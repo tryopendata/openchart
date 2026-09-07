@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PositionedEdge, PositionedNode } from '../types';
-import { diffGraphUpdate, type NextGraph } from '../update-diff';
+import { diffGraphUpdate, type NextGraph, reheatAlpha } from '../update-diff';
 import type { SimulationConfigLike } from '../update-diff-config';
 import { simulationConfigEqual } from '../update-diff-config';
 
@@ -291,5 +291,62 @@ describe('simulationConfigEqual', () => {
 
   it('detects a physics change', () => {
     expect(simulationConfigEqual(baseConfig, { ...baseConfig, linkDistance: 60 })).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Reheat impulse
+// ---------------------------------------------------------------------------
+
+describe('reheatAlpha', () => {
+  const prevNodes = [node('a', 0, 0), node('b', 10, 10), node('c', 20, 20), node('d', 30, 30)];
+  const prevEdges = [edge('a', 'b'), edge('b', 'c'), edge('c', 'd')];
+
+  function alphaFor(
+    nodes: Array<{ id: string; community?: string }>,
+    edges: Array<{ source: string; target: string }>,
+  ): number {
+    const diff = diffGraphUpdate(prevNodes, prevEdges, next(nodes, edges), baseConfig, 0);
+    return reheatAlpha(diff, edges.length);
+  }
+
+  it('sits at the floor when nothing structural moved', () => {
+    const diff = diffGraphUpdate(
+      prevNodes,
+      prevEdges,
+      next(
+        [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }],
+        [
+          { source: 'a', target: 'b' },
+          { source: 'b', target: 'c' },
+          { source: 'c', target: 'd' },
+        ],
+      ),
+      baseConfig,
+      0,
+    );
+    expect(reheatAlpha(diff, 3)).toBeCloseTo(0.3);
+  });
+
+  it('scales with churn: one node of four leaving lifts it off the floor', () => {
+    // 'd' and the c->d edge go: node churn 1/4, edge churn 1/3, so the edge
+    // side wins.
+    expect(
+      alphaFor(
+        [{ id: 'a' }, { id: 'b' }, { id: 'c' }],
+        [
+          { source: 'a', target: 'b' },
+          { source: 'b', target: 'c' },
+        ],
+      ),
+    ).toBeCloseTo(0.3 + 0.7 * (1 / 3));
+  });
+
+  it('reaches 1 when the whole node set is swapped', () => {
+    expect(alphaFor([{ id: 'w' }, { id: 'x' }, { id: 'y' }, { id: 'z' }], [])).toBeCloseTo(1);
+  });
+
+  it('never exceeds 1', () => {
+    expect(alphaFor([{ id: 'w' }], [])).toBeLessThanOrEqual(1);
   });
 });

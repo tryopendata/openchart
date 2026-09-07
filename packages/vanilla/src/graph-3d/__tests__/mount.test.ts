@@ -970,6 +970,166 @@ describe('update', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Structural update choreography
+// ---------------------------------------------------------------------------
+
+describe('update transitions', () => {
+  /**
+   * Choreography on, hover crossfade off: the emphasis pass and the enter fade
+   * both write `material.opacity`, and only the second one is under test here.
+   */
+  function movingSpec(overrides: Partial<GraphSpec> = {}): GraphSpec {
+    return {
+      ...spec({ animation: { hover: false } as GraphSpec['animation'] }),
+      ...overrides,
+    } as GraphSpec;
+  }
+
+  const EXTRA = { id: 'd', label: 'Delta', kind: 'lab', weight: 0.4, rel: 1 };
+
+  beforeEach(() => {
+    vi.useFakeTimers({
+      toFake: [
+        'setTimeout',
+        'clearTimeout',
+        'Date',
+        'performance',
+        'requestAnimationFrame',
+        'cancelAnimationFrame',
+      ],
+    });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function nodeScale(fake: FakeForceGraph3D, id: string): number {
+    return (nodeGroup(fake, id).children[0] as unknown as { scale: { x: number } }).scale.x;
+  }
+
+  it('runs no synchronous warmup on a structural update, and restores the budget on stop', () => {
+    const { instance, fake } = mount();
+    const budgeted = fake.props.warmupTicks as number;
+    expect(budgeted).toBeGreaterThan(0);
+
+    instance.update(spec({ nodes: [...NODES, EXTRA] }));
+
+    // The library runs warmupTicks in one blocking loop inside its digest, which
+    // is the single-frame snap the update path must not do.
+    expect(fake.props.warmupTicks).toBe(0);
+    (fake.handlers.onEngineStop as () => void)();
+    expect(fake.props.warmupTicks).toBe(budgeted);
+  });
+
+  it('suppresses the center force for the update cooldown and restores it on stop', () => {
+    const { instance, fake } = mount();
+    expect(fake.d3Force('center')).toBeDefined();
+
+    instance.update(spec({ nodes: [...NODES, EXTRA] }));
+    expect(fake.d3Force('center')).toBeUndefined();
+
+    (fake.handlers.onEngineStop as () => void)();
+    expect(fake.d3Force('center')).toBeDefined();
+  });
+
+  it('damps the impulse for the cooldown instead of reheating at full energy', () => {
+    const { instance, fake } = mount();
+    const resting = fake.props.d3VelocityDecay as number;
+
+    instance.update(spec({ nodes: [...NODES, EXTRA] }));
+    // `graphData()` always restarts at alpha 1, so the impulse is scaled from
+    // the outside: a node keeps less of its velocity per tick.
+    expect(fake.props.d3VelocityDecay as number).toBeGreaterThan(resting);
+
+    (fake.handlers.onEngineStop as () => void)();
+    expect(fake.props.d3VelocityDecay).toBe(resting);
+  });
+
+  it('reuses the scene object of a link between two survivors', () => {
+    const { instance, fake } = mount();
+    const before = linkObject(fake, 0);
+
+    // 'c' leaves, so the b->c edge goes; a->b survives untouched.
+    instance.update(spec({ nodes: NODES.slice(0, 2), edges: [EDGES[0]] }));
+    fake.flush();
+
+    expect(linkObject(fake, 0)).toBe(before);
+    expect(fake.deallocated).not.toContain(before);
+  });
+
+  it('starts entering nodes collapsed and lands them by the end of update.duration', () => {
+    const { instance, fake } = mount(movingSpec());
+    instance.update(movingSpec({ nodes: [...NODES, EXTRA] }));
+    fake.flush();
+
+    expect(nodeMaterial(fake, 'd').opacity).toBe(0);
+    expect(nodeScale(fake, 'd')).toBeCloseTo(0.01);
+    // Survivors are pinned at full strength: only the arriving mark is shaped.
+    expect(nodeMaterial(fake, 'a').opacity).toBeCloseTo(nodeDatum(fake, 'a').node.opacity);
+
+    vi.advanceTimersByTime(400);
+    expect(nodeMaterial(fake, 'd').opacity).toBeCloseTo(nodeDatum(fake, 'd').node.opacity);
+    expect(nodeScale(fake, 'd')).toBe(1);
+  });
+
+  it('keeps a ghost of every departed mark on screen for exit.duration, then frees it', () => {
+    const { instance, fake } = mount(movingSpec());
+    const before = new Set(fake.scene().children);
+
+    // 'c' and the b->c edge leave; nothing enters.
+    instance.update(movingSpec({ nodes: NODES.slice(0, 2), edges: [EDGES[0]] }));
+    fake.flush();
+
+    const parked = fake.scene().children.filter((o) => !before.has(o));
+    expect(parked).toHaveLength(2);
+    const ghostGroup = parked.find((o) => o.type === 'Group');
+    const ghostMaterial = (ghostGroup?.children[0] as unknown as { material: { opacity: number } })
+      .material;
+    expect(ghostMaterial.opacity).toBeGreaterThan(0);
+
+    vi.advanceTimersByTime(400);
+    expect(fake.scene().children.filter((o) => !before.has(o))).toEqual([]);
+    expect(allocations.disposed.has(ghostMaterial as unknown as { dispose(): void })).toBe(true);
+  });
+
+  it('snaps instead of ghosting under reduced motion', () => {
+    vi.spyOn(window, 'matchMedia').mockReturnValue({
+      matches: true,
+      addEventListener() {},
+      removeEventListener() {},
+    } as unknown as MediaQueryList);
+    const { instance, fake } = mount(movingSpec());
+    const before = new Set(fake.scene().children);
+
+    instance.update(movingSpec({ nodes: NODES.slice(0, 2), edges: [EDGES[0]] }));
+    fake.flush();
+
+    expect(fake.scene().children.filter((o) => !before.has(o))).toEqual([]);
+  });
+
+  it('finishes an in-flight ghost fade when a second update arrives', () => {
+    const { instance, fake } = mount(movingSpec());
+    const before = new Set(fake.scene().children);
+    instance.update(movingSpec({ nodes: NODES.slice(0, 2), edges: [EDGES[0]] }));
+    fake.flush();
+    expect(fake.scene().children.filter((o) => !before.has(o))).toHaveLength(2);
+
+    const firstGhosts = fake.scene().children.filter((o) => !before.has(o));
+
+    vi.advanceTimersByTime(50);
+    instance.update(movingSpec({ nodes: [...NODES.slice(0, 2), EXTRA], edges: [EDGES[0]] }));
+    fake.flush();
+
+    // `update()` finishes every in-flight tween, so the first fade is resolved
+    // rather than left running against a scene it no longer belongs to.
+    for (const ghost of firstGhosts) {
+      expect(fake.scene().children).not.toContain(ghost);
+    }
+  });
+});
+
 describe('webgl context loss', () => {
   it('preventDefaults the loss so the browser will restore the context', () => {
     const { fake } = mount();
@@ -1217,17 +1377,28 @@ describe('entrance', () => {
     expect(nodeMaterial(fake, 'c').opacity).toBeCloseTo(0.3);
   });
 
-  it('never replays on update()', () => {
+  // The staggered mount reveal is once-per-mount. A structural update runs the
+  // much shorter enter fade over the ARRIVING marks only, so survivors are never
+  // taken back to zero.
+  it('never replays the mount reveal on update()', () => {
     const { instance, fake } = mount(enterSpec());
     vi.advanceTimersByTime(SPAN_MS + 64);
     instance.update({
       ...enterSpec(),
       nodes: [...NODES, { id: 'd', label: 'Delta', kind: 'lab', weight: 0.4, rel: 1 }],
     } as GraphSpec);
-    for (const id of ['a', 'b', 'c', 'd']) {
+    fake.flush();
+
+    for (const id of ['a', 'b', 'c']) {
       expect(nodeMaterial(fake, id).opacity).toBeCloseTo(1);
       expect(nodeScale(fake, id)).toBe(1);
     }
+    // The one enterer fades in over `update.duration` (300ms by default) rather
+    // than over the mount span.
+    expect(nodeMaterial(fake, 'd').opacity).toBe(0);
+    vi.advanceTimersByTime(400);
+    expect(nodeMaterial(fake, 'd').opacity).toBeCloseTo(1);
+    expect(nodeScale(fake, 'd')).toBe(1);
   });
 
   it('finishes an in-flight entrance rather than leaving nodes hidden on update()', () => {

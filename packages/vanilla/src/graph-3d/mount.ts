@@ -18,14 +18,15 @@
  *    setters.
  *
  * Differences from 2D that are deliberate and documented in RFC 27: no
- * keyboard navigation, no node drag, no cursor repulsion or springy drag, no
- * wall-clock warmup budget, and a structural `update()` reheats globally
- * (`graphData()` restarts the layout at alpha 1) instead of applying 2D's local
- * impulse.
+ * keyboard navigation, no node drag, no cursor repulsion or springy drag, and
+ * no wall-clock warmup budget. A structural `update()` DOES animate like 2D
+ * (enter fade, exit ghosts, churn-scaled local reheat), but it reaches the
+ * impulse indirectly: `graphData()` forces alpha to 1 and the library exposes no
+ * alpha setter, so `beginUpdateReheat` damps it from outside instead.
  */
 
 import type { GraphSpec, ThemeConfig, TooltipContent } from '@opendata-ai/openchart-core';
-import type { CompiledGraphNode } from '@opendata-ai/openchart-engine';
+import type { CompiledGraphEdge, CompiledGraphNode } from '@opendata-ai/openchart-engine';
 import { buildEdgeTooltip } from '@opendata-ai/openchart-engine';
 import ForceGraph3D from '3d-force-graph';
 import type { Object3D } from 'three';
@@ -48,7 +49,7 @@ import { AnimationScheduler, type GraphAnimation } from '../graph/scheduler';
 import { GraphSearchManager } from '../graph/search';
 import { seedNodePositions } from '../graph/seed';
 import type { GraphCamera, GraphFlyTarget, PositionedEdge, PositionedNode } from '../graph/types';
-import { diffGraphUpdate } from '../graph/update-diff';
+import { diffGraphUpdate, reheatAlpha } from '../graph/update-diff';
 import type { SimNode } from '../graph/worker-protocol';
 import type {
   GraphHighlightTarget,
@@ -60,7 +61,7 @@ import { resolvedSurface } from '../theme-tokens';
 import { resolveEmphasis } from './emphasis';
 import { ENTRANCE_CAMERA_PULLBACK, elementProgress, planEntrance } from './entrance';
 import { computeFit, normalize } from './fit';
-import { applySimulationConfig } from './forces';
+import { applySimulationConfig, beginUpdateReheat, endUpdateReheat } from './forces';
 import { LABEL_BUDGET_3D, type LabelBox, labelBox, overlaps, resolveVisibleLabels } from './labels';
 import {
   applyLinkVisuals,
@@ -69,6 +70,7 @@ import {
   LINK_WIDTH_MAX_EDGES,
   type LinkObject3D,
   linkShapeMatches,
+  placeGhostLink,
   updateLinkPosition,
   widthAsAlpha,
 } from './links';
@@ -181,8 +183,8 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
   // -- Scene object registries ---------------------------------------------
 
   const nodeObjects = new Map<string, NodeObject3D>();
-  /** Keyed by index into `compilation.edges` so parallel edges stay distinct. */
-  const linkObjects = new Map<number, LinkObject3D>();
+  /** Keyed by {@link edgeKeys} so a link between two survivors keeps its object. */
+  const linkObjects = new Map<string, LinkObject3D>();
   let nodeData: Node3D[] = [];
   let nodeById = new Map<string, Node3D>();
   let linkData: Link3D[] = [];
@@ -225,6 +227,12 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
   /** Standoff multiplier the fit is scaled by while the camera flies in. */
   let entranceCameraPull = 1;
   let emphasisTween: GraphAnimation | null = null;
+
+  // -- Update transition state ---------------------------------------------
+  /** Marks that left, kept on screen at their last positions while they fade. */
+  let ghosts: Ghost[] = [];
+  /** True while a structural update's damped reheat is in flight. */
+  let reheatActive = false;
 
   // -- Frame loop ----------------------------------------------------------
   // The library runs its own render loop; this scheduler only drives our tweens.
@@ -351,11 +359,13 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
       const p = positions.get(node.id) ?? [0, 0, 0];
       return { id: node.id, node, x: p[0], y: p[1], z: p[2] };
     });
+    const keys = edgeKeys(compilation.edges);
     linkData = compilation.edges.map((edge, edgeIndex) => ({
       source: edge.source,
       target: edge.target,
       edge,
       edgeIndex,
+      key: keys[edgeIndex],
     }));
     nodeById = new Map(nodeData.map((d) => [d.id, d]));
     graph.graphData({ nodes: nodeData, links: linkData });
@@ -386,18 +396,19 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
   const linkThreeObject = (datum: Link3D): LinkObject3D['object'] => linkObjectFor(datum).object;
 
   /**
-   * Same identity contract as {@link nodeObjectFor}: whenever the link datums
-   * are rebuilt, `linkObjects` must be cleared first, so the digest never hands
-   * a cached object to a new datum while the old datum's remove hook is still
-   * pending on it. The structural `update()` clears the map for exactly this
-   * reason (the edge renumbering makes it necessary anyway).
+   * Same identity contract as {@link nodeObjectFor}, which is why the map is
+   * keyed by the datum's stable {@link edgeKeys} key rather than by edge index:
+   * a link between two survivors keeps BOTH its datum and its object across a
+   * structural update, so the digest never hands a cached object to a new datum
+   * while the old datum's remove hook is still pending on it. Only links that
+   * actually left (or a shape-class flip) drop out of the map.
    */
   function linkObjectFor(datum: Link3D): LinkObject3D {
-    let obj = linkObjects.get(datum.edgeIndex);
+    let obj = linkObjects.get(datum.key);
     if (!obj) {
       const resting = edgeBaseAlpha?.get(datum.edgeIndex) ?? 0.3;
       obj = createLinkObject(datum.edge, useLinkWidth, resting);
-      linkObjects.set(datum.edgeIndex, obj);
+      linkObjects.set(datum.key, obj);
       const base = displayEdgeAlpha.get(datum.edgeIndex) ?? resting;
       obj.material.opacity = entranceActive
         ? base * (entranceEdgeAlpha.get(datum.edgeIndex) ?? 0)
@@ -461,10 +472,13 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
         obj.material.opacity = a;
       }
     }
-    for (const [index, obj] of linkObjects) {
-      const a = displayEdgeAlpha.get(index);
-      if (a === undefined) continue;
-      obj.material.opacity = entranceActive ? a * (entranceEdgeAlpha.get(index) ?? 0) : a;
+    // Iterated over the datums rather than `linkObjects`, because the alphas are
+    // keyed by edge index while the objects are keyed by edge identity.
+    for (const datum of linkData) {
+      const obj = linkObjects.get(datum.key);
+      const a = displayEdgeAlpha.get(datum.edgeIndex);
+      if (!obj || a === undefined) continue;
+      obj.material.opacity = entranceActive ? a * (entranceEdgeAlpha.get(datum.edgeIndex) ?? 0) : a;
     }
   }
 
@@ -1129,6 +1143,143 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
   }
 
   // =========================================================================
+  // Update transitions (enter fade + exit ghosts)
+  // =========================================================================
+
+  /** Where a ghost is parked: the node groups' own parent, else the scene root. */
+  function ghostParent(): GhostParent | null {
+    for (const obj of nodeObjects.values()) {
+      if (obj.group.parent) return obj.group.parent as unknown as GhostParent;
+    }
+    return (graph.scene() as unknown as GhostParent | undefined) ?? null;
+  }
+
+  /** A clone of a departed node, parked at its last position. */
+  function nodeGhost(
+    node: CompiledGraphNode,
+    pos: { x: number; y: number; z: number },
+    alpha: number,
+    withLabel: boolean,
+  ): Ghost {
+    const obj = createNodeObject(node, labelColor());
+    obj.group.position.set(pos.x, pos.y, pos.z);
+    obj.material.opacity = alpha;
+    const fades: Ghost['fades'] = [{ material: obj.material, base: alpha }];
+    if (withLabel) {
+      const sprite = ensureLabelSprite(obj);
+      if (sprite) {
+        sprite.visible = true;
+        fades.push({
+          material: sprite.material as unknown as Ghost['fades'][number]['material'],
+          base: 1,
+        });
+      }
+    }
+    return { object: obj.group, fades, dispose: () => disposeNodeObject(obj) };
+  }
+
+  /** A clone of a departed link, frozen on its last segment. */
+  function linkGhost(
+    edge: CompiledGraphEdge,
+    start: { x: number; y: number; z: number },
+    end: { x: number; y: number; z: number },
+    alpha: number,
+    useWidth: boolean,
+  ): Ghost {
+    const obj = createLinkObject(edge, useWidth, alpha);
+    placeGhostLink(obj, start, end);
+    return {
+      object: obj.object,
+      fades: [{ material: obj.material, base: alpha }],
+      dispose: () => disposeLinkObject(obj),
+    };
+  }
+
+  /**
+   * Park `pending` in the scene and fade it to nothing over `exit.duration`.
+   * With the phase off, under reduced motion, or with nowhere to park them, the
+   * departed marks simply go — same snap 2D takes.
+   */
+  function startExitFade(pending: Ghost[]): void {
+    if (pending.length === 0) return;
+    const cfg = compilation.animation?.exit ?? null;
+    const parent = ghostParent();
+    if (!cfg || prefersReducedMotion() || !parent) {
+      for (const g of pending) g.dispose();
+      return;
+    }
+    for (const g of pending) {
+      for (const f of g.fades) f.material.transparent = true;
+      parent.add(g.object);
+    }
+    ghosts = ghosts.concat(pending);
+    scheduler.add(
+      createTween({
+        duration: cfg.duration,
+        ease: resolveEase(cfg.ease),
+        apply: (t) => {
+          for (const g of pending) {
+            for (const f of g.fades) f.material.opacity = f.base * (1 - t);
+          }
+        },
+        onDone: () => removeGhosts(pending),
+      }),
+    );
+  }
+
+  /** Detach and free `list`, dropping it from the live ghost set. */
+  function removeGhosts(list: Ghost[]): void {
+    for (const g of list) {
+      g.object.parent?.remove(g.object);
+      g.dispose();
+    }
+    const gone = new Set(list);
+    ghosts = ghosts.filter((g) => !gone.has(g));
+  }
+
+  /**
+   * Fade and pop in what a structural update added, over `update.duration`.
+   *
+   * Reuses the entrance multipliers rather than adding a parallel set: `paint()`
+   * already composes them with the emphasis alphas, and everything that survived
+   * is pinned at full strength so only the arriving marks are shaped.
+   */
+  function startEnterFade(enteringIds: string[], enteringEdgeIndices: number[]): void {
+    const cfg = compilation.animation?.update ?? null;
+    if (enteringIds.length === 0 && enteringEdgeIndices.length === 0) return;
+    if (!cfg || prefersReducedMotion()) return;
+
+    entranceActive = true;
+    for (const node of compilation.nodes) {
+      entranceNodeAlpha.set(node.id, 1);
+      entranceNodeScale.set(node.id, 1);
+    }
+    for (let i = 0; i < compilation.edges.length; i++) entranceEdgeAlpha.set(i, 1);
+    for (const id of enteringIds) {
+      entranceNodeAlpha.set(id, 0);
+      entranceNodeScale.set(id, ENTRANCE_MIN_SCALE);
+    }
+    for (const index of enteringEdgeIndices) entranceEdgeAlpha.set(index, 0);
+    paint();
+
+    scheduler.add(
+      createTween({
+        duration: cfg.duration,
+        ease: resolveEase(cfg.ease),
+        apply: (t) => {
+          for (const id of enteringIds) {
+            entranceNodeAlpha.set(id, popAlpha(t));
+            entranceNodeScale.set(id, Math.max(ENTRANCE_MIN_SCALE, popScale(t)));
+          }
+          for (const index of enteringEdgeIndices) entranceEdgeAlpha.set(index, t);
+          paint();
+        },
+        onDone: endEntrance,
+      }),
+    );
+  }
+
+  // =========================================================================
   // Public handle
   // =========================================================================
 
@@ -1285,7 +1436,7 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
         const edge = compilation.edges[i];
         linkData[i].edge = edge;
         if (shapeClassChanged) continue;
-        const obj = linkObjects.get(i);
+        const obj = linkObjects.get(linkData[i].key);
         // Width, dash pattern and color all move here: color alone would leave
         // a cylinder at its old radius and a line at its old dash geometry.
         if (obj) applyLinkVisuals(obj, edge, useLinkWidth);
@@ -1304,22 +1455,55 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
       return;
     }
 
-    // Structural: dispose the scene objects for everything that left, then
-    // rebuild the data arrays with carried-over kinematics.
+    // Structural: ghost what left, carry survivors across, fade in what entered.
     const nextNodeIds = new Set(compilation.nodes.map((n) => n.id));
+    const keys = edgeKeys(compilation.edges);
+    const nextKeys = new Set(keys);
+    const prevLinkByKey = new Map(linkData.map((d) => [d.key, d]));
+    // Cloned BEFORE the data arrays are rebuilt: the last positions and the live
+    // emphasis alphas only exist until then. The originals still go — the
+    // library deallocates any object whose datum leaves `graphData()`, so a
+    // ghost has to be a copy we own outright.
+    const pendingGhosts: Ghost[] = [];
+
     for (const [id, obj] of nodeObjects) {
-      if (!nextNodeIds.has(id)) {
-        disposeNodeObject(obj);
-        nodeObjects.delete(id);
-        displayNodeAlpha.delete(id);
-        entranceNodeAlpha.delete(id);
-        entranceNodeScale.delete(id);
+      if (nextNodeIds.has(id)) continue;
+      const datum = nodeById.get(id);
+      if (datum) {
+        pendingGhosts.push(
+          nodeGhost(
+            datum.node,
+            { x: datum.x ?? 0, y: datum.y ?? 0, z: datum.z ?? 0 },
+            displayNodeAlpha.get(id) ?? datum.node.opacity,
+            Boolean(obj.sprite?.visible),
+          ),
+        );
       }
+      disposeNodeObject(obj);
+      nodeObjects.delete(id);
+      displayNodeAlpha.delete(id);
+      entranceNodeAlpha.delete(id);
+      entranceNodeScale.delete(id);
     }
-    // Link objects are keyed by index into the edge list, which the new
-    // compilation renumbers, so they all go.
-    for (const obj of linkObjects.values()) disposeLinkObject(obj);
-    linkObjects.clear();
+
+    for (const [key, obj] of linkObjects) {
+      if (nextKeys.has(key) && !shapeClassChanged) continue;
+      const datum = prevLinkByKey.get(key);
+      if (datum && !nextKeys.has(key)) {
+        pendingGhosts.push(
+          linkGhost(
+            datum.edge,
+            endpointPos(datum.source),
+            endpointPos(datum.target),
+            displayEdgeAlpha.get(datum.edgeIndex) ?? 0.3,
+            prevUseLinkWidth,
+          ),
+        );
+      }
+      disposeLinkObject(obj);
+      linkObjects.delete(key);
+    }
+    // The alphas are keyed by edge index, which the new compilation renumbers.
     displayEdgeAlpha.clear();
     entranceEdgeAlpha.clear();
 
@@ -1357,16 +1541,44 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
         z: seedZ(node.id, node.radius, node.community),
       };
     });
-    linkData = compilation.edges.map((edge, edgeIndex) => ({
-      source: edge.source,
-      target: edge.target,
-      edge,
-      edgeIndex,
-    }));
+    // Link datums are reused by key for the same reason node datums are: the
+    // digest binds by identity, so a fresh literal for a surviving edge would
+    // hand its object to the new datum and then remove it for the old one. A
+    // shape-class flip is the one case that must rebuild, so it opts out.
+    const enteringEdgeIndices: number[] = [];
+    linkData = compilation.edges.map((edge, edgeIndex) => {
+      const key = keys[edgeIndex];
+      const existing = shapeClassChanged ? undefined : prevLinkByKey.get(key);
+      if (!prevLinkByKey.has(key)) enteringEdgeIndices.push(edgeIndex);
+      if (existing) {
+        existing.edge = edge;
+        existing.edgeIndex = edgeIndex;
+        const obj = linkObjects.get(key);
+        if (obj) applyLinkVisuals(obj, edge, useLinkWidth);
+        return existing;
+      }
+      return { source: edge.source, target: edge.target, edge, edgeIndex, key };
+    });
 
     nodeById = new Map(nodeData.map((d) => [d.id, d]));
-    applySimulationConfig(graph, compilation.simulationConfig, nodeData.length);
+
+    // No synchronous warmup here. The library runs `warmupTicks` in one blocking
+    // loop inside the digest, which is exactly the single-frame snap this path
+    // must not do; the mount-time path still warms up. `beginUpdateReheat` then
+    // scales the impulse down to `reheatAlpha`, and `onEngineStop` restores both.
+    applySimulationConfig(graph, compilation.simulationConfig, nodeData.length, {
+      warmupTicks: 0,
+    });
+    beginUpdateReheat(
+      graph,
+      compilation.simulationConfig,
+      reheatAlpha(diff, compilation.edges.length),
+    );
+    reheatActive = true;
+
     graph.graphData({ nodes: nodeData, links: linkData });
+    startEnterFade(diff.enteringIds, enteringEdgeIndices);
+    startExitFade(pendingGhosts);
     pruneInteractionState();
     armEmphasis();
   }
@@ -1395,6 +1607,8 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
     destroyed = true;
 
     scheduler.cancelAll();
+    // `cancelAll` does not run `onDone`, so the ghosts still have to be freed.
+    removeGhosts(ghosts);
     if (pumpId !== null) {
       cancelAnimationFrame(pumpId);
       pumpId = null;
@@ -1477,7 +1691,7 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
     .linkWidth((d: Link3D) => (useLinkWidth ? d.edge.strokeWidth : 0))
     .linkThreeObject(linkThreeObject)
     .linkPositionUpdate((_obj, coords, d: Link3D) => {
-      const link = linkObjects.get(d.edgeIndex);
+      const link = linkObjects.get(d.key);
       // Returning false hands cylinder meshes back to the library, which
       // already positions them correctly (translate + scale.z + lookAt).
       return link ? updateLinkPosition(link, coords.start, coords.end) : false;
@@ -1556,6 +1770,10 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
     })
     .onEngineStop(() => {
       if (destroyed) return;
+      if (reheatActive) {
+        reheatActive = false;
+        endUpdateReheat(graph, compilation.simulationConfig, nodeData.length);
+      }
       if (autoFit && options?.fitOnLoad !== false) {
         autoFit = false;
         fitNow({ duration: 0 });
@@ -1607,6 +1825,42 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
     resize: doResize,
     destroy,
   };
+}
+
+/**
+ * Stable per-edge keys for the current edge list.
+ *
+ * Endpoints plus an occurrence counter, so two parallel A->B edges stay
+ * distinct while an edge that merely moved position in the list keeps its
+ * identity across a structural update.
+ */
+function edgeKeys(edges: CompiledGraphEdge[]): string[] {
+  const seen = new Map<string, number>();
+  return edges.map((edge) => {
+    const base = `${edge.source}\u0000${edge.target}`;
+    const n = seen.get(base) ?? 0;
+    seen.set(base, n + 1);
+    return `${base}\u0000${n}`;
+  });
+}
+
+/** Whatever a ghost is parented to: the node groups' parent, or the scene root. */
+type GhostParent = { add(o: Object3D): unknown };
+
+/**
+ * A mark that has left the data binding but is still on screen, fading out.
+ *
+ * The library deallocates any object whose datum leaves `graphData()`, so a
+ * ghost cannot be the real scene object held back — it is a clone parked at the
+ * departed mark's last position and owned entirely by us.
+ */
+interface Ghost {
+  /** Scene object to detach when the fade ends. */
+  object: Object3D;
+  /** Materials the fade writes, with the alpha each starts from. */
+  fades: Array<{ material: { opacity: number; transparent: boolean }; base: number }>;
+  /** Release this ghost's GPU resources. */
+  dispose(): void;
 }
 
 /**

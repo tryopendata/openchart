@@ -233,3 +233,39 @@ function edgeSetsEqual(
   }
   return true;
 }
+
+/**
+ * Reheat alpha for a structural update: `min(1, 0.3 + 0.7 * changeRatio)`.
+ *
+ * `changeRatio` is the larger of the node and edge churn, each expressed as
+ * (entering + exiting) / max(prevCount, nextCount). A low alpha IS the local
+ * reheat: survivors barely move while the delta settles. Shared by both
+ * renderers so the impulse is defined once (the 3D adapter cannot set the
+ * simulation's alpha directly and damps toward this value instead — see
+ * `graph-3d/forces.ts`).
+ *
+ * @param nextEdgeCount - Edge count of the NEW compilation.
+ */
+export function reheatAlpha(diff: GraphUpdateDiff, nextEdgeCount: number): number {
+  const prevNodeCount = diff.survivingPositions.size + diff.exitingNodes.length;
+  const nextNodeCount = diff.survivingPositions.size + diff.enteringIds.length;
+  const nodeRatio = ratio(
+    diff.enteringIds.length + diff.exitingNodes.length,
+    Math.max(prevNodeCount, nextNodeCount),
+  );
+  const prevEdgeCount = nextEdgeCount - diff.enteringEdgeCount + diff.exitingEdges.length;
+  const edgeRatio = ratio(
+    diff.enteringEdgeCount + diff.exitingEdges.length,
+    Math.max(prevEdgeCount, nextEdgeCount),
+  );
+  const changeRatio = Math.max(nodeRatio, edgeRatio);
+  return Math.min(1, REHEAT_FLOOR + (1 - REHEAT_FLOOR) * changeRatio);
+}
+
+/** Alpha a structural update reheats to even when almost nothing changed. */
+const REHEAT_FLOOR = 0.3;
+
+/** Safe ratio (0 when the denominator is 0). */
+function ratio(numerator: number, denominator: number): number {
+  return denominator > 0 ? numerator / denominator : 0;
+}

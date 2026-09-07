@@ -1489,6 +1489,83 @@ function Toggle2D3DGraph() {
 
 export default { title: 'Graphs' };
 
+// ---------------------------------------------------------------------------
+// 19. Update transitions in 3D — the same choreography, in WebGL
+// ---------------------------------------------------------------------------
+
+/** Hub-and-ring graph over a sliding window of node ids. */
+function build3DUpdateSpec(count: number, offset: number): GraphSpec {
+  const ids = Array.from({ length: count }, (_, i) => `s${offset + i}`);
+  return {
+    type: 'graph',
+    dimensions: 3,
+    nodes: [
+      { id: 'hub', label: 'Hub', community: 'core' },
+      ...ids.map((id, i) => ({ id, label: `Node ${offset + i + 1}`, community: 'ring' })),
+    ],
+    edges: [
+      ...ids.map((id) => ({ source: 'hub', target: id })),
+      ...ids.map((id, i) => ({ source: id, target: ids[(i + 1) % ids.length] })),
+    ],
+    encoding: { nodeColor: { field: 'community', type: 'nominal' } },
+    layout: { type: 'force', seed: 5 },
+    chrome: {
+      title: 'The Layout Tweens in Three Dimensions Too',
+      subtitle: 'update() reheats locally: survivors drift, enterers slide in, leavers ghost out',
+      source: ILLUSTRATIVE,
+    },
+  };
+}
+
+const update3DSpec = build3DUpdateSpec(8, 0);
+
+/**
+ * The 2D update demo against the WebGL renderer, plus the re-seed case that
+ * motivated it: swapping half the node set at once is what loading a different
+ * subgraph does, and it is the change most likely to read as a snap.
+ */
+function Update3DGraph() {
+  const [count, setCount] = useState(8);
+  const [offset, setOffset] = useState(0);
+  const spec = useMemo(() => build3DUpdateSpec(count, offset), [count, offset]);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
+      <div style={{ height: 480 }} data-testid="update-3d-surface">
+        <Graph3DReady>
+          <Graph spec={spec} />
+        </Graph3DReady>
+      </div>
+      <div style={{ display: 'flex', gap: 'var(--gx-space-2)', alignItems: 'center' }}>
+        <button
+          type="button"
+          className="oc-spec-copy"
+          onClick={() => setCount((n) => Math.min(n + 2, 18))}
+        >
+          Add nodes
+        </button>
+        <button
+          type="button"
+          className="oc-spec-copy"
+          onClick={() => setCount((n) => Math.max(n - 2, 4))}
+        >
+          Remove nodes
+        </button>
+        <button
+          type="button"
+          className="oc-spec-copy"
+          onClick={() => setOffset((o) => o + Math.floor(count / 2))}
+        >
+          Re-seed neighborhood
+        </button>
+        <span style={{ fontSize: 'var(--gx-type-caption)', color: 'var(--gx-text-muted)' }}>
+          {count + 1} nodes
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export const Graphs = () => (
   <GalleryPage
     title="Graphs"
@@ -1703,6 +1780,15 @@ export const Graphs = () => (
         height={720}
       >
         <OverGate3DGraph />
+      </Demo>
+      <Demo
+        id="update-3d"
+        title="Update transitions in 3D"
+        description="The same diff as the 2D demo, against WebGL: no synchronous warmup, the center force is suspended for the cooldown and the reheat is scaled by how much actually changed. Re-seed swaps half the node set at once — the opendata case — and it still settles rather than snapping."
+        specForPanel={update3DSpec}
+        height={640}
+      >
+        <Update3DGraph />
       </Demo>
       <Demo
         id="toggle-2d-3d"

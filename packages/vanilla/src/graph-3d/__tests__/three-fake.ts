@@ -78,6 +78,12 @@ export class Object3D {
     this.children.push(child);
     return this;
   }
+  remove(child: Object3D): this {
+    const i = this.children.indexOf(child);
+    if (i >= 0) this.children.splice(i, 1);
+    if (child.parent === this) child.parent = null;
+    return this;
+  }
   lookAt(): void {}
 }
 

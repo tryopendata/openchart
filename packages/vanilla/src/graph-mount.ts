@@ -61,7 +61,7 @@ import type {
   PositionedEdge,
   PositionedNode,
 } from './graph/types';
-import { diffGraphUpdate } from './graph/update-diff';
+import { diffGraphUpdate, reheatAlpha } from './graph/update-diff';
 import type { SimEdge, SimNode } from './graph/worker-protocol';
 import { ZoomTransform } from './graph/zoom';
 import { resolveDarkMode } from './resolve-dark-mode';
@@ -1739,24 +1739,9 @@ export function createGraph(
     for (const [id, p] of diff.survivingPositions) positions.set(id, p);
     for (const [id, p] of diff.spawnPositions) positions.set(id, p);
 
-    // changeRatio = max(node churn, edge churn). Node churn is
-    // (|entering| + |exiting nodes|) / max(prevNodeCount, nextNodeCount); the
-    // edge analog uses the same shape. Low alpha IS the local reheat.
-    const prevNodeCount = diff.survivingPositions.size + diff.exitingNodes.length;
-    const nextNodeCount = diff.survivingPositions.size + diff.enteringIds.length;
-    const nodeRatio = ratio(
-      diff.enteringIds.length + diff.exitingNodes.length,
-      Math.max(prevNodeCount, nextNodeCount),
-    );
-    const prevEdgeCount =
-      compilation.edges.length - diff.enteringEdgeCount + diff.exitingEdges.length;
-    const nextEdgeCount = compilation.edges.length;
-    const edgeRatio = ratio(
-      diff.enteringEdgeCount + diff.exitingEdges.length,
-      Math.max(prevEdgeCount, nextEdgeCount),
-    );
-    const changeRatio = Math.max(nodeRatio, edgeRatio);
-    const initialAlpha = Math.min(1, 0.3 + 0.7 * changeRatio);
+    // Churn-scaled local reheat. Shared with the 3D renderer so the impulse is
+    // defined once; see `reheatAlpha`.
+    const initialAlpha = reheatAlpha(diff, compilation.edges.length);
 
     // Seed positioned nodes/edges immediately so the first frame (before the sim
     // streams its first tick) draws survivors at their prior spots and enterers
@@ -1792,11 +1777,6 @@ export function createGraph(
 
     needsRender = true;
     scheduleRender();
-  }
-
-  /** Safe ratio (0 when the denominator is 0). */
-  function ratio(numerator: number, denominator: number): number {
-    return denominator > 0 ? numerator / denominator : 0;
   }
 
   /**
