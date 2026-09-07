@@ -25,6 +25,10 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./graph-3d": {
+      "types": "./dist/graph-3d.d.ts",
+      "import": "./dist/graph-3d.js"
+    },
     "./styles.css": "./dist/styles.css"
   },
   "files": [

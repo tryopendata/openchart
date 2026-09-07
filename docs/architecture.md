@@ -122,6 +122,10 @@ The key difference from charts: the engine output does **not** include x/y posit
 
 The output is a `GraphCompilation` with resolved nodes, edges, simulation config, legend, tooltip descriptors, and the resolved theme. The vanilla adapter creates a canvas element and an animation loop driven by simulation ticks.
 
+### Graph renderer registry
+
+`createGraph()` builds a shared shell (the `.oc-graph-wrapper`, the chrome band, the legend slot, the tooltip manager, and the resize wiring; `packages/vanilla/src/graph/shell.ts`) and then dispatches on `compilation.numDimensions`. 2D is built in and mounts a `<canvas>` into the shell. 3D is registered from the `@opendata-ai/openchart-vanilla/graph-3d` subpath, which calls `registerGraphRenderer(3, factory)` as an import side effect (`packages/vanilla/src/graph/renderer-registry.ts`). The subpath exists so three.js, `3d-force-graph` and `three-spritetext` stay optional peers and never enter the default bundle. `createGraph()` deliberately does not dynamically import the renderer: mount is synchronous because every framework wrapper assumes it is, so a `dimensions: 3` spec mounted without the import throws with the import line in the message. The renderer is chosen once, at mount, so a dimension change is a wrapper remount rather than an `update()`.
+
 Graphs use a separate compilation function (`compileGraph`) rather than the chart registry. The chart registry handles the mark types that all share the same scale/axis/mark pipeline. Graphs have fundamentally different input (nodes + edges instead of rows + encoding) and output (simulation config instead of positioned marks), so they get their own path.
 
 ## Why headless

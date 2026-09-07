@@ -29,6 +29,18 @@ export { materializeCanvasModeSVG, VECTOR_EXPORT_MAX_POINTS } from './export-can
 export type { SpecSequenceOptions } from './export-sequence';
 export { exportSpecSequence } from './export-sequence';
 export type { CameraFlightOptions } from './graph/camera';
+// Graph renderer registry: the 3D subpath registers itself here on import.
+export type {
+  GraphRendererContext,
+  GraphRendererFactory,
+  GraphShell,
+} from './graph/renderer-registry';
+export {
+  GRAPH_3D_NOT_REGISTERED_ERROR,
+  getGraphRenderer,
+  registerGraphRenderer,
+} from './graph/renderer-registry';
+export { createGraphShell } from './graph/shell';
 // Graph simulation worker
 export { createSimulationWorker } from './graph/simulation-worker-url';
 export type {

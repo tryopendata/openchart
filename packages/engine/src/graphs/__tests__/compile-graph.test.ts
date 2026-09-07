@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { compileGraph } from '../compile-graph';
+import { MAX_3D_NODES } from '../types';
 
 // ---------------------------------------------------------------------------
 // Shared fixtures
@@ -463,6 +464,116 @@ describe('compileGraph', () => {
 
       expect(result.seedNodeIds).toEqual([]);
       expect(warnings.some((w) => w.includes('seedNode "nope"'))).toBe(true);
+    });
+  });
+
+  describe('dimensions', () => {
+    function warnCollector() {
+      const warnings: string[] = [];
+      return { warnings, options: { ...compileOptions, onWarn: (m: string) => warnings.push(m) } };
+    }
+
+    function bigSpec(nodeCount: number) {
+      return {
+        type: 'graph' as const,
+        nodes: Array.from({ length: nodeCount }, (_, i) => ({ id: `n${i}` })),
+        edges: [{ source: 'n0', target: 'n1' }],
+        dimensions: 3 as const,
+      };
+    }
+
+    it('defaults to 2 when omitted', () => {
+      expect(compileGraph(makeBasicGraphSpec(), compileOptions).numDimensions).toBe(2);
+    });
+
+    it('carries an explicit 2 and 3 through', () => {
+      expect(
+        compileGraph({ ...makeBasicGraphSpec(), dimensions: 2 }, compileOptions).numDimensions,
+      ).toBe(2);
+      expect(
+        compileGraph({ ...makeBasicGraphSpec(), dimensions: 3 }, compileOptions).numDimensions,
+      ).toBe(3);
+    });
+
+    it('throws for a value other than 2 or 3', () => {
+      expect(() =>
+        compileGraph({ ...makeBasicGraphSpec(), dimensions: 4 }, compileOptions),
+      ).toThrow(/graph "dimensions" must be 2 or 3/);
+      expect(() =>
+        compileGraph({ ...makeBasicGraphSpec(), dimensions: '3' }, compileOptions),
+      ).toThrow(/graph "dimensions" must be 2 or 3/);
+    });
+
+    it('falls back to 2D with a warning above MAX_3D_NODES', () => {
+      const { warnings, options } = warnCollector();
+      const result = compileGraph(bigSpec(MAX_3D_NODES + 1), options);
+
+      expect(result.numDimensions).toBe(2);
+      const warning = warnings.find((w) => w.includes('3000'));
+      expect(warning).toBeDefined();
+      expect(warning).toContain(String(MAX_3D_NODES + 1));
+    });
+
+    it('stays 3D at exactly MAX_3D_NODES', () => {
+      const { warnings, options } = warnCollector();
+      expect(compileGraph(bigSpec(MAX_3D_NODES), options).numDimensions).toBe(3);
+      expect(warnings.filter((w) => w.includes('3000'))).toEqual([]);
+    });
+
+    it('warns for cursorRepulsion and springyDrag in 3D', () => {
+      const { warnings, options } = warnCollector();
+      compileGraph(
+        {
+          ...makeBasicGraphSpec(),
+          dimensions: 3,
+          interaction: { cursorRepulsion: true, springyDrag: true },
+        },
+        options,
+      );
+
+      expect(warnings.some((w) => w.includes('cursorRepulsion'))).toBe(true);
+      expect(warnings.some((w) => w.includes('springyDrag'))).toBe(true);
+    });
+
+    // radial/hierarchical never reach the 3D gate: spec validation rejects any
+    // layout.type but 'force' first, in 2D and 3D alike.
+    it('rejects radial and hierarchical layouts before the 3D gate', () => {
+      for (const type of ['radial', 'hierarchical'] as const) {
+        expect(() =>
+          compileGraph(
+            { ...makeBasicGraphSpec(), dimensions: 3, layout: { type } },
+            compileOptions,
+          ),
+        ).toThrow(/layout.type/);
+      }
+    });
+
+    it('emits one warning covering every stroke/strokeWidth override in 3D', () => {
+      const { warnings, options } = warnCollector();
+      compileGraph(
+        {
+          ...makeBasicGraphSpec(),
+          dimensions: 3,
+          nodeOverrides: { a: { stroke: '#f00' }, b: { strokeWidth: 4 } },
+        },
+        options,
+      );
+
+      expect(warnings.filter((w) => w.includes('stroke'))).toHaveLength(1);
+    });
+
+    it('does not warn about unsupported options in 2D', () => {
+      const { warnings, options } = warnCollector();
+      compileGraph(
+        {
+          ...makeBasicGraphSpec(),
+          interaction: { cursorRepulsion: true, springyDrag: true },
+          nodeOverrides: { a: { stroke: '#f00' } },
+        },
+        options,
+      );
+
+      expect(warnings).toEqual([]);
     });
   });
 

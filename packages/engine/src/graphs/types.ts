@@ -132,4 +132,16 @@ export interface GraphCompilation {
   seedNodeIds: string[];
   /** Edge legend entries (nominal edgeColor with >1 category), or undefined. */
   edgeLegend?: LegendEntry[];
+  /**
+   * Resolved render dimensionality. `3` only when the spec asked for it AND the
+   * node count is within {@link MAX_3D_NODES}; otherwise `2`.
+   */
+  numDimensions: 2 | 3;
 }
+
+/**
+ * Node ceiling for 3D rendering. The 3D simulation runs on the main thread, so
+ * a spec above this falls back to 2D with a warning rather than freezing the
+ * page. Mirrors ENTRANCE_STAGGER_MAX_NODES in the vanilla renderer.
+ */
+export const MAX_3D_NODES = 3000;

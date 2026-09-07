@@ -43,6 +43,7 @@ import type {
   GraphCompilation,
   SimulationConfig,
 } from './types';
+import { MAX_3D_NODES } from './types';
 
 const graphNumberFormatter = defaultNumberFormatter({ allIntegers: false, surface: 'chart' });
 
@@ -327,6 +328,8 @@ export function compileGraph(spec: unknown, options: CompileOptions): GraphCompi
 
   const graphSpec = normalized as NormalizedGraphSpec;
 
+  const numDimensions = resolveNumDimensions(graphSpec, options.onWarn);
+
   // Warn (don't error) when `sort` is set on a quantitative color channel —
   // ordering a continuous domain is a no-op and usually a spec mistake.
   for (const [name, ch] of [
@@ -537,7 +540,59 @@ export function compileGraph(spec: unknown, options: CompileOptions): GraphCompi
     initialHighlight,
     seedNodeIds,
     edgeLegend,
+    numDimensions,
   };
+}
+
+/**
+ * Validate `dimensions` and apply the 3D gates.
+ *
+ * Anything other than 2, 3 or undefined is a spec error and throws. A valid
+ * `3` still resolves to 2 when the graph is larger than {@link MAX_3D_NODES}:
+ * the 3D simulation runs on the main thread, so a 10k-node graph would freeze
+ * the page. Options the 3D renderer cannot honour warn once each and are
+ * ignored (they are not errors: a host toggling 2D/3D on one spec should not
+ * have to strip them).
+ */
+function resolveNumDimensions(spec: NormalizedGraphSpec, onWarn: CompileOptions['onWarn']): 2 | 3 {
+  const requested = spec.dimensions;
+  if (requested !== undefined && requested !== 2 && requested !== 3) {
+    throw new Error(
+      `Spec error: graph "dimensions" must be 2 or 3, received ${JSON.stringify(requested)}.`,
+    );
+  }
+  if (requested !== 3) return 2;
+
+  if (spec.nodes.length > MAX_3D_NODES) {
+    onWarn?.(
+      `dimensions: 3 is unavailable for ${spec.nodes.length} nodes (the limit is ${MAX_3D_NODES}); rendering in 2D.`,
+    );
+    return 2;
+  }
+
+  if (spec.interaction?.cursorRepulsion) {
+    onWarn?.('interaction.cursorRepulsion is not supported in 3D; it will be ignored.');
+  }
+  if (spec.interaction?.springyDrag) {
+    onWarn?.('interaction.springyDrag is not supported in 3D; it will be ignored.');
+  }
+  // Spec validation currently rejects any layout.type other than 'force' before
+  // compilation reaches here, so this is dormant. It stays so that shipping
+  // radial/hierarchical in 2D can't silently imply 3D support.
+  const layoutType = spec.layout.type;
+  if (layoutType === 'radial' || layoutType === 'hierarchical') {
+    onWarn?.(
+      `layout.type: '${layoutType}' is not supported in 3D; a force layout is used instead.`,
+    );
+  }
+  const strokeOverrides = Object.values(spec.nodeOverrides ?? {}).some(
+    (o) => o?.stroke !== undefined || o?.strokeWidth !== undefined,
+  );
+  if (strokeOverrides) {
+    onWarn?.('nodeOverrides stroke/strokeWidth are not supported in 3D; they will be ignored.');
+  }
+
+  return 3;
 }
 
 /** Default padding for collision radius when there are no nodes. */

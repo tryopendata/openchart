@@ -126,7 +126,10 @@ export const Graph = defineComponent({
       return fn ? fn(item, defaults) : defaults;
     };
 
-    function mountGraph() {
+    // `playEntrance` is set only by the dimension remount: 2D and 3D are
+    // different renderers, so the new one should play its entrance instead of
+    // being suppressed the way a theme-only recreation is.
+    function mountGraph(playEntrance = false) {
       const container = containerRef.value;
       if (!container) return;
 
@@ -150,7 +153,7 @@ export const Graph = defineComponent({
         onHighlightChange: (nodeIds) => emit('highlight-change', nodeIds),
         onCameraChange: (camera) => emit('camera-change', camera),
         responsive: true,
-        suppressEntrance: mountedOnce,
+        suppressEntrance: mountedOnce && !playEntrance,
       };
 
       instance = createGraph(container, props.spec, options);
@@ -236,6 +239,19 @@ export const Graph = defineComponent({
     onUnmounted(() => {
       destroyGraph();
     });
+
+    // A dimension change picks a different renderer, and the renderer is chosen
+    // once, at mount — so it is a remount, not an update(). Registered before
+    // the spec watcher so the remount runs first; mountGraph refreshes prevSpec,
+    // and the spec watcher then finds nothing to apply.
+    watch(
+      () => props.spec.dimensions ?? 2,
+      () => {
+        if (!containerRef.value) return;
+        destroyGraph();
+        mountGraph(true);
+      },
+    );
 
     // Watch spec changes
     watch(

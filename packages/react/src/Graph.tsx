@@ -281,6 +281,10 @@ export const Graph = forwardRef<GraphHandle, GraphProps>(function Graph(
   // formatter (a function) is deliberately excluded — it rides the trampoline.
   const tooltipOn = tooltipStructural(tooltip);
   const legendKey = legendStructural(legend);
+  // 2D and 3D are different renderers chosen once, at mount, so a dimension
+  // change is a remount. It is deliberately NOT in `mountDeps`: the new
+  // renderer should play its entrance rather than suppress it.
+  const dimensions = spec.dimensions ?? 2;
 
   // Mount graph and recreate when theme/darkMode/structural options change.
   // Event handlers and the tooltip formatter use stable refs so they don't
@@ -351,6 +355,7 @@ export const Graph = forwardRef<GraphHandle, GraphProps>(function Graph(
     stableOnHighlightChange,
     stableOnCameraChange,
     stableTooltipFormatter,
+    dimensions,
   ]);
 
   // Update the graph when the spec changes. `update()` diffs prev↔next itself:

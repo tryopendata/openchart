@@ -3,7 +3,7 @@ import { copyFileSync, existsSync, mkdirSync } from 'fs';
 import { resolve, dirname } from 'path';
 
 export default defineConfig({
-  entry: ['src/index.ts'],
+  entry: ['src/index.ts', 'src/graph-3d.ts'],
   format: ['esm'],
   dts: true,
   sourcemap: true,
@@ -12,6 +12,7 @@ export default defineConfig({
     '@opendata-ai/openchart-core',
     '@opendata-ai/openchart-engine',
     '@opendata-ai/openchart-vanilla',
+    '@opendata-ai/openchart-vanilla/graph-3d',
     'react',
     'react-dom',
     'react/jsx-runtime',

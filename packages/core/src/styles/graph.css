@@ -23,6 +23,27 @@
     cursor: grabbing;
   }
 
+  /* 3D surface. 3d-force-graph builds its own `div.scene-container` inside the
+   * element it is handed and sizes the WebGL canvas imperatively, so the slot
+   * has to fill the same box the 2D canvas fills or the first measurement is
+   * zero-height. */
+  .oc-graph-3d,
+  .oc-graph-3d .scene-container {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .oc-graph-3d {
+    cursor: grab;
+  }
+
+  .oc-graph-3d .scene-container canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
   .oc-graph-chrome {
     position: absolute;
     top: 0;
