@@ -66,8 +66,10 @@ npm install three 3d-force-graph three-spritetext
 ```
 
 The subpath registers the renderer as an import side effect, so it has to be
-imported before the graph mounts. Vue and Svelte hosts import
-`@opendata-ai/openchart-vanilla/graph-3d` instead; everything else is identical.
+imported before the graph mounts. Every framework package ships its own mirror
+of it (`@opendata-ai/openchart-vue/graph-3d`,
+`@opendata-ai/openchart-svelte/graph-3d`), so you never reach past the package
+you depend on; everything else is identical.
 
 ```tsx
 import { Graph } from '@opendata-ai/openchart-react';
@@ -100,9 +102,15 @@ Differences from 2D:
   out instead of being decluttered by priority.
 - The force simulation runs on the main thread. Above 2000 nodes the spec warns
   and renders in 2D.
-- Keyboard navigation, SVG export, `interaction.cursorRepulsion`,
-  `interaction.springyDrag`, and `layout.type` of `radial`/`hierarchical` are
-  unsupported. Each warns and is ignored.
+- Keyboard navigation, SVG export, `interaction.cursorRepulsion`, and
+  `interaction.springyDrag` are unsupported. Each warns and is ignored.
+  (`layout.type` of `radial` or `hierarchical` is rejected by spec validation in
+  both dimensions, so it never reaches either renderer.)
+- `getCamera()` returns a pose, not a zoom transform: `x`/`y` are the look-at
+  point in world units, alongside `position` and `target`. In 2D they are the
+  zoom transform's translate in pixels. `onCameraChange` carries the same
+  payload, so persisted camera state has to be keyed on the dimension it came
+  from.
 - A structural `update()` reheats the whole layout, so settled nodes drift. 2D
   applies a local impulse instead.
 - `nodeOverrides[*].stroke` and `strokeWidth` are ignored (no ring).

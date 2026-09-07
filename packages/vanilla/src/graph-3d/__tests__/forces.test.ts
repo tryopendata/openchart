@@ -108,6 +108,20 @@ describe('applySimulationConfig', () => {
     expect(fake.forces.get('cluster')).toBeNull();
   });
 
+  it('removes the library default center force when the spec turns it off', () => {
+    const fake = new FakeForceGraph3D(document.createElement('div'));
+    applySimulationConfig(fake as unknown as Graph3D, { ...config, centerForce: false }, 40);
+    expect(fake.forces.get('center')).toBeNull();
+  });
+
+  it('leaves the center force in place when the spec did not turn it off', () => {
+    const fake = new FakeForceGraph3D(document.createElement('div'));
+    applySimulationConfig(fake as unknown as Graph3D, config, 40);
+    expect(fake.forces.get('center')).not.toBeNull();
+    applySimulationConfig(fake as unknown as Graph3D, { ...config, centerForce: true }, 40);
+    expect(fake.forces.get('center')).not.toBeNull();
+  });
+
   it('sizes collision from the node radius plus the compiled padding', () => {
     const fake = new FakeForceGraph3D(document.createElement('div'));
     applySimulationConfig(fake as unknown as Graph3D, config, 40);

@@ -37,6 +37,10 @@ import {
   type FocusSnapshot,
   layerHoverFocus,
 } from '../graph/focus-transition';
+import {
+  categoryHighlightSet as categoryHighlightIds,
+  resolveHighlightTarget as resolveHighlightTargetIds,
+} from '../graph/highlight';
 import { createGraphLegend, type GraphLegendController } from '../graph/legend';
 import { createTween, linear, prefersReducedMotion, resolveEase } from '../graph/motion';
 import type { GraphRendererContext } from '../graph/renderer-registry';
@@ -59,10 +63,12 @@ import { computeFit, normalize } from './fit';
 import { applySimulationConfig } from './forces';
 import { LABEL_BUDGET_3D, type LabelBox, labelBox, overlaps, resolveVisibleLabels } from './labels';
 import {
+  applyLinkVisuals,
   createLinkObject,
   disposeLinkObject,
   LINK_WIDTH_MAX_EDGES,
   type LinkObject3D,
+  linkShapeMatches,
   updateLinkPosition,
   widthAsAlpha,
 } from './links';
@@ -261,6 +267,13 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
   // -- Tooltip state -------------------------------------------------------
 
   let openTooltip: { kind: 'node'; id: string } | { kind: 'edge'; index: number } | null = null;
+  /**
+   * The target whose content is currently rendered into the tooltip element.
+   * `anchorTooltip()` runs on every engine tick and every camera change, so
+   * re-running the host formatter and rewriting the DOM each time would be a
+   * per-frame cost for content that only changes when the target does.
+   */
+  let renderedTooltip: string | null = null;
 
   // =========================================================================
   // Derived-data builders
@@ -371,6 +384,13 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
     return obj;
   }
 
+  /**
+   * Same identity contract as {@link nodeObjectFor}: whenever the link datums
+   * are rebuilt, `linkObjects` must be cleared first, so the digest never hands
+   * a cached object to a new datum while the old datum's remove hook is still
+   * pending on it. The structural `update()` clears the map for exactly this
+   * reason (the edge renumbering makes it necessary anyway).
+   */
   function linkObjectFor(datum: Link3D): LinkObject3D {
     let obj = linkObjects.get(datum.edgeIndex);
     if (!obj) {
@@ -509,31 +529,11 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
   // =========================================================================
 
   function resolveHighlightTarget(target: GraphHighlightTarget): Set<string> {
-    if ('nodeIds' in target) return new Set(target.nodeIds);
-    if ('neighborsOf' in target) {
-      const set = new Set<string>();
-      if (target.includeSelf !== false) set.add(target.neighborsOf);
-      const neighbors = adjacency.get(target.neighborsOf);
-      if (neighbors) for (const nid of neighbors) set.add(nid);
-      return set;
-    }
-    const values = new Set(
-      Array.isArray(target.category.value) ? target.category.value : [target.category.value],
-    );
-    const field = target.category.field;
-    const set = new Set<string>();
-    for (const n of compilation.nodes) {
-      const v = n.data?.[field];
-      if (v != null && values.has(String(v))) set.add(n.id);
-    }
-    return set;
+    return resolveHighlightTargetIds(target, compilation.nodes, adjacency);
   }
 
   function categoryHighlightSet(): Set<string> | null {
-    if (activeCategories.size === 0) return null;
-    const set = new Set<string>();
-    for (const [id, cat] of nodeCategory) if (activeCategories.has(cat)) set.add(id);
-    return set;
+    return categoryHighlightIds(activeCategories, nodeCategory);
   }
 
   function recomputeHighlight(): void {
@@ -835,11 +835,17 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
     else tm.show(result, x, y);
   }
 
-  /** (Re)position and (re)render whatever tooltip is currently open. */
+  /**
+   * Re-anchor whatever tooltip is open, rendering its content only when the
+   * open target has changed since the last render. Everything else is a
+   * reposition, which is what the tick and orbit paths actually need.
+   */
   function anchorTooltip(): void {
     const tm = shell.tooltipManager;
     if (!tm || openTooltip === null) return;
     const formatter = tooltipFormatter();
+    const key =
+      openTooltip.kind === 'node' ? `node:${openTooltip.id}` : `edge:${openTooltip.index}`;
 
     if (openTooltip.kind === 'node') {
       const id = openTooltip.id;
@@ -848,6 +854,11 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
       if (!datum || !defaults) return;
       const at = toWrapperXY({ x: datum.x ?? 0, y: datum.y ?? 0, z: datum.z ?? 0 });
       if (!at) return;
+      if (key === renderedTooltip) {
+        tm.move(at.x, at.y);
+        return;
+      }
+      renderedTooltip = key;
       if (!formatter) {
         tm.show(defaults, at.x, at.y);
         return;
@@ -866,6 +877,11 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
     const b = endpointPos(link.target);
     const at = toWrapperXY({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, z: (a.z + b.z) / 2 });
     if (!at) return;
+    if (key === renderedTooltip) {
+      tm.move(at.x, at.y);
+      return;
+    }
+    renderedTooltip = key;
     const defaults = buildEdgeTooltip(link.edge);
     if (!formatter) {
       tm.show(defaults, at.x, at.y);
@@ -888,6 +904,7 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
 
   function hideTooltip(): void {
     openTooltip = null;
+    renderedTooltip = null;
     shell.tooltipManager?.hide();
   }
 
@@ -1175,8 +1192,9 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
    *
    * `diffGraphUpdate` classifies the change exactly as in 2D. A visual-only
    * change mutates materials and geometry in place and never touches
-   * `graphData()`. A structural change carries `x/y/z` and `vx/vy/vz` across by
-   * id, spawns z for entering nodes from the seeded stream, and then calls
+   * `graphData()`. A structural change reuses the surviving node datums (so
+   * their positions, velocities AND their scene-object bindings all carry
+   * over), spawns z for entering nodes from the seeded stream, and then calls
    * `graphData()`.
    *
    * 3D difference: `graphData()` reheats the layout globally (alpha 1). 2D
@@ -1202,19 +1220,19 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
       y: d.y ?? 0,
       index,
     }));
-    const prevZ = new Map(nodeData.map((d) => [d.id, d.z ?? 0]));
-    const prevV = new Map(
-      nodeData.map((d) => [d.id, { vx: d.vx ?? 0, vy: d.vy ?? 0, vz: d.vz ?? 0 }]),
-    );
     const prevEdges: PositionedEdge[] = compilation.edges.map((edge) => {
       const a = endpointPos(edge.source);
       const b = endpointPos(edge.target);
       return { ...edge, sourceX: a.x, sourceY: a.y, targetX: b.x, targetY: b.y };
     });
     const prevConfig = compilation.simulationConfig;
+    const prevUseLinkWidth = useLinkWidth;
 
     currentSpec = newSpec;
     compilation = next;
+    // The compiled descriptors behind an open tooltip may have changed, so the
+    // next anchor must re-render rather than take the reposition fast path.
+    renderedTooltip = null;
 
     const diff = diffGraphUpdate(
       prevNodes,
@@ -1231,7 +1249,15 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
     recomputeHighlight();
     reRunSearch();
 
-    if (diff.visualOnly) {
+    // An `edgeWidth` encoding appearing or disappearing swaps every link
+    // between a cylinder mesh and a line. The scene binds objects to datums by
+    // identity, so a replacement object would never reach the scene: that one
+    // change has to go through `graphData()` even though the ids are unchanged.
+    const shapeClassChanged = (): boolean =>
+      useLinkWidth !== prevUseLinkWidth ||
+      [...linkObjects.values()].some((obj) => !linkShapeMatches(obj, useLinkWidth));
+
+    if (diff.visualOnly && !shapeClassChanged()) {
       // Same ids in the same order, so the datum's compiled node/edge can be
       // swapped under the existing scene objects with no layout restart.
       for (let i = 0; i < compilation.nodes.length; i++) {
@@ -1243,7 +1269,10 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
       for (let i = 0; i < compilation.edges.length; i++) {
         const edge = compilation.edges[i];
         linkData[i].edge = edge;
-        linkObjects.get(i)?.material.color.set(edge.stroke);
+        const obj = linkObjects.get(i);
+        // Width, dash pattern and color all move here: color alone would leave
+        // a cylinder at its old radius and a line at its old dash geometry.
+        if (obj) applyLinkVisuals(obj, edge, useLinkWidth);
       }
       pruneInteractionState();
       armEmphasis();
@@ -1269,20 +1298,25 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
     displayEdgeAlpha.clear();
     entranceEdgeAlpha.clear();
 
+    // Survivors keep their EXISTING datum OBJECT, mutated in place.
+    //
+    // This is not a micro-optimisation, it is the only correct thing to do.
+    // `graphData()` runs a `DataBindMapper` digest whose id accessor is
+    // identity (`d => d`); three-forcegraph never sets one, and `graphData()`
+    // does not clear the node mapper. Handing the digest a fresh literal for a
+    // node whose cached group `nodeThreeObject` still returns therefore binds
+    // that group to the NEW datum, and then the OLD datum -- absent from the
+    // new set -- runs the remove hook on the SAME group: `scene.remove`,
+    // `_deallocate`, and the binding deleted. Every survivor silently leaves
+    // the scene and the tick loop. Reusing the datum keeps the binding, and it
+    // already carries the x/y/z and vx/vy/vz that used to be copied out into
+    // carry-over maps.
+    const survivors = new Map(nodeById);
     nodeData = compilation.nodes.map((node) => {
-      const survivor = diff.survivingPositions.get(node.id);
-      if (survivor) {
-        const v = prevV.get(node.id);
-        return {
-          id: node.id,
-          node,
-          x: survivor.x,
-          y: survivor.y,
-          z: prevZ.get(node.id) ?? 0,
-          vx: v?.vx ?? 0,
-          vy: v?.vy ?? 0,
-          vz: v?.vz ?? 0,
-        };
+      const existing = survivors.get(node.id);
+      if (existing) {
+        existing.node = node;
+        return existing;
       }
       const spawn = diff.spawnPositions.get(node.id) ?? { x: 0, y: 0 };
       return {

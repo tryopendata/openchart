@@ -151,6 +151,10 @@ export function applySimulationConfig(
 
   graph.d3Force('cluster', config.clustering ? forceCluster3D(config.clustering.strength) : null);
 
+  // 3d-force-graph installs a `center` force of its own, so honouring
+  // `centerForce: false` means removing it rather than declining to add it.
+  if (config.centerForce === false) graph.d3Force('center', null);
+
   graph.d3VelocityDecay(config.velocityDecay);
   graph.d3AlphaDecay(config.alphaDecay);
   graph.warmupTicks(budgetedWarmupTicks(config.warmupTicks ?? 0, nodeCount, config.warmupBudgetMs));

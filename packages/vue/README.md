@@ -61,6 +61,41 @@ const props = defineProps<{ spec: VizSpec }>();
 
 If you need event handlers or component-specific props, use the specific component directly instead.
 
+## 3D graphs
+
+`dimensions: 3` on a graph spec renders with WebGL instead of canvas. The 3D
+renderer ships on its own subpath so three.js never lands in the default bundle,
+and its libraries are optional peers you install yourself:
+
+```bash
+npm install three 3d-force-graph three-spritetext
+```
+
+The subpath registers the renderer as an import side effect, so it has to be
+imported before the graph mounts. Import this package's own subpath rather than
+reaching past it into vanilla:
+
+```vue
+<script setup lang="ts">
+import { Graph } from '@opendata-ai/openchart-vue';
+import { onMounted, ref } from 'vue';
+
+const ready = ref(false);
+// Client-side only: 3d-force-graph touches `window` at import time.
+onMounted(async () => {
+  await import('@opendata-ai/openchart-vue/graph-3d');
+  ready.value = true;
+});
+</script>
+
+<template>
+  <Graph v-if="ready" :spec="{ ...spec, dimensions: 3 }" />
+</template>
+```
+
+Mounting a `dimensions: 3` spec without that import throws. See the
+[vanilla README](../vanilla/README.md#3d-graphs) for how 3D differs from 2D.
+
 ## Dark mode and theming
 
 Wrap components with `VizThemeProvider` to set theme and dark mode for all child visualizations. It uses Vue's `provide`/`inject` under the hood, so all `Chart`, `DataTable`, and `Graph` components inside the provider inherit its values.

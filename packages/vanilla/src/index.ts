@@ -35,12 +35,21 @@ export type {
   GraphRendererFactory,
   GraphShell,
 } from './graph/renderer-registry';
+/**
+ * `registerGraphRenderer` is the extension point: call it with a
+ * `GraphRendererFactory` to supply your own renderer for a dimension count, the
+ * way the `@opendata-ai/openchart-vanilla/graph-3d` subpath registers the WebGL
+ * one on import. `createGraph()` looks the factory up at mount time and throws
+ * `GRAPH_3D_NOT_REGISTERED_ERROR` when a `dimensions: 3` spec finds none.
+ *
+ * The lookup itself (`getGraphRenderer`) and the shell builder
+ * (`createGraphShell`) stay internal: they are the mount path's own plumbing,
+ * not surface a host is meant to drive.
+ */
 export {
   GRAPH_3D_NOT_REGISTERED_ERROR,
-  getGraphRenderer,
   registerGraphRenderer,
 } from './graph/renderer-registry';
-export { createGraphShell } from './graph/shell';
 // Graph simulation worker
 export { createSimulationWorker } from './graph/simulation-worker-url';
 export type {

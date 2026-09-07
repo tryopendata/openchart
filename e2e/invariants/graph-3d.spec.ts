@@ -110,6 +110,11 @@ test('a graph one node over the gate renders in 2D', async ({ page }) => {
 });
 
 test('toggling dimensions remounts once and releases the WebGL context', async ({ page }) => {
+  // The gallery loads the 3D subpath with a dynamic import, so on a cold dev
+  // server the first click pays for transforming the three.js chunk. That can
+  // exceed the default 30s budget on its own and leave nothing for the second
+  // toggle; the individual waits below are already generous.
+  test.slow();
   await instrumentContextLoss(page, 'toggle-2d-3d');
   await page.goto(STORY);
   await openDemo(page, 'toggle-2d-3d', '.oc-graph-wrapper');

@@ -31,6 +31,14 @@ export type TooltipInput = TooltipContent | { text: string } | { element: HTMLEl
 export interface TooltipManager {
   /** Show the tooltip with content at a given position. */
   show(content: TooltipInput, x: number, y: number, opts?: TooltipShowOptions): void;
+  /**
+   * Re-anchor the open tooltip without re-rendering its content.
+   *
+   * The 3D graph re-anchors on every engine tick and every camera change, and
+   * `show()` would re-run the host formatter and rewrite the DOM at frame rate
+   * for content that has not changed.
+   */
+  move(x: number, y: number, opts?: TooltipShowOptions): void;
   /** Hide the tooltip. */
   hide(): void;
   /** Remove the tooltip element and clean up event listeners. */
@@ -186,6 +194,11 @@ export function createTooltipManager(container: HTMLElement): TooltipManager {
     });
   }
 
+  /** Re-anchor the tooltip at a new coordinate, leaving its content alone. */
+  function move(x: number, y: number, opts?: TooltipShowOptions): void {
+    position(x, y, opts);
+  }
+
   function hide(): void {
     tooltip.style.display = 'none';
     lastContentKey = '';
@@ -199,7 +212,7 @@ export function createTooltipManager(container: HTMLElement): TooltipManager {
     }
   }
 
-  return { show, hide, destroy };
+  return { show, move, hide, destroy };
 }
 
 function esc(str: string): string {
