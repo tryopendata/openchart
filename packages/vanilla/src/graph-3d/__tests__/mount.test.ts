@@ -675,6 +675,21 @@ describe('tooltips', () => {
     expect((container.querySelector('.oc-tooltip') as HTMLElement).textContent).toBe('Beta');
   });
 
+  it('closes the tooltip for good when the formatter suppresses an item', () => {
+    const formatter = vi.fn(() => null);
+    const { fake, container } = mount(spec(), { tooltip: { formatter } });
+    (fake.handlers.onNodeHover as (n: Node3D | null) => void)(nodeDatum(fake, 'a'));
+
+    // A suppressed item must clear the open-tooltip bookkeeping too: with it
+    // left set, the tick path takes the reposition fast path and `move()`
+    // would put the element back on screen.
+    const tick = fake.handlers.onEngineTick as () => void;
+    for (let i = 0; i < 5; i++) tick();
+
+    expect(formatter).toHaveBeenCalledTimes(1);
+    expect((container.querySelector('.oc-tooltip') as HTMLElement).style.display).toBe('none');
+  });
+
   it('creates no tooltip manager when tooltip is false', () => {
     const { container } = mount(spec(), { tooltip: false });
     expect(container.querySelector('.oc-tooltip')).toBeNull();
@@ -747,11 +762,41 @@ describe('update', () => {
     // the remove hook for the old one on that same group, taking the survivor
     // out of the scene and out of the position tick loop.
     const datum = nodeDatum(fake, 'a') as unknown as Record<string, unknown>;
-    expect(fake.nodeBinding.get(datum)).toBe(groupBefore);
     expect(datum.__threeObj).toBe(groupBefore);
     expect(fake.scene().children).toContain(groupBefore);
     expect(fake.removedFromScene.has(groupBefore)).toBe(false);
     expect(fake.deallocated).not.toContain(groupBefore);
+  });
+
+  it('repaints a survivor whose compiled visuals changed in a structural update', () => {
+    const { instance, fake } = mount();
+    const material = nodeMaterial(fake, 'a') as unknown as { color: { value: string } };
+    const group = nodeGroup(fake, 'a');
+    const geometry = () =>
+      (group.children[0] as unknown as { geometry: { parameters: { radius: number } } }).geometry
+        .parameters.radius;
+    const colorBefore = material.color.value;
+    const radiusBefore = geometry();
+
+    // 'a' survives but changes category and size, and 'd' enters, so the
+    // change is structural: the cached group has to be repainted rather than
+    // left on the old compiled node's fill and radius.
+    instance.update(
+      spec({
+        nodes: [
+          { id: 'a', label: 'Alpha', kind: 'dataset', weight: 0.15, rel: 1 },
+          ...NODES.slice(1),
+          { id: 'd', label: 'Delta', kind: 'lab', weight: 0.4, rel: 1 },
+        ],
+      }),
+    );
+    fake.flush();
+
+    const datum = nodeDatum(fake, 'a');
+    expect(material.color.value).not.toBe(colorBefore);
+    expect(geometry()).not.toBe(radiusBefore);
+    expect(material.color.value).toBe(datum.node.fill);
+    expect(geometry()).toBe(datum.node.radius);
   });
 
   it('deallocates the scene object of a node that left', () => {
@@ -821,17 +866,36 @@ describe('update', () => {
     expect(radius(0)).toBeLessThan(radius(1));
   });
 
-  it('rebuilds link objects through graphData when the shape class flips', () => {
+  it('rebuilds link objects without reheating when the shape class flips', () => {
     const { instance, fake } = mount();
     // edgeWidth encoded -> cylinders.
     expect(linkObject(fake, 0).type).toBe('Mesh');
+    const dataBefore = fake.graph;
+    const callsBefore = fake.graphDataCalls;
 
-    instance.update(spec({ encoding: { nodeColor: { field: 'kind', type: 'nominal' } } }));
+    // Drop `edgeWidth` and nothing else: node sizing has to stay, or the
+    // compiled collision radius changes and the update is a physics change
+    // that legitimately reheats.
+    instance.update(
+      spec({
+        encoding: {
+          nodeColor: { field: 'kind', type: 'nominal' },
+          nodeSize: { field: 'weight', type: 'quantitative' },
+          nodeOpacity: { field: 'rel', type: 'quantitative' },
+          nodeLabel: { field: 'label' },
+        },
+      }),
+    );
     fake.flush();
 
-    // A line cannot be a mesh in place, so the change has to go through the
-    // digest rather than the visual-only fast path.
+    // A line cannot be a mesh in place, so the objects have to be rebuilt --
+    // but re-setting `linkThreeObject` is enough for that, and `graphData()`
+    // would restart the layout at alpha 1 for a purely visual change.
     expect(linkObject(fake, 0).type).toBe('Line');
+    expect(fake.graphDataCalls).toBe(callsBefore);
+    expect(fake.graph).toBe(dataBefore);
+    // Lines are a thinner hit target than a cylinder.
+    expect(fake.props.linkHoverPrecision).toBe(8);
   });
 
   it('re-runs an active search against the new nodes', () => {
@@ -855,17 +919,12 @@ describe('webgl context loss', () => {
     expect(event.defaultPrevented).toBe(true);
   });
 
-  it('rebuilds every scene object when the context comes back', () => {
+  it('leaves the restore to three, without a refresh', () => {
     const { fake } = mount();
-    expect(fake.refreshCount).toBe(0);
     fake.canvas.dispatchEvent(new Event('webglcontextrestored'));
-    expect(fake.refreshCount).toBe(1);
-  });
-
-  it('does not rebuild after destroy', () => {
-    const { instance, fake } = mount();
-    instance.destroy();
-    fake.canvas.dispatchEvent(new Event('webglcontextrestored'));
+    // three's own `onContextRestore` reallocates the GL resources for every
+    // object already in the scene. `refresh()` would tear the scene down and
+    // re-add it, and resume the engine for a spurious tick.
     expect(fake.refreshCount).toBe(0);
   });
 });

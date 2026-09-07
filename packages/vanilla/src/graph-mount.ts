@@ -53,7 +53,12 @@ import { seedNodePositions } from './graph/seed';
 import { createGraphShell, getContainerDimensions as measureContainer } from './graph/shell';
 import { SimulationManager } from './graph/simulation';
 import { SpatialIndex } from './graph/spatial-index';
-import type { GraphRenderState, PositionedEdge, PositionedNode } from './graph/types';
+import type {
+  GraphHighlightTarget,
+  GraphRenderState,
+  PositionedEdge,
+  PositionedNode,
+} from './graph/types';
 import { diffGraphUpdate } from './graph/update-diff';
 import type { SimEdge, SimNode } from './graph/worker-protocol';
 import { ZoomTransform } from './graph/zoom';
@@ -64,14 +69,9 @@ import type { TooltipManager } from './tooltip';
 // Types
 // ---------------------------------------------------------------------------
 
-/**
- * A programmatic highlight target. Resolved once at call time into a node id set
- * and rendered through the focus model (eased crossfade). See {@link GraphInstance.highlight}.
- */
-export type GraphHighlightTarget =
-  | { nodeIds: string[] }
-  | { category: { field: string; value: string | string[] } }
-  | { neighborsOf: string; includeSelf?: boolean };
+// Defined in `graph/types` (see the note there) and re-exported here so the
+// public surface stays exactly where consumers already import it from.
+export type { GraphHighlightTarget } from './graph/types';
 
 /** A hovered node or edge, passed to a tooltip formatter. */
 export interface GraphTooltipItem {

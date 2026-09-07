@@ -8,7 +8,7 @@
  * twice and drifting.
  */
 
-import type { GraphHighlightTarget } from '../graph-mount';
+import type { GraphHighlightTarget } from './types';
 
 /** The compiled-node fields the resolution actually reads. */
 export interface HighlightNode {

@@ -196,6 +196,10 @@ export function createTooltipManager(container: HTMLElement): TooltipManager {
 
   /** Re-anchor the tooltip at a new coordinate, leaving its content alone. */
   function move(x: number, y: number, opts?: TooltipShowOptions): void {
+    // `position()` unhides the element, so moving a hidden tooltip would put
+    // whatever content was last rendered back on screen. A move only ever
+    // re-anchors something already visible.
+    if (tooltip.style.display !== 'block') return;
     position(x, y, opts);
   }
 
