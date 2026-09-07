@@ -101,6 +101,13 @@ beforeEach(() => {
   document.body.replaceChildren();
 });
 
+// Spies (matchMedia, for the reduced-motion cases) are restored here rather
+// than inline, so an assertion that throws mid-test cannot leak one into the
+// next.
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 // ---------------------------------------------------------------------------
 
 describe('construction', () => {
@@ -347,15 +354,12 @@ describe('camera', () => {
   });
 
   it('snaps camera flights under reduced motion', () => {
-    const matchMedia = vi
-      .spyOn(window, 'matchMedia')
-      .mockReturnValue({ matches: true } as MediaQueryList);
+    vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: true } as MediaQueryList);
     const { instance, fake } = mount(
       spec({ animation: { camera: { duration: 900 } } } as Partial<GraphSpec>),
     );
     instance.zoomToNode('a');
     expect(fake.cameraPositionCalls[fake.cameraPositionCalls.length - 1].ms).toBe(0);
-    matchMedia.mockRestore();
   });
 
   it('centerAt keeps the current zoom and recentres', () => {
@@ -408,15 +412,12 @@ describe('emphasis and hover', () => {
   });
 
   it('snaps the hover crossfade under reduced motion instead of tweening it', () => {
-    const matchMedia = vi
-      .spyOn(window, 'matchMedia')
-      .mockReturnValue({ matches: true } as MediaQueryList);
+    vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: true } as MediaQueryList);
     // A hover choreography IS configured; reduced motion is what collapses it.
     const { fake } = mount(spec({ animation: { hover: { duration: 400 } } } as Partial<GraphSpec>));
     (fake.handlers.onNodeHover as (n: Node3D | null) => void)(nodeDatum(fake, 'a'));
     // No frame has been pumped, so a tweened value would still be at its start.
     expect(nodeMaterial(fake, 'c').opacity).toBeCloseTo(0.3 * nodeDatum(fake, 'c').node.opacity);
-    matchMedia.mockRestore();
   });
 
   it('reports highlight changes through onHighlightChange', () => {
@@ -590,6 +591,48 @@ describe('labels', () => {
     expect(withSprite.length).toBeLessThan(many.length);
   });
 
+  // Unlabelled nodes used to be ranked alongside labelled ones, so a graph
+  // where most nodes have no label spent the whole budget on nodes that could
+  // never draw anything and the few real labels dropped out.
+  it('never spends label budget on nodes with no compiled label', () => {
+    const LABELLED = 5;
+    const nodes = Array.from({ length: 50 }, (_, i) => ({
+      id: `n${i}`,
+      // Only the last few carry a label; the rest outrank them on priority, so
+      // under the old ranking they would fill all 40 slots first.
+      ...(i >= 50 - LABELLED ? { label: `Node ${i}` } : {}),
+      prio: i >= 50 - LABELLED ? 0 : 1,
+      kind: 'lab',
+      weight: 1,
+      rel: 1,
+    }));
+    const { fake } = mount(
+      spec({
+        nodes,
+        edges: [{ source: 'n0', target: 'n1', confidence: 1 }],
+        encoding: {
+          nodeColor: { field: 'kind', type: 'nominal' },
+          nodeLabel: { field: 'label' },
+          nodeLabelPriority: { field: 'prio', type: 'quantitative' },
+        },
+      } as Partial<GraphSpec>),
+    );
+    // Spread the cloud so the screen-space declutter never fires.
+    (fake.graph.nodes as unknown as Node3D[]).forEach((n, i) => {
+      n.x = i * 1000;
+      n.y = 0;
+      n.z = 0;
+    });
+    (fake.handlers.onEngineTick as () => void)();
+
+    const labelledIds = nodes.filter((n) => n.label).map((n) => n.id);
+    expect(labelledIds).toHaveLength(LABELLED);
+    for (const id of labelledIds) {
+      const sprite = nodeGroup(fake, id).children[1] as unknown as { visible: boolean } | undefined;
+      expect(sprite?.visible, `${id} label should be visible`).toBe(true);
+    }
+  });
+
   it('shows the hovered node label even when the budget is full', () => {
     const { fake } = mount();
     (fake.handlers.onNodeHover as (n: Node3D | null) => void)(nodeDatum(fake, 'b'));
@@ -724,6 +767,24 @@ describe('update', () => {
     const entered = nodeDatum(fake, 'd');
     expect(entered.z).not.toBe(0);
     expect(Number.isFinite(entered.z)).toBe(true);
+  });
+
+  // Edge indices are renumbered by every structural update, so an active edge
+  // hover always drops. A host that opened something on hover needs the close.
+  it('emits onEdgeHover(null) when an update drops the hovered edge', () => {
+    const onEdgeHover = vi.fn();
+    const { instance, fake } = mount(spec(), { onEdgeHover });
+    (fake.handlers.onLinkHover as (l: Link3D | null) => void)(
+      fake.graph.links[0] as unknown as Link3D,
+    );
+    expect(onEdgeHover).toHaveBeenCalledWith(expect.anything());
+    onEdgeHover.mockClear();
+
+    instance.update(
+      spec({ nodes: [...NODES, { id: 'd', label: 'Delta', kind: 'lab', weight: 0.4, rel: 1 }] }),
+    );
+
+    expect(onEdgeHover).toHaveBeenCalledWith(null);
   });
 
   it('never touches graphData for a visual-only change', () => {
@@ -1099,15 +1160,12 @@ describe('entrance', () => {
   });
 
   it('snaps to full opacity and scale under reduced motion', () => {
-    const matchMedia = vi
-      .spyOn(window, 'matchMedia')
-      .mockReturnValue({ matches: true } as MediaQueryList);
+    vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: true } as MediaQueryList);
     const { fake } = mount(enterSpec());
     for (const id of ['a', 'b', 'c']) {
       expect(nodeMaterial(fake, id).opacity).toBeCloseTo(1);
       expect(nodeScale(fake, id)).toBe(1);
     }
-    matchMedia.mockRestore();
   });
 
   it('snaps when suppressEntrance is set', () => {

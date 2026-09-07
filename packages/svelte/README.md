@@ -91,7 +91,8 @@ onMount(async () => {
 {/if}
 ```
 
-Mounting a `dimensions: 3` spec without that import throws. See the
+The subpath import is required only when compilation actually resolves to 3D: a
+spec above the 2000-node gate falls back to 2D and renders without it. See the
 [vanilla README](../vanilla/README.md#3d-graphs) for how 3D differs from 2D.
 
 ## Dark mode and theming

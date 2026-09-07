@@ -89,7 +89,19 @@ export function computeFit(points: FitPoint[], view: FitView): FitResult | null 
     if (p.y > maxY) maxY = p.y;
     if (p.z > maxZ) maxZ = p.z;
   }
-  if (!Number.isFinite(minX)) return null;
+  // All six extents, not just minX: an empty cloud leaves every one at its
+  // sentinel, but a single NaN or Infinity coordinate poisons only the extents
+  // it touches, and any one of them would carry through into center/distance.
+  if (
+    !Number.isFinite(minX) ||
+    !Number.isFinite(minY) ||
+    !Number.isFinite(minZ) ||
+    !Number.isFinite(maxX) ||
+    !Number.isFinite(maxY) ||
+    !Number.isFinite(maxZ)
+  ) {
+    return null;
+  }
 
   const center = { x: (minX + maxX) / 2, y: (minY + maxY) / 2, z: (minZ + maxZ) / 2 };
   // Keep the viewing angle the viewer already chose; only the distance moves.

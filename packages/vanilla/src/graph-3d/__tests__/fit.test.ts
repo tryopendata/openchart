@@ -18,6 +18,22 @@ describe('computeFit', () => {
     expect(computeFit([], view)).toBeNull();
   });
 
+  // A simulation that diverges hands back Infinity/NaN coordinates. Only minX
+  // used to be checked, so a blow-up on any other axis produced a fit whose
+  // center or distance was non-finite and moved the camera nowhere useful.
+  it.each([
+    ['x', { x: Number.POSITIVE_INFINITY, y: 0, z: 0 }],
+    ['y', { x: 0, y: Number.POSITIVE_INFINITY, z: 0 }],
+    ['z', { x: 0, y: 0, z: Number.NEGATIVE_INFINITY }],
+  ])('returns null when %s is non-finite', (_axis, bad) => {
+    expect(computeFit([{ ...bad, radius: 0 }, ...pts([0, 0, 0], [10, 10, 10])], view)).toBeNull();
+  });
+
+  it('returns null for an all-NaN cloud', () => {
+    const nan = Number.NaN;
+    expect(computeFit([{ x: nan, y: nan, z: nan, radius: 0 }], view)).toBeNull();
+  });
+
   it('centres on the cloud, not the world origin', () => {
     const fit = computeFit(pts([100, 100, 0], [300, 300, 0]), view);
     expect(fit?.center).toEqual({ x: 200, y: 200, z: 0 });

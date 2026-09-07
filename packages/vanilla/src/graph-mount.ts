@@ -54,6 +54,8 @@ import { createGraphShell, getContainerDimensions as measureContainer } from './
 import { SimulationManager } from './graph/simulation';
 import { SpatialIndex } from './graph/spatial-index';
 import type {
+  GraphCamera,
+  GraphFlyTarget,
   GraphHighlightTarget,
   GraphRenderState,
   PositionedEdge,
@@ -71,7 +73,7 @@ import type { TooltipManager } from './tooltip';
 
 // Defined in `graph/types` (see the note there) and re-exported here so the
 // public surface stays exactly where consumers already import it from.
-export type { GraphHighlightTarget } from './graph/types';
+export type { GraphCamera, GraphFlyTarget, GraphHighlightTarget } from './graph/types';
 
 /** A hovered node or edge, passed to a tooltip formatter. */
 export interface GraphTooltipItem {
@@ -140,7 +142,7 @@ export interface GraphMountOptions {
    */
   fitOnLoad?: boolean;
   /** Camera change callback, rAF-coalesced (fires at most once per rendered frame). */
-  onCameraChange?: (camera: { x: number; y: number; k: number }) => void;
+  onCameraChange?: (camera: GraphCamera) => void;
   /** Skip the entrance reveal/flight on mount (spec unchanged; used by wrappers when recreating for a theme/darkMode-only change so the entrance doesn't replay). Warmup still runs. */
   suppressEntrance?: boolean;
 }
@@ -156,11 +158,14 @@ export interface GraphInstance {
   /** Fly to a node and zoom in (default scale 2). Tracks the node while it settles. */
   zoomToNode(nodeId: string, opts?: CameraFlightOptions & { scale?: number }): void;
   /** Fly the camera to a graph-space target. */
-  flyTo(target: { x: number; y: number; k?: number }, opts?: CameraFlightOptions): void;
+  flyTo(target: GraphFlyTarget, opts?: CameraFlightOptions): void;
   /** Center the camera on a graph-space point (keeps current zoom). */
   centerAt(x: number, y: number, opts?: CameraFlightOptions): void;
-  /** Current camera (graph-space center-ish transform components). */
-  getCamera(): { x: number; y: number; k: number };
+  /**
+   * Current camera. In 2D this is the zoom transform; in 3D the same `x`/`y`/`k`
+   * summary plus the `position`/`target` pose. See `GraphCamera`.
+   */
+  getCamera(): GraphCamera;
   /** Select a node; `{ fly: true }` also flies to it (default follows interaction.select.flyTo). */
   selectNode(nodeId: string, opts?: { fly?: boolean } & CameraFlightOptions): void;
   getSelectedNodes(): string[];
@@ -1461,7 +1466,9 @@ export function createGraph(
     flyCamera(provider, opts);
   }
 
-  function flyTo(target: { x: number; y: number; k?: number }, opts?: CameraFlightOptions): void {
+  // `target.position`/`target.target` are 3D-only pose fields; 2D ignores them
+  // so a camera saved from a 3D mount still flies to a sane 2D point.
+  function flyTo(target: GraphFlyTarget, opts?: CameraFlightOptions): void {
     if (destroyed || !interactionManager) return;
     const { width: cw, height: ch } = getCanvasDimensions();
     const k = clampK(target.k ?? interactionManager.getTransform().k);
@@ -1472,7 +1479,7 @@ export function createGraph(
     flyTo({ x, y }, opts);
   }
 
-  function getCamera(): { x: number; y: number; k: number } {
+  function getCamera(): GraphCamera {
     const t = interactionManager?.getTransform() ?? ZoomTransform.identity();
     return { x: t.x, y: t.y, k: t.k };
   }
@@ -1807,7 +1814,12 @@ export function createGraph(
     // Hovered edge: clear if either endpoint is gone.
     if (hoveredEdgeId) {
       const [src, tgt] = hoveredEdgeId.split('->');
-      if (!nextIds.has(src) || !nextIds.has(tgt)) hoveredEdgeId = null;
+      if (!nextIds.has(src) || !nextIds.has(tgt)) {
+        hoveredEdgeId = null;
+        // A listener that opened something on hover would otherwise never get
+        // the close.
+        options?.onEdgeHover?.(null);
+      }
     }
 
     // Selection: intersect with survivors, then push into the interaction manager.

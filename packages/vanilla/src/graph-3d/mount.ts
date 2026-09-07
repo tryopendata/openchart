@@ -47,7 +47,7 @@ import type { GraphRendererContext } from '../graph/renderer-registry';
 import { AnimationScheduler, type GraphAnimation } from '../graph/scheduler';
 import { GraphSearchManager } from '../graph/search';
 import { seedNodePositions } from '../graph/seed';
-import type { PositionedEdge, PositionedNode } from '../graph/types';
+import type { GraphCamera, GraphFlyTarget, PositionedEdge, PositionedNode } from '../graph/types';
 import { diffGraphUpdate } from '../graph/update-diff';
 import type { SimNode } from '../graph/worker-protocol';
 import type {
@@ -131,23 +131,17 @@ const K_MAX = 40;
 /** Second seed stream for the z axis (golden-ratio salt, as in `seed.ts`). */
 const Z_SEED_SALT = 0x9e3779b9;
 
-/** A camera pose, the 3D superset of 2D's `{ x, y, k }`. */
-export interface Camera3D {
-  x: number;
-  y: number;
-  k: number;
+/**
+ * A camera pose: the shared `GraphCamera` with the pose fields narrowed to
+ * required, since the 3D renderer always reports them.
+ */
+export interface Camera3D extends GraphCamera {
   position: { x: number; y: number; z: number };
   target: { x: number; y: number; z: number };
 }
 
 /** `flyTo` accepts either the 2D shape or a full 3D pose from `getCamera()`. */
-export type FlyTarget3D = {
-  x: number;
-  y: number;
-  k?: number;
-  position?: { x: number; y: number; z: number };
-  target?: { x: number; y: number; z: number };
-};
+export type FlyTarget3D = GraphFlyTarget;
 
 // ---------------------------------------------------------------------------
 // Renderer
@@ -596,13 +590,19 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
     const cameraPos = camera?.position ?? { x: 0, y: 0, z: FIT_DISTANCE };
     const forced = forcedLabelIds();
     const ranked = resolveVisibleLabels(
-      nodeData.map((d) => ({
-        id: d.id,
-        priority: d.node.labelPriority,
-        x: d.x ?? 0,
-        y: d.y ?? 0,
-        z: d.z ?? 0,
-      })),
+      // Only nodes that actually compiled a label are candidates. Filtering on
+      // the datum rather than `nodeObjects` matters: the library's digest is
+      // deferred, so on the first rank the objects may not exist yet and an
+      // object-side filter would let unlabelled nodes eat budget slots.
+      nodeData
+        .filter((d) => d.node.label)
+        .map((d) => ({
+          id: d.id,
+          priority: d.node.labelPriority,
+          x: d.x ?? 0,
+          y: d.y ?? 0,
+          z: d.z ?? 0,
+        })),
       forced,
       cameraPos,
       LABEL_BUDGET_3D,
@@ -1374,7 +1374,12 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
   function pruneInteractionState(): void {
     const ids = new Set(compilation.nodes.map((n) => n.id));
     if (hoveredNodeId && !ids.has(hoveredNodeId)) hoveredNodeId = null;
+    // Edge indices are renumbered by every update, so the hover always drops.
+    // Tell the host: a listener that opened something on hover would otherwise
+    // never get the close.
+    const hadEdgeHover = hoveredLinkIndex !== null;
     hoveredLinkIndex = null;
+    if (hadEdgeHover) options?.onEdgeHover?.(null);
     selectedNodeIds = new Set([...selectedNodeIds].filter((id) => ids.has(id)));
     if (openTooltip?.kind === 'node' && !ids.has(openTooltip.id)) hideTooltip();
     if (openTooltip?.kind === 'edge') hideTooltip();

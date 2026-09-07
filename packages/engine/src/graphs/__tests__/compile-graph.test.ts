@@ -562,6 +562,37 @@ describe('compileGraph', () => {
       expect(warnings.filter((w) => w.includes('stroke'))).toHaveLength(1);
     });
 
+    // seedNode.style is merged into the node overrides, so a stroke set only
+    // there is just as ignored in 3D and has to warn.
+    it('covers a stroke set only on seedNode.style, still as one warning', () => {
+      const { warnings, options } = warnCollector();
+      compileGraph(
+        {
+          ...makeBasicGraphSpec(),
+          dimensions: 3,
+          seedNode: { id: 'a', style: { stroke: '#f00' } },
+          nodeOverrides: { b: { strokeWidth: 4 } },
+        },
+        options,
+      );
+
+      expect(warnings.filter((w) => w.includes('stroke'))).toHaveLength(1);
+    });
+
+    it('warns when seedNode.style is the only stroke source', () => {
+      const { warnings, options } = warnCollector();
+      compileGraph(
+        {
+          ...makeBasicGraphSpec(),
+          dimensions: 3,
+          seedNode: { id: 'a', style: { strokeWidth: 3 } },
+        },
+        options,
+      );
+
+      expect(warnings.filter((w) => w.includes('stroke'))).toHaveLength(1);
+    });
+
     it('does not warn about unsupported options in 2D', () => {
       const { warnings, options } = warnCollector();
       compileGraph(

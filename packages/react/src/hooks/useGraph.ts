@@ -9,14 +9,17 @@
 import type { GraphSpec } from '@opendata-ai/openchart-core';
 import type {
   CameraFlightOptions,
+  GraphCamera,
+  GraphFlyTarget,
   GraphHighlightTarget,
   GraphInstance,
   GraphLegendData,
 } from '@opendata-ai/openchart-vanilla';
 import { useCallback, useRef } from 'react';
 
-/** Camera transform components (graph-space). */
-export type GraphCamera = { x: number; y: number; k: number };
+// Re-exported rather than redeclared so the 3D pose fields (`position`,
+// `target`) stay visible to typed consumers of the React wrapper.
+export type { GraphCamera, GraphFlyTarget } from '@opendata-ai/openchart-vanilla';
 
 export interface UseGraphReturn {
   /** Ref to pass to <Graph ref={ref} />. */
@@ -32,7 +35,7 @@ export interface UseGraphReturn {
   /** Fly to a node and zoom in (default scale 2). */
   zoomToNode: (nodeId: string, opts?: CameraFlightOptions & { scale?: number }) => void;
   /** Fly the camera to a graph-space target. */
-  flyTo: (target: { x: number; y: number; k?: number }, opts?: CameraFlightOptions) => void;
+  flyTo: (target: GraphFlyTarget, opts?: CameraFlightOptions) => void;
   /** Center the camera on a graph-space point (keeps current zoom). */
   centerAt: (x: number, y: number, opts?: CameraFlightOptions) => void;
   /** Current camera transform. */
@@ -68,7 +71,7 @@ export interface GraphHandle {
   getSearchMatches: () => string[];
   zoomToFit: (opts?: CameraFlightOptions & { padding?: number }) => void;
   zoomToNode: (nodeId: string, opts?: CameraFlightOptions & { scale?: number }) => void;
-  flyTo: (target: { x: number; y: number; k?: number }, opts?: CameraFlightOptions) => void;
+  flyTo: (target: GraphFlyTarget, opts?: CameraFlightOptions) => void;
   centerAt: (x: number, y: number, opts?: CameraFlightOptions) => void;
   getCamera: () => GraphCamera;
   selectNode: (nodeId: string, opts?: { fly?: boolean } & CameraFlightOptions) => void;
@@ -120,12 +123,9 @@ export function useGraph(): UseGraphReturn {
     [],
   );
 
-  const flyTo = useCallback(
-    (target: { x: number; y: number; k?: number }, opts?: CameraFlightOptions) => {
-      ref.current?.flyTo(target, opts);
-    },
-    [],
-  );
+  const flyTo = useCallback((target: GraphFlyTarget, opts?: CameraFlightOptions) => {
+    ref.current?.flyTo(target, opts);
+  }, []);
 
   const centerAt = useCallback((x: number, y: number, opts?: CameraFlightOptions) => {
     ref.current?.centerAt(x, y, opts);

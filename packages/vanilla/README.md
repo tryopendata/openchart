@@ -98,7 +98,9 @@ import { createGraph } from '@opendata-ai/openchart-vanilla';
 createGraph(container, { ...graphSpec, dimensions: 3 });
 ```
 
-Mounting a `dimensions: 3` spec without that import throws.
+The subpath import is required only when compilation actually resolves to 3D.
+A spec above the 2000-node gate warns and falls back to 2D, so it renders
+without the import; a `dimensions: 3` spec that stays 3D throws without it.
 
 Framework hosts import their own package's mirror of this subpath rather than
 reaching past it into vanilla: `@opendata-ai/openchart-react/graph-3d`,
@@ -127,7 +129,8 @@ Differences from 2D:
   point in world units, alongside `position` and `target`. In 2D they are the
   zoom transform's translate in pixels. `onCameraChange` carries the same
   payload, so persisted camera state has to be keyed on the dimension it came
-  from.
+  from. Both are typed `GraphCamera`, whose `position`/`target` are optional
+  because only 3D sets them; `flyTo` accepts them back, and 2D ignores them.
 - A structural `update()` reheats the whole layout, so settled nodes drift. 2D
   applies a local impulse instead.
 - `nodeOverrides[*].stroke` and `strokeWidth` are ignored (no ring).

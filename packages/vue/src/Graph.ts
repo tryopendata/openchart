@@ -11,6 +11,7 @@
 import type { DarkMode, GraphSpec, ThemeConfig } from '@opendata-ai/openchart-core';
 import {
   createGraph,
+  type GraphCamera,
   type GraphInstance,
   type GraphMountOptions,
   type GraphTooltipFormatter,
@@ -94,7 +95,7 @@ export const Graph = defineComponent({
     'legend-hover': (_entry: { field: string; value: string } | null) => true,
     'legend-toggle': (_activeValues: string[]) => true,
     'highlight-change': (_nodeIds: string[] | null) => true,
-    'camera-change': (_camera: { x: number; y: number; k: number }) => true,
+    'camera-change': (_camera: GraphCamera) => true,
   },
   setup(props, { emit, expose }) {
     const containerRef = ref<HTMLDivElement | null>(null);

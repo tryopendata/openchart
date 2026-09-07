@@ -323,10 +323,27 @@ describe('tooltip move', () => {
     manager.show({ text: 'anchored' }, 10, 10);
     await flushPositioning();
 
+    const tooltip = container.querySelector('.oc-tooltip') as HTMLElement;
+    const shownLeft = tooltip.style.left;
+    const shownTop = tooltip.style.top;
+    const callsAfterShow = mockComputePosition.mock.calls.length;
+
+    // A different resolved position, so a move that never re-positioned would
+    // leave the tooltip at the show() coordinates and fail below.
+    mockComputePosition.mockResolvedValue({
+      x: 77,
+      y: 88,
+      placement: 'bottom-start',
+      strategy: 'absolute',
+      middlewareData: {},
+    });
+
     manager.move(40, 40);
     await flushPositioning();
 
-    const tooltip = container.querySelector('.oc-tooltip') as HTMLElement;
+    expect(mockComputePosition.mock.calls.length).toBeGreaterThan(callsAfterShow);
+    expect(tooltip.style.left).not.toBe(shownLeft);
+    expect(tooltip.style.top).not.toBe(shownTop);
     expect(tooltip.style.display).toBe('block');
     expect(tooltip.textContent).toBe('anchored');
   });

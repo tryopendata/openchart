@@ -25,6 +25,38 @@ export type GraphHighlightTarget =
   | { category: { field: string; value: string | string[] } }
   | { neighborsOf: string; includeSelf?: boolean };
 
+/**
+ * The camera payload both renderers report through `getCamera()` and
+ * `onCameraChange`.
+ *
+ * `x`/`y`/`k` are always present. In 2D they are the d3 zoom transform: `x`/`y`
+ * are the translate in pixels, `k` the zoom scalar. In 3D they describe a pose
+ * instead: `x`/`y` are the look-at point in world units and `k` is
+ * `FIT_DISTANCE / cameraDistance`, so the sign convention still matches.
+ *
+ * `position` and `target` are present ONLY in 3D, which is why they are
+ * optional here. Persisted camera state has to be keyed on the dimension it
+ * came from before it is restored.
+ */
+export interface GraphCamera {
+  x: number;
+  y: number;
+  k: number;
+  /** 3D only: the camera's world-space position. */
+  position?: { x: number; y: number; z: number };
+  /** 3D only: the world-space point the camera looks at. */
+  target?: { x: number; y: number; z: number };
+}
+
+/**
+ * A `flyTo` destination: a `GraphCamera` with an optional `k` (omit it to keep
+ * the current zoom/distance). The 3D pose fields are accepted here so a
+ * `getCamera()` result round-trips unchanged; the 2D renderer ignores them.
+ */
+export interface GraphFlyTarget extends Omit<GraphCamera, 'k'> {
+  k?: number;
+}
+
 /** A compiled node with simulation-assigned x/y position. */
 export interface PositionedNode extends CompiledGraphNode {
   x: number;

@@ -1361,9 +1361,11 @@ function OverGate3DGraph() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
       <div style={{ height: 520, position: 'relative' }}>
         {spec ? (
-          <Graph3DReady>
-            <Graph spec={spec} />
-          </Graph3DReady>
+          // Deliberately NOT wrapped in Graph3DReady: this spec is over the
+          // node gate, so compilation resolves it to 2D and the mount never
+          // consults the 3D registry. Gating it would make the 2D fallback this
+          // demo exists to show depend on the WebGL chunk loading.
+          <Graph spec={spec} />
         ) : (
           <div
             style={{
