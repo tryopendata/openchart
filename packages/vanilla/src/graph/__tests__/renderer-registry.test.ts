@@ -63,7 +63,7 @@ function fakeInstance(): GraphInstance {
     highlight: () => {},
     clearHighlight: () => {},
     getHighlight: () => null,
-    getLegend: () => null,
+    getLegend: () => ({ field: null, nodes: [], edges: [] }),
     setActiveCategories: () => {},
     getActiveCategories: () => [],
     resize: () => {},

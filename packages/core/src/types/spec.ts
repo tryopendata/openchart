@@ -2390,7 +2390,8 @@ export interface GraphSpec {
    *   the look-at point in world units, alongside `position` and `target`. In
    *   2D they are the zoom transform's translate in pixels. `onCameraChange`
    *   carries the same payload, so persisted camera state has to be keyed on
-   *   the dimension it came from.
+   *   the dimension it came from. Both are typed `GraphCamera` (vanilla), whose
+   *   `position`/`target` are optional because only 3D sets them.
    * - A structural `update()` reheats the whole layout globally, so settled
    *   nodes drift; 2D applies a local impulse instead.
    * - Above 2000 nodes the spec warns and falls back to 2D.

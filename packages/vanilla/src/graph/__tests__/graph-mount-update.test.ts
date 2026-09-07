@@ -300,6 +300,54 @@ describe('update() selection reconciliation', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Hover reconciliation
+// ---------------------------------------------------------------------------
+
+describe('update() hover reconciliation', () => {
+  it('emits onEdgeHover(null) when the hovered edge loses an endpoint', async () => {
+    container = makeContainer();
+    const onEdgeHover = vi.fn();
+    const graph = createGraph(
+      container,
+      graphSpec(
+        ['a', 'b', 'c'],
+        [
+          ['a', 'b'],
+          ['b', 'c'],
+        ],
+      ),
+      { onEdgeHover },
+    );
+    await settle();
+
+    // Hover the b->c edge by moving the mouse onto its midpoint, converted to
+    // screen space through the live camera transform.
+    const state = lastState();
+    const edge = state.edges.find((e) => e.source === 'b' && e.target === 'c');
+    if (!edge) throw new Error('b->c edge missing from the render state');
+    const t = state.transform;
+    const canvas = container.querySelector('.oc-graph-canvas');
+    if (!canvas) throw new Error('graph canvas missing');
+    canvas.dispatchEvent(
+      new MouseEvent('mousemove', {
+        clientX: t.x + ((edge.sourceX + edge.targetX) / 2) * t.k,
+        clientY: t.y + ((edge.sourceY + edge.targetY) / 2) * t.k,
+        bubbles: true,
+      }),
+    );
+    expect(onEdgeHover).toHaveBeenCalledWith(expect.anything());
+    onEdgeHover.mockClear();
+
+    // Delete 'c'. The hover cannot survive, so the host has to hear about it.
+    graph.update(graphSpec(['a', 'b'], [['a', 'b']]));
+    await settle(nowValue + 25, nowValue + 500, 25);
+
+    expect(onEdgeHover).toHaveBeenCalledWith(null);
+    graph.destroy();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Search survival
 // ---------------------------------------------------------------------------
 

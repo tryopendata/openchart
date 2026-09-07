@@ -13,6 +13,8 @@ import type { DarkMode, GraphSpec, ThemeConfig } from '@opendata-ai/openchart-co
 import {
   type CameraFlightOptions,
   createGraph,
+  type GraphCamera,
+  type GraphFlyTarget,
   type GraphHighlightTarget,
   type GraphInstance,
   type GraphLegendData,
@@ -60,7 +62,7 @@ let {
   onlegendhover?: (entry: { field: string; value: string } | null) => void;
   onlegendtoggle?: (activeValues: string[]) => void;
   onhighlightchange?: (nodeIds: string[] | null) => void;
-  oncamerachange?: (camera: { x: number; y: number; k: number }) => void;
+  oncamerachange?: (camera: GraphCamera) => void;
   class?: string;
   style?: string;
 } = $props();
@@ -193,10 +195,7 @@ export function zoomToNode(nodeId: string, opts?: CameraFlightOptions & { scale?
   instance?.zoomToNode(nodeId, opts);
 }
 
-export function flyTo(
-  target: { x: number; y: number; k?: number },
-  opts?: CameraFlightOptions,
-): void {
+export function flyTo(target: GraphFlyTarget, opts?: CameraFlightOptions): void {
   instance?.flyTo(target, opts);
 }
 
@@ -204,7 +203,7 @@ export function centerAt(x: number, y: number, opts?: CameraFlightOptions): void
   instance?.centerAt(x, y, opts);
 }
 
-export function getCamera(): { x: number; y: number; k: number } {
+export function getCamera(): GraphCamera {
   return instance?.getCamera() ?? { x: 0, y: 0, k: 1 };
 }
 

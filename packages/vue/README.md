@@ -77,8 +77,15 @@ reaching past it into vanilla:
 
 ```vue
 <script setup lang="ts">
+import type { GraphSpec } from '@opendata-ai/openchart-core';
 import { Graph } from '@opendata-ai/openchart-vue';
 import { onMounted, ref } from 'vue';
+
+const spec: GraphSpec = {
+  type: 'graph',
+  nodes: [{ id: 'a' }, { id: 'b' }],
+  edges: [{ source: 'a', target: 'b' }],
+};
 
 const ready = ref(false);
 // Client-side only: 3d-force-graph touches `window` at import time.
@@ -93,7 +100,8 @@ onMounted(async () => {
 </template>
 ```
 
-Mounting a `dimensions: 3` spec without that import throws. See the
+The subpath import is required only when compilation actually resolves to 3D: a
+spec above the 2000-node gate falls back to 2D and renders without it. See the
 [vanilla README](../vanilla/README.md#3d-graphs) for how 3D differs from 2D.
 
 ## Dark mode and theming

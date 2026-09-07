@@ -21,14 +21,17 @@ import type { GraphSpec } from '@opendata-ai/openchart-core';
 import {
   type CameraFlightOptions,
   createGraph,
+  type GraphCamera,
+  type GraphFlyTarget,
   type GraphHighlightTarget,
   type GraphInstance,
   type GraphLegendData,
   type GraphMountOptions,
 } from '@opendata-ai/openchart-vanilla';
 
-/** Camera transform components (graph-space). */
-export type GraphCamera = { x: number; y: number; k: number };
+// Re-exported rather than redeclared so the 3D pose fields (`position`,
+// `target`) stay visible to typed consumers of the Svelte wrapper.
+export type { GraphCamera, GraphFlyTarget } from '@opendata-ai/openchart-vanilla';
 
 export interface UseGraphOptions {
   /** Theme overrides. */
@@ -77,7 +80,7 @@ export interface UseGraphReturn {
   /** Fly to a node and zoom in (default scale 2). */
   zoomToNode: (nodeId: string, opts?: CameraFlightOptions & { scale?: number }) => void;
   /** Fly the camera to a graph-space target. */
-  flyTo: (target: { x: number; y: number; k?: number }, opts?: CameraFlightOptions) => void;
+  flyTo: (target: GraphFlyTarget, opts?: CameraFlightOptions) => void;
   /** Center the camera on a graph-space point (keeps current zoom). */
   centerAt: (x: number, y: number, opts?: CameraFlightOptions) => void;
   /** Current camera transform. */
@@ -168,7 +171,7 @@ export function useGraph(
     zoomToNode(nodeId: string, opts?: CameraFlightOptions & { scale?: number }) {
       instance?.zoomToNode(nodeId, opts);
     },
-    flyTo(target: { x: number; y: number; k?: number }, opts?: CameraFlightOptions) {
+    flyTo(target: GraphFlyTarget, opts?: CameraFlightOptions) {
       instance?.flyTo(target, opts);
     },
     centerAt(x: number, y: number, opts?: CameraFlightOptions) {

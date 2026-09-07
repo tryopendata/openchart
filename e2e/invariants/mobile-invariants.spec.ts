@@ -75,12 +75,11 @@ const stories: StoryCase[] = [
     name: 'grouped-bars-sparse-ticks',
     slug: 'testing--mobile-regression--grouped-bars-sparse-ticks',
     quantAxis: 'x',
-    // On Linux at 412px, inside-bar value labels overlap by ~2.5px (Rule 2):
-    // estimateTextWidth (engine charts/bar/labels.ts) is calibrated against
-    // macOS-ish fonts and Liberation digits render wider. Passes on darwin
-    // and on the 360px project. Deliberately NOT fixed by loosening the
-    // overlap epsilon; needs a font-metric-aware calibration.
-    knownFailures: [{ project: 'invariants-chromium-mobile', platform: 'linux' }],
+    // Previously carried a Linux knownFailures entry: inside-bar value labels
+    // overlapped by ~2.5px at 412px because estimateTextWidth is calibrated
+    // against macOS-ish fonts and Liberation digits render wider. The CI runner
+    // image now reports an unexpected pass, so the entry is removed per the
+    // contract above. If a future runner regresses it, put it back.
   },
   {
     name: 'rotated-with-source',

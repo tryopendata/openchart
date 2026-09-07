@@ -576,11 +576,16 @@ function resolveNumDimensions(spec: NormalizedGraphSpec, onWarn: CompileOptions[
   if (spec.interaction?.springyDrag) {
     onWarn?.('interaction.springyDrag is not supported in 3D; it will be ignored.');
   }
-  const strokeOverrides = Object.values(spec.nodeOverrides ?? {}).some(
-    (o) => o?.stroke !== undefined || o?.strokeWidth !== undefined,
-  );
+  // `seedNode.style` is merged into the node overrides further down, so a stroke
+  // set only there would otherwise be dropped without a word.
+  const hasStroke = (o: NodeOverride | undefined) =>
+    o?.stroke !== undefined || o?.strokeWidth !== undefined;
+  const strokeOverrides =
+    Object.values(spec.nodeOverrides ?? {}).some(hasStroke) || hasStroke(spec.seedNode?.style);
   if (strokeOverrides) {
-    onWarn?.('nodeOverrides stroke/strokeWidth are not supported in 3D; they will be ignored.');
+    onWarn?.(
+      'nodeOverrides/seedNode.style stroke and strokeWidth are not supported in 3D; they will be ignored.',
+    );
   }
 
   return 3;

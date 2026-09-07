@@ -11,6 +11,7 @@
 import type { DarkMode, GraphSpec, ThemeConfig } from '@opendata-ai/openchart-core';
 import {
   createGraph,
+  type GraphCamera,
   type GraphInstance,
   type GraphMountOptions,
   type GraphTooltipFormatter,
@@ -55,7 +56,7 @@ export interface GraphProps {
   /** Fired whenever the highlight set changes (programmatic or legend), null when cleared. */
   onHighlightChange?: (nodeIds: string[] | null) => void;
   /** Camera change callback, rAF-coalesced (fires at most once per rendered frame). */
-  onCameraChange?: (camera: { x: number; y: number; k: number }) => void;
+  onCameraChange?: (camera: GraphCamera) => void;
   /**
    * Show built-in tooltip on node/edge hover. Defaults to true. Pass an object
    * with a `formatter` to customize content.
@@ -203,7 +204,7 @@ export const Graph = forwardRef<GraphHandle, GraphProps>(function Graph(
     [],
   );
   const stableOnCameraChange = useCallback(
-    (camera: { x: number; y: number; k: number }) => handlersRef.current.onCameraChange?.(camera),
+    (camera: GraphCamera) => handlersRef.current.onCameraChange?.(camera),
     [],
   );
   // A stable formatter wrapper: it always calls the LATEST formatter off the ref.

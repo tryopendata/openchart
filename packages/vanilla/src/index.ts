@@ -53,6 +53,8 @@ export {
 // Graph simulation worker
 export { createSimulationWorker } from './graph/simulation-worker-url';
 export type {
+  GraphCamera,
+  GraphFlyTarget,
   GraphHighlightTarget,
   GraphInstance,
   GraphLegendData,
