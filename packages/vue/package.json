@@ -35,7 +35,8 @@
     "dist"
   ],
   "sideEffects": [
-    "./dist/styles.css"
+    "./dist/styles.css",
+    "./dist/graph-3d.js"
   ],
   "keywords": [
     "chart",
