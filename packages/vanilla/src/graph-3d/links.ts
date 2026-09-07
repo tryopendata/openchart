@@ -205,6 +205,25 @@ export function updateLinkPosition(
   return true;
 }
 
+/**
+ * Park a link object on a fixed segment, outside the library's tick loop.
+ *
+ * `updateLinkPosition` deliberately reports cylinders back to the library, which
+ * owns their placement. An exit ghost has left the data binding, so nothing
+ * positions it any more and both shape classes have to be handled here.
+ */
+export function placeGhostLink(
+  obj: LinkObject3D,
+  start: { x: number; y: number; z: number },
+  end: { x: number; y: number; z: number },
+): void {
+  if (updateLinkPosition(obj, start, end)) return;
+  const mesh = obj.object as Mesh;
+  mesh.position.set(start.x, start.y, start.z);
+  mesh.lookAt(end.x, end.y, end.z);
+  mesh.scale.z = Math.hypot(end.x - start.x, end.y - start.y, end.z - start.z);
+}
+
 /** Dispose every GPU resource this link object owns. */
 export function disposeLinkObject(obj: LinkObject3D): void {
   obj.geometry.dispose();

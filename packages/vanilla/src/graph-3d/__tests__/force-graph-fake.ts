@@ -91,7 +91,23 @@ export class FakeForceGraph3D {
   };
   readonly fakeCamera = { position: { x: 0, y: 0, z: 1000 } };
   readonly fakeControls: FakeControls;
-  readonly fakeScene = { children: [] as Object3D[] };
+  /**
+   * Stands in for the scene root. Exit ghosts are parked here directly (they
+   * have left the data binding), so it needs three's `add`/`remove`, not just a
+   * children array.
+   */
+  readonly fakeScene = {
+    children: [] as Object3D[],
+    add(obj: Object3D): void {
+      obj.parent = this as unknown as Object3D;
+      this.children.push(obj);
+    },
+    remove(obj: Object3D): void {
+      const i = this.children.indexOf(obj);
+      if (i >= 0) this.children.splice(i, 1);
+      obj.parent = null;
+    },
+  };
 
   graph: { nodes: Array<Record<string, unknown>>; links: Array<Record<string, unknown>> } = {
     nodes: [],

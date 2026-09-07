@@ -32,8 +32,15 @@ export interface Link3D {
   target: string | Node3D;
   /** The compiled edge this datum renders. */
   edge: CompiledGraphEdge;
-  /** Index into `compilation.edges`; the key for link objects and emphasis. */
+  /** Index into `compilation.edges`; the key for emphasis alphas and hover. */
   edgeIndex: number;
+  /**
+   * Stable identity across updates: endpoints plus an occurrence counter so
+   * parallel edges stay distinct. `edgeIndex` is renumbered by every structural
+   * update, so it cannot key the scene objects — a link between two survivors
+   * would be torn down and rebuilt for nothing. See `edgeKeys` in `mount.ts`.
+   */
+  key: string;
 }
 
 /** The typed 3d-force-graph instance the adapter drives. */

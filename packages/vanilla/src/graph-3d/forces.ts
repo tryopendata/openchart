@@ -123,10 +123,20 @@ export function forceCluster3D(strength: number): (alpha: number) => void {
  * through {@link budgetedWarmupTicks}, since the library runs them all in one
  * synchronous block.
  */
+export interface ApplySimulationOptions {
+  /**
+   * Warmup tick override. The structural `update()` passes 0: the library runs
+   * `warmupTicks` in ONE synchronous block inside its digest, which lands the
+   * whole re-layout in a single frame instead of animating it.
+   */
+  warmupTicks?: number;
+}
+
 export function applySimulationConfig(
   graph: Graph3D,
   config: SimulationConfig,
   nodeCount: number,
+  opts: ApplySimulationOptions = {},
 ): void {
   const charge = graph.d3Force('charge');
   if (charge && typeof (charge as { strength?: unknown }).strength === 'function') {
@@ -162,6 +172,56 @@ export function applySimulationConfig(
 
   graph.d3VelocityDecay(config.velocityDecay);
   graph.d3AlphaDecay(config.alphaDecay);
-  graph.warmupTicks(budgetedWarmupTicks(config.warmupTicks ?? 0, nodeCount, config.warmupBudgetMs));
+  graph.warmupTicks(opts.warmupTicks ?? configuredWarmupTicks(config, nodeCount));
   graph.cooldownTicks(ticksToSettle(config.alphaDecay));
+}
+
+/** The warmup tick count this config resolves to at this node count. */
+function configuredWarmupTicks(config: SimulationConfig, nodeCount: number): number {
+  return budgetedWarmupTicks(config.warmupTicks ?? 0, nodeCount, config.warmupBudgetMs);
+}
+
+/**
+ * Damp a structural update's reheat so it reads as a local settle rather than a
+ * global explosion.
+ *
+ * 2D restarts its own simulation at `reheatAlpha(diff)`. Here the simulation
+ * belongs to the library: `graphData()` unconditionally does `.stop().alpha(1)`
+ * and three-forcegraph exposes no alpha setter (`d3Force` hands back forces, not
+ * the simulation), so the impulse has to be scaled from the outside. Two knobs
+ * do it, and they were picked over pinning survivors with `fx/fy/fz` because a
+ * pin release mid-cooldown is itself a visible jump:
+ *
+ * - The `center` force is dropped for the duration, mirroring 2D's
+ *   `suppressCenter`. Otherwise the whole cloud translates toward the origin
+ *   while the delta settles, which reads as the graph jumping.
+ * - `velocityDecay` is raised so the fraction of velocity a node keeps per tick
+ *   is scaled by `initialAlpha`. Every force left in the set writes velocities
+ *   and is linear in alpha, so scaling the retained velocity is a first-order
+ *   stand-in for scaling alpha itself.
+ *
+ * {@link endUpdateReheat} puts both back on `onEngineStop`.
+ */
+export function beginUpdateReheat(
+  graph: Graph3D,
+  config: SimulationConfig,
+  initialAlpha: number,
+): void {
+  graph.d3Force('center', null);
+  const scale = Math.min(1, Math.max(0, initialAlpha));
+  graph.d3VelocityDecay(1 - (1 - config.velocityDecay) * scale);
+}
+
+/**
+ * Undo {@link beginUpdateReheat} and restore the config's warmup budget, which
+ * the update call zeroed. Runs on `onEngineStop`, not straight after
+ * `graphData()`: Kapsule's digest is debounced, so the library reads
+ * `warmupTicks` a tick LATER than the call that set it.
+ */
+export function endUpdateReheat(graph: Graph3D, config: SimulationConfig, nodeCount: number): void {
+  graph.d3VelocityDecay(config.velocityDecay);
+  graph.warmupTicks(configuredWarmupTicks(config, nodeCount));
+  if (config.centerForce !== false) {
+    graph.d3Force('center', graph.d3Force('center') ?? forceCenter());
+  }
 }
