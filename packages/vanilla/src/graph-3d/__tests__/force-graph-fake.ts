@@ -7,9 +7,24 @@
  * and functions are recorded verbatim so tests can call them with a compiled
  * datum and assert on what comes back, rather than on call sequences.
  *
- * `graphData()` also invokes `nodeThreeObject` / `linkThreeObject` for each
- * datum, the way the real library's digest cycle does, so scene objects exist
- * in tests without a WebGL frame.
+ * `graphData()` models the real digest rather than just calling the accessors,
+ * because the shape of that digest is what the adapter has to be correct
+ * against. Specifically, three-forcegraph binds objects to datums through a
+ * `DataBindMapper` whose id accessor is IDENTITY (`d => d`) and never clears
+ * the node mapper on a `graphData()` call, so:
+ *
+ * - a datum already in the binding is left alone (no object is created);
+ * - a datum that has left the set runs the remove hook on ITS bound object:
+ *   the object leaves the scene, is deallocated, and `datum.__threeObj` goes;
+ * - creation is deferred behind Kapsule's debounced digest, so objects do not
+ *   exist the instant `graphData()` returns. {@link FakeForceGraph3D.flush}
+ *   stands in for that.
+ *
+ * Handing the digest a fresh datum literal for a node whose CACHED object the
+ * accessor still returns therefore rebinds that object to the new datum and
+ * then removes it on behalf of the old one. That is a real failure mode of the
+ * adapter's structural `update()`, and a fake that only called the accessors
+ * could not see it.
  */
 
 import type { Object3D } from './three-fake';
@@ -135,6 +150,9 @@ export class FakeForceGraph3D {
     };
     this.forces.set('charge', makeForce());
     this.forces.set('link', makeForce());
+    // 3d-force-graph installs a centering force of its own; `centerForce: false`
+    // has to remove it, so the fake has to have one to remove.
+    this.forces.set('center', makeForce());
     forceGraphInstances.push(this);
   }
 
@@ -236,19 +254,85 @@ export class FakeForceGraph3D {
     return this;
   }
 
-  /** Mirrors the real digest: materialize a scene object per node and link. */
+  /**
+   * Queue a digest, exactly as the real library does: the data is swapped
+   * immediately, the objects are materialized on the next {@link flush}.
+   */
   graphData(data?: {
     nodes: Array<Record<string, unknown>>;
     links: Array<Record<string, unknown>>;
   }): unknown {
     if (!data) return this.graph;
     this.graph = data;
-    const nodeObj = this.props.nodeThreeObject as ((d: unknown) => Object3D) | undefined;
-    const linkObj = this.props.linkThreeObject as ((d: unknown) => Object3D) | undefined;
-    if (typeof nodeObj === 'function') for (const n of data.nodes) nodeObj(n);
-    if (typeof linkObj === 'function') for (const l of data.links) linkObj(l);
+    this.pendingDigest = true;
     return this;
   }
+
+  /** Kapsule's debounced digest, run on demand. */
+  flush(): this {
+    if (!this.pendingDigest) return this;
+    this.pendingDigest = false;
+    this.digest(
+      this.nodeBinding,
+      this.graph.nodes,
+      this.props.nodeThreeObject as ((d: unknown) => Object3D) | undefined,
+    );
+    this.digest(
+      this.linkBinding,
+      this.graph.links,
+      this.props.linkThreeObject as ((d: unknown) => Object3D) | undefined,
+    );
+    return this;
+  }
+
+  /**
+   * One `DataBindMapper` cycle. Keyed by datum identity, creates first and
+   * removes second, which is the ordering that makes the cached-object collision
+   * observable.
+   */
+  private digest(
+    binding: Map<Record<string, unknown>, Object3D>,
+    data: Array<Record<string, unknown>>,
+    accessor: ((d: unknown) => Object3D) | undefined,
+  ): void {
+    if (typeof accessor !== 'function') return;
+    const objToDatum = new Map<Object3D, Record<string, unknown>>();
+    for (const [d, o] of binding) objToDatum.set(o, d);
+
+    for (const d of data) {
+      if (binding.has(d)) continue;
+      const obj = accessor(d);
+      d.__threeObj = obj;
+      binding.set(d, obj);
+      objToDatum.set(obj, d);
+      if (!this.fakeScene.children.includes(obj)) this.fakeScene.children.push(obj);
+      this.removedFromScene.delete(obj);
+    }
+
+    const present = new Set(data);
+    for (const [d, obj] of [...binding]) {
+      if (present.has(d)) continue;
+      binding.delete(d);
+      const bound = objToDatum.get(obj);
+      const index = this.fakeScene.children.indexOf(obj);
+      if (index >= 0) this.fakeScene.children.splice(index, 1);
+      this.removedFromScene.add(obj);
+      this.deallocated.push(obj);
+      // The library deletes the binding attribute off whichever datum the
+      // object currently points at, which is not necessarily `d`.
+      if (bound) delete bound.__threeObj;
+    }
+  }
+
+  /** Datum -> scene object, the node half of the binding. */
+  readonly nodeBinding = new Map<Record<string, unknown>, Object3D>();
+  /** Datum -> scene object, the link half of the binding. */
+  readonly linkBinding = new Map<Record<string, unknown>, Object3D>();
+  /** Objects the digest has taken out of the scene. */
+  readonly removedFromScene = new Set<Object3D>();
+  /** Every object the digest has deallocated, in order. */
+  readonly deallocated: Object3D[] = [];
+  private pendingDigest = false;
 
   refresh(): this {
     this.refreshCount++;

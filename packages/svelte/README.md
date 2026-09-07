@@ -57,6 +57,43 @@ let { spec }: { spec: VizSpec } = $props();
 
 If you need event handlers or component-specific props, use the specific component directly instead.
 
+## 3D graphs
+
+`dimensions: 3` on a graph spec renders with WebGL instead of canvas. The 3D
+renderer ships on its own subpath so three.js never lands in the default bundle,
+and its libraries are optional peers you install yourself:
+
+```bash
+npm install three 3d-force-graph three-spritetext
+```
+
+The subpath registers the renderer as an import side effect, so it has to be
+imported before the graph mounts. Import this package's own subpath rather than
+reaching past it into vanilla:
+
+```svelte
+<script lang="ts">
+import { Graph } from '@opendata-ai/openchart-svelte';
+import { onMount } from 'svelte';
+
+let { spec } = $props();
+let ready = $state(false);
+
+// Client-side only: 3d-force-graph touches `window` at import time.
+onMount(async () => {
+  await import('@opendata-ai/openchart-svelte/graph-3d');
+  ready = true;
+});
+</script>
+
+{#if ready}
+  <Graph spec={{ ...spec, dimensions: 3 }} />
+{/if}
+```
+
+Mounting a `dimensions: 3` spec without that import throws. See the
+[vanilla README](../vanilla/README.md#3d-graphs) for how 3D differs from 2D.
+
 ## Dark mode and theming
 
 Wrap components with `VizThemeProvider` to set theme and dark mode for all child visualizations. It uses Svelte's context API, so all `Chart`, `DataTable`, and `Graph` components inside the provider inherit its values.

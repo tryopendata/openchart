@@ -26,6 +26,11 @@
       "svelte": "./dist/index.js",
       "import": "./dist/index.js"
     },
+    "./graph-3d": {
+      "types": "./dist/graph-3d.d.ts",
+      "svelte": "./dist/graph-3d.js",
+      "import": "./dist/graph-3d.js"
+    },
     "./styles.css": "./dist/styles.css"
   },
   "files": [

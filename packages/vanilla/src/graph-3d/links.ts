@@ -49,6 +49,49 @@ export interface LinkObject3D {
   dashed: boolean;
 }
 
+/** True when `edge` asks for a dashed or dotted line material. */
+function isDashed(edge: CompiledGraphEdge): boolean {
+  return edge.style === 'dashed' || edge.style === 'dotted';
+}
+
+/** Cylinder radius for a width-encoded edge. */
+function cylinderRadius(edge: CompiledGraphEdge): number {
+  return Math.max(edge.strokeWidth, 0.1) / 2;
+}
+
+function buildCylinder(edge: CompiledGraphEdge): CylinderGeometry {
+  const r = cylinderRadius(edge);
+  const geometry = new CylinderGeometry(r, r, 1, CYLINDER_SEGMENTS, 1, false);
+  // Match the library's cylinder convention: origin at the start point,
+  // length along +z, so its tick loop can position with scale.z + lookAt.
+  geometry.applyMatrix4(new Matrix4().makeTranslation(0, 0.5, 0));
+  geometry.applyMatrix4(new Matrix4().makeRotationX(Math.PI / 2));
+  return geometry;
+}
+
+function buildLineMaterial(
+  edge: CompiledGraphEdge,
+  opacity: number,
+): LineBasicMaterial | LineDashedMaterial {
+  if (!isDashed(edge)) {
+    return new LineBasicMaterial({
+      color: edge.stroke,
+      transparent: true,
+      opacity,
+      depthWrite: false,
+    });
+  }
+  const dash = DASH[edge.style as 'dashed' | 'dotted'];
+  return new LineDashedMaterial({
+    color: edge.stroke,
+    transparent: true,
+    opacity,
+    depthWrite: false,
+    dashSize: dash.dash,
+    gapSize: dash.gap,
+  });
+}
+
 /**
  * Build the scene object for one compiled edge.
  *
@@ -61,12 +104,7 @@ export function createLinkObject(
   restingAlpha: number,
 ): LinkObject3D {
   if (useWidth) {
-    const r = Math.max(edge.strokeWidth, 0.1) / 2;
-    const geometry = new CylinderGeometry(r, r, 1, CYLINDER_SEGMENTS, 1, false);
-    // Match the library's cylinder convention: origin at the start point,
-    // length along +z, so its tick loop can position with scale.z + lookAt.
-    geometry.applyMatrix4(new Matrix4().makeTranslation(0, 0.5, 0));
-    geometry.applyMatrix4(new Matrix4().makeRotationX(Math.PI / 2));
+    const geometry = buildCylinder(edge);
     const material = new MeshLambertMaterial({
       color: edge.stroke,
       transparent: true,
@@ -78,23 +116,64 @@ export function createLinkObject(
 
   const geometry = new BufferGeometry();
   geometry.setAttribute('position', new BufferAttribute(new Float32Array(2 * 3), 3));
-  const dashed = edge.style === 'dashed' || edge.style === 'dotted';
-  const material = dashed
-    ? new LineDashedMaterial({
-        color: edge.stroke,
-        transparent: true,
-        opacity: restingAlpha,
-        depthWrite: false,
-        dashSize: DASH[edge.style as 'dashed' | 'dotted'].dash,
-        gapSize: DASH[edge.style as 'dashed' | 'dotted'].gap,
-      })
-    : new LineBasicMaterial({
-        color: edge.stroke,
-        transparent: true,
-        opacity: restingAlpha,
-        depthWrite: false,
-      });
-  return { object: new Line(geometry, material), geometry, material, dashed };
+  const material = buildLineMaterial(edge, restingAlpha);
+  return { object: new Line(geometry, material), geometry, material, dashed: isDashed(edge) };
+}
+
+/**
+ * Re-apply compiled visuals to an existing link object, in place.
+ *
+ * The visual-only update path must not touch `graphData()`, and it cannot swap
+ * the scene object either: the library binds objects to datums by identity, so
+ * a replacement object would never reach the scene. Geometry and material CAN
+ * be swapped under the same object, which is what a changed cylinder radius or
+ * a changed dash pattern needs; the old resource is disposed here.
+ *
+ * The shape class (line vs cylinder) is the one thing that cannot change in
+ * place — see {@link linkShapeMatches}.
+ */
+export function applyLinkVisuals(
+  obj: LinkObject3D,
+  edge: CompiledGraphEdge,
+  useWidth: boolean,
+): void {
+  obj.material.color.set(edge.stroke);
+
+  if (useWidth) {
+    const r = cylinderRadius(edge);
+    if ((obj.geometry as CylinderGeometry).parameters.radiusTop === r) return;
+    const next = buildCylinder(edge);
+    (obj.object as Mesh).geometry = next;
+    obj.geometry.dispose();
+    obj.geometry = next;
+    return;
+  }
+
+  const dashed = isDashed(edge);
+  const current = obj.material as LineDashedMaterial;
+  const dash = dashed ? DASH[edge.style as 'dashed' | 'dotted'] : null;
+  const sameDash =
+    dashed === obj.dashed &&
+    (dash === null || (current.dashSize === dash.dash && current.gapSize === dash.gap));
+  if (sameDash) return;
+
+  // Carry the live opacity across so a style change mid-hover doesn't flash;
+  // the emphasis pass retargets it on the next paint anyway.
+  const next = buildLineMaterial(edge, obj.material.opacity);
+  (obj.object as Line).material = next;
+  obj.material.dispose();
+  obj.material = next;
+  obj.dashed = dashed;
+  if (dashed) (obj.object as Line).computeLineDistances();
+}
+
+/**
+ * Whether an existing link object still has the right shape class for the
+ * current `useLinkWidth` setting. A mismatch means the object has to be rebuilt
+ * through `graphData()`, because the scene binding is by object identity.
+ */
+export function linkShapeMatches(obj: LinkObject3D, useWidth: boolean): boolean {
+  return useWidth ? obj.object instanceof Mesh : obj.object instanceof Line;
 }
 
 /**

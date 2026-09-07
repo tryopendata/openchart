@@ -15,9 +15,7 @@
 import type { GraphSpec } from '@opendata-ai/openchart-core';
 import { MAX_3D_NODES } from '@opendata-ai/openchart-engine';
 import { Graph, useGraph } from '@opendata-ai/openchart-react';
-// Side-effect import: registers the WebGL renderer for `dimensions: 3` specs.
-import '@opendata-ai/openchart-react/graph-3d';
-import { useEffect, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { Demo, GalleryPage, Section } from '../components';
 import { generateRandomGraph, generateScaleFreeGraph } from '../graphs/helpers';
 
@@ -914,10 +912,73 @@ const cursorSpec: GraphSpec = {
 // ---------------------------------------------------------------------------
 
 /**
+ * The 3D subpath, loaded once and shared by every demo on this page.
+ *
+ * It is a side-effect import that pulls three.js in, so a static import would
+ * put three.js on the gallery's critical path for every visitor, 3D demos or
+ * not. Deferring it to an effect keeps it out of the initial bundle graph, and
+ * memoizing the promise at module scope means the six demos share one request.
+ */
+let graph3DImport: Promise<unknown> | null = null;
+
+/** True once `registerGraphRenderer(3, ...)` has run. */
+function useGraph3D(): boolean {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    graph3DImport ??= import('@opendata-ai/openchart-react/graph-3d');
+    graph3DImport.then(() => {
+      if (!cancelled) setReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return ready;
+}
+
+/** Fills the box the graph will take, so nothing reflows when it swaps in. */
+function Graph3DPlaceholder() {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '100%',
+        height: '100%',
+        color: 'var(--gx-text-muted)',
+        fontSize: 'var(--gx-type-caption)',
+      }}
+    >
+      Loading WebGL renderer…
+    </div>
+  );
+}
+
+/**
+ * Holds a `dimensions: 3` graph back until the renderer is registered.
+ *
+ * Mount is synchronous, so `createGraph` throws if a 3D spec reaches it before
+ * the subpath has registered.
+ *
+ * Only for graphs that are 3D for their whole life. A demo that toggles
+ * dimensions calls `useGraph3D()` directly instead: wrapping just the 3D side
+ * would change the element type at that position, and React would then unmount
+ * the whole subtree (detaching the container before the vanilla instance's
+ * `destroy()` runs) rather than swapping the instance inside a stable one.
+ */
+function Graph3DReady({ children }: { children: ReactNode }) {
+  const ready = useGraph3D();
+  if (ready) return <>{children}</>;
+  return <Graph3DPlaceholder />;
+}
+
+/**
  * `dimensions: 3` swaps the Canvas renderer for the WebGL one. The spec is
  * otherwise unchanged, and the whole handle (search, highlight, legend, camera,
  * update) behaves the same. three.js ships on its own subpath, so the
- * side-effect import at the top of this file is what makes these mount.
+ * `Graph3DReady` gate above is what makes these mount.
  */
 const basic3DSpec: GraphSpec = {
   ...basicSpec,
@@ -1063,17 +1124,19 @@ function Seeded3DGraph() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
       <div style={{ display: 'flex', gap: 'var(--gx-space-3)', alignItems: 'flex-start' }}>
         <div style={{ flex: 1, height: 520 }}>
-          <Graph
-            ref={ref}
-            spec={spec}
-            legend={false}
-            onNodeClick={(node) => {
-              const id = String(node.id);
-              setSelected(id);
-              selectNode(id);
-            }}
-            onNodeDoubleClick={(node) => setSeedId(String(node.id))}
-          />
+          <Graph3DReady>
+            <Graph
+              ref={ref}
+              spec={spec}
+              legend={false}
+              onNodeClick={(node) => {
+                const id = String(node.id);
+                setSelected(id);
+                selectNode(id);
+              }}
+              onNodeDoubleClick={(node) => setSeedId(String(node.id))}
+            />
+          </Graph3DReady>
         </div>
         <div
           style={{
@@ -1178,7 +1241,9 @@ function Scale3DGraph() {
   return (
     <div style={{ height: 600, position: 'relative' }}>
       {spec ? (
-        <Graph spec={spec} />
+        <Graph3DReady>
+          <Graph spec={spec} />
+        </Graph3DReady>
       ) : (
         <div
           style={{
@@ -1261,7 +1326,9 @@ function OverGate3DGraph() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
       <div style={{ height: 520, position: 'relative' }}>
         {spec ? (
-          <Graph spec={spec} />
+          <Graph3DReady>
+            <Graph spec={spec} />
+          </Graph3DReady>
         ) : (
           <div
             style={{
@@ -1353,6 +1420,9 @@ function buildToggleSpec(dimensions: 2 | 3): GraphSpec {
 function Toggle2D3DGraph() {
   const [dimensions, setDimensions] = useState<2 | 3>(2);
   const spec = useMemo(() => buildToggleSpec(dimensions), [dimensions]);
+  // Kicks the subpath import off on mount, so the 3D side is usually already
+  // registered by the time the button is pressed.
+  const ready3D = useGraph3D();
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
@@ -1366,7 +1436,7 @@ function Toggle2D3DGraph() {
         </button>
       </div>
       <div style={{ height: 520 }}>
-        <Graph spec={spec} />
+        {dimensions === 3 && !ready3D ? <Graph3DPlaceholder /> : <Graph spec={spec} />}
       </div>
     </div>
   );
@@ -1546,16 +1616,24 @@ export const Graphs = () => (
         id="basic-3d"
         title="A force layout in three dimensions"
         description="The Basics spec with one field added. Drag to orbit, scroll to dolly; labels appear for the nodes nearest the camera."
-        spec={basic3DSpec}
+        specForPanel={basic3DSpec}
         height={520}
-      />
+      >
+        <Graph3DReady>
+          <Graph spec={basic3DSpec} />
+        </Graph3DReady>
+      </Demo>
       <Demo
         id="communities-3d"
         title="Community clusters in 3D"
         description="The cluster force pulls each community toward its own centroid in x, y and z, so groups that overlap in a flat projection separate along depth."
-        spec={communities3DSpec}
+        specForPanel={communities3DSpec}
         height={520}
-      />
+      >
+        <Graph3DReady>
+          <Graph spec={communities3DSpec} />
+        </Graph3DReady>
+      </Demo>
       <Demo
         id="seeded-3d"
         title="Seeded neighborhood + host legend"

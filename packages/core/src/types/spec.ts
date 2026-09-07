@@ -2371,17 +2371,26 @@ export interface GraphSpec {
    * import '@opendata-ai/openchart-vanilla/graph-3d';
    * ```
    *
-   * (React hosts can import `@opendata-ai/openchart-react/graph-3d`.) Mounting
-   * a `dimensions: 3` spec without that import throws.
+   * (Framework hosts import their own package's mirror of the subpath:
+   * `@opendata-ai/openchart-react/graph-3d`,
+   * `@opendata-ai/openchart-vue/graph-3d`,
+   * `@opendata-ai/openchart-svelte/graph-3d`.) Mounting a `dimensions: 3` spec
+   * without that import throws.
    *
    * 3D differs from 2D in these ways:
    * - Labels use a fixed budget re-ranked by camera distance, not the 2D
    *   priority declutter, so distant labels drop out.
    * - The simulation runs on the main thread (no worker, no wall-clock warmup
    *   budget).
-   * - Keyboard navigation, SVG export, `interaction.cursorRepulsion`,
-   *   `interaction.springyDrag`, and `layout.type` of `'radial'` or
-   *   `'hierarchical'` are unsupported. Each warns and is ignored.
+   * - Keyboard navigation, SVG export, `interaction.cursorRepulsion` and
+   *   `interaction.springyDrag` are unsupported. Each warns and is ignored.
+   *   (`layout.type` of `'radial'` or `'hierarchical'` is rejected by spec
+   *   validation in both dimensions, so it never reaches either renderer.)
+   * - `getCamera()` returns a pose rather than a zoom transform: `x`/`y` are
+   *   the look-at point in world units, alongside `position` and `target`. In
+   *   2D they are the zoom transform's translate in pixels. `onCameraChange`
+   *   carries the same payload, so persisted camera state has to be keyed on
+   *   the dimension it came from.
    * - A structural `update()` reheats the whole layout globally, so settled
    *   nodes drift; 2D applies a local impulse instead.
    * - Above 2000 nodes the spec warns and falls back to 2D.

@@ -22,6 +22,7 @@ import { entranceOrder } from '../../graph/entrance';
 import type { GraphInstance } from '../../graph-mount';
 import { createGraph3D } from '../index';
 import { LABEL_BUDGET_3D } from '../labels';
+import { FIT_DISTANCE } from '../mount';
 import type { Link3D, Node3D } from '../types';
 import {
   type FakeForceGraph3D,
@@ -64,11 +65,14 @@ function spec(overrides: Partial<GraphSpec> = {}): GraphSpec {
   } as GraphSpec;
 }
 
-function mount(s: GraphSpec = spec(), options?: Parameters<typeof createGraph3D>[2]) {
+function mount(s: GraphSpec = spec(), options?: Parameters<typeof createGraph3D>[2], flush = true) {
   const container = document.createElement('div');
   document.body.appendChild(container);
   const instance = createGraph3D(container, s, options);
   const fake = forceGraphInstances[forceGraphInstances.length - 1];
+  // The library's digest is debounced; every test but the deferred-creation
+  // one wants the steady state where the objects exist.
+  if (flush) fake.flush();
   return { container, instance, fake };
 }
 
@@ -180,6 +184,10 @@ describe('accessor mapping', () => {
 
   it('adds a non-raycasting label sprite carrying the compiled label', () => {
     const { fake } = mount();
+    // Sprites are built by the label rank, which needs the node objects to
+    // exist: the library's digest is debounced, so the first rank that can see
+    // them is the one on the first engine tick.
+    (fake.handlers.onEngineTick as () => void)();
     const sprite = nodeGroup(fake, 'a').children[1] as unknown as {
       text: string;
       raycast: () => void;
@@ -308,6 +316,48 @@ describe('camera', () => {
     expect(call.position.z).toBeGreaterThan(100);
   });
 
+  it('stops auto-fitting once the host calls zoomToFit itself', () => {
+    const { instance, fake } = mount();
+    instance.zoomToFit({ duration: 0 });
+    const after = fake.cameraPositionCalls.length;
+    expect(after).toBeGreaterThan(0);
+    (fake.handlers.onEngineTick as () => void)();
+    (fake.handlers.onEngineStop as () => void)();
+    expect(fake.cameraPositionCalls).toHaveLength(after);
+  });
+
+  it('reports a full 3D pose through onCameraChange', async () => {
+    const onCameraChange = vi.fn();
+    const { instance, fake } = mount(spec(), { onCameraChange });
+    instance.zoomToNode('a', { duration: 0 });
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+
+    expect(onCameraChange).toHaveBeenCalled();
+    const cam = onCameraChange.mock.calls[onCameraChange.mock.calls.length - 1][0];
+    const call = fake.cameraPositionCalls[fake.cameraPositionCalls.length - 1];
+    expect(cam.position).toEqual(call.position);
+    expect(cam.target).toEqual(call.lookAt);
+    const distance = Math.hypot(
+      cam.position.x - cam.target.x,
+      cam.position.y - cam.target.y,
+      cam.position.z - cam.target.z,
+    );
+    // 3D has no zoom scalar, so `k` is the reference distance over the current one.
+    expect(cam.k).toBeCloseTo(FIT_DISTANCE / distance);
+  });
+
+  it('snaps camera flights under reduced motion', () => {
+    const matchMedia = vi
+      .spyOn(window, 'matchMedia')
+      .mockReturnValue({ matches: true } as MediaQueryList);
+    const { instance, fake } = mount(
+      spec({ animation: { camera: { duration: 900 } } } as Partial<GraphSpec>),
+    );
+    instance.zoomToNode('a');
+    expect(fake.cameraPositionCalls[fake.cameraPositionCalls.length - 1].ms).toBe(0);
+    matchMedia.mockRestore();
+  });
+
   it('centerAt keeps the current zoom and recentres', () => {
     const { instance, fake } = mount();
     instance.centerAt(50, 60);
@@ -355,6 +405,18 @@ describe('emphasis and hover', () => {
 
     instance.clearHighlight();
     expect(instance.getHighlight()?.sort()).toEqual(['a', 'b']);
+  });
+
+  it('snaps the hover crossfade under reduced motion instead of tweening it', () => {
+    const matchMedia = vi
+      .spyOn(window, 'matchMedia')
+      .mockReturnValue({ matches: true } as MediaQueryList);
+    // A hover choreography IS configured; reduced motion is what collapses it.
+    const { fake } = mount(spec({ animation: { hover: { duration: 400 } } } as Partial<GraphSpec>));
+    (fake.handlers.onNodeHover as (n: Node3D | null) => void)(nodeDatum(fake, 'a'));
+    // No frame has been pumped, so a tweened value would still be at its start.
+    expect(nodeMaterial(fake, 'c').opacity).toBeCloseTo(0.3 * nodeDatum(fake, 'c').node.opacity);
+    matchMedia.mockRestore();
   });
 
   it('reports highlight changes through onHighlightChange', () => {
@@ -432,6 +494,19 @@ describe('legend', () => {
     expect(container.querySelector('.oc-graph-legend')).toBeNull();
   });
 
+  it('fires onLegendHover with the legend field and value, and null on leave', () => {
+    const onLegendHover = vi.fn();
+    const { container } = mount(spec(), { onLegendHover });
+    const row = container.querySelector('.oc-graph-legend-item') as HTMLButtonElement;
+    row.dispatchEvent(new MouseEvent('mouseenter'));
+    expect(onLegendHover).toHaveBeenLastCalledWith({
+      field: 'kind',
+      value: expect.stringMatching(/lab|dataset/),
+    });
+    row.dispatchEvent(new MouseEvent('mouseleave'));
+    expect(onLegendHover).toHaveBeenLastCalledWith(null);
+  });
+
   it('fires onLegendToggle when a legend row is clicked', () => {
     const onLegendToggle = vi.fn();
     const { container } = mount(spec(), { onLegendToggle });
@@ -487,7 +562,8 @@ describe('labels', () => {
     }
     (fake.handlers.onEngineTick as () => void)();
     const shown = (['a', 'b', 'c'] as const).filter(
-      (id) => (nodeGroup(fake, id).children[1] as unknown as { visible: boolean }).visible,
+      (id) =>
+        (nodeGroup(fake, id).children[1] as unknown as { visible: boolean } | undefined)?.visible,
     );
     expect(shown).toHaveLength(1);
   });
@@ -531,6 +607,26 @@ describe('tooltips', () => {
     expect(tooltip.textContent).toContain('Alpha');
   });
 
+  it('fires onEdgeHover with the edge data and clears it on leave', () => {
+    const onEdgeHover = vi.fn();
+    const { fake } = mount(spec(), { onEdgeHover });
+    const hover = fake.handlers.onLinkHover as (l: Link3D | null) => void;
+    hover(fake.graph.links[0] as unknown as Link3D);
+    expect(onEdgeHover).toHaveBeenLastCalledWith(expect.objectContaining({ confidence: 0.9 }));
+    hover(null);
+    expect(onEdgeHover).toHaveBeenLastCalledWith(null);
+  });
+
+  it('lets a node hover own the tooltip over an edge hover', () => {
+    const onEdgeHover = vi.fn();
+    const { fake } = mount(spec(), { onEdgeHover });
+    (fake.handlers.onNodeHover as (n: Node3D | null) => void)(nodeDatum(fake, 'a'));
+    (fake.handlers.onLinkHover as (l: Link3D | null) => void)(
+      fake.graph.links[0] as unknown as Link3D,
+    );
+    expect(onEdgeHover).not.toHaveBeenCalled();
+  });
+
   it('shows an edge tooltip from the compiled edge', () => {
     const { fake, container } = mount();
     (fake.handlers.onLinkHover as (l: Link3D | null) => void)(
@@ -549,6 +645,34 @@ describe('tooltips', () => {
       expect.anything(),
     );
     expect((container.querySelector('.oc-tooltip') as HTMLElement).textContent).toBe('custom text');
+  });
+
+  it('re-anchors on every tick without re-running the formatter', () => {
+    const formatter = vi.fn(() => 'custom text');
+    const { fake, container } = mount(spec(), { tooltip: { formatter } });
+    (fake.handlers.onNodeHover as (n: Node3D | null) => void)(nodeDatum(fake, 'a'));
+    expect(formatter).toHaveBeenCalledTimes(1);
+
+    // The node moves under a still pointer while the layout settles, so the
+    // tooltip has to follow it -- but the content has not changed.
+    const tick = fake.handlers.onEngineTick as () => void;
+    for (let i = 0; i < 20; i++) tick();
+    fake.controls().emit('change');
+
+    expect(formatter).toHaveBeenCalledTimes(1);
+    const tooltip = container.querySelector('.oc-tooltip') as HTMLElement;
+    expect(tooltip.style.display).toBe('block');
+    expect(tooltip.textContent).toBe('custom text');
+  });
+
+  it('re-renders when the hover moves to a different node', () => {
+    const formatter = vi.fn((ctx: { data: Record<string, unknown> }) => String(ctx.data.label));
+    const { fake, container } = mount(spec(), { tooltip: { formatter } });
+    const hover = fake.handlers.onNodeHover as (n: Node3D | null) => void;
+    hover(nodeDatum(fake, 'a'));
+    hover(nodeDatum(fake, 'b'));
+    expect(formatter).toHaveBeenCalledTimes(2);
+    expect((container.querySelector('.oc-tooltip') as HTMLElement).textContent).toBe('Beta');
   });
 
   it('creates no tooltip manager when tooltip is false', () => {
@@ -611,6 +735,105 @@ describe('update', () => {
     expect(fake.graph).toBe(before);
   });
 
+  it('keeps surviving nodes bound to their scene objects across a structural change', () => {
+    const { instance, fake } = mount();
+    const groupBefore = nodeGroup(fake, 'a');
+
+    instance.update(spec({ nodes: NODES.slice(0, 2), edges: [EDGES[0]] }));
+    fake.flush();
+
+    // The digest binds by datum IDENTITY. A fresh datum literal for a survivor
+    // would make the digest hand the cached group to the new datum and then run
+    // the remove hook for the old one on that same group, taking the survivor
+    // out of the scene and out of the position tick loop.
+    const datum = nodeDatum(fake, 'a') as unknown as Record<string, unknown>;
+    expect(fake.nodeBinding.get(datum)).toBe(groupBefore);
+    expect(datum.__threeObj).toBe(groupBefore);
+    expect(fake.scene().children).toContain(groupBefore);
+    expect(fake.removedFromScene.has(groupBefore)).toBe(false);
+    expect(fake.deallocated).not.toContain(groupBefore);
+  });
+
+  it('deallocates the scene object of a node that left', () => {
+    const { instance, fake } = mount();
+    const gone = nodeGroup(fake, 'c');
+
+    instance.update(spec({ nodes: NODES.slice(0, 2), edges: [EDGES[0]] }));
+    fake.flush();
+
+    expect(fake.scene().children).not.toContain(gone);
+    expect(fake.deallocated).toContain(gone);
+  });
+
+  it('carries positions across on the datum itself, without a copy step', () => {
+    const { instance, fake } = mount();
+    const before = nodeDatum(fake, 'a');
+    before.x = 11;
+    before.y = 22;
+    before.z = 33;
+    before.vx = 1;
+
+    instance.update(spec({ nodes: NODES.slice(0, 2), edges: [EDGES[0]] }));
+
+    // Same object, so nothing can be dropped on the way across.
+    expect(nodeDatum(fake, 'a')).toBe(before);
+    expect([before.x, before.y, before.z, before.vx]).toEqual([11, 22, 33, 1]);
+  });
+
+  it('updates link width and dash when the edge encoding changes', () => {
+    // No edgeWidth encoding, so links are lines and edgeStyle owns the material.
+    const lines = spec({
+      encoding: { nodeColor: { field: 'kind', type: 'nominal' } },
+    });
+    const { instance, fake } = mount(lines);
+    const before = linkObject(fake, 0);
+    expect((before.material as unknown as { type: string }).type).toBe('LineBasicMaterial');
+
+    instance.update(spec({ encoding: { edgeStyle: { field: 'confidence', type: 'nominal' } } }));
+    fake.flush();
+
+    const materials = [0, 1].map(
+      (i) => (linkObject(fake, i).material as unknown as { type: string }).type,
+    );
+    expect(materials).toContain('LineDashedMaterial');
+  });
+
+  it('updates cylinder radius when the edgeWidth values change', () => {
+    const { instance, fake } = mount();
+    const radius = (i: number) =>
+      (linkObject(fake, i).geometry as unknown as { parameters: { radiusTop: number } }).parameters
+        .radiusTop;
+    const before = radius(0);
+
+    // Flip which edge is the heavy one: the compiled strokeWidths swap, so a
+    // color-only refresh would leave both cylinders at their old radii.
+    instance.update(
+      spec({
+        edges: [
+          { source: 'a', target: 'b', confidence: 0.2 },
+          { source: 'b', target: 'c', confidence: 0.9 },
+        ],
+      }),
+    );
+    fake.flush();
+
+    expect(radius(0)).not.toBeCloseTo(before);
+    expect(radius(0)).toBeLessThan(radius(1));
+  });
+
+  it('rebuilds link objects through graphData when the shape class flips', () => {
+    const { instance, fake } = mount();
+    // edgeWidth encoded -> cylinders.
+    expect(linkObject(fake, 0).type).toBe('Mesh');
+
+    instance.update(spec({ encoding: { nodeColor: { field: 'kind', type: 'nominal' } } }));
+    fake.flush();
+
+    // A line cannot be a mesh in place, so the change has to go through the
+    // digest rather than the visual-only fast path.
+    expect(linkObject(fake, 0).type).toBe('Line');
+  });
+
   it('re-runs an active search against the new nodes', () => {
     const { instance } = mount();
     instance.search('a');
@@ -619,6 +842,31 @@ describe('update', () => {
     );
     // 'Gamma' contains an 'a' too, so every node matches after the insert.
     expect(instance.getSearchMatches().sort()).toEqual(['a', 'b', 'c', 'd']);
+  });
+});
+
+describe('webgl context loss', () => {
+  it('preventDefaults the loss so the browser will restore the context', () => {
+    const { fake } = mount();
+    const event = new Event('webglcontextlost', { cancelable: true });
+    fake.canvas.dispatchEvent(event);
+    // Without preventDefault the context is gone for good and the canvas
+    // stays blank.
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('rebuilds every scene object when the context comes back', () => {
+    const { fake } = mount();
+    expect(fake.refreshCount).toBe(0);
+    fake.canvas.dispatchEvent(new Event('webglcontextrestored'));
+    expect(fake.refreshCount).toBe(1);
+  });
+
+  it('does not rebuild after destroy', () => {
+    const { instance, fake } = mount();
+    instance.destroy();
+    fake.canvas.dispatchEvent(new Event('webglcontextrestored'));
+    expect(fake.refreshCount).toBe(0);
   });
 });
 
@@ -809,6 +1057,47 @@ describe('entrance', () => {
       expect(nodeMaterial(fake, id).opacity).toBeCloseTo(1);
       expect(nodeScale(fake, id)).toBe(1);
     }
+  });
+
+  it('starts objects created after the entrance began at alpha 0 and collapsed', () => {
+    // The library's digest is debounced, so the scene objects for a graph
+    // mounted mid-frame are built AFTER `startEntrance()` has already run. They
+    // have to pick up the entrance state rather than flash in at full alpha.
+    const { fake } = mount(enterSpec(), undefined, false);
+    expect(fake.scene().children).toHaveLength(0);
+
+    fake.flush();
+    for (const id of ['a', 'b', 'c']) {
+      expect(nodeMaterial(fake, id).opacity).toBe(0);
+      expect(nodeScale(fake, id)).toBeCloseTo(0.01);
+    }
+    expect(linkObject(fake, 0).material.opacity).toBe(0);
+  });
+
+  it('composes a hover with the entrance instead of fighting it', () => {
+    // A snapping hover, so the assertion reads the composed value directly
+    // rather than a point on the crossfade.
+    const { fake } = mount({
+      ...enterSpec(),
+      animation: { enter: { duration: 1000, stagger: true }, hover: { duration: 0 } },
+    } as GraphSpec);
+    vi.advanceTimersByTime(700);
+    const entranceAlpha = ['a', 'b', 'c'].map((id) => nodeMaterial(fake, id).opacity);
+    // Mid-entrance: 'c' is partway in, so its entrance factor is neither 0 nor 1.
+    expect(entranceAlpha[2]).toBeGreaterThan(0);
+    expect(entranceAlpha[2]).toBeLessThan(1);
+
+    (fake.handlers.onNodeHover as (n: Node3D | null) => void)(nodeDatum(fake, 'a'));
+    // 'c' is outside a's neighbourhood: its alpha is the dim factor TIMES its
+    // entrance factor, not one of them replacing the other.
+    expect(nodeMaterial(fake, 'c').opacity).toBeCloseTo(0.3 * entranceAlpha[2]);
+    // The lit nodes keep the entrance factor they had, undimmed.
+    expect(nodeMaterial(fake, 'a').opacity).toBeCloseTo(entranceAlpha[0]);
+
+    // And the entrance still lands on top of the standing hover.
+    vi.advanceTimersByTime(SPAN_MS);
+    expect(nodeMaterial(fake, 'a').opacity).toBeCloseTo(1);
+    expect(nodeMaterial(fake, 'c').opacity).toBeCloseTo(0.3);
   });
 
   it('never replays on update()', () => {

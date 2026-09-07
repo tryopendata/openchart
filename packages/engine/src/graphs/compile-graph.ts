@@ -576,15 +576,6 @@ function resolveNumDimensions(spec: NormalizedGraphSpec, onWarn: CompileOptions[
   if (spec.interaction?.springyDrag) {
     onWarn?.('interaction.springyDrag is not supported in 3D; it will be ignored.');
   }
-  // Spec validation currently rejects any layout.type other than 'force' before
-  // compilation reaches here, so this is dormant. It stays so that shipping
-  // radial/hierarchical in 2D can't silently imply 3D support.
-  const layoutType = spec.layout.type;
-  if (layoutType === 'radial' || layoutType === 'hierarchical') {
-    onWarn?.(
-      `layout.type: '${layoutType}' is not supported in 3D; a force layout is used instead.`,
-    );
-  }
   const strokeOverrides = Object.values(spec.nodeOverrides ?? {}).some(
     (o) => o?.stroke !== undefined || o?.strokeWidth !== undefined,
   );

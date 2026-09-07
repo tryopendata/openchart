@@ -100,6 +100,10 @@ createGraph(container, { ...graphSpec, dimensions: 3 });
 
 Mounting a `dimensions: 3` spec without that import throws.
 
+Framework hosts import their own package's mirror of this subpath rather than
+reaching past it into vanilla: `@opendata-ai/openchart-react/graph-3d`,
+`@opendata-ai/openchart-vue/graph-3d`, `@opendata-ai/openchart-svelte/graph-3d`.
+
 Notes:
 
 - **SSR**: `3d-force-graph` touches `window` at import time. Import the subpath
@@ -115,9 +119,15 @@ Differences from 2D:
   out instead of being decluttered by priority.
 - The force simulation runs on the main thread. Above 2000 nodes the spec warns
   and renders in 2D.
-- Keyboard navigation, SVG export, `interaction.cursorRepulsion`,
-  `interaction.springyDrag`, and `layout.type` of `radial`/`hierarchical` are
-  unsupported. Each warns and is ignored.
+- Keyboard navigation, SVG export, `interaction.cursorRepulsion`, and
+  `interaction.springyDrag` are unsupported. Each warns and is ignored.
+  (`layout.type` of `radial` or `hierarchical` is rejected by spec validation in
+  both dimensions, so it never reaches either renderer.)
+- `getCamera()` returns a pose, not a zoom transform: `x`/`y` are the look-at
+  point in world units, alongside `position` and `target`. In 2D they are the
+  zoom transform's translate in pixels. `onCameraChange` carries the same
+  payload, so persisted camera state has to be keyed on the dimension it came
+  from.
 - A structural `update()` reheats the whole layout, so settled nodes drift. 2D
   applies a local impulse instead.
 - `nodeOverrides[*].stroke` and `strokeWidth` are ignored (no ring).

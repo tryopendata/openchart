@@ -104,6 +104,6 @@
     "@types/three": "^0.185.4",
     "gifenc": "^1.0.3",
     "three": "0.185.1",
-    "three-spritetext": "^1.10.0"
+    "three-spritetext": "1.10.0"
   }
 }
