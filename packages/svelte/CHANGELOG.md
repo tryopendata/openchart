@@ -1,5 +1,20 @@
 # Changelog
 
+## [8.5.0](https://github.com/tryopendata/openchart/compare/core-v8.4.1...core-v8.5.0) (2026-09-07)
+
+
+### Features
+
+* entrance choreography, 2000-node gate, toggle and over-gate stories, invariants ([e9ec03a](https://github.com/tryopendata/openchart/commit/e9ec03a))
+* 3D renderer scaffold via 3d-force-graph (RFC 27 phases 1-2) ([1ae803c](https://github.com/tryopendata/openchart/commit/1ae803c))
+
+
+### Bug Fixes
+
+* address CodeRabbit findings on #118 ([508a417](https://github.com/tryopendata/openchart/commit/508a417))
+* address re-review findings ([0957388](https://github.com/tryopendata/openchart/commit/0957388))
+* address review findings ([44691eb](https://github.com/tryopendata/openchart/commit/44691eb))
+
 ## [8.4.1](https://github.com/tryopendata/openchart/compare/core-v8.4.0...core-v8.4.1) (2026-09-06)
 
 
