@@ -142,6 +142,11 @@ export interface GraphCompilation {
 /**
  * Node ceiling for 3D rendering. The 3D simulation runs on the main thread, so
  * a spec above this falls back to 2D with a warning rather than freezing the
- * page. Mirrors ENTRANCE_STAGGER_MAX_NODES in the vanilla renderer.
+ * page.
+ *
+ * The number is measured, not guessed. On the RFC 27 gate rig (headed Chromium,
+ * ANGLE/Metal, 900x600, DPR 2) an idle 3,000-node / ~6,000-edge scene held
+ * 22-27fps against a 30fps floor, while 2,000 held 38-44fps. Every edge is a
+ * separate draw call, which is what the ceiling is really made of.
  */
-export const MAX_3D_NODES = 3000;
+export const MAX_3D_NODES = 2000;

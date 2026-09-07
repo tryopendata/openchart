@@ -113,7 +113,7 @@ Differences from 2D:
 
 - Labels use a fixed budget re-ranked by camera distance, so distant labels drop
   out instead of being decluttered by priority.
-- The force simulation runs on the main thread. Above 3000 nodes the spec warns
+- The force simulation runs on the main thread. Above 2000 nodes the spec warns
   and renders in 2D.
 - Keyboard navigation, SVG export, `interaction.cursorRepulsion`,
   `interaction.springyDrag`, and `layout.type` of `radial`/`hierarchical` are

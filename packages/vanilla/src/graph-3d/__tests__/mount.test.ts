@@ -9,7 +9,7 @@
  */
 
 import type { GraphSpec } from '@opendata-ai/openchart-core';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('three', async () => await import('./three-fake'));
 vi.mock('three-spritetext', async () => await import('./spritetext-fake'));
@@ -18,6 +18,7 @@ vi.mock('3d-force-graph', async () => {
   return { default: mod.FakeForceGraph3D };
 });
 
+import { entranceOrder } from '../../graph/entrance';
 import type { GraphInstance } from '../../graph-mount';
 import { createGraph3D } from '../index';
 import { LABEL_BUDGET_3D } from '../labels';
@@ -673,5 +674,163 @@ describe('destroy', () => {
     local.instance.destroy();
     local.fake.canvas.dispatchEvent(new MouseEvent('dblclick'));
     expect(onNodeDoubleClick).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Entrance choreography
+// ---------------------------------------------------------------------------
+
+describe('entrance', () => {
+  /**
+   * No `nodeOpacity` encoding, so every node's resting alpha is 1 and the
+   * material opacity IS the entrance factor. `animation.hover` stays at its
+   * default, which is deliberate: the emphasis tween and the entrance tween
+   * both write `material.opacity`, and these tests are the guard that they
+   * compose rather than fight.
+   */
+  function enterSpec(enter: Record<string, unknown> = {}): GraphSpec {
+    return {
+      type: 'graph',
+      dimensions: 3,
+      nodes: NODES,
+      edges: EDGES,
+      encoding: { nodeColor: { field: 'kind', type: 'nominal' }, nodeLabel: { field: 'label' } },
+      animation: { enter: { duration: 1000, stagger: true, ...enter } },
+    } as GraphSpec;
+  }
+
+  /** Longest possible offset with these fixtures: last node + the link beat. */
+  const SPAN_MS = 1750;
+
+  beforeEach(() => {
+    vi.useFakeTimers({
+      toFake: [
+        'setTimeout',
+        'clearTimeout',
+        'Date',
+        'performance',
+        'requestAnimationFrame',
+        'cancelAnimationFrame',
+      ],
+    });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function nodeScale(fake: FakeForceGraph3D, id: string): number {
+    return (nodeGroup(fake, id).children[0] as unknown as { scale: { x: number } }).scale.x;
+  }
+
+  it('starts every node invisible and collapsed on the first painted frame', () => {
+    const { fake } = mount(enterSpec());
+    for (const id of ['a', 'b', 'c']) {
+      expect(nodeMaterial(fake, id).opacity).toBe(0);
+      expect(nodeScale(fake, id)).toBeCloseTo(0.01);
+    }
+    expect(linkObject(fake, 0).material.opacity).toBe(0);
+  });
+
+  it('reveals nodes in entranceOrder rank order', () => {
+    const { fake } = mount(enterSpec());
+    const rank = entranceOrder(NODES.map((n) => ({ id: n.id, x: 0, y: 0 })));
+    vi.advanceTimersByTime(600);
+    const byRank = [...rank.entries()].sort((a, b) => a[1] - b[1]).map(([id]) => id);
+    const alphas = byRank.map((id) => nodeMaterial(fake, id).opacity);
+    expect(alphas[0]).toBeGreaterThan(alphas[1]);
+    expect(alphas[1]).toBeGreaterThan(alphas[2]);
+  });
+
+  it('lands every node and link at its target by the end of the span', () => {
+    const { fake } = mount(enterSpec());
+    vi.advanceTimersByTime(SPAN_MS + 64);
+    for (const id of ['a', 'b', 'c']) {
+      expect(nodeMaterial(fake, id).opacity).toBeCloseTo(1);
+      expect(nodeScale(fake, id)).toBe(1);
+    }
+    expect(linkObject(fake, 0).material.opacity).toBeGreaterThan(0);
+  });
+
+  it('holds links back until after their endpoints', () => {
+    const { fake } = mount(enterSpec());
+    // 250ms is exactly the link beat, so no link has started while the
+    // earliest node is already a quarter of the way through its pop.
+    vi.advanceTimersByTime(240);
+    expect(linkObject(fake, 0).material.opacity).toBe(0);
+    expect(
+      Math.max(...['a', 'b', 'c'].map((id) => nodeMaterial(fake, id).opacity)),
+    ).toBeGreaterThan(0);
+  });
+
+  it('pulls the camera back and flies it in over the entrance window', () => {
+    const { fake } = mount(enterSpec());
+    vi.advanceTimersByTime(32);
+    const first = fake.cameraPositionCalls[0];
+    expect(first).toBeDefined();
+    vi.advanceTimersByTime(SPAN_MS + 64);
+    const last = fake.cameraPositionCalls[fake.cameraPositionCalls.length - 1];
+    const dist = (c: typeof first): number =>
+      Math.hypot(
+        c.position.x - (c.lookAt?.x ?? 0),
+        c.position.y - (c.lookAt?.y ?? 0),
+        c.position.z - (c.lookAt?.z ?? 0),
+      );
+    // The cloud never moves in this fake, so the whole difference is the
+    // entrance standoff multiplier easing 1.6 -> 1.
+    expect(dist(first) / dist(last)).toBeGreaterThan(1.5);
+    expect(dist(first) / dist(last)).toBeLessThanOrEqual(1.6);
+  });
+
+  it('reveals the whole graph as one when stagger is off', () => {
+    const { fake } = mount(enterSpec({ stagger: false }));
+    vi.advanceTimersByTime(600);
+    const alphas = ['a', 'b', 'c'].map((id) => nodeMaterial(fake, id).opacity);
+    expect(new Set(alphas).size).toBe(1);
+    expect(alphas[0]).toBeGreaterThan(0);
+  });
+
+  it('snaps to full opacity and scale under reduced motion', () => {
+    const matchMedia = vi
+      .spyOn(window, 'matchMedia')
+      .mockReturnValue({ matches: true } as MediaQueryList);
+    const { fake } = mount(enterSpec());
+    for (const id of ['a', 'b', 'c']) {
+      expect(nodeMaterial(fake, id).opacity).toBeCloseTo(1);
+      expect(nodeScale(fake, id)).toBe(1);
+    }
+    matchMedia.mockRestore();
+  });
+
+  it('snaps when suppressEntrance is set', () => {
+    const { fake } = mount(enterSpec(), { suppressEntrance: true });
+    for (const id of ['a', 'b', 'c']) {
+      expect(nodeMaterial(fake, id).opacity).toBeCloseTo(1);
+      expect(nodeScale(fake, id)).toBe(1);
+    }
+  });
+
+  it('never replays on update()', () => {
+    const { instance, fake } = mount(enterSpec());
+    vi.advanceTimersByTime(SPAN_MS + 64);
+    instance.update({
+      ...enterSpec(),
+      nodes: [...NODES, { id: 'd', label: 'Delta', kind: 'lab', weight: 0.4, rel: 1 }],
+    } as GraphSpec);
+    for (const id of ['a', 'b', 'c', 'd']) {
+      expect(nodeMaterial(fake, id).opacity).toBeCloseTo(1);
+      expect(nodeScale(fake, id)).toBe(1);
+    }
+  });
+
+  it('finishes an in-flight entrance rather than leaving nodes hidden on update()', () => {
+    const { instance, fake } = mount(enterSpec());
+    vi.advanceTimersByTime(100);
+    instance.update(enterSpec());
+    for (const id of ['a', 'b', 'c']) {
+      expect(nodeMaterial(fake, id).opacity).toBeCloseTo(1);
+      expect(nodeScale(fake, id)).toBe(1);
+    }
   });
 });

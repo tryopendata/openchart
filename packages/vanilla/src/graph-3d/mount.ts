@@ -31,13 +31,14 @@ import ForceGraph3D from '3d-force-graph';
 import type { Object3D } from 'three';
 import { Raycaster, Vector2 } from 'three';
 import type { CameraFlightOptions } from '../graph/camera';
+import { ENTRANCE_STAGGER_MAX_NODES, popAlpha, popScale } from '../graph/entrance';
 import {
   composeStandingFocus,
   type FocusSnapshot,
   layerHoverFocus,
 } from '../graph/focus-transition';
 import { createGraphLegend, type GraphLegendController } from '../graph/legend';
-import { createTween, prefersReducedMotion, resolveEase } from '../graph/motion';
+import { createTween, linear, prefersReducedMotion, resolveEase } from '../graph/motion';
 import type { GraphRendererContext } from '../graph/renderer-registry';
 import { AnimationScheduler, type GraphAnimation } from '../graph/scheduler';
 import { GraphSearchManager } from '../graph/search';
@@ -53,6 +54,7 @@ import type {
 } from '../graph-mount';
 import { resolvedSurface } from '../theme-tokens';
 import { resolveEmphasis } from './emphasis';
+import { ENTRANCE_CAMERA_PULLBACK, elementProgress, planEntrance } from './entrance';
 import { computeFit, normalize } from './fit';
 import { applySimulationConfig } from './forces';
 import { LABEL_BUDGET_3D, type LabelBox, labelBox, overlaps, resolveVisibleLabels } from './labels';
@@ -107,8 +109,14 @@ const AUTO_FIT_INTERVAL_MS = 250;
 export const NODE_FOCUS_DISTANCE = 120;
 /** Fallback flight duration when `animation.camera.duration` is `'auto'`. */
 const AUTO_FLIGHT_MS = 800;
-/** Entrance fade length. Phase 3 replaces this with the full choreography. */
-const ENTRANCE_FADE_MS = 300;
+/**
+ * The scale a node holds before its pop starts. Not 0: a zero scale collapses
+ * the sphere's bounding box, and three skips frustum culling maths on a
+ * degenerate box in ways that vary by build.
+ */
+const ENTRANCE_MIN_SCALE = 0.01;
+/** Entrance alpha below which a node's label stays hidden. */
+const LABEL_ENTRANCE_MIN = 0.4;
 /** Label re-rank throttle while orbiting. */
 const LABEL_RERANK_MS = 100;
 /** `k` clamp, mirroring 2D's `clampK`. */
@@ -202,13 +210,20 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
   let highlightDimOpacity: number | null = null;
 
   // -- Opacity state -------------------------------------------------------
-  // `display*` is what the materials currently show; `entranceAlpha` is a global
-  // multiplier so the entrance and the emphasis crossfade compose instead of
-  // fighting over `material.opacity`. Phase 3 hangs the full choreography off it.
+  // `display*` is what the emphasis model says each element should show;
+  // `entrance*` is a per-element multiplier on top of it, so the entrance and
+  // the emphasis crossfade compose instead of fighting over `material.opacity`.
+  // While `entranceActive` is false the multipliers are skipped entirely, which
+  // keeps the steady-state paint a plain map read.
 
   const displayNodeAlpha = new Map<string, number>();
   const displayEdgeAlpha = new Map<number, number>();
-  let entranceAlpha = 1;
+  let entranceActive = false;
+  const entranceNodeAlpha = new Map<string, number>();
+  const entranceNodeScale = new Map<string, number>();
+  const entranceEdgeAlpha = new Map<number, number>();
+  /** Standoff multiplier the fit is scaled by while the camera flies in. */
+  let entranceCameraPull = 1;
   let emphasisTween: GraphAnimation | null = null;
 
   // -- Frame loop ----------------------------------------------------------
@@ -236,6 +251,9 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
   let autoFit = true;
   let lastAutoFit = 0;
   let cameraChangeQueued = false;
+  /** Ids whose label won a slot in the last rank. `paint()` reads it so the
+   * entrance can hide a label whose node has not popped in yet. */
+  const labelShown = new Set<string>();
   let lastLabelRank = 0;
   let labelRankQueued = false;
   let controlsListener: (() => void) | null = null;
@@ -342,7 +360,13 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
       obj = createNodeObject(datum.node, labelColor());
       obj.group.userData.nodeId = datum.id;
       nodeObjects.set(datum.id, obj);
-      obj.material.opacity = (displayNodeAlpha.get(datum.id) ?? datum.node.opacity) * entranceAlpha;
+      const base = displayNodeAlpha.get(datum.id) ?? datum.node.opacity;
+      if (entranceActive) {
+        obj.material.opacity = base * (entranceNodeAlpha.get(datum.id) ?? 0);
+        obj.mesh.scale.setScalar(entranceNodeScale.get(datum.id) ?? ENTRANCE_MIN_SCALE);
+      } else {
+        obj.material.opacity = base;
+      }
     }
     return obj;
   }
@@ -353,7 +377,10 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
       const resting = edgeBaseAlpha?.get(datum.edgeIndex) ?? 0.3;
       obj = createLinkObject(datum.edge, useLinkWidth, resting);
       linkObjects.set(datum.edgeIndex, obj);
-      obj.material.opacity = (displayEdgeAlpha.get(datum.edgeIndex) ?? resting) * entranceAlpha;
+      const base = displayEdgeAlpha.get(datum.edgeIndex) ?? resting;
+      obj.material.opacity = entranceActive
+        ? base * (entranceEdgeAlpha.get(datum.edgeIndex) ?? 0)
+        : base;
     }
     return obj;
   }
@@ -393,14 +420,30 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
     return custom ?? compilation.interaction.dimOpacity;
   }
 
+  /**
+   * Push the composed opacity (and, mid-entrance, the pop scale) onto every
+   * material. Called from both the emphasis tween and the entrance tween, so it
+   * allocates nothing: every map it reads is preallocated and reused.
+   */
   function paint(): void {
     for (const [id, obj] of nodeObjects) {
       const a = displayNodeAlpha.get(id);
-      if (a !== undefined) obj.material.opacity = a * entranceAlpha;
+      if (a === undefined) continue;
+      if (entranceActive) {
+        const factor = entranceNodeAlpha.get(id) ?? 0;
+        obj.material.opacity = a * factor;
+        obj.mesh.scale.setScalar(entranceNodeScale.get(id) ?? ENTRANCE_MIN_SCALE);
+        // SpriteText has no opacity channel of its own, so a label whose node
+        // has not popped yet would otherwise float over empty space.
+        if (obj.sprite) obj.sprite.visible = labelShown.has(id) && factor > LABEL_ENTRANCE_MIN;
+      } else {
+        obj.material.opacity = a;
+      }
     }
     for (const [index, obj] of linkObjects) {
       const a = displayEdgeAlpha.get(index);
-      if (a !== undefined) obj.material.opacity = a * entranceAlpha;
+      if (a === undefined) continue;
+      obj.material.opacity = entranceActive ? a * (entranceEdgeAlpha.get(index) ?? 0) : a;
     }
   }
 
@@ -568,7 +611,7 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
     const viewportHeight = shell.getSize().height || 1;
     const worldPerPixel = (2 * Math.tan(fov / 2)) / viewportHeight;
 
-    const shown = new Set<string>();
+    labelShown.clear();
     const placed: LabelBox[] = [];
     for (const id of ranked) {
       const obj = nodeObjects.get(id);
@@ -596,14 +639,18 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
       // Only a label that actually won a slot is worth a sprite.
       const sprite = ensureLabelSprite(obj);
       if (!sprite) continue;
-      shown.add(id);
+      labelShown.add(id);
       if (obj.labelBaseScale) {
         sprite.scale.set(obj.labelBaseScale.x * factor, obj.labelBaseScale.y * factor, 0);
       }
     }
 
     for (const [id, obj] of nodeObjects) {
-      if (obj.sprite) obj.sprite.visible = shown.has(id);
+      if (obj.sprite) {
+        obj.sprite.visible =
+          labelShown.has(id) &&
+          (!entranceActive || (entranceNodeAlpha.get(id) ?? 0) > LABEL_ENTRANCE_MIN);
+      }
     }
     lastLabelRank = performance.now();
   }
@@ -710,11 +757,14 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
       },
     );
     if (!fit) return;
+    // Mid-entrance the camera stands `entranceCameraPull ×` further back than
+    // the true fit, easing to 1. See `startEntrance`.
+    const distance = fit.distance * entranceCameraPull;
     graph.cameraPosition(
       {
-        x: fit.center.x + fit.dir.x * fit.distance,
-        y: fit.center.y + fit.dir.y * fit.distance,
-        z: fit.center.z + fit.dir.z * fit.distance,
+        x: fit.center.x + fit.dir.x * distance,
+        y: fit.center.y + fit.dir.y * distance,
+        z: fit.center.z + fit.dir.z * distance,
       },
       fit.center,
       flightMs(opts),
@@ -971,31 +1021,81 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
   // Entrance
   // =========================================================================
 
+  /** Drop the entrance multipliers and restore every node to full scale. */
+  function endEntrance(): void {
+    entranceActive = false;
+    entranceCameraPull = 1;
+    for (const obj of nodeObjects.values()) obj.mesh.scale.setScalar(1);
+    paint();
+  }
+
   /**
-   * Phase 1/2 entrance: a plain opacity fade. Phase 3 replaces the body of this
-   * function with the staggered pop and camera pull-in; the `entranceAlpha`
-   * multiplier and this call site are the hook.
+   * Nodes pop in (scale 0.01 → 1 with an overshoot, opacity 0 → their emphasis
+   * alpha), staggered by `entranceOrder`; links fade in a beat after the later
+   * of their endpoints; the camera starts pulled back to
+   * `ENTRANCE_CAMERA_PULLBACK ×` the fit and flies in over the same window.
+   *
+   * The pull-in is expressed as a MULTIPLIER on the fit distance rather than as
+   * its own camera flight. The settle-phase auto-fit re-frames the cloud every
+   * `AUTO_FIT_INTERVAL_MS` while the layout expands from its seeded blob, and a
+   * flight to a distance computed at t=0 would be re-targeting a framing that is
+   * already stale. As a multiplier the two compose: the auto-fit keeps deciding
+   * WHAT to frame, the entrance only decides how far back to stand.
+   *
+   * Runs once per mount. `update()` never calls it.
    */
   function startEntrance(): void {
     const enter = compilation.animation?.enter ?? null;
     if (options?.suppressEntrance || !enter || prefersReducedMotion()) {
-      entranceAlpha = 1;
-      paint();
+      endEntrance();
       return;
     }
-    entranceAlpha = 0;
+
+    // Same gate as 2D: thousands of distinct start times read as noise, so
+    // above the cap the whole graph reveals as one.
+    const stagger = enter.stagger && compilation.nodes.length <= ENTRANCE_STAGGER_MAX_NODES;
+    const plan = planEntrance(
+      nodeData.map((d) => ({ id: d.id, x: d.x ?? 0, y: d.y ?? 0 })),
+      compilation.edges,
+      enter.duration,
+      stagger,
+    );
+    const ease = resolveEase(enter.ease);
+
+    entranceActive = true;
+    entranceCameraPull = enter.cameraFit ? ENTRANCE_CAMERA_PULLBACK : 1;
+    for (const id of plan.nodeOffset.keys()) {
+      entranceNodeAlpha.set(id, 0);
+      entranceNodeScale.set(id, ENTRANCE_MIN_SCALE);
+    }
+    for (const index of plan.linkOffset.keys()) entranceEdgeAlpha.set(index, 0);
     paint();
+
+    // The driver runs linear over the whole span so each element can apply the
+    // spec's ease across its OWN window; easing the global clock instead would
+    // squeeze the stagger rather than shape each pop.
     const tween = createTween({
-      duration: Math.min(ENTRANCE_FADE_MS, enter.duration),
-      ease: resolveEase(enter.ease),
+      duration: plan.span,
+      ease: linear,
       apply: (t) => {
-        entranceAlpha = t;
+        const elapsed = t * plan.span;
+        for (const [id, offset] of plan.nodeOffset) {
+          const p = elementProgress(elapsed, offset, enter.duration, ease);
+          entranceNodeAlpha.set(id, popAlpha(p));
+          entranceNodeScale.set(id, Math.max(ENTRANCE_MIN_SCALE, popScale(p)));
+        }
+        for (const [index, offset] of plan.linkOffset) {
+          entranceEdgeAlpha.set(index, elementProgress(elapsed, offset, enter.duration, ease));
+        }
+        if (enter.cameraFit) {
+          entranceCameraPull = ENTRANCE_CAMERA_PULLBACK + (1 - ENTRANCE_CAMERA_PULLBACK) * ease(t);
+          // The auto-fit throttle is too coarse to carry a flight, so the
+          // entrance re-fits every frame while it owns the standoff.
+          if (autoFit && options?.fitOnLoad !== false) fitNow({ duration: 0 });
+        }
         paint();
       },
-      onDone: () => {
-        entranceAlpha = 1;
-        paint();
-      },
+      onDone: endEntrance,
     });
     scheduler.add(tween);
   }
@@ -1158,6 +1258,8 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
         disposeNodeObject(obj);
         nodeObjects.delete(id);
         displayNodeAlpha.delete(id);
+        entranceNodeAlpha.delete(id);
+        entranceNodeScale.delete(id);
       }
     }
     // Link objects are keyed by index into the edge list, which the new
@@ -1165,6 +1267,7 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
     for (const obj of linkObjects.values()) disposeLinkObject(obj);
     linkObjects.clear();
     displayEdgeAlpha.clear();
+    entranceEdgeAlpha.clear();
 
     nodeData = compilation.nodes.map((node) => {
       const survivor = diff.survivingPositions.get(node.id);

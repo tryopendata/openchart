@@ -509,7 +509,7 @@ describe('compileGraph', () => {
       const result = compileGraph(bigSpec(MAX_3D_NODES + 1), options);
 
       expect(result.numDimensions).toBe(2);
-      const warning = warnings.find((w) => w.includes('3000'));
+      const warning = warnings.find((w) => w.includes(String(MAX_3D_NODES)));
       expect(warning).toBeDefined();
       expect(warning).toContain(String(MAX_3D_NODES + 1));
     });
@@ -517,7 +517,7 @@ describe('compileGraph', () => {
     it('stays 3D at exactly MAX_3D_NODES', () => {
       const { warnings, options } = warnCollector();
       expect(compileGraph(bigSpec(MAX_3D_NODES), options).numDimensions).toBe(3);
-      expect(warnings.filter((w) => w.includes('3000'))).toEqual([]);
+      expect(warnings.filter((w) => w.includes(String(MAX_3D_NODES)))).toEqual([]);
     });
 
     it('warns for cursorRepulsion and springyDrag in 3D', () => {

@@ -1,5 +1,5 @@
 import type { GraphSpec } from '@opendata-ai/openchart-core';
-import { compileGraph } from '@opendata-ai/openchart-engine';
+import { compileGraph, MAX_3D_NODES } from '@opendata-ai/openchart-engine';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createGraph, type GraphInstance } from '../../graph-mount';
 import {
@@ -150,7 +150,7 @@ describe('createGraph dimension dispatch', () => {
       container,
       {
         type: 'graph',
-        nodes: Array.from({ length: 3001 }, (_, i) => ({ id: `n${i}` })),
+        nodes: Array.from({ length: MAX_3D_NODES + 1 }, (_, i) => ({ id: `n${i}` })),
         edges: [{ source: 'n0', target: 'n1' }],
         dimensions: 3,
       },
@@ -158,7 +158,7 @@ describe('createGraph dimension dispatch', () => {
     );
 
     expect(container.querySelector('.oc-graph-canvas')).not.toBeNull();
-    expect(warnings.some((w) => w.includes('3000'))).toBe(true);
+    expect(warnings.some((w) => w.includes(String(MAX_3D_NODES)))).toBe(true);
     graph.destroy();
   });
 });

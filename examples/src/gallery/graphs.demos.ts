@@ -31,6 +31,8 @@ export const page: PageEntry = {
     { id: 'basic-3d', title: 'A force layout in three dimensions' },
     { id: 'communities-3d', title: 'Community clusters in 3D' },
     { id: 'seeded-3d', title: 'Seeded neighborhood + host legend' },
-    { id: 'scale-3d', title: 'Scale: 3,000 nodes (click to load)' },
+    { id: 'scale-3d', title: 'Scale: 2,000 nodes (click to load)' },
+    { id: 'over-gate-3d', title: 'Over the gate: 3D falls back to 2D' },
+    { id: 'toggle-2d-3d', title: 'Switching dimensions' },
   ],
 };

@@ -13,6 +13,7 @@
  */
 
 import type { GraphSpec } from '@opendata-ai/openchart-core';
+import { MAX_3D_NODES } from '@opendata-ai/openchart-engine';
 import { Graph, useGraph } from '@opendata-ai/openchart-react';
 // Side-effect import: registers the WebGL renderer for `dimensions: 3` specs.
 import '@opendata-ai/openchart-react/graph-3d';
@@ -21,6 +22,9 @@ import { Demo, GalleryPage, Section } from '../components';
 import { generateRandomGraph, generateScaleFreeGraph } from '../graphs/helpers';
 
 const ILLUSTRATIVE = 'Illustrative data';
+
+/** The 3D node ceiling, formatted for prose. Pinned to the engine constant. */
+const NODE_GATE = MAX_3D_NODES.toLocaleString();
 
 // ---------------------------------------------------------------------------
 // 1. Basic force-directed graph — who reviews whose pull requests
@@ -1163,7 +1167,10 @@ function Seeded3DGraph() {
 
 // -- Scale 3D: the node gate, exactly at the limit ---------------------------
 
-const scale3DPanelSpec: GraphSpec = { ...generateScaleFreeGraph(3000), dimensions: 3 };
+const scale3DPanelSpec: GraphSpec = {
+  ...generateScaleFreeGraph(MAX_3D_NODES),
+  dimensions: 3,
+};
 
 function Scale3DGraph() {
   const [spec, setSpec] = useState<GraphSpec | null>(null);
@@ -1189,31 +1196,178 @@ function Scale3DGraph() {
           }}
         >
           <span style={{ fontSize: 'var(--gx-type-caption)' }}>
-            3,000 nodes, ~6,000 edges — the 3D node ceiling
+            {NODE_GATE} nodes, ~{MAX_3D_NODES * 2} edges — the 3D node ceiling
           </span>
           <button
             type="button"
             className="oc-spec-copy"
             onClick={() =>
               setSpec({
-                ...generateScaleFreeGraph(3000),
+                ...generateScaleFreeGraph(MAX_3D_NODES),
                 dimensions: 3,
                 animation: false,
                 chrome: {
-                  title: 'Three Thousand Nodes on the Main Thread',
+                  title: 'Two Thousand Nodes on the Main Thread',
                   subtitle: 'The 3D gate: above this the spec warns and falls back to 2D',
                   source: ILLUSTRATIVE,
                 },
               })
             }
           >
-            Load the 3,000-node graph
+            Load the {NODE_GATE}-node graph
           </button>
           <span style={{ fontSize: 'var(--gx-type-caption)' }}>
             The 3D simulation runs on the main thread — nothing starts until you ask
           </span>
         </div>
       )}
+    </div>
+  );
+}
+
+// -- Over the gate: 3D asked for, 2D delivered -------------------------------
+
+const overGate3DPanelSpec: GraphSpec = {
+  ...generateScaleFreeGraph(MAX_3D_NODES + 1),
+  dimensions: 3,
+};
+
+/**
+ * One node past the ceiling. `compileGraph` resolves `numDimensions` to 2 and
+ * warns, so what mounts is the Canvas renderer.
+ *
+ * The warning is surfaced by patching `console.warn`, not by a prop: `<Graph>`
+ * has no `onWarn`, and the vanilla mount's default warn sink is `console.warn`.
+ * The patch is installed before the click that mounts the graph and removed on
+ * unmount, so it never outlives this demo.
+ */
+function OverGate3DGraph() {
+  const [spec, setSpec] = useState<GraphSpec | null>(null);
+  const [warnings, setWarnings] = useState<string[]>([]);
+
+  useEffect(() => {
+    const original = console.warn;
+    console.warn = (...args: unknown[]) => {
+      const text = args.map(String).join(' ');
+      if (text.includes('dimensions: 3')) setWarnings((prev) => [...prev, text]);
+      original(...args);
+    };
+    return () => {
+      console.warn = original;
+    };
+  }, []);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
+      <div style={{ height: 520, position: 'relative' }}>
+        {spec ? (
+          <Graph spec={spec} />
+        ) : (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 'var(--gx-space-3)',
+              height: '100%',
+              border: '1px dashed var(--gx-border)',
+              borderRadius: 'var(--gx-radius-control)',
+              background: 'var(--gx-surface-raised)',
+              color: 'var(--gx-text-muted)',
+              textAlign: 'center',
+            }}
+          >
+            <span style={{ fontSize: 'var(--gx-type-caption)' }}>
+              {(MAX_3D_NODES + 1).toLocaleString()} nodes with dimensions: 3 — one over the gate
+            </span>
+            <button
+              type="button"
+              className="oc-spec-copy"
+              onClick={() =>
+                setSpec({
+                  ...generateScaleFreeGraph(MAX_3D_NODES + 1),
+                  dimensions: 3,
+                  animation: false,
+                  chrome: {
+                    title: 'Asked for 3D, Rendered in 2D',
+                    subtitle: `One node past MAX_3D_NODES (${NODE_GATE}); the spec warns and falls back`,
+                    source: ILLUSTRATIVE,
+                  },
+                })
+              }
+            >
+              Load the over-gate graph
+            </button>
+          </div>
+        )}
+      </div>
+      {warnings.length > 0 && (
+        <pre
+          style={{
+            margin: 0,
+            padding: 'var(--gx-space-3)',
+            border: '1px solid var(--gx-border)',
+            borderRadius: 'var(--gx-radius-control)',
+            background: 'var(--gx-surface-raised)',
+            color: 'var(--gx-text-muted)',
+            fontSize: 'var(--gx-type-caption)',
+            whiteSpace: 'pre-wrap',
+          }}
+        >
+          {warnings.join('\n')}
+        </pre>
+      )}
+    </div>
+  );
+}
+
+// -- 2D / 3D toggle: the wrapper remount -------------------------------------
+
+const toggleBase = generateRandomGraph(90, 1.7, 4);
+
+function buildToggleSpec(dimensions: 2 | 3): GraphSpec {
+  return {
+    type: 'graph',
+    dimensions,
+    nodes: toggleBase.nodes,
+    edges: toggleBase.edges,
+    encoding: { nodeColor: { field: 'community', type: 'nominal' } },
+    layout: { type: 'force', clustering: { field: 'community' }, chargeStrength: -260, seed: 11 },
+    animation: { enter: { duration: 1000, stagger: true } },
+    chrome: {
+      title: dimensions === 3 ? 'The Same Graph, Three Axes' : 'The Same Graph, Two Axes',
+      subtitle: 'Only `dimensions` changes; every other field is identical',
+      source: ILLUSTRATIVE,
+    },
+  };
+}
+
+/**
+ * A dimension change is a remount, never an `update()`: the two renderers own
+ * different surfaces and vanilla's `update()` has no path back through the
+ * shell. The wrappers put `spec.dimensions` in their mount key, so flipping it
+ * tears the instance down and builds the other renderer — which is why both
+ * sides play their entrance rather than cross-fading.
+ */
+function Toggle2D3DGraph() {
+  const [dimensions, setDimensions] = useState<2 | 3>(2);
+  const spec = useMemo(() => buildToggleSpec(dimensions), [dimensions]);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
+      <div>
+        <button
+          type="button"
+          className="oc-spec-copy"
+          onClick={() => setDimensions((d) => (d === 2 ? 3 : 2))}
+        >
+          Switch to {dimensions === 2 ? '3D' : '2D'}
+        </button>
+      </div>
+      <div style={{ height: 520 }}>
+        <Graph spec={spec} />
+      </div>
     </div>
   );
 }
@@ -1413,15 +1567,32 @@ export const Graphs = () => (
       </Demo>
       <Demo
         id="scale-3d"
-        title="Scale: 3,000 nodes (click to load)"
-        description="The 3D simulation runs on the main thread, so the renderer caps at 3,000 nodes; above that a spec warns and renders in 2D. Mounted only on click, with animation off."
+        title={`Scale: ${NODE_GATE} nodes (click to load)`}
+        description={`The 3D simulation runs on the main thread, so the renderer caps at ${NODE_GATE} nodes; above that a spec warns and renders in 2D. The ceiling is measured, not guessed: on the reference GPU an idle 3,000-node scene held 22-27fps against a 30fps floor while ${NODE_GATE} held 38-44fps. Mounted only on click, with animation off.`}
         specForPanel={scale3DPanelSpec}
-        generatorSnippet={
-          "import { generateScaleFreeGraph } from './graphs/helpers';\n\nconst spec = { ...generateScaleFreeGraph(3000), dimensions: 3, animation: false };\n\n// <Graph spec={spec} />"
-        }
+        generatorSnippet={`import { generateScaleFreeGraph } from './graphs/helpers';\n\nconst spec = { ...generateScaleFreeGraph(${MAX_3D_NODES}), dimensions: 3, animation: false };\n\n// <Graph spec={spec} />`}
         height={680}
       >
         <Scale3DGraph />
+      </Demo>
+      <Demo
+        id="over-gate-3d"
+        title="Over the gate: 3D falls back to 2D"
+        description={`One node past the ceiling. compileGraph resolves numDimensions to 2 and warns, so the Canvas renderer mounts instead — no WebGL context, no three.js scene. <Graph> has no onWarn prop, so the demo patches console.warn (the vanilla mount's default warn sink) while it is on screen and prints what it caught below the graph.`}
+        specForPanel={overGate3DPanelSpec}
+        generatorSnippet={`import { generateScaleFreeGraph } from './graphs/helpers';\n\n// MAX_3D_NODES is ${MAX_3D_NODES}; one more falls back to 2D with a warning.\nconst spec = { ...generateScaleFreeGraph(${MAX_3D_NODES + 1}), dimensions: 3, animation: false };\n\n// <Graph spec={spec} />`}
+        height={720}
+      >
+        <OverGate3DGraph />
+      </Demo>
+      <Demo
+        id="toggle-2d-3d"
+        title="Switching dimensions"
+        description="One spec, one button, two renderers. A dimension change is a remount rather than an update(): the framework wrappers carry spec.dimensions in their mount key, so the old instance is destroyed (releasing its WebGL context) and the new one plays its own entrance."
+        specForPanel={buildToggleSpec(3)}
+        height={640}
+      >
+        <Toggle2D3DGraph />
       </Demo>
     </Section>
   </GalleryPage>
