@@ -11,6 +11,20 @@ import type { ResolvedTheme } from '@opendata-ai/openchart-core';
 import type { CompiledGraphEdge, CompiledGraphNode } from '@opendata-ai/openchart-engine';
 import type { FocusSnapshot } from './focus-transition';
 
+/**
+ * A programmatic highlight target. Resolved once at call time into a node id set
+ * and rendered through the focus model (eased crossfade). See
+ * `GraphInstance.highlight`.
+ *
+ * Lives here rather than in `graph-mount` so `graph/highlight.ts`, which both
+ * the 2D and 3D mounts consume, does not have to import upward from the layer
+ * that consumes it.
+ */
+export type GraphHighlightTarget =
+  | { nodeIds: string[] }
+  | { category: { field: string; value: string | string[] } }
+  | { neighborsOf: string; includeSelf?: boolean };
+
 /** A compiled node with simulation-assigned x/y position. */
 export interface PositionedNode extends CompiledGraphNode {
   x: number;

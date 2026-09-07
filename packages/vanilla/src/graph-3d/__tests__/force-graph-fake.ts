@@ -99,6 +99,8 @@ export class FakeForceGraph3D {
   };
   /** Number of `refresh()` calls. The hover path must never increment this. */
   refreshCount = 0;
+  /** Number of `graphData(data)` calls; each one reheats the layout at alpha 1. */
+  graphDataCalls = 0;
   destructorCount = 0;
   zoomToFitCalls: Array<[number | undefined, number | undefined]> = [];
   cameraPositionCalls: Array<{
@@ -208,7 +210,17 @@ export class FakeForceGraph3D {
     return this.set('linkWidth', v);
   }
   linkThreeObject(v: unknown): this {
-    return this.set('linkThreeObject', v);
+    // three-forcegraph clears its link mapper whenever this prop changes and
+    // then re-digests the LINKS only (see its `linkThreeObject` prop change
+    // list): every link object is rebuilt without `graphData()` and without
+    // the simulation being touched. Re-setting the same accessor counts.
+    const rebind = 'linkThreeObject' in this.props;
+    this.set('linkThreeObject', v);
+    if (rebind) {
+      this.pendingLinkClear = true;
+      this.pendingLinkDigest = true;
+    }
+    return this;
   }
   linkPositionUpdate(v: unknown): this {
     return this.set('linkPositionUpdate', v);
@@ -249,7 +261,9 @@ export class FakeForceGraph3D {
   }
 
   d3Force(name: string, fn?: unknown): unknown {
-    if (fn === undefined) return this.forces.get(name);
+    // d3's `simulation.force(name)` reports a removed force as undefined, not
+    // as the null that removed it.
+    if (fn === undefined) return this.forces.get(name) ?? undefined;
     this.forces.set(name, fn);
     return this;
   }
@@ -263,6 +277,7 @@ export class FakeForceGraph3D {
     links: Array<Record<string, unknown>>;
   }): unknown {
     if (!data) return this.graph;
+    this.graphDataCalls++;
     this.graph = data;
     this.pendingDigest = true;
     return this;
@@ -270,18 +285,26 @@ export class FakeForceGraph3D {
 
   /** Kapsule's debounced digest, run on demand. */
   flush(): this {
-    if (!this.pendingDigest) return this;
-    this.pendingDigest = false;
-    this.digest(
-      this.nodeBinding,
-      this.graph.nodes,
-      this.props.nodeThreeObject as ((d: unknown) => Object3D) | undefined,
-    );
-    this.digest(
-      this.linkBinding,
-      this.graph.links,
-      this.props.linkThreeObject as ((d: unknown) => Object3D) | undefined,
-    );
+    if (this.pendingDigest) {
+      this.pendingDigest = false;
+      this.pendingLinkDigest = true;
+      this.digest(
+        this.nodeBinding,
+        this.graph.nodes,
+        this.props.nodeThreeObject as ((d: unknown) => Object3D) | undefined,
+      );
+    }
+    if (this.pendingLinkDigest) {
+      this.pendingLinkDigest = false;
+      const accessor = this.props.linkThreeObject as ((d: unknown) => Object3D) | undefined;
+      // `DataBindMapper.clear()` is `digest([])`: every bound object leaves the
+      // scene and is deallocated before the next digest rebuilds it.
+      if (this.pendingLinkClear) {
+        this.pendingLinkClear = false;
+        this.digest(this.linkBinding, [], accessor);
+      }
+      this.digest(this.linkBinding, this.graph.links, accessor);
+    }
     return this;
   }
 
@@ -333,6 +356,8 @@ export class FakeForceGraph3D {
   /** Every object the digest has deallocated, in order. */
   readonly deallocated: Object3D[] = [];
   private pendingDigest = false;
+  private pendingLinkDigest = false;
+  private pendingLinkClear = false;
 
   refresh(): this {
     this.refreshCount++;

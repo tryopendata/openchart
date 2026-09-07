@@ -15,7 +15,7 @@
 import type { GraphSpec } from '@opendata-ai/openchart-core';
 import { MAX_3D_NODES } from '@opendata-ai/openchart-engine';
 import { Graph, useGraph } from '@opendata-ai/openchart-react';
-import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Demo, GalleryPage, Section } from '../components';
 import { generateRandomGraph, generateScaleFreeGraph } from '../graphs/helpers';
 
@@ -921,28 +921,58 @@ const cursorSpec: GraphSpec = {
  */
 let graph3DImport: Promise<unknown> | null = null;
 
-/** True once `registerGraphRenderer(3, ...)` has run. */
-function useGraph3D(): boolean {
-  const [ready, setReady] = useState(false);
-  useEffect(() => {
-    let cancelled = false;
-    graph3DImport ??= import('@opendata-ai/openchart-react/graph-3d');
-    graph3DImport.then(() => {
-      if (!cancelled) setReady(true);
-    });
-    return () => {
-      cancelled = true;
-    };
+type Graph3DStatus = 'loading' | 'ready' | 'failed';
+
+/**
+ * Tracks the subpath import: `'ready'` once `registerGraphRenderer(3, ...)` has
+ * run, `'failed'` if the chunk never arrived.
+ *
+ * A rejected promise stays rejected forever, so the failure path drops the
+ * module-scope memo: without that, one flaky chunk request would leave every
+ * 3D demo on the page stuck on the placeholder for the rest of the session.
+ * `retry()` re-runs the effect, which starts a fresh import.
+ */
+function useGraph3D(): { status: Graph3DStatus; retry: () => void } {
+  const [status, setStatus] = useState<Graph3DStatus>('loading');
+  const mounted = useRef(true);
+  const load = useCallback(() => {
+    setStatus('loading');
+    const pending = (graph3DImport ??= import('@opendata-ai/openchart-react/graph-3d'));
+    pending.then(
+      () => {
+        if (mounted.current) setStatus('ready');
+      },
+      (error: unknown) => {
+        if (graph3DImport === pending) graph3DImport = null;
+        console.error('3D graph renderer failed to load', error);
+        if (mounted.current) setStatus('failed');
+      },
+    );
   }, []);
-  return ready;
+  useEffect(() => {
+    mounted.current = true;
+    load();
+    return () => {
+      mounted.current = false;
+    };
+  }, [load]);
+  return { status, retry: load };
 }
 
 /** Fills the box the graph will take, so nothing reflows when it swaps in. */
-function Graph3DPlaceholder() {
+function Graph3DPlaceholder({
+  failed = false,
+  onRetry,
+}: {
+  failed?: boolean;
+  onRetry?: () => void;
+}) {
   return (
     <div
       style={{
         display: 'flex',
+        flexDirection: 'column',
+        gap: 'var(--gx-space-2)',
         alignItems: 'center',
         justifyContent: 'center',
         width: '100%',
@@ -951,7 +981,12 @@ function Graph3DPlaceholder() {
         fontSize: 'var(--gx-type-caption)',
       }}
     >
-      Loading WebGL renderer…
+      {failed ? 'Could not load the WebGL renderer' : 'Loading WebGL renderer…'}
+      {failed && onRetry ? (
+        <button type="button" className="oc-spec-copy" onClick={onRetry}>
+          Try again
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -969,9 +1004,9 @@ function Graph3DPlaceholder() {
  * `destroy()` runs) rather than swapping the instance inside a stable one.
  */
 function Graph3DReady({ children }: { children: ReactNode }) {
-  const ready = useGraph3D();
-  if (ready) return <>{children}</>;
-  return <Graph3DPlaceholder />;
+  const { status, retry } = useGraph3D();
+  if (status === 'ready') return <>{children}</>;
+  return <Graph3DPlaceholder failed={status === 'failed'} onRetry={retry} />;
 }
 
 /**
@@ -1422,7 +1457,7 @@ function Toggle2D3DGraph() {
   const spec = useMemo(() => buildToggleSpec(dimensions), [dimensions]);
   // Kicks the subpath import off on mount, so the 3D side is usually already
   // registered by the time the button is pressed.
-  const ready3D = useGraph3D();
+  const { status: status3D, retry: retry3D } = useGraph3D();
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
@@ -1436,7 +1471,11 @@ function Toggle2D3DGraph() {
         </button>
       </div>
       <div style={{ height: 520 }}>
-        {dimensions === 3 && !ready3D ? <Graph3DPlaceholder /> : <Graph spec={spec} />}
+        {dimensions === 3 && status3D !== 'ready' ? (
+          <Graph3DPlaceholder failed={status3D === 'failed'} onRetry={retry3D} />
+        ) : (
+          <Graph spec={spec} />
+        )}
       </div>
     </div>
   );

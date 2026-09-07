@@ -10,7 +10,7 @@
  */
 
 import type { SimulationConfig } from '@opendata-ai/openchart-engine';
-import { forceCollide } from 'd3-force-3d';
+import { forceCenter, forceCollide } from 'd3-force-3d';
 import type { Graph3D, Node3D } from './types';
 
 /** d3's default `alphaMin`, the alpha at which a simulation stops. */
@@ -151,9 +151,14 @@ export function applySimulationConfig(
 
   graph.d3Force('cluster', config.clustering ? forceCluster3D(config.clustering.strength) : null);
 
-  // 3d-force-graph installs a `center` force of its own, so honouring
-  // `centerForce: false` means removing it rather than declining to add it.
-  if (config.centerForce === false) graph.d3Force('center', null);
+  // 3d-force-graph installs a `center` force of its own, and only in its
+  // constructor, so honouring `centerForce: false` means removing it -- and a
+  // later update that turns centering back on has to install a replacement,
+  // because the library will never do it again.
+  graph.d3Force(
+    'center',
+    config.centerForce === false ? null : (graph.d3Force('center') ?? forceCenter()),
+  );
 
   graph.d3VelocityDecay(config.velocityDecay);
   graph.d3AlphaDecay(config.alphaDecay);

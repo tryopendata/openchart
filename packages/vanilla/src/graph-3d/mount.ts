@@ -385,6 +385,13 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
   }
 
   /**
+   * The `linkThreeObject` accessor, hoisted out of the boot chain so the
+   * shape-class flip in `update()` can re-set the same function: that prop
+   * changing is what makes three-forcegraph rebuild link objects on their own.
+   */
+  const linkThreeObject = (datum: Link3D): LinkObject3D['object'] => linkObjectFor(datum).object;
+
+  /**
    * Same identity contract as {@link nodeObjectFor}: whenever the link datums
    * are rebuilt, `linkObjects` must be cleared first, so the digest never hands
    * a cached object to a new datum while the old datum's remove hook is still
@@ -829,7 +836,10 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
   ): void {
     const tm = shell.tooltipManager;
     if (!tm) return;
-    if (result === null) tm.hide();
+    // A suppressed item has to clear `openTooltip`/`renderedTooltip` too:
+    // leaving them set would send the next `anchorTooltip()` down the
+    // reposition fast path, which re-shows the previous item's content.
+    if (result === null) hideTooltip();
     else if (typeof result === 'string') tm.show({ text: result }, x, y);
     else if (result instanceof HTMLElement) tm.show({ element: result }, x, y);
     else tm.show(result, x, y);
@@ -1027,11 +1037,12 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
     if (id) options?.onNodeDoubleClick?.(nodeDataMap.get(id) ?? {});
   };
 
+  // three's own `onContextRestore` rebuilds the GL resources for every object
+  // already in the scene, so there is nothing left for us to rebuild. Calling
+  // `refresh()` here would tear the scene down and re-add it, and resume the
+  // engine for a spurious tick.
   const onContextLost = (event: Event): void => {
     event.preventDefault();
-  };
-  const onContextRestored = (): void => {
-    if (!destroyed) graph.refresh();
   };
 
   // =========================================================================
@@ -1250,14 +1261,18 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
     reRunSearch();
 
     // An `edgeWidth` encoding appearing or disappearing swaps every link
-    // between a cylinder mesh and a line. The scene binds objects to datums by
-    // identity, so a replacement object would never reach the scene: that one
-    // change has to go through `graphData()` even though the ids are unchanged.
-    const shapeClassChanged = (): boolean =>
+    // between a cylinder mesh and a line, which cannot be done in place: the
+    // scene binds objects to datums by identity, so a replacement object never
+    // reaches the scene on its own.
+    const shapeClassChanged =
       useLinkWidth !== prevUseLinkWidth ||
       [...linkObjects.values()].some((obj) => !linkShapeMatches(obj, useLinkWidth));
 
-    if (diff.visualOnly && !shapeClassChanged()) {
+    // Lines are thin hit targets compared with a cylinder, so the precision
+    // has to follow the shape class rather than stay at its boot value.
+    if (useLinkWidth !== prevUseLinkWidth) graph.linkHoverPrecision(useLinkWidth ? 4 : 8);
+
+    if (diff.visualOnly) {
       // Same ids in the same order, so the datum's compiled node/edge can be
       // swapped under the existing scene objects with no layout restart.
       for (let i = 0; i < compilation.nodes.length; i++) {
@@ -1269,10 +1284,20 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
       for (let i = 0; i < compilation.edges.length; i++) {
         const edge = compilation.edges[i];
         linkData[i].edge = edge;
+        if (shapeClassChanged) continue;
         const obj = linkObjects.get(i);
         // Width, dash pattern and color all move here: color alone would leave
         // a cylinder at its old radius and a line at its old dash geometry.
         if (obj) applyLinkVisuals(obj, edge, useLinkWidth);
+      }
+      if (shapeClassChanged) {
+        // Re-setting `linkThreeObject` makes three-forcegraph clear its link
+        // mapper and re-digest the links alone, so every link object is
+        // rebuilt from the cleared cache without `graphData()` reheating the
+        // layout at alpha 1.
+        for (const obj of linkObjects.values()) disposeLinkObject(obj);
+        linkObjects.clear();
+        graph.linkThreeObject(linkThreeObject);
       }
       pruneInteractionState();
       armEmphasis();
@@ -1316,6 +1341,11 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
       const existing = survivors.get(node.id);
       if (existing) {
         existing.node = node;
+        // The cached group was built from the OLD compiled node, so a
+        // structural update that also recolored or resized a survivor would
+        // otherwise keep painting the stale fill, radius and label.
+        const obj = nodeObjects.get(node.id);
+        if (obj) applyNodeVisuals(obj, node, labelColor());
         return existing;
       }
       const spawn = diff.spawnPositions.get(node.id) ?? { x: 0, y: 0 };
@@ -1370,7 +1400,6 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
     canvas?.removeEventListener('pointerdown', onCanvasCameraInput);
     canvas?.removeEventListener('wheel', onCanvasCameraInput);
     canvas?.removeEventListener('webglcontextlost', onContextLost);
-    canvas?.removeEventListener('webglcontextrestored', onContextRestored);
     if (controlsListener) {
       (
         graph.controls() as { removeEventListener?(t: string, f: () => void): void }
@@ -1441,7 +1470,7 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
     .nodeThreeObject((d: Node3D) => nodeObjectFor(d).group)
     .linkColor((d: Link3D) => d.edge.stroke)
     .linkWidth((d: Link3D) => (useLinkWidth ? d.edge.strokeWidth : 0))
-    .linkThreeObject((d: Link3D) => linkObjectFor(d).object)
+    .linkThreeObject(linkThreeObject)
     .linkPositionUpdate((_obj, coords, d: Link3D) => {
       const link = linkObjects.get(d.edgeIndex);
       // Returning false hands cylinder meshes back to the library, which
@@ -1546,7 +1575,6 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
   canvasEl?.addEventListener('pointerdown', onCanvasCameraInput);
   canvasEl?.addEventListener('wheel', onCanvasCameraInput, { passive: true });
   canvasEl?.addEventListener('webglcontextlost', onContextLost);
-  canvasEl?.addEventListener('webglcontextrestored', onContextRestored);
 
   const disconnectResize = shell.observeResize(() => doResize());
 

@@ -309,6 +309,45 @@ describe('tooltip positioning', () => {
 // HTML escaping
 // ---------------------------------------------------------------------------
 
+describe('tooltip move', () => {
+  it('re-anchors an open tooltip without touching its content', async () => {
+    mockComputePosition.mockResolvedValue({
+      x: 5,
+      y: 6,
+      placement: 'bottom-start',
+      strategy: 'absolute',
+      middlewareData: {},
+    });
+    const container = createContainer();
+    const manager = createTooltipManager(container);
+    manager.show({ text: 'anchored' }, 10, 10);
+    await flushPositioning();
+
+    manager.move(40, 40);
+    await flushPositioning();
+
+    const tooltip = container.querySelector('.oc-tooltip') as HTMLElement;
+    expect(tooltip.style.display).toBe('block');
+    expect(tooltip.textContent).toBe('anchored');
+  });
+
+  it('is a no-op while the tooltip is hidden', async () => {
+    const container = createContainer();
+    const manager = createTooltipManager(container);
+    manager.show({ text: 'stale' }, 10, 10);
+    await flushPositioning();
+    manager.hide();
+
+    // The 3D graph re-anchors on every engine tick; a move that unhid the
+    // element would put the last item's content back on screen.
+    manager.move(20, 20);
+    await flushPositioning();
+
+    const tooltip = container.querySelector('.oc-tooltip') as HTMLElement;
+    expect(tooltip.style.display).toBe('none');
+  });
+});
+
 describe('tooltip content escaping', () => {
   it('escapes HTML special characters in title and fields', () => {
     const container = createContainer();

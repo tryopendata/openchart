@@ -30,6 +30,23 @@ declare module 'd3-force-3d' {
     iterations(iterations: number): CollideForce<N>;
   }
 
+  export interface CenterForce<N> extends Force3D<N> {
+    x(): number;
+    x(x: number): CenterForce<N>;
+    y(): number;
+    y(y: number): CenterForce<N>;
+    z(): number;
+    z(z: number): CenterForce<N>;
+    strength(): number;
+    strength(strength: number): CenterForce<N>;
+  }
+
+  export function forceCenter<N extends Force3DNode>(
+    x?: number,
+    y?: number,
+    z?: number,
+  ): CenterForce<N>;
+
   export function forceCollide<N extends Force3DNode>(
     radius?: number | ((node: N, i: number, nodes: N[]) => number),
   ): CollideForce<N>;
