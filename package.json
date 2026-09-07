@@ -59,7 +59,7 @@
     "react-dom": "19.2.8",
     "ts-json-schema-generator": "^2.9.0",
     "tsup": "^8.5.1",
-    "typescript": "^6.0.2",
+    "typescript": "^7.0.2",
     "vitest": "^4.0.18"
   }
 }
