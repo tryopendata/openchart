@@ -47,6 +47,9 @@ export class Vector3 {
     this.z = z;
     return this;
   }
+  setScalar(v: number): this {
+    return this.set(v, v, v);
+  }
 }
 
 export class Color {

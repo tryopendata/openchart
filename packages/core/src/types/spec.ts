@@ -2384,7 +2384,7 @@ export interface GraphSpec {
    *   `'hierarchical'` are unsupported. Each warns and is ignored.
    * - A structural `update()` reheats the whole layout globally, so settled
    *   nodes drift; 2D applies a local impulse instead.
-   * - Above 3000 nodes the spec warns and falls back to 2D.
+   * - Above 2000 nodes the spec warns and falls back to 2D.
    * - `nodeOverrides[*].stroke` and `strokeWidth` are ignored (no ring).
    */
   dimensions?: 2 | 3;
