@@ -38,19 +38,23 @@ import { GraphInteractionManager } from './graph/interaction';
 import { attachGraphKeyboardNav } from './graph/keyboard';
 import { createGraphLegend, type GraphLegendController } from './graph/legend';
 import { createTween, prefersReducedMotion, resolveEase } from './graph/motion';
+import {
+  GRAPH_3D_NOT_REGISTERED_ERROR,
+  type GraphShell,
+  getGraphRenderer,
+} from './graph/renderer-registry';
 import { AnimationScheduler, type GraphAnimation } from './graph/scheduler';
 import { GraphSearchManager } from './graph/search';
 import { seedNodePositions } from './graph/seed';
+import { createGraphShell, getContainerDimensions as measureContainer } from './graph/shell';
 import { SimulationManager } from './graph/simulation';
 import { SpatialIndex } from './graph/spatial-index';
 import type { GraphRenderState, PositionedEdge, PositionedNode } from './graph/types';
 import { diffGraphUpdate } from './graph/update-diff';
 import type { SimEdge, SimNode } from './graph/worker-protocol';
 import { ZoomTransform } from './graph/zoom';
-import { observeResize } from './resize-observer';
 import { resolveDarkMode } from './resolve-dark-mode';
-import { resolvedSurface } from './theme-tokens';
-import { createTooltipManager, type TooltipManager } from './tooltip';
+import type { TooltipManager } from './tooltip';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -217,8 +221,9 @@ export function createGraph(
   let compilation: GraphCompilation;
   let destroyed = false;
 
-  // DOM elements
-  let wrapper: HTMLElement | null = null;
+  // DOM elements. The shell owns the wrapper/chrome/legend/tooltip scaffolding;
+  // the fields below mirror it so the 2D path reads them directly.
+  let shell: GraphShell | null = null;
   let canvas: HTMLCanvasElement | null = null;
   let chromeEl: HTMLElement | null = null;
   let legendEl: HTMLElement | null = null;
@@ -341,11 +346,7 @@ export function createGraph(
   }
 
   function getContainerDimensions(): { width: number; height: number } {
-    const rect = container.getBoundingClientRect();
-    return {
-      width: Math.max(rect.width || 600, 100),
-      height: Math.max(rect.height || 400, 100),
-    };
+    return measureContainer(container);
   }
 
   /**
@@ -360,7 +361,7 @@ export function createGraph(
     else console.warn(message);
   }
 
-  function compile(): GraphCompilation {
+  function compile(specToCompile: GraphSpec = currentSpec): GraphCompilation {
     const { width, height } = getContainerDimensions();
     const darkMode = resolveDarkMode(options?.darkMode);
 
@@ -373,7 +374,7 @@ export function createGraph(
       onWarn: warnOnce,
     };
 
-    return compileGraph(currentSpec, compileOpts);
+    return compileGraph(specToCompile, compileOpts);
   }
 
   function buildDataMaps(): void {
@@ -483,88 +484,34 @@ export function createGraph(
   // DOM creation
   // ---------------------------------------------------------------------------
 
-  function createDOM(): void {
-    const { width, height } = getContainerDimensions();
-    const isDark = resolveDarkMode(options?.darkMode);
+  /**
+   * Mount the 2D drawing surface into the shell. The wrapper, chrome band and
+   * legend slot already exist; this only adds the canvas between them and
+   * builds the renderer.
+   */
+  function createSurface(): void {
+    const activeShell = shell;
+    if (!activeShell) return;
 
-    // Wrapper
-    wrapper = document.createElement('div');
-    wrapper.className = isDark ? 'oc-graph-wrapper oc-dark' : 'oc-graph-wrapper';
-    if (isDark) {
-      container.classList.add('oc-dark');
-    } else {
-      container.classList.remove('oc-dark');
-    }
-
-    // Apply theme colors as CSS custom properties so chrome HTML picks them up.
-    // Without this, consumer-supplied theme.colors.text only affects canvas-drawn
-    // labels but not the HTML title/subtitle which read from --oc-text.
-    const resolvedTheme = compilation.theme;
-    if (resolvedTheme) {
-      const s = wrapper.style;
-      // The graph paints on an opaque canvas, so a transparent theme background
-      // resolves to the mode's --oc-bg token. This is the single source for the
-      // graph surface: the node knockout rings are cut in the same color.
-      s.setProperty('--oc-bg', resolvedSurface(resolvedTheme));
-      s.setProperty('--oc-text', resolvedTheme.colors.text);
-      s.setProperty('--oc-text-secondary', resolvedTheme.colors.neutral.secondary);
-      s.setProperty('--oc-text-muted', resolvedTheme.colors.axis);
-      s.setProperty('--oc-border', resolvedTheme.colors.neutral.border);
-      s.setProperty('--oc-font-family', resolvedTheme.fonts.family);
-      s.fontFamily = resolvedTheme.fonts.family;
-    }
-
-    // Chrome (title, subtitle)
-    chromeEl = document.createElement('div');
-    chromeEl.className = 'oc-graph-chrome';
-    renderChrome();
-    wrapper.appendChild(chromeEl);
-
-    // Canvas
     canvas = document.createElement('canvas');
     canvas.className = 'oc-graph-canvas';
     canvas.setAttribute('role', 'img');
     if (compilation.a11y?.altText) {
       canvas.setAttribute('aria-label', compilation.a11y.altText);
     }
-    wrapper.appendChild(canvas);
+    activeShell.mountSurface(canvas);
 
-    // Legend
-    if (legendSetting() !== false) {
-      legendEl = document.createElement('div');
-      legendEl.className = 'oc-graph-legend';
-      renderLegend();
-      wrapper.appendChild(legendEl);
-    }
-
-    container.appendChild(wrapper);
-    syncChromeInset();
+    renderLegend();
+    activeShell.syncChromeInset();
 
     // Canvas uses the full container height; chrome overlays on top
-    const canvasHeight = Math.max(height, 200);
+    const { width, height } = activeShell.getSize();
     renderer = new GraphCanvasRenderer(canvas);
-    renderer.resize(width, canvasHeight);
+    renderer.resize(width, height);
   }
 
   function renderChrome(): void {
-    if (!chromeEl) return;
-    let html = '';
-
-    if (compilation.chrome.title) {
-      html += `<h2 class="oc-title">${escapeHtml(compilation.chrome.title.text)}</h2>`;
-    }
-    if (compilation.chrome.subtitle) {
-      html += `<p class="oc-subtitle">${escapeHtml(compilation.chrome.subtitle.text)}</p>`;
-    }
-
-    chromeEl.innerHTML = html;
-
-    // Hide chrome if empty
-    if (!html) {
-      chromeEl.style.display = 'none';
-    } else {
-      chromeEl.style.display = '';
-    }
+    shell?.renderChrome(compilation);
   }
 
   /**
@@ -615,15 +562,8 @@ export function createGraph(
     syncChromeInset();
   }
 
-  /**
-   * Keep the chrome block out of the legend's column: the title/subtitle wrap
-   * before they reach the legend box instead of running underneath it. No-op
-   * when there's no legend (or it has no measurable width, e.g. in happy-dom).
-   */
   function syncChromeInset(): void {
-    if (!chromeEl) return;
-    const legendW = legendEl?.offsetWidth ?? 0;
-    chromeEl.style.right = legendW > 0 ? `${legendW + 24}px` : '';
+    shell?.syncChromeInset();
   }
 
   /**
@@ -1321,10 +1261,6 @@ export function createGraph(
   function initInteraction(): void {
     if (!canvas) return;
 
-    if (options?.tooltip !== false) {
-      tooltipManager = createTooltipManager(wrapper!);
-    }
-
     interactionManager = new GraphInteractionManager(canvas, spatialIndex, {
       onTransformChange(_transform) {
         // User-initiated pan/zoom cancels any camera flight. Programmatic
@@ -1664,10 +1600,9 @@ export function createGraph(
   }
 
   function doResize(): void {
-    if (destroyed || !canvas || !renderer || !wrapper) return;
-    const { width, height } = getContainerDimensions();
-    const canvasHeight = Math.max(height, 200);
-    renderer.resize(width, canvasHeight);
+    if (destroyed || !canvas || !renderer || !shell) return;
+    const { width, height } = shell.getSize();
+    renderer.resize(width, height);
     // A width change can rewrap the title or move the legend; re-derive the
     // chrome/legend separation before any fit below measures the chrome band.
     syncChromeInset();
@@ -1702,6 +1637,16 @@ export function createGraph(
    */
   function update(newSpec: GraphSpec): void {
     if (destroyed) return;
+
+    // Recompile first: a dimension change has no path back through the shell
+    // (the renderer is chosen once, at mount), so it is a remount, not an
+    // update. Bail before touching any state so the instance stays intact.
+    const nextCompilation = compile(newSpec);
+    if (nextCompilation.numDimensions !== compilation.numDimensions) {
+      warnOnce('createGraph: update() cannot change dimensions; remount the graph');
+      return;
+    }
+
     currentSpec = newSpec;
 
     // Finish any in-flight animations (e.g. an entrance reveal or a prior
@@ -1721,8 +1666,7 @@ export function createGraph(
     const prevEdges = positionedEdges;
     const prevConfig = compilation.simulationConfig;
 
-    // Recompile with the new spec.
-    compilation = compile();
+    compilation = nextCompilation;
     seedIds = new Set(compilation.seedNodeIds);
 
     const diff = diffGraphUpdate(
@@ -2004,8 +1948,6 @@ export function createGraph(
     interactionManager = null;
     simulation?.destroy();
     simulation = null;
-    tooltipManager?.destroy();
-    tooltipManager = null;
   }
 
   function destroy(): void {
@@ -2027,16 +1969,13 @@ export function createGraph(
     legendController?.destroy();
     legendController = null;
 
-    if (wrapper?.parentNode) {
-      wrapper.parentNode.removeChild(wrapper);
-    }
-    wrapper = null;
+    shell?.destroy();
+    shell = null;
+    tooltipManager = null;
     canvas = null;
     chromeEl = null;
     legendEl = null;
     renderer = null;
-
-    container.classList.remove('oc-dark');
   }
 
   // ---------------------------------------------------------------------------
@@ -2045,13 +1984,8 @@ export function createGraph(
 
   try {
     compilation = compile();
-    seedIds = new Set(compilation.seedNodeIds);
-    adjacencyMap = buildAdjacencyMap(compilation.edges);
-    buildDataMaps();
-    applyInitialHighlight();
-    createDOM();
-    initSimulation();
-    initInteraction();
+    shell = createGraphShell(container, currentSpec, compilation, options, warnOnce);
+    shell.renderChrome(compilation);
   } catch (err) {
     // Same failure semantics as createChart and createSankey: a spec that
     // cannot compile or mount is a caller bug, and a throw is the only signal
@@ -2060,12 +1994,55 @@ export function createGraph(
     throw err;
   }
 
-  // Responsive resize
-  if (options?.responsive !== false) {
-    disconnectResize = observeResize(container, () => {
-      doResize();
-    });
+  // 3D hands off to the registered WebGL renderer. The subpath registers itself
+  // as an import side effect; createGraph never dynamically imports it, because
+  // mount is synchronous and every framework wrapper assumes it is.
+  if (compilation.numDimensions === 3) {
+    const factory = getGraphRenderer(3);
+    if (!factory) {
+      // Leave no half-built DOM behind for a caller who forgot the import.
+      shell.destroy();
+      shell = null;
+      throw new Error(GRAPH_3D_NOT_REGISTERED_ERROR);
+    }
+    const ctx = {
+      shell,
+      spec: currentSpec,
+      compilation,
+      options,
+      compile: (next: GraphSpec) => compile(next),
+    };
+    try {
+      return factory(ctx);
+    } catch (err) {
+      shell.destroy();
+      shell = null;
+      console.error('[viz] Graph mount failed:', err);
+      throw err;
+    }
   }
+
+  chromeEl = shell.chromeEl;
+  legendEl = shell.legendEl;
+  tooltipManager = shell.tooltipManager;
+
+  try {
+    seedIds = new Set(compilation.seedNodeIds);
+    adjacencyMap = buildAdjacencyMap(compilation.edges);
+    buildDataMaps();
+    applyInitialHighlight();
+    createSurface();
+    initSimulation();
+    initInteraction();
+  } catch (err) {
+    console.error('[viz] Graph mount failed:', err);
+    throw err;
+  }
+
+  // Responsive resize (the shell no-ops when `responsive: false`).
+  disconnectResize = shell.observeResize(() => {
+    doResize();
+  });
 
   return {
     update,
@@ -2089,16 +2066,4 @@ export function createGraph(
     resize: doResize,
     destroy,
   };
-}
-
-// ---------------------------------------------------------------------------
-// Util
-// ---------------------------------------------------------------------------
-
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }

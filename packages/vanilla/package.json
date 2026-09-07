@@ -37,6 +37,10 @@
       "types": "./dist/export-gif.d.ts",
       "import": "./dist/export-gif.js"
     },
+    "./graph-3d": {
+      "types": "./dist/graph-3d/index.d.ts",
+      "import": "./dist/graph-3d/index.js"
+    },
     "./styles.css": "./dist/styles.css",
     "./simulation-worker": "./dist/simulation-worker.js"
   },
@@ -64,25 +68,42 @@
     "@opendata-ai/openchart-core": "workspace:*",
     "@opendata-ai/openchart-engine": "workspace:*",
     "d3-force": "^3.0.0",
+    "d3-force-3d": "^3.0.6",
     "d3-interpolate": "^3.0.0",
     "d3-quadtree": "^3.0.1"
   },
   "peerDependencies": {
+    "3d-force-graph": ">=1.80.0",
     "gifenc": ">=1.0.0",
-    "happy-dom": ">=14.0.0"
+    "happy-dom": ">=14.0.0",
+    "three": ">=0.179 <1",
+    "three-spritetext": ">=1.9.0"
   },
   "peerDependenciesMeta": {
+    "3d-force-graph": {
+      "optional": true
+    },
     "gifenc": {
       "optional": true
     },
     "happy-dom": {
       "optional": true
+    },
+    "three": {
+      "optional": true
+    },
+    "three-spritetext": {
+      "optional": true
     }
   },
   "devDependencies": {
+    "3d-force-graph": "1.80.0",
     "@types/d3-force": "^3.0.10",
     "@types/d3-interpolate": "^3.0.4",
     "@types/d3-quadtree": "^3.0.6",
-    "gifenc": "^1.0.3"
+    "@types/three": "^0.185.4",
+    "gifenc": "^1.0.3",
+    "three": "0.185.1",
+    "three-spritetext": "^1.10.0"
   }
 }

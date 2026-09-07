@@ -61,6 +61,7 @@ export type {
   GraphCompilation,
   SimulationConfig,
 } from './graphs/types';
+export { MAX_3D_NODES } from './graphs/types';
 
 // ---------------------------------------------------------------------------
 // Sankey compilation types

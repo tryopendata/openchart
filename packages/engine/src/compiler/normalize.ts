@@ -628,6 +628,7 @@ function normalizeGraphSpec(spec: GraphSpec, warnings: string[]): NormalizedGrap
     animation: spec.animation,
     interaction: spec.interaction,
     legend: spec.legend,
+    dimensions: spec.dimensions,
   };
 }
 

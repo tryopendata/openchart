@@ -206,6 +206,8 @@ export interface NormalizedGraphSpec {
   animation?: GraphAnimationSpec;
   interaction?: GraphInteractionConfig;
   legend?: boolean | { interactive?: boolean; counts?: boolean };
+  /** Requested render dimensionality. Validated (and gated) in compileGraph. */
+  dimensions?: 2 | 3;
 }
 
 /** Discriminated union of all normalized spec types. */

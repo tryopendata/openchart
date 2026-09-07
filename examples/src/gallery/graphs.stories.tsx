@@ -14,7 +14,9 @@
 
 import type { GraphSpec } from '@opendata-ai/openchart-core';
 import { Graph, useGraph } from '@opendata-ai/openchart-react';
-import { useEffect, useState } from 'react';
+// Side-effect import: registers the WebGL renderer for `dimensions: 3` specs.
+import '@opendata-ai/openchart-react/graph-3d';
+import { useEffect, useMemo, useState } from 'react';
 import { Demo, GalleryPage, Section } from '../components';
 import { generateRandomGraph, generateScaleFreeGraph } from '../graphs/helpers';
 
@@ -904,6 +906,319 @@ const cursorSpec: GraphSpec = {
 };
 
 // ---------------------------------------------------------------------------
+// 15-18. Three dimensions — the same specs, rendered with WebGL
+// ---------------------------------------------------------------------------
+
+/**
+ * `dimensions: 3` swaps the Canvas renderer for the WebGL one. The spec is
+ * otherwise unchanged, and the whole handle (search, highlight, legend, camera,
+ * update) behaves the same. three.js ships on its own subpath, so the
+ * side-effect import at the top of this file is what makes these mount.
+ */
+const basic3DSpec: GraphSpec = {
+  ...basicSpec,
+  dimensions: 3,
+  chrome: {
+    title: 'The Same Network, With Room to Breathe',
+    subtitle: 'Drag to orbit, scroll to dolly; the spec is the 2D one plus dimensions: 3',
+    source: ILLUSTRATIVE,
+  },
+};
+
+const communities3DSpec: GraphSpec = {
+  ...generateRandomGraph(120, 1.6, 5),
+  dimensions: 3,
+  encoding: { nodeColor: { field: 'community', type: 'nominal' } },
+  layout: { type: 'force', clustering: { field: 'community' }, chargeStrength: -220, seed: 3 },
+  chrome: {
+    title: 'A Third Axis Keeps Communities Apart',
+    subtitle: '120 nodes in 5 clusters; the cluster force works in x, y and z',
+    source: ILLUSTRATIVE,
+  },
+};
+
+// -- Seeded 3D: the full opendata /graph shape -------------------------------
+
+const seededBase = generateRandomGraph(70, 1.5, 4);
+
+const seededAdjacency = (() => {
+  const map = new Map<string, string[]>();
+  const push = (a: string, b: string) => {
+    const list = map.get(a);
+    if (list) list.push(b);
+    else map.set(a, [b]);
+  };
+  for (const e of seededBase.edges) {
+    push(e.source, e.target);
+    push(e.target, e.source);
+  }
+  return map;
+})();
+
+/** Relatedness = 1 / (1 + hops from the seed), the shape the route encodes. */
+function relatednessFrom(seedId: string): Map<string, number> {
+  const depth = new Map<string, number>([[seedId, 0]]);
+  const queue = [seedId];
+  while (queue.length > 0) {
+    const id = queue.shift() as string;
+    const d = depth.get(id) ?? 0;
+    for (const next of seededAdjacency.get(id) ?? []) {
+      if (depth.has(next)) continue;
+      depth.set(next, d + 1);
+      queue.push(next);
+    }
+  }
+  const out = new Map<string, number>();
+  for (const node of seededBase.nodes) {
+    out.set(node.id, 1 / (1 + (depth.get(node.id) ?? 6)));
+  }
+  return out;
+}
+
+const SEED_ROTATION = ['n0', 'n11', 'n27', 'n44'];
+
+function buildSeeded3DSpec(seedId: string): GraphSpec {
+  const relatedness = relatednessFrom(seedId);
+  return {
+    type: 'graph',
+    dimensions: 3,
+    nodes: seededBase.nodes.map((n) => ({ ...n, relatedness: relatedness.get(n.id) ?? 0.15 })),
+    edges: seededBase.edges,
+    encoding: {
+      nodeColor: { field: 'community', type: 'nominal' },
+      nodeOpacity: { field: 'relatedness', type: 'quantitative' },
+    },
+    layout: {
+      type: 'force',
+      clustering: { field: 'community' },
+      chargeStrength: -500,
+      linkDistance: 100,
+      linkStrength: 0.3,
+      collisionPadding: 4,
+      warmup: 30,
+      seed: 7,
+    },
+    seedNode: seedId,
+    nodeOverrides: { [seedId]: { fill: '#22c55e', radius: 10, alwaysShowLabel: true } },
+    legend: false,
+    interaction: { hover: { mode: 'neighbors' } },
+    animation: { enter: { duration: 1000, stagger: true } },
+    // A transparent background lets the page show through the WebGL canvas; an
+    // explicit text color keeps the sprite labels readable in either theme.
+    theme: { colors: { background: 'transparent', text: '#94a3b8' } },
+    chrome: {
+      title: 'Seeded Neighborhood in Three Dimensions',
+      subtitle: 'Opacity is relatedness to the green seed; double-click a node to re-seed',
+      source: ILLUSTRATIVE,
+    },
+  };
+}
+
+const seeded3DSpec = buildSeeded3DSpec(SEED_ROTATION[0]);
+
+function Seeded3DGraph() {
+  const {
+    ref,
+    getLegend,
+    setActiveCategories,
+    getActiveCategories,
+    highlight,
+    clearHighlight,
+    search,
+    clearSearch,
+    selectNode,
+  } = useGraph();
+  const [rows, setRows] = useState<Array<{ label: string; color: string; count?: number }>>([]);
+  const [active, setActive] = useState<string[]>([]);
+  const [query, setQuery] = useState('');
+  const [seedId, setSeedId] = useState(SEED_ROTATION[0]);
+  const [selected, setSelected] = useState<string | null>(null);
+
+  // The legend model resolves only after the graph mounts, so poll frames
+  // rather than guessing at one.
+  useEffect(() => {
+    let frame = 0;
+    let id = 0;
+    const read = () => {
+      const legend = getLegend();
+      if (legend) {
+        setRows(legend.nodes);
+        return;
+      }
+      if (++frame < 60) id = requestAnimationFrame(read);
+    };
+    id = requestAnimationFrame(read);
+    return () => cancelAnimationFrame(id);
+  }, [getLegend]);
+
+  // Passing a new spec is the update path: <Graph> diffs it and calls
+  // update() on the instance, so survivors keep their positions.
+  const spec = useMemo(() => buildSeeded3DSpec(seedId), [seedId]);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gx-space-3)' }}>
+      <div style={{ display: 'flex', gap: 'var(--gx-space-3)', alignItems: 'flex-start' }}>
+        <div style={{ flex: 1, height: 520 }}>
+          <Graph
+            ref={ref}
+            spec={spec}
+            legend={false}
+            onNodeClick={(node) => {
+              const id = String(node.id);
+              setSelected(id);
+              selectNode(id);
+            }}
+            onNodeDoubleClick={(node) => setSeedId(String(node.id))}
+          />
+        </div>
+        <div
+          style={{
+            width: 200,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 'var(--gx-space-2)',
+            padding: 'var(--gx-space-3)',
+            border: '1px solid var(--gx-border)',
+            borderRadius: 'var(--gx-radius-control)',
+            background: 'var(--gx-surface-raised)',
+          }}
+        >
+          <input
+            type="text"
+            value={query}
+            placeholder="Search nodes"
+            onChange={(e) => {
+              const q = e.target.value;
+              setQuery(q);
+              if (q) search(q);
+              else clearSearch();
+            }}
+            style={{
+              padding: '6px 10px',
+              border: '1px solid var(--gx-border)',
+              borderRadius: 'var(--gx-radius-control)',
+              background: 'var(--gx-surface)',
+              color: 'var(--gx-text)',
+              fontSize: 'var(--gx-type-caption)',
+            }}
+          />
+          {rows.map((row) => (
+            <button
+              key={row.label}
+              type="button"
+              onClick={() => {
+                const current = getActiveCategories();
+                const next = current.includes(row.label)
+                  ? current.filter((v) => v !== row.label)
+                  : [...current, row.label];
+                setActiveCategories(next);
+                setActive(next);
+              }}
+              onMouseEnter={() => highlight({ category: { field: 'community', value: row.label } })}
+              onMouseLeave={() => clearHighlight()}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--gx-space-2)',
+                padding: 'var(--gx-space-1) var(--gx-space-2)',
+                border: '1px solid transparent',
+                borderRadius: 'var(--gx-radius-control)',
+                background: 'transparent',
+                color: 'var(--gx-text)',
+                fontSize: 'var(--gx-type-caption)',
+                cursor: 'pointer',
+                opacity: active.length === 0 || active.includes(row.label) ? 1 : 0.45,
+              }}
+            >
+              <span
+                style={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: 999,
+                  background: row.color,
+                  flexShrink: 0,
+                }}
+              />
+              <span>{row.label}</span>
+            </button>
+          ))}
+          <button
+            type="button"
+            className="oc-spec-copy"
+            onClick={() =>
+              setSeedId(SEED_ROTATION[(SEED_ROTATION.indexOf(seedId) + 1) % SEED_ROTATION.length])
+            }
+          >
+            Re-seed
+          </button>
+        </div>
+      </div>
+      <div style={{ fontSize: 'var(--gx-type-caption)', color: 'var(--gx-text-muted)' }}>
+        Seed: <strong>{seedId}</strong>
+        {selected ? ` · selected ${selected}` : ''}
+      </div>
+    </div>
+  );
+}
+
+// -- Scale 3D: the node gate, exactly at the limit ---------------------------
+
+const scale3DPanelSpec: GraphSpec = { ...generateScaleFreeGraph(3000), dimensions: 3 };
+
+function Scale3DGraph() {
+  const [spec, setSpec] = useState<GraphSpec | null>(null);
+
+  return (
+    <div style={{ height: 600, position: 'relative' }}>
+      {spec ? (
+        <Graph spec={spec} />
+      ) : (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 'var(--gx-space-3)',
+            height: '100%',
+            border: '1px dashed var(--gx-border)',
+            borderRadius: 'var(--gx-radius-control)',
+            background: 'var(--gx-surface-raised)',
+            color: 'var(--gx-text-muted)',
+            textAlign: 'center',
+          }}
+        >
+          <span style={{ fontSize: 'var(--gx-type-caption)' }}>
+            3,000 nodes, ~6,000 edges — the 3D node ceiling
+          </span>
+          <button
+            type="button"
+            className="oc-spec-copy"
+            onClick={() =>
+              setSpec({
+                ...generateScaleFreeGraph(3000),
+                dimensions: 3,
+                animation: false,
+                chrome: {
+                  title: 'Three Thousand Nodes on the Main Thread',
+                  subtitle: 'The 3D gate: above this the spec warns and falls back to 2D',
+                  source: ILLUSTRATIVE,
+                },
+              })
+            }
+          >
+            Load the 3,000-node graph
+          </button>
+          <span style={{ fontSize: 'var(--gx-type-caption)' }}>
+            The 3D simulation runs on the main thread — nothing starts until you ask
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
@@ -1066,6 +1381,48 @@ export const Graphs = () => (
         spec={cursorSpec}
         height={480}
       />
+    </Section>
+
+    <Section
+      id="three-dimensions"
+      title="3D"
+      lede="dimensions: 3 renders the same spec with WebGL. Communities that a flat projection stacks on top of one another get room to separate, and the whole handle — search, legend filter, highlight, camera, update — behaves as it does in 2D. three.js loads from its own subpath, so 2D bundles never pay for it."
+    >
+      <Demo
+        id="basic-3d"
+        title="A force layout in three dimensions"
+        description="The Basics spec with one field added. Drag to orbit, scroll to dolly; labels appear for the nodes nearest the camera."
+        spec={basic3DSpec}
+        height={520}
+      />
+      <Demo
+        id="communities-3d"
+        title="Community clusters in 3D"
+        description="The cluster force pulls each community toward its own centroid in x, y and z, so groups that overlap in a flat projection separate along depth."
+        spec={communities3DSpec}
+        height={520}
+      />
+      <Demo
+        id="seeded-3d"
+        title="Seeded neighborhood + host legend"
+        description="The full imperative surface against the WebGL renderer: nodeOpacity encodes relatedness to the green seed, the legend is the host's own via getLegend()/setActiveCategories()/highlight(), the search box drives search(), and Re-seed (or a double-click on any node) calls update() — survivors keep their positions while the new neighborhood settles."
+        specForPanel={seeded3DSpec}
+        height={600}
+      >
+        <Seeded3DGraph />
+      </Demo>
+      <Demo
+        id="scale-3d"
+        title="Scale: 3,000 nodes (click to load)"
+        description="The 3D simulation runs on the main thread, so the renderer caps at 3,000 nodes; above that a spec warns and renders in 2D. Mounted only on click, with animation off."
+        specForPanel={scale3DPanelSpec}
+        generatorSnippet={
+          "import { generateScaleFreeGraph } from './graphs/helpers';\n\nconst spec = { ...generateScaleFreeGraph(3000), dimensions: 3, animation: false };\n\n// <Graph spec={spec} />"
+        }
+        height={680}
+      >
+        <Scale3DGraph />
+      </Demo>
     </Section>
   </GalleryPage>
 );

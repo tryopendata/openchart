@@ -2360,6 +2360,34 @@ export interface GraphSpec {
   legend?: boolean | { interactive?: boolean; counts?: boolean };
   /** Whether to show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
+  /**
+   * Render in two or three dimensions. Defaults to `2` (the Canvas renderer).
+   *
+   * `3` renders with WebGL. The 3D renderer ships on its own subpath so
+   * three.js never enters the default bundle, and it must be imported before
+   * the graph mounts:
+   *
+   * ```ts
+   * import '@opendata-ai/openchart-vanilla/graph-3d';
+   * ```
+   *
+   * (React hosts can import `@opendata-ai/openchart-react/graph-3d`.) Mounting
+   * a `dimensions: 3` spec without that import throws.
+   *
+   * 3D differs from 2D in these ways:
+   * - Labels use a fixed budget re-ranked by camera distance, not the 2D
+   *   priority declutter, so distant labels drop out.
+   * - The simulation runs on the main thread (no worker, no wall-clock warmup
+   *   budget).
+   * - Keyboard navigation, SVG export, `interaction.cursorRepulsion`,
+   *   `interaction.springyDrag`, and `layout.type` of `'radial'` or
+   *   `'hierarchical'` are unsupported. Each warns and is ignored.
+   * - A structural `update()` reheats the whole layout globally, so settled
+   *   nodes drift; 2D applies a local impulse instead.
+   * - Above 3000 nodes the spec warns and falls back to 2D.
+   * - `nodeOverrides[*].stroke` and `strokeWidth` are ignored (no ring).
+   */
+  dimensions?: 2 | 3;
 }
 
 // ---------------------------------------------------------------------------

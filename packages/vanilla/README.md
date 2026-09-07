@@ -78,6 +78,52 @@ graph.destroy();
 
 Graphs render on canvas with a force simulation running in a web worker. Nodes support click, drag, and double-click. The simulation auto-fits nodes once it settles.
 
+## 3D graphs
+
+`dimensions: 3` on a graph spec renders with WebGL instead of canvas. The 3D
+renderer ships on its own subpath so three.js never lands in the default bundle,
+and its libraries are optional peers you install yourself:
+
+```bash
+npm install three 3d-force-graph three-spritetext
+```
+
+The subpath registers the renderer as an import side effect, so it has to be
+imported before the graph mounts:
+
+```typescript
+import '@opendata-ai/openchart-vanilla/graph-3d';
+import { createGraph } from '@opendata-ai/openchart-vanilla';
+
+createGraph(container, { ...graphSpec, dimensions: 3 });
+```
+
+Mounting a `dimensions: 3` spec without that import throws.
+
+Notes:
+
+- **SSR**: `3d-force-graph` touches `window` at import time. Import the subpath
+  client-side only (inside `useEffect`, a dynamic `import()`, or a browser-only
+  module) and render your own placeholder until it resolves.
+- **One copy of three**: run `npm ls three` (or `bun pm ls three`) and confirm a
+  single copy. Two copies fail at runtime with `Cannot read properties of
+  undefined (reading 'VERTEX')` (vasturiano/react-force-graph#595).
+
+Differences from 2D:
+
+- Labels use a fixed budget re-ranked by camera distance, so distant labels drop
+  out instead of being decluttered by priority.
+- The force simulation runs on the main thread. Above 3000 nodes the spec warns
+  and renders in 2D.
+- Keyboard navigation, SVG export, `interaction.cursorRepulsion`,
+  `interaction.springyDrag`, and `layout.type` of `radial`/`hierarchical` are
+  unsupported. Each warns and is ignored.
+- A structural `update()` reheats the whole layout, so settled nodes drift. 2D
+  applies a local impulse instead.
+- `nodeOverrides[*].stroke` and `strokeWidth` are ignored (no ring).
+- A dimension change is a remount, not an `update()`. The framework wrappers do
+  this for you; `update()` with a changed `dimensions` warns and no-ops.
+
 ## Export utilities
 
 Standalone export functions if you need them outside of an instance:

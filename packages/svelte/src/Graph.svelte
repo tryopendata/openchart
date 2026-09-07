@@ -85,6 +85,10 @@ const legendKey = $derived(
       ? 'true'
       : JSON.stringify({ interactive: legend.interactive, counts: legend.counts }),
 );
+// 2D and 3D are different renderers, chosen once at mount, so a dimension
+// change recreates the graph. A $derived over a primitive only invalidates when
+// the value actually changes, so an unrelated spec edit never remounts.
+const dimensions = $derived(spec.dimensions ?? 2);
 
 // Stable tooltip formatter wrapper: always reads the LATEST formatter off the
 // (untracked) prop, so a formatter can be added or swapped per-render without
@@ -103,6 +107,9 @@ onMount(() => {
 });
 
 let prevSpec = '';
+// Dimensions at the last mount, so a dimension-driven recreation can play its
+// entrance while a theme-only one still suppresses it.
+let prevDimensions = 2;
 
 // Effect 1: Mount/recreate graph on theme/darkMode/structural option changes.
 $effect(() => {
@@ -115,6 +122,7 @@ $effect(() => {
   const on = tooltipOn;
   void legendKey;
   const fit = fitOnLoad;
+  const dims = dimensions;
   const currentSpec = untrack(() => spec);
 
   instance?.destroy();
@@ -140,12 +148,14 @@ $effect(() => {
     onCameraChange: (camera) => untrack(() => oncamerachange)?.(camera),
     responsive: true,
     // untrack so reading the flag doesn't add a dependency; the value is set
-    // after the first mount and reset only on component teardown.
-    suppressEntrance: untrack(() => mountedOnce),
+    // after the first mount and reset only on component teardown. A dimension
+    // change is exempt: the incoming renderer should play its entrance.
+    suppressEntrance: untrack(() => mountedOnce) && dims === prevDimensions,
   };
 
   instance = createGraph(containerEl, currentSpec, options);
   prevSpec = JSON.stringify(currentSpec);
+  prevDimensions = dims;
   mountedOnce = true;
 });
 
