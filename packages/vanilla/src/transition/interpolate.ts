@@ -55,6 +55,26 @@ export function applyGeomToElement(
   }
 }
 
+/**
+ * Tween a rect's `fill-opacity`. A histogram that gains or loses a color group
+ * changes from opaque to 0.55 (or back); without this the fill would snap on
+ * the first frame while the geometry eased.
+ */
+export function applyFillOpacityToElement(
+  shapeEl: SVGElement | null | undefined,
+  value: number | undefined,
+): void {
+  if (!shapeEl) return;
+  // `undefined` is "fully opaque with no attribute", which is what the
+  // renderer serializes for an ungrouped bar. Writing fill-opacity="1"
+  // instead would leave the element permanently unlike a fresh render.
+  if (value === undefined) {
+    shapeEl.removeAttribute('fill-opacity');
+    return;
+  }
+  shapeEl.setAttribute('fill-opacity', String(value));
+}
+
 export function lerpGeom(from: RectGeom, to: RectGeom, t: number): RectGeom {
   return {
     x: from.x + (to.x - from.x) * t,

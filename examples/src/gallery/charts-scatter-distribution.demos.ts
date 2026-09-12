@@ -24,6 +24,8 @@ export const page: PageEntry = {
     { id: 'strip-plot', title: 'Tick / strip plot' },
     { id: 'beeswarm', title: 'Beeswarm' },
     { id: 'beeswarm-stepper', title: 'Stepping beeswarm (keyed update)' },
+    { id: 'histogram', title: 'Overlapping histograms' },
+    { id: 'density-curves', title: 'Overlapping density curves' },
     { id: 'calendar-heatmap', title: 'Calendar heatmap' },
     { id: 'rect-heatmap', title: 'Rect heatmap' },
     { id: 'range-dumbbell', title: 'Dumbbell (range mark)' },

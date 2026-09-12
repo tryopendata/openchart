@@ -215,7 +215,16 @@ function computeSingleArea(
       fillValue = markFill;
       fillOpacity = isGradientDef(markFill)
         ? 1
-        : (spec.markDef.opacity ?? (y2Channel ? 0.25 : DEFAULT_FILL_OPACITY));
+        : (spec.markDef.fillOpacity ??
+          spec.markDef.opacity ??
+          (y2Channel ? 0.25 : DEFAULT_FILL_OPACITY));
+    } else if (spec.markDef.fillOpacity != null) {
+      // An explicit fillOpacity means the author wants a flat translucent
+      // fill in the series color. Gradients and overlapping fills are
+      // mutually exclusive: two stacked fades read as mud, which is exactly
+      // the case overlapping density curves need to get right.
+      fillValue = getRepresentativeColor(color);
+      fillOpacity = spec.markDef.fillOpacity;
     } else {
       const colorStr = getRepresentativeColor(color);
       fillValue = buildGradientFill(colorStr, defaultGradientStops);
@@ -394,10 +403,14 @@ function computeStackedArea(
 
     if (markFill != null) {
       fillValue = markFill;
-      fillOpacity = isGradientDef(markFill) ? 1 : (spec.markDef.opacity ?? 0.7);
+      fillOpacity = isGradientDef(markFill)
+        ? 1
+        : (spec.markDef.fillOpacity ?? spec.markDef.opacity ?? 0.7);
     } else {
       fillValue = getRepresentativeColor(color);
-      fillOpacity = STACKED_FILL_OPACITY;
+      // Same precedence as the non-stacked path: an explicit fillOpacity is
+      // the author's, and stacking shouldn't quietly overwrite it.
+      fillOpacity = spec.markDef.fillOpacity ?? STACKED_FILL_OPACITY;
     }
 
     const rawPointKeys = validPoints.map((_p, idx) => serializeKeyValue(layer[idx]?.data.__x__));

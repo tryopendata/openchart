@@ -37,6 +37,10 @@ import type { SeriesStrategy, TokenValue } from './theme';
  * - 'waffle': unit grids ("x of 100") for part-to-whole counts
  * - 'calendar': GitHub-style calendar heatmap (weeks x weekdays, daily dates)
  * - 'parliament': hemicycle seat-dot chart for election/legislature results
+ * - 'histogram': binned bars over a continuous field; sugar for a bar with
+ *   `x.bin` + `y: { aggregate: 'count' }`
+ * - 'density': kernel density estimate drawn as a filled curve; sugar for an
+ *   area over a density transform
  */
 export type MarkType =
   | 'bar'
@@ -54,7 +58,9 @@ export type MarkType =
   | 'range'
   | 'waffle'
   | 'calendar'
-  | 'parliament';
+  | 'parliament'
+  | 'histogram'
+  | 'density';
 
 // ---------------------------------------------------------------------------
 // Gradient definitions (Vega-aligned)
@@ -240,6 +246,43 @@ export interface MarkDef {
   filled?: boolean;
   /** Default opacity (0-1). */
   opacity?: number;
+  /**
+   * Fill opacity (0-1), independent of stroke (Vega-Lite aligned).
+   *
+   * On a binned bar with more than one color group this defaults to 0.55 so
+   * overlapping distributions stay readable; set it explicitly to override.
+   * On an area, setting it switches the fill from the default gradient to a
+   * flat translucent series color — gradients and overlapping fills don't mix.
+   */
+  fillOpacity?: number;
+  /**
+   * Number of bins. Only meaningful when `type` is `'histogram'`; desugars to
+   * `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned
+   * extent, write `x.bin` directly — it is the canonical form and takes
+   * precedence over this shorthand.
+   */
+  binCount?: number;
+  /**
+   * Plot each group's share of its own total instead of a raw count. Only
+   * meaningful when `type` is `'histogram'`. Makes two distributions of very
+   * different size directly comparable.
+   */
+  normalize?: boolean;
+  /**
+   * Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`.
+   * Omitted uses Silverman's rule of thumb.
+   */
+  bandwidth?: number;
+  /**
+   * Draw the cumulative distribution instead of the density. Only meaningful
+   * when `type` is `'density'`.
+   */
+  cumulative?: boolean;
+  /**
+   * Number of points the density curve is evaluated at. Only meaningful when
+   * `type` is `'density'`. Defaults to 200.
+   */
+  steps?: number;
   /** Default fill color or gradient. */
   fill?: string | GradientDef;
   /** Default stroke color. */
@@ -1812,6 +1855,27 @@ export interface ParliamentEncoding<TData extends DataRow = DataRow> extends Enc
 }
 
 /**
+ * Encoding for histogram marks (binned bars over a continuous field).
+ * - `x`: required quantitative, the raw values to bin (not pre-binned)
+ * - `y`: optional; defaults to the per-bin count
+ * - `color`: optional grouping. Groups overlap at the same bins rather than
+ *   dodging or stacking, so two distributions can be compared by shape.
+ */
+export interface HistogramEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
+  x: EncodingChannel<TData>;
+}
+
+/**
+ * Encoding for density marks (kernel density estimates).
+ * - `x`: required quantitative, the raw values to estimate over
+ * - `y`: computed by the density transform, not authored
+ * - `color`: optional grouping, one translucent curve per group
+ */
+export interface DensityEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
+  x: EncodingChannel<TData>;
+}
+
+/**
  * Encoding for calendar marks (GitHub-style calendar heatmaps).
  * - `x`: required (temporal, daily dates, one row per day)
  * - `color`: required (quantitative, the per-day value)
@@ -2159,6 +2223,14 @@ export type ChartSpec<TData extends DataRow = DataRow> =
   | (BaseChartSpec<TData> & {
       mark: 'parliament' | (MarkDef & { type: 'parliament' });
       encoding: ParliamentEncoding<TData>;
+    })
+  | (BaseChartSpec<TData> & {
+      mark: 'histogram' | (MarkDef & { type: 'histogram' });
+      encoding: HistogramEncoding<TData>;
+    })
+  | (BaseChartSpec<TData> & {
+      mark: 'density' | (MarkDef & { type: 'density' });
+      encoding: DensityEncoding<TData>;
     });
 
 /** Row density for tables. Maps to 40 / 48 / 56px row heights. */
@@ -3001,6 +3073,47 @@ export interface TimeUnitTransform {
 }
 
 /**
+ * Density transform: kernel density estimate over a quantitative field
+ * (Vega-Lite aligned).
+ *
+ * Produces a new dataset — one row per evaluation point, per group — rather
+ * than adding fields to the input rows. The output is what an area mark plots.
+ */
+export interface DensityTransform {
+  /** Field of raw values to estimate the density of. */
+  density: string;
+  /** Group the estimate by these fields; one curve per group. */
+  groupby?: string[];
+  /** Gaussian kernel bandwidth. Omitted or 0 uses Silverman's rule of thumb. */
+  bandwidth?: number;
+  /** [min, max] to evaluate over. Defaults to the data extent, padded to close the tails. */
+  extent?: [number, number];
+  /** Emit the cumulative distribution instead of the density. */
+  cumulative?: boolean;
+  /** Scale the curve by the group's row count instead of integrating to 1. */
+  counts?: boolean;
+  /** Number of evaluation points. Default 200. */
+  steps?: number;
+  /** Output field names. Default ['value', 'density']. */
+  as?: [string, string];
+}
+
+/**
+ * Join-aggregate transform: compute group summaries and write them back onto
+ * every row of the group (VL aligned).
+ *
+ * The difference from `AggregateTransform` is the row count: `aggregate`
+ * collapses a group to one row, `joinaggregate` keeps every row and adds the
+ * group's summary as a new field. That is what makes "this row's value as a
+ * share of its group's total" expressible — compute the total, then divide.
+ */
+export interface JoinAggregateTransform {
+  joinaggregate: Array<{ op: AggregateOp; field: string; as: string }>;
+  /** Fields to group by. Omitted or empty treats all rows as one group. */
+  groupby?: string[];
+}
+
+/**
  * Aggregate transform: group rows and compute summary statistics (VL aligned).
  * Produces one row per group with the groupby fields and computed aggregates.
  */
@@ -3054,6 +3167,8 @@ export type Transform =
   | CalculateTransform
   | TimeUnitTransform
   | AggregateTransform
+  | JoinAggregateTransform
+  | DensityTransform
   | FoldTransform
   | WindowTransform;
 
@@ -3159,6 +3274,8 @@ export const MARK_TYPES: ReadonlySet<string> = new Set<MarkType>([
   'waffle',
   'calendar',
   'parliament',
+  'histogram',
+  'density',
 ]);
 
 /**
@@ -3278,4 +3395,6 @@ export const MARK_DISPLAY_NAMES: Record<MarkType, string> = {
   waffle: 'Waffle chart',
   calendar: 'Calendar heatmap',
   parliament: 'Parliament chart',
+  histogram: 'Histogram',
+  density: 'Density plot',
 };

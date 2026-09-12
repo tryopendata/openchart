@@ -41,7 +41,7 @@ import type {
   TimeUnitTransform,
   Transform,
 } from '@opendata-ai/openchart-core';
-import { resolveSchemeName } from '@opendata-ai/openchart-core';
+import { inferFieldType, resolveSchemeName } from '@opendata-ai/openchart-core';
 import { computeAggregate } from '../transforms/aggregate';
 
 // ---------------------------------------------------------------------------
@@ -88,10 +88,15 @@ function uniqueFieldStrings(data: DataRow[], field: string): string[] {
  *
  * Mutates nothing; returns a new spec object (shallow copy).
  */
-export function expandEncodingSugar(spec: Record<string, unknown>): Record<string, unknown> {
+export function expandEncodingSugar(
+  spec: Record<string, unknown>,
+  inheritedData?: DataRow[],
+): Record<string, unknown> {
   const encoding = spec.encoding as Record<string, EncodingChannel | undefined> | undefined;
   if (!encoding) return spec;
 
+  const markType = markTypeOf(spec);
+  const specData = (Array.isArray(spec.data) ? spec.data : inheritedData) as DataRow[] | undefined;
   const generatedTransforms: Transform[] = [];
   const updatedEncoding = { ...encoding };
   let changed = false;
@@ -104,16 +109,43 @@ export function expandEncodingSugar(spec: Record<string, unknown>): Record<strin
     if (ch.bin != null && ch.bin !== false) {
       const field = ch.field;
       const outputField = `bin_${field}`;
+      // A histogram bar needs the bin's *width*, which means both edges. Emit
+      // the pair (VL's own `bin_x` / `bin_x_end` naming) and wire the end onto
+      // x2, which is what dispatches the binned-bar renderer downstream.
+      //
+      // All three conditions are load-bearing. Only `bar` (and `range`, `rect`,
+      // `rule`) declare x2 in MARK_ENCODING_RULES, and the published schema is
+      // `additionalProperties: false`, so stamping x2 onto a binned `point`
+      // spec would emit a spec the schema rejects. An ordinal binned channel
+      // keeps a band scale and the existing bar path. The `y` channel is
+      // excluded because the horizontal (y-binned) histogram doesn't exist yet.
+      // The channel type is usually explicit, but it's inferred later in the
+      // pipeline when omitted, and this runs before that. Infer it here too,
+      // or the canonical histogram spelling with no `type` silently falls
+      // through to a band scale whose labels are raw bin edges.
+      const resolvedType =
+        ch.type ?? (specData && specData.length > 0 ? inferFieldType(specData, field) : undefined);
+      const emitInterval = channel === 'x' && resolvedType === 'quantitative' && markType === 'bar';
+      const endField = `${outputField}_end`;
       const binTransform: BinTransform = {
         bin: ch.bin === true ? true : (ch.bin as BinParams),
         field,
-        as: outputField,
+        as: emitInterval ? [outputField, endField] : outputField,
       };
       generatedTransforms.push(binTransform);
 
       // Update encoding to reference binned output field, remove bin property
       const { bin: _bin, ...rest } = ch;
-      updatedEncoding[channel] = { ...rest, field: outputField } as EncodingChannel;
+      updatedEncoding[channel] = {
+        ...rest,
+        field: outputField,
+        // The axis should read `amount`, not `bin_amount`. Scoped to the same
+        // guard: retitling every binned channel would move existing baselines.
+        ...(emitInterval && rest.title == null ? { title: field } : {}),
+      } as EncodingChannel;
+      if (emitInterval) {
+        updatedEncoding.x2 = { field: endField, type: 'quantitative' } as EncodingChannel;
+      }
       changed = true;
     }
 
@@ -470,7 +502,9 @@ function expandChannelSugar(
 /** Channels whose fields group the count aggregate (mirrors VL's implicit groupby). */
 const COUNT_GROUP_CHANNELS = [
   'x',
+  'x2',
   'y',
+  'y2',
   'color',
   'detail',
   'strokeDash',
@@ -634,6 +668,217 @@ function resolveSortSugar(
 }
 
 // ---------------------------------------------------------------------------
+// Distribution mark sugar (histogram, density)
+// ---------------------------------------------------------------------------
+
+/** Default bin count for `mark: 'histogram'`. */
+const HISTOGRAM_DEFAULT_MAXBINS = 20;
+
+/** Output field the normalize pass writes each group's share into. */
+const PROPORTION_FIELD = '__proportion';
+/** Output field the normalize pass writes each group's total into. */
+const GROUP_TOTAL_FIELD = '__group_total';
+
+/**
+ * Desugar `mark: 'histogram'` into the canonical Vega-Lite form: a bar with a
+ * binned quantitative x and a count aggregate on y.
+ *
+ * Must run BEFORE `expandEncodingSugar` and `expandCountAggregate` so the
+ * `x.bin` and `y.aggregate` it writes are picked up by those passes. The
+ * mark-level shorthands are shorthands, not a competing source of truth: an
+ * explicit `x.bin` or `y` on the spec always wins.
+ */
+function expandHistogramMark(spec: Record<string, unknown>): Record<string, unknown> {
+  if (markTypeOf(spec) !== 'histogram') return spec;
+
+  const markDef = (typeof spec.mark === 'string' ? {} : { ...(spec.mark as object) }) as Record<
+    string,
+    unknown
+  >;
+  const { binCount, normalize, ...restMark } = markDef;
+
+  const encoding = { ...((spec.encoding as Record<string, unknown>) ?? {}) };
+  const x = { ...((encoding.x as Record<string, unknown>) ?? {}) };
+
+  if (x.bin == null) {
+    x.bin = { maxbins: typeof binCount === 'number' ? binCount : HISTOGRAM_DEFAULT_MAXBINS };
+  }
+  x.type = x.type ?? 'quantitative';
+  encoding.x = x;
+
+  if (encoding.y == null) {
+    encoding.y = { aggregate: 'count' };
+  }
+
+  const out: Record<string, unknown> = {
+    ...spec,
+    mark: { ...restMark, type: 'bar' },
+    encoding,
+  };
+
+  // `normalize` needs each group's total, which no single aggregate op gives:
+  // the count aggregate collapses to one row per (bin, group), so the total
+  // has to be joined back on afterwards and then divided into.
+  if (normalize === true) {
+    out.__histogramNormalize = true;
+  }
+  return out;
+}
+
+/** Fill opacity for overlapping density curves. */
+const DENSITY_OVERLAP_FILL_OPACITY = 0.4;
+
+/**
+ * Fields that partition a distribution into independent curves or bars.
+ *
+ * `color` is the usual one, but `detail` groups without a visual encoding and
+ * has to count too: otherwise two detail groups get pooled into one estimate.
+ */
+function distributionGroupFields(encoding: Record<string, unknown>): string[] {
+  const fields: string[] = [];
+  for (const channel of ['color', 'detail'] as const) {
+    const ch = encoding[channel] as Record<string, unknown> | undefined;
+    if (typeof ch?.field === 'string' && !fields.includes(ch.field)) fields.push(ch.field);
+  }
+  return fields;
+}
+
+/** Output fields the density transform writes, and the encoding then reads. */
+const DENSITY_VALUE_FIELD = 'value';
+const DENSITY_OUTPUT_FIELD = 'density';
+
+/**
+ * Desugar `mark: 'density'` into the canonical form: an area over a prepended
+ * `DensityTransform`, with the KDE's output fields wired onto x and y.
+ *
+ * `interpolate: 'linear'` is deliberate. The estimate already evaluates a few
+ * hundred points, so a spline would add shape the estimate does not contain.
+ */
+function expandDensityMark(spec: Record<string, unknown>): Record<string, unknown> {
+  if (markTypeOf(spec) !== 'density') return spec;
+
+  const markDef = (typeof spec.mark === 'string' ? {} : { ...(spec.mark as object) }) as Record<
+    string,
+    unknown
+  >;
+  const { bandwidth, cumulative, steps, ...restMark } = markDef;
+
+  const encoding = { ...((spec.encoding as Record<string, unknown>) ?? {}) };
+  const x = { ...((encoding.x as Record<string, unknown>) ?? {}) };
+  const field = typeof x.field === 'string' ? x.field : undefined;
+  // Nothing to estimate over. Leave the spec alone so validation reports the
+  // missing required x against MARK_ENCODING_RULES.density, which names the
+  // mark the author actually wrote.
+  if (field == null) return spec;
+
+  const groupFields = distributionGroupFields(encoding);
+
+  // `as` is written explicitly rather than leaning on runDensity's defaults:
+  // the encoding below references these two names, and the coupling would
+  // otherwise be invisible across two files.
+  const densityTransform: Record<string, unknown> = {
+    density: field,
+    as: [DENSITY_VALUE_FIELD, DENSITY_OUTPUT_FIELD],
+  };
+  if (groupFields.length > 0) densityTransform.groupby = groupFields;
+  if (typeof bandwidth === 'number') densityTransform.bandwidth = bandwidth;
+  if (cumulative === true) densityTransform.cumulative = true;
+  if (typeof steps === 'number') densityTransform.steps = steps;
+
+  // The estimate runs over whatever the author's own transforms produced: a
+  // filter on the source field has to narrow the sample before the KDE sees
+  // it, and after the KDE the source field no longer exists to filter on.
+  const transforms = ((spec.transform as Transform[] | undefined) ?? [])
+    .slice()
+    .concat(densityTransform as unknown as Transform);
+
+  encoding.x = {
+    ...x,
+    field: DENSITY_VALUE_FIELD,
+    type: 'quantitative',
+    ...(x.title == null ? { title: field } : {}),
+  };
+  const y = { ...((encoding.y as Record<string, unknown>) ?? {}) };
+  encoding.y = {
+    title: cumulative === true ? 'Cumulative share' : 'Density',
+    // A density's absolute height is not a quantity readers interpret, so the
+    // axis is off unless the author asks for it.
+    axis: false,
+    ...y,
+    field: DENSITY_OUTPUT_FIELD,
+    type: 'quantitative',
+    // Areas stack by default on a color field; overlapping translucent curves
+    // are the whole point of a density comparison.
+    stack: y.stack ?? null,
+  };
+
+  const out: Record<string, unknown> = {
+    ...spec,
+    mark: {
+      interpolate: 'linear',
+      ...(groupFields.length > 0 ? { fillOpacity: DENSITY_OVERLAP_FILL_OPACITY } : {}),
+      ...restMark,
+      type: 'area',
+    },
+    encoding,
+    transform: transforms,
+  };
+
+  // A crosshair reading "value: 3821, density: 0.00012" is noise, and an
+  // endpoint label carrying the same number is worse: it lands on the tail of
+  // the curve and prints an unreadable float. Both default on for line and
+  // area marks, so turn them off unless the author was explicit.
+  if (out.crosshair === undefined) out.crosshair = false;
+  if (out.endpointLabels === undefined) out.endpointLabels = false;
+  return out;
+}
+
+/**
+ * Apply `mark.normalize` after the count aggregate has been generated.
+ *
+ * Runs LAST, because it appends to the transform chain the count aggregate
+ * produced: join each group's summed count back onto its rows, divide, and
+ * repoint y at the share.
+ */
+function applyHistogramNormalize(spec: Record<string, unknown>): Record<string, unknown> {
+  if (spec.__histogramNormalize !== true) return spec;
+  const { __histogramNormalize: _flag, ...rest } = spec;
+
+  const encoding = { ...((rest.encoding as Record<string, unknown>) ?? {}) };
+  const y = { ...((encoding.y as Record<string, unknown>) ?? {}) };
+  const countField = typeof y.field === 'string' ? y.field : '__count';
+
+  // Group by the color field when one is present, so each distribution is
+  // normalized against its own total rather than the combined total.
+  const groupby = distributionGroupFields(encoding);
+
+  const transforms = ((rest.transform as Transform[] | undefined) ?? []).slice();
+  transforms.push({
+    joinaggregate: [{ op: 'sum', field: countField, as: GROUP_TOTAL_FIELD }],
+    groupby,
+  } as Transform);
+  transforms.push({
+    calculate: { op: '/', field: countField, field2: GROUP_TOTAL_FIELD },
+    as: PROPORTION_FIELD,
+  } as Transform);
+
+  encoding.y = {
+    ...y,
+    field: PROPORTION_FIELD,
+    type: 'quantitative',
+    title: y.title === 'Count' || y.title == null ? 'Share' : y.title,
+    // `axis: false` is an author turning the axis off; don't spread it into an
+    // object and hand back an axis they asked not to have.
+    axis:
+      y.axis === false || y.axis === null
+        ? y.axis
+        : { format: 'percent', ...((y.axis as Record<string, unknown>) ?? {}) },
+  };
+
+  return { ...rest, encoding, transform: transforms };
+}
+
+// ---------------------------------------------------------------------------
 // Composition: chart and layer expansion
 // ---------------------------------------------------------------------------
 
@@ -650,9 +895,12 @@ function expandChartSugar(
   out = applyFixedSizeDefault(out);
   out = expandAnnotationSugar(out, warnings);
   out = expandChannelSugar(out, warnings);
-  out = expandEncodingSugar(out);
+  out = expandHistogramMark(out);
+  out = expandDensityMark(out);
+  out = expandEncodingSugar(out, inheritedData);
   out = resolveSortSugar(out, inheritedData);
   out = expandCountAggregate(out);
+  out = applyHistogramNormalize(out);
   return out;
 }
 

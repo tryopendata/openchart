@@ -738,11 +738,18 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
       }
       // aggregate/window carry their output field names inside their op arrays,
       // and aggregate preserves its groupby fields on the output rows.
-      const opList = (t.aggregate ?? t.window) as Record<string, unknown>[] | undefined;
+      const opList = (t.aggregate ?? t.window ?? t.joinaggregate) as
+        | Record<string, unknown>[]
+        | undefined;
       if (Array.isArray(opList)) {
         for (const op of opList) {
           if (op && typeof op.as === 'string') transformFields.add(op.as);
         }
+      }
+      // The density transform defaults its two outputs when `as` is omitted.
+      if (typeof t.density === 'string' && t.as == null) {
+        transformFields.add('value');
+        transformFields.add('density');
       }
       if (Array.isArray(t.groupby)) {
         for (const g of t.groupby) {

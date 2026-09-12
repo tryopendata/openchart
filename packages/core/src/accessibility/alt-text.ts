@@ -31,6 +31,20 @@ export function generateAltText(spec: ChartSpec, data: DataRow[]): string {
     chartName = 'Donut chart';
   }
 
+  // Special case: histogram detection. A binned bar reaches here already
+  // desugared to `bar`, so without this a distribution announces itself as
+  // "Bar chart" and the reader loses what the chart is actually showing.
+  // Matches the renderer's own dispatch condition, quantitative y included:
+  // a nominal-y bar with x2 is a floating range bar, not a histogram.
+  const isBinnedBar =
+    markType === 'bar' &&
+    !!spec.encoding.x2 &&
+    spec.encoding.x?.type === 'quantitative' &&
+    spec.encoding.y?.type === 'quantitative';
+  if (isBinnedBar) {
+    chartName = 'Histogram';
+  }
+
   const parts: string[] = [chartName];
 
   // Add title context if present
@@ -75,6 +89,16 @@ export function generateAltText(spec: ChartSpec, data: DataRow[]): string {
       parts.push(
         `plotting the distribution of ${valueField}${laneField ? ` by ${laneField}` : ''}`,
       );
+    }
+  }
+
+  // Histogram: name the field whose distribution is being shown. The x field
+  // at this point is the bin-start output, so read the channel title the bin
+  // sugar stamped with the original field name.
+  if (isBinnedBar) {
+    const sourceField = spec.encoding.x?.title ?? spec.encoding.x?.field;
+    if (sourceField) {
+      parts.push(`showing the distribution of ${sourceField}`);
     }
   }
 

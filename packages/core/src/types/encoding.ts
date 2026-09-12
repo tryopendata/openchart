@@ -99,7 +99,9 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     detail: optional('nominal'),
   },
   area: {
-    x: required('temporal', 'ordinal'),
+    // Quantitative x is what a density curve needs: the x values are computed
+    // evaluation points, not categories or dates.
+    x: required('temporal', 'ordinal', 'quantitative'),
     y: required('quantitative'),
     y2: optional('quantitative'),
     color: optional('nominal', 'ordinal', 'quantitative'),
@@ -242,6 +244,31 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     x: required('temporal'),
     y: optional(),
     color: required('quantitative'),
+    size: optional(),
+    opacity: optional('quantitative'),
+    tooltip: optional(),
+    detail: optional('nominal'),
+  },
+  // histogram: x is the raw quantitative field to bin. y is optional because
+  // it defaults to the bin count; supply it only to plot something else per
+  // bin. A color field groups the distributions and they overlap rather than
+  // stack, which is the whole reason this mark exists.
+  histogram: {
+    x: required('quantitative'),
+    y: optional('quantitative'),
+    color: optional('nominal', 'ordinal'),
+    size: optional(),
+    opacity: optional('quantitative'),
+    tooltip: optional(),
+    detail: optional('nominal'),
+  },
+  // density: x is the raw quantitative field to estimate over. y is computed
+  // by the density transform, never authored, so it stays optional. A color
+  // field yields one translucent curve per group.
+  density: {
+    x: required('quantitative'),
+    y: optional('quantitative'),
+    color: optional('nominal', 'ordinal'),
     size: optional(),
     opacity: optional('quantitative'),
     tooltip: optional(),

@@ -301,6 +301,13 @@ function renderRectMark(mark: RectMark, index: number): SVGElement {
     }
   }
   shapeEl.setAttribute('fill', resolveFillOrPattern(mark.fill, mark.pattern));
+  // Only when set: an unconditional fill-opacity="1" would change the
+  // serialized SVG of every existing bar and churn the visual baselines.
+  // `fill-opacity` is a different property from the `opacity` that the
+  // hover-emphasis CSS drives, so the two compose rather than fight.
+  if (mark.fillOpacity !== undefined) {
+    shapeEl.setAttribute('fill-opacity', String(mark.fillOpacity));
+  }
   if (mark.stroke) {
     shapeEl.setAttribute('stroke', mark.stroke);
   }

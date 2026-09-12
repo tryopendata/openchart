@@ -105,6 +105,13 @@ export function buildRectTweens(
       fromGeom = { x: snap.x, y: snap.y, width: snap.width, height: snap.height };
     }
 
+    // Only when the two differ: a histogram gaining or losing a color group
+    // flips between opaque and the overlap opacity, and an un-tweened fill
+    // would snap on frame one while the geometry eased.
+    const prevFillOpacity = prev.fillOpacity ?? 1;
+    const nextFillOpacity = next.fillOpacity ?? 1;
+    const fillOpacityChanged = prevFillOpacity !== nextFillOpacity;
+
     tweens.push({
       tweenType: 'rect',
       kind: 'update',
@@ -112,6 +119,9 @@ export function buildRectTweens(
       from: fromGeom,
       to: geomFromMark(next),
       mark: next,
+      ...(fillOpacityChanged
+        ? { fromFillOpacity: prevFillOpacity, toFillOpacity: nextFillOpacity }
+        : {}),
       shapeEl: resolveRectShapeElement(el),
       cornerScratch: buildCornerScratch(next),
     });

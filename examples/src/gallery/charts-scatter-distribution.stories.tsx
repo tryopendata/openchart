@@ -71,6 +71,54 @@ const countyIncomes = (() => {
 })();
 
 // ---------------------------------------------------------------------------
+// Donation dataset: two campaigns' individual contributions. Small-dollar
+// giving piles up under $100; the other campaign's checks cluster near $620,
+// overlapping the first group's tail — which is the comparison. Procedural
+// for the same reason the beeswarm rows are: the shape is the point, and a
+// transcribed table of 700 contributions would swamp the file.
+// ---------------------------------------------------------------------------
+
+const campaignDonations = (() => {
+  const rand = mulberry32(0xd04a7e);
+  const rows: Array<{ amount: number; candidate: string }> = [];
+  // Small-dollar: a long right tail out of a $60 mode.
+  for (let i = 0; i < 420; i++) {
+    rows.push({ amount: Math.round(20 + 700 * rand() ** 2.2), candidate: 'Talarico' });
+  }
+  // Larger checks: a bell around $620, overlapping the first group's tail.
+  for (let i = 0; i < 280; i++) {
+    rows.push({ amount: Math.round(620 + (rand() + rand() - 1) * 480), candidate: 'Paxton' });
+  }
+  return rows;
+})();
+
+const histogramSpec: ChartSpec = {
+  animation: true,
+  mark: { type: 'histogram', binCount: 24 },
+  data: campaignDonations,
+  title: 'Two campaigns, two donor bases',
+  subtitle: 'Individual contributions, by size',
+  source: 'Illustrative data',
+  encoding: {
+    x: { field: 'amount', type: 'quantitative', axis: { title: 'Contribution ($)' } },
+    color: { field: 'candidate', type: 'nominal' },
+  },
+} as ChartSpec;
+
+const densitySpec: ChartSpec = {
+  animation: true,
+  mark: { type: 'density' },
+  data: campaignDonations,
+  title: 'The same two distributions, smoothed',
+  subtitle: 'Kernel density estimate, Silverman bandwidth',
+  source: 'Illustrative data',
+  encoding: {
+    x: { field: 'amount', type: 'quantitative', axis: { title: 'Contribution ($)' } },
+    color: { field: 'candidate', type: 'nominal' },
+  },
+} as ChartSpec;
+
+// ---------------------------------------------------------------------------
 // 1. Basic scatter — two quantitative axes
 // ---------------------------------------------------------------------------
 
@@ -1170,6 +1218,20 @@ export const ScatterAndDistribution = () => (
       >
         <BeeswarmStepper />
       </Demo>
+      <Demo
+        id="histogram"
+        title="Overlapping histograms"
+        description="mark: 'histogram' bins a raw quantitative field and counts each bin, on a continuous x so bin width tracks the value range. Two color groups overlap at the same x rather than dodging, which is what lets you compare the shapes."
+        spec={histogramSpec}
+        height={460}
+      />
+      <Demo
+        id="density-curves"
+        title="Overlapping density curves"
+        description="mark: 'density' runs a Gaussian KDE over the same raw values and draws the result as a translucent area. It trades the histogram's bin-edge artifacts for a smoothing choice; bandwidth is Silverman's rule unless you set it."
+        spec={densitySpec}
+        height={460}
+      />
     </Section>
 
     <Section

@@ -17,7 +17,7 @@ import { computeScales } from '../layout/scales';
 
 describe('expandEncodingSugar', () => {
   describe('bin expansion', () => {
-    it('expands encoding.x.bin: true into a BinTransform', () => {
+    it('expands a binned quantitative x on a bar into a paired BinTransform + x2', () => {
       const spec = {
         mark: 'bar',
         data: [{ val: 10 }, { val: 20 }],
@@ -29,15 +29,63 @@ describe('expandEncodingSugar', () => {
 
       const result = expandEncodingSugar(spec);
 
-      // Should generate a bin transform
+      // A histogram bar is sized from both bin edges, so the transform emits
+      // the pair and the end edge is wired onto x2 (VL's own convention).
       expect(result.transform).toHaveLength(1);
-      expect(result.transform).toEqual([{ bin: true, field: 'val', as: 'bin_val' }]);
+      expect(result.transform).toEqual([
+        { bin: true, field: 'val', as: ['bin_val', 'bin_val_end'] },
+      ]);
 
       // Encoding field should reference the binned output
       const encoding = result.encoding as Record<string, { field: string; bin?: unknown }>;
       expect(encoding.x.field).toBe('bin_val');
+      expect(encoding.x2.field).toBe('bin_val_end');
       // bin property should be removed from the encoding channel
       expect(encoding.x.bin).toBeUndefined();
+    });
+
+    it('titles the binned axis with the original field, not the bin output', () => {
+      const result = expandEncodingSugar({
+        mark: 'bar',
+        data: [],
+        encoding: {
+          x: { field: 'amount', type: 'quantitative', bin: true },
+          y: { field: 'count', type: 'quantitative' },
+        },
+      });
+
+      const encoding = result.encoding as Record<string, { title?: string }>;
+      expect(encoding.x.title).toBe('amount');
+    });
+
+    it('respects an explicit title on a binned channel', () => {
+      const result = expandEncodingSugar({
+        mark: 'bar',
+        data: [],
+        encoding: {
+          x: { field: 'amount', type: 'quantitative', bin: true, title: 'Donation size' },
+          y: { field: 'count', type: 'quantitative' },
+        },
+      });
+
+      const encoding = result.encoding as Record<string, { title?: string }>;
+      expect(encoding.x.title).toBe('Donation size');
+    });
+
+    it('keeps the single-field form for an ordinal binned x', () => {
+      // An ordinal binned channel still resolves to a band scale and the
+      // existing bar path, so it must not gain an x2 or change shape.
+      const result = expandEncodingSugar({
+        mark: 'bar',
+        data: [],
+        encoding: {
+          x: { field: 'val', type: 'ordinal', bin: true },
+          y: { field: 'count', type: 'quantitative' },
+        },
+      });
+
+      expect(result.transform).toEqual([{ bin: true, field: 'val', as: 'bin_val' }]);
+      expect((result.encoding as Record<string, unknown>).x2).toBeUndefined();
     });
 
     it('expands encoding.y.bin with BinParams', () => {

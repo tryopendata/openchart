@@ -1138,6 +1138,53 @@ always-on label, and exemption from focus dimming, replacing a hand-written
 
 ---
 
+## 25. `mark: 'bar'` with a quantitative `x` and `x2` now renders as a histogram (8.6)
+
+Scope note: like section 24, this is a change within v8, not a v7 → v8 change.
+It applies only if you author a bar spec with both endpoints on a quantitative
+x axis.
+
+`MARK_ENCODING_RULES.bar` has always declared `x2` as an optional quantitative
+channel, so a spec like this validated and rendered through the ordinary bar
+path:
+
+```js
+{
+  mark: 'bar',
+  encoding: {
+    x: { field: 'start', type: 'quantitative' },
+    x2: { field: 'end', type: 'quantitative' },
+    y: { field: 'phase', type: 'quantitative' },
+  },
+}
+```
+
+As of 8.6 that exact shape — mark `bar`, quantitative `x`, an `x2`, and a
+quantitative `y` — dispatches to the binned-bar (histogram) renderer instead.
+Several things change together: bars are sized from the linear x scale rather
+than a band, the x domain extends to cover the `x2` values, the x scale
+defaults to `zero: false`, the left gutter is sized from formatted numeric
+ticks rather than measured category labels, and tooltips render the pair as a
+range (`0 – 10`) instead of two separate rows. Color groups overlap
+translucently instead of dodging. A binned channel also carries its original
+field name onto the axis, so a title reads `amount` rather than `bin_amount`.
+
+If you want the old rendering, the shape you almost certainly meant is the
+range mark, which is what `x`/`x2` spans are for:
+
+```js
+// Before (8.5 and earlier)
+{ mark: 'bar', encoding: { x: {...}, x2: {...}, y: { type: 'quantitative' } } }
+
+// After
+{ mark: { type: 'range', style: 'bar' }, encoding: { x: {...}, x2: {...}, y: {...} } }
+```
+
+A `bar` with a nominal or ordinal `y` (the ordinary floating-bar Gantt shape)
+is unaffected: the new dispatch requires a quantitative `y`.
+
+---
+
 ## Verification
 
 After applying the changes above, run a build and check the console output.
@@ -1162,3 +1209,6 @@ warning at compile time with the exact fix. Items with no runtime warning:
 - **Scatter stroke default (section 20):** silent visual change, and only on
   themes with an opaque dark background. Set `mark.stroke` explicitly to opt
   out.
+- **Binned bar dispatch (section 25):** silent behavior change, and only on a
+  `bar` with a quantitative `x`, an `x2`, and a quantitative `y`. Switch those
+  to `mark: { type: 'range', style: 'bar' }`.

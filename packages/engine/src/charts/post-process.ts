@@ -126,16 +126,40 @@ function computeBandRowObstacles(marks: Mark[], scales: ResolvedScales): Placeme
 /**
  * Resolve the renderer key from mark type, encoding, and mark definition.
  *
- * - 'bar' -> 'bar' (horizontal) or 'bar:vertical' based on encoding axis types
+ * - 'bar' -> 'bar:binned' when x is quantitative with a matching x2 (histogram),
+ *   else 'bar' (horizontal) or 'bar:vertical' based on encoding axis types
  * - 'arc' -> 'arc' (pie) or 'arc:donut' based on innerRadius
  * - All other mark types pass through unchanged
  */
+/**
+ * Is this the binned-bar (histogram) shape?
+ *
+ * A quantitative x paired with x2 and a quantitative y: the bar's width comes
+ * from the two bin edges on a linear scale, not from a bandwidth. The layout
+ * gutter (`layout/plan.ts`, `layout/dimensions.ts`) and the x-scale zero
+ * default (`layout/scales.ts`) all have to agree with the renderer dispatch,
+ * so they share this predicate rather than each spelling the conditions out.
+ * A `bar` with a nominal or ordinal y — the floating Gantt bar — is not this
+ * shape and must keep its category-label gutter and zero-anchored x domain.
+ */
+export function isBinnedBarEncoding(markType: string, encoding: Partial<Encoding>): boolean {
+  return (
+    markType === 'bar' &&
+    encoding.x?.type === 'quantitative' &&
+    !!encoding.x2 &&
+    encoding.y?.type === 'quantitative'
+  );
+}
+
 export function resolveRendererKey(
   markType: string,
   encoding: Partial<Encoding>,
   markDef: Partial<MarkDef>,
 ): string {
   if (markType === 'bar') {
+    if (isBinnedBarEncoding(markType, encoding)) {
+      return 'bar:binned';
+    }
     const xType = encoding.x?.type;
     const yType = encoding.y?.type;
     const isVertical =

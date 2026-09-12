@@ -383,6 +383,13 @@ export interface RectMark {
   fill: string | GradientDef;
   /** Resolved fill pattern. Present only when `mark.fillPattern: 'auto'` assigned one. */
   pattern?: ResolvedFillPattern;
+  /**
+   * Fill opacity, independent of stroke. Omitted means fully opaque; the
+   * renderer emits no `fill-opacity` attribute in that case, so an ordinary
+   * bar's serialized SVG is unchanged. Set by the binned-bar renderer when
+   * color groups overlap at the same x.
+   */
+  fillOpacity?: number;
   /** Stroke color. */
   stroke?: string;
   /** Stroke width. */

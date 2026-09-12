@@ -70,6 +70,13 @@ export interface RectTween {
   ghost?: SVGElement;
   fromOpacity?: number;
   toOpacity?: number;
+  /**
+   * Fill opacity endpoints, set only when they differ between prev and next
+   * (a histogram gaining or losing a color group). Distinct from
+   * `fromOpacity`/`toOpacity`, which drive element opacity on enter/exit.
+   */
+  fromFillOpacity?: number;
+  toFillOpacity?: number;
   /** Cached `el.querySelector('rect, path')`, resolved once at construction so
    *  per-frame writes and the final snap never re-query the DOM. */
   shapeEl?: SVGElement | null;

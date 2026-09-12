@@ -174,7 +174,7 @@ const spec = {
 };
 ```
 
-Supported marks: `line`, `area`, `bar`, `point`, `circle`, `arc`.
+Supported marks: `line`, `area`, `bar`, `point`, `circle`, `arc`, `text`, `rule`, `tick`, `rect`, `lollipop`, `beeswarm`, `histogram`, `density`, `range`, `waffle`, `calendar`, `parliament`. The [chart types guide](chart-types.md) has a runnable spec for each.
 
 **Vertical vs horizontal bars**: The engine infers orientation from the encoding. When x is categorical/temporal and y is quantitative, bars render vertically. When y is categorical and x is quantitative, bars render horizontally.
 

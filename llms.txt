@@ -49,7 +49,7 @@ There is no `type: "line"` grammar. Charts use `mark`, following Vega-Lite. `mar
     size?:  EncodingChannel,
     // also: x2, y2, theta, opacity, strokeDash, text, tooltip, detail, facet
   },
-  transform?: Transform[],       // filter, bin, calculate, timeUnit, aggregate, fold, window
+  transform?: Transform[],       // filter, bin, calculate, timeUnit, aggregate, joinaggregate, fold, window, density
   chrome?:    Chrome,            // title, subtitle, source, byline, footer, eyebrow, brand
   title?:     string | { text, subtitle },   // sugar -> chrome.title
   annotations?: Annotation[],    // text callouts, highlighted ranges, reference lines
@@ -73,7 +73,7 @@ There is no `type: "line"` grammar. Charts use `mark`, following Vega-Lite. `mar
 
 A mark is a string shorthand or an object `{ type, ...options }`. Mark types:
 
-`bar`, `line`, `area`, `point`, `circle`, `arc`, `text`, `rule`, `tick`, `rect`, `lollipop`, `beeswarm`, `range`, `waffle`, `calendar`, `parliament`.
+`bar`, `line`, `area`, `point`, `circle`, `arc`, `text`, `rule`, `tick`, `rect`, `lollipop`, `beeswarm`, `histogram`, `density`, `range`, `waffle`, `calendar`, `parliament`.
 
 Common MarkDef options:
 
@@ -92,7 +92,7 @@ Common MarkDef options:
 |------|---|---|-------|-------|------|------------|
 | `bar` | req (quantitative, nominal, ordinal, temporal) | req (quantitative, nominal, ordinal) | - | opt (nominal, ordinal, quantitative) | opt | Bar chart |
 | `line` | req (temporal, ordinal) | req (quantitative) | - | opt (nominal, ordinal, quantitative) | opt | Line chart |
-| `area` | req (temporal, ordinal) | req (quantitative) | - | opt (nominal, ordinal, quantitative) | opt | Area chart |
+| `area` | req (temporal, ordinal, quantitative) | req (quantitative) | - | opt (nominal, ordinal, quantitative) | opt | Area chart |
 | `point` | req (quantitative, temporal, nominal, ordinal) | req (quantitative, temporal, nominal, ordinal) | - | opt (nominal, ordinal, quantitative) | opt (quantitative) | Scatter plot |
 | `circle` | req (quantitative) | req (nominal, ordinal) | - | opt (nominal, ordinal, quantitative) | opt (quantitative) | Dot plot |
 | `lollipop` | req (quantitative) | req (nominal, ordinal) | - | opt (nominal, ordinal, quantitative) | opt (quantitative) | Lollipop chart |
@@ -106,6 +106,8 @@ Common MarkDef options:
 | `tick` | req | req | - | opt | opt | Tick plot |
 | `rect` | req | req | - | opt | opt | Heatmap |
 | `calendar` | req (temporal) | opt | - | req (quantitative) | opt | Calendar heatmap |
+| `histogram` | req (quantitative) | opt (quantitative) | - | opt (nominal, ordinal) | opt | Histogram |
+| `density` | req (quantitative) | opt (quantitative) | - | opt (nominal, ordinal) | opt | Density plot |
 
 An EncodingChannel is `{ field, type, aggregate?, bin?, timeUnit?, sort?, scale?, axis?, legend?, format?, title?, stack?, highlight? }`. `type` is one of `quantitative`, `temporal`, `nominal`, `ordinal`. Multi-series bar and area charts default to stacked (Vega-Lite aligned); set `stack: null` on the value channel for grouped bars or overlapping areas.
 
@@ -122,8 +124,12 @@ For a quantitative `color` field with a sequential/diverging `scale.scheme`, the
 - `{ calculate: { op, field, field2?, value? }, as }` - derive a field.
 - `{ timeUnit, field, as }` - truncate a temporal field (year, month, yearmonth, ...).
 - `{ aggregate: [{ op, field, as }], groupby }` - group and summarize (sum, mean, count, median, ...).
+- `{ joinaggregate: [{ op, field, as }], groupby }` - same ops, joined back onto every row (group totals, shares).
 - `{ fold: [fields], as? }` - wide to long.
 - `{ window: [...], sort, groupby? }` - lag, lead, cumsum, rank, pct_change, ...
+- `{ density: field, groupby?, bandwidth?, extent?, cumulative?, counts?, steps?, as? }` - kernel density estimate; replaces rows with one per evaluation point (fields `value` and `density`).
+
+A bin plus a count aggregate is a histogram. Take both bin edges (`as: ["bin_x", "bin_x_end"]`) and put the end on `encoding.x2`: that is what puts the bars on a continuous axis instead of one equal-width slot per bin, and it is what `mark: "histogram"` writes for you. On a `bar` with a quantitative binned `x`, the `encoding.x.bin` shorthand emits both edges and the `x2` channel automatically.
 
 ## Annotations
 

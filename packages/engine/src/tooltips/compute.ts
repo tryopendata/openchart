@@ -27,7 +27,7 @@ import {
   formatPercent,
   getRepresentativeColor,
 } from '@opendata-ai/openchart-core';
-
+import { isBinnedBarEncoding } from '../charts/post-process';
 import type { NormalizedChartSpec } from '../compiler/types';
 import { resolveFieldFormatter } from '../format/field-format';
 import { fieldIterable } from '../layout/shared';
@@ -722,6 +722,93 @@ function computeWaffleTooltips(
 }
 
 // ---------------------------------------------------------------------------
+// Binned bar (histogram) tooltips
+// ---------------------------------------------------------------------------
+
+/** A bar whose x carries both bin edges: the shape `'bar:binned'` renders. */
+function isBinnedBarSpec(spec: NormalizedChartSpec): boolean {
+  return isBinnedBarEncoding(spec.markType, spec.encoding as Encoding);
+}
+
+/**
+ * Build tooltip descriptors for binned bars.
+ *
+ * The title is the bin as a range ("400 – 450") rather than its start value,
+ * formatted through the same x formatter the axis uses so the tooltip and the
+ * ticks agree. The count row is labelled from the y channel's title, which the
+ * count sugar already sets to "Count". An explicit `encoding.tooltip`
+ * overrides the default field set.
+ */
+function computeBinnedBarTooltips(
+  spec: NormalizedChartSpec,
+  marks: Mark[],
+): Map<string, TooltipContent> {
+  const encoding = spec.encoding as Encoding;
+  const descriptors = new Map<string, TooltipContent>();
+
+  const xCh = encoding.x;
+  const x2Ch = encoding.x2;
+  const yCh = encoding.y;
+  if (!xCh || !x2Ch || !yCh) return descriptors;
+
+  const colorEnc = encoding.color && 'field' in encoding.color ? encoding.color : undefined;
+  const allChannels = [
+    xCh,
+    yCh,
+    colorEnc,
+    ...(encoding.tooltip
+      ? Array.isArray(encoding.tooltip)
+        ? encoding.tooltip
+        : [encoding.tooltip]
+      : []),
+  ].filter((ch): ch is EncodingChannel => !!ch && 'field' in ch);
+  const fmtCache = buildFormatterCache(spec.data, allChannels);
+  const xFormatter = getFormatter(fmtCache, xCh);
+  // A stacked histogram gets the same Total row every other stacked bar has.
+  const stackTotals = computeRectStackTotals(marks, encoding, fmtCache);
+
+  for (let i = 0; i < marks.length; i++) {
+    const mark = marks[i];
+    if (mark.type !== 'rect') continue;
+    const row = mark.data as DataRow;
+
+    const start = formatValue(row[xCh.field], 'quantitative', xFormatter);
+    const end = formatValue(row[x2Ch.field], 'quantitative', xFormatter);
+    const title = `${start} \u2013 ${end}`;
+
+    if (encoding.tooltip) {
+      const channels = Array.isArray(encoding.tooltip) ? encoding.tooltip : [encoding.tooltip];
+      descriptors.set(`rect-${i}`, {
+        title,
+        fields: buildExplicitTooltipFields(row, channels, fmtCache),
+      });
+      continue;
+    }
+
+    const fields: TooltipField[] = [];
+    if (colorEnc) {
+      fields.push({
+        label: resolveLabel(colorEnc),
+        value: String(row[colorEnc.field] ?? ''),
+        color: getRepresentativeColor(mark.fill),
+      });
+    }
+    fields.push({
+      label: resolveLabel(yCh),
+      value: formatValue(row[yCh.field], yCh.type, getFormatter(fmtCache, yCh)),
+      ...(colorEnc ? {} : { color: getRepresentativeColor(mark.fill) }),
+    });
+
+    const total = mark.stackGroup !== undefined ? stackTotals?.get(mark.stackGroup) : undefined;
+    if (total) fields.push(total);
+
+    descriptors.set(`rect-${i}`, { title, fields });
+  }
+
+  return descriptors;
+}
+
+// ---------------------------------------------------------------------------
 // Parliament mark tooltips (one shared tooltip per party)
 // ---------------------------------------------------------------------------
 
@@ -833,6 +920,13 @@ export function computeTooltipDescriptors(
   // as one target).
   if (spec.markType === 'parliament') {
     return computeParliamentTooltips(spec, marks);
+  }
+
+  // A binned bar's x field is the bin's *start*. The generic path would show
+  // "bin_amount: 0", which is neither the field the reader sees on the axis
+  // nor the range the bar actually covers.
+  if (isBinnedBarSpec(spec)) {
+    return computeBinnedBarTooltips(spec, marks);
   }
 
   const encoding = spec.encoding as Encoding;

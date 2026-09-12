@@ -173,6 +173,30 @@
                           "type": "number",
                           "description": "Default opacity (0-1)."
                         },
+                        "fillOpacity": {
+                          "type": "number",
+                          "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                        },
+                        "binCount": {
+                          "type": "number",
+                          "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                        },
+                        "normalize": {
+                          "type": "boolean",
+                          "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                        },
+                        "bandwidth": {
+                          "type": "number",
+                          "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                        },
+                        "cumulative": {
+                          "type": "boolean",
+                          "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                        },
+                        "steps": {
+                          "type": "number",
+                          "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
+                        },
                         "fill": {
                           "anyOf": [
                             {
@@ -494,6 +518,30 @@
                         "opacity": {
                           "type": "number",
                           "description": "Default opacity (0-1)."
+                        },
+                        "fillOpacity": {
+                          "type": "number",
+                          "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                        },
+                        "binCount": {
+                          "type": "number",
+                          "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                        },
+                        "normalize": {
+                          "type": "boolean",
+                          "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                        },
+                        "bandwidth": {
+                          "type": "number",
+                          "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                        },
+                        "cumulative": {
+                          "type": "boolean",
+                          "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                        },
+                        "steps": {
+                          "type": "number",
+                          "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
                         },
                         "fill": {
                           "anyOf": [
@@ -817,6 +865,30 @@
                           "type": "number",
                           "description": "Default opacity (0-1)."
                         },
+                        "fillOpacity": {
+                          "type": "number",
+                          "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                        },
+                        "binCount": {
+                          "type": "number",
+                          "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                        },
+                        "normalize": {
+                          "type": "boolean",
+                          "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                        },
+                        "bandwidth": {
+                          "type": "number",
+                          "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                        },
+                        "cumulative": {
+                          "type": "boolean",
+                          "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                        },
+                        "steps": {
+                          "type": "number",
+                          "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
+                        },
                         "fill": {
                           "anyOf": [
                             {
@@ -1138,6 +1210,30 @@
                         "opacity": {
                           "type": "number",
                           "description": "Default opacity (0-1)."
+                        },
+                        "fillOpacity": {
+                          "type": "number",
+                          "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                        },
+                        "binCount": {
+                          "type": "number",
+                          "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                        },
+                        "normalize": {
+                          "type": "boolean",
+                          "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                        },
+                        "bandwidth": {
+                          "type": "number",
+                          "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                        },
+                        "cumulative": {
+                          "type": "boolean",
+                          "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                        },
+                        "steps": {
+                          "type": "number",
+                          "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
                         },
                         "fill": {
                           "anyOf": [
@@ -1461,6 +1557,30 @@
                           "type": "number",
                           "description": "Default opacity (0-1)."
                         },
+                        "fillOpacity": {
+                          "type": "number",
+                          "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                        },
+                        "binCount": {
+                          "type": "number",
+                          "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                        },
+                        "normalize": {
+                          "type": "boolean",
+                          "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                        },
+                        "bandwidth": {
+                          "type": "number",
+                          "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                        },
+                        "cumulative": {
+                          "type": "boolean",
+                          "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                        },
+                        "steps": {
+                          "type": "number",
+                          "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
+                        },
                         "fill": {
                           "anyOf": [
                             {
@@ -1782,6 +1902,30 @@
                         "opacity": {
                           "type": "number",
                           "description": "Default opacity (0-1)."
+                        },
+                        "fillOpacity": {
+                          "type": "number",
+                          "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                        },
+                        "binCount": {
+                          "type": "number",
+                          "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                        },
+                        "normalize": {
+                          "type": "boolean",
+                          "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                        },
+                        "bandwidth": {
+                          "type": "number",
+                          "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                        },
+                        "cumulative": {
+                          "type": "boolean",
+                          "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                        },
+                        "steps": {
+                          "type": "number",
+                          "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
                         },
                         "fill": {
                           "anyOf": [
@@ -2105,6 +2249,30 @@
                           "type": "number",
                           "description": "Default opacity (0-1)."
                         },
+                        "fillOpacity": {
+                          "type": "number",
+                          "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                        },
+                        "binCount": {
+                          "type": "number",
+                          "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                        },
+                        "normalize": {
+                          "type": "boolean",
+                          "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                        },
+                        "bandwidth": {
+                          "type": "number",
+                          "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                        },
+                        "cumulative": {
+                          "type": "boolean",
+                          "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                        },
+                        "steps": {
+                          "type": "number",
+                          "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
+                        },
                         "fill": {
                           "anyOf": [
                             {
@@ -2426,6 +2594,30 @@
                         "opacity": {
                           "type": "number",
                           "description": "Default opacity (0-1)."
+                        },
+                        "fillOpacity": {
+                          "type": "number",
+                          "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                        },
+                        "binCount": {
+                          "type": "number",
+                          "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                        },
+                        "normalize": {
+                          "type": "boolean",
+                          "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                        },
+                        "bandwidth": {
+                          "type": "number",
+                          "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                        },
+                        "cumulative": {
+                          "type": "boolean",
+                          "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                        },
+                        "steps": {
+                          "type": "number",
+                          "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
                         },
                         "fill": {
                           "anyOf": [
@@ -2749,6 +2941,30 @@
                           "type": "number",
                           "description": "Default opacity (0-1)."
                         },
+                        "fillOpacity": {
+                          "type": "number",
+                          "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                        },
+                        "binCount": {
+                          "type": "number",
+                          "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                        },
+                        "normalize": {
+                          "type": "boolean",
+                          "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                        },
+                        "bandwidth": {
+                          "type": "number",
+                          "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                        },
+                        "cumulative": {
+                          "type": "boolean",
+                          "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                        },
+                        "steps": {
+                          "type": "number",
+                          "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
+                        },
                         "fill": {
                           "anyOf": [
                             {
@@ -3070,6 +3286,30 @@
                         "opacity": {
                           "type": "number",
                           "description": "Default opacity (0-1)."
+                        },
+                        "fillOpacity": {
+                          "type": "number",
+                          "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                        },
+                        "binCount": {
+                          "type": "number",
+                          "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                        },
+                        "normalize": {
+                          "type": "boolean",
+                          "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                        },
+                        "bandwidth": {
+                          "type": "number",
+                          "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                        },
+                        "cumulative": {
+                          "type": "boolean",
+                          "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                        },
+                        "steps": {
+                          "type": "number",
+                          "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
                         },
                         "fill": {
                           "anyOf": [
@@ -3393,6 +3633,30 @@
                           "type": "number",
                           "description": "Default opacity (0-1)."
                         },
+                        "fillOpacity": {
+                          "type": "number",
+                          "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                        },
+                        "binCount": {
+                          "type": "number",
+                          "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                        },
+                        "normalize": {
+                          "type": "boolean",
+                          "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                        },
+                        "bandwidth": {
+                          "type": "number",
+                          "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                        },
+                        "cumulative": {
+                          "type": "boolean",
+                          "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                        },
+                        "steps": {
+                          "type": "number",
+                          "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
+                        },
                         "fill": {
                           "anyOf": [
                             {
@@ -3714,6 +3978,30 @@
                         "opacity": {
                           "type": "number",
                           "description": "Default opacity (0-1)."
+                        },
+                        "fillOpacity": {
+                          "type": "number",
+                          "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                        },
+                        "binCount": {
+                          "type": "number",
+                          "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                        },
+                        "normalize": {
+                          "type": "boolean",
+                          "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                        },
+                        "bandwidth": {
+                          "type": "number",
+                          "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                        },
+                        "cumulative": {
+                          "type": "boolean",
+                          "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                        },
+                        "steps": {
+                          "type": "number",
+                          "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
                         },
                         "fill": {
                           "anyOf": [
@@ -4037,6 +4325,30 @@
                           "type": "number",
                           "description": "Default opacity (0-1)."
                         },
+                        "fillOpacity": {
+                          "type": "number",
+                          "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                        },
+                        "binCount": {
+                          "type": "number",
+                          "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                        },
+                        "normalize": {
+                          "type": "boolean",
+                          "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                        },
+                        "bandwidth": {
+                          "type": "number",
+                          "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                        },
+                        "cumulative": {
+                          "type": "boolean",
+                          "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                        },
+                        "steps": {
+                          "type": "number",
+                          "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
+                        },
                         "fill": {
                           "anyOf": [
                             {
@@ -4358,6 +4670,30 @@
                         "opacity": {
                           "type": "number",
                           "description": "Default opacity (0-1)."
+                        },
+                        "fillOpacity": {
+                          "type": "number",
+                          "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                        },
+                        "binCount": {
+                          "type": "number",
+                          "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                        },
+                        "normalize": {
+                          "type": "boolean",
+                          "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                        },
+                        "bandwidth": {
+                          "type": "number",
+                          "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                        },
+                        "cumulative": {
+                          "type": "boolean",
+                          "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                        },
+                        "steps": {
+                          "type": "number",
+                          "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
                         },
                         "fill": {
                           "anyOf": [
@@ -4681,6 +5017,30 @@
                           "type": "number",
                           "description": "Default opacity (0-1)."
                         },
+                        "fillOpacity": {
+                          "type": "number",
+                          "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                        },
+                        "binCount": {
+                          "type": "number",
+                          "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                        },
+                        "normalize": {
+                          "type": "boolean",
+                          "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                        },
+                        "bandwidth": {
+                          "type": "number",
+                          "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                        },
+                        "cumulative": {
+                          "type": "boolean",
+                          "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                        },
+                        "steps": {
+                          "type": "number",
+                          "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
+                        },
                         "fill": {
                           "anyOf": [
                             {
@@ -5003,6 +5363,30 @@
                           "type": "number",
                           "description": "Default opacity (0-1)."
                         },
+                        "fillOpacity": {
+                          "type": "number",
+                          "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                        },
+                        "binCount": {
+                          "type": "number",
+                          "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                        },
+                        "normalize": {
+                          "type": "boolean",
+                          "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                        },
+                        "bandwidth": {
+                          "type": "number",
+                          "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                        },
+                        "cumulative": {
+                          "type": "boolean",
+                          "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                        },
+                        "steps": {
+                          "type": "number",
+                          "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
+                        },
                         "fill": {
                           "anyOf": [
                             {
@@ -5188,6 +5572,698 @@
               }
             }
           ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/definitions/ChartSpecBase"
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "encoding",
+                "mark"
+              ],
+              "properties": {
+                "mark": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "const": "histogram"
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "type": {
+                          "$ref": "#/definitions/MarkType",
+                          "description": "The mark type."
+                        },
+                        "point": {
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "string",
+                              "const": "transparent"
+                            },
+                            {
+                              "type": "string",
+                              "const": "endpoints"
+                            },
+                            {
+                              "type": "string",
+                              "const": "last"
+                            },
+                            {
+                              "type": "string",
+                              "const": "first"
+                            }
+                          ],
+                          "description": "Show point markers on line/area marks.\n- true: filled circles at each data point\n- 'transparent': invisible hover targets (legacy behavior)\n- 'endpoints': show only first and last point per series (hollow dots)\n- 'last' / 'first': show only the last (or first) point — filled dot,   no white halo. Useful for highlighting the latest reading on a line   chart and the default for sparkline mode.\n- false: no point marks (default; uses voronoi overlay for tooltips)"
+                        },
+                        "interpolate": {
+                          "type": "string",
+                          "enum": [
+                            "linear",
+                            "monotone",
+                            "step",
+                            "step-before",
+                            "step-after",
+                            "basis",
+                            "cardinal",
+                            "natural"
+                          ],
+                          "description": "Curve interpolation for line/area marks. Maps to d3-shape curve factories."
+                        },
+                        "orient": {
+                          "type": "string",
+                          "enum": [
+                            "horizontal",
+                            "vertical"
+                          ],
+                          "description": "Explicit orientation override for bar marks."
+                        },
+                        "innerRadius": {
+                          "type": "number",
+                          "description": "Inner radius for arc marks. >0 produces a donut, 0 or omitted produces a pie."
+                        },
+                        "outerRadius": {
+                          "type": "number",
+                          "description": "Outer radius for arc marks."
+                        },
+                        "startAngle": {
+                          "type": "number",
+                          "description": "Start angle in radians for arc marks. Defaults to 0 (full pie/donut). Combined with `endAngle`, restricts the pie/donut to a partial sweep, e.g. `startAngle: -Math.PI / 2, endAngle: Math.PI / 2` for a half-donut (election-style results donut). Angles follow d3's convention: 0 is straight up, increasing clockwise. Only meaningful when `type` is `'arc'`."
+                        },
+                        "endAngle": {
+                          "type": "number",
+                          "description": "End angle in radians for arc marks. Defaults to 2*Math.PI (full pie/donut). See `startAngle`. Only meaningful when `type` is `'arc'`."
+                        },
+                        "centerLabel": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "text": {
+                                  "type": "string"
+                                },
+                                "subtitle": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "text"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Donut center stat. A string renders one line; the object form adds a caption under it. Decorative (the number is already in the slices), and only meaningful when `type` is `'arc'` with an inner radius."
+                        },
+                        "cornerRadius": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string",
+                              "const": "pill"
+                            }
+                          ],
+                          "description": "Corner radius for rect/bar marks. 'pill' sets rx to half the bar thickness."
+                        },
+                        "size": {
+                          "type": "number",
+                          "description": "Bar/column marks: fixed bar thickness in pixels. When set, bars are this height (horizontal) or width (vertical), centered within the band.\n\nPoint marks: the dot RADIUS in pixels (default 5, typical 2-12). This is NOT Vega-Lite's point `size`, which is an area in px^2 -- a VL size of 110 corresponds to `size: 6` here (r = sqrt(area / pi)). Validation rejects values above 50 with the conversion."
+                        },
+                        "filled": {
+                          "type": "boolean",
+                          "description": "Whether the mark is filled (vs stroked only)."
+                        },
+                        "opacity": {
+                          "type": "number",
+                          "description": "Default opacity (0-1)."
+                        },
+                        "fillOpacity": {
+                          "type": "number",
+                          "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                        },
+                        "binCount": {
+                          "type": "number",
+                          "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                        },
+                        "normalize": {
+                          "type": "boolean",
+                          "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                        },
+                        "bandwidth": {
+                          "type": "number",
+                          "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                        },
+                        "cumulative": {
+                          "type": "boolean",
+                          "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                        },
+                        "steps": {
+                          "type": "number",
+                          "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
+                        },
+                        "fill": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "$ref": "#/definitions/GradientDef"
+                            }
+                          ],
+                          "description": "Default fill color or gradient."
+                        },
+                        "stroke": {
+                          "type": "string",
+                          "description": "Default stroke color."
+                        },
+                        "strokeWidth": {
+                          "type": "number",
+                          "description": "Default stroke width."
+                        },
+                        "tooltip": {
+                          "type": [
+                            "boolean",
+                            "null"
+                          ],
+                          "description": "Tooltip behavior. null disables tooltips."
+                        },
+                        "clip": {
+                          "type": "boolean",
+                          "description": "Clip marks to the chart area."
+                        },
+                        "trendline": {
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "$ref": "#/definitions/TrendlineConfig"
+                            }
+                          ],
+                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals.\n\nPass an object to control stacking order: the line renders `below` the points by default, but a dense scatter (thousands of overlapping dots) fully occludes a line drawn underneath, so `{ layer: 'above' }` lifts the reference line over the cloud."
+                        },
+                        "dx": {
+                          "type": "number",
+                          "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                        },
+                        "dy": {
+                          "type": "number",
+                          "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                        },
+                        "align": {
+                          "type": "string",
+                          "enum": [
+                            "left",
+                            "center",
+                            "right"
+                          ],
+                          "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                        },
+                        "baseline": {
+                          "type": "string",
+                          "enum": [
+                            "top",
+                            "middle",
+                            "bottom"
+                          ],
+                          "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                        },
+                        "fontSize": {
+                          "type": "number",
+                          "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
+                        },
+                        "fillPattern": {
+                          "type": "string",
+                          "enum": [
+                            "auto",
+                            "none"
+                          ],
+                          "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
+                        },
+                        "style": {
+                          "type": "string",
+                          "enum": [
+                            "dumbbell",
+                            "arrow",
+                            "bar"
+                          ],
+                          "description": "Visual style for range marks. Only meaningful when `type` is `'range'`.\n- 'dumbbell' (default): a dot at each end joined by a connector line.   The start dot is muted, the end dot carries the accent color.\n- 'arrow': a line with an arrowhead at the x2/y2 end, the strongest   \"change between two points in time\" form.\n- 'bar': a plain floating range bar spanning start to end."
+                        },
+                        "colorByDirection": {
+                          "type": "boolean",
+                          "description": "Color range marks by direction of change. Only meaningful when `type` is `'range'`. When true, increases (x2 > x, or y2 > y) use the theme's `positive` semantic color and decreases use `negative`. A field-based `encoding.color` takes precedence over direction coloring."
+                        },
+                        "units": {
+                          "type": "number",
+                          "description": "Total number of cells in a waffle grid. Only meaningful when `type` is `'waffle'`. Category values normalize to this many cells via largest-remainder rounding so the grid always sums exactly. Default 100."
+                        },
+                        "columns": {
+                          "type": "number",
+                          "description": "Number of columns in a waffle grid. Only meaningful when `type` is `'waffle'`. Rows derive from `units / columns`. Default 10."
+                        },
+                        "other": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "threshold": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "threshold"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Opt-in \"Other\" bucketing for waffle grids. Only meaningful when `type` is `'waffle'`. Categories whose share of the total falls below `threshold` (a fraction, so `0.05` is 5%) merge into one trailing category. Off by default: bucketing is an editorial decision, not a layout default. Same shape as `SankeySpec.other`."
+                        },
+                        "weekStart": {
+                          "type": "string",
+                          "enum": [
+                            "monday",
+                            "sunday"
+                          ],
+                          "description": "First day of the week for calendar marks. Only meaningful when `type` is `'calendar'`. Controls which weekday occupies the top row of each band. Defaults to 'monday' (ISO week convention)."
+                        },
+                        "cellRadius": {
+                          "type": "number",
+                          "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 2."
+                        },
+                        "shape": {
+                          "type": "string",
+                          "const": "hemicycle",
+                          "description": "Seat layout shape for parliament marks. Only meaningful when `type` is `'parliament'`. `'hemicycle'` (default, and currently the only shape) packs seats into concentric semicircular arcs, party-grouped left to right."
+                        },
+                        "seatRadius": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string",
+                              "const": "auto"
+                            }
+                          ],
+                          "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
+                        },
+                        "majorityLine": {
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "seats": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ]
+                    }
+                  ]
+                },
+                "encoding": {
+                  "$ref": "#/definitions/HistogramEncoding%3CDataRow%3E"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/definitions/ChartSpecBase"
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "encoding",
+                "mark"
+              ],
+              "properties": {
+                "mark": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "const": "density"
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "type": {
+                          "$ref": "#/definitions/MarkType",
+                          "description": "The mark type."
+                        },
+                        "point": {
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "string",
+                              "const": "transparent"
+                            },
+                            {
+                              "type": "string",
+                              "const": "endpoints"
+                            },
+                            {
+                              "type": "string",
+                              "const": "last"
+                            },
+                            {
+                              "type": "string",
+                              "const": "first"
+                            }
+                          ],
+                          "description": "Show point markers on line/area marks.\n- true: filled circles at each data point\n- 'transparent': invisible hover targets (legacy behavior)\n- 'endpoints': show only first and last point per series (hollow dots)\n- 'last' / 'first': show only the last (or first) point — filled dot,   no white halo. Useful for highlighting the latest reading on a line   chart and the default for sparkline mode.\n- false: no point marks (default; uses voronoi overlay for tooltips)"
+                        },
+                        "interpolate": {
+                          "type": "string",
+                          "enum": [
+                            "linear",
+                            "monotone",
+                            "step",
+                            "step-before",
+                            "step-after",
+                            "basis",
+                            "cardinal",
+                            "natural"
+                          ],
+                          "description": "Curve interpolation for line/area marks. Maps to d3-shape curve factories."
+                        },
+                        "orient": {
+                          "type": "string",
+                          "enum": [
+                            "horizontal",
+                            "vertical"
+                          ],
+                          "description": "Explicit orientation override for bar marks."
+                        },
+                        "innerRadius": {
+                          "type": "number",
+                          "description": "Inner radius for arc marks. >0 produces a donut, 0 or omitted produces a pie."
+                        },
+                        "outerRadius": {
+                          "type": "number",
+                          "description": "Outer radius for arc marks."
+                        },
+                        "startAngle": {
+                          "type": "number",
+                          "description": "Start angle in radians for arc marks. Defaults to 0 (full pie/donut). Combined with `endAngle`, restricts the pie/donut to a partial sweep, e.g. `startAngle: -Math.PI / 2, endAngle: Math.PI / 2` for a half-donut (election-style results donut). Angles follow d3's convention: 0 is straight up, increasing clockwise. Only meaningful when `type` is `'arc'`."
+                        },
+                        "endAngle": {
+                          "type": "number",
+                          "description": "End angle in radians for arc marks. Defaults to 2*Math.PI (full pie/donut). See `startAngle`. Only meaningful when `type` is `'arc'`."
+                        },
+                        "centerLabel": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "text": {
+                                  "type": "string"
+                                },
+                                "subtitle": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "text"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Donut center stat. A string renders one line; the object form adds a caption under it. Decorative (the number is already in the slices), and only meaningful when `type` is `'arc'` with an inner radius."
+                        },
+                        "cornerRadius": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string",
+                              "const": "pill"
+                            }
+                          ],
+                          "description": "Corner radius for rect/bar marks. 'pill' sets rx to half the bar thickness."
+                        },
+                        "size": {
+                          "type": "number",
+                          "description": "Bar/column marks: fixed bar thickness in pixels. When set, bars are this height (horizontal) or width (vertical), centered within the band.\n\nPoint marks: the dot RADIUS in pixels (default 5, typical 2-12). This is NOT Vega-Lite's point `size`, which is an area in px^2 -- a VL size of 110 corresponds to `size: 6` here (r = sqrt(area / pi)). Validation rejects values above 50 with the conversion."
+                        },
+                        "filled": {
+                          "type": "boolean",
+                          "description": "Whether the mark is filled (vs stroked only)."
+                        },
+                        "opacity": {
+                          "type": "number",
+                          "description": "Default opacity (0-1)."
+                        },
+                        "fillOpacity": {
+                          "type": "number",
+                          "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                        },
+                        "binCount": {
+                          "type": "number",
+                          "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                        },
+                        "normalize": {
+                          "type": "boolean",
+                          "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                        },
+                        "bandwidth": {
+                          "type": "number",
+                          "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                        },
+                        "cumulative": {
+                          "type": "boolean",
+                          "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                        },
+                        "steps": {
+                          "type": "number",
+                          "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
+                        },
+                        "fill": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "$ref": "#/definitions/GradientDef"
+                            }
+                          ],
+                          "description": "Default fill color or gradient."
+                        },
+                        "stroke": {
+                          "type": "string",
+                          "description": "Default stroke color."
+                        },
+                        "strokeWidth": {
+                          "type": "number",
+                          "description": "Default stroke width."
+                        },
+                        "tooltip": {
+                          "type": [
+                            "boolean",
+                            "null"
+                          ],
+                          "description": "Tooltip behavior. null disables tooltips."
+                        },
+                        "clip": {
+                          "type": "boolean",
+                          "description": "Clip marks to the chart area."
+                        },
+                        "trendline": {
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "$ref": "#/definitions/TrendlineConfig"
+                            }
+                          ],
+                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals.\n\nPass an object to control stacking order: the line renders `below` the points by default, but a dense scatter (thousands of overlapping dots) fully occludes a line drawn underneath, so `{ layer: 'above' }` lifts the reference line over the cloud."
+                        },
+                        "dx": {
+                          "type": "number",
+                          "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                        },
+                        "dy": {
+                          "type": "number",
+                          "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                        },
+                        "align": {
+                          "type": "string",
+                          "enum": [
+                            "left",
+                            "center",
+                            "right"
+                          ],
+                          "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                        },
+                        "baseline": {
+                          "type": "string",
+                          "enum": [
+                            "top",
+                            "middle",
+                            "bottom"
+                          ],
+                          "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                        },
+                        "fontSize": {
+                          "type": "number",
+                          "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
+                        },
+                        "fillPattern": {
+                          "type": "string",
+                          "enum": [
+                            "auto",
+                            "none"
+                          ],
+                          "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
+                        },
+                        "style": {
+                          "type": "string",
+                          "enum": [
+                            "dumbbell",
+                            "arrow",
+                            "bar"
+                          ],
+                          "description": "Visual style for range marks. Only meaningful when `type` is `'range'`.\n- 'dumbbell' (default): a dot at each end joined by a connector line.   The start dot is muted, the end dot carries the accent color.\n- 'arrow': a line with an arrowhead at the x2/y2 end, the strongest   \"change between two points in time\" form.\n- 'bar': a plain floating range bar spanning start to end."
+                        },
+                        "colorByDirection": {
+                          "type": "boolean",
+                          "description": "Color range marks by direction of change. Only meaningful when `type` is `'range'`. When true, increases (x2 > x, or y2 > y) use the theme's `positive` semantic color and decreases use `negative`. A field-based `encoding.color` takes precedence over direction coloring."
+                        },
+                        "units": {
+                          "type": "number",
+                          "description": "Total number of cells in a waffle grid. Only meaningful when `type` is `'waffle'`. Category values normalize to this many cells via largest-remainder rounding so the grid always sums exactly. Default 100."
+                        },
+                        "columns": {
+                          "type": "number",
+                          "description": "Number of columns in a waffle grid. Only meaningful when `type` is `'waffle'`. Rows derive from `units / columns`. Default 10."
+                        },
+                        "other": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "threshold": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "threshold"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "Opt-in \"Other\" bucketing for waffle grids. Only meaningful when `type` is `'waffle'`. Categories whose share of the total falls below `threshold` (a fraction, so `0.05` is 5%) merge into one trailing category. Off by default: bucketing is an editorial decision, not a layout default. Same shape as `SankeySpec.other`."
+                        },
+                        "weekStart": {
+                          "type": "string",
+                          "enum": [
+                            "monday",
+                            "sunday"
+                          ],
+                          "description": "First day of the week for calendar marks. Only meaningful when `type` is `'calendar'`. Controls which weekday occupies the top row of each band. Defaults to 'monday' (ISO week convention)."
+                        },
+                        "cellRadius": {
+                          "type": "number",
+                          "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 2."
+                        },
+                        "shape": {
+                          "type": "string",
+                          "const": "hemicycle",
+                          "description": "Seat layout shape for parliament marks. Only meaningful when `type` is `'parliament'`. `'hemicycle'` (default, and currently the only shape) packs seats into concentric semicircular arcs, party-grouped left to right."
+                        },
+                        "seatRadius": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string",
+                              "const": "auto"
+                            }
+                          ],
+                          "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
+                        },
+                        "majorityLine": {
+                          "anyOf": [
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "seats": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "additionalProperties": false
+                            }
+                          ],
+                          "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ]
+                    }
+                  ]
+                },
+                "encoding": {
+                  "$ref": "#/definitions/DensityEncoding%3CDataRow%3E"
+                }
+              }
+            }
+          ]
         }
       ],
       "description": "Chart specification: the primary input for standard chart types.\n\nUses the Vega-Lite `mark` property instead of `type` to specify the visualization mark. The mark can be a string shorthand or an object with additional properties (interpolation, point markers, etc.).\n\nThis is a discriminated union — the `mark` value determines which encoding channels are required. TypeScript enforces required channels at compile time, matching the runtime rules in `MARK_ENCODING_RULES`."
@@ -5210,9 +6286,11 @@
         "range",
         "waffle",
         "calendar",
-        "parliament"
+        "parliament",
+        "histogram",
+        "density"
       ],
-      "description": "Supported mark types, following Vega-Lite conventions.\n\nMapping from previous OpenChart chart types:\n- 'bar' covers both horizontal bars (old 'bar') and vertical columns (old 'column')\n- 'arc' covers both pie (old 'pie') and donut (old 'donut')\n- 'point' replaces old 'scatter'\n- 'circle' replaces old 'dot'\n- 'line' and 'area' unchanged\n\nNew mark types not in previous OpenChart:\n- 'text': data-positioned text labels\n- 'rule': reference lines as data marks\n- 'tick': strip/rug plot marks\n- 'rect': heatmaps and 2D binned plots\n- 'range': dumbbell / arrow / range-bar plots spanning two values per category\n- 'waffle': unit grids (\"x of 100\") for part-to-whole counts\n- 'calendar': GitHub-style calendar heatmap (weeks x weekdays, daily dates)\n- 'parliament': hemicycle seat-dot chart for election/legislature results"
+      "description": "Supported mark types, following Vega-Lite conventions.\n\nMapping from previous OpenChart chart types:\n- 'bar' covers both horizontal bars (old 'bar') and vertical columns (old 'column')\n- 'arc' covers both pie (old 'pie') and donut (old 'donut')\n- 'point' replaces old 'scatter'\n- 'circle' replaces old 'dot'\n- 'line' and 'area' unchanged\n\nNew mark types not in previous OpenChart:\n- 'text': data-positioned text labels\n- 'rule': reference lines as data marks\n- 'tick': strip/rug plot marks\n- 'rect': heatmaps and 2D binned plots\n- 'range': dumbbell / arrow / range-bar plots spanning two values per category\n- 'waffle': unit grids (\"x of 100\") for part-to-whole counts\n- 'calendar': GitHub-style calendar heatmap (weeks x weekdays, daily dates)\n- 'parliament': hemicycle seat-dot chart for election/legislature results\n- 'histogram': binned bars over a continuous field; sugar for a bar with   `x.bin` + `y: { aggregate: 'count' }`\n- 'density': kernel density estimate drawn as a filled curve; sugar for an   area over a density transform"
     },
     "GradientDef": {
       "anyOf": [
@@ -6352,6 +7430,12 @@
           "$ref": "#/definitions/AggregateTransform"
         },
         {
+          "$ref": "#/definitions/JoinAggregateTransform"
+        },
+        {
+          "$ref": "#/definitions/DensityTransform"
+        },
+        {
           "$ref": "#/definitions/FoldTransform"
         },
         {
@@ -6530,6 +7614,101 @@
       ],
       "additionalProperties": false,
       "description": "Aggregate transform: group rows and compute summary statistics (VL aligned). Produces one row per group with the groupby fields and computed aggregates."
+    },
+    "JoinAggregateTransform": {
+      "type": "object",
+      "properties": {
+        "joinaggregate": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "op": {
+                "$ref": "#/definitions/AggregateOp"
+              },
+              "field": {
+                "type": "string"
+              },
+              "as": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "op",
+              "field",
+              "as"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "groupby": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Fields to group by. Omitted or empty treats all rows as one group."
+        }
+      },
+      "required": [
+        "joinaggregate"
+      ],
+      "additionalProperties": false,
+      "description": "Join-aggregate transform: compute group summaries and write them back onto every row of the group (VL aligned).\n\nThe difference from `AggregateTransform` is the row count: `aggregate` collapses a group to one row, `joinaggregate` keeps every row and adds the group's summary as a new field. That is what makes \"this row's value as a share of its group's total\" expressible — compute the total, then divide."
+    },
+    "DensityTransform": {
+      "type": "object",
+      "properties": {
+        "density": {
+          "type": "string",
+          "description": "Field of raw values to estimate the density of."
+        },
+        "groupby": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Group the estimate by these fields; one curve per group."
+        },
+        "bandwidth": {
+          "type": "number",
+          "description": "Gaussian kernel bandwidth. Omitted or 0 uses Silverman's rule of thumb."
+        },
+        "extent": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "[min, max] to evaluate over. Defaults to the data extent, padded to close the tails."
+        },
+        "cumulative": {
+          "type": "boolean",
+          "description": "Emit the cumulative distribution instead of the density."
+        },
+        "counts": {
+          "type": "boolean",
+          "description": "Scale the curve by the group's row count instead of integrating to 1."
+        },
+        "steps": {
+          "type": "number",
+          "description": "Number of evaluation points. Default 200."
+        },
+        "as": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "Output field names. Default ['value', 'density']."
+        }
+      },
+      "required": [
+        "density"
+      ],
+      "additionalProperties": false,
+      "description": "Density transform: kernel density estimate over a quantitative field (Vega-Lite aligned).\n\nProduces a new dataset — one row per evaluation point, per group — rather than adding fields to the input rows. The output is what an area mark plots."
     },
     "FoldTransform": {
       "type": "object",
@@ -9853,6 +11032,242 @@
       "additionalProperties": false,
       "description": "Encoding for parliament marks (hemicycle seat-dot charts).\n- `color`: required (nominal/ordinal, the party)\n- `theta`: the canonical quantitative seat count, the same part-to-whole   value channel arc/waffle marks use. `y` is a deprecated alias, accepted   for backward compatibility."
     },
+    "HistogramEncoding<DataRow>": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
+          "description": "Horizontal position channel. Required for: bar, line, area, point, tick, rect, lollipop. Maps a field to the x-axis. Use `type: 'temporal'` for dates, `'nominal'` for categories, `'quantitative'` for numbers."
+        },
+        "y": {
+          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
+          "description": "Vertical position channel. Required for: bar, line, area, point, tick, rect, arc, lollipop. For arc marks, this is the value field (slice size). For all others it's the y-axis position."
+        },
+        "color": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/EncodingChannel%3CDataRow%3E"
+            },
+            {
+              "$ref": "#/definitions/ConditionalValueDef%3CDataRow%3E"
+            },
+            {
+              "$ref": "#/definitions/ValueDef"
+            }
+          ],
+          "description": "Color channel. Required for arc marks (determines pie/donut slice coloring). Optional for all other marks -- used for series differentiation on multi-series charts, or heatmap intensity. Accepts a conditional definition to apply colors based on data predicates, or a bare `{ value }` constant (VL aligned; expanded to the mark-level fill/stroke)."
+        },
+        "size": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/EncodingChannel%3CDataRow%3E"
+            },
+            {
+              "$ref": "#/definitions/ConditionalValueDef%3CDataRow%3E"
+            },
+            {
+              "$ref": "#/definitions/ValueDef"
+            }
+          ],
+          "description": "Size channel. Used by point/bubble charts to scale dots by a quantitative field, area-proportionally (sqrt curve). The units are dot RADII in px: `scale.range` defaults to [3, 30] for scatter, and a bare `{ value }` constant expands to `mark.size`, also a radius. This differs from Vega-Lite, where point size is an area in px^2 -- VL-scale values (60-900) are rejected by validation with the conversion. Accepts a conditional definition to vary size based on data predicates."
+        },
+        "detail": {
+          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
+          "description": "Detail channel. Groups data into multiple series without mapping to a visual property. Useful when you want separate lines per category but don't need the color to differ."
+        },
+        "key": {
+          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
+          "description": "Identity channel for data-update transitions. Maps a field whose value uniquely identifies each datum across updates. Mirrors Vega-Lite's key channel. Not visually encoded. Optional: charts derive sensible default keys."
+        },
+        "x2": {
+          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
+          "description": "Secondary x position. Used with `x` to define a horizontal span (rect marks, error bars). Both `x` and `x2` must be quantitative."
+        },
+        "y2": {
+          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
+          "description": "Secondary y position. Used with `y` to define a vertical span (rect marks, error bands). Both `y` and `y2` must be quantitative."
+        },
+        "opacity": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/EncodingChannel%3CDataRow%3E"
+            },
+            {
+              "$ref": "#/definitions/ConditionalValueDef%3CDataRow%3E"
+            },
+            {
+              "$ref": "#/definitions/ValueDef"
+            }
+          ],
+          "description": "Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity based on data predicates (e.g., highlight selected points), or a bare `{ value }` constant (VL aligned; expanded to `mark.opacity`)."
+        },
+        "strokeDash": {
+          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
+          "description": "Stroke dash pattern encoding. Maps a nominal/ordinal field to different dash patterns on line and rule marks. Useful when color alone doesn't distinguish series well."
+        },
+        "angle": {
+          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
+          "description": "Rotation angle encoding for point marks. Maps a quantitative field to 0-360 degrees."
+        },
+        "text": {
+          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
+          "description": "Text content for `text` marks. Required when mark is `'text'`. Not meaningful for other mark types."
+        },
+        "tooltip": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/EncodingChannel%3CDataRow%3E"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/EncodingChannel%3CDataRow%3E"
+              }
+            }
+          ],
+          "description": "Tooltip field(s). Shown on hover. Can be a single channel or an array for multi-field tooltips. Independent of the x/y/color encoding."
+        },
+        "theta": {
+          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
+          "description": "Angular position (slice value) for arc marks (pie/donut), the canonical value channel in v8. Waffle and parliament marks accept it too (the same part-to-whole value channel). `y` is still accepted on these marks as a deprecated alias for backward compatibility (a compile warning is emitted and `y` is populated from `theta` internally). Not used by any other mark type."
+        },
+        "facet": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+        },
+        "row": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Row facet channel: partitions data into vertically-stacked panels. Each unique value of the row field produces one panel, arranged in a single column. Shares the x-axis scale by default; y-axis is independent. Mutually exclusive with `facet` and `column`."
+        },
+        "column": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Column facet channel: partitions data into side-by-side panels. Each unique value of the column field produces one panel, arranged in a single row. Shares the y-axis scale by default; x-axis is independent. Mutually exclusive with `facet` and `row`."
+        }
+      },
+      "required": [
+        "x"
+      ],
+      "additionalProperties": false,
+      "description": "Encoding for histogram marks (binned bars over a continuous field).\n- `x`: required quantitative, the raw values to bin (not pre-binned)\n- `y`: optional; defaults to the per-bin count\n- `color`: optional grouping. Groups overlap at the same bins rather than   dodging or stacking, so two distributions can be compared by shape."
+    },
+    "DensityEncoding<DataRow>": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
+          "description": "Horizontal position channel. Required for: bar, line, area, point, tick, rect, lollipop. Maps a field to the x-axis. Use `type: 'temporal'` for dates, `'nominal'` for categories, `'quantitative'` for numbers."
+        },
+        "y": {
+          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
+          "description": "Vertical position channel. Required for: bar, line, area, point, tick, rect, arc, lollipop. For arc marks, this is the value field (slice size). For all others it's the y-axis position."
+        },
+        "color": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/EncodingChannel%3CDataRow%3E"
+            },
+            {
+              "$ref": "#/definitions/ConditionalValueDef%3CDataRow%3E"
+            },
+            {
+              "$ref": "#/definitions/ValueDef"
+            }
+          ],
+          "description": "Color channel. Required for arc marks (determines pie/donut slice coloring). Optional for all other marks -- used for series differentiation on multi-series charts, or heatmap intensity. Accepts a conditional definition to apply colors based on data predicates, or a bare `{ value }` constant (VL aligned; expanded to the mark-level fill/stroke)."
+        },
+        "size": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/EncodingChannel%3CDataRow%3E"
+            },
+            {
+              "$ref": "#/definitions/ConditionalValueDef%3CDataRow%3E"
+            },
+            {
+              "$ref": "#/definitions/ValueDef"
+            }
+          ],
+          "description": "Size channel. Used by point/bubble charts to scale dots by a quantitative field, area-proportionally (sqrt curve). The units are dot RADII in px: `scale.range` defaults to [3, 30] for scatter, and a bare `{ value }` constant expands to `mark.size`, also a radius. This differs from Vega-Lite, where point size is an area in px^2 -- VL-scale values (60-900) are rejected by validation with the conversion. Accepts a conditional definition to vary size based on data predicates."
+        },
+        "detail": {
+          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
+          "description": "Detail channel. Groups data into multiple series without mapping to a visual property. Useful when you want separate lines per category but don't need the color to differ."
+        },
+        "key": {
+          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
+          "description": "Identity channel for data-update transitions. Maps a field whose value uniquely identifies each datum across updates. Mirrors Vega-Lite's key channel. Not visually encoded. Optional: charts derive sensible default keys."
+        },
+        "x2": {
+          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
+          "description": "Secondary x position. Used with `x` to define a horizontal span (rect marks, error bars). Both `x` and `x2` must be quantitative."
+        },
+        "y2": {
+          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
+          "description": "Secondary y position. Used with `y` to define a vertical span (rect marks, error bands). Both `y` and `y2` must be quantitative."
+        },
+        "opacity": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/EncodingChannel%3CDataRow%3E"
+            },
+            {
+              "$ref": "#/definitions/ConditionalValueDef%3CDataRow%3E"
+            },
+            {
+              "$ref": "#/definitions/ValueDef"
+            }
+          ],
+          "description": "Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity based on data predicates (e.g., highlight selected points), or a bare `{ value }` constant (VL aligned; expanded to `mark.opacity`)."
+        },
+        "strokeDash": {
+          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
+          "description": "Stroke dash pattern encoding. Maps a nominal/ordinal field to different dash patterns on line and rule marks. Useful when color alone doesn't distinguish series well."
+        },
+        "angle": {
+          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
+          "description": "Rotation angle encoding for point marks. Maps a quantitative field to 0-360 degrees."
+        },
+        "text": {
+          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
+          "description": "Text content for `text` marks. Required when mark is `'text'`. Not meaningful for other mark types."
+        },
+        "tooltip": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/EncodingChannel%3CDataRow%3E"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/EncodingChannel%3CDataRow%3E"
+              }
+            }
+          ],
+          "description": "Tooltip field(s). Shown on hover. Can be a single channel or an array for multi-field tooltips. Independent of the x/y/color encoding."
+        },
+        "theta": {
+          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
+          "description": "Angular position (slice value) for arc marks (pie/donut), the canonical value channel in v8. Waffle and parliament marks accept it too (the same part-to-whole value channel). `y` is still accepted on these marks as a deprecated alias for backward compatibility (a compile warning is emitted and `y` is populated from `theta` internally). Not used by any other mark type."
+        },
+        "facet": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+        },
+        "row": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Row facet channel: partitions data into vertically-stacked panels. Each unique value of the row field produces one panel, arranged in a single column. Shares the x-axis scale by default; y-axis is independent. Mutually exclusive with `facet` and `column`."
+        },
+        "column": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Column facet channel: partitions data into side-by-side panels. Each unique value of the column field produces one panel, arranged in a single row. Shares the y-axis scale by default; x-axis is independent. Mutually exclusive with `facet` and `row`."
+        }
+      },
+      "required": [
+        "x"
+      ],
+      "additionalProperties": false,
+      "description": "Encoding for density marks (kernel density estimates).\n- `x`: required quantitative, the raw values to estimate over\n- `y`: computed by the density transform, not authored\n- `color`: optional grouping, one translucent curve per group"
+    },
     "LayerSpec": {
       "type": "object",
       "properties": {
@@ -10123,6 +11538,30 @@
                     "opacity": {
                       "type": "number",
                       "description": "Default opacity (0-1)."
+                    },
+                    "fillOpacity": {
+                      "type": "number",
+                      "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                    },
+                    "binCount": {
+                      "type": "number",
+                      "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                    },
+                    "normalize": {
+                      "type": "boolean",
+                      "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                    },
+                    "bandwidth": {
+                      "type": "number",
+                      "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                    },
+                    "cumulative": {
+                      "type": "boolean",
+                      "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                    },
+                    "steps": {
+                      "type": "number",
+                      "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
                     },
                     "fill": {
                       "anyOf": [
@@ -10634,6 +12073,30 @@
                       "type": "number",
                       "description": "Default opacity (0-1)."
                     },
+                    "fillOpacity": {
+                      "type": "number",
+                      "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                    },
+                    "binCount": {
+                      "type": "number",
+                      "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                    },
+                    "normalize": {
+                      "type": "boolean",
+                      "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                    },
+                    "bandwidth": {
+                      "type": "number",
+                      "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                    },
+                    "cumulative": {
+                      "type": "boolean",
+                      "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                    },
+                    "steps": {
+                      "type": "number",
+                      "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
+                    },
                     "fill": {
                       "anyOf": [
                         {
@@ -11143,6 +12606,30 @@
                     "opacity": {
                       "type": "number",
                       "description": "Default opacity (0-1)."
+                    },
+                    "fillOpacity": {
+                      "type": "number",
+                      "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                    },
+                    "binCount": {
+                      "type": "number",
+                      "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                    },
+                    "normalize": {
+                      "type": "boolean",
+                      "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                    },
+                    "bandwidth": {
+                      "type": "number",
+                      "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                    },
+                    "cumulative": {
+                      "type": "boolean",
+                      "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                    },
+                    "steps": {
+                      "type": "number",
+                      "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
                     },
                     "fill": {
                       "anyOf": [
@@ -11654,6 +13141,30 @@
                       "type": "number",
                       "description": "Default opacity (0-1)."
                     },
+                    "fillOpacity": {
+                      "type": "number",
+                      "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                    },
+                    "binCount": {
+                      "type": "number",
+                      "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                    },
+                    "normalize": {
+                      "type": "boolean",
+                      "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                    },
+                    "bandwidth": {
+                      "type": "number",
+                      "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                    },
+                    "cumulative": {
+                      "type": "boolean",
+                      "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                    },
+                    "steps": {
+                      "type": "number",
+                      "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
+                    },
                     "fill": {
                       "anyOf": [
                         {
@@ -12163,6 +13674,30 @@
                     "opacity": {
                       "type": "number",
                       "description": "Default opacity (0-1)."
+                    },
+                    "fillOpacity": {
+                      "type": "number",
+                      "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                    },
+                    "binCount": {
+                      "type": "number",
+                      "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                    },
+                    "normalize": {
+                      "type": "boolean",
+                      "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                    },
+                    "bandwidth": {
+                      "type": "number",
+                      "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                    },
+                    "cumulative": {
+                      "type": "boolean",
+                      "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                    },
+                    "steps": {
+                      "type": "number",
+                      "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
                     },
                     "fill": {
                       "anyOf": [
@@ -12674,6 +14209,30 @@
                       "type": "number",
                       "description": "Default opacity (0-1)."
                     },
+                    "fillOpacity": {
+                      "type": "number",
+                      "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                    },
+                    "binCount": {
+                      "type": "number",
+                      "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                    },
+                    "normalize": {
+                      "type": "boolean",
+                      "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                    },
+                    "bandwidth": {
+                      "type": "number",
+                      "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                    },
+                    "cumulative": {
+                      "type": "boolean",
+                      "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                    },
+                    "steps": {
+                      "type": "number",
+                      "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
+                    },
                     "fill": {
                       "anyOf": [
                         {
@@ -13183,6 +14742,30 @@
                     "opacity": {
                       "type": "number",
                       "description": "Default opacity (0-1)."
+                    },
+                    "fillOpacity": {
+                      "type": "number",
+                      "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                    },
+                    "binCount": {
+                      "type": "number",
+                      "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                    },
+                    "normalize": {
+                      "type": "boolean",
+                      "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                    },
+                    "bandwidth": {
+                      "type": "number",
+                      "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                    },
+                    "cumulative": {
+                      "type": "boolean",
+                      "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                    },
+                    "steps": {
+                      "type": "number",
+                      "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
                     },
                     "fill": {
                       "anyOf": [
@@ -13694,6 +15277,30 @@
                       "type": "number",
                       "description": "Default opacity (0-1)."
                     },
+                    "fillOpacity": {
+                      "type": "number",
+                      "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                    },
+                    "binCount": {
+                      "type": "number",
+                      "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                    },
+                    "normalize": {
+                      "type": "boolean",
+                      "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                    },
+                    "bandwidth": {
+                      "type": "number",
+                      "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                    },
+                    "cumulative": {
+                      "type": "boolean",
+                      "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                    },
+                    "steps": {
+                      "type": "number",
+                      "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
+                    },
                     "fill": {
                       "anyOf": [
                         {
@@ -14203,6 +15810,30 @@
                     "opacity": {
                       "type": "number",
                       "description": "Default opacity (0-1)."
+                    },
+                    "fillOpacity": {
+                      "type": "number",
+                      "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                    },
+                    "binCount": {
+                      "type": "number",
+                      "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                    },
+                    "normalize": {
+                      "type": "boolean",
+                      "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                    },
+                    "bandwidth": {
+                      "type": "number",
+                      "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                    },
+                    "cumulative": {
+                      "type": "boolean",
+                      "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                    },
+                    "steps": {
+                      "type": "number",
+                      "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
                     },
                     "fill": {
                       "anyOf": [
@@ -14714,6 +16345,30 @@
                       "type": "number",
                       "description": "Default opacity (0-1)."
                     },
+                    "fillOpacity": {
+                      "type": "number",
+                      "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                    },
+                    "binCount": {
+                      "type": "number",
+                      "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                    },
+                    "normalize": {
+                      "type": "boolean",
+                      "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                    },
+                    "bandwidth": {
+                      "type": "number",
+                      "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                    },
+                    "cumulative": {
+                      "type": "boolean",
+                      "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                    },
+                    "steps": {
+                      "type": "number",
+                      "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
+                    },
                     "fill": {
                       "anyOf": [
                         {
@@ -15223,6 +16878,30 @@
                     "opacity": {
                       "type": "number",
                       "description": "Default opacity (0-1)."
+                    },
+                    "fillOpacity": {
+                      "type": "number",
+                      "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                    },
+                    "binCount": {
+                      "type": "number",
+                      "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                    },
+                    "normalize": {
+                      "type": "boolean",
+                      "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                    },
+                    "bandwidth": {
+                      "type": "number",
+                      "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                    },
+                    "cumulative": {
+                      "type": "boolean",
+                      "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                    },
+                    "steps": {
+                      "type": "number",
+                      "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
                     },
                     "fill": {
                       "anyOf": [
@@ -15734,6 +17413,30 @@
                       "type": "number",
                       "description": "Default opacity (0-1)."
                     },
+                    "fillOpacity": {
+                      "type": "number",
+                      "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                    },
+                    "binCount": {
+                      "type": "number",
+                      "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                    },
+                    "normalize": {
+                      "type": "boolean",
+                      "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                    },
+                    "bandwidth": {
+                      "type": "number",
+                      "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                    },
+                    "cumulative": {
+                      "type": "boolean",
+                      "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                    },
+                    "steps": {
+                      "type": "number",
+                      "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
+                    },
                     "fill": {
                       "anyOf": [
                         {
@@ -16243,6 +17946,30 @@
                     "opacity": {
                       "type": "number",
                       "description": "Default opacity (0-1)."
+                    },
+                    "fillOpacity": {
+                      "type": "number",
+                      "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                    },
+                    "binCount": {
+                      "type": "number",
+                      "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                    },
+                    "normalize": {
+                      "type": "boolean",
+                      "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                    },
+                    "bandwidth": {
+                      "type": "number",
+                      "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                    },
+                    "cumulative": {
+                      "type": "boolean",
+                      "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                    },
+                    "steps": {
+                      "type": "number",
+                      "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
                     },
                     "fill": {
                       "anyOf": [
@@ -16754,6 +18481,30 @@
                       "type": "number",
                       "description": "Default opacity (0-1)."
                     },
+                    "fillOpacity": {
+                      "type": "number",
+                      "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                    },
+                    "binCount": {
+                      "type": "number",
+                      "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                    },
+                    "normalize": {
+                      "type": "boolean",
+                      "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                    },
+                    "bandwidth": {
+                      "type": "number",
+                      "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                    },
+                    "cumulative": {
+                      "type": "boolean",
+                      "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                    },
+                    "steps": {
+                      "type": "number",
+                      "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
+                    },
                     "fill": {
                       "anyOf": [
                         {
@@ -17263,6 +19014,30 @@
                     "opacity": {
                       "type": "number",
                       "description": "Default opacity (0-1)."
+                    },
+                    "fillOpacity": {
+                      "type": "number",
+                      "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                    },
+                    "binCount": {
+                      "type": "number",
+                      "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                    },
+                    "normalize": {
+                      "type": "boolean",
+                      "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                    },
+                    "bandwidth": {
+                      "type": "number",
+                      "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                    },
+                    "cumulative": {
+                      "type": "boolean",
+                      "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                    },
+                    "steps": {
+                      "type": "number",
+                      "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
                     },
                     "fill": {
                       "anyOf": [
@@ -17774,6 +19549,30 @@
                       "type": "number",
                       "description": "Default opacity (0-1)."
                     },
+                    "fillOpacity": {
+                      "type": "number",
+                      "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                    },
+                    "binCount": {
+                      "type": "number",
+                      "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                    },
+                    "normalize": {
+                      "type": "boolean",
+                      "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                    },
+                    "bandwidth": {
+                      "type": "number",
+                      "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                    },
+                    "cumulative": {
+                      "type": "boolean",
+                      "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                    },
+                    "steps": {
+                      "type": "number",
+                      "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
+                    },
                     "fill": {
                       "anyOf": [
                         {
@@ -17955,6 +19754,1074 @@
             },
             "encoding": {
               "$ref": "#/definitions/ParliamentEncoding%3CDataRow%3E"
+            },
+            "data": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/DataRow"
+              },
+              "description": "Data array: each element is a row with field values. The Vega-Lite object form `{ values: [...] }` is also accepted at runtime and unwrapped during the pre-validation sugar expansion. `{ url }` is not supported (openchart does not fetch data)."
+            },
+            "transform": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Transform"
+              },
+              "description": "Data transforms applied in order before encoding (filter, bin, calculate, timeUnit)."
+            },
+            "chrome": {
+              "$ref": "#/definitions/Chrome",
+              "description": "Editorial chrome (title, subtitle, source, etc.)."
+            },
+            "chromeLayout": {
+              "type": "string",
+              "enum": [
+                "subtract",
+                "grow"
+              ],
+              "description": "How chrome height interacts with the container height budget.\n\n- `'subtract'` (default): the container height is fixed and chrome text   (title/subtitle/source) is subtracted from it, shrinking the plot. This   is the historical behavior.\n- `'grow'`: the container height is treated as the *plot* budget, and the   rendered SVG grows taller by the measured chrome height. The plot keeps   its full budget (minus axis/padding overhead) regardless of how many   lines the title wraps to.\n\n`'grow'` is a no-op for faceted specs in this version."
+            },
+            "title": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "text": {
+                      "type": "string"
+                    },
+                    "subtitle": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "text"
+                  ],
+                  "additionalProperties": false
+                }
+              ],
+              "description": "Top-level title sugar (Vega-Lite aligned). Expanded into `chrome.title` (and `chrome.subtitle` for the object form). `chrome.title` wins when both are set."
+            },
+            "subtitle": {
+              "type": "string",
+              "description": "Top-level subtitle sugar. Expanded into `chrome.subtitle`; `chrome.subtitle` wins."
+            },
+            "description": {
+              "type": "string",
+              "description": "Alt text for the rendered chart (Vega-Lite aligned). Sugar for `a11y.description`; `a11y.description` wins when both are set. When absent, alt text is auto-generated from the spec and data."
+            },
+            "a11y": {
+              "$ref": "#/definitions/A11yConfig",
+              "description": "Accessibility overrides. See  {@link  A11yConfig } ."
+            },
+            "width": {
+              "type": "number",
+              "description": "Fixed render width in pixels (Vega-Lite aligned). Overrides the container-derived width. When both `width` and `height` are set, `responsive: false` is implied unless `responsive` is set explicitly. Omit for the default container-driven sizing."
+            },
+            "height": {
+              "type": "number",
+              "description": "Fixed render height in pixels (Vega-Lite aligned). See `width`."
+            },
+            "$schema": {
+              "type": "string",
+              "description": "Accepted for Vega-Lite compatibility and ignored (with a compile warning)."
+            },
+            "metrics": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Metric"
+              },
+              "description": "KPI/metric cells rendered as a horizontal row between subtitle and chart area. Each cell shows a label/value pair with optional delta and secondary value. Hidden in sparkline mode and auto-stripped when the container is too narrow or short, or when value text would overflow its cell."
+            },
+            "annotations": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Annotation"
+              },
+              "description": "Data annotations (text callouts, highlighted ranges, reference lines)."
+            },
+            "labels": {
+              "$ref": "#/definitions/LabelSpec",
+              "description": "Label display configuration. `false` disables all labels, `true` uses defaults."
+            },
+            "legend": {
+              "$ref": "#/definitions/LegendConfig",
+              "description": "Legend display configuration (position override)."
+            },
+            "endpointLabels": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "$ref": "#/definitions/EndpointLabelsConfig"
+                }
+              ],
+              "description": "Right-side endpoint labels column for multi-series line/area charts.\n\n- `true` or `EndpointLabelsConfig`: render the column.\n- `false`: hide the column.\n- omitted: auto-enable for multi-series line/area charts, hide otherwise.\n\nSee  {@link  EndpointLabelsConfig }  for the full suppression truth table that relates this flag to `legend.show` and the legacy end-of-line labels."
+            },
+            "responsive": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "$ref": "#/definitions/ResponsiveConfig"
+                }
+              ],
+              "description": "Responsive behavior. `true`/`false` enables/disables container-width adaptation. Pass a `ResponsiveConfig` object for fine-grained control (e.g. `{ autoThin: false }` to disable automatic annotation thinning)."
+            },
+            "theme": {
+              "$ref": "#/definitions/ThemeConfig",
+              "description": "Theme configuration overrides."
+            },
+            "darkMode": {
+              "$ref": "#/definitions/DarkMode",
+              "description": "Dark mode behavior. Defaults to \"off\"."
+            },
+            "watermark": {
+              "type": "boolean",
+              "description": "Whether to show the OpenData watermark. Defaults to true; auto-hides when the container is under 200px tall (the cramped height class) unless explicitly set."
+            },
+            "hiddenSeries": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Series names to hide from rendering by default. This is the authored persistence target for legend visibility. Runtime legend toggles (legend-toggle edit events) layer on top of this via ephemeral runtime sets but never modify it."
+            },
+            "seriesStyles": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/definitions/SeriesStyle"
+              },
+              "description": "Per-series visual overrides, keyed by series name (the color field value)."
+            },
+            "overrides": {
+              "type": "object",
+              "properties": {
+                "compact": {
+                  "$ref": "#/definitions/ChartSpecOverride"
+                },
+                "medium": {
+                  "$ref": "#/definitions/ChartSpecOverride"
+                },
+                "full": {
+                  "$ref": "#/definitions/ChartSpecOverride"
+                }
+              },
+              "additionalProperties": false,
+              "description": "Breakpoint-conditional overrides. Keys are breakpoint names. At compile time, if the container matches a breakpoint, its overrides are shallow-merged into the spec before layout computation."
+            },
+            "animation": {
+              "$ref": "#/definitions/AnimationSpec",
+              "description": "Animation configuration.\n- true: enable entrance animation with sensible defaults\n- false/omitted: no animation (current behavior)\n- AnimationConfig: full control via enter/update/exit phases"
+            },
+            "crosshair": {
+              "type": "boolean",
+              "description": "Show a vertical crosshair line that tracks the nearest data point on line and area charts. Only active when a voronoi overlay is present. Defaults to false. In sparkline display mode, defaults to false unless explicitly set."
+            },
+            "seriesSearch": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "$ref": "#/definitions/SeriesSearchConfig"
+                }
+              ],
+              "description": "Searchable series highlight (\"find your country\"). Renders a compact search input above the chart with typeahead over the color channel's distinct values. Selecting a value adds it to the highlight set (multi-select chips, removable); clearing restores the authored `encoding.color.highlight` baseline. Requires a categorical color encoding. Mutually exclusive with edit mode (search wins)."
+            },
+            "youDrawIt": {
+              "$ref": "#/definitions/YouDrawItConfig",
+              "description": "\"You draw it\" interactive engagement format: the reader draws their guess of the trend before the real line reveals. Line marks only, single-series only. Mutually exclusive with edit mode (validation warning if both are enabled; youDrawIt is disabled)."
+            },
+            "display": {
+              "$ref": "#/definitions/Display",
+              "description": "Display mode controlling how much chart chrome is rendered.\n\n- `'full'` (default): full publication chart with chrome, axes, legend, padding.\n- `'sparkline'`: inline mini-chart for dashboards/KPI cards. Strips chrome,   axes, legend, watermark, animation, and crosshair. The mark fills the   container edge-to-edge with a small safety margin. Best with   `mark: 'line' | 'area' | 'bar' | 'point'`.\n\n**Override precedence:** explicit user fields always win, even in sparkline mode. Setting `chrome.title` on a sparkline still renders the title. Setting `legend: { show: true }` still renders the legend. This applies at top-level and per-breakpoint overrides."
+            },
+            "resolve": {
+              "$ref": "#/definitions/ResolveConfig",
+              "description": "Resolution strategy for shared/independent scales and axes across facet panels. Only meaningful when `encoding.facet` is present. Shared scales (the default) let readers compare across panels; independent scales give each panel its own domain."
+            },
+            "zIndex": {
+              "type": "number",
+              "description": "Render order within a LayerSpec. Higher values render on top. When omitted, layers render in array order (later layers paint on top). Axis assignment (left/right y) is always determined by array position, not zIndex."
+            }
+          },
+          "required": [
+            "data",
+            "encoding",
+            "mark"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mark": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "const": "histogram"
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "type": {
+                      "$ref": "#/definitions/MarkType",
+                      "description": "The mark type."
+                    },
+                    "point": {
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "string",
+                          "const": "transparent"
+                        },
+                        {
+                          "type": "string",
+                          "const": "endpoints"
+                        },
+                        {
+                          "type": "string",
+                          "const": "last"
+                        },
+                        {
+                          "type": "string",
+                          "const": "first"
+                        }
+                      ],
+                      "description": "Show point markers on line/area marks.\n- true: filled circles at each data point\n- 'transparent': invisible hover targets (legacy behavior)\n- 'endpoints': show only first and last point per series (hollow dots)\n- 'last' / 'first': show only the last (or first) point — filled dot,   no white halo. Useful for highlighting the latest reading on a line   chart and the default for sparkline mode.\n- false: no point marks (default; uses voronoi overlay for tooltips)"
+                    },
+                    "interpolate": {
+                      "type": "string",
+                      "enum": [
+                        "linear",
+                        "monotone",
+                        "step",
+                        "step-before",
+                        "step-after",
+                        "basis",
+                        "cardinal",
+                        "natural"
+                      ],
+                      "description": "Curve interpolation for line/area marks. Maps to d3-shape curve factories."
+                    },
+                    "orient": {
+                      "type": "string",
+                      "enum": [
+                        "horizontal",
+                        "vertical"
+                      ],
+                      "description": "Explicit orientation override for bar marks."
+                    },
+                    "innerRadius": {
+                      "type": "number",
+                      "description": "Inner radius for arc marks. >0 produces a donut, 0 or omitted produces a pie."
+                    },
+                    "outerRadius": {
+                      "type": "number",
+                      "description": "Outer radius for arc marks."
+                    },
+                    "startAngle": {
+                      "type": "number",
+                      "description": "Start angle in radians for arc marks. Defaults to 0 (full pie/donut). Combined with `endAngle`, restricts the pie/donut to a partial sweep, e.g. `startAngle: -Math.PI / 2, endAngle: Math.PI / 2` for a half-donut (election-style results donut). Angles follow d3's convention: 0 is straight up, increasing clockwise. Only meaningful when `type` is `'arc'`."
+                    },
+                    "endAngle": {
+                      "type": "number",
+                      "description": "End angle in radians for arc marks. Defaults to 2*Math.PI (full pie/donut). See `startAngle`. Only meaningful when `type` is `'arc'`."
+                    },
+                    "centerLabel": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "text": {
+                              "type": "string"
+                            },
+                            "subtitle": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "text"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ],
+                      "description": "Donut center stat. A string renders one line; the object form adds a caption under it. Decorative (the number is already in the slices), and only meaningful when `type` is `'arc'` with an inner radius."
+                    },
+                    "cornerRadius": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "string",
+                          "const": "pill"
+                        }
+                      ],
+                      "description": "Corner radius for rect/bar marks. 'pill' sets rx to half the bar thickness."
+                    },
+                    "size": {
+                      "type": "number",
+                      "description": "Bar/column marks: fixed bar thickness in pixels. When set, bars are this height (horizontal) or width (vertical), centered within the band.\n\nPoint marks: the dot RADIUS in pixels (default 5, typical 2-12). This is NOT Vega-Lite's point `size`, which is an area in px^2 -- a VL size of 110 corresponds to `size: 6` here (r = sqrt(area / pi)). Validation rejects values above 50 with the conversion."
+                    },
+                    "filled": {
+                      "type": "boolean",
+                      "description": "Whether the mark is filled (vs stroked only)."
+                    },
+                    "opacity": {
+                      "type": "number",
+                      "description": "Default opacity (0-1)."
+                    },
+                    "fillOpacity": {
+                      "type": "number",
+                      "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                    },
+                    "binCount": {
+                      "type": "number",
+                      "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                    },
+                    "normalize": {
+                      "type": "boolean",
+                      "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                    },
+                    "bandwidth": {
+                      "type": "number",
+                      "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                    },
+                    "cumulative": {
+                      "type": "boolean",
+                      "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                    },
+                    "steps": {
+                      "type": "number",
+                      "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
+                    },
+                    "fill": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "$ref": "#/definitions/GradientDef"
+                        }
+                      ],
+                      "description": "Default fill color or gradient."
+                    },
+                    "stroke": {
+                      "type": "string",
+                      "description": "Default stroke color."
+                    },
+                    "strokeWidth": {
+                      "type": "number",
+                      "description": "Default stroke width."
+                    },
+                    "tooltip": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ],
+                      "description": "Tooltip behavior. null disables tooltips."
+                    },
+                    "clip": {
+                      "type": "boolean",
+                      "description": "Clip marks to the chart area."
+                    },
+                    "trendline": {
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "$ref": "#/definitions/TrendlineConfig"
+                        }
+                      ],
+                      "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals.\n\nPass an object to control stacking order: the line renders `below` the points by default, but a dense scatter (thousands of overlapping dots) fully occludes a line drawn underneath, so `{ layer: 'above' }` lifts the reference line over the cloud."
+                    },
+                    "dx": {
+                      "type": "number",
+                      "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                    },
+                    "dy": {
+                      "type": "number",
+                      "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                    },
+                    "align": {
+                      "type": "string",
+                      "enum": [
+                        "left",
+                        "center",
+                        "right"
+                      ],
+                      "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                    },
+                    "baseline": {
+                      "type": "string",
+                      "enum": [
+                        "top",
+                        "middle",
+                        "bottom"
+                      ],
+                      "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                    },
+                    "fontSize": {
+                      "type": "number",
+                      "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
+                    },
+                    "fillPattern": {
+                      "type": "string",
+                      "enum": [
+                        "auto",
+                        "none"
+                      ],
+                      "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
+                    },
+                    "style": {
+                      "type": "string",
+                      "enum": [
+                        "dumbbell",
+                        "arrow",
+                        "bar"
+                      ],
+                      "description": "Visual style for range marks. Only meaningful when `type` is `'range'`.\n- 'dumbbell' (default): a dot at each end joined by a connector line.   The start dot is muted, the end dot carries the accent color.\n- 'arrow': a line with an arrowhead at the x2/y2 end, the strongest   \"change between two points in time\" form.\n- 'bar': a plain floating range bar spanning start to end."
+                    },
+                    "colorByDirection": {
+                      "type": "boolean",
+                      "description": "Color range marks by direction of change. Only meaningful when `type` is `'range'`. When true, increases (x2 > x, or y2 > y) use the theme's `positive` semantic color and decreases use `negative`. A field-based `encoding.color` takes precedence over direction coloring."
+                    },
+                    "units": {
+                      "type": "number",
+                      "description": "Total number of cells in a waffle grid. Only meaningful when `type` is `'waffle'`. Category values normalize to this many cells via largest-remainder rounding so the grid always sums exactly. Default 100."
+                    },
+                    "columns": {
+                      "type": "number",
+                      "description": "Number of columns in a waffle grid. Only meaningful when `type` is `'waffle'`. Rows derive from `units / columns`. Default 10."
+                    },
+                    "other": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "threshold": {
+                              "type": "number"
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "threshold"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ],
+                      "description": "Opt-in \"Other\" bucketing for waffle grids. Only meaningful when `type` is `'waffle'`. Categories whose share of the total falls below `threshold` (a fraction, so `0.05` is 5%) merge into one trailing category. Off by default: bucketing is an editorial decision, not a layout default. Same shape as `SankeySpec.other`."
+                    },
+                    "weekStart": {
+                      "type": "string",
+                      "enum": [
+                        "monday",
+                        "sunday"
+                      ],
+                      "description": "First day of the week for calendar marks. Only meaningful when `type` is `'calendar'`. Controls which weekday occupies the top row of each band. Defaults to 'monday' (ISO week convention)."
+                    },
+                    "cellRadius": {
+                      "type": "number",
+                      "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 2."
+                    },
+                    "shape": {
+                      "type": "string",
+                      "const": "hemicycle",
+                      "description": "Seat layout shape for parliament marks. Only meaningful when `type` is `'parliament'`. `'hemicycle'` (default, and currently the only shape) packs seats into concentric semicircular arcs, party-grouped left to right."
+                    },
+                    "seatRadius": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "string",
+                          "const": "auto"
+                        }
+                      ],
+                      "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
+                    },
+                    "majorityLine": {
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "seats": {
+                              "type": "number"
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      ],
+                      "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
+                    }
+                  },
+                  "required": [
+                    "type"
+                  ]
+                }
+              ]
+            },
+            "encoding": {
+              "$ref": "#/definitions/HistogramEncoding%3CDataRow%3E"
+            },
+            "data": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/DataRow"
+              },
+              "description": "Data array: each element is a row with field values. The Vega-Lite object form `{ values: [...] }` is also accepted at runtime and unwrapped during the pre-validation sugar expansion. `{ url }` is not supported (openchart does not fetch data)."
+            },
+            "transform": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Transform"
+              },
+              "description": "Data transforms applied in order before encoding (filter, bin, calculate, timeUnit)."
+            },
+            "chrome": {
+              "$ref": "#/definitions/Chrome",
+              "description": "Editorial chrome (title, subtitle, source, etc.)."
+            },
+            "chromeLayout": {
+              "type": "string",
+              "enum": [
+                "subtract",
+                "grow"
+              ],
+              "description": "How chrome height interacts with the container height budget.\n\n- `'subtract'` (default): the container height is fixed and chrome text   (title/subtitle/source) is subtracted from it, shrinking the plot. This   is the historical behavior.\n- `'grow'`: the container height is treated as the *plot* budget, and the   rendered SVG grows taller by the measured chrome height. The plot keeps   its full budget (minus axis/padding overhead) regardless of how many   lines the title wraps to.\n\n`'grow'` is a no-op for faceted specs in this version."
+            },
+            "title": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "text": {
+                      "type": "string"
+                    },
+                    "subtitle": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "text"
+                  ],
+                  "additionalProperties": false
+                }
+              ],
+              "description": "Top-level title sugar (Vega-Lite aligned). Expanded into `chrome.title` (and `chrome.subtitle` for the object form). `chrome.title` wins when both are set."
+            },
+            "subtitle": {
+              "type": "string",
+              "description": "Top-level subtitle sugar. Expanded into `chrome.subtitle`; `chrome.subtitle` wins."
+            },
+            "description": {
+              "type": "string",
+              "description": "Alt text for the rendered chart (Vega-Lite aligned). Sugar for `a11y.description`; `a11y.description` wins when both are set. When absent, alt text is auto-generated from the spec and data."
+            },
+            "a11y": {
+              "$ref": "#/definitions/A11yConfig",
+              "description": "Accessibility overrides. See  {@link  A11yConfig } ."
+            },
+            "width": {
+              "type": "number",
+              "description": "Fixed render width in pixels (Vega-Lite aligned). Overrides the container-derived width. When both `width` and `height` are set, `responsive: false` is implied unless `responsive` is set explicitly. Omit for the default container-driven sizing."
+            },
+            "height": {
+              "type": "number",
+              "description": "Fixed render height in pixels (Vega-Lite aligned). See `width`."
+            },
+            "$schema": {
+              "type": "string",
+              "description": "Accepted for Vega-Lite compatibility and ignored (with a compile warning)."
+            },
+            "metrics": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Metric"
+              },
+              "description": "KPI/metric cells rendered as a horizontal row between subtitle and chart area. Each cell shows a label/value pair with optional delta and secondary value. Hidden in sparkline mode and auto-stripped when the container is too narrow or short, or when value text would overflow its cell."
+            },
+            "annotations": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Annotation"
+              },
+              "description": "Data annotations (text callouts, highlighted ranges, reference lines)."
+            },
+            "labels": {
+              "$ref": "#/definitions/LabelSpec",
+              "description": "Label display configuration. `false` disables all labels, `true` uses defaults."
+            },
+            "legend": {
+              "$ref": "#/definitions/LegendConfig",
+              "description": "Legend display configuration (position override)."
+            },
+            "endpointLabels": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "$ref": "#/definitions/EndpointLabelsConfig"
+                }
+              ],
+              "description": "Right-side endpoint labels column for multi-series line/area charts.\n\n- `true` or `EndpointLabelsConfig`: render the column.\n- `false`: hide the column.\n- omitted: auto-enable for multi-series line/area charts, hide otherwise.\n\nSee  {@link  EndpointLabelsConfig }  for the full suppression truth table that relates this flag to `legend.show` and the legacy end-of-line labels."
+            },
+            "responsive": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "$ref": "#/definitions/ResponsiveConfig"
+                }
+              ],
+              "description": "Responsive behavior. `true`/`false` enables/disables container-width adaptation. Pass a `ResponsiveConfig` object for fine-grained control (e.g. `{ autoThin: false }` to disable automatic annotation thinning)."
+            },
+            "theme": {
+              "$ref": "#/definitions/ThemeConfig",
+              "description": "Theme configuration overrides."
+            },
+            "darkMode": {
+              "$ref": "#/definitions/DarkMode",
+              "description": "Dark mode behavior. Defaults to \"off\"."
+            },
+            "watermark": {
+              "type": "boolean",
+              "description": "Whether to show the OpenData watermark. Defaults to true; auto-hides when the container is under 200px tall (the cramped height class) unless explicitly set."
+            },
+            "hiddenSeries": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Series names to hide from rendering by default. This is the authored persistence target for legend visibility. Runtime legend toggles (legend-toggle edit events) layer on top of this via ephemeral runtime sets but never modify it."
+            },
+            "seriesStyles": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/definitions/SeriesStyle"
+              },
+              "description": "Per-series visual overrides, keyed by series name (the color field value)."
+            },
+            "overrides": {
+              "type": "object",
+              "properties": {
+                "compact": {
+                  "$ref": "#/definitions/ChartSpecOverride"
+                },
+                "medium": {
+                  "$ref": "#/definitions/ChartSpecOverride"
+                },
+                "full": {
+                  "$ref": "#/definitions/ChartSpecOverride"
+                }
+              },
+              "additionalProperties": false,
+              "description": "Breakpoint-conditional overrides. Keys are breakpoint names. At compile time, if the container matches a breakpoint, its overrides are shallow-merged into the spec before layout computation."
+            },
+            "animation": {
+              "$ref": "#/definitions/AnimationSpec",
+              "description": "Animation configuration.\n- true: enable entrance animation with sensible defaults\n- false/omitted: no animation (current behavior)\n- AnimationConfig: full control via enter/update/exit phases"
+            },
+            "crosshair": {
+              "type": "boolean",
+              "description": "Show a vertical crosshair line that tracks the nearest data point on line and area charts. Only active when a voronoi overlay is present. Defaults to false. In sparkline display mode, defaults to false unless explicitly set."
+            },
+            "seriesSearch": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "$ref": "#/definitions/SeriesSearchConfig"
+                }
+              ],
+              "description": "Searchable series highlight (\"find your country\"). Renders a compact search input above the chart with typeahead over the color channel's distinct values. Selecting a value adds it to the highlight set (multi-select chips, removable); clearing restores the authored `encoding.color.highlight` baseline. Requires a categorical color encoding. Mutually exclusive with edit mode (search wins)."
+            },
+            "youDrawIt": {
+              "$ref": "#/definitions/YouDrawItConfig",
+              "description": "\"You draw it\" interactive engagement format: the reader draws their guess of the trend before the real line reveals. Line marks only, single-series only. Mutually exclusive with edit mode (validation warning if both are enabled; youDrawIt is disabled)."
+            },
+            "display": {
+              "$ref": "#/definitions/Display",
+              "description": "Display mode controlling how much chart chrome is rendered.\n\n- `'full'` (default): full publication chart with chrome, axes, legend, padding.\n- `'sparkline'`: inline mini-chart for dashboards/KPI cards. Strips chrome,   axes, legend, watermark, animation, and crosshair. The mark fills the   container edge-to-edge with a small safety margin. Best with   `mark: 'line' | 'area' | 'bar' | 'point'`.\n\n**Override precedence:** explicit user fields always win, even in sparkline mode. Setting `chrome.title` on a sparkline still renders the title. Setting `legend: { show: true }` still renders the legend. This applies at top-level and per-breakpoint overrides."
+            },
+            "resolve": {
+              "$ref": "#/definitions/ResolveConfig",
+              "description": "Resolution strategy for shared/independent scales and axes across facet panels. Only meaningful when `encoding.facet` is present. Shared scales (the default) let readers compare across panels; independent scales give each panel its own domain."
+            },
+            "zIndex": {
+              "type": "number",
+              "description": "Render order within a LayerSpec. Higher values render on top. When omitted, layers render in array order (later layers paint on top). Axis assignment (left/right y) is always determined by array position, not zIndex."
+            }
+          },
+          "required": [
+            "data",
+            "encoding",
+            "mark"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mark": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "const": "density"
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "type": {
+                      "$ref": "#/definitions/MarkType",
+                      "description": "The mark type."
+                    },
+                    "point": {
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "string",
+                          "const": "transparent"
+                        },
+                        {
+                          "type": "string",
+                          "const": "endpoints"
+                        },
+                        {
+                          "type": "string",
+                          "const": "last"
+                        },
+                        {
+                          "type": "string",
+                          "const": "first"
+                        }
+                      ],
+                      "description": "Show point markers on line/area marks.\n- true: filled circles at each data point\n- 'transparent': invisible hover targets (legacy behavior)\n- 'endpoints': show only first and last point per series (hollow dots)\n- 'last' / 'first': show only the last (or first) point — filled dot,   no white halo. Useful for highlighting the latest reading on a line   chart and the default for sparkline mode.\n- false: no point marks (default; uses voronoi overlay for tooltips)"
+                    },
+                    "interpolate": {
+                      "type": "string",
+                      "enum": [
+                        "linear",
+                        "monotone",
+                        "step",
+                        "step-before",
+                        "step-after",
+                        "basis",
+                        "cardinal",
+                        "natural"
+                      ],
+                      "description": "Curve interpolation for line/area marks. Maps to d3-shape curve factories."
+                    },
+                    "orient": {
+                      "type": "string",
+                      "enum": [
+                        "horizontal",
+                        "vertical"
+                      ],
+                      "description": "Explicit orientation override for bar marks."
+                    },
+                    "innerRadius": {
+                      "type": "number",
+                      "description": "Inner radius for arc marks. >0 produces a donut, 0 or omitted produces a pie."
+                    },
+                    "outerRadius": {
+                      "type": "number",
+                      "description": "Outer radius for arc marks."
+                    },
+                    "startAngle": {
+                      "type": "number",
+                      "description": "Start angle in radians for arc marks. Defaults to 0 (full pie/donut). Combined with `endAngle`, restricts the pie/donut to a partial sweep, e.g. `startAngle: -Math.PI / 2, endAngle: Math.PI / 2` for a half-donut (election-style results donut). Angles follow d3's convention: 0 is straight up, increasing clockwise. Only meaningful when `type` is `'arc'`."
+                    },
+                    "endAngle": {
+                      "type": "number",
+                      "description": "End angle in radians for arc marks. Defaults to 2*Math.PI (full pie/donut). See `startAngle`. Only meaningful when `type` is `'arc'`."
+                    },
+                    "centerLabel": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "text": {
+                              "type": "string"
+                            },
+                            "subtitle": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "text"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ],
+                      "description": "Donut center stat. A string renders one line; the object form adds a caption under it. Decorative (the number is already in the slices), and only meaningful when `type` is `'arc'` with an inner radius."
+                    },
+                    "cornerRadius": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "string",
+                          "const": "pill"
+                        }
+                      ],
+                      "description": "Corner radius for rect/bar marks. 'pill' sets rx to half the bar thickness."
+                    },
+                    "size": {
+                      "type": "number",
+                      "description": "Bar/column marks: fixed bar thickness in pixels. When set, bars are this height (horizontal) or width (vertical), centered within the band.\n\nPoint marks: the dot RADIUS in pixels (default 5, typical 2-12). This is NOT Vega-Lite's point `size`, which is an area in px^2 -- a VL size of 110 corresponds to `size: 6` here (r = sqrt(area / pi)). Validation rejects values above 50 with the conversion."
+                    },
+                    "filled": {
+                      "type": "boolean",
+                      "description": "Whether the mark is filled (vs stroked only)."
+                    },
+                    "opacity": {
+                      "type": "number",
+                      "description": "Default opacity (0-1)."
+                    },
+                    "fillOpacity": {
+                      "type": "number",
+                      "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                    },
+                    "binCount": {
+                      "type": "number",
+                      "description": "Number of bins. Only meaningful when `type` is `'histogram'`; desugars to `x.bin.maxbins`. Defaults to 20. For a fixed bin width or a pinned extent, write `x.bin` directly — it is the canonical form and takes precedence over this shorthand."
+                    },
+                    "normalize": {
+                      "type": "boolean",
+                      "description": "Plot each group's share of its own total instead of a raw count. Only meaningful when `type` is `'histogram'`. Makes two distributions of very different size directly comparable."
+                    },
+                    "bandwidth": {
+                      "type": "number",
+                      "description": "Gaussian kernel bandwidth. Only meaningful when `type` is `'density'`. Omitted uses Silverman's rule of thumb."
+                    },
+                    "cumulative": {
+                      "type": "boolean",
+                      "description": "Draw the cumulative distribution instead of the density. Only meaningful when `type` is `'density'`."
+                    },
+                    "steps": {
+                      "type": "number",
+                      "description": "Number of points the density curve is evaluated at. Only meaningful when `type` is `'density'`. Defaults to 200."
+                    },
+                    "fill": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "$ref": "#/definitions/GradientDef"
+                        }
+                      ],
+                      "description": "Default fill color or gradient."
+                    },
+                    "stroke": {
+                      "type": "string",
+                      "description": "Default stroke color."
+                    },
+                    "strokeWidth": {
+                      "type": "number",
+                      "description": "Default stroke width."
+                    },
+                    "tooltip": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ],
+                      "description": "Tooltip behavior. null disables tooltips."
+                    },
+                    "clip": {
+                      "type": "boolean",
+                      "description": "Clip marks to the chart area."
+                    },
+                    "trendline": {
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "$ref": "#/definitions/TrendlineConfig"
+                        }
+                      ],
+                      "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals.\n\nPass an object to control stacking order: the line renders `below` the points by default, but a dense scatter (thousands of overlapping dots) fully occludes a line drawn underneath, so `{ layer: 'above' }` lifts the reference line over the cloud."
+                    },
+                    "dx": {
+                      "type": "number",
+                      "description": "Horizontal pixel offset from the data anchor. Only meaningful when `type` is `'text'`. Use it to lift a label clear of the mark it annotates instead of shifting the underlying data value."
+                    },
+                    "dy": {
+                      "type": "number",
+                      "description": "Vertical pixel offset from the data anchor (negative = up). Only meaningful when `type` is `'text'`. `{ type: 'text', dy: -10 }` floats each label ten pixels above its point."
+                    },
+                    "align": {
+                      "type": "string",
+                      "enum": [
+                        "left",
+                        "center",
+                        "right"
+                      ],
+                      "description": "Horizontal alignment of text marks relative to their anchor. Defaults to `'center'`."
+                    },
+                    "baseline": {
+                      "type": "string",
+                      "enum": [
+                        "top",
+                        "middle",
+                        "bottom"
+                      ],
+                      "description": "Vertical alignment of text marks relative to their anchor. Defaults to `'middle'`."
+                    },
+                    "fontSize": {
+                      "type": "number",
+                      "description": "Font size in pixels for text marks. Ignored when the `size` encoding channel is present (which scales font size from a data field). `size` is already taken by bar thickness, hence the distinct name."
+                    },
+                    "fillPattern": {
+                      "type": "string",
+                      "enum": [
+                        "auto",
+                        "none"
+                      ],
+                      "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
+                    },
+                    "style": {
+                      "type": "string",
+                      "enum": [
+                        "dumbbell",
+                        "arrow",
+                        "bar"
+                      ],
+                      "description": "Visual style for range marks. Only meaningful when `type` is `'range'`.\n- 'dumbbell' (default): a dot at each end joined by a connector line.   The start dot is muted, the end dot carries the accent color.\n- 'arrow': a line with an arrowhead at the x2/y2 end, the strongest   \"change between two points in time\" form.\n- 'bar': a plain floating range bar spanning start to end."
+                    },
+                    "colorByDirection": {
+                      "type": "boolean",
+                      "description": "Color range marks by direction of change. Only meaningful when `type` is `'range'`. When true, increases (x2 > x, or y2 > y) use the theme's `positive` semantic color and decreases use `negative`. A field-based `encoding.color` takes precedence over direction coloring."
+                    },
+                    "units": {
+                      "type": "number",
+                      "description": "Total number of cells in a waffle grid. Only meaningful when `type` is `'waffle'`. Category values normalize to this many cells via largest-remainder rounding so the grid always sums exactly. Default 100."
+                    },
+                    "columns": {
+                      "type": "number",
+                      "description": "Number of columns in a waffle grid. Only meaningful when `type` is `'waffle'`. Rows derive from `units / columns`. Default 10."
+                    },
+                    "other": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "threshold": {
+                              "type": "number"
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "threshold"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ],
+                      "description": "Opt-in \"Other\" bucketing for waffle grids. Only meaningful when `type` is `'waffle'`. Categories whose share of the total falls below `threshold` (a fraction, so `0.05` is 5%) merge into one trailing category. Off by default: bucketing is an editorial decision, not a layout default. Same shape as `SankeySpec.other`."
+                    },
+                    "weekStart": {
+                      "type": "string",
+                      "enum": [
+                        "monday",
+                        "sunday"
+                      ],
+                      "description": "First day of the week for calendar marks. Only meaningful when `type` is `'calendar'`. Controls which weekday occupies the top row of each band. Defaults to 'monday' (ISO week convention)."
+                    },
+                    "cellRadius": {
+                      "type": "number",
+                      "description": "Corner radius in pixels for calendar day cells. Only meaningful when `type` is `'calendar'`. Defaults to 2."
+                    },
+                    "shape": {
+                      "type": "string",
+                      "const": "hemicycle",
+                      "description": "Seat layout shape for parliament marks. Only meaningful when `type` is `'parliament'`. `'hemicycle'` (default, and currently the only shape) packs seats into concentric semicircular arcs, party-grouped left to right."
+                    },
+                    "seatRadius": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "string",
+                          "const": "auto"
+                        }
+                      ],
+                      "description": "Seat dot radius in pixels for parliament marks. `'auto'` (default) sizes dots to fill the available hemicycle rings for the given seat count. Only meaningful when `type` is `'parliament'`."
+                    },
+                    "majorityLine": {
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "seats": {
+                              "type": "number"
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      ],
+                      "description": "The majority-threshold line and \"N to win\" label on parliament marks. Only meaningful when `type` is `'parliament'`. `true` (default) draws the line at a simple majority (half the seats plus one); `false` hides it. The object form overrides the threshold and label: `{ seats }` sets a custom seat count (e.g. a two-thirds supermajority) and `{ label }` overrides the default \"N to win\" text. A `seats` value outside `1..totalSeats` warns and falls back to the simple-majority default."
+                    }
+                  },
+                  "required": [
+                    "type"
+                  ]
+                }
+              ]
+            },
+            "encoding": {
+              "$ref": "#/definitions/DensityEncoding%3CDataRow%3E"
             },
             "data": {
               "type": "array",

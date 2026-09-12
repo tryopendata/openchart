@@ -49,7 +49,7 @@ There is no `type: "line"` grammar. Charts use `mark`, following Vega-Lite. `mar
     size?:  EncodingChannel,
     // also: x2, y2, theta, opacity, strokeDash, text, tooltip, detail, facet
   },
-  transform?: Transform[],       // filter, bin, calculate, timeUnit, aggregate, fold, window
+  transform?: Transform[],       // filter, bin, calculate, timeUnit, aggregate, joinaggregate, fold, window, density
   chrome?:    Chrome,            // title, subtitle, source, byline, footer, eyebrow, brand
   title?:     string | { text, subtitle },   // sugar -> chrome.title
   annotations?: Annotation[],    // text callouts, highlighted ranges, reference lines
@@ -73,7 +73,7 @@ There is no `type: "line"` grammar. Charts use `mark`, following Vega-Lite. `mar
 
 A mark is a string shorthand or an object `{ type, ...options }`. Mark types:
 
-`bar`, `line`, `area`, `point`, `circle`, `arc`, `text`, `rule`, `tick`, `rect`, `lollipop`, `beeswarm`, `range`, `waffle`, `calendar`, `parliament`.
+`bar`, `line`, `area`, `point`, `circle`, `arc`, `text`, `rule`, `tick`, `rect`, `lollipop`, `beeswarm`, `histogram`, `density`, `range`, `waffle`, `calendar`, `parliament`.
 
 Common MarkDef options:
 
@@ -92,7 +92,7 @@ Common MarkDef options:
 |------|---|---|-------|-------|------|------------|
 | `bar` | req (quantitative, nominal, ordinal, temporal) | req (quantitative, nominal, ordinal) | - | opt (nominal, ordinal, quantitative) | opt | Bar chart |
 | `line` | req (temporal, ordinal) | req (quantitative) | - | opt (nominal, ordinal, quantitative) | opt | Line chart |
-| `area` | req (temporal, ordinal) | req (quantitative) | - | opt (nominal, ordinal, quantitative) | opt | Area chart |
+| `area` | req (temporal, ordinal, quantitative) | req (quantitative) | - | opt (nominal, ordinal, quantitative) | opt | Area chart |
 | `point` | req (quantitative, temporal, nominal, ordinal) | req (quantitative, temporal, nominal, ordinal) | - | opt (nominal, ordinal, quantitative) | opt (quantitative) | Scatter plot |
 | `circle` | req (quantitative) | req (nominal, ordinal) | - | opt (nominal, ordinal, quantitative) | opt (quantitative) | Dot plot |
 | `lollipop` | req (quantitative) | req (nominal, ordinal) | - | opt (nominal, ordinal, quantitative) | opt (quantitative) | Lollipop chart |
@@ -106,6 +106,8 @@ Common MarkDef options:
 | `tick` | req | req | - | opt | opt | Tick plot |
 | `rect` | req | req | - | opt | opt | Heatmap |
 | `calendar` | req (temporal) | opt | - | req (quantitative) | opt | Calendar heatmap |
+| `histogram` | req (quantitative) | opt (quantitative) | - | opt (nominal, ordinal) | opt | Histogram |
+| `density` | req (quantitative) | opt (quantitative) | - | opt (nominal, ordinal) | opt | Density plot |
 
 An EncodingChannel is `{ field, type, aggregate?, bin?, timeUnit?, sort?, scale?, axis?, legend?, format?, title?, stack?, highlight? }`. `type` is one of `quantitative`, `temporal`, `nominal`, `ordinal`. Multi-series bar and area charts default to stacked (Vega-Lite aligned); set `stack: null` on the value channel for grouped bars or overlapping areas.
 
@@ -122,8 +124,12 @@ For a quantitative `color` field with a sequential/diverging `scale.scheme`, the
 - `{ calculate: { op, field, field2?, value? }, as }` - derive a field.
 - `{ timeUnit, field, as }` - truncate a temporal field (year, month, yearmonth, ...).
 - `{ aggregate: [{ op, field, as }], groupby }` - group and summarize (sum, mean, count, median, ...).
+- `{ joinaggregate: [{ op, field, as }], groupby }` - same ops, joined back onto every row (group totals, shares).
 - `{ fold: [fields], as? }` - wide to long.
 - `{ window: [...], sort, groupby? }` - lag, lead, cumsum, rank, pct_change, ...
+- `{ density: field, groupby?, bandwidth?, extent?, cumulative?, counts?, steps?, as? }` - kernel density estimate; replaces rows with one per evaluation point (fields `value` and `density`).
+
+A bin plus a count aggregate is a histogram. Take both bin edges (`as: ["bin_x", "bin_x_end"]`) and put the end on `encoding.x2`: that is what puts the bars on a continuous axis instead of one equal-width slot per bin, and it is what `mark: "histogram"` writes for you. On a `bar` with a quantitative binned `x`, the `encoding.x.bin` shorthand emits both edges and the `x2` channel automatically.
 
 ## Annotations
 
@@ -422,7 +428,7 @@ const spec = {
 };
 ```
 
-Supported marks: `line`, `area`, `bar`, `point`, `circle`, `arc`.
+Supported marks: `line`, `area`, `bar`, `point`, `circle`, `arc`, `text`, `rule`, `tick`, `rect`, `lollipop`, `beeswarm`, `histogram`, `density`, `range`, `waffle`, `calendar`, `parliament`. The [chart types guide](chart-types.md) has a runnable spec for each.
 
 **Vertical vs horizontal bars**: The engine infers orientation from the encoding. When x is categorical/temporal and y is quantitative, bars render vertically. When y is categorical and x is quantitative, bars render horizontally.
 
@@ -931,6 +937,7 @@ All types are importable from `@opendata-ai/openchart-core` or from the convenie
 - [LayerSpec](#layerspec) (overlay multiple chart types)
 - [Encoding](#encoding) (x, y, color, size, detail channels)
 - [Faceting](#faceting) (facet, row, column channels; resolve)
+- [Transforms](#transforms) (filter, bin, aggregate, joinaggregate, calculate, timeUnit, fold, window, density)
 - [Annotations](#annotations) (refline, text, range)
 - [Labels](#labels) (density, format, position)
 - [Chrome](#chrome) (title, subtitle, source, byline, footer)
@@ -982,7 +989,7 @@ The primary input for standard chart types. Source: `core/src/types/spec.ts`.
 
 | Field         | Type           | Default     | Description                                                                                   |
 | ------------- | -------------- | ----------- | --------------------------------------------------------------------------------------------- |
-| `type`        | `ChartType`    | (required)  | Chart type: `'line'`, `'area'`, `'bar'`, `'column'`, `'pie'`, `'donut'`, `'dot'`, `'scatter'` |
+| `mark`        | `MarkType \| MarkDef` | (required) | The mark: `'bar'`, `'line'`, `'area'`, `'point'`, `'circle'`, `'arc'`, `'text'`, `'rule'`, `'tick'`, `'rect'`, `'lollipop'`, `'beeswarm'`, `'histogram'`, `'density'`, `'range'`, `'waffle'`, `'calendar'`, `'parliament'`. See [Mark properties](#mark-properties) for the object form. |
 | `data`        | `DataRow[]`    | (required)  | Array of data rows. Each row is a `Record<string, unknown>`. Must be non-empty.               |
 | `encoding`    | `Encoding`     | (required)  | Maps data fields to visual channels. See [Encoding](#encoding).                               |
 | `chrome`      | `Chrome`       | `undefined` | Editorial text: title, subtitle, source, byline, footer. See [Chrome](#chrome).               |
@@ -1033,6 +1040,7 @@ The `mark` field on ChartSpec accepts either a string (`'line'`) or an object wi
 | `centerLabel`  | `string \| { text, subtitle? }` | `undefined` | arc    | Donut center stat. A string renders one line; the object form adds a caption under it. Decorative (the number is already in the slices), and only meaningful with an inner radius. |
 | `filled`       | `boolean`               | `true`      | all            | Whether the mark is filled vs stroked only. |
 | `opacity`      | `number`                | `1`         | all            | Overall mark opacity (0-1). |
+| `fillOpacity`  | `number`                | varies      | histogram, density, area, bar | Fill opacity independent of stroke. Defaults to 0.55 on overlapping histogram groups and 0.4 on grouped density curves. On an area it replaces the auto gradient with a flat translucent fill. |
 | `fill`         | `string \| GradientDef` | theme color | all            | Fill color or gradient. See [Gradients](#gradients). |
 | `stroke`       | `string`                | `undefined` | all            | Stroke color. |
 | `strokeWidth`  | `number`                | varies      | all            | Stroke width in pixels. |
@@ -1047,6 +1055,11 @@ The `mark` field on ChartSpec accepts either a string (`'line'`) or an object wi
 | `weekStart`    | `'monday' \| 'sunday'`  | `'monday'`  | calendar       | Weekday on the top row of each year band. |
 | `cellRadius`   | `number`                | `2`         | calendar       | Corner radius in pixels for day cells. |
 | `shape`        | `'hemicycle'`           | `'hemicycle'` | parliament   | Seat layout shape (currently the only shape). |
+| `binCount`     | `number`                | `20`        | histogram      | Number of bins. Desugars to `x.bin.maxbins`. |
+| `normalize`    | `boolean`               | `false`     | histogram      | Plot each group's share of its own total instead of a raw count, so differently sized groups are comparable. Formats the y axis as a percentage. |
+| `bandwidth`    | `number`                | Silverman   | density        | Gaussian kernel bandwidth. Omitted uses Silverman's rule of thumb. |
+| `cumulative`   | `boolean`               | `false`     | density        | Emit a cumulative distribution (CDF) instead of a density. |
+| `steps`        | `number`                | `200`       | density        | Evaluation points along the curve. |
 | `seatRadius`   | `number \| 'auto'`      | `'auto'`    | parliament     | Seat dot radius in pixels. `'auto'` sizes dots to fill the rings for the seat count. |
 | `majorityLine` | `boolean`               | `true`      | parliament     | Draw the majority-threshold line and its "N to win" label. |
 
@@ -1225,6 +1238,8 @@ The engine validates encoding channels at runtime using `MARK_ENCODING_RULES`. S
 | `range`    | quantitative or nominal (req)    | quantitative or nominal (req) | nominal, ordinal (opt) | -- | nominal (opt) | Dumbbell/arrow/range-bar. x+x2 (horizontal) or y+y2 (vertical); orientation-dependent second endpoint |
 | `waffle`   | -- (opt, unused)                 | quantitative (req, via `theta`) | nominal, ordinal (req) | -- | nominal (opt) | Unit grid. `theta` (alias for y) = share, color = category |
 | `parliament` | -- (opt, unused)               | quantitative (req, via `theta`) | nominal, ordinal (req) | -- | nominal (opt) | Hemicycle seats. `theta` (alias for y) = seat count, color = party |
+| `histogram` | quantitative (req)              | quantitative (opt)     | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | Raw values on x; y defaults to the per-bin count. Color groups overlap rather than dodge |
+| `density`  | quantitative (req)               | -- (computed)          | nominal, ordinal (opt) | -- | nominal (opt) | KDE over raw x values; y is the estimated density |
 | `calendar` | temporal (req)                   | -- (not allowed)       | quantitative (req)     | -- | nominal (opt) | Calendar heatmap. x = daily date, color = per-day value; owns its own geometry |
 
 ### Channel purpose per chart type
@@ -1401,6 +1416,35 @@ Reach for `'grow'` on fixed-height article or blog charts where a long title on 
 ```
 
 `chromeLayout: 'grow'` is a no-op for faceted (small-multiples) specs in this version and falls back to `'subtract'`. It is also honored by bar list, sankey, map, and tilemap specs via the spec or compile option.
+
+---
+
+## Transforms
+
+`transform` is an ordered array run against the data before scales and layout. Each entry produces a new array that feeds the next. Source: `engine/src/transforms/`.
+
+| Transform | Shape | What it does |
+| --------- | ----- | ------------ |
+| `filter` | `{ filter: Predicate }` | Keeps rows matching a predicate (field/op/value, or a relative time reference). |
+| `bin` | `{ bin: true \| BinParams, field, as }` | Buckets a quantitative field. `BinParams` is `{ maxbins, step, nice, extent }`. `as` takes a string for the bin start, or `[start, end]` for both edges. |
+| `calculate` | `{ calculate: { op, field, field2? \| value? }, as }` | Arithmetic between two fields or a field and a constant. |
+| `timeUnit` | `{ timeUnit, field, as }` | Truncates a temporal field to a unit (year, month, week, day...). |
+| `aggregate` | `{ aggregate: [{ op, field, as }], groupby }` | Collapses each group to one row. Ops: `count`, `sum`, `mean`, `median`, `min`, `max`, `variance`, `stdev`, `distinct`, `q1`, `q3`. |
+| `joinaggregate` | `{ joinaggregate: [{ op, field, as }], groupby }` | Same ops, but keeps every row and writes the group's summary onto each. This is what expresses "this row's share of its group's total". |
+| `fold` | `{ fold: [fields], as }` | Wide to long: one row per (row, field) pair. |
+| `window` | `{ window: [{ op, field, as }], groupby, sort, frame }` | Running/ordered computations over a moving frame. |
+| `density` | `{ density, groupby?, bandwidth?, extent?, cumulative?, counts?, steps?, as? }` | Gaussian kernel density estimate. Replaces the rows with one row per evaluation point per group, defaulting to fields `value` and `density`. Groups share one extent so the curves are comparable. |
+
+A histogram is a bin plus a count aggregate, which is what `mark: 'histogram'` desugars to:
+
+```ts
+transform: [
+  { bin: { maxbins: 24 }, field: "amount", as: ["bin_amount", "bin_amount_end"] },
+  { aggregate: [{ op: "count", field: "amount", as: "__count" }], groupby: ["bin_amount", "bin_amount_end"] },
+];
+```
+
+Carrying both bin edges matters: the end edge goes to `x2`, which is what puts the bars on a continuous axis instead of one equal-width slot per bin.
 
 ---
 
@@ -3161,6 +3205,96 @@ const spec = {
 For the full field reference, see [TileMapSpec in spec-reference.md](spec-reference.md#tilemapspec).
 
 **Live examples**: [Quantitative](https://tryopendata.github.io/openchart/?story=sankey---tile-maps--sankey-and-tile-maps#quantitative) | [Categorical](https://tryopendata.github.io/openchart/?story=sankey---tile-maps--sankey-and-tile-maps#categorical) | [Palette variants](https://tryopendata.github.io/openchart/?story=sankey---tile-maps--sankey-and-tile-maps#palettes) | [Partial data](https://tryopendata.github.io/openchart/?story=sankey---tile-maps--sankey-and-tile-maps#partial-data)
+
+---
+
+## Histogram
+
+Distribution of a raw quantitative field: bin the values, count each bin, draw a bar per bin on a continuous axis. Bin width reflects the actual value range, so the shape of the distribution is readable rather than an artifact of equal-width categories.
+
+```ts
+const spec = {
+  mark: { type: "histogram", binCount: 24 },
+  data: [
+    { amount: 50, candidate: "Talarico" },
+    { amount: 3500, candidate: "Paxton" },
+    // ...one row per observation
+  ],
+  encoding: {
+    x: { field: "amount", type: "quantitative" },
+    color: { field: "candidate", type: "nominal" },
+  },
+};
+```
+
+With a `color` field and no `stack`, groups **overlap** at the same x (ggplot's `position = "identity"`) and the fill drops to 55% opacity so both distributions stay visible. Set `y.stack: true` to stack them at full opacity instead.
+
+**Accepted encodings:**
+- `x` (quantitative, required) -- the raw values to bin
+- `y` (quantitative, optional) -- defaults to the per-bin count
+- `color` (nominal/ordinal, optional) -- one overlapping distribution per group
+
+**Mark properties:** `binCount` (default 20), `normalize` (each group's bars sum to 1, y formatted as a percentage, which is what makes two differently sized groups comparable), `fillOpacity` (overrides the 0.55 overlap default).
+
+`mark: 'histogram'` is sugar. It desugars to the Vega-Lite form, which you can also write directly and refine further:
+
+```ts
+const spec = {
+  mark: "bar",
+  encoding: {
+    x: { field: "amount", type: "quantitative", bin: { maxbins: 24 } },
+    y: { aggregate: "count" },
+  },
+};
+```
+
+`labels` has no effect on a histogram: a number over every bin buries the distribution. The compiler warns if you set one.
+
+**Live example**: [Overlapping histograms](https://tryopendata.github.io/openchart/?story=testing--fixtures--distribution-histogram)
+
+---
+
+## Density
+
+The same comparison, smoothed. A Gaussian kernel density estimate over raw values, drawn as a translucent filled area. It trades the histogram's bin-edge artifacts for a bandwidth choice.
+
+```ts
+const spec = {
+  mark: { type: "density" },
+  data: [
+    { amount: 50, candidate: "Talarico" },
+    // ...one row per observation
+  ],
+  encoding: {
+    x: { field: "amount", type: "quantitative" },
+    color: { field: "candidate", type: "nominal" },
+  },
+};
+```
+
+**Accepted encodings:**
+- `x` (quantitative, required) -- the raw values to estimate over
+- `color` (nominal/ordinal, optional) -- one curve per group, all evaluated over a shared extent so they're comparable
+
+**Mark properties:** `bandwidth` (defaults to Silverman's rule of thumb), `cumulative` (a CDF instead of a density), `steps` (evaluation points, default 200), `fillOpacity` (default 0.4 when grouped). The transform's `extent` and `counts` options have no mark-level shorthand; reach for the canonical spelling below when you need a pinned evaluation window (two charts on a shared x, say) or curves scaled by group size.
+
+The y axis is suppressed by default, because a density's absolute height is not a quantity readers interpret. Pass an explicit `y.axis` to show it. The crosshair is off for the same reason. Curves interpolate linearly: the estimate already carries its own smoothing, and a spline on top would add shape the data doesn't contain.
+
+Like the histogram, this is sugar over a transform you can write yourself:
+
+```ts
+const spec = {
+  mark: { type: "area", interpolate: "linear", fillOpacity: 0.4 },
+  transform: [{ density: "amount", groupby: ["candidate"], bandwidth: 200 }],
+  encoding: {
+    x: { field: "value", type: "quantitative" },
+    y: { field: "density", type: "quantitative", stack: null },
+    color: { field: "candidate", type: "nominal" },
+  },
+};
+```
+
+**Live example**: [Overlapping density curves](https://tryopendata.github.io/openchart/?story=testing--fixtures--distribution-density)
 
 ---
 

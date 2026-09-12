@@ -58,7 +58,7 @@ The fixed-height wrapper is optional. Without one, the chart sizes itself: a 400
 
 | Category    | What you get                                                                        |
 | ----------- | ----------------------------------------------------------------------------------- |
-| Charts      | Bar, line, area, point, circle, arc (pie/donut), lollipop, beeswarm, range, waffle, calendar, parliament |
+| Charts      | Bar, line, area, point, circle, arc (pie/donut), lollipop, beeswarm, histogram, density, range, waffle, calendar, parliament |
 | Tables      | Sort, search, pagination, heatmap cells, sparklines, inline bars, category colors   |
 | Graphs      | Force-directed networks, canvas rendering, node interaction, search, zoom           |
 | Maps        | Choropleth and symbol maps from TopoJSON, plus US state tile grids                  |

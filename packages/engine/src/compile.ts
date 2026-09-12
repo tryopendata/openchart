@@ -60,6 +60,7 @@ import { compileBarList as compileBarListImpl } from './barlist/compile-barlist'
 import {
   assignAnimationIndices,
   computeMarkObstacles,
+  isBinnedBarEncoding,
   resolveRendererKey,
 } from './charts/post-process';
 import { getChartRenderer } from './charts/registry';
@@ -743,6 +744,22 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
       width: chartArea.width - plan.inlineYLabelInset,
       height: chartArea.height,
     };
+  }
+
+  // A histogram has one bar per bin, so a number over every bar buries the
+  // distribution it exists to show. The binned-bar renderer emits no value
+  // labels; say so rather than letting `labels` silently do nothing.
+  if (
+    chartSpec.userExplicit.labels &&
+    chartSpec.labels?.density !== 'none' &&
+    isBinnedBarEncoding(chartSpec.markType, renderSpec.encoding)
+  ) {
+    emitSpecWarnings(
+      [
+        "[openchart] `labels` has no effect on a histogram (binned bar): a value over every bin obscures the distribution. Remove it, or use mark: 'bar' over pre-aggregated categories if you need per-bar values.",
+      ],
+      options.onWarn,
+    );
   }
 
   // Compute scales

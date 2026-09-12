@@ -424,6 +424,96 @@ For the full field reference, see [TileMapSpec in spec-reference.md](spec-refere
 
 ---
 
+## Histogram
+
+Distribution of a raw quantitative field: bin the values, count each bin, draw a bar per bin on a continuous axis. Bin width reflects the actual value range, so the shape of the distribution is readable rather than an artifact of equal-width categories.
+
+```ts
+const spec = {
+  mark: { type: "histogram", binCount: 24 },
+  data: [
+    { amount: 50, candidate: "Talarico" },
+    { amount: 3500, candidate: "Paxton" },
+    // ...one row per observation
+  ],
+  encoding: {
+    x: { field: "amount", type: "quantitative" },
+    color: { field: "candidate", type: "nominal" },
+  },
+};
+```
+
+With a `color` field and no `stack`, groups **overlap** at the same x (ggplot's `position = "identity"`) and the fill drops to 55% opacity so both distributions stay visible. Set `y.stack: true` to stack them at full opacity instead.
+
+**Accepted encodings:**
+- `x` (quantitative, required) -- the raw values to bin
+- `y` (quantitative, optional) -- defaults to the per-bin count
+- `color` (nominal/ordinal, optional) -- one overlapping distribution per group
+
+**Mark properties:** `binCount` (default 20), `normalize` (each group's bars sum to 1, y formatted as a percentage, which is what makes two differently sized groups comparable), `fillOpacity` (overrides the 0.55 overlap default).
+
+`mark: 'histogram'` is sugar. It desugars to the Vega-Lite form, which you can also write directly and refine further:
+
+```ts
+const spec = {
+  mark: "bar",
+  encoding: {
+    x: { field: "amount", type: "quantitative", bin: { maxbins: 24 } },
+    y: { aggregate: "count" },
+  },
+};
+```
+
+`labels` has no effect on a histogram: a number over every bin buries the distribution. The compiler warns if you set one.
+
+**Live example**: [Overlapping histograms](https://tryopendata.github.io/openchart/?story=testing--fixtures--distribution-histogram)
+
+---
+
+## Density
+
+The same comparison, smoothed. A Gaussian kernel density estimate over raw values, drawn as a translucent filled area. It trades the histogram's bin-edge artifacts for a bandwidth choice.
+
+```ts
+const spec = {
+  mark: { type: "density" },
+  data: [
+    { amount: 50, candidate: "Talarico" },
+    // ...one row per observation
+  ],
+  encoding: {
+    x: { field: "amount", type: "quantitative" },
+    color: { field: "candidate", type: "nominal" },
+  },
+};
+```
+
+**Accepted encodings:**
+- `x` (quantitative, required) -- the raw values to estimate over
+- `color` (nominal/ordinal, optional) -- one curve per group, all evaluated over a shared extent so they're comparable
+
+**Mark properties:** `bandwidth` (defaults to Silverman's rule of thumb), `cumulative` (a CDF instead of a density), `steps` (evaluation points, default 200), `fillOpacity` (default 0.4 when grouped). The transform's `extent` and `counts` options have no mark-level shorthand; reach for the canonical spelling below when you need a pinned evaluation window (two charts on a shared x, say) or curves scaled by group size.
+
+The y axis is suppressed by default, because a density's absolute height is not a quantity readers interpret. Pass an explicit `y.axis` to show it. The crosshair is off for the same reason. Curves interpolate linearly: the estimate already carries its own smoothing, and a spline on top would add shape the data doesn't contain.
+
+Like the histogram, this is sugar over a transform you can write yourself:
+
+```ts
+const spec = {
+  mark: { type: "area", interpolate: "linear", fillOpacity: 0.4 },
+  transform: [{ density: "amount", groupby: ["candidate"], bandwidth: 200 }],
+  encoding: {
+    x: { field: "value", type: "quantitative" },
+    y: { field: "density", type: "quantitative", stack: null },
+    color: { field: "candidate", type: "nominal" },
+  },
+};
+```
+
+**Live example**: [Overlapping density curves](https://tryopendata.github.io/openchart/?story=testing--fixtures--distribution-density)
+
+---
+
 ## Beeswarm
 
 Distribution of individual observations, dodged apart so no two dots overlap. Better than a histogram when you want every data point visible, and better than a strip plot when the data is dense enough that ticks would pile up.
