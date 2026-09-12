@@ -3012,6 +3012,13 @@ export interface BinParams {
   nice?: boolean;
   /** Explicit extent [min, max] for binning. */
   extent?: [number, number];
+  /**
+   * Scale type hint for the bin computation. When `'log'`, bin edges are
+   * log-spaced (equal width in log space) instead of linearly spaced. Set
+   * automatically by histogram sugar when `encoding.x.scale.type` is `'log'`.
+   * @internal Not part of the public spec surface; injected by the compiler.
+   */
+  scaleType?: 'linear' | 'log';
 }
 
 /** Expression for calculate transforms. */

@@ -127,8 +127,20 @@ export function expandEncodingSugar(
         ch.type ?? (specData && specData.length > 0 ? inferFieldType(specData, field) : undefined);
       const emitInterval = channel === 'x' && resolvedType === 'quantitative' && markType === 'bar';
       const endField = `${outputField}_end`;
+      // If the channel has a log scale, inject scaleType into bin params so the
+      // bin transform generates log-spaced edges.
+      const chScale = ch.scale as Record<string, unknown> | undefined;
+      let binDef: true | BinParams;
+      if (chScale?.type === 'log') {
+        binDef =
+          ch.bin === true
+            ? { scaleType: 'log' as const }
+            : { ...(ch.bin as BinParams), scaleType: 'log' as const };
+      } else {
+        binDef = ch.bin === true ? true : (ch.bin as BinParams);
+      }
       const binTransform: BinTransform = {
-        bin: ch.bin === true ? true : (ch.bin as BinParams),
+        bin: binDef,
         field,
         as: emitInterval ? [outputField, endField] : outputField,
       };
@@ -701,7 +713,16 @@ function expandHistogramMark(spec: Record<string, unknown>): Record<string, unkn
   const x = { ...((encoding.x as Record<string, unknown>) ?? {}) };
 
   if (x.bin == null) {
-    x.bin = { maxbins: typeof binCount === 'number' ? binCount : HISTOGRAM_DEFAULT_MAXBINS };
+    const binParams: Record<string, unknown> = {
+      maxbins: typeof binCount === 'number' ? binCount : HISTOGRAM_DEFAULT_MAXBINS,
+    };
+    // Detect log scale on x and pass it through so the bin transform generates
+    // log-spaced edges instead of linear ones.
+    const xScale = x.scale as Record<string, unknown> | undefined;
+    if (xScale?.type === 'log') {
+      binParams.scaleType = 'log';
+    }
+    x.bin = binParams;
   }
   x.type = x.type ?? 'quantitative';
   encoding.x = x;

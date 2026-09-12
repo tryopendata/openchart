@@ -278,6 +278,106 @@ describe("mark: 'histogram' sugar", () => {
   });
 });
 
+describe('log-spaced histogram', () => {
+  /** Skewed data spanning several orders of magnitude (campaign contributions). */
+  function skewedDonations(): Array<Record<string, unknown>> {
+    const amounts = [
+      1, 2, 5, 10, 15, 20, 25, 50, 75, 100, 150, 200, 250, 500, 750, 1000, 2000, 2500, 5000, 6500,
+    ];
+    return amounts.map((amount, i) => ({
+      amount,
+      candidate: i % 2 === 0 ? 'Talarico' : 'Paxton',
+    }));
+  }
+
+  it('spreads skewed data across multiple bins instead of collapsing', () => {
+    const bars = barsOf({
+      type: 'chart',
+      mark: { type: 'histogram', binCount: 10 },
+      data: skewedDonations(),
+      encoding: {
+        x: { field: 'amount', type: 'quantitative', scale: { type: 'log' } },
+      },
+    });
+    expect(bars.length).toBeGreaterThan(0);
+    // With log binning, skewed data should not collapse into 1-2 bins.
+    // Linear binning over [1, 6500] with 10 bins puts ~15 of 20 values in bin 1.
+    expect(bars.length).toBeGreaterThanOrEqual(5);
+  });
+
+  it('produces bins with variable data-space widths (equal in log space)', () => {
+    const bars = barsOf({
+      type: 'chart',
+      mark: { type: 'histogram', binCount: 5 },
+      data: skewedDonations(),
+      encoding: {
+        x: { field: 'amount', type: 'quantitative', scale: { type: 'log' } },
+      },
+    });
+    // Log-spaced bins have varying data-space widths (bin_end - bin_start)
+    // but equal pixel widths because the log scale compresses them uniformly.
+    // Check that the data-space widths vary (unlike linear binning).
+    const dataWidths = bars.map((b) => {
+      const row = b.data as Record<string, unknown>;
+      return (row.bin_amount_end as number) - (row.bin_amount as number);
+    });
+    const uniqueWidths = new Set(dataWidths.map((w) => Math.round(w * 100) / 100));
+    expect(uniqueWidths.size).toBeGreaterThan(1);
+  });
+
+  it('works with normalize: true on a log scale', () => {
+    const layout = compile({
+      type: 'chart',
+      mark: { type: 'histogram', binCount: 8, normalize: true },
+      data: skewedDonations(),
+      encoding: {
+        x: { field: 'amount', type: 'quantitative', scale: { type: 'log' } },
+      },
+    });
+    const bars = layout.marks.filter((m): m is RectMark => m.type === 'rect');
+    expect(bars.length).toBeGreaterThan(0);
+    // Proportions should sum to ~1
+    let total = 0;
+    for (const bar of bars) {
+      const row = bar.data as Record<string, unknown> | undefined;
+      total += Number(row?.__proportion ?? 0);
+    }
+    expect(total).toBeCloseTo(1, 6);
+  });
+
+  it('handles color groups with log-spaced bins', () => {
+    const bars = barsOf({
+      type: 'chart',
+      mark: { type: 'histogram', binCount: 8 },
+      data: skewedDonations(),
+      encoding: {
+        x: { field: 'amount', type: 'quantitative', scale: { type: 'log' } },
+        color: { field: 'candidate', type: 'nominal' },
+      },
+    });
+    const talarico = bars.filter((b) => b.seriesKey === 'Talarico');
+    const paxton = bars.filter((b) => b.seriesKey === 'Paxton');
+    expect(talarico.length).toBeGreaterThan(0);
+    expect(paxton.length).toBeGreaterThan(0);
+  });
+
+  it('leaves linear binning unchanged when no log scale', () => {
+    const linearBars = barsOf({
+      type: 'chart',
+      mark: { type: 'histogram', binCount: 10 },
+      data: skewedDonations(),
+      encoding: {
+        x: { field: 'amount', type: 'quantitative' },
+      },
+    });
+    // Linear bins: all bars have equal width
+    const widths = linearBars.map((b) => b.width);
+    const minW = Math.min(...widths);
+    const maxW = Math.max(...widths);
+    expect(maxW - minW).toBeLessThan(1);
+  });
+});
+
 describe('authored bar + x2 (migration section 25)', () => {
   it('routes a quantitative x, x2 and y to the binned renderer', () => {
     // Pins the documented behavior change: this shape used to render through
