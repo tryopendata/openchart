@@ -403,10 +403,14 @@ function computeStackedArea(
 
     if (markFill != null) {
       fillValue = markFill;
-      fillOpacity = isGradientDef(markFill) ? 1 : (spec.markDef.opacity ?? 0.7);
+      fillOpacity = isGradientDef(markFill)
+        ? 1
+        : (spec.markDef.fillOpacity ?? spec.markDef.opacity ?? 0.7);
     } else {
       fillValue = getRepresentativeColor(color);
-      fillOpacity = STACKED_FILL_OPACITY;
+      // Same precedence as the non-stacked path: an explicit fillOpacity is
+      // the author's, and stacking shouldn't quietly overwrite it.
+      fillOpacity = spec.markDef.fillOpacity ?? STACKED_FILL_OPACITY;
     }
 
     const rawPointKeys = validPoints.map((_p, idx) => serializeKeyValue(layer[idx]?.data.__x__));

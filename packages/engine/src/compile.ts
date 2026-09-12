@@ -60,6 +60,7 @@ import { compileBarList as compileBarListImpl } from './barlist/compile-barlist'
 import {
   assignAnimationIndices,
   computeMarkObstacles,
+  isBinnedBarEncoding,
   resolveRendererKey,
 } from './charts/post-process';
 import { getChartRenderer } from './charts/registry';
@@ -751,9 +752,7 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
   if (
     chartSpec.userExplicit.labels &&
     chartSpec.labels?.density !== 'none' &&
-    chartSpec.markType === 'bar' &&
-    renderSpec.encoding.x2 &&
-    renderSpec.encoding.x?.type === 'quantitative'
+    isBinnedBarEncoding(chartSpec.markType, renderSpec.encoding)
   ) {
     emitSpecWarnings(
       [

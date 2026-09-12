@@ -105,6 +105,34 @@ describe('runDensity', () => {
     expect(out).toHaveLength(10);
   });
 
+  it('ignores rows with a missing value rather than counting them as zero', () => {
+    const withNulls: DataRow[] = [
+      ...sample(100, 500, 20, 23),
+      ...Array.from({ length: 50 }, () => ({ v: null })),
+    ];
+    const clean = runDensity(sample(100, 500, 20, 23), { density: 'v', steps: 40 });
+    const dirty = runDensity(withNulls, { density: 'v', steps: 40 });
+    expect(dirty.map((r) => r.value)).toEqual(clean.map((r) => r.value));
+    expect(dirty.map((r) => r.density)).toEqual(clean.map((r) => r.density));
+  });
+
+  it('falls back to the default steps for a non-finite count', () => {
+    expect(runDensity(sample(30, 0, 5, 29), { density: 'v', steps: Number.NaN })).toHaveLength(200);
+    expect(
+      runDensity(sample(30, 0, 5, 29), { density: 'v', steps: Number.POSITIVE_INFINITY }),
+    ).toHaveLength(200);
+  });
+
+  it('ignores a reversed or non-finite extent', () => {
+    const out = runDensity(sample(50, 10, 3, 31), {
+      density: 'v',
+      extent: [100, 0],
+      steps: 20,
+    });
+    const values = out.map((r) => r.value as number);
+    expect(values[0]).toBeLessThan(values.at(-1) as number);
+  });
+
   it('honors an explicit extent and output field names', () => {
     const t: DensityTransform = { density: 'v', extent: [0, 10], steps: 11, as: ['x', 'y'] };
     const out = runDensity(sample(50, 5, 2, 17), t);

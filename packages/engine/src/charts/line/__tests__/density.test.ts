@@ -143,6 +143,23 @@ describe('mark: density', () => {
     expect(layout.endpointLabels).toBeUndefined();
   });
 
+  it('estimates over the rows a user filter left behind', () => {
+    // The density transform has to run last: after the KDE the source field
+    // is gone, so a filter appended behind it would have nothing to match.
+    const unfiltered = areasOf({
+      ...base,
+      mark: { type: 'density', bandwidth: 20 },
+      encoding: { x: { field: 'amount', type: 'quantitative' } },
+    } as unknown as ChartSpec);
+    const filtered = areasOf({
+      ...base,
+      mark: { type: 'density', bandwidth: 20 },
+      transform: [{ filter: { field: 'who', equal: 'Small' } }],
+      encoding: { x: { field: 'amount', type: 'quantitative' } },
+    } as unknown as ChartSpec);
+    expect(filtered[0].path).not.toBe(unfiltered[0].path);
+  });
+
   it('turns the crosshair off by default but respects an explicit one', () => {
     const implicit = compileChart({
       ...base,

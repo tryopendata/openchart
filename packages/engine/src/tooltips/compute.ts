@@ -27,7 +27,7 @@ import {
   formatPercent,
   getRepresentativeColor,
 } from '@opendata-ai/openchart-core';
-
+import { isBinnedBarEncoding } from '../charts/post-process';
 import type { NormalizedChartSpec } from '../compiler/types';
 import { resolveFieldFormatter } from '../format/field-format';
 import { fieldIterable } from '../layout/shared';
@@ -727,8 +727,7 @@ function computeWaffleTooltips(
 
 /** A bar whose x carries both bin edges: the shape `'bar:binned'` renders. */
 function isBinnedBarSpec(spec: NormalizedChartSpec): boolean {
-  const encoding = spec.encoding as Encoding;
-  return spec.markType === 'bar' && !!encoding.x2 && encoding.x?.type === 'quantitative';
+  return isBinnedBarEncoding(spec.markType, spec.encoding as Encoding);
 }
 
 /**
@@ -765,6 +764,8 @@ function computeBinnedBarTooltips(
   ].filter((ch): ch is EncodingChannel => !!ch && 'field' in ch);
   const fmtCache = buildFormatterCache(spec.data, allChannels);
   const xFormatter = getFormatter(fmtCache, xCh);
+  // A stacked histogram gets the same Total row every other stacked bar has.
+  const stackTotals = computeRectStackTotals(marks, encoding, fmtCache);
 
   for (let i = 0; i < marks.length; i++) {
     const mark = marks[i];
@@ -797,6 +798,9 @@ function computeBinnedBarTooltips(
       value: formatValue(row[yCh.field], yCh.type, getFormatter(fmtCache, yCh)),
       ...(colorEnc ? {} : { color: getRepresentativeColor(mark.fill) }),
     });
+
+    const total = mark.stackGroup !== undefined ? stackTotals?.get(mark.stackGroup) : undefined;
+    if (total) fields.push(total);
 
     descriptors.set(`rect-${i}`, { title, fields });
   }

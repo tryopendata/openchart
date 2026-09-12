@@ -728,6 +728,21 @@ function expandHistogramMark(spec: Record<string, unknown>): Record<string, unkn
 /** Fill opacity for overlapping density curves. */
 const DENSITY_OVERLAP_FILL_OPACITY = 0.4;
 
+/**
+ * Fields that partition a distribution into independent curves or bars.
+ *
+ * `color` is the usual one, but `detail` groups without a visual encoding and
+ * has to count too: otherwise two detail groups get pooled into one estimate.
+ */
+function distributionGroupFields(encoding: Record<string, unknown>): string[] {
+  const fields: string[] = [];
+  for (const channel of ['color', 'detail'] as const) {
+    const ch = encoding[channel] as Record<string, unknown> | undefined;
+    if (typeof ch?.field === 'string' && !fields.includes(ch.field)) fields.push(ch.field);
+  }
+  return fields;
+}
+
 /** Output fields the density transform writes, and the encoding then reads. */
 const DENSITY_VALUE_FIELD = 'value';
 const DENSITY_OUTPUT_FIELD = 'density';
@@ -756,8 +771,7 @@ function expandDensityMark(spec: Record<string, unknown>): Record<string, unknow
   // mark the author actually wrote.
   if (field == null) return spec;
 
-  const color = encoding.color as Record<string, unknown> | undefined;
-  const colorField = typeof color?.field === 'string' ? color.field : undefined;
+  const groupFields = distributionGroupFields(encoding);
 
   // `as` is written explicitly rather than leaning on runDensity's defaults:
   // the encoding below references these two names, and the coupling would
@@ -766,14 +780,17 @@ function expandDensityMark(spec: Record<string, unknown>): Record<string, unknow
     density: field,
     as: [DENSITY_VALUE_FIELD, DENSITY_OUTPUT_FIELD],
   };
-  if (colorField) densityTransform.groupby = [colorField];
+  if (groupFields.length > 0) densityTransform.groupby = groupFields;
   if (typeof bandwidth === 'number') densityTransform.bandwidth = bandwidth;
   if (cumulative === true) densityTransform.cumulative = true;
   if (typeof steps === 'number') densityTransform.steps = steps;
 
-  const transforms = [densityTransform as unknown as Transform].concat(
-    ((spec.transform as Transform[] | undefined) ?? []).slice(),
-  );
+  // The estimate runs over whatever the author's own transforms produced: a
+  // filter on the source field has to narrow the sample before the KDE sees
+  // it, and after the KDE the source field no longer exists to filter on.
+  const transforms = ((spec.transform as Transform[] | undefined) ?? [])
+    .slice()
+    .concat(densityTransform as unknown as Transform);
 
   encoding.x = {
     ...x,
@@ -799,7 +816,7 @@ function expandDensityMark(spec: Record<string, unknown>): Record<string, unknow
     ...spec,
     mark: {
       interpolate: 'linear',
-      ...(colorField ? { fillOpacity: DENSITY_OVERLAP_FILL_OPACITY } : {}),
+      ...(groupFields.length > 0 ? { fillOpacity: DENSITY_OVERLAP_FILL_OPACITY } : {}),
       ...restMark,
       type: 'area',
     },
@@ -833,8 +850,7 @@ function applyHistogramNormalize(spec: Record<string, unknown>): Record<string, 
 
   // Group by the color field when one is present, so each distribution is
   // normalized against its own total rather than the combined total.
-  const color = encoding.color as Record<string, unknown> | undefined;
-  const groupby = typeof color?.field === 'string' ? [color.field] : [];
+  const groupby = distributionGroupFields(encoding);
 
   const transforms = ((rest.transform as Transform[] | undefined) ?? []).slice();
   transforms.push({
@@ -851,7 +867,12 @@ function applyHistogramNormalize(spec: Record<string, unknown>): Record<string, 
     field: PROPORTION_FIELD,
     type: 'quantitative',
     title: y.title === 'Count' || y.title == null ? 'Share' : y.title,
-    axis: { format: 'percent', ...((y.axis as Record<string, unknown>) ?? {}) },
+    // `axis: false` is an author turning the axis off; don't spread it into an
+    // object and hand back an axis they asked not to have.
+    axis:
+      y.axis === false || y.axis === null
+        ? y.axis
+        : { format: 'percent', ...((y.axis as Record<string, unknown>) ?? {}) },
   };
 
   return { ...rest, encoding, transform: transforms };

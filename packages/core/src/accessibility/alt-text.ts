@@ -34,8 +34,13 @@ export function generateAltText(spec: ChartSpec, data: DataRow[]): string {
   // Special case: histogram detection. A binned bar reaches here already
   // desugared to `bar`, so without this a distribution announces itself as
   // "Bar chart" and the reader loses what the chart is actually showing.
+  // Matches the renderer's own dispatch condition, quantitative y included:
+  // a nominal-y bar with x2 is a floating range bar, not a histogram.
   const isBinnedBar =
-    markType === 'bar' && !!spec.encoding.x2 && spec.encoding.x?.type === 'quantitative';
+    markType === 'bar' &&
+    !!spec.encoding.x2 &&
+    spec.encoding.x?.type === 'quantitative' &&
+    spec.encoding.y?.type === 'quantitative';
   if (isBinnedBar) {
     chartName = 'Histogram';
   }

@@ -12,6 +12,9 @@ import { deviation, quantile } from 'd3-array';
 /** Default number of points the curve is evaluated at. */
 const DEFAULT_STEPS = 200;
 
+/** Hard cap on evaluation points, so a bad `steps` can't exhaust memory. */
+const MAX_STEPS = 10_000;
+
 /**
  * How far past the data extent to evaluate, in bandwidths. Three is enough for
  * a Gaussian kernel's tail to be visually closed; stopping at the data extent
@@ -47,6 +50,24 @@ export function silvermanBandwidth(values: number[]): number {
   return 1.06 * spread * n ** (-1 / 5);
 }
 
+/**
+ * Bounded, integral step count.
+ *
+ * `steps` arrives from the spec, where `NaN` or `Infinity` would reach
+ * `new Array(steps)` and either throw or allocate until the tab dies. The cap
+ * is well past the point where a curve is visually smooth at any chart width.
+ */
+function resolveSteps(requested: number | undefined): number {
+  if (requested == null || !Number.isFinite(requested)) return DEFAULT_STEPS;
+  return Math.min(MAX_STEPS, Math.max(2, Math.round(requested)));
+}
+
+/** An author-supplied extent is only usable if it's finite and ascending. */
+function isUsableExtent(extent: [number, number]): boolean {
+  const [lo, hi] = extent;
+  return Number.isFinite(lo) && Number.isFinite(hi) && hi > lo;
+}
+
 /** Standard normal kernel. */
 function gaussian(u: number): number {
   return Math.exp(-0.5 * u * u) / SQRT_2PI;
@@ -75,7 +96,7 @@ function groupRows(data: DataRow[], groupby: string[]): Map<string, DataRow[]> {
 export function runDensity(data: DataRow[], transform: DensityTransform): DataRow[] {
   const field = transform.density;
   const groupby = transform.groupby ?? [];
-  const steps = Math.max(2, Math.round(transform.steps ?? DEFAULT_STEPS));
+  const steps = resolveSteps(transform.steps);
   const [valueAs, densityAs] = transform.as ?? ['value', 'density'];
   const cumulative = transform.cumulative === true;
   const counts = transform.counts === true;
@@ -89,7 +110,15 @@ export function runDensity(data: DataRow[], transform: DensityTransform): DataRo
   let widestBandwidth = 0;
 
   for (const rows of groups.values()) {
-    const samples = rows.map((r) => Number(r[field])).filter((v) => Number.isFinite(v));
+    // Filter the missing values out *before* coercing: `Number(null)` is 0,
+    // so a row with no value would otherwise plant a kernel at zero.
+    const samples: number[] = [];
+    for (const r of rows) {
+      const raw = r[field];
+      if (raw == null || raw === '') continue;
+      const v = Number(raw);
+      if (Number.isFinite(v)) samples.push(v);
+    }
     if (samples.length === 0) continue;
     const bandwidth =
       transform.bandwidth && transform.bandwidth > 0
@@ -103,7 +132,7 @@ export function runDensity(data: DataRow[], transform: DensityTransform): DataRo
 
   let lo: number;
   let hi: number;
-  if (transform.extent) {
+  if (transform.extent && isUsableExtent(transform.extent)) {
     [lo, hi] = transform.extent;
   } else {
     // Folded per group rather than spread over one flattened array:

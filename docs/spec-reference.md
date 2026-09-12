@@ -64,7 +64,7 @@ The primary input for standard chart types. Source: `core/src/types/spec.ts`.
 
 | Field         | Type           | Default     | Description                                                                                   |
 | ------------- | -------------- | ----------- | --------------------------------------------------------------------------------------------- |
-| `type`        | `ChartType`    | (required)  | Chart type: `'line'`, `'area'`, `'bar'`, `'column'`, `'pie'`, `'donut'`, `'dot'`, `'scatter'` |
+| `mark`        | `MarkType \| MarkDef` | (required) | The mark: `'bar'`, `'line'`, `'area'`, `'point'`, `'circle'`, `'arc'`, `'text'`, `'rule'`, `'tick'`, `'rect'`, `'lollipop'`, `'beeswarm'`, `'histogram'`, `'density'`, `'range'`, `'waffle'`, `'calendar'`, `'parliament'`. See [Mark properties](#mark-properties) for the object form. |
 | `data`        | `DataRow[]`    | (required)  | Array of data rows. Each row is a `Record<string, unknown>`. Must be non-empty.               |
 | `encoding`    | `Encoding`     | (required)  | Maps data fields to visual channels. See [Encoding](#encoding).                               |
 | `chrome`      | `Chrome`       | `undefined` | Editorial text: title, subtitle, source, byline, footer. See [Chrome](#chrome).               |

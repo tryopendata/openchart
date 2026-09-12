@@ -184,8 +184,12 @@ function overlappingBins(
       const value = Number(row[yField]);
       if (!Number.isFinite(value)) continue;
 
-      const top = yScale(value);
-      const height = Math.max(baseline - top, MIN_BAR_HEIGHT);
+      // A count is never negative, but an authored bar + x2 spec can carry a
+      // negative y. Anchor on the baseline in both directions rather than
+      // clamping a negative height to a one-pixel stub at the endpoint.
+      const endY = yScale(value);
+      const top = Math.min(baseline, endY);
+      const height = Math.max(Math.abs(baseline - endY), MIN_BAR_HEIGHT);
       marks.push({
         type: 'rect',
         x: geom.x,
