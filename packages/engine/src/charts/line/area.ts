@@ -215,7 +215,16 @@ function computeSingleArea(
       fillValue = markFill;
       fillOpacity = isGradientDef(markFill)
         ? 1
-        : (spec.markDef.opacity ?? (y2Channel ? 0.25 : DEFAULT_FILL_OPACITY));
+        : (spec.markDef.fillOpacity ??
+          spec.markDef.opacity ??
+          (y2Channel ? 0.25 : DEFAULT_FILL_OPACITY));
+    } else if (spec.markDef.fillOpacity != null) {
+      // An explicit fillOpacity means the author wants a flat translucent
+      // fill in the series color. Gradients and overlapping fills are
+      // mutually exclusive: two stacked fades read as mud, which is exactly
+      // the case overlapping density curves need to get right.
+      fillValue = getRepresentativeColor(color);
+      fillOpacity = spec.markDef.fillOpacity;
     } else {
       const colorStr = getRepresentativeColor(color);
       fillValue = buildGradientFill(colorStr, defaultGradientStops);

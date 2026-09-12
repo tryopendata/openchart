@@ -13,6 +13,7 @@
 
 import { barRenderer } from './bar';
 import { beeswarmRenderer } from './beeswarm';
+import { binnedBarRenderer } from './binned-bar';
 import { calendarRenderer } from './calendar';
 import { columnRenderer } from './column';
 import { dotRenderer } from './dot';
@@ -45,6 +46,13 @@ const builtinRenderers: Record<string, ChartRenderer> = {
   area: areaRenderer,
   bar: barRenderer, // horizontal bars
   'bar:vertical': columnRenderer, // vertical bars (old 'column')
+  'bar:binned': binnedBarRenderer, // histogram: rects sized from a linear x scale via x2
+  // Safety net. `compileChart` always expands sugar before dispatch, so these
+  // keys should be unreachable — but an unregistered key yields zero marks
+  // with no error, i.e. a silently blank chart, which is the exact failure
+  // this whole mark family exists to remove.
+  histogram: binnedBarRenderer,
+  density: areaRenderer,
   point: scatterRenderer, // old 'scatter'
   arc: pieRenderer, // old 'pie' (donut handled via innerRadius)
   'arc:donut': donutRenderer, // old 'donut'

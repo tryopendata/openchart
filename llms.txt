@@ -92,7 +92,7 @@ Common MarkDef options:
 |------|---|---|-------|-------|------|------------|
 | `bar` | req (quantitative, nominal, ordinal, temporal) | req (quantitative, nominal, ordinal) | - | opt (nominal, ordinal, quantitative) | opt | Bar chart |
 | `line` | req (temporal, ordinal) | req (quantitative) | - | opt (nominal, ordinal, quantitative) | opt | Line chart |
-| `area` | req (temporal, ordinal) | req (quantitative) | - | opt (nominal, ordinal, quantitative) | opt | Area chart |
+| `area` | req (temporal, ordinal, quantitative) | req (quantitative) | - | opt (nominal, ordinal, quantitative) | opt | Area chart |
 | `point` | req (quantitative, temporal, nominal, ordinal) | req (quantitative, temporal, nominal, ordinal) | - | opt (nominal, ordinal, quantitative) | opt (quantitative) | Scatter plot |
 | `circle` | req (quantitative) | req (nominal, ordinal) | - | opt (nominal, ordinal, quantitative) | opt (quantitative) | Dot plot |
 | `lollipop` | req (quantitative) | req (nominal, ordinal) | - | opt (nominal, ordinal, quantitative) | opt (quantitative) | Lollipop chart |
@@ -106,6 +106,8 @@ Common MarkDef options:
 | `tick` | req | req | - | opt | opt | Tick plot |
 | `rect` | req | req | - | opt | opt | Heatmap |
 | `calendar` | req (temporal) | opt | - | req (quantitative) | opt | Calendar heatmap |
+| `histogram` | req (quantitative) | opt (quantitative) | - | opt (nominal, ordinal) | opt | Histogram |
+| `density` | req (quantitative) | opt (quantitative) | - | opt (nominal, ordinal) | opt | Density plot |
 
 An EncodingChannel is `{ field, type, aggregate?, bin?, timeUnit?, sort?, scale?, axis?, legend?, format?, title?, stack?, highlight? }`. `type` is one of `quantitative`, `temporal`, `nominal`, `ordinal`. Multi-series bar and area charts default to stacked (Vega-Lite aligned); set `stack: null` on the value channel for grouped bars or overlapping areas.
 

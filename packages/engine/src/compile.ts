@@ -745,6 +745,24 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
     };
   }
 
+  // A histogram has one bar per bin, so a number over every bar buries the
+  // distribution it exists to show. The binned-bar renderer emits no value
+  // labels; say so rather than letting `labels` silently do nothing.
+  if (
+    chartSpec.userExplicit.labels &&
+    chartSpec.labels?.density !== 'none' &&
+    chartSpec.markType === 'bar' &&
+    renderSpec.encoding.x2 &&
+    renderSpec.encoding.x?.type === 'quantitative'
+  ) {
+    emitSpecWarnings(
+      [
+        "[openchart] `labels` has no effect on a histogram (binned bar): a value over every bin obscures the distribution. Remove it, or use mark: 'bar' over pre-aggregated categories if you need per-bar values.",
+      ],
+      options.onWarn,
+    );
+  }
+
   // Compute scales
   const scales = computeScales(renderSpec, scaleArea, renderSpec.data);
 

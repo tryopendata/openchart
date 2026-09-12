@@ -266,9 +266,16 @@ intent everywhere in the library; sort explicitly if you want a gap ranking.
 **Parliament.** Seat knockout stroke 0.75px in the background. Majority
 line label uses `colors.axis`.
 
+**Histogram and density.** Overlapping distributions are the default, not
+grouped or stacked ones: a binned axis exists to compare shapes, and dodging
+separates the very thing you're reading. Overlap costs opacity — histogram
+bars drop to 0.55 fill, density curves to 0.4 — which is enough for two
+groups and muddy past three. Density curves also drop the auto gradient for a
+flat fill; two stacked gradients read as mud rather than as two curves.
+
 Sources: `packages/engine/src/charts/{utils,line/compute,line/area,scatter/compute,
 scatter/trendline,pie/compute,pie/labels,pie/index,calendar/compute,
-waffle/compute,range/compute,parliament/compute}.ts`.
+waffle/compute,range/compute,parliament/compute,binned-bar/compute}.ts`.
 
 ## Hover, legend, tooltip, keyboard
 

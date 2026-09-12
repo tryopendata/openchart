@@ -45,6 +45,7 @@ import {
   scaleUtc,
 } from 'd3-scale';
 
+import { isBinnedBarEncoding } from '../charts/post-process';
 import type { NormalizedChartSpec } from '../compiler/types';
 import { DEFAULT_BIN_COUNT, sampleRampColors } from '../legend/continuous';
 import { fieldIterable } from './shared';
@@ -859,6 +860,34 @@ export function computeScales(
     }
   }
 
+  // An area over a quantitative x is a density curve (quantitative x on an
+  // area was a validation error before this shape existed), and its x is a
+  // position. Only the x channel: the y baseline still anchors at zero.
+  if (
+    spec.markType === 'area' &&
+    encoding.x?.type === 'quantitative' &&
+    encoding.x.scale?.zero === undefined
+  ) {
+    if (!encoding.x.scale) {
+      (encoding.x as { scale?: Record<string, unknown> }).scale = { zero: false };
+    } else {
+      (encoding.x.scale as Record<string, unknown>).zero = false;
+    }
+  }
+
+  // A binned bar's x is a position, not a length: bins start at the data
+  // minimum, so padding the domain out to zero leaves a wide empty gutter on
+  // any distribution that doesn't start near it (test scores, years, prices).
+  // Scoped to the binned axis only — the y (count) axis keeps its zero base.
+  const binnedX = isBinnedBarEncoding(spec.markType, encoding) ? encoding.x : undefined;
+  if (binnedX && binnedX.scale?.zero === undefined) {
+    if (!binnedX.scale) {
+      (binnedX as { scale?: Record<string, unknown> }).scale = { zero: false };
+    } else {
+      (binnedX.scale as Record<string, unknown>).zero = false;
+    }
+  }
+
   if (encoding.x) {
     // For stacked bars, the x-domain needs the max category sum, not max individual value.
     // Without this, stacked bars would clip past the chart area.
@@ -866,7 +895,13 @@ export function computeScales(
     let xChannel = encoding.x;
     // Range charts span x to x2: the x-domain must cover both endpoint fields.
     // Synthetic rows map x2 values into the x field so buildLinearScale sees them.
-    if (spec.markType === 'range' && encoding.x2 && encoding.x.type === 'quantitative') {
+    // Binned bars span x to x2 exactly like range marks do: without this the
+    // final bin's right edge falls outside the scale and the bar clips.
+    if (
+      (spec.markType === 'range' || spec.markType === 'bar') &&
+      encoding.x2 &&
+      encoding.x.type === 'quantitative'
+    ) {
       const xField = encoding.x.field;
       const x2Field = encoding.x2.field;
       xData = [...data, ...data.map((row) => ({ [xField]: row[x2Field] }) as DataRow)];
@@ -961,7 +996,11 @@ export function computeScales(
     let yData = data;
     let yChannel = encoding.y;
     // Range charts span y to y2 (vertical form): cover both endpoint fields.
-    if (spec.markType === 'range' && encoding.y2 && encoding.y.type === 'quantitative') {
+    if (
+      (spec.markType === 'range' || spec.markType === 'bar') &&
+      encoding.y2 &&
+      encoding.y.type === 'quantitative'
+    ) {
       const yField = encoding.y.field;
       const y2Field = encoding.y2.field;
       yData = [...data, ...data.map((row) => ({ [yField]: row[y2Field] }) as DataRow)];

@@ -12,6 +12,7 @@ All types are importable from `@opendata-ai/openchart-core` or from the convenie
 - [LayerSpec](#layerspec) (overlay multiple chart types)
 - [Encoding](#encoding) (x, y, color, size, detail channels)
 - [Faceting](#faceting) (facet, row, column channels; resolve)
+- [Transforms](#transforms) (filter, bin, aggregate, joinaggregate, calculate, timeUnit, fold, window, density)
 - [Annotations](#annotations) (refline, text, range)
 - [Labels](#labels) (density, format, position)
 - [Chrome](#chrome) (title, subtitle, source, byline, footer)
@@ -114,6 +115,7 @@ The `mark` field on ChartSpec accepts either a string (`'line'`) or an object wi
 | `centerLabel`  | `string \| { text, subtitle? }` | `undefined` | arc    | Donut center stat. A string renders one line; the object form adds a caption under it. Decorative (the number is already in the slices), and only meaningful with an inner radius. |
 | `filled`       | `boolean`               | `true`      | all            | Whether the mark is filled vs stroked only. |
 | `opacity`      | `number`                | `1`         | all            | Overall mark opacity (0-1). |
+| `fillOpacity`  | `number`                | varies      | histogram, density, area, bar | Fill opacity independent of stroke. Defaults to 0.55 on overlapping histogram groups and 0.4 on grouped density curves. On an area it replaces the auto gradient with a flat translucent fill. |
 | `fill`         | `string \| GradientDef` | theme color | all            | Fill color or gradient. See [Gradients](#gradients). |
 | `stroke`       | `string`                | `undefined` | all            | Stroke color. |
 | `strokeWidth`  | `number`                | varies      | all            | Stroke width in pixels. |
@@ -128,6 +130,11 @@ The `mark` field on ChartSpec accepts either a string (`'line'`) or an object wi
 | `weekStart`    | `'monday' \| 'sunday'`  | `'monday'`  | calendar       | Weekday on the top row of each year band. |
 | `cellRadius`   | `number`                | `2`         | calendar       | Corner radius in pixels for day cells. |
 | `shape`        | `'hemicycle'`           | `'hemicycle'` | parliament   | Seat layout shape (currently the only shape). |
+| `binCount`     | `number`                | `20`        | histogram      | Number of bins. Desugars to `x.bin.maxbins`. |
+| `normalize`    | `boolean`               | `false`     | histogram      | Plot each group's share of its own total instead of a raw count, so differently sized groups are comparable. Formats the y axis as a percentage. |
+| `bandwidth`    | `number`                | Silverman   | density        | Gaussian kernel bandwidth. Omitted uses Silverman's rule of thumb. |
+| `cumulative`   | `boolean`               | `false`     | density        | Emit a cumulative distribution (CDF) instead of a density. |
+| `steps`        | `number`                | `200`       | density        | Evaluation points along the curve. |
 | `seatRadius`   | `number \| 'auto'`      | `'auto'`    | parliament     | Seat dot radius in pixels. `'auto'` sizes dots to fill the rings for the seat count. |
 | `majorityLine` | `boolean`               | `true`      | parliament     | Draw the majority-threshold line and its "N to win" label. |
 
@@ -306,6 +313,8 @@ The engine validates encoding channels at runtime using `MARK_ENCODING_RULES`. S
 | `range`    | quantitative or nominal (req)    | quantitative or nominal (req) | nominal, ordinal (opt) | -- | nominal (opt) | Dumbbell/arrow/range-bar. x+x2 (horizontal) or y+y2 (vertical); orientation-dependent second endpoint |
 | `waffle`   | -- (opt, unused)                 | quantitative (req, via `theta`) | nominal, ordinal (req) | -- | nominal (opt) | Unit grid. `theta` (alias for y) = share, color = category |
 | `parliament` | -- (opt, unused)               | quantitative (req, via `theta`) | nominal, ordinal (req) | -- | nominal (opt) | Hemicycle seats. `theta` (alias for y) = seat count, color = party |
+| `histogram` | quantitative (req)              | quantitative (opt)     | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | Raw values on x; y defaults to the per-bin count. Color groups overlap rather than dodge |
+| `density`  | quantitative (req)               | -- (computed)          | nominal, ordinal (opt) | -- | nominal (opt) | KDE over raw x values; y is the estimated density |
 | `calendar` | temporal (req)                   | -- (not allowed)       | quantitative (req)     | -- | nominal (opt) | Calendar heatmap. x = daily date, color = per-day value; owns its own geometry |
 
 ### Channel purpose per chart type
@@ -482,6 +491,35 @@ Reach for `'grow'` on fixed-height article or blog charts where a long title on 
 ```
 
 `chromeLayout: 'grow'` is a no-op for faceted (small-multiples) specs in this version and falls back to `'subtract'`. It is also honored by bar list, sankey, map, and tilemap specs via the spec or compile option.
+
+---
+
+## Transforms
+
+`transform` is an ordered array run against the data before scales and layout. Each entry produces a new array that feeds the next. Source: `engine/src/transforms/`.
+
+| Transform | Shape | What it does |
+| --------- | ----- | ------------ |
+| `filter` | `{ filter: Predicate }` | Keeps rows matching a predicate (field/op/value, or a relative time reference). |
+| `bin` | `{ bin: true \| BinParams, field, as }` | Buckets a quantitative field. `BinParams` is `{ maxbins, step, nice, extent }`. `as` takes a string for the bin start, or `[start, end]` for both edges. |
+| `calculate` | `{ calculate: { op, field, field2? \| value? }, as }` | Arithmetic between two fields or a field and a constant. |
+| `timeUnit` | `{ timeUnit, field, as }` | Truncates a temporal field to a unit (year, month, week, day...). |
+| `aggregate` | `{ aggregate: [{ op, field, as }], groupby }` | Collapses each group to one row. Ops: `count`, `sum`, `mean`, `median`, `min`, `max`, `variance`, `stdev`, `distinct`, `q1`, `q3`. |
+| `joinaggregate` | `{ joinaggregate: [{ op, field, as }], groupby }` | Same ops, but keeps every row and writes the group's summary onto each. This is what expresses "this row's share of its group's total". |
+| `fold` | `{ fold: [fields], as }` | Wide to long: one row per (row, field) pair. |
+| `window` | `{ window: [{ op, field, as }], groupby, sort, frame }` | Running/ordered computations over a moving frame. |
+| `density` | `{ density, groupby?, bandwidth?, extent?, cumulative?, counts?, steps?, as? }` | Gaussian kernel density estimate. Replaces the rows with one row per evaluation point per group, defaulting to fields `value` and `density`. Groups share one extent so the curves are comparable. |
+
+A histogram is a bin plus a count aggregate, which is what `mark: 'histogram'` desugars to:
+
+```ts
+transform: [
+  { bin: { maxbins: 24 }, field: "amount", as: ["bin_amount", "bin_amount_end"] },
+  { aggregate: [{ op: "count", field: "amount", as: "__count" }], groupby: ["bin_amount", "bin_amount_end"] },
+];
+```
+
+Carrying both bin edges matters: the end edge goes to `x2`, which is what puts the bars on a continuous axis instead of one equal-width slot per bin.
 
 ---
 

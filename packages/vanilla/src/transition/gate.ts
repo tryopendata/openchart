@@ -13,7 +13,19 @@ import { keyAnnotations } from './keys';
  * real-time tile, and the line/area path morph works at sparkline scale like
  * anywhere else.
  */
-export const TRANSITIONABLE_MARKS = new Set(['bar', 'line', 'area', 'point', 'beeswarm', 'arc']);
+// `histogram` and `density` are here because this gate reads the RAW spec's
+// mark, before sugar expansion. Without them the sugar spelling would snap
+// while the byte-identical canonical spelling ('bar' / 'area') tweened.
+export const TRANSITIONABLE_MARKS = new Set([
+  'bar',
+  'line',
+  'area',
+  'point',
+  'beeswarm',
+  'arc',
+  'histogram',
+  'density',
+]);
 
 /**
  * Default cap on the mark count that still runs a tweened data-update

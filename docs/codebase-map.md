@@ -37,6 +37,9 @@
 | Text wrapping | `packages/core/src/layout/text-wrap.ts` (`wrapText`) |
 | Chrome layout computation (title/subtitle/source/byline/footer geometry) | `packages/core/src/layout/chrome.ts` → `computeChrome()` |
 | Spec normalization (defaults, shorthand expansion) | `packages/engine/src/compiler/normalize.ts` → `normalizeSpec()` |
+| Data transforms (filter, bin, calculate, timeUnit, aggregate, joinaggregate, fold, window, density) | `packages/engine/src/transforms/` — one file per transform plus `index.ts` → `runTransforms(data, transforms)`, called once from `compile.ts` against the post-sugar spec, before scales. A histogram is `bin` + `aggregate: count`; there is no separate binning implementation. |
+| Spec sugar (pre-validation rewrites: `theta`→`y`, `x.bin`→`BinTransform`, `mark: 'histogram'`/`'density'`→ canonical form) | `packages/engine/src/compile/spec-sugar.ts` → `expandSpecSugar()`. Runs before validation, so sugar mark types never reach the validator or the renderer dispatch. |
+| Binned bar (histogram) renderer | `packages/engine/src/charts/binned-bar/compute.ts`. Dispatched as `'bar:binned'` when x is quantitative and `x2` is present. Color groups overlap at `OVERLAP_FILL_OPACITY` (0.55) unless `stack` is set — the inverse of the band-scale bar default, because a binned axis exists to compare shapes. |
 | Spec validation | `packages/engine/src/compiler/validate.ts` → `validateSpec()` |
 | Top-level compile entry | `packages/engine/src/compiler/index.ts` → `compile()` |
 | Chart compile orchestration | `packages/engine/src/compile.ts` → `compileChart()`, `compileFaceted()` |

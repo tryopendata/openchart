@@ -33,7 +33,7 @@ import {
   resolveNumberFormatter,
   TOP_PAD_EXTRA_NARROW,
 } from '@opendata-ai/openchart-core';
-
+import { isBinnedBarEncoding } from '../charts/post-process';
 import type { NormalizedChartSpec } from '../compiler/types';
 import { predictEndpointLabelsWidth } from '../endpoint-labels/predict';
 import { computeLegendContent, hasLegendContent, type LegendContent } from '../legend/compute';
@@ -233,12 +233,18 @@ export function resolveLayoutPlan(
   // -----------------------------------------------------------------------
   let leftGutter = hPad + axisMargin; // base: pad + axis margin
   if (encoding.y && !isRadial && !yAxisSuppressed && !yIsInline) {
+    // A binned bar is a `bar` whose y is the quantitative count, so the bare
+    // markType test would send it down the category-label path and size the
+    // gutter by string-measuring raw counts instead of formatted ticks. The
+    // predicate is shared with the renderer dispatch so the two can't drift.
+    const isBinnedBar = isBinnedBarEncoding(renderSpec.markType, encoding);
     if (
-      encoding.y.type === 'nominal' ||
-      encoding.y.type === 'ordinal' ||
-      renderSpec.markType === 'bar' ||
-      renderSpec.markType === 'circle' ||
-      renderSpec.markType === 'lollipop'
+      !isBinnedBar &&
+      (encoding.y.type === 'nominal' ||
+        encoding.y.type === 'ordinal' ||
+        renderSpec.markType === 'bar' ||
+        renderSpec.markType === 'circle' ||
+        renderSpec.markType === 'lollipop')
     ) {
       // Category labels: measure real data values
       const yField = encoding.y.field;

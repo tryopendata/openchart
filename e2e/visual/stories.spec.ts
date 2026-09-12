@@ -315,6 +315,17 @@ const stories: Array<{ name: string; slug: string; note?: string }> = [
     slug: 'testing--fixtures--rect-heatmap',
     note: 'Two-way heatmap: band scales on BOTH axes (rect used to alias the column renderer, which needs a linear y, so it emitted zero marks and rendered blank). Cells tile with a hairline gutter and draw no gridlines.',
   },
+  // --- Distribution marks (histogram / density) ---
+  {
+    name: 'distribution-histogram',
+    slug: 'testing--fixtures--distribution-histogram',
+    note: "mark: 'histogram' — bins on a continuous x with x2, color groups overlapping at fill-opacity 0.55 rather than dodging.",
+  },
+  {
+    name: 'distribution-density',
+    slug: 'testing--fixtures--distribution-density',
+    note: "mark: 'density' — Gaussian KDE desugared to an area with a flat translucent fill (no gradient) and a suppressed y axis.",
+  },
   // --- Canvas mark mode (static: the JS entrance cannot be frozen by CSS) ---
   {
     name: 'canvas-scatter-static',

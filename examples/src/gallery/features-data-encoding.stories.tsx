@@ -118,25 +118,31 @@ function FilterToggle() {
 // ---------------------------------------------------------------------------
 
 // Bin the continuous finish times into 30-minute buckets, then count finishers
-// per bucket. The bin transform writes the bucket start into `binStart`; the
-// aggregate transform groups by it and counts rows.
+// per bucket. The bin transform writes each bucket's edges into `binStart` and
+// `binEnd`; the aggregate groups by both and counts rows. Carrying the end edge
+// through to `x2` is what makes this a histogram rather than a bar chart of
+// bucket labels: the bars sit on a continuous axis, so their width is the bin
+// width in data units. `mark: 'histogram'` writes all of this for you.
 const binSpec: ChartSpec = {
   animation: true,
   mark: 'bar',
   data: [...marathonFinishTimes.data],
   transform: [
-    { bin: { step: 0.5, nice: false }, field: 'hours', as: 'binStart' },
-    { aggregate: [{ op: 'count', field: 'hours', as: 'finishers' }], groupby: ['binStart'] },
+    { bin: { step: 0.5, nice: false }, field: 'hours', as: ['binStart', 'binEnd'] },
+    {
+      aggregate: [{ op: 'count', field: 'hours', as: 'finishers' }],
+      groupby: ['binStart', 'binEnd'],
+    },
   ],
   encoding: {
     x: {
       field: 'binStart',
-      type: 'ordinal',
+      type: 'quantitative',
       axis: { title: 'Finish time (hours)', format: '.1f' },
     },
+    x2: { field: 'binEnd', type: 'quantitative' },
     y: { field: 'finishers', type: 'quantitative', axis: { title: 'Finishers' } },
   },
-  labels: { density: 'all', format: ',.0f' },
   chrome: {
     title: 'Most Finishers Cross Between Four and Five Hours',
     subtitle: 'Marathon finish times binned into 30-minute buckets, then counted per bucket.',

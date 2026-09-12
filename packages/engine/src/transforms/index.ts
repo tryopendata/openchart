@@ -10,8 +10,10 @@ import type { DataRow, Transform } from '@opendata-ai/openchart-core';
 import { runAggregate } from './aggregate';
 import { runBin } from './bin';
 import { runCalculate } from './calculate';
+import { runDensity } from './density';
 import { runFilter } from './filter';
 import { runFold } from './fold';
+import { runJoinAggregate } from './joinaggregate';
 import { runTimeUnit } from './timeunit';
 import { runWindow } from './window';
 
@@ -19,8 +21,10 @@ export { runAggregate } from './aggregate';
 export { runBin } from './bin';
 export { runCalculate } from './calculate';
 export { isConditionalValueDef, resolveConditionalValue } from './conditional';
+export { runDensity, silvermanBandwidth } from './density';
 export { runFilter } from './filter';
 export { runFold } from './fold';
+export { runJoinAggregate } from './joinaggregate';
 export { evaluatePredicate, isRelativeTimeRef } from './predicates';
 export { runTimeUnit } from './timeunit';
 export { runWindow } from './window';
@@ -49,6 +53,10 @@ export function runTransforms(data: DataRow[], transforms: Transform[]): DataRow
       result = runTimeUnit(result, transform);
     } else if ('aggregate' in transform) {
       result = runAggregate(result, transform);
+    } else if ('joinaggregate' in transform) {
+      result = runJoinAggregate(result, transform);
+    } else if ('density' in transform) {
+      result = runDensity(result, transform);
     } else if ('fold' in transform) {
       result = runFold(result, transform);
     } else if ('window' in transform) {

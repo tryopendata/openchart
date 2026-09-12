@@ -9,10 +9,12 @@ import {
 } from './canvas-tweens';
 import {
   applyAreaPaths,
+  applyFillOpacityToElement,
   applyGeomToElement,
   applyLinePath,
   interpolatePoints,
   lerpGeom,
+  resolveRectShapeElement,
 } from './interpolate';
 import type { ArcGeom, ArcTween, RuleTween, TickTween, Tween } from './types';
 
@@ -106,6 +108,12 @@ export function applyTweenState(
     case 'rect': {
       const geom = lerpGeom(tw.from, tw.to, eased);
       applyGeomToElement(tw.el, geom, tw.mark, tw.shapeEl, tw.cornerScratch);
+      if (tw.fromFillOpacity !== undefined && tw.toFillOpacity !== undefined) {
+        applyFillOpacityToElement(
+          tw.shapeEl ?? resolveRectShapeElement(tw.el),
+          tw.fromFillOpacity + (tw.toFillOpacity - tw.fromFillOpacity) * eased,
+        );
+      }
       break;
     }
     case 'line': {
@@ -224,6 +232,14 @@ export function snapTweenToFinal(tw: Tween): void {
   switch (tw.tweenType) {
     case 'rect':
       applyGeomToElement(tw.el, tw.to, tw.mark, tw.shapeEl, tw.cornerScratch);
+      if (tw.toFillOpacity !== undefined) {
+        // Land on the mark's own value, so a bar that lost its color grouping
+        // ends with no attribute rather than a literal fill-opacity="1".
+        applyFillOpacityToElement(
+          tw.shapeEl ?? resolveRectShapeElement(tw.el),
+          tw.mark.fillOpacity,
+        );
+      }
       break;
     case 'line':
       applyLinePath(tw.el, tw.toPts, tw.interpolate, tw.pathEl);

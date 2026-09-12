@@ -45,7 +45,7 @@ import {
   resolveNumberFormatter,
   TOP_PAD_EXTRA_NARROW,
 } from '@opendata-ai/openchart-core';
-
+import { isBinnedBarEncoding } from '../charts/post-process';
 import type { NormalizedChartSpec } from '../compiler/types';
 import { isEndsBoth, predictEndpointLabelsWidth } from '../endpoint-labels/predict';
 import { hasLegendContent } from '../legend/compute';
@@ -533,8 +533,14 @@ export function computeDimensions(
   const yAxisSuppressed = encoding.y?.axis === false;
   const yIsInline = yIsInlinePre;
   if (encoding.y && !isRadial && !yAxisSuppressed && !yIsInline) {
+    // See the matching guard in layout/plan.ts: a binned bar's y is the
+    // quantitative count, so it must take the numeric tick path, not the
+    // measure-the-category-labels path. Scoped to the binned shape so
+    // ordinary vertical columns keep their exact gutter.
+    const isBinnedBar = isBinnedBarEncoding(spec.markType, encoding);
     if (
       !plan &&
+      !isBinnedBar &&
       (spec.markType === 'bar' ||
         spec.markType === 'circle' ||
         spec.markType === 'lollipop' ||

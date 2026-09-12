@@ -180,6 +180,8 @@ This decouples chart-type logic from the compile pipeline. Adding a new chart ty
 
 Each chart renderer receives `(spec, scales, chartArea, strategy)` and returns `Mark[]`. A `Mark` is a discriminated union (line marks, rect marks, arc marks, point marks, text marks, rule marks) with all positions and colors computed. Higher-level marks compose from these primitives rather than inventing new geometry: for example, `parliament` (a hemicycle seat chart) emits point marks for the seats, a rule mark for the majority line, and text marks for labels; `waffle` emits a grid of rects.
 
+Two mark types never reach a renderer at all. `histogram` and `density` are spec sugar: `expandSpecSugar` rewrites them into the canonical Vega-Lite form (a bar over a bin plus a count aggregate, and an area over a density transform) before validation, so the dispatch, the encoding rules, and the transition gate all see the underlying mark. One code path, two spellings.
+
 Some marks are axisless: arc, waffle, calendar, and parliament compute their own internal geometry and have no positional x/y scales, axes, or gridlines. The single predicate `isAxislessMark()` gates the axis/gridline/dimension code paths for all of them, so the pipeline skips axis space and tick computation uniformly rather than special-casing each mark.
 
 ## Table pipeline
