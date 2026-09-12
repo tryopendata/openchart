@@ -1,5 +1,12 @@
 # Changelog
 
+## [8.6.1](https://github.com/tryopendata/openchart/compare/core-v8.6.0...core-v8.6.1) (2026-09-12)
+
+
+### Features
+
+* log-spaced histogram binning ([e85456a](https://github.com/tryopendata/openchart/commit/e85456a))
+
 ## [8.6.0](https://github.com/tryopendata/openchart/compare/core-v8.5.2...core-v8.6.0) (2026-09-12)
 
 
