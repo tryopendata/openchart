@@ -1,5 +1,12 @@
 # Changelog
 
+## [8.6.0](https://github.com/tryopendata/openchart/compare/core-v8.5.2...core-v8.6.0) (2026-09-12)
+
+
+### Features
+
+* histogram and density marks (#122) ([31fce42](https://github.com/tryopendata/openchart/commit/31fce42))
+
 ## [8.5.2](https://github.com/tryopendata/openchart/compare/core-v8.5.1...core-v8.5.2) (2026-09-07)
 
 
