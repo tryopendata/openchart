@@ -476,7 +476,7 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
     buildD3Formatter(mapSpec.encoding?.color?.format ?? mapSpec.valueFormat) ?? formatNumber;
   // The theme's own neutral ramp, so a warm or cool theme gets a warm or cool
   // "no data" gray instead of an uninvited zinc.
-  const neutralFill = isDarkMode ? theme.colors.neutral[800] : theme.colors.neutral[100];
+  const neutralFill = theme.colors.neutral[100];
   // A solid neutral is indistinguishable from the middle class of a diverging
   // ramp (redBlue's center is #f7f7f7), so holes in the join get a diagonal
   // hatch over the same neutral. Only under a color encoding: a basemap-only
@@ -484,7 +484,7 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
   const noDataPattern: ResolvedFillPattern = {
     type: 'diagonal',
     base: neutralFill,
-    line: isDarkMode ? theme.colors.neutral[600] : theme.colors.neutral[300],
+    line: theme.colors.neutral[300],
   };
 
   let featureMarks: GeoMapFeatureMark[];
