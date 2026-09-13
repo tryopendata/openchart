@@ -1,5 +1,27 @@
 # Changelog
 
+## [8.6.2](https://github.com/tryopendata/openchart/compare/core-v8.6.1...core-v8.6.2) (2026-09-13)
+
+
+### Features
+
+* log-spaced histogram binning ([e85456a](https://github.com/tryopendata/openchart/commit/e85456a))
+* histogram and density marks (#122) ([31fce42](https://github.com/tryopendata/openchart/commit/31fce42))
+* entrance choreography, 2000-node gate, toggle and over-gate stories, invariants ([e9ec03a](https://github.com/tryopendata/openchart/commit/e9ec03a))
+* 3D renderer scaffold via 3d-force-graph (RFC 27 phases 1-2) ([1ae803c](https://github.com/tryopendata/openchart/commit/1ae803c))
+
+
+### Bug Fixes
+
+* use near-background neutral for dark-mode geo basemap fills ([6d7c0a7](https://github.com/tryopendata/openchart/commit/6d7c0a7))
+* animate structural update() instead of snapping ([8771a97](https://github.com/tryopendata/openchart/commit/8771a97))
+* declare the graph-3d subpath as side-effectful so bundlers keep it ([ed6573a](https://github.com/tryopendata/openchart/commit/ed6573a))
+* address CodeRabbit findings on #118 ([508a417](https://github.com/tryopendata/openchart/commit/508a417))
+* address re-review findings ([0957388](https://github.com/tryopendata/openchart/commit/0957388))
+* address review findings ([44691eb](https://github.com/tryopendata/openchart/commit/44691eb))
+* address RFC 26 re-review findings ([d06e5a5](https://github.com/tryopendata/openchart/commit/d06e5a5))
+* address RFC 26 review findings ([c632e7e](https://github.com/tryopendata/openchart/commit/c632e7e))
+
 ## [8.6.1](https://github.com/tryopendata/openchart/compare/core-v8.6.0...core-v8.6.1) (2026-09-12)
 
 
