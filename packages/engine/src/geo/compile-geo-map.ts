@@ -491,7 +491,8 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
   let continuousLegend: ContinuousLegendLayout | null = null;
   let categoricalLegend: CategoricalLegendLayout | null = null;
 
-  if (!colorEncoding) {
+  const isBasemapOnly = !colorEncoding || (mapSpec.data.length === 0 && mapSpec.points != null);
+  if (isBasemapOnly) {
     // Basemap-only mode: all features get neutral fill, no legend
     featureMarks = buildBasemapMarks({
       geoFeatures,
