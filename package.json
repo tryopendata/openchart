@@ -41,7 +41,7 @@
   "overrides": {
     "strip-ansi": "6.0.1",
     "string-width": "4.2.3",
-    "react": "19.2.8",
+    "react": "19.3.0",
     "react-dom": "19.2.8"
   },
   "devDependencies": {
@@ -55,7 +55,7 @@
     "husky": "^9.1.7",
     "lightningcss-cli": "^1.32.0",
     "lightningcss-cli-darwin-arm64": "^1.32.0",
-    "react": "19.2.8",
+    "react": "19.3.0",
     "react-dom": "19.2.8",
     "ts-json-schema-generator": "^2.9.0",
     "tsup": "^8.5.1",

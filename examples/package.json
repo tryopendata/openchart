@@ -13,7 +13,7 @@
     "@opendata-ai/openchart-engine": "workspace:*",
     "@opendata-ai/openchart-vanilla": "workspace:*",
     "@opendata-ai/openchart-react": "workspace:*",
-    "react": "^19.0.0",
+    "react": "^19.3.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
