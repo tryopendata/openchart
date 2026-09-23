@@ -56,9 +56,6 @@ const TRAIL_RESOLUTION = 1000;
 /** How far left of `from` the pointer overlay extends, so a press aimed at the visible line end still lands. */
 const START_SLOP_PX = 16;
 
-/** Minimum distance from `from` within which a first press starts the guess at the visible line end. */
-const ANCHOR_SNAP_MIN_PX = 40;
-
 /** Build the "M x,y L x,y ..." path string for a straight-segment line through points, sorted by x. */
 function buildLinearPath(points: Point[]): string {
   if (points.length === 0) return '';
@@ -254,11 +251,17 @@ export function createYouDrawIt(options: YouDrawItOptions): YouDrawItController 
     const path = svgEl.querySelector<SVGPathElement>('[data-ydi-guess-path]');
     if (!path) return;
     const cfg = config;
-    const points: Point[] = Array.from(trail.entries()).map(([i, v]) => ({
-      x: round2(indexToPx(cfg, i)),
-      y: round2(dataToPixelY(v)),
-    }));
-    path.setAttribute('d', buildLinearPath(points));
+    // A stroke fills every trail index it crosses, so a jump of more than one
+    // index is a gap between separate strokes: start a new subpath there
+    // instead of bridging ground the reader never drew over.
+    const keys = Array.from(trail.keys()).sort((a, b) => a - b);
+    const d = keys
+      .map((i, n) => {
+        const cmd = n === 0 || i - keys[n - 1] > 1 ? 'M' : 'L';
+        return `${cmd}${round2(indexToPx(cfg, i))},${round2(dataToPixelY(trail.get(i)!))}`;
+      })
+      .join(' ');
+    path.setAttribute('d', d);
     syncResetButton();
   }
 
@@ -328,34 +331,67 @@ export function createYouDrawIt(options: YouDrawItOptions): YouDrawItController 
 
     /**
      * Whether a stroke's first point is close enough to `from` to start the
-     * guess at the visible line end. A press far to the right starts where it
-     * lands instead, so we never invent a ramp the reader didn't draw.
+     * guess at the visible line end: within the start slop, or before the
+     * first hidden sample. Either way the ramp from the line end crosses no
+     * sample the reader didn't reach, so we never invent a guess.
      */
     const nearAnchor = (p: Point): boolean => {
       if (!config?.anchor) return false;
-      const firstGap = config.samples.length > 0 ? config.samples[0].px - config.fromX : 0;
-      return p.x - config.fromX <= Math.max(ANCHOR_SNAP_MIN_PX, firstGap * 1.5);
+      if (p.x - config.fromX <= START_SLOP_PX) return true;
+      return config.samples.length > 0 && p.x <= config.samples[0].px;
+    };
+
+    const endStroke = () => {
+      activePointer = null;
+      last = null;
     };
 
     const handleDown = (e: Event) => {
       const pe = e as PointerEvent;
+      // Primary button only: right-click, middle-click and the pen barrel
+      // button shouldn't draw.
+      if (pe.button !== 0) return;
+      // A second pointer (another finger, a resting palm) must not hijack a
+      // stroke in progress. A stale id whose capture is gone doesn't count.
+      if (
+        activePointer !== null &&
+        activePointer !== pe.pointerId &&
+        overlay.hasPointerCapture?.(activePointer)
+      ) {
+        return;
+      }
       if (pe.cancelable) pe.preventDefault();
       activePointer = pe.pointerId;
       overlay.setPointerCapture?.(pe.pointerId);
+      live.textContent = '';
       const p = toSvgPoint(pe.clientX, pe.clientY);
       const anchor = config?.anchor;
       if (trail.size === 0 && anchor && nearAnchor(p)) {
-        paintSegment(anchor.x, anchor.y, p.x, p.y);
+        // Pin the start to the line end, then draw to the press (if the press
+        // is past it; a press in the slop zone clamps onto `from`).
+        trail.set(0, pixelYToData(anchor.y));
+        if (p.x > anchor.x) {
+          paintSegment(anchor.x, anchor.y, p.x, p.y);
+          last = p;
+        } else {
+          last = { x: anchor.x, y: anchor.y };
+        }
       } else {
         paintSegment(p.x, p.y, p.x, p.y);
+        last = p;
       }
-      last = p;
       redrawGuessPath();
     };
 
     const handleMove = (e: Event) => {
       const pe = e as PointerEvent;
       if (activePointer !== pe.pointerId) return;
+      // No button held: the release happened somewhere we didn't see (e.g. a
+      // re-render swapped the overlay mid-drag). Don't let hover draw.
+      if (pe.buttons === 0) {
+        endStroke();
+        return;
+      }
       if (pe.cancelable) pe.preventDefault();
       // Coalesced events carry the full-rate pointer path between frames.
       const coalesced = pe.getCoalescedEvents?.() ?? [];
@@ -372,7 +408,13 @@ export function createYouDrawIt(options: YouDrawItOptions): YouDrawItController 
     const handleUp = (e: Event) => {
       const pe = e as PointerEvent;
       if (activePointer !== pe.pointerId) return;
-      activePointer = null;
+      endStroke();
+    };
+
+    // Capture lost for any other reason: the next move restarts from where the
+    // pointer is instead of bridging a jump. activePointer is kept so the
+    // re-render path (which re-captures) keeps the stroke alive.
+    const handleLostCapture = () => {
       last = null;
     };
 
@@ -380,12 +422,14 @@ export function createYouDrawIt(options: YouDrawItOptions): YouDrawItController 
     overlay.addEventListener('pointermove', handleMove);
     overlay.addEventListener('pointerup', handleUp);
     overlay.addEventListener('pointercancel', handleUp);
+    overlay.addEventListener('lostpointercapture', handleLostCapture);
 
     return () => {
       overlay.removeEventListener('pointerdown', handleDown);
       overlay.removeEventListener('pointermove', handleMove);
       overlay.removeEventListener('pointerup', handleUp);
       overlay.removeEventListener('pointercancel', handleUp);
+      overlay.removeEventListener('lostpointercapture', handleLostCapture);
     };
   }
 
@@ -475,8 +519,9 @@ export function createYouDrawIt(options: YouDrawItOptions): YouDrawItController 
   }
 
   /**
-   * The guess at each x sample, interpolated from the trail. Samples outside
-   * the drawn span are omitted, so an undrawn stretch is never reported.
+   * The guess at each x sample, interpolated from the trail. A sample the
+   * reader didn't draw over (outside the drawn span, or in a gap between
+   * strokes) is omitted, so an undrawn stretch is never reported.
    */
   function getGuessData(): Array<{ x: string | number; y: number }> {
     if (!config || trail.size === 0) return [];
@@ -494,6 +539,8 @@ export function createYouDrawIt(options: YouDrawItOptions): YouDrawItController 
       const loPos = hiPos > 0 && keys[hiPos] > i ? hiPos - 1 : hiPos;
       const k0 = keys[loPos];
       const k1 = keys[hiPos];
+      // Strokes fill every index they cross; a wider bracket is a gap.
+      if (k1 - k0 > 1) continue;
       const v0 = trail.get(k0)!;
       const v1 = trail.get(k1)!;
       const t = k1 === k0 ? 0 : (i - k0) / (k1 - k0);
@@ -510,6 +557,7 @@ export function createYouDrawIt(options: YouDrawItOptions): YouDrawItController 
   function doReveal(): void {
     if (destroyed || revealed || !svgEl || !config) return;
     revealed = true;
+    activePointer = null;
 
     const clipRect = svgEl.querySelector<SVGRectElement>('[data-ydi-clip-rect]');
     if (clipRect) {
@@ -540,10 +588,10 @@ export function createYouDrawIt(options: YouDrawItOptions): YouDrawItController 
   function doReset(): void {
     if (destroyed) return;
     revealed = false;
+    activePointer = null;
     trail.clear();
     revealButton.disabled = false;
     root.classList.remove('oc-ydi-revealed');
-    live.textContent = '';
     syncResetButton();
     if (config && svgEl) {
       render(config, svgEl);
@@ -579,7 +627,6 @@ export function createYouDrawIt(options: YouDrawItOptions): YouDrawItController 
       revealButton.style.minHeight = `${MIN_TOUCH_TARGET}px`;
       revealButton.disabled = revealed;
       resetButton.textContent = cfg.resetLabel;
-      resetButton.setAttribute('aria-label', `${cfg.resetLabel} your drawing`);
       resetButton.style.minHeight = `${MIN_TOUCH_TARGET}px`;
       syncResetButton();
       if (revealed) root.classList.add('oc-ydi-revealed');
@@ -604,6 +651,7 @@ export function createYouDrawIt(options: YouDrawItOptions): YouDrawItController 
       }
     },
     hide(): void {
+      activePointer = null;
       root.style.display = 'none';
       svgEl?.querySelector('[data-you-draw-it]')?.remove();
       cleanupPointerEvents?.();
@@ -613,7 +661,6 @@ export function createYouDrawIt(options: YouDrawItOptions): YouDrawItController 
       doReveal();
     },
     reset(): void {
-      activePointer = null;
       doReset();
     },
     get isRevealed(): boolean {

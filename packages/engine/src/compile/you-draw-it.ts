@@ -87,9 +87,8 @@ export function resolveYouDrawIt(
   // Pair each pixel-x sample strictly after `from` with its data-x value, so
   // the vanilla layer can report the guess in data coordinates on reveal. A
   // point sitting at `from` is the visible line end (the anchor), not a guess.
-  // Prefer
-  // dataPoints (carries the original datum) and fall back to the raw point x
-  // when dataPoints is absent (e.g. a single-point degenerate line).
+  // Prefer dataPoints (carries the original datum) and fall back to the raw
+  // point x when dataPoints is absent (e.g. a single-point degenerate line).
   const seen = new Set<number>();
   const samples: YouDrawItSample[] = [];
   if (targetLine.dataPoints?.length) {
@@ -104,8 +103,8 @@ export function resolveYouDrawIt(
   }
   if (samples.length === 0) {
     // No dataPoints (or none past `from`): fall back to geometric point xs so
-    // drawing still snaps, reporting pixel x as the identity when we can't
-    // recover the data value.
+    // onReveal still has x positions to report at, using pixel x as the
+    // identity when we can't recover the data value.
     for (const p of targetLine.points) {
       if (p.x <= fromX + 0.5) continue;
       if (seen.has(p.x)) continue;

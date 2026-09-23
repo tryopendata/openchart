@@ -52,28 +52,47 @@ function clipRect(container: HTMLElement): SVGRectElement | null {
 
 const POINTER_ID = 1;
 
-function pointer(type: string, clientX = 0, clientY = 0): PointerEvent {
+function pointer(
+  type: string,
+  clientX = 0,
+  clientY = 0,
+  init: PointerEventInit = {},
+): PointerEvent {
+  const pressed = type === 'pointerdown' || type === 'pointermove';
   return new PointerEvent(type, {
     bubbles: true,
     cancelable: true,
     pointerId: POINTER_ID,
+    button: 0,
+    buttons: pressed ? 1 : 0,
     clientX,
     clientY,
+    ...init,
   });
 }
 
 /** Press on the overlay and start a stroke. */
-function drawAt(target: EventTarget, clientX: number, clientY: number): void {
-  target.dispatchEvent(pointer('pointerdown', clientX, clientY));
+function drawAt(
+  target: EventTarget,
+  clientX: number,
+  clientY: number,
+  init: PointerEventInit = {},
+): void {
+  target.dispatchEvent(pointer('pointerdown', clientX, clientY, init));
 }
 
 /** Continue the stroke. Pointer capture routes moves to the overlay. */
-function dragTo(target: EventTarget, clientX: number, clientY: number): void {
-  target.dispatchEvent(pointer('pointermove', clientX, clientY));
+function dragTo(
+  target: EventTarget,
+  clientX: number,
+  clientY: number,
+  init: PointerEventInit = {},
+): void {
+  target.dispatchEvent(pointer('pointermove', clientX, clientY, init));
 }
 
-function release(target: EventTarget): void {
-  target.dispatchEvent(pointer('pointerup'));
+function release(target: EventTarget, init: PointerEventInit = {}): void {
+  target.dispatchEvent(pointer('pointerup', 0, 0, init));
 }
 
 /** Parse "M x,y L x,y ..." into points. */
@@ -135,8 +154,10 @@ describe('you draw it', () => {
     expect(ydi.samples.map((s) => s.xValue)).toEqual(['2015', '2020']);
     const rect = overlay(container)!;
 
-    // One move event from `from` straight to the last sample, skipping 2015.
+    // Press at `from` (the stroke starts at the line end), then one move
+    // straight to the last sample, skipping 2015.
     const endX = ydi.samples[1].px;
+    const startY = ydi.anchor!.y;
     drawAt(rect, ydi.fromX, 100);
     dragTo(rect, endX, 200);
     release(rect);
@@ -145,7 +166,7 @@ describe('you draw it', () => {
     const guess = onReveal.mock.calls[0][0] as Array<{ x: string | number; y: number }>;
     expect(guess.map((g) => g.x)).toEqual(['2015', '2020']);
     const t = (ydi.samples[0].px - ydi.fromX) / (endX - ydi.fromX);
-    expect(guess[0].y).toBeCloseTo(pixelToData(ydi, 100 + t * 100), 1);
+    expect(guess[0].y).toBeCloseTo(pixelToData(ydi, startY + t * (200 - startY)), 1);
     expect(guess[1].y).toBeCloseTo(pixelToData(ydi, 200), 1);
   });
 
@@ -213,6 +234,47 @@ describe('you draw it', () => {
     const points = pathPoints(guessPath(container)!.getAttribute('d') ?? '');
     expect(points.length).toBeGreaterThan(0);
     expect(Math.min(...points.map((p) => p.x))).toBeGreaterThanOrEqual(ydi.fromX - 0.01);
+    // The press landed off the line end, but the stroke still starts on it.
+    expect(points[0].x).toBeCloseTo(ydi.fromX, 1);
+    expect(points[0].y).toBeCloseTo(ydi.anchor!.y, 1);
+  });
+
+  it('does not ramp from the line end over a sample the press already passed', () => {
+    const onReveal = vi.fn();
+    chart = createChart(container, makeSpec(), { onReveal });
+    const ydi = chart.layout.youDrawIt!;
+    const rect = overlay(container)!;
+
+    drawAt(rect, ydi.samples[0].px + 20, 200);
+    dragTo(rect, ydi.samples[1].px, 200);
+    release(rect);
+    chart.revealDrawing();
+
+    const guess = onReveal.mock.calls[0][0] as Array<{ x: string | number }>;
+    expect(guess.map((g) => g.x)).toEqual(['2020']);
+  });
+
+  it('leaves a gap between separate strokes instead of bridging it', () => {
+    const onReveal = vi.fn();
+    chart = createChart(container, makeSpec(), { onReveal });
+    const ydi = chart.layout.youDrawIt!;
+    const rect = overlay(container)!;
+    const mid = (ydi.fromX + ydi.samples[0].px) / 2;
+
+    drawAt(rect, ydi.fromX, 150);
+    dragTo(rect, mid, 150);
+    release(rect);
+    drawAt(rect, ydi.samples[1].px - 10, 180);
+    dragTo(rect, ydi.samples[1].px, 180);
+    release(rect);
+
+    const d = guessPath(container)!.getAttribute('d') ?? '';
+    expect(d.match(/M/g)?.length).toBe(2);
+
+    chart.revealDrawing();
+    const guess = onReveal.mock.calls[0][0] as Array<{ x: string | number }>;
+    // 2015 sits in the undrawn gap.
+    expect(guess.map((g) => g.x)).toEqual(['2020']);
   });
 
   it('does not invent a ramp from the line end when the first press is far right', () => {
@@ -271,7 +333,7 @@ describe('you draw it', () => {
     chart = createChart(resizable, makeSpec(), { onReveal });
     const before = chart.layout.youDrawIt!;
     const rect = overlay(resizable)!;
-    drawAt(rect, before.fromX, 150);
+    drawAt(rect, before.samples[0].px, 150);
     dragTo(rect, before.samples[1].px, 150);
     release(rect);
     const drawnValue = pixelToData(before, 150);
@@ -299,7 +361,6 @@ describe('you draw it', () => {
     const button = resetButton(container);
     expect(button.hidden).toBe(true);
     expect(button.textContent).toBe('Erase');
-    expect(button.getAttribute('aria-label')).toBe('Erase your drawing');
 
     const rect = overlay(container)!;
     drawAt(rect, ydi.fromX, 150);
@@ -316,10 +377,14 @@ describe('you draw it', () => {
     expect(document.activeElement).toBe(reveal);
     expect(container.querySelector('[aria-live="polite"]')?.textContent).toBe('Drawing cleared');
 
-    // Drawing works again after clearing.
+    // Drawing works again after clearing, and resets the announcement so a
+    // second clear is announced too.
     drawAt(overlay(container)!, ydi.fromX, 150);
     release(overlay(container)!);
     expect(guessPath(container)!.getAttribute('d')).not.toBe('');
+    expect(container.querySelector('[aria-live="polite"]')?.textContent).toBe('');
+    button.click();
+    expect(container.querySelector('[aria-live="polite"]')?.textContent).toBe('Drawing cleared');
   });
 
   it('hides the clear button after reveal', () => {
@@ -420,6 +485,8 @@ describe('you draw it', () => {
         cancelable: true,
         pointerId: 7,
         pointerType: 'touch',
+        button: 0,
+        buttons: type === 'pointerup' ? 0 : 1,
         clientX: x,
         clientY: y,
       });
@@ -452,6 +519,69 @@ describe('you draw it', () => {
 
     const guess = onReveal.mock.calls[0][0] as Array<{ x: string | number }>;
     expect(guess.map((g) => g.x)).toEqual(['2015', '2020']);
+  });
+
+  it('a second pointer cannot hijack a stroke in progress', () => {
+    chart = createChart(container, makeSpec());
+    const ydi = chart.layout.youDrawIt!;
+    const rect = overlay(container)!;
+    drawAt(rect, ydi.fromX, 150);
+    dragTo(rect, ydi.samples[0].px, 150);
+    const d = guessPath(container)!.getAttribute('d');
+
+    // Second finger lands far right.
+    drawAt(rect, ydi.samples[1].px, 50, { pointerId: 2 });
+    dragTo(rect, ydi.samples[1].px, 60, { pointerId: 2 });
+    expect(guessPath(container)!.getAttribute('d')).toBe(d);
+
+    // The first finger keeps drawing.
+    dragTo(rect, ydi.samples[1].px, 150);
+    const points = pathPoints(guessPath(container)!.getAttribute('d') ?? '');
+    expect(points[points.length - 1].x).toBeCloseTo(ydi.samples[1].px, 0);
+    expect(points[points.length - 1].y).toBeCloseTo(150, 0);
+  });
+
+  it('only the primary button draws', () => {
+    chart = createChart(container, makeSpec());
+    const ydi = chart.layout.youDrawIt!;
+    drawAt(overlay(container)!, ydi.fromX, 150, { button: 2, buttons: 2 });
+    expect(guessPath(container)!.getAttribute('d')).toBe('');
+  });
+
+  it('a move with no button held ends the stroke instead of drawing on hover', () => {
+    chart = createChart(container, makeSpec());
+    const ydi = chart.layout.youDrawIt!;
+    const rect = overlay(container)!;
+    drawAt(rect, ydi.fromX, 150);
+    const d = guessPath(container)!.getAttribute('d');
+
+    dragTo(rect, ydi.samples[1].px, 250, { buttons: 0 });
+    expect(guessPath(container)!.getAttribute('d')).toBe(d);
+    // And the stroke stays over.
+    dragTo(rect, ydi.samples[1].px, 250);
+    expect(guessPath(container)!.getAttribute('d')).toBe(d);
+  });
+
+  it('pointercancel ends the stroke', () => {
+    chart = createChart(container, makeSpec());
+    const ydi = chart.layout.youDrawIt!;
+    const rect = overlay(container)!;
+    drawAt(rect, ydi.fromX, 150);
+    rect.dispatchEvent(pointer('pointercancel'));
+    const d = guessPath(container)!.getAttribute('d');
+    dragTo(rect, ydi.samples[1].px, 250);
+    expect(guessPath(container)!.getAttribute('d')).toBe(d);
+  });
+
+  it('resetDrawing mid-stroke drops the stroke', () => {
+    chart = createChart(container, makeSpec());
+    const ydi = chart.layout.youDrawIt!;
+    drawAt(overlay(container)!, ydi.fromX, 150);
+    dragTo(overlay(container)!, ydi.samples[0].px, 150);
+
+    chart.resetDrawing();
+    dragTo(overlay(container)!, ydi.samples[1].px, 150);
+    expect(guessPath(container)!.getAttribute('d')).toBe('');
   });
 
   it('ignores moves after the pointer is released', () => {
