@@ -17,6 +17,7 @@
  * Playground has no page yet; Phase 06 adds it plus its entry.
  */
 
+import { page as agents } from './agents.demos';
 import { page as barColumn } from './charts-bar-column.demos';
 import { page as buildingBlocks } from './charts-building-blocks.demos';
 import { page as lineArea } from './charts-line-area.demos';
@@ -52,6 +53,7 @@ export type PageEntry = {
 
 /** Every gallery page, in sidebar order. */
 export const GALLERY: PageEntry[] = [
+  agents,
   barColumn,
   lineArea,
   pieDonut,

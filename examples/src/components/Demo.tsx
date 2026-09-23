@@ -139,7 +139,7 @@ function buildSpecView(spec: VizSpec, generatorSnippet?: string): SpecView {
 }
 
 /** Tokenize a JSON-ish string into muted-punctuation spans (no dependency). */
-function Tokenized({ text }: { text: string }) {
+export function Tokenized({ text }: { text: string }) {
   // Split on strings, comments, numbers, punctuation. Key strings are those
   // immediately followed by a colon.
   const parts: ReactNode[] = [];

@@ -411,7 +411,7 @@ export const saasMrrSpec: ChartSpec = {
  * `cramped` height class, and the brand auto-hides. This is the live demo of
  * that behavior, so the key must stay absent.
  */
-const saasSignupsSpec: ChartSpec = {
+export const saasSignupsSpec: ChartSpec = {
   animation: true,
   mark: 'bar',
   data: [...saasMetrics.signups],
@@ -426,15 +426,14 @@ const saasSignupsSpec: ChartSpec = {
   legend: { show: false },
 };
 
-const saasTopPagesSpec: BarListSpec = {
+export const saasTopPagesSpec: BarListSpec = {
   type: 'barlist',
   animation: true,
   data: [...saasMetrics.topPages],
   encoding: {
     label: { field: 'page', type: 'nominal' as const },
-    value: { field: 'sessions', type: 'quantitative' as const },
+    value: { field: 'sessions', type: 'quantitative' as const, format: ',.0f' },
   },
-  valueFormat: ',.0f',
   barHeight: 8,
   chrome: { title: 'Top pages by session' },
   watermark: false,
@@ -442,7 +441,7 @@ const saasTopPagesSpec: BarListSpec = {
 
 /** Tables resolve `watermark` in `compileTable`, outside the chart auto-hide,
  *  so a compact table tile always needs the explicit opt-out. */
-const saasAccountsSpec: TableSpec = {
+export const saasAccountsSpec: TableSpec = {
   type: 'table',
   data: [...saasMetrics.accounts],
   columns: [
@@ -453,11 +452,11 @@ const saasAccountsSpec: TableSpec = {
     { key: 'trend', label: '8-week trend', sparkline: { type: 'line' } },
   ],
   chrome: { title: 'Largest accounts' },
-  compact: true,
+  density: 'condensed',
   watermark: false,
 };
 
-const SAAS_GRID_CSS = `
+export const SAAS_GRID_CSS = `
 .oc-dash-saas {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

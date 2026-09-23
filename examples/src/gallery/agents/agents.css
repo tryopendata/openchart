@@ -1,0 +1,459 @@
+/**
+ * Agents page: the replay player (toolbar, transcript, stage, spec pane).
+ *
+ * Everything keys off the shared --gx-* tokens under [data-oc-mode] so it
+ * follows light/dark inside the width-addon iframe (see gallery.css, C3).
+ * The only additions are two muted semantic colors for validation results.
+ */
+
+[data-oc-mode="light"] {
+  --oca-ok: #15803d;
+  --oca-ok-soft: rgba(22, 163, 74, 0.08);
+  --oca-err: #b91c1c;
+  --oca-err-soft: rgba(220, 38, 38, 0.07);
+}
+
+[data-oc-mode="dark"] {
+  --oca-ok: #4ade80;
+  --oca-ok-soft: rgba(74, 222, 128, 0.08);
+  --oca-err: #f87171;
+  --oca-err-soft: rgba(248, 113, 113, 0.08);
+}
+
+/* A growing transcript must not add a page scrollbar mid-animation and
+   resize the chart under it. */
+html:has(.oca-player) {
+  scrollbar-gutter: stable;
+}
+
+.oca-player {
+  border: 1px solid var(--gx-border);
+  border-radius: var(--gx-radius-card);
+  background: var(--gx-surface-raised);
+  overflow: hidden;
+  container-type: inline-size;
+  container-name: oca-player;
+}
+
+/* ---------------------------------------------------------------- toolbar */
+
+.oca-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gx-space-2) var(--gx-space-4);
+  padding: var(--gx-space-2) var(--gx-space-4);
+  border-bottom: 1px solid var(--gx-border);
+}
+
+.oca-caption {
+  font-size: var(--gx-type-caption);
+  color: var(--gx-text-muted);
+}
+
+.oca-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--gx-space-2);
+}
+
+.oca-turns {
+  display: inline-flex;
+  gap: 2px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  margin: 0 var(--gx-space-2) 0 0;
+}
+
+.oca-btn,
+.oca-turn,
+.oca-pane-toggle {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  font-family: var(--gx-font-body);
+  font-size: var(--gx-type-caption);
+  font-weight: 500;
+  color: var(--gx-text);
+  background: transparent;
+  border: 1px solid var(--gx-border);
+  border-radius: var(--gx-radius-control);
+  padding: 3px 10px;
+  cursor: pointer;
+}
+
+.oca-turn {
+  font-family: var(--gx-font-mono);
+  padding: 3px 8px;
+  color: var(--gx-text-muted);
+}
+
+.oca-turn[aria-current="step"] {
+  color: var(--gx-accent-text);
+  border-color: var(--gx-accent);
+  background: var(--gx-accent-soft);
+}
+
+.oca-btn:hover:not(:disabled),
+.oca-turn:hover,
+.oca-pane-toggle:hover {
+  border-color: var(--gx-accent);
+  color: var(--gx-accent-text);
+}
+
+.oca-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.oca-btn-speed {
+  font-family: var(--gx-font-mono);
+  min-width: 36px;
+  justify-content: center;
+}
+
+.oca-btn:focus-visible,
+.oca-turn:focus-visible,
+.oca-pane-toggle:focus-visible {
+  outline: 2px solid var(--gx-accent);
+  outline-offset: 2px;
+}
+
+.oca-convo:focus-visible,
+.oca-pane-body:focus-visible {
+  outline: 2px solid var(--gx-accent);
+  outline-offset: -2px;
+}
+
+.oca-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- layout */
+
+.oca-split {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+}
+
+.oca-stage {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--gx-border);
+  background: var(--gx-surface);
+}
+
+.oca-viz {
+  min-width: 0;
+  padding: var(--gx-space-4);
+  box-sizing: content-box;
+}
+
+.oca-viz-empty {
+  height: 100%;
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: var(--gx-type-caption);
+  color: var(--gx-text-muted);
+  border: 1px dashed var(--gx-border-strong);
+  border-radius: var(--gx-radius-control);
+}
+
+/* ---------------------------------------------------------------- transcript */
+
+.oca-convo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gx-space-3);
+  padding: var(--gx-space-4);
+  max-height: 700px;
+  overflow-y: auto;
+  font-size: var(--gx-type-caption);
+  line-height: 1.5;
+}
+
+.oca-dash-wrap {
+  padding: var(--gx-space-4);
+  border-top: 1px solid var(--gx-border);
+  background: var(--gx-surface);
+}
+
+.oca-layout-dashboard .oca-convo {
+  height: 300px;
+  max-height: none;
+}
+
+.oca-layout-dashboard .oc-spec-code.oca-pane-body {
+  height: 260px;
+}
+
+.oca-empty {
+  color: var(--gx-text-muted);
+  margin: 0;
+}
+
+.oca-user {
+  align-self: flex-end;
+  max-width: 88%;
+  padding: var(--gx-space-2) var(--gx-space-3);
+  border-radius: var(--gx-radius-card);
+  background: var(--gx-accent-soft);
+  color: var(--gx-text-strong);
+  font-size: var(--gx-type-body);
+}
+
+.oca-step {
+  border-left: 2px solid var(--gx-border-strong);
+  padding: 2px 0 2px var(--gx-space-3);
+}
+
+.oca-step-spec {
+  border-left-color: var(--gx-accent);
+}
+
+.oca-step-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gx-space-2);
+  align-items: baseline;
+}
+
+.oca-fn {
+  font-family: var(--gx-font-mono);
+  color: var(--gx-text);
+  overflow-wrap: anywhere;
+}
+
+.oca-step-meta,
+.oca-step-status {
+  color: var(--gx-text-muted);
+}
+
+.oca-pulse {
+  animation: oca-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes oca-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.oca-check {
+  display: block;
+  margin-top: var(--gx-space-1);
+  padding: 6px var(--gx-space-2);
+  border-radius: var(--gx-radius-control);
+}
+
+.oca-check-ok {
+  color: var(--oca-ok);
+  background: var(--oca-ok-soft);
+}
+
+.oca-check-err {
+  color: var(--oca-err);
+  background: var(--oca-err-soft);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gx-space-1);
+}
+
+.oca-check-title {
+  font-weight: 600;
+}
+
+.oca-check-msg {
+  font-family: var(--gx-font-mono);
+  font-size: 0.75rem;
+  color: var(--gx-text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.oca-check-note {
+  color: var(--gx-text-muted);
+}
+
+.oca-add {
+  color: var(--oca-ok);
+}
+
+.oca-del {
+  color: var(--oca-err);
+}
+
+.oca-prose {
+  margin: 0;
+  color: var(--gx-text);
+  font-size: var(--gx-type-body);
+}
+
+/* ---------------------------------------------------------------- spec pane */
+
+.oca-pane {
+  border-top: 1px solid var(--gx-border);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.oca-pane-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gx-space-2) var(--gx-space-3);
+  padding: var(--gx-space-2) var(--gx-space-4);
+}
+
+.oca-pane-title {
+  font-size: var(--gx-type-caption);
+  font-weight: 600;
+  color: var(--gx-text-strong);
+}
+
+.oca-pane-note {
+  font-size: 0.75rem;
+  color: var(--gx-text-muted);
+  font-family: var(--gx-font-mono);
+}
+
+.oca-pane-toggle {
+  margin-left: auto;
+  padding: 1px 8px;
+  font-size: 0.75rem;
+}
+
+.oc-spec-code.oca-pane-body {
+  height: 240px;
+  max-height: none;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  padding: var(--gx-space-3) var(--gx-space-4);
+  background: var(--gx-surface-raised);
+}
+
+.oca-diff-line {
+  display: block;
+  margin: 0 calc(-1 * var(--gx-space-4));
+  padding: 0 var(--gx-space-4);
+}
+
+.oca-diff-add {
+  background: var(--oca-ok-soft);
+}
+
+.oca-diff-del {
+  background: var(--oca-err-soft);
+}
+
+.oca-diff-del,
+.oca-diff-del * {
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--oca-err) 50%, transparent);
+}
+
+.oca-diff-gap {
+  color: var(--gx-text-muted);
+  font-style: italic;
+}
+
+.oca-diff-gutter {
+  display: inline-block;
+  width: 1.5ch;
+  color: var(--gx-text-muted);
+  text-decoration: none;
+}
+
+.oca-diff-add .oca-diff-gutter {
+  color: var(--oca-ok);
+}
+
+.oca-diff-del .oca-diff-gutter {
+  color: var(--oca-err);
+}
+
+/* ---------------------------------------------------------------- narrow */
+
+/* Below ~900px the split stacks. The pane moves above the chart and shrinks
+   to a few lines so the stream and the render share one screen. */
+@container oca-player (max-width: 860px) {
+  .oca-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .oca-convo {
+    max-height: 280px;
+  }
+  .oca-stage {
+    border-left: none;
+    border-top: 1px solid var(--gx-border);
+  }
+  .oca-pane {
+    order: -1;
+    border-top: none;
+    border-bottom: 1px solid var(--gx-border);
+  }
+  .oc-spec-code.oca-pane-body {
+    height: 140px;
+  }
+}
+
+/* ---------------------------------------------------------------- prose */
+
+.oca-prose-block {
+  max-width: 68ch;
+  font-size: var(--gx-type-body);
+  line-height: 1.65;
+  color: var(--gx-text);
+}
+
+.oca-prose-block p {
+  margin: 0 0 var(--gx-space-4);
+}
+
+.oca-prose-block code,
+.oca-inline-code {
+  font-family: var(--gx-font-mono);
+  font-size: 0.85em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--gx-accent-soft);
+  color: var(--gx-accent-text);
+}
+
+.oca-prose-block a {
+  color: var(--gx-accent-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.oca-snippet {
+  margin: var(--gx-space-4) 0 0;
+  border: 1px solid var(--gx-border);
+  border-radius: var(--gx-radius-card);
+  max-width: 720px;
+}
+
+.oca-snippet .oc-spec-code {
+  border-top: none;
+  background: var(--gx-surface-raised);
+  border-radius: var(--gx-radius-card);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oca-pulse {
+    animation: none;
+  }
+}

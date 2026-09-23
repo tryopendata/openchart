@@ -5,8 +5,13 @@ import { expect, type Page } from '@playwright/test';
  * the wait conditions and dev-overlay hiding in one place means a fix applied
  * for one viewport can't silently weaken the other's baselines.
  */
-export async function captureStory(page: Page, slug: string, screenshotName: string) {
-  await page.goto(`/?mode=preview&story=${encodeURIComponent(slug)}`);
+export async function captureStory(
+  page: Page,
+  slug: string,
+  screenshotName: string,
+  query = '',
+) {
+  await page.goto(`/?mode=preview&story=${encodeURIComponent(slug)}${query}`);
 
   // Kill animations so enter/stagger/annotation-delay timings don't leak
   // into the screenshot. Inject before chart mount completes. Also hide the

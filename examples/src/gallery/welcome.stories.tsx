@@ -97,6 +97,71 @@ const WELCOME_CSS = `
   background: var(--gx-accent-soft);
   color: var(--gx-accent-text);
 }
+.ocw-agents {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: var(--gx-space-5);
+  align-items: center;
+  border: 1px solid var(--gx-border);
+  border-radius: var(--gx-radius-card);
+  background: var(--gx-surface);
+  padding: var(--gx-space-5);
+}
+.ocw-agents code {
+  font-family: var(--gx-font-mono);
+  font-size: 0.85em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--gx-accent-soft);
+  color: var(--gx-accent-text);
+}
+.ocw-agents-link {
+  display: inline-block;
+  margin-top: var(--gx-space-3);
+  font-size: var(--gx-type-caption);
+  font-weight: 600;
+  color: var(--gx-accent-text);
+  text-decoration: none;
+}
+.ocw-agents-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.ocw-agents-link:focus-visible {
+  outline: 2px solid var(--gx-accent);
+  outline-offset: 2px;
+  border-radius: var(--gx-radius-control);
+}
+.ocw-agents-code {
+  margin: 0;
+  font-family: var(--gx-font-mono);
+  font-size: 0.75rem;
+  line-height: 1.7;
+  color: var(--gx-text);
+  background: var(--gx-surface-raised);
+  border: 1px solid var(--gx-border);
+  border-radius: var(--gx-radius-control);
+  padding: var(--gx-space-3) var(--gx-space-4);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.ocw-agents-bad {
+  color: #b91c1c;
+}
+.ocw-agents-good {
+  color: #15803d;
+}
+[data-oc-mode='dark'] .ocw-agents-bad {
+  color: #f87171;
+}
+[data-oc-mode='dark'] .ocw-agents-good {
+  color: #4ade80;
+}
+@media (max-width: 720px) {
+  .ocw-agents {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 .ocw-cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -666,7 +731,31 @@ export const Welcome = () => {
         </div>
       </div>
 
-      {/* 2. Install / quick-start */}
+      {/* 2. Built for agents */}
+      <div className="ocw-block">
+        <div className="ocw-agents">
+          <div>
+            <h2 className="ocw-block-title">Let your agent draw the chart</h2>
+            <p className="ocw-block-lede">
+              Specs are JSON, so LLMs can write them, <code>validateSpec</code> catches their
+              mistakes, and every revision animates in place.
+            </p>
+            <a className="ocw-agents-link" href="?story=agents--built-for-agents">
+              See it in action →
+            </a>
+          </div>
+          <pre className="ocw-agents-code">
+            {'"y": { "field": "capacity_gw" }\n'}
+            <span className="ocw-agents-bad">
+              {'✗ does not exist in data. Did you mean "capacity"?\n\n'}
+            </span>
+            {'"y": { "field": "capacity" }\n'}
+            <span className="ocw-agents-good">{'✓ valid · rendered with 15 rows'}</span>
+          </pre>
+        </div>
+      </div>
+
+      {/* 3. Install / quick-start */}
       <div className="ocw-block">
         <div className="ocw-block-head">
           <h2 className="ocw-block-title">Quick start</h2>
@@ -696,7 +785,7 @@ export const Welcome = () => {
         </div>
       </div>
 
-      {/* 3. Section cards */}
+      {/* 4. Section cards */}
       <div className="ocw-block">
         <div className="ocw-block-head">
           <h2 className="ocw-block-title">Browse the gallery</h2>
@@ -707,7 +796,7 @@ export const Welcome = () => {
         <SectionCards />
       </div>
 
-      {/* 4. Demo index */}
+      {/* 5. Demo index */}
       <div className="ocw-block">
         <div className="ocw-block-head">
           <h2 className="ocw-block-title">Every demo</h2>
@@ -719,7 +808,7 @@ export const Welcome = () => {
         <DemoIndex />
       </div>
 
-      {/* 5. Footer */}
+      {/* 6. Footer */}
       <footer className="ocw-footer">
         <div className="ocw-footer-links">
           <a href="https://github.com/tryopendata/openchart" target="_blank" rel="noreferrer">

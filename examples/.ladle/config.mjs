@@ -17,6 +17,7 @@ export default {
   },
   storyOrder: () => [
     'welcome*',
+    'agents*',
     'charts*',
     'tables*',
     'graphs*',

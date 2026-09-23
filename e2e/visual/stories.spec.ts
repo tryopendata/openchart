@@ -12,7 +12,7 @@ import { captureStory } from './capture';
  * We use `?mode=preview` to hide the Ladle sidebar that would otherwise
  * compress the chart area.
  */
-const stories: Array<{ name: string; slug: string; note?: string }> = [
+const stories: Array<{ name: string; slug: string; query?: string; note?: string }> = [
   { name: 'bar-vertical', slug: 'testing--fixtures--simple-columns' },
   { name: 'bar-horizontal-gradient', slug: 'testing--fixtures--simple-bars' },
   { name: 'line-multi-series', slug: 'testing--fixtures--gdp-growth' },
@@ -451,10 +451,16 @@ const stories: Array<{ name: string; slug: string; note?: string }> = [
     slug: 'testing--fixtures-dashboards--tiny-tile-metrics',
     note: '160px-tall cramped tile with a title and one metric: cramped now renders chromeMode "compact" (not "hidden"), so wantsMetrics reserves the metric bar.',
   },
+  {
+    name: 'agents-chat-analyst-final',
+    slug: 'agents--built-for-agents',
+    query: '&final=1',
+    note: 'Agents page with ?final=1: the chat analyst ends on the stacked, annotated chart the agent built over three turns.',
+  },
 ];
 
 for (const story of stories) {
   test(`visual: ${story.name}`, async ({ page }) => {
-    await captureStory(page, story.slug, `${story.name}.png`);
+    await captureStory(page, story.slug, `${story.name}.png`, story.query);
   });
 }
