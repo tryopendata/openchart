@@ -7,7 +7,7 @@
  * That works on-screen and, for exports, `injectThemeStyleBlock` inlines those
  * class rules into the export clone so they survive the detach from the page
  * stylesheet — the same mechanism that carries every other class-based chrome
- * element (brand dot, legend text, endpoint labels). See `theme-style-block.ts`.
+ * element (eyebrow dot, legend text, endpoint labels). See `theme-style-block.ts`.
  */
 
 import type { ChartLayout } from '@opendata-ai/openchart-core';

@@ -1432,7 +1432,7 @@ export function createChart<TData extends DataRow = DataRow>(
           })
         : svgElement;
     // The resolved theme, defaulted into the export options, so class-based
-    // chrome fills (metrics, brand dot, legend) survive serialization away from
+    // chrome fills (metrics, eyebrow dot, legend) survive serialization away from
     // the page stylesheet. An explicit options.theme still wins.
     const theme = 'theme' in currentLayout ? currentLayout.theme : undefined;
     const withTheme = <T extends { theme?: unknown }>(o: T | undefined): T =>
