@@ -8,9 +8,11 @@ Publication-quality data graphics from a JSON spec. You describe what the chart 
 
 The spec is a plain JSON object that both humans and LLMs can author. The headless engine means the same spec renders in React, Vue, Svelte, or vanilla JS without code changes.
 
+Because a chart is a JSON document, OpenChart works well as a render target for AI agents: the model writes the spec, `validateSpec` returns field-level errors it can fix, and updates animate in place. See [Built for agents](https://tryopendata.github.io/openchart/?story=agents--built-for-agents) for a walkthrough, and [Generating specs](docs/generating-specs.md) for the tool setup.
+
 <img alt="OpenChart example charts" src="https://github.com/user-attachments/assets/a08a9237-8fe0-45ff-8203-898848a142ab" />
 
-### [Interactive Examples](https://tryopendata.github.io/openchart/)
+### [Interactive Examples](https://tryopendata.github.io/openchart/) · [Built for agents](https://tryopendata.github.io/openchart/?story=agents--built-for-agents)
 
 ## Quick start
 
