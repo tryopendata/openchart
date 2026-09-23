@@ -36,6 +36,7 @@ let {
   tooltip,
   legend,
   fitOnLoad,
+  initialZoom,
   onnodeclick,
   onnodedoubleclick,
   onnodehover,
@@ -54,6 +55,8 @@ let {
   tooltip?: GraphTooltipProp;
   legend?: GraphLegendProp;
   fitOnLoad?: boolean;
+  /** How much closer than the fit the opening camera sits: a multiplier on the fit (2 = twice as close), not an absolute zoom level. Default 1. Read once at mount; `zoomToFit()` still frames the whole graph. */
+  initialZoom?: number;
   onnodeclick?: (node: Record<string, unknown>) => void;
   onnodedoubleclick?: (node: Record<string, unknown>) => void;
   onnodehover?: (node: Record<string, unknown> | null) => void;
@@ -139,6 +142,7 @@ $effect(() => {
     tooltip: tooltipOption,
     legend: untrack(() => legend),
     fitOnLoad: fit,
+    initialZoom: untrack(() => initialZoom),
     onNodeClick: (node) => untrack(() => onnodeclick)?.(node),
     onNodeDoubleClick: (node) => untrack(() => onnodedoubleclick)?.(node),
     onNodeHover: (node) => untrack(() => onnodehover)?.(node),

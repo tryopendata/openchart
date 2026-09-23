@@ -141,6 +141,13 @@ export interface GraphMountOptions {
    * restore a saved camera (e.g. getCamera() + flyTo) without the initial fit.
    */
   fitOnLoad?: boolean;
+  /**
+   * How much closer than the fit the load-time framing sits, as a multiplier on
+   * the fit (2 = twice as close). Default 1. Only the opening camera uses it;
+   * an explicit `zoomToFit()` still frames the whole graph. Ignored when
+   * `fitOnLoad` is false.
+   */
+  initialZoom?: number;
   /** Camera change callback, rAF-coalesced (fires at most once per rendered frame). */
   onCameraChange?: (camera: GraphCamera) => void;
   /** Skip the entrance reveal/flight on mount (spec unchanged; used by wrappers when recreating for a theme/darkMode-only change so the entrance doesn't replay). Warmup still runs. */
@@ -755,7 +762,9 @@ export function createGraph(
       spread: !warmed,
       insetTop: chromeInsetTop(),
     });
-    return transform;
+    const zoom = options?.initialZoom ?? 1;
+    if (!(zoom > 0) || zoom === 1) return transform;
+    return transform.zoomAt(clampK(transform.k * zoom), cw / 2, ch / 2);
   }
 
   /**

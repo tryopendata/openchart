@@ -69,6 +69,8 @@ export interface GraphProps {
   legend?: GraphLegendProp;
   /** Fit the graph to the viewport on the first tick. Default true. */
   fitOnLoad?: boolean;
+  /** How much closer than the fit the opening camera sits: a multiplier on the fit (2 = twice as close), not an absolute zoom level. Default 1. Read once at mount; `zoomToFit()` still frames the whole graph. */
+  initialZoom?: number;
   /** CSS class name for the wrapper div. */
   className?: string;
   /** Inline styles for the wrapper div. */
@@ -120,6 +122,7 @@ export const Graph = forwardRef<GraphHandle, GraphProps>(function Graph(
     tooltip,
     legend,
     fitOnLoad,
+    initialZoom,
     className,
     style,
   },
@@ -316,6 +319,8 @@ export const Graph = forwardRef<GraphHandle, GraphProps>(function Graph(
       tooltip: tooltipOption,
       legend,
       fitOnLoad,
+      // Only the opening camera reads it, so it is not a mount dep.
+      initialZoom,
       onNodeClick: stableOnNodeClick,
       onNodeDoubleClick: stableOnNodeDoubleClick,
       onNodeHover: stableOnNodeHover,

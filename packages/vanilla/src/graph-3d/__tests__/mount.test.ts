@@ -94,6 +94,14 @@ function linkObject(fake: FakeForceGraph3D, index: number) {
   return accessor(fake.graph.links[index] as unknown as Link3D);
 }
 
+function callDistance(call: FakeForceGraph3D['cameraPositionCalls'][number]): number {
+  return Math.hypot(
+    call.position.x - (call.lookAt?.x ?? 0),
+    call.position.y - (call.lookAt?.y ?? 0),
+    call.position.z - (call.lookAt?.z ?? 0),
+  );
+}
+
 beforeEach(() => {
   resetForceGraphFakes();
   resetAllocations();
@@ -294,6 +302,66 @@ describe('camera', () => {
     (fake.handlers.onEngineTick as () => void)();
     (fake.handlers.onEngineStop as () => void)();
     expect(fake.cameraPositionCalls).toHaveLength(0);
+  });
+
+  it('re-fits on every engine tick while the layout settles', () => {
+    const { fake } = mount();
+    const tick = fake.handlers.onEngineTick as () => void;
+    // No throttle: a throttled re-fit jumps the camera in visible steps while
+    // the cloud expands; a per-tick one glides with it.
+    tick();
+    tick();
+    tick();
+    expect(fake.cameraPositionCalls).toHaveLength(3);
+    expect(fake.cameraPositionCalls.every((c) => c.ms === 0)).toBe(true);
+  });
+
+  it('pulls the load framing in by initialZoom', () => {
+    const plain = mount();
+    (plain.fake.handlers.onEngineTick as () => void)();
+    const zoomed = mount(spec(), { initialZoom: 2 });
+    (zoomed.fake.handlers.onEngineTick as () => void)();
+    const plainDist = callDistance(plain.fake.cameraPositionCalls[0]);
+    const zoomedDist = callDistance(zoomed.fake.cameraPositionCalls[0]);
+    expect(zoomedDist).toBeLessThan(plainDist);
+    expect(zoomedDist).toBeGreaterThanOrEqual(plainDist / 2 - 1e-6);
+  });
+
+  it('frames the whole graph on an explicit zoomToFit despite initialZoom', () => {
+    const plain = mount();
+    plain.instance.zoomToFit({ duration: 0 });
+    const zoomed = mount(spec(), { initialZoom: 2 });
+    zoomed.instance.zoomToFit({ duration: 0 });
+    expect(callDistance(zoomed.fake.cameraPositionCalls[0])).toBeCloseTo(
+      callDistance(plain.fake.cameraPositionCalls[0]),
+    );
+  });
+
+  it('never zooms the load framing into a cloud stretched towards the camera', () => {
+    const { fake } = mount(spec(), { initialZoom: 20 });
+    // Deep along z (the default viewing axis), narrow across it: the fit
+    // distance is mostly near-side depth, which a naive divide would undercut.
+    for (const node of fake.graph.nodes as unknown as Node3D[]) {
+      node.z = (node.z ?? 0) * 10 + 500;
+    }
+    (fake.handlers.onEngineTick as () => void)();
+    const call = fake.cameraPositionCalls[0];
+    const nodes = fake.graph.nodes as unknown as Node3D[];
+    const nearest = Math.max(...nodes.map((n) => n.z ?? 0));
+    // The camera looks down -z from the +z side, so it must sit past every node.
+    expect(call.position.z).toBeGreaterThan(nearest);
+  });
+
+  it('under reduced motion, frames on the first tick and at stop only', () => {
+    vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: true } as MediaQueryList);
+    const { fake } = mount();
+    const tick = fake.handlers.onEngineTick as () => void;
+    tick();
+    tick();
+    tick();
+    expect(fake.cameraPositionCalls).toHaveLength(1);
+    (fake.handlers.onEngineStop as () => void)();
+    expect(fake.cameraPositionCalls).toHaveLength(2);
   });
 
   it('round-trips getCamera through flyTo', () => {

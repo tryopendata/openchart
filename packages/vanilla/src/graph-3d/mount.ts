@@ -111,8 +111,11 @@ const MAX_PIXEL_RATIO = 2;
 /** Fallback when the camera has not reported its own field of view yet. */
 const DEFAULT_FOV_DEG = 50;
 
-/** Throttle for the settle-phase auto re-fit (ms). */
-const AUTO_FIT_INTERVAL_MS = 250;
+/**
+ * Minimum gap, in scene units, between the camera and the near face of the
+ * cloud when `initialZoom` pulls the load framing in past the fit.
+ */
+const NEAR_CLEARANCE = 60;
 /** Camera standoff from a node for `zoomToNode`, in scene units. */
 export const NODE_FOCUS_DISTANCE = 120;
 /** Fallback flight duration when `animation.camera.duration` is `'auto'`. */
@@ -254,10 +257,12 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
 
   // The layout starts collapsed near the origin, so a single fit on the first
   // tick frames a blob and leaves the camera inside the cloud once it expands.
-  // Re-fit on a throttle while the simulation settles, and stop the moment the
-  // viewer takes the camera themselves.
+  // Re-fit on every tick while the simulation settles, and stop the moment the
+  // viewer takes the camera themselves. Every tick, not on a throttle: node
+  // positions move a little per tick, so a per-tick fit glides with the layout,
+  // while a throttled one jumps the camera in visible steps.
   let autoFit = true;
-  let lastAutoFit = 0;
+  let firstAutoFitDone = false;
   let cameraChangeQueued = false;
   /** Ids whose label won a slot in the last rank. `paint()` reads it so the
    * entrance can hide a label whose node has not popped in yet. */
@@ -759,7 +764,16 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
     fitNow(opts);
   }
 
-  function fitNow(opts?: CameraFlightOptions & { padding?: number }): void {
+  /**
+   * The settle-phase framing: the fit, pulled in by `initialZoom`. Called every
+   * tick while `autoFit` holds, so it must never animate.
+   */
+  function autoFitNow(): void {
+    firstAutoFitDone = true;
+    fitNow({ duration: 0 }, options?.initialZoom ?? 1);
+  }
+
+  function fitNow(opts?: CameraFlightOptions & { padding?: number }, zoom = 1): void {
     if (destroyed || nodeData.length === 0) return;
     const camera = graph.camera() as { fov?: number; aspect?: number } | undefined;
     const fit = computeFit(
@@ -780,7 +794,13 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
     if (!fit) return;
     // Mid-entrance the camera stands `entranceCameraPull ×` further back than
     // the true fit, easing to 1. See `startEntrance`.
-    const distance = fit.distance * entranceCameraPull;
+    // A zoomed-in framing never comes closer than the cloud's near face, or a
+    // cloud stretched along the view axis would put the camera inside it.
+    const framed =
+      zoom > 0 && zoom !== 1
+        ? Math.max(fit.distance / zoom, fit.nearDepth + NEAR_CLEARANCE)
+        : fit.distance;
+    const distance = framed * entranceCameraPull;
     graph.cameraPosition(
       {
         x: fit.center.x + fit.dir.x * distance,
@@ -1079,7 +1099,7 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
    *
    * The pull-in is expressed as a MULTIPLIER on the fit distance rather than as
    * its own camera flight. The settle-phase auto-fit re-frames the cloud every
-   * `AUTO_FIT_INTERVAL_MS` while the layout expands from its seeded blob, and a
+   * tick while the layout expands from its seeded blob, and a
    * flight to a distance computed at t=0 would be re-targeting a framing that is
    * already stale. As a multiplier the two compose: the auto-fit keeps deciding
    * WHAT to frame, the entrance only decides how far back to stand.
@@ -1131,9 +1151,9 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
         }
         if (enter.cameraFit) {
           entranceCameraPull = ENTRANCE_CAMERA_PULLBACK + (1 - ENTRANCE_CAMERA_PULLBACK) * ease(t);
-          // The auto-fit throttle is too coarse to carry a flight, so the
-          // entrance re-fits every frame while it owns the standoff.
-          if (autoFit && options?.fitOnLoad !== false) fitNow({ duration: 0 });
+          // The entrance clock and the engine tick are separate loops; re-fit
+          // here too so the pull-in eases every frame even between ticks.
+          if (autoFit && options?.fitOnLoad !== false) autoFitNow();
         }
         paint();
       },
@@ -1759,13 +1779,17 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
       // The node moves under a still pointer while the layout settles, so an
       // open tooltip has to follow it.
       anchorTooltip();
-      if (autoFit && options?.fitOnLoad !== false) {
-        const now = performance.now();
-        if (now - lastAutoFit > AUTO_FIT_INTERVAL_MS) {
-          lastAutoFit = now;
-          fitNow({ duration: 0 });
-          refreshLabels();
-        }
+      // Under reduced motion the camera does not ride the expansion: it frames
+      // once on the first tick and once more when the layout stops.
+      if (
+        autoFit &&
+        options?.fitOnLoad !== false &&
+        (!firstAutoFitDone || !prefersReducedMotion())
+      ) {
+        autoFitNow();
+        // Label ranking reads camera distance, so it follows the framing, but
+        // on its own throttle: a full re-rank every frame is wasted work.
+        if (performance.now() - lastLabelRank >= LABEL_RERANK_MS) refreshLabels();
       }
     })
     .onEngineStop(() => {
@@ -1776,7 +1800,7 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
       }
       if (autoFit && options?.fitOnLoad !== false) {
         autoFit = false;
-        fitNow({ duration: 0 });
+        autoFitNow();
       }
       refreshLabels();
     });

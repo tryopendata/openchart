@@ -356,6 +356,31 @@ describe('createGraph entrance', () => {
     graph.destroy();
   });
 
+  it('initialZoom scales the load framing; zoomToFit still frames everything', async () => {
+    stubMatchMedia(true);
+    container = makeContainer();
+    const plain = createGraph(container, warmedSpec, { suppressEntrance: true });
+    await Promise.resolve();
+    pumpRaf(0);
+    const fitK = plain.getCamera().k;
+    plain.destroy();
+
+    const zoomedContainer = makeContainer();
+    const zoomed = createGraph(zoomedContainer, warmedSpec, {
+      suppressEntrance: true,
+      initialZoom: 2,
+    });
+    await Promise.resolve();
+    pumpRaf(0);
+    expect(zoomed.getCamera().k).toBeCloseTo(fitK * 2, 5);
+
+    zoomed.zoomToFit({ duration: 0 });
+    expect(zoomed.getCamera().k).toBeCloseTo(fitK, 5);
+
+    zoomed.destroy();
+    zoomedContainer.remove();
+  });
+
   it('user wheel zoom fires the coalesced onCameraChange', async () => {
     container = makeContainer();
     const onCameraChange = vi.fn();

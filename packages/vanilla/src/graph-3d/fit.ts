@@ -27,6 +27,11 @@ export interface FitResult {
   /** Unit vector from `center` towards the camera. */
   dir: Vec3;
   distance: number;
+  /**
+   * How far the cloud reaches from `center` towards the camera. A camera closer
+   * than this to `center` sits inside the cloud.
+   */
+  nearDepth: number;
 }
 
 /** Inputs the mount reads off the live camera and shell. */
@@ -143,5 +148,5 @@ export function computeFit(points: FitPoint[], view: FitView): FitResult | null 
       (halfRight * slack) / Math.tan(hFov / 2),
       MIN_FIT_DISTANCE,
     ) + Math.max(0, nearDepth);
-  return { center, dir, distance };
+  return { center, dir, distance, nearDepth: Math.max(0, nearDepth) };
 }

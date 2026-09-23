@@ -41,6 +41,8 @@ export interface GraphProps {
   tooltip?: GraphTooltipProp;
   legend?: GraphLegendProp;
   fitOnLoad?: boolean;
+  /** How much closer than the fit the opening camera sits: a multiplier on the fit (2 = twice as close), not an absolute zoom level. Default 1. Read once at mount; `zoomToFit()` still frames the whole graph. */
+  initialZoom?: number;
   class?: string;
   style?: string | CSSProperties;
 }
@@ -75,6 +77,10 @@ export const Graph = defineComponent({
     },
     fitOnLoad: {
       type: Boolean,
+      default: undefined,
+    },
+    initialZoom: {
+      type: Number,
       default: undefined,
     },
     class: {
@@ -144,6 +150,7 @@ export const Graph = defineComponent({
         tooltip: tooltipOption,
         legend: props.legend,
         fitOnLoad: props.fitOnLoad,
+        initialZoom: props.initialZoom,
         onNodeClick: (node) => emit('node-click', node),
         onNodeDoubleClick: (node) => emit('node-double-click', node),
         onNodeHover: (node) => emit('node-hover', node),

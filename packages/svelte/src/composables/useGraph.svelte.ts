@@ -44,6 +44,8 @@ export interface UseGraphOptions {
   legend?: GraphMountOptions['legend'];
   /** Fit the graph to the viewport on the first tick. Default true. */
   fitOnLoad?: GraphMountOptions['fitOnLoad'];
+  /** How much closer than the fit the opening camera sits: a multiplier on the fit (2 = twice as close), not an absolute zoom level. Default 1. Read once at mount; `zoomToFit()` still frames the whole graph. */
+  initialZoom?: GraphMountOptions['initialZoom'];
   /** Node click handler. */
   onNodeClick?: GraphMountOptions['onNodeClick'];
   /** Node double-click handler. */
@@ -126,6 +128,7 @@ export function useGraph(
         tooltip: opts?.tooltip,
         legend: opts?.legend,
         fitOnLoad: opts?.fitOnLoad,
+        initialZoom: opts?.initialZoom,
         onNodeClick: opts?.onNodeClick,
         onNodeDoubleClick: opts?.onNodeDoubleClick,
         onNodeHover: opts?.onNodeHover,
