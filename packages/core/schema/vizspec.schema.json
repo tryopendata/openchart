@@ -6955,6 +6955,14 @@
           "minItems": 2,
           "maxItems": 2,
           "description": "Explicit extent [min, max] for binning."
+        },
+        "scaleType": {
+          "type": "string",
+          "enum": [
+            "linear",
+            "log"
+          ],
+          "description": "Scale type hint for the bin computation. When `'log'`, bin edges are log-spaced (equal width in log space) instead of linearly spaced. Set automatically by histogram sugar when `encoding.x.scale.type` is `'log'`."
         }
       },
       "additionalProperties": false,
@@ -7902,7 +7910,7 @@
               "$ref": "#/definitions/ChromeText"
             }
           ],
-          "description": "Right-anchored brand block on the footer row, paired with a small accent dot to its left. Visually balances the source/byline left-anchored text. When set, suppresses the default `OpenData` watermark for this chart."
+          "description": "Right-anchored brand block on the footer row. Visually balances the source/byline left-anchored text. When set, suppresses the default `OpenData` watermark for this chart."
         }
       },
       "additionalProperties": false,
@@ -9177,7 +9185,7 @@
             "string",
             "number"
           ],
-          "description": "The x value (matching `encoding.x`'s domain) where drawing starts. Data before this point renders normally; data at or after it is hidden behind a hatched \"draw here\" region until reveal."
+          "description": "The x value (matching `encoding.x`'s domain) where drawing starts. The line renders normally up to this point; data after it is hidden behind a hatched \"draw here\" region until reveal."
         },
         "prompt": {
           "type": "string",
@@ -9186,6 +9194,10 @@
         "revealLabel": {
           "type": "string",
           "description": "Label for the skip-to-reveal button. Defaults to \"Show me\"."
+        },
+        "resetLabel": {
+          "type": "string",
+          "description": "Label for the clear-drawing button, shown once the reader has drawn and hidden on reveal. Defaults to \"Clear\"."
         },
         "comparisonLine": {
           "type": "array",

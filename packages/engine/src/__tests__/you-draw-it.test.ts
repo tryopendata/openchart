@@ -33,7 +33,7 @@ function baseSpec(overrides: Partial<ChartSpec> = {}): ChartSpec {
 }
 
 describe('youDrawIt resolution', () => {
-  it('resolves geometry with samples at/after `from` in data coordinates', () => {
+  it('resolves geometry with samples strictly after `from` in data coordinates', () => {
     const layout = compileChart(baseSpec(), OPTS);
     const ydi = layout.youDrawIt;
     expect(ydi).toBeDefined();
@@ -42,9 +42,10 @@ describe('youDrawIt resolution', () => {
     expect(ydi!.fromX).toBeGreaterThan(ydi!.area.x);
     expect(ydi!.fromX).toBeLessThanOrEqual(ydi!.area.x + ydi!.area.width);
 
-    // Samples start at 2010 and run to the last x, carrying data x values.
+    // 2010 is the visible line end (the anchor), so samples start after it
+    // and run to the last x, carrying data x values.
     const xValues = ydi!.samples.map((s) => s.xValue);
-    expect(xValues).toEqual(['2010', '2015', '2020']);
+    expect(xValues).toEqual(['2015', '2020']);
 
     // Samples ascend by pixel x.
     const pxs = ydi!.samples.map((s) => s.px);
@@ -60,19 +61,51 @@ describe('youDrawIt resolution', () => {
     expect(inv!.topPixel).toBeLessThan(inv!.bottomPixel);
   });
 
-  it('applies default prompt and revealLabel', () => {
+  it('applies default prompt, revealLabel, and resetLabel', () => {
     const layout = compileChart(baseSpec(), OPTS);
     expect(layout.youDrawIt!.prompt).toBe('Draw your guess');
     expect(layout.youDrawIt!.revealLabel).toBe('Show me');
+    expect(layout.youDrawIt!.resetLabel).toBe('Clear');
   });
 
-  it('honors custom prompt and revealLabel', () => {
+  it('honors custom prompt, revealLabel, and resetLabel', () => {
     const layout = compileChart(
-      baseSpec({ youDrawIt: { from: '2010', prompt: 'Your turn', revealLabel: 'Reveal' } }),
+      baseSpec({
+        youDrawIt: {
+          from: '2010',
+          prompt: 'Your turn',
+          revealLabel: 'Reveal',
+          resetLabel: 'Erase',
+        },
+      }),
       OPTS,
     );
     expect(layout.youDrawIt!.prompt).toBe('Your turn');
     expect(layout.youDrawIt!.revealLabel).toBe('Reveal');
+    expect(layout.youDrawIt!.resetLabel).toBe('Erase');
+  });
+
+  it('anchors the guess on the data point when `from` is a data x', () => {
+    const layout = compileChart(baseSpec(), OPTS);
+    const ydi = layout.youDrawIt!;
+    const line = layout.marks.find((m) => m.type === 'line');
+    if (line?.type !== 'line') throw new Error('expected a line mark');
+    const atFrom = line.points.find((p) => Math.abs(p.x - ydi.fromX) <= 0.5);
+    expect(atFrom).toBeDefined();
+    expect(ydi.anchor).toEqual({ x: ydi.fromX, y: atFrom!.y });
+  });
+
+  it('interpolates the anchor when `from` falls between data points', () => {
+    const layout = compileChart(baseSpec({ youDrawIt: { from: '2012' } }), OPTS);
+    const ydi = layout.youDrawIt!;
+    const line = layout.marks.find((m) => m.type === 'line');
+    if (line?.type !== 'line') throw new Error('expected a line mark');
+    const before = line.points.filter((p) => p.x < ydi.fromX).at(-1)!;
+    const after = line.points.find((p) => p.x > ydi.fromX)!;
+    const t = (ydi.fromX - before.x) / (after.x - before.x);
+    expect(ydi.anchor!.x).toBe(ydi.fromX);
+    expect(ydi.anchor!.y).toBeCloseTo(before.y + t * (after.y - before.y), 6);
+    expect(ydi.samples.map((s) => s.xValue)).toEqual(['2015', '2020']);
   });
 
   it('resolves a comparison line to pixel points', () => {

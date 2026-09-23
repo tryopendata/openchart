@@ -12,9 +12,16 @@
  * State (the reader's in-progress guess) lives in this module's closure,
  * matching mount.ts's per-instance-closure convention (StrictMode double-
  * mount safe): a fresh `createYouDrawIt()` call gets a fresh closure.
+ *
+ * The guess is a dense trail, not a set of snapped samples: one entry per
+ * 1/TRAIL_RESOLUTION of the drawing region's width, holding a data-space y.
+ * Storing it as (region fraction, data value) rather than pixels keeps the
+ * drawing intact across resize re-renders. Per-sample values for `onReveal`
+ * are interpolated from the trail on demand.
  */
 
 import type { Point, ResolvedYouDrawIt } from '@opendata-ai/openchart-core';
+import { applySrOnlyStyles } from './dom-helpers';
 import { createSVGElement, SVG_NS, setAttrs } from './renderers/svg-dom';
 import { nextSvgId } from './svg-ids';
 
@@ -43,11 +50,25 @@ export interface YouDrawItController {
 /** Minimum touch target size (effective hit area), per WCAG 2.5.5 / mobile a11y conventions. */
 const MIN_TOUCH_TARGET = 24;
 
+/** Trail entries across the drawing region's width (~1px each at typical sizes). */
+const TRAIL_RESOLUTION = 1000;
+
+/** How far left of `from` the pointer overlay extends, so a press aimed at the visible line end still lands. */
+const START_SLOP_PX = 16;
+
+/** Minimum distance from `from` within which a first press starts the guess at the visible line end. */
+const ANCHOR_SNAP_MIN_PX = 40;
+
 /** Build the "M x,y L x,y ..." path string for a straight-segment line through points, sorted by x. */
 function buildLinearPath(points: Point[]): string {
   if (points.length === 0) return '';
   const sorted = [...points].sort((a, b) => a.x - b.x);
   return sorted.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
+}
+
+/** Round to two decimals for compact path strings. */
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
 }
 
 /**
@@ -62,9 +83,15 @@ export function createYouDrawIt(options: YouDrawItOptions): YouDrawItController 
   let revealed = false;
   let config: ResolvedYouDrawIt | null = null;
   let svgEl: SVGSVGElement | null = null;
-  /** Reader's guess: pixel y keyed by pixel x sample. */
-  const guessByX = new Map<number, number>();
+  /** Reader's guess: data-space y keyed by trail index (0..TRAIL_RESOLUTION across the drawing region). */
+  const trail = new Map<number, number>();
   let cleanupPointerEvents: (() => void) | null = null;
+  /**
+   * The pointer drawing the current stroke. Lives outside wirePointerEvents so
+   * a stroke survives a re-render mid-drag (resize, theme flip): the new
+   * overlay re-captures the pointer and the stroke carries on.
+   */
+  let activePointer: number | null = null;
 
   // ---------------------------------------------------------------------------
   // SVG elements (rebuilt each update() since the SVG itself is rebuilt on render)
@@ -180,13 +207,15 @@ export function createYouDrawIt(options: YouDrawItOptions): YouDrawItController 
     guessPath.setAttribute('pointer-events', 'none');
     group.appendChild(guessPath);
 
-    // Pointer-capture overlay over the drawing region only.
+    // Pointer-capture overlay over the drawing region, padded a little left of
+    // `from` so a press aimed at the visible line end still starts a stroke.
     if (!revealed) {
+      const overlayX = Math.max(area.x, fromX - START_SLOP_PX);
       const overlay = createSVGElement('rect');
       setAttrs(overlay, {
-        x: fromX,
+        x: overlayX,
         y: area.y,
-        width: regionWidth,
+        width: regionWidth + (fromX - overlayX),
         height: area.height,
         fill: 'transparent',
       });
@@ -205,26 +234,37 @@ export function createYouDrawIt(options: YouDrawItOptions): YouDrawItController 
     svg.appendChild(group);
   }
 
-  function redrawGuessPath(): void {
-    if (!svgEl) return;
-    const path = svgEl.querySelector<SVGPathElement>('[data-ydi-guess-path]');
-    if (!path) return;
-    const points: Point[] = Array.from(guessByX.entries()).map(([x, y]) => ({ x, y }));
-    path.setAttribute('d', buildLinearPath(points));
+  function regionWidthOf(cfg: ResolvedYouDrawIt): number {
+    return Math.max(0, cfg.area.x + cfg.area.width - cfg.fromX);
   }
 
-  function snapToNearestSample(px: number): number | null {
-    if (!config || config.samples.length === 0) return null;
-    let nearestPx = config.samples[0].px;
-    let best = Math.abs(nearestPx - px);
-    for (const s of config.samples) {
-      const d = Math.abs(s.px - px);
-      if (d < best) {
-        best = d;
-        nearestPx = s.px;
-      }
-    }
-    return nearestPx;
+  /** Pixel x → fractional trail index (unrounded). */
+  function pxToIndex(cfg: ResolvedYouDrawIt, px: number): number {
+    const w = regionWidthOf(cfg);
+    if (w === 0) return 0;
+    return ((px - cfg.fromX) / w) * TRAIL_RESOLUTION;
+  }
+
+  function indexToPx(cfg: ResolvedYouDrawIt, index: number): number {
+    return cfg.fromX + (index / TRAIL_RESOLUTION) * regionWidthOf(cfg);
+  }
+
+  function redrawGuessPath(): void {
+    if (!svgEl || !config) return;
+    const path = svgEl.querySelector<SVGPathElement>('[data-ydi-guess-path]');
+    if (!path) return;
+    const cfg = config;
+    const points: Point[] = Array.from(trail.entries()).map(([i, v]) => ({
+      x: round2(indexToPx(cfg, i)),
+      y: round2(dataToPixelY(v)),
+    }));
+    path.setAttribute('d', buildLinearPath(points));
+    syncResetButton();
+  }
+
+  function clampX(px: number): number {
+    if (!config) return px;
+    return Math.min(config.area.x + config.area.width, Math.max(config.fromX, px));
   }
 
   function clampY(py: number): number {
@@ -232,83 +272,120 @@ export function createYouDrawIt(options: YouDrawItOptions): YouDrawItController 
     return Math.min(config.area.y + config.area.height, Math.max(config.area.y, py));
   }
 
+  /**
+   * Write the trail across the pixel segment (x0,y0)→(x1,y1), one entry per
+   * trail index it crosses, with y interpolated along the segment. Filling
+   * every index in between means a fast sweep (sparse pointer events) still
+   * leaves a continuous guess, and a backward sweep overwrites what it crosses.
+   */
+  function paintSegment(x0: number, y0: number, x1: number, y1: number): void {
+    if (!config) return;
+    const i0 = pxToIndex(config, x0);
+    const i1 = pxToIndex(config, x1);
+    const lo = Math.max(0, Math.ceil(Math.min(i0, i1)));
+    const hi = Math.min(TRAIL_RESOLUTION, Math.floor(Math.max(i0, i1)));
+    const span = i1 - i0;
+    for (let i = lo; i <= hi; i++) {
+      const t = span === 0 ? 1 : (i - i0) / span;
+      trail.set(i, pixelYToData(y0 + t * (y1 - y0)));
+    }
+    // Always record the endpoint itself so a single tap leaves a mark.
+    const end = Math.min(TRAIL_RESOLUTION, Math.max(0, Math.round(i1)));
+    trail.set(end, pixelYToData(y1));
+  }
+
   // ---------------------------------------------------------------------------
   // Pointer capture (mouse + touch), following the crosshair toSvgCoords pattern
   // ---------------------------------------------------------------------------
 
   function wirePointerEvents(svg: SVGSVGElement): () => void {
-    const overlay = svg.querySelector('[data-ydi-overlay]');
+    const overlay = svg.querySelector<SVGRectElement>('[data-ydi-overlay]');
     if (!overlay) return () => {};
 
-    let dragging = false;
+    // Pixel position of the previous pointer event in this render. Reset on
+    // re-render, since pixel geometry may have changed; the next move then
+    // resumes the stroke from where the pointer is.
+    let last: Point | null = null;
+    if (activePointer !== null) {
+      try {
+        overlay.setPointerCapture?.(activePointer);
+      } catch {
+        // The pointer lifted during the re-render; the stroke is over.
+        activePointer = null;
+      }
+    }
 
-    const toSvgCoords = (clientX: number, clientY: number) => {
+    const toSvgPoint = (clientX: number, clientY: number): Point => {
       const svgRect = svg.getBoundingClientRect();
       const viewBox = svg.viewBox?.baseVal;
       const scaleX = viewBox?.width && svgRect.width ? viewBox.width / svgRect.width : 1;
       const scaleY = viewBox?.height && svgRect.height ? viewBox.height / svgRect.height : 1;
       return {
-        svgX: (clientX - svgRect.left) * scaleX,
-        svgY: (clientY - svgRect.top) * scaleY,
+        x: clampX((clientX - svgRect.left) * scaleX),
+        y: clampY((clientY - svgRect.top) * scaleY),
       };
     };
 
-    const paintAt = (clientX: number, clientY: number) => {
-      const { svgX, svgY } = toSvgCoords(clientX, clientY);
-      const snapped = snapToNearestSample(svgX);
-      if (snapped === null) return;
-      guessByX.set(snapped, clampY(svgY));
+    /**
+     * Whether a stroke's first point is close enough to `from` to start the
+     * guess at the visible line end. A press far to the right starts where it
+     * lands instead, so we never invent a ramp the reader didn't draw.
+     */
+    const nearAnchor = (p: Point): boolean => {
+      if (!config?.anchor) return false;
+      const firstGap = config.samples.length > 0 ? config.samples[0].px - config.fromX : 0;
+      return p.x - config.fromX <= Math.max(ANCHOR_SNAP_MIN_PX, firstGap * 1.5);
+    };
+
+    const handleDown = (e: Event) => {
+      const pe = e as PointerEvent;
+      if (pe.cancelable) pe.preventDefault();
+      activePointer = pe.pointerId;
+      overlay.setPointerCapture?.(pe.pointerId);
+      const p = toSvgPoint(pe.clientX, pe.clientY);
+      const anchor = config?.anchor;
+      if (trail.size === 0 && anchor && nearAnchor(p)) {
+        paintSegment(anchor.x, anchor.y, p.x, p.y);
+      } else {
+        paintSegment(p.x, p.y, p.x, p.y);
+      }
+      last = p;
       redrawGuessPath();
     };
 
-    const handleMouseDown = (e: Event) => {
-      const me = e as MouseEvent;
-      dragging = true;
-      paintAt(me.clientX, me.clientY);
-    };
-    const handleMouseMove = (e: Event) => {
-      if (!dragging) return;
-      const me = e as MouseEvent;
-      paintAt(me.clientX, me.clientY);
-    };
-    const handleMouseUp = () => {
-      dragging = false;
-    };
-
-    const handleTouchStart = (e: Event) => {
-      const te = e as TouchEvent;
-      if (te.touches.length === 0) return;
-      if (te.cancelable) te.preventDefault();
-      dragging = true;
-      paintAt(te.touches[0].clientX, te.touches[0].clientY);
-    };
-    const handleTouchMove = (e: Event) => {
-      if (!dragging) return;
-      const te = e as TouchEvent;
-      if (te.touches.length === 0) return;
-      if (te.cancelable) te.preventDefault();
-      paintAt(te.touches[0].clientX, te.touches[0].clientY);
-    };
-    const handleTouchEnd = () => {
-      dragging = false;
+    const handleMove = (e: Event) => {
+      const pe = e as PointerEvent;
+      if (activePointer !== pe.pointerId) return;
+      if (pe.cancelable) pe.preventDefault();
+      // Coalesced events carry the full-rate pointer path between frames.
+      const coalesced = pe.getCoalescedEvents?.() ?? [];
+      const events = coalesced.length > 0 ? coalesced : [pe];
+      for (const ev of events) {
+        const p = toSvgPoint(ev.clientX, ev.clientY);
+        const from = last ?? p;
+        paintSegment(from.x, from.y, p.x, p.y);
+        last = p;
+      }
+      redrawGuessPath();
     };
 
-    overlay.addEventListener('mousedown', handleMouseDown);
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-    overlay.addEventListener('touchstart', handleTouchStart, { passive: false });
-    overlay.addEventListener('touchmove', handleTouchMove, { passive: false });
-    overlay.addEventListener('touchend', handleTouchEnd);
-    overlay.addEventListener('touchcancel', handleTouchEnd);
+    const handleUp = (e: Event) => {
+      const pe = e as PointerEvent;
+      if (activePointer !== pe.pointerId) return;
+      activePointer = null;
+      last = null;
+    };
+
+    overlay.addEventListener('pointerdown', handleDown);
+    overlay.addEventListener('pointermove', handleMove);
+    overlay.addEventListener('pointerup', handleUp);
+    overlay.addEventListener('pointercancel', handleUp);
 
     return () => {
-      overlay.removeEventListener('mousedown', handleMouseDown);
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      overlay.removeEventListener('touchstart', handleTouchStart);
-      overlay.removeEventListener('touchmove', handleTouchMove);
-      overlay.removeEventListener('touchend', handleTouchEnd);
-      overlay.removeEventListener('touchcancel', handleTouchEnd);
+      overlay.removeEventListener('pointerdown', handleDown);
+      overlay.removeEventListener('pointermove', handleMove);
+      overlay.removeEventListener('pointerup', handleUp);
+      overlay.removeEventListener('pointercancel', handleUp);
     };
   }
 
@@ -324,11 +401,27 @@ export function createYouDrawIt(options: YouDrawItOptions): YouDrawItController 
   const prompt = document.createElement('div');
   prompt.className = 'oc-ydi-prompt';
 
+  const resetButton = document.createElement('button');
+  resetButton.type = 'button';
+  resetButton.className = 'oc-ydi-reset-button';
+  resetButton.hidden = true;
+
   const revealButton = document.createElement('button');
   revealButton.type = 'button';
   revealButton.className = 'oc-ydi-reveal-button';
 
-  root.append(prompt, revealButton);
+  const actions = document.createElement('div');
+  actions.className = 'oc-ydi-actions';
+  actions.append(resetButton, revealButton);
+
+  // Polite live region: the clear button hides itself on click, so this is
+  // the only confirmation a screen-reader user gets that it worked.
+  const live = document.createElement('span');
+  live.className = 'oc-sr-only';
+  applySrOnlyStyles(live);
+  live.setAttribute('aria-live', 'polite');
+
+  root.append(prompt, actions, live);
   container.style.position = container.style.position || 'relative';
   container.appendChild(root);
 
@@ -367,12 +460,51 @@ export function createYouDrawIt(options: YouDrawItOptions): YouDrawItController 
     return inv.topData + t * (inv.bottomData - inv.topData);
   }
 
+  /** Inverse of `pixelYToData`, against the current config (so it tracks resizes). */
+  function dataToPixelY(value: number): number {
+    if (!config) return value;
+    const inv = config.yInvert;
+    if (!inv) {
+      const area = config.area;
+      return area.y + (1 - value) * area.height;
+    }
+    const dataSpan = inv.bottomData - inv.topData;
+    if (dataSpan === 0) return inv.topPixel;
+    const t = (value - inv.topData) / dataSpan;
+    return inv.topPixel + t * (inv.bottomPixel - inv.topPixel);
+  }
+
+  /**
+   * The guess at each x sample, interpolated from the trail. Samples outside
+   * the drawn span are omitted, so an undrawn stretch is never reported.
+   */
   function getGuessData(): Array<{ x: string | number; y: number }> {
-    if (!config) return [];
-    const valueByPx = new Map(config.samples.map((s) => [s.px, s.xValue]));
-    return Array.from(guessByX.entries())
-      .sort((a, b) => a[0] - b[0])
-      .map(([px, py]) => ({ x: valueByPx.get(px) ?? px, y: pixelYToData(py) }));
+    if (!config || trail.size === 0) return [];
+    const cfg = config;
+    const keys = Array.from(trail.keys()).sort((a, b) => a - b);
+    const first = keys[0];
+    const lastKey = keys[keys.length - 1];
+    const out: Array<{ x: string | number; y: number }> = [];
+    for (const sample of cfg.samples) {
+      const i = pxToIndex(cfg, sample.px);
+      if (i < first - 0.5 || i > lastKey + 0.5) continue;
+      // Find the trail entries bracketing i and interpolate between them.
+      let hiPos = keys.findIndex((k) => k >= i);
+      if (hiPos === -1) hiPos = keys.length - 1;
+      const loPos = hiPos > 0 && keys[hiPos] > i ? hiPos - 1 : hiPos;
+      const k0 = keys[loPos];
+      const k1 = keys[hiPos];
+      const v0 = trail.get(k0)!;
+      const v1 = trail.get(k1)!;
+      const t = k1 === k0 ? 0 : (i - k0) / (k1 - k0);
+      out.push({ x: sample.xValue, y: v0 + t * (v1 - v0) });
+    }
+    return out;
+  }
+
+  /** The clear button shows only while there is a drawing to clear and before reveal. */
+  function syncResetButton(): void {
+    resetButton.hidden = revealed || trail.size === 0;
   }
 
   function doReveal(): void {
@@ -400,11 +532,34 @@ export function createYouDrawIt(options: YouDrawItOptions): YouDrawItController 
     root.classList.add('oc-ydi-revealed');
     prompt.textContent = '';
     revealButton.disabled = true;
+    syncResetButton();
 
     onReveal?.(getGuessData());
   }
 
+  function doReset(): void {
+    if (destroyed) return;
+    revealed = false;
+    trail.clear();
+    revealButton.disabled = false;
+    root.classList.remove('oc-ydi-revealed');
+    live.textContent = '';
+    syncResetButton();
+    if (config && svgEl) {
+      render(config, svgEl);
+      prompt.textContent = config.prompt;
+      cleanupPointerEvents?.();
+      cleanupPointerEvents = wirePointerEvents(svgEl);
+    }
+  }
+
   revealButton.addEventListener('click', doReveal);
+  resetButton.addEventListener('click', () => {
+    doReset();
+    // The clear button just hid itself; keep keyboard focus on the controls.
+    revealButton.focus();
+    live.textContent = 'Drawing cleared';
+  });
 
   return {
     update(cfg: ResolvedYouDrawIt, svg: SVGSVGElement): void {
@@ -423,6 +578,10 @@ export function createYouDrawIt(options: YouDrawItOptions): YouDrawItController 
       revealButton.setAttribute('aria-label', cfg.revealLabel);
       revealButton.style.minHeight = `${MIN_TOUCH_TARGET}px`;
       revealButton.disabled = revealed;
+      resetButton.textContent = cfg.resetLabel;
+      resetButton.setAttribute('aria-label', `${cfg.resetLabel} your drawing`);
+      resetButton.style.minHeight = `${MIN_TOUCH_TARGET}px`;
+      syncResetButton();
       if (revealed) root.classList.add('oc-ydi-revealed');
       else root.classList.remove('oc-ydi-revealed');
 
@@ -454,17 +613,8 @@ export function createYouDrawIt(options: YouDrawItOptions): YouDrawItController 
       doReveal();
     },
     reset(): void {
-      if (destroyed) return;
-      revealed = false;
-      guessByX.clear();
-      revealButton.disabled = false;
-      root.classList.remove('oc-ydi-revealed');
-      if (config && svgEl) {
-        render(config, svgEl);
-        prompt.textContent = config.prompt;
-        cleanupPointerEvents?.();
-        cleanupPointerEvents = wirePointerEvents(svgEl);
-      }
+      activePointer = null;
+      doReset();
     },
     get isRevealed(): boolean {
       return revealed;

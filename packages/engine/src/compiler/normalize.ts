@@ -316,6 +316,7 @@ function normalizeYouDrawIt(
   return {
     prompt: 'Draw your guess',
     revealLabel: 'Show me',
+    resetLabel: 'Clear',
     ...spec.youDrawIt,
   };
 }

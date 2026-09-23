@@ -1347,7 +1347,7 @@ Each field accepts either a plain string or a `ChromeText` object for style over
 | `source`   | Below chart area                | 12px, normal (400), `#999999`                                |
 | `byline`   | Below source                    | 12px, normal (400), `#999999`                                |
 | `footer`   | Below byline                    | 12px, normal (400), `#999999`                                |
-| `brand`    | Right-aligned on the source row | 12px — leading accent dot, suppresses the default watermark  |
+| `brand`    | Right-aligned on the source row | 12px, suppresses the default watermark                       |
 
 **KPI metric row** is a separate top-level field on chart specs, not part of `Chrome`. Use `metrics: Metric[]` on the chart spec for a horizontal row of label+value cells rendered between the subtitle and the chart area. Each cell can carry a delta and a secondary value. See `Metric` in `core/src/types/spec.ts` for the full shape.
 
