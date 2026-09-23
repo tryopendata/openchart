@@ -573,6 +573,17 @@ describe('you draw it', () => {
     expect(guessPath(container)!.getAttribute('d')).toBe(d);
   });
 
+  it('losing pointer capture ends the stroke', () => {
+    chart = createChart(container, makeSpec());
+    const ydi = chart.layout.youDrawIt!;
+    const rect = overlay(container)!;
+    drawAt(rect, ydi.fromX, 150);
+    rect.dispatchEvent(pointer('lostpointercapture'));
+    const d = guessPath(container)!.getAttribute('d');
+    dragTo(rect, ydi.samples[1].px, 250);
+    expect(guessPath(container)!.getAttribute('d')).toBe(d);
+  });
+
   it('resetDrawing mid-stroke drops the stroke', () => {
     chart = createChart(container, makeSpec());
     const ydi = chart.layout.youDrawIt!;

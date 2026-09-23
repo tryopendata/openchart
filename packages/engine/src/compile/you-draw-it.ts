@@ -44,6 +44,13 @@ function resolveYInvert(scaleY: ResolvedScales['y'], area: Rect): ResolvedYouDra
 }
 
 /**
+ * Tolerance for "this point sits at `from`". Line points and `fromX` come
+ * from the same scale, so they match up to float noise; a pixel-sized
+ * tolerance would misclassify genuinely distinct points in dense data.
+ */
+const AT_FROM_EPSILON = 1e-6;
+
+/**
  * The target line's position at `fromX`: where the visible line ends and the
  * reader's guess starts. Uses the point at `fromX` when there is one, else
  * interpolates between the neighbors on either side. Undefined when `fromX`
@@ -53,7 +60,7 @@ function resolveAnchor(points: Point[], fromX: number): Point | undefined {
   const sorted = [...points].sort((a, b) => a.x - b.x);
   for (let i = 0; i < sorted.length; i++) {
     const p = sorted[i];
-    if (Math.abs(p.x - fromX) <= 0.5) return { x: fromX, y: p.y };
+    if (Math.abs(p.x - fromX) <= AT_FROM_EPSILON) return { x: fromX, y: p.y };
     if (p.x > fromX) {
       if (i === 0) return undefined;
       const prev = sorted[i - 1];
@@ -93,7 +100,7 @@ export function resolveYouDrawIt(
   const samples: YouDrawItSample[] = [];
   if (targetLine.dataPoints?.length) {
     for (const dp of targetLine.dataPoints) {
-      if (dp.x <= fromX + 0.5) continue;
+      if (dp.x <= fromX + AT_FROM_EPSILON) continue;
       if (seen.has(dp.x)) continue;
       seen.add(dp.x);
       const raw = xField ? dp.datum[xField] : undefined;
@@ -106,7 +113,7 @@ export function resolveYouDrawIt(
     // onReveal still has x positions to report at, using pixel x as the
     // identity when we can't recover the data value.
     for (const p of targetLine.points) {
-      if (p.x <= fromX + 0.5) continue;
+      if (p.x <= fromX + AT_FROM_EPSILON) continue;
       if (seen.has(p.x)) continue;
       seen.add(p.x);
       samples.push({ px: p.x, xValue: p.x });

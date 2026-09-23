@@ -411,11 +411,11 @@ export function createYouDrawIt(options: YouDrawItOptions): YouDrawItController 
       endStroke();
     };
 
-    // Capture lost for any other reason: the next move restarts from where the
-    // pointer is instead of bridging a jump. activePointer is kept so the
-    // re-render path (which re-captures) keeps the stroke alive.
+    // Capture lost (the browser took it away, or the pointer lifted): the
+    // stroke is over. A re-render doesn't land here: update() removes these
+    // listeners before swapping the overlay, then the new one re-captures.
     const handleLostCapture = () => {
-      last = null;
+      endStroke();
     };
 
     overlay.addEventListener('pointerdown', handleDown);
