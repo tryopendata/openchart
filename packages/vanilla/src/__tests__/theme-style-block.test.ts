@@ -16,7 +16,7 @@ describe('buildThemeStyleBlock', () => {
     expect(css).toContain('.oc-metric-value');
     expect(css).toContain('.oc-metric-delta-up');
     expect(css).toContain('.oc-metric-delta-down');
-    expect(css).toContain('.oc-brand-dot');
+    expect(css).toContain('.oc-eyebrow-dot');
     expect(css).toContain('.oc-legend text');
     expect(css).toContain('.oc-endpoint-label');
 

@@ -44,6 +44,34 @@ function resolveYInvert(scaleY: ResolvedScales['y'], area: Rect): ResolvedYouDra
 }
 
 /**
+ * Tolerance for "this point sits at `from`". Line points and `fromX` come
+ * from the same scale, so they match up to float noise; a pixel-sized
+ * tolerance would misclassify genuinely distinct points in dense data.
+ */
+const AT_FROM_EPSILON = 1e-6;
+
+/**
+ * The target line's position at `fromX`: where the visible line ends and the
+ * reader's guess starts. Uses the point at `fromX` when there is one, else
+ * interpolates between the neighbors on either side. Undefined when `fromX`
+ * falls outside the line's x extent.
+ */
+function resolveAnchor(points: Point[], fromX: number): Point | undefined {
+  const sorted = [...points].sort((a, b) => a.x - b.x);
+  for (let i = 0; i < sorted.length; i++) {
+    const p = sorted[i];
+    if (Math.abs(p.x - fromX) <= AT_FROM_EPSILON) return { x: fromX, y: p.y };
+    if (p.x > fromX) {
+      if (i === 0) return undefined;
+      const prev = sorted[i - 1];
+      const t = (fromX - prev.x) / (p.x - prev.x);
+      return { x: fromX, y: prev.y + t * (p.y - prev.y) };
+    }
+  }
+  return undefined;
+}
+
+/**
  * Resolve `youDrawIt` into pixel geometry, or undefined when the config is
  * absent, no line mark was produced (e.g. empty data), or `from` doesn't
  * resolve to a position on the x scale.
@@ -63,15 +91,16 @@ export function resolveYouDrawIt(
   const fromX = resolvePosition(config.from, scales.x);
   if (fromX === null) return undefined;
 
-  // Pair each pixel-x sample at/after `from` with its data-x value, so the
-  // vanilla layer can report the guess in data coordinates on reveal. Prefer
-  // dataPoints (carries the original datum) and fall back to the raw point x
-  // when dataPoints is absent (e.g. a single-point degenerate line).
+  // Pair each pixel-x sample strictly after `from` with its data-x value, so
+  // the vanilla layer can report the guess in data coordinates on reveal. A
+  // point sitting at `from` is the visible line end (the anchor), not a guess.
+  // Prefer dataPoints (carries the original datum) and fall back to the raw
+  // point x when dataPoints is absent (e.g. a single-point degenerate line).
   const seen = new Set<number>();
   const samples: YouDrawItSample[] = [];
   if (targetLine.dataPoints?.length) {
     for (const dp of targetLine.dataPoints) {
-      if (dp.x < fromX - 0.5) continue;
+      if (dp.x <= fromX + AT_FROM_EPSILON) continue;
       if (seen.has(dp.x)) continue;
       seen.add(dp.x);
       const raw = xField ? dp.datum[xField] : undefined;
@@ -81,10 +110,10 @@ export function resolveYouDrawIt(
   }
   if (samples.length === 0) {
     // No dataPoints (or none past `from`): fall back to geometric point xs so
-    // drawing still snaps, reporting pixel x as the identity when we can't
-    // recover the data value.
+    // onReveal still has x positions to report at, using pixel x as the
+    // identity when we can't recover the data value.
     for (const p of targetLine.points) {
-      if (p.x < fromX - 0.5) continue;
+      if (p.x <= fromX + AT_FROM_EPSILON) continue;
       if (seen.has(p.x)) continue;
       seen.add(p.x);
       samples.push({ px: p.x, xValue: p.x });
@@ -108,6 +137,7 @@ export function resolveYouDrawIt(
   }
 
   const yInvert = resolveYInvert(scales.y, chartArea);
+  const anchor = resolveAnchor(targetLine.points, fromX);
 
   return {
     fromX,
@@ -115,9 +145,11 @@ export function resolveYouDrawIt(
     samples,
     prompt: config.prompt ?? 'Draw your guess',
     revealLabel: config.revealLabel ?? 'Show me',
+    resetLabel: config.resetLabel ?? 'Clear',
     lineColor: targetLine.stroke,
     targetSeriesKey: targetLine.seriesKey,
     ...(yInvert ? { yInvert } : {}),
+    ...(anchor ? { anchor } : {}),
     ...(comparisonPoints ? { comparisonPoints } : {}),
   };
 }

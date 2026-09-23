@@ -62,7 +62,7 @@ There is no `type: "line"` grammar. Charts use `mark`, following Vega-Lite. `mar
   width?: number, height?: number,
   animation?: boolean | AnimationConfig,
   seriesSearch?: boolean | { placeholder?: string },   // "find your country" typeahead; needs categorical color
-  youDrawIt?: { from, prompt?, revealLabel?, comparisonLine? },  // reader-draws-the-trend; line marks, single series
+  youDrawIt?: { from, prompt?, revealLabel?, resetLabel?, comparisonLine? },  // reader-draws-the-trend; line marks, single series
   crosshair?: boolean,
   display?: "full" | "sparkline",
   facet via encoding.facet + resolve?: { scale?, axis?, legend? },  // small multiples

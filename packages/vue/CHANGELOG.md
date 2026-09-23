@@ -1,5 +1,12 @@
 # Changelog
 
+## [8.7.0](https://github.com/tryopendata/openchart/compare/core-v8.6.4...core-v8.7.0) (2026-09-23)
+
+
+### Features
+
+* continuous pen-stroke drawing and a Clear button (#126) ([4a300aa](https://github.com/tryopendata/openchart/commit/4a300aa))
+
 ## [8.6.4](https://github.com/tryopendata/openchart/compare/core-v8.6.3...core-v8.6.4) (2026-09-23)
 
 

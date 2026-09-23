@@ -1008,8 +1008,8 @@ export interface Chrome {
   /** Footer text, displayed at the very bottom. */
   footer?: string | ChromeText;
   /**
-   * Right-anchored brand block on the footer row, paired with a small accent
-   * dot to its left. Visually balances the source/byline left-anchored text.
+   * Right-anchored brand block on the footer row. Visually balances the
+   * source/byline left-anchored text.
    * When set, suppresses the default `OpenData` watermark for this chart.
    */
   brand?: string | ChromeText;
@@ -1472,15 +1472,17 @@ export interface SeriesSearchConfig {
  */
 export interface YouDrawItConfig {
   /**
-   * The x value (matching `encoding.x`'s domain) where drawing starts. Data
-   * before this point renders normally; data at or after it is hidden behind
-   * a hatched "draw here" region until reveal.
+   * The x value (matching `encoding.x`'s domain) where drawing starts. The
+   * line renders normally up to this point; data after it is hidden behind a
+   * hatched "draw here" region until reveal.
    */
   from: string | number;
   /** Prompt text shown in the hatched drawing region. Defaults to "Draw your guess". */
   prompt?: string;
   /** Label for the skip-to-reveal button. Defaults to "Show me". */
   revealLabel?: string;
+  /** Label for the clear-drawing button, shown once the reader has drawn and hidden on reveal. Defaults to "Clear". */
+  resetLabel?: string;
   /**
    * Optional extra comparison line (e.g. "what everyone else guessed"),
    * supplied by the host app. Rendered in a third, visually distinct style

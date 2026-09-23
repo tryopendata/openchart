@@ -87,10 +87,20 @@
     display: none;
   }
 
-  /* Skip-to-reveal button. pointer-events re-enabled (the overlay disables it)
-   * so it stays clickable and keyboard-reachable. Min height enforced inline by
-   * the adapter (>= 24px effective touch target). */
-  .oc-ydi-reveal-button {
+  /* Clear + reveal buttons, side by side at the bottom-right. */
+  .oc-ydi-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    pointer-events: none;
+  }
+
+  /* Skip-to-reveal and clear buttons. pointer-events re-enabled (the overlay
+   * disables it) so they stay clickable and keyboard-reachable. Min height
+   * enforced inline by the adapter (>= 24px effective touch target). */
+  .oc-ydi-reveal-button,
+  .oc-ydi-reset-button {
     pointer-events: auto;
     display: inline-flex;
     align-items: center;
@@ -103,6 +113,7 @@
     font-family: inherit;
     font-size: 13px;
     font-weight: 500;
+    white-space: nowrap;
     cursor: pointer;
     box-shadow: var(--oc-tooltip-shadow);
     transition:
@@ -110,11 +121,17 @@
       border-color 0.15s;
   }
 
-  .oc-ydi-reveal-button:hover {
+  .oc-ydi-reset-button[hidden] {
+    display: none;
+  }
+
+  .oc-ydi-reveal-button:hover,
+  .oc-ydi-reset-button:hover {
     background: var(--oc-hover-bg);
   }
 
-  .oc-ydi-reveal-button:focus-visible {
+  .oc-ydi-reveal-button:focus-visible,
+  .oc-ydi-reset-button:focus-visible {
     outline: 2px solid var(--oc-focus);
     outline-offset: 2px;
   }

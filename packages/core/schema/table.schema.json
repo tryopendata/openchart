@@ -441,7 +441,7 @@
               "$ref": "#/definitions/ChromeText"
             }
           ],
-          "description": "Right-anchored brand block on the footer row, paired with a small accent dot to its left. Visually balances the source/byline left-anchored text. When set, suppresses the default `OpenData` watermark for this chart."
+          "description": "Right-anchored brand block on the footer row. Visually balances the source/byline left-anchored text. When set, suppresses the default `OpenData` watermark for this chart."
         }
       },
       "additionalProperties": false,

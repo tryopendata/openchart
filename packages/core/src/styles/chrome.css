@@ -43,10 +43,6 @@
     fill: var(--oc-text-faint);
   }
 
-  .oc-brand-dot {
-    fill: var(--oc-accent);
-  }
-
   .oc-eyebrow-dot {
     fill: var(--oc-accent);
   }

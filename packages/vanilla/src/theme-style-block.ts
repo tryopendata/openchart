@@ -2,7 +2,7 @@
  * Theme `<style>` block for self-contained SVG export.
  *
  * Charts render most fills as inline SVG attributes, but a handful of chrome
- * elements (metric cells, the brand watermark dot, legend text, endpoint labels)
+ * elements (metric cells, the eyebrow dot, legend text, endpoint labels)
  * take their fill from CSS classes in `chrome.css` via `--oc-*` variables. That
  * works on-screen because the live SVG inherits the page stylesheet — but a
  * serialized/rasterized export (PNG/JPG/GIF) is detached from the page, so those
@@ -71,7 +71,6 @@ export function buildThemeStyleBlock(theme: ResolvedTheme): string {
     `.oc-subtitle { font-size: var(--oc-subtitle-size); font-weight: var(--oc-subtitle-weight); fill: var(--oc-text-muted); }`,
     `.oc-source, .oc-byline, .oc-footer { font-size: var(--oc-source-size); font-weight: var(--oc-source-weight); fill: var(--oc-text-muted); }`,
     `.oc-brand { font-size: 11px; font-weight: 500; letter-spacing: 0.02em; fill: var(--oc-text-faint); }`,
-    `.oc-brand-dot { fill: var(--oc-accent); }`,
     `.oc-eyebrow-dot { fill: var(--oc-accent); }`,
     `.oc-metrics { font-family: var(--oc-font-family); }`,
     `.oc-metric-label { font-size: 11px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; fill: var(--oc-text-muted); }`,
