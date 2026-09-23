@@ -38,7 +38,7 @@ describe('renderStaticSVG', () => {
   it('includes the inlined style block with theme values', () => {
     const svg = renderStaticSVG(lineSpec);
     expect(svg).toContain('<style');
-    expect(svg).toContain('.oc-brand-dot');
+    expect(svg).toContain('.oc-eyebrow-dot');
   });
 
   it('scopes custom properties to svg.oc-chart, not :root', () => {
@@ -53,7 +53,7 @@ describe('renderStaticSVG', () => {
     expect(svg).toContain('fill: var(--oc-text)');
     expect(svg).toContain('fill: var(--oc-text-muted)');
     expect(svg).toContain('font-family: var(--oc-font-family)');
-    expect(svg).not.toMatch(/\.oc-brand-dot \{ fill: #[0-9a-f]{6}/i);
+    expect(svg).not.toMatch(/\.oc-eyebrow-dot \{ fill: #[0-9a-f]{6}/i);
   });
 
   it('renders bar charts', () => {

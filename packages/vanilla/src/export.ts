@@ -20,7 +20,7 @@ export interface SVGExportOptions {
   embedFonts?: boolean;
   /**
    * Resolved theme to inline as a `<style>` block, so class-based fills (metric
-   * cells, brand watermark dot, legend text, endpoint labels) survive
+   * cells, eyebrow dot, legend text, endpoint labels) survive
    * serialization away from the page stylesheet. Omit to skip — a chart whose
    * chrome is all inline-filled exports fine without it.
    */

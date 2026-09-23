@@ -1302,12 +1302,16 @@ export interface ResolvedYouDrawIt {
   fromX: number;
   /** The chart drawing area, for clamping pointer input and sizing the hatch region. */
   area: Rect;
-  /** X samples (pixel + data value) at or after `from`, ascending by pixel x. Drawing snaps to these. */
+  /** X samples (pixel + data value) strictly after `from`, ascending by pixel x. The guess is reported at these. */
   samples: YouDrawItSample[];
+  /** Where the visible line ends (the target line at `fromX`). The reader's guess starts here. Absent when `from` precedes the line's first point. */
+  anchor?: Point;
   /** Resolved prompt text for the hatched region. */
   prompt: string;
   /** Resolved skip-to-reveal button label. */
   revealLabel: string;
+  /** Resolved clear-drawing button label. */
+  resetLabel: string;
   /** Stroke color of the target line (the reader's guess uses a distinct pen style, but shares the palette for continuity). */
   lineColor: string;
   /** seriesKey of the target line mark, so the vanilla layer can find its DOM element. Undefined for a single-series line with no color encoding. */

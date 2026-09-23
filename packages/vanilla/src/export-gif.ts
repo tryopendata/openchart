@@ -62,7 +62,7 @@ export interface GIFExportOptions {
   backgroundColor?: string;
   /**
    * Resolved theme to inline as a `<style>` block so class-based fills (metric
-   * cells, brand watermark dot, legend text) survive serialization. Omit to skip.
+   * cells, eyebrow dot, legend text) survive serialization. Omit to skip.
    */
   theme?: ResolvedTheme;
 }
@@ -333,7 +333,7 @@ export async function exportGIF(
   // derives from it, so fonts are embedded exactly once.
   const clone = svgElement.cloneNode(true) as SVGElement;
   // Inline the theme style block so class-based chrome fills survive the detach
-  // from the page stylesheet (metrics, brand dot, legend). No-op when undefined.
+  // from the page stylesheet (metrics, eyebrow dot, legend). No-op when undefined.
   injectThemeStyleBlock(clone, options?.theme);
   if (shouldEmbed) {
     await embedFonts(clone);
