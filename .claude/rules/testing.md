@@ -12,7 +12,7 @@ When writing tests, load the ce:writing-tests skill for general patterns.
 
 ## Flaky Tests
 
-When fixing flaky tests, load the ce:fixing-flaky-tests skill.
+When fixing flaky tests, load the ce:writing-tests skill (flaky-test guidance is in its references/flaky-tests.md).
 
 | Symptom | Likely Cause |
 |---------|--------------|
