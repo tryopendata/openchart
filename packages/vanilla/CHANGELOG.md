@@ -1,5 +1,13 @@
 # Changelog
 
+## [8.8.0](https://github.com/tryopendata/openchart/compare/core-v8.7.0...core-v8.8.0) (2026-09-28)
+
+
+### Features
+
+* reader zoom and pan via geo.zoom ([7731b7c](https://github.com/tryopendata/openchart/commit/7731b7c))
+* add Built for Agents page ([9112b2f](https://github.com/tryopendata/openchart/commit/9112b2f))
+
 ## [8.7.0](https://github.com/tryopendata/openchart/compare/core-v8.6.4...core-v8.7.0) (2026-09-23)
 
 
