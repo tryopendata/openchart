@@ -179,6 +179,7 @@ export type {
   GeoMapProjection,
   GeoMapSpec,
   GeoMapSpecWithoutData,
+  GeoMapZoomConfig,
   GradientDef,
   GradientStop,
   GraphAnimationConfig,

@@ -1673,6 +1673,40 @@ function validateTileMapSpec(spec: Record<string, unknown>, errors: ValidationEr
 // Map validation
 // ---------------------------------------------------------------------------
 
+/** `geo.zoom`: boolean, or `{ maxZoom?: number >= 1, controls?: boolean }`. */
+function validateGeoMapZoom(zoom: unknown, errors: ValidationError[]): void {
+  if (zoom === undefined || typeof zoom === 'boolean') return;
+  if (typeof zoom !== 'object' || zoom === null || Array.isArray(zoom)) {
+    errors.push({
+      message: 'Spec error: geo.zoom must be a boolean or an object { maxZoom?, controls? }',
+      path: 'geo.zoom',
+      code: 'INVALID_TYPE',
+      suggestion: 'Use zoom: true, or zoom: { maxZoom: 8, controls: true }',
+    });
+    return;
+  }
+  const cfg = zoom as Record<string, unknown>;
+  if (
+    cfg.maxZoom !== undefined &&
+    (typeof cfg.maxZoom !== 'number' || !Number.isFinite(cfg.maxZoom) || cfg.maxZoom < 1)
+  ) {
+    errors.push({
+      message: 'Spec error: geo.zoom.maxZoom must be a number >= 1',
+      path: 'geo.zoom.maxZoom',
+      code: 'INVALID_VALUE',
+      suggestion: 'maxZoom is a multiple of the full map, e.g. maxZoom: 8. The default is 12.',
+    });
+  }
+  if (cfg.controls !== undefined && typeof cfg.controls !== 'boolean') {
+    errors.push({
+      message: 'Spec error: geo.zoom.controls must be a boolean',
+      path: 'geo.zoom.controls',
+      code: 'INVALID_TYPE',
+      suggestion: 'Use controls: false to hide the zoom buttons',
+    });
+  }
+}
+
 function validateGeoMapSpec(spec: Record<string, unknown>, errors: ValidationError[]): void {
   if (!spec.geo || typeof spec.geo !== 'object') {
     errors.push({
@@ -1815,6 +1849,8 @@ function validateGeoMapSpec(spec: Record<string, unknown>, errors: ValidationErr
       });
     }
   }
+
+  validateGeoMapZoom(geo.zoom, errors);
 
   const encoding = spec.encoding as Record<string, unknown>;
   const hasPoints = spec.points && typeof spec.points === 'object' && !Array.isArray(spec.points);

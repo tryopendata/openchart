@@ -26,12 +26,15 @@ import {
 import {
   applyMapCamera,
   cameraForTarget,
+  clampMapCamera,
   FOCUS_DIM_OPACITY,
   focusTargetForFeatures,
   type GeoMapCameraOptions,
+  resolveMapZoom,
 } from './map-camera';
 import { renderMapSVG } from './map-renderer';
 import { captureMapSnapshot, runMapFillTransition } from './map-transition';
+import { createMapZoomController, type MapZoomController } from './map-zoom';
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
 import { observeResize } from './resize-observer';
 import { resolveDarkMode } from './resolve-dark-mode';
@@ -115,6 +118,13 @@ export interface GeoMapMountOptions {
   onMarkClick?: (event: GeoMapMarkEvent) => void;
   /** Callback when a feature or point is hovered (null on mouse leave). */
   onMarkHover?: (event: GeoMapMarkEvent | null) => void;
+  /**
+   * Called whenever the camera moves: reader zoom/pan (`geo.zoom`), the
+   * imperative camera API, and focus changes. Fires on every frame of an
+   * animated move. `cx`/`cy` are the view center in map-frame units, `k` the
+   * zoom factor (1 = full map).
+   */
+  onCameraChange?: (camera: Camera) => void;
 }
 
 export interface GeoMapInstance {
@@ -147,6 +157,9 @@ export interface GeoMapInstance {
   /** Set the camera to an exact state (no animation). */
   setCamera(camera: Camera): void;
 }
+
+/** Tween length for button, key, and double-click zoom steps. */
+const USER_ZOOM_MS = 250;
 
 // ---------------------------------------------------------------------------
 // Dark mode resolution
@@ -194,6 +207,9 @@ export function createGeoMap(
   let currentCamera: Camera = { cx: 0, cy: 0, k: 1 };
   let currentFocusIds: Array<string | number> | null = null;
   let cameraTween: Tween<Camera> | null = null;
+
+  // Reader zoom/pan (geo.zoom). Created lazily on the first render with zoom on.
+  let zoomController: MapZoomController | null = null;
 
   // Track whether this is the first render (for snap-to-focus).
   let isFirstRender = true;
@@ -458,6 +474,21 @@ export function createGeoMap(
     return cameraForTarget(currentLayout, null);
   }
 
+  /** The one place the live camera changes after mount. */
+  function commitCamera(cam: Camera): void {
+    currentCamera = cam;
+    if (svgElement) applyMapCamera(svgElement, cam, currentLayout);
+    zoomController?.onCamera();
+    options?.onCameraChange?.({ ...cam });
+  }
+
+  function cancelCameraTween(): void {
+    if (cameraTween) {
+      cameraTween.cancel();
+      cameraTween = null;
+    }
+  }
+
   function animateCamera(target: Camera, duration: number): void {
     if (cameraTween) cameraTween.cancel();
     cameraTween = createTween<Camera>({
@@ -466,8 +497,7 @@ export function createGeoMap(
       duration,
       ease: easingFns.easeInOutCubic,
       onFrame(cam) {
-        currentCamera = cam;
-        if (svgElement) applyMapCamera(svgElement, cam, currentLayout);
+        commitCamera(cam);
       },
     });
     cameraTween.to(target);
@@ -475,11 +505,66 @@ export function createGeoMap(
 
   function driveCamera(cam: Camera, duration: number): void {
     if (duration === 0 || prefersReducedMotion()) {
-      currentCamera = cam;
-      if (svgElement) applyMapCamera(svgElement, cam, currentLayout);
+      cancelCameraTween();
+      commitCamera(cam);
     } else {
       animateCamera(cam, duration);
     }
+  }
+
+  function resetCamera(duration: number): void {
+    currentFocusIds = null;
+    const cam = cameraForTarget(currentLayout, null);
+    driveCamera(cam, duration);
+    applyFocusDim(null);
+    updateA11yLive(null);
+  }
+
+  /**
+   * Keep a free (non-focus) camera on the same part of the map when the map
+   * frame changes size: camera units are map-frame pixels, so they scale with
+   * the frame.
+   */
+  function rescaleFreeCamera(prev: { width: number; height: number }): void {
+    const next = currentLayout.mapSize;
+    if (!prev.width || !prev.height || (prev.width === next.width && prev.height === next.height)) {
+      return;
+    }
+    const scaled = {
+      cx: (currentCamera.cx * next.width) / prev.width,
+      cy: (currentCamera.cy * next.height) / prev.height,
+      k: currentCamera.k,
+    };
+    const zoom = resolveMapZoom(currentSpec.geo?.zoom);
+    currentCamera = zoom ? clampMapCamera(scaled, next, zoom.maxZoom) : scaled;
+  }
+
+  function syncZoomController(restoreFocus: boolean): void {
+    const zoom = resolveMapZoom(currentSpec.geo?.zoom);
+    if (!zoom && !zoomController) return;
+    if (!zoomController) {
+      zoomController = createMapZoomController({
+        container,
+        getSvg: () => svgElement,
+        getLayout: () => currentLayout,
+        getConfig: () => resolveMapZoom(currentSpec.geo?.zoom),
+        getCamera: () => ({ ...currentCamera }),
+        setCamera(cam) {
+          // A reader gesture takes the camera off any focus target, so a
+          // resize keeps their view instead of snapping back to the focus.
+          cancelCameraTween();
+          currentFocusIds = null;
+          commitCamera(cam);
+        },
+        animateCamera(cam) {
+          currentFocusIds = null;
+          driveCamera(cam, USER_ZOOM_MS);
+        },
+        reset: () => resetCamera(USER_ZOOM_MS),
+        hideTooltip: () => tooltipManager?.hide(),
+      });
+    }
+    zoomController.onRender(restoreFocus);
   }
 
   function updateA11yLive(ids: Array<string | number> | null): void {
@@ -537,6 +622,7 @@ export function createGeoMap(
 
     // Render new SVG before removing old to avoid a paint gap
     const oldSvg = svgElement;
+    const oldSvgHadFocus = !!oldSvg && document.activeElement === oldSvg;
     const newSvg = renderMapSVG(currentLayout, { animate });
 
     if (oldSvg) {
@@ -603,6 +689,8 @@ export function createGeoMap(
       }
     }
     isFirstRender = false;
+
+    syncZoomController(oldSvgHadFocus);
   }
 
   function update(newSpec: GeoMapSpec): void {
@@ -624,8 +712,10 @@ export function createGeoMap(
     // cluster moves between steps.
     const prevFocusIds = currentFocusIds ? currentFocusIds.map(String).sort().join(',') : null;
     const prevFocusSig = focusSignature(currentLayout.focus);
+    const prevMapSize = currentLayout.mapSize;
 
     currentLayout = compile();
+    if (!currentFocusIds) rescaleFreeCamera(prevMapSize);
     render();
 
     // Run the update tween if the *new* layout enables update animation
@@ -670,12 +760,11 @@ export function createGeoMap(
 
     // Cancel any running camera tween: the resize recomputes the camera for the
     // new dimensions, and a stale tween would overwrite it on the next frame.
-    if (cameraTween) {
-      cameraTween.cancel();
-      cameraTween = null;
-    }
+    cancelCameraTween();
 
+    const prevMapSize = currentLayout.mapSize;
     currentLayout = compile();
+    if (!currentFocusIds) rescaleFreeCamera(prevMapSize);
     render();
 
     // Re-resolve camera against new layout dimensions.
@@ -689,6 +778,7 @@ export function createGeoMap(
       if (svgElement) applyMapCamera(svgElement, currentCamera, currentLayout);
     }
     applyFocusDim(currentFocusIds);
+    zoomController?.onCamera();
   }
 
   // ---------------------------------------------------------------------------
@@ -733,9 +823,10 @@ export function createGeoMap(
       fillTransitionHandle.cancel();
       fillTransitionHandle = null;
     }
-    if (cameraTween) {
-      cameraTween.cancel();
-      cameraTween = null;
+    cancelCameraTween();
+    if (zoomController) {
+      zoomController.destroy();
+      zoomController = null;
     }
 
     // Clean up events
@@ -845,19 +936,15 @@ export function createGeoMap(
       applyFocusDim(null);
     },
     resetView(opts?: GeoMapCameraOptions): void {
-      currentFocusIds = null;
-      const cam = cameraForTarget(currentLayout, null);
-      driveCamera(cam, opts?.duration ?? storyMotion.camera);
-      applyFocusDim(null);
-      updateA11yLive(null);
+      resetCamera(opts?.duration ?? storyMotion.camera);
     },
     getCamera(): Camera {
       return { ...currentCamera };
     },
     setCamera(camera: Camera): void {
-      currentCamera = camera;
+      cancelCameraTween();
       currentFocusIds = null;
-      if (svgElement) applyMapCamera(svgElement, camera, currentLayout);
+      commitCamera(camera);
     },
   };
 }

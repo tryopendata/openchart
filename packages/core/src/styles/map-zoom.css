@@ -1,0 +1,111 @@
+@layer oc.components {
+  /* ---------------------------------------------------------------------------
+   * Map reader zoom (geo.zoom)
+   * The overlay is pinned to the map area (left/top/width/height stamped in %
+   * by vanilla/src/map-zoom.ts) and passes pointer events through, so only the
+   * buttons are hit targets. Surfaces reuse the tooltip tokens: a translucent
+   * card that reads over any fill, light or dark.
+   * --------------------------------------------------------------------------- */
+
+  .oc-map-zoom {
+    position: absolute;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .oc-map-zoom-controls {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    flex-direction: column;
+    pointer-events: auto;
+    background: var(--oc-tooltip-bg);
+    backdrop-filter: blur(14px);
+    border: 1px solid var(--oc-tooltip-border);
+    border-radius: var(--oc-radius-md);
+    box-shadow: var(--oc-tooltip-shadow);
+    overflow: hidden;
+  }
+
+  .oc-map-zoom-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--oc-text);
+    font: inherit;
+    cursor: pointer;
+    transition:
+      background var(--oc-hover-duration) ease-out,
+      opacity var(--oc-hover-duration) ease-out;
+
+    & + & {
+      border-top: 1px solid var(--oc-tooltip-border);
+    }
+
+    &:hover:not(:disabled) {
+      background: var(--oc-focus-ring);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--oc-focus);
+      outline-offset: -2px;
+    }
+
+    &:disabled {
+      cursor: default;
+      opacity: 0.35;
+    }
+  }
+
+  /* Short-lived "use ctrl/cmd + scroll" hint after a plain wheel over the map. */
+  .oc-map-zoom-hint {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    max-width: calc(100% - 32px);
+    padding: 8px 12px;
+    background: var(--oc-tooltip-bg);
+    backdrop-filter: blur(14px);
+    border: 1px solid var(--oc-tooltip-border);
+    border-radius: var(--oc-radius-md);
+    box-shadow: var(--oc-tooltip-shadow);
+    color: var(--oc-tooltip-text);
+    font-family: var(--oc-font-family);
+    font-size: 13px;
+    line-height: 1.3;
+    text-align: center;
+    opacity: 0;
+    transition: opacity 200ms ease-out;
+
+    &[data-visible] {
+      opacity: 1;
+    }
+  }
+
+  /* The SVG is focusable while zoom is on (keyboard: + - arrows 0). */
+  .oc-map:focus {
+    outline: none;
+  }
+
+  .oc-map:focus-visible {
+    outline: 2px solid var(--oc-focus);
+    outline-offset: 2px;
+  }
+
+  .oc-map[data-oc-zoomed] {
+    cursor: grab;
+  }
+
+  /* The SVG holds pointer capture during a drag, so its cursor is the one shown. */
+  .oc-map--panning {
+    cursor: grabbing;
+  }
+}

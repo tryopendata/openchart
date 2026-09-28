@@ -1,6 +1,6 @@
 import type { GeoMapSpec } from '@opendata-ai/openchart-core';
 import { cleanup, render, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { GeoMap } from '../GeoMap';
 
 // ---------------------------------------------------------------------------
@@ -166,5 +166,30 @@ describe('<GeoMap />', () => {
 
     const wrapper = container.firstElementChild as HTMLElement;
     expect(wrapper?.style.border).toBe('1px solid red');
+  });
+
+  it('geo.zoom in the spec alone enables reader zoom; onCameraChange reports moves', async () => {
+    const onCameraChange = vi.fn();
+    const zoomSpec: GeoMapSpec = { ...mapSpec, geo: { ...mapSpec.geo, zoom: true } };
+    const { container } = await renderGeoMap({ spec: zoomSpec, onCameraChange });
+
+    const zoomIn = container.querySelector(
+      '.oc-map-zoom-btn[data-zoom="in"]',
+    ) as HTMLButtonElement | null;
+    expect(zoomIn).not.toBeNull();
+    expect(container.querySelector('svg')?.getAttribute('tabindex')).toBe('0');
+
+    zoomIn!.click();
+    await waitFor(() => {
+      expect(onCameraChange).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(onCameraChange.mock.lastCall?.[0].k).toBeCloseTo(2);
+    });
+  });
+
+  it('maps without geo.zoom render no zoom controls', async () => {
+    const { container } = await renderGeoMap({ spec: mapSpec });
+    expect(container.querySelector('.oc-map-zoom')).toBeNull();
   });
 });

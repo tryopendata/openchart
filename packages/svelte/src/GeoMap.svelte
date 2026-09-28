@@ -8,6 +8,7 @@
 <script lang="ts">
 import type { DarkMode, GeoMapSpec, ThemeConfig } from '@opendata-ai/openchart-core';
 import {
+  type Camera,
   createGeoMap,
   type GeoMapInstance,
   type GeoMapMarkEvent,
@@ -22,6 +23,7 @@ let {
   darkMode,
   onmarkclick,
   onmarkhover,
+  oncamerachange,
   class: className,
   style,
 }: {
@@ -30,6 +32,7 @@ let {
   darkMode?: DarkMode;
   onmarkclick?: (event: GeoMapMarkEvent) => void;
   onmarkhover?: (event: GeoMapMarkEvent | null) => void;
+  oncamerachange?: (camera: Camera) => void;
   class?: string;
   style?: string;
 } = $props();
@@ -62,6 +65,7 @@ $effect(() => {
     darkMode: resolvedDarkMode,
     onMarkClick: (feature) => untrack(() => onmarkclick)?.(feature),
     onMarkHover: (feature) => untrack(() => onmarkhover)?.(feature),
+    onCameraChange: (camera) => untrack(() => oncamerachange)?.(camera),
     responsive: true,
   };
 

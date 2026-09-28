@@ -1363,6 +1363,7 @@ Maps render TopoJSON geometries as SVG, join tabular data rows to features by id
 | `idField`    | `string`           | `'id'`        | Field in the TopoJSON feature properties used as the join key.                         |
 | `projection` | `GeoMapProjection`    | `'albersUsa'` | `'albersUsa'`, `'mercator'`, `'equalEarth'`, or `'identity'`. Use `'identity'` for pre-projected files like `states-albers-10m.json` (coordinates already in pixel space). |
 | `focus`      | `GeoMapFocus \| null` | `undefined`   | Camera focus. See [Focus](#focus). `null` clears focus from a prior story step.        |
+| `zoom`       | `boolean \| { maxZoom?, controls? }` | `undefined` (off) | Let readers zoom and pan. See [Reader zoom](#reader-zoom).                   |
 
 ### GeoMapEncoding
 
@@ -1405,6 +1406,36 @@ Symbol overlay projected through the same geo projection as the features. Indepe
 | `{ points: true, padding? }`        | Fit the points layer's cluster instead of any feature. Use when points occupy a small part of a large feature. |
 | `{ points: { field, value } }`      | Fit only the points where `row[field] === value`, so a story can pan between sub-clusters. |
 | `null`                              | Clear focus (back to the full map).                                                   |
+
+### Reader zoom
+
+`geo.zoom` lets readers zoom into dense areas and pan around. It is off by default, so existing maps don't change.
+
+```ts
+geo: { features: txCounties, projection: "mercator", zoom: true }
+// or tune it:
+geo: { features: txCounties, zoom: { maxZoom: 8, controls: true } }
+```
+
+| Field      | Type      | Default | Description                                                                 |
+| ---------- | --------- | ------- | --------------------------------------------------------------------------- |
+| `maxZoom`  | `number`  | `12`    | Zoom ceiling as a multiple of the full map. Readers can never zoom out past the full map (1). |
+| `controls` | `boolean` | `true`  | Show the zoom in / zoom out / reset buttons in the map's top-right corner.  |
+
+The gestures follow the cooperative convention used by embedded web maps, so the map never traps page scroll:
+
+| Input | Behavior |
+| ----- | -------- |
+| Mouse wheel | Ctrl + wheel (⌘ + wheel on macOS) zooms around the cursor. A plain wheel scrolls the page and briefly shows a hint. |
+| Trackpad | Pinch zooms around the cursor. Two-finger scroll scrolls the page. |
+| Mouse drag | Pans once zoomed in. A drag never fires `onMarkClick`. |
+| Double-click | Zooms in 2x at the cursor; shift + double-click zooms out. |
+| Touch | Two-finger pinch zooms and pans. One finger scrolls the page at the full view and pans the map once the reader has zoomed in; the reset button hands one-finger scrolling back to the page. |
+| Keyboard | The map is focusable: `+`/`-` zoom, arrow keys pan, `0` resets. |
+
+Panning is clamped so the map can't leave its frame, and the map is clipped to its area while zoomed so it doesn't slide under the chrome or legend. Points keep their screen radius and strokes stay hairline at every zoom level, and tooltips track the zoomed geometry. Button, key, and double-click zooms animate; under `prefers-reduced-motion` they snap.
+
+Reader gestures and the imperative camera API (`zoomTo`, `panTo`, `resetView`, `setCamera`) move the same camera. `onCameraChange` (mount option, or the `onCameraChange` prop on `<GeoMap>`) reports every move as `{ cx, cy, k }`.
 
 ### Map legends
 

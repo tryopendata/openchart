@@ -410,6 +410,36 @@ const pointLayerSpec: GeoMapSpec = {
 };
 
 // ---------------------------------------------------------------------------
+// 11. Reader zoom — geo.zoom opts the map into wheel/drag/pinch/keyboard zoom
+// ---------------------------------------------------------------------------
+
+const readerZoomCountySpec: GeoMapSpec = {
+  ...usCountySpec,
+  geo: { ...usCountySpec.geo, zoom: true },
+  chrome: {
+    title: 'Zoom In to Read the Counties',
+    subtitle: 'Ctrl/⌘ + scroll, pinch, double-click, or the buttons. Drag to pan.',
+    byline: 'Chart: OpenChart',
+  },
+  animation: false,
+};
+
+const readerZoomPointsSpec: GeoMapSpec = {
+  ...pointLayerSpec,
+  geo: {
+    features: usStatesUnprojected,
+    projection: 'albersUsa',
+    focus: { features: '48', padding: 8 },
+    zoom: { maxZoom: 8 },
+  },
+  chrome: {
+    title: 'Points Hold Their Size as You Zoom',
+    subtitle: 'Starts on the geo.focus camera; gestures continue from it',
+  },
+  animation: false,
+};
+
+// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
@@ -544,6 +574,27 @@ export const Maps = () => (
         title="Point layer"
         description="A basemap-only spec (no choropleth color) with synthetic point data overlaid. Size encodes population, color encodes category. Points counter-scale when the camera zooms."
         spec={pointLayerSpec}
+        height={500}
+      />
+    </Section>
+
+    <Section
+      id="reader-zoom"
+      title="Reader zoom"
+      lede="geo.zoom lets readers zoom and pan. A plain wheel still scrolls the page; ctrl/⌘ + wheel or a trackpad pinch zooms around the cursor, drag pans, double-click zooms in, and +/-/arrows/0 work when the map has focus. On touch, two fingers pinch and one finger pans once zoomed in."
+    >
+      <Demo
+        id="reader-zoom-counties"
+        title="Reader zoom: counties"
+        description="zoom: true on ~3,200 county paths. Strokes stay hairline at every zoom level and panning stops at the map edge."
+        spec={readerZoomCountySpec}
+        height={500}
+      />
+      <Demo
+        id="reader-zoom-points"
+        title="Reader zoom: points"
+        description="zoom: { maxZoom: 8 } over a focused point layer. Points keep their screen radius and tooltips track the zoomed geometry."
+        spec={readerZoomPointsSpec}
         height={500}
       />
     </Section>

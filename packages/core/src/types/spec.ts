@@ -2747,6 +2747,20 @@ export type GeoMapFocus =
   | { features: string | number | Array<string | number>; padding?: number }
   | { points: GeoMapPointsFocus; padding?: number };
 
+/**
+ * Reader zoom and pan for a map. Opt-in: maps without it stay static.
+ *
+ * `maxZoom` caps how far readers can zoom in, as a multiple of the full map
+ * (the full map is 1, and readers can never zoom out past it). `controls`
+ * shows the on-screen zoom in / zoom out / reset buttons.
+ */
+export interface GeoMapZoomConfig {
+  /** Largest zoom factor, relative to the full map. Default 12, minimum 1. */
+  maxZoom?: number;
+  /** Show on-screen zoom in / zoom out / reset buttons. Default true. */
+  controls?: boolean;
+}
+
 /** Geo configuration for map specs. */
 export interface GeoMapGeo {
   /** TopoJSON topology object. User imports this from us-atlas, world-atlas, or their own source. */
@@ -2768,6 +2782,15 @@ export interface GeoMapGeo {
    * story can pan between sub-clusters. null clears focus from a prior story step.
    */
   focus?: GeoMapFocus | null;
+  /**
+   * Let readers zoom and pan the map. Off by default. `true` enables it with
+   * defaults; an object tunes the zoom ceiling and the on-screen buttons.
+   * Gestures: ctrl/cmd + wheel or trackpad pinch zooms around the cursor (a
+   * plain wheel scrolls the page), drag pans, double-click zooms in, two-finger
+   * pinch zooms on touch, and +/-/arrows/0 work when the map has focus. One
+   * finger scrolls the page until the reader has zoomed in, then pans the map.
+   */
+  zoom?: boolean | GeoMapZoomConfig;
 }
 
 /** Encoding channels specific to map visualizations. */

@@ -866,6 +866,43 @@ describe('compileGeoMap', () => {
   });
 
   // ---------------------------------------------------------------------------
+  // Reader zoom (geo.zoom): validated here, applied by the vanilla mount
+  // ---------------------------------------------------------------------------
+
+  describe('geo.zoom validation', () => {
+    const withZoom = (zoom: unknown) => ({
+      type: 'map' as const,
+      geo: { features: MINI_TOPO, projection: 'mercator' as const, zoom: zoom as never },
+      data: [{ fips: '06', value: 10 }],
+      encoding: {
+        key: { field: 'fips', type: 'nominal' as const },
+        color: { field: 'value', type: 'quantitative' as const },
+      },
+    });
+
+    it('accepts true, false, and a config object', () => {
+      for (const zoom of [true, false, {}, { maxZoom: 8 }, { maxZoom: 1, controls: false }]) {
+        expect(() => compileGeoMap(withZoom(zoom), DEFAULT_OPTIONS)).not.toThrow();
+      }
+    });
+
+    it('rejects a non-boolean, non-object zoom', () => {
+      expect(() => compileGeoMap(withZoom('yes'), DEFAULT_OPTIONS)).toThrow(/geo\.zoom must be/);
+    });
+
+    it('rejects maxZoom below 1 or non-numeric', () => {
+      expect(() => compileGeoMap(withZoom({ maxZoom: 0.5 }), DEFAULT_OPTIONS)).toThrow(/maxZoom/);
+      expect(() => compileGeoMap(withZoom({ maxZoom: '4' }), DEFAULT_OPTIONS)).toThrow(/maxZoom/);
+    });
+
+    it('rejects a non-boolean controls flag', () => {
+      expect(() => compileGeoMap(withZoom({ controls: 'no' }), DEFAULT_OPTIONS)).toThrow(
+        /controls/,
+      );
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // Focus resolution
   // ---------------------------------------------------------------------------
 

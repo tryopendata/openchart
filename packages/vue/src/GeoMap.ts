@@ -8,6 +8,7 @@
 
 import type { DarkMode, GeoMapSpec, ThemeConfig } from '@opendata-ai/openchart-core';
 import {
+  type Camera,
   createGeoMap,
   type GeoMapInstance,
   type GeoMapMarkEvent,
@@ -61,6 +62,7 @@ export const GeoMap = defineComponent({
   emits: {
     'mark-click': (_event: GeoMapMarkEvent) => true,
     'mark-hover': (_event: GeoMapMarkEvent | null) => true,
+    'camera-change': (_camera: Camera) => true,
   },
   setup(props, { emit, expose }) {
     const containerRef = ref<HTMLDivElement | null>(null);
@@ -88,6 +90,7 @@ export const GeoMap = defineComponent({
         darkMode: resolveDarkMode(),
         onMarkClick: (feature) => emit('mark-click', feature),
         onMarkHover: (feature) => emit('mark-hover', feature),
+        onCameraChange: (camera) => emit('camera-change', camera),
         responsive: true,
       };
 

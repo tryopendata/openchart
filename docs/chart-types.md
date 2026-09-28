@@ -386,7 +386,7 @@ const spec = {
 
 `geo.features` takes a TopoJSON topology (from `us-atlas`, `world-atlas`, or your own source). `encoding.key` names the data field that joins rows to feature ids. A quantitative `color` bins values into quantile classes from a sequential scheme (`blue` by default; set `encoding.color.scale.scheme` to `green`, `orange`, `purple`, or `teal`); a nominal `color` assigns categorical fills via `scale.range`.
 
-Add a `points` layer for symbol overlays (`longitude`/`latitude` channels, optional `size` and `color`), and `geo.focus` to zoom the camera to a feature, a set of features, or the point cluster. Vanilla uses `createGeoMap(container, spec)`.
+Add a `points` layer for symbol overlays (`longitude`/`latitude` channels, optional `size` and `color`), and `geo.focus` to zoom the camera to a feature, a set of features, or the point cluster. `geo.zoom: true` lets readers zoom and pan (ctrl/cmd + wheel, pinch, drag, double-click, keyboard, and on-screen buttons). Vanilla uses `createGeoMap(container, spec)`.
 
 For the full field reference, see [GeoMapSpec in spec-reference.md](spec-reference.md#geomapspec).
 

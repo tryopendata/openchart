@@ -10,6 +10,7 @@
 
 import type { DarkMode, GeoMapSpec, ThemeConfig } from '@opendata-ai/openchart-core';
 import {
+  type Camera,
   createGeoMap,
   type GeoMapInstance,
   type GeoMapMarkEvent,
@@ -36,6 +37,8 @@ export interface GeoMapProps {
   onMarkClick?: (feature: GeoMapMarkEvent) => void;
   /** Callback when a map feature is hovered (null when hover ends). */
   onMarkHover?: (feature: GeoMapMarkEvent | null) => void;
+  /** Called whenever the camera moves (reader zoom/pan, zoomTo, focus). */
+  onCameraChange?: (camera: Camera) => void;
   /** CSS class name for the wrapper div. */
   className?: string;
   /** Inline styles for the wrapper div. */
@@ -48,7 +51,7 @@ export interface GeoMapHandle {
 }
 
 export const GeoMap = forwardRef<GeoMapHandle, GeoMapProps>(function GeoMap(
-  { spec, theme: themeProp, darkMode, onMarkClick, onMarkHover, className, style },
+  { spec, theme: themeProp, darkMode, onMarkClick, onMarkHover, onCameraChange, className, style },
   ref,
 ) {
   const contextTheme = useVizTheme();
@@ -62,10 +65,12 @@ export const GeoMap = forwardRef<GeoMapHandle, GeoMapProps>(function GeoMap(
   const handlersRef = useRef<{
     onMarkClick?: GeoMapProps['onMarkClick'];
     onMarkHover?: GeoMapProps['onMarkHover'];
+    onCameraChange?: GeoMapProps['onCameraChange'];
   }>({});
   handlersRef.current = {
     onMarkClick,
     onMarkHover,
+    onCameraChange,
   };
 
   const stableOnMarkClick = useCallback(
@@ -74,6 +79,10 @@ export const GeoMap = forwardRef<GeoMapHandle, GeoMapProps>(function GeoMap(
   );
   const stableOnMarkHover = useCallback(
     (feature: GeoMapMarkEvent | null) => handlersRef.current.onMarkHover?.(feature),
+    [],
+  );
+  const stableOnCameraChange = useCallback(
+    (camera: Camera) => handlersRef.current.onCameraChange?.(camera),
     [],
   );
 
@@ -97,6 +106,7 @@ export const GeoMap = forwardRef<GeoMapHandle, GeoMapProps>(function GeoMap(
       darkMode: resolvedDarkMode,
       onMarkClick: stableOnMarkClick,
       onMarkHover: stableOnMarkHover,
+      onCameraChange: stableOnCameraChange,
       responsive: true,
     };
 
@@ -107,7 +117,7 @@ export const GeoMap = forwardRef<GeoMapHandle, GeoMapProps>(function GeoMap(
       instanceRef.current?.destroy();
       instanceRef.current = null;
     };
-  }, [theme, resolvedDarkMode, stableOnMarkClick, stableOnMarkHover]);
+  }, [theme, resolvedDarkMode, stableOnMarkClick, stableOnMarkHover, stableOnCameraChange]);
 
   useEffect(() => {
     const instance = instanceRef.current;

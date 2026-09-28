@@ -6,8 +6,8 @@
  * on the `[data-oc-map-camera]` group, never as a CSS transform.
  */
 
-import type { GeoMapLayout } from '@opendata-ai/openchart-core';
-import type { Camera, CameraTarget } from './story/camera-math';
+import type { GeoMapLayout, GeoMapZoomConfig } from '@opendata-ai/openchart-core';
+import type { Camera, CameraTarget, ViewBoxSize } from './story/camera-math';
 import { cameraTransform, FULL_VIEW, fitTarget } from './story/camera-math';
 
 export type { Camera } from './story/camera-math';
@@ -61,6 +61,85 @@ export function cameraForTarget(layout: GeoMapLayout, target?: CameraTarget | nu
   if (!target) return fitTarget(FULL_VIEW(vb), vb);
   const cam = fitTarget(target, vb);
   return { ...cam, k: Math.max(1, Math.min(40, cam.k)) };
+}
+
+// ---------------------------------------------------------------------------
+// Reader zoom/pan math (geo.zoom)
+// ---------------------------------------------------------------------------
+
+/** Default zoom ceiling for reader zoom, as a multiple of the full map. */
+export const DEFAULT_MAX_ZOOM = 12;
+
+/** Resolved `geo.zoom` config. */
+export interface ResolvedMapZoom {
+  maxZoom: number;
+  controls: boolean;
+}
+
+/** Resolve `geo.zoom` to a config, or null when reader zoom is off. */
+export function resolveMapZoom(
+  zoom: GeoMapZoomConfig | boolean | undefined,
+): ResolvedMapZoom | null {
+  if (!zoom) return null;
+  const cfg = zoom === true ? {} : zoom;
+  const max = cfg.maxZoom;
+  return {
+    maxZoom: typeof max === 'number' && Number.isFinite(max) ? Math.max(1, max) : DEFAULT_MAX_ZOOM,
+    controls: cfg.controls !== false,
+  };
+}
+
+/**
+ * Clamp a camera for reader navigation: zoom stays in [1, maxZoom] and the
+ * view window (mapSize / k, centered on cx/cy) never leaves the map, so the
+ * reader can't pan the map out of its frame. At k = 1 this pins the center.
+ */
+export function clampMapCamera(camera: Camera, vb: ViewBoxSize, maxZoom: number): Camera {
+  const k = Math.min(Math.max(camera.k, 1), Math.max(1, maxZoom));
+  const halfW = vb.width / (2 * k);
+  const halfH = vb.height / (2 * k);
+  return {
+    cx: Math.min(Math.max(camera.cx, halfW), vb.width - halfW),
+    cy: Math.min(Math.max(camera.cy, halfH), vb.height - halfH),
+    k,
+  };
+}
+
+/**
+ * Zoom to `k` keeping the map point under a pivot fixed on screen. The pivot
+ * is in map-frame units (0..mapSize, before the camera transform), the same
+ * space the cursor lands in. Mirrors graph `ZoomTransform.zoomAt` for the
+ * center-based camera: the point under the pivot is c + (s - vb/2) / k.
+ */
+export function zoomCameraAt(
+  camera: Camera,
+  vb: ViewBoxSize,
+  k: number,
+  pivotX: number,
+  pivotY: number,
+): Camera {
+  const ox = pivotX - vb.width / 2;
+  const oy = pivotY - vb.height / 2;
+  const px = camera.cx + ox / camera.k;
+  const py = camera.cy + oy / camera.k;
+  return { cx: px - ox / k, cy: py - oy / k, k };
+}
+
+/** Pan by a screen delta in map-frame units (drag right moves the map right). */
+export function panCamera(camera: Camera, dx: number, dy: number): Camera {
+  return { cx: camera.cx - dx / camera.k, cy: camera.cy - dy / camera.k, k: camera.k };
+}
+
+/**
+ * Multiplicative zoom step for a wheel event, d3-zoom style: exponential so a
+ * notch in and a notch out cancel. Trackpad pinch arrives as ctrl + small
+ * pixel deltas, which get a boost so a pinch feels as fast as the wheel.
+ */
+export function wheelZoomFactor(e: Pick<WheelEvent, 'deltaY' | 'deltaMode' | 'ctrlKey'>): number {
+  const perUnit = e.deltaMode === 1 ? 0.05 : e.deltaMode === 2 ? 1 : 0.002;
+  let exp = -e.deltaY * perUnit;
+  if (e.ctrlKey && e.deltaMode === 0 && Math.abs(e.deltaY) < 50) exp *= 5;
+  return 2 ** Math.max(-1, Math.min(1, exp));
 }
 
 /**
