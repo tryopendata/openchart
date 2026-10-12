@@ -91,6 +91,12 @@ export function computeColumnMarks(
     return [];
   }
 
+  // Missing observations have no measurable length; never render them as zero bars.
+  const measuredData = spec.data.filter((row) => {
+    const value = row[yChannel.field];
+    return value != null && value !== '' && Number.isFinite(Number(value));
+  });
+
   const bandwidth = xScale.bandwidth();
   // Baseline = pixel y where the column's bottom edge anchors. When the
   // y-domain includes zero (the common case), this is yScale(0). Sparkline
@@ -115,7 +121,10 @@ export function computeColumnMarks(
   if (colorField && !isSequentialColor) {
     // Check if any category has multiple rows (actual stacking needed)
     const categoryGroups = groupByField(spec.data, xChannel.field);
-    const needsStacking = Array.from(categoryGroups.values()).some((rows) => rows.length > 1);
+    const needsStacking =
+      yChannel.stack === 'normalize' ||
+      yChannel.stack === 'center' ||
+      Array.from(categoryGroups.values()).some((rows) => rows.length > 1);
 
     if (needsStacking) {
       // stack: undefined/true/'zero'/'normalize'/'center' -> stacked (default); null/false -> grouped
@@ -123,7 +132,7 @@ export function computeColumnMarks(
 
       if (!stackEnabled) {
         marks = computeGroupedColumns(
-          spec.data,
+          measuredData,
           xChannel.field,
           yChannel.field,
           colorField,
@@ -142,7 +151,7 @@ export function computeColumnMarks(
               : 'zero';
 
         marks = computeStackedColumns(
-          spec.data,
+          measuredData,
           xChannel.field,
           yChannel.field,
           colorField,
@@ -157,7 +166,7 @@ export function computeColumnMarks(
     } else {
       // Single row per category: render like simple columns but with color from scale
       marks = computeColoredColumns(
-        spec.data,
+        measuredData,
         xChannel.field,
         yChannel.field,
         colorField,
@@ -170,7 +179,7 @@ export function computeColumnMarks(
     }
   } else {
     marks = computeSimpleColumns(
-      spec.data,
+      measuredData,
       xChannel.field,
       yChannel.field,
       xScale,

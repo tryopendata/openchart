@@ -65,8 +65,23 @@ export function computeAggregate(op: AggregateOp, values: number[]): number {
 /**
  * Build a composite group key from a row's groupby field values.
  */
-function groupKey(row: DataRow, groupby: string[]): string {
-  return groupby.map((f) => String(row[f] ?? '')).join('\x00');
+export function groupKey(row: DataRow, groupby: string[]): string {
+  return JSON.stringify(groupby.map((field) => [typeof row[field], row[field] ?? null]));
+}
+
+/** Missing and nonnumeric observations never become measured zeroes. */
+export function aggregateRows(op: AggregateOp, field: string, rows: DataRow[]): number | null {
+  if (op === 'count') return rows.length;
+  if (op === 'distinct') return new Set(rows.map((row) => row[field])).size;
+  const values = rows.flatMap((row) => {
+    const raw = row[field];
+    if (raw == null || typeof raw === 'boolean' || (typeof raw === 'string' && !raw.trim()))
+      return [];
+    if (typeof raw !== 'number' && typeof raw !== 'string') return [];
+    const value = Number(raw);
+    return Number.isFinite(value) ? [value] : [];
+  });
+  return values.length ? computeAggregate(op, values) : null;
 }
 
 /**
@@ -106,22 +121,7 @@ export function runAggregate(data: DataRow[], transform: AggregateTransform): Da
 
     // Compute each aggregate operation
     for (const agg of aggregate) {
-      // distinct counts unique raw values (not just numeric)
-      if (agg.op === 'distinct') {
-        outRow[agg.as] = new Set(rows.map((r) => r[agg.field])).size;
-        continue;
-      }
-
-      const values = rows
-        .map((r) => {
-          // For count, the field value doesn't matter, just count rows
-          if (agg.op === 'count') return 1;
-          const v = Number(r[agg.field]);
-          return Number.isFinite(v) ? v : NaN;
-        })
-        .filter((v) => !Number.isNaN(v));
-
-      outRow[agg.as] = computeAggregate(agg.op, values);
+      outRow[agg.as] = aggregateRows(agg.op, agg.field, rows);
     }
 
     result.push(outRow);

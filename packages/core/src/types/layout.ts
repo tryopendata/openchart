@@ -897,6 +897,8 @@ export interface ContinuousLegendTick {
   x: number;
   /** Horizontal text anchor for the label. */
   anchor: 'start' | 'middle' | 'end';
+  /** Additional baseline offset for staggered class boundaries (pixels). */
+  offsetY?: number;
 }
 
 /** A discrete class swatch in a binned continuous legend. */

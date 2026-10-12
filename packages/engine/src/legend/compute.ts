@@ -386,7 +386,7 @@ export function computeLegendContent(
     const labelRowHeight = Math.ceil(labelStyle.fontSize * labelStyle.lineHeight);
     const height = compact
       ? Math.max(continuous.barHeight, labelRowHeight)
-      : continuous.barHeight + CONTINUOUS_LABEL_GAP + labelRowHeight;
+      : continuous.barHeight + CONTINUOUS_LABEL_GAP + labelRowHeight * (continuous.labelRows ?? 1);
     const blockWidth = continuous.blockWidth ?? continuous.barWidth;
     return {
       entries: [],

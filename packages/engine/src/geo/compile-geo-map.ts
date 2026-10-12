@@ -351,7 +351,10 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
       const labelRowHeight = Math.ceil(theme.fonts.sizes.small * 1.3);
       const titleRowHeight = legendTitle ? labelRowHeight : 0;
       legendBlockHeight =
-        titleRowHeight + continuousContent.barHeight + CONTINUOUS_LABEL_GAP + labelRowHeight;
+        titleRowHeight +
+        continuousContent.barHeight +
+        CONTINUOUS_LABEL_GAP +
+        labelRowHeight * (continuousContent.labelRows ?? 1);
     }
   }
   if (legendBlockHeight === 0 && showChoroplethLegend && colorEncoding && !isQuantitative) {
@@ -374,12 +377,31 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
     legendBlockHeight = rows * (Math.max(10, labelHeight) + 6);
   }
 
+  const pointColor = mapSpec.points?.color;
+  const pointContinuousContent =
+    showLegend && pointColor?.type === 'quantitative'
+      ? computeContinuousLegendContentForChannel(
+          mapSpec
+            .points!.data.map((row) => row[pointColor.field])
+            .filter((value) => value != null)
+            .map(Number)
+            .filter(Number.isFinite),
+          { ...pointColor, scale: { ...pointColor.scale, type: 'quantile' } },
+          theme,
+          fullArea.width,
+        )
+      : null;
+
   // Reserve height for point color legend if applicable (overlay legends
   // float inside the map area and reserve nothing)
   if (showLegend && !pointLegendOverlay && mapSpec.points?.color) {
     if (mapSpec.points.color.type === 'quantitative') {
       const labelRowHeight = Math.ceil(theme.fonts.sizes.small * 1.3);
-      legendBlockHeight += CONTINUOUS_BAR_HEIGHT + CONTINUOUS_LABEL_GAP + labelRowHeight + 8;
+      legendBlockHeight +=
+        (pointContinuousContent?.barHeight ?? CONTINUOUS_BAR_HEIGHT) +
+        CONTINUOUS_LABEL_GAP +
+        labelRowHeight * (pointContinuousContent?.labelRows ?? 1) +
+        8;
     } else {
       const ptLabelHeight = Math.ceil(theme.fonts.sizes.small * 1.3);
       legendBlockHeight += Math.max(10, ptLabelHeight) + 6 + 8; // swatch row + gap
@@ -863,24 +885,7 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
 
     // Point continuous legend (quantitative color)
     if (pts.color && pts.color.type === 'quantitative' && showLegend) {
-      const ptColorValues: number[] = [];
-      for (const row of pts.data) {
-        const v = row[pts.color.field];
-        if (v != null) {
-          const n = Number(v);
-          if (Number.isFinite(n)) ptColorValues.push(n);
-        }
-      }
-      const ptLegendChannel: EncodingChannel = {
-        ...pts.color,
-        scale: { ...pts.color.scale, type: 'quantile' },
-      };
-      const ptContinuousContent = computeContinuousLegendContentForChannel(
-        ptColorValues,
-        ptLegendChannel,
-        theme,
-        fullArea.width,
-      );
+      const ptContinuousContent = pointContinuousContent;
       if (ptContinuousContent) {
         const labelStyle: TextStyle = {
           fontFamily: theme.fonts.family,
@@ -901,7 +906,9 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
           : fullArea.y + mapAreaHeight + legendReserveGap + bottomChoroplethH + choroplethLegendGap;
         const ptLabelRowHeight = Math.ceil(theme.fonts.sizes.small * 1.3);
         const ptLegendHeight =
-          ptContinuousContent.barHeight + CONTINUOUS_LABEL_GAP + ptLabelRowHeight;
+          ptContinuousContent.barHeight +
+          CONTINUOUS_LABEL_GAP +
+          ptLabelRowHeight * (ptContinuousContent.labelRows ?? 1);
         const bounds = {
           x: legendX,
           y: legendY,

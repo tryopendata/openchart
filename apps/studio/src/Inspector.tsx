@@ -1,5 +1,4 @@
 import type {
-  ChartSpec,
   DesignDiagnostic,
   DesignQuestion,
   SpecPatch,
@@ -8,8 +7,9 @@ import type {
 import { type RecommendationRoles, recommendCompositions } from '@opendata-ai/openchart-engine';
 import { motion } from 'motion/react';
 import { useId } from 'react';
-import { fieldType } from './document';
+import { ChartControls, CompositionControl } from './ChartControls';
 import { isSupported, type SupportedSpec } from './Preview';
+import { MapControls, TableControls } from './TableMapControls';
 
 type InspectorTab = 'design' | 'recommend' | 'review';
 
@@ -122,9 +122,6 @@ export function DesignInspector({
   onChange: (next: VizSpec) => void;
 }) {
   const chart = !('type' in spec) ? spec : null;
-  const fields = [...new Set(spec.data.flatMap(Object.keys))].filter(
-    (field) => spec.fields?.[field]?.role !== 'identity',
-  );
   return (
     <div className="studio-inspector-content">
       <h2>Make the message clear</h2>
@@ -162,42 +159,7 @@ export function DesignInspector({
       {chart && (
         <>
           <div className="studio-divider" />
-          <h3>Field roles</h3>
-          {(['x', 'y'] as const).map((axis) => {
-            const channel = chart.encoding[axis];
-            if (!channel || !('field' in channel)) return null;
-            return (
-              <label key={axis} className="studio-field">
-                {axis.toUpperCase()} axis
-                <select
-                  value={channel.field}
-                  onChange={(event) => {
-                    const field = event.target.value;
-                    const type = fieldType(spec.data, field, spec.fields);
-                    onChange({
-                      ...chart,
-                      encoding: {
-                        ...chart.encoding,
-                        [axis]: {
-                          field,
-                          type:
-                            type === 'number'
-                              ? 'quantitative'
-                              : type === 'date'
-                                ? 'temporal'
-                                : 'nominal',
-                        },
-                      },
-                    } as ChartSpec);
-                  }}
-                >
-                  {fields.map((field) => (
-                    <option key={field}>{field}</option>
-                  ))}
-                </select>
-              </label>
-            );
-          })}
+          <ChartControls chart={chart} onChange={onChange} />
           <label className="studio-field">
             Motion
             <select
@@ -226,6 +188,16 @@ export function DesignInspector({
           </label>
         </>
       )}
+      <CompositionControl
+        key={JSON.stringify([
+          spec.data[0] && Object.keys(spec.data[0]),
+          'type' in spec ? spec.type : spec.mark,
+        ])}
+        spec={spec}
+        onChange={onChange}
+      />
+      {'type' in spec && spec.type === 'table' && <TableControls spec={spec} onChange={onChange} />}
+      {'type' in spec && spec.type === 'map' && <MapControls spec={spec} onChange={onChange} />}
       <label className="studio-check">
         <input
           type="checkbox"

@@ -500,3 +500,25 @@ describe('runMapFillTransition point geometry', () => {
     expect(svg.querySelector('.oc-map-point')!.getAttribute('fill')).toBe('rgb(0, 255, 0)');
   });
 });
+
+describe('missing-data paint during updates', () => {
+  it('keeps new hatch references through every frame instead of interpolating URL paint as black', () => {
+    const svg = buildMapSvg([
+      { key: 'missing', fill: 'url(#new-hatch)' },
+      { key: 'new-data', fill: '#55aabb' },
+    ]);
+    runMapFillTransition(
+      svg,
+      new Map([
+        ['missing', 'url(#old-hatch)'],
+        ['new-data', 'url(#old-hatch)'],
+      ]),
+      { duration: 300 },
+    );
+    for (const time of [0, 150, 300]) {
+      pumpRaf(time);
+      expect(featureAt(svg, 0).getAttribute('fill')).toBe('url(#new-hatch)');
+      expect(featureAt(svg, 1).getAttribute('fill')).toBe('#55aabb');
+    }
+  });
+});

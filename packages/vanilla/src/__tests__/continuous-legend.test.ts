@@ -83,6 +83,35 @@ describe('continuous color legend rendering', () => {
     chart.destroy();
   });
 
+  it('renders every long irregular class boundary within the reserved legend height', () => {
+    const chart = createChart(container, {
+      ...heatmapSpec,
+      encoding: {
+        ...heatmapSpec.encoding,
+        color: {
+          field: 'value',
+          type: 'quantitative',
+          format: '$,.0f',
+          scale: { type: 'threshold', domain: [20000, 41000, 79000, 88000] },
+        },
+      },
+    });
+    const labels = [...container.querySelectorAll('.oc-legend--continuous text')];
+    expect(labels.map((label) => label.textContent)).toEqual([
+      '$20,000',
+      '$41,000',
+      '$79,000',
+      '$88,000',
+    ]);
+    expect(new Set(labels.map((label) => label.getAttribute('y'))).size).toBeGreaterThan(1);
+    const legend = chart.layout.legend!;
+    for (const label of labels)
+      expect(Number(label.getAttribute('y'))).toBeLessThanOrEqual(
+        legend.bounds.y + legend.bounds.height,
+      );
+    chart.destroy();
+  });
+
   it('is removed by legend: { show: false }', () => {
     const chart = createChart(container, { ...heatmapSpec, legend: { show: false } });
     expect(container.querySelector('.oc-legend--continuous')).toBeNull();

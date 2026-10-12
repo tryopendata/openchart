@@ -83,6 +83,7 @@
 | Renderer: marks (line, area, rect, arc, point, text, rule, tick) | `packages/vanilla/src/renderers/marks.ts` → `renderMarks()`. Returns an optional `<g class="oc-mark-labels">` overlay that `svg-renderer.ts` appends outside the clip path so value labels on tall columns aren't clipped — `.oc-annotations` is appended *before* that overlay, so annotations paint under the data labels. Label halos: `applyLabelHalo` (skipped when the engine set `halo: false`) delegates to the one `applyKnockoutHalo(el, color, fontSize)` in `renderers/svg-dom.ts`, shared with the annotation labels; presentation attributes, stroke width `round(fontSize * 0.3)`. |
 | Renderer: axes | `packages/vanilla/src/renderers/axes.ts` → `renderAxes()` |
 | Renderer: annotations | `packages/vanilla/src/renderers/annotations.ts` → `renderAnnotations()`. Knockout halo behind label text comes from `applyKnockoutHalo` in `renderers/svg-dom.ts` (same helper the mark labels use). |
+| Binned color legend label packing | `packages/engine/src/legend/continuous.ts` preserves every boundary using `labelRows` and optional tick `offsetY`; Cartesian/map planners reserve the height, and the shared SVG legend renderer applies it. |
 | Renderer: legend | `packages/vanilla/src/renderers/legend.ts` |
 | Renderer: brand block | `packages/vanilla/src/renderers/brand.ts` |
 | Renderer: endpoint labels (line/area series labels at the trailing edge) | `packages/vanilla/src/renderers/endpoint-labels.ts` |
@@ -350,15 +351,17 @@ These are easy mistakes — written down so the next agent doesn't search for th
 
 | Concern | Location |
 | --- | --- |
-| Static Studio entry and build | `examples/workbench.html`, `examples/workbench.vite.config.ts` |
-| Canonical document, imports and history | `examples/src/workbench/document.ts`, `Workbench.tsx` |
-| Renderer lifecycle, reader/editor separation | `examples/src/workbench/Preview.tsx` |
+| Static Studio entry and build | `apps/studio/index.html`, `apps/studio/vite.config.ts` |
+| Canonical document, imports and history | `apps/studio/src/document.ts`, `project.ts`, `Workbench.tsx` |
+| Composition and contextual design controls | `apps/studio/src/composition.ts`, `ChartControls.tsx`, `TableMapControls.tsx` |
+| Movable product and dependency checks | `scripts/extract-studio.mjs`, `check-product-boundary.mjs`, `check-library-bundle.mjs` |
+| Renderer lifecycle, reader/editor separation | `apps/studio/src/Preview.tsx` |
 | Field correction, design and recommendations | `DataEditor.tsx`, `Inspector.tsx` in the workbench |
-| Reference compositions | `examples/src/workbench/patterns.ts` |
+| Reference compositions | `apps/studio/src/patterns.ts` |
 | Metadata, diagnostic and reader contracts | `packages/core/src/types/design.ts` |
 | Deterministic bounded spring sampler | `packages/core/src/motion/sample.ts` |
 | Pure review/recommendation/patch/identity APIs | `packages/engine/src/design/` |
 | Retained SVG and sampled reader geometry | `packages/vanilla/src/transition/{reconcile,scene,labels}.ts`, `reader.ts` |
-| Production browser gates | `playwright.workbench.config.ts`, `e2e/workbench/studio.spec.ts` |
+| Production browser gates | `apps/studio/playwright.config.ts`, `apps/studio/e2e/` |
 
 See [workbench deployment and boundaries](workbench.md) before adding host persistence or publishing.

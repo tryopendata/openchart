@@ -14,7 +14,8 @@
   },
   "workspaces": [
     "packages/*",
-    "examples"
+    "examples",
+    "apps/*"
   ],
   "scripts": {
     "build": "bun run --filter '@opendata-ai/openchart-core' build && bun run --filter '@opendata-ai/openchart-engine' build && bun run --filter '@opendata-ai/openchart-vanilla' build && bun run --filter '@opendata-ai/openchart-react' --filter '@opendata-ai/openchart-vue' --filter '@opendata-ai/openchart-svelte' build",
@@ -37,10 +38,13 @@
     "test:invariants": "playwright test --project=invariants --project=invariants-chromium-mobile --project=invariants-chromium-mobile-narrow --project=invariants-webkit-mobile",
     "test:perf": "playwright test --project=perf",
     "prepare": "husky",
-    "dev:workbench": "cd examples && bun run dev:workbench",
-    "build:workbench": "cd examples && bun run build:workbench",
+    "dev:workbench": "bun run --cwd apps/studio dev",
+    "build:workbench": "bun run build && bun run --cwd apps/studio build",
     "capture:design": "node scripts/capture-design-baseline.mjs",
-    "test:workbench": "playwright test --config playwright.workbench.config.ts"
+    "test:workbench": "bun run build && bun run --cwd apps/studio test:e2e",
+    "check:boundaries": "node scripts/check-product-boundary.mjs",
+    "extract:studio": "node scripts/extract-studio.mjs",
+    "check:library-bundle": "node scripts/check-library-bundle.mjs"
   },
   "overrides": {
     "strip-ansi": "6.0.1",

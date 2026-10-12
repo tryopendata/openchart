@@ -150,7 +150,11 @@ function renderContinuousLegend(parent: SVGElement, legend: ContinuousLegendLayo
 
   for (const tick of legend.ticks) {
     const label = createSVGElement('text');
-    setAttrs(label, { x: tick.x, y: legend.labelY, 'text-anchor': tick.anchor });
+    setAttrs(label, {
+      x: tick.x,
+      y: legend.labelY + (tick.offsetY ?? 0),
+      'text-anchor': tick.anchor,
+    });
     applyTextStyle(label, legend.labelStyle);
     label.textContent = tick.label;
     g.appendChild(label);

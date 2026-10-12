@@ -25,7 +25,9 @@ import type {
 import {
   computeFieldFormatContext,
   defaultNumberFormatter,
+  estimateTextWidth,
   resolveNumberFormatter,
+  resolveSchemeName,
 } from '@opendata-ai/openchart-core';
 import { tickStep } from 'd3-array';
 import { scaleQuantile } from 'd3-scale';
@@ -107,6 +109,8 @@ export interface ContinuousLegendContent {
   ticks: ContinuousLegendTick[];
   /** The class scale the swatches were drawn from (binned mode only). */
   classScale?: ClassScale;
+  /** Number of label rows required to preserve every class boundary. */
+  labelRows?: number;
   /**
    * Bar x offset inside the legend block. Non-zero only for the compact
    * variant, where a "Less" label sits to the left of the first swatch.
@@ -213,6 +217,10 @@ function isDivergingRamp(colors: string[], theme: ResolvedTheme): boolean {
 function resolveRampColors(channel: EncodingChannel, theme: ResolvedTheme): string[] {
   const explicitRange = channel.scale?.range as string[] | undefined;
   if (explicitRange?.length) return explicitRange;
+  if (channel.scale?.scheme) {
+    const scheme = resolveSchemeName(channel.scale.scheme);
+    if (scheme) return channel.scale.reverse ? [...scheme].reverse() : scheme;
+  }
   return Object.values(theme.colors.sequential)[0] ?? theme.colors.categorical;
 }
 
@@ -439,6 +447,23 @@ export function computeContinuousLegendContentForChannel(
       anchor: 'middle' as const,
     }));
 
+    const rowEnds: number[] = [];
+    const rowHeight = Math.ceil(theme.fonts.sizes.small * 1.3);
+    for (const tick of ticks) {
+      const width = estimateTextWidth(
+        tick.label,
+        theme.fonts.sizes.small,
+        theme.fonts.weights.normal,
+      );
+      if (tick.x - width / 2 < 0) tick.anchor = 'start';
+      else if (tick.x + width / 2 > barWidth) tick.anchor = 'end';
+      const left =
+        tick.x - (tick.anchor === 'middle' ? width / 2 : tick.anchor === 'end' ? width : 0);
+      let row = rowEnds.findIndex((end) => end + 6 <= left);
+      if (row < 0) row = rowEnds.length;
+      rowEnds[row] = left + width;
+      if (row > 0) tick.offsetY = row * rowHeight;
+    }
     return {
       mode: 'binned',
       barWidth,
@@ -446,6 +471,7 @@ export function computeContinuousLegendContentForChannel(
       colorStops: [],
       bins,
       ticks,
+      labelRows: Math.max(1, rowEnds.length),
       classScale: scale,
     };
   }

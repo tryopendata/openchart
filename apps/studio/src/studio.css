@@ -1,6 +1,6 @@
 @font-face {
   font-family: "Inter Variable";
-  src: url("/fonts/InterVariable.woff2") format("woff2");
+  src: url("./assets/InterVariable.woff2") format("woff2");
   font-weight: 100 900;
   font-display: swap;
 }
@@ -9,6 +9,7 @@
   color: #18181b;
   background: #fff;
   font-synthesis: none;
+  --studio-ink: #18181b;
   --studio-accent: #0f766e;
   --studio-border: #e4e4e7;
   --studio-muted: #71717a;
@@ -828,4 +829,102 @@ button.studio-primary:hover {
 .studio-recovery button {
   min-height: 44px;
   margin: 8px 12px 8px 0;
+}
+
+.studio-control-section {
+  border-top: 1px solid var(--studio-border);
+  margin: 20px 0;
+  padding-top: 16px;
+}
+.studio-control-section summary {
+  cursor: pointer;
+  font-weight: 600;
+  min-height: 36px;
+  padding: 8px 0;
+}
+.studio-control-section details {
+  padding: 8px 0;
+}
+.studio-control-section button,
+.studio-preparation button,
+.studio-data-switch button {
+  min-height: 40px;
+  margin: 6px 4px 6px 0;
+}
+.studio-color,
+.studio-annotation {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin: 8px 0;
+  overflow-wrap: anywhere;
+}
+.studio-color input {
+  flex-shrink: 0;
+  width: 44px;
+  height: 32px;
+  padding: 2px;
+}
+.studio-preparation,
+.studio-prepared-table {
+  padding: 24px;
+  background: white;
+  border: 1px solid var(--studio-border);
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+.studio-data-workspace {
+  width: 100%;
+  min-width: 0;
+}
+.studio-control-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+  gap: 16px;
+}
+.studio-control-grid fieldset,
+.studio-sheet fieldset {
+  min-width: 0;
+  border: 1px solid var(--studio-border);
+  border-radius: 6px;
+}
+.studio-data-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.studio-data-switch [aria-pressed="true"] {
+  background: var(--studio-ink);
+  color: white;
+}
+.studio-prepared-table table {
+  border-collapse: collapse;
+  width: 100%;
+}
+.studio-prepared-table th,
+.studio-prepared-table td {
+  padding: 8px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--studio-border);
+  white-space: nowrap;
+}
+.studio-map-report {
+  padding: 12px;
+  background: #f1f5f4;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 650px) {
+  .studio-control-section button,
+  .studio-control-section summary,
+  .studio-preparation button,
+  .studio-data-switch button {
+    min-height: 44px;
+  }
+  .studio-preparation,
+  .studio-prepared-table {
+    padding: 12px;
+  }
 }

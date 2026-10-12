@@ -122,6 +122,12 @@ export function computeBarMarks(
     return [];
   }
 
+  // Missing observations have no measurable length; never render them as zero bars.
+  const measuredData = spec.data.filter((row) => {
+    const value = row[xChannel.field];
+    return value != null && value !== '' && Number.isFinite(Number(value));
+  });
+
   const bandwidth = yScale.bandwidth();
   // Baseline = pixel x where the bar's left edge anchors. When the x-domain
   // includes zero (the common case), this is xScale(0). When the domain
@@ -144,7 +150,7 @@ export function computeBarMarks(
   // If no color encoding, or sequential color (value-based gradient), render simple bars
   if (!colorField || isSequentialColor) {
     marks = computeSimpleBars(
-      spec.data,
+      measuredData,
       xChannel.field,
       yChannel.field,
       xScale,
@@ -158,7 +164,10 @@ export function computeBarMarks(
   } else {
     // Color encoding present: decide between colored simple bars vs stacked
     const categoryGroups = groupByField(spec.data, yChannel.field);
-    const needsStacking = Array.from(categoryGroups.values()).some((rows) => rows.length > 1);
+    const needsStacking =
+      xChannel.stack === 'normalize' ||
+      xChannel.stack === 'center' ||
+      Array.from(categoryGroups.values()).some((rows) => rows.length > 1);
 
     if (needsStacking) {
       // stack: undefined/true/'zero'/'normalize'/'center' -> stacked (default); null/false -> grouped
@@ -166,7 +175,7 @@ export function computeBarMarks(
 
       if (!stackEnabled) {
         marks = computeGroupedBars(
-          spec.data,
+          measuredData,
           xChannel.field,
           yChannel.field,
           colorField,
@@ -186,7 +195,7 @@ export function computeBarMarks(
               : 'zero';
 
         marks = computeStackedBars(
-          spec.data,
+          measuredData,
           xChannel.field,
           yChannel.field,
           colorField,
@@ -201,7 +210,7 @@ export function computeBarMarks(
     } else {
       // Single row per category: render like simple bars but with color from scale
       marks = computeColoredBars(
-        spec.data,
+        measuredData,
         xChannel.field,
         yChannel.field,
         colorField,
