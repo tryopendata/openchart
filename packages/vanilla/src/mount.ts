@@ -81,12 +81,7 @@ import { renderChartSVG } from './svg-renderer';
 import { createTextEditOverlay, createTextEditOverlayAtPosition } from './text-edit-overlay';
 import { stampThemeProperties } from './theme-tokens';
 import { createTooltipManager, type TooltipManager } from './tooltip';
-import {
-  canTransition,
-  type GeometrySnapshot,
-  runTransition,
-  type TransitionHandle,
-} from './transition';
+import { canTransition, runTransition, type TransitionHandle } from './transition';
 import { createYouDrawIt, type YouDrawItController } from './you-draw-it';
 
 // ---------------------------------------------------------------------------
@@ -300,7 +295,6 @@ export function createChart<TData extends DataRow = DataRow>(
 
   // Data-update transition state
   let transitionHandle: TransitionHandle | null = null;
-  let transitionSnapshot: GeometrySnapshot | null = null;
 
   // Set when webfonts have loaded and a recompile is owed to reflect final font
   // metrics. The next render() that actually recompiles flips
@@ -1303,16 +1297,12 @@ export function createChart<TData extends DataRow = DataRow>(
     const prevLayout = currentLayout;
     const entranceWasRunning = cleanupAnimations != null;
 
-    // Snapshot in-flight transition geometry before render() cancels it.
-    // This enables retargeting: the next transition starts from the
-    // interrupted position instead of snapping to the previous final state.
-    if (transitionHandle?.running) {
-      transitionSnapshot = transitionHandle.snapshot();
-    }
-
     const nextFont = resolveEffectiveFont(newSpec);
     const nextMeasure = nextFont === fontFamily ? measureText : createMeasureText(nextFont);
     const nextLayout = compile(newSpec, nextMeasure, layoutOnly);
+    // Capture only after compilation succeeds, before render() cancels the
+    // current motion. A rejected edit must not leave geometry for a later update.
+    const snapshot = transitionHandle?.running ? transitionHandle.snapshot() : undefined;
     currentSpec = newSpec;
     fontFamily = nextFont;
     measureText = nextMeasure;
@@ -1348,16 +1338,12 @@ export function createChart<TData extends DataRow = DataRow>(
         entranceInFlight: entranceWasRunning,
       })
     ) {
-      // Consume snapshot (if any) for retargeting, then clear
-      const snapshot = transitionSnapshot;
-      transitionSnapshot = null;
-
       const handle = runTransition({
         svg: svgElement as SVGSVGElement,
         prevLayout,
         nextLayout: currentLayout,
         animation: currentLayout.animation!,
-        fromSnapshot: snapshot ?? undefined,
+        fromSnapshot: snapshot,
         manual,
         // render() above already rebuilt the layer for the NEXT layout, so this
         // is the destination-mode layer the tween writes into.
@@ -1371,8 +1357,6 @@ export function createChart<TData extends DataRow = DataRow>(
       transitionHandle = handle;
       return handle;
     }
-    // No transition started; clear any stale snapshot
-    transitionSnapshot = null;
     return null;
   }
 
@@ -1500,8 +1484,6 @@ export function createChart<TData extends DataRow = DataRow>(
       transitionHandle.cancel();
       transitionHandle = null;
     }
-    transitionSnapshot = null;
-
     if (cleanupAnimations) {
       cleanupAnimations();
       cleanupAnimations = null;

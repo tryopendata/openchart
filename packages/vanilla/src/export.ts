@@ -97,7 +97,11 @@ function inheritedFontProperty(element: SVGElement, root: SVGElement, property: 
   let current: SVGElement | null = element;
   while (current) {
     const value = current.style.getPropertyValue(property) || current.getAttribute(property);
-    if (value && value !== 'inherit' && value !== 'unset') return value;
+    const keyword = value?.trim().toLowerCase();
+    // Unlike inheritance, initial resets to normal weight or the browser's
+    // default family, which has no authored font face to embed.
+    if (keyword === 'initial') return property === 'font-weight' ? '400' : '';
+    if (value && keyword !== 'inherit' && keyword !== 'unset') return value;
     if (current === root) break;
     current = current.parentElement as SVGElement | null;
   }

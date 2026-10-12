@@ -173,6 +173,31 @@ describe('exportSVGWithFonts', () => {
     expect(exported).toContain(`font-family: 'ExportFont'; font-weight: ${weight}`);
   });
 
+  it('resets an initial text weight instead of inheriting the ancestor weight', async () => {
+    const fetchFont = installFontFixtures();
+    const svg = renderToSVG();
+    svg.style.fontWeight = '700';
+    const title = svg.querySelector<SVGTextElement>('.oc-title')!;
+    title.style.fontFamily = 'ExportFont';
+    title.style.fontWeight = 'initial';
+    const exported = await exportSVGWithFonts(svg);
+    expect(fetchFont.mock.calls.map(([url]) => url)).toEqual([
+      'https://fonts.example/face-400.woff2',
+    ]);
+    expect(exported).toContain("font-family: 'ExportFont'; font-weight: 400");
+  });
+
+  it('does not inherit an authored font family through an initial declaration', async () => {
+    const fetchFont = installFontFixtures();
+    const svg = renderToSVG();
+    svg.style.fontFamily = 'ExportFont';
+    const title = svg.querySelector<SVGTextElement>('.oc-title')!;
+    title.style.fontFamily = 'initial';
+    const exported = await exportSVGWithFonts(svg);
+    expect(fetchFont).not.toHaveBeenCalled();
+    expect(exported).not.toContain('@font-face');
+  });
+
   it('returns a promise', () => {
     const svg = renderToSVG();
     const result = exportSVGWithFonts(svg);
