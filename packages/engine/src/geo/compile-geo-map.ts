@@ -41,6 +41,7 @@ import { buildSizeScale, SIZE_SCALE_DEFAULTS } from '../compile/size-scale';
 import { emitSpecWarnings, expandSpecSugar } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
+import { finiteNumber } from '../data/finite-number';
 import { resolveChromeLayout } from '../layout/shared';
 import {
   type ClassScale,
@@ -321,11 +322,8 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
   if (colorEncoding && isQuantitative) {
     const colorValues: number[] = [];
     for (const row of mapSpec.data) {
-      const v = row[colorEncoding.field];
-      if (v != null) {
-        const n = Number(v);
-        if (!Number.isNaN(n)) colorValues.push(n);
-      }
+      const value = finiteNumber(row[colorEncoding.field]);
+      if (value !== undefined) colorValues.push(value);
     }
     // Maps class their values rather than ramping them continuously, so the
     // legend infra draws swatches. `quantize` (round breaks) is the default;
@@ -381,11 +379,10 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
   const pointContinuousContent =
     showLegend && pointColor?.type === 'quantitative'
       ? computeContinuousLegendContentForChannel(
-          mapSpec
-            .points!.data.map((row) => row[pointColor.field])
-            .filter((value) => value != null)
-            .map(Number)
-            .filter(Number.isFinite),
+          mapSpec.points!.data.flatMap((row) => {
+            const value = finiteNumber(row[pointColor.field]);
+            return value === undefined ? [] : [value];
+          }),
           { ...pointColor, scale: { ...pointColor.scale, type: 'quantile' } },
           theme,
           fullArea.width,
@@ -496,6 +493,10 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
   // 13. Build color scale + feature marks
   const formatter =
     buildD3Formatter(mapSpec.encoding?.color?.format ?? mapSpec.valueFormat) ?? formatNumber;
+  const formatQuantitative = (value: unknown): string => {
+    const number = finiteNumber(value);
+    return number === undefined ? 'No data' : formatter(number);
+  };
   // The theme's own neutral ramp, so a warm or cool theme gets a warm or cool
   // "no data" gray instead of an uninvited zinc.
   const neutralFill = theme.colors.neutral[100];
@@ -707,19 +708,16 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
       if (pts.color.type === 'quantitative') {
         const colorValues: number[] = [];
         for (const row of pts.data) {
-          const raw = row[pts.color.field];
-          if (raw != null) {
-            const v = Number(raw);
-            if (Number.isFinite(v)) colorValues.push(v);
-          }
+          const value = finiteNumber(row[pts.color.field]);
+          if (value !== undefined) colorValues.push(value);
         }
         if (colorValues.length > 0) {
           const palette = pts.color.scale?.scheme ?? 'blue';
           const paletteStops = [...(SEQUENTIAL_PALETTES[palette] ?? SEQUENTIAL_PALETTES.blue)];
           const qScale = scaleQuantile<string>().domain(colorValues).range(paletteStops);
           pointColorScale = (val: unknown) => {
-            const v = Number(val);
-            return Number.isFinite(v) ? qScale(v) : CATEGORICAL_PALETTE[0];
+            const value = finiteNumber(val);
+            return value !== undefined ? qScale(value) : neutralFill;
           };
         }
       } else {
@@ -767,19 +765,26 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
 
     for (let i = 0; i < pts.data.length; i++) {
       const row = pts.data[i];
-      const lon = Number(row[lonField]);
-      const lat = Number(row[latField]);
-      if (!Number.isFinite(lon) || !Number.isFinite(lat)) continue;
+      const lon = finiteNumber(row[lonField]);
+      const lat = finiteNumber(row[latField]);
+      if (lon === undefined || lat === undefined) continue;
+      const sizeValue = pts.size ? finiteNumber(row[pts.size.field]) : undefined;
+      if (pts.size && sizeValue === undefined) continue;
 
       const projected = projection([lon, lat]);
-      if (!projected) {
+      if (!projected || !projected.every(Number.isFinite)) {
         droppedPoints.push([lon, lat]);
         continue;
       }
 
-      const r = sizeScale ? sizeScale.scale(Number(row[sizeScale.field])) : 5;
+      const r = sizeScale && sizeValue !== undefined ? sizeScale.scale(sizeValue) : 5;
+      if (!Number.isFinite(r) || r < 0) continue;
       const fill =
-        pointColorScale && pts.color ? pointColorScale(row[pts.color.field]) : defaultFill;
+        pointColorScale && pts.color
+          ? pointColorScale(row[pts.color.field])
+          : pts.color?.type === 'quantitative'
+            ? neutralFill
+            : defaultFill;
       const key = keyChannel ? String(row[keyChannel.field] ?? i) : String(i);
       // Knockout ring in the canvas color: overlapping bubbles stay countable.
       const stroke = resolveKnockoutColor(theme);
@@ -996,17 +1001,17 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
     if (tooltipChannels) {
       for (const ch of tooltipChannels) {
         const val = mark.data[ch.field];
-        if (val != null) {
+        if (val != null || ch.type === 'quantitative') {
           fields.push({
             label: ch.title ?? ch.field,
-            value: ch.type === 'quantitative' ? formatter(Number(val)) : String(val),
+            value: ch.type === 'quantitative' ? formatQuantitative(val) : String(val),
           });
         }
       }
-    } else if (colorEncoding && isQuantitative && mark.data[colorEncoding.field] != null) {
+    } else if (colorEncoding && isQuantitative) {
       fields.push({
         label: colorEncoding.title ?? colorEncoding.field,
-        value: formatter(Number(mark.data[colorEncoding.field])),
+        value: formatQuantitative(mark.data[colorEncoding.field]),
       });
     } else if (colorEncoding && !isQuantitative && mark.data[colorEncoding.field] != null) {
       fields.push({
@@ -1030,10 +1035,10 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
       if (ptTooltipChannels) {
         for (const ch of ptTooltipChannels) {
           const val = pm.data[ch.field];
-          if (val != null) {
+          if (val != null || ch.type === 'quantitative') {
             fields.push({
               label: ch.title ?? ch.field,
-              value: ch.type === 'quantitative' ? formatter(Number(val)) : String(val),
+              value: ch.type === 'quantitative' ? formatQuantitative(val) : String(val),
             });
           }
         }
@@ -1047,16 +1052,15 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
         }
         if (pts.color) {
           const val = pm.data[pts.color.field];
-          if (val != null)
+          if (val != null || pts.color.type === 'quantitative')
             fields.push({
               label: pts.color.title ?? pts.color.field,
-              value: pts.color.type === 'quantitative' ? formatter(Number(val)) : String(val),
+              value: pts.color.type === 'quantitative' ? formatQuantitative(val) : String(val),
             });
         }
         if (pts.size) {
           const val = pm.data[pts.size.field];
-          if (val != null)
-            fields.push({ label: pts.size.title ?? pts.size.field, value: formatter(Number(val)) });
+          fields.push({ label: pts.size.title ?? pts.size.field, value: formatQuantitative(val) });
         }
       }
       if (fields.length > 0) {
@@ -1260,25 +1264,16 @@ function buildQuantitativeMarks(opts: QuantitativeOptions): {
 
     const featureId = feat.id as string | number;
     const dataRow = joined.get(featureId) ?? null;
-    const hasData = dataRow !== null;
 
     let fill = neutralFill;
     let binIndex: number | undefined;
     // A value of exactly 0 is data. Only a missing row, a null cell or a
     // non-numeric cell counts as a hole.
-    let hasValue = false;
-    if (hasData) {
-      const raw = dataRow[colorField];
-      if (raw != null) {
-        const v = Number(raw);
-        if (!Number.isNaN(v)) {
-          hasValue = true;
-          if (classScale) {
-            fill = classScale.color(v);
-            binIndex = classScale.binIndex(v);
-          }
-        }
-      }
+    const value = finiteNumber(dataRow?.[colorField]);
+    const hasValue = value !== undefined;
+    if (value !== undefined && classScale) {
+      fill = classScale.color(value);
+      binIndex = classScale.binIndex(value);
     }
 
     const props = feat.properties as Record<string, unknown> | null;
@@ -1307,7 +1302,7 @@ function buildQuantitativeMarks(opts: QuantitativeOptions): {
       aria: {
         role: 'img',
         label: name
-          ? `${name}: ${hasData && dataRow[colorField] != null && !Number.isNaN(Number(dataRow[colorField])) ? formatter(Number(dataRow[colorField])) : 'no data'}`
+          ? `${name}: ${value !== undefined ? formatter(value) : 'no data'}`
           : String(featureId),
       },
       animationIndex: animIndex++,

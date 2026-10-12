@@ -47,6 +47,7 @@ import {
 
 import { isBinnedBarEncoding } from '../charts/post-process';
 import type { NormalizedChartSpec } from '../compiler/types';
+import { finiteNumber } from '../data/finite-number';
 import { DEFAULT_BIN_COUNT, sampleRampColors } from '../legend/continuous';
 import { fieldIterable } from './shared';
 
@@ -114,23 +115,12 @@ export interface ResolvedScales {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/**
- * Extract and parse a field to numbers in a single pass (fused fieldValues +
- * parseNumbers). Semantics preserved exactly:
- *   - `v != null` filter first (drops null/undefined, keeps everything else
- *     including empty string).
- *   - Non-number values go through `Number(v)`, so `''` becomes `0` and is
- *     KEPT (0 is finite). Do not "fix" this -- it's existing behavior.
- *   - `Number.isFinite` filters out NaN/Infinity after coercion.
- *   - Element order preserved (data order).
- */
+/** Extract measured numbers in data order, without coercing holes to zero. */
 function numericFieldValues(data: DataRow[], field: string): number[] {
   const result: number[] = [];
-  for (const d of data) {
-    const v = d[field];
-    if (v == null) continue;
-    const n = typeof v === 'number' ? v : Number(v);
-    if (Number.isFinite(n)) result.push(n);
+  for (const row of data) {
+    const value = finiteNumber(row[field]);
+    if (value !== undefined) result.push(value);
   }
   return result;
 }
@@ -937,8 +927,8 @@ export function computeScales(
           const sums = new Map<string, number>();
           for (const row of data) {
             const cat = String(row[yField] ?? '');
-            const val = Number(row[xField] ?? 0);
-            if (Number.isFinite(val) && val > 0) {
+            const val = finiteNumber(row[xField]);
+            if (val !== undefined && val > 0) {
               sums.set(cat, (sums.get(cat) ?? 0) + val);
             }
           }
@@ -960,8 +950,8 @@ export function computeScales(
           const sums = new Map<string, number>();
           for (const row of data) {
             const cat = String(row[yField] ?? '');
-            const val = Number(row[xField] ?? 0);
-            if (Number.isFinite(val) && val > 0) {
+            const val = finiteNumber(row[xField]);
+            if (val !== undefined && val > 0) {
               sums.set(cat, (sums.get(cat) ?? 0) + val);
             }
           }
@@ -1071,8 +1061,8 @@ export function computeScales(
           const sums = new Map<string, number>();
           for (const row of data) {
             const cat = String(row[xField] ?? '');
-            const val = Number(row[yField] ?? 0);
-            if (Number.isFinite(val) && val > 0) {
+            const val = finiteNumber(row[yField]);
+            if (val !== undefined && val > 0) {
               sums.set(cat, (sums.get(cat) ?? 0) + val);
             }
           }
@@ -1094,8 +1084,8 @@ export function computeScales(
           const sums = new Map<string, number>();
           for (const row of data) {
             const cat = String(row[xField] ?? '');
-            const val = Number(row[yField] ?? 0);
-            if (Number.isFinite(val) && val > 0) {
+            const val = finiteNumber(row[yField]);
+            if (val !== undefined && val > 0) {
               sums.set(cat, (sums.get(cat) ?? 0) + val);
             }
           }

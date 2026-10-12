@@ -110,16 +110,14 @@ export function createYouDrawIt(options: YouDrawItOptions): YouDrawItController 
 
   /** Locate the target line's <path> in the freshly rendered SVG. */
   function findTargetLinePath(svg: SVGSVGElement, seriesKey?: string): SVGPathElement | null {
-    // Line marks render as <g data-mark-id="line-{seriesKey ?? index}"> with a
-    // single <path> child (see renderers/marks.ts). Prefer the seriesKey match;
-    // fall back to the first line mark for single-series charts (no color enc).
-    if (seriesKey) {
-      const escaped =
-        typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
-          ? CSS.escape(seriesKey)
-          : seriesKey.replace(/"/g, '\\"');
-      const byKey = svg.querySelector<SVGPathElement>(`[data-mark-id="line-${escaped}"] path`);
-      if (byKey) return byKey;
+    // Interaction IDs identify individual marks, not series. Match the authored
+    // series directly so quotes or repeated names in other mark types are safe.
+    if (seriesKey !== undefined) {
+      const group = [...svg.querySelectorAll('.oc-mark-line')].find(
+        (element) => element.getAttribute('data-series') === seriesKey,
+      );
+      const path = group?.querySelector<SVGPathElement>('path');
+      if (path) return path;
     }
     return svg.querySelector<SVGPathElement>('.oc-mark-line path');
   }

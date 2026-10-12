@@ -48,6 +48,7 @@ import { scaleLinear } from 'd3-scale';
 import { emitSpecWarnings, expandSpecSugar } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
+import { finiteNumber } from '../data/finite-number';
 import { resolveFieldFormatter } from '../format/field-format';
 import { resolveChromeLayout } from '../layout/shared';
 import { computeTilePositions, STATE_CODE_SET, STATE_NAMES, US_STATE_TILES } from './layout';
@@ -269,12 +270,9 @@ function compileQuantitative(
   const stateValueMap = new Map<string, number>();
   for (const row of tilemapSpec.data) {
     const stateCode = String(row[stateField]);
-    const raw = row[valueField];
-    if (STATE_CODE_SET.has(stateCode) && raw !== null && raw !== undefined) {
-      const value = Number(raw);
-      if (!Number.isNaN(value)) {
-        stateValueMap.set(stateCode, value);
-      }
+    const value = finiteNumber(row[valueField]);
+    if (STATE_CODE_SET.has(stateCode) && value !== undefined) {
+      stateValueMap.set(stateCode, value);
     }
   }
 

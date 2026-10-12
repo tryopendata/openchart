@@ -24,6 +24,12 @@ import {
   type JPGExportOptions,
   type SVGExportOptions,
 } from './export';
+import {
+  captureMarkFocus,
+  type NavigableMark,
+  restoreMarkFocus,
+  wireMarkNavigation,
+} from './interactions/mark-navigation';
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
 import { observeResize } from './resize-observer';
 import { resolveDarkMode } from './resolve-dark-mode';
@@ -90,10 +96,10 @@ export function createBarList(
   // { ...spec.theme, ...options.theme }, so options.theme wins over the
   // spec-level theme; fall back to the container's computed font. Measuring a
   // different font than gets rendered desyncs layout metrics and the reload watcher.
-  function resolveEffectiveFont(): string {
+  function resolveEffectiveFont(candidate = currentSpec): string {
     return (
       options?.theme?.fonts?.family ??
-      currentSpec.theme?.fonts?.family ??
+      candidate.theme?.fonts?.family ??
       resolveFontFamily(container)
     );
   }
@@ -109,7 +115,7 @@ export function createBarList(
     };
   }
 
-  function compile(): BarListLayout {
+  function compile(candidate = currentSpec, measure = measureText): BarListLayout {
     const { width, height } = getContainerDimensions();
     const darkMode = resolveDarkMode(options?.darkMode);
 
@@ -119,10 +125,10 @@ export function createBarList(
       theme: options?.theme,
       darkMode,
       watermark: options?.watermark,
-      measureText,
+      measureText: measure,
     };
 
-    const layout = compileBarList(currentSpec, compileOpts);
+    const layout = compileBarList(candidate, compileOpts);
 
     // Auto-size height to content so few-row lists don't leave empty space.
     if (layout.rows.length > 0) {
@@ -141,6 +147,8 @@ export function createBarList(
 
   function wireTooltipAndInteraction(svg: SVGSVGElement, layout: BarListLayout): () => void {
     const cleanups: Array<() => void> = [];
+    const navigation: NavigableMark[] = [];
+    let activeLeave: (() => void) | null = null;
 
     const rowElements = svg.querySelectorAll('.oc-barlist-row');
     for (const el of rowElements) {
@@ -151,6 +159,8 @@ export function createBarList(
       const row = layout.rows[Number(indexStr)];
 
       const handleMouseEnter = (e: Event) => {
+        activeLeave?.();
+        activeLeave = handleMouseLeave;
         const mouseEvent = e as MouseEvent;
         if (content && tooltipManager && options?.tooltip !== false) {
           const svgRect = svg.getBoundingClientRect();
@@ -178,6 +188,8 @@ export function createBarList(
       };
 
       const handleMouseLeave = () => {
+        if (activeLeave !== handleMouseLeave) return;
+        activeLeave = null;
         tooltipManager?.hide();
         options?.onRowHover?.(null);
       };
@@ -192,6 +204,13 @@ export function createBarList(
         }
       };
 
+      navigation.push({
+        element: el,
+        key: row?.label.text ?? indexStr,
+        enter: handleMouseEnter,
+        leave: handleMouseLeave,
+        activate: handleClick,
+      });
       el.addEventListener('mouseenter', handleMouseEnter);
       el.addEventListener('mousemove', handleMouseMove);
       el.addEventListener('mouseleave', handleMouseLeave);
@@ -205,12 +224,16 @@ export function createBarList(
       });
     }
 
+    cleanups.push(wireMarkNavigation(svg, navigation));
     return () => {
+      activeLeave?.();
       for (const cleanup of cleanups) cleanup();
     };
   }
 
   function render(animate = false): void {
+    const focusedMark = captureMarkFocus(svgElement);
+    tooltipManager?.hide();
     if (animationCleanup) {
       animationCleanup();
       animationCleanup = null;
@@ -236,7 +259,7 @@ export function createBarList(
       }
     }
 
-    if (currentLayout.animation?.enter) {
+    if (animate && currentLayout.animation?.enter) {
       animationCleanup = setupAnimationCleanup(newSvg, () => {
         // Null the handle BEFORE replaying, or the deferred resize hits the
         // entrance-in-flight gate and re-defers forever (mount.ts pattern).
@@ -258,18 +281,21 @@ export function createBarList(
       fontsReloadPending = false;
       container.dataset.ocFontsState = 'ready';
     }
+    if (svgElement) restoreMarkFocus(svgElement, focusedMark);
   }
 
   function update(newSpec: BarListSpec): void {
+    if (destroyed) return;
+    // Compile before adopting an edit: a rejected spec must leave the last
+    // valid view, its interactions, and future resize/export calls intact.
+    const nextFont = resolveEffectiveFont(newSpec);
+    const nextMeasure = nextFont === fontFamily ? measureText : createMeasureText(nextFont);
+    const nextLayout = compile(newSpec, nextMeasure);
     currentSpec = newSpec;
-    // A new spec can change theme.fonts.family; rebuild the measurer so layout
-    // measures the font compile will actually render with.
-    const nextFont = resolveEffectiveFont();
-    if (nextFont !== fontFamily) {
-      fontFamily = nextFont;
-      measureText = createMeasureText(fontFamily);
-    }
-    currentLayout = compile();
+    fontFamily = nextFont;
+    measureText = nextMeasure;
+
+    currentLayout = nextLayout;
     render();
   }
 
@@ -288,15 +314,19 @@ export function createBarList(
     options_?: JPGExportOptions | SVGExportOptions,
   ): string | Promise<Blob> | Promise<string> {
     if (!svgElement) return '';
+    // Export settled geometry, independent of transient hover and animation.
+    const terminalSvg = renderBarListSVG(currentLayout, { animate: false });
+    const resolvedOptions = { theme: currentLayout.theme, ...options_ };
+
     switch (format) {
       case 'svg':
-        return exportSVG(svgElement);
+        return exportSVG(terminalSvg);
       case 'svg-with-fonts':
-        return exportSVGWithFonts(svgElement);
+        return exportSVGWithFonts(terminalSvg, resolvedOptions);
       case 'png':
-        return exportPNG(svgElement, options_ as JPGExportOptions);
+        return exportPNG(terminalSvg, resolvedOptions);
       case 'jpg':
-        return exportJPG(svgElement, options_ as JPGExportOptions);
+        return exportJPG(terminalSvg, resolvedOptions);
       default:
         return '';
     }

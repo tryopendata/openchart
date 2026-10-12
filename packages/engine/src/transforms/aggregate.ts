@@ -7,6 +7,7 @@
  */
 
 import type { AggregateOp, AggregateTransform, DataRow } from '@opendata-ai/openchart-core';
+import { finiteNumber } from '../data/finite-number';
 
 /**
  * Compute a single aggregate operation over an array of numeric values.
@@ -74,12 +75,8 @@ export function aggregateRows(op: AggregateOp, field: string, rows: DataRow[]): 
   if (op === 'count') return rows.length;
   if (op === 'distinct') return new Set(rows.map((row) => row[field])).size;
   const values = rows.flatMap((row) => {
-    const raw = row[field];
-    if (raw == null || typeof raw === 'boolean' || (typeof raw === 'string' && !raw.trim()))
-      return [];
-    if (typeof raw !== 'number' && typeof raw !== 'string') return [];
-    const value = Number(raw);
-    return Number.isFinite(value) ? [value] : [];
+    const value = finiteNumber(row[field]);
+    return value === undefined ? [] : [value];
   });
   return values.length ? computeAggregate(op, values) : null;
 }

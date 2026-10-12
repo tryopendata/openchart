@@ -157,3 +157,37 @@ describe('runAggregate', () => {
     expect(result).toHaveLength(0);
   });
 });
+
+it('ignores nonmeasurements in numeric summaries without changing row counts', () => {
+  const data = [
+    null,
+    undefined,
+    '',
+    ' ',
+    false,
+    true,
+    NaN,
+    Infinity,
+    -Infinity,
+    'bad',
+    0,
+    ' 20 ',
+    -5,
+  ].map((value) => ({ value }));
+  expect(
+    runAggregate(data, {
+      groupby: [],
+      aggregate: [
+        { op: 'sum', field: 'value', as: 'sum' },
+        { op: 'mean', field: 'value', as: 'mean' },
+        { op: 'count', field: 'value', as: 'count' },
+      ],
+    }),
+  ).toEqual([{ sum: 15, mean: 5, count: 13 }]);
+  expect(
+    runAggregate(data.slice(0, 10), {
+      groupby: [],
+      aggregate: [{ op: 'sum', field: 'value', as: 'sum' }],
+    }),
+  ).toEqual([{ sum: null }]);
+});

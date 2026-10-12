@@ -279,7 +279,11 @@ export function buildLineTweens(
     const prevKeySet = new Set(prevPKs);
     const hasSurvivors = nextPKs.some((k) => prevKeySet.has(k));
 
-    if (!hasSurvivors) {
+    // Flat point arrays cannot represent missing-data breaks. Crossfade the
+    // canonical paths rather than inventing a segment across absent evidence.
+    const hasGaps =
+      (prev.path?.match(/M/g)?.length ?? 0) > 1 || (next.path?.match(/M/g)?.length ?? 0) > 1;
+    if (!hasSurvivors || hasGaps) {
       // Crossfade: fade out old (ghost), fade in new
       const ghost = renderSingleMark(prev, 0);
       if (ghost) {
@@ -483,7 +487,11 @@ export function buildAreaTweens(
     const prevKeySet = new Set(prevPKs);
     const hasSurvivors = nextPKs.some((k) => prevKeySet.has(k));
 
-    if (!hasSurvivors) {
+    // Flat point arrays cannot represent missing-data breaks. Crossfade the
+    // canonical paths rather than inventing a segment across absent evidence.
+    const hasGaps =
+      (prev.path?.match(/M/g)?.length ?? 0) > 1 || (next.path?.match(/M/g)?.length ?? 0) > 1;
+    if (!hasSurvivors || hasGaps) {
       // Crossfade
       const ghost = renderSingleMark(prev, 0);
       if (ghost) {

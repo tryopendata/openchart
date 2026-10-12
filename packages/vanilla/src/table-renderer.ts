@@ -151,6 +151,7 @@ function renderTbody(rows: TableRow[], columns: ResolvedColumn[]): HTMLTableSect
 
       const td = renderCell(cell);
       td.setAttribute('role', 'gridcell');
+      td.setAttribute('data-column', columns[c].key);
       td.style.textAlign = columns[c].align;
       // Cards mode (below 400px) hides the header and prints these instead;
       // the CSS reads them through `content: attr(data-label)`.
@@ -184,6 +185,7 @@ function renderTfoot(
     const cell = totalRow.cells[c];
     const td = cell ? renderCell(cell) : document.createElement('td');
     td.setAttribute('role', 'gridcell');
+    td.setAttribute('data-column', columns[c].key);
     td.style.textAlign = columns[c].align;
     td.setAttribute('data-label', columns[c].label);
     td.setAttribute('data-priority', String(columns[c].priority));

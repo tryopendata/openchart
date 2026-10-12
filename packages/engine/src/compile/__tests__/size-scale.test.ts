@@ -106,3 +106,22 @@ describe('buildSizeScale', () => {
     expect(resolved?.domain).toEqual([0, 100]);
   });
 });
+
+it('fits magnitude only to measurements, excluding whitespace and booleans', () => {
+  const data = [
+    null,
+    undefined,
+    '',
+    ' ',
+    false,
+    true,
+    NaN,
+    Infinity,
+    -Infinity,
+    'bad',
+    ' 20 ',
+    30,
+  ].map((v) => ({ v }));
+  expect(buildSizeScale(size(), data, SQRT)?.domain).toEqual([20, 30]);
+  expect(buildSizeScale(size(), [...data, { v: 0 }], SQRT)?.domain).toEqual([0, 30]);
+});

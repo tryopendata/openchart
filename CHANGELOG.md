@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Fixed
+
+- **library:** rejected updates preserve the last valid chart/table; animated maps, tile maps and tables resume resizing after entrance completion. Sankey updates no longer replay entrances, and disabling tooltips no longer disables callbacks.
+- **inspection:** layered charts retain each leaf's tooltip formatting, observation identity and crosshair evidence even when series names repeat or paint order changes. Reader pins reconcile filter visibility without requiring data replacement; unsupported layered pinning clears with an announcement.
+- **keyboard:** maps, tile maps, bar lists and Sankey share keyboard inspection/activation; graph Tab no longer traps focus. Tables preserve logical focus, cancel pending search on Escape, distinguish typed/ambiguous row keys and preserve native mobile disclosure controls.
+- **data:** missing, blank, boolean and nonfinite measurements no longer fabricate zero-valued marks, coordinates or differences. Sankey rejects undrawable flows with diagnostics. Line/area gaps remain intact during interrupted animation.
+- **export:** specialized SVG/raster exports render settled geometry without transient hover effects; maps preserve the current camera and clipping. Font embedding respects inline typography and inherited span fonts. Table CSV includes every filtered/sorted row across pagination.
+- **typography:** bar lists and Sankey use shared chrome wrapping and measured font styles, keeping headings inside narrow containers.
+
 ### Changed
 
 - **graph!:** `highlight()` now layers over the sticky category filter instead of replacing it. In v8.0 the two shared one slot and the last writer won, so hovering a custom legend row threw away the filter the reader had just clicked. The effective emphasis is now the intersection of filter and highlight, except that a highlight disjoint from the filter previews on its own and a highlight matching no nodes is a no-op layer. Two consequences: `clearHighlight()` releases only the transient highlight and returns to the filtered view (clearing the filter is `setActiveCategories([])`), and `onHighlightChange` reports the effective set, so it can fire with an array where it previously fired `null`. Legend `active` flags now track the filter alone. See [migration guide](docs/migrating-v8.md#24-graph-highlight-layers-over-the-category-filter-81).

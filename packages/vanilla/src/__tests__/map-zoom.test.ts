@@ -540,6 +540,15 @@ describe('GeoMap reader zoom (geo.zoom)', () => {
     const ref = group().getAttribute('clip-path')!;
     expect(ref).toMatch(/^url\(#oc-map-zoom-clip-\d+\)$/);
     expect(container.querySelector(ref.slice(4, -1))).not.toBeNull();
+    const exported = new DOMParser().parseFromString(inst.export('svg') as string, 'image/svg+xml');
+    expect(exported.querySelector('.oc-map-group')?.getAttribute('clip-path')).toBe(ref);
+    const exportedClip = exported.querySelector(ref.slice(4, -1));
+    expect(exportedClip?.querySelector('rect')?.getAttribute('width')).toBe(
+      String(inst.layout.area.width),
+    );
+    expect(exportedClip?.querySelector('rect')?.getAttribute('height')).toBe(
+      String(inst.layout.area.height),
+    );
     button(container, 'reset').click();
     expect(group().hasAttribute('clip-path')).toBe(false);
     inst.destroy();

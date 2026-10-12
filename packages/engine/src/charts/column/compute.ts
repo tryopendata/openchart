@@ -25,6 +25,7 @@ import { isGradientDef } from '@opendata-ai/openchart-core';
 import type { ScaleBand, ScaleLinear } from 'd3-scale';
 import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
+import { finiteNumber } from '../../data/finite-number';
 import type { ResolvedScales } from '../../layout/scales';
 import { isConditionalValueDef, resolveConditionalValue } from '../../transforms/conditional';
 import { formatLabelValue } from '../_shared/format-label-value';
@@ -92,10 +93,7 @@ export function computeColumnMarks(
   }
 
   // Missing observations have no measurable length; never render them as zero bars.
-  const measuredData = spec.data.filter((row) => {
-    const value = row[yChannel.field];
-    return value != null && value !== '' && Number.isFinite(Number(value));
-  });
+  const measuredData = spec.data.filter((row) => finiteNumber(row[yChannel.field]) !== undefined);
 
   const bandwidth = xScale.bandwidth();
   // Baseline = pixel y where the column's bottom edge anchors. When the

@@ -25,9 +25,9 @@ import {
 } from '@opendata-ai/openchart-core';
 import type { PieArcDatum } from 'd3-shape';
 import { arc as d3Arc, pie as d3Pie } from 'd3-shape';
-
 import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
+import { finiteNumber } from '../../data/finite-number';
 import type { ResolvedScales } from '../../layout/scales';
 import { resolveConditionalValue } from '../../transforms/conditional';
 import { resolveKnockoutColor } from '../utils';
@@ -210,8 +210,8 @@ export function computePieMarks(
 
     for (const row of spec.data) {
       const cat = String(row[categoryField] ?? '');
-      const val = Number(row[valueChannel.field] ?? 0);
-      if (!Number.isFinite(val) || val < 0) continue;
+      const val = finiteNumber(row[valueChannel.field]);
+      if (val === undefined || val < 0) continue;
 
       categoryTotals.set(cat, (categoryTotals.get(cat) ?? 0) + val);
       if (!categoryRows.has(cat)) {
@@ -233,8 +233,8 @@ export function computePieMarks(
     // Each data row is a slice. Use a label field if present, or index.
     for (let i = 0; i < spec.data.length; i++) {
       const row = spec.data[i];
-      const val = Number(row[valueChannel.field] ?? 0);
-      if (!Number.isFinite(val) || val < 0) continue;
+      const val = finiteNumber(row[valueChannel.field]);
+      if (val === undefined || val < 0) continue;
 
       // Try common label fields
       const label = String(row.label ?? row.name ?? row.category ?? `Slice ${i + 1}`);

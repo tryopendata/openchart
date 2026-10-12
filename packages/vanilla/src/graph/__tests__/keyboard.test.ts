@@ -121,15 +121,21 @@ describe('attachGraphKeyboardNav', () => {
   });
 
   // -----------------------------------------------------------------------
-  // Tab focus
+  // Focus entry
   // -----------------------------------------------------------------------
 
-  describe('Tab', () => {
+  describe('focus entry and exit', () => {
+    it.each([false, true])('never intercepts Tab (shift=%s)', (shiftKey) => {
+      const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey, cancelable: true });
+      canvas.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(false);
+      expect(callbacks.onSelect).not.toHaveBeenCalled();
+    });
     it('focuses the first node when none selected', () => {
-      // Tab should set internal focus to first node (center). It does not
+      // Focus should set internal focus to first node (center). It does not
       // call onSelect on its own -- the focus is internal. Arrow keys after
       // Tab will use the focused node for navigation.
-      keydown(canvas, 'Tab');
+      canvas.dispatchEvent(new FocusEvent('focus'));
 
       // Verify focus by pressing ArrowRight, which should navigate from
       // center to right and call onSelect('right').
@@ -147,7 +153,7 @@ describe('attachGraphKeyboardNav', () => {
       });
       const cl = attachGraphKeyboardNav(options);
 
-      keydown(c, 'Tab');
+      c.dispatchEvent(new FocusEvent('focus'));
       // Now focused on 'left'. ArrowRight from left should navigate to center.
       keydown(c, 'ArrowRight');
       expect(cbs.onSelect).toHaveBeenCalledWith('center');
@@ -165,7 +171,7 @@ describe('attachGraphKeyboardNav', () => {
       });
       const cl = attachGraphKeyboardNav(options);
 
-      keydown(c, 'Tab');
+      c.dispatchEvent(new FocusEvent('focus'));
       // No error, no callbacks fired
       expect(cbs.onSelect).not.toHaveBeenCalled();
 
@@ -178,9 +184,9 @@ describe('attachGraphKeyboardNav', () => {
   // -----------------------------------------------------------------------
 
   describe('ArrowKey navigation', () => {
-    // First Tab to set focus to center, then test arrow keys
+    // First focus to set the starting node to center, then test arrow keys
     function focusCenter(): void {
-      keydown(canvas, 'Tab');
+      canvas.dispatchEvent(new FocusEvent('focus'));
     }
 
     it('ArrowRight navigates to the right neighbor', () => {
@@ -207,10 +213,9 @@ describe('attachGraphKeyboardNav', () => {
       expect(callbacks.onSelect).toHaveBeenCalledWith('down');
     });
 
-    it('does nothing when no node is focused', () => {
-      // No Tab pressed, so no focus. Arrow keys should be no-ops.
+    it('navigates on the first arrow without requiring a Tab keydown', () => {
       keydown(canvas, 'ArrowRight');
-      expect(callbacks.onSelect).not.toHaveBeenCalled();
+      expect(callbacks.onSelect).toHaveBeenCalledWith('right');
     });
 
     it('does nothing when there are no neighbors', () => {
@@ -228,7 +233,7 @@ describe('attachGraphKeyboardNav', () => {
       });
       const cl = attachGraphKeyboardNav(options);
 
-      keydown(c, 'Tab');
+      c.dispatchEvent(new FocusEvent('focus'));
       keydown(c, 'ArrowRight');
       expect(cbs.onSelect).not.toHaveBeenCalled();
 
@@ -250,7 +255,7 @@ describe('attachGraphKeyboardNav', () => {
       });
       const cl = attachGraphKeyboardNav(options);
 
-      keydown(c, 'Tab');
+      c.dispatchEvent(new FocusEvent('focus'));
       keydown(c, 'ArrowRight');
       expect(cbs.onSelect).not.toHaveBeenCalled();
 
@@ -264,7 +269,7 @@ describe('attachGraphKeyboardNav', () => {
 
   describe('Enter', () => {
     it('selects the focused node when not already selected', () => {
-      keydown(canvas, 'Tab'); // focus center
+      canvas.dispatchEvent(new FocusEvent('focus')); // focus center
       keydown(canvas, 'Enter');
       expect(callbacks.onSelect).toHaveBeenCalledWith('center');
     });
@@ -279,7 +284,7 @@ describe('attachGraphKeyboardNav', () => {
       });
       const cl = attachGraphKeyboardNav(options);
 
-      keydown(c, 'Tab'); // focus goes to selected node 'center'
+      c.dispatchEvent(new FocusEvent('focus')); // focus goes to selected node 'center'
       keydown(c, 'Enter');
       expect(cbs.onDeselect).toHaveBeenCalled();
       expect(cbs.onSelect).not.toHaveBeenCalled();
@@ -287,9 +292,9 @@ describe('attachGraphKeyboardNav', () => {
       cl();
     });
 
-    it('does nothing when no node is focused', () => {
+    it('selects the first node on Enter without a prior Tab keydown', () => {
       keydown(canvas, 'Enter');
-      expect(callbacks.onSelect).not.toHaveBeenCalled();
+      expect(callbacks.onSelect).toHaveBeenCalledWith('center');
       expect(callbacks.onDeselect).not.toHaveBeenCalled();
     });
   });
@@ -300,14 +305,14 @@ describe('attachGraphKeyboardNav', () => {
 
   describe('Escape', () => {
     it('clears focus and calls onDeselect', () => {
-      keydown(canvas, 'Tab'); // focus center
+      canvas.dispatchEvent(new FocusEvent('focus')); // focus center
       keydown(canvas, 'Escape');
 
       expect(callbacks.onDeselect).toHaveBeenCalled();
 
-      // Focus is cleared, so arrow keys should do nothing
+      // Navigation can resume immediately after dismissal.
       keydown(canvas, 'ArrowRight');
-      expect(callbacks.onSelect).not.toHaveBeenCalled();
+      expect(callbacks.onSelect).toHaveBeenCalledWith('right');
     });
   });
 
@@ -440,7 +445,7 @@ describe('attachGraphKeyboardNav', () => {
       });
       const cl = attachGraphKeyboardNav(options);
 
-      keydown(c, 'Tab');
+      c.dispatchEvent(new FocusEvent('focus'));
       keydown(c, 'ArrowRight');
       expect(cbs.onSelect).toHaveBeenCalledWith('up-right');
 
@@ -468,7 +473,7 @@ describe('attachGraphKeyboardNav', () => {
       });
       const cl = attachGraphKeyboardNav(options);
 
-      keydown(c, 'Tab');
+      c.dispatchEvent(new FocusEvent('focus'));
       keydown(c, 'ArrowLeft');
       expect(cbs.onSelect).toHaveBeenCalledWith('far-left');
 
@@ -496,7 +501,7 @@ describe('attachGraphKeyboardNav', () => {
       });
       const cl = attachGraphKeyboardNav(options);
 
-      keydown(c, 'Tab');
+      c.dispatchEvent(new FocusEvent('focus'));
       keydown(c, 'ArrowDown');
       expect(cbs.onSelect).toHaveBeenCalledWith('below');
 
@@ -524,7 +529,7 @@ describe('attachGraphKeyboardNav', () => {
       });
       const cl = attachGraphKeyboardNav(options);
 
-      keydown(c, 'Tab');
+      c.dispatchEvent(new FocusEvent('focus'));
       keydown(c, 'ArrowUp');
       expect(cbs.onSelect).toHaveBeenCalledWith('above');
 
@@ -553,7 +558,7 @@ describe('attachGraphKeyboardNav', () => {
       });
       const cl = attachGraphKeyboardNav(options);
 
-      keydown(c, 'Tab');
+      c.dispatchEvent(new FocusEvent('focus'));
       keydown(c, 'ArrowRight');
       // far-right has higher score (275 > 100) due to larger dx
       expect(cbs.onSelect).toHaveBeenCalledWith('far-right');
@@ -583,7 +588,7 @@ describe('attachGraphKeyboardNav', () => {
       });
       const cl = attachGraphKeyboardNav(options);
 
-      keydown(c, 'Tab');
+      c.dispatchEvent(new FocusEvent('focus'));
       keydown(c, 'ArrowRight');
       // aligned (80) beats offset (0) because the perpendicular penalty kicks in
       expect(cbs.onSelect).toHaveBeenCalledWith('aligned');
@@ -597,17 +602,17 @@ describe('attachGraphKeyboardNav', () => {
   // -----------------------------------------------------------------------
 
   describe('edge cases', () => {
-    it('Tab keeps focus if the focused node still exists', () => {
+    it('Focus entry keeps focus if the focused node still exists', () => {
       // Tab once to focus center
-      keydown(canvas, 'Tab');
+      canvas.dispatchEvent(new FocusEvent('focus'));
       // Tab again -- focusedNodeId is still valid, should keep it
-      keydown(canvas, 'Tab');
+      canvas.dispatchEvent(new FocusEvent('focus'));
       // Arrow right from center should still go to right
       keydown(canvas, 'ArrowRight');
       expect(callbacks.onSelect).toHaveBeenCalledWith('right');
     });
 
-    it('Tab refocuses to first node if focused node was removed', () => {
+    it('Focus entry refocuses to first node if focused node was removed', () => {
       const mutableNodes = [...makeCrossNodes()];
       const {
         options,
@@ -619,7 +624,7 @@ describe('attachGraphKeyboardNav', () => {
       const cl = attachGraphKeyboardNav(options);
 
       // Tab to focus center (first node)
-      keydown(c, 'Tab');
+      c.dispatchEvent(new FocusEvent('focus'));
       // Navigate right to focus on 'right'
       keydown(c, 'ArrowRight');
       expect(cbs.onSelect).toHaveBeenCalledWith('right');
@@ -630,7 +635,7 @@ describe('attachGraphKeyboardNav', () => {
 
       // Tab again -- focused node 'right' no longer exists via findNodeById,
       // so Tab falls through to refocus on nodes[0] which is 'center'
-      keydown(c, 'Tab');
+      c.dispatchEvent(new FocusEvent('focus'));
 
       // Enter to confirm we're focused on center
       keydown(c, 'Enter');
@@ -641,7 +646,7 @@ describe('attachGraphKeyboardNav', () => {
 
     it('sequential navigation updates focus correctly', () => {
       // Tab to center, then right, then the focus should be on 'right'
-      keydown(canvas, 'Tab');
+      canvas.dispatchEvent(new FocusEvent('focus'));
       keydown(canvas, 'ArrowRight');
       expect(callbacks.onSelect).toHaveBeenCalledWith('right');
 

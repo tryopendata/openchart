@@ -665,3 +665,23 @@ describe('trendline opt-out', () => {
     expect((line as { strokeWidth: number }).strokeWidth).toBe(3);
   });
 });
+
+describe('scatter numeric observations', () => {
+  it('requires measured x, y and encoded size without inventing zero positions or bubbles', () => {
+    const spec = makeBasicScatterSpec();
+    spec.encoding.size = { field: 'size', type: 'quantitative' };
+    const invalid = [null, undefined, '', '  ', false, true, NaN, Infinity, -Infinity, 'bad'];
+    spec.data = [
+      ...invalid.map((x) => ({ x, y: 10, size: 10 })),
+      ...invalid.map((y) => ({ x: 10, y, size: 10 })),
+      ...invalid.map((size) => ({ x: 10, y: 10, size })),
+      { x: 0, y: 0, size: 0 },
+      { x: ' 20 ', y: ' 20 ', size: ' 20 ' },
+    ];
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeScatterMarks(spec, scales, chartArea, fullStrategy);
+    expect(marks).toHaveLength(2);
+    expect(marks.map((mark) => mark.data.x)).toEqual([0, ' 20 ']);
+    for (const mark of marks) expect([mark.cx, mark.cy, mark.r].every(Number.isFinite)).toBe(true);
+  });
+});

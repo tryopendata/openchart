@@ -20,9 +20,9 @@ import type {
   ResolvedTheme,
 } from '@opendata-ai/openchart-core';
 import type { ScaleBand, ScaleLinear } from 'd3-scale';
-
 import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
+import { finiteNumber } from '../../data/finite-number';
 import type { ResolvedScales } from '../../layout/scales';
 import { getColor, getSequentialColor, groupByField, resolveKnockoutColor } from '../utils';
 
@@ -154,8 +154,8 @@ function computeDumbbellMarks(
     // Collect all x-values for this category to find the range
     const xValues: number[] = [];
     for (const row of rows) {
-      const value = Number(row[valueField] ?? 0);
-      if (Number.isFinite(value)) xValues.push(value);
+      const value = finiteNumber(row[valueField]);
+      if (value !== undefined) xValues.push(value);
     }
 
     if (xValues.length === 0) continue;
@@ -186,8 +186,8 @@ function computeDumbbellMarks(
 
     // Individual dots for each series value
     for (const row of rows) {
-      const value = Number(row[valueField] ?? 0);
-      if (!Number.isFinite(value)) continue;
+      const value = finiteNumber(row[valueField]);
+      if (value === undefined) continue;
 
       const cx = xScale(value);
       const colorCategory = String(row[colorField] ?? '');
@@ -235,8 +235,8 @@ function computeLollipopMarks(
 
   for (const row of data) {
     const category = String(row[categoryField] ?? '');
-    const value = Number(row[valueField] ?? 0);
-    if (!Number.isFinite(value)) continue;
+    const value = finiteNumber(row[valueField]);
+    if (value === undefined) continue;
 
     const bandY = yScale(category);
     if (bandY === undefined) continue;

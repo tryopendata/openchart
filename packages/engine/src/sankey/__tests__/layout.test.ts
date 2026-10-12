@@ -163,3 +163,14 @@ describe('computeSankeyLayout', () => {
     }
   });
 });
+
+it('returns no geometry for nonpositive or unmeasured direct layout flows', () => {
+  const data = [null, undefined, '', ' ', false, true, NaN, Infinity, -1, 0].map((value) => ({
+    source: 'A',
+    target: 'B',
+    value,
+  }));
+  expect(
+    computeSankeyLayout(data, 'source', 'target', 'value', area, 12, 16, 'justify', 6),
+  ).toEqual({ nodes: [], links: [] });
+});

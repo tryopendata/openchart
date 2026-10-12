@@ -1,0 +1,37 @@
+.library-contracts {
+  padding: 24px;
+  color: #18181b;
+  background: #fff;
+}
+.library-contracts--dark {
+  color: #fafafa;
+  background: #09090b;
+}
+.library-contracts-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.library-contracts button,
+.library-contracts select {
+  min-height: 44px;
+  padding: 8px 12px;
+  font: inherit;
+}
+.library-contracts-host {
+  width: 100%;
+  max-width: 900px;
+  min-height: 420px;
+  margin: 16px 0;
+}
+.library-contracts-host--narrow {
+  max-width: 390px;
+}
+.library-contracts pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.library-contracts-canvas {
+  min-height: 420px;
+}

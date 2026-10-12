@@ -428,17 +428,26 @@ export function runTransition(args: {
         case 'line': {
           // Freeze the current interpolated path string
           const pts = interpolatePoints(tw.fromPts, tw.toPts, easedUpdate);
-          const d = buildLinePath(pts, tw.interpolate);
+          const d =
+            tw.kind === 'update'
+              ? buildLinePath(pts, tw.interpolate)
+              : (tw.pathEl?.getAttribute('d') ?? '');
           snap.set(key, { type: 'line', d, points: pts, pointKeys: tw.pointKeys });
           break;
         }
         case 'area': {
           const top = interpolatePoints(tw.fromTop, tw.toTop, easedUpdate);
           const bottom = interpolatePoints(tw.fromBottom, tw.toBottom, easedUpdate);
-          const d = buildAreaPath(top, bottom, tw.interpolate);
+          const d =
+            tw.kind === 'update'
+              ? buildAreaPath(top, bottom, tw.interpolate)
+              : (tw.fillPathEl?.getAttribute('d') ?? '');
           let topD: string | undefined;
           if (tw.hasStroke) {
-            topD = buildLinePath(top, tw.interpolate);
+            topD =
+              tw.kind === 'update'
+                ? buildLinePath(top, tw.interpolate)
+                : (tw.topPathEl?.getAttribute('d') ?? '');
           }
           snap.set(key, {
             type: 'area',

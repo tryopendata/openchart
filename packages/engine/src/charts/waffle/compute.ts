@@ -29,9 +29,9 @@ import type {
   RectMark,
 } from '@opendata-ai/openchart-core';
 import { formatPercent } from '@opendata-ai/openchart-core';
-
 import { serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
+import { finiteNumber } from '../../data/finite-number';
 import type { ResolvedScales } from '../../layout/scales';
 import { getColor } from '../utils';
 
@@ -118,8 +118,8 @@ export function computeWaffleMarks(
   const categoryRows = new Map<string, DataRow>();
   for (const row of spec.data) {
     const cat = String(row[colorField] ?? '');
-    const val = Number(row[valueChannel.field] ?? 0);
-    if (!Number.isFinite(val) || val < 0) continue;
+    const val = finiteNumber(row[valueChannel.field]);
+    if (val === undefined || val < 0) continue;
 
     categoryTotals.set(cat, (categoryTotals.get(cat) ?? 0) + val);
     if (!categoryRows.has(cat)) {

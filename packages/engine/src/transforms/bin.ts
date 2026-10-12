@@ -5,6 +5,7 @@
  */
 
 import type { BinParams, BinTransform, DataRow } from '@opendata-ai/openchart-core';
+import { finiteNumber } from '../data/finite-number';
 
 /**
  * Compute a nice step size for binning.
@@ -85,8 +86,8 @@ export function runBin(data: DataRow[], transform: BinTransform): DataRow[] {
     let min = Infinity;
     let max = -Infinity;
     for (const row of data) {
-      const v = Number(row[field]);
-      if (Number.isFinite(v)) {
+      const v = finiteNumber(row[field]);
+      if (v !== undefined) {
         // For log scale, skip non-positive values
         if (params.scaleType === 'log' && v <= 0) continue;
         if (v < min) min = v;
@@ -102,10 +103,10 @@ export function runBin(data: DataRow[], transform: BinTransform): DataRow[] {
   if (params.scaleType === 'log') {
     const edges = computeLogBinEdges(extent, maxbins);
     return data.map((row) => {
-      const v = Number(row[field]);
+      const v = finiteNumber(row[field]);
       const newRow = { ...row };
 
-      if (!Number.isFinite(v) || v <= 0) {
+      if (v === undefined || v <= 0) {
         newRow[startAs] = null;
         if (endAs) newRow[endAs] = null;
       } else {
@@ -131,10 +132,10 @@ export function runBin(data: DataRow[], transform: BinTransform): DataRow[] {
   const step = params.step ?? computeStep(extent, maxbins, nice);
 
   return data.map((row) => {
-    const v = Number(row[field]);
+    const v = finiteNumber(row[field]);
     const newRow = { ...row };
 
-    if (!Number.isFinite(v)) {
+    if (v === undefined) {
       newRow[startAs] = null;
       if (endAs) newRow[endAs] = null;
     } else {

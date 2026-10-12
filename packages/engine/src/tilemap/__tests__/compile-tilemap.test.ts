@@ -660,3 +660,45 @@ describe('compileTileMap', () => {
     });
   });
 });
+
+describe('tilemap numeric observations', () => {
+  it.each([
+    null,
+    undefined,
+    '',
+    '  ',
+    false,
+    true,
+    NaN,
+    Infinity,
+    -Infinity,
+    'Infinity',
+    'bad',
+  ])('keeps %s missing while retaining numeric zero and numeric strings', (value) => {
+    const layout = compileTileMap(
+      {
+        type: 'tilemap',
+        data: [
+          { state: 'CA', value },
+          { state: 'TX', value: 0 },
+          { state: 'NY', value: ' 20 ' },
+        ],
+        encoding: { state: { field: 'state' }, value: { field: 'value' } },
+      },
+      defaultOptions,
+    );
+    expect(layout.tiles.find((tile) => tile.stateCode === 'CA')).toMatchObject({
+      value: null,
+      hasData: false,
+    });
+    expect(layout.tiles.find((tile) => tile.stateCode === 'TX')).toMatchObject({
+      value: 0,
+      hasData: true,
+    });
+    expect(layout.tiles.find((tile) => tile.stateCode === 'NY')).toMatchObject({
+      value: 20,
+      hasData: true,
+    });
+    expect(layout.tiles.every((tile) => Number.isFinite(tile.fillOpacity))).toBe(true);
+  });
+});

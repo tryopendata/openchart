@@ -133,7 +133,7 @@ export function registerMarkRenderer<T extends Mark>(
 
 function renderLineMark(mark: LineMark, index: number): SVGElement {
   const g = createSVGElement('g');
-  g.setAttribute('data-mark-id', `line-${mark.seriesKey ?? index}`);
+  g.setAttribute('data-mark-id', `line-${index}`);
   g.setAttribute('class', 'oc-mark oc-mark-line');
   stampAnimationAttrs(g, mark, index);
 
@@ -200,7 +200,7 @@ function renderLineMark(mark: LineMark, index: number): SVGElement {
 
 function renderAreaMark(mark: AreaMark, index: number): SVGElement {
   const g = createSVGElement('g');
-  g.setAttribute('data-mark-id', `area-${mark.seriesKey ?? index}`);
+  g.setAttribute('data-mark-id', `area-${index}`);
   g.setAttribute('class', 'oc-mark oc-mark-area');
   stampAnimationAttrs(g, mark, index);
 

@@ -24,9 +24,16 @@ import {
   type SVGExportOptions,
 } from './export';
 import {
+  captureMarkFocus,
+  type NavigableMark,
+  restoreMarkFocus,
+  wireMarkNavigation,
+} from './interactions/mark-navigation';
+import {
   applyMapCamera,
   cameraForTarget,
   clampMapCamera,
+  ensureMapClip,
   FOCUS_DIM_OPACITY,
   focusTargetForFeatures,
   type GeoMapCameraOptions,
@@ -221,10 +228,10 @@ export function createGeoMap(
   container.classList.add('oc-map-root');
 
   // Resolve the effective font the same way compile() will.
-  function resolveEffectiveFont(): string {
+  function resolveEffectiveFont(candidate = currentSpec): string {
     return (
       options?.theme?.fonts?.family ??
-      currentSpec.theme?.fonts?.family ??
+      candidate.theme?.fonts?.family ??
       resolveFontFamily(container)
     );
   }
@@ -256,7 +263,7 @@ export function createGeoMap(
     return { width, height: Math.round(width * 0.625) };
   }
 
-  function compile(): GeoMapLayout {
+  function compile(candidate = currentSpec, measure = measureText): GeoMapLayout {
     const { width, height } = getContainerDimensions();
     const darkMode = resolveDarkMode(options?.darkMode);
 
@@ -266,10 +273,10 @@ export function createGeoMap(
       theme: options?.theme,
       darkMode,
       watermark: options?.watermark,
-      measureText,
+      measureText: measure,
     };
 
-    return compileGeoMap(currentSpec, compileOpts);
+    return compileGeoMap(candidate, compileOpts);
   }
 
   // ---------------------------------------------------------------------------
@@ -278,6 +285,8 @@ export function createGeoMap(
 
   function wireTooltipAndInteraction(svg: SVGSVGElement, layout: GeoMapLayout): () => void {
     const cleanups: Array<() => void> = [];
+    const navigation: NavigableMark[] = [];
+    let activeLeave: (() => void) | null = null;
 
     const featuresById = new Map<string, (typeof layout.features)[number]>();
     for (const f of layout.features) {
@@ -294,9 +303,12 @@ export function createGeoMap(
       const feature = featuresById.get(featureId);
 
       const handleMouseEnter = (e: Event) => {
+        activeLeave?.();
+        activeLeave = handleMouseLeave;
         const mouseEvent = e as MouseEvent;
         (el as SVGElement & ElementCSSInlineStyle).style.setProperty('cursor', 'pointer');
-        raiseFeature(el, svg);
+        // Reparenting a focused SVG node drops native keyboard focus.
+        if (document.activeElement !== el) raiseFeature(el, svg);
         el.classList.add('oc-map-feature--hover');
         if (content && tooltipManager && options?.tooltip !== false) {
           const svgRect = svg.getBoundingClientRect();
@@ -325,6 +337,8 @@ export function createGeoMap(
       };
 
       const handleMouseLeave = () => {
+        if (activeLeave !== handleMouseLeave) return;
+        activeLeave = null;
         (el as SVGElement & ElementCSSInlineStyle).style.removeProperty('cursor');
         el.classList.remove('oc-map-feature--hover');
         restoreFeatureOrder(el);
@@ -343,6 +357,13 @@ export function createGeoMap(
         }
       };
 
+      navigation.push({
+        element: el,
+        key: `feature:${featureId}`,
+        enter: handleMouseEnter,
+        leave: handleMouseLeave,
+        activate: handleClick,
+      });
       el.addEventListener('mouseenter', handleMouseEnter);
       el.addEventListener('mousemove', handleMouseMove);
       el.addEventListener('mouseleave', handleMouseLeave);
@@ -388,6 +409,8 @@ export function createGeoMap(
       const pointMark = pointMarksByKey.get(pointKey);
 
       const handlePointMouseEnter = (e: Event) => {
+        activeLeave?.();
+        activeLeave = handlePointMouseLeave;
         const mouseEvent = e as MouseEvent;
         (el as SVGElement & ElementCSSInlineStyle).style.setProperty('cursor', 'pointer');
         (el as SVGElement & ElementCSSInlineStyle).style.setProperty('filter', 'brightness(1.15)');
@@ -417,6 +440,8 @@ export function createGeoMap(
       };
 
       const handlePointMouseLeave = () => {
+        if (activeLeave !== handlePointMouseLeave) return;
+        activeLeave = null;
         (el as SVGElement & ElementCSSInlineStyle).style.removeProperty('cursor');
         (el as SVGElement & ElementCSSInlineStyle).style.removeProperty('filter');
         tooltipManager?.hide();
@@ -433,6 +458,13 @@ export function createGeoMap(
         }
       };
 
+      navigation.push({
+        element: el,
+        key: `point:${pointKey}`,
+        enter: handlePointMouseEnter,
+        leave: handlePointMouseLeave,
+        activate: handlePointClick,
+      });
       el.addEventListener('mouseenter', handlePointMouseEnter);
       el.addEventListener('mousemove', handlePointMouseMove);
       el.addEventListener('mouseleave', handlePointMouseLeave);
@@ -446,7 +478,9 @@ export function createGeoMap(
       });
     }
 
+    cleanups.push(wireMarkNavigation(svg, navigation));
     return () => {
+      activeLeave?.();
       for (const cleanup of cleanups) {
         cleanup();
       }
@@ -586,9 +620,9 @@ export function createGeoMap(
     liveEl.textContent = `Zoomed to ${names.join(', ')}`;
   }
 
-  function applyFocusDim(ids: Array<string | number> | null): void {
-    if (!svgElement) return;
-    const features = svgElement.querySelectorAll('.oc-map-feature');
+  function applyFocusDim(ids: Array<string | number> | null, target = svgElement): void {
+    if (!target) return;
+    const features = target.querySelectorAll('.oc-map-feature');
     if (!ids || ids.length === 0) {
       for (const el of features) {
         (el as SVGElement & ElementCSSInlineStyle).style.removeProperty('opacity');
@@ -610,6 +644,8 @@ export function createGeoMap(
   // ---------------------------------------------------------------------------
 
   function render(animate = false): void {
+    const focusedMark = captureMarkFocus(svgElement);
+    tooltipManager?.hide();
     // Cancel running animations
     if (animationCleanup) {
       animationCleanup();
@@ -650,6 +686,7 @@ export function createGeoMap(
     const isAnimating = animate && !!currentLayout.animation?.enter;
     if (isAnimating) {
       animationCleanup = setupAnimationCleanup(newSvg, () => {
+        animationCleanup = null;
         if (pendingResize && !destroyed) {
           pendingResize = false;
           resize();
@@ -691,15 +728,19 @@ export function createGeoMap(
     isFirstRender = false;
 
     syncZoomController(oldSvgHadFocus);
+    if (svgElement) restoreMarkFocus(svgElement, focusedMark);
   }
 
   function update(newSpec: GeoMapSpec): void {
+    if (destroyed) return;
+    // Compile before adopting an edit: a rejected spec must leave the last
+    // valid view, its interactions, and future resize/export calls intact.
+    const nextFont = resolveEffectiveFont(newSpec);
+    const nextMeasure = nextFont === fontFamily ? measureText : createMeasureText(nextFont);
+    const nextLayout = compile(newSpec, nextMeasure);
     currentSpec = newSpec;
-    const nextFont = resolveEffectiveFont();
-    if (nextFont !== fontFamily) {
-      fontFamily = nextFont;
-      measureText = createMeasureText(fontFamily);
-    }
+    fontFamily = nextFont;
+    measureText = nextMeasure;
 
     // Capture paint + point geometry optimistically; gate the tween on the
     // *new* layout's animation config after compile
@@ -714,7 +755,7 @@ export function createGeoMap(
     const prevFocusSig = focusSignature(currentLayout.focus);
     const prevMapSize = currentLayout.mapSize;
 
-    currentLayout = compile();
+    currentLayout = nextLayout;
     if (!currentFocusIds) rescaleFreeCamera(prevMapSize);
     render();
 
@@ -791,15 +832,27 @@ export function createGeoMap(
   ): string | Promise<Blob> | Promise<string> {
     if (!svgElement) return '';
 
+    // Export settled geometry, independent of transient hover and animation.
+    const terminalSvg = renderMapSVG(currentLayout, { animate: false });
+    applyMapCamera(terminalSvg, currentCamera, currentLayout);
+    const clip = svgElement.querySelector('.oc-map-group')?.getAttribute('clip-path');
+    if (clip) {
+      const clipId = clip.slice(5, -1);
+      ensureMapClip(terminalSvg, currentLayout, clipId);
+      terminalSvg.querySelector('.oc-map-group')?.setAttribute('clip-path', clip);
+    }
+    applyFocusDim(currentFocusIds, terminalSvg);
+    const resolvedOptions = { theme: currentLayout.theme, ...options_ };
+
     switch (format) {
       case 'svg':
-        return exportSVG(svgElement);
+        return exportSVG(terminalSvg);
       case 'svg-with-fonts':
-        return exportSVGWithFonts(svgElement);
+        return exportSVGWithFonts(terminalSvg, resolvedOptions);
       case 'png':
-        return exportPNG(svgElement, options_ as JPGExportOptions);
+        return exportPNG(terminalSvg, resolvedOptions);
       case 'jpg':
-        return exportJPG(svgElement, options_ as JPGExportOptions);
+        return exportJPG(terminalSvg, resolvedOptions);
       default:
         return '';
     }

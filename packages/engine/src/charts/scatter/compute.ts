@@ -21,6 +21,7 @@ import type { ScaleBand, ScaleLinear, ScalePoint, ScaleTime } from 'd3-scale';
 import { buildSizeScale, SIZE_SCALE_DEFAULTS } from '../../compile/size-scale';
 import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
+import { finiteNumber } from '../../data/finite-number';
 import type { ResolvedScales } from '../../layout/scales';
 import { getColor, getSequentialColor, resolveKnockoutColor } from '../utils';
 
@@ -51,6 +52,7 @@ function resolvePosition(
     | ScaleBand<string>
     | ScalePoint<string>,
 ): number | undefined {
+  if (value == null) return undefined;
   switch (channelType) {
     case 'nominal':
     case 'ordinal': {
@@ -69,9 +71,10 @@ function resolvePosition(
       return Number.isNaN(px) ? undefined : px;
     }
     default: {
-      const num = Number(value);
-      if (!Number.isFinite(num)) return undefined;
-      return (scale as ScaleLinear<number, number>)(num);
+      const number = finiteNumber(value);
+      if (number === undefined) return undefined;
+      const position = (scale as ScaleLinear<number, number>)(number);
+      return Number.isFinite(position) ? position : undefined;
     }
   }
 }
@@ -168,10 +171,9 @@ export function computeScatterMarks(
     const category = colorField && !isSequentialColor ? String(row[colorField] ?? '') : undefined;
     let color: string | GradientDef;
     if (isSequentialColor && colorField) {
-      const val = Number(row[colorField]);
-      color = Number.isFinite(val)
-        ? getSequentialColor(scales, val)
-        : getColor(scales, '__default__');
+      const value = finiteNumber(row[colorField]);
+      color =
+        value !== undefined ? getSequentialColor(scales, value) : getColor(scales, '__default__');
     } else if (colorField) {
       color = getColor(scales, category ?? '__default__');
     } else {
@@ -180,12 +182,12 @@ export function computeScatterMarks(
     }
 
     let radius = constSize != null ? constSize : DEFAULT_POINT_RADIUS;
-    if (sizeScale && sizeField) {
-      const sizeVal = Number(row[sizeField]);
-      if (Number.isFinite(sizeVal)) {
-        radius = sizeScale(sizeVal);
-      }
+    if (sizeField) {
+      const sizeValue = finiteNumber(row[sizeField]);
+      if (sizeValue === undefined) continue;
+      if (sizeScale) radius = sizeScale(sizeValue);
     }
+    if (!Number.isFinite(radius) || radius < 0) continue;
 
     const labelParts = [`${xChannel.field}=${rawX}`, `${yChannel.field}=${rawY}`];
     if (category) labelParts.push(`${colorField}=${category}`);

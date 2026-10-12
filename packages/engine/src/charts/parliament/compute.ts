@@ -33,9 +33,9 @@ import type {
   TextMarkLayout,
 } from '@opendata-ai/openchart-core';
 import { formatPercent } from '@opendata-ai/openchart-core';
-
 import { serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
+import { finiteNumber } from '../../data/finite-number';
 import type { ResolvedScales } from '../../layout/scales';
 import { getColor, stackSeamStroke } from '../utils';
 
@@ -195,8 +195,8 @@ export function computeParliamentMarks(
   const partyRows = new Map<string, DataRow>();
   for (const row of spec.data) {
     const party = String(row[colorField] ?? '');
-    const val = Number(row[valueChannel.field] ?? 0);
-    if (!Number.isFinite(val) || val < 0) continue;
+    const val = finiteNumber(row[valueChannel.field]);
+    if (val === undefined || val < 0) continue;
     partyTotals.set(party, (partyTotals.get(party) ?? 0) + Math.round(val));
     if (!partyRows.has(party)) partyRows.set(party, row);
   }

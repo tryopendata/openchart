@@ -24,6 +24,7 @@ import type { ScaleBand, ScaleLinear } from 'd3-scale';
 import { buildSizeScale, SIZE_SCALE_DEFAULTS } from '../../compile/size-scale';
 import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
+import { finiteNumber } from '../../data/finite-number';
 import type { ResolvedScales } from '../../layout/scales';
 import { getColor, getSequentialColor, resolveKnockoutColor } from '../utils';
 import { dodgeOffsets } from './dodge';
@@ -108,13 +109,8 @@ export function computeBeeswarmMarks(
   const dots: ResolvedDot[] = [];
 
   for (const row of spec.data) {
-    const raw = row[valueChannel.field];
-    // Drop null/undefined explicitly: the validator tolerates them (it only
-    // rejects non-numeric or non-finite present values), but Number(null) is 0,
-    // which would silently place a phantom dot at value 0 instead of skipping.
-    if (raw == null) continue;
-    const value = Number(raw);
-    if (!Number.isFinite(value)) continue;
+    const value = finiteNumber(row[valueChannel.field]);
+    if (value === undefined) continue;
 
     const position = positionScale(value);
     if (!Number.isFinite(position)) continue;
@@ -129,12 +125,12 @@ export function computeBeeswarmMarks(
     }
 
     let radius = DEFAULT_DOT_RADIUS;
-    if (sizeScale && sizeField) {
-      const sizeVal = Number(row[sizeField]);
-      if (Number.isFinite(sizeVal)) {
-        radius = sizeScale(sizeVal);
-      }
+    if (sizeField) {
+      const sizeValue = finiteNumber(row[sizeField]);
+      if (sizeValue === undefined) continue;
+      if (sizeScale) radius = sizeScale(sizeValue);
     }
+    if (!Number.isFinite(radius) || radius < 0) continue;
 
     dots.push({ row: row as Record<string, unknown>, value, position, radius, lane, laneCenter });
   }
@@ -155,10 +151,9 @@ export function computeBeeswarmMarks(
 
     let color: string | GradientDef;
     if (isSequentialColor && colorField) {
-      const colorVal = Number(dot.row[colorField]);
-      color = Number.isFinite(colorVal)
-        ? getSequentialColor(scales, colorVal)
-        : getColor(scales, '__default__');
+      const value = finiteNumber(dot.row[colorField]);
+      color =
+        value !== undefined ? getSequentialColor(scales, value) : getColor(scales, '__default__');
     } else if (colorField) {
       color = getColor(scales, String(dot.row[colorField] ?? '__default__'));
     } else {

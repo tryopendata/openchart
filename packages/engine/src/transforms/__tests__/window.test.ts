@@ -284,3 +284,52 @@ describe('window transform', () => {
     expect(result.map((r) => r.delta)).toEqual([10, 30]);
   });
 });
+
+describe('window comparisons require measured values', () => {
+  it.each([
+    null,
+    undefined,
+    '',
+    ' ',
+    false,
+    true,
+    NaN,
+    Infinity,
+    -Infinity,
+    'bad',
+  ])('returns no comparison across a %s observation', (value) => {
+    const result = runTransforms(
+      [10, value, ' 20 ', 0, 10].map((value, index) => ({ value, index })),
+      [
+        {
+          window: [
+            { op: 'diff', field: 'value', as: 'delta' },
+            { op: 'pct_change', field: 'value', as: 'change' },
+          ],
+          sort: [{ field: 'index' }],
+        },
+      ],
+    );
+    expect(result.map((row) => row.delta)).toEqual([null, null, null, -20, 10]);
+    expect(result.map((row) => row.change)).toEqual([null, null, null, -1, null]);
+  });
+
+  it('returns no comparison when the numeric result cannot be represented finitely', () => {
+    const result = runTransforms(
+      [{ value: -Number.MAX_VALUE }, { value: Number.MAX_VALUE }],
+      [
+        {
+          window: [
+            { op: 'diff', field: 'value', as: 'delta' },
+            { op: 'pct_change', field: 'value', as: 'change' },
+          ],
+          sort: [],
+        },
+      ],
+    );
+    expect(result.map((row) => [row.delta, row.change])).toEqual([
+      [null, null],
+      [null, null],
+    ]);
+  });
+});

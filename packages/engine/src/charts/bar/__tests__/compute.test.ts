@@ -994,3 +994,43 @@ describe('markDef overrides', () => {
     }
   });
 });
+
+describe('bar numeric observations', () => {
+  it('skips missing and nonfinite lengths while preserving zero and signed numeric strings', () => {
+    const spec = makeSimpleBarSpec();
+    spec.data = [
+      null,
+      undefined,
+      '',
+      '  ',
+      false,
+      true,
+      NaN,
+      Infinity,
+      -Infinity,
+      'bad',
+      0,
+      ' 20 ',
+      -10,
+    ].map((value, index) => ({ category: String(index), value: value }));
+    const scales = computeScales(spec, chartArea, spec.data);
+    const marks = computeBarMarks(spec, scales, chartArea, fullStrategy, CONTAINER_WIDTH);
+    expect(marks).toHaveLength(3);
+    expect(marks.map((mark) => mark.data.value)).toEqual([0, ' 20 ', -10]);
+    for (const mark of marks) {
+      expect([mark.x, mark.y, mark.width, mark.height].every(Number.isFinite)).toBe(true);
+    }
+  });
+
+  it('does not pull a nonzero domain down to missing values', () => {
+    const spec = makeSimpleBarSpec();
+    const channel = spec.encoding.x!;
+    channel.scale = { zero: false, nice: false };
+    spec.data = [20, 30, '', ' ', false, true].map((value, index) => ({
+      category: String(index),
+      value: value,
+    }));
+    const scales = computeScales(spec, chartArea, spec.data);
+    expect(scales.x!.scale.domain()).toEqual([20, 30]);
+  });
+});

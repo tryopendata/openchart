@@ -36,8 +36,8 @@ import type {
 } from '@opendata-ai/openchart-core';
 import { defaultNumberFormatter, formatDate } from '@opendata-ai/openchart-core';
 import { type CountableTimeInterval, utcDay, utcMonday, utcSunday } from 'd3-time';
-
 import type { NormalizedChartSpec } from '../../compiler/types';
+import { finiteNumber } from '../../data/finite-number';
 import type { ResolvedScales } from '../../layout/scales';
 import { getSequentialColor } from '../utils';
 
@@ -159,8 +159,8 @@ export function computeCalendarMarks(
     const day = parseUtcDay(row[xEnc.field]);
     if (!day) continue;
     years.add(day.getUTCFullYear());
-    const value = Number(row[colorEnc.field]);
-    if (!Number.isFinite(value)) continue;
+    const value = finiteNumber(row[colorEnc.field]);
+    if (value === undefined) continue;
     dayData.set(isoDayKey(day), { row: row as Record<string, unknown>, value });
   }
   if (years.size === 0) return [];

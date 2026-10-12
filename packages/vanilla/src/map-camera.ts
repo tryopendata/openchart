@@ -188,3 +188,20 @@ export function applyMapCamera(svg: SVGElement, camera: Camera, layout: GeoMapLa
     }
   }
 }
+
+/** Define the map viewport clip for both live zoom and terminal exports. */
+export function ensureMapClip(svg: SVGSVGElement, layout: GeoMapLayout, clipId: string): void {
+  if (svg.querySelector(`#${clipId}`)) return;
+  let defs = svg.querySelector('defs');
+  if (!defs) {
+    defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    svg.insertBefore(defs, svg.firstChild);
+  }
+  const clip = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+  clip.setAttribute('id', clipId);
+  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  rect.setAttribute('width', String(layout.area.width));
+  rect.setAttribute('height', String(layout.area.height));
+  clip.appendChild(rect);
+  defs.appendChild(clip);
+}

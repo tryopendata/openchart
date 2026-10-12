@@ -38,6 +38,7 @@ import {
 import { emitSpecWarnings, expandSpecSugar } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
+import { finiteNumber } from '../data/finite-number';
 import { resolveFieldFormatter } from '../format/field-format';
 import { resolveChromeLayout } from '../layout/shared';
 import { ENTRY_GAP, measureLegendWrap, SWATCH_GAP, SWATCH_SIZE } from '../legend/wrap';
@@ -205,10 +206,11 @@ function rewriteRowsForOther(
     const newTgt = merged.get(tgt) ?? tgt;
     if (newSrc === newTgt) continue;
     const key = `${newSrc}\u0000${newTgt}`;
-    const value = Number(row[valueField]) || 0;
+    const value = finiteNumber(row[valueField]);
+    if (value === undefined || value <= 0) continue;
     const existing = index.get(key);
     if (existing) {
-      existing[valueField] = (Number(existing[valueField]) || 0) + value;
+      existing[valueField] = (finiteNumber(existing[valueField]) ?? 0) + value;
       continue;
     }
     const next = { ...row, [sourceField]: newSrc, [targetField]: newTgt, [valueField]: value };
@@ -405,15 +407,44 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
   const targetField = sankeySpec.encoding.target.field;
   const valueField = sankeySpec.encoding.value.field;
   const colorField = sankeySpec.encoding.color?.field;
+  let missingFlowCount = 0;
+  let negativeFlowCount = 0;
+  let zeroFlowCount = 0;
+  const measuredData = sankeySpec.data.filter((row) => {
+    const value = finiteNumber(row[valueField]);
+    if (value === undefined) missingFlowCount++;
+    else if (value < 0) negativeFlowCount++;
+    else if (value === 0) zeroFlowCount++;
+    else return true;
+    return false;
+  });
+  const omittedCount = missingFlowCount + negativeFlowCount + zeroFlowCount;
+  if (omittedCount > 0) {
+    const reasons = [
+      missingFlowCount > 0 ? `${missingFlowCount} missing, nonnumeric, or nonfinite` : '',
+      negativeFlowCount > 0 ? `${negativeFlowCount} negative` : '',
+      zeroFlowCount > 0 ? `${zeroFlowCount} zero-width` : '',
+    ].filter(Boolean);
+    emitSpecWarnings(
+      [
+        `Sankey omitted ${omittedCount} flow rows from "${valueField}" (${reasons.join(', ')}). ` +
+          'Sankey geometry requires positive finite values. Supply measured positive amounts; zero flows have no drawable width.',
+      ],
+      options.onWarn,
+    );
+  }
+  if (measuredData.length === 0) {
+    return emptyLayout(fullArea, chrome, theme, { ...options, height: grownHeight }, watermark);
+  }
   const flowFmt = resolveFieldFormatter({
     surfaceFormat: resolvedValueFormat,
-    values: sankeySpec.data.map((r) => r[valueField]),
+    values: measuredData.map((r) => r[valueField]),
   });
 
   // 5b. Pre-compute legend to reserve vertical space
   //     We need the color map first, so build a temporary one from raw data
   const tempNodeIds = new Set<string>();
-  for (const row of sankeySpec.data) {
+  for (const row of measuredData) {
     tempNodeIds.add(String(row[sourceField]));
     tempNodeIds.add(String(row[targetField]));
   }
@@ -421,14 +452,14 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
     [...tempNodeIds].map((id) => ({ id })),
     theme.colors.categorical,
     colorField,
-    sankeySpec.data,
+    measuredData,
     sourceField,
     targetField,
   );
   const legend = buildSankeyLegend(
     tempColorMap,
     colorField,
-    sankeySpec.data,
+    measuredData,
     sourceField,
     targetField,
     theme,
@@ -455,7 +486,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
   const valueFontWeight = theme.fonts.weights.normal;
   const nodeLabelAlign = sankeySpec.nodeLabelAlign ?? 'auto';
 
-  let workingData = sankeySpec.data;
+  let workingData = measuredData;
   const runLayout = (rect: Rect) =>
     computeSankeyLayout(
       workingData,

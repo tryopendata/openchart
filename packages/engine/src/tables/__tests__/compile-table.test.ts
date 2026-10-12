@@ -82,10 +82,10 @@ describe('compileTable', () => {
     const spec = { ...baseSpec, rowKey: 'name' };
     const layout = compileTable(spec, baseOptions);
 
-    expect(layout.rows[0].id).toBe('Alice');
-    expect(layout.rows[1].id).toBe('Bob');
-    expect(layout.rows[2].id).toBe('Charlie');
-    expect(layout.rows[3].id).toBe('Diana');
+    expect(layout.rows[0].id).toBe('string:Alice');
+    expect(layout.rows[1].id).toBe('string:Bob');
+    expect(layout.rows[2].id).toBe('string:Charlie');
+    expect(layout.rows[3].id).toBe('string:Diana');
   });
 
   it('applies tabular-nums font variant on number cells', () => {

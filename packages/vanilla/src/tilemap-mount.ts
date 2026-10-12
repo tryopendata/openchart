@@ -24,6 +24,12 @@ import {
   type JPGExportOptions,
   type SVGExportOptions,
 } from './export';
+import {
+  captureMarkFocus,
+  type NavigableMark,
+  restoreMarkFocus,
+  wireMarkNavigation,
+} from './interactions/mark-navigation';
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
 import { observeResize } from './resize-observer';
 import { resolveDarkMode } from './resolve-dark-mode';
@@ -155,10 +161,10 @@ export function createTileMap(
   // { ...spec.theme, ...options.theme }, so options.theme wins over the
   // spec-level theme; fall back to the container's computed font. Measuring a
   // different font than gets rendered desyncs layout metrics and the reload watcher.
-  function resolveEffectiveFont(): string {
+  function resolveEffectiveFont(candidate = currentSpec): string {
     return (
       options?.theme?.fonts?.family ??
-      currentSpec.theme?.fonts?.family ??
+      candidate.theme?.fonts?.family ??
       resolveFontFamily(container)
     );
   }
@@ -204,7 +210,7 @@ export function createTileMap(
     return { width, height };
   }
 
-  function compile(): TileMapLayout {
+  function compile(candidate = currentSpec, measure = measureText): TileMapLayout {
     const { width, height } = getContainerDimensions();
     const darkMode = resolveDarkMode(options?.darkMode);
 
@@ -214,10 +220,10 @@ export function createTileMap(
       theme: options?.theme,
       darkMode,
       watermark: options?.watermark,
-      measureText,
+      measureText: measure,
     };
 
-    return compileTileMap(currentSpec, compileOpts);
+    return compileTileMap(candidate, compileOpts);
   }
 
   // ---------------------------------------------------------------------------
@@ -226,6 +232,8 @@ export function createTileMap(
 
   function wireTooltipAndInteraction(svg: SVGSVGElement, layout: TileMapLayout): () => void {
     const cleanups: Array<() => void> = [];
+    const navigation: NavigableMark[] = [];
+    let activeLeave: (() => void) | null = null;
 
     const tilesByStateCode = new Map<string, (typeof layout.tiles)[number]>();
     for (const t of layout.tiles) {
@@ -244,6 +252,8 @@ export function createTileMap(
       const tile = tilesByStateCode.get(stateCode);
 
       const handleMouseEnter = (e: Event) => {
+        activeLeave?.();
+        activeLeave = handleMouseLeave;
         const mouseEvent = e as MouseEvent;
         tilesGroup?.classList.add('oc-hover-active');
         el.classList.add('oc-tilemap-tile--hover');
@@ -274,6 +284,8 @@ export function createTileMap(
       };
 
       const handleMouseLeave = () => {
+        if (activeLeave !== handleMouseLeave) return;
+        activeLeave = null;
         tilesGroup?.classList.remove('oc-hover-active');
         el.classList.remove('oc-tilemap-tile--hover');
         tooltipManager?.hide();
@@ -291,6 +303,13 @@ export function createTileMap(
         }
       };
 
+      navigation.push({
+        element: el,
+        key: stateCode,
+        enter: handleMouseEnter,
+        leave: handleMouseLeave,
+        activate: handleClick,
+      });
       el.addEventListener('mouseenter', handleMouseEnter);
       el.addEventListener('mousemove', handleMouseMove);
       el.addEventListener('mouseleave', handleMouseLeave);
@@ -304,7 +323,9 @@ export function createTileMap(
       });
     }
 
+    cleanups.push(wireMarkNavigation(svg, navigation));
     return () => {
+      activeLeave?.();
       for (const cleanup of cleanups) {
         cleanup();
       }
@@ -316,6 +337,8 @@ export function createTileMap(
   // ---------------------------------------------------------------------------
 
   function render(animate = false): void {
+    const focusedMark = captureMarkFocus(svgElement);
+    tooltipManager?.hide();
     // Cancel running animations
     if (animationCleanup) {
       animationCleanup();
@@ -349,6 +372,7 @@ export function createTileMap(
     // Setup animation cleanup only when actually animating
     if (animate && currentLayout.animation?.enter) {
       animationCleanup = setupAnimationCleanup(newSvg, () => {
+        animationCleanup = null;
         // On animation complete, check if resize was pending
         if (pendingResize && !destroyed) {
           pendingResize = false;
@@ -367,18 +391,21 @@ export function createTileMap(
       fontsReloadPending = false;
       container.dataset.ocFontsState = 'ready';
     }
+    if (svgElement) restoreMarkFocus(svgElement, focusedMark);
   }
 
   function update(newSpec: TileMapSpec): void {
+    if (destroyed) return;
+    // Compile before adopting an edit: a rejected spec must leave the last
+    // valid view, its interactions, and future resize/export calls intact.
+    const nextFont = resolveEffectiveFont(newSpec);
+    const nextMeasure = nextFont === fontFamily ? measureText : createMeasureText(nextFont);
+    const nextLayout = compile(newSpec, nextMeasure);
     currentSpec = newSpec;
-    // A new spec can change theme.fonts.family; rebuild the measurer so layout
-    // measures the font compile will actually render with.
-    const nextFont = resolveEffectiveFont();
-    if (nextFont !== fontFamily) {
-      fontFamily = nextFont;
-      measureText = createMeasureText(fontFamily);
-    }
-    currentLayout = compile();
+    fontFamily = nextFont;
+    measureText = nextMeasure;
+
+    currentLayout = nextLayout;
     render();
   }
 
@@ -405,15 +432,19 @@ export function createTileMap(
   ): string | Promise<Blob> | Promise<string> {
     if (!svgElement) return '';
 
+    // Export settled geometry, independent of transient hover and animation.
+    const terminalSvg = renderTileMapSVG(currentLayout, { animate: false });
+    const resolvedOptions = { theme: currentLayout.theme, ...options_ };
+
     switch (format) {
       case 'svg':
-        return exportSVG(svgElement);
+        return exportSVG(terminalSvg);
       case 'svg-with-fonts':
-        return exportSVGWithFonts(svgElement);
+        return exportSVGWithFonts(terminalSvg, resolvedOptions);
       case 'png':
-        return exportPNG(svgElement, options_ as JPGExportOptions);
+        return exportPNG(terminalSvg, resolvedOptions);
       case 'jpg':
-        return exportJPG(svgElement, options_ as JPGExportOptions);
+        return exportJPG(terminalSvg, resolvedOptions);
       default:
         return '';
     }

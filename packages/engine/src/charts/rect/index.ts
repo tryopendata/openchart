@@ -18,9 +18,9 @@
 import type { Encoding, Mark, MarkAria, Rect, RectMark } from '@opendata-ai/openchart-core';
 import { formatNumber } from '@opendata-ai/openchart-core';
 import type { ScaleBand } from 'd3-scale';
-
 import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
+import { finiteNumber } from '../../data/finite-number';
 import type { ResolvedScales } from '../../layout/scales';
 import type { ChartRenderer } from '../registry';
 import { getColor, getSequentialColor, scaleValue } from '../utils';
@@ -75,8 +75,8 @@ export function computeRectMarks(
     // case); a nominal one picks a categorical swatch.
     let fill: RectMark['fill'];
     if (colorEnc && isSequential) {
-      const value = Number(row[colorEnc.field]);
-      if (!Number.isFinite(value)) continue;
+      const value = finiteNumber(row[colorEnc.field]);
+      if (value === undefined) continue;
       fill = getSequentialColor(scales, value);
     } else if (colorEnc) {
       fill = getColor(scales, String(row[colorEnc.field] ?? '__default__'));
