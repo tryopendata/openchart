@@ -172,11 +172,19 @@ test('mobile inspector choices survive dismissal and data-view exports retain pr
 
 test('table pins never display stale evidence after corrections or imports', async ({ page }) => {
   await choosePattern(page, 'The details matter');
+  const paper = page.locator('.studio-paper');
+  await expect(paper.locator('table')).toBeVisible();
+  await expect(paper.locator('.oc-animate')).toHaveCount(0);
   const more = page.locator('.studio-paper summary').first();
-  if (await more.isVisible()) {
-    const tableBounds = await page.locator('.studio-paper').boundingBox();
-    const moreBounds = await more.boundingBox();
-    expect(moreBounds!.x + moreBounds!.width).toBeLessThanOrEqual(tableBounds!.x + tableBounds!.width);
+  if (page.viewportSize()!.width < 600) {
+    await expect(more).toBeVisible();
+    // Resize can rebuild priority details. Measure both boxes atomically and
+    // retry missing controls rather than dereferencing a detached element.
+    await expect.poll(() => paper.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      const control = element.querySelector('summary')?.getBoundingClientRect();
+      return !!control && control.width > 0 && control.right <= bounds.right;
+    })).toBe(true);
     await more.click();
     await expect(page.locator('.studio-paper details[open]')).toContainText('Company');
     await more.click();
