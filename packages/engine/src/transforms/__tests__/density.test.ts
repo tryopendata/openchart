@@ -108,7 +108,7 @@ describe('runDensity', () => {
   it('ignores rows with a missing value rather than counting them as zero', () => {
     const withNulls: DataRow[] = [
       ...sample(100, 500, 20, 23),
-      ...Array.from({ length: 50 }, () => ({ v: null })),
+      ...[null, undefined, '', '  ', false, true, NaN, Infinity, -Infinity].map((v) => ({ v })),
     ];
     const clean = runDensity(sample(100, 500, 20, 23), { density: 'v', steps: 40 });
     const dirty = runDensity(withNulls, { density: 'v', steps: 40 });

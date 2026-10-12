@@ -9,7 +9,7 @@
 import type { ChartSpec } from '@opendata-ai/openchart-core';
 import type { CompileOptions } from '@opendata-ai/openchart-engine';
 import { compileChart } from '@opendata-ai/openchart-engine';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createContainer } from '../__test-fixtures__/dom';
 import { barSpec, lineSpec } from '../__test-fixtures__/specs';
 import {
@@ -21,6 +21,7 @@ import {
   getSVGBackgroundColor,
 } from '../export';
 import { createChart } from '../mount';
+import { createSankey } from '../sankey-mount';
 import { type CanvasStub, stubCanvas2D } from '../scatter-canvas/__tests__/canvas-stub';
 import { renderChartSVG } from '../svg-renderer';
 
@@ -38,6 +39,7 @@ function renderToSVG(spec = lineSpec) {
 
 afterEach(() => {
   document.body.innerHTML = '';
+  vi.unstubAllGlobals();
 });
 
 // ---------------------------------------------------------------------------
@@ -92,6 +94,110 @@ describe('exportSVG', () => {
 // ---------------------------------------------------------------------------
 
 describe('exportSVGWithFonts', () => {
+  function installFontFixtures(weights: Array<string | number> = [400, 500, 600, 700]) {
+    const stylesheet = document.createElement('style');
+    stylesheet.textContent = weights
+      .map(
+        (weight) =>
+          `@font-face { font-family: 'ExportFont'; font-weight: ${weight}; src: url('https://fonts.example/face-${weight}.woff2') format('woff2'); }`,
+      )
+      .join('\n');
+    document.body.appendChild(stylesheet);
+    // Only the network boundary is stubbed; font discovery, rendering and
+    // serialization run through the production export pipeline.
+    const fetchFont = vi.fn(async (_url: string) => new Response(new Uint8Array([1, 2, 3])));
+    vi.stubGlobal('fetch', fetchFont);
+    return fetchFont;
+  }
+
+  it('embeds inline-styled fonts from a terminal Sankey with attribution disabled', async () => {
+    const fetchFont = installFontFixtures();
+    const container = createContainer(390, 420);
+    const sankey = createSankey(
+      container,
+      {
+        type: 'sankey',
+        data: [{ from: 'Supply', to: 'Demand', value: 12 }],
+        encoding: {
+          source: { field: 'from', type: 'nominal' },
+          target: { field: 'to', type: 'nominal' },
+          value: { field: 'value', type: 'quantitative' },
+        },
+        chrome: { title: 'Where the energy goes' },
+      },
+      { watermark: false, theme: { fonts: { family: 'ExportFont, sans-serif' } } },
+    );
+    expect(container.querySelector('text[font-family]')).toBeNull();
+    const exported = await sankey.export('svg-with-fonts');
+    expect(fetchFont).toHaveBeenCalled();
+    expect(exported).toContain("font-family: 'ExportFont'");
+    expect(exported).toContain('src: url(data:font/woff2;base64,AQID)');
+    // Embedding the detached export must not mutate the interactive SVG.
+    expect(container.querySelector('svg style')).toBeNull();
+    sankey.destroy();
+  });
+
+  it('embeds inherited span fonts and gives inline styles precedence over attributes', async () => {
+    const fetchFont = installFontFixtures();
+    const svg = renderToSVG();
+    const title = svg.querySelector<SVGTextElement>('.oc-title')!;
+    title.setAttribute('font-family', 'UnusedFont');
+    title.setAttribute('font-weight', '900');
+    title.style.fontFamily = 'ExportFont, sans-serif';
+    title.style.fontWeight = 'normal';
+    const span = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+    span.style.fontWeight = 'bold';
+    span.textContent = ' highlighted';
+    title.appendChild(span);
+
+    const exported = await exportSVGWithFonts(svg);
+    expect(fetchFont.mock.calls.map(([url]) => url).sort()).toEqual([
+      'https://fonts.example/face-400.woff2',
+      'https://fonts.example/face-700.woff2',
+    ]);
+    expect(exported).toContain("font-family: 'ExportFont'; font-weight: 400");
+    expect(exported).toContain("font-family: 'ExportFont'; font-weight: 700");
+  });
+
+  it.each([
+    ['normal', '400'],
+    ['bold', '700'],
+  ])('matches a %s font-face declaration to its numeric text weight', async (keyword, weight) => {
+    const fetchFont = installFontFixtures([keyword]);
+    const svg = renderToSVG();
+    const title = svg.querySelector<SVGTextElement>('.oc-title')!;
+    title.style.fontFamily = 'ExportFont';
+    title.style.fontWeight = weight;
+    const exported = await exportSVGWithFonts(svg);
+    expect(fetchFont).toHaveBeenCalledWith(`https://fonts.example/face-${keyword}.woff2`);
+    expect(exported).toContain(`font-family: 'ExportFont'; font-weight: ${weight}`);
+  });
+
+  it('resets an initial text weight instead of inheriting the ancestor weight', async () => {
+    const fetchFont = installFontFixtures();
+    const svg = renderToSVG();
+    svg.style.fontWeight = '700';
+    const title = svg.querySelector<SVGTextElement>('.oc-title')!;
+    title.style.fontFamily = 'ExportFont';
+    title.style.fontWeight = 'initial';
+    const exported = await exportSVGWithFonts(svg);
+    expect(fetchFont.mock.calls.map(([url]) => url)).toEqual([
+      'https://fonts.example/face-400.woff2',
+    ]);
+    expect(exported).toContain("font-family: 'ExportFont'; font-weight: 400");
+  });
+
+  it('does not inherit an authored font family through an initial declaration', async () => {
+    const fetchFont = installFontFixtures();
+    const svg = renderToSVG();
+    svg.style.fontFamily = 'ExportFont';
+    const title = svg.querySelector<SVGTextElement>('.oc-title')!;
+    title.style.fontFamily = 'initial';
+    const exported = await exportSVGWithFonts(svg);
+    expect(fetchFont).not.toHaveBeenCalled();
+    expect(exported).not.toContain('@font-face');
+  });
+
   it('returns a promise', () => {
     const svg = renderToSVG();
     const result = exportSVGWithFonts(svg);

@@ -7,6 +7,7 @@
  */
 
 import type { DataRow, WindowTransform } from '@opendata-ai/openchart-core';
+import { finiteNumber } from '../data/finite-number';
 
 /**
  * Build a composite group key from a row's groupby field values.
@@ -125,20 +126,22 @@ export function runWindow(data: DataRow[], transform: WindowTransform): DataRow[
           case 'diff': {
             const lagIdx = i - offset;
             if (lagIdx >= 0) {
-              const current = Number(entry.row[def.field]);
-              const lagged = Number(sorted[lagIdx].row[def.field]);
+              const current = finiteNumber(entry.row[def.field]);
+              const lagged = finiteNumber(sorted[lagIdx].row[def.field]);
               computed =
-                Number.isFinite(current) && Number.isFinite(lagged) ? current - lagged : null;
+                current !== undefined && lagged !== undefined
+                  ? (finiteNumber(current - lagged) ?? null)
+                  : null;
             }
             break;
           }
           case 'pct_change': {
             const lagIdx = i - offset;
             if (lagIdx >= 0) {
-              const current = Number(entry.row[def.field]);
-              const lagged = Number(sorted[lagIdx].row[def.field]);
-              if (Number.isFinite(current) && Number.isFinite(lagged) && lagged !== 0) {
-                computed = (current - lagged) / lagged;
+              const current = finiteNumber(entry.row[def.field]);
+              const lagged = finiteNumber(sorted[lagIdx].row[def.field]);
+              if (current !== undefined && lagged !== undefined && lagged !== 0) {
+                computed = finiteNumber((current - lagged) / lagged) ?? null;
               }
             }
             break;

@@ -20,6 +20,7 @@
 import type { DataRow, EncodingChannel } from '@opendata-ai/openchart-core';
 import { max, min } from 'd3-array';
 import { scaleLinear, scaleSqrt } from 'd3-scale';
+import { finiteNumber } from '../data/finite-number';
 
 /** How a size value maps onto its visual magnitude. */
 export type SizeCurve = 'sqrt' | 'linear';
@@ -105,14 +106,8 @@ export function buildSizeScale(
 
   const values: number[] = [];
   for (const row of data) {
-    const raw = row[field];
-    // Reject holes before coercing: `Number(null)` and `Number('')` are both a
-    // finite 0, so a null would enter the extent as a real zero and drag the
-    // domain floor down -- rescaling every genuine mark, and drawing a
-    // minimum-size mark for a datum that has no size at all.
-    if (raw == null || raw === '') continue;
-    const v = Number(raw);
-    if (Number.isFinite(v)) values.push(v);
+    const value = finiteNumber(row[field]);
+    if (value !== undefined) values.push(value);
   }
 
   const explicitDomain = sizeEncoding.scale?.domain as [number, number] | undefined;

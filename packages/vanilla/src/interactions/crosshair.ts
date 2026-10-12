@@ -11,7 +11,9 @@ interface SeriesPoint {
 }
 
 interface SeriesGroup {
+  key: string;
   seriesKey: string;
+  markId: string;
   color: string;
   pointsByX: Map<number, SeriesPoint>;
 }
@@ -56,7 +58,7 @@ function snapKey(x: number): number {
 }
 
 function collectSeriesGroups(layout: ChartLayout): SeriesGroup[] {
-  // Dedupe by seriesKey: area charts emit BOTH an AreaMark and a derived
+  // Dedupe within each leaf: area charts emit BOTH an AreaMark and a derived
   // LineMark per series. Without dedupe, single-series area charts show
   // "line-0" / "area-1" in the tooltip instead of the actual data fields.
   // Prefer the line mark (same logic as endpoint-labels).
@@ -65,7 +67,12 @@ function collectSeriesGroups(layout: ChartLayout): SeriesGroup[] {
   for (let i = 0; i < layout.marks.length; i++) {
     const mark = layout.marks[i];
     if ((mark.type === 'line' || mark.type === 'area') && mark.dataPoints?.length) {
-      const key = mark.seriesKey ?? '__default__';
+      // compileLayer namespaces mark keys by original leaf index, independently
+      // of paint order. Equal series names in separate leaves are distinct
+      // evidence; a band's derived line still shares its leaf's series group.
+      const scope = mark.key?.match(/^layer:\d+:/)?.[0] ?? '';
+      const seriesKey = mark.seriesKey ?? '__default__';
+      const key = `${scope}${seriesKey}`;
       const existingType = markTypeByKey.get(key);
       if (existingType === 'line' && mark.type === 'area') continue;
       const color = mark.type === 'line' ? mark.stroke : getRepresentativeColor(mark.fill);
@@ -73,7 +80,7 @@ function collectSeriesGroups(layout: ChartLayout): SeriesGroup[] {
       for (const dp of mark.dataPoints) {
         pointsByX.set(snapKey(dp.x), { ...dp });
       }
-      byKey.set(key, { seriesKey: key, color, pointsByX });
+      byKey.set(key, { key, seriesKey, markId: `${mark.type}-${i}`, color, pointsByX });
       markTypeByKey.set(key, mark.type);
     }
   }
@@ -115,6 +122,9 @@ function buildSliceTooltip(
   const fields: TooltipField[] = [];
 
   const isMulti = hits.length > 1;
+  const seriesCounts = new Map<string, number>();
+  for (const { group } of hits)
+    seriesCounts.set(group.seriesKey, (seriesCounts.get(group.seriesKey) ?? 0) + 1);
   // The stack total is precomputed per x by the engine and carried on every
   // layer's row; take the first one and append it once, below the series rows.
   let total: TooltipField | undefined;
@@ -137,10 +147,15 @@ function buildSliceTooltip(
         null;
       if (!yField) continue;
       fields.push({
-        label: group.seriesKey,
+        label:
+          group.seriesKey === '__default__'
+            ? yField.label
+            : (seriesCounts.get(group.seriesKey) ?? 0) > 1
+              ? `${group.seriesKey} · ${yField.label}`
+              : group.seriesKey,
         value: yField.value,
         color: group.color,
-        ...(emphasisKey === group.seriesKey ? { emphasis: true } : {}),
+        ...(emphasisKey === group.key ? { emphasis: true } : {}),
       });
     } else {
       for (const f of tip.fields) {
@@ -246,8 +261,10 @@ export function wireVoronoiTooltipEvents(
     }
 
     currentEmphasis = emphasisKey;
-    if (emphasisKey) emphasis?.setSeries(emphasisKey);
-    else emphasis?.clear();
+    const emphasizedGroup = groups.find((group) => group.key === emphasisKey);
+    if (emphasizedGroup) {
+      emphasis?.setMark(svg.querySelector(`[data-mark-id="${emphasizedGroup.markId}"]`));
+    } else emphasis?.clear();
 
     const tooltip = buildSliceTooltip(hits, emphasisKey);
     if (!tooltip) return false;
@@ -264,7 +281,7 @@ export function wireVoronoiTooltipEvents(
   function keysAt(snappedX: number): string[] {
     const keys: string[] = [];
     for (const group of groups) {
-      if (group.pointsByX.has(snappedX)) keys.push(group.seriesKey);
+      if (group.pointsByX.has(snappedX)) keys.push(group.key);
     }
     return keys;
   }
@@ -284,7 +301,7 @@ export function wireVoronoiTooltipEvents(
       const dy = Math.abs(point.y - svgY);
       if (dy < nearestDy) {
         nearestDy = dy;
-        nearestKey = group.seriesKey;
+        nearestKey = group.key;
       }
     }
     const emphasisKey = nearestDy <= EMPHASIS_PROXIMITY_PX ? nearestKey : null;

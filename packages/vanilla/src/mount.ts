@@ -81,12 +81,7 @@ import { renderChartSVG } from './svg-renderer';
 import { createTextEditOverlay, createTextEditOverlayAtPosition } from './text-edit-overlay';
 import { stampThemeProperties } from './theme-tokens';
 import { createTooltipManager, type TooltipManager } from './tooltip';
-import {
-  canTransition,
-  type GeometrySnapshot,
-  runTransition,
-  type TransitionHandle,
-} from './transition';
+import { canTransition, runTransition, type TransitionHandle } from './transition';
 import { createYouDrawIt, type YouDrawItController } from './you-draw-it';
 
 // ---------------------------------------------------------------------------
@@ -300,7 +295,6 @@ export function createChart<TData extends DataRow = DataRow>(
 
   // Data-update transition state
   let transitionHandle: TransitionHandle | null = null;
-  let transitionSnapshot: GeometrySnapshot | null = null;
 
   // Set when webfonts have loaded and a recompile is owed to reflect final font
   // metrics. The next render() that actually recompiles flips
@@ -342,10 +336,10 @@ export function createChart<TData extends DataRow = DataRow>(
   // spec-level theme; fall back to the container's computed font. Measuring
   // against a different font than compile renders (e.g. a spec that sets
   // theme.fonts.family) desyncs layout metrics and the font-reload watcher.
-  function resolveEffectiveFont(): string {
+  function resolveEffectiveFont(candidate = currentSpec): string {
     return (
       options?.theme?.fonts?.family ??
-      currentSpec.theme?.fonts?.family ??
+      candidate.theme?.fonts?.family ??
       resolveFontFamily(container)
     );
   }
@@ -357,7 +351,13 @@ export function createChart<TData extends DataRow = DataRow>(
   // Compilation
   // ---------------------------------------------------------------------------
 
-  function compileAt(width: number, height: number): ChartLayout {
+  function compileAt(
+    width: number,
+    height: number,
+    candidate: typeof currentSpec,
+    measure: typeof measureText,
+    runtime: boolean,
+  ): ChartLayout {
     const darkMode = resolveDarkMode(options?.darkMode);
 
     const compileOpts: CompileOptions = {
@@ -367,13 +367,12 @@ export function createChart<TData extends DataRow = DataRow>(
       darkMode,
       renderer: options?.renderer,
       watermark: options?.watermark,
-      measureText,
+      measureText: measure,
     };
 
-    if (isLayerSpec(currentSpec)) {
-      return compileLayer(withRuntimeHidden(currentSpec as LayerSpec) as LayerSpec, compileOpts);
-    }
-    return compileChart(withRuntimeHidden(currentSpec) as ChartSpec | GraphSpec, compileOpts);
+    const effective = runtime ? withRuntimeHidden(candidate) : candidate;
+    if (isLayerSpec(effective)) return compileLayer(effective, compileOpts);
+    return compileChart(effective as ChartSpec | GraphSpec, compileOpts);
   }
 
   /**
@@ -420,18 +419,18 @@ export function createChart<TData extends DataRow = DataRow>(
     );
   }
 
-  function compile(): ChartLayout {
-    const { width, height } = getContainerDimensions();
+  function compile(candidate = currentSpec, measure = measureText, runtime = true): ChartLayout {
+    const { width, height } = getContainerDimensions(candidate);
 
     // Auto-height growth applies to ChartSpec mounts only. GraphSpec,
     // LayerSpec, and sparkline mounts keep the fixed-fallback behavior.
     const growsWithChrome =
       isAutoHeight === true &&
-      !isLayerSpec(currentSpec) &&
-      !isGraphSpec(currentSpec as unknown as Record<string, unknown>) &&
-      (currentSpec as ChartSpec).display !== 'sparkline';
+      !isLayerSpec(candidate) &&
+      !isGraphSpec(candidate as unknown as Record<string, unknown>) &&
+      (candidate as ChartSpec).display !== 'sparkline';
     if (!growsWithChrome) {
-      return compileAt(width, height);
+      return compileAt(width, height, candidate, measure, runtime);
     }
 
     // Bounded convergence loop, max 3 compiles. Chrome height depends on
@@ -441,13 +440,13 @@ export function createChart<TData extends DataRow = DataRow>(
     // un-strip chrome, changing the overheads once more. (Height classes are
     // not the issue — they only strip below 200/350px, and growing from 400
     // moves away from those thresholds.) Pass 3 is accepted unconditionally.
-    let layout = compileAt(width, height);
+    let layout = compileAt(width, height, candidate, measure, runtime);
     const overheads = verticalOverheads(layout, width);
     if (overheads > 0) {
-      layout = compileAt(width, height + overheads);
+      layout = compileAt(width, height + overheads, candidate, measure, runtime);
       const overheads2 = verticalOverheads(layout, width);
       if (overheads2 !== overheads) {
-        layout = compileAt(width, height + overheads2);
+        layout = compileAt(width, height + overheads2, candidate, measure, runtime);
       }
     }
     return layout;
@@ -545,10 +544,9 @@ export function createChart<TData extends DataRow = DataRow>(
   // Container dimensions
   // ---------------------------------------------------------------------------
 
-  function getContainerDimensions(): { width: number; height: number } {
+  function getContainerDimensions(candidate = currentSpec): { width: number; height: number } {
     const rect = container.getBoundingClientRect();
-    const isSparkline =
-      'display' in currentSpec && (currentSpec as ChartSpec).display === 'sparkline';
+    const isSparkline = 'display' in candidate && (candidate as ChartSpec).display === 'sparkline';
     if (isSparkline) {
       let width = rect.width;
       let height = rect.height;
@@ -874,12 +872,14 @@ export function createChart<TData extends DataRow = DataRow>(
   // Render cycle
   // ---------------------------------------------------------------------------
 
-  function render(retainScene = false): void {
+  function render(retainScene = false, prepared?: ChartLayout): void {
     const retainedSVG = retainScene ? svgElement : null;
     if (isDragging) {
       pendingRender = true;
       return;
     }
+
+    const nextLayout = prepared ?? compile();
 
     // Cancel any in-progress data-update transition
     if (transitionHandle) {
@@ -941,7 +941,7 @@ export function createChart<TData extends DataRow = DataRow>(
       srTableWrapper = null;
     }
 
-    currentLayout = compile();
+    currentLayout = nextLayout;
     // Recorded for the ResizeObserver's self-induced-resize guard.
     lastRenderedWidth = currentLayout.dimensions.width;
     lastRenderedSvgHeight = currentLayout.dimensions.height;
@@ -1297,21 +1297,15 @@ export function createChart<TData extends DataRow = DataRow>(
     const prevLayout = currentLayout;
     const entranceWasRunning = cleanupAnimations != null;
 
-    // Snapshot in-flight transition geometry before render() cancels it.
-    // This enables retargeting: the next transition starts from the
-    // interrupted position instead of snapping to the previous final state.
-    if (transitionHandle?.running) {
-      transitionSnapshot = transitionHandle.snapshot();
-    }
-
+    const nextFont = resolveEffectiveFont(newSpec);
+    const nextMeasure = nextFont === fontFamily ? measureText : createMeasureText(nextFont);
+    const nextLayout = compile(newSpec, nextMeasure, layoutOnly);
+    // Capture only after compilation succeeds, before render() cancels the
+    // current motion. A rejected edit must not leave geometry for a later update.
+    const snapshot = transitionHandle?.running ? transitionHandle.snapshot() : undefined;
     currentSpec = newSpec;
-    // A new spec can change theme.fonts.family; rebuild the measurer so layout
-    // measures the font compile will actually render with.
-    const nextFont = resolveEffectiveFont();
-    if (nextFont !== fontFamily) {
-      fontFamily = nextFont;
-      measureText = createMeasureText(fontFamily);
-    }
+    fontFamily = nextFont;
+    measureText = nextMeasure;
     if (!layoutOnly) {
       runtimeHiddenSeries.clear();
       runtimeShownSeries.clear();
@@ -1329,7 +1323,7 @@ export function createChart<TData extends DataRow = DataRow>(
     if (updateOpts && 'selectedElement' in updateOpts) {
       selectedElement = updateOpts.selectedElement ?? null;
     }
-    render(canTransitionSpecShape(prevSpec, newSpec));
+    render(canTransitionSpecShape(prevSpec, newSpec), nextLayout);
 
     // After render, check if we can run a smooth transition instead of the
     // instant swap that render() already performed.
@@ -1344,16 +1338,12 @@ export function createChart<TData extends DataRow = DataRow>(
         entranceInFlight: entranceWasRunning,
       })
     ) {
-      // Consume snapshot (if any) for retargeting, then clear
-      const snapshot = transitionSnapshot;
-      transitionSnapshot = null;
-
       const handle = runTransition({
         svg: svgElement as SVGSVGElement,
         prevLayout,
         nextLayout: currentLayout,
         animation: currentLayout.animation!,
-        fromSnapshot: snapshot ?? undefined,
+        fromSnapshot: snapshot,
         manual,
         // render() above already rebuilt the layer for the NEXT layout, so this
         // is the destination-mode layer the tween writes into.
@@ -1367,8 +1357,6 @@ export function createChart<TData extends DataRow = DataRow>(
       transitionHandle = handle;
       return handle;
     }
-    // No transition started; clear any stale snapshot
-    transitionSnapshot = null;
     return null;
   }
 
@@ -1496,8 +1484,6 @@ export function createChart<TData extends DataRow = DataRow>(
       transitionHandle.cancel();
       transitionHandle = null;
     }
-    transitionSnapshot = null;
-
     if (cleanupAnimations) {
       cleanupAnimations();
       cleanupAnimations = null;

@@ -11,21 +11,20 @@ import type {
   LegendLayout,
   MeasureTextFn,
   ResolvedAnimation,
-  ResolvedChromeElement,
   SankeyLayout,
   SankeyLinkMark,
   SankeyNodeMark,
-  TextStyle,
 } from '@opendata-ai/openchart-core';
 import {
   BRAND_FONT_SIZE,
   BRAND_MIN_WIDTH,
   estimateTextWidth,
-  textAscent,
   wrapText,
 } from '@opendata-ai/openchart-core';
 import { clampStaggerDelay } from '@opendata-ai/openchart-engine';
 import { stampAnimationVars } from './animation-vars';
+import { renderChromeElement } from './renderers/chrome';
+import { applyTextStyle } from './renderers/svg-dom';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const XLINK_NS = 'http://www.w3.org/1999/xlink';
@@ -42,24 +41,6 @@ function createSVGElement(tag: string): SVGElement {
 function setAttrs(el: SVGElement, attrs: Record<string, string | number>): void {
   for (const [key, value] of Object.entries(attrs)) {
     el.setAttribute(key, String(value));
-  }
-}
-
-function applyTextStyle(el: SVGElement, style: TextStyle): void {
-  setAttrs(el, {
-    'font-family': style.fontFamily,
-    'font-size': style.fontSize,
-    'font-weight': style.fontWeight,
-  });
-  (el as SVGElement & ElementCSSInlineStyle).style.setProperty('fill', style.fill);
-  if (style.textAnchor) {
-    el.setAttribute('text-anchor', style.textAnchor);
-  }
-  if (style.dominantBaseline) {
-    el.setAttribute('dominant-baseline', style.dominantBaseline);
-  }
-  if (style.fontVariant) {
-    el.setAttribute('font-variant', style.fontVariant);
   }
 }
 
@@ -81,44 +62,6 @@ function stampAnimationAttrs(
 // ---------------------------------------------------------------------------
 // Chrome rendering
 // ---------------------------------------------------------------------------
-
-function renderChromeElement(
-  parent: SVGElement,
-  element: ResolvedChromeElement,
-  className: string,
-  chromeKey: string,
-  measureText?: MeasureTextFn,
-): void {
-  const text = createSVGElement('text');
-  // element.y is the TOP of the text box; convert to the alphabetic baseline
-  // (see renderers/chrome.ts — WebKit mishandles dominant-baseline:hanging).
-  setAttrs(text, { x: element.x, y: element.y + textAscent(element.style.fontSize) });
-  applyTextStyle(text, element.style);
-  text.setAttribute('class', className);
-  text.setAttribute('data-chrome-key', chromeKey);
-
-  const lines = wrapText(
-    element.text,
-    element.style.fontSize,
-    element.style.fontWeight,
-    element.maxWidth,
-    measureText,
-  );
-
-  if (lines.length === 1) {
-    text.textContent = element.text;
-  } else {
-    const lineHeight = element.style.fontSize * (element.style.lineHeight ?? 1.3);
-    for (let i = 0; i < lines.length; i++) {
-      const tspan = createSVGElement('tspan');
-      setAttrs(tspan, { x: element.x, dy: i === 0 ? 0 : lineHeight });
-      tspan.textContent = lines[i];
-      text.appendChild(tspan);
-    }
-  }
-
-  parent.appendChild(text);
-}
 
 function renderChrome(parent: SVGElement, layout: SankeyLayout): void {
   const g = createSVGElement('g');

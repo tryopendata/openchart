@@ -91,6 +91,10 @@
 | SVG DOM helpers (`createSVGElement`, `setAttrs`, `applyTextStyle`) | `packages/vanilla/src/renderers/svg-dom.ts` (note: `computeXAxisExtent` was removed; use `layout.chrome.bottomAnchorY` instead) |
 | Gradient utilities (`LinearGradient` resolution) | `packages/vanilla/src/gradient-utils.ts` |
 | Resize observer wiring | `packages/vanilla/src/resize-observer.ts` |
+| Specialized mark keyboard inspection and focus restoration | `packages/vanilla/src/interactions/mark-navigation.ts` → `wireMarkNavigation`, `captureMarkFocus`, `restoreMarkFocus`; used by map/tilemap/barlist/Sankey mounts. |
+| Numeric observation validity | `packages/engine/src/data/finite-number.ts` → `finiteNumber`; shared by measured mark channels, scales, geographic coordinates, aggregates, bins, density and window comparisons. |
+| Library lifecycle/interaction QA | `packages/vanilla/src/__tests__/lifecycle-contracts.test.ts`; manual Ladle fixture `examples/src/testing/library-contracts.stories.tsx`; browser checks `e2e/invariants/library-interactions.spec.ts`. |
+| Zoom viewport clipping for live maps and exports | `packages/vanilla/src/map-camera.ts` → `ensureMapClip`; reused by `map-zoom.ts` and terminal map export. |
 | Animation lifecycle / cleanup | `packages/vanilla/src/animation.ts`. `computeAnimationDuration(svg)` is the shared total-entrance-time calc (used by cleanup timing and GIF capture). |
 | Data-update transition driver (rAF-based mark/axis tweening) | `packages/vanilla/src/transition/` (driver.ts, gate.ts, svg-tweens.ts, canvas-tweens.ts, chrome-tweens.ts, ...; `transition.ts` is the re-export barrel) |
 | Export (SVG/PNG/JPG/CSV) | `packages/vanilla/src/export.ts` → `exportSVG`, `exportPNG`, `exportJPG`, `exportCSV`, plus `rasterizeSVGToCanvas`/`getSVGDimensions`/`embedFonts` helpers reused by GIF export. Wired into `chart.export(format)` in `mount.ts`. |

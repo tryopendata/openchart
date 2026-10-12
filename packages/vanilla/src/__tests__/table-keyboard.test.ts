@@ -147,7 +147,7 @@ describe('tbody arrow key navigation', () => {
 
   it('focus highlights first cell and sets aria-activedescendant', () => {
     const tbody = focusTbody(wrapper);
-    expect(tbody.getAttribute('aria-activedescendant')).toBe('oc-cell-0-0');
+    expect(tbody.getAttribute('aria-activedescendant')).toMatch(/-cell-0-0$/);
     const cell = wrapper.querySelector('.oc-table-cell-focus');
     expect(cell).not.toBeNull();
     expect(cell?.textContent).toBe('R0C0');
@@ -156,25 +156,25 @@ describe('tbody arrow key navigation', () => {
   it('ArrowDown moves focus down one row', () => {
     const tbody = focusTbody(wrapper);
     keydown(tbody, 'ArrowDown');
-    expect(tbody.getAttribute('aria-activedescendant')).toBe('oc-cell-1-0');
+    expect(tbody.getAttribute('aria-activedescendant')).toMatch(/-cell-1-0$/);
   });
 
   it('ArrowDown does not go past last row', () => {
     const tbody = focusTbody(wrapper);
     for (let i = 0; i < 10; i++) keydown(tbody, 'ArrowDown');
-    expect(tbody.getAttribute('aria-activedescendant')).toBe('oc-cell-4-0');
+    expect(tbody.getAttribute('aria-activedescendant')).toMatch(/-cell-4-0$/);
   });
 
   it('ArrowRight moves focus right one column', () => {
     const tbody = focusTbody(wrapper);
     keydown(tbody, 'ArrowRight');
-    expect(tbody.getAttribute('aria-activedescendant')).toBe('oc-cell-0-1');
+    expect(tbody.getAttribute('aria-activedescendant')).toMatch(/-cell-0-1$/);
   });
 
   it('ArrowRight does not go past last column', () => {
     const tbody = focusTbody(wrapper);
     for (let i = 0; i < 10; i++) keydown(tbody, 'ArrowRight');
-    expect(tbody.getAttribute('aria-activedescendant')).toBe('oc-cell-0-2');
+    expect(tbody.getAttribute('aria-activedescendant')).toMatch(/-cell-0-2$/);
   });
 
   it('ArrowLeft moves focus left', () => {
@@ -182,13 +182,13 @@ describe('tbody arrow key navigation', () => {
     keydown(tbody, 'ArrowRight');
     keydown(tbody, 'ArrowRight');
     keydown(tbody, 'ArrowLeft');
-    expect(tbody.getAttribute('aria-activedescendant')).toBe('oc-cell-0-1');
+    expect(tbody.getAttribute('aria-activedescendant')).toMatch(/-cell-0-1$/);
   });
 
   it('ArrowLeft does not go past first column', () => {
     const tbody = focusTbody(wrapper);
     keydown(tbody, 'ArrowLeft');
-    expect(tbody.getAttribute('aria-activedescendant')).toBe('oc-cell-0-0');
+    expect(tbody.getAttribute('aria-activedescendant')).toMatch(/-cell-0-0$/);
   });
 
   it('Home moves to first column in current row', () => {
@@ -196,13 +196,13 @@ describe('tbody arrow key navigation', () => {
     keydown(tbody, 'ArrowRight');
     keydown(tbody, 'ArrowRight');
     keydown(tbody, 'Home');
-    expect(tbody.getAttribute('aria-activedescendant')).toBe('oc-cell-0-0');
+    expect(tbody.getAttribute('aria-activedescendant')).toMatch(/-cell-0-0$/);
   });
 
   it('End moves to last column in current row', () => {
     const tbody = focusTbody(wrapper);
     keydown(tbody, 'End');
-    expect(tbody.getAttribute('aria-activedescendant')).toBe('oc-cell-0-2');
+    expect(tbody.getAttribute('aria-activedescendant')).toMatch(/-cell-0-2$/);
   });
 
   it('navigation clears previous focus highlight', () => {
@@ -274,7 +274,7 @@ describe('header keyboard navigation', () => {
     keydown(headers[1] as HTMLElement, 'ArrowDown');
     const tbody = wrapper.querySelector('tbody')!;
     // The tbody should have activedescendant set to first row, column 1
-    expect(tbody.getAttribute('aria-activedescendant')).toBe('oc-cell-0-1');
+    expect(tbody.getAttribute('aria-activedescendant')).toMatch(/-cell-0-1$/);
   });
 });
 

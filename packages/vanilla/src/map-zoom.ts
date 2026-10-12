@@ -24,6 +24,7 @@
 import type { GeoMapLayout } from '@opendata-ai/openchart-core';
 import {
   clampMapCamera,
+  ensureMapClip,
   panCamera,
   type ResolvedMapZoom,
   wheelZoomFactor,
@@ -66,7 +67,6 @@ const DRAG_THRESHOLD = 3;
 const HINT_MS = 1500;
 const EPS = 1e-3;
 
-const SVG_NS = 'http://www.w3.org/2000/svg';
 let clipIdCounter = 0;
 
 const ICONS = {
@@ -539,22 +539,6 @@ export function createMapZoomController(host: MapZoomHost): MapZoomController {
     overlay.style.height = `${(area.height / height) * 100}%`;
   }
 
-  function ensureClip(svg: SVGSVGElement, layout: GeoMapLayout): void {
-    if (svg.querySelector(`#${clipId}`)) return;
-    let defs = svg.querySelector('defs');
-    if (!defs) {
-      defs = document.createElementNS(SVG_NS, 'defs');
-      svg.insertBefore(defs, svg.firstChild);
-    }
-    const clip = document.createElementNS(SVG_NS, 'clipPath');
-    clip.setAttribute('id', clipId);
-    const rect = document.createElementNS(SVG_NS, 'rect');
-    rect.setAttribute('width', String(layout.area.width));
-    rect.setAttribute('height', String(layout.area.height));
-    clip.appendChild(rect);
-    defs.appendChild(clip);
-  }
-
   // -------------------------------------------------------------------------
   // Lifecycle
   // -------------------------------------------------------------------------
@@ -569,7 +553,7 @@ export function createMapZoomController(host: MapZoomHost): MapZoomController {
     const layout = host.getLayout();
     svg.setAttribute('tabindex', '0');
     svg.setAttribute('aria-keyshortcuts', '+ - 0 ArrowUp ArrowDown ArrowLeft ArrowRight');
-    ensureClip(svg, layout);
+    ensureMapClip(svg, layout, clipId);
     ensureOverlay(cfg.controls);
     placeOverlay(layout);
     if (restoreFocus) svg.focus({ preventScroll: true });

@@ -56,6 +56,16 @@ export function attachGraphKeyboardNav(options: KeyboardNavOptions): () => void 
     return getNodes().find((n) => n.id === id);
   }
 
+  function ensureFocus(): void {
+    if (focusedNodeId && findNodeById(focusedNodeId)) return;
+    focusedNodeId = getSelectedIds().find((id) => findNodeById(id)) ?? getNodes()[0]?.id ?? null;
+  }
+
+  function onFocus(): void {
+    focusedNodeId = getSelectedIds().find((id) => findNodeById(id)) ?? focusedNodeId;
+    ensureFocus();
+  }
+
   /**
    * Given a set of neighbor node ids, pick the one that best matches
    * the arrow key direction relative to the current focused node.
@@ -103,23 +113,11 @@ export function attachGraphKeyboardNav(options: KeyboardNavOptions): () => void 
   }
 
   function onKeyDown(e: KeyboardEvent): void {
+    // Tab belongs to the page. Node navigation starts when the canvas receives
+    // focus, and recovers if the previously focused node was removed.
+    if (e.key === 'Tab') return;
+    ensureFocus();
     switch (e.key) {
-      case 'Tab': {
-        // Focus first/selected node
-        const selected = getSelectedIds();
-        const nodes = getNodes();
-        if (nodes.length === 0) return;
-
-        if (selected.length > 0) {
-          focusedNodeId = selected[0];
-        } else if (!focusedNodeId || !findNodeById(focusedNodeId)) {
-          focusedNodeId = nodes[0].id;
-        }
-
-        e.preventDefault();
-        break;
-      }
-
       case 'ArrowUp':
       case 'ArrowDown':
       case 'ArrowLeft':
@@ -200,9 +198,11 @@ export function attachGraphKeyboardNav(options: KeyboardNavOptions): () => void 
   }
 
   canvas.addEventListener('keydown', onKeyDown);
+  canvas.addEventListener('focus', onFocus);
 
   // Return cleanup function
   return () => {
     canvas.removeEventListener('keydown', onKeyDown);
+    canvas.removeEventListener('focus', onFocus);
   };
 }

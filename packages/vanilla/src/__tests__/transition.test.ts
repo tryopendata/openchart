@@ -1604,6 +1604,40 @@ const DATA_D = [
 ];
 
 describe('interruption retargeting', () => {
+  it('a rejected edit cannot leak interrupted area geometry into a later update', () => {
+    const specA = noEnter(areaSpec(LINE_DATA_A));
+    const specB = noEnter(areaSpec(LINE_DATA_B));
+    const container = createContainer();
+    const chart = createChart(container, specA);
+    const areaPath = () =>
+      container.querySelector('.oc-mark-area:not(.oc-ghost) path')?.getAttribute('d');
+
+    try {
+      chart.update(specB);
+      pumpRaf(0);
+      pumpRaf(150);
+      const interruptedPath = areaPath();
+      expect(() => chart.update({ ...specB, data: null } as unknown as ChartSpec)).toThrow();
+      expect(areaPath()).toBe(interruptedPath);
+
+      // The rejected edit leaves the original animation free to settle.
+      pumpRaf(2000);
+      const settledPath = areaPath();
+      expect(settledPath).not.toBe(interruptedPath);
+
+      chart.update(specA);
+      // A new transition must start at the last settled scene, without
+      // resurfacing a ghost captured by the rejected edit.
+      expect(areaPath()).toBe(settledPath);
+      expect(container.querySelector('.oc-mark-area.oc-ghost')).toBeNull();
+      runToCompletion();
+      const { svg } = compileAndRender(specA);
+      expect(areaPath()).toBe(svg.querySelector('.oc-mark-area path')?.getAttribute('d'));
+    } finally {
+      chart.destroy();
+    }
+  });
+
   it('A -> B -> interrupt at ~50% -> C -> complete -> equals fresh render of C', () => {
     const specA = noEnter(columnSpec(DATA_A));
     const specB = noEnter(columnSpec(DATA_B));

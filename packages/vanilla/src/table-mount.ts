@@ -120,6 +120,7 @@ export function createTable(
   let disconnectResize: (() => void) | null = null;
   let cleanupKeyboard: (() => void) | null = null;
   let cleanupAnimations: (() => void) | null = null;
+  let pendingResize = false;
   let isFirstRender = true;
   let destroyed = false;
   // Whether the user has touched sorting. Once they have, a null sort means
@@ -173,7 +174,7 @@ export function createTable(
     }
   }
 
-  function compile(): TableLayout {
+  function compile(candidate = currentSpec): TableLayout {
     const state = getState();
     const darkMode = resolveDarkMode(options?.darkMode);
     const { width } = getContainerDimensions();
@@ -193,7 +194,7 @@ export function createTable(
       page: state.page,
     };
 
-    return compileTable(currentSpec, compileOpts);
+    return compileTable(candidate, compileOpts);
   }
 
   /** The sort once the user has touched it, otherwise defer to the spec. */
@@ -261,91 +262,138 @@ export function createTable(
     wrapperElement.classList.toggle('oc-table--regular', !condensed);
   }
 
-  function render(): void {
+  function render(candidate = currentSpec): void {
     if (destroyed) return;
 
-    try {
-      // Cancel any in-flight animations before re-rendering
-      if (cleanupAnimations) {
-        cleanupAnimations();
+    // Keep the previous view usable if validation or compilation rejects an edit.
+    const nextLayout = compile(candidate);
+    const active = document.activeElement as HTMLElement | null;
+    const bodyFocused = active === wrapperElement?.querySelector('tbody');
+    const focusedCell = wrapperElement?.querySelector('.oc-table-cell-focus');
+    const initialCell =
+      bodyFocused && focusedCell
+        ? {
+            rowId: focusedCell.closest('tr')?.getAttribute('data-row-id') ?? '',
+            columnKey: focusedCell.getAttribute('data-column') ?? '',
+          }
+        : undefined;
+    const headerKey = wrapperElement?.contains(active)
+      ? active?.closest('th')?.getAttribute('data-column')
+      : null;
+    const pageAction = wrapperElement?.contains(active)
+      ? active?.getAttribute('data-page-action')
+      : null;
+    currentSpec = candidate;
+    // Cancel any in-flight animations before re-rendering
+    if (cleanupAnimations) {
+      cleanupAnimations();
+      cleanupAnimations = null;
+    }
+
+    // Clean up previous keyboard nav
+    if (cleanupKeyboard) {
+      cleanupKeyboard();
+      cleanupKeyboard = null;
+    }
+
+    // Clean up previous render
+    if (wrapperElement?.parentNode) {
+      wrapperElement.parentNode.removeChild(wrapperElement);
+      wrapperElement = null;
+    }
+
+    currentLayout = nextLayout;
+    const shouldAnimate = isFirstRender && !!currentLayout.animation?.enter;
+    wrapperElement = renderTable(currentLayout, container, { animate: shouldAnimate });
+
+    // Set up animation cleanup on first animated render
+    if (shouldAnimate && wrapperElement) {
+      cleanupAnimations = setupTableAnimationCleanup(wrapperElement, () => {
         cleanupAnimations = null;
-      }
+        if (pendingResize && !destroyed) {
+          pendingResize = false;
+          resize();
+        }
+      });
+    }
+    if (isFirstRender) {
+      isFirstRender = false;
+    }
 
-      // Clean up previous keyboard nav
-      if (cleanupKeyboard) {
-        cleanupKeyboard();
-        cleanupKeyboard = null;
-      }
+    // Apply dark mode class
+    const isDark = resolveDarkMode(options?.darkMode);
+    if (isDark) {
+      container.classList.add('oc-dark');
+    } else {
+      container.classList.remove('oc-dark');
+    }
 
-      // Clean up previous render
-      if (wrapperElement?.parentNode) {
-        wrapperElement.parentNode.removeChild(wrapperElement);
-        wrapperElement = null;
-      }
+    // Apply responsive breakpoint
+    applyBreakpointClass();
 
-      currentLayout = compile();
-      const shouldAnimate = isFirstRender && !!currentLayout.animation?.enter;
-      wrapperElement = renderTable(currentLayout, container, { animate: shouldAnimate });
+    // Add clickable class if onRowClick is provided
+    if (options?.onRowClick) {
+      wrapperElement.classList.add('oc-table--clickable');
+    }
 
-      // Set up animation cleanup on first animated render
-      if (shouldAnimate && wrapperElement) {
-        cleanupAnimations = setupTableAnimationCleanup(wrapperElement);
-      }
-      if (isFirstRender) {
-        isFirstRender = false;
-      }
+    // Wire up event handlers
+    wireEvents();
 
-      // Apply dark mode class
-      const isDark = resolveDarkMode(options?.darkMode);
-      if (isDark) {
-        container.classList.add('oc-dark');
-      } else {
-        container.classList.remove('oc-dark');
-      }
-
-      // Apply responsive breakpoint
-      applyBreakpointClass();
-
-      // Add clickable class if onRowClick is provided
-      if (options?.onRowClick) {
-        wrapperElement.classList.add('oc-table--clickable');
-      }
-
-      // Wire up event handlers
-      wireEvents();
-
-      // Wire up keyboard navigation
-      if (wrapperElement) {
-        cleanupKeyboard = attachKeyboardNav({
-          wrapper: wrapperElement,
-          onSort: (columnKey: string) => {
-            const state = getState();
-            const newSort = cycleSort(state.sort, columnKey);
-            updateState({ sort: newSort, page: 0 });
-
-            // Announce sort change
-            if (newSort) {
-              const dir = newSort.direction === 'asc' ? 'ascending' : 'descending';
-              announce(`Sorted by ${columnKey} ${dir}`);
-            } else {
-              announce('Sort cleared');
+    // Wire up keyboard navigation
+    if (wrapperElement) {
+      cleanupKeyboard = attachKeyboardNav({
+        wrapper: wrapperElement,
+        initialCell,
+        onRowActivate: options?.onRowClick
+          ? (rowId) => {
+              const row = currentLayout.rows.find((item) => item.id === rowId);
+              if (row) options.onRowClick?.(row.data);
             }
+          : undefined,
+        onSort: (columnKey: string) => {
+          const state = getState();
+          const newSort = cycleSort(state.sort, columnKey);
+          updateState({ sort: newSort, page: 0 });
 
-            if (!isControlled) {
-              rerender();
-            }
-          },
-          onClearSearch: () => {
-            updateState({ search: '', page: 0 });
-            if (!isControlled) {
-              rerender();
-            }
-          },
-          onAnnounce: announce,
-        });
-      }
-    } catch (err) {
-      console.error('[viz] Table render failed:', err);
+          // Announce sort change
+          if (newSort) {
+            const dir = newSort.direction === 'asc' ? 'ascending' : 'descending';
+            announce(`Sorted by ${columnKey} ${dir}`);
+          } else {
+            announce('Sort cleared');
+          }
+
+          if (!isControlled) {
+            rerender();
+          }
+        },
+        onClearSearch: () => {
+          if (searchDebounceTimer !== null) clearTimeout(searchDebounceTimer);
+          searchDebounceTimer = null;
+          updateState({ search: '', page: 0 });
+          if (!isControlled) {
+            rerender();
+          }
+          wrapperElement?.querySelector<HTMLElement>('tbody')?.focus();
+          announce('Search cleared');
+        },
+        onAnnounce: announce,
+      });
+    }
+    if (bodyFocused) wrapperElement?.querySelector<HTMLElement>('tbody')?.focus();
+    else if (headerKey) {
+      [...(wrapperElement?.querySelectorAll<HTMLElement>('th[data-column]') ?? [])]
+        .find((element) => element.dataset.column === headerKey)
+        ?.focus();
+    } else if (pageAction) {
+      const buttons = [
+        ...(wrapperElement?.querySelectorAll<HTMLButtonElement>('[data-page-action]') ?? []),
+      ];
+      (
+        buttons.find((button) => button.dataset.pageAction === pageAction && !button.disabled) ??
+        buttons.find((button) => !button.disabled) ??
+        wrapperElement?.querySelector<HTMLElement>('tbody')
+      )?.focus();
     }
   }
 
@@ -457,7 +505,7 @@ export function createTable(
   /**
    * Re-render the table, preserving search input focus across the DOM rebuild.
    */
-  function rerender(): void {
+  function rerender(candidate = currentSpec): void {
     if (destroyed) return;
 
     // Capture current search input state before re-render
@@ -469,7 +517,7 @@ export function createTable(
     const selectionStart = searchInput?.selectionStart ?? 0;
     const selectionEnd = searchInput?.selectionEnd ?? 0;
 
-    render();
+    render(candidate);
 
     // Restore search focus after re-render
     if (hadFocus) {
@@ -486,13 +534,15 @@ export function createTable(
 
   function update(newSpec: TableSpec): void {
     if (destroyed) return;
-    currentSpec = newSpec;
-    render();
+    rerender(newSpec);
   }
 
   function resize(): void {
     if (destroyed) return;
-    if (cleanupAnimations) return; // Skip resize during entrance animation
+    if (cleanupAnimations) {
+      pendingResize = true;
+      return;
+    }
     rerender();
   }
 
@@ -507,15 +557,18 @@ export function createTable(
     const darkMode = resolveDarkMode(options?.darkMode);
     const { width } = getContainerDimensions();
 
-    const fullLayout = compileTable(currentSpec, {
-      width,
-      height: 600,
-      theme: options?.theme,
-      darkMode,
-      sort: resolveEffectiveSort(state),
-      search: state.search || undefined,
-      // No page/pageSize: get all rows
-    });
+    const fullLayout = compileTable(
+      { ...currentSpec, pagination: false },
+      {
+        width,
+        height: 600,
+        theme: options?.theme,
+        darkMode,
+        sort: resolveEffectiveSort(state),
+        search: state.search || undefined,
+        // No page/pageSize: get all rows
+      },
+    );
 
     const headers = fullLayout.columns.map((c) => c.label);
     const csvRows = [headers.map(csvEscape).join(',')];

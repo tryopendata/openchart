@@ -27,10 +27,10 @@ import type {
 } from '@opendata-ai/openchart-core';
 import { getRepresentativeColor } from '@opendata-ai/openchart-core';
 import type { ScaleBand, ScaleLinear } from 'd3-scale';
-
 import { computeArrowheadPoints } from '../../annotations/geometry';
 import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
+import { finiteNumber } from '../../data/finite-number';
 import type { ResolvedScales } from '../../layout/scales';
 import { getColor, stackSeamStroke } from '../utils';
 
@@ -131,9 +131,9 @@ export function computeRangeMarks(
     const startRaw = row[startChannel.field];
     const endRaw = row[endChannel.field];
     if (startRaw == null || endRaw == null) continue;
-    const startVal = Number(startRaw);
-    const endVal = Number(endRaw);
-    if (!Number.isFinite(startVal) || !Number.isFinite(endVal)) continue;
+    const startVal = finiteNumber(startRaw);
+    const endVal = finiteNumber(endRaw);
+    if (startVal === undefined || endVal === undefined) continue;
 
     const center = bandPos + bandwidth / 2;
     const pStart = valueScale(startVal);

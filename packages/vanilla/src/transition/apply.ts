@@ -106,11 +106,14 @@ export function applyTweenState(
       break;
     }
     case 'line': {
+      // Enter/exit are opacity-only: retain gaps and frozen interrupted paths.
+      if (tw.kind !== 'update') break;
       tw.ptsBuffer = interpolatePoints(tw.fromPts, tw.toPts, eased, tw.ptsBuffer);
       applyLinePath(tw.el, tw.ptsBuffer, tw.interpolate, tw.pathEl);
       break;
     }
     case 'area': {
+      if (tw.kind !== 'update') break;
       tw.topBuffer = interpolatePoints(tw.fromTop, tw.toTop, eased, tw.topBuffer);
       tw.bottomBuffer = interpolatePoints(tw.fromBottom, tw.toBottom, eased, tw.bottomBuffer);
       applyAreaPaths(
@@ -231,9 +234,11 @@ export function snapTweenToFinal(tw: Tween): void {
       }
       break;
     case 'line':
+      if (tw.kind !== 'update') break;
       applyLinePath(tw.el, tw.toPts, tw.interpolate, tw.pathEl);
       break;
     case 'area':
+      if (tw.kind !== 'update') break;
       applyAreaPaths(
         tw.el,
         tw.toTop,

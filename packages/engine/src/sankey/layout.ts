@@ -9,6 +9,7 @@
 import type { Rect, SankeyNodeAlign } from '@opendata-ai/openchart-core';
 import type { SankeyExtraProperties, SankeyGraph, SankeyLink, SankeyNode } from 'd3-sankey';
 import { sankey, sankeyCenter, sankeyJustify, sankeyLeft, sankeyRight } from 'd3-sankey';
+import { finiteNumber } from '../data/finite-number';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -75,30 +76,28 @@ export function computeSankeyLayout(
   iterations: number,
   nodeSort?: string[],
 ): SankeyLayoutResult {
-  // Extract unique node IDs from source and target columns
-  const nodeSet = new Set<string>();
-  for (const row of data) {
-    nodeSet.add(String(row[sourceField]));
-    nodeSet.add(String(row[targetField]));
-  }
-
-  // Build node and link arrays (cloned so d3-sankey mutations don't affect input)
-  const nodes: Array<{ id: string; label: string }> = [...nodeSet].map((id) => ({
-    id,
-    label: id,
-  }));
-
+  // Zero has no drawable flow area. Missing or nonpositive flows must not
+  // create isolated nodes that make d3-sankey divide by zero.
   const links: Array<{
     source: string;
     target: string;
     value: number;
     data: Record<string, unknown>;
-  }> = data.map((row) => ({
-    source: String(row[sourceField]),
-    target: String(row[targetField]),
-    value: Number(row[valueField]) || 0,
-    data: { ...row },
-  }));
+  }> = [];
+  const nodeSet = new Set<string>();
+  for (const row of data) {
+    const value = finiteNumber(row[valueField]);
+    if (value === undefined || value <= 0) continue;
+    const source = String(row[sourceField]);
+    const target = String(row[targetField]);
+    nodeSet.add(source);
+    nodeSet.add(target);
+    links.push({ source, target, value, data: { ...row } });
+  }
+  if (links.length === 0) return { nodes: [], links: [] };
+
+  // Clone nodes and rows: d3-sankey mutates the graph in place.
+  const nodes = [...nodeSet].map((id) => ({ id, label: id }));
 
   // Configure and run d3-sankey
   const alignFn = ALIGN_MAP[nodeAlign] ?? sankeyJustify;

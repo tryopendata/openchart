@@ -29,9 +29,9 @@ import {
   stackOffsetSilhouette,
   stackOrderNone,
 } from 'd3-shape';
-
 import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
+import { finiteNumber } from '../../data/finite-number';
 import type { ResolvedScales } from '../../layout/scales';
 import { getColor, resolveSeriesStroke, scaleValue, sortByField } from '../utils';
 import { LINE_STROKE_WIDTH } from './compute';
@@ -151,6 +151,7 @@ function computeSingleArea(
 
     // Compute points, filtering out null values
     const validPoints: { x: number; yTop: number; yBottom: number; row: DataRow }[] = [];
+    const segments: (typeof validPoints)[] = [[]];
 
     // Check for y2 channel (band between y and y2)
     const y2Channel = (encoding as Encoding & { y2?: { field: string; type: string } }).y2;
@@ -159,19 +160,17 @@ function computeSingleArea(
       const xVal = scaleValue(scales.x.scale, scales.x.type, row[xChannel.field]);
       const yVal = scaleValue(scales.y.scale, scales.y.type, row[yChannel.field]);
 
-      if (xVal === null || yVal === null) continue;
+      const yBottomVal = y2Channel
+        ? scaleValue(scales.y.scale, scales.y.type, row[y2Channel.field])
+        : baselineY;
+      if (xVal === null || yVal === null || yBottomVal === null) {
+        if (segments[segments.length - 1].length > 0) segments.push([]);
+        continue;
+      }
 
-      const yBottomVal =
-        y2Channel && row[y2Channel.field] != null
-          ? scaleValue(scales.y.scale, scales.y.type, row[y2Channel.field])
-          : null;
-
-      validPoints.push({
-        x: xVal,
-        yTop: yVal,
-        yBottom: yBottomVal ?? baselineY,
-        row,
-      });
+      const point = { x: xVal, yTop: yVal, yBottom: yBottomVal, row };
+      validPoints.push(point);
+      segments[segments.length - 1].push(point);
     }
 
     if (validPoints.length === 0) continue;
@@ -184,14 +183,14 @@ function computeSingleArea(
       .y1((d) => d.yTop)
       .curve(curve);
 
-    const pathStr = areaGenerator(validPoints) ?? '';
+    const pathStr = segments.map((segment) => areaGenerator(segment) ?? '').join(' ');
 
     // Top-line path for stroking only the data line (not the baseline)
     const topLineGenerator = line<{ x: number; yTop: number }>()
       .x((d) => d.x)
       .y((d) => d.yTop)
       .curve(curve);
-    const topPathStr = topLineGenerator(validPoints) ?? '';
+    const topPathStr = segments.map((segment) => topLineGenerator(segment) ?? '').join(' ');
 
     const topPoints = validPoints.map((p) => ({ x: p.x, y: p.yTop }));
     const bottomPoints = validPoints.map((p) => ({ x: p.x, y: p.yBottom }));
@@ -318,6 +317,9 @@ function computeStackedArea(
   const keys = Array.from(seriesKeys);
   const xValues = Array.from(xValueSet);
 
+  // An explicitly missing observation makes the cumulative boundary unknown.
+  // Keep a shared gap at that x rather than inventing a zero-width segment.
+  const missingBoundaries = new Set<string>();
   // Build a pivot table: one row per x value, one column per series
   const pivotData: Record<string, unknown>[] = xValues.map((xVal) => {
     const pivot: Record<string, unknown> = { __x__: xVal };
@@ -329,7 +331,9 @@ function computeStackedArea(
     if (xRows) {
       for (const row of xRows) {
         const series = String(row[colorField]);
-        pivot[series] = row[yChannel.field] ?? 0;
+        const value = finiteNumber(row[yChannel.field]);
+        if (value === undefined) missingBoundaries.add(xVal);
+        pivot[series] = value ?? 0;
       }
     }
     return pivot;
@@ -358,17 +362,35 @@ function computeStackedArea(
     const seriesKey = layer.key;
     const color = getColor(scales, seriesKey);
 
-    const validPoints: { x: number; yTop: number; yBottom: number }[] = [];
+    const validPoints: {
+      x: number;
+      yTop: number;
+      yBottom: number;
+      xKey: string;
+      datum: DataRow;
+    }[] = [];
+    const segments: (typeof validPoints)[] = [[]];
 
     for (const d of layer) {
       const xVal = scaleValue(scales.x.scale, scales.x.type, d.data.__x__);
 
-      if (xVal === null) continue;
-
+      const xKey = String(d.data.__x__);
       const yTop = yScale(d[1] as number);
       const yBottom = yScale(d[0] as number);
+      if (
+        xVal === null ||
+        missingBoundaries.has(xKey) ||
+        !Number.isFinite(yTop) ||
+        !Number.isFinite(yBottom)
+      ) {
+        if (segments[segments.length - 1].length > 0) segments.push([]);
+        continue;
+      }
 
-      validPoints.push({ x: xVal, yTop, yBottom });
+      const datum = rowsByXSeries.get(`${xKey}::${seriesKey}`) ?? d.data;
+      const point = { x: xVal, yTop, yBottom, xKey, datum };
+      validPoints.push(point);
+      segments[segments.length - 1].push(point);
     }
 
     if (validPoints.length === 0) continue;
@@ -380,13 +402,13 @@ function computeStackedArea(
       .y1((p) => p.yTop)
       .curve(stackCurve);
 
-    const pathStr = areaGenerator(validPoints) ?? '';
+    const pathStr = segments.map((segment) => areaGenerator(segment) ?? '').join(' ');
 
     const topLineGenerator = line<{ x: number; yTop: number }>()
       .x((p) => p.x)
       .y((p) => p.yTop)
       .curve(stackCurve);
-    const topPathStr = topLineGenerator(validPoints) ?? '';
+    const topPathStr = segments.map((segment) => topLineGenerator(segment) ?? '').join(' ');
 
     const topPoints = validPoints.map((p) => ({ x: p.x, y: p.yTop }));
     const bottomPoints = validPoints.map((p) => ({ x: p.x, y: p.yBottom }));
@@ -413,7 +435,7 @@ function computeStackedArea(
       fillOpacity = spec.markDef.fillOpacity ?? STACKED_FILL_OPACITY;
     }
 
-    const rawPointKeys = validPoints.map((_p, idx) => serializeKeyValue(layer[idx]?.data.__x__));
+    const rawPointKeys = validPoints.map((point) => serializeKeyValue(point.xKey));
 
     marks.push({
       type: 'area',
@@ -431,17 +453,8 @@ function computeStackedArea(
       seriesKey,
       stacked: true,
       stackNormalized: stackProp === 'normalize',
-      data: layer.map((d) => {
-        const xStr = String(d.data.__x__);
-        return (rowsByXSeries.get(`${xStr}::${seriesKey}`) ?? d.data) as Record<string, unknown>;
-      }),
-      dataPoints: validPoints.map((p, idx) => {
-        const xStr = String(layer[idx]?.data.__x__);
-        const datum = (rowsByXSeries.get(`${xStr}::${seriesKey}`) ??
-          layer[idx]?.data ??
-          {}) as Record<string, unknown>;
-        return { x: p.x, y: p.yTop, datum };
-      }),
+      data: validPoints.map((point) => point.datum),
+      dataPoints: validPoints.map((point) => ({ x: point.x, y: point.yTop, datum: point.datum })),
       aria,
     });
   }

@@ -1528,3 +1528,90 @@ describe('compileGeoMap', () => {
     });
   });
 });
+
+describe('map numeric observations', () => {
+  it.each([
+    null,
+    undefined,
+    '',
+    '  ',
+    false,
+    true,
+    NaN,
+    Infinity,
+    -Infinity,
+    'Infinity',
+    'bad',
+  ])('renders %s as missing color data without changing the measured scale', (value) => {
+    const layout = compileGeoMap(
+      {
+        type: 'map',
+        geo: { features: MINI_TOPO, projection: 'mercator' },
+        data: [
+          { fips: '06', value },
+          { fips: '48', value: 0 },
+          { fips: '36', value: ' 20 ' },
+        ],
+        encoding: {
+          key: { field: 'fips', type: 'nominal' },
+          color: { field: 'value', type: 'quantitative' },
+        },
+      },
+      DEFAULT_OPTIONS,
+    );
+    const missing = layout.features.find((feature) => feature.id === '06')!;
+    expect(missing.noData).toBe(true);
+    expect(missing.aria.label).toBe('California: no data');
+    expect(layout.tooltipDescriptors.get('06')?.fields).toContainEqual({
+      label: 'value',
+      value: 'No data',
+    });
+    expect(layout.features.find((feature) => feature.id === '48')?.aria.label).toBe('Texas: 0');
+    expect(layout.features.find((feature) => feature.id === '36')?.aria.label).toBe('New York: 20');
+  });
+
+  it('omits points with missing coordinates or encoded sizes, retaining real zero coordinates', () => {
+    const invalid = [null, undefined, '', '  ', false, true, NaN, Infinity, -Infinity, 'bad'];
+    const layout = compileGeoMap(
+      {
+        type: 'map',
+        geo: { features: MINI_TOPO, projection: 'equalEarth' },
+        data: [],
+        encoding: { key: { field: 'id', type: 'nominal' } },
+        points: {
+          data: [
+            ...invalid.map((value, index) => ({
+              name: `lon-${index}`,
+              lon: value,
+              lat: 0,
+              size: 10,
+            })),
+            ...invalid.map((value, index) => ({
+              name: `lat-${index}`,
+              lon: 0,
+              lat: value,
+              size: 10,
+            })),
+            ...invalid.map((value, index) => ({
+              name: `size-${index}`,
+              lon: 0,
+              lat: 0,
+              size: value,
+            })),
+            { name: 'origin', lon: 0, lat: 0, size: 0 },
+            { name: 'numeric strings', lon: ' 10 ', lat: ' 20 ', size: ' 20 ' },
+          ],
+          key: { field: 'name', type: 'nominal' },
+          longitude: { field: 'lon', type: 'quantitative' },
+          latitude: { field: 'lat', type: 'quantitative' },
+          size: { field: 'size', type: 'quantitative' },
+        },
+      },
+      DEFAULT_OPTIONS,
+    );
+    expect(layout.pointMarks.map((mark) => mark.key).sort()).toEqual(['numeric strings', 'origin']);
+    for (const mark of layout.pointMarks) {
+      expect([mark.cx, mark.cy, mark.r].every(Number.isFinite)).toBe(true);
+    }
+  });
+});

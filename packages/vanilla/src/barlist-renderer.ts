@@ -6,8 +6,8 @@
  */
 
 import type { BarListLayout, BarListRowMark, ResolvedAnimation } from '@opendata-ai/openchart-core';
-import { textAscent } from '@opendata-ai/openchart-core';
 import { stampAnimationVars } from './animation-vars';
+import { renderChromeElement } from './renderers/chrome';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const XLINK_NS = 'http://www.w3.org/1999/xlink';
@@ -43,20 +43,13 @@ function renderChrome(parent: SVGElement, layout: BarListLayout): void {
     if (!el) continue;
 
     const isBottom = key === 'source' || key === 'byline' || key === 'footer';
-    const text = createSVGElement('text');
-    // el.y is the TOP of the text box; convert to the alphabetic baseline
-    // (WebKit mishandles dominant-baseline:hanging, see renderers/chrome.ts).
-    setAttrs(text, {
-      x: el.x,
-      y: (isBottom ? bottomOffset + el.y : el.y) + textAscent(el.style.fontSize),
-    });
-    text.setAttribute('class', `oc-${key}`);
-    text.setAttribute('font-family', el.style.fontFamily);
-    text.setAttribute('font-size', String(el.style.fontSize));
-    text.setAttribute('font-weight', String(el.style.fontWeight));
-    (text as SVGElement & ElementCSSInlineStyle).style.setProperty('fill', el.style.fill);
-    text.textContent = el.text;
-    g.appendChild(text);
+    renderChromeElement(
+      g,
+      isBottom ? { ...el, y: bottomOffset + el.y } : el,
+      `oc-${key}`,
+      key,
+      layout.measureText,
+    );
   }
 
   parent.appendChild(g);

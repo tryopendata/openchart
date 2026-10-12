@@ -13,13 +13,13 @@ function buildMarkDataMap(
     const mark = layout.marks[i];
     switch (mark.type) {
       case 'line':
-        map.set(`line-${mark.seriesKey ?? i}`, {
+        map.set(`line-${i}`, {
           datum: mark.data[0] ?? {},
           series: mark.seriesKey,
         });
         break;
       case 'area':
-        map.set(`area-${mark.seriesKey ?? i}`, {
+        map.set(`area-${i}`, {
           datum: mark.data[0] ?? {},
           series: mark.seriesKey,
         });

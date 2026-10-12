@@ -8,6 +8,7 @@
 
 import type { DataRow, DensityTransform } from '@opendata-ai/openchart-core';
 import { deviation, quantile } from 'd3-array';
+import { finiteNumber } from '../data/finite-number';
 
 /** Default number of points the curve is evaluated at. */
 const DEFAULT_STEPS = 200;
@@ -114,10 +115,8 @@ export function runDensity(data: DataRow[], transform: DensityTransform): DataRo
     // so a row with no value would otherwise plant a kernel at zero.
     const samples: number[] = [];
     for (const r of rows) {
-      const raw = r[field];
-      if (raw == null || raw === '') continue;
-      const v = Number(raw);
-      if (Number.isFinite(v)) samples.push(v);
+      const value = finiteNumber(r[field]);
+      if (value !== undefined) samples.push(value);
     }
     if (samples.length === 0) continue;
     const bandwidth =

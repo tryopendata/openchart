@@ -13,8 +13,12 @@
 export interface KeyboardNavOptions {
   /** The wrapper element containing the whole table UI. */
   wrapper: HTMLElement;
+  /** Logical cell to restore after a resize, sort, or data update. */
+  initialCell?: { rowId: string; columnKey: string };
   /** Callback to trigger sort on a column. */
   onSort: (columnKey: string) => void;
+  /** Activate the focused row through the host's existing row-click callback. */
+  onRowActivate?: (rowId: string) => void;
   /** Callback to clear search and return focus to the table body. */
   onClearSearch: () => void;
   /** Callback to announce text to screen readers via the live region. */
@@ -30,6 +34,8 @@ interface CellPosition {
 // Main
 // ---------------------------------------------------------------------------
 
+let navigationId = 0;
+
 /**
  * Attach keyboard navigation to a rendered table.
  *
@@ -39,6 +45,7 @@ export function attachKeyboardNav(options: KeyboardNavOptions): () => void {
   const { wrapper, onSort, onClearSearch, onAnnounce } = options;
 
   let focusedCell: CellPosition = { row: -1, col: 0 };
+  const idPrefix = `oc-table-${++navigationId}`;
 
   const table = wrapper.querySelector('table');
   if (!table) return () => {};
@@ -59,11 +66,11 @@ export function attachKeyboardNav(options: KeyboardNavOptions): () => void {
     if (!thead) return [];
     const headerRow = thead.querySelector('tr');
     if (!headerRow) return [];
-    return Array.from(headerRow.querySelectorAll('th'));
+    return Array.from(headerRow.querySelectorAll('th')).filter((cell) => !cell.hidden);
   }
 
   function getCellsInRow(tr: HTMLTableRowElement): HTMLTableCellElement[] {
-    return Array.from(tr.querySelectorAll('td'));
+    return Array.from(tr.querySelectorAll('td')).filter((cell) => !cell.hidden);
   }
 
   function getColCount(): number {
@@ -99,7 +106,7 @@ export function attachKeyboardNav(options: KeyboardNavOptions): () => void {
     const cell = cells[col];
     if (!cell) return;
 
-    const cellId = `oc-cell-${row}-${col}`;
+    const cellId = `${idPrefix}-cell-${row}-${col}`;
     cell.id = cellId;
     cell.classList.add('oc-table-cell-focus');
     cell.setAttribute('data-row', String(row));
@@ -117,13 +124,21 @@ export function attachKeyboardNav(options: KeyboardNavOptions): () => void {
   function handleTbodyFocus(): void {
     // When tbody receives focus, highlight the first cell (or restore last)
     if (focusedCell.row < 0) {
-      setFocusedCell(0, 0);
+      const row = getRows().findIndex(
+        (item) => item.getAttribute('data-row-id') === options.initialCell?.rowId,
+      );
+      const col = getHeaderCells().findIndex(
+        (item) => item.getAttribute('data-column') === options.initialCell?.columnKey,
+      );
+      setFocusedCell(Math.max(0, row), Math.max(0, col));
     } else {
       setFocusedCell(focusedCell.row, focusedCell.col);
     }
   }
 
   function handleTbodyKeydown(e: KeyboardEvent): void {
+    // Native links and priority-row disclosures own their keyboard behavior.
+    if (e.target !== tbody) return;
     const rows = getRows();
     if (rows.length === 0) return;
 
@@ -131,6 +146,15 @@ export function attachKeyboardNav(options: KeyboardNavOptions): () => void {
     const { row, col } = focusedCell;
 
     switch (e.key) {
+      case 'Enter':
+      case ' ': {
+        const rowId = rows[Math.max(row, 0)]?.getAttribute('data-row-id');
+        if (rowId && options.onRowActivate) {
+          e.preventDefault();
+          options.onRowActivate(rowId);
+        }
+        break;
+      }
       case 'ArrowDown':
         e.preventDefault();
         if (row < rows.length - 1) {
@@ -225,8 +249,8 @@ export function attachKeyboardNav(options: KeyboardNavOptions): () => void {
     if (e.key === 'Escape') {
       e.preventDefault();
       onClearSearch();
-      // Return focus to tbody
-      if (tbody) {
+      // The host may replace the body; focus the old one only if it survived.
+      if (tbody?.isConnected) {
         tbody.focus();
         onAnnounce('Search cleared');
       }

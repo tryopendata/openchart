@@ -89,15 +89,40 @@ export function ensureSVGDimensions(svgString: string, width: number, height: nu
 // ---------------------------------------------------------------------------
 
 /**
- * Collect unique font-family + font-weight combos from all <text> elements.
+ * Resolve an authored font declaration, including SVG inheritance. Inline
+ * styles win over presentation attributes, as they do in the live renderer.
+ * This also works on detached terminal scenes used for exports.
  */
+function inheritedFontProperty(element: SVGElement, root: SVGElement, property: string): string {
+  let current: SVGElement | null = element;
+  while (current) {
+    const value = current.style.getPropertyValue(property) || current.getAttribute(property);
+    const keyword = value?.trim().toLowerCase();
+    // Unlike inheritance, initial resets to normal weight or the browser's
+    // default family, which has no authored font face to embed.
+    if (keyword === 'initial') return property === 'font-weight' ? '400' : '';
+    if (value && keyword !== 'inherit' && keyword !== 'unset') return value;
+    if (current === root) break;
+    current = current.parentElement as SVGElement | null;
+  }
+  return '';
+}
+
+function normalizeFontWeight(weight: string): string {
+  const value = weight.trim();
+  return value === 'normal' ? '400' : value === 'bold' ? '700' : value;
+}
+
+/** Collect font families and weights, including styled spans within labels. */
 function collectUsedFonts(svgElement: SVGElement): Map<string, Set<string>> {
   const fonts = new Map<string, Set<string>>();
-  const textElements = svgElement.querySelectorAll('text');
+  const textElements = svgElement.querySelectorAll<SVGElement>('text, tspan');
 
   for (const el of textElements) {
-    const family = el.getAttribute('font-family');
-    const weight = el.getAttribute('font-weight') || '400';
+    const family = inheritedFontProperty(el, svgElement, 'font-family');
+    const weight = normalizeFontWeight(
+      inheritedFontProperty(el, svgElement, 'font-weight') || '400',
+    );
     if (family) {
       // Take the first font in the stack (e.g., "Inter, sans-serif" → "Inter")
       const primary = family.split(',')[0].trim().replace(/["']/g, '');
@@ -138,7 +163,7 @@ function findFontFaceRules(
         if (!(rule instanceof CSSFontFaceRule)) continue;
 
         const familyRaw = rule.style.getPropertyValue('font-family').replace(/["']/g, '').trim();
-        const weight = rule.style.getPropertyValue('font-weight') || '400';
+        const weight = normalizeFontWeight(rule.style.getPropertyValue('font-weight') || '400');
         const style = rule.style.getPropertyValue('font-style') || 'normal';
         const src = rule.style.getPropertyValue('src');
 

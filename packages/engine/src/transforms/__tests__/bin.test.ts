@@ -201,3 +201,19 @@ describe('runBin', () => {
     });
   });
 });
+
+it.each(['linear', 'log'] as const)('keeps nonmeasurements unbinned on a %s scale', (scaleType) => {
+  const data = [null, undefined, '', ' ', false, true, NaN, Infinity, -Infinity, 'bad'].map(
+    (value) => ({ value }),
+  );
+  const result = runBin([...data, { value: ' 20 ' }], {
+    bin: { scaleType },
+    field: 'value',
+    as: ['start', 'end'],
+  });
+  expect(result.slice(0, data.length).every((row) => row.start === null && row.end === null)).toBe(
+    true,
+  );
+  expect(Number.isFinite(result.at(-1)?.start)).toBe(true);
+  expect(Number.isFinite(result.at(-1)?.end)).toBe(true);
+});

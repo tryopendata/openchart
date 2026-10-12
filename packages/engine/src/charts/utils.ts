@@ -15,6 +15,7 @@ import {
   type ResolvedTheme,
 } from '@opendata-ai/openchart-core';
 import type { ScaleBand, ScaleLinear, ScalePoint, ScaleTime } from 'd3-scale';
+import { finiteNumber } from '../data/finite-number';
 import type { D3Scale, ResolvedScales } from '../layout/scales';
 
 // ---------------------------------------------------------------------------
@@ -172,9 +173,10 @@ export function scaleValue(scale: D3Scale, scaleType: string, value: unknown): n
     return result ?? null;
   }
 
-  const num = typeof value === 'number' ? value : Number(value);
-  if (!Number.isFinite(num)) return null;
-  return (scale as ScaleLinear<number, number>)(num);
+  const number = finiteNumber(value);
+  if (number === undefined) return null;
+  const position = (scale as ScaleLinear<number, number>)(number);
+  return Number.isFinite(position) ? position : null;
 }
 
 // ---------------------------------------------------------------------------

@@ -1397,6 +1397,8 @@ export function createGraph(
       getAdjacency: () => adjacencyMap,
       onSelect(nodeId) {
         selectedNodeIds = new Set([nodeId]);
+        interactionManager?.setSelection([nodeId]);
+        armFocus(performance.now());
         needsRender = true;
         scheduleRender();
         options?.onNodeClick?.(nodeDataById(nodeId));
@@ -1404,6 +1406,8 @@ export function createGraph(
       },
       onDeselect() {
         selectedNodeIds.clear();
+        interactionManager?.setSelection([]);
+        armFocus(performance.now());
         needsRender = true;
         scheduleRender();
         options?.onSelectionChange?.([]);

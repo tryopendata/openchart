@@ -1,10 +1,13 @@
 import type {
+  ChartLayout,
   ChartSpec,
   DataRow,
+  LayerSpec,
   ReaderObservation,
   ReaderSelection,
 } from '@opendata-ai/openchart-core';
 import {
+  observationKey,
   reconcileReaderSelection,
   resolveObservationIdentities,
 } from '@opendata-ai/openchart-engine';
@@ -12,31 +15,46 @@ import type { ChartInstance } from './mount';
 
 export interface ReaderController {
   readonly selection: ReaderSelection;
-  update(spec: ChartSpec, visibleKeys?: ReadonlySet<string>): void;
+  /** Call after chart.update(). Without an override, visibility follows compiled marks. */
+  update(spec: ChartSpec | LayerSpec, visibleKeys?: ReadonlySet<string>): void;
   pin(datum: DataRow): void;
   clear(): void;
   destroy(): void;
 }
 
-/** Persistent reader interaction, separate from editor ElementRef selection. */
+const LAYER_UNSUPPORTED =
+  'Reader inspection is unavailable for layered charts: observations cannot be bound to a single dataset.';
+const seriesField = (spec: ChartSpec) =>
+  spec.encoding.color && 'field' in spec.encoding.color ? spec.encoding.color.field : undefined;
+
+/**
+ * Persistent reader interaction, separate from editor ElementRef selection.
+ * Layered specs clear/disable inspection and announce the unsupported binding;
+ * updating back to a single chart resumes inspection without choosing a leaf.
+ */
 export function createReader(
   container: HTMLElement,
   instance: ChartInstance,
-  initial: ChartSpec,
+  initial: ChartSpec | LayerSpec,
   onChange: (selection: ReaderSelection) => void,
 ): ReaderController {
-  let spec = initial;
-  let state: ReaderSelection = { preview: null, pinned: [], announcement: '' };
+  let spec = 'layer' in initial ? null : initial;
+  let state: ReaderSelection = {
+    preview: null,
+    pinned: [],
+    announcement: spec ? '' : LAYER_UNSUPPORTED,
+  };
   let keyboardIndex = -1;
   let settleFrame: number | null = null;
-  let identities = resolveObservationIdentities(
-    spec.data,
-    spec.encoding.key?.field,
-    spec.encoding.color && 'field' in spec.encoding.color ? spec.encoding.color.field : undefined,
-  );
+  let visibilityOverride: ReadonlySet<string> | undefined;
+  let identities = spec
+    ? resolveObservationIdentities(spec.data, spec.encoding.key?.field, seriesField(spec))
+    : [];
   const emit = () => onChange({ ...state, pinned: [...state.pinned] });
-  const visibleData = (): Array<{ datum: DataRow; key?: string }> => {
-    const rows = instance.sampleLayout().marks.flatMap((mark) => {
+  const visibleData = (
+    layout: ChartLayout = instance.sampleLayout(),
+  ): Array<{ datum: DataRow; key?: string }> => {
+    const rows = layout.marks.flatMap((mark) => {
       if ('opacity' in mark && mark.opacity === 0) return [];
       if (mark.type === 'line' || mark.type === 'area')
         return (mark.dataPoints ?? []).map((point, index) => ({
@@ -46,14 +64,49 @@ export function createReader(
       if ('data' in mark) return [{ datum: mark.data as DataRow, key: mark.key }];
       return [];
     });
-    return [...new Map(rows.map((row) => [JSON.stringify(row.datum), row])).values()];
+    // A line and its point overlay share rows. Distinct duplicate rows must not
+    // collapse merely because their serialized values happen to be identical.
+    return [...new Map(rows.map((row) => [row.datum, row])).values()];
+  };
+  const compiledVisibleKeys = (observations: ReaderObservation[]): ReadonlySet<string> => {
+    const keys = new Set<string>();
+    if (!spec || !observations.length) return keys;
+    // Use the destination layout, not interpolated geometry or exit ghosts.
+    // Zero-length marks still count; absence retains the pin as filtered.
+    const rows = visibleData(instance.layout);
+    const references = new Set(rows.map(({ datum }) => datum));
+    const signatures = new Set(rows.map(({ datum }) => JSON.stringify(datum)));
+    const keyField = spec.encoding.key?.field;
+    const visibleSourceKeys = new Set(
+      keyField ? rows.map(({ datum }) => observationKey(datum[keyField])) : [],
+    );
+    for (const observation of observations) {
+      if (observation.kind === 'aggregate') {
+        if (signatures.has(JSON.stringify(observation.datum))) keys.add(observation.observation);
+        continue;
+      }
+      const index = identities.findIndex((id) => id.observation === observation.observation);
+      if (index < 0) continue;
+      const row = spec.data[index];
+      const signature = JSON.stringify(row);
+      const visible = observation.persistent
+        ? visibleSourceKeys.has(observation.observation)
+        : references.has(row) ||
+          (signatures.has(signature) &&
+            spec.data.filter((source) => JSON.stringify(source) === signature).length === 1);
+      if (visible) keys.add(observation.observation);
+    }
+    return keys;
   };
   const resolve = (datum: DataRow): ReaderObservation | null => {
+    if (!spec) return null;
     const keyField = spec.encoding.key?.field;
     let index = spec.data.indexOf(datum);
+    if (index >= 0 && spec.data.lastIndexOf(datum) !== index) return null;
     if (index < 0 && keyField)
       index = spec.data.findIndex(
-        (row, i) => identities[i].persistent && row[keyField] === datum[keyField],
+        (_row, i) =>
+          identities[i].persistent && identities[i].observation === observationKey(datum[keyField]),
       );
     // Compilers may normalize a row. Within one revision, a unique exact row
     // match is safe; an ambiguous match must never pick the first observation.
@@ -61,13 +114,14 @@ export function createReader(
       const matches = spec.data.flatMap((row, i) =>
         JSON.stringify(row) === JSON.stringify(datum) ? [i] : [],
       );
+      if (matches.length > 1) return null;
       if (matches.length === 1) index = matches[0];
     }
     if (index >= 0) return { ...identities[index], datum: spec.data[index], state: 'visible' };
     // Aggregated/bin observations describe visible groups, not a raw source row.
     // Their identity includes the transformation and grouping mark; replacement
     // clears them until an explicit host mapping supplies revision persistence.
-    const group = visibleData().find(
+    const group = visibleData(instance.layout).find(
       (row) => row.datum === datum || JSON.stringify(row.datum) === JSON.stringify(datum),
     );
     return group
@@ -83,6 +137,11 @@ export function createReader(
   const pin = (datum: DataRow) => {
     const observation = resolve(datum);
     if (!observation) return;
+    observation.state = (visibilityOverride ?? compiledVisibleKeys([observation])).has(
+      observation.observation,
+    )
+      ? 'visible'
+      : 'filtered';
     state = {
       ...state,
       preview: observation,
@@ -95,10 +154,15 @@ export function createReader(
     emit();
   };
   const clear = () => {
-    state = { preview: null, pinned: [], announcement: 'Selection dismissed.' };
+    state = {
+      preview: null,
+      pinned: [],
+      announcement: spec ? 'Selection dismissed.' : LAYER_UNSUPPORTED,
+    };
     emit();
   };
   function hit(event: MouseEvent | PointerEvent): DataRow | null {
+    if (!spec) return null;
     const svg = container.querySelector('svg');
     if (!svg) return null;
     const bounds = svg.getBoundingClientRect();
@@ -165,6 +229,7 @@ export function createReader(
     emit();
   };
   const keydown = (event: KeyboardEvent) => {
+    if (!spec) return;
     if (
       (event.target as HTMLElement).closest(
         'input, textarea, select, button, [contenteditable=true]',
@@ -197,6 +262,7 @@ export function createReader(
   container.addEventListener('pointerleave', leave);
   container.addEventListener('click', click);
   container.addEventListener('keydown', keydown, true);
+  if (!spec) emit();
   return {
     get selection() {
       return state;
@@ -204,9 +270,23 @@ export function createReader(
     pin,
     clear,
     update(next, visibleKeys) {
+      if (settleFrame !== null) {
+        cancelAnimationFrame(settleFrame);
+        settleFrame = null;
+      }
+      visibilityOverride = visibleKeys;
+      if ('layer' in next) {
+        spec = null;
+        identities = [];
+        keyboardIndex = -1;
+        state = { preview: null, pinned: [], announcement: LAYER_UNSUPPORTED };
+        emit();
+        return;
+      }
       const meaningChanged =
+        !spec ||
         JSON.stringify([next.mark, next.encoding, next.transform]) !==
-        JSON.stringify([spec.mark, spec.encoding, spec.transform]);
+          JSON.stringify([spec.mark, spec.encoding, spec.transform]);
       if (
         meaningChanged &&
         (state.pinned.some((item) => item.kind === 'aggregate') ||
@@ -221,27 +301,38 @@ export function createReader(
         };
       }
       const replaced =
-        next.data !== spec.data || next.encoding.key?.field !== spec.encoding.key?.field;
+        !spec || next.data !== spec.data || next.encoding.key?.field !== spec.encoding.key?.field;
+      const resuming = !spec;
       spec = next;
       identities = resolveObservationIdentities(
         spec.data,
         spec.encoding.key?.field,
-        spec.encoding.color && 'field' in spec.encoding.color
-          ? spec.encoding.color.field
-          : undefined,
+        seriesField(spec),
       );
-      if (replaced || visibleKeys)
+      const effectiveVisibility = visibleKeys ?? compiledVisibleKeys(state.pinned);
+      if (replaced)
         state = reconcileReaderSelection(
           state,
           spec.data,
           spec.encoding.key?.field,
-          spec.encoding.color && 'field' in spec.encoding.color
-            ? spec.encoding.color.field
-            : undefined,
-          visibleKeys,
+          seriesField(spec),
+          effectiveVisibility,
         );
+      else
+        state = {
+          ...state,
+          preview: null,
+          pinned: state.pinned.map((item) => ({
+            ...item,
+            ...(item.kind !== 'aggregate'
+              ? identities.find((id) => id.observation === item.observation)
+              : {}),
+            state: effectiveVisibility.has(item.observation) ? 'visible' : 'filtered',
+          })),
+        };
+      if (resuming) state = { ...state, announcement: '' };
+      if (replaced || meaningChanged) keyboardIndex = -1;
       emit();
-      if (settleFrame !== null) cancelAnimationFrame(settleFrame);
       const settle = () => {
         settleFrame = null;
         if (!state.pinned.some((item) => item.previous)) return;

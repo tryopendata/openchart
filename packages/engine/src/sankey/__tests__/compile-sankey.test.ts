@@ -704,3 +704,69 @@ describe('sankey other bucketing', () => {
     expect(after.nodes.map((n) => n.nodeId).sort()).toEqual(['Big', 'Sink', 'Small1']);
   });
 });
+
+describe('Sankey finite flow geometry', () => {
+  it.each([
+    null,
+    undefined,
+    '',
+    '  ',
+    false,
+    true,
+    NaN,
+    Infinity,
+    -Infinity,
+    'Infinity',
+    'bad',
+    -10,
+    0,
+    '0',
+  ])('returns an empty finite figure with an actionable warning for %s flow', (amount) => {
+    const warnings: string[] = [];
+    const layout = compileSankey(
+      { ...basicSpec, data: [{ from: 'A', to: 'B', amount }] },
+      {
+        ...defaultOptions,
+        onWarn: (message) => warnings.push(message),
+      },
+    );
+    expect(layout.nodes).toEqual([]);
+    expect(layout.links).toEqual([]);
+    expect(Object.values(layout.area).every(Number.isFinite)).toBe(true);
+    expect(layout.a11y.keyboardNavigable).toBe(false);
+    expect(warnings.join(' ')).toContain('positive finite');
+    expect(warnings.join(' ')).toContain('amount');
+  });
+
+  it('retains measured flows and original rows while excluding invalid flow nodes and legends', () => {
+    const validRows = [
+      { from: 'A', to: 'B', amount: ' 10 ', group: 'Measured' },
+      { from: 'B', to: 'C', amount: 10, group: 'Measured' },
+    ];
+    const invalidRows = [null, '', false, Infinity, -1, 0].map((amount, index) => ({
+      from: `invalid-${index}`,
+      to: 'C',
+      amount,
+      group: 'Missing',
+    }));
+    const layout = compileSankey(
+      {
+        ...basicSpec,
+        data: [...validRows, ...invalidRows],
+        encoding: { ...basicSpec.encoding, color: { field: 'group', type: 'nominal' } },
+      },
+      { ...defaultOptions, onWarn: () => {} },
+    );
+    expect(layout.nodes.map((node) => node.nodeId).sort()).toEqual(['A', 'B', 'C']);
+    expect(layout.links).toHaveLength(2);
+    for (const link of layout.links) {
+      expect(link.path).not.toMatch(/NaN|Infinity/);
+      expect(link.value).toBe(10);
+    }
+    for (const node of layout.nodes) {
+      expect([node.x, node.y, node.width, node.height].every(Number.isFinite)).toBe(true);
+    }
+    expect(JSON.stringify(layout.legend)).not.toContain('Missing');
+    expect(validRows[0].amount).toBe(' 10 ');
+  });
+});

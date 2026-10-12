@@ -27,6 +27,33 @@ import { createMeasureFn } from '../layout/plan';
 type ChartCompiler = (spec: unknown, options: CompileOptions) => ChartLayout;
 
 /**
+ * Paint order controls interaction IDs; authored leaf order controls identity.
+ * Copy each leaf's descriptors instead of rebuilding them with the primary
+ * encoding, which would replace its formats and transformed observations.
+ */
+function appendLayerMarks(
+  layout: ChartLayout,
+  leafIndex: number,
+  marks: Mark[],
+  tooltips: ChartLayout['tooltipDescriptors'],
+  sourceMarks = layout.marks,
+): void {
+  const scope = `layer:${leafIndex}:`;
+  for (const [index, mark] of sourceMarks.entries()) {
+    const content = layout.tooltipDescriptors.get(`${mark.type}-${index}`);
+    if (content) tooltips.set(`${mark.type}-${marks.length}`, content);
+    const key = `${scope}${mark.type}:${mark.key !== undefined ? `key:${mark.key}` : `index:${index}`}`;
+    marks.push({
+      ...mark,
+      key,
+      ...((mark.type === 'line' || mark.type === 'area') && mark.pointKeys
+        ? { pointKeys: mark.pointKeys.map((pointKey) => `${scope}${pointKey}`) }
+        : {}),
+    });
+  }
+}
+
+/**
  * Compile a LayerSpec into a single ChartLayout.
  *
  * Flattens nested layers, merges inherited data/encoding/transforms,
@@ -46,7 +73,11 @@ export function compileLayer(
 
   if (leaves.length === 1) {
     const singleSpec = buildPrimarySpec(leaves, spec);
-    return compileChart(singleSpec, options);
+    const layout = compileChart(singleSpec, options);
+    const marks: Mark[] = [];
+    const tooltipDescriptors: ChartLayout['tooltipDescriptors'] = new Map();
+    appendLayerMarks(layout, 0, marks, tooltipDescriptors);
+    return { ...layout, marks, tooltipDescriptors };
   }
 
   // Past this point every compile is one piece of a multi-leaf layer, not a
@@ -62,6 +93,7 @@ export function compileLayer(
   const primaryLayout = compileChart(primarySpec, layerOptions);
 
   const allMarks: Mark[] = [];
+  const tooltipDescriptors: ChartLayout['tooltipDescriptors'] = new Map();
   const seenLabels = new Set<string>();
   const pLegend = primaryLayout.legend;
   const mergedLegendEntries = 'entries' in pLegend ? [...pLegend.entries] : [];
@@ -71,6 +103,7 @@ export function compileLayer(
 
   const indexedLeaves = leaves.map((leaf, i) => ({
     leaf,
+    leafIndex: i,
     zIndex: (leaf as ChartSpec).zIndex ?? i,
   }));
   indexedLeaves.sort((a, b) => a.zIndex - b.zIndex);
@@ -87,7 +120,7 @@ export function compileLayer(
   // they annotate. Union the quantitative domains across every leaf and pin them.
   const sharedDomains = computeSharedDomains(leaves);
 
-  for (const { leaf } of indexedLeaves) {
+  for (const { leaf, leafIndex } of indexedLeaves) {
     const themedLeaf = {
       ...withSharedDomains(leaf as ChartSpec, sharedDomains),
       theme: (leaf as ChartSpec).theme ?? spec.theme,
@@ -95,7 +128,7 @@ export function compileLayer(
     };
     const leafLayout = compileChart(themedLeaf as unknown, leafOptions);
 
-    allMarks.push(...leafLayout.marks);
+    appendLayerMarks(leafLayout, leafIndex, allMarks, tooltipDescriptors);
 
     const leafLeg = leafLayout.legend;
     if ('entries' in leafLeg) {
@@ -116,6 +149,7 @@ export function compileLayer(
   return {
     ...primaryLayout,
     marks: allMarks,
+    tooltipDescriptors,
     legend: mergedLegend,
     // `legends` is what the renderer iterates, so the merged color legend has to
     // land in it too. Spreading `primaryLayout` alone would leave legends[0] as
@@ -390,22 +424,17 @@ function compileLayerIndependent(
     }
   }
 
-  const l0Count = layout0.marks.length;
-  const mergedTooltips = new Map(layout0.tooltipDescriptors);
-  for (const [key, value] of layout1.tooltipDescriptors) {
-    const match = /^(rect|point|arc)-(\d+)$/.exec(key);
-    if (match) {
-      const offsetKey = `${match[1]}-${Number(match[2]) + l0Count}`;
-      mergedTooltips.set(offsetKey, value);
-    } else {
-      mergedTooltips.set(key, value);
-    }
-  }
-
   const z0 = leaf0.zIndex ?? 0;
   const z1 = leaf1.zIndex ?? 1;
-  const marks =
-    z0 <= z1 ? [...adjustedMarks0, ...taggedMarks1] : [...taggedMarks1, ...adjustedMarks0];
+  const marks: Mark[] = [];
+  const mergedTooltips: ChartLayout['tooltipDescriptors'] = new Map();
+  const layers = [
+    { layout: layout0, leafIndex: 0, sourceMarks: adjustedMarks0, zIndex: z0 },
+    { layout: layout1, leafIndex: 1, sourceMarks: taggedMarks1, zIndex: z1 },
+  ].sort((a, b) => a.zIndex - b.zIndex);
+  for (const layer of layers) {
+    appendLayerMarks(layer.layout, layer.leafIndex, marks, mergedTooltips, layer.sourceMarks);
+  }
 
   const mergedLegend = {
     ...layout0.legend,

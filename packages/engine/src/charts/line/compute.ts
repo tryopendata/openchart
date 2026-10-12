@@ -20,9 +20,9 @@ import type {
 } from '@opendata-ai/openchart-core';
 import { getRepresentativeColor } from '@opendata-ai/openchart-core';
 import { line } from 'd3-shape';
-
 import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
+import { finiteNumber } from '../../data/finite-number';
 import type { ResolvedScales } from '../../layout/scales';
 import {
   getColor,
@@ -298,8 +298,8 @@ export function computeLineMarks(
         // Sequential color: each point gets colored by its data value
         let pointColor = color;
         if (isSequentialColor) {
-          const val = Number(p.row[sequentialColorField!]);
-          pointColor = Number.isFinite(val) ? getSequentialColor(scales, val) : color;
+          const value = finiteNumber(p.row[sequentialColorField!]);
+          pointColor = value !== undefined ? getSequentialColor(scales, value) : color;
         }
         const hollow = isEndpoints && visible;
         const pointColorStr = getRepresentativeColor(pointColor);
@@ -375,7 +375,10 @@ export function computeLineMarks(
 
 /** Get the midpoint numeric value of a field across rows (for sequential line stroke). */
 function _getMidValue(rows: DataRow[], field: string): number {
-  const values = rows.map((r) => Number(r[field])).filter(Number.isFinite);
+  const values = rows.flatMap((row) => {
+    const value = finiteNumber(row[field]);
+    return value === undefined ? [] : [value];
+  });
   if (values.length === 0) return 0;
   const sorted = values.sort((a, b) => a - b);
   return sorted[Math.floor(sorted.length / 2)];

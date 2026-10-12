@@ -77,7 +77,10 @@ export function setupAnimationCleanup(
  * Same timeout-based approach as chart animations: compute total time from
  * CSS custom properties and row count, then remove oc-animate after completion.
  */
-export function setupTableAnimationCleanup(wrapper: HTMLElement): () => void {
+export function setupTableAnimationCleanup(
+  wrapper: HTMLElement,
+  onComplete?: () => void,
+): () => void {
   const style = wrapper.style;
   const duration = parseFloat(style.getPropertyValue('--oc-animation-duration')) || 500;
   const stagger = parseFloat(style.getPropertyValue('--oc-animation-stagger')) || 0;
@@ -90,6 +93,7 @@ export function setupTableAnimationCleanup(wrapper: HTMLElement): () => void {
 
   const timer = setTimeout(() => {
     wrapper.classList.remove('oc-animate');
+    onComplete?.();
   }, totalTime);
 
   return () => {

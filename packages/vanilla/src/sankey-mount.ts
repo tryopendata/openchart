@@ -24,6 +24,12 @@ import {
   type JPGExportOptions,
   type SVGExportOptions,
 } from './export';
+import {
+  captureMarkFocus,
+  type NavigableMark,
+  restoreMarkFocus,
+  wireMarkNavigation,
+} from './interactions/mark-navigation';
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
 import { observeResize } from './resize-observer';
 import { resolveDarkMode } from './resolve-dark-mode';
@@ -63,7 +69,7 @@ export interface SankeyInstance {
   /** Export the sankey diagram. */
   export(
     format: 'svg' | 'svg-with-fonts' | 'png' | 'jpg',
-    options?: JPGExportOptions,
+    options?: JPGExportOptions | SVGExportOptions,
   ): string | Promise<Blob> | Promise<string>;
   /** Remove all DOM elements and disconnect observers. */
   destroy(): void;
@@ -140,10 +146,10 @@ export function createSankey(
   // { ...spec.theme, ...options.theme }, so options.theme wins over the
   // spec-level theme; fall back to the container's computed font. Measuring a
   // different font than gets rendered desyncs layout metrics and the reload watcher.
-  function resolveEffectiveFont(): string {
+  function resolveEffectiveFont(candidate = currentSpec): string {
     return (
       options?.theme?.fonts?.family ??
-      currentSpec.theme?.fonts?.family ??
+      candidate.theme?.fonts?.family ??
       resolveFontFamily(container)
     );
   }
@@ -163,7 +169,7 @@ export function createSankey(
     };
   }
 
-  function compile(): SankeyLayout {
+  function compile(candidate = currentSpec, measure = measureText): SankeyLayout {
     const { width, height } = getContainerDimensions();
     const darkMode = resolveDarkMode(options?.darkMode);
 
@@ -173,10 +179,10 @@ export function createSankey(
       theme: options?.theme,
       darkMode,
       watermark: options?.watermark,
-      measureText,
+      measureText: measure,
     };
 
-    return compileSankey(currentSpec, compileOpts);
+    return compileSankey(candidate, compileOpts);
   }
 
   // ---------------------------------------------------------------------------
@@ -185,6 +191,8 @@ export function createSankey(
 
   function wireTooltipAndInteraction(svg: SVGSVGElement, layout: SankeyLayout): () => void {
     const cleanups: Array<() => void> = [];
+    const navigation: NavigableMark[] = [];
+    let activeLeave: (() => void) | null = null;
 
     const nodesById = new Map<string, (typeof layout.nodes)[number]>();
     for (const n of layout.nodes) {
@@ -202,6 +210,8 @@ export function createSankey(
       const nodeData = nodeId ? (nodesById.get(nodeId)?.data ?? {}) : {};
 
       const handleMouseEnter = (e: Event) => {
+        activeLeave?.();
+        activeLeave = handleMouseLeave;
         const mouseEvent = e as MouseEvent;
         if (content && tooltipManager) {
           const svgRect = svg.getBoundingClientRect();
@@ -224,6 +234,8 @@ export function createSankey(
       };
 
       const handleMouseLeave = () => {
+        if (activeLeave !== handleMouseLeave) return;
+        activeLeave = null;
         tooltipManager?.hide();
         options?.onNodeHover?.(null);
         resetLinkOpacity(svg, layout);
@@ -233,6 +245,13 @@ export function createSankey(
         options?.onNodeClick?.(nodeData);
       };
 
+      navigation.push({
+        element: el,
+        key: nodeId ? `node:${nodeId}` : markId,
+        enter: handleMouseEnter,
+        leave: handleMouseLeave,
+        activate: handleClick,
+      });
       el.addEventListener('mouseenter', handleMouseEnter);
       el.addEventListener('mousemove', handleMouseMove);
       el.addEventListener('mouseleave', handleMouseLeave);
@@ -248,16 +267,18 @@ export function createSankey(
 
     // Wire tooltip on link elements
     const linkElements = svg.querySelectorAll('.oc-sankey-link');
-    for (const el of linkElements) {
+    for (const [index, el] of linkElements.entries()) {
       const markId = el.getAttribute('data-mark-id');
       if (!markId) continue;
 
       const content = layout.tooltipDescriptors.get(markId);
       const sourceId = el.getAttribute('data-source');
       const targetId = el.getAttribute('data-target');
-      const linkData = findLinkData(layout, sourceId, targetId);
+      const linkData = layout.links[index]?.data ?? {};
 
       const handleMouseEnter = (e: Event) => {
+        activeLeave?.();
+        activeLeave = handleMouseLeave;
         const mouseEvent = e as MouseEvent;
         if (content && tooltipManager) {
           const svgRect = svg.getBoundingClientRect();
@@ -286,6 +307,8 @@ export function createSankey(
       };
 
       const handleMouseLeave = () => {
+        if (activeLeave !== handleMouseLeave) return;
+        activeLeave = null;
         tooltipManager?.hide();
         options?.onLinkHover?.(null);
         resetLinkOpacity(svg, layout);
@@ -295,6 +318,13 @@ export function createSankey(
         options?.onLinkClick?.(linkData);
       };
 
+      navigation.push({
+        element: el,
+        key: JSON.stringify(['link', sourceId, targetId]),
+        enter: handleMouseEnter,
+        leave: handleMouseLeave,
+        activate: handleClick,
+      });
       el.addEventListener('mouseenter', handleMouseEnter);
       el.addEventListener('mousemove', handleMouseMove);
       el.addEventListener('mouseleave', handleMouseLeave);
@@ -308,24 +338,13 @@ export function createSankey(
       });
     }
 
+    cleanups.push(wireMarkNavigation(svg, navigation));
     return () => {
+      activeLeave?.();
       for (const cleanup of cleanups) {
         cleanup();
       }
     };
-  }
-
-  /**
-   * Find the data record for a link by source/target ids.
-   */
-  function findLinkData(
-    layout: SankeyLayout,
-    sourceId: string | null,
-    targetId: string | null,
-  ): Record<string, unknown> {
-    if (!sourceId || !targetId) return {};
-    const link = layout.links.find((l) => l.sourceId === sourceId && l.targetId === targetId);
-    return link?.data ?? {};
   }
 
   /**
@@ -409,13 +428,10 @@ export function createSankey(
    */
   function resetLinkOpacity(svg: SVGSVGElement, layout: SankeyLayout): void {
     const linkElements = svg.querySelectorAll('.oc-sankey-link');
-    for (const el of linkElements) {
+    for (const [index, el] of linkElements.entries()) {
       const path = el.querySelector('path');
       if (!path) continue;
-      // Look up the original opacity via data attributes rather than positional index
-      const source = el.getAttribute('data-source');
-      const target = el.getAttribute('data-target');
-      const link = layout.links.find((l) => l.sourceId === source && l.targetId === target);
+      const link = layout.links[index];
       path.setAttribute('fill-opacity', String(link?.fillOpacity ?? 0.5));
     }
 
@@ -429,8 +445,11 @@ export function createSankey(
   // Render
   // ---------------------------------------------------------------------------
 
-  function render(): void {
+  function render(prepared?: SankeyLayout): void {
     if (destroyed) return;
+    const nextLayout = prepared ?? compile();
+    const focusedMark = captureMarkFocus(svgElement);
+    tooltipManager?.hide();
 
     // Cancel in-progress animations before tearing down
     if (animationCleanup) {
@@ -452,8 +471,7 @@ export function createSankey(
       svgElement.parentNode.removeChild(svgElement);
     }
 
-    // Compile
-    currentLayout = compile();
+    currentLayout = nextLayout;
 
     // Determine if we should animate
     const shouldAnimate = isFirstRender && !!currentLayout.animation?.enter;
@@ -477,8 +495,8 @@ export function createSankey(
       if (!tooltipManager) {
         tooltipManager = createTooltipManager(container);
       }
-      cleanupTooltipEvents = wireTooltipAndInteraction(svgElement, currentLayout);
     }
+    cleanupTooltipEvents = wireTooltipAndInteraction(svgElement, currentLayout);
 
     // Animation cleanup on first render
     if (shouldAnimate && svgElement) {
@@ -501,6 +519,7 @@ export function createSankey(
       fontsReloadPending = false;
       container.dataset.ocFontsState = 'ready';
     }
+    if (svgElement) restoreMarkFocus(svgElement, focusedMark);
   }
 
   // ---------------------------------------------------------------------------
@@ -509,16 +528,16 @@ export function createSankey(
 
   function update(newSpec: SankeySpec): void {
     if (destroyed) return;
+    // Compile before adopting an edit: a rejected spec must leave the last
+    // valid view, its interactions, and future resize/export calls intact.
+    const nextFont = resolveEffectiveFont(newSpec);
+    const nextMeasure = nextFont === fontFamily ? measureText : createMeasureText(nextFont);
+    const nextLayout = compile(newSpec, nextMeasure);
     currentSpec = newSpec;
-    // A new spec can change theme.fonts.family; rebuild the measurer so layout
-    // measures the font compile will actually render with.
-    const nextFont = resolveEffectiveFont();
-    if (nextFont !== fontFamily) {
-      fontFamily = nextFont;
-      measureText = createMeasureText(fontFamily);
-    }
-    isFirstRender = true; // Allow animation on update
-    render();
+    fontFamily = nextFont;
+    measureText = nextMeasure;
+
+    render(nextLayout);
   }
 
   function resize(): void {
@@ -534,21 +553,25 @@ export function createSankey(
 
   function doExport(
     format: 'svg' | 'svg-with-fonts' | 'png' | 'jpg',
-    exportOptions?: JPGExportOptions,
+    exportOptions?: JPGExportOptions | SVGExportOptions,
   ): string | Promise<Blob> | Promise<string> {
     if (!svgElement) {
       throw new Error('Sankey is not rendered yet');
     }
 
+    // Export settled geometry, independent of transient hover and animation.
+    const terminalSvg = renderSankeySVG(currentLayout);
+    const resolvedOptions = { theme: currentLayout.theme, ...exportOptions };
+
     switch (format) {
       case 'svg':
-        return exportSVG(svgElement);
+        return exportSVG(terminalSvg);
       case 'svg-with-fonts':
-        return exportSVGWithFonts(svgElement, exportOptions as SVGExportOptions);
+        return exportSVGWithFonts(terminalSvg, resolvedOptions);
       case 'png':
-        return exportPNG(svgElement, exportOptions);
+        return exportPNG(terminalSvg, resolvedOptions);
       case 'jpg':
-        return exportJPG(svgElement, exportOptions);
+        return exportJPG(terminalSvg, resolvedOptions);
       default:
         throw new Error(`Unsupported export format: ${format}`);
     }
@@ -623,8 +646,8 @@ export function createSankey(
     // Wire tooltip + interaction events
     if (options?.tooltip !== false && svgElement) {
       tooltipManager = createTooltipManager(container);
-      cleanupTooltipEvents = wireTooltipAndInteraction(svgElement, currentLayout);
     }
+    cleanupTooltipEvents = wireTooltipAndInteraction(svgElement, currentLayout);
 
     // Animation cleanup
     if (shouldAnimate && svgElement) {

@@ -26,9 +26,9 @@ import type {
 } from '@opendata-ai/openchart-core';
 import { formatNumber } from '@opendata-ai/openchart-core';
 import type { ScaleLinear } from 'd3-scale';
-
 import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
+import { finiteNumber } from '../../data/finite-number';
 import type { ResolvedScales } from '../../layout/scales';
 import { getColor, groupByField, stackSeamStroke } from '../utils';
 
@@ -123,9 +123,9 @@ function binGeometry(
   x2Field: string,
   xScale: ScaleLinear<number, number>,
 ): { x: number; width: number } | undefined {
-  const start = Number(row[xField]);
-  const end = Number(row[x2Field]);
-  if (!Number.isFinite(start) || !Number.isFinite(end)) return undefined;
+  const start = finiteNumber(row[xField]);
+  const end = finiteNumber(row[x2Field]);
+  if (start === undefined || end === undefined) return undefined;
 
   const px0 = xScale(start);
   const px1 = xScale(end);
@@ -181,8 +181,8 @@ function overlappingBins(
     for (const row of rows) {
       const geom = binGeometry(row, xField, x2Field, xScale);
       if (!geom) continue;
-      const value = Number(row[yField]);
-      if (!Number.isFinite(value)) continue;
+      const value = finiteNumber(row[yField]);
+      if (value === undefined) continue;
 
       // A count is never negative, but an authored bar + x2 spec can carry a
       // negative y. Anchor on the baseline in both directions rather than
@@ -235,9 +235,9 @@ function stackedBins(
     for (const row of rows) {
       const geom = binGeometry(row, xField, x2Field, xScale);
       if (!geom) continue;
-      const value = Number(row[yField]);
+      const value = finiteNumber(row[yField]);
       // Stacking a negative segment has no coherent meaning for a count.
-      if (!Number.isFinite(value) || value <= 0) continue;
+      if (value === undefined || value <= 0) continue;
 
       const binKey = serializeKeyValue(row[xField]);
       const used = offsets.get(binKey) ?? 0;

@@ -25,6 +25,7 @@ import { computeChrome, estimateTextWidth } from '@opendata-ai/openchart-core';
 import { emitSpecWarnings } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
 import type { NormalizedTableSpec } from '../compiler/types';
+import { resolveObservationIdentities } from '../design/identity';
 import { computeBarCell, computeColumnMax, computeColumnMin } from './bar-column';
 import { computeCategoryColors } from './category-colors';
 import { formatCell } from './format-cells';
@@ -581,10 +582,19 @@ export function compileTableLayout(
     }
   }
 
+  const identities = spec.rowKey ? resolveObservationIdentities(data, spec.rowKey) : null;
+  if (identities?.some((identity) => !identity.persistent))
+    emitSpecWarnings(
+      [
+        'TABLE_ROW_KEY_AMBIGUOUS: rowKey contains duplicate or missing values; affected rows use revision-local identities.',
+      ],
+      options.onWarn,
+    );
+
   // 8. Build rows from visible data
   const rows: TableRow[] = currentData.map((row, i) => {
     const origIdx = originalIndices[i];
-    const rowId = spec.rowKey ? String(row[spec.rowKey] ?? origIdx) : String(origIdx);
+    const rowId = identities?.[origIdx].observation ?? String(origIdx);
 
     const cells: TableCell[] = spec.columns.map((col, c) => {
       const resolved = resolvedColumns[c];

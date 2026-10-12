@@ -196,11 +196,17 @@ Visual features are computed per-column based on the column config: heatmap buil
 
 ## Rendering strategy
 
-The vanilla adapter renders charts by building a fresh SVG element from the `ChartLayout`. It doesn't diff or patch. On every update or resize, it tears down the old SVG and creates a new one.
+The vanilla adapter compiles a candidate layout before committing an update. Rejected chart, map, tile map, bar list, Sankey and table specifications leave the last valid view and its interactions usable. Cartesian charts reconcile compatible SVG scenes by stable mark keys; incompatible scenes and specialized renderers rebuild from their compiled layouts. This keeps the engine independent of DOM lifetime.
+
+Line and area geometry can morph when point identity and path topology permit it. Paths with missing-observation breaks use an opacity crossfade of the canonical paths, including interrupted updates, so motion never connects absent evidence. Entrance completion releases the resize gate and replays any deferred resize.
 
 Scatter charts past a point-count threshold (or mounted with the `renderer: 'canvas'` option) render their dots on a `<canvas>` instead (see [canvas mark mode](spec-reference.md#canvas-mark-mode)). The canvas is a sibling inserted *before* the SVG and painting the background, gridlines and marks; the SVG keeps axes, trendline, annotations and chrome. The engine only records the decision as `ChartLayout.markRenderMode` -- the renderer keys strictly on its own `canvasMarks` option, so any caller that omits it (SSR, exports) gets a complete SVG regardless of what the layout says.
 
-For tables, it creates HTML elements (table, thead, tbody, etc.) with interactivity wired up: sort headers, search input, pagination controls, keyboard navigation.
+For tables, it creates HTML elements (table, thead, tbody, etc.) with interactivity wired up: sort headers, search input, pagination controls, keyboard navigation. Logical row/column focus survives rebuilds; typed row keys prevent collisions between `1` and `"1"`. Duplicate or missing authored keys receive revision-local identifiers and a warning. DOM row IDs are opaque implementation details.
+
+Maps, tile maps, bar lists and Sankey diagrams share mark keyboard navigation. Arrows inspect marks, Enter/Space invoke existing activation callbacks, Escape dismisses inspection and Tab follows the page's native focus order. Focus restores by mark identity after a rebuild, with a chart-root fallback for removed or ambiguous marks. Tooltip visibility is independent from callback wiring. Tables leave nested links and disclosure controls in charge of their own keys.
+
+Static chart exports render the terminal layout rather than serializing hover or in-flight geometry. Map exports retain the current camera, authored focus and zoom viewport clipping. Font embedding resolves inline styles before presentation attributes and inherits font declarations for text spans, including detached export scenes. Table CSV exports use all filtered/sorted rows, independently of the displayed page.
 
 Both adapters use `ResizeObserver` to detect container size changes and trigger recompilation at the new dimensions. The responsive system uses breakpoints to adjust layout strategy (label density, legend position, annotation placement).
 
@@ -218,9 +224,8 @@ sequenceDiagram
   React->>Vanilla: chart.update(spec)
   Vanilla->>Engine: compileChart(spec, options)
   Engine-->>Vanilla: ChartLayout
-  Vanilla->>DOM: Remove old SVG
-  Vanilla->>DOM: Create new SVG from layout
-  Vanilla->>DOM: Wire tooltips + keyboard nav
+  Vanilla->>DOM: Reconcile compatible scene or replace specialized view
+  Vanilla->>DOM: Restore valid focus and wire interactions
 ```
 
 ## Theme resolution
@@ -231,7 +236,7 @@ Themes flow through three stages:
 2. **Deep merge** (`resolveTheme()`): Merge user config onto `DEFAULT_THEME`. Produces a `ResolvedTheme` with every field set.
 3. **Dark mode adaptation** (`adaptTheme()`): If dark mode is active, transform the resolved theme. Swap background/text, adjust palette brightness, lighten gridlines.
 
-The default theme uses Inter as the primary font, editorial typography hierarchy (22px title, 15px subtitle, 13px body, 11px axis ticks), and a categorical palette tuned for distinguishability.
+The default theme uses Inter as the primary font and a categorical palette tuned for distinguishability. Theme tokens remain the source of truth for typography; the opt-in `clarity` preset provides the newer editorial hierarchy without changing v8 defaults.
 
 Themes can be applied per-component (via prop) or globally (via `VizThemeProvider` in React, or the `theme` option in vanilla).
 

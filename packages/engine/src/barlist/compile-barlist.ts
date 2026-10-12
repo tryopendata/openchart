@@ -31,6 +31,7 @@ import {
 import { emitSpecWarnings, expandSpecSugar } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
+import { finiteNumber } from '../data/finite-number';
 import { resolveFieldFormatter } from '../format/field-format';
 import { resolveChromeLayout } from '../layout/shared';
 import type { NormalizedBarListSpec } from './types';
@@ -151,10 +152,7 @@ export function compileBarList(spec: unknown, options: CompileOptions): BarListL
 
   // Filter valid rows, sort descending, cap to the lesser of maxItems and available height
   const validRows = barlistSpec.data
-    .filter((row) => {
-      const val = row[valueField];
-      return val !== null && val !== undefined && !Number.isNaN(Number(val));
-    })
+    .filter((row) => finiteNumber(row[valueField]) !== undefined)
     .sort((a, b) => Number(b[valueField]) - Number(a[valueField]))
     .slice(0, Math.min(barlistSpec.maxItems, maxFittingRows));
 
