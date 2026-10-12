@@ -10,7 +10,7 @@
  * chrome, annotations) still animates via CSS on the SVG above.
  */
 
-import type { ResolvedAnimationPhase } from '@opendata-ai/openchart-core';
+import { type ResolvedAnimationPhase, sampleMotion } from '@opendata-ai/openchart-core';
 import type { Animation } from '../motion/scheduler';
 import { createTween, prefersReducedMotion, resolveEase } from '../motion/tween';
 import type { ScatterCanvasState } from './types';
@@ -63,7 +63,7 @@ export function entranceAlphaAt(
   const local = (t - stagger * markIndex) / pointDuration;
   if (local <= 0) return 0;
   if (local >= 1) return 1;
-  return ease(local);
+  return enter.spring ? sampleMotion(enter, local * enter.duration).position : ease(local);
 }
 
 /** Write the alpha for every point at time `t` into `state.enterAlpha`. */

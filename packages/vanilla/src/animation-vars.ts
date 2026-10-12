@@ -1,3 +1,5 @@
+import { motionCSS, type SpringConfig } from '@opendata-ai/openchart-core';
+
 /**
  * Shared animation CSS custom-property stamping for vanilla renderers.
  *
@@ -14,6 +16,7 @@ export const EASE_VAR_MAP: Record<string, string> = {
 };
 
 export interface AnimationVars {
+  spring?: SpringConfig;
   /** Entrance animation duration, in ms. */
   duration: number;
   /** Per-item stagger delay, in ms. May be fractional (map renderer) — do NOT round. */
@@ -33,7 +36,12 @@ export function stampAnimationVars(el: ElementCSSInlineStyle, v: AnimationVars):
   if (v.annotationDelay !== undefined) {
     el.style.setProperty('--oc-annotation-delay', `${v.annotationDelay}ms`);
   }
-  if (v.ease !== undefined) {
+  if (v.spring) {
+    el.style.setProperty(
+      '--oc-animation-ease',
+      motionCSS({ duration: v.duration, spring: v.spring }),
+    );
+  } else if (v.ease !== undefined) {
     el.style.setProperty('--oc-animation-ease', EASE_VAR_MAP[v.ease] || EASE_VAR_MAP.smooth);
   }
   if (v.stackSegmentDuration !== undefined) {

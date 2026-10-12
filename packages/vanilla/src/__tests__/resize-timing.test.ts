@@ -95,46 +95,42 @@ describe('chart resize timing', () => {
     const initialSvg = container.querySelector('svg');
     expect(initialSvg).not.toBeNull();
 
-    // Track SVG node identity across renders: each render() replaces the SVG,
-    // so counting how many distinct SVG nodes appear tells us how many renders ran.
-    let renderCount = 0;
-    const mo = new MutationObserver((records) => {
-      for (const r of records) {
-        for (let i = 0; i < r.addedNodes.length; i++) {
-          const node = r.addedNodes[i];
-          if (node instanceof Element && node.tagName.toLowerCase() === 'svg') {
-            renderCount++;
-          }
-        }
-      }
-    });
-    mo.observe(container, { childList: true });
-
-    // Fire 20 resize events within a tight window.
-    for (let i = 0; i < 20; i++) {
-      fireResize(container, 600 + i, 400);
-    }
-
-    // Before the debounce window elapses, no new SVG has been appended.
-    expect(renderCount).toBe(0);
-
-    // Run all pending timers (16ms inner debounce + any outer delay).
+    // Observable resize contract: the final viewport is used once and the
+    // retained root never disappears during a burst.
+    const initialGeneration = Number(container.dataset.ocRenderGen);
+    for (let i = 0; i < 20; i++) fireResize(container, 600 + i, 400);
+    expect(Number(container.dataset.ocRenderGen)).toBe(initialGeneration);
     await vi.runAllTimersAsync();
+    expect(Number(container.dataset.ocRenderGen)).toBe(initialGeneration + 1);
+    expect(container.querySelector('svg')).toBe(initialSvg);
 
-    // MutationObserver records are delivered as microtasks; flush them.
-    mo.takeRecords().forEach((r) => {
-      for (let i = 0; i < r.addedNodes.length; i++) {
-        const node = r.addedNodes[i];
-        if (node instanceof Element && node.tagName.toLowerCase() === 'svg') {
-          renderCount++;
-        }
-      }
+    chart.destroy();
+  });
+
+  it('does not compound a minimum-height host with growing chart chrome', async () => {
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    let height = 420;
+    Object.defineProperty(container, 'getBoundingClientRect', {
+      value: () => ({
+        width: 390,
+        height,
+        x: 0,
+        y: 0,
+        left: 0,
+        top: 0,
+        right: 390,
+        bottom: height,
+      }),
     });
-
-    // Exactly one re-render should have run for the whole burst (no thrash).
-    expect(renderCount).toBe(1);
-
-    mo.disconnect();
+    const chart = createChart(container, { ...lineSpec, chromeLayout: 'grow' });
+    const originalHeight = chart.layout.dimensions.height;
+    height = originalHeight;
+    fireResize(container, 390, height);
+    await vi.runAllTimersAsync();
+    expect(chart.layout.dimensions.height).toBe(originalHeight);
+    chart.update({ ...lineSpec, chromeLayout: 'grow' });
+    expect(chart.layout.dimensions.height).toBe(originalHeight);
     chart.destroy();
   });
 

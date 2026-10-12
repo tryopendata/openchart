@@ -30,7 +30,11 @@ import { applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
  * invitation for the two to drift and drop the footnotes onto the watermark.
  */
 export function footnoteBandHeight(layout: ChartLayout): number {
-  return footnoteBandHeightFor(layout.chrome.footnotes?.length ?? 0, layout.theme);
+  return footnoteBandHeightFor(
+    (layout.chrome.footnotes?.length ?? 0) +
+      (layout.chrome.seriesSummary?.reduce((count, entry) => count + entry.lines.length, 0) ?? 0),
+    layout.theme,
+  );
 }
 
 export function renderChromeElement(
@@ -187,6 +191,40 @@ export function renderChrome(parent: SVGElement, layout: ChartLayout): void {
       el.textContent = `${f.index}. ${f.text}`;
       g.appendChild(el);
     }
+  }
+
+  let summaryLine = chrome.footnotes?.length ?? 0;
+  for (const entry of chrome.seriesSummary ?? []) {
+    const size = layout.theme.fonts.sizes.small;
+    const el = createSVGElement('text');
+    el.setAttribute('class', 'oc-series-summary');
+    el.setAttribute('data-series', entry.key);
+    setAttrs(el, {
+      x: layout.theme.spacing.padding,
+      y:
+        bottomOffset +
+        layout.theme.spacing.chartToFooter +
+        textAscent(size) +
+        summaryLine * size * FOOTNOTE_LINE_HEIGHT,
+    });
+    applyTextStyle(el, {
+      fontFamily: layout.theme.fonts.family,
+      fontSize: size,
+      fontWeight: 500,
+      lineHeight: FOOTNOTE_LINE_HEIGHT,
+      fill: entry.color,
+    });
+    entry.lines.forEach((line, index) => {
+      const span = createSVGElement('tspan');
+      setAttrs(span, {
+        x: layout.theme.spacing.padding,
+        dy: index === 0 ? 0 : size * FOOTNOTE_LINE_HEIGHT,
+      });
+      span.textContent = line;
+      el.appendChild(span);
+    });
+    summaryLine += entry.lines.length;
+    g.appendChild(el);
   }
 
   if (chrome.source) {

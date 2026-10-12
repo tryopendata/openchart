@@ -181,3 +181,16 @@ export type {
   TileMapSpec,
   VizSpec,
 } from '@opendata-ai/openchart-core';
+
+export { diagnoseChart } from './design/diagnostics';
+export type { ObservationComparison } from './design/identity';
+export {
+  compareObservations,
+  linkedEntityKeys,
+  observationKey,
+  reconcileReaderSelection,
+  resolveObservationIdentities,
+} from './design/identity';
+export { applySpecPatch } from './design/patch';
+export type { RecommendationResult, RecommendationRoles } from './design/recommend';
+export { recommendCompositions } from './design/recommend';

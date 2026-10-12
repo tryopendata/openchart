@@ -1,3 +1,6 @@
+import { canTransitionSpecShape } from './transition/gate';
+import { reconcileSVG } from './transition/reconcile';
+import { sampleLayout } from './transition/scene';
 /**
  * Mount API: the main entry point for vanilla JS usage.
  *
@@ -133,6 +136,8 @@ export interface ChartInstance {
   beginManualUpdate(spec: ChartSpec | LayerSpec | GraphSpec): TransitionHandle | null;
   /** Re-compile at current container dimensions. */
   resize(): void;
+  /** Geometry currently visible, sampled on demand for reader hit testing. */
+  sampleLayout(): ChartLayout;
   /** Export the chart. */
   export(format: 'svg'): string;
   export(format: 'svg-with-fonts', options?: SVGExportOptions): Promise<string>;
@@ -291,6 +296,7 @@ export function createChart<TData extends DataRow = DataRow>(
   let isAutoHeight: boolean | null = null;
   let lastRenderedWidth: number | null = null;
   let lastRenderedSvgHeight: number | null = null;
+  let lastHostHeight = FALLBACK_HEIGHT;
 
   // Data-update transition state
   let transitionHandle: TransitionHandle | null = null;
@@ -563,6 +569,11 @@ export function createChart<TData extends DataRow = DataRow>(
     if (isAutoHeight === null && (rect.width > 0 || rect.height > 0)) {
       isAutoHeight = rect.height === 0 && rect.width > 0;
     }
+    // A min-height host can start with a nonzero box and then grow with its
+    // SVG. Do not feed that output height back into chromeLayout: 'grow'.
+    const ownHeight =
+      lastRenderedSvgHeight !== null && Math.abs(rect.height - lastRenderedSvgHeight) < 0.5;
+    if (!ownHeight && rect.height > 0) lastHostHeight = rect.height;
 
     return {
       width: Math.max(rect.width || 600, 100),
@@ -570,7 +581,9 @@ export function createChart<TData extends DataRow = DataRow>(
       // the first render the container's measured height is just our own
       // SVG, so reading it back would re-pin whatever we rendered last.
       height:
-        isAutoHeight === true ? FALLBACK_HEIGHT : Math.max(rect.height || FALLBACK_HEIGHT, 100),
+        isAutoHeight === true
+          ? FALLBACK_HEIGHT
+          : Math.max(ownHeight ? lastHostHeight : rect.height || FALLBACK_HEIGHT, 100),
     };
   }
 
@@ -861,7 +874,8 @@ export function createChart<TData extends DataRow = DataRow>(
   // Render cycle
   // ---------------------------------------------------------------------------
 
-  function render(): void {
+  function render(retainScene = false): void {
+    const retainedSVG = retainScene ? svgElement : null;
     if (isDragging) {
       pendingRender = true;
       return;
@@ -916,7 +930,7 @@ export function createChart<TData extends DataRow = DataRow>(
       isTextEditingActive = false;
     }
     overlayElement = null;
-    if (svgElement?.parentNode) {
+    if (!retainedSVG && svgElement?.parentNode) {
       svgElement.parentNode.removeChild(svgElement);
     }
     if (tooltipManager) {
@@ -957,11 +971,16 @@ export function createChart<TData extends DataRow = DataRow>(
       }
     }
 
-    svgElement = renderChartSVG(currentLayout, container, {
+    const sceneHost = retainedSVG ? document.createElement('div') : container;
+    svgElement = renderChartSVG(currentLayout, sceneHost, {
       animate: shouldAnimate,
       crosshair,
       canvasMarks: canvasMode,
     });
+    if (retainedSVG && svgElement) {
+      reconcileSVG(retainedSVG, svgElement);
+      svgElement = retainedSVG;
+    }
     tooltipManager = createTooltipManager(container);
 
     // Canvas hit-testing replaces per-element listeners for point marks.
@@ -1269,6 +1288,7 @@ export function createChart<TData extends DataRow = DataRow>(
     newSpec: ChartSpec | GraphSpec,
     updateOpts: UpdateOptions | undefined,
     manual: boolean,
+    layoutOnly = false,
   ): TransitionHandle | null {
     if (destroyed) return null;
 
@@ -1292,12 +1312,16 @@ export function createChart<TData extends DataRow = DataRow>(
       fontFamily = nextFont;
       measureText = createMeasureText(fontFamily);
     }
-    runtimeHiddenSeries.clear();
-    runtimeShownSeries.clear();
+    if (!layoutOnly) {
+      runtimeHiddenSeries.clear();
+      runtimeShownSeries.clear();
+    }
     // The new spec is the source of truth: re-capture the authored highlight
     // baseline and drop any search selections layered on the previous spec.
-    searchBaseline = authoredHighlight(newSpec);
-    seriesSearch?.setSelected([]);
+    if (!layoutOnly) {
+      searchBaseline = authoredHighlight(newSpec);
+      seriesSearch?.setSelected([]);
+    }
     // A new spec re-arms the conflict warnings (youDrawIt/edit and
     // seriesSearch/edit) so a newly-introduced conflict warns once again.
     ydiEditSuppressWarned = false;
@@ -1305,7 +1329,7 @@ export function createChart<TData extends DataRow = DataRow>(
     if (updateOpts && 'selectedElement' in updateOpts) {
       selectedElement = updateOpts.selectedElement ?? null;
     }
-    render();
+    render(canTransitionSpecShape(prevSpec, newSpec));
 
     // After render, check if we can run a smooth transition instead of the
     // instant swap that render() already performed.
@@ -1338,11 +1362,9 @@ export function createChart<TData extends DataRow = DataRow>(
           transitionHandle = null;
         },
       });
-      // A manual transition is caller-owned: the caller steps it and finalizes
-      // via `cancel()`, and `onComplete` never fires in manual mode. Don't track
-      // it on the instance field, or it would be left pointing at a cancelled
-      // handle. The auto (rAF) path keeps tracking so retargeting can snapshot it.
-      if (!manual) transitionHandle = handle;
+      // Keep the sampled scene available to readers for both clocks. Manual
+      // callers still own step/cancel; a cancelled handle is ignored by sampling.
+      transitionHandle = handle;
       return handle;
     }
     // No transition started; clear any stale snapshot
@@ -1368,7 +1390,7 @@ export function createChart<TData extends DataRow = DataRow>(
       pendingResize = true;
       return;
     }
-    render();
+    doUpdate(currentSpec as ChartSpec, undefined, false, true);
   }
 
   /**
@@ -1430,7 +1452,7 @@ export function createChart<TData extends DataRow = DataRow>(
         ? materializeCanvasModeSVG(currentLayout, {
             forceVector: format === 'png' || format === 'jpg' || format === 'gif',
           })
-        : svgElement;
+        : renderChartSVG(currentLayout, document.createElement('div'), { animate: false });
     // The resolved theme, defaulted into the export options, so class-based
     // chrome fills (metrics, eyebrow dot, legend) survive serialization away from
     // the page stylesheet. An explicit options.theme still wins.
@@ -1574,15 +1596,16 @@ export function createChart<TData extends DataRow = DataRow>(
   // Set up responsive resize
   if (options?.responsive !== false) {
     disconnectResize = observeResize(container, (width, height) => {
+      const widthChanged = lastRenderedWidth === null || Math.abs(width - lastRenderedWidth) >= 0.5;
+      const selfInducedHeight =
+        lastRenderedSvgHeight !== null && Math.abs(height - lastRenderedSvgHeight) < 0.5;
+      if (!widthChanged && selfInducedHeight) return;
       // Self-induced-resize guard, scoped to latched-auto mounts: growing
       // the SVG grows the container, which re-fires this observer. A fire
       // whose height matches the SVG we just rendered (and whose width is
       // unchanged) is our own echo — re-rendering on it would loop; the
       // 16ms debounce alone doesn't break the cycle.
       if (isAutoHeight === true) {
-        const widthChanged = width !== lastRenderedWidth;
-        const selfInducedHeight = height === lastRenderedSvgHeight;
-        if (!widthChanged && selfInducedHeight) return;
         if (!selfInducedHeight) {
           // Any other height delta is host-driven: un-latch so the next
           // measure re-derives (and re-latches explicit if the container
@@ -1602,6 +1625,11 @@ export function createChart<TData extends DataRow = DataRow>(
     update,
     beginManualUpdate,
     resize,
+    sampleLayout: () =>
+      sampleLayout(
+        currentLayout,
+        transitionHandle?.running ? transitionHandle.snapshot() : undefined,
+      ),
     export: doExport,
     destroy,
     get layout() {

@@ -84,6 +84,21 @@ describe('auto-thinning footnote reserve', () => {
     expect(roomy.chrome.footnotes).toBeUndefined();
   });
 
+  it('grows the figure for demoted footnotes without consuming the plot height budget', () => {
+    const options = { width: 200, height: 340, chromeLayout: 'grow' as const };
+    const { annotations: _dropped, ...noAnnotations } = crowdedSpec;
+    const baseline = compileChart(noAnnotations, options);
+    const layout = compileChart(crowdedSpec, options);
+    const footnotes = layout.chrome.footnotes ?? [];
+    expect(footnotes.length).toBeGreaterThan(0);
+    expect(layout.area.height).toBeCloseTo(baseline.area.height, 6);
+    const band = footnotes.length * layout.theme.fonts.sizes.small * 1.3 + 4;
+    expect(layout.dimensions.height - baseline.dimensions.height).toBeCloseTo(band, 6);
+
+    const subtract = compileChart({ ...crowdedSpec, chromeLayout: 'subtract' }, options);
+    expect(subtract.dimensions.height).toBe(options.height);
+  });
+
   it('converges instead of recursing forever', () => {
     // Reserving space shrinks the plot, which can demote one more label and grow
     // the band again. This must settle, not spin.

@@ -1,0 +1,303 @@
+{
+  "timestamp": "2026-10-12T06:48:05.186Z",
+  "revision": "3cc274e9d7cf7b465421d8127dec1088c436afa9",
+  "host": {
+    "platform": "darwin",
+    "release": "27.0.0",
+    "arch": "arm64",
+    "cpu": "Apple M3 Max",
+    "cores": 16,
+    "memory": 68719476736
+  },
+  "profiles": [
+    {
+      "name": "desktop-chromium",
+      "browser": "147.0.7727.15",
+      "width": 1280,
+      "throttle": 1,
+      "captures": [
+        {
+          "id": "ranking",
+          "story": "showcase--showcase",
+          "anchor": "full-chrome-bar",
+          "bounds": {
+            "x": 24,
+            "y": 32.40625,
+            "width": 1232,
+            "height": 683.296875
+          }
+        },
+        {
+          "id": "line",
+          "story": "showcase--showcase",
+          "anchor": "multi-series-line",
+          "bounds": {
+            "x": 24,
+            "y": 32.109375,
+            "width": 1232,
+            "height": 683.296875
+          }
+        },
+        {
+          "id": "composition",
+          "story": "showcase--showcase",
+          "anchor": "stacked-area",
+          "bounds": {
+            "x": 24,
+            "y": 31.703125,
+            "width": 1232,
+            "height": 663.296875
+          }
+        },
+        {
+          "id": "distribution",
+          "story": "charts--scatter-and-distribution",
+          "anchor": "strip-plot",
+          "bounds": {
+            "x": 120,
+            "y": 32.328125,
+            "width": 1040,
+            "height": 583.296875
+          }
+        },
+        {
+          "id": "change",
+          "story": "charts--scatter-and-distribution",
+          "anchor": "range-dumbbell",
+          "bounds": {
+            "x": 120,
+            "y": 32.03125,
+            "width": 1040,
+            "height": 683.296875
+          }
+        },
+        {
+          "id": "map",
+          "story": "showcase--showcase",
+          "anchor": "world-choropleth",
+          "bounds": {
+            "x": 24,
+            "y": 32.296875,
+            "width": 1232,
+            "height": 723.296875
+          }
+        },
+        {
+          "id": "table",
+          "story": "showcase--showcase",
+          "anchor": "data-table",
+          "bounds": {
+            "x": 24,
+            "y": 31,
+            "width": 1232,
+            "height": 969.296875
+          }
+        },
+        {
+          "id": "narrative",
+          "story": "features--scrollytelling",
+          "anchor": "narrative",
+          "bounds": {
+            "x": 120,
+            "y": 31.625,
+            "width": 1040,
+            "height": 4244.890625
+          }
+        }
+      ]
+    },
+    {
+      "name": "mobile-chromium",
+      "browser": "147.0.7727.15",
+      "width": 390,
+      "throttle": 4,
+      "captures": [
+        {
+          "id": "ranking",
+          "story": "showcase--showcase",
+          "anchor": "full-chrome-bar",
+          "bounds": {
+            "x": 24,
+            "y": 32.1875,
+            "width": 342,
+            "height": 741.796875
+          }
+        },
+        {
+          "id": "line",
+          "story": "showcase--showcase",
+          "anchor": "multi-series-line",
+          "bounds": {
+            "x": 24,
+            "y": 31.890625,
+            "width": 342,
+            "height": 722.296875
+          }
+        },
+        {
+          "id": "composition",
+          "story": "showcase--showcase",
+          "anchor": "stacked-area",
+          "bounds": {
+            "x": 24,
+            "y": 31.984375,
+            "width": 342,
+            "height": 721.796875
+          }
+        },
+        {
+          "id": "distribution",
+          "story": "charts--scatter-and-distribution",
+          "anchor": "strip-plot",
+          "bounds": {
+            "x": 24,
+            "y": 32.109375,
+            "width": 342,
+            "height": 622.296875
+          }
+        },
+        {
+          "id": "change",
+          "story": "charts--scatter-and-distribution",
+          "anchor": "range-dumbbell",
+          "bounds": {
+            "x": 24,
+            "y": 31.609375,
+            "width": 342,
+            "height": 722.296875
+          }
+        },
+        {
+          "id": "map",
+          "story": "showcase--showcase",
+          "anchor": "world-choropleth",
+          "bounds": {
+            "x": 24,
+            "y": 32.078125,
+            "width": 342,
+            "height": 781.796875
+          }
+        },
+        {
+          "id": "table",
+          "story": "showcase--showcase",
+          "anchor": "data-table",
+          "bounds": {
+            "x": 24,
+            "y": 30.78125,
+            "width": 342,
+            "height": 2584.296875
+          }
+        },
+        {
+          "id": "narrative",
+          "story": "features--scrollytelling",
+          "anchor": "narrative",
+          "bounds": {
+            "x": 24,
+            "y": 31.65625,
+            "width": 342,
+            "height": 4284.140625
+          }
+        }
+      ]
+    },
+    {
+      "name": "mobile-webkit",
+      "browser": "26.4",
+      "width": 390,
+      "throttle": 1,
+      "captures": [
+        {
+          "id": "ranking",
+          "story": "showcase--showcase",
+          "anchor": "full-chrome-bar",
+          "bounds": {
+            "x": 24,
+            "y": 32.1875,
+            "width": 342,
+            "height": 741.796875
+          }
+        },
+        {
+          "id": "line",
+          "story": "showcase--showcase",
+          "anchor": "multi-series-line",
+          "bounds": {
+            "x": 24,
+            "y": 31.890625,
+            "width": 342,
+            "height": 722.296875
+          }
+        },
+        {
+          "id": "composition",
+          "story": "showcase--showcase",
+          "anchor": "stacked-area",
+          "bounds": {
+            "x": 24,
+            "y": 31.984375,
+            "width": 342,
+            "height": 721.796875
+          }
+        },
+        {
+          "id": "distribution",
+          "story": "charts--scatter-and-distribution",
+          "anchor": "strip-plot",
+          "bounds": {
+            "x": 24,
+            "y": 32.109375,
+            "width": 342,
+            "height": 622.296875
+          }
+        },
+        {
+          "id": "change",
+          "story": "charts--scatter-and-distribution",
+          "anchor": "range-dumbbell",
+          "bounds": {
+            "x": 24,
+            "y": 31.609375,
+            "width": 342,
+            "height": 722.296875
+          }
+        },
+        {
+          "id": "map",
+          "story": "showcase--showcase",
+          "anchor": "world-choropleth",
+          "bounds": {
+            "x": 24,
+            "y": 32.078125,
+            "width": 342,
+            "height": 781.796875
+          }
+        },
+        {
+          "id": "table",
+          "story": "showcase--showcase",
+          "anchor": "data-table",
+          "bounds": {
+            "x": 24,
+            "y": 0.78125,
+            "width": 342,
+            "height": 2590.296875
+          }
+        },
+        {
+          "id": "narrative",
+          "story": "features--scrollytelling",
+          "anchor": "narrative",
+          "bounds": {
+            "x": 24,
+            "y": 0.65625,
+            "width": 342,
+            "height": 4284.140625
+          }
+        }
+      ]
+    }
+  ],
+  "humanStudies": "Not conducted. See docs/design-evolution.md for the protocol."
+}

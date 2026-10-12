@@ -113,6 +113,7 @@ export function renderChartSVG(
 
     stampAnimationVars(svg, {
       duration: enterPhase.duration,
+      spring: enterPhase.spring,
       stagger,
       annotationDelay: animation!.annotationDelay,
       ease: enterPhase.ease,
@@ -216,6 +217,36 @@ export function renderChartSVG(
       clippedGroup.setAttribute('data-oc-marks-group', 'true');
       clipGroup.appendChild(clippedGroup);
       const markLabelsOverlay = renderMarks(clippedGroup, layout, { skipPoints: canvasMarks });
+      // A fluid stack is one quantitative object: reveal its shared extent,
+      // never chain independently eased segments that can appear to separate.
+      if (
+        enterPhase?.spring &&
+        layout.marks.some((mark) => mark.type === 'rect' && mark.stackPos !== undefined)
+      ) {
+        const stacks = new Map<string, SVGElement>();
+        for (const mark of layout.marks) {
+          if (mark.type !== 'rect' || mark.stackPos === undefined || !mark.key) continue;
+          const element = Array.from(clippedGroup.children).find(
+            (child) => child.getAttribute('data-key') === mark.key,
+          );
+          if (!element) continue;
+          const horizontal = element.getAttribute('data-orient') === 'horizontal';
+          const key = `${horizontal ? 'h' : 'v'}:${horizontal ? mark.y : mark.x}`;
+          let stack = stacks.get(key);
+          if (!stack) {
+            stack = createSVGElement('g');
+            setAttrs(stack, {
+              class: 'oc-stack-reveal',
+              'data-key': `stack:${key}`,
+              'data-orient': horizontal ? 'horizontal' : 'vertical',
+              'data-animation-index': 0,
+            });
+            clippedGroup.insertBefore(stack, element);
+            stacks.set(key, stack);
+          }
+          stack.appendChild(element);
+        }
+      }
 
       // Single query+parse pass over point circles, reused below by both the
       // voronoi-overlay pointer-events pass and the endpoint-label suppression

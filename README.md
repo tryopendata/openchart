@@ -99,6 +99,7 @@ Release candidates publish under the `next` dist-tag, so a plain install always 
 
 | Doc | What's in it |
 | --- | ------------ |
+| [Studio workbench](docs/workbench.md) | Build and deploy the portable authoring application |
 | [Getting started](docs/getting-started.md) | Hands-on tutorial from first chart to custom themes, tables, and graphs |
 | [Chart types](docs/chart-types.md) | Catalog of every mark and spec type, with when to reach for each |
 | [Spec reference](docs/spec-reference.md) | Field-by-field type reference for ChartSpec, TableSpec, and GraphSpec |

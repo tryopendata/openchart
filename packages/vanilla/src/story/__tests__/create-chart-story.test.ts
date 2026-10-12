@@ -245,7 +245,8 @@ describe('createChartStory', () => {
     // the veto and keep the crossfade ghost.
     const svgs = container.querySelectorAll('svg');
     expect(svgs.length).toBe(2);
-    expect(svgs[0].getAttribute('aria-hidden')).toBe('true');
+    expect(container.querySelectorAll('svg[aria-hidden="true"]')).toHaveLength(1);
+    expect(container.querySelectorAll('svg:not([aria-hidden="true"])')).toHaveLength(1);
 
     story.destroy();
   });

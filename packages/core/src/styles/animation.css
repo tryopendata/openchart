@@ -10,7 +10,8 @@
        (SVG rx rounds all four corners or none), so both shapes match. */
     & .oc-mark-rect :is(rect, path),
     & .oc-mark-bar :is(rect, path) {
-      animation: oc-enter-bar var(--oc-animation-duration) var(--oc-ease-smooth) both;
+      animation: oc-enter-bar var(--oc-animation-duration)
+        var(--oc-animation-ease, var(--oc-ease-smooth)) both;
       animation-delay: calc(var(--oc-animation-stagger) * var(--oc-mark-index, 0));
     }
 
@@ -33,6 +34,17 @@
         var(--oc-stack-pos, 0) *
         var(--oc-stack-segment-duration, 150ms)
       );
+    }
+
+    & .oc-stack-reveal {
+      animation: oc-enter-bar var(--oc-animation-duration)
+        var(--oc-animation-ease, var(--oc-ease-smooth)) both;
+    }
+    & .oc-stack-reveal[data-orient="horizontal"] {
+      animation-name: oc-enter-bar-h;
+    }
+    & .oc-stack-reveal .oc-mark-rect :is(rect, path) {
+      animation: none;
     }
 
     /* Line marks: entire group clips left-to-right (no WAAPI needed) */

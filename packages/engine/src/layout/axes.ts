@@ -34,6 +34,7 @@ import {
   buildContinuousTicks,
   categoricalTicks,
   continuousTicks,
+  formatTickLabel,
   resolveExplicitTicks,
   scaleSupportsTickCount,
   targetTickCount,
@@ -401,6 +402,7 @@ export interface AxesResult {
 
 /** Optional data context for axis computation (enables labelField subtitles). */
 export interface AxesDataContext {
+  preserveEnd?: boolean;
   /** The data rows for subtitle lookup. */
   data: DataRow[];
   /** The encoding object to resolve field names. */
@@ -604,6 +606,41 @@ export function computeAxes(
     // coarsening a ruler. Explicit `axis.values` opts out either way.
     if (isContinuousX && !hasExplicitValues && dataContext?.maxXTicks != null) {
       ticks = capTickCount(ticks, dataContext.maxXTicks);
+    }
+
+    if (
+      dataContext?.preserveEnd &&
+      !hasExplicitValues &&
+      (scales.x.type === 'time' || scales.x.type === 'utc')
+    ) {
+      const scale = scales.x.scale as import('./scales').D3ContinuousScale;
+      const domain = scale.domain();
+      const value = domain[domain.length - 1];
+      const boundary = {
+        value,
+        position: scale(value as number & Date) as number,
+        label: formatTickLabel(value, scales.x),
+      };
+      if (Number.isFinite(boundary.position)) {
+        ticks = ticks.filter(
+          (tick) => Number(tick.value) !== Number(value) && tick.label !== boundary.label,
+        );
+        ticks.push(boundary);
+        ticks.sort((a, b) => a.position - b.position);
+        ticks = thinTicksUntilFit(ticks, fontSize, fontWeight, measureText);
+      }
+    }
+
+    if (dataContext?.preserveEnd && !hasExplicitValues && !isContinuousX) {
+      const domain = scales.x.scale.domain();
+      const value = domain[domain.length - 1];
+      const boundary = resolveExplicitTicks([value], scales.x)[0];
+      if (boundary) {
+        ticks = ticks.filter((tick) => tick.label !== boundary.label);
+        ticks.push(boundary);
+        ticks.sort((a, b) => a.position - b.position);
+        ticks = thinTicksUntilFit(ticks, fontSize, fontWeight, measureText);
+      }
     }
 
     // Truncate rotated labels that would overflow the capped reservation.

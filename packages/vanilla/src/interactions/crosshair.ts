@@ -340,14 +340,14 @@ export function wireVoronoiTooltipEvents(
     if (te.touches.length === 0) return;
     const t = te.touches[0];
     const { svgX, svgY, viewBoxToContainer } = toSvgCoords(t.clientX, t.clientY);
-    if (te.cancelable) te.preventDefault();
+
     positionAt(svgX, svgY, viewBoxToContainer);
   };
 
   overlay.addEventListener('mousemove', handleMouseMove);
   overlay.addEventListener('mouseleave', hideOnPointerOut);
-  overlay.addEventListener('touchstart', handleTouch, { passive: false });
-  overlay.addEventListener('touchmove', handleTouch, { passive: false });
+  overlay.addEventListener('touchstart', handleTouch, { passive: true });
+  overlay.addEventListener('touchmove', handleTouch, { passive: true });
   overlay.addEventListener('touchend', hideOnPointerOut);
 
   return {

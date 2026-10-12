@@ -35,3 +35,6 @@ examples/output.svg
 
 # Scratch Ladle build output (e.g. `ladle build --outDir tmp/...` during verification)
 examples/tmp/
+examples/build-workbench/
+workbench-test-results/
+design-baseline-artifacts/

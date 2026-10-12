@@ -590,6 +590,7 @@ export function renderSankeySVG(
     const stagger = clampStaggerDelay(enterPhase.staggerDelay, totalMarks);
     stampAnimationVars(svg, {
       duration: enterPhase.duration,
+      spring: enterPhase.spring,
       stagger,
       annotationDelay: animation!.annotationDelay,
       ease: enterPhase.ease,

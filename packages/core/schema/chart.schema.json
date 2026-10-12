@@ -7386,6 +7386,67 @@
       "additionalProperties": false,
       "description": "Facet channel definition: partitions data into small-multiple panels.\n\nUnlike positional channels, facet only needs a field, a categorical type, and optional layout hints (columns, sort). It does not carry scale/axis config because it produces a grid, not a visual encoding."
     },
+    "FieldMetadata": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "text",
+            "number",
+            "date"
+          ],
+          "description": "Explicit imported field type; preserved with the portable document."
+        },
+        "role": {
+          "type": "string",
+          "const": "identity",
+          "description": "Identifies an internal, persistent row identity column."
+        },
+        "label": {
+          "type": "string"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "measure": {
+          "type": "string"
+        },
+        "provenance": {
+          "type": "string"
+        },
+        "representation": {
+          "type": "string",
+          "enum": [
+            "number",
+            "percent",
+            "proportion"
+          ],
+          "description": "Percent is encoded 0–100; proportion is encoded 0–1."
+        },
+        "interval": {
+          "type": "object",
+          "properties": {
+            "lower": {
+              "type": "string"
+            },
+            "upper": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "lower",
+            "upper"
+          ],
+          "additionalProperties": false
+        },
+        "statusField": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Supplied semantics; the library never invents a measure or uncertainty."
+    },
     "DataRow": {
       "type": "object",
       "additionalProperties": {},
@@ -8541,6 +8602,14 @@
     "ResponsiveConfig": {
       "type": "object",
       "properties": {
+        "preserveEnd": {
+          "type": "boolean",
+          "description": "Preserve the final temporal boundary before thinning interior ticks."
+        },
+        "labelSummary": {
+          "type": "boolean",
+          "description": "Move direct series labels into a keyed list when the inline column cannot fit."
+        },
         "autoThin": {
           "type": "boolean",
           "description": "Automatic annotation thinning at narrow widths. When true (default), annotations that can't be placed without overlap are demoted to numbered dot markers with footnote text below the chart. Set false to restore the pre-auto-thinning behavior (annotations hidden at compact breakpoints)."
@@ -8996,14 +9065,30 @@
           "type": "boolean"
         },
         {
+          "$ref": "#/definitions/AnimationPreset"
+        },
+        {
           "$ref": "#/definitions/AnimationConfig"
         }
       ],
       "description": "Animation spec property.\n- true: enable entrance animation with sensible defaults\n- false/omitted: no animation (current behavior)\n- AnimationConfig: full control via enter/update/exit phases"
     },
+    "AnimationPreset": {
+      "type": "string",
+      "enum": [
+        "fluid",
+        "subtle",
+        "legacy"
+      ],
+      "description": "Opt-in motion language. `legacy` preserves the v8 tween timing."
+    },
     "AnimationConfig": {
       "type": "object",
       "properties": {
+        "preset": {
+          "$ref": "#/definitions/AnimationPreset",
+          "description": "Base preset; explicit phase settings take precedence."
+        },
         "enter": {
           "anyOf": [
             {
@@ -9048,6 +9133,10 @@
     "AnimationPhaseConfig": {
       "type": "object",
       "properties": {
+        "spring": {
+          "$ref": "#/definitions/SpringConfig",
+          "description": "Spring mode. Cannot be combined with duration or ease in this phase."
+        },
         "duration": {
           "type": "number",
           "description": "Duration in ms. Default: 500 for enter."
@@ -9070,6 +9159,22 @@
       },
       "additionalProperties": false,
       "description": "Animation phase config. Follows Vega's enter/update/exit model. Each phase can be true (use defaults) or a config object."
+    },
+    "SpringConfig": {
+      "type": "object",
+      "properties": {
+        "stiffness": {
+          "type": "number"
+        },
+        "damping": {
+          "type": "number"
+        },
+        "mass": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Physical spring parameters. Quantitative motion is bounded at critical damping."
     },
     "AnimationEase": {
       "type": "string",
@@ -9102,6 +9207,10 @@
     "UpdatePhaseConfig": {
       "type": "object",
       "properties": {
+        "spring": {
+          "$ref": "#/definitions/SpringConfig",
+          "description": "Spring mode. Cannot be combined with duration or ease in this phase."
+        },
         "duration": {
           "type": "number",
           "description": "Duration in ms. Default: 500 for enter."
@@ -11260,6 +11369,13 @@
         },
         "encoding": {
           "description": "Encoding channel map."
+        },
+        "fields": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/FieldMetadata"
+          },
+          "description": "Optional authored measure, unit, provenance, and supplied interval metadata."
         },
         "data": {
           "type": "array",

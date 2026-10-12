@@ -475,6 +475,7 @@ export function renderTable(
     const stagger = clampStaggerDelay(enterPhase.staggerDelay, rowCount);
     stampAnimationVars(wrapper, {
       duration: enterPhase.duration,
+      spring: enterPhase.spring,
       stagger,
       ease: enterPhase.ease,
     });

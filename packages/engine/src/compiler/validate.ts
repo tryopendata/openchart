@@ -2173,7 +2173,81 @@ function validateLayerSpec(spec: Record<string, unknown>, errors: ValidationErro
  */
 function validateAnimation(spec: Record<string, unknown>, errors: ValidationError[]): void {
   const animation = spec.animation;
+  if (typeof animation === 'string' && !['fluid', 'subtle', 'legacy'].includes(animation)) {
+    errors.push({
+      code: 'INVALID_VALUE',
+      suggestion: 'Use a named preset or separate valid spring and tween phase settings.',
+      path: 'animation',
+      message: 'Unknown animation preset.',
+    });
+  }
   if (!animation || typeof animation !== 'object' || Array.isArray(animation)) return;
+
+  const config = animation as Record<string, unknown>;
+  if (
+    config.preset !== undefined &&
+    !['fluid', 'subtle', 'legacy'].includes(String(config.preset))
+  ) {
+    errors.push({
+      code: 'INVALID_VALUE',
+      suggestion: 'Use a named preset or separate valid spring and tween phase settings.',
+      path: 'animation.preset',
+      message: 'Animation preset must be fluid, subtle, or legacy.',
+    });
+  }
+  for (const phase of ['enter', 'update', 'exit']) {
+    const value = config[phase];
+    if (!value || typeof value !== 'object') continue;
+    const settings = value as Record<string, unknown>;
+    if (settings.spring !== undefined) {
+      if (settings.duration !== undefined || settings.ease !== undefined) {
+        errors.push({
+          code: 'INVALID_VALUE',
+          suggestion: 'Use a named preset or separate valid spring and tween phase settings.',
+          path: `animation.${phase}`,
+          message: 'A phase cannot combine spring with duration or ease.',
+        });
+      }
+      if (
+        !settings.spring ||
+        typeof settings.spring !== 'object' ||
+        Array.isArray(settings.spring)
+      ) {
+        errors.push({
+          code: 'INVALID_VALUE',
+          suggestion: 'Use a named preset or separate valid spring and tween phase settings.',
+          path: `animation.${phase}.spring`,
+          message: 'Spring must be a configuration object.',
+        });
+      } else {
+        for (const [key, number] of Object.entries(settings.spring)) {
+          const known = ['stiffness', 'damping', 'mass'].includes(key);
+          if (known && number === undefined) continue;
+          if (!known || typeof number !== 'number' || !Number.isFinite(number) || number <= 0) {
+            errors.push({
+              code: 'INVALID_VALUE',
+              suggestion: 'Use a named preset or separate valid spring and tween phase settings.',
+              path: `animation.${phase}.spring.${key}`,
+              message: 'Spring parameters must be finite positive stiffness, damping, or mass.',
+            });
+          }
+        }
+      }
+    }
+    if (
+      settings.duration !== undefined &&
+      (typeof settings.duration !== 'number' ||
+        !Number.isFinite(settings.duration) ||
+        settings.duration < 0)
+    ) {
+      errors.push({
+        code: 'INVALID_VALUE',
+        suggestion: 'Use a named preset or separate valid spring and tween phase settings.',
+        path: `animation.${phase}.duration`,
+        message: 'Animation duration must be finite and nonnegative.',
+      });
+    }
+  }
 
   const update = (animation as Record<string, unknown>).update;
   if (!update || typeof update !== 'object' || Array.isArray(update)) return;
@@ -2192,6 +2266,75 @@ function validateAnimation(spec: Record<string, unknown>, errors: ValidationErro
       suggestion:
         'Set animation.update.maxMarks to the largest mark count that should still tween, e.g. animation: { update: { maxMarks: 5000 } }. Omit it to use the default of 500.',
     });
+  }
+}
+
+/** Validate optional field semantics before any host can display imported metadata. */
+function validateFieldMetadata(obj: Record<string, unknown>, errors: ValidationError[]): void {
+  if (obj.fields === undefined) return;
+  const fail = (path: string, message: string) =>
+    errors.push({
+      path,
+      message,
+      code: 'INVALID_VALUE',
+      suggestion:
+        'Use string labels, units and field references, and documented metadata enum values.',
+    });
+  if (!obj.fields || typeof obj.fields !== 'object' || Array.isArray(obj.fields)) {
+    fail('fields', 'Field metadata must be an object keyed by field name.');
+    return;
+  }
+  for (const [field, value] of Object.entries(obj.fields)) {
+    const path = `fields.${field}`;
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      fail(path, 'Field metadata must be an object.');
+      continue;
+    }
+    const metadata = value as Record<string, unknown>;
+    for (const key of ['label', 'unit', 'measure', 'provenance', 'statusField']) {
+      if (metadata[key] !== undefined && typeof metadata[key] !== 'string')
+        fail(`${path}.${key}`, `${key} must be a string.`);
+    }
+    for (const [key, values] of Object.entries({
+      type: ['text', 'number', 'date'],
+      role: ['identity'],
+      representation: ['number', 'percent', 'proportion'],
+    })) {
+      if (metadata[key] !== undefined && !values.includes(metadata[key] as string))
+        fail(`${path}.${key}`, `${key} must be one of ${values.join(', ')}.`);
+    }
+    if (metadata.interval !== undefined) {
+      const interval = metadata.interval as Record<string, unknown> | null;
+      if (
+        !interval ||
+        typeof interval !== 'object' ||
+        Array.isArray(interval) ||
+        typeof interval.lower !== 'string' ||
+        !interval.lower ||
+        typeof interval.upper !== 'string' ||
+        !interval.upper
+      ) {
+        fail(`${path}.interval`, 'Interval lower and upper must name supplied numeric fields.');
+      } else if (Array.isArray(obj.data)) {
+        for (const [index, row] of obj.data.entries()) {
+          if (!row || typeof row !== 'object') continue;
+          const lower = row[interval.lower];
+          const upper = row[interval.upper];
+          if (
+            [lower, upper].some(
+              (bound) => bound != null && (typeof bound !== 'number' || !Number.isFinite(bound)),
+            ) ||
+            (typeof lower === 'number' && typeof upper === 'number' && lower > upper)
+          ) {
+            fail(
+              `${path}.interval`,
+              `Row ${index + 1} must supply finite interval bounds with lower <= upper, or missing values.`,
+            );
+            break;
+          }
+        }
+      }
+    }
   }
 }
 
@@ -2226,6 +2369,37 @@ export function validateSpec(spec: unknown): ValidationResult {
   }
 
   const obj = spec as Record<string, unknown>;
+  validateFieldMetadata(obj, errors);
+  if (obj.chrome !== undefined) {
+    const chrome = obj.chrome;
+    if (!chrome || typeof chrome !== 'object' || Array.isArray(chrome)) {
+      errors.push({
+        path: 'chrome',
+        code: 'INVALID_TYPE',
+        message: 'Chrome must be an object of text elements.',
+        suggestion: 'Use string text or a text object with a string text property.',
+      });
+    } else {
+      for (const key of ['title', 'subtitle', 'source', 'footer', 'byline', 'eyebrow']) {
+        const value = (chrome as Record<string, unknown>)[key];
+        if (value === undefined) continue;
+        if (
+          typeof value !== 'string' &&
+          (!value ||
+            typeof value !== 'object' ||
+            Array.isArray(value) ||
+            typeof (value as Record<string, unknown>).text !== 'string')
+        ) {
+          errors.push({
+            path: `chrome.${key}`,
+            code: 'INVALID_TYPE',
+            message: `${key} must be text or an object with a string text property.`,
+            suggestion: 'Preserve authored styling in the object and provide text as a string.',
+          });
+        }
+      }
+    }
+  }
 
   // Determine spec type via structural discrimination:
   // - Layer specs have a 'layer' array

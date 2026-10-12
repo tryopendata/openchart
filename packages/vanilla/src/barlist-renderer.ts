@@ -240,7 +240,11 @@ export function renderBarListSVG(
   svg.setAttribute('class', classes);
 
   if (animate && animation?.enter) {
-    stampAnimationVars(svg, { duration: animation.enter.duration, stagger: 40 });
+    stampAnimationVars(svg, {
+      duration: animation.enter.duration,
+      spring: animation.enter.spring,
+      stagger: 40,
+    });
   }
 
   renderChrome(svg, layout);

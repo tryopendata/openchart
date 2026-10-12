@@ -371,6 +371,16 @@ export function renderMapSVG(layout: GeoMapLayout, opts?: { animate?: boolean })
   const classes = animate ? 'oc-map oc-animate' : 'oc-map';
   svg.setAttribute('class', classes);
 
+  // Export must carry the same authored surface as the embedded map.
+  const background = createSVGElement('rect');
+  setAttrs(background, {
+    width,
+    height,
+    fill: layout.theme.colors.background,
+    'aria-hidden': 'true',
+  });
+  svg.appendChild(background);
+
   const bulk = features.length > BULK_ANIMATION_THRESHOLD;
   let mapStaggerBudget = 0;
   if (animate && animation?.enter) {
@@ -383,6 +393,7 @@ export function renderMapSVG(layout: GeoMapLayout, opts?: { animate?: boolean })
     const stagger = !bulk && n > 1 ? mapStaggerBudget / (n - 1) : 0;
     stampAnimationVars(svg, {
       duration: perFeature,
+      spring: animation.enter.spring,
       stagger,
       annotationDelay: animation.annotationDelay,
       ease: animation.enter.ease,

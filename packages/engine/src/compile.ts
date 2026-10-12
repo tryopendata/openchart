@@ -1,3 +1,4 @@
+import { diagnoseChart } from './design/diagnostics';
 /**
  * Main compile API: the public entry points for the engine.
  *
@@ -45,6 +46,7 @@ import {
   MAX_SR_TABLE_ROWS,
   resolveChromeEconomy,
   resolveTheme,
+  wrapText,
 } from '@opendata-ai/openchart-core';
 import { collectPinnedOverlapWarnings } from './annotations/collisions';
 import { computeAnnotations } from './annotations/compute';
@@ -807,6 +809,13 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
     ? { x: undefined, y: undefined }
     : computeAxes(scales, chartArea, strategy, theme, options.measureText, {
         data: renderSpec.data,
+        preserveEnd:
+          typeof (spec as ChartSpec).responsive === 'object'
+            ? (
+                (spec as ChartSpec)
+                  .responsive as import('@opendata-ai/openchart-core').ResponsiveConfig
+              ).preserveEnd
+            : false,
         encoding: renderSpec.encoding as Encoding,
         skipX,
         skipY,
@@ -993,12 +1002,69 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
         reserve > currentReserve &&
         (options.footnotePass ?? 0) < MAX_FOOTNOTE_PASSES
       ) {
+        const grow = ((spec as ChartSpec).chromeLayout ?? options.chromeLayout) === 'grow';
         return compileChart(spec, {
           ...optionsInput,
+          height: optionsInput.height + (grow ? reserve - currentReserve : 0),
           footnoteReserve: reserve,
           footnotePass: (options.footnotePass ?? 0) + 1,
         });
       }
+    }
+  }
+
+  const responsive = (spec as ChartSpec).responsive;
+  const wantsSummary = typeof responsive === 'object' && responsive.labelSummary;
+  const seriesSummary =
+    wantsSummary && endpointLabels.entries.length === 0
+      ? computeEndpointLabels(chartSpec, marks, theme, chartArea, undefined, false).entries.map(
+          (entry) => ({
+            key: entry.seriesKey,
+            text: `${entry.seriesKey} · ${entry.value}`,
+            lines: wrapText(
+              `${entry.seriesKey} · ${entry.value}`,
+              theme.fonts.sizes.small,
+              500,
+              Math.max(1, options.width - 2 * theme.spacing.padding),
+              options.measureText,
+            ).flatMap((line) => {
+              // Break an unspaced identifier too: editorial labels may be URLs or codes.
+              const max = Math.max(1, options.width - 2 * theme.spacing.padding);
+              const chunks: string[] = [];
+              let chunk = '';
+              for (const character of line) {
+                const candidate = chunk + character;
+                if (chunk && measure(candidate, theme.fonts.sizes.small, 500) > max) {
+                  chunks.push(chunk);
+                  chunk = character;
+                } else chunk = candidate;
+              }
+              if (chunk) chunks.push(chunk);
+              return chunks;
+            }),
+            color: entry.color,
+          }),
+        )
+      : [];
+  if (seriesSummary.length) {
+    const reserve = footnoteBandHeight(
+      (footnotes?.length ?? 0) +
+        seriesSummary.reduce((count, entry) => count + entry.lines.length, 0),
+      theme,
+    );
+    const previousReserve = options.footnoteReserve ?? 0;
+    if (
+      !options.frozenChartArea &&
+      reserve > previousReserve &&
+      (options.footnotePass ?? 0) < MAX_FOOTNOTE_PASSES
+    ) {
+      const grow = ((spec as ChartSpec).chromeLayout ?? options.chromeLayout) === 'grow';
+      return compileChart(spec, {
+        ...optionsInput,
+        height: optionsInput.height + (grow ? reserve - previousReserve : 0),
+        footnoteReserve: reserve,
+        footnotePass: (options.footnotePass ?? 0) + 1,
+      });
     }
   }
 
@@ -1031,13 +1097,17 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
   // Assign animationIndex for stagger ordering when animation is enabled
   assignAnimationIndices(marks, resolvedAnimation);
 
-  const chrome = footnotes ? { ...dims.chrome, footnotes } : dims.chrome;
+  const chrome = {
+    ...dims.chrome,
+    ...(footnotes ? { footnotes } : {}),
+    ...(seriesSummary.length ? { seriesSummary } : {}),
+  };
 
   // Scale inversion anchors for edit-mode anchor drag (pixel -> data-space)
   const xInvert = resolveScaleInvert(scales.x);
   const yInvert = resolveScaleInvert(scales.y);
 
-  return {
+  const layout: ChartLayout = {
     area: chartArea,
     chrome,
     metrics: dims.metrics,
@@ -1078,6 +1148,11 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
     ...(yInvert ? { yInvert } : {}),
     ...(markRenderMode === 'canvas' ? { markRenderMode } : {}),
   };
+  if (options.onDiagnostic) {
+    for (const diagnostic of diagnoseChart(spec as ChartSpec, layout))
+      options.onDiagnostic(diagnostic);
+  }
+  return layout;
 }
 
 // ---------------------------------------------------------------------------

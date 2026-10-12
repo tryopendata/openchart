@@ -10,6 +10,7 @@
 
 // Re-import for use in LegendConfig and overrides (avoids circular by importing from sibling)
 import type { Breakpoint, LegendPosition } from '../responsive/breakpoints';
+import type { FieldMetadata } from './design';
 import type { SortState } from './layout';
 import type { ColumnConfig } from './table';
 import type { SeriesStrategy, TokenValue } from './theme';
@@ -1603,6 +1604,16 @@ export interface SeriesStyle {
  */
 export type AnimationEase = 'smooth' | 'snappy';
 
+/** Opt-in motion language. `legacy` preserves the v8 tween timing. */
+export type AnimationPreset = 'fluid' | 'subtle' | 'legacy';
+
+/** Physical spring parameters. Quantitative motion is bounded at critical damping. */
+export interface SpringConfig {
+  stiffness?: number;
+  damping?: number;
+  mass?: number;
+}
+
 /** Stagger configuration for sequential element reveal. */
 export interface AnimationStagger {
   /** Delay between each element in ms. Default: 80 */
@@ -1613,6 +1624,10 @@ export interface AnimationStagger {
 
 /** Fine-grained responsive behavior configuration. */
 export interface ResponsiveConfig {
+  /** Preserve the final temporal boundary before thinning interior ticks. */
+  preserveEnd?: boolean;
+  /** Move direct series labels into a keyed list when the inline column cannot fit. */
+  labelSummary?: boolean;
   /**
    * Automatic annotation thinning at narrow widths. When true (default),
    * annotations that can't be placed without overlap are demoted to numbered
@@ -1627,6 +1642,8 @@ export interface ResponsiveConfig {
  * Each phase can be true (use defaults) or a config object.
  */
 export interface AnimationPhaseConfig {
+  /** Spring mode. Cannot be combined with duration or ease in this phase. */
+  spring?: SpringConfig;
   /** Duration in ms. Default: 500 for enter. */
   duration?: number;
   /** Easing preset. Default: 'smooth'. */
@@ -1655,6 +1672,8 @@ export interface UpdatePhaseConfig extends AnimationPhaseConfig {
  * following Vega's encoding set model.
  */
 export interface AnimationConfig {
+  /** Base preset; explicit phase settings take precedence. */
+  preset?: AnimationPreset;
   /** Entrance animation when chart first renders. */
   enter?: AnimationPhaseConfig | boolean;
   /** Transition animation when data updates. */
@@ -1671,7 +1690,7 @@ export interface AnimationConfig {
  * - false/omitted: no animation (current behavior)
  * - AnimationConfig: full control via enter/update/exit phases
  */
-export type AnimationSpec = boolean | AnimationConfig;
+export type AnimationSpec = boolean | AnimationPreset | AnimationConfig;
 
 /**
  * Chart display mode.
@@ -1958,6 +1977,8 @@ export interface A11yConfig {
  * @internal
  */
 interface BaseChartSpec<TData extends DataRow = DataRow> {
+  /** Optional authored measure, unit, provenance, and supplied interval metadata. */
+  fields?: Record<string, FieldMetadata>;
   /**
    * Data array: each element is a row with field values.
    * The Vega-Lite object form `{ values: [...] }` is also accepted at runtime
@@ -2245,6 +2266,10 @@ export type TableDensity = 'condensed' | 'regular' | 'relaxed';
  * heatmap coloring, inline sparklines, sorted columns, search, and pagination.
  */
 export interface TableSpec {
+  /** Compact layout. v8 defaults to cards; priority retains comparable columns with expandable details. */
+  mobileLayout?: 'cards' | 'priority' | 'scroll';
+  /** Optional authored measure, unit, provenance, and supplied interval metadata. */
+  fields?: Record<string, FieldMetadata>;
   /** Discriminant: always "table". */
   type: 'table';
   /** Data array: each element is a row. */
@@ -2825,6 +2850,8 @@ export interface GeoMapPointsLayer {
 }
 
 export interface GeoMapSpec {
+  /** Optional authored measure, unit, provenance, and supplied interval metadata. */
+  fields?: Record<string, FieldMetadata>;
   /** Discriminant: always "map". */
   type: 'map';
   /** Geo configuration: TopoJSON features, join key, and projection. */
