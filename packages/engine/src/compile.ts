@@ -1002,8 +1002,10 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
         reserve > currentReserve &&
         (options.footnotePass ?? 0) < MAX_FOOTNOTE_PASSES
       ) {
+        const grow = ((spec as ChartSpec).chromeLayout ?? options.chromeLayout) === 'grow';
         return compileChart(spec, {
           ...optionsInput,
+          height: optionsInput.height + (grow ? reserve - currentReserve : 0),
           footnoteReserve: reserve,
           footnotePass: (options.footnotePass ?? 0) + 1,
         });
@@ -1056,7 +1058,7 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
       reserve > previousReserve &&
       (options.footnotePass ?? 0) < MAX_FOOTNOTE_PASSES
     ) {
-      const grow = (spec as ChartSpec).chromeLayout === 'grow' || options.chromeLayout === 'grow';
+      const grow = ((spec as ChartSpec).chromeLayout ?? options.chromeLayout) === 'grow';
       return compileChart(spec, {
         ...optionsInput,
         height: optionsInput.height + (grow ? reserve - previousReserve : 0),

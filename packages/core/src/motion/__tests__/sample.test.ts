@@ -34,4 +34,12 @@ describe('deterministic quantitative motion', () => {
     expect(() => springDuration({ stiffness: Number.NaN })).toThrow('positive');
     expect(sampleMotion({ duration: 0 }, 0).position).toBe(1);
   });
+  it('uses the default curve when optional spring settings are explicitly undefined', () => {
+    const spring = { stiffness: undefined, damping: undefined, mass: undefined };
+    const duration = springDuration(spring);
+    expect(duration).toBe(springDuration(FLUID_SPRING));
+    expect(sampleMotion({ duration, spring }, duration / 2)).toEqual(
+      sampleMotion({ duration, spring: FLUID_SPRING }, duration / 2),
+    );
+  });
 });

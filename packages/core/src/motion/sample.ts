@@ -55,7 +55,9 @@ function springState(timeMs: number, config: SpringConfig): MotionSample {
 
 /** Resolve finite duration once, outside the frame loop. */
 export function springDuration(config: SpringConfig): number {
-  for (const [name, value] of Object.entries(config)) {
+  for (const name of ['stiffness', 'damping', 'mass'] as const) {
+    const value = config[name];
+    if (value === undefined) continue;
     if (!Number.isFinite(value) || value <= 0)
       throw new Error(`spring.${name} must be finite and positive`);
   }

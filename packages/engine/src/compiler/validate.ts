@@ -2221,12 +2221,9 @@ function validateAnimation(spec: Record<string, unknown>, errors: ValidationErro
         });
       } else {
         for (const [key, number] of Object.entries(settings.spring)) {
-          if (
-            !['stiffness', 'damping', 'mass'].includes(key) ||
-            typeof number !== 'number' ||
-            !Number.isFinite(number) ||
-            number <= 0
-          ) {
+          const known = ['stiffness', 'damping', 'mass'].includes(key);
+          if (known && number === undefined) continue;
+          if (!known || typeof number !== 'number' || !Number.isFinite(number) || number <= 0) {
             errors.push({
               code: 'INVALID_VALUE',
               suggestion: 'Use a named preset or separate valid spring and tween phase settings.',

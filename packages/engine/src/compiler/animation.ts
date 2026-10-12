@@ -83,6 +83,7 @@ export function resolveAnimation(spec: AnimationSpec | undefined): ResolvedAnima
 
   const enter = resolvePhase(config.enter, base(ENTER_DEFAULTS));
   const update = resolvePhase(config.update, base(UPDATE_DEFAULTS));
+  // Exits are brief fades; only an authored phase opts into spring timing.
   const exit = resolvePhase(
     config.exit,
     preset === 'legacy' ? EXIT_DEFAULTS : { ...EXIT_DEFAULTS, duration: 160 },

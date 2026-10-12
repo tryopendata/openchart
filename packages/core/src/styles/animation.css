@@ -37,7 +37,8 @@
     }
 
     & .oc-stack-reveal {
-      animation: oc-enter-bar var(--oc-animation-duration) var(--oc-animation-ease) both;
+      animation: oc-enter-bar var(--oc-animation-duration)
+        var(--oc-animation-ease, var(--oc-ease-smooth)) both;
     }
     & .oc-stack-reveal[data-orient="horizontal"] {
       animation-name: oc-enter-bar-h;

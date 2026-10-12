@@ -130,4 +130,21 @@ describe('design contracts', () => {
     expect(resolveAnimation(false)).toBeUndefined();
     expect(resolveAnimation(undefined)).toBeUndefined();
   });
+  it('compiles optional undefined spring settings while rejecting unknown settings', () => {
+    const authored: ChartSpec = {
+      ...spec,
+      animation: { enter: { spring: { stiffness: undefined, damping: undefined } } },
+    };
+    expect(validateSpec(authored).valid).toBe(true);
+    const layout = compileChart(authored, { width: 600, height: 400 });
+    const defaults = compileChart(
+      { ...spec, animation: { enter: { spring: {} } } },
+      { width: 600, height: 400 },
+    );
+    expect(layout.animation?.enter?.duration).toBe(defaults.animation?.enter?.duration);
+    expect(layout.marks).toEqual(defaults.marks);
+    expect(
+      validateSpec({ ...spec, animation: { enter: { spring: { typo: undefined } } } }).valid,
+    ).toBe(false);
+  });
 });

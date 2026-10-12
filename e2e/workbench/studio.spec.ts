@@ -37,9 +37,11 @@ test('all eight compositions render within the viewport and keep stable height',
     await expect(paper).toBeVisible();
     await expect(page.getByRole('alert')).toHaveCount(0);
     await expect.poll(async () => paper.evaluate((el) => el.getBoundingClientRect().height)).toBeGreaterThan(200);
-    // Wait for animation completion, then observe several real browser frames.
+    // The renderer removes its entrance state after the finite settling window.
+    // Do not await every document Animation.finished: Chromium can suspend those
+    // promises for sparklines inside closed mobile-table details.
+    await expect(paper.locator('.oc-animate')).toHaveCount(0);
     await page.evaluate(async () => {
-      await Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => {})));
       await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
     });
     const height = await paper.evaluate((el) => el.getBoundingClientRect().height);
