@@ -1,3 +1,4 @@
+import { buildLabelMotion } from './labels';
 /**
  * Data-update transition driver for bar/column, line, area, scatter/dot,
  * rule, tick, and text charts. Also transitions axis ticks, tick labels,
@@ -27,10 +28,9 @@ import type {
   LineMark,
   ResolvedAnimation,
 } from '@opendata-ai/openchart-core';
-import { isGradientDef } from '@opendata-ai/openchart-core';
+import { isGradientDef, sampleMotion } from '@opendata-ai/openchart-core';
 import { buildAreaPath, buildLinePath, EXIT_DEFAULTS } from '@opendata-ai/openchart-engine';
 import { buildGradientDefs } from '../gradient-utils';
-import { cubicOut } from '../motion/easing';
 
 import { applyTweenState, getKeyForTween, lerpArcGeom, snapTweenToFinal } from './apply';
 import { buildCanvasGridlinesTween, buildCanvasPointsTween } from './canvas-tweens';
@@ -258,11 +258,9 @@ export function runTransition(args: {
   // ones hold steady instead of blinking.
   buildAnnotationTweens(svg, prevLayout, nextLayout, tweens);
 
-  // Secondary element crossfade: endpoint labels and mark labels still use the
-  // blanket fade (annotations were promoted to the keyed path above).
-  const secondaryEls = collectSecondaryElements(svg);
-  // Store original opacities so we can restore them on completion
-  const secondaryOriginalOpacity = secondaryEls.map((el) => el.style.opacity ?? '');
+  // Surviving labels follow the same sampled geometry as their marks.
+  const labelMotion = buildLabelMotion(svg, prevLayout, nextLayout, fromSnapshot);
+  labelMotion.apply(0);
 
   // Apply all from-states SYNCHRONOUSLY before scheduling the first rAF
   for (const tw of tweens) {
@@ -277,10 +275,6 @@ export function runTransition(args: {
   // describes the destination layout, and rebuilding it per frame at 4k points
   // is exactly the cost the canvas layer exists to avoid.
   canvas?.setInteractionSuspended(true);
-  // Set secondary elements to invisible at start
-  for (const el of secondaryEls) {
-    el.style.opacity = '0';
-  }
 
   // Animation loop state
   let rafId: number | null = null;
@@ -307,7 +301,7 @@ export function runTransition(args: {
     }
 
     // Crossfade secondary elements: delayed 40%, over 60% of update duration
-    applySecondaryOpacity(secondaryEls, elapsed, enterDelay, enterDuration);
+    labelMotion.apply(sampleMotion(update, elapsed).position);
 
     // One paint per frame, after every tween has written its state.
     canvas?.repaint();
@@ -338,9 +332,6 @@ export function runTransition(args: {
     settleCanvas();
     pulsedDot = pulseSparklineTerminator(svg, marksContainer);
     // Restore secondary element opacities to their rendered values
-    for (let i = 0; i < secondaryEls.length; i++) {
-      secondaryEls[i].style.opacity = secondaryOriginalOpacity[i];
-    }
     onComplete();
   }
 
@@ -363,6 +354,7 @@ export function runTransition(args: {
   }
 
   function removeGhosts(): void {
+    labelMotion.apply(1);
     for (const ghost of ghosts) {
       ghost.parentNode?.removeChild(ghost);
     }
@@ -371,11 +363,13 @@ export function runTransition(args: {
   /** Capture the current interpolated geometry of all in-flight tweens. */
   function captureSnapshot(): GeometrySnapshot {
     const snap: GeometrySnapshot = new Map();
-    const tUpdate = Math.min(lastElapsed / update.duration, 1);
-    const easedUpdate = cubicOut(tUpdate);
-
     for (const tw of tweens) {
-      if (tw.kind !== 'update') continue;
+      const easedUpdate =
+        tw.kind === 'enter'
+          ? sampleMotion({ duration: enterDuration }, Math.max(0, lastElapsed - enterDelay))
+              .position
+          : sampleMotion(update, lastElapsed).position;
+      if (tw.kind === 'exit') continue;
 
       // Canvas points snapshot per-point from the packed arrays. The emitted
       // entries are plain `{type:'point'}` -- identical to what the SVG path
@@ -435,7 +429,7 @@ export function runTransition(args: {
           // Freeze the current interpolated path string
           const pts = interpolatePoints(tw.fromPts, tw.toPts, easedUpdate);
           const d = buildLinePath(pts, tw.interpolate);
-          snap.set(key, { type: 'line', d });
+          snap.set(key, { type: 'line', d, points: pts, pointKeys: tw.pointKeys });
           break;
         }
         case 'area': {
@@ -446,7 +440,14 @@ export function runTransition(args: {
           if (tw.hasStroke) {
             topD = buildLinePath(top, tw.interpolate);
           }
-          snap.set(key, { type: 'area', d, topD });
+          snap.set(key, {
+            type: 'area',
+            d,
+            topD,
+            points: top,
+            bottomPoints: bottom,
+            pointKeys: tw.pointKeys,
+          });
           break;
         }
         case 'arc': {
@@ -460,6 +461,7 @@ export function runTransition(args: {
         }
       }
     }
+    labelMotion.snapshot(snap);
     return snap;
   }
 
@@ -487,9 +489,6 @@ export function runTransition(args: {
       removeGhosts();
       settleCanvas();
       // Restore secondary element opacities on cancel
-      for (let i = 0; i < secondaryEls.length; i++) {
-        secondaryEls[i].style.opacity = secondaryOriginalOpacity[i];
-      }
     },
     get running() {
       return running;
@@ -505,7 +504,7 @@ export function runTransition(args: {
       for (const tw of tweens) {
         applyTweenState(tw, elapsedMs, update, exit, enterDelay, enterDuration);
       }
-      applySecondaryOpacity(secondaryEls, elapsedMs, enterDelay, enterDuration);
+      labelMotion.apply(sampleMotion(update, elapsedMs).position);
       if (elapsedMs >= totalMs) {
         // Snap to exact final geometry (paths, ghosts removed) so the last frame
         // is pixel-correct, but do NOT flip `running` — the caller decides when
@@ -589,33 +588,4 @@ function pulseSparklineTerminator(
     }, PULSE_DURATION_MS),
   );
   return dot;
-}
-
-export function collectSecondaryElements(svg: SVGSVGElement): SVGElement[] {
-  const els: SVGElement[] = [];
-  const epLabels = svg.querySelector('.oc-endpoint-labels') as SVGElement | null;
-  if (epLabels) els.push(epLabels);
-  const markLabels = svg.querySelector('.oc-mark-labels') as SVGElement | null;
-  if (markLabels) els.push(markLabels);
-  return els;
-}
-
-/** Apply delayed fade-in to secondary elements during transition. */
-export function applySecondaryOpacity(
-  els: SVGElement[],
-  elapsed: number,
-  enterDelay: number,
-  enterDuration: number,
-): void {
-  if (els.length === 0) return;
-  let t: number;
-  if (elapsed < enterDelay) {
-    t = 0;
-  } else {
-    t = Math.min((elapsed - enterDelay) / enterDuration, 1);
-  }
-  const opacity = String(cubicOut(t));
-  for (const el of els) {
-    el.style.opacity = opacity;
-  }
 }

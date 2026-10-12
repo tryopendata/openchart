@@ -1,4 +1,5 @@
 import type { AxisLayout, ChartLayout, PointMark } from '@opendata-ai/openchart-core';
+import { type MotionPhase, sampleMotion } from '@opendata-ai/openchart-core';
 import { serializeKeyValue } from '@opendata-ai/openchart-engine';
 import { cubicOut } from '../motion/easing';
 import { flattenFill } from '../scatter-canvas/state';
@@ -153,13 +154,13 @@ export function buildCanvasPointsTween(
 export function applyCanvasPointsState(
   tw: CanvasPointsTween,
   elapsed: number,
-  update: { duration: number },
-  exit: { duration: number },
+  update: MotionPhase,
+  exit: MotionPhase,
   enterDelay: number,
   enterDuration: number,
 ): void {
   const soa = tw.layer.state.marks;
-  const easedUpdate = cubicOut(Math.min(elapsed / update.duration, 1));
+  const easedUpdate = sampleMotion(update, elapsed).position;
 
   for (let s = 0; s < tw.soaIndex.length; s++) {
     const i = tw.soaIndex[s];
@@ -182,7 +183,7 @@ export function applyCanvasPointsState(
   // Exit ghosts hold their prev position and fade out on the exit clock.
   // The record is preallocated; only alpha changes frame to frame.
   if (tw.exitState) {
-    const easedExit = cubicOut(Math.min(elapsed / exit.duration, 1));
+    const easedExit = sampleMotion(exit, elapsed).position;
     tw.exitState.alpha = 1 - easedExit;
     tw.layer.state.exiting = tw.exitState;
   }
@@ -298,12 +299,12 @@ export function buildCanvasGridlinesTween(
 export function applyCanvasGridlinesState(
   tw: CanvasGridlinesTween,
   elapsed: number,
-  update: { duration: number },
+  update: MotionPhase,
   enterDelay: number,
   enterDuration: number,
 ): void {
   const live = tw.layer.state.gridlines;
-  const easedUpdate = cubicOut(Math.min(elapsed / update.duration, 1));
+  const easedUpdate = sampleMotion(update, elapsed).position;
   // Enters share the point tween's delayed-fade clock so the whole update
   // reads as one motion.
   const tEnter = elapsed < enterDelay ? 0 : Math.min((elapsed - enterDelay) / enterDuration, 1);

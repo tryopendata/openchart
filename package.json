@@ -36,7 +36,11 @@
     "test:visual:setup": "playwright install chromium webkit",
     "test:invariants": "playwright test --project=invariants --project=invariants-chromium-mobile --project=invariants-chromium-mobile-narrow --project=invariants-webkit-mobile",
     "test:perf": "playwright test --project=perf",
-    "prepare": "husky"
+    "prepare": "husky",
+    "dev:workbench": "cd examples && bun run dev:workbench",
+    "build:workbench": "cd examples && bun run build:workbench",
+    "capture:design": "node scripts/capture-design-baseline.mjs",
+    "test:workbench": "playwright test --config playwright.workbench.config.ts"
   },
   "overrides": {
     "strip-ansi": "6.0.1",

@@ -12,10 +12,14 @@ import type {
 } from '@opendata-ai/openchart-core';
 import { resolveMarkFill } from '../gradient-utils';
 import { renderSingleMark } from '../renderers/marks';
-
 import { resolveLineElement } from './apply';
 import type { MarkDomIndex } from './dom-index';
-import { geomFromMark, normalizePointArrays, resolveRectShapeElement } from './interpolate';
+import {
+  geomFromMark,
+  mergeKeyOrder,
+  normalizePointArrays,
+  resolveRectShapeElement,
+} from './interpolate';
 import type { ArcGeom, GeometrySnapshot, RectGeom, Tween } from './types';
 
 /**
@@ -223,7 +227,7 @@ export function buildLineTweens(
 
     // If interrupted mid-morph, freeze the current path and crossfade
     const snap = fromSnapshot?.get(key);
-    if (snap && snap.type === 'line') {
+    if (snap && snap.type === 'line' && !snap.points) {
       // Create ghost carrying the frozen mid-morph path
       const ghost = el.cloneNode(true) as SVGElement;
       ghost.classList.add('oc-ghost');
@@ -265,7 +269,10 @@ export function buildLineTweens(
       continue;
     }
 
-    const prevPKs = prev.pointKeys ?? prev.points.map((_, i) => `${i}`);
+    const prevPKs =
+      snap?.type === 'line' && snap.pointKeys
+        ? snap.pointKeys
+        : (prev.pointKeys ?? prev.points.map((_, i) => `${i}`));
     const nextPKs = next.pointKeys ?? next.points.map((_, i) => `${i}`);
 
     // Check if zero survivors (fully replaced dataset)
@@ -313,7 +320,12 @@ export function buildLineTweens(
       });
     } else {
       // Normal morph with point matching
-      const [fromPts, toPts] = normalizePointArrays(prev.points, next.points, prevPKs, nextPKs);
+      const [fromPts, toPts] = normalizePointArrays(
+        snap?.type === 'line' && snap.points ? snap.points : prev.points,
+        next.points,
+        prevPKs,
+        nextPKs,
+      );
 
       tweens.push({
         tweenType: 'line',
@@ -321,6 +333,7 @@ export function buildLineTweens(
         el,
         fromPts,
         toPts,
+        pointKeys: mergeKeyOrder(prevPKs, nextPKs),
         finalPoints: next.points,
         interpolate: next.interpolate,
         pathEl: resolveLinePathEl(el),
@@ -533,6 +546,7 @@ export function buildAreaTweens(
 
       tweens.push({
         tweenType: 'area',
+        pointKeys: mergeKeyOrder(prevPKs, nextPKs),
         kind: 'update',
         el,
         fromTop,

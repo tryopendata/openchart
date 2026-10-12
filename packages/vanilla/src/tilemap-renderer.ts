@@ -400,6 +400,7 @@ export function renderTileMapSVG(
     const stagger = Math.max(5, Math.round(800 / Math.max(tiles.length, 1)));
     stampAnimationVars(svg, {
       duration: animation.enter.duration,
+      spring: animation.enter.spring,
       stagger,
       annotationDelay: animation.annotationDelay,
       ease: animation.enter.ease,

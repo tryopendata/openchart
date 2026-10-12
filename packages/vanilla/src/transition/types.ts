@@ -12,13 +12,21 @@ import type { ArcMark, Point, RectMark } from '@opendata-ai/openchart-core';
 export type GeometrySnapshot = Map<string, SnapshotGeometry>;
 
 export type SnapshotGeometry =
+  | { type: 'attribute'; value: number }
   | { type: 'rect'; x: number; y: number; width: number; height: number }
   | { type: 'point'; cx: number; cy: number; r?: number }
   | { type: 'rule'; x1: number; y1: number; x2: number; y2: number }
   | { type: 'tick'; x1: number; y1: number; x2: number; y2: number }
   | { type: 'textMark'; x: number; y: number }
-  | { type: 'line'; d: string }
-  | { type: 'area'; d: string; topD?: string }
+  | { type: 'line'; d: string; points?: Point[]; pointKeys?: string[] }
+  | {
+      type: 'area';
+      d: string;
+      topD?: string;
+      points?: Point[];
+      bottomPoints?: Point[];
+      pointKeys?: string[];
+    }
   | {
       type: 'arc';
       startAngle: number;
@@ -90,6 +98,7 @@ export interface RectTween {
 }
 
 export interface LineTween {
+  pointKeys?: string[];
   tweenType: 'line';
   kind: 'update' | 'enter' | 'exit';
   el: SVGElement;
@@ -108,6 +117,7 @@ export interface LineTween {
 }
 
 export interface AreaTween {
+  pointKeys?: string[];
   tweenType: 'area';
   kind: 'update' | 'enter' | 'exit';
   el: SVGElement;

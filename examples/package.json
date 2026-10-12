@@ -6,21 +6,28 @@
     "dev": "ladle serve",
     "build": "ladle build",
     "typecheck": "tsc --noEmit",
-    "check:registry": "node scripts/check-registry-drift.mjs"
+    "check:registry": "node scripts/check-registry-drift.mjs",
+    "dev:workbench": "vite --config workbench.vite.config.ts --open /workbench.html",
+    "build:workbench": "vite build --config workbench.vite.config.ts",
+    "preview:workbench": "vite preview --config workbench.vite.config.ts"
   },
   "dependencies": {
     "@opendata-ai/openchart-core": "workspace:*",
     "@opendata-ai/openchart-engine": "workspace:*",
-    "@opendata-ai/openchart-vanilla": "workspace:*",
     "@opendata-ai/openchart-react": "workspace:*",
+    "@opendata-ai/openchart-vanilla": "workspace:*",
+    "d3-dsv": "^3.0.1",
+    "motion": "^14.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@ladle/react": "^5.1.1",
+    "@types/d3-dsv": "^3.0.7",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "us-atlas": "^3.0.1",
+    "vite": "^7.3.1",
     "world-atlas": "^2.0.2"
   }
 }

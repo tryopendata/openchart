@@ -127,7 +127,7 @@ interface TickContext {
 }
 
 /** Format a tick value based on the scale type. */
-function formatTickLabel(
+export function formatTickLabel(
   value: unknown,
   resolvedScale: ResolvedScale,
   compact = false,

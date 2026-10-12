@@ -1,3 +1,4 @@
+import { applyPriorityTable } from './table-responsive';
 /**
  * Table mount API: the main entry point for vanilla JS table usage.
  *
@@ -237,7 +238,17 @@ export function createTable(
     if (!wrapperElement) return;
     const { width } = getContainerDimensions();
 
-    wrapperElement.classList.toggle('oc-table--cards', width < BREAKPOINT_COMPACT_MAX);
+    const compact = width < BREAKPOINT_COMPACT_MAX;
+    wrapperElement.classList.toggle(
+      'oc-table--cards',
+      compact && (currentSpec.mobileLayout ?? 'cards') === 'cards',
+    );
+    if (currentLayout)
+      applyPriorityTable(
+        wrapperElement,
+        currentLayout,
+        compact && currentSpec.mobileLayout === 'priority',
+      );
 
     if (currentSpec.density !== undefined || currentSpec.compact === true) return;
 

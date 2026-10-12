@@ -155,3 +155,24 @@ export const terminal: ThemeConfig = {
   borderRadius: 4,
   seriesStrategy: 'accent-neutral',
 };
+
+/** Next-generation editorial composition; opt in during v8. */
+export const clarity: ThemeConfig = {
+  colors: {
+    background: { light: '#ffffff', dark: '#09090b' },
+    axis: { light: '#52525b', dark: '#a1a1aa' },
+  },
+  fonts: { sizes: { title: 26, subtitle: 14, body: 13, small: 12, axisTick: 12 } },
+  chrome: {
+    eyebrow: { color: { light: '#0f766e', dark: '#5eead4' } },
+    source: { fontSize: 12 },
+    footer: { fontSize: 12 },
+  },
+  spacing: { chromeToChart: 16, chartToFooter: 12 },
+};
+
+/** Documented v8 typography. This does not freeze the layout engine. */
+export const legacyEditorial: ThemeConfig = {
+  fonts: { sizes: { title: 26, subtitle: 14, body: 13, small: 11, axisTick: 11 } },
+  spacing: { padding: 20, chromeGap: 6, chromeToChart: 8, chartToFooter: 8 },
+};

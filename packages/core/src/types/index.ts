@@ -5,6 +5,17 @@
  * from '@opendata-ai/openchart-core' directly.
  */
 
+export type {
+  CompositionRecommendation,
+  DatasetBinding,
+  DesignDiagnostic,
+  DesignQuestion,
+  FieldMetadata,
+  ObservationIdentity,
+  ReaderObservation,
+  ReaderSelection,
+  SpecPatch,
+} from './design';
 // Encoding rules
 export type {
   ChannelRule,
@@ -127,6 +138,7 @@ export type {
   AnimationConfig,
   AnimationEase,
   AnimationPhaseConfig,
+  AnimationPreset,
   AnimationSpec,
   AnimationStagger,
   Annotation,
@@ -230,6 +242,7 @@ export type {
   SeriesSearchConfig,
   SeriesStyle,
   SortByField,
+  SpringConfig,
   StoredVizSpec,
   TableDensity,
   TableSpec,

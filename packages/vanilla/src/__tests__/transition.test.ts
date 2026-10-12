@@ -282,7 +282,7 @@ describe('canTransition gate', () => {
     expect(canTransition(args)).toBe(false);
   });
 
-  it('gate 6: fails when dimensions change', () => {
+  it('allows compatible geometry to retarget when dimensions change', () => {
     const specA = columnSpec(DATA_A);
     const specB = columnSpec(DATA_B);
     expect(
@@ -294,7 +294,7 @@ describe('canTransition gate', () => {
         isFirstRender: false,
         entranceInFlight: false,
       }),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it('gate 7: fails when mark count exceeds 500', () => {
@@ -1679,9 +1679,8 @@ describe('interruption retargeting', () => {
     // Should have entries for updated marks
     expect(snap.size).toBeGreaterThan(0);
 
-    // Each entry should be a rect with intermediate values
-    for (const [, geom] of snap) {
-      expect(geom.type).toBe('rect');
+    for (const mark of layoutB.marks.filter((mark) => mark.type === 'rect')) {
+      expect(snap.get(mark.key!)?.type).toBe('rect');
     }
 
     handle.cancel();
@@ -1832,7 +1831,7 @@ describe('secondary element crossfade', () => {
     }
   });
 
-  it('endpoint labels start at opacity 0 during transition', () => {
+  it('surviving endpoint labels remain visible during transition', () => {
     // Use a line chart that produces endpoint labels
     const lineSpecWithLabels: ChartSpec = {
       animation: true,
@@ -1873,10 +1872,11 @@ describe('secondary element crossfade', () => {
       onComplete: () => {},
     });
 
-    // Check if endpoint labels exist
+    // Labels remain available while their positions follow the marks.
     const epLabels = svg.querySelector('.oc-endpoint-labels') as SVGElement | null;
+    expect(epLabels).not.toBeNull();
     if (epLabels) {
-      expect(epLabels.style.opacity).toBe('0');
+      expect(epLabels.style.opacity).not.toBe('0');
 
       runToCompletion();
 

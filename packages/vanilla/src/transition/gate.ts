@@ -70,11 +70,31 @@ export function canTransitionSpecShape(prevSpec: unknown, nextSpec: unknown): bo
   const prevEnc = (prev as { encoding?: Record<string, Record<string, unknown>> }).encoding;
   const nextEnc = (next as { encoding?: Record<string, Record<string, unknown>> }).encoding;
   if (!prevEnc || !nextEnc) return false;
+  if (JSON.stringify(prev.transform) !== JSON.stringify(next.transform)) return false;
+  for (const channel of ['x', 'y', 'theta', 'radius']) {
+    for (const property of ['aggregate', 'bin', 'stack', 'timeUnit']) {
+      if (
+        JSON.stringify(prevEnc[channel]?.[property]) !==
+        JSON.stringify(nextEnc[channel]?.[property])
+      )
+        return false;
+    }
+    const field = prevEnc[channel]?.field as string | undefined;
+    if (field) {
+      const a = (prev.fields as Record<string, Record<string, unknown>> | undefined)?.[field];
+      const b = (next.fields as Record<string, Record<string, unknown>> | undefined)?.[field];
+      if (['unit', 'measure', 'representation'].some((key) => a?.[key] !== b?.[key])) return false;
+    }
+  }
   return !(
     prevEnc.x?.field !== nextEnc.x?.field ||
     prevEnc.x?.type !== nextEnc.x?.type ||
+    (prevEnc.x?.scale as { type?: string } | undefined)?.type !==
+      (nextEnc.x?.scale as { type?: string } | undefined)?.type ||
     prevEnc.y?.field !== nextEnc.y?.field ||
     prevEnc.y?.type !== nextEnc.y?.type ||
+    (prevEnc.y?.scale as { type?: string } | undefined)?.type !==
+      (nextEnc.y?.scale as { type?: string } | undefined)?.type ||
     prevEnc.theta?.field !== nextEnc.theta?.field ||
     prevEnc.theta?.type !== nextEnc.theta?.type ||
     prevEnc.color?.field !== nextEnc.color?.field ||
@@ -113,14 +133,6 @@ export function canTransition(args: {
 
   // 5. Entrance animation not in flight
   if (entranceInFlight) return false;
-
-  // 6. Layout dimensions unchanged
-  if (
-    prevLayout.dimensions.width !== nextLayout.dimensions.width ||
-    prevLayout.dimensions.height !== nextLayout.dimensions.height
-  ) {
-    return false;
-  }
 
   // 7. Mark count within the update cap. Per-frame SVG attribute writes on
   //    thousands of elements drop frames on low-end devices, so past the cap

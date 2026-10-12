@@ -57,9 +57,11 @@ export {
   adaptForLightLineStroke,
   adaptTheme,
   broadsheet,
+  clarity,
   DEFAULT_THEME,
   editorial,
   essay,
+  legacyEditorial,
   resolveTheme,
   terminal,
   wire,
@@ -226,5 +228,14 @@ export { deepMergeSpec } from './helpers/deep-merge';
 // CSS token definitions (single source of truth for tokens.css / dark.css)
 // ---------------------------------------------------------------------------
 
+export type { MotionPhase, MotionSample } from './motion/sample';
+export {
+  FLUID_SPRING,
+  MAX_SPRING_DURATION,
+  MOTION_REST_THRESHOLD,
+  motionCSS,
+  sampleMotion,
+  springDuration,
+} from './motion/sample';
 export type { CssTokenDef } from './styles/token-definitions';
 export { CSS_TOKEN_ROOT_SELECTORS, CSS_TOKENS, cssTokenDefault } from './styles/token-definitions';

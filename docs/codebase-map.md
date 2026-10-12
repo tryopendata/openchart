@@ -345,3 +345,20 @@ These are easy mistakes — written down so the next agent doesn't search for th
 - Run `grep -rn "<symbol>" packages/ --include="*.ts" --include="*.tsx"` from the repo root.
 - Use `Skill(openchart:openchart)` for design-philosophy / visual-QA references.
 - The skill's `references/visual-qa.md` has a defect catalog with fix patterns for chart rendering issues.
+
+## Reference authoring application
+
+| Concern | Location |
+| --- | --- |
+| Static Studio entry and build | `examples/workbench.html`, `examples/workbench.vite.config.ts` |
+| Canonical document, imports and history | `examples/src/workbench/document.ts`, `Workbench.tsx` |
+| Renderer lifecycle, reader/editor separation | `examples/src/workbench/Preview.tsx` |
+| Field correction, design and recommendations | `DataEditor.tsx`, `Inspector.tsx` in the workbench |
+| Reference compositions | `examples/src/workbench/patterns.ts` |
+| Metadata, diagnostic and reader contracts | `packages/core/src/types/design.ts` |
+| Deterministic bounded spring sampler | `packages/core/src/motion/sample.ts` |
+| Pure review/recommendation/patch/identity APIs | `packages/engine/src/design/` |
+| Retained SVG and sampled reader geometry | `packages/vanilla/src/transition/{reconcile,scene,labels}.ts`, `reader.ts` |
+| Production browser gates | `playwright.workbench.config.ts`, `e2e/workbench/studio.spec.ts` |
+
+See [workbench deployment and boundaries](workbench.md) before adding host persistence or publishing.

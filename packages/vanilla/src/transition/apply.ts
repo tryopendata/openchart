@@ -1,5 +1,5 @@
+import { type MotionPhase, sampleMotion } from '@opendata-ai/openchart-core';
 import { buildArcPath } from '@opendata-ai/openchart-engine';
-import { cubicOut } from '../motion/easing';
 
 import {
   applyCanvasGridlinesState,
@@ -72,8 +72,8 @@ function resolveTweenLineElement(tw: RuleTween | TickTween): SVGElement {
 export function applyTweenState(
   tw: Tween,
   elapsed: number,
-  update: { duration: number },
-  exit: { duration: number },
+  update: MotionPhase,
+  exit: MotionPhase,
   enterDelay: number,
   enterDuration: number,
 ): void {
@@ -88,21 +88,10 @@ export function applyTweenState(
     return;
   }
 
-  let tLocal: number;
-
-  if (tw.kind === 'exit') {
-    tLocal = Math.min(elapsed / exit.duration, 1);
-  } else if (tw.kind === 'enter') {
-    if (elapsed < enterDelay) {
-      tLocal = 0;
-    } else {
-      tLocal = Math.min((elapsed - enterDelay) / enterDuration, 1);
-    }
-  } else {
-    tLocal = Math.min(elapsed / update.duration, 1);
-  }
-
-  const eased = cubicOut(tLocal);
+  const phase =
+    tw.kind === 'exit' ? exit : tw.kind === 'enter' ? { duration: enterDuration } : update;
+  const elapsedMs = tw.kind === 'enter' ? Math.max(0, elapsed - enterDelay) : elapsed;
+  const eased = sampleMotion(phase, elapsedMs).position;
 
   switch (tw.tweenType) {
     case 'rect': {

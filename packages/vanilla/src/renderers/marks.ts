@@ -168,6 +168,7 @@ function renderLineMark(mark: LineMark, index: number): SVGElement {
   if (mark.label?.visible) {
     const label = createSVGElement('text');
     label.setAttribute('class', 'oc-mark-label');
+    if (mark.key) label.setAttribute('data-label-key', mark.key);
     if (mark.seriesKey) {
       label.setAttribute('data-series', mark.seriesKey);
     }
@@ -346,6 +347,7 @@ function renderArcMark(mark: ArcMark, index: number): SVGElement {
   if (mark.label?.visible) {
     const label = createSVGElement('text');
     label.setAttribute('class', 'oc-mark-label');
+    if (mark.key) label.setAttribute('data-label-key', mark.key);
     // Label position is in absolute coords, but we're in a translated group,
     // so subtract the center offset
     setAttrs(label, {
@@ -602,6 +604,7 @@ export function renderMarks(
 
     const label = createSVGElement('text');
     label.setAttribute('class', 'oc-mark-label');
+    if (mark.key) label.setAttribute('data-label-key', mark.key);
     setAttrs(label, { x: rect.label.x, y: rect.label.y });
     applyTextStyle(label, rect.label.style);
     applyLabelHalo(label, rect.label);

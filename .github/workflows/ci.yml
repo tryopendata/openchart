@@ -85,3 +85,28 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+
+  workbench:
+    name: Workbench production browser QA
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Setup
+        uses: ./.github/actions/setup-bun
+      - name: Install browsers
+        run: bunx playwright install --with-deps chromium webkit
+      - name: Test production artifact
+        run: bun run test:workbench
+      - name: Upload browser evidence
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: workbench-browser-evidence
+          path: workbench-test-results/
+          retention-days: 7

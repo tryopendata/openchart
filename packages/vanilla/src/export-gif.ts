@@ -19,7 +19,13 @@
  * untouched. `gifenc` is an optional peer dependency, loaded dynamically.
  */
 
-import type { AnimationEase, ResolvedAnimation, ResolvedTheme } from '@opendata-ai/openchart-core';
+import {
+  type AnimationEase,
+  type MotionPhase,
+  type ResolvedAnimation,
+  type ResolvedTheme,
+  sampleMotion,
+} from '@opendata-ai/openchart-core';
 import {
   embedFonts,
   ensureSVGDimensions,
@@ -126,6 +132,13 @@ export function classifyTarget(
 ): { el: SVGElement; kind: AnimationKind } | null {
   const cls = groupOrEl.getAttribute('class') ?? '';
 
+  if (cls.includes('oc-stack-reveal'))
+    return {
+      el: groupOrEl,
+      kind:
+        groupOrEl.getAttribute('data-orient') === 'horizontal' ? 'bar-horizontal' : 'bar-vertical',
+    };
+
   // Bars: CSS animates the child <rect>; clip + fade. Orient on the group.
   if (cls.includes('oc-mark-rect') || cls.includes('oc-mark-bar')) {
     const rect = groupOrEl.querySelector('rect') ?? groupOrEl.querySelector('path');
@@ -168,6 +181,7 @@ function collectTargets(
   const targets: AnimatedTarget[] = [];
 
   for (const el of els) {
+    if (!el.classList.contains('oc-stack-reveal') && el.closest('.oc-stack-reveal')) continue;
     const classified = classifyTarget(el);
     if (!classified) continue;
     const idx = parseInt(el.getAttribute('data-animation-index') ?? '0', 10) || 0;
@@ -239,9 +253,14 @@ export function applyFrameState(
   target: AnimatedTarget,
   nowMs: number,
   easeKind: AnimationEase,
+  phase?: MotionPhase,
 ): void {
   const p = clamp01((nowMs - target.startMs) / target.durationMs);
-  const eased = ease(p, easeKind);
+  const progress = (fraction: number) =>
+    phase?.spring
+      ? sampleMotion(phase, clamp01(fraction) * phase.duration).position
+      : ease(clamp01(fraction), easeKind);
+  const eased = progress(p);
   const style = target.el.style;
 
   switch (target.kind) {
@@ -249,21 +268,21 @@ export function applyFrameState(
       // oc-enter-bar: clip-path inset(100%→0 from top) + opacity (full by 75%).
       const inset = (1 - eased) * 100;
       style.clipPath = `inset(${inset}% 0 0 0)`;
-      style.opacity = String(clamp01(p / 0.75));
+      style.opacity = String(progress(p / 0.75));
       break;
     }
     case 'bar-horizontal': {
       // oc-enter-bar-h: clip-path inset(0 100%→0 from right) + opacity.
       const inset = (1 - eased) * 100;
       style.clipPath = `inset(0 ${inset}% 0 0)`;
-      style.opacity = String(clamp01(p / 0.75));
+      style.opacity = String(progress(p / 0.75));
       break;
     }
     case 'line-area': {
       // oc-enter-line: clip-path inset(0 100%→0 from right); opacity full by 15%.
       const inset = (1 - eased) * 100;
       style.clipPath = `inset(0 ${inset}% 0 0)`;
-      style.opacity = String(clamp01(p / 0.15));
+      style.opacity = String(progress(p / 0.15));
       break;
     }
     case 'fade': {
@@ -387,7 +406,7 @@ export async function exportGIF(
     if (nowMs === null) {
       for (const t of targets) clearFrameState(t);
     } else {
-      for (const t of targets) applyFrameState(t, nowMs, easeKind);
+      for (const t of targets) applyFrameState(t, nowMs, easeKind, enter || undefined);
     }
     const svgString = ensureSVGDimensions(exportSVG(clone), width, height);
     const canvas = await rasterizeSVGToCanvas(svgString, width, height, dpi, fillBackground);

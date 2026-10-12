@@ -71,6 +71,8 @@ export { createGeoMap } from './map-mount';
 export type { ChartInstance, ExportOptions, MountOptions, UpdateOptions } from './mount';
 // Main mount API
 export { createChart } from './mount';
+export type { ReaderController } from './reader';
+export { createReader } from './reader';
 // Geometry helpers for mark path reconstruction
 export { rectPathWithCorners } from './renderers/marks';
 // Cell renderers

@@ -23,6 +23,7 @@ import type {
   ResolvedAnimationPhase,
   UpdatePhaseConfig,
 } from '@opendata-ai/openchart-core';
+import { FLUID_SPRING, springDuration } from '@opendata-ai/openchart-core';
 
 /** Default values for entrance animation. */
 export const ENTER_DEFAULTS: ResolvedAnimationPhase = {
@@ -72,11 +73,20 @@ export function resolveAnimation(spec: AnimationSpec | undefined): ResolvedAnima
   }
 
   // AnimationConfig object
-  const config = spec as AnimationConfig;
+  const config: AnimationConfig = typeof spec === 'string' ? { preset: spec } : spec;
+  const preset = config.preset ?? 'legacy';
+  const spring = preset === 'fluid' ? { ...FLUID_SPRING } : undefined;
+  const base = (defaults: ResolvedAnimationPhase): ResolvedAnimationPhase =>
+    preset === 'legacy'
+      ? defaults
+      : { ...defaults, duration: spring ? springDuration(spring) : 250, spring, staggerDelay: 0 };
 
-  const enter = resolvePhase(config.enter, ENTER_DEFAULTS);
-  const update = resolvePhase(config.update, UPDATE_DEFAULTS);
-  const exit = resolvePhase(config.exit, EXIT_DEFAULTS);
+  const enter = resolvePhase(config.enter, base(ENTER_DEFAULTS));
+  const update = resolvePhase(config.update, base(UPDATE_DEFAULTS));
+  const exit = resolvePhase(
+    config.exit,
+    preset === 'legacy' ? EXIT_DEFAULTS : { ...EXIT_DEFAULTS, duration: 160 },
+  );
 
   // maxMarks is update-only, so it is applied here rather than in the
   // phase-agnostic resolvePhase. No default is baked in: the renderer supplies
@@ -102,7 +112,7 @@ export function resolveAnimation(spec: AnimationSpec | undefined): ResolvedAnima
     enter: enter ?? undefined,
     update: update ?? undefined,
     exit: exit ?? undefined,
-    annotationDelay: config.annotationDelay ?? DEFAULT_ANNOTATION_DELAY,
+    annotationDelay: config.annotationDelay ?? (preset === 'legacy' ? DEFAULT_ANNOTATION_DELAY : 0),
   };
 }
 
@@ -132,10 +142,17 @@ function resolvePhase(
   }
 
   const cfg = phase as AnimationPhaseConfig;
+  if (cfg.spring && (cfg.duration !== undefined || cfg.ease !== undefined)) {
+    throw new Error('An animation phase cannot combine spring with duration or ease.');
+  }
+  const spring =
+    cfg.spring ??
+    (cfg.duration !== undefined || cfg.ease !== undefined ? undefined : defaults.spring);
   const stagger = resolveStagger(cfg.stagger, defaults);
 
   return {
-    duration: cfg.duration ?? defaults.duration,
+    duration: spring ? springDuration(spring) : (cfg.duration ?? defaults.duration),
+    spring,
     ease: cfg.ease ?? defaults.ease,
     staggerDelay: stagger.delay,
     staggerOrder: stagger.order,
