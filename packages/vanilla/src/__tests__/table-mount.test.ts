@@ -538,6 +538,61 @@ describe('createTable', () => {
     table.destroy();
   });
 
+  it('keeps the search query, caret and focus through responsive and controlled updates', () => {
+    vi.useFakeTimers();
+    const table = createTable(container, makeSpec({ search: true }));
+    const input = container.querySelector('.oc-table-search input') as HTMLInputElement;
+    input.focus();
+    input.value = 'Alice';
+    input.setSelectionRange(2, 2);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    table.setState({ page: 0 }); // Unrelated sync must not discard queued typing.
+    table.setState({ search: '' }); // Nor a framework's no-op state synchronization.
+    table.resize(); // Resize can arrive before the search debounce settles.
+    let current = container.querySelector('.oc-table-search input') as HTMLInputElement;
+    expect(document.activeElement).toBe(current);
+    expect(current.value).toBe('Alice');
+    expect(current.selectionStart).toBe(2);
+    vi.advanceTimersByTime(250);
+    table.resize(); // Filtering itself changes the table's height.
+    current = container.querySelector('.oc-table-search input') as HTMLInputElement;
+    expect(document.activeElement).toBe(current);
+    expect(current.value).toBe('Alice');
+    expect(container.querySelectorAll('tbody tr')).toHaveLength(1);
+    table.setState({ search: 'Bob' });
+    current = container.querySelector('.oc-table-search input') as HTMLInputElement;
+    expect(document.activeElement).toBe(current);
+    expect(current.value).toBe('Bob');
+    table.destroy();
+    vi.useRealTimers();
+  });
+
+  it.each([
+    false,
+    true,
+  ])('explicit search replacement cancels pending typing (controlled=%s)', (controlled) => {
+    vi.useFakeTimers();
+    const table = createTable(
+      container,
+      makeSpec({ search: true }),
+      controlled ? { externalState: { search: '', page: 0, sort: null } } : {},
+    );
+    const input = container.querySelector('.oc-table-search input') as HTMLInputElement;
+    input.focus();
+    input.value = 'Alice';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    table.setState({ search: 'Bob' });
+    vi.advanceTimersByTime(250);
+    const current = container.querySelector('.oc-table-search input') as HTMLInputElement;
+    expect(document.activeElement).toBe(current);
+    expect(current.value).toBe('Bob');
+    expect(table.getState().search).toBe('Bob');
+    expect(container.querySelector('tbody')?.textContent).toContain('Bob');
+    expect(container.querySelector('tbody')?.textContent).not.toContain('Alice');
+    table.destroy();
+    vi.useRealTimers();
+  });
+
   it('resize() re-renders the table', () => {
     const spec = makeSpec();
     const table = createTable(container, spec);

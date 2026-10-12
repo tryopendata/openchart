@@ -23,6 +23,10 @@ Dependencies are strictly one-directional. Core imports from nothing. Engine imp
 
 Each package re-exports core types for consumer convenience, so users typically only import from one package.
 
+## Separate authoring product
+
+`apps/studio` is a private application that consumes built public core, engine and vanilla exports. It owns React/Motion controls, import, local projects, reference data and assets. The published library packages must never import Studio or acquire its product dependencies. Library build/test/typecheck commands exclude the app; dedicated app CI and extraction tests enforce the boundary. Studio can move into another repository without changing `VizSpec` or the chart runtime. See [Studio deployment and capabilities](workbench.md).
+
 ## Compilation pipeline
 
 The engine is the heart of the library. It takes a raw spec (plain JSON object) and produces a fully resolved layout object with computed positions, colors, and marks ready for rendering.

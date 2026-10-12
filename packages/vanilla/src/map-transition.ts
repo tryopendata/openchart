@@ -140,7 +140,9 @@ export function runMapFillTransition(
     const key = p.getAttribute('data-key');
     const to = p.getAttribute('fill');
     const from = key ? snapshot.fills.get(key) : undefined;
-    if (from && to && from !== to) {
+    // Pattern references belong to the newly rendered defs. Interpolating them
+    // as RGB produces black and can reference a removed pattern during updates.
+    if (from && to && from !== to && !from.startsWith('url(') && !to.startsWith('url(')) {
       tweens.push({ kind: 'fill', el: p, to, interp: interpolateRgb(from, to) });
       p.setAttribute('fill', from);
     }

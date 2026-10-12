@@ -465,6 +465,7 @@ export function createTable(
       '.oc-table-search input',
     ) as HTMLInputElement | null;
     const hadFocus = searchInput && document.activeElement === searchInput;
+    const pendingQuery = searchDebounceTimer !== null ? searchInput?.value : undefined;
     const selectionStart = searchInput?.selectionStart ?? 0;
     const selectionEnd = searchInput?.selectionEnd ?? 0;
 
@@ -476,6 +477,7 @@ export function createTable(
         '.oc-table-search input',
       ) as HTMLInputElement | null;
       if (newInput) {
+        if (pendingQuery !== undefined) newInput.value = pendingQuery;
         newInput.focus();
         newInput.setSelectionRange(selectionStart, selectionEnd);
       }
@@ -491,7 +493,7 @@ export function createTable(
   function resize(): void {
     if (destroyed) return;
     if (cleanupAnimations) return; // Skip resize during entrance animation
-    render();
+    rerender();
   }
 
   function doExport(format: 'csv'): string {
@@ -528,6 +530,16 @@ export function createTable(
 
   function setState(partial: Partial<TableState>): void {
     if (destroyed) return;
+    // An explicit replacement wins over queued typing. No-op framework sync
+    // and unrelated state changes must leave the reader's pending edit intact.
+    if (
+      partial.search !== undefined &&
+      partial.search !== getState().search &&
+      searchDebounceTimer !== null
+    ) {
+      clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = null;
+    }
 
     // In controlled mode compile() reads from options.externalState, so
     // updating internalState alone would be ignored. Push the new values onto
@@ -551,7 +563,7 @@ export function createTable(
       if (partial.page !== undefined) internalState.page = partial.page;
     }
 
-    render();
+    rerender();
   }
 
   function destroy(): void {

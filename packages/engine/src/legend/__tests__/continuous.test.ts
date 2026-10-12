@@ -1,4 +1,4 @@
-import { resolveTheme } from '@opendata-ai/openchart-core';
+import { estimateTextWidth, resolveSchemeName, resolveTheme } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 
 import { compileChart } from '../../compile';
@@ -6,7 +6,12 @@ import { applyColorScaleRange } from '../../compile/color-scale-range';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import { computeScales } from '../../layout/scales';
 import { computeLegendContent, placeLegend } from '../compute';
-import { buildClassScale, sampleRampColors } from '../continuous';
+import {
+  buildClassScale,
+  classScaleForChannel,
+  computeContinuousLegendContentForChannel,
+  sampleRampColors,
+} from '../continuous';
 
 const theme = resolveTheme({});
 const strategy = {
@@ -359,5 +364,56 @@ describe('buildClassScale', () => {
     expect(scale.breaks).toEqual([]);
     expect(scale.colors).toHaveLength(1);
     expect(scale.binIndex(7)).toBe(0);
+  });
+});
+
+describe('authored map palette and compact legend formats', () => {
+  it('uses the named palette for direct map channels without compiler sugar expansion', () => {
+    const values = [0, 20, 40, 60, 80, 100];
+    const channel = {
+      field: 'value',
+      type: 'quantitative' as const,
+      scale: { type: 'quantize' as const, scheme: 'teal' },
+    };
+    const scale = classScaleForChannel(values, channel, theme);
+    expect(scale.colors.every((color) => resolveSchemeName('teal')!.includes(color))).toBe(true);
+    const reversed = classScaleForChannel(
+      values,
+      { ...channel, scale: { ...channel.scale, reverse: true } },
+      theme,
+    );
+    expect(reversed.colors[0]).toBe(scale.colors.at(-1));
+  });
+  it.each([
+    'quantize',
+    'quantile',
+    'threshold',
+  ] as const)('retains every %s currency boundary without overlapping labels', (type) => {
+    const content = computeContinuousLegendContentForChannel(
+      [0, 2, 70, 88000, 100000],
+      {
+        field: 'value',
+        type: 'quantitative',
+        format: '$,.0f',
+        scale: { type, ...(type === 'threshold' ? { domain: [2, 70, 88000] } : {}) },
+      },
+      theme,
+      300,
+    )!;
+    expect(content.ticks.at(-1)?.value).toBe(content.classScale!.breaks.at(-1));
+    expect(content.ticks.map((tick) => tick.value)).toEqual(content.classScale!.breaks);
+    for (const [index, current] of content.ticks.entries()) {
+      for (const previous of content.ticks.slice(0, index)) {
+        if ((current.offsetY ?? 0) !== (previous.offsetY ?? 0)) continue;
+        const bounds = (tick: typeof current) => {
+          const width = estimateTextWidth(tick.label, theme.fonts.sizes.small);
+          const left =
+            tick.x - (tick.anchor === 'middle' ? width / 2 : tick.anchor === 'end' ? width : 0);
+          return { left, right: left + width };
+        };
+        expect(bounds(current).left).toBeGreaterThan(bounds(previous).right);
+      }
+    }
+    expect(content.ticks.every((tick) => tick.label.startsWith('$'))).toBe(true);
   });
 });

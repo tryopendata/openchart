@@ -48,11 +48,33 @@ export function joinDataToFeatures(
   const warnings: CompileWarning[] = [];
 
   const dataLookup = new Map<string, Record<string, unknown>>();
+  const duplicates = new Set<string>();
+  const lowerCounts = new Map<string, number>();
+  let missingKeys = 0;
   for (const row of data) {
-    const key = String(row[dataKeyField]);
+    const value = row[dataKeyField];
+    if (value == null || String(value).trim() === '') {
+      missingKeys++;
+      continue;
+    }
+    const key = String(value);
+    if (dataLookup.has(key)) duplicates.add(key);
     dataLookup.set(key, row);
+    lowerCounts.set(key.toLowerCase(), (lowerCounts.get(key.toLowerCase()) ?? 0) + 1);
   }
-
+  if (duplicates.size)
+    warnings.push({
+      code: 'DUPLICATE_DATA_KEYS',
+      message: `${duplicates.size} duplicate map key(s) are ambiguous and will use neutral fill. Filter or aggregate to one observation per feature.`,
+      context: { keys: [...duplicates] },
+    });
+  if (missingKeys)
+    warnings.push({
+      code: 'MISSING_DATA_KEYS',
+      message: `${missingKeys} data row(s) have no map key.`,
+      context: { count: missingKeys },
+    });
+  const ambiguousFallbacks = new Set<string>();
   const joined = new Map<string | number, Record<string, unknown>>();
   const usedDataKeys = new Set<string>();
   let lowerLookup: Map<string, Record<string, unknown>> | null = null;
@@ -64,17 +86,19 @@ export function joinDataToFeatures(
         ? String(feature.id)
         : String(feature.properties[featureIdField] ?? feature.id);
 
-    let match = dataLookup.get(featureId);
+    let match = duplicates.has(featureId) ? undefined : dataLookup.get(featureId);
 
     // Try case-insensitive fallback for name-based joins
-    if (!match) {
+    if (!match && !duplicates.has(featureId)) {
       if (!lowerLookup) {
         lowerLookup = new Map<string, Record<string, unknown>>();
         for (const [key, row] of dataLookup) {
-          lowerLookup.set(key.toLowerCase(), row);
+          if (lowerCounts.get(key.toLowerCase()) === 1) lowerLookup.set(key.toLowerCase(), row);
         }
       }
-      match = lowerLookup.get(featureId.toLowerCase());
+      const lower = featureId.toLowerCase();
+      match = lowerLookup.get(lower);
+      if (!match && (lowerCounts.get(lower) ?? 0) > 1) ambiguousFallbacks.add(featureId);
     }
 
     if (match) {
@@ -85,6 +109,12 @@ export function joinDataToFeatures(
     }
   }
 
+  if (ambiguousFallbacks.size)
+    warnings.push({
+      code: 'AMBIGUOUS_DATA_KEYS',
+      message: `${ambiguousFallbacks.size} feature(s) match multiple case variants and will use neutral fill. Use exact, unique keys.`,
+      context: { keys: [...ambiguousFallbacks] },
+    });
   const unmatchedDataKeys: string[] = [];
   for (const key of dataLookup.keys()) {
     if (!usedDataKeys.has(key)) {

@@ -99,12 +99,18 @@ export function importDelimited(
     throw new Error(
       'Every row must have the same number of columns as the headings. Check delimiters and quoted values.',
     );
+  const expandedHeaders =
+    populated.length * headers.reduce((sum, header) => sum + JSON.stringify(header).length + 3, 0);
+  if (expandedHeaders + text.length > 5 * MAX_IMPORT_BYTES)
+    throw new Error(
+      'Column headings repeated across these rows exceed the document limit. Shorten headings or reduce the data.',
+    );
   const fields = Object.fromEntries(
     headers.map((header, index) => [header, inferField(populated.map((row) => row[index]))]),
   );
   let key = '_rowId';
   while (headers.includes(key)) key = `_${key}`;
-  return {
+  const imported = {
     key,
     fields,
     rows: populated.map((row) =>
@@ -114,18 +120,25 @@ export function importDelimited(
       ]),
     ),
   };
+  checkImportSize(JSON.stringify(imported.rows));
+  return imported;
 }
 
-export interface DocumentHistory {
-  past: VizSpec[];
-  present: VizSpec;
-  future: VizSpec[];
+export interface DocumentHistory<T = VizSpec> {
+  past: T[];
+  present: T;
+  future: T[];
 }
-export function editDocument(history: DocumentHistory, next: VizSpec): DocumentHistory {
+export function editDocument(
+  history: DocumentHistory<VizSpec>,
+  next: VizSpec,
+): DocumentHistory<VizSpec>;
+export function editDocument<T>(history: DocumentHistory<T>, next: T): DocumentHistory<T>;
+export function editDocument<T>(history: DocumentHistory<T>, next: T): DocumentHistory<T> {
   if (JSON.stringify(history.present) === JSON.stringify(next)) return history;
   return { past: [...history.past, history.present].slice(-100), present: next, future: [] };
 }
-export function undoDocument(history: DocumentHistory): DocumentHistory {
+export function undoDocument<T>(history: DocumentHistory<T>): DocumentHistory<T> {
   if (!history.past.length) return history;
   return {
     past: history.past.slice(0, -1),
@@ -133,7 +146,7 @@ export function undoDocument(history: DocumentHistory): DocumentHistory {
     future: [history.present, ...history.future],
   };
 }
-export function redoDocument(history: DocumentHistory): DocumentHistory {
+export function redoDocument<T>(history: DocumentHistory<T>): DocumentHistory<T> {
   if (!history.future.length) return history;
   return {
     past: [...history.past, history.present],

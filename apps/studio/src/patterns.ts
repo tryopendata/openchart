@@ -8,7 +8,7 @@ import {
   populationByCountry,
   stockPerformance,
   worldGdp,
-} from '../data';
+} from './data';
 
 export interface ReferencePattern {
   id: string;

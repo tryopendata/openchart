@@ -10,12 +10,7 @@
 
 import type { DataRow, JoinAggregateTransform } from '@opendata-ai/openchart-core';
 
-import { computeAggregate } from './aggregate';
-
-/** Composite group key. Null-joined, matching `runAggregate`'s convention. */
-function groupKey(row: DataRow, groupby: string[]): string {
-  return groupby.map((f) => String(row[f] ?? '')).join('\x00');
-}
+import { aggregateRows, groupKey } from './aggregate';
 
 /**
  * Apply a join-aggregate transform to data rows.
@@ -37,16 +32,11 @@ export function runJoinAggregate(data: DataRow[], transform: JoinAggregateTransf
   }
 
   // One summary object per group, shared across that group's rows.
-  const summaries = new Map<string, Record<string, number>>();
+  const summaries = new Map<string, Record<string, number | null>>();
   for (const [key, rows] of groups) {
-    const summary: Record<string, number> = {};
+    const summary: Record<string, number | null> = {};
     for (const { op, field, as } of transform.joinaggregate) {
-      // `count` counts rows, so the field need not exist (mirrors runAggregate).
-      const values =
-        op === 'count'
-          ? rows.map(() => 1)
-          : rows.map((r) => Number(r[field])).filter((v) => Number.isFinite(v));
-      summary[as] = computeAggregate(op, values);
+      summary[as] = aggregateRows(op, field, rows);
     }
     summaries.set(key, summary);
   }

@@ -102,11 +102,25 @@ jobs:
       - name: Install browsers
         run: bunx playwright install --with-deps chromium webkit
       - name: Test production artifact
-        run: bun run test:workbench
+        run: |
+          bun run check:boundaries
+          bun run build
+          bun run --cwd apps/studio typecheck
+          bun run --cwd apps/studio lint
+          bun run --cwd apps/studio test
+          bun run --cwd apps/studio test:e2e
+          bun run check:library-bundle
+      - name: Verify independent checkout and nested hosting
+        run: |
+          bun run extract:studio "$RUNNER_TEMP/OpenChart Studio"
+          cd "$RUNNER_TEMP/OpenChart Studio"
+          STUDIO_TEST_BASE_PATH=/tools/studio/ bun run test:e2e
       - name: Upload browser evidence
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: workbench-browser-evidence
-          path: workbench-test-results/
+          path: |
+            apps/studio/test-results/
+            ${{ runner.temp }}/OpenChart Studio/test-results/
           retention-days: 7
