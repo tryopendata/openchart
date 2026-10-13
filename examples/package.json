@@ -14,7 +14,7 @@
     "@opendata-ai/openchart-react": "workspace:*",
     "@opendata-ai/openchart-vanilla": "workspace:*",
     "react": "^19.3.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.3.0"
   },
   "devDependencies": {
     "@ladle/react": "^5.1.1",
