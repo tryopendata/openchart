@@ -18,8 +18,8 @@
     "@opendata-ai/openchart-vanilla": "workspace:*",
     "d3-dsv": "3.0.1",
     "motion": "14.1.0",
-    "react": "19.2.8",
-    "react-dom": "19.2.8",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
     "world-atlas": "2.0.2",
     "gifenc": "1.0.3"
   },
@@ -30,8 +30,8 @@
     "@types/node": "24.19.2",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
-    "typescript": "6.0.2",
+    "typescript": "7.0.2",
     "vite": "7.3.1",
-    "vitest": "4.0.18"
+    "vitest": "5.0.4"
   }
 }

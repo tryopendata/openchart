@@ -27,7 +27,7 @@ jobs:
       - name: Setup
         uses: ./.github/actions/setup-bun
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Build
         run: bun run build
