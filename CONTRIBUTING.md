@@ -5,7 +5,7 @@ How to set up the project, run tests, add chart types, add table cell types, and
 ## Prerequisites
 
 - **Bun** (package manager and script runner)
-- **Node.js 18+** (runtime for TypeScript tooling)
+- **Node.js 24** (development runtime; use the version in `.nvmrc`)
 
 ## Setup
 
@@ -14,7 +14,14 @@ cd openchart
 bun install
 ```
 
-That's it. Bun installs all workspace packages and links the internal dependencies.
+Bun installs all workspace packages and links the internal dependencies.
+
+Type-checking uses TypeScript 7 through the `@typescript/native` alias. The
+`typescript` dependency aliases Microsoft's `@typescript/typescript6` compatibility
+package because tsup and Svelte tooling still use the JavaScript compiler API.
+Keep both aliases when updating dependencies. The Bun patch for Ladle 5.1.1 moves
+its existing dialog-prop error suppressions to the locations reported by TypeScript 7;
+it only changes bundled type-checking sources, not Ladle's runtime.
 
 ## Development
 

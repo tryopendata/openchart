@@ -23,6 +23,7 @@ updates:
       typescript:
         patterns:
           - 'typescript'
+          - '@typescript/*'
           - 'tsup'
           - '@types/*'
     ignore:

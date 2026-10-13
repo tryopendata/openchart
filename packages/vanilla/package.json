@@ -104,7 +104,7 @@
     "@types/d3-quadtree": "^3.0.6",
     "@types/three": "^0.185.4",
     "gifenc": "^1.0.3",
-    "three": "0.185.1",
+    "three": "0.186.0",
     "three-spritetext": "1.10.0"
   }
 }
