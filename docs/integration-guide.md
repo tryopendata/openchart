@@ -23,26 +23,37 @@ The library uses an immutable update pattern: every spec change triggers a full 
 
 Switch chart types by changing the `mark` field. If the encoding channels are compatible (see [encoding by chart type](spec-reference.md#encoding-by-chart-type)), the same spec works across types.
 
+These examples accept a category on x and a quantitative value on y, and switch only between `line`, `area` and vertical `bar`. They keep both positional channels required instead of accepting unrelated arc or map encodings.
+
 ### React
 
 ```tsx
 import { useState } from "react";
 import { Chart } from "@opendata-ai/openchart-react";
-import type { MarkType, ChartSpec } from "@opendata-ai/openchart-core";
+import type { ChartSpec, LineEncoding } from "@opendata-ai/openchart-core";
 
-const MARK_OPTIONS: MarkType[] = ["line", "area", "bar"];
+type CartesianMark = "line" | "area" | "bar";
+type CartesianSpec = Omit<ChartSpec, "mark" | "encoding"> & {
+  mark: CartesianMark;
+  encoding: LineEncoding;
+};
+const MARK_OPTIONS: CartesianMark[] = ["line", "area", "bar"];
 
-function ChartWithTypeSwitcher({ baseSpec }: { baseSpec: ChartSpec }) {
-  const [chartType, setMarkType] = useState<MarkType>(typeof baseSpec.mark === "string" ? baseSpec.mark : baseSpec.mark.type);
+function ChartWithTypeSwitcher({ baseSpec }: { baseSpec: CartesianSpec }) {
+  const [chartType, setMarkType] = useState<CartesianMark>(baseSpec.mark);
 
   // Immutable update: spread the spec, override mark
-  const spec = { ...baseSpec, mark: chartType };
+  const spec: ChartSpec = chartType === "line"
+    ? { ...baseSpec, mark: "line" }
+    : chartType === "area"
+      ? { ...baseSpec, mark: "area" }
+      : { ...baseSpec, mark: "bar" };
 
   return (
     <div>
       <select
         value={chartType}
-        onChange={(e) => setMarkType(e.target.value as MarkType)}
+        onChange={(e) => setMarkType(e.target.value as CartesianMark)}
       >
         {MARK_OPTIONS.map((t) => (
           <option key={t} value={t}>
@@ -64,13 +75,22 @@ function ChartWithTypeSwitcher({ baseSpec }: { baseSpec: ChartSpec }) {
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { Chart } from "@opendata-ai/openchart-vue";
-import type { MarkType, ChartSpec } from "@opendata-ai/openchart-core";
+import type { ChartSpec, LineEncoding } from "@opendata-ai/openchart-core";
 
-const props = defineProps<{ baseSpec: ChartSpec }>();
-const MARK_OPTIONS: MarkType[] = ["line", "area", "bar"];
-const chartType = ref<MarkType>(typeof props.baseSpec.mark === "string" ? props.baseSpec.mark : props.baseSpec.mark.type);
+type CartesianMark = "line" | "area" | "bar";
+type CartesianSpec = Omit<ChartSpec, "mark" | "encoding"> & {
+  mark: CartesianMark;
+  encoding: LineEncoding;
+};
+const props = defineProps<{ baseSpec: CartesianSpec }>();
+const MARK_OPTIONS: CartesianMark[] = ["line", "area", "bar"];
+const chartType = ref<CartesianMark>(props.baseSpec.mark);
 
-const spec = computed(() => ({ ...props.baseSpec, mark: chartType.value }));
+const spec = computed<ChartSpec>(() => chartType.value === "line"
+  ? { ...props.baseSpec, mark: "line" }
+  : chartType.value === "area"
+    ? { ...props.baseSpec, mark: "area" }
+    : { ...props.baseSpec, mark: "bar" });
 </script>
 
 <template>
@@ -88,13 +108,22 @@ const spec = computed(() => ({ ...props.baseSpec, mark: chartType.value }));
 ```svelte
 <script lang="ts">
 import { Chart } from "@opendata-ai/openchart-svelte";
-import type { MarkType, ChartSpec } from "@opendata-ai/openchart-core";
+import type { ChartSpec, LineEncoding } from "@opendata-ai/openchart-core";
 
-let { baseSpec }: { baseSpec: ChartSpec } = $props();
-const MARK_OPTIONS: MarkType[] = ["line", "area", "bar"];
-let chartType: MarkType = $state(typeof baseSpec.mark === "string" ? baseSpec.mark : baseSpec.mark.type);
+type CartesianMark = "line" | "area" | "bar";
+type CartesianSpec = Omit<ChartSpec, "mark" | "encoding"> & {
+  mark: CartesianMark;
+  encoding: LineEncoding;
+};
+let { baseSpec }: { baseSpec: CartesianSpec } = $props();
+const MARK_OPTIONS: CartesianMark[] = ["line", "area", "bar"];
+let chartType: CartesianMark = $state(baseSpec.mark);
 
-const spec = $derived({ ...baseSpec, mark: chartType });
+const spec: ChartSpec = $derived(chartType === "line"
+  ? { ...baseSpec, mark: "line" }
+  : chartType === "area"
+    ? { ...baseSpec, mark: "area" }
+    : { ...baseSpec, mark: "bar" });
 </script>
 
 <select bind:value={chartType}>

@@ -163,24 +163,20 @@ React, Vue, and Svelte all wrap the same vanilla adapter. The framework packages
 
 ## Chart registry pattern
 
-Chart types register themselves via side-effect imports. When `engine/src/index.ts` imports `./charts/bar/index`, the bar module runs `registerChartRenderer('bar', barRenderer)` at module load time.
+Chart modules export their renderers; `engine/src/charts/builtin.ts` collects them in the `builtinRenderers` map. Its `registerBuiltinRenderers()` function registers that map when the module is first imported. Tests can call the same function to restore built-ins after clearing the registry.
 
 ```mermaid
 graph TB
-  A["engine/src/index.ts"] -->|"import './charts/bar/index'"| B["bar/index.ts"]
-  A -->|"import './charts/line/index'"| C["line/index.ts"]
-  A -->|"import './charts/scatter/index'"| D["scatter/index.ts"]
-
-  B -->|"registerChartRenderer('bar', ...)"| E[Registry Map]
-  C -->|"registerChartRenderer('line', ...)<br/>registerChartRenderer('area', ...)"| E
-  D -->|"registerChartRenderer('scatter', ...)"| E
+  A["engine/src/compile.ts"] -->|"imports"| B["charts/builtin.ts"]
+  C["bar, line, scatter and other chart modules"] -->|"export renderers"| B
+  B -->|"registerBuiltinRenderers()"| E[Registry Map]
 
   F["compileChart()"] -->|"getChartRenderer(type)"| E
 
   style E fill:#4a6fa5,color:#fff
 ```
 
-This decouples chart-type logic from the compile pipeline. Adding a new chart type means creating a directory under `charts/`, implementing a renderer function, and importing it in `index.ts`. The compile pipeline doesn't change.
+This decouples chart-type logic from the compile pipeline. Adding a new chart type means creating a directory under `charts/`, exporting its renderer, and adding it to `builtinRenderers` in `charts/builtin.ts`. The compile pipeline doesn't change.
 
 Each chart renderer receives `(spec, scales, chartArea, strategy)` and returns `Mark[]`. A `Mark` is a discriminated union (line marks, rect marks, arc marks, point marks, text marks, rule marks) with all positions and colors computed. Higher-level marks compose from these primitives rather than inventing new geometry: for example, `parliament` (a hemicycle seat chart) emits point marks for the seats, a rule mark for the majority line, and text marks for labels; `waffle` emits a grid of rects.
 
