@@ -169,7 +169,7 @@ test('donut labels remain attached to their slices while a resized center is in 
   await page.setViewportSize({ width: 1000, height: 760 });
   await page.goto(fixture);
   await expect(page.getByTestId('library-host').locator('svg').first()).toBeVisible();
-  const positions = await page.evaluate(async (moduleUrl) => {
+  const frames = await page.evaluate(async (moduleUrl) => {
     const { createChart } = await import(moduleUrl);
     const host = document.createElement('div');
     host.id = 'release-review-chart';
@@ -193,24 +193,48 @@ test('donut labels remain attached to their slices while a resized center is in 
     host.style.height = '500px';
     const handle = chart.beginManualUpdate(spec)!;
     if (!handle) throw new Error('Expected a resize transition');
-    const positions = (layout: typeof chart.layout) => layout.marks.flatMap((mark) => {
+    const positions = (layout: typeof chart.layout, progress: number) => layout.marks.flatMap((mark) => {
       if (mark.type !== 'arc' || !mark.label?.visible) return [];
+      const before = original.marks.find((item) => item.key === mark.key);
+      const after = chart.layout.marks.find((item) => item.key === mark.key);
+      if (before?.type !== 'arc' || after?.type !== 'arc' || !before.label || !after.label)
+        throw new Error('Missing label endpoints');
       const group = [...host.querySelectorAll<SVGGElement>('.oc-mark-arc')].find((element) => element.getAttribute('data-key') === mark.key)!;
       const text = group.querySelector<SVGTextElement>('.oc-mark-label')!;
       const transform = group.transform.baseVal.consolidate()!.matrix;
-      return [{ expectedX: mark.label.x, expectedY: mark.label.y,
+      return [{ expectedX: before.label.x + (after.label.x - before.label.x) * progress,
+        expectedY: before.label.y + (after.label.y - before.label.y) * progress,
+        expectedCenterX: mark.center.x, expectedCenterY: mark.center.y,
+        actualCenterX: transform.e, actualCenterY: transform.f,
         actualX: text.x.baseVal.getItem(0).value + transform.e,
         actualY: text.y.baseVal.getItem(0).value + transform.f }];
     });
-    const initial = positions(original);
+    const initial = positions(original, 0);
     handle.step(150);
+    const sampled = chart.sampleLayout();
+    const moving = sampled.marks.find((mark) => mark.type === 'arc' && mark.label?.visible);
+    const before = original.marks.find((mark) => mark.key === moving?.key);
+    const after = chart.layout.marks.find((mark) => mark.key === moving?.key);
+    if (moving?.type !== 'arc' || before?.type !== 'arc' || after?.type !== 'arc' ||
+      before.center.x === after.center.x) throw new Error('Expected a moving arc center');
+    // sampleLayout samples centers, while label metadata describes the destination.
+    // Derive the label's expected progress from the current center, not that metadata.
+    const progress = (moving.center.x - before.center.x) / (after.center.x - before.center.x);
+    const midpoint = positions(sampled, progress);
     // Keep the manual frame visible for screenshot inspection; destroy owns cancellation.
-    return initial;
+    return { initial, midpoint, progress };
   }, rendererModule);
-  expect(positions.length).toBeGreaterThan(0);
-  for (const position of positions) {
-    expect(position.actualX).toBeCloseTo(position.expectedX, 3);
-    expect(position.actualY).toBeCloseTo(position.expectedY, 3);
+  expect(frames.progress).toBeGreaterThan(0);
+  expect(frames.progress).toBeLessThan(1);
+  expect(frames.initial.length).toBeGreaterThan(0);
+  expect(frames.midpoint).toHaveLength(frames.initial.length);
+  for (const positions of [frames.initial, frames.midpoint]) {
+    for (const position of positions) {
+      expect(position.actualCenterX).toBeCloseTo(position.expectedCenterX, 3);
+      expect(position.actualCenterY).toBeCloseTo(position.expectedCenterY, 3);
+      expect(position.actualX).toBeCloseTo(position.expectedX, 3);
+      expect(position.actualY).toBeCloseTo(position.expectedY, 3);
+    }
   }
   const screenshot = testInfo.outputPath('donut-during-resize.png');
   await page.locator('#release-review-chart').screenshot({ path: screenshot });

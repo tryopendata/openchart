@@ -126,6 +126,31 @@ describe('design contracts', () => {
     const patch = diagnostics.find((item) => item.fix)!.fix!;
     expect(patch.precondition).toBe(JSON.stringify(authored));
   });
+  it('diagnoses the active breakpoint encoding against transformed rows', () => {
+    const authored = {
+      ...spec,
+      transform: [
+        { aggregate: [{ op: 'sum', field: 'value', as: 'total' }], groupby: ['category'] },
+      ],
+      encoding: {
+        x: { field: 'value', type: 'quantitative' },
+        y: { field: 'category', type: 'nominal' },
+      },
+      overrides: {
+        compact: { encoding: { x: { field: 'total', type: 'quantitative' } } },
+      },
+    };
+    const diagnostics: ReturnType<typeof diagnoseChart> = [];
+    const layout = compileChart(authored, {
+      width: 360,
+      height: 400,
+      onDiagnostic: (item) => diagnostics.push(item),
+    });
+    expect(layout.marks.filter((mark) => mark.type === 'rect')).toHaveLength(2);
+    expect(diagnostics.filter((item) => item.code === 'data.missing')).toEqual([]);
+    const patch = diagnostics.find((item) => item.fix)!.fix!;
+    expect(patch.precondition).toBe(JSON.stringify(authored));
+  });
   it('requests explicit roles/aggregation and preserves source order', () => {
     expect(recommendCompositions(spec.data, 'comparison', {}).missingRoles).toEqual([
       'measure',

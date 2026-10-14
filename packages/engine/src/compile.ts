@@ -1151,7 +1151,11 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
   if (options.onDiagnostic) {
     // Diagnostics inspect the same rows/fields as the compiled scene, including
     // data.values and derived channels. Fixes still target the authored document.
-    const diagnosticSpec = { ...(expandedSpec as ChartSpec), data: chartSpec.data };
+    const diagnosticSpec = {
+      ...(expandedSpec as ChartSpec),
+      data: chartSpec.data,
+      encoding: chartSpec.encoding,
+    } as ChartSpec;
     for (const diagnostic of diagnoseChart(diagnosticSpec, layout)) {
       if (diagnostic.fix) diagnostic.fix.precondition = JSON.stringify(spec);
       options.onDiagnostic(diagnostic);
