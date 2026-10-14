@@ -1,5 +1,34 @@
 # Changelog
 
+## [8.9.0](https://github.com/tryopendata/openchart/compare/core-v8.8.0...core-v8.9.0) (2026-10-14)
+
+### Added
+
+- **authoring APIs:** field metadata, structured design diagnostics, deterministic composition suggestions, guarded spec patches, observation comparisons and explicit dataset bindings.
+- **reader:** a framework-independent reader controller with preview/pins and sampled geometry, plus persistent observation identities.
+- **motion:** opt-in `fluid`, `subtle` and `legacy` timing presets; bounded spring motion; compatible SVG scene retention and coordinated label transitions.
+- **responsive:** final-tick preservation, wrapped endpoint summaries, growing chrome and priority-column mobile tables. Added the opt-in `clarity` theme and `legacyEditorial` preset.
+
+### Fixed
+
+- **library:** rejected updates preserve the last valid chart/table; animated maps, tile maps and tables resume resizing after entrance completion. Sankey updates no longer replay entrances, and disabling tooltips no longer disables callbacks.
+- **inspection:** layered charts retain each leaf's tooltip formatting, observation identity and crosshair evidence even when series names repeat or paint order changes. Reader pins reconcile filter visibility without requiring data replacement; unsupported layered pinning clears with an announcement.
+- **keyboard:** maps, tile maps, bar lists and Sankey share keyboard inspection/activation; graph Tab no longer traps focus. Tables preserve logical focus, cancel pending search on Escape, distinguish typed/ambiguous row keys and preserve native mobile disclosure controls.
+- **data:** missing, blank, boolean and nonfinite measurements no longer fabricate zero-valued marks, coordinates or differences. Sankey rejects undrawable flows with diagnostics. Line/area gaps remain intact during interrupted animation.
+- **export:** specialized SVG/raster exports render settled geometry without transient hover effects; maps preserve the current camera and clipping. Font embedding respects inline typography and inherited span fonts. Table CSV includes every filtered/sorted row across pagination.
+- **typography:** bar lists and Sankey use shared chrome wrapping and measured font styles, keeping headings inside narrow containers.
+
+- **rendering:** retained canvas charts keep axes and annotations above the canvas after updates and resizing; donut labels follow their slice when the center moves.
+- **reader:** initial Left/Up navigation starts at the final observation; group links accept ordinary labels such as `constructor`.
+- **scales:** continuous legends, layered domains and map point palettes now agree with the measurements and classes used to draw marks. Window/density grouping preserves typed keys, and cumulative sums skip booleans.
+- **diagnostics:** `onDiagnostic` accepts inline `data.values` and transformed fields while keeping fixes guarded against the authored document.
+- **motion:** physically equivalent spring parameters remain finite even at very large or small scales.
+
+### Changed
+
+- **Studio:** the standalone authoring app moved to [OpenStudio](https://github.com/tryopendata/openstudio). OpenChart ships the reusable visualization library and public authoring APIs; Studio UI, dependencies, persistence and hosting live in their own repository.
+- **tooling:** development uses Node.js 24, TypeScript 7 and Vitest 5, with the TypeScript 6 compatibility API retained for build tooling. React and optional Three.js development dependencies were updated. Published package runtime requirements are unchanged.
+
 ## [8.8.0](https://github.com/tryopendata/openchart/compare/core-v8.7.0...core-v8.8.0) (2026-09-28)
 
 
