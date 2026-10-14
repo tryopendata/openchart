@@ -21,6 +21,7 @@ import {
 import { scaleLinear } from 'd3-scale';
 import { curveMonotoneX, area as d3area, line as d3line } from 'd3-shape';
 import { flattenLayers } from '../compiler/index';
+import { finiteNumber } from '../data/finite-number';
 import type { MeasureFn } from '../layout/plan';
 import { createMeasureFn } from '../layout/plan';
 
@@ -534,8 +535,8 @@ function withUnionXDomain(
     let min = Number.POSITIVE_INFINITY;
     let max = Number.NEGATIVE_INFINITY;
     for (const v of allValues) {
-      const n = typeof v === 'number' ? v : Number(v);
-      if (!Number.isFinite(n)) continue;
+      const n = finiteNumber(v);
+      if (n === undefined) continue;
       if (n < min) min = n;
       if (n > max) max = n;
     }
@@ -579,8 +580,12 @@ function alignYDomains(
   const includeZero0 = yEnc0.scale?.zero !== false;
   const includeZero1 = yEnc1.scale?.zero !== false;
 
-  const vals0 = leaf0.data.map((r) => Number(r[yEnc0.field])).filter(Number.isFinite);
-  const vals1 = leaf1.data.map((r) => Number(r[yEnc1.field])).filter(Number.isFinite);
+  const vals0 = leaf0.data
+    .map((row) => finiteNumber(row[yEnc0.field]))
+    .filter((value): value is number => value !== undefined);
+  const vals1 = leaf1.data
+    .map((row) => finiteNumber(row[yEnc1.field]))
+    .filter((value): value is number => value !== undefined);
   if (vals0.length === 0 || vals1.length === 0) return undefined;
 
   const niced = (vals: number[], includeZero: boolean): [number, number] => {
@@ -681,8 +686,8 @@ function computeSharedDomains(leaves: ChartSpec[]): SharedDomains {
       }
 
       for (const row of leaf.data ?? []) {
-        const v = Number((row as DataRow)[enc.field]);
-        if (!Number.isFinite(v)) continue;
+        const v = finiteNumber((row as DataRow)[enc.field]);
+        if (v === undefined) continue;
         if (v < lo) lo = v;
         if (v > hi) hi = v;
         sawAny = true;

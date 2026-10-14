@@ -83,8 +83,12 @@ export function buildLabelMotion(
       !after.label
     )
       continue;
-    add(label, 'x', before.label.x - after.label.x, `label:${key}:x`);
-    add(label, 'y', before.label.y - after.label.y, `label:${key}:y`);
+    // Arc labels are local to a translated mark group. Its center already
+    // follows the arc tween, so only the local label offset belongs here.
+    const dx = before.type === 'arc' && after.type === 'arc' ? before.center.x - after.center.x : 0;
+    const dy = before.type === 'arc' && after.type === 'arc' ? before.center.y - after.center.y : 0;
+    add(label, 'x', before.label.x - after.label.x - dx, `label:${key}:x`);
+    add(label, 'y', before.label.y - after.label.y - dy, `label:${key}:y`);
   }
   let progress = 0;
   return {

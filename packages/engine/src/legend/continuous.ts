@@ -31,8 +31,8 @@ import {
 } from '@opendata-ai/openchart-core';
 import { tickStep } from 'd3-array';
 import { scaleQuantile } from 'd3-scale';
-
 import type { NormalizedChartSpec } from '../compiler/types';
+import { finiteNumber } from '../data/finite-number';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -175,10 +175,8 @@ export function sampleRampColors(colors: string[], k: number): string[] {
 function numericFieldValues(spec: NormalizedChartSpec, field: string): number[] {
   const out: number[] = [];
   for (const row of spec.data) {
-    const v = row[field];
-    if (v == null) continue;
-    const num = typeof v === 'number' ? v : Number(v);
-    if (Number.isFinite(num)) out.push(num);
+    const value = finiteNumber(row[field]);
+    if (value !== undefined) out.push(value);
   }
   return out;
 }

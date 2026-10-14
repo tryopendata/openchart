@@ -300,7 +300,7 @@ export function runTransition(args: {
       applyTweenState(tw, elapsed, update, exit, enterDelay, enterDuration);
     }
 
-    // Crossfade secondary elements: delayed 40%, over 60% of update duration
+    // Attached labels share the marks' update clock.
     labelMotion.apply(sampleMotion(update, elapsed).position);
 
     // One paint per frame, after every tween has written its state.
@@ -331,7 +331,6 @@ export function runTransition(args: {
     removeGhosts();
     settleCanvas();
     pulsedDot = pulseSparklineTerminator(svg, marksContainer);
-    // Restore secondary element opacities to their rendered values
     onComplete();
   }
 
@@ -497,7 +496,6 @@ export function runTransition(args: {
       snapToFinal();
       removeGhosts();
       settleCanvas();
-      // Restore secondary element opacities on cancel
     },
     get running() {
       return running;

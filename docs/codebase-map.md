@@ -351,21 +351,14 @@ These are easy mistakes — written down so the next agent doesn't search for th
 - Use `Skill(openchart:openchart)` for design-philosophy / visual-QA references.
 - The skill's `references/visual-qa.md` has a defect catalog with fix patterns for chart rendering issues.
 
-## Reference authoring application
+## Authoring and reader library APIs
 
 | Concern | Location |
 | --- | --- |
-| Static Studio entry and build | `apps/studio/index.html`, `apps/studio/vite.config.ts` |
-| Canonical document, imports and history | `apps/studio/src/document.ts`, `project.ts`, `Workbench.tsx` |
-| Composition and contextual design controls | `apps/studio/src/composition.ts`, `ChartControls.tsx`, `TableMapControls.tsx` |
-| Movable product and dependency checks | `scripts/extract-studio.mjs`, `check-product-boundary.mjs`, `check-library-bundle.mjs` |
-| Renderer lifecycle, reader/editor separation | `apps/studio/src/Preview.tsx` |
-| Field correction, design and recommendations | `DataEditor.tsx`, `Inspector.tsx` in the workbench |
-| Reference compositions | `apps/studio/src/patterns.ts` |
 | Metadata, diagnostic and reader contracts | `packages/core/src/types/design.ts` |
 | Deterministic bounded spring sampler | `packages/core/src/motion/sample.ts` |
 | Pure review/recommendation/patch/identity APIs | `packages/engine/src/design/` |
 | Retained SVG and sampled reader geometry | `packages/vanilla/src/transition/{reconcile,scene,labels}.ts`, `reader.ts` |
-| Production browser gates | `apps/studio/playwright.config.ts`, `apps/studio/e2e/` |
+| Product dependency and consumer bundle checks | `scripts/check-product-boundary.mjs`, `scripts/check-library-bundle.mjs` |
 
-See [workbench deployment and boundaries](workbench.md) before adding host persistence or publishing.
+The browser authoring application lives in the separate [OpenStudio repository](https://github.com/tryopendata/openstudio). Its UI, imports, persistence and deployment are not part of this codebase.

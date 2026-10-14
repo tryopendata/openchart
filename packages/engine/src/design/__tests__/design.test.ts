@@ -76,6 +76,12 @@ describe('design contracts', () => {
       linkedEntityKeys({ group: 'A' }, { ...source, groupMembers: { A: ['x'] } }, target),
     ).toEqual(['string:x']);
     expect(linkedEntityKeys({ group: 'A' }, source, { ...target, dataset: 'other' })).toEqual([]);
+    for (const group of ['toString', 'constructor', '__proto__']) {
+      expect(linkedEntityKeys({ group }, { ...source, groupMembers: {} }, target)).toEqual([]);
+      expect(
+        linkedEntityKeys({ group }, { ...source, groupMembers: { [group]: ['member'] } }, target),
+      ).toEqual(['string:member']);
+    }
   });
   it('makes fixes reversible and refuses stale or unsafe paths', () => {
     const layout = compileChart(spec, { width: 600, height: 400 });
@@ -100,6 +106,50 @@ describe('design contracts', () => {
       diagnoseChart(spec, layout).find((item) => item.code === 'contrast.unknown-background')
         ?.status,
     ).toBe('uncheckable');
+  });
+  it('diagnoses expanded and transformed data without losing the authored patch precondition', () => {
+    const authored = {
+      ...spec,
+      data: { values: spec.data },
+      transform: [{ calculate: { op: '*', field: 'value', value: 2 }, as: 'doubled' }],
+      encoding: { ...spec.encoding, x: { field: 'doubled', type: 'quantitative' } },
+    };
+    const diagnostics: ReturnType<typeof diagnoseChart> = [];
+    expect(() =>
+      compileChart(authored, {
+        width: 600,
+        height: 400,
+        onDiagnostic: (item) => diagnostics.push(item),
+      }),
+    ).not.toThrow();
+    expect(diagnostics.some((item) => item.code === 'data.missing')).toBe(false);
+    const patch = diagnostics.find((item) => item.fix)!.fix!;
+    expect(patch.precondition).toBe(JSON.stringify(authored));
+  });
+  it('diagnoses the active breakpoint encoding against transformed rows', () => {
+    const authored = {
+      ...spec,
+      transform: [
+        { aggregate: [{ op: 'sum', field: 'value', as: 'total' }], groupby: ['category'] },
+      ],
+      encoding: {
+        x: { field: 'value', type: 'quantitative' },
+        y: { field: 'category', type: 'nominal' },
+      },
+      overrides: {
+        compact: { encoding: { x: { field: 'total', type: 'quantitative' } } },
+      },
+    };
+    const diagnostics: ReturnType<typeof diagnoseChart> = [];
+    const layout = compileChart(authored, {
+      width: 360,
+      height: 400,
+      onDiagnostic: (item) => diagnostics.push(item),
+    });
+    expect(layout.marks.filter((mark) => mark.type === 'rect')).toHaveLength(2);
+    expect(diagnostics.filter((item) => item.code === 'data.missing')).toEqual([]);
+    const patch = diagnostics.find((item) => item.fix)!.fix!;
+    expect(patch.precondition).toBe(JSON.stringify(authored));
   });
   it('requests explicit roles/aggregation and preserves source order', () => {
     expect(recommendCompositions(spec.data, 'comparison', {}).missingRoles).toEqual([

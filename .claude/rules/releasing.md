@@ -13,7 +13,7 @@ node scripts/release.mjs 6.15.0   # explicit version
 
 The script:
 1. Bumps `version` in all 6 `packages/*/package.json` files
-2. Updates `CHANGELOG.md` in each package from conventional commits
+2. Copies the reviewed version entry from the root `CHANGELOG.md` into each package changelog; falls back to conventional commits when no reviewed entry exists
 3. Commits as `release: openchart vX.Y.Z`
 4. Creates per-package git tags via GitHub API (`core-vX.Y.Z`, `engine-vX.Y.Z`, etc.) so they get verified signatures
 5. Pushes the commit to origin
@@ -56,6 +56,8 @@ working tree is unchanged.
 ## CI on release commits
 
 CI and deploy-examples skip on release commits (prefix `release:`). The Release workflow handles build/typecheck/test verification before publishing.
+
+Before releasing, write the target version section in the root changelog and review it in the release-preparation PR. Run `bun run test:scripts` to verify dry-run behavior and changelog selection.
 
 ## Choosing bump type
 

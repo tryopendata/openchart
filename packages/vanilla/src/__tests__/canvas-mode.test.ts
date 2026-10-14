@@ -155,6 +155,21 @@ describe('canvas mark mode DOM contract', () => {
 
     chart.destroy();
   });
+
+  it('keeps the recreated canvas beneath retained SVG chrome after updates and resizes', () => {
+    const container = createContainer();
+    const chart = createChart(container, scatterSpec(20), { renderer: 'canvas' });
+    const svg = container.querySelector('svg')!;
+
+    for (const update of [() => chart.update(scatterSpec(25)), () => chart.resize()]) {
+      update();
+      expect(container.querySelector('svg')).toBe(svg);
+      const canvas = container.querySelector('canvas.oc-mark-canvas')!;
+      expect(canvas.compareDocumentPosition(svg) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+
+    chart.destroy();
+  });
 });
 
 describe('canvas entrance completion clock', () => {

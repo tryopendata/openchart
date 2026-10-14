@@ -28,23 +28,36 @@ export const FLUID_SPRING: Readonly<Required<SpringConfig>> = {
 function springState(timeMs: number, config: SpringConfig): MotionSample {
   const stiffness = config.stiffness ?? FLUID_SPRING.stiffness;
   const mass = config.mass ?? FLUID_SPRING.mass;
-  const omega = Math.sqrt(stiffness / mass);
-  const damping = Math.max(config.damping ?? FLUID_SPRING.damping, 2 * Math.sqrt(stiffness * mass));
-  const zeta = damping / (2 * Math.sqrt(stiffness * mass));
+  const rootStiffness = Math.sqrt(stiffness);
+  const rootMass = Math.sqrt(mass);
+  const omega = rootStiffness / rootMass;
+  const damping = config.damping ?? FLUID_SPRING.damping;
+  // Avoid products of physical parameters: scaling mass, stiffness and damping
+  // together must preserve the curve even when their product over/underflows.
+  const zeta = Math.max(1, damping / rootStiffness / rootMass / 2);
   const t = Math.max(0, timeMs) / 1000;
   let remaining: number;
   let velocity: number;
   if (zeta - 1 < 0.0001) {
-    const decay = Math.exp(-omega * t);
-    remaining = (1 + omega * t) * decay;
-    velocity = omega * omega * t * decay;
+    const scaledTime = omega * t;
+    const decay = Math.exp(-scaledTime);
+    remaining = decay === 0 ? 0 : (1 + scaledTime) * decay;
+    velocity = decay === 0 ? 0 : omega * (scaledTime * decay);
   } else {
-    const root = Math.sqrt(zeta * zeta - 1);
-    const slow = -omega / (zeta + root);
-    const fast = -omega * (zeta + root);
-    const denominator = fast - slow;
-    remaining = (fast * Math.exp(slow * t) - slow * Math.exp(fast * t)) / denominator;
-    velocity = (-fast * slow * (Math.exp(slow * t) - Math.exp(fast * t))) / denominator;
+    const inverseZeta = 1 / zeta;
+    const q = (damping / 2) * (1 + Math.sqrt(1 - inverseZeta * inverseZeta));
+    const slow = -stiffness / q;
+    const fast = -q / mass;
+    const ratio = slow / fast;
+    const slowDecay = Math.exp(slow * t);
+    const fastDecay = Math.exp(fast * t);
+    if (slowDecay === 0) {
+      remaining = 0;
+      velocity = 0;
+    } else {
+      remaining = (slowDecay - ratio * fastDecay) / (1 - ratio);
+      velocity = -slow * ((slowDecay - fastDecay) / (1 - ratio));
+    }
   }
   return {
     position: Math.min(1, Math.max(0, 1 - remaining)),

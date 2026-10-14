@@ -67,6 +67,43 @@ function makeSpec(overrides: Partial<NormalizedChartSpec> = {}): NormalizedChart
 }
 
 describe('continuous legend content', () => {
+  it.each([
+    undefined,
+    'quantile',
+  ] as const)('excludes unmeasured colors from the %s legend just as the mark scale does', (type) => {
+    const measured = [20, 40, 60, 80].map((value, index) => ({ category: `cell-${index}`, value }));
+    const compile = (data: Array<{ category: string; value: unknown }>) =>
+      compileChart(
+        {
+          mark: 'rect',
+          data,
+          encoding: {
+            x: { field: 'category', type: 'nominal' },
+            y: { field: 'category', type: 'nominal' },
+            color: { field: 'value', type: 'quantitative', scale: { type } },
+          },
+        },
+        { width: 600, height: 400 },
+      );
+    const expected = compile(measured);
+    const actual = compile([
+      ...measured,
+      ...[null, undefined, '', '  ', false, true, NaN, Infinity].map((value, index) => ({
+        category: `missing-${index}`,
+        value,
+      })),
+    ]);
+    expect(actual.legend.type).toBe('continuous');
+    expect(expected.legend.type).toBe('continuous');
+    if (actual.legend.type !== 'continuous' || expected.legend.type !== 'continuous') return;
+    expect(actual.legend.ticks.map(({ value, label }) => ({ value, label }))).toEqual(
+      expected.legend.ticks.map(({ value, label }) => ({ value, label })),
+    );
+    expect(actual.marks.map((mark) => 'fill' in mark && mark.fill)).toEqual(
+      expected.marks.map((mark) => 'fill' in mark && mark.fill),
+    );
+  });
+
   it('produces a gradient legend by default for a sequential color scale', () => {
     const content = computeLegendContent(makeSpec(), strategy, theme, 600, 400);
 

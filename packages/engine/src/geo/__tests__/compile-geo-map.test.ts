@@ -52,6 +52,33 @@ const DEFAULT_OPTIONS = { width: 600, height: 400 };
 // ---------------------------------------------------------------------------
 
 describe('compileGeoMap', () => {
+  it.each([
+    { scheme: 'blue', reverse: true },
+    { range: ['#ffff00', '#ff0000', '#000000'] },
+  ])('uses the point legend classes for quantitative fills (%j)', (scale) => {
+    const layout = compileGeoMap(
+      {
+        type: 'map',
+        geo: { features: MINI_TOPO, projection: 'mercator' },
+        data: [],
+        encoding: {},
+        points: {
+          data: Array.from({ length: 21 }, (_, value) => ({ lon: -100, lat: 31, value })),
+          longitude: { field: 'lon', type: 'quantitative' },
+          latitude: { field: 'lat', type: 'quantitative' },
+          color: { field: 'value', type: 'quantitative', scale },
+        },
+      },
+      DEFAULT_OPTIONS,
+    );
+    const legend = layout.pointContinuousLegend!;
+    expect(legend.bins!.length).toBeGreaterThan(1);
+    for (const mark of layout.pointMarks) {
+      const bin = legend.ticks.filter((tick) => Number(mark.data.value) >= tick.value).length;
+      expect(mark.fill).toBe(legend.bins![bin].color);
+    }
+  });
+
   it('compiles a minimal GeoMapSpec and produces features with paths', () => {
     const layout = compileGeoMap(
       {

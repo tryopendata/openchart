@@ -38,13 +38,17 @@ jobs:
           LINT_PID=$!
           bun run build || { echo "::error::Build failed"; exit 1; }
           wait $LINT_PID || { echo "::error::Lint failed"; exit 1; }
+          bun run check:boundaries || exit 1
+          bun run check:library-bundle || exit 1
           bun run typecheck || { echo "::error::Typecheck failed"; exit 1; }
           # Fail if spec.ts changed without regenerating the schema / llms.txt
           # (runs after build: generate:llms imports the built core).
           bun run check:generated || { echo "::error::Generated schema or llms.txt is stale. Run: bun run generate"; exit 1; }
 
       - name: Test
-        run: bun run test
+        run: |
+          bun run test
+          bun run test:scripts
 
   invariants:
     name: Playwright layout invariants
@@ -84,43 +88,4 @@ jobs:
         with:
           name: playwright-report
           path: playwright-report/
-          retention-days: 7
-
-  workbench:
-    name: Workbench production browser QA
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Setup
-        uses: ./.github/actions/setup-bun
-      - name: Install browsers
-        run: bunx playwright install --with-deps chromium webkit
-      - name: Test production artifact
-        run: |
-          bun run check:boundaries
-          bun run build
-          bun run --cwd apps/studio typecheck
-          bun run --cwd apps/studio lint
-          bun run --cwd apps/studio test
-          bun run --cwd apps/studio test:e2e
-          bun run check:library-bundle
-      - name: Verify independent checkout and nested hosting
-        run: |
-          bun run extract:studio "$RUNNER_TEMP/OpenChart Studio"
-          cd "$RUNNER_TEMP/OpenChart Studio"
-          STUDIO_TEST_BASE_PATH=/tools/studio/ bun run test:e2e
-      - name: Upload browser evidence
-        if: failure()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: workbench-browser-evidence
-          path: |
-            apps/studio/test-results/
-            ${{ runner.temp }}/OpenChart Studio/test-results/
           retention-days: 7

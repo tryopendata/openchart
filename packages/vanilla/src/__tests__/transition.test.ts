@@ -2409,6 +2409,37 @@ function donutSpec(data: Array<{ status: string; services: number }>): ChartSpec
 }
 
 describe('arc transitions', () => {
+  it('keeps labels in the arc group coordinate system when the center moves on resize', () => {
+    const spec = { ...donutSpec(STATUS_A), labels: { density: 'all' as const } };
+    const previous = compile(spec, 600, 400);
+    const next = compile(spec, 800, 500);
+    const svg = renderChartSVG(next, createContainer(800, 500)) as SVGSVGElement;
+    const handle = runTransition({
+      svg,
+      prevLayout: previous,
+      nextLayout: next,
+      animation: next.animation!,
+      manual: true,
+      onComplete: () => {},
+    });
+    const before = previous.marks.find((mark) => mark.type === 'arc' && mark.label?.visible);
+    if (before?.type !== 'arc' || !before.label) throw new Error('Missing labeled arc');
+    const group = [...svg.querySelectorAll('[data-mark-id]')].find(
+      (element) => element.getAttribute('data-key') === before.key,
+    )!;
+    const label = group.querySelector('.oc-mark-label')!;
+    expect(group.getAttribute('transform')).toBe(
+      `translate(${before.center.x},${before.center.y})`,
+    );
+    expect(Number(label.getAttribute('x')) + before.center.x).toBeCloseTo(before.label.x);
+    expect(Number(label.getAttribute('y')) + before.center.y).toBeCloseTo(before.label.y);
+    handle.cancel();
+    const after = next.marks.find((mark) => mark.key === before.key);
+    if (after?.type !== 'arc' || !after.label) throw new Error('Missing resized arc');
+    expect(Number(label.getAttribute('x')) + after.center.x).toBeCloseTo(after.label.x);
+    expect(Number(label.getAttribute('y')) + after.center.y).toBeCloseTo(after.label.y);
+  });
+
   it('canTransition passes for a donut data update', () => {
     expect(canTransition(passingGateArgs(donutSpec(STATUS_A), donutSpec(STATUS_B)))).toBe(true);
   });

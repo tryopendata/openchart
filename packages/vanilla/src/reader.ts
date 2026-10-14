@@ -250,11 +250,13 @@ export function createReader(
       return;
     event.preventDefault();
     event.stopPropagation();
+    const backwards = event.key === 'ArrowLeft' || event.key === 'ArrowUp';
     keyboardIndex =
-      (keyboardIndex +
-        (event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 1) +
-        rows.length) %
-      rows.length;
+      keyboardIndex < 0
+        ? backwards
+          ? rows.length - 1
+          : 0
+        : (keyboardIndex + (backwards ? -1 : 1) + rows.length) % rows.length;
     state = { ...state, preview: resolve(rows[keyboardIndex].datum) };
     emit();
   };

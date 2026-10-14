@@ -14,12 +14,12 @@
   },
   "workspaces": [
     "packages/*",
-    "examples",
-    "apps/*"
+    "examples"
   ],
   "scripts": {
     "build": "bun run --filter '@opendata-ai/openchart-core' build && bun run --filter '@opendata-ai/openchart-engine' build && bun run --filter '@opendata-ai/openchart-vanilla' build && bun run --filter '@opendata-ai/openchart-react' --filter '@opendata-ai/openchart-vue' --filter '@opendata-ai/openchart-svelte' build",
     "test": "vitest run",
+    "test:scripts": "node --test scripts/__tests__/*.test.mjs",
     "test:coverage": "vitest run --coverage",
     "lint": "biome check packages/ examples/src/ examples/.ladle/",
     "lint:fix": "biome check --write packages/ examples/src/ examples/.ladle/",
@@ -38,12 +38,8 @@
     "test:invariants": "playwright test --project=invariants --project=invariants-chromium-mobile --project=invariants-chromium-mobile-narrow --project=invariants-webkit-mobile",
     "test:perf": "playwright test --project=perf",
     "prepare": "husky",
-    "dev:workbench": "bun run --cwd apps/studio dev",
-    "build:workbench": "bun run build && bun run --cwd apps/studio build",
     "capture:design": "node scripts/capture-design-baseline.mjs",
-    "test:workbench": "bun run build && bun run --cwd apps/studio test:e2e",
     "check:boundaries": "node scripts/check-product-boundary.mjs",
-    "extract:studio": "node scripts/extract-studio.mjs",
     "check:library-bundle": "node scripts/check-library-bundle.mjs"
   },
   "overrides": {

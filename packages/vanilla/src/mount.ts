@@ -953,6 +953,9 @@ export function createChart<TData extends DataRow = DataRow>(
     const canvasMode = currentLayout.markRenderMode === 'canvas';
     if (canvasMode) {
       canvasLayer = createScatterCanvasLayer(container, currentLayout);
+      // Compatible updates keep the SVG in place, so appending the new canvas
+      // would paint its opaque background over the retained chrome and axes.
+      if (retainedSVG) container.insertBefore(canvasLayer.canvas, retainedSVG);
       canvasLayer.repaint();
 
       // Point marks are pixels on a canvas, not selectable elements, so

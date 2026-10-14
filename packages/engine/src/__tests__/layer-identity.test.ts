@@ -22,6 +22,40 @@ describe('layered observation identity', () => {
   it.each([
     'shared',
     'independent',
+  ] as const)('excludes missing observations from %s layer scale domains', (scale) => {
+    const leaf = (missing: boolean): ChartSpec => ({
+      mark: 'point',
+      data: [
+        { x: 10, y: 20 },
+        { x: 20, y: 40 },
+        ...(missing
+          ? [
+              { x: null, y: null },
+              { x: '', y: '' },
+            ]
+          : []),
+      ],
+      encoding: {
+        x: { field: 'x', type: 'quantitative', scale: { zero: false } },
+        y: { field: 'y', type: 'quantitative', scale: { zero: false } },
+      },
+    });
+    const compile = (missing: boolean) =>
+      compileLayer(
+        { layer: [leaf(missing), leaf(missing)], resolve: { scale: { y: scale } } },
+        dimensions,
+      );
+    const before = compile(false);
+    const after = compile(true);
+    expect(after.marks).toHaveLength(before.marks.length);
+    expect(after.marks.map((mark) => mark.type === 'point' && [mark.cx, mark.cy])).toEqual(
+      before.marks.map((mark) => mark.type === 'point' && [mark.cx, mark.cy]),
+    );
+  });
+
+  it.each([
+    'shared',
+    'independent',
   ] as const)('keeps each leaf tooltip and format attached to the painted mark with %s scales', (scale) => {
     const layout = compileLayer(
       {

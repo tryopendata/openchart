@@ -9,6 +9,7 @@
 import type { DataRow, DensityTransform } from '@opendata-ai/openchart-core';
 import { deviation, quantile } from 'd3-array';
 import { finiteNumber } from '../data/finite-number';
+import { groupKey } from './aggregate';
 
 /** Default number of points the curve is evaluated at. */
 const DEFAULT_STEPS = 200;
@@ -79,7 +80,7 @@ function groupRows(data: DataRow[], groupby: string[]): Map<string, DataRow[]> {
   if (groupby.length === 0) return new Map([['', data]]);
   const groups = new Map<string, DataRow[]>();
   for (const row of data) {
-    const key = groupby.map((f) => String(row[f] ?? '')).join('\x00');
+    const key = groupKey(row, groupby);
     const bucket = groups.get(key);
     if (bucket) bucket.push(row);
     else groups.set(key, [row]);

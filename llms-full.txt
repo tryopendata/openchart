@@ -2811,7 +2811,7 @@ const result = validateSpec(spec);
 
 ## Authoring foundation additions
 
-The reference [Studio workbench](workbench.md) consumes these additive interfaces. Existing v8 visual and animation defaults remain unchanged.
+The separate [OpenStudio application](https://github.com/tryopendata/openstudio) consumes these additive interfaces. Existing v8 visual and animation defaults remain unchanged.
 
 - **Theme:** import `clarity` for white/ink surfaces, Inter titles and 12px axes; `legacyEditorial` restores documented v8 typography without freezing layout behavior.
 - **Motion:** `animation: 'fluid' | 'subtle' | 'legacy'`; explicit phases override their preset. A phase can use `spring: { stiffness: 320, damping: 36, mass: 1 }` or the existing duration/easing configuration. Combining a spring with duration/easing in the same phase is an error. Quantitative springs are bounded, with a finite terminal state. Omitted/false animation remains disabled.
@@ -2824,7 +2824,7 @@ Host-neutral identity, comparison and explicit dataset-binding helpers are also 
 
 ### Numeric observations and interaction contracts
 
-Measured channels accept finite numbers and nonblank numeric strings, including zero. Null, blank text, booleans, `NaN` and infinities are absent measurements, not zeroes. This applies to chart quantities, map coordinates/colors, size/domain extraction, aggregates, bins, density and window differences/percentage changes. Supplied missing line/area observations remain gaps during rendering, updates and exports. Sankey requires positive finite flow values; omitted flows produce a warning and an all-invalid dataset produces an empty finite layout. Existing cumulative-sum, text-size fallback and absent-series stack conventions are unchanged.
+Measured channels accept finite numbers and nonblank numeric strings, including zero. Null, blank text, booleans, `NaN` and infinities are absent measurements, not zeroes. This applies to chart quantities, map coordinates/colors, size/domain extraction, aggregates, bins, density and window differences/percentage changes. Supplied missing line/area observations remain gaps during rendering, updates and exports. Sankey requires positive finite flow values; omitted flows produce a warning and an all-invalid dataset produces an empty finite layout. Cumulative sums skip absent/non-numeric contributions; window and density groups distinguish numeric and string keys. Layer domains and continuous legends use the same finite-measurement policy. Text-size fallback and absent-series stack conventions are unchanged.
 
 Maps, tile maps, bar lists and Sankey support arrows for inspection and Enter/Space for their existing click callbacks, including when `tooltip: false`. Escape dismisses inspection; Tab exits naturally. A keyboard-focused map mark uses arrows for mark navigation; the map root retains its separate zoom/pan shortcuts. Tables restore keyed cell/header focus across updates and keep native mobile detail disclosures operable.
 

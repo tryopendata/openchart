@@ -27,10 +27,4 @@ for (const name of await readdir('packages')) {
       throw new Error(`Product dependency ${dependency} in ${manifest.name}`);
   }
 }
-const app = JSON.parse(await readFile('apps/studio/package.json', 'utf8'));
-if (!app.private) throw new Error('Studio must remain a private, separately built app.');
-for (const config of ['vite.config.ts', 'vitest.config.ts', 'tsconfig.json']) {
-  if (/(?:alias\s*:|\.\.\/|packages\/)/.test(await readFile(`apps/studio/${config}`, 'utf8')))
-    throw new Error(`Studio configuration crosses its package boundary: ${config}`);
-}
-console.log('Library/product boundary verified. Studio consumes public package exports.');
+console.log('Library/product boundary verified. Published packages contain no application dependencies.');
