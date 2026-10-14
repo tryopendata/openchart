@@ -1,6 +1,6 @@
 # Design evolution delivery record
 
-OpenChart's direction is editorial clarity, continuous interaction, and explainable authoring. Datawrapper is a quality reference; OpenChart remains a portable JSON visualization library with a standalone reference workbench. Motion belongs in application controls, not in the rendering runtime.
+OpenChart's direction is editorial clarity, continuous interaction, and explainable authoring. Datawrapper is a quality reference; OpenChart remains a portable JSON visualization library consumed by the separate [OpenStudio application](https://github.com/tryopendata/openstudio). Motion belongs in application controls, not in the rendering runtime.
 
 ## Delivery and evidence
 
@@ -12,7 +12,7 @@ This record distinguishes implementation from release validation. No comprehensi
 | 1 | Editorial hierarchy, flat fills, authored focus, consistent formatting, responsive examples, source visibility, optional attribution | Opt-in theme and eight workbench compositions implemented; major defaults deferred |
 | 2 | Retained compatible scenes, interruption, shared deterministic sampler, bounded springs, coordinated labels/axes/stacks, export parity | SVG retention, bounded springs, sampled updates and attached labels implemented; controller/velocity continuity and broader parity remain |
 | 3 | Stable reader identity, preview/pin/compare, moving hit tests, semantic responsiveness, mobile tables | Chart reader, metadata comparisons, endpoint summaries and priority tables implemented; full renderer interaction parity remains |
-| 4 | Reference workbench, imports/types, direct editing, undo/drafts, responsive preview, exports, Motion controls | Standalone client-side application implemented; deployment destination and SaaS services undecided |
+| 4 | Reference workbench, imports/types, direct editing, undo/drafts, responsive preview, exports, Motion controls | Moved to OpenStudio; client-side GitHub Pages demo, no backend services |
 | 5 | Structured diagnostics, deterministic recommendations, explained reversible patches, host APIs | Additive APIs and editor UI implemented; full compiler decision provenance remains |
 | 6 | Linked exploration, supplied uncertainty, narrative continuity, full mobile authoring | Roadmap |
 
@@ -31,7 +31,7 @@ This record distinguishes implementation from release validation. No comprehensi
 
 Stress cases include empty data, long labels, missing observations, negative values, crowded series, dense scatter, duplicate keys, filtering, deletion, aggregation changes, and incompatible measures.
 
-The current delivery prioritizes production authoring infrastructure per the latest scope decision. See [workbench.md](workbench.md) for supported behavior and deployment boundaries. No remaining high-value roadmap item has been removed.
+The current delivery prioritizes production authoring infrastructure per the latest scope decision. See [OpenStudio](https://github.com/tryopendata/openstudio) for application features and deployment; this repository owns the reusable library contracts. No remaining high-value roadmap item has been removed.
 
 ## Contracts (target architecture; not all gates complete)
 

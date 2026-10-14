@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [8.9.0] - 2026-10-14
+
+### Added
+
+- **authoring APIs:** field metadata, structured design diagnostics, deterministic composition suggestions, guarded spec patches, observation comparisons and explicit dataset bindings.
+- **reader:** a framework-independent reader controller with preview/pins and sampled geometry, plus persistent observation identities.
+- **motion:** opt-in `fluid`, `subtle` and `legacy` timing presets; bounded spring motion; compatible SVG scene retention and coordinated label transitions.
+- **responsive:** final-tick preservation, wrapped endpoint summaries, growing chrome and priority-column mobile tables. Added the opt-in `clarity` theme and `legacyEditorial` preset.
+
 ### Fixed
 
 - **library:** rejected updates preserve the last valid chart/table; animated maps, tile maps and tables resume resizing after entrance completion. Sankey updates no longer replay entrances, and disabling tooltips no longer disables callbacks.
@@ -15,13 +24,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **export:** specialized SVG/raster exports render settled geometry without transient hover effects; maps preserve the current camera and clipping. Font embedding respects inline typography and inherited span fonts. Table CSV includes every filtered/sorted row across pagination.
 - **typography:** bar lists and Sankey use shared chrome wrapping and measured font styles, keeping headings inside narrow containers.
 
+- **rendering:** retained canvas charts keep axes and annotations above the canvas after updates and resizing; donut labels follow their slice when the center moves.
+- **reader:** initial Left/Up navigation starts at the final observation; group links accept ordinary labels such as `constructor`.
+- **scales:** continuous legends, layered domains and map point palettes now agree with the measurements and classes used to draw marks. Window/density grouping preserves typed keys, and cumulative sums skip booleans.
+- **diagnostics:** `onDiagnostic` accepts inline `data.values` and transformed fields while keeping fixes guarded against the authored document.
+- **motion:** physically equivalent spring parameters remain finite even at very large or small scales.
+
+### Changed
+
+- **Studio:** the standalone authoring app moved to [OpenStudio](https://github.com/tryopendata/openstudio). OpenChart ships the reusable visualization library and public authoring APIs; Studio UI, dependencies, persistence and hosting live in their own repository.
+- **tooling:** development uses Node.js 24, TypeScript 7 and Vitest 5, with the TypeScript 6 compatibility API retained for build tooling. React and optional Three.js development dependencies were updated. Published package runtime requirements are unchanged.
+
+## [8.8.0] - 2026-09-28
+
+### Added
+
+- **map:** `geo.zoom` lets readers zoom and pan a GeoMap. Opt-in (`zoom: true`, or `{ maxZoom?: number, controls?: boolean }`), so existing maps are unchanged. Ctrl/cmd + wheel and trackpad pinch zoom around the cursor while a plain wheel still scrolls the page (with a brief hint), drag pans, double-click zooms, two-finger pinch zooms on touch (one finger pans only once zoomed in), and `+`/`-`/arrows/`0` work when the map has focus. On-screen zoom in / zoom out / reset buttons follow the theme in light and dark. Zoom is clamped to 1x..`maxZoom` (default 12), panning can't leave the frame, points keep their screen size, and gestures share one camera with `zoomTo`/`setCamera`/focus. New `onCameraChange` mount option (and `<GeoMap onCameraChange>` / `camera-change` / `oncamerachange` in React, Vue, Svelte).
+- **docs:** Built for Agents examples and walkthrough.
+
+Releases 8.1.1 through 8.7.0 are recorded in the [package changelog](packages/core/CHANGELOG.md).
+
+## [8.1.0] - 2026-08-15
+
 ### Changed
 
 - **graph!:** `highlight()` now layers over the sticky category filter instead of replacing it. In v8.0 the two shared one slot and the last writer won, so hovering a custom legend row threw away the filter the reader had just clicked. The effective emphasis is now the intersection of filter and highlight, except that a highlight disjoint from the filter previews on its own and a highlight matching no nodes is a no-op layer. Two consequences: `clearHighlight()` releases only the transient highlight and returns to the filtered view (clearing the filter is `setActiveCategories([])`), and `onHighlightChange` reports the effective set, so it can fire with an array where it previously fired `null`. Legend `active` flags now track the filter alone. See [migration guide](docs/migrating-v8.md#24-graph-highlight-layers-over-the-category-filter-81).
 
-### Features
+### Added
 
-- **map:** `geo.zoom` lets readers zoom and pan a GeoMap. Opt-in (`zoom: true`, or `{ maxZoom?: number, controls?: boolean }`), so existing maps are unchanged. Ctrl/cmd + wheel and trackpad pinch zoom around the cursor while a plain wheel still scrolls the page (with a brief hint), drag pans, double-click zooms, two-finger pinch zooms on touch (one finger pans only once zoomed in), and `+`/`-`/arrows/`0` work when the map has focus. On-screen zoom in / zoom out / reset buttons follow the theme in light and dark. Zoom is clamped to 1x..`maxZoom` (default 12), panning can't leave the frame, points keep their screen size, and gestures share one camera with `zoomTo`/`setCamera`/focus. New `onCameraChange` mount option (and `<GeoMap onCameraChange>` / `camera-change` / `oncamerachange` in React, Vue, Svelte).
 - **graph:** `seedNode` on `GraphSpec` — name the graph's seed/root node (`seedNode: 'id'`, or `{ id, style }`) and it gets a ring in the theme text color, a 2px stroke, and an always-on label, plus exemption from focus dimming (highlight, legend filter, hover, and selection; search still dims it). Only the seed is exempt; its neighbors dim normally, so a hub seed doesn't light half the graph. Radius stays with the `nodeSize` encoding unless `style.radius` is set. `style` layers under any `nodeOverrides` entry for the same id, and an id matching no node warns rather than throwing. Unrelated to `layout.seed`.
 - **graph:** `legend: false` set on the spec (rather than as a mount option) now actually suppresses the built-in legend. The field was typed and documented but only the mount option was read, so a spec-only host got two legends. The mount option still wins when both are set.
 - **graph:** `onWarn` mount option routes compiler advisories (unknown `seedNode` id, deprecations) somewhere other than `console.warn`. Each distinct message is emitted at most once per instance, so a standing warning doesn't repeat on every `update()`.

@@ -7,7 +7,7 @@ const { build } = require('esbuild');
 const result = await build({
   stdin: {
     contents: "export { createChart } from '@opendata-ai/openchart-vanilla';",
-    resolveDir: resolve('apps/studio'),
+    resolveDir: resolve('packages/vanilla'),
   },
   bundle: true,
   minify: true,

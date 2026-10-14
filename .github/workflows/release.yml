@@ -36,7 +36,9 @@ jobs:
         run: bun run typecheck
 
       - name: Test
-        run: bun run test
+        run: |
+          bun run test
+          bun run test:scripts
 
       - name: Extract version from commit message
         id: version

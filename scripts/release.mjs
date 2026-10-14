@@ -90,6 +90,20 @@ function verifyOnMain() {
 }
 
 function generateChangelog(currentVersion, newVersion) {
+  // A reviewed release entry can explain the net change more accurately than
+  // individual commits (for example, a product extracted before publication).
+  const date = new Date().toISOString().split('T')[0];
+  const compareBase = `core-v${currentVersion}`;
+  const heading = `## [${newVersion}](https://github.com/tryopendata/openchart/compare/${compareBase}...core-v${newVersion}) (${date})\n`;
+  const rootChangelog = readFileSync(resolve(ROOT, 'CHANGELOG.md'), 'utf8');
+  const reviewedEntry = rootChangelog.split(/^## /m).find((section) =>
+    section.startsWith(`[${newVersion}]`),
+  );
+  if (reviewedEntry) {
+    const body = reviewedEntry.slice(reviewedEntry.indexOf('\n') + 1).trim();
+    if (body) return `${heading}\n${body}\n`;
+  }
+
   // Collect commits since the last release tag
   const lastTag = `core-v${currentVersion}`;
   let tagExists;
@@ -137,9 +151,7 @@ function generateChangelog(currentVersion, newVersion) {
     }
   }
 
-  const date = new Date().toISOString().split('T')[0];
-  const compareBase = `core-v${currentVersion}`;
-  let md = `## [${newVersion}](https://github.com/tryopendata/openchart/compare/${compareBase}...core-v${newVersion}) (${date})\n`;
+  let md = heading;
 
   let hasContent = false;
   for (const [section, items] of Object.entries(sections)) {

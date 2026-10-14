@@ -28,23 +28,23 @@ Switch chart types by changing the `mark` field. If the encoding channels are co
 ```tsx
 import { useState } from "react";
 import { Chart } from "@opendata-ai/openchart-react";
-import type { ChartType, ChartSpec } from "@opendata-ai/openchart-core";
+import type { MarkType, ChartSpec } from "@opendata-ai/openchart-core";
 
-const CHART_TYPES: ChartType[] = ["line", "column", "area", "bar"];
+const MARK_OPTIONS: MarkType[] = ["line", "area", "bar"];
 
 function ChartWithTypeSwitcher({ baseSpec }: { baseSpec: ChartSpec }) {
-  const [chartType, setChartType] = useState<ChartType>(baseSpec.type);
+  const [chartType, setMarkType] = useState<MarkType>(typeof baseSpec.mark === "string" ? baseSpec.mark : baseSpec.mark.type);
 
-  // Immutable update: spread the spec, override type
-  const spec = { ...baseSpec, type: chartType };
+  // Immutable update: spread the spec, override mark
+  const spec = { ...baseSpec, mark: chartType };
 
   return (
     <div>
       <select
         value={chartType}
-        onChange={(e) => setChartType(e.target.value as ChartType)}
+        onChange={(e) => setMarkType(e.target.value as MarkType)}
       >
-        {CHART_TYPES.map((t) => (
+        {MARK_OPTIONS.map((t) => (
           <option key={t} value={t}>
             {t}
           </option>
@@ -64,18 +64,18 @@ function ChartWithTypeSwitcher({ baseSpec }: { baseSpec: ChartSpec }) {
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { Chart } from "@opendata-ai/openchart-vue";
-import type { ChartType, ChartSpec } from "@opendata-ai/openchart-core";
+import type { MarkType, ChartSpec } from "@opendata-ai/openchart-core";
 
 const props = defineProps<{ baseSpec: ChartSpec }>();
-const CHART_TYPES: ChartType[] = ["line", "column", "area", "bar"];
-const chartType = ref<ChartType>(props.baseSpec.type);
+const MARK_OPTIONS: MarkType[] = ["line", "area", "bar"];
+const chartType = ref<MarkType>(typeof props.baseSpec.mark === "string" ? props.baseSpec.mark : props.baseSpec.mark.type);
 
-const spec = computed(() => ({ ...props.baseSpec, type: chartType.value }));
+const spec = computed(() => ({ ...props.baseSpec, mark: chartType.value }));
 </script>
 
 <template>
   <select v-model="chartType">
-    <option v-for="t in CHART_TYPES" :key="t" :value="t">{{ t }}</option>
+    <option v-for="t in MARK_OPTIONS" :key="t" :value="t">{{ t }}</option>
   </select>
   <div style="width: 100%; height: 400px">
     <Chart :spec="spec" />
@@ -88,17 +88,17 @@ const spec = computed(() => ({ ...props.baseSpec, type: chartType.value }));
 ```svelte
 <script lang="ts">
 import { Chart } from "@opendata-ai/openchart-svelte";
-import type { ChartType, ChartSpec } from "@opendata-ai/openchart-core";
+import type { MarkType, ChartSpec } from "@opendata-ai/openchart-core";
 
 let { baseSpec }: { baseSpec: ChartSpec } = $props();
-const CHART_TYPES: ChartType[] = ["line", "column", "area", "bar"];
-let chartType: ChartType = $state(baseSpec.type);
+const MARK_OPTIONS: MarkType[] = ["line", "area", "bar"];
+let chartType: MarkType = $state(typeof baseSpec.mark === "string" ? baseSpec.mark : baseSpec.mark.type);
 
-const spec = $derived({ ...baseSpec, type: chartType });
+const spec = $derived({ ...baseSpec, mark: chartType });
 </script>
 
 <select bind:value={chartType}>
-  {#each CHART_TYPES as t}
+  {#each MARK_OPTIONS as t}
     <option value={t}>{t}</option>
   {/each}
 </select>
@@ -111,9 +111,9 @@ All framework components detect spec changes and call `chart.update(spec)` inter
 
 ### Encoding compatibility
 
-Switching between `line`, `area`, and `column` usually works without encoding changes since they all use x (temporal/ordinal) and y (quantitative).
+Switching between `line`, `area`, and vertical `bar` usually works with a category on x and a quantitative value on y. `bar` orientation follows the encodings; there is no separate `column` mark.
 
-Switching to `bar` requires swapping axes: bar expects the category on y and the value on x. Switching to `pie`/`donut` requires dropping x and making color required.
+Horizontal bars use the category on y and the value on x. Pie and donut charts use `mark: "arc"` with `encoding.theta` for the value and `encoding.color` for categories; `mark: { type: "arc", innerRadius: 0.55 }` makes a donut.
 
 If the encoding doesn't match the new type, the engine returns a validation error. Check encoding requirements in the [encoding rules table](spec-reference.md#encoding-by-chart-type).
 

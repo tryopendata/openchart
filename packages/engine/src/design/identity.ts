@@ -115,7 +115,12 @@ export function linkedEntityKeys(
     return key ? [key] : [];
   }
   if (source.kind === 'group' && target.kind === 'row') {
-    return (source.groupMembers?.[String(value)] ?? []).flatMap((member) => {
+    const group = String(value);
+    const members =
+      source.groupMembers && Object.hasOwn(source.groupMembers, group)
+        ? source.groupMembers[group]
+        : [];
+    return members.flatMap((member) => {
       const key = observationKey(member);
       return key ? [key] : [];
     });

@@ -30,10 +30,8 @@ import {
   HPAD_COMPACT_FRACTION,
   HPAD_COMPACT_MIN,
   resolveTheme,
-  SEQUENTIAL_PALETTES,
 } from '@opendata-ai/openchart-core';
 import { geoArea, geoPath } from 'd3-geo';
-import { scaleQuantile } from 'd3-scale';
 import { feature as topoFeature, mesh as topoMesh } from 'topojson-client';
 import type { GeometryCollection, Topology } from 'topojson-specification';
 import { resolveKnockoutColor } from '../charts/utils';
@@ -376,16 +374,28 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
   }
 
   const pointColor = mapSpec.points?.color;
+  const pointColorChannel: EncodingChannel | undefined =
+    pointColor?.type === 'quantitative'
+      ? { ...pointColor, scale: { ...pointColor.scale, type: 'quantile' } }
+      : undefined;
+  const pointColorValues = pointColorChannel
+    ? mapSpec.points!.data.flatMap((row) => {
+        const value = finiteNumber(row[pointColorChannel.field]);
+        return value === undefined ? [] : [value];
+      })
+    : [];
+  const pointClassScale =
+    pointColorChannel && pointColorValues.length
+      ? classScaleForChannel(pointColorValues, pointColorChannel, theme)
+      : undefined;
   const pointContinuousContent =
-    showLegend && pointColor?.type === 'quantitative'
+    showLegend && pointColorChannel
       ? computeContinuousLegendContentForChannel(
-          mapSpec.points!.data.flatMap((row) => {
-            const value = finiteNumber(row[pointColor.field]);
-            return value === undefined ? [] : [value];
-          }),
-          { ...pointColor, scale: { ...pointColor.scale, type: 'quantile' } },
+          pointColorValues,
+          pointColorChannel,
           theme,
           fullArea.width,
+          pointClassScale,
         )
       : null;
 
@@ -706,18 +716,10 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
 
     if (pts.color) {
       if (pts.color.type === 'quantitative') {
-        const colorValues: number[] = [];
-        for (const row of pts.data) {
-          const value = finiteNumber(row[pts.color.field]);
-          if (value !== undefined) colorValues.push(value);
-        }
-        if (colorValues.length > 0) {
-          const palette = pts.color.scale?.scheme ?? 'blue';
-          const paletteStops = [...(SEQUENTIAL_PALETTES[palette] ?? SEQUENTIAL_PALETTES.blue)];
-          const qScale = scaleQuantile<string>().domain(colorValues).range(paletteStops);
+        if (pointClassScale) {
           pointColorScale = (val: unknown) => {
             const value = finiteNumber(val);
-            return value !== undefined ? qScale(value) : neutralFill;
+            return value !== undefined ? pointClassScale.color(value) : neutralFill;
           };
         }
       } else {

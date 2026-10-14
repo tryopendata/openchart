@@ -28,10 +28,13 @@ it only changes bundled type-checking sources, not Ladle's runtime.
 ```bash
 bun run dev         # Start the examples dev server (Ladle) at localhost:6006
 bun run build       # Build all packages in dependency order
-bun run test        # Run all tests
+bun run test        # Run library and example tests
+bun run test:scripts # Test release tooling
 bun run typecheck   # Type-check all packages
 bun run lint        # Lint all packages
 ```
+
+The browser authoring app lives in [OpenStudio](https://github.com/tryopendata/openstudio), with its own dependencies, tests and GitHub Pages deployment.
 
 The dev server uses [Ladle](https://ladle.dev) to render stories from `examples/src/`. Each story is a standalone React component that demonstrates a feature. Open it in a browser to see your changes live.
 
@@ -44,11 +47,13 @@ openchart/
     engine/         Headless compiler: spec in, layout out
     vanilla/        DOM rendering: SVG charts, HTML tables
     react/          React components wrapping vanilla
+    vue/            Vue 3 components wrapping vanilla
+    svelte/         Svelte 5 components wrapping vanilla
   examples/         Ladle stories for visual development
   docs/             Documentation
 ```
 
-Dependency direction: `core <- engine <- vanilla <- react`. Never import upstream.
+Dependency direction: `core <- engine <- vanilla <- react / vue / svelte`. Never import upstream.
 
 For a deeper look at how the packages fit together, see [docs/architecture.md](docs/architecture.md).
 
@@ -111,18 +116,17 @@ export function computeMyTypeLabels(
 
 ### Step 4: Register the renderer
 
-`index.ts` composes compute + labels into a `ChartRenderer` and registers it:
+`index.ts` composes compute + labels into an exported `ChartRenderer`:
 
 ```ts
 // packages/engine/src/charts/<type>/index.ts
 
 import type { Mark } from "@opendata-ai/openchart-core";
-import { registerChartRenderer } from "../registry";
 import type { ChartRenderer } from "../registry";
 import { computeMyTypeMarks } from "./compute";
 import { computeMyTypeLabels } from "./labels";
 
-const myTypeRenderer: ChartRenderer = (spec, scales, chartArea, strategy) => {
+export const myTypeRenderer: ChartRenderer = (spec, scales, chartArea, strategy) => {
   const marks = computeMyTypeMarks(spec, scales, chartArea, strategy);
   const labels = computeMyTypeLabels(marks, chartArea);
   for (let i = 0; i < marks.length && i < labels.length; i++) {
@@ -131,26 +135,18 @@ const myTypeRenderer: ChartRenderer = (spec, scales, chartArea, strategy) => {
   return marks as Mark[];
 };
 
-registerChartRenderer("<type>", myTypeRenderer);
-
 export { computeMyTypeMarks } from "./compute";
 export { computeMyTypeLabels } from "./labels";
 ```
 
 ### Step 5: Wire it up
 
-1. Add the import to `packages/engine/src/index.ts`:
+1. Import `myTypeRenderer` in `packages/engine/src/charts/builtin.ts` and add `registerChartRenderer("<type>", myTypeRenderer)` inside `registerBuiltinRenderers()`. Keeping registration there also lets tests restore built-ins after clearing the registry.
+
+2. Add the type string to the `MarkType` union in `packages/core/src/types/spec.ts`:
 
    ```ts
-   import "./charts/<type>/index";
-   ```
-
-   This import triggers self-registration at module load time.
-
-2. Add the type string to the `ChartType` union in `packages/core/src/types/spec.ts`:
-
-   ```ts
-   export type ChartType = 'line' | 'area' | 'bar' | ... | '<type>';
+   export type MarkType = 'line' | 'area' | 'bar' | ... | '<type>';
    ```
 
 3. Add encoding rules in `packages/core/src/types/encoding.ts` (which channels are required/optional for this type).
@@ -266,7 +262,7 @@ import { describe, it, expect } from "vitest";
 // Fixture factories at the top of the file
 function createTestSpec(): ChartSpec {
   return {
-    type: "line",
+    mark: "line",
     data: [{ x: 1, y: 2 }],
     encoding: {
       x: { field: "x", type: "quantitative" },
@@ -287,7 +283,7 @@ Run tests from the repo root:
 
 ```bash
 bun run test                    # All tests
-bun run test -- --watch         # Watch mode
+bunx vitest --watch             # Watch mode
 bun run test -- path/to/file    # Single file
 ```
 
@@ -313,7 +309,7 @@ node scripts/release.mjs 8.1.0-rc.1     # explicit version
 node scripts/release.mjs minor --dry-run  # preview, writes nothing
 ```
 
-The script bumps every `packages/*/package.json`, generates changelogs from conventional commits, commits as `release: openchart vX.Y.Z`, creates per-package tags (`core-vX.Y.Z`, ...) via the GitHub API, and pushes.
+The script bumps every `packages/*/package.json`, copies the reviewed version entry from the root changelog (or generates notes from conventional commits when no entry exists), commits as `release: openchart vX.Y.Z`, creates per-package tags (`core-vX.Y.Z`, ...) via the GitHub API, and pushes.
 
 Don't edit `package.json` versions by hand and don't create release tags yourself. Pushing the `release:` commit triggers the Release workflow, which builds, tests, rewrites `workspace:*` dependencies to real versions, and publishes all six packages to npm. Prerelease versions (anything with a `-`) publish under the `next` dist-tag, so they never take `latest`.
 

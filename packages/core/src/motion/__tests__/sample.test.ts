@@ -42,4 +42,29 @@ describe('deterministic quantitative motion', () => {
       sampleMotion({ duration, spring: FLUID_SPRING }, duration / 2),
     );
   });
+  it.each([1e-200, 1e200])('preserves the same physical spring at parameter scale %s', (scale) => {
+    const spring = {
+      stiffness: FLUID_SPRING.stiffness * scale,
+      damping: FLUID_SPRING.damping * scale,
+      mass: FLUID_SPRING.mass * scale,
+    };
+    const duration = springDuration(FLUID_SPRING);
+    expect(springDuration(spring)).toBe(duration);
+    for (let elapsed = 1; elapsed < duration; elapsed += 13) {
+      const expected = sampleMotion({ duration, spring: FLUID_SPRING }, elapsed);
+      const actual = sampleMotion({ duration, spring }, elapsed);
+      expect(actual.position).toBeCloseTo(expected.position, 10);
+      expect(actual.velocity).toBeCloseTo(expected.velocity, 10);
+    }
+    expect(motionCSS({ duration, spring })).not.toContain('NaN');
+  });
+  it('keeps heavily overdamped springs finite', () => {
+    const spring = { stiffness: 320, damping: 1e200, mass: 1 };
+    const duration = springDuration(spring);
+    const sample = sampleMotion({ duration, spring }, 100);
+    expect(Number.isFinite(sample.position)).toBe(true);
+    expect(Number.isFinite(sample.velocity)).toBe(true);
+    expect(sample.position).toBeGreaterThanOrEqual(0);
+    expect(sample.position).toBeLessThanOrEqual(1);
+  });
 });

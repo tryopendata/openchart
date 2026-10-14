@@ -38,6 +38,15 @@ function mount(initial: ChartSpec | LayerSpec = spec) {
 }
 
 describe('reader identity and visibility on compiled charts', () => {
+  it.each([
+    'ArrowLeft',
+    'ArrowUp',
+  ])('starts backward navigation at the last observation (%s)', (key) => {
+    const { container, reader } = mount();
+    container.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+    expect(reader.selection.preview?.datum).toBe(spec.data.at(-1));
+  });
+
   it('retains a zero-value pin and marks it filtered when a transform hides its row', () => {
     const { reader, update } = mount();
     reader.pin(spec.data[0]);

@@ -8,14 +8,7 @@
 
 import type { DataRow, WindowTransform } from '@opendata-ai/openchart-core';
 import { finiteNumber } from '../data/finite-number';
-
-/**
- * Build a composite group key from a row's groupby field values.
- * Uses null-char delimiter (same convention as aggregate.ts).
- */
-function groupKey(row: DataRow, groupby: string[]): string {
-  return groupby.map((f) => String(row[f] ?? '')).join('\x00');
-}
+import { groupKey } from './aggregate';
 
 /**
  * Try to parse a value as a date, returning its timestamp if valid.
@@ -147,8 +140,7 @@ export function runWindow(data: DataRow[], transform: WindowTransform): DataRow[
             break;
           }
           case 'cumsum': {
-            const val = Number(entry.row[def.field]);
-            const addend = Number.isFinite(val) ? val : 0;
+            const addend = finiteNumber(entry.row[def.field]) ?? 0;
             if (i === 0) {
               computed = addend;
             } else {

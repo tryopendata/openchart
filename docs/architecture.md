@@ -25,7 +25,7 @@ Each package re-exports core types for consumer convenience, so users typically 
 
 ## Separate authoring product
 
-`apps/studio` is a private application that consumes built public core, engine and vanilla exports. It owns React/Motion controls, import, local projects, reference data and assets. The published library packages must never import Studio or acquire its product dependencies. Library build/test/typecheck commands exclude the app; dedicated app CI and extraction tests enforce the boundary. Studio can move into another repository without changing `VizSpec` or the chart runtime. See [Studio deployment and capabilities](workbench.md).
+[OpenStudio](https://github.com/tryopendata/openstudio) is a separate browser application that consumes published core, engine and vanilla packages. It owns authoring controls, imports, project persistence, reference data, assets and GitHub Pages hosting. OpenChart owns the reusable spec, diagnostics, recommendations, identity, motion and rendering contracts. The library never imports application code or product dependencies. Library CI checks that boundary in source manifests and a bundled consumer.
 
 ## Compilation pipeline
 

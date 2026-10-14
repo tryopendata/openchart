@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { compileChart } from '../../compile';
 import { runAggregate } from '../aggregate';
+import { runDensity } from '../density';
 import { runJoinAggregate } from '../joinaggregate';
+import { runWindow } from '../window';
 
 describe('summaries preserve missing observations', () => {
   const data = [
@@ -45,6 +47,32 @@ describe('summaries preserve missing observations', () => {
         (row) => row.result,
       ),
     ).toEqual([2, 2, 2, 2, 2]);
+  });
+  it('preserves typed groups through window and density transforms', () => {
+    const groups = [null, '', 1, '1', 'a\0b'];
+    const source = groups.flatMap((group) => [
+      { group, value: 2 },
+      { group, value: 4 },
+    ]);
+    const windowed = runWindow(source, {
+      groupby: ['group'],
+      sort: [{ field: 'value' }],
+      window: [{ op: 'cumsum', field: 'value', as: 'total' }],
+    });
+    expect(windowed.map((row) => row.total)).toEqual(groups.flatMap(() => [2, 6]));
+    const density = runDensity(source, { density: 'value', groupby: ['group'], steps: 4 });
+    expect(new Set(density.map((row) => JSON.stringify([typeof row.group, row.group]))).size).toBe(
+      groups.length,
+    );
+  });
+  it('does not add boolean observations to running totals', () => {
+    const source = [2, true, false, null, '', '  ', '4'].map((value, order) => ({ value, order }));
+    expect(
+      runWindow(source, {
+        sort: [{ field: 'order' }],
+        window: [{ op: 'cumsum', field: 'value', as: 'total' }],
+      }).map((row) => row.total),
+    ).toEqual([2, 2, 2, 2, 2, 2, 6]);
   });
   it('compiles only measured marks and exposes the real summary to inspection', () => {
     const layout = compileChart(

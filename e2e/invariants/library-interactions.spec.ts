@@ -1,4 +1,9 @@
 import { expect, test } from '@playwright/test';
+import path from 'node:path';
+import type { ChartInstance } from '../../packages/vanilla/src/mount';
+
+type ReviewWindow = Window & { releaseChart: ChartInstance };
+const rendererModule = `/@fs${path.resolve(__dirname, '../../packages/vanilla/src/mount.ts')}`;
 
 const fixture = '/?story=testing--library-contracts--lifecycle&mode=preview';
 const renderers = [
@@ -110,4 +115,104 @@ test('graph: the canvas releases both Tab directions', async ({ page }) => {
   await canvas.focus();
   await page.keyboard.press('Shift+Tab');
   await expect(canvas).not.toBeFocused();
+});
+
+test('canvas updates and resizes retain visible, interactive SVG chrome above the paint layer', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1000, height: 760 });
+  await page.goto(fixture);
+  await expect(page.getByTestId('library-host').locator('svg').first()).toBeVisible();
+  await page.evaluate(async (moduleUrl) => {
+    const { createChart } = await import(moduleUrl);
+    const host = document.createElement('div');
+    host.id = 'release-review-chart';
+    host.style.cssText = 'width:600px;height:400px;margin:24px;background:white';
+    document.body.replaceChildren(host);
+    const spec = {
+      mark: 'point',
+      animation: { enter: false, update: true },
+      chrome: { title: 'Canvas scatter after update', subtitle: 'Axes and chrome stay above the canvas surface' },
+      data: Array.from({ length: 60 }, (_, i) => ({ id: i, x: i % 10, y: (i * 17) % 100 })),
+      encoding: {
+        x: { field: 'x', type: 'quantitative' },
+        y: { field: 'y', type: 'quantitative' },
+        key: { field: 'id', type: 'nominal' },
+      },
+    };
+    const chart: ChartInstance = createChart(host, spec, { renderer: 'canvas', responsive: false });
+    (window as ReviewWindow).releaseChart = chart;
+    chart.update({ ...spec, data: spec.data.map((row) => ({ ...row, y: 100 - row.y })) });
+  }, rendererModule);
+  const host = page.locator('#release-review-chart');
+  await expect(host.locator('svg')).not.toHaveClass(/oc-transitioning/);
+  const chromeAboveCanvas = () => host.evaluate((element) => {
+    const canvas = element.querySelector('canvas')!;
+    const svg = element.querySelector('svg')!;
+    const title = element.querySelector('.oc-title')!;
+    const bounds = title.getBoundingClientRect();
+    const top = document.elementFromPoint(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2);
+    return !!(canvas.compareDocumentPosition(svg) & Node.DOCUMENT_POSITION_FOLLOWING) &&
+      !!top && (top === title || title.contains(top));
+  });
+  expect(await chromeAboveCanvas()).toBe(true);
+  await page.evaluate(() => {
+    document.querySelector<HTMLElement>('#release-review-chart')!.style.width = '800px';
+    (window as ReviewWindow).releaseChart.resize();
+  });
+  await expect(host.locator('svg')).not.toHaveClass(/oc-transitioning/);
+  expect(await chromeAboveCanvas()).toBe(true);
+  const screenshot = testInfo.outputPath('canvas-after-update-and-resize.png');
+  await host.screenshot({ path: screenshot });
+  await testInfo.attach('canvas-after-update-and-resize', { path: screenshot, contentType: 'image/png' });
+});
+
+test('donut labels remain attached to their slices while a resized center is in motion', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1000, height: 760 });
+  await page.goto(fixture);
+  await expect(page.getByTestId('library-host').locator('svg').first()).toBeVisible();
+  const positions = await page.evaluate(async (moduleUrl) => {
+    const { createChart } = await import(moduleUrl);
+    const host = document.createElement('div');
+    host.id = 'release-review-chart';
+    host.style.cssText = 'width:600px;height:400px;margin:24px;background:white';
+    document.body.replaceChildren(host);
+    const spec = {
+      mark: { type: 'arc', innerRadius: 55 },
+      animation: { preset: 'fluid', enter: false },
+      chrome: { title: 'Donut resized with attached labels' },
+      data: [{ status: 'Healthy', value: 24 }, { status: 'Degraded', value: 4 }, { status: 'Down', value: 2 }],
+      encoding: {
+        theta: { field: 'value', type: 'quantitative' },
+        color: { field: 'status', type: 'nominal' },
+      },
+      labels: { density: 'all' }, legend: { show: false },
+    };
+    const chart: ChartInstance = createChart(host, spec, { responsive: false });
+    (window as ReviewWindow).releaseChart = chart;
+    const original = chart.layout;
+    host.style.width = '800px';
+    host.style.height = '500px';
+    const handle = chart.beginManualUpdate(spec)!;
+    if (!handle) throw new Error('Expected a resize transition');
+    const positions = (layout: typeof chart.layout) => layout.marks.flatMap((mark) => {
+      if (mark.type !== 'arc' || !mark.label?.visible) return [];
+      const group = [...host.querySelectorAll<SVGGElement>('.oc-mark-arc')].find((element) => element.getAttribute('data-key') === mark.key)!;
+      const text = group.querySelector<SVGTextElement>('.oc-mark-label')!;
+      const transform = group.transform.baseVal.consolidate()!.matrix;
+      return [{ expectedX: mark.label.x, expectedY: mark.label.y,
+        actualX: text.x.baseVal.getItem(0).value + transform.e,
+        actualY: text.y.baseVal.getItem(0).value + transform.f }];
+    });
+    const initial = positions(original);
+    handle.step(150);
+    // Keep the manual frame visible for screenshot inspection; destroy owns cancellation.
+    return initial;
+  }, rendererModule);
+  expect(positions.length).toBeGreaterThan(0);
+  for (const position of positions) {
+    expect(position.actualX).toBeCloseTo(position.expectedX, 3);
+    expect(position.actualY).toBeCloseTo(position.expectedY, 3);
+  }
+  const screenshot = testInfo.outputPath('donut-during-resize.png');
+  await page.locator('#release-review-chart').screenshot({ path: screenshot });
+  await testInfo.attach('donut-during-resize', { path: screenshot, contentType: 'image/png' });
 });
