@@ -1063,6 +1063,14 @@ The `mark` field on ChartSpec accepts either a string (`'line'`) or an object wi
 | `seatRadius`   | `number \| 'auto'`      | `'auto'`    | parliament     | Seat dot radius in pixels. `'auto'` sizes dots to fill the rings for the seat count. |
 | `majorityLine` | `boolean`               | `true`      | parliament     | Draw the majority-threshold line and its "N to win" label. |
 
+For pre-binned histograms, an explicit `encoding.tooltip` replaces the default
+numeric range title as well as the tooltip rows. To describe pooled end bins,
+include a nominal field such as `{ field: 'rangeLabel', type: 'nominal', title:
+'Gift size' }` with values like `Below $1,000` and `$100,000 or more`. Numeric
+`x`/`x2` still position the bars; a finite display boundary need not be presented
+as the actual upper bound. Without explicit tooltip fields, the bin-edge range
+remains the default title.
+
 #### Gradients
 
 The `fill` property accepts a `GradientDef` object for linear or radial gradients. Source: `core/src/types/spec.ts`.
@@ -1596,6 +1604,14 @@ annotations: [
 ## Labels
 
 Data label display configuration. Source: `core/src/types/spec.ts`.
+
+The semantic format `percent` displays nonzero magnitudes below 0.1 percent as
+`<0.1%` (or `>−0.1%` for negative values), while exact zero remains `0%`. This
+applies to labels, tooltip fields, and table columns using the semantic keyword,
+and to the exported `formatPercent` utility. Fraction-versus-pre-scaled detection
+is unchanged. Explicit d3 formats retain their requested precision: use `.4%`
+for four decimal places or `.1%` for ordinary rounding. Formatting uses the
+library's existing default d3 locale; runtime locale replacement is unsupported.
 
 ```ts
 interface LabelConfig {

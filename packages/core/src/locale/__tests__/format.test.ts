@@ -123,6 +123,24 @@ describe('formatPercent', () => {
     expect(formatPercent(1)).toBe('100%');
   });
 
+  it('distinguishes tiny nonzero percentages from zero in either representation', () => {
+    expect(formatPercent(0)).toBe('0%');
+    expect(formatPercent(-0)).toBe('0%');
+    expect(formatPercent(0.000016)).toBe('<0.1%');
+    expect(formatPercent(-0.000016)).toBe('>−0.1%');
+    expect(formatPercent(0.001)).toBe('0.1%');
+    expect(formatPercent(-0.001)).toBe('−0.1%');
+    expect(formatPercent(0.016, { fraction: false })).toBe('<0.1%');
+    expect(formatPercent(-0.016, { fraction: false })).toBe('>−0.1%');
+    expect(formatPercent(0.1, { fraction: false })).toBe('0.1%');
+  });
+
+  it('preserves non-finite formatting without inventing a threshold', () => {
+    expect(formatPercent(NaN)).toBe('NaN%');
+    expect(formatPercent(Infinity)).toBe('Infinity%');
+    expect(formatPercent(-Infinity)).toBe('−Infinity%');
+  });
+
   it('formats pre-scaled values with fraction: false', () => {
     expect(formatPercent(84.7, { fraction: false })).toBe('84.7%');
     expect(formatPercent(1200, { fraction: false })).toBe('1,200%');
@@ -263,6 +281,13 @@ describe('resolveNumberFormatter', () => {
   it('resolves percent keyword with fraction detection (extent <= 1)', () => {
     const fmt = resolveNumberFormatter('percent', { extent: [0, 0.9] });
     expect(fmt!(0.847)).toBe('84.7%');
+  });
+
+  it('uses nonzero bounds for semantic percent, while explicit d3 keeps authored precision', () => {
+    expect(resolveNumberFormatter('percent', { extent: [0, 1] })!(0.00001)).toBe('<0.1%');
+    expect(resolveNumberFormatter('percent', { extent: [-100, 100] })!(-0.001)).toBe('>−0.1%');
+    expect(resolveNumberFormatter('.1%')!(0.00001)).toBe('0.0%');
+    expect(resolveNumberFormatter('.4%')!(0.00001)).toBe('0.0010%');
   });
 
   it('resolves percent keyword with pre-scaled detection (extent > 1)', () => {

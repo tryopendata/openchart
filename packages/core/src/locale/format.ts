@@ -194,6 +194,13 @@ export type NumberFormatter = (value: number) => string;
 
 export function formatPercent(value: number, options?: { fraction?: boolean }): string {
   const fraction = options?.fraction ?? true;
+  // Semantic percentages promise a readable magnitude, not fixed precision.
+  // Never turn a small observation into an apparent absence. Keep explicit
+  // d3 formats untouched for callers who need exact decimal-place control.
+  const percent = fraction ? value * 100 : value;
+  if (Number.isFinite(percent) && percent !== 0 && Math.abs(percent) < 0.1) {
+    return percent < 0 ? `>${FORMAT_PERCENT_RAW(-0.1)}%` : `<${FORMAT_PERCENT_RAW(0.1)}%`;
+  }
   if (fraction) {
     return FORMAT_PERCENT_FRACTION(value);
   }

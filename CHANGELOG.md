@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [8.9.1] - 2026-10-16
+
+### Fixed
+
+- **maps:** automatically sized maps grow around wrapped headings and source notes, preserving room for geography on phones. Explicitly sized hosts keep their height budget. Map headings, legends and sources now share the same responsive gutter.
+- **tooltips:** binned bars respect explicit tooltip fields without adding a numeric range that can contradict an authored, open-ended bin label.
+- **formatting:** the semantic `percent` format distinguishes tiny nonzero values from zero with a threshold label. Explicit d3 percentage formats retain their requested precision.
+
 ## [8.9.0] - 2026-10-14
 
 ### Added

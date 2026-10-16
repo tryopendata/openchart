@@ -241,6 +241,12 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
   }
   const isDarkMode = options.darkMode;
 
+  // Chrome and legends share the same responsive gutter.
+  const padding =
+    getBreakpoint(options.width) === 'compact'
+      ? Math.max(HPAD_COMPACT_MIN, Math.round(theme.spacing.padding * HPAD_COMPACT_FRACTION))
+      : theme.spacing.padding;
+
   // 4. Chrome
   const chrome = computeChrome(
     {
@@ -254,15 +260,11 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
     options.width,
     options.measureText,
     'full',
-    undefined,
+    padding,
     watermark,
   );
 
   // 5. Drawing area
-  const padding =
-    getBreakpoint(options.width) === 'compact'
-      ? Math.max(HPAD_COMPACT_MIN, Math.round(theme.spacing.padding * HPAD_COMPACT_FRACTION))
-      : theme.spacing.padding;
   // In 'grow' mode the plot keeps the full height budget (chrome is not
   // subtracted). The returned SVG height is already content-driven (it sums
   // chrome.bottomHeight + content + padding below), so it grows naturally when
