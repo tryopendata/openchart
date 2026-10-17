@@ -194,3 +194,5 @@ export {
 export { applySpecPatch } from './design/patch';
 export type { RecommendationResult, RecommendationRoles } from './design/recommend';
 export { recommendCompositions } from './design/recommend';
+export type { SpecRepair } from './migration/v8';
+export { migrateSpecV8 } from './migration/v8';

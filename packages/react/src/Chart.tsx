@@ -51,6 +51,10 @@ export interface ChartProps<TData extends DataRow = DataRow> extends ChartEventH
    * option). `'auto'` (default) promotes dense scatters to canvas.
    */
   renderer?: 'auto' | 'svg' | 'canvas';
+  /** Observe container resizes. */
+  autoResize?: boolean;
+  /** @deprecated Use autoResize. */
+  responsive?: boolean;
   /** Callback when a data point is clicked. @deprecated Use onMarkClick instead. */
   onDataPointClick?: (data: Record<string, unknown>) => void;
   /** The currently selected element (controlled). */
@@ -92,6 +96,10 @@ function ChartInner(
     theme: themeProp,
     darkMode,
     renderer,
+    autoResize,
+    responsive,
+    revision,
+    onEditTransaction,
     onDataPointClick,
     onMarkClick,
     onMarkHover,
@@ -113,6 +121,7 @@ function ChartInner(
   }: ChartProps,
   ref: React.Ref<ChartHandle>,
 ) {
+  const hasTransactionListener = Boolean(onEditTransaction);
   const contextTheme = useVizTheme();
   const contextDarkMode = useVizDarkMode();
   const theme = themeProp ?? contextTheme;
@@ -120,6 +129,7 @@ function ChartInner(
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<ChartInstance | null>(null);
   const specRef = useRef<string>('');
+  const revisionRef = useRef(revision);
 
   // Store event handlers in refs so they don't trigger chart recreation.
   // Inline arrow functions create new references every render, which would
@@ -134,12 +144,14 @@ function ChartInner(
     onAnnotationClick?: ChartProps['onAnnotationClick'];
     onAnnotationEdit?: ChartProps['onAnnotationEdit'];
     onEdit?: ChartProps['onEdit'];
+    onEditTransaction?: ChartProps['onEditTransaction'];
     onSelect?: ChartProps['onSelect'];
     onDeselect?: ChartProps['onDeselect'];
     onTextEdit?: ChartProps['onTextEdit'];
     onReveal?: ChartProps['onReveal'];
   }>({});
   handlersRef.current = {
+    onEditTransaction,
     onDataPointClick,
     onMarkClick,
     onMarkHover,
@@ -180,8 +192,11 @@ function ChartInner(
     [],
   );
   const stableOnAnnotationClick = useCallback(
-    (annotation: import('@opendata-ai/openchart-core').Annotation, event: MouseEvent) =>
-      handlersRef.current.onAnnotationClick?.(annotation, event),
+    (
+      annotation: import('@opendata-ai/openchart-core').Annotation,
+      event: MouseEvent,
+      element: ElementRef,
+    ) => handlersRef.current.onAnnotationClick?.(annotation, event, element),
     [],
   );
   const stableOnAnnotationEdit = useCallback(
@@ -193,6 +208,11 @@ function ChartInner(
   );
   const stableOnEdit = useCallback(
     (edit: import('@opendata-ai/openchart-core').ElementEdit) => handlersRef.current.onEdit?.(edit),
+    [],
+  );
+  const stableOnEditTransaction = useCallback(
+    (tx: import('@opendata-ai/openchart-core').EditTransaction) =>
+      handlersRef.current.onEditTransaction?.(tx),
     [],
   );
   const stableOnSelect = useCallback(
@@ -244,7 +264,7 @@ function ChartInner(
       theme,
       darkMode: resolvedDarkMode,
       renderer,
-      onDataPointClick: stableOnDataPointClick,
+      ...(handlersRef.current.onDataPointClick ? { onDataPointClick: stableOnDataPointClick } : {}),
       onMarkClick: stableOnMarkClick,
       onMarkHover: stableOnMarkHover,
       onMarkLeave: stableOnMarkLeave,
@@ -262,7 +282,12 @@ function ChartInner(
       ...(handlersRef.current.onReveal ? { onReveal: stableOnReveal } : {}),
       ...(editable != null ? { editable } : {}),
       ...(selectedElementProp ? { selectedElement: selectedElementProp } : {}),
-      responsive: true,
+      autoResize,
+      responsive,
+      revision,
+      ...(handlersRef.current.onEditTransaction
+        ? { onEditTransaction: stableOnEditTransaction }
+        : {}),
     };
 
     chartRef.current = createChart(container, spec, options);
@@ -282,6 +307,10 @@ function ChartInner(
     stableOnAnnotationClick,
     stableOnDataPointClick,
     stableOnEdit,
+    stableOnEditTransaction,
+    hasTransactionListener,
+    autoResize,
+    responsive,
     stableOnLegendToggle,
     stableOnHighlightChange,
     stableOnMarkClick,
@@ -300,11 +329,14 @@ function ChartInner(
     if (!chart) return;
 
     const specString = JSON.stringify(spec);
-    if (specString !== specRef.current) {
+    if (specString !== specRef.current || revisionRef.current !== revision) {
       specRef.current = specString;
-      chart.update(spec);
+      const revisionChanged = revisionRef.current !== revision;
+      revisionRef.current = revision;
+      if (revision !== undefined || revisionChanged) chart.update(spec, { revision });
+      else chart.update(spec);
     }
-  }, [spec]);
+  }, [spec, revision]);
 
   // Handle selectedElement prop changes separately (like Vue/Svelte adapters)
   useEffect(() => {

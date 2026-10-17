@@ -471,6 +471,29 @@ export function computeLegendContent(
     entries = [];
   }
 
+  return measureCategoricalLegendContent(
+    entries,
+    spec.legend,
+    strategy,
+    theme,
+    availableWidth,
+    availableHeight,
+    watermark,
+    measureWidth,
+  );
+}
+
+/** Measure already-resolved entries, including entries merged across layers. */
+export function measureCategoricalLegendContent(
+  entries: LegendEntry[],
+  legend: NormalizedChartSpec['legend'],
+  strategy: LayoutStrategy,
+  theme: ResolvedTheme,
+  availableWidth: number,
+  availableHeight: number,
+  watermark = true,
+  measureWidth: MeasureFn = estimateTextWidth,
+): LegendContent {
   const labelStyle: TextStyle = {
     fontFamily: theme.fonts.family,
     fontSize: theme.fonts.sizes.small,
@@ -484,7 +507,7 @@ export function computeLegendContent(
 
   // Resolve position: spec-level override wins, then responsive strategy.
   // 'top-left' is a map-only overlay position; charts fold it into 'top'.
-  const specPosition = spec.legend?.position === 'top-left' ? 'top' : spec.legend?.position;
+  const specPosition = legend?.position === 'top-left' ? 'top' : legend?.position;
   const resolvedPosition = specPosition ?? (strategy.legendPosition === 'right' ? 'right' : 'top');
 
   // No entries = empty legend with no space
@@ -492,7 +515,7 @@ export function computeLegendContent(
     return emptyContent(resolvedPosition, theme);
   }
 
-  const offset = spec.legend?.offset;
+  const offset = legend?.offset;
 
   if (resolvedPosition === 'right' || resolvedPosition === 'bottom-right') {
     // Right-positioned legend: vertical stack
@@ -516,8 +539,7 @@ export function computeLegendContent(
       Math.floor((maxLegendHeight - LEGEND_PADDING * 2) / (entryHeight + 4)),
     );
     // symbolLimit overrides the space-based limit when explicitly set (minimum 1)
-    const maxEntries =
-      spec.legend?.symbolLimit != null ? Math.max(1, spec.legend.symbolLimit) : maxFromSpace;
+    const maxEntries = legend?.symbolLimit != null ? Math.max(1, legend.symbolLimit) : maxFromSpace;
     if (entries.length > maxEntries) {
       entries = truncateEntries(entries, maxEntries);
     }
@@ -570,8 +592,8 @@ export function computeLegendContent(
     availableWidth - effectivePadding * 2 - (reserveBrand ? BRAND_RESERVE_WIDTH : 0);
 
   // Apply symbolLimit first if set (minimum 1), then fit remaining entries to available rows.
-  if (spec.legend?.symbolLimit != null) {
-    const limit = Math.max(1, spec.legend.symbolLimit);
+  if (legend?.symbolLimit != null) {
+    const limit = Math.max(1, legend.symbolLimit);
     if (limit < entries.length) {
       entries = truncateEntries(entries, limit);
     }
@@ -579,10 +601,10 @@ export function computeLegendContent(
 
   // Resolve max rows: explicit maxRows wins, then columns-derived, then default.
   const maxRows =
-    spec.legend?.maxRows != null
-      ? Math.max(1, spec.legend.maxRows)
-      : spec.legend?.columns != null
-        ? Math.ceil(entries.length / spec.legend.columns)
+    legend?.maxRows != null
+      ? Math.max(1, legend.maxRows)
+      : legend?.columns != null
+        ? Math.ceil(entries.length / legend.columns)
         : TOP_LEGEND_MAX_ROWS;
   const { fittingCount } = measureLegendWrap(
     entries,

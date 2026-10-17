@@ -487,7 +487,7 @@ const spec: TableSpec = {
   search: true,                        // Client-side search bar
   pagination: { pageSize: 20 },        // Paginate with 20 rows per page
   stickyFirstColumn: true,             // Freeze first column on horizontal scroll
-  compact: true,                       // Reduced padding and font sizes
+  density: 'condensed',                       // Reduced padding and font sizes
 };
 ```
 

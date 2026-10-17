@@ -30,6 +30,8 @@ export {
 export type {
   ChartEventHandlers,
   ChromeKey,
+  EditOp,
+  EditTransaction,
   ElementEdit,
   ElementRef,
   MarkEvent,

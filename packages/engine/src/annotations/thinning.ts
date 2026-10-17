@@ -162,8 +162,12 @@ export function thinAnnotations(
     if (overlaps || !fitsWithin(bounds, containment) || overBudget) {
       const footnoteIndex = footnotes.length + 1;
       footnotes.push({
+        ...(entry.resolved.specIndex !== undefined ? { specIndex: entry.resolved.specIndex } : {}),
+        ...(entry.resolved.id !== undefined ? { id: entry.resolved.id } : {}),
         index: footnoteIndex,
-        text: entry.resolved.label!.text,
+        text: entry.spec?.subtitle
+          ? `${entry.resolved.label!.text}. ${entry.spec.subtitle}`
+          : entry.resolved.label!.text,
       });
       entry.resolved.footnoteIndex = footnoteIndex;
     } else {

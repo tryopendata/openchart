@@ -590,7 +590,6 @@ const editorialSingleLineDarkSpec: ChartSpec = {
       label: 'ChatGPT mania',
     },
   ],
-  darkMode: 'force',
 };
 
 export const EditorialSingleLine = () => (
@@ -666,7 +665,7 @@ const lineSpec: ChartSpec = {
       connector: false,
     },
   ],
-  labels: { density: 'endpoints', offsets: { YouTube: { dy: 16 } } },
+  labels: { density: 'endpoints' },
   legend: { position: 'bottom-right' },
   chrome: {
     title: "TikTok's Meteoric Rise Overtakes Instagram",

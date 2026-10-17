@@ -1,10 +1,34 @@
 # Changelog
 
+## Unreleased — 8.10
+
+- Add atomic `EditTransaction` operations, pure `applyEditTransaction` with undo,
+  optional revisions, and `onEditTransaction` in vanilla and all three wrappers.
+- Preserve annotation source identity through filtering, facets, and first-leaf
+  layers; click callbacks now include the source reference as a third argument.
+- Include annotation subtitles in numbered notes and wrap long notes within the figure,
+  reserving the full band above source and footer text.
+- Export pure, idempotent `migrateSpecV8` with per-change repairs. Legacy series
+  labels migrate to endpoint labels; their positions change and offsets are lost.
+  Dual-axis charts retain secondary-series endpoint labels outside the right axis.
+- Add mount `autoResize`, table-builder `density`, and compatibility warnings for
+  legacy APIs. Existing 8.x callbacks and optional-field defaults remain supported.
+- Centralize shallow theme merging and remove unused internal compatibility paths.
+
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+
+## [8.9.1] - 2026-10-16
+
+### Fixed
+
+- **maps:** automatically sized maps grow around wrapped headings and source notes, preserving room for geography on phones. Explicitly sized hosts keep their height budget. Map headings, legends and sources now share the same responsive gutter.
+- **tooltips:** binned bars respect explicit tooltip fields without adding a numeric range that can contradict an authored, open-ended bin label.
+- **formatting:** the semantic `percent` format distinguishes tiny nonzero values from zero with a threshold label. Explicit d3 percentage formats retain their requested precision.
 
 ## [8.9.0] - 2026-10-14
 

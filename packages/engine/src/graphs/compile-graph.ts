@@ -1,3 +1,4 @@
+import { mergeThemeConfig } from '@opendata-ai/openchart-core';
 /**
  * Graph compilation pipeline.
  *
@@ -30,7 +31,7 @@ import {
   defaultNumberFormatter,
   resolveTheme,
 } from '@opendata-ai/openchart-core';
-import { emitSpecWarnings } from '../compile/spec-sugar';
+import { emitSpecWarnings, emitThemeWarnings } from '../compile/spec-sugar';
 import { compile as compileSpec } from '../compiler/index';
 import type { NormalizedGraphSpec } from '../compiler/types';
 import { resolveGraphAnimation } from './animation';
@@ -348,9 +349,8 @@ export function compileGraph(spec: unknown, options: CompileOptions): GraphCompi
   const watermark = rawWatermark !== undefined ? graphSpec.watermark : (options.watermark ?? true);
 
   // 2. Resolve theme
-  const mergedThemeConfig = options.theme
-    ? { ...graphSpec.theme, ...options.theme }
-    : graphSpec.theme;
+  emitThemeWarnings(options.theme, options.onWarn);
+  const mergedThemeConfig = mergeThemeConfig(graphSpec.theme, options.theme);
   let theme: ResolvedTheme = resolveTheme(mergedThemeConfig);
   if (options.darkMode) {
     theme = adaptTheme(theme);

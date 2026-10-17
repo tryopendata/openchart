@@ -1,7 +1,8 @@
 import type { ChartSpec, MeasureTextFn, ResolvedChromeElement } from '@opendata-ai/openchart-core';
 import { broadsheet } from '@opendata-ai/openchart-core';
+import { compileChart } from '@opendata-ai/openchart-engine';
 import { describe, expect, it } from 'vitest';
-import { renderChromeElement } from '../renderers/chrome';
+import { renderChrome, renderChromeElement } from '../renderers/chrome';
 import { renderStaticSVG } from '../static';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -91,4 +92,48 @@ describe('editorial rule', () => {
     const svg = renderStaticSVG(spec, { width: 640, height: 420 });
     expect(svg).not.toContain('oc-chrome-rule');
   });
+});
+
+it('uses the engine note lines for rendering, footer spacing, and static export', () => {
+  const spec: ChartSpec = {
+    mark: 'line',
+    data: [
+      { x: 0, y: 1 },
+      { x: 1, y: 2 },
+    ],
+    encoding: { x: { field: 'x', type: 'ordinal' }, y: { field: 'y', type: 'quantitative' } },
+    chrome: { source: 'Source' },
+    annotations: [0, 1].map((x) => ({
+      type: 'text',
+      id: `note-${x}`,
+      x,
+      y: x + 1,
+      text: 'A very long callout heading that must become a note',
+      subtitle: 'A subtitle that should wrap without overlapping the next note or the source row.',
+    })),
+  };
+  const layout = compileChart(spec, { width: 292, height: 500 });
+  const parent = document.createElementNS(SVG_NS, 'g');
+  renderChrome(parent, layout);
+  const notes = [...parent.querySelectorAll('.oc-footnotes')];
+  expect(notes.length).toBeGreaterThan(0);
+  let previousBottom = 0;
+  for (const [i, note] of notes.entries()) {
+    const resolved = layout.chrome.footnotes![i];
+    expect([...note.querySelectorAll('tspan')].map((span) => span.textContent)).toEqual(
+      resolved.lines,
+    );
+    expect(note.getAttribute('data-note-id')).toBe(resolved.id);
+    const top = Number(note.getAttribute('y'));
+    expect(top).toBeGreaterThan(previousBottom);
+    previousBottom = top + (resolved.lines!.length - 1) * layout.theme.fonts.sizes.small * 1.3;
+  }
+  expect(Number(parent.querySelector('.oc-source')!.getAttribute('y'))).toBeGreaterThan(
+    previousBottom,
+  );
+  const svg = renderStaticSVG(spec, { width: 292, height: 500 });
+  const exported = new DOMParser().parseFromString(svg, 'image/svg+xml');
+  expect(
+    [...exported.querySelectorAll('.oc-footnotes tspan')].map((span) => span.textContent),
+  ).toEqual([...parent.querySelectorAll('.oc-footnotes tspan')].map((span) => span.textContent));
 });

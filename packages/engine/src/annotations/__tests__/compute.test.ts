@@ -4,6 +4,8 @@ import { describe, expect, it } from 'vitest';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import { computeScales } from '../../layout/scales';
 import { computeAnnotations } from '../compute';
+import { heuristicMeasure as annotationMeasureForTest } from '../geometry';
+import { normalizeObstacles as normalizeObstaclesForTest } from '../placement';
 import { resolvePosition } from '../position';
 
 // ---------------------------------------------------------------------------
@@ -58,7 +60,15 @@ describe('computeAnnotations', () => {
     it('resolves text annotation to pixel position', () => {
       const spec = makeSpec([{ type: 'text', x: '2020-01-01', y: 20, text: 'Important point' }]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations).toHaveLength(1);
       expect(annotations[0].type).toBe('text');
@@ -74,7 +84,15 @@ describe('computeAnnotations', () => {
         { type: 'text', x: '2020-01-01', y: 20, text: 'Note', offset: { dx: 0, dy: -60 } },
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations[0].label!.connector).toBeDefined();
       expect(annotations[0].label!.connector!.from).toBeDefined();
@@ -84,7 +102,15 @@ describe('computeAnnotations', () => {
     it('returns null for text annotation with invalid data value', () => {
       const spec = makeSpec([{ type: 'text', x: 'not-a-date', y: 999, text: 'Missing' }]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       // Invalid date should result in null annotation (filtered out)
       expect(annotations).toHaveLength(0);
@@ -103,7 +129,15 @@ describe('computeAnnotations', () => {
           },
         ]);
         const scales = computeScales(spec, chartArea, spec.data);
-        const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+        const annotations = computeAnnotations(spec, {
+          scales: scales,
+          chartArea: chartArea,
+          strategy: fullStrategy,
+          isDark: false,
+          obstacles: [],
+          svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+          measure: annotationMeasureForTest,
+        });
 
         const ann = annotations[0];
         const c = ann.label?.connector;
@@ -131,7 +165,15 @@ describe('computeAnnotations', () => {
           },
         ]);
         const scales = computeScales(spec, chartArea, spec.data);
-        const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+        const annotations = computeAnnotations(spec, {
+          scales: scales,
+          chartArea: chartArea,
+          strategy: fullStrategy,
+          isDark: false,
+          obstacles: [],
+          svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+          measure: annotationMeasureForTest,
+        });
 
         const ann = annotations[0];
         const px = resolvePosition('2019-01-01', scales.x);
@@ -151,7 +193,15 @@ describe('computeAnnotations', () => {
           },
         ]);
         const scales = computeScales(spec, chartArea, spec.data);
-        const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+        const annotations = computeAnnotations(spec, {
+          scales: scales,
+          chartArea: chartArea,
+          strategy: fullStrategy,
+          isDark: false,
+          obstacles: [],
+          svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+          measure: annotationMeasureForTest,
+        });
 
         const ann = annotations[0];
         const px = resolvePosition('2022-01-01', scales.x);
@@ -175,7 +225,15 @@ describe('computeAnnotations', () => {
           },
         ]);
         const scales = computeScales(spec, tinyArea, spec.data);
-        const annotations = computeAnnotations(spec, scales, tinyArea, fullStrategy);
+        const annotations = computeAnnotations(spec, {
+          scales: scales,
+          chartArea: tinyArea,
+          strategy: fullStrategy,
+          isDark: false,
+          obstacles: [],
+          svg: { width: tinyArea.x + tinyArea.width, height: tinyArea.y + tinyArea.height },
+          measure: annotationMeasureForTest,
+        });
 
         // anchor=right but the right side is even narrower than left, so flip
         expect(annotations[0].label?.style.textAnchor).toBe('end');
@@ -193,7 +251,15 @@ describe('computeAnnotations', () => {
           },
         ]);
         const scales = computeScales(spec, chartArea, spec.data);
-        const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+        const annotations = computeAnnotations(spec, {
+          scales: scales,
+          chartArea: chartArea,
+          strategy: fullStrategy,
+          isDark: false,
+          obstacles: [],
+          svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+          measure: annotationMeasureForTest,
+        });
 
         // Engine output retains end anchor; the renderer relies on this to
         // not override it back to middle.
@@ -208,7 +274,15 @@ describe('computeAnnotations', () => {
         { type: 'range', x1: '2020-01-01', x2: '2021-01-01', label: 'Period' },
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations).toHaveLength(1);
       expect(annotations[0].type).toBe('range');
@@ -223,7 +297,15 @@ describe('computeAnnotations', () => {
         { type: 'range', x1: '2020-01-01', x2: '2021-01-01', label: 'Recession' },
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations[0].label).toBeDefined();
       expect(annotations[0].label!.text).toBe('Recession');
@@ -234,7 +316,15 @@ describe('computeAnnotations', () => {
         { type: 'range', x1: '2020-01-01', x2: '2021-01-01', label: 'Period' },
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations[0].label!.style.fontSize).toBe(11);
       expect(annotations[0].label!.style.fontWeight).toBe(500);
@@ -252,7 +342,15 @@ describe('computeAnnotations', () => {
         },
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations[0].label!.style.fontSize).toBe(19);
       expect(annotations[0].label!.style.fontWeight).toBe(600);
@@ -269,7 +367,15 @@ describe('computeAnnotations', () => {
         },
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations[0].fill).toBe('#ff0000');
       expect(annotations[0].opacity).toBe(0.2);
@@ -278,7 +384,15 @@ describe('computeAnnotations', () => {
     it('uses default fill and opacity when not specified', () => {
       const spec = makeSpec([{ type: 'range', x1: '2020-01-01', x2: '2021-01-01' }]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations[0].fill).toBeDefined();
       expect(annotations[0].opacity).toBeDefined();
@@ -306,7 +420,15 @@ describe('computeAnnotations', () => {
         labels: { density: 'auto', format: '' },
       };
       const scales = computeScales(ordinalSpec, chartArea, ordinalSpec.data);
-      const annotations = computeAnnotations(ordinalSpec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(ordinalSpec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations).toHaveLength(1);
       expect(annotations[0].rect).toBeDefined();
@@ -317,12 +439,15 @@ describe('computeAnnotations', () => {
         ...ordinalSpec,
         annotations: [{ type: 'range', x1: '2007', x2: '2012', label: 'Known' }],
       };
-      const knownAnnotations = computeAnnotations(
-        rangeWithKnownPoints,
-        scales,
-        chartArea,
-        fullStrategy,
-      );
+      const knownAnnotations = computeAnnotations(rangeWithKnownPoints, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
       // The interpolated range (2008-2010) should be narrower than and inside (2007-2012)
       expect(annotations[0].rect!.width).toBeLessThan(knownAnnotations[0].rect!.width);
       expect(annotations[0].rect!.x).toBeGreaterThan(knownAnnotations[0].rect!.x);
@@ -349,7 +474,15 @@ describe('computeAnnotations', () => {
         labels: { density: 'auto', format: '' },
       };
       const scales = computeScales(ordinalSpec, chartArea, ordinalSpec.data);
-      const annotations = computeAnnotations(ordinalSpec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(ordinalSpec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations).toHaveLength(1);
       expect(annotations[0].rect).toBeDefined();
@@ -377,7 +510,15 @@ describe('computeAnnotations', () => {
         labels: { density: 'auto', format: '' },
       };
       const scales = computeScales(catSpec, chartArea, catSpec.data);
-      const annotations = computeAnnotations(catSpec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(catSpec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       // Non-numeric domain can't interpolate, annotation is dropped
       expect(annotations).toHaveLength(0);
@@ -413,7 +554,15 @@ describe('computeAnnotations', () => {
         labels: { density: 'auto', format: '' },
       };
       const scales = computeScales(ordinalSpec, chartArea, ordinalSpec.data);
-      const annotations = computeAnnotations(ordinalSpec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(ordinalSpec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations).toHaveLength(2);
       const rect1 = annotations[0].rect!;
@@ -443,7 +592,15 @@ describe('computeAnnotations', () => {
         labels: { density: 'auto', format: '' },
       };
       const scales = computeScales(ordinalSpec, chartArea, ordinalSpec.data);
-      const annotations = computeAnnotations(ordinalSpec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(ordinalSpec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations).toHaveLength(1);
       const rect = annotations[0].rect!;
@@ -480,7 +637,15 @@ describe('computeAnnotations', () => {
         labels: { density: 'auto', format: '' },
       };
       const scales = computeScales(barSpec, chartArea, barSpec.data);
-      const annotations = computeAnnotations(barSpec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(barSpec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations).toHaveLength(1);
       const rect = annotations[0].rect!;
@@ -520,7 +685,15 @@ describe('computeAnnotations', () => {
         labels: { density: 'auto', format: '' },
       };
       const scales = computeScales(ordinalSpec, chartArea, ordinalSpec.data);
-      const annotations = computeAnnotations(ordinalSpec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(ordinalSpec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations).toHaveLength(1);
       const rect = annotations[0].rect!;
@@ -540,7 +713,15 @@ describe('computeAnnotations', () => {
       // This ensures the fix doesn't introduce any drift on continuous axes.
       const linearSpec = makeSpec([{ type: 'range', x1: '2020-01-01', x2: '2021-01-01' }]);
       const scales = computeScales(linearSpec, chartArea, linearSpec.data);
-      const annotations = computeAnnotations(linearSpec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(linearSpec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations).toHaveLength(1);
       const rect = annotations[0].rect!;
@@ -582,7 +763,15 @@ describe('computeAnnotations', () => {
         labels: { density: 'auto', format: '' },
       };
       const scales = computeScales(ordinalYSpec, chartArea, ordinalYSpec.data);
-      const annotations = computeAnnotations(ordinalYSpec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(ordinalYSpec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations).toHaveLength(2);
       const rects = annotations.map((a) => a.rect!);
@@ -600,7 +789,15 @@ describe('computeAnnotations', () => {
     it('resolves horizontal refline at y value', () => {
       const spec = makeSpec([{ type: 'refline', y: 20, label: 'Target' }]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations).toHaveLength(1);
       expect(annotations[0].type).toBe('refline');
@@ -615,7 +812,15 @@ describe('computeAnnotations', () => {
     it('resolves vertical refline at x value', () => {
       const spec = makeSpec([{ type: 'refline', x: '2020-06-01', label: 'Event' }]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations).toHaveLength(1);
       expect(annotations[0].line).toBeDefined();
@@ -627,7 +832,15 @@ describe('computeAnnotations', () => {
     it('refline has dashed style by default', () => {
       const spec = makeSpec([{ type: 'refline', y: 20 }]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations[0].strokeDasharray).toBeDefined();
     });
@@ -635,7 +848,15 @@ describe('computeAnnotations', () => {
     it('refline label defaults to fontSize 11', () => {
       const spec = makeSpec([{ type: 'refline', x: '2020-06-01', label: 'Event' }]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations[0].label!.style.fontSize).toBe(11);
     });
@@ -645,7 +866,15 @@ describe('computeAnnotations', () => {
         { type: 'refline', x: '2020-06-01', label: 'Event', fontSize: 24, fontWeight: 600 },
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations[0].label!.style.fontSize).toBe(24);
       expect(annotations[0].label!.style.fontWeight).toBe(600);
@@ -654,7 +883,15 @@ describe('computeAnnotations', () => {
     it('solid refline has no dasharray', () => {
       const spec = makeSpec([{ type: 'refline', y: 20, style: 'solid' }]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations[0].strokeDasharray).toBeUndefined();
     });
@@ -662,7 +899,15 @@ describe('computeAnnotations', () => {
     it('returns nothing for refline with neither x nor y', () => {
       const spec = makeSpec([{ type: 'refline', label: 'Orphan' } as Annotation]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations).toHaveLength(0);
     });
@@ -676,7 +921,15 @@ describe('computeAnnotations', () => {
         { type: 'refline', y: 20 },
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, compactStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: compactStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations).toHaveLength(0);
     });
@@ -708,7 +961,15 @@ describe('computeAnnotations', () => {
         { type: 'refline', y: 25 },
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations).toHaveLength(3);
       expect(annotations.map((a) => a.type)).toEqual(['text', 'range', 'refline']);
@@ -719,7 +980,15 @@ describe('computeAnnotations', () => {
     it('returns empty array when spec has no annotations', () => {
       const spec = makeSpec([]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations).toHaveLength(0);
     });
@@ -737,15 +1006,34 @@ describe('computeAnnotations', () => {
           x: '2020-01-01',
           y: 20,
           text: 'Offset label',
+          anchor: 'top',
           offset: { dx: 20, dy: -30 },
         },
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
 
       // Compute with and without offset
-      const specNoOffset = makeSpec([{ type: 'text', x: '2020-01-01', y: 20, text: 'No offset' }]);
-      const withOffset = computeAnnotations(spec, scales, chartArea, fullStrategy);
-      const withoutOffset = computeAnnotations(specNoOffset, scales, chartArea, fullStrategy);
+      const specNoOffset = makeSpec([
+        { type: 'text', x: '2020-01-01', y: 20, text: 'Offset label', anchor: 'top' },
+      ]);
+      const withOffset = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
+      const withoutOffset = computeAnnotations(specNoOffset, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(withOffset).toHaveLength(1);
       expect(withoutOffset).toHaveLength(1);
@@ -766,7 +1054,15 @@ describe('computeAnnotations', () => {
       const scales = computeScales(spec, chartArea, spec.data);
 
       const py = scales.y?.scale(20);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations).toHaveLength(1);
       // Label y should be above the data point y
@@ -780,7 +1076,15 @@ describe('computeAnnotations', () => {
       const scales = computeScales(spec, chartArea, spec.data);
 
       const py = scales.y?.scale(20);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations).toHaveLength(1);
       // Label y should be below the data point y
@@ -794,7 +1098,15 @@ describe('computeAnnotations', () => {
       const scales = computeScales(spec, chartArea, spec.data);
 
       const px = scales.x?.scale(new Date('2020-01-01'));
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations).toHaveLength(1);
       // Label x should be to the left of the data point x
@@ -808,7 +1120,15 @@ describe('computeAnnotations', () => {
       const scales = computeScales(spec, chartArea, spec.data);
 
       const px = scales.x?.scale(new Date('2020-01-01'));
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations).toHaveLength(1);
       // Label x should be to the right of the data point x
@@ -828,7 +1148,15 @@ describe('computeAnnotations', () => {
         },
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations[0].label!.connector).toBeDefined();
     });
@@ -838,7 +1166,15 @@ describe('computeAnnotations', () => {
         { type: 'text', x: '2020-01-01', y: 20, text: 'No connector', connector: false },
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations[0].label!.connector).toBeUndefined();
     });
@@ -857,7 +1193,15 @@ describe('computeAnnotations', () => {
 
       const px = scales.x?.scale(new Date('2020-01-01')) as number;
       const py = scales.y?.scale(20) as number;
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       const resolved = annotations[0];
       const connector = resolved.label!.connector!;
@@ -879,7 +1223,15 @@ describe('computeAnnotations', () => {
         { type: 'range', x1: '2020-01-01', x2: '2021-01-01', zIndex: 5 },
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations).toHaveLength(3);
       // Should be sorted: zIndex 1, 5, 10
@@ -894,7 +1246,15 @@ describe('computeAnnotations', () => {
         { type: 'refline', y: 25 }, // no zIndex, defaults to 0
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations).toHaveLength(2);
       // The refline (no zIndex = 0) should come before text (zIndex 5)
@@ -924,8 +1284,24 @@ describe('computeAnnotations', () => {
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
 
-      const withOffset = computeAnnotations(spec, scales, chartArea, fullStrategy);
-      const withoutOffset = computeAnnotations(specNoOffset, scales, chartArea, fullStrategy);
+      const withOffset = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
+      const withoutOffset = computeAnnotations(specNoOffset, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       const dx = withOffset[0].label!.x - withoutOffset[0].label!.x;
       const dy = withOffset[0].label!.y - withoutOffset[0].label!.y;
@@ -953,8 +1329,24 @@ describe('computeAnnotations', () => {
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
 
-      const withOffset = computeAnnotations(spec, scales, chartArea, fullStrategy);
-      const withoutOffset = computeAnnotations(specNoOffset, scales, chartArea, fullStrategy);
+      const withOffset = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
+      const withoutOffset = computeAnnotations(specNoOffset, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       const dx = withOffset[0].label!.x - withoutOffset[0].label!.x;
       const dy = withOffset[0].label!.y - withoutOffset[0].label!.y;
@@ -971,7 +1363,15 @@ describe('computeAnnotations', () => {
     it('horizontal refline: "left" places label at start.x with text-anchor start', () => {
       const spec = makeSpec([{ type: 'refline', y: 20, label: 'Left label', labelAnchor: 'left' }]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       const label = annotations[0].label!;
       // Label x should be near chartArea.x (start of line) + small offset
@@ -982,7 +1382,15 @@ describe('computeAnnotations', () => {
     it('horizontal refline: default places label at end.x with text-anchor end', () => {
       const spec = makeSpec([{ type: 'refline', y: 20, label: 'Default label' }]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       const label = annotations[0].label!;
       // Label x should be near chartArea.x + chartArea.width (end of line) - small offset
@@ -997,8 +1405,24 @@ describe('computeAnnotations', () => {
       ]);
       const scales = computeScales(specTop, chartArea, specTop.data);
 
-      const top = computeAnnotations(specTop, scales, chartArea, fullStrategy);
-      const bottom = computeAnnotations(specBottom, scales, chartArea, fullStrategy);
+      const top = computeAnnotations(specTop, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
+      const bottom = computeAnnotations(specBottom, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       // Bottom label should be below top label (larger y value)
       expect(bottom[0].label!.y).toBeGreaterThan(top[0].label!.y);
@@ -1009,7 +1433,15 @@ describe('computeAnnotations', () => {
         { type: 'refline', x: '2020-06-01', label: 'Right', labelAnchor: 'right' },
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       const label = annotations[0].label!;
       expect(label.style.textAnchor).toBe('end');
@@ -1024,8 +1456,24 @@ describe('computeAnnotations', () => {
       ]);
       const scales = computeScales(specTop, chartArea, specTop.data);
 
-      const top = computeAnnotations(specTop, scales, chartArea, fullStrategy);
-      const bottom = computeAnnotations(specBottom, scales, chartArea, fullStrategy);
+      const top = computeAnnotations(specTop, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
+      const bottom = computeAnnotations(specBottom, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       // Bottom label should be further down (near end.y which is chartArea.y + chartArea.height)
       expect(bottom[0].label!.y).toBeGreaterThan(top[0].label!.y);
@@ -1046,8 +1494,24 @@ describe('computeAnnotations', () => {
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
 
-      const withOffset = computeAnnotations(spec, scales, chartArea, fullStrategy);
-      const withoutOffset = computeAnnotations(specNoOffset, scales, chartArea, fullStrategy);
+      const withOffset = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
+      const withoutOffset = computeAnnotations(specNoOffset, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       const dx = withOffset[0].label!.x - withoutOffset[0].label!.x;
       const dy = withOffset[0].label!.y - withoutOffset[0].label!.y;
@@ -1078,7 +1542,15 @@ describe('computeAnnotations', () => {
         },
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       const ann = annotations[0];
       const connector = ann.label!.connector!;
@@ -1101,7 +1573,15 @@ describe('computeAnnotations', () => {
         },
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       const ann = annotations[0];
       const connector = ann.label!.connector!;
@@ -1123,7 +1603,15 @@ describe('computeAnnotations', () => {
         },
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       const ann = annotations[0];
       const connector = ann.label!.connector!;
@@ -1148,7 +1636,15 @@ describe('computeAnnotations', () => {
         },
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       const ann = annotations[0];
       const connector = ann.label!.connector!;
@@ -1171,7 +1667,15 @@ describe('computeAnnotations', () => {
         },
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       const ann = annotations[0];
       const { from } = ann.label!.connector!;
@@ -1205,8 +1709,24 @@ describe('computeAnnotations', () => {
       const scalesRight = computeScales(specRight, chartArea, specRight.data);
       const scalesLeft = computeScales(specLeft, chartArea, specLeft.data);
 
-      const annRight = computeAnnotations(specRight, scalesRight, chartArea, fullStrategy)[0];
-      const annLeft = computeAnnotations(specLeft, scalesLeft, chartArea, fullStrategy)[0];
+      const annRight = computeAnnotations(specRight, {
+        scales: scalesRight,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      })[0];
+      const annLeft = computeAnnotations(specLeft, {
+        scales: scalesLeft,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      })[0];
 
       // Label right of the point: exit off the left edge.
       expect(annRight.label!.connector!.from.x).toBeLessThan(annRight.bounds!.x);
@@ -1240,8 +1760,24 @@ describe('computeAnnotations', () => {
       ]);
       const scales = computeScales(specWithOffset, chartArea, specWithOffset.data);
 
-      const withOffset = computeAnnotations(specWithOffset, scales, chartArea, fullStrategy);
-      const withoutOffset = computeAnnotations(specNoOffset, scales, chartArea, fullStrategy);
+      const withOffset = computeAnnotations(specWithOffset, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
+      const withoutOffset = computeAnnotations(specNoOffset, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       const fromWith = withOffset[0].label!.connector!.from;
       const fromWithout = withoutOffset[0].label!.connector!.from;
@@ -1265,7 +1801,15 @@ describe('computeAnnotations', () => {
         },
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       const ann = annotations[0];
       const connector = ann.label!.connector!;
@@ -1288,7 +1832,15 @@ describe('computeAnnotations', () => {
         { type: 'text', x: '2020-01-01', y: 20, text: 'Second note' },
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations).toHaveLength(2);
 
@@ -1310,7 +1862,15 @@ describe('computeAnnotations', () => {
         { type: 'text', x: '2020-01-01', y: 21, text: 'Second annotation' },
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations).toHaveLength(2);
 
@@ -1342,7 +1902,15 @@ describe('computeAnnotations', () => {
         },
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       const nudged = annotations[1];
       const nudgedLabel = nudged.label!;
@@ -1381,14 +1949,25 @@ describe('computeAnnotations', () => {
         { type: 'text', x: '2020-01-01', y: 20, text: 'Second note', subtitle: 'Context two' },
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
-      const single = computeAnnotations(
-        makeSpec([spec.annotations[1]]),
-        scales,
-        chartArea,
-        fullStrategy,
-      )[0];
+      const single = computeAnnotations(makeSpec([spec.annotations[1]]), {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      })[0];
 
       const nudged = annotations[1];
       const dx = nudged.label!.x - single.label!.x;
@@ -1449,7 +2028,15 @@ describe('computeAnnotations', () => {
         { type: 'text', x: '2020-01-01', y: 20, text: 'Note C' },
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations).toHaveLength(3);
 
@@ -1486,7 +2073,15 @@ describe('computeAnnotations', () => {
       const scales = computeScales(spec, chartArea, spec.data);
 
       // Compute once to get positions
-      const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations).toHaveLength(2);
 
@@ -1494,8 +2089,24 @@ describe('computeAnnotations', () => {
       // be without collision resolution (i.e., not nudged)
       const specSingle1 = makeSpec([spec.annotations[0]]);
       const specSingle2 = makeSpec([spec.annotations[1]]);
-      const single1 = computeAnnotations(specSingle1, scales, chartArea, fullStrategy);
-      const single2 = computeAnnotations(specSingle2, scales, chartArea, fullStrategy);
+      const single1 = computeAnnotations(specSingle1, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
+      const single2 = computeAnnotations(specSingle2, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations[0].label!.x).toBeCloseTo(single1[0].label!.x, 1);
       expect(annotations[0].label!.y).toBeCloseTo(single1[0].label!.y, 1);
@@ -1514,7 +2125,15 @@ describe('computeAnnotations', () => {
       const scales = computeScales(spec, chartArea, spec.data);
 
       // Place an obstacle rect exactly where the annotation would land
-      const withoutObstacles = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const withoutObstacles = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
       const originalLabel = withoutObstacles[0].label!;
 
       const obstacle: Rect = {
@@ -1524,9 +2143,15 @@ describe('computeAnnotations', () => {
         height: 30,
       };
 
-      const withObstacles = computeAnnotations(spec, scales, chartArea, fullStrategy, false, [
-        obstacle,
-      ]);
+      const withObstacles = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: normalizeObstaclesForTest([obstacle]),
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(withObstacles).toHaveLength(1);
       const nudgedLabel = withObstacles[0].label!;
@@ -1551,7 +2176,15 @@ describe('computeAnnotations', () => {
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
 
-      const withoutObstacles = computeAnnotations(spec, scales, chartArea, fullStrategy);
+      const withoutObstacles = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
       const originalLabel = withoutObstacles[0].label!;
       expect(originalLabel.connector).toBeDefined();
       expect(originalLabel.connector!.style).toBe('straight');
@@ -1564,9 +2197,15 @@ describe('computeAnnotations', () => {
         height: 30,
       };
 
-      const withObstacles = computeAnnotations(spec, scales, chartArea, fullStrategy, false, [
-        obstacle,
-      ]);
+      const withObstacles = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: normalizeObstaclesForTest([obstacle]),
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
       const nudgedLabel = withObstacles[0].label!;
       expect(nudgedLabel.connector).toBeDefined();
       expect(nudgedLabel.connector!.style).toBe('straight');
@@ -1594,15 +2233,15 @@ describe('computeAnnotations', () => {
         },
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(
-        spec,
-        scales,
-        chartArea,
-        fullStrategy,
-        false,
-        [],
-        svgDimensions,
-      );
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: normalizeObstaclesForTest([]),
+        svg: svgDimensions,
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations).toHaveLength(1);
       const label = annotations[0].label!;
@@ -1624,15 +2263,15 @@ describe('computeAnnotations', () => {
         },
       ]);
       const scales = computeScales(spec, chartArea, spec.data);
-      const annotations = computeAnnotations(
-        spec,
-        scales,
-        chartArea,
-        fullStrategy,
-        false,
-        [],
-        svgDimensions,
-      );
+      const annotations = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: normalizeObstaclesForTest([]),
+        svg: svgDimensions,
+        measure: annotationMeasureForTest,
+      });
 
       expect(annotations).toHaveLength(1);
       const label = annotations[0].label!;
@@ -1656,16 +2295,24 @@ describe('computeAnnotations', () => {
       const scales = computeScales(spec, chartArea, spec.data);
 
       // Compute with and without SVG dimensions to verify no change
-      const withClamping = computeAnnotations(
-        spec,
-        scales,
-        chartArea,
-        fullStrategy,
-        false,
-        [],
-        svgDimensions,
-      );
-      const withoutClamping = computeAnnotations(spec, scales, chartArea, fullStrategy, false, []);
+      const withClamping = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: normalizeObstaclesForTest([]),
+        svg: svgDimensions,
+        measure: annotationMeasureForTest,
+      });
+      const withoutClamping = computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: normalizeObstaclesForTest([]),
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      });
 
       expect(withClamping).toHaveLength(1);
       expect(withoutClamping).toHaveLength(1);

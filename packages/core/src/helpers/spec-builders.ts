@@ -22,6 +22,7 @@ import type {
   LegendConfig,
   MarkDef,
   MarkType,
+  TableDensity,
   TableSpec,
   ThemeConfig,
   TileMapEncoding,
@@ -37,6 +38,20 @@ import type { ColumnConfig } from '../types/table';
 /** A field reference: either a plain string (field name) or a full EncodingChannel. */
 export type FieldRef = string | EncodingChannel;
 
+const warnedBuilderOptions = new Set<string>();
+function warnBuilderOption(key: string, message: string): void {
+  if (warnedBuilderOptions.has(key)) return;
+  warnedBuilderOptions.add(key);
+  console.warn(`[openchart] ${message}`);
+}
+function warnDarkMode(options?: { darkMode?: DarkMode }): void {
+  if (options?.darkMode !== undefined)
+    warnBuilderOption(
+      'darkMode',
+      'Builder darkMode is deprecated and has no effect; use the mount option.',
+    );
+}
+
 /** Common options shared by all chart builder functions. */
 export interface ChartBuilderOptions {
   /** Color encoding: field name or full channel config for series differentiation. */
@@ -51,7 +66,7 @@ export interface ChartBuilderOptions {
   responsive?: boolean;
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
-  /** Dark mode behavior. */
+  /** @deprecated Set darkMode on the mount instead; this option has no effect. */
   darkMode?: DarkMode;
 }
 
@@ -65,7 +80,7 @@ export interface TableBuilderOptions {
   chrome?: Chrome;
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
-  /** Dark mode behavior. */
+  /** @deprecated Set darkMode on the mount instead; this option has no effect. */
   darkMode?: DarkMode;
   /** Enable client-side search/filter. */
   search?: boolean;
@@ -73,7 +88,9 @@ export interface TableBuilderOptions {
   pagination?: boolean | { pageSize: number };
   /** Stick the first column during horizontal scroll. */
   stickyFirstColumn?: boolean;
-  /** Compact mode. */
+  /** Row density. */
+  density?: TableDensity;
+  /** @deprecated Use density. */
   compact?: boolean;
   /** Whether the table adapts to container width. */
   responsive?: boolean;
@@ -167,6 +184,7 @@ function buildChartSpec(
   encoding: Encoding,
   options?: ChartBuilderOptions,
 ): ChartSpec {
+  warnDarkMode(options);
   // Cast needed because the generic discriminated union can't be constructed
   // from a runtime MarkType variable — the caller always pairs mark+encoding correctly.
   const spec = { mark, data, encoding } as ChartSpec;
@@ -174,7 +192,6 @@ function buildChartSpec(
   if (options?.annotations) spec.annotations = options.annotations;
   if (options?.responsive !== undefined) spec.responsive = options.responsive;
   if (options?.theme) spec.theme = options.theme;
-  if (options?.darkMode) spec.darkMode = options.darkMode;
   return spec;
 }
 
@@ -382,6 +399,9 @@ export function scatterChart(
  * @param options - Column definitions, chrome, pagination, search, etc.
  */
 export function dataTable(data: DataRow[], options?: TableBuilderOptions): TableSpec {
+  warnDarkMode(options);
+  if (options?.compact !== undefined)
+    warnBuilderOption('compact', 'dataTable compact is deprecated; use density.');
   // Auto-generate columns from data keys if not provided
   let columns = options?.columns;
   if (!columns && data.length > 0) {
@@ -407,11 +427,11 @@ export function dataTable(data: DataRow[], options?: TableBuilderOptions): Table
   if (options?.rowKey) spec.rowKey = options.rowKey;
   if (options?.chrome) spec.chrome = options.chrome;
   if (options?.theme) spec.theme = options.theme;
-  if (options?.darkMode) spec.darkMode = options.darkMode;
   if (options?.search !== undefined) spec.search = options.search;
   if (options?.pagination !== undefined) spec.pagination = options.pagination;
   if (options?.stickyFirstColumn !== undefined) spec.stickyFirstColumn = options.stickyFirstColumn;
-  if (options?.compact !== undefined) spec.compact = options.compact;
+  if (options?.density !== undefined) spec.density = options.density;
+  else if (options?.compact !== undefined) spec.density = options.compact ? 'condensed' : 'regular';
   if (options?.responsive !== undefined) spec.responsive = options.responsive;
 
   return spec;
@@ -435,7 +455,7 @@ export interface TileMapBuilderOptions {
   legend?: LegendConfig;
   /** Theme overrides. */
   theme?: ThemeConfig;
-  /** Dark mode setting. */
+  /** @deprecated Set darkMode on the mount instead; this option has no effect. */
   darkMode?: DarkMode;
   /** Whether to show the watermark. */
   watermark?: boolean;
@@ -462,6 +482,7 @@ export function tileMap(
   data: Record<string, number | string | null> | DataRow[],
   options?: TileMapBuilderOptions,
 ): TileMapSpec {
+  warnDarkMode(options);
   return {
     type: 'tilemap' as const,
     data,
@@ -471,7 +492,6 @@ export function tileMap(
     ...(options?.chrome && { chrome: options.chrome }),
     ...(options?.legend && { legend: options.legend }),
     ...(options?.theme && { theme: options.theme }),
-    ...(options?.darkMode && { darkMode: options.darkMode }),
     ...(options?.watermark !== undefined && { watermark: options.watermark }),
     ...(options?.animation && { animation: options.animation }),
     ...(options?.valueFormat && { valueFormat: options.valueFormat }),

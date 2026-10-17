@@ -29,6 +29,7 @@ import {
   getBreakpoint,
   HPAD_COMPACT_FRACTION,
   HPAD_COMPACT_MIN,
+  mergeThemeConfig,
   resolveTheme,
 } from '@opendata-ai/openchart-core';
 import { geoArea, geoPath } from 'd3-geo';
@@ -36,7 +37,7 @@ import { feature as topoFeature, mesh as topoMesh } from 'topojson-client';
 import type { GeometryCollection, Topology } from 'topojson-specification';
 import { resolveKnockoutColor } from '../charts/utils';
 import { buildSizeScale, SIZE_SCALE_DEFAULTS } from '../compile/size-scale';
-import { emitSpecWarnings, expandSpecSugar } from '../compile/spec-sugar';
+import { emitSpecWarnings, emitThemeWarnings, expandSpecSugar } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
 import { finiteNumber } from '../data/finite-number';
@@ -233,13 +234,20 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
   const watermark = rawWatermark !== undefined ? mapSpec.watermark : (options.watermark ?? true);
 
   // 3. Resolve theme
-  const mergedThemeConfig = options.theme ? { ...mapSpec.theme, ...options.theme } : mapSpec.theme;
+  emitThemeWarnings(options.theme, options.onWarn);
+  const mergedThemeConfig = mergeThemeConfig(mapSpec.theme, options.theme);
   const lightTheme: ResolvedTheme = resolveTheme(mergedThemeConfig);
   let theme: ResolvedTheme = lightTheme;
   if (options.darkMode) {
     theme = adaptTheme(theme);
   }
   const isDarkMode = options.darkMode;
+
+  // Chrome and legends share the same responsive gutter.
+  const padding =
+    getBreakpoint(options.width) === 'compact'
+      ? Math.max(HPAD_COMPACT_MIN, Math.round(theme.spacing.padding * HPAD_COMPACT_FRACTION))
+      : theme.spacing.padding;
 
   // 4. Chrome
   const chrome = computeChrome(
@@ -254,15 +262,11 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
     options.width,
     options.measureText,
     'full',
-    undefined,
+    padding,
     watermark,
   );
 
   // 5. Drawing area
-  const padding =
-    getBreakpoint(options.width) === 'compact'
-      ? Math.max(HPAD_COMPACT_MIN, Math.round(theme.spacing.padding * HPAD_COMPACT_FRACTION))
-      : theme.spacing.padding;
   // In 'grow' mode the plot keeps the full height budget (chrome is not
   // subtracted). The returned SVG height is already content-driven (it sums
   // chrome.bottomHeight + content + padding below), so it grows naturally when

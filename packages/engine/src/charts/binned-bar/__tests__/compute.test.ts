@@ -175,6 +175,38 @@ describe('binned bar (histogram)', () => {
     expect(tooltip?.title).toContain('–');
   });
 
+  it('honors custom pooled-bin descriptions without a contradictory numeric title', () => {
+    const layout = compile({
+      mark: 'bar',
+      data: [
+        { start: 0, end: 1000, range: 'Below $1,000', share: 0.999 },
+        { start: 1000, end: 2000, range: '$1,000 or more', share: 0.00001 },
+      ],
+      encoding: {
+        x: { field: 'start', type: 'quantitative' },
+        x2: { field: 'end' },
+        y: { field: 'share', type: 'quantitative' },
+        tooltip: [
+          { field: 'range', type: 'nominal', title: 'Contribution size' },
+          { field: 'share', type: 'quantitative', title: 'Share', format: 'percent' },
+        ],
+      },
+    });
+    const tooltips = [...layout.tooltipDescriptors.values()];
+    expect(tooltips).toHaveLength(2);
+    expect(tooltips[1].title).toBeUndefined();
+    expect(tooltips[1].fields).toEqual([
+      { label: 'Contribution size', value: '$1,000 or more' },
+      { label: 'Share', value: '<0.1%' },
+    ]);
+    expect(tooltips[0].fields[0].value).toBe('Below $1,000');
+  });
+
+  it('does not create an empty floating tooltip for an empty authored field list', () => {
+    const layout = compile(histogram({ encoding: { tooltip: [] } }));
+    expect(layout.tooltipDescriptors.size).toBe(0);
+  });
+
   it('still routes an ordinal binned x to the band bar path', () => {
     // Regression guard on the sugar change: only a quantitative x on a bar
     // gains the paired bin output and the x2 channel.

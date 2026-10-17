@@ -1,4 +1,5 @@
 import type { Annotation, ChartEventHandlers, ChartLayout } from '@opendata-ai/openchart-core';
+import { buildElementRef } from './selection';
 
 /**
  * Build a map from data-mark-id to { datum, series } so event handlers
@@ -114,16 +115,27 @@ export function wireChartEvents(
   }
 
   if (handlers.onAnnotationClick) {
-    const annotationElements = svg.querySelectorAll('.oc-annotation');
+    const annotationElements = svg.querySelectorAll('.oc-annotation, [data-note-spec-index]');
 
     for (let i = 0; i < annotationElements.length; i++) {
       const el = annotationElements[i];
-      const specAnnotation = specAnnotations[i];
+      const noteIndex = el.getAttribute('data-note-spec-index');
+      const ref =
+        noteIndex !== null
+          ? {
+              type: 'annotation' as const,
+              index: Number(noteIndex),
+              id: el.getAttribute('data-note-id') ?? undefined,
+              path: el.getAttribute('data-note-path') ?? `/annotations/${noteIndex}`,
+            }
+          : buildElementRef(el, specAnnotations);
+      if (!ref || ref.type !== 'annotation') continue;
+      const specAnnotation = specAnnotations[ref.index];
       if (!specAnnotation) continue;
 
       const handleClick = (e: Event) => {
         const mouseEvent = e as MouseEvent;
-        handlers.onAnnotationClick!(specAnnotation, mouseEvent);
+        handlers.onAnnotationClick!(specAnnotation, mouseEvent, ref);
       };
 
       el.addEventListener('click', handleClick);

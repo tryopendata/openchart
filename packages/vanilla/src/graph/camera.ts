@@ -13,8 +13,8 @@
 
 import type { AnimationEase } from '@opendata-ai/openchart-core';
 import { interpolateZoom } from 'd3-interpolate';
-import { resolveEase } from './motion';
-import type { GraphAnimation } from './scheduler';
+import type { Animation as GraphAnimation } from '../motion/scheduler';
+import { resolveEase } from '../motion/tween';
 import { ZoomTransform } from './zoom';
 
 /** Minimum/maximum zoom scale a flight may resolve to. */

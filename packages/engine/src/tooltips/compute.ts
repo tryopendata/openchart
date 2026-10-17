@@ -737,7 +737,9 @@ function isBinnedBarSpec(spec: NormalizedChartSpec): boolean {
  * formatted through the same x formatter the axis uses so the tooltip and the
  * ticks agree. The count row is labelled from the y channel's title, which the
  * count sugar already sets to "Count". An explicit `encoding.tooltip`
- * overrides the default field set.
+ * overrides the whole default presentation, including the numeric range title.
+ * Pooled end bins can then supply truthful labels such as "$100,000 or more"
+ * through an authored nominal tooltip field.
  */
 function computeBinnedBarTooltips(
   spec: NormalizedChartSpec,
@@ -778,8 +780,8 @@ function computeBinnedBarTooltips(
 
     if (encoding.tooltip) {
       const channels = Array.isArray(encoding.tooltip) ? encoding.tooltip : [encoding.tooltip];
+      if (channels.length === 0) continue;
       descriptors.set(`rect-${i}`, {
-        title,
         fields: buildExplicitTooltipFields(row, channels, fmtCache),
       });
       continue;

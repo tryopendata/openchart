@@ -66,7 +66,7 @@ export const PatternFillsStacked = () => (
 
 export const PatternFillsStackedDark = () => (
   <div className="tfix-chart tfix-h-440">
-    <Chart spec={{ ...patternStackedSpec, darkMode: 'force' }} />
+    <Chart spec={patternStackedSpec} />
   </div>
 );
 

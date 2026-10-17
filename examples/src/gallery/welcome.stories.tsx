@@ -460,7 +460,7 @@ function cardSpec(kind: SectionCard['chartKind']): VizSpec {
           { key: 'price', label: 'Price', format: '$,.0f', align: 'right' },
           { key: 'ytdChange', label: 'YTD', format: '.0f', align: 'right', bar: {} },
         ],
-        compact: true,
+        density: 'condensed',
         watermark: false,
       };
       return spec;
@@ -540,9 +540,9 @@ function cardSpec(kind: SectionCard['chartKind']): VizSpec {
         data: programmingLanguages.data.slice(0, 4).map((d) => ({ ...d })),
         encoding: {
           label: { field: 'language', type: 'nominal' },
-          value: { field: 'pct', type: 'quantitative' },
+          value: { field: 'pct', type: 'quantitative', format: '.1f' },
         },
-        valueFormat: '.1f',
+
         barHeight: 6,
         watermark: false,
       };

@@ -138,6 +138,8 @@ function renderAnnotation(
   // be spec annotation 1, and dragging one label moves the other. Fall back to the
   // position for a hand-built layout that carries no `specIndex`.
   g.setAttribute('data-annotation-index', String(annotation.specIndex ?? index));
+  const facet = parent.closest('[data-facet]')?.getAttribute('data-facet');
+  if (facet !== null && facet !== undefined) g.setAttribute('data-facet-instance', facet);
   if (annotation.id) {
     g.setAttribute('data-annotation-id', annotation.id);
   }
@@ -375,6 +377,7 @@ export function renderAnnotations(parent: SVGElement, layout: ChartLayout): void
 
   const g = createSVGElement('g');
   g.setAttribute('class', 'oc-annotations');
+  parent.appendChild(g);
 
   // Annotations are already sorted by zIndex from the engine, so render in order.
   // The knockout halo has to be cut in an OPAQUE color: theme.colors.background
@@ -383,6 +386,4 @@ export function renderAnnotations(parent: SVGElement, layout: ChartLayout): void
   for (let i = 0; i < layout.annotations.length; i++) {
     renderAnnotation(g, layout.annotations[i], i, bgColor);
   }
-
-  parent.appendChild(g);
 }

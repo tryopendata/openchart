@@ -134,10 +134,10 @@ const moversSpec: BarListSpec = {
   data: [...programmingLanguages.data].slice(0, 8),
   encoding: {
     label: { field: 'language', type: 'nominal' as const },
-    value: { field: 'pct', type: 'quantitative' as const },
+    value: { field: 'pct', type: 'quantitative' as const, format: '.1f' },
     color: { field: 'category', type: 'nominal' as const },
   },
-  valueFormat: '.1f',
+
   barHeight: 8,
   chrome: {
     title: 'Top Movers',
@@ -312,10 +312,10 @@ const composedMoversSpec: BarListSpec = {
   data: [...programmingLanguages.data].slice(0, 5),
   encoding: {
     label: { field: 'language', type: 'nominal' as const },
-    value: { field: 'pct', type: 'quantitative' as const },
+    value: { field: 'pct', type: 'quantitative' as const, format: '.1f' },
     color: { field: 'category', type: 'nominal' as const },
   },
-  valueFormat: '.1f',
+
   barHeight: 8,
   chrome: { title: 'Language leaders' },
   watermark: false,

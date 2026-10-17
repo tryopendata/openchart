@@ -27,9 +27,9 @@ const usStateSpec: GeoMapSpec = {
   data: [...usUnemployment.data],
   encoding: {
     key: { field: 'id', type: 'nominal' },
-    color: { field: 'rate', type: 'quantitative' },
+    color: { field: 'rate', type: 'quantitative', format: '.1f' },
   },
-  valueFormat: '.1f',
+
   chrome: {
     title: 'Where the Job Market Is Tightest',
     subtitle: 'State unemployment rate, seasonally adjusted, %',
@@ -69,9 +69,9 @@ const worldEqualEarthSpec: GeoMapSpec = {
   data: [...worldGdp.data],
   encoding: {
     key: { field: 'id', type: 'nominal' },
-    color: { field: 'gdp', type: 'quantitative' },
+    color: { field: 'gdp', type: 'quantitative', format: '$,.0f' },
   },
-  valueFormat: '$,.0f',
+
   chrome: {
     title: 'The World in Dollars Per Person',
     subtitle: 'GDP per capita, current US$, 2023',
@@ -91,9 +91,9 @@ const worldMercatorSpec: GeoMapSpec = {
   data: [...worldGdp.data],
   encoding: {
     key: { field: 'id', type: 'nominal' },
-    color: { field: 'gdp', type: 'quantitative' },
+    color: { field: 'gdp', type: 'quantitative', format: '$,.0f' },
   },
-  valueFormat: '$,.0f',
+
   chrome: {
     title: 'Same Data, Mercator Projection',
     subtitle: 'Greenland looks enormous, but carries no data here',
@@ -113,9 +113,9 @@ const interactiveSpec: GeoMapSpec = {
   data: [...usUnemployment.data],
   encoding: {
     key: { field: 'id', type: 'nominal' },
-    color: { field: 'rate', type: 'quantitative' },
+    color: { field: 'rate', type: 'quantitative', format: '.1f' },
   },
-  valueFormat: '.1f',
+
   chrome: {
     title: 'Hover a State to Read Its Rate',
     subtitle: 'onMarkHover drives the live readout below the map',

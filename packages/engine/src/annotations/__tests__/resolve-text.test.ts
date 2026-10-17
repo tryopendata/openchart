@@ -1,3 +1,4 @@
+import { heuristicMeasure as annotationMeasureForTest } from '../geometry';
 /**
  * Tests for the text-annotation resolver, focused on the `dot` and
  * `subtitle` fields added in the multi-series area redesign.
@@ -69,7 +70,15 @@ describe('text annotation: dot', () => {
   it('resolves the default dot when a connector is enabled and no dot key is set', () => {
     const spec = makeSpec([{ type: 'text', x: '2020-01-01', y: 20, text: 'No dot key' }]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     const dot = annotations[0].dot;
     expect(dot).toBeDefined();
@@ -81,7 +90,15 @@ describe('text annotation: dot', () => {
       { type: 'text', x: '2020-01-01', y: 20, text: 'Straight', connector: 'straight' },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     expect(annotations[0].dot).toBeDefined();
   });
@@ -91,7 +108,15 @@ describe('text annotation: dot', () => {
       { type: 'text', x: '2020-01-01', y: 20, text: 'Drop', connector: 'drop-line' },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     expect(annotations[0].dot).toBeDefined();
   });
@@ -101,7 +126,15 @@ describe('text annotation: dot', () => {
       { type: 'text', x: '2020-01-01', y: 20, text: 'Drop', connector: 'drop-line', dot: true },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     const ann = annotations[0];
     const px = scales.x!.scale(new Date('2020-01-01')) as number;
@@ -118,7 +151,15 @@ describe('text annotation: dot', () => {
       { type: 'text', x: '2020-01-01', y: 20, text: 'Arrowed', connector: 'curve' },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     expect(annotations[0].dot).toBeUndefined();
   });
@@ -128,7 +169,15 @@ describe('text annotation: dot', () => {
       { type: 'text', x: '2020-01-01', y: 20, text: 'Bare', connector: false },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     expect(annotations[0].dot).toBeUndefined();
   });
@@ -138,7 +187,15 @@ describe('text annotation: dot', () => {
       { type: 'text', x: '2020-01-01', y: 20, text: 'No marker', dot: false },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     expect(annotations[0].dot).toBeUndefined();
   });
@@ -146,7 +203,15 @@ describe('text annotation: dot', () => {
   it('populates dot with default styling when dot: true (light mode)', () => {
     const spec = makeSpec([{ type: 'text', x: '2020-01-01', y: 20, text: 'With dot', dot: true }]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy, false);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     const dot = annotations[0].dot;
     expect(dot).toBeDefined();
@@ -160,7 +225,15 @@ describe('text annotation: dot', () => {
   it('populates dot with dark-mode defaults when isDark is true', () => {
     const spec = makeSpec([{ type: 'text', x: '2020-01-01', y: 20, text: 'Dark', dot: true }]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy, true);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: true,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     const dot = annotations[0].dot;
     expect(dot).toBeDefined();
@@ -179,7 +252,15 @@ describe('text annotation: dot', () => {
       },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     const dot = annotations[0].dot;
     expect(dot).toBeDefined();
@@ -194,7 +275,15 @@ describe('text annotation: dot', () => {
       { type: 'text', x: '2020-01-01', y: 20, text: 'Partial', dot: { radius: 3 } },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     const dot = annotations[0].dot;
     expect(dot).toBeDefined();
@@ -220,7 +309,15 @@ describe('text annotation: dot', () => {
       },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     const resolved = annotations[0];
     const px = scales.x!.scale(new Date('2020-01-01')) as number;
@@ -239,7 +336,15 @@ describe('text annotation: dot', () => {
   it('dot coordinates apply user connectorOffset.to', () => {
     const baseSpec = makeSpec([{ type: 'text', x: '2020-01-01', y: 20, text: 'A', dot: true }]);
     const baseScales = computeScales(baseSpec, chartArea, baseSpec.data);
-    const withoutOffset = computeAnnotations(baseSpec, baseScales, chartArea, fullStrategy);
+    const withoutOffset = computeAnnotations(baseSpec, {
+      scales: baseScales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
     const baseDot = withoutOffset[0].dot!;
 
     const withOffsetSpec = makeSpec([
@@ -253,7 +358,15 @@ describe('text annotation: dot', () => {
       },
     ]);
     const scales2 = computeScales(withOffsetSpec, chartArea, withOffsetSpec.data);
-    const withOffset = computeAnnotations(withOffsetSpec, scales2, chartArea, fullStrategy);
+    const withOffset = computeAnnotations(withOffsetSpec, {
+      scales: scales2,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
     const offsetDot = withOffset[0].dot!;
 
     // The user's connector offset shifts the data-side endpoint, so the marker
@@ -267,7 +380,15 @@ describe('text annotation: background', () => {
   it('does not populate background when not specified', () => {
     const spec = makeSpec([{ type: 'text', x: '2020-01-01', y: 20, text: 'No plate' }]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     expect(annotations[0].label.background).toBeUndefined();
   });
@@ -277,7 +398,15 @@ describe('text annotation: background', () => {
       { type: 'text', x: '2020-01-01', y: 20, text: 'Plate', background: true },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy, false);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     expect(annotations[0].label.background).toBe(LIGHT_LABEL_BACKGROUND);
   });
@@ -289,7 +418,15 @@ describe('text annotation: background', () => {
       { type: 'text', x: '2020-01-01', y: 20, text: 'Plate', background: true },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy, true);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: true,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     expect(annotations[0].label.background).toBe(DARK_LABEL_BACKGROUND);
     expect(annotations[0].label.background).not.toBe(LIGHT_LABEL_BACKGROUND);
@@ -302,10 +439,26 @@ describe('text annotation: background', () => {
     const scales = computeScales(spec, chartArea, spec.data);
 
     expect(
-      computeAnnotations(spec, scales, chartArea, fullStrategy, false)[0].label.background,
+      computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: false,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      })[0].label.background,
     ).toBe('#ff00ff');
     expect(
-      computeAnnotations(spec, scales, chartArea, fullStrategy, true)[0].label.background,
+      computeAnnotations(spec, {
+        scales: scales,
+        chartArea: chartArea,
+        strategy: fullStrategy,
+        isDark: true,
+        obstacles: [],
+        svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+        measure: annotationMeasureForTest,
+      })[0].label.background,
     ).toBe('#ff00ff');
   });
 });
@@ -314,7 +467,15 @@ describe('text annotation: subtitle', () => {
   it('does not populate subtitle when not specified', () => {
     const spec = makeSpec([{ type: 'text', x: '2020-01-01', y: 20, text: 'No subtitle' }]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     expect(annotations[0].subtitle).toBeUndefined();
   });
@@ -330,7 +491,15 @@ describe('text annotation: subtitle', () => {
       },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy, false);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     const sub = annotations[0].subtitle;
     expect(sub).toBeDefined();
@@ -346,7 +515,15 @@ describe('text annotation: subtitle', () => {
       { type: 'text', x: '2020-01-01', y: 20, text: 'Primary', subtitle: 'Note' },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy, true);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: true,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     expect(annotations[0].subtitle!.style.fill).toBe(DARK_MUTED_TEXT_FILL);
   });
@@ -356,13 +533,21 @@ describe('text annotation: subtitle', () => {
       { type: 'text', x: '2020-01-01', y: 20, text: 'One line', subtitle: 'sub' },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     const label = annotations[0].label!;
     const sub = annotations[0].subtitle!;
     const fontSize = label.style.fontSize ?? DEFAULT_ANNOTATION_FONT_SIZE;
     const expectedY = label.y + fontSize * DEFAULT_LINE_HEIGHT * 1 + SUBTITLE_GAP;
-    expect(sub.y).toBe(expectedY);
+    expect(sub.y).toBeCloseTo(expectedY);
     expect(sub.x).toBe(label.x);
   });
 
@@ -377,13 +562,21 @@ describe('text annotation: subtitle', () => {
       },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     const label = annotations[0].label!;
     const sub = annotations[0].subtitle!;
     const fontSize = label.style.fontSize ?? DEFAULT_ANNOTATION_FONT_SIZE;
     const expectedY = label.y + fontSize * DEFAULT_LINE_HEIGHT * 3 + SUBTITLE_GAP;
-    expect(sub.y).toBe(expectedY);
+    expect(sub.y).toBeCloseTo(expectedY);
   });
 
   it('subtitle font size scales with custom primary fontSize', () => {
@@ -398,7 +591,15 @@ describe('text annotation: subtitle', () => {
       },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     expect(annotations[0].subtitle!.style.fontSize).toBe(Math.round(20 * SUBTITLE_FONT_SIZE_RATIO));
   });
@@ -418,7 +619,15 @@ describe('text annotation: dot + subtitle co-resolution', () => {
       },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     const resolved = annotations[0];
     const px = scales.x!.scale(new Date('2020-01-01')) as number;
@@ -447,7 +656,15 @@ describe('text annotation: dot + subtitle co-resolution', () => {
       },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     const ann = annotations[0];
     const connector = ann.label!.connector!;
@@ -478,7 +695,15 @@ describe('text annotation: connector suppression', () => {
       },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     expect(annotations[0].label!.connector).toBeUndefined();
     expect(annotations[0].dot).toBeDefined();
@@ -490,7 +715,15 @@ describe('text annotation: connector suppression', () => {
   it('draws a connector for a bare text annotation with no offset', () => {
     const spec = makeSpec([{ type: 'text', x: '2020-01-01', y: 20, text: 'Default callout' }]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     const connector = annotations[0].label!.connector;
     expect(connector).toBeDefined();
@@ -515,7 +748,15 @@ describe('text annotation: connector suppression', () => {
       },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     expect(annotations[0].label!.connector).toBeUndefined();
     expect(annotations[0].dot).toBeDefined();
@@ -526,7 +767,15 @@ describe('text annotation: connector suppression', () => {
       { type: 'text', x: '2020-01-01', y: 20, text: 'Far label', offset: { dx: 0, dy: -60 } },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     const connector = annotations[0].label!.connector!;
     expect(connector).toBeDefined();
@@ -548,7 +797,15 @@ describe('text annotation: connector config', () => {
       },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     const c = annotations[0].label!.connector!;
     expect(c.style).toBe('curve');
@@ -567,7 +824,15 @@ describe('text annotation: connector config', () => {
       },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     const c = annotations[0].label!.connector!;
     expect(c.style).toBe('straight');
@@ -586,7 +851,15 @@ describe('text annotation: connector config', () => {
       },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     const c = annotations[0].label!.connector!;
     expect(c.style).toBe('straight');
@@ -605,7 +878,15 @@ describe('text annotation: connector config', () => {
       },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     const c = annotations[0].label!.connector!;
     expect(c.style).toBe('straight');
@@ -624,7 +905,15 @@ describe('text annotation: connector config', () => {
       },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     const c = annotations[0].label!.connector!;
     expect(c.style).toBe('curve');
@@ -643,7 +932,15 @@ describe('text annotation: connector config', () => {
       },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     const c = annotations[0].label!.connector!;
     expect(c.style).toBe('curve');
@@ -655,7 +952,15 @@ describe('text annotation: connector config', () => {
       { type: 'text', x: '2020-01-01', y: 20, text: 'No connector', connector: false },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     expect(annotations[0].label!.connector).toBeUndefined();
   });
@@ -665,7 +970,15 @@ describe('text annotation: connector config', () => {
       { type: 'text', x: '2020-01-01', y: 20, text: 'Drop line', connector: 'drop-line' },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     const c = annotations[0].label!.connector!;
     expect(c.style).toBe('drop-line');
@@ -683,7 +996,15 @@ describe('text annotation: connector config', () => {
       },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     const c = annotations[0].label!.connector!;
     expect(c.style).toBe('drop-line');
@@ -695,7 +1016,15 @@ describe('text annotation: typography', () => {
   it('defaults to the regular annotation font size and weight', () => {
     const spec = makeSpec([{ type: 'text', x: '2020-01-01', y: 20, text: 'Plain' }]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     const style = annotations[0].label!.style;
     expect(style.fontSize).toBe(DEFAULT_ANNOTATION_FONT_SIZE);
@@ -708,7 +1037,15 @@ describe('text annotation: typography', () => {
       { type: 'text', x: '2020-01-01', y: 20, text: 'Feb. 25', subtitle: '2015 maximum' },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     expect(annotations[0].label!.style.fontWeight).toBe(LEDE_FONT_WEIGHT);
     // The subtitle never inherits it.
@@ -727,7 +1064,15 @@ describe('text annotation: typography', () => {
       },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     expect(annotations[0].label!.style.fontWeight).toBe(500);
   });
@@ -758,7 +1103,15 @@ describe('text annotation: typography', () => {
   it('falls back to the default font stack when no theme font is threaded', () => {
     const spec = makeSpec([{ type: 'text', x: '2020-01-01', y: 20, text: 'Callout' }]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     expect(annotations[0].label!.style.fontFamily).toBe(FALLBACK_FONT_FAMILY);
   });
@@ -771,7 +1124,15 @@ describe('text annotation: alignment', () => {
       { type: 'text', x: '2020-01-01', y: 20, text: 'First line\nSecond line' },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     expect(annotations[0].label!.style.textAnchor).toBe('start');
   });
@@ -781,7 +1142,15 @@ describe('text annotation: alignment', () => {
       { type: 'text', x: '2020-01-01', y: 20, text: 'First line\nSecond line', anchor: 'left' },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
-    const annotations = computeAnnotations(spec, scales, chartArea, fullStrategy);
+    const annotations = computeAnnotations(spec, {
+      scales: scales,
+      chartArea: chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: chartArea.x + chartArea.width, height: chartArea.y + chartArea.height },
+      measure: annotationMeasureForTest,
+    });
 
     expect(annotations[0].label!.style.textAnchor).toBe('end');
   });

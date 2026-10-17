@@ -529,17 +529,16 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
  * Resolve row density. `density` wins; the deprecated `compact` flag maps to
  * `'condensed'` and warns once.
  */
-function normalizeTableDensity(spec: TableSpec, warnings: string[]): TableDensity {
+function normalizeTableDensity(spec: TableSpec): TableDensity {
   if (spec.density) return spec.density;
   if (spec.compact) {
-    warnings.push('[openchart] table "compact" is deprecated; use density: "condensed" instead.');
     return 'condensed';
   }
   return 'regular';
 }
 
-function normalizeTableSpec(spec: TableSpec, warnings: string[]): NormalizedTableSpec {
-  const density = normalizeTableDensity(spec, warnings);
+function normalizeTableSpec(spec: TableSpec, _warnings: string[]): NormalizedTableSpec {
+  const density = normalizeTableDensity(spec);
   const totalRow =
     spec.totalRow === true
       ? { label: 'Total' }
@@ -758,6 +757,36 @@ function normalizeBarListSpec(spec: BarListSpec, _warnings: string[]): Normalize
  * @returns A NormalizedSpec with all optionals filled.
  */
 export function normalizeSpec(spec: VizSpec, warnings: string[] = []): NormalizedSpec {
+  const authored = spec as unknown as Record<string, unknown>;
+  if (authored.darkMode !== undefined)
+    warnings.push(
+      '[openchart] spec darkMode is deprecated and has no effect; use the mount darkMode option.',
+    );
+  const themeChrome = (authored.theme as { chrome?: Record<string, unknown> } | undefined)?.chrome;
+  if (themeChrome && Object.values(themeChrome).some((value) => typeof value === 'string'))
+    warnings.push('[openchart] theme.chrome string colors are deprecated; use { color } objects.');
+  if (
+    authored.animation === 'legacy' ||
+    (authored.animation as { preset?: string } | undefined)?.preset === 'legacy'
+  )
+    warnings.push('[openchart] animation legacy is deprecated; omit preset to retain v8 timing.');
+  if ((authored.labels as { offsets?: unknown } | undefined)?.offsets !== undefined)
+    warnings.push(
+      '[openchart] labels.offsets is deprecated; use endpointLabels. Migration drops manual offsets.',
+    );
+  if (authored.type === 'table' && 'compact' in authored)
+    warnings.push(
+      '[openchart] table "compact" is deprecated; use density: "condensed" (true) or "regular" (false).',
+    );
+  const annotations = authored.annotations as Annotation[] | undefined;
+  if (Array.isArray(annotations)) {
+    const ids = annotations.map((a) => a.id).filter((id) => id !== undefined);
+    if (ids.length !== annotations.length || new Set(ids).size !== ids.length)
+      warnings.push(
+        '[openchart] Missing or duplicate annotation IDs use revision-local source indices; provide unique IDs for durable identity.',
+      );
+  }
+
   if (isLayerSpec(spec)) {
     // For LayerSpec, we flatten and normalize the first leaf to get a valid NormalizedChartSpec.
     // The actual layer compilation happens in compileLayer, not here.

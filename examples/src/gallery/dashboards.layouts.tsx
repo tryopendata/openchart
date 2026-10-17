@@ -1037,9 +1037,9 @@ export const funnelSankeySpec: SankeySpec = {
   encoding: {
     source: { field: 'source', type: 'nominal' },
     target: { field: 'target', type: 'nominal' },
-    value: { field: 'value', type: 'quantitative' },
+    value: { field: 'value', type: 'quantitative', format: ',.0f' },
   },
-  valueFormat: ',.0f',
+
   chrome: {
     title: '10,000 Visitors In, 720 Paying Users Out',
     subtitle: 'Monthly cohort from landing page through conversion',
@@ -1278,9 +1278,9 @@ const incidentSignaturesSpec: BarListSpec = {
   data: [...incidentIntelligence.errorSignatures],
   encoding: {
     label: { field: 'signature', type: 'nominal' },
-    value: { field: 'events', type: 'quantitative' },
+    value: { field: 'events', type: 'quantitative', format: ',.0f' },
   },
-  valueFormat: ',.0f',
+
   barHeight: 8,
   chrome: { title: 'Top error signatures (24h)' },
   watermark: false,
@@ -1298,7 +1298,7 @@ const incidentActivitySpec: TableSpec = {
     { key: 'usersAffected', label: 'Est. users affected', format: ',.0f', align: 'right' },
   ],
   chrome: { title: 'Recent investigations' },
-  compact: true,
+  density: 'condensed',
   watermark: false,
 };
 

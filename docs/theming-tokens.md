@@ -169,8 +169,9 @@ never disagree.
 | `--oc-map-hover-dim` | 0.75 | map-local override; dimming 3000 county paths at 0.3 reads as a blackout, so maps use a lighter dim and only on legend-bin hover, never on feature hover |
 | `--oc-positive-tint` / `--oc-negative-tint` | 10% color-mix toward `--oc-bg` | delta chip backgrounds |
 
-`--oc-border-radius` (8px) is the one users typically override; it drives
-containers and tooltips. Mark geometry uses the fixed `--oc-radius-sm`
+`--oc-border-radius` (8px) drives containers and tooltips. In v8, mounts stamp
+resolved theme tokens inline, so ordinary stylesheet overrides of these tokens
+do not win. Set `theme.borderRadius` to change this value. Mark geometry uses the fixed `--oc-radius-sm`
 regardless, so a theme with `borderRadius: 0` still draws a 2px bar-end
 radius.
 

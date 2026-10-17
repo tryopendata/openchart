@@ -270,14 +270,14 @@ describe('density', () => {
     expect(warnings.join('\n')).toContain('density: "condensed"');
   });
 
-  it('lets density win over compact without warning', () => {
+  it('lets density win and warns about the authored compact alias', () => {
     const warnings: string[] = [];
     const layout = compileTable(
       { ...base, compact: true, density: 'relaxed' },
       { ...options, onWarn: (m) => warnings.push(m) },
     );
     expect(layout.density).toBe('relaxed');
-    expect(warnings).toHaveLength(0);
+    expect(warnings.some((warning) => warning.includes('compact'))).toBe(true);
   });
 });
 

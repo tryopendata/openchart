@@ -1,3 +1,4 @@
+import { mergeThemeConfig } from '@opendata-ai/openchart-core';
 import { diagnoseChart } from './design/diagnostics';
 /**
  * Main compile API: the public entry points for the engine.
@@ -51,6 +52,7 @@ import {
 import { collectPinnedOverlapWarnings } from './annotations/collisions';
 import { computeAnnotations } from './annotations/compute';
 import { type AnnotationMeasureTextFn, heuristicMeasure } from './annotations/geometry';
+import { annotationNoteLineCount, wrapAnnotationNotes } from './annotations/notes';
 import type { PlacementObstacle } from './annotations/placement';
 import { thinAnnotations } from './annotations/thinning';
 import { computeEndpointLabels } from './endpoint-labels/compute';
@@ -71,7 +73,7 @@ import { applyColorScaleRange, defaultSeriesColor } from './compile/color-scale-
 import { filterClippedDomains } from './compile/data-clip';
 import { applyFillPatterns } from './compile/fill-patterns';
 import { compileLayer as compileLayerImpl } from './compile/layer';
-import { emitSpecWarnings, expandSpecSugar } from './compile/spec-sugar';
+import { emitSpecWarnings, emitThemeWarnings, expandSpecSugar } from './compile/spec-sugar';
 import { computeWatermarkObstacle } from './compile/watermark-obstacle';
 import { resolveYouDrawIt } from './compile/you-draw-it';
 import { collectContrastWarnings } from './compiler/a11y-warnings';
@@ -570,9 +572,8 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
   }
 
   // Resolve theme: merge spec-level theme with options-level overrides
-  const mergedThemeConfig = options.theme
-    ? { ...chartSpec.theme, ...options.theme }
-    : chartSpec.theme;
+  emitThemeWarnings(options.theme, options.onWarn);
+  const mergedThemeConfig = mergeThemeConfig(chartSpec.theme, options.theme);
   let theme: ResolvedTheme = resolveTheme(mergedThemeConfig);
   if (options.darkMode) {
     theme = adaptTheme(theme);
@@ -851,6 +852,13 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
     ? renderer(renderSpec, scales, chartArea, strategy, theme, options.width)
     : [];
 
+  if (marks.some((mark) => mark.type === 'line' && mark.label?.visible)) {
+    emitSpecWarnings(
+      ['[openchart] Legacy end-of-line labels are deprecated; use endpointLabels.'],
+      options.onWarn,
+    );
+  }
+
   // Opt-in per-series fill patterns (mark.fillPattern: 'auto'). Mutates
   // filled marks in place; assignment is deterministic and theme-aware.
   applyFillPatterns(marks, chartSpec.markDef, theme);
@@ -976,7 +984,12 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
     );
     annotations = result.annotations;
     if (result.footnotes.length > 0) {
-      footnotes = result.footnotes;
+      footnotes = wrapAnnotationNotes(
+        result.footnotes,
+        dims.total.width,
+        theme,
+        options.measureText,
+      );
 
       // The footnote list renders below the plot, but nothing reserved space for
       // it — thinning only just now discovered how many lines there are. Recompile
@@ -995,7 +1008,7 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
       // so a grown bottom margin is computed and then thrown away. The
       // recursion would re-run the whole compile up to MAX_FOOTNOTE_PASSES
       // times and return the identical layout. Skip it rather than pay for it.
-      const reserve = footnoteBandHeight(footnotes.length, theme);
+      const reserve = footnoteBandHeight(annotationNoteLineCount(footnotes), theme);
       const currentReserve = options.footnoteReserve ?? 0;
       if (
         !options.frozenChartArea &&
@@ -1048,7 +1061,7 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
       : [];
   if (seriesSummary.length) {
     const reserve = footnoteBandHeight(
-      (footnotes?.length ?? 0) +
+      annotationNoteLineCount(footnotes ?? []) +
         seriesSummary.reduce((count, entry) => count + entry.lines.length, 0),
       theme,
     );
@@ -1454,6 +1467,8 @@ function compileFaceted(
           num = allFootnotes.length + 1;
           footnoteNumberBySpecIndex.set(a.specIndex, num);
           allFootnotes.push({
+            specIndex: a.specIndex,
+            ...(a.id !== undefined ? { id: a.id } : {}),
             index: num,
             text: thinned.footnotes[panelIndex - 1]?.text ?? '',
           });
@@ -1491,8 +1506,14 @@ function compileFaceted(
   // pins every leaf to the primary layout's coordinate space, so the grown bottom
   // margin is computed and then thrown away. Recursing would re-run the whole
   // compile up to MAX_FOOTNOTE_PASSES times for an identical layout.
+  const wrappedFootnotes = wrapAnnotationNotes(
+    allFootnotes,
+    dims.total.width,
+    theme,
+    options.measureText,
+  );
   if (allFootnotes.length > 0 && !options.frozenChartArea) {
-    const reserve = footnoteBandHeight(allFootnotes.length, theme);
+    const reserve = footnoteBandHeight(annotationNoteLineCount(wrappedFootnotes), theme);
     const currentReserve = options.footnoteReserve ?? 0;
     if (reserve > currentReserve && (options.footnotePass ?? 0) < MAX_FOOTNOTE_PASSES) {
       return compileChart(rawSpec, {
@@ -1505,6 +1526,13 @@ function compileFaceted(
 
   // Compute tooltip descriptors from all marks across panels
   const tooltipDescriptors = computeTooltipDescriptors(panelChartSpec, allMarks);
+
+  if (allMarks.some((mark) => mark.type === 'line' && mark.label?.visible)) {
+    emitSpecWarnings(
+      ['[openchart] Legacy end-of-line labels are deprecated; use endpointLabels.'],
+      options.onWarn,
+    );
+  }
 
   // Opt-in per-series fill patterns across all panels at once so a series
   // gets the same pattern in every panel.
@@ -1561,7 +1589,7 @@ function compileFaceted(
   // Figure-level marks are the union of all panel marks (for tooltip/keyboard nav)
   return {
     area: chartArea,
-    chrome: allFootnotes.length > 0 ? { ...dims.chrome, footnotes: allFootnotes } : dims.chrome,
+    chrome: allFootnotes.length > 0 ? { ...dims.chrome, footnotes: wrappedFootnotes } : dims.chrome,
     metrics: dims.metrics,
     ...(dims.seriesSearch ? { seriesSearch: dims.seriesSearch } : {}),
     axes: { x: undefined, y: undefined },
@@ -1643,9 +1671,8 @@ export function compileTable(spec: unknown, options: CompileTableOptions): Table
   const tableSpec = normalized as NormalizedTableSpec;
 
   // Resolve theme: merge spec-level theme with options-level overrides
-  const mergedThemeConfig = options.theme
-    ? { ...tableSpec.theme, ...options.theme }
-    : tableSpec.theme;
+  emitThemeWarnings(options.theme, options.onWarn);
+  const mergedThemeConfig = mergeThemeConfig(tableSpec.theme, options.theme);
   let theme: ResolvedTheme = resolveTheme(mergedThemeConfig);
   if (options.darkMode) {
     theme = adaptTheme(theme);

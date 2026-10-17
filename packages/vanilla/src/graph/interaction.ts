@@ -1,3 +1,4 @@
+import type { PositionedNode } from './types';
 /**
  * Graph interaction manager.
  *
@@ -7,7 +8,7 @@
  * conversion.
  */
 
-import type { SpatialIndex } from './spatial-index';
+import type { SpatialIndex } from '../spatial-index';
 import { ZoomTransform } from './zoom';
 
 // ---------------------------------------------------------------------------
@@ -59,7 +60,7 @@ interface PanState {
 
 export class GraphInteractionManager {
   private canvas: HTMLCanvasElement;
-  private spatialIndex: SpatialIndex;
+  private spatialIndex: SpatialIndex<PositionedNode>;
   private callbacks: InteractionCallbacks;
   private transform = ZoomTransform.identity();
 
@@ -85,7 +86,7 @@ export class GraphInteractionManager {
 
   constructor(
     canvas: HTMLCanvasElement,
-    spatialIndex: SpatialIndex,
+    spatialIndex: SpatialIndex<PositionedNode>,
     callbacks: InteractionCallbacks,
   ) {
     this.canvas = canvas;

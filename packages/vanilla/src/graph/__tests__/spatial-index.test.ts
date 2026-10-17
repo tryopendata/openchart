@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SpatialIndex } from '../spatial-index';
+import { SpatialIndex } from '../../spatial-index';
 import type { PositionedNode } from '../types';
 
 // ---------------------------------------------------------------------------
@@ -29,7 +29,7 @@ function makeNode(id: string, x: number, y: number, radius = 5): PositionedNode 
 describe('SpatialIndex', () => {
   describe('findNearest', () => {
     it('returns the correct nearest node', () => {
-      const idx = new SpatialIndex();
+      const idx = new SpatialIndex<PositionedNode>();
       const nodes = [makeNode('a', 0, 0), makeNode('b', 100, 100), makeNode('c', 200, 200)];
       idx.rebuild(nodes);
 
@@ -39,12 +39,12 @@ describe('SpatialIndex', () => {
     });
 
     it('returns null for empty tree', () => {
-      const idx = new SpatialIndex();
+      const idx = new SpatialIndex<PositionedNode>();
       expect(idx.findNearest(0, 0)).toBeNull();
     });
 
     it('respects maxDistance', () => {
-      const idx = new SpatialIndex();
+      const idx = new SpatialIndex<PositionedNode>();
       const nodes = [makeNode('a', 100, 100, 5)];
       idx.rebuild(nodes);
 
@@ -59,7 +59,7 @@ describe('SpatialIndex', () => {
     });
 
     it('handles radius-based hit (clicking within a large node)', () => {
-      const idx = new SpatialIndex();
+      const idx = new SpatialIndex<PositionedNode>();
       // Node at (100, 100) with radius 50
       const nodes = [makeNode('big', 100, 100, 50)];
       idx.rebuild(nodes);
@@ -73,7 +73,7 @@ describe('SpatialIndex', () => {
     });
 
     it('prefers closer nodes even when a large node is present', () => {
-      const idx = new SpatialIndex();
+      const idx = new SpatialIndex<PositionedNode>();
       const nodes = [makeNode('small-close', 10, 10, 5), makeNode('big-far', 200, 200, 50)];
       idx.rebuild(nodes);
 
@@ -85,7 +85,7 @@ describe('SpatialIndex', () => {
 
   describe('findInRect', () => {
     it('returns all nodes inside the rectangle', () => {
-      const idx = new SpatialIndex();
+      const idx = new SpatialIndex<PositionedNode>();
       const nodes = [makeNode('a', 50, 50), makeNode('b', 150, 150), makeNode('c', 250, 250)];
       idx.rebuild(nodes);
 
@@ -95,13 +95,13 @@ describe('SpatialIndex', () => {
     });
 
     it('returns empty array for empty tree', () => {
-      const idx = new SpatialIndex();
+      const idx = new SpatialIndex<PositionedNode>();
       const result = idx.findInRect(0, 0, 100, 100);
       expect(result).toEqual([]);
     });
 
     it('handles inverted coordinates (x2 < x1)', () => {
-      const idx = new SpatialIndex();
+      const idx = new SpatialIndex<PositionedNode>();
       const nodes = [makeNode('a', 50, 50), makeNode('b', 150, 150)];
       idx.rebuild(nodes);
 
@@ -111,7 +111,7 @@ describe('SpatialIndex', () => {
     });
 
     it('returns correct subset', () => {
-      const idx = new SpatialIndex();
+      const idx = new SpatialIndex<PositionedNode>();
       const nodes = [
         makeNode('origin', 0, 0),
         makeNode('top-right', 100, 0),
@@ -129,7 +129,7 @@ describe('SpatialIndex', () => {
 
   describe('generation tracking', () => {
     it('increments generation on rebuild', () => {
-      const idx = new SpatialIndex();
+      const idx = new SpatialIndex<PositionedNode>();
       expect(idx.getGeneration()).toBe(0);
 
       idx.rebuild([makeNode('a', 0, 0)]);

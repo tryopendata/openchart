@@ -1,3 +1,4 @@
+import { warnDeprecated } from './deprecations';
 /**
  * Graph mount API: the main entry point for vanilla JS graph usage.
  *
@@ -41,18 +42,15 @@ import {
 import { GraphInteractionManager } from './graph/interaction';
 import { attachGraphKeyboardNav } from './graph/keyboard';
 import { createGraphLegend, type GraphLegendController } from './graph/legend';
-import { createTween, prefersReducedMotion, resolveEase } from './graph/motion';
 import {
   GRAPH_3D_NOT_REGISTERED_ERROR,
   type GraphShell,
   getGraphRenderer,
 } from './graph/renderer-registry';
-import { AnimationScheduler, type GraphAnimation } from './graph/scheduler';
 import { GraphSearchManager } from './graph/search';
 import { seedNodePositions } from './graph/seed';
 import { createGraphShell, getContainerDimensions as measureContainer } from './graph/shell';
 import { SimulationManager } from './graph/simulation';
-import { SpatialIndex } from './graph/spatial-index';
 import type {
   GraphCamera,
   GraphFlyTarget,
@@ -64,7 +62,10 @@ import type {
 import { diffGraphUpdate, reheatAlpha } from './graph/update-diff';
 import type { SimEdge, SimNode } from './graph/worker-protocol';
 import { ZoomTransform } from './graph/zoom';
+import { AnimationScheduler, type Animation as GraphAnimation } from './motion/scheduler';
+import { createTween, prefersReducedMotion, resolveEase } from './motion/tween';
 import { resolveDarkMode } from './resolve-dark-mode';
+import { SpatialIndex } from './spatial-index';
 import type { TooltipManager } from './tooltip';
 
 // ---------------------------------------------------------------------------
@@ -248,7 +249,7 @@ export function createGraph(
   // Subsystems
   let renderer: GraphCanvasRenderer | null = null;
   let simulation: SimulationManager | null = null;
-  const spatialIndex = new SpatialIndex();
+  const spatialIndex = new SpatialIndex<PositionedNode>();
   let interactionManager: GraphInteractionManager | null = null;
   const searchManager = new GraphSearchManager();
   let tooltipManager: TooltipManager | null = null;
@@ -1901,6 +1902,7 @@ export function createGraph(
    * compatibility.
    */
   function updateVisuals(newSpec: GraphSpec): void {
+    warnDeprecated('updateVisuals is deprecated; use update.');
     update(newSpec);
   }
 
