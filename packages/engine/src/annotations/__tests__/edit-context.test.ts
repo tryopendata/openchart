@@ -278,3 +278,35 @@ describe('resolved annotation editing', () => {
     expect(warnings.some((w) => w.includes('bend'))).toBe(true);
   });
 });
+
+it.each([
+  'straight',
+  'curve',
+  'drop-line',
+] as const)('wrapped %s previews retain line geometry after release', (connector) => {
+  const spec: ChartSpec = {
+    ...editSpec,
+    annotations: [
+      {
+        ...editSpec.annotations![0],
+        text: 'A **long heading** for wrapped geometry',
+        subtitle: 'A **supporting** line with more detail',
+        maxWidth: 90,
+        subtitleFontSize: 15,
+        connector,
+      },
+    ],
+  };
+  const layout = compileChart(spec, options);
+  const ctx = createAnnotationEditContext(layout, spec);
+  const preview = previewAnnotationMove(ctx, ref, { dx: -50, dy: 30 });
+  const placement = inverseLabelPlacement(ctx, ref, preview.bounds!);
+  const committed = compileChart(
+    { ...spec, annotations: [{ ...spec.annotations![0], ...placement }] },
+    options,
+  ).annotations[0];
+  expect(committed.label!.lines).toEqual(preview.label!.lines);
+  expect(committed.subtitle!.lines).toEqual(preview.subtitle!.lines);
+  for (const key of ['x', 'y', 'width', 'height'] as const)
+    expect(committed.bounds![key]).toBeCloseTo(preview.bounds![key], 8);
+});

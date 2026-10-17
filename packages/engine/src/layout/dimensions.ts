@@ -1,3 +1,5 @@
+import { heuristicMeasure } from '../annotations/geometry';
+import { referenceLabelReserve } from '../annotations/reference-layout';
 /**
  * Dimension computation for the chart layout.
  *
@@ -190,6 +192,7 @@ export function computeDimensions(
   strategy: LayoutStrategy | undefined,
   watermark: boolean,
   plan: LayoutPlan,
+  reserveReferenceLabels = true,
 ): LayoutDimensions {
   const { width, height } = options;
 
@@ -239,7 +242,14 @@ export function computeDimensions(
   // Also used below to gate out the metric bar / series-search band, which
   // are sized for full tiles and would blow the same guardrail at this height.
   const isCrampedHeight = getHeightClass(height) === 'cramped';
-  const chrome = plan.chrome;
+  const chrome = { ...plan.chrome };
+  const referenceReserve = referenceLabelReserve(
+    reserveReferenceLabels ? spec.annotations : [],
+    width,
+    options.measureText
+      ? (text, font) => options.measureText!(text, font.fontSize, font.fontWeight).width
+      : heuristicMeasure,
+  );
 
   // chromeLayout 'grow': the plot keeps the full height budget and the SVG
   // grows by the chrome height. effectiveHeight is the height the plot-area
@@ -252,6 +262,7 @@ export function computeDimensions(
     chromeLayout === 'grow'
       ? height + chrome.topHeight + chrome.bottomHeight + (options.footnoteReserve ?? 0)
       : height;
+  if (chromeLayout === 'grow') chrome.grownHeight = effectiveHeight - height;
 
   // Sparkline mode: produce a near-edge-to-edge layout. Only stroke-width-based
   // safety padding plus chrome (if user-explicit). Skip axis space, label
@@ -359,7 +370,8 @@ export function computeDimensions(
   // subtitle-to-legend gap tight while reserving physical space for ticks
   // that protrude above the chart area.
   const margins: Margins = {
-    top: topPad + chrome.topHeight + tentativeMetricsHeight + searchReservation,
+    top:
+      topPad + chrome.topHeight + tentativeMetricsHeight + searchReservation + referenceReserve.top,
     right: hPad + (isRadial ? hPad : axisMargin),
     bottom: bottomMargin(chrome.bottomHeight, padding, xAxisHeight),
     left: hPad + (isRadial ? hPad : axisMargin),
@@ -497,7 +509,7 @@ export function computeDimensions(
   // a chart with only one of them reserves exactly what it did before.
   const colorReserve = colorLegendInGutter ? legendBoundsWidth + 8 : 0;
   const sizeReserve = sizeLegend ? sizeLegend.width + SIZE_LEGEND_GAP : 0;
-  margins.right += Math.max(colorReserve, sizeReserve);
+  margins.right += Math.max(colorReserve, sizeReserve) + referenceReserve.right;
 
   // effectiveAxisGap sits between the legend (or chrome, if no legend) and
   // the chart area. When a top legend is present, the legendGap already

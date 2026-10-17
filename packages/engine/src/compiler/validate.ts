@@ -1,3 +1,4 @@
+import { collectMarkOptionWarnings } from './mark-options';
 /**
  * Runtime spec validation.
  *
@@ -2349,13 +2350,48 @@ function validateFieldMetadata(obj: Record<string, unknown>, errors: ValidationE
  * field type compatibility. Returns structured errors with machine-readable
  * codes and actionable suggestions for each problem found.
  */
-function validateAnnotationBends(
+function validateAnnotationLayout(
   spec: Record<string, unknown>,
   errors: ValidationError[],
   prefix = '',
 ): void {
+  const responsive = spec.responsive as Record<string, unknown> | undefined;
+  const limit =
+    responsive && typeof responsive === 'object' ? responsive.compactAnnotationLimit : undefined;
+  if (limit != null && (typeof limit !== 'number' || !Number.isInteger(limit) || limit < 0)) {
+    errors.push({
+      code: 'INVALID_VALUE',
+      path: `${prefix}responsive.compactAnnotationLimit`,
+      message: 'compactAnnotationLimit must be a nonnegative integer or null',
+      suggestion: 'Use null for unlimited inline annotations.',
+    });
+  }
   if (Array.isArray(spec.annotations)) {
     for (const [index, annotation] of spec.annotations.entries()) {
+      for (const field of ['maxWidth', 'subtitleFontSize'] as const) {
+        const value = annotation?.[field];
+        if (value === undefined || (field === 'maxWidth' && value === null)) continue;
+        if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0)
+          errors.push({
+            code: 'INVALID_VALUE',
+            path: `${prefix}annotations[${index}].${field}`,
+            message: `${field} must be a positive finite number`,
+            suggestion:
+              field === 'maxWidth'
+                ? 'Use null for unlimited width.'
+                : 'Omit subtitleFontSize to use the default ratio.',
+          });
+      }
+      if (
+        annotation?.labelPlacement !== undefined &&
+        !['auto', 'start', 'end', 'outside'].includes(annotation.labelPlacement)
+      )
+        errors.push({
+          code: 'INVALID_VALUE',
+          path: `${prefix}annotations[${index}].labelPlacement`,
+          message: 'Unknown reference label placement',
+          suggestion: 'Use auto, start, end or outside.',
+        });
       const bend = annotation?.connector?.bend;
       if (
         bend !== undefined &&
@@ -2374,11 +2410,11 @@ function validateAnnotationBends(
   if (Array.isArray(spec.layer))
     for (const [index, child] of spec.layer.entries()) {
       if (child && typeof child === 'object' && !Array.isArray(child))
-        validateAnnotationBends(child, errors, `${prefix}layer[${index}].`);
+        validateAnnotationLayout(child, errors, `${prefix}layer[${index}].`);
     }
 }
 
-export function validateSpec(spec: unknown): ValidationResult {
+function validateSpecShape(spec: unknown): ValidationResult {
   const errors: ValidationError[] = [];
 
   // Basic shape check
@@ -2398,7 +2434,7 @@ export function validateSpec(spec: unknown): ValidationResult {
   }
 
   const obj = spec as Record<string, unknown>;
-  validateAnnotationBends(obj, errors);
+  validateAnnotationLayout(obj, errors);
   validateFieldMetadata(obj, errors);
   if (obj.chrome !== undefined) {
     const chrome = obj.chrome;
@@ -2571,4 +2607,11 @@ export function validateSpec(spec: unknown): ValidationResult {
     errors: [],
     normalized: spec as VizSpec,
   };
+}
+
+/** Validation warnings remain advisory throughout 8.x. */
+export function validateSpec(spec: unknown): ValidationResult {
+  const result = validateSpecShape(spec);
+  const warnings = collectMarkOptionWarnings(spec);
+  return warnings.length ? { ...result, warnings } : result;
 }

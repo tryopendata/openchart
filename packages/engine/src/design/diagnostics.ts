@@ -13,7 +13,7 @@ export function noteCapacityDiagnostic(layout: ChartLayout): DesignDiagnostic | 
     severity: 'error',
     viewport: layout.dimensions,
     message:
-      'Reserved annotation note capacity leaves no plotting space. Increase the requested height, explicitly choose chromeLayout: "grow" for non-faceted charts, or reduce annotation text/count.',
+      'Reserved annotation note capacity leaves no plotting space. Increase the requested height, explicitly choose chromeLayout: "grow", or reduce annotation text/count.',
   };
 }
 

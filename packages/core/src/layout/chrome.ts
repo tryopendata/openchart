@@ -179,17 +179,37 @@ export const FOOTNOTE_LINE_HEIGHT = 1.3;
 /** Gap below the footnote list, separating it from the source row. */
 const FOOTNOTE_BAND_GAP = 4;
 
+/** Internal compiler arithmetic and compatibility fallback for hand-built layouts. */
+export function computeNoteBandHeight(
+  input: number | Pick<ResolvedChrome, 'noteBandHeight' | 'footnotes' | 'seriesSummary'>,
+  theme: ResolvedTheme,
+): number {
+  if (typeof input !== 'number' && input.noteBandHeight !== undefined) return input.noteBandHeight;
+  const count =
+    typeof input === 'number'
+      ? input
+      : (input.footnotes?.reduce((sum, note) => sum + (note.lines?.length ?? 1), 0) ?? 0) +
+        (input.seriesSummary?.reduce((sum, entry) => sum + entry.lines.length, 0) ?? 0);
+  return count <= 0
+    ? 0
+    : count * theme.fonts.sizes.small * FOOTNOTE_LINE_HEIGHT + FOOTNOTE_BAND_GAP;
+}
+
+let warnedFootnoteBandHeight = false;
 /**
- * Vertical space a footnote list of `count` lines occupies below the plot.
- *
- * Single source of truth, deliberately: the engine reserves this band in the
- * bottom margin, the chrome renderer shifts the source row down by it, and the
- * brand watermark shifts by it too. When those three disagree the footnotes
- * land on top of the watermark, which is exactly the bug this centralizes away.
+ * @deprecated Read layout.chrome.noteBandHeight. The numeric signature remains compatible in 8.x.
  */
-export function footnoteBandHeight(count: number, theme: ResolvedTheme): number {
-  if (count <= 0) return 0;
-  return count * theme.fonts.sizes.small * FOOTNOTE_LINE_HEIGHT + FOOTNOTE_BAND_GAP;
+export function footnoteBandHeight(
+  input: number | Pick<ResolvedChrome, 'noteBandHeight' | 'footnotes' | 'seriesSummary'>,
+  theme: ResolvedTheme,
+): number {
+  if (!warnedFootnoteBandHeight) {
+    warnedFootnoteBandHeight = true;
+    console.warn(
+      '[openchart] footnoteBandHeight is deprecated; read layout.chrome.noteBandHeight.',
+    );
+  }
+  return computeNoteBandHeight(input, theme);
 }
 
 /**

@@ -1,4 +1,4 @@
-import type { ChartSpec } from '@opendata-ai/openchart-core';
+import type { ChartSpec, LayerSpec } from '@opendata-ai/openchart-core';
 /**
  * Demo registry for the Annotations gallery page.
  *
@@ -89,4 +89,139 @@ export const annotationCrowdedSpec: ChartSpec = {
       ? { responsive: false, anchor: 'left' as const, offset: { dx: -20, dy: -30 } }
       : {}),
   })),
+};
+
+/** Optional layout behavior, kept out of screenshot baselines until phase 5. */
+export const annotationReferenceSpecs: ChartSpec[] = [
+  {
+    ...annotationGestureSpec,
+    responsive: true,
+    chrome: {
+      title: 'Thresholds and events',
+      subtitle: 'Labels stay connected to their reference lines.',
+    },
+    annotations: [
+      {
+        type: 'refline',
+        id: 'threshold',
+        y: 6,
+        label: 'A longer threshold label, wrapped in the reserved right gutter',
+        labelPlacement: 'outside',
+        responsive: false,
+      },
+      {
+        type: 'refline',
+        id: 'nearby',
+        y: 5.8,
+        label: 'A nearby threshold',
+        labelPlacement: 'outside',
+        responsive: false,
+      },
+      {
+        type: 'refline',
+        id: 'event-one',
+        x: 3,
+        label: 'First event',
+        labelPlacement: 'outside',
+        responsive: false,
+      },
+      {
+        type: 'refline',
+        id: 'event-two',
+        x: 7,
+        label: 'Another event',
+        labelPlacement: 'outside',
+        responsive: false,
+      },
+    ],
+  },
+  ...(['top', 'bottom', 'left', 'right', 'auto'] as const).flatMap((labelAnchor) =>
+    [true, false].map((horizontal) => ({
+      ...annotationGestureSpec,
+      chrome: { title: `${horizontal ? 'Horizontal' : 'Vertical'} · ${labelAnchor}` },
+      annotations: (['start', 'end', 'auto'] as const).map((labelPlacement, i) => ({
+        type: 'refline' as const,
+        id: `${labelAnchor}-${labelPlacement}`,
+        ...(horizontal ? { y: 2 + i * 3 } : { x: 2 + i * 3 }),
+        label: labelPlacement,
+        labelAnchor,
+        labelPlacement,
+        responsive: false as const,
+      })),
+    })),
+  ),
+];
+
+export const annotationNotesSpecs: ChartSpec[] = [undefined, 'subtract', 'grow'].flatMap(
+  (chromeLayout) => {
+    const base: ChartSpec = {
+      ...annotationGestureSpec,
+      chromeLayout: chromeLayout as ChartSpec['chromeLayout'],
+      chrome: {
+        title: `Notes · ${chromeLayout ?? 'default'}`,
+        source: 'Source: sample observations',
+      },
+      responsive: { compactAnnotationLimit: 0 },
+      annotations: [
+        {
+          type: 'text',
+          id: 'note-a',
+          x: 4,
+          y: 4,
+          text: 'A **finding**',
+          subtitle: 'Full supporting context for the observation',
+          maxWidth: 90,
+          anchor: 'bottom',
+        },
+        {
+          type: 'text',
+          id: 'note-b',
+          x: 4.8,
+          y: 4.8,
+          text: 'Another finding',
+          subtitle: 'Additional context, retained in notes',
+          maxWidth: 90,
+          anchor: 'bottom',
+        },
+      ],
+    };
+    return [
+      base,
+      {
+        ...base,
+        data: base.data.map((row) => ({ ...row, group: 'Panel' })),
+        encoding: { ...base.encoding, facet: { field: 'group', type: 'nominal' as const } },
+      },
+    ];
+  },
+);
+
+/** Exercises the independently reserved right axis, endpoint, legend and reference columns. */
+export const annotationReferenceDualAxisSpec: LayerSpec = {
+  layer: [1, 10].map(
+    (factor) =>
+      ({
+        mark: factor === 1 ? 'bar' : 'line',
+        data: (factor === 1 ? ['Count'] : ['North', 'South']).flatMap((s, i) => [
+          { x: 'Jan', y: (i + 1) * factor, s },
+          { x: 'Feb', y: (i + 5) * factor, s },
+        ]),
+        encoding: {
+          x: { field: 'x', type: 'ordinal' },
+          y: {
+            field: 'y',
+            type: 'quantitative',
+            axis: { title: factor === 1 ? 'Count' : 'Value' },
+          },
+          ...(factor === 1 ? {} : { color: { field: 's', type: 'nominal' as const } }),
+        },
+      }) as ChartSpec,
+  ),
+  labels: { density: 'none' },
+  animation: false,
+  chrome: { title: 'Separate columns' },
+  resolve: { scale: { y: 'independent' } },
+  legend: { show: false },
+  endpointLabels: { content: 'label' },
+  annotations: [{ type: 'refline', y: 4, label: 'Reference threshold', labelPlacement: 'outside' }],
 };

@@ -72,6 +72,20 @@ export interface ThemeColors {
   annotationFill: string;
   /** Annotation text color. */
   annotationText: string;
+  /** Annotation label color. */
+  annotationLabel: string;
+  /** Annotation muted color. */
+  annotationMuted: string;
+  /** Annotation leader color. */
+  annotationLeader: string;
+  /** Annotation rule color. */
+  annotationRule: string;
+  /** Annotation rangefill color. */
+  annotationRangeFill: string;
+  /** Annotation markerfill color. */
+  annotationMarkerFill: string;
+  /** Annotation plate color. */
+  annotationPlate: string;
   /** Semantic color for positive/up-trend values (e.g. sparkline trend coloring). */
   positive: string;
   /** Semantic color for negative/down-trend values (e.g. sparkline trend coloring). */

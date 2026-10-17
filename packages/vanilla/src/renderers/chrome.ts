@@ -8,37 +8,19 @@ import type {
   ResolvedChromeElement,
 } from '@opendata-ai/openchart-core';
 import {
+  computeNoteBandHeight,
   FOOTNOTE_LINE_HEIGHT,
-  footnoteBandHeight as footnoteBandHeightFor,
   textAscent,
   truncateToWidth,
   wrapText,
 } from '@opendata-ai/openchart-core';
+import { warnDeprecated } from '../deprecations';
 import { applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
 
-/**
- * Vertical space the auto-thinning footnote list occupies below the plot.
- * Everything on the footer row (source, byline, footer, brand) shifts down by
- * this much so the footnotes don't land on top of it. Zero when there are no
- * footnotes. The brand watermark renders from a separate path
- * (`renderBrand`), so it has to read the same number from here rather than
- * recompute it.
- *
- * A `ChartLayout`-shaped adapter over the core helper -- deliberately not a
- * second implementation. The engine reserves this band in the bottom margin
- * from the same function, so a local copy of the arithmetic is a standing
- * invitation for the two to drift and drop the footnotes onto the watermark.
- */
+/** @deprecated Read layout.chrome.noteBandHeight. */
 export function footnoteBandHeight(layout: ChartLayout): number {
-  return (
-    layout.chrome.noteBandHeight ??
-    footnoteBandHeightFor(
-      (layout.chrome.footnotes?.reduce((count, note) => count + (note.lines?.length ?? 1), 0) ??
-        0) +
-        (layout.chrome.seriesSummary?.reduce((count, entry) => count + entry.lines.length, 0) ?? 0),
-      layout.theme,
-    )
-  );
+  warnDeprecated('footnoteBandHeight is deprecated; read layout.chrome.noteBandHeight.');
+  return computeNoteBandHeight(layout.chrome, layout.theme);
 }
 
 export function renderChromeElement(
@@ -170,7 +152,8 @@ export function renderChrome(parent: SVGElement, layout: ChartLayout): void {
 
   // Footnotes from auto-thinned annotations, rendered above source/byline.
   // Each footnote gets its own line to avoid horizontal overflow.
-  const bandHeight = footnoteBandHeight(layout);
+  const bandHeight =
+    layout.chrome.noteBandHeight ?? computeNoteBandHeight(layout.chrome, layout.theme);
   let noteLine = 0;
   if (chrome.footnotes && chrome.footnotes.length > 0) {
     const fontSize = layout.theme.fonts.sizes.small;

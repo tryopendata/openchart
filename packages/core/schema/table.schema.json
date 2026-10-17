@@ -664,6 +664,34 @@
                   "$ref": "#/definitions/TokenValue",
                   "description": "Annotation text color. Accepts a TokenValue for light/dark pairs."
                 },
+                "annotationLabel": {
+                  "$ref": "#/definitions/TokenValue",
+                  "description": "Annotation label color. Accepts a TokenValue light/dark pair."
+                },
+                "annotationMuted": {
+                  "$ref": "#/definitions/TokenValue",
+                  "description": "Annotation muted color. Accepts a TokenValue light/dark pair."
+                },
+                "annotationLeader": {
+                  "$ref": "#/definitions/TokenValue",
+                  "description": "Annotation leader color. Accepts a TokenValue light/dark pair."
+                },
+                "annotationRule": {
+                  "$ref": "#/definitions/TokenValue",
+                  "description": "Annotation rule color. Accepts a TokenValue light/dark pair."
+                },
+                "annotationRangeFill": {
+                  "$ref": "#/definitions/TokenValue",
+                  "description": "Annotation rangefill color. Accepts a TokenValue light/dark pair."
+                },
+                "annotationMarkerFill": {
+                  "$ref": "#/definitions/TokenValue",
+                  "description": "Annotation markerfill color. Accepts a TokenValue light/dark pair."
+                },
+                "annotationPlate": {
+                  "$ref": "#/definitions/TokenValue",
+                  "description": "Annotation plate color. Accepts a TokenValue light/dark pair."
+                },
                 "positive": {
                   "$ref": "#/definitions/TokenValue",
                   "description": "Semantic color for positive/up-trend values. Accepts a TokenValue for light/dark pairs."

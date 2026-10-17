@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased — 8.12
+
+- Add opt-in rich callout wrapping (`maxWidth`), `subtitleFontSize`, and compact
+  callout limits. Omitted fields retain existing output; null disables limits.
+- Add reference-label placement at line ends, automatic contained placement, and
+  reserved outside lanes with wrapping and connectors, including facets and
+  independent-axis layers.
+- Add seven annotation theme color tokens with light/dark authoring support;
+  explicit annotation ink remains authoritative. Rule/range tokens preserve the
+  existing compiled colors in both modes.
+- Support facet `chromeLayout: 'grow'` and report engine-added height so auto-height
+  mounts and export count chrome, notes and facet growth once.
+- Deprecate both `footnoteBandHeight` helpers in favor of resolved
+  `layout.chrome.noteBandHeight`, preserving their 8.x compatibility signatures.
+- Materialize omitted 8.x defaults in `migrateSpecV8` while preserving authored
+  theme, responsive and layer ownership. Warn about inapplicable mark options
+  before shorthand expansion, with exact authored paths and repair guidance.
+
 ## Unreleased — 8.11
 
 - Add optional connector `bend` in `[-1, 1]` and engine-resolved curve control

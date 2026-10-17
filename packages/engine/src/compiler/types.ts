@@ -137,6 +137,7 @@ export interface NormalizedChartSpec {
   responsive: boolean;
   /** Whether auto-thinning of annotations at narrow widths is enabled. Resolved from `responsive.autoThin`. */
   autoThin: boolean;
+  compactAnnotationLimit?: number | null;
   theme: ThemeConfig;
   darkMode: DarkMode;
   /** Whether the OpenData watermark is enabled. */
@@ -247,6 +248,8 @@ export interface ValidationError {
 
 /** Result of spec validation. */
 export interface ValidationResult {
+  /** Advisory authored-option warnings; incompatible options remain accepted in 8.x. */
+  warnings?: string[];
   /** Whether the spec is valid. */
   valid: boolean;
   /** Validation errors (empty if valid). */

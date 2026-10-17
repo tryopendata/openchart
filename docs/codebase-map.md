@@ -398,3 +398,22 @@ The chart compiler places right-side legends after resolving the endpoint column
 using its existing gutter reservation. Independent-layer assembly adds only the
 remaining right-axis/merged-column offset; `compile-legend-gutter.test.ts` covers
 regular, shared-layer and dual-axis column separation.
+
+
+## 8.12 annotation layout opt-ins
+
+| Concern | Location |
+|---|---|
+| Rich wrapping without changing authored text/transition keys | `packages/engine/src/annotations/wrap-text.ts`: `wrapAnnotationText`; `resolve-text.ts` stores `label.lines`/subtitle lines |
+| Opt-in reference end/auto/outside geometry | `packages/engine/src/annotations/reference-layout.ts`: `referenceLabelReserve`, `placeReferenceLabel`; `geometry.ts` retains corridor attachments during rebuilds; `compute.ts` uses per-panel reserved lanes owned by `layout/facet.ts`; `dimensions.ts` and `compile/layer.ts` reserve the gutter |
+| Compact priority/source count limit | `annotations/thinning.ts`: optional final `compactLimit`; `compile.ts` gates on outer width and height before coverage/collision thinning |
+| Resolved note arithmetic and compatibility exports | `packages/core/src/layout/chrome.ts`: `computeNoteBandHeight` and deprecated `footnoteBandHeight`, exported through core index; vanilla adapter in `renderers/chrome.ts`; renderers/brand consume resolved `noteBandHeight` |
+| Exactly-once facet grow metadata | `packages/engine/src/compile.ts` facet assembly and `layout/dimensions.ts` populate optional `chrome.grownHeight`; `packages/vanilla/src/mount.ts` deducts engine-owned growth |
+| Authored mark-option warnings | `packages/engine/src/compiler/mark-options.ts`: `collectMarkOptionWarnings`; `compile/spec-sugar.ts` calls it before rewrites; `validate.ts` exposes optional warnings |
+| 8.x default materialization | `packages/engine/src/migration/v8.ts`: `migrateSpecV8`; parity fixtures in `examples/src/__tests__/migration-parity.test.ts` |
+| Layout opt-in browser fixtures | `examples/src/gallery/features-annotations.demos.ts` and `.stories.tsx`: ReferenceLabels, CrowdedCallouts, NotesSizing; `e2e/annotation-invariants/layout.spec.ts` covers geometry, note counts, heights, SVG/PNG and canvas |
+
+The seven annotation colors are resolved theme fields in `core/src/types/theme.ts`,
+registered with dark pairs in `theme/resolve.ts` and `theme/dark-mode.ts`, and mirrored
+by `styles/token-definitions.ts` and generated CSS. Existing generic annotation
+colors retain their previous uses.

@@ -1,5 +1,5 @@
 import type { ChartSpec, LayerSpec } from '@opendata-ai/openchart-core';
-import { estimateTextWidth, footnoteBandHeight } from '@opendata-ai/openchart-core';
+import { computeNoteBandHeight, estimateTextWidth } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import { compileChart, compileLayer } from '../compile';
 import { migrateSpecV8 } from '../migration/v8';
@@ -80,7 +80,7 @@ describe('wrapped annotation notes', () => {
         ).toBeLessThanOrEqual(options.width - 2 * layout.theme.spacing.padding);
     }
     const baseline = compileChart({ ...noteSpec, annotations: [] }, options);
-    const band = footnoteBandHeight(
+    const band = computeNoteBandHeight(
       notes.reduce((n, note) => n + note.lines!.length, 0),
       layout.theme,
     );
@@ -179,7 +179,7 @@ it.each([
   const layout = compileLayer(spec, { width: 390, height: 450 });
   const notes = layout.chrome.footnotes!;
   expect(notes.length).toBeGreaterThan(0);
-  const noteBand = footnoteBandHeight(
+  const noteBand = computeNoteBandHeight(
     notes.reduce((n, note) => n + (note.lines?.length ?? 1), 0),
     layout.theme,
   );
@@ -272,7 +272,7 @@ it('reserves wrapped notes once beneath a facet grid', () => {
   expect(notes.length).toBeGreaterThan(0);
   expect(notes.every((note) => (note.lines?.length ?? 0) > 1)).toBe(true);
   expect(new Set(notes.map((note) => note.id)).size).toBe(notes.length);
-  const reserve = footnoteBandHeight(
+  const reserve = computeNoteBandHeight(
     notes.reduce((sum, note) => sum + note.lines!.length, 0),
     layout.theme,
   );

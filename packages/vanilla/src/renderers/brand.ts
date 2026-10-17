@@ -3,8 +3,7 @@
  */
 
 import type { ChartLayout } from '@opendata-ai/openchart-core';
-import { BRAND_MIN_WIDTH, textAscent } from '@opendata-ai/openchart-core';
-import { footnoteBandHeight } from './chrome';
+import { BRAND_MIN_WIDTH, computeNoteBandHeight, textAscent } from '@opendata-ai/openchart-core';
 import { createSVGElement, setAttrs, XLINK_NS } from './svg-dom';
 
 const BRAND_URL = 'https://tryopendata.ai';
@@ -36,7 +35,8 @@ export function renderBrand(parent: SVGElement, layout: ChartLayout): void {
   // renderChrome pushes the whole footer row down past the footnote list; the
   // brand shares that row, so it takes the same shift or the footnotes land on
   // top of it.
-  const bandHeight = footnoteBandHeight(layout);
+  const bandHeight =
+    layout.chrome.noteBandHeight ?? computeNoteBandHeight(layout.chrome, layout.theme);
   const chromeY = firstBottom
     ? bottomOffset + firstBottom.y + bandHeight
     : bottomOffset + layout.theme.spacing.chartToFooter + bottomLegendOffset + bandHeight;
