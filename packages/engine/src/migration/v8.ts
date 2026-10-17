@@ -141,24 +141,28 @@ export function migrateSpecV8<T>(input: T): { spec: T; repairs: SpecRepair[] } {
     };
     const layerSpec = effective as unknown as LayerSpec;
     const leaves = Array.isArray(current.layer) ? flattenLayers(layerSpec) : [];
-    const migrationSource = leaves.length ? buildPrimarySpec(leaves, layerSpec) : effective;
-    const sourceMark =
-      typeof migrationSource.mark === 'string'
-        ? migrationSource.mark
-        : node(migrationSource.mark)?.type;
-    if (['line', 'area'].includes(String(sourceMark))) {
-      // Reuse the compiler's truth table, including the series-count cutoff,
-      // angular/color inference and stacked-area behavior. Migration has no
-      // viewport; width-only responsive demotion stays a rendering decision.
+    // Independent axes compile each leaf as a primary chart. Shared scales
+    // use the first mark as the primary, with all leaf data, just as compileLayer.
+    const migrationSources = leaves.length
+      ? layerSpec.resolve?.scale?.y === 'independent'
+        ? leaves.map((leaf) => buildPrimarySpec([leaf], layerSpec))
+        : [buildPrimarySpec(leaves, layerSpec)]
+      : [effective];
+    legacyLabels = migrationSources.some((migrationSource) => {
+      const sourceMark =
+        typeof migrationSource.mark === 'string'
+          ? migrationSource.mark
+          : node(migrationSource.mark)?.type;
+      if (!['line', 'area'].includes(String(sourceMark))) return false;
       const normalized = normalizeSpec(
         expandSpecSugar(migrationSource as unknown as Node) as unknown as ChartSpec,
       ) as NormalizedChartSpec;
-      legacyLabels = resolveSuppression(normalized, {
+      return resolveSuppression(normalized, {
         seriesCount: countColorSeries(normalized),
         labelsHiddenByStrategy: false,
         labelsDensityNone: normalized.labels.density === 'none',
       }).showEndOfLineLabels;
-    }
+    });
     if (legacyLabels)
       rewrite(
         'endpointLabels',

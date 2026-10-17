@@ -1282,7 +1282,13 @@ Tilemap `valueFormat` stays supported. The `oc-table--compact` compatibility cla
 also stays in 8.x; host styles should target `oc-table--condensed` ahead
 of its eventual removal. The `footnoteBandHeight` API is unchanged in 8.10.
 
-Notes now retain subtitles as `text. subtitle` on their existing single line.
+Notes now retain subtitles as `text. subtitle` and wrap within the figure. The engine
+reserves every wrapped line above the source and footer. Existing single-line
+notes retain their size and spacing. Rich-text note formatting remains deferred.
+
+Dual-axis legacy-label migration now includes the secondary axis. Both layers
+share one plot rectangle, and the combined endpoint column sits beyond the
+right-hand axis; each series retains its own value formatting.
 
 
 Legacy-label migration currently targets multi-series line/area charts. A line

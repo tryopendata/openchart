@@ -6,9 +6,11 @@
   optional revisions, and `onEditTransaction` in vanilla and all three wrappers.
 - Preserve annotation source identity through filtering, facets, and first-leaf
   layers; click callbacks now include the source reference as a third argument.
-- Include annotation subtitles in numbered notes.
+- Include annotation subtitles in numbered notes and wrap long notes within the figure,
+  reserving the full band above source and footer text.
 - Export pure, idempotent `migrateSpecV8` with per-change repairs. Legacy series
   labels migrate to endpoint labels; their positions change and offsets are lost.
+  Dual-axis charts retain secondary-series endpoint labels outside the right axis.
 - Add mount `autoResize`, table-builder `density`, and compatibility warnings for
   legacy APIs. Existing 8.x callbacks and optional-field defaults remain supported.
 - Centralize shallow theme merging and remove unused internal compatibility paths.

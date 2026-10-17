@@ -31,7 +31,7 @@ import { applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
  */
 export function footnoteBandHeight(layout: ChartLayout): number {
   return footnoteBandHeightFor(
-    (layout.chrome.footnotes?.length ?? 0) +
+    (layout.chrome.footnotes?.reduce((count, note) => count + (note.lines?.length ?? 1), 0) ?? 0) +
       (layout.chrome.seriesSummary?.reduce((count, entry) => count + entry.lines.length, 0) ?? 0),
     layout.theme,
   );
@@ -167,6 +167,7 @@ export function renderChrome(parent: SVGElement, layout: ChartLayout): void {
   // Footnotes from auto-thinned annotations, rendered above source/byline.
   // Each footnote gets its own line to avoid horizontal overflow.
   const bandHeight = footnoteBandHeight(layout);
+  let noteLine = 0;
   if (chrome.footnotes && chrome.footnotes.length > 0) {
     const fontSize = layout.theme.fonts.sizes.small;
     const pad = layout.theme.spacing.padding;
@@ -183,19 +184,30 @@ export function renderChrome(parent: SVGElement, layout: ChartLayout): void {
     for (let i = 0; i < chrome.footnotes.length; i++) {
       const f = chrome.footnotes[i];
       const y =
-        bottomOffset + layout.theme.spacing.chartToFooter + textAscent(fontSize) + i * lineHeight;
+        bottomOffset +
+        layout.theme.spacing.chartToFooter +
+        textAscent(fontSize) +
+        noteLine * lineHeight;
       const el = createSVGElement('text');
       el.setAttribute('class', 'oc-footnotes');
       if (f.specIndex !== undefined) el.setAttribute('data-note-spec-index', String(f.specIndex));
       if (f.id !== undefined) el.setAttribute('data-note-id', f.id);
       setAttrs(el, { x: pad, y });
       applyTextStyle(el, style);
-      el.textContent = `${f.index}. ${f.text}`;
+      if (f.lines) {
+        f.lines.forEach((line, index) => {
+          const span = createSVGElement('tspan');
+          setAttrs(span, { x: pad, dy: index === 0 ? 0 : lineHeight });
+          span.textContent = line;
+          el.appendChild(span);
+        });
+      } else el.textContent = `${f.index}. ${f.text}`;
+      noteLine += f.lines?.length ?? 1;
       g.appendChild(el);
     }
   }
 
-  let summaryLine = chrome.footnotes?.length ?? 0;
+  let summaryLine = noteLine;
   for (const entry of chrome.seriesSummary ?? []) {
     const size = layout.theme.fonts.sizes.small;
     const el = createSVGElement('text');

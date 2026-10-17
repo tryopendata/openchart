@@ -52,6 +52,7 @@ import {
 import { collectPinnedOverlapWarnings } from './annotations/collisions';
 import { computeAnnotations } from './annotations/compute';
 import { type AnnotationMeasureTextFn, heuristicMeasure } from './annotations/geometry';
+import { annotationNoteLineCount, wrapAnnotationNotes } from './annotations/notes';
 import type { PlacementObstacle } from './annotations/placement';
 import { thinAnnotations } from './annotations/thinning';
 import { computeEndpointLabels } from './endpoint-labels/compute';
@@ -983,7 +984,12 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
     );
     annotations = result.annotations;
     if (result.footnotes.length > 0) {
-      footnotes = result.footnotes;
+      footnotes = wrapAnnotationNotes(
+        result.footnotes,
+        dims.total.width,
+        theme,
+        options.measureText,
+      );
 
       // The footnote list renders below the plot, but nothing reserved space for
       // it — thinning only just now discovered how many lines there are. Recompile
@@ -1002,7 +1008,7 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
       // so a grown bottom margin is computed and then thrown away. The
       // recursion would re-run the whole compile up to MAX_FOOTNOTE_PASSES
       // times and return the identical layout. Skip it rather than pay for it.
-      const reserve = footnoteBandHeight(footnotes.length, theme);
+      const reserve = footnoteBandHeight(annotationNoteLineCount(footnotes), theme);
       const currentReserve = options.footnoteReserve ?? 0;
       if (
         !options.frozenChartArea &&
@@ -1055,7 +1061,7 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
       : [];
   if (seriesSummary.length) {
     const reserve = footnoteBandHeight(
-      (footnotes?.length ?? 0) +
+      annotationNoteLineCount(footnotes ?? []) +
         seriesSummary.reduce((count, entry) => count + entry.lines.length, 0),
       theme,
     );
@@ -1500,8 +1506,14 @@ function compileFaceted(
   // pins every leaf to the primary layout's coordinate space, so the grown bottom
   // margin is computed and then thrown away. Recursing would re-run the whole
   // compile up to MAX_FOOTNOTE_PASSES times for an identical layout.
+  const wrappedFootnotes = wrapAnnotationNotes(
+    allFootnotes,
+    dims.total.width,
+    theme,
+    options.measureText,
+  );
   if (allFootnotes.length > 0 && !options.frozenChartArea) {
-    const reserve = footnoteBandHeight(allFootnotes.length, theme);
+    const reserve = footnoteBandHeight(annotationNoteLineCount(wrappedFootnotes), theme);
     const currentReserve = options.footnoteReserve ?? 0;
     if (reserve > currentReserve && (options.footnotePass ?? 0) < MAX_FOOTNOTE_PASSES) {
       return compileChart(rawSpec, {
@@ -1577,7 +1589,7 @@ function compileFaceted(
   // Figure-level marks are the union of all panel marks (for tooltip/keyboard nav)
   return {
     area: chartArea,
-    chrome: allFootnotes.length > 0 ? { ...dims.chrome, footnotes: allFootnotes } : dims.chrome,
+    chrome: allFootnotes.length > 0 ? { ...dims.chrome, footnotes: wrappedFootnotes } : dims.chrome,
     metrics: dims.metrics,
     ...(dims.seriesSearch ? { seriesSearch: dims.seriesSearch } : {}),
     axes: { x: undefined, y: undefined },
