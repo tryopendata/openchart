@@ -1,3 +1,4 @@
+import type { NormalizedMarkDef } from './types';
 /**
  * Spec normalization: fill in defaults and infer types.
  *
@@ -22,7 +23,6 @@ import type {
   GraphSpec,
   LabelSpec,
   LayerSpec,
-  MarkDef,
   SankeySpec,
   TableDensity,
   TableSpec,
@@ -351,7 +351,7 @@ const BEESWARM_POINT_BUDGET = 2000;
  * computation. Only the object form of majorityLine carries a seat count.
  */
 function warnParliamentMajorityRange(
-  markDef: MarkDef,
+  markDef: NormalizedMarkDef,
   encoding: Encoding,
   data: DataRow[],
   warnings: string[],
@@ -418,7 +418,7 @@ function resolveOtherOption(
 function applyWaffleOther(
   spec: ChartSpec,
   encoding: Encoding,
-  markDef: MarkDef,
+  markDef: NormalizedMarkDef,
   warnings: string[],
 ): DataRow[] {
   const option = resolveOtherOption(markDef.other);

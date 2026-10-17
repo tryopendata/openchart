@@ -1,4 +1,4 @@
-import { collectMarkOptionWarnings } from './mark-options';
+import { collectMarkOptionErrors } from './mark-options';
 /**
  * Runtime spec validation.
  *
@@ -2609,9 +2609,11 @@ function validateSpecShape(spec: unknown): ValidationResult {
   };
 }
 
-/** Validation warnings remain advisory throughout 8.x. */
+/** Validate authored mark contracts before any sugar transformation. */
 export function validateSpec(spec: unknown): ValidationResult {
   const result = validateSpecShape(spec);
-  const warnings = collectMarkOptionWarnings(spec);
-  return warnings.length ? { ...result, warnings } : result;
+  const errors = collectMarkOptionErrors(spec);
+  return errors.length
+    ? { ...result, valid: false, errors: [...result.errors, ...errors], normalized: null }
+    : result;
 }

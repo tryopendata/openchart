@@ -179,7 +179,7 @@ export interface TrendlineConfig {
  * When it's an object, it can include properties like interpolation,
  * point markers, orientation, and more.
  */
-export interface MarkDef {
+interface MarkOptions {
   /** The mark type. */
   type: MarkType;
   /**
@@ -409,6 +409,64 @@ export interface MarkDef {
    */
   majorityLine?: boolean | { seats?: number; label?: string };
 }
+
+/** Shared visual options accepted by every authored mark. */
+type SharedMarkOptions = Pick<
+  MarkOptions,
+  | 'size'
+  | 'filled'
+  | 'opacity'
+  | 'fillOpacity'
+  | 'fill'
+  | 'stroke'
+  | 'strokeWidth'
+  | 'tooltip'
+  | 'clip'
+  | 'fillPattern'
+>;
+
+/**
+ * Authored mark configuration. Each mark accepts only options it understands.
+ * String marks remain shorthand for `{ type: mark }`.
+ * Extend this union with `type CustomMark = MarkDef & { ... }`, not an interface.
+ */
+export type MarkDef =
+  | (SharedMarkOptions & { type: 'bar' } & Pick<MarkOptions, 'orient' | 'cornerRadius'>)
+  | (SharedMarkOptions & { type: 'line' } & Pick<MarkOptions, 'point' | 'interpolate'>)
+  | (SharedMarkOptions & { type: 'area' } & Pick<MarkOptions, 'point' | 'interpolate'>)
+  | (SharedMarkOptions & { type: 'point' } & Pick<MarkOptions, 'trendline'>)
+  | (SharedMarkOptions & { type: 'circle' })
+  | (SharedMarkOptions & { type: 'arc' } & Pick<
+        MarkOptions,
+        'innerRadius' | 'outerRadius' | 'startAngle' | 'endAngle' | 'centerLabel'
+      >)
+  | (SharedMarkOptions & { type: 'text' } & Pick<
+        MarkOptions,
+        'dx' | 'dy' | 'align' | 'baseline' | 'fontSize'
+      >)
+  | (SharedMarkOptions & { type: 'rule' })
+  | (SharedMarkOptions & { type: 'tick' })
+  | (SharedMarkOptions & { type: 'rect' } & Pick<MarkOptions, 'cornerRadius'>)
+  | (SharedMarkOptions & { type: 'lollipop' })
+  | (SharedMarkOptions & { type: 'beeswarm' })
+  | (SharedMarkOptions & { type: 'range' } & Pick<MarkOptions, 'style' | 'colorByDirection'>)
+  | (SharedMarkOptions & { type: 'waffle' } & Pick<
+        MarkOptions,
+        'units' | 'columns' | 'other' | 'cornerRadius'
+      >)
+  | (SharedMarkOptions & { type: 'calendar' } & Pick<MarkOptions, 'weekStart' | 'cellRadius'>)
+  | (SharedMarkOptions & { type: 'parliament' } & Pick<
+        MarkOptions,
+        'shape' | 'seatRadius' | 'majorityLine'
+      >)
+  | (SharedMarkOptions & { type: 'histogram' } & Pick<
+        MarkOptions,
+        'orient' | 'cornerRadius' | 'binCount' | 'normalize'
+      >)
+  | (SharedMarkOptions & { type: 'density' } & Pick<
+        MarkOptions,
+        'point' | 'interpolate' | 'bandwidth' | 'cumulative' | 'steps'
+      >);
 
 // ---------------------------------------------------------------------------
 // Encoding
@@ -2213,75 +2271,75 @@ interface BaseChartSpec<TData extends DataRow = DataRow> {
  */
 export type ChartSpec<TData extends DataRow = DataRow> =
   | (BaseChartSpec<TData> & {
-      mark: 'arc' | (MarkDef & { type: 'arc' });
+      mark: 'arc' | Extract<MarkDef, { type: 'arc' }>;
       encoding: ArcEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
-      mark: 'line' | (MarkDef & { type: 'line' });
+      mark: 'line' | Extract<MarkDef, { type: 'line' }>;
       encoding: LineEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
-      mark: 'bar' | (MarkDef & { type: 'bar' });
+      mark: 'bar' | Extract<MarkDef, { type: 'bar' }>;
       encoding: BarEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
-      mark: 'area' | (MarkDef & { type: 'area' });
+      mark: 'area' | Extract<MarkDef, { type: 'area' }>;
       encoding: AreaEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
-      mark: 'point' | (MarkDef & { type: 'point' });
+      mark: 'point' | Extract<MarkDef, { type: 'point' }>;
       encoding: PointEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
-      mark: 'circle' | (MarkDef & { type: 'circle' });
+      mark: 'circle' | Extract<MarkDef, { type: 'circle' }>;
       encoding: CircleEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
-      mark: 'lollipop' | (MarkDef & { type: 'lollipop' });
+      mark: 'lollipop' | Extract<MarkDef, { type: 'lollipop' }>;
       encoding: LollipopEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
-      mark: 'beeswarm' | (MarkDef & { type: 'beeswarm' });
+      mark: 'beeswarm' | Extract<MarkDef, { type: 'beeswarm' }>;
       encoding: BeeswarmEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
-      mark: 'range' | (MarkDef & { type: 'range' });
+      mark: 'range' | Extract<MarkDef, { type: 'range' }>;
       encoding: RangeEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
-      mark: 'waffle' | (MarkDef & { type: 'waffle' });
+      mark: 'waffle' | Extract<MarkDef, { type: 'waffle' }>;
       encoding: WaffleEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
-      mark: 'text' | (MarkDef & { type: 'text' });
+      mark: 'text' | Extract<MarkDef, { type: 'text' }>;
       encoding: TextEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
-      mark: 'tick' | (MarkDef & { type: 'tick' });
+      mark: 'tick' | Extract<MarkDef, { type: 'tick' }>;
       encoding: TickEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
-      mark: 'rect' | (MarkDef & { type: 'rect' });
+      mark: 'rect' | Extract<MarkDef, { type: 'rect' }>;
       encoding: RectEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
-      mark: 'rule' | (MarkDef & { type: 'rule' });
+      mark: 'rule' | Extract<MarkDef, { type: 'rule' }>;
       encoding: Encoding<TData>;
     })
   | (BaseChartSpec<TData> & {
-      mark: 'calendar' | (MarkDef & { type: 'calendar' });
+      mark: 'calendar' | Extract<MarkDef, { type: 'calendar' }>;
       encoding: CalendarEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
-      mark: 'parliament' | (MarkDef & { type: 'parliament' });
+      mark: 'parliament' | Extract<MarkDef, { type: 'parliament' }>;
       encoding: ParliamentEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
-      mark: 'histogram' | (MarkDef & { type: 'histogram' });
+      mark: 'histogram' | Extract<MarkDef, { type: 'histogram' }>;
       encoding: HistogramEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
-      mark: 'density' | (MarkDef & { type: 'density' });
+      mark: 'density' | Extract<MarkDef, { type: 'density' }>;
       encoding: DensityEncoding<TData>;
     });
 

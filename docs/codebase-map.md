@@ -409,7 +409,8 @@ regular, shared-layer and dual-axis column separation.
 | Compact priority/source count limit | `annotations/thinning.ts`: optional final `compactLimit`; `compile.ts` gates on outer width and height before coverage/collision thinning |
 | Resolved note arithmetic and compatibility exports | `packages/core/src/layout/chrome.ts`: `computeNoteBandHeight` and deprecated `footnoteBandHeight`, exported through core index; vanilla adapter in `renderers/chrome.ts`; renderers/brand consume resolved `noteBandHeight` |
 | Exactly-once facet grow metadata | `packages/engine/src/compile.ts` facet assembly and `layout/dimensions.ts` populate optional `chrome.grownHeight`; `packages/vanilla/src/mount.ts` deducts engine-owned growth |
-| Authored mark-option warnings | `packages/engine/src/compiler/mark-options.ts`: `collectMarkOptionWarnings`; `compile/spec-sugar.ts` calls it before rewrites; `validate.ts` exposes optional warnings |
+| Authored mark-option contract | `core/src/types/spec.ts`: discriminated `MarkDef`; `engine/src/compiler/types.ts`: internal wide `NormalizedMarkDef`; `compiler/mark-options.ts`: `collectMarkOptionErrors` / `assertMarkOptions`, checked before sugar with authored JSON Pointer paths |
+| Mark contract parity matrix | `packages/engine/src/__test-fixtures__/mark-options.ts`: every mark × option plus compile-time union assertions; `compiler/__tests__/mark-options.test.ts`: published schema, strict-null transform, and runtime agreement |
 | 8.x default materialization | `packages/engine/src/migration/v8.ts`: `migrateSpecV8`; parity fixtures in `examples/src/__tests__/migration-parity.test.ts` |
 | Layout opt-in browser fixtures | `examples/src/gallery/features-annotations.demos.ts` and `.stories.tsx`: ReferenceLabels, CrowdedCallouts, NotesSizing; `e2e/annotation-invariants/layout.spec.ts` covers geometry, note counts, heights, SVG/PNG and canvas |
 

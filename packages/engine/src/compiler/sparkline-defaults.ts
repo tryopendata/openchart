@@ -1,3 +1,4 @@
+import type { NormalizedMarkDef } from './types';
 /**
  * Sparkline default resolution.
  *
@@ -16,7 +17,7 @@
  *   theme override > sparkline trend default.
  */
 
-import type { DataRow, GradientDef, MarkDef, ResolvedTheme } from '@opendata-ai/openchart-core';
+import type { DataRow, GradientDef, ResolvedTheme } from '@opendata-ai/openchart-core';
 
 /** Trend classification for a single value series. */
 export type Trend = 'up' | 'down' | 'neutral';
@@ -105,7 +106,7 @@ export function computeTrendFromData(data: readonly DataRow[], yField: string | 
  * 3. Sparkline trend default (returned when both flags are false)
  */
 export function hasExplicitColor(
-  markDef: MarkDef | undefined,
+  markDef: NormalizedMarkDef | undefined,
   encodingHasColor: boolean,
 ): { fill: boolean; stroke: boolean } {
   if (encodingHasColor) return { fill: true, stroke: true };

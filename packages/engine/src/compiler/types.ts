@@ -101,12 +101,24 @@ export interface UserExplicit {
   crosshair: boolean;
 }
 
+/** Internal renderer configuration: sugar can change the mark type while
+ * retaining visual options. Keep this wide shape outside the authored contract. */
+type UnionKeys<T> = T extends unknown ? keyof T : never;
+type UnionValue<T, K extends PropertyKey> = T extends unknown
+  ? K extends keyof T
+    ? T[K]
+    : never
+  : never;
+export type NormalizedMarkDef = { type: MarkType } & {
+  [K in Exclude<UnionKeys<MarkDef>, 'type'>]?: UnionValue<MarkDef, K>;
+};
+
 /** A ChartSpec with all optional fields filled with sensible defaults. */
 export interface NormalizedChartSpec {
   /** Resolved mark type string (extracted from spec.mark). */
   markType: MarkType;
   /** Resolved mark definition with defaults filled in. */
-  markDef: MarkDef;
+  markDef: NormalizedMarkDef;
   data: DataRow[];
   encoding: Encoding;
   chrome: NormalizedChrome;

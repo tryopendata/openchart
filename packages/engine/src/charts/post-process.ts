@@ -1,3 +1,4 @@
+import type { NormalizedMarkDef } from '../compiler/types';
 /**
  * Mark post-processing: obstacle computation, renderer dispatch, and
  * animation index assignment. These are mark-type-aware operations that
@@ -9,7 +10,6 @@ import type {
   Encoding,
   LineMark,
   Mark,
-  MarkDef,
   PointMark,
   RectMark,
   ResolvedAnimation,
@@ -154,7 +154,7 @@ export function isBinnedBarEncoding(markType: string, encoding: Partial<Encoding
 export function resolveRendererKey(
   markType: string,
   encoding: Partial<Encoding>,
-  markDef: Partial<MarkDef>,
+  markDef: Partial<NormalizedMarkDef>,
 ): string {
   if (markType === 'bar') {
     if (isBinnedBarEncoding(markType, encoding)) {

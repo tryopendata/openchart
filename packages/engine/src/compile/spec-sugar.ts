@@ -1,4 +1,4 @@
-import { collectMarkOptionWarnings } from '../compiler/mark-options';
+import { assertMarkOptions } from '../compiler/mark-options';
 /**
  * Pre-validation spec sugar expansion.
  *
@@ -1019,10 +1019,10 @@ function expandValueFormatSugar(
 export function expandSpecSugar(
   spec: Record<string, unknown>,
   warnings: string[] = [],
-  markOptionWarnings = true,
+  checkMarkOptions = true,
 ): Record<string, unknown> {
   if (!spec || typeof spec !== 'object' || Array.isArray(spec)) return spec;
-  if (markOptionWarnings) warnings.push(...collectMarkOptionWarnings(spec));
+  if (checkMarkOptions) assertMarkOptions(spec);
   if (Array.isArray(spec.layer) && typeof spec.type !== 'string') {
     return expandLayerSugar(spec, warnings);
   }

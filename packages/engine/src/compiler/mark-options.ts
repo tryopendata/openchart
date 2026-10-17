@@ -1,7 +1,9 @@
-import type { MarkDef, MarkType } from '@opendata-ai/openchart-core';
+import type { MarkType } from '@opendata-ai/openchart-core';
 
-/** Authored options with a mark-specific meaning; shared visual properties stay wide in 8.x. */
-const APPLIES_TO: Partial<Record<keyof MarkDef, readonly MarkType[]>> = {
+import type { NormalizedMarkDef, ValidationError } from './types';
+
+/** Authored options with a mark-specific meaning; shared visual properties remain common. */
+const APPLIES_TO: Partial<Record<keyof NormalizedMarkDef, readonly MarkType[]>> = {
   point: ['line', 'area', 'density'],
   interpolate: ['line', 'area', 'density'],
   orient: ['bar', 'histogram'],
@@ -35,23 +37,36 @@ const APPLIES_TO: Partial<Record<keyof MarkDef, readonly MarkType[]>> = {
 };
 
 /** Run before sugar: diagnostics point to authored fields, including stripped histogram/density options. */
-export function collectMarkOptionWarnings(input: unknown, path = ''): string[] {
+export function collectMarkOptionErrors(input: unknown, path = ''): ValidationError[] {
   if (!input || typeof input !== 'object' || Array.isArray(input)) return [];
   const spec = input as Record<string, unknown>;
-  const warnings: string[] = [];
+  const errors: ValidationError[] = [];
   if (spec.mark && typeof spec.mark === 'object' && !Array.isArray(spec.mark)) {
-    const mark = spec.mark as MarkDef;
+    const mark = spec.mark as NormalizedMarkDef;
     for (const [key, allowed] of Object.entries(APPLIES_TO)) {
-      if (mark[key as keyof MarkDef] !== undefined && !allowed.includes(mark.type)) {
-        warnings.push(
-          `[openchart] ${path}/mark/${key} has no effect on mark "${mark.type}". Remove ${key}, or use a supported mark: ${allowed.join(', ')}.`,
-        );
+      if (mark[key as keyof NormalizedMarkDef] !== undefined && !allowed.includes(mark.type)) {
+        errors.push({
+          code: 'INVALID_VALUE',
+          path: `${path}/mark/${key}`,
+          message: `Option "${key}" is not supported by mark "${mark.type}".`,
+          suggestion: `Remove ${key}, or use a supported mark: ${allowed.join(', ')}.`,
+        });
       }
     }
   }
   if (Array.isArray(spec.layer))
     spec.layer.forEach((child, i) => {
-      warnings.push(...collectMarkOptionWarnings(child, `${path}/layer/${i}`));
+      errors.push(...collectMarkOptionErrors(child, `${path}/layer/${i}`));
     });
-  return warnings;
+  return errors;
+}
+
+/** Reject authored options before sugar can erase or reinterpret them. */
+export function assertMarkOptions(input: unknown): void {
+  const errors = collectMarkOptionErrors(input);
+  if (errors.length) {
+    throw new Error(
+      `Invalid spec:\n${errors.map((e) => `${e.path}: ${e.message} ${e.suggestion}`).join('\n')}`,
+    );
+  }
 }

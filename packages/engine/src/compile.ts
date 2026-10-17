@@ -60,7 +60,7 @@ import {
 import type { PlacementObstacle } from './annotations/placement';
 import { referenceLabelReserve } from './annotations/reference-layout';
 import { thinAnnotations } from './annotations/thinning';
-import { collectMarkOptionWarnings } from './compiler/mark-options';
+import { assertMarkOptions } from './compiler/mark-options';
 import { computeEndpointLabels } from './endpoint-labels/compute';
 import { ENDPOINT_COLUMN_GAP } from './endpoint-labels/constants';
 // Side-effect import: registers all built-in chart renderers with the
@@ -269,11 +269,11 @@ function resolveScaleInvert(resolved: ResolvedScale | undefined): ScaleInvert | 
  * @throws Error if spec is invalid or not a chart type.
  */
 export function compileChart(spec: unknown, optionsInput: CompileOptions): ChartLayout {
-  emitSpecWarnings(collectMarkOptionWarnings(spec), optionsInput?.onWarn);
+  assertMarkOptions(spec);
   return compileChartInternal(spec, optionsInput);
 }
 
-/** Internal passes retain authored warnings from the public entry point. */
+/** Internal passes use options validated at the public authored boundary. */
 function compileChartInternal(spec: unknown, optionsInput: CompileOptions): ChartLayout {
   // Expand VL-idiom and encoding-level sugar (data {values}, top-level title,
   // sort-by-value, value defs, scheme names, theta, bin/timeUnit, ...) before
