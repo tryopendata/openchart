@@ -187,6 +187,7 @@ function normalizeAnnotations(
     switch (ann.type) {
       case 'text':
         if (
+          ann.connector !== null &&
           typeof ann.connector === 'object' &&
           ann.connector.type !== 'curve' &&
           ann.connector.bend !== undefined

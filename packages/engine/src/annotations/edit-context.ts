@@ -6,6 +6,7 @@ import type {
   ResolvedAnnotation,
   TextAnnotation,
 } from '@opendata-ai/openchart-core';
+import { annotationSource } from '@opendata-ai/openchart-core';
 import { clampAnnotationsToBounds } from './collisions';
 import type { AnnotationContext } from './compute';
 import { refreshConnector } from './geometry';
@@ -41,28 +42,12 @@ export interface AnnotationEditContext {
 
 const snapshots = new WeakMap<AnnotationEditContext, readonly Entry[]>();
 
-function annotationOwner(
-  spec: unknown,
-  path = '',
-): { annotations: unknown[]; path: string } | undefined {
-  if (!spec || typeof spec !== 'object') return undefined;
-  const node = spec as Record<string, unknown>;
-  if (Array.isArray(node.annotations))
-    return { annotations: node.annotations, path: `${path}/annotations` };
-  if (Array.isArray(node.layer)) {
-    for (const [i, child] of node.layer.entries()) {
-      const found = annotationOwner(child, `${path}/layer/${i}`);
-      if (found) return found;
-    }
-  } else if ('mark' in node) return { annotations: [], path: `${path}/annotations` };
-}
-
 /** Snapshot a compiled layout without asking callers to reconstruct scales or obstacles. */
 export function createAnnotationEditContext(
   layout: ChartLayout,
   spec: unknown,
 ): AnnotationEditContext {
-  const source = annotationOwner(spec);
+  const source = annotationSource(spec);
   const entries: Entry[] = [];
   const panels = layout.facet
     ? layout.facet.panels.map((p) => ({ annotations: p.annotations, facet: p.key }))
@@ -139,7 +124,10 @@ export function inverseLabelPlacement(
   const bounds = entry.base.bounds!;
   return {
     anchor: entry.anchor,
-    offset: { dx: renderedBox.x - bounds.x, dy: renderedBox.y - bounds.y },
+    offset: {
+      dx: Math.round((renderedBox.x - bounds.x) * 1e10) / 1e10,
+      dy: Math.round((renderedBox.y - bounds.y) * 1e10) / 1e10,
+    },
     responsive: false,
   };
 }
@@ -182,5 +170,37 @@ export function previewConnectorBend(
       annotation.bounds!,
       markerClearance(annotation.dot),
     );
+  return annotation;
+}
+
+/** Preview a connector endpoint nudge without parsing rendered path geometry. */
+export function previewConnectorOffset(
+  ctx: AnnotationEditContext,
+  ref: ElementRef,
+  end: 'from' | 'to',
+  delta: { dx: number; dy: number },
+): ResolvedAnnotation {
+  const entry = entryFor(ctx, ref);
+  const annotation = structuredClone(entry.resolved);
+  const connector = structuredClone(annotation.label?.connector ?? entry.connectorSeed);
+  if (!connector?.endpoint) return annotation;
+  if (end === 'from')
+    connector.fromOffset = {
+      dx: (connector.fromOffset?.dx ?? 0) + delta.dx,
+      dy: (connector.fromOffset?.dy ?? 0) + delta.dy,
+    };
+  else {
+    connector.endpoint.x += delta.dx;
+    connector.endpoint.y += delta.dy;
+    if (annotation.dot) {
+      annotation.dot.x += delta.dx;
+      annotation.dot.y += delta.dy;
+    }
+  }
+  annotation.label!.connector = refreshConnector(
+    connector,
+    annotation.bounds!,
+    markerClearance(annotation.dot),
+  );
   return annotation;
 }

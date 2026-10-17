@@ -1,4 +1,4 @@
-import type { Annotation, EditOp, EditTransaction, ElementEdit } from '@opendata-ai/openchart-core';
+import type { EditOp, EditTransaction, ElementEdit } from '@opendata-ai/openchart-core';
 
 type Node = Record<string, unknown>;
 const object = (value: unknown): Node | undefined =>
@@ -6,29 +6,9 @@ const object = (value: unknown): Node | undefined =>
     ? (value as Node)
     : undefined;
 
-/** Matches layer compilation's parent-or-first-leaf annotation ownership. */
-export function annotationSource(spec: unknown): { annotations: Annotation[]; path: string } {
-  const root = object(spec);
-  if (Array.isArray(root?.annotations))
-    return { annotations: root.annotations, path: '/annotations' };
-  function firstLeaf(
-    node: Node | undefined,
-    path: string,
-  ): { annotations: Annotation[]; path: string } | undefined {
-    if (Array.isArray(node?.layer)) {
-      for (const [index, child] of node.layer.entries()) {
-        const result = firstLeaf(object(child), `${path}/layer/${index}`);
-        if (result) return result;
-      }
-    } else if (node && 'mark' in node) {
-      return {
-        annotations: Array.isArray(node.annotations) ? node.annotations : [],
-        path: `${path}/annotations`,
-      };
-    }
-  }
-  return firstLeaf(root, '') ?? { annotations: [], path: '/annotations' };
-}
+export { annotationSource } from '@opendata-ai/openchart-core';
+
+import { annotationSource } from '@opendata-ai/openchart-core';
 
 /** Bridge existing gesture events to authored operations without changing legacy callbacks. */
 export function editToTransaction(
@@ -67,7 +47,9 @@ export function editToTransaction(
     const path = `${source.path}/${edit.element.index}`;
     switch (edit.type) {
       case 'annotation':
+        if (edit.anchor !== undefined) set(`${path}/anchor`, edit.anchor, expected);
         set(`${path}/offset`, edit.offset, expected);
+        if (edit.responsive !== undefined) set(`${path}/responsive`, edit.responsive, expected);
         break;
       case 'annotation-connector':
         set(

@@ -50,10 +50,16 @@ describe('engine connector control', () => {
 });
 
 describe('manual placement predicate', () => {
-  it.each([undefined, {}, { dx: 0 }, { dx: 0, dy: 0 }])('treats %j as automatic', (offset) => {
+  it.each([undefined])('treats %j as automatic', (offset) => {
     expect(isAutoPlacement({ offset })).toBe(true);
   });
-  it.each([{ dx: 1 }, { dy: -1 }])('treats %j as manual', (offset) => {
+  it.each([
+    {},
+    { dx: 0 },
+    { dx: 0, dy: 0 },
+    { dx: 1 },
+    { dy: -1 },
+  ])('treats %j as manual', (offset) => {
     expect(isAutoPlacement({ offset })).toBe(false);
   });
   it('keeps explicit anchors and drop-lines manual even with zero offset', () => {

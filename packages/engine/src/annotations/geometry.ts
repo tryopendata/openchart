@@ -333,6 +333,7 @@ export function refreshConnector(
   connector: NonNullable<ResolvedLabel['connector']>,
   bounds: Rect,
   markerRadius: number,
+  keepVisible = false,
 ): ResolvedLabel['connector'] {
   // `endpoint` is the un-pulled-back data point, and the only valid basis for a
   // rebuild: pulling back from `to` (already pulled back) shrinks the line a
@@ -356,13 +357,24 @@ export function refreshConnector(
     const gap = connectorPullbackGap(markerRadius, false);
     return {
       ...connector,
-      from: { x: endpoint.x, y: bounds.y - DROP_LINE_TOP_GAP },
+      from: {
+        x: endpoint.x + (connector.fromOffset?.dx ?? 0),
+        y: bounds.y - DROP_LINE_TOP_GAP + (connector.fromOffset?.dy ?? 0),
+      },
       to: { x: endpoint.x, y: endpoint.y - gap },
       exit: 'vertical',
     };
   }
 
-  const exit = connectorExit(bounds, endpoint.x, endpoint.y);
+  const exit =
+    connectorExit(bounds, endpoint.x, endpoint.y) ??
+    (keepVisible
+      ? {
+          x: bounds.x + bounds.width / 2,
+          y: bounds.y + bounds.height / 2,
+          exit: connector.exit ?? ('horizontal' as const),
+        }
+      : null);
   if (!exit) return undefined;
 
   // Re-apply the author's from-end nudge BEFORE the pullback, so the pullback
@@ -386,7 +398,8 @@ export function refreshConnector(
   // direction once its end is pulled back, and checking first would miss it.
   const lx = to.x - from.x;
   const ly = to.y - from.y;
-  if (!connectorIsDrawable(Math.sqrt(lx * lx + ly * ly), connector.arrow)) return undefined;
+  if (!keepVisible && !connectorIsDrawable(Math.sqrt(lx * lx + ly * ly), connector.arrow))
+    return undefined;
 
   return {
     ...connector,

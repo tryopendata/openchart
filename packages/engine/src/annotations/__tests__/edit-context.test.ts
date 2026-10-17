@@ -1,19 +1,21 @@
 import type { ChartSpec, TextAnnotation } from '@opendata-ai/openchart-core';
 import { elementRef } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
-import { compileChart } from '../../compile';
+import { annotationCrowdedSpec } from '../../../../../examples/src/gallery/features-annotations.demos';
+import { compileChart, compileLayer } from '../../compile';
 import { validateSpec } from '../../compiler/validate';
 import {
   createAnnotationEditContext,
   inverseLabelPlacement,
   previewAnnotationMove,
   previewConnectorBend,
+  previewConnectorOffset,
 } from '../edit-context';
 
 export const editSpec: ChartSpec = {
   mark: 'point',
   animation: false,
-  autoThin: false,
+  responsive: { autoThin: false },
   data: [
     { x: 0, y: 0 },
     { x: 10, y: 10 },
@@ -65,6 +67,22 @@ describe('resolved annotation editing', () => {
     expect(committed.dot).toEqual(layout.annotations[0].dot);
     expect(layout.annotations).toEqual(before);
   });
+  it('keeps a crowded note-bearing plot fixed when a first drag changes note eligibility', () => {
+    const spec = structuredClone(annotationCrowdedSpec);
+    const size = { width: 390, height: 600 };
+    const layout = compileChart(spec, size);
+    const ctx = createAnnotationEditContext(layout, spec);
+    const ref = elementRef.annotation(0, 'crowded-0');
+    const preview = previewAnnotationMove(ctx, ref, { dx: -20, dy: -20 });
+    const placement = inverseLabelPlacement(ctx, ref, preview.bounds!);
+    const annotations = spec.annotations!.map((annotation, index) =>
+      index === 0 ? { ...annotation, ...placement } : annotation,
+    );
+    const committed = compileChart({ ...spec, annotations }, size);
+    const result = committed.annotations.find((annotation) => annotation.specIndex === 0)!;
+    expect(result.label!.y).toBeCloseTo(preview.label!.y, 8);
+    expect(committed.area).toEqual(layout.area);
+  });
   it('keeps the plot and attachment fixed when committing a callout at maximum x', () => {
     const spec = { ...editSpec, annotations: [{ ...editSpec.annotations![0], x: 10 }] };
     const layout = compileChart(spec, options);
@@ -80,6 +98,96 @@ describe('resolved annotation editing', () => {
     expect(next.annotations[0].label!.connector?.endpoint).toEqual(
       preview.label!.connector?.endpoint,
     );
+  });
+  it('round-trips a moved drop-line including its subtitle and fixed marker', () => {
+    const spec: ChartSpec = {
+      ...editSpec,
+      annotations: [{ ...editSpec.annotations![0], connector: 'drop-line' }],
+    };
+    const layout = compileChart(spec, options);
+    const ctx = createAnnotationEditContext(layout, spec);
+    const preview = previewAnnotationMove(ctx, ref, { dx: 20, dy: 20 });
+    const placement = inverseLabelPlacement(ctx, ref, preview.bounds!);
+    const next = compileChart(
+      { ...spec, annotations: [{ ...spec.annotations![0], ...placement }] },
+      options,
+    ).annotations[0];
+    expect(next.label!.x).toBeCloseTo(preview.label!.x, 8);
+    expect(next.label!.y).toBeCloseTo(preview.label!.y, 8);
+    expect(next.dot).toEqual(preview.dot);
+    expect(next.label!.connector).toEqual(preview.label!.connector);
+  });
+  it('keeps zero-offset placement pinned against data obstacles', () => {
+    const pinned = {
+      ...editSpec,
+      annotations: [{ ...editSpec.annotations![0], anchor: 'left', offset: { dx: 0, dy: 0 } }],
+    } as ChartSpec;
+    const layout = compileChart(pinned, options);
+    const ctx = createAnnotationEditContext(layout, pinned);
+    const inverse = inverseLabelPlacement(ctx, ref, layout.annotations[0].bounds!);
+    expect(inverse.offset).toEqual({ dx: 0, dy: 0 });
+    const next = compileChart(
+      { ...pinned, annotations: [{ ...pinned.annotations![0], ...inverse }] },
+      options,
+    );
+    expect(next.annotations).toEqual(layout.annotations);
+  });
+  it('uses the first leaf despite ignored intermediate layer annotations', () => {
+    const spec = {
+      layer: [
+        {
+          annotations: [{ type: 'text', id: 'ignored', x: 0, y: 0, text: 'Ignored' }],
+          layer: [editSpec],
+        },
+      ],
+    };
+    const layout = compileLayer(spec, options);
+    const ctx = createAnnotationEditContext(layout, spec);
+    expect(
+      previewAnnotationMove(
+        ctx,
+        { ...ref, path: '/layer/0/layer/0/annotations/0' },
+        { dx: 5, dy: 0 },
+      ).id,
+    ).toBe('callout');
+    expect(() =>
+      previewAnnotationMove(ctx, { ...ref, path: '/layer/0/annotations/0' }, { dx: 5, dy: 0 }),
+    ).toThrow();
+  });
+  it('validates bend in root and nested layer annotations', () => {
+    const bad = { type: 'text', x: 0, y: 0, text: 'Bad', connector: { type: 'curve', bend: 3 } };
+    const result = validateSpec({
+      annotations: [bad],
+      layer: [{ layer: [{ ...editSpec, annotations: [bad] }] }],
+    });
+    expect(result.valid).toBe(false);
+    expect(result.errors.map((error) => error.path)).toContain('annotations[0].connector.bend');
+    expect(result.errors.map((error) => error.path)).toContain(
+      'layer[0].layer[0].annotations[0].connector.bend',
+    );
+  });
+  it('preserves the existing null connector fallback without throwing a warning error', () => {
+    expect(() =>
+      compileChart(
+        {
+          ...editSpec,
+          annotations: [{ ...editSpec.annotations![0], connector: null }],
+        } as unknown as ChartSpec,
+        options,
+      ),
+    ).not.toThrow();
+  });
+  it('validates bend on graph annotations too', () => {
+    const result = validateSpec({
+      type: 'graph',
+      nodes: [{ id: 'a' }],
+      edges: [],
+      annotations: [
+        { type: 'text', text: 'Bad', x: 0, y: 0, connector: { type: 'curve', bend: NaN } },
+      ],
+    });
+    expect(result.valid).toBe(false);
+    expect(result.errors.map((error) => error.path)).toContain('annotations[0].connector.bend');
   });
   it('freezes the original layout and source during a gesture', () => {
     const spec = structuredClone(editSpec);
@@ -108,6 +216,37 @@ describe('resolved annotation editing', () => {
     expect(preview).toEqual(next.annotations[0]);
     expect(preview.label!.x).toBe(layout.annotations[0].label!.x);
     expect(preview.dot).toEqual(layout.annotations[0].dot);
+  });
+  it.each([
+    'straight',
+    'curve',
+    'drop-line',
+  ] as const)('%s endpoint previews round trip', (type) => {
+    const spec = {
+      ...editSpec,
+      annotations: [
+        {
+          ...editSpec.annotations![0],
+          x: 5,
+          y: 5,
+          anchor: 'left',
+          offset: { dx: -40, dy: -40 },
+          connector: { type },
+          dot: true,
+        },
+      ],
+    } as ChartSpec;
+    const layout = compileChart(spec, options);
+    const ctx = createAnnotationEditContext(layout, spec);
+    for (const end of ['from', 'to'] as const) {
+      const delta = { dx: 20, dy: 20 };
+      const preview = previewConnectorOffset(ctx, ref, end, delta);
+      const next = compileChart(
+        { ...spec, annotations: [{ ...spec.annotations![0], connectorOffset: { [end]: delta } }] },
+        options,
+      );
+      expect(preview).toEqual(next.annotations[0]);
+    }
   });
   it.each([-1.01, 1.01, NaN, Infinity, '0.5'])('rejects invalid bend %s', (bend) => {
     const result = validateSpec({

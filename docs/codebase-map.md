@@ -371,7 +371,7 @@ The browser authoring application lives in the separate [OpenStudio repository](
 | Concern | Source / exports |
 | --- | --- |
 | Atomic authored-spec edits and inverse operations | `packages/core/src/helpers/edit-transactions.ts`: public `applyEditTransaction`, `EditTransactionResult`; `types/events.ts`: `EditOp`, `EditTransaction`, optional revision and callback |
-| Authored annotation ownership and legacy event bridge | `packages/vanilla/src/interactions/edit-transactions.ts`: `annotationSource`, `editToTransaction`; mount stamps source paths, renderer stamps facet instances; selection and click events preserve both identities |
+| Authored annotation ownership and legacy event bridge | `packages/core/src/helpers/annotation-source.ts`: `annotationSource`; `packages/vanilla/src/interactions/edit-transactions.ts`: `editToTransaction`; mount stamps source paths, renderer stamps facet instances; selection and click events preserve both identities |
 | Alias migration with repair paths | `packages/engine/src/migration/v8.ts`: public `migrateSpecV8`, `SpecRepair`; layer migrations reuse `compile/layer.ts:buildPrimarySpec` and `compiler/normalize.ts:flattenLayers` |
 | Shared v8 shallow theme precedence | `packages/core/src/theme/merge.ts`: `mergeThemeConfig`; `ThemeBase` is internal, public `Theme` remains deprecated |
 | Mount compatibility warnings | `packages/vanilla/src/deprecations.ts`; engine warnings remain in `compile/spec-sugar.ts` |
@@ -382,3 +382,14 @@ require a `LayoutPlan`. Their old positional/plan-less fallbacks are gone.
 Graph scheduler, tween and spatial-index callers import from `motion/`
 and `spatial-index.ts`; the `graph/` re-export shims are gone. Map fill
 transitions accept `MapTransitionSnapshot` only.
+
+## Track A 8.11 additions
+
+| Concern | Source / exports |
+| --- | --- |
+| Frozen compiled annotation editing geometry | `packages/engine/src/annotations/edit-context.ts`: `createAnnotationEditContext`, `previewAnnotationMove`, `previewConnectorBend`, `previewConnectorOffset`, `inverseLabelPlacement`; uses actual compiled annotation objects with private measurement metadata |
+| Curve control and per-frame annotation geometry | `annotations/geometry.ts`: `automaticControlPoint`, `refreshConnector`; `annotations/interpolate.ts`: `interpolateAnnotationGeometry`; all exported from engine |
+| Cancellable mouse/touch gestures and keyboard batches | `packages/vanilla/src/interactions/drag-handler.ts`, `annotation-nudges.ts`; mount flushes pending edits before gesture starts and retargets after synchronous host updates |
+| In-place annotation drawing shared by preview and animation | `packages/vanilla/src/renderers/annotations.ts`: `updateAnnotationGeometry`; transition gate/build/apply consume resolved geometry |
+| Cross-browser geometry contract | `e2e/annotation-invariants/`; two dedicated projects; gallery `AnnotationCurves` and `AnnotationGestures` stay outside visual baselines |
+| Preview benchmark | `packages/engine/src/annotations/__tests__/preview.bench.ts`; Vitest 5 test-context bench, run with `bunx vitest bench --run` |

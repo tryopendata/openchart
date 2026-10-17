@@ -7,7 +7,17 @@
   warn and ignore bend.
 - Export frozen annotation editing contexts, move/bend previews, and inverse
   label placement from the engine.
-- Treat an authored zero offset as automatic annotation placement.
+- Keep authored zero offsets pinned so a committed placement is not nudged on release.
+
+- Convert the first label drag to an explicit anchor/offset and `responsive: false`
+  atomically, keeping the data point fixed. Remove placement-dependent right
+  margin reservation so the plot does not shift when the drag commits.
+- Add Alt+arrow (1px) and Alt+Shift+arrow (10px) annotation nudges, batched into
+  one transaction. Escape, pointer/touch cancellation, width changes and document
+  replacement cancel active drags without emitting edits.
+- Animate label and data-anchor positions independently, rebuilding connectors
+  from engine geometry while preserving annotation enter fades.
+- Make drop-line label and connector offsets round-trip through edit previews.
 
 ## Unreleased — 8.10
 

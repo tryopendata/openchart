@@ -1296,3 +1296,25 @@ with one color category can still draw a legacy series label, even though the
 suppression truth table describes single-series labels as hidden. Endpoint
 labels also suppress that case, so 8.10 preserves its existing rendering. This
 needs a separate decision before removing the legacy renderer.
+
+### Annotation geometry and editing in 8.11
+
+The first label drag commits `anchor`, `offset`, and `responsive: false` together.
+Use `onEditTransaction` to apply all three atomically. A dragged label stays inline
+at compact widths; its data point stays fixed. The compatibility `onEdit` annotation
+payload also includes the optional `anchor` and `responsive` fields. The deprecated
+`onAnnotationEdit(annotation, offset)` retains its original callback shape and cannot
+represent this complete placement change.
+
+In edit mode, Alt+arrow nudges the selected text annotation by 1px; Alt+Shift+arrow
+uses 10px. Plain arrows still cycle selection. Repeated nudges form one transaction.
+Escape, pointer/touch cancellation, a width change, or document replacement cancels
+an active drag without emitting an edit. A height-only resize waits for the gesture.
+
+Custom editors can import `createAnnotationEditContext`, `previewAnnotationMove`,
+`previewConnectorBend`, `previewConnectorOffset`, and `inverseLabelPlacement` from
+engine. Create the context from the actual compiled layout and matching spec, use
+canonical annotation refs (including `facetInstance` for facets), and recreate it
+after commit or resize. It retains the compiler's private measurement context, so
+JSON-deserialized or hand-built layouts cannot provide editing contexts. The
+renderer still supports hand-built curve layouts through its control-point fallback.

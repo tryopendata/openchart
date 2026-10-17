@@ -369,9 +369,6 @@ export function computeDimensions(
   //      line/area). Reserves chart-width + ENDPOINT_COLUMN_GAP + col-width.
   //   2. Legacy end-of-line labels — only when the truth table resolves to
   //      `showEndOfLineLabels: true` (legend hidden AND endpoint column off).
-  //   3. Right-edge text annotations — stack ADDITIVELY on top of (1) and (2)
-  //      so a callout at maxX lands between the chart area and any column to
-  //      its right.
   const labelDensity = spec.labels.density;
   const labelsHiddenByStrategy = strategy?.labelMode === 'none';
   const seriesCount = countColorSeries(spec);
@@ -430,37 +427,9 @@ export function computeDimensions(
     }
   }
 
-  // (3) Right-edge text annotations. The annotation text and the endpoint
-  // column occupy the same right-side space, so take the max rather than
-  // stacking additively.
-  if (
-    strategy?.annotationPosition !== 'tooltip-only' &&
-    spec.annotations.length > 0 &&
-    encoding.x
-  ) {
-    const xField = encoding.x.field;
-    let maxX: string | number | undefined;
-    for (const row of spec.data) {
-      const v = row[xField];
-      if (v != null && (maxX == null || String(v) >= String(maxX))) maxX = v as string | number;
-    }
-    if (maxX != null) {
-      const maxXStr = String(maxX);
-      for (const ann of spec.annotations) {
-        if (ann.type === 'text' && String(ann.x) === maxXStr) {
-          const textWidth = estimateTextWidth(ann.text, ann.fontSize ?? 11, ann.fontWeight ?? 600);
-          const dx = ann.offset?.dx ?? 0;
-          const anchor = ann.anchor ?? 'auto';
-          const baseRightExtent =
-            anchor === 'right' ? textWidth : anchor === 'left' ? 0 : textWidth / 2;
-          const rightOverflow = Math.max(0, baseRightExtent + dx);
-          if (rightOverflow > 0) {
-            margins.right = Math.max(margins.right, hPad + rightOverflow + 12);
-          }
-        }
-      }
-    }
-  }
+  // Annotation placement must not feed back into plot dimensions: committing an
+  // explicit anchor/offset would otherwise move the data point underneath it.
+  // Callout bounds are handled by placement and the figure-boundary clamp.
 
   margins.left = Math.max(margins.left, plan.leftGutter);
 

@@ -189,7 +189,9 @@ export {
   inverseLabelPlacement,
   previewAnnotationMove,
   previewConnectorBend,
+  previewConnectorOffset,
 } from './annotations/edit-context';
+export { interpolateAnnotationGeometry } from './annotations/interpolate';
 export { diagnoseChart } from './design/diagnostics';
 export type { ObservationComparison } from './design/identity';
 export {

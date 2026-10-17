@@ -490,7 +490,9 @@ function resolveDropLineAnnotation(
     side = fitsLeft || spaceLeft > spaceRight ? 'left' : 'right';
   }
 
-  const labelX = side === 'left' ? px - DROP_LINE_LABEL_GAP : px + DROP_LINE_LABEL_GAP;
+  const labelX =
+    (side === 'left' ? px - DROP_LINE_LABEL_GAP : px + DROP_LINE_LABEL_GAP) +
+    (annotation.offset?.dx ?? 0);
   const textAnchor: 'start' | 'end' = side === 'left' ? 'end' : 'start';
 
   // Drop the label box top a bit above the data point so the label and line
@@ -507,7 +509,7 @@ function resolveDropLineAnnotation(
   // upward into chrome / metric-bar territory.
   const desiredLabelTopY = py - totalHeight - 12;
   const minLabelTopY = chartArea.y + 4;
-  const labelTopY = Math.max(desiredLabelTopY, minLabelTopY);
+  const labelTopY = Math.max(desiredLabelTopY, minLabelTopY) + (annotation.offset?.dy ?? 0);
   const labelBaselineY = labelTopY + fontSize;
 
   const resolvedStyle: TextStyle = { ...labelStyle, textAnchor };
@@ -517,11 +519,26 @@ function resolveDropLineAnnotation(
   // connector styles. Quiet voice: gray hairline, marker in the same gray.
   const connectorStroke =
     annotation.stroke ?? (isDark ? DARK_CONNECTOR_STROKE : LIGHT_CONNECTOR_STROKE);
-  const dot = resolveDot(annotation.dot, true, false, px, py, isDark, connectorStroke);
+  const endpoint = {
+    x: px + (annotation.connectorOffset?.to?.dx ?? 0),
+    y: py + (annotation.connectorOffset?.to?.dy ?? 0),
+  };
+  const dot = resolveDot(
+    annotation.dot,
+    true,
+    false,
+    endpoint.x,
+    endpoint.y,
+    isDark,
+    connectorStroke,
+  );
   const bottomGap = connectorPullbackGap(markerClearance(dot), false);
 
-  const from = { x: px, y: labelTopY - DROP_LINE_TOP_GAP };
-  const to = { x: px, y: py - bottomGap };
+  const from = {
+    x: endpoint.x + (annotation.connectorOffset?.from?.dx ?? 0),
+    y: labelTopY - DROP_LINE_TOP_GAP + (annotation.connectorOffset?.from?.dy ?? 0),
+  };
+  const to = { x: endpoint.x, y: endpoint.y - bottomGap };
 
   const labelBounds = computeTextBlockBounds(
     labelX,
@@ -567,7 +584,15 @@ function resolveDropLineAnnotation(
     connector: {
       from,
       to,
-      endpoint: { x: px, y: py },
+      endpoint,
+      ...(annotation.connectorOffset?.from
+        ? {
+            fromOffset: {
+              dx: annotation.connectorOffset.from.dx ?? 0,
+              dy: annotation.connectorOffset.from.dy ?? 0,
+            },
+          }
+        : {}),
       stroke: connectorStroke,
       style: 'drop-line',
       arrow: false,
