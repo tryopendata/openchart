@@ -137,22 +137,20 @@ describe('transaction wrapper options', () => {
     const first = vi.fn();
     const second = vi.fn();
     const { rerender } = render(
-      <Chart spec={lineSpec} autoResize={false} revision="one" onEditTransaction={first} />,
+      <Chart spec={lineSpec} autoResize={false} revision="one" onEdit={first} />,
     );
     const options = vi.mocked(createChart).mock.calls.at(-1)![2]!;
     expect(options).toMatchObject({ autoResize: false, revision: 'one' });
     const tx = { revision: 'one', ops: [{ op: 'set' as const, path: '/title', value: 'Title' }] };
-    options.onEditTransaction?.(tx);
+    options.onEdit?.(tx);
     expect(first).toHaveBeenCalledWith(tx);
     const mounts = vi.mocked(createChart).mock.calls.length;
-    rerender(
-      <Chart spec={lineSpec} autoResize={false} revision="two" onEditTransaction={second} />,
-    );
+    rerender(<Chart spec={lineSpec} autoResize={false} revision="two" onEdit={second} />);
     await waitFor(() =>
       expect(mockChartInstance.update).toHaveBeenCalledWith(lineSpec, { revision: 'two' }),
     );
     expect(vi.mocked(createChart).mock.calls.length).toBe(mounts);
-    options.onEditTransaction?.(tx);
+    options.onEdit?.(tx);
     expect(second).toHaveBeenCalledWith(tx);
   });
 });
@@ -160,9 +158,9 @@ describe('transaction wrapper options', () => {
 it('enables and disables a transaction callback added after mounting', () => {
   const listener = vi.fn();
   const { rerender } = render(<Chart spec={lineSpec} />);
-  expect(vi.mocked(createChart).mock.calls.at(-1)![2]?.onEditTransaction).toBeUndefined();
-  rerender(<Chart spec={lineSpec} onEditTransaction={listener} />);
-  expect(vi.mocked(createChart).mock.calls.at(-1)![2]?.onEditTransaction).toBeTypeOf('function');
+  expect(vi.mocked(createChart).mock.calls.at(-1)![2]?.onEdit).toBeUndefined();
+  rerender(<Chart spec={lineSpec} onEdit={listener} />);
+  expect(vi.mocked(createChart).mock.calls.at(-1)![2]?.onEdit).toBeTypeOf('function');
   rerender(<Chart spec={lineSpec} />);
-  expect(vi.mocked(createChart).mock.calls.at(-1)![2]?.onEditTransaction).toBeUndefined();
+  expect(vi.mocked(createChart).mock.calls.at(-1)![2]?.onEdit).toBeUndefined();
 });

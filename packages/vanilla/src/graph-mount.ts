@@ -1,4 +1,3 @@
-import { warnDeprecated } from './deprecations';
 /**
  * Graph mount API: the main entry point for vanilla JS graph usage.
  *
@@ -158,7 +157,6 @@ export interface GraphMountOptions {
 export interface GraphInstance {
   update(spec: GraphSpec): void;
   /** Re-compile encoding/legend/chrome without restarting the simulation. Preserves node positions. */
-  updateVisuals(spec: GraphSpec): void;
   search(query: string): void;
   clearSearch(): void;
   /** Fit all nodes into the viewport. Animated by default; `{ duration: 0 }` snaps. */
@@ -1901,10 +1899,6 @@ export function createGraph(
    * node positions when nothing structural changed. Kept as an alias for backward
    * compatibility.
    */
-  function updateVisuals(newSpec: GraphSpec): void {
-    warnDeprecated('updateVisuals is deprecated; use update.');
-    update(newSpec);
-  }
 
   /** Tear down ONLY the simulation, keeping interaction/transform/selection. */
   function teardownSimOnly(): void {
@@ -2036,7 +2030,6 @@ export function createGraph(
 
   return {
     update,
-    updateVisuals,
     search,
     clearSearch,
     zoomToFit,

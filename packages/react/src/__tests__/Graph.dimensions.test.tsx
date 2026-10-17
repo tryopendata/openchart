@@ -13,7 +13,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const instanceStub = {
   update: vi.fn(),
-  updateVisuals: vi.fn(),
   search: vi.fn(),
   clearSearch: vi.fn(),
   getSearchMatches: vi.fn(() => []),

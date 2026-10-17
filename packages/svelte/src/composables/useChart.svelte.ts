@@ -25,10 +25,8 @@ export interface UseChartOptions {
   theme?: MountOptions['theme'];
   /** Dark mode setting. */
   darkMode?: MountOptions['darkMode'];
-  /** Data point click handler. */
-  onDataPointClick?: MountOptions['onDataPointClick'];
-  /** Enable responsive resizing. Defaults to true. */
-  responsive?: boolean;
+  /** Observe container resizes. Defaults to true. */
+  autoResize?: boolean;
   /** Rendering backend for point marks; see the vanilla `MountOptions.renderer`. */
   renderer?: MountOptions['renderer'];
 }
@@ -59,8 +57,7 @@ export function useChart(
       const mountOpts: MountOptions = {
         theme: opts?.theme,
         darkMode: opts?.darkMode,
-        onDataPointClick: opts?.onDataPointClick,
-        responsive: opts?.responsive ?? true,
+        autoResize: opts?.autoResize ?? true,
         renderer: opts?.renderer,
       };
 

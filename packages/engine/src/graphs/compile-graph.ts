@@ -271,7 +271,7 @@ function buildGraphTooltips(nodes: CompiledGraphNode[]): Map<string, TooltipCont
  *
  * Construction is LAZY (called for the one hovered edge), not an eager O(E)
  * descriptor map — edges outnumber nodes 5–10× and an eager map on every
- * compile (including updateVisuals) would be pure bloat. Shows source → target
+ * compile (including graph updates) would be pure bloat. Shows source → target
  * and all non-structural data fields.
  */
 export function buildEdgeTooltip(edge: CompiledGraphEdge): TooltipContent {

@@ -1,10 +1,7 @@
-import {
-  applyEditTransaction,
-  type ChartSpec,
-  type ElementEdit,
-} from '@opendata-ai/openchart-core';
+import { applyEditTransaction, type ChartSpec } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import { annotationSource, editToTransaction } from '../interactions/edit-transactions';
+import type { GestureEdit } from '../interactions/gesture-edit';
 
 const annotation = { type: 'text' as const, x: 1, y: 2, text: 'Note', id: 'note' };
 const spec = { mark: 'point', data: [], encoding: {}, annotations: [annotation] } as ChartSpec;
@@ -86,12 +83,6 @@ describe('durable edit bridge', () => {
     }
   });
 
-  it('keeps transient visibility outside transactions', () => {
-    expect(
-      editToTransaction(spec, { type: 'legend-toggle', series: 'A', hidden: true }),
-    ).toBeNull();
-  });
-
   it('adds annotations to an absent array and removes the container on undo', () => {
     const source = { title: 'Chart' };
     const tx = editToTransaction(source, { type: 'add', annotation });
@@ -113,7 +104,7 @@ describe('durable edit bridge', () => {
     const tx = editToTransaction(spec, {
       ...edit,
       element: { type: 'annotation', index: 0 },
-    } as ElementEdit);
+    } as GestureEdit);
     expect(tx?.ops.length).toBeGreaterThan(0);
     expect(tx?.ops.every((op) => op.expect?.text === 'Note')).toBe(true);
     expect(applyEditTransaction(spec, tx!).ok).toBe(true);

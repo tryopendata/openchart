@@ -148,7 +148,6 @@ describe('<Graph />', () => {
       'clearHighlight',
       'getHighlight',
       'getLegend',
-      'updateVisuals',
     ]) {
       expect(typeof api[name]).toBe('function');
     }

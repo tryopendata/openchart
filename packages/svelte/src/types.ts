@@ -7,11 +7,11 @@
 
 import type {
   Annotation,
-  AnnotationOffset,
   BarListSpec,
   ChartSpec,
   DarkMode,
-  ElementEdit,
+  EditTransaction,
+  ElementRef,
   GeoMapSpec,
   GraphSpec,
   LayerSpec,
@@ -19,7 +19,6 @@ import type {
   SankeySpec,
   SortState,
   TableSpec,
-  TextAnnotation,
   ThemeConfig,
   TileMapSpec,
   VizSpec,
@@ -36,10 +35,15 @@ export interface ChartProps {
   onmarkhover?: (event: MarkEvent) => void;
   onmarkleave?: () => void;
   onlegendtoggle?: (series: string, visible: boolean) => void;
-  onannotationclick?: (annotation: Annotation, event: MouseEvent) => void;
-  onannotationedit?: (annotation: TextAnnotation, offset: AnnotationOffset) => void;
-  onedit?: (edit: ElementEdit) => void;
-  ondatapointclick?: (data: Record<string, unknown>) => void;
+  autoResize?: boolean;
+  revision?: string | number;
+  editable?: boolean;
+  selectedElement?: ElementRef;
+  highlight?: string[] | null;
+  onedit?: (transaction: EditTransaction) => void;
+  onselect?: (element: ElementRef) => void;
+  ondeselect?: (element: ElementRef) => void;
+  onannotationclick?: (annotation: Annotation, event: MouseEvent, element: ElementRef) => void;
   class?: string;
   style?: string;
 }

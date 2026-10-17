@@ -396,27 +396,5 @@ describe('update() search reconciliation', () => {
 });
 
 // ---------------------------------------------------------------------------
-// updateVisuals alias
+// Unified graph updates
 // ---------------------------------------------------------------------------
-
-describe('updateVisuals deprecated alias', () => {
-  it('routes through update() (structural change still reheats)', async () => {
-    container = makeContainer();
-    const graph = createGraph(container, graphSpec(['a', 'b'], [['a', 'b']]));
-    await settle();
-
-    const createSpy = vi.spyOn(SimulationManager, 'create');
-    graph.updateVisuals(
-      graphSpec(
-        ['a', 'b', 'c'],
-        [
-          ['a', 'b'],
-          ['b', 'c'],
-        ],
-      ),
-    );
-    expect(createSpy).toHaveBeenCalledTimes(1);
-    createSpy.mockRestore();
-    graph.destroy();
-  });
-});

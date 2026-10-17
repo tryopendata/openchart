@@ -49,7 +49,6 @@ function makeContainer(): HTMLElement {
 function fakeInstance(): GraphInstance {
   return {
     update: () => {},
-    updateVisuals: () => {},
     search: () => {},
     clearSearch: () => {},
     getSearchMatches: () => [],

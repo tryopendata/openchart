@@ -32,7 +32,6 @@ export type {
   ChromeKey,
   EditOp,
   EditTransaction,
-  ElementEdit,
   ElementRef,
   MarkEvent,
 } from './events';

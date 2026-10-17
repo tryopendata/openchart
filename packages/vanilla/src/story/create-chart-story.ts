@@ -127,7 +127,7 @@ function morphWithinMarkCap(
  * the base spec, then drives it through cumulative patch steps as the
  * reader scrolls (or via `goTo`).
  *
- * `editMode` (any of `onEdit`/`onSelect`/`onDeselect`/`onTextEdit` on
+ * `editMode` (any of `onEdit`/`onSelect`/`onDeselect` on
  * `mountOptions`) and an active story are mutually exclusive in v1: passing
  * both warns once and disables the story's own drive loop, matching the
  * seriesSearch/edit-mode precedent in `mount.ts`.
@@ -160,8 +160,7 @@ export function createChartStory<TData extends DataRow = DataRow>(
   const editModeRequested = !!(
     mountOptions?.onEdit ||
     mountOptions?.onSelect ||
-    mountOptions?.onDeselect ||
-    mountOptions?.onTextEdit
+    mountOptions?.onDeselect
   );
   if (editModeRequested) {
     console.warn(
@@ -183,7 +182,7 @@ export function createChartStory<TData extends DataRow = DataRow>(
       theme: mountOptions?.theme,
       darkMode: mountOptions?.darkMode,
       watermark: mountOptions?.watermark,
-      responsive: mountOptions?.responsive,
+      responsive: mountOptions?.autoResize,
     };
     instance = createGeoMap(container, initialSpec as GeoMapSpec, mapOpts);
   } else {

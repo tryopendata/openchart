@@ -1,4 +1,4 @@
-import type { ChartSpec, ElementEdit } from '@opendata-ai/openchart-engine';
+import type { ChartSpec, EditTransaction } from '@opendata-ai/openchart-engine';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createContainer, createMouseEvent } from '../__test-fixtures__/dom';
 import { barSpec, lineSpec } from '../__test-fixtures__/specs';
@@ -166,17 +166,18 @@ describe('edit events', () => {
       simulateDrag(annotation, 100, 100, 150, 130);
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('annotation');
-      if (edit.type === 'annotation') {
-        // Canonical placement converts the implicit diagonal anchor into explicit right.
-        expect(edit.offset.dx).toBe(60);
-        expect(edit.offset.dy).toBe(-18);
-        expect(edit.anchor).toBe('right');
-        expect(edit.responsive).toBe(false);
-        // RFC 6901 path to the offset property
-        expect(edit.element.path).toBe('/annotations/0/offset');
-      }
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+      expect(edit.ops.some((op) => op.path.endsWith('/offset'))).toBe(true);
+
+      // Canonical placement converts the implicit diagonal anchor into explicit right.
+      expect(valueAt<{ dx: number; dy: number }>(edit, '/offset').dx).toBe(60);
+      expect(valueAt<{ dx: number; dy: number }>(edit, '/offset').dy).toBe(-18);
+      expect(valueAt<string>(edit, '/anchor')).toBe('right');
+      expect(valueAt<boolean>(edit, '/responsive')).toBe(false);
+      // RFC 6901 path to the offset property
+      expect(edit.ops.find((op) => op.path.endsWith('/offset'))?.path).toBe(
+        '/annotations/0/offset',
+      );
 
       chart.destroy();
     });
@@ -305,49 +306,6 @@ describe('edit events', () => {
         expect(legendG.style.cursor).toBe('grab');
       }
 
-      // Series labels should have grab cursor (if any rendered with data-series)
-      const seriesLabels = container.querySelectorAll('.oc-mark-label[data-series]');
-      for (const el of seriesLabels) {
-        expect((el as HTMLElement).style.cursor).toBe('grab');
-      }
-
-      chart.destroy();
-    });
-
-    it('dragging a text annotation fires BOTH onAnnotationEdit and onEdit when both are provided', () => {
-      const onAnnotationEdit = vi.fn();
-      const onEdit = vi.fn();
-      const chart = createChart(container, textAnnotatedSpec, { onAnnotationEdit, onEdit });
-
-      const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotation) {
-        chart.destroy();
-        return;
-      }
-
-      simulateDrag(annotation, 100, 100, 150, 130);
-
-      expect(onAnnotationEdit).toHaveBeenCalledTimes(1);
-      expect(onEdit).toHaveBeenCalledTimes(1);
-
-      // Verify onAnnotationEdit received the text annotation and offset
-      const [annotationArg, offsetArg] = onAnnotationEdit.mock.calls[0];
-      expect(annotationArg.type).toBe('text');
-      expect(annotationArg.text).toBe('Peak');
-      expect(offsetArg.dx).toBe(60);
-      expect(offsetArg.dy).toBe(10);
-
-      // Verify onEdit received an annotation edit
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('annotation');
-      if (edit.type === 'annotation') {
-        expect(edit.annotation.text).toBe('Peak');
-        expect(edit.offset.dx).toBe(60);
-        expect(edit.offset.dy).toBe(-18);
-        expect(edit.anchor).toBe('right');
-        expect(edit.responsive).toBe(false);
-      }
-
       chart.destroy();
     });
 
@@ -364,8 +322,8 @@ describe('edit events', () => {
       simulateDrag(annotation, 100, 100, 150, 130);
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('annotation');
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+      expect(edit.ops.some((op) => op.path.endsWith('/offset'))).toBe(true);
 
       chart.destroy();
     });
@@ -407,15 +365,16 @@ describe('edit events', () => {
       simulateDrag(rangeLabel, 100, 100, 140, 120);
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('range-label');
-      if (edit.type === 'range-label') {
-        expect(edit.annotation.type).toBe('range');
-        // Original labelOffset (5, 3) + drag delta (40, 20) = (45, 23)
-        expect(edit.labelOffset.dx).toBe(45);
-        expect(edit.labelOffset.dy).toBe(23);
-        expect(edit.element.path).toBe('/annotations/0/labelOffset');
-      }
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+      expect(edit.ops.some((op) => op.path.endsWith('/labelOffset'))).toBe(true);
+
+      expect(edit.ops[0].expect?.type).toBe('range');
+      // Original labelOffset (5, 3) + drag delta (40, 20) = (45, 23)
+      expect(valueAt<{ dx: number; dy: number }>(edit, '/labelOffset').dx).toBe(45);
+      expect(valueAt<{ dx: number; dy: number }>(edit, '/labelOffset').dy).toBe(23);
+      expect(edit.ops.find((op) => op.path.endsWith('/labelOffset'))?.path).toBe(
+        '/annotations/0/labelOffset',
+      );
 
       chart.destroy();
     });
@@ -451,15 +410,16 @@ describe('edit events', () => {
       simulateDrag(reflineLabel, 100, 100, 130, 115);
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('refline-label');
-      if (edit.type === 'refline-label') {
-        expect(edit.annotation.type).toBe('refline');
-        // Original labelOffset (2, -4) + drag delta (30, 15) = (32, 11)
-        expect(edit.labelOffset.dx).toBe(32);
-        expect(edit.labelOffset.dy).toBe(11);
-        expect(edit.element.path).toBe('/annotations/0/labelOffset');
-      }
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+      expect(edit.ops.some((op) => op.path.endsWith('/labelOffset'))).toBe(true);
+
+      expect(edit.ops[0].expect?.type).toBe('refline');
+      // Original labelOffset (2, -4) + drag delta (30, 15) = (32, 11)
+      expect(valueAt<{ dx: number; dy: number }>(edit, '/labelOffset').dx).toBe(32);
+      expect(valueAt<{ dx: number; dy: number }>(edit, '/labelOffset').dy).toBe(11);
+      expect(edit.ops.find((op) => op.path.endsWith('/labelOffset'))?.path).toBe(
+        '/annotations/0/labelOffset',
+      );
 
       chart.destroy();
     });
@@ -498,15 +458,20 @@ describe('edit events', () => {
       simulateDrag(titleEl, 100, 100, 130, 115);
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('chrome');
-      if (edit.type === 'chrome') {
-        expect(edit.key).toBe('title');
-        expect(edit.text).toBeTruthy();
-        // No existing offset, so offset = delta (30, 15)
-        expect(edit.offset.dx).toBe(30);
-        expect(edit.offset.dy).toBe(15);
-      }
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+      expect(edit.ops.some((op) => op.path.endsWith('/chrome/title'))).toBe(true);
+
+      expect(edit.ops[0].path).toBe('/chrome/title');
+      expect(valueAt<{ text: string }>(edit, '/chrome/title').text).toBeTruthy();
+      // No existing offset, so offset = delta (30, 15)
+      expect(
+        valueAt<{ offset: { dx: number; dy: number }; text: string }>(edit, '/chrome/title').offset
+          .dx,
+      ).toBe(30);
+      expect(
+        valueAt<{ offset: { dx: number; dy: number }; text: string }>(edit, '/chrome/title').offset
+          .dy,
+      ).toBe(15);
 
       chart.destroy();
     });
@@ -543,12 +508,11 @@ describe('edit events', () => {
       simulateDrag(legendG, 200, 50, 250, 70);
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('legend');
-      if (edit.type === 'legend') {
-        expect(edit.offset.dx).toBe(50);
-        expect(edit.offset.dy).toBe(20);
-      }
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+      expect(edit.ops.some((op) => op.path.endsWith('/legend'))).toBe(true);
+
+      expect(valueAt<{ offset: { dx: number; dy: number } }>(edit, '/legend').offset.dx).toBe(50);
+      expect(valueAt<{ offset: { dx: number; dy: number } }>(edit, '/legend').offset.dy).toBe(20);
 
       chart.destroy();
     });
@@ -690,16 +654,23 @@ describe('edit events', () => {
       simulateDrag(fromHandle, 100, 100, 130, 115);
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('annotation-connector');
-      if (edit.type === 'annotation-connector') {
-        expect(edit.endpoint).toBe('from');
-        expect(edit.annotation.type).toBe('text');
-        // No existing connectorOffset, so offset = delta (30, 15)
-        expect(edit.offset.dx).toBe(30);
-        expect(edit.offset.dy).toBe(15);
-        expect(edit.element.path).toBe('/annotations/0/connectorOffset/from');
-      }
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+      expect(edit.ops.some((op) => op.path.endsWith('/connectorOffset'))).toBe(true);
+
+      expect(
+        valueAt<Record<string, { dx: number; dy: number }>>(edit, '/connectorOffset').from,
+      ).toBeDefined();
+      expect(edit.ops[0].expect?.type).toBe('text');
+      // No existing connectorOffset, so offset = delta (30, 15)
+      expect(
+        valueAt<Record<string, { dx: number; dy: number }>>(edit, '/connectorOffset').from.dx,
+      ).toBe(30);
+      expect(
+        valueAt<Record<string, { dx: number; dy: number }>>(edit, '/connectorOffset').from.dy,
+      ).toBe(15);
+      expect(edit.ops.find((op) => op.path.endsWith('/connectorOffset'))?.path).toBe(
+        '/annotations/0/connectorOffset',
+      );
 
       chart.destroy();
     });
@@ -730,16 +701,23 @@ describe('edit events', () => {
       simulateDrag(fromHandle!, 100, 100, 130, 118);
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('annotation-connector');
-      if (edit.type !== 'annotation-connector') return;
-      expect(edit.endpoint).toBe('from');
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+      expect(edit.ops.some((op) => op.path.endsWith('/connectorOffset'))).toBe(true);
+      expect(
+        valueAt<Record<string, { dx: number; dy: number }>>(edit, '/connectorOffset').from,
+      ).toBeDefined();
 
       // Host writes the edit back to the spec and re-renders.
       chart.update({
         ...autoAnnotatedSpec,
         annotations: [
-          { ...autoAnnotatedSpec.annotations![0], connectorOffset: { from: edit.offset } },
+          {
+            ...autoAnnotatedSpec.annotations![0],
+            connectorOffset: {
+              from: valueAt<Record<string, { dx: number; dy: number }>>(edit, '/connectorOffset')
+                .from,
+            },
+          },
         ],
       } as ChartSpec);
 
@@ -774,12 +752,15 @@ describe('edit events', () => {
       simulateDrag(toHandle, 100, 100, 140, 125);
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('annotation-connector');
-      if (edit.type === 'annotation-connector') {
-        expect(edit.endpoint).toBe('to');
-        expect(edit.element.path).toBe('/annotations/0/connectorOffset/to');
-      }
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+      expect(edit.ops.some((op) => op.path.endsWith('/connectorOffset'))).toBe(true);
+
+      expect(
+        valueAt<Record<string, { dx: number; dy: number }>>(edit, '/connectorOffset').to,
+      ).toBeDefined();
+      expect(edit.ops.find((op) => op.path.endsWith('/connectorOffset'))?.path).toBe(
+        '/annotations/0/connectorOffset',
+      );
 
       chart.destroy();
     });
@@ -802,13 +783,12 @@ describe('edit events', () => {
         simulateDrag(secondG, 100, 100, 120, 110);
 
         expect(onEdit).toHaveBeenCalledTimes(1);
-        const edit: ElementEdit = onEdit.mock.calls[0][0];
-        expect(edit.type).toBe('annotation');
-        if (edit.type === 'annotation') {
-          // The edit must carry the annotation whose label was actually dragged.
-          // Pre-fix this returned the *other* one (zIndex had swapped their slots).
-          expect(edit.annotation.id).toBe('second');
-        }
+        const edit: EditTransaction = onEdit.mock.calls[0][0];
+        expect(edit.ops.some((op) => op.path.endsWith('/offset'))).toBe(true);
+
+        // The edit must carry the annotation whose label was actually dragged.
+        // Pre-fix this returned the *other* one (zIndex had swapped their slots).
+        expect(edit.ops[0].expect?.id).toBe('second');
 
         chart.destroy();
       });
@@ -890,13 +870,18 @@ describe('edit events', () => {
         simulateDrag(toHandle, 100, 100, 130, 115);
 
         expect(onEdit).toHaveBeenCalledTimes(1);
-        const edit: ElementEdit = onEdit.mock.calls[0][0];
-        expect(edit.type).toBe('annotation-connector');
-        if (edit.type === 'annotation-connector') {
-          expect(edit.endpoint).toBe('to');
-          expect(edit.offset.dx).toBe(30);
-          expect(edit.offset.dy).toBe(15);
-        }
+        const edit: EditTransaction = onEdit.mock.calls[0][0];
+        expect(edit.ops.some((op) => op.path.endsWith('/connectorOffset'))).toBe(true);
+
+        expect(
+          valueAt<Record<string, { dx: number; dy: number }>>(edit, '/connectorOffset').to,
+        ).toBeDefined();
+        expect(
+          valueAt<Record<string, { dx: number; dy: number }>>(edit, '/connectorOffset').to.dx,
+        ).toBe(30);
+        expect(
+          valueAt<Record<string, { dx: number; dy: number }>>(edit, '/connectorOffset').to.dy,
+        ).toBe(15);
 
         chart.destroy();
       });
@@ -906,109 +891,27 @@ describe('edit events', () => {
   // =========================================================================
   // 7. legend-toggle onEdit payload
   // =========================================================================
-  describe('legend-toggle onEdit payload', () => {
-    /** Multi-series line chart with explicit top legend so entries always render. */
-    const legendToggleSpec: ChartSpec = {
-      ...lineSpec,
-      legend: { show: true, position: 'top' },
-    };
-
-    it('legend click fires onEdit with correct payload', () => {
+  describe('transient legend visibility', () => {
+    it('reports visibility through onLegendToggle without a durable transaction', () => {
       const onEdit = vi.fn();
       const onLegendToggle = vi.fn();
-      const chart = createChart(container, legendToggleSpec, { onEdit, onLegendToggle });
-
-      const entry = container.querySelector(
-        '.oc-legend:not(.oc-legend--size) [data-legend-index]',
-      ) as SVGGElement | null;
-      if (!entry) {
-        chart.destroy();
-        return;
-      }
-
-      const label = entry.getAttribute('data-legend-label')!;
-      entry.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-
-      expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('legend-toggle');
-      if (edit.type === 'legend-toggle') {
-        expect(edit.series).toBe(label);
-        expect(edit.hidden).toBe(true);
-      }
-
-      chart.destroy();
-    });
-
-    it('second click re-shows (hidden: false)', () => {
-      const onEdit = vi.fn();
-      const chart = createChart(container, legendToggleSpec, { onEdit });
-
-      const entry = container.querySelector(
-        '.oc-legend:not(.oc-legend--size) [data-legend-index]',
-      ) as SVGGElement | null;
-      if (!entry) {
-        chart.destroy();
-        return;
-      }
-      const label = entry.getAttribute('data-legend-label')!;
-
-      // First click hides (triggers re-render, so DOM reference goes stale)
-      entry.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      expect(onEdit).toHaveBeenCalledTimes(1);
-      expect((onEdit.mock.calls[0][0] as ElementEdit & { type: 'legend-toggle' }).hidden).toBe(
-        true,
+      const chart = createChart(
+        container,
+        { ...lineSpec, legend: { show: true, position: 'top' } },
+        { onEdit, onLegendToggle },
       );
-
-      // Re-query after re-render for the same series
-      const entry2 = container.querySelector(
-        `.oc-legend:not(.oc-legend--size) [data-legend-label="${label}"]`,
-      ) as SVGGElement | null;
-      expect(entry2).toBeTruthy();
-
-      // Second click re-shows
-      entry2!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      expect(onEdit).toHaveBeenCalledTimes(2);
-      const edit: ElementEdit = onEdit.mock.calls[1][0];
-      expect(edit.type).toBe('legend-toggle');
-      if (edit.type === 'legend-toggle') {
-        expect(edit.hidden).toBe(false);
-      }
-
-      chart.destroy();
-    });
-
-    it('onLegendToggle polarity is opposite of hidden', () => {
-      const onEdit = vi.fn();
-      const onLegendToggle = vi.fn();
-      const chart = createChart(container, legendToggleSpec, { onEdit, onLegendToggle });
-
       const entry = container.querySelector(
         '.oc-legend:not(.oc-legend--size) [data-legend-index]',
-      ) as SVGGElement | null;
-      if (!entry) {
-        chart.destroy();
-        return;
-      }
-
-      const label = entry.getAttribute('data-legend-label')!;
-
-      // First click: hidden=true, visible=false (triggers re-render)
+      )!;
+      expect(entry).not.toBeNull();
+      const series = entry.getAttribute('data-legend-label')!;
       entry.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      expect(onLegendToggle).toHaveBeenCalledTimes(1);
-      expect(onLegendToggle).toHaveBeenCalledWith(label, false);
-
-      // Re-query after re-render for the same series
-      const entry2 = container.querySelector(
-        `.oc-legend:not(.oc-legend--size) [data-legend-label="${label}"]`,
-      ) as SVGGElement | null;
-      expect(entry2).toBeTruthy();
-
-      // Second click: hidden=false, visible=true
-      entry2!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      expect(onLegendToggle).toHaveBeenCalledTimes(2);
-      expect(onLegendToggle).toHaveBeenCalledWith(label, true);
-
+      expect(onLegendToggle).toHaveBeenLastCalledWith(series, false);
+      container
+        .querySelector(`[data-legend-label="${series}"]`)!
+        .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      expect(onLegendToggle).toHaveBeenLastCalledWith(series, true);
+      expect(onEdit).not.toHaveBeenCalled();
       chart.destroy();
     });
   });
@@ -1034,13 +937,16 @@ describe('edit events', () => {
       const svg = container.querySelector('svg')!;
       svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
 
-      const deleteCall = onEdit.mock.calls.find((call: [ElementEdit]) => call[0].type === 'delete');
+      const deleteCall = onEdit.mock.calls.find((call: [EditTransaction]) =>
+        call[0].ops.some((op) => op.op === 'remove'),
+      );
       expect(deleteCall).toBeDefined();
-      const edit: ElementEdit = deleteCall![0];
-      expect(edit.type).toBe('delete');
-      if (edit.type === 'delete') {
-        expect(edit.element.path).toBe('/annotations/0');
-      }
+      const edit: EditTransaction = deleteCall![0];
+      expect(edit.ops.some((op) => op.op === 'remove')).toBe(true);
+
+      expect(edit.ops.find((op) => op.path.endsWith('/annotations/0'))?.path).toBe(
+        '/annotations/0',
+      );
 
       chart.destroy();
     });
@@ -1129,10 +1035,11 @@ describe('edit events', () => {
       simulateDrag(toHandle, 100, 100, 130, 115);
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      if (edit.type === 'annotation-connector') {
-        expect(edit.element.path).toBe('/annotations/0/connectorOffset/to');
-      }
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+
+      expect(edit.ops.find((op) => op.path.endsWith('/connectorOffset'))?.path).toBe(
+        '/annotations/0/connectorOffset',
+      );
 
       chart.destroy();
     });
@@ -1153,82 +1060,22 @@ describe('edit events', () => {
   // =========================================================================
   // 10. wireSeriesLabelDrag
   // =========================================================================
-  describe('wireSeriesLabelDrag', () => {
-    it('series labels get cursor:grab when onEdit is provided', () => {
-      const onEdit = vi.fn();
-      const chart = createChart(container, fullEditSpec, { onEdit });
-
-      const seriesLabels = container.querySelectorAll('.oc-mark-label[data-series]');
-      if (seriesLabels.length === 0) {
-        // Labels may not render in the test env depending on layout
-        chart.destroy();
-        return;
-      }
-
-      for (const el of seriesLabels) {
-        expect((el as HTMLElement).style.cursor).toBe('grab');
-      }
-
-      chart.destroy();
-    });
-
-    it('dragging fires onEdit with type series-label, correct series name, and accumulated offset', () => {
-      const onEdit = vi.fn();
-      const chart = createChart(container, fullEditSpec, { onEdit });
-
-      const seriesLabel = container.querySelector(
-        '.oc-mark-label[data-series]',
-      ) as SVGTextElement | null;
-      if (!seriesLabel) {
-        chart.destroy();
-        return;
-      }
-
-      const seriesName = seriesLabel.getAttribute('data-series')!;
-      simulateDrag(seriesLabel, 100, 100, 135, 118);
-
-      // Find the onEdit call for a series-label (could have other edits from other elements)
-      const seriesLabelCall = onEdit.mock.calls.find(
-        (call: [ElementEdit]) => call[0].type === 'series-label',
-      );
-      expect(seriesLabelCall).toBeDefined();
-
-      const edit: ElementEdit = seriesLabelCall![0];
-      expect(edit.type).toBe('series-label');
-      if (edit.type === 'series-label') {
-        expect(edit.series).toBe(seriesName);
-        // No existing offset, so offset = delta (35, 18)
-        expect(edit.offset.dx).toBe(35);
-        expect(edit.offset.dy).toBe(18);
-      }
-
-      chart.destroy();
-    });
-  });
 
   // =========================================================================
   // 8. element field on annotation edit payloads
   // =========================================================================
   describe('element field on annotation edit payloads', () => {
-    it('keeps first-leaf drag pointers canonical in both callbacks', () => {
+    it('keeps first-leaf drag pointers canonical', () => {
       const onEdit = vi.fn();
-      const onEditTransaction = vi.fn();
-      const chart = createChart(
-        container,
-        { layer: [textAnnotatedSpec] },
-        { onEdit, onEditTransaction },
-      );
+      const chart = createChart(container, { layer: [textAnnotatedSpec] }, { onEdit });
       const annotation = container.querySelector('.oc-annotation-text');
       expect(annotation).not.toBeNull();
       simulateDrag(annotation!, 100, 100, 150, 130);
-      expect(onEdit.mock.calls[0][0].element.path).toBe('/layer/0/annotations/0/offset');
-      expect(onEditTransaction.mock.calls[0][0].ops.map((op: { path: string }) => op.path)).toEqual(
-        [
-          '/layer/0/annotations/0/anchor',
-          '/layer/0/annotations/0/offset',
-          '/layer/0/annotations/0/responsive',
-        ],
-      );
+      expect(onEdit.mock.calls[0][0].ops.map((op: { path: string }) => op.path)).toEqual([
+        '/layer/0/annotations/0/anchor',
+        '/layer/0/annotations/0/offset',
+        '/layer/0/annotations/0/responsive',
+      ]);
       chart.destroy();
     });
 
@@ -1245,12 +1092,13 @@ describe('edit events', () => {
       simulateDrag(annotation, 100, 100, 150, 130);
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('annotation');
-      if (edit.type === 'annotation') {
-        expect(edit.element).toMatchObject({ type: 'annotation', index: 0 });
-        expect(edit.element.path).toBe('/annotations/0/offset');
-      }
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+      expect(edit.ops.some((op) => op.path.endsWith('/offset'))).toBe(true);
+
+      expect(edit.ops[0].path).toMatch(/^\/annotations\/0\//);
+      expect(edit.ops.find((op) => op.path.endsWith('/offset'))?.path).toBe(
+        '/annotations/0/offset',
+      );
 
       chart.destroy();
     });
@@ -1282,11 +1130,10 @@ describe('edit events', () => {
       simulateDrag(annotation, 100, 100, 150, 130);
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('annotation');
-      if (edit.type === 'annotation') {
-        expect(edit.element.id).toBe('test-id');
-      }
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+      expect(edit.ops.some((op) => op.path.endsWith('/offset'))).toBe(true);
+
+      expect(edit.ops[0].expect?.id).toBe('test-id');
 
       chart.destroy();
     });
@@ -1304,11 +1151,10 @@ describe('edit events', () => {
       simulateDrag(annotation, 100, 100, 150, 130);
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('annotation');
-      if (edit.type === 'annotation') {
-        expect(edit.element.id).toBeUndefined();
-      }
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+      expect(edit.ops.some((op) => op.path.endsWith('/offset'))).toBe(true);
+
+      expect(edit.ops[0].expect?.id).toBeUndefined();
 
       chart.destroy();
     });
@@ -1349,12 +1195,14 @@ describe('edit events', () => {
       simulateDrag(fromHandle, 100, 100, 130, 115);
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('annotation-connector');
-      if (edit.type === 'annotation-connector') {
-        expect(edit.element).toMatchObject({ type: 'annotation', index: 0, id: 'conn-id' });
-        expect(edit.element.path).toBe('/annotations/0/connectorOffset/from');
-      }
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+      expect(edit.ops.some((op) => op.path.endsWith('/connectorOffset'))).toBe(true);
+
+      expect(edit.ops[0].path).toMatch(/^\/annotations\/0\//);
+      expect(edit.ops[0].expect?.id).toBe('conn-id');
+      expect(edit.ops.find((op) => op.path.endsWith('/connectorOffset'))?.path).toBe(
+        '/annotations/0/connectorOffset',
+      );
 
       chart.destroy();
     });
@@ -1374,14 +1222,12 @@ describe('edit events', () => {
       simulateDrag(rangeLabel, 100, 100, 140, 120);
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('range-label');
-      if (edit.type === 'range-label') {
-        expect(edit.element.type).toBe('annotation');
-        if (edit.element.type === 'annotation') {
-          expect(edit.element.index).toBe(0);
-        }
-      }
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+      expect(edit.ops.some((op) => op.path.endsWith('/labelOffset'))).toBe(true);
+
+      expect(edit.ops[0].path).toMatch(/^\/annotations\//);
+
+      expect(edit.ops[0].path).toMatch(/^\/annotations\/0\//);
 
       chart.destroy();
     });
@@ -1401,14 +1247,12 @@ describe('edit events', () => {
       simulateDrag(reflineLabel, 100, 100, 130, 115);
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('refline-label');
-      if (edit.type === 'refline-label') {
-        expect(edit.element.type).toBe('annotation');
-        if (edit.element.type === 'annotation') {
-          expect(edit.element.index).toBe(0);
-        }
-      }
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+      expect(edit.ops.some((op) => op.path.endsWith('/labelOffset'))).toBe(true);
+
+      expect(edit.ops[0].path).toMatch(/^\/annotations\//);
+
+      expect(edit.ops[0].path).toMatch(/^\/annotations\/0\//);
 
       chart.destroy();
     });
@@ -1484,20 +1328,25 @@ describe('edit events', () => {
       const cy = Number(handle.getAttribute('cy'));
       simulateDrag(handle, cx, cy, cx + 30, cy + 20);
 
-      const anchorCall = onEdit.mock.calls.find(
-        (call: [ElementEdit]) => call[0].type === 'annotation-anchor',
+      const anchorCall = onEdit.mock.calls.find((call: [EditTransaction]) =>
+        call[0].ops.some((op) => op.path.endsWith('/x')),
       );
       expect(anchorCall).toBeDefined();
-      const edit: ElementEdit = anchorCall![0];
-      expect(edit.type).toBe('annotation-anchor');
-      if (edit.type === 'annotation-anchor') {
-        expect(edit.annotation).toBeDefined();
-        expect(edit.element.type).toBe('annotation');
-        expect(edit.x).toBeDefined();
-        expect(edit.y).toBeDefined();
-      }
+      const edit: EditTransaction = anchorCall![0];
+      expect(edit.ops.some((op) => op.path.endsWith('/x'))).toBe(true);
+
+      expect(edit.ops[0].expect).toBeDefined();
+      expect(edit.ops[0].path).toMatch(/^\/annotations\//);
+      expect(valueAt(edit, '/x')).toBeDefined();
+      expect(valueAt(edit, '/y')).toBeDefined();
 
       chart.destroy();
     });
   });
 });
+
+function valueAt<T>(tx: EditTransaction, suffix: string): T {
+  const op = tx.ops.find((op) => op.path.endsWith(suffix));
+  expect(op, `transaction operation ending in ${suffix}`).toBeDefined();
+  return op!.value as T;
+}

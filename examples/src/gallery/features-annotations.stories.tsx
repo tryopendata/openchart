@@ -717,7 +717,7 @@ export function AnnotationGestures() {
     const chart = createChart(host.current, spec, {
       editable: true,
       revision,
-      onEditTransaction: (tx) => {
+      onEdit: (tx) => {
         const result = applyEditTransaction(spec, tx);
         if (!result.ok) throw new Error(result.error.reason);
         spec = result.spec;

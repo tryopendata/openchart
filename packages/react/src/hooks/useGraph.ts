@@ -6,7 +6,6 @@
  * graph instance. The full vanilla GraphInstance API is threaded through.
  */
 
-import type { GraphSpec } from '@opendata-ai/openchart-core';
 import type {
   CameraFlightOptions,
   GraphCamera,
@@ -83,7 +82,6 @@ export interface GraphHandle {
   setActiveCategories: (values: string[]) => void;
   getActiveCategories: () => string[];
   /** Re-compile encoding/legend/chrome without restarting the simulation. */
-  updateVisuals: (spec: GraphSpec) => void;
   /** The underlying GraphInstance from the vanilla adapter. */
   instance: GraphInstance | null;
 }

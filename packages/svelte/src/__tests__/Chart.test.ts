@@ -154,14 +154,14 @@ describe('annotation transactions', () => {
       editable: true,
       autoResize: false,
       revision: 'one',
-      onedittransaction: (tx: unknown) => transactions.push(tx),
+      onedit: (tx: unknown) => transactions.push(tx),
     });
     await rerender({
       spec,
       editable: true,
       autoResize: false,
       revision: 'two',
-      onedittransaction: (tx: unknown) => transactions.push(tx),
+      onedit: (tx: unknown) => transactions.push(tx),
     });
     container
       .querySelector('[data-annotation-index="0"]')!
@@ -197,7 +197,7 @@ it('reacts to transaction listener presence without enabling all charts for edit
   const cursor = () =>
     (container.querySelector('[data-annotation-index="0"]') as SVGElement).style.cursor;
   expect(cursor()).not.toBe('grab');
-  await rerender({ spec, onedittransaction: (tx: unknown) => transactions.push(tx) });
+  await rerender({ spec, onedit: (tx: unknown) => transactions.push(tx) });
   expect(cursor()).toBe('grab');
   container
     .querySelector('[data-annotation-index="0"]')!
@@ -206,7 +206,7 @@ it('reacts to transaction listener presence without enabling all charts for edit
     .querySelector('svg')!
     .dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
   expect(transactions).toHaveLength(1);
-  await rerender({ spec, onedittransaction: undefined });
+  await rerender({ spec, onedit: undefined });
   expect(cursor()).not.toBe('grab');
 });
 

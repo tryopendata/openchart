@@ -1,4 +1,4 @@
-import type { ChartSpec, ElementEdit, ElementRef } from '@opendata-ai/openchart-core';
+import type { ChartSpec, EditTransaction, ElementRef } from '@opendata-ai/openchart-core';
 import { elementRef } from '@opendata-ai/openchart-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createContainer } from '../__test-fixtures__/dom';
@@ -384,11 +384,10 @@ describe('selection events', () => {
       simulateKeyDown(getSvg(container), 'Delete');
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('delete');
-      if (edit.type === 'delete') {
-        expect(edit.element.type).toBe('chrome');
-      }
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+      expect(edit.ops.some((op) => op.op === 'remove')).toBe(true);
+
+      expect(edit.ops[0].path).toMatch(/^\/chrome\//);
 
       chart.destroy();
     });
@@ -408,8 +407,8 @@ describe('selection events', () => {
       simulateKeyDown(getSvg(container), 'Backspace');
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('delete');
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+      expect(edit.ops.some((op) => op.op === 'remove')).toBe(true);
 
       chart.destroy();
     });
@@ -443,8 +442,8 @@ describe('selection events', () => {
       simulateKeyDown(getSvg(container), 'Delete');
 
       // onEdit should not have been called with type 'delete'
-      const deleteCalls = onEdit.mock.calls.filter(
-        (call: [ElementEdit]) => call[0].type === 'delete',
+      const deleteCalls = onEdit.mock.calls.filter((call: [EditTransaction]) =>
+        call[0].ops.some((op) => op.op === 'remove'),
       );
       expect(deleteCalls).toHaveLength(0);
 
@@ -489,7 +488,7 @@ describe('selection events', () => {
       chart.destroy();
     });
 
-    it('Arrow keys cycle through editable elements when one is selected', () => {
+    it('Tab and Shift+Tab cycle through editable elements when one is selected', () => {
       const onSelect = vi.fn();
       const onDeselect = vi.fn();
       const chart = createChart(container, chromeOnlySpec, { onSelect, onDeselect });
@@ -508,8 +507,8 @@ describe('selection events', () => {
         expect(firstRef.key).toBe('title');
       }
 
-      // ArrowDown should cycle to the next element (subtitle), deselecting title
-      simulateKeyDown(getSvg(container), 'ArrowDown');
+      // Tab should cycle to the next element (subtitle), deselecting title
+      simulateKeyDown(getSvg(container), 'Tab');
 
       expect(onDeselect).toHaveBeenCalledTimes(1);
       expect(onSelect).toHaveBeenCalledTimes(2);
@@ -518,6 +517,10 @@ describe('selection events', () => {
       if (secondRef.type === 'chrome') {
         expect(secondRef.key).toBe('subtitle');
       }
+      getSvg(container).dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true }),
+      );
+      expect(chart.getSelectedElement()).toMatchObject({ type: 'chrome', key: 'title' });
 
       chart.destroy();
     });
@@ -697,11 +700,10 @@ describe('selection events', () => {
       chart.destroy();
     });
 
-    it('pressing Enter in the overlay fires onEdit and onTextEdit when text changed', () => {
+    it('pressing Enter in the overlay fires onEdit when text changed', () => {
       const onSelect = vi.fn();
       const onEdit = vi.fn();
-      const onTextEdit = vi.fn();
-      const chart = createChart(container, selectionSpec, { onSelect, onEdit, onTextEdit });
+      const chart = createChart(container, selectionSpec, { onSelect, onEdit });
 
       const titleEl = container.querySelector('[data-chrome-key="title"]') as SVGElement | null;
       if (!titleEl) {
@@ -723,17 +725,12 @@ describe('selection events', () => {
       // Press Enter to commit
       textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
 
-      expect(onTextEdit).toHaveBeenCalledTimes(1);
-      expect(onTextEdit.mock.calls[0][1]).toBe('GDP Growth'); // oldText
-      expect(onTextEdit.mock.calls[0][2]).toBe('New Title'); // newText
-
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('text-edit');
-      if (edit.type === 'text-edit') {
-        expect(edit.oldText).toBe('GDP Growth');
-        expect(edit.newText).toBe('New Title');
-      }
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+      expect(edit.ops.some((op) => op.path.endsWith('/chrome/title'))).toBe(true);
+
+      expect(edit.ops[0].path).toBe('/chrome/title');
+      expect((edit.ops[0].value as { text: string }).text).toBe('New Title');
 
       chart.destroy();
     });
@@ -741,8 +738,7 @@ describe('selection events', () => {
     it('pressing Escape in the overlay cancels without firing callbacks', () => {
       const onSelect = vi.fn();
       const onEdit = vi.fn();
-      const onTextEdit = vi.fn();
-      const chart = createChart(container, selectionSpec, { onSelect, onEdit, onTextEdit });
+      const chart = createChart(container, selectionSpec, { onSelect, onEdit });
 
       const titleEl = container.querySelector('[data-chrome-key="title"]') as SVGElement | null;
       if (!titleEl) {
@@ -764,10 +760,8 @@ describe('selection events', () => {
       // Press Escape to cancel
       textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 
-      // Neither onTextEdit nor onEdit should be called for text-edit type
-      expect(onTextEdit).not.toHaveBeenCalled();
-      const textEditCalls = onEdit.mock.calls.filter(
-        (call: [ElementEdit]) => call[0].type === 'text-edit',
+      const textEditCalls = onEdit.mock.calls.filter((call: [EditTransaction]) =>
+        call[0].ops.some((op) => op.path.endsWith('/text') || op.path.startsWith('/chrome/')),
       );
       expect(textEditCalls).toHaveLength(0);
 
@@ -783,8 +777,7 @@ describe('selection events', () => {
     it('text edit does not fire when text has not changed', () => {
       const onSelect = vi.fn();
       const onEdit = vi.fn();
-      const onTextEdit = vi.fn();
-      const chart = createChart(container, selectionSpec, { onSelect, onEdit, onTextEdit });
+      const chart = createChart(container, selectionSpec, { onSelect, onEdit });
 
       const titleEl = container.querySelector('[data-chrome-key="title"]') as SVGElement | null;
       if (!titleEl) {
@@ -804,9 +797,8 @@ describe('selection events', () => {
       textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
 
       // Neither callback should fire since text is unchanged
-      expect(onTextEdit).not.toHaveBeenCalled();
-      const textEditCalls = onEdit.mock.calls.filter(
-        (call: [ElementEdit]) => call[0].type === 'text-edit',
+      const textEditCalls = onEdit.mock.calls.filter((call: [EditTransaction]) =>
+        call[0].ops.some((op) => op.path.endsWith('/text') || op.path.startsWith('/chrome/')),
       );
       expect(textEditCalls).toHaveLength(0);
 
@@ -920,14 +912,13 @@ describe('selection events', () => {
       textarea!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('add');
-      if (edit.type === 'add') {
-        expect(edit.annotation.type).toBe('text');
-        expect(edit.annotation.text).toBe('New annotation');
-        expect(typeof edit.annotation.x).toBe('number');
-        expect(typeof edit.annotation.y).toBe('number');
-      }
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+      expect(edit.ops.some((op) => op.op === 'add')).toBe(true);
+
+      expect((edit.ops[0].value as { type: string }).type).toBe('text');
+      expect((edit.ops[0].value as { text: string }).text).toBe('New annotation');
+      expect(typeof (edit.ops[0].value as { x: unknown }).x).toBe('number');
+      expect(typeof (edit.ops[0].value as { y: unknown }).y).toBe('number');
 
       chart.destroy();
     });
@@ -1048,13 +1039,12 @@ describe('selection events', () => {
       textarea!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('add');
-      if (edit.type === 'add') {
-        expect(edit.annotation.type).toBe('text');
-        expect(typeof edit.annotation.x).not.toBe('undefined');
-        expect(typeof edit.annotation.y).not.toBe('undefined');
-      }
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+      expect(edit.ops.some((op) => op.op === 'add')).toBe(true);
+
+      expect((edit.ops[0].value as { type: string }).type).toBe('text');
+      expect(typeof (edit.ops[0].value as { x: unknown }).x).not.toBe('undefined');
+      expect(typeof (edit.ops[0].value as { y: unknown }).y).not.toBe('undefined');
 
       chart.destroy();
     });

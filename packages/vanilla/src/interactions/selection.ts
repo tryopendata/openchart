@@ -34,8 +34,6 @@ export function findElementByRef(svg: SVGElement, ref: ElementRef): SVGElement |
     }
     case 'chrome':
       return svg.querySelector(`[data-chrome-key="${ref.key}"]`) as SVGElement | null;
-    case 'series-label':
-      return svg.querySelector(`.oc-mark-label[data-series="${ref.series}"]`) as SVGElement | null;
     // The editable legend is the color legend. Excluding the size legend
     // explicitly rather than relying on it rendering second: `querySelector`
     // takes the first match, so a bare `.oc-legend` would silently retarget
@@ -80,13 +78,6 @@ export function buildElementRef(
   if (chromeEl) {
     const key = chromeEl.getAttribute('data-chrome-key') as ChromeKey;
     if (key) return elementRef.chrome(key, `/chrome/${key}`);
-  }
-
-  const seriesLabelEl = element.closest('.oc-mark-label[data-series]');
-  if (seriesLabelEl) {
-    const series = seriesLabelEl.getAttribute('data-series');
-    if (series)
-      return elementRef.seriesLabel(series, `/labels/offsets/${encodePointerToken(series)}`);
   }
 
   const legendEntryEl = element.closest('[data-legend-index]');
@@ -135,17 +126,6 @@ export function getEditableElements(
       }
     } else if (layout.annotations.some((a, j) => (a.specIndex ?? j) === i))
       refs.push(elementRef.annotation(i, annotations[i].id, `${path}/${i}`));
-  }
-
-  const seriesLabels: string[] = [];
-  for (const mark of layout.marks) {
-    if (mark.type === 'line' && mark.label?.visible && mark.seriesKey) {
-      seriesLabels.push(mark.seriesKey);
-    }
-  }
-  seriesLabels.sort();
-  for (const series of seriesLabels) {
-    refs.push(elementRef.seriesLabel(series));
   }
 
   if ('entries' in layout.legend && layout.legend.entries.length > 0) {
@@ -208,8 +188,6 @@ export function refsEqual(a: ElementRef | null, b: ElementRef | null): boolean {
     }
     case 'chrome':
       return a.key === (b as typeof a).key;
-    case 'series-label':
-      return a.series === (b as typeof a).series;
     case 'legend':
       return true;
     case 'legend-entry': {

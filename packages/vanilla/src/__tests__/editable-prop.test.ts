@@ -1,4 +1,4 @@
-import type { ChartSpec, ElementEdit } from '@opendata-ai/openchart-engine';
+import type { ChartSpec, EditTransaction } from '@opendata-ai/openchart-engine';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createContainer, createMouseEvent } from '../__test-fixtures__/dom';
 import { barSpec, lineSpec } from '../__test-fixtures__/specs';
@@ -116,8 +116,8 @@ describe('editable prop', () => {
     svg?.dispatchEvent(deleteEvent);
 
     // No delete edit should fire
-    const deleteEdits = onEdit.mock.calls.filter(
-      (call: [ElementEdit]) => call[0].type === 'delete',
+    const deleteEdits = onEdit.mock.calls.filter((call: [EditTransaction]) =>
+      call[0].ops.some((op) => op.op === 'remove'),
     );
     expect(deleteEdits).toHaveLength(0);
 

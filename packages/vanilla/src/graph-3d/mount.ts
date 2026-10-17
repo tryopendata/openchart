@@ -1,4 +1,3 @@
-import { warnDeprecated } from '../deprecations';
 /**
  * The 3D graph renderer: a `GraphInstance` backed by `3d-force-graph`.
  *
@@ -1830,10 +1829,6 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
     update,
     // `update()` already routes an id-set-preserving change through the
     // material-mutation path, which never touches `graphData()`.
-    updateVisuals: (spec) => {
-      warnDeprecated('updateVisuals is deprecated; use update.');
-      update(spec);
-    },
     search,
     clearSearch,
     zoomToFit,

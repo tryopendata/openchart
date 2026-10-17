@@ -233,9 +233,6 @@ export const Graph = defineComponent({
       getActiveCategories(): string[] {
         return instance?.getActiveCategories() ?? [];
       },
-      updateVisuals(spec: GraphSpec) {
-        instance?.updateVisuals(spec);
-      },
       get instance() {
         return instance;
       },

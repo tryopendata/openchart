@@ -1,4 +1,5 @@
-import type { EditOp, EditTransaction, ElementEdit } from '@opendata-ai/openchart-core';
+import type { EditOp, EditTransaction } from '@opendata-ai/openchart-core';
+import type { GestureEdit } from './gesture-edit';
 
 type Node = Record<string, unknown>;
 const object = (value: unknown): Node | undefined =>
@@ -10,10 +11,10 @@ export { annotationSource } from '@opendata-ai/openchart-core';
 
 import { annotationSource } from '@opendata-ai/openchart-core';
 
-/** Bridge existing gesture events to authored operations without changing legacy callbacks. */
+/** Convert internal gesture descriptions to atomic authored operations. */
 export function editToTransaction(
   spec: unknown,
-  edit: ElementEdit,
+  edit: GestureEdit,
   revision?: string | number,
 ): EditTransaction | null {
   const root = object(spec) ?? {};
@@ -21,7 +22,6 @@ export function editToTransaction(
   const ops: EditOp[] = [];
   const set = (path: string, value: unknown, expect?: EditOp['expect']) =>
     ops.push({ op: 'set', path, value, ...(expect ? { expect } : {}) });
-  if (edit.type === 'legend-toggle') return null;
   if (edit.type === 'add') {
     ops.push({ op: 'add', path: `${source.path}/-`, value: edit.annotation });
   } else if ('element' in edit && edit.element.type === 'annotation') {
@@ -114,9 +114,6 @@ export function editToTransaction(
       path: '/legend',
       value: { ...(object(root.legend) ?? {}), show: false },
     });
-  } else if (edit.type === 'series-label') {
-    const key = edit.series.replace(/~/g, '~0').replace(/\//g, '~1');
-    ops.push({ op: 'add', path: `/labels/offsets/${key}`, value: edit.offset });
   }
   return ops.length ? { ...(revision !== undefined ? { revision } : {}), ops } : null;
 }

@@ -24,10 +24,8 @@ export interface UseChartOptions {
   theme?: MountOptions['theme'];
   /** Dark mode setting. */
   darkMode?: MountOptions['darkMode'];
-  /** Data point click handler. */
-  onDataPointClick?: MountOptions['onDataPointClick'];
-  /** Enable responsive resizing. Defaults to true. */
-  responsive?: boolean;
+  /** Observe container resizes. Defaults to true. */
+  autoResize?: boolean;
   /** Rendering backend for point marks; see the vanilla `MountOptions.renderer`. */
   renderer?: MountOptions['renderer'];
 }
@@ -69,8 +67,7 @@ export function useChart(
     const mountOpts: MountOptions = {
       theme: options?.theme,
       darkMode: options?.darkMode,
-      onDataPointClick: options?.onDataPointClick,
-      responsive: options?.responsive,
+      autoResize: options?.autoResize,
       renderer: options?.renderer,
     };
 
@@ -85,13 +82,7 @@ export function useChart(
       setLayout(null);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    options?.theme,
-    options?.darkMode,
-    options?.onDataPointClick,
-    options?.responsive,
-    options?.renderer,
-  ]);
+  }, [options?.theme, options?.darkMode, options?.autoResize, options?.renderer]);
 
   // Update on spec change
   useEffect(() => {

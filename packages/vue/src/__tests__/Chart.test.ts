@@ -162,7 +162,7 @@ describe('annotation transactions', () => {
         editable: true,
         autoResize: false,
         revision: 'one',
-        'onEdit-transaction': (tx: unknown) => transactions.push(tx),
+        onEdit: (tx: unknown) => transactions.push(tx),
       },
     });
     await flushPromises();
@@ -200,13 +200,13 @@ it('reacts to transaction listener presence without enabling all charts for edit
   const cursor = () =>
     (wrapper.find('[data-annotation-index="0"]').element as SVGElement).style.cursor;
   expect(cursor()).not.toBe('grab');
-  await wrapper.setProps({ 'onEdit-transaction': (tx: unknown) => transactions.push(tx) });
+  await wrapper.setProps({ onEdit: (tx: unknown) => transactions.push(tx) });
   await flushPromises();
   expect(cursor()).toBe('grab');
   await wrapper.find('[data-annotation-index="0"]').trigger('click');
   await wrapper.find('svg').trigger('keydown', { key: 'Delete' });
   expect(transactions).toHaveLength(1);
-  await wrapper.setProps({ 'onEdit-transaction': undefined });
+  await wrapper.setProps({ onEdit: undefined });
   await flushPromises();
   expect(cursor()).not.toBe('grab');
   wrapper.unmount();

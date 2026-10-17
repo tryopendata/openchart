@@ -55,10 +55,6 @@ export interface ChartProps<TData extends DataRow = DataRow> extends ChartEventH
   renderer?: 'auto' | 'svg' | 'canvas';
   /** Observe container resizes. */
   autoResize?: boolean;
-  /** @deprecated Use autoResize. */
-  responsive?: boolean;
-  /** Callback when a data point is clicked. @deprecated Use onMarkClick instead. */
-  onDataPointClick?: (data: Record<string, unknown>) => void;
   /** The currently selected element (controlled). */
   selectedElement?: ElementRef;
   /** Highlight specific color-encoding values. Pass null to clear. */
@@ -99,21 +95,16 @@ function ChartInner(
     darkMode,
     renderer,
     autoResize,
-    responsive,
     revision,
-    onEditTransaction,
-    onDataPointClick,
+    onEdit,
     onMarkClick,
     onMarkHover,
     onMarkLeave,
     onLegendToggle,
     onHighlightChange,
     onAnnotationClick,
-    onAnnotationEdit,
-    onEdit,
     onSelect,
     onDeselect,
-    onTextEdit,
     onReveal,
     editable,
     selectedElement: selectedElementProp,
@@ -123,7 +114,7 @@ function ChartInner(
   }: ChartProps,
   ref: React.Ref<ChartHandle>,
 ) {
-  const hasTransactionListener = Boolean(onEditTransaction);
+  const hasEditListener = Boolean(onEdit);
   const contextTheme = useVizTheme();
   const contextDarkMode = useVizDarkMode();
   const theme = useMemo(() => mergeThemeConfig(contextTheme, themeProp), [contextTheme, themeProp]);
@@ -137,43 +128,31 @@ function ChartInner(
   // Inline arrow functions create new references every render, which would
   // destroy and recreate the entire chart instance without this pattern.
   const handlersRef = useRef<{
-    onDataPointClick?: ChartProps['onDataPointClick'];
     onMarkClick?: ChartProps['onMarkClick'];
     onMarkHover?: ChartProps['onMarkHover'];
     onMarkLeave?: ChartProps['onMarkLeave'];
     onLegendToggle?: ChartProps['onLegendToggle'];
     onHighlightChange?: ChartProps['onHighlightChange'];
     onAnnotationClick?: ChartProps['onAnnotationClick'];
-    onAnnotationEdit?: ChartProps['onAnnotationEdit'];
     onEdit?: ChartProps['onEdit'];
-    onEditTransaction?: ChartProps['onEditTransaction'];
     onSelect?: ChartProps['onSelect'];
     onDeselect?: ChartProps['onDeselect'];
-    onTextEdit?: ChartProps['onTextEdit'];
     onReveal?: ChartProps['onReveal'];
   }>({});
   handlersRef.current = {
-    onEditTransaction,
-    onDataPointClick,
+    onEdit,
     onMarkClick,
     onMarkHover,
     onMarkLeave,
     onLegendToggle,
     onHighlightChange,
     onAnnotationClick,
-    onAnnotationEdit,
-    onEdit,
     onSelect,
     onDeselect,
-    onTextEdit,
     onReveal,
   };
 
   // Stable callback wrappers that read from refs
-  const stableOnDataPointClick = useCallback(
-    (data: Record<string, unknown>) => handlersRef.current.onDataPointClick?.(data),
-    [],
-  );
   const stableOnMarkClick = useCallback(
     (event: import('@opendata-ai/openchart-core').MarkEvent) =>
       handlersRef.current.onMarkClick?.(event),
@@ -201,20 +180,8 @@ function ChartInner(
     ) => handlersRef.current.onAnnotationClick?.(annotation, event, element),
     [],
   );
-  const stableOnAnnotationEdit = useCallback(
-    (
-      annotation: import('@opendata-ai/openchart-core').TextAnnotation,
-      updatedOffset: import('@opendata-ai/openchart-core').AnnotationOffset,
-    ) => handlersRef.current.onAnnotationEdit?.(annotation, updatedOffset),
-    [],
-  );
   const stableOnEdit = useCallback(
-    (edit: import('@opendata-ai/openchart-core').ElementEdit) => handlersRef.current.onEdit?.(edit),
-    [],
-  );
-  const stableOnEditTransaction = useCallback(
-    (tx: import('@opendata-ai/openchart-core').EditTransaction) =>
-      handlersRef.current.onEditTransaction?.(tx),
+    (tx: import('@opendata-ai/openchart-core').EditTransaction) => handlersRef.current.onEdit?.(tx),
     [],
   );
   const stableOnSelect = useCallback(
@@ -223,11 +190,6 @@ function ChartInner(
   );
   const stableOnDeselect = useCallback(
     (element: ElementRef) => handlersRef.current.onDeselect?.(element),
-    [],
-  );
-  const stableOnTextEdit = useCallback(
-    (element: ElementRef, oldText: string, newText: string) =>
-      handlersRef.current.onTextEdit?.(element, oldText, newText),
     [],
   );
   const stableOnReveal = useCallback(
@@ -266,7 +228,6 @@ function ChartInner(
       theme,
       darkMode: resolvedDarkMode,
       renderer,
-      ...(handlersRef.current.onDataPointClick ? { onDataPointClick: stableOnDataPointClick } : {}),
       onMarkClick: stableOnMarkClick,
       onMarkHover: stableOnMarkHover,
       onMarkLeave: stableOnMarkLeave,
@@ -276,20 +237,14 @@ function ChartInner(
       // Only include editing callbacks when the consumer provides them.
       // The stable wrappers are always truthy, so gating on handlersRef
       // avoids adding unstable prop references to the effect deps.
-      ...(handlersRef.current.onAnnotationEdit ? { onAnnotationEdit: stableOnAnnotationEdit } : {}),
-      ...(handlersRef.current.onEdit ? { onEdit: stableOnEdit } : {}),
       ...(handlersRef.current.onSelect ? { onSelect: stableOnSelect } : {}),
       ...(handlersRef.current.onDeselect ? { onDeselect: stableOnDeselect } : {}),
-      ...(handlersRef.current.onTextEdit ? { onTextEdit: stableOnTextEdit } : {}),
       ...(handlersRef.current.onReveal ? { onReveal: stableOnReveal } : {}),
       ...(editable != null ? { editable } : {}),
       ...(selectedElementProp ? { selectedElement: selectedElementProp } : {}),
       autoResize,
-      responsive,
       revision,
-      ...(handlersRef.current.onEditTransaction
-        ? { onEditTransaction: stableOnEditTransaction }
-        : {}),
+      ...(handlersRef.current.onEdit ? { onEdit: stableOnEdit } : {}),
     };
 
     chartRef.current = createChart(container, spec, options);
@@ -307,21 +262,16 @@ function ChartInner(
     renderer,
     editable,
     stableOnAnnotationClick,
-    stableOnDataPointClick,
     stableOnEdit,
-    stableOnEditTransaction,
-    hasTransactionListener,
+    hasEditListener,
     autoResize,
-    responsive,
     stableOnLegendToggle,
     stableOnHighlightChange,
     stableOnMarkClick,
     stableOnMarkHover,
     stableOnMarkLeave,
-    stableOnAnnotationEdit,
     stableOnSelect,
     stableOnDeselect,
-    stableOnTextEdit,
     stableOnReveal,
   ]);
 

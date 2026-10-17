@@ -116,7 +116,7 @@ function mountOffscreen(
   document.body.appendChild(container);
 
   // enter:false → first spec settled immediately; update:true → tween on
-  // beginManualUpdate. responsive:false → no ResizeObserver on a detached node.
+  // beginManualUpdate. autoResize:false → no ResizeObserver on a detached node.
   const settledSpec = settleAnimation(spec);
   let instance: ReturnType<typeof createChart>;
   try {
@@ -124,7 +124,7 @@ function mountOffscreen(
       darkMode,
       theme: themeConfig,
       renderer,
-      responsive: false,
+      autoResize: false,
     });
   } catch (err) {
     // A spec that fails to compile must not leak the offscreen container.

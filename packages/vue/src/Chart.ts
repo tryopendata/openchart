@@ -8,16 +8,13 @@
 
 import type {
   Annotation,
-  AnnotationOffset,
   ChartSpec,
   DarkMode,
   EditTransaction,
-  ElementEdit,
   ElementRef,
   GraphSpec,
   LayerSpec,
   MarkEvent,
-  TextAnnotation,
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
 import { mergeThemeConfig } from '@opendata-ai/openchart-core';
@@ -43,10 +40,8 @@ export interface ChartProps {
   /** Rendering backend for point marks; see the vanilla `MountOptions.renderer`. */
   renderer?: 'auto' | 'svg' | 'canvas';
   autoResize?: boolean;
-  /** @deprecated Use autoResize. */
-  responsive?: boolean;
   revision?: string | number;
-  onEditTransaction?: (tx: EditTransaction) => void;
+  onEdit?: (tx: EditTransaction) => void;
   class?: string;
   style?: string | CSSProperties;
 }
@@ -73,12 +68,11 @@ export const Chart = defineComponent({
     // A declared listener prop makes presence reactive. Vue excludes declared
     // emits listeners from update checks, which would leave editing enabled
     // when a parent removes its transaction listener.
-    onEditTransaction: {
+    onEdit: {
       type: Function as PropType<(tx: EditTransaction) => void>,
       default: undefined,
     },
     autoResize: { type: Boolean, default: undefined },
-    responsive: { type: Boolean, default: undefined },
     revision: { type: [String, Number] as PropType<string | number>, default: undefined },
     class: {
       type: String,
@@ -107,15 +101,8 @@ export const Chart = defineComponent({
     'mark-leave': () => true,
     'legend-toggle': (_series: string, _visible: boolean) => true,
     'annotation-click': (_annotation: Annotation, _event: MouseEvent, _element: ElementRef) => true,
-    /** @deprecated Use edit-transaction. */
-    'annotation-edit': (_annotation: TextAnnotation, _updatedOffset: AnnotationOffset) => true,
-    edit: (_edit: ElementEdit) => true,
     select: (_element: ElementRef) => true,
     deselect: (_element: ElementRef) => true,
-    /** @deprecated Use edit-transaction. */
-    'text-edit': (_element: ElementRef, _oldText: string, _newText: string) => true,
-    /** @deprecated Has no effect; use mark-click. */
-    'data-point-click': (_data: Record<string, unknown>) => true,
   },
   setup(props, { emit, expose }) {
     const containerRef = ref<HTMLDivElement | null>(null);
@@ -128,16 +115,11 @@ export const Chart = defineComponent({
 
     // Check which event listeners are bound by the parent.
     // Vue 3 passes listeners as onXxx props on the component vnode.
-    // Legacy listener gates retain their 8.x setup behavior; transaction
-    // listener presence is a reactive prop below.
+    // Edit listener presence is a reactive prop below.
     const vm = getCurrentInstance();
     const vnodeProps = vm?.vnode.props ?? {};
-    const hasAnnotationEditListener =
-      'onAnnotation-edit' in vnodeProps || 'onAnnotationEdit' in vnodeProps;
-    const hasEditListener = 'onEdit' in vnodeProps;
     const hasSelectListener = 'onSelect' in vnodeProps;
     const hasDeselectListener = 'onDeselect' in vnodeProps;
-    const hasTextEditListener = 'onText-edit' in vnodeProps || 'onTextEdit' in vnodeProps;
 
     function resolveTheme(): ThemeConfig | undefined {
       return mergeThemeConfig(contextTheme?.value, props.theme);
@@ -155,9 +137,6 @@ export const Chart = defineComponent({
         theme: resolveTheme(),
         darkMode: resolveDarkMode(),
         renderer: props.renderer,
-        ...('onDataPointClick' in vnodeProps || 'onData-point-click' in vnodeProps
-          ? { onDataPointClick: (data: Record<string, unknown>) => emit('data-point-click', data) }
-          : {}),
         onMarkClick: (event: MarkEvent) => emit('mark-click', event),
         onMarkHover: (event: MarkEvent) => emit('mark-hover', event),
         onMarkLeave: () => emit('mark-leave'),
@@ -167,33 +146,17 @@ export const Chart = defineComponent({
           emit('annotation-click', annotation, event, element),
         // Only include editing callbacks when the parent binds a listener.
         // Without this gate, every chart gets drag editing wired up.
-        ...(hasAnnotationEditListener
-          ? {
-              onAnnotationEdit: (annotation: TextAnnotation, updatedOffset: AnnotationOffset) =>
-                emit('annotation-edit', annotation, updatedOffset),
-            }
-          : {}),
-        ...(hasEditListener ? { onEdit: (edit: ElementEdit) => emit('edit', edit) } : {}),
         ...(hasSelectListener
           ? { onSelect: (element: ElementRef) => emit('select', element) }
           : {}),
         ...(hasDeselectListener
           ? { onDeselect: (element: ElementRef) => emit('deselect', element) }
           : {}),
-        ...(hasTextEditListener
-          ? {
-              onTextEdit: (element: ElementRef, oldText: string, newText: string) =>
-                emit('text-edit', element, oldText, newText),
-            }
-          : {}),
         ...(props.editable != null ? { editable: props.editable } : {}),
         ...(props.selectedElement ? { selectedElement: props.selectedElement } : {}),
         autoResize: props.autoResize,
-        responsive: props.responsive,
         revision: props.revision,
-        ...(props.onEditTransaction
-          ? { onEditTransaction: (tx: EditTransaction) => vm?.emit('edit-transaction', tx) }
-          : {}),
+        ...(props.onEdit ? { onEdit: (tx: EditTransaction) => props.onEdit?.(tx) } : {}),
       };
 
       instance = createChart(container, props.spec, options);
@@ -278,9 +241,8 @@ export const Chart = defineComponent({
     // Recreate chart when theme, darkMode, renderer, or editable change
     watch(
       [
-        () => Boolean(props.onEditTransaction),
+        () => Boolean(props.onEdit),
         () => props.autoResize,
-        () => props.responsive,
         () => props.theme,
         () => props.darkMode,
         () => props.renderer,

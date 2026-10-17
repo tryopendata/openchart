@@ -19,7 +19,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 // A stub GraphInstance whose methods we can assert against.
 const instanceStub = {
   update: vi.fn(),
-  updateVisuals: vi.fn(),
   search: vi.fn(),
   clearSearch: vi.fn(),
   getSearchMatches: vi.fn(() => ['a']),

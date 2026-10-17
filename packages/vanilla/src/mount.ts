@@ -1,6 +1,6 @@
-import { warnDeprecated } from './deprecations';
 import { createAnnotationNudges } from './interactions/annotation-nudges';
 import { annotationSource, editToTransaction } from './interactions/edit-transactions';
+import type { GestureEdit } from './interactions/gesture-edit';
 import { canTransitionSpecShape } from './transition/gate';
 import { reconcileSVG } from './transition/reconcile';
 import { sampleLayout } from './transition/scene';
@@ -21,7 +21,6 @@ import type {
   CompileOptions,
   DarkMode,
   DataRow,
-  ElementEdit,
   ElementRef,
   GraphSpec,
   LayerSpec,
@@ -75,7 +74,6 @@ import {
   wireKeyboardNav,
   wireLegendDrag,
   wireLegendInteraction,
-  wireSeriesLabelDrag,
   wireTooltipEvents,
   wireVoronoiTooltipEvents,
 } from './interactions';
@@ -109,11 +107,6 @@ export interface MountOptions extends ChartEventHandlers {
    * console warning for non-point marks and faceted/layered/sparkline charts.
    */
   renderer?: 'auto' | 'svg' | 'canvas';
-  /** Callback when a data point is clicked. @deprecated Use onMarkClick instead. */
-  onDataPointClick?: (data: Record<string, unknown>) => void;
-  /** Enable responsive resizing. Defaults to true. */
-  /** @deprecated Use autoResize. */
-  responsive?: boolean;
   /** Observe container resizing. Defaults to true. */
   autoResize?: boolean;
   /** Show the OpenData watermark. Defaults to true. */
@@ -218,13 +211,7 @@ function makeEditable(svg: SVGElement): void {
 }
 
 function hasEditingCallbacks(opts?: MountOptions): boolean {
-  return !!(
-    opts?.onEditTransaction ||
-    opts?.onEdit ||
-    opts?.onSelect ||
-    opts?.onDeselect ||
-    opts?.onTextEdit
-  );
+  return !!(opts?.onEdit || opts?.onSelect || opts?.onDeselect);
 }
 
 // ---------------------------------------------------------------------------
@@ -613,14 +600,6 @@ export function createChart<TData extends DataRow = DataRow>(
   // Selection & text editing
   // ---------------------------------------------------------------------------
 
-  if (options?.onDataPointClick)
-    warnDeprecated('onDataPointClick is deprecated and has no effect; use onMarkClick.');
-  if (options?.onAnnotationEdit)
-    warnDeprecated('onAnnotationEdit is deprecated; use onEditTransaction.');
-  if (options?.onTextEdit) warnDeprecated('onTextEdit is deprecated; use onEditTransaction.');
-  if (options?.responsive !== undefined)
-    warnDeprecated('The mount responsive option is deprecated; use autoResize.');
-
   let editRevision = options?.revision;
   const annotationNudges = createAnnotationNudges(
     () => ({
@@ -632,17 +611,11 @@ export function createChart<TData extends DataRow = DataRow>(
     emitEdit,
   );
 
-  function emitEdit(edit: ElementEdit): void {
+  function emitEdit(edit: GestureEdit): void {
     const tx = editToTransaction(currentSpec, edit, editRevision);
-    if (!tx && edit.type !== 'legend-toggle') return;
-    if (tx && !applyEditTransaction(currentSpec, tx).ok) return;
-    if ('element' in edit && edit.element.type === 'annotation') {
-      const base = `${annotationSource(currentSpec).path}/${edit.element.index}`;
-      const suffix = edit.element.path?.replace(/^.*\/annotations\/\d+/, '') ?? '';
-      edit = { ...edit, element: { ...edit.element, path: base + suffix } };
-    }
-    if (tx) options?.onEditTransaction?.(tx);
-    options?.onEdit?.(edit);
+    if (!tx) return;
+    if (!applyEditTransaction(currentSpec, tx).ok) return;
+    options?.onEdit?.(tx);
   }
 
   function getSpecAnnotations(): Annotation[] {
@@ -689,6 +662,7 @@ export function createChart<TData extends DataRow = DataRow>(
   }
 
   function enterTextEditing(): void {
+    annotationNudges.flush();
     if (!svgElement || !selectedElement || isTextEditingActive) return;
 
     const specAnnotations = getSpecAnnotations();
@@ -716,7 +690,6 @@ export function createChart<TData extends DataRow = DataRow>(
         textEditCleanup = null;
 
         if (newText !== currentText) {
-          options?.onTextEdit?.(editRef, currentText, newText);
           emitEdit({
             type: 'text-edit',
             element: editRef,
@@ -797,12 +770,7 @@ export function createChart<TData extends DataRow = DataRow>(
       }
 
       // Double-click on empty canvas: create a new annotation
-      if (
-        !ref &&
-        (options?.onEdit || options?.onEditTransaction) &&
-        currentLayout?.xInvert &&
-        currentLayout?.yInvert
-      ) {
+      if (!ref && options?.onEdit && currentLayout?.xInvert && currentLayout?.yInvert) {
         const svgEl = svg as SVGSVGElement;
         const viewBox = svgEl.viewBox?.baseVal;
         const svgRect = svgEl.getBoundingClientRect();
@@ -883,31 +851,18 @@ export function createChart<TData extends DataRow = DataRow>(
           break;
         }
 
-        case 'ArrowDown':
-        case 'ArrowRight': {
-          if (!isTextEditingActive && selectedElement) {
-            e.preventDefault();
+        case 'Tab': {
+          if (!isTextEditingActive) {
             const editables = getEditableElements(currentSpec, currentLayout);
-            if (editables.length === 0) break;
-
-            const currentIndex = editables.findIndex((r) => refsEqual(r, selectedElement));
-            const nextIndex = currentIndex >= editables.length - 1 ? 0 : currentIndex + 1;
-
-            selectElement(editables[nextIndex]);
-          }
-          break;
-        }
-
-        case 'ArrowUp':
-        case 'ArrowLeft': {
-          if (!isTextEditingActive && selectedElement) {
+            if (!editables.length) break;
             e.preventDefault();
-            const editables = getEditableElements(currentSpec, currentLayout);
-            if (editables.length === 0) break;
-
+            annotationNudges.flush();
             const currentIndex = editables.findIndex((r) => refsEqual(r, selectedElement));
-            const nextIndex = currentIndex <= 0 ? editables.length - 1 : currentIndex - 1;
-
+            const nextIndex = e.shiftKey
+              ? currentIndex <= 0
+                ? editables.length - 1
+                : currentIndex - 1
+              : (currentIndex + 1) % editables.length;
             selectElement(editables[nextIndex]);
           }
           break;
@@ -927,7 +882,8 @@ export function createChart<TData extends DataRow = DataRow>(
 
     svg.addEventListener('keydown', handleKeyDown);
     const flushNudges = () => annotationNudges.flush();
-    svg.addEventListener('keyup', flushNudges);
+    const releaseNudge = (event: KeyboardEvent) => annotationNudges.keyup(event);
+    svg.addEventListener('keyup', releaseNudge);
     const startGesture = (event: MouseEvent | TouchEvent) => {
       const target = event.target as Element;
       const ref = buildElementRef(target, getSpecAnnotations());
@@ -972,7 +928,7 @@ export function createChart<TData extends DataRow = DataRow>(
 
     return () => {
       svg.removeEventListener('keydown', handleKeyDown);
-      svg.removeEventListener('keyup', flushNudges);
+      svg.removeEventListener('keyup', releaseNudge);
       svg.removeEventListener('mousedown', startGesture, true);
       svg.removeEventListener('touchstart', startGesture, true);
       document.removeEventListener('pointercancel', flushNudges, true);
@@ -1073,10 +1029,7 @@ export function createChart<TData extends DataRow = DataRow>(
       // Point marks are pixels on a canvas, not selectable elements, so
       // per-mark edit selection is unavailable. Annotation, chrome, and legend
       // editing still work -- those stay in the SVG. Warned once per mount.
-      if (
-        !warnedCanvasEditMode &&
-        (options?.editable || hasEditingCallbacks(options) || options?.onAnnotationEdit)
-      ) {
+      if (!warnedCanvasEditMode && (options?.editable || hasEditingCallbacks(options))) {
         warnedCanvasEditMode = true;
         console.warn(
           'openchart: canvas mark mode does not support per-mark edit selection. ' +
@@ -1139,7 +1092,9 @@ export function createChart<TData extends DataRow = DataRow>(
 
     // Wire keyboard navigation. Skipped when the author hid the chart from
     // assistive technology (a11y.hidden): a hidden chart must not be a tab stop.
-    if (!currentLayout.a11y.hidden) {
+    const keyboardEditing =
+      !wantsSeriesSearch(currentSpec) && (options?.editable ?? hasEditingCallbacks(options));
+    if (!currentLayout.a11y.hidden && !keyboardEditing) {
       cleanupKeyboardNav = wireKeyboardNav(
         svgElement,
         container,
@@ -1157,7 +1112,7 @@ export function createChart<TData extends DataRow = DataRow>(
     if (
       editSuppressed &&
       !editSuppressWarned &&
-      (options?.editable || hasEditingCallbacks(options) || options?.onAnnotationEdit)
+      (options?.editable || hasEditingCallbacks(options))
     ) {
       editSuppressWarned = true;
       console.warn(
@@ -1186,7 +1141,6 @@ export function createChart<TData extends DataRow = DataRow>(
       currentLayout,
       toggleSeriesVisibility,
       options?.onLegendToggle,
-      editSuppressed ? undefined : emitEdit,
       hoverEmphasis,
     );
 
@@ -1214,15 +1168,10 @@ export function createChart<TData extends DataRow = DataRow>(
     const dragAnnotations = getSpecAnnotations();
 
     // Wire annotation drag editing
-    if (
-      !editSuppressed &&
-      (options?.editable ??
-        Boolean(options?.onAnnotationEdit || options?.onEdit || options?.onEditTransaction))
-    ) {
+    if (!editSuppressed && (options?.editable ?? Boolean(options?.onEdit))) {
       cleanupAnnotationDrag = wireAnnotationDrag(
         svgElement,
         dragAnnotations,
-        options?.onAnnotationEdit,
         emitEdit,
         setDragging,
         currentLayout,
@@ -1231,10 +1180,7 @@ export function createChart<TData extends DataRow = DataRow>(
     }
 
     // Wire all edit drag handlers when onEdit is provided (or editable is true)
-    if (
-      !editSuppressed &&
-      (options?.editable ?? Boolean(options?.onEdit || options?.onEditTransaction))
-    ) {
+    if (!editSuppressed && (options?.editable ?? Boolean(options?.onEdit))) {
       const editCleanups: Array<() => void> = [];
       const onEditFn = emitEdit;
 
@@ -1261,7 +1207,6 @@ export function createChart<TData extends DataRow = DataRow>(
       const editSpec = currentSpec as ChartSpec | GraphSpec;
       editCleanups.push(wireChromeDrag(svgElement, editSpec, onEditFn, setDragging));
       editCleanups.push(wireLegendDrag(svgElement, editSpec, onEditFn, setDragging));
-      editCleanups.push(wireSeriesLabelDrag(svgElement, editSpec, onEditFn, setDragging));
 
       cleanupEditDrags = () => {
         for (const cleanup of editCleanups) {
@@ -1733,7 +1678,7 @@ export function createChart<TData extends DataRow = DataRow>(
   container.dataset.ocFontsState = pending ? 'pending' : 'ready';
 
   // Set up responsive resize
-  if ((options?.autoResize ?? options?.responsive) !== false) {
+  if (options?.autoResize !== false) {
     disconnectResize = observeResize(container, (width, height) => {
       const widthChanged = lastRenderedWidth === null || Math.abs(width - lastRenderedWidth) >= 0.5;
       const selfInducedHeight =

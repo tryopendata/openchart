@@ -243,10 +243,6 @@ export function setActiveCategories(values: string[]): void {
 export function getActiveCategories(): string[] {
   return instance?.getActiveCategories() ?? [];
 }
-
-export function updateVisuals(nextSpec: GraphSpec): void {
-  instance?.updateVisuals(nextSpec);
-}
 </script>
 
 <div
