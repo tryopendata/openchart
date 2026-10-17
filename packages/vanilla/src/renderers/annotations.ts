@@ -316,7 +316,12 @@ function renderAnnotation(
     const fontSize = annotation.label.style.fontSize ?? DEFAULT_ANNOTATION_FONT_SIZE;
     const lineHeight = fontSize * (annotation.label.style.lineHeight ?? DEFAULT_LINE_HEIGHT);
 
-    fillRichText(text, annotation.label.text, annotation.label.x, lineHeight);
+    fillRichText(
+      text,
+      annotation.label.lines?.join('\n') ?? annotation.label.text,
+      annotation.label.x,
+      lineHeight,
+    );
 
     // Render background rect behind text if specified, otherwise use
     // paint-order stroke halo to knock out lines behind text
@@ -361,7 +366,12 @@ function renderAnnotation(
       const subFontSize = annotation.subtitle.style.fontSize ?? DEFAULT_ANNOTATION_FONT_SIZE;
       const subLineHeight =
         subFontSize * (annotation.subtitle.style.lineHeight ?? DEFAULT_LINE_HEIGHT);
-      fillRichText(sub, annotation.subtitle.text, annotation.subtitle.x, subLineHeight);
+      fillRichText(
+        sub,
+        annotation.subtitle.lines?.join('\n') ?? annotation.subtitle.text,
+        annotation.subtitle.x,
+        subLineHeight,
+      );
       g.appendChild(sub);
     }
   }

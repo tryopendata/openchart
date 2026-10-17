@@ -546,6 +546,8 @@ A callout label positioned at a data coordinate.
 | `y`          | `string \| number`   | (required)             | Y-axis data value or position.                                                                                         |
 | `text`       | `string`             | (required)             | The annotation text. Supports `\n` for line breaks and `**bold**` spans.                                               |
 | `subtitle`   | `string`             | `undefined`            | Optional muted second-tone text rendered below `text`. Use for supporting context (methodology, source, etc.). Supports `**bold**` too. |
+| `maxWidth` | `number \| null` | unlimited | Optional positive wrapping width in pixels; null disables wrapping. |
+| `subtitleFontSize` | `number` | `round(fontSize * 0.85)` | Optional positive subtitle size in pixels. |
 | `dot`        | `boolean \| AnnotationDot` | see below        | Open-ring marker on the data point. Appears by default on non-arrowed connectors. `false` for none, an object to restyle. |
 | `label`      | `string`             | `undefined`            | Additional label text.                                                                                                 |
 | `fontSize`   | `number`             | `13`                   | Font size override in pixels.                                                                                          |
@@ -640,6 +642,7 @@ A horizontal or vertical reference line.
 | `strokeWidth` | `number`                          | `1`                    | Line width in pixels.               |
 | `labelOffset` | `AnnotationOffset`                | `undefined`            | Pixel offset for the label.         |
 | `labelAnchor` | `AnnotationAnchor`                | `'auto'`               | Label placement direction.          |
+| `labelPlacement` | `'auto' \| 'start' \| 'end' \| 'outside'` | legacy anchor behavior | Opt-in screen-space end selection, automatic containment, or a reserved outside gutter/lane. `labelAnchor` selects the side; an authored offset pins the base. |
 | `fontSize`    | `number`                          | `11`                   | Font size override for the label (px). |
 | `fontWeight`  | `number`                          | `400`                  | Font weight override for the label. |
 | `fill`        | `string`                          | `undefined`            | Fill color.                         |
@@ -1916,3 +1919,17 @@ Measured channels accept finite numbers and nonblank numeric strings, including 
 Maps, tile maps, bar lists and Sankey support arrows for inspection and Enter/Space for their existing click callbacks, including when `tooltip: false`. Escape dismisses inspection; Tab exits naturally. A keyboard-focused map mark uses arrows for mark navigation; the map root retains its separate zoom/pan shortcuts. Tables restore keyed cell/header focus across updates and keep native mobile detail disclosures operable.
 
 Table `rowKey` values must be unique to support identity across revisions. Numeric `1` and string `"1"` are distinct. Missing/duplicate keys emit `TABLE_ROW_KEY_AMBIGUOUS` and use revision-local identities. Treat compiled row IDs as opaque. CSV export includes all filtered and sorted rows, not just the current pagination page.
+
+
+### Compact callout limits and note sizing (8.12)
+
+`responsive.compactAnnotationLimit?: number | null` is an optional nonnegative
+integer limit below 400px outer width. Omitted/null means unlimited; zero demotes
+all eligible callouts. `responsive: false` callouts are exempt. Priority/source
+order precedes coverage/collision thinning. Existing disabled-response and
+short-height rules still apply. Facet panel width does not trigger this limit.
+
+Read `layout.chrome.noteBandHeight` for note space and `layout.dimensions.height`
+for the final rendered/exported height. `chromeLayout: 'grow'` also supports facets;
+`chrome.grownHeight` reports engine-added height for auto-height consumers.
+See [8.12 migration guidance](./migrating-v8.md#812-annotation-layout-opt-ins).

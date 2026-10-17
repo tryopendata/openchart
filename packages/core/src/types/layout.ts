@@ -132,6 +132,8 @@ export interface ResolvedChrome {
   footnotes?: AnnotationFootnote[];
   /** Reserved annotation-note and series-summary band, independent of the current demoted set. */
   noteBandHeight?: number;
+  /** Height added by the engine in grow mode; hosts must not add it again. */
+  grownHeight?: number;
   /** Responsive series readout above source/methodology. */
   seriesSummary?: Array<{ key: string; text: string; lines: string[]; color: string }>;
   /** Absolute y at which bottom-chrome relative offsets are anchored: area.y + area.height + x-axis extent. */
@@ -658,6 +660,8 @@ export type Mark =
  * The collision engine determines whether labels are visible or demoted to tooltip-only.
  */
 export interface ResolvedLabel {
+  /** Engine-wrapped display lines; text retains the original identity string. */
+  lines?: string[];
   /** Label text content. */
   text: string;
   /** Computed x position. */
@@ -684,6 +688,8 @@ export interface ResolvedLabel {
     endpoint?: Point;
     /** Author's from-end nudge, re-applied on every geometry rebuild (mirrors `endpoint` for `to`). */
     fromOffset?: { dx: number; dy: number };
+    /** Fixed label attachment for outside-reference gutter leaders; retained during animation. */
+    labelAttachment?: 'left-center';
     /** Connector line color. */
     stroke: string;
     /** Connector style: straight line, curved arrow, or vertical drop-line through the data point. */
@@ -762,6 +768,7 @@ export interface ResolvedAnnotation {
    * label. Positioned `lineHeight * primaryLineCount + gap` below `label.y`.
    */
   subtitle?: {
+    lines?: string[];
     text: string;
     x: number;
     y: number;

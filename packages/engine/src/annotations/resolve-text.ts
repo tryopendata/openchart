@@ -11,6 +11,7 @@ import type {
   ResolvedLabel,
   TextAnnotation,
   TextStyle,
+  ThemeColors,
 } from '@opendata-ai/openchart-core';
 import type { ResolvedScales } from '../layout/scales';
 import {
@@ -51,6 +52,7 @@ import {
   unionRects,
 } from './geometry';
 import { resolvePosition } from './position';
+import { wrapAnnotationText } from './wrap-text';
 
 /** The resolved endpoint marker on a text annotation. */
 type ResolvedDot = NonNullable<ResolvedAnnotation['dot']>;
@@ -62,9 +64,14 @@ type ResolvedDot = NonNullable<ResolvedAnnotation['dot']>;
  *
  * The marker inherits the same color, so leader and dot read as one system.
  */
-function defaultConnectorStroke(hasArrow: boolean, isDark: boolean, textInk: string): string {
+function defaultConnectorStroke(
+  hasArrow: boolean,
+  isDark: boolean,
+  textInk: string,
+  colors?: ThemeColors,
+): string {
   if (hasArrow) return textInk;
-  return isDark ? DARK_CONNECTOR_STROKE : LIGHT_CONNECTOR_STROKE;
+  return colors?.annotationLeader ?? (isDark ? DARK_CONNECTOR_STROKE : LIGHT_CONNECTOR_STROKE);
 }
 
 /**
@@ -83,6 +90,7 @@ function resolveDot(
   y: number,
   isDark: boolean,
   connectorStroke: string,
+  colors?: ThemeColors,
 ): ResolvedDot | undefined {
   const useDefault = dotSpec === undefined && hasConnector && !hasArrow;
   if (!dotSpec && !useDefault) return undefined;
@@ -92,7 +100,8 @@ function resolveDot(
     x,
     y,
     radius: dotConfig.radius ?? DEFAULT_DOT_RADIUS,
-    fill: dotConfig.fill ?? (isDark ? DARK_DOT_FILL : LIGHT_DOT_FILL),
+    fill:
+      dotConfig.fill ?? colors?.annotationMarkerFill ?? (isDark ? DARK_DOT_FILL : LIGHT_DOT_FILL),
     stroke: dotConfig.stroke ?? connectorStroke,
     strokeWidth: dotConfig.strokeWidth ?? DEFAULT_DOT_STROKE_WIDTH,
   };
@@ -134,6 +143,7 @@ export function textConnectorSeed(
   annotation: TextAnnotation,
   scales: ResolvedScales,
   isDark: boolean,
+  colors?: ThemeColors,
 ): ResolvedLabel['connector'] {
   const config = resolveConnectorConfig(annotation.connector);
   const x = resolvePosition(annotation.x, scales.x);
@@ -154,7 +164,8 @@ export function textConnectorSeed(
       defaultConnectorStroke(
         config.arrow,
         isDark,
-        annotation.fill ?? (isDark ? DARK_TEXT_FILL : LIGHT_TEXT_FILL),
+        annotation.fill ?? colors?.annotationLabel ?? (isDark ? DARK_TEXT_FILL : LIGHT_TEXT_FILL),
+        colors,
       ),
     ...(config.bend !== undefined ? { bend: config.bend } : {}),
     ...(annotation.connectorOffset?.from
@@ -175,9 +186,11 @@ export function textConnectorSeed(
 function resolveLabelBackground(
   background: string | true | undefined,
   isDark: boolean,
+  colors?: ThemeColors,
 ): string | undefined {
   if (background === undefined) return undefined;
-  if (background === true) return isDark ? DARK_LABEL_BACKGROUND : LIGHT_LABEL_BACKGROUND;
+  if (background === true)
+    return colors?.annotationPlate ?? (isDark ? DARK_LABEL_BACKGROUND : LIGHT_LABEL_BACKGROUND);
   return background;
 }
 
@@ -211,6 +224,7 @@ export function resolveLedeFontWeight(annotation: TextAnnotation): number | unde
   return annotation.subtitle ? LEDE_FONT_WEIGHT : undefined;
 }
 
+/** Resolve wrapped display geometry, retaining authored text as the identity. */
 export function resolveTextAnnotation(
   annotation: TextAnnotation,
   scales: ResolvedScales,
@@ -218,14 +232,72 @@ export function resolveTextAnnotation(
   isDark: boolean,
   measure: AnnotationMeasureTextFn = heuristicMeasure,
   fontFamily?: string,
+  colors?: ThemeColors,
+): ResolvedAnnotation | null {
+  if (annotation.maxWidth == null)
+    return resolveTextAnnotationDisplay(
+      annotation,
+      scales,
+      chartArea,
+      isDark,
+      measure,
+      fontFamily,
+      colors,
+    );
+  const fontSize = annotation.fontSize ?? DEFAULT_ANNOTATION_FONT_SIZE;
+  const lines = wrapAnnotationText(
+    annotation.text,
+    annotation.maxWidth,
+    { fontSize, fontWeight: resolveLedeFontWeight(annotation) },
+    measure,
+  );
+  const subLines = annotation.subtitle
+    ? wrapAnnotationText(
+        annotation.subtitle,
+        annotation.maxWidth,
+        {
+          fontSize: annotation.subtitleFontSize ?? subtitleFontSize(fontSize),
+          fontWeight: SUBTITLE_FONT_WEIGHT,
+        },
+        measure,
+      )
+    : undefined;
+  const resolved = resolveTextAnnotationDisplay(
+    { ...annotation, text: lines.join('\n'), subtitle: subLines?.join('\n') },
+    scales,
+    chartArea,
+    isDark,
+    measure,
+    fontFamily,
+    colors,
+  );
+  if (resolved?.label) {
+    resolved.label.text = annotation.text;
+    resolved.label.lines = lines;
+  }
+  if (resolved?.subtitle) {
+    resolved.subtitle.text = annotation.subtitle!;
+    resolved.subtitle.lines = subLines;
+  }
+  return resolved;
+}
+
+function resolveTextAnnotationDisplay(
+  annotation: TextAnnotation,
+  scales: ResolvedScales,
+  chartArea: Rect,
+  isDark: boolean,
+  measure: AnnotationMeasureTextFn = heuristicMeasure,
+  fontFamily?: string,
+  colors?: ThemeColors,
 ): ResolvedAnnotation | null {
   const px = resolvePosition(annotation.x, scales.x);
   const py = resolvePosition(annotation.y, scales.y);
 
   if (px === null || py === null) return null;
 
-  const defaultTextFill = isDark ? DARK_TEXT_FILL : LIGHT_TEXT_FILL;
-  const labelBackground = resolveLabelBackground(annotation.background, isDark);
+  const defaultTextFill = colors?.annotationLabel ?? (isDark ? DARK_TEXT_FILL : LIGHT_TEXT_FILL);
+  const labelBackground = resolveLabelBackground(annotation.background, isDark, colors);
 
   const labelStyle = makeAnnotationLabelStyle(
     annotation.fontSize,
@@ -251,6 +323,7 @@ export function resolveTextAnnotation(
       labelBackground,
       isDark,
       measure,
+      colors,
     );
   }
 
@@ -291,7 +364,7 @@ export function resolveTextAnnotation(
           annotation.subtitle,
           {
             ...labelStyle,
-            fontSize: subtitleFontSize(fontSize),
+            fontSize: annotation.subtitleFontSize ?? subtitleFontSize(fontSize),
             fontWeight: SUBTITLE_FONT_WEIGHT,
             textAnchor: 'start',
           },
@@ -317,10 +390,11 @@ export function resolveTextAnnotation(
   let annotationBounds: Rect = labelBounds;
   if (annotation.subtitle) {
     const primaryLineCount = annotation.text.split('\n').length;
-    const mutedFill = isDark ? DARK_MUTED_TEXT_FILL : LIGHT_MUTED_TEXT_FILL;
+    const mutedFill =
+      colors?.annotationMuted ?? (isDark ? DARK_MUTED_TEXT_FILL : LIGHT_MUTED_TEXT_FILL);
     const subtitleStyle: TextStyle = {
       ...labelStyle,
-      fontSize: subtitleFontSize(fontSize),
+      fontSize: annotation.subtitleFontSize ?? subtitleFontSize(fontSize),
       fontWeight: SUBTITLE_FONT_WEIGHT,
       fill: mutedFill,
     };
@@ -351,7 +425,7 @@ export function resolveTextAnnotation(
   // The marker shares the color so it reads as part of the same gesture.
   const connectorStroke =
     annotation.stroke ??
-    defaultConnectorStroke(connectorArrow, isDark, labelStyle.fill ?? defaultTextFill);
+    defaultConnectorStroke(connectorArrow, isDark, labelStyle.fill ?? defaultTextFill, colors);
   const dot = resolveDot(
     annotation.dot,
     showConnector,
@@ -360,6 +434,7 @@ export function resolveTextAnnotation(
     endpoint.y,
     isDark,
     connectorStroke,
+    colors,
   );
 
   // Connector origin: ray from the block center (label ∪ subtitle) to the data
@@ -456,12 +531,13 @@ function resolveDropLineAnnotation(
   labelBackground: string | undefined,
   isDark: boolean,
   measure: AnnotationMeasureTextFn = heuristicMeasure,
+  colors?: ThemeColors,
 ): ResolvedAnnotation {
   const fontSize = annotation.fontSize ?? DEFAULT_ANNOTATION_FONT_SIZE;
   const fontWeight = Number(labelStyle.fontWeight) || DEFAULT_ANNOTATION_FONT_WEIGHT;
   const lines = annotation.text.split('\n');
   const subtitleLines = annotation.subtitle ? annotation.subtitle.split('\n') : [];
-  const subFontSize = subtitleFontSize(fontSize);
+  const subFontSize = annotation.subtitleFontSize ?? subtitleFontSize(fontSize);
   const estimatedWidth = Math.max(
     0,
     ...lines.map((line) => measureRichLine(line, { fontSize, fontWeight }, measure)),
@@ -518,7 +594,9 @@ function resolveDropLineAnnotation(
   // marker too — and the line stops short of it by the same rule as the other
   // connector styles. Quiet voice: gray hairline, marker in the same gray.
   const connectorStroke =
-    annotation.stroke ?? (isDark ? DARK_CONNECTOR_STROKE : LIGHT_CONNECTOR_STROKE);
+    annotation.stroke ??
+    colors?.annotationLeader ??
+    (isDark ? DARK_CONNECTOR_STROKE : LIGHT_CONNECTOR_STROKE);
   const endpoint = {
     x: px + (annotation.connectorOffset?.to?.dx ?? 0),
     y: py + (annotation.connectorOffset?.to?.dy ?? 0),
@@ -531,6 +609,7 @@ function resolveDropLineAnnotation(
     endpoint.y,
     isDark,
     connectorStroke,
+    colors,
   );
   const bottomGap = connectorPullbackGap(markerClearance(dot), false);
 
@@ -558,7 +637,7 @@ function resolveDropLineAnnotation(
       ...resolvedStyle,
       fontSize: subFontSize,
       fontWeight: SUBTITLE_FONT_WEIGHT,
-      fill: isDark ? DARK_MUTED_TEXT_FILL : LIGHT_MUTED_TEXT_FILL,
+      fill: colors?.annotationMuted ?? (isDark ? DARK_MUTED_TEXT_FILL : LIGHT_MUTED_TEXT_FILL),
     };
     // `lineHeight` here is already the pixel line-height, which is what the shared
     // formula takes.

@@ -314,22 +314,19 @@ describe('auto-thinning in faceted charts', () => {
     }
   });
 
-  it.each([
-    false,
-    true,
-  ])('retains facet subtract behavior with spec-level grow=%s until the facet opt-in phase', (onSpec) => {
+  it.each([false, true])('grows facet chrome once with spec-level grow=%s', (onSpec) => {
     const options = { width: 640, height: 600 };
     const baseline = compileChart(facetedSpec, options);
     const grown = compileChart(
       onSpec ? { ...facetedSpec, chromeLayout: 'grow' } : facetedSpec,
       onSpec ? options : { ...options, chromeLayout: 'grow' },
     );
-    expect(grown.dimensions).toEqual(baseline.dimensions);
-    expect(grown.area).toEqual(baseline.area);
-    expect(grown.facet!.panels.map((panel) => panel.area)).toEqual(
-      baseline.facet!.panels.map((panel) => panel.area),
-    );
-    expect(grown.chrome.bottomAnchorY).toEqual(baseline.chrome.bottomAnchorY);
+    const growth = grown.chrome.grownHeight!;
+    expect(growth).toBeGreaterThan(0);
+    expect(grown.dimensions.height - baseline.dimensions.height).toBeCloseTo(growth);
+    expect(grown.area.height - baseline.area.height).toBeCloseTo(growth);
+    expect(grown.facet!.panels.length).toBe(baseline.facet!.panels.length);
+    expect(grown.chrome.noteBandHeight).toBe(baseline.chrome.noteBandHeight);
   });
 
   it('reserves each facet source once and keeps the grid fixed when notes disappear', () => {

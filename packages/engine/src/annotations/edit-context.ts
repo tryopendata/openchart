@@ -70,6 +70,7 @@ export function createAnnotationEditContext(
         context.isDark,
         context.measure,
         context.fontFamily,
+        context.colors,
       );
       if (!base) continue;
       entries.push({
@@ -83,7 +84,12 @@ export function createAnnotationEditContext(
         resolved: structuredClone(resolved),
         base,
         anchor,
-        connectorSeed: textConnectorSeed(metadata.authored, context.scales, context.isDark),
+        connectorSeed: textConnectorSeed(
+          metadata.authored,
+          context.scales,
+          context.isDark,
+          context.colors,
+        ),
         context: {
           ...context,
           chartArea: { ...context.chartArea },

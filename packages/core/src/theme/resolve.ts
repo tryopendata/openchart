@@ -12,6 +12,7 @@
 
 import { isOpaqueColor } from '../colors/contrast';
 import { deriveNeutralRamp } from '../colors/neutral';
+import { cssTokenDefault } from '../styles/token-definitions';
 import type { ChromeThemeOverride, ThemeConfig } from '../types/spec';
 import type { ChromeDefaults, ResolvedTheme, ThemeBase, TokenValue } from '../types/theme';
 
@@ -78,6 +79,20 @@ function themeConfigToPartial(config: ThemeConfig): Partial<ThemeBase> {
         colors.annotationFill = resolveTokenLight(config.colors.annotationFill);
       if (config.colors.annotationText)
         colors.annotationText = resolveTokenLight(config.colors.annotationText);
+      if (config.colors.annotationLabel)
+        colors.annotationLabel = resolveTokenLight(config.colors.annotationLabel);
+      if (config.colors.annotationMuted)
+        colors.annotationMuted = resolveTokenLight(config.colors.annotationMuted);
+      if (config.colors.annotationLeader)
+        colors.annotationLeader = resolveTokenLight(config.colors.annotationLeader);
+      if (config.colors.annotationRule)
+        colors.annotationRule = resolveTokenLight(config.colors.annotationRule);
+      if (config.colors.annotationRangeFill)
+        colors.annotationRangeFill = resolveTokenLight(config.colors.annotationRangeFill);
+      if (config.colors.annotationMarkerFill)
+        colors.annotationMarkerFill = resolveTokenLight(config.colors.annotationMarkerFill);
+      if (config.colors.annotationPlate)
+        colors.annotationPlate = resolveTokenLight(config.colors.annotationPlate);
       if (config.colors.positive) colors.positive = resolveTokenLight(config.colors.positive);
       if (config.colors.negative) colors.negative = resolveTokenLight(config.colors.negative);
     }
@@ -169,6 +184,13 @@ function collectTokenPairs(
       'axis',
       'annotationFill',
       'annotationText',
+      'annotationLabel',
+      'annotationMuted',
+      'annotationLeader',
+      'annotationRule',
+      'annotationRangeFill',
+      'annotationMarkerFill',
+      'annotationPlate',
       'positive',
       'negative',
     ] as const;
@@ -331,6 +353,24 @@ export function resolveTheme(
   const dark = isDarkBackground(merged.colors.background);
   if (dark) {
     merged = adaptChromeForDarkBg(merged, merged.colors.text);
+    // These defaults historically followed a dark canvas even without darkMode.
+    const authoredColors =
+      userTheme?.colors && !Array.isArray(userTheme.colors) ? userTheme.colors : {};
+    for (const key of [
+      'annotationLabel',
+      'annotationMuted',
+      'annotationLeader',
+      'annotationRule',
+      'annotationRangeFill',
+      'annotationMarkerFill',
+      'annotationPlate',
+    ] as const) {
+      if (authoredColors[key] === undefined)
+        merged.colors[key] = cssTokenDefault(
+          `--oc-${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`,
+          'dark',
+        );
+    }
   }
 
   return {

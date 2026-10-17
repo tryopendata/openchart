@@ -80,6 +80,7 @@ export {
   BRAND_RESERVE_WIDTH,
   COMPACT_WIDTH,
   computeChrome,
+  computeNoteBandHeight,
   estimateTextWidth,
   FOOTNOTE_LINE_HEIGHT,
   footnoteBandHeight,

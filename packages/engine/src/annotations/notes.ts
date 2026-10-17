@@ -47,8 +47,9 @@ export function annotationNoteCapacity(
   width: number,
   theme: ResolvedTheme,
   measureText?: MeasureTextFn,
+  includeSingle = false,
 ): number {
-  if (annotations.length <= 1) return 0;
+  if (annotations.length <= 1 && !includeSingle) return 0;
   const texts = annotations.flatMap((annotation, specIndex) =>
     annotation.type === 'text'
       ? [

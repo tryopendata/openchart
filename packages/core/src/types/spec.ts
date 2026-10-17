@@ -1104,6 +1104,10 @@ export interface TextAnnotation extends AnnotationBase {
    * 700 — the lede + context stack.
    */
   subtitle?: string;
+  /** Subtitle size in pixels. Default: round(fontSize * 0.85). */
+  subtitleFontSize?: number;
+  /** Optional display wrap width in pixels. Omitted or null keeps unbounded lines. */
+  maxWidth?: number | null;
   /**
    * Open-ring marker drawn on the data point itself (not on the pulled-back
    * connector tip).
@@ -1218,6 +1222,8 @@ export interface RefLineAnnotation extends AnnotationBase {
   strokeWidth?: number;
   /** Pixel offset for the reference line label. */
   labelOffset?: AnnotationOffset;
+  /** Opt-in screen-space label placement. Outside reserves a right gutter or top lane; omission preserves legacy labelAnchor behavior. */
+  labelPlacement?: 'auto' | 'start' | 'end' | 'outside';
   /** Anchor direction for the reference line label. */
   labelAnchor?: AnnotationAnchor;
   /** Label font size in pixels. Default: 11. */
@@ -1302,6 +1308,20 @@ export interface ThemeConfig {
         annotationFill?: TokenValue;
         /** Annotation text color. Accepts a TokenValue for light/dark pairs. */
         annotationText?: TokenValue;
+        /** Annotation label color. Accepts a TokenValue light/dark pair. */
+        annotationLabel?: TokenValue;
+        /** Annotation muted color. Accepts a TokenValue light/dark pair. */
+        annotationMuted?: TokenValue;
+        /** Annotation leader color. Accepts a TokenValue light/dark pair. */
+        annotationLeader?: TokenValue;
+        /** Annotation rule color. Accepts a TokenValue light/dark pair. */
+        annotationRule?: TokenValue;
+        /** Annotation rangefill color. Accepts a TokenValue light/dark pair. */
+        annotationRangeFill?: TokenValue;
+        /** Annotation markerfill color. Accepts a TokenValue light/dark pair. */
+        annotationMarkerFill?: TokenValue;
+        /** Annotation plate color. Accepts a TokenValue light/dark pair. */
+        annotationPlate?: TokenValue;
         /** Semantic color for positive/up-trend values. Accepts a TokenValue for light/dark pairs. */
         positive?: TokenValue;
         /** Semantic color for negative/down-trend values. Accepts a TokenValue for light/dark pairs. */
@@ -1630,6 +1650,8 @@ export interface AnimationStagger {
 
 /** Fine-grained responsive behavior configuration. */
 export interface ResponsiveConfig {
+  /** Maximum eligible inline callouts below 400px container width; null or omitted is unlimited. Pinned annotations are exempt. */
+  compactAnnotationLimit?: number | null;
   /** Preserve the final temporal boundary before thinning interior ticks. */
   preserveEnd?: boolean;
   /** Move direct series labels into a keyed list when the inline column cannot fit. */

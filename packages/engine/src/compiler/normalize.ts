@@ -506,6 +506,8 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
     labels: normalizeLabels(spec.labels),
     legend: spec.legend,
     endpointLabels: spec.endpointLabels,
+    compactAnnotationLimit:
+      typeof spec.responsive === 'object' ? spec.responsive.compactAnnotationLimit : undefined,
     responsive: typeof spec.responsive === 'object' ? true : (spec.responsive ?? true),
     autoThin:
       typeof spec.responsive === 'object'

@@ -179,6 +179,27 @@ export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
       annotationText: pairs?.['colors.annotationText']
         ? pairs['colors.annotationText'].dark
         : overridden(theme.colors.annotationText, light.annotationText, darkMuted),
+      annotationLabel:
+        pairs?.['colors.annotationLabel']?.dark ??
+        overridden(theme.colors.annotationLabel, light.annotationLabel, '#d1d5db'),
+      annotationMuted:
+        pairs?.['colors.annotationMuted']?.dark ??
+        overridden(theme.colors.annotationMuted, light.annotationMuted, '#9ca3af'),
+      annotationLeader:
+        pairs?.['colors.annotationLeader']?.dark ??
+        overridden(theme.colors.annotationLeader, light.annotationLeader, '#9aa0a6'),
+      annotationRule:
+        pairs?.['colors.annotationRule']?.dark ??
+        overridden(theme.colors.annotationRule, light.annotationRule, '#9ca3af'),
+      annotationRangeFill:
+        pairs?.['colors.annotationRangeFill']?.dark ??
+        overridden(theme.colors.annotationRangeFill, light.annotationRangeFill, '#f0c040'),
+      annotationMarkerFill:
+        pairs?.['colors.annotationMarkerFill']?.dark ??
+        overridden(theme.colors.annotationMarkerFill, light.annotationMarkerFill, '#0a0a0a'),
+      annotationPlate:
+        pairs?.['colors.annotationPlate']?.dark ??
+        overridden(theme.colors.annotationPlate, light.annotationPlate, '#0a0a0a'),
       categorical,
       categoricalFill,
       hairline: darkHairline,
