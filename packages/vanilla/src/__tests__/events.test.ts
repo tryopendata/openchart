@@ -315,7 +315,7 @@ describe('chart event handlers', () => {
       chart.destroy();
     });
 
-    it('applies transform during drag', () => {
+    it('moves label geometry without translating the data anchor during drag', async () => {
       const onAnnotationEdit = vi.fn();
       const chart = createChart(container, textAnnotatedSpec, { onAnnotationEdit });
 
@@ -325,12 +325,15 @@ describe('chart event handlers', () => {
         return;
       }
 
+      const startX = Number(annotation.querySelector('.oc-annotation-label')!.getAttribute('x'));
       annotation.dispatchEvent(createMouseEvent('mousedown', 100, 100));
       document.dispatchEvent(createMouseEvent('mousemove', 140, 120));
 
-      // During drag, the annotation group should have a transform
-      const transform = annotation.getAttribute('transform');
-      expect(transform).toContain('translate');
+      await new Promise(requestAnimationFrame);
+      expect(annotation.hasAttribute('transform')).toBe(false);
+      expect(Number(annotation.querySelector('.oc-annotation-label')!.getAttribute('x'))).not.toBe(
+        startX,
+      );
 
       // Complete the drag to clean up
       document.dispatchEvent(createMouseEvent('mouseup', 140, 120));

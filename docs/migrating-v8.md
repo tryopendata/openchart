@@ -1296,3 +1296,45 @@ with one color category can still draw a legacy series label, even though the
 suppression truth table describes single-series labels as hidden. Endpoint
 labels also suppress that case, so 8.10 preserves its existing rendering. This
 needs a separate decision before removing the legacy renderer.
+
+### Annotation geometry and editing in 8.11
+
+The first label drag commits `anchor`, `offset`, and `responsive: false` together.
+Use `onEditTransaction` to apply all three atomically. A dragged label stays inline
+at compact widths; its data point stays fixed. The compatibility `onEdit` annotation
+payload also includes the optional `anchor` and `responsive` fields. The deprecated
+`onAnnotationEdit(annotation, offset)` retains its original callback shape and cannot
+represent this complete placement change.
+
+In edit mode, Alt+arrow nudges the selected text annotation by 1px; Alt+Shift+arrow
+uses 10px. Plain arrows still cycle selection. Repeated nudges form one transaction.
+Escape, pointer/touch cancellation, a width change, or document replacement cancels
+an active drag without emitting an edit. A height-only resize waits for the gesture.
+
+Custom editors can import `createAnnotationEditContext`, `previewAnnotationMove`,
+`previewConnectorBend`, `previewConnectorOffset`, and `inverseLabelPlacement` from
+engine. Create the context from the actual compiled layout and matching spec, use
+canonical annotation refs (including `facetInstance` for facets), and recreate it
+after commit or resize. It retains the compiler's private measurement context, so
+JSON-deserialized or hand-built layouts cannot provide editing contexts. The
+renderer still supports hand-built curve layouts through its control-point fallback.
+
+### 8.11: stable annotation note space
+
+Charts with automatic annotation thinning reserve note capacity from their source
+text and subtitles before layout. Pinning or moving a callout can change the
+visible notes without moving the plot, footer, watermark, or SVG edge. The band
+can contain unused space. Pinned source callouts contribute because a fresh
+compile cannot distinguish an authored pin from a drag result. Facets count each
+source once. Charts with automatic thinning disabled retain their existing behavior.
+
+`layout.chrome.noteBandHeight` carries this reserve to renderers and export. It is
+optional for compatibility with older or hand-built layouts; the existing
+`footnoteBandHeight` helpers remain available in 8.11.
+
+With an explicit `subtract` height, enough annotation text can consume the entire
+plot budget, even when those callouts are pinned. The figure keeps its requested
+height; the existing chrome fallback can hide footer content and the plot can
+have zero height. `onDiagnostic` reports `layout.note-capacity` as a non-throwing
+error in this case. Increase the height, explicitly choose `grow` for a non-faceted chart, or reduce the
+annotation text/count. The compiler does not silently change sizing modes.

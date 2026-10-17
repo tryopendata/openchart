@@ -10,10 +10,13 @@
  */
 
 import type { ChartSpec } from '@opendata-ai/openchart-core';
+import { applyEditTransaction } from '@opendata-ai/openchart-core';
 import { Chart } from '@opendata-ai/openchart-react';
-import { useState } from 'react';
+import { createChart } from '@opendata-ai/openchart-vanilla';
+import { useEffect, useRef, useState } from 'react';
 import { Demo, GalleryPage, Section } from '../components';
 import { nvidiaStock, temperatureAnomaly, usInflation, usPayrolls } from '../data';
+import { annotationCurveSpecs, annotationGestureSpec } from './features-annotations.demos';
 
 const ACCENT = '#0e7490';
 
@@ -695,3 +698,87 @@ export const Annotations = () => (
     </Section>
   </GalleryPage>
 );
+
+/** Interactive geometry fixture, deliberately outside the visual baseline registry. */
+export function AnnotationGestures() {
+  const host = useRef<HTMLDivElement>(null);
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    if (!host.current) return;
+    let spec = structuredClone(annotationGestureSpec);
+    let revision = 0;
+    const chart = createChart(host.current, spec, {
+      editable: true,
+      revision,
+      onEditTransaction: (tx) => {
+        const result = applyEditTransaction(spec, tx);
+        if (!result.ok) throw new Error(result.error.reason);
+        spec = result.spec;
+        revision++;
+        setCount((count) => count + 1);
+        chart.update(spec, { revision });
+      },
+    });
+    const replace = () => {
+      spec = structuredClone(spec);
+      chart.update(spec, { revision: ++revision });
+    };
+    const exportSVG = () => {
+      host.current!.dataset.export = chart.export('svg');
+    };
+    const expose = () => {
+      host.current!.dataset.layout = JSON.stringify(chart.layout);
+    };
+    host.current.addEventListener('fixture-replace', replace);
+    host.current.addEventListener('fixture-export', exportSVG);
+    host.current.addEventListener('fixture-layout', expose);
+    return () => {
+      host.current?.removeEventListener('fixture-replace', replace);
+      host.current?.removeEventListener('fixture-export', exportSVG);
+      host.current?.removeEventListener('fixture-layout', expose);
+      chart.destroy();
+    };
+  }, []);
+  return (
+    <div style={{ paddingTop: 56 }}>
+      <div
+        ref={host}
+        data-testid="annotation-gesture-host"
+        style={{ width: '100%', height: 440 }}
+      />
+      <output data-testid="edit-count">{count}</output>
+    </div>
+  );
+}
+
+/** Shares the compiled snapshot with invariant tests, without exposing editor controls. */
+function AnnotationInvariantChart({ spec }: { spec: ChartSpec }) {
+  const host = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const node = host.current!;
+    const chart = createChart(node, spec);
+    const expose = () => {
+      node.dataset.layout = JSON.stringify(chart.layout);
+    };
+    const exportSVG = () => {
+      node.dataset.export = chart.export('svg');
+    };
+    node.addEventListener('fixture-layout', expose);
+    node.addEventListener('fixture-export', exportSVG);
+    return () => {
+      node.removeEventListener('fixture-layout', expose);
+      node.removeEventListener('fixture-export', exportSVG);
+      chart.destroy();
+    };
+  }, [spec]);
+  return <div ref={host} data-testid="annotation-curve" style={{ height: 300 }} />;
+}
+export function AnnotationCurves() {
+  return (
+    <div style={{ paddingTop: 56 }}>
+      {annotationCurveSpecs.map((spec) => (
+        <AnnotationInvariantChart key={spec.annotations![0].id} spec={spec} />
+      ))}
+    </div>
+  );
+}

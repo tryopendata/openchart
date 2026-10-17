@@ -465,7 +465,21 @@ function EditModeStudio() {
     (edit: ElementEdit) => {
       switch (edit.type) {
         case 'annotation':
-          // Also flows through onAnnotationEdit above; persisted there.
+          setState((prev) => ({
+            ...prev,
+            annotations: prev.annotations?.map((annotation, index) =>
+              edit.element.type === 'annotation' &&
+              index === edit.element.index &&
+              annotation.type === 'text'
+                ? {
+                    ...annotation,
+                    offset: edit.offset,
+                    ...(edit.anchor !== undefined ? { anchor: edit.anchor } : {}),
+                    ...(edit.responsive !== undefined ? { responsive: edit.responsive } : {}),
+                  }
+                : annotation,
+            ),
+          }));
           pushLog(
             'onEdit',
             `annotation[${'index' in edit.element ? edit.element.index : '?'}] "${oneLine(edit.annotation.text)}" → ${fmtOffset(edit.offset)}`,

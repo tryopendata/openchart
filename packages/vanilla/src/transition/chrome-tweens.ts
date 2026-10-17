@@ -94,10 +94,8 @@ export function buildColorTweens(
  * queried from the `svg` root. A `marksContainer.querySelector` would never
  * find it.
  *
- * Surviving annotations tween from their old position to their new one via a
- * transform offset (the alternative -- re-resolving label x/y, connector path,
- * dot, subtitle and background rect individually -- is a lot of surface for no
- * extra fidelity). Entering ones fade in. See the note at the bottom for why
+ * Surviving annotations sample label and data-anchor geometry independently.
+ * Entering ones fade in. See the note at the bottom for why
  * exiting ones do not fade out.
  */
 export function buildAnnotationTweens(
@@ -130,24 +128,21 @@ export function buildAnnotationTweens(
         tweenType: 'annotation',
         kind: 'enter',
         el,
-        fromDx: 0,
-        fromDy: 0,
+
         fromOpacity: 0,
         toOpacity: 1,
       });
       continue;
     }
 
-    // Surviving: hold at full opacity, slide from the old position if it moved.
-    const dx = (before.label?.x ?? 0) - (next[i].label?.x ?? 0);
-    const dy = (before.label?.y ?? 0) - (next[i].label?.y ?? 0);
-    if (dx === 0 && dy === 0) continue;
+    if (JSON.stringify(before) === JSON.stringify(next[i])) continue;
     tweens.push({
       tweenType: 'annotation',
       kind: 'update',
       el,
-      fromDx: dx,
-      fromDy: dy,
+      before,
+      after: next[i],
+      background: nextLayout.theme.colors.neutral.surface,
     });
   }
 

@@ -5,6 +5,7 @@
 import type { ChartLayout, Point, ResolvedAnnotation } from '@opendata-ai/openchart-core';
 import {
   ARROWHEAD_LENGTH,
+  automaticControlPoint,
   BOLD_SPAN_FONT_WEIGHT,
   computeArrowheadPoints,
   DEFAULT_ANNOTATION_FONT_SIZE,
@@ -65,13 +66,9 @@ function renderCurvedConnector(
   stroke: string,
   showArrow: boolean,
   exit: 'horizontal' | 'vertical' | undefined,
+  control?: Point,
 ): void {
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-
-  const vertical = exit ? exit === 'vertical' : Math.abs(dy) >= Math.abs(dx);
-  const cpx = from.x + dx * (vertical ? 0.2 : 0.6);
-  const cpy = from.y + dy * (vertical ? 0.6 : 0.2);
+  const { x: cpx, y: cpy } = control ?? automaticControlPoint(from, to, exit);
 
   // Tangent at the tip runs from the control point to the tip.
   const tx = to.x - cpx;
@@ -238,7 +235,7 @@ function renderAnnotation(
     if (annotation.label.connector) {
       const c = annotation.label.connector;
       if (c.style === 'curve') {
-        renderCurvedConnector(g, c.from, c.to, c.stroke, c.arrow, c.exit);
+        renderCurvedConnector(g, c.from, c.to, c.stroke, c.arrow, c.exit, c.control);
       } else if (c.style === 'drop-line') {
         // Quiet voice: hairline, slightly recessed, snapped to the pixel grid.
         const connector = createSVGElement('line');
@@ -386,4 +383,38 @@ export function renderAnnotations(parent: SVGElement, layout: ChartLayout): void
   for (let i = 0; i < layout.annotations.length; i++) {
     renderAnnotation(g, layout.annotations[i], i, bgColor);
   }
+}
+
+/** Apply engine geometry while retaining the group, listeners, and editing handles. */
+export function updateAnnotationGeometry(
+  group: SVGElement,
+  annotation: ResolvedAnnotation,
+  bgColor?: string,
+): void {
+  const scratch = createSVGElement('g');
+  renderAnnotation(scratch, annotation, annotation.specIndex ?? 0, bgColor);
+  const fresh = scratch.firstElementChild!;
+  const previous = [...group.children].filter((child) =>
+    [...child.classList].some((name) => name.startsWith('oc-annotation-')),
+  );
+  const used = new Set<Element>();
+  for (const child of [...fresh.children]) {
+    const target = previous.find(
+      (old) =>
+        !used.has(old) &&
+        old.tagName === child.tagName &&
+        old.getAttribute('class') === child.getAttribute('class'),
+    );
+    if (target) {
+      used.add(target);
+      for (const attr of [...target.attributes])
+        if (!child.hasAttribute(attr.name)) target.removeAttribute(attr.name);
+      for (const attr of [...child.attributes]) target.setAttribute(attr.name, attr.value);
+      target.replaceChildren(...child.childNodes);
+      group.appendChild(target);
+    } else group.appendChild(child);
+  }
+  for (const old of previous) if (!used.has(old)) old.remove();
+  for (const handle of [...group.querySelectorAll('.oc-connector-handle, .oc-anchor-handle')])
+    group.appendChild(handle);
 }

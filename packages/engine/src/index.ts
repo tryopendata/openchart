@@ -91,8 +91,10 @@ export {
 } from './annotations/constants';
 export type { AnnotationMeasureTextFn, ArrowheadPoints } from './annotations/geometry';
 export {
+  automaticControlPoint,
   computeArrowheadPoints,
   heuristicMeasure,
+  refreshConnector,
 } from './annotations/geometry';
 export type { ObstacleKind, PlacementObstacle } from './annotations/placement';
 export type { RichSpan } from './annotations/rich-text';
@@ -181,7 +183,15 @@ export type {
   TileMapSpec,
   VizSpec,
 } from '@opendata-ai/openchart-core';
-
+export type { AnnotationEditContext } from './annotations/edit-context';
+export {
+  createAnnotationEditContext,
+  inverseLabelPlacement,
+  previewAnnotationMove,
+  previewConnectorBend,
+  previewConnectorOffset,
+} from './annotations/edit-context';
+export { interpolateAnnotationGeometry } from './annotations/interpolate';
 export { diagnoseChart } from './design/diagnostics';
 export type { ObservationComparison } from './design/identity';
 export {

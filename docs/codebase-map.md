@@ -56,13 +56,14 @@
 | Annotations: top-level compile | `packages/engine/src/annotations/compute.ts` → `computeAnnotations()` |
 | Annotations: text resolution (anchor → offset → connector) | `packages/engine/src/annotations/resolve-text.ts` |
 | Annotations: refline / range | `packages/engine/src/annotations/resolve-refline.ts`, `resolve-range.ts` |
-| Annotations: geometry (text bounds, anchor offsets, ray-box connector exit, connector rebuild, arrowhead points) | `packages/engine/src/annotations/geometry.ts` (`connectorExit`, `refreshConnector`, `computeArrowheadPoints`). No `computeConnectorOrigin` — that's the pre-v8 name. |
+| Annotations: geometry (text bounds, anchor offsets, ray-box connector exit, connector rebuild, arrowhead points) | `packages/engine/src/annotations/geometry.ts` (`connectorExit`, `refreshConnector`, `automaticControlPoint`, `computeArrowheadPoints`). No `computeConnectorOrigin` — that's the pre-v8 name. |
 | Annotations: `**bold**` span parsing | `packages/engine/src/annotations/rich-text.ts` → `parseAnnotationSpans()`, `RichSpan`, `BOLD_SPAN_FONT_WEIGHT` |
 | Annotations: block repositioning (label + subtitle + bounds + connector move as one; auto-placement's `textAnchor` stamp) | `packages/engine/src/annotations/move.ts` → `moveAnnotationTo()`, `moveAnnotationBy()`, `annotationBlockBounds()` |
 | Annotations: collision resolution | `packages/engine/src/annotations/collisions.ts` |
 | Annotations: chrome guard (labels can't climb into the title block) | `packages/engine/src/annotations/collisions.ts` → `clampAnnotationsToBounds(annotations, svgWidth, svgHeight, measure, topBound)`. `topBound` is the first y a label may occupy; `compile.ts` passes `dims.topPad + dims.chrome.topHeight` (`LayoutDimensions.topPad` in `engine/layout/dimensions.ts`) when there is a chrome block, and the same band is fed to auto-placement as a `'chrome'` `ObstacleKind` (`annotations/placement.ts`). |
 | Annotations: auto-thinning (demote callouts → numbered footnotes) | `packages/engine/src/annotations/thinning.ts` → `thinAnnotations()`. Three independent demotion rules: pairwise overlap (padded by `COLLISION_PADDING`), containment (`fitsWithin`, checked against `containerBounds ?? plotArea` — callouts legitimately live in the margin, so only labels escaping the *chart* demote), and a `COVERAGE_BUDGET` cap on the share of *plot* area inline labels may claim. The budget is what thins narrow charts — collision resolution spreads labels apart and clamping tucks them back in, so crowded layouts never trip the first two rules. Pinned (`responsive: false`) labels are exempt from the budget. |
-| Annotations: wrapped note lines and reserve counts | `packages/engine/src/annotations/notes.ts` → `wrapAnnotationNotes()`, `annotationNoteLineCount()` (internal). `AnnotationFootnote.lines` carries engine-wrapped display lines to rendering/export. |
+| Annotations: wrapped note lines and reserve counts | `packages/engine/src/annotations/notes.ts` → `wrapAnnotationNotes()`, `annotationNoteLineCount()`, `annotationNoteCapacity()` (internal; source capacity including pinned text/subtitles and widest numeric prefix). `AnnotationFootnote.lines` carries engine-wrapped display lines to rendering/export; optional `ResolvedChrome.noteBandHeight` carries the stable source-capacity reserve to footer/brand/export and layered alignment. |
+| Annotations: frozen editing geometry | `packages/engine/src/annotations/edit-context.ts` → public `createAnnotationEditContext()`, `previewAnnotationMove()`, `previewConnectorBend()`, `inverseLabelPlacement()`. Uses compiled annotation metadata (scales and measurement stay inside engine); snapshots preserve source/facet identity and clamp bounds. |
 | Annotations: data → pixel resolver | `packages/engine/src/annotations/position.ts` |
 | Annotations: shared constants (`ANCHOR_OFFSET=28`, `CONNECTOR_STANDOFF=6`, `MIN_CONNECTOR_LENGTH=8`, dot defaults, `LEDE_FONT_WEIGHT`, connector strokes, default font) | `packages/engine/src/annotations/constants.ts` |
 | Legend layout (entries, wrapping, positioning, `entryPositions`) | `packages/engine/src/legend/compute.ts`, `wrap.ts`; internal `measureCategoricalLegendContent()` reuses the same measurement for merged layer entries. |
@@ -259,7 +260,7 @@ The vanilla adapter (`mount.ts`) takes the resulting `ChartLayout` and calls `re
 - **Typography:** 13px / weight 400 by default, in `theme.fonts.family` (threaded via `AnnotationContext.fontFamily` from `compile.ts`; `FALLBACK_FONT_FAMILY` covers SSR paths). The **lede rule** (`resolveLedeFontWeight`): a `subtitle` with no explicit `fontWeight` promotes the primary text to `LEDE_FONT_WEIGHT` (700); the subtitle stays 400.
 - **Thinning** (`annotations/thinning.ts`): `thinAnnotations(annotations, specs, measure, plotArea?, containerBounds?)` demotes overlapping/overflowing labels to numbered footnotes. Containment is checked against `containerBounds ?? plotArea` — annotations legitimately sit in the margin (above a peak, below a trough), so only labels escaping the *chart* demote. The coverage budget still measures against the plot.
 - **`specIndex` — the resolved array is NOT the spec array.** `computeAnnotations` drops any annotation whose position falls outside the scale domain, so `annotations[i]` is not `spec.annotations[i]`. Every resolved annotation carries `specIndex` for the trip back; thinning's priority/`responsive` lookup and the faceted footnote numbering both key on it. Indexing `specs[i]` by resolved position is the bug this exists to prevent — it silently mis-associates annotations, and it only shows up once one of them fails to resolve.
-- **Faceted thinning** (`compile.ts`, in `compileFaceted`): faceted charts do *not* reach the single-chart `thinAnnotations` call — `compileChart` branches to `compileFaceted` first, so before this existed `autoThin` on a facet was a silent no-op and labels sprawled across neighbouring panels. Each panel now thins against its own `gridPanel.area`, passed as **both** `plotArea` and `containerBounds` (a panel is its own little chart). Footnotes pool into one figure-level `chrome.footnotes` list; since a spec annotation resolves into *every* panel, numbering is keyed on `specIndex` so a label demoted in all N panels gets one footnote, not N copies. The bottom-margin reserve loop mirrors the single-chart path, `frozenChartArea` guard included.
+- **Faceted thinning** (`compile.ts`, in `compileFaceted`): faceted charts do *not* reach the single-chart `thinAnnotations` call — `compileChart` branches to `compileFaceted` first, so before this existed `autoThin` on a facet was a silent no-op and labels sprawled across neighbouring panels. Each panel now thins against its own `gridPanel.area`, passed as **both** `plotArea` and `containerBounds` (a panel is its own little chart). Footnotes pool into one figure-level `chrome.footnotes` list; since a spec annotation resolves into *every* panel, numbering is keyed on `specIndex` so a label demoted in all N panels gets one footnote, not N copies. The shared preflight reserves source note capacity once per annotation, including pinned text and subtitles. `frozenChartArea` prevents leaf recompilation from moving the common layer plot.
 - **Shared constants:** `annotations/constants.ts` (`ANCHOR_OFFSET`, `CONNECTOR_STANDOFF`, `MIN_CONNECTOR_LENGTH`, `DEFAULT_DOT_RADIUS`/`_STROKE_WIDTH`, `LEDE_FONT_WEIGHT`, connector strokes, default font sizing, dash pattern, refline/text fills for light/dark).
 
 ## Chrome system
@@ -370,7 +371,7 @@ The browser authoring application lives in the separate [OpenStudio repository](
 | Concern | Source / exports |
 | --- | --- |
 | Atomic authored-spec edits and inverse operations | `packages/core/src/helpers/edit-transactions.ts`: public `applyEditTransaction`, `EditTransactionResult`; `types/events.ts`: `EditOp`, `EditTransaction`, optional revision and callback |
-| Authored annotation ownership and legacy event bridge | `packages/vanilla/src/interactions/edit-transactions.ts`: `annotationSource`, `editToTransaction`; mount stamps source paths, renderer stamps facet instances; selection and click events preserve both identities |
+| Authored annotation ownership and legacy event bridge | `packages/core/src/helpers/annotation-source.ts`: `annotationSource`; `packages/vanilla/src/interactions/edit-transactions.ts`: `editToTransaction`; mount stamps source paths, renderer stamps facet instances; selection and click events preserve both identities |
 | Alias migration with repair paths | `packages/engine/src/migration/v8.ts`: public `migrateSpecV8`, `SpecRepair`; layer migrations reuse `compile/layer.ts:buildPrimarySpec` and `compiler/normalize.ts:flattenLayers` |
 | Shared v8 shallow theme precedence | `packages/core/src/theme/merge.ts`: `mergeThemeConfig`; `ThemeBase` is internal, public `Theme` remains deprecated |
 | Mount compatibility warnings | `packages/vanilla/src/deprecations.ts`; engine warnings remain in `compile/spec-sugar.ts` |
@@ -381,3 +382,19 @@ require a `LayoutPlan`. Their old positional/plan-less fallbacks are gone.
 Graph scheduler, tween and spatial-index callers import from `motion/`
 and `spatial-index.ts`; the `graph/` re-export shims are gone. Map fill
 transitions accept `MapTransitionSnapshot` only.
+
+## Track A 8.11 additions
+
+| Concern | Source / exports |
+| --- | --- |
+| Frozen compiled annotation editing geometry | `packages/engine/src/annotations/edit-context.ts`: `createAnnotationEditContext`, `previewAnnotationMove`, `previewConnectorBend`, `previewConnectorOffset`, `inverseLabelPlacement`; uses actual compiled annotation objects with private measurement metadata |
+| Curve control and per-frame annotation geometry | `annotations/geometry.ts`: `automaticControlPoint`, `refreshConnector`; `annotations/interpolate.ts`: `interpolateAnnotationGeometry`; all exported from engine |
+| Cancellable mouse/touch gestures and keyboard batches | `packages/vanilla/src/interactions/drag-handler.ts`, `annotation-nudges.ts`; mount flushes pending edits before gesture starts and retargets after synchronous host updates |
+| In-place annotation drawing shared by preview and animation | `packages/vanilla/src/renderers/annotations.ts`: `updateAnnotationGeometry`; transition gate/build/apply consume resolved geometry |
+| Cross-browser geometry contract | `e2e/annotation-invariants/`; two dedicated projects; gallery `AnnotationCurves` and `AnnotationGestures` stay outside visual baselines |
+| Preview benchmark | `packages/engine/src/annotations/__tests__/preview.bench.ts`; Vitest 5 test-context bench, run with `bunx vitest bench --run` |
+
+The chart compiler places right-side legends after resolving the endpoint column,
+using its existing gutter reservation. Independent-layer assembly adds only the
+remaining right-axis/merged-column offset; `compile-legend-gutter.test.ts` covers
+regular, shared-layer and dual-axis column separation.

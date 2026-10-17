@@ -544,7 +544,7 @@ describe('annotation steps through update()', () => {
     chart.destroy();
   });
 
-  it('annotation move tweens via a transform offset and clears it on completion', () => {
+  it('annotation move samples label geometry and settles at the final position', () => {
     const { chart, svg } = mountChart(columnSpec(COL_A, { annotations: [NOTE] }));
 
     chart.update(columnSpec(COL_A, { annotations: [{ ...NOTE, x: 'Q3', y: 120 }] }));
@@ -552,13 +552,17 @@ describe('annotation steps through update()', () => {
     const annotation = svg().querySelector('.oc-annotation') as SVGElement;
     pumpRaf(0);
     pumpRaf(250);
-    // Mid-flight: sliding from the old position via an SVG transform.
-    expect(annotation.getAttribute('transform')).toMatch(/translate/);
+    // Positions are sampled independently, without moving the entire group.
+    const midX = Number(annotation.querySelector('.oc-annotation-label')!.getAttribute('x'));
+    expect(annotation.hasAttribute('transform')).toBe(false);
     // A moved annotation is the same annotation: it must not re-fade.
     expect(annotation.style.opacity).not.toBe('0');
 
     pumpRaf(5000);
-    // Completion drops the offset so the DOM matches what render() produced.
+    expect(Number(annotation.querySelector('.oc-annotation-label')!.getAttribute('x'))).not.toBe(
+      midX,
+    );
+    // Completion matches what render() produced.
     expect(annotation.hasAttribute('transform')).toBe(false);
 
     chart.destroy();

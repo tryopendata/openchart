@@ -424,6 +424,45 @@ describe('compileLayer', () => {
   // Independent y-scales (dual-axis)
   // -------------------------------------------------------------------------
 
+  it.each([
+    'subtract',
+    'grow',
+  ] as const)('aligns independent axes with a stable note band and no endpoint column in %s', (chromeLayout) => {
+    const leaf: ChartSpec = {
+      mark: 'point',
+      endpointLabels: false,
+      data: [
+        { x: 0, y: 0 },
+        { x: 10, y: 10 },
+      ],
+      encoding: {
+        x: { field: 'x', type: 'quantitative' },
+        y: { field: 'y', type: 'quantitative' },
+      },
+    };
+    const layout = compileLayer(
+      {
+        layer: [leaf, leaf],
+        chromeLayout,
+        resolve: { scale: { y: 'independent' } },
+        annotations: [
+          { type: 'text', id: 'a', text: 'A', x: 3, y: 5, responsive: false },
+          { type: 'text', id: 'b', text: 'B', x: 7, y: 5, responsive: false },
+        ],
+      },
+      { width: 600, height: 400 },
+    );
+    expect(layout.chrome.noteBandHeight).toBeGreaterThan(0);
+    expect(layout.endpointLabels).toBeUndefined();
+    expect(layout.axes.y2!.ticks.map((tick) => tick.position)).toEqual(
+      layout.axes.y!.ticks.map((tick) => tick.position),
+    );
+    const points = layout.marks.filter((mark) => mark.type === 'point');
+    expect(points.slice(0, 2).map((point) => point.cy)).toEqual(
+      points.slice(2).map((point) => point.cy),
+    );
+  });
+
   it('produces a y2 axis when resolve.scale.y is independent', () => {
     const spec: LayerSpec = {
       resolve: { scale: { y: 'independent' } },

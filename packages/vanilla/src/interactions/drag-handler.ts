@@ -1,175 +1,123 @@
-/**
- * Reusable drag handler for SVG elements.
- * Handles mouse and touch events, viewBox scaling, threshold detection,
- * click suppression after drag, and cursor state.
- */
-
+/** Mouse/touch drag lifecycle, with one cancellation path and optional frame-coalesced previews. */
 export interface DragConfig {
   element: SVGElement;
   svg: SVGSVGElement;
   onMove: (dx: number, dy: number) => void;
   onEnd: (dx: number, dy: number, moved: boolean) => void;
+  onCancel?: () => void;
+  onStart?: () => void;
   setDragging: (dragging: boolean) => void;
   threshold?: number;
+  animationFrame?: boolean;
 }
 
 export function createDragHandler(config: DragConfig): () => void {
   const { element, svg, onMove, onEnd, setDragging, threshold = 3 } = config;
-  const cleanups: Array<() => void> = [];
-
-  let activeDocMouseMove: ((e: MouseEvent) => void) | null = null;
-  let activeDocMouseUp: ((e: MouseEvent) => void) | null = null;
-  let activeDocTouchMove: ((e: TouchEvent) => void) | null = null;
-  let activeDocTouchEnd: ((e: TouchEvent) => void) | null = null;
-  let activeDocTouchCancel: ((e: TouchEvent) => void) | null = null;
-
-  function getScale(): { scaleX: number; scaleY: number } {
-    const viewBox = svg.viewBox?.baseVal;
-    const svgRect = svg.getBoundingClientRect();
-    return {
-      scaleX: viewBox?.width && svgRect.width ? viewBox.width / svgRect.width : 1,
-      scaleY: viewBox?.height && svgRect.height ? viewBox.height / svgRect.height : 1,
-    };
-  }
+  let cancelActive: (() => void) | undefined;
 
   function startDrag(startX: number, startY: number): void {
+    cancelActive?.();
+    config.onStart?.();
     setDragging(true);
-    const { scaleX, scaleY } = getScale();
-
+    const viewBox = svg.viewBox?.baseVal;
+    const rect = svg.getBoundingClientRect();
+    const scaleX = viewBox?.width && rect.width ? viewBox.width / rect.width : 1;
+    const scaleY = viewBox?.height && rect.height ? viewBox.height / rect.height : 1;
     element.style.cursor = 'grabbing';
     svg.style.userSelect = 'none';
-
-    const handleMove = (clientX: number, clientY: number) => {
-      const dx = (clientX - startX) * scaleX;
-      const dy = (clientY - startY) * scaleY;
-      onMove(dx, dy);
+    let frame: number | undefined;
+    let dx = 0;
+    let dy = 0;
+    let active = true;
+    const preview = () => {
+      frame = undefined;
+      if (active) onMove(dx, dy);
     };
-
-    const cleanupDocListeners = () => {
-      if (activeDocMouseMove) {
-        document.removeEventListener('mousemove', activeDocMouseMove);
-        activeDocMouseMove = null;
-      }
-      if (activeDocMouseUp) {
-        document.removeEventListener('mouseup', activeDocMouseUp);
-        activeDocMouseUp = null;
-      }
-      if (activeDocTouchMove) {
-        document.removeEventListener('touchmove', activeDocTouchMove);
-        activeDocTouchMove = null;
-      }
-      if (activeDocTouchEnd) {
-        document.removeEventListener('touchend', activeDocTouchEnd);
-        activeDocTouchEnd = null;
-      }
-      if (activeDocTouchCancel) {
-        document.removeEventListener('touchcancel', activeDocTouchCancel);
-        activeDocTouchCancel = null;
-      }
+    const move = (x: number, y: number) => {
+      dx = (x - startX) * scaleX;
+      dy = (y - startY) * scaleY;
+      if (!config.animationFrame) preview();
+      else if (frame === undefined) frame = requestAnimationFrame(preview);
     };
-
-    const handleEnd = (clientX: number, clientY: number) => {
-      const dx = (clientX - startX) * scaleX;
-      const dy = (clientY - startY) * scaleY;
-      const moved = Math.abs(dx) > threshold || Math.abs(dy) > threshold;
-
-      onEnd(dx, dy, moved);
-
-      if (moved) {
-        element.addEventListener(
-          'click',
-          (clickE) => {
-            clickE.stopPropagation();
-          },
-          { capture: true, once: true },
-        );
-      }
-
+    const detach = () => {
+      active = false;
+      if (frame !== undefined) cancelAnimationFrame(frame);
+      frame = undefined;
+      document.removeEventListener('mousemove', mouseMove);
+      document.removeEventListener('mouseup', mouseUp);
+      document.removeEventListener('touchmove', touchMove);
+      document.removeEventListener('touchend', touchEnd);
+      document.removeEventListener('touchcancel', cancel);
+      document.removeEventListener('pointercancel', cancel);
+      document.removeEventListener('keydown', keyDown, true);
+      svg.removeEventListener('oc-cancel-drag', cancel);
       element.style.cursor = 'grab';
       svg.style.userSelect = '';
-
-      cleanupDocListeners();
+      cancelActive = undefined;
+    };
+    const cancel = () => {
+      if (!active) return;
+      detach();
+      config.onCancel?.();
       setDragging(false);
     };
-
-    const onMouseMove = (moveEvent: MouseEvent) => {
-      handleMove(moveEvent.clientX, moveEvent.clientY);
+    const end = (x: number, y: number) => {
+      if (!active) return;
+      dx = (x - startX) * scaleX;
+      dy = (y - startY) * scaleY;
+      const moved = Math.abs(dx) > threshold || Math.abs(dy) > threshold;
+      detach();
+      onEnd(dx, dy, moved);
+      if (moved)
+        element.addEventListener('click', (event) => event.stopPropagation(), {
+          capture: true,
+          once: true,
+        });
+      setDragging(false);
     };
-    const onMouseUp = (upEvent: MouseEvent) => {
-      handleEnd(upEvent.clientX, upEvent.clientY);
+    const mouseMove = (event: MouseEvent) => move(event.clientX, event.clientY);
+    const mouseUp = (event: MouseEvent) => end(event.clientX, event.clientY);
+    const touchMove = (event: TouchEvent) => {
+      if (!event.touches.length) return;
+      event.preventDefault();
+      move(event.touches[0].clientX, event.touches[0].clientY);
     };
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-    activeDocMouseMove = onMouseMove;
-    activeDocMouseUp = onMouseUp;
-
-    const onTouchMove = (moveEvent: TouchEvent) => {
-      if (moveEvent.touches.length > 0) {
-        moveEvent.preventDefault();
-        handleMove(moveEvent.touches[0].clientX, moveEvent.touches[0].clientY);
+    const touchEnd = (event: TouchEvent) => {
+      const touch = event.changedTouches[0];
+      end(touch?.clientX ?? startX, touch?.clientY ?? startY);
+    };
+    const keyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        cancel();
       }
     };
-    const onTouchEnd = (endEvent: TouchEvent) => {
-      const touch = endEvent.changedTouches[0];
-      if (touch) {
-        handleEnd(touch.clientX, touch.clientY);
-      } else {
-        handleEnd(startX, startY);
-      }
-    };
-    document.addEventListener('touchmove', onTouchMove, { passive: false });
-    document.addEventListener('touchend', onTouchEnd);
-    document.addEventListener('touchcancel', onTouchEnd);
-    activeDocTouchMove = onTouchMove;
-    activeDocTouchEnd = onTouchEnd;
-    activeDocTouchCancel = onTouchEnd;
+    document.addEventListener('mousemove', mouseMove);
+    document.addEventListener('mouseup', mouseUp);
+    document.addEventListener('touchmove', touchMove, { passive: false });
+    document.addEventListener('touchend', touchEnd);
+    document.addEventListener('touchcancel', cancel);
+    document.addEventListener('pointercancel', cancel);
+    document.addEventListener('keydown', keyDown, true);
+    svg.addEventListener('oc-cancel-drag', cancel);
+    cancelActive = cancel;
   }
 
-  const handleMouseDown = (e: Event) => {
-    const mouseEvent = e as MouseEvent;
-    mouseEvent.preventDefault();
-    startDrag(mouseEvent.clientX, mouseEvent.clientY);
+  const mouseDown = (event: MouseEvent) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    startDrag(event.clientX, event.clientY);
   };
-
-  const handleTouchStart = (e: Event) => {
-    const touchEvent = e as TouchEvent;
-    if (touchEvent.touches.length === 1) {
-      touchEvent.preventDefault();
-      startDrag(touchEvent.touches[0].clientX, touchEvent.touches[0].clientY);
-    }
+  const touchStart = (event: TouchEvent) => {
+    if (event.touches.length !== 1) return;
+    event.preventDefault();
+    startDrag(event.touches[0].clientX, event.touches[0].clientY);
   };
-
-  element.addEventListener('mousedown', handleMouseDown);
-  element.addEventListener('touchstart', handleTouchStart, { passive: false });
-  cleanups.push(() => {
-    element.removeEventListener('mousedown', handleMouseDown);
-    element.removeEventListener('touchstart', handleTouchStart);
-  });
-
+  element.addEventListener('mousedown', mouseDown);
+  element.addEventListener('touchstart', touchStart, { passive: false });
   return () => {
-    for (const cleanup of cleanups) {
-      cleanup();
-    }
-    if (activeDocMouseMove) {
-      document.removeEventListener('mousemove', activeDocMouseMove);
-      activeDocMouseMove = null;
-    }
-    if (activeDocMouseUp) {
-      document.removeEventListener('mouseup', activeDocMouseUp);
-      activeDocMouseUp = null;
-    }
-    if (activeDocTouchMove) {
-      document.removeEventListener('touchmove', activeDocTouchMove);
-      activeDocTouchMove = null;
-    }
-    if (activeDocTouchEnd) {
-      document.removeEventListener('touchend', activeDocTouchEnd);
-      activeDocTouchEnd = null;
-    }
-    if (activeDocTouchCancel) {
-      document.removeEventListener('touchcancel', activeDocTouchCancel);
-      activeDocTouchCancel = null;
-    }
-    svg.style.userSelect = '';
+    element.removeEventListener('mousedown', mouseDown);
+    element.removeEventListener('touchstart', touchStart);
+    cancelActive?.();
   };
 }
