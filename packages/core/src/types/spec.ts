@@ -1038,6 +1038,8 @@ export type ConnectorType = 'straight' | 'curve' | 'drop-line';
 export interface ConnectorConfig {
   /** Connector style. */
   type: ConnectorType;
+  /** Curve displacement along the chord normal, from -1 to 1. Omitted or zero preserves the automatic curve. Ignored for other connector types. */
+  bend?: number;
   /** Whether to draw an arrowhead at the data-point end. Default: true for curve, false for straight. Drop-line never takes a head. */
   arrow?: boolean;
 }

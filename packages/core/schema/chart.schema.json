@@ -8254,6 +8254,10 @@
           "$ref": "#/definitions/ConnectorType",
           "description": "Connector style."
         },
+        "bend": {
+          "type": "number",
+          "description": "Curve displacement along the chord normal, from -1 to 1. Omitted or zero preserves the automatic curve. Ignored for other connector types."
+        },
         "arrow": {
           "type": "boolean",
           "description": "Whether to draw an arrowhead at the data-point end. Default: true for curve, false for straight. Drop-line never takes a head."

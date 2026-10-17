@@ -1,4 +1,9 @@
-import type { AnnotationFootnote, MeasureTextFn, ResolvedTheme } from '@opendata-ai/openchart-core';
+import type {
+  Annotation,
+  AnnotationFootnote,
+  MeasureTextFn,
+  ResolvedTheme,
+} from '@opendata-ai/openchart-core';
 import { estimateTextWidth, wrapText } from '@opendata-ai/openchart-core';
 
 /** Resolve note lines once, so figure sizing, SVG rendering and export agree. */
@@ -34,4 +39,44 @@ export function wrapAnnotationNotes(
 
 export function annotationNoteLineCount(notes: AnnotationFootnote[]): number {
   return notes.reduce((count, note) => count + (note.lines?.length ?? 1), 0);
+}
+
+/** Source capacity stays fixed when a drag pins a label or changes which notes demote. */
+export function annotationNoteCapacity(
+  annotations: Annotation[],
+  width: number,
+  theme: ResolvedTheme,
+  measureText?: MeasureTextFn,
+): number {
+  if (annotations.length <= 1) return 0;
+  const texts = annotations.flatMap((annotation, specIndex) =>
+    annotation.type === 'text'
+      ? [
+          {
+            specIndex,
+            text: annotation.subtitle
+              ? `${annotation.text}. ${annotation.subtitle}`
+              : annotation.text,
+          },
+        ]
+      : [],
+  );
+  // Priority and placement determine the eventual numbering. Budget every source
+  // with the widest possible prefix, including proportional numeral fonts.
+  const size = theme.fonts.sizes.small;
+  const weight = theme.fonts.weights.normal;
+  const measure = (text: string) =>
+    measureText?.(text, size, weight).width ?? estimateTextWidth(text, size, weight);
+  let widestIndex = 1;
+  for (let index = 2; index <= texts.length; index++) {
+    if (measure(`${index}. `) > measure(`${widestIndex}. `)) widestIndex = index;
+  }
+  return annotationNoteLineCount(
+    wrapAnnotationNotes(
+      texts.map((note) => ({ ...note, index: widestIndex })),
+      width,
+      theme,
+      measureText,
+    ),
+  );
 }

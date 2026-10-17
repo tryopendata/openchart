@@ -10,7 +10,7 @@
 
 import type { ChartSpec } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
-import { compileChart } from '../compile';
+import { compileChart, compileLayer } from '../compile';
 
 /**
  * Six callouts in a narrow plot. At this width the labels are far wider than the
@@ -78,9 +78,9 @@ describe('auto-thinning footnote reserve', () => {
     expect(pulledUpBy).toBeGreaterThanOrEqual(band - 1e-9);
   });
 
-  it('leaves the plot alone when nothing demotes', () => {
+  it('keeps labels inline when nothing demotes', () => {
     const roomy = compileChart(crowdedSpec, { width: 900, height: 500 });
-    // Wide enough that the labels fit; no footnotes, so no reserve.
+    // Wide enough that labels fit; the stable band remains available for later edits.
     expect(roomy.chrome.footnotes).toBeUndefined();
   });
 
@@ -93,10 +93,161 @@ describe('auto-thinning footnote reserve', () => {
     expect(footnotes.length).toBeGreaterThan(0);
     expect(layout.area.height).toBeCloseTo(baseline.area.height, 6);
     const band = footnotes.length * layout.theme.fonts.sizes.small * 1.3 + 4;
-    expect(layout.dimensions.height - baseline.dimensions.height).toBeCloseTo(band, 6);
+    expect(layout.chrome.noteBandHeight).toBeGreaterThanOrEqual(band);
+    expect(layout.dimensions.height - baseline.dimensions.height).toBeCloseTo(
+      layout.chrome.noteBandHeight!,
+      6,
+    );
 
     const subtract = compileChart({ ...crowdedSpec, chromeLayout: 'subtract' }, options);
     expect(subtract.dimensions.height).toBe(options.height);
+  });
+
+  it.each([
+    'subtract',
+    'grow',
+  ] as const)('reserves stable source capacity in %s, including pinned subtitles', (chromeLayout) => {
+    const spec: ChartSpec = {
+      ...crowdedSpec,
+      annotations: crowdedSpec.annotations!.map((annotation) => ({
+        ...annotation,
+        subtitle: 'A longer explanatory subtitle that wraps at narrow widths',
+      })),
+    };
+    const options = { width: 390, height: 600, chromeLayout };
+    const automatic = compileChart(spec, options);
+    const pinned = compileChart(
+      {
+        ...spec,
+        annotations: spec.annotations!.map((annotation) => ({ ...annotation, responsive: false })),
+      },
+      options,
+    );
+    expect(automatic.chrome.footnotes?.length).toBeGreaterThan(0);
+    expect(pinned.chrome.footnotes).toBeUndefined();
+    expect(automatic.chrome.noteBandHeight).toBeGreaterThan(0);
+    expect(pinned.chrome.noteBandHeight).toEqual(automatic.chrome.noteBandHeight);
+    expect(pinned.area).toEqual(automatic.area);
+    expect(pinned.dimensions).toEqual(automatic.dimensions);
+    expect(pinned.chrome.bottomAnchorY).toEqual(automatic.chrome.bottomAnchorY);
+  });
+
+  it.each([
+    false,
+    true,
+  ])('preserves the original grow plot budget and padding with authored height=%s', (authoredHeight) => {
+    const spec: ChartSpec = {
+      ...crowdedSpec,
+      chromeLayout: 'grow',
+      ...(authoredHeight ? { height: 400 } : {}),
+      annotations: crowdedSpec.annotations!.map((annotation) => ({
+        ...annotation,
+        responsive: false,
+      })),
+    };
+    const options = { width: 600, height: authoredHeight ? 200 : 400 };
+    const baseline = compileChart({ ...spec, annotations: [] }, options);
+    const reserved = compileChart(spec, options);
+    expect(reserved.chrome.noteBandHeight).toBeGreaterThan(0);
+    expect(reserved.area).toEqual(baseline.area);
+    expect(reserved.dimensions.height - baseline.dimensions.height).toBeCloseTo(
+      reserved.chrome.noteBandHeight!,
+      8,
+    );
+  });
+
+  it.each([
+    ['subtract', false],
+    ['grow', false],
+    ['subtract', true],
+    ['grow', true],
+  ] as const)('reserves sparkline notes in %s with pinned=%s', (chromeLayout, pinned) => {
+    const spec: ChartSpec = {
+      ...crowdedSpec,
+      display: 'sparkline',
+      chromeLayout,
+      annotations: crowdedSpec.annotations!.map((annotation) => ({
+        ...annotation,
+        x: '2021-01-01',
+        y: 22,
+        offset: { dx: 0, dy: 0 },
+        ...(pinned ? { responsive: false } : {}),
+      })),
+    };
+    const options = { width: 600, height: 400 };
+    const baseline = compileChart({ ...spec, annotations: [] }, options);
+    const reserved = compileChart(spec, options);
+    const band = reserved.chrome.noteBandHeight!;
+    expect(band).toBeGreaterThan(0);
+    if (!pinned) expect(reserved.chrome.footnotes?.length).toBeGreaterThan(0);
+    expect(reserved.area.height).toBeCloseTo(
+      baseline.area.height - (chromeLayout === 'subtract' ? band : 0),
+      8,
+    );
+    expect(reserved.dimensions.height).toBeCloseTo(
+      baseline.dimensions.height + (chromeLayout === 'grow' ? band : 0),
+      8,
+    );
+  });
+
+  it('reports exhausted fixed subtract budgets instead of silently changing sizing mode', () => {
+    const spec: ChartSpec = {
+      ...crowdedSpec,
+      chromeLayout: 'subtract',
+      annotations: Array.from({ length: 10 }, (_, index) => ({
+        type: 'text',
+        id: `pinned-${index}`,
+        x: '2021-01-01',
+        y: 22,
+        text: `Note ${index}`,
+        subtitle:
+          'A detailed explanatory subtitle that takes additional lines at the narrow chart width.',
+        responsive: false,
+      })),
+    };
+    const diagnostics: string[] = [];
+    const layout = compileChart(spec, {
+      width: 390,
+      height: 300,
+      onDiagnostic: (diagnostic) => diagnostics.push(diagnostic.code),
+    });
+    expect(layout.dimensions.height).toBe(300);
+    expect(layout.area.height).toBe(0);
+    expect(diagnostics).toContain('layout.note-capacity');
+    expect(diagnostics).not.toContain('layout.constrained');
+    const layerDiagnostics: string[] = [];
+    const layered = compileLayer(
+      { layer: [spec, spec], annotations: spec.annotations },
+      {
+        width: 390,
+        height: 300,
+        onDiagnostic: (diagnostic) => layerDiagnostics.push(diagnostic.code),
+      },
+    );
+    expect(layered.area.height).toBe(0);
+    expect(layerDiagnostics.filter((code) => code === 'layout.note-capacity')).toHaveLength(1);
+    const facetDiagnostics: string[] = [];
+    const faceted = compileChart(
+      {
+        ...spec,
+        data: [{ region: 'North', date: '2021-01-01', value: 22 }],
+        encoding: { ...spec.encoding, facet: { field: 'region', type: 'nominal' } },
+        annotations: Array.from({ length: 100 }, (_, i) => ({
+          ...spec.annotations![0],
+          id: `facet-${i}`,
+        })),
+      },
+      {
+        width: 390,
+        height: 300,
+        onDiagnostic: (diagnostic) => facetDiagnostics.push(diagnostic.code),
+      },
+    );
+    expect(faceted.area.height).toBe(0);
+    expect(facetDiagnostics.filter((code) => code === 'layout.note-capacity')).toHaveLength(1);
+
+    const grown = compileChart({ ...spec, chromeLayout: 'grow' }, { width: 390, height: 300 });
+    expect(grown.area.height).toBeGreaterThan(80);
   });
 
   it('converges instead of recursing forever', () => {
@@ -161,6 +312,48 @@ describe('auto-thinning in faceted charts', () => {
         );
       }
     }
+  });
+
+  it.each([
+    false,
+    true,
+  ])('retains facet subtract behavior with spec-level grow=%s until the facet opt-in phase', (onSpec) => {
+    const options = { width: 640, height: 600 };
+    const baseline = compileChart(facetedSpec, options);
+    const grown = compileChart(
+      onSpec ? { ...facetedSpec, chromeLayout: 'grow' } : facetedSpec,
+      onSpec ? options : { ...options, chromeLayout: 'grow' },
+    );
+    expect(grown.dimensions).toEqual(baseline.dimensions);
+    expect(grown.area).toEqual(baseline.area);
+    expect(grown.facet!.panels.map((panel) => panel.area)).toEqual(
+      baseline.facet!.panels.map((panel) => panel.area),
+    );
+    expect(grown.chrome.bottomAnchorY).toEqual(baseline.chrome.bottomAnchorY);
+  });
+
+  it('reserves each facet source once and keeps the grid fixed when notes disappear', () => {
+    const size = { width: 640, height: 600 };
+    const before = compileChart(facetedSpec, size);
+    const after = compileChart(
+      {
+        ...facetedSpec,
+        annotations: facetedSpec.annotations!.map((annotation) => ({
+          ...annotation,
+          responsive: false,
+        })),
+      },
+      size,
+    );
+    const single = compileChart({ ...facetedSpec, encoding: { ...crowdedSpec.encoding } }, size);
+    expect(before.chrome.footnotes?.length).toBeGreaterThan(0);
+    expect(after.chrome.footnotes).toBeUndefined();
+    expect(before.chrome.noteBandHeight).toEqual(single.chrome.noteBandHeight);
+    expect(after.chrome.noteBandHeight).toEqual(before.chrome.noteBandHeight);
+    expect(after.facet!.panels.map((panel) => panel.area)).toEqual(
+      before.facet!.panels.map((panel) => panel.area),
+    );
+    expect(after.dimensions).toEqual(before.dimensions);
   });
 
   it('numbers a demoted annotation once, not once per panel', () => {

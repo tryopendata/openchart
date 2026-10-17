@@ -1,5 +1,6 @@
 import { type MotionPhase, sampleMotion } from '@opendata-ai/openchart-core';
-import { buildArcPath } from '@opendata-ai/openchart-engine';
+import { buildArcPath, interpolateAnnotationGeometry } from '@opendata-ai/openchart-engine';
+import { updateAnnotationGeometry } from '../renderers/annotations';
 
 import {
   applyCanvasGridlinesState,
@@ -189,16 +190,12 @@ export function applyTweenState(
       break;
     }
     case 'annotation': {
-      // Ease the offset back to zero: the group is already rendered at its
-      // final position, so (0,0) is the destination. SVG transform attribute,
-      // not CSS -- CSS transform would replace any SVG transform attribute
-      // (see .claude/rules/svg-animation.md), and this composes cleanly since
-      // the annotations renderer sets none.
-      const dx = tw.fromDx * (1 - eased);
-      const dy = tw.fromDy * (1 - eased);
-      if (dx !== 0 || dy !== 0) {
-        tw.el.setAttribute('transform', `translate(${dx} ${dy})`);
-      }
+      if (tw.before && tw.after)
+        updateAnnotationGeometry(
+          tw.el,
+          interpolateAnnotationGeometry(tw.before, tw.after, eased),
+          tw.background,
+        );
       break;
     }
   }
@@ -299,9 +296,7 @@ export function snapTweenToFinal(tw: Tween): void {
       tw.el.setAttribute(tw.attr, tw.to);
       break;
     case 'annotation':
-      // The group is rendered at its final position; drop the offset entirely
-      // rather than writing translate(0 0), so the DOM returns to the exact
-      // shape render() produced.
+      if (tw.after) updateAnnotationGeometry(tw.el, tw.after, tw.background);
       tw.el.removeAttribute('transform');
       break;
   }

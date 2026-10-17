@@ -137,3 +137,48 @@ it('uses the engine note lines for rendering, footer spacing, and static export'
     [...exported.querySelectorAll('.oc-footnotes tspan')].map((span) => span.textContent),
   ).toEqual([...parent.querySelectorAll('.oc-footnotes tspan')].map((span) => span.textContent));
 });
+
+it.each([
+  'subtract',
+  'grow',
+] as const)('keeps exported source and watermark fixed when notes disappear in %s', (chromeLayout) => {
+  const spec: ChartSpec = {
+    mark: 'point',
+    chromeLayout,
+    data: [
+      { x: 0, y: 0 },
+      { x: 1, y: 1 },
+    ],
+    encoding: { x: { field: 'x', type: 'quantitative' }, y: { field: 'y', type: 'quantitative' } },
+    chrome: { source: 'Source' },
+    annotations: Array.from({ length: 4 }, (_, i) => ({
+      type: 'text',
+      id: `note-${i}`,
+      x: 0.5,
+      y: 0.5,
+      text: `A long explanatory callout ${i}`,
+      subtitle: 'Additional context',
+    })),
+  };
+  const parse = (spec: ChartSpec) =>
+    new DOMParser().parseFromString(
+      renderStaticSVG(spec, { width: 390, height: 600 }),
+      'image/svg+xml',
+    );
+  const before = parse(spec);
+  const after = parse({
+    ...spec,
+    annotations: spec.annotations!.map((annotation) => ({ ...annotation, responsive: false })),
+  });
+  expect(before.querySelectorAll('.oc-footnotes').length).toBeGreaterThan(0);
+  expect(after.querySelectorAll('.oc-footnotes')).toHaveLength(0);
+  for (const selector of ['.oc-source', '.oc-chrome-ref text']) {
+    expect(before.querySelector(selector)).not.toBeNull();
+    expect(after.querySelector(selector)!.getAttribute('y')).toEqual(
+      before.querySelector(selector)!.getAttribute('y'),
+    );
+  }
+  expect(after.documentElement.getAttribute('viewBox')).toEqual(
+    before.documentElement.getAttribute('viewBox'),
+  );
+});

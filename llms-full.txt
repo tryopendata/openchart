@@ -1487,6 +1487,10 @@ A callout label positioned at a data coordinate.
 
 #### Text: line breaks, bold spans, and the lede rule
 
+Curve connectors accept optional `bend: -1..1`; omitted or zero preserves the
+existing automatic curve. Other connector types ignore `bend` with a warning.
+An authored `offset` object pins placement even when both values are zero.
+
 `\n` starts a new line. Each line renders as its own `<tspan>`. Multi-line blocks are left-aligned by default, or right-aligned when `anchor: 'left'` puts the block to the left of the point, so the block's facing edge lines up with the leader.
 
 `**bold**` marks an inline bold span in `text` and in `subtitle`. Emphasis belongs on the key phrase, not the whole block:

@@ -2349,6 +2349,35 @@ function validateFieldMetadata(obj: Record<string, unknown>, errors: ValidationE
  * field type compatibility. Returns structured errors with machine-readable
  * codes and actionable suggestions for each problem found.
  */
+function validateAnnotationBends(
+  spec: Record<string, unknown>,
+  errors: ValidationError[],
+  prefix = '',
+): void {
+  if (Array.isArray(spec.annotations)) {
+    for (const [index, annotation] of spec.annotations.entries()) {
+      const bend = annotation?.connector?.bend;
+      if (
+        bend !== undefined &&
+        (typeof bend !== 'number' || !Number.isFinite(bend) || bend < -1 || bend > 1)
+      ) {
+        errors.push({
+          code: 'INVALID_VALUE',
+          path: `${prefix}annotations[${index}].connector.bend`,
+          message: 'Connector bend must be a finite number between -1 and 1',
+          suggestion: 'Omit bend for the automatic curve, or use a number in [-1, 1].',
+        });
+      }
+    }
+  }
+
+  if (Array.isArray(spec.layer))
+    for (const [index, child] of spec.layer.entries()) {
+      if (child && typeof child === 'object' && !Array.isArray(child))
+        validateAnnotationBends(child, errors, `${prefix}layer[${index}].`);
+    }
+}
+
 export function validateSpec(spec: unknown): ValidationResult {
   const errors: ValidationError[] = [];
 
@@ -2369,6 +2398,7 @@ export function validateSpec(spec: unknown): ValidationResult {
   }
 
   const obj = spec as Record<string, unknown>;
+  validateAnnotationBends(obj, errors);
   validateFieldMetadata(obj, errors);
   if (obj.chrome !== undefined) {
     const chrome = obj.chrome;
