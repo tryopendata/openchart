@@ -11,6 +11,8 @@
 // Type system (specs, layouts, marks, encoding, theme types)
 // ---------------------------------------------------------------------------
 
+export type { EditTransactionResult } from './helpers/edit-transactions';
+export { applyEditTransaction } from './helpers/edit-transactions';
 export * from './types/index';
 
 // ---------------------------------------------------------------------------

@@ -34,6 +34,15 @@ function makeSpec(text: string, overrides?: Partial<TextAnnotation>): TextAnnota
 }
 
 describe('thinAnnotations', () => {
+  it('preserves a demoted subtitle on the same note line', () => {
+    const annotations = [makeResolved(100, 100, 'First'), makeResolved(105, 100, 'Second')];
+    const result = thinAnnotations(
+      annotations,
+      [makeSpec('First'), makeSpec('Second', { subtitle: 'Details' })],
+      measure,
+    );
+    expect(result.footnotes).toEqual([{ index: 1, text: 'Second. Details' }]);
+  });
   it('returns unchanged when 0 or 1 annotations', () => {
     const single = [makeResolved(100, 100, 'A')];
     const result = thinAnnotations(single, [makeSpec('A')], measure);

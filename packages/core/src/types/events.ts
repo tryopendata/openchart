@@ -18,6 +18,21 @@ import type {
   TextAnnotation,
 } from './spec';
 
+/** A source-addressed durable edit. Paths use escaped RFC 6901 JSON Pointers. */
+export interface EditOp {
+  op: 'set' | 'remove' | 'add';
+  path: string;
+  value?: unknown;
+  /** Preconditions on the nearest authored annotation ancestor. */
+  expect?: { id?: string; type?: string; text?: string };
+}
+
+/** All operations succeed together. Revision is optional host bookkeeping. */
+export interface EditTransaction {
+  revision?: string | number;
+  ops: EditOp[];
+}
+
 // ---------------------------------------------------------------------------
 // Chrome key identifiers
 // ---------------------------------------------------------------------------

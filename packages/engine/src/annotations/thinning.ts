@@ -163,7 +163,9 @@ export function thinAnnotations(
       const footnoteIndex = footnotes.length + 1;
       footnotes.push({
         index: footnoteIndex,
-        text: entry.resolved.label!.text,
+        text: entry.spec?.subtitle
+          ? `${entry.resolved.label!.text}. ${entry.spec.subtitle}`
+          : entry.resolved.label!.text,
       });
       entry.resolved.footnoteIndex = footnoteIndex;
     } else {
