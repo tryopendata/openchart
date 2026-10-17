@@ -2,6 +2,23 @@
 
 v9 makes the annotation layout options introduced in 8.9.1 the default, consolidates theme precedence, and removes the deprecated authoring and editing APIs. Upgrade all six OpenChart packages together. This guide covers the library; OpenStudio's document envelope, migration dialog, and adoption are separate work.
 
+## How to use this guide
+
+If you are upgrading from v7 or earlier, work through [the v8 migration guide](migrating-v8.md) first. This guide starts from v8.9.1. Unlike v8's deprecation period, v9 rejects the retired spec forms listed below; it does not silently rewrite them during compilation.
+
+1. Upgrade the OpenChart packages your app uses to the same 9.x version. Update your lockfile and run TypeScript before changing stored documents.
+2. Run `migrateSpecV8` on a copy of each older spec and review its repairs. Choose whether to preserve v8 styling or adopt the new defaults.
+3. Update callbacks, imports, wrapper props, and host CSS using the sections below. The spec migration cannot change application code.
+4. Review narrow and exact-height embeds, edit/undo flows, and exports before saving migrated documents.
+
+A useful first search in your application source is:
+
+```sh
+rg 'onEditTransaction|onAnnotationEdit|onTextEdit|ElementEdit|onDataPointClick|updateVisuals|footnoteBandHeight|TOP_PAD_NARROW_MAX|LABEL_GAP_NARROW_MAX|oc-table--compact'
+```
+
+Also inspect `responsive` in Chart mount options or component props, `compact` in tables, `valueFormat` in specialized specs, `Theme` imports, and `labels.offsets`. Those names have valid uses elsewhere, so do not replace them globally.
+
 ## Choose how older documents should look
 
 Run the public engine migration on the original authored document, before compiling it:
@@ -27,6 +44,8 @@ The default styling mode writes former annotation weights, subtitle sizes, curve
 **Keeping v8 styling does not promise pixel-identical v8 layout.** Placement scoring, note numbering, theme composition, rich-text notes, and other v9 layout rules still apply. Review migrated charts at their actual embed sizes. In particular, the legacy series-label rewrite moves labels into the endpoint column and drops manual per-series offsets; each dropped offset appears in `repairs`.
 
 ## Changed annotation and figure defaults
+
+**Who is affected:** Charts relying on omitted styling, wrapping, placement, or height options. These are deliberate default changes and do not produce deprecation warnings. Use explicit settings from the table below or the default migration mode to retain the former authored styling.
 
 | Setting | v8 default | v9 default / explicit override |
 | --- | --- | --- |
@@ -65,6 +84,8 @@ Notes and their markers support linked focus/click/tap emphasis. This is transie
 A label drag converts resolved placement into an explicit anchor/offset and sets `responsive: false` in one transaction. The annotation then stays inline on narrow screens; the position is clamped and can overlap other pinned annotations. Changing the data attachment remains a separate operation.
 
 ### Editing and keyboard navigation
+
+**Search for:** `onEditTransaction`, `onAnnotationEdit`, `onTextEdit`, `ElementEdit`, and any `onEdit` handler that expects a single legacy element edit. Change the handler to consume the complete transaction, rather than reading the former payload fields.
 
 `onEdit` now receives an `EditTransaction`. The old `ElementEdit` union and the
 additive `onEditTransaction` callback are removed. Apply the complete transaction
@@ -108,11 +129,22 @@ Removed APIs and their replacements:
 | Graph `updateVisuals()` | `update()` |
 | `ElementRef` series-label variant and `elementRef.seriesLabel()` | Endpoint labels; manual endpoint-label offsets are not supported |
 
+For Chart mounts, move only the resize option:
+
+```ts
+// v8: mount option
+createChart(container, spec, { responsive: false });
+// v9: mount option; spec.responsive keeps its annotation behavior
+createChart(container, spec, { autoResize: false });
+```
+
 Other mount families retain their existing `responsive` resize option.
 
 `applyEditTransaction` validates the whole operation list before returning a new spec. A failed transaction leaves the input unchanged. Annotation `expect` preconditions carry identity/type/text checks, so a stale edit cannot silently target a reordered ID-less annotation. The helper does not compare `revision`; hosts may use it for their own bookkeeping.
 
 ## Theme composition
+
+**Search for:** `Theme` imports, `editorial` / `clarity` preset use, shallow theme spreads, and custom `--oc-*` CSS. Recheck nested overrides: previously discarded leaves now survive theme composition.
 
 Authored theme layers now deep-merge: spec theme, provider theme, then component prop or mount/compile option. In a layer, the leaf theme overrides its parent before host overrides apply. This preserves unrelated nested fields that a shallow merge previously discarded.
 
@@ -135,7 +167,7 @@ Only authored theme tokens and their derived values are stamped inline. Omitted 
 
 ## Retired spec forms and helpers
 
-These retired authoring forms are now validation errors. `migrateSpecV8` handles their spec rewrites in either styling mode.
+Retired spec forms are now validation errors, and removed imports stop compiling. `migrateSpecV8` handles spec rewrites in either styling mode; update imports and application options yourself.
 
 | Removed form | Replacement |
 | --- | --- |
@@ -151,6 +183,20 @@ These retired authoring forms are now validation errors. `migrateSpecV8` handles
 | `animation: 'legacy'` / `animation.preset: 'legacy'` | Use `true` / omit `preset`; omitting animation itself still disables it |
 | `labels.offsets` and legacy line-end series labels | `endpointLabels` |
 | `TOP_PAD_NARROW_MAX`, `LABEL_GAP_NARROW_MAX` imports | `NARROW_VIEWPORT_MAX` |
+
+For example, the migration moves specialized formatting and renames annotation aliases:
+
+```js
+// v8 spec fragments
+{ type: 'barlist', valueFormat: '$,.0f', encoding: { value: { field: 'amount' } } }
+{ annotations: [{ type: 'rule', y: 0, label: 'Baseline' }] }
+
+// v9
+{ type: 'barlist', encoding: { value: { field: 'amount', format: '$,.0f' } } }
+{ annotations: [{ type: 'refline', y: 0, label: 'Baseline' }] }
+```
+
+Move spec `darkMode` to the mount/component yourself: the migration removes the retired spec key and reports the repair, but cannot configure its host. Likewise, move `mark.render` to the host's `renderer` option if you still need that renderer selection.
 
 The spec-level chrome text shorthand **stays**: `chrome: { title: 'A title' }` is valid. Tilemap `valueFormat` also stays, including for record data with no encoding channel. `colors: string[]`, ordinary Vega-Lite sugar, and chart-type value-label configuration remain supported.
 
