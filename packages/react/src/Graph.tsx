@@ -273,6 +273,9 @@ export const Graph = forwardRef<GraphHandle, GraphProps>(function Graph(
       getActiveCategories() {
         return graphRef.current?.getActiveCategories() ?? [];
       },
+      update(spec: GraphSpec) {
+        graphRef.current?.update(spec);
+      },
       get instance() {
         return graphRef.current;
       },

@@ -734,7 +734,7 @@ export function createChart<TData extends DataRow = DataRow>(
 
     const handleMouseEnter = (e: Event) => {
       const target = (e.target as Element).closest(
-        '[data-annotation-index], [data-chrome-key], .oc-mark-label[data-series], .oc-legend:not(.oc-legend--size), [data-legend-index]',
+        '[data-annotation-index], [data-chrome-key], .oc-legend:not(.oc-legend--size), [data-legend-index]',
       );
       if (target) {
         (target as SVGElement).classList.add('oc-editable-hover');
