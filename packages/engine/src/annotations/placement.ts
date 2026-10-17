@@ -625,7 +625,7 @@ export function isAutoPlacement(annotation: {
   offset?: { dx?: number; dy?: number };
   connector?: string | boolean | { type?: string };
 }): boolean {
-  if (annotation.offset) return false;
+  if ((annotation.offset?.dx ?? 0) !== 0 || (annotation.offset?.dy ?? 0) !== 0) return false;
   if (annotation.anchor && annotation.anchor !== 'auto') return false;
   if (annotation.connector === 'drop-line') return false;
   if (

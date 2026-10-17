@@ -1,3 +1,4 @@
+import { rememberAnnotationGeometry } from './edit-context';
 /**
  * Annotation computation: converts spec-level annotations to pixel-positioned
  * ResolvedAnnotation objects using the resolved scales.
@@ -281,5 +282,9 @@ export function computeAnnotations(
   // Sort by zIndex (lower first, undefined treated as 0)
   annotations.sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0));
 
+  for (const resolved of annotations) {
+    const authored = spec.annotations[resolved.specIndex!];
+    if (authored?.type === 'text') rememberAnnotationGeometry(resolved, authored, ctx);
+  }
   return annotations;
 }

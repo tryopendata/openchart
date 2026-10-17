@@ -551,6 +551,23 @@ function validatePointSize(spec: Record<string, unknown>, errors: ValidationErro
 // ---------------------------------------------------------------------------
 
 function validateChartSpec(spec: Record<string, unknown>, errors: ValidationError[]): void {
+  if (Array.isArray(spec.annotations)) {
+    for (const [index, annotation] of spec.annotations.entries()) {
+      const bend = annotation?.connector?.bend;
+      if (
+        bend !== undefined &&
+        (typeof bend !== 'number' || !Number.isFinite(bend) || bend < -1 || bend > 1)
+      ) {
+        errors.push({
+          code: 'INVALID_VALUE',
+          path: `annotations[${index}].connector.bend`,
+          message: 'Connector bend must be a finite number between -1 and 1',
+          suggestion: 'Omit bend for the automatic curve, or use a number in [-1, 1].',
+        });
+      }
+    }
+  }
+
   const markType =
     typeof spec.mark === 'string' ? spec.mark : (spec.mark as Record<string, unknown>)?.type;
 

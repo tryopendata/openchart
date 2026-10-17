@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — 8.11
+
+- Add optional connector `bend` in `[-1, 1]` and engine-resolved curve control
+  points. Omitted/zero bend retains the existing curve; other connector types
+  warn and ignore bend.
+- Export frozen annotation editing contexts, move/bend previews, and inverse
+  label placement from the engine.
+- Treat an authored zero offset as automatic annotation placement.
+
 ## Unreleased — 8.10
 
 - Add atomic `EditTransaction` operations, pure `applyEditTransaction` with undo,

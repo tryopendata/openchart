@@ -313,6 +313,22 @@ export function connectorPullbackGap(markerRadius: number, arrow: boolean): numb
  * inside the text block, or the resulting line is shorter than
  * `MIN_CONNECTOR_LENGTH`.
  */
+export function automaticControlPoint(
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+  exit?: 'horizontal' | 'vertical',
+  bend = 0,
+): { x: number; y: number } {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const vertical = exit ? exit === 'vertical' : Math.abs(dy) >= Math.abs(dx);
+  const x = from.x + dx * (vertical ? 0.2 : 0.6);
+  const y = from.y + dy * (vertical ? 0.6 : 0.2);
+  // len * normal = (dy, -dx), including a degenerate chord. Preserve exact
+  // floating-point output when bend is omitted or zero.
+  return bend === 0 ? { x, y } : { x: x + bend * dy, y: y - bend * dx };
+}
+
 export function refreshConnector(
   connector: NonNullable<ResolvedLabel['connector']>,
   bounds: Rect,
@@ -372,5 +388,13 @@ export function refreshConnector(
   const ly = to.y - from.y;
   if (!connectorIsDrawable(Math.sqrt(lx * lx + ly * ly), connector.arrow)) return undefined;
 
-  return { ...connector, from, to, exit: exit.exit };
+  return {
+    ...connector,
+    from,
+    to,
+    exit: exit.exit,
+    ...(connector.style === 'curve'
+      ? { control: automaticControlPoint(from, to, exit.exit, connector.bend) }
+      : {}),
+  };
 }

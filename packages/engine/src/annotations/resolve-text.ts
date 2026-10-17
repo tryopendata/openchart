@@ -41,6 +41,7 @@ import {
 import {
   type AnnotationMeasureTextFn,
   applyOffset,
+  automaticControlPoint,
   computeAnchorOffset,
   computeTextBlockBounds,
   connectorExit,
@@ -108,13 +109,17 @@ export function markerClearance(dot: ResolvedDot | undefined): number {
  */
 function resolveConnectorConfig(
   connector: TextAnnotation['connector'],
-): { type: ConnectorType; arrow: boolean } | null {
+): { type: ConnectorType; arrow: boolean; bend?: number } | null {
   if (connector === false) return null;
 
   if (typeof connector === 'object' && connector !== null && 'type' in connector) {
     const cfg = connector as ConnectorConfig;
     const arrow = cfg.type === 'drop-line' ? false : (cfg.arrow ?? cfg.type === 'curve');
-    return { type: cfg.type, arrow };
+    return {
+      type: cfg.type,
+      arrow,
+      ...(cfg.type === 'curve' && cfg.bend !== undefined ? { bend: cfg.bend } : {}),
+    };
   }
 
   if (connector === 'curve') return { type: 'curve', arrow: true };
@@ -122,6 +127,45 @@ function resolveConnectorConfig(
 
   // true, 'straight', or undefined all map to straight with no arrow
   return { type: 'straight', arrow: false };
+}
+
+/** Retain a rebuildable connector even when its current leader is too short to draw. */
+export function textConnectorSeed(
+  annotation: TextAnnotation,
+  scales: ResolvedScales,
+  isDark: boolean,
+): ResolvedLabel['connector'] {
+  const config = resolveConnectorConfig(annotation.connector);
+  const x = resolvePosition(annotation.x, scales.x);
+  const y = resolvePosition(annotation.y, scales.y);
+  if (!config || x === null || y === null) return undefined;
+  const endpoint = {
+    x: x + (annotation.connectorOffset?.to?.dx ?? 0),
+    y: y + (annotation.connectorOffset?.to?.dy ?? 0),
+  };
+  return {
+    from: { ...endpoint },
+    to: { ...endpoint },
+    endpoint,
+    style: config.type,
+    arrow: config.arrow,
+    stroke:
+      annotation.stroke ??
+      defaultConnectorStroke(
+        config.arrow,
+        isDark,
+        annotation.fill ?? (isDark ? DARK_TEXT_FILL : LIGHT_TEXT_FILL),
+      ),
+    ...(config.bend !== undefined ? { bend: config.bend } : {}),
+    ...(annotation.connectorOffset?.from
+      ? {
+          fromOffset: {
+            dx: annotation.connectorOffset.from.dx ?? 0,
+            dy: annotation.connectorOffset.from.dy ?? 0,
+          },
+        }
+      : {}),
+  };
 }
 
 /**
@@ -361,6 +405,12 @@ export function resolveTextAnnotation(
           style: connectorStyle,
           arrow: connectorArrow,
           exit: exit.exit,
+          ...(connectorStyle === 'curve'
+            ? {
+                control: automaticControlPoint(from, to, exit.exit, connectorConfig?.bend),
+                ...(connectorConfig?.bend !== undefined ? { bend: connectorConfig.bend } : {}),
+              }
+            : {}),
         };
       }
     }

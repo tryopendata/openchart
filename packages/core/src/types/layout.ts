@@ -672,6 +672,10 @@ export interface ResolvedLabel {
   connector?: {
     /** Connector start (at the label). */
     from: Point;
+    /** Engine-resolved quadratic control point; absent in older hand-built layouts. */
+    control?: Point;
+    /** Authored curve displacement, retained for geometry rebuilds. */
+    bend?: number;
     /** Connector end (pulled back from the data point so the line doesn't touch it). */
     to: Point;
     /** Actual data point the connector is calling out. Renderer uses this for the endpoint marker. */
