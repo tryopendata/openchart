@@ -43,6 +43,18 @@ describe('thinAnnotations', () => {
     );
     expect(result.footnotes).toEqual([{ index: 1, text: 'Second. Details' }]);
   });
+  it('keeps source identity on notes after filtering', () => {
+    const annotations = [
+      makeResolved(100, 100, 'First', { specIndex: 1 }),
+      makeResolved(105, 100, 'Second', { specIndex: 2, id: 'second' }),
+    ];
+    const result = thinAnnotations(
+      annotations,
+      [makeSpec('Hidden'), makeSpec('First'), makeSpec('Second', { id: 'second' })],
+      measure,
+    );
+    expect(result.footnotes[0]).toMatchObject({ specIndex: 2, id: 'second', text: 'Second' });
+  });
   it('returns unchanged when 0 or 1 annotations', () => {
     const single = [makeResolved(100, 100, 'A')];
     const result = thinAnnotations(single, [makeSpec('A')], measure);

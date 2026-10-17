@@ -931,7 +931,7 @@ import { useTable } from "@opendata-ai/openchart-react";
 function AdvancedTable({ spec }: { spec: TableSpec }) {
   const { ref, table, state } = useTable(spec, {
     onRowClick: (row) => console.log("Clicked:", row),
-    responsive: true,
+    autoResize: true,
   });
 
   return (
@@ -953,7 +953,7 @@ import { useTable } from "@opendata-ai/openchart-vue";
 
 const { containerRef, table, layout } = useTable(spec, {
   onRowClick: (row) => console.log("Clicked:", row),
-  responsive: true,
+  autoResize: true,
 });
 </script>
 
@@ -971,7 +971,7 @@ import { useTable } from "@opendata-ai/openchart-svelte";
 
 const { action, table, layout } = useTable(spec, {
   onRowClick: (row) => console.log("Clicked:", row),
-  responsive: true,
+  autoResize: true,
 });
 </script>
 
@@ -1040,14 +1040,14 @@ Tables don't need explicit height since they expand with content. The wrapper ha
 
 ### Disabling responsive
 
-Set `responsive: false` on the spec or component prop to disable ResizeObserver. The chart renders once at the initial container dimensions and doesn't resize.
+Set `autoResize: false` on the mount or Chart component to disable ResizeObserver. The spec's `responsive` field controls layout adaptations; it does not disable observation.
 
 ```tsx
 // Spec-level
 const spec = { mark: "line", data, encoding, responsive: false };
 
 // Vanilla adapter
-createChart(container, spec, { responsive: false });
+createChart(container, spec, { autoResize: false });
 ```
 
 ### Forcing size for export
@@ -1060,7 +1060,7 @@ container.style.width = "1200px";
 container.style.height = "800px";
 document.body.appendChild(container);
 
-const chart = createChart(container, spec, { responsive: false });
+const chart = createChart(container, spec, { autoResize: false });
 const pngBlob = await chart.export("png", { dpi: 2 });
 
 chart.destroy();
@@ -1285,7 +1285,7 @@ import { createChart } from "@opendata-ai/openchart-vanilla";
 // Mount
 const chart = createChart(container, spec, {
   darkMode: "auto",
-  responsive: true,
+  autoResize: true,
   onMarkClick: (event) => console.log(event.datum),
 });
 
@@ -1316,7 +1316,7 @@ The vanilla mount stamps two attributes on the container so external code (tests
 Wait for `data-oc-fonts-state="ready"` before screenshotting so you capture final-font layout rather than a fallback-metric frame:
 
 ```ts
-const chart = createChart(container, spec, { responsive: false });
+const chart = createChart(container, spec, { autoResize: false });
 
 // Wait until the layout reflects the final webfont metrics.
 if (container.dataset.ocFontsState !== "ready") {
@@ -1346,7 +1346,7 @@ import { createTable } from "@opendata-ai/openchart-vanilla";
 
 const table = createTable(container, tableSpec, {
   darkMode: "auto",
-  responsive: true,
+  autoResize: true,
   onRowClick: (row) => console.log(row),
   onStateChange: (state) => {
     // state: { sort: SortState | null, search: string, page: number }
@@ -1551,7 +1551,7 @@ import { createGraph } from "@opendata-ai/openchart-vanilla";
 
 const graph = createGraph(container, graphSpec, {
   darkMode: "auto",
-  responsive: true,
+  autoResize: true,
   onNodeClick: (node) => console.log("Clicked:", node),
   onNodeDoubleClick: (node) => console.log("Double-clicked:", node),
   onSelectionChange: (nodeIds) => console.log("Selected:", nodeIds),

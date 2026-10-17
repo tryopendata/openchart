@@ -1,3 +1,4 @@
+import { mergeThemeConfig } from '@opendata-ai/openchart-core';
 /**
  * Graph compilation pipeline.
  *
@@ -348,9 +349,7 @@ export function compileGraph(spec: unknown, options: CompileOptions): GraphCompi
   const watermark = rawWatermark !== undefined ? graphSpec.watermark : (options.watermark ?? true);
 
   // 2. Resolve theme
-  const mergedThemeConfig = options.theme
-    ? { ...graphSpec.theme, ...options.theme }
-    : graphSpec.theme;
+  const mergedThemeConfig = mergeThemeConfig(graphSpec.theme, options.theme);
   let theme: ResolvedTheme = resolveTheme(mergedThemeConfig);
   if (options.darkMode) {
     theme = adaptTheme(theme);

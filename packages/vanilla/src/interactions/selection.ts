@@ -10,6 +10,7 @@ import type {
 } from '@opendata-ai/openchart-core';
 import { elementRef } from '@opendata-ai/openchart-core';
 import { applySrOnlyStyles } from '../dom-helpers';
+import { annotationSource } from './edit-transactions';
 
 /**
  * Find a DOM element inside the SVG that matches the given ElementRef.
@@ -17,11 +18,14 @@ import { applySrOnlyStyles } from '../dom-helpers';
 export function findElementByRef(svg: SVGElement, ref: ElementRef): SVGElement | null {
   switch (ref.type) {
     case 'annotation': {
-      if (ref.id) {
-        const byId = svg.querySelector(`[data-annotation-id="${ref.id}"]`);
-        if (byId) return byId as SVGElement;
-      }
-      return svg.querySelector(`[data-annotation-index="${ref.index}"]`) as SVGElement | null;
+      const matches = [...svg.querySelectorAll<SVGElement>('[data-annotation-index]')].filter(
+        (el) =>
+          Number(el.getAttribute('data-annotation-index')) === ref.index &&
+          (ref.id === undefined || el.getAttribute('data-annotation-id') === ref.id) &&
+          (ref.facetInstance === undefined ||
+            el.getAttribute('data-facet-instance') === ref.facetInstance),
+      );
+      return matches[0] ?? null;
     }
     case 'chrome':
       return svg.querySelector(`[data-chrome-key="${ref.key}"]`) as SVGElement | null;
@@ -55,7 +59,16 @@ export function buildElementRef(
   if (annotationEl) {
     const index = Number(annotationEl.getAttribute('data-annotation-index'));
     const id = annotationEl.getAttribute('data-annotation-id') ?? undefined;
-    return elementRef.annotation(index, id, `/annotations/${index}`);
+    return {
+      ...elementRef.annotation(
+        index,
+        id,
+        annotationEl.getAttribute('data-annotation-path') ?? `/annotations/${index}`,
+      ),
+      ...(annotationEl.hasAttribute('data-facet-instance')
+        ? { facetInstance: annotationEl.getAttribute('data-facet-instance')! }
+        : {}),
+    };
   }
 
   const chromeEl = element.closest('[data-chrome-key]');
@@ -104,10 +117,19 @@ export function getEditableElements(
     }
   }
 
-  const annotations: Annotation[] =
-    'annotations' in spec && Array.isArray(spec.annotations) ? spec.annotations : [];
+  const { annotations, path } = annotationSource(spec);
   for (let i = 0; i < annotations.length; i++) {
-    refs.push(elementRef.annotation(i, annotations[i].id));
+    const panels = layout.facet?.panels;
+    if (panels) {
+      for (const panel of panels) {
+        if (panel.annotations.some((a) => a.specIndex === i))
+          refs.push({
+            ...elementRef.annotation(i, annotations[i].id, `${path}/${i}`),
+            facetInstance: panel.key,
+          });
+      }
+    } else if (layout.annotations.some((a, j) => (a.specIndex ?? j) === i))
+      refs.push(elementRef.annotation(i, annotations[i].id, `${path}/${i}`));
   }
 
   const seriesLabels: string[] = [];
@@ -149,8 +171,7 @@ export function getElementText(
 ): string | null {
   if (ref.type === 'chrome') {
     const chromeConfig = 'chrome' in spec ? spec.chrome : undefined;
-    if (!chromeConfig) return null;
-    const entry = chromeConfig[ref.key];
+    const entry = chromeConfig?.[ref.key] ?? (spec as unknown as Record<string, unknown>)[ref.key];
     if (typeof entry === 'string') return entry;
     if (typeof entry === 'object' && entry !== null && 'text' in entry) {
       return (entry as { text: string }).text;
@@ -158,8 +179,7 @@ export function getElementText(
     return null;
   }
   if (ref.type === 'annotation') {
-    const annotations: Annotation[] =
-      'annotations' in spec && Array.isArray(spec.annotations) ? spec.annotations : [];
+    const { annotations } = annotationSource(spec);
     const annotation = annotations[ref.index];
     if (annotation?.type === 'text') return (annotation as TextAnnotation).text ?? null;
     if (annotation?.label) return annotation.label;
@@ -177,7 +197,8 @@ export function refsEqual(a: ElementRef | null, b: ElementRef | null): boolean {
   switch (a.type) {
     case 'annotation': {
       const bAnno = b as typeof a;
-      if (a.id && bAnno.id) return a.id === bAnno.id;
+      if (a.facetInstance !== bAnno.facetInstance) return false;
+      if (a.id && bAnno.id) return a.id === bAnno.id && a.index === bAnno.index;
       return a.index === bAnno.index;
     }
     case 'chrome':

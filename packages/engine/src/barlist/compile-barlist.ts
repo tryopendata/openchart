@@ -1,3 +1,4 @@
+import { mergeThemeConfig } from '@opendata-ai/openchart-core';
 /**
  * BarList compilation pipeline.
  *
@@ -81,9 +82,7 @@ export function compileBarList(spec: unknown, options: CompileOptions): BarListL
     rawWatermark !== undefined ? barlistSpec.watermark : (options.watermark ?? true);
 
   // Resolve theme
-  const mergedThemeConfig = options.theme
-    ? { ...barlistSpec.theme, ...options.theme }
-    : barlistSpec.theme;
+  const mergedThemeConfig = mergeThemeConfig(barlistSpec.theme, options.theme);
   const lightTheme: ResolvedTheme = resolveTheme(mergedThemeConfig);
   let theme: ResolvedTheme = lightTheme;
   if (options.darkMode) {

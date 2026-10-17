@@ -186,6 +186,8 @@ export function renderChrome(parent: SVGElement, layout: ChartLayout): void {
         bottomOffset + layout.theme.spacing.chartToFooter + textAscent(fontSize) + i * lineHeight;
       const el = createSVGElement('text');
       el.setAttribute('class', 'oc-footnotes');
+      if (f.specIndex !== undefined) el.setAttribute('data-note-spec-index', String(f.specIndex));
+      if (f.id !== undefined) el.setAttribute('data-note-id', f.id);
       setAttrs(el, { x: pad, y });
       applyTextStyle(el, style);
       el.textContent = `${f.index}. ${f.text}`;

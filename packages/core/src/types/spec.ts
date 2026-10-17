@@ -1366,17 +1366,17 @@ export interface ThemeConfig {
    */
   chrome?: {
     /** Eyebrow (kicker) style override. */
-    eyebrow?: string | ChromeThemeOverride;
+    eyebrow?: ChromeThemeOverride | /** @deprecated Use { color }. */ string;
     /** Title style override. */
-    title?: string | ChromeThemeOverride;
+    title?: ChromeThemeOverride | /** @deprecated Use { color }. */ string;
     /** Subtitle style override. */
-    subtitle?: string | ChromeThemeOverride;
+    subtitle?: ChromeThemeOverride | /** @deprecated Use { color }. */ string;
     /** Source/attribution style override. */
-    source?: string | ChromeThemeOverride;
+    source?: ChromeThemeOverride | /** @deprecated Use { color }. */ string;
     /** Byline style override. */
-    byline?: string | ChromeThemeOverride;
+    byline?: ChromeThemeOverride | /** @deprecated Use { color }. */ string;
     /** Footer style override. */
-    footer?: string | ChromeThemeOverride;
+    footer?: ChromeThemeOverride | /** @deprecated Use { color }. */ string;
   };
   /**
    * Editorial rule above the chrome block: a short colored bar (the
@@ -1604,8 +1604,12 @@ export interface SeriesStyle {
  */
 export type AnimationEase = 'smooth' | 'snappy';
 
-/** Opt-in motion language. `legacy` preserves the v8 tween timing. */
-export type AnimationPreset = 'fluid' | 'subtle' | 'legacy';
+/** Opt-in motion language. */
+export type AnimationPreset =
+  | 'fluid'
+  | 'subtle'
+  /** @deprecated Omit preset for v8 timing. */
+  | 'legacy';
 
 /** Physical spring parameters. Quantitative motion is bounded at critical damping. */
 export interface SpringConfig {
@@ -2064,6 +2068,7 @@ interface BaseChartSpec<TData extends DataRow = DataRow> {
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
   /** Dark mode behavior. Defaults to "off". */
+  /** @deprecated Use the mount darkMode option; the spec field has no effect. */
   darkMode?: DarkMode;
   /**
    * Whether to show the OpenData watermark. Defaults to true; auto-hides
@@ -2283,6 +2288,7 @@ export interface TableSpec {
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
   /** Dark mode behavior. */
+  /** @deprecated Use the mount darkMode option; the spec field has no effect. */
   darkMode?: DarkMode;
   /** Whether to show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
@@ -2444,6 +2450,7 @@ export interface GraphSpec {
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
   /** Dark mode behavior. */
+  /** @deprecated Use the mount darkMode option; the spec field has no effect. */
   darkMode?: DarkMode;
   /**
    * Motion configuration. DEFAULT-ON: omit for full defaults, `false` to opt
@@ -2573,6 +2580,7 @@ export interface LayerSpec<TData extends DataRow = DataRow> {
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
   /** Dark mode behavior. Defaults to "off". */
+  /** @deprecated Use the mount darkMode option; the spec field has no effect. */
   darkMode?: DarkMode;
   /** Whether to show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
@@ -2665,6 +2673,7 @@ export interface SankeySpec {
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
   /** Dark mode behavior. Defaults to "off". */
+  /** @deprecated Use the mount darkMode option; the spec field has no effect. */
   darkMode?: DarkMode;
   /** Whether to show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
@@ -2736,6 +2745,7 @@ export interface TileMapSpec {
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
   /** Dark mode behavior. Defaults to "off". */
+  /** @deprecated Use the mount darkMode option; the spec field has no effect. */
   darkMode?: DarkMode;
   /** Whether to show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
@@ -2744,8 +2754,6 @@ export interface TileMapSpec {
   /**
    * d3-format string applied to tile values, legend labels, and tooltips.
    * Examples: ".1f" for one decimal, "$,.0f" for currency, "~s" for SI.
-   * @deprecated Use the encoding channel's `format` field instead. This
-   * property is expanded into the encoding during compilation.
    */
   valueFormat?: string;
 }
@@ -2867,6 +2875,7 @@ export interface GeoMapSpec {
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
   /** Dark mode behavior. Defaults to "off". */
+  /** @deprecated Use the mount darkMode option; the spec field has no effect. */
   darkMode?: DarkMode;
   /** Whether to show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
@@ -2906,6 +2915,7 @@ export interface BarListSpec {
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
   /** Dark mode behavior. Defaults to "off". */
+  /** @deprecated Use the mount darkMode option; the spec field has no effect. */
   darkMode?: DarkMode;
   /** Whether to show the OpenData watermark. Defaults to true. */
   watermark?: boolean;

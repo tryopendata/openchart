@@ -19,7 +19,6 @@ import type {
   ElementRef,
   RangeAnnotation,
   RefLineAnnotation,
-  TextAnnotation,
 } from '@opendata-ai/openchart-core';
 import { Chart, type ChartHandle } from '@opendata-ai/openchart-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -459,22 +458,6 @@ function EditModeStudio() {
     [pushLog],
   );
 
-  // Drag repositioning of a text annotation. This is the narrow, ergonomic
-  // callback (fires only for text-annotation drags); persist by writing the new
-  // offset back into the matching annotation.
-  const handleAnnotationEdit = useCallback(
-    (annotation: TextAnnotation, updatedOffset: AnnotationOffset) => {
-      setState((prev) => ({
-        ...prev,
-        annotations: prev.annotations?.map((a) =>
-          a.type === 'text' && a.text === annotation.text ? { ...a, offset: updatedOffset } : a,
-        ),
-      }));
-      pushLog('onAnnotationEdit', `"${oneLine(annotation.text)}" → ${fmtOffset(updatedOffset)}`);
-    },
-    [pushLog],
-  );
-
   // Unified edit callback: covers connector drags, range/refline label drags,
   // chrome/series/legend moves, and text edits. We persist the ones that map to
   // our editable surface (annotations + chrome).
@@ -589,15 +572,6 @@ function EditModeStudio() {
     [pushLog],
   );
 
-  // Text-edit callback (also flows through onEdit; logged distinctly here so the
-  // console shows both firing).
-  const handleTextEdit = useCallback(
-    (_element: ElementRef, oldText: string, newText: string) => {
-      pushLog('onTextEdit', `"${oneLine(oldText)}" → "${oneLine(newText)}"`);
-    },
-    [pushLog],
-  );
-
   const reset = useCallback(() => {
     chartRef.current?.deselect();
     setState(makePristineState());
@@ -639,8 +613,6 @@ function EditModeStudio() {
               onSelect={handleSelect}
               onDeselect={handleDeselect}
               onEdit={handleEdit}
-              onAnnotationEdit={handleAnnotationEdit}
-              onTextEdit={handleTextEdit}
             />
           </div>
           <p className="ocem-hint">

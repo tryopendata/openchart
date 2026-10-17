@@ -137,3 +137,43 @@ describe('Chart', () => {
     wrapper.unmount();
   });
 });
+
+describe('annotation transactions', () => {
+  it('emits the current revision after a prop-only update', async () => {
+    const spec = {
+      ...lineSpec,
+      annotations: [
+        {
+          type: 'text' as const,
+          x: '2020-01-01',
+          y: 10,
+          text: 'Note',
+          id: 'note',
+          responsive: false,
+        },
+      ],
+    };
+    const transactions: unknown[] = [];
+    const wrapper = mount(Chart, {
+      props: {
+        spec,
+        editable: true,
+        autoResize: false,
+        revision: 'one',
+        'onEdit-transaction': (tx: unknown) => transactions.push(tx),
+      },
+    });
+    await flushPromises();
+    await wrapper.setProps({ revision: 'two' });
+    await flushPromises();
+    await wrapper.find('[data-annotation-index="0"]').trigger('click');
+    await wrapper.find('svg').trigger('keydown', { key: 'Delete' });
+    expect(transactions).toMatchObject([
+      {
+        revision: 'two',
+        ops: [{ op: 'remove', path: '/annotations/0', expect: { id: 'note', text: 'Note' } }],
+      },
+    ]);
+    wrapper.unmount();
+  });
+});

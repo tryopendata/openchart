@@ -131,3 +131,28 @@ describe('DataTable update-vs-remount', () => {
     });
   });
 });
+
+describe('transaction wrapper options', () => {
+  it('forwards transactions through a stable callback and updates revision without remounting', async () => {
+    const first = vi.fn();
+    const second = vi.fn();
+    const { rerender } = render(
+      <Chart spec={lineSpec} autoResize={false} revision="one" onEditTransaction={first} />,
+    );
+    const options = vi.mocked(createChart).mock.calls.at(-1)![2]!;
+    expect(options).toMatchObject({ autoResize: false, revision: 'one' });
+    const tx = { revision: 'one', ops: [{ op: 'set' as const, path: '/title', value: 'Title' }] };
+    options.onEditTransaction?.(tx);
+    expect(first).toHaveBeenCalledWith(tx);
+    const mounts = vi.mocked(createChart).mock.calls.length;
+    rerender(
+      <Chart spec={lineSpec} autoResize={false} revision="two" onEditTransaction={second} />,
+    );
+    await waitFor(() =>
+      expect(mockChartInstance.update).toHaveBeenCalledWith(lineSpec, { revision: 'two' }),
+    );
+    expect(vi.mocked(createChart).mock.calls.length).toBe(mounts);
+    options.onEditTransaction?.(tx);
+    expect(second).toHaveBeenCalledWith(tx);
+  });
+});

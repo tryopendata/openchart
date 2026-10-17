@@ -16,12 +16,12 @@ import {
   SEQUENTIAL_PALETTES,
 } from '../colors/palettes';
 import { X_AXIS_BAND_HEIGHT } from '../responsive/metrics';
-import type { Theme } from '../types/theme';
+import type { ThemeBase } from '../types/theme';
 
 /**
  * The default theme. All fields are required and fully specified.
  */
-export const DEFAULT_THEME: Theme = {
+export const DEFAULT_THEME: ThemeBase = {
   colors: {
     categorical: [...CATEGORICAL_PALETTE],
     categoricalFill: [...CATEGORICAL_FILL_PALETTE],

@@ -1,3 +1,4 @@
+import { mergeThemeConfig } from '@opendata-ai/openchart-core';
 import { diagnoseChart } from './design/diagnostics';
 /**
  * Main compile API: the public entry points for the engine.
@@ -570,9 +571,7 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
   }
 
   // Resolve theme: merge spec-level theme with options-level overrides
-  const mergedThemeConfig = options.theme
-    ? { ...chartSpec.theme, ...options.theme }
-    : chartSpec.theme;
+  const mergedThemeConfig = mergeThemeConfig(chartSpec.theme, options.theme);
   let theme: ResolvedTheme = resolveTheme(mergedThemeConfig);
   if (options.darkMode) {
     theme = adaptTheme(theme);
@@ -850,6 +849,13 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
   const marks: Mark[] = renderer
     ? renderer(renderSpec, scales, chartArea, strategy, theme, options.width)
     : [];
+
+  if (marks.some((mark) => mark.type === 'line' && mark.label?.visible)) {
+    emitSpecWarnings(
+      ['[openchart] Legacy end-of-line labels are deprecated; use endpointLabels.'],
+      options.onWarn,
+    );
+  }
 
   // Opt-in per-series fill patterns (mark.fillPattern: 'auto'). Mutates
   // filled marks in place; assignment is deterministic and theme-aware.
@@ -1454,6 +1460,8 @@ function compileFaceted(
           num = allFootnotes.length + 1;
           footnoteNumberBySpecIndex.set(a.specIndex, num);
           allFootnotes.push({
+            specIndex: a.specIndex,
+            ...(a.id !== undefined ? { id: a.id } : {}),
             index: num,
             text: thinned.footnotes[panelIndex - 1]?.text ?? '',
           });
@@ -1505,6 +1513,13 @@ function compileFaceted(
 
   // Compute tooltip descriptors from all marks across panels
   const tooltipDescriptors = computeTooltipDescriptors(panelChartSpec, allMarks);
+
+  if (allMarks.some((mark) => mark.type === 'line' && mark.label?.visible)) {
+    emitSpecWarnings(
+      ['[openchart] Legacy end-of-line labels are deprecated; use endpointLabels.'],
+      options.onWarn,
+    );
+  }
 
   // Opt-in per-series fill patterns across all panels at once so a series
   // gets the same pattern in every panel.
@@ -1643,9 +1658,7 @@ export function compileTable(spec: unknown, options: CompileTableOptions): Table
   const tableSpec = normalized as NormalizedTableSpec;
 
   // Resolve theme: merge spec-level theme with options-level overrides
-  const mergedThemeConfig = options.theme
-    ? { ...tableSpec.theme, ...options.theme }
-    : tableSpec.theme;
+  const mergedThemeConfig = mergeThemeConfig(tableSpec.theme, options.theme);
   let theme: ResolvedTheme = resolveTheme(mergedThemeConfig);
   if (options.darkMode) {
     theme = adaptTheme(theme);

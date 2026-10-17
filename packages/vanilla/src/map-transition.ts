@@ -72,20 +72,6 @@ export function captureMapSnapshot(svg: SVGElement | null): MapTransitionSnapsho
   return { fills, points };
 }
 
-/**
- * Back-compat shim for callers that only need feature fills.
- *
- * @deprecated Use {@link captureMapSnapshot}, which also carries point geometry.
- */
-export function captureFeatureFills(svg: SVGElement | null): Map<string, string> {
-  const { fills, points } = captureMapSnapshot(svg);
-  const merged = new Map(fills);
-  for (const [key, snap] of points) {
-    if (snap.fill !== undefined) merged.set(`pt:${key}`, snap.fill);
-  }
-  return merged;
-}
-
 /** A single attribute being interpolated over the transition. */
 type Tween =
   | { kind: 'fill'; el: Element; to: string; interp: (t: number) => string }
@@ -117,22 +103,9 @@ function snapTween(tw: Tween): void {
  */
 export function runMapFillTransition(
   svg: SVGElement,
-  prev: MapTransitionSnapshot | Map<string, string>,
+  snapshot: MapTransitionSnapshot,
   opts: { duration: number },
 ): { cancel: () => void } {
-  // Accept the legacy flat fill map so external callers keep working.
-  const snapshot: MapTransitionSnapshot =
-    prev instanceof Map
-      ? {
-          fills: prev,
-          points: new Map(
-            Array.from(prev)
-              .filter(([k]) => k.startsWith('pt:'))
-              .map(([k, fill]) => [k.slice(3), { fill }]),
-          ),
-        }
-      : prev;
-
   const tweens: Tween[] = [];
 
   const features = svg.querySelectorAll('.oc-map-feature[data-key]');

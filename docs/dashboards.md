@@ -112,9 +112,8 @@ const spec: BarListSpec = {
   data: topPages,
   encoding: {
     label: { field: 'page', type: 'nominal' },
-    value: { field: 'views', type: 'quantitative' },
+    value: { field: 'views', type: 'quantitative', format: '.1f' },
   },
-  valueFormat: '.1f',
   barHeight: 8,
   chrome: { title: 'Top pages' },
   watermark: false,

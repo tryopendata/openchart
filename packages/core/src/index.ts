@@ -64,6 +64,7 @@ export {
   editorial,
   essay,
   legacyEditorial,
+  mergeThemeConfig,
   resolveTheme,
   terminal,
   wire,

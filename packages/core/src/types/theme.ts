@@ -1,8 +1,8 @@
 /**
  * Theme types: color palettes, typography, spacing, and chrome defaults.
  *
- * Theme is the user-facing partial config (all optional).
- * ResolvedTheme is the engine-internal fully resolved version (no optionals).
+ * ThemeConfig is the user-facing partial config (all optional).
+ * ResolvedTheme is the public fully resolved output type.
  */
 
 import type { NeutralRamp } from '../colors/neutral';
@@ -196,7 +196,7 @@ export interface ThemeChromeDefaults {
 }
 
 // ---------------------------------------------------------------------------
-// Theme (user-facing, all optional)
+// Resolved theme structure (authored overrides use ThemeConfig)
 // ---------------------------------------------------------------------------
 
 /**
@@ -205,10 +205,11 @@ export interface ThemeChromeDefaults {
  * works with).
  *
  * Users provide ThemeConfig (from spec.ts) which is the partial/optional
- * version. The theme resolver deep-merges ThemeConfig onto the default Theme
+ * version. The theme resolver deep-merges ThemeConfig onto the default theme
  * to produce a ResolvedTheme.
  */
-export interface Theme {
+/** @internal Base structure before runtime color resolution. */
+export interface ThemeBase {
   /** Color palettes. */
   colors: ThemeColors;
   /** Typography settings. */
@@ -228,18 +229,11 @@ export interface Theme {
   seriesStrategy: SeriesStrategy;
 }
 
-/**
- * Fully resolved theme with no optional fields.
- *
- * This is the result of resolveTheme(): the default theme with user
- * overrides deep-merged in. Every property is guaranteed to have a value.
- * The engine uses ResolvedTheme internally so it never needs null checks.
- *
- * Structurally identical to Theme (both have all required fields), but
- * exists as a separate type for semantic clarity: Theme is the default
- * definition, ResolvedTheme is the runtime-resolved instance.
- */
-export interface ResolvedTheme extends Theme {
+/** @deprecated Use ThemeConfig for input or ResolvedTheme for resolved output. */
+export type Theme = ThemeBase;
+
+/** Fully resolved runtime theme, including color adaptation and token metadata. */
+export interface ResolvedTheme extends ThemeBase {
   /** Colors plus the neutral ramp derived from `text` and `background`. */
   colors: ResolvedThemeColors;
   /** Whether dark mode adaptations have been applied to this theme. */

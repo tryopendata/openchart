@@ -1,3 +1,5 @@
+import { warnDeprecated } from './deprecations';
+import { annotationSource, editToTransaction } from './interactions/edit-transactions';
 import { canTransitionSpecShape } from './transition/gate';
 import { reconcileSVG } from './transition/reconcile';
 import { sampleLayout } from './transition/scene';
@@ -18,13 +20,19 @@ import type {
   CompileOptions,
   DarkMode,
   DataRow,
+  ElementEdit,
   ElementRef,
   GraphSpec,
   LayerSpec,
   TextAnnotation,
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
-import { cssTokenDefault, isGraphSpec, isLayerSpec } from '@opendata-ai/openchart-core';
+import {
+  applyEditTransaction,
+  cssTokenDefault,
+  isGraphSpec,
+  isLayerSpec,
+} from '@opendata-ai/openchart-core';
 import {
   compileChart,
   compileLayer,
@@ -103,7 +111,10 @@ export interface MountOptions extends ChartEventHandlers {
   /** Callback when a data point is clicked. @deprecated Use onMarkClick instead. */
   onDataPointClick?: (data: Record<string, unknown>) => void;
   /** Enable responsive resizing. Defaults to true. */
+  /** @deprecated Use autoResize. */
   responsive?: boolean;
+  /** Observe container resizing. Defaults to true. */
+  autoResize?: boolean;
   /** Show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
   /** Initial selected element. */
@@ -111,6 +122,8 @@ export interface MountOptions extends ChartEventHandlers {
 }
 
 export interface UpdateOptions {
+  /** Source revision for subsequent edit transactions. */
+  revision?: string | number;
   /** Override the selected element after update. When omitted, preserves current selection. */
   selectedElement?: ElementRef;
 }
@@ -204,7 +217,13 @@ function makeEditable(svg: SVGElement): void {
 }
 
 function hasEditingCallbacks(opts?: MountOptions): boolean {
-  return !!(opts?.onEdit || opts?.onSelect || opts?.onDeselect || opts?.onTextEdit);
+  return !!(
+    opts?.onEditTransaction ||
+    opts?.onEdit ||
+    opts?.onSelect ||
+    opts?.onDeselect ||
+    opts?.onTextEdit
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -589,10 +608,31 @@ export function createChart<TData extends DataRow = DataRow>(
   // Selection & text editing
   // ---------------------------------------------------------------------------
 
+  if (options?.onDataPointClick)
+    warnDeprecated('onDataPointClick is deprecated and has no effect; use onMarkClick.');
+  if (options?.onAnnotationEdit)
+    warnDeprecated('onAnnotationEdit is deprecated; use onEditTransaction.');
+  if (options?.onTextEdit) warnDeprecated('onTextEdit is deprecated; use onEditTransaction.');
+  if (options?.responsive !== undefined)
+    warnDeprecated('The mount responsive option is deprecated; use autoResize.');
+
+  let editRevision = options?.revision;
+
+  function emitEdit(edit: ElementEdit): void {
+    const tx = editToTransaction(currentSpec, edit, editRevision);
+    if (!tx && edit.type !== 'legend-toggle') return;
+    if (tx && !applyEditTransaction(currentSpec, tx).ok) return;
+    if ('element' in edit && edit.element.type === 'annotation') {
+      const base = `${annotationSource(currentSpec).path}/${edit.element.index}`;
+      const suffix = edit.element.path?.replace(/^.*\/annotations\/\d+/, '') ?? '';
+      edit = { ...edit, element: { ...edit.element, path: base + suffix } };
+    }
+    if (tx) options?.onEditTransaction?.(tx);
+    options?.onEdit?.(edit);
+  }
+
   function getSpecAnnotations(): Annotation[] {
-    return 'annotations' in currentSpec && Array.isArray(currentSpec.annotations)
-      ? currentSpec.annotations
-      : [];
+    return annotationSource(currentSpec).annotations;
   }
 
   function selectElement(ref: ElementRef): void {
@@ -661,7 +701,7 @@ export function createChart<TData extends DataRow = DataRow>(
 
         if (newText !== currentText) {
           options?.onTextEdit?.(editRef, currentText, newText);
-          options?.onEdit?.({
+          emitEdit({
             type: 'text-edit',
             element: editRef,
             oldText: currentText,
@@ -741,7 +781,12 @@ export function createChart<TData extends DataRow = DataRow>(
       }
 
       // Double-click on empty canvas: create a new annotation
-      if (!ref && options?.onEdit && currentLayout?.xInvert && currentLayout?.yInvert) {
+      if (
+        !ref &&
+        (options?.onEdit || options?.onEditTransaction) &&
+        currentLayout?.xInvert &&
+        currentLayout?.yInvert
+      ) {
         const svgEl = svg as SVGSVGElement;
         const viewBox = svgEl.viewBox?.baseVal;
         const svgRect = svgEl.getBoundingClientRect();
@@ -768,7 +813,7 @@ export function createChart<TData extends DataRow = DataRow>(
             isTextEditingActive = false;
             textEditCleanup = null;
             const annotation: TextAnnotation = { type: 'text', x: dataX, y: dataY, text };
-            options.onEdit!({ type: 'add', annotation });
+            emitEdit({ type: 'add', annotation });
           },
           onCancel: () => {
             isTextEditingActive = false;
@@ -802,7 +847,7 @@ export function createChart<TData extends DataRow = DataRow>(
         case 'Backspace': {
           if (selectedElement && !isTextEditingActive) {
             e.preventDefault();
-            options?.onEdit?.({ type: 'delete', element: selectedElement });
+            emitEdit({ type: 'delete', element: selectedElement });
           }
           break;
         }
@@ -1053,13 +1098,28 @@ export function createChart<TData extends DataRow = DataRow>(
       );
     }
 
+    const authoredAnnotations = annotationSource(currentSpec);
+    for (const el of svgElement.querySelectorAll('[data-annotation-index]')) {
+      el.setAttribute(
+        'data-annotation-path',
+        `${authoredAnnotations.path}/${el.getAttribute('data-annotation-index')}`,
+      );
+    }
+
+    for (const el of svgElement.querySelectorAll('[data-note-spec-index]')) {
+      el.setAttribute(
+        'data-note-path',
+        `${authoredAnnotations.path}/${el.getAttribute('data-note-spec-index')}`,
+      );
+    }
+
     // Wire legend interactivity
     cleanupLegend = wireLegendInteraction(
       svgElement,
       currentLayout,
       toggleSeriesVisibility,
       options?.onLegendToggle,
-      editSuppressed ? undefined : options?.onEdit,
+      editSuppressed ? undefined : emitEdit,
       hoverEmphasis,
     );
 
@@ -1070,10 +1130,7 @@ export function createChart<TData extends DataRow = DataRow>(
       options?.onMarkLeave ||
       options?.onAnnotationClick
     ) {
-      const specAnnotations: Annotation[] =
-        'annotations' in currentSpec && Array.isArray(currentSpec.annotations)
-          ? currentSpec.annotations
-          : [];
+      const specAnnotations = getSpecAnnotations();
       cleanupChartEvents = wireChartEvents(svgElement, currentLayout, specAnnotations, options);
     }
 
@@ -1086,29 +1143,30 @@ export function createChart<TData extends DataRow = DataRow>(
       }
     };
 
-    const dragAnnotations: Annotation[] =
-      'annotations' in currentSpec && Array.isArray(currentSpec.annotations)
-        ? currentSpec.annotations
-        : [];
+    const dragAnnotations = getSpecAnnotations();
 
     // Wire annotation drag editing
     if (
       !editSuppressed &&
-      (options?.editable ?? Boolean(options?.onAnnotationEdit || options?.onEdit))
+      (options?.editable ??
+        Boolean(options?.onAnnotationEdit || options?.onEdit || options?.onEditTransaction))
     ) {
       cleanupAnnotationDrag = wireAnnotationDrag(
         svgElement,
         dragAnnotations,
         options?.onAnnotationEdit,
-        options?.onEdit,
+        emitEdit,
         setDragging,
       );
     }
 
     // Wire all edit drag handlers when onEdit is provided (or editable is true)
-    if (!editSuppressed && (options?.editable ?? Boolean(options?.onEdit))) {
+    if (
+      !editSuppressed &&
+      (options?.editable ?? Boolean(options?.onEdit || options?.onEditTransaction))
+    ) {
       const editCleanups: Array<() => void> = [];
-      const onEditFn = options?.onEdit ?? (() => {});
+      const onEditFn = emitEdit;
 
       editCleanups.push(
         wireConnectorEndpointDrag(svgElement, dragAnnotations, onEditFn, setDragging),
@@ -1306,6 +1364,7 @@ export function createChart<TData extends DataRow = DataRow>(
     // Capture only after compilation succeeds, before render() cancels the
     // current motion. A rejected edit must not leave geometry for a later update.
     const snapshot = transitionHandle?.running ? transitionHandle.snapshot() : undefined;
+    if (updateOpts && Object.hasOwn(updateOpts, 'revision')) editRevision = updateOpts.revision;
     currentSpec = newSpec;
     fontFamily = nextFont;
     measureText = nextMeasure;
@@ -1583,7 +1642,7 @@ export function createChart<TData extends DataRow = DataRow>(
   container.dataset.ocFontsState = pending ? 'pending' : 'ready';
 
   // Set up responsive resize
-  if (options?.responsive !== false) {
+  if ((options?.autoResize ?? options?.responsive) !== false) {
     disconnectResize = observeResize(container, (width, height) => {
       const widthChanged = lastRenderedWidth === null || Math.abs(width - lastRenderedWidth) >= 0.5;
       const selfInducedHeight =

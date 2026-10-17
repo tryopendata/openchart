@@ -29,6 +29,7 @@ import {
   getBreakpoint,
   HPAD_COMPACT_FRACTION,
   HPAD_COMPACT_MIN,
+  mergeThemeConfig,
   resolveTheme,
 } from '@opendata-ai/openchart-core';
 import { geoArea, geoPath } from 'd3-geo';
@@ -233,7 +234,7 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
   const watermark = rawWatermark !== undefined ? mapSpec.watermark : (options.watermark ?? true);
 
   // 3. Resolve theme
-  const mergedThemeConfig = options.theme ? { ...mapSpec.theme, ...options.theme } : mapSpec.theme;
+  const mergedThemeConfig = mergeThemeConfig(mapSpec.theme, options.theme);
   const lightTheme: ResolvedTheme = resolveTheme(mergedThemeConfig);
   let theme: ResolvedTheme = lightTheme;
   if (options.darkMode) {

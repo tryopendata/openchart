@@ -296,8 +296,11 @@ import { MarkType, MARK_TYPES, MARK_ENCODING_RULES } from '@opendata-ai/openchar
 nudge per-series value labels by pixel offset. The collision system now
 handles label positioning automatically.
 
-**Runtime behavior:** The property still works. No console warning. It's
-`@deprecated` in the type only and will be removed in a future major.
+**Runtime behavior (8.10):** The property still works and emits a deprecation
+warning once per process. Prefer `endpointLabels`. `migrateSpecV8` replaces
+legacy end-of-line labels with `{ content: 'label', showMarker: false }` and
+reports each dropped series offset. Labels can move to the right-edge column;
+manual offsets are not preserved.
 
 **TypeScript behavior:** Linters that flag `@deprecated` usage will warn.
 Build still passes.
@@ -1212,3 +1215,71 @@ warning at compile time with the exact fix. Items with no runtime warning:
 - **Binned bar dispatch (section 25):** silent behavior change, and only on a
   `bar` with a quantitative `x`, an `x2`, and a quantitative `y`. Switch those
   to `mark: { type: 'range', style: 'bar' }`.
+
+
+## 8.10: atomic edits and compatibility aliases
+
+Use the additive `onEditTransaction` callback to persist edits without a switch
+for each legacy edit variant. `onEdit` keeps its existing payload in 8.x.
+
+```ts
+// Before: a persistence adapter must interpret each ElementEdit variant.
+createChart(container, spec, { onEdit: persistLegacyElementEdit });
+
+// After: operations point into the authored spec, including first-leaf layers.
+import { applyEditTransaction } from '@opendata-ai/openchart-core';
+createChart(container, spec, {
+  revision: 1,
+  onEditTransaction(tx) {
+    const result = applyEditTransaction(spec, tx);
+    if (!result.ok) return; // target was deleted or no longer matches expect
+    spec = result.spec;
+    saveSpec(spec);
+    undoStack.push(result.inverse);
+  },
+});
+```
+
+The helper never mutates its input and returns no partially applied spec on
+failure. Annotation operations check every authored `expect` field against the
+nearest annotation ancestor. Give annotations unique IDs; missing or duplicate
+IDs use source indices local to the current revision and produce a diagnostic.
+`revision` is optional bookkeeping, not a required host precondition. Update it
+with `chart.update(spec, { revision })`. React accepts `onEditTransaction`, Vue
+emits `edit-transaction`, and Svelte accepts `onedittransaction`; all three
+wrappers accept `revision` and `autoResize`.
+
+`autoResize` controls the mount's ResizeObserver and defaults to true. The old
+mount option `responsive` remains a deprecated fallback; `autoResize` wins when
+both are supplied. The spec's `responsive` keeps controlling chart layout.
+
+Run `migrateSpecV8(spec)` from `@opendata-ai/openchart-engine` to obtain a new spec
+and a repair list (`path`, `from`, `to`, `reason`). It is pure and idempotent.
+The 8.10 migration changes aliases only:
+
+| Deprecated form | Replacement |
+| --- | --- |
+| Table `compact`, including `dataTable` options | `density: 'condensed'` (or `'regular'` for false) |
+| Sankey/barlist `valueFormat` | `encoding.value.format` |
+| Map `valueFormat` | `encoding.color.format` |
+| Annotation `type: 'rule'` | `type: 'refline'` |
+| Arc/waffle/parliament `encoding.y` | `encoding.theta` |
+| Theme chrome string colors | `{ color: ... }` (spec chrome strings remain valid text) |
+| Animation `'legacy'` / `preset: 'legacy'` | `true` / omit the preset |
+| Spec and builder `darkMode` | Set `darkMode` on the mount or framework component |
+| Dead `radius`, `shape`, `href`, `order` channels | Remove them; they have no rendering effect |
+| `mark.render` | Mount `renderer` |
+| Legacy end-of-line labels / `labels.offsets` | `endpointLabels`; see section 8 for placement changes |
+| `onDataPointClick` | `onMarkClick`; the old callback has no effect |
+| `onAnnotationEdit`, `onTextEdit` | `onEditTransaction` |
+| Graph `updateVisuals` | `update` |
+| `Theme` type | `ThemeConfig` for authoring, `ResolvedTheme` for resolved output |
+| `TOP_PAD_NARROW_MAX`, `LABEL_GAP_NARROW_MAX` | `NARROW_VIEWPORT_MAX` |
+
+Executable compatibility paths warn once. Type-only aliases and primitive
+constant imports cannot detect usage at runtime; their JSDoc marks the migration.
+Tilemap `valueFormat` stays supported. The `oc-table--compact` compatibility class
+also stays in 8.x; host styles should target `oc-table--condensed` ahead
+of its eventual removal. The `footnoteBandHeight` API is unchanged in 8.10.
+
+Notes now retain subtitles as `text. subtitle` on their existing single line.

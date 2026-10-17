@@ -132,7 +132,6 @@ const tradeBalanceSpec: ChartSpec = {
     subtitle: 'Monthly trade balance, $ billions; red is deficit, blue is surplus',
     source: 'Source: Synthetic fixture data',
   },
-  darkMode: 'force',
 };
 
 export const ColorLegendDarkDiverging = () => (

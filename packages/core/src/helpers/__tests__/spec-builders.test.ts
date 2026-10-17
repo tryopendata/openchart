@@ -144,14 +144,14 @@ describe('lineChart', () => {
     expect(spec.annotations).toHaveLength(1);
   });
 
-  it('passes through theme and darkMode', () => {
+  it('passes through theme without emitting ineffective spec darkMode', () => {
     const spec = lineChart(timeSeriesData, 'date', 'value', {
       theme: { borderRadius: 8 },
       darkMode: 'auto',
     });
 
     expect(spec.theme).toEqual({ borderRadius: 8 });
-    expect(spec.darkMode).toBe('auto');
+    expect(spec.darkMode).toBeUndefined();
   });
 });
 
@@ -299,8 +299,9 @@ describe('dataTable', () => {
     expect(spec.search).toBe(true);
     expect(spec.pagination).toEqual({ pageSize: 10 });
     expect(spec.stickyFirstColumn).toBe(true);
-    expect(spec.compact).toBe(true);
-    expect(spec.darkMode).toBe('auto');
+    expect(spec.density).toBe('condensed');
+    expect(spec.compact).toBeUndefined();
+    expect(spec.darkMode).toBeUndefined();
   });
 
   it('returns empty columns for empty data', () => {

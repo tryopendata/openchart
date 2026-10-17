@@ -1,3 +1,4 @@
+import { mergeThemeConfig } from '@opendata-ai/openchart-core';
 /**
  * Sankey diagram compilation pipeline.
  *
@@ -338,9 +339,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
   const watermark = rawWatermark !== undefined ? sankeySpec.watermark : (options.watermark ?? true);
 
   // 2. Resolve theme
-  const mergedThemeConfig = options.theme
-    ? { ...sankeySpec.theme, ...options.theme }
-    : sankeySpec.theme;
+  const mergedThemeConfig = mergeThemeConfig(sankeySpec.theme, options.theme);
   const lightTheme: ResolvedTheme = resolveTheme(mergedThemeConfig);
   let theme: ResolvedTheme = lightTheme;
   if (options.darkMode) {

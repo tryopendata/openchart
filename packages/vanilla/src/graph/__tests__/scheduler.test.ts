@@ -4,8 +4,8 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import { createTween, cubicInOut, cubicOut, linear, resolveEase } from '../motion';
-import { AnimationScheduler, type GraphAnimation } from '../scheduler';
+import { AnimationScheduler, type Animation as GraphAnimation } from '../../motion/scheduler';
+import { createTween, cubicInOut, cubicOut, linear, resolveEase } from '../../motion/tween';
 
 /** Minimal controllable animation for scheduler tests. */
 function fakeAnim(runFrames: number, onDone?: () => void): GraphAnimation {

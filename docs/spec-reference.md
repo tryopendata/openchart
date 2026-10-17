@@ -73,7 +73,6 @@ The primary input for standard chart types. Source: `core/src/types/spec.ts`.
 | `labels`      | `LabelConfig`  | `undefined` | Data label display controls. See [Labels](#labels).                                           |
 | `responsive`  | `boolean`      | `true`      | Whether the chart adapts to container width via ResizeObserver.                               |
 | `theme`       | `ThemeConfig`  | `undefined` | Theme overrides. Deep-merged onto the default theme. See [ThemeConfig](#themeconfig).         |
-| `darkMode`    | `DarkMode`     | `'off'`     | Dark mode behavior. See [DarkMode](#darkmode).                                                |
 | `watermark`   | `boolean`      | `true`      | Whether to show the tryOpenData.ai watermark. Spec-level value takes precedence over mount/compile options. Defaults to `true`; auto-hides when the container is under 200px tall unless explicitly set. |
 | `animation`   | `AnimationSpec`| `undefined` | Animation configuration. `true` enables entrance + update/exit animations. See [Animation](#animation). |
 | `description` | `string`       | `undefined` | Alt text for the chart (Vega-Lite aligned). Sugar for `a11y.description`. Auto-generated when absent. See the [accessibility guide](accessibility.md). |
@@ -190,7 +189,6 @@ Overlay multiple chart types on shared scales. Source: `core/src/types/spec.ts`.
 | `legend`       | `LegendConfig`               | `undefined` | Legend display configuration.                                                                 |
 | `responsive`   | `boolean`                    | `true`      | Whether the chart adapts to container width.                                                  |
 | `theme`        | `ThemeConfig`                | `undefined` | Theme overrides.                                                                              |
-| `darkMode`     | `DarkMode`                   | `'off'`     | Dark mode behavior.                                                                           |
 | `watermark`    | `boolean`                    | `true`      | Whether to show the watermark. Defaults to `true`; auto-hides when the container is under 200px tall unless explicitly set. |
 | `resolve`      | `ResolveConfig`              | `undefined` | Resolution strategy for shared vs. independent scales/axes/legends.                           |
 | `hiddenSeries` | `string[]`                   | `undefined` | Series names to hide from rendering.                                                          |
@@ -1068,7 +1066,6 @@ Input for data table visualizations. Source: `core/src/types/spec.ts`.
 | `rowKey`            | `string`                          | auto-generated | Field to use as a unique row identifier.                                          |
 | `chrome`            | `Chrome`                          | `undefined`    | Editorial text (title, subtitle, source, etc.).                                   |
 | `theme`             | `ThemeConfig`                     | `undefined`    | Theme overrides.                                                                  |
-| `darkMode`          | `DarkMode`                        | `'off'`        | Dark mode behavior.                                                               |
 | `search`            | `boolean`                         | `false`        | Enable client-side search/filter bar.                                             |
 | `pagination`        | `boolean \| { pageSize: number }` | `false`        | Enable pagination. `true` uses default page size. Object sets explicit page size. |
 | `stickyFirstColumn` | `boolean`                         | `false`        | Freeze the first column during horizontal scroll.                                 |
@@ -1238,7 +1235,6 @@ Graphs render force-directed network visualizations on canvas. They support node
 | `chrome`         | `Chrome`                         | `undefined` | Editorial text.                                                                       |
 | `annotations`    | `Annotation[]`                   | `undefined` | Annotations.                                                                          |
 | `theme`          | `ThemeConfig`                    | `undefined` | Theme overrides.                                                                      |
-| `darkMode`       | `DarkMode`                       | `'off'`     | Dark mode behavior.                                                                   |
 | `watermark`      | `boolean`                        | `true`      | Whether to show the tryOpenData.ai watermark. Spec-level value takes precedence over mount/compile options. |
 
 ### GraphEncoding
@@ -1306,7 +1302,6 @@ Sankey diagrams show flows between stages. Each data row represents a link from 
 | `chrome`        | `Chrome`          | `undefined` | Editorial text (title, subtitle, source, byline, footer).                           |
 | `legend`        | `LegendConfig`    | `undefined` | Legend display configuration.                                                       |
 | `theme`         | `ThemeConfig`     | `undefined` | Theme overrides.                                                                    |
-| `darkMode`      | `DarkMode`        | `'off'`     | Dark mode behavior.                                                                 |
 | `watermark`     | `boolean`         | `true`      | Whether to show the tryOpenData.ai watermark.                                       |
 | `animation`     | `AnimationSpec`   | `undefined` | Entrance animation configuration. Sankey charts support entrance animations only.   |
 
@@ -1366,7 +1361,6 @@ Maps render TopoJSON geometries as SVG, join tabular data rows to features by id
 | `chrome`      | `Chrome`          | `undefined` | Editorial text (title, subtitle, source, byline, footer).                            |
 | `legend`      | `LegendConfig`    | `undefined` | Legend display configuration. See [Map legends](#map-legends).                       |
 | `theme`       | `ThemeConfig`     | `undefined` | Theme overrides.                                                                     |
-| `darkMode`    | `DarkMode`        | `'off'`     | Dark mode behavior.                                                                  |
 | `watermark`   | `boolean`         | `true`      | Whether to show the tryOpenData.ai watermark.                                        |
 | `animation`   | `AnimationSpec`   | `undefined` | Entrance animation configuration.                                                    |
 | `valueFormat` | `string`          | `undefined` | Deprecated: use `encoding.color.format` instead. d3-format string for color values in tooltips and the legend (e.g. `".1f"`). `encoding.color.format` wins when both are set. |
@@ -1506,7 +1500,6 @@ Every state renders as an equal-size square in a fixed 12x8 grid, so small state
 | `chrome`      | `Chrome`                                              | `undefined` | Editorial text (title, subtitle, source, byline, footer).                       |
 | `legend`      | `LegendConfig`                                        | `undefined` | Legend display configuration. `show: false` hides it.                           |
 | `theme`       | `ThemeConfig`                                         | `undefined` | Theme overrides.                                                                |
-| `darkMode`    | `DarkMode`                                            | `'off'`     | Dark mode behavior.                                                             |
 | `watermark`   | `boolean`                                             | `true`      | Whether to show the tryOpenData.ai watermark.                                   |
 | `animation`   | `AnimationSpec`                                       | `undefined` | Entrance animation configuration.                                               |
 | `valueFormat` | `string`                                              | `undefined` | Deprecated: use `encoding.value.format` instead. d3-format string for tile values, legend labels, and tooltips. |
@@ -1837,7 +1830,6 @@ All builders accept field names as strings (auto-infer type from data) or full `
 | `annotations` | `Annotation[]` | Annotations.                               |
 | `responsive`  | `boolean`      | Responsive behavior.                       |
 | `theme`       | `ThemeConfig`  | Theme overrides.                           |
-| `darkMode`    | `DarkMode`     | Dark mode behavior.                        |
 | `watermark`   | `boolean`      | Whether to show the tryOpenData.ai watermark. Spec-level value takes precedence over mount/compile options; defaults to `true`. |
 
 `FieldRef` is `string | EncodingChannel`. When a string is provided, `inferFieldType()` samples up to 20 data values to determine the encoding type (quantitative, temporal, or nominal).
@@ -1905,7 +1897,7 @@ const result = validateSpec(spec);
 The separate [OpenStudio application](https://github.com/tryopendata/openstudio) consumes these additive interfaces. Existing v8 visual and animation defaults remain unchanged.
 
 - **Theme:** import `clarity` for white/ink surfaces, Inter titles and 12px axes; `legacyEditorial` restores documented v8 typography without freezing layout behavior.
-- **Motion:** `animation: 'fluid' | 'subtle' | 'legacy'`; explicit phases override their preset. A phase can use `spring: { stiffness: 320, damping: 36, mass: 1 }` or the existing duration/easing configuration. Combining a spring with duration/easing in the same phase is an error. Quantitative springs are bounded, with a finite terminal state. Omitted/false animation remains disabled.
+- **Motion:** `animation: 'fluid' | 'subtle' (omit the preset for v8 timing)`; explicit phases override their preset. A phase can use `spring: { stiffness: 320, damping: 36, mass: 1 }` or the existing duration/easing configuration. Combining a spring with duration/easing in the same phase is an error. Quantitative springs are bounded, with a finite terminal state. Omitted/false animation remains disabled.
 - **Responsiveness:** `responsive: { preserveEnd: true, labelSummary: true }` retains the final x-axis boundary and moves overflowing endpoint identities to a wrapped list. Explicit axis values and author choices remain authoritative. `chromeLayout: 'grow'` gives that content space. Tables may opt into `mobileLayout: 'priority'`; `cards` remains the default, with `scroll` also available.
 - **Field metadata:** chart, table and map documents accept `fields`, keyed by field name. Each entry may declare `type` (`text`, `number`, `date`), `role: 'identity'`, `label`, `unit`, `measure`, `provenance`, `representation` (`number`, `percent`, `proportion`), `interval: { lower: 'lowerField', upper: 'upperField' }`, or `statusField`. Supplied intervals are never synthesized. Percent means 0–100 and proportion means 0–1.
 - **Reader identity:** a unique authored `encoding.key` supports observation persistence. Missing/duplicate keys clear observation pins on data replacement. Aggregated observations are groups, not raw rows, and the reference reader clears them on data/grouping revision. The `createReader` controller is independent from editor selection and uses `ChartInstance.sampleLayout()` for supported moving geometry. Call `reader.update(spec)` after `chart.update(spec)`; it reconciles visibility against the compiled destination marks even when the source data array is unchanged. An explicit `visibleKeys` override remains supported. Layered charts retain per-layer hover/crosshair inspection, but reader pinning across layers is not yet supported: a `LayerSpec` clears pins with an announcement rather than guessing cross-layer identity.

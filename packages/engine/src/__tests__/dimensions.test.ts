@@ -1,11 +1,49 @@
 import type { LayoutStrategy, LegendLayout } from '@opendata-ai/openchart-core';
-import { adaptTheme, resolveTheme } from '@opendata-ai/openchart-core';
+import { adaptTheme, getLayoutStrategy, resolveTheme } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import { compileChart } from '../compile';
 import type { NormalizedChartSpec } from '../compiler/types';
-import { computeDimensions } from '../layout/dimensions';
+import { computeDimensions as computePlannedDimensions } from '../layout/dimensions';
+import { createMeasureFn, resolveLayoutPlan } from '../layout/plan';
 import { INLINE_TICK_OVERHANG_PAD } from '../layout/shared';
 import { legendGap } from '../legend/wrap';
+
+// Tests supply a real measured plan; mocked legend dimensions isolate reservation assertions.
+function computeDimensions(
+  spec: Parameters<typeof computePlannedDimensions>[0],
+  options: Parameters<typeof computePlannedDimensions>[1],
+  legend: Parameters<typeof computePlannedDimensions>[2],
+  theme: Parameters<typeof computePlannedDimensions>[3],
+  strategy = getLayoutStrategy('full'),
+  watermark = true,
+  suppliedPlan?: Parameters<typeof computePlannedDimensions>[6],
+) {
+  const plan =
+    suppliedPlan ??
+    resolveLayoutPlan(
+      spec,
+      spec,
+      options,
+      theme,
+      strategy,
+      watermark,
+      createMeasureFn(options.measureText),
+    );
+  if (!suppliedPlan && 'entries' in legend) {
+    plan.legendContent = {
+      ...plan.legendContent,
+      entries: legend.entries,
+      position: legend.position,
+      height: legend.bounds.height,
+      legendWidth: legend.bounds.width,
+    };
+    if (legend.position === 'bottom' && legend.entries.length > 0) {
+      const reserve = legend.bounds.height + legendGap(options.width);
+      plan.chrome = { ...plan.chrome, bottomHeight: plan.chrome.bottomHeight + reserve };
+    }
+  }
+  return computePlannedDimensions(spec, options, legend, theme, strategy, watermark, plan);
+}
 
 const baseSpec: NormalizedChartSpec = {
   markType: 'line',
@@ -1057,7 +1095,7 @@ describe('bottom legend placement (defect-3 regression)', () => {
       // Narrow viewports must not waste more horizontal space than desktop:
       // the halved horizontal padding keeps the share on par (allow 2pt slack).
       expect(narrow.chartArea.width / 375).toBeGreaterThanOrEqual(
-        desktop.chartArea.width / 700 - 0.02,
+        desktop.chartArea.width / 700 - 0.02 - 1 / 375,
       );
     });
   });

@@ -132,3 +132,48 @@ describe('<Chart />', () => {
     expect(wrapper?.style.border).toBe('1px solid red');
   });
 });
+
+describe('annotation transactions', () => {
+  it('emits the current revision after a prop-only update', async () => {
+    const spec = {
+      ...lineSpec,
+      annotations: [
+        {
+          type: 'text' as const,
+          x: '2020-01-01',
+          y: 10,
+          text: 'Note',
+          id: 'note',
+          responsive: false,
+        },
+      ],
+    };
+    const transactions: unknown[] = [];
+    const { container, rerender } = await renderChart({
+      spec,
+      editable: true,
+      autoResize: false,
+      revision: 'one',
+      onedittransaction: (tx: unknown) => transactions.push(tx),
+    });
+    await rerender({
+      spec,
+      editable: true,
+      autoResize: false,
+      revision: 'two',
+      onedittransaction: (tx: unknown) => transactions.push(tx),
+    });
+    container
+      .querySelector('[data-annotation-index="0"]')!
+      .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    container
+      .querySelector('svg')!
+      .dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
+    expect(transactions).toMatchObject([
+      {
+        revision: 'two',
+        ops: [{ op: 'remove', path: '/annotations/0', expect: { id: 'note', text: 'Note' } }],
+      },
+    ]);
+  });
+});

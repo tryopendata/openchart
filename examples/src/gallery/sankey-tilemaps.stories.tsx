@@ -31,9 +31,9 @@ const energyFlowSpec: SankeySpec = {
   encoding: {
     source: { field: 'source', type: 'nominal' },
     target: { field: 'target', type: 'nominal' },
-    value: { field: 'value', type: 'quantitative' },
+    value: { field: 'value', type: 'quantitative', format: '.1f' },
   },
-  valueFormat: '.1f',
+
   chrome: {
     title: 'Electricity Is the Grand Central of US Energy',
     subtitle: 'Primary sources through carriers to end-use sectors, quadrillion BTU',
@@ -53,9 +53,9 @@ const budgetSpec: SankeySpec = {
   encoding: {
     source: { field: 'source', type: 'nominal' },
     target: { field: 'target', type: 'nominal' },
-    value: { field: 'value', type: 'quantitative' },
+    value: { field: 'value', type: 'quantitative', format: '$,.1f' },
   },
-  valueFormat: '$,.1f',
+
   chrome: {
     title: 'Engineering Absorbs the Largest Share of Every Revenue Stream',
     subtitle: 'FY 2024 revenue allocation by department, $M',
@@ -75,9 +75,9 @@ const userJourneySpec: SankeySpec = {
   encoding: {
     source: { field: 'source', type: 'nominal' },
     target: { field: 'target', type: 'nominal' },
-    value: { field: 'value', type: 'quantitative' },
+    value: { field: 'value', type: 'quantitative', format: ',.0f' },
   },
-  valueFormat: ',.0f',
+
   chrome: {
     title: '10,000 Visitors In, 720 Paying Users Out',
     subtitle: 'Monthly cohort from landing page through conversion',
@@ -97,12 +97,12 @@ const linkStyleSpec: SankeySpec = {
   encoding: {
     source: { field: 'source', type: 'nominal' },
     target: { field: 'target', type: 'nominal' },
-    value: { field: 'value', type: 'quantitative' },
+    value: { field: 'value', type: 'quantitative', format: '.1f' },
     color: { field: 'source', type: 'nominal' },
   },
   linkStyle: 'source',
   nodeAlign: 'left',
-  valueFormat: '.1f',
+
   chrome: {
     title: 'Same Flow, Tinted by Its Source',
     subtitle:

@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased — 8.10
+
+- Add atomic `EditTransaction` operations, pure `applyEditTransaction` with undo,
+  optional revisions, and `onEditTransaction` in vanilla and all three wrappers.
+- Preserve annotation source identity through filtering, facets, and first-leaf
+  layers; click callbacks now include the source reference as a third argument.
+- Include annotation subtitles in numbered notes.
+- Export pure, idempotent `migrateSpecV8` with per-change repairs. Legacy series
+  labels migrate to endpoint labels; their positions change and offsets are lost.
+- Add mount `autoResize`, table-builder `density`, and compatibility warnings for
+  legacy APIs. Existing 8.x callbacks and optional-field defaults remain supported.
+- Centralize shallow theme merging and remove unused internal compatibility paths.
+
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).

@@ -11,6 +11,7 @@ import type {
   AnnotationOffset,
   ChartSpec,
   DarkMode,
+  EditTransaction,
   ElementEdit,
   ElementRef,
   GraphSpec,
@@ -40,6 +41,10 @@ export interface ChartProps {
   darkMode?: DarkMode;
   /** Rendering backend for point marks; see the vanilla `MountOptions.renderer`. */
   renderer?: 'auto' | 'svg' | 'canvas';
+  autoResize?: boolean;
+  /** @deprecated Use autoResize. */
+  responsive?: boolean;
+  revision?: string | number;
   class?: string;
   style?: string | CSSProperties;
 }
@@ -63,6 +68,9 @@ export const Chart = defineComponent({
       type: String as PropType<'auto' | 'svg' | 'canvas'>,
       default: undefined,
     },
+    autoResize: { type: Boolean, default: undefined },
+    responsive: { type: Boolean, default: undefined },
+    revision: { type: [String, Number] as PropType<string | number>, default: undefined },
     class: {
       type: String,
       default: undefined,
@@ -89,12 +97,16 @@ export const Chart = defineComponent({
     'mark-hover': (_event: MarkEvent) => true,
     'mark-leave': () => true,
     'legend-toggle': (_series: string, _visible: boolean) => true,
-    'annotation-click': (_annotation: Annotation, _event: MouseEvent) => true,
+    'annotation-click': (_annotation: Annotation, _event: MouseEvent, _element: ElementRef) => true,
+    /** @deprecated Use edit-transaction. */
     'annotation-edit': (_annotation: TextAnnotation, _updatedOffset: AnnotationOffset) => true,
     edit: (_edit: ElementEdit) => true,
+    'edit-transaction': (_tx: EditTransaction) => true,
     select: (_element: ElementRef) => true,
     deselect: (_element: ElementRef) => true,
+    /** @deprecated Use edit-transaction. */
     'text-edit': (_element: ElementRef, _oldText: string, _newText: string) => true,
+    /** @deprecated Has no effect; use mark-click. */
     'data-point-click': (_data: Record<string, unknown>) => true,
   },
   setup(props, { emit, expose }) {
@@ -114,6 +126,8 @@ export const Chart = defineComponent({
     const hasAnnotationEditListener =
       'onAnnotation-edit' in vnodeProps || 'onAnnotationEdit' in vnodeProps;
     const hasEditListener = 'onEdit' in vnodeProps;
+    const hasTransactionListener =
+      'onEditTransaction' in vnodeProps || 'onEdit-transaction' in vnodeProps;
     const hasSelectListener = 'onSelect' in vnodeProps;
     const hasDeselectListener = 'onDeselect' in vnodeProps;
     const hasTextEditListener = 'onText-edit' in vnodeProps || 'onTextEdit' in vnodeProps;
@@ -134,14 +148,16 @@ export const Chart = defineComponent({
         theme: resolveTheme(),
         darkMode: resolveDarkMode(),
         renderer: props.renderer,
-        onDataPointClick: (data: Record<string, unknown>) => emit('data-point-click', data),
+        ...('onDataPointClick' in vnodeProps || 'onData-point-click' in vnodeProps
+          ? { onDataPointClick: (data: Record<string, unknown>) => emit('data-point-click', data) }
+          : {}),
         onMarkClick: (event: MarkEvent) => emit('mark-click', event),
         onMarkHover: (event: MarkEvent) => emit('mark-hover', event),
         onMarkLeave: () => emit('mark-leave'),
         onLegendToggle: (series: string, visible: boolean) =>
           emit('legend-toggle', series, visible),
-        onAnnotationClick: (annotation: Annotation, event: MouseEvent) =>
-          emit('annotation-click', annotation, event),
+        onAnnotationClick: (annotation: Annotation, event: MouseEvent, element: ElementRef) =>
+          emit('annotation-click', annotation, event, element),
         // Only include editing callbacks when the parent binds a listener.
         // Without this gate, every chart gets drag editing wired up.
         ...(hasAnnotationEditListener
@@ -165,7 +181,12 @@ export const Chart = defineComponent({
           : {}),
         ...(props.editable != null ? { editable: props.editable } : {}),
         ...(props.selectedElement ? { selectedElement: props.selectedElement } : {}),
-        responsive: true,
+        autoResize: props.autoResize,
+        responsive: props.responsive,
+        revision: props.revision,
+        ...(hasTransactionListener
+          ? { onEditTransaction: (tx: EditTransaction) => emit('edit-transaction', tx) }
+          : {}),
       };
 
       instance = createChart(container, props.spec, options);
@@ -212,9 +233,17 @@ export const Chart = defineComponent({
         if (!instance) return;
         if (newVal !== prevSpec) {
           prevSpec = newVal;
-          instance.update(props.spec, { selectedElement: props.selectedElement });
+          instance.update(props.spec, {
+            selectedElement: props.selectedElement,
+            revision: props.revision,
+          });
         }
       },
+    );
+
+    watch(
+      () => props.revision,
+      () => instance?.update(props.spec, { revision: props.revision }),
     );
 
     // Watch selectedElement prop changes
@@ -242,6 +271,8 @@ export const Chart = defineComponent({
     // Recreate chart when theme, darkMode, renderer, or editable change
     watch(
       [
+        () => props.autoResize,
+        () => props.responsive,
         () => props.theme,
         () => props.darkMode,
         () => props.renderer,

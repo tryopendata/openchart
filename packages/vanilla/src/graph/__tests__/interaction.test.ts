@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { SpatialIndex } from '../../spatial-index';
 import type { InteractionCallbacks } from '../interaction';
 import { GraphInteractionManager } from '../interaction';
-import { SpatialIndex } from '../spatial-index';
 import type { PositionedNode } from '../types';
 import { ZoomTransform } from '../zoom';
 
@@ -92,13 +92,13 @@ function createCallbacks(): InteractionCallbacks & {
 
 describe('GraphInteractionManager', () => {
   let canvas: HTMLCanvasElement;
-  let spatialIndex: SpatialIndex;
+  let spatialIndex: SpatialIndex<PositionedNode>;
   let callbacks: ReturnType<typeof createCallbacks>;
   let manager: GraphInteractionManager;
 
   beforeEach(() => {
     canvas = createMockCanvas();
-    spatialIndex = new SpatialIndex();
+    spatialIndex = new SpatialIndex<PositionedNode>();
     callbacks = createCallbacks();
 
     const nodes = [

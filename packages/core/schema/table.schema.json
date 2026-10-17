@@ -58,7 +58,7 @@
         },
         "darkMode": {
           "$ref": "#/definitions/DarkMode",
-          "description": "Dark mode behavior."
+          "deprecated": "Use the mount darkMode option; the spec field has no effect."
         },
         "watermark": {
           "type": "boolean",
@@ -796,10 +796,10 @@
             "eyebrow": {
               "anyOf": [
                 {
-                  "type": "string"
+                  "$ref": "#/definitions/ChromeThemeOverride"
                 },
                 {
-                  "$ref": "#/definitions/ChromeThemeOverride"
+                  "type": "string"
                 }
               ],
               "description": "Eyebrow (kicker) style override."
@@ -807,10 +807,10 @@
             "title": {
               "anyOf": [
                 {
-                  "type": "string"
+                  "$ref": "#/definitions/ChromeThemeOverride"
                 },
                 {
-                  "$ref": "#/definitions/ChromeThemeOverride"
+                  "type": "string"
                 }
               ],
               "description": "Title style override."
@@ -818,10 +818,10 @@
             "subtitle": {
               "anyOf": [
                 {
-                  "type": "string"
+                  "$ref": "#/definitions/ChromeThemeOverride"
                 },
                 {
-                  "$ref": "#/definitions/ChromeThemeOverride"
+                  "type": "string"
                 }
               ],
               "description": "Subtitle style override."
@@ -829,10 +829,10 @@
             "source": {
               "anyOf": [
                 {
-                  "type": "string"
+                  "$ref": "#/definitions/ChromeThemeOverride"
                 },
                 {
-                  "$ref": "#/definitions/ChromeThemeOverride"
+                  "type": "string"
                 }
               ],
               "description": "Source/attribution style override."
@@ -840,10 +840,10 @@
             "byline": {
               "anyOf": [
                 {
-                  "type": "string"
+                  "$ref": "#/definitions/ChromeThemeOverride"
                 },
                 {
-                  "$ref": "#/definitions/ChromeThemeOverride"
+                  "type": "string"
                 }
               ],
               "description": "Byline style override."
@@ -851,10 +851,10 @@
             "footer": {
               "anyOf": [
                 {
-                  "type": "string"
+                  "$ref": "#/definitions/ChromeThemeOverride"
                 },
                 {
-                  "$ref": "#/definitions/ChromeThemeOverride"
+                  "type": "string"
                 }
               ],
               "description": "Footer style override."
@@ -1012,7 +1012,7 @@
         "subtle",
         "legacy"
       ],
-      "description": "Opt-in motion language. `legacy` preserves the v8 tween timing."
+      "description": "Opt-in motion language."
     },
     "AnimationConfig": {
       "type": "object",
