@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { DEFAULT_THEME } from '../../packages/core/src/theme/defaults';
 
 /**
  * Layout invariants that were once red-locked bugs and are now fixed.
@@ -53,18 +54,14 @@ test('rotated x-axis labels do not overlap source text', async ({ page }) => {
   // Primary invariant: the source text must never overlap the axis labels.
   expect(overlap.gap, 'source text overlaps rotated x-axis labels').toBeGreaterThanOrEqual(0);
 
-  // Secondary: the gap should stay a sane, readable size — roughly the theme's
-  // chartToFooter spacing (default 8px) without a large dead band. The exact
-  // value drifts by engine: Blink and WebKit place the bottom edge of a -45°
-  // rotated glyph several pixels apart for the same layout, so we bound the
-  // gap to a range that fits every engine (Chrome desktop ~3px, mobile WebKit
-  // ~19px) rather than pinning it to a tight window it can't hold. The bottom
-  // extent now reserves space from the real canvas-measured label width (axes
-  // and planner agree on the measurer), which on WebKit-mobile measures the
-  // rotated labels a few pixels wider than the old heuristic — a slightly more
-  // conservative reservation, never an overlap.
+  // Keep the same 14px cross-engine glyph-bounds tolerance above the theme's
+  // footer spacing. v8 used 8px + 14px = 22px; v9 deliberately uses 12px +
+  // 14px = 26px. WebKit places the bottom of a rotated glyph several pixels
+  // higher than Blink for the same reserved extent. The no-overlap bound above
+  // stays strict; this upper bound still rejects a large accidental dead band.
+  const maxGap = DEFAULT_THEME.spacing.chartToFooter + 14;
   expect(
     overlap.gap,
-    `gap between axis labels and source should be readable (0-22px), got ${overlap.gap.toFixed(1)}px`,
-  ).toBeLessThanOrEqual(22);
+    `gap between axis labels and source should be readable (0-${maxGap}px), got ${overlap.gap.toFixed(1)}px`,
+  ).toBeLessThanOrEqual(maxGap);
 });
