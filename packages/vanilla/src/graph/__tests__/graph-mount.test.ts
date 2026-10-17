@@ -1,8 +1,8 @@
 import type { GraphSpec } from '@opendata-ai/openchart-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createGraph } from '../../graph-mount';
+import { SpatialIndex } from '../../spatial-index';
 import { SimulationManager } from '../simulation';
-import { SpatialIndex } from '../spatial-index';
 
 // ---------------------------------------------------------------------------
 // Test data

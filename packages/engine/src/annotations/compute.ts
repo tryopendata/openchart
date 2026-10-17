@@ -27,14 +27,8 @@ import {
 } from './collisions';
 import { SUBTITLE_FONT_WEIGHT, subtitleFontSize } from './constants';
 import type { AnnotationMeasureTextFn } from './geometry';
-import { heuristicMeasure } from './geometry';
 import { moveAnnotationTo } from './move';
-import {
-  findBestPlacement,
-  isAutoPlacement,
-  normalizeObstacles,
-  type PlacementObstacle,
-} from './placement';
+import { findBestPlacement, isAutoPlacement, type PlacementObstacle } from './placement';
 import { resolvePosition } from './position';
 import { resolveRangeAnnotation } from './resolve-range';
 import { resolveRefLineAnnotation } from './resolve-refline';
@@ -81,46 +75,7 @@ export interface AnnotationContext {
 export function computeAnnotations(
   spec: NormalizedChartSpec,
   ctx: AnnotationContext,
-): ResolvedAnnotation[];
-
-/**
- * @deprecated Use the context-object overload instead.
- */
-export function computeAnnotations(
-  spec: NormalizedChartSpec,
-  scales: ResolvedScales,
-  chartArea: Rect,
-  strategy: LayoutStrategy,
-  isDark?: boolean,
-  obstacles?: Rect[],
-  svgDimensions?: { width: number; height: number },
-): ResolvedAnnotation[];
-
-export function computeAnnotations(
-  spec: NormalizedChartSpec,
-  scalesOrCtx: ResolvedScales | AnnotationContext,
-  chartArea?: Rect,
-  strategy?: LayoutStrategy,
-  isDark?: boolean,
-  obstacles?: Rect[],
-  svgDimensions?: { width: number; height: number },
 ): ResolvedAnnotation[] {
-  let ctx: AnnotationContext;
-
-  if ('measure' in scalesOrCtx) {
-    ctx = scalesOrCtx as AnnotationContext;
-  } else {
-    ctx = {
-      scales: scalesOrCtx as ResolvedScales,
-      chartArea: chartArea!,
-      strategy: strategy!,
-      isDark: isDark ?? false,
-      obstacles: obstacles ? normalizeObstacles(obstacles) : [],
-      svg: svgDimensions ?? { width: 0, height: 0 },
-      measure: heuristicMeasure,
-    };
-  }
-
   const isCompact = ctx.strategy.annotationPosition === 'tooltip-only' && !ctx.autoThin;
 
   const svgRect: Rect = { x: 0, y: 0, width: ctx.svg.width, height: ctx.svg.height };
@@ -288,20 +243,6 @@ export function computeAnnotations(
       // search's own estimate of it. One of them has to be the source of truth.
       const placedBounds = resolved.bounds ?? result.bounds;
       workingObstacles.push({ ...placedBounds, kind: 'annotation' } as PlacementObstacle);
-    }
-  } else if (autoQueue.length > 0) {
-    // Fallback: no SVG dimensions, use legacy nudge for auto annotations
-    for (const entry of autoQueue) {
-      if (ctx.obstacles.length > 0) {
-        nudgeAnnotationFromObstacles(
-          entry.resolved,
-          entry.annotation,
-          ctx.scales,
-          ctx.chartArea,
-          ctx.obstacles,
-          ctx.measure,
-        );
-      }
     }
   }
 

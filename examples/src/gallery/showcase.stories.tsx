@@ -188,9 +188,9 @@ const worldMapSpec: GeoMapSpec = {
   data: [...worldGdp.data],
   encoding: {
     key: { field: 'id', type: 'nominal' },
-    color: { field: 'gdp', type: 'quantitative', title: 'GDP per capita (US$)' },
+    color: { field: 'gdp', type: 'quantitative', title: 'GDP per capita (US$)', format: '$,.0f' },
   },
-  valueFormat: '$,.0f',
+
   chrome: {
     title: 'The World in Dollars Per Person',
     subtitle:
@@ -211,9 +211,9 @@ const sankeySpec: SankeySpec = {
   encoding: {
     source: { field: 'source', type: 'nominal' },
     target: { field: 'target', type: 'nominal' },
-    value: { field: 'value', type: 'quantitative' },
+    value: { field: 'value', type: 'quantitative', format: '.1f' },
   },
-  valueFormat: '.1f',
+
   chrome: {
     title: 'Electricity Is the Grand Central of US Energy',
     subtitle: 'Hover any node: the whole upstream and downstream path lights, everything else dims',

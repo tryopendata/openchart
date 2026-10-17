@@ -274,6 +274,11 @@ export function createGeoMap(
       darkMode,
       watermark: options?.watermark,
       measureText: measure,
+      // An unconstrained host must grow around wrapped titles and sources.
+      // Treating the aspect-ratio budget as the entire SVG can leave only a
+      // few pixels for geography on phones. Explicit heights remain a hard
+      // budget, as they are in dashboards and scrollytelling panels.
+      chromeLayout: isAutoHeight === true ? 'grow' : 'subtract',
     };
 
     return compileGeoMap(candidate, compileOpts);

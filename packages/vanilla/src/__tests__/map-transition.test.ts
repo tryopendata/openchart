@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { captureFeatureFills, captureMapSnapshot, runMapFillTransition } from '../map-transition';
+import { captureMapSnapshot, runMapFillTransition } from '../map-transition';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -99,10 +99,10 @@ afterEach(() => {
 // captureFeatureFills
 // ---------------------------------------------------------------------------
 
-describe('captureFeatureFills', () => {
+describe('captureMapSnapshot feature fills', () => {
   it('returns an empty map for a null SVG', () => {
     // Mount code calls capture before the first render, when no SVG exists yet.
-    const fills = captureFeatureFills(null);
+    const { fills } = captureMapSnapshot(null);
     expect(fills.size).toBe(0);
   });
 
@@ -115,14 +115,14 @@ describe('captureFeatureFills', () => {
       [{ key: 'sf', fill: '#0000ff' }],
     );
 
-    const fills = captureFeatureFills(svg);
+    const { fills } = captureMapSnapshot(svg);
 
-    expect(fills.size).toBe(3);
+    expect(fills.size).toBe(2);
     expect(fills.get('06')).toBe('#ff0000');
     expect(fills.get('48')).toBe('#00ff00');
     // Points share the map with features, namespaced so a feature id can
     // never collide with a point key.
-    expect(fills.get('pt:sf')).toBe('#0000ff');
+    expect(captureMapSnapshot(svg).points.get('sf')?.fill).toBe('#0000ff');
   });
 
   it('skips features without a data-key attribute', () => {
@@ -130,7 +130,7 @@ describe('captureFeatureFills', () => {
     // decorative geometry) are excluded rather than captured under a bogus key.
     const svg = buildMapSvg([{ fill: '#ff0000' }, { key: '48', fill: '#00ff00' }]);
 
-    const fills = captureFeatureFills(svg);
+    const { fills } = captureMapSnapshot(svg);
 
     expect(fills.size).toBe(1);
     expect(fills.get('48')).toBe('#00ff00');
@@ -139,7 +139,7 @@ describe('captureFeatureFills', () => {
   it('skips features that have a key but no fill attribute', () => {
     const svg = buildMapSvg([{ key: '06' }, { key: '48', fill: '#00ff00' }]);
 
-    const fills = captureFeatureFills(svg);
+    const { fills } = captureMapSnapshot(svg);
 
     expect(fills.size).toBe(1);
     expect(fills.has('06')).toBe(false);
@@ -155,7 +155,7 @@ describe('captureFeatureFills', () => {
       { key: '06', fill: '#0000ff' },
     ]);
 
-    const fills = captureFeatureFills(svg);
+    const { fills } = captureMapSnapshot(svg);
 
     expect(fills.size).toBe(1);
     expect(fills.get('06')).toBe('#0000ff');
@@ -174,7 +174,11 @@ describe('runMapFillTransition', () => {
       ['pt:sf', '#ff0000'],
     ]);
 
-    runMapFillTransition(svg, prevFills, { duration: 100 });
+    runMapFillTransition(
+      svg,
+      { fills: prevFills, points: new Map([['sf', { fill: '#ff0000' }]]) },
+      { duration: 100 },
+    );
 
     // From-state is applied synchronously before the first frame, so there is
     // no flash of the final color while the first rAF is pending.
@@ -201,7 +205,7 @@ describe('runMapFillTransition', () => {
     // from nothing.
     const svg = buildMapSvg([{ key: '36', fill: '#0000ff' }]);
 
-    runMapFillTransition(svg, new Map(), { duration: 100 });
+    runMapFillTransition(svg, { fills: new Map(), points: new Map() }, { duration: 100 });
 
     expect(featureAt(svg, 0).getAttribute('fill')).toBe('#0000ff');
     // No tweens means the early-return path: nothing scheduled on rAF.
@@ -218,7 +222,7 @@ describe('runMapFillTransition', () => {
     ]);
 
     expect(() => {
-      runMapFillTransition(svg, prevFills, { duration: 100 });
+      runMapFillTransition(svg, { fills: prevFills, points: new Map() }, { duration: 100 });
       runToCompletion();
     }).not.toThrow();
 
@@ -235,7 +239,7 @@ describe('runMapFillTransition', () => {
       ['48', '#ff0000'], // changed: should tween
     ]);
 
-    runMapFillTransition(svg, prevFills, { duration: 100 });
+    runMapFillTransition(svg, { fills: prevFills, points: new Map() }, { duration: 100 });
     runToCompletion();
 
     // The unchanged feature keeps its original attribute string; only the
@@ -250,7 +254,7 @@ describe('runMapFillTransition', () => {
     const svg = buildMapSvg([{ key: '06', fill: '#0000ff' }]);
     const prevFills = new Map([['06', '#ff0000']]);
 
-    runMapFillTransition(svg, prevFills, { duration: 0 });
+    runMapFillTransition(svg, { fills: prevFills, points: new Map() }, { duration: 0 });
 
     expect(featureAt(svg, 0).getAttribute('fill')).toBe('#0000ff');
     expect(rafCallbacks.size).toBe(0);
@@ -260,7 +264,11 @@ describe('runMapFillTransition', () => {
     const svg = buildMapSvg([{ key: '06', fill: '#0000ff' }]);
     const prevFills = new Map([['06', '#ff0000']]);
 
-    const handle = runMapFillTransition(svg, prevFills, { duration: 100 });
+    const handle = runMapFillTransition(
+      svg,
+      { fills: prevFills, points: new Map() },
+      { duration: 100 },
+    );
     pumpRaf(0);
     pumpRaf(50);
 
@@ -278,18 +286,22 @@ describe('runMapFillTransition', () => {
     // current (interpolated) fills, cancel the in-flight tween, re-render,
     // then start a new transition from the captured snapshot.
     const svg = buildMapSvg([{ key: '06', fill: '#0000ff' }]);
-    const first = runMapFillTransition(svg, new Map([['06', '#ff0000']]), { duration: 100 });
+    const first = runMapFillTransition(
+      svg,
+      { fills: new Map([['06', '#ff0000']]), points: new Map() },
+      { duration: 100 },
+    );
     pumpRaf(0);
     pumpRaf(50);
 
-    const midFills = captureFeatureFills(svg);
+    const midFills = captureMapSnapshot(svg).fills;
     first.cancel();
 
     // Simulate the re-render assigning a new target color.
     featureAt(svg, 0).setAttribute('fill', '#00ff00');
 
     expect(() => {
-      runMapFillTransition(svg, midFills, { duration: 100 });
+      runMapFillTransition(svg, { fills: midFills, points: new Map() }, { duration: 100 });
       runToCompletion();
     }).not.toThrow();
 
@@ -298,7 +310,11 @@ describe('runMapFillTransition', () => {
 
   it('cancel() after natural completion is a harmless no-op', () => {
     const svg = buildMapSvg([{ key: '06', fill: '#0000ff' }]);
-    const handle = runMapFillTransition(svg, new Map([['06', '#ff0000']]), { duration: 100 });
+    const handle = runMapFillTransition(
+      svg,
+      { fills: new Map([['06', '#ff0000']]), points: new Map() },
+      { duration: 100 },
+    );
     runToCompletion();
 
     expect(() => handle.cancel()).not.toThrow();
@@ -326,7 +342,7 @@ describe('runMapFillTransition', () => {
     ]);
 
     expect(() => {
-      runMapFillTransition(svg, prevFills, { duration: 100 });
+      runMapFillTransition(svg, { fills: prevFills, points: new Map() }, { duration: 100 });
       runToCompletion();
     }).not.toThrow();
 
@@ -494,7 +510,11 @@ describe('runMapFillTransition point geometry', () => {
     // Older callers pass Map<string,string> with pt:-prefixed point keys.
     const svg = buildMapSvg([{ key: '06', fill: '#0000ff' }], [{ key: 'sf', fill: '#00ff00' }]);
 
-    runMapFillTransition(svg, new Map([['pt:sf', '#ff0000']]), { duration: 100 });
+    runMapFillTransition(
+      svg,
+      { fills: new Map(), points: new Map([['sf', { fill: '#ff0000' }]]) },
+      { duration: 100 },
+    );
     runToCompletion();
 
     expect(svg.querySelector('.oc-map-point')!.getAttribute('fill')).toBe('rgb(0, 255, 0)');
@@ -509,10 +529,13 @@ describe('missing-data paint during updates', () => {
     ]);
     runMapFillTransition(
       svg,
-      new Map([
-        ['missing', 'url(#old-hatch)'],
-        ['new-data', 'url(#old-hatch)'],
-      ]),
+      {
+        fills: new Map([
+          ['missing', 'url(#old-hatch)'],
+          ['new-data', 'url(#old-hatch)'],
+        ]),
+        points: new Map(),
+      },
       { duration: 300 },
     );
     for (const time of [0, 150, 300]) {

@@ -24,28 +24,16 @@ import type {
   ResolvedTheme,
 } from '@opendata-ai/openchart-core';
 import {
-  AXIS_TITLE_TRAILING_PAD,
-  axisTitleOffset,
   BREAKPOINT_COMPACT_MAX,
   computeChrome,
-  computeFieldFormatContext,
-  defaultNumberFormatter,
   estimateTextWidth,
   getHeightClass,
   HPAD_COMPACT_FRACTION,
   HPAD_COMPACT_MIN,
   isAxislessMark,
-  LABEL_GAP_COMPACT,
-  LABEL_GAP_DEFAULT,
-  MAX_LEFT_LABEL_FRACTION_COMPACT,
-  MAX_LEFT_LABEL_FRACTION_DEFAULT,
-  MAX_LEFT_LABEL_FRACTION_MEDIUM,
-  MAX_LEFT_LABEL_FRACTION_MEDIUM_MAX,
   NARROW_VIEWPORT_MAX,
-  resolveNumberFormatter,
   TOP_PAD_EXTRA_NARROW,
 } from '@opendata-ai/openchart-core';
-import { isBinnedBarEncoding } from '../charts/post-process';
 import type { NormalizedChartSpec } from '../compiler/types';
 import { isEndsBoth, predictEndpointLabelsWidth } from '../endpoint-labels/predict';
 import { hasLegendContent } from '../legend/compute';
@@ -58,7 +46,6 @@ import type { LayoutPlan } from './plan';
 import {
   bottomMargin,
   chromeToInput,
-  fieldIterable,
   INLINE_TICK_OVERHANG_PAD,
   resolveChromeLayout,
   scalePadding,
@@ -67,12 +54,6 @@ import {
 /** Pull the metric-row font sizes from the resolved theme. */
 function metricFonts(theme: ResolvedTheme): MetricFontSizes {
   return { label: theme.fonts.sizes.metricLabel, value: theme.fonts.sizes.metricValue };
-}
-
-/** True when a placed legend layout has visible content (back-compat path). */
-function legendLayoutHasContent(legendLayout: LegendLayout): boolean {
-  if (legendLayout.type === 'continuous') return legendLayout.bounds.height > 0;
-  return 'entries' in legendLayout && legendLayout.entries.length > 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -206,9 +187,9 @@ export function computeDimensions(
   options: CompileOptions,
   legendLayout: LegendLayout,
   theme: ResolvedTheme,
-  strategy?: LayoutStrategy,
-  watermark: boolean = true,
-  plan?: LayoutPlan,
+  strategy: LayoutStrategy | undefined,
+  watermark: boolean,
+  plan: LayoutPlan,
 ): LayoutDimensions {
   const { width, height } = options;
 
@@ -235,12 +216,9 @@ export function computeDimensions(
   // chrome layout can stack source/byline/footer below the legend band.
   // When a layout plan is present, derive legend info from plan.legendContent;
   // otherwise fall back to the legendLayout parameter (back-compat).
-  const bottomLegendReservation = plan
-    ? hasLegendContent(plan.legendContent) && plan.legendContent.position === 'bottom'
+  const bottomLegendReservation =
+    hasLegendContent(plan.legendContent) && plan.legendContent.position === 'bottom'
       ? plan.legendContent.height + legendGap(width)
-      : 0
-    : legendLayoutHasContent(legendLayout) && legendLayout.position === 'bottom'
-      ? legendLayout.bounds.height + legendGap(width)
       : 0;
 
   // When a layout plan is present, use its pre-computed chrome directly.
@@ -261,19 +239,7 @@ export function computeDimensions(
   // Also used below to gate out the metric bar / series-search band, which
   // are sized for full tiles and would blow the same guardrail at this height.
   const isCrampedHeight = getHeightClass(height) === 'cramped';
-  const chrome =
-    plan?.chrome ??
-    computeChrome(
-      chromeToInput(spec.chrome),
-      theme,
-      width,
-      options.measureText,
-      chromeMode,
-      padding,
-      watermark,
-      bottomLegendReservation,
-      isCrampedHeight,
-    );
+  const chrome = plan.chrome;
 
   // chromeLayout 'grow': the plot keeps the full height budget and the SVG
   // grows by the chrome height. effectiveHeight is the height the plot-area
@@ -305,7 +271,7 @@ export function computeDimensions(
     };
 
     // Reserve legend space only when user explicitly opted into a legend.
-    if (userExplicit.legend && legendLayoutHasContent(legendLayout)) {
+    if (userExplicit.legend && hasLegendContent(plan.legendContent)) {
       const gap = legendGap(width);
       if (legendLayout.position === 'right' || legendLayout.position === 'bottom-right') {
         margins.right += legendLayout.bounds.width + 8;
@@ -345,40 +311,8 @@ export function computeDimensions(
   // Estimate x-axis height below chart area: tick labels sit 14px below,
   // axis title sits 35px below. These extend past the chart area bottom
   // and source/footer chrome must be positioned below them.
-  const xAxisSuppressed = encoding.x?.axis === false;
-  const xAxis = (!xAxisSuppressed && encoding.x?.axis) as
-    | (Record<string, unknown> & { labelAngle?: number })
-    | undefined;
-  const hasXAxisLabel = !!xAxis?.title;
-  const xTickAngle = xAxis?.labelAngle;
 
-  let xAxisHeight: number;
-  if (plan) {
-    xAxisHeight = plan.xAxisExtent;
-  } else if (isRadial || xAxisSuppressed) {
-    xAxisHeight = 0;
-  } else if (xTickAngle && Math.abs(xTickAngle) > 10) {
-    // Rotated labels: estimate height from the longest label text.
-    // At -90 degrees, the label height = text width. At -45, it's width * sin(45).
-    const angleRad = Math.abs(xTickAngle) * (Math.PI / 180);
-    const xField = encoding.x?.field;
-    let maxLabelWidth = 40; // fallback
-    if (xField) {
-      for (const row of spec.data) {
-        const label = String(row[xField] ?? '');
-        const w = estimateTextWidth(label, theme.fonts.sizes.axisTick, theme.fonts.weights.normal);
-        if (w > maxLabelWidth) maxLabelWidth = w;
-      }
-    }
-    // Rotated label height: width * sin(angle), plus a small gap
-    const rotatedHeight = maxLabelWidth * Math.sin(angleRad) + 6;
-    // Cap at a reasonable max to avoid absurd margins
-    const labelHeight = Math.min(rotatedHeight, 120);
-    xAxisHeight = hasXAxisLabel ? labelHeight + 20 : labelHeight;
-  } else {
-    const base = theme.spacing.xAxisHeight;
-    xAxisHeight = hasXAxisLabel ? base + 22 : base;
-  }
+  const xAxisHeight = plan.xAxisExtent;
 
   // Resolve effective y-axis tickPosition early so margin math can account
   // for the inline-tick overhang. Inline y-tick labels render above their
@@ -445,7 +379,7 @@ export function computeDimensions(
     seriesCount,
     labelsHiddenByStrategy,
     labelsDensityNone: labelDensity === 'none',
-    endpointLabelsDemoted: plan?.endpointLabelsDemoted,
+    endpointLabelsDemoted: plan.endpointLabelsDemoted,
   });
 
   // (1) Endpoint-labels column reservation. predictEndpointLabelsWidth returns 0
@@ -528,165 +462,7 @@ export function computeDimensions(
     }
   }
 
-  // Dynamic left margin for y-axis labels (yIsInline already resolved above
-  // for inline-tick top-margin reservation).
-  const yAxisSuppressed = encoding.y?.axis === false;
-  const yIsInline = yIsInlinePre;
-  if (encoding.y && !isRadial && !yAxisSuppressed && !yIsInline) {
-    // See the matching guard in layout/plan.ts: a binned bar's y is the
-    // quantitative count, so it must take the numeric tick path, not the
-    // measure-the-category-labels path. Scoped to the binned shape so
-    // ordinary vertical columns keep their exact gutter.
-    const isBinnedBar = isBinnedBarEncoding(spec.markType, encoding);
-    if (
-      !plan &&
-      !isBinnedBar &&
-      (spec.markType === 'bar' ||
-        spec.markType === 'circle' ||
-        spec.markType === 'lollipop' ||
-        encoding.y.type === 'nominal' ||
-        encoding.y.type === 'ordinal')
-    ) {
-      // Category labels on the left for bar/dot charts
-      const yField = encoding.y.field;
-      const yLabelField = (encoding.y.axis as Record<string, unknown> | undefined)?.labelField as
-        | string
-        | undefined;
-      let maxLabelWidth = 0;
-      for (const row of spec.data) {
-        const label = String(row[yField] ?? '');
-        let w = estimateTextWidth(label, theme.fonts.sizes.axisTick, theme.fonts.weights.normal);
-        // When labelField is set, add a gap and the subtitle width
-        if (yLabelField) {
-          const subtitle = String(row[yLabelField] ?? '');
-          if (subtitle) {
-            const gap = theme.fonts.sizes.axisTick * 0.6;
-            const subtitleWidth = estimateTextWidth(
-              subtitle,
-              theme.fonts.sizes.axisTick,
-              theme.fonts.weights.normal,
-            );
-            w += gap + subtitleWidth;
-          }
-        }
-        if (w > maxLabelWidth) maxLabelWidth = w;
-      }
-      if (maxLabelWidth > 0) {
-        // Tighter label-to-chart gap on narrow containers
-        const labelGap = width < NARROW_VIEWPORT_MAX ? LABEL_GAP_COMPACT : LABEL_GAP_DEFAULT;
-        // Clamp reservation so bars keep at least ~45% of container width on
-        // narrow viewports. Labels that exceed the cap will be truncated by
-        // the axis renderer (see axes.ts).
-        const maxLeftFraction =
-          width < BREAKPOINT_COMPACT_MAX
-            ? MAX_LEFT_LABEL_FRACTION_COMPACT
-            : width < MAX_LEFT_LABEL_FRACTION_MEDIUM_MAX
-              ? MAX_LEFT_LABEL_FRACTION_MEDIUM
-              : MAX_LEFT_LABEL_FRACTION_DEFAULT;
-        const maxLeftReserved = Math.floor(width * maxLeftFraction);
-        const reserved = Math.min(hPad + maxLabelWidth + labelGap, maxLeftReserved);
-        margins.left = Math.max(margins.left, reserved);
-      }
-    } else if ((encoding.y.type === 'quantitative' || encoding.y.type === 'temporal') && !plan) {
-      // Numeric tick labels on the left. Estimate width from the data range.
-      // Skipped when a layout plan is present -- the plan measured real tick
-      // labels and provides plan.leftGutter below.
-      const yField = encoding.y.field;
-      const yAxisFormat = (encoding.y.axis as Record<string, unknown> | undefined)?.format as
-        | string
-        | undefined;
-      let maxAbsVal = 0;
-      for (const row of spec.data) {
-        const v = Number(row[yField]);
-        if (Number.isFinite(v) && Math.abs(v) > maxAbsVal) maxAbsVal = Math.abs(v);
-      }
-
-      const ctx = computeFieldFormatContext(fieldIterable(spec.data, yField));
-      let sampleLabel: string;
-      if (yAxisFormat) {
-        const fmt = resolveNumberFormatter(yAxisFormat, ctx);
-        sampleLabel = fmt ? fmt(maxAbsVal) : String(maxAbsVal);
-      } else {
-        sampleLabel = defaultNumberFormatter({ ...ctx, extent: ctx.extent ?? [0, maxAbsVal] })(
-          maxAbsVal,
-        );
-      }
-      const negPrefix = spec.data.some((r) => Number(r[yField]) < 0) ? '-' : '';
-      const labelEst = negPrefix + sampleLabel;
-      const labelWidth = estimateTextWidth(
-        labelEst,
-        theme.fonts.sizes.axisTick,
-        theme.fonts.weights.normal,
-      );
-      // 6px gap between label and chart area edge
-      margins.left = Math.max(margins.left, hPad + labelWidth + 10);
-    }
-  }
-
-  // Rotated y-axis label needs extra left margin (rendered at area.x - offset in SVG).
-  // The renderer computes a dynamic offset that accounts for wide tick labels (e.g.
-  // "$100,000" is ~62px wide and would overlap a fixed 45px offset). We replicate
-  // the same formula here so the reserved space matches what the renderer places.
-  // Skipped when a layout plan is present -- the plan already accounts for the
-  // y-axis title in its leftGutter calculation.
-  const yAxis = encoding.y?.axis as Record<string, unknown> | undefined;
-  if (yAxis && (yAxis.title || yAxis.label) && !isRadial && !plan) {
-    // Estimate the widest y-axis tick label width to mirror the renderer's dynamic offset.
-    const yFieldForTitle = encoding.y?.field;
-    const yAxisFormatForTitle = yAxis?.format as string | undefined;
-    let estTickLabelWidth = 0;
-    // Inline y-tick labels render inside the chart area (above their gridlines),
-    // not in a left gutter, so they add no width the rotated title must clear.
-    // Counting them here would reserve a phantom gutter and leave a dead gap
-    // between the title and the plot.
-    if (
-      yFieldForTitle &&
-      !yIsInlinePre &&
-      (encoding.y?.type === 'quantitative' || encoding.y?.type === 'temporal')
-    ) {
-      let maxAbsValForTitle = 0;
-      for (const row of spec.data) {
-        const v = Number(row[yFieldForTitle]);
-        if (Number.isFinite(v) && Math.abs(v) > maxAbsValForTitle) maxAbsValForTitle = Math.abs(v);
-      }
-      const ctxForTitle = computeFieldFormatContext(fieldIterable(spec.data, yFieldForTitle!));
-      let sampleLabelForTitle: string;
-      if (yAxisFormatForTitle) {
-        const fmt = resolveNumberFormatter(yAxisFormatForTitle, ctxForTitle);
-        sampleLabelForTitle = fmt ? fmt(maxAbsValForTitle) : String(maxAbsValForTitle);
-      } else {
-        sampleLabelForTitle = defaultNumberFormatter({
-          ...ctxForTitle,
-          extent: ctxForTitle.extent ?? [0, maxAbsValForTitle],
-        })(maxAbsValForTitle);
-      }
-      const negPrefixForTitle = spec.data.some((r) => Number(r[yFieldForTitle]) < 0) ? '-' : '';
-      estTickLabelWidth = estimateTextWidth(
-        negPrefixForTitle + sampleLabelForTitle,
-        theme.fonts.sizes.axisTick,
-        theme.fonts.weights.normal,
-      );
-    }
-    // Mirror the renderer's title placement so the reserved space matches where
-    // the title is drawn. axisTitleOffset() returns the distance to the title's
-    // center; it already includes the title half-glyph on the tick-label side.
-    // We add another halfGlyph here for the title glyph extending the other way,
-    // toward the container edge, so the margin reaches the title's outer edge.
-    const titleFontSize = theme.fonts.sizes.body;
-    const offset = axisTitleOffset(estTickLabelWidth, titleFontSize, width, yIsInlinePre);
-    const halfGlyph = Math.ceil(titleFontSize / 2);
-    const rotatedLabelMargin =
-      offset + halfGlyph + (width < BREAKPOINT_COMPACT_MAX ? 0 : AXIS_TITLE_TRAILING_PAD);
-    margins.left = Math.max(margins.left, hPad + rotatedLabelMargin);
-  }
-
-  // When a layout plan is present, its leftGutter was measured from real tick
-  // labels and already accounts for quantitative guess + y-axis title. Apply
-  // it as a floor so the plan's measurement wins over the category-label
-  // reservation above (which stays for bar/dot charts).
-  if (plan) {
-    margins.left = Math.max(margins.left, plan.leftGutter);
-  }
+  margins.left = Math.max(margins.left, plan.leftGutter);
 
   // Reserve space for a secondary (right) y-axis in dual-axis charts.
   // Use Math.max (not +=) to mirror the left-margin pattern: the reserve
@@ -711,14 +487,12 @@ export function computeDimensions(
   // stacks underneath the legend band rather than colliding with it.
   // When a plan is present, derive legend position/size from plan.legendContent;
   // otherwise use the legendLayout parameter (back-compat for non-plan callers).
-  const legendHasEntries = plan
-    ? hasLegendContent(plan.legendContent)
-    : legendLayoutHasContent(legendLayout);
-  const legendPos = plan ? plan.legendContent.position : legendLayout.position;
-  const legendHeight = plan ? plan.legendContent.height : legendLayout.bounds.height;
-  const legendBoundsWidth = plan ? plan.legendContent.legendWidth : legendLayout.bounds.width;
+  const legendHasEntries = hasLegendContent(plan.legendContent);
+  const legendPos = plan.legendContent.position;
+  const legendHeight = plan.legendContent.height;
+  const legendBoundsWidth = plan.legendContent.legendWidth;
 
-  const sizeLegend = plan?.sizeLegendContent;
+  const sizeLegend = plan.sizeLegendContent;
   const colorLegendInGutter =
     legendHasEntries && (legendPos === 'right' || legendPos === 'bottom-right');
 

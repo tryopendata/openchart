@@ -13,7 +13,8 @@
 import { isOpaqueColor } from '../colors/contrast';
 import { deriveNeutralRamp } from '../colors/neutral';
 import type { ChromeThemeOverride, ThemeConfig } from '../types/spec';
-import type { ChromeDefaults, ResolvedTheme, Theme, TokenValue } from '../types/theme';
+import type { ChromeDefaults, ResolvedTheme, ThemeBase, TokenValue } from '../types/theme';
+
 import { DEFAULT_THEME } from './defaults';
 
 /**
@@ -52,14 +53,14 @@ function resolveTokenLight(v: TokenValue): string {
 }
 
 /**
- * Convert a user-facing ThemeConfig (partial) into the full Theme shape
+ * Convert a user-facing ThemeConfig (partial) into the full ThemeBase shape
  * that deepMerge can work with.
  */
-function themeConfigToPartial(config: ThemeConfig): Partial<Theme> {
-  const partial: Partial<Theme> = {};
+function themeConfigToPartial(config: ThemeConfig): Partial<ThemeBase> {
+  const partial: Partial<ThemeBase> = {};
 
   if (config.colors) {
-    const colors: Partial<Theme['colors']> = {};
+    const colors: Partial<ThemeBase['colors']> = {};
     // Shorthand: flat string[] is treated as categorical palette
     if (Array.isArray(config.colors)) {
       colors.categorical = config.colors;
@@ -86,20 +87,20 @@ function themeConfigToPartial(config: ThemeConfig): Partial<Theme> {
     if (colors.categorical && !colors.categoricalFill) {
       colors.categoricalFill = colors.categorical;
     }
-    partial.colors = colors as Theme['colors'];
+    partial.colors = colors as ThemeBase['colors'];
   }
 
   if (config.fonts) {
-    const fonts: Partial<Theme['fonts']> = {};
+    const fonts: Partial<ThemeBase['fonts']> = {};
     if (config.fonts.family) fonts.family = config.fonts.family;
     if (config.fonts.mono) fonts.mono = config.fonts.mono;
-    if (config.fonts.sizes) fonts.sizes = config.fonts.sizes as Theme['fonts']['sizes'];
-    if (config.fonts.weights) fonts.weights = config.fonts.weights as Theme['fonts']['weights'];
-    partial.fonts = fonts as Theme['fonts'];
+    if (config.fonts.sizes) fonts.sizes = config.fonts.sizes as ThemeBase['fonts']['sizes'];
+    if (config.fonts.weights) fonts.weights = config.fonts.weights as ThemeBase['fonts']['weights'];
+    partial.fonts = fonts as ThemeBase['fonts'];
   }
 
   if (config.spacing) {
-    const spacing: Partial<Theme['spacing']> = {};
+    const spacing: Partial<ThemeBase['spacing']> = {};
     if (config.spacing.padding !== undefined) spacing.padding = config.spacing.padding;
     if (config.spacing.chromeGap !== undefined) spacing.chromeGap = config.spacing.chromeGap;
     if (config.spacing.chromeToChart !== undefined)
@@ -110,7 +111,7 @@ function themeConfigToPartial(config: ThemeConfig): Partial<Theme> {
     if (config.spacing.xAxisHeight !== undefined) spacing.xAxisHeight = config.spacing.xAxisHeight;
     if (config.spacing.xAxisLabelPadding !== undefined)
       spacing.xAxisLabelPadding = config.spacing.xAxisLabelPadding;
-    partial.spacing = spacing as Theme['spacing'];
+    partial.spacing = spacing as ThemeBase['spacing'];
   }
 
   if (config.borderRadius !== undefined) {
@@ -133,7 +134,7 @@ function themeConfigToPartial(config: ThemeConfig): Partial<Theme> {
         chrome[element] = override;
       }
     }
-    partial.chrome = chrome as unknown as Theme['chrome'];
+    partial.chrome = chrome as unknown as ThemeBase['chrome'];
   }
 
   if (config.rule) {
@@ -226,7 +227,7 @@ function isDarkBackground(hex: string): boolean {
  * Only overrides values that still match the light-mode defaults,
  * so explicit user overrides are preserved.
  */
-function adaptChromeForDarkBg(theme: Theme, textColor: string): Theme {
+function adaptChromeForDarkBg(theme: ThemeBase, textColor: string): ThemeBase {
   const light = DEFAULT_THEME.chrome;
   return {
     ...theme,
@@ -294,8 +295,13 @@ function adjustOpacity(hex: string, opacity: number): string {
  * @param base - Base theme to merge onto. Defaults to DEFAULT_THEME.
  * @returns A ResolvedTheme with all properties guaranteed.
  */
-export function resolveTheme(userTheme?: ThemeConfig, base: Theme = DEFAULT_THEME): ResolvedTheme {
-  let merged: Theme = userTheme ? deepMerge(base, themeConfigToPartial(userTheme)) : { ...base };
+export function resolveTheme(
+  userTheme?: ThemeConfig,
+  base: ThemeBase = DEFAULT_THEME,
+): ResolvedTheme {
+  let merged: ThemeBase = userTheme
+    ? deepMerge(base, themeConfigToPartial(userTheme))
+    : { ...base };
 
   // Propagate fonts.sizes overrides onto the chrome element fontSizes.
   // The chrome defaults hard-code fontSize independently from fonts.sizes,

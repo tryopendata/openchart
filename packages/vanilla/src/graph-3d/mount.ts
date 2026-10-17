@@ -1,3 +1,4 @@
+import { warnDeprecated } from '../deprecations';
 /**
  * The 3D graph renderer: a `GraphInstance` backed by `3d-force-graph`.
  *
@@ -43,9 +44,7 @@ import {
   resolveHighlightTarget as resolveHighlightTargetIds,
 } from '../graph/highlight';
 import { createGraphLegend, type GraphLegendController } from '../graph/legend';
-import { createTween, linear, prefersReducedMotion, resolveEase } from '../graph/motion';
 import type { GraphRendererContext } from '../graph/renderer-registry';
-import { AnimationScheduler, type GraphAnimation } from '../graph/scheduler';
 import { GraphSearchManager } from '../graph/search';
 import { seedNodePositions } from '../graph/seed';
 import type { GraphCamera, GraphFlyTarget, PositionedEdge, PositionedNode } from '../graph/types';
@@ -57,6 +56,8 @@ import type {
   GraphLegendData,
   GraphTooltipFormatter,
 } from '../graph-mount';
+import { AnimationScheduler, type Animation as GraphAnimation } from '../motion/scheduler';
+import { createTween, linear, prefersReducedMotion, resolveEase } from '../motion/tween';
 import { resolvedSurface } from '../theme-tokens';
 import { resolveEmphasis } from './emphasis';
 import { ENTRANCE_CAMERA_PULLBACK, elementProgress, planEntrance } from './entrance';
@@ -1829,7 +1830,10 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
     update,
     // `update()` already routes an id-set-preserving change through the
     // material-mutation path, which never touches `graphData()`.
-    updateVisuals: update,
+    updateVisuals: (spec) => {
+      warnDeprecated('updateVisuals is deprecated; use update.');
+      update(spec);
+    },
     search,
     clearSearch,
     zoomToFit,

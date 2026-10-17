@@ -11,6 +11,7 @@ import type {
   AnnotationOffset,
   ChartSpec,
   DarkMode,
+  EditTransaction,
   ElementEdit,
   ElementRef,
   GraphSpec,
@@ -28,6 +29,10 @@ let {
   theme,
   darkMode,
   renderer,
+  autoResize,
+  responsive,
+  revision,
+  onedittransaction,
   onmarkclick,
   onmarkhover,
   onmarkleave,
@@ -49,16 +54,24 @@ let {
   theme?: ThemeConfig;
   darkMode?: DarkMode;
   renderer?: 'auto' | 'svg' | 'canvas';
+  autoResize?: boolean;
+  /** @deprecated Use autoResize. */
+  responsive?: boolean;
+  revision?: string | number;
+  onedittransaction?: (tx: EditTransaction) => void;
   onmarkclick?: (event: MarkEvent) => void;
   onmarkhover?: (event: MarkEvent) => void;
   onmarkleave?: () => void;
   onlegendtoggle?: (series: string, visible: boolean) => void;
-  onannotationclick?: (annotation: Annotation, event: MouseEvent) => void;
+  onannotationclick?: (annotation: Annotation, event: MouseEvent, element: ElementRef) => void;
+  /** @deprecated Use onedittransaction. */
   onannotationedit?: (annotation: TextAnnotation, offset: AnnotationOffset) => void;
   onedit?: (edit: ElementEdit) => void;
   onselect?: (element: ElementRef) => void;
   ondeselect?: (element: ElementRef) => void;
+  /** @deprecated Use onedittransaction. */
   ontextedit?: (element: ElementRef, oldText: string, newText: string) => void;
+  /** @deprecated Use onmarkclick. */
   ondatapointclick?: (data: Record<string, unknown>) => void;
   editable?: boolean;
   selectedElement?: ElementRef;
@@ -89,9 +102,8 @@ const stableHandlers: MountOptions = {
   onMarkLeave: () => untrack(() => onmarkleave)?.(),
   onLegendToggle: (series: string, visible: boolean) =>
     untrack(() => onlegendtoggle)?.(series, visible),
-  onAnnotationClick: (annotation: Annotation, event: MouseEvent) =>
-    untrack(() => onannotationclick)?.(annotation, event),
-  onDataPointClick: (data: Record<string, unknown>) => untrack(() => ondatapointclick)?.(data),
+  onAnnotationClick: (annotation: Annotation, event: MouseEvent, element: ElementRef) =>
+    untrack(() => onannotationclick)?.(annotation, event, element),
 };
 
 // Editing callbacks - only defined as stable wrappers, but only
@@ -104,7 +116,11 @@ const stableOnDeselect = (element: ElementRef) => untrack(() => ondeselect)?.(el
 const stableOnTextEdit = (element: ElementRef, oldText: string, newText: string) =>
   untrack(() => ontextedit)?.(element, oldText, newText);
 
+const hasTransactionListener = $derived(Boolean(onedittransaction));
+const stableOnEditTransaction = (tx: EditTransaction) => untrack(() => onedittransaction)?.(tx);
+
 let prevSpec = '';
+let prevRevision: string | number | undefined;
 
 // Effect 1: Mount/recreate chart on theme/darkMode changes.
 // Reads spec via untrack() so spec changes don't trigger full recreate.
@@ -129,7 +145,16 @@ $effect(() => {
     theme: resolvedTheme,
     darkMode: resolvedDarkMode,
     renderer: resolvedRenderer,
-    responsive: true,
+    autoResize,
+    responsive,
+    revision: untrack(() => revision),
+    ...(untrack(() => ondatapointclick)
+      ? {
+          onDataPointClick: (data: Record<string, unknown>) =>
+            untrack(() => ondatapointclick)?.(data),
+        }
+      : {}),
+    ...(hasTransactionListener ? { onEditTransaction: stableOnEditTransaction } : {}),
     ...stableHandlers,
     ...(resolvedEditable != null ? { editable: resolvedEditable } : {}),
     ...(hasAnnotationEdit ? { onAnnotationEdit: stableOnAnnotationEdit } : {}),
@@ -147,12 +172,17 @@ $effect(() => {
 // Effect 2: Update chart when spec changes (no destroy/recreate).
 $effect(() => {
   const currentSpec = spec;
+  const currentRevision = revision;
   if (!instance) return;
 
   const specString = JSON.stringify(currentSpec);
-  if (specString !== prevSpec) {
+  if (specString !== prevSpec || currentRevision !== prevRevision) {
     prevSpec = specString;
-    instance.update(currentSpec, { selectedElement: untrack(() => selectedElementProp) });
+    prevRevision = currentRevision;
+    instance.update(currentSpec, {
+      selectedElement: untrack(() => selectedElementProp),
+      revision: currentRevision,
+    });
   }
 });
 

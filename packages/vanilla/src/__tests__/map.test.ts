@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createContainer } from '../__test-fixtures__/dom';
+import { createAutoHeightContainer, createContainer } from '../__test-fixtures__/dom';
 import { createGeoMap } from '../map-mount';
 
 function mockReducedMotion() {
@@ -96,6 +96,51 @@ describe('createGeoMap', () => {
     expect(features.length).toBe(3);
 
     instance.destroy();
+  });
+
+  describe('responsive height', () => {
+    const wrappedChrome = {
+      title: 'Contributor names by mailing state',
+      subtitle: 'July through September compared with April through June. Equal reporting windows.',
+      source: 'Source: State campaign finance itemized contributions',
+    };
+
+    it.each(
+      [330, 360, 680].flatMap((width) => [11, 14].map((axisTick) => ({ width, axisTick }))),
+    )('keeps geography legible at $width px with $axisTick px ticks', ({ width, axisTick }) => {
+      const host = createAutoHeightContainer(width);
+      const instance = createGeoMap(
+        host,
+        { ...basicMapSpec, chrome: wrappedChrome },
+        { responsive: false, theme: { fonts: { sizes: { axisTick } } } },
+      );
+      expect(instance.layout.area.height).toBeGreaterThan(width * 0.3);
+      expect(instance.layout.height).toBeGreaterThan(width * 0.625);
+      const initialHeight = instance.layout.height;
+      instance.resize();
+      instance.resize();
+      expect(instance.layout.height).toBe(initialHeight);
+      instance.update({
+        ...basicMapSpec,
+        chrome: { ...wrappedChrome, subtitle: 'Short subtitle' },
+      });
+      expect(instance.layout.area.height).toBeGreaterThan(width * 0.3);
+      expect(instance.layout.height).toBeLessThanOrEqual(initialHeight);
+      instance.destroy();
+    });
+
+    it('respects an explicitly sized host with wrapped chrome', () => {
+      const host = createContainer(360, 420);
+      const instance = createGeoMap(
+        host,
+        { ...basicMapSpec, chrome: wrappedChrome },
+        { responsive: false },
+      );
+      expect(instance.layout.height).toBeLessThanOrEqual(420);
+      instance.resize();
+      expect(instance.layout.height).toBeLessThanOrEqual(420);
+      instance.destroy();
+    });
   });
 
   describe('hover', () => {

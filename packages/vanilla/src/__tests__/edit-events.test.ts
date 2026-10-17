@@ -1206,6 +1206,22 @@ describe('edit events', () => {
   // 8. element field on annotation edit payloads
   // =========================================================================
   describe('element field on annotation edit payloads', () => {
+    it('keeps first-leaf drag pointers canonical in both callbacks', () => {
+      const onEdit = vi.fn();
+      const onEditTransaction = vi.fn();
+      const chart = createChart(
+        container,
+        { layer: [textAnnotatedSpec] },
+        { onEdit, onEditTransaction },
+      );
+      const annotation = container.querySelector('.oc-annotation-text');
+      expect(annotation).not.toBeNull();
+      simulateDrag(annotation!, 100, 100, 150, 130);
+      expect(onEdit.mock.calls[0][0].element.path).toBe('/layer/0/annotations/0/offset');
+      expect(onEditTransaction.mock.calls[0][0].ops[0].path).toBe('/layer/0/annotations/0/offset');
+      chart.destroy();
+    });
+
     it('text annotation drag includes element with index', () => {
       const onEdit = vi.fn();
       const chart = createChart(container, textAnnotatedSpec, { onEdit });

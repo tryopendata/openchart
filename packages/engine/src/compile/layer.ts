@@ -4,7 +4,10 @@ import type {
   CompileOptions,
   DataRow,
   Encoding,
+  EndpointLabelEntry,
+  EndpointLabelsLayout,
   LayerSpec,
+  LegendLayout,
   Mark,
 } from '@opendata-ai/openchart-core';
 import {
@@ -14,16 +17,31 @@ import {
   computeFieldFormatContext,
   defaultNumberFormatter,
   estimateTextWidth,
+  footnoteBandHeight,
+  getBreakpoint,
+  getHeightClass,
+  getLayoutStrategy,
   resolveNumberFormatter,
   resolveTheme,
   TICK_LABEL_OFFSET,
 } from '@opendata-ai/openchart-core';
 import { scaleLinear } from 'd3-scale';
 import { curveMonotoneX, area as d3area, line as d3line } from 'd3-shape';
+import { annotationNoteLineCount } from '../annotations/notes';
 import { flattenLayers } from '../compiler/index';
+import { normalizeSpec } from '../compiler/normalize';
+import type { NormalizedChartSpec } from '../compiler/types';
 import { finiteNumber } from '../data/finite-number';
+import { bidirectionalSweep } from '../endpoint-labels/compute';
+import {
+  ENDPOINT_COLUMN_GAP,
+  ENDPOINT_ENTRY_GAP,
+  ENDPOINT_LEADER_THRESHOLD,
+} from '../endpoint-labels/constants';
 import type { MeasureFn } from '../layout/plan';
 import { createMeasureFn } from '../layout/plan';
+import { measureCategoricalLegendContent, placeLegend } from '../legend/compute';
+import { expandSpecSugar } from './spec-sugar';
 
 type ChartCompiler = (spec: unknown, options: CompileOptions) => ChartLayout;
 
@@ -288,11 +306,85 @@ function compileLayerIndependent(
   }
 
   const primary0 = buildPrimarySpec([leaf0WithUnionX], layerSpec);
-  const layout0 = compileChart(primary0, optionsWithReserve);
+  let layout0 = compileChart(primary0, optionsWithReserve);
 
   const primary1 = buildPrimarySpec([leaf1WithUnionX], layerSpec);
   primary1.annotations = [];
-  const layout1 = compileChart(primary1, optionsWithReserve);
+  let layout1 = compileChart(primary1, optionsWithReserve);
+
+  // Endpoint columns belong to the assembled figure. Both axes must use the
+  // same plot rectangle, with the trailing column outside the right axis.
+  const columns = [layout0.endpointLabels, layout1.endpointLabels].filter(
+    (column): column is EndpointLabelsLayout => !!column,
+  );
+  let leadingColumnX: number | undefined;
+  if (columns.length) {
+    const pad = layout0.theme.spacing.padding;
+    const leadingWidth = Math.max(0, ...columns.map((column) => column.leadingBounds?.width ?? 0));
+    const leftAxisReserve = Math.max(
+      0,
+      layout0.area.x -
+        pad -
+        (layout0.endpointLabels?.leadingBounds
+          ? layout0.endpointLabels.leadingBounds.width + 16
+          : 0),
+    );
+    const x = Math.max(
+      layout0.area.x,
+      layout1.area.x,
+      leadingWidth ? pad + leadingWidth + ENDPOINT_COLUMN_GAP + leftAxisReserve : 0,
+    );
+    leadingColumnX = leadingWidth ? pad : undefined;
+    const y = Math.max(layout0.area.y, layout1.area.y);
+    const endpointWidth = Math.max(...columns.map((column) => column.bounds.width));
+    const rightLegends = [...layout0.legends, ...layout1.legends].filter(isRightLegend);
+    const legendReserve = rightLegends.length
+      ? Math.max(...rightLegends.map((legend) => legend.bounds.width)) + 8
+      : 0;
+    const right =
+      options.width - pad - rightReserve - ENDPOINT_COLUMN_GAP - endpointWidth - legendReserve;
+    const grow = (primary0.chromeLayout ?? options.chromeLayout) === 'grow';
+    const bottom = grow
+      ? layout0.area.y + layout0.area.height
+      : Math.min(layout0.area.y + layout0.area.height, layout1.area.y + layout1.area.height);
+    const area = {
+      ...(options.frozenChartArea ?? {
+        x,
+        y,
+        width: Math.max(1, right - x),
+        height: Math.max(1, bottom - y),
+      }),
+    };
+    let reserve = noteReserve(layout0);
+    // Narrowing the plot can demote more annotations. Carry the old reserve
+    // through frozen compilation, then reconcile any new note lines. The
+    // reserve only grows and is bounded by the authored annotation count.
+    for (let pass = 0; pass <= (primary0.annotations?.length ?? 0) + 1; pass++) {
+      const alignedOptions = {
+        ...optionsWithReserve,
+        frozenChartArea: area,
+        footnoteReserve: reserve,
+        height: optionsWithReserve.height + (grow ? reserve : 0),
+      };
+      layout0 = compileChart(primary0, alignedOptions);
+      layout1 = compileChart(primary1, alignedOptions);
+      const nextReserve = noteReserve(layout0);
+      if (nextReserve <= reserve) break;
+      const delta = nextReserve - reserve;
+      reserve = nextReserve;
+      if (grow) {
+        layout0.dimensions = { ...layout0.dimensions, height: layout0.dimensions.height + delta };
+        break;
+      }
+      if (options.frozenChartArea) break;
+      area.height = Math.max(1, area.height - delta);
+    }
+    // The compiler places right legends next to the plot. In this assembly
+    // the right axis and endpoint column occupy that space first.
+    const legendShift = rightReserve + ENDPOINT_COLUMN_GAP + endpointWidth;
+    layout0 = moveRightLegends(layout0, legendShift);
+    layout1 = moveRightLegends(layout1, legendShift);
+  }
 
   const y2Axis = layout1.axes.y
     ? {
@@ -412,6 +504,46 @@ function compileLayerIndependent(
     return tagged;
   });
 
+  const endpointColumns = [layout0, layout1].flatMap((layout, index) => {
+    const column = layout.endpointLabels;
+    if (!column) return [];
+    const sourceMarks = index === 0 ? adjustedMarks0 : taggedMarks1;
+    // Band-centering changes the data-point x after compilation. Move endpoint
+    // markers with the remapped line instead of leaving them between categories.
+    const remap = (entry: EndpointLabelEntry, leading = false) => {
+      const line = sourceMarks.find(
+        (mark) => mark.type === 'line' && mark.seriesKey === entry.seriesKey,
+      );
+      if (!entry.marker || line?.type !== 'line') return entry;
+      const points = line.dataPoints?.length ? line.dataPoints : line.points;
+      const point = leading ? points[0] : points.at(-1);
+      if (!point) return entry;
+      return {
+        ...entry,
+        marker: {
+          ...entry.marker,
+          dataX: point.x,
+          x: point.x + (leading ? -1 : 1) * entry.marker.radius,
+        },
+      };
+    };
+    const endpointConfig = (index === 0 ? primary0 : primary1).endpointLabels;
+    return [
+      {
+        ...column,
+        leadersEnabled: typeof endpointConfig === 'object' && endpointConfig.showLeader === true,
+        entries: column.entries.map((entry) => remap(entry)),
+        leading: column.leading?.map((entry) => remap(entry, true)),
+      },
+    ];
+  });
+  const endpointLabels = mergeEndpointColumns(
+    endpointColumns,
+    layout0.area,
+    rightReserve,
+    leadingColumnX,
+  );
+
   const seenLabels = new Set<string>();
   const l0Legend = layout0.legend;
   const l1Legend = layout1.legend;
@@ -437,13 +569,44 @@ function compileLayerIndependent(
     appendLayerMarks(layer.layout, layer.leafIndex, marks, mergedTooltips, layer.sourceMarks);
   }
 
-  const mergedLegend = {
+  let mergedLegend = {
     ...layout0.legend,
     ...('entries' in l0Legend ? { entries: mergedLegendEntries } : {}),
   } as typeof layout0.legend;
+  if (endpointLabels) {
+    const owner = l0Legend.bounds.width > 0 ? layout0 : layout1;
+    if (isRightLegend(owner.legend) && 'entries' in owner.legend) {
+      const ownerSpec = owner === layout0 ? primary0 : primary1;
+      const normalized = normalizeSpec(
+        expandSpecSugar(ownerSpec as unknown as Record<string, unknown>) as unknown as ChartSpec,
+      ) as NormalizedChartSpec;
+      const content = measureCategoricalLegendContent(
+        mergedLegendEntries,
+        normalized.legend,
+        getLayoutStrategy(getBreakpoint(options.width), getHeightClass(options.height)),
+        owner.theme,
+        options.width,
+        layout0.area.height,
+        owner.watermark,
+        measureFn,
+      );
+      mergedLegend = placeLegend(
+        content,
+        {
+          ...layout0.area,
+          width:
+            layout0.area.width + rightReserve + ENDPOINT_COLUMN_GAP + endpointLabels.bounds.width,
+        },
+        options.width,
+        owner.theme,
+        0, // Right legends do not depend on the x-axis extent.
+      );
+    }
+  }
 
   return {
     ...layout0,
+    ...(endpointLabels ? { endpointLabels } : {}),
     axes: {
       x: layout0.axes.x,
       y: layout0.axes.y,
@@ -455,6 +618,114 @@ function compileLayerIndependent(
     // legend must replace the primary's entry there as well.
     legends: [mergedLegend, ...layout0.legends.slice(1)],
     tooltipDescriptors: mergedTooltips,
+  };
+}
+
+function noteReserve(layout: ChartLayout): number {
+  return footnoteBandHeight(
+    annotationNoteLineCount(layout.chrome.footnotes ?? []) +
+      (layout.chrome.seriesSummary?.reduce((count, entry) => count + entry.lines.length, 0) ?? 0),
+    layout.theme,
+  );
+}
+
+function isRightLegend(legend: LegendLayout): boolean {
+  return (
+    (legend.position === 'right' || legend.position === 'bottom-right') && legend.bounds.width > 0
+  );
+}
+
+function moveRightLegends(layout: ChartLayout, dx: number): ChartLayout {
+  const move = (legend: LegendLayout): LegendLayout => {
+    if (!isRightLegend(legend)) return legend;
+    const shifted = { ...legend, bounds: { ...legend.bounds, x: legend.bounds.x + dx } };
+    if ('entryPositions' in legend)
+      return {
+        ...shifted,
+        entryPositions: legend.entryPositions?.map((position) => ({
+          ...position,
+          x: position.x + dx,
+          labelX: position.labelX + dx,
+        })),
+      } as LegendLayout;
+    if (legend.type === 'continuous')
+      return {
+        ...shifted,
+        bar: { ...legend.bar, x: legend.bar.x + dx },
+        bins: legend.bins.map((bin) => ({ ...bin, x: bin.x + dx })),
+        ticks: legend.ticks.map((tick) => ({ ...tick, x: tick.x + dx })),
+      } as LegendLayout;
+    return shifted;
+  };
+  return { ...layout, legend: move(layout.legend), legends: layout.legends.map(move) };
+}
+
+/** Keep each axis's formatted entries, then resolve collisions in one column. */
+function mergeEndpointColumns(
+  columns: (EndpointLabelsLayout & { leadersEnabled: boolean })[],
+  area: ChartLayout['area'],
+  rightReserve: number,
+  leadingColumnX?: number,
+): EndpointLabelsLayout | undefined {
+  if (!columns.length) return undefined;
+  const { leadersEnabled: _leadersEnabled, ...first } = columns[0];
+  const sweep = (entries: (EndpointLabelEntry & { leadersEnabled: boolean })[]) => {
+    const size = first.labelStyle.fontSize;
+    const tops = bidirectionalSweep(
+      entries.map((entry, index) => ({
+        naturalTop: entry.dataY - size / 2,
+        height:
+          entry.labelLines.length * size * (first.labelStyle.lineHeight ?? 1.25) +
+          (entry.value
+            ? first.valueGap + first.valueStyle.fontSize * (first.valueStyle.lineHeight ?? 1.25)
+            : 0) +
+          ENDPOINT_ENTRY_GAP,
+        index,
+      })),
+      area.y,
+      area.y + area.height,
+    );
+    return entries.map(({ leadersEnabled, ...entry }, index) => ({
+      ...entry,
+      labelY: tops[index],
+      showLeader:
+        leadersEnabled &&
+        Math.abs(tops[index] + size / 2 - entry.dataY) > ENDPOINT_LEADER_THRESHOLD,
+    }));
+  };
+  const leadingColumns = columns.filter((column) => column.leadingBounds);
+  const leadingWidth = Math.max(0, ...leadingColumns.map((column) => column.leadingBounds!.width));
+  return {
+    ...first,
+    entries: sweep(
+      columns.flatMap((column) =>
+        column.entries.map((entry) => ({ ...entry, leadersEnabled: column.leadersEnabled })),
+      ),
+    ),
+    bounds: {
+      x: area.x + area.width + rightReserve + ENDPOINT_COLUMN_GAP,
+      y: area.y,
+      width: Math.max(...columns.map((column) => column.bounds.width)),
+      height: area.height,
+    },
+    ...(leadingColumns.length
+      ? {
+          leading: sweep(
+            leadingColumns.flatMap((column) =>
+              (column.leading ?? []).map((entry) => ({
+                ...entry,
+                leadersEnabled: column.leadersEnabled,
+              })),
+            ),
+          ),
+          leadingBounds: {
+            x: leadingColumnX ?? area.x - ENDPOINT_COLUMN_GAP - leadingWidth,
+            y: area.y,
+            width: leadingWidth,
+            height: area.height,
+          },
+        }
+      : {}),
   };
 }
 
@@ -735,7 +1006,7 @@ function withSharedDomains(leaf: ChartSpec, shared: SharedDomains): ChartSpec {
   return { ...leaf, encoding } as unknown as ChartSpec;
 }
 
-function buildPrimarySpec(leaves: ChartSpec[], layerSpec: LayerSpec): ChartSpec {
+export function buildPrimarySpec(leaves: ChartSpec[], layerSpec: LayerSpec): ChartSpec {
   const allData = leaves.flatMap((leaf) => leaf.data);
 
   const primary = {

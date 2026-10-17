@@ -8855,10 +8855,10 @@
             "eyebrow": {
               "anyOf": [
                 {
-                  "type": "string"
+                  "$ref": "#/definitions/ChromeThemeOverride"
                 },
                 {
-                  "$ref": "#/definitions/ChromeThemeOverride"
+                  "type": "string"
                 }
               ],
               "description": "Eyebrow (kicker) style override."
@@ -8866,10 +8866,10 @@
             "title": {
               "anyOf": [
                 {
-                  "type": "string"
+                  "$ref": "#/definitions/ChromeThemeOverride"
                 },
                 {
-                  "$ref": "#/definitions/ChromeThemeOverride"
+                  "type": "string"
                 }
               ],
               "description": "Title style override."
@@ -8877,10 +8877,10 @@
             "subtitle": {
               "anyOf": [
                 {
-                  "type": "string"
+                  "$ref": "#/definitions/ChromeThemeOverride"
                 },
                 {
-                  "$ref": "#/definitions/ChromeThemeOverride"
+                  "type": "string"
                 }
               ],
               "description": "Subtitle style override."
@@ -8888,10 +8888,10 @@
             "source": {
               "anyOf": [
                 {
-                  "type": "string"
+                  "$ref": "#/definitions/ChromeThemeOverride"
                 },
                 {
-                  "$ref": "#/definitions/ChromeThemeOverride"
+                  "type": "string"
                 }
               ],
               "description": "Source/attribution style override."
@@ -8899,10 +8899,10 @@
             "byline": {
               "anyOf": [
                 {
-                  "type": "string"
+                  "$ref": "#/definitions/ChromeThemeOverride"
                 },
                 {
-                  "$ref": "#/definitions/ChromeThemeOverride"
+                  "type": "string"
                 }
               ],
               "description": "Byline style override."
@@ -8910,10 +8910,10 @@
             "footer": {
               "anyOf": [
                 {
-                  "type": "string"
+                  "$ref": "#/definitions/ChromeThemeOverride"
                 },
                 {
-                  "$ref": "#/definitions/ChromeThemeOverride"
+                  "type": "string"
                 }
               ],
               "description": "Footer style override."
@@ -9109,7 +9109,7 @@
         "subtle",
         "legacy"
       ],
-      "description": "Opt-in motion language. `legacy` preserves the v8 tween timing."
+      "description": "Opt-in motion language."
     },
     "AnimationConfig": {
       "type": "object",
@@ -11492,7 +11492,7 @@
         },
         "darkMode": {
           "$ref": "#/definitions/DarkMode",
-          "description": "Dark mode behavior. Defaults to \"off\"."
+          "deprecated": "Use the mount darkMode option; the spec field has no effect."
         },
         "watermark": {
           "type": "boolean",
@@ -11996,7 +11996,7 @@
             },
             "darkMode": {
               "$ref": "#/definitions/DarkMode",
-              "description": "Dark mode behavior. Defaults to \"off\"."
+              "deprecated": "Use the mount darkMode option; the spec field has no effect."
             },
             "watermark": {
               "type": "boolean",
@@ -12537,7 +12537,7 @@
             },
             "darkMode": {
               "$ref": "#/definitions/DarkMode",
-              "description": "Dark mode behavior. Defaults to \"off\"."
+              "deprecated": "Use the mount darkMode option; the spec field has no effect."
             },
             "watermark": {
               "type": "boolean",
@@ -13078,7 +13078,7 @@
             },
             "darkMode": {
               "$ref": "#/definitions/DarkMode",
-              "description": "Dark mode behavior. Defaults to \"off\"."
+              "deprecated": "Use the mount darkMode option; the spec field has no effect."
             },
             "watermark": {
               "type": "boolean",
@@ -13619,7 +13619,7 @@
             },
             "darkMode": {
               "$ref": "#/definitions/DarkMode",
-              "description": "Dark mode behavior. Defaults to \"off\"."
+              "deprecated": "Use the mount darkMode option; the spec field has no effect."
             },
             "watermark": {
               "type": "boolean",
@@ -14160,7 +14160,7 @@
             },
             "darkMode": {
               "$ref": "#/definitions/DarkMode",
-              "description": "Dark mode behavior. Defaults to \"off\"."
+              "deprecated": "Use the mount darkMode option; the spec field has no effect."
             },
             "watermark": {
               "type": "boolean",
@@ -14701,7 +14701,7 @@
             },
             "darkMode": {
               "$ref": "#/definitions/DarkMode",
-              "description": "Dark mode behavior. Defaults to \"off\"."
+              "deprecated": "Use the mount darkMode option; the spec field has no effect."
             },
             "watermark": {
               "type": "boolean",
@@ -15242,7 +15242,7 @@
             },
             "darkMode": {
               "$ref": "#/definitions/DarkMode",
-              "description": "Dark mode behavior. Defaults to \"off\"."
+              "deprecated": "Use the mount darkMode option; the spec field has no effect."
             },
             "watermark": {
               "type": "boolean",
@@ -15783,7 +15783,7 @@
             },
             "darkMode": {
               "$ref": "#/definitions/DarkMode",
-              "description": "Dark mode behavior. Defaults to \"off\"."
+              "deprecated": "Use the mount darkMode option; the spec field has no effect."
             },
             "watermark": {
               "type": "boolean",
@@ -16324,7 +16324,7 @@
             },
             "darkMode": {
               "$ref": "#/definitions/DarkMode",
-              "description": "Dark mode behavior. Defaults to \"off\"."
+              "deprecated": "Use the mount darkMode option; the spec field has no effect."
             },
             "watermark": {
               "type": "boolean",
@@ -16865,7 +16865,7 @@
             },
             "darkMode": {
               "$ref": "#/definitions/DarkMode",
-              "description": "Dark mode behavior. Defaults to \"off\"."
+              "deprecated": "Use the mount darkMode option; the spec field has no effect."
             },
             "watermark": {
               "type": "boolean",
@@ -17406,7 +17406,7 @@
             },
             "darkMode": {
               "$ref": "#/definitions/DarkMode",
-              "description": "Dark mode behavior. Defaults to \"off\"."
+              "deprecated": "Use the mount darkMode option; the spec field has no effect."
             },
             "watermark": {
               "type": "boolean",
@@ -17947,7 +17947,7 @@
             },
             "darkMode": {
               "$ref": "#/definitions/DarkMode",
-              "description": "Dark mode behavior. Defaults to \"off\"."
+              "deprecated": "Use the mount darkMode option; the spec field has no effect."
             },
             "watermark": {
               "type": "boolean",
@@ -18488,7 +18488,7 @@
             },
             "darkMode": {
               "$ref": "#/definitions/DarkMode",
-              "description": "Dark mode behavior. Defaults to \"off\"."
+              "deprecated": "Use the mount darkMode option; the spec field has no effect."
             },
             "watermark": {
               "type": "boolean",
@@ -19029,7 +19029,7 @@
             },
             "darkMode": {
               "$ref": "#/definitions/DarkMode",
-              "description": "Dark mode behavior. Defaults to \"off\"."
+              "deprecated": "Use the mount darkMode option; the spec field has no effect."
             },
             "watermark": {
               "type": "boolean",
@@ -19570,7 +19570,7 @@
             },
             "darkMode": {
               "$ref": "#/definitions/DarkMode",
-              "description": "Dark mode behavior. Defaults to \"off\"."
+              "deprecated": "Use the mount darkMode option; the spec field has no effect."
             },
             "watermark": {
               "type": "boolean",
@@ -20111,7 +20111,7 @@
             },
             "darkMode": {
               "$ref": "#/definitions/DarkMode",
-              "description": "Dark mode behavior. Defaults to \"off\"."
+              "deprecated": "Use the mount darkMode option; the spec field has no effect."
             },
             "watermark": {
               "type": "boolean",
@@ -20652,7 +20652,7 @@
             },
             "darkMode": {
               "$ref": "#/definitions/DarkMode",
-              "description": "Dark mode behavior. Defaults to \"off\"."
+              "deprecated": "Use the mount darkMode option; the spec field has no effect."
             },
             "watermark": {
               "type": "boolean",
@@ -21193,7 +21193,7 @@
             },
             "darkMode": {
               "$ref": "#/definitions/DarkMode",
-              "description": "Dark mode behavior. Defaults to \"off\"."
+              "deprecated": "Use the mount darkMode option; the spec field has no effect."
             },
             "watermark": {
               "type": "boolean",
@@ -21377,7 +21377,7 @@
         },
         "darkMode": {
           "$ref": "#/definitions/DarkMode",
-          "description": "Dark mode behavior. Defaults to \"off\"."
+          "deprecated": "Use the mount darkMode option; the spec field has no effect."
         },
         "watermark": {
           "type": "boolean",
@@ -21468,7 +21468,7 @@
         },
         "darkMode": {
           "$ref": "#/definitions/DarkMode",
-          "description": "Dark mode behavior."
+          "deprecated": "Use the mount darkMode option; the spec field has no effect."
         },
         "watermark": {
           "type": "boolean",
@@ -21893,7 +21893,7 @@
         },
         "darkMode": {
           "$ref": "#/definitions/DarkMode",
-          "description": "Dark mode behavior."
+          "deprecated": "Use the mount darkMode option; the spec field has no effect."
         },
         "animation": {
           "$ref": "#/definitions/GraphAnimationSpec",
@@ -22433,7 +22433,7 @@
         },
         "darkMode": {
           "$ref": "#/definitions/DarkMode",
-          "description": "Dark mode behavior. Defaults to \"off\"."
+          "deprecated": "Use the mount darkMode option; the spec field has no effect."
         },
         "watermark": {
           "type": "boolean",
@@ -22730,7 +22730,7 @@
         },
         "darkMode": {
           "$ref": "#/definitions/DarkMode",
-          "description": "Dark mode behavior. Defaults to \"off\"."
+          "deprecated": "Use the mount darkMode option; the spec field has no effect."
         },
         "watermark": {
           "type": "boolean",
@@ -22742,8 +22742,7 @@
         },
         "valueFormat": {
           "type": "string",
-          "description": "d3-format string applied to tile values, legend labels, and tooltips. Examples: \".1f\" for one decimal, \"$,.0f\" for currency, \"~s\" for SI.",
-          "deprecated": "Use the encoding channel's `format` field instead. This\nproperty is expanded into the encoding during compilation."
+          "description": "d3-format string applied to tile values, legend labels, and tooltips. Examples: \".1f\" for one decimal, \"$,.0f\" for currency, \"~s\" for SI."
         }
       },
       "required": [
@@ -22844,7 +22843,7 @@
         },
         "darkMode": {
           "$ref": "#/definitions/DarkMode",
-          "description": "Dark mode behavior. Defaults to \"off\"."
+          "deprecated": "Use the mount darkMode option; the spec field has no effect."
         },
         "watermark": {
           "type": "boolean",
@@ -23168,7 +23167,7 @@
         },
         "darkMode": {
           "$ref": "#/definitions/DarkMode",
-          "description": "Dark mode behavior. Defaults to \"off\"."
+          "deprecated": "Use the mount darkMode option; the spec field has no effect."
         },
         "watermark": {
           "type": "boolean",
@@ -23372,7 +23371,7 @@
         },
         "darkMode": {
           "$ref": "#/definitions/DarkMode",
-          "description": "Dark mode behavior. Defaults to \"off\"."
+          "deprecated": "Use the mount darkMode option; the spec field has no effect."
         },
         "watermark": {
           "type": "boolean",

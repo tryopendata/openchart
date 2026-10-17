@@ -18,6 +18,21 @@ import type {
   TextAnnotation,
 } from './spec';
 
+/** A source-addressed durable edit. Paths use escaped RFC 6901 JSON Pointers. */
+export interface EditOp {
+  op: 'set' | 'remove' | 'add';
+  path: string;
+  value?: unknown;
+  /** Preconditions on the nearest authored annotation ancestor. */
+  expect?: { id?: string; type?: string; text?: string };
+}
+
+/** All operations succeed together. Revision is optional host bookkeeping. */
+export interface EditTransaction {
+  revision?: string | number;
+  ops: EditOp[];
+}
+
 // ---------------------------------------------------------------------------
 // Chrome key identifiers
 // ---------------------------------------------------------------------------
@@ -42,6 +57,8 @@ export type ElementRef =
       id?: string;
       /** RFC 6901 JSON Pointer to the edited property in the spec. */
       path?: string;
+      /** Rendered facet instance; source identity remains index/id/path. */
+      facetInstance?: string;
     }
   | {
       type: 'chrome';
@@ -70,7 +87,11 @@ export type ElementRef =
 
 /** Helper constructors for ergonomic ElementRef creation. */
 export const elementRef = {
-  annotation: (index: number, id?: string, path?: string): ElementRef => ({
+  annotation: (
+    index: number,
+    id?: string,
+    path?: string,
+  ): Extract<ElementRef, { type: 'annotation' }> => ({
     type: 'annotation',
     index,
     ...(id !== undefined ? { id } : {}),
@@ -216,16 +237,20 @@ export interface ChartEventHandlers {
    */
   onHighlightChange?: (values: string[]) => void;
   /** Called when an annotation element is clicked. */
-  onAnnotationClick?: (annotation: Annotation, event: MouseEvent) => void;
-  /** Called when a text annotation label is dragged to a new position. */
+  onAnnotationClick?: (annotation: Annotation, event: MouseEvent, element: ElementRef) => void;
+  /** @deprecated Use onEditTransaction to persist complete edits. */
   onAnnotationEdit?: (annotation: TextAnnotation, updatedOffset: AnnotationOffset) => void;
   /** Unified edit callback. Fires for any spec-modifying edit (repositioning, deletion, text editing). */
   onEdit?: (edit: ElementEdit) => void;
+  /** Optional source revision, stamped on emitted transactions. */
+  revision?: string | number;
+  /** Durable authored edits, applied atomically with applyEditTransaction. */
+  onEditTransaction?: (transaction: EditTransaction) => void;
   /** Fired when an element is selected via click or programmatic select(). */
   onSelect?: (element: ElementRef) => void;
   /** Fired when the current element is deselected (click empty, Escape, or new selection replaces old). */
   onDeselect?: (element: ElementRef) => void;
-  /** Fired when inline text editing commits. Also flows through onEdit as a 'text-edit' event. */
+  /** @deprecated Use onEditTransaction with a text set operation. */
   onTextEdit?: (element: ElementRef, oldText: string, newText: string) => void;
   /**
    * Fired when a "you draw it" (`youDrawIt`) drawing is revealed (button click

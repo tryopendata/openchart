@@ -285,10 +285,10 @@ const barListSpec = {
   data: [...programmingLanguages.data],
   encoding: {
     label: { field: 'language', type: 'nominal' as const },
-    value: { field: 'pct', type: 'quantitative' as const },
+    value: { field: 'pct', type: 'quantitative' as const, format: '.1f' },
     color: { field: 'category', type: 'nominal' as const },
   },
-  valueFormat: '.1f',
+
   chrome: {
     title: 'Python Leads the Pack',
     subtitle: 'Programming-language popularity index, % share, 2025',

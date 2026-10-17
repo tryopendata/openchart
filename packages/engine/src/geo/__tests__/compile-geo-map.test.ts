@@ -392,6 +392,32 @@ describe('compileGeoMap', () => {
     expect(legend.bounds.y + legend.bounds.height).toBeLessThanOrEqual(layout.area.y);
   });
 
+  it.each(
+    [330, 360, 680].flatMap((width) => [11, 14].map((axisTick) => ({ width, axisTick }))),
+  )('aligns map chrome and top legend at $width px with $axisTick px ticks', ({
+    width,
+    axisTick,
+  }) => {
+    const layout = compileGeoMap(
+      {
+        type: 'map',
+        geo: { features: MINI_TOPO, projection: 'mercator' },
+        data: [{ fips: '06', category: 'west' }],
+        encoding: {
+          key: { field: 'fips', type: 'nominal' },
+          color: { field: 'category', type: 'nominal' },
+        },
+        chrome: { title: 'Donor growth by state', source: 'State records' },
+      },
+      { width, height: 600, theme: { fonts: { sizes: { axisTick } } } },
+    );
+    const legend = layout.categoricalLegend!;
+    expect(legend.bounds.x).toBe(layout.chrome.title!.x);
+    expect(legend.bounds.x).toBe(layout.chrome.source!.x);
+    expect(legend.bounds.x).toBe(layout.area.x);
+    expect(legend.bounds.y + legend.bounds.height).toBeLessThanOrEqual(layout.area.y);
+  });
+
   it('honors position: bottom for categorical legend', () => {
     const layout = compileGeoMap(
       {
