@@ -245,3 +245,14 @@ it('flushes a pending nudge before opening the text editor', () => {
   expect(m.transactions).toHaveLength(1);
   expect(m.container.querySelector('textarea, input, [contenteditable]')).not.toBeNull();
 });
+
+it('keeps the clicked text node connected through an unmoved pointer gesture', () => {
+  const m = mount();
+  const text = m.group().querySelector('.oc-annotation-label')!;
+  const line = text.firstChild!;
+  text.dispatchEvent(createMouseEvent('mousedown', 100, 100));
+  document.dispatchEvent(createMouseEvent('mouseup', 100, 100));
+  expect(line.isConnected).toBe(true);
+  expect(text.firstChild).toBe(line);
+  expect(m.transactions).toHaveLength(0);
+});

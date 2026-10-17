@@ -49,8 +49,14 @@ export function wireAnnotationDrag(
     }
     if (!initial.label?.visible || initial.footnoteIndex !== undefined) continue;
     const original = initial;
-    const restore = () =>
+    let previewed = false;
+    const restore = () => {
+      // Preserve the click target when a pointer gesture never changed geometry.
+      // Replacing label children on mouseup prevents the browser's click bubbling.
+      if (!previewed) return;
       updateAnnotationGeometry(group, original, layout.theme.colors.neutral.surface);
+      previewed = false;
+    };
     group.style.cursor = 'grab';
     cleanups.push(
       createDragHandler({
@@ -58,12 +64,14 @@ export function wireAnnotationDrag(
         svg: svg as SVGSVGElement,
         setDragging,
         animationFrame: true,
-        onMove: (dx, dy) =>
+        onMove: (dx, dy) => {
+          previewed = true;
           updateAnnotationGeometry(
             group,
             previewAnnotationMove(ctx, ref, { dx, dy }),
             layout.theme.colors.neutral.surface,
-          ),
+          );
+        },
         onCancel: restore,
         onEnd: (dx, dy, moved) => {
           restore();
