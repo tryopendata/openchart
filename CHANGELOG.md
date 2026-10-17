@@ -23,6 +23,8 @@
 - Animate label and data-anchor positions independently, rebuilding connectors
   from engine geometry while preserving annotation enter fades.
 - Make drop-line label and connector offsets round-trip through edit previews.
+- Place right-side legends after endpoint labels in the gutter already reserved
+  for them, preventing column overlap in regular and layered charts.
 
 ## Unreleased — 8.10
 

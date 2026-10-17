@@ -378,8 +378,14 @@ function compileLayerIndependent(
     // The compiler places right legends next to the plot. In this assembly
     // the right axis and endpoint column occupy that space first.
     const legendShift = rightReserve + ENDPOINT_COLUMN_GAP + endpointWidth;
-    layout0 = moveRightLegends(layout0, legendShift);
-    layout1 = moveRightLegends(layout1, legendShift);
+    // Each leaf already places its legend after its own endpoint column. The
+    // assembled figure adds the right axis and the widest merged column.
+    const localColumnReserve = (layout: ChartLayout) =>
+      layout.endpointLabels?.entries.length
+        ? ENDPOINT_COLUMN_GAP + layout.endpointLabels.bounds.width
+        : 0;
+    layout0 = moveRightLegends(layout0, legendShift - localColumnReserve(layout0));
+    layout1 = moveRightLegends(layout1, legendShift - localColumnReserve(layout1));
   }
 
   // Without endpoint columns the secondary leaf still needs the primary's

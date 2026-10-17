@@ -60,6 +60,7 @@ import {
 import type { PlacementObstacle } from './annotations/placement';
 import { thinAnnotations } from './annotations/thinning';
 import { computeEndpointLabels } from './endpoint-labels/compute';
+import { ENDPOINT_COLUMN_GAP } from './endpoint-labels/constants';
 // Side-effect import: registers all built-in chart renderers with the
 // registry on module load. Tests that clear the registry can import
 // `registerBuiltinRenderers` from `./charts/builtin` to restore defaults.
@@ -737,27 +738,6 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
   // one so all layers share the primary layout's coordinate space.
   const chartArea = options.frozenChartArea ?? dims.chartArea;
 
-  // Place legend in its final position relative to the computed chart area.
-  // effectiveAxisGap lifts a top legend above the inline-tick overhang zone
-  // the margin stack reserved below it.
-  const finalLegend = placeLegend(
-    plan.legendContent,
-    chartArea,
-    options.width,
-    theme,
-    plan.xAxisExtent,
-    dims.effectiveAxisGap,
-  );
-
-  // Every legend on the chart. The color legend is primary (and stays in the
-  // singular `legend` slot); a size legend joins it when a quantitative `size`
-  // channel is encoded. Consumers that reserve space or hit-test must iterate
-  // this rather than read `legend` -- see ChartLayout.legends.
-  const sizeLegend = plan.sizeLegendContent
-    ? placeSizeLegend(plan.sizeLegendContent, chartArea, theme, finalLegend)
-    : null;
-  const allLegends: LegendLayout[] = [finalLegend, ...(sizeLegend ? [sizeLegend] : [])];
-
   // Inline y-axis labels: inset the x-scale range start by the widest tick
   // label width so data marks start to the right of the labels. The plan
   // already measured the real tick labels.
@@ -921,6 +901,32 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
     strategy,
     plan.endpointLabelsDemoted,
   );
+
+  // Place legend in its final position relative to the computed chart area.
+  // effectiveAxisGap lifts a top legend above the inline-tick overhang zone
+  // the margin stack reserved below it.
+  const finalLegend = placeLegend(
+    plan.legendContent,
+    // Dimensions reserve both columns; place the legend after the resolved
+    // endpoint column instead of drawing both at the plot's right edge.
+    (plan.legendContent.position === 'right' || plan.legendContent.position === 'bottom-right') &&
+      endpointLabels.entries.length > 0
+      ? { ...chartArea, width: chartArea.width + ENDPOINT_COLUMN_GAP + endpointLabels.bounds.width }
+      : chartArea,
+    options.width,
+    theme,
+    plan.xAxisExtent,
+    dims.effectiveAxisGap,
+  );
+
+  // Every legend on the chart. The color legend is primary (and stays in the
+  // singular `legend` slot); a size legend joins it when a quantitative `size`
+  // channel is encoded. Consumers that reserve space or hit-test must iterate
+  // this rather than read `legend` -- see ChartLayout.legends.
+  const sizeLegend = plan.sizeLegendContent
+    ? placeSizeLegend(plan.sizeLegendContent, chartArea, theme, finalLegend)
+    : null;
+  const allLegends: LegendLayout[] = [finalLegend, ...(sizeLegend ? [sizeLegend] : [])];
 
   // Compute annotations from spec, passing legend + mark + brand bounds as obstacles
   const obstacles: PlacementObstacle[] = [];

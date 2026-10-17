@@ -393,3 +393,8 @@ transitions accept `MapTransitionSnapshot` only.
 | In-place annotation drawing shared by preview and animation | `packages/vanilla/src/renderers/annotations.ts`: `updateAnnotationGeometry`; transition gate/build/apply consume resolved geometry |
 | Cross-browser geometry contract | `e2e/annotation-invariants/`; two dedicated projects; gallery `AnnotationCurves` and `AnnotationGestures` stay outside visual baselines |
 | Preview benchmark | `packages/engine/src/annotations/__tests__/preview.bench.ts`; Vitest 5 test-context bench, run with `bunx vitest bench --run` |
+
+The chart compiler places right-side legends after resolving the endpoint column,
+using its existing gutter reservation. Independent-layer assembly adds only the
+remaining right-axis/merged-column offset; `compile-legend-gutter.test.ts` covers
+regular, shared-layer and dual-axis column separation.
