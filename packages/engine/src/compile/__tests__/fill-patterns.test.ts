@@ -138,7 +138,7 @@ describe('fill patterns on arcs', () => {
       ],
       encoding: {
         color: { field: 'browser', type: 'nominal' },
-        y: { field: 'share', type: 'quantitative' },
+        theta: { field: 'share', type: 'quantitative' },
       },
     };
     const layout = compileChart(spec, OPTS);

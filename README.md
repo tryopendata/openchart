@@ -54,7 +54,7 @@ function App() {
 
 That's the whole interface. `encoding` maps data fields to visual channels. `chrome` adds editorial framing. The engine figures out the rest.
 
-The fixed-height wrapper is optional. Without one, the chart sizes itself: a 400px budget for the visualization (axes + plot), and titles, legends, and other chrome grow the figure on top of that. Give the wrapper an explicit height when you need the chart to fit a fixed slot.
+The fixed-height wrapper is optional. Without one, the chart sizes itself: a 400px budget for the visualization (axes + plot), and titles, legends, and other chrome grow the figure on top of that. Give the wrapper an explicit height and set `chromeLayout: 'subtract'` when the chart must fit an exact slot; otherwise annotation notes can grow the figure.
 
 ## Features
 
@@ -115,6 +115,7 @@ Release candidates publish under the `next` dist-tag, so a plain install always 
 | [Accessibility](docs/accessibility.md) | What's automatic, what's opt-in (alt text, pattern fills, contrast warnings), WCAG mapping |
 | [Agent patterns](docs/agent-patterns.md) | Visualization patterns and cookbook for LLM-generated charts |
 | [Architecture](docs/architecture.md) | Compilation pipeline, package boundaries, design decisions |
+| [Migrating to v9](docs/migrating-v9.md) | Annotation defaults, transaction editing, theme precedence, and retired APIs |
 | [Migrating to v8](docs/migrating-v8.md) | Breaking changes, before/after specs, and jq codemod recipes for the v8 upgrade |
 | [Theming tokens](docs/theming-tokens.md) | Design token system, `TokenValue` light/dark pairs, `seriesStrategy`, named presets |
 | [Contributing](CONTRIBUTING.md) | Setup, running tests, adding chart types, PR guidelines |

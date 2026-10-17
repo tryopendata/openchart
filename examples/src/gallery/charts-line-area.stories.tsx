@@ -156,7 +156,7 @@ const multiSeriesSpec: ChartSpec = {
 };
 
 // ---------------------------------------------------------------------------
-// 3. Five series with legend — when direct labels stop working
+// 3. Five series with explicit focus and readable comparison labels
 // ---------------------------------------------------------------------------
 
 const fiveSeriesSpec: ChartSpec = {
@@ -170,13 +170,19 @@ const fiveSeriesSpec: ChartSpec = {
       type: 'quantitative',
       axis: { title: 'Annual revenue ($B)', format: ',.0f', grid: true },
     },
-    color: { field: 'company', type: 'nominal' },
+    color: {
+      field: 'company',
+      type: 'nominal',
+      scale: {
+        domain: ['Amazon', 'Apple', 'Alphabet', 'Microsoft', 'Meta'],
+        range: ['#0e7490', '#7a858f', '#7a858f', '#7a858f', '#7a858f'],
+      },
+    },
   },
-  // legend.position implies show:true; endpointLabels:false hands series
-  // identification to the legend alone (see the suppression truth table in
-  // packages/core/src/types/spec.ts) so the two keys don't duplicate.
-  legend: { position: 'top' },
-  endpointLabels: false,
+  // Explicit focus mutes comparison strokes; direct labels keep every company identifiable.
+  legend: { show: false },
+  endpointLabels: { content: 'label', showMarker: true },
+  seriesStyles: { Amazon: { strokeWidth: 3 } },
   labels: { density: 'none' },
   chrome: {
     title: 'Amazon Pulls Away at the Top of Big Tech',
@@ -465,7 +471,7 @@ export const LineAndArea = () => (
     <Section
       id="lines"
       title="Lines"
-      lede="One series, a few series with direct labels, or many with a legend — the choice is about how readers tell the lines apart."
+      lede="One series, several with direct labels, or a focused series against its peers — make the comparison explicit."
     >
       <Demo
         id="single-line"
@@ -483,8 +489,8 @@ export const LineAndArea = () => (
       />
       <Demo
         id="five-series-legend"
-        title="Five-plus series with legend"
-        description="Past four or five crossing lines, endpoint labels collide and a legend earns its place. Set legend.position to pin it; the legend is interactive out of the box — click an entry to toggle that series."
+        title="Focus one series, keep the comparisons"
+        description="An explicit color scale and thicker Amazon stroke establish the focus. Endpoint labels identify every company even when comparison lines share a neutral color."
         spec={fiveSeriesSpec}
         height={460}
       />

@@ -1,16 +1,12 @@
-# Migration Guide
+# Theming Design Tokens
 
-## Theming Design Tokens
+`ThemeConfig` controls colors, typography, spacing, rules, and component surfaces.
+Defaults are shared by the JavaScript theme and generated CSS tokens. v9
+consolidates authored deep merging and leaves omitted CSS tokens available to
+host styles. For removed forms and legacy styling, see [Migrating to v9](migrating-v9.md).
 
-This release widens `ThemeConfig` to expose every design-decision field and unifies CSS custom properties with the JS theme engine. All changes are backward-compatible. Existing theme configs continue to work without modification.
+### ThemeConfig fields
 
-### What changed
-
-**Before:** `ThemeConfig` covered colors, font family/sizes, 4 spacing fields, border radius, and chrome color (string only). Font weights, chrome typography, semantic colors, and additional spacing fields were hardcoded in `DEFAULT_THEME` with no override path. CSS custom properties in `tokens.css`/`dark.css` were hand-maintained separately from the JS theme.
-
-**After:** `ThemeConfig` covers everything. CSS custom properties are generated from the resolved JS theme at mount time. The static CSS files serve as SSR/pre-mount fallback defaults.
-
-### New ThemeConfig fields
 
 ```ts
 const theme: ThemeConfig = {
@@ -146,11 +142,11 @@ fixed zinc ladder. A warm or cool custom theme gets warm or cool grays for
 free instead of zinc showing up uninvited beside the palette. The ramp lives
 on `ResolvedTheme.colors.neutral` (`100`/`200`/`300`/`400`/`600`/`800`, plus
 `secondary` = `800`, `faint` = `300`, `border` = `100`, plus `surface`) and is
-computed once in `resolveTheme`/`adaptTheme`; mounts stamp the CSS tokens from
-it. `surface` is the opaque color the theme paints on — the background itself
+computed once in `resolveTheme`/`adaptTheme`. Mounts stamp derived tokens when
+the relevant theme colors are authored; omitted tokens use the CSS cascade. `surface` is the opaque color the theme paints on — the background itself
 when it is opaque, otherwise the mode's `--oc-bg` token — and is the single
 source for knockout rings, stacked-segment seams, table cell fills, graph node
-rings and the stamped `--oc-bg`. When the
+rings, annotation marker/plate fills, and authored background tokens. When the
 background is transparent (the default) the ramp falls back to the static
 token defaults, which is why the default theme and the generated `tokens.css`
 never disagree.
@@ -179,7 +175,7 @@ radius.
 `token-theme-parity` test asserts this, along with the four weight tokens,
 `--oc-gridline`, `--oc-axis`, `--oc-border-radius`, `colors.neutral`, and
 `--oc-animation-stagger`, so the JS theme and the generated CSS tokens can't
-drift apart the way they did before this release.
+drift apart.
 
 ### The editorial rule
 

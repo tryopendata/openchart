@@ -120,7 +120,7 @@ it('uses the engine note lines for rendering, footer spacing, and static export'
   let previousBottom = 0;
   for (const [i, note] of notes.entries()) {
     const resolved = layout.chrome.footnotes![i];
-    expect([...note.querySelectorAll('tspan')].map((span) => span.textContent)).toEqual(
+    expect([...note.querySelectorAll(':scope > tspan')].map((span) => span.textContent)).toEqual(
       resolved.lines,
     );
     expect(note.getAttribute('data-note-id')).toBe(resolved.id);

@@ -110,7 +110,7 @@ function blendOnSurface(fill: string, fillOpacity: number, theme: ResolvedTheme)
  */
 function growContentHeight(
   contentHeight: number,
-  chromeLayout: 'subtract' | 'grow',
+  chromeLayout: 'subtract' | 'grow' | 'notes',
   budgetHeight: number,
   chrome: { topHeight: number; bottomHeight: number },
 ): number {
@@ -261,7 +261,7 @@ function compileQuantitative(
   fullArea: { x: number; y: number; width: number; height: number },
   isDarkMode: boolean | undefined,
   watermark: boolean,
-  chromeLayout: 'subtract' | 'grow',
+  chromeLayout: 'subtract' | 'grow' | 'notes',
 ): TileMapLayout {
   const stateField = tilemapSpec.encoding.state.field;
   const valueField = tilemapSpec.encoding.value.field;
@@ -450,7 +450,7 @@ function compileCategorical(
   fullArea: { x: number; y: number; width: number; height: number },
   isDarkMode: boolean | undefined,
   watermark: boolean,
-  chromeLayout: 'subtract' | 'grow',
+  chromeLayout: 'subtract' | 'grow' | 'notes',
 ): TileMapLayout {
   const stateField = tilemapSpec.encoding.state.field;
   const colorField = tilemapSpec.encoding.color?.field ?? tilemapSpec.encoding.value.field;

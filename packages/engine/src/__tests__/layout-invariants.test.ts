@@ -1,5 +1,4 @@
-import type { ChartLayout } from '@opendata-ai/openchart-core';
-import { afterAll, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { compileChart } from '../compile';
 import { checkLayoutInvariants } from './helpers/invariants';
 
@@ -62,20 +61,9 @@ const FULL_CHROME = {
 const WIDTHS = [320, 800] as const;
 const HEIGHT = 400;
 
-let compileSkipCount = 0;
-
-/**
- * Compile a spec and run layout invariants. Returns early (skip) if
- * compileChart throws due to pre-existing compile failures from plan merges.
- */
+/** Compile every fixture; a compile failure must fail the invariant test. */
 function compileAndCheck(spec: Record<string, unknown>, width: number, height = HEIGHT) {
-  let layout: ChartLayout;
-  try {
-    layout = compileChart(spec, { width, height });
-  } catch {
-    compileSkipCount++;
-    return;
-  }
+  const layout = compileChart(spec, { width, height });
   const violations = checkLayoutInvariants(layout, { svgWidth: width, svgHeight: height });
   expect(violations, violations.join('\n')).toEqual([]);
 }
@@ -85,12 +73,6 @@ function compileAndCheck(spec: Record<string, unknown>, width: number, height = 
 // ---------------------------------------------------------------------------
 
 describe('layout invariants', () => {
-  afterAll(() => {
-    if (compileSkipCount > 0) {
-      console.warn(`layout invariants: ${compileSkipCount} tests skipped due to compile errors`);
-    }
-  });
-
   // -----------------------------------------------------------------------
   // Bar charts (horizontal: x=quantitative, y=nominal)
   // -----------------------------------------------------------------------
@@ -292,7 +274,7 @@ describe('layout invariants', () => {
   });
 
   // -----------------------------------------------------------------------
-  // Pie charts (arc mark: y=quantitative, color=nominal)
+  // Pie charts (arc mark: theta=quantitative, color=nominal)
   // -----------------------------------------------------------------------
   describe('pie charts', () => {
     for (const width of WIDTHS) {
@@ -302,7 +284,7 @@ describe('layout invariants', () => {
             mark: 'arc',
             data: makePieData(SHORT_LABELS),
             encoding: {
-              y: { field: 'value', type: 'quantitative' },
+              theta: { field: 'value', type: 'quantitative' },
               color: { field: 'category', type: 'nominal' },
             },
             chrome: TITLE_ONLY,
@@ -318,7 +300,7 @@ describe('layout invariants', () => {
           mark: 'arc',
           data: makePieData(SHORT_LABELS),
           encoding: {
-            y: { field: 'value', type: 'quantitative' },
+            theta: { field: 'value', type: 'quantitative' },
             color: { field: 'category', type: 'nominal' },
           },
           legend: { position: 'bottom', show: true },
@@ -335,7 +317,7 @@ describe('layout invariants', () => {
           mark: 'arc',
           data: makePieData(LONG_LABELS),
           encoding: {
-            y: { field: 'value', type: 'quantitative' },
+            theta: { field: 'value', type: 'quantitative' },
             color: { field: 'category', type: 'nominal' },
           },
           legend: { position: 'top', show: true },
@@ -351,7 +333,7 @@ describe('layout invariants', () => {
           mark: 'arc',
           data: makePieData(SHORT_LABELS),
           encoding: {
-            y: { field: 'value', type: 'quantitative' },
+            theta: { field: 'value', type: 'quantitative' },
             color: { field: 'category', type: 'nominal' },
           },
           chrome: NO_CHROME,
@@ -437,7 +419,7 @@ describe('layout invariants', () => {
   });
 
   // -----------------------------------------------------------------------
-  // Dot charts (circle mark: x=quantitative, y=quantitative)
+  // Dot charts (circle mark: x=quantitative, y=ordinal)
   // -----------------------------------------------------------------------
   describe('dot charts', () => {
     for (const width of WIDTHS) {
@@ -448,7 +430,7 @@ describe('layout invariants', () => {
             data: makeScatterData(['Alpha', 'Beta']),
             encoding: {
               x: { field: 'x', type: 'quantitative' },
-              y: { field: 'y', type: 'quantitative' },
+              y: { field: 'y', type: 'ordinal' },
               color: { field: 'group', type: 'nominal' },
             },
             legend: { position: 'bottom', show: true },
@@ -466,7 +448,7 @@ describe('layout invariants', () => {
           data: makeScatterData(['Very Long Group Name A', 'Very Long Group Name B']),
           encoding: {
             x: { field: 'x', type: 'quantitative' },
-            y: { field: 'y', type: 'quantitative' },
+            y: { field: 'y', type: 'ordinal' },
             color: { field: 'group', type: 'nominal' },
           },
           legend: { position: 'top', show: true },

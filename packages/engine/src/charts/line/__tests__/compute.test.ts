@@ -5,7 +5,6 @@ import type { NormalizedChartSpec } from '../../../compiler/types';
 import { computeScales } from '../../../layout/scales';
 import { computeAreaMarks } from '../area';
 import { computeLineMarks } from '../compute';
-import { computeLineLabels } from '../labels';
 
 const DARK_THEME = adaptTheme(resolveTheme());
 
@@ -20,13 +19,6 @@ const fullStrategy: LayoutStrategy = {
   legendPosition: 'right',
   annotationPosition: 'inline',
   axisLabelDensity: 'full',
-};
-
-const compactStrategy: LayoutStrategy = {
-  labelMode: 'none',
-  legendPosition: 'top',
-  annotationPosition: 'tooltip-only',
-  axisLabelDensity: 'minimal',
 };
 
 function makeSingleSeriesSpec(): NormalizedChartSpec {
@@ -879,121 +871,6 @@ describe('computeAreaMarks', () => {
 
     // Should produce empty marks since dates can't be parsed, not crash
     expect(marks).toHaveLength(0);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Label computation tests
-// ---------------------------------------------------------------------------
-
-describe('computeLineLabels', () => {
-  it('produces labels for multi-series line marks', () => {
-    const spec = makeMultiSeriesSpec();
-    const scales = computeScales(spec, chartArea, spec.data);
-    const allMarks = computeLineMarks(spec, scales, chartArea, fullStrategy);
-
-    const lineMarks = allMarks.filter((m): m is LineMark => m.type === 'line');
-    const labelMap = computeLineLabels(lineMarks, fullStrategy);
-
-    expect(labelMap.size).toBe(2);
-    expect(labelMap.has('US')).toBe(true);
-    expect(labelMap.has('UK')).toBe(true);
-  });
-
-  it('labels are positioned at end of line', () => {
-    const spec = makeMultiSeriesSpec();
-    const scales = computeScales(spec, chartArea, spec.data);
-    const allMarks = computeLineMarks(spec, scales, chartArea, fullStrategy);
-
-    const lineMarks = allMarks.filter((m): m is LineMark => m.type === 'line');
-    const labelMap = computeLineLabels(lineMarks, fullStrategy);
-
-    for (const lineMark of lineMarks) {
-      if (!lineMark.seriesKey) continue;
-      const lastPoint = lineMark.points[lineMark.points.length - 1];
-      const label = labelMap.get(lineMark.seriesKey);
-      expect(label).toBeDefined();
-      // Label x should be to the right of the last point
-      expect(label!.x).toBeGreaterThan(lastPoint.x);
-    }
-  });
-
-  it('labels are visible at full width', () => {
-    const spec = makeMultiSeriesSpec();
-    const scales = computeScales(spec, chartArea, spec.data);
-    const allMarks = computeLineMarks(spec, scales, chartArea, fullStrategy);
-
-    const lineMarks = allMarks.filter((m): m is LineMark => m.type === 'line');
-    const labelMap = computeLineLabels(lineMarks, fullStrategy);
-
-    // At least some labels should be visible
-    const labels = Array.from(labelMap.values());
-    expect(labels.some((l) => l.visible)).toBe(true);
-  });
-
-  it('labels collapse at compact breakpoint', () => {
-    const spec = makeMultiSeriesSpec();
-    const scales = computeScales(spec, chartArea, spec.data);
-    const allMarks = computeLineMarks(spec, scales, chartArea, compactStrategy);
-
-    const lineMarks = allMarks.filter((m): m is LineMark => m.type === 'line');
-    const labelMap = computeLineLabels(lineMarks, compactStrategy);
-
-    // At compact, no labels should be produced
-    expect(labelMap.size).toBe(0);
-  });
-
-  it('collision detection resolves overlapping labels', () => {
-    // Create a spec where series end at the same y position
-    const spec: NormalizedChartSpec = {
-      markType: 'line',
-      markDef: { type: 'line', point: true },
-      data: [
-        { date: '2020-01-01', value: 10, country: 'A' },
-        { date: '2021-01-01', value: 30, country: 'A' },
-        { date: '2020-01-01', value: 10, country: 'B' },
-        { date: '2021-01-01', value: 30, country: 'B' },
-        { date: '2020-01-01', value: 10, country: 'C' },
-        { date: '2021-01-01', value: 30, country: 'C' },
-      ],
-      encoding: {
-        x: { field: 'date', type: 'temporal' },
-        y: { field: 'value', type: 'quantitative' },
-        color: { field: 'country', type: 'nominal' },
-      },
-      chrome: {},
-      annotations: [],
-      responsive: true,
-      theme: {},
-      darkMode: 'off',
-      labels: { density: 'auto', format: '' },
-    };
-
-    const scales = computeScales(spec, chartArea, spec.data);
-    const allMarks = computeLineMarks(spec, scales, chartArea, fullStrategy);
-    const lineMarks = allMarks.filter((m): m is LineMark => m.type === 'line');
-    const labelMap = computeLineLabels(lineMarks, fullStrategy);
-
-    expect(labelMap.size).toBe(3);
-
-    // At least one label should be offset or demoted due to collision
-    const labels = Array.from(labelMap.values());
-    const positions = labels.map((l) => `${l.x},${l.y}`);
-    const uniquePositions = new Set(positions);
-    // If collision worked, positions should differ even though anchor points are the same
-    expect(uniquePositions.size).toBeGreaterThanOrEqual(2);
-  });
-
-  it('skips single series with no seriesKey', () => {
-    const spec = makeSingleSeriesSpec();
-    const scales = computeScales(spec, chartArea, spec.data);
-    const allMarks = computeLineMarks(spec, scales, chartArea, fullStrategy);
-
-    const lineMarks = allMarks.filter((m): m is LineMark => m.type === 'line');
-    const labelMap = computeLineLabels(lineMarks, fullStrategy);
-
-    // Single series has no seriesKey, so no label
-    expect(labelMap.size).toBe(0);
   });
 });
 

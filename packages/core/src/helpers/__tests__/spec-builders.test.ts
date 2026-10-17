@@ -58,9 +58,9 @@ describe('inferFieldType', () => {
     expect(inferFieldType(data, 'period')).toBe('temporal');
   });
 
-  it('infers temporal for year-only strings (YYYY format)', () => {
+  it('infers quantitative for numeric year strings, matching compilation', () => {
     const data = [{ year: '2020' }, { year: '2021' }];
-    expect(inferFieldType(data, 'year')).toBe('temporal');
+    expect(inferFieldType(data, 'year')).toBe('quantitative');
   });
 
   it('infers nominal for plain string fields', () => {
@@ -83,10 +83,29 @@ describe('inferFieldType', () => {
     expect(inferFieldType(data, 'date')).toBe('temporal');
   });
 
-  it('samples at most 20 values', () => {
-    // Create 100 items, all numbers. Should still work without issue.
-    const data = Array.from({ length: 100 }, (_, i) => ({ v: i }));
-    expect(inferFieldType(data, 'v')).toBe('quantitative');
+  it.each([
+    { values: ['12', '15.5', '-3'], type: 'quantitative' },
+    { values: ['2020', '2021'], type: 'quantitative' },
+    { values: ['2020-01-01', '2021-01-01'], type: 'temporal' },
+    { values: [1, 2, 3, 4, 'other'], type: 'nominal' },
+    { values: [1, 2, 3, 4, 5, 'other'], type: 'quantitative' },
+  ])('uses compilation inference rules for $values', ({ values, type }) => {
+    expect(
+      inferFieldType(
+        values.map((value) => ({ value })),
+        'value',
+      ),
+    ).toBe(type);
+  });
+
+  it('samples 50 rows, including evidence beyond the former 20-row window', () => {
+    const data = Array.from({ length: 100 }, (_, i) => ({ value: i < 20 ? i : 'other' }));
+    expect(inferFieldType(data, 'value')).toBe('nominal');
+  });
+
+  it('does not let rows after the first 50 change the inferred type', () => {
+    const data = Array.from({ length: 100 }, (_, i) => ({ value: i < 50 ? i : 'other' }));
+    expect(inferFieldType(data, 'value')).toBe('quantitative');
   });
 
   it('returns nominal for empty data', () => {
@@ -147,11 +166,10 @@ describe('lineChart', () => {
   it('passes through theme without emitting ineffective spec darkMode', () => {
     const spec = lineChart(timeSeriesData, 'date', 'value', {
       theme: { borderRadius: 8 },
-      darkMode: 'auto',
     });
 
     expect(spec.theme).toEqual({ borderRadius: 8 });
-    expect(spec.darkMode).toBeUndefined();
+    expect(spec).not.toHaveProperty('darkMode');
   });
 });
 
@@ -290,8 +308,7 @@ describe('dataTable', () => {
       search: true,
       pagination: { pageSize: 10 },
       stickyFirstColumn: true,
-      compact: true,
-      darkMode: 'auto',
+      density: 'condensed',
     });
 
     expect(spec.rowKey).toBe('name');
@@ -300,8 +317,8 @@ describe('dataTable', () => {
     expect(spec.pagination).toEqual({ pageSize: 10 });
     expect(spec.stickyFirstColumn).toBe(true);
     expect(spec.density).toBe('condensed');
-    expect(spec.compact).toBeUndefined();
-    expect(spec.darkMode).toBeUndefined();
+    expect(spec).not.toHaveProperty('compact');
+    expect(spec).not.toHaveProperty('darkMode');
   });
 
   it('returns empty columns for empty data', () => {

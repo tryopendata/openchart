@@ -294,7 +294,7 @@ const fiveSeriesSpec: ChartSpec = {
 };
 
 export const FiveSeries = () => (
-  <div className="tfix-chart tfix-h-460">
+  <div className="tfix-chart tfix-h-600">
     <Chart spec={fiveSeriesSpec} />
   </div>
 );
@@ -603,6 +603,8 @@ export const EditorialSingleLine = () => (
 // ---------------------------------------------------------------------------
 
 const lineSpec: ChartSpec = {
+  // The fixed-height fixture includes chrome and the note reservation.
+  chromeLayout: 'subtract',
   mark: 'line',
   data: [
     // YouTube

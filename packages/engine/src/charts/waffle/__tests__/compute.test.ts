@@ -31,6 +31,7 @@ function makeWaffleSpec(overrides: Partial<NormalizedChartSpec> = {}): Normalize
     markDef: { type: 'waffle' },
     data: [...energyMix],
     encoding: {
+      // Normalized renderers consume the internal theta-to-y mapping.
       y: { field: 'share', type: 'quantitative' },
       color: { field: 'source', type: 'nominal' },
     },
@@ -320,7 +321,7 @@ describe('waffle "other" bucketing (opt-in)', () => {
         mark,
         data: longTail,
         encoding: {
-          y: { field: 'share', type: 'quantitative' },
+          theta: { field: 'share', type: 'quantitative' },
           color: { field: 'source', type: 'nominal' },
         },
       },
@@ -379,7 +380,7 @@ describe('waffle "other" bucketing (opt-in)', () => {
           { source: 'Tidal', share: 2 },
         ],
         encoding: {
-          y: { field: 'share', type: 'quantitative' },
+          theta: { field: 'share', type: 'quantitative' },
           color: { field: 'source', type: 'nominal' },
         },
       },

@@ -311,7 +311,7 @@ describe('computeAnnotations', () => {
       expect(annotations[0].label!.text).toBe('Recession');
     });
 
-    it('range label defaults to 11px / weight 500', () => {
+    it('range label defaults to 12px / weight 500', () => {
       const spec = makeSpec([
         { type: 'range', x1: '2020-01-01', x2: '2021-01-01', label: 'Period' },
       ]);
@@ -326,7 +326,7 @@ describe('computeAnnotations', () => {
         measure: annotationMeasureForTest,
       });
 
-      expect(annotations[0].label!.style.fontSize).toBe(11);
+      expect(annotations[0].label!.style.fontSize).toBe(12);
       expect(annotations[0].label!.style.fontWeight).toBe(500);
     });
 
@@ -845,7 +845,7 @@ describe('computeAnnotations', () => {
       expect(annotations[0].strokeDasharray).toBeDefined();
     });
 
-    it('refline label defaults to fontSize 11', () => {
+    it('refline label defaults to fontSize 12', () => {
       const spec = makeSpec([{ type: 'refline', x: '2020-06-01', label: 'Event' }]);
       const scales = computeScales(spec, chartArea, spec.data);
       const annotations = computeAnnotations(spec, {
@@ -858,7 +858,7 @@ describe('computeAnnotations', () => {
         measure: annotationMeasureForTest,
       });
 
-      expect(annotations[0].label!.style.fontSize).toBe(11);
+      expect(annotations[0].label!.style.fontSize).toBe(12);
     });
 
     it('refline label honors fontSize and fontWeight overrides', () => {

@@ -20,7 +20,6 @@ import {
   DEFAULT_DOT_STROKE_WIDTH,
   DEFAULT_LINE_HEIGHT,
   FALLBACK_FONT_FAMILY,
-  LEDE_FONT_WEIGHT,
   LIGHT_CONNECTOR_STROKE,
   LIGHT_DOT_FILL,
   LIGHT_LABEL_BACKGROUND,
@@ -148,7 +147,13 @@ describe('text annotation: dot', () => {
   // the data point.
   it('does not resolve a default dot when the connector has an arrowhead', () => {
     const spec = makeSpec([
-      { type: 'text', x: '2020-01-01', y: 20, text: 'Arrowed', connector: 'curve' },
+      {
+        type: 'text',
+        x: '2020-01-01',
+        y: 20,
+        text: 'Arrowed',
+        connector: { type: 'curve', arrow: true },
+      },
     ]);
     const scales = computeScales(spec, chartArea, spec.data);
     const annotations = computeAnnotations(spec, {
@@ -785,7 +790,7 @@ describe('text annotation: connector suppression', () => {
 });
 
 describe('text annotation: connector config', () => {
-  it('bare "curve" string defaults arrow to true', () => {
+  it('bare "curve" string defaults arrow to false', () => {
     const spec = makeSpec([
       {
         type: 'text',
@@ -809,7 +814,7 @@ describe('text annotation: connector config', () => {
 
     const c = annotations[0].label!.connector!;
     expect(c.style).toBe('curve');
-    expect(c.arrow).toBe(true);
+    expect(c.arrow).toBe(false);
   });
 
   it('bare "straight" string defaults arrow to false', () => {
@@ -920,7 +925,7 @@ describe('text annotation: connector config', () => {
     expect(c.arrow).toBe(false);
   });
 
-  it('object form { type: "curve" } defaults arrow to true', () => {
+  it('object form { type: "curve" } defaults arrow to false', () => {
     const spec = makeSpec([
       {
         type: 'text',
@@ -944,7 +949,7 @@ describe('text annotation: connector config', () => {
 
     const c = annotations[0].label!.connector!;
     expect(c.style).toBe('curve');
-    expect(c.arrow).toBe(true);
+    expect(c.arrow).toBe(false);
   });
 
   it('connector: false disables connector entirely', () => {
@@ -1032,7 +1037,7 @@ describe('text annotation: typography', () => {
   });
 
   // Lede rule: a subtitle turns the primary line into a lede, so it goes bold.
-  it('promotes the primary text to the lede weight when a subtitle is present', () => {
+  it('keeps primary text regular when a subtitle is present', () => {
     const spec = makeSpec([
       { type: 'text', x: '2020-01-01', y: 20, text: 'Feb. 25', subtitle: '2015 maximum' },
     ]);
@@ -1047,7 +1052,7 @@ describe('text annotation: typography', () => {
       measure: annotationMeasureForTest,
     });
 
-    expect(annotations[0].label!.style.fontWeight).toBe(LEDE_FONT_WEIGHT);
+    expect(annotations[0].label!.style.fontWeight).toBe(400);
     // The subtitle never inherits it.
     expect(annotations[0].subtitle!.style.fontWeight).toBe(SUBTITLE_FONT_WEIGHT);
   });

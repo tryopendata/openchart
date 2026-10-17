@@ -6,6 +6,70 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### 9.0.0 — annotation and figure defaults
+
+- Adopt 12px small/axis/source/byline/footer text and 16px/12px chrome spacing.
+  Background stays transparent; default axis and eyebrow colors are unchanged.
+- Default callouts to measured wrapping, regular primary text, 12/13 subtitle
+  sizing, and curves without implied arrows. Explicit author settings still win.
+- Default reference labels to automatic placement and reference/range labels to
+  theme small text. Process automatic annotations by priority then source order,
+  and score connector crossings when selecting placements.
+- Keep one eligible inline callout at compact widths by default. Per-annotation
+  `responsive: false` stays pinned; existing chart-level responsive opt-outs retain
+  their compact behavior. Null still disables count and wrap limits.
+- Grow omitted `chromeLayout` by the note band only. Explicit `subtract` keeps an
+  exact outer budget; `grow` grows by all chrome. Resolved heights avoid double
+  counting in mounts and exports, including layered and faceted figures.
+- Render complete wrapped rich-text notes with source-order numbering. Number
+  gaps are intentional and facet instances share source identity. Notes and
+  markers support transient linked focus/click/tap emphasis.
+- Retune default reference-rule and range ink; derive marker and plate fills from
+  the resolved neutral surface while preserving authored colors.
+
+### 9.0.0 — breaking API and authoring changes
+
+- Make `onEdit(EditTransaction)` the sole durable editing callback. Remove
+  `ElementEdit`, `onEditTransaction`, `onAnnotationEdit`, and `onTextEdit`; use
+  `applyEditTransaction` for atomic application, stale-target rejection, and undo.
+- In edit mode, arrows nudge 1px, Shift+arrows nudge 10px, and Tab/Shift+Tab cycle
+  selection. Native text editing keeps its normal keyboard behavior.
+- Remove the inert `onDataPointClick`, graph `updateVisuals()`, and the Chart
+  mount/wrapper `responsive` resize alias. Use `onMarkClick`, `update()`, and
+  `autoResize`, respectively; spec `responsive` is unchanged.
+- Enforce the discriminated `MarkDef` union and reject inapplicable authored mark
+  options before sugar expansion, with matching TypeScript/schema/runtime checks.
+- Reject retired table `compact`, Sankey/map/barlist `valueFormat`, annotation
+  `rule`, spec `darkMode`, theme chrome color strings, arc-family `encoding.y`
+  aliases, dead encoding channels, `mark.render`, and explicit `legacy` animation
+  presets. Tilemap `valueFormat` and ordinary chrome text shorthand remain valid.
+- Remove legacy line-end series labels, manual series-label offsets/dragging, and
+  series-label element refs. Use the endpoint column; warn when both identifiers
+  are explicitly disabled on a multi-series line chart.
+- Remove `footnoteBandHeight` helpers and narrow-breakpoint constant aliases.
+  Read `layout.chrome.noteBandHeight` and use `NARROW_VIEWPORT_MAX`.
+- Unify builder/compiler field inference: sample up to 50 rows, require more than
+  80% agreement, and recognize numeric strings before dates. Explicit field types
+  remain authoritative.
+
+### 9.0.0 — themes and migration
+
+- Deep-merge spec/provider/host themes; leaf themes override parent themes and
+  mount/compile options have highest precedence. Arrays and color pairs replace
+  atomically; partial rules inherit and `rule: null` clears a preset rule.
+- Prefer authored chrome font sizes over general font propagation. Remove public
+  `Theme` and the empty `editorial` preset; use `ThemeConfig` / `ResolvedTheme` and
+  omit the preset. Deprecate `clarity`, retaining its remaining color choices.
+- Stamp only authored CSS theme overrides through one renderer helper. Host CSS
+  can override omitted tokens; dark defaults include all registered tokens and
+  SVG/raster exports retain live CSS token values.
+- Extend `migrateSpecV8` with `{ styling: 'v9' }` for alias-only migration. Default
+  migration materializes former v8 styling, including annotation colors/spacing,
+  and reports repairs without mutating input. Layout pixel parity is not promised.
+- Add [the v9 migration guide](docs/migrating-v9.md), including persistence handler,
+  exact-height embed, theme, CSS, and mark-union changes.
+
+
 ## [8.9.1] - 2026-10-17
 
 ### Annotation layout and theme options

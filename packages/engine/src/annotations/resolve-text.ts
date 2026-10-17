@@ -28,7 +28,6 @@ import {
   DEFAULT_LINE_HEIGHT,
   DROP_LINE_TOP_GAP,
   FALLBACK_FONT_FAMILY,
-  LEDE_FONT_WEIGHT,
   LIGHT_CONNECTOR_STROKE,
   LIGHT_DOT_FILL,
   LIGHT_LABEL_BACKGROUND,
@@ -123,7 +122,7 @@ function resolveConnectorConfig(
 
   if (typeof connector === 'object' && connector !== null && 'type' in connector) {
     const cfg = connector as ConnectorConfig;
-    const arrow = cfg.type === 'drop-line' ? false : (cfg.arrow ?? cfg.type === 'curve');
+    const arrow = cfg.type === 'drop-line' ? false : (cfg.arrow ?? false);
     return {
       type: cfg.type,
       arrow,
@@ -131,7 +130,7 @@ function resolveConnectorConfig(
     };
   }
 
-  if (connector === 'curve') return { type: 'curve', arrow: true };
+  if (connector === 'curve') return { type: 'curve', arrow: false };
   if (connector === 'drop-line') return { type: 'drop-line', arrow: false };
 
   // true, 'straight', or undefined all map to straight with no arrow
@@ -215,13 +214,9 @@ export function makeAnnotationLabelStyle(
   };
 }
 
-/**
- * The primary text's resolved weight. A subtitle turns the primary line into a
- * lede, so it goes bold unless the author asked for a specific weight.
- */
+/** Primary text stays regular unless the author supplies a weight. */
 export function resolveLedeFontWeight(annotation: TextAnnotation): number | undefined {
-  if (annotation.fontWeight !== undefined) return annotation.fontWeight;
-  return annotation.subtitle ? LEDE_FONT_WEIGHT : undefined;
+  return annotation.fontWeight;
 }
 
 /** Resolve wrapped display geometry, retaining authored text as the identity. */

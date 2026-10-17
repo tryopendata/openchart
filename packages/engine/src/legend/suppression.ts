@@ -1,33 +1,4 @@
-/**
- * Single source of truth for legend / endpoint-column / end-of-line label
- * suppression on multi-series line/area charts.
- *
- * Three independent toggles drive the chart's series identification surface:
- *
- *   - `legend.show` — the traditional swatch legend (top/bottom/right).
- *   - `endpointLabels` — the right-side per-series column with last value.
- *   - end-of-line labels — the legacy series-name label glued to the last point.
- *
- * For ≥2-series line/area charts the resolution table is:
- *
- * | `legend.show` | `endpointLabels` | Traditional legend | Endpoint column | End-of-line labels |
- * |--|--|--|--|--|
- * | unset | unset | hidden (auto-suppressed) | shown                  | hidden |
- * | true  | unset | shown                    | shown                  | hidden |
- * | unset | false | shown (auto-revoked)     | hidden                 | hidden |
- * | false | false | hidden                   | hidden                 | shown  |
- * | true  | false | shown                    | hidden                 | hidden |
- * | false | true  | hidden                   | shown                  | hidden |
- * | true  | true  | shown                    | shown                  | hidden |
- *
- * Single-series and non-line/area charts: column always hidden, legend hidden
- * (single-series rule), end-of-line labels never render.
- *
- * Rule of thumb: end-of-line labels are the fallback identifier of last resort.
- * They render only when neither the traditional legend nor the endpoint column
- * is showing. The endpoint column "owns" the right zone and absorbs the
- * suppression role the traditional legend used to have for end-of-line labels.
- */
+/** Series identification uses two independent surfaces: legend and endpoint column. */
 
 import type { Encoding } from '@opendata-ai/openchart-core';
 
@@ -39,8 +10,6 @@ export interface SuppressionResult {
   showTraditionalLegend: boolean;
   /** Whether the right-side endpoint column should render. */
   showEndpointLabels: boolean;
-  /** Whether the legacy end-of-line labels should render. */
-  showEndOfLineLabels: boolean;
 }
 
 /** Inputs needed by the resolution helper. */
@@ -49,8 +18,6 @@ export interface SuppressionContext {
   seriesCount: number;
   /** True when responsive strategy strips inline labels (compact breakpoint). */
   labelsHiddenByStrategy: boolean;
-  /** True when spec.labels.density === 'none'. */
-  labelsDensityNone: boolean;
   /** When true, endpoint labels are demoted because they don't fit at the current width. */
   endpointLabelsDemoted?: boolean;
 }
@@ -106,10 +73,9 @@ function getMaxSeries(spec: NormalizedChartSpec): number {
 }
 
 /**
- * Resolve the three booleans from spec + context.
+ * Resolve legend and endpoint visibility from spec + context.
  *
- * Pure: no theme, no chart area, no scales. Both `computeLegend` and
- * `computeLineLabels` and `computeEndpointLabels` share this exact logic.
+ * Pure: no theme, no chart area, no scales. `computeLegend` and `computeEndpointLabels` share this exact logic.
  */
 export function resolveSuppression(
   spec: NormalizedChartSpec,
@@ -120,15 +86,11 @@ export function resolveSuppression(
   const isMultiSeries = isLineOrArea && hasColorEncoding && ctx.seriesCount >= 2;
 
   // Single-series, non-line/area, or compact strategy: never show endpoint
-  // column or end-of-line labels. Legend follows its own rules elsewhere.
+  // column. Legend follows its own rules elsewhere.
   // Explicit user opt-in (endpointLabels config) overrides the compact
   // strip: slope/bump recipes carry their values on the labels, so an
   // author who wrote endpointLabels config keeps the column at 320px.
   //
-  // Note: `labelsDensityNone` is intentionally NOT in this short-circuit.
-  // `labels.density: 'none'` is the legacy switch for end-of-line labels and
-  // must not affect the endpoint column or the traditional legend (those
-  // are independent concerns governed by the truth table below).
   const strategyHidesEndpoint = ctx.labelsHiddenByStrategy && !endpointLabelsExplicitlyOn(spec);
   if (!isMultiSeries || strategyHidesEndpoint) {
     return {
@@ -136,7 +98,6 @@ export function resolveSuppression(
       // doesn't override the existing legend behavior for non-multi-series.
       showTraditionalLegend: !legendHiddenExplicitly(spec),
       showEndpointLabels: false,
-      showEndOfLineLabels: false,
     };
   }
 
@@ -158,7 +119,6 @@ export function resolveSuppression(
     return {
       showTraditionalLegend: !legendHiddenExplicitly(spec),
       showEndpointLabels: explicitOn,
-      showEndOfLineLabels: false,
     };
   }
 
@@ -191,17 +151,9 @@ export function resolveSuppression(
     showTraditionalLegend = !showEndpointLabels;
   }
 
-  // End-of-line labels are the last-resort series identifier: they render
-  // only when both the traditional legend and the endpoint column are off.
-  // `labels.density: 'none'` is the legacy switch that explicitly disables
-  // end-of-line labels regardless of the other toggles.
-  const showEndOfLineLabels =
-    !showTraditionalLegend && !showEndpointLabels && !ctx.labelsDensityNone;
-
   return {
     showTraditionalLegend,
     showEndpointLabels,
-    showEndOfLineLabels,
   };
 }
 

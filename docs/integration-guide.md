@@ -327,7 +327,7 @@ import { VizThemeProvider, Chart, DataTable } from "@opendata-ai/openchart-svelt
 </VizThemeProvider>
 ```
 
-Each framework uses its native context system (React context, Vue provide/inject, Svelte context). A `theme` prop on a component takes precedence over the context theme.
+Each framework uses its native context system (React context, Vue provide/inject, Svelte context). A component `theme` prop deep-merges over the context theme, preserving unrelated nested provider values. Arrays and light/dark pairs replace atomically.
 
 ### Reading the theme in custom components
 
@@ -394,7 +394,7 @@ createGraph(container, graphSpec, { watermark: false });
 createSankey(container, sankeySpec, { watermark: false });
 ```
 
-Spec-level `watermark` takes precedence over the mount option when both are set.
+The mount `watermark` option takes precedence over the spec and active breakpoint values when both are set.
 
 Chart-family specs also auto-hide the watermark when the compiled container is under 200px tall — chrome is already hidden at that height, so the brand band would paint over the plot. Set `watermark` explicitly (top level or in an active breakpoint override) to opt back in; an explicit `watermark: true` in that cramped state reserves a compact brand band instead of overlapping the chart. This auto-hide is scoped to charts — sankey, tilemap, graph, geo-map, and table watermarks are unaffected and still need an explicit `watermark: false`.
 
@@ -575,6 +575,18 @@ import type { MarkEvent } from "@opendata-ai/openchart-core";
 // event.position - { x, y } relative to chart container
 // event.event   - the raw browser MouseEvent
 ```
+
+### Persisting edits
+
+In edit mode, `onEdit` receives one `EditTransaction` per committed gesture.
+Apply it atomically with `applyEditTransaction` from core, persist the returned
+spec, and retain the inverse for undo. A rejected transaction leaves the original
+unchanged. Do not persist transient selection, note emphasis, or legend visibility
+as gesture edits. Cancelled pointer gestures emit nothing.
+
+React uses `onEdit`, Vue uses `@edit`, and Svelte uses `onedit`. The former
+`onEditTransaction` and element-edit callbacks are removed. See the complete
+[persistence example and keyboard contract](migrating-v9.md#editing-and-keyboard-navigation).
 
 ### Click-to-drill-down pattern
 
@@ -1002,13 +1014,13 @@ The responsive system also uses breakpoints to adjust layout strategy at smaller
 - **Label density**: Fewer labels at smaller widths to avoid overcrowding
 - **Legend position**: May shift from inline to top/bottom at narrow widths
 - **Annotation placement**: Adjusts for available space
-- **Tables**: Auto-apply compact mode at small breakpoints
+- **Tables**: Adapt density and switch to the chosen mobile layout
 
 ### Container sizing
 
 The `<Chart>` and `<DataTable>` components render a wrapper div set to `width: 100%; height: 100%`. They fill whatever container you put them in.
 
-For charts, the container needs an explicit height (charts don't have intrinsic height):
+An explicit height supplies the chart's figure budget. To keep an exact outer height even when annotations produce notes, set `chromeLayout: 'subtract'` on the spec. Without a height constraint, charts use a 400px visualization budget and add chrome:
 
 ```tsx
 {
@@ -1029,7 +1041,7 @@ For charts, the container needs an explicit height (charts don't have intrinsic 
 </div>;
 
 {
-  /* Won't work: no height constraint, chart collapses to minimum */
+  /* Automatic height: 400px visualization budget plus chrome */
 }
 <div>
   <Chart spec={spec} />
@@ -1052,7 +1064,7 @@ createChart(container, spec, { autoResize: false });
 
 ### Forcing size for export
 
-When you need a chart at specific dimensions (for image export, thumbnails, etc.), set the container to the exact size you want, disable responsive, and export:
+For exact export dimensions, set the container size, use `chromeLayout: 'subtract'` to prevent note-band growth, and disable automatic resize:
 
 ```ts
 const container = document.createElement("div");
@@ -1060,7 +1072,7 @@ container.style.width = "1200px";
 container.style.height = "800px";
 document.body.appendChild(container);
 
-const chart = createChart(container, spec, { autoResize: false });
+const chart = createChart(container, { ...spec, chromeLayout: 'subtract' }, { autoResize: false });
 const pngBlob = await chart.export("png", { dpi: 2 });
 
 chart.destroy();

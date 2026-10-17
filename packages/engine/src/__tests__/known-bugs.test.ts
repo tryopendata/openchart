@@ -249,11 +249,8 @@ describe('known layout bugs', () => {
     });
   });
 
-  // Regression: `resolveTextAnnotation` bolts the lede rule on (a `subtitle`
-  // promotes the primary line to 700) BEFORE branching to the drop-line resolver,
-  // which used to resolve no subtitle at all. Net effect: authoring a subtitle on
-  // a drop-line silently threw the subtitle away but still bolded the primary --
-  // a field whose only visible effect was a mystery weight change.
+  // Regression: drop-line resolution used to discard subtitle content. The v9
+  // regular-weight default must preserve the subtitle on this connector path.
   describe('a drop-line annotation honors its subtitle', () => {
     // Annotate Mar, not the Feb maximum: a callout on the chart's top value clamps
     // against the chart edge and has nowhere to go, which is a separate (and
@@ -290,8 +287,8 @@ describe('known layout bugs', () => {
       expect(annotation?.subtitle?.text).toBe('the highest month');
     });
 
-    test('still promotes the primary line to a bold lede', () => {
-      expect(dropLineWithSubtitle()?.label?.style.fontWeight).toBe(700);
+    test('keeps the primary line regular by default', () => {
+      expect(dropLineWithSubtitle()?.label?.style.fontWeight).toBe(400);
     });
 
     test('renders the subtitle below the primary line, left edges aligned', () => {
@@ -529,7 +526,7 @@ describe('known layout bugs', () => {
       return style;
     };
 
-    test('a subtitle promotes the primary line to a bold lede', () => {
+    test('a subtitle keeps the primary line regular by default', () => {
       const style = styleOf({
         type: 'text',
         x: '2025',
@@ -537,7 +534,7 @@ describe('known layout bugs', () => {
         text: 'Peak',
         subtitle: 'the warmest year on record',
       });
-      expect(style.fontWeight).toBe(700);
+      expect(style.fontWeight).toBe(400);
     });
 
     test('a plain annotation stays regular weight', () => {
@@ -550,7 +547,7 @@ describe('known layout bugs', () => {
       expect(style.fontSize).toBe(13);
     });
 
-    test('an explicit fontWeight beats the lede rule', () => {
+    test('an explicit fontWeight overrides the regular default', () => {
       const style = styleOf({
         type: 'text',
         x: '2025',

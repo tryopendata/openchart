@@ -1,0 +1,1335 @@
+[
+  {
+    "name": "defaults and annotations",
+    "source": {
+      "mark": "point",
+      "data": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "encoding": {
+        "x": {
+          "field": "x",
+          "type": "quantitative",
+          "scale": {
+            "zero": false
+          }
+        },
+        "y": {
+          "field": "y",
+          "type": "quantitative",
+          "scale": {
+            "zero": false
+          }
+        }
+      },
+      "chrome": {
+        "title": "Title",
+        "source": "Source"
+      },
+      "annotations": [
+        {
+          "type": "text",
+          "x": 0,
+          "y": 0,
+          "text": "Headline",
+          "subtitle": "Detail",
+          "connector": "curve"
+        },
+        {
+          "type": "refline",
+          "y": 1,
+          "label": "Rule"
+        },
+        {
+          "type": "range",
+          "y1": 0,
+          "y2": 1,
+          "label": "Range"
+        }
+      ]
+    },
+    "expected": {
+      "fonts": {
+        "family": "\"Inter Variable\", Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif",
+        "mono": "\"JetBrains Mono\", \"Fira Code\", \"Cascadia Code\", monospace",
+        "sizes": {
+          "title": 26,
+          "subtitle": 14,
+          "body": 13,
+          "small": 11,
+          "axisTick": 11,
+          "metricLabel": 11,
+          "metricValue": 22
+        },
+        "weights": {
+          "normal": 400,
+          "medium": 500,
+          "semibold": 600,
+          "bold": 700
+        }
+      },
+      "spacing": {
+        "padding": 20,
+        "chromeGap": 6,
+        "chromeToChart": 8,
+        "chartToFooter": 8,
+        "axisMargin": 6,
+        "xAxisHeight": 26,
+        "xAxisLabelPadding": 4
+      },
+      "chrome": {
+        "eyebrow": {
+          "fontSize": 11,
+          "fontWeight": 500,
+          "color": "#06b6d4",
+          "lineHeight": 1.4
+        },
+        "title": {
+          "fontSize": 26,
+          "fontWeight": 600,
+          "color": "#09090b",
+          "lineHeight": 1.15
+        },
+        "subtitle": {
+          "fontSize": 14,
+          "fontWeight": 400,
+          "color": "#71717a",
+          "lineHeight": 1.45
+        },
+        "source": {
+          "fontSize": 11,
+          "fontWeight": 400,
+          "color": "#71717a",
+          "lineHeight": 1.4
+        },
+        "byline": {
+          "fontSize": 11,
+          "fontWeight": 400,
+          "color": "#71717a",
+          "lineHeight": 1.4
+        },
+        "footer": {
+          "fontSize": 11,
+          "fontWeight": 400,
+          "color": "#71717a",
+          "lineHeight": 1.4
+        }
+      },
+      "colors": {
+        "categorical": ["#06b6d4", "#e29e47", "#4170cb", "#b2417f", "#3ca368", "#a584dc"],
+        "categoricalFill": ["#51bccc", "#dda96b", "#587fc8", "#bf6291", "#62ab7d", "#ae96da"],
+        "sequential": {
+          "blue": ["#deebf7", "#c6dbef", "#9ecae1", "#6baed6", "#3182bd", "#08519c"],
+          "green": ["#e5f5e0", "#c7e9c0", "#a1d99b", "#74c476", "#31a354", "#006d2c"],
+          "orange": ["#fee6ce", "#fdd0a2", "#fdae6b", "#fd8d3c", "#e6550d", "#a63603"],
+          "purple": ["#efedf5", "#dadaeb", "#bcbddc", "#9e9ac8", "#756bb1", "#54278f"],
+          "teal": ["#06b6d4", "#05a3be", "#0490a8", "#037d92", "#026a7c", "#015766", "#004450"]
+        },
+        "diverging": {
+          "redBlue": ["#b2182b", "#d6604d", "#f4a582", "#f7f7f7", "#92c5de", "#4393c3", "#2166ac"],
+          "brownTeal": ["#8c510a", "#bf812d", "#dfc27d", "#f6e8c3", "#80cdc1", "#35978f", "#01665e"]
+        },
+        "background": "transparent",
+        "text": "#09090b",
+        "gridline": "rgba(0,0,0,0.08)",
+        "hairline": "rgba(0,0,0,0.14)",
+        "axis": "#71717a",
+        "annotationFill": "rgba(0,0,0,0.04)",
+        "annotationText": "#71717a",
+        "annotationLabel": "#333333",
+        "annotationMuted": "#6b7280",
+        "annotationLeader": "#8f8f8f",
+        "annotationRule": "#666666",
+        "annotationRangeFill": "#000000",
+        "annotationMarkerFill": "#ffffff",
+        "annotationPlate": "#ffffff",
+        "positive": "#15803d",
+        "negative": "#dc2626",
+        "neutral": {
+          "100": "#f0f0f0",
+          "200": "#e1e1e2",
+          "300": "#c9c9c9",
+          "400": "#9d9d9d",
+          "600": "#787879",
+          "800": "#474748",
+          "secondary": "#3f3f46",
+          "faint": "#d4d4d8",
+          "border": "rgba(0, 0, 0, 0.08)",
+          "surface": "#ffffff"
+        }
+      },
+      "annotations": [
+        {
+          "type": "text",
+          "label": {
+            "text": "Headline",
+            "style": {
+              "fontFamily": "\"Inter Variable\", Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif",
+              "fontSize": 13,
+              "fontWeight": 700,
+              "fill": "#333333",
+              "lineHeight": 1.3,
+              "textAnchor": "start"
+            }
+          },
+          "subtitle": {
+            "text": "Detail",
+            "style": {
+              "fontFamily": "\"Inter Variable\", Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif",
+              "fontSize": 11,
+              "fontWeight": 400,
+              "fill": "#6b7280",
+              "lineHeight": 1.3,
+              "textAnchor": "start"
+            }
+          },
+          "connector": {
+            "arrow": true,
+            "stroke": "#333333"
+          }
+        },
+        {
+          "type": "refline",
+          "label": {
+            "text": "Rule",
+            "style": {
+              "fontFamily": "\"Inter Variable\", Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif",
+              "fontSize": 11,
+              "fontWeight": 400,
+              "fill": "#666666",
+              "lineHeight": 1.3,
+              "textAnchor": "start"
+            }
+          }
+        },
+        {
+          "type": "range",
+          "label": {
+            "text": "Range",
+            "style": {
+              "fontFamily": "\"Inter Variable\", Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif",
+              "fontSize": 11,
+              "fontWeight": 500,
+              "fill": "#333333",
+              "lineHeight": 1.3,
+              "textAnchor": "middle"
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "authored typography 1",
+    "source": {
+      "mark": "point",
+      "data": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "encoding": {
+        "x": {
+          "field": "x",
+          "type": "quantitative",
+          "scale": {
+            "zero": false
+          }
+        },
+        "y": {
+          "field": "y",
+          "type": "quantitative",
+          "scale": {
+            "zero": false
+          }
+        }
+      },
+      "theme": {
+        "chrome": {
+          "title": {
+            "fontSize": 31
+          },
+          "source": {
+            "fontSize": 16
+          }
+        }
+      },
+      "chrome": {
+        "title": "Title",
+        "source": "Source",
+        "footer": "Footer"
+      }
+    },
+    "expected": {
+      "fonts": {
+        "family": "\"Inter Variable\", Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif",
+        "mono": "\"JetBrains Mono\", \"Fira Code\", \"Cascadia Code\", monospace",
+        "sizes": {
+          "title": 26,
+          "subtitle": 14,
+          "body": 13,
+          "small": 11,
+          "axisTick": 11,
+          "metricLabel": 11,
+          "metricValue": 22
+        },
+        "weights": {
+          "normal": 400,
+          "medium": 500,
+          "semibold": 600,
+          "bold": 700
+        }
+      },
+      "spacing": {
+        "padding": 20,
+        "chromeGap": 6,
+        "chromeToChart": 8,
+        "chartToFooter": 8,
+        "axisMargin": 6,
+        "xAxisHeight": 26,
+        "xAxisLabelPadding": 4
+      },
+      "chrome": {
+        "eyebrow": {
+          "fontSize": 11,
+          "fontWeight": 500,
+          "color": "#06b6d4",
+          "lineHeight": 1.4
+        },
+        "title": {
+          "fontSize": 31,
+          "fontWeight": 600,
+          "color": "#09090b",
+          "lineHeight": 1.15
+        },
+        "subtitle": {
+          "fontSize": 14,
+          "fontWeight": 400,
+          "color": "#71717a",
+          "lineHeight": 1.45
+        },
+        "source": {
+          "fontSize": 16,
+          "fontWeight": 400,
+          "color": "#71717a",
+          "lineHeight": 1.4
+        },
+        "byline": {
+          "fontSize": 11,
+          "fontWeight": 400,
+          "color": "#71717a",
+          "lineHeight": 1.4
+        },
+        "footer": {
+          "fontSize": 11,
+          "fontWeight": 400,
+          "color": "#71717a",
+          "lineHeight": 1.4
+        }
+      },
+      "colors": {
+        "categorical": ["#06b6d4", "#e29e47", "#4170cb", "#b2417f", "#3ca368", "#a584dc"],
+        "categoricalFill": ["#51bccc", "#dda96b", "#587fc8", "#bf6291", "#62ab7d", "#ae96da"],
+        "sequential": {
+          "blue": ["#deebf7", "#c6dbef", "#9ecae1", "#6baed6", "#3182bd", "#08519c"],
+          "green": ["#e5f5e0", "#c7e9c0", "#a1d99b", "#74c476", "#31a354", "#006d2c"],
+          "orange": ["#fee6ce", "#fdd0a2", "#fdae6b", "#fd8d3c", "#e6550d", "#a63603"],
+          "purple": ["#efedf5", "#dadaeb", "#bcbddc", "#9e9ac8", "#756bb1", "#54278f"],
+          "teal": ["#06b6d4", "#05a3be", "#0490a8", "#037d92", "#026a7c", "#015766", "#004450"]
+        },
+        "diverging": {
+          "redBlue": ["#b2182b", "#d6604d", "#f4a582", "#f7f7f7", "#92c5de", "#4393c3", "#2166ac"],
+          "brownTeal": ["#8c510a", "#bf812d", "#dfc27d", "#f6e8c3", "#80cdc1", "#35978f", "#01665e"]
+        },
+        "background": "transparent",
+        "text": "#09090b",
+        "gridline": "rgba(0,0,0,0.08)",
+        "hairline": "rgba(0,0,0,0.14)",
+        "axis": "#71717a",
+        "annotationFill": "rgba(0,0,0,0.04)",
+        "annotationText": "#71717a",
+        "annotationLabel": "#333333",
+        "annotationMuted": "#6b7280",
+        "annotationLeader": "#8f8f8f",
+        "annotationRule": "#666666",
+        "annotationRangeFill": "#000000",
+        "annotationMarkerFill": "#ffffff",
+        "annotationPlate": "#ffffff",
+        "positive": "#15803d",
+        "negative": "#dc2626",
+        "neutral": {
+          "100": "#f0f0f0",
+          "200": "#e1e1e2",
+          "300": "#c9c9c9",
+          "400": "#9d9d9d",
+          "600": "#787879",
+          "800": "#474748",
+          "secondary": "#3f3f46",
+          "faint": "#d4d4d8",
+          "border": "rgba(0, 0, 0, 0.08)",
+          "surface": "#ffffff"
+        }
+      },
+      "annotations": []
+    }
+  },
+  {
+    "name": "authored typography 2",
+    "source": {
+      "mark": "point",
+      "data": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "encoding": {
+        "x": {
+          "field": "x",
+          "type": "quantitative",
+          "scale": {
+            "zero": false
+          }
+        },
+        "y": {
+          "field": "y",
+          "type": "quantitative",
+          "scale": {
+            "zero": false
+          }
+        }
+      },
+      "theme": {
+        "fonts": {
+          "sizes": {
+            "small": 15,
+            "title": 32
+          }
+        }
+      },
+      "chrome": {
+        "title": "Title",
+        "source": "Source",
+        "footer": "Footer"
+      }
+    },
+    "expected": {
+      "fonts": {
+        "family": "\"Inter Variable\", Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif",
+        "mono": "\"JetBrains Mono\", \"Fira Code\", \"Cascadia Code\", monospace",
+        "sizes": {
+          "title": 32,
+          "subtitle": 14,
+          "body": 13,
+          "small": 15,
+          "axisTick": 11,
+          "metricLabel": 11,
+          "metricValue": 22
+        },
+        "weights": {
+          "normal": 400,
+          "medium": 500,
+          "semibold": 600,
+          "bold": 700
+        }
+      },
+      "spacing": {
+        "padding": 20,
+        "chromeGap": 6,
+        "chromeToChart": 8,
+        "chartToFooter": 8,
+        "axisMargin": 6,
+        "xAxisHeight": 26,
+        "xAxisLabelPadding": 4
+      },
+      "chrome": {
+        "eyebrow": {
+          "fontSize": 11,
+          "fontWeight": 500,
+          "color": "#06b6d4",
+          "lineHeight": 1.4
+        },
+        "title": {
+          "fontSize": 32,
+          "fontWeight": 600,
+          "color": "#09090b",
+          "lineHeight": 1.15
+        },
+        "subtitle": {
+          "fontSize": 14,
+          "fontWeight": 400,
+          "color": "#71717a",
+          "lineHeight": 1.45
+        },
+        "source": {
+          "fontSize": 15,
+          "fontWeight": 400,
+          "color": "#71717a",
+          "lineHeight": 1.4
+        },
+        "byline": {
+          "fontSize": 15,
+          "fontWeight": 400,
+          "color": "#71717a",
+          "lineHeight": 1.4
+        },
+        "footer": {
+          "fontSize": 15,
+          "fontWeight": 400,
+          "color": "#71717a",
+          "lineHeight": 1.4
+        }
+      },
+      "colors": {
+        "categorical": ["#06b6d4", "#e29e47", "#4170cb", "#b2417f", "#3ca368", "#a584dc"],
+        "categoricalFill": ["#51bccc", "#dda96b", "#587fc8", "#bf6291", "#62ab7d", "#ae96da"],
+        "sequential": {
+          "blue": ["#deebf7", "#c6dbef", "#9ecae1", "#6baed6", "#3182bd", "#08519c"],
+          "green": ["#e5f5e0", "#c7e9c0", "#a1d99b", "#74c476", "#31a354", "#006d2c"],
+          "orange": ["#fee6ce", "#fdd0a2", "#fdae6b", "#fd8d3c", "#e6550d", "#a63603"],
+          "purple": ["#efedf5", "#dadaeb", "#bcbddc", "#9e9ac8", "#756bb1", "#54278f"],
+          "teal": ["#06b6d4", "#05a3be", "#0490a8", "#037d92", "#026a7c", "#015766", "#004450"]
+        },
+        "diverging": {
+          "redBlue": ["#b2182b", "#d6604d", "#f4a582", "#f7f7f7", "#92c5de", "#4393c3", "#2166ac"],
+          "brownTeal": ["#8c510a", "#bf812d", "#dfc27d", "#f6e8c3", "#80cdc1", "#35978f", "#01665e"]
+        },
+        "background": "transparent",
+        "text": "#09090b",
+        "gridline": "rgba(0,0,0,0.08)",
+        "hairline": "rgba(0,0,0,0.14)",
+        "axis": "#71717a",
+        "annotationFill": "rgba(0,0,0,0.04)",
+        "annotationText": "#71717a",
+        "annotationLabel": "#333333",
+        "annotationMuted": "#6b7280",
+        "annotationLeader": "#8f8f8f",
+        "annotationRule": "#666666",
+        "annotationRangeFill": "#000000",
+        "annotationMarkerFill": "#ffffff",
+        "annotationPlate": "#ffffff",
+        "positive": "#15803d",
+        "negative": "#dc2626",
+        "neutral": {
+          "100": "#f0f0f0",
+          "200": "#e1e1e2",
+          "300": "#c9c9c9",
+          "400": "#9d9d9d",
+          "600": "#787879",
+          "800": "#474748",
+          "secondary": "#3f3f46",
+          "faint": "#d4d4d8",
+          "border": "rgba(0, 0, 0, 0.08)",
+          "surface": "#ffffff"
+        }
+      },
+      "annotations": []
+    }
+  },
+  {
+    "name": "authored typography 3",
+    "source": {
+      "mark": "point",
+      "data": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "encoding": {
+        "x": {
+          "field": "x",
+          "type": "quantitative",
+          "scale": {
+            "zero": false
+          }
+        },
+        "y": {
+          "field": "y",
+          "type": "quantitative",
+          "scale": {
+            "zero": false
+          }
+        }
+      },
+      "theme": {
+        "fonts": {
+          "sizes": {
+            "body": 16
+          }
+        },
+        "chrome": {
+          "footer": {
+            "fontSize": 19
+          }
+        }
+      },
+      "chrome": {
+        "title": "Title",
+        "source": "Source",
+        "footer": "Footer"
+      }
+    },
+    "expected": {
+      "fonts": {
+        "family": "\"Inter Variable\", Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif",
+        "mono": "\"JetBrains Mono\", \"Fira Code\", \"Cascadia Code\", monospace",
+        "sizes": {
+          "title": 26,
+          "subtitle": 14,
+          "body": 16,
+          "small": 11,
+          "axisTick": 11,
+          "metricLabel": 11,
+          "metricValue": 22
+        },
+        "weights": {
+          "normal": 400,
+          "medium": 500,
+          "semibold": 600,
+          "bold": 700
+        }
+      },
+      "spacing": {
+        "padding": 20,
+        "chromeGap": 6,
+        "chromeToChart": 8,
+        "chartToFooter": 8,
+        "axisMargin": 6,
+        "xAxisHeight": 26,
+        "xAxisLabelPadding": 4
+      },
+      "chrome": {
+        "eyebrow": {
+          "fontSize": 11,
+          "fontWeight": 500,
+          "color": "#06b6d4",
+          "lineHeight": 1.4
+        },
+        "title": {
+          "fontSize": 26,
+          "fontWeight": 600,
+          "color": "#09090b",
+          "lineHeight": 1.15
+        },
+        "subtitle": {
+          "fontSize": 14,
+          "fontWeight": 400,
+          "color": "#71717a",
+          "lineHeight": 1.45
+        },
+        "source": {
+          "fontSize": 11,
+          "fontWeight": 400,
+          "color": "#71717a",
+          "lineHeight": 1.4
+        },
+        "byline": {
+          "fontSize": 11,
+          "fontWeight": 400,
+          "color": "#71717a",
+          "lineHeight": 1.4
+        },
+        "footer": {
+          "fontSize": 19,
+          "fontWeight": 400,
+          "color": "#71717a",
+          "lineHeight": 1.4
+        }
+      },
+      "colors": {
+        "categorical": ["#06b6d4", "#e29e47", "#4170cb", "#b2417f", "#3ca368", "#a584dc"],
+        "categoricalFill": ["#51bccc", "#dda96b", "#587fc8", "#bf6291", "#62ab7d", "#ae96da"],
+        "sequential": {
+          "blue": ["#deebf7", "#c6dbef", "#9ecae1", "#6baed6", "#3182bd", "#08519c"],
+          "green": ["#e5f5e0", "#c7e9c0", "#a1d99b", "#74c476", "#31a354", "#006d2c"],
+          "orange": ["#fee6ce", "#fdd0a2", "#fdae6b", "#fd8d3c", "#e6550d", "#a63603"],
+          "purple": ["#efedf5", "#dadaeb", "#bcbddc", "#9e9ac8", "#756bb1", "#54278f"],
+          "teal": ["#06b6d4", "#05a3be", "#0490a8", "#037d92", "#026a7c", "#015766", "#004450"]
+        },
+        "diverging": {
+          "redBlue": ["#b2182b", "#d6604d", "#f4a582", "#f7f7f7", "#92c5de", "#4393c3", "#2166ac"],
+          "brownTeal": ["#8c510a", "#bf812d", "#dfc27d", "#f6e8c3", "#80cdc1", "#35978f", "#01665e"]
+        },
+        "background": "transparent",
+        "text": "#09090b",
+        "gridline": "rgba(0,0,0,0.08)",
+        "hairline": "rgba(0,0,0,0.14)",
+        "axis": "#71717a",
+        "annotationFill": "rgba(0,0,0,0.04)",
+        "annotationText": "#71717a",
+        "annotationLabel": "#333333",
+        "annotationMuted": "#6b7280",
+        "annotationLeader": "#8f8f8f",
+        "annotationRule": "#666666",
+        "annotationRangeFill": "#000000",
+        "annotationMarkerFill": "#ffffff",
+        "annotationPlate": "#ffffff",
+        "positive": "#15803d",
+        "negative": "#dc2626",
+        "neutral": {
+          "100": "#f0f0f0",
+          "200": "#e1e1e2",
+          "300": "#c9c9c9",
+          "400": "#9d9d9d",
+          "600": "#787879",
+          "800": "#474748",
+          "secondary": "#3f3f46",
+          "faint": "#d4d4d8",
+          "border": "rgba(0, 0, 0, 0.08)",
+          "surface": "#ffffff"
+        }
+      },
+      "annotations": []
+    }
+  },
+  {
+    "name": "partial child theme replaces parent",
+    "source": {
+      "theme": {
+        "colors": {
+          "categorical": ["green"]
+        }
+      },
+      "layer": [
+        {
+          "mark": "point",
+          "data": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 1,
+              "y": 1
+            }
+          ],
+          "encoding": {
+            "x": {
+              "field": "x",
+              "type": "quantitative",
+              "scale": {
+                "zero": false
+              }
+            },
+            "y": {
+              "field": "y",
+              "type": "quantitative",
+              "scale": {
+                "zero": false
+              }
+            }
+          },
+          "theme": {
+            "fonts": {
+              "sizes": {
+                "small": 16
+              }
+            }
+          }
+        },
+        {
+          "mark": "point",
+          "data": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 1,
+              "y": 1
+            }
+          ],
+          "encoding": {
+            "x": {
+              "field": "x",
+              "type": "quantitative",
+              "scale": {
+                "zero": false
+              }
+            },
+            "y": {
+              "field": "y",
+              "type": "quantitative",
+              "scale": {
+                "zero": false
+              }
+            }
+          }
+        }
+      ]
+    },
+    "expected": {
+      "fonts": {
+        "family": "\"Inter Variable\", Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif",
+        "mono": "\"JetBrains Mono\", \"Fira Code\", \"Cascadia Code\", monospace",
+        "sizes": {
+          "title": 26,
+          "subtitle": 14,
+          "body": 13,
+          "small": 11,
+          "axisTick": 11,
+          "metricLabel": 11,
+          "metricValue": 22
+        },
+        "weights": {
+          "normal": 400,
+          "medium": 500,
+          "semibold": 600,
+          "bold": 700
+        }
+      },
+      "spacing": {
+        "padding": 20,
+        "chromeGap": 6,
+        "chromeToChart": 8,
+        "chartToFooter": 8,
+        "axisMargin": 6,
+        "xAxisHeight": 26,
+        "xAxisLabelPadding": 4
+      },
+      "chrome": {
+        "eyebrow": {
+          "fontSize": 11,
+          "fontWeight": 500,
+          "color": "#06b6d4",
+          "lineHeight": 1.4
+        },
+        "title": {
+          "fontSize": 26,
+          "fontWeight": 600,
+          "color": "#09090b",
+          "lineHeight": 1.15
+        },
+        "subtitle": {
+          "fontSize": 14,
+          "fontWeight": 400,
+          "color": "#71717a",
+          "lineHeight": 1.45
+        },
+        "source": {
+          "fontSize": 11,
+          "fontWeight": 400,
+          "color": "#71717a",
+          "lineHeight": 1.4
+        },
+        "byline": {
+          "fontSize": 11,
+          "fontWeight": 400,
+          "color": "#71717a",
+          "lineHeight": 1.4
+        },
+        "footer": {
+          "fontSize": 11,
+          "fontWeight": 400,
+          "color": "#71717a",
+          "lineHeight": 1.4
+        }
+      },
+      "colors": {
+        "categorical": ["green"],
+        "categoricalFill": ["green"],
+        "sequential": {
+          "blue": ["#deebf7", "#c6dbef", "#9ecae1", "#6baed6", "#3182bd", "#08519c"],
+          "green": ["#e5f5e0", "#c7e9c0", "#a1d99b", "#74c476", "#31a354", "#006d2c"],
+          "orange": ["#fee6ce", "#fdd0a2", "#fdae6b", "#fd8d3c", "#e6550d", "#a63603"],
+          "purple": ["#efedf5", "#dadaeb", "#bcbddc", "#9e9ac8", "#756bb1", "#54278f"],
+          "teal": ["#06b6d4", "#05a3be", "#0490a8", "#037d92", "#026a7c", "#015766", "#004450"]
+        },
+        "diverging": {
+          "redBlue": ["#b2182b", "#d6604d", "#f4a582", "#f7f7f7", "#92c5de", "#4393c3", "#2166ac"],
+          "brownTeal": ["#8c510a", "#bf812d", "#dfc27d", "#f6e8c3", "#80cdc1", "#35978f", "#01665e"]
+        },
+        "background": "transparent",
+        "text": "#09090b",
+        "gridline": "rgba(0,0,0,0.08)",
+        "hairline": "rgba(0,0,0,0.14)",
+        "axis": "#71717a",
+        "annotationFill": "rgba(0,0,0,0.04)",
+        "annotationText": "#71717a",
+        "annotationLabel": "#333333",
+        "annotationMuted": "#6b7280",
+        "annotationLeader": "#8f8f8f",
+        "annotationRule": "#666666",
+        "annotationRangeFill": "#000000",
+        "annotationMarkerFill": "#ffffff",
+        "annotationPlate": "#ffffff",
+        "positive": "#15803d",
+        "negative": "#dc2626",
+        "neutral": {
+          "100": "#f0f0f0",
+          "200": "#e1e1e2",
+          "300": "#c9c9c9",
+          "400": "#9d9d9d",
+          "600": "#787879",
+          "800": "#474748",
+          "secondary": "#3f3f46",
+          "faint": "#d4d4d8",
+          "border": "rgba(0, 0, 0, 0.08)",
+          "surface": "#ffffff"
+        }
+      },
+      "annotations": []
+    }
+  },
+  {
+    "name": "leaf owner nested=false",
+    "source": {
+      "layer": [
+        {
+          "mark": "point",
+          "data": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 1,
+              "y": 1
+            }
+          ],
+          "encoding": {
+            "x": {
+              "field": "x",
+              "type": "quantitative",
+              "scale": {
+                "zero": false
+              }
+            },
+            "y": {
+              "field": "y",
+              "type": "quantitative",
+              "scale": {
+                "zero": false
+              }
+            }
+          },
+          "responsive": false,
+          "theme": {
+            "colors": {
+              "background": "pink"
+            },
+            "fonts": {
+              "sizes": {
+                "title": 40
+              }
+            }
+          },
+          "chrome": {
+            "title": "Owned by first leaf"
+          },
+          "annotations": [
+            {
+              "type": "text",
+              "x": 0,
+              "y": 0,
+              "text": "Hidden"
+            }
+          ]
+        },
+        {
+          "mark": "point",
+          "data": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 1,
+              "y": 1
+            }
+          ],
+          "encoding": {
+            "x": {
+              "field": "x",
+              "type": "quantitative",
+              "scale": {
+                "zero": false
+              }
+            },
+            "y": {
+              "field": "y",
+              "type": "quantitative",
+              "scale": {
+                "zero": false
+              }
+            }
+          }
+        }
+      ]
+    },
+    "expected": {
+      "fonts": {
+        "family": "\"Inter Variable\", Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif",
+        "mono": "\"JetBrains Mono\", \"Fira Code\", \"Cascadia Code\", monospace",
+        "sizes": {
+          "title": 40,
+          "subtitle": 14,
+          "body": 13,
+          "small": 11,
+          "axisTick": 11,
+          "metricLabel": 11,
+          "metricValue": 22
+        },
+        "weights": {
+          "normal": 400,
+          "medium": 500,
+          "semibold": 600,
+          "bold": 700
+        }
+      },
+      "spacing": {
+        "padding": 20,
+        "chromeGap": 6,
+        "chromeToChart": 8,
+        "chartToFooter": 8,
+        "axisMargin": 6,
+        "xAxisHeight": 26,
+        "xAxisLabelPadding": 4
+      },
+      "chrome": {
+        "eyebrow": {
+          "fontSize": 11,
+          "fontWeight": 500,
+          "color": "#06b6d4",
+          "lineHeight": 1.4
+        },
+        "title": {
+          "fontSize": 40,
+          "fontWeight": 600,
+          "color": "#09090b",
+          "lineHeight": 1.15
+        },
+        "subtitle": {
+          "fontSize": 14,
+          "fontWeight": 400,
+          "color": "#2d2d2e",
+          "lineHeight": 1.45
+        },
+        "source": {
+          "fontSize": 11,
+          "fontWeight": 400,
+          "color": "#454546",
+          "lineHeight": 1.4
+        },
+        "byline": {
+          "fontSize": 11,
+          "fontWeight": 400,
+          "color": "#454546",
+          "lineHeight": 1.4
+        },
+        "footer": {
+          "fontSize": 11,
+          "fontWeight": 400,
+          "color": "#454546",
+          "lineHeight": 1.4
+        }
+      },
+      "colors": {
+        "categorical": ["#06b6d4", "#e29e47", "#4170cb", "#b2417f", "#3ca368", "#a584dc"],
+        "categoricalFill": ["#51bccc", "#dda96b", "#587fc8", "#bf6291", "#62ab7d", "#ae96da"],
+        "sequential": {
+          "blue": ["#deebf7", "#c6dbef", "#9ecae1", "#6baed6", "#3182bd", "#08519c"],
+          "green": ["#e5f5e0", "#c7e9c0", "#a1d99b", "#74c476", "#31a354", "#006d2c"],
+          "orange": ["#fee6ce", "#fdd0a2", "#fdae6b", "#fd8d3c", "#e6550d", "#a63603"],
+          "purple": ["#efedf5", "#dadaeb", "#bcbddc", "#9e9ac8", "#756bb1", "#54278f"],
+          "teal": ["#06b6d4", "#05a3be", "#0490a8", "#037d92", "#026a7c", "#015766", "#004450"]
+        },
+        "diverging": {
+          "redBlue": ["#b2182b", "#d6604d", "#f4a582", "#f7f7f7", "#92c5de", "#4393c3", "#2166ac"],
+          "brownTeal": ["#8c510a", "#bf812d", "#dfc27d", "#f6e8c3", "#80cdc1", "#35978f", "#01665e"]
+        },
+        "background": "pink",
+        "text": "#09090b",
+        "gridline": "rgba(0,0,0,0.08)",
+        "hairline": "rgba(0,0,0,0.14)",
+        "axis": "#71717a",
+        "annotationFill": "rgba(0,0,0,0.04)",
+        "annotationText": "#71717a",
+        "annotationLabel": "#d1d5db",
+        "annotationMuted": "#9ca3af",
+        "annotationLeader": "#9aa0a6",
+        "annotationRule": "#666666",
+        "annotationRangeFill": "#000000",
+        "annotationMarkerFill": "#0a0a0a",
+        "annotationPlate": "#0a0a0a",
+        "positive": "#15803d",
+        "negative": "#dc2626",
+        "neutral": {
+          "100": "#171719",
+          "200": "#262627",
+          "300": "#3d3e3f",
+          "400": "#68696a",
+          "600": "#8c8c8d",
+          "800": "#bcbcbd",
+          "secondary": "#d0d6e0",
+          "faint": "#52525b",
+          "border": "rgba(255, 255, 255, 0.1)",
+          "surface": "pink"
+        }
+      },
+      "annotations": [
+        {
+          "type": "text",
+          "label": {
+            "text": "Hidden",
+            "style": {
+              "fontFamily": "\"Inter Variable\", Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif",
+              "fontSize": 13,
+              "fontWeight": 400,
+              "fill": "#d1d5db",
+              "lineHeight": 1.3,
+              "textAnchor": "start"
+            }
+          },
+          "connector": {
+            "arrow": false,
+            "stroke": "#9aa0a6"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "leaf owner nested=true",
+    "source": {
+      "layer": [
+        {
+          "layer": [
+            {
+              "mark": "point",
+              "data": [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 1,
+                  "y": 1
+                }
+              ],
+              "encoding": {
+                "x": {
+                  "field": "x",
+                  "type": "quantitative",
+                  "scale": {
+                    "zero": false
+                  }
+                },
+                "y": {
+                  "field": "y",
+                  "type": "quantitative",
+                  "scale": {
+                    "zero": false
+                  }
+                }
+              },
+              "responsive": false,
+              "theme": {
+                "colors": {
+                  "background": "pink"
+                },
+                "fonts": {
+                  "sizes": {
+                    "title": 40
+                  }
+                }
+              },
+              "chrome": {
+                "title": "Owned by first leaf"
+              },
+              "annotations": [
+                {
+                  "type": "text",
+                  "x": 0,
+                  "y": 0,
+                  "text": "Hidden"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "mark": "point",
+          "data": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 1,
+              "y": 1
+            }
+          ],
+          "encoding": {
+            "x": {
+              "field": "x",
+              "type": "quantitative",
+              "scale": {
+                "zero": false
+              }
+            },
+            "y": {
+              "field": "y",
+              "type": "quantitative",
+              "scale": {
+                "zero": false
+              }
+            }
+          }
+        }
+      ]
+    },
+    "expected": {
+      "fonts": {
+        "family": "\"Inter Variable\", Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif",
+        "mono": "\"JetBrains Mono\", \"Fira Code\", \"Cascadia Code\", monospace",
+        "sizes": {
+          "title": 40,
+          "subtitle": 14,
+          "body": 13,
+          "small": 11,
+          "axisTick": 11,
+          "metricLabel": 11,
+          "metricValue": 22
+        },
+        "weights": {
+          "normal": 400,
+          "medium": 500,
+          "semibold": 600,
+          "bold": 700
+        }
+      },
+      "spacing": {
+        "padding": 20,
+        "chromeGap": 6,
+        "chromeToChart": 8,
+        "chartToFooter": 8,
+        "axisMargin": 6,
+        "xAxisHeight": 26,
+        "xAxisLabelPadding": 4
+      },
+      "chrome": {
+        "eyebrow": {
+          "fontSize": 11,
+          "fontWeight": 500,
+          "color": "#06b6d4",
+          "lineHeight": 1.4
+        },
+        "title": {
+          "fontSize": 40,
+          "fontWeight": 600,
+          "color": "#09090b",
+          "lineHeight": 1.15
+        },
+        "subtitle": {
+          "fontSize": 14,
+          "fontWeight": 400,
+          "color": "#2d2d2e",
+          "lineHeight": 1.45
+        },
+        "source": {
+          "fontSize": 11,
+          "fontWeight": 400,
+          "color": "#454546",
+          "lineHeight": 1.4
+        },
+        "byline": {
+          "fontSize": 11,
+          "fontWeight": 400,
+          "color": "#454546",
+          "lineHeight": 1.4
+        },
+        "footer": {
+          "fontSize": 11,
+          "fontWeight": 400,
+          "color": "#454546",
+          "lineHeight": 1.4
+        }
+      },
+      "colors": {
+        "categorical": ["#06b6d4", "#e29e47", "#4170cb", "#b2417f", "#3ca368", "#a584dc"],
+        "categoricalFill": ["#51bccc", "#dda96b", "#587fc8", "#bf6291", "#62ab7d", "#ae96da"],
+        "sequential": {
+          "blue": ["#deebf7", "#c6dbef", "#9ecae1", "#6baed6", "#3182bd", "#08519c"],
+          "green": ["#e5f5e0", "#c7e9c0", "#a1d99b", "#74c476", "#31a354", "#006d2c"],
+          "orange": ["#fee6ce", "#fdd0a2", "#fdae6b", "#fd8d3c", "#e6550d", "#a63603"],
+          "purple": ["#efedf5", "#dadaeb", "#bcbddc", "#9e9ac8", "#756bb1", "#54278f"],
+          "teal": ["#06b6d4", "#05a3be", "#0490a8", "#037d92", "#026a7c", "#015766", "#004450"]
+        },
+        "diverging": {
+          "redBlue": ["#b2182b", "#d6604d", "#f4a582", "#f7f7f7", "#92c5de", "#4393c3", "#2166ac"],
+          "brownTeal": ["#8c510a", "#bf812d", "#dfc27d", "#f6e8c3", "#80cdc1", "#35978f", "#01665e"]
+        },
+        "background": "pink",
+        "text": "#09090b",
+        "gridline": "rgba(0,0,0,0.08)",
+        "hairline": "rgba(0,0,0,0.14)",
+        "axis": "#71717a",
+        "annotationFill": "rgba(0,0,0,0.04)",
+        "annotationText": "#71717a",
+        "annotationLabel": "#d1d5db",
+        "annotationMuted": "#9ca3af",
+        "annotationLeader": "#9aa0a6",
+        "annotationRule": "#666666",
+        "annotationRangeFill": "#000000",
+        "annotationMarkerFill": "#0a0a0a",
+        "annotationPlate": "#0a0a0a",
+        "positive": "#15803d",
+        "negative": "#dc2626",
+        "neutral": {
+          "100": "#171719",
+          "200": "#262627",
+          "300": "#3d3e3f",
+          "400": "#68696a",
+          "600": "#8c8c8d",
+          "800": "#bcbcbd",
+          "secondary": "#d0d6e0",
+          "faint": "#52525b",
+          "border": "rgba(255, 255, 255, 0.1)",
+          "surface": "pink"
+        }
+      },
+      "annotations": [
+        {
+          "type": "text",
+          "label": {
+            "text": "Hidden",
+            "style": {
+              "fontFamily": "\"Inter Variable\", Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif",
+              "fontSize": 13,
+              "fontWeight": 400,
+              "fill": "#d1d5db",
+              "lineHeight": 1.3,
+              "textAnchor": "start"
+            }
+          },
+          "connector": {
+            "arrow": false,
+            "stroke": "#9aa0a6"
+          }
+        }
+      ]
+    }
+  }
+]

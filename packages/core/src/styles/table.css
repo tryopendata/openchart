@@ -358,12 +358,10 @@
   /* ---------------------------------------------------------------------------
    * Density
    *
-   * regular 48px rows (base), condensed 40px, relaxed 56px. `.oc-table--compact`
-   * is the deprecated alias for condensed, kept one release.
+   * regular 48px rows (base), condensed 40px, relaxed 56px.
    * --------------------------------------------------------------------------- */
 
-  .oc-table--condensed,
-  .oc-table--compact {
+  .oc-table--condensed {
     & th,
     & td {
       padding: 8px 12px;

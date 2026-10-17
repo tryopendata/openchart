@@ -13,6 +13,11 @@ import { captureStory } from './capture';
  * compress the chart area.
  */
 const stories: Array<{ name: string; slug: string; query?: string; note?: string }> = [
+  { name: 'v9-reference-labels', slug: 'features--annotation-reference-labels' },
+  { name: 'v9-crowded-callouts', slug: 'features--annotation-crowded-callouts' },
+  { name: 'v9-notes-sizing', slug: 'features--annotation-notes-sizing' },
+  { name: 'v9-curves', slug: 'features--annotation-curves' },
+
   { name: 'bar-vertical', slug: 'testing--fixtures--simple-columns' },
   { name: 'bar-horizontal-gradient', slug: 'testing--fixtures--simple-bars' },
   { name: 'line-multi-series', slug: 'testing--fixtures--gdp-growth' },

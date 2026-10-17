@@ -1,3 +1,4 @@
+import { wireAnnotationNotes } from './interactions/annotation-notes';
 /**
  * SVG renderer: converts a ChartLayout into SVG DOM elements.
  *
@@ -386,6 +387,7 @@ export function renderChartSVG(
     svg.style.position = 'relative';
   }
 
+  wireAnnotationNotes(svg);
   container.appendChild(svg);
   return svg;
 }

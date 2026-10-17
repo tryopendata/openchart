@@ -504,8 +504,7 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
   const droppedFeatures: string[] = [];
 
   // 13. Build color scale + feature marks
-  const formatter =
-    buildD3Formatter(mapSpec.encoding?.color?.format ?? mapSpec.valueFormat) ?? formatNumber;
+  const formatter = buildD3Formatter(mapSpec.encoding?.color?.format) ?? formatNumber;
   const formatQuantitative = (value: unknown): string => {
     const number = finiteNumber(value);
     return number === undefined ? 'No data' : formatter(number);

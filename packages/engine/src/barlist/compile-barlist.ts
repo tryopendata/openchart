@@ -181,7 +181,7 @@ export function compileBarList(spec: unknown, options: CompileOptions): BarListL
 
   // Value formatter: prefer encoding-level format (v8 canonical), fall back to deprecated valueFormat
   const formatter = resolveFieldFormatter({
-    surfaceFormat: barlistSpec.encoding.value.format ?? barlistSpec.valueFormat,
+    surfaceFormat: barlistSpec.encoding.value.format,
     values: validRows.map((r) => r[valueField]),
   });
 

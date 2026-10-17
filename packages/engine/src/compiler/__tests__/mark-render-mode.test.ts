@@ -352,22 +352,18 @@ describe('compileChart markRenderMode', () => {
     expect(denseWarnings).toEqual([]);
   });
 
-  it('warns on and strips the removed mark.render spec field', () => {
+  it('rejects the removed mark.render field before choosing a backend', () => {
     const onWarn = vi.fn();
-    const layout = compileChart(
-      {
-        // Pre-v8 spec shape: render lived on the mark def. Sugar strips it
-        // with a migration warning; it no longer selects the backend.
-        mark: { type: 'point', render: 'canvas' } as never,
-        data: SCATTER_DATA,
-        encoding: SCATTER_ENCODING,
-      },
-      { width: 600, height: 400, onWarn },
-    );
-    expect('markRenderMode' in layout).toBe(false);
-    const stripWarnings = onWarn.mock.calls.filter((c) =>
-      String(c[0]).includes('mark.render was removed'),
-    );
-    expect(stripWarnings).toHaveLength(1);
+    expect(() =>
+      compileChart(
+        {
+          mark: { type: 'point', render: 'canvas' },
+          data: SCATTER_DATA,
+          encoding: SCATTER_ENCODING,
+        },
+        { width: 600, height: 400, onWarn },
+      ),
+    ).toThrow(/mark.render.*renderer mount option/);
+    expect(onWarn).not.toHaveBeenCalled();
   });
 });

@@ -34,14 +34,14 @@ function makeSpec(text: string, overrides?: Partial<TextAnnotation>): TextAnnota
 }
 
 describe('thinAnnotations', () => {
-  it('preserves a demoted subtitle on the same note line', () => {
+  it('preserves primary text and subtitle separately in notes', () => {
     const annotations = [makeResolved(100, 100, 'First'), makeResolved(105, 100, 'Second')];
     const result = thinAnnotations(
       annotations,
       [makeSpec('First'), makeSpec('Second', { subtitle: 'Details' })],
       measure,
     );
-    expect(result.footnotes).toEqual([{ index: 1, text: 'Second. Details' }]);
+    expect(result.footnotes).toEqual([{ index: 2, text: 'Second', subtitle: 'Details' }]);
   });
   it('keeps source identity on notes after filtering', () => {
     const annotations = [
@@ -79,8 +79,8 @@ describe('thinAnnotations', () => {
     const specs: Annotation[] = [makeSpec('First label'), makeSpec('Second label')];
     const result = thinAnnotations(annotations, specs, measure);
     expect(result.footnotes).toHaveLength(1);
-    expect(result.footnotes[0]).toEqual({ index: 1, text: 'Second label' });
-    expect(result.annotations[1].footnoteIndex).toBe(1);
+    expect(result.footnotes[0]).toEqual({ index: 2, text: 'Second label' });
+    expect(result.annotations[1].footnoteIndex).toBe(2);
     expect(result.annotations[0].footnoteIndex).toBeUndefined();
   });
 
@@ -122,7 +122,7 @@ describe('thinAnnotations', () => {
     expect(result.footnotes).toHaveLength(0);
   });
 
-  it('assigns sequential footnote indices', () => {
+  it('uses source ordinals with gaps for inline annotations', () => {
     const annotations = [
       makeResolved(100, 100, 'Keep this'),
       makeResolved(105, 100, 'Demote 1'),
@@ -131,8 +131,8 @@ describe('thinAnnotations', () => {
     const specs: Annotation[] = [makeSpec('Keep this'), makeSpec('Demote 1'), makeSpec('Demote 2')];
     const result = thinAnnotations(annotations, specs, measure);
     expect(result.footnotes).toHaveLength(2);
-    expect(result.footnotes[0].index).toBe(1);
-    expect(result.footnotes[1].index).toBe(2);
+    expect(result.footnotes[0].index).toBe(2);
+    expect(result.footnotes[1].index).toBe(3);
   });
 
   it('maintains correct index alignment with mixed annotation types', () => {
@@ -153,7 +153,7 @@ describe('thinAnnotations', () => {
     expect(result.footnotes).toHaveLength(1);
     expect(result.footnotes[0].text).toBe('Second text');
     expect(result.annotations[1].footnoteIndex).toBeUndefined();
-    expect(result.annotations[2].footnoteIndex).toBe(1);
+    expect(result.annotations[2].footnoteIndex).toBe(2);
   });
 
   describe('plot-area containment', () => {
@@ -174,7 +174,7 @@ describe('thinAnnotations', () => {
       expect(result.footnotes).toHaveLength(1);
       expect(result.footnotes[0].text).toBe('Way too long to fit here');
       expect(result.annotations[0].footnoteIndex).toBeUndefined();
-      expect(result.annotations[1].footnoteIndex).toBe(1);
+      expect(result.annotations[1].footnoteIndex).toBe(2);
     });
 
     it('keeps a label that fits inside the plot', () => {
@@ -244,7 +244,7 @@ describe('thinAnnotations', () => {
       const result = thinAnnotations(annotations, specs, measure, insetPlot, chart);
 
       expect(result.footnotes).toHaveLength(1);
-      expect(result.annotations[1].footnoteIndex).toBe(1);
+      expect(result.annotations[1].footnoteIndex).toBe(2);
     });
   });
 

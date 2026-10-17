@@ -30,14 +30,24 @@ const ACCENT = '#0e7490';
 
 const simpleBarsSpec: ChartSpec = {
   animation: true,
-  mark: { type: 'bar', fill: hBarGradient(ACCENT) },
+  mark: 'bar',
   data: [...populationByCountry.data],
   encoding: {
     x: { field: 'population', type: 'quantitative', axis: { title: 'Population', format: '.2~s' } },
-    y: { field: 'country', type: 'nominal' },
+    y: { field: 'country', type: 'nominal', sort: 'x' },
+    color: { field: 'country', type: 'nominal', highlight: ['India', 'China'] },
   },
+  legend: { show: false },
+  labels: { color: 'var(--oc-text)' },
   annotations: [
-    { type: 'refline', x: 1_000_000_000, label: '1 billion', style: 'dashed', stroke: '#cc4444' },
+    {
+      type: 'refline',
+      x: 1_000_000_000,
+      label: '1 billion',
+      labelPlacement: 'outside',
+      style: 'dashed',
+      stroke: '#cc4444',
+    },
   ],
   chrome: {
     title: 'India Has Overtaken China as the Most Populous Country',
@@ -76,7 +86,7 @@ const columnsSpec: ChartSpec = {
       style: 'dashed',
       stroke: '#64748b',
       strokeWidth: 1,
-      labelOffset: { dx: -560, dy: -10 },
+      labelPlacement: 'outside',
     },
   ],
   labels: { density: 'all', format: ',.0f' },

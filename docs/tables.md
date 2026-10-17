@@ -185,7 +185,6 @@ All features are opt-in via top-level `TableSpec` properties.
 | Striping | `striped: true` | `false` | Zebra rows. Hairlines only by default |
 | Initial sort | `sort: { column, direction }` | first inline-bar column, desc | Sort applied before the user touches a header |
 | Total row | `totalRow: true` | `false` | Sticky footer summing every quantitative column with a summable cell type (text/bar/heatmap). Set `columns[].total: false` to leave an individual column's total cell blank |
-| Compact mode | `compact: true` | `false` | **Deprecated.** Alias for `density: 'condensed'`; warns |
 | Responsive | `responsive: true` | `true` | Table adapts to container width |
 
 In controlled mode a `sort` of `null` means "the user cleared sorting" and

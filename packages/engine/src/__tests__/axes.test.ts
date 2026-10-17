@@ -681,7 +681,7 @@ describe('text-aware tick density', () => {
   it('applies the last-anchored stride when even vertical labels cannot fit', () => {
     // 40 short categories on a 360px chart: ~9px steps fit nothing at any
     // angle (a vertical label ribbon needs ~17px), so the safety net keeps
-    // every 2nd label counting back from the LAST category.
+    // every 3rd label counting back from the LAST category.
     const categories = Array.from({ length: 40 }, (_, i) => `C${i + 1}`);
     const barSpec: NormalizedChartSpec = {
       ...lineSpec,
@@ -700,7 +700,7 @@ describe('text-aware tick density', () => {
 
     expect(axes.x!.tickAngle).toBe(-90);
     const kept = axes.x!.ticks.map((t) => t.label);
-    expect(kept.length).toBe(20);
+    expect(kept).toEqual(Array.from({ length: 14 }, (_, i) => `C${1 + i * 3}`));
     // The stride anchors at the final category — the most recent one is
     // always labeled.
     expect(kept[kept.length - 1]).toBe('C40');

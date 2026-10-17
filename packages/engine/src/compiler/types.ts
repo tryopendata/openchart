@@ -13,7 +13,6 @@ import type {
   AxisConfig,
   ChromeText,
   ColumnConfig,
-  DarkMode,
   DataRow,
   Display,
   Encoding,
@@ -128,7 +127,7 @@ export interface NormalizedChartSpec {
    * `'subtract'` (default) shrinks the plot to fit chrome. Carried through from
    * the spec so the layout pipeline can honor it.
    */
-  chromeLayout?: 'subtract' | 'grow';
+  chromeLayout: 'subtract' | 'grow' | 'notes';
   /** Optional KPI metric cells, passed through unchanged. */
   metrics?: import('@opendata-ai/openchart-core').Metric[];
   /**
@@ -141,7 +140,7 @@ export interface NormalizedChartSpec {
   annotations: Annotation[];
   /** Normalized label configuration with defaults applied. density, format, and prefix are always set; offsets and color stay optional. */
   labels: Required<Pick<LabelConfig, 'density' | 'format' | 'prefix'>> &
-    Pick<LabelConfig, 'offsets' | 'color' | 'fontSize' | 'suffix'>;
+    Pick<LabelConfig, 'color' | 'fontSize' | 'suffix'>;
   /** Legend configuration (position override). */
   legend?: LegendConfig;
   /** Right-side endpoint labels column config (multi-series line/area only). */
@@ -151,7 +150,6 @@ export interface NormalizedChartSpec {
   autoThin: boolean;
   compactAnnotationLimit?: number | null;
   theme: ThemeConfig;
-  darkMode: DarkMode;
   /** Whether the OpenData watermark is enabled. */
   watermark: boolean;
   /** Series names to hide from rendering. */
@@ -186,7 +184,6 @@ export interface NormalizedTableSpec {
   rowKey?: string;
   chrome: NormalizedChrome;
   theme: ThemeConfig;
-  darkMode: DarkMode;
   watermark: boolean;
   search: boolean;
   pagination: boolean | { pageSize: number };
@@ -196,7 +193,6 @@ export interface NormalizedTableSpec {
   sort?: SortState;
   totalRow?: { label: string };
   /** Mirrors `density === 'condensed'` for back-compat. */
-  compact: boolean;
   responsive: boolean;
   animation?: AnimationSpec;
 }
@@ -214,7 +210,6 @@ export interface NormalizedGraphSpec {
   chrome: NormalizedChrome;
   annotations: Annotation[];
   theme: ThemeConfig;
-  darkMode: DarkMode;
   watermark: boolean;
   animation?: GraphAnimationSpec;
   interaction?: GraphInteractionConfig;

@@ -237,7 +237,7 @@ describe('compileGeoMap', () => {
     expect(layout.categoricalLegend).toBeNull();
   });
 
-  it('encoding.color.format takes precedence over deprecated valueFormat', () => {
+  it('encoding.color.format formats tooltip values', () => {
     const layout = compileGeoMap(
       {
         type: 'map',
@@ -247,7 +247,6 @@ describe('compileGeoMap', () => {
           key: { field: 'fips', type: 'nominal' },
           color: { field: 'value', type: 'quantitative', format: '$,.0f' },
         },
-        valueFormat: '.2f',
       },
       DEFAULT_OPTIONS,
     );
@@ -256,23 +255,22 @@ describe('compileGeoMap', () => {
     expect(ca!.fields.map((f) => f.value)).toContain('$1,500');
   });
 
-  it('deprecated valueFormat still formats tooltips when no encoding format is set', () => {
-    const layout = compileGeoMap(
-      {
-        type: 'map',
-        geo: { features: MINI_TOPO, projection: 'mercator' },
-        data: [{ fips: '06', value: 1500 }],
-        encoding: {
-          key: { field: 'fips', type: 'nominal' },
-          color: { field: 'value', type: 'quantitative' },
+  it('rejects the removed valueFormat field with the replacement channel', () => {
+    expect(() =>
+      compileGeoMap(
+        {
+          type: 'map',
+          geo: { features: MINI_TOPO, projection: 'mercator' },
+          data: [{ fips: '06', value: 1500 }],
+          encoding: {
+            key: { field: 'fips', type: 'nominal' },
+            color: { field: 'value', type: 'quantitative' },
+          },
+          valueFormat: '$,.0f',
         },
-        valueFormat: '$,.0f',
-      },
-      DEFAULT_OPTIONS,
-    );
-
-    const ca = layout.tooltipDescriptors.get('06');
-    expect(ca!.fields.map((f) => f.value)).toContain('$1,500');
+        DEFAULT_OPTIONS,
+      ),
+    ).toThrow(/valueFormat.*encoding.color.format/);
   });
 
   it('classes the default legend on round breaks', () => {

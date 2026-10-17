@@ -17,19 +17,18 @@ import type {
   ChromeText,
   DataRow,
   Encoding,
-  FieldType,
   GeoMapSpec,
   GraphLayoutConfig,
   GraphSpec,
   LabelSpec,
   LayerSpec,
   SankeySpec,
-  TableDensity,
   TableSpec,
   TileMapSpec,
   VizSpec,
 } from '@opendata-ai/openchart-core';
 import {
+  inferFieldType,
   isBarListSpec,
   isChartSpec,
   isGeoMapSpec,
@@ -82,57 +81,6 @@ function normalizeChrome(chrome: Chrome | undefined): NormalizedChrome {
 // ---------------------------------------------------------------------------
 // Type inference
 // ---------------------------------------------------------------------------
-
-/** Sample values from a data column and infer the field type. */
-function inferFieldType(data: DataRow[], field: string): FieldType {
-  // Sample up to 50 rows for more reliable inference on mixed/messy data
-  const sampleSize = Math.min(50, data.length);
-  let numericCount = 0;
-  let dateCount = 0;
-  let totalNonNull = 0;
-
-  for (let i = 0; i < sampleSize; i++) {
-    const value = data[i][field];
-    if (value == null) continue;
-    totalNonNull++;
-
-    // Check numeric
-    if (typeof value === 'number' && Number.isFinite(value)) {
-      numericCount++;
-      continue;
-    }
-
-    // Check date-like strings
-    if (typeof value === 'string') {
-      // Try as number first
-      const num = Number(value);
-      if (!Number.isNaN(num) && Number.isFinite(num) && value.trim() !== '') {
-        numericCount++;
-        continue;
-      }
-
-      // Try as date
-      const date = new Date(value);
-      if (!Number.isNaN(date.getTime())) {
-        dateCount++;
-        continue;
-      }
-    }
-
-    if (value instanceof Date && !Number.isNaN(value.getTime())) {
-      dateCount++;
-    }
-  }
-
-  if (totalNonNull === 0) return 'nominal';
-
-  // If >80% of sampled values are dates, it's temporal
-  if (dateCount / totalNonNull > 0.8) return 'temporal';
-  // If >80% are numeric, it's quantitative
-  if (numericCount / totalNonNull > 0.8) return 'quantitative';
-  // Otherwise it's nominal
-  return 'nominal';
-}
 
 /** Infer types for encoding channels that don't have one specified. */
 function inferEncodingTypes(encoding: Encoding, data: DataRow[], warnings: string[]): Encoding {
@@ -214,6 +162,8 @@ function normalizeAnnotations(
       case 'refline':
         return {
           ...ann,
+          labelPlacement:
+            ann.labelPlacement ?? (ann.labelAnchor === undefined ? 'auto' : undefined),
           style: ann.style ?? 'dashed',
           strokeWidth: ann.strokeWidth ?? 1,
           opacity: ann.opacity ?? 0.8,
@@ -236,7 +186,6 @@ function normalizeLabels(labels?: LabelSpec): NormalizedChartSpec['labels'] {
     format: labels.format ?? '',
     prefix: labels.prefix ?? '',
     suffix: labels.suffix,
-    offsets: labels.offsets,
     color: labels.color,
     fontSize: labels.fontSize,
   };
@@ -498,7 +447,7 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
     data,
     encoding,
     chrome: normalizeChrome(spec.chrome),
-    chromeLayout: spec.chromeLayout,
+    chromeLayout: spec.chromeLayout ?? 'notes',
     metrics: spec.metrics,
     seriesSearch: normalizeSeriesSearch(spec, encoding, warnings),
     youDrawIt: normalizeYouDrawIt(spec),
@@ -507,14 +456,15 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
     legend: spec.legend,
     endpointLabels: spec.endpointLabels,
     compactAnnotationLimit:
-      typeof spec.responsive === 'object' ? spec.responsive.compactAnnotationLimit : undefined,
+      typeof spec.responsive === 'object' && spec.responsive.compactAnnotationLimit !== undefined
+        ? spec.responsive.compactAnnotationLimit
+        : 1,
     responsive: typeof spec.responsive === 'object' ? true : (spec.responsive ?? true),
     autoThin:
       typeof spec.responsive === 'object'
         ? (spec.responsive.autoThin ?? true)
         : (spec.responsive ?? true),
     theme: spec.theme ?? {},
-    darkMode: spec.darkMode ?? 'off',
     hiddenSeries: spec.hiddenSeries ?? [],
     seriesStyles: spec.seriesStyles ?? {},
     watermark: spec.watermark ?? true,
@@ -538,20 +488,8 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
   };
 }
 
-/**
- * Resolve row density. `density` wins; the deprecated `compact` flag maps to
- * `'condensed'` and warns once.
- */
-function normalizeTableDensity(spec: TableSpec): TableDensity {
-  if (spec.density) return spec.density;
-  if (spec.compact) {
-    return 'condensed';
-  }
-  return 'regular';
-}
-
 function normalizeTableSpec(spec: TableSpec, _warnings: string[]): NormalizedTableSpec {
-  const density = normalizeTableDensity(spec);
+  const density = spec.density ?? 'regular';
   const totalRow =
     spec.totalRow === true
       ? { label: 'Total' }
@@ -566,7 +504,6 @@ function normalizeTableSpec(spec: TableSpec, _warnings: string[]): NormalizedTab
     rowKey: spec.rowKey,
     chrome: normalizeChrome(spec.chrome),
     theme: spec.theme ?? {},
-    darkMode: spec.darkMode ?? 'off',
     search: spec.search ?? false,
     pagination: spec.pagination ?? false,
     stickyFirstColumn: spec.stickyFirstColumn ?? false,
@@ -574,7 +511,6 @@ function normalizeTableSpec(spec: TableSpec, _warnings: string[]): NormalizedTab
     striped: spec.striped ?? false,
     sort: spec.sort,
     totalRow,
-    compact: density === 'condensed',
     responsive: spec.responsive ?? true,
     animation: spec.animation,
     watermark: spec.watermark ?? true,
@@ -596,9 +532,7 @@ function normalizeSankeySpec(spec: SankeySpec, _warnings: string[]): NormalizedS
     chrome: normalizeChrome(spec.chrome),
     legend: spec.legend,
     theme: spec.theme ?? {},
-    darkMode: spec.darkMode ?? 'off',
     animation: spec.animation,
-    valueFormat: spec.valueFormat,
     linkOpacity: spec.linkOpacity,
     other: spec.other,
     watermark: spec.watermark ?? true,
@@ -636,7 +570,6 @@ function normalizeGraphSpec(spec: GraphSpec, warnings: string[]): NormalizedGrap
     chrome: normalizeChrome(spec.chrome),
     annotations: normalizeAnnotations(spec.annotations, warnings),
     theme: spec.theme ?? {},
-    darkMode: spec.darkMode ?? 'off',
     watermark: spec.watermark ?? true,
     animation: spec.animation,
     interaction: spec.interaction,
@@ -709,7 +642,6 @@ function normalizeTileMapSpec(spec: TileMapSpec, warnings: string[]): Normalized
     chrome: normalizeChrome(spec.chrome),
     legend: spec.legend,
     theme: spec.theme ?? {},
-    darkMode: spec.darkMode ?? 'off',
     watermark: spec.watermark ?? true,
     animation: spec.animation,
     valueFormat: spec.valueFormat,
@@ -733,10 +665,8 @@ function normalizeGeoMapSpec(spec: GeoMapSpec, _warnings: string[]): NormalizedG
     chrome: normalizeChrome(spec.chrome),
     legend: spec.legend,
     theme: spec.theme ?? {},
-    darkMode: spec.darkMode ?? 'off',
     watermark: spec.watermark ?? true,
     animation: spec.animation,
-    valueFormat: spec.valueFormat,
     points: spec.points,
   };
 }
@@ -751,10 +681,8 @@ function normalizeBarListSpec(spec: BarListSpec, _warnings: string[]): Normalize
     maxItems: spec.maxItems ?? 20,
     chrome: normalizeChrome(spec.chrome),
     theme: spec.theme ?? {},
-    darkMode: spec.darkMode ?? 'off',
     watermark: spec.watermark ?? true,
     animation: spec.animation ?? true,
-    valueFormat: spec.valueFormat,
   };
 }
 
@@ -771,26 +699,6 @@ function normalizeBarListSpec(spec: BarListSpec, _warnings: string[]): Normalize
  */
 export function normalizeSpec(spec: VizSpec, warnings: string[] = []): NormalizedSpec {
   const authored = spec as unknown as Record<string, unknown>;
-  if (authored.darkMode !== undefined)
-    warnings.push(
-      '[openchart] spec darkMode is deprecated and has no effect; use the mount darkMode option.',
-    );
-  const themeChrome = (authored.theme as { chrome?: Record<string, unknown> } | undefined)?.chrome;
-  if (themeChrome && Object.values(themeChrome).some((value) => typeof value === 'string'))
-    warnings.push('[openchart] theme.chrome string colors are deprecated; use { color } objects.');
-  if (
-    authored.animation === 'legacy' ||
-    (authored.animation as { preset?: string } | undefined)?.preset === 'legacy'
-  )
-    warnings.push('[openchart] animation legacy is deprecated; omit preset to retain v8 timing.');
-  if ((authored.labels as { offsets?: unknown } | undefined)?.offsets !== undefined)
-    warnings.push(
-      '[openchart] labels.offsets is deprecated; use endpointLabels. Migration drops manual offsets.',
-    );
-  if (authored.type === 'table' && 'compact' in authored)
-    warnings.push(
-      '[openchart] table "compact" is deprecated; use density: "condensed" (true) or "regular" (false).',
-    );
   const annotations = authored.annotations as Annotation[] | undefined;
   if (Array.isArray(annotations)) {
     const ids = annotations.map((a) => a.id).filter((id) => id !== undefined);

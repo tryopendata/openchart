@@ -43,7 +43,7 @@ const validArcSpec = {
     { label: 'Bananas', amount: 20 },
   ],
   encoding: {
-    y: { field: 'amount', type: 'quantitative' },
+    theta: { field: 'amount', type: 'quantitative' },
     color: { field: 'label', type: 'nominal' },
   },
 };
@@ -244,16 +244,23 @@ describe('validateSpec', () => {
       expect(numError!.suggestion).toContain('nominal');
     });
 
-    it('rejects invalid darkMode with INVALID_VALUE code', () => {
+    it.each([
+      'auto',
+      'force',
+      'off',
+      'maybe',
+    ])('rejects removed spec darkMode %s with a migration instruction', (darkMode) => {
       const result = validateSpec({
         ...validLineSpec,
-        darkMode: 'maybe',
+        darkMode,
       });
       expect(result.valid).toBe(false);
       const dmError = result.errors.find((e) => e.message.includes('darkMode'));
       expect(dmError).toBeDefined();
       expect(dmError!.code).toBe('INVALID_VALUE');
-      expect(dmError!.suggestion).toContain('auto');
+      expect(dmError!.path).toBe('darkMode');
+      expect(dmError!.message).toContain('mount option');
+      expect(dmError!.suggestion).toContain('migrateSpecV8');
     });
 
     it('rejects missing encoding channel field with MISSING_FIELD code', () => {

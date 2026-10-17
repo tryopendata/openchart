@@ -15,6 +15,11 @@ import { captureStory } from './capture';
  */
 
 const stories = [
+  { name: 'v9-reference-labels', slug: 'features--annotation-reference-labels' },
+  { name: 'v9-crowded-callouts', slug: 'features--annotation-crowded-callouts' },
+  { name: 'v9-notes-sizing', slug: 'features--annotation-notes-sizing' },
+  { name: 'v9-curves', slug: 'features--annotation-curves' },
+
   { name: 'mr-long-title', slug: 'testing--mobile-regression--long-title-mobile' },
   { name: 'mr-grouped-columns-labels-all', slug: 'testing--mobile-regression--grouped-columns-labels-all' },
   { name: 'mr-grouped-bars-many-rows', slug: 'testing--mobile-regression--grouped-bars-many-rows' },

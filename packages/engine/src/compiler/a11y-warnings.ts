@@ -108,3 +108,21 @@ export function collectContrastWarnings(
 
   return warnings;
 }
+
+/** Warn when a multi-series author deliberately removes both identification surfaces. */
+export function seriesIdentificationWarnings(
+  spec: import('./types').NormalizedChartSpec,
+): string[] {
+  if ((spec.markType !== 'line' && spec.markType !== 'area') || spec.legend?.show !== false)
+    return [];
+  const hidden =
+    spec.endpointLabels === false ||
+    (typeof spec.endpointLabels === 'object' && spec.endpointLabels.show === false);
+  const color = spec.encoding.color;
+  if (!hidden || !color || !('field' in color) || color.type === 'quantitative') return [];
+  return new Set(spec.data.map((row) => row[color.field])).size > 1
+    ? [
+        '[openchart a11y] Both legend and endpointLabels are disabled on a multi-series chart. Enable either to identify the series.',
+      ]
+    : [];
+}

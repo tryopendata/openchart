@@ -146,7 +146,6 @@ export function compileLayer(
     const themedLeaf = {
       ...withSharedDomains(leaf as ChartSpec, sharedDomains),
       theme: mergeThemeConfig(spec.theme, (leaf as ChartSpec).theme),
-      darkMode: (leaf as ChartSpec).darkMode ?? spec.darkMode,
     };
     const leafLayout = compileChart(themedLeaf as unknown, leafOptions);
 
@@ -361,7 +360,7 @@ function compileLayerIndependent(
       endpointWidth -
       legendReserve -
       referenceReserve.right;
-    const grow = (primary0.chromeLayout ?? options.chromeLayout) === 'grow';
+    const grow = (primary0.chromeLayout ?? options.chromeLayout) !== 'subtract';
     const bottom = grow
       ? layout0.area.y + layout0.area.height
       : Math.min(layout0.area.y + layout0.area.height, layout1.area.y + layout1.area.height);
@@ -1057,7 +1056,6 @@ export function buildPrimarySpec(leaves: ChartSpec[], layerSpec: LayerSpec): Cha
     legend: layerSpec.legend ?? leaves[0].legend,
     responsive: layerSpec.responsive ?? leaves[0].responsive,
     theme: mergeThemeConfig(layerSpec.theme, leaves[0].theme),
-    darkMode: layerSpec.darkMode ?? leaves[0].darkMode,
     watermark: layerSpec.watermark ?? leaves[0].watermark,
     hiddenSeries: layerSpec.hiddenSeries ?? leaves[0].hiddenSeries,
     endpointLabels: layerSpec.endpointLabels ?? leaves[0].endpointLabels,

@@ -276,9 +276,7 @@ function makePristineState(): EditableState {
         y: 71.42,
         text: 'Holiday peak:\n$71.4B devices',
         fontSize: 11,
-        anchor: 'left',
         connector: true,
-        offset: { dx: -110, dy: -50 },
       },
       {
         type: 'text',
@@ -286,9 +284,8 @@ function makePristineState(): EditableState {
         y: 22.17,
         text: 'Cloud overtakes\n2022 devices floor',
         fontSize: 11,
-        anchor: 'left',
+        anchor: 'top',
         connector: true,
-        offset: { dx: -30, dy: -34 },
       },
     ],
     chrome: {
@@ -494,7 +491,7 @@ function EditModeStudio() {
       <div className="ocem-grid">
         {/* Editor */}
         <div className="ocem-chart-card">
-          <div className="story-chart" style={{ height: 460 }}>
+          <div className="story-chart" style={{ height: 600 }}>
             <Chart
               ref={chartRef}
               spec={spec}
@@ -636,9 +633,7 @@ function EditableToggleDemo() {
         y: 71.42,
         text: 'Holiday peak',
         fontSize: 11,
-        anchor: 'left',
         connector: true,
-        offset: { dx: -90, dy: -40 },
       },
     ],
     chrome: {

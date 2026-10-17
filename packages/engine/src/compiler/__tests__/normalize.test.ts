@@ -46,14 +46,13 @@ describe('normalizeSpec', () => {
       const result = normalizeSpec(lineSpec, warnings) as NormalizedChartSpec;
 
       expect(result.responsive).toBe(true);
-      expect(result.darkMode).toBe('off');
+      expect(result).not.toHaveProperty('darkMode');
       expect(result.annotations).toEqual([]);
       expect(result.theme).toEqual({});
       expect(result.labels).toEqual({
         density: 'auto',
         format: '',
         prefix: '',
-        offsets: undefined,
       });
     });
 
@@ -72,12 +71,12 @@ describe('normalizeSpec', () => {
       const spec: ChartSpec = {
         ...lineSpec,
         responsive: false,
-        darkMode: 'force',
+        chromeLayout: 'subtract',
       };
       const result = normalizeSpec(spec) as NormalizedChartSpec;
 
       expect(result.responsive).toBe(false);
-      expect(result.darkMode).toBe('force');
+      expect(result.chromeLayout).toBe('subtract');
     });
 
     it('normalizes chrome strings to ChromeText objects', () => {
@@ -164,7 +163,6 @@ describe('normalizeSpec', () => {
         density: 'none',
         format: ',.0f',
         prefix: '',
-        offsets: undefined,
       });
     });
 
@@ -178,7 +176,6 @@ describe('normalizeSpec', () => {
         density: 'endpoints',
         format: '',
         prefix: '',
-        offsets: undefined,
       });
     });
 
@@ -238,9 +235,10 @@ describe('normalizeSpec', () => {
       expect(result.search).toBe(false);
       expect(result.pagination).toBe(false);
       expect(result.stickyFirstColumn).toBe(false);
-      expect(result.compact).toBe(false);
+      expect(result.density).toBe('regular');
+      expect(result).not.toHaveProperty('compact');
       expect(result.responsive).toBe(true);
-      expect(result.darkMode).toBe('off');
+      expect(result).not.toHaveProperty('darkMode');
     });
 
     it('watermark defaults to true when not specified', () => {
@@ -280,7 +278,7 @@ describe('normalizeSpec', () => {
       // -300), so normalize no longer injects them.
       expect(result.layout).toEqual({ type: 'force' });
       expect(result.annotations).toEqual([]);
-      expect(result.darkMode).toBe('off');
+      expect(result).not.toHaveProperty('darkMode');
     });
 
     it('watermark defaults to true when not specified', () => {

@@ -84,10 +84,16 @@ describe('createBarList', () => {
     instance.destroy();
   });
 
-  it('valueFormat formats value labels', () => {
+  it('encoding.value.format formats value labels', () => {
     const instance = createBarList(
       container,
-      { ...basicSpec, valueFormat: '$,.0f' },
+      {
+        ...basicSpec,
+        encoding: {
+          ...basicSpec.encoding,
+          value: { ...basicSpec.encoding.value, format: '$,.0f' },
+        },
+      },
       { responsive: false },
     );
 

@@ -490,12 +490,13 @@ describe('createTable', () => {
     table.destroy();
   });
 
-  it('compact mode applies oc-table--compact class', () => {
-    const spec = makeSpec({ compact: true });
+  it('condensed density applies the canonical density class', () => {
+    const spec = makeSpec({ density: 'condensed' });
     const table = createTable(container, spec);
 
     const wrapper = container.querySelector('.oc-table-wrapper');
-    expect(wrapper?.classList.contains('oc-table--compact')).toBe(true);
+    expect(wrapper?.classList.contains('oc-table--condensed')).toBe(true);
+    expect(wrapper?.classList.contains('oc-table--compact')).toBe(false);
 
     table.destroy();
   });

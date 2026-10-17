@@ -8,7 +8,6 @@
 
 import type {
   AnimationSpec,
-  DarkMode,
   LegendConfig,
   SankeyEncoding,
   SankeyLinkColor,
@@ -33,10 +32,8 @@ export interface NormalizedSankeySpec {
   chrome: NormalizedChrome;
   legend?: LegendConfig;
   theme: ThemeConfig;
-  darkMode: DarkMode;
   watermark: boolean;
   animation?: AnimationSpec;
-  valueFormat?: string;
   linkOpacity?: number;
   other?: number | { threshold: number; label?: string };
 }

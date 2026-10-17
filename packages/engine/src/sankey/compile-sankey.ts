@@ -332,7 +332,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
   const sankeySpec = normalized as NormalizedSankeySpec;
 
   // Resolve format: encoding-level (v8 canonical) wins over deprecated top-level valueFormat
-  const resolvedValueFormat = sankeySpec.encoding.value.format ?? sankeySpec.valueFormat;
+  const resolvedValueFormat = sankeySpec.encoding.value.format;
 
   // Resolve watermark: explicit spec value wins, then options fallback, then default true.
   const rawWatermark = (spec as Record<string, unknown>).watermark;

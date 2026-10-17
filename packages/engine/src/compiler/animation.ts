@@ -74,10 +74,10 @@ export function resolveAnimation(spec: AnimationSpec | undefined): ResolvedAnima
 
   // AnimationConfig object
   const config: AnimationConfig = typeof spec === 'string' ? { preset: spec } : spec;
-  const preset = config.preset ?? 'legacy';
+  const preset = config.preset;
   const spring = preset === 'fluid' ? { ...FLUID_SPRING } : undefined;
   const base = (defaults: ResolvedAnimationPhase): ResolvedAnimationPhase =>
-    preset === 'legacy'
+    preset === undefined
       ? defaults
       : { ...defaults, duration: spring ? springDuration(spring) : 250, spring, staggerDelay: 0 };
 
@@ -86,7 +86,7 @@ export function resolveAnimation(spec: AnimationSpec | undefined): ResolvedAnima
   // Exits are brief fades; only an authored phase opts into spring timing.
   const exit = resolvePhase(
     config.exit,
-    preset === 'legacy' ? EXIT_DEFAULTS : { ...EXIT_DEFAULTS, duration: 160 },
+    preset === undefined ? EXIT_DEFAULTS : { ...EXIT_DEFAULTS, duration: 160 },
   );
 
   // maxMarks is update-only, so it is applied here rather than in the
@@ -113,7 +113,8 @@ export function resolveAnimation(spec: AnimationSpec | undefined): ResolvedAnima
     enter: enter ?? undefined,
     update: update ?? undefined,
     exit: exit ?? undefined,
-    annotationDelay: config.annotationDelay ?? (preset === 'legacy' ? DEFAULT_ANNOTATION_DELAY : 0),
+    annotationDelay:
+      config.annotationDelay ?? (preset === undefined ? DEFAULT_ANNOTATION_DELAY : 0),
   };
 }
 

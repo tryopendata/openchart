@@ -59,7 +59,6 @@ function makeMultiSeriesLineSpec(
 const baseCtx = {
   seriesCount: 2,
   labelsHiddenByStrategy: false,
-  labelsDensityNone: false,
 };
 
 // ---------------------------------------------------------------------------
@@ -102,7 +101,6 @@ describe('resolveSuppression - 8-cell truth table', () => {
     const result = resolveSuppression(spec, baseCtx);
     expect(result.showTraditionalLegend).toBe(false);
     expect(result.showEndpointLabels).toBe(true);
-    expect(result.showEndOfLineLabels).toBe(false);
   });
 
   // Cell 2: legend: { show: true }, endpointLabels unset
@@ -112,7 +110,6 @@ describe('resolveSuppression - 8-cell truth table', () => {
     const result = resolveSuppression(spec, baseCtx);
     expect(result.showTraditionalLegend).toBe(true);
     expect(result.showEndpointLabels).toBe(true);
-    expect(result.showEndOfLineLabels).toBe(false);
   });
 
   // Cell 3: legend unset, endpointLabels: false
@@ -122,12 +119,11 @@ describe('resolveSuppression - 8-cell truth table', () => {
     const result = resolveSuppression(spec, baseCtx);
     expect(result.showTraditionalLegend).toBe(true);
     expect(result.showEndpointLabels).toBe(false);
-    expect(result.showEndOfLineLabels).toBe(false);
   });
 
   // Cell 4: legend: { show: false }, endpointLabels: false
   //   -> all legend surfaces off, end-of-line labels are last resort
-  it('cell 4 (legend: false, endpointLabels: false): only end-of-line labels show', () => {
+  it('cell 4 (legend: false, endpointLabels: false): both surfaces remain hidden', () => {
     const spec = makeMultiSeriesLineSpec({
       legend: { show: false },
       endpointLabels: false,
@@ -135,7 +131,6 @@ describe('resolveSuppression - 8-cell truth table', () => {
     const result = resolveSuppression(spec, baseCtx);
     expect(result.showTraditionalLegend).toBe(false);
     expect(result.showEndpointLabels).toBe(false);
-    expect(result.showEndOfLineLabels).toBe(true);
   });
 
   // Cell 5: legend: { show: true }, endpointLabels: false
@@ -148,7 +143,6 @@ describe('resolveSuppression - 8-cell truth table', () => {
     const result = resolveSuppression(spec, baseCtx);
     expect(result.showTraditionalLegend).toBe(true);
     expect(result.showEndpointLabels).toBe(false);
-    expect(result.showEndOfLineLabels).toBe(false);
   });
 
   // Cell 6: legend: { show: false }, endpointLabels: true
@@ -161,7 +155,6 @@ describe('resolveSuppression - 8-cell truth table', () => {
     const result = resolveSuppression(spec, baseCtx);
     expect(result.showTraditionalLegend).toBe(false);
     expect(result.showEndpointLabels).toBe(true);
-    expect(result.showEndOfLineLabels).toBe(false);
   });
 
   // Cell 7: legend: { show: true }, endpointLabels: true
@@ -174,7 +167,6 @@ describe('resolveSuppression - 8-cell truth table', () => {
     const result = resolveSuppression(spec, baseCtx);
     expect(result.showTraditionalLegend).toBe(true);
     expect(result.showEndpointLabels).toBe(true);
-    expect(result.showEndOfLineLabels).toBe(false);
   });
 
   // Cell 8 (the implicit eighth cell): unset + endpointLabels: true
@@ -184,7 +176,6 @@ describe('resolveSuppression - 8-cell truth table', () => {
     const result = resolveSuppression(spec, baseCtx);
     expect(result.showTraditionalLegend).toBe(false);
     expect(result.showEndpointLabels).toBe(true);
-    expect(result.showEndOfLineLabels).toBe(false);
   });
 });
 
@@ -193,7 +184,6 @@ describe('resolveSuppression - special cases', () => {
     const spec = makeMultiSeriesLineSpec();
     const result = resolveSuppression(spec, { ...baseCtx, seriesCount: 1 });
     expect(result.showEndpointLabels).toBe(false);
-    expect(result.showEndOfLineLabels).toBe(false);
     expect(result.showTraditionalLegend).toBe(true);
   });
 
@@ -201,7 +191,6 @@ describe('resolveSuppression - special cases', () => {
     const spec = makeMultiSeriesLineSpec({ markType: 'bar' });
     const result = resolveSuppression(spec, baseCtx);
     expect(result.showEndpointLabels).toBe(false);
-    expect(result.showEndOfLineLabels).toBe(false);
   });
 
   it('compact strategy (labelsHiddenByStrategy): column off, end-of-line off', () => {
@@ -211,27 +200,21 @@ describe('resolveSuppression - special cases', () => {
       labelsHiddenByStrategy: true,
     });
     expect(result.showEndpointLabels).toBe(false);
-    expect(result.showEndOfLineLabels).toBe(false);
   });
 
-  it('labels.density === none: scoped to end-of-line labels only (column + legend follow truth table)', () => {
-    // labels.density: 'none' is the legacy switch for end-of-line labels.
-    // It must NOT suppress the endpoint column or the traditional legend —
-    // those follow the truth table independently. End-of-line labels stay off.
-    const spec = makeMultiSeriesLineSpec();
-    const result = resolveSuppression(spec, { ...baseCtx, labelsDensityNone: true });
+  it('labels.density does not suppress the endpoint column or legend', () => {
+    const spec = makeMultiSeriesLineSpec({ labels: { density: 'none' } });
+    const result = resolveSuppression(spec, baseCtx);
     expect(result.showEndpointLabels).toBe(true);
-    expect(result.showEndOfLineLabels).toBe(false);
     // Cell 1 (legend unset, endpointLabels unset): traditional legend hidden.
     expect(result.showTraditionalLegend).toBe(false);
   });
 
   it('labels.density === none + legend.show: true: legend stays shown', () => {
     const spec = makeMultiSeriesLineSpec({ legend: { show: true } });
-    const result = resolveSuppression(spec, { ...baseCtx, labelsDensityNone: true });
+    const result = resolveSuppression(spec, baseCtx);
     expect(result.showTraditionalLegend).toBe(true);
     expect(result.showEndpointLabels).toBe(true);
-    expect(result.showEndOfLineLabels).toBe(false);
   });
 
   it('stacked area: legend shown by default, column off', () => {
@@ -247,7 +230,6 @@ describe('resolveSuppression - special cases', () => {
     const result = resolveSuppression(spec, baseCtx);
     expect(result.showTraditionalLegend).toBe(true);
     expect(result.showEndpointLabels).toBe(false);
-    expect(result.showEndOfLineLabels).toBe(false);
   });
 
   it('stacked area with explicit endpointLabels: true: column shown', () => {
@@ -289,7 +271,6 @@ describe('resolveSuppression - special cases', () => {
     const result = resolveSuppression(spec, baseCtx);
     expect(result.showTraditionalLegend).toBe(true);
     expect(result.showEndpointLabels).toBe(false);
-    expect(result.showEndOfLineLabels).toBe(false);
   });
 
   it('endpointLabels: { show: false } counts as explicit off', () => {

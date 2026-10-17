@@ -412,7 +412,6 @@ export function computeLegendContent(
   const suppression = resolveSuppression(spec, {
     seriesCount,
     labelsHiddenByStrategy: strategy.labelMode === 'none',
-    labelsDensityNone: spec.labels.density === 'none',
     endpointLabelsDemoted,
   });
   if (!suppression.showTraditionalLegend) {

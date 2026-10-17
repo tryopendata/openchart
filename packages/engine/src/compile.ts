@@ -1,4 +1,5 @@
 import { mergeThemeConfig } from '@opendata-ai/openchart-core';
+import { seriesIdentificationWarnings } from './compiler/a11y-warnings';
 import { diagnoseChart, noteCapacityDiagnostic } from './design/diagnostics';
 /**
  * Main compile API: the public entry points for the engine.
@@ -133,7 +134,7 @@ function applySpecSize(spec: unknown, options: CompileOptions): CompileOptions {
     width: typeof sized.width === 'number' ? sized.width : options.width,
     height:
       typeof sized.height === 'number' &&
-      !(options?.facetHeightGrown && (sized.chromeLayout ?? options.chromeLayout) === 'grow')
+      !(options?.facetHeightGrown && (sized.chromeLayout ?? options.chromeLayout) !== 'subtract')
         ? sized.height
         : options.height,
   };
@@ -602,6 +603,8 @@ function compileChartInternal(spec: unknown, optionsInput: CompileOptions): Char
     theme = adaptTheme(theme);
   }
 
+  emitSpecWarnings(seriesIdentificationWarnings(chartSpec), options.onWarn);
+
   // Reserve from source text before placement. A drag can pin a label and change
   // the demoted set; neither the plot nor the SVG clamp may move at commit.
   // Include pinned sources because fresh compiles cannot distinguish authored
@@ -878,13 +881,6 @@ function compileChartInternal(spec: unknown, optionsInput: CompileOptions): Char
     ? renderer(renderSpec, scales, chartArea, strategy, theme, options.width)
     : [];
 
-  if (marks.some((mark) => mark.type === 'line' && mark.label?.visible)) {
-    emitSpecWarnings(
-      ['[openchart] Legacy end-of-line labels are deprecated; use endpointLabels.'],
-      options.onWarn,
-    );
-  }
-
   // Opt-in per-series fill patterns (mark.fillPattern: 'auto'). Mutates
   // filled marks in place; assignment is deterministic and theme-aware.
   applyFillPatterns(marks, chartSpec.markDef, theme);
@@ -1003,6 +999,8 @@ function compileChartInternal(spec: unknown, optionsInput: CompileOptions): Char
     measure: annotationMeasure,
     fontFamily: theme.fonts.family,
     colors: theme.colors,
+    padding: theme.spacing.padding,
+    smallFontSize: theme.fonts.sizes.small,
     onWarn: (message) => emitSpecWarnings([message], options.onWarn),
     autoThin: chartSpec.autoThin,
     // Hand-placed blocks skip every nudge pass, so the clamp is the only lever
@@ -1512,6 +1510,8 @@ function compileFaceted(
       measure: annotationMeasure,
       fontFamily: theme.fonts.family,
       colors: theme.colors,
+      padding: theme.spacing.padding,
+      smallFontSize: theme.fonts.sizes.small,
       onWarn: (message) => emitSpecWarnings([message], options.onWarn),
       autoThin: panelSpecWithDomains.autoThin,
       topBound: dims.chrome.topHeight > 0 ? dims.topPad + dims.chrome.topHeight : undefined,
@@ -1540,32 +1540,13 @@ function compileFaceted(
         options.width < 400 && options.height >= 200 ? chartSpec.compactAnnotationLimit : undefined,
       );
       panelAnnotations = thinned.annotations;
-      // `thinAnnotations` numbers footnotes 1..n *within the panel it was given*,
-      // so restamp each demoted annotation with its figure-level number. Take the
-      // text from `thinned.footnotes` (the 1-based panel-local index it just
-      // assigned) rather than re-reading `label.text`: thinning owns that string,
-      // and re-deriving it here would be a second producer to drift out of sync.
-      //
-      // Key on `specIndex`, NOT on position: with `resolve.scale.x: 'independent'`
-      // each panel derives its own domain, so an annotation can resolve in one
-      // panel and be dropped in another. Position i then means a different spec
-      // annotation in each panel, and the markers point at other panels' text.
-      for (const a of panelAnnotations) {
-        const panelIndex = a.footnoteIndex;
-        if (panelIndex == null || a.specIndex === undefined) continue;
-        let num = footnoteNumberBySpecIndex.get(a.specIndex);
-        if (num === undefined) {
-          num = allFootnotes.length + 1;
-          footnoteNumberBySpecIndex.set(a.specIndex, num);
-          allFootnotes.push({
-            specIndex: a.specIndex,
-            ...(a.id !== undefined ? { id: a.id } : {}),
-            index: num,
-            text: thinned.footnotes[panelIndex - 1]?.text ?? '',
-          });
-        }
-        a.footnoteIndex = num;
+      // Every facet instance shares its source text ordinal and a single note.
+      for (const note of thinned.footnotes) {
+        if (note.specIndex === undefined || footnoteNumberBySpecIndex.has(note.specIndex)) continue;
+        footnoteNumberBySpecIndex.set(note.specIndex, note.index);
+        allFootnotes.push(note);
       }
+      allFootnotes.sort((a, b) => a.index - b.index);
     }
 
     allMarks.push(...panelMarks);
@@ -1609,13 +1590,6 @@ function compileFaceted(
 
   // Compute tooltip descriptors from all marks across panels
   const tooltipDescriptors = computeTooltipDescriptors(panelChartSpec, allMarks);
-
-  if (allMarks.some((mark) => mark.type === 'line' && mark.label?.visible)) {
-    emitSpecWarnings(
-      ['[openchart] Legacy end-of-line labels are deprecated; use endpointLabels.'],
-      options.onWarn,
-    );
-  }
 
   // Opt-in per-series fill patterns across all panels at once so a series
   // gets the same pattern in every panel.

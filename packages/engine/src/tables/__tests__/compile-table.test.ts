@@ -34,7 +34,8 @@ describe('compileTable', () => {
     expect(layout.chrome).toBeDefined();
     expect(layout.search.enabled).toBe(false);
     expect(layout.stickyFirstColumn).toBe(false);
-    expect(layout.compact).toBe(false);
+    expect(layout.density).toBe('regular');
+    expect(layout).not.toHaveProperty('compact');
   });
 
   it('formats cell values correctly', () => {

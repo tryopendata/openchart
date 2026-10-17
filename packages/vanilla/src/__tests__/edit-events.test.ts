@@ -75,7 +75,7 @@ const curvedAnnotatedSpec: ChartSpec = {
       y: 'A',
       text: 'Peak',
       offset: { dx: 40, dy: -50 },
-      connector: 'curve',
+      connector: { type: 'curve', arrow: true },
     },
   ],
 };

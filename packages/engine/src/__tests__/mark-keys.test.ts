@@ -245,7 +245,7 @@ describe('pie chart mark keys', () => {
         { category: 'Tablet', share: 10 },
       ],
       encoding: {
-        y: { field: 'share', type: 'quantitative' },
+        theta: { field: 'share', type: 'quantitative' },
         color: { field: 'category', type: 'nominal' },
       },
     };

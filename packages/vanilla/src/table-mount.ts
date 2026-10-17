@@ -251,7 +251,7 @@ export function createTable(
         compact && currentSpec.mobileLayout === 'priority',
       );
 
-    if (currentSpec.density !== undefined || currentSpec.compact === true) return;
+    if (currentSpec.density !== undefined) return;
 
     const columns = currentLayout?.columns.length ?? 0;
     const condensed =

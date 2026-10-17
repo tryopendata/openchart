@@ -1,3 +1,4 @@
+import { ConnectorCrossings } from './connector-crossings';
 import { rememberAnnotationGeometry } from './edit-context';
 import {
   placeReferenceLabel,
@@ -34,7 +35,7 @@ import {
 } from './collisions';
 import { SUBTITLE_FONT_WEIGHT, subtitleFontSize } from './constants';
 import type { AnnotationMeasureTextFn } from './geometry';
-import { moveAnnotationTo } from './move';
+import { annotationBlockBounds, moveAnnotationTo } from './move';
 import { findBestPlacement, isAutoPlacement, type PlacementObstacle } from './placement';
 import { resolvePosition } from './position';
 import { resolveRangeAnnotation } from './resolve-range';
@@ -43,6 +44,7 @@ import {
   makeAnnotationLabelStyle,
   resolveLedeFontWeight,
   resolveTextAnnotation,
+  textConnectorSeed,
 } from './resolve-text';
 
 export interface AnnotationContext {
@@ -58,6 +60,8 @@ export interface AnnotationContext {
   measure: AnnotationMeasureTextFn;
   /** Theme font stack, so annotation text is measured and rendered in the same face. */
   fontFamily?: string;
+  padding?: number;
+  smallFontSize?: number;
   colors?: import('@opendata-ai/openchart-core').ThemeColors;
   debugPlacement?: boolean;
   onWarn?: (message: string) => void;
@@ -106,7 +110,17 @@ export function computeAnnotations(
   }> = [];
 
   // ---- Pass 1: resolve explicit annotations and queue auto ones ----
-  for (const [specIndex, annotation] of spec.annotations.entries()) {
+  for (const [specIndex, sourceAnnotation] of spec.annotations.entries()) {
+    const annotation =
+      sourceAnnotation.type === 'text'
+        ? {
+            ...sourceAnnotation,
+            maxWidth:
+              sourceAnnotation.maxWidth === undefined
+                ? Math.max(1, Math.min(240, ctx.chartArea.width - 2 * (ctx.padding ?? 16)))
+                : sourceAnnotation.maxWidth,
+          }
+        : { ...sourceAnnotation, fontSize: sourceAnnotation.fontSize ?? ctx.smallFontSize ?? 12 };
     if (isCompact && annotation.responsive !== false) {
       continue;
     }
@@ -165,6 +179,10 @@ export function computeAnnotations(
     }
 
     if (resolved) {
+      // Range labels are fixed obstacles too; their bands are not. Record the
+      // measured text block before automatic callouts choose a placement.
+      if (resolved.label && !resolved.bounds)
+        resolved.bounds = annotationBlockBounds(resolved, resolved.label, ctx.measure);
       if (annotation.type === 'text' && ctx.obstacles.length > 0) {
         nudgeAnnotationFromObstacles(
           resolved,
@@ -215,11 +233,22 @@ export function computeAnnotations(
     const workingObstacles: PlacementObstacle[] = [...ctx.obstacles];
     for (let i = 0; i < annotations.length; i++) {
       const a = annotations[i];
-      if (a.bounds && !autoQueue.some((q) => q.index === i)) {
+      if (a.bounds && !autoQueue.some((q) => q.resolved === a)) {
         workingObstacles.push({ ...a.bounds, kind: 'annotation' } as PlacementObstacle);
       }
     }
 
+    const crossingIndex = new ConnectorCrossings();
+    for (const obstacle of workingObstacles) crossingIndex.addBox(obstacle);
+    for (const placed of annotations) {
+      if (!autoQueue.some((entry) => entry.resolved === placed))
+        crossingIndex.addConnector(placed.label?.connector);
+    }
+    autoQueue.sort(
+      (a, b) =>
+        (a.annotation.priority ?? Number.MAX_SAFE_INTEGER) -
+          (b.annotation.priority ?? Number.MAX_SAFE_INTEGER) || a.index - b.index,
+    );
     for (const entry of autoQueue) {
       const { annotation, anchorX, anchorY, resolved } = entry;
       // Must mirror resolveTextAnnotation exactly (lede weight, theme font):
@@ -259,6 +288,18 @@ export function computeAnnotations(
         svgRect,
         ctx.measure,
         ctx.debugPlacement,
+        (x, y, anchor) => {
+          const candidate = structuredClone(resolved);
+          if (!candidate.label) return 0;
+          candidate.label.connector ??= textConnectorSeed(
+            annotation,
+            ctx.scales,
+            ctx.isDark,
+            ctx.colors,
+          );
+          moveAnnotationTo(candidate, candidate.label, x, y, ctx.measure, anchor);
+          return crossingIndex.score(candidate.label.connector);
+        },
       );
 
       // Commit the placement. `moveAnnotationTo` owns every piece of the block's
@@ -284,6 +325,8 @@ export function computeAnnotations(
       // search's own estimate of it. One of them has to be the source of truth.
       const placedBounds = resolved.bounds ?? result.bounds;
       workingObstacles.push({ ...placedBounds, kind: 'annotation' } as PlacementObstacle);
+      crossingIndex.addBox({ ...placedBounds, kind: 'annotation' });
+      crossingIndex.addConnector(resolved.label?.connector);
     }
   }
 
@@ -324,7 +367,18 @@ export function computeAnnotations(
 
   for (const resolved of annotations) {
     const authored = spec.annotations[resolved.specIndex!];
-    if (authored?.type === 'text') rememberAnnotationGeometry(resolved, authored, ctx);
+    if (authored?.type === 'text')
+      rememberAnnotationGeometry(
+        resolved,
+        {
+          ...authored,
+          maxWidth:
+            authored.maxWidth === undefined
+              ? Math.max(1, Math.min(240, ctx.chartArea.width - 2 * (ctx.padding ?? 16)))
+              : authored.maxWidth,
+        },
+        ctx,
+      );
   }
   return annotations;
 }

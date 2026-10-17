@@ -136,8 +136,13 @@ describe('compileBarList', () => {
     expect(() => compileBarList(spec, BASE_OPTIONS)).toThrow(/empty/i);
   });
 
-  it('formats values with valueFormat', () => {
-    const spec = makeSpec({ valueFormat: '$,.0f' });
+  it('formats values with encoding.value.format', () => {
+    const spec = makeSpec({
+      encoding: {
+        ...makeSpec().encoding,
+        value: { ...makeSpec().encoding.value, format: '$,.0f' },
+      },
+    });
     const layout = compileBarList(spec, BASE_OPTIONS);
     expect(layout.rows[0].formattedValue).toBe('$100');
   });
@@ -148,7 +153,7 @@ describe('compileBarList', () => {
         { label: 'Big', count: 1500 },
         { label: 'Small', count: 200 },
       ],
-      valueFormat: '~s',
+      encoding: { ...makeSpec().encoding, value: { ...makeSpec().encoding.value, format: '~s' } },
     });
     const layout = compileBarList(spec, BASE_OPTIONS);
     expect(layout.rows[0].formattedValue).toBe('1.5k');

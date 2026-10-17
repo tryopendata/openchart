@@ -142,6 +142,8 @@ export const LongAxisLabels = () => (
 // ---------------------------------------------------------------------------
 
 const simpleBarSpec: ChartSpec = {
+  // This fixture has an exact-height host, including its note reservation.
+  chromeLayout: 'subtract',
   animation: true,
   mark: { type: 'bar', fill: hBarGradient('#1b7fa3') },
   data: [
@@ -194,7 +196,7 @@ const simpleBarSpec: ChartSpec = {
 };
 
 export const SimpleBars = () => (
-  <div className="tfix-chart tfix-h-420">
+  <div className="tfix-chart tfix-h-600">
     <Chart spec={simpleBarSpec} />
   </div>
 );
@@ -356,7 +358,7 @@ export const TemperatureAnomaly = () => (
 
 const populationBarSpec: ChartSpec = {
   animation: true,
-  mark: { type: 'bar', fill: hBarGradient('#1b7fa3') },
+  mark: 'bar',
   data: [
     { country: 'India', population: 1_463_000_000 },
     { country: 'China', population: 1_410_000_000 },
@@ -371,13 +373,17 @@ const populationBarSpec: ChartSpec = {
   ],
   encoding: {
     x: { field: 'population', type: 'quantitative', axis: { title: 'Population' } },
-    y: { field: 'country', type: 'nominal' },
+    y: { field: 'country', type: 'nominal', sort: 'x' },
+    color: { field: 'country', type: 'nominal', highlight: ['India', 'China'] },
   },
+  legend: { show: false },
+  labels: { color: 'var(--oc-text)' },
   annotations: [
     {
       type: 'refline',
       x: 1_000_000_000,
       label: '1 billion',
+      labelPlacement: 'outside',
       style: 'dashed',
       stroke: '#cc4444',
     },

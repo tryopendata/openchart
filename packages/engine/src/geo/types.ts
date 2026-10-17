@@ -1,6 +1,5 @@
 import type {
   AnimationSpec,
-  DarkMode,
   GeoMapEncoding,
   GeoMapGeo,
   GeoMapPointsLayer,
@@ -22,9 +21,7 @@ export interface NormalizedGeoMapSpec {
   chrome: NormalizedChrome;
   legend?: LegendConfig;
   theme: ThemeConfig;
-  darkMode: DarkMode;
   watermark: boolean;
   animation?: AnimationSpec;
-  valueFormat?: string;
   points?: GeoMapPointsLayer;
 }

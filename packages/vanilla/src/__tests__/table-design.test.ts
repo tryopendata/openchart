@@ -67,11 +67,11 @@ describe('table density classes', () => {
     t.destroy();
   });
 
-  it('keeps the deprecated compact alias class alongside condensed', () => {
+  it('uses only the canonical condensed density class', () => {
     const t = createTable(container, makeSpec({ density: 'condensed' }));
     const wrapper = container.querySelector('.oc-table-wrapper')!;
     expect(wrapper.classList.contains('oc-table--condensed')).toBe(true);
-    expect(wrapper.classList.contains('oc-table--compact')).toBe(true);
+    expect(wrapper.classList.contains('oc-table--compact')).toBe(false);
     t.destroy();
   });
 

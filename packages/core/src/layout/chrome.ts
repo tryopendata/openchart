@@ -195,23 +195,6 @@ export function computeNoteBandHeight(
     : count * theme.fonts.sizes.small * FOOTNOTE_LINE_HEIGHT + FOOTNOTE_BAND_GAP;
 }
 
-let warnedFootnoteBandHeight = false;
-/**
- * @deprecated Read layout.chrome.noteBandHeight. The numeric signature remains compatible in 8.x.
- */
-export function footnoteBandHeight(
-  input: number | Pick<ResolvedChrome, 'noteBandHeight' | 'footnotes' | 'seriesSummary'>,
-  theme: ResolvedTheme,
-): number {
-  if (!warnedFootnoteBandHeight) {
-    warnedFootnoteBandHeight = true;
-    console.warn(
-      '[openchart] footnoteBandHeight is deprecated; read layout.chrome.noteBandHeight.',
-    );
-  }
-  return computeNoteBandHeight(input, theme);
-}
-
 /**
  * Compute resolved chrome layout from a Chrome spec and resolved theme.
  *

@@ -17,7 +17,6 @@ import type { ChartRenderer } from '../registry';
 import { resolveKnockoutColor } from '../utils';
 import { computeAreaMarks } from './area';
 import { computeLineMarks } from './compute';
-import { computeLineLabels } from './labels';
 
 /** Radius for area-chart data points, matching the line renderer. */
 const AREA_POINT_RADIUS = 3;
@@ -34,28 +33,6 @@ const AREA_POINT_RADIUS = 3;
  */
 export const lineRenderer: ChartRenderer = (spec, scales, chartArea, strategy, theme) => {
   const marks = computeLineMarks(spec, scales, chartArea, strategy, theme);
-
-  // Extract just the line marks for label computation
-  const lineMarks = marks.filter((m): m is LineMark => m.type === 'line');
-
-  // Compute and attach labels to line marks by seriesKey lookup. Passing the
-  // spec engages the shared suppression truth table so end-of-line labels
-  // hide when the legend or endpoint column is showing.
-  const labelMap = computeLineLabels(
-    lineMarks,
-    strategy,
-    spec.labels.density,
-    spec.labels.offsets,
-    spec,
-  );
-  for (const mark of marks) {
-    if (mark.type === 'line' && mark.seriesKey) {
-      const label = labelMap.get(mark.seriesKey);
-      if (label) {
-        mark.label = label;
-      }
-    }
-  }
 
   return marks as Mark[];
 };
@@ -181,4 +158,3 @@ function pointsFromAreas(
 
 export { computeAreaMarks } from './area';
 export { computeLineMarks } from './compute';
-export { computeLineLabels } from './labels';

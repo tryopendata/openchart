@@ -271,7 +271,6 @@ export function computeEndpointLabels(
     // The 'none' branch above returned unless the user explicitly opted in,
     // in which case resolveSuppression's explicit-on override applies anyway.
     labelsHiddenByStrategy: false,
-    labelsDensityNone: spec.labels.density === 'none',
     endpointLabelsDemoted,
   });
   const epExplicitlyOff =

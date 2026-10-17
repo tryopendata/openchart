@@ -4,7 +4,7 @@ OpenChart's direction is editorial clarity, continuous interaction, and explaina
 
 ## Delivery and evidence
 
-This record distinguishes implementation from release validation. No comprehension, authoring, or performance improvement is claimed without measurements. Breaking defaults remain reserved for the next major release.
+This record distinguishes implementation from release validation. No comprehension, authoring, or performance improvement is claimed without measurements. Breaking defaults are recorded separately from publication and release validation.
 
 | Phase | Scope retained | Status |
 | --- | --- | --- |
@@ -53,3 +53,40 @@ Performance targets: 60fps reference motion; desktop p95 frame interval below 33
 Human validation (requires real participants, not simulated results): matched baseline comprehension tasks, at least 80% correct, no accuracy regression and 20% lower median response time; at least five representative authors, four completing import/refine/mobile check/undo/reopen/export without JSON. Record completion time and corrections. These gates remain pending until the study is conducted.
 
 Technical architecture and product UX reviewers must independently approve the implementation after fix/review cycles before the final commit, merge, and push. This does not substitute for the human release gates.
+
+
+## v9 chart clarity and annotation contract (implementation record)
+
+The additive Track A work shipped in 8.9.1. The v9 implementation adopts the
+accepted chart-clarity plan's defaults and removes its compatibility APIs. This
+record describes the library changes in the v9 branch; it does not claim that an
+RC or final release has been published, that Studio has adopted it, or that the
+human studies above have been conducted.
+
+| Decision | v9 contract and reason |
+| --- | --- |
+| Figure budget | Omitted `chromeLayout` adds only the note band; public `grow` and `subtract` retain their meanings. The engine reports total and grown heights so mounts/exports count growth once. Exact-height embeds author `subtract`. |
+| Editorial typography | Small/axis/footer text becomes 12px, with 16px chrome-to-chart and 12px chart-to-footer gaps. Background, axis, and eyebrow defaults retain their prior choices. Subtitle ratio becomes 12/13 and a subtitle no longer implies a bold primary label. |
+| Annotation placement | Automatic labels use priority then source order, measured wrapping, and connector-crossing costs. Curves no longer imply arrows. Reference labels default to automatic placement unless a legacy anchor is explicitly authored. |
+| Compact reading | One eligible inline callout is the compact default; null removes that count limit. Pinned annotations remain inline and may overlap after narrow clamping. Existing chart-level responsive opt-outs retain their behavior. |
+| Note identity | Rich primary/subtitle content wraps in the engine. Numbers follow source text-annotation order before filtering, allow gaps, and are shared across facet instances. Linked note/marker emphasis is transient reader state. |
+| Surface and ink | D19 reference/range colors are retuned; marker and plate colors derive from the neutral surface. Authored annotation and theme colors remain authoritative. |
+| Editing | `onEdit` receives atomic transactions; hosts use `applyEditTransaction` and its inverse. Arrows nudge, Shift accelerates, Tab cycles selection. Engine geometry remains authoritative through preview, commit, animation, and export. |
+| Theme composition | Spec, provider, and host overrides deep-merge; leaves override parent themes. Authored chrome sizes beat general font propagation. Arrays/color pairs are atomic and null clears rules. Unauthored CSS tokens remain available to host styles. |
+| Authoring grammar | `MarkDef` is a discriminated union with pre-sugar errors and schema/type/runtime parity. Inference has one core implementation. Retired aliases fail validation; endpoint labels replace legacy line-end labels. |
+| Migration | Default `migrateSpecV8` rewrites aliases and materializes former styling. `{ styling: 'v9' }` rewrites aliases only. Neither mode promises v8 pixel layout; every repair is inspectable. |
+
+The implementation retains the portable boundary: core owns pure contracts and
+theme/inference helpers, engine owns geometry and layout, and vanilla/framework
+packages own rendering and interaction. OpenStudio's v2 envelope, migration
+choice, storage recovery, and version adoption remain separate application work.
+The external authoring-skill synchronization and publication are separate release
+steps, not implied by this implementation record.
+
+Validation locations: `e2e/annotation-invariants/` owns the two annotation browser
+projects; the existing `invariants*` projects keep their original scope. The
+preview benchmark is `packages/engine/src/annotations/__tests__/preview.bench.ts`.
+Theme and transaction behavior have direct integration tests. Visual baselines
+must be reviewed once for the completed v9 composition before release; this
+record does not substitute for that review or claim reader-comprehension gains.
+See [the migration guide](migrating-v9.md) for the public before/after contract.

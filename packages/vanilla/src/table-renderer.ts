@@ -330,10 +330,6 @@ export function renderTable(
 
   // Apply class modifiers
   wrapper.classList.add(`oc-table--${layout.density}`);
-  if (layout.density === 'condensed') {
-    // Deprecated alias, kept one release for stylesheets targeting it.
-    wrapper.classList.add('oc-table--compact');
-  }
   if (layout.striped) {
     wrapper.classList.add('oc-table--striped');
   }

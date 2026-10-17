@@ -28,7 +28,6 @@ import type {
 import {
   BREAKPOINT_COMPACT_MAX,
   computeChrome,
-  estimateTextWidth,
   getHeightClass,
   HPAD_COMPACT_FRACTION,
   HPAD_COMPACT_MIN,
@@ -261,8 +260,8 @@ export function computeDimensions(
   const effectiveHeight =
     chromeLayout === 'grow'
       ? height + chrome.topHeight + chrome.bottomHeight + (options.footnoteReserve ?? 0)
-      : height;
-  if (chromeLayout === 'grow') chrome.grownHeight = effectiveHeight - height;
+      : height + (chromeLayout === 'notes' ? (options.footnoteReserve ?? 0) : 0);
+  if (chromeLayout !== 'subtract') chrome.grownHeight = effectiveHeight - height;
 
   // Sparkline mode: produce a near-edge-to-edge layout. Only stroke-width-based
   // safety padding plus chrome (if user-explicit). Skip axis space, label
@@ -377,27 +376,16 @@ export function computeDimensions(
     left: hPad + (isRadial ? hPad : axisMargin),
   };
 
-  // Right-margin reservation for the three-way label suppression truth table:
-  //
-  //   1. Endpoint-labels column (predicted width, default ON for ≥2-series
-  //      line/area). Reserves chart-width + ENDPOINT_COLUMN_GAP + col-width.
-  //   2. Legacy end-of-line labels — only when the truth table resolves to
-  //      `showEndOfLineLabels: true` (legend hidden AND endpoint column off).
-  const labelDensity = spec.labels.density;
+  // Reserve the endpoint column when the series identification policy shows it.
   const labelsHiddenByStrategy = strategy?.labelMode === 'none';
   const seriesCount = countColorSeries(spec);
   const sup = resolveSuppression(spec, {
     seriesCount,
     labelsHiddenByStrategy,
-    labelsDensityNone: labelDensity === 'none',
     endpointLabelsDemoted: plan.endpointLabelsDemoted,
   });
 
-  // (1) Endpoint-labels column reservation. predictEndpointLabelsWidth returns 0
-  // when the column would be suppressed. `labels.density` is intentionally
-  // not checked here — that switch controls only the legacy end-of-line labels.
-  // No extra strategy check either: `sup.showEndpointLabels` already accounts
-  // for the compact strip (and its explicit-opt-in override).
+  // The policy accounts for compact demotion and explicit author opt-ins.
   let endpointWidth = 0;
   if (sup.showEndpointLabels) {
     endpointWidth = predictEndpointLabelsWidth(spec, theme);
@@ -407,36 +395,6 @@ export function computeDimensions(
       // Both-ends mode: mirror the column on the left for first-value labels.
       if (isEndsBoth(spec)) {
         margins.left = Math.max(margins.left, hPad) + endpointWidth + 16;
-      }
-    }
-  }
-
-  // (2) Legacy end-of-line label reservation — fires only in the truth-table
-  // cell where end-of-line labels still render (legend hidden AND endpoint
-  // column off AND ≥2 series AND labels visible). When the endpoint column
-  // is on, this reservation is redundant and is skipped.
-  if (
-    endpointWidth === 0 &&
-    sup.showEndOfLineLabels &&
-    (spec.markType === 'line' || spec.markType === 'area') &&
-    labelDensity !== 'none' &&
-    !labelsHiddenByStrategy
-  ) {
-    const colorEnc = encoding.color;
-    const colorField = colorEnc && 'field' in colorEnc ? colorEnc.field : undefined;
-    if (colorField) {
-      let maxLabelWidth = 0;
-      const seen = new Set<string>();
-      for (const row of spec.data) {
-        const label = String(row[colorField] ?? '');
-        if (!seen.has(label)) {
-          seen.add(label);
-          const w = estimateTextWidth(label, 11, 600);
-          if (w > maxLabelWidth) maxLabelWidth = w;
-        }
-      }
-      if (maxLabelWidth > 0) {
-        margins.right = Math.max(margins.right, hPad + maxLabelWidth + 8);
       }
     }
   }

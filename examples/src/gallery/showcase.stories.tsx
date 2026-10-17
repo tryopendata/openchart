@@ -39,7 +39,7 @@ import { hBarGradient } from './helpers';
 const ACCENT = '#0e7490';
 
 // ---------------------------------------------------------------------------
-// 1. Multi-series line — legend bottom-right, endpoint labels
+// 1. Multi-series line — explicit Amazon focus and endpoint labels
 // ---------------------------------------------------------------------------
 
 const multiLineSpec: ChartSpec = {
@@ -53,8 +53,18 @@ const multiLineSpec: ChartSpec = {
       type: 'quantitative',
       axis: { title: 'Annual revenue ($B)', format: ',.0f', grid: true },
     },
-    color: { field: 'company', type: 'nominal' },
+    color: {
+      field: 'company',
+      type: 'nominal',
+      scale: {
+        domain: ['Amazon', 'Apple', 'Alphabet', 'Microsoft', 'Meta'],
+        range: ['#0e7490', '#7a858f', '#7a858f', '#7a858f', '#7a858f'],
+      },
+    },
   },
+  legend: { show: false },
+  endpointLabels: { content: 'label', showMarker: true },
+  seriesStyles: { Amazon: { strokeWidth: 3 } },
   annotations: [
     {
       type: 'text',
@@ -82,14 +92,24 @@ const multiLineSpec: ChartSpec = {
 
 const fullChromeSpec: ChartSpec = {
   animation: true,
-  mark: { type: 'bar', fill: hBarGradient(ACCENT) },
+  mark: 'bar',
   data: [...populationByCountry.data],
   encoding: {
     x: { field: 'population', type: 'quantitative', axis: { title: 'Population', format: '.2~s' } },
-    y: { field: 'country', type: 'nominal' },
+    y: { field: 'country', type: 'nominal', sort: 'x' },
+    color: { field: 'country', type: 'nominal', highlight: ['India', 'China'] },
   },
+  legend: { show: false },
+  labels: { color: 'var(--oc-text)' },
   annotations: [
-    { type: 'refline', x: 1_000_000_000, label: '1 billion', style: 'dashed', stroke: '#cc4444' },
+    {
+      type: 'refline',
+      x: 1_000_000_000,
+      label: '1 billion',
+      labelPlacement: 'outside',
+      style: 'dashed',
+      stroke: '#cc4444',
+    },
   ],
   chrome: {
     eyebrow: 'Demographics',
@@ -449,7 +469,7 @@ export const Showcase = () => (
           title="Horizontal bar with full chrome"
           description="Every editorial chrome element at once: eyebrow, title, subtitle, source, byline, and footer wrapped around a ranked horizontal bar."
           spec={fullChromeSpec}
-          height={520}
+          height={600}
         />
       </div>
 

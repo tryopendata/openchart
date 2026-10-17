@@ -1,4 +1,5 @@
 import { collectMarkOptionErrors } from './mark-options';
+import { collectRemovedSpecErrors } from './removed-spec-fields';
 /**
  * Runtime spec validation.
  *
@@ -29,8 +30,6 @@ import type { ValidationError, ValidationResult } from './types';
 // ---------------------------------------------------------------------------
 
 const VALID_FIELD_TYPES = new Set<string>(['quantitative', 'temporal', 'nominal', 'ordinal']);
-
-const VALID_DARK_MODES = new Set<string>(['auto', 'force', 'off']);
 
 /** Check if a value looks like a parseable date. */
 function isParseableDate(value: unknown): boolean {
@@ -1028,17 +1027,6 @@ function validateChartSpec(spec: Record<string, unknown>, errors: ValidationErro
     }
   }
 
-  // Validate darkMode if provided
-  if (spec.darkMode !== undefined && !VALID_DARK_MODES.has(spec.darkMode as string)) {
-    errors.push({
-      message: `Spec error: darkMode must be "auto", "force", or "off"`,
-      path: 'darkMode',
-      code: 'INVALID_VALUE',
-      suggestion:
-        'Use one of: "auto" (system preference), "force" (always dark), or "off" (always light)',
-    });
-  }
-
   // Validate youDrawIt: line marks only, single-series only, "from" required.
   if (spec.youDrawIt !== undefined && spec.youDrawIt !== false) {
     if (markType !== 'line') {
@@ -1531,17 +1519,6 @@ function validateSankeySpec(spec: Record<string, unknown>, errors: ValidationErr
     'sankey node colors cycle the theme categorical palette',
     'Remove scale.scheme. To customize sankey colors, set theme.colors.categorical.',
   );
-
-  // Validate darkMode if provided
-  if (spec.darkMode !== undefined && !VALID_DARK_MODES.has(spec.darkMode as string)) {
-    errors.push({
-      message: 'Spec error: darkMode must be "auto", "force", or "off"',
-      path: 'darkMode',
-      code: 'INVALID_VALUE',
-      suggestion:
-        'Use one of: "auto" (system preference), "force" (always dark), or "off" (always light)',
-    });
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1656,17 +1633,6 @@ function validateTileMapSpec(spec: Record<string, unknown>, errors: ValidationEr
       'tilemap fills come from the top-level palette property',
       `Remove scale.scheme and set the top-level palette property instead, e.g. palette: "green". Supported: ${MAP_PALETTE_NAMES}.`,
     );
-  }
-
-  // Validate darkMode if provided
-  if (spec.darkMode !== undefined && !VALID_DARK_MODES.has(spec.darkMode as string)) {
-    errors.push({
-      message: 'Spec error: darkMode must be "auto", "force", or "off"',
-      path: 'darkMode',
-      code: 'INVALID_VALUE',
-      suggestion:
-        'Use one of: "auto" (system preference), "force" (always dark), or "off" (always light)',
-    });
   }
 }
 
@@ -2061,16 +2027,6 @@ function validateBarListSpec(spec: Record<string, unknown>, errors: ValidationEr
     'bar list colors cycle the built-in barlist palette',
     'Remove scale.scheme. Bar list colors are not configurable via encoding; they cycle the built-in palette.',
   );
-
-  if (spec.darkMode !== undefined && !VALID_DARK_MODES.has(spec.darkMode as string)) {
-    errors.push({
-      message: 'Spec error: darkMode must be "auto", "force", or "off"',
-      path: 'darkMode',
-      code: 'INVALID_VALUE',
-      suggestion:
-        'Use one of: "auto" (system preference), "force" (always dark), or "off" (always light)',
-    });
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -2174,7 +2130,7 @@ function validateLayerSpec(spec: Record<string, unknown>, errors: ValidationErro
  */
 function validateAnimation(spec: Record<string, unknown>, errors: ValidationError[]): void {
   const animation = spec.animation;
-  if (typeof animation === 'string' && !['fluid', 'subtle', 'legacy'].includes(animation)) {
+  if (typeof animation === 'string' && !['fluid', 'subtle'].includes(animation)) {
     errors.push({
       code: 'INVALID_VALUE',
       suggestion: 'Use a named preset or separate valid spring and tween phase settings.',
@@ -2185,15 +2141,12 @@ function validateAnimation(spec: Record<string, unknown>, errors: ValidationErro
   if (!animation || typeof animation !== 'object' || Array.isArray(animation)) return;
 
   const config = animation as Record<string, unknown>;
-  if (
-    config.preset !== undefined &&
-    !['fluid', 'subtle', 'legacy'].includes(String(config.preset))
-  ) {
+  if (config.preset !== undefined && !['fluid', 'subtle'].includes(String(config.preset))) {
     errors.push({
       code: 'INVALID_VALUE',
       suggestion: 'Use a named preset or separate valid spring and tween phase settings.',
       path: 'animation.preset',
-      message: 'Animation preset must be fluid, subtle, or legacy.',
+      message: 'Animation preset must be fluid or subtle.',
     });
   }
   for (const phase of ['enter', 'update', 'exit']) {
@@ -2434,6 +2387,7 @@ function validateSpecShape(spec: unknown): ValidationResult {
   }
 
   const obj = spec as Record<string, unknown>;
+  errors.push(...collectRemovedSpecErrors(obj));
   validateAnnotationLayout(obj, errors);
   validateFieldMetadata(obj, errors);
   if (obj.chrome !== undefined) {

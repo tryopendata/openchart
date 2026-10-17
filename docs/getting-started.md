@@ -108,7 +108,7 @@ const spec = {
 
 The `encoding` object maps data fields to visual channels. `type` tells the engine how to interpret the values: `temporal` for dates, `quantitative` for numbers, `nominal` for categories.
 
-The chart component fills its parent container. Set width and height on the wrapper element.
+Set the wrapper width to the desired embed width. An explicit height supplies the figure budget; omitted `chromeLayout` can grow it by the note band. Set `chromeLayout: 'subtract'` for an exact-height slot. Without a height constraint, the mount uses a 400px visualization budget and adds chrome.
 
 See this running: [live example](https://tryopendata.github.io/openchart/?story=charts--line-and-area#single-line)
 
@@ -151,7 +151,7 @@ chrome: {
 
 ## Change mark type
 
-Swap `mark: 'line'` for any supported mark type. The encoding channels stay the same, the engine handles the rest.
+Swap `mark: 'line'` for any supported mark type. Use the channels required by the new mark: arc, waffle, and parliament use `theta` for values; positional marks use `x`/`y`. Mark-specific options must belong to the chosen mark.
 
 ```tsx
 const spec = {
@@ -284,7 +284,7 @@ Dark mode adapts the theme automatically: background, text colors, gridlines, ax
 
 ## Custom theme
 
-Override any part of the default theme with a `ThemeConfig` object. The engine deep-merges your overrides onto the defaults, so you only specify what you want to change.
+Override any part of the default theme with a `ThemeConfig` object. Spec, provider, and component themes deep-merge in that order; nested fields survive and arrays/color pairs replace atomically. Mount options have highest precedence. Only authored overrides are stamped inline, so omitted CSS tokens remain available to host styles.
 
 ```tsx
 import { Chart, VizThemeProvider } from "@opendata-ai/openchart-react";
@@ -594,7 +594,7 @@ const chart = createChart(
   },
   {
     darkMode: "auto",
-    responsive: true,
+    autoResize: true,
   },
 );
 
@@ -618,7 +618,7 @@ chart.destroy();
 | `export(format)` | Export as `'svg'`, `'png'`, `'jpg'`, `'gif'` (animated, needs the optional `gifenc` peer), or `'csv'` |
 | `destroy()`      | Remove DOM elements, disconnect observers  |
 
-Responsive mode (enabled by default) uses a `ResizeObserver` on the container, so charts resize automatically when the container changes size.
+`autoResize` (enabled by default) uses `ResizeObserver` so charts resize with their container. The spec `responsive` field controls layout adaptation, not observation. For transaction-based editing and changed defaults, see [Migrating to v9](migrating-v9.md).
 
 ### Table
 

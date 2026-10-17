@@ -67,7 +67,7 @@ export const DEFAULT_DOT_STROKE_WIDTH = 1.5;
 export const SUBTITLE_GAP = 2;
 
 /** Subtitle font size multiplier (relative to primary annotation font size). */
-export const SUBTITLE_FONT_SIZE_RATIO = 0.85;
+export const SUBTITLE_FONT_SIZE_RATIO = 12 / 13;
 
 /**
  * The subtitle's resolved font size. Rounded, and shared by every caller: the

@@ -309,11 +309,22 @@ export function getSVGBackgroundColor(svgElement: SVGElement, fallback?: string)
  * @returns The SVG markup as a string.
  */
 export function exportSVG(svgElement: SVGElement): string {
-  if (!svgElement.getAttribute('xmlns')) {
-    svgElement.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  // Export a clean snapshot without changing the live chart's focus/selection.
+  // Every SVG and raster path serializes here, including font-embedded exports.
+  const clone = svgElement.cloneNode(true) as SVGElement;
+  for (const control of clone.querySelectorAll(
+    '.oc-selection-overlay, .oc-anchor-handle, .oc-connector-handle',
+  ))
+    control.remove();
+  clone.classList.remove('oc-note-active');
+  for (const element of clone.querySelectorAll('.oc-note-active')) {
+    element.classList.remove('oc-note-active');
+  }
+  if (!clone.getAttribute('xmlns')) {
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
   }
   const serializer = new XMLSerializer();
-  return serializer.serializeToString(svgElement);
+  return serializer.serializeToString(clone);
 }
 
 /**

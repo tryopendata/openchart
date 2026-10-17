@@ -4,7 +4,9 @@ import type {
   MeasureTextFn,
   ResolvedTheme,
 } from '@opendata-ai/openchart-core';
-import { estimateTextWidth, wrapText } from '@opendata-ai/openchart-core';
+import { estimateTextWidth } from '@opendata-ai/openchart-core';
+import { parseAnnotationSpans } from './rich-text';
+import { wrapAnnotationText } from './wrap-text';
 
 /** Resolve note lines once, so figure sizing, SVG rendering and export agree. */
 export function wrapAnnotationNotes(
@@ -16,24 +18,17 @@ export function wrapAnnotationNotes(
   const size = theme.fonts.sizes.small;
   const weight = theme.fonts.weights.normal;
   const maxWidth = Math.max(1, width - 2 * theme.spacing.padding);
-  const measure = (text: string) =>
-    measureText?.(text, size, weight).width ?? estimateTextWidth(text, size, weight);
+  const measure = (text: string, style: { fontSize: number; fontWeight?: number | string }) =>
+    measureText?.(text, style.fontSize, Number(style.fontWeight) || weight).width ??
+    estimateTextWidth(text, style.fontSize, Number(style.fontWeight) || weight);
   return notes.map((note) => {
-    const text = `${note.index}. ${note.text}`;
-    const lines = wrapText(text, size, weight, maxWidth, measureText).flatMap((line) => {
-      // Word wrapping alone cannot contain an unbroken URL or identifier.
-      const chunks: string[] = [];
-      let chunk = '';
-      for (const character of line) {
-        if (chunk && measure(chunk + character) > maxWidth) {
-          chunks.push(chunk);
-          chunk = character;
-        } else chunk += character;
-      }
-      chunks.push(chunk);
-      return chunks;
-    });
-    return lines.length > 1 ? { ...note, lines } : note;
+    const lines = wrapAnnotationText(
+      `${note.index}. ${note.text}${note.subtitle ? `\n${note.subtitle}` : ''}`,
+      maxWidth,
+      { fontSize: size, fontWeight: weight },
+      measure,
+    );
+    return { ...note, lines, spans: lines.map(parseAnnotationSpans) };
   });
 }
 
@@ -55,15 +50,14 @@ export function annotationNoteCapacity(
       ? [
           {
             specIndex,
-            text: annotation.subtitle
-              ? `${annotation.text}. ${annotation.subtitle}`
-              : annotation.text,
+            text: annotation.text,
+            subtitle: annotation.subtitle,
           },
         ]
       : [],
   );
-  // Priority and placement determine the eventual numbering. Budget every source
-  // with the widest possible prefix, including proportional numeral fonts.
+  // Reserve the widest source ordinal so placement and drag changes cannot
+  // change capacity, including with proportional numeral fonts.
   const size = theme.fonts.sizes.small;
   const weight = theme.fonts.weights.normal;
   const measure = (text: string) =>

@@ -184,6 +184,14 @@ function renderAnnotation(
   // Footnote marker: annotation was demoted by auto-thinning. Render a numbered
   // dot at the data point instead of the full label text.
   if (annotation.footnoteIndex != null && annotation.label) {
+    if (annotation.specIndex !== undefined)
+      g.setAttribute('data-note-marker-index', String(annotation.specIndex));
+    g.setAttribute('tabindex', '0');
+    g.setAttribute('role', 'button');
+    g.setAttribute(
+      'aria-label',
+      `Annotation ${annotation.footnoteIndex}: ${annotation.label.text.replaceAll('**', '')}. Activate to read the note.`,
+    );
     // Prefer the data point. A suppressed connector (too short to be worth
     // drawing) still leaves a resolved dot there, so fall through to it before
     // giving up on the label position.
@@ -222,6 +230,8 @@ function renderAnnotation(
       ...annotation.label.style,
       fontSize: 9,
       fontWeight: 600,
+      textAnchor: 'middle',
+      dominantBaseline: 'central',
     });
     num.textContent = String(annotation.footnoteIndex);
     g.appendChild(num);

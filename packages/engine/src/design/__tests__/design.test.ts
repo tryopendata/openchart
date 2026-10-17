@@ -15,6 +15,7 @@ import { recommendCompositions } from '../recommend';
 
 const spec: ChartSpec = {
   mark: 'bar',
+  theme: { fonts: { sizes: { axisTick: 11 } } },
   data: [
     { id: 'a', category: 'Alpha', value: 10 },
     { id: 'b', category: 'Beta', value: 20 },
@@ -88,7 +89,7 @@ describe('design contracts', () => {
     const patch = diagnoseChart(spec, layout).find((item) => item.fix)!.fix!;
     const next = applySpecPatch(spec, patch);
     expect(next.theme?.fonts?.sizes?.axisTick).toBe(12);
-    expect(spec.theme).toBeUndefined();
+    expect(spec.theme?.fonts?.sizes?.axisTick).toBe(11);
     expect(() => applySpecPatch(next, patch)).toThrow('stale');
     expect(() =>
       applySpecPatch(spec, { ...patch, changes: [{ path: '/__proto__/polluted', value: true }] }),

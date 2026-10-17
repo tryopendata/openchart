@@ -162,14 +162,15 @@ export function thinAnnotations(
     const overBudget = plotAreaSize > 0 && usedArea + candidateArea > coverageBudget;
 
     if (overLimit || overlaps || !fitsWithin(bounds, containment) || overBudget) {
-      const footnoteIndex = footnotes.length + 1;
+      const footnoteIndex = specs
+        .slice(0, (entry.resolved.specIndex ?? entry.index) + 1)
+        .filter((a) => a.type === 'text').length;
       footnotes.push({
         ...(entry.resolved.specIndex !== undefined ? { specIndex: entry.resolved.specIndex } : {}),
         ...(entry.resolved.id !== undefined ? { id: entry.resolved.id } : {}),
         index: footnoteIndex,
-        text: entry.spec?.subtitle
-          ? `${entry.resolved.label!.text}. ${entry.spec.subtitle}`
-          : entry.resolved.label!.text,
+        text: entry.resolved.label!.text,
+        ...(entry.spec?.subtitle ? { subtitle: entry.spec.subtitle } : {}),
       });
       entry.resolved.footnoteIndex = footnoteIndex;
     } else {
@@ -178,7 +179,7 @@ export function thinAnnotations(
     }
   }
 
-  return { annotations, footnotes };
+  return { annotations, footnotes: footnotes.sort((a, b) => a.index - b.index) };
 }
 
 /**
