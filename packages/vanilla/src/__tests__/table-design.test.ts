@@ -210,15 +210,19 @@ describe('table theme custom properties', () => {
     return (container.querySelector('.oc-table-wrapper') as HTMLElement).style;
   }
 
-  it('stamps an opaque surface on --oc-bg', () => {
+  it('leaves the default surface in CSS and stamps authored surfaces', () => {
     const t = createTable(container, makeSpec());
     // The default theme's background is 'transparent'; the sticky thead, the
     // sticky first column and the totals footer paint this to occlude the rows
     // scrolling under them, so a transparent value shows rows through them.
     const bg = props().getPropertyValue('--oc-bg');
-    expect(bg).not.toBe('');
-    expect(bg).not.toBe('transparent');
+    expect(bg).toBe('');
     t.destroy();
+    const themed = createTable(container, makeSpec(), {
+      theme: { colors: { background: '#faf8f5' } },
+    });
+    expect(props().getPropertyValue('--oc-bg')).toBe('#faf8f5');
+    themed.destroy();
   });
 
   it('uses the neutral border on the default theme, the gridline when overridden', () => {
@@ -228,8 +232,7 @@ describe('table theme custom properties', () => {
     // gridline.
     const plain = createTable(container, makeSpec());
     const border = props().getPropertyValue('--oc-border');
-    expect(border).not.toBe('');
-    expect(border).not.toBe(props().getPropertyValue('--oc-gridline'));
+    expect(border).toBe('');
     plain.destroy();
 
     const themed = createTable(container, makeSpec(), {

@@ -9,7 +9,7 @@
  */
 
 import type { ResolvedTheme } from '@opendata-ai/openchart-core';
-import { injectThemeStyleBlock } from './theme-style-block';
+import { copyComputedThemeProperties, injectThemeStyleBlock } from './theme-style-block';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -333,6 +333,7 @@ export async function exportSVGWithFonts(
   options?: SVGExportOptions,
 ): Promise<string> {
   const clone = svgElement.cloneNode(true) as SVGElement;
+  copyComputedThemeProperties(svgElement, clone);
   const shouldEmbed = options?.embedFonts ?? true;
   injectThemeStyleBlock(clone, options?.theme);
   if (shouldEmbed) {
@@ -458,6 +459,7 @@ async function prepareRasterSVG(
 ): Promise<{ svgString: string; width: number; height: number }> {
   const { width, height } = getSVGDimensions(svgElement);
   const clone = svgElement.cloneNode(true) as SVGElement;
+  copyComputedThemeProperties(svgElement, clone);
   // Inline the theme style block so class-based fills survive the detach from
   // the page stylesheet. No-op when theme is undefined.
   injectThemeStyleBlock(clone, theme);

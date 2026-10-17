@@ -4,9 +4,8 @@
   /* ---------------------------------------------------------------------------
    * Dark mode overrides (fallback defaults)
    *
-   * At runtime, the JS theme engine stamps dark-adapted --oc-* custom
-   * properties on each .oc-root container. These CSS values serve as
-   * fallbacks for contexts where JS hasn't mounted yet.
+   * Dark defaults stay in CSS; authored theme overrides are resolved and
+   * stamped by the JS theme engine.
    * --------------------------------------------------------------------------- */
 
   .oc-dark {
@@ -40,5 +39,20 @@
     --oc-tooltip-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 1px rgba(0, 0, 0, 0.4);
     --oc-tooltip-text: #f7f8f8;
     --oc-legend-text: #d0d6e0;
+
+    /* Annotation and neutral colors */
+    --oc-annotation-label: #d1d5db;
+    --oc-annotation-muted: #9ca3af;
+    --oc-annotation-leader: #9aa0a6;
+    --oc-annotation-rule: #9ca3af;
+    --oc-annotation-range-fill: #f0c040;
+    --oc-annotation-marker-fill: #09090b;
+    --oc-annotation-plate: #09090b;
+    --oc-gray-100: #171719;
+    --oc-gray-200: #262627;
+    --oc-gray-300: #3d3e3f;
+    --oc-gray-400: #68696a;
+    --oc-gray-600: #8c8c8d;
+    --oc-gray-800: #bcbcbd;
   }
 }

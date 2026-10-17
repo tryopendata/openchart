@@ -8,6 +8,7 @@
 import type { BarListLayout, BarListRowMark, ResolvedAnimation } from '@opendata-ai/openchart-core';
 import { stampAnimationVars } from './animation-vars';
 import { renderChromeElement } from './renderers/chrome';
+import { stampThemeProperties } from './theme-tokens';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const XLINK_NS = 'http://www.w3.org/1999/xlink';
@@ -231,6 +232,7 @@ export function renderBarListSVG(
 
   const classes = animate ? 'oc-barlist oc-animate' : 'oc-barlist';
   svg.setAttribute('class', classes);
+  stampThemeProperties(svg, layout.theme);
 
   if (animate && animation?.enter) {
     stampAnimationVars(svg, {

@@ -10,6 +10,7 @@
 -->
 <script lang="ts">
 import type { DarkMode, GraphSpec, ThemeConfig } from '@opendata-ai/openchart-core';
+import { mergeThemeConfig } from '@opendata-ai/openchart-core';
 import {
   type CameraFlightOptions,
   createGraph,
@@ -118,7 +119,7 @@ let prevDimensions = 2;
 
 // Effect 1: Mount/recreate graph on theme/darkMode/structural option changes.
 $effect(() => {
-  const resolvedTheme = theme ?? ctxTheme?.();
+  const resolvedTheme = mergeThemeConfig(ctxTheme?.(), theme);
   const resolvedDarkMode = darkMode ?? ctxDarkMode?.();
   // Read the structural tooltip/legend keys + fitOnLoad so a change to any of
   // them recreates the graph; the tooltip formatter is deliberately NOT tracked

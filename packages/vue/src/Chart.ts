@@ -20,6 +20,7 @@ import type {
   TextAnnotation,
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
+import { mergeThemeConfig } from '@opendata-ai/openchart-core';
 import { type ChartInstance, createChart, type MountOptions } from '@opendata-ai/openchart-vanilla';
 import {
   type CSSProperties,
@@ -139,7 +140,7 @@ export const Chart = defineComponent({
     const hasTextEditListener = 'onText-edit' in vnodeProps || 'onTextEdit' in vnodeProps;
 
     function resolveTheme(): ThemeConfig | undefined {
-      return props.theme ?? contextTheme?.value;
+      return mergeThemeConfig(contextTheme?.value, props.theme);
     }
 
     function resolveDarkMode(): DarkMode | undefined {

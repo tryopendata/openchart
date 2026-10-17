@@ -7,6 +7,7 @@
  */
 
 import type { DarkMode, ThemeConfig, TileMapSpec } from '@opendata-ai/openchart-core';
+import { mergeThemeConfig } from '@opendata-ai/openchart-core';
 import {
   createTileMap,
   type TileMapInstance,
@@ -78,7 +79,7 @@ export const TileMap = defineComponent({
     const contextDarkMode = inject(VizDarkModeKey, undefined);
 
     function resolveTheme(): ThemeConfig | undefined {
-      return props.theme ?? contextTheme?.value;
+      return mergeThemeConfig(contextTheme?.value, props.theme);
     }
 
     function resolveDarkMode(): DarkMode | undefined {

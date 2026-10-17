@@ -15,7 +15,7 @@
  */
 
 import type { ChartSpec, ThemeConfig } from '@opendata-ai/openchart-core';
-import { broadsheet, editorial, essay, terminal, wire } from '@opendata-ai/openchart-core';
+import { broadsheet, essay, terminal, wire } from '@opendata-ai/openchart-core';
 import { Chart, VizThemeProvider } from '@opendata-ai/openchart-react';
 import type { CSSProperties } from 'react';
 import { useState } from 'react';
@@ -151,7 +151,7 @@ const compactBarSpec: ChartSpec = {
 const PRESETS: { name: string; theme: ThemeConfig; note: string }[] = [
   {
     name: 'editorial',
-    theme: editorial,
+    theme: {},
     note: 'The default look. Clean sans, restrained neutrals.',
   },
   { name: 'essay', theme: essay, note: 'Serif display titles, warm canvas, generous spacing.' },
@@ -514,7 +514,7 @@ export const Theming = () => (
     <Section
       id="presets"
       title="Built-in presets"
-      lede="Five ready-made looks ship in the core package: editorial (the default), essay, wire, broadsheet, and terminal. Import and pass them directly — the same chart, five personalities. broadsheet shows the theme `rule`: a short colored bar above the chrome block."
+      lede="The default editorial look plus four presets: essay, wire, broadsheet, and terminal. Import presets and pass them directly — the same chart, five personalities. broadsheet shows the theme `rule`: a short colored bar above the chrome block."
     >
       <Demo id="presets" specForPanel={{ ...presetSpec, theme: broadsheet }} maxWidth={1040}>
         <PresetGrid />

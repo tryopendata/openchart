@@ -7,6 +7,7 @@
  */
 
 import type { DarkMode, GeoMapSpec, ThemeConfig } from '@opendata-ai/openchart-core';
+import { mergeThemeConfig } from '@opendata-ai/openchart-core';
 import {
   type Camera,
   createGeoMap,
@@ -74,7 +75,7 @@ export const GeoMap = defineComponent({
     const contextDarkMode = inject(VizDarkModeKey, undefined);
 
     function resolveTheme(): ThemeConfig | undefined {
-      return props.theme ?? contextTheme?.value;
+      return mergeThemeConfig(contextTheme?.value, props.theme);
     }
 
     function resolveDarkMode(): DarkMode | undefined {

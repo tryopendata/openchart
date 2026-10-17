@@ -29,7 +29,7 @@ import {
   estimateTextWidth,
   resolveTheme,
 } from '@opendata-ai/openchart-core';
-import { emitSpecWarnings, emitThemeWarnings, expandSpecSugar } from '../compile/spec-sugar';
+import { emitSpecWarnings, expandSpecSugar } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
 import { finiteNumber } from '../data/finite-number';
@@ -82,7 +82,6 @@ export function compileBarList(spec: unknown, options: CompileOptions): BarListL
     rawWatermark !== undefined ? barlistSpec.watermark : (options.watermark ?? true);
 
   // Resolve theme
-  emitThemeWarnings(options.theme, options.onWarn);
   const mergedThemeConfig = mergeThemeConfig(barlistSpec.theme, options.theme);
   const lightTheme: ResolvedTheme = resolveTheme(mergedThemeConfig);
   let theme: ResolvedTheme = lightTheme;

@@ -43,7 +43,7 @@ describe('resolveTheme', () => {
   });
 
   it('overrides a chrome element color, preserving its size and weight', () => {
-    const resolved = resolveTheme({ chrome: { subtitle: '#d0d6e0' } });
+    const resolved = resolveTheme({ chrome: { subtitle: { color: '#d0d6e0' } } });
     expect(resolved.chrome.subtitle.color).toBe('#d0d6e0');
     // Non-color chrome fields come from the typography scale, untouched.
     expect(resolved.chrome.subtitle.fontSize).toBe(14);

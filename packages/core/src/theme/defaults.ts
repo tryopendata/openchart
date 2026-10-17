@@ -18,6 +18,16 @@ import {
 import { X_AXIS_BAND_HEIGHT } from '../responsive/metrics';
 import type { ThemeBase } from '../types/theme';
 
+const FONT_SIZES = {
+  title: 26,
+  subtitle: 14,
+  body: 13,
+  small: 12,
+  axisTick: 12,
+  metricLabel: 11,
+  metricValue: 22,
+};
+
 /**
  * The default theme. All fields are required and fully specified.
  */
@@ -42,8 +52,8 @@ export const DEFAULT_THEME: ThemeBase = {
     annotationLabel: '#333333',
     annotationMuted: '#6b7280',
     annotationLeader: '#8f8f8f',
-    annotationRule: '#666666',
-    annotationRangeFill: '#000000',
+    annotationRule: '#888888',
+    annotationRangeFill: '#f0c040',
     annotationMarkerFill: '#ffffff',
     annotationPlate: '#ffffff',
     positive: '#15803d',
@@ -53,15 +63,7 @@ export const DEFAULT_THEME: ThemeBase = {
     family:
       '"Inter Variable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     mono: '"JetBrains Mono", "Fira Code", "Cascadia Code", monospace',
-    sizes: {
-      title: 26,
-      subtitle: 14,
-      body: 13,
-      small: 11,
-      axisTick: 11,
-      metricLabel: 11,
-      metricValue: 22,
-    },
+    sizes: FONT_SIZES,
     // One ladder everywhere: 400 regular / 500 medium (eyebrow, labels, UI,
     // values) / 600 semibold (title, series names, annotation lede) / 700 bold.
     weights: {
@@ -74,8 +76,8 @@ export const DEFAULT_THEME: ThemeBase = {
   spacing: {
     padding: 20,
     chromeGap: 6,
-    chromeToChart: 8,
-    chartToFooter: 8,
+    chromeToChart: 16,
+    chartToFooter: 12,
     axisMargin: 6,
     xAxisHeight: X_AXIS_BAND_HEIGHT,
     // Gap (px) between the x-axis line and the TOP of the tick labels. The
@@ -95,31 +97,31 @@ export const DEFAULT_THEME: ThemeBase = {
       lineHeight: 1.4,
     },
     title: {
-      fontSize: 26,
+      fontSize: FONT_SIZES.title,
       fontWeight: 600,
       color: '#09090b',
       lineHeight: 1.15,
     },
     subtitle: {
-      fontSize: 14,
+      fontSize: FONT_SIZES.subtitle,
       fontWeight: 400,
       color: '#71717a',
       lineHeight: 1.45,
     },
     source: {
-      fontSize: 11,
+      fontSize: FONT_SIZES.small,
       fontWeight: 400,
       color: '#71717a',
       lineHeight: 1.4,
     },
     byline: {
-      fontSize: 11,
+      fontSize: FONT_SIZES.small,
       fontWeight: 400,
       color: '#71717a',
       lineHeight: 1.4,
     },
     footer: {
-      fontSize: 11,
+      fontSize: FONT_SIZES.small,
       fontWeight: 400,
       color: '#71717a',
       lineHeight: 1.4,

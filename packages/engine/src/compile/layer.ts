@@ -21,6 +21,7 @@ import {
   getBreakpoint,
   getHeightClass,
   getLayoutStrategy,
+  mergeThemeConfig,
   resolveNumberFormatter,
   resolveTheme,
   TICK_LABEL_OFFSET,
@@ -144,7 +145,7 @@ export function compileLayer(
   for (const { leaf, leafIndex } of indexedLeaves) {
     const themedLeaf = {
       ...withSharedDomains(leaf as ChartSpec, sharedDomains),
-      theme: (leaf as ChartSpec).theme ?? spec.theme,
+      theme: mergeThemeConfig(spec.theme, (leaf as ChartSpec).theme),
       darkMode: (leaf as ChartSpec).darkMode ?? spec.darkMode,
     };
     const leafLayout = compileChart(themedLeaf as unknown, leafOptions);
@@ -263,7 +264,9 @@ function compileLayerIndependent(
     );
   }
 
-  const theme = resolveTheme(layerSpec.theme ?? leaf1.theme);
+  const theme = resolveTheme(
+    mergeThemeConfig(mergeThemeConfig(layerSpec.theme, leaf1.theme), options.theme),
+  );
   const axisFontSize = theme.fonts?.sizes?.axisTick ?? 11;
   const measureFn = createMeasureFn(options.measureText);
   const rightAxisWidth = estimateYAxisLabelWidth(
@@ -1053,7 +1056,7 @@ export function buildPrimarySpec(leaves: ChartSpec[], layerSpec: LayerSpec): Cha
     labels: layerSpec.labels ?? leaves[0].labels,
     legend: layerSpec.legend ?? leaves[0].legend,
     responsive: layerSpec.responsive ?? leaves[0].responsive,
-    theme: layerSpec.theme ?? leaves[0].theme,
+    theme: mergeThemeConfig(layerSpec.theme, leaves[0].theme),
     darkMode: layerSpec.darkMode ?? leaves[0].darkMode,
     watermark: layerSpec.watermark ?? leaves[0].watermark,
     hiddenSeries: layerSpec.hiddenSeries ?? leaves[0].hiddenSeries,

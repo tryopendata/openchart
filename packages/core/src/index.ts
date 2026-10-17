@@ -61,7 +61,6 @@ export {
   broadsheet,
   clarity,
   DEFAULT_THEME,
-  editorial,
   essay,
   legacyEditorial,
   mergeThemeConfig,

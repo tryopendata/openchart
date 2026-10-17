@@ -9,6 +9,7 @@
  */
 
 import type { DarkMode, GraphSpec, ThemeConfig } from '@opendata-ai/openchart-core';
+import { mergeThemeConfig } from '@opendata-ai/openchart-core';
 import {
   createGraph,
   type GraphCamera,
@@ -115,7 +116,7 @@ export const Graph = defineComponent({
     const contextDarkMode = inject(VizDarkModeKey, undefined);
 
     function resolveTheme(): ThemeConfig | undefined {
-      return props.theme ?? contextTheme?.value;
+      return mergeThemeConfig(contextTheme?.value, props.theme);
     }
 
     function resolveDarkMode(): DarkMode | undefined {

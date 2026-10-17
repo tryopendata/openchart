@@ -667,9 +667,9 @@ describe('compileChart', () => {
     expect(layout.watermark).toBe(true);
   });
 
-  it('cramped height ignores the compile-option watermark fallback', () => {
+  it('cramped height respects the compile-option watermark override', () => {
     const layout = compileChart(lineSpec, { width: 600, height: 180, watermark: true });
-    expect(layout.watermark).toBe(false);
+    expect(layout.watermark).toBe(true);
   });
 
   it('explicit watermark: true at minimal height reserves the brand band', () => {

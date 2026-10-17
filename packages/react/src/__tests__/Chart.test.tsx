@@ -2,6 +2,7 @@ import type { ChartSpec } from '@opendata-ai/openchart-core';
 import { cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Chart } from '../Chart';
+import { VizThemeProvider } from '../ThemeContext';
 
 // ---------------------------------------------------------------------------
 // Test data
@@ -193,4 +194,20 @@ it.each([
   expect(container.querySelector('svg')!.getAttribute('viewBox')).toBe(initial);
   unmount();
   expect(container.querySelector('svg')).toBeNull();
+});
+
+it('merges spec, provider, and prop themes at authored leaves', async () => {
+  const { container } = render(
+    <VizThemeProvider theme={{ fonts: { sizes: { title: 33 } } }}>
+      <Chart
+        spec={{ ...lineSpec, theme: { fonts: { family: 'Georgia' } } }}
+        theme={{ fonts: { sizes: { small: 15 } } }}
+      />
+    </VizThemeProvider>,
+  );
+  await waitFor(() => expect(container.querySelector('.oc-title')).not.toBeNull());
+  const title = container.querySelector<SVGElement>('.oc-title')!;
+  expect(title.style.fontSize).toBe('33px');
+  expect(title.style.fontFamily).toBe('Georgia');
+  expect(container.querySelector<SVGElement>('.oc-source')!.style.fontSize).toBe('15px');
 });

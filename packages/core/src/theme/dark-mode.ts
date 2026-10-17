@@ -164,6 +164,20 @@ export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
     ...CATEGORICAL_FILL_PALETTE_DARK,
   ]);
 
+  const neutral = deriveNeutralRamp(darkText, darkBg, true);
+  const authoredColors =
+    theme._authored?.colors && !Array.isArray(theme._authored.colors) ? theme._authored.colors : {};
+  const annotationColor = (
+    key:
+      | 'annotationLabel'
+      | 'annotationMuted'
+      | 'annotationLeader'
+      | 'annotationRule'
+      | 'annotationRangeFill',
+    fallback: string,
+  ): string =>
+    pairs?.[`colors.${key}`]?.dark ??
+    (authoredColors[key] !== undefined ? theme.colors[key] : fallback);
   return {
     ...theme,
     isDark: true,
@@ -179,27 +193,21 @@ export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
       annotationText: pairs?.['colors.annotationText']
         ? pairs['colors.annotationText'].dark
         : overridden(theme.colors.annotationText, light.annotationText, darkMuted),
-      annotationLabel:
-        pairs?.['colors.annotationLabel']?.dark ??
-        overridden(theme.colors.annotationLabel, light.annotationLabel, '#d1d5db'),
-      annotationMuted:
-        pairs?.['colors.annotationMuted']?.dark ??
-        overridden(theme.colors.annotationMuted, light.annotationMuted, '#9ca3af'),
-      annotationLeader:
-        pairs?.['colors.annotationLeader']?.dark ??
-        overridden(theme.colors.annotationLeader, light.annotationLeader, '#9aa0a6'),
-      annotationRule:
-        pairs?.['colors.annotationRule']?.dark ??
-        overridden(theme.colors.annotationRule, light.annotationRule, '#666666'),
-      annotationRangeFill:
-        pairs?.['colors.annotationRangeFill']?.dark ??
-        overridden(theme.colors.annotationRangeFill, light.annotationRangeFill, '#000000'),
+      annotationLabel: annotationColor('annotationLabel', '#d1d5db'),
+      annotationMuted: annotationColor('annotationMuted', '#9ca3af'),
+      annotationLeader: annotationColor('annotationLeader', '#9aa0a6'),
+      annotationRule: annotationColor('annotationRule', '#9ca3af'),
+      annotationRangeFill: annotationColor('annotationRangeFill', '#f0c040'),
       annotationMarkerFill:
         pairs?.['colors.annotationMarkerFill']?.dark ??
-        overridden(theme.colors.annotationMarkerFill, light.annotationMarkerFill, '#0a0a0a'),
+        (authoredColors.annotationMarkerFill !== undefined
+          ? theme.colors.annotationMarkerFill
+          : neutral.surface),
       annotationPlate:
         pairs?.['colors.annotationPlate']?.dark ??
-        overridden(theme.colors.annotationPlate, light.annotationPlate, '#0a0a0a'),
+        (authoredColors.annotationPlate !== undefined
+          ? theme.colors.annotationPlate
+          : neutral.surface),
       categorical,
       categoricalFill,
       hairline: darkHairline,
@@ -209,7 +217,7 @@ export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
       negative: pairs?.['colors.negative']
         ? pairs['colors.negative'].dark
         : overridden(theme.colors.negative, light.negative, '#f87171'),
-      neutral: deriveNeutralRamp(darkText, darkBg, true),
+      neutral,
     },
     chrome: {
       // Eyebrow keeps its accent tint (cyan in both modes) unless the user

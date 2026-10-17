@@ -7,6 +7,7 @@
  */
 
 import type { DarkMode, SortState, TableSpec, ThemeConfig } from '@opendata-ai/openchart-core';
+import { mergeThemeConfig } from '@opendata-ai/openchart-core';
 import {
   createTable,
   type TableInstance,
@@ -87,7 +88,7 @@ export const DataTable = defineComponent({
     const contextDarkMode = inject(VizDarkModeKey, undefined);
 
     function resolveTheme(): ThemeConfig | undefined {
-      return props.theme ?? contextTheme?.value;
+      return mergeThemeConfig(contextTheme?.value, props.theme);
     }
 
     function resolveDarkMode(): DarkMode | undefined {

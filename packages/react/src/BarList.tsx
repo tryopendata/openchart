@@ -7,6 +7,7 @@
  */
 
 import type { BarListSpec, DarkMode, ThemeConfig } from '@opendata-ai/openchart-core';
+import { mergeThemeConfig } from '@opendata-ai/openchart-core';
 import {
   type BarListInstance,
   type BarListMountOptions,
@@ -18,6 +19,7 @@ import {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useMemo,
   useRef,
 } from 'react';
 import { useVizDarkMode, useVizTheme } from './ThemeContext';
@@ -48,7 +50,7 @@ export const BarList = forwardRef<BarListHandle, BarListProps>(function BarList(
 ) {
   const contextTheme = useVizTheme();
   const contextDarkMode = useVizDarkMode();
-  const theme = themeProp ?? contextTheme;
+  const theme = useMemo(() => mergeThemeConfig(contextTheme, themeProp), [contextTheme, themeProp]);
   const resolvedDarkMode = darkMode ?? contextDarkMode;
   const containerRef = useRef<HTMLDivElement>(null);
   const instanceRef = useRef<BarListInstance | null>(null);

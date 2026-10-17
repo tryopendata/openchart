@@ -80,7 +80,7 @@ import { applyColorScaleRange, defaultSeriesColor } from './compile/color-scale-
 import { filterClippedDomains } from './compile/data-clip';
 import { applyFillPatterns } from './compile/fill-patterns';
 import { compileLayer as compileLayerImpl } from './compile/layer';
-import { emitSpecWarnings, emitThemeWarnings, expandSpecSugar } from './compile/spec-sugar';
+import { emitSpecWarnings, expandSpecSugar } from './compile/spec-sugar';
 import { computeWatermarkObstacle } from './compile/watermark-obstacle';
 import { resolveYouDrawIt } from './compile/you-draw-it';
 import { collectContrastWarnings } from './compiler/a11y-warnings';
@@ -316,9 +316,9 @@ function compileChartInternal(spec: unknown, optionsInput: CompileOptions): Char
 
   let chartSpec = normalized as NormalizedChartSpec;
 
-  // Resolve watermark: explicit spec value wins, then options fallback, then default true.
+  // Host mount/compile options override authored spec values.
   const rawWatermark = (expandedSpec as Record<string, unknown>).watermark;
-  let watermark = rawWatermark !== undefined ? chartSpec.watermark : (options.watermark ?? true);
+  let watermark = options.watermark ?? (rawWatermark !== undefined ? chartSpec.watermark : true);
 
   // Run data transforms (filter, bin, calculate, timeUnit) before any other data processing.
   // Transforms are defined on the expanded spec (which includes any auto-generated
@@ -495,7 +495,7 @@ function compileChartInternal(spec: unknown, optionsInput: CompileOptions): Char
         encoding: mergedEncoding as unknown as NormalizedChartSpec['encoding'],
       };
     }
-    if (typeof bp.watermark === 'boolean') {
+    if (options.watermark === undefined && typeof bp.watermark === 'boolean') {
       // Update the resolved watermark value used downstream. ChartSpec carries
       // this in its normalized shape; the local `watermark` variable controls
       // chrome computation and rendering.
@@ -573,7 +573,11 @@ function compileChartInternal(spec: unknown, optionsInput: CompileOptions): Char
   const crosshair = chartSpec.userExplicit.crosshair ? rawCrosshair === true : crosshairDefault;
 
   // Watermark default-off in sparkline mode unless user-explicit.
-  if (chartSpec.display === 'sparkline' && !chartSpec.userExplicit.watermark) {
+  if (
+    chartSpec.display === 'sparkline' &&
+    options.watermark === undefined &&
+    !chartSpec.userExplicit.watermark
+  ) {
     watermark = false;
     chartSpec = { ...chartSpec, watermark: false };
   }
@@ -584,6 +588,7 @@ function compileChartInternal(spec: unknown, optionsInput: CompileOptions): Char
   // watermark at any level wins.
   if (
     (heightClass === 'minimal' || heightClass === 'cramped') &&
+    options.watermark === undefined &&
     !chartSpec.userExplicit.watermark
   ) {
     watermark = false;
@@ -591,7 +596,6 @@ function compileChartInternal(spec: unknown, optionsInput: CompileOptions): Char
   }
 
   // Resolve theme: merge spec-level theme with options-level overrides
-  emitThemeWarnings(options.theme, options.onWarn);
   const mergedThemeConfig = mergeThemeConfig(chartSpec.theme, options.theme);
   let theme: ResolvedTheme = resolveTheme(mergedThemeConfig);
   if (options.darkMode) {
@@ -1772,7 +1776,6 @@ export function compileTable(spec: unknown, options: CompileTableOptions): Table
   const tableSpec = normalized as NormalizedTableSpec;
 
   // Resolve theme: merge spec-level theme with options-level overrides
-  emitThemeWarnings(options.theme, options.onWarn);
   const mergedThemeConfig = mergeThemeConfig(tableSpec.theme, options.theme);
   let theme: ResolvedTheme = resolveTheme(mergedThemeConfig);
   if (options.darkMode) {

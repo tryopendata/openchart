@@ -243,15 +243,14 @@ export interface ThemeBase {
   seriesStrategy: SeriesStrategy;
 }
 
-/** @deprecated Use ThemeConfig for input or ResolvedTheme for resolved output. */
-export type Theme = ThemeBase;
-
 /** Fully resolved runtime theme, including color adaptation and token metadata. */
 export interface ResolvedTheme extends ThemeBase {
   /** Colors plus the neutral ramp derived from `text` and `background`. */
   colors: ResolvedThemeColors;
   /** Whether dark mode adaptations have been applied to this theme. */
   isDark: boolean;
+  /** Authored theme leaves, retained for CSS overrides and mode adaptation. @internal */
+  _authored?: import('./spec').ThemeConfig;
   /**
    * Original light/dark token pairs from the user's ThemeConfig. Used
    * by adaptTheme() to skip algorithmic adaptation for tokens with

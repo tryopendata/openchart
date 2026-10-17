@@ -38,7 +38,6 @@ import type {
   BinTransform,
   DataRow,
   EncodingChannel,
-  ThemeConfig,
   TimeUnit,
   TimeUnitTransform,
   Transform,
@@ -1066,15 +1065,5 @@ export function emitSpecWarnings(warnings: string[], sink: WarnSink = defaultWar
     if (seen.has(warning)) continue;
     seen.add(warning);
     sink(warning);
-  }
-}
-
-/** Warn for compile/mount/provider theme inputs, beyond spec.theme. */
-export function emitThemeWarnings(theme: ThemeConfig | undefined, sink?: WarnSink): void {
-  if (theme?.chrome && Object.values(theme.chrome).some((value) => typeof value === 'string')) {
-    emitSpecWarnings(
-      ['[openchart] theme.chrome string colors are deprecated; use { color } objects.'],
-      sink,
-    );
   }
 }

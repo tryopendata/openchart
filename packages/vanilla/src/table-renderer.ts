@@ -7,12 +7,12 @@
  */
 
 import type { ResolvedColumn, TableLayout, TableRow } from '@opendata-ai/openchart-core';
-import { BRAND_FONT_SIZE, cssTokenDefault } from '@opendata-ai/openchart-core';
+import { BRAND_FONT_SIZE } from '@opendata-ai/openchart-core';
 import { clampStaggerDelay } from '@opendata-ai/openchart-engine';
 import { stampAnimationVars } from './animation-vars';
 import { applySrOnlyStyles } from './dom-helpers';
 import { renderCell } from './renderers/table-cells';
-import { resolvedSurface } from './theme-tokens';
+import { stampThemeProperties } from './theme-tokens';
 
 /** Options for renderTable(). */
 export interface TableRenderOptions {
@@ -302,38 +302,7 @@ export function renderTable(
   // Without this, dark-background themes show invisible text since the
   // CSS defaults (--oc-text etc.) are light-mode values.
   const { theme, chrome } = layout;
-  if (theme) {
-    const s = wrapper.style;
-    const n = theme.colors.neutral;
-    // Sticky header/column/footer cells paint this to occlude the rows sliding
-    // under them, so it has to be an opaque surface. theme.colors.background is
-    // 'transparent' on the default theme.
-    s.setProperty('--oc-bg', resolvedSurface(theme));
-    s.setProperty('--oc-text', theme.colors.text);
-    // Secondary grays come from the theme's own text/background mix, the same
-    // ramp charts stamp. Deriving them from colors.axis (the tick-label ink)
-    // used to pin every table gray to one value and shut token changes out.
-    s.setProperty('--oc-text-secondary', n.secondary);
-    s.setProperty('--oc-text-muted', n[600]);
-    s.setProperty('--oc-text-faint', n.faint);
-    s.setProperty('--oc-gray-100', n[100]);
-    s.setProperty('--oc-gray-200', n[200]);
-    s.setProperty('--oc-gray-300', n[300]);
-    s.setProperty('--oc-gray-400', n[400]);
-    s.setProperty('--oc-gridline', theme.colors.gridline);
-    // The table hairline is a border, not a gridline. Only a theme that sets
-    // gridline explicitly gets to drive it; otherwise the derived ramp wins.
-    // Compare whitespace-stripped: the theme literal is 'rgba(0,0,0,0.08)' but
-    // the CSS token is written 'rgba(0, 0, 0, 0.08)'.
-    const stripWs = (c: string) => c.replace(/\s+/g, '');
-    const defaultGridline = cssTokenDefault('--oc-gridline', theme.isDark ? 'dark' : 'light');
-    const gridlineOverridden = stripWs(theme.colors.gridline) !== stripWs(defaultGridline);
-    s.setProperty('--oc-border', gridlineOverridden ? theme.colors.gridline : n.border);
-    s.setProperty('--oc-positive', theme.colors.positive);
-    s.setProperty('--oc-negative', theme.colors.negative);
-    s.setProperty('--oc-font-family', theme.fonts.family);
-    s.fontFamily = theme.fonts.family;
-  }
+  if (theme) stampThemeProperties(wrapper, theme, 'table');
 
   // Set computed chrome CSS custom properties so chrome elements pick up
   // theme-resolved values via CSS fallbacks (e.g. --oc-title-computed-size).

@@ -20,6 +20,7 @@ import type {
   TextAnnotation,
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
+import { mergeThemeConfig } from '@opendata-ai/openchart-core';
 import { type ChartInstance, createChart, type MountOptions } from '@opendata-ai/openchart-vanilla';
 import { onMount, untrack } from 'svelte';
 import { getVizDarkMode, getVizTheme } from './context.js';
@@ -125,7 +126,7 @@ let prevRevision: string | number | undefined;
 // Effect 1: Mount/recreate chart on theme/darkMode changes.
 // Reads spec via untrack() so spec changes don't trigger full recreate.
 $effect(() => {
-  const resolvedTheme = theme ?? ctxTheme?.();
+  const resolvedTheme = mergeThemeConfig(ctxTheme?.(), theme);
   const resolvedDarkMode = darkMode ?? ctxDarkMode?.();
   const resolvedRenderer = renderer;
   const resolvedEditable = editable;

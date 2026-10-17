@@ -18,7 +18,7 @@ import { FOCUS_DIM_OPACITY } from './map-camera';
 import { buildPatternDefs, resolvePatternFill } from './pattern-utils';
 import { renderChromeElement } from './renderers/chrome';
 import { renderLegend } from './renderers/legend';
-import { resolvedSurface } from './theme-tokens';
+import { resolvedSurface, stampThemeProperties } from './theme-tokens';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const XLINK_NS = 'http://www.w3.org/1999/xlink';
@@ -370,6 +370,7 @@ export function renderMapSVG(layout: GeoMapLayout, opts?: { animate?: boolean })
 
   const classes = animate ? 'oc-map oc-animate' : 'oc-map';
   svg.setAttribute('class', classes);
+  stampThemeProperties(svg, layout.theme);
 
   // Export must carry the same authored surface as the embedded map.
   const background = createSVGElement('rect');

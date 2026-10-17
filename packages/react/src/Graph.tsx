@@ -9,6 +9,7 @@
  */
 
 import type { DarkMode, GraphSpec, ThemeConfig } from '@opendata-ai/openchart-core';
+import { mergeThemeConfig } from '@opendata-ai/openchart-core';
 import {
   createGraph,
   type GraphCamera,
@@ -22,6 +23,7 @@ import {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useMemo,
   useRef,
 } from 'react';
 import type { GraphHandle } from './hooks/useGraph';
@@ -130,7 +132,7 @@ export const Graph = forwardRef<GraphHandle, GraphProps>(function Graph(
 ) {
   const contextTheme = useVizTheme();
   const contextDarkMode = useVizDarkMode();
-  const theme = themeProp ?? contextTheme;
+  const theme = useMemo(() => mergeThemeConfig(contextTheme, themeProp), [contextTheme, themeProp]);
   const resolvedDarkMode = darkMode ?? contextDarkMode;
   const containerRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<GraphInstance | null>(null);

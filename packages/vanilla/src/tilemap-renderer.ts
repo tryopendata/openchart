@@ -15,6 +15,7 @@ import { stampAnimationVars } from './animation-vars';
 import { renderChromeElement } from './renderers/chrome';
 import { renderLegend } from './renderers/legend';
 import { nextSvgId } from './svg-ids';
+import { stampThemeProperties } from './theme-tokens';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const XLINK_NS = 'http://www.w3.org/1999/xlink';
@@ -394,6 +395,7 @@ export function renderTileMapSVG(
 
   const classes = animate ? 'oc-tilemap oc-animate' : 'oc-tilemap';
   svg.setAttribute('class', classes);
+  stampThemeProperties(svg, layout.theme);
 
   if (animate && animation?.enter) {
     // Target ~1s total: stagger window ~800ms + per-tile pop ~200ms

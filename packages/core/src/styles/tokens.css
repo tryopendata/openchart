@@ -4,11 +4,8 @@
   /* ---------------------------------------------------------------------------
    * Custom properties (light mode defaults)
    *
-   * These are FALLBACK defaults. At runtime, the JS theme engine stamps the
-   * resolved theme as inline --oc-* custom properties on each .oc-root
-   * container (see packages/vanilla/src/theme-tokens.ts). These CSS values
-   * serve as fallbacks for contexts where JS hasn't mounted yet (SSR, static
-   * HTML examples).
+   * Defaults remain in CSS so host styles can override them. The JS theme
+   * engine stamps only authored theme overrides (theme-tokens.ts).
    * --------------------------------------------------------------------------- */
 
   .oc-root,
@@ -95,14 +92,14 @@
     --oc-title-tracking: -0.022em;
     --oc-subtitle-size: 14px;
     --oc-subtitle-weight: 400;
-    --oc-source-size: 11px;
+    --oc-source-size: 12px;
     --oc-source-weight: 400;
     --oc-body-size: 13px;
     --oc-annotation-label: #333333;
     --oc-annotation-muted: #6b7280;
     --oc-annotation-leader: #8f8f8f;
-    --oc-annotation-rule: #666666;
-    --oc-annotation-range-fill: #000000;
+    --oc-annotation-rule: #888888;
+    --oc-annotation-range-fill: #f0c040;
     --oc-annotation-marker-fill: #ffffff;
     --oc-annotation-plate: #ffffff;
     --oc-eyebrow-size: 11px;

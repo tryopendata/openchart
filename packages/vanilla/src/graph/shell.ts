@@ -15,7 +15,7 @@ import type { GraphCompilation } from '@opendata-ai/openchart-engine';
 import type { GraphMountOptions } from '../graph-mount';
 import { observeResize } from '../resize-observer';
 import { resolveDarkMode } from '../resolve-dark-mode';
-import { resolvedSurface } from '../theme-tokens';
+import { stampThemeProperties } from '../theme-tokens';
 import { createTooltipManager } from '../tooltip';
 import type { GraphShell } from './renderer-registry';
 
@@ -63,19 +63,7 @@ export function createGraphShell(
   // Without this, consumer-supplied theme.colors.text only affects canvas-drawn
   // labels but not the HTML title/subtitle which read from --oc-text.
   const resolvedTheme = compilation.theme;
-  if (resolvedTheme) {
-    const s = wrapper.style;
-    // The graph paints on an opaque canvas, so a transparent theme background
-    // resolves to the mode's --oc-bg token. This is the single source for the
-    // graph surface: the node knockout rings are cut in the same color.
-    s.setProperty('--oc-bg', resolvedSurface(resolvedTheme));
-    s.setProperty('--oc-text', resolvedTheme.colors.text);
-    s.setProperty('--oc-text-secondary', resolvedTheme.colors.neutral.secondary);
-    s.setProperty('--oc-text-muted', resolvedTheme.colors.axis);
-    s.setProperty('--oc-border', resolvedTheme.colors.neutral.border);
-    s.setProperty('--oc-font-family', resolvedTheme.fonts.family);
-    s.fontFamily = resolvedTheme.fonts.family;
-  }
+  if (resolvedTheme) stampThemeProperties(wrapper, resolvedTheme);
 
   const chromeEl = document.createElement('div');
   chromeEl.className = 'oc-graph-chrome';

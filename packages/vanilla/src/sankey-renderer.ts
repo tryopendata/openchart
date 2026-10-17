@@ -25,6 +25,7 @@ import { clampStaggerDelay } from '@opendata-ai/openchart-engine';
 import { stampAnimationVars } from './animation-vars';
 import { renderChromeElement } from './renderers/chrome';
 import { applyTextStyle } from './renderers/svg-dom';
+import { stampThemeProperties } from './theme-tokens';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const XLINK_NS = 'http://www.w3.org/1999/xlink';
@@ -526,6 +527,7 @@ export function renderSankeySVG(
   const animate = !!enterPhase;
   const classes = animate ? 'oc-chart oc-sankey oc-animate' : 'oc-chart oc-sankey';
   svg.setAttribute('class', classes);
+  stampThemeProperties(svg, layout.theme);
 
   // Set animation CSS custom properties when the enter phase is enabled
   if (enterPhase) {

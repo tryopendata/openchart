@@ -27,8 +27,8 @@ describe('DEFAULT_THEME', () => {
     expect(DEFAULT_THEME.chrome.subtitle.fontWeight).toBe(400);
   });
 
-  it('source is 11px normal weight', () => {
-    expect(DEFAULT_THEME.chrome.source.fontSize).toBe(11);
+  it('source is 12px normal weight', () => {
+    expect(DEFAULT_THEME.chrome.source.fontSize).toBe(12);
     expect(DEFAULT_THEME.chrome.source.fontWeight).toBe(400);
   });
 

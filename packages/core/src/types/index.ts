@@ -309,7 +309,6 @@ export type {
   ResolvedTheme,
   ResolvedThemeColors,
   SeriesStrategy,
-  Theme,
   ThemeChromeDefaults,
   ThemeColors,
   ThemeFontSizes,

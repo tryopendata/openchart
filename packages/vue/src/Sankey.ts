@@ -7,6 +7,7 @@
  */
 
 import type { DarkMode, SankeySpec, ThemeConfig } from '@opendata-ai/openchart-core';
+import { mergeThemeConfig } from '@opendata-ai/openchart-core';
 import {
   createSankey,
   type SankeyInstance,
@@ -73,7 +74,7 @@ export const Sankey = defineComponent({
     const contextDarkMode = inject(VizDarkModeKey, undefined);
 
     function resolveTheme(): ThemeConfig | undefined {
-      return props.theme ?? contextTheme?.value;
+      return mergeThemeConfig(contextTheme?.value, props.theme);
     }
 
     function resolveDarkMode(): DarkMode | undefined {

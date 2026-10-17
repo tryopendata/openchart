@@ -7,6 +7,7 @@
 -->
 <script lang="ts">
 import type { DarkMode, GeoMapSpec, ThemeConfig } from '@opendata-ai/openchart-core';
+import { mergeThemeConfig } from '@opendata-ai/openchart-core';
 import {
   type Camera,
   createGeoMap,
@@ -54,7 +55,7 @@ let prevSpec = '';
 
 // Effect 1: Mount/recreate map on theme/darkMode changes.
 $effect(() => {
-  const resolvedTheme = theme ?? ctxTheme?.();
+  const resolvedTheme = mergeThemeConfig(ctxTheme?.(), theme);
   const resolvedDarkMode = darkMode ?? ctxDarkMode?.();
   const currentSpec = untrack(() => spec);
 

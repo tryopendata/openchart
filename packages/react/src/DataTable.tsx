@@ -7,12 +7,13 @@
  */
 
 import type { DarkMode, SortState, TableSpec, ThemeConfig } from '@opendata-ai/openchart-core';
+import { mergeThemeConfig } from '@opendata-ai/openchart-core';
 import {
   createTable,
   type TableInstance,
   type TableMountOptions,
 } from '@opendata-ai/openchart-vanilla';
-import { type CSSProperties, useCallback, useEffect, useRef } from 'react';
+import { type CSSProperties, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useVizDarkMode, useVizTheme } from './ThemeContext';
 
 export interface DataTableProps {
@@ -64,7 +65,7 @@ export function DataTable({
 }: DataTableProps) {
   const contextTheme = useVizTheme();
   const contextDarkMode = useVizDarkMode();
-  const theme = themeProp ?? contextTheme;
+  const theme = useMemo(() => mergeThemeConfig(contextTheme, themeProp), [contextTheme, themeProp]);
   const resolvedDarkMode = darkMode ?? contextDarkMode;
   const containerRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<TableInstance | null>(null);

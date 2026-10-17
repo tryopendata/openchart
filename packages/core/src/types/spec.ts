@@ -1314,8 +1314,7 @@ export type Annotation = TextAnnotation | RangeAnnotation | RefLineAnnotation;
 export type DarkMode = 'auto' | 'force' | 'off';
 
 /**
- * Per-element chrome theme override. Pass a plain string (color only,
- * backward-compatible) or an object with full typography control.
+ * Per-element chrome theme typography controls.
  */
 export interface ChromeThemeOverride {
   /** Text color. Accepts a TokenValue for light/dark pairs. */
@@ -1399,9 +1398,9 @@ export interface ThemeConfig {
       subtitle?: number;
       /** Body text (tooltips, legend labels). Default: 13. */
       body?: number;
-      /** Small text (source line, footer). Default: 11. */
+      /** Small text (source line, footer). Default: 12. */
       small?: number;
-      /** Axis tick labels. Default: 11. */
+      /** Axis tick labels. Default: 12. */
       axisTick?: number;
       /** KPI metric uppercase label. Default: 10. */
       metricLabel?: number;
@@ -1440,23 +1439,21 @@ export interface ThemeConfig {
   /** Border radius for chart container and tooltips. */
   borderRadius?: number;
   /**
-   * Per-element chrome style overrides. Pass a plain string for color-only
-   * (backward-compatible), or a ChromeThemeOverride object for full
-   * typography control (color, fontSize, fontWeight, lineHeight).
+   * Per-element chrome typography control (color, fontSize, fontWeight, lineHeight).
    */
   chrome?: {
     /** Eyebrow (kicker) style override. */
-    eyebrow?: ChromeThemeOverride | /** @deprecated Use { color }. */ string;
+    eyebrow?: ChromeThemeOverride;
     /** Title style override. */
-    title?: ChromeThemeOverride | /** @deprecated Use { color }. */ string;
+    title?: ChromeThemeOverride;
     /** Subtitle style override. */
-    subtitle?: ChromeThemeOverride | /** @deprecated Use { color }. */ string;
+    subtitle?: ChromeThemeOverride;
     /** Source/attribution style override. */
-    source?: ChromeThemeOverride | /** @deprecated Use { color }. */ string;
+    source?: ChromeThemeOverride;
     /** Byline style override. */
-    byline?: ChromeThemeOverride | /** @deprecated Use { color }. */ string;
+    byline?: ChromeThemeOverride;
     /** Footer style override. */
-    footer?: ChromeThemeOverride | /** @deprecated Use { color }. */ string;
+    footer?: ChromeThemeOverride;
   };
   /**
    * Editorial rule above the chrome block: a short colored bar (the
@@ -1464,12 +1461,12 @@ export interface ThemeConfig {
    */
   rule?: {
     /** Rule color. Accepts a TokenValue for light/dark pairs. */
-    color: TokenValue;
+    color?: TokenValue;
     /** Rule length in pixels. */
-    width: number;
+    width?: number;
     /** Rule height in pixels. */
-    thickness: number;
-  };
+    thickness?: number;
+  } | null;
   /**
    * Series color assignment strategy.
    * Default: 'palette' (full categorical palette always, zero visual drift).

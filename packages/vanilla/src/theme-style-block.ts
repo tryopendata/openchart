@@ -16,7 +16,7 @@
  */
 
 import type { ResolvedTheme } from '@opendata-ai/openchart-core';
-import { adaptForLightLineStroke, cssTokenDefault } from '@opendata-ai/openchart-core';
+import { adaptForLightLineStroke, CSS_TOKENS, cssTokenDefault } from '@opendata-ai/openchart-core';
 import { SVG_NS } from './renderers/svg-dom';
 
 /**
@@ -109,4 +109,14 @@ export function injectThemeStyleBlock(svg: SVGElement, theme: ResolvedTheme | un
   style.setAttribute('data-oc-theme', '');
   style.textContent = buildThemeStyleBlock(theme);
   defs.insertBefore(style, defs.firstChild);
+}
+
+/** Preserve the live host CSS tokens when an export leaves its document. */
+export function copyComputedThemeProperties(source: SVGElement, clone: SVGElement): void {
+  if (!source.isConnected) return;
+  const computed = getComputedStyle(source);
+  for (const { name } of CSS_TOKENS) {
+    const value = computed.getPropertyValue(name).trim();
+    if (value) clone.style.setProperty(name, value);
+  }
 }

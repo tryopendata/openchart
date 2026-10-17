@@ -1,7 +1,9 @@
 import type { ChartSpec } from '@opendata-ai/openchart-core';
 import { flushPromises, mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
+import { ref } from 'vue';
 import { Chart } from '../Chart';
+import { VizThemeKey } from '../context';
 
 // ---------------------------------------------------------------------------
 // Test data
@@ -207,5 +209,21 @@ it('reacts to transaction listener presence without enabling all charts for edit
   await wrapper.setProps({ 'onEdit-transaction': undefined });
   await flushPromises();
   expect(cursor()).not.toBe('grab');
+  wrapper.unmount();
+});
+
+it('merges spec, provider, and prop themes at authored leaves', async () => {
+  const wrapper = mount(Chart, {
+    props: {
+      spec: { ...lineSpec, theme: { fonts: { family: 'Georgia' } } },
+      theme: { fonts: { sizes: { small: 15 } } },
+    },
+    global: { provide: { [VizThemeKey as symbol]: ref({ fonts: { sizes: { title: 33 } } }) } },
+  });
+  await flushPromises();
+  const title = wrapper.element.querySelector<SVGElement>('.oc-title')!;
+  expect(title.style.fontSize).toBe('33px');
+  expect(title.style.fontFamily).toBe('Georgia');
+  expect(wrapper.element.querySelector<SVGElement>('.oc-source')!.style.fontSize).toBe('15px');
   wrapper.unmount();
 });

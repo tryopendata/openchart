@@ -104,3 +104,22 @@ describe('Theme context', () => {
     });
   });
 });
+
+it('merges spec, provider, and prop themes at authored leaves', async () => {
+  const { container } = render(Chart, {
+    props: {
+      spec: {
+        ...minimalSpec,
+        chrome: { title: 'Title', source: 'Source' },
+        theme: { fonts: { family: 'Georgia' } },
+      },
+      theme: { fonts: { sizes: { small: 15 } } },
+    },
+    context: new Map([[THEME_KEY, () => ({ fonts: { sizes: { title: 33 } } })]]),
+  });
+  await waitFor(() => expect(container.querySelector('.oc-title')).not.toBeNull());
+  const title = container.querySelector<SVGElement>('.oc-title')!;
+  expect(title.style.fontSize).toBe('33px');
+  expect(title.style.fontFamily).toBe('Georgia');
+  expect(container.querySelector<SVGElement>('.oc-source')!.style.fontSize).toBe('15px');
+});
