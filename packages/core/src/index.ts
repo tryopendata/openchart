@@ -80,6 +80,7 @@ export {
   BRAND_RESERVE_WIDTH,
   COMPACT_WIDTH,
   computeChrome,
+  computeNoteBandHeight,
   estimateTextWidth,
   FOOTNOTE_LINE_HEIGHT,
   footnoteBandHeight,
@@ -231,6 +232,7 @@ export { deepMergeSpec } from './helpers/deep-merge';
 // CSS token definitions (single source of truth for tokens.css / dark.css)
 // ---------------------------------------------------------------------------
 
+export { annotationSource } from './helpers/annotation-source';
 export type { MotionPhase, MotionSample } from './motion/sample';
 export {
   FLUID_SPRING,

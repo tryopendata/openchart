@@ -8,6 +8,7 @@ import type {
   Rect,
   ResolvedAnnotation,
   ResolvedLabel,
+  ThemeColors,
 } from '@opendata-ai/openchart-core';
 import type { ResolvedScales } from '../layout/scales';
 import { DEFAULT_RANGE_FILL, DEFAULT_RANGE_OPACITY } from './constants';
@@ -21,6 +22,7 @@ export function resolveRangeAnnotation(
   chartArea: Rect,
   isDark: boolean,
   fontFamily?: string,
+  colors?: ThemeColors,
 ): ResolvedAnnotation | null {
   let x = chartArea.x;
   let y = chartArea.y;
@@ -78,7 +80,7 @@ export function resolveRangeAnnotation(
     const style = makeAnnotationLabelStyle(
       annotation.fontSize ?? 11,
       annotation.fontWeight ?? 500,
-      undefined,
+      colors?.annotationLabel,
       isDark,
       fontFamily,
     );
@@ -109,7 +111,7 @@ export function resolveRangeAnnotation(
     id: annotation.id,
     rect,
     label,
-    fill: annotation.fill ?? DEFAULT_RANGE_FILL,
+    fill: annotation.fill ?? colors?.annotationRangeFill ?? DEFAULT_RANGE_FILL,
     opacity: annotation.opacity ?? defaultOpacity,
     stroke: annotation.stroke,
     zIndex: annotation.zIndex,

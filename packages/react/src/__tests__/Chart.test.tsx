@@ -165,3 +165,32 @@ describe('<Chart /> renderer prop', () => {
     });
   });
 });
+
+it.each([
+  undefined,
+  'subtract',
+  'grow',
+] as const)('mounts, updates and destroys note sizing mode %s', async (chromeLayout) => {
+  const spec = {
+    ...lineSpec,
+    animation: false as const,
+    chromeLayout,
+    annotations: [
+      {
+        type: 'text' as const,
+        x: '2020-01-01',
+        y: 10,
+        text: 'A wrapped note',
+        maxWidth: 60,
+        responsive: false as const,
+      },
+    ],
+  };
+  const { container, rerender, unmount } = await renderChart({ spec });
+  const initial = container.querySelector('svg')!.getAttribute('viewBox');
+  rerender(<Chart spec={{ ...spec, chrome: { ...spec.chrome, title: 'Changed' } }} />);
+  await waitFor(() => expect(container.querySelector('.oc-title')?.textContent).toBe('Changed'));
+  expect(container.querySelector('svg')!.getAttribute('viewBox')).toBe(initial);
+  unmount();
+  expect(container.querySelector('svg')).toBeNull();
+});

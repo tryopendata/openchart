@@ -650,7 +650,8 @@ const lineSpec: ChartSpec = {
       text: 'TikTok overtakes Instagram\nin Q2 2024',
       fontSize: 11,
       anchor: 'left',
-      offset: { dx: 0, dy: 45 },
+      // Keep the authored callout clear of ticks after reserving stable note capacity.
+      offset: { dx: 0, dy: 25 },
       connector: true,
       background: true,
     },

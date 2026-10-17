@@ -54,29 +54,11 @@ export function generateNudgeCandidates(
   return candidates;
 }
 
-/**
- * Did the author hand-place this block?
- *
- * A hand-placed block goes exactly where it was put, and the automatic passes keep
- * their hands off it. Without that, the obstacle pass overrides the author: on a line
- * chart the polyline is one long obstacle, so `dy: -10` moved a block by ZERO pixels
- * while `dy: -15` teleported it 56px. Same knob, no monotonicity -- unaimable.
- *
- * `isAutoPlacement` is the ONLY definition of "did the author place this". It already
- * decides which resolve path an annotation takes, and a non-zero `offset` disqualifies
- * the scored search there, so an offset ALWAYS means hand-placed -- with or without an
- * `anchor`. A second, subtly different rule here (an earlier version of this function
- * additionally demanded an `anchor`) does not create a second tier of annotation; it
- * just disagrees with the function that actually routed the thing, and the disagreement
- * shows up as an un-aimable offset on exactly the annotations the extra condition
- * excluded.
- *
- * `offset: { dx: 0 }` is not an instruction, just the default spelled out, so it does
- * not count -- matching `applyOffset`, which is likewise a no-op for it.
+/** A present offset pins placement, even when both components are zero.
+ * Anchor-only annotations and drop-lines without offsets keep the existing nudge behavior.
  */
 function hasExplicitOffset(annotation: TextAnnotation): boolean {
-  const moved = (annotation.offset?.dx ?? 0) !== 0 || (annotation.offset?.dy ?? 0) !== 0;
-  return moved && !isAutoPlacement(annotation);
+  return annotation.offset !== undefined && !isAutoPlacement(annotation);
 }
 
 /**

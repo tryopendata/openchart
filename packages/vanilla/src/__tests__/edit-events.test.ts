@@ -169,9 +169,11 @@ describe('edit events', () => {
       const edit: ElementEdit = onEdit.mock.calls[0][0];
       expect(edit.type).toBe('annotation');
       if (edit.type === 'annotation') {
-        // Original offset (10, -20) + drag delta (50, 30) = (60, 10)
+        // Canonical placement converts the implicit diagonal anchor into explicit right.
         expect(edit.offset.dx).toBe(60);
-        expect(edit.offset.dy).toBe(10);
+        expect(edit.offset.dy).toBe(-18);
+        expect(edit.anchor).toBe('right');
+        expect(edit.responsive).toBe(false);
         // RFC 6901 path to the offset property
         expect(edit.element.path).toBe('/annotations/0/offset');
       }
@@ -341,7 +343,9 @@ describe('edit events', () => {
       if (edit.type === 'annotation') {
         expect(edit.annotation.text).toBe('Peak');
         expect(edit.offset.dx).toBe(60);
-        expect(edit.offset.dy).toBe(10);
+        expect(edit.offset.dy).toBe(-18);
+        expect(edit.anchor).toBe('right');
+        expect(edit.responsive).toBe(false);
       }
 
       chart.destroy();
@@ -1218,7 +1222,13 @@ describe('edit events', () => {
       expect(annotation).not.toBeNull();
       simulateDrag(annotation!, 100, 100, 150, 130);
       expect(onEdit.mock.calls[0][0].element.path).toBe('/layer/0/annotations/0/offset');
-      expect(onEditTransaction.mock.calls[0][0].ops[0].path).toBe('/layer/0/annotations/0/offset');
+      expect(onEditTransaction.mock.calls[0][0].ops.map((op: { path: string }) => op.path)).toEqual(
+        [
+          '/layer/0/annotations/0/anchor',
+          '/layer/0/annotations/0/offset',
+          '/layer/0/annotations/0/responsive',
+        ],
+      );
       chart.destroy();
     });
 

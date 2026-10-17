@@ -8122,6 +8122,17 @@
           "type": "string",
           "description": "Optional muted second-tone text rendered below the primary `text`. Used for supporting context (e.g. methodology, source). Newlines in `text` still produce multi-line primary; subtitle is a separate block.\n\nSupports the same inline `**bold**` spans as `text`. When a subtitle is present and no `fontWeight` is set, the primary `text` resolves to weight 700 — the lede + context stack."
         },
+        "subtitleFontSize": {
+          "type": "number",
+          "description": "Subtitle size in pixels. Default: round(fontSize * 0.85)."
+        },
+        "maxWidth": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Optional display wrap width in pixels. Omitted or null keeps unbounded lines."
+        },
         "dot": {
           "anyOf": [
             {
@@ -8253,6 +8264,10 @@
         "type": {
           "$ref": "#/definitions/ConnectorType",
           "description": "Connector style."
+        },
+        "bend": {
+          "type": "number",
+          "description": "Curve displacement along the chord normal, from -1 to 1. Omitted or zero preserves the automatic curve. Ignored for other connector types."
         },
         "arrow": {
           "type": "boolean",
@@ -8429,6 +8444,16 @@
           "$ref": "#/definitions/AnnotationOffset",
           "description": "Pixel offset for the reference line label."
         },
+        "labelPlacement": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "start",
+            "end",
+            "outside"
+          ],
+          "description": "Opt-in screen-space label placement. Outside reserves a right gutter or top lane; omission preserves legacy labelAnchor behavior."
+        },
         "labelAnchor": {
           "$ref": "#/definitions/AnnotationAnchor",
           "description": "Anchor direction for the reference line label."
@@ -8602,6 +8627,13 @@
     "ResponsiveConfig": {
       "type": "object",
       "properties": {
+        "compactAnnotationLimit": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Maximum eligible inline callouts below 400px container width; null or omitted is unlimited. Pinned annotations are exempt."
+        },
         "preserveEnd": {
           "type": "boolean",
           "description": "Preserve the final temporal boundary before thinning interior ticks."
@@ -8693,6 +8725,34 @@
                 "annotationText": {
                   "$ref": "#/definitions/TokenValue",
                   "description": "Annotation text color. Accepts a TokenValue for light/dark pairs."
+                },
+                "annotationLabel": {
+                  "$ref": "#/definitions/TokenValue",
+                  "description": "Annotation label color. Accepts a TokenValue light/dark pair."
+                },
+                "annotationMuted": {
+                  "$ref": "#/definitions/TokenValue",
+                  "description": "Annotation muted color. Accepts a TokenValue light/dark pair."
+                },
+                "annotationLeader": {
+                  "$ref": "#/definitions/TokenValue",
+                  "description": "Annotation leader color. Accepts a TokenValue light/dark pair."
+                },
+                "annotationRule": {
+                  "$ref": "#/definitions/TokenValue",
+                  "description": "Annotation rule color. Accepts a TokenValue light/dark pair."
+                },
+                "annotationRangeFill": {
+                  "$ref": "#/definitions/TokenValue",
+                  "description": "Annotation rangefill color. Accepts a TokenValue light/dark pair."
+                },
+                "annotationMarkerFill": {
+                  "$ref": "#/definitions/TokenValue",
+                  "description": "Annotation markerfill color. Accepts a TokenValue light/dark pair."
+                },
+                "annotationPlate": {
+                  "$ref": "#/definitions/TokenValue",
+                  "description": "Annotation plate color. Accepts a TokenValue light/dark pair."
                 },
                 "positive": {
                   "$ref": "#/definitions/TokenValue",

@@ -57,19 +57,12 @@ export const INLINE_TICK_OVERHANG_PAD = 6;
  * the plot. `'grow'`: the plot keeps the full height budget and the final SVG
  * grows by the chrome height.
  *
- * Spec-level `chromeLayout` wins over the compile-option default. Faceted specs
- * never grow in v1: faceting already grows the SVG for short panels, and
- * composing both growth mechanisms is out of scope, so faceted specs are pinned
- * to `'subtract'`.
+ * Spec-level `chromeLayout` wins over the compile-option default. The outer
+ * chart or facet assembly owns growth exactly once.
  */
 export function resolveChromeLayout(
   spec: { chromeLayout?: 'subtract' | 'grow'; encoding?: unknown } | undefined,
   options: Pick<CompileOptions, 'chromeLayout'> | undefined,
 ): 'subtract' | 'grow' {
-  const encoding = spec?.encoding as
-    | { facet?: unknown; row?: unknown; column?: unknown }
-    | undefined;
-  const isFaceted = !!(encoding?.facet || encoding?.row || encoding?.column);
-  if (isFaceted) return 'subtract';
   return spec?.chromeLayout ?? options?.chromeLayout ?? 'subtract';
 }

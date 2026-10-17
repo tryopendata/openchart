@@ -17,7 +17,7 @@ import { validateSpec } from './validate';
  * @returns CompileResult with the normalized spec and any warnings.
  * @throws Error if the spec is invalid.
  */
-export function compile(spec: unknown): CompileResult {
+export function compile(spec: unknown, options?: { markOptionWarnings?: boolean }): CompileResult {
   const validation = validateSpec(spec);
 
   if (!validation.valid || !validation.normalized) {
@@ -25,7 +25,8 @@ export function compile(spec: unknown): CompileResult {
     throw new Error(`Invalid spec:\n${errorMessages}`);
   }
 
-  const warnings: string[] = [];
+  const warnings: string[] =
+    options?.markOptionWarnings === false ? [] : [...(validation.warnings ?? [])];
   const normalized = normalizeSpec(validation.normalized, warnings);
 
   return { spec: normalized, warnings };

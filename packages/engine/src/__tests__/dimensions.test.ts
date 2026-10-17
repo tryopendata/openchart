@@ -460,7 +460,7 @@ describe('computeDimensions', () => {
     expect(dimsSmall.margins.bottom).toBe(dimsNone.margins.bottom);
   });
 
-  it('does not reserve annotation margin when strategy is tooltip-only', () => {
+  it('keeps plot margins independent of annotation placement and visibility', () => {
     const specWithAnnotations: NormalizedChartSpec = {
       ...baseSpec,
       annotations: [{ type: 'text', x: '2021-01-01', y: 20, text: 'Right-edge annotation' }],
@@ -500,8 +500,8 @@ describe('computeDimensions', () => {
       lightTheme,
     );
 
-    // Inline strategy should reserve extra right margin for the annotation
-    expect(dimsInline.margins.right).toBeGreaterThan(dimsNoAnnotations.margins.right);
+    // Inline callouts no longer change the data coordinate space
+    expect(dimsInline.margins.right).toBe(dimsNoAnnotations.margins.right);
     // Tooltip-only should NOT reserve extra margin (annotations are hidden)
     expect(dimsTooltipOnly.margins.right).toBe(dimsNoAnnotations.margins.right);
   });

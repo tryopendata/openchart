@@ -95,3 +95,26 @@ describe('CSS token / theme parity', () => {
     expect(dark.colors.neutral.surface).toBe(cssTokenDefault('--oc-bg', 'dark'));
   });
 });
+
+it('annotation tokens preserve both legacy modes and authored pairs', () => {
+  const names = [
+    'annotationLabel',
+    'annotationMuted',
+    'annotationLeader',
+    'annotationRule',
+    'annotationRangeFill',
+    'annotationMarkerFill',
+    'annotationPlate',
+  ] as const;
+  const colors = Object.fromEntries(
+    names.map((name) => [name, { light: '#123456', dark: '#abcdef' }]),
+  );
+  const custom = resolveTheme({ colors });
+  for (const name of names) {
+    const css = `--oc-${name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`;
+    expect(cssTokenDefault(css, 'light')).toBe(light.colors[name]);
+    expect(cssTokenDefault(css, 'dark')).toBe(dark.colors[name]);
+    expect(custom.colors[name]).toBe('#123456');
+    expect(adaptTheme(custom).colors[name]).toBe('#abcdef');
+  }
+});

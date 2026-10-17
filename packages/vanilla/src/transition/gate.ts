@@ -213,8 +213,7 @@ export function hasAnnotationChanged(prevLayout: ChartLayout, nextLayout: ChartL
     if (prevKeys[i] !== nextKeys[i]) return true;
     const p = prev[i];
     const n = next[i];
-    if (p.label?.x !== n.label?.x || p.label?.y !== n.label?.y) return true;
-    if (p.opacity !== n.opacity) return true;
+    if (JSON.stringify(p) !== JSON.stringify(n)) return true;
   }
   return false;
 }
