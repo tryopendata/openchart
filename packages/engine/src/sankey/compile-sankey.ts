@@ -36,7 +36,7 @@ import {
   estimateTextWidth,
   resolveTheme,
 } from '@opendata-ai/openchart-core';
-import { emitSpecWarnings, expandSpecSugar } from '../compile/spec-sugar';
+import { emitSpecWarnings, emitThemeWarnings, expandSpecSugar } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
 import { finiteNumber } from '../data/finite-number';
@@ -339,6 +339,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
   const watermark = rawWatermark !== undefined ? sankeySpec.watermark : (options.watermark ?? true);
 
   // 2. Resolve theme
+  emitThemeWarnings(options.theme, options.onWarn);
   const mergedThemeConfig = mergeThemeConfig(sankeySpec.theme, options.theme);
   const lightTheme: ResolvedTheme = resolveTheme(mergedThemeConfig);
   let theme: ResolvedTheme = lightTheme;

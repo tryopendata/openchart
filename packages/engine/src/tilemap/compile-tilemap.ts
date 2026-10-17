@@ -46,7 +46,7 @@ import {
 } from '@opendata-ai/openchart-core';
 import { interpolateRgb } from 'd3-interpolate';
 import { scaleLinear } from 'd3-scale';
-import { emitSpecWarnings, expandSpecSugar } from '../compile/spec-sugar';
+import { emitSpecWarnings, emitThemeWarnings, expandSpecSugar } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
 import { finiteNumber } from '../data/finite-number';
@@ -159,6 +159,7 @@ export function compileTileMap(spec: unknown, options: CompileOptions): TileMapL
     rawWatermark !== undefined ? tilemapSpec.watermark : (options.watermark ?? true);
 
   // 2. Resolve theme
+  emitThemeWarnings(options.theme, options.onWarn);
   const mergedThemeConfig = mergeThemeConfig(tilemapSpec.theme, options.theme);
   const lightTheme: ResolvedTheme = resolveTheme(mergedThemeConfig);
   let theme: ResolvedTheme = lightTheme;

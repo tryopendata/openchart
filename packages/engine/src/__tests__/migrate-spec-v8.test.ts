@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compileChart } from '../compile';
+import { compileChart, compileLayer } from '../compile';
 import { migrateSpecV8 } from '../migration/v8';
 
 const chart = {
@@ -127,4 +127,43 @@ describe('legacy label suppression migration', () => {
     };
     expect(migrateSpecV8(spec).spec).toEqual({ mark, encoding: { theta: { field: 'v' } } });
   });
+});
+
+it('rewrites the parent endpoint owner of a legacy-label layer', () => {
+  const spec = {
+    legend: { show: false },
+    endpointLabels: false,
+    layer: [
+      {
+        mark: 'line' as const,
+        data: [
+          { x: 0, y: 1, s: 'A' },
+          { x: 1, y: 2, s: 'B' },
+        ],
+        encoding: {
+          x: { field: 'x', type: 'ordinal' as const },
+          y: { field: 'y', type: 'quantitative' as const },
+          color: { field: 's', type: 'nominal' as const },
+        },
+      },
+    ],
+  };
+  const migrated = migrateSpecV8(spec);
+  expect(migrated.spec.endpointLabels).toEqual({ content: 'label', showMarker: false });
+  expect(migrated.repairs.map((repair) => repair.path)).toContain('/endpointLabels');
+  expect(compileLayer(migrated.spec, { width: 1280, height: 400 }).endpointLabels).toBeDefined();
+  expect(migrateSpecV8(migrated.spec).repairs).toEqual([]);
+});
+
+it('warns once for legacy chrome colors supplied through compile options', () => {
+  const warnings: string[] = [];
+  const options = {
+    width: 640,
+    height: 400,
+    theme: { chrome: { title: 'red' } },
+    onWarn: (message: string) => warnings.push(message),
+  };
+  compileChart(chart, options);
+  compileChart(chart, options);
+  expect(warnings.filter((message) => message.includes('theme.chrome'))).toHaveLength(1);
 });

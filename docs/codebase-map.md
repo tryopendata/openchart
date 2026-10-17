@@ -370,7 +370,7 @@ The browser authoring application lives in the separate [OpenStudio repository](
 | --- | --- |
 | Atomic authored-spec edits and inverse operations | `packages/core/src/helpers/edit-transactions.ts`: public `applyEditTransaction`, `EditTransactionResult`; `types/events.ts`: `EditOp`, `EditTransaction`, optional revision and callback |
 | Authored annotation ownership and legacy event bridge | `packages/vanilla/src/interactions/edit-transactions.ts`: `annotationSource`, `editToTransaction`; mount stamps source paths, renderer stamps facet instances; selection and click events preserve both identities |
-| Alias migration with repair paths | `packages/engine/src/migration/v8.ts`: public `migrateSpecV8`, `SpecRepair` |
+| Alias migration with repair paths | `packages/engine/src/migration/v8.ts`: public `migrateSpecV8`, `SpecRepair`; layer migrations reuse `compile/layer.ts:buildPrimarySpec` and `compiler/normalize.ts:flattenLayers` |
 | Shared v8 shallow theme precedence | `packages/core/src/theme/merge.ts`: `mergeThemeConfig`; `ThemeBase` is internal, public `Theme` remains deprecated |
 | Mount compatibility warnings | `packages/vanilla/src/deprecations.ts`; engine warnings remain in `compile/spec-sugar.ts` |
 | Example migration parity | `examples/src/__tests__/migration-parity.test.ts`; test-only collector in `examples/vitest.config.ts` exposes authored story/layout values |

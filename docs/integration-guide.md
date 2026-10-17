@@ -931,7 +931,7 @@ import { useTable } from "@opendata-ai/openchart-react";
 function AdvancedTable({ spec }: { spec: TableSpec }) {
   const { ref, table, state } = useTable(spec, {
     onRowClick: (row) => console.log("Clicked:", row),
-    autoResize: true,
+    responsive: true,
   });
 
   return (
@@ -953,7 +953,7 @@ import { useTable } from "@opendata-ai/openchart-vue";
 
 const { containerRef, table, layout } = useTable(spec, {
   onRowClick: (row) => console.log("Clicked:", row),
-  autoResize: true,
+  responsive: true,
 });
 </script>
 
@@ -971,7 +971,7 @@ import { useTable } from "@opendata-ai/openchart-svelte";
 
 const { action, table, layout } = useTable(spec, {
   onRowClick: (row) => console.log("Clicked:", row),
-  autoResize: true,
+  responsive: true,
 });
 </script>
 
@@ -1346,7 +1346,7 @@ import { createTable } from "@opendata-ai/openchart-vanilla";
 
 const table = createTable(container, tableSpec, {
   darkMode: "auto",
-  autoResize: true,
+  responsive: true,
   onRowClick: (row) => console.log(row),
   onStateChange: (state) => {
     // state: { sort: SortState | null, search: string, page: number }
@@ -1551,7 +1551,7 @@ import { createGraph } from "@opendata-ai/openchart-vanilla";
 
 const graph = createGraph(container, graphSpec, {
   darkMode: "auto",
-  autoResize: true,
+  responsive: true,
   onNodeClick: (node) => console.log("Clicked:", node),
   onNodeDoubleClick: (node) => console.log("Double-clicked:", node),
   onSelectionChange: (nodeIds) => console.log("Selected:", nodeIds),

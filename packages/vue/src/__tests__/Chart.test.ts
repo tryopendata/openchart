@@ -177,3 +177,35 @@ describe('annotation transactions', () => {
     wrapper.unmount();
   });
 });
+
+it('reacts to transaction listener presence without enabling all charts for editing', async () => {
+  const spec = {
+    ...lineSpec,
+    annotations: [
+      {
+        type: 'text' as const,
+        x: '2020-01-01',
+        y: 10,
+        text: 'Note',
+        id: 'note',
+        responsive: false,
+      },
+    ],
+  };
+  const transactions: unknown[] = [];
+  const wrapper = mount(Chart, { props: { spec } });
+  await flushPromises();
+  const cursor = () =>
+    (wrapper.find('[data-annotation-index="0"]').element as SVGElement).style.cursor;
+  expect(cursor()).not.toBe('grab');
+  await wrapper.setProps({ 'onEdit-transaction': (tx: unknown) => transactions.push(tx) });
+  await flushPromises();
+  expect(cursor()).toBe('grab');
+  await wrapper.find('[data-annotation-index="0"]').trigger('click');
+  await wrapper.find('svg').trigger('keydown', { key: 'Delete' });
+  expect(transactions).toHaveLength(1);
+  await wrapper.setProps({ 'onEdit-transaction': undefined });
+  await flushPromises();
+  expect(cursor()).not.toBe('grab');
+  wrapper.unmount();
+});

@@ -735,7 +735,7 @@ function withSharedDomains(leaf: ChartSpec, shared: SharedDomains): ChartSpec {
   return { ...leaf, encoding } as unknown as ChartSpec;
 }
 
-function buildPrimarySpec(leaves: ChartSpec[], layerSpec: LayerSpec): ChartSpec {
+export function buildPrimarySpec(leaves: ChartSpec[], layerSpec: LayerSpec): ChartSpec {
   const allData = leaves.flatMap((leaf) => leaf.data);
 
   const primary = {

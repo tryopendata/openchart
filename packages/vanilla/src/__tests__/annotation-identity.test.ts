@@ -32,6 +32,14 @@ describe('annotation source and instance identity', () => {
       id: 'visible',
       path: '/annotations/1',
     });
+    expect(
+      findElementByRef(container.querySelector('svg')!, {
+        type: 'annotation',
+        index: 1,
+        id: 'visible',
+        path: '/layer/0/annotations/1',
+      }),
+    ).toBeNull();
     chart.destroy();
   });
 

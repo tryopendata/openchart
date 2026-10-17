@@ -177,3 +177,35 @@ describe('annotation transactions', () => {
     ]);
   });
 });
+
+it('reacts to transaction listener presence without enabling all charts for editing', async () => {
+  const spec = {
+    ...lineSpec,
+    annotations: [
+      {
+        type: 'text' as const,
+        x: '2020-01-01',
+        y: 10,
+        text: 'Note',
+        id: 'note',
+        responsive: false,
+      },
+    ],
+  };
+  const transactions: unknown[] = [];
+  const { container, rerender } = await renderChart({ spec });
+  const cursor = () =>
+    (container.querySelector('[data-annotation-index="0"]') as SVGElement).style.cursor;
+  expect(cursor()).not.toBe('grab');
+  await rerender({ spec, onedittransaction: (tx: unknown) => transactions.push(tx) });
+  expect(cursor()).toBe('grab');
+  container
+    .querySelector('[data-annotation-index="0"]')!
+    .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  container
+    .querySelector('svg')!
+    .dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
+  expect(transactions).toHaveLength(1);
+  await rerender({ spec, onedittransaction: undefined });
+  expect(cursor()).not.toBe('grab');
+});

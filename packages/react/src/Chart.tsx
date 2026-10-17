@@ -121,6 +121,7 @@ function ChartInner(
   }: ChartProps,
   ref: React.Ref<ChartHandle>,
 ) {
+  const hasTransactionListener = Boolean(onEditTransaction);
   const contextTheme = useVizTheme();
   const contextDarkMode = useVizDarkMode();
   const theme = themeProp ?? contextTheme;
@@ -307,6 +308,7 @@ function ChartInner(
     stableOnDataPointClick,
     stableOnEdit,
     stableOnEditTransaction,
+    hasTransactionListener,
     autoResize,
     responsive,
     stableOnLegendToggle,

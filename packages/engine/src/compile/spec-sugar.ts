@@ -37,6 +37,7 @@ import type {
   BinTransform,
   DataRow,
   EncodingChannel,
+  ThemeConfig,
   TimeUnit,
   TimeUnitTransform,
   Transform,
@@ -987,23 +988,19 @@ function expandValueFormatSugar(
   // tilemap/barlist API may not have explicit encoding — the normalizer infers it).
   if (!valueCh || typeof valueCh !== 'object') {
     if (type === 'tilemap') return spec;
-    warnings.push(
-      '[openchart] valueFormat is deprecated; set format on the encoding value channel instead (e.g. encoding.value.format).',
-    );
+    warnings.push(`[openchart] valueFormat is deprecated; use encoding.${channelKey}.format.`);
     return spec;
   }
 
   if (valueCh.format !== undefined) {
     const { valueFormat: _vf, ...rest } = spec;
     warnings.push(
-      '[openchart] valueFormat is deprecated; the encoding.value.format field takes precedence and valueFormat was ignored.',
+      `[openchart] valueFormat is deprecated; encoding.${channelKey}.format takes precedence and valueFormat was ignored.`,
     );
     return rest;
   }
 
-  warnings.push(
-    '[openchart] valueFormat is deprecated; set format on the encoding value channel instead (e.g. encoding.value.format).',
-  );
+  warnings.push(`[openchart] valueFormat is deprecated; use encoding.${channelKey}.format.`);
   const { valueFormat, ...rest } = spec;
   return {
     ...rest,
@@ -1066,5 +1063,15 @@ export function emitSpecWarnings(warnings: string[], sink: WarnSink = defaultWar
     if (seen.has(warning)) continue;
     seen.add(warning);
     sink(warning);
+  }
+}
+
+/** Warn for compile/mount/provider theme inputs, beyond spec.theme. */
+export function emitThemeWarnings(theme: ThemeConfig | undefined, sink?: WarnSink): void {
+  if (theme?.chrome && Object.values(theme.chrome).some((value) => typeof value === 'string')) {
+    emitSpecWarnings(
+      ['[openchart] theme.chrome string colors are deprecated; use { color } objects.'],
+      sink,
+    );
   }
 }

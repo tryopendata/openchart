@@ -1,6 +1,7 @@
-import type { ChartSpec } from '@opendata-ai/openchart-core';
+import type { ChartSpec, LayerSpec } from '@opendata-ai/openchart-core';
+import { buildPrimarySpec } from '../compile/layer';
 import { expandSpecSugar } from '../compile/spec-sugar';
-import { normalizeSpec } from '../compiler/normalize';
+import { flattenLayers, normalizeSpec } from '../compiler/normalize';
 import type { NormalizedChartSpec } from '../compiler/types';
 import { countColorSeries, resolveSuppression } from '../legend/suppression';
 
@@ -132,17 +133,25 @@ export function migrateSpecV8<T>(input: T): { spec: T; repairs: SpecRepair[] } {
     const labels = node(current.labels);
     const endpoint = current.endpointLabels ?? inherited.endpointLabels;
     let legacyLabels = false;
-    if (['line', 'area'].includes(String(markType))) {
+    const effective: Node = {
+      ...inherited,
+      ...current,
+      data: data ?? [],
+      encoding: effectiveEncoding,
+    };
+    const layerSpec = effective as unknown as LayerSpec;
+    const leaves = Array.isArray(current.layer) ? flattenLayers(layerSpec) : [];
+    const migrationSource = leaves.length ? buildPrimarySpec(leaves, layerSpec) : effective;
+    const sourceMark =
+      typeof migrationSource.mark === 'string'
+        ? migrationSource.mark
+        : node(migrationSource.mark)?.type;
+    if (['line', 'area'].includes(String(sourceMark))) {
       // Reuse the compiler's truth table, including the series-count cutoff,
       // angular/color inference and stacked-area behavior. Migration has no
       // viewport; width-only responsive demotion stays a rendering decision.
       const normalized = normalizeSpec(
-        expandSpecSugar({
-          ...inherited,
-          ...current,
-          data: data ?? [],
-          encoding: effectiveEncoding,
-        }) as unknown as ChartSpec,
+        expandSpecSugar(migrationSource as unknown as Node) as unknown as ChartSpec,
       ) as NormalizedChartSpec;
       legacyLabels = resolveSuppression(normalized, {
         seriesCount: countColorSeries(normalized),
@@ -175,7 +184,7 @@ export function migrateSpecV8<T>(input: T): { spec: T; repairs: SpecRepair[] } {
           visit(childNode, `${path}/layer/${index}`, {
             data,
             encoding: effectiveEncoding,
-            endpointLabels: endpoint,
+            endpointLabels: current.endpointLabels ?? endpoint,
             legend: current.legend ?? inherited.legend,
             labels: current.labels ?? inherited.labels,
           });

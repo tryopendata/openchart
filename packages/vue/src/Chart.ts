@@ -45,6 +45,7 @@ export interface ChartProps {
   /** @deprecated Use autoResize. */
   responsive?: boolean;
   revision?: string | number;
+  onEditTransaction?: (tx: EditTransaction) => void;
   class?: string;
   style?: string | CSSProperties;
 }
@@ -66,6 +67,13 @@ export const Chart = defineComponent({
     },
     renderer: {
       type: String as PropType<'auto' | 'svg' | 'canvas'>,
+      default: undefined,
+    },
+    // A declared listener prop makes presence reactive. Vue excludes declared
+    // emits listeners from update checks, which would leave editing enabled
+    // when a parent removes its transaction listener.
+    onEditTransaction: {
+      type: Function as PropType<(tx: EditTransaction) => void>,
       default: undefined,
     },
     autoResize: { type: Boolean, default: undefined },
@@ -101,7 +109,6 @@ export const Chart = defineComponent({
     /** @deprecated Use edit-transaction. */
     'annotation-edit': (_annotation: TextAnnotation, _updatedOffset: AnnotationOffset) => true,
     edit: (_edit: ElementEdit) => true,
-    'edit-transaction': (_tx: EditTransaction) => true,
     select: (_element: ElementRef) => true,
     deselect: (_element: ElementRef) => true,
     /** @deprecated Use edit-transaction. */
@@ -120,14 +127,13 @@ export const Chart = defineComponent({
 
     // Check which event listeners are bound by the parent.
     // Vue 3 passes listeners as onXxx props on the component vnode.
-    // We cache this at setup time since it won't change.
+    // Legacy listener gates retain their 8.x setup behavior; transaction
+    // listener presence is a reactive prop below.
     const vm = getCurrentInstance();
     const vnodeProps = vm?.vnode.props ?? {};
     const hasAnnotationEditListener =
       'onAnnotation-edit' in vnodeProps || 'onAnnotationEdit' in vnodeProps;
     const hasEditListener = 'onEdit' in vnodeProps;
-    const hasTransactionListener =
-      'onEditTransaction' in vnodeProps || 'onEdit-transaction' in vnodeProps;
     const hasSelectListener = 'onSelect' in vnodeProps;
     const hasDeselectListener = 'onDeselect' in vnodeProps;
     const hasTextEditListener = 'onText-edit' in vnodeProps || 'onTextEdit' in vnodeProps;
@@ -184,8 +190,8 @@ export const Chart = defineComponent({
         autoResize: props.autoResize,
         responsive: props.responsive,
         revision: props.revision,
-        ...(hasTransactionListener
-          ? { onEditTransaction: (tx: EditTransaction) => emit('edit-transaction', tx) }
+        ...(props.onEditTransaction
+          ? { onEditTransaction: (tx: EditTransaction) => vm?.emit('edit-transaction', tx) }
           : {}),
       };
 
@@ -271,6 +277,7 @@ export const Chart = defineComponent({
     // Recreate chart when theme, darkMode, renderer, or editable change
     watch(
       [
+        () => Boolean(props.onEditTransaction),
         () => props.autoResize,
         () => props.responsive,
         () => props.theme,

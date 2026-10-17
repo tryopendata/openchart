@@ -72,7 +72,7 @@ import { applyColorScaleRange, defaultSeriesColor } from './compile/color-scale-
 import { filterClippedDomains } from './compile/data-clip';
 import { applyFillPatterns } from './compile/fill-patterns';
 import { compileLayer as compileLayerImpl } from './compile/layer';
-import { emitSpecWarnings, expandSpecSugar } from './compile/spec-sugar';
+import { emitSpecWarnings, emitThemeWarnings, expandSpecSugar } from './compile/spec-sugar';
 import { computeWatermarkObstacle } from './compile/watermark-obstacle';
 import { resolveYouDrawIt } from './compile/you-draw-it';
 import { collectContrastWarnings } from './compiler/a11y-warnings';
@@ -571,6 +571,7 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
   }
 
   // Resolve theme: merge spec-level theme with options-level overrides
+  emitThemeWarnings(options.theme, options.onWarn);
   const mergedThemeConfig = mergeThemeConfig(chartSpec.theme, options.theme);
   let theme: ResolvedTheme = resolveTheme(mergedThemeConfig);
   if (options.darkMode) {
@@ -1658,6 +1659,7 @@ export function compileTable(spec: unknown, options: CompileTableOptions): Table
   const tableSpec = normalized as NormalizedTableSpec;
 
   // Resolve theme: merge spec-level theme with options-level overrides
+  emitThemeWarnings(options.theme, options.onWarn);
   const mergedThemeConfig = mergeThemeConfig(tableSpec.theme, options.theme);
   let theme: ResolvedTheme = resolveTheme(mergedThemeConfig);
   if (options.darkMode) {

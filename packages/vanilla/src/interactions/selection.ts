@@ -22,6 +22,11 @@ export function findElementByRef(svg: SVGElement, ref: ElementRef): SVGElement |
         (el) =>
           Number(el.getAttribute('data-annotation-index')) === ref.index &&
           (ref.id === undefined || el.getAttribute('data-annotation-id') === ref.id) &&
+          (ref.path === undefined ||
+            ref.path === (el.getAttribute('data-annotation-path') ?? `/annotations/${ref.index}`) ||
+            ref.path.startsWith(
+              `${el.getAttribute('data-annotation-path') ?? `/annotations/${ref.index}`}/`,
+            )) &&
           (ref.facetInstance === undefined ||
             el.getAttribute('data-facet-instance') === ref.facetInstance),
       );

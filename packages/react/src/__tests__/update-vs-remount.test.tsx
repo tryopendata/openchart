@@ -156,3 +156,13 @@ describe('transaction wrapper options', () => {
     expect(second).toHaveBeenCalledWith(tx);
   });
 });
+
+it('enables and disables a transaction callback added after mounting', () => {
+  const listener = vi.fn();
+  const { rerender } = render(<Chart spec={lineSpec} />);
+  expect(vi.mocked(createChart).mock.calls.at(-1)![2]?.onEditTransaction).toBeUndefined();
+  rerender(<Chart spec={lineSpec} onEditTransaction={listener} />);
+  expect(vi.mocked(createChart).mock.calls.at(-1)![2]?.onEditTransaction).toBeTypeOf('function');
+  rerender(<Chart spec={lineSpec} />);
+  expect(vi.mocked(createChart).mock.calls.at(-1)![2]?.onEditTransaction).toBeUndefined();
+});

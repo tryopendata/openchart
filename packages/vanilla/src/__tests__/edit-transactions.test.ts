@@ -10,6 +10,19 @@ const annotation = { type: 'text' as const, x: 1, y: 2, text: 'Note', id: 'note'
 const spec = { mark: 'point', data: [], encoding: {}, annotations: [annotation] } as ChartSpec;
 
 describe('durable edit bridge', () => {
+  it('guards an authored empty ID rather than treating it as absent', () => {
+    const source = { ...spec, annotations: [{ ...annotation, id: '' }] };
+    const tx = editToTransaction(source, {
+      type: 'delete',
+      element: { type: 'annotation', index: 0 },
+    });
+    expect(tx?.ops[0].expect).toEqual({ id: '', type: 'text', text: 'Note' });
+    expect(
+      applyEditTransaction({ ...source, annotations: [{ ...annotation, id: 'replacement' }] }, tx!)
+        .ok,
+    ).toBe(false);
+  });
+
   it('addresses the first leaf and includes source preconditions', () => {
     const layered = { layer: [spec, { ...spec, annotations: [] }] };
     const tx = editToTransaction(
@@ -35,6 +48,21 @@ describe('durable edit bridge', () => {
     });
     expect(applyEditTransaction(layered, tx!).ok).toBe(true);
     expect(annotationSource({ ...layered, annotations: [] }).path).toBe('/annotations');
+  });
+
+  it('rejects a source path from a different annotation owner', () => {
+    expect(
+      editToTransaction(spec, {
+        type: 'delete',
+        element: { type: 'annotation', index: 0, id: 'note', path: '/layer/0/annotations/0' },
+      }),
+    ).toBeNull();
+    expect(
+      editToTransaction(
+        { layer: [spec] },
+        { type: 'delete', element: { type: 'annotation', index: 0, path: '/annotations/0' } },
+      ),
+    ).toBeNull();
   });
 
   it('edits chrome shorthand and top-level sugar without dropping styles', () => {

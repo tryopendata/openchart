@@ -37,7 +37,7 @@ import { feature as topoFeature, mesh as topoMesh } from 'topojson-client';
 import type { GeometryCollection, Topology } from 'topojson-specification';
 import { resolveKnockoutColor } from '../charts/utils';
 import { buildSizeScale, SIZE_SCALE_DEFAULTS } from '../compile/size-scale';
-import { emitSpecWarnings, expandSpecSugar } from '../compile/spec-sugar';
+import { emitSpecWarnings, emitThemeWarnings, expandSpecSugar } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
 import { finiteNumber } from '../data/finite-number';
@@ -234,6 +234,7 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
   const watermark = rawWatermark !== undefined ? mapSpec.watermark : (options.watermark ?? true);
 
   // 3. Resolve theme
+  emitThemeWarnings(options.theme, options.onWarn);
   const mergedThemeConfig = mergeThemeConfig(mapSpec.theme, options.theme);
   const lightTheme: ResolvedTheme = resolveTheme(mergedThemeConfig);
   let theme: ResolvedTheme = lightTheme;

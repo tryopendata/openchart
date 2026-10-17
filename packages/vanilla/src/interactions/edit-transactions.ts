@@ -45,6 +45,13 @@ export function editToTransaction(
   if (edit.type === 'add') {
     ops.push({ op: 'add', path: `${source.path}/-`, value: edit.annotation });
   } else if ('element' in edit && edit.element.type === 'annotation') {
+    const expectedPath = `${source.path}/${edit.element.index}`;
+    if (
+      edit.element.path !== undefined &&
+      edit.element.path !== expectedPath &&
+      !edit.element.path.startsWith(`${expectedPath}/`)
+    )
+      return null;
     const annotation = source.annotations[edit.element.index];
     if (!annotation || (edit.element.id !== undefined && annotation.id !== edit.element.id))
       return null;
@@ -52,7 +59,7 @@ export function editToTransaction(
     const expected: EditOp['expect'] = {
       type: authored.type,
       text: authored.type === 'text' ? authored.text : (authored.label ?? ''),
-      ...(authored.id ? { id: authored.id } : {}),
+      ...(authored.id !== undefined ? { id: authored.id } : {}),
     };
     // Non-text annotations have a label rather than a text property. The
     // precondition uses their authored text value (absent), not the display label.

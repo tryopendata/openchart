@@ -116,6 +116,9 @@ const stableOnDeselect = (element: ElementRef) => untrack(() => ondeselect)?.(el
 const stableOnTextEdit = (element: ElementRef, oldText: string, newText: string) =>
   untrack(() => ontextedit)?.(element, oldText, newText);
 
+const hasTransactionListener = $derived(Boolean(onedittransaction));
+const stableOnEditTransaction = (tx: EditTransaction) => untrack(() => onedittransaction)?.(tx);
+
 let prevSpec = '';
 let prevRevision: string | number | undefined;
 
@@ -151,9 +154,7 @@ $effect(() => {
             untrack(() => ondatapointclick)?.(data),
         }
       : {}),
-    ...(untrack(() => onedittransaction)
-      ? { onEditTransaction: (tx: EditTransaction) => untrack(() => onedittransaction)?.(tx) }
-      : {}),
+    ...(hasTransactionListener ? { onEditTransaction: stableOnEditTransaction } : {}),
     ...stableHandlers,
     ...(resolvedEditable != null ? { editable: resolvedEditable } : {}),
     ...(hasAnnotationEdit ? { onAnnotationEdit: stableOnAnnotationEdit } : {}),

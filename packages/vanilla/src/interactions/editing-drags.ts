@@ -94,7 +94,7 @@ export function wireAnnotationDrag(
             element: elementRef.annotation(
               index,
               textAnnotation.id,
-              `/annotations/${index}/offset`,
+              `${annotationG.getAttribute('data-annotation-path') ?? `/annotations/${index}`}/offset`,
             ),
             annotation: textAnnotation,
             offset: newOffset,
@@ -238,7 +238,7 @@ export function wireConnectorEndpointDrag(
               element: elementRef.annotation(
                 index,
                 textAnnotation.id,
-                `/annotations/${index}/connectorOffset/${ep.name}`,
+                `${annotationG.getAttribute('data-annotation-path') ?? `/annotations/${index}`}/connectorOffset/${ep.name}`,
               ),
               annotation: textAnnotation,
               endpoint: ep.name,
@@ -339,7 +339,7 @@ export function wireAnnotationLabelDrag(
                 element: elementRef.annotation(
                   index,
                   specAnnotation.id,
-                  `/annotations/${index}/labelOffset`,
+                  `${annotationG.getAttribute('data-annotation-path') ?? `/annotations/${index}`}/labelOffset`,
                 ),
                 annotation: specAnnotation as RangeAnnotation,
                 labelOffset: { dx: origLabelDx + dx, dy: origLabelDy + dy },
@@ -350,7 +350,7 @@ export function wireAnnotationLabelDrag(
                 element: elementRef.annotation(
                   index,
                   specAnnotation.id,
-                  `/annotations/${index}/labelOffset`,
+                  `${annotationG.getAttribute('data-annotation-path') ?? `/annotations/${index}`}/labelOffset`,
                 ),
                 annotation: specAnnotation as RefLineAnnotation,
                 labelOffset: { dx: origLabelDx + dx, dy: origLabelDy + dy },
@@ -619,7 +619,11 @@ export function wireAnchorDrag(
           const newY = invertScale(layout.yInvert!, anchorY + dy);
           onEdit({
             type: 'annotation-anchor',
-            element: elementRef.annotation(index, textAnnotation.id, `/annotations/${index}`),
+            element: elementRef.annotation(
+              index,
+              textAnnotation.id,
+              annotationG.getAttribute('data-annotation-path') ?? `/annotations/${index}`,
+            ),
             annotation: textAnnotation,
             x: newX,
             y: newY,

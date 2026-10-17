@@ -1283,3 +1283,10 @@ also stays in 8.x; host styles should target `oc-table--condensed` ahead
 of its eventual removal. The `footnoteBandHeight` API is unchanged in 8.10.
 
 Notes now retain subtitles as `text. subtitle` on their existing single line.
+
+
+Legacy-label migration currently targets multi-series line/area charts. A line
+with one color category can still draw a legacy series label, even though the
+suppression truth table describes single-series labels as hidden. Endpoint
+labels also suppress that case, so 8.10 preserves its existing rendering. This
+needs a separate decision before removing the legacy renderer.
