@@ -209,7 +209,7 @@ as `chrome.*.color` and needs no dark-mode branch. `computeChrome` reserves
 No action required. If you import `tokens.css`/`dark.css`, keep doing so. The JS-stamped properties take precedence via inline style specificity.
 
 
-### Annotation tokens (8.12)
+### Annotation tokens (8.9.1)
 
 `theme.colors` accepts `annotationLabel`, `annotationMuted`, `annotationLeader`,
 `annotationRule`, `annotationRangeFill`, `annotationMarkerFill`, and

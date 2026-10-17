@@ -366,7 +366,7 @@ These are easy mistakes — written down so the next agent doesn't search for th
 The browser authoring application lives in the separate [OpenStudio repository](https://github.com/tryopendata/openstudio). Its UI, imports, persistence and deployment are not part of this codebase.
 
 
-## Track A 8.10 additions
+## Track A phase 1 additions (released in 8.9.1)
 
 | Concern | Source / exports |
 | --- | --- |
@@ -383,7 +383,7 @@ Graph scheduler, tween and spatial-index callers import from `motion/`
 and `spatial-index.ts`; the `graph/` re-export shims are gone. Map fill
 transitions accept `MapTransitionSnapshot` only.
 
-## Track A 8.11 additions
+## Track A phase 2 additions (released in 8.9.1)
 
 | Concern | Source / exports |
 | --- | --- |
@@ -400,7 +400,7 @@ remaining right-axis/merged-column offset; `compile-legend-gutter.test.ts` cover
 regular, shared-layer and dual-axis column separation.
 
 
-## 8.12 annotation layout opt-ins
+## Track A phase 3 annotation layout opt-ins (released in 8.9.1)
 
 | Concern | Location |
 |---|---|

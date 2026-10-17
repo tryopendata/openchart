@@ -296,7 +296,7 @@ import { MarkType, MARK_TYPES, MARK_ENCODING_RULES } from '@opendata-ai/openchar
 nudge per-series value labels by pixel offset. The collision system now
 handles label positioning automatically.
 
-**Runtime behavior (8.10):** The property still works and emits a deprecation
+**Runtime behavior (8.9.1):** The property still works and emits a deprecation
 warning once per process. Prefer `endpointLabels`. `migrateSpecV8` replaces
 legacy end-of-line labels with `{ content: 'label', showMarker: false }` and
 reports each dropped series offset. Labels can move to the right-edge column;
@@ -1217,7 +1217,7 @@ warning at compile time with the exact fix. Items with no runtime warning:
   to `mark: { type: 'range', style: 'bar' }`.
 
 
-## 8.10: atomic edits and compatibility aliases
+## 8.9.1: atomic edits and compatibility aliases
 
 Use the additive `onEditTransaction` callback to persist edits without a switch
 for each legacy edit variant. `onEdit` keeps its existing payload in 8.x.
@@ -1255,7 +1255,7 @@ both are supplied. The spec's `responsive` keeps controlling chart layout.
 
 Run `migrateSpecV8(spec)` from `@opendata-ai/openchart-engine` to obtain a new spec
 and a repair list (`path`, `from`, `to`, `reason`). It is pure and idempotent.
-The 8.10 migration changes aliases only:
+The migration rewrites these aliases and also materializes omitted defaults as described below:
 
 | Deprecated form | Replacement |
 | --- | --- |
@@ -1280,7 +1280,7 @@ Executable compatibility paths warn once. Type-only aliases and primitive
 constant imports cannot detect usage at runtime; their JSDoc marks the migration.
 Tilemap `valueFormat` stays supported. The `oc-table--compact` compatibility class
 also stays in 8.x; host styles should target `oc-table--condensed` ahead
-of its eventual removal. The `footnoteBandHeight` API is unchanged in 8.10.
+of its eventual removal. The `footnoteBandHeight` helpers retain their compatibility signatures but are deprecated; see below.
 
 Notes now retain subtitles as `text. subtitle` and wrap within the figure. The engine
 reserves every wrapped line above the source and footer. Existing single-line
@@ -1294,10 +1294,10 @@ right-hand axis; each series retains its own value formatting.
 Legacy-label migration currently targets multi-series line/area charts. A line
 with one color category can still draw a legacy series label, even though the
 suppression truth table describes single-series labels as hidden. Endpoint
-labels also suppress that case, so 8.10 preserves its existing rendering. This
+labels also suppress that case, so 8.9.1 preserves its existing rendering. This
 needs a separate decision before removing the legacy renderer.
 
-### Annotation geometry and editing in 8.11
+### Annotation geometry and editing
 
 The first label drag commits `anchor`, `offset`, and `responsive: false` together.
 Use `onEditTransaction` to apply all three atomically. A dragged label stays inline
@@ -1319,7 +1319,7 @@ after commit or resize. It retains the compiler's private measurement context, s
 JSON-deserialized or hand-built layouts cannot provide editing contexts. The
 renderer still supports hand-built curve layouts through its control-point fallback.
 
-### 8.11: stable annotation note space
+### Stable annotation note space
 
 Charts with automatic annotation thinning reserve note capacity from their source
 text and subtitles before layout. Pinning or moving a callout can change the
@@ -1330,16 +1330,16 @@ source once. Charts with automatic thinning disabled retain their existing behav
 
 `layout.chrome.noteBandHeight` carries this reserve to renderers and export. It is
 optional for compatibility with older or hand-built layouts; the existing
-`footnoteBandHeight` helpers remain available in 8.11.
+`footnoteBandHeight` helpers remain available, with deprecation warnings.
 
 With an explicit `subtract` height, enough annotation text can consume the entire
 plot budget, even when those callouts are pinned. The figure keeps its requested
 height; the existing chrome fallback can hide footer content and the plot can
 have zero height. `onDiagnostic` reports `layout.note-capacity` as a non-throwing
-error in this case. Increase the height, explicitly choose `grow` for a non-faceted chart, or reduce the
+error in this case. Increase the height, explicitly choose `grow`, or reduce the
 annotation text/count. The compiler does not silently change sizing modes.
 
-### 8.12: annotation layout opt-ins
+### Annotation layout opt-ins
 
 Existing specs retain their 8.x rendering. Add these fields only where you want
 new behavior:

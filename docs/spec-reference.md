@@ -1921,7 +1921,7 @@ Maps, tile maps, bar lists and Sankey support arrows for inspection and Enter/Sp
 Table `rowKey` values must be unique to support identity across revisions. Numeric `1` and string `"1"` are distinct. Missing/duplicate keys emit `TABLE_ROW_KEY_AMBIGUOUS` and use revision-local identities. Treat compiled row IDs as opaque. CSV export includes all filtered and sorted rows, not just the current pagination page.
 
 
-### Compact callout limits and note sizing (8.12)
+### Compact callout limits and note sizing (8.9.1)
 
 `responsive.compactAnnotationLimit?: number | null` is an optional nonnegative
 integer limit below 400px outer width. Omitted/null means unlimited; zero demotes
@@ -1932,4 +1932,4 @@ short-height rules still apply. Facet panel width does not trigger this limit.
 Read `layout.chrome.noteBandHeight` for note space and `layout.dimensions.height`
 for the final rendered/exported height. `chromeLayout: 'grow'` also supports facets;
 `chrome.grownHeight` reports engine-added height for auto-height consumers.
-See [8.12 migration guidance](./migrating-v8.md#812-annotation-layout-opt-ins).
+See [annotation migration guidance](./migrating-v8.md#annotation-layout-opt-ins).

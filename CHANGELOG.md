@@ -1,6 +1,14 @@
 # Changelog
 
-## Unreleased — 8.12
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
+
+## [Unreleased]
+
+## [8.9.1] - 2026-10-17
+
+### Annotation layout and theme options
 
 - Add opt-in rich callout wrapping (`maxWidth`), `subtitleFontSize`, and compact
   callout limits. Omitted fields retain existing output; null disables limits.
@@ -18,7 +26,7 @@
   theme, responsive and layer ownership. Warn about inapplicable mark options
   before shorthand expansion, with exact authored paths and repair guidance.
 
-## Unreleased — 8.11
+### Annotation geometry and gestures
 
 - Add optional connector `bend` in `[-1, 1]` and engine-resolved curve control
   points. Omitted/zero bend retains the existing curve; other connector types
@@ -44,7 +52,7 @@
 - Place right-side legends after endpoint labels in the gutter already reserved
   for them, preventing column overlap in regular and layered charts.
 
-## Unreleased — 8.10
+### Editing transactions and compatibility
 
 - Add atomic `EditTransaction` operations, pure `applyEditTransaction` with undo,
   optional revisions, and `onEditTransaction` in vanilla and all three wrappers.
@@ -58,15 +66,6 @@
 - Add mount `autoResize`, table-builder `density`, and compatibility warnings for
   legacy APIs. Existing 8.x callbacks and optional-field defaults remain supported.
 - Centralize shallow theme merging and remove unused internal compatibility paths.
-
-
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
-
-## [Unreleased]
-
-## [8.9.1] - 2026-10-16
 
 ### Fixed
 
