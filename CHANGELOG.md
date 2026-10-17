@@ -1,6 +1,58 @@
 # Changelog
 
-## Unreleased — 8.10
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
+
+## [Unreleased]
+
+## [8.9.1] - 2026-10-17
+
+### Annotation layout and theme options
+
+- Add opt-in rich callout wrapping (`maxWidth`), `subtitleFontSize`, and compact
+  callout limits. Omitted fields retain existing output; null disables limits.
+- Add reference-label placement at line ends, automatic contained placement, and
+  reserved outside lanes with wrapping and connectors, including facets and
+  independent-axis layers.
+- Add seven annotation theme color tokens with light/dark authoring support;
+  explicit annotation ink remains authoritative. Rule/range tokens preserve the
+  existing compiled colors in both modes.
+- Support facet `chromeLayout: 'grow'` and report engine-added height so auto-height
+  mounts and export count chrome, notes and facet growth once.
+- Deprecate both `footnoteBandHeight` helpers in favor of resolved
+  `layout.chrome.noteBandHeight`, preserving their 8.x compatibility signatures.
+- Materialize omitted 8.x defaults in `migrateSpecV8` while preserving authored
+  theme, responsive and layer ownership. Warn about inapplicable mark options
+  before shorthand expansion, with exact authored paths and repair guidance.
+
+### Annotation geometry and gestures
+
+- Add optional connector `bend` in `[-1, 1]` and engine-resolved curve control
+  points. Omitted/zero bend retains the existing curve; other connector types
+  warn and ignore bend.
+- Export frozen annotation editing contexts, move/bend previews, and inverse
+  label placement from the engine.
+- Keep authored zero offsets pinned so a committed placement is not nudged on release.
+
+- Convert the first label drag to an explicit anchor/offset and `responsive: false`
+  atomically, keeping the data point fixed. Remove placement-dependent right
+  margin reservation so the plot does not shift when the drag commits.
+- Reserve note space from source annotation text, including subtitles and pinned
+  callouts, so dragging cannot resize the plot or figure. Auto-thinned charts may
+  retain unused note space. Expose the reserved height as `chrome.noteBandHeight`
+  so rendering, footer placement and export agree. Exhausted fixed-height budgets
+  report an actionable `layout.note-capacity` diagnostic.
+- Add Alt+arrow (1px) and Alt+Shift+arrow (10px) annotation nudges, batched into
+  one transaction. Escape, pointer/touch cancellation, width changes and document
+  replacement cancel active drags without emitting edits.
+- Animate label and data-anchor positions independently, rebuilding connectors
+  from engine geometry while preserving annotation enter fades.
+- Make drop-line label and connector offsets round-trip through edit previews.
+- Place right-side legends after endpoint labels in the gutter already reserved
+  for them, preventing column overlap in regular and layered charts.
+
+### Editing transactions and compatibility
 
 - Add atomic `EditTransaction` operations, pure `applyEditTransaction` with undo,
   optional revisions, and `onEditTransaction` in vanilla and all three wrappers.
@@ -14,15 +66,6 @@
 - Add mount `autoResize`, table-builder `density`, and compatibility warnings for
   legacy APIs. Existing 8.x callbacks and optional-field defaults remain supported.
 - Centralize shallow theme merging and remove unused internal compatibility paths.
-
-
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
-
-## [Unreleased]
-
-## [8.9.1] - 2026-10-16
 
 ### Fixed
 

@@ -24,6 +24,16 @@ export default defineConfig({
   },
   projects: [
     {
+      name: 'annotation-invariants',
+      testDir: './e2e/annotation-invariants',
+      use: { ...devices['Desktop Chrome'], deviceScaleFactor: 1 },
+    },
+    {
+      name: 'annotation-invariants-webkit',
+      testDir: './e2e/annotation-invariants',
+      use: { ...devices['Desktop Safari'], deviceScaleFactor: 1 },
+    },
+    {
       name: 'visual',
       testDir: './e2e/visual',
       testMatch: /stories\.spec\.ts$/,

@@ -9,11 +9,21 @@
  * lines, resize-stability, and auto-thinning.
  */
 
-import type { ChartSpec } from '@opendata-ai/openchart-core';
+import type { ChartSpec, LayerSpec } from '@opendata-ai/openchart-core';
+import { applyEditTransaction } from '@opendata-ai/openchart-core';
 import { Chart } from '@opendata-ai/openchart-react';
-import { useState } from 'react';
+import { createChart } from '@opendata-ai/openchart-vanilla';
+import { useEffect, useRef, useState } from 'react';
 import { Demo, GalleryPage, Section } from '../components';
 import { nvidiaStock, temperatureAnomaly, usInflation, usPayrolls } from '../data';
+import {
+  annotationCrowdedSpec,
+  annotationCurveSpecs,
+  annotationGestureSpec,
+  annotationNotesSpecs,
+  annotationReferenceDualAxisSpec,
+  annotationReferenceSpecs,
+} from './features-annotations.demos';
 
 const ACCENT = '#0e7490';
 
@@ -695,3 +705,213 @@ export const Annotations = () => (
     </Section>
   </GalleryPage>
 );
+
+/** Interactive geometry fixture, deliberately outside the visual baseline registry. */
+export function AnnotationGestures() {
+  const host = useRef<HTMLDivElement>(null);
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    if (!host.current) return;
+    let spec = structuredClone(annotationGestureSpec);
+    let revision = 0;
+    const chart = createChart(host.current, spec, {
+      editable: true,
+      revision,
+      onEditTransaction: (tx) => {
+        const result = applyEditTransaction(spec, tx);
+        if (!result.ok) throw new Error(result.error.reason);
+        spec = result.spec;
+        revision++;
+        setCount((count) => count + 1);
+        chart.update(spec, { revision });
+      },
+    });
+    const replace = () => {
+      spec = structuredClone(spec);
+      chart.update(spec, { revision: ++revision });
+    };
+    const exportSVG = () => {
+      host.current!.dataset.export = chart.export('svg');
+    };
+    const expose = () => {
+      host.current!.dataset.layout = JSON.stringify(chart.layout);
+    };
+    host.current.addEventListener('fixture-replace', replace);
+    host.current.addEventListener('fixture-export', exportSVG);
+    host.current.addEventListener('fixture-layout', expose);
+    return () => {
+      host.current?.removeEventListener('fixture-replace', replace);
+      host.current?.removeEventListener('fixture-export', exportSVG);
+      host.current?.removeEventListener('fixture-layout', expose);
+      chart.destroy();
+    };
+  }, []);
+  return (
+    <div style={{ paddingTop: 56 }}>
+      <div
+        ref={host}
+        data-testid="annotation-gesture-host"
+        style={{ width: '100%', height: 440 }}
+      />
+      <output data-testid="edit-count">{count}</output>
+    </div>
+  );
+}
+
+/** Shares the compiled snapshot with invariant tests, without exposing editor controls. */
+function AnnotationInvariantChart({
+  spec,
+  height = 300,
+  testId = 'annotation-curve',
+  renderer,
+}: {
+  spec: ChartSpec | LayerSpec;
+  height?: number | 'auto';
+  testId?: string;
+  renderer?: 'svg' | 'canvas';
+}) {
+  const host = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const node = host.current!;
+    const chart = createChart(node, spec, { renderer, darkMode: 'auto' });
+    // A fixed plot budget can render a taller grow-mode figure. Keep the next
+    // example below the actual SVG while leaving the authored budget unchanged.
+    const spaceFigure = () => {
+      node.style.marginBottom = `${Math.max(0, chart.layout.dimensions.height - node.clientHeight)}px`;
+    };
+    const observer = new ResizeObserver(spaceFigure);
+    const svg = node.querySelector('svg');
+    if (svg) observer.observe(svg);
+    spaceFigure();
+    const expose = () => {
+      node.dataset.layout = JSON.stringify(chart.layout);
+    };
+    const exportSVG = () => {
+      node.dataset.export = chart.export('svg');
+    };
+    const exportPNG = async () => {
+      const bitmap = await createImageBitmap(
+        await chart.export('png', { dpi: 1, embedFonts: false }),
+      );
+      node.dataset.png = JSON.stringify({ width: bitmap.width, height: bitmap.height });
+      bitmap.close();
+    };
+    node.addEventListener('fixture-png', exportPNG);
+    node.addEventListener('fixture-layout', expose);
+    node.addEventListener('fixture-export', exportSVG);
+    return () => {
+      observer.disconnect();
+      node.removeEventListener('fixture-png', exportPNG);
+      node.removeEventListener('fixture-layout', expose);
+      node.removeEventListener('fixture-export', exportSVG);
+      chart.destroy();
+    };
+  }, [spec, renderer]);
+  return <div ref={host} data-testid={testId} style={{ height }} />;
+}
+export function AnnotationCurves() {
+  return (
+    <div style={{ paddingTop: 56 }}>
+      {annotationCurveSpecs.map((spec) => (
+        <AnnotationInvariantChart key={spec.annotations![0].id} spec={spec} />
+      ))}
+    </div>
+  );
+}
+
+export function AnnotationReferenceLabels() {
+  return (
+    <div style={{ paddingTop: 56 }}>
+      <AnnotationInvariantChart
+        spec={annotationReferenceDualAxisSpec}
+        height={580}
+        testId="annotation-layout"
+      />
+      <AnnotationInvariantChart
+        spec={{
+          ...annotationReferenceSpecs[0],
+          data: ['A', 'B'].flatMap((group) =>
+            annotationReferenceSpecs[0].data.map((row) => ({ ...row, group })),
+          ),
+          encoding: {
+            x: { field: 'x', type: 'quantitative' },
+            y: { field: 'y', type: 'quantitative' },
+            facet: { field: 'group', type: 'nominal', columns: 2 },
+          },
+          mark: 'point',
+        }}
+        height={750}
+        testId="annotation-layout"
+      />
+      {annotationReferenceSpecs.map((spec) => (
+        <AnnotationInvariantChart
+          key={`${String(spec.chrome?.title)}-${!!spec.encoding.facet}`}
+          spec={spec}
+          height={580}
+          testId="annotation-layout"
+        />
+      ))}
+    </div>
+  );
+}
+
+export function AnnotationCrowdedCallouts() {
+  return (
+    <div style={{ paddingTop: 56 }}>
+      <AnnotationInvariantChart
+        spec={{
+          ...annotationCrowdedSpec,
+          responsive: { compactAnnotationLimit: 1 },
+          annotations: annotationCrowdedSpec.annotations!.map((a) =>
+            a.type === 'text' ? { ...a, maxWidth: 130 } : a,
+          ),
+        }}
+        height={850}
+        testId="annotation-layout"
+      />
+    </div>
+  );
+}
+
+export function AnnotationNotesSizing() {
+  return (
+    <div style={{ paddingTop: 56 }}>
+      {annotationNotesSpecs.map((spec) => (
+        <AnnotationInvariantChart
+          key={`${String(spec.chrome?.title)}-${!!spec.encoding.facet}`}
+          spec={spec}
+          height={600}
+          testId="annotation-layout"
+        />
+      ))}
+      {annotationNotesSpecs
+        .filter((_, i) => i % 2 === 0)
+        .map((spec) => (
+          <AnnotationInvariantChart
+            key={`layer-${String(spec.chrome?.title)}`}
+            spec={{
+              layer: [
+                { ...spec, annotations: undefined },
+                { ...spec, annotations: undefined },
+              ],
+              annotations: spec.annotations,
+              chrome: spec.chrome,
+            }}
+            height={600}
+            testId="annotation-layout"
+          />
+        ))}
+      <AnnotationInvariantChart
+        spec={annotationNotesSpecs[4]}
+        renderer="canvas"
+        height={600}
+        testId="annotation-canvas"
+      />
+      <AnnotationInvariantChart
+        spec={{ ...annotationNotesSpecs[4], chromeLayout: 'grow' }}
+        height="auto"
+        testId="annotation-auto-height"
+      />
+    </div>
+  );
+}

@@ -9,10 +9,19 @@ import {
   type GraphSpec,
   type RangeAnnotation,
   type RefLineAnnotation,
+  type ResolvedAnnotation,
   type TextAnnotation,
 } from '@opendata-ai/openchart-core';
+import {
+  createAnnotationEditContext,
+  inverseLabelPlacement,
+  previewAnnotationMove,
+  previewConnectorOffset,
+} from '@opendata-ai/openchart-engine';
+import { updateAnnotationGeometry } from '../renderers/annotations';
 import { createDragHandler } from './drag-handler';
 import { invertScale } from './invert';
+import { buildElementRef } from './selection';
 
 /**
  * Wire drag-to-reposition on text annotation labels.
@@ -26,91 +35,70 @@ export function wireAnnotationDrag(
     | undefined,
   onEdit: ((edit: ElementEdit) => void) | undefined,
   setDragging: (dragging: boolean) => void,
+  layout: ChartLayout,
+  spec: unknown,
 ): () => void {
-  const annotationElements = svg.querySelectorAll('.oc-annotation-text');
   const cleanups: Array<() => void> = [];
-
-  for (const el of annotationElements) {
-    const indexStr = el.getAttribute('data-annotation-index');
-    if (indexStr === null) continue;
-
-    const index = Number(indexStr);
-    const specAnnotation = specAnnotations[index];
-    if (!specAnnotation || specAnnotation.type !== 'text') continue;
-
-    const textAnnotation = specAnnotation as TextAnnotation;
-    const annotationG = el as SVGGElement;
-
-    annotationG.style.cursor = 'grab';
-
-    const connectorLine = annotationG.querySelector('line.oc-annotation-connector');
-    const origX2 = connectorLine ? Number(connectorLine.getAttribute('x2')) : 0;
-    const origY2 = connectorLine ? Number(connectorLine.getAttribute('y2')) : 0;
-
-    const curvedPath = annotationG.querySelector('path.oc-annotation-connector');
-    const arrowhead = annotationG.querySelector('polyline.oc-annotation-arrowhead');
-    const hasCurvedConnector = curvedPath !== null;
-
-    const origDx = textAnnotation.offset?.dx ?? 0;
-    const origDy = textAnnotation.offset?.dy ?? 0;
-
-    const cleanup = createDragHandler({
-      element: annotationG,
-      svg: svg as unknown as SVGSVGElement,
-      onMove: (dx, dy) => {
-        annotationG.setAttribute('transform', `translate(${dx}, ${dy})`);
-
-        if (connectorLine && !hasCurvedConnector) {
-          connectorLine.setAttribute('x2', String(origX2 - dx));
-          connectorLine.setAttribute('y2', String(origY2 - dy));
-        }
-
-        if (hasCurvedConnector) {
-          if (curvedPath) curvedPath.setAttribute('display', 'none');
-          if (arrowhead) arrowhead.setAttribute('display', 'none');
-        }
-      },
-      onEnd: (dx, dy, moved) => {
-        annotationG.removeAttribute('transform');
-
-        if (connectorLine && !hasCurvedConnector) {
-          connectorLine.setAttribute('x2', String(origX2));
-          connectorLine.setAttribute('y2', String(origY2));
-        }
-
-        if (hasCurvedConnector) {
-          if (curvedPath) curvedPath.removeAttribute('display');
-          if (arrowhead) arrowhead.removeAttribute('display');
-        }
-
-        if (moved) {
-          const newOffset: AnnotationOffset = {
-            dx: origDx + dx,
-            dy: origDy + dy,
-          };
-          onAnnotationEdit?.(textAnnotation, newOffset);
+  const ctx = createAnnotationEditContext(layout, spec);
+  for (const group of svg.querySelectorAll<SVGGElement>('.oc-annotation-text')) {
+    const ref = buildElementRef(group, specAnnotations);
+    if (ref?.type !== 'annotation') continue;
+    const authored = specAnnotations[ref.index];
+    if (authored?.type !== 'text') continue;
+    let initial: ResolvedAnnotation;
+    try {
+      initial = previewAnnotationMove(ctx, ref, { dx: 0, dy: 0 });
+    } catch {
+      continue;
+    }
+    if (!initial.label?.visible || initial.footnoteIndex !== undefined) continue;
+    const original = initial;
+    const restore = () =>
+      updateAnnotationGeometry(group, original, layout.theme.colors.neutral.surface);
+    group.style.cursor = 'grab';
+    cleanups.push(
+      createDragHandler({
+        element: group,
+        svg: svg as SVGSVGElement,
+        setDragging,
+        animationFrame: true,
+        onMove: (dx, dy) =>
+          updateAnnotationGeometry(
+            group,
+            previewAnnotationMove(ctx, ref, { dx, dy }),
+            layout.theme.colors.neutral.surface,
+          ),
+        onCancel: restore,
+        onEnd: (dx, dy, moved) => {
+          restore();
+          if (!moved) return;
+          const preview = previewAnnotationMove(ctx, ref, { dx, dy });
+          const placement = inverseLabelPlacement(ctx, ref, preview.bounds!);
+          // Preserve the deprecated callback's original-reference/relative-offset contract.
+          onAnnotationEdit?.(authored, {
+            dx:
+              Math.round(
+                ((authored.offset?.dx ?? 0) + preview.label!.x - original.label!.x) * 1e10,
+              ) / 1e10,
+            dy:
+              Math.round(
+                ((authored.offset?.dy ?? 0) + preview.label!.y - original.label!.y) * 1e10,
+              ) / 1e10,
+          });
           onEdit?.({
             type: 'annotation',
-            element: elementRef.annotation(
-              index,
-              textAnnotation.id,
-              `${annotationG.getAttribute('data-annotation-path') ?? `/annotations/${index}`}/offset`,
-            ),
-            annotation: textAnnotation,
-            offset: newOffset,
+            element: { ...ref, path: `${ref.path}/offset` },
+            annotation: authored,
+            offset: placement.offset!,
+            anchor: placement.anchor,
+            responsive: false,
           });
-        }
-      },
-      setDragging,
-    });
-
-    cleanups.push(cleanup);
+        },
+      }),
+    );
   }
-
   return () => {
-    for (const cleanup of cleanups) {
-      cleanup();
-    }
+    for (const cleanup of cleanups) cleanup();
   };
 }
 
@@ -123,161 +111,98 @@ export function wireConnectorEndpointDrag(
   specAnnotations: Annotation[],
   onEdit: (edit: ElementEdit) => void,
   setDragging: (dragging: boolean) => void,
+  layout: ChartLayout,
+  spec: unknown,
 ): () => void {
-  const SVG_NS = 'http://www.w3.org/2000/svg';
   const cleanups: Array<() => void> = [];
-  const annotationGroups = svg.querySelectorAll('.oc-annotation-text');
-
-  for (const el of annotationGroups) {
-    const annotationG = el as SVGGElement;
-    const indexStr = annotationG.getAttribute('data-annotation-index');
-    if (indexStr === null) continue;
-
-    const index = Number(indexStr);
-    const specAnnotation = specAnnotations[index];
-    if (!specAnnotation || specAnnotation.type !== 'text') continue;
-
-    const textAnnotation = specAnnotation as TextAnnotation;
-
-    const connectorLine = annotationG.querySelector('line.oc-annotation-connector');
-    const curvedPath = annotationG.querySelector('path.oc-annotation-connector');
-    if (!connectorLine && !curvedPath) continue;
-
-    let fromX: number, fromY: number, toX: number, toY: number;
-    if (connectorLine) {
-      fromX = Number(connectorLine.getAttribute('x1')) || 0;
-      fromY = Number(connectorLine.getAttribute('y1')) || 0;
-      toX = Number(connectorLine.getAttribute('x2')) || 0;
-      toY = Number(connectorLine.getAttribute('y2')) || 0;
-    } else {
-      const pathD = curvedPath!.getAttribute('d') ?? '';
-      const mMatch = pathD.match(/M\s*([\d.e+-]+)\s+([\d.e+-]+)/);
-      fromX = mMatch ? Number(mMatch[1]) : 0;
-      fromY = mMatch ? Number(mMatch[2]) : 0;
-      // The open-V arrowhead is a polyline "baseLeft tip baseRight": the tip is
-      // the middle point.
-      const arrowhead = annotationG.querySelector('polyline.oc-annotation-arrowhead');
-      const points = arrowhead?.getAttribute('points')?.split(' ') ?? [];
-      const [px, py] = (points[1] ?? '0,0').split(',');
-      toX = Number(px) || 0;
-      toY = Number(py) || 0;
+  const ctx = createAnnotationEditContext(layout, spec);
+  for (const group of svg.querySelectorAll<SVGGElement>('.oc-annotation-text')) {
+    const ref = buildElementRef(group, specAnnotations);
+    if (ref?.type !== 'annotation') continue;
+    const authored = specAnnotations[ref.index];
+    if (authored?.type !== 'text') continue;
+    let original: ResolvedAnnotation;
+    try {
+      original = previewAnnotationMove(ctx, ref, { dx: 0, dy: 0 });
+    } catch {
+      continue;
     }
-
-    const endpoints: Array<{ name: 'from' | 'to'; cx: number; cy: number }> = [
-      { name: 'from', cx: fromX, cy: fromY },
-      { name: 'to', cx: toX, cy: toY },
-    ];
-
-    const createdHandles: SVGCircleElement[] = [];
-
-    for (const ep of endpoints) {
-      if (!Number.isFinite(ep.cx) || !Number.isFinite(ep.cy)) continue;
-
-      const handleEl = document.createElementNS(SVG_NS, 'circle') as SVGCircleElement;
-      handleEl.setAttribute('class', 'oc-connector-handle');
-      handleEl.setAttribute('data-endpoint', ep.name);
-      handleEl.setAttribute('cx', String(ep.cx));
-      handleEl.setAttribute('cy', String(ep.cy));
-      handleEl.setAttribute('r', '4');
-      handleEl.setAttribute('opacity', '0');
-      handleEl.setAttribute('fill', 'currentColor');
-      handleEl.setAttribute('stroke', 'currentColor');
-      annotationG.appendChild(handleEl);
-      createdHandles.push(handleEl);
-
-      const origCx = ep.cx;
-      const origCy = ep.cy;
-
-      const stopProp = (e: Event) => {
-        e.stopPropagation();
+    const connector = original.label?.connector;
+    if (!connector || original.footnoteIndex !== undefined) continue;
+    const handles: SVGCircleElement[] = [];
+    for (const end of ['from', 'to'] as const) {
+      const point = connector[end];
+      const handle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      handle.setAttribute('class', 'oc-connector-handle');
+      handle.setAttribute('data-endpoint', end);
+      handle.setAttribute('cx', String(point.x));
+      handle.setAttribute('cy', String(point.y));
+      handle.setAttribute('r', '4');
+      handle.setAttribute('opacity', '0');
+      handle.setAttribute('fill', 'currentColor');
+      handle.setAttribute('stroke', 'currentColor');
+      handle.style.cursor = 'grab';
+      group.appendChild(handle);
+      handles.push(handle);
+      const stop = (event: Event) => event.stopPropagation();
+      handle.addEventListener('mousedown', stop);
+      handle.addEventListener('touchstart', stop);
+      const restore = () => {
+        updateAnnotationGeometry(group, original, layout.theme.colors.neutral.surface);
+        handle.setAttribute('cx', String(point.x));
+        handle.setAttribute('cy', String(point.y));
       };
-      handleEl.addEventListener('mousedown', stopProp);
-      handleEl.addEventListener('touchstart', stopProp);
-      cleanups.push(() => {
-        handleEl.removeEventListener('mousedown', stopProp);
-        handleEl.removeEventListener('touchstart', stopProp);
-      });
-
-      const cleanup = createDragHandler({
-        element: handleEl,
-        svg: svg as unknown as SVGSVGElement,
-        onMove: (dx, dy) => {
-          handleEl.setAttribute('cx', String(origCx + dx));
-          handleEl.setAttribute('cy', String(origCy + dy));
-
-          if (connectorLine) {
-            if (ep.name === 'from') {
-              connectorLine.setAttribute('x1', String(origCx + dx));
-              connectorLine.setAttribute('y1', String(origCy + dy));
-            } else {
-              connectorLine.setAttribute('x2', String(origCx + dx));
-              connectorLine.setAttribute('y2', String(origCy + dy));
-            }
-          }
-        },
-        onEnd: (dx, dy, moved) => {
-          handleEl.setAttribute('cx', String(origCx));
-          handleEl.setAttribute('cy', String(origCy));
-
-          if (connectorLine) {
-            if (ep.name === 'from') {
-              connectorLine.setAttribute('x1', String(origCx));
-              connectorLine.setAttribute('y1', String(origCy));
-            } else {
-              connectorLine.setAttribute('x2', String(origCx));
-              connectorLine.setAttribute('y2', String(origCy));
-            }
-          }
-
-          if (moved) {
-            const existingOffset = textAnnotation.connectorOffset?.[ep.name];
-            const origEndDx = existingOffset?.dx ?? 0;
-            const origEndDy = existingOffset?.dy ?? 0;
+      cleanups.push(
+        createDragHandler({
+          element: handle,
+          svg: svg as SVGSVGElement,
+          setDragging,
+          animationFrame: true,
+          onMove: (dx, dy) => {
+            const preview = previewConnectorOffset(ctx, ref, end, { dx, dy });
+            updateAnnotationGeometry(group, preview, layout.theme.colors.neutral.surface);
+            const position = preview.label?.connector?.[end] ?? point;
+            handle.setAttribute('cx', String(position.x));
+            handle.setAttribute('cy', String(position.y));
+          },
+          onCancel: restore,
+          onEnd: (dx, dy, moved) => {
+            restore();
+            if (!moved) return;
+            const previous = authored.connectorOffset?.[end];
             onEdit({
               type: 'annotation-connector',
-              element: elementRef.annotation(
-                index,
-                textAnnotation.id,
-                `${annotationG.getAttribute('data-annotation-path') ?? `/annotations/${index}`}/connectorOffset/${ep.name}`,
-              ),
-              annotation: textAnnotation,
-              endpoint: ep.name,
-              offset: { dx: origEndDx + dx, dy: origEndDy + dy },
+              element: { ...ref, path: `${ref.path}/connectorOffset/${end}` },
+              annotation: authored,
+              endpoint: end,
+              offset: { dx: (previous?.dx ?? 0) + dx, dy: (previous?.dy ?? 0) + dy },
             });
-          }
-        },
-        setDragging,
+          },
+        }),
+      );
+      cleanups.push(() => {
+        handle.removeEventListener('mousedown', stop);
+        handle.removeEventListener('touchstart', stop);
+        handle.remove();
       });
-
-      cleanups.push(cleanup);
     }
-
-    const showHandles = () => {
-      for (const h of createdHandles) {
-        h.setAttribute('opacity', '0.6');
-      }
-    };
-    const hideHandles = () => {
-      for (const h of createdHandles) {
-        h.setAttribute('opacity', '0');
-      }
-    };
-
-    annotationG.addEventListener('mouseenter', showHandles);
-    annotationG.addEventListener('mouseleave', hideHandles);
+    const show = () =>
+      handles.forEach((handle) => {
+        handle.setAttribute('opacity', '0.6');
+      });
+    const hide = () =>
+      handles.forEach((handle) => {
+        handle.setAttribute('opacity', '0');
+      });
+    group.addEventListener('mouseenter', show);
+    group.addEventListener('mouseleave', hide);
     cleanups.push(() => {
-      annotationG.removeEventListener('mouseenter', showHandles);
-      annotationG.removeEventListener('mouseleave', hideHandles);
-      for (const h of createdHandles) {
-        h.remove();
-      }
+      group.removeEventListener('mouseenter', show);
+      group.removeEventListener('mouseleave', hide);
     });
   }
-
   return () => {
-    for (const cleanup of cleanups) {
-      cleanup();
-    }
+    for (const cleanup of cleanups) cleanup();
   };
 }
 
@@ -328,6 +253,9 @@ export function wireAnnotationLabelDrag(
         onMove: (dx, dy) => {
           (labelEl as SVGElement & ElementCSSInlineStyle).style.transform =
             `translate(${dx}px, ${dy}px)`;
+        },
+        onCancel: () => {
+          labelEl.style.transform = '';
         },
         onEnd: (dx, dy, moved) => {
           (labelEl as SVGElement & ElementCSSInlineStyle).style.transform = '';
@@ -407,6 +335,9 @@ export function wireChromeDrag(
         (textEl as SVGElement & ElementCSSInlineStyle).style.transform =
           `translate(${dx}px, ${dy}px)`;
       },
+      onCancel: () => {
+        textEl.style.transform = '';
+      },
       onEnd: (dx, dy, moved) => {
         (textEl as SVGElement & ElementCSSInlineStyle).style.transform = '';
 
@@ -468,6 +399,9 @@ export function wireLegendDrag(
       (legendG as SVGElement & ElementCSSInlineStyle).style.transform =
         `translate(${dx}px, ${dy}px)`;
     },
+    onCancel: () => {
+      legendG.style.transform = '';
+    },
     onEnd: (dx, dy, moved) => {
       (legendG as SVGElement & ElementCSSInlineStyle).style.transform = '';
 
@@ -522,6 +456,9 @@ export function wireSeriesLabelDrag(
       onMove: (dx, dy) => {
         (labelEl as SVGElement & ElementCSSInlineStyle).style.transform =
           `translate(${dx}px, ${dy}px)`;
+      },
+      onCancel: () => {
+        labelEl.style.transform = '';
       },
       onEnd: (dx, dy, moved) => {
         (labelEl as SVGElement & ElementCSSInlineStyle).style.transform = '';
@@ -609,6 +546,10 @@ export function wireAnchorDrag(
       onMove: (dx, dy) => {
         handleEl.setAttribute('cx', String(anchorX + dx));
         handleEl.setAttribute('cy', String(anchorY + dy));
+      },
+      onCancel: () => {
+        handleEl.setAttribute('cx', String(anchorX));
+        handleEl.setAttribute('cy', String(anchorY));
       },
       onEnd: (dx, dy, moved) => {
         handleEl.setAttribute('cx', String(anchorX));

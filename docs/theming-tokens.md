@@ -207,3 +207,15 @@ as `chrome.*.color` and needs no dark-mode branch. `computeChrome` reserves
 - **If you were reading `--oc-*` values from CSS** to style surrounding UI, those values now reflect the actual resolved theme rather than the hardcoded defaults. This is almost certainly what you wanted, but worth noting.
 
 No action required. If you import `tokens.css`/`dark.css`, keep doing so. The JS-stamped properties take precedence via inline style specificity.
+
+
+### Annotation tokens (8.9.1)
+
+`theme.colors` accepts `annotationLabel`, `annotationMuted`, `annotationLeader`,
+`annotationRule`, `annotationRangeFill`, `annotationMarkerFill`, and
+`annotationPlate`, each as a color or `{ light, dark }` pair. Their CSS equivalents
+are `--oc-annotation-label`, `--oc-annotation-muted`, `--oc-annotation-leader`,
+`--oc-annotation-rule`, `--oc-annotation-range-fill`, `--oc-annotation-marker-fill`,
+and `--oc-annotation-plate`. Explicit annotation colors override the tokens.
+Arrow connectors match label ink. Existing `annotationText`/`annotationFill`
+uses are unchanged. Omitted annotation tokens preserve current 8.x output.

@@ -233,7 +233,7 @@ export function estimateLabelBounds(
   return computeTextBlockBounds(
     label.x,
     label.y,
-    label.text,
+    label.lines?.join('\n') ?? label.text,
     {
       fontSize,
       fontWeight,
@@ -313,10 +313,27 @@ export function connectorPullbackGap(markerRadius: number, arrow: boolean): numb
  * inside the text block, or the resulting line is shorter than
  * `MIN_CONNECTOR_LENGTH`.
  */
+export function automaticControlPoint(
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+  exit?: 'horizontal' | 'vertical',
+  bend = 0,
+): { x: number; y: number } {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const vertical = exit ? exit === 'vertical' : Math.abs(dy) >= Math.abs(dx);
+  const x = from.x + dx * (vertical ? 0.2 : 0.6);
+  const y = from.y + dy * (vertical ? 0.6 : 0.2);
+  // len * normal = (dy, -dx), including a degenerate chord. Preserve exact
+  // floating-point output when bend is omitted or zero.
+  return bend === 0 ? { x, y } : { x: x + bend * dy, y: y - bend * dx };
+}
+
 export function refreshConnector(
   connector: NonNullable<ResolvedLabel['connector']>,
   bounds: Rect,
   markerRadius: number,
+  keepVisible = false,
 ): ResolvedLabel['connector'] {
   // `endpoint` is the un-pulled-back data point, and the only valid basis for a
   // rebuild: pulling back from `to` (already pulled back) shrinks the line a
@@ -340,13 +357,30 @@ export function refreshConnector(
     const gap = connectorPullbackGap(markerRadius, false);
     return {
       ...connector,
-      from: { x: endpoint.x, y: bounds.y - DROP_LINE_TOP_GAP },
+      from: {
+        x: endpoint.x + (connector.fromOffset?.dx ?? 0),
+        y: bounds.y - DROP_LINE_TOP_GAP + (connector.fromOffset?.dy ?? 0),
+      },
       to: { x: endpoint.x, y: endpoint.y - gap },
       exit: 'vertical',
     };
   }
 
-  const exit = connectorExit(bounds, endpoint.x, endpoint.y);
+  const exit =
+    (connector.labelAttachment === 'left-center'
+      ? {
+          x: bounds.x - BOX_INFLATE - CONNECTOR_STANDOFF,
+          y: bounds.y + bounds.height / 2,
+          exit: 'horizontal' as const,
+        }
+      : connectorExit(bounds, endpoint.x, endpoint.y)) ??
+    (keepVisible
+      ? {
+          x: bounds.x + bounds.width / 2,
+          y: bounds.y + bounds.height / 2,
+          exit: connector.exit ?? ('horizontal' as const),
+        }
+      : null);
   if (!exit) return undefined;
 
   // Re-apply the author's from-end nudge BEFORE the pullback, so the pullback
@@ -370,7 +404,16 @@ export function refreshConnector(
   // direction once its end is pulled back, and checking first would miss it.
   const lx = to.x - from.x;
   const ly = to.y - from.y;
-  if (!connectorIsDrawable(Math.sqrt(lx * lx + ly * ly), connector.arrow)) return undefined;
+  if (!keepVisible && !connectorIsDrawable(Math.sqrt(lx * lx + ly * ly), connector.arrow))
+    return undefined;
 
-  return { ...connector, from, to, exit: exit.exit };
+  return {
+    ...connector,
+    from,
+    to,
+    exit: exit.exit,
+    ...(connector.style === 'curve'
+      ? { control: automaticControlPoint(from, to, exit.exit, connector.bend) }
+      : {}),
+  };
 }

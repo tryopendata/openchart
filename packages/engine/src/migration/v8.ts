@@ -1,4 +1,5 @@
 import type { ChartSpec, LayerSpec } from '@opendata-ai/openchart-core';
+import { legacyEditorial } from '@opendata-ai/openchart-core';
 import { buildPrimarySpec } from '../compile/layer';
 import { expandSpecSugar } from '../compile/spec-sugar';
 import { flattenLayers, normalizeSpec } from '../compiler/normalize';
@@ -128,6 +129,107 @@ export function migrateSpecV8<T>(input: T): { spec: T; repairs: SpecRepair[] } {
         if (annotation?.type === 'rule')
           replace(annotation, 'type', 'refline', `${path}/annotations/${index}`, 'Use refline.');
       }
+    // Materialize only omitted v8 defaults. An authored null/false remains an opt-out.
+    if (Array.isArray(current.annotations))
+      for (const [index, value] of current.annotations.entries()) {
+        const annotation = node(value);
+        if (!annotation) continue;
+        const at = `${path}/annotations/${index}`;
+        const setDefault = (key: string, value: unknown) => {
+          if (annotation[key] === undefined)
+            replace(annotation, key, value, at, 'Preserve the v8 annotation default.');
+        };
+        if (annotation.type === 'text') {
+          setDefault('maxWidth', null);
+          if (annotation.subtitle) {
+            setDefault('fontWeight', 700);
+            setDefault(
+              'subtitleFontSize',
+              Math.round(
+                (typeof annotation.fontSize === 'number' ? annotation.fontSize : 13) * 0.85,
+              ),
+            );
+          }
+          if (annotation.connector === 'curve')
+            replace(
+              annotation,
+              'connector',
+              { type: 'curve', arrow: true },
+              at,
+              'Preserve the v8 curve arrow.',
+            );
+          const connector = node(annotation.connector);
+          if (connector?.type === 'curve' && connector.arrow === undefined)
+            replace(connector, 'arrow', true, `${at}/connector`, 'Preserve the v8 curve arrow.');
+        }
+        if (
+          annotation.type === 'refline' &&
+          annotation.label &&
+          annotation.labelAnchor === undefined &&
+          annotation.labelPlacement === undefined
+        ) {
+          setDefault('labelAnchor', annotation.y !== undefined ? 'top' : 'left');
+        }
+      }
+    const isChart = current.mark !== undefined || Array.isArray(current.layer);
+    const isLayer = Array.isArray(current.layer);
+    if (isChart && !isLayer && current.chromeLayout === undefined)
+      rewrite('chromeLayout', 'subtract', 'Preserve the v8 fixed figure budget.');
+    if (
+      isChart &&
+      (!isLayer ||
+        current.responsive !== undefined ||
+        (typeof current.width === 'number' && typeof current.height === 'number'))
+    ) {
+      const responsive = current.responsive;
+      if (responsive !== false) {
+        if (
+          responsive === undefined &&
+          typeof current.width === 'number' &&
+          typeof current.height === 'number'
+        )
+          rewrite('responsive', false, 'Preserve the fixed-size responsive opt-out.');
+        else if (node(responsive)?.compactAnnotationLimit === undefined)
+          rewrite(
+            'responsive',
+            { ...node(responsive), compactAnnotationLimit: null },
+            'Preserve unlimited v8 compact annotations.',
+          );
+      }
+    }
+    // A theme-less layer inherits its parent. Adding a partial leaf theme would
+    // change the v8 shallow merge, so only materialize at an actual theme owner.
+    if (
+      (!isLayer && (isChart || current.type !== undefined) && inherited.theme === undefined) ||
+      current.theme !== undefined
+    ) {
+      const oldTheme = { ...node(current.theme) };
+      const fonts = node(oldTheme.fonts) ?? {};
+      const sizes = node(fonts.sizes) ?? {};
+      const chromeDefaults = node(oldTheme.chrome) ?? {};
+      const newSizes = { ...sizes };
+      for (const [key, value] of Object.entries(legacyEditorial.fonts!.sizes!)) {
+        const matching = key === 'small' ? ['source', 'byline', 'footer'] : [key];
+        if (
+          newSizes[key] === undefined &&
+          !matching.some((name) => node(chromeDefaults[name])?.fontSize !== undefined)
+        )
+          newSizes[key] = value;
+      }
+      const newChrome = { ...chromeDefaults };
+      for (const key of ['byline', 'source', 'footer']) {
+        const entry = node(newChrome[key]) ?? {};
+        if (entry.fontSize === undefined)
+          newChrome[key] = { ...entry, fontSize: sizes.small ?? 11 };
+      }
+      const materialized = { ...oldTheme, fonts: { ...fonts, sizes: newSizes }, chrome: newChrome };
+      if (JSON.stringify(materialized) !== JSON.stringify(current.theme))
+        rewrite(
+          'theme',
+          materialized,
+          'Preserve v8 typography without overriding authored chrome sizes.',
+        );
+    }
     const data = current.data ?? inherited.data;
     const effectiveEncoding = { ...node(inherited.encoding), ...encoding };
     const labels = node(current.labels);
@@ -187,6 +289,9 @@ export function migrateSpecV8<T>(input: T): { spec: T; repairs: SpecRepair[] } {
         if (childNode)
           visit(childNode, `${path}/layer/${index}`, {
             data,
+            theme: current.theme ?? inherited.theme,
+            responsive: current.responsive ?? inherited.responsive,
+            chromeLayout: current.chromeLayout ?? inherited.chromeLayout,
             encoding: effectiveEncoding,
             endpointLabels: current.endpointLabels ?? endpoint,
             legend: current.legend ?? inherited.legend,

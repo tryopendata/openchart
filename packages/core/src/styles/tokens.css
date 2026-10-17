@@ -98,6 +98,13 @@
     --oc-source-size: 11px;
     --oc-source-weight: 400;
     --oc-body-size: 13px;
+    --oc-annotation-label: #333333;
+    --oc-annotation-muted: #6b7280;
+    --oc-annotation-leader: #8f8f8f;
+    --oc-annotation-rule: #666666;
+    --oc-annotation-range-fill: #000000;
+    --oc-annotation-marker-fill: #ffffff;
+    --oc-annotation-plate: #ffffff;
     --oc-eyebrow-size: 11px;
     --oc-eyebrow-weight: 500;
     --oc-eyebrow-tracking: 0.08em;

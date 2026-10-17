@@ -1,4 +1,5 @@
 import { warnDeprecated } from './deprecations';
+import { createAnnotationNudges } from './interactions/annotation-nudges';
 import { annotationSource, editToTransaction } from './interactions/edit-transactions';
 import { canTransitionSpecShape } from './transition/gate';
 import { reconcileSVG } from './transition/reconcile';
@@ -292,6 +293,7 @@ export function createChart<TData extends DataRow = DataRow>(
   let destroyed = false;
   let isDragging = false;
   let pendingRender = false;
+  let gestureWidth = 0;
 
   // Animation state
   let isFirstRender = true;
@@ -429,12 +431,15 @@ export function createChart<TData extends DataRow = DataRow>(
       }
     }
 
-    return (
+    return Math.max(
+      0,
       layout.chrome.topHeight +
-      layout.chrome.bottomHeight +
-      topLegendBlock +
-      (layout.metrics?.height ?? 0) +
-      facetGrowth
+        layout.chrome.bottomHeight +
+        topLegendBlock +
+        (layout.metrics?.height ?? 0) +
+        facetGrowth +
+        (layout.chrome.grownHeight !== undefined ? (layout.chrome.noteBandHeight ?? 0) : 0) -
+        (layout.chrome.grownHeight ?? 0),
     );
   }
 
@@ -617,6 +622,15 @@ export function createChart<TData extends DataRow = DataRow>(
     warnDeprecated('The mount responsive option is deprecated; use autoResize.');
 
   let editRevision = options?.revision;
+  const annotationNudges = createAnnotationNudges(
+    () => ({
+      layout: currentLayout,
+      spec: currentSpec,
+      svg: svgElement,
+      selected: selectedElement,
+    }),
+    emitEdit,
+  );
 
   function emitEdit(edit: ElementEdit): void {
     const tx = editToTransaction(currentSpec, edit, editRevision);
@@ -636,6 +650,7 @@ export function createChart<TData extends DataRow = DataRow>(
   }
 
   function selectElement(ref: ElementRef): void {
+    annotationNudges.flush();
     if (!svgElement) return;
 
     const target = findElementByRef(svgElement, ref);
@@ -653,6 +668,7 @@ export function createChart<TData extends DataRow = DataRow>(
   }
 
   function deselectElement(): void {
+    annotationNudges.flush();
     if (!selectedElement) return;
 
     if (isTextEditingActive && textEditCleanup) {
@@ -841,6 +857,9 @@ export function createChart<TData extends DataRow = DataRow>(
 
     const handleKeyDown = (e: KeyboardEvent) => {
       const specAnnotations = getSpecAnnotations();
+      if (!isTextEditingActive && annotationNudges.keydown(e)) return;
+      if (e.key === 'Escape' || e.key === 'Delete' || e.key === 'Backspace')
+        annotationNudges.flush();
 
       switch (e.key) {
         case 'Delete':
@@ -907,9 +926,57 @@ export function createChart<TData extends DataRow = DataRow>(
     };
 
     svg.addEventListener('keydown', handleKeyDown);
+    const flushNudges = () => annotationNudges.flush();
+    svg.addEventListener('keyup', flushNudges);
+    const startGesture = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Element;
+      const ref = buildElementRef(target, getSpecAnnotations());
+      const previousLayout = currentLayout;
+      // Capture the specific handle before a controlled update replaces it.
+      const role = target.closest('.oc-connector-handle, .oc-anchor-handle, .oc-annotation-label');
+      const roleClass = role?.getAttribute('class');
+      const endpoint = role?.getAttribute('data-endpoint');
+      annotationNudges.flush();
+      if (destroyed || !ref || !svgElement || currentLayout === previousLayout) return;
+      const group = findElementByRef(svgElement, ref);
+      if (!group) return;
+      const replacement = roleClass
+        ? ([...group.querySelectorAll('*')].find(
+            (el) =>
+              el.getAttribute('class') === roleClass &&
+              el.getAttribute('data-endpoint') === endpoint,
+          ) ?? group)
+        : group;
+      event.stopImmediatePropagation();
+      event.preventDefault();
+      const init = { bubbles: true, cancelable: true };
+      replacement.dispatchEvent(
+        event.type === 'mousedown'
+          ? new MouseEvent('mousedown', {
+              ...init,
+              clientX: (event as MouseEvent).clientX,
+              clientY: (event as MouseEvent).clientY,
+              button: (event as MouseEvent).button,
+            })
+          : new TouchEvent('touchstart', {
+              ...init,
+              touches: [...(event as TouchEvent).touches],
+              changedTouches: [...(event as TouchEvent).changedTouches],
+            }),
+      );
+    };
+    svg.addEventListener('mousedown', startGesture, true);
+    svg.addEventListener('touchstart', startGesture, true);
+    document.addEventListener('pointercancel', flushNudges, true);
+    document.addEventListener('touchcancel', flushNudges, true);
 
     return () => {
       svg.removeEventListener('keydown', handleKeyDown);
+      svg.removeEventListener('keyup', flushNudges);
+      svg.removeEventListener('mousedown', startGesture, true);
+      svg.removeEventListener('touchstart', startGesture, true);
+      document.removeEventListener('pointercancel', flushNudges, true);
+      document.removeEventListener('touchcancel', flushNudges, true);
     };
   }
 
@@ -1136,6 +1203,7 @@ export function createChart<TData extends DataRow = DataRow>(
 
     // Shared setDragging callback for all drag handlers
     const setDragging = (dragging: boolean) => {
+      if (dragging) gestureWidth = getContainerDimensions().width;
       isDragging = dragging;
       if (!dragging && pendingRender) {
         pendingRender = false;
@@ -1157,6 +1225,8 @@ export function createChart<TData extends DataRow = DataRow>(
         options?.onAnnotationEdit,
         emitEdit,
         setDragging,
+        currentLayout,
+        currentSpec,
       );
     }
 
@@ -1169,7 +1239,14 @@ export function createChart<TData extends DataRow = DataRow>(
       const onEditFn = emitEdit;
 
       editCleanups.push(
-        wireConnectorEndpointDrag(svgElement, dragAnnotations, onEditFn, setDragging),
+        wireConnectorEndpointDrag(
+          svgElement,
+          dragAnnotations,
+          onEditFn,
+          setDragging,
+          currentLayout,
+          currentSpec,
+        ),
       );
       editCleanups.push(
         wireAnnotationLabelDrag(svgElement, dragAnnotations, onEditFn, setDragging),
@@ -1346,12 +1423,25 @@ export function createChart<TData extends DataRow = DataRow>(
   }
 
   function doUpdate(
-    newSpec: ChartSpec | GraphSpec,
+    newSpec: ChartSpec | LayerSpec | GraphSpec,
     updateOpts: UpdateOptions | undefined,
     manual: boolean,
     layoutOnly = false,
   ): TransitionHandle | null {
     if (destroyed) return null;
+
+    annotationNudges.flush();
+    if (destroyed) return null;
+    // A controlled host may commit the flushed nudge synchronously.
+    if (layoutOnly) newSpec = currentSpec;
+    if (isDragging) {
+      if (layoutOnly && getContainerDimensions().width === gestureWidth) {
+        pendingRender = true;
+        return null;
+      }
+      pendingRender = false;
+      svgElement?.dispatchEvent(new Event('oc-cancel-drag'));
+    }
 
     // Capture pre-update state for transition gating
     const prevSpec = currentSpec;
@@ -1538,6 +1628,7 @@ export function createChart<TData extends DataRow = DataRow>(
   }
 
   function destroy(): void {
+    annotationNudges.flush();
     if (destroyed) return;
     destroyed = true;
 

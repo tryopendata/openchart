@@ -296,7 +296,7 @@ import { MarkType, MARK_TYPES, MARK_ENCODING_RULES } from '@opendata-ai/openchar
 nudge per-series value labels by pixel offset. The collision system now
 handles label positioning automatically.
 
-**Runtime behavior (8.10):** The property still works and emits a deprecation
+**Runtime behavior (8.9.1):** The property still works and emits a deprecation
 warning once per process. Prefer `endpointLabels`. `migrateSpecV8` replaces
 legacy end-of-line labels with `{ content: 'label', showMarker: false }` and
 reports each dropped series offset. Labels can move to the right-edge column;
@@ -1217,7 +1217,7 @@ warning at compile time with the exact fix. Items with no runtime warning:
   to `mark: { type: 'range', style: 'bar' }`.
 
 
-## 8.10: atomic edits and compatibility aliases
+## 8.9.1: atomic edits and compatibility aliases
 
 Use the additive `onEditTransaction` callback to persist edits without a switch
 for each legacy edit variant. `onEdit` keeps its existing payload in 8.x.
@@ -1255,7 +1255,7 @@ both are supplied. The spec's `responsive` keeps controlling chart layout.
 
 Run `migrateSpecV8(spec)` from `@opendata-ai/openchart-engine` to obtain a new spec
 and a repair list (`path`, `from`, `to`, `reason`). It is pure and idempotent.
-The 8.10 migration changes aliases only:
+The migration rewrites these aliases and also materializes omitted defaults as described below:
 
 | Deprecated form | Replacement |
 | --- | --- |
@@ -1280,7 +1280,7 @@ Executable compatibility paths warn once. Type-only aliases and primitive
 constant imports cannot detect usage at runtime; their JSDoc marks the migration.
 Tilemap `valueFormat` stays supported. The `oc-table--compact` compatibility class
 also stays in 8.x; host styles should target `oc-table--condensed` ahead
-of its eventual removal. The `footnoteBandHeight` API is unchanged in 8.10.
+of its eventual removal. The `footnoteBandHeight` helpers retain their compatibility signatures but are deprecated; see below.
 
 Notes now retain subtitles as `text. subtitle` and wrap within the figure. The engine
 reserves every wrapped line above the source and footer. Existing single-line
@@ -1294,5 +1294,109 @@ right-hand axis; each series retains its own value formatting.
 Legacy-label migration currently targets multi-series line/area charts. A line
 with one color category can still draw a legacy series label, even though the
 suppression truth table describes single-series labels as hidden. Endpoint
-labels also suppress that case, so 8.10 preserves its existing rendering. This
+labels also suppress that case, so 8.9.1 preserves its existing rendering. This
 needs a separate decision before removing the legacy renderer.
+
+### Annotation geometry and editing
+
+The first label drag commits `anchor`, `offset`, and `responsive: false` together.
+Use `onEditTransaction` to apply all three atomically. A dragged label stays inline
+at compact widths; its data point stays fixed. The compatibility `onEdit` annotation
+payload also includes the optional `anchor` and `responsive` fields. The deprecated
+`onAnnotationEdit(annotation, offset)` retains its original callback shape and cannot
+represent this complete placement change.
+
+In edit mode, Alt+arrow nudges the selected text annotation by 1px; Alt+Shift+arrow
+uses 10px. Plain arrows still cycle selection. Repeated nudges form one transaction.
+Escape, pointer/touch cancellation, a width change, or document replacement cancels
+an active drag without emitting an edit. A height-only resize waits for the gesture.
+
+Custom editors can import `createAnnotationEditContext`, `previewAnnotationMove`,
+`previewConnectorBend`, `previewConnectorOffset`, and `inverseLabelPlacement` from
+engine. Create the context from the actual compiled layout and matching spec, use
+canonical annotation refs (including `facetInstance` for facets), and recreate it
+after commit or resize. It retains the compiler's private measurement context, so
+JSON-deserialized or hand-built layouts cannot provide editing contexts. The
+renderer still supports hand-built curve layouts through its control-point fallback.
+
+### Stable annotation note space
+
+Charts with automatic annotation thinning reserve note capacity from their source
+text and subtitles before layout. Pinning or moving a callout can change the
+visible notes without moving the plot, footer, watermark, or SVG edge. The band
+can contain unused space. Pinned source callouts contribute because a fresh
+compile cannot distinguish an authored pin from a drag result. Facets count each
+source once. Charts with automatic thinning disabled retain their existing behavior.
+
+`layout.chrome.noteBandHeight` carries this reserve to renderers and export. It is
+optional for compatibility with older or hand-built layouts; the existing
+`footnoteBandHeight` helpers remain available, with deprecation warnings.
+
+With an explicit `subtract` height, enough annotation text can consume the entire
+plot budget, even when those callouts are pinned. The figure keeps its requested
+height; the existing chrome fallback can hide footer content and the plot can
+have zero height. `onDiagnostic` reports `layout.note-capacity` as a non-throwing
+error in this case. Increase the height, explicitly choose `grow`, or reduce the
+annotation text/count. The compiler does not silently change sizing modes.
+
+### Annotation layout opt-ins
+
+Existing specs retain their 8.x rendering. Add these fields only where you want
+new behavior:
+
+- `TextAnnotation.maxWidth` wraps measured rich text, including long words and
+  authored line breaks. Omission or `null` keeps unlimited width. Display lines
+  live in `label.lines`; `label.text` remains the authored text used for identity
+  and notes. `subtitleFontSize` overrides the existing rounded 85% subtitle size.
+- `responsive.compactAnnotationLimit` limits eligible inline callouts below a
+  400px **figure** width. Priority wins, then source order, before coverage and
+  collision thinning. Omission or `null` is unlimited; `0` sends all eligible
+  callouts to notes. Callouts with `responsive: false` remain inline and do not
+  count. Existing hide-all behavior with disabled responsiveness/auto-thinning
+  or fixed-size specs remains unchanged, as does the behavior below 200px tall.
+- `RefLineAnnotation.labelPlacement` accepts `start`, `end`, `auto`, or `outside`.
+  Start/end mean left/right for horizontal rules and top/bottom for vertical
+  rules. `labelAnchor` still chooses the side. Auto tries the ends, then slides
+  along the rule to avoid obstacles using the full label bounds. An explicit
+  `labelOffset` pins the authored base position and reports overflow rather than
+  moving it. Outside labels wrap in a reserved right gutter or top lane; facets
+  reserve lanes inside each panel. Horizontal outside leaders stay in the gutter
+  during layout and animation. Dual-axis charts retain separate axis, endpoint, legend,
+  and reference columns. If a lane cannot fit its text, increase the figure size
+  or shorten the labels. Omitted placement retains the legacy anchor behavior.
+
+Annotation ink has seven theme tokens: `annotationLabel`, `annotationMuted`,
+`annotationLeader`, `annotationRule`, `annotationRangeFill`,
+`annotationMarkerFill`, and `annotationPlate`. Set them under `theme.colors`,
+using either a color or a `{ light, dark }` pair. Explicit annotation colors win;
+arrow connectors keep the label's ink. Rule and range defaults preserve the
+previous compiled colors (`#666666` and `#000000`, respectively, in both modes).
+Existing `annotationText` and
+`annotationFill` token uses stay unchanged.
+
+Facet charts now support `chromeLayout: 'grow'`: chrome and the note band extend
+the figure, preserving its plot budget. The outer assembly owns that space;
+`layout.dimensions.height` is the final height for rendering and export.
+`layout.chrome.grownHeight` reports added engine height so auto-height mounts
+count it once. In layered specs, author `chromeLayout` on the first leaf (or use
+the compile option); `LayerSpec` has no root-level `chromeLayout` field.
+Default/subtract sizing still takes chrome and notes out of the requested height.
+
+Both `footnoteBandHeight` helpers are deprecated and warn once when called.
+Read `layout.chrome.noteBandHeight` for the resolved reservation. Core retains
+its numeric `(lineCount, theme)` signature for compatibility; it also accepts
+resolved chrome metadata. `computeNoteBandHeight` supplies nondeprecated core
+arithmetic for compiler code and hand-built layouts lacking that metadata.
+Normal rendering and all framework wrappers use the resolved value.
+
+`migrateSpecV8` now also materializes omitted 8.x defaults: unlimited callout
+width/compact count, lede weight, subtitle size, curve arrows, legacy reference
+anchors, subtract sizing, and legacy editorial fonts/chrome sizes. It preserves
+authored values, font precedence, theme presets, responsive opt-outs, and layer
+ownership. It remains pure and idempotent; inspect `repairs` for every change.
+The previously documented legacy series-label rewrite remains a visual migration.
+
+Mark options with no meaning for the authored mark now produce advisory warnings
+with exact source paths and a suggested repair. Warnings are collected before
+histogram/density shorthand expansion so discarded options remain visible.
+Validation and the 8.x mark types remain compatible; these warnings are not errors.

@@ -86,5 +86,10 @@ export async function captureStory(
   // One layout tick after fonts finish to settle text measurements.
   await page.waitForTimeout(100);
 
-  await expect(chart).toHaveScreenshot(screenshotName);
+  await expect(chart).toHaveScreenshot(screenshotName, {
+    // React can reconcile away an early head style while mounting the story.
+    // Apply overlay hiding during the capture itself as well, so dev controls
+    // cannot intermittently cover the chart. Chart pixels stay untouched.
+    style: '.ladle-theme-picker, .oc-github-link { display: none !important; }',
+  });
 }

@@ -174,7 +174,10 @@ function inferEncodingTypes(encoding: Encoding, data: DataRow[], warnings: strin
 // ---------------------------------------------------------------------------
 
 /** Apply default styles to annotations that don't have them. */
-function normalizeAnnotations(annotations: Annotation[] | undefined): Annotation[] {
+function normalizeAnnotations(
+  annotations: Annotation[] | undefined,
+  warnings: string[],
+): Annotation[] {
   if (!annotations || annotations.length === 0) return [];
 
   // The spec-sugar pass rewrites the deprecated `type: 'rule'` annotation
@@ -183,6 +186,14 @@ function normalizeAnnotations(annotations: Annotation[] | undefined): Annotation
   return annotations.map((ann) => {
     switch (ann.type) {
       case 'text':
+        if (
+          ann.connector !== null &&
+          typeof ann.connector === 'object' &&
+          ann.connector.type !== 'curve' &&
+          ann.connector.bend !== undefined
+        ) {
+          warnings.push('Annotation connector.bend is ignored unless connector.type is curve.');
+        }
         // Deliberately does NOT default fontSize/fontWeight. The annotation
         // layer owns those (DEFAULT_ANNOTATION_FONT_SIZE, and the lede rule
         // that promotes a subtitle-bearing primary line to bold). Stamping
@@ -193,18 +204,18 @@ function normalizeAnnotations(annotations: Annotation[] | undefined): Annotation
           ...ann,
           opacity: ann.opacity ?? 1,
         };
+      // Omitted ink resolves through theme tokens. Their 8.x defaults preserve
+      // the colors historically stamped here; explicit authored ink stays intact.
       case 'range':
         return {
           ...ann,
           opacity: ann.opacity ?? 0.1,
-          fill: ann.fill ?? '#000000',
         };
       case 'refline':
         return {
           ...ann,
           style: ann.style ?? 'dashed',
           strokeWidth: ann.strokeWidth ?? 1,
-          stroke: ann.stroke ?? '#666666',
           opacity: ann.opacity ?? 0.8,
         };
       default:
@@ -491,10 +502,12 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
     metrics: spec.metrics,
     seriesSearch: normalizeSeriesSearch(spec, encoding, warnings),
     youDrawIt: normalizeYouDrawIt(spec),
-    annotations: normalizeAnnotations(spec.annotations),
+    annotations: normalizeAnnotations(spec.annotations, warnings),
     labels: normalizeLabels(spec.labels),
     legend: spec.legend,
     endpointLabels: spec.endpointLabels,
+    compactAnnotationLimit:
+      typeof spec.responsive === 'object' ? spec.responsive.compactAnnotationLimit : undefined,
     responsive: typeof spec.responsive === 'object' ? true : (spec.responsive ?? true),
     autoThin:
       typeof spec.responsive === 'object'
@@ -621,7 +634,7 @@ function normalizeGraphSpec(spec: GraphSpec, warnings: string[]): NormalizedGrap
     nodeOverrides: spec.nodeOverrides,
     seedNode,
     chrome: normalizeChrome(spec.chrome),
-    annotations: normalizeAnnotations(spec.annotations),
+    annotations: normalizeAnnotations(spec.annotations, warnings),
     theme: spec.theme ?? {},
     darkMode: spec.darkMode ?? 'off',
     watermark: spec.watermark ?? true,

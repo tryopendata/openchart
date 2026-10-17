@@ -140,6 +140,10 @@ export type ElementEdit =
       element: ElementRef;
       annotation: TextAnnotation;
       offset: AnnotationOffset;
+      /** Resolved first-drag placement. Persist together with offset when supplied. */
+      anchor?: TextAnnotation['anchor'];
+      /** A moved annotation stays inline. */
+      responsive?: false;
     }
   | {
       type: 'annotation-connector';

@@ -1,4 +1,4 @@
-import type { ArcMark, Point, RectMark } from '@opendata-ai/openchart-core';
+import type { ArcMark, Point, RectMark, ResolvedAnnotation } from '@opendata-ai/openchart-core';
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -302,9 +302,9 @@ export interface AnnotationTween {
   tweenType: 'annotation';
   kind: 'update' | 'enter' | 'exit';
   el: SVGElement;
-  /** Pixel delta applied as a transform; annotations position via many child attrs. */
-  fromDx: number;
-  fromDy: number;
+  before?: ResolvedAnnotation;
+  after?: ResolvedAnnotation;
+  background?: string;
   ghost?: SVGElement;
   fromOpacity?: number;
   toOpacity?: number;
