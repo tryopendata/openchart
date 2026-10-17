@@ -37,7 +37,7 @@ import type {
 import {
   adaptTheme,
   computeLabelBounds,
-  footnoteBandHeight,
+  computeNoteBandHeight,
   generateAltText,
   generateDataTable,
   getBreakpoint,
@@ -58,7 +58,9 @@ import {
   wrapAnnotationNotes,
 } from './annotations/notes';
 import type { PlacementObstacle } from './annotations/placement';
+import { referenceLabelReserve } from './annotations/reference-layout';
 import { thinAnnotations } from './annotations/thinning';
+import { collectMarkOptionWarnings } from './compiler/mark-options';
 import { computeEndpointLabels } from './endpoint-labels/compute';
 import { ENDPOINT_COLUMN_GAP } from './endpoint-labels/constants';
 // Side-effect import: registers all built-in chart renderers with the
@@ -129,7 +131,11 @@ function applySpecSize(spec: unknown, options: CompileOptions): CompileOptions {
   return {
     ...options,
     width: typeof sized.width === 'number' ? sized.width : options.width,
-    height: typeof sized.height === 'number' ? sized.height : options.height,
+    height:
+      typeof sized.height === 'number' &&
+      !(options?.facetHeightGrown && (sized.chromeLayout ?? options.chromeLayout) === 'grow')
+        ? sized.height
+        : options.height,
   };
 }
 
@@ -263,13 +269,19 @@ function resolveScaleInvert(resolved: ResolvedScale | undefined): ScaleInvert | 
  * @throws Error if spec is invalid or not a chart type.
  */
 export function compileChart(spec: unknown, optionsInput: CompileOptions): ChartLayout {
+  emitSpecWarnings(collectMarkOptionWarnings(spec), optionsInput?.onWarn);
+  return compileChartInternal(spec, optionsInput);
+}
+
+/** Internal passes retain authored warnings from the public entry point. */
+function compileChartInternal(spec: unknown, optionsInput: CompileOptions): ChartLayout {
   // Expand VL-idiom and encoding-level sugar (data {values}, top-level title,
   // sort-by-value, value defs, scheme names, theta, bin/timeUnit, ...) before
   // validation + normalization, surfacing any deprecation warnings.
   const sugarWarnings: string[] = [];
   const expandedSpec =
     spec && typeof spec === 'object' && !Array.isArray(spec)
-      ? expandSpecSugar(spec as Record<string, unknown>, sugarWarnings)
+      ? expandSpecSugar(spec as Record<string, unknown>, sugarWarnings, false)
       : spec;
 
   // Top-level width/height are fixed-size overrides (VL alignment): the
@@ -281,7 +293,9 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
   // console channel as the sugar warnings. Emit both together in one call so
   // dedup spans the whole compile: a message produced by both a sugar pass and
   // a normalize pass prints once, not once per stage.
-  const { spec: normalized, warnings: normalizeWarnings } = compileSpec(expandedSpec);
+  const { spec: normalized, warnings: normalizeWarnings } = compileSpec(expandedSpec, {
+    markOptionWarnings: false,
+  });
   emitSpecWarnings([...sugarWarnings, ...normalizeWarnings], options.onWarn);
 
   if ('type' in normalized && (normalized as unknown as Record<string, unknown>).type === 'table') {
@@ -589,11 +603,17 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
   // Include pinned sources because fresh compiles cannot distinguish authored
   // pins from labels pinned by editing. Facets share this source-level budget.
   const noteCapacity = chartSpec.autoThin
-    ? annotationNoteCapacity(chartSpec.annotations, options.width, theme, options.measureText)
+    ? annotationNoteCapacity(
+        chartSpec.annotations,
+        options.width,
+        theme,
+        options.measureText,
+        options.width < 400 && options.height >= 200 && chartSpec.compactAnnotationLimit != null,
+      )
     : 0;
-  const stableNoteReserve = footnoteBandHeight(noteCapacity, theme);
+  const stableNoteReserve = computeNoteBandHeight(noteCapacity, theme);
   if (!options.frozenChartArea && stableNoteReserve > (options.footnoteReserve ?? 0)) {
-    return compileChart(spec, {
+    return compileChartInternal(spec, {
       ...optionsInput,
       footnoteReserve: stableNoteReserve,
     });
@@ -978,6 +998,8 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
     svg: { width: dims.total.width, height: dims.total.height },
     measure: annotationMeasure,
     fontFamily: theme.fonts.family,
+    colors: theme.colors,
+    onWarn: (message) => emitSpecWarnings([message], options.onWarn),
     autoThin: chartSpec.autoThin,
     // Hand-placed blocks skip every nudge pass, so the clamp is the only lever
     // that keeps an author's offset from parking a callout on the title.
@@ -1002,13 +1024,14 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
   // Pass the full spec annotations (not filtered to text-only) so index
   // alignment with the resolved array is preserved.
   let footnotes: import('@opendata-ai/openchart-core').AnnotationFootnote[] | undefined;
-  if (chartSpec.autoThin && annotations.length > 1) {
+  if (chartSpec.autoThin && (annotations.length > 1 || chartSpec.compactAnnotationLimit != null)) {
     const result = thinAnnotations(
       annotations,
       chartSpec.annotations,
       annotationMeasure,
       chartArea,
       { x: 0, y: 0, width: dims.total.width, height: dims.total.height },
+      options.width < 400 && options.height >= 200 ? chartSpec.compactAnnotationLimit : undefined,
     );
     annotations = result.annotations;
     if (result.footnotes.length > 0) {
@@ -1022,14 +1045,14 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
       // Source capacity normally covers this list. Keep a bounded fallback
       // for custom measurement functions. Frozen layers share the primary
       // plot and reconcile any larger reserve in their assembly pass.
-      const reserve = footnoteBandHeight(annotationNoteLineCount(footnotes), theme);
+      const reserve = computeNoteBandHeight(annotationNoteLineCount(footnotes), theme);
       const currentReserve = options.footnoteReserve ?? 0;
       if (
         !options.frozenChartArea &&
         reserve > currentReserve &&
         (options.footnotePass ?? 0) < MAX_FOOTNOTE_PASSES
       ) {
-        return compileChart(spec, {
+        return compileChartInternal(spec, {
           ...optionsInput,
           footnoteReserve: reserve,
           footnotePass: (options.footnotePass ?? 0) + 1,
@@ -1072,7 +1095,7 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
         )
       : [];
   if (seriesSummary.length) {
-    const reserve = footnoteBandHeight(
+    const reserve = computeNoteBandHeight(
       Math.max(noteCapacity, annotationNoteLineCount(footnotes ?? [])) +
         seriesSummary.reduce((count, entry) => count + entry.lines.length, 0),
       theme,
@@ -1083,7 +1106,7 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
       reserve > previousReserve &&
       (options.footnotePass ?? 0) < MAX_FOOTNOTE_PASSES
     ) {
-      return compileChart(spec, {
+      return compileChartInternal(spec, {
         ...optionsInput,
         footnoteReserve: reserve,
         footnotePass: (options.footnotePass ?? 0) + 1,
@@ -1122,7 +1145,7 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
 
   const noteBandHeight = Math.max(
     options.footnoteReserve ?? 0,
-    footnoteBandHeight(
+    computeNoteBandHeight(
       Math.max(noteCapacity, annotationNoteLineCount(footnotes ?? [])) +
         seriesSummary.reduce((count, entry) => count + entry.lines.length, 0),
       theme,
@@ -1251,13 +1274,14 @@ function compileFaceted(
     plan.xAxisExtent,
   );
   const dims = computeDimensions(
-    { ...panelChartSpec, chromeLayout: 'subtract' },
+    panelChartSpec,
     options,
     legendStub,
     theme,
     strategy,
     watermark,
     plan,
+    false,
   );
   const chartArea = dims.chartArea;
 
@@ -1279,10 +1303,33 @@ function compileFaceted(
   // computeDimensions), so leftmost-panel tick labels render into that margin
   // just like the single-chart path.
   const effectiveColumns = facetDirection === 'column' ? facetValues.length : facetChannel.columns;
-  const grid = computeFacetGrid(facetValues, effectiveColumns, chartArea, {
-    left: 0,
-    bottom: bottomReservation,
-  });
+  const facetAnnotationMeasure: AnnotationMeasureTextFn = options.measureText
+    ? (text, font) => options.measureText!(text, font.fontSize, font.fontWeight).width
+    : heuristicMeasure;
+  const hasOutsideReferences = chartSpec.annotations.some(
+    (a) => a.type === 'refline' && a.labelPlacement === 'outside' && !!a.label,
+  );
+  const referenceInsets = hasOutsideReferences
+    ? {
+        measure: (width: number) =>
+          referenceLabelReserve(chartSpec.annotations, width, facetAnnotationMeasure),
+        innerAxisWidth:
+          (chartSpec.resolve?.scale?.y ?? (facetDirection === 'row' ? 'independent' : 'shared')) ===
+          'independent'
+            ? plan.leftGutter
+            : 0,
+      }
+    : undefined;
+  const grid = computeFacetGrid(
+    facetValues,
+    effectiveColumns,
+    chartArea,
+    {
+      left: 0,
+      bottom: bottomReservation,
+    },
+    referenceInsets,
+  );
 
   // If panels are too short, grow the compile height and restart (once).
   if (
@@ -1290,14 +1337,17 @@ function compileFaceted(
     grid.panels.length > 0 &&
     grid.panels[0].area.height < MIN_PANEL_HEIGHT
   ) {
-    const neededChartHeight = facetMinHeight(facetValues.length, grid.columns);
+    const neededChartHeight =
+      grid.minimumHeight ?? facetMinHeight(facetValues.length, grid.columns);
     const heightGrowth = neededChartHeight - chartArea.height;
     if (heightGrowth > 0) {
-      return compileChart(rawSpec, {
+      const grown = compileChartInternal(rawSpec, {
         ...optionsInput,
         height: options.height + heightGrowth,
         facetHeightGrown: true,
       });
+      if (grown.chrome.grownHeight !== undefined) grown.chrome.grownHeight += heightGrowth;
+      return grown;
     }
   }
 
@@ -1390,7 +1440,11 @@ function compileFaceted(
           data: panelData,
           encoding: panelSpecWithDomains.encoding as Encoding,
           markType: chartSpec.markType,
-          totalWidth: gridPanel.area.width,
+          // Outside-label cells use figure coordinates throughout, including
+          // the tick-label clamp. Keep the legacy path unchanged in 8.x.
+          totalWidth: gridPanel.referenceContainer
+            ? gridPanel.area.x + gridPanel.area.width
+            : gridPanel.area.width,
         });
 
     if (!isRadial) {
@@ -1439,12 +1493,22 @@ function compileFaceted(
     let panelAnnotations = computeAnnotations(panelSpecWithDomains, {
       scales: panelScales,
       chartArea: gridPanel.area,
+      referenceContainer: gridPanel.referenceContainer,
+      referenceReserve: gridPanel.referenceContainer
+        ? referenceLabelReserve(
+            chartSpec.annotations,
+            gridPanel.referenceContainer.width,
+            facetAnnotationMeasure,
+          )
+        : undefined,
       strategy,
       isDark: theme.isDark,
       obstacles: [],
-      svg: { width: options.width, height: options.height },
+      svg: { width: dims.total.width, height: dims.total.height },
       measure: annotationMeasure,
       fontFamily: theme.fonts.family,
+      colors: theme.colors,
+      onWarn: (message) => emitSpecWarnings([message], options.onWarn),
       autoThin: panelSpecWithDomains.autoThin,
       topBound: dims.chrome.topHeight > 0 ? dims.topPad + dims.chrome.topHeight : undefined,
     });
@@ -1459,13 +1523,17 @@ function compileFaceted(
     // is per-spec-annotation, so number by spec index and reuse that number in
     // every panel that demoted it -- otherwise the list repeats itself once per
     // panel.
-    if (chartSpec.autoThin && panelAnnotations.length > 1) {
+    if (
+      chartSpec.autoThin &&
+      (panelAnnotations.length > 1 || chartSpec.compactAnnotationLimit != null)
+    ) {
       const thinned = thinAnnotations(
         panelAnnotations,
         chartSpec.annotations,
         annotationMeasure,
         gridPanel.area,
         gridPanel.area,
+        options.width < 400 && options.height >= 200 ? chartSpec.compactAnnotationLimit : undefined,
       );
       panelAnnotations = thinned.annotations;
       // `thinAnnotations` numbers footnotes 1..n *within the panel it was given*,
@@ -1524,10 +1592,10 @@ function compileFaceted(
     options.measureText,
   );
   if (allFootnotes.length > 0 && !options.frozenChartArea) {
-    const reserve = footnoteBandHeight(annotationNoteLineCount(wrappedFootnotes), theme);
+    const reserve = computeNoteBandHeight(annotationNoteLineCount(wrappedFootnotes), theme);
     const currentReserve = options.footnoteReserve ?? 0;
     if (reserve > currentReserve && (options.footnotePass ?? 0) < MAX_FOOTNOTE_PASSES) {
-      return compileChart(rawSpec, {
+      return compileChartInternal(rawSpec, {
         ...optionsInput,
         footnoteReserve: reserve,
         footnotePass: (options.footnotePass ?? 0) + 1,
@@ -1604,7 +1672,7 @@ function compileFaceted(
       ...dims.chrome,
       noteBandHeight: Math.max(
         options.footnoteReserve ?? 0,
-        footnoteBandHeight(annotationNoteLineCount(wrappedFootnotes), theme),
+        computeNoteBandHeight(annotationNoteLineCount(wrappedFootnotes), theme),
       ),
       ...(allFootnotes.length > 0 ? { footnotes: wrappedFootnotes } : {}),
     },
@@ -1627,7 +1695,7 @@ function compileFaceted(
       ...(chartSpec.a11y?.hidden ? { hidden: true } : {}),
     },
     theme,
-    dimensions: { width: options.width, height: options.height },
+    dimensions: { width: dims.total.width, height: dims.total.height },
     animation: resolvedAnimation,
     watermark,
     display: chartSpec.display,
@@ -1669,7 +1737,7 @@ export function compileLayer(spec: LayerSpec, options: CompileOptions): ChartLay
           }
         : undefined,
     },
-    compileChart,
+    compileChartInternal,
   );
   const diagnostic = noteCapacityDiagnostic(layout);
   if (diagnostic) options.onDiagnostic?.(diagnostic);

@@ -431,12 +431,15 @@ export function createChart<TData extends DataRow = DataRow>(
       }
     }
 
-    return (
+    return Math.max(
+      0,
       layout.chrome.topHeight +
-      layout.chrome.bottomHeight +
-      topLegendBlock +
-      (layout.metrics?.height ?? 0) +
-      facetGrowth
+        layout.chrome.bottomHeight +
+        topLegendBlock +
+        (layout.metrics?.height ?? 0) +
+        facetGrowth +
+        (layout.chrome.grownHeight !== undefined ? (layout.chrome.noteBandHeight ?? 0) : 0) -
+        (layout.chrome.grownHeight ?? 0),
     );
   }
 

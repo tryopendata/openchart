@@ -65,8 +65,9 @@ export function thinAnnotations(
   measure: AnnotationMeasureTextFn,
   plotArea?: Rect,
   containerBounds?: Rect,
+  compactLimit?: number | null,
 ): ThinningResult {
-  if (annotations.length <= 1) {
+  if (annotations.length <= 1 && compactLimit == null) {
     return { annotations, footnotes: [] };
   }
 
@@ -138,10 +139,11 @@ export function thinAnnotations(
   const containment = containerBounds ?? plotArea;
   let usedArea = 0;
 
-  for (const entry of candidates) {
+  for (const [rank, entry] of candidates.entries()) {
+    const overLimit = compactLimit != null && rank >= compactLimit;
     const bounds = entry.resolved.bounds ?? estimateLabelBounds(entry.resolved.label!, measure);
 
-    if (bounds.width <= 0 || bounds.height <= 0) {
+    if (!overLimit && (bounds.width <= 0 || bounds.height <= 0)) {
       placedBounds.push(bounds);
       continue;
     }
@@ -159,7 +161,7 @@ export function thinAnnotations(
     const candidateArea = bounds.width * bounds.height;
     const overBudget = plotAreaSize > 0 && usedArea + candidateArea > coverageBudget;
 
-    if (overlaps || !fitsWithin(bounds, containment) || overBudget) {
+    if (overLimit || overlaps || !fitsWithin(bounds, containment) || overBudget) {
       const footnoteIndex = footnotes.length + 1;
       footnotes.push({
         ...(entry.resolved.specIndex !== undefined ? { specIndex: entry.resolved.specIndex } : {}),

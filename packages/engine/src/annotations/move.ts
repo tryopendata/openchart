@@ -56,7 +56,7 @@ export function annotationBlockBounds(
   const subBounds = computeTextBlockBounds(
     sub.x,
     sub.y,
-    sub.text,
+    sub.lines?.join('\n') ?? sub.text,
     {
       // Every resolver stamps all three, so these fallbacks are unreachable today.
       // They still come from the constants: a hand-rolled `?? 10` here is a second

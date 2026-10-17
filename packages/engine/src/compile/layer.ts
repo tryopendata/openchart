@@ -15,9 +15,9 @@ import {
   axisTitleOffset,
   BREAKPOINT_COMPACT_MAX,
   computeFieldFormatContext,
+  computeNoteBandHeight,
   defaultNumberFormatter,
   estimateTextWidth,
-  footnoteBandHeight,
   getBreakpoint,
   getHeightClass,
   getLayoutStrategy,
@@ -27,7 +27,9 @@ import {
 } from '@opendata-ai/openchart-core';
 import { scaleLinear } from 'd3-scale';
 import { curveMonotoneX, area as d3area, line as d3line } from 'd3-shape';
+import { heuristicMeasure } from '../annotations/geometry';
 import { annotationNoteLineCount } from '../annotations/notes';
+import { referenceLabelReserve } from '../annotations/reference-layout';
 import { flattenLayers } from '../compiler/index';
 import { normalizeSpec } from '../compiler/normalize';
 import type { NormalizedChartSpec } from '../compiler/types';
@@ -341,8 +343,21 @@ function compileLayerIndependent(
     const legendReserve = rightLegends.length
       ? Math.max(...rightLegends.map((legend) => legend.bounds.width)) + 8
       : 0;
+    const referenceReserve = referenceLabelReserve(
+      primary0.annotations ?? [],
+      options.width,
+      options.measureText
+        ? (text, font) => options.measureText!(text, font.fontSize, font.fontWeight).width
+        : heuristicMeasure,
+    );
     const right =
-      options.width - pad - rightReserve - ENDPOINT_COLUMN_GAP - endpointWidth - legendReserve;
+      options.width -
+      pad -
+      rightReserve -
+      ENDPOINT_COLUMN_GAP -
+      endpointWidth -
+      legendReserve -
+      referenceReserve.right;
     const grow = (primary0.chromeLayout ?? options.chromeLayout) === 'grow';
     const bottom = grow
       ? layout0.area.y + layout0.area.height
@@ -638,7 +653,7 @@ function compileLayerIndependent(
 function noteReserve(layout: ChartLayout): number {
   return (
     layout.chrome.noteBandHeight ??
-    footnoteBandHeight(
+    computeNoteBandHeight(
       annotationNoteLineCount(layout.chrome.footnotes ?? []) +
         (layout.chrome.seriesSummary?.reduce((count, entry) => count + entry.lines.length, 0) ?? 0),
       layout.theme,

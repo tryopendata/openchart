@@ -233,7 +233,7 @@ export function estimateLabelBounds(
   return computeTextBlockBounds(
     label.x,
     label.y,
-    label.text,
+    label.lines?.join('\n') ?? label.text,
     {
       fontSize,
       fontWeight,
@@ -367,7 +367,13 @@ export function refreshConnector(
   }
 
   const exit =
-    connectorExit(bounds, endpoint.x, endpoint.y) ??
+    (connector.labelAttachment === 'left-center'
+      ? {
+          x: bounds.x - BOX_INFLATE - CONNECTOR_STANDOFF,
+          y: bounds.y + bounds.height / 2,
+          exit: 'horizontal' as const,
+        }
+      : connectorExit(bounds, endpoint.x, endpoint.y)) ??
     (keepVisible
       ? {
           x: bounds.x + bounds.width / 2,

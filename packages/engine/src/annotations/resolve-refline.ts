@@ -9,6 +9,7 @@ import type {
   RefLineAnnotation,
   ResolvedAnnotation,
   ResolvedLabel,
+  ThemeColors,
 } from '@opendata-ai/openchart-core';
 import type { ResolvedScales } from '../layout/scales';
 import { DARK_REFLINE_STROKE, DEFAULT_REFLINE_DASH, LIGHT_REFLINE_STROKE } from './constants';
@@ -24,6 +25,7 @@ export function resolveRefLineAnnotation(
   isDark: boolean,
   measure: AnnotationMeasureTextFn = heuristicMeasure,
   fontFamily?: string,
+  colors?: ThemeColors,
 ): ResolvedAnnotation | null {
   let start: Point;
   let end: Point;
@@ -123,9 +125,28 @@ export function resolveRefLineAnnotation(
       }
     }
 
+    if (annotation.labelPlacement) {
+      const atStart =
+        annotation.labelPlacement === 'start' ||
+        (!isHorizontal && annotation.labelPlacement !== 'end');
+      if (isHorizontal) {
+        labelX = atStart ? start.x : end.x;
+        labelY = start.y;
+        baseDx = atStart ? 4 : -4;
+        baseDy = anchor === 'bottom' ? 14 : -4;
+        textAnchor = atStart ? 'start' : 'end';
+      } else {
+        labelX = start.x;
+        labelY = atStart ? start.y : end.y;
+        baseDx = anchor === 'right' ? -4 : 4;
+        baseDy = atStart ? 14 : -4;
+        textAnchor = anchor === 'right' ? 'end' : 'start';
+      }
+    }
     const labelDelta = applyOffset({ dx: baseDx, dy: baseDy }, annotation.labelOffset);
 
-    const defaultStroke = isDark ? DARK_REFLINE_STROKE : LIGHT_REFLINE_STROKE;
+    const defaultStroke =
+      colors?.annotationRule ?? (isDark ? DARK_REFLINE_STROKE : LIGHT_REFLINE_STROKE);
     const style = makeAnnotationLabelStyle(
       annotation.fontSize ?? 11,
       annotation.fontWeight ?? 400,
@@ -144,7 +165,8 @@ export function resolveRefLineAnnotation(
     };
   }
 
-  const defaultStroke = isDark ? DARK_REFLINE_STROKE : LIGHT_REFLINE_STROKE;
+  const defaultStroke =
+    colors?.annotationRule ?? (isDark ? DARK_REFLINE_STROKE : LIGHT_REFLINE_STROKE);
 
   const resolved: ResolvedAnnotation = {
     type: 'refline',

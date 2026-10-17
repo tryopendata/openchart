@@ -2,7 +2,12 @@
  * Layout module barrel export.
  */
 
-export { computeChrome, FOOTNOTE_LINE_HEIGHT, footnoteBandHeight } from './chrome';
+export {
+  computeChrome,
+  computeNoteBandHeight,
+  FOOTNOTE_LINE_HEIGHT,
+  footnoteBandHeight,
+} from './chrome';
 export {
   BRAND_FONT_SIZE,
   BRAND_MIN_WIDTH,

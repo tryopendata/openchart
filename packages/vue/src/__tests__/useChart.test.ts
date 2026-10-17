@@ -124,3 +124,33 @@ describe('useChart', () => {
     expect(destroySpy).toHaveBeenCalledTimes(1);
   });
 });
+
+it.each([
+  undefined,
+  'subtract',
+  'grow',
+] as const)('mounts, updates and destroys note sizing mode %s', async (chromeLayout) => {
+  const spec = {
+    ...lineSpec,
+    animation: false as const,
+    chromeLayout,
+    annotations: [
+      {
+        type: 'text' as const,
+        x: '2020-01-01',
+        y: 10,
+        text: 'A wrapped note',
+        maxWidth: 60,
+        responsive: false as const,
+      },
+    ],
+  };
+  const wrapper = await mountHarness(spec);
+  const initial = wrapper.find('svg').attributes('viewBox');
+  await wrapper.setProps({ spec: { ...spec, chrome: { title: 'Changed' } } });
+  await flushPromises();
+  expect(wrapper.find('.oc-title').text()).toBe('Changed');
+  expect(wrapper.find('svg').attributes('viewBox')).toBe(initial);
+  wrapper.unmount();
+  expect(wrapper.find('svg').exists()).toBe(false);
+});

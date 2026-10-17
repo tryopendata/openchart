@@ -1,4 +1,10 @@
 import { rememberAnnotationGeometry } from './edit-context';
+import {
+  placeReferenceLabel,
+  type ReferenceLanes,
+  type ReferenceReserve,
+  referenceLabelReserve,
+} from './reference-layout';
 /**
  * Annotation computation: converts spec-level annotations to pixel-positioned
  * ResolvedAnnotation objects using the resolved scales.
@@ -42,6 +48,9 @@ import {
 export interface AnnotationContext {
   scales: ResolvedScales;
   chartArea: Rect;
+  referenceContainer?: Rect;
+  referenceLanes?: ReferenceLanes;
+  referenceReserve?: ReferenceReserve;
   strategy: LayoutStrategy;
   isDark: boolean;
   obstacles: PlacementObstacle[];
@@ -49,7 +58,9 @@ export interface AnnotationContext {
   measure: AnnotationMeasureTextFn;
   /** Theme font stack, so annotation text is measured and rendered in the same face. */
   fontFamily?: string;
+  colors?: import('@opendata-ai/openchart-core').ThemeColors;
   debugPlacement?: boolean;
+  onWarn?: (message: string) => void;
   /** When true, annotations that overlap are demoted to footnote markers instead of being hidden. */
   autoThin?: boolean;
   /**
@@ -81,6 +92,9 @@ export function computeAnnotations(
 
   const svgRect: Rect = { x: 0, y: 0, width: ctx.svg.width, height: ctx.svg.height };
   const annotations: ResolvedAnnotation[] = [];
+  const referenceReserve =
+    ctx.referenceReserve ?? referenceLabelReserve(spec.annotations, ctx.svg.width, ctx.measure);
+  const referenceLanes: ReferenceLanes = ctx.referenceLanes ?? {};
 
   // Deferred auto-placement entries (resolved in Pass 2)
   const autoQueue: Array<{
@@ -107,6 +121,7 @@ export function computeAnnotations(
           ctx.isDark,
           ctx.measure,
           ctx.fontFamily,
+          ctx.colors,
         );
         if (resolved && ctx.svg.width > 0 && ctx.svg.height > 0 && isAutoPlacement(annotation)) {
           const px = resolvePosition(annotation.x, ctx.scales.x);
@@ -133,6 +148,7 @@ export function computeAnnotations(
           ctx.chartArea,
           ctx.isDark,
           ctx.fontFamily,
+          ctx.colors,
         );
         break;
       case 'refline':
@@ -143,6 +159,7 @@ export function computeAnnotations(
           ctx.isDark,
           ctx.measure,
           ctx.fontFamily,
+          ctx.colors,
         );
         break;
     }
@@ -158,7 +175,30 @@ export function computeAnnotations(
           ctx.measure,
         );
       }
-      if (annotation.type === 'refline' && ctx.obstacles.length > 0) {
+      if (annotation.type === 'refline' && annotation.labelPlacement)
+        placeReferenceLabel(
+          annotation,
+          resolved,
+          ctx.chartArea,
+          ctx.referenceContainer ?? {
+            x: 8,
+            y: ctx.topBound ?? 8,
+            width: ctx.svg.width - 16,
+            height: ctx.svg.height - (ctx.topBound ?? 8) - 8,
+          },
+          referenceReserve,
+          referenceLanes,
+          ctx.measure,
+          ctx.colors,
+          ctx.onWarn,
+          [
+            ...ctx.obstacles,
+            ...annotations.flatMap((a) =>
+              a.bounds ? [{ ...a.bounds, kind: 'annotation' as const }] : [],
+            ),
+          ],
+        );
+      if (annotation.type === 'refline' && !annotation.labelPlacement && ctx.obstacles.length > 0) {
         nudgeRefLineLabel(resolved, annotation, ctx.obstacles, ctx.chartArea, ctx.measure);
       }
       // The resolved array is filtered (an out-of-domain annotation resolves to
@@ -195,7 +235,7 @@ export function computeAnnotations(
 
       const subtitleStyle = annotation.subtitle
         ? {
-            fontSize: subtitleFontSize(labelStyle.fontSize),
+            fontSize: annotation.subtitleFontSize ?? subtitleFontSize(labelStyle.fontSize),
             fontWeight: SUBTITLE_FONT_WEIGHT,
             lineHeight: labelStyle.lineHeight,
             fontFamily: labelStyle.fontFamily,
@@ -205,14 +245,14 @@ export function computeAnnotations(
       const result = findBestPlacement(
         anchorX,
         anchorY,
-        annotation.text,
+        resolved.label?.lines?.join('\n') ?? annotation.text,
         {
           fontSize: labelStyle.fontSize,
           fontWeight: Number(labelStyle.fontWeight) || 400,
           lineHeight: labelStyle.lineHeight,
           fontFamily: labelStyle.fontFamily,
         },
-        annotation.subtitle,
+        resolved.subtitle?.lines?.join('\n') ?? annotation.subtitle,
         subtitleStyle,
         workingObstacles,
         ctx.chartArea,
