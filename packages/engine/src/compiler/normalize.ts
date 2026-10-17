@@ -204,18 +204,18 @@ function normalizeAnnotations(
           ...ann,
           opacity: ann.opacity ?? 1,
         };
+      // Omitted ink resolves through theme tokens. Their 8.x defaults preserve
+      // the colors historically stamped here; explicit authored ink stays intact.
       case 'range':
         return {
           ...ann,
           opacity: ann.opacity ?? 0.1,
-          fill: ann.fill ?? '#000000',
         };
       case 'refline':
         return {
           ...ann,
           style: ann.style ?? 'dashed',
           strokeWidth: ann.strokeWidth ?? 1,
-          stroke: ann.stroke ?? '#666666',
           opacity: ann.opacity ?? 0.8,
         };
       default:

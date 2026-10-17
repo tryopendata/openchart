@@ -1369,7 +1369,9 @@ Annotation ink has seven theme tokens: `annotationLabel`, `annotationMuted`,
 `annotationLeader`, `annotationRule`, `annotationRangeFill`,
 `annotationMarkerFill`, and `annotationPlate`. Set them under `theme.colors`,
 using either a color or a `{ light, dark }` pair. Explicit annotation colors win;
-arrow connectors keep the label's ink. Existing `annotationText` and
+arrow connectors keep the label's ink. Rule and range defaults preserve the
+previous compiled colors (`#666666` and `#000000`, respectively, in both modes).
+Existing `annotationText` and
 `annotationFill` token uses stay unchanged.
 
 Facet charts now support `chromeLayout: 'grow'`: chrome and the note band extend

@@ -224,3 +224,36 @@ it.each([
   const result = validateSpec({ ...base, responsive: { compactAnnotationLimit } });
   expect(result.valid).toBe(false);
 });
+
+it.each([
+  false,
+  true,
+])('preserves compiled rule/range defaults while honoring tokens (dark=%s)', (darkMode) => {
+  const annotations: ChartSpec['annotations'] = [
+    { type: 'refline', id: 'rule', y: 3, label: 'Rule' },
+    { type: 'range', id: 'range', x1: 1, x2: 2, label: 'Range' },
+  ];
+  const options = { width: 800, height: 700, darkMode };
+  const legacyInk: ChartSpec['annotations'] = [
+    { ...annotations[0], stroke: '#666666' },
+    { ...annotations[1], fill: '#000000' },
+  ];
+  const defaults = compileChart({ ...base, annotations }, options);
+  expect(defaults.theme.colors.annotationRule).toBe('#666666');
+  expect(defaults.theme.colors.annotationRangeFill).toBe('#000000');
+  expect(defaults.annotations).toEqual(
+    compileChart({ ...base, annotations: legacyInk }, options).annotations,
+  );
+  const theme = {
+    colors: {
+      annotationRule: { light: '#445566', dark: '#aabbcc' },
+      annotationRangeFill: { light: '#556677', dark: '#bbccdd' },
+    },
+  };
+  const themed = compileChart({ ...base, annotations, theme }, options);
+  expect(themed.annotations[0].stroke).toBe(darkMode ? '#aabbcc' : '#445566');
+  expect(themed.annotations[1].fill).toBe(darkMode ? '#bbccdd' : '#556677');
+  const explicit = compileChart({ ...base, annotations: legacyInk, theme }, options);
+  expect(explicit.annotations[0].stroke).toBe('#666666');
+  expect(explicit.annotations[1].fill).toBe('#000000');
+});

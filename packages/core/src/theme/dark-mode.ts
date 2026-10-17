@@ -190,10 +190,10 @@ export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
         overridden(theme.colors.annotationLeader, light.annotationLeader, '#9aa0a6'),
       annotationRule:
         pairs?.['colors.annotationRule']?.dark ??
-        overridden(theme.colors.annotationRule, light.annotationRule, '#9ca3af'),
+        overridden(theme.colors.annotationRule, light.annotationRule, '#666666'),
       annotationRangeFill:
         pairs?.['colors.annotationRangeFill']?.dark ??
-        overridden(theme.colors.annotationRangeFill, light.annotationRangeFill, '#f0c040'),
+        overridden(theme.colors.annotationRangeFill, light.annotationRangeFill, '#000000'),
       annotationMarkerFill:
         pairs?.['colors.annotationMarkerFill']?.dark ??
         overridden(theme.colors.annotationMarkerFill, light.annotationMarkerFill, '#0a0a0a'),

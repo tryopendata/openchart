@@ -8,7 +8,8 @@
   reserved outside lanes with wrapping and connectors, including facets and
   independent-axis layers.
 - Add seven annotation theme color tokens with light/dark authoring support;
-  explicit annotation ink remains authoritative.
+  explicit annotation ink remains authoritative. Rule/range tokens preserve the
+  existing compiled colors in both modes.
 - Support facet `chromeLayout: 'grow'` and report engine-added height so auto-height
   mounts and export count chrome, notes and facet growth once.
 - Deprecate both `footnoteBandHeight` helpers in favor of resolved
