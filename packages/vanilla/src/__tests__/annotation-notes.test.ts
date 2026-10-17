@@ -50,6 +50,23 @@ const press = (element: Element, key: string) =>
   element.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
 
 describe('source-linked annotation notes', () => {
+  it.each([
+    false,
+    true,
+  ])('keeps hidden notes out of keyboard navigation across compatible updates (initially hidden=%s)', (hidden) => {
+    const m = mount({ ...spec, a11y: { hidden } });
+    for (const nextHidden of [hidden, !hidden, hidden]) {
+      m.chart.update({ ...spec, a11y: { hidden: nextHidden } });
+      const svg = m.container.querySelector('svg')!;
+      const note = svg.querySelector<SVGElement>('[data-note-spec-index]')!;
+      const marker = svg.querySelector<SVGElement>('[data-note-marker-index]')!;
+      expect(note.getAttribute('tabindex')).toBe(nextHidden ? null : '0');
+      expect(marker.getAttribute('tabindex')).toBe(nextHidden ? null : '0');
+      const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+      note.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(!nextHidden);
+    }
+  });
   it('renders source-ordered, accessible complete notes with rich text', () => {
     const m = mount();
     expect(

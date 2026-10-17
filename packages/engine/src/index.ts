@@ -22,6 +22,7 @@ export {
   compileTable,
   compileTileMap,
 } from './compile';
+export { resolveLayerTheme } from './compile/layer';
 
 // Lazy edge-tooltip builder (graph edge hover content on demand).
 export { buildEdgeTooltip } from './graphs/compile-graph';

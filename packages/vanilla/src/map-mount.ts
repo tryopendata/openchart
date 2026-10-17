@@ -49,6 +49,7 @@ import type { Camera } from './story/camera-math';
 import { interpolateCamera } from './story/camera-math';
 import type { Tween } from './story/tween';
 import { createTween, easingFns, storyMotion } from './story/tween';
+import { prepareSettledExportTheme } from './theme-style-block';
 import { createTooltipManager, type TooltipManager } from './tooltip';
 
 /**
@@ -848,6 +849,7 @@ export function createGeoMap(
     }
     applyFocusDim(currentFocusIds, terminalSvg);
     const resolvedOptions = { theme: currentLayout.theme, ...options_ };
+    prepareSettledExportTheme(svgElement, terminalSvg, resolvedOptions.theme, !!options_?.theme);
 
     switch (format) {
       case 'svg':

@@ -34,6 +34,7 @@ import { createMeasureText, resolveFontFamily, scheduleFontReload } from './meas
 import { observeResize } from './resize-observer';
 import { resolveDarkMode } from './resolve-dark-mode';
 import { renderSankeySVG } from './sankey-renderer';
+import { prepareSettledExportTheme } from './theme-style-block';
 import { createTooltipManager, type TooltipManager } from './tooltip';
 
 // ---------------------------------------------------------------------------
@@ -562,6 +563,12 @@ export function createSankey(
     // Export settled geometry, independent of transient hover and animation.
     const terminalSvg = renderSankeySVG(currentLayout);
     const resolvedOptions = { theme: currentLayout.theme, ...exportOptions };
+    prepareSettledExportTheme(
+      svgElement,
+      terminalSvg,
+      resolvedOptions.theme,
+      !!exportOptions?.theme,
+    );
 
     switch (format) {
       case 'svg':

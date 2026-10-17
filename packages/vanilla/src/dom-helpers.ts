@@ -12,6 +12,10 @@
  */
 export function applySrOnlyStyles(el: HTMLElement): void {
   el.style.position = 'absolute';
+  // A grown SVG may exceed an exact-height host. Do not let this hidden box
+  // use its static position after the SVG and add stray page scroll space.
+  el.style.top = '0';
+  el.style.left = '0';
   el.style.width = '1px';
   el.style.height = '1px';
   el.style.padding = '0';

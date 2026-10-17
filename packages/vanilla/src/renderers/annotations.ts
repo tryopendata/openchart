@@ -125,6 +125,7 @@ function renderAnnotation(
   annotation: ResolvedAnnotation,
   index: number,
   bgColor?: string,
+  hidden = false,
 ): void {
   const g = createSVGElement('g');
   g.setAttribute('class', `oc-annotation oc-annotation-${annotation.type}`);
@@ -186,7 +187,7 @@ function renderAnnotation(
   if (annotation.footnoteIndex != null && annotation.label) {
     if (annotation.specIndex !== undefined)
       g.setAttribute('data-note-marker-index', String(annotation.specIndex));
-    g.setAttribute('tabindex', '0');
+    if (!hidden) g.setAttribute('tabindex', '0');
     g.setAttribute('role', 'button');
     g.setAttribute(
       'aria-label',
@@ -401,7 +402,7 @@ export function renderAnnotations(parent: SVGElement, layout: ChartLayout): void
   // defaults to 'transparent', which made every halo a no-op on default themes.
   const bgColor = resolvedSurface(layout.theme);
   for (let i = 0; i < layout.annotations.length; i++) {
-    renderAnnotation(g, layout.annotations[i], i, bgColor);
+    renderAnnotation(g, layout.annotations[i], i, bgColor, layout.a11y.hidden);
   }
 }
 

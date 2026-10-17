@@ -8,6 +8,67 @@ const base = {
   data: [{ x: 1, y: 2 }],
   encoding: { x: { field: 'x', type: 'quantitative' }, y: { field: 'y', type: 'quantitative' } },
 };
+it.each([
+  'line',
+  'area',
+])('migrates %s breakpoint patches without inventing a layer container', (mark) => {
+  const source = {
+    ...base,
+    mark,
+    encoding: { ...base.encoding, x: { field: 'x', type: 'ordinal' } },
+    overrides: { full: { legend: { show: false } } },
+  };
+  for (const styling of ['v8', 'v9'] as const) {
+    const result = migrateSpecV8(source, { styling });
+    expect(() => compileChart(result.spec, { width: 1280, height: 600 })).not.toThrow();
+    expect(migrateSpecV8(result.spec, { styling }).repairs).toEqual([]);
+  }
+});
+
+it('applies boolean and object endpoint-label breakpoint overrides', () => {
+  const source = {
+    ...base,
+    mark: 'line',
+    data: [
+      { x: 1, y: 2, s: 'A' },
+      { x: 2, y: 3, s: 'A' },
+      { x: 1, y: 4, s: 'B' },
+      { x: 2, y: 5, s: 'B' },
+    ],
+    encoding: {
+      ...base.encoding,
+      x: { field: 'x', type: 'ordinal' },
+      color: { field: 's', type: 'nominal' },
+    },
+    endpointLabels: true,
+  };
+  expect(
+    compileChart(
+      { ...source, overrides: { full: { endpointLabels: false } } },
+      { width: 1280, height: 600 },
+    ).endpointLabels?.entries ?? [],
+  ).toEqual([]);
+  const withLabel = compileChart(
+    { ...source, overrides: { full: { endpointLabels: { content: 'label' } } } },
+    { width: 1280, height: 600 },
+  );
+  expect(withLabel.endpointLabels!.entries.map((entry) => entry.value)).toEqual(['', '']);
+});
+
+it('normalizes active breakpoint annotation defaults exactly as root annotations', () => {
+  const annotations = [
+    { type: 'refline', y: 1.9, label: 'First threshold' },
+    { type: 'refline', y: 1.91, label: 'Second threshold' },
+  ];
+  const root = compileChart({ ...base, annotations }, { width: 1280, height: 600 });
+  const overridden = compileChart(
+    { ...base, overrides: { full: { annotations } } },
+    { width: 1280, height: 600 },
+  );
+  expect(overridden.annotations.map((a) => a.bounds)).toEqual(
+    root.annotations.map((a) => a.bounds),
+  );
+});
 it('rejects retired breakpoint annotations even when another breakpoint is active', () => {
   const spec = {
     ...base,

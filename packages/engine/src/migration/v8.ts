@@ -152,6 +152,8 @@ export function migrateSpecV8<T>(
             if (annotation[key] === undefined)
               replace(annotation, key, value, at, 'Preserve the v8 annotation default.');
           };
+          if (annotation.type === 'refline' || annotation.type === 'range')
+            setDefault('fontSize', 11);
           if (annotation.type === 'text') {
             setDefault('maxWidth', null);
             if (annotation.subtitle) {
@@ -262,16 +264,18 @@ export function migrateSpecV8<T>(
     const endpoint = current.endpointLabels ?? inherited.endpointLabels;
     for (const [breakpoint, override] of Object.entries(node(current.overrides) ?? {})) {
       const overrideNode = node(override);
-      if (overrideNode)
-        visit(overrideNode, `${path}/overrides/${escapePointer(breakpoint)}`, {
+      if (overrideNode) {
+        const owner: Node = {
           ...inherited,
           ...current,
           data,
           encoding: effectiveEncoding,
-          // An override is a shallow patch, not another container to traverse.
-          overrides: undefined,
-          layer: undefined,
-        });
+        };
+        // Shape guards distinguish absence from an undefined layer key.
+        delete owner.overrides;
+        delete owner.layer;
+        visit(overrideNode, `${path}/overrides/${escapePointer(breakpoint)}`, owner);
+      }
     }
     if (Array.isArray(current.layer))
       current.layer.forEach((child, index) => {

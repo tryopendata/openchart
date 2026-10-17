@@ -33,6 +33,7 @@ import {
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
 import { observeResize } from './resize-observer';
 import { resolveDarkMode } from './resolve-dark-mode';
+import { prepareSettledExportTheme } from './theme-style-block';
 import { renderTileMapSVG } from './tilemap-renderer';
 import { createTooltipManager, type TooltipManager } from './tooltip';
 
@@ -435,6 +436,7 @@ export function createTileMap(
     // Export settled geometry, independent of transient hover and animation.
     const terminalSvg = renderTileMapSVG(currentLayout, { animate: false });
     const resolvedOptions = { theme: currentLayout.theme, ...options_ };
+    prepareSettledExportTheme(svgElement, terminalSvg, resolvedOptions.theme, !!options_?.theme);
 
     switch (format) {
       case 'svg':

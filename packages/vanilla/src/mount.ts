@@ -38,6 +38,7 @@ import {
   compileLayer,
   facetMinHeight,
   legendGap,
+  resolveLayerTheme,
 } from '@opendata-ai/openchart-engine';
 import { cancelAnimations, computeAnimationDuration, setupAnimationCleanup } from './animation';
 import {
@@ -86,7 +87,8 @@ import { createScatterCanvasLayer, type ScatterCanvasLayer } from './scatter-can
 import { createSeriesSearch, type SeriesSearchController } from './series-search';
 import { renderChartSVG } from './svg-renderer';
 import { createTextEditOverlay, createTextEditOverlayAtPosition } from './text-edit-overlay';
-import { stampThemeProperties } from './theme-tokens';
+import { prepareSettledExportTheme } from './theme-style-block';
+import { readWithoutThemeStamp, stampThemeProperties } from './theme-tokens';
 import { createTooltipManager, type TooltipManager } from './tooltip';
 import { canTransition, runTransition, type TransitionHandle } from './transition';
 import { createYouDrawIt, type YouDrawItController } from './you-draw-it';
@@ -339,21 +341,20 @@ export function createChart<TData extends DataRow = DataRow>(
   // before we build the text measurer.
   container.classList.add('oc-root');
 
-  // Resolve the effective font family the way compile() will. compile merges
-  // { ...spec.theme, ...options.theme }, so options.theme wins over the
-  // spec-level theme; fall back to the container's computed font. Measuring
-  // against a different font than compile renders (e.g. a spec that sets
-  // theme.fonts.family) desyncs layout metrics and the font-reload watcher.
+  // Use the compiler's primary leaf ownership before the host override so
+  // measurement and font readiness agree with the rendered layer theme.
   function resolveEffectiveFont(candidate = currentSpec): string {
+    const theme = isLayerSpec(candidate) ? resolveLayerTheme(candidate) : candidate.theme;
     return (
       options?.theme?.fonts?.family ??
-      candidate.theme?.fonts?.family ??
-      resolveFontFamily(container)
+      theme?.fonts?.family ??
+      readWithoutThemeStamp(container, '--oc-font-family', () => resolveFontFamily(container))
     );
   }
   let fontFamily = resolveEffectiveFont();
   let measureText = createMeasureText(fontFamily);
   let renderGen = 0;
+  let fontWatchGeneration = 0;
 
   // ---------------------------------------------------------------------------
   // Compilation
@@ -1394,7 +1395,8 @@ export function createChart<TData extends DataRow = DataRow>(
     const entranceWasRunning = cleanupAnimations != null;
 
     const nextFont = resolveEffectiveFont(newSpec);
-    const nextMeasure = nextFont === fontFamily ? measureText : createMeasureText(nextFont);
+    const fontChanged = nextFont !== fontFamily;
+    const nextMeasure = fontChanged ? createMeasureText(nextFont) : measureText;
     const nextLayout = compile(newSpec, nextMeasure, layoutOnly);
     // Capture only after compilation succeeds, before render() cancels the
     // current motion. A rejected edit must not leave geometry for a later update.
@@ -1421,6 +1423,7 @@ export function createChart<TData extends DataRow = DataRow>(
       selectedElement = updateOpts.selectedElement ?? null;
     }
     render(canTransitionSpecShape(prevSpec, newSpec), nextLayout);
+    if (fontChanged) watchCurrentFont();
 
     // After render, check if we can run a smooth transition instead of the
     // instant swap that render() already performed.
@@ -1542,6 +1545,14 @@ export function createChart<TData extends DataRow = DataRow>(
     // chrome fills (metrics, eyebrow dot, legend) survive serialization away from
     // the page stylesheet. An explicit options.theme still wins.
     const theme = 'theme' in currentLayout ? currentLayout.theme : undefined;
+    // Re-rendering preserves settled geometry, but the detached scene has no
+    // host cascade. Carry the live tokens across unless export overrides them.
+    prepareSettledExportTheme(
+      svgElement,
+      svg,
+      exportOptions?.theme ?? theme,
+      !!exportOptions?.theme,
+    );
     const withTheme = <T extends { theme?: unknown }>(o: T | undefined): T =>
       ({ theme, ...(o ?? {}) }) as T;
 
@@ -1660,22 +1671,23 @@ export function createChart<TData extends DataRow = DataRow>(
   // Initial render
   render();
 
-  // Recompile once after webfonts load. On real devices the primary font
-  // (e.g. Inter via display=swap) often swaps in after first paint, changing
-  // text metrics; without a re-measure, titles wrap wrong and labels collide.
-  // Desktop Chrome has the font cached, so it renders 'ready' immediately.
-  const pending = scheduleFontReload(
-    fontFamily,
-    () => !destroyed,
-    () => {
-      // Mark the reload owed, then trigger a recompile. render() flips the
-      // attribute to 'ready' once it actually recompiles — including the
-      // pendingResize replay after the entrance animation finishes.
-      fontsReloadPending = true;
-      resize();
-    },
-  );
-  container.dataset.ocFontsState = pending ? 'pending' : 'ready';
+  // Track the effective font after initial mount and spec updates. A delayed
+  // promise for a superseded font must not recompile the current chart.
+  function watchCurrentFont(): void {
+    const generation = ++fontWatchGeneration;
+    const pending = scheduleFontReload(
+      fontFamily,
+      () => !destroyed && generation === fontWatchGeneration,
+      () => {
+        // render() marks ready only after the new metrics actually compile,
+        // including deferred resize work during an entrance animation.
+        fontsReloadPending = true;
+        resize();
+      },
+    );
+    container.dataset.ocFontsState = pending ? 'pending' : 'ready';
+  }
+  watchCurrentFont();
 
   // Set up responsive resize
   if (options?.autoResize !== false) {

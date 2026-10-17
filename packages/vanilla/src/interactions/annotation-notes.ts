@@ -4,7 +4,11 @@ const NOTE_SELECTOR = '[data-note-spec-index], [data-note-marker-index]';
 export function wireAnnotationNotes(svg: SVGSVGElement): void {
   // A graphic's children are presentational to assistive technology. Keep the
   // chart's name, but expose its interactive note list and marker buttons.
-  if (svg.querySelector(NOTE_SELECTOR) && svg.getAttribute('role') === 'img') {
+  if (
+    svg.getAttribute('aria-hidden') !== 'true' &&
+    svg.querySelector(NOTE_SELECTOR) &&
+    svg.getAttribute('role') === 'img'
+  ) {
     svg.setAttribute('role', 'group');
   }
   // Compatible updates reconcile descendants into this SVG. Delegate events
@@ -14,7 +18,9 @@ export function wireAnnotationNotes(svg: SVGSVGElement): void {
   const key = (element: Element) =>
     element.getAttribute('data-note-spec-index') ?? element.getAttribute('data-note-marker-index');
   const target = (event: Event) =>
-    event.target instanceof Element ? event.target.closest<SVGElement>(NOTE_SELECTOR) : null;
+    svg.getAttribute('aria-hidden') !== 'true' && event.target instanceof Element
+      ? event.target.closest<SVGElement>(NOTE_SELECTOR)
+      : null;
   const emphasize = (index: string | null) => {
     for (const element of linked()) {
       element.classList.toggle('oc-note-active', index !== null && key(element) === index);

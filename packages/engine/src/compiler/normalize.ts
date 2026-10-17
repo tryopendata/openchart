@@ -122,15 +122,13 @@ function inferEncodingTypes(encoding: Encoding, data: DataRow[], warnings: strin
 // ---------------------------------------------------------------------------
 
 /** Apply default styles to annotations that don't have them. */
-function normalizeAnnotations(
+export function normalizeAnnotations(
   annotations: Annotation[] | undefined,
   warnings: string[],
 ): Annotation[] {
   if (!annotations || annotations.length === 0) return [];
 
-  // The spec-sugar pass rewrites the deprecated `type: 'rule'` annotation
-  // alias to `'refline'` (with a warning) before validation/normalization
-  // ever runs, so by this point every annotation is in canonical form.
+  // Retired aliases are rejected before normalization; migration accepts v8 input.
   return annotations.map((ann) => {
     switch (ann.type) {
       case 'text':
@@ -142,18 +140,13 @@ function normalizeAnnotations(
         ) {
           warnings.push('Annotation connector.bend is ignored unless connector.type is curve.');
         }
-        // Deliberately does NOT default fontSize/fontWeight. The annotation
-        // layer owns those (DEFAULT_ANNOTATION_FONT_SIZE, and the lede rule
-        // that promotes a subtitle-bearing primary line to bold). Stamping
-        // them here makes `annotation.fontWeight` always defined, so
-        // `resolveLedeFontWeight` can never fire and the size default can
-        // never apply — both features become dead code.
+        // The annotation layer owns typography so authored values remain
+        // distinguishable from theme/default choices.
         return {
           ...ann,
           opacity: ann.opacity ?? 1,
         };
-      // Omitted ink resolves through theme tokens. Their 8.x defaults preserve
-      // the colors historically stamped here; explicit authored ink stays intact.
+      // Omitted ink resolves through theme tokens; authored ink stays intact.
       case 'range':
         return {
           ...ann,

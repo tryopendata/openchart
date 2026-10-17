@@ -21,7 +21,7 @@ import { SVG_NS } from './renderers/svg-dom';
 
 /**
  * Build the theme `<style>` block CSS text for a resolved theme. Sets the
- * `--oc-*` custom properties on `svg.oc-chart` and defines every class-based
+ * `--oc-*` custom properties on each supported SVG root and defines every class-based
  * chrome rule against them.
  */
 export function buildThemeStyleBlock(theme: ResolvedTheme): string {
@@ -64,7 +64,7 @@ export function buildThemeStyleBlock(theme: ResolvedTheme): string {
   const rules = [
     // Tabular figures everywhere in the chart's own text: axis ticks, value
     // labels and legend entries all line up column-wise.
-    `svg.oc-chart { ${props.join('; ')}; font-variant-numeric: tabular-nums; }`,
+    `svg.oc-chart, svg.oc-map, svg.oc-tilemap, svg.oc-barlist { ${props.join('; ')}; font-variant-numeric: tabular-nums; }`,
     `.oc-chrome { font-family: var(--oc-font-family); }`,
     `.oc-eyebrow { font-size: var(--oc-eyebrow-size); font-weight: var(--oc-eyebrow-weight); letter-spacing: var(--oc-eyebrow-tracking); text-transform: uppercase; fill: var(--oc-accent); }`,
     `.oc-title { font-size: var(--oc-title-size); font-weight: var(--oc-title-weight); letter-spacing: var(--oc-title-tracking); fill: var(--oc-text); }`,
@@ -94,12 +94,13 @@ export function buildThemeStyleBlock(theme: ResolvedTheme): string {
 
 /**
  * Inject the theme style block into an SVG clone's `<defs>` so class-based fills
- * survive serialization. Idempotent-ish: adds one `<style data-oc-theme>` at the
- * front of `<defs>`; call once per clone before serializing. No-op if `theme` is
+ * survive serialization. Replaces any prior export theme block, so repeated
+ * preparation produces one block. No-op if `theme` is
  * undefined (nothing to resolve against).
  */
 export function injectThemeStyleBlock(svg: SVGElement, theme: ResolvedTheme | undefined): void {
   if (!theme) return;
+  for (const previous of svg.querySelectorAll('style[data-oc-theme]')) previous.remove();
   let defs = svg.querySelector('defs');
   if (!defs) {
     defs = document.createElementNS(SVG_NS, 'defs');
@@ -119,4 +120,21 @@ export function copyComputedThemeProperties(source: SVGElement, clone: SVGElemen
     const value = computed.getPropertyValue(name).trim();
     if (value) clone.style.setProperty(name, value);
   }
+}
+
+/** Prepare detached settled geometry with its live cascade or an export override. */
+export function prepareSettledExportTheme(
+  source: SVGElement,
+  settled: SVGElement,
+  theme: ResolvedTheme | undefined,
+  explicitTheme = false,
+): void {
+  if (explicitTheme) {
+    // A re-render may stamp authored mount values inline. They would beat the
+    // export theme's stylesheet even when copying the live cascade is skipped.
+    for (const { name } of CSS_TOKENS) settled.style.removeProperty(name);
+  } else {
+    copyComputedThemeProperties(source, settled);
+  }
+  injectThemeStyleBlock(settled, theme);
 }

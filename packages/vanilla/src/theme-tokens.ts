@@ -24,6 +24,21 @@ const stamped = new WeakMap<
   Map<string, { previous: string; priority: string; value: string }>
 >();
 
+/** Read the host cascade without an earlier authored token, then restore it synchronously. */
+export function readWithoutThemeStamp<T>(el: StyledElement, name: string, read: () => T): T {
+  const entry = stamped.get(el)?.get(name);
+  const value = el.style.getPropertyValue(name);
+  if (!entry || value !== entry.value) return read();
+  const priority = el.style.getPropertyPriority(name);
+  try {
+    if (entry.previous) el.style.setProperty(name, entry.previous, entry.priority);
+    else el.style.removeProperty(name);
+    return read();
+  } finally {
+    el.style.setProperty(name, value, priority);
+  }
+}
+
 /** Stamp only authored theme leaves. Defaults stay in CSS so host rules can override them. */
 export function stampThemeProperties(
   el: StyledElement,

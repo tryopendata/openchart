@@ -282,7 +282,7 @@ The vanilla adapter (`mount.ts`) takes the resulting `ChartLayout` and calls `re
 - **Default theme:** `DEFAULT_THEME` literal in `packages/core/src/theme/defaults.ts`. Single source of truth.
 - **User overrides:** public `mergeThemeConfig()` deep-merges authored configuration; arrays and TokenValues are atomic, null replaces. Layer leaf values beat parent values; mount options beat both. Framework providers merge into component props. `resolveTheme()` adds defaults and returns `ResolvedTheme`, retaining internal `_authored` metadata for CSS and dark adaptation. Public `Theme` is removed; `ThemeBase` remains internal.
 - **Dark mode:** `adaptTheme(resolved)` in `dark-mode.ts` swaps surface tokens, adapts categorical palette via binary-search on lightness to preserve contrast against the dark background.
-- **Authored CSS tokens:** `packages/vanilla/src/theme-tokens.ts` → `stampThemeProperties()` is shared by chart/table/graph/map and specialized renderers. It stamps authored overrides only, restoring previous host inline values when an override disappears. `theme-style-block.ts` copies computed tokens into export clones.
+- **Authored CSS tokens:** `packages/vanilla/src/theme-tokens.ts` → `stampThemeProperties()` is shared by chart/table/graph/map and specialized renderers. It stamps authored overrides only, restoring previous host inline values when an override disappears. `theme-style-block.ts` → `prepareSettledExportTheme()` preserves live computed tokens across chart, map, tilemap, Sankey, and barlist exports, or clears authored inline overrides when an explicit export theme wins.
 - **CSS tokens** (`tokens.css`, `dark.css`) are **generated** from `packages/core/src/styles/token-definitions.ts`. Run `bun run generate:tokens` after editing. CI enforces freshness via `check:generated`.
 - **Cascade layers:** all CSS is wrapped in `@layer oc.*` sub-layers declared in `index.css`: `oc.tokens, oc.base, oc.components, oc.animation, oc.reduced-motion`. Consumer un-layered CSS beats all openchart rules (v8 breaking change, see `docs/migrating-v8.md` section 14).
 
@@ -433,6 +433,7 @@ colors retain their previous uses.
 | Shared bounded field inference | `core/src/helpers/spec-builders.ts`: public `inferFieldType`; normalization and chart helpers sample up to 50 values, with numeric strings before temporal matching. The engine duplicate is removed. |
 | V9 default and removal guards | `engine/src/annotations/__tests__/v9-defaults.test.ts`, `compiler/__tests__/v9-removed-fields.test.ts`; migration fixtures in `engine/src/__tests__/migrate-spec-v8.test.ts`. |
 | Connector crossing score | `engine/src/annotations/connector-crossings.ts`: internal `ConnectorCrossings`; geometry tests in `annotations/__tests__/connector-crossings.test.ts`. |
+| Layer theme ownership | `engine/src/compile/layer.ts`: public `resolveLayerTheme` shares primary-leaf theme precedence with mount font measurement. |
 | Former line label implementation | `engine/src/charts/line/labels.ts` removed; endpoint columns use `engine/src/endpoint-labels/` and `vanilla/src/renderers/endpoint-labels.ts`. |
 
 The migration guide records remaining type/field removals. The built-in `editorial`

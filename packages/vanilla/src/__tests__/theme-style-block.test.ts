@@ -26,7 +26,7 @@ describe('buildThemeStyleBlock', () => {
 
     // The custom properties the rules reference must be defined on svg.oc-chart,
     // else the var() lookups resolve to nothing once detached from the page.
-    expect(css).toMatch(/svg\.oc-chart\s*\{[^}]*--oc-text:/);
+    expect(css).toMatch(/svg\.oc-chart[^{}]*\{[^}]*--oc-text:/);
     expect(css).toMatch(/--oc-positive:/);
     expect(css).toMatch(/--oc-negative:/);
   });
@@ -58,6 +58,14 @@ describe('injectThemeStyleBlock', () => {
     expect(svg.querySelector('defs')).toBeNull();
     injectThemeStyleBlock(svg, resolveTheme());
     expect(svg.querySelector('defs')).not.toBeNull();
+  });
+
+  it('replaces its existing block when preparation repeats with a new theme', () => {
+    const svg = makeSvg();
+    injectThemeStyleBlock(svg, resolveTheme());
+    injectThemeStyleBlock(svg, resolveTheme({ colors: { text: '#abcdef' } }));
+    expect(svg.querySelectorAll('style[data-oc-theme]')).toHaveLength(1);
+    expect(svg.querySelector('style')?.textContent).toContain('--oc-text: #abcdef');
   });
 
   it('is a no-op when theme is undefined', () => {

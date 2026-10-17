@@ -175,7 +175,7 @@ export function renderChrome(parent: SVGElement, layout: ChartLayout): void {
       const el = createSVGElement('text');
       el.setAttribute('class', 'oc-footnotes');
       el.setAttribute('role', 'listitem');
-      el.setAttribute('tabindex', '0');
+      if (!layout.a11y.hidden) el.setAttribute('tabindex', '0');
       el.setAttribute(
         'aria-label',
         `${f.index}. ${f.text.replaceAll('**', '')}${f.subtitle ? `. ${f.subtitle.replaceAll('**', '')}` : ''}`,

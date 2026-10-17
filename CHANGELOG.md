@@ -6,7 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
-### 9.0.0 — annotation and figure defaults
+## [9.0.0] - 2026-10-17
+
+### Annotation and figure defaults
 
 - Adopt 12px small/axis/source/byline/footer text and 16px/12px chrome spacing.
   Background stays transparent; default axis and eyebrow colors are unchanged.
@@ -27,7 +29,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Retune default reference-rule and range ink; derive marker and plate fills from
   the resolved neutral surface while preserving authored colors.
 
-### 9.0.0 — breaking API and authoring changes
+### Breaking API and authoring changes
 
 - Make `onEdit(EditTransaction)` the sole durable editing callback. Remove
   `ElementEdit`, `onEditTransaction`, `onAnnotationEdit`, and `onTextEdit`; use
@@ -52,7 +54,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   80% agreement, and recognize numeric strings before dates. Explicit field types
   remain authoritative.
 
-### 9.0.0 — themes and migration
+### Themes and migration
 
 - Deep-merge spec/provider/host themes; leaf themes override parent themes and
   mount/compile options have highest precedence. Arrays and color pairs replace
@@ -63,6 +65,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Stamp only authored CSS theme overrides through one renderer helper. Host CSS
   can override omitted tokens; dark defaults include all registered tokens and
   SVG/raster exports retain live CSS token values.
+- Keep layer font measurement and font-load updates aligned with the primary
+  leaf theme; keep hidden annotation notes out of keyboard navigation.
+- Normalize breakpoint annotations and apply endpoint-label patches consistently
+  with root specs, including migrated legacy labels.
 - Extend `migrateSpecV8` with `{ styling: 'v9' }` for alias-only migration. Default
   migration materializes former v8 styling, including annotation colors/spacing,
   and reports repairs without mutating input. Layout pixel parity is not promised.

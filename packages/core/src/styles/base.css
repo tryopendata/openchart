@@ -63,6 +63,8 @@
      packages/vanilla/src/dom-helpers.ts for why. Keep the two in sync. */
   .oc-sr-only {
     position: absolute;
+    top: 0;
+    left: 0;
     width: 1px;
     height: 1px;
     padding: 0;

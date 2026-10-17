@@ -4275,8 +4275,8 @@ const theme: ThemeConfig = {
     subtitle: { fontWeight: 400, lineHeight: 1.4 },
     eyebrow: { color: '#e3120b', fontWeight: 700 },
 
-    // Plain strings still work (color-only, backward-compatible)
-    source: '#666',
+    // Color-only overrides use the same object form.
+    source: { color: '#666' },
   },
 
   // New: series color assignment strategy

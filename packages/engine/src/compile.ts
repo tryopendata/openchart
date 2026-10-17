@@ -19,6 +19,7 @@ import type {
   AnimationSpec,
   ChartLayout,
   ChartSpec,
+  ChartSpecOverride,
   CompileOptions,
   CompileTableOptions,
   Encoding,
@@ -88,6 +89,7 @@ import { collectContrastWarnings } from './compiler/a11y-warnings';
 import { resolveAnimation } from './compiler/animation';
 import { compile as compileSpec } from './compiler/index';
 import { resolveMarkRenderMode } from './compiler/mark-render-mode';
+import { normalizeAnnotations } from './compiler/normalize';
 import {
   buildSparklineAreaGradient,
   computeTrendFromData,
@@ -343,22 +345,7 @@ function compileChartInternal(spec: unknown, optionsInput: CompileOptions): Char
   // Apply breakpoint-conditional overrides from the expanded spec
   const rawSpec = expandedSpec as Record<string, unknown>;
   const overrides = rawSpec.overrides as
-    | Partial<
-        Record<
-          string,
-          {
-            chrome?: unknown;
-            labels?: unknown;
-            legend?: unknown;
-            annotations?: unknown;
-            animation?: unknown;
-            display?: unknown;
-            encoding?: unknown;
-            watermark?: unknown;
-            crosshair?: unknown;
-          }
-        >
-      >
+    | Partial<Record<string, ChartSpecOverride & { encoding?: unknown }>>
     | undefined;
 
   // Build userExplicit descriptor BEFORE applying any overrides so we capture
@@ -381,8 +368,7 @@ function compileChartInternal(spec: unknown, optionsInput: CompileOptions): Char
     chrome: hasChromeKeys(rawSpec.chrome) || hasChromeKeys(bpForExplicit?.chrome),
     legend: rawSpec.legend !== undefined || bpForExplicit?.legend !== undefined,
     endpointLabels:
-      rawSpec.endpointLabels !== undefined ||
-      (bpForExplicit as Record<string, unknown> | undefined)?.endpointLabels !== undefined,
+      rawSpec.endpointLabels !== undefined || bpForExplicit?.endpointLabels !== undefined,
     // Axis explicitness tracks "user opted IN to render the axis" — `axis: false`
     // is an explicit opt-OUT and must not flip these flags on. Sparkline mode
     // reads them to decide whether to reserve axis space; treating `false` as
@@ -402,6 +388,8 @@ function compileChartInternal(spec: unknown, optionsInput: CompileOptions): Char
 
   if (overrides?.[breakpoint]) {
     const bp = overrides[breakpoint]!;
+    if (bp.endpointLabels !== undefined)
+      chartSpec = { ...chartSpec, endpointLabels: bp.endpointLabels };
     if (bp.chrome) {
       chartSpec = {
         ...chartSpec,
@@ -439,10 +427,12 @@ function compileChartInternal(spec: unknown, optionsInput: CompileOptions): Char
       };
     }
     if (bp.annotations) {
+      const annotationWarnings: string[] = [];
       chartSpec = {
         ...chartSpec,
-        annotations: bp.annotations as NormalizedChartSpec['annotations'],
+        annotations: normalizeAnnotations(bp.annotations, annotationWarnings),
       };
+      emitSpecWarnings(annotationWarnings, options.onWarn);
       // User explicitly provided annotations at this breakpoint — override the
       // responsive strategy so they render inline instead of being stripped.
       strategy = { ...strategy, annotationPosition: 'inline' };

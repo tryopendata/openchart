@@ -12,6 +12,30 @@ const chart = {
   encoding: { x: { field: 'x', type: 'quantitative' }, y: { field: 'y', type: 'quantitative' } },
 };
 describe('migrateSpecV8 alias repairs', () => {
+  it('preserves hardcoded v8 reference typography independently of the small theme size', () => {
+    const source = {
+      ...chart,
+      theme: { fonts: { sizes: { small: 20 } } },
+      annotations: [
+        { type: 'refline', y: 0, label: 'Threshold' },
+        { type: 'range', x1: 0, x2: 1, label: 'Interval' },
+        { type: 'refline', y: 1, label: 'Authored', fontSize: 17 },
+      ],
+    };
+    const migrated = migrateSpecV8(source);
+    expect(
+      compileChart(migrated.spec, { width: 800, height: 600 }).annotations.map(
+        (a) => a.label?.style.fontSize,
+      ),
+    ).toEqual([11, 11, 17]);
+    expect(migrateSpecV8(migrated.spec).repairs).toEqual([]);
+    expect(
+      compileChart(migrateSpecV8(source, { styling: 'v9' }).spec, {
+        width: 800,
+        height: 600,
+      }).annotations.map((a) => a.label?.style.fontSize),
+    ).toEqual([20, 20, 17]);
+  });
   it.each([
     [
       { type: 'table', compact: true },

@@ -1040,6 +1040,11 @@ function withSharedDomains(leaf: ChartSpec, shared: SharedDomains): ChartSpec {
   return { ...leaf, encoding } as unknown as ChartSpec;
 }
 
+/** Authored theme ownership shared by layer compilation and host text measurement. */
+export function resolveLayerTheme(layerSpec: LayerSpec, primary = flattenLayers(layerSpec)[0]) {
+  return mergeThemeConfig(layerSpec.theme, primary?.theme);
+}
+
 export function buildPrimarySpec(leaves: ChartSpec[], layerSpec: LayerSpec): ChartSpec {
   const allData = leaves.flatMap((leaf) => leaf.data);
 
@@ -1055,7 +1060,7 @@ export function buildPrimarySpec(leaves: ChartSpec[], layerSpec: LayerSpec): Cha
     labels: layerSpec.labels ?? leaves[0].labels,
     legend: layerSpec.legend ?? leaves[0].legend,
     responsive: layerSpec.responsive ?? leaves[0].responsive,
-    theme: mergeThemeConfig(layerSpec.theme, leaves[0].theme),
+    theme: resolveLayerTheme(layerSpec, leaves[0]),
     watermark: layerSpec.watermark ?? leaves[0].watermark,
     hiddenSeries: layerSpec.hiddenSeries ?? leaves[0].hiddenSeries,
     endpointLabels: layerSpec.endpointLabels ?? leaves[0].endpointLabels,
