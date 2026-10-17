@@ -249,7 +249,9 @@ export function computeDimensions(
   // effectiveHeight === height, keeping that path byte-identical.
   const chromeLayout = resolveChromeLayout(spec, options);
   const effectiveHeight =
-    chromeLayout === 'grow' ? height + chrome.topHeight + chrome.bottomHeight : height;
+    chromeLayout === 'grow'
+      ? height + chrome.topHeight + chrome.bottomHeight + (options.footnoteReserve ?? 0)
+      : height;
 
   // Sparkline mode: produce a near-edge-to-edge layout. Only stroke-width-based
   // safety padding plus chrome (if user-explicit). Skip axis space, label
@@ -266,7 +268,7 @@ export function computeDimensions(
     const margins: Margins = {
       top: chrome.topHeight + sparkPad.top,
       right: sparkPad.right,
-      bottom: chrome.bottomHeight + sparkPad.bottom + xAxisSpace,
+      bottom: chrome.bottomHeight + sparkPad.bottom + xAxisSpace + (options.footnoteReserve ?? 0),
       left: sparkPad.left + yAxisSpace,
     };
 
@@ -549,7 +551,9 @@ export function computeDimensions(
     const fallbackEffectiveAxisGap = hasTopLegend ? inlineTickOverhang : fallbackTopAxisGap;
     const newTop = topPad + fallbackChrome.topHeight + tentativeMetricsHeight + searchReservation;
     const topDelta = margins.top - newTop;
-    const newBottom = bottomMargin(fallbackChrome.bottomHeight, padding, xAxisHeight);
+    const newBottom =
+      bottomMargin(fallbackChrome.bottomHeight, padding, xAxisHeight) +
+      (options.footnoteReserve ?? 0);
     const bottomDelta = margins.bottom - newBottom;
 
     if (topDelta > 0 || bottomDelta > 0) {

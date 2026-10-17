@@ -2,6 +2,21 @@ import type { ChartLayout, ChartSpec, DesignDiagnostic } from '@opendata-ai/open
 import { computeLabelBounds, contrastRatio, isOpaqueColor } from '@opendata-ai/openchart-core';
 import { resolveObservationIdentities } from './identity';
 
+/** A fixed figure budget may be exhausted by the stable source-note capacity. */
+export function noteCapacityDiagnostic(layout: ChartLayout): DesignDiagnostic | undefined {
+  if ((layout.chrome.noteBandHeight ?? 0) <= 0 || layout.area.height > 0) return undefined;
+  return {
+    code: 'layout.note-capacity',
+    path: '/annotations',
+    origin: 'author',
+    status: 'failed',
+    severity: 'error',
+    viewport: layout.dimensions,
+    message:
+      'Reserved annotation note capacity leaves no plotting space. Increase the requested height, explicitly choose chromeLayout: "grow" for non-faceted charts, or reduce annotation text/count.',
+  };
+}
+
 /** Checks use resolved geometry and authored metadata, never headline interpretation. */
 export function diagnoseChart(spec: ChartSpec, layout: ChartLayout): DesignDiagnostic[] {
   const diagnostics: DesignDiagnostic[] = [];
@@ -120,7 +135,9 @@ export function diagnoseChart(spec: ChartSpec, layout: ChartLayout): DesignDiagn
       'author',
     );
   }
-  if (layout.area.width < 80 || layout.area.height < 80)
+  const exhaustedNotes = noteCapacityDiagnostic(layout);
+  if (exhaustedNotes) diagnostics.push(exhaustedNotes);
+  else if (layout.area.width < 80 || layout.area.height < 80)
     emit(
       'layout.constrained',
       '/chromeLayout',

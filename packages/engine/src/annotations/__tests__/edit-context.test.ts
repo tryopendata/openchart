@@ -67,13 +67,18 @@ describe('resolved annotation editing', () => {
     expect(committed.dot).toEqual(layout.annotations[0].dot);
     expect(layout.annotations).toEqual(before);
   });
-  it('keeps a crowded note-bearing plot fixed when a first drag changes note eligibility', () => {
+  it.each([
+    ['subtract', -20],
+    ['grow', -20],
+    ['subtract', 999],
+    ['grow', 999],
+  ] as const)('keeps a crowded note-bearing %s plot fixed on drag %s', (chromeLayout, dy) => {
     const spec = structuredClone(annotationCrowdedSpec);
-    const size = { width: 390, height: 600 };
+    const size = { width: 390, height: 600, chromeLayout };
     const layout = compileChart(spec, size);
     const ctx = createAnnotationEditContext(layout, spec);
     const ref = elementRef.annotation(0, 'crowded-0');
-    const preview = previewAnnotationMove(ctx, ref, { dx: -20, dy: -20 });
+    const preview = previewAnnotationMove(ctx, ref, { dx: -20, dy });
     const placement = inverseLabelPlacement(ctx, ref, preview.bounds!);
     const annotations = spec.annotations!.map((annotation, index) =>
       index === 0 ? { ...annotation, ...placement } : annotation,
@@ -82,6 +87,8 @@ describe('resolved annotation editing', () => {
     const result = committed.annotations.find((annotation) => annotation.specIndex === 0)!;
     expect(result.label!.y).toBeCloseTo(preview.label!.y, 8);
     expect(committed.area).toEqual(layout.area);
+    expect(committed.dimensions).toEqual(layout.dimensions);
+    expect(committed.chrome.noteBandHeight).toEqual(layout.chrome.noteBandHeight);
   });
   it('keeps the plot and attachment fixed when committing a callout at maximum x', () => {
     const spec = { ...editSpec, annotations: [{ ...editSpec.annotations![0], x: 10 }] };

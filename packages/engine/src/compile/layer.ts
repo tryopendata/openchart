@@ -364,7 +364,6 @@ function compileLayerIndependent(
         ...optionsWithReserve,
         frozenChartArea: area,
         footnoteReserve: reserve,
-        height: optionsWithReserve.height + (grow ? reserve : 0),
       };
       layout0 = compileChart(primary0, alignedOptions);
       layout1 = compileChart(primary1, alignedOptions);
@@ -372,10 +371,7 @@ function compileLayerIndependent(
       if (nextReserve <= reserve) break;
       const delta = nextReserve - reserve;
       reserve = nextReserve;
-      if (grow) {
-        layout0.dimensions = { ...layout0.dimensions, height: layout0.dimensions.height + delta };
-        break;
-      }
+      if (grow) continue;
       if (options.frozenChartArea) break;
       area.height = Math.max(1, area.height - delta);
     }
@@ -384,6 +380,18 @@ function compileLayerIndependent(
     const legendShift = rightReserve + ENDPOINT_COLUMN_GAP + endpointWidth;
     layout0 = moveRightLegends(layout0, legendShift);
     layout1 = moveRightLegends(layout1, legendShift);
+  }
+
+  // Without endpoint columns the secondary leaf still needs the primary's
+  // stable note band. It owns no annotations, so an independent compile would
+  // otherwise stretch its scale below the assembled plot.
+  if (!columns.length && noteReserve(layout0) > 0) {
+    const reserve = noteReserve(layout0);
+    layout1 = compileChart(primary1, {
+      ...optionsWithReserve,
+      frozenChartArea: layout0.area,
+      footnoteReserve: reserve,
+    });
   }
 
   const y2Axis = layout1.axes.y
@@ -622,10 +630,13 @@ function compileLayerIndependent(
 }
 
 function noteReserve(layout: ChartLayout): number {
-  return footnoteBandHeight(
-    annotationNoteLineCount(layout.chrome.footnotes ?? []) +
-      (layout.chrome.seriesSummary?.reduce((count, entry) => count + entry.lines.length, 0) ?? 0),
-    layout.theme,
+  return (
+    layout.chrome.noteBandHeight ??
+    footnoteBandHeight(
+      annotationNoteLineCount(layout.chrome.footnotes ?? []) +
+        (layout.chrome.seriesSummary?.reduce((count, entry) => count + entry.lines.length, 0) ?? 0),
+      layout.theme,
+    )
   );
 }
 

@@ -12,6 +12,11 @@
 - Convert the first label drag to an explicit anchor/offset and `responsive: false`
   atomically, keeping the data point fixed. Remove placement-dependent right
   margin reservation so the plot does not shift when the drag commits.
+- Reserve note space from source annotation text, including subtitles and pinned
+  callouts, so dragging cannot resize the plot or figure. Auto-thinned charts may
+  retain unused note space. Expose the reserved height as `chrome.noteBandHeight`
+  so rendering, footer placement and export agree. Exhausted fixed-height budgets
+  report an actionable `layout.note-capacity` diagnostic.
 - Add Alt+arrow (1px) and Alt+Shift+arrow (10px) annotation nudges, batched into
   one transaction. Escape, pointer/touch cancellation, width changes and document
   replacement cancel active drags without emitting edits.

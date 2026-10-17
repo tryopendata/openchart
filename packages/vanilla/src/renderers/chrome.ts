@@ -30,10 +30,14 @@ import { applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
  * invitation for the two to drift and drop the footnotes onto the watermark.
  */
 export function footnoteBandHeight(layout: ChartLayout): number {
-  return footnoteBandHeightFor(
-    (layout.chrome.footnotes?.reduce((count, note) => count + (note.lines?.length ?? 1), 0) ?? 0) +
-      (layout.chrome.seriesSummary?.reduce((count, entry) => count + entry.lines.length, 0) ?? 0),
-    layout.theme,
+  return (
+    layout.chrome.noteBandHeight ??
+    footnoteBandHeightFor(
+      (layout.chrome.footnotes?.reduce((count, note) => count + (note.lines?.length ?? 1), 0) ??
+        0) +
+        (layout.chrome.seriesSummary?.reduce((count, entry) => count + entry.lines.length, 0) ?? 0),
+      layout.theme,
+    )
   );
 }
 
