@@ -1105,7 +1105,11 @@ export interface ConnectorConfig {
 export interface AnnotationDot {
   /** Circle radius in pixels. Default 4. */
   radius?: number;
-  /** Fill color. Defaults to theme background for an "open ring" look. */
+  /**
+   * Fill color. Defaults to `theme.colors.annotationMarkerFill`, which resolves to
+   * the theme's opaque surface. A default dot on an endpoint marker takes the
+   * marker's fill and stroke.
+   */
   fill?: string;
   /** Stroke color. Defaults to the connector's resolved stroke, so marker and leader read as one system. */
   stroke?: string;
@@ -1117,8 +1121,6 @@ export interface AnnotationDot {
 interface AnnotationBase {
   /** Stable identifier for selection and edit callbacks. When provided, edit events include this ID for reliable element matching. */
   id?: string;
-  /** Human-readable label for the annotation. */
-  label?: string;
   /** Fill color for the annotation element. */
   fill?: string;
   /** Stroke color for the annotation element. */
@@ -1156,9 +1158,9 @@ export interface TextAnnotation extends AnnotationBase {
    * Used for supporting context (e.g. methodology, source). Newlines in
    * `text` still produce multi-line primary; subtitle is a separate block.
    *
-   * Supports the same inline `**bold**` spans as `text`. When a subtitle is
-   * present and no `fontWeight` is set, the primary `text` resolves to weight
-   * 700 — the lede + context stack.
+   * Supports the same inline `**bold**` spans as `text`. The primary `text`
+   * keeps its own weight (default 400); use `fontWeight` or `**bold**` spans
+   * for a bold lede.
    */
   subtitle?: string;
   /** Subtitle size in pixels. Default: round(fontSize * 12 / 13). */
@@ -1226,6 +1228,8 @@ export interface TextAnnotation extends AnnotationBase {
  */
 export interface RangeAnnotation extends AnnotationBase {
   type: 'range';
+  /** Text drawn with the range band. */
+  label?: string;
   /** Start of the range on the x-axis. */
   x1?: string | number;
   /** End of the range on the x-axis. */
@@ -1261,6 +1265,8 @@ export interface RangeAnnotation extends AnnotationBase {
 export interface RefLineAnnotation extends AnnotationBase {
   /** Reference-line annotation discriminant. Older rule aliases require migrateSpecV8. */
   type: 'refline';
+  /** Text drawn with the reference line. */
+  label?: string;
   /** X-axis value for a vertical reference line. */
   x?: string | number;
   /** Y-axis value for a horizontal reference line. */
@@ -1475,7 +1481,10 @@ export interface ThemeConfig {
  * Label density mode controlling how many data labels are shown.
  * - 'all': show every label, skip collision detection
  * - 'auto': show labels with collision detection (default)
- * - 'endpoints': show only first and last per series (useful for line charts)
+ * - 'endpoints': show only first and last per series
+ *
+ * Line and area marks draw no value labels; identify their series with
+ * `endpointLabels` or the legend.
  * - 'none': hide all labels (rely on tooltips and legend)
  */
 export type LabelDensity = 'all' | 'auto' | 'endpoints' | 'none';
@@ -1619,9 +1628,12 @@ export interface EndpointLabelsConfig {
   format?: string;
   /** Max wrap width in pixels for long series names. Default 96. */
   width?: number;
-  /** Render an open-circle marker on the line at the right edge. Default true. */
+  /**
+   * Render a ring marker centered on the line's end point. Default true. Its
+   * fill defaults to the opaque canvas color so the ring covers the line end.
+   */
   showMarker?: boolean;
-  /** Override the marker style. */
+  /** Override the marker style. `fill: 'transparent'` keeps a see-through ring. */
   markerStyle?: {
     fill?: string;
     stroke?: string;
@@ -2129,7 +2141,6 @@ interface BaseChartSpec<TData extends DataRow = DataRow> {
   responsive?: boolean | ResponsiveConfig;
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
-  /** Dark mode behavior. Defaults to "off". */
   /**
    * Whether to show the OpenData watermark. Defaults to true; auto-hides
    * when the container is under 200px tall (the cramped height class) unless
@@ -2347,7 +2358,6 @@ export interface TableSpec {
   chrome?: Chrome;
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
-  /** Dark mode behavior. */
   /** Whether to show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
   /** Enable client-side search/filter. */
@@ -2503,7 +2513,6 @@ export interface GraphSpec {
   annotations?: Annotation[];
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
-  /** Dark mode behavior. */
   /**
    * Motion configuration. DEFAULT-ON: omit for full defaults, `false` to opt
    * out of choreography (layout warmup still applies).
@@ -2627,11 +2636,16 @@ export interface LayerSpec<TData extends DataRow = DataRow> {
   labels?: LabelSpec;
   /** Legend display configuration. */
   legend?: LegendConfig;
-  /** Whether the chart adapts to container width. Defaults to true. */
-  responsive?: boolean;
+  /**
+   * Responsive behavior for the composed chart, with the same meaning as
+   * `ChartSpec.responsive`: `true`/`false` enables/disables container-width
+   * adaptation, and a `ResponsiveConfig` object gives fine-grained control
+   * (e.g. `{ compactAnnotationLimit: null }`). When omitted, the first leaf
+   * layer's `responsive` applies.
+   */
+  responsive?: boolean | ResponsiveConfig;
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
-  /** Dark mode behavior. Defaults to "off". */
   /** Whether to show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
   /** Resolution strategy for shared scales/axes/legends. */
@@ -2722,7 +2736,6 @@ export interface SankeySpec {
   legend?: LegendConfig;
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
-  /** Dark mode behavior. Defaults to "off". */
   /** Whether to show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
   /** Animation configuration for entrance animations. */
@@ -2782,7 +2795,6 @@ export interface TileMapSpec {
   legend?: LegendConfig;
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
-  /** Dark mode behavior. Defaults to "off". */
   /** Whether to show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
   /** Animation configuration for entrance animations. */
@@ -2910,7 +2922,6 @@ export interface GeoMapSpec {
   legend?: LegendConfig;
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
-  /** Dark mode behavior. Defaults to "off". */
   /** Whether to show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
   /** Optional point/symbol layer rendered above choropleth features. */
@@ -2943,7 +2954,6 @@ export interface BarListSpec {
   chrome?: Chrome;
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
-  /** Dark mode behavior. Defaults to "off". */
   /** Whether to show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
   /** Animation configuration for entrance animations. */

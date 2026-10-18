@@ -18,7 +18,7 @@ Don't rely on it for:
 
 ## How it works
 
-`playwright.config.ts` at the repo root spawns the Ladle dev server on port 61000, then two specs screenshot the canonical story set: `e2e/visual/stories.spec.ts` (60 desktop entries) and `e2e/visual/stories-mobile.spec.ts` (12 entries at a mobile viewport). Both go through the shared harness in `e2e/visual/capture.ts`. Baselines live in `e2e/visual/__screenshots__/<spec>-snapshots/` and are committed to git.
+`playwright.config.ts` at the repo root spawns the Ladle dev server on port 61000, then two specs screenshot the canonical story set: `e2e/visual/stories.spec.ts` (94 desktop entries) and `e2e/visual/stories-mobile.spec.ts` (21 entries at a mobile viewport). Both go through the shared harness in `e2e/visual/capture.ts`. Baselines live in `e2e/visual/__screenshots__/<spec>-snapshots/` and are committed to git.
 
 Before each screenshot the harness disables animations via an injected stylesheet and hides the Ladle dev overlays, then waits for fonts to settle, so timing and layout are deterministic.
 

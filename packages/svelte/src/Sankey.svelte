@@ -68,7 +68,7 @@ $effect(() => {
     onLinkClick: (link: Record<string, unknown>) => untrack(() => onlinkclick)?.(link),
     onNodeHover: (node: Record<string, unknown> | null) => untrack(() => onnodehover)?.(node),
     onLinkHover: (link: Record<string, unknown> | null) => untrack(() => onlinkhover)?.(link),
-    responsive: true,
+    autoResize: true,
   };
 
   instance = createSankey(containerEl, currentSpec, options);

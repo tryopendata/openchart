@@ -20,7 +20,8 @@ it.each([
   };
   for (const styling of ['v8', 'v9'] as const) {
     const result = migrateSpecV8(source, { styling });
-    expect(() => compileChart(result.spec, { width: 1280, height: 600 })).not.toThrow();
+    expect(validateSpec(result.spec).errors).toEqual([]);
+    expect(compileChart(result.spec, { width: 1280, height: 600 }).marks.length).toBeGreaterThan(0);
     expect(migrateSpecV8(result.spec, { styling }).repairs).toEqual([]);
   }
 });
@@ -75,7 +76,7 @@ it('rejects retired breakpoint annotations even when another breakpoint is activ
     overrides: { compact: { annotations: [{ type: 'rule', y: 2 }], animation: 'legacy' } },
   };
   expect(validateSpec(spec).errors.map((error) => error.path)).toContain(
-    'overrides.compact.annotations[0].type',
+    '/overrides/compact/annotations/0/type',
   );
   expect(() => compileChart(spec, { width: 800, height: 400 })).toThrow(/removed in v9/);
   const migrated = migrateSpecV8(spec);
@@ -84,8 +85,9 @@ it('rejects retired breakpoint annotations even when another breakpoint is activ
   expect(migrated.repairs.map((repair) => repair.path)).toContain(
     '/overrides/compact/annotations/0/type',
   );
+  expect(validateSpec(migrated.spec).errors).toEqual([]);
   for (const width of [390, 800])
-    expect(() => compileChart(migrated.spec, { width, height: 400 })).not.toThrow();
+    expect(compileChart(migrated.spec, { width, height: 400 }).marks.length).toBeGreaterThan(0);
   expect(migrateSpecV8(migrated.spec).repairs).toEqual([]);
 });
 it.each([
@@ -94,6 +96,7 @@ it.each([
   { animation: 'legacy' },
   { mark: { type: 'point', render: 'canvas' } },
   { annotations: [{ type: 'rule', y: 2 }] },
+  { annotations: [{ type: 'text', x: 1, y: 2, text: 'Peak', label: 'Peak' }] },
   { theme: { chrome: { title: '#000000' } } },
   ...['radius', 'shape', 'href', 'order'].map((key) => ({
     encoding: { ...base.encoding, [key]: { field: 'x' } },
@@ -102,5 +105,56 @@ it.each([
   const spec = { ...base, ...patch };
   expect(validateSpec(spec).valid).toBe(false);
   expect(() => compileChart(spec, { width: 600, height: 400 })).toThrow(/removed in v9/);
-  expect(() => compileChart(migrateSpecV8(spec).spec, { width: 600, height: 400 })).not.toThrow();
+  const migrated = migrateSpecV8(spec).spec;
+  expect(validateSpec(migrated).errors).toEqual([]);
+  expect(compileChart(migrated, { width: 600, height: 400 }).marks.length).toBeGreaterThan(0);
+});
+it('reports removed fields on the compile path like validation, with JSON Pointer paths', () => {
+  const spec = { layer: [{ ...base, darkMode: 'auto' }] };
+  expect(validateSpec(spec).errors.map((error) => error.path)).toContain('/layer/0/darkMode');
+  expect(() => compileChart(spec, { width: 600, height: 400 })).toThrow(
+    /^Invalid spec:\n\/layer\/0\/darkMode was removed in v9\. .*Run migrateSpecV8/,
+  );
+});
+it.each([
+  'arc',
+  'waffle',
+  'parliament',
+])('rejects %s encoding.y even when theta is authored', (mark) => {
+  const spec = {
+    mark,
+    data: [{ k: 'a', v: 1, old: 2 }],
+    encoding: {
+      y: { field: 'old', type: 'quantitative' },
+      theta: { field: 'v', type: 'quantitative' },
+      color: { field: 'k', type: 'nominal' },
+    },
+  };
+  const error = validateSpec(spec).errors.find((e) => e.path === '/encoding/y');
+  expect(error?.message).toMatch(/Remove encoding\.y; encoding\.theta/);
+  expect(() => compileChart(spec, { width: 600, height: 400 })).toThrow(/\/encoding\/y/);
+  expect(migrateSpecV8(spec).spec.encoding).not.toHaveProperty('y');
+});
+it('scopes annotation label to range and refline annotations', () => {
+  const spec = {
+    ...base,
+    annotations: [
+      { type: 'text', x: 1, y: 2, text: 'Peak', label: 'Old' },
+      { type: 'refline', y: 2, label: 'Target' },
+      { type: 'range', y1: 1, y2: 2, label: 'Band' },
+    ],
+  };
+  const errors = validateSpec(spec).errors;
+  expect(errors.map((error) => error.path)).toEqual(['/annotations/0/label']);
+  expect(errors[0].message).toMatch(/no effect on text annotations.*text/);
+  const migrated = migrateSpecV8(spec, { styling: 'v9' });
+  expect(migrated.spec.annotations[0]).not.toHaveProperty('label');
+  expect(migrated.spec.annotations.slice(1).map((a) => a.label)).toEqual(['Target', 'Band']);
+  expect(migrated.repairs).toContainEqual({
+    path: '/annotations/0/label',
+    from: 'Old',
+    to: undefined,
+    reason: 'Removed: label had no effect on text annotations.',
+  });
+  expect(validateSpec(migrated.spec).valid).toBe(true);
 });

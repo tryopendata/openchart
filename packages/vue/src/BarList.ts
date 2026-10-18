@@ -89,7 +89,7 @@ export const BarList = defineComponent({
         darkMode: resolveDarkMode(),
         onRowClick: (row: BarListRowEvent) => emit('row-click', row),
         onRowHover: (row: BarListRowEvent | null) => emit('row-hover', row),
-        responsive: true,
+        autoResize: true,
       };
 
       instance = createBarList(container, props.spec, options);

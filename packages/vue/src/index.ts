@@ -20,6 +20,7 @@ export * from '@opendata-ai/openchart-core';
 // ---------------------------------------------------------------------------
 
 export type {
+  InteractionMode,
   JPGExportOptions,
   PNGExportOptions,
   SpecSequenceOptions,

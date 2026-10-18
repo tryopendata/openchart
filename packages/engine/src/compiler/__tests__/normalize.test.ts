@@ -434,3 +434,36 @@ describe('normalizeSpec', () => {
     });
   });
 });
+
+describe('annotation identity diagnostics', () => {
+  const idWarnings = (annotations: Array<{ id?: string }>) => {
+    const warnings: string[] = [];
+    normalizeSpec(
+      {
+        ...lineSpec,
+        annotations: annotations.map((a, i) => ({
+          ...a,
+          type: 'text',
+          x: '2020-01-01',
+          y: i,
+          text: `Note ${i}`,
+        })),
+      } as ChartSpec,
+      warnings,
+    );
+    return warnings.filter((w) => w.includes('annotation IDs'));
+  };
+
+  it('stays quiet for read-only specs that author no IDs', () => {
+    expect(idWarnings([{}, {}])).toEqual([]);
+  });
+  it('stays quiet when every annotation has a unique ID', () => {
+    expect(idWarnings([{ id: 'a' }, { id: 'b' }])).toEqual([]);
+  });
+  it('warns on duplicate IDs', () => {
+    expect(idWarnings([{ id: 'a' }, { id: 'a' }])).toHaveLength(1);
+  });
+  it('warns when only some annotations have IDs', () => {
+    expect(idWarnings([{ id: 'a' }, {}])).toHaveLength(1);
+  });
+});

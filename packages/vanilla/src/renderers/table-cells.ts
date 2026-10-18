@@ -490,7 +490,8 @@ export function renderCell(cell: TableCell): HTMLTableCellElement {
     case 'flag':
       return renderFlagCell(cell);
     default:
-      // Exhaustive check fallback
+      // Exhaustive check; the text fallback only guards malformed runtime data.
+      cell satisfies never;
       return renderTextCell(cell as TextTableCell);
   }
 }

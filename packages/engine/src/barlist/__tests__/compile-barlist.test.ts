@@ -114,7 +114,8 @@ describe('compileBarList', () => {
     expect(layout.tooltipDescriptors.size).toBe(4);
     const tooltip = layout.tooltipDescriptors.get('0');
     expect(tooltip?.title).toBe('Alpha');
-    expect(tooltip?.fields[0].value).toBeDefined();
+    // One field: the value channel's field name and Alpha's formatted count.
+    expect(tooltip?.fields).toEqual([{ label: 'count', value: '100' }]);
   });
 
   it('builds a11y metadata', () => {

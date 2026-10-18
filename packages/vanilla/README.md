@@ -17,7 +17,7 @@ import { createChart } from '@opendata-ai/openchart-vanilla';
 
 const chart = createChart(container, spec, {
   darkMode: 'auto',
-  responsive: true,
+  autoResize: true,
   onMarkClick: (event) => console.log(event.datum),
   onMarkHover: (event) => showTooltip(event),
   onMarkLeave: () => hideTooltip(),
@@ -33,7 +33,7 @@ chart.export('csv');            // Export data as CSV
 chart.destroy();                // Clean up DOM and observers
 ```
 
-Responsive mode (default) uses a `ResizeObserver` on the container. Charts recompile at new dimensions automatically.
+Auto-resize (`autoResize`, on by default) uses a `ResizeObserver` on the container. Charts recompile at new dimensions automatically.
 
 ## Tables
 
@@ -41,7 +41,7 @@ Responsive mode (default) uses a `ResizeObserver` on the container. Charts recom
 import { createTable } from '@opendata-ai/openchart-vanilla';
 
 const table = createTable(container, tableSpec, {
-  responsive: true,
+  autoResize: true,
   onRowClick: (row) => console.log(row),
   onStateChange: (state) => console.log(state.sort, state.search, state.page),
 });
@@ -60,7 +60,7 @@ import { createGraph } from '@opendata-ai/openchart-vanilla';
 
 const graph = createGraph(container, graphSpec, {
   darkMode: 'auto',
-  responsive: true,
+  autoResize: true,
   onNodeClick: (node) => console.log(node),
   onNodeDoubleClick: (node) => console.log(node),
   onSelectionChange: (nodeIds) => console.log(nodeIds),

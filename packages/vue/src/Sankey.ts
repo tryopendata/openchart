@@ -92,7 +92,7 @@ export const Sankey = defineComponent({
         onLinkClick: (link: Record<string, unknown>) => emit('link-click', link),
         onNodeHover: (node: Record<string, unknown> | null) => emit('node-hover', node),
         onLinkHover: (link: Record<string, unknown> | null) => emit('link-hover', link),
-        responsive: true,
+        autoResize: true,
       };
 
       instance = createSankey(container, props.spec, options);

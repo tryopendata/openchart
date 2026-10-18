@@ -261,11 +261,16 @@ export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
       },
     },
     // The editorial rule is a brand device: it keeps its authored color unless
-    // the theme gave an explicit dark half of the pair.
+    // the theme gave an explicit dark half of the pair. A partial rule with no
+    // color derives from text ink, so it follows the dark text.
     rule:
       theme.rule && pairs?.['rule.color']
         ? { ...theme.rule, color: pairs['rule.color'].dark }
-        : theme.rule,
+        : theme.rule &&
+            theme._authored?.rule?.color === undefined &&
+            theme.rule.color === theme.colors.text
+          ? { ...theme.rule, color: darkText }
+          : theme.rule,
   };
 }
 

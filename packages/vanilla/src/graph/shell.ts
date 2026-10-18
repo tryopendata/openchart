@@ -130,7 +130,7 @@ export function createGraphShell(
     },
 
     observeResize(callback: () => void): () => void {
-      if (options?.responsive === false) return () => {};
+      if (options?.autoResize === false) return () => {};
       return observeResize(container, () => {
         callback();
       });

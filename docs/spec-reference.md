@@ -71,7 +71,7 @@ The primary input for standard chart types. Source: `core/src/types/spec.ts`.
 | `chromeLayout`| `'subtract' \| 'grow'` | note-band growth | How chrome text interacts with the container height budget. See [Chrome layout](#chrome-layout). |
 | `annotations` | `Annotation[]` | `undefined` | Text callouts, highlighted ranges, reference lines. See [Annotations](#annotations).          |
 | `labels`      | `LabelConfig`  | `undefined` | Data label display controls. See [Labels](#labels).                                           |
-| `responsive`  | `boolean \| ResponsiveSpec` | `true` | Layout adaptations at compact sizes; mount `autoResize` controls ResizeObserver.                               |
+| `responsive`  | `boolean \| ResponsiveConfig` | `true` | Layout adaptations at compact sizes; mount `autoResize` controls ResizeObserver.                               |
 | `theme`       | `ThemeConfig`  | `undefined` | Theme overrides. Deep-merged onto the default theme. See [ThemeConfig](#themeconfig).         |
 | `watermark`   | `boolean`      | `true`      | Whether to show the tryOpenData.ai watermark. Mount/compile options take precedence over spec and active breakpoint values. Defaults to `true`; auto-hides when the container is under 200px tall unless explicitly set. |
 | `animation`   | `AnimationSpec`| `undefined` | Animation configuration. `true` enables entrance + update/exit animations. See [Animation](#animation). |
@@ -189,7 +189,7 @@ Overlay multiple chart types on shared scales. Source: `core/src/types/spec.ts`.
 | `annotations`  | `Annotation[]`               | `undefined` | Annotations on the layered view.                                                              |
 | `labels`       | `LabelConfig`                | `undefined` | Label display configuration.                                                                  |
 | `legend`       | `LegendConfig`               | `undefined` | Legend display configuration.                                                                 |
-| `responsive`   | `boolean`                    | `true`      | Whether the chart adapts to container width.                                                  |
+| `responsive`   | `boolean \| ResponsiveConfig` | `undefined` | Same as `ChartSpec.responsive`. When omitted, the first leaf's value applies.                 |
 | `theme`        | `ThemeConfig`                | `undefined` | Theme overrides.                                                                              |
 | `watermark`    | `boolean`                    | `true`      | Whether to show the watermark. Defaults to `true`; auto-hides when the container is under 200px tall unless explicitly set. |
 | `resolve`      | `ResolveConfig`              | `undefined` | Resolution strategy for shared vs. independent scales/axes/legends.                           |
@@ -557,7 +557,6 @@ A callout label positioned at a data coordinate.
 | `maxWidth` | `number \| null` | `min(240, plotWidth - 2 * padding)`, at least 1px | Positive display wrapping width in pixels; null disables wrapping. |
 | `subtitleFontSize` | `number` | `round(fontSize * 12 / 13)` | Optional positive subtitle size in pixels. |
 | `dot`        | `boolean \| AnnotationDot` | see below        | Open-ring marker on the data point. Appears by default on non-arrowed connectors. `false` for none, an object to restyle. |
-| `label`      | `string`             | `undefined`            | Additional label text.                                                                                                 |
 | `fontSize`   | `number`             | `13`                   | Font size override in pixels.                                                                                          |
 | `priority` | `number` | source order | Lower values get placement and compact-inline preference; ties retain source order. |
 | `responsive` | `boolean` | `true` | `false` pins the annotation inline and exempts it from thinning/count limits. |
@@ -592,7 +591,7 @@ Primary text and subtitles default to weight 400. Set `fontWeight: 700` for a bo
 
 #### Connectors
 
-The connector leaves the text block (primary text plus subtitle, treated as one box) on the side facing the data point, with a 6px standoff gap, and stops short of the marker at the other end. Two voices:
+The connector leaves the text block (primary text plus subtitle, treated as one box) on the side facing the data point, with a 6px standoff gap, and stops short of the marker at the other end. A curved connector is shaped to the data point and then pulled back along its end tangent, so the tail still aims at the marker. Two voices:
 
 - **Emphasis.** An explicitly arrowed connector (`{ type: 'curve', arrow: true }`) is drawn in the label's text ink with a small open-V arrowhead, so the gesture reads as part of the sentence.
 - **Quiet.** A non-arrowed curve, straight leader, or `'drop-line'` is a gray hairline. It points without competing with the words.
@@ -608,7 +607,7 @@ Connectors are dropped when they'd be noise rather than signal: a leader shorter
 | `stroke`      | `string` | the connector's stroke      | Ring color.                       |
 | `strokeWidth` | `number` | `1.5`                       | Ring width in pixels.             |
 
-The marker sits on the data point itself, not on the pulled-back connector tip. You get one by default when a connector is enabled and carries no arrowhead, including drop-lines. An arrowed connector gets no marker unless you ask for one, since the arrowhead already marks the spot. `dot: false` is always bare; an explicit `dot` always wins.
+The marker sits on the data point itself, not on the pulled-back connector tip. You get one by default when a connector is enabled and carries no arrowhead, including drop-lines. An arrowed connector gets no marker unless you ask for one, since the arrowhead already marks the spot. `dot: false` is always bare; an explicit `dot` always wins. A default dot that lands on a line's endpoint marker takes the marker's fill and stroke, so the two draw as one ring.
 
 ### RangeAnnotation
 
@@ -661,6 +660,8 @@ A horizontal or vertical reference line.
 | `zIndex`      | `number`                          | `0`                    | Render ordering.                    |
 
 Provide `x` for a vertical line or `y` for a horizontal line. Both can be set for a crosshair.
+
+With `labelPlacement: 'outside'`, horizontal lines reserve a right lane as wide as the widest wrapped label (capped at 160px or 25% of the width). Vertical lines share a lane above the plot: labels whose extents don't overlap pack into one row, and whole rows are admitted while the lane stays within 25% of the height. A label whose row doesn't fit falls back to automatic placement inside the plot with a warning. The lane shrinks before the title or subtitle does.
 
 ### Annotation example
 
@@ -932,7 +933,7 @@ For line/area marks, mid-morph interruption uses a crossfade from the frozen int
 
 Public authored theme overrides live in `core/src/types/spec.ts`. Every field is optional. Use `ThemeConfig` for input and `ResolvedTheme` for compiled output; the former public `Theme` alias is removed.
 
-`mergeThemeConfig()` deep-merges authored layers before `resolveTheme()` supplies defaults. Component theme props override provider themes; mount/compile options override the spec. Layer leaf themes override their parent first. Nested objects merge, arrays and `{ light, dark }` TokenValues replace atomically, and null replaces. `colors: string[]` is shorthand for `colors.categorical`.
+`mergeThemeConfig()` deep-merges authored layers before `resolveTheme()` supplies defaults. Component theme props override provider themes; mount/compile options override the spec. In a `LayerSpec`, chrome, axes and legend use the layer theme (falling back to the first leaf's); each leaf's marks use its theme merged over the layer theme. Nested objects merge, arrays and `{ light, dark }` TokenValues replace atomically, and null replaces. `colors: string[]` is shorthand for `colors.categorical`.
 
 ```ts
 import { broadsheet, mergeThemeConfig } from '@opendata-ai/openchart-core';
@@ -1166,8 +1167,10 @@ Pass these through `MountOptions` (vanilla) or `ChartProps` (React).
 | `onEdit` | `(transaction: EditTransaction) => void` | One committed authored edit; apply atomically with `applyEditTransaction` and retain its inverse for undo. |
 | `onLegendToggle`    | `(series: string, visible: boolean) => void`          | User clicks a legend entry to show/hide a series. |
 | `onAnnotationClick` | `(annotation: Annotation, event: MouseEvent, element: ElementRef) => void` | User clicks an annotation element.                |
+| `onSelect` | `(element: ElementRef) => void` | An element is selected by click, Tab, or `select()`. Requires `interaction` `'select'` or `'edit'`. |
+| `onDeselect` | `(element: ElementRef) => void` | The selected element is deselected. |
 
-See [Editing and keyboard navigation](migrating-v9.md#editing-and-keyboard-navigation) for transaction persistence and cancelled-gesture behavior.
+The `interaction` mount option (`'read' | 'select' | 'edit'`) gates selection and editing; when omitted, `onEdit` implies `'edit'` and `onSelect`/`onDeselect` imply `'select'`. Every `ElementRef` carries a JSON Pointer `path`. See [Editing and keyboard navigation](migrating-v9.md#editing-and-keyboard-navigation) for transaction persistence and cancelled-gesture behavior. See [Interaction mode](integration-guide.md#interaction-mode) for the full table.
 
 ### MarkEvent
 
@@ -1836,12 +1839,12 @@ const result = validateSpec(spec);
 
 ### ValidationError
 
-| Field        | Type                  | Description                                                   |
-| ------------ | --------------------- | ------------------------------------------------------------- |
-| `message`    | `string`              | Human-readable error description.                             |
-| `path`       | `string \| undefined` | Dot-path to the field that failed, e.g. `'encoding.x.field'`. |
-| `code`       | `ValidationErrorCode` | Machine-readable error code.                                  |
-| `suggestion` | `string`              | Actionable fix suggestion.                                    |
+| Field        | Type                  | Description                                                                                                                     |
+| ------------ | --------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `message`    | `string`              | Human-readable error description.                                                                                               |
+| `path`       | `string`              | Root-relative RFC 6901 JSON Pointer to the value that failed, e.g. `'/encoding/x/field'` or `'/layer/1/data/0/value'`. The root is `''`. |
+| `code`       | `ValidationErrorCode` | Machine-readable error code.                                                                                                    |
+| `suggestion` | `string`              | Actionable fix suggestion.                                                                                                      |
 
 ### ValidationErrorCode
 
@@ -1874,7 +1877,7 @@ These library interfaces support authoring and reader applications. OpenStudio a
 - **Responsiveness:** `responsive: { preserveEnd: true, labelSummary: true }` retains the final x-axis boundary and moves overflowing endpoint identities to a wrapped list. Explicit axis values and author choices remain authoritative. `chromeLayout: 'grow'` gives that content space. Tables may opt into `mobileLayout: 'priority'`; `cards` remains the default, with `scroll` also available.
 - **Field metadata:** chart, table and map documents accept `fields`, keyed by field name. Each entry may declare `type` (`text`, `number`, `date`), `role: 'identity'`, `label`, `unit`, `measure`, `provenance`, `representation` (`number`, `percent`, `proportion`), `interval: { lower: 'lowerField', upper: 'upperField' }`, or `statusField`. Supplied intervals are never synthesized. Percent means 0–100 and proportion means 0–1.
 - **Reader identity:** a unique authored `encoding.key` supports observation persistence. Missing/duplicate keys clear observation pins on data replacement. Aggregated observations are groups, not raw rows, and the reference reader clears them on data/grouping revision. The `createReader` controller is independent from editor selection and uses `ChartInstance.sampleLayout()` for supported moving geometry. Call `reader.update(spec)` after `chart.update(spec)`; it reconciles visibility against the compiled destination marks even when the source data array is unchanged. An explicit `visibleKeys` override remains supported. Layered charts retain per-layer hover/crosshair inspection, but reader pinning across layers is not yet supported: a `LayerSpec` clears pins with an announcement rather than guessing cross-layer identity.
-- **Design review:** `diagnoseChart(spec, layout)` returns structured checks with code, severity, checkability, path, viewport, explanation and origin. `CompileOptions.onDiagnostic` receives these checks. `recommendCompositions(data, question, roles)` requires explicit field roles and returns explained alternatives. `applySpecPatch` rejects stale snapshot preconditions; hosts should preview patches and retain undo. The reference editor uses the full authored document for patches even while previewing a filtered scene.
+- **Design review:** `diagnoseChart(spec, layout)` returns structured checks with code, severity, checkability, path, viewport, explanation and origin. `CompileOptions.onDiagnostic` receives these checks. `recommendCompositions(data, question, roles)` requires explicit field roles and returns explained alternatives. A diagnostic `fix` is a `SpecPatch` whose `changes` are `EditOp`s. `applySpecPatch(spec, patch)` rejects stale snapshot preconditions, applies the operations atomically through `applyEditTransaction`, and returns `{ spec, inverse }`; apply `inverse` to the patched document to undo. Hosts should preview patches before applying them. The reference editor uses the full authored document for patches even while previewing a filtered scene.
 
 Host-neutral identity, comparison and explicit dataset-binding helpers are also exported from the engine. They provide foundations for future linked views, without implicitly declaring compatible measures or raw-row/aggregate relationships. See the [delivery record](design-evolution.md) for the advanced capabilities and release gates still pending.
 

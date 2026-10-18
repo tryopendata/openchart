@@ -153,10 +153,17 @@ export function diagnoseChart(spec: ChartSpec, layout: ChartLayout): DesignDiagn
       'failed',
       'info',
     );
+    // `set` needs the parent object; `add` creates any missing theme containers.
     diagnostics[diagnostics.length - 1].fix = {
       label: 'Use 12px axis labels',
       precondition: JSON.stringify(spec),
-      changes: [{ path: '/theme/fonts/sizes/axisTick', value: 12 }],
+      changes: [
+        {
+          op: spec.theme?.fonts?.sizes ? 'set' : 'add',
+          path: '/theme/fonts/sizes/axisTick',
+          value: 12,
+        },
+      ],
     };
   }
   return diagnostics;

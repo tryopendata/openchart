@@ -99,12 +99,14 @@ describe('compileGeoMap', () => {
 
     expect(layout.features).toHaveLength(3);
     for (const f of layout.features) {
-      expect(f.path).toBeTruthy();
-      expect(f.fill).toBeTruthy();
+      expect(f.path).toMatch(/^M[-\d.]/);
       expect(f.type).toBe('map-feature');
     }
+    expect(layout.features.map((f) => f.id)).toEqual(['06', '48', '36']);
+    // Three distinct values on a sequential ramp: three distinct fills.
+    expect(new Set(layout.features.map((f) => f.fill)).size).toBe(3);
     // Non-shared arcs produce no interior mesh, but outlines should exist
-    expect(layout.borders.outlinePath).toBeTruthy();
+    expect(layout.borders.outlinePath).toMatch(/^M[-\d.]/);
     expect(layout.width).toBe(600);
   });
 
@@ -912,8 +914,8 @@ describe('compileGeoMap', () => {
       DEFAULT_OPTIONS,
     );
 
-    expect(layout.chrome.title).toBeDefined();
-    expect(layout.chrome.subtitle).toBeDefined();
+    expect(layout.chrome.title!.text).toBe('Test Map');
+    expect(layout.chrome.subtitle!.text).toBe('Test subtitle');
   });
 
   // ---------------------------------------------------------------------------
@@ -933,7 +935,8 @@ describe('compileGeoMap', () => {
 
     it('accepts true, false, and a config object', () => {
       for (const zoom of [true, false, {}, { maxZoom: 8 }, { maxZoom: 1, controls: false }]) {
-        expect(() => compileGeoMap(withZoom(zoom), DEFAULT_OPTIONS)).not.toThrow();
+        // Zoom is reader interaction applied by the mount; compile output is unaffected.
+        expect(compileGeoMap(withZoom(zoom), DEFAULT_OPTIONS).features).toHaveLength(3);
       }
     });
 
@@ -1255,7 +1258,8 @@ describe('compileGeoMap', () => {
 
       expect(layout.pointMarks).toHaveLength(0);
       const warning = layout.warnings.find((w) => w.code === 'POINT_NULL_PROJECTION');
-      expect(warning).toBeDefined();
+      expect(warning!.message).toContain('1 point(s) project to null');
+      expect(warning!.context).toEqual({ count: 1, samples: [[0, 0]] });
     });
 
     it('builds sqrt size scale for points', () => {
@@ -1406,8 +1410,8 @@ describe('compileGeoMap', () => {
 
       // Choropleth features should have color-encoded fills
       const matchedFeature = layout.features.find((f) => f.id === '06');
-      expect(matchedFeature).toBeDefined();
-      expect(matchedFeature!.fill).not.toBe('#e8e8e8');
+      const unmatchedFeature = layout.features.find((f) => f.id === '36');
+      expect(matchedFeature!.fill).not.toBe(unmatchedFeature!.fill);
 
       // Point marks should also be present
       expect(layout.pointMarks).toHaveLength(2);

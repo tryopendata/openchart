@@ -1,4 +1,5 @@
 import type { EditOp, EditTransaction } from '../types/events';
+import { jsonPointer } from './json-pointer';
 
 export type EditTransactionResult<T> =
   | { ok: true; spec: T; inverse: EditTransaction }
@@ -38,10 +39,6 @@ function tokens(path: string): string[] {
     });
 }
 
-function pointer(parts: string[]): string {
-  return `/${parts.map((part) => part.replace(/~/g, '~0').replace(/\//g, '~1')).join('/')}`;
-}
-
 function keyAt(parent: Container, token: string, insert = false): string | number {
   if (!Array.isArray(parent)) return token;
   if (insert && token === '-') return parent.length;
@@ -78,7 +75,9 @@ function checkExpectation(root: unknown, parts: string[], expected: EditOp['expe
   if (!isContainer(target) || Array.isArray(target))
     throw new Error('Annotation target is invalid.');
   for (const field of ['id', 'type', 'text'] as const) {
-    if (Object.hasOwn(expected, field) && target[field] !== expected[field]) {
+    // Reflines and ranges expose their text as `label`.
+    const actual = field === 'text' && target.type !== 'text' ? target.label : target[field];
+    if (Object.hasOwn(expected, field) && actual !== expected[field]) {
       throw new Error(`Annotation ${field} changed; discard the stale edit.`);
     }
   }
@@ -108,7 +107,7 @@ export function applyEditTransaction<T>(spec: T, tx: EditTransaction): EditTrans
           if (op.op !== 'add' || Array.isArray(parent))
             throw new Error('Intermediate container is missing.');
           parent[key] = /^(0|[1-9]\d*|-)$/.test(parts[i + 1]) ? [] : {};
-          created.push(pointer(parts.slice(0, i + 1)));
+          created.push(jsonPointer(...parts.slice(0, i + 1)));
         }
         parent = read(parent, key);
       }
@@ -116,7 +115,7 @@ export function applyEditTransaction<T>(spec: T, tx: EditTransaction): EditTrans
       const key = keyAt(parent, parts.at(-1)!, op.op === 'add');
       const exists = Object.hasOwn(parent, key);
       const old = read(parent, key);
-      const path = pointer([...parts.slice(0, -1), String(key)]);
+      const path = jsonPointer(...parts.slice(0, -1), key);
       let undo: EditOp;
       if (op.op === 'remove') {
         if (!exists) throw new Error('Edit target no longer exists.');

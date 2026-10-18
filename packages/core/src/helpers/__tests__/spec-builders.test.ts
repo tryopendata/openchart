@@ -89,6 +89,16 @@ describe('inferFieldType', () => {
     { values: ['2020-01-01', '2021-01-01'], type: 'temporal' },
     { values: [1, 2, 3, 4, 'other'], type: 'nominal' },
     { values: [1, 2, 3, 4, 5, 'other'], type: 'quantitative' },
+    { values: ['2020-01', '2020-02'], type: 'temporal' },
+    { values: ['2020-01-01T12:30:00Z', '2020-01-02 08:00'], type: 'temporal' },
+    { values: ['2020-01-01T12:30:00.000+02:00'], type: 'temporal' },
+    { values: ['Jan 2020', 'February 2020', 'Mar 3, 2020'], type: 'temporal' },
+    { values: ['01/15/2020', '2020/01/16'], type: 'temporal' },
+    // Engine-dependent Date parsing accepts these; they are categories.
+    { values: ['Product 1', 'Product 2', 'Product 3'], type: 'nominal' },
+    { values: ['Region 2', 'North 10'], type: 'nominal' },
+    { values: ['item-1', 'panel 1', 'A: 10', '#000000', '10%'], type: 'nominal' },
+    { values: ['2020-13-45'], type: 'nominal' },
   ])('uses compilation inference rules for $values', ({ values, type }) => {
     expect(
       inferFieldType(

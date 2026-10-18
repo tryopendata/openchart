@@ -1,4 +1,11 @@
 import type { Rect } from '@opendata-ai/openchart-core';
+import {
+  admitReferenceRows,
+  packReferenceRows,
+  type ReferenceReserve,
+  referenceLaneHeights,
+} from '../annotations/reference-layout';
+import { fitReferenceLane, REFERENCE_LANE_SHARE_MAX } from './stack';
 
 const MIN_PANEL_WIDTH = 200;
 export const MIN_PANEL_HEIGHT = 100;
@@ -11,6 +18,8 @@ export interface FacetGridPanel {
   area: Rect;
   headerPos: { x: number; y: number };
   referenceContainer?: Rect;
+  /** This panel's outside-label reserve, with top-lane rows admitted under the lane cap. */
+  referenceReserve?: ReferenceReserve;
   row: number;
   col: number;
 }
@@ -39,7 +48,7 @@ export function computeFacetGrid(
   totalArea: Rect,
   outerAxisReservation: { left: number; bottom: number },
   referenceInsets?: {
-    measure: (width: number) => { right: number; top: number };
+    measure: (width: number) => ReferenceReserve;
     innerAxisWidth: number;
   },
 ): FacetGridResult {
@@ -64,9 +73,34 @@ export function computeFacetGrid(
   // applies per-row (as overhead), not just at the grid bottom.
   const xAxisPerRow = outerAxisReservation.bottom;
   const usableHeight = totalArea.height;
-  const topInset =
-    referenceInsets?.measure(panelWidth - (columns > 1 ? referenceInsets.innerAxisWidth : 0)).top ??
-    0;
+  // The top lane is capped per grid row exactly as the single-chart lane is
+  // capped per figure (fitReferenceLane): leading rows are admitted whole while
+  // they fit the lane's share of the row height and leave the panel its
+  // minimum. Short grids grow to their minimum height (compileFaceted), so the
+  // row is measured at the height it will grow to: never less than the panel
+  // minimum plus the rows that fit the share at that minimum. Every panel in a
+  // grid row shares the lane, sized for the narrowest panel.
+  let topInset = 0;
+  if (referenceInsets) {
+    const narrowest = referenceInsets.measure(
+      panelWidth - (columns > 1 ? referenceInsets.innerAxisWidth : 0),
+    );
+    const cumulative = referenceLaneHeights(packReferenceRows(narrowest.labels));
+    const minRow = HEADER_HEIGHT + MIN_PANEL_HEIGHT + xAxisPerRow;
+    const minLane = cumulative.filter((c) => c <= REFERENCE_LANE_SHARE_MAX * (minRow + c)).at(-1);
+    const rowHeight = (usableHeight - (rows - 1) * PANEL_GAP) / rows;
+    // At or below the grown height (which a grown grid lands on up to float
+    // error), the lane is exactly the rows that fit there.
+    topInset =
+      rowHeight <= minRow + (minLane ?? 0) + 1e-6
+        ? (minLane ?? 0)
+        : fitReferenceLane(
+            cumulative,
+            rowHeight,
+            rowHeight - HEADER_HEIGHT - xAxisPerRow,
+            MIN_PANEL_HEIGHT,
+          ).reserve;
+  }
   const panelHeight = Math.max(
     0,
     (usableHeight - rows * (HEADER_HEIGHT + topInset + xAxisPerRow) - (rows - 1) * PANEL_GAP) /
@@ -83,12 +117,15 @@ export function computeFacetGrid(
     const y = totalArea.y + row * rowStride;
 
     const leftInset = col > 0 ? (referenceInsets?.innerAxisWidth ?? 0) : 0;
-    const reserve = referenceInsets?.measure(panelWidth - leftInset);
+    const measured = referenceInsets?.measure(panelWidth - leftInset);
+    const reserve =
+      measured && admitReferenceRows(measured, packReferenceRows(measured.labels), topInset);
+    const areaY = y + HEADER_HEIGHT + topInset;
     panels.push({
       key: facetValues[i],
       area: {
         x: x + leftInset,
-        y: y + HEADER_HEIGHT + topInset,
+        y: areaY,
         width: Math.max(0, panelWidth - leftInset - (reserve?.right ?? 0)),
         height: panelHeight,
       },
@@ -96,10 +133,13 @@ export function computeFacetGrid(
         ? {
             referenceContainer: {
               x: x + leftInset,
-              y: y + HEADER_HEIGHT,
+              // Measured back from the plot as placement measures a lane row
+              // (plot top - row offset), so a full lane is not lost to float error.
+              y: areaY - topInset,
               width: panelWidth - leftInset,
               height: topInset + panelHeight,
             },
+            referenceReserve: reserve,
           }
         : {}),
       headerPos: {

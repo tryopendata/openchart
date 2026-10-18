@@ -4,7 +4,6 @@ import type {
   ChartSpec,
   ChromeKey,
   ElementRef,
-  GraphSpec,
   LayerSpec,
   TextAnnotation,
 } from '@opendata-ai/openchart-core';
@@ -84,7 +83,7 @@ export function buildElementRef(
   if (legendEntryEl) {
     const index = Number(legendEntryEl.getAttribute('data-legend-index'));
     const series = legendEntryEl.getAttribute('data-legend-label') ?? '';
-    return elementRef.legendEntry(series, index);
+    return elementRef.legendEntry(series, index, '/legend');
   }
 
   // Only the color legend is selectable/editable. A click inside the size legend
@@ -98,10 +97,29 @@ export function buildElementRef(
 }
 
 /**
+ * Return `ref` with its authored-object `path` filled in when the caller left
+ * it out (e.g. a programmatic `select()`), so every emitted ref carries one.
+ * Chrome refs use `/chrome/<key>`; legend and legend-entry refs use `/legend`
+ * (entries are derived from data, so the legend config is their authored object).
+ */
+export function withElementPath(ref: ElementRef, spec: ChartSpec | LayerSpec): ElementRef {
+  if (ref.path !== undefined) return ref;
+  switch (ref.type) {
+    case 'annotation':
+      return { ...ref, path: `${annotationSource(spec).path}/${ref.index}` };
+    case 'chrome':
+      return { ...ref, path: `/chrome/${ref.key}` };
+    case 'legend':
+    case 'legend-entry':
+      return { ...ref, path: '/legend' };
+  }
+}
+
+/**
  * Get an ordered list of all editable ElementRefs from the current spec and layout.
  */
 export function getEditableElements(
-  spec: ChartSpec | LayerSpec | GraphSpec,
+  spec: ChartSpec | LayerSpec,
   layout: ChartLayout,
 ): ElementRef[] {
   const refs: ElementRef[] = [];
@@ -109,7 +127,7 @@ export function getEditableElements(
   const chromeKeys: ChromeKey[] = ['title', 'subtitle', 'source', 'byline', 'footer'];
   for (const key of chromeKeys) {
     if (layout.chrome[key]) {
-      refs.push(elementRef.chrome(key));
+      refs.push(elementRef.chrome(key, `/chrome/${key}`));
     }
   }
 
@@ -129,7 +147,7 @@ export function getEditableElements(
   }
 
   if ('entries' in layout.legend && layout.legend.entries.length > 0) {
-    refs.push(elementRef.legend());
+    refs.push(elementRef.legend('/legend'));
   }
 
   return refs;
@@ -150,10 +168,7 @@ export function isTextEditable(ref: ElementRef, specAnnotations: Annotation[]): 
 /**
  * Get the current text content for an element ref.
  */
-export function getElementText(
-  ref: ElementRef,
-  spec: ChartSpec | LayerSpec | GraphSpec,
-): string | null {
+export function getElementText(ref: ElementRef, spec: ChartSpec | LayerSpec): string | null {
   if (ref.type === 'chrome') {
     const chromeConfig = 'chrome' in spec ? spec.chrome : undefined;
     const entry = chromeConfig?.[ref.key] ?? (spec as unknown as Record<string, unknown>)[ref.key];

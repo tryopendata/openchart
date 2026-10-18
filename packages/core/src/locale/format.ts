@@ -24,6 +24,12 @@ const FORMAT_PERCENT_RAW = d3Format(',.1~f');
 const FORMAT_CURRENCY_INTEGER = d3Format('$,');
 const FORMAT_CURRENCY_DECIMAL = d3Format('$,.2f');
 const FORMAT_STEP_FRACTION = [d3Format('.0~f'), d3Format('.1~f'), d3Format('.2~f')] as const;
+const FORMAT_STEP_PRECISION = [
+  d3Format(',.0~f'),
+  d3Format(',.1~f'),
+  d3Format(',.2~f'),
+  d3Format(',.3~f'),
+] as const;
 
 // ---------------------------------------------------------------------------
 // Number formatting
@@ -344,6 +350,16 @@ export function defaultNumberFormatter(ctx?: FieldFormatContext): NumberFormatte
 
   if (ctx?.step != null && (ctx.stepReference ?? maxAbs(ctx.extent)) >= 1000) {
     return buildCompactStepFormatter(ctx.step);
+  }
+
+  // Uniform ticks below 1000: the step's own precision tells every tick apart,
+  // so 3.5 / 4 / 4.5 read "3.5", "4", "4.5" rather than "3.50" beside "4".
+  if (ctx?.step != null && ctx.step > 0) {
+    const p = fractionDigits(ctx.step);
+    if (p <= 3) {
+      const fmt = FORMAT_STEP_PRECISION[p];
+      return (v: number) => (Number.isFinite(v) ? fmt(v) : String(v));
+    }
   }
 
   return (v: number) => {

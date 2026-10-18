@@ -59,7 +59,7 @@ describe('validateSpec', () => {
       expect(result.valid).toBe(false);
       expect(result.errors[0].message).toContain('non-null object');
       expect(result.errors[0].code).toBe('INVALID_TYPE');
-      expect(result.errors[0].suggestion).toBeDefined();
+      expect(result.errors[0].suggestion).toContain('"mark" field');
     });
 
     it('rejects arrays', () => {
@@ -148,7 +148,6 @@ describe('validateSpec', () => {
       const yError = result.errors.find((e) => e.message.includes('encoding.y'));
       expect(yError).toBeDefined();
       expect(yError!.code).toBe('MISSING_FIELD');
-      expect(yError!.suggestion).toBeDefined();
       // Suggestion should mention available data columns
       expect(yError!.suggestion).toContain('date');
     });
@@ -258,7 +257,7 @@ describe('validateSpec', () => {
       const dmError = result.errors.find((e) => e.message.includes('darkMode'));
       expect(dmError).toBeDefined();
       expect(dmError!.code).toBe('INVALID_VALUE');
-      expect(dmError!.path).toBe('darkMode');
+      expect(dmError!.path).toBe('/darkMode');
       expect(dmError!.message).toContain('mount option');
       expect(dmError!.suggestion).toContain('migrateSpecV8');
     });
@@ -312,7 +311,7 @@ describe('validateSpec', () => {
       const err = result.errors.find((e) => e.message.includes('tooltip[1]'));
       expect(err).toBeDefined();
       expect(err!.code).toBe('MISSING_FIELD');
-      expect(err!.path).toBe('encoding.tooltip[1].field');
+      expect(err!.path).toBe('/encoding/tooltip/1/field');
     });
   });
 
@@ -359,7 +358,7 @@ describe('validateSpec', () => {
         },
       });
       expect(result.valid).toBe(false);
-      const err = result.errors.find((e) => e.path === 'encoding.x2');
+      const err = result.errors.find((e) => e.path === '/encoding/x2');
       expect(err).toBeDefined();
       expect(err!.code).toBe('MISSING_FIELD');
       expect(err!.message).toContain('encoding.x2');
@@ -376,7 +375,7 @@ describe('validateSpec', () => {
         },
       });
       expect(result.valid).toBe(false);
-      const err = result.errors.find((e) => e.path === 'encoding.y2');
+      const err = result.errors.find((e) => e.path === '/encoding/y2');
       expect(err).toBeDefined();
       expect(err!.code).toBe('MISSING_FIELD');
       expect(err!.message).toContain('encoding.y2');
@@ -394,7 +393,7 @@ describe('validateSpec', () => {
         },
       });
       expect(result.valid).toBe(false);
-      const err = result.errors.find((e) => e.path === 'encoding.y2');
+      const err = result.errors.find((e) => e.path === '/encoding/y2');
       expect(err).toBeDefined();
       expect(err!.code).toBe('INVALID_VALUE');
     });
@@ -425,7 +424,7 @@ describe('validateSpec', () => {
         },
       });
       expect(result.valid).toBe(false);
-      const err = result.errors.find((e) => e.path === 'mark.style');
+      const err = result.errors.find((e) => e.path === '/mark/style');
       expect(err).toBeDefined();
       expect(err!.code).toBe('INVALID_VALUE');
       expect(err!.message).toContain('dumbbell, arrow, bar');
@@ -459,7 +458,7 @@ describe('validateSpec', () => {
       });
       expect(result.valid).toBe(false);
       expect(result.errors[0].code).toBe('EMPTY_DATA');
-      expect(result.errors[0].suggestion).toBeDefined();
+      expect(result.errors[0].suggestion).toContain('Add at least one data row');
     });
 
     it('rejects table without columns with MISSING_FIELD code', () => {
@@ -544,7 +543,7 @@ describe('validateSpec', () => {
         seedNode: 42,
       });
       expect(result.valid).toBe(false);
-      const seedError = result.errors.find((e) => e.path === 'seedNode');
+      const seedError = result.errors.find((e) => e.path === '/seedNode');
       expect(seedError).toBeDefined();
       expect(seedError!.code).toBe('INVALID_TYPE');
     });
@@ -557,7 +556,7 @@ describe('validateSpec', () => {
         seedNode: { style: { radius: 10 } },
       });
       expect(result.valid).toBe(false);
-      const seedError = result.errors.find((e) => e.path === 'seedNode.id');
+      const seedError = result.errors.find((e) => e.path === '/seedNode/id');
       expect(seedError).toBeDefined();
       expect(seedError!.code).toBe('MISSING_FIELD');
     });
@@ -570,7 +569,6 @@ describe('validateSpec', () => {
         seedNode: 'ghost',
       };
       expect(validateSpec(spec).valid).toBe(true);
-      expect(() => compile(spec)).not.toThrow();
       expect(compile(spec).warnings.some((w) => w.includes('seedNode "ghost"'))).toBe(true);
     });
   });
@@ -592,8 +590,14 @@ describe('validateSpec', () => {
 
       for (const result of results) {
         for (const error of result.errors) {
-          expect(error.code).toBeDefined();
-          expect(typeof error.code).toBe('string');
+          expect([
+            'MISSING_FIELD',
+            'INVALID_TYPE',
+            'INVALID_VALUE',
+            'ENCODING_MISMATCH',
+            'DATA_FIELD_MISSING',
+            'EMPTY_DATA',
+          ]).toContain(error.code);
         }
       }
     });
@@ -608,7 +612,6 @@ describe('validateSpec', () => {
 
       for (const result of results) {
         for (const error of result.errors) {
-          expect(error.suggestion).toBeDefined();
           expect(typeof error.suggestion).toBe('string');
           expect(error.suggestion!.length).toBeGreaterThan(0);
         }
@@ -684,7 +687,7 @@ describe('validateSpec', () => {
           row: { field: 'nonexistent', type: 'nominal' },
         },
       });
-      expect(result.errors.some((e) => e.path === 'encoding.row.field')).toBe(true);
+      expect(result.errors.some((e) => e.path === '/encoding/row/field')).toBe(true);
     });
 
     it('rejects row with invalid type', () => {
@@ -697,7 +700,7 @@ describe('validateSpec', () => {
           row: { field: 'country', type: 'quantitative' as 'nominal' },
         },
       });
-      expect(result.errors.some((e) => e.path === 'encoding.row.type')).toBe(true);
+      expect(result.errors.some((e) => e.path === '/encoding/row/type')).toBe(true);
     });
 
     it('rejects row + facet together', () => {
@@ -742,7 +745,7 @@ describe('validateSpec', () => {
           row: { field: 'country', type: 'nominal' },
         },
       });
-      expect(result.errors.filter((e) => e.path?.startsWith('encoding.row'))).toHaveLength(0);
+      expect(result.errors.filter((e) => e.path?.startsWith('/encoding/row'))).toHaveLength(0);
     });
 
     it('rejects column + facet together', () => {
@@ -771,7 +774,7 @@ describe('validateSpec', () => {
           column: { field: 'country', type: 'nominal' },
         },
       });
-      expect(result.errors.filter((e) => e.path?.startsWith('encoding.column'))).toHaveLength(0);
+      expect(result.errors.filter((e) => e.path?.startsWith('/encoding/column'))).toHaveLength(0);
     });
   });
 });
@@ -792,7 +795,7 @@ describe('animation.update.maxMarks validation', () => {
   });
 
   const maxMarksErrors = (spec: unknown) =>
-    validateSpec(spec).errors.filter((e) => e.path === 'animation.update.maxMarks');
+    validateSpec(spec).errors.filter((e) => e.path === '/animation/update/maxMarks');
 
   it('accepts a positive maxMarks', () => {
     const result = validateSpec(specWith({ maxMarks: 5000 }));
@@ -803,7 +806,7 @@ describe('animation.update.maxMarks validation', () => {
     const errors = maxMarksErrors(specWith({ maxMarks: value }));
     expect(errors).toHaveLength(1);
     expect(errors[0].code).toBe('INVALID_VALUE');
-    expect(errors[0].suggestion).toBeTruthy();
+    expect(errors[0].suggestion).toContain('animation: { update: { maxMarks:');
   });
 
   it.each([[0.5], [0.99]])('rejects a fractional maxMarks below 1 (%p)', (value) => {
@@ -838,5 +841,85 @@ describe('animation.update.maxMarks validation', () => {
     expect(maxMarksErrors({ ...specWith(true), animation: true })).toHaveLength(0);
     expect(maxMarksErrors(specWith(true))).toHaveLength(0);
     expect(maxMarksErrors(specWith(false))).toHaveLength(0);
+  });
+});
+
+describe('JSON Pointer error paths', () => {
+  const paths = (spec: unknown) => validateSpec(spec).errors.map((e) => e.path);
+  const pointer = /^(\/([^~/]|~[01])*)*$/;
+
+  it('uses root-relative RFC 6901 pointers for every error', () => {
+    const invalid: unknown[] = [
+      null,
+      { nope: true },
+      { hconcat: [] },
+      { ...validLineSpec, data: [] },
+      { ...validLineSpec, encoding: { ...validLineSpec.encoding, y: { field: 'missing' } } },
+      { ...validLineSpec, encoding: { ...validLineSpec.encoding, tooltip: [{ type: 'bogus' }] } },
+      { ...validLineSpec, transform: [{ calculate: 'datum.a * 2', as: 'b' }] },
+      { type: 'table', data: [{ a: 1 }], columns: [{ key: 'b' }] },
+      { type: 'graph', nodes: [{ id: 'a' }], edges: [{ source: 'a', target: 'z' }] },
+      { ...validLineSpec, animation: { enter: { duration: -1 } } },
+      { layer: [validLineSpec, { mark: 'nope' }] },
+    ];
+    for (const spec of invalid) {
+      const result = paths(spec);
+      expect(result.length).toBeGreaterThan(0);
+      for (const path of result) expect(path).toMatch(pointer);
+    }
+    expect(paths(null)).toEqual(['']);
+  });
+
+  it('escapes authored keys', () => {
+    expect(paths({ ...validLineSpec, fields: { 'a/b~c': 5 } })).toEqual(['/fields/a~1b~0c']);
+  });
+
+  it('roots layer leaf errors at the leaf that authored the value', () => {
+    const leafField = paths({
+      data: validLineData,
+      encoding: { x: { field: 'date', type: 'temporal' } },
+      layer: [
+        { mark: 'line', encoding: { y: { field: 'value', type: 'quantitative' } } },
+        { mark: 'point', encoding: { y: { field: 'missing', type: 'quantitative' } } },
+      ],
+    });
+    expect(leafField).toEqual(['/layer/1/encoding/y/field']);
+
+    const nested = paths({
+      layer: [
+        {
+          layer: [validLineSpec, { ...validLineSpec, data: [{ date: 'x', value: 'y' }] }],
+        },
+      ],
+    });
+    expect(nested.length).toBeGreaterThan(0);
+    for (const path of nested) expect(path.startsWith('/layer/0/layer/1/')).toBe(true);
+  });
+
+  it('points inherited encoding and data errors at the parent layer', () => {
+    const result = paths({
+      data: validLineData,
+      encoding: { x: { field: 'nope', type: 'temporal' } },
+      layer: [{ mark: 'line', encoding: { y: { field: 'value', type: 'quantitative' } } }],
+    });
+    expect(result).toEqual(['/encoding/x/field']);
+  });
+
+  it('prefixes annotation layout errors inside layers', () => {
+    const result = paths({
+      layer: [
+        { ...validLineSpec, annotations: [{ type: 'text', x: 1, y: 1, text: 'a', maxWidth: 0 }] },
+      ],
+    });
+    expect(result).toEqual(['/layer/0/annotations/0/maxWidth']);
+  });
+
+  it('names the pointer in compile errors', () => {
+    expect(() =>
+      compile({
+        ...validLineSpec,
+        encoding: { ...validLineSpec.encoding, y: { field: 'missing' } },
+      }),
+    ).toThrow(/^Invalid spec:\n\/encoding\/y\/field: /);
   });
 });

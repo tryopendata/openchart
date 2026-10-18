@@ -38,17 +38,15 @@ describe('formatCell', () => {
   it('auto-formats numbers without explicit format', () => {
     const col: ColumnConfig = { key: 'x' };
     const result = formatCell(42, col);
-    // Should produce some formatted string (formatNumber)
-    expect(result.formattedValue).toBeTruthy();
-    expect(typeof result.formattedValue).toBe('string');
+    expect(result.formattedValue).toBe('42');
   });
 
   it('formats Date values', () => {
     const col: ColumnConfig = { key: 'x' };
     const date = new Date('2023-06-15');
     const result = formatCell(date, col);
-    expect(result.formattedValue).toBeTruthy();
-    expect(typeof result.formattedValue).toBe('string');
+    // formatDate reads UTC fields by default, so this is timezone-stable
+    expect(result.formattedValue).toBe('Jun 15, 2023');
   });
 
   it('handles NaN gracefully (not numeric, falls through to String)', () => {
@@ -74,7 +72,7 @@ describe('formatCell', () => {
     const col: ColumnConfig = { key: 'x', format: '%%%invalid%%%' };
     // Should not throw, falls through to auto-format
     const result = formatCell(42, col);
-    expect(result.formattedValue).toBeTruthy();
+    expect(result.formattedValue).toBe('42');
   });
 
   it('formats plain strings as-is', () => {
@@ -98,7 +96,7 @@ describe('formatCell', () => {
   it('returns empty style object', () => {
     const col: ColumnConfig = { key: 'x' };
     const result = formatCell('test', col);
-    expect(result.style).toBeDefined();
+    expect(result.style).toEqual({});
   });
 
   it('d3-format string ignored for non-numeric values', () => {

@@ -576,6 +576,31 @@ import type { MarkEvent } from "@opendata-ai/openchart-core";
 // event.event   - the raw browser MouseEvent
 ```
 
+### Interaction mode
+
+The `interaction` mount option (and wrapper prop) sets what a reader can do with
+chart elements:
+
+| Mode | Selection | Edit gestures (drag, nudge, delete, text) | Arrow keys |
+| --- | --- | --- | --- |
+| `'read'` | None | None | Reader data navigation |
+| `'select'` | Click and Tab; `onSelect`/`onDeselect` fire | None | Reader data navigation |
+| `'edit'` | Click and Tab | All, emitted through `onEdit` | Nudge the selection |
+
+When `interaction` is omitted it is inferred once per mount: an `onEdit` handler
+gives `'edit'`, otherwise `onSelect`/`onDeselect` give `'select'`, otherwise
+`'read'`. Selection callbacks alone never enable text editing.
+
+```tsx
+<Chart spec={spec} interaction="edit" onEdit={persist} />
+```
+
+Vue uses `:interaction="'edit'"`, Svelte uses `interaction="edit"`. Every
+`ElementRef` passed to `onSelect`, `onDeselect` and `onAnnotationClick`, or
+returned by `getSelectedElement()`, carries a JSON Pointer `path` (`/chrome/<key>`
+for chrome, `/legend` for the legend and its entries). `chart.isTextEditing` is
+true while the inline text editor is open.
+
 ### Persisting edits
 
 In edit mode, `onEdit` receives one `EditTransaction` per committed gesture.
@@ -943,7 +968,7 @@ import { useTable } from "@opendata-ai/openchart-react";
 function AdvancedTable({ spec }: { spec: TableSpec }) {
   const { ref, table, state } = useTable(spec, {
     onRowClick: (row) => console.log("Clicked:", row),
-    responsive: true,
+    autoResize: true,
   });
 
   return (
@@ -965,7 +990,7 @@ import { useTable } from "@opendata-ai/openchart-vue";
 
 const { containerRef, table, layout } = useTable(spec, {
   onRowClick: (row) => console.log("Clicked:", row),
-  responsive: true,
+  autoResize: true,
 });
 </script>
 
@@ -983,7 +1008,7 @@ import { useTable } from "@opendata-ai/openchart-svelte";
 
 const { action, table, layout } = useTable(spec, {
   onRowClick: (row) => console.log("Clicked:", row),
-  responsive: true,
+  autoResize: true,
 });
 </script>
 
@@ -1358,7 +1383,7 @@ import { createTable } from "@opendata-ai/openchart-vanilla";
 
 const table = createTable(container, tableSpec, {
   darkMode: "auto",
-  responsive: true,
+  autoResize: true,
   onRowClick: (row) => console.log(row),
   onStateChange: (state) => {
     // state: { sort: SortState | null, search: string, page: number }
@@ -1563,7 +1588,7 @@ import { createGraph } from "@opendata-ai/openchart-vanilla";
 
 const graph = createGraph(container, graphSpec, {
   darkMode: "auto",
-  responsive: true,
+  autoResize: true,
   onNodeClick: (node) => console.log("Clicked:", node),
   onNodeDoubleClick: (node) => console.log("Double-clicked:", node),
   onSelectionChange: (nodeIds) => console.log("Selected:", nodeIds),

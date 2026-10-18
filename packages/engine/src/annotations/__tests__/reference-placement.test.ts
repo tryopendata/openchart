@@ -131,7 +131,7 @@ it('auto avoids both occupied ends by sliding while retaining the authored side'
     a,
     result.area,
     { x: 0, y: 0, width: 640, height: 600 },
-    { top: 0, right: 0, labelWidth: 160 },
+    { top: 0, right: 0, labelWidth: 160, labels: [], rows: [] },
     {},
     heuristicMeasure,
     result.theme.colors,
@@ -309,4 +309,84 @@ it.each([
         }
       }
     }
+});
+
+describe('vertical outside reference lanes', () => {
+  const series: ChartSpec = {
+    mark: 'line',
+    data: Array.from({ length: 20 }, (_, i) => ({
+      x: `2020-01-${String(i + 1).padStart(2, '0')}`,
+      y: i,
+    })),
+    chrome: { title: 'Title here' },
+    encoding: { x: { field: 'x', type: 'temporal' }, y: { field: 'y', type: 'quantitative' } },
+  };
+  const label = 'A fairly long reference label that will wrap across lines';
+  const rules: RefLineAnnotation[] = [4, 10, 16].map((day, i) => ({
+    id: `r${i}`,
+    type: 'refline',
+    x: `2020-01-${String(day).padStart(2, '0')}`,
+    label,
+    labelPlacement: 'outside',
+  }));
+
+  it('reserves at least the rendered height of the wrapped labels at the theme small size', () => {
+    const plain = compileChart(series, { width: 600, height: 600 });
+    const layout = compileChart(
+      { ...series, annotations: rules },
+      { width: 600, height: 600, onWarn: () => {} },
+    );
+    const blocks = layout.annotations.map((a) => a.label!.bounds!);
+    // The three rules are far enough apart to share one row: the lane is the
+    // tallest block plus its 8px gap, and 24px separates it from the plot.
+    const rendered = Math.max(...blocks.map((b) => b.height)) + 8 + 24;
+    expect(layout.annotations[0].label!.style.fontSize).toBe(12);
+    expect(layout.area.y - plain.area.y).toBeGreaterThanOrEqual(rendered - 0.01);
+    for (const b of blocks) {
+      expect(b.y).toBeCloseTo(blocks[0].y);
+      expect(b.y + b.height).toBeLessThanOrEqual(layout.area.y);
+    }
+  });
+
+  it('never positions lanes off-canvas in a small figure', () => {
+    for (const height of [300, 400]) {
+      const layout = compileChart(
+        { ...series, annotations: rules },
+        { width: 380, height, onWarn: () => {} },
+      );
+      for (const a of layout.annotations) {
+        const b = a.label!.bounds!;
+        expect(b.y).toBeGreaterThanOrEqual(0);
+        expect(b.y + b.height).toBeLessThanOrEqual(height);
+      }
+    }
+  });
+});
+
+describe('partially admitted top reference lane', () => {
+  it('falls labels the lane cannot hold back inside, clear of the title, with one warning', () => {
+    const warnings: string[] = [];
+    const layout = compileChart(
+      {
+        ...base,
+        chrome: { title: 'Quarterly revenue', subtitle: 'Indexed to the first quarter' },
+        annotations: Array.from({ length: 4 }, (_, i) => ({
+          type: 'refline' as const,
+          x: 1 + i,
+          label: `Policy change ${i} announced in the spring`,
+          labelPlacement: 'outside' as const,
+        })),
+      },
+      { width: 640, height: 360, onWarn: (message) => warnings.push(message) },
+    );
+    // The lane yields before chrome: the subtitle stays.
+    expect(layout.chrome.subtitle).toBeDefined();
+    const titleBottom = layout.chrome.subtitle!.y + layout.chrome.subtitle!.style.fontSize;
+    expect(layout.annotations).toHaveLength(4);
+    const inside = layout.annotations.filter((a) => a.label!.bounds!.y >= layout.area.y);
+    expect(inside.length).toBeGreaterThan(0);
+    for (const annotation of layout.annotations)
+      expect(annotation.label!.bounds!.y).toBeGreaterThan(titleBottom);
+    expect(warnings.filter((m) => m.includes('exceed their available lane'))).toHaveLength(1);
+  });
 });

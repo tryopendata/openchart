@@ -27,9 +27,8 @@ import { createChart } from '../mount';
 import { stubCanvas2D } from '../scatter-canvas/__tests__/canvas-stub';
 import { renderChartSVG } from '../svg-renderer';
 
-// `gifenc` is an optional peer that isn't installed here, and happy-dom has no
-// canvas 2D context to read pixels back from. Stub both so the export pipeline
-// runs far enough to reach the frame-background painter.
+// `gifenc` is an optional third-party peer that isn't installed here; stub it
+// so the export pipeline runs far enough to reach the frame-background painter.
 vi.mock('gifenc', () => ({
   GIFEncoder: () => ({
     writeFrame: () => {},
@@ -38,11 +37,6 @@ vi.mock('gifenc', () => ({
   }),
   quantize: () => [[0, 0, 0]],
   applyPalette: () => new Uint8Array(),
-}));
-
-vi.mock('../gif-encode', () => ({
-  readCanvasSRGB: () => new Uint8ClampedArray(4),
-  paletteFromCanvas: () => [[0, 0, 0]],
 }));
 
 // Build a detached SVG element of a given class/shape for classify/interp tests.
@@ -333,12 +327,21 @@ async function capturedFrameFills(
   svg.setAttribute('data-test-marker', marker);
   const fills: string[] = [];
   const exportModule = await import('../export');
+  // happy-dom can't decode an SVG into an <img> or paint a canvas, so the
+  // rasterizer is replaced by one that just runs the background painter.
   const spy = vi
     .spyOn(exportModule, 'rasterizeSVGToCanvas')
     .mockImplementation(async (svgString, w, h, dpi, prepare) => {
       const canvas = document.createElement('canvas');
       canvas.width = w * dpi;
       canvas.height = h * dpi;
+      // Blank pixels for the real sRGB readback in gif-encode.
+      const readback = {
+        getImageData: (_x: number, _y: number, sw: number, sh: number) => ({
+          data: new Uint8ClampedArray(sw * sh * 4),
+        }),
+      };
+      canvas.getContext = (() => readback) as unknown as HTMLCanvasElement['getContext'];
       const ctx = { fillStyle: '', fillRect: () => {} } as unknown as CanvasRenderingContext2D;
       prepare?.(ctx, canvas);
       if (svgString.includes(marker)) fills.push(ctx.fillStyle as string);

@@ -9,7 +9,6 @@ import type {
   ChartLayout,
   ChartSpec,
   DarkMode,
-  GraphSpec,
   LayerSpec,
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
@@ -43,7 +42,7 @@ export interface UseChartReturn {
  * The chart mounts automatically and updates when the spec changes.
  */
 export function useChart(
-  spec: Ref<ChartSpec | LayerSpec | GraphSpec>,
+  spec: Ref<ChartSpec | LayerSpec>,
   options?: UseChartOptions,
 ): UseChartReturn {
   const containerRef = ref<HTMLDivElement | null>(null);

@@ -36,6 +36,8 @@ const stories = [
   { name: 'mr-chrome-layout-grow', slug: 'testing--mobile-regression--chrome-layout-grow' },
   // maxLines — the same runaway title capped at 2 lines with an ellipsis.
   { name: 'mr-chrome-max-lines', slug: 'testing--mobile-regression--chrome-max-lines' },
+  // Outside reference lanes that cannot fit: labels must stay on canvas.
+  { name: 'mr-reference-lane-overflow', slug: 'testing--mobile-regression--reference-lane-overflow' },
   { name: 'bar-vertical', slug: 'testing--fixtures--simple-columns' },
   { name: 'line-multi-series', slug: 'testing--fixtures--gdp-growth' },
   { name: 'stacked-column', slug: 'testing--fixtures--energy-mix' },

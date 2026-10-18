@@ -73,6 +73,7 @@ function renderColumn(
       'stroke-width': 2,
       'stroke-linecap': 'round',
     });
+    if (entry.strokeDasharray) line.setAttribute('stroke-dasharray', entry.strokeDasharray);
     entryG.appendChild(line);
 
     const label = createSVGElement('text');

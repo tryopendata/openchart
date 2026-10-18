@@ -245,8 +245,11 @@ export type ValidationErrorCode =
 export interface ValidationError {
   /** Error message describing what's wrong. */
   message: string;
-  /** The path to the problematic value (e.g. "encoding.x.field"). */
-  path?: string;
+  /**
+   * Root-relative RFC 6901 JSON Pointer to the problematic value, e.g.
+   * `/encoding/x/field` or `/layer/1/data/0/value`. The root is `''`.
+   */
+  path: string;
   /** Machine-readable error code for programmatic handling. */
   code: ValidationErrorCode;
   /** Actionable suggestion for fixing the error. */
@@ -255,8 +258,6 @@ export interface ValidationError {
 
 /** Result of spec validation. */
 export interface ValidationResult {
-  /** Advisory authored-option warnings; incompatible options remain accepted in 8.x. */
-  warnings?: string[];
   /** Whether the spec is valid. */
   valid: boolean;
   /** Validation errors (empty if valid). */

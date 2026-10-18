@@ -51,7 +51,7 @@ export function resolvePosition(
   const s = scale.scale;
   const type = scale.type;
 
-  if (type === 'time') {
+  if (type === 'time' || type === 'utc') {
     const date = new Date(String(value));
     if (Number.isNaN(date.getTime())) return null;
     return (s as ScaleTime<number, number>)(date);

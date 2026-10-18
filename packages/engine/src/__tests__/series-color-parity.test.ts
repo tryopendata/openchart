@@ -214,6 +214,24 @@ describe('series color parity', () => {
     ]);
   });
 
+  it('warns once when annotation notes re-run the compile', () => {
+    const warnings: string[] = [];
+    compileChart(
+      lineSpec({
+        legend: { show: false },
+        endpointLabels: false,
+        annotations: [
+          { type: 'text', x: multiSeries[0].date, y: multiSeries[0].value, text: 'One' },
+          { type: 'text', x: multiSeries[1].date, y: multiSeries[1].value, text: 'Two' },
+        ],
+      } as Partial<ChartSpec>),
+      { ...SIZE, onWarn: (warning) => warnings.push(warning) },
+    );
+    expect(
+      warnings.filter((warning) => warning.includes('Both legend and endpointLabels')),
+    ).toHaveLength(1);
+  });
+
   it.each([
     { legend: { show: true }, endpointLabels: false },
     { legend: { show: false }, endpointLabels: true },

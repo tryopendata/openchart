@@ -6,20 +6,8 @@
  * manager, and search manager, then runs an animation loop driven by
  * simulation ticks. Returns a GraphInstance with update/search/zoom/destroy.
  */
-
-import type {
-  CompileOptions,
-  DarkMode,
-  GraphSpec,
-  ThemeConfig,
-  TooltipContent,
-} from '@opendata-ai/openchart-core';
-import type {
-  CompiledGraphEdge,
-  CompiledGraphNode,
-  GraphCompilation,
-} from '@opendata-ai/openchart-engine';
-import { buildEdgeTooltip, compileGraph } from '@opendata-ai/openchart-engine';
+import type { CompileOptions, GraphSpec } from '@opendata-ai/openchart-core';
+import { compileGraph, type GraphCompilation } from '@opendata-ai/openchart-engine';
 import {
   type CameraFlightOptions,
   clampK,
@@ -28,19 +16,18 @@ import {
 } from './graph/camera';
 import { GraphCanvasRenderer } from './graph/canvas-renderer';
 import { ENTRANCE_STAGGER_MAX_NODES, entranceOffsets, entranceOrder } from './graph/entrance';
+import { createGraphFocusModel } from './graph/focus-model';
 import {
-  composeStandingFocus,
-  type FocusSnapshot,
-  FocusTransition,
-  layerHoverFocus,
-} from './graph/focus-transition';
-import {
-  categoryHighlightSet as categoryHighlightIds,
-  resolveHighlightTarget as resolveHighlightTargetIds,
-} from './graph/highlight';
+  buildAdjacencyMap,
+  buildGraphDataMaps,
+  hitTestEdge,
+  toSimEdges,
+  toSimNodes,
+} from './graph/graph-data';
 import { GraphInteractionManager } from './graph/interaction';
 import { attachGraphKeyboardNav } from './graph/keyboard';
 import { createGraphLegend, type GraphLegendController } from './graph/legend';
+import type { GraphInstance, GraphLegendData, GraphMountOptions } from './graph/mount-types';
 import {
   GRAPH_3D_NOT_REGISTERED_ERROR,
   type GraphShell,
@@ -50,6 +37,7 @@ import { GraphSearchManager } from './graph/search';
 import { seedNodePositions } from './graph/seed';
 import { createGraphShell, getContainerDimensions as measureContainer } from './graph/shell';
 import { SimulationManager } from './graph/simulation';
+import { createGraphTooltips } from './graph/tooltip-content';
 import type {
   GraphCamera,
   GraphFlyTarget,
@@ -59,7 +47,7 @@ import type {
   PositionedNode,
 } from './graph/types';
 import { diffGraphUpdate, reheatAlpha } from './graph/update-diff';
-import type { SimEdge, SimNode } from './graph/worker-protocol';
+import { createGraphUpdateFades } from './graph/update-fades';
 import { ZoomTransform } from './graph/zoom';
 import { AnimationScheduler, type Animation as GraphAnimation } from './motion/scheduler';
 import { createTween, prefersReducedMotion, resolveEase } from './motion/tween';
@@ -67,139 +55,16 @@ import { resolveDarkMode } from './resolve-dark-mode';
 import { SpatialIndex } from './spatial-index';
 import type { TooltipManager } from './tooltip';
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-// Defined in `graph/types` (see the note there) and re-exported here so the
+export type {
+  GraphInstance,
+  GraphLegendData,
+  GraphMountOptions,
+  GraphTooltipFormatter,
+  GraphTooltipItem,
+} from './graph/mount-types';
+// Defined in `graph/types` and `graph/mount-types` and re-exported here so the
 // public surface stays exactly where consumers already import it from.
 export type { GraphCamera, GraphFlyTarget, GraphHighlightTarget } from './graph/types';
-
-/** A hovered node or edge, passed to a tooltip formatter. */
-export interface GraphTooltipItem {
-  kind: 'node' | 'edge';
-  /** The raw datum (node record, or edge record with source/target). */
-  data: Record<string, unknown>;
-}
-
-/**
- * Custom tooltip content builder. Receives the hovered item and the library's
- * default {@link TooltipContent}, returns replacement content.
- *
- * Safety contract:
- * - A returned `TooltipContent` or `string` is escaped by the library (strings
- *   are inserted via `textContent`, never `innerHTML`).
- * - A returned `HTMLElement` is trusted verbatim — the host owns sanitization.
- * - `null` suppresses the tooltip for that item.
- */
-export type GraphTooltipFormatter = (
-  item: GraphTooltipItem,
-  defaults: TooltipContent,
-) => TooltipContent | string | HTMLElement | null;
-
-/** Built-in legend data (headless mirror of the rendered legend). */
-export interface GraphLegendData {
-  field: string | null;
-  nodes: Array<{ label: string; color: string; count?: number; active: boolean }>;
-  edges: Array<{ label: string; color: string; count?: number }>;
-}
-
-export interface GraphMountOptions {
-  theme?: ThemeConfig;
-  darkMode?: DarkMode;
-  /**
-   * Sink for advisory spec warnings from the compiler (unknown `seedNode` id,
-   * deprecations, and so on). Defaults to `console.warn`. Each distinct message
-   * is emitted at most once per instance, so a warning that survives every
-   * recompile doesn't spam the console on `update()`.
-   */
-  onWarn?: (message: string) => void;
-  responsive?: boolean;
-  /** Show the OpenData watermark. Defaults to true. */
-  watermark?: boolean;
-  /** Show the built-in tooltip; pass an object for a custom formatter. Defaults to true. */
-  tooltip?: boolean | { formatter?: GraphTooltipFormatter };
-  /**
-   * Built-in legend. `true` (default) renders an interactive legend with counts.
-   * `false` renders none (set this if you render your own legend). An object
-   * toggles interactivity/counts.
-   */
-  legend?: boolean | { interactive?: boolean; counts?: boolean };
-  onNodeClick?: (node: Record<string, unknown>) => void;
-  onNodeDoubleClick?: (node: Record<string, unknown>) => void;
-  onNodeHover?: (node: Record<string, unknown> | null) => void;
-  onEdgeHover?: (edge: Record<string, unknown> | null) => void;
-  onSelectionChange?: (nodeIds: string[]) => void;
-  /** Fired when the user hovers a legend entry (null on leave). */
-  onLegendHover?: (entry: { field: string; value: string } | null) => void;
-  /** Fired when legend toggle state changes; `activeValues` is the active category set (empty = all). */
-  onLegendToggle?: (activeValues: string[]) => void;
-  /** Fired whenever the highlight set changes (programmatic or legend), null when cleared. */
-  onHighlightChange?: (nodeIds: string[] | null) => void;
-  /**
-   * Fit the graph to the viewport on the first tick. Default true. Set false to
-   * restore a saved camera (e.g. getCamera() + flyTo) without the initial fit.
-   */
-  fitOnLoad?: boolean;
-  /**
-   * How much closer than the fit the load-time framing sits, as a multiplier on
-   * the fit (2 = twice as close). Default 1. Only the opening camera uses it;
-   * an explicit `zoomToFit()` still frames the whole graph. Ignored when
-   * `fitOnLoad` is false.
-   */
-  initialZoom?: number;
-  /** Camera change callback, rAF-coalesced (fires at most once per rendered frame). */
-  onCameraChange?: (camera: GraphCamera) => void;
-  /** Skip the entrance reveal/flight on mount (spec unchanged; used by wrappers when recreating for a theme/darkMode-only change so the entrance doesn't replay). Warmup still runs. */
-  suppressEntrance?: boolean;
-}
-
-export interface GraphInstance {
-  update(spec: GraphSpec): void;
-  /** Re-compile encoding/legend/chrome without restarting the simulation. Preserves node positions. */
-  search(query: string): void;
-  clearSearch(): void;
-  /** Fit all nodes into the viewport. Animated by default; `{ duration: 0 }` snaps. */
-  zoomToFit(opts?: CameraFlightOptions & { padding?: number }): void;
-  /** Fly to a node and zoom in (default scale 2). Tracks the node while it settles. */
-  zoomToNode(nodeId: string, opts?: CameraFlightOptions & { scale?: number }): void;
-  /** Fly the camera to a graph-space target. */
-  flyTo(target: GraphFlyTarget, opts?: CameraFlightOptions): void;
-  /** Center the camera on a graph-space point (keeps current zoom). */
-  centerAt(x: number, y: number, opts?: CameraFlightOptions): void;
-  /**
-   * Current camera. In 2D this is the zoom transform; in 3D the same `x`/`y`/`k`
-   * summary plus the `position`/`target` pose. See `GraphCamera`.
-   */
-  getCamera(): GraphCamera;
-  /** Select a node; `{ fly: true }` also flies to it (default follows interaction.select.flyTo). */
-  selectNode(nodeId: string, opts?: { fly?: boolean } & CameraFlightOptions): void;
-  getSelectedNodes(): string[];
-  /** Node ids currently matching the active search query. */
-  getSearchMatches(): string[];
-  /**
-   * Emphasize a set of nodes; eased via the focus model. Layers over the
-   * standing category filter (`setActiveCategories`) rather than replacing it:
-   * the effective set is the intersection, or the highlight alone when the two
-   * are disjoint. Legend toggle state is untouched.
-   */
-  highlight(target: GraphHighlightTarget, opts?: { dimOpacity?: number }): void;
-  /**
-   * Clear the transient highlight, returning to the standing category filter.
-   * Does NOT clear the filter — use `setActiveCategories([])` for that.
-   */
-  clearHighlight(): void;
-  /** The effective highlighted node ids, or null when nothing is highlighted. */
-  getHighlight(): string[] | null;
-  /** Headless snapshot of the legend (node categories + edge categories). */
-  getLegend(): GraphLegendData;
-  /** Set the active category filter declaratively (replaces legend toggle state). */
-  setActiveCategories(values: string[]): void;
-  /** Current active category values (empty = all active, no filter). */
-  getActiveCategories(): string[];
-  resize(): void;
-  destroy(): void;
-}
 
 // ---------------------------------------------------------------------------
 // Physics-feel gates (Phase 8)
@@ -282,20 +147,6 @@ export function createGraph(
   let lastAlpha = 1;
   let cameraChangePending = false;
 
-  // Focus / highlight state (Phase 5). Two independent layers compose into one
-  // effective set:
-  //   - `activeCategories` is the STICKY category filter (empty = no filter),
-  //     written only by setActiveCategories / toggleLegendCategory /
-  //     applyInitialHighlight. Legend `active` flags track this and only this.
-  //   - `transientHighlight` is the TRANSIENT emphasis owned solely by
-  //     highlight() / clearHighlight(), along with `highlightDimOpacity`.
-  //     `transientTarget` keeps the unresolved target so a category-form
-  //     highlight can be re-resolved against new data on update().
-  // `highlightSet` is the cached composition of the two (null = nothing
-  // highlighted), assigned only by recomputeHighlight(). It is the cache
-  // standingSnapshot() reads, so armFocus stays allocation-free per frame.
-  let highlightSet: Set<string> | null = null;
-  let highlightDimOpacity: number | null = null;
   // Ids exempt from highlight/filter dimming (the spec's `seedNode`). Kept OUT
   // of `highlightSet` on purpose: composeStandingFocus expands the core set to
   // `core ∪ neighbors(core)`, and a seed is by construction a hub, so unioning
@@ -303,20 +154,10 @@ export function createGraph(
   // out also means getHighlight()/onHighlightChange never leak the seed id.
   // Re-derived wherever `compilation` is reassigned.
   let seedIds = new Set<string>();
-  let activeCategories = new Set<string>();
-  let transientHighlight: Set<string> | null = null;
-  let transientTarget: GraphHighlightTarget | null = null;
   // Compiler warnings already emitted by this instance (see warnOnce).
   const seenWarnings = new Set<string>();
   // Node id → its legend-field category value, for category-based highlight.
   let nodeCategory = new Map<string, string>();
-  // The live focus crossfade, driving eased dimming. Rebuilt on first render.
-  let focusTransition: FocusTransition | null = null;
-  // Scheduler animation that keeps frames dirty while the focus crossfade runs.
-  let focusAnim: GraphAnimation | null = null;
-  // Hovered-node radius tween (1 → 1.15), null when settled at 1.
-  let hoverRadiusTween: { nodeId: string; scale: number } | null = null;
-
   // Entrance choreography state (Phase 6). `entranceProgress` is a mount-level
   // 0→1 value read by buildRenderState; < 1 means the reveal is mid-flight.
   // `entranceActive` gates the render-state `entrance` field. `entranceFitInFlight`
@@ -337,13 +178,10 @@ export function createGraph(
   // change so the entrance doesn't replay. Warmup still runs. One-shot.
   let suppressEntranceOnce = options?.suppressEntrance ?? false;
 
-  // Data-update transition state (Phase 7). `enterAlphaMap` fades newly-added
-  // nodes in over update.duration (null when no enter-fade is live). `exiting`
-  // holds ghost marks (removed nodes/edges) fading out over exit.duration; both
-  // are read by buildRenderState and drawn by the canvas renderer.
-  let enterAlphaMap: Map<string, number> | null = null;
-  let exitingGhosts: { nodes: PositionedNode[]; edges: PositionedEdge[]; alpha: number } | null =
-    null;
+  // Data-update transition state (Phase 7): enter fades and exit ghosts.
+  const updateFades = createGraphUpdateFades(scheduler, () => {
+    needsRender = true;
+  });
 
   // ---------------------------------------------------------------------------
   // Helpers
@@ -393,45 +231,11 @@ export function createGraph(
   }
 
   function buildDataMaps(): void {
-    nodeDataMap = new Map(compilation.nodes.map((n) => [n.id, n.data ?? {}]));
-    edgeDataMap = new Map(compilation.edges.map((e) => [`${e.source}->${e.target}`, e.data ?? {}]));
-
-    // Node → legend-field category value, for category hover/highlight. Empty
-    // when the graph has no categorical color field.
-    nodeCategory = new Map();
-    const field = compilation.legendField;
-    if (field) {
-      for (const n of compilation.nodes) {
-        const v = n.data?.[field];
-        if (v != null) nodeCategory.set(n.id, String(v));
-      }
-    }
-  }
-
-  function buildAdjacencyMap(edges: CompiledGraphEdge[]): Map<string, Set<string>> {
-    const map = new Map<string, Set<string>>();
-    for (const edge of edges) {
-      if (!map.has(edge.source)) map.set(edge.source, new Set());
-      if (!map.has(edge.target)) map.set(edge.target, new Set());
-      map.get(edge.source)!.add(edge.target);
-      map.get(edge.target)!.add(edge.source);
-    }
-    return map;
-  }
-
-  function toSimNodes(nodes: CompiledGraphNode[]): SimNode[] {
-    return nodes.map((n) => ({
-      id: n.id,
-      radius: n.radius,
-      community: n.community,
-    }));
-  }
-
-  function toSimEdges(edges: CompiledGraphEdge[]): SimEdge[] {
-    return edges.map((e) => ({
-      source: e.source,
-      target: e.target,
-    }));
+    ({
+      nodeData: nodeDataMap,
+      edgeData: edgeDataMap,
+      nodeCategory,
+    } = buildGraphDataMaps(compilation));
   }
 
   /**
@@ -440,52 +244,6 @@ export function createGraph(
    */
   function nodeDataById(nodeId: string): Record<string, unknown> {
     return nodeDataMap.get(nodeId) ?? {};
-  }
-
-  /**
-   * Point-to-line-segment distance for edge hit testing.
-   * Returns the shortest distance from point (px, py) to the segment (ax, ay)-(bx, by).
-   */
-  function pointToSegmentDist(
-    px: number,
-    py: number,
-    ax: number,
-    ay: number,
-    bx: number,
-    by: number,
-  ): number {
-    const dx = bx - ax;
-    const dy = by - ay;
-    const lenSq = dx * dx + dy * dy;
-    if (lenSq === 0) return Math.hypot(px - ax, py - ay);
-    const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lenSq));
-    return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
-  }
-
-  /**
-   * Find the edge closest to a graph-space point, within a threshold.
-   * Returns an edge key "source->target" or null.
-   */
-  function hitTestEdge(graphX: number, graphY: number, threshold: number): string | null {
-    let bestDist = threshold;
-    let bestEdgeId: string | null = null;
-
-    for (const edge of positionedEdges) {
-      const dist = pointToSegmentDist(
-        graphX,
-        graphY,
-        edge.sourceX,
-        edge.sourceY,
-        edge.targetX,
-        edge.targetY,
-      );
-      if (dist < bestDist) {
-        bestDist = dist;
-        bestEdgeId = `${edge.source}->${edge.target}`;
-      }
-    }
-
-    return bestEdgeId;
   }
 
   /**
@@ -856,257 +614,52 @@ export function createGraph(
   // Focus model (Phase 5): highlight ∩ search + hover neighborhood, eased.
   // -------------------------------------------------------------------------
 
-  /** Neighborhood of the hovered node under the resolved hover mode. */
-  function hoverConnectedSet(nodeId: string | null): Set<string> | null {
-    if (nodeId === null) return null;
-    if (compilation.interaction.hoverMode === 'category') {
-      const cat = nodeCategory.get(nodeId);
-      const set = new Set<string>([nodeId]);
-      if (cat !== undefined) {
-        for (const [id, c] of nodeCategory) if (c === cat) set.add(id);
-      }
-      return set;
-    }
-    // 'neighbors' (default): the node plus its adjacency.
-    const set = new Set<string>([nodeId]);
-    const neighbors = adjacencyMap.get(nodeId);
-    if (neighbors) for (const nid of neighbors) set.add(nid);
-    return set;
-  }
+  const focus = createGraphFocusModel({
+    compilation: () => compilation,
+    adjacency: () => adjacencyMap,
+    nodeCategory: () => nodeCategory,
+    searchMatches: () => searchManager.getMatches(),
+    selected: () => selectedNodeIds,
+    hovered: () => hoveredNodeId,
+    scheduler,
+    invalidate: () => {
+      needsRender = true;
+    },
+  });
 
-  /** The standing (non-hover) focus from highlight + search + selection. */
-  function standingSnapshot(): FocusSnapshot {
-    return composeStandingFocus(
-      highlightSet,
-      searchManager.getMatches(),
-      selectedNodeIds,
-      adjacencyMap,
-    );
-  }
-
-  /** The full target snapshot = standing state with the hover layer on top. */
-  function targetSnapshot(): FocusSnapshot {
-    return layerHoverFocus(standingSnapshot(), hoveredNodeId, hoverConnectedSet(hoveredNodeId));
-  }
-
-  /**
-   * Point the focus crossfade at the current target and arm a scheduler
-   * animation that keeps frames dirty until it settles. Snaps instantly under
-   * reduced motion or when hover animation is disabled.
-   */
-  function armFocus(now: number): void {
-    const target = targetSnapshot();
-    const hoverCfg = compilation.animation?.hover ?? null;
-    const duration = hoverCfg && !prefersReducedMotion() ? hoverCfg.duration : 0;
-    const ease = resolveEase(hoverCfg?.ease ?? 'smooth');
-
-    if (!focusTransition) {
-      focusTransition = new FocusTransition(target, duration, ease, now);
-      return;
-    }
-    focusTransition.retarget(target, now);
-
-    // Keep the crossfade running via a scheduler animation until settled.
-    if (focusAnim) scheduler.remove(focusAnim);
-    focusAnim = {
-      tick: (t: number): boolean => {
-        const running = focusTransition !== null && !focusTransition.isSettled(t);
-        if (!running) focusAnim = null;
-        return running;
-      },
-      finish: (): void => {
-        focusAnim = null;
-      },
-      cancel: (): void => {
-        focusAnim = null;
-      },
-    };
-    scheduler.add(focusAnim);
-  }
-
-  /** Recompute the highlight set and re-arm the focus crossfade. */
+  /** Re-arm the focus crossfade against the current state and request a frame. */
   function refreshFocus(): void {
-    armFocus(performance.now());
+    focus.arm(performance.now());
     needsRender = true;
     scheduleRender();
   }
 
-  /** Resolve a highlight target into a concrete node id set. */
-  function resolveHighlightTarget(target: GraphHighlightTarget): Set<string> {
-    return resolveHighlightTargetIds(target, compilation.nodes, adjacencyMap);
-  }
-
-  /** Node ids for the active legend categories (empty categories = no filter). */
-  function categoryHighlightSet(): Set<string> | null {
-    return categoryHighlightIds(activeCategories, nodeCategory);
-  }
-
-  /**
-   * Recompose the effective highlight from the sticky category filter and the
-   * transient highlight(). THE ONLY assigner of `highlightSet`.
-   *
-   * Composition rule: both present → their intersection, except when the
-   * intersection is empty, in which case the transient wins (a host legend
-   * hovering an out-of-filter row previews that category — the built-in legend
-   * only fires `onLegendHover`, so this path is host-driven). Exactly one
-   * present → that one. Neither → null. Same shape as the highlight ∩ search
-   * rule in composeStandingFocus.
-   *
-   * An EMPTY transient is not a transient: `resolveHighlightTarget` returns an
-   * empty set for `{ nodeIds: [] }` or a category matching zero nodes, and
-   * treating that as a layer would silently wipe the standing filter's dimming.
-   */
-  function recomputeHighlight(): void {
-    const filter = categoryHighlightSet();
-    const transient =
-      transientHighlight !== null && transientHighlight.size > 0 ? transientHighlight : null;
-    if (filter !== null && transient !== null) {
-      const inter = new Set<string>();
-      for (const id of transient) if (filter.has(id)) inter.add(id);
-      highlightSet = inter.size > 0 ? inter : transient;
-      return;
-    }
-    highlightSet = filter ?? transient;
-  }
-
-  /**
-   * Re-resolve the standing transient target against the current compilation
-   * and drop ids that no longer exist. Category-form targets track data changes
-   * this way; an unpruned id set would otherwise resurrect deleted nodes.
-   */
-  function refreshTransientHighlight(): void {
-    if (transientTarget === null) {
-      transientHighlight = null;
-      return;
-    }
-    const nextIds = new Set(compilation.nodes.map((n) => n.id));
-    const resolved = new Set(
-      [...resolveHighlightTarget(transientTarget)].filter((id) => nextIds.has(id)),
-    );
-    transientHighlight = resolved.size > 0 ? resolved : null;
-  }
-
-  /** The custom `dimOpacity` applies only while a transient highlight is up. */
-  function effectiveDimOpacity(): number {
-    const custom = transientHighlight !== null ? highlightDimOpacity : null;
-    return custom ?? compilation.interaction.dimOpacity;
-  }
-
   /** Fire onHighlightChange with the current highlight set. */
   function emitHighlightChange(): void {
+    const highlightSet = focus.highlightSet;
     options?.onHighlightChange?.(highlightSet ? [...highlightSet] : null);
   }
 
-  /** Apply the resolved initialHighlight from the compilation, if any. */
-  function applyInitialHighlight(): void {
-    const init = compilation.initialHighlight;
-    if (!init) return;
-    activeCategories = new Set(init.values);
-    recomputeHighlight();
-  }
+  const tooltips = createGraphTooltips({
+    options,
+    manager: () => tooltipManager,
+    compilation: () => compilation,
+  });
 
-  /** Start (or cancel) the hovered node's 1 → 1.15 radius tween. */
-  function startHoverRadiusTween(nodeId: string | null): void {
-    const hoverCfg = compilation.animation?.hover ?? null;
-    // No hover animation, reduced motion, or hover-off → snap (no tween).
-    if (nodeId === null || !hoverCfg || prefersReducedMotion()) {
-      hoverRadiusTween = nodeId ? { nodeId, scale: 1.15 } : null;
-      return;
-    }
-    hoverRadiusTween = { nodeId, scale: 1 };
-    const ease = resolveEase(hoverCfg.ease);
-    const tween = createTween({
-      duration: hoverCfg.duration,
-      ease,
-      apply: (t) => {
-        // Guard against a newer hover having replaced the target mid-tween.
-        if (hoverRadiusTween?.nodeId === nodeId) hoverRadiusTween.scale = 1 + 0.15 * t;
-        needsRender = true;
-      },
-      onDone: () => {
-        if (hoverRadiusTween?.nodeId === nodeId) hoverRadiusTween.scale = 1.15;
-      },
-    });
-    scheduler.add(tween);
-  }
-
-  /** Resolve tooltip content for a node, applying a custom formatter if set. */
+  /** Show a node's tooltip anchored at its current screen position. */
   function showNodeTooltip(nodeId: string): void {
     if (!tooltipManager || !interactionManager) return;
-    const defaults = compilation.tooltipDescriptors.get(nodeId);
-    if (!defaults) return;
     const node = positionedNodes.find((n) => n.id === nodeId);
     if (!node) return;
     const screen = interactionManager.getTransform().graphToScreen(node.x, node.y);
-
-    const formatter = tooltipFormatter();
-    if (!formatter) {
-      tooltipManager.show(defaults, screen.x, screen.y);
-      return;
-    }
-    const result = formatter({ kind: 'node', data: nodeDataById(nodeId) }, defaults);
-    applyFormatterResult(result, screen.x, screen.y);
-  }
-
-  /** Resolve tooltip content for an edge (lazy default), applying a formatter. */
-  function showEdgeTooltip(
-    edgeId: string,
-    data: Record<string, unknown>,
-    screenX: number,
-    screenY: number,
-  ): void {
-    if (!tooltipManager) return;
-    const edge = compilation.edges.find((e) => `${e.source}->${e.target}` === edgeId);
-    const defaults = edge ? buildEdgeTooltip(edge) : { title: edgeId, fields: [] };
-
-    const formatter = tooltipFormatter();
-    if (!formatter) {
-      tooltipManager.show(defaults, screenX, screenY);
-      return;
-    }
-    const result = formatter({ kind: 'edge', data }, defaults);
-    applyFormatterResult(result, screenX, screenY);
-  }
-
-  /** The configured tooltip formatter, or null when tooltips are plain. */
-  function tooltipFormatter(): GraphTooltipFormatter | null {
-    const t = options?.tooltip;
-    return t && typeof t === 'object' ? (t.formatter ?? null) : null;
-  }
-
-  /** Route a formatter's return value to the tooltip manager (or hide on null). */
-  function applyFormatterResult(
-    result: TooltipContent | string | HTMLElement | null,
-    x: number,
-    y: number,
-  ): void {
-    if (!tooltipManager) return;
-    if (result === null) {
-      tooltipManager.hide();
-    } else if (typeof result === 'string') {
-      tooltipManager.show({ text: result }, x, y);
-    } else if (result instanceof HTMLElement) {
-      tooltipManager.show({ element: result }, x, y);
-    } else {
-      tooltipManager.show(result, x, y);
-    }
+    tooltips.showNode(nodeId, nodeDataById(nodeId), screen.x, screen.y);
   }
 
   /** Build the immutable per-frame render state from current mount state. */
   function buildRenderState(now: number): GraphRenderState {
     const transform = interactionManager!.getTransform();
 
-    // Ensure a focus transition exists (first render), pointed at current state.
-    if (!focusTransition) armFocus(now);
-    const ft = focusTransition as FocusTransition;
-    const t = ft.progress(now);
-    const focus = t < 1 ? { t, prev: ft.prev, next: ft.next } : undefined;
-    // When settled we still pass the resting snapshot as `next` for the fast path.
-    const settledNext = ft.next;
-
-    const hoverRadiusScale = hoverRadiusTween
-      ? new Map([[hoverRadiusTween.nodeId, hoverRadiusTween.scale]])
-      : undefined;
+    const focusState = focus.frame(now);
 
     return {
       nodes: positionedNodes,
@@ -1121,9 +674,7 @@ export function createGraph(
       exemptIds: seedIds,
       isGesturing,
       watermark: compilation.watermark,
-      focus: focus ?? { t: 1, prev: settledNext, next: settledNext },
-      hoverRadiusScale,
-      dimOpacity: effectiveDimOpacity(),
+      ...focusState,
       entrance:
         entranceActive && entranceProgress < 1
           ? {
@@ -1133,8 +684,7 @@ export function createGraph(
               offsets: entranceOffsetMap ?? undefined,
             }
           : undefined,
-      enterAlpha: enterAlphaMap ?? undefined,
-      exiting: exitingGhosts ?? undefined,
+      ...updateFades.frame(),
     };
   }
 
@@ -1276,8 +826,8 @@ export function createGraph(
         if (nodeId === hoveredNodeId) return;
         hoveredNodeId = nodeId;
         // Re-arm the focus crossfade so the hover neighborhood eases in/out.
-        armFocus(performance.now());
-        startHoverRadiusTween(nodeId);
+        focus.arm(performance.now());
+        focus.hoverRadius(nodeId);
         needsRender = true;
         scheduleRender();
 
@@ -1322,7 +872,7 @@ export function createGraph(
         // Edge hit testing: check proximity to edge line segments
         const transform = interactionManager?.getTransform();
         const threshold = 5 / (transform?.k ?? 1); // 5px in screen space
-        const edgeId = hitTestEdge(graphX, graphY, threshold);
+        const edgeId = hitTestEdge(positionedEdges, graphX, graphY, threshold);
 
         if (edgeId !== hoveredEdgeId) {
           hoveredEdgeId = edgeId;
@@ -1332,7 +882,7 @@ export function createGraph(
           if (edgeId) {
             const data = edgeDataById(edgeId);
             options?.onEdgeHover?.(data);
-            if (tooltipManager && data) showEdgeTooltip(edgeId, data, screenX, screenY);
+            if (tooltipManager && data) tooltips.showEdge(edgeId, data, screenX, screenY);
           } else {
             options?.onEdgeHover?.(null);
             tooltipManager?.hide();
@@ -1341,7 +891,7 @@ export function createGraph(
       },
       onSelectionChange(nodeIds) {
         selectedNodeIds = new Set(nodeIds);
-        armFocus(performance.now());
+        focus.arm(performance.now());
         needsRender = true;
         scheduleRender();
         options?.onSelectionChange?.(nodeIds);
@@ -1397,7 +947,7 @@ export function createGraph(
       onSelect(nodeId) {
         selectedNodeIds = new Set([nodeId]);
         interactionManager?.setSelection([nodeId]);
-        armFocus(performance.now());
+        focus.arm(performance.now());
         needsRender = true;
         scheduleRender();
         options?.onNodeClick?.(nodeDataById(nodeId));
@@ -1406,7 +956,7 @@ export function createGraph(
       onDeselect() {
         selectedNodeIds.clear();
         interactionManager?.setSelection([]);
-        armFocus(performance.now());
+        focus.arm(performance.now());
         needsRender = true;
         scheduleRender();
         options?.onSelectionChange?.([]);
@@ -1435,7 +985,8 @@ export function createGraph(
 
   function search(query: string): void {
     if (destroyed) return;
-    searchManager.search(query, positionedNodes);
+    // Match on the compiled nodes: positions don't exist until the first tick.
+    searchManager.search(query, compilation.nodes);
     needsRender = true;
     scheduleRender();
   }
@@ -1527,10 +1078,7 @@ export function createGraph(
    */
   function highlight(target: GraphHighlightTarget, opts?: { dimOpacity?: number }): void {
     if (destroyed) return;
-    transientTarget = target;
-    refreshTransientHighlight();
-    highlightDimOpacity = opts?.dimOpacity ?? null;
-    recomputeHighlight();
+    focus.highlight(target, opts?.dimOpacity);
     refreshFocus();
     emitHighlightChange();
   }
@@ -1541,15 +1089,13 @@ export function createGraph(
    */
   function clearHighlight(): void {
     if (destroyed) return;
-    transientTarget = null;
-    transientHighlight = null;
-    highlightDimOpacity = null;
-    recomputeHighlight();
+    focus.clearHighlight();
     refreshFocus();
     emitHighlightChange();
   }
 
   function getHighlight(): string[] | null {
+    const highlightSet = focus.highlightSet;
     return highlightSet ? [...highlightSet] : null;
   }
 
@@ -1563,7 +1109,7 @@ export function createGraph(
           label: e.label,
           color: e.color,
           count: e.count,
-          active: activeCategories.size === 0 || activeCategories.has(e.label),
+          active: focus.categories.size === 0 || focus.categories.has(e.label),
         })),
       edges: (compilation.edgeLegend ?? []).map((e) => ({
         label: e.label,
@@ -1580,24 +1126,21 @@ export function createGraph(
    */
   function setActiveCategories(values: string[]): void {
     if (destroyed) return;
-    activeCategories = new Set(values);
-    recomputeHighlight();
+    focus.setCategories(values);
     syncLegendActiveState();
     refreshFocus();
     emitHighlightChange();
   }
 
   function getActiveCategories(): string[] {
-    return [...activeCategories];
+    return [...focus.categories];
   }
 
   function toggleLegendCategory(value: string): void {
-    if (activeCategories.has(value)) activeCategories.delete(value);
-    else activeCategories.add(value);
-    recomputeHighlight();
+    focus.toggleCategory(value);
     syncLegendActiveState();
     refreshFocus();
-    options?.onLegendToggle?.([...activeCategories]);
+    options?.onLegendToggle?.([...focus.categories]);
     emitHighlightChange();
   }
 
@@ -1660,8 +1203,7 @@ export function createGraph(
     entranceFitInFlight = false;
     entranceReveal = null;
     // Clear any lingering update-transition state (finishAll ran their onDone).
-    enterAlphaMap = null;
-    exitingGhosts = null;
+    updateFades.clear();
 
     // Capture prev state BEFORE recompiling.
     const prevNodes = positionedNodes;
@@ -1719,8 +1261,7 @@ export function createGraph(
     // Highlight persists: re-resolve both layers against the new nodes. Node
     // ids are identical on a visual-only update, but a category-form transient
     // can still change membership if the underlying field values changed.
-    refreshTransientHighlight();
-    recomputeHighlight();
+    focus.reconcile();
 
     // Search survives: re-run the stored query against the new nodes.
     reRunSearch();
@@ -1785,7 +1326,7 @@ export function createGraph(
     reconcileStateAfterUpdate();
 
     // Wire the enter-fade and exit-ghost transitions.
-    startUpdateTransitions(diff);
+    updateFades.start(diff, compilation);
 
     needsRender = true;
     scheduleRender();
@@ -1822,8 +1363,7 @@ export function createGraph(
     // Highlight persists. Re-resolve the transient layer against the new nodes
     // first (this both tracks category membership changes and drops deleted
     // ids, which an unpruned set would resurrect), then recompose.
-    refreshTransientHighlight();
-    recomputeHighlight();
+    focus.reconcile();
     syncLegendActiveState();
 
     // Search survives: re-run the stored query against the new nodes.
@@ -1831,8 +1371,8 @@ export function createGraph(
 
     // Re-arm the focus crossfade against the reconciled state (a fresh transition
     // so it doesn't blend from stale prev/next snapshots).
-    focusTransition = null;
-    armFocus(performance.now());
+    focus.reset();
+    focus.arm(performance.now());
   }
 
   /** Re-run the active search query (if any) against the current positioned nodes. */
@@ -1840,65 +1380,6 @@ export function createGraph(
     const q = searchManager.getQuery();
     if (q !== null) searchManager.search(q, positionedNodes);
   }
-
-  /**
-   * Start the enter-fade (new nodes 0→1 over update.duration, quantized for
-   * batching) and the exit-ghost fade (removed marks 1→0 over exit.duration).
-   * Snaps instantly under reduced motion or when the phase is disabled.
-   */
-  function startUpdateTransitions(diff: ReturnType<typeof diffGraphUpdate>): void {
-    const updateCfg = compilation.animation?.update ?? null;
-    const exitCfg = compilation.animation?.exit ?? null;
-    const reduced = prefersReducedMotion();
-
-    // -- Enter fade --
-    if (diff.enteringIds.length > 0 && updateCfg && !reduced) {
-      const entering = diff.enteringIds;
-      enterAlphaMap = new Map(entering.map((id) => [id, 0]));
-      const ease = resolveEase(updateCfg.ease);
-      const tween = createTween({
-        duration: updateCfg.duration,
-        ease,
-        apply: (t) => {
-          // Quantize to 8 buckets so per-node alpha keeps fill-batching bounded.
-          const q = Math.round(t * 8) / 8;
-          if (enterAlphaMap) for (const id of entering) enterAlphaMap.set(id, q);
-          needsRender = true;
-        },
-        onDone: () => {
-          enterAlphaMap = null;
-          needsRender = true;
-        },
-      });
-      scheduler.add(tween);
-    }
-
-    // -- Exit ghosts --
-    if ((diff.exitingNodes.length > 0 || diff.exitingEdges.length > 0) && exitCfg && !reduced) {
-      exitingGhosts = { nodes: diff.exitingNodes, edges: diff.exitingEdges, alpha: 1 };
-      const ease = resolveEase(exitCfg.ease);
-      const tween = createTween({
-        duration: exitCfg.duration,
-        ease,
-        apply: (t) => {
-          if (exitingGhosts) exitingGhosts.alpha = 1 - t;
-          needsRender = true;
-        },
-        onDone: () => {
-          exitingGhosts = null;
-          needsRender = true;
-        },
-      });
-      scheduler.add(tween);
-    }
-  }
-
-  /**
-   * @deprecated Use {@link GraphInstance.update} instead. `update` now handles
-   * both visual-only and structural changes (diffed automatically) and preserves
-   * node positions when nothing structural changed. Kept as an alias for backward
-   * compatibility.
-   */
 
   /** Tear down ONLY the simulation, keeping interaction/transform/selection. */
   function teardownSimOnly(): void {
@@ -1918,8 +1399,7 @@ export function createGraph(
     entranceProgress = 1;
     entranceFitInFlight = false;
     // Reset update-transition state too (cancelAll already stopped the tweens).
-    enterAlphaMap = null;
-    exitingGhosts = null;
+    updateFades.clear();
     if (animFrameId !== null) {
       cancelAnimationFrame(animFrameId);
       animFrameId = null;
@@ -2014,7 +1494,7 @@ export function createGraph(
     seedIds = new Set(compilation.seedNodeIds);
     adjacencyMap = buildAdjacencyMap(compilation.edges);
     buildDataMaps();
-    applyInitialHighlight();
+    focus.applyInitial();
     createSurface();
     initSimulation();
     initInteraction();
@@ -2023,7 +1503,7 @@ export function createGraph(
     throw err;
   }
 
-  // Responsive resize (the shell no-ops when `responsive: false`).
+  // Responsive resize (the shell no-ops when `autoResize: false`).
   disconnectResize = shell.observeResize(() => {
     doResize();
   });

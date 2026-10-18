@@ -407,6 +407,8 @@ ctx.addEventListener('message', ((event: MessageEvent<InMessage>) => {
         if (simulation) simulation.stop();
         break;
       }
+      default:
+        msg satisfies never;
     }
   } catch (err) {
     post({

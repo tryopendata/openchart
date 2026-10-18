@@ -231,6 +231,15 @@ share whatever space is left. If the explicit widths on their own would
 exceed the container, they're scaled down proportionally (floored at 60px)
 and the engine emits a `TABLE_WIDTH_OVERFLOW` warning through `onWarn`.
 
+### Surface
+
+Tables paint `theme.colors.background`, which is transparent by default, so a
+table sits on the host surface like a chart does. The header, totals row,
+search input and pager buttons are transparent too; the opt-in sticky first
+column keeps the mode's `--oc-bg` so scrolled cells don't show through. Inline
+bar fills render at 40% opacity in dark mode (18% in light). Set
+`theme.colors.background` for an opaque table.
+
 ### Full-featured example
 
 ```ts

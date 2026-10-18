@@ -1,5 +1,6 @@
 import type { ChartLayout, ResolvedAnnotation } from '@opendata-ai/openchart-core';
 import { expect, test, type Page } from '@playwright/test';
+import { waitForResizeSettled } from '../settle';
 
 for (const width of [320, 390, 768, 1280])
   for (const colorScheme of ['light', 'dark'] as const) {
@@ -92,7 +93,11 @@ for (const width of [320, 390, 768, 1280])
           expect(JSON.parse((await auto.getAttribute('data-png'))!).height).toBe(
             Math.floor(first.dimensions.height),
           );
-          await page.waitForTimeout(250);
+          // Auto-height grows the host, which re-fires the ResizeObserver. Wait
+          // for the mount to handle that echo (and any echo of its own render);
+          // a self-resize loop never settles, and a single re-render would show
+          // up as a changed height below.
+          await waitForResizeSettled(auto);
           await auto.dispatchEvent('fixture-layout');
           expect(JSON.parse((await auto.getAttribute('data-layout'))!).dimensions.height).toBe(
             first.dimensions.height,

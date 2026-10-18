@@ -137,7 +137,6 @@ There is no \`type: "line"\` grammar. Charts use \`mark\`, following Vega-Lite. 
   labels?:    boolean | LabelConfig,          // direct data labels
   legend?:    LegendConfig,      // { position, show, columns, ... }
   theme?:     ThemeConfig,       // colors, fonts, spacing overrides
-  darkMode?:  "auto" | "force" | "off",
   a11y?:      { description?: string, hidden?: boolean },
   description?: string,          // sugar -> a11y.description (alt text)
   width?: number, height?: number,
@@ -199,7 +198,7 @@ A bin plus a count aggregate is a histogram. Take both bin edges (\`as: ["bin_x"
 
 - \`{ type: "text", x, y, text, subtitle?, connector?, dot?, anchor? }\` - callout at a data coordinate.
 - \`{ type: "range", x1?, x2?, y1?, y2?, label? }\` - highlighted band.
-- \`{ type: "refline" | "rule", x?, y?, style?, label? }\` - reference line at a value.
+- \`{ type: "refline", x?, y?, style?, label?, labelPlacement? }\` - reference line at a value.
 
 ## Chrome
 
@@ -213,7 +212,7 @@ Each accepts a string or \`{ text, style?, offset? }\`.
 
 ## Theme
 
-\`theme\` overrides design tokens: \`{ colors?, fonts?, spacing?, borderRadius?, chrome? }\`. \`colors\` accepts a categorical array or an object (\`categorical\`, \`sequential\`, \`diverging\`, \`background\`, \`text\`, \`gridline\`, \`positive\`, \`negative\`, ...). \`darkMode\` ("auto" | "force" | "off") controls automatic dark adaptation.
+\`theme\` overrides design tokens: \`{ colors?, fonts?, spacing?, borderRadius?, chrome? }\`. \`colors\` accepts a categorical array or an object (\`categorical\`, \`sequential\`, \`diverging\`, \`background\`, \`text\`, \`gridline\`, \`positive\`, \`negative\`, ...). Dark mode is not a spec field: pass \`darkMode\` ("auto" | "force" | "off") as a mount option or component prop.
 
 ## TableSpec
 
@@ -226,9 +225,8 @@ Each accepts a string or \`{ text, style?, offset? }\`.
   search?: boolean,
   pagination?: boolean | { pageSize: number },
   stickyFirstColumn?: boolean,
-  compact?: boolean,
+  density?: "condensed" | "regular" | "relaxed",
   theme?: ThemeConfig,
-  darkMode?: "auto" | "force" | "off",
 }
 \`\`\`
 
@@ -242,7 +240,6 @@ Each accepts a string or \`{ text, style?, offset? }\`.
   encoding?: { nodeColor?, nodeSize?, edgeColor?, edgeWidth?, nodeLabel? },
   layout?: { type: "force" | "radial" | "hierarchical", clustering?, chargeStrength?, linkDistance? },
   chrome?: Chrome,
-  darkMode?: "auto" | "force" | "off",
 }
 \`\`\`
 
@@ -258,7 +255,7 @@ Every chart ships a screen-reader description, a hidden data table, and keyboard
 
 ## Validation and repair
 
-Validate a spec before rendering with \`validateSpec(spec)\` from \`@opendata-ai/openchart-engine\`. It returns \`{ valid, errors, normalized }\`. Each error carries a machine-readable \`code\`, the offending \`path\`, and a repair-friendly \`suggestion\`. Field references are checked against the columns in the provided \`data\`; a misspelled field name suggests the nearest actual column ("did you mean").
+Validate a spec before rendering with \`validateSpec(spec)\` from \`@opendata-ai/openchart-engine\`. It returns \`{ valid, errors, normalized }\`. Each error carries a machine-readable \`code\`, the offending \`path\` as a root-relative JSON Pointer (e.g. \`/encoding/y/field\`, \`/layer/1/data/0/value\`), and a repair-friendly \`suggestion\`. Field references are checked against the columns in the provided \`data\`; a misspelled field name suggests the nearest actual column ("did you mean").
 
 ## JSON Schema
 

@@ -1,4 +1,4 @@
-import type { MarkType } from '@opendata-ai/openchart-core';
+import { jsonPointer, type MarkType } from '@opendata-ai/openchart-core';
 
 import type { NormalizedMarkDef, ValidationError } from './types';
 
@@ -36,6 +36,21 @@ const APPLIES_TO: Partial<Record<keyof NormalizedMarkDef, readonly MarkType[]>> 
   majorityLine: ['parliament'],
 };
 
+/** Visual options every authored mark accepts. */
+const SHARED_OPTIONS = new Set([
+  'type',
+  'size',
+  'filled',
+  'opacity',
+  'fillOpacity',
+  'fill',
+  'stroke',
+  'strokeWidth',
+  'tooltip',
+  'clip',
+  'fillPattern',
+]);
+
 /** Run before sugar: diagnostics point to authored fields, including stripped histogram/density options. */
 export function collectMarkOptionErrors(input: unknown, path = ''): ValidationError[] {
   if (!input || typeof input !== 'object' || Array.isArray(input)) return [];
@@ -47,9 +62,20 @@ export function collectMarkOptionErrors(input: unknown, path = ''): ValidationEr
       if (mark[key as keyof NormalizedMarkDef] !== undefined && !allowed.includes(mark.type)) {
         errors.push({
           code: 'INVALID_VALUE',
-          path: `${path}/mark/${key}`,
+          path: `${path}${jsonPointer('mark', key)}`,
           message: `Option "${key}" is not supported by mark "${mark.type}".`,
           suggestion: `Remove ${key}, or use a supported mark: ${allowed.join(', ')}.`,
+        });
+      }
+    }
+    for (const key of Object.keys(mark)) {
+      // Retired `render` gets its migration error from removed-spec-fields.
+      if (key !== 'render' && !SHARED_OPTIONS.has(key) && !(key in APPLIES_TO)) {
+        errors.push({
+          code: 'INVALID_VALUE',
+          path: `${path}${jsonPointer('mark', key)}`,
+          message: `Unknown mark option "${key}".`,
+          suggestion: `Remove ${key}.`,
         });
       }
     }

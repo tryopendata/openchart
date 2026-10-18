@@ -303,6 +303,9 @@ export function renderTable(
   // CSS defaults (--oc-text etc.) are light-mode values.
   const { theme, chrome } = layout;
   if (theme) stampThemeProperties(wrapper, theme, 'table');
+  // Paint the theme background like a chart does: transparent by default, so
+  // the table sits on the host surface instead of the mode's canvas token.
+  if (theme) wrapper.style.background = theme.colors.background;
 
   // Set computed chrome CSS custom properties so chrome elements pick up
   // theme-resolved values via CSS fallbacks (e.g. --oc-title-computed-size).

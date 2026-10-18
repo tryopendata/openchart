@@ -58,15 +58,21 @@ describe('compileGraph', () => {
   it('returns a valid GraphCompilation shape', () => {
     const result = compileGraph(makeBasicGraphSpec(), compileOptions);
 
-    expect(result.nodes).toBeDefined();
-    expect(result.edges).toBeDefined();
-    expect(result.legend).toBeDefined();
-    expect(result.chrome).toBeDefined();
-    expect(result.tooltipDescriptors).toBeDefined();
-    expect(result.a11y).toBeDefined();
-    expect(result.theme).toBeDefined();
-    expect(result.dimensions).toBeDefined();
-    expect(result.simulationConfig).toBeDefined();
+    expect(result.nodes.map((n) => n.id)).toEqual(['a', 'b', 'c', 'd']);
+    expect(result.edges.map((e) => [e.source, e.target])).toEqual([
+      ['a', 'b'],
+      ['b', 'c'],
+      ['c', 'd'],
+      ['a', 'c'],
+    ]);
+    // No communities and no color encoding: every node shares one fill, so no legend.
+    expect(result.legend.entries).toEqual([]);
+    expect(result.chrome.title).toBeUndefined();
+    expect([...result.tooltipDescriptors.keys()]).toEqual(['a', 'b', 'c', 'd']);
+    expect(result.a11y.altText).toContain('4 nodes');
+    expect(result.theme.colors.categorical.length).toBeGreaterThan(0);
+    expect(result.dimensions).toEqual({ width: 600, height: 400 });
+    expect(result.simulationConfig.collisionRadius).toBeGreaterThan(0);
   });
 
   it('compiles correct number of nodes and edges', () => {
@@ -86,26 +92,31 @@ describe('compileGraph', () => {
   it('nodes have resolved visual properties', () => {
     const result = compileGraph(makeBasicGraphSpec(), compileOptions);
 
-    for (const node of result.nodes) {
-      expect(node.id).toBeTruthy();
+    const spec = makeBasicGraphSpec();
+    expect(result.nodes.map((n) => n.id)).toEqual(spec.nodes.map((n) => n.id));
+    for (const [i, node] of result.nodes.entries()) {
       expect(node.radius).toBeGreaterThan(0);
-      expect(node.fill).toBeTruthy();
-      expect(node.stroke).toBeTruthy();
+      // No color encoding: every node takes the first categorical color.
+      expect(node.fill).toBe(result.theme.colors.categorical[0]);
+      // Knockout ring in the canvas color, not a darkened fill.
+      expect(node.stroke).toBe(result.theme.colors.neutral.surface);
       expect(node.strokeWidth).toBeGreaterThan(0);
-      expect(node.data).toBeDefined();
+      expect(node.data).toEqual(spec.nodes[i]);
     }
   });
 
   it('edges have resolved visual properties', () => {
     const result = compileGraph(makeBasicGraphSpec(), compileOptions);
 
-    for (const edge of result.edges) {
-      expect(edge.source).toBeTruthy();
-      expect(edge.target).toBeTruthy();
-      expect(edge.stroke).toBeTruthy();
+    const spec = makeBasicGraphSpec();
+    for (const [i, edge] of result.edges.entries()) {
+      expect(edge.source).toBe(spec.edges[i].source);
+      expect(edge.target).toBe(spec.edges[i].target);
+      // Both endpoints share one fill, so the blended edge color is that fill.
+      expect(edge.stroke).toBe(result.theme.colors.categorical[0]);
       expect(edge.strokeWidth).toBeGreaterThan(0);
       expect(edge.style).toBe('solid');
-      expect(edge.data).toBeDefined();
+      expect(edge.data).toEqual(spec.edges[i]);
     }
   });
 
@@ -269,8 +280,13 @@ describe('compileGraph', () => {
       const result = compileGraph(makeBasicGraphSpec(), compileOptions);
 
       const tooltip = result.tooltipDescriptors.get('a')!;
-      expect(tooltip.title).toBeTruthy();
-      expect(tooltip.fields.length).toBeGreaterThan(0);
+      // No nodeLabel encoding: the label (and so the title) is the node id.
+      expect(tooltip.title).toBe('a');
+      expect(tooltip.fields.map((f) => [f.label, f.value])).toEqual([
+        ['group', 'X'],
+        ['value', '10'],
+        ['name', 'Alice'],
+      ]);
     });
 
     it('tooltip includes community when clustering is active', () => {
@@ -359,9 +375,7 @@ describe('compileGraph', () => {
       };
       const result = compileGraph(spec, compileOptions);
 
-      expect(result.chrome.title).toBeDefined();
       expect(result.chrome.title!.text).toBe('Network Graph');
-      expect(result.chrome.source).toBeDefined();
       expect(result.chrome.source!.text).toBe('Test Data');
     });
   });

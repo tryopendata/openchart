@@ -30,9 +30,9 @@ import type {
   TextStyle,
 } from '@opendata-ai/openchart-core';
 import { BRAND_RESERVE_WIDTH, COMPACT_WIDTH, estimateTextWidth } from '@opendata-ai/openchart-core';
-
+import { strokeDashPatterns } from '../charts/line/compute';
 import { isStrokeSeriesMark, resolveSeriesStroke } from '../charts/utils';
-import { categoricalColorsForDomain } from '../compile/color-scale-range';
+import { categoricalColorsForDomain, defaultSeriesColor } from '../compile/color-scale-range';
 import type { NormalizedChartSpec } from '../compiler/types';
 import type { MeasureFn } from '../layout/plan';
 import { applyCategoricalSort } from '../layout/scales';
@@ -43,7 +43,7 @@ import {
   computeContinuousLegendContent,
   hasContinuousColorScale,
 } from './continuous';
-import { countColorSeries, resolveSuppression } from './suppression';
+import { countColorSeries, resolveSuppression, seriesField } from './suppression';
 import {
   ENTRY_GAP,
   ENTRY_GAP_COMPACT,
@@ -189,6 +189,31 @@ function swatchShapeForType(markType: string): LegendEntry['shape'] {
     default:
       return 'square';
   }
+}
+
+/**
+ * Line series identified by strokeDash alone (no categorical color): one
+ * dashed-line swatch per dash value, as Vega-Lite builds a strokeDash legend.
+ * Swatches take the shared line stroke the marks use.
+ */
+function extractDashEntries(spec: NormalizedChartSpec, theme: ResolvedTheme): LegendEntry[] {
+  const field = seriesField(spec);
+  const dash = spec.encoding.strokeDash;
+  if (!field || !dash || !('field' in dash) || dash.field !== field) return [];
+  const stroke =
+    spec.markDef.stroke ??
+    resolveSeriesStroke(spec, spec.markDef.fill ?? defaultSeriesColor(theme, spec.markType), theme);
+  const excludeSet = new Set(spec.legend?.exclude ?? []);
+  const hiddenSet = new Set(spec.hiddenSeries);
+  return [...strokeDashPatterns(spec)]
+    .filter(([value]) => !excludeSet.has(value))
+    .map(([value, pattern]) => ({
+      label: value,
+      color: stroke,
+      shape: 'line' as const,
+      active: !hiddenSet.has(value),
+      ...(pattern ? { strokeDasharray: pattern } : {}),
+    }));
 }
 
 /** Extract unique color values from data based on the color encoding. */
@@ -403,6 +428,7 @@ export function computeLegendContent(
   }
 
   let entries = extractColorEntries(spec, theme);
+  if (entries.length === 0) entries = extractDashEntries(spec, theme);
 
   // Consult the shared suppression truth table so the legend, endpoint column,
   // and end-of-line labels stay in sync. The helper returns

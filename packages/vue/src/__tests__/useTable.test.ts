@@ -8,7 +8,7 @@
 import type { TableSpec } from '@opendata-ai/openchart-core';
 import type { TableInstance } from '@opendata-ai/openchart-vanilla';
 import { flushPromises, mount } from '@vue/test-utils';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { defineComponent, h, type PropType, toRef } from 'vue';
 import { useTable } from '../composables/useTable';
 
@@ -115,12 +115,15 @@ describe('useTable', () => {
     const wrapper = await mountHarness(tableSpec);
 
     const vm = wrapper.vm as unknown as { table: TableInstance | null };
-    const instance = vm.table;
-    expect(instance).not.toBeNull();
+    expect(vm.table).not.toBeNull();
+    const table = wrapper.element.querySelector('table');
+    const tableWrapper = table?.closest('.oc-table-wrapper');
+    expect(tableWrapper?.parentNode).not.toBeNull();
 
-    const destroySpy = vi.spyOn(instance as TableInstance, 'destroy');
     wrapper.unmount();
 
-    expect(destroySpy).toHaveBeenCalledTimes(1);
+    // Vue only detaches the component root; destroy() removes the table from
+    // its container, so a still-attached table means the instance leaked.
+    expect(tableWrapper?.parentNode).toBeNull();
   });
 });

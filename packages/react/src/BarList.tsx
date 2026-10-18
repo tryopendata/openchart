@@ -94,7 +94,7 @@ export const BarList = forwardRef<BarListHandle, BarListProps>(function BarList(
       darkMode: resolvedDarkMode,
       onRowClick: stableOnRowClick,
       onRowHover: stableOnRowHover,
-      responsive: true,
+      autoResize: true,
     };
 
     instanceRef.current = createBarList(container, spec, options);

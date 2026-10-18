@@ -18,6 +18,7 @@ import type { MarkType, ResolvedTheme } from '@opendata-ai/openchart-core';
 import { contrastRatio, findAccessibleColor, isOpaqueColor } from '@opendata-ai/openchart-core';
 import type { ScaleOrdinal } from 'd3-scale';
 import type { ResolvedScales } from '../layout/scales';
+import { seriesField } from '../legend/suppression';
 
 /** WCAG 1.4.11 minimum for graphical objects against adjacent colors. */
 const GRAPHIC_MIN = 3;
@@ -50,11 +51,12 @@ export function collectContrastWarnings(
   const bg = theme.colors.background;
   const bgIsCheckable = isOpaqueColor(bg);
 
-  // Resolved per-series colors in domain (render) order. Sequential color
-  // scales encode magnitude, not series identity; adjacency checks there
-  // would flag every neighboring ramp stop, so only categorical scales apply.
+  // Resolved per-series colors in domain (render) order. Sequential and binned
+  // (quantile/quantize/threshold) color scales encode magnitude, not series
+  // identity; adjacency checks there would flag every neighboring ramp stop,
+  // so only categorical scales apply.
   const series: Array<{ key: string; color: string }> = [];
-  if (scales.color && scales.color.type !== 'sequential') {
+  if (scales.color && scales.color.type === 'ordinal') {
     const ordinal = scales.color.scale as unknown as ScaleOrdinal<string, string>;
     for (const key of ordinal.domain()) {
       series.push({ key, color: ordinal(key) });
@@ -118,9 +120,9 @@ export function seriesIdentificationWarnings(
   const hidden =
     spec.endpointLabels === false ||
     (typeof spec.endpointLabels === 'object' && spec.endpointLabels.show === false);
-  const color = spec.encoding.color;
-  if (!hidden || !color || !('field' in color) || color.type === 'quantitative') return [];
-  return new Set(spec.data.map((row) => row[color.field])).size > 1
+  const field = seriesField(spec);
+  if (!hidden || !field) return [];
+  return new Set(spec.data.map((row) => row[field])).size > 1
     ? [
         '[openchart a11y] Both legend and endpointLabels are disabled on a multi-series chart. Enable either to identify the series.',
       ]

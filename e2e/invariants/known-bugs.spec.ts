@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { waitForResizeSettled } from '../settle';
 import { DEFAULT_THEME } from '../../packages/core/src/theme/defaults';
 
 /**
@@ -21,7 +22,8 @@ test('rotated x-axis labels do not overlap source text', async ({ page }) => {
   // Wait for the chart to render.
   await page.waitForSelector('.oc-root');
   await page.evaluate(() => document.fonts.ready);
-  await page.waitForTimeout(100);
+  await page.waitForSelector('.oc-root[data-oc-fonts-state="ready"] svg.oc-chart:not(.oc-animate)');
+  await waitForResizeSettled(page.locator('.oc-root').first());
 
   const overlap = await page.evaluate(() => {
     // Collect bounding rects for all x-axis tick labels.

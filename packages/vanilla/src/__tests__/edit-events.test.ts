@@ -35,6 +35,12 @@ const fullEditSpec: ChartSpec = {
   },
 };
 
+/**
+ * v9 identifies multi-series lines with the endpoint column by default; turning
+ * it off brings back the traditional legend these drag tests need.
+ */
+const legendEditSpec: ChartSpec = { ...fullEditSpec, endpointLabels: false };
+
 /** Simple text annotation spec for focused annotation tests. */
 const textAnnotatedSpec: ChartSpec = {
   ...barSpec,
@@ -144,10 +150,7 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
       const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotation) {
-        chart.destroy();
-        return;
-      }
+      if (!annotation) throw new Error('annotation was not rendered');
 
       expect(annotation.style.cursor).toBe('grab');
       chart.destroy();
@@ -158,10 +161,7 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
       const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotation) {
-        chart.destroy();
-        return;
-      }
+      if (!annotation) throw new Error('annotation was not rendered');
 
       simulateDrag(annotation, 100, 100, 150, 130);
 
@@ -187,10 +187,7 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
       const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotation) {
-        chart.destroy();
-        return;
-      }
+      if (!annotation) throw new Error('annotation was not rendered');
 
       // Move less than 3px
       simulateDrag(annotation, 100, 100, 101, 101);
@@ -205,10 +202,7 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onAnnotationClick, onEdit });
 
       const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotation) {
-        chart.destroy();
-        return;
-      }
+      if (!annotation) throw new Error('annotation was not rendered');
 
       // Drag beyond threshold
       simulateDrag(annotation, 100, 100, 150, 130);
@@ -228,10 +222,7 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
       const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotation) {
-        chart.destroy();
-        return;
-      }
+      if (!annotation) throw new Error('annotation was not rendered');
 
       annotation.dispatchEvent(createMouseEvent('mousedown', 100, 100));
       // During drag (after mousedown, before mouseup) the cursor should be grabbing
@@ -314,10 +305,7 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
       const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotation) {
-        chart.destroy();
-        return;
-      }
+      if (!annotation) throw new Error('annotation was not rendered');
 
       simulateDrag(annotation, 100, 100, 150, 130);
 
@@ -340,11 +328,7 @@ describe('edit events', () => {
       const rangeLabel = container.querySelector(
         '.oc-annotation-range .oc-annotation-label',
       ) as SVGTextElement | null;
-      if (!rangeLabel) {
-        // Range may not render a visible label in test env
-        chart.destroy();
-        return;
-      }
+      if (!rangeLabel) throw new Error('rangeLabel was not rendered');
 
       expect(rangeLabel.style.cursor).toBe('grab');
       chart.destroy();
@@ -357,10 +341,7 @@ describe('edit events', () => {
       const rangeLabel = container.querySelector(
         '.oc-annotation-range .oc-annotation-label',
       ) as SVGTextElement | null;
-      if (!rangeLabel) {
-        chart.destroy();
-        return;
-      }
+      if (!rangeLabel) throw new Error('rangeLabel was not rendered');
 
       simulateDrag(rangeLabel, 100, 100, 140, 120);
 
@@ -386,10 +367,7 @@ describe('edit events', () => {
       const reflineLabel = container.querySelector(
         '.oc-annotation-refline .oc-annotation-label',
       ) as SVGTextElement | null;
-      if (!reflineLabel) {
-        chart.destroy();
-        return;
-      }
+      if (!reflineLabel) throw new Error('reflineLabel was not rendered');
 
       expect(reflineLabel.style.cursor).toBe('grab');
       chart.destroy();
@@ -402,10 +380,7 @@ describe('edit events', () => {
       const reflineLabel = container.querySelector(
         '.oc-annotation-refline .oc-annotation-label',
       ) as SVGTextElement | null;
-      if (!reflineLabel) {
-        chart.destroy();
-        return;
-      }
+      if (!reflineLabel) throw new Error('reflineLabel was not rendered');
 
       simulateDrag(reflineLabel, 100, 100, 130, 115);
 
@@ -450,10 +425,7 @@ describe('edit events', () => {
       const titleEl = container.querySelector(
         '.oc-chrome text[data-chrome-key="title"]',
       ) as SVGTextElement | null;
-      if (!titleEl) {
-        chart.destroy();
-        return;
-      }
+      if (!titleEl) throw new Error('titleEl was not rendered');
 
       simulateDrag(titleEl, 100, 100, 130, 115);
 
@@ -462,7 +434,8 @@ describe('edit events', () => {
       expect(edit.ops.some((op) => op.path.endsWith('/chrome/title'))).toBe(true);
 
       expect(edit.ops[0].path).toBe('/chrome/title');
-      expect(valueAt<{ text: string }>(edit, '/chrome/title').text).toBeTruthy();
+      // The title's text is carried through unchanged; only its offset moves.
+      expect(valueAt<{ text: string }>(edit, '/chrome/title').text).toBe('GDP Growth');
       // No existing offset, so offset = delta (30, 15)
       expect(
         valueAt<{ offset: { dx: number; dy: number }; text: string }>(edit, '/chrome/title').offset
@@ -483,13 +456,10 @@ describe('edit events', () => {
   describe('wireLegendDrag', () => {
     it('legend group gets cursor:grab when onEdit is provided', () => {
       const onEdit = vi.fn();
-      const chart = createChart(container, fullEditSpec, { onEdit });
+      const chart = createChart(container, legendEditSpec, { onEdit });
 
       const legendG = container.querySelector('.oc-legend') as SVGGElement | null;
-      if (!legendG) {
-        chart.destroy();
-        return;
-      }
+      if (!legendG) throw new Error('legendG was not rendered');
 
       expect(legendG.style.cursor).toBe('grab');
       chart.destroy();
@@ -497,13 +467,10 @@ describe('edit events', () => {
 
     it('dragging legend fires onEdit with type legend and accumulated offset', () => {
       const onEdit = vi.fn();
-      const chart = createChart(container, fullEditSpec, { onEdit });
+      const chart = createChart(container, legendEditSpec, { onEdit });
 
       const legendG = container.querySelector('.oc-legend') as SVGGElement | null;
-      if (!legendG) {
-        chart.destroy();
-        return;
-      }
+      if (!legendG) throw new Error('legendG was not rendered');
 
       simulateDrag(legendG, 200, 50, 250, 70);
 
@@ -520,13 +487,10 @@ describe('edit events', () => {
     it('click event after drag is suppressed (does not fire onLegendToggle)', () => {
       const onLegendToggle = vi.fn();
       const onEdit = vi.fn();
-      const chart = createChart(container, fullEditSpec, { onLegendToggle, onEdit });
+      const chart = createChart(container, legendEditSpec, { onLegendToggle, onEdit });
 
       const legendG = container.querySelector('.oc-legend') as SVGGElement | null;
-      if (!legendG) {
-        chart.destroy();
-        return;
-      }
+      if (!legendG) throw new Error('legendG was not rendered');
 
       // Drag the legend
       simulateDrag(legendG, 200, 50, 250, 70);
@@ -551,10 +515,7 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
       const annotationG = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotationG) {
-        chart.destroy();
-        return;
-      }
+      if (!annotationG) throw new Error('annotationG was not rendered');
 
       // Check that connector handles exist within the annotation group
       const handles = annotationG.querySelectorAll('.oc-connector-handle');
@@ -576,10 +537,7 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
       const annotationG = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotationG) {
-        chart.destroy();
-        return;
-      }
+      if (!annotationG) throw new Error('annotationG was not rendered');
 
       const handles = annotationG.querySelectorAll('.oc-connector-handle');
       if (handles.length === 0) {
@@ -608,10 +566,7 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
       const annotationG = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotationG) {
-        chart.destroy();
-        return;
-      }
+      if (!annotationG) throw new Error('annotationG was not rendered');
 
       const handles = annotationG.querySelectorAll('.oc-connector-handle');
       if (handles.length === 0) {
@@ -636,20 +591,14 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
       const annotationG = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotationG) {
-        chart.destroy();
-        return;
-      }
+      if (!annotationG) throw new Error('annotationG was not rendered');
 
       // Find the "from" handle
       const fromHandle = annotationG.querySelector(
         '.oc-connector-handle[data-endpoint="from"]',
       ) as SVGCircleElement | null;
 
-      if (!fromHandle) {
-        chart.destroy();
-        return;
-      }
+      if (!fromHandle) throw new Error('fromHandle was not rendered');
 
       simulateDrag(fromHandle, 100, 100, 130, 115);
 
@@ -657,9 +606,6 @@ describe('edit events', () => {
       const edit: EditTransaction = onEdit.mock.calls[0][0];
       expect(edit.ops.some((op) => op.path.endsWith('/connectorOffset'))).toBe(true);
 
-      expect(
-        valueAt<Record<string, { dx: number; dy: number }>>(edit, '/connectorOffset').from,
-      ).toBeDefined();
       expect(edit.ops[0].expect?.type).toBe('text');
       // No existing connectorOffset, so offset = delta (30, 15)
       expect(
@@ -705,7 +651,7 @@ describe('edit events', () => {
       expect(edit.ops.some((op) => op.path.endsWith('/connectorOffset'))).toBe(true);
       expect(
         valueAt<Record<string, { dx: number; dy: number }>>(edit, '/connectorOffset').from,
-      ).toBeDefined();
+      ).toEqual({ dx: 30, dy: 18 });
 
       // Host writes the edit back to the spec and re-renders.
       chart.update({
@@ -735,19 +681,13 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
       const annotationG = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotationG) {
-        chart.destroy();
-        return;
-      }
+      if (!annotationG) throw new Error('annotationG was not rendered');
 
       const toHandle = annotationG.querySelector(
         '.oc-connector-handle[data-endpoint="to"]',
       ) as SVGCircleElement | null;
 
-      if (!toHandle) {
-        chart.destroy();
-        return;
-      }
+      if (!toHandle) throw new Error('toHandle was not rendered');
 
       simulateDrag(toHandle, 100, 100, 140, 125);
 
@@ -755,9 +695,10 @@ describe('edit events', () => {
       const edit: EditTransaction = onEdit.mock.calls[0][0];
       expect(edit.ops.some((op) => op.path.endsWith('/connectorOffset'))).toBe(true);
 
+      // No existing connectorOffset, so offset = delta (40, 25)
       expect(
         valueAt<Record<string, { dx: number; dy: number }>>(edit, '/connectorOffset').to,
-      ).toBeDefined();
+      ).toEqual({ dx: 40, dy: 25 });
       expect(edit.ops.find((op) => op.path.endsWith('/connectorOffset'))?.path).toBe(
         '/annotations/0/connectorOffset',
       );
@@ -874,9 +815,6 @@ describe('edit events', () => {
         expect(edit.ops.some((op) => op.path.endsWith('/connectorOffset'))).toBe(true);
 
         expect(
-          valueAt<Record<string, { dx: number; dy: number }>>(edit, '/connectorOffset').to,
-        ).toBeDefined();
-        expect(
           valueAt<Record<string, { dx: number; dy: number }>>(edit, '/connectorOffset').to.dx,
         ).toBe(30);
         expect(
@@ -926,10 +864,7 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onEdit, onSelect });
 
       const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotation) {
-        chart.destroy();
-        return;
-      }
+      if (!annotation) throw new Error('annotation was not rendered');
 
       annotation.dispatchEvent(createMouseEvent('click', 100, 100));
       expect(onSelect).toHaveBeenCalled();
@@ -956,10 +891,7 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onEdit: vi.fn(), onSelect });
 
       const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotation) {
-        chart.destroy();
-        return;
-      }
+      if (!annotation) throw new Error('annotation was not rendered');
 
       annotation.dispatchEvent(createMouseEvent('click', 100, 100));
       expect(onSelect).toHaveBeenCalled();
@@ -980,10 +912,7 @@ describe('edit events', () => {
       const titleEl = container.querySelector(
         '.oc-chrome text[data-chrome-key="title"]',
       ) as SVGTextElement | null;
-      if (!titleEl) {
-        chart.destroy();
-        return;
-      }
+      if (!titleEl) throw new Error('titleEl was not rendered');
 
       titleEl.dispatchEvent(createMouseEvent('click', 100, 100));
       expect(onSelect).toHaveBeenCalled();
@@ -999,13 +928,10 @@ describe('edit events', () => {
 
     it('buildElementRef produces /legend path for legend clicks', () => {
       const onSelect = vi.fn();
-      const chart = createChart(container, fullEditSpec, { onEdit: vi.fn(), onSelect });
+      const chart = createChart(container, legendEditSpec, { onEdit: vi.fn(), onSelect });
 
       const legendG = container.querySelector('.oc-legend') as SVGGElement | null;
-      if (!legendG) {
-        chart.destroy();
-        return;
-      }
+      if (!legendG) throw new Error('legendG was not rendered');
 
       legendG.dispatchEvent(createMouseEvent('click', 200, 50));
       expect(onSelect).toHaveBeenCalled();
@@ -1027,10 +953,7 @@ describe('edit events', () => {
       const toHandle = annotationG?.querySelector(
         '.oc-connector-handle[data-endpoint="to"]',
       ) as SVGCircleElement;
-      if (!toHandle) {
-        chart.destroy();
-        return;
-      }
+      if (!toHandle) throw new Error('toHandle was not rendered');
 
       simulateDrag(toHandle, 100, 100, 130, 115);
 
@@ -1058,10 +981,6 @@ describe('edit events', () => {
   });
 
   // =========================================================================
-  // 10. wireSeriesLabelDrag
-  // =========================================================================
-
-  // =========================================================================
   // 8. element field on annotation edit payloads
   // =========================================================================
   describe('element field on annotation edit payloads', () => {
@@ -1084,10 +1003,7 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
       const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotation) {
-        chart.destroy();
-        return;
-      }
+      if (!annotation) throw new Error('annotation was not rendered');
 
       simulateDrag(annotation, 100, 100, 150, 130);
 
@@ -1122,10 +1038,7 @@ describe('edit events', () => {
       const chart = createChart(container, specWithId, { onEdit });
 
       const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotation) {
-        chart.destroy();
-        return;
-      }
+      if (!annotation) throw new Error('annotation was not rendered');
 
       simulateDrag(annotation, 100, 100, 150, 130);
 
@@ -1143,10 +1056,7 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
       const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotation) {
-        chart.destroy();
-        return;
-      }
+      if (!annotation) throw new Error('annotation was not rendered');
 
       simulateDrag(annotation, 100, 100, 150, 130);
 
@@ -1178,19 +1088,13 @@ describe('edit events', () => {
       const chart = createChart(container, specWithId, { onEdit });
 
       const annotationG = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotationG) {
-        chart.destroy();
-        return;
-      }
+      if (!annotationG) throw new Error('annotationG was not rendered');
 
       const fromHandle = annotationG.querySelector(
         '.oc-connector-handle[data-endpoint="from"]',
       ) as SVGCircleElement | null;
 
-      if (!fromHandle) {
-        chart.destroy();
-        return;
-      }
+      if (!fromHandle) throw new Error('fromHandle was not rendered');
 
       simulateDrag(fromHandle, 100, 100, 130, 115);
 
@@ -1214,10 +1118,7 @@ describe('edit events', () => {
       const rangeLabel = container.querySelector(
         '.oc-annotation-range .oc-annotation-label',
       ) as SVGTextElement | null;
-      if (!rangeLabel) {
-        chart.destroy();
-        return;
-      }
+      if (!rangeLabel) throw new Error('rangeLabel was not rendered');
 
       simulateDrag(rangeLabel, 100, 100, 140, 120);
 
@@ -1239,10 +1140,7 @@ describe('edit events', () => {
       const reflineLabel = container.querySelector(
         '.oc-annotation-refline .oc-annotation-label',
       ) as SVGTextElement | null;
-      if (!reflineLabel) {
-        chart.destroy();
-        return;
-      }
+      if (!reflineLabel) throw new Error('reflineLabel was not rendered');
 
       simulateDrag(reflineLabel, 100, 100, 130, 115);
 
@@ -1267,10 +1165,7 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
       const annotationG = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotationG) {
-        chart.destroy();
-        return;
-      }
+      if (!annotationG) throw new Error('annotationG was not rendered');
 
       const handle = annotationG.querySelector('.oc-anchor-handle');
       if (handle) {
@@ -1286,16 +1181,10 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
       const annotationG = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotationG) {
-        chart.destroy();
-        return;
-      }
+      if (!annotationG) throw new Error('annotationG was not rendered');
 
       const handle = annotationG.querySelector('.oc-anchor-handle');
-      if (!handle) {
-        chart.destroy();
-        return;
-      }
+      if (!handle) throw new Error('handle was not rendered');
 
       expect(handle.getAttribute('opacity')).toBe('0');
 
@@ -1313,16 +1202,10 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
       const annotationG = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotationG) {
-        chart.destroy();
-        return;
-      }
+      if (!annotationG) throw new Error('annotationG was not rendered');
 
       const handle = annotationG.querySelector('.oc-anchor-handle') as SVGCircleElement | null;
-      if (!handle) {
-        chart.destroy();
-        return;
-      }
+      if (!handle) throw new Error('handle was not rendered');
 
       const cx = Number(handle.getAttribute('cx'));
       const cy = Number(handle.getAttribute('cy'));
@@ -1335,10 +1218,17 @@ describe('edit events', () => {
       const edit: EditTransaction = anchorCall![0];
       expect(edit.ops.some((op) => op.path.endsWith('/x'))).toBe(true);
 
-      expect(edit.ops[0].expect).toBeDefined();
-      expect(edit.ops[0].path).toMatch(/^\/annotations\//);
-      expect(valueAt(edit, '/x')).toBeDefined();
-      expect(valueAt(edit, '/y')).toBeDefined();
+      // Each op guards against a concurrent edit replacing the annotation.
+      for (const op of edit.ops) expect(op.expect).toEqual({ type: 'text', text: 'Peak' });
+      expect(edit.ops.map((op) => op.path)).toEqual(['/annotations/0/x', '/annotations/0/y']);
+      // x is quantitative: the 30px move converts through the x scale's px-per-unit.
+      const ticks = chart.layout.axes.x!.ticks;
+      const pxPerUnit =
+        (ticks[1].position - ticks[0].position) /
+        ((ticks[1].value as number) - (ticks[0].value as number));
+      expect(valueAt<number>(edit, '/x')).toBeCloseTo(10 + 30 / pxPerUnit, 6);
+      // y is a band: 20px stays inside the 'A' band.
+      expect(valueAt(edit, '/y')).toBe('A');
 
       chart.destroy();
     });

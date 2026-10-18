@@ -233,6 +233,9 @@ describe('adaptTheme', () => {
     const dark = adaptTheme(light);
     // Text should be adapted to a light color for dark bg readability
     expect(dark.colors.text).not.toBe(light.colors.text);
-    expect(dark.colors.text).toBeDefined();
+    // ...lighter: more contrast against black than the light-mode text has.
+    expect(contrastRatio(dark.colors.text, '#000000')).toBeGreaterThan(
+      contrastRatio(light.colors.text, '#000000'),
+    );
   });
 });

@@ -80,10 +80,22 @@ export interface TableBuilderOptions {
 // ---------------------------------------------------------------------------
 
 /**
+ * Date-shaped strings: ISO 8601 dates and date-times, month-name dates
+ * ("Jan 2020", "March 3, 2020"), and slash dates. `Date` parsing alone is
+ * engine-dependent and accepts labels such as "Product 1".
+ */
+const DATE_STRING_RES = [
+  /^\d{4}-\d{2}(-\d{2}([T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?)?$/,
+  /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?( \d{1,2},?)? \d{4}$/i,
+  /^(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}\/\d{1,2}\/\d{1,2})$/,
+];
+
+/**
  * Infer the encoding field type from data values.
  *
  * Samples 50 rows, ignoring nulls; more than 80% numeric or temporal values
  * establish a type. Numeric strings (including ISO years) are quantitative.
+ * Strings count as temporal only when date-shaped and parseable.
  */
 export function inferFieldType(data: DataRow[], field: string): FieldType {
   // Sample up to 50 rows for more reliable inference on mixed/messy data
@@ -114,7 +126,7 @@ export function inferFieldType(data: DataRow[], field: string): FieldType {
 
       // Try as date
       const date = new Date(value);
-      if (!Number.isNaN(date.getTime())) {
+      if (DATE_STRING_RES.some((re) => re.test(value)) && !Number.isNaN(date.getTime())) {
         dateCount++;
         continue;
       }

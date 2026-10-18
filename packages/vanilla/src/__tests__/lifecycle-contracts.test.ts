@@ -110,7 +110,7 @@ function fixture<S extends Spec>(
   create: (
     element: HTMLElement,
     spec: S,
-    options: { responsive: false },
+    options: { autoResize: false },
   ) => { update(spec: S): void; resize(): void; export(format: 'svg'): unknown; destroy(): void },
   spec: S,
   selector: string,
@@ -119,7 +119,7 @@ function fixture<S extends Spec>(
     name,
     selector,
     mount: (element: HTMLElement, animation: boolean) => {
-      const instance = create(element, { ...spec, animation }, { responsive: false });
+      const instance = create(element, { ...spec, animation }, { autoResize: false });
       return {
         ...instance,
         invalid: () => instance.update({ ...spec, data: null } as unknown as S),
@@ -232,7 +232,7 @@ it('Sankey callbacks work without tooltips and teardown clears active evidence',
   const clicks: unknown[] = [];
   const hovers: unknown[] = [];
   const instance = createSankey(host.element, sankey, {
-    responsive: false,
+    autoResize: false,
     tooltip: false,
     onNodeClick: (node) => clicks.push(node),
     onNodeHover: (node) => hovers.push(node),
@@ -251,7 +251,7 @@ it('exports a settled Sankey without transient hover dimming or changing the liv
   const instance = createSankey(
     host.element,
     { ...sankey, animation: true },
-    { responsive: false },
+    { autoResize: false },
   );
   const node = host.element.querySelector('.oc-sankey-node')!;
   node.dispatchEvent(new MouseEvent('mouseenter'));
@@ -270,7 +270,7 @@ it('exports a settled Sankey without transient hover dimming or changing the liv
 it('table Escape cancels queued typing and focuses the current body', () => {
   vi.useFakeTimers();
   const host = container();
-  const instance = createTable(host.element, table, { responsive: false });
+  const instance = createTable(host.element, table, { autoResize: false });
   const input = host.element.querySelector<HTMLInputElement>('input')!;
   input.focus();
   input.value = 'Alpha';
@@ -285,7 +285,7 @@ it('table Escape cancels queued typing and focuses the current body', () => {
 
 it('table preserves the logical cell after reordering and rejects invalid updates atomically', () => {
   const host = container();
-  const instance = createTable(host.element, table, { responsive: false });
+  const instance = createTable(host.element, table, { autoResize: false });
   host.element.querySelector<HTMLElement>('tbody')!.focus();
   instance.update({ ...table, data: [...rows].reverse() });
   expect(host.element.querySelector('.oc-table-cell-focus')?.textContent).toBe('Alpha');
@@ -300,7 +300,7 @@ it('table preserves the logical cell after reordering and rejects invalid update
 it('table animation does not permanently block responsive layout', () => {
   vi.useFakeTimers();
   const host = container();
-  const instance = createTable(host.element, { ...table, animation: true }, { responsive: false });
+  const instance = createTable(host.element, { ...table, animation: true }, { autoResize: false });
   host.width(390);
   instance.resize();
   vi.advanceTimersByTime(5000);
@@ -324,7 +324,7 @@ it('table callbacks distinguish typed, duplicate and missing keys after sorting'
   const instance = createTable(
     host.element,
     { ...table, rowKey: 'id', data, columns: [{ key: 'name', label: 'Name', sortable: true }] },
-    { responsive: false, onRowClick: (row) => selected.push(row) },
+    { autoResize: false, onRowClick: (row) => selected.push(row) },
   );
   instance.setState({ sort: { column: 'name', direction: 'asc' } });
   const renderedRows = [...host.element.querySelectorAll('tbody tr')];
@@ -341,7 +341,7 @@ it('table CSV includes every filtered row even when the displayed table is pagin
   const instance = createTable(
     host.element,
     { ...table, pagination: { pageSize: 1 } },
-    { responsive: false },
+    { autoResize: false },
   );
   expect(host.element.querySelectorAll('tbody tr')).toHaveLength(1);
   instance.setState({ page: 1, sort: { column: 'name', direction: 'desc' } });
@@ -366,7 +366,7 @@ it.each([
     ],
     encoding: { x: { field: 'x', type: 'ordinal' }, y: { field: 'y', type: 'quantitative' } },
   };
-  const instance = createChart(host.element, spec, { responsive: false });
+  const instance = createChart(host.element, spec, { autoResize: false });
   const next = {
     ...spec,
     data: spec.data.map((row) => ({ ...row, y: typeof row.y === 'number' ? row.y * 2 : row.y })),

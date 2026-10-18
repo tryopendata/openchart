@@ -125,6 +125,26 @@ function numericFieldValues(data: DataRow[], field: string): number[] {
   return result;
 }
 
+/** ISO date forms JavaScript parses as UTC midnight: YYYY, YYYY-MM, YYYY-MM-DD. */
+const DATE_ONLY_ISO = /^\d{4}(-\d{2}(-\d{2})?)?$/;
+
+/**
+ * Whether every value of a temporal field is a date-only ISO string. Those
+ * parse as UTC midnight, so their axis is built in UTC: a local-time scale
+ * would tick local midnights, shifted off the data by the host's offset, and
+ * drop the first or last date depending on the machine's timezone.
+ */
+function isDateOnlyField(data: DataRow[], field: string): boolean {
+  let any = false;
+  for (const d of data) {
+    const v = d[field];
+    if (v == null) continue;
+    if (typeof v !== 'string' || !DATE_ONLY_ISO.test(v)) return false;
+    any = true;
+  }
+  return any;
+}
+
 /**
  * Extract and parse a field to dates in a single pass (fused fieldValues +
  * parseDates). Semantics preserved exactly:
@@ -746,7 +766,9 @@ function buildPositionalScale(
   // Infer from field type
   switch (channel.type) {
     case 'temporal':
-      return buildTimeScale(channel, data, rangeStart, rangeEnd);
+      return isDateOnlyField(data, channel.field)
+        ? buildUtcScale(channel, data, rangeStart, rangeEnd)
+        : buildTimeScale(channel, data, rangeStart, rangeEnd);
     case 'quantitative':
       return buildLinearScale(channel, data, rangeStart, rangeEnd);
     case 'nominal':
@@ -755,6 +777,21 @@ function buildPositionalScale(
     default:
       return buildLinearScale(channel, data, rangeStart, rangeEnd);
   }
+}
+
+/**
+ * Whether a nominal/ordinal position channel without an explicit scale type
+ * resolves to a band scale (true) or a point scale (false). Only band axes
+ * auto-rotate their labels, so the layout plan asks this too.
+ */
+export function categoricalAxisIsBand(chartType: string, axis: 'x' | 'y'): boolean {
+  return (
+    chartType === 'rect' ||
+    chartType === 'bar' ||
+    chartType === 'beeswarm' ||
+    chartType === 'range' ||
+    ((chartType === 'circle' || chartType === 'lollipop') && axis === 'y')
+  );
 }
 
 /**
@@ -786,12 +823,7 @@ function buildCategoricalScale(
   if (chartType === 'rect') {
     return buildBandScale(channel, data, rangeStart, rangeEnd, HEATMAP_BAND_PADDING);
   }
-  if (
-    chartType === 'bar' ||
-    chartType === 'beeswarm' ||
-    chartType === 'range' ||
-    ((chartType === 'circle' || chartType === 'lollipop') && axis === 'y')
-  ) {
+  if (categoricalAxisIsBand(chartType, axis)) {
     return buildBandScale(channel, data, rangeStart, rangeEnd);
   }
   // Line/area marks read as a continuous trend, like a time scale -- the first

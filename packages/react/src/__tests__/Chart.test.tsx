@@ -1,6 +1,6 @@
 import type { ChartSpec } from '@opendata-ai/openchart-core';
 import { cleanup, render, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Chart } from '../Chart';
 import { VizThemeProvider } from '../ThemeContext';
 
@@ -210,4 +210,44 @@ it('merges spec, provider, and prop themes at authored leaves', async () => {
   expect(title.style.fontSize).toBe('33px');
   expect(title.style.fontFamily).toBe('Georgia');
   expect(container.querySelector<SVGElement>('.oc-source')!.style.fontSize).toBe('15px');
+});
+
+describe('interaction prop', () => {
+  afterEach(cleanup);
+  const clickTitle = (container: HTMLElement) =>
+    container
+      .querySelector('[data-chrome-key="title"]')!
+      .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+  it("interaction='read' suppresses selection even with onSelect", async () => {
+    const onSelect = vi.fn();
+    const { container } = await renderChart({ spec: lineSpec, interaction: 'read', onSelect });
+    clickTitle(container);
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('changing interaction recreates the chart in the new mode', async () => {
+    const onSelect = vi.fn();
+    const { container, rerender } = await renderChart({
+      spec: lineSpec,
+      interaction: 'read',
+      onSelect,
+    });
+    rerender(<Chart spec={lineSpec} interaction="select" onSelect={onSelect} />);
+    await waitFor(() => {
+      clickTitle(container);
+      expect(onSelect).toHaveBeenCalled();
+    });
+  });
+
+  it('adding onSelect later re-infers select mode', async () => {
+    const onSelect = vi.fn();
+    const { container, rerender } = await renderChart({ spec: lineSpec });
+    clickTitle(container);
+    rerender(<Chart spec={lineSpec} onSelect={onSelect} />);
+    await waitFor(() => {
+      clickTitle(container);
+      expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ path: '/chrome/title' }));
+    });
+  });
 });

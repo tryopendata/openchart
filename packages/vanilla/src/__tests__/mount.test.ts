@@ -183,8 +183,8 @@ describe('createChart', () => {
   });
 
   it('passes responsive option to skip resize observer', () => {
-    // Should not throw with responsive: false
-    const chart = createChart(container, lineSpec, { responsive: false });
+    // Should not throw with autoResize: false
+    const chart = createChart(container, lineSpec, { autoResize: false });
 
     const svg = container.querySelector('svg');
     expect(svg).not.toBeNull();

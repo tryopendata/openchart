@@ -129,8 +129,9 @@ before shipping; the ChartSpec subset is the tightest surface the library offers
 Field-level validation against the provided data is what kills the dominant
 failure mode (a spec that references a hallucinated column and renders an empty
 chart). `validateSpec` returns machine-readable errors: each carries a `code`, the
-offending `path`, and a repair-friendly `suggestion`. Misspelled field names get a
-nearest-column "did you mean" hint.
+offending `path` as a root-relative JSON Pointer (`/encoding/y/field`), and a
+repair-friendly `suggestion`. Misspelled field names get a nearest-column "did you
+mean" hint.
 
 ```js
 const { valid, errors } = validateSpec(withData);

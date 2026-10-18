@@ -28,9 +28,7 @@ import {
 } from '@opendata-ai/openchart-core';
 import { scaleLinear } from 'd3-scale';
 import { curveMonotoneX, area as d3area, line as d3line } from 'd3-shape';
-import { heuristicMeasure } from '../annotations/geometry';
 import { annotationNoteLineCount } from '../annotations/notes';
-import { referenceLabelReserve } from '../annotations/reference-layout';
 import { flattenLayers } from '../compiler/index';
 import { normalizeSpec } from '../compiler/normalize';
 import type { NormalizedChartSpec } from '../compiler/types';
@@ -41,12 +39,38 @@ import {
   ENDPOINT_ENTRY_GAP,
   ENDPOINT_LEADER_THRESHOLD,
 } from '../endpoint-labels/constants';
+import { NO_REFERENCE_RESERVE, outsideBudget } from '../layout/budget';
 import type { MeasureFn } from '../layout/plan';
 import { createMeasureFn } from '../layout/plan';
+import { resolveChromeLayout } from '../layout/shared';
 import { measureCategoricalLegendContent, placeLegend } from '../legend/compute';
-import { expandSpecSugar } from './spec-sugar';
+import type { InternalCompileOptions, LeafContext } from './internal-options';
+import { emitSpecWarnings, expandSpecSugar } from './spec-sugar';
 
-type ChartCompiler = (spec: unknown, options: CompileOptions) => ChartLayout;
+type ChartCompiler = (spec: unknown, options: InternalCompileOptions) => ChartLayout;
+
+/**
+ * Hold a measure-pass compile's warnings and diagnostics. A leaf whose measure
+ * layout is final releases them; a leaf the assembly recompiles drops them, so
+ * each leaf reports once.
+ */
+function holdReports(options: CompileOptions) {
+  const warnings: string[] = [];
+  const diagnostics: Parameters<NonNullable<CompileOptions['onDiagnostic']>>[0][] = [];
+  return {
+    sinks: {
+      onWarn: (message: string) => warnings.push(message),
+      onDiagnostic: options.onDiagnostic
+        ? (diagnostic: (typeof diagnostics)[number]) => diagnostics.push(diagnostic)
+        : undefined,
+    },
+    release() {
+      // One call per message keeps the per-sink deprecation de-duplication.
+      for (const message of warnings) emitSpecWarnings([message], options.onWarn);
+      for (const diagnostic of diagnostics) options.onDiagnostic?.(diagnostic);
+    },
+  };
+}
 
 /**
  * Paint order controls interaction IDs; authored leaf order controls identity.
@@ -105,7 +129,7 @@ export function compileLayer(
   // Past this point every compile is one piece of a multi-leaf layer, not a
   // standalone chart. Flagged so per-chart resolutions that only make sense for
   // a whole figure (the canvas mark layer) opt out.
-  const layerOptions: CompileOptions = { ...options, layered: true };
+  const layerOptions: InternalCompileOptions = { ...options, layered: true };
 
   if (spec.resolve?.scale?.y === 'independent') {
     return compileLayerIndependent(leaves, spec, layerOptions, compileChart);
@@ -132,8 +156,12 @@ export function compileLayer(
 
   // Leaf specs lack the layer-level chrome/legend, so left alone they compute
   // a different chart area than the primary and their marks drift off the
-  // axes. Freeze the primary's area (and inherit its theme) for every leaf.
-  const leafOptions: CompileOptions = { ...layerOptions, frozenChartArea: primaryLayout.area };
+  // axes. Freeze the primary's area for every leaf. Each leaf's own theme
+  // deep-merges over the layer theme for its marks.
+  const leafOptions: InternalCompileOptions = {
+    ...layerOptions,
+    frozenBudget: { chartArea: primaryLayout.area },
+  };
 
   // Shared scales means shared *domains*, not just a shared plot rect. Each leaf
   // otherwise re-fits its own domain from its own rows, so a layer holding fewer
@@ -241,7 +269,7 @@ function estimateYAxisLabelWidth(
 function compileLayerIndependent(
   leaves: ChartSpec[],
   layerSpec: LayerSpec,
-  options: CompileOptions,
+  options: InternalCompileOptions,
   compileChart: ChartCompiler,
 ): ChartLayout {
   if (leaves.length > 2) {
@@ -263,9 +291,11 @@ function compileLayerIndependent(
     );
   }
 
-  const theme = resolveTheme(
-    mergeThemeConfig(mergeThemeConfig(layerSpec.theme, leaf1.theme), options.theme),
-  );
+  // Each side's axis and marks belong to its leaf, so they use the leaf theme
+  // deep-merged over the layer's (as shared-axis leaf marks do). Root chrome
+  // and the shared legend come from leaf 0's compile with the root theme.
+  const leafTheme1 = mergeThemeConfig(layerSpec.theme, leaf1.theme);
+  const theme = resolveTheme(mergeThemeConfig(leafTheme1, options.theme));
   const axisFontSize = theme.fonts?.sizes?.axisTick ?? 11;
   const measureFn = createMeasureFn(options.measureText);
   const rightAxisWidth = estimateYAxisLabelWidth(
@@ -291,7 +321,7 @@ function compileLayerIndependent(
     : 0;
   const rightReserve = Math.max(tickExtent, titleExtent);
 
-  const optionsWithReserve: CompileOptions = {
+  const optionsWithReserve: InternalCompileOptions = {
     ...options,
     rightAxisReserve: rightReserve,
   };
@@ -309,12 +339,23 @@ function compileLayerIndependent(
     leaf1WithUnionX = withYDomain(leaf1WithUnionX, aligned.domain1);
   }
 
+  // Measure pass: each leaf compiled on its own resolves the plot, legend,
+  // endpoint column and reserves the assembly sizes against. The primary
+  // leaf's budget carries the figure's authored reserves.
   const primary0 = buildPrimarySpec([leaf0WithUnionX], layerSpec);
-  let layout0 = compileChart(primary0, optionsWithReserve);
+  const measure0 = holdReports(options);
+  const leaf0Budget: LeafContext = {};
+  let layout0 = compileChart(primary0, {
+    ...optionsWithReserve,
+    ...measure0.sinks,
+    leafContext: leaf0Budget,
+  });
 
   const primary1 = buildPrimarySpec([leaf1WithUnionX], layerSpec);
+  primary1.theme = leafTheme1;
   primary1.annotations = [];
-  let layout1 = compileChart(primary1, optionsWithReserve);
+  const measure1 = holdReports(options);
+  let layout1 = compileChart(primary1, { ...optionsWithReserve, ...measure1.sinks });
 
   // Endpoint columns belong to the assembled figure. Both axes must use the
   // same plot rectangle, with the trailing column outside the right axis.
@@ -345,13 +386,7 @@ function compileLayerIndependent(
     const legendReserve = rightLegends.length
       ? Math.max(...rightLegends.map((legend) => legend.bounds.width)) + 8
       : 0;
-    const referenceReserve = referenceLabelReserve(
-      primary0.annotations ?? [],
-      options.width,
-      options.measureText
-        ? (text, font) => options.measureText!(text, font.fontSize, font.fontWeight).width
-        : heuristicMeasure,
-    );
+    const referenceReserve = leaf0Budget.budget?.reference ?? NO_REFERENCE_RESERVE;
     const right =
       options.width -
       pad -
@@ -360,38 +395,20 @@ function compileLayerIndependent(
       endpointWidth -
       legendReserve -
       referenceReserve.right;
-    const grow = (primary0.chromeLayout ?? options.chromeLayout) !== 'subtract';
-    const bottom = grow
+    // With the note band outside the budget the primary plot keeps its
+    // height; inside it, both axes share the shorter plot.
+    const bottom = outsideBudget(resolveChromeLayout(primary0, options), 'notes')
       ? layout0.area.y + layout0.area.height
       : Math.min(layout0.area.y + layout0.area.height, layout1.area.y + layout1.area.height);
-    const area = {
-      ...(options.frozenChartArea ?? {
-        x,
-        y,
-        width: Math.max(1, right - x),
-        height: Math.max(1, bottom - y),
-      }),
+    // Frozen pass: both leaves draw into the shared plot with the primary's
+    // note band. The reserve is measured from authored text up front, so a
+    // narrower plot that demotes more labels never needs another pass.
+    const frozenBudget = {
+      chartArea: { x, y, width: Math.max(1, right - x), height: Math.max(1, bottom - y) },
+      noteReserve: noteReserve(layout0),
     };
-    let reserve = noteReserve(layout0);
-    // Narrowing the plot can demote more annotations. Carry the old reserve
-    // through frozen compilation, then reconcile any new note lines. The
-    // reserve only grows and is bounded by the authored annotation count.
-    for (let pass = 0; pass <= (primary0.annotations?.length ?? 0) + 1; pass++) {
-      const alignedOptions = {
-        ...optionsWithReserve,
-        frozenChartArea: area,
-        footnoteReserve: reserve,
-      };
-      layout0 = compileChart(primary0, alignedOptions);
-      layout1 = compileChart(primary1, alignedOptions);
-      const nextReserve = noteReserve(layout0);
-      if (nextReserve <= reserve) break;
-      const delta = nextReserve - reserve;
-      reserve = nextReserve;
-      if (grow) continue;
-      if (options.frozenChartArea) break;
-      area.height = Math.max(1, area.height - delta);
-    }
+    layout0 = compileChart(primary0, { ...optionsWithReserve, frozenBudget });
+    layout1 = compileChart(primary1, { ...optionsWithReserve, frozenBudget });
     // The compiler places right legends next to the plot. In this assembly
     // the right axis and endpoint column occupy that space first.
     const legendShift = rightReserve + ENDPOINT_COLUMN_GAP + endpointWidth;
@@ -408,13 +425,35 @@ function compileLayerIndependent(
   // Without endpoint columns the secondary leaf still needs the primary's
   // stable note band. It owns no annotations, so an independent compile would
   // otherwise stretch its scale below the assembled plot.
-  if (!columns.length && noteReserve(layout0) > 0) {
-    const reserve = noteReserve(layout0);
-    layout1 = compileChart(primary1, {
-      ...optionsWithReserve,
-      frozenChartArea: layout0.area,
-      footnoteReserve: reserve,
-    });
+  if (!columns.length) {
+    measure0.release();
+    if (noteReserve(layout0) > 0) {
+      layout1 = compileChart(primary1, {
+        ...optionsWithReserve,
+        frozenBudget: { chartArea: layout0.area, noteReserve: noteReserve(layout0) },
+      });
+    } else measure1.release();
+  }
+
+  // Leaf 0's marks and axes take its merged theme. Its compile above used the
+  // root theme for chrome, so redraw them in the same plot when the two differ.
+  if (layerSpec.theme && leaf0.theme) {
+    const leafView = compileChart(
+      { ...primary0, theme: mergeThemeConfig(layerSpec.theme, leaf0.theme) },
+      {
+        ...optionsWithReserve,
+        // The root-theme compile already reported this leaf's warnings.
+        ...holdReports(options).sinks,
+        frozenBudget: { chartArea: layout0.area, noteReserve: noteReserve(layout0) },
+      },
+    );
+    layout0 = {
+      ...layout0,
+      marks: leafView.marks,
+      axes: leafView.axes,
+      tooltipDescriptors: leafView.tooltipDescriptors,
+      ...(layout0.endpointLabels ? { endpointLabels: leafView.endpointLabels } : {}),
+    };
   }
 
   const y2Axis = layout1.axes.y
@@ -554,7 +593,7 @@ function compileLayerIndependent(
         marker: {
           ...entry.marker,
           dataX: point.x,
-          x: point.x + (leading ? -1 : 1) * entry.marker.radius,
+          x: point.x,
         },
       };
     };
@@ -1040,9 +1079,14 @@ function withSharedDomains(leaf: ChartSpec, shared: SharedDomains): ChartSpec {
   return { ...leaf, encoding } as unknown as ChartSpec;
 }
 
-/** Authored theme ownership shared by layer compilation and host text measurement. */
+/**
+ * Root (chrome, axes, legend) theme of a layer, shared by layer compilation and
+ * host text measurement. Like every other root property, the layer's value wins
+ * whole and the first leaf's is the fallback. Leaf marks are themed separately:
+ * each leaf's theme deep-merges over the layer theme for its own marks.
+ */
 export function resolveLayerTheme(layerSpec: LayerSpec, primary = flattenLayers(layerSpec)[0]) {
-  return mergeThemeConfig(layerSpec.theme, primary?.theme);
+  return layerSpec.theme ?? primary?.theme;
 }
 
 export function buildPrimarySpec(leaves: ChartSpec[], layerSpec: LayerSpec): ChartSpec {

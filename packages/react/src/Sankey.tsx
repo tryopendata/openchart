@@ -137,7 +137,7 @@ export const Sankey = forwardRef<SankeyHandle, SankeyProps>(function Sankey(
       onLinkClick: stableOnLinkClick,
       onNodeHover: stableOnNodeHover,
       onLinkHover: stableOnLinkHover,
-      responsive: true,
+      autoResize: true,
     };
 
     instanceRef.current = createSankey(container, spec, options);

@@ -16,7 +16,7 @@ export interface EditOp {
   op: 'set' | 'remove' | 'add';
   path: string;
   value?: unknown;
-  /** Preconditions on the nearest authored annotation ancestor. */
+  /** Preconditions on the nearest authored annotation ancestor. `text` matches a refline/range `label`. */
   expect?: { id?: string; type?: string; text?: string };
 }
 
@@ -48,7 +48,7 @@ export type ElementRef =
       type: 'annotation';
       index: number;
       id?: string;
-      /** RFC 6901 JSON Pointer to the edited property in the spec. */
+      /** Root-relative RFC 6901 JSON Pointer to the authored object this ref identifies (e.g. `/layer/0/annotations/2`, `/chrome/title`). Always set on refs the chart emits or returns; legend refs point at `/legend`. Edited properties are addressed by `EditOp.path`. */
       path?: string;
       /** Rendered facet instance; source identity remains index/id/path. */
       facetInstance?: string;
@@ -56,19 +56,19 @@ export type ElementRef =
   | {
       type: 'chrome';
       key: ChromeKey;
-      /** RFC 6901 JSON Pointer to the edited property in the spec. */
+      /** Root-relative RFC 6901 JSON Pointer to the authored object this ref identifies (e.g. `/layer/0/annotations/2`, `/chrome/title`). Always set on refs the chart emits or returns; legend refs point at `/legend`. Edited properties are addressed by `EditOp.path`. */
       path?: string;
     }
   | {
       type: 'legend';
-      /** RFC 6901 JSON Pointer to the edited property in the spec. */
+      /** Root-relative RFC 6901 JSON Pointer to the authored object this ref identifies (e.g. `/layer/0/annotations/2`, `/chrome/title`). Always set on refs the chart emits or returns; legend refs point at `/legend`. Edited properties are addressed by `EditOp.path`. */
       path?: string;
     }
   | {
       type: 'legend-entry';
       series: string;
       index: number;
-      /** RFC 6901 JSON Pointer to the edited property in the spec. */
+      /** Root-relative RFC 6901 JSON Pointer to the authored object this ref identifies (e.g. `/layer/0/annotations/2`, `/chrome/title`). Always set on refs the chart emits or returns; legend refs point at `/legend`. Edited properties are addressed by `EditOp.path`. */
       path?: string;
     };
 
@@ -133,14 +133,6 @@ export interface MarkEvent {
  * or ChartProps (React component) to receive interaction callbacks.
  */
 export interface ChartEventHandlers {
-  /**
-   * Explicitly enable or disable edit interactions (drag, select, keyboard
-   * delete/edit). When true, the interaction layer is wired even without
-   * onEdit. When false, all edit interactions are suppressed even when
-   * onEdit is provided. When omitted, each interaction block uses its
-   * existing callback-presence gate.
-   */
-  editable?: boolean;
   /** Called when a data mark is clicked. */
   onMarkClick?: (event: MarkEvent) => void;
   /** Called when the mouse enters a data mark. */

@@ -32,7 +32,7 @@ describe('did-you-mean field suggestions', () => {
       },
     });
     expect(result.valid).toBe(false);
-    const suggestion = suggestionFor(result, 'encoding.y.field');
+    const suggestion = suggestionFor(result, '/encoding/y/field');
     expect(suggestion).toContain('Did you mean "revenue"?');
     // The full available-column list is still present alongside the hint.
     expect(suggestion).toContain('revenue');
@@ -49,7 +49,7 @@ describe('did-you-mean field suggestions', () => {
       },
     });
     expect(result.valid).toBe(false);
-    const suggestion = suggestionFor(result, 'encoding.y.field');
+    const suggestion = suggestionFor(result, '/encoding/y/field');
     expect(suggestion).not.toContain('Did you mean');
     // Still lists the real columns so the author can pick the right one.
     expect(suggestion).toContain('revenue');
@@ -62,7 +62,7 @@ describe('did-you-mean field suggestions', () => {
       columns: [{ key: 'quater' }], // typo of "quarter"
     });
     expect(result.valid).toBe(false);
-    const suggestion = suggestionFor(result, 'columns[0].key');
+    const suggestion = suggestionFor(result, '/columns/0/key');
     expect(suggestion).toContain('Did you mean "quarter"?');
   });
 
@@ -77,7 +77,7 @@ describe('did-you-mean field suggestions', () => {
       },
     });
     expect(result.valid).toBe(false);
-    const suggestion = suggestionFor(result, 'encoding.source.field');
+    const suggestion = suggestionFor(result, '/encoding/source/field');
     expect(suggestion).toContain('Did you mean "source"?');
     expect(suggestion).toContain('target');
   });
@@ -92,7 +92,7 @@ describe('did-you-mean field suggestions', () => {
       },
     });
     expect(result.valid).toBe(false);
-    const suggestion = suggestionFor(result, 'encoding.value.field');
+    const suggestion = suggestionFor(result, '/encoding/value/field');
     expect(suggestion).toContain('Did you mean "value"?');
   });
 
@@ -106,7 +106,7 @@ describe('did-you-mean field suggestions', () => {
       },
     });
     expect(result.valid).toBe(false);
-    const suggestion = suggestionFor(result, 'encoding.label.field');
+    const suggestion = suggestionFor(result, '/encoding/label/field');
     expect(suggestion).toContain('Did you mean "label"?');
   });
 
@@ -121,7 +121,7 @@ describe('did-you-mean field suggestions', () => {
       },
     });
     expect(result.valid).toBe(false);
-    const suggestion = suggestionFor(result, 'encoding.color.field');
+    const suggestion = suggestionFor(result, '/encoding/color/field');
     expect(suggestion).toContain('Did you mean "group"?');
   });
 
@@ -135,7 +135,7 @@ describe('did-you-mean field suggestions', () => {
       },
     });
     expect(result.valid).toBe(false);
-    const suggestion = suggestionFor(result, 'encoding.nodeColor.field');
+    const suggestion = suggestionFor(result, '/encoding/nodeColor/field');
     expect(suggestion).toContain('Did you mean "category"?');
   });
 
@@ -146,7 +146,7 @@ describe('did-you-mean field suggestions', () => {
       edges: [{ source: 'alpha', target: 'betta' }], // typo of "beta"
     });
     expect(result.valid).toBe(false);
-    const suggestion = suggestionFor(result, 'edges[0].target');
+    const suggestion = suggestionFor(result, '/edges/0/target');
     expect(suggestion).toContain('Did you mean "beta"?');
   });
 
@@ -164,7 +164,7 @@ describe('did-you-mean field suggestions', () => {
       },
     });
     expect(result.valid).toBe(false);
-    const suggestion = suggestionFor(result, 'encoding.x.field');
+    const suggestion = suggestionFor(result, '/encoding/x/field');
     expect(suggestion).not.toContain('Did you mean');
   });
 });

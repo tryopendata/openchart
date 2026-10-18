@@ -468,3 +468,58 @@ export const ChromeMaxLines = () => (
     <Chart spec={chromeMaxLinesSpec} />
   </div>
 );
+
+// Outside reference labels in a short, narrow figure (v9 review, Oct 2026).
+// Three wrapped event labels plus a wrapped threshold label cannot all fit in
+// the lanes above and beside a 400px-tall plot at ~358px wide. The top lane
+// packs labels whose extents don't overlap into one row (2017 and 2022 share
+// it), takes at most 25% of the height, and yields before chrome: at 400px the
+// subtitle stays, one row sits above the plot, and the 2020 label falls back
+// inside the plot on its own. Every label stays on canvas.
+const referenceLaneOverflowSpec: ChartSpec = {
+  mark: 'line',
+  data: [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024].map((year, i) => ({
+    year: String(year),
+    rate: 4 + Math.sin(i / 1.5) * 1.6 + i * 0.25,
+  })),
+  encoding: {
+    x: { field: 'year', type: 'temporal', axis: { title: undefined } },
+    y: { field: 'rate', type: 'quantitative', axis: { title: 'Unemployment rate (%)' } },
+  },
+  chrome: {
+    title: 'Three policy changes, one labor market',
+    subtitle: 'Unemployment rate around each policy event',
+  },
+  annotations: [
+    {
+      type: 'refline',
+      x: '2017',
+      label: 'Minimum wage increase takes effect statewide',
+      labelPlacement: 'outside',
+    },
+    {
+      type: 'refline',
+      x: '2020',
+      label: 'Pandemic emergency declaration and closures',
+      labelPlacement: 'outside',
+    },
+    {
+      type: 'refline',
+      x: '2022',
+      label: 'Expanded child tax credit expires nationwide',
+      labelPlacement: 'outside',
+    },
+    {
+      type: 'refline',
+      y: 6,
+      label: 'Long-run average across the full period',
+      labelPlacement: 'outside',
+    },
+  ],
+};
+
+export const ReferenceLaneOverflow = () => (
+  <div className="story-chart story-h-400">
+    <Chart spec={referenceLaneOverflowSpec} />
+  </div>
+);

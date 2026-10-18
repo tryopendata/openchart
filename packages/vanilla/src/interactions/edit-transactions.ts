@@ -36,14 +36,14 @@ export function editToTransaction(
     if (!annotation || (edit.element.id !== undefined && annotation.id !== edit.element.id))
       return null;
     const authored = 'annotation' in edit ? edit.annotation : annotation;
+    // Non-text annotations carry their identifying text in `label`; the
+    // precondition checks it there so reordered ID-less reflines still fail.
+    const text = authored.type === 'text' ? authored.text : authored.label;
     const expected: EditOp['expect'] = {
       type: authored.type,
-      text: authored.type === 'text' ? authored.text : (authored.label ?? ''),
+      ...(text !== undefined ? { text } : {}),
       ...(authored.id !== undefined ? { id: authored.id } : {}),
     };
-    // Non-text annotations have a label rather than a text property. The
-    // precondition uses their authored text value (absent), not the display label.
-    if (authored.type !== 'text') expected.text = undefined;
     const path = `${source.path}/${edit.element.index}`;
     switch (edit.type) {
       case 'annotation':
@@ -75,6 +75,8 @@ export function editToTransaction(
       case 'delete':
         ops.push({ op: 'remove', path, expect: expected });
         break;
+      default:
+        edit satisfies never;
     }
   } else if (edit.type === 'chrome' || ('element' in edit && edit.element.type === 'chrome')) {
     const key =

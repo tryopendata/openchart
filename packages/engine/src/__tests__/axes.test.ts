@@ -54,8 +54,11 @@ describe('computeAxes', () => {
     const scales = computeScales(lineSpec, chartArea, lineSpec.data);
     const axes = computeAxes(scales, chartArea, fullStrategy, theme);
 
-    expect(axes.x).toBeDefined();
-    expect(axes.y).toBeDefined();
+    // x runs along the bottom edge of the plot, y up the left edge.
+    expect(axes.x!.start.y).toBe(chartArea.y + chartArea.height);
+    expect(axes.x!.ticks.length).toBeGreaterThan(1);
+    expect(axes.y!.start.x).toBe(chartArea.x);
+    expect(axes.y!.ticks.length).toBeGreaterThan(1);
   });
 
   it('generates ticks for both axes', () => {

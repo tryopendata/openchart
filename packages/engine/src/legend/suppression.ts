@@ -14,7 +14,7 @@ export interface SuppressionResult {
 
 /** Inputs needed by the resolution helper. */
 export interface SuppressionContext {
-  /** Number of distinct series (color-encoding domain values). 0 if no color encoding. */
+  /** Number of distinct series (`seriesField` values). 0 when the chart has no series field. */
   seriesCount: number;
   /** True when responsive strategy strips inline labels (compact breakpoint). */
   labelsHiddenByStrategy: boolean;
@@ -82,8 +82,7 @@ export function resolveSuppression(
   ctx: SuppressionContext,
 ): SuppressionResult {
   const isLineOrArea = spec.markType === 'line' || spec.markType === 'area';
-  const hasColorEncoding = spec.encoding.color != null;
-  const isMultiSeries = isLineOrArea && hasColorEncoding && ctx.seriesCount >= 2;
+  const isMultiSeries = isLineOrArea && seriesField(spec) != null && ctx.seriesCount >= 2;
 
   // Single-series, non-line/area, or compact strategy: never show endpoint
   // column. Legend follows its own rules elsewhere.
@@ -158,17 +157,28 @@ export function resolveSuppression(
 }
 
 /**
- * Count distinct series for the color encoding (for use in
- * SuppressionContext.seriesCount). Returns 0 when no color encoding is set
- * or when the encoding is conditional/quantitative.
+ * The field that splits a line/area chart into identifiable series: a
+ * categorical color field, or, on a line without one, the strokeDash field
+ * (the line compute groups by it). `detail` is deliberately excluded: as in
+ * Vega-Lite it groups without identifying, so it gets no legend or endpoint
+ * column. Conditional and quantitative color never define series themselves.
+ */
+export function seriesField(spec: NormalizedChartSpec): string | undefined {
+  const color = spec.encoding.color;
+  if (color && !('condition' in color) && 'field' in color && color.type !== 'quantitative')
+    return color.field || undefined;
+  if (spec.markType !== 'line') return undefined;
+  const dash = spec.encoding.strokeDash;
+  return dash && 'field' in dash ? dash.field || undefined : undefined;
+}
+
+/**
+ * Count distinct series (for use in SuppressionContext.seriesCount): values of
+ * `seriesField`, so color series and strokeDash-only line series both count.
+ * Returns 0 when the chart has no series field.
  */
 export function countColorSeries(spec: NormalizedChartSpec): number {
-  const colorEnc = spec.encoding.color;
-  if (!colorEnc) return 0;
-  if ('condition' in colorEnc) return 0;
-  if (!('field' in colorEnc)) return 0;
-  if (colorEnc.type === 'quantitative') return 0;
-  const field = colorEnc.field;
+  const field = seriesField(spec);
   if (!field) return 0;
   const seen = new Set<string>();
   for (const row of spec.data) {

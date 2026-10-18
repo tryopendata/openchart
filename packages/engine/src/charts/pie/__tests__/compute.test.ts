@@ -109,8 +109,7 @@ describe('computePieMarks', () => {
       const marks = computePieMarks(spec, scales, chartArea, fullStrategy, false);
 
       for (const mark of marks) {
-        expect(mark.path).toBeTruthy();
-        expect(mark.path.length).toBeGreaterThan(0);
+        expect(mark.path).toMatch(/^M[-\d.]/);
       }
     });
 
@@ -179,9 +178,10 @@ describe('computePieMarks', () => {
       const marks = computePieMarks(spec, scales, chartArea, fullStrategy, false);
 
       for (const mark of marks) {
-        expect(mark.centroid).toBeDefined();
-        expect(typeof mark.centroid.x).toBe('number');
-        expect(typeof mark.centroid.y).toBe('number');
+        // The centroid sits inside the slice: within outerRadius of the pie center.
+        const dist = Math.hypot(mark.centroid.x - mark.center.x, mark.centroid.y - mark.center.y);
+        expect(dist).toBeGreaterThan(0);
+        expect(dist).toBeLessThan(mark.outerRadius);
       }
     });
   });
@@ -291,7 +291,7 @@ describe('computePieMarks', () => {
       const marks = computePieMarks(spec, scales, chartArea, fullStrategy, true);
 
       for (const mark of marks) {
-        expect(mark.path).toBeTruthy();
+        expect(mark.path).toMatch(/^M[-\d.]/);
         expect(mark.outerRadius).toBeGreaterThan(0);
         expect(mark.innerRadius).toBeGreaterThan(0);
       }
@@ -391,8 +391,11 @@ describe('computePieLabels', () => {
     const labels = computePieLabels(marks, chartArea);
 
     const visibleLabels = labels.filter((l) => l.visible);
+    expect(visibleLabels.length).toBeGreaterThan(0);
     for (const label of visibleLabels) {
-      expect(label.connector).toBeDefined();
+      // Runs from the label to its own slice's centroid.
+      expect(label.connector!.from).toEqual({ x: label.x, y: label.y });
+      expect(label.connector!.to).toEqual(marks[label.index!].centroid);
     }
   });
 });

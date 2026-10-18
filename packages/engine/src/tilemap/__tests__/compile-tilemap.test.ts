@@ -117,8 +117,7 @@ describe('compileTileMap', () => {
 
     const dataTiles = result.tiles.filter((t) => t.hasData);
     for (const tile of dataTiles) {
-      expect(tile.fill).toBeTruthy();
-      expect(typeof tile.fill).toBe('string');
+      expect(tile.fill).toMatch(/^#[0-9a-f]{6}$/i);
     }
 
     const fills = new Set(dataTiles.map((t) => t.fill));
@@ -172,11 +171,12 @@ describe('compileTileMap', () => {
       const result = compileTileMap(basicSpec, defaultOptions);
 
       expect(result.gradientLegend).not.toBeNull();
-      expect(result.gradientLegend!.minLabel).toBeTruthy();
-      expect(result.gradientLegend!.maxLabel).toBeTruthy();
-      expect(Number(result.gradientLegend!.minLabel)).toBeLessThan(
-        Number(result.gradientLegend!.maxLabel),
-      );
+      // basicSpec spans FL 3.3 .. CA 5.4; the endpoints read like those tiles do.
+      const tile = (code: string) => result.tiles.find((t) => t.stateCode === code)!;
+      expect(Number(result.gradientLegend!.minLabel)).toBe(3.3);
+      expect(Number(result.gradientLegend!.maxLabel)).toBe(5.4);
+      expect(result.gradientLegend!.minLabel).toBe(tile('FL').formattedValue);
+      expect(result.gradientLegend!.maxLabel).toBe(tile('CA').formattedValue);
     });
 
     it('has colorStops', () => {
@@ -186,7 +186,7 @@ describe('compileTileMap', () => {
       for (const stop of result.gradientLegend!.colorStops) {
         expect(stop.offset).toBeGreaterThanOrEqual(0);
         expect(stop.offset).toBeLessThanOrEqual(1);
-        expect(stop.color).toBeTruthy();
+        expect(stop.color).toMatch(/^(#[0-9a-f]{6}|rgba?\([^)]+\))$/i);
       }
     });
 

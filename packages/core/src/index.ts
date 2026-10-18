@@ -13,6 +13,7 @@
 
 export type { EditTransactionResult } from './helpers/edit-transactions';
 export { applyEditTransaction } from './helpers/edit-transactions';
+export { encodePointerToken, jsonPointer } from './helpers/json-pointer';
 export * from './types/index';
 
 // ---------------------------------------------------------------------------

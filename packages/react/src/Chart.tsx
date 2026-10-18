@@ -13,12 +13,16 @@ import type {
   DarkMode,
   DataRow,
   ElementRef,
-  GraphSpec,
   LayerSpec,
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
 import { mergeThemeConfig } from '@opendata-ai/openchart-core';
-import { type ChartInstance, createChart, type MountOptions } from '@opendata-ai/openchart-vanilla';
+import {
+  type ChartInstance,
+  createChart,
+  type InteractionMode,
+  type MountOptions,
+} from '@opendata-ai/openchart-vanilla';
 import {
   type CSSProperties,
   forwardRef,
@@ -42,8 +46,14 @@ export interface ChartHandle {
 }
 
 export interface ChartProps<TData extends DataRow = DataRow> extends ChartEventHandlers {
-  /** The visualization spec to render. */
-  spec: ChartSpec<TData> | LayerSpec<TData> | GraphSpec;
+  /** The chart spec to render. Graph specs render through `<Graph />` or `<Visualization />`. */
+  spec: ChartSpec<TData> | LayerSpec<TData>;
+  /**
+   * Interaction mode: `'read'`, `'select'`, or `'edit'`. When omitted it is
+   * inferred from the callbacks (`onEdit` -> edit, `onSelect`/`onDeselect` ->
+   * select, otherwise read). Changing it recreates the chart.
+   */
+  interaction?: InteractionMode;
   /** Theme overrides. */
   theme?: ThemeConfig;
   /** Dark mode: "auto", "force", or "off". */
@@ -106,7 +116,7 @@ function ChartInner(
     onSelect,
     onDeselect,
     onReveal,
-    editable,
+    interaction,
     selectedElement: selectedElementProp,
     highlight,
     className,
@@ -114,7 +124,10 @@ function ChartInner(
   }: ChartProps,
   ref: React.Ref<ChartHandle>,
 ) {
+  // Callback presence feeds the inferred interaction mode, so it recreates the chart.
   const hasEditListener = Boolean(onEdit);
+  const hasSelectListener = Boolean(onSelect);
+  const hasDeselectListener = Boolean(onDeselect);
   const contextTheme = useVizTheme();
   const contextDarkMode = useVizDarkMode();
   const theme = useMemo(() => mergeThemeConfig(contextTheme, themeProp), [contextTheme, themeProp]);
@@ -240,7 +253,7 @@ function ChartInner(
       ...(handlersRef.current.onSelect ? { onSelect: stableOnSelect } : {}),
       ...(handlersRef.current.onDeselect ? { onDeselect: stableOnDeselect } : {}),
       ...(handlersRef.current.onReveal ? { onReveal: stableOnReveal } : {}),
-      ...(editable != null ? { editable } : {}),
+      ...(interaction != null ? { interaction } : {}),
       ...(selectedElementProp ? { selectedElement: selectedElementProp } : {}),
       autoResize,
       revision,
@@ -260,10 +273,12 @@ function ChartInner(
     theme,
     resolvedDarkMode,
     renderer,
-    editable,
+    interaction,
     stableOnAnnotationClick,
     stableOnEdit,
     hasEditListener,
+    hasSelectListener,
+    hasDeselectListener,
     autoResize,
     stableOnLegendToggle,
     stableOnHighlightChange,

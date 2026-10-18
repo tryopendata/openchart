@@ -1,10 +1,11 @@
 import { ConnectorCrossings } from './connector-crossings';
 import { rememberAnnotationGeometry } from './edit-context';
 import {
+  defaultReferenceContainer,
+  NO_REFERENCE_RESERVE,
   placeReferenceLabel,
   type ReferenceLanes,
   type ReferenceReserve,
-  referenceLabelReserve,
 } from './reference-layout';
 /**
  * Annotation computation: converts spec-level annotations to pixel-positioned
@@ -33,8 +34,8 @@ import {
   nudgeRefLineLabel,
   resolveAnnotationCollisions,
 } from './collisions';
-import { SUBTITLE_FONT_WEIGHT, subtitleFontSize } from './constants';
-import type { AnnotationMeasureTextFn } from './geometry';
+import { DEFAULT_ANNOTATION_FONT_SIZE, SUBTITLE_FONT_WEIGHT, subtitleFontSize } from './constants';
+import { type AnnotationMeasureTextFn, stopAtTargetLabel } from './geometry';
 import { annotationBlockBounds, moveAnnotationTo } from './move';
 import { findBestPlacement, isAutoPlacement, type PlacementObstacle } from './placement';
 import { resolvePosition } from './position';
@@ -52,6 +53,10 @@ export interface AnnotationContext {
   chartArea: Rect;
   referenceContainer?: Rect;
   referenceLanes?: ReferenceLanes;
+  /**
+   * Outside reference lanes resolved by the figure budget, the only source of
+   * the reserve. Without one, outside labels place inside the plot.
+   */
   referenceReserve?: ReferenceReserve;
   strategy: LayoutStrategy;
   isDark: boolean;
@@ -73,6 +78,17 @@ export interface AnnotationContext {
    * the title/subtitle. Defaults to the plain SVG clamp margin.
    */
   topBound?: number;
+  /** Endpoint markers drawn on data points (see `adoptPointMarker`). */
+  pointMarkers?: ReadonlyArray<{ x: number; y: number; fill: string; stroke: string }>;
+}
+
+/**
+ * Default callout wrap width: up to 240px inside the padded plot, but never
+ * narrower than about four ems, so a tiny plot does not stack one glyph per line.
+ */
+function defaultCalloutMaxWidth(annotation: TextAnnotation, ctx: AnnotationContext): number {
+  const floor = (annotation.fontSize ?? DEFAULT_ANNOTATION_FONT_SIZE) * 4;
+  return Math.max(floor, Math.min(240, ctx.chartArea.width - 2 * (ctx.padding ?? 16)));
 }
 
 /**
@@ -88,6 +104,20 @@ export interface AnnotationContext {
  * annotation collisions are resolved using a greedy placement algorithm.
  * Finally, labels are clamped to stay within the total SVG bounds.
  */
+/**
+ * A default annotation dot on a point that already carries an endpoint marker
+ * takes the marker's colors, so the two draw as one ring instead of two.
+ */
+function adoptPointMarker(
+  dot: NonNullable<ResolvedAnnotation['dot']>,
+  markers: AnnotationContext['pointMarkers'],
+): void {
+  const marker = markers?.find((m) => Math.abs(m.x - dot.x) < 0.5 && Math.abs(m.y - dot.y) < 0.5);
+  if (!marker) return;
+  dot.fill = marker.fill;
+  dot.stroke = marker.stroke;
+}
+
 export function computeAnnotations(
   spec: NormalizedChartSpec,
   ctx: AnnotationContext,
@@ -96,9 +126,10 @@ export function computeAnnotations(
 
   const svgRect: Rect = { x: 0, y: 0, width: ctx.svg.width, height: ctx.svg.height };
   const annotations: ResolvedAnnotation[] = [];
-  const referenceReserve =
-    ctx.referenceReserve ?? referenceLabelReserve(spec.annotations, ctx.svg.width, ctx.measure);
+  const referenceReserve = ctx.referenceReserve ?? NO_REFERENCE_RESERVE;
   const referenceLanes: ReferenceLanes = ctx.referenceLanes ?? {};
+  // Value labels a leader may run into on its way to its own data point.
+  const dataLabels = ctx.obstacles.filter((obstacle) => obstacle.kind === 'data-label');
 
   // Deferred auto-placement entries (resolved in Pass 2)
   const autoQueue: Array<{
@@ -117,7 +148,7 @@ export function computeAnnotations(
             ...sourceAnnotation,
             maxWidth:
               sourceAnnotation.maxWidth === undefined
-                ? Math.max(1, Math.min(240, ctx.chartArea.width - 2 * (ctx.padding ?? 16)))
+                ? defaultCalloutMaxWidth(sourceAnnotation, ctx)
                 : sourceAnnotation.maxWidth,
           }
         : { ...sourceAnnotation, fontSize: sourceAnnotation.fontSize ?? ctx.smallFontSize ?? 12 };
@@ -193,17 +224,16 @@ export function computeAnnotations(
           ctx.measure,
         );
       }
+      // The resolved array is filtered (an out-of-domain annotation resolves to
+      // nothing), so carry the spec index along -- it's the only stable way back
+      // to the authored annotation from here on (reference lanes key on it too).
+      resolved.specIndex = specIndex;
       if (annotation.type === 'refline' && annotation.labelPlacement)
         placeReferenceLabel(
           annotation,
           resolved,
           ctx.chartArea,
-          ctx.referenceContainer ?? {
-            x: 8,
-            y: ctx.topBound ?? 8,
-            width: ctx.svg.width - 16,
-            height: ctx.svg.height - (ctx.topBound ?? 8) - 8,
-          },
+          ctx.referenceContainer ?? defaultReferenceContainer(ctx.svg, ctx.topBound),
           referenceReserve,
           referenceLanes,
           ctx.measure,
@@ -219,10 +249,6 @@ export function computeAnnotations(
       if (annotation.type === 'refline' && !annotation.labelPlacement && ctx.obstacles.length > 0) {
         nudgeRefLineLabel(resolved, annotation, ctx.obstacles, ctx.chartArea, ctx.measure);
       }
-      // The resolved array is filtered (an out-of-domain annotation resolves to
-      // nothing), so carry the spec index along -- it's the only stable way back
-      // to the authored annotation from here on.
-      resolved.specIndex = specIndex;
       annotations.push(resolved);
     }
   }
@@ -251,7 +277,16 @@ export function computeAnnotations(
     );
     for (const entry of autoQueue) {
       const { annotation, anchorX, anchorY, resolved } = entry;
-      // Must mirror resolveTextAnnotation exactly (lede weight, theme font):
+      // Seed before the search so the leader it scores is the one the commit
+      // below rebuilds; a too-short initial stub left the label unconnected.
+      if (resolved.label)
+        resolved.label.connector ??= textConnectorSeed(
+          annotation,
+          ctx.scales,
+          ctx.isDark,
+          ctx.colors,
+        );
+      // Must mirror resolveTextAnnotation exactly (font weight, theme font):
       // findBestPlacement measures with this style, and the resolved annotation
       // renders with the other one. Any drift and the scored bounds are a lie.
       const labelStyle = makeAnnotationLabelStyle(
@@ -289,16 +324,18 @@ export function computeAnnotations(
         ctx.measure,
         ctx.debugPlacement,
         (x, y, anchor) => {
-          const candidate = structuredClone(resolved);
-          if (!candidate.label) return 0;
-          candidate.label.connector ??= textConnectorSeed(
-            annotation,
-            ctx.scales,
-            ctx.isDark,
-            ctx.colors,
+          // No connector config means no leader at any candidate.
+          if (!resolved.label?.connector) return 0;
+          // The mover replaces label, subtitle and bounds rather than mutating
+          // them, so a shallow copy keeps the resolved annotation untouched.
+          const candidate = { ...resolved };
+          moveAnnotationTo(candidate, resolved.label, x, y, ctx.measure, anchor);
+          const connector = candidate.label?.connector;
+          // Score the leader as it will draw: stopped short of its own value
+          // label. One cut to nothing still strikes that label, so it scores whole.
+          return crossingIndex.score(
+            (connector && stopAtTargetLabel(connector, dataLabels)) || connector,
           );
-          moveAnnotationTo(candidate, candidate.label, x, y, ctx.measure, anchor);
-          return crossingIndex.score(candidate.label.connector);
         },
       );
 
@@ -367,6 +404,16 @@ export function computeAnnotations(
 
   for (const resolved of annotations) {
     const authored = spec.annotations[resolved.specIndex!];
+    // Routing, not placement: an authored block stays put while its leader
+    // stops short of the value label it would otherwise strike through.
+    const connector = resolved.label?.connector;
+    if (authored?.type === 'text' && connector && dataLabels.length > 0) {
+      const stopped = stopAtTargetLabel(connector, dataLabels);
+      if (stopped !== undefined)
+        resolved.label = { ...resolved.label!, connector: stopped ?? undefined };
+    }
+    if (authored?.type === 'text' && authored.dot === undefined && resolved.dot)
+      adoptPointMarker(resolved.dot, ctx.pointMarkers);
     if (authored?.type === 'text')
       rememberAnnotationGeometry(
         resolved,
@@ -374,7 +421,7 @@ export function computeAnnotations(
           ...authored,
           maxWidth:
             authored.maxWidth === undefined
-              ? Math.max(1, Math.min(240, ctx.chartArea.width - 2 * (ctx.padding ?? 16)))
+              ? defaultCalloutMaxWidth(authored, ctx)
               : authored.maxWidth,
         },
         ctx,

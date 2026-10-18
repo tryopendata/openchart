@@ -12,17 +12,20 @@ import type {
   DarkMode,
   EditTransaction,
   ElementRef,
-  GraphSpec,
   LayerSpec,
   MarkEvent,
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
 import { mergeThemeConfig } from '@opendata-ai/openchart-core';
-import { type ChartInstance, createChart, type MountOptions } from '@opendata-ai/openchart-vanilla';
+import {
+  type ChartInstance,
+  createChart,
+  type InteractionMode,
+  type MountOptions,
+} from '@opendata-ai/openchart-vanilla';
 import {
   type CSSProperties,
   defineComponent,
-  getCurrentInstance,
   h,
   inject,
   onMounted,
@@ -34,14 +37,19 @@ import {
 import { VizDarkModeKey, VizThemeKey } from './context';
 
 export interface ChartProps {
-  spec: ChartSpec | LayerSpec | GraphSpec;
+  /** The chart spec. Graph specs render through `<Graph />` or `<Visualization />`. */
+  spec: ChartSpec | LayerSpec;
   theme?: ThemeConfig;
   darkMode?: DarkMode;
   /** Rendering backend for point marks; see the vanilla `MountOptions.renderer`. */
   renderer?: 'auto' | 'svg' | 'canvas';
   autoResize?: boolean;
   revision?: string | number;
+  /** Interaction mode; inferred from the edit/select listeners when omitted. */
+  interaction?: InteractionMode;
   onEdit?: (tx: EditTransaction) => void;
+  onSelect?: (element: ElementRef) => void;
+  onDeselect?: (element: ElementRef) => void;
   class?: string;
   style?: string | CSSProperties;
 }
@@ -50,7 +58,7 @@ export const Chart = defineComponent({
   name: 'Chart',
   props: {
     spec: {
-      type: Object as PropType<ChartSpec | LayerSpec | GraphSpec>,
+      type: Object as PropType<ChartSpec | LayerSpec>,
       required: true,
     },
     theme: {
@@ -65,11 +73,20 @@ export const Chart = defineComponent({
       type: String as PropType<'auto' | 'svg' | 'canvas'>,
       default: undefined,
     },
-    // A declared listener prop makes presence reactive. Vue excludes declared
-    // emits listeners from update checks, which would leave editing enabled
-    // when a parent removes its transaction listener.
+    // Declared listener props make presence reactive. Vue excludes declared
+    // emits listeners from update checks, which would leave the inferred
+    // interaction mode stale when a parent adds or removes a listener.
+    // `@edit`, `@select`, and `@deselect` bind to these props.
     onEdit: {
       type: Function as PropType<(tx: EditTransaction) => void>,
+      default: undefined,
+    },
+    onSelect: {
+      type: Function as PropType<(element: ElementRef) => void>,
+      default: undefined,
+    },
+    onDeselect: {
+      type: Function as PropType<(element: ElementRef) => void>,
       default: undefined,
     },
     autoResize: { type: Boolean, default: undefined },
@@ -90,8 +107,8 @@ export const Chart = defineComponent({
       type: [Array, null] as unknown as PropType<string[] | null>,
       default: undefined,
     },
-    editable: {
-      type: Boolean as PropType<boolean>,
+    interaction: {
+      type: String as PropType<InteractionMode>,
       default: undefined,
     },
   },
@@ -101,8 +118,8 @@ export const Chart = defineComponent({
     'mark-leave': () => true,
     'legend-toggle': (_series: string, _visible: boolean) => true,
     'annotation-click': (_annotation: Annotation, _event: MouseEvent, _element: ElementRef) => true,
-    select: (_element: ElementRef) => true,
-    deselect: (_element: ElementRef) => true,
+    'highlight-change': (_values: string[]) => true,
+    reveal: (_guess: Array<{ x: string | number; y: number }>) => true,
   },
   setup(props, { emit, expose }) {
     const containerRef = ref<HTMLDivElement | null>(null);
@@ -112,14 +129,6 @@ export const Chart = defineComponent({
     // Inject theme/darkMode from provider as fallbacks
     const contextTheme = inject(VizThemeKey, undefined);
     const contextDarkMode = inject(VizDarkModeKey, undefined);
-
-    // Check which event listeners are bound by the parent.
-    // Vue 3 passes listeners as onXxx props on the component vnode.
-    // Edit listener presence is a reactive prop below.
-    const vm = getCurrentInstance();
-    const vnodeProps = vm?.vnode.props ?? {};
-    const hasSelectListener = 'onSelect' in vnodeProps;
-    const hasDeselectListener = 'onDeselect' in vnodeProps;
 
     function resolveTheme(): ThemeConfig | undefined {
       return mergeThemeConfig(contextTheme?.value, props.theme);
@@ -144,15 +153,15 @@ export const Chart = defineComponent({
           emit('legend-toggle', series, visible),
         onAnnotationClick: (annotation: Annotation, event: MouseEvent, element: ElementRef) =>
           emit('annotation-click', annotation, event, element),
-        // Only include editing callbacks when the parent binds a listener.
-        // Without this gate, every chart gets drag editing wired up.
-        ...(hasSelectListener
-          ? { onSelect: (element: ElementRef) => emit('select', element) }
+        onHighlightChange: (values: string[]) => emit('highlight-change', values),
+        onReveal: (guess) => emit('reveal', guess),
+        // Only include selection/edit callbacks when the parent binds a listener:
+        // their presence infers the interaction mode when `interaction` is omitted.
+        ...(props.onSelect ? { onSelect: (element: ElementRef) => props.onSelect?.(element) } : {}),
+        ...(props.onDeselect
+          ? { onDeselect: (element: ElementRef) => props.onDeselect?.(element) }
           : {}),
-        ...(hasDeselectListener
-          ? { onDeselect: (element: ElementRef) => emit('deselect', element) }
-          : {}),
-        ...(props.editable != null ? { editable: props.editable } : {}),
+        ...(props.interaction != null ? { interaction: props.interaction } : {}),
         ...(props.selectedElement ? { selectedElement: props.selectedElement } : {}),
         autoResize: props.autoResize,
         revision: props.revision,
@@ -196,24 +205,19 @@ export const Chart = defineComponent({
       destroyChart();
     });
 
-    // Watch spec changes: update if only spec changed, recreate if theme/darkMode changed
+    // Watch spec and revision together so an undo that changes both updates once
     watch(
-      () => JSON.stringify(props.spec),
-      (newVal) => {
+      () => [JSON.stringify(props.spec), props.revision] as const,
+      ([newSpec, newRevision], [, oldRevision]) => {
         if (!instance) return;
-        if (newVal !== prevSpec) {
-          prevSpec = newVal;
+        if (newSpec !== prevSpec || newRevision !== oldRevision) {
+          prevSpec = newSpec;
           instance.update(props.spec, {
             selectedElement: props.selectedElement,
             revision: props.revision,
           });
         }
       },
-    );
-
-    watch(
-      () => props.revision,
-      () => instance?.update(props.spec, { revision: props.revision }),
     );
 
     // Watch selectedElement prop changes
@@ -238,15 +242,18 @@ export const Chart = defineComponent({
       },
     );
 
-    // Recreate chart when theme, darkMode, renderer, or editable change
+    // Recreate chart when theme, darkMode, renderer, or the interaction mode
+    // (explicit or inferred from listener presence) change
     watch(
       [
         () => Boolean(props.onEdit),
+        () => Boolean(props.onSelect),
+        () => Boolean(props.onDeselect),
         () => props.autoResize,
         () => props.theme,
         () => props.darkMode,
         () => props.renderer,
-        () => props.editable,
+        () => props.interaction,
         () => contextTheme?.value,
         () => contextDarkMode?.value,
       ],

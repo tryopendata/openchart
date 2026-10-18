@@ -108,7 +108,7 @@ export function DataTable({
       theme,
       darkMode: resolvedDarkMode,
       onRowClick: stableOnRowClick,
-      responsive: true,
+      autoResize: true,
       onStateChange: stableOnStateChange,
     };
 

@@ -46,8 +46,8 @@ describe('mark label halo', () => {
     expect(label).toBeTruthy();
     expect(label!.getAttribute('paint-order')).toBe('stroke');
     const stroke = label!.getAttribute('stroke');
-    expect(stroke).toBeTruthy();
-    expect(stroke).not.toBe('transparent');
+    // An opaque color: a transparent halo cuts nothing.
+    expect(stroke).toMatch(/^(#[0-9a-f]{6}|rgb\()/i);
     expect(label!.getAttribute('stroke-linejoin')).toBe('round');
   });
 
@@ -118,8 +118,8 @@ describe('annotation label halo', () => {
     expect(label).toBeTruthy();
     expect(label!.getAttribute('paint-order')).toBe('stroke');
     const stroke = label!.getAttribute('stroke');
-    expect(stroke).toBeTruthy();
-    expect(stroke).not.toBe('transparent');
+    // An opaque color: a transparent halo cuts nothing.
+    expect(stroke).toMatch(/^(#[0-9a-f]{6}|rgb\()/i);
     expect(label!.getAttribute('stroke-linejoin')).toBe('round');
   });
 });

@@ -110,11 +110,12 @@ describe('createChart font-load recompile', () => {
   it.each([
     false,
     true,
-  ])('measures the effective first leaf font through updates (nested=%s)', (nested) => {
+  ])('measures the effective root font through updates (nested=%s)', (nested) => {
     installFonts(makeFontFaceSet(true));
     const ctx = stubCanvasContext();
-    const spec = (family: string) => ({
-      theme: { fonts: { family: 'ParentFont' } },
+    // Without a layer theme the first leaf's theme owns the root.
+    const spec = (family: string, parent?: string) => ({
+      ...(parent ? { theme: { fonts: { family: parent } } } : {}),
       layer: nested
         ? [{ layer: [{ ...lineSpec, theme: { fonts: { family } } }] }]
         : [{ ...lineSpec, theme: { fonts: { family } } }],
@@ -128,6 +129,10 @@ describe('createChart font-load recompile', () => {
       chart.update(spec('NextLeafFont'));
       expect(chart.layout.theme.fonts.family).toBe(hostFamily ?? 'NextLeafFont');
       expect(ctx.font).toContain(hostFamily ?? 'NextLeafFont');
+      // A layer theme owns the root whole, ahead of the leaf.
+      chart.update(spec('NextLeafFont', 'ParentFont'));
+      expect(chart.layout.theme.fonts.family).toBe(hostFamily ?? 'ParentFont');
+      expect(ctx.font).toContain(hostFamily ?? 'ParentFont');
       chart.destroy();
     }
   });

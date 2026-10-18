@@ -301,7 +301,7 @@ describe('compileChart markRenderMode', () => {
         },
         { width: 600, height: 400, renderer: 'canvas' },
       );
-      expect(layout.facet).toBeDefined();
+      expect(layout.facet!.panels.map((p) => p.header.text)).toEqual(['a', 'b']);
       expect('markRenderMode' in layout).toBe(false);
     } finally {
       spy.mockRestore();

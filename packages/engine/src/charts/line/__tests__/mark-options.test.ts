@@ -117,9 +117,8 @@ describe('LineMark.dataPoints', () => {
     for (const dp of lineMark.dataPoints!) {
       expect(typeof dp.x).toBe('number');
       expect(typeof dp.y).toBe('number');
-      expect(dp.datum).toBeDefined();
-      expect(dp.datum.date).toBeDefined();
-      expect(dp.datum.value).toBeDefined();
+      // The original row, untouched.
+      expect(spec.data).toContainEqual(dp.datum);
     }
   });
 });

@@ -75,7 +75,7 @@ export function useTable(spec: TableSpec, options?: TableMountOptions): UseTable
     options?.theme,
     options?.darkMode,
     options?.onRowClick,
-    options?.responsive,
+    options?.autoResize,
     handleStateChange,
     options,
     spec,

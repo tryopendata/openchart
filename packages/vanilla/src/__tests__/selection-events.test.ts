@@ -3,6 +3,7 @@ import { elementRef } from '@opendata-ai/openchart-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createContainer } from '../__test-fixtures__/dom';
 import { barSpec, lineSpec, scatterSpec } from '../__test-fixtures__/specs';
+import { buildElementRef, withElementPath } from '../interactions/selection';
 import { createChart } from '../mount';
 
 // ---------------------------------------------------------------------------
@@ -273,8 +274,9 @@ describe('selection events', () => {
       chart.select(ref);
 
       expect(onSelect).toHaveBeenCalledTimes(1);
-      expect(onSelect.mock.calls[0][0]).toEqual(ref);
-      expect(chart.getSelectedElement()).toEqual(ref);
+      // select() fills in the authored path the caller left out.
+      expect(onSelect.mock.calls[0][0]).toEqual({ ...ref, path: '/chrome/title' });
+      expect(chart.getSelectedElement()).toEqual({ ...ref, path: '/chrome/title' });
 
       chart.destroy();
     });
@@ -522,6 +524,39 @@ describe('selection events', () => {
       );
       expect(chart.getSelectedElement()).toMatchObject({ type: 'chrome', key: 'title' });
 
+      // Shift+Tab past the first element releases selection and focus (no keyboard trap).
+      const exit = new KeyboardEvent('keydown', {
+        key: 'Tab',
+        shiftKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      getSvg(container).dispatchEvent(exit);
+      expect(exit.defaultPrevented).toBe(false);
+      expect(chart.getSelectedElement()).toBeNull();
+
+      chart.destroy();
+    });
+
+    it('Tab past the last editable element lets focus leave the chart', () => {
+      const chart = createChart(container, chromeOnlySpec, { onSelect: vi.fn() });
+      const svg = getSvg(container);
+      let prevented = 0;
+      for (let i = 0; i < 20; i++) {
+        const tab = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+        svg.dispatchEvent(tab);
+        if (!tab.defaultPrevented) break;
+        prevented++;
+      }
+      expect(prevented).toBeGreaterThan(0);
+      expect(prevented).toBeLessThan(20);
+      expect(chart.getSelectedElement()).toBeNull();
+      chart.destroy();
+    });
+
+    it('selection callbacks alone keep reader keyboard navigation', () => {
+      const chart = createChart(container, selectionSpec, { onSelect: vi.fn() });
+      expect(container.getAttribute('tabindex')).toBe('0');
       chart.destroy();
     });
   });
@@ -663,7 +698,7 @@ describe('selection events', () => {
   describe('text editing', () => {
     it('double-click on chrome text creates a text editing overlay', () => {
       const onSelect = vi.fn();
-      const chart = createChart(container, selectionSpec, { onSelect });
+      const chart = createChart(container, selectionSpec, { onSelect, interaction: 'edit' });
 
       const titleEl = container.querySelector('[data-chrome-key="title"]') as SVGElement | null;
       if (!titleEl) {
@@ -676,14 +711,14 @@ describe('selection events', () => {
       // A textarea should appear in the container
       const textarea = container.querySelector('textarea');
       expect(textarea).not.toBeNull();
-      expect(chart.isEditing).toBe(true);
+      expect(chart.isTextEditing).toBe(true);
 
       chart.destroy();
     });
 
     it('text editing overlay contains the current text', () => {
       const onSelect = vi.fn();
-      const chart = createChart(container, selectionSpec, { onSelect });
+      const chart = createChart(container, selectionSpec, { onSelect, interaction: 'edit' });
 
       const titleEl = container.querySelector('[data-chrome-key="title"]') as SVGElement | null;
       if (!titleEl) {
@@ -768,8 +803,8 @@ describe('selection events', () => {
       // Textarea should be removed
       expect(container.querySelector('textarea')).toBeNull();
 
-      // isEditing should be false again
-      expect(chart.isEditing).toBe(false);
+      // isTextEditing should be false again
+      expect(chart.isTextEditing).toBe(false);
 
       chart.destroy();
     });
@@ -805,10 +840,10 @@ describe('selection events', () => {
       chart.destroy();
     });
 
-    it('isEditing is false initially', () => {
+    it('isTextEditing is false initially', () => {
       const chart = createChart(container, selectionSpec, { onSelect: vi.fn() });
 
-      expect(chart.isEditing).toBe(false);
+      expect(chart.isTextEditing).toBe(false);
 
       chart.destroy();
     });
@@ -906,7 +941,7 @@ describe('selection events', () => {
 
       const textarea = container.querySelector('textarea');
       expect(textarea).not.toBeNull();
-      expect(chart.isEditing).toBe(true);
+      expect(chart.isTextEditing).toBe(true);
 
       textarea!.value = 'New annotation';
       textarea!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
@@ -943,7 +978,7 @@ describe('selection events', () => {
 
       expect(onEdit).not.toHaveBeenCalled();
       expect(container.querySelector('textarea')).toBeNull();
-      expect(chart.isEditing).toBe(false);
+      expect(chart.isTextEditing).toBe(false);
 
       chart.destroy();
     });
@@ -1047,6 +1082,43 @@ describe('selection events', () => {
       expect(typeof (edit.ops[0].value as { y: unknown }).y).not.toBe('undefined');
 
       chart.destroy();
+    });
+  });
+
+  // =========================================================================
+  // Every emitted ref carries its authored-object path
+  // =========================================================================
+  describe('ElementRef.path', () => {
+    it('is set on refs from Tab, clicks, and programmatic select()', () => {
+      const selected: ElementRef[] = [];
+      const chart = createChart(container, selectionSpec, {
+        onSelect: (ref) => selected.push(ref),
+      });
+      const svg = getSvg(container);
+
+      // Tab walks chrome then annotations.
+      for (let i = 0; i < 4; i++) simulateKeyDown(svg, 'Tab');
+      chart.select({ type: 'chrome', key: 'subtitle' });
+      chart.select({ type: 'annotation', index: 0 });
+
+      expect(selected.map((r) => r.type)).toEqual(expect.arrayContaining(['chrome', 'annotation']));
+      for (const ref of selected) expect(ref.path).toEqual(expect.stringMatching(/^\//));
+      expect(selected.find((r) => r.type === 'chrome')?.path).toBe('/chrome/title');
+      expect(selected.at(-1)).toMatchObject({ type: 'annotation', path: '/annotations/0' });
+      expect(chart.getSelectedElement()?.path).toBe('/annotations/0');
+
+      chart.destroy();
+    });
+
+    it('legend and legend-entry refs point at the legend config', () => {
+      const entry = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      entry.setAttribute('data-legend-index', '1');
+      entry.setAttribute('data-legend-label', 'UK');
+      expect(buildElementRef(entry, [])).toMatchObject({ type: 'legend-entry', path: '/legend' });
+      expect(withElementPath({ type: 'legend' }, selectionSpec).path).toBe('/legend');
+      expect(
+        withElementPath({ type: 'legend-entry', series: 'UK', index: 1 }, selectionSpec).path,
+      ).toBe('/legend');
     });
   });
 });

@@ -242,12 +242,11 @@ describe('header keyboard navigation', () => {
 
   it('ArrowUp from first body row moves focus to header', () => {
     const tbody = focusTbody(wrapper);
-    // ArrowUp from row 0 should focus the header
+    const headers = wrapper.querySelectorAll<HTMLElement>('thead th');
+    const focusSpy = vi.spyOn(headers[0], 'focus');
+    // ArrowUp from row 0 should focus the header in the same column
     keydown(tbody, 'ArrowUp');
-    // Focus moved to header, so tbody's activedescendant should remain unchanged
-    const headers = wrapper.querySelectorAll('thead th');
-    // Can't easily check document.activeElement in happy-dom, but header focus() was called
-    expect(headers[0]).toBeDefined();
+    expect(focusSpy).toHaveBeenCalledTimes(1);
   });
 
   it('Enter on header triggers sort', () => {

@@ -99,7 +99,8 @@ describe('applyFillPatterns via compileChart', () => {
     expect(thin.length).toBeGreaterThan(0);
     expect(thick.length).toBeGreaterThan(0);
     for (const rect of thin) expect(rect.pattern).toBeUndefined();
-    for (const rect of thick) expect(rect.pattern).toBeDefined();
+    // The pattern tile is laid over the series' own solid color.
+    for (const rect of thick) expect(rect.pattern!.base).toBe(rect.fill);
   });
 
   it('assignment does not shift when individual marks are too small', () => {

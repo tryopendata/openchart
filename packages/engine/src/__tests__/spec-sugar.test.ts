@@ -343,24 +343,22 @@ describe('theta on arc marks', () => {
     expect(warned()).toEqual([]);
   });
 
-  it('prefers theta over y when both are present (theta is canonical)', () => {
-    const layout = compileChart(
-      {
-        mark: 'arc',
-        data,
-        encoding: {
-          y: { field: 'category', type: 'quantitative' },
-          theta: { field: 'amount', type: 'quantitative' },
-          color: { field: 'category', type: 'nominal' },
+  it('rejects a differing y when theta is present instead of silently dropping it', () => {
+    expect(() =>
+      compileChart(
+        {
+          mark: 'arc',
+          data,
+          encoding: {
+            y: { field: 'category', type: 'quantitative' },
+            theta: { field: 'amount', type: 'quantitative' },
+            color: { field: 'category', type: 'nominal' },
+          },
         },
-      },
-      OPTIONS,
-    );
-    const arcs = layout.marks.filter((m) => m.type === 'arc');
-    expect(arcs.length).toBe(2);
-    expect(warned()).toEqual([
-      '[openchart] encoding.theta and encoding.y are both set on arc; theta takes precedence and y was dropped.',
-    ]);
+        OPTIONS,
+      ),
+    ).toThrow(/\/encoding\/y was removed in v9\. Remove encoding\.y/);
+    expect(warned()).toEqual([]);
   });
 
   it('does not warn when theta and y are identical', () => {
@@ -648,8 +646,8 @@ describe('removed fields and retained warnings', () => {
       ...base,
       encoding: { ...base.encoding, [channel]: { field: 'value', type: 'quantitative' } },
     };
-    expect(() => compileChart(spec, OPTIONS)).toThrow(`encoding.${channel} was removed in v9`);
-    expect(() => expandSpecSugar(spec)).toThrow(`encoding.${channel} was removed in v9`);
+    expect(() => compileChart(spec, OPTIONS)).toThrow(`/encoding/${channel} was removed in v9`);
+    expect(() => expandSpecSugar(spec)).toThrow(`/encoding/${channel} was removed in v9`);
     expect(warned()).toEqual([]);
   });
 
@@ -672,7 +670,7 @@ describe('removed fields and retained warnings', () => {
         },
         OPTIONS,
       ),
-    ).toThrow(/annotations\[0\].type.*Use refline/);
+    ).toThrow(/\/annotations\/0\/type.*Use refline/);
     expect(warned()).toEqual([]);
   });
 
@@ -740,8 +738,8 @@ describe('layer specs', () => {
         },
       })),
     };
-    expect(() => compileLayer(spec as LayerSpec, OPTIONS)).toThrow('layer[0].encoding.href');
-    expect(() => compileLayer(spec as LayerSpec, OPTIONS)).toThrow('layer[1].encoding.href');
+    expect(() => compileLayer(spec as LayerSpec, OPTIONS)).toThrow('/layer/0/encoding/href');
+    expect(() => compileLayer(spec as LayerSpec, OPTIONS)).toThrow('/layer/1/encoding/href');
     expect(warned()).toEqual([]);
   });
 });

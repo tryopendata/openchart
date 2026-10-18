@@ -3874,10 +3874,6 @@
           "type": "string",
           "description": "Stable identifier for selection and edit callbacks. When provided, edit events include this ID for reliable element matching."
         },
-        "label": {
-          "type": "string",
-          "description": "Human-readable label for the annotation."
-        },
         "fill": {
           "type": "string",
           "description": "Fill color for the annotation element."
@@ -3926,7 +3922,7 @@
         },
         "subtitle": {
           "type": "string",
-          "description": "Optional muted second-tone text rendered below the primary `text`. Used for supporting context (e.g. methodology, source). Newlines in `text` still produce multi-line primary; subtitle is a separate block.\n\nSupports the same inline `**bold**` spans as `text`. When a subtitle is present and no `fontWeight` is set, the primary `text` resolves to weight 700 — the lede + context stack."
+          "description": "Optional muted second-tone text rendered below the primary `text`. Used for supporting context (e.g. methodology, source). Newlines in `text` still produce multi-line primary; subtitle is a separate block.\n\nSupports the same inline `**bold**` spans as `text`. The primary `text` keeps its own weight (default 400); use `fontWeight` or `**bold**` spans for a bold lede."
         },
         "subtitleFontSize": {
           "type": "number",
@@ -4030,7 +4026,7 @@
         },
         "fill": {
           "type": "string",
-          "description": "Fill color. Defaults to theme background for an \"open ring\" look."
+          "description": "Fill color. Defaults to `theme.colors.annotationMarkerFill`, which resolves to the theme's opaque surface. A default dot on an endpoint marker takes the marker's fill and stroke."
         },
         "stroke": {
           "type": "string",
@@ -4093,10 +4089,6 @@
           "type": "string",
           "description": "Stable identifier for selection and edit callbacks. When provided, edit events include this ID for reliable element matching."
         },
-        "label": {
-          "type": "string",
-          "description": "Human-readable label for the annotation."
-        },
         "fill": {
           "type": "string",
           "description": "Fill color for the annotation element."
@@ -4120,6 +4112,10 @@
         "type": {
           "type": "string",
           "const": "range"
+        },
+        "label": {
+          "type": "string",
+          "description": "Text drawn with the range band."
         },
         "x1": {
           "type": [
@@ -4183,10 +4179,6 @@
           "type": "string",
           "description": "Stable identifier for selection and edit callbacks. When provided, edit events include this ID for reliable element matching."
         },
-        "label": {
-          "type": "string",
-          "description": "Human-readable label for the annotation."
-        },
         "fill": {
           "type": "string",
           "description": "Fill color for the annotation element."
@@ -4211,6 +4203,10 @@
           "type": "string",
           "const": "refline",
           "description": "Reference-line annotation discriminant. Older rule aliases require migrateSpecV8."
+        },
+        "label": {
+          "type": "string",
+          "description": "Text drawn with the reference line."
         },
         "x": {
           "type": [
@@ -4329,7 +4325,7 @@
         "endpoints",
         "none"
       ],
-      "description": "Label density mode controlling how many data labels are shown.\n- 'all': show every label, skip collision detection\n- 'auto': show labels with collision detection (default)\n- 'endpoints': show only first and last per series (useful for line charts)\n- 'none': hide all labels (rely on tooltips and legend)"
+      "description": "Label density mode controlling how many data labels are shown.\n- 'all': show every label, skip collision detection\n- 'auto': show labels with collision detection (default)\n- 'endpoints': show only first and last per series\n\nLine and area marks draw no value labels; identify their series with `endpointLabels` or the legend.\n- 'none': hide all labels (rely on tooltips and legend)"
     },
     "EndpointLabelsConfig": {
       "type": "object",
@@ -4384,7 +4380,7 @@
         },
         "showMarker": {
           "type": "boolean",
-          "description": "Render an open-circle marker on the line at the right edge. Default true."
+          "description": "Render a ring marker centered on the line's end point. Default true. Its fill defaults to the opaque canvas color so the ring covers the line end."
         },
         "markerStyle": {
           "type": "object",
@@ -4403,7 +4399,7 @@
             }
           },
           "additionalProperties": false,
-          "description": "Override the marker style."
+          "description": "Override the marker style. `fill: 'transparent'` keeps a see-through ring."
         },
         "showLeader": {
           "type": "boolean",

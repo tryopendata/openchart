@@ -30,7 +30,7 @@ const families = [
             value: { field: 'value', type: 'quantitative' },
           },
         },
-        { responsive: false },
+        { autoResize: false },
       ),
   },
   {
@@ -72,7 +72,7 @@ const families = [
             color: { field: 'value', type: 'quantitative' },
           },
         },
-        { responsive: false },
+        { autoResize: false },
       ),
   },
   {
@@ -92,7 +92,7 @@ const families = [
             value: { field: 'value', type: 'quantitative' },
           },
         },
-        { responsive: false },
+        { autoResize: false },
       ),
   },
   {
@@ -111,7 +111,7 @@ const families = [
             value: { field: 'value', type: 'quantitative' },
           },
         },
-        { responsive: false },
+        { autoResize: false },
       ),
   },
 ];

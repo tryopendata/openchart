@@ -17,7 +17,7 @@ import { estimateTextWidth, wrapText } from '@opendata-ai/openchart-core';
 
 import type { NormalizedChartSpec } from '../compiler/types';
 import { resolveFieldFormatter } from '../format/field-format';
-import { endpointLabelsExplicitlyOn } from '../legend/suppression';
+import { endpointLabelsExplicitlyOn, seriesField } from '../legend/suppression';
 import {
   ENDPOINT_GAP,
   ENDPOINT_LABEL_FONT_SIZE,
@@ -43,18 +43,12 @@ export function predictEndpointLabelsWidth(
 ): number {
   if (spec.endpointLabels === false) return 0;
   if (spec.markType !== 'line' && spec.markType !== 'area') return 0;
-  const colorEnc = spec.encoding.color;
-  if (!colorEnc) return 0;
-  if ('condition' in colorEnc) return 0;
-  if (!('field' in colorEnc)) return 0;
-  if (colorEnc.type === 'quantitative') return 0;
-
-  // Distinct series count.
-  const colorField = colorEnc.field;
-  if (!colorField) return 0;
+  // Distinct series count (color, or strokeDash on a color-less line).
+  const field = seriesField(spec);
+  if (!field) return 0;
   const seriesNames = new Set<string>();
   for (const row of spec.data) {
-    seriesNames.add(String(row[colorField]));
+    seriesNames.add(String(row[field]));
   }
   if (seriesNames.size < 2) return 0;
 

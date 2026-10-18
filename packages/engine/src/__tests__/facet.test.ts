@@ -185,8 +185,9 @@ describe('compileChart with facet', () => {
       expect(panel.marks.length).toBeGreaterThan(0);
       expect(panel.area.width).toBeGreaterThan(0);
       expect(panel.area.height).toBeGreaterThan(0);
-      expect(panel.header.text).toBeTruthy();
     }
+    // One header per facet value, sorted ascending as in Vega-Lite's facet default.
+    expect(layout.facet!.panels.map((p) => p.header.text)).toEqual(['DE', 'UK', 'US']);
   });
 
   it('figure-level axes are undefined when faceted', () => {
@@ -258,7 +259,8 @@ describe('compileChart with row faceting', () => {
   it('keeps y-axis on all panels', () => {
     const layout = compileChart(rowSpec, { width: 600, height: 600 });
     for (const panel of layout.facet!.panels) {
-      expect(panel.axes.y).toBeDefined();
+      // Each row panel labels its own country band.
+      expect(panel.axes.y!.ticks.map((t) => t.label)).toEqual(['US', 'UK', 'DE']);
     }
   });
 
@@ -364,9 +366,6 @@ describe('compileChart with column faceting', () => {
 
   it('creates panels in a single row', () => {
     const layout = compileChart(colSpec, { width: 800, height: 400 });
-    for (const panel of layout.facet!.panels) {
-      expect(panel.header.text).toBeTruthy();
-    }
-    expect(layout.facet!.panels).toHaveLength(2);
+    expect(layout.facet!.panels.map((p) => p.header.text)).toEqual(['2020', '2021']);
   });
 });

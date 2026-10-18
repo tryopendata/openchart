@@ -109,7 +109,7 @@ export const GeoMap = forwardRef<GeoMapHandle, GeoMapProps>(function GeoMap(
       onMarkClick: stableOnMarkClick,
       onMarkHover: stableOnMarkHover,
       onCameraChange: stableOnCameraChange,
-      responsive: true,
+      autoResize: true,
     };
 
     instanceRef.current = createGeoMap(container, spec, options);

@@ -19,6 +19,8 @@ import {
   DEFAULT_ANNOTATION_FONT_WEIGHT,
   DEFAULT_LINE_HEIGHT,
   DROP_LINE_TOP_GAP,
+  TARGET_LABEL_REACH,
+  TARGET_LABEL_STANDOFF,
 } from './constants';
 import { BOLD_SPAN_FONT_WEIGHT, parseAnnotationSpans } from './rich-text';
 
@@ -329,11 +331,160 @@ export function automaticControlPoint(
   return bend === 0 ? { x, y } : { x: x + bend * dy, y: y - bend * dx };
 }
 
+/**
+ * Pull a connector's data end back from `endpoint` by `gap`. A straight line
+ * shortens along its chord. A curve is shaped to the real endpoint and then
+ * shortened along its own end tangent (control -> endpoint), so the tail still
+ * aims at the marker; shortening along the chord bends the tail off it.
+ */
+export function pullBackConnector(
+  from: { x: number; y: number },
+  endpoint: { x: number; y: number },
+  gap: number,
+  curve?: { exit?: 'horizontal' | 'vertical'; bend?: number },
+): { to: { x: number; y: number }; control?: { x: number; y: number } } {
+  const control = curve ? automaticControlPoint(from, endpoint, curve.exit, curve.bend) : undefined;
+  const pullback = (origin: { x: number; y: number }) => {
+    const dx = endpoint.x - origin.x;
+    const dy = endpoint.y - origin.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    return dist > 0
+      ? { x: endpoint.x - (dx / dist) * gap, y: endpoint.y - (dy / dist) * gap }
+      : null;
+  };
+  const to = (control && pullback(control)) ?? pullback(from) ?? { ...endpoint };
+  return control ? { to, control } : { to };
+}
+
+type Connector = NonNullable<ResolvedLabel['connector']>;
+
+/** Point at parameter `t` along the drawn connector: its chord, or the rendered quadratic. */
+function connectorPointAt(connector: Connector, t: number): { x: number; y: number } {
+  const { from, to, control } = connector;
+  if (connector.style !== 'curve' || !control)
+    return { x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t };
+  const u = 1 - t;
+  return {
+    x: u * u * from.x + 2 * u * t * control.x + t * t * to.x,
+    y: u * u * from.y + 2 * u * t * control.y + t * t * to.y,
+  };
+}
+
+/** First parameter at which the drawn connector enters `box`; undefined when it never does. */
+function connectorEntry(connector: Connector, box: Rect): number | undefined {
+  const inside = (p: { x: number; y: number }) =>
+    p.x >= box.x && p.x <= box.x + box.width && p.y >= box.y && p.y <= box.y + box.height;
+  // A leader that starts inside the label has no clear stretch to keep.
+  if (inside(connector.from)) return undefined;
+  if (connector.style !== 'curve' || !connector.control) {
+    // Liang-Barsky clip of the chord against the box.
+    const { from, to } = connector;
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    let t0 = 0;
+    let t1 = 1;
+    const clip = (p: number, q: number) => {
+      if (p === 0) return q >= 0;
+      const r = q / p;
+      if (p < 0) {
+        if (r > t1) return false;
+        if (r > t0) t0 = r;
+      } else {
+        if (r < t0) return false;
+        if (r < t1) t1 = r;
+      }
+      return true;
+    };
+    return clip(-dx, from.x - box.x) &&
+      clip(dx, box.x + box.width - from.x) &&
+      clip(-dy, from.y - box.y) &&
+      clip(dy, box.y + box.height - from.y)
+      ? t0
+      : undefined;
+  }
+  // A quadratic: find the first sampled step inside, then bisect to the edge.
+  const steps = 64;
+  for (let i = 1; i <= steps; i++) {
+    if (!inside(connectorPointAt(connector, i / steps))) continue;
+    let lo = (i - 1) / steps;
+    let hi = i / steps;
+    for (let k = 0; k < 24; k++) {
+      const mid = (lo + hi) / 2;
+      if (inside(connectorPointAt(connector, mid))) hi = mid;
+      else lo = mid;
+    }
+    return hi;
+  }
+  return undefined;
+}
+
+/**
+ * Stop a connector's data end where it would strike through the target's own
+ * value label, a standoff short of the label box. Only labels within
+ * `TARGET_LABEL_REACH` of the data point count: a value label elsewhere on the
+ * leader's path is a placement concern, not a reason to cut the line short. A
+ * curve is split at the cut (de Casteljau), so the kept part keeps its shape.
+ *
+ * Returns `undefined` when no target label is crossed, `null` when the line
+ * left before the label is too short to draw, else the shortened connector
+ * carrying the label as `targetLabel` for later rebuilds.
+ */
+export function stopAtTargetLabel(
+  connector: Connector,
+  labels: readonly Rect[],
+): Connector | null | undefined {
+  const endpoint = connector.endpoint ?? connector.to;
+  let cut: { t: number; label: Rect } | undefined;
+  for (const label of labels) {
+    const gapX = Math.max(label.x - endpoint.x, 0, endpoint.x - (label.x + label.width));
+    const gapY = Math.max(label.y - endpoint.y, 0, endpoint.y - (label.y + label.height));
+    if (Math.hypot(gapX, gapY) > TARGET_LABEL_REACH) continue;
+    const t = connectorEntry(connector, {
+      x: label.x - TARGET_LABEL_STANDOFF,
+      y: label.y - TARGET_LABEL_STANDOFF,
+      width: label.width + 2 * TARGET_LABEL_STANDOFF,
+      height: label.height + 2 * TARGET_LABEL_STANDOFF,
+    });
+    if (t !== undefined && (!cut || t < cut.t)) cut = { t, label };
+  }
+  if (!cut) return undefined;
+  const to = connectorPointAt(connector, cut.t);
+  const { from, control } = connector;
+  if (!connectorIsDrawable(Math.hypot(to.x - from.x, to.y - from.y), connector.arrow)) return null;
+  const { x, y, width, height } = cut.label;
+  return {
+    ...connector,
+    to,
+    ...(connector.style === 'curve' && control
+      ? {
+          control: {
+            x: from.x + (control.x - from.x) * cut.t,
+            y: from.y + (control.y - from.y) * cut.t,
+          },
+        }
+      : {}),
+    targetLabel: { x, y, width, height },
+  };
+}
+
 export function refreshConnector(
-  connector: NonNullable<ResolvedLabel['connector']>,
+  connector: Connector,
   bounds: Rect,
   markerRadius: number,
   keepVisible = false,
+): ResolvedLabel['connector'] {
+  const rebuilt = rebuildConnector(connector, bounds, markerRadius, keepVisible);
+  if (!rebuilt?.targetLabel) return rebuilt;
+  const stopped = stopAtTargetLabel(rebuilt, [rebuilt.targetLabel]);
+  if (stopped === null) return keepVisible ? rebuilt : undefined;
+  return stopped ?? rebuilt;
+}
+
+function rebuildConnector(
+  connector: Connector,
+  bounds: Rect,
+  markerRadius: number,
+  keepVisible: boolean,
 ): ResolvedLabel['connector'] {
   // `endpoint` is the un-pulled-back data point, and the only valid basis for a
   // rebuild: pulling back from `to` (already pulled back) shrinks the line a
@@ -391,14 +542,12 @@ export function refreshConnector(
     y: exit.y + (connector.fromOffset?.dy ?? 0),
   };
 
-  const gap = connectorPullbackGap(markerRadius, connector.arrow);
-  const cdx = endpoint.x - from.x;
-  const cdy = endpoint.y - from.y;
-  const dist = Math.sqrt(cdx * cdx + cdy * cdy);
-  const to =
-    dist > 0
-      ? { x: endpoint.x - (cdx / dist) * gap, y: endpoint.y - (cdy / dist) * gap }
-      : { ...endpoint };
+  const { to, control } = pullBackConnector(
+    from,
+    endpoint,
+    connectorPullbackGap(markerRadius, connector.arrow),
+    connector.style === 'curve' ? { exit: exit.exit, bend: connector.bend } : undefined,
+  );
 
   // Min-length check runs AFTER the pullback: a near-degenerate line can flip
   // direction once its end is pulled back, and checking first would miss it.
@@ -412,8 +561,6 @@ export function refreshConnector(
     from,
     to,
     exit: exit.exit,
-    ...(connector.style === 'curve'
-      ? { control: automaticControlPoint(from, to, exit.exit, connector.bend) }
-      : {}),
+    ...(control ? { control } : {}),
   };
 }

@@ -579,7 +579,7 @@ describe('computeTrendLine', () => {
     const points = computeScatterMarks(spec, scales, chartArea, fullStrategy);
     const trendLine = computeTrendLine(points);
 
-    expect(trendLine!.strokeDasharray).toBeTruthy();
+    expect(trendLine!.strokeDasharray).toMatch(/^\d+(\.\d+)? \d+(\.\d+)?$/);
   });
 
   it('returns null for fewer than 2 points', () => {

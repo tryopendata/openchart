@@ -92,7 +92,7 @@ export const GeoMap = defineComponent({
         onMarkClick: (feature) => emit('mark-click', feature),
         onMarkHover: (feature) => emit('mark-hover', feature),
         onCameraChange: (camera) => emit('camera-change', camera),
-        responsive: true,
+        autoResize: true,
       };
 
       instance = createGeoMap(container, props.spec, options);

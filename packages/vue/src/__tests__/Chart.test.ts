@@ -159,7 +159,7 @@ describe('annotation transactions', () => {
     const wrapper = mount(Chart, {
       props: {
         spec,
-        editable: true,
+        interaction: 'edit' as const,
         autoResize: false,
         revision: 'one',
         onEdit: (tx: unknown) => transactions.push(tx),
@@ -226,4 +226,83 @@ it('merges spec, provider, and prop themes at authored leaves', async () => {
   expect(title.style.fontFamily).toBe('Georgia');
   expect(wrapper.element.querySelector<SVGElement>('.oc-source')!.style.fontSize).toBe('15px');
   wrapper.unmount();
+});
+
+describe('interaction mode and listener parity', () => {
+  const clickTitle = (wrapper: ReturnType<typeof mount>) =>
+    wrapper.find('[data-chrome-key="title"]').trigger('click');
+
+  it('re-infers select mode when a select listener is added later', async () => {
+    const selected: unknown[] = [];
+    const wrapper = mount(Chart, { props: { spec: lineSpec, autoResize: false } });
+    await flushPromises();
+    await clickTitle(wrapper);
+    await wrapper.setProps({ onSelect: (el: unknown) => selected.push(el) });
+    await flushPromises();
+    await clickTitle(wrapper);
+    expect(selected).toEqual([{ type: 'chrome', key: 'title', path: '/chrome/title' }]);
+    wrapper.unmount();
+  });
+
+  it("interaction='read' suppresses selection even with a select listener", async () => {
+    const selected: unknown[] = [];
+    const wrapper = mount(Chart, {
+      props: {
+        spec: lineSpec,
+        autoResize: false,
+        interaction: 'read' as const,
+        onSelect: (el: unknown) => selected.push(el),
+      },
+    });
+    await flushPromises();
+    await clickTitle(wrapper);
+    expect(selected).toHaveLength(0);
+    await wrapper.setProps({ interaction: 'select' });
+    await flushPromises();
+    await clickTitle(wrapper);
+    expect(selected).toHaveLength(1);
+    wrapper.unmount();
+  });
+
+  it('emits reveal for youDrawIt charts', async () => {
+    const spec = {
+      mark: 'line',
+      data: [2000, 2005, 2010, 2015, 2020].map((year, i) => ({ year: `${year}`, value: i })),
+      encoding: {
+        x: { field: 'year', type: 'temporal' },
+        y: { field: 'value', type: 'quantitative' },
+      },
+      youDrawIt: { from: '2010' },
+      animation: false,
+    } as ChartSpec;
+    const wrapper = mount(Chart, { props: { spec, autoResize: false } });
+    await flushPromises();
+    (wrapper.vm as unknown as { instance: { revealDrawing(): void } }).instance.revealDrawing();
+    expect(wrapper.emitted('reveal')).toHaveLength(1);
+    wrapper.unmount();
+  });
+
+  it('emits highlight-change from the series search', async () => {
+    const spec = {
+      mark: 'line',
+      data: ['Germany', 'France'].flatMap((country, i) => [
+        { year: '2020-01-01', value: i, country },
+        { year: '2021-01-01', value: i + 1, country },
+      ]),
+      encoding: {
+        x: { field: 'year', type: 'temporal' },
+        y: { field: 'value', type: 'quantitative' },
+        color: { field: 'country', type: 'nominal' },
+      },
+      seriesSearch: true,
+    } as ChartSpec;
+    const wrapper = mount(Chart, { props: { spec, autoResize: false }, attachTo: document.body });
+    await flushPromises();
+    const input = wrapper.element.querySelector('.oc-series-search-input') as HTMLInputElement;
+    input.value = 'ger';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(wrapper.emitted('highlight-change')).toEqual([[['Germany']]]);
+    wrapper.unmount();
+  });
 });

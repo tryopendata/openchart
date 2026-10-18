@@ -1,6 +1,4 @@
-import { createAnnotationNudges } from './interactions/annotation-nudges';
-import { annotationSource, editToTransaction } from './interactions/edit-transactions';
-import type { GestureEdit } from './interactions/gesture-edit';
+import { annotationSource } from './interactions/edit-transactions';
 import { canTransitionSpecShape } from './transition/gate';
 import { reconcileSVG } from './transition/reconcile';
 import { sampleLayout } from './transition/scene';
@@ -14,57 +12,21 @@ import { sampleLayout } from './transition/scene';
  */
 
 import type {
-  Annotation,
-  ChartEventHandlers,
   ChartLayout,
   ChartSpec,
-  CompileOptions,
-  DarkMode,
   DataRow,
   ElementRef,
-  GraphSpec,
   LayerSpec,
-  TextAnnotation,
-  ThemeConfig,
 } from '@opendata-ai/openchart-core';
-import {
-  applyEditTransaction,
-  cssTokenDefault,
-  isGraphSpec,
-  isLayerSpec,
-} from '@opendata-ai/openchart-core';
-import {
-  compileChart,
-  compileLayer,
-  facetMinHeight,
-  legendGap,
-  resolveLayerTheme,
-} from '@opendata-ai/openchart-engine';
+import { isLayerSpec } from '@opendata-ai/openchart-core';
+import { resolveLayerTheme } from '@opendata-ai/openchart-engine';
 import { cancelAnimations, computeAnimationDuration, setupAnimationCleanup } from './animation';
+import { createEditSession } from './chart-editing';
+import { createChartExporter } from './chart-export';
+import { createChartSizer } from './chart-sizing';
 import {
-  exportCSV,
-  exportJPG,
-  exportPNG,
-  exportSVG,
-  exportSVGWithFonts,
-  type JPGExportOptions,
-  type SVGExportOptions,
-} from './export';
-import { materializeCanvasModeSVG } from './export-canvas';
-import type { GIFExportOptions } from './export-gif';
-import {
-  buildElementRef,
-  type CrosshairController,
   createHoverEmphasis,
   createScreenReaderTable,
-  findElementByRef,
-  getEditableElements,
-  getElementText,
-  type HoverEmphasis,
-  invertScale,
-  isTextEditable,
-  refsEqual,
-  renderSelectionOverlay,
   wireAnchorDrag,
   wireAnnotationDrag,
   wireAnnotationLabelDrag,
@@ -79,150 +41,41 @@ import {
   wireVoronoiTooltipEvents,
 } from './interactions';
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
+import {
+  type ChartInstance,
+  type MountOptions,
+  resolveInteractionMode,
+  type UpdateOptions,
+} from './mount-types';
 import { observeResize } from './resize-observer';
 import { resolveDarkMode } from './resolve-dark-mode';
 import type { EntranceHandle } from './scatter-canvas/entrance';
 import { wireCanvasInteractions } from './scatter-canvas/interactions';
 import { createScatterCanvasLayer, type ScatterCanvasLayer } from './scatter-canvas/layer';
 import { createSeriesSearch, type SeriesSearchController } from './series-search';
+import { createSeriesVisibility } from './series-visibility';
 import { renderChartSVG } from './svg-renderer';
-import { createTextEditOverlay, createTextEditOverlayAtPosition } from './text-edit-overlay';
-import { prepareSettledExportTheme } from './theme-style-block';
 import { readWithoutThemeStamp, stampThemeProperties } from './theme-tokens';
 import { createTooltipManager, type TooltipManager } from './tooltip';
 import { canTransition, runTransition, type TransitionHandle } from './transition';
 import { createYouDrawIt, type YouDrawItController } from './you-draw-it';
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-export interface MountOptions extends ChartEventHandlers {
-  /** Theme overrides. */
-  theme?: ThemeConfig;
-  /** Dark mode setting: "auto" (system pref), "force", or "off". */
-  darkMode?: DarkMode;
-  /**
-   * Rendering backend for point marks (mirrors vega-embed's `renderer`
-   * option). `'auto'` (default) promotes dense scatters (>1,000 points) to a
-   * canvas mark layer; `'svg'`/`'canvas'` force a backend. Ignored with a
-   * console warning for non-point marks and faceted/layered/sparkline charts.
-   */
-  renderer?: 'auto' | 'svg' | 'canvas';
-  /** Observe container resizing. Defaults to true. */
-  autoResize?: boolean;
-  /** Show the OpenData watermark. Defaults to true. */
-  watermark?: boolean;
-  /** Initial selected element. */
-  selectedElement?: ElementRef;
-}
-
-export interface UpdateOptions {
-  /** Source revision for subsequent edit transactions. */
-  revision?: string | number;
-  /** Override the selected element after update. When omitted, preserves current selection. */
-  selectedElement?: ElementRef;
-}
-
-export interface ExportOptions extends JPGExportOptions {
-  // Extensible for future formats (extends JPGExportOptions which extends PNGExportOptions)
-}
-
-export interface ChartInstance {
-  /** Re-compile and re-render with a new spec. */
-  update(spec: ChartSpec | LayerSpec | GraphSpec, options?: UpdateOptions): void;
-  /**
-   * Re-render with a new spec and start a MANUAL update transition the caller
-   * drives via `handle.step(elapsedMs)`, with no rAF clock. Returns the handle,
-   * or null when no transition applies (the render already swapped instantly).
-   * For headless frame capture (e.g. GIF export of a spec-swap stepper).
-   */
-  beginManualUpdate(spec: ChartSpec | LayerSpec | GraphSpec): TransitionHandle | null;
-  /** Re-compile at current container dimensions. */
-  resize(): void;
-  /** Geometry currently visible, sampled on demand for reader hit testing. */
-  sampleLayout(): ChartLayout;
-  /** Export the chart. */
-  export(format: 'svg'): string;
-  export(format: 'svg-with-fonts', options?: SVGExportOptions): Promise<string>;
-  export(format: 'png', options?: ExportOptions): Promise<Blob>;
-  export(format: 'jpg', options?: ExportOptions): Promise<Blob>;
-  export(format: 'gif', options?: GIFExportOptions): Promise<Blob>;
-  export(format: 'csv'): string;
-  export(
-    format: 'svg' | 'svg-with-fonts' | 'png' | 'jpg' | 'gif' | 'csv',
-    options?: ExportOptions | GIFExportOptions,
-  ): string | Promise<Blob> | Promise<string>;
-  /** Remove all DOM elements and disconnect observers. */
-  destroy(): void;
-  /** The current compiled layout (for hooks / debugging). */
-  readonly layout: ChartLayout;
-  /** Get the currently selected element, or null if none. */
-  getSelectedElement(): ElementRef | null;
-  /** Programmatically select an element. Silent no-op if element not found. */
-  select(ref: ElementRef): void;
-  /** Deselect the current element. */
-  deselect(): void;
-  /** Whether inline text editing is active. */
-  readonly isEditing: boolean;
-  /** Set highlight values on the color encoding and re-render. Pass null to clear. */
-  setHighlight(values: string[] | null): void;
-  /**
-   * Reset a "you draw it" (`youDrawIt`) drawing: clears the reader's guess and
-   * returns to the drawing state. No-op when youDrawIt isn't enabled.
-   */
-  resetDrawing(): void;
-  /**
-   * Reveal a "you draw it" drawing programmatically (equivalent to the
-   * skip-to-reveal button). No-op when youDrawIt isn't enabled.
-   */
-  revealDrawing(): void;
-}
-
-// ---------------------------------------------------------------------------
-// Container sizing
-// ---------------------------------------------------------------------------
-
-/**
- * Fallback height when the container doesn't constrain height. For
- * auto-height ChartSpec mounts this is the fixed budget for the
- * visualization itself (padding + axes + plot); chrome, the top legend
- * block, and the metrics bar grow the figure on top of it.
- */
-const FALLBACK_HEIGHT = 400;
-
-// ---------------------------------------------------------------------------
-// Editable element helpers
-// ---------------------------------------------------------------------------
-
-const EDITABLE_HOVER_CSS = `
-.oc-editable-hover {
-  outline: 1.5px solid ${cssTokenDefault('--oc-editable-hover', 'light')};
-  outline-offset: 2px;
-  border-radius: 2px;
-}
-`;
-
-function makeEditable(svg: SVGElement): void {
-  svg.setAttribute('tabindex', '0');
-  svg.style.outline = 'none';
-
-  const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
-  style.textContent = EDITABLE_HOVER_CSS;
-  svg.insertBefore(style, svg.firstChild);
-}
-
-function hasEditingCallbacks(opts?: MountOptions): boolean {
-  return !!(opts?.onEdit || opts?.onSelect || opts?.onDeselect);
-}
+export {
+  type ChartInstance,
+  type ExportOptions,
+  type InteractionMode,
+  type MountOptions,
+  resolveInteractionMode,
+  type UpdateOptions,
+} from './mount-types';
 
 // ---------------------------------------------------------------------------
 // Series search helpers
 // ---------------------------------------------------------------------------
 
 /** The authored encoding.color.highlight as an array (empty when unset). */
-function authoredHighlight(spec: ChartSpec | LayerSpec | GraphSpec): string[] {
-  if (isLayerSpec(spec) || isGraphSpec(spec as unknown as Record<string, unknown>)) return [];
+function authoredHighlight(spec: ChartSpec | LayerSpec): string[] {
+  if (isLayerSpec(spec)) return [];
   const colorEnc = (spec as ChartSpec).encoding?.color;
   if (!colorEnc || typeof colorEnc !== 'object' || !('field' in colorEnc)) return [];
   const raw = (colorEnc as { highlight?: string | string[] }).highlight;
@@ -231,14 +84,14 @@ function authoredHighlight(spec: ChartSpec | LayerSpec | GraphSpec): string[] {
 }
 
 /** True when the spec enables the series search input. */
-function wantsSeriesSearch(spec: ChartSpec | LayerSpec | GraphSpec): boolean {
-  if (isLayerSpec(spec) || isGraphSpec(spec as unknown as Record<string, unknown>)) return false;
+function wantsSeriesSearch(spec: ChartSpec | LayerSpec): boolean {
+  if (isLayerSpec(spec)) return false;
   return !!(spec as ChartSpec).seriesSearch;
 }
 
 /** True when the spec enables the "you draw it" interactive format. */
-function wantsYouDrawIt(spec: ChartSpec | LayerSpec | GraphSpec): boolean {
-  if (isLayerSpec(spec) || isGraphSpec(spec as unknown as Record<string, unknown>)) return false;
+function wantsYouDrawIt(spec: ChartSpec | LayerSpec): boolean {
+  if (isLayerSpec(spec)) return false;
   return !!(spec as ChartSpec).youDrawIt;
 }
 
@@ -251,33 +104,29 @@ function wantsYouDrawIt(spec: ChartSpec | LayerSpec | GraphSpec): boolean {
  */
 export function createChart<TData extends DataRow = DataRow>(
   container: HTMLElement,
-  spec: ChartSpec<TData> | LayerSpec<TData> | GraphSpec,
+  spec: ChartSpec<TData> | LayerSpec<TData>,
   options?: MountOptions,
 ): ChartInstance {
-  let currentSpec: ChartSpec | LayerSpec | GraphSpec = spec as ChartSpec | LayerSpec | GraphSpec;
+  let currentSpec: ChartSpec | LayerSpec = spec as ChartSpec | LayerSpec;
+  // Resolved once: every selection/edit gate below reads these, never the raw options.
+  const interaction = resolveInteractionMode(options);
+  const selectable = interaction !== 'read';
+  const editing = interaction === 'edit';
+  if (options?.interaction === 'edit' && !options.onEdit) {
+    console.warn(
+      "[openchart] interaction: 'edit' was set without an onEdit handler; edit gestures will run but their transactions have no sink.",
+    );
+  }
   let currentLayout: ChartLayout;
   let svgElement: SVGElement | null = null;
   let tooltipManager: TooltipManager | null = null;
   let disconnectResize: (() => void) | null = null;
-  let cleanupTooltipEvents: (() => void) | null = null;
-  let cleanupVoronoiEvents: (() => void) | null = null;
-  let cleanupEndpointHover: (() => void) | null = null;
-  let hoverEmphasis: HoverEmphasis | null = null;
-  let crosshairController: CrosshairController | null = null;
   // Canvas mark layer, present only while currentLayout.markRenderMode is
   // 'canvas'. render() is a full teardown/rebuild, so StrictMode double-mounts
   // and resizes need no canvas-specific handling beyond destroying it here.
   let canvasLayer: ScatterCanvasLayer | null = null;
-  let cleanupCanvasEvents: (() => void) | null = null;
   let canvasEntrance: EntranceHandle | null = null;
   let warnedCanvasEditMode = false;
-  let cleanupKeyboardNav: (() => void) | null = null;
-  let cleanupLegend: (() => void) | null = null;
-  let cleanupChartEvents: (() => void) | null = null;
-  let cleanupAnnotationDrag: (() => void) | null = null;
-  let cleanupEditDrags: (() => void) | null = null;
-  let cleanupSelection: (() => void) | null = null;
-  let cleanupKeyboardEdit: (() => void) | null = null;
   let srTableWrapper: HTMLElement | null = null;
   let destroyed = false;
   let isDragging = false;
@@ -289,20 +138,6 @@ export function createChart<TData extends DataRow = DataRow>(
   let cleanupAnimations: (() => void) | null = null;
   let pendingResize = false;
 
-  // Auto-height sizing state. `isAutoHeight` latches whether the host
-  // constrains the container's height:
-  //   null  = unknown — every measurement so far was an all-zero rect
-  //           (display:none / detached); keep re-checking each measure.
-  //   true  = auto-height — the figure grows with chrome (ChartSpec only).
-  //   false = explicit height — fit inside the host's box (today's behavior).
-  // The latch matters because the SVG's own style.height gives the container
-  // a nonzero rect after the first render, so auto-height cannot be
-  // re-derived per measure.
-  let isAutoHeight: boolean | null = null;
-  let lastRenderedWidth: number | null = null;
-  let lastRenderedSvgHeight: number | null = null;
-  let lastHostHeight = FALLBACK_HEIGHT;
-
   // Data-update transition state
   let transitionHandle: TransitionHandle | null = null;
 
@@ -313,15 +148,8 @@ export function createChart<TData extends DataRow = DataRow>(
   // entrance animation makes resize() defer to pendingResize.
   let fontsReloadPending = false;
 
-  // Selection and text editing state
-  let selectedElement: ElementRef | null = options?.selectedElement ?? null;
-  let overlayElement: SVGGElement | null = null;
-  let isTextEditingActive = false;
-
-  // Runtime legend-toggle state
-  const runtimeHiddenSeries = new Set<string>();
-  const runtimeShownSeries = new Set<string>();
-  let textEditCleanup: (() => void) | null = null;
+  const sizer = createChartSizer(container);
+  const visibility = createSeriesVisibility();
 
   // Series search state. The control persists across renders (so focus and
   // chips survive the re-render each selection triggers); the baseline is the
@@ -356,586 +184,51 @@ export function createChart<TData extends DataRow = DataRow>(
   let renderGen = 0;
   let fontWatchGeneration = 0;
 
+  // Teardown for everything one render wires up. render() runs it before
+  // rebuilding and destroy() runs it on the way out, newest first.
+  const renderDisposers: Array<() => void> = [];
+  function track(dispose: () => void): void {
+    renderDisposers.push(dispose);
+  }
+  function disposeRender(): void {
+    for (let dispose = renderDisposers.pop(); dispose; dispose = renderDisposers.pop()) dispose();
+  }
+
   // ---------------------------------------------------------------------------
   // Compilation
   // ---------------------------------------------------------------------------
 
-  function compileAt(
-    width: number,
-    height: number,
-    candidate: typeof currentSpec,
-    measure: typeof measureText,
-    runtime: boolean,
-  ): ChartLayout {
-    const darkMode = resolveDarkMode(options?.darkMode);
-
-    const compileOpts: CompileOptions = {
-      width,
-      height,
+  function compile(candidate = currentSpec, measure = measureText, runtime = true): ChartLayout {
+    return sizer.compile(runtime ? visibility.apply(candidate) : candidate, {
       theme: options?.theme,
-      darkMode,
+      darkMode: resolveDarkMode(options?.darkMode),
       renderer: options?.renderer,
       watermark: options?.watermark,
       measureText: measure,
-    };
-
-    const effective = runtime ? withRuntimeHidden(candidate) : candidate;
-    if (isLayerSpec(effective)) return compileLayer(effective, compileOpts);
-    return compileChart(effective as ChartSpec | GraphSpec, compileOpts);
-  }
-
-  /**
-   * Vertical overheads that grow an auto-height figure beyond the
-   * FALLBACK_HEIGHT budget: top+bottom chrome (bottom chrome already includes
-   * a bottom legend's reservation), the top legend block (height + gap), and
-   * the KPI metrics bar. topPad and the axis gap are plot clearance, not
-   * chrome — they stay inside the budget.
-   *
-   * For faceted charts, extra rows beyond what the base budget can fit
-   * also contribute: each additional row needs space for the panel itself
-   * plus its header and gap.
-   */
-  function verticalOverheads(layout: ChartLayout, width: number): number {
-    // Sum EVERY top legend, not just the primary. A chart can carry a color
-    // legend and a size legend; counting one and growing the container by its
-    // height alone leaves the other squeezing the plot.
-    let topLegendBlock = 0;
-    for (const legend of layout.legends ?? [layout.legend]) {
-      if (legend.position !== 'top') continue;
-      const hasContent =
-        legend.type === 'continuous' || legend.type === 'size'
-          ? legend.bounds.height > 0
-          : 'entries' in legend && legend.entries.length > 0;
-      if (hasContent) topLegendBlock += legend.bounds.height + legendGap(width);
-    }
-
-    let facetGrowth = 0;
-    if (layout.facet) {
-      const needed = facetMinHeight(layout.facet.panels.length, layout.facet.columns);
-      const budgetForPanels =
-        FALLBACK_HEIGHT - layout.chrome.topHeight - layout.chrome.bottomHeight - topLegendBlock;
-      if (needed > budgetForPanels) {
-        facetGrowth = needed - budgetForPanels;
-      }
-    }
-
-    return Math.max(
-      0,
-      layout.chrome.topHeight +
-        layout.chrome.bottomHeight +
-        topLegendBlock +
-        (layout.metrics?.height ?? 0) +
-        facetGrowth +
-        (layout.chrome.grownHeight !== undefined ? (layout.chrome.noteBandHeight ?? 0) : 0) -
-        (layout.chrome.grownHeight ?? 0),
-    );
-  }
-
-  function compile(candidate = currentSpec, measure = measureText, runtime = true): ChartLayout {
-    const { width, height } = getContainerDimensions(candidate);
-
-    // Auto-height growth applies to ChartSpec mounts only. GraphSpec,
-    // LayerSpec, and sparkline mounts keep the fixed-fallback behavior.
-    const growsWithChrome =
-      isAutoHeight === true &&
-      !isLayerSpec(candidate) &&
-      !isGraphSpec(candidate as unknown as Record<string, unknown>) &&
-      (candidate as ChartSpec).display !== 'sparkline';
-    if (!growsWithChrome) {
-      return compileAt(width, height, candidate, measure, runtime);
-    }
-
-    // Bounded convergence loop, max 3 compiles. Chrome height depends on
-    // width (text wrap), not height — but the engine's chrome-strip guardrail
-    // strips chrome when the residual plot is too small, which makes chrome
-    // height-dependent at the budget boundary: growing the figure can
-    // un-strip chrome, changing the overheads once more. (Height classes are
-    // not the issue — they only strip below 200/350px, and growing from 400
-    // moves away from those thresholds.) Pass 3 is accepted unconditionally.
-    let layout = compileAt(width, height, candidate, measure, runtime);
-    const overheads = verticalOverheads(layout, width);
-    if (overheads > 0) {
-      layout = compileAt(width, height + overheads, candidate, measure, runtime);
-      const overheads2 = verticalOverheads(layout, width);
-      if (overheads2 !== overheads) {
-        layout = compileAt(width, height + overheads2, candidate, measure, runtime);
-      }
-    }
-    return layout;
-  }
-
-  function withRuntimeHidden<T extends { hiddenSeries?: string[]; annotations?: Annotation[] }>(
-    spec: T,
-  ): T {
-    if (runtimeHiddenSeries.size === 0 && runtimeShownSeries.size === 0) return spec;
-    const userHidden = spec.hiddenSeries ?? [];
-    const finalHidden = new Set<string>(userHidden);
-    for (const s of runtimeHiddenSeries) finalHidden.add(s);
-    for (const s of runtimeShownSeries) finalHidden.delete(s);
-    const out: T = { ...spec, hiddenSeries: Array.from(finalHidden) };
-    if (finalHidden.size > 0 && spec.annotations) {
-      const filtered = spec.annotations.filter((a) => a.type !== 'text');
-      out.annotations = filtered.length > 0 ? filtered : undefined;
-    }
-    return out;
-  }
-
-  // ---------------------------------------------------------------------------
-  // Legend toggle
-  // ---------------------------------------------------------------------------
-
-  function countSeries(spec: ChartSpec | GraphSpec | LayerSpec): number {
-    if (isLayerSpec(spec)) return Infinity;
-    const enc = (spec as ChartSpec).encoding;
-    const colorEnc = enc?.color;
-    if (!colorEnc || 'condition' in colorEnc) return Infinity;
-    if (!('field' in colorEnc) || !colorEnc.field) return Infinity;
-    if (colorEnc.type === 'quantitative') return Infinity;
-    const field = colorEnc.field;
-    const seen = new Set<string>();
-    for (const row of (spec as ChartSpec).data ?? []) {
-      seen.add(String((row as Record<string, unknown>)[field]));
-    }
-    return seen.size;
-  }
-
-  function isSeriesHidden(series: string): boolean {
-    if (runtimeShownSeries.has(series)) return false;
-    if (runtimeHiddenSeries.has(series)) return true;
-    const userHidden = (currentSpec as { hiddenSeries?: string[] }).hiddenSeries ?? [];
-    return userHidden.includes(series);
+    });
   }
 
   function toggleSeriesVisibility(series: string): boolean {
-    const wasHidden = isSeriesHidden(series);
-    if (!wasHidden) {
-      const total = countSeries(currentSpec);
-      if (Number.isFinite(total)) {
-        const userHidden = new Set((currentSpec as { hiddenSeries?: string[] }).hiddenSeries ?? []);
-        let visibleAfter = 0;
-        const seriesField = getColorField(currentSpec);
-        if (seriesField) {
-          const allSeries = new Set<string>();
-          for (const row of (currentSpec as ChartSpec).data ?? []) {
-            allSeries.add(String((row as Record<string, unknown>)[seriesField]));
-          }
-          for (const s of allSeries) {
-            if (s === series) continue;
-            if (runtimeShownSeries.has(s)) {
-              visibleAfter++;
-              continue;
-            }
-            if (runtimeHiddenSeries.has(s)) continue;
-            if (!userHidden.has(s)) visibleAfter++;
-          }
-        }
-        if (visibleAfter === 0) return false;
-      }
-    }
-    if (wasHidden) {
-      runtimeHiddenSeries.delete(series);
-      const userHidden = (currentSpec as { hiddenSeries?: string[] }).hiddenSeries ?? [];
-      if (userHidden.includes(series)) runtimeShownSeries.add(series);
-    } else {
-      runtimeShownSeries.delete(series);
-      runtimeHiddenSeries.add(series);
-    }
+    const hidden = visibility.toggle(currentSpec, series);
+    if (hidden === null) return false;
     render();
-    return !wasHidden;
-  }
-
-  function getColorField(spec: ChartSpec | GraphSpec | LayerSpec): string | undefined {
-    if (isLayerSpec(spec)) return undefined;
-    const colorEnc = (spec as ChartSpec).encoding?.color;
-    if (!colorEnc || 'condition' in colorEnc) return undefined;
-    if (!('field' in colorEnc) || !colorEnc.field) return undefined;
-    return colorEnc.field;
-  }
-
-  // ---------------------------------------------------------------------------
-  // Container dimensions
-  // ---------------------------------------------------------------------------
-
-  function getContainerDimensions(candidate = currentSpec): { width: number; height: number } {
-    const rect = container.getBoundingClientRect();
-    const isSparkline = 'display' in candidate && (candidate as ChartSpec).display === 'sparkline';
-    if (isSparkline) {
-      let width = rect.width;
-      let height = rect.height;
-      if (!height && container.parentElement) {
-        const parentRect = container.parentElement.getBoundingClientRect();
-        height = parentRect.height;
-        if (!width) width = parentRect.width;
-      }
-      return {
-        width: Math.max(width || 200, 30),
-        height: Math.max(height || 40, 20),
-      };
-    }
-    // Latch auto-height on the first NONZERO measurement: height 0 with a
-    // real width means the host doesn't constrain height. An all-zero rect
-    // (display:none / detached) stays "unknown" — keep re-checking until the
-    // container produces a real measurement.
-    if (isAutoHeight === null && (rect.width > 0 || rect.height > 0)) {
-      isAutoHeight = rect.height === 0 && rect.width > 0;
-    }
-    // A min-height host can start with a nonzero box and then grow with its
-    // SVG. Do not feed that output height back into chromeLayout: 'grow'.
-    const ownHeight =
-      lastRenderedSvgHeight !== null && Math.abs(rect.height - lastRenderedSvgHeight) < 0.5;
-    if (!ownHeight && rect.height > 0) lastHostHeight = rect.height;
-
-    return {
-      width: Math.max(rect.width || 600, 100),
-      // Latched-auto mounts always compile against the fixed budget: after
-      // the first render the container's measured height is just our own
-      // SVG, so reading it back would re-pin whatever we rendered last.
-      height:
-        isAutoHeight === true
-          ? FALLBACK_HEIGHT
-          : Math.max(ownHeight ? lastHostHeight : rect.height || FALLBACK_HEIGHT, 100),
-    };
+    return hidden;
   }
 
   // ---------------------------------------------------------------------------
   // Selection & text editing
   // ---------------------------------------------------------------------------
 
-  let editRevision = options?.revision;
-  const annotationNudges = createAnnotationNudges(
-    () => ({
-      layout: currentLayout,
-      spec: currentSpec,
-      svg: svgElement,
-      selected: selectedElement,
-    }),
-    emitEdit,
-  );
-
-  function emitEdit(edit: GestureEdit): void {
-    const tx = editToTransaction(currentSpec, edit, editRevision);
-    if (!tx) return;
-    if (!applyEditTransaction(currentSpec, tx).ok) return;
-    options?.onEdit?.(tx);
-  }
-
-  function getSpecAnnotations(): Annotation[] {
-    return annotationSource(currentSpec).annotations;
-  }
-
-  function selectElement(ref: ElementRef): void {
-    annotationNudges.flush();
-    if (!svgElement) return;
-
-    const target = findElementByRef(svgElement, ref);
-    if (!target) return;
-
-    if (selectedElement && !refsEqual(selectedElement, ref)) {
-      deselectElement();
-    }
-
-    selectedElement = ref;
-    overlayElement = renderSelectionOverlay(svgElement, ref, currentLayout);
-    options?.onSelect?.(ref);
-
-    (svgElement as SVGSVGElement).focus();
-  }
-
-  function deselectElement(): void {
-    annotationNudges.flush();
-    if (!selectedElement) return;
-
-    if (isTextEditingActive && textEditCleanup) {
-      textEditCleanup();
-      textEditCleanup = null;
-      isTextEditingActive = false;
-    }
-
-    const prev = selectedElement;
-    selectedElement = null;
-
-    if (overlayElement?.parentNode) {
-      overlayElement.parentNode.removeChild(overlayElement);
-    }
-    overlayElement = null;
-
-    options?.onDeselect?.(prev);
-  }
-
-  function enterTextEditing(): void {
-    annotationNudges.flush();
-    if (!svgElement || !selectedElement || isTextEditingActive) return;
-
-    const specAnnotations = getSpecAnnotations();
-    if (!isTextEditable(selectedElement, specAnnotations)) return;
-
-    const currentText = getElementText(selectedElement, currentSpec);
-    if (currentText === null) return;
-
-    const target = findElementByRef(svgElement, selectedElement);
-    if (!target) return;
-
-    const textEl = target.tagName === 'text' ? target : target.querySelector('text');
-    if (!textEl) return;
-
-    isTextEditingActive = true;
-    const editRef = selectedElement;
-
-    const overlay = createTextEditOverlay({
-      container,
-      svg: svgElement as SVGSVGElement,
-      targetElement: textEl as SVGElement,
-      currentText,
-      onCommit: (newText: string) => {
-        isTextEditingActive = false;
-        textEditCleanup = null;
-
-        if (newText !== currentText) {
-          emitEdit({
-            type: 'text-edit',
-            element: editRef,
-            oldText: currentText,
-            newText,
-          });
-        }
-      },
-      onCancel: () => {
-        isTextEditingActive = false;
-        textEditCleanup = null;
-      },
-    });
-
-    textEditCleanup = overlay.destroy;
-  }
-
-  function wireSelectionEvents(): () => void {
-    if (!svgElement) return () => {};
-
-    const svg = svgElement;
-    const cleanups: Array<() => void> = [];
-
-    const handleClick = (e: Event) => {
-      const mouseEvent = e as MouseEvent;
-      const target = mouseEvent.target as Element;
-
-      if (isTextEditingActive) return;
-
-      const specAnnotations = getSpecAnnotations();
-      const ref = buildElementRef(target, specAnnotations);
-
-      if (ref) {
-        selectElement(ref);
-      } else {
-        deselectElement();
-      }
-    };
-
-    svg.addEventListener('click', handleClick);
-    cleanups.push(() => svg.removeEventListener('click', handleClick));
-
-    const handleMouseEnter = (e: Event) => {
-      const target = (e.target as Element).closest(
-        '[data-annotation-index], [data-chrome-key], .oc-legend:not(.oc-legend--size), [data-legend-index]',
-      );
-      if (target) {
-        (target as SVGElement).classList.add('oc-editable-hover');
-      }
-    };
-
-    const handleMouseLeave = (e: Event) => {
-      const target = (e.target as Element).closest('.oc-editable-hover');
-      if (target) {
-        (target as SVGElement).classList.remove('oc-editable-hover');
-      }
-    };
-
-    svg.addEventListener('mouseenter', handleMouseEnter, true);
-    svg.addEventListener('mouseleave', handleMouseLeave, true);
-    cleanups.push(() => {
-      svg.removeEventListener('mouseenter', handleMouseEnter, true);
-      svg.removeEventListener('mouseleave', handleMouseLeave, true);
-    });
-
-    const handleDblClick = (e: Event) => {
-      const mouseEvent = e as MouseEvent;
-      const target = mouseEvent.target as Element;
-      const specAnnotations = getSpecAnnotations();
-      const ref = buildElementRef(target, specAnnotations);
-
-      if (ref && isTextEditable(ref, specAnnotations)) {
-        if (!refsEqual(selectedElement, ref)) {
-          selectElement(ref);
-        }
-        enterTextEditing();
-        return;
-      }
-
-      // Double-click on empty canvas: create a new annotation
-      if (!ref && options?.onEdit && currentLayout?.xInvert && currentLayout?.yInvert) {
-        const svgEl = svg as SVGSVGElement;
-        const viewBox = svgEl.viewBox?.baseVal;
-        const svgRect = svgEl.getBoundingClientRect();
-        if (!viewBox || !svgRect.width || !svgRect.height) return;
-
-        const vbScaleX = viewBox.width / svgRect.width;
-        const vbScaleY = viewBox.height / svgRect.height;
-        const svgX = (mouseEvent.clientX - svgRect.left) * vbScaleX;
-        const svgY = (mouseEvent.clientY - svgRect.top) * vbScaleY;
-
-        const area = currentLayout.area;
-        if (svgX < area.x || svgX > area.x + area.width) return;
-        if (svgY < area.y || svgY > area.y + area.height) return;
-
-        const dataX = invertScale(currentLayout.xInvert, svgX);
-        const dataY = invertScale(currentLayout.yInvert, svgY);
-
-        isTextEditingActive = true;
-        const overlay = createTextEditOverlayAtPosition({
-          container,
-          svg: svgEl,
-          position: { x: svgX, y: svgY },
-          onCommit: (text: string) => {
-            isTextEditingActive = false;
-            textEditCleanup = null;
-            const annotation: TextAnnotation = { type: 'text', x: dataX, y: dataY, text };
-            emitEdit({ type: 'add', annotation });
-          },
-          onCancel: () => {
-            isTextEditingActive = false;
-            textEditCleanup = null;
-          },
-        });
-        textEditCleanup = overlay.destroy;
-      }
-    };
-
-    svg.addEventListener('dblclick', handleDblClick);
-    cleanups.push(() => svg.removeEventListener('dblclick', handleDblClick));
-
-    return () => {
-      for (const cleanup of cleanups) {
-        cleanup();
-      }
-    };
-  }
-
-  function wireKeyboardEditEvents(): () => void {
-    if (!svgElement) return () => {};
-
-    const svg = svgElement;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const specAnnotations = getSpecAnnotations();
-      if (!isTextEditingActive && annotationNudges.keydown(e)) return;
-      if (e.key === 'Escape' || e.key === 'Delete' || e.key === 'Backspace')
-        annotationNudges.flush();
-
-      switch (e.key) {
-        case 'Delete':
-        case 'Backspace': {
-          if (selectedElement && !isTextEditingActive) {
-            e.preventDefault();
-            emitEdit({ type: 'delete', element: selectedElement });
-          }
-          break;
-        }
-
-        case 'Escape': {
-          e.preventDefault();
-          if (isTextEditingActive && textEditCleanup) {
-            textEditCleanup();
-            textEditCleanup = null;
-            isTextEditingActive = false;
-          } else if (selectedElement) {
-            deselectElement();
-          }
-          break;
-        }
-
-        case 'Tab': {
-          if (!isTextEditingActive) {
-            const editables = getEditableElements(currentSpec, currentLayout);
-            if (!editables.length) break;
-            e.preventDefault();
-            annotationNudges.flush();
-            const currentIndex = editables.findIndex((r) => refsEqual(r, selectedElement));
-            const nextIndex = e.shiftKey
-              ? currentIndex <= 0
-                ? editables.length - 1
-                : currentIndex - 1
-              : (currentIndex + 1) % editables.length;
-            selectElement(editables[nextIndex]);
-          }
-          break;
-        }
-
-        case 'Enter': {
-          if (selectedElement && !isTextEditingActive) {
-            if (isTextEditable(selectedElement, specAnnotations)) {
-              e.preventDefault();
-              enterTextEditing();
-            }
-          }
-          break;
-        }
-      }
-    };
-
-    svg.addEventListener('keydown', handleKeyDown);
-    const flushNudges = () => annotationNudges.flush();
-    const releaseNudge = (event: KeyboardEvent) => annotationNudges.keyup(event);
-    svg.addEventListener('keyup', releaseNudge);
-    const startGesture = (event: MouseEvent | TouchEvent) => {
-      const target = event.target as Element;
-      const ref = buildElementRef(target, getSpecAnnotations());
-      const previousLayout = currentLayout;
-      // Capture the specific handle before a controlled update replaces it.
-      const role = target.closest('.oc-connector-handle, .oc-anchor-handle, .oc-annotation-label');
-      const roleClass = role?.getAttribute('class');
-      const endpoint = role?.getAttribute('data-endpoint');
-      annotationNudges.flush();
-      if (destroyed || !ref || !svgElement || currentLayout === previousLayout) return;
-      const group = findElementByRef(svgElement, ref);
-      if (!group) return;
-      const replacement = roleClass
-        ? ([...group.querySelectorAll('*')].find(
-            (el) =>
-              el.getAttribute('class') === roleClass &&
-              el.getAttribute('data-endpoint') === endpoint,
-          ) ?? group)
-        : group;
-      event.stopImmediatePropagation();
-      event.preventDefault();
-      const init = { bubbles: true, cancelable: true };
-      replacement.dispatchEvent(
-        event.type === 'mousedown'
-          ? new MouseEvent('mousedown', {
-              ...init,
-              clientX: (event as MouseEvent).clientX,
-              clientY: (event as MouseEvent).clientY,
-              button: (event as MouseEvent).button,
-            })
-          : new TouchEvent('touchstart', {
-              ...init,
-              touches: [...(event as TouchEvent).touches],
-              changedTouches: [...(event as TouchEvent).changedTouches],
-            }),
-      );
-    };
-    svg.addEventListener('mousedown', startGesture, true);
-    svg.addEventListener('touchstart', startGesture, true);
-    document.addEventListener('pointercancel', flushNudges, true);
-    document.addEventListener('touchcancel', flushNudges, true);
-
-    return () => {
-      svg.removeEventListener('keydown', handleKeyDown);
-      svg.removeEventListener('keyup', releaseNudge);
-      svg.removeEventListener('mousedown', startGesture, true);
-      svg.removeEventListener('touchstart', startGesture, true);
-      document.removeEventListener('pointercancel', flushNudges, true);
-      document.removeEventListener('touchcancel', flushNudges, true);
-    };
-  }
+  const edits = createEditSession({
+    container,
+    options,
+    selectable,
+    editing,
+    spec: () => currentSpec,
+    layout: () => currentLayout,
+    svg: () => svgElement,
+    destroyed: () => destroyed,
+  });
 
   // ---------------------------------------------------------------------------
   // Render cycle
@@ -966,39 +259,8 @@ export function createChart<TData extends DataRow = DataRow>(
     cancelAnimations(svgElement);
 
     // Clean up previous render
-    cleanupTooltipEvents?.();
-    cleanupTooltipEvents = null;
-    cleanupVoronoiEvents?.();
-    cleanupVoronoiEvents = null;
-    crosshairController = null;
-    cleanupEndpointHover?.();
-    cleanupEndpointHover = null;
-    hoverEmphasis?.destroy();
-    hoverEmphasis = null;
-    cleanupCanvasEvents?.();
-    cleanupCanvasEvents = null;
-    canvasLayer?.destroy();
-    canvasLayer = null;
-    cleanupKeyboardNav?.();
-    cleanupKeyboardNav = null;
-    cleanupLegend?.();
-    cleanupLegend = null;
-    cleanupChartEvents?.();
-    cleanupChartEvents = null;
-    cleanupAnnotationDrag?.();
-    cleanupAnnotationDrag = null;
-    cleanupEditDrags?.();
-    cleanupEditDrags = null;
-    cleanupSelection?.();
-    cleanupSelection = null;
-    cleanupKeyboardEdit?.();
-    cleanupKeyboardEdit = null;
-    if (textEditCleanup) {
-      textEditCleanup();
-      textEditCleanup = null;
-      isTextEditingActive = false;
-    }
-    overlayElement = null;
+    disposeRender();
+    edits.detach();
     if (!retainedSVG && svgElement?.parentNode) {
       svgElement.parentNode.removeChild(svgElement);
     }
@@ -1012,8 +274,7 @@ export function createChart<TData extends DataRow = DataRow>(
 
     currentLayout = nextLayout;
     // Recorded for the ResizeObserver's self-induced-resize guard.
-    lastRenderedWidth = currentLayout.dimensions.width;
-    lastRenderedSvgHeight = currentLayout.dimensions.height;
+    sizer.rendered(currentLayout);
     const shouldAnimate = isFirstRender && !!currentLayout.animation?.enter;
     const crosshair = !!currentLayout.crosshair;
 
@@ -1021,7 +282,12 @@ export function createChart<TData extends DataRow = DataRow>(
     // it underneath (both are positioned, so DOM order decides paint order).
     const canvasMode = currentLayout.markRenderMode === 'canvas';
     if (canvasMode) {
-      canvasLayer = createScatterCanvasLayer(container, currentLayout);
+      const layer = createScatterCanvasLayer(container, currentLayout);
+      canvasLayer = layer;
+      renderDisposers.push(() => {
+        layer.destroy();
+        canvasLayer = null;
+      });
       // Compatible updates keep the SVG in place, so appending the new canvas
       // would paint its opaque background over the retained chrome and axes.
       if (retainedSVG) container.insertBefore(canvasLayer.canvas, retainedSVG);
@@ -1030,7 +296,7 @@ export function createChart<TData extends DataRow = DataRow>(
       // Point marks are pixels on a canvas, not selectable elements, so
       // per-mark edit selection is unavailable. Annotation, chrome, and legend
       // editing still work -- those stay in the SVG. Warned once per mount.
-      if (!warnedCanvasEditMode && (options?.editable || hasEditingCallbacks(options))) {
+      if (!warnedCanvasEditMode && selectable) {
         warnedCanvasEditMode = true;
         console.warn(
           'openchart: canvas mark mode does not support per-mark edit selection. ' +
@@ -1056,53 +322,58 @@ export function createChart<TData extends DataRow = DataRow>(
     // wireTooltipEvents below still runs and is simply inert for points --
     // canvas mode emits no [data-mark-id] circles for it to bind to.
     if (canvasMode && canvasLayer) {
-      cleanupCanvasEvents = wireCanvasInteractions({
-        layer: canvasLayer,
-        svg: svgElement,
-        tooltipDescriptors: currentLayout.tooltipDescriptors,
-        tooltipManager,
-        options,
-      });
+      track(
+        wireCanvasInteractions({
+          layer: canvasLayer,
+          svg: svgElement,
+          tooltipDescriptors: currentLayout.tooltipDescriptors,
+          tooltipManager,
+          options,
+        }),
+      );
     }
 
     // Shared hover language: mark hover, legend hover and the crosshair all
     // route through this one controller so they cannot contradict each other.
-    hoverEmphasis = createHoverEmphasis(svgElement, currentLayout);
+    const hoverEmphasis = createHoverEmphasis(svgElement, currentLayout);
+    track(() => hoverEmphasis.destroy());
 
     // Wire tooltip events on mark elements
-    cleanupTooltipEvents = wireTooltipEvents(
-      svgElement,
-      currentLayout.tooltipDescriptors,
-      tooltipManager,
-      hoverEmphasis,
+    track(
+      wireTooltipEvents(
+        svgElement,
+        currentLayout.tooltipDescriptors,
+        tooltipManager,
+        hoverEmphasis,
+      ),
     );
 
     // Wire voronoi overlay tooltip events for line/area charts
-    const crosshairCtl = wireVoronoiTooltipEvents(
+    const crosshairController = wireVoronoiTooltipEvents(
       svgElement,
       currentLayout,
       tooltipManager,
       hoverEmphasis,
     );
-    crosshairController = crosshairCtl;
-    // Bound to the local, not the instance field: teardown nulls the field.
-    cleanupVoronoiEvents = crosshairCtl ? () => crosshairCtl.cleanup() : null;
+    if (crosshairController) track(() => crosshairController.cleanup());
 
     // The endpoint-label column is the legend on charts that have none.
-    cleanupEndpointHover = wireEndpointLabelHover(svgElement, hoverEmphasis);
+    track(wireEndpointLabelHover(svgElement, hoverEmphasis));
 
     // Wire keyboard navigation. Skipped when the author hid the chart from
     // assistive technology (a11y.hidden): a hidden chart must not be a tab stop.
-    const keyboardEditing =
-      !wantsSeriesSearch(currentSpec) && (options?.editable ?? hasEditingCallbacks(options));
+    // Edit mode takes the arrow keys for nudges; read and select keep reader nav.
+    const keyboardEditing = !wantsSeriesSearch(currentSpec) && editing;
     if (!currentLayout.a11y.hidden && !keyboardEditing) {
-      cleanupKeyboardNav = wireKeyboardNav(
-        svgElement,
-        container,
-        currentLayout.tooltipDescriptors,
-        tooltipManager,
-        currentLayout,
-        crosshairController,
+      track(
+        wireKeyboardNav(
+          svgElement,
+          container,
+          currentLayout.tooltipDescriptors,
+          tooltipManager,
+          currentLayout,
+          crosshairController,
+        ),
       );
     }
 
@@ -1110,11 +381,7 @@ export function createChart<TData extends DataRow = DataRow>(
     // the spec enables seriesSearch, edit interactions are suppressed
     // (search wins -- the engine already reserved the search band).
     const editSuppressed = wantsSeriesSearch(currentSpec);
-    if (
-      editSuppressed &&
-      !editSuppressWarned &&
-      (options?.editable || hasEditingCallbacks(options))
-    ) {
+    if (editSuppressed && !editSuppressWarned && selectable) {
       editSuppressWarned = true;
       console.warn(
         '[openchart] seriesSearch and edit mode are mutually exclusive; edit interactions are disabled while seriesSearch is enabled.',
@@ -1137,12 +404,14 @@ export function createChart<TData extends DataRow = DataRow>(
     }
 
     // Wire legend interactivity
-    cleanupLegend = wireLegendInteraction(
-      svgElement,
-      currentLayout,
-      toggleSeriesVisibility,
-      options?.onLegendToggle,
-      hoverEmphasis,
+    track(
+      wireLegendInteraction(
+        svgElement,
+        currentLayout,
+        toggleSeriesVisibility,
+        options?.onLegendToggle,
+        hoverEmphasis,
+      ),
     );
 
     // Wire chart event handlers (mark click/hover/leave, annotation click)
@@ -1152,13 +421,13 @@ export function createChart<TData extends DataRow = DataRow>(
       options?.onMarkLeave ||
       options?.onAnnotationClick
     ) {
-      const specAnnotations = getSpecAnnotations();
-      cleanupChartEvents = wireChartEvents(svgElement, currentLayout, specAnnotations, options);
+      const specAnnotations = edits.annotations();
+      track(wireChartEvents(svgElement, currentLayout, specAnnotations, options));
     }
 
     // Shared setDragging callback for all drag handlers
     const setDragging = (dragging: boolean) => {
-      if (dragging) gestureWidth = getContainerDimensions().width;
+      if (dragging) gestureWidth = sizer.dimensions(currentSpec).width;
       isDragging = dragging;
       if (!dragging && pendingRender) {
         pendingRender = false;
@@ -1166,26 +435,27 @@ export function createChart<TData extends DataRow = DataRow>(
       }
     };
 
-    const dragAnnotations = getSpecAnnotations();
+    const dragAnnotations = edits.annotations();
 
     // Wire annotation drag editing
-    if (!editSuppressed && (options?.editable ?? Boolean(options?.onEdit))) {
-      cleanupAnnotationDrag = wireAnnotationDrag(
-        svgElement,
-        dragAnnotations,
-        emitEdit,
-        setDragging,
-        currentLayout,
-        currentSpec,
+    if (!editSuppressed && editing) {
+      track(
+        wireAnnotationDrag(
+          svgElement,
+          dragAnnotations,
+          edits.emit,
+          setDragging,
+          currentLayout,
+          currentSpec,
+        ),
       );
     }
 
-    // Wire all edit drag handlers when onEdit is provided (or editable is true)
-    if (!editSuppressed && (options?.editable ?? Boolean(options?.onEdit))) {
-      const editCleanups: Array<() => void> = [];
-      const onEditFn = emitEdit;
+    // Wire all edit drag handlers in edit mode
+    if (!editSuppressed && editing) {
+      const onEditFn = edits.emit;
 
-      editCleanups.push(
+      track(
         wireConnectorEndpointDrag(
           svgElement,
           dragAnnotations,
@@ -1195,42 +465,20 @@ export function createChart<TData extends DataRow = DataRow>(
           currentSpec,
         ),
       );
-      editCleanups.push(
-        wireAnnotationLabelDrag(svgElement, dragAnnotations, onEditFn, setDragging),
-      );
+      track(wireAnnotationLabelDrag(svgElement, dragAnnotations, onEditFn, setDragging));
 
       if (currentLayout.xInvert && currentLayout.yInvert) {
-        editCleanups.push(
-          wireAnchorDrag(svgElement, dragAnnotations, currentLayout, onEditFn, setDragging),
-        );
+        track(wireAnchorDrag(svgElement, dragAnnotations, currentLayout, onEditFn, setDragging));
       }
 
-      const editSpec = currentSpec as ChartSpec | GraphSpec;
-      editCleanups.push(wireChromeDrag(svgElement, editSpec, onEditFn, setDragging));
-      editCleanups.push(wireLegendDrag(svgElement, editSpec, onEditFn, setDragging));
-
-      cleanupEditDrags = () => {
-        for (const cleanup of editCleanups) {
-          cleanup();
-        }
-      };
+      const editSpec = currentSpec as ChartSpec;
+      track(wireChromeDrag(svgElement, editSpec, onEditFn, setDragging));
+      track(wireLegendDrag(svgElement, editSpec, onEditFn, setDragging));
     }
 
-    // Wire selection and keyboard edit events when editing callbacks are provided
-    if (!editSuppressed && (options?.editable ?? hasEditingCallbacks(options))) {
-      makeEditable(svgElement);
-      cleanupSelection = wireSelectionEvents();
-      cleanupKeyboardEdit = wireKeyboardEditEvents();
-
-      if (selectedElement) {
-        const target = findElementByRef(svgElement, selectedElement);
-        if (target) {
-          overlayElement = renderSelectionOverlay(svgElement, selectedElement, currentLayout);
-        } else {
-          selectedElement = null;
-          overlayElement = null;
-        }
-      }
+    // Wire selection and keyboard selection/edit events in select and edit modes
+    if (!editSuppressed && selectable) {
+      edits.attach(svgElement);
     }
 
     // Create hidden data table for screen readers (not when the author hid
@@ -1261,13 +509,13 @@ export function createChart<TData extends DataRow = DataRow>(
 
     // Mount/refresh the "you draw it" overlay. Created once and kept across
     // renders so the reader's in-progress guess survives each resize's
-    // re-render. Mutually exclusive with edit mode: when editing callbacks are
-    // present, youDrawIt is disabled (warn once) per plans 11/17's rule.
-    const ydiEditConflict = wantsYouDrawIt(currentSpec) && hasEditingCallbacks(options);
+    // re-render. Mutually exclusive with selection/editing: outside read mode,
+    // youDrawIt is disabled (warn once) per plans 11/17's rule.
+    const ydiEditConflict = wantsYouDrawIt(currentSpec) && selectable;
     if (ydiEditConflict && !ydiEditSuppressWarned) {
       ydiEditSuppressWarned = true;
       console.warn(
-        '[openchart] youDrawIt and edit mode are mutually exclusive; youDrawIt is disabled while editing callbacks are provided.',
+        "[openchart] youDrawIt and edit mode are mutually exclusive; youDrawIt is disabled unless interaction is 'read'.",
       );
     }
     if (currentLayout.youDrawIt && !ydiEditConflict) {
@@ -1353,7 +601,7 @@ export function createChart<TData extends DataRow = DataRow>(
   // Public API methods
   // ---------------------------------------------------------------------------
 
-  function update(newSpec: ChartSpec | GraphSpec, updateOpts?: UpdateOptions): void {
+  function update(newSpec: ChartSpec | LayerSpec, updateOpts?: UpdateOptions): void {
     doUpdate(newSpec, updateOpts, false);
   }
 
@@ -1364,24 +612,24 @@ export function createChart<TData extends DataRow = DataRow>(
    * instantly). Used by headless frame capture (GIF export of a spec-swap
    * stepper) to sample the update tween deterministically. No rAF runs.
    */
-  function beginManualUpdate(newSpec: ChartSpec | LayerSpec | GraphSpec): TransitionHandle | null {
-    return doUpdate(newSpec as ChartSpec | GraphSpec, undefined, true);
+  function beginManualUpdate(newSpec: ChartSpec | LayerSpec): TransitionHandle | null {
+    return doUpdate(newSpec, undefined, true);
   }
 
   function doUpdate(
-    newSpec: ChartSpec | LayerSpec | GraphSpec,
+    newSpec: ChartSpec | LayerSpec,
     updateOpts: UpdateOptions | undefined,
     manual: boolean,
     layoutOnly = false,
   ): TransitionHandle | null {
     if (destroyed) return null;
 
-    annotationNudges.flush();
+    edits.flush();
     if (destroyed) return null;
     // A controlled host may commit the flushed nudge synchronously.
     if (layoutOnly) newSpec = currentSpec;
     if (isDragging) {
-      if (layoutOnly && getContainerDimensions().width === gestureWidth) {
+      if (layoutOnly && sizer.dimensions(currentSpec).width === gestureWidth) {
         pendingRender = true;
         return null;
       }
@@ -1393,6 +641,7 @@ export function createChart<TData extends DataRow = DataRow>(
     const prevSpec = currentSpec;
     const prevLayout = currentLayout;
     const entranceWasRunning = cleanupAnimations != null;
+    const settledAnnotations = edits.takeSettled(prevLayout, layoutOnly);
 
     const nextFont = resolveEffectiveFont(newSpec);
     const fontChanged = nextFont !== fontFamily;
@@ -1401,13 +650,12 @@ export function createChart<TData extends DataRow = DataRow>(
     // Capture only after compilation succeeds, before render() cancels the
     // current motion. A rejected edit must not leave geometry for a later update.
     const snapshot = transitionHandle?.running ? transitionHandle.snapshot() : undefined;
-    if (updateOpts && Object.hasOwn(updateOpts, 'revision')) editRevision = updateOpts.revision;
+    if (updateOpts && Object.hasOwn(updateOpts, 'revision')) edits.setRevision(updateOpts.revision);
     currentSpec = newSpec;
     fontFamily = nextFont;
     measureText = nextMeasure;
     if (!layoutOnly) {
-      runtimeHiddenSeries.clear();
-      runtimeShownSeries.clear();
+      visibility.clear();
     }
     // The new spec is the source of truth: re-capture the authored highlight
     // baseline and drop any search selections layered on the previous spec.
@@ -1420,7 +668,7 @@ export function createChart<TData extends DataRow = DataRow>(
     ydiEditSuppressWarned = false;
     editSuppressWarned = false;
     if (updateOpts && 'selectedElement' in updateOpts) {
-      selectedElement = updateOpts.selectedElement ?? null;
+      edits.setSelection(updateOpts.selectedElement);
     }
     render(canTransitionSpecShape(prevSpec, newSpec), nextLayout);
     if (fontChanged) watchCurrentFont();
@@ -1444,6 +692,7 @@ export function createChart<TData extends DataRow = DataRow>(
         nextLayout: currentLayout,
         animation: currentLayout.animation!,
         fromSnapshot: snapshot,
+        settledAnnotations,
         manual,
         // render() above already rebuilt the layer for the NEXT layout, so this
         // is the destination-mode layer the tween writes into.
@@ -1497,8 +746,7 @@ export function createChart<TData extends DataRow = DataRow>(
 
   function setHighlight(values: string[] | null): void {
     if (destroyed) return;
-    if (isLayerSpec(currentSpec) || isGraphSpec(currentSpec as unknown as Record<string, unknown>))
-      return;
+    if (isLayerSpec(currentSpec)) return;
     const spec = currentSpec as ChartSpec;
     const colorEnc = spec.encoding?.color;
     if (!colorEnc || typeof colorEnc !== 'object' || !('field' in colorEnc)) return;
@@ -1517,74 +765,15 @@ export function createChart<TData extends DataRow = DataRow>(
     render();
   }
 
-  function doExport(format: 'svg'): string;
-  function doExport(format: 'svg-with-fonts', exportOptions?: SVGExportOptions): Promise<string>;
-  function doExport(format: 'png', exportOptions?: ExportOptions): Promise<Blob>;
-  function doExport(format: 'jpg', exportOptions?: ExportOptions): Promise<Blob>;
-  function doExport(format: 'gif', exportOptions?: GIFExportOptions): Promise<Blob>;
-  function doExport(format: 'csv'): string;
-  function doExport(
-    format: 'svg' | 'svg-with-fonts' | 'png' | 'jpg' | 'gif' | 'csv',
-    exportOptions?: ExportOptions | GIFExportOptions,
-  ): string | Promise<Blob> | Promise<string> {
-    if (!svgElement) {
-      throw new Error('Chart is not rendered yet');
-    }
-    // In canvas mode the on-screen SVG has no dots, no gridlines and no
-    // background -- the canvas owns those. Serializing it would export an
-    // empty chart, so every format works off a materialized SVG that has the
-    // missing half folded back in. Raster formats force the vector path: they
-    // are becoming pixels anyway, and it buys parity with SVG mode for free.
-    const svg =
-      canvasLayer && currentLayout.markRenderMode === 'canvas'
-        ? materializeCanvasModeSVG(currentLayout, {
-            forceVector: format === 'png' || format === 'jpg' || format === 'gif',
-          })
-        : renderChartSVG(currentLayout, document.createElement('div'), { animate: false });
-    // The resolved theme, defaulted into the export options, so class-based
-    // chrome fills (metrics, eyebrow dot, legend) survive serialization away from
-    // the page stylesheet. An explicit options.theme still wins.
-    const theme = 'theme' in currentLayout ? currentLayout.theme : undefined;
-    // Re-rendering preserves settled geometry, but the detached scene has no
-    // host cascade. Carry the live tokens across unless export overrides them.
-    prepareSettledExportTheme(
-      svgElement,
-      svg,
-      exportOptions?.theme ?? theme,
-      !!exportOptions?.theme,
-    );
-    const withTheme = <T extends { theme?: unknown }>(o: T | undefined): T =>
-      ({ theme, ...(o ?? {}) }) as T;
-
-    switch (format) {
-      case 'svg':
-        return exportSVG(svg);
-      case 'svg-with-fonts':
-        return exportSVGWithFonts(svg, withTheme(exportOptions as SVGExportOptions | undefined));
-      case 'png':
-        return exportPNG(svg, withTheme(exportOptions as ExportOptions | undefined));
-      case 'jpg':
-        return exportJPG(svg, withTheme(exportOptions as ExportOptions | undefined));
-      case 'gif': {
-        // Dynamic import keeps the GIF encoder (optional `gifenc` peer) out of
-        // the core bundle — only consumers who export GIFs load this chunk.
-        const gifOptions = withTheme(exportOptions as GIFExportOptions | undefined);
-        const gifBlob: Promise<Blob> = import('./export-gif').then(({ exportGIF }) =>
-          exportGIF(svg, currentLayout.animation, gifOptions),
-        );
-        return gifBlob;
-      }
-      case 'csv':
-        return exportCSV(
-          'data' in currentSpec && Array.isArray(currentSpec.data) ? currentSpec.data : [],
-        );
-      default:
-        throw new Error(`Unsupported export format: ${format}`);
-    }
-  }
+  const doExport = createChartExporter(() => ({
+    svgElement,
+    canvasLayer,
+    currentLayout,
+    currentSpec,
+  }));
 
   function destroy(): void {
-    annotationNudges.flush();
+    edits.flush();
     if (destroyed) return;
     destroyed = true;
 
@@ -1600,46 +789,14 @@ export function createChart<TData extends DataRow = DataRow>(
     }
     cancelAnimations(svgElement);
 
-    cleanupTooltipEvents?.();
-    cleanupTooltipEvents = null;
-    cleanupVoronoiEvents?.();
-    cleanupVoronoiEvents = null;
-    crosshairController = null;
-    cleanupEndpointHover?.();
-    cleanupEndpointHover = null;
-    hoverEmphasis?.destroy();
-    hoverEmphasis = null;
-    cleanupCanvasEvents?.();
-    cleanupCanvasEvents = null;
     // Cancel before destroying the layer, matching render()/resize(). The
     // layer's own destroy() stops the scheduler, so this is not a live timer;
     // what it drops is this closure's reference to the layer state, whose
     // typed arrays scale with the point count.
     canvasEntrance?.cancel();
     canvasEntrance = null;
-    canvasLayer?.destroy();
-    canvasLayer = null;
-    cleanupKeyboardNav?.();
-    cleanupKeyboardNav = null;
-    cleanupLegend?.();
-    cleanupLegend = null;
-    cleanupChartEvents?.();
-    cleanupChartEvents = null;
-    cleanupAnnotationDrag?.();
-    cleanupAnnotationDrag = null;
-    cleanupEditDrags?.();
-    cleanupEditDrags = null;
-    cleanupSelection?.();
-    cleanupSelection = null;
-    cleanupKeyboardEdit?.();
-    cleanupKeyboardEdit = null;
-    if (textEditCleanup) {
-      textEditCleanup();
-      textEditCleanup = null;
-      isTextEditingActive = false;
-    }
-    selectedElement = null;
-    overlayElement = null;
+    disposeRender();
+    edits.destroy();
     if (seriesSearch) {
       seriesSearch.destroy();
       seriesSearch = null;
@@ -1692,28 +849,7 @@ export function createChart<TData extends DataRow = DataRow>(
   // Set up responsive resize
   if (options?.autoResize !== false) {
     disconnectResize = observeResize(container, (width, height) => {
-      const widthChanged = lastRenderedWidth === null || Math.abs(width - lastRenderedWidth) >= 0.5;
-      const selfInducedHeight =
-        lastRenderedSvgHeight !== null && Math.abs(height - lastRenderedSvgHeight) < 0.5;
-      if (!widthChanged && selfInducedHeight) return;
-      // Self-induced-resize guard, scoped to latched-auto mounts: growing
-      // the SVG grows the container, which re-fires this observer. A fire
-      // whose height matches the SVG we just rendered (and whose width is
-      // unchanged) is our own echo — re-rendering on it would loop; the
-      // 16ms debounce alone doesn't break the cycle.
-      if (isAutoHeight === true) {
-        if (!selfInducedHeight) {
-          // Any other height delta is host-driven: un-latch so the next
-          // measure re-derives (and re-latches explicit if the container
-          // now reports a height that isn't ours).
-          isAutoHeight = null;
-        }
-        resize();
-        return;
-      }
-      // Explicit-height (and not-yet-latched) mounts keep today's
-      // re-render-on-every-fire behavior.
-      resize();
+      if (sizer.shouldResize(width, height)) resize();
     });
   }
 
@@ -1732,18 +868,18 @@ export function createChart<TData extends DataRow = DataRow>(
       return currentLayout;
     },
     getSelectedElement(): ElementRef | null {
-      return selectedElement;
+      return edits.selected;
     },
     select(ref: ElementRef): void {
       if (destroyed) return;
-      selectElement(ref);
+      edits.select(ref);
     },
     deselect(): void {
       if (destroyed) return;
-      deselectElement();
+      edits.deselect();
     },
-    get isEditing(): boolean {
-      return isTextEditingActive;
+    get isTextEditing(): boolean {
+      return edits.isTextEditing;
     },
     setHighlight,
     resetDrawing(): void {

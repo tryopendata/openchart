@@ -225,8 +225,8 @@ describe('createGraphShell', () => {
     shell.destroy();
   });
 
-  it('does not observe resizes when responsive is false', () => {
-    const shell = shellFor({ responsive: false });
+  it('does not observe resizes when autoResize is false', () => {
+    const shell = shellFor({ autoResize: false });
     const callback = vi.fn();
 
     const disconnect = shell.observeResize(callback);

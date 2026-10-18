@@ -1,5 +1,5 @@
 import type { ChartSpec, LayerSpec } from '@opendata-ai/openchart-core';
-import { legacyEditorial, resolveTheme } from '@opendata-ai/openchart-core';
+import { encodePointerToken, legacyEditorial, resolveTheme } from '@opendata-ai/openchart-core';
 import { buildPrimarySpec } from '../compile/layer';
 import { expandSpecSugar } from '../compile/spec-sugar';
 import { flattenLayers, normalizeSpec } from '../compiler/normalize';
@@ -18,7 +18,6 @@ const node = (value: unknown): Node | undefined =>
   value !== null && typeof value === 'object' && !Array.isArray(value)
     ? (value as Node)
     : undefined;
-const escapePointer = (value: string) => value.replace(/~/g, '~0').replace(/\//g, '~1');
 
 /**
  * Rewrite v8 aliases without mutating the input. Safe to run repeatedly.
@@ -41,10 +40,10 @@ export function migrateSpecV8<T>(
           )
         : value;
   const spec = clone(input) as T;
-  function visit(current: Node, path: string, inherited: Node = {}) {
+  function visit(current: Node, path: string, inherited: Node = {}, dualAxisLeaf = false) {
     function replace(owner: Node, key: string, value: unknown, at: string, reason: string) {
       repairs.push({
-        path: `${at}/${escapePointer(key)}`,
+        path: `${at}/${encodePointerToken(key)}`,
         from: clone(owner[key]),
         to: clone(value),
         reason,
@@ -54,6 +53,15 @@ export function migrateSpecV8<T>(
     }
     const rewrite = (key: string, value: unknown, reason: string) =>
       replace(current, key, value, path, reason);
+    // v8 drew dual-axis leaves entirely with the layer theme when it had one;
+    // v9 merges the leaf theme over it for the leaf's marks and axis.
+    if (
+      options.styling !== 'v9' &&
+      dualAxisLeaf &&
+      !Array.isArray(current.layer) &&
+      current.theme !== undefined
+    )
+      rewrite('theme', undefined, 'v8 dual-axis charts ignored leaf themes under a layer theme.');
     if ('darkMode' in current)
       rewrite('darkMode', undefined, 'Spec darkMode has no effect; use the mount option.');
     if (current.type === 'table' && 'compact' in current) {
@@ -61,15 +69,6 @@ export function migrateSpecV8<T>(
         rewrite('density', current.compact ? 'condensed' : 'regular', 'Use table density.');
       rewrite('compact', undefined, 'Replaced by density.');
     }
-    // v8's layer-level theme replaced a leaf theme as a whole. Make that
-    // formerly effective choice explicit before v9's deep parent/leaf merge.
-    if (
-      options.styling !== 'v9' &&
-      current.theme !== undefined &&
-      inherited.theme !== undefined &&
-      JSON.stringify(current.theme) !== JSON.stringify(inherited.theme)
-    )
-      rewrite('theme', clone(inherited.theme), 'Preserve the v8 parent theme precedence.');
     const theme = node(current.theme);
     const chrome = node(theme?.chrome);
     if (chrome)
@@ -133,13 +132,22 @@ export function migrateSpecV8<T>(
             'Use channel format.',
           );
         rewrite('valueFormat', undefined, 'Replaced by channel format.');
-      }
+      } else
+        rewrite('valueFormat', undefined, `Removed: it had no effect without encoding.${key}.`);
     }
     if (Array.isArray(current.annotations))
       for (const [index, value] of current.annotations.entries()) {
         const annotation = node(value);
         if (annotation?.type === 'rule')
           replace(annotation, 'type', 'refline', `${path}/annotations/${index}`, 'Use refline.');
+        if (annotation?.type === 'text' && 'label' in annotation)
+          replace(
+            annotation,
+            'label',
+            undefined,
+            `${path}/annotations/${index}`,
+            'Removed: label had no effect on text annotations.',
+          );
       }
     if (options.styling !== 'v9') {
       // Materialize only omitted v8 defaults. An authored null/false remains an opt-out.
@@ -218,6 +226,34 @@ export function migrateSpecV8<T>(
         (!isLayer && (isChart || current.type !== undefined) && inherited.theme === undefined) ||
         current.theme !== undefined
       ) {
+        // v8 let authored fonts.sizes override authored chrome sizes; v9 reverses that.
+        // A size equal to the legacy default is what this migration materializes,
+        // so it is not treated as an override; that keeps the rewrite idempotent.
+        const legacySizes = legacyEditorial.fonts!.sizes! as Node;
+        const authoredSizes = node(node(node(current.theme)?.fonts)?.sizes) ?? {};
+        const authoredChrome = node(node(current.theme)?.chrome) ?? {};
+        for (const [key, size] of Object.entries({
+          title: 'title',
+          subtitle: 'subtitle',
+          source: 'small',
+          byline: 'small',
+          footer: 'small',
+        })) {
+          const entry = node(authoredChrome[key]);
+          if (
+            entry?.fontSize !== undefined &&
+            authoredSizes[size] !== undefined &&
+            authoredSizes[size] !== legacySizes[size] &&
+            entry.fontSize !== authoredSizes[size]
+          )
+            replace(
+              entry,
+              'fontSize',
+              authoredSizes[size],
+              `${path}/theme/chrome/${key}`,
+              `Preserve v8 precedence of fonts.sizes.${size} over chrome sizes.`,
+            );
+        }
         const oldTheme = { ...node(current.theme) };
         const fonts = node(oldTheme.fonts) ?? {};
         const sizes = node(fonts.sizes) ?? {};
@@ -274,23 +310,31 @@ export function migrateSpecV8<T>(
         // Shape guards distinguish absence from an undefined layer key.
         delete owner.overrides;
         delete owner.layer;
-        visit(overrideNode, `${path}/overrides/${escapePointer(breakpoint)}`, owner);
+        visit(overrideNode, `${path}/overrides/${encodePointerToken(breakpoint)}`, owner);
       }
     }
     if (Array.isArray(current.layer))
       current.layer.forEach((child, index) => {
         const childNode = node(child);
         if (childNode)
-          visit(childNode, `${path}/layer/${index}`, {
-            data,
-            theme: current.theme ?? inherited.theme,
-            responsive: current.responsive ?? inherited.responsive,
-            chromeLayout: current.chromeLayout ?? inherited.chromeLayout,
-            encoding: effectiveEncoding,
-            endpointLabels: current.endpointLabels ?? endpoint,
-            legend: current.legend ?? inherited.legend,
-            labels: current.labels ?? inherited.labels,
-          });
+          visit(
+            childNode,
+            `${path}/layer/${index}`,
+            {
+              data,
+              theme: current.theme ?? inherited.theme,
+              responsive: current.responsive ?? inherited.responsive,
+              chromeLayout: current.chromeLayout ?? inherited.chromeLayout,
+              encoding: effectiveEncoding,
+              endpointLabels: current.endpointLabels ?? endpoint,
+              legend: current.legend ?? inherited.legend,
+              labels: current.labels ?? inherited.labels,
+            },
+            dualAxisLeaf ||
+              (path === '' &&
+                current.theme !== undefined &&
+                node(node(node(current.resolve)?.scale))?.y === 'independent'),
+          );
       });
     let legacyLabels = false;
     const effective: Node = {
@@ -330,15 +374,23 @@ export function migrateSpecV8<T>(
         sourceMark === 'area' &&
         normalized.encoding.y?.stack !== null &&
         normalized.encoding.y?.stack !== false;
+      // v8 suppressed end-of-line labels only for color series. Series keyed by
+      // strokeDash alone always had them, whatever the legend/endpoint config.
+      const color = normalized.encoding.color;
+      const colorSeries =
+        !!color && !('condition' in color) && 'field' in color && color.type !== 'quantitative';
       return (
         !stackedArea &&
         countColorSeries(normalized) >= 2 &&
         normalized.labels.density !== 'none' &&
-        !suppression.showTraditionalLegend &&
-        !suppression.showEndpointLabels
+        (!colorSeries || (!suppression.showTraditionalLegend && !suppression.showEndpointLabels))
       );
     });
-    if (legacyLabels)
+    if (
+      legacyLabels &&
+      JSON.stringify(current.endpointLabels) !==
+        JSON.stringify({ content: 'label', showMarker: false })
+    )
       rewrite(
         'endpointLabels',
         { content: 'label', showMarker: false },

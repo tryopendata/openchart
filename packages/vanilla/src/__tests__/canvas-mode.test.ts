@@ -86,7 +86,9 @@ describe('canvas mark mode DOM contract', () => {
     const svg = container.querySelector('svg') as SVGElement;
 
     // Canvas earlier in document order => painted underneath...
-    expect(canvas.compareDocumentPosition(svg) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(canvas.compareDocumentPosition(svg) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
     // ...but only because both are positioned. A static SVG would lose to the
     // absolutely-positioned canvas regardless of order.
     expect(canvas.style.position).toBe('absolute');
@@ -123,8 +125,8 @@ describe('canvas mark mode DOM contract', () => {
     });
 
     const svg = container.querySelector('svg') as SVGElement;
-    expect(svg.getAttribute('role')).toBeTruthy();
-    expect(svg.getAttribute('aria-label')).toBeTruthy();
+    expect(svg.getAttribute('role')).toBe('img');
+    expect(svg.getAttribute('aria-label')).toBe('Scatter plot (20 data points)');
 
     chart.destroy();
   });
@@ -165,7 +167,9 @@ describe('canvas mark mode DOM contract', () => {
       update();
       expect(container.querySelector('svg')).toBe(svg);
       const canvas = container.querySelector('canvas.oc-mark-canvas')!;
-      expect(canvas.compareDocumentPosition(svg) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(canvas.compareDocumentPosition(svg) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
     }
 
     chart.destroy();

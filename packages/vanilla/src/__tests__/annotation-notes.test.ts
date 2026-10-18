@@ -78,7 +78,9 @@ describe('source-linked annotation notes', () => {
       ),
     ).toEqual(['0', '1']);
     expect(m.svg.getAttribute('role')).toBe('group');
-    expect(m.svg.getAttribute('aria-label')).toBeTruthy();
+    expect(m.svg.getAttribute('aria-label')).toBe(
+      'Bar chart showing Updated Chart (3 data points)',
+    );
     expect(m.note(0).getAttribute('role')).toBe('listitem');
     expect(m.note(0).getAttribute('tabindex')).toBe('0');
     expect(m.note(0).getAttribute('aria-label')).toBe('1. A finding. Supporting context');

@@ -198,7 +198,12 @@ describe('edge legend + sort', () => {
       ],
       encoding: { edgeColor: { field: 'kind', type: 'nominal' as const } },
     };
-    expect(() => compileGraph(spec, compileOptions)).not.toThrow();
+    const result = compileGraph(spec, compileOptions);
+    expect(result.edges).toHaveLength(3);
+    expect(result.edgeLegend?.map((e) => e.label)).toContain('sparse');
+    const sparse = result.edges.find((e) => e.data.kind === 'sparse');
+    const plain = result.edges.find((e) => e.data.kind === undefined);
+    expect(sparse?.stroke).not.toBe(plain?.stroke);
   });
 });
 

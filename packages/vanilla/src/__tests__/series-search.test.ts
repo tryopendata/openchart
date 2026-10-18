@@ -123,7 +123,9 @@ describe('series search', () => {
     expect(input.getAttribute('aria-expanded')).toBe('true');
     expect(getListbox(container).hidden).toBe(false);
     expect(optionLabels(container)).toEqual(COUNTRIES);
-    expect(input.getAttribute('aria-activedescendant')).toBeTruthy();
+    const firstOption = container.querySelector('.oc-series-search-option');
+    expect(firstOption?.id).toBeTruthy();
+    expect(input.getAttribute('aria-activedescendant')).toBe(firstOption?.id);
 
     // Arrows move the active option (aria-activedescendant tracks it)
     const first = input.getAttribute('aria-activedescendant');

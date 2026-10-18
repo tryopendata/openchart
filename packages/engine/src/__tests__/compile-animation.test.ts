@@ -102,10 +102,14 @@ describe('compileChart with animation', () => {
     const indices = rectMarks.map(
       (m) => (m as unknown as { animationIndex?: number }).animationIndex,
     );
-    for (const idx of indices) {
-      expect(idx).toBeDefined();
-      expect(typeof idx).toBe('number');
-    }
+    // Value order is ascending: Q1 (100) first, then Q3 (200), then Q2 (300).
+    const byCategory = Object.fromEntries(
+      rectMarks.map((m) => [
+        (m as { data: Record<string, unknown> }).data.category,
+        (m as unknown as { animationIndex?: number }).animationIndex,
+      ]),
+    );
+    expect(byCategory).toEqual({ Q1: 0, Q3: 1, Q2: 2 });
 
     // Indices should be unique and sequential (0, 1, 2)
     const sorted = [...indices].sort((a, b) => a! - b!);
@@ -151,8 +155,8 @@ describe('compileChart with animation', () => {
       },
     } as ChartSpec;
     const layoutCompact = compileChart(specNoAnim, { width: 350, height: 400 });
-    expect(layoutCompact.animation).toBeDefined();
-    expect(layoutCompact.animation!.enter).toBeDefined();
+    // `animation: true` resolves the default entrance.
+    expect(layoutCompact.animation!.enter!.duration).toBe(450);
 
     // At full width (> 700), no override applies, so no animation
     const layoutFull = compileChart(specNoAnim, { width: 800, height: 400 });

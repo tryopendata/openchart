@@ -153,7 +153,7 @@ $effect(() => {
     onLegendToggle: (activeValues) => untrack(() => onlegendtoggle)?.(activeValues),
     onHighlightChange: (nodeIds) => untrack(() => onhighlightchange)?.(nodeIds),
     onCameraChange: (camera) => untrack(() => oncamerachange)?.(camera),
-    responsive: true,
+    autoResize: true,
     // untrack so reading the flag doesn't add a dependency; the value is set
     // after the first mount and reset only on component teardown. A dimension
     // change is exempt: the incoming renderer should play its entrance.

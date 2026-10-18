@@ -360,6 +360,7 @@ export function renderLegend(parent: SVGElement, legend: LegendLayout): void {
         'stroke-width': 2,
         'stroke-linecap': 'round',
       });
+      if (entry.strokeDasharray) line.setAttribute('stroke-dasharray', entry.strokeDasharray);
       entryG.appendChild(line);
     } else {
       const rectSize = Math.round(legend.swatchSize * 0.6);

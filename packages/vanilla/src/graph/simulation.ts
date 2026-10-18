@@ -405,6 +405,8 @@ export class SimulationManager {
           case 'error':
             console.error('[SimulationManager] Worker error:', msg.message);
             break;
+          default:
+            msg satisfies never;
         }
       };
 

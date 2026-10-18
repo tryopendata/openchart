@@ -1,3 +1,4 @@
+import type { EditOp } from './events';
 import type { DataRow, VizSpec } from './spec';
 
 /** Supplied semantics; the library never invents a measure or uncertainty. */
@@ -27,12 +28,17 @@ export interface DesignDiagnostic {
   fix?: SpecPatch;
 }
 
-/** Atomic JSON-pointer edits guarded by the complete source document. */
+/**
+ * Atomic edits guarded by the complete source document. `changes` uses the same
+ * `EditOp` semantics as `applyEditTransaction`: `set` replaces a value whose
+ * parent exists, `add` also creates missing object containers, and `remove`
+ * deletes a value.
+ */
 export interface SpecPatch {
   label: string;
   /** Canonical source snapshot prevents stale fixes overwriting subsequent edits. */
   precondition: string;
-  changes: Array<{ path: string; value: unknown }>;
+  changes: EditOp[];
 }
 
 export type DesignQuestion =

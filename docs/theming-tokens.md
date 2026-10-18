@@ -202,7 +202,9 @@ wins via its inline style. Removing a theme override restores the host value.
 SVG and raster exports retain the live CSS token values before leaving the page.
 
 Theme layers deep-merge in this order: spec theme, provider theme, component prop
-(or mount/compile option). For layered charts, a leaf theme overrides its parent.
+(or mount/compile option). For layered charts, chrome, axes and legend use the
+layer theme (or the first leaf's when the layer sets none), and each leaf's marks
+use its own theme merged over the layer theme.
 Objects merge by leaf; arrays and `{ light, dark }` pairs replace atomically.
 `colors: string[]` remains shorthand for `colors.categorical`. `null` replaces:
 use `rule: null` to remove a preset rule. Partial rules inherit unspecified

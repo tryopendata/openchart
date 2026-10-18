@@ -6,7 +6,6 @@
   .oc-table-wrapper {
     font-family: var(--oc-font-family);
     color: var(--oc-text);
-    background: var(--oc-bg);
 
     & > .oc-chrome {
       margin-bottom: 16px;
@@ -51,7 +50,6 @@
       position: sticky;
       top: 0;
       z-index: 2;
-      background: var(--oc-bg);
     }
 
     /* A hairline, like every other rule in the table. The old 2px header rule
@@ -199,7 +197,7 @@
     border-radius: var(--oc-radius-md);
     font-size: 13px;
     font-family: inherit;
-    background: var(--oc-bg);
+    background: transparent;
     color: var(--oc-text);
     box-sizing: border-box;
     transition: border-color 0.15s;
@@ -242,7 +240,7 @@
       padding: 6px 14px;
       border: 1px solid var(--oc-border);
       border-radius: var(--oc-radius-md);
-      background: var(--oc-bg);
+      background: transparent;
       color: var(--oc-text);
       cursor: pointer;
       font-size: 13px;
@@ -293,6 +291,12 @@
     border-radius: var(--oc-radius-sm);
     opacity: 0.18;
     pointer-events: none;
+  }
+
+  /* A low-alpha tint of a mid-dark color all but disappears on a dark
+     surface, so dark mode lifts it. */
+  .oc-dark .oc-table-bar-fill {
+    opacity: 0.4;
   }
 
   .oc-table-bar-value {
@@ -463,7 +467,6 @@
     position: sticky;
     bottom: 0;
     z-index: 2;
-    background: var(--oc-bg);
 
     & td {
       font-weight: 600;

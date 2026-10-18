@@ -41,13 +41,13 @@ import {
 import {
   type AnnotationMeasureTextFn,
   applyOffset,
-  automaticControlPoint,
   computeAnchorOffset,
   computeTextBlockBounds,
   connectorExit,
   connectorPullbackGap,
   heuristicMeasure,
   measureRichLine,
+  pullBackConnector,
   unionRects,
 } from './geometry';
 import { resolvePosition } from './position';
@@ -444,14 +444,12 @@ function resolveTextAnnotationDisplay(
       };
 
       // Pull the data-point end back so the line stops short of the marker.
-      const gap = connectorPullbackGap(markerClearance(dot), connectorArrow);
-      const cdx = endpoint.x - from.x;
-      const cdy = endpoint.y - from.y;
-      const dist = Math.sqrt(cdx * cdx + cdy * cdy);
-      const to =
-        dist > 0
-          ? { x: endpoint.x - (cdx / dist) * gap, y: endpoint.y - (cdy / dist) * gap }
-          : { ...endpoint };
+      const { to, control } = pullBackConnector(
+        from,
+        endpoint,
+        connectorPullbackGap(markerClearance(dot), connectorArrow),
+        connectorStyle === 'curve' ? { exit: exit.exit, bend: connectorConfig?.bend } : undefined,
+      );
 
       // Min-length check runs after the pullback: it can flip a near-degenerate
       // line's direction, and a stub shorter than MIN_CONNECTOR_LENGTH reads as
@@ -477,7 +475,7 @@ function resolveTextAnnotationDisplay(
           exit: exit.exit,
           ...(connectorStyle === 'curve'
             ? {
-                control: automaticControlPoint(from, to, exit.exit, connectorConfig?.bend),
+                control,
                 ...(connectorConfig?.bend !== undefined ? { bend: connectorConfig.bend } : {}),
               }
             : {}),
@@ -622,9 +620,7 @@ function resolveDropLineAnnotation(
     measure,
   );
 
-  // A subtitle works on a drop-line the same as on any other connector style:
-  // the lede rule already bolded the primary line on the way in, so dropping the
-  // subtitle here would leave a mystery-bold label with no context under it.
+  // A subtitle works on a drop-line the same as on any other connector style.
   let subtitle: ResolvedAnnotation['subtitle'] | undefined;
   let annotationBounds = labelBounds;
   if (annotation.subtitle) {

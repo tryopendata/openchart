@@ -109,7 +109,7 @@ export const DataTable = defineComponent({
         theme: resolveTheme(),
         darkMode: resolveDarkMode(),
         onRowClick: (row: Record<string, unknown>) => emit('row-click', row),
-        responsive: true,
+        autoResize: true,
         onStateChange: (state) => {
           if (state.sort !== undefined) emit('update:sort', state.sort);
           if (state.search !== undefined) emit('update:search', state.search);

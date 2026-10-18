@@ -78,7 +78,7 @@ $effect(() => {
     theme: resolvedTheme,
     darkMode: resolvedDarkMode,
     onRowClick: (row: Record<string, unknown>) => untrack(() => onrowclick)?.(row),
-    responsive: true,
+    autoResize: true,
     onStateChange: (state) => {
       if (state.sort !== undefined) untrack(() => onsortchange)?.(state.sort);
       if (state.search !== undefined) untrack(() => onsearchchange)?.(state.search);

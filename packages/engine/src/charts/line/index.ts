@@ -28,8 +28,8 @@ const AREA_POINT_RADIUS = 3;
 /**
  * Line chart renderer.
  *
- * Computes line marks + point marks for hover targets, then resolves
- * end-of-line labels and attaches them to the corresponding line marks.
+ * Computes line marks + point marks for hover targets. Series names come from
+ * the endpoint column or legend, not from line-end labels.
  */
 export const lineRenderer: ChartRenderer = (spec, scales, chartArea, strategy, theme) => {
   const marks = computeLineMarks(spec, scales, chartArea, strategy, theme);

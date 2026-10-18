@@ -159,4 +159,12 @@ describe('published mark contract parity', () => {
       );
     }
   });
+
+  it.each(MARK_CONTRACT_TYPES)('rejects an unknown option on %s everywhere', (type) => {
+    const mark = { type, bogus: 1 };
+    expect(validateMark(mark), 'published schema').toBe(false);
+    const errors = collectMarkOptionErrors({ mark });
+    expect(errors).toEqual([expect.objectContaining({ path: '/mark/bogus' })]);
+    expect(errors[0].message).toContain('Unknown mark option "bogus"');
+  });
 });

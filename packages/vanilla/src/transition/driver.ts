@@ -89,6 +89,8 @@ export function runTransition(args: {
    * the duration (entrance blocks transitions; hover is suspended).
    */
   canvas?: CanvasLayerLike;
+  /** Annotation spec indices whose committed geometry a gesture already previewed; they snap. */
+  settledAnnotations?: ReadonlySet<number>;
 }): TransitionHandle {
   const { svg, prevLayout, nextLayout, animation, onComplete, fromSnapshot, manual, canvas } = args;
   const update = animation.update!;
@@ -256,7 +258,7 @@ export function runTransition(args: {
 
   // Annotations: keyed diff, so only NEW annotations fade in and surviving
   // ones hold steady instead of blinking.
-  buildAnnotationTweens(svg, prevLayout, nextLayout, tweens);
+  buildAnnotationTweens(svg, prevLayout, nextLayout, tweens, args.settledAnnotations);
 
   // Surviving labels follow the same sampled geometry as their marks.
   const labelMotion = buildLabelMotion(svg, prevLayout, nextLayout, fromSnapshot);

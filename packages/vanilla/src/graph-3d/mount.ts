@@ -1827,8 +1827,6 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
 
   return {
     update,
-    // `update()` already routes an id-set-preserving change through the
-    // material-mutation path, which never touches `graphData()`.
     search,
     clearSearch,
     zoomToFit,

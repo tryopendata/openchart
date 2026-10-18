@@ -220,7 +220,7 @@ export function wireVoronoiTooltipEvents(
   let currentEmphasis: string | null = null;
 
   function containerScale(): number {
-    const svgEl = svg as unknown as SVGSVGElement;
+    const svgEl = svg as SVGSVGElement;
     const rect = svgEl.getBoundingClientRect();
     const viewBox = svgEl.viewBox?.baseVal;
     const scaleX = viewBox?.width && rect.width ? viewBox.width / rect.width : 1;
@@ -310,7 +310,7 @@ export function wireVoronoiTooltipEvents(
   };
 
   const toSvgCoords = (clientX: number, clientY: number) => {
-    const svgEl = svg as unknown as SVGSVGElement;
+    const svgEl = svg as SVGSVGElement;
     const svgRect = svgEl.getBoundingClientRect();
     const viewBox = svgEl.viewBox?.baseVal;
     const scaleX = viewBox?.width && svgRect.width ? viewBox.width / svgRect.width : 1;

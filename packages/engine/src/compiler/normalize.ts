@@ -695,7 +695,10 @@ export function normalizeSpec(spec: VizSpec, warnings: string[] = []): Normalize
   const annotations = authored.annotations as Annotation[] | undefined;
   if (Array.isArray(annotations)) {
     const ids = annotations.map((a) => a.id).filter((id) => id !== undefined);
-    if (ids.length !== annotations.length || new Set(ids).size !== ids.length)
+    // A spec with no IDs at all is the common read-only case and gets source
+    // indices silently. Partial IDs signal intended identity, so diagnose them.
+    const partial = ids.length > 0 && ids.length !== annotations.length;
+    if (partial || new Set(ids).size !== ids.length)
       warnings.push(
         '[openchart] Missing or duplicate annotation IDs use revision-local source indices; provide unique IDs for durable identity.',
       );

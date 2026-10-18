@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { waitForResizeSettled } from '../settle';
 
 for (const width of [320, 390, 768, 1280])
   for (const colorScheme of ['light', 'dark'] as const) {
@@ -28,9 +29,11 @@ for (const width of [320, 390, 768, 1280])
           )
           .toBe(chartWidth);
       }
-      // Like the visual capture harness, let the initial debounced resize and
-      // font measurement frame finish before testing a user's focus action.
-      await page.waitForTimeout(100);
+      // A re-render replaces the focused note, so let the entrance animation
+      // (which defers resizes) finish and the debounced resize settle before
+      // testing a user's focus action.
+      await expect(chart.locator('svg')).not.toHaveClass(/oc-animate/);
+      await waitForResizeSettled(chart);
       await expect(firstNote).toBeVisible();
       const source = await firstNote.getAttribute('data-note-spec-index');
       const note = chart.locator(`[data-note-spec-index="${source}"]`);

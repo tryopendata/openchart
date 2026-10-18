@@ -167,6 +167,8 @@ export function runWindow(data: DataRow[], transform: WindowTransform): DataRow[
             computed = sorted[0].row[def.field] ?? null;
             break;
           }
+          default:
+            def.op satisfies never;
         }
 
         outRow[def.as] = computed;

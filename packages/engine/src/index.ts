@@ -202,6 +202,7 @@ export {
   reconcileReaderSelection,
   resolveObservationIdentities,
 } from './design/identity';
+export type { AppliedSpecPatch } from './design/patch';
 export { applySpecPatch } from './design/patch';
 export type { RecommendationResult, RecommendationRoles } from './design/recommend';
 export { recommendCompositions } from './design/recommend';

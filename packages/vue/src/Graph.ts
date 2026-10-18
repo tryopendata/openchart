@@ -161,7 +161,7 @@ export const Graph = defineComponent({
         onLegendToggle: (activeValues) => emit('legend-toggle', activeValues),
         onHighlightChange: (nodeIds) => emit('highlight-change', nodeIds),
         onCameraChange: (camera) => emit('camera-change', camera),
-        responsive: true,
+        autoResize: true,
         suppressEntrance: mountedOnce && !playEntrance,
       };
 

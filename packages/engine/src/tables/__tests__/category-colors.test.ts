@@ -72,9 +72,9 @@ describe('computeCategoryColors', () => {
     // "inactive" and "pending" should get palette colors (not the explicit green)
     const inactiveBg = colors.get(1)!.accent!;
     const pendingBg = colors.get(3)!.accent!;
-    expect(inactiveBg).toBeTruthy();
-    expect(pendingBg).toBeTruthy();
-    expect(inactiveBg).not.toBe('#00ff00');
+    expect(theme.colors.categorical).toContain(inactiveBg);
+    expect(theme.colors.categorical).toContain(pendingBg);
+    expect(inactiveBg).not.toBe(pendingBg);
   });
 
   it('same category value gets consistent colors', () => {

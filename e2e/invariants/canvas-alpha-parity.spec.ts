@@ -42,8 +42,19 @@ test('canvas composites stacked translucent points like SVG does', async ({ page
   await page.waitForSelector('#parity-svg.oc-root svg.oc-chart');
   await page.waitForSelector('#parity-canvas canvas.oc-mark-canvas');
   await page.evaluate(() => document.fonts.ready);
-  // The canvas layer paints on a rAF tick; give it a couple of frames to land.
-  await page.waitForTimeout(200);
+  // The post-font recompile rebuilds the canvas layer, so wait for it first.
+  await page.waitForSelector('#parity-canvas[data-oc-fonts-state="ready"] canvas.oc-mark-canvas');
+  // The canvas layer paints on a rAF tick, all marks in one pass (the story
+  // sets `animation: false`, so the first paint is the final one). Any
+  // non-transparent pixel means that pass has landed.
+  await page.waitForFunction(() => {
+    const c = document.querySelector('#parity-canvas canvas.oc-mark-canvas') as HTMLCanvasElement | null;
+    const ctx = c?.getContext('2d');
+    if (!c || !ctx || c.width === 0 || c.height === 0) return false;
+    const { data } = ctx.getImageData(0, 0, c.width, c.height);
+    for (let i = 3; i < data.length; i += 4) if (data[i] !== 0) return true;
+    return false;
+  });
 
   const sample = await page.evaluate(() => {
     const markCanvas = document.querySelector(

@@ -1,137 +1,158 @@
 /**
- * Vue Graph wrapper: suppressEntrance wiring + full imperative API exposure.
+ * Vue Graph wrapper: entrance suppression on recreation + full imperative API.
  *
- * Mocks the vanilla createGraph so we can observe the mount options the wrapper
- * passes and confirm the exposed handle forwards the full GraphInstance API.
+ * Renders the real vanilla graph. Whether the entrance played is read off the
+ * public camera: a played entrance opens pulled back from the fit and flies in,
+ * a suppressed one opens on the fit. rAF and performance.now are driven by a
+ * manual frame clock so that's deterministic.
  */
 
 import type { GraphSpec } from '@opendata-ai/openchart-core';
-import { flushPromises, mount } from '@vue/test-utils';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { GraphCamera, GraphLegendData } from '@opendata-ai/openchart-vanilla';
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import {
+  type FrameClock,
+  installFrameClock,
+  playsEntrance,
+} from '../../../vanilla/src/__test-fixtures__/graph-frame-clock';
+import { Graph } from '../Graph';
 
-const instanceStub = {
-  update: vi.fn(),
-  search: vi.fn(),
-  clearSearch: vi.fn(),
-  getSearchMatches: vi.fn(() => ['a']),
-  zoomToFit: vi.fn(),
-  zoomToNode: vi.fn(),
-  flyTo: vi.fn(),
-  centerAt: vi.fn(),
-  getCamera: vi.fn(() => ({ x: 1, y: 2, k: 3 })),
-  selectNode: vi.fn(),
-  getSelectedNodes: vi.fn(() => ['a']),
-  highlight: vi.fn(),
-  clearHighlight: vi.fn(),
-  getHighlight: vi.fn(() => ['a']),
-  getLegend: vi.fn(() => ({ field: null, nodes: [], edges: [] })),
-  resize: vi.fn(),
-  destroy: vi.fn(),
-};
+interface Handle {
+  search: (q: string) => void;
+  clearSearch: () => void;
+  zoomToFit: (o?: unknown) => void;
+  zoomToNode: (id: string, o?: unknown) => void;
+  flyTo: (t: unknown, o?: unknown) => void;
+  centerAt: (x: number, y: number, o?: unknown) => void;
+  selectNode: (id: string, o?: unknown) => void;
+  getSelectedNodes: () => string[];
+  highlight: (t: unknown, o?: unknown) => void;
+  clearHighlight: () => void;
+  getCamera: () => GraphCamera;
+  getSearchMatches: () => string[];
+  getHighlight: () => string[] | null;
+  getLegend: () => GraphLegendData | null;
+  setActiveCategories: (values: string[]) => void;
+  getActiveCategories: () => string[];
+  instance: { getCamera: () => GraphCamera } | null;
+}
 
-const createGraphMock = vi.fn(() => instanceStub);
-
-vi.mock('@opendata-ai/openchart-vanilla', () => ({
-  createGraph: createGraphMock,
-}));
-
-const { Graph } = await import('../Graph');
-
+// Warmed so the first delivered tick is near-settled and starts the entrance.
 const spec: GraphSpec = {
   type: 'graph',
-  nodes: [{ id: 'a', label: 'A' }],
-  edges: [],
+  nodes: [
+    { id: 'a', label: 'A', kind: 'x' },
+    { id: 'b', label: 'B', kind: 'y' },
+    { id: 'c', label: 'C', kind: 'y' },
+  ],
+  edges: [
+    { source: 'a', target: 'b' },
+    { source: 'b', target: 'c' },
+  ],
+  encoding: { nodeColor: { field: 'kind', type: 'nominal' } },
+  layout: { type: 'force', warmup: 30 },
 };
 
+let clock: FrameClock;
+let wrapper: VueWrapper | null = null;
+
+function handle(): Handle {
+  return wrapper!.vm as unknown as Handle;
+}
+
+beforeEach(() => {
+  clock = installFrameClock();
+});
+
 afterEach(() => {
-  createGraphMock.mockClear();
-  for (const fn of Object.values(instanceStub)) fn.mockClear?.();
+  wrapper?.unmount();
+  wrapper = null;
+  clock.restore();
 });
 
 describe('Graph suppressEntrance', () => {
-  it('first mount passes suppressEntrance: false (entrance plays)', async () => {
-    const wrapper = mount(Graph, { props: { spec } });
-    await flushPromises();
-    expect(createGraphMock).toHaveBeenCalledTimes(1);
-    const opts = createGraphMock.mock.calls[0][2] as { suppressEntrance?: boolean };
-    expect(opts.suppressEntrance).toBe(false);
-    wrapper.unmount();
+  it('plays the entrance on first mount', async () => {
+    wrapper = mount(Graph, { props: { spec }, attachTo: document.body });
+    expect(await playsEntrance(clock, () => handle().getCamera().k)).toBe(true);
   });
 
-  it('theme change recreates with suppressEntrance: true (no replay)', async () => {
-    const wrapper = mount(Graph, { props: { spec, darkMode: 'off' } });
-    await flushPromises();
-    expect(createGraphMock).toHaveBeenCalledTimes(1);
+  it('a theme change recreates the graph without replaying the entrance', async () => {
+    wrapper = mount(Graph, { props: { spec, darkMode: 'off' }, attachTo: document.body });
+    expect(await playsEntrance(clock, () => handle().getCamera().k)).toBe(true);
+    const first = wrapper.element.querySelector('.oc-graph-wrapper');
 
     await wrapper.setProps({ darkMode: 'force' });
     await flushPromises();
-    expect(createGraphMock).toHaveBeenCalledTimes(2);
-
-    const secondOpts = createGraphMock.mock.calls[1][2] as { suppressEntrance?: boolean };
-    expect(secondOpts.suppressEntrance).toBe(true);
-    wrapper.unmount();
+    // Recreated: a new wrapper, now dark.
+    const second = wrapper.element.querySelector('.oc-graph-wrapper');
+    expect(second).not.toBe(first);
+    expect(second?.classList.contains('oc-dark')).toBe(true);
+    expect(await playsEntrance(clock, () => handle().getCamera().k, 2000)).toBe(false);
   });
 
-  it('the mounted tooltip option carries a stable formatter wrapper (not the raw prop)', async () => {
-    const raw = vi.fn(() => 'x');
-    const wrapper = mount(Graph, { props: { spec, tooltip: { formatter: raw } } });
+  it('hover tooltips use the latest formatter prop, not the one from mount', async () => {
+    wrapper = mount(Graph, {
+      props: { spec, tooltip: { formatter: () => 'one' } },
+      attachTo: document.body,
+    });
+    await playsEntrance(clock, () => handle().getCamera().k);
+    const graphWrapper = wrapper.element.querySelector('.oc-graph-wrapper');
+    await wrapper.setProps({ tooltip: { formatter: () => 'two' } });
     await flushPromises();
-    const opts = createGraphMock.mock.calls[0][2] as {
-      tooltip?: { formatter?: (...a: unknown[]) => unknown };
-    };
-    expect(typeof opts.tooltip).toBe('object');
-    expect(opts.tooltip?.formatter).toBeTypeOf('function');
-    expect(opts.tooltip?.formatter).not.toBe(raw);
-    wrapper.unmount();
+    // Swapping the formatter does not recreate the graph.
+    expect(wrapper.element.querySelector('.oc-graph-wrapper')).toBe(graphWrapper);
+
+    // Center node `a` in the viewport, then hover the viewport center.
+    handle().zoomToNode('a', { duration: 0 });
+    clock.pump(2000);
+    const canvas = wrapper.element.querySelector('canvas')!;
+    const { width, height } = canvas.getBoundingClientRect();
+    canvas.dispatchEvent(
+      new MouseEvent('mousemove', { clientX: width / 2, clientY: height / 2, bubbles: true }),
+    );
+    clock.pump(2050);
+
+    expect(document.body.textContent).toContain('two');
+    expect(document.body.textContent).not.toContain('one');
   });
 
-  it('exposes the full instance API and forwards opts to the instance', async () => {
-    const wrapper = mount(Graph, { props: { spec } });
-    await flushPromises();
+  it('exposes the full instance API and drives the real graph', async () => {
+    wrapper = mount(Graph, { props: { spec }, attachTo: document.body });
+    await playsEntrance(clock, () => handle().getCamera().k);
+    const h = handle();
 
-    const handle = wrapper.vm as unknown as {
-      search: (q: string) => void;
-      zoomToFit: (o?: unknown) => void;
-      zoomToNode: (id: string, o?: unknown) => void;
-      flyTo: (t: unknown, o?: unknown) => void;
-      centerAt: (x: number, y: number, o?: unknown) => void;
-      selectNode: (id: string, o?: unknown) => void;
-      highlight: (t: unknown, o?: unknown) => void;
-      clearHighlight: () => void;
-      getCamera: () => unknown;
-      getSearchMatches: () => string[];
-      getHighlight: () => string[] | null;
-      getLegend: () => unknown;
-      instance: unknown;
-    };
+    h.search('B');
+    expect(h.getSearchMatches()).toEqual(['b']);
+    h.clearSearch();
+    expect(h.getSearchMatches()).toEqual([]);
 
-    handle.search('q');
-    expect(instanceStub.search).toHaveBeenCalledWith('q');
+    h.zoomToNode('a', { scale: 3, duration: 0 });
+    const zoomed = h.getCamera();
+    h.zoomToFit({ duration: 0 });
+    expect(h.getCamera().k).toBeLessThan(zoomed.k);
 
-    handle.zoomToFit({ duration: 0 });
-    expect(instanceStub.zoomToFit).toHaveBeenCalledWith({ duration: 0 });
+    h.flyTo({ x: 1, y: 2, k: 3 }, { duration: 0 });
+    expect(h.getCamera().k).toBeCloseTo(3);
+    const before = h.getCamera();
+    h.centerAt(5, 6, { duration: 0 });
+    const centered = h.getCamera();
+    expect(centered.k).toBeCloseTo(before.k);
+    expect([centered.x, centered.y]).not.toEqual([before.x, before.y]);
 
-    handle.zoomToNode('a', { scale: 3 });
-    expect(instanceStub.zoomToNode).toHaveBeenCalledWith('a', { scale: 3 });
+    h.selectNode('a');
+    expect(h.getSelectedNodes()).toEqual(['a']);
 
-    handle.flyTo({ x: 1, y: 2, k: 3 }, { ease: 'smooth' });
-    expect(instanceStub.flyTo).toHaveBeenCalledWith({ x: 1, y: 2, k: 3 }, { ease: 'smooth' });
+    h.highlight({ nodeIds: ['a'] }, { dimOpacity: 0.1 });
+    expect(h.getHighlight()).toEqual(['a']);
+    h.clearHighlight();
+    expect(h.getHighlight()).toBeNull();
 
-    handle.centerAt(5, 6, { duration: 200 });
-    expect(instanceStub.centerAt).toHaveBeenCalledWith(5, 6, { duration: 200 });
+    expect(h.getLegend()?.field).toBe('kind');
+    expect(h.getLegend()?.nodes.map((n) => n.label)).toEqual(['x', 'y']);
+    h.setActiveCategories(['y']);
+    expect(h.getActiveCategories()).toEqual(['y']);
 
-    handle.selectNode('a', { fly: true });
-    expect(instanceStub.selectNode).toHaveBeenCalledWith('a', { fly: true });
-
-    handle.highlight({ nodeIds: ['a'] }, { dimOpacity: 0.1 });
-    expect(instanceStub.highlight).toHaveBeenCalledWith({ nodeIds: ['a'] }, { dimOpacity: 0.1 });
-
-    expect(handle.getCamera()).toEqual({ x: 1, y: 2, k: 3 });
-    expect(handle.getSearchMatches()).toEqual(['a']);
-    expect(handle.getHighlight()).toEqual(['a']);
-    expect(handle.getLegend()).toEqual({ field: null, nodes: [], edges: [] });
-    expect(handle.instance).toBe(instanceStub);
-
-    wrapper.unmount();
+    expect(h.instance?.getCamera()).toEqual(h.getCamera());
   });
 });

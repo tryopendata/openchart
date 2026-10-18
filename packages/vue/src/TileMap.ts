@@ -95,7 +95,7 @@ export const TileMap = defineComponent({
         darkMode: resolveDarkMode(),
         onTileClick: (tile: TileMapTileEvent) => emit('tile-click', tile),
         onTileHover: (tile: TileMapTileEvent | null) => emit('tile-hover', tile),
-        responsive: true,
+        autoResize: true,
       };
 
       instance = createTileMap(container, props.spec, options);

@@ -273,7 +273,14 @@ function fitContinuousTicks(
   const useCompact =
     (scale.type === 'time' || scale.type === 'utc') && orientation === 'horizontal';
 
+  // A default axis never fits down to a lone tick: a single date says nothing
+  // about the axis scale. D3 can return one at low counts (ticks(2) over nine
+  // years is [2020]), so a candidate below the floor never counts as a fit.
+  // An authored tickCount is honored as asked.
+  const minTicks =
+    scale.channel.axis && scale.channel.axis.tickCount != null ? 1 : MIN_QUANTITATIVE_TICKS;
   const fitsCleanly = (candidate: AxisTick[]): boolean =>
+    candidate.length >= minTicks &&
     candidate.length <= tolerance &&
     !ticksOverlap(candidate, fontSize, fontWeight, measureText, orientation);
 
@@ -444,6 +451,21 @@ export interface AxesDataContext {
 }
 
 /**
+ * Compact dates name the year only on a year-boundary tick (where the compact
+ * and full labels agree). When a cap drops every such tick ("Jul | Apr | Oct"
+ * over two years), relabel the kept ticks in the full format; the caller keeps
+ * the compact set if the full labels overlap.
+ */
+function restoreDateContext(
+  ticks: AxisTick[],
+  scale: NonNullable<ResolvedScales['x']>,
+): AxisTick[] {
+  if (scale.type !== 'time' && scale.type !== 'utc') return ticks;
+  const full = ticks.map((t) => ({ ...t, label: formatTickLabel(t.value, scale) }));
+  return full.some((t, i) => t.label === ticks[i].label) ? ticks : full;
+}
+
+/**
  * Reduce `ticks` to at most `max` entries, keeping the first and the last and
  * spreading the remainder evenly. The endpoints anchor the reader; anything in
  * between is a convenience.
@@ -605,7 +627,10 @@ export function computeAxes(
     // tick IS a category's identity, so dropping one erases a bar rather than
     // coarsening a ruler. Explicit `axis.values` opts out either way.
     if (isContinuousX && !hasExplicitValues && dataContext?.maxXTicks != null) {
-      ticks = capTickCount(ticks, dataContext.maxXTicks);
+      const capped = capTickCount(ticks, dataContext.maxXTicks);
+      ticks = capped.length < ticks.length ? restoreDateContext(capped, scales.x) : capped;
+      if (ticks !== capped && ticksOverlap(ticks, fontSize, fontWeight, measureText))
+        ticks = capped;
     }
 
     if (

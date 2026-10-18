@@ -19,7 +19,6 @@ import { describe, expect, it } from 'vitest';
 
 import type { NormalizedChartSpec } from '../../compiler/types';
 import { bidirectionalSweep, computeEndpointLabels } from '../compute';
-import { ENDPOINT_MARKER_RADIUS } from '../constants';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -282,13 +281,14 @@ describe('computeEndpointLabels', () => {
 
     for (const entry of layout.entries) {
       expect(entry.marker).toBeDefined();
-      // dataX is the original line endpoint; x is offset right by radius so the
-      // line terminates at the circle edge rather than its center.
+      // Centered on the data point, where hover dots and annotation anchors
+      // also sit; the opaque fill covers the line end.
       expect(entry.marker!.dataX).toBe(lastX);
-      expect(entry.marker!.x).toBe(lastX + ENDPOINT_MARKER_RADIUS);
+      expect(entry.marker!.x).toBe(lastX);
+      expect(entry.marker!.fill).toBe(theme.colors.neutral.surface);
       // Marker y is at the actual data point (not displaced labelY).
       expect(entry.marker!.y).toBe(entry.dataY);
-      // Open-circle convention: fill = background, stroke = series color.
+      // Stroke = series color.
       expect(entry.marker!.stroke).toBe(entry.color);
     }
   });
@@ -514,8 +514,7 @@ describe('computeEndpointLabels', () => {
     for (const entry of layout.leading!) {
       expect(entry.marker).toBeDefined();
       expect(entry.marker!.dataX).toBe(chartArea.x);
-      // Leading marker offset: x = dataX - radius (left side).
-      expect(entry.marker!.x).toBe(chartArea.x - ENDPOINT_MARKER_RADIUS);
+      expect(entry.marker!.x).toBe(chartArea.x);
     }
   });
 

@@ -151,12 +151,12 @@ describe('resolveTheme deep merge edge cases', () => {
   it('dark background adapts chrome colors without losing chrome structure', () => {
     const resolved = resolveTheme({ colors: { background: '#111111', text: '#ffffff' } });
     expect(resolved.isDark).toBe(true);
-    // Chrome structure should still be fully populated
-    expect(resolved.chrome.title).toBeDefined();
-    expect(resolved.chrome.subtitle).toBeDefined();
-    expect(resolved.chrome.source).toBeDefined();
-    expect(resolved.chrome.byline).toBeDefined();
-    expect(resolved.chrome.footer).toBeDefined();
+    // Chrome structure should still be fully populated: dark mode adapts colors,
+    // not type sizes.
+    for (const key of ['title', 'subtitle', 'source', 'byline', 'footer'] as const) {
+      expect(resolved.chrome[key].fontSize).toBe(DEFAULT_THEME.chrome[key].fontSize);
+      expect(resolved.chrome[key].color).toMatch(/^#[0-9a-f]{3,8}$/i);
+    }
     // Title color should be adapted (not the light-mode default)
     expect(resolved.chrome.title.color).not.toBe(DEFAULT_THEME.chrome.title.color);
   });

@@ -1,27 +1,31 @@
 import type { SpecPatch, VizSpec } from '@opendata-ai/openchart-core';
+import { applyEditTransaction } from '@opendata-ai/openchart-core';
 
-const unsafe = new Set(['__proto__', 'prototype', 'constructor']);
-/** JSON-pointer patch application is atomic: validate all paths before returning a new document. */
-export function applySpecPatch(spec: VizSpec, patch: SpecPatch): VizSpec {
+export interface AppliedSpecPatch {
+  spec: VizSpec;
+  /** Undoes the patch; its precondition is the patched document. */
+  inverse: SpecPatch;
+}
+
+/**
+ * Apply a patch atomically through `applyEditTransaction`. Throws when the
+ * document changed since the patch was produced or any operation is invalid;
+ * the input spec is never mutated.
+ */
+export function applySpecPatch(spec: VizSpec, patch: SpecPatch): AppliedSpecPatch {
   if (JSON.stringify(spec) !== patch.precondition)
     throw new Error('This suggestion is stale. Review the current document again.');
-  const copy = structuredClone(spec);
-  for (const change of patch.changes) {
-    if (!change.path.startsWith('/')) throw new Error('Patch paths must be JSON pointers.');
-    const keys = change.path
-      .slice(1)
-      .split('/')
-      .map((key) => key.replace(/~1/g, '/').replace(/~0/g, '~'));
-    if (keys.some((key) => unsafe.has(key) || key.length === 0))
-      throw new Error('Unsafe patch path.');
-    let parent = copy as unknown as Record<string, unknown>;
-    for (const key of keys.slice(0, -1)) {
-      if (parent[key] === undefined) parent[key] = {};
-      if (!parent[key] || typeof parent[key] !== 'object')
-        throw new Error('Patch path is no longer an object.');
-      parent = parent[key] as Record<string, unknown>;
-    }
-    parent[keys[keys.length - 1]] = structuredClone(change.value);
-  }
-  return copy;
+  const result = applyEditTransaction(spec, { ops: patch.changes });
+  if (!result.ok)
+    throw new Error(
+      `Patch operation ${result.error.opIndex} at "${result.error.path}" failed: ${result.error.reason}`,
+    );
+  return {
+    spec: result.spec,
+    inverse: {
+      label: `Undo: ${patch.label}`,
+      precondition: JSON.stringify(result.spec),
+      changes: result.inverse.ops,
+    },
+  };
 }

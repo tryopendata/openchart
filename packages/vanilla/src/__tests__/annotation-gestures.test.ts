@@ -32,8 +32,8 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.useRealTimers();
 });
-function mount(controlled = false) {
-  let authored = spec;
+function mount(controlled = false, initial: ChartSpec = spec) {
+  let authored = initial;
   let width = 600;
   let height = 400;
   const container = document.createElement('div');
@@ -50,9 +50,9 @@ function mount(controlled = false) {
     toJSON: () => ({}),
   });
   const transactions: EditTransaction[] = [];
-  const chart = createChart(container, spec, {
+  const chart = createChart(container, initial, {
     autoResize: false,
-    editable: true,
+    interaction: 'edit',
     onEdit: (tx) => {
       transactions.push(tx);
       if (controlled) {
@@ -233,6 +233,51 @@ it('batches successive key releases for 500ms and leaves modified/native key com
     expect(m.transactions).toHaveLength(0);
   }
   vi.advanceTimersByTime(100);
+  expect(m.transactions).toHaveLength(1);
+});
+
+it('an animated async host update does not tween a released drag back from its origin', async () => {
+  vi.useFakeTimers();
+  let authored: ChartSpec = { ...spec, animation: true };
+  const container = document.createElement('div');
+  document.body.append(container);
+  container.getBoundingClientRect = () =>
+    ({ width: 600, height: 400, x: 0, y: 0, left: 0, top: 0, right: 600, bottom: 400 }) as DOMRect;
+  const chart = createChart(container, authored, {
+    autoResize: false,
+    onEdit: (tx) => {
+      const result = applyEditTransaction(authored, tx);
+      if (!result.ok) throw new Error('fixture transaction failed');
+      authored = result.spec;
+      queueMicrotask(() => chart.update(authored));
+    },
+  });
+  cleanup.push(() => chart.destroy());
+  vi.advanceTimersByTime(5000);
+  const group = () => container.querySelector('.oc-annotation-text')!;
+  const labelPosition = () => {
+    const label = group().querySelector('.oc-annotation-label')!;
+    return [label.getAttribute('x'), Number(label.getAttribute('y')).toFixed(3)];
+  };
+  const origin = labelPosition();
+  group().dispatchEvent(createMouseEvent('mousedown', 100, 100));
+  document.dispatchEvent(createMouseEvent('mousemove', 140, 120));
+  vi.advanceTimersByTime(20);
+  const previewed = labelPosition();
+  expect(previewed).not.toEqual(origin);
+  document.dispatchEvent(createMouseEvent('mouseup', 140, 120));
+  await Promise.resolve();
+  vi.advanceTimersByTime(20);
+  expect(labelPosition()).toEqual(previewed);
+});
+
+it('commits a pending nudge when focus leaves before the key is released', () => {
+  const m = mount();
+  m.group().dispatchEvent(createMouseEvent('click'));
+  const svg = m.container.querySelector('svg')!;
+  svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  expect(m.transactions).toHaveLength(0);
+  window.dispatchEvent(new Event('blur'));
   expect(m.transactions).toHaveLength(1);
 });
 

@@ -147,3 +147,70 @@ it('keeps auto-placed subtitle blocks clear of their own point markers', () => {
     point.x >= b.x && point.x <= b.x + b.width && point.y >= b.y && point.y <= b.y + b.height,
   ).toBe(false);
 });
+
+describe('compact override annotations', () => {
+  const twoCallouts: TextAnnotation[] = [
+    { id: 'p', type: 'text', x: 1, y: 1, text: 'A' },
+    { id: 'q', type: 'text', x: 9, y: 9, text: 'B' },
+  ];
+  it('renders author-written compact annotations inline without the default limit', () => {
+    const layout = compileChart(
+      { ...base, overrides: { compact: { annotations: twoCallouts } } } as ChartSpec,
+      { width: 360, height: 400, onWarn: () => {} },
+    );
+    expect(layout.annotations.map((a) => [a.id, a.footnoteIndex])).toEqual([
+      ['p', undefined],
+      ['q', undefined],
+    ]);
+    expect(layout.chrome.footnotes ?? []).toEqual([]);
+  });
+  it('still applies an explicit compactAnnotationLimit to compact override annotations', () => {
+    const layout = compileChart(
+      {
+        ...base,
+        responsive: { compactAnnotationLimit: 1 },
+        overrides: { compact: { annotations: twoCallouts } },
+      } as ChartSpec,
+      { width: 360, height: 400, onWarn: () => {} },
+    );
+    expect(layout.annotations.filter((a) => a.footnoteIndex !== undefined)).toHaveLength(1);
+  });
+});
+
+it('draws the leader that auto placement scored, even when the initial stub was too short', () => {
+  const layout = compileChart(
+    {
+      mark: 'point',
+      data: Array.from({ length: 11 }, (_, i) => ({ x: i * 10, y: i * 10 })),
+      encoding: {
+        x: { field: 'x', type: 'quantitative' },
+        y: { field: 'y', type: 'quantitative' },
+      },
+      // The shifted endpoint sits inside the initially resolved label box, so
+      // the resolver drops the stub; the placed label ends up well away from it.
+      annotations: [
+        {
+          type: 'text',
+          x: 50,
+          y: 50,
+          text: 'Callout text',
+          connectorOffset: { to: { dx: 20, dy: -20 } },
+        },
+      ],
+    } as ChartSpec,
+    { width: 600, height: 400, onWarn: () => {} },
+  );
+  const label = layout.annotations[0].label!;
+  const box = label.bounds!;
+  const point = layout.marks.find(
+    (m) => m.type === 'point' && (m.data as { x: number }).x === 50,
+  ) as { cx: number; cy: number };
+  const ex = point.cx + 20;
+  const ey = point.cy - 20;
+  const gap = Math.hypot(
+    Math.max(box.x - ex, 0, ex - box.x - box.width),
+    Math.max(box.y - ey, 0, ey - box.y - box.height),
+  );
+  expect(gap).toBeGreaterThan(20);
+  expect(label.connector).toBeDefined();
+});

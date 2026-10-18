@@ -340,7 +340,7 @@ function renderPointMarks(
       circle.setAttribute('aria-label', pt.aria.label);
     }
     if (animation?.enter) {
-      const s = (circle as unknown as ElementCSSInlineStyle).style;
+      const s = circle.style;
       s.setProperty('--oc-mark-index', String(pt.animationIndex));
       s.setProperty('transform-origin', `${pt.cx}px ${pt.cy}px`);
     }

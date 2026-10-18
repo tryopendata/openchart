@@ -133,7 +133,7 @@ export const TileMap = forwardRef<TileMapHandle, TileMapProps>(function TileMap(
       darkMode: resolvedDarkMode,
       onTileClick: stableOnTileClick,
       onTileHover: stableOnTileHover,
-      responsive: true,
+      autoResize: true,
     };
 
     instanceRef.current = createTileMap(container, spec, options);

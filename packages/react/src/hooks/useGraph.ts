@@ -1,4 +1,3 @@
-import type { GraphSpec } from '@opendata-ai/openchart-core';
 /**
  * useGraph: hook for imperative graph control.
  *
@@ -7,6 +6,7 @@ import type { GraphSpec } from '@opendata-ai/openchart-core';
  * graph instance. The full vanilla GraphInstance API is threaded through.
  */
 
+import type { GraphSpec } from '@opendata-ai/openchart-core';
 import type {
   CameraFlightOptions,
   GraphCamera,

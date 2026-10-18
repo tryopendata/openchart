@@ -67,7 +67,7 @@ $effect(() => {
     onMarkClick: (feature) => untrack(() => onmarkclick)?.(feature),
     onMarkHover: (feature) => untrack(() => onmarkhover)?.(feature),
     onCameraChange: (camera) => untrack(() => oncamerachange)?.(camera),
-    responsive: true,
+    autoResize: true,
   };
 
   instance = createGeoMap(containerEl, currentSpec, options);

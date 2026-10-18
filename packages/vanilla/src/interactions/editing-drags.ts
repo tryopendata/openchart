@@ -242,7 +242,7 @@ export function wireAnnotationLabelDrag(
 
       const cleanup = createDragHandler({
         element: labelEl,
-        svg: svg as unknown as SVGSVGElement,
+        svg: svg as SVGSVGElement,
         onMove: (dx, dy) => {
           (labelEl as SVGElement & ElementCSSInlineStyle).style.transform =
             `translate(${dx}px, ${dy}px)`;
@@ -323,7 +323,7 @@ export function wireChromeDrag(
 
     const cleanup = createDragHandler({
       element: textEl,
-      svg: svg as unknown as SVGSVGElement,
+      svg: svg as SVGSVGElement,
       onMove: (dx, dy) => {
         (textEl as SVGElement & ElementCSSInlineStyle).style.transform =
           `translate(${dx}px, ${dy}px)`;
@@ -387,7 +387,7 @@ export function wireLegendDrag(
 
   const cleanup = createDragHandler({
     element: legendG,
-    svg: svg as unknown as SVGSVGElement,
+    svg: svg as SVGSVGElement,
     onMove: (dx, dy) => {
       (legendG as SVGElement & ElementCSSInlineStyle).style.transform =
         `translate(${dx}px, ${dy}px)`;
@@ -472,7 +472,7 @@ export function wireAnchorDrag(
 
     const cleanup = createDragHandler({
       element: handleEl,
-      svg: svg as unknown as SVGSVGElement,
+      svg: svg as SVGSVGElement,
       onMove: (dx, dy) => {
         handleEl.setAttribute('cx', String(anchorX + dx));
         handleEl.setAttribute('cy', String(anchorY + dy));

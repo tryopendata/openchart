@@ -116,8 +116,8 @@ export interface GeoMapMountOptions {
   theme?: ThemeConfig;
   /** Dark mode setting: "auto" (system pref), "force", or "off". */
   darkMode?: DarkMode;
-  /** Enable responsive resizing. Defaults to true. */
-  responsive?: boolean;
+  /** Observe container resizing. Defaults to true. */
+  autoResize?: boolean;
   /** Show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
   /** Show tooltips on hover. Defaults to true. */
@@ -945,7 +945,7 @@ export function createGeoMap(
   container.dataset.ocFontsState = fontsPending ? 'pending' : 'ready';
 
   // Setup responsive resizing
-  if (options?.responsive !== false) {
+  if (options?.autoResize !== false) {
     disconnectResize = observeResize(container, () => {
       resize();
     });

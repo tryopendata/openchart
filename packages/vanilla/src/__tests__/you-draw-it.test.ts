@@ -641,4 +641,20 @@ describe('you draw it', () => {
     expect(container.querySelector('.oc-ydi-region')).toBeNull();
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('mutually exclusive'));
   });
+
+  it("keeps youDrawIt under interaction: 'read' even with selection callbacks", () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    chart = createChart(container, makeSpec(), { interaction: 'read', onSelect: () => {} });
+
+    expect(overlay(container)).not.toBeNull();
+    expect(warn).not.toHaveBeenCalledWith(expect.stringContaining('mutually exclusive'));
+  });
+
+  it("disables youDrawIt under an explicit interaction: 'select' with no callbacks", () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    chart = createChart(container, makeSpec(), { interaction: 'select' });
+
+    expect(overlay(container)).toBeNull();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('mutually exclusive'));
+  });
 });

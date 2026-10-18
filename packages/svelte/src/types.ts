@@ -23,10 +23,12 @@ import type {
   TileMapSpec,
   VizSpec,
 } from '@opendata-ai/openchart-core';
+import type { InteractionMode } from '@opendata-ai/openchart-vanilla';
 import type { Snippet } from 'svelte';
 
 export interface ChartProps {
-  spec: ChartSpec | LayerSpec | GraphSpec;
+  /** The chart spec. Graph specs render through `<Graph />` or `<Visualization />`. */
+  spec: ChartSpec | LayerSpec;
   theme?: ThemeConfig;
   darkMode?: DarkMode;
   /** Rendering backend for point marks; see the vanilla `MountOptions.renderer`. */
@@ -37,13 +39,16 @@ export interface ChartProps {
   onlegendtoggle?: (series: string, visible: boolean) => void;
   autoResize?: boolean;
   revision?: string | number;
-  editable?: boolean;
+  /** Interaction mode; inferred from `onedit`/`onselect`/`ondeselect` when omitted. */
+  interaction?: InteractionMode;
   selectedElement?: ElementRef;
   highlight?: string[] | null;
   onedit?: (transaction: EditTransaction) => void;
   onselect?: (element: ElementRef) => void;
   ondeselect?: (element: ElementRef) => void;
   onannotationclick?: (annotation: Annotation, event: MouseEvent, element: ElementRef) => void;
+  onhighlightchange?: (values: string[]) => void;
+  onreveal?: (guess: Array<{ x: string | number; y: number }>) => void;
   class?: string;
   style?: string;
 }

@@ -706,7 +706,8 @@ export function AnnotationGestures() {
     let spec = structuredClone(annotationGestureSpec);
     let revision = 0;
     const chart = createChart(host.current, spec, {
-      editable: true,
+      interaction: 'edit',
+      darkMode: 'auto',
       revision,
       onEdit: (tx) => {
         const result = applyEditTransaction(spec, tx);

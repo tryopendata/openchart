@@ -17,13 +17,7 @@
  * `gifenc` is an optional peer dependency, loaded dynamically.
  */
 
-import type {
-  AnimationSpec,
-  ChartSpec,
-  LayerSpec,
-  ResolvedTheme,
-  ThemeConfig,
-} from '@opendata-ai/openchart-core';
+import type { ChartSpec, LayerSpec, ResolvedTheme, ThemeConfig } from '@opendata-ai/openchart-core';
 import {
   embedFonts,
   ensureSVGDimensions,
@@ -82,15 +76,12 @@ export interface SpecSequenceOptions {
  * the tween cap above 500 marks would silently swap instead of tween on export.
  */
 export function settleAnimation(spec: ChartSpec | LayerSpec): ChartSpec | LayerSpec {
-  const authored = (spec as { animation?: AnimationSpec }).animation;
+  const authored = spec.animation;
   const update =
     typeof authored === 'object' && typeof authored.update === 'object'
       ? { ...authored.update }
       : true;
-  return {
-    ...(spec as unknown as Record<string, unknown>),
-    animation: { enter: false, update },
-  } as unknown as ChartSpec | LayerSpec;
+  return { ...spec, animation: { enter: false, update } };
 }
 
 /**

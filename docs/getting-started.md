@@ -349,7 +349,7 @@ Theme config options:
 | Property             | What it controls                                      |
 | -------------------- | ----------------------------------------------------- |
 | `colors.categorical` | Array of CSS color strings for series differentiation |
-| `colors.background`  | Chart background color                                |
+| `colors.background`  | Chart and table background (transparent by default)   |
 | `colors.text`        | Default text color                                    |
 | `colors.gridline`    | Gridline color                                        |
 | `colors.axis`        | Axis line and tick color                              |
@@ -640,7 +640,7 @@ const table = createTable(
     pagination: { pageSize: 20 },
   },
   {
-    responsive: true,
+    autoResize: true,
     onRowClick: (row) => console.log("Clicked:", row),
     onStateChange: (state) => {
       // { sort, search, page }

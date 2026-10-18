@@ -3,43 +3,34 @@
  *
  * 2D and 3D are different renderers and the renderer is chosen once, at mount,
  * so vanilla `update()` refuses a dimension change. The wrapper has to destroy
- * and recreate instead. Mocks createGraph so create/destroy/update are
- * observable; kept in its own file so the module mock doesn't leak.
+ * and recreate instead. This renders the real vanilla graph and the real 3D
+ * renderer; only the WebGL libraries underneath it are faked.
  */
 
 import type { GraphSpec } from '@opendata-ai/openchart-core';
-import { cleanup, render, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, render } from '@testing-library/react';
+import { createRef } from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const instanceStub = {
-  update: vi.fn(),
-  search: vi.fn(),
-  clearSearch: vi.fn(),
-  getSearchMatches: vi.fn(() => []),
-  zoomToFit: vi.fn(),
-  zoomToNode: vi.fn(),
-  flyTo: vi.fn(),
-  centerAt: vi.fn(),
-  getCamera: vi.fn(() => ({ x: 0, y: 0, k: 1 })),
-  selectNode: vi.fn(),
-  getSelectedNodes: vi.fn(() => []),
-  highlight: vi.fn(),
-  clearHighlight: vi.fn(),
-  getHighlight: vi.fn(() => null),
-  getLegend: vi.fn(() => null),
-  setActiveCategories: vi.fn(),
-  getActiveCategories: vi.fn(() => []),
-  resize: vi.fn(),
-  destroy: vi.fn(),
-};
+// happy-dom has no WebGL, so three.js and 3d-force-graph can't run; swap in the
+// vanilla package's recording fakes for those third-party libraries.
+vi.mock('three', async () => await import('../../../vanilla/src/graph-3d/__tests__/three-fake'));
+vi.mock(
+  'three-spritetext',
+  async () => await import('../../../vanilla/src/graph-3d/__tests__/spritetext-fake'),
+);
+vi.mock('3d-force-graph', async () => {
+  const mod = await import('../../../vanilla/src/graph-3d/__tests__/force-graph-fake');
+  return { default: mod.FakeForceGraph3D };
+});
 
-const createGraphMock = vi.fn(() => instanceStub);
-
-vi.mock('@opendata-ai/openchart-vanilla', () => ({
-  createGraph: createGraphMock,
-}));
-
+// Registers the 3D renderer, as an app importing the graph-3d subpath would.
+await import('../../../vanilla/src/graph-3d/index');
+const { forceGraphInstances, resetForceGraphFakes } = await import(
+  '../../../vanilla/src/graph-3d/__tests__/force-graph-fake'
+);
 const { Graph } = await import('../Graph');
+type GraphHandle = import('../hooks/useGraph').GraphHandle;
 
 const spec: GraphSpec = {
   type: 'graph',
@@ -47,55 +38,78 @@ const spec: GraphSpec = {
   edges: [],
 };
 
+function wrapperEl(container: HTMLElement): Element | null {
+  return container.querySelector('.oc-graph-wrapper');
+}
+
+/** Opacity of a 3D node's material: 0 while its entrance is still to play. */
+function node3DOpacity(id: string): number {
+  const fake = forceGraphInstances.at(-1);
+  if (!fake) throw new Error('no 3D graph mounted');
+  fake.flush();
+  const datum = fake.graph.nodes.find((n) => (n as { id: string }).id === id);
+  const accessor = fake.props.nodeThreeObject as (d: unknown) => {
+    children: Array<{ material: { opacity: number } }>;
+  };
+  return accessor(datum).children[0].material.opacity;
+}
+
+beforeEach(() => {
+  resetForceGraphFakes();
+});
+
 afterEach(() => {
   cleanup();
-  createGraphMock.mockClear();
-  for (const fn of Object.values(instanceStub)) fn.mockClear?.();
 });
 
 describe('<Graph /> dimensions', () => {
-  it('recreates the instance when dimensions change', async () => {
-    const { rerender } = render(<Graph spec={spec} />);
-    await waitFor(() => expect(createGraphMock).toHaveBeenCalledTimes(1));
+  it('recreates the graph with the 3D renderer when dimensions change', () => {
+    const { container, rerender } = render(<Graph spec={spec} />);
+    const first = wrapperEl(container);
+    expect(first?.querySelector('canvas.oc-graph-canvas')).not.toBeNull();
 
     rerender(<Graph spec={{ ...spec, dimensions: 3 }} />);
-    await waitFor(() => expect(createGraphMock).toHaveBeenCalledTimes(2));
 
-    expect(instanceStub.destroy).toHaveBeenCalledTimes(1);
-    // The remount carries the new spec, so update() has nothing left to apply.
-    expect(instanceStub.update).not.toHaveBeenCalled();
-    expect(createGraphMock.mock.calls[1][1]).toMatchObject({ dimensions: 3 });
+    // The 2D graph was torn down and a single 3D graph mounted from the new spec.
+    expect(first?.isConnected).toBe(false);
+    expect(container.querySelectorAll('.oc-graph-wrapper')).toHaveLength(1);
+    expect(wrapperEl(container)?.querySelector('.oc-graph-3d')).not.toBeNull();
+    expect(container.querySelector('canvas.oc-graph-canvas')).toBeNull();
   });
 
-  it('lets the new renderer play its entrance', async () => {
+  it('lets the new renderer play its entrance', () => {
     const { rerender } = render(<Graph spec={spec} />);
-    await waitFor(() => expect(createGraphMock).toHaveBeenCalledTimes(1));
-
     rerender(<Graph spec={{ ...spec, dimensions: 3 }} />);
-    await waitFor(() => expect(createGraphMock).toHaveBeenCalledTimes(2));
 
-    const opts = createGraphMock.mock.calls[1][2] as { suppressEntrance?: boolean };
-    expect(opts.suppressEntrance).toBe(false);
+    // A suppressed entrance would have snapped the node to full opacity.
+    expect(node3DOpacity('a')).toBe(0);
   });
 
-  it('updates in place when the spec changes at the same dimensions', async () => {
-    const { rerender } = render(<Graph spec={spec} />);
-    await waitFor(() => expect(createGraphMock).toHaveBeenCalledTimes(1));
+  it('updates in place when the spec changes at the same dimensions', () => {
+    const ref = createRef<GraphHandle>();
+    const { container, rerender } = render(<Graph ref={ref} spec={spec} />);
+    const wrapper = wrapperEl(container);
+    const instance = ref.current?.instance;
 
-    rerender(<Graph spec={{ ...spec, nodes: [{ id: 'a' }, { id: 'b' }] }} />);
-    await waitFor(() => expect(instanceStub.update).toHaveBeenCalledTimes(1));
+    rerender(<Graph ref={ref} spec={{ ...spec, nodes: [{ id: 'a' }, { id: 'b' }] }} />);
 
-    expect(createGraphMock).toHaveBeenCalledTimes(1);
-    expect(instanceStub.destroy).not.toHaveBeenCalled();
+    expect(wrapperEl(container)).toBe(wrapper);
+    expect(ref.current?.instance).toBe(instance);
+    // The update reached the live graph: the new node is searchable.
+    ref.current?.search('b');
+    expect(ref.current?.getSearchMatches()).toEqual(['b']);
   });
 
-  it('treats an explicit dimensions: 2 as unchanged from omitted', async () => {
-    const { rerender } = render(<Graph spec={spec} />);
-    await waitFor(() => expect(createGraphMock).toHaveBeenCalledTimes(1));
+  it('treats an explicit dimensions: 2 as unchanged from omitted', () => {
+    const ref = createRef<GraphHandle>();
+    const { container, rerender } = render(<Graph ref={ref} spec={spec} />);
+    const wrapper = wrapperEl(container);
+    const instance = ref.current?.instance;
 
-    rerender(<Graph spec={{ ...spec, dimensions: 2 }} />);
-    await waitFor(() => expect(instanceStub.update).toHaveBeenCalledTimes(1));
+    rerender(<Graph ref={ref} spec={{ ...spec, dimensions: 2 }} />);
 
-    expect(createGraphMock).toHaveBeenCalledTimes(1);
+    expect(wrapperEl(container)).toBe(wrapper);
+    expect(ref.current?.instance).toBe(instance);
+    expect(container.querySelector('.oc-graph-3d')).toBeNull();
   });
 });

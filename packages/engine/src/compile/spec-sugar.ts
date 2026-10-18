@@ -377,20 +377,14 @@ function expandChannelSugar(
   // theta: the canonical arc value channel in v8, shared by waffle and
   // parliament marks (the same part-to-whole value). The engine still reads
   // encoding.y internally, so both directions of the alias converge on y:
-  // - theta present -> y is populated from theta (theta wins if both are set,
-  //   since it's canonical now)
+  // - theta present -> y is populated from theta (a differing authored y is
+  //   rejected earlier by collectRemovedSpecErrors)
   // - only y present -> y is kept and theta is populated from it, with a
   //   deprecation warning nudging authors toward theta
   if (markType && (updated.theta || updated.y)) {
     const thetaMark = markType === 'arc' || markType === 'waffle' || markType === 'parliament';
     const hasTheta = updated.theta && typeof updated.theta === 'object';
-    const hasY = updated.y && typeof updated.y === 'object';
     if (thetaMark && hasTheta) {
-      if (hasY && JSON.stringify(updated.y) !== JSON.stringify(updated.theta)) {
-        warnings.push(
-          `[openchart] encoding.theta and encoding.y are both set on ${markType}; theta takes precedence and y was dropped.`,
-        );
-      }
       updated.y = updated.theta;
       changed = true;
     } else if (hasTheta && !thetaMark) {
@@ -946,7 +940,8 @@ export function expandSpecSugar(
 ): Record<string, unknown> {
   if (!spec || typeof spec !== 'object' || Array.isArray(spec)) return spec;
   const removed = collectRemovedSpecErrors(spec);
-  if (removed.length) throw new Error(removed.map((error) => error.message).join('\n'));
+  if (removed.length)
+    throw new Error(`Invalid spec:\n${removed.map((error) => error.message).join('\n')}`);
   if (checkMarkOptions) assertMarkOptions(spec);
   if (Array.isArray(spec.layer) && typeof spec.type !== 'string') {
     return expandLayerSugar(spec, warnings);

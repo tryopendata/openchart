@@ -38,7 +38,7 @@ describe('createBarList', () => {
   });
 
   it('mounts an SVG with barlist classes into the container', () => {
-    const instance = createBarList(container, basicSpec, { responsive: false });
+    const instance = createBarList(container, basicSpec, { autoResize: false });
 
     const svg = container.querySelector('svg');
     expect(svg).not.toBeNull();
@@ -49,7 +49,7 @@ describe('createBarList', () => {
   });
 
   it('renders a row with label, value, track, and bar for each data row', () => {
-    const instance = createBarList(container, basicSpec, { responsive: false });
+    const instance = createBarList(container, basicSpec, { autoResize: false });
 
     const rows = container.querySelectorAll('.oc-barlist-row');
     expect(rows).toHaveLength(3);
@@ -67,7 +67,7 @@ describe('createBarList', () => {
   });
 
   it('sorts rows descending by value', () => {
-    const instance = createBarList(container, basicSpec, { responsive: false });
+    const instance = createBarList(container, basicSpec, { autoResize: false });
 
     const labels = instance.layout.rows.map((r) => r.label.text);
     expect(labels).toEqual(['Beta', 'Gamma', 'Alpha']);
@@ -76,7 +76,7 @@ describe('createBarList', () => {
   });
 
   it('maxItems caps the number of rendered rows', () => {
-    const instance = createBarList(container, { ...basicSpec, maxItems: 2 }, { responsive: false });
+    const instance = createBarList(container, { ...basicSpec, maxItems: 2 }, { autoResize: false });
 
     expect(container.querySelectorAll('.oc-barlist-row')).toHaveLength(2);
     expect(instance.layout.rows).toHaveLength(2);
@@ -94,7 +94,7 @@ describe('createBarList', () => {
           value: { ...basicSpec.encoding.value, format: '$,.0f' },
         },
       },
-      { responsive: false },
+      { autoResize: false },
     );
 
     const values = instance.layout.rows.map((r) => r.valueLabel.text);
@@ -108,7 +108,7 @@ describe('createBarList', () => {
     const instance = createBarList(
       container,
       { ...basicSpec, chrome: { title: 'Top Things' } },
-      { responsive: false },
+      { autoResize: false },
     );
 
     const title = container.querySelector('.oc-title');
@@ -119,7 +119,7 @@ describe('createBarList', () => {
 
   it('renders the watermark link when enabled', () => {
     const instance = createBarList(container, basicSpec, {
-      responsive: false,
+      autoResize: false,
       watermark: true,
     });
 
@@ -129,7 +129,7 @@ describe('createBarList', () => {
   });
 
   it('auto-sizes height down to content for few rows', () => {
-    const instance = createBarList(container, basicSpec, { responsive: false });
+    const instance = createBarList(container, basicSpec, { autoResize: false });
 
     // Container is 600x400; three rows should not need the full height.
     expect(instance.layout.height).toBeLessThan(400);
@@ -143,7 +143,7 @@ describe('createBarList', () => {
     const instance = createBarList(
       container,
       { ...basicSpec, data: [{ name: 'X', value: null }] },
-      { responsive: false },
+      { autoResize: false },
     );
 
     expect(container.querySelector('svg')).not.toBeNull();
@@ -154,7 +154,7 @@ describe('createBarList', () => {
   });
 
   it('update() re-renders with new data', () => {
-    const instance = createBarList(container, basicSpec, { responsive: false });
+    const instance = createBarList(container, basicSpec, { autoResize: false });
     expect(container.dataset.ocRenderGen).toBe('1');
 
     instance.update({
@@ -176,7 +176,7 @@ describe('createBarList', () => {
   });
 
   it('update() with a new theme font rebuilds the measurer and still renders', () => {
-    const instance = createBarList(container, basicSpec, { responsive: false });
+    const instance = createBarList(container, basicSpec, { autoResize: false });
 
     instance.update({
       ...basicSpec,
@@ -193,7 +193,7 @@ describe('createBarList', () => {
     const instance = createBarList(
       container,
       { ...basicSpec, theme: { fonts: { family: 'Georgia, serif' } } },
-      { responsive: false, theme: { fonts: { family: 'Courier, monospace' } } },
+      { autoResize: false, theme: { fonts: { family: 'Courier, monospace' } } },
     );
 
     expect(instance.layout.theme.fonts.family).toContain('Courier');
@@ -202,7 +202,7 @@ describe('createBarList', () => {
   });
 
   it('resize() recompiles and re-renders', () => {
-    const instance = createBarList(container, basicSpec, { responsive: false });
+    const instance = createBarList(container, basicSpec, { autoResize: false });
     expect(container.dataset.ocRenderGen).toBe('1');
 
     instance.resize();
@@ -215,7 +215,7 @@ describe('createBarList', () => {
 
   it('destroy() removes the SVG and container classes', () => {
     const instance = createBarList(container, basicSpec, {
-      responsive: false,
+      autoResize: false,
       darkMode: 'force',
     });
 
@@ -234,17 +234,17 @@ describe('createBarList', () => {
   });
 
   it('darkMode "force" adds the oc-dark class, default does not', () => {
-    const dark = createBarList(container, basicSpec, { responsive: false, darkMode: 'force' });
+    const dark = createBarList(container, basicSpec, { autoResize: false, darkMode: 'force' });
     expect(container.classList.contains('oc-dark')).toBe(true);
     dark.destroy();
 
-    const light = createBarList(container, basicSpec, { responsive: false });
+    const light = createBarList(container, basicSpec, { autoResize: false });
     expect(container.classList.contains('oc-dark')).toBe(false);
     light.destroy();
   });
 
   it('marks fonts state ready when no webfont reload is pending', () => {
-    const instance = createBarList(container, basicSpec, { responsive: false });
+    const instance = createBarList(container, basicSpec, { autoResize: false });
 
     expect(container.dataset.ocFontsState).toBe('ready');
 
@@ -260,7 +260,7 @@ describe('createBarList', () => {
   });
 
   it('export("svg") returns serialized SVG; unknown format and post-destroy return ""', () => {
-    const instance = createBarList(container, basicSpec, { responsive: false });
+    const instance = createBarList(container, basicSpec, { autoResize: false });
 
     const svgString = instance.export('svg') as string;
     expect(typeof svgString).toBe('string');
@@ -274,7 +274,7 @@ describe('createBarList', () => {
   });
 
   it('export("png") and export("jpg") return promises', () => {
-    const instance = createBarList(container, basicSpec, { responsive: false });
+    const instance = createBarList(container, basicSpec, { autoResize: false });
 
     const png = instance.export('png');
     const jpg = instance.export('jpg', { quality: 0.8 });
@@ -302,7 +302,7 @@ describe('createBarList', () => {
       const instance = createBarList(
         container,
         { ...basicSpec, theme: { fonts: { family: 'Inter, sans-serif' } } },
-        { responsive: false },
+        { autoResize: false },
       );
 
       expect(container.dataset.ocFontsState).toBe('pending');
@@ -326,7 +326,7 @@ describe('createBarList', () => {
 
   describe('tooltip and interaction', () => {
     it('shows the tooltip on mouseenter/mousemove and hides on mouseleave', () => {
-      const instance = createBarList(container, basicSpec, { responsive: false });
+      const instance = createBarList(container, basicSpec, { autoResize: false });
 
       const row = container.querySelector('.oc-barlist-row') as SVGGElement;
       row.dispatchEvent(createMouseEvent('mouseenter', 150, 60));
@@ -346,7 +346,7 @@ describe('createBarList', () => {
 
     it('tooltip: false skips tooltip creation entirely', () => {
       const instance = createBarList(container, basicSpec, {
-        responsive: false,
+        autoResize: false,
         tooltip: false,
       });
 
@@ -361,7 +361,7 @@ describe('createBarList', () => {
     it('onRowClick fires with label, value, and source data', () => {
       const onRowClick = vi.fn();
       const instance = createBarList(container, basicSpec, {
-        responsive: false,
+        autoResize: false,
         onRowClick,
       });
 
@@ -382,7 +382,7 @@ describe('createBarList', () => {
     it('onRowHover fires with the row on enter and null on leave', () => {
       const onRowHover = vi.fn();
       const instance = createBarList(container, basicSpec, {
-        responsive: false,
+        autoResize: false,
         onRowHover,
       });
 
@@ -401,7 +401,7 @@ describe('createBarList', () => {
     it('interaction listeners are removed on destroy', () => {
       const onRowClick = vi.fn();
       const instance = createBarList(container, basicSpec, {
-        responsive: false,
+        autoResize: false,
         onRowClick,
       });
 
@@ -426,7 +426,7 @@ describe('createBarList', () => {
       const instance = createBarList(
         container,
         { ...basicSpec, animation: true },
-        { responsive: false },
+        { autoResize: false },
       );
 
       const svg = container.querySelector('svg') as SVGSVGElement;
@@ -453,7 +453,7 @@ describe('createBarList', () => {
       const instance = createBarList(
         container,
         { ...basicSpec, animation: true },
-        { responsive: false },
+        { autoResize: false },
       );
 
       instance.update({ ...basicSpec, animation: true, data: [{ name: 'Solo', value: 1 }] });
@@ -469,7 +469,7 @@ describe('createBarList', () => {
       const instance = createBarList(
         container,
         { ...basicSpec, animation: true },
-        { responsive: false },
+        { autoResize: false },
       );
 
       instance.destroy();

@@ -68,9 +68,15 @@ export type { Camera, GeoMapCameraOptions } from './map-camera';
 export type { GeoMapInstance, GeoMapMarkEvent, GeoMapMountOptions } from './map-mount';
 // Map mount API
 export { createGeoMap } from './map-mount';
-export type { ChartInstance, ExportOptions, MountOptions, UpdateOptions } from './mount';
+export type {
+  ChartInstance,
+  ExportOptions,
+  InteractionMode,
+  MountOptions,
+  UpdateOptions,
+} from './mount';
 // Main mount API
-export { createChart } from './mount';
+export { createChart, resolveInteractionMode } from './mount';
 export type { ReaderController } from './reader';
 export { createReader } from './reader';
 // Geometry helpers for mark path reconstruction

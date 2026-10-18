@@ -10,13 +10,7 @@
  * or controlled by passing `step={n}` to drive it externally.
  */
 
-import type {
-  ChartSpec,
-  DataRow,
-  GeoMapSpec,
-  GraphSpec,
-  LayerSpec,
-} from '@opendata-ai/openchart-core';
+import type { ChartSpec, DataRow, GeoMapSpec, LayerSpec } from '@opendata-ai/openchart-core';
 import type { MountOptions } from '@opendata-ai/openchart-vanilla';
 import {
   type ChartStoryInstance,
@@ -35,7 +29,7 @@ export interface ChartStoryHandle {
 
 export interface ChartStoryProps<TData extends DataRow = DataRow> {
   /** Base spec the story drives. */
-  spec: ChartSpec<TData> | LayerSpec<TData> | GraphSpec | GeoMapSpec;
+  spec: ChartSpec<TData> | LayerSpec<TData> | GeoMapSpec;
   /** Ordered step patches. `steps[i]` is applied cumulatively onto the base. */
   steps: ChartStoryOptions<TData>['steps'];
   /**

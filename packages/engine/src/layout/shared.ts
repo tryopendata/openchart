@@ -60,10 +60,12 @@ export const INLINE_TICK_OVERHANG_PAD = 6;
  * Spec-level `chromeLayout` wins over the compile-option default. The outer
  * chart or facet assembly owns growth exactly once.
  */
+export type ChromeLayoutMode = 'subtract' | 'grow' | 'notes';
+
 export function resolveChromeLayout(
-  spec: { chromeLayout?: 'subtract' | 'grow' | 'notes'; encoding?: unknown } | undefined,
+  spec: { chromeLayout?: ChromeLayoutMode; encoding?: unknown } | undefined,
   options: Pick<CompileOptions, 'chromeLayout'> | undefined,
-): 'subtract' | 'grow' | 'notes' {
+): ChromeLayoutMode {
   if (spec?.chromeLayout === 'notes') return options?.chromeLayout ?? 'notes';
   return spec?.chromeLayout ?? options?.chromeLayout ?? 'notes';
 }

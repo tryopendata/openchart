@@ -7,6 +7,7 @@ import { contrastRatio, meetsAA } from '../../colors/contrast';
 import { CATEGORICAL_FILL_PALETTE_DARK, CATEGORICAL_PALETTE_DARK } from '../../colors/palettes';
 import { adaptTheme } from '../dark-mode';
 import { DEFAULT_THEME } from '../defaults';
+import { mergeThemeConfig } from '../merge';
 import { broadsheet, terminal } from '../presets';
 import { resolveTheme } from '../resolve';
 
@@ -95,5 +96,17 @@ describe('theme rule surface', () => {
     expect(t.rule).toEqual({ color: '#123456', width: 24, thickness: 2 });
     // No TokenValue pair, so dark mode leaves the authored color alone.
     expect(adaptTheme(t).rule?.color).toBe('#123456');
+  });
+
+  it('adapts a rule color derived from text ink in dark mode', () => {
+    const dark = adaptTheme(resolveTheme({ rule: { width: 80 } }));
+    expect(dark.rule).toEqual({ color: dark.colors.text, width: 80, thickness: 3 });
+    expect(dark.rule?.color).not.toBe('#09090b');
+    const custom = adaptTheme(resolveTheme({ colors: { text: '#333333' }, rule: { width: 8 } }));
+    expect(custom.rule?.color).toBe('#333333');
+    // A preset's authored rule color is unchanged by a partial override.
+    expect(
+      adaptTheme(resolveTheme(mergeThemeConfig(broadsheet, { rule: { width: 80 } })!)).rule?.color,
+    ).toBe(adaptTheme(resolveTheme(broadsheet)).rule?.color);
   });
 });

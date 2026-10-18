@@ -46,8 +46,12 @@ describe('animation in compiled layout', () => {
   it('layout has animation config when spec enables animation', () => {
     const spec = { ...barSpec, animation: true } as ChartSpec;
     const layout = compileChart(spec, { width: 600, height: 400 });
-    expect(layout.animation).toBeDefined();
-    expect(layout.animation!.enter).toBeDefined();
+    expect(layout.animation?.enter).toEqual({
+      duration: 450,
+      ease: 'smooth',
+      staggerDelay: 30,
+      staggerOrder: 'index',
+    });
   });
 
   it('layout has no animation config when spec omits animation', () => {
@@ -243,11 +247,11 @@ describe('animationIndex for value-based stagger', () => {
     const rectMarks = layout.marks.filter((m) => m.type === 'rect');
     expect(rectMarks.length).toBe(3);
 
-    // Each rect mark should have animationIndex
-    for (const mark of rectMarks) {
-      const idx = (mark as unknown as { animationIndex?: number }).animationIndex;
-      expect(idx).toBeDefined();
-    }
+    // Each rect mark gets a distinct animationIndex covering 0..n-1
+    const indices = rectMarks.map(
+      (mark) => (mark as unknown as { animationIndex?: number }).animationIndex,
+    );
+    expect([...indices].sort()).toEqual([0, 1, 2]);
   });
 
   it('orders marks by their primary quantitative value', () => {

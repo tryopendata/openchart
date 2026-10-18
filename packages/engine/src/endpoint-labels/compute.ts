@@ -29,6 +29,7 @@ import type {
 } from '@opendata-ai/openchart-core';
 import { estimateTextWidth, wrapText } from '@opendata-ai/openchart-core';
 
+import { resolveKnockoutColor } from '../charts/utils';
 import type { NormalizedChartSpec } from '../compiler/types';
 import { resolveFieldFormatter } from '../format/field-format';
 import {
@@ -311,7 +312,9 @@ export function computeEndpointLabels(
   const showMarker = config?.showMarker !== false;
   const markerRadius = config?.markerStyle?.radius ?? ENDPOINT_MARKER_RADIUS;
   const markerStrokeWidth = config?.markerStyle?.strokeWidth ?? ENDPOINT_MARKER_STROKE_WIDTH;
-  const markerFill = config?.markerStyle?.fill ?? theme.colors.background;
+  // Opaque by default: the marker sits on the line's last point and its fill
+  // covers the line end, so the ring isn't pierced.
+  const markerFill = config?.markerStyle?.fill ?? resolveKnockoutColor(theme);
   const trailingContent = resolveEndpointContent(config?.content, 'trailing');
   const leadingContent = resolveEndpointContent(config?.content, 'leading');
 
@@ -338,6 +341,7 @@ export function computeEndpointLabels(
     labelLines: string[];
     value: string;
     color: string;
+    strokeDasharray?: string;
     dataX: number;
     dataY: number;
     height: number;
@@ -400,6 +404,7 @@ export function computeEndpointLabels(
       labelLines,
       value,
       color,
+      strokeDasharray: mark.type === 'line' ? mark.strokeDasharray : undefined,
       dataX: last.x,
       dataY: last.y,
       height: entryHeight,
@@ -455,11 +460,10 @@ export function computeEndpointLabels(
       labelY,
       showLeader: showLeader && displaced,
     };
+    if (p.strokeDasharray) entry.strokeDasharray = p.strokeDasharray;
     if (showMarker) {
-      // Offset cx right by markerRadius so the line terminates at the circle's
-      // left edge rather than its center — prevents the line from piercing the ring.
       entry.marker = {
-        x: p.dataX + markerRadius,
+        x: p.dataX,
         y: p.dataY,
         dataX: p.dataX,
         fill: markerFill,
@@ -482,6 +486,7 @@ export function computeEndpointLabels(
       labelLines: string[];
       value: string;
       color: string;
+      strokeDasharray?: string;
       dataX: number;
       dataY: number;
       height: number;
@@ -536,6 +541,7 @@ export function computeEndpointLabels(
         labelLines,
         value,
         color,
+        strokeDasharray: mark.type === 'line' ? mark.strokeDasharray : undefined,
         dataX: first.x,
         dataY: first.y,
         height: entryHeight,
@@ -577,9 +583,10 @@ export function computeEndpointLabels(
           labelY,
           showLeader: showLeader && displaced,
         };
+        if (p.strokeDasharray) entry.strokeDasharray = p.strokeDasharray;
         if (showMarker) {
           entry.marker = {
-            x: p.dataX - markerRadius,
+            x: p.dataX,
             y: p.dataY,
             dataX: p.dataX,
             fill: markerFill,

@@ -14,7 +14,7 @@ import { applyEditTransaction } from '@opendata-ai/openchart-core';
  */
 
 import type { ChartSpec, EditTransaction, ElementRef } from '@opendata-ai/openchart-core';
-import { Chart, type ChartHandle } from '@opendata-ai/openchart-react';
+import { Chart, type ChartHandle, type InteractionMode } from '@opendata-ai/openchart-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { GalleryPage, Section } from '../components';
 import { segmentRevenue } from '../data';
@@ -608,8 +608,14 @@ const TOGGLE_CSS = `
 }
 `;
 
-function EditableToggleDemo() {
-  const [editable, setEditable] = useState(false);
+const MODE_STATUS: Record<InteractionMode, string> = {
+  read: 'No selection or editing; arrow keys move between data points',
+  select: 'Click or Tab selects; arrows still navigate data; nothing is edited',
+  edit: 'Select, drag, nudge, retitle, and delete; arrows nudge the selection',
+};
+
+function InteractionModeDemo() {
+  const [mode, setMode] = useState<InteractionMode>('read');
   const [eventLog, setEventLog] = useState<Array<{ text: string; ts: number }>>([]);
 
   const spec: ChartSpec = {
@@ -637,8 +643,8 @@ function EditableToggleDemo() {
       },
     ],
     chrome: {
-      title: 'Editable Toggle Demo',
-      subtitle: 'Toggle editable to enable/disable editing',
+      title: 'Interaction Mode Demo',
+      subtitle: 'Switch between read, select, and edit',
     },
   };
 
@@ -665,27 +671,28 @@ function EditableToggleDemo() {
       {/* biome-ignore lint/security/noDangerouslySetInnerHtml: static CSS constant, no user input */}
       <style dangerouslySetInnerHTML={{ __html: TOGGLE_CSS }} />
       <div className="ocem-toggle-bar">
-        <button
-          type="button"
-          className="ocem-toggle-btn"
-          data-active={String(editable)}
-          onClick={() => setEditable((v) => !v)}
-        >
-          editable: {String(editable)}
-        </button>
-        <span className="ocem-toggle-status">
-          {editable ? 'Drag, select, and edit are active' : 'Edit interactions are suppressed'}
-        </span>
+        {(['read', 'select', 'edit'] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            className="ocem-toggle-btn"
+            data-active={String(mode === m)}
+            onClick={() => setMode(m)}
+          >
+            interaction: '{m}'
+          </button>
+        ))}
+        <span className="ocem-toggle-status">{MODE_STATUS[mode]}</span>
       </div>
       <div className="story-chart" style={{ height: 400 }}>
-        <Chart spec={spec} editable={editable} onSelect={handleSelect} onEdit={handleEdit} />
+        <Chart spec={spec} interaction={mode} onSelect={handleSelect} onEdit={handleEdit} />
       </div>
       <div className="ocem-toggle-log">
         {eventLog.length === 0 ? (
           <span className="ocem-toggle-log-empty">
-            {editable
-              ? 'Try selecting or dragging an element...'
-              : 'Enable editable to interact with the chart.'}
+            {mode === 'read'
+              ? 'Switch to select or edit to interact with the chart.'
+              : 'Try selecting or dragging an element...'}
           </span>
         ) : (
           eventLog.map((e) => <div key={e.ts + e.text}>{e.text}</div>)
@@ -725,11 +732,11 @@ export const EditMode = () => (
       <EditModeStudio />
     </Section>
     <Section
-      id="editable-toggle"
-      title="The editable prop"
-      lede="Decouple edit interactions from callback presence. Toggle editable to enable or disable drag, delete, and text editing independently."
+      id="interaction-mode"
+      title="The interaction prop"
+      lede="Pick the interaction mode explicitly instead of inferring it from callbacks. read is a plain reader chart, select reports selections while arrows keep navigating data, and edit turns on every gesture."
     >
-      <EditableToggleDemo />
+      <InteractionModeDemo />
     </Section>
   </GalleryPage>
 );

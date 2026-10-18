@@ -11,7 +11,7 @@
   Pass `step` to drive the story externally; omit for self-driving scroll.
 -->
 <script lang="ts">
-import type { ChartSpec, GeoMapSpec, GraphSpec, LayerSpec } from '@opendata-ai/openchart-core';
+import type { ChartSpec, GeoMapSpec, LayerSpec } from '@opendata-ai/openchart-core';
 import type { MountOptions } from '@opendata-ai/openchart-vanilla';
 import {
   type ChartStoryInstance,
@@ -30,7 +30,7 @@ let {
   mountOptions,
   class: className,
 }: {
-  spec: ChartSpec | LayerSpec | GraphSpec | GeoMapSpec;
+  spec: ChartSpec | LayerSpec | GeoMapSpec;
   steps: ChartStoryOptions['steps'];
   narrative: Snippet[];
   step?: number;

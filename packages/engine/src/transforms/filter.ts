@@ -34,6 +34,8 @@ function applyOffset(anchor: Date, offset: number, unit: RelativeTimeRef['unit']
     case 'day':
       d.setDate(d.getDate() + offset);
       break;
+    default:
+      unit satisfies never;
   }
   return d.getTime();
 }

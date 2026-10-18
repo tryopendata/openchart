@@ -25,5 +25,6 @@ export {
   isTextEditable,
   refsEqual,
   renderSelectionOverlay,
+  withElementPath,
 } from './selection';
 export { wireTooltipEvents } from './tooltip-events';

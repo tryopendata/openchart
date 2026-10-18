@@ -2,10 +2,19 @@ import type { Point, Rect, ResolvedLabel } from '@opendata-ai/openchart-core';
 import type { PlacementObstacle } from './placement';
 
 type Segment = { a: Point; b: Point };
-type Obstacle = { bounds: Rect; segment?: Segment; kind: PlacementObstacle['kind'] };
+type Obstacle = {
+  bounds: Rect;
+  segment?: Segment;
+  kind: PlacementObstacle['kind'];
+  /** Stamps for the last segment that tested this obstacle and the last score it counted toward. */
+  tested: number;
+  counted: number;
+};
 const CELL = 64;
 const contains = (r: Rect, p: Point) =>
   p.x >= r.x && p.x <= r.x + r.width && p.y >= r.y && p.y <= r.y + r.height;
+const overlaps = (a: Rect, b: Rect) =>
+  a.x <= b.x + b.width && b.x <= a.x + a.width && a.y <= b.y + b.height && b.y <= a.y + a.height;
 const bounds = ({ a, b }: Segment): Rect => ({
   x: Math.min(a.x, b.x),
   y: Math.min(a.y, b.y),
@@ -64,6 +73,7 @@ export class ConnectorCrossings {
   private cells = new Map<string, Set<Obstacle>>();
   private all = new Set<Obstacle>();
   private oversized = new Set<Obstacle>();
+  private stamp = 0;
   private keys(r: Rect): string[] | undefined {
     const count =
       (Math.floor((r.x + r.width) / CELL) - Math.floor(r.x / CELL) + 1) *
@@ -92,37 +102,59 @@ export class ConnectorCrossings {
     }
   }
   addBox(box: PlacementObstacle): void {
-    this.insert({ bounds: box, kind: box.kind });
+    this.insert({ bounds: box, kind: box.kind, tested: 0, counted: 0 });
   }
   addConnector(connector: ResolvedLabel['connector']): void {
     if (connector)
       for (const segment of segments(connector))
-        this.insert({ bounds: bounds(segment), segment, kind: 'annotation' });
+        this.insert({
+          bounds: bounds(segment),
+          segment,
+          kind: 'annotation',
+          tested: 0,
+          counted: 0,
+        });
   }
   score(connector: ResolvedLabel['connector']): number {
     if (!connector) return 0;
-    const hit = new Set<Obstacle>();
+    // Stamps instead of per-segment Sets: this runs once per placement candidate.
+    const scoreStamp = ++this.stamp;
+    let hits = 0;
     for (const segment of segments(connector)) {
-      const keys = this.keys(bounds(segment));
-      const candidates = keys
-        ? new Set([...this.oversized, ...keys.flatMap((key) => [...(this.cells.get(key) ?? [])])])
-        : this.all;
-      for (const obstacle of candidates) {
+      const segmentStamp = ++this.stamp;
+      const test = (obstacle: Obstacle) => {
+        if (obstacle.tested === segmentStamp || obstacle.counted === scoreStamp) return;
+        obstacle.tested = segmentStamp;
         // The observation being explained is not an unrelated obstacle.
         if (
-          ['mark', 'line', 'area-fill'].includes(obstacle.kind) &&
+          (obstacle.kind === 'mark' || obstacle.kind === 'line' || obstacle.kind === 'area-fill') &&
           connector.endpoint &&
           contains(obstacle.bounds, connector.endpoint)
         )
-          continue;
+          return;
+        // Disjoint boxes can neither cross nor contain: skip the exact tests.
+        if (!overlaps(box, obstacle.bounds)) return;
         if (
           obstacle.segment
             ? intersects(segment, obstacle.segment)
             : crossesRect(segment, obstacle.bounds)
-        )
-          hit.add(obstacle);
+        ) {
+          obstacle.counted = scoreStamp;
+          hits++;
+        }
+      };
+      const box = bounds(segment);
+      const keys = this.keys(box);
+      if (!keys) {
+        for (const obstacle of this.all) test(obstacle);
+        continue;
+      }
+      for (const obstacle of this.oversized) test(obstacle);
+      for (const key of keys) {
+        const cell = this.cells.get(key);
+        if (cell) for (const obstacle of cell) test(obstacle);
       }
     }
-    return hit.size * 2;
+    return hits * 2;
   }
 }

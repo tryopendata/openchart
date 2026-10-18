@@ -43,7 +43,8 @@ import { createTooltipManager, type TooltipManager } from './tooltip';
 export interface BarListMountOptions {
   theme?: ThemeConfig;
   darkMode?: DarkMode;
-  responsive?: boolean;
+  /** Observe container resizing. Defaults to true. */
+  autoResize?: boolean;
   watermark?: boolean;
   tooltip?: boolean;
   onRowClick?: (row: { label: string; value: number; data: Record<string, unknown> }) => void;
@@ -390,7 +391,7 @@ export function createBarList(
   );
   container.dataset.ocFontsState = fontsPending ? 'pending' : 'ready';
 
-  if (options?.responsive !== false) {
+  if (options?.autoResize !== false) {
     disconnectResize = observeResize(container, () => resize());
   }
 

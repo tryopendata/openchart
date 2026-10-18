@@ -204,7 +204,7 @@ Maps, tile maps, bar lists and Sankey diagrams share mark keyboard navigation. A
 
 Static chart exports render the terminal layout rather than serializing hover or in-flight geometry. Map exports retain the current camera, authored focus and zoom viewport clipping. Font embedding resolves inline styles before presentation attributes and inherits font declarations for text spans, including detached export scenes. Table CSV exports use all filtered/sorted rows, independently of the displayed page.
 
-Both adapters use `ResizeObserver` to detect container size changes and trigger recompilation at the new dimensions. The responsive system uses breakpoints to adjust layout strategy (label density, legend position, annotation placement).
+Both adapters use `ResizeObserver` to detect container size changes and trigger recompilation at the new dimensions; every mount takes `autoResize: false` to opt out. The responsive system uses breakpoints to adjust layout strategy (label density, legend position, annotation placement).
 
 ### Update flow
 
@@ -243,7 +243,7 @@ facet instances. Their linked marker emphasis is transient renderer state.
 
 Themes flow through authored composition, default resolution, and mode adaptation:
 
-1. **Authored composition** (`ThemeConfig`, `mergeThemeConfig`): Deep-merge partial spec/provider/host overrides. Arrays and TokenValues are atomic; null replaces. A layer leaf overrides its parent before host options apply.
+1. **Authored composition** (`ThemeConfig`, `mergeThemeConfig`): Deep-merge partial spec/provider/host overrides. Arrays and TokenValues are atomic; null replaces. In a layer, the root scope (chrome, axes, legend) uses the layer theme, falling back to the first leaf's theme when the layer has none; each leaf's marks use the leaf theme merged over the layer theme. Host options apply on top of both.
 2. **Default resolution** (`resolveTheme()`): Fill omitted fields from `DEFAULT_THEME`. Produces `ResolvedTheme`, with authored metadata retained for token stamping. Authored chrome font sizes win over general size propagation; partial rules inherit and null clears them.
 3. **Dark mode adaptation** (`adaptTheme()`): If dark mode is active, transform the resolved theme. Swap background/text, adjust palette brightness, lighten gridlines.
 
@@ -258,6 +258,6 @@ The engine generates accessibility metadata as part of compilation:
 - **Alt text**: Auto-generated description of the chart (type, data summary, encoding).
 - **Data table fallback**: A screen-reader-only HTML table with the chart's data.
 - **ARIA labels**: Role, roledescription, and label attributes for the SVG container.
-- **Keyboard navigation**: Arrow keys navigate between marks. Enter/Space shows tooltip. Escape hides it.
+- **Keyboard navigation**: Arrow keys navigate between marks. Enter/Space shows tooltip. Escape hides it. In edit mode (`interaction: 'edit'`) arrows nudge the selected annotation instead.
 
 The vanilla adapter creates a visually-hidden data table alongside the SVG, and wires keyboard event handlers on the container. React components inherit this through the vanilla adapter.

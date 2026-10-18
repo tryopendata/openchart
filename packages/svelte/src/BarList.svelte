@@ -70,7 +70,7 @@ $effect(() => {
         data: Record<string, unknown>;
       } | null,
     ) => untrack(() => onrowhover)?.(row),
-    responsive: true,
+    autoResize: true,
   };
 
   instance = createBarList(containerEl, currentSpec, options);

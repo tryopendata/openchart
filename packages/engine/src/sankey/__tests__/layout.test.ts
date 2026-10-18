@@ -122,10 +122,8 @@ describe('computeSankeyLayout', () => {
     // The x positions should be the same for a linear chain (both align
     // left-to-right), but verify the layouts are structurally sound.
     for (const node of justifyResult.nodes) {
-      expect(node.x0).toBeDefined();
-      expect(node.x1).toBeDefined();
-      expect(node.y0).toBeDefined();
-      expect(node.y1).toBeDefined();
+      expect(node.x1).toBeGreaterThan(node.x0);
+      expect(node.y1).toBeGreaterThan(node.y0);
     }
   });
 

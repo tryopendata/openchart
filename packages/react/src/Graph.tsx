@@ -332,7 +332,7 @@ export const Graph = forwardRef<GraphHandle, GraphProps>(function Graph(
       onLegendToggle: stableOnLegendToggle,
       onHighlightChange: stableOnHighlightChange,
       onCameraChange: stableOnCameraChange,
-      responsive: true,
+      autoResize: true,
       suppressEntrance,
     };
 

@@ -77,8 +77,8 @@ describe('compileChart', () => {
     expect(layout.a11y.altText.length).toBeGreaterThan(0);
     expect(layout.a11y.role).toBe('img');
 
-    // Theme is resolved with actual color values
-    expect(layout.theme.colors.background).toBeTruthy();
+    // Theme is resolved with actual color values (transparent so the host shows through)
+    expect(layout.theme.colors.background).toBe('transparent');
     expect(layout.theme.colors.categorical.length).toBeGreaterThan(0);
 
     // Dimensions match the input
@@ -138,7 +138,8 @@ describe('compileChart', () => {
     expect(xTicks.length).toBeGreaterThan(0);
     for (const tick of xTicks) {
       expect(tick.position).toBeGreaterThanOrEqual(0);
-      expect(tick.label).toBeTruthy();
+      // Data spans 2020-01-01..2021-01-01, so every temporal label names one of those years.
+      expect(tick.label).toMatch(/\b202[01]\b/);
     }
 
     // Y axis
@@ -146,7 +147,7 @@ describe('compileChart', () => {
     expect(yTicks.length).toBeGreaterThan(0);
     for (const tick of yTicks) {
       expect(tick.position).toBeGreaterThanOrEqual(0);
-      expect(tick.label).toBeTruthy();
+      expect(tick.label).toBe(String(tick.value));
     }
 
     // Axes have start and end points
@@ -165,10 +166,19 @@ describe('compileChart', () => {
   });
 
   it('legend entries have colors and shapes', () => {
-    const layout = compileChart(lineSpec, { width: 600, height: 400 });
+    // Endpoint labels replace the legend by default, so turn them off to get entries.
+    const layout = compileChart(
+      { ...lineSpec, endpointLabels: false },
+      { width: 600, height: 400 },
+    );
+    expect(layout.legend.entries.map((e) => e.label)).toEqual(['US', 'UK']);
+    const strokes = new Map(
+      layout.marks.flatMap((m) => (m.type === 'line' ? [[m.seriesKey, m.stroke] as const] : [])),
+    );
     for (const entry of layout.legend.entries) {
-      expect(entry.color).toBeTruthy();
-      expect(['circle', 'square', 'line']).toContain(entry.shape);
+      // Swatch color is the series' line color; line series get line swatches.
+      expect(entry.color).toBe(strokes.get(entry.label));
+      expect(entry.shape).toBe('line');
     }
   });
 
@@ -231,7 +241,7 @@ describe('compileChart', () => {
     for (const mark of lineMarks) {
       if (mark.type === 'line') {
         expect(mark.points.length).toBeGreaterThan(0);
-        expect(mark.stroke).toBeTruthy();
+        expect(mark.stroke).toMatch(/^#[0-9a-f]{6}$/i);
         expect(mark.strokeWidth).toBeGreaterThan(0);
         expect(mark.dataPoints).toBeDefined();
         expect(mark.dataPoints!.length).toBeGreaterThan(0);
@@ -368,9 +378,11 @@ describe('compileChart', () => {
       if (mark.type === 'rect') {
         expect(mark.width).toBeGreaterThan(0);
         expect(mark.height).toBeGreaterThan(0);
-        expect(mark.fill).toBeTruthy();
+        expect(mark.fill).toMatch(/^#[0-9a-f]{6}$/i);
       }
     }
+    // Single series: every bar shares one fill.
+    expect(new Set(layout.marks.map((m) => (m.type === 'rect' ? m.fill : null))).size).toBe(1);
 
     // Both axes should be present with ticks
     expect(layout.axes.x!.ticks.length).toBeGreaterThan(0);
@@ -788,7 +800,8 @@ describe('compileChart', () => {
       },
       { width: 400, height: 200 },
     );
-    expect(layout.axes.x).toBeDefined();
+    expect(layout.axes.x!.label).toBe('date');
+    expect(layout.axes.x!.ticks.length).toBeGreaterThan(0);
   });
 
   it('sparkline + explicit chrome.title still renders chrome', () => {
@@ -1110,7 +1123,7 @@ describe('compileChart', () => {
     };
     const layout = compileChart(spec, { width: 320, height: 200 });
     expect(layout.display).toBe('sparkline');
-    expect(layout.animation?.enter).toBeDefined();
+    expect(layout.animation?.enter?.duration).toBe(1100);
   });
 
   it('breakpoint chrome wins when top-level is sparkline', () => {
@@ -1165,7 +1178,7 @@ describe('compileChart', () => {
       },
     };
     const layoutFull = compileChart(spec, { width: 1200, height: 600 });
-    expect(layoutFull.axes.x).toBeDefined();
+    expect(layoutFull.axes.x!.label).toBe('date');
     const layoutCompact = compileChart(spec, { width: 320, height: 200 });
     expect(layoutCompact.axes.x).toBeUndefined();
   });
@@ -1253,7 +1266,8 @@ describe('compileTable', () => {
     // Columns are resolved with labels and widths
     expect(layout.columns).toHaveLength(2);
     expect(layout.columns[0].key).toBe('name');
-    expect(layout.columns[0].label).toBeTruthy();
+    // No authored label: the column key is the header.
+    expect(layout.columns[0].label).toBe('name');
     expect(layout.columns[0].width).toBeGreaterThan(0);
     expect(layout.columns[1].key).toBe('age');
 
@@ -1268,7 +1282,7 @@ describe('compileTable', () => {
 
     // Theme is resolved
     expect(layout.theme.isDark).toBe(false);
-    expect(layout.theme.colors.background).toBeTruthy();
+    expect(layout.theme.colors.background).toBe('transparent');
   });
 
   it('throws if a chart spec is passed', () => {

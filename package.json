@@ -39,6 +39,7 @@
     "test:perf": "playwright test --project=perf",
     "prepare": "husky",
     "capture:design": "node scripts/capture-design-baseline.mjs",
+    "test:parity:capture": "node scripts/capture-v8-parity.mjs",
     "check:boundaries": "node scripts/check-product-boundary.mjs",
     "check:library-bundle": "node scripts/check-library-bundle.mjs"
   },

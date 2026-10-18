@@ -688,6 +688,11 @@ export interface ResolvedLabel {
     endpoint?: Point;
     /** Author's from-end nudge, re-applied on every geometry rebuild (mirrors `endpoint` for `to`). */
     fromOffset?: { dx: number; dy: number };
+    /**
+     * The target's own value label. The data end stops short of it instead of
+     * striking through it; retained so geometry rebuilds stop at the same label.
+     */
+    targetLabel?: Rect;
     /** Fixed label attachment for outside-reference gutter leaders; retained during animation. */
     labelAttachment?: 'left-center';
     /** Connector line color. */
@@ -814,6 +819,8 @@ export interface LegendEntry {
   color: string;
   /** Shape of the swatch (matches the mark type). */
   shape: 'circle' | 'square' | 'line';
+  /** SVG dash pattern for a `line` swatch, matching a strokeDash-encoded series. */
+  strokeDasharray?: string;
   /** Whether this entry is currently highlighted/active. */
   active?: boolean;
   /** True for overflow indicator entries ("+N more"). Not interactive. */
@@ -1067,6 +1074,8 @@ export interface EndpointLabelEntry {
   value: string;
   /** Series color. */
   color: string;
+  /** SVG dash pattern of the series line, drawn on the swatch. */
+  strokeDasharray?: string;
   /** True pixel y of the last data point on the line. */
   dataY: number;
   /** Displaced y after the bidirectional collision sweep. */
@@ -1314,7 +1323,7 @@ export interface ScaleInvert {
   topData: number;
   bottomData: number;
   /** Scale type so the vanilla layer applies the correct inverse transform. */
-  scaleType?: 'linear' | 'log' | 'pow' | 'sqrt' | 'symlog' | 'time';
+  scaleType?: 'linear' | 'log' | 'pow' | 'sqrt' | 'symlog' | 'time' | 'utc';
   /** For band/point scales: ordered domain values and their pixel centers. */
   domain?: (string | number)[];
   positions?: number[];
@@ -2206,7 +2215,9 @@ export interface CompileOptions {
    * How chrome height interacts with the height budget. Mirrors the spec-level
    * `chromeLayout`; the engine reads whichever is set (spec wins).
    *
-   * - `'subtract'` (default): `height` is the fixed total; chrome shrinks the plot.
+   * - omitted: notes and the series summary grow the SVG; title, subtitle, and
+   *   source subtract from `height`.
+   * - `'subtract'`: `height` is the fixed total; all chrome shrinks the plot.
    * - `'grow'`: `height` is the plot budget; the SVG grows by the chrome height.
    */
   chromeLayout?: 'subtract' | 'grow';
@@ -2266,34 +2277,6 @@ export interface CompileOptions {
    * If not provided, the engine falls back to heuristic estimation.
    */
   measureText?: MeasureTextFn;
-  /** Extra pixels to reserve on the right margin for a secondary y-axis. Set by compileLayer when resolve.scale.y is 'independent'. */
-  rightAxisReserve?: number;
-  /**
-   * Internal note-band reserve resolved from source annotation capacity and
-   * responsive series-summary lines. Subtract mode consumes the fixed figure
-   * budget; grow mode adds the reserve to the SVG height while keeping the
-   * original layout budget and padding. Callers should not set this field.
-   */
-  footnoteReserve?: number;
-  /** Recursion depth of the footnote-reserve convergence pass. Internal to compileChart. */
-  footnotePass?: number;
-  /** Set after facet height growth to prevent unbounded recursion. Internal to compileFaceted. */
-  facetHeightGrown?: boolean;
-  /**
-   * Use this chart drawing area instead of computing one from chrome, axes,
-   * and legend reservations. Set by compileLayer when compiling leaf layers so
-   * their marks land in the primary layout's coordinate space; leaf specs lack
-   * the layer-level chrome/legend/theme and would otherwise compute a
-   * different area than the one the axes are rendered in.
-   */
-  frozenChartArea?: Rect;
-  /**
-   * Marks this compile as one leaf (or the primary spec) of a multi-leaf layer.
-   * Set by compileLayer; callers should not set it. Only consumer today is the
-   * canvas mark-layer resolution, which refuses canvas mode for layered charts
-   * because the layer layout concatenates marks from several compiles.
-   */
-  layered?: boolean;
 }
 
 /** Extended compile options for table visualizations. */

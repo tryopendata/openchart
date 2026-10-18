@@ -30,8 +30,9 @@ describe('compileTable', () => {
 
     expect(layout.columns).toHaveLength(3);
     expect(layout.rows).toHaveLength(4);
-    expect(layout.theme).toBeDefined();
-    expect(layout.chrome).toBeDefined();
+    expect(layout.theme.isDark).toBe(false);
+    // No chrome authored, so none is resolved.
+    expect(layout.chrome.title).toBeUndefined();
     expect(layout.search.enabled).toBe(false);
     expect(layout.stickyFirstColumn).toBe(false);
     expect(layout.density).toBe('regular');

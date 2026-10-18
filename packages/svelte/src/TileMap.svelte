@@ -86,7 +86,7 @@ $effect(() => {
         data: Record<string, unknown>;
       } | null,
     ) => untrack(() => ontilehover)?.(tile),
-    responsive: true,
+    autoResize: true,
   };
 
   instance = createTileMap(containerEl, currentSpec, options);

@@ -89,7 +89,7 @@ export function wireCanvasInteractions({
       datum: (datum ?? {}) as Record<string, unknown>,
       series: undefined,
       position: local,
-      event: e as unknown as MouseEvent,
+      event: e,
     };
   }
 

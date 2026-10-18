@@ -1331,5 +1331,222 @@
         }
       ]
     }
+  },
+  {
+    "name": "leaf theme differs from parent",
+    "source": {
+      "theme": {
+        "colors": {
+          "categorical": ["#111111"]
+        }
+      },
+      "layer": [
+        {
+          "mark": "point",
+          "data": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 1,
+              "y": 1
+            }
+          ],
+          "encoding": {
+            "x": {
+              "field": "x",
+              "type": "quantitative",
+              "scale": {
+                "zero": false
+              }
+            },
+            "y": {
+              "field": "y",
+              "type": "quantitative",
+              "scale": {
+                "zero": false
+              }
+            }
+          }
+        },
+        {
+          "mark": "point",
+          "data": [
+            {
+              "x": 0,
+              "y": 0
+            },
+            {
+              "x": 1,
+              "y": 1
+            }
+          ],
+          "encoding": {
+            "x": {
+              "field": "x",
+              "type": "quantitative",
+              "scale": {
+                "zero": false
+              }
+            },
+            "y": {
+              "field": "y",
+              "type": "quantitative",
+              "scale": {
+                "zero": false
+              }
+            }
+          },
+          "theme": {
+            "colors": {
+              "categorical": ["#ff0000"]
+            }
+          }
+        }
+      ]
+    },
+    "expected": {
+      "fonts": {
+        "family": "\"Inter Variable\", Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif",
+        "mono": "\"JetBrains Mono\", \"Fira Code\", \"Cascadia Code\", monospace",
+        "sizes": {
+          "title": 26,
+          "subtitle": 14,
+          "body": 13,
+          "small": 11,
+          "axisTick": 11,
+          "metricLabel": 11,
+          "metricValue": 22
+        },
+        "weights": {
+          "normal": 400,
+          "medium": 500,
+          "semibold": 600,
+          "bold": 700
+        }
+      },
+      "spacing": {
+        "padding": 20,
+        "chromeGap": 6,
+        "chromeToChart": 8,
+        "chartToFooter": 8,
+        "axisMargin": 6,
+        "xAxisHeight": 26,
+        "xAxisLabelPadding": 4
+      },
+      "chrome": {
+        "eyebrow": {
+          "fontSize": 11,
+          "fontWeight": 500,
+          "color": "#06b6d4",
+          "lineHeight": 1.4
+        },
+        "title": {
+          "fontSize": 26,
+          "fontWeight": 600,
+          "color": "#09090b",
+          "lineHeight": 1.15
+        },
+        "subtitle": {
+          "fontSize": 14,
+          "fontWeight": 400,
+          "color": "#71717a",
+          "lineHeight": 1.45
+        },
+        "source": {
+          "fontSize": 11,
+          "fontWeight": 400,
+          "color": "#71717a",
+          "lineHeight": 1.4
+        },
+        "byline": {
+          "fontSize": 11,
+          "fontWeight": 400,
+          "color": "#71717a",
+          "lineHeight": 1.4
+        },
+        "footer": {
+          "fontSize": 11,
+          "fontWeight": 400,
+          "color": "#71717a",
+          "lineHeight": 1.4
+        }
+      },
+      "colors": {
+        "categorical": ["#111111"],
+        "categoricalFill": ["#111111"],
+        "sequential": {
+          "blue": ["#deebf7", "#c6dbef", "#9ecae1", "#6baed6", "#3182bd", "#08519c"],
+          "green": ["#e5f5e0", "#c7e9c0", "#a1d99b", "#74c476", "#31a354", "#006d2c"],
+          "orange": ["#fee6ce", "#fdd0a2", "#fdae6b", "#fd8d3c", "#e6550d", "#a63603"],
+          "purple": ["#efedf5", "#dadaeb", "#bcbddc", "#9e9ac8", "#756bb1", "#54278f"],
+          "teal": ["#06b6d4", "#05a3be", "#0490a8", "#037d92", "#026a7c", "#015766", "#004450"]
+        },
+        "diverging": {
+          "redBlue": ["#b2182b", "#d6604d", "#f4a582", "#f7f7f7", "#92c5de", "#4393c3", "#2166ac"],
+          "brownTeal": ["#8c510a", "#bf812d", "#dfc27d", "#f6e8c3", "#80cdc1", "#35978f", "#01665e"]
+        },
+        "background": "transparent",
+        "text": "#09090b",
+        "gridline": "rgba(0,0,0,0.08)",
+        "hairline": "rgba(0,0,0,0.14)",
+        "axis": "#71717a",
+        "annotationFill": "rgba(0,0,0,0.04)",
+        "annotationText": "#71717a",
+        "annotationLabel": "#333333",
+        "annotationMuted": "#6b7280",
+        "annotationLeader": "#8f8f8f",
+        "annotationRule": "#666666",
+        "annotationRangeFill": "#000000",
+        "annotationMarkerFill": "#ffffff",
+        "annotationPlate": "#ffffff",
+        "positive": "#15803d",
+        "negative": "#dc2626",
+        "neutral": {
+          "100": "#f0f0f0",
+          "200": "#e1e1e2",
+          "300": "#c9c9c9",
+          "400": "#9d9d9d",
+          "600": "#787879",
+          "800": "#474748",
+          "secondary": "#3f3f46",
+          "faint": "#d4d4d8",
+          "border": "rgba(0, 0, 0, 0.08)",
+          "surface": "#ffffff"
+        }
+      },
+      "annotations": [],
+      "marks": [
+        {
+          "type": "line",
+          "stroke": "#71717a"
+        },
+        {
+          "type": "point",
+          "fill": "#111111",
+          "stroke": "#ffffff"
+        },
+        {
+          "type": "point",
+          "fill": "#111111",
+          "stroke": "#ffffff"
+        },
+        {
+          "type": "line",
+          "stroke": "#71717a"
+        },
+        {
+          "type": "point",
+          "fill": "#ff0000",
+          "stroke": "#ffffff"
+        },
+        {
+          "type": "point",
+          "fill": "#ff0000",
+          "stroke": "#ffffff"
+        }
+      ]
+    }
   }
 ]

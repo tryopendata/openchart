@@ -47,7 +47,7 @@ export interface GraphShell {
   /** Current container size (width/height in CSS px, height floored at 200). */
   getSize(): { width: number; height: number };
   /**
-   * Subscribe to container resizes. Honours `options.responsive === false`
+   * Subscribe to container resizes. Honours `options.autoResize === false`
    * (returns a no-op disconnect). The ResizeObserver fires once on first
    * layout, so renderers must tolerate an immediate callback.
    */

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import v8Fixtures from '../__test-fixtures__/v8-styling.json';
 import { compileChart, compileLayer } from '../compile';
+import { validateSpec } from '../compiler/validate';
 import { migrateSpecV8 } from '../migration/v8';
 
 const chart = {
@@ -49,6 +50,11 @@ describe('migrateSpecV8 alias repairs', () => {
       { type: 'map', valueFormat: '.2f', encoding: { color: { field: 'v' } } },
       { type: 'map', encoding: { color: { field: 'v', format: '.2f' } } },
     ],
+    [{ type: 'map', valueFormat: '.2f' }, { type: 'map' }],
+    [
+      { type: 'barlist', valueFormat: '.2f', encoding: { label: { field: 'k' } } },
+      { type: 'barlist', encoding: { label: { field: 'k' } } },
+    ],
     [
       { type: 'sankey', valueFormat: '.2f', encoding: { value: { field: 'v', format: '.1f' } } },
       { type: 'sankey', encoding: { value: { field: 'v', format: '.1f' } } },
@@ -76,6 +82,24 @@ describe('migrateSpecV8 alias repairs', () => {
     expect(migrateSpecV8(result.spec)).toEqual({ spec: result.spec, repairs: [] });
   });
 
+  it('drops a channel-less map valueFormat so the migrated spec validates', () => {
+    const { spec, repairs } = migrateSpecV8({
+      type: 'map',
+      geography: 'us-states',
+      data: [],
+      valueFormat: '.1f',
+      points: {
+        data: [{ lat: 1, lon: 2 }],
+        encoding: { latitude: { field: 'lat' }, longitude: { field: 'lon' } },
+      },
+    });
+    expect(spec).not.toHaveProperty('valueFormat');
+    expect(repairs.find((r) => r.path === '/valueFormat')?.reason).toMatch(/no effect/);
+    expect(validateSpec(spec).errors.filter((e) => /valueFormat/.test(e.path + e.message))).toEqual(
+      [],
+    );
+  });
+
   it('keeps record tilemap valueFormat', () => {
     const spec = { type: 'tilemap', data: { CA: 4 }, valueFormat: '.2f' };
     expect(migrateSpecV8(spec).spec).toMatchObject(spec);
@@ -99,7 +123,8 @@ describe('migrateSpecV8 alias repairs', () => {
     const layout = compileChart(migrateSpecV8(spec).spec, { width: 640, height: 400 });
     expect(layout.annotations[0].type).toBe('refline');
     expect(layout.theme.chrome.title.color).toBe('#333333');
-    expect(layout.animation).toBeDefined();
+    // The legacy preset is dropped, so the default entrance applies.
+    expect(layout.animation?.enter?.duration).toBe(450);
   });
 
   it('replaces legacy labels and records each lost offset (explicit 8.10 exception)', () => {
@@ -178,7 +203,8 @@ it('rewrites the parent endpoint owner of a legacy-label layer', () => {
   const migrated = migrateSpecV8(spec);
   expect(migrated.spec.endpointLabels).toEqual({ content: 'label', showMarker: false });
   expect(migrated.repairs.map((repair) => repair.path)).toContain('/endpointLabels');
-  expect(compileLayer(migrated.spec, { width: 1280, height: 400 }).endpointLabels).toBeDefined();
+  const endpointLabels = compileLayer(migrated.spec, { width: 1280, height: 400 }).endpointLabels;
+  expect(endpointLabels!.entries.map((e) => e.seriesKey).sort()).toEqual(['A', 'B']);
   expect(migrateSpecV8(migrated.spec).repairs).toEqual([]);
 });
 
@@ -281,6 +307,77 @@ it.each(v8Fixtures)('preserves released v8 styling: $name', ({ source, expected 
       : undefined,
   }));
   expect(JSON.parse(JSON.stringify(annotations))).toEqual(expected.annotations);
+  if ('marks' in expected)
+    expect(
+      JSON.parse(
+        JSON.stringify(
+          layout.marks.map((m) => ({
+            type: m.type,
+            fill: 'fill' in m ? m.fill : undefined,
+            stroke: 'stroke' in m ? m.stroke : undefined,
+          })),
+        ),
+      ),
+    ).toEqual(expected.marks);
+});
+
+it('keeps v8 general font sizes ahead of authored chrome sizes', () => {
+  const source = {
+    ...chart,
+    chrome: { title: 'T', subtitle: 'S', source: 'S', byline: 'B', footer: 'F' },
+    theme: {
+      fonts: { sizes: { title: 30, subtitle: 17, small: 13 } },
+      chrome: {
+        title: { fontSize: 18 },
+        subtitle: { fontSize: 9 },
+        source: { fontSize: 10 },
+        byline: { fontSize: 8 },
+        footer: { fontSize: 7, color: 'red' },
+      },
+    },
+  };
+  const { spec, repairs } = migrateSpecV8(source);
+  const { chrome } = compileChart(spec, { width: 640, height: 400 }).theme;
+  // Captured from released v8.9.1.
+  expect(
+    ['title', 'subtitle', 'source', 'byline', 'footer'].map(
+      (key) => chrome[key as keyof typeof chrome].fontSize,
+    ),
+  ).toEqual([30, 17, 13, 13, 13]);
+  expect(chrome.footer.color).toBe('red');
+  expect(repairs.map((r) => r.path)).toContain('/theme/chrome/title/fontSize');
+  expect(migrateSpecV8(spec).repairs).toEqual([]);
+  const v9 = migrateSpecV8(source, { styling: 'v9' }).spec;
+  expect(compileChart(v9, { width: 640, height: 400 }).theme.chrome.title.fontSize).toBe(18);
+});
+
+it('keeps each leaf palette while the layer theme keeps owning root chrome', () => {
+  const source = {
+    theme: { colors: { categorical: ['#111111'] }, fonts: { sizes: { title: 30 } } },
+    chrome: { title: 'Title' },
+    layer: [
+      {
+        ...chart,
+        theme: { colors: { categorical: ['#00ff00'] }, fonts: { sizes: { title: 12 } } },
+      },
+      { ...chart, theme: { colors: { categorical: ['#ff0000'] } } },
+    ],
+  };
+  const { spec } = migrateSpecV8(source);
+  const layout = compileLayer(spec as never, { width: 640, height: 500 });
+  // Captured from released v8.9.1.
+  expect(layout.marks.filter((m) => m.type === 'point').map((m) => m.fill)).toEqual([
+    '#00ff00',
+    '#00ff00',
+    '#ff0000',
+    '#ff0000',
+  ]);
+  expect(layout.theme.chrome.title.fontSize).toBe(30);
+  expect(migrateSpecV8(spec).repairs).toEqual([]);
+  // v9 resolves root and leaf themes the way v8 did, so the leaf keeps its
+  // own non-color keys rather than taking a copy of the parent theme.
+  expect(spec.layer[0].theme.fonts.sizes.title).toBe(12);
+  expect(spec.layer[0].theme.colors.categorical).toEqual(['#00ff00']);
 });
 
 it('repairs aliases in a line-layer before inspecting its legacy label policy', () => {
@@ -301,6 +398,33 @@ it('repairs aliases in a line-layer before inspecting its legacy label policy', 
   const result = migrateSpecV8(source);
   expect(result.spec.layer[0].annotations[0].type).toBe('refline');
   expect(result.spec.layer[0].encoding).not.toHaveProperty('radius');
-  expect(() => compileLayer(result.spec, { width: 640, height: 400 })).not.toThrow();
+  const layout = compileLayer(result.spec, { width: 640, height: 400 });
+  expect(layout.annotations.map((a) => a.type)).toEqual(['refline']);
   expect(migrateSpecV8(result.spec).repairs).toEqual([]);
+});
+
+it('drops dual-axis leaf themes that v8 ignored under a layer theme', () => {
+  const leafWith = (fill: string) => ({ ...chart, theme: { colors: { categorical: [fill] } } });
+  const source = {
+    theme: { colors: { categorical: ['#111111'] } },
+    resolve: { scale: { y: 'independent' } },
+    layer: [leafWith('#00ff00'), leafWith('#ff0000')],
+  };
+  const { spec, repairs } = migrateSpecV8(source);
+  expect(spec.layer.map((leaf: { theme?: unknown }) => leaf.theme)).toEqual([undefined, undefined]);
+  expect(repairs.map((r) => r.path)).toEqual(
+    expect.arrayContaining(['/layer/0/theme', '/layer/1/theme']),
+  );
+  expect(migrateSpecV8(spec).repairs).toEqual([]);
+  const layout = compileLayer(spec as never, { width: 640, height: 500 });
+  // v8.9.1 drew both sides with the layer palette.
+  expect(
+    new Set(
+      layout.marks.filter((m) => m.type === 'point').map((m) => (m as { fill: string }).fill),
+    ),
+  ).toEqual(new Set(['#111111']));
+  // Without a layer theme each leaf kept its own in v8, so nothing changes.
+  const { theme: _omit, ...noLayerTheme } = source;
+  // (The leaf theme itself stays, keeping its own palette.)
+  expect(migrateSpecV8(noLayerTheme).spec.layer[0].theme.colors.categorical).toEqual(['#00ff00']);
 });

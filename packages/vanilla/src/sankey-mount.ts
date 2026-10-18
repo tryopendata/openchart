@@ -46,8 +46,8 @@ export interface SankeyMountOptions {
   theme?: ThemeConfig;
   /** Dark mode setting: "auto" (system pref), "force", or "off". */
   darkMode?: DarkMode;
-  /** Enable responsive resizing. Defaults to true. */
-  responsive?: boolean;
+  /** Observe container resizing. Defaults to true. */
+  autoResize?: boolean;
   /** Show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
   /** Show tooltips on hover. Defaults to true. */
@@ -691,7 +691,7 @@ export function createSankey(
   container.dataset.ocFontsState = fontsPending ? 'pending' : 'ready';
 
   // Responsive resize
-  if (options?.responsive !== false) {
+  if (options?.autoResize !== false) {
     disconnectResize = observeResize(container, () => {
       resize();
     });

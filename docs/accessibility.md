@@ -19,7 +19,7 @@ Every chart gets these without configuration, in the vanilla adapter and all fra
 - **Alt text**: a generated description of the chart (mark type, title, data range, series, point count) set as `aria-label` on the SVG with `role="img"`.
 - **Screen reader data table**: a visually hidden HTML `<table>` with the chart's data rendered alongside the SVG, so screen reader users can read the actual values.
 - **Per-mark ARIA labels**: each bar, slice, and point carries a descriptive label for assistive technology.
-- **Keyboard navigation**: the chart container is focusable; arrow keys move between marks, Enter/Space shows the tooltip, Escape dismisses it. Focus indicators use the `--oc-focus` token, which has distinct light and dark values so the ring is visible in both modes.
+- **Keyboard navigation**: the chart container is focusable; arrow keys move between marks, Enter/Space shows the tooltip, Escape dismisses it. In edit mode (`interaction: 'edit'`, or an `onEdit` handler) arrows nudge the selected annotation instead, so reader navigation is off; `'read'` and `'select'` keep it. Focus indicators use the `--oc-focus` token, which has distinct light and dark values so the ring is visible in both modes.
 - **Dismissible tooltips**: Escape hides a visible tooltip even while hovering, without moving the pointer (WCAG 1.4.13).
 - **Data tables**: semantic HTML (`<table>`, `<th scope="col">`), ARIA grid roles, sort state attributes, and a live region announcing sort/search changes.
 
