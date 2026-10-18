@@ -152,6 +152,17 @@ describe('buildScatterCanvasState gridlines', () => {
     expect(yPositions).toEqual(layout.axes.y?.gridlines.map((g) => g.position) ?? []);
   });
 
+  it('carries a resolved per-gridline color into the canvas paint state', () => {
+    const layout = compileChart(scatterSpec(), { width: 600, height: 400 });
+    const rule = layout.axes.y!.gridlines[0];
+    rule.color = '#778899';
+    const state = buildScatterCanvasState(layout);
+    expect(
+      state.gridlines.find((g) => g.orient === 'y' && g.position === rule.position)?.color,
+    ).toBe('#778899');
+    expect(state.gridlines.filter((g) => g.color).length).toBe(1);
+  });
+
   it('skips gridlines from a right-side y-axis, matching axes.ts', () => {
     const layout = compileChart(scatterSpec(), { width: 600, height: 400 });
     const y = layout.axes.y;

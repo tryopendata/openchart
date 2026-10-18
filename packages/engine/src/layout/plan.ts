@@ -32,16 +32,23 @@ import {
   resolveNumberFormatter,
 } from '@opendata-ai/openchart-core';
 import { NO_REFERENCE_RESERVE } from '../annotations/reference-layout';
+import { type BarLabelPlan, planBarLabels } from '../charts/bar/label-plan';
 import { isBinnedBarEncoding } from '../charts/post-process';
 import type { InternalCompileOptions } from '../compile/internal-options';
 import type { NormalizedChartSpec } from '../compiler/types';
-import { predictEndpointLabelsWidth } from '../endpoint-labels/predict';
-import { computeLegendContent, hasLegendContent, type LegendContent } from '../legend/compute';
+import { isEndsBoth, predictEndpointLabelsWidth } from '../endpoint-labels/predict';
+import {
+  computeLegendContent,
+  hasLegendContent,
+  type LegendContent,
+  measureCategoricalLegendContent,
+} from '../legend/compute';
 import {
   computeSizeLegendContent,
   type SizeLegendContent,
   sizeLegendScaleFor,
 } from '../legend/size';
+import { endpointLabelsExplicitlyOn } from '../legend/suppression';
 import { legendGap } from '../legend/wrap';
 import { yTickPositionIsInline } from './axes';
 import { resolveBandTickAngle } from './axes/rotation';
@@ -51,6 +58,12 @@ import {
   scaleSupportsTickCount,
   targetTickCount,
 } from './axes/ticks';
+import {
+  type AxisTitleHeader,
+  authoredTitleFootprint,
+  isYAxisHeader,
+  measureYAxisHeader,
+} from './axis-title-plan';
 import type { BudgetReserves } from './budget';
 import {
   createFrame,
@@ -58,6 +71,7 @@ import {
   frameMargins,
   frameReference,
   frameSpacing,
+  hasUsablePlotWidth,
 } from './frame';
 import {
   categoricalAxisIsBand,
@@ -81,6 +95,8 @@ export type MeasureFn = (text: string, fontSize: number, fontWeight: number) => 
 
 /** Frozen layout dimensions produced by the measure phase. */
 export interface LayoutPlan {
+  valueLabelPlan?: BarLabelPlan;
+  axisTitleHeader?: AxisTitleHeader;
   leftGutter: number;
   xAxisExtent: number;
   legendContent: LegendContent;
@@ -153,10 +169,20 @@ export function endpointLabelsDemotedAt(
   chartSpec: NormalizedChartSpec,
   theme: ResolvedTheme,
   width: number,
+  measureText?: MeasureTextFn,
 ): boolean {
-  if (!chartSpec.autoThin) return false;
-  const epWidth = predictEndpointLabelsWidth(chartSpec, theme);
-  return epWidth > 0 && epWidth / width > MAX_ENDPOINT_FRACTION;
+  if (
+    !chartSpec.autoThin ||
+    chartSpec.legend?.show === false ||
+    endpointLabelsExplicitlyOn(chartSpec)
+  )
+    return false;
+  const epWidth = predictEndpointLabelsWidth(chartSpec, theme, measureText);
+  return (
+    epWidth > 0 &&
+    ((epWidth + theme.spacing.endpointColumnGap) * (isEndsBoth(chartSpec) ? 2 : 1)) / width >
+      MAX_ENDPOINT_FRACTION
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -191,6 +217,50 @@ export function resolveLayoutPlan(
   reserves?: BudgetReserves,
 ): LayoutPlan {
   const { width, height } = options;
+  const measureFigureLegend: typeof computeLegendContent = (...args) => {
+    const merged = options.categoricalLegend;
+    if (merged)
+      return measureCategoricalLegendContent(
+        merged.entries,
+        merged.config,
+        args[1],
+        args[2],
+        args[3],
+        args[4],
+        args[5],
+        args[6],
+      );
+    const content = computeLegendContent(...args);
+    if (
+      options.leafContext &&
+      !options.leafContext.categoricalLegend &&
+      content.entries.length &&
+      !content.continuous
+    ) {
+      // Use the actual transformed normalized rows and resolved leaf colors.
+      // Collection preserves eligibility; only limits wait for the figure union.
+      const full = computeLegendContent(
+        {
+          ...args[0],
+          legend: {
+            ...args[0].legend,
+            show: true,
+            symbolLimit: Number.MAX_SAFE_INTEGER,
+            maxRows: Number.MAX_SAFE_INTEGER,
+          },
+        },
+        args[1],
+        args[2],
+        args[3],
+        args[4],
+        args[5],
+        args[6],
+        args[7],
+      );
+      options.leafContext.categoricalLegend = { entries: full.entries, config: args[0].legend };
+    }
+    return content;
+  };
   const padding = scalePadding(theme.spacing.padding, width, height);
   const hPad =
     width < BREAKPOINT_COMPACT_MAX
@@ -216,7 +286,7 @@ export function resolveLayoutPlan(
   // Sparkline / radial: trivial plan (no y-axis measurement needed)
   // -----------------------------------------------------------------------
   if (renderSpec.display === 'sparkline' || isRadial) {
-    const legendContent = computeLegendContent(
+    const legendContent = measureFigureLegend(
       chartSpec,
       strategy,
       theme,
@@ -376,7 +446,7 @@ export function resolveLayoutPlan(
 
   // Endpoint-label fit check: when autoThin is on, demote endpoint labels to
   // legend if the column would consume more than 30% of the total width.
-  const endpointLabelsDemoted = endpointLabelsDemotedAt(chartSpec, theme, width);
+  let endpointLabelsDemoted = endpointLabelsDemotedAt(chartSpec, theme, width, options.measureText);
 
   // Size legend: keys a quantitative `size` channel with graduated circles.
   // Independent of the color legend -- a bubble chart keys BOTH continent
@@ -410,6 +480,8 @@ export function resolveLayoutPlan(
   };
   const spacing = frameSpacing(frameCtx);
   const frameRef = frameReference(frameCtx, spacing);
+  let valueLabelPlan: BarLabelPlan | undefined;
+  let axisTitleHeader: AxisTitleHeader | undefined;
   const planFrame = (
     legendContent: LegendContent,
     chrome: ResolvedChrome,
@@ -426,6 +498,8 @@ export function resolveLayoutPlan(
         xAxisExtent,
         inlineYLabelInset,
         endpointLabelsDemoted,
+        valueLabelPlan,
+        axisTitleHeader,
       },
       chrome,
     ).place(chrome).chartArea;
@@ -445,7 +519,7 @@ export function resolveLayoutPlan(
   for (let iter = 0; iter < 2; iter++) {
     // Legend content
     const legendAvailWidth = width - padding - leftGutter;
-    const legendContent = computeLegendContent(
+    let legendContent = measureFigureLegend(
       chartSpec,
       strategy,
       theme,
@@ -461,7 +535,7 @@ export function resolveLayoutPlan(
       hasLegendContent(legendContent) && legendContent.position === 'bottom'
         ? legendContent.height + legendGap(width)
         : 0;
-    const chrome = computeChrome(
+    let chrome = computeChrome(
       chromeToInput(renderSpec.chrome),
       theme,
       width,
@@ -528,7 +602,60 @@ export function resolveLayoutPlan(
             tickFontWeight: theme.fonts.weights.normal,
             xAxisHeight: theme.spacing.xAxisHeight,
             measure,
+          }) +
+            Math.max(
+              0,
+              (authoredTitleFootprint(encoding.x, theme, options.measureText)?.height ??
+                theme.fonts.sizes.body) - theme.fonts.sizes.body,
+            );
+    };
+    // Evaluate each authored mode against the same frame the budget places.
+    // This is a planning measurement: no marks/scales are placed or recompiled.
+    const selectValueLabelPlan = (gutter: number, inlineInset = 0): BarLabelPlan | undefined => {
+      if (renderSpec.markType !== 'bar' || !renderSpec.labels.placement) return undefined;
+      const baseMargins = frameMargins(frameCtx, spacing, frameRef, {
+        legendContent,
+        sizeLegendContent,
+        leftGutter: gutter,
+        endpointLabelsDemoted,
+      });
+      return planBarLabels(renderSpec, theme, {
+        availableWidth: Math.max(0, width - baseMargins.left - baseMargins.right - inlineInset),
+        measureText: options.measureText,
+        plotHeightForPlan: (candidate) => {
+          const candidateMargins = frameMargins(frameCtx, spacing, frameRef, {
+            legendContent,
+            sizeLegendContent,
+            leftGutter: gutter,
+            endpointLabelsDemoted,
+            valueLabelPlan: candidate,
           });
+          const plotWidth = Math.max(
+            0,
+            width - candidateMargins.left - candidateMargins.right - inlineInset,
+          );
+          const header = measureYAxisHeader(
+            encoding.y,
+            theme,
+            plotWidth * (options.axisHeaderWidthFraction ?? 1),
+            options.measureText,
+          );
+          return createFrame(
+            frameCtx,
+            {
+              legendContent,
+              sizeLegendContent,
+              leftGutter: gutter,
+              xAxisExtent: xAxisExtentFor(plotWidth),
+              inlineYLabelInset: inlineInset,
+              endpointLabelsDemoted,
+              valueLabelPlan: candidate,
+              axisTitleHeader: header,
+            },
+            chrome,
+          ).place(chrome).chartArea.height;
+        },
+      });
     };
     const margins = frameMargins(frameCtx, spacing, frameRef, {
       legendContent,
@@ -536,6 +663,15 @@ export function resolveLayoutPlan(
       leftGutter,
       endpointLabelsDemoted,
     });
+    valueLabelPlan = selectValueLabelPlan(leftGutter);
+    margins.left += valueLabelPlan?.reserveLeft ?? 0;
+    margins.right += valueLabelPlan?.reserveRight ?? 0;
+    axisTitleHeader = measureYAxisHeader(
+      encoding.y,
+      theme,
+      Math.max(0, width - margins.left - margins.right) * (options.axisHeaderWidthFraction ?? 1),
+      options.measureText,
+    );
     const xAxisExtent = xAxisExtentFor(Math.max(0, width - margins.left - margins.right));
 
     // The plot at this iteration's gutter. The inline y-label inset is not
@@ -633,7 +769,12 @@ export function resolveLayoutPlan(
       // Account for rotated y-axis title in the gutter
       let gutterWithTitle = finalGutter;
       const yAxisDef = encoding.y?.axis as Record<string, unknown> | undefined;
-      if (yAxisDef && (yAxisDef.title || yAxisDef.label) && !isRadial) {
+      if (
+        yAxisDef &&
+        (yAxisDef.title || yAxisDef.label) &&
+        !isRadial &&
+        !isYAxisHeader(encoding.y)
+      ) {
         let estTickLabelWidth = 0;
         // Inline y-tick labels sit above their gridlines inside the chart area,
         // not in a left gutter, so they add no width the title must clear.
@@ -656,12 +797,84 @@ export function resolveLayoutPlan(
         const halfGlyph = Math.ceil(titleFontSize / 2);
         const rotatedLabelMargin =
           offset + halfGlyph + (width < BREAKPOINT_COMPACT_MAX ? 0 : AXIS_TITLE_TRAILING_PAD);
-        gutterWithTitle = Math.max(finalGutter, hPad + rotatedLabelMargin);
+        const titleExtra = Math.max(
+          0,
+          (authoredTitleFootprint(encoding.y, theme, options.measureText)?.width ??
+            theme.fonts.sizes.body) - theme.fonts.sizes.body,
+        );
+        gutterWithTitle = Math.max(finalGutter, hPad + rotatedLabelMargin + titleExtra);
       }
 
       // The budget's frame: this plan's final measurements over the same
       // reserves. When the title gutter or the inline inset moved the plot
       // (the inset can repack the reference lane), plan the ticks again for it.
+      // Freeze the authored mode against the final category/title gutter before
+      // placement. No reserve is discovered after this planning stage.
+      let finalMargins = frameMargins(frameCtx, spacing, frameRef, {
+        legendContent,
+        sizeLegendContent,
+        leftGutter: gutterWithTitle,
+        endpointLabelsDemoted,
+      });
+      // Select the identification mode from the final measured frame, before
+      // scale placement. Explicit endpoint/suppression choices remain authored.
+      const fallbackAvailable =
+        chartSpec.legend?.show !== false || (reserves?.endpointSummaryBand ?? 0) > 0;
+      if (
+        !endpointLabelsDemoted &&
+        chartSpec.autoThin &&
+        !endpointLabelsExplicitlyOn(chartSpec) &&
+        fallbackAvailable &&
+        predictEndpointLabelsWidth(chartSpec, theme, options.measureText) > 0 &&
+        !hasUsablePlotWidth(width, finalMargins, inlineYLabelInset)
+      ) {
+        endpointLabelsDemoted = true;
+        legendContent = measureFigureLegend(
+          chartSpec,
+          strategy,
+          theme,
+          width - padding - gutterWithTitle,
+          height,
+          watermark,
+          measure,
+          true,
+        );
+        const bottomReserve =
+          hasLegendContent(legendContent) && legendContent.position === 'bottom'
+            ? legendContent.height + legendGap(width)
+            : 0;
+        chrome = computeChrome(
+          chromeToInput(renderSpec.chrome),
+          theme,
+          width,
+          options.measureText,
+          chromeMode,
+          padding,
+          watermark,
+          bottomReserve,
+          crampedTitle,
+        );
+        finalMargins = frameMargins(frameCtx, spacing, frameRef, {
+          legendContent,
+          sizeLegendContent,
+          leftGutter: gutterWithTitle,
+          endpointLabelsDemoted,
+        });
+      }
+      valueLabelPlan = selectValueLabelPlan(gutterWithTitle, inlineYLabelInset);
+      axisTitleHeader = measureYAxisHeader(
+        encoding.y,
+        theme,
+        Math.max(
+          0,
+          width -
+            finalMargins.left -
+            finalMargins.right -
+            (valueLabelPlan?.reserveLeft ?? 0) -
+            (valueLabelPlan?.reserveRight ?? 0),
+        ) * (options.axisHeaderWidthFraction ?? 1),
+        options.measureText,
+      );
       let finalXAxisExtent = xAxisExtent;
       let plotArea = planFrame(
         legendContent,
@@ -704,6 +917,8 @@ export function resolveLayoutPlan(
         inlineYLabelInset,
         endpointLabelsDemoted,
         plotArea,
+        ...(valueLabelPlan ? { valueLabelPlan } : {}),
+        ...(axisTitleHeader ? { axisTitleHeader } : {}),
       };
       break;
     }

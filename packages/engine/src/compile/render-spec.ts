@@ -6,6 +6,7 @@
 
 import { strokeDashPatterns } from '../charts/line/compute';
 import type { NormalizedChartSpec } from '../compiler/types';
+import { createAreaStackCache } from '../data/area-stack';
 import { seriesField } from '../legend/suppression';
 import { filterClippedDomains } from './data-clip';
 
@@ -34,7 +35,12 @@ export function buildRenderSpec(chartSpec: NormalizedChartSpec): NormalizedChart
   renderData = filterClippedDomains(renderData, chartSpec.encoding);
 
   // Build a filtered spec for scales and marks, keeping all other properties intact
-  let renderSpec = renderData !== chartSpec.data ? { ...chartSpec, data: renderData } : chartSpec;
+  let renderSpec =
+    chartSpec.markType === 'area'
+      ? { ...chartSpec, data: renderData, areaStackCache: createAreaStackCache() }
+      : renderData !== chartSpec.data
+        ? { ...chartSpec, data: renderData }
+        : chartSpec;
 
   // Lock the color scale domain to the unfiltered series list so palette
   // assignments stay stable across legend toggles. Without this, hiding a

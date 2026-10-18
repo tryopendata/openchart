@@ -9,7 +9,7 @@
 import type { GeoMapSpec } from '@opendata-ai/openchart-core';
 import type { GeoMapHandle } from '@opendata-ai/openchart-react';
 import { ChartStory, GeoMap } from '@opendata-ai/openchart-react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import usCountiesTopo from 'us-atlas/counties-albers-10m.json';
 import usStatesUnprojected from 'us-atlas/states-10m.json';
 import usStatesTopo from 'us-atlas/states-albers-10m.json';
@@ -600,3 +600,141 @@ export const Maps = () => (
     </Section>
   </GalleryPage>
 );
+
+/** Explicit P2 compositions: narrow frames demonstrate the diagnosed top fallback. */
+export const SideLegendComposition = () => (
+  <GalleryPage
+    title="Geography and keys share one measured frame"
+    lede="Side keys preserve projection proportions. Narrow frames fall back to the top before fitting the geography."
+  >
+    <Section id="side-map-keys" title="Side legend composition">
+      <Demo
+        id="world-side-key"
+        title="World, right key"
+        description="The same world coverage and color classes, with a measured right gutter."
+        spec={{ ...worldEqualEarthSpec, legend: { position: 'right' }, animation: false }}
+        height={500}
+      />
+      <Demo
+        id="bubble-side-keys"
+        title="Independent color and size keys"
+        description="City color and population size use separate keys in one bottom-aligned gutter."
+        spec={{ ...pointLayerSpec, legend: { position: 'bottom-right' }, animation: false }}
+        height={500}
+      />
+      <Demo
+        id="county-side-key"
+        title="County coverage stays intact"
+        description="An explicit right key does not remove unjoined counties or alter geographic coverage."
+        spec={{ ...usCountySpec, legend: { position: 'right' }, animation: false }}
+        height={500}
+      />
+    </Section>
+  </GalleryPage>
+);
+
+/** Isolated renderer experiment; no production pattern default or spec API changes. */
+function CraftMapPrototype({ spec, candidate }: { spec: GeoMapSpec; candidate: boolean }) {
+  const host = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const root = host.current;
+    if (!root || !candidate) return;
+    const apply = () => {
+      for (const pattern of root.querySelectorAll('pattern')) {
+        pattern.setAttribute('width', '10');
+        pattern.setAttribute('height', '10');
+        const base = pattern.querySelector('rect');
+        base?.setAttribute('width', '10');
+        base?.setAttribute('height', '10');
+        const hatch = pattern.querySelector('path');
+        hatch?.setAttribute('d', 'M1,3 l2,-2 M6,8 l2,-2');
+        hatch?.setAttribute('stroke-width', '0.9');
+      }
+    };
+    apply();
+    const observer = new MutationObserver(apply);
+    observer.observe(root, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [candidate]);
+  return (
+    <div ref={host} style={{ height: 500 }}>
+      <GeoMap spec={spec} />
+    </div>
+  );
+}
+
+/** G8 evidence candidate; the toggle changes only explicit authored theme colors. */
+export const MapCraftCandidates = () => {
+  const [candidate, setCandidate] = useState(false);
+  const theme = candidate
+    ? {
+        colors: {
+          mapNoDataFill: { light: '#f5f5f5', dark: '#252525' },
+          mapNoDataHatch: { light: '#707070', dark: '#aaaaaa' },
+          mapInteriorBorder: { light: 'rgba(0,0,0,0.14)', dark: 'rgba(255,255,255,0.18)' },
+          mapOutlineBorder: { light: 'rgba(0,0,0,0.40)', dark: 'rgba(255,255,255,0.38)' },
+        },
+      }
+    : undefined;
+  const fixtures: Array<{ id: string; title: string; spec: GeoMapSpec }> = [
+    { id: 'craft-world', title: 'Sparse world coverage', spec: worldEqualEarthSpec },
+    {
+      id: 'craft-county',
+      title: 'County values and missingness (synthetic)',
+      spec: {
+        ...usCountySpec,
+        data: (
+          usCountiesTopo as {
+            objects: { counties: { geometries: Array<{ id: string | number }> } };
+          }
+        ).objects.counties.geometries
+          .filter((_, index) => index % 4 !== 0)
+          .map((feature, index) => ({ id: feature.id, rate: [-10, -5, 0, 5, 10][index % 5] })),
+        chrome: {
+          title: 'Observed Zero and Missing Counties Are Different',
+          subtitle:
+            'Synthetic illustrative values: 75% observed counties, 25% missing; no geographic exclusions',
+        },
+        encoding: {
+          ...usCountySpec.encoding,
+          color: {
+            field: 'rate',
+            type: 'quantitative',
+            scale: { scheme: 'redBlue', domain: [-10, 10] },
+          },
+        },
+      },
+    },
+    { id: 'craft-bubbles', title: 'Bubble map context', spec: pointLayerSpec },
+  ];
+  return (
+    <GalleryPage
+      title="Map craft candidates"
+      lede="Review quieter borders and a more distinct missing-data texture. These are explicit theme overrides; current defaults remain available for comparison."
+    >
+      <button type="button" aria-pressed={candidate} onClick={() => setCandidate(!candidate)}>
+        {candidate ? 'Show current defaults' : 'Show candidate colors'}
+      </button>
+      <Section
+        id="map-craft-candidates"
+        title={candidate ? 'Candidate colors' : 'Current defaults'}
+      >
+        {fixtures.map(({ id, title, spec }) => (
+          <Demo
+            key={id}
+            id={id}
+            title={title}
+            height={500}
+            specForPanel={{ ...spec, theme, animation: false }}
+          >
+            <CraftMapPrototype
+              key={candidate ? 'candidate' : 'current'}
+              spec={{ ...spec, theme, animation: false }}
+              candidate={candidate}
+            />
+          </Demo>
+        ))}
+      </Section>
+    </GalleryPage>
+  );
+};

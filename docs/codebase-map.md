@@ -10,6 +10,11 @@
 
 | Looking for... | File |
 |---|---|
+| Measured bar value modes and common facet value columns | `packages/engine/src/charts/bar/label-plan.ts`; frame ownership in `layout/frame.ts`, validation in `compiler/validation/label-placement.ts`. |
+| Endpoint observation provenance, shared precision and interior area labels | `packages/engine/src/endpoint-labels/{observations,source,precision,formatter,interior}.ts`; `predict.ts` and `compute.ts` share formatting and host measurement. |
+| Measured horizontal axis title headers and authored angle footprint | `packages/engine/src/layout/axis-title-plan.ts`; reserved by frame/plan, positioned by `layout/axes.ts`. |
+| Map composition and accessible legend scale intervals | `packages/engine/src/geo/layout.ts` (pure measured gutters/fallback), `geo/legend-semantics.ts` (scale-faithful descriptions); consumed by `compile-geo-map.ts`. |
+| Endpoint and map theme roles | `packages/core/src/theme/{defaults,resolve,dark-mode}.ts`, `styles/token-definitions.ts`; authored overrides stamped by `packages/vanilla/src/theme-tokens.ts`. Zero-gridline colors flow through both SVG axes and scatter canvas. |
 | Top-level chart spec types (`ChartSpec`, `Encoding`, `Mark`, `Annotation`, `Chrome`) | `packages/core/src/types/spec.ts` (~1670 lines) |
 | Resolved layout types (`ChartLayout`, `ResolvedChrome`, `AxisLayout`, `ResolvedLabel`) | `packages/core/src/types/layout.ts` (~1290 lines) |
 | Theme types (`ThemeConfig` input, `ResolvedTheme` output, `ThemeColors`, `ThemeFonts`, `ThemeChromeDefaults`) | `packages/core/src/types/theme.ts` |
@@ -55,7 +60,7 @@
 | Layout: figure budget (authored reserves, chrome reservation, fallback ladder) | `packages/engine/src/layout/budget.ts` (`measureAuthoredReserves`, `resolveFigureBudget`, `outsideBudget`, `resolveNoteOverflow`); `layout/dimensions.ts` (`computeDimensions`) is a thin wrapper. Vertical stack primitives used by the frame (`stackTop`, `stackHeight`, `headerBands`, top reference lane share cap `fitReferenceLane`, `referenceLaneFor`) live in `layout/stack.ts`. Engine-internal compile options (`frozenBudget`, `leafContext`, `rightAxisReserve`, `layered`) live in `engine/src/compile/internal-options.ts` |
 | Layout: facet grid geometry (panel rects, responsive column degradation, per-row top reference lane cap) | `packages/engine/src/layout/facet.ts` (`computeFacetGrid`, `autoColumns`). The lane is fit with `fitReferenceLane` per grid row, measured at the height a short grid grows to; each panel's admitted reserve is `FacetGridPanel.referenceReserve`. Right-lane chrome inset: `chromeInsetReference` in `layout/stack.ts` |
 | Layout: gridlines | `packages/engine/src/layout/gridlines.ts` |
-| Layout: scales (d3-scale construction) | `packages/engine/src/layout/scales.ts` |
+| Layout: scales (d3-scale construction) | `packages/engine/src/layout/scales.ts`; `data/area-stack.ts` shares area pivot/offset semantics with the renderer so signed cumulative extents use the same boundaries. `buildRenderSpec` creates a fresh internal stack cache per compilation, shared by scale measurement and marks without surviving an update. `data/sort-by-field.ts` supplies the shared stable x ordering. |
 | Annotations: top-level compile | `packages/engine/src/annotations/compute.ts` → `computeAnnotations()` |
 | Annotations: text resolution (anchor → offset → connector) | `packages/engine/src/annotations/resolve-text.ts` |
 | Annotations: refline / range | `packages/engine/src/annotations/resolve-refline.ts`, `resolve-range.ts` |
@@ -319,6 +324,8 @@ Its real job is **direct labeling**: a text layer over a point/bar layer, not a 
 The `size` channel maps a field onto a font-size range with a **linear** scale (`encoding.size.scale.{domain,range}` override it; `mark.fontSize` sets a static size). Linear, not the `scaleSqrt` scatter uses for bubbles — sqrt is right for *area*, but a glyph reads by its height. Note there is **no size legend anywhere in the library** (`engine/src/legend/compute.ts` handles color only), so `size` on text is an unkeyed encoding: use it where it reinforces an axis that's already present.
 
 ## Layered scales (`engine/src/compile/layer.ts`)
+
+Independent y-scale assemblies choose endpoint names before measurement when a leaf requests interior identification; overlapping independent bands cannot guarantee a shared interior label background. The endpoint merge retains mandatory band leaders in both columns. `__tests__/layer-endpoint-identification.test.ts` covers names, authored formats, source observations and the diagnostic fallback. `__tests__/layer-legend-assembly.test.ts` covers complete legend measurement before the shared frame freezes, transformed/hidden leaves and authored limits.
 
 Shared scales means shared **domains**, not just a shared plot rect. `compileLayer` freezes the primary's chart area for every leaf (`frozenBudget.chartArea`), but each leaf otherwise re-fits its own domain from its own rows — so a layer holding fewer or narrower rows than its siblings (a label layer naming only the notable points) lands on a different scale and its marks slide off the ones they annotate. `computeSharedDomains`/`withSharedDomains` union the quantitative x/y extents across all leaves and pin them. The union bails on any channel where a leaf is non-quantitative or has an author-pinned `scale.domain`.
 

@@ -73,6 +73,52 @@ export const CSS_TOKENS: readonly CssTokenDef[] = [
   { name: '--oc-source-size', light: '12px' },
   { name: '--oc-source-weight', light: '400' },
   { name: '--oc-body-size', light: '13px' },
+  {
+    name: '--oc-gridline-zero',
+    light: 'rgba(0, 0, 0, 0.08)',
+    dark: 'rgba(255, 255, 255, 0.06)',
+    comment: 'Omission uses the active theme gridline color',
+  },
+  {
+    name: '--oc-endpoint-label-size',
+    light: '13px',
+    consumers: 'Endpoint geometry and authored theme stamp',
+  },
+  {
+    name: '--oc-endpoint-value-size',
+    light: '12px',
+    consumers: 'Endpoint geometry and authored theme stamp',
+  },
+  { name: '--oc-endpoint-entry-gap', light: '6px', consumers: 'Endpoint collision spacing' },
+  { name: '--oc-endpoint-value-gap', light: '4px', consumers: 'Endpoint internal spacing' },
+  {
+    name: '--oc-endpoint-column-gap',
+    light: '18px',
+    consumers: 'Endpoint frame reservation and placement',
+  },
+  {
+    name: '--oc-map-no-data-fill',
+    light: '#f0f0f0',
+    dark: '#171719',
+    comment: 'Engine omission derives neutral[100] from the active theme',
+  },
+  {
+    name: '--oc-map-no-data-hatch',
+    light: '#c9c9c9',
+    dark: '#3d3e3f',
+    comment: 'Engine omission derives neutral[300] from the active theme',
+  },
+  {
+    name: '--oc-map-interior-border',
+    light: 'rgba(0, 0, 0, 0.25)',
+    dark: 'rgba(255, 255, 255, 0.22)',
+  },
+  {
+    name: '--oc-map-outline-border',
+    light: 'rgba(0, 0, 0, 0.55)',
+    dark: 'rgba(255, 255, 255, 0.45)',
+  },
+
   { name: '--oc-annotation-label', light: '#333333', dark: '#d1d5db' },
   { name: '--oc-annotation-muted', light: '#6b7280', dark: '#9ca3af' },
   { name: '--oc-annotation-leader', light: '#8f8f8f', dark: '#9aa0a6' },

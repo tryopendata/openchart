@@ -14,6 +14,20 @@ export interface SpecRepair {
   reason: string;
 }
 type Node = Record<string, unknown>;
+function hasCorrectedValueLabels(current: Node): boolean {
+  const mark =
+    typeof current.mark === 'string' ? current.mark : (current.mark as Node | undefined)?.type;
+  const labels = current.labels as Node | false | undefined;
+  return (
+    (['bar', 'lollipop', 'range'].includes(String(mark)) &&
+      labels !== false &&
+      labels?.density !== 'none') ||
+    (Array.isArray(current.layer) &&
+      current.layer.some(
+        (child) => child && typeof child === 'object' && hasCorrectedValueLabels(child as Node),
+      ))
+  );
+}
 const node = (value: unknown): Node | undefined =>
   value !== null && typeof value === 'object' && !Array.isArray(value)
     ? (value as Node)
@@ -258,7 +272,8 @@ export function migrateSpecV8<T>(
         const fonts = node(oldTheme.fonts) ?? {};
         const sizes = node(fonts.sizes) ?? {};
         const chromeDefaults = node(oldTheme.chrome) ?? {};
-        const newSizes = { ...sizes };
+        // Released v8.9.1 endpoint typography/spacing were renderer constants.
+        const newSizes: Node = { endpointLabel: 13, endpointValue: 12, ...sizes };
         // v9 gives explicit chrome sizes precedence, so materialized font sizes
         // can also preserve note/axis typography without overriding chrome.
         for (const [key, value] of Object.entries(legacyEditorial.fonts!.sizes!)) {
@@ -283,14 +298,24 @@ export function migrateSpecV8<T>(
               : node(oldTheme.colors)),
           },
           fonts: { ...fonts, sizes: newSizes },
-          spacing: { ...legacyEditorial.spacing, ...node(oldTheme.spacing) },
+          spacing: {
+            ...legacyEditorial.spacing,
+            endpointEntryGap: 6,
+            endpointValueGap: 4,
+            endpointColumnGap: 18,
+            ...node(oldTheme.spacing),
+          },
           chrome: newChrome,
         };
         if (JSON.stringify(materialized) !== JSON.stringify(current.theme))
           rewrite(
             'theme',
             materialized,
-            'Preserve v8 typography without overriding authored chrome sizes.',
+            'Preserve v8 typography without overriding authored chrome sizes.' +
+              (hasCorrectedValueLabels(current) &&
+              resolveTheme(oldTheme).fonts.family !== 'system-ui, -apple-system, sans-serif'
+                ? ' Corrected value labels now follow the resolved theme font; their former system-font mismatch cannot be preserved independently.'
+                : ''),
           );
       }
     }

@@ -18,9 +18,6 @@ import {
   computeNoteBandHeight,
   defaultNumberFormatter,
   estimateTextWidth,
-  getBreakpoint,
-  getHeightClass,
-  getLayoutStrategy,
   mergeThemeConfig,
   resolveNumberFormatter,
   resolveTheme,
@@ -30,22 +27,16 @@ import { scaleLinear } from 'd3-scale';
 import { curveMonotoneX, area as d3area, line as d3line } from 'd3-shape';
 import { annotationNoteLineCount } from '../annotations/notes';
 import { flattenLayers } from '../compiler/index';
-import { normalizeSpec } from '../compiler/normalize';
-import type { NormalizedChartSpec } from '../compiler/types';
 import { finiteNumber } from '../data/finite-number';
 import { bidirectionalSweep } from '../endpoint-labels/compute';
-import {
-  ENDPOINT_COLUMN_GAP,
-  ENDPOINT_ENTRY_GAP,
-  ENDPOINT_LEADER_THRESHOLD,
-} from '../endpoint-labels/constants';
+import { ENDPOINT_LEADER_THRESHOLD } from '../endpoint-labels/constants';
+import { authoredTitleFootprint, isYAxisHeader } from '../layout/axis-title-plan';
 import { NO_REFERENCE_RESERVE, outsideBudget } from '../layout/budget';
 import type { MeasureFn } from '../layout/plan';
 import { createMeasureFn } from '../layout/plan';
 import { resolveChromeLayout } from '../layout/shared';
-import { measureCategoricalLegendContent, placeLegend } from '../legend/compute';
 import type { InternalCompileOptions, LeafContext } from './internal-options';
-import { emitSpecWarnings, expandSpecSugar } from './spec-sugar';
+import { emitSpecWarnings } from './spec-sugar';
 
 type ChartCompiler = (spec: unknown, options: InternalCompileOptions) => ChartLayout;
 
@@ -279,6 +270,23 @@ function compileLayerIndependent(
     );
   }
 
+  // Independently scaled bands can cover each other's accepted interior boxes.
+  // Choose endpoint identification before measuring either leaf, so no name is
+  // lost and the shared column reserves the complete fallback text up front.
+  const endpointIdentification = (leaf: ChartSpec, index: number): ChartSpec => {
+    if (typeof leaf.endpointLabels !== 'object' || leaf.endpointLabels?.placement !== 'interior')
+      return leaf;
+    options.onDiagnostic?.({
+      code: 'LAYER_INTERIOR_LABEL_FALLBACK',
+      severity: 'warning',
+      status: 'failed',
+      origin: 'author',
+      path: '/resolve/scale/y',
+      viewport: { width: options.width, height: options.height },
+      message: `Layer ${index + 1}: interior names cannot be reconciled across independent y-scales; using endpoint names while preserving the authored anchor and value format.`,
+    });
+    return { ...leaf, endpointLabels: { ...leaf.endpointLabels, placement: 'end' } };
+  };
   const leaf0 = leaves[0];
   const leaf1 = leaves[1];
 
@@ -305,7 +313,10 @@ function compileLayerIndependent(
     measureFn,
   );
   const yAxisConfig = leaf1.encoding?.y?.axis || undefined;
-  const hasRightAxisTitle = !!yAxisConfig?.title;
+  const rightHeader = isYAxisHeader(leaf1.encoding?.y);
+  const hasHeader = rightHeader || isYAxisHeader(leaf0.encoding?.y);
+  const hasRightAxisTitle = !!yAxisConfig?.title && !rightHeader;
+  const titleFootprint = authoredTitleFootprint(leaf1.encoding?.y, theme, options.measureText);
   const tickExtent = TICK_LABEL_OFFSET + rightAxisWidth;
   const bodyFontSize = theme.fonts?.sizes?.body ?? 13;
   const halfGlyph = Math.ceil(bodyFontSize / 2);
@@ -317,6 +328,7 @@ function compileLayerIndependent(
   const titleExtent = hasRightAxisTitle
     ? titleCenterOffset +
       halfGlyph +
+      Math.max(0, (titleFootprint?.width ?? bodyFontSize) - bodyFontSize) +
       (options.width < BREAKPOINT_COMPACT_MAX ? 0 : AXIS_TITLE_TRAILING_PAD)
     : 0;
   const rightReserve = Math.max(tickExtent, titleExtent);
@@ -324,6 +336,7 @@ function compileLayerIndependent(
   const optionsWithReserve: InternalCompileOptions = {
     ...options,
     rightAxisReserve: rightReserve,
+    ...(rightHeader && isYAxisHeader(leaf0.encoding?.y) ? { axisHeaderWidthFraction: 0.45 } : {}),
   };
 
   const xField0 = leaf0.encoding?.x?.field;
@@ -342,7 +355,7 @@ function compileLayerIndependent(
   // Measure pass: each leaf compiled on its own resolves the plot, legend,
   // endpoint column and reserves the assembly sizes against. The primary
   // leaf's budget carries the figure's authored reserves.
-  const primary0 = buildPrimarySpec([leaf0WithUnionX], layerSpec);
+  const primary0 = endpointIdentification(buildPrimarySpec([leaf0WithUnionX], layerSpec), 0);
   const measure0 = holdReports(options);
   const leaf0Budget: LeafContext = {};
   let layout0 = compileChart(primary0, {
@@ -351,11 +364,55 @@ function compileLayerIndependent(
     leafContext: leaf0Budget,
   });
 
-  const primary1 = buildPrimarySpec([leaf1WithUnionX], layerSpec);
+  const primary1 = endpointIdentification(buildPrimarySpec([leaf1WithUnionX], layerSpec), 1);
   primary1.theme = leafTheme1;
   primary1.annotations = [];
+  if (hasHeader && primary1.encoding?.y) {
+    primary1.encoding = {
+      ...primary1.encoding,
+      y: { ...primary1.encoding.y, axis: { ...(primary1.encoding.y.axis || {}), orient: 'right' } },
+    };
+  }
   const measure1 = holdReports(options);
-  let layout1 = compileChart(primary1, { ...optionsWithReserve, ...measure1.sinks });
+  const leaf1Legend: LeafContext = {};
+  let layout1 = compileChart(primary1, {
+    ...optionsWithReserve,
+    ...measure1.sinks,
+    leafContext: leaf1Legend,
+  });
+
+  // Gather every eligible categorical entry before applying figure-level limits.
+  // The source compiles retain each leaf's show/suppression policy; extraction
+  // only removes truncation so an authored limit is applied once to the union.
+  const eligible = [leaf0Budget.categoricalLegend, leaf1Legend.categoricalLegend].filter(
+    (content): content is NonNullable<typeof content> => !!content,
+  );
+  const legendLabels = new Set<string>();
+  const completeLegendEntries = eligible
+    .flatMap((item) => item.entries)
+    .filter((entry) => {
+      if (legendLabels.has(entry.label)) return false;
+      legendLabels.add(entry.label);
+      return true;
+    });
+  const primaryOptions: InternalCompileOptions = eligible.length
+    ? {
+        ...optionsWithReserve,
+        categoricalLegend: {
+          entries: completeLegendEntries,
+          config: eligible[0].config,
+        },
+      }
+    : optionsWithReserve;
+  if (eligible.length) {
+    // Still the measure phase: the complete legend now participates in the
+    // primary frame's rows, right gutter and chrome before shared geometry freezes.
+    layout0 = compileChart(primary0, {
+      ...primaryOptions,
+      ...measure0.sinks,
+      leafContext: leaf0Budget,
+    });
+  }
 
   // Endpoint columns belong to the assembled figure. Both axes must use the
   // same plot rectangle, with the trailing column outside the right axis.
@@ -371,13 +428,15 @@ function compileLayerIndependent(
       layout0.area.x -
         pad -
         (layout0.endpointLabels?.leadingBounds
-          ? layout0.endpointLabels.leadingBounds.width + 16
+          ? layout0.endpointLabels.leadingBounds.width + layout0.theme.spacing.endpointColumnGap
           : 0),
     );
     const x = Math.max(
       layout0.area.x,
       layout1.area.x,
-      leadingWidth ? pad + leadingWidth + ENDPOINT_COLUMN_GAP + leftAxisReserve : 0,
+      leadingWidth
+        ? pad + leadingWidth + layout0.theme.spacing.endpointColumnGap + leftAxisReserve
+        : 0,
     );
     leadingColumnX = leadingWidth ? pad : undefined;
     const y = Math.max(layout0.area.y, layout1.area.y);
@@ -391,7 +450,7 @@ function compileLayerIndependent(
       options.width -
       pad -
       rightReserve -
-      ENDPOINT_COLUMN_GAP -
+      layout0.theme.spacing.endpointColumnGap -
       endpointWidth -
       legendReserve -
       referenceReserve.right;
@@ -407,16 +466,16 @@ function compileLayerIndependent(
       chartArea: { x, y, width: Math.max(1, right - x), height: Math.max(1, bottom - y) },
       noteReserve: noteReserve(layout0),
     };
-    layout0 = compileChart(primary0, { ...optionsWithReserve, frozenBudget });
+    layout0 = compileChart(primary0, { ...primaryOptions, frozenBudget });
     layout1 = compileChart(primary1, { ...optionsWithReserve, frozenBudget });
     // The compiler places right legends next to the plot. In this assembly
     // the right axis and endpoint column occupy that space first.
-    const legendShift = rightReserve + ENDPOINT_COLUMN_GAP + endpointWidth;
+    const legendShift = rightReserve + layout0.theme.spacing.endpointColumnGap + endpointWidth;
     // Each leaf already places its legend after its own endpoint column. The
     // assembled figure adds the right axis and the widest merged column.
     const localColumnReserve = (layout: ChartLayout) =>
       layout.endpointLabels?.entries.length
-        ? ENDPOINT_COLUMN_GAP + layout.endpointLabels.bounds.width
+        ? layout0.theme.spacing.endpointColumnGap + layout.endpointLabels.bounds.width
         : 0;
     layout0 = moveRightLegends(layout0, legendShift - localColumnReserve(layout0));
     layout1 = moveRightLegends(layout1, legendShift - localColumnReserve(layout1));
@@ -425,7 +484,21 @@ function compileLayerIndependent(
   // Without endpoint columns the secondary leaf still needs the primary's
   // stable note band. It owns no annotations, so an independent compile would
   // otherwise stretch its scale below the assembled plot.
-  if (!columns.length) {
+  if (!columns.length && (hasHeader || eligible.length)) {
+    const y = Math.max(layout0.area.y, layout1.area.y);
+    const bottom = Math.min(
+      layout0.area.y + layout0.area.height,
+      layout1.area.y + layout1.area.height,
+    );
+    const frozenBudget = {
+      chartArea: { ...layout0.area, y, height: Math.max(1, bottom - y) },
+      noteReserve: noteReserve(layout0),
+    };
+    layout0 = compileChart(primary0, { ...primaryOptions, frozenBudget });
+    layout1 = compileChart(primary1, { ...optionsWithReserve, frozenBudget });
+    layout0 = moveRightLegends(layout0, rightReserve);
+    layout1 = moveRightLegends(layout1, rightReserve);
+  } else if (!columns.length) {
     measure0.release();
     if (noteReserve(layout0) > 0) {
       layout1 = compileChart(primary1, {
@@ -441,7 +514,7 @@ function compileLayerIndependent(
     const leafView = compileChart(
       { ...primary0, theme: mergeThemeConfig(layerSpec.theme, leaf0.theme) },
       {
-        ...optionsWithReserve,
+        ...primaryOptions,
         // The root-theme compile already reported this leaf's warnings.
         ...holdReports(options).sinks,
         frozenBudget: { chartArea: layout0.area, noteReserve: noteReserve(layout0) },
@@ -471,14 +544,20 @@ function compileLayerIndependent(
         },
         ...(layout1.axes.y.label
           ? {
-              titlePosition: {
-                x:
-                  layout0.area.x +
-                  layout0.area.width +
-                  axisTitleOffset(rawTickWidth, bodyFontSize, layout0.dimensions.width),
-                y: layout0.area.y + layout0.area.height / 2,
-                angle: 90,
-              },
+              titlePosition: rightHeader
+                ? layout1.axes.y.titlePosition
+                : {
+                    x:
+                      layout0.area.x +
+                      layout0.area.width +
+                      axisTitleOffset(rawTickWidth, bodyFontSize, layout0.dimensions.width) +
+                      Math.max(0, (titleFootprint?.width ?? bodyFontSize) - bodyFontSize) / 2,
+                    y: yAxisConfig?.titleAnchor
+                      ? (layout1.axes.y.titlePosition?.y ??
+                        layout0.area.y + layout0.area.height / 2)
+                      : layout0.area.y + layout0.area.height / 2,
+                    angle: yAxisConfig?.titleAngle ?? 90,
+                  },
             }
           : {}),
       }
@@ -598,10 +677,18 @@ function compileLayerIndependent(
       };
     };
     const endpointConfig = (index === 0 ? primary0 : primary1).endpointLabels;
+    const bandSeries = new Set(
+      typeof endpointConfig === 'object' && endpointConfig.anchor === 'band'
+        ? sourceMarks.flatMap((mark) =>
+            mark.type === 'area' && mark.stacked && mark.seriesKey ? [mark.seriesKey] : [],
+          )
+        : [],
+    );
     return [
       {
         ...column,
         leadersEnabled: typeof endpointConfig === 'object' && endpointConfig.showLeader === true,
+        bandSeries,
         entries: column.entries.map((entry) => remap(entry)),
         leading: column.leading?.map((entry) => remap(entry, true)),
       },
@@ -612,20 +699,9 @@ function compileLayerIndependent(
     layout0.area,
     rightReserve,
     leadingColumnX,
+    layout0.theme.spacing.endpointColumnGap,
+    layout0.theme.spacing.endpointEntryGap,
   );
-
-  const seenLabels = new Set<string>();
-  const l0Legend = layout0.legend;
-  const l1Legend = layout1.legend;
-  const mergedLegendEntries = 'entries' in l0Legend ? [...l0Legend.entries] : [];
-  for (const entry of mergedLegendEntries) seenLabels.add(entry.label);
-  const l1Entries = 'entries' in l1Legend ? l1Legend.entries : [];
-  for (const entry of l1Entries) {
-    if (!seenLabels.has(entry.label)) {
-      seenLabels.add(entry.label);
-      mergedLegendEntries.push(entry);
-    }
-  }
 
   const z0 = leaf0.zIndex ?? 0;
   const z1 = leaf1.zIndex ?? 1;
@@ -639,40 +715,7 @@ function compileLayerIndependent(
     appendLayerMarks(layer.layout, layer.leafIndex, marks, mergedTooltips, layer.sourceMarks);
   }
 
-  let mergedLegend = {
-    ...layout0.legend,
-    ...('entries' in l0Legend ? { entries: mergedLegendEntries } : {}),
-  } as typeof layout0.legend;
-  if (endpointLabels) {
-    const owner = l0Legend.bounds.width > 0 ? layout0 : layout1;
-    if (isRightLegend(owner.legend) && 'entries' in owner.legend) {
-      const ownerSpec = owner === layout0 ? primary0 : primary1;
-      const normalized = normalizeSpec(
-        expandSpecSugar(ownerSpec as unknown as Record<string, unknown>) as unknown as ChartSpec,
-      ) as NormalizedChartSpec;
-      const content = measureCategoricalLegendContent(
-        mergedLegendEntries,
-        normalized.legend,
-        getLayoutStrategy(getBreakpoint(options.width), getHeightClass(options.height)),
-        owner.theme,
-        options.width,
-        layout0.area.height,
-        owner.watermark,
-        measureFn,
-      );
-      mergedLegend = placeLegend(
-        content,
-        {
-          ...layout0.area,
-          width:
-            layout0.area.width + rightReserve + ENDPOINT_COLUMN_GAP + endpointLabels.bounds.width,
-        },
-        options.width,
-        owner.theme,
-        0, // Right legends do not depend on the x-axis extent.
-      );
-    }
-  }
+  const mergedLegend = layout0.legend;
 
   return {
     ...layout0,
@@ -735,14 +778,18 @@ function moveRightLegends(layout: ChartLayout, dx: number): ChartLayout {
 
 /** Keep each axis's formatted entries, then resolve collisions in one column. */
 function mergeEndpointColumns(
-  columns: (EndpointLabelsLayout & { leadersEnabled: boolean })[],
+  columns: (EndpointLabelsLayout & { leadersEnabled: boolean; bandSeries: Set<string> })[],
   area: ChartLayout['area'],
   rightReserve: number,
-  leadingColumnX?: number,
+  leadingColumnX: number | undefined,
+  columnGap: number,
+  entryGap: number,
 ): EndpointLabelsLayout | undefined {
   if (!columns.length) return undefined;
-  const { leadersEnabled: _leadersEnabled, ...first } = columns[0];
-  const sweep = (entries: (EndpointLabelEntry & { leadersEnabled: boolean })[]) => {
+  const { leadersEnabled: _leadersEnabled, bandSeries: _bandSeries, ...first } = columns[0];
+  const sweep = (
+    entries: (EndpointLabelEntry & { leadersEnabled: boolean; bandLeader: boolean })[],
+  ) => {
     const size = first.labelStyle.fontSize;
     const tops = bidirectionalSweep(
       entries.map((entry, index) => ({
@@ -752,18 +799,22 @@ function mergeEndpointColumns(
           (entry.value
             ? first.valueGap + first.valueStyle.fontSize * (first.valueStyle.lineHeight ?? 1.25)
             : 0) +
-          ENDPOINT_ENTRY_GAP,
+          (entry.date
+            ? first.valueStyle.fontSize * (first.valueStyle.lineHeight ?? 1.25) + first.valueGap
+            : 0) +
+          entryGap,
         index,
       })),
       area.y,
       area.y + area.height,
     );
-    return entries.map(({ leadersEnabled, ...entry }, index) => ({
+    return entries.map(({ leadersEnabled, bandLeader, ...entry }, index) => ({
       ...entry,
       labelY: tops[index],
       showLeader:
-        leadersEnabled &&
-        Math.abs(tops[index] + size / 2 - entry.dataY) > ENDPOINT_LEADER_THRESHOLD,
+        bandLeader ||
+        (leadersEnabled &&
+          Math.abs(tops[index] + size / 2 - entry.dataY) > ENDPOINT_LEADER_THRESHOLD),
     }));
   };
   const leadingColumns = columns.filter((column) => column.leadingBounds);
@@ -772,11 +823,15 @@ function mergeEndpointColumns(
     ...first,
     entries: sweep(
       columns.flatMap((column) =>
-        column.entries.map((entry) => ({ ...entry, leadersEnabled: column.leadersEnabled })),
+        column.entries.map((entry) => ({
+          ...entry,
+          leadersEnabled: column.leadersEnabled,
+          bandLeader: column.bandSeries.has(entry.seriesKey),
+        })),
       ),
     ),
     bounds: {
-      x: area.x + area.width + rightReserve + ENDPOINT_COLUMN_GAP,
+      x: area.x + area.width + rightReserve + columnGap,
       y: area.y,
       width: Math.max(...columns.map((column) => column.bounds.width)),
       height: area.height,
@@ -788,11 +843,12 @@ function mergeEndpointColumns(
               (column.leading ?? []).map((entry) => ({
                 ...entry,
                 leadersEnabled: column.leadersEnabled,
+                bandLeader: column.bandSeries.has(entry.seriesKey),
               })),
             ),
           ),
           leadingBounds: {
-            x: leadingColumnX ?? area.x - ENDPOINT_COLUMN_GAP - leadingWidth,
+            x: leadingColumnX ?? area.x - columnGap - leadingWidth,
             y: area.y,
             width: leadingWidth,
             height: area.height,
@@ -920,6 +976,21 @@ function alignYDomains(
   if (yEnc0.type !== 'quantitative' || yEnc1.type !== 'quantitative') return undefined;
 
   if (yEnc0.scale?.domain || yEnc1.scale?.domain) return undefined;
+
+  // Raw row extrema cannot represent a stack's accumulated/normalized domain.
+  // Leave those domains to the existing per-leaf stack scale resolver instead
+  // of pinning a smaller domain before the stack has been computed.
+  const hasStackedY = (leaf: ChartSpec) => {
+    if (!leaf.encoding?.color) return false;
+    const mark = typeof leaf.mark === 'string' ? leaf.mark : leaf.mark.type;
+    const stack = leaf.encoding.y?.stack;
+    return (
+      (mark === 'area' && stack !== null && stack !== false) ||
+      (mark === 'bar' &&
+        (stack === true || stack === 'zero' || stack === 'normalize' || stack === 'center'))
+    );
+  };
+  if (hasStackedY(leaf0) || hasStackedY(leaf1)) return undefined;
 
   const includeZero0 = yEnc0.scale?.zero !== false;
   const includeZero1 = yEnc1.scale?.zero !== false;

@@ -2577,6 +2577,19 @@
           "type": "number",
           "description": "Axis position offset in pixels."
         },
+        "titleAngle": {
+          "type": "number",
+          "description": "Angle of the title in degrees. A y-axis title at angle 0 and anchor end becomes a header."
+        },
+        "titleAnchor": {
+          "type": "string",
+          "enum": [
+            "start",
+            "middle",
+            "end"
+          ],
+          "description": "Position along the axis for the title; omission keeps the centered title."
+        },
         "titlePadding": {
           "type": "number",
           "description": "Padding between axis title and axis."
@@ -4289,6 +4302,16 @@
     "LabelConfig": {
       "type": "object",
       "properties": {
+        "placement": {
+          "type": "string",
+          "enum": [
+            "adaptive",
+            "inside",
+            "outside",
+            "column"
+          ],
+          "description": "Placement for bar/column values. Column is only supported for simple horizontal bars."
+        },
         "density": {
           "$ref": "#/definitions/LabelDensity",
           "description": "How many labels to show. Defaults to 'auto'."
@@ -4330,6 +4353,22 @@
     "EndpointLabelsConfig": {
       "type": "object",
       "properties": {
+        "anchor": {
+          "type": "string",
+          "enum": [
+            "boundary",
+            "band"
+          ],
+          "description": "Stacked-area anchor: cumulative boundary or the middle of the band."
+        },
+        "placement": {
+          "type": "string",
+          "enum": [
+            "end",
+            "interior"
+          ],
+          "description": "Series identification in the end column or fitted inside stacked bands."
+        },
         "show": {
           "type": "boolean",
           "description": "Explicit on/off. When undefined, the chart auto-decides based on series count."
@@ -4548,6 +4587,22 @@
                   "$ref": "#/definitions/TokenValue",
                   "description": "Annotation plate color. Accepts a TokenValue light/dark pair."
                 },
+                "gridlineZero": {
+                  "$ref": "#/definitions/TokenValue",
+                  "description": "Optional map missing-data and geographic border ink."
+                },
+                "mapNoDataFill": {
+                  "$ref": "#/definitions/TokenValue"
+                },
+                "mapNoDataHatch": {
+                  "$ref": "#/definitions/TokenValue"
+                },
+                "mapInteriorBorder": {
+                  "$ref": "#/definitions/TokenValue"
+                },
+                "mapOutlineBorder": {
+                  "$ref": "#/definitions/TokenValue"
+                },
                 "positive": {
                   "$ref": "#/definitions/TokenValue",
                   "description": "Semantic color for positive/up-trend values. Accepts a TokenValue for light/dark pairs."
@@ -4603,6 +4658,13 @@
                 "metricValue": {
                   "type": "number",
                   "description": "KPI metric primary value. Default: 22. Delta/secondary derive from this."
+                },
+                "endpointLabel": {
+                  "type": "number",
+                  "description": "Series-name and numerical endpoint font sizes in pixels."
+                },
+                "endpointValue": {
+                  "type": "number"
                 }
               },
               "additionalProperties": false,
@@ -4665,6 +4727,16 @@
             "xAxisLabelPadding": {
               "type": "number",
               "description": "Gap in pixels between the x-axis line and tick label text. Increase when larger axisTick fonts sit too close to the axis line."
+            },
+            "endpointEntryGap": {
+              "type": "number",
+              "description": "Endpoint block separation, internal value gap, and plot-to-column gap."
+            },
+            "endpointValueGap": {
+              "type": "number"
+            },
+            "endpointColumnGap": {
+              "type": "number"
             }
           },
           "additionalProperties": false,

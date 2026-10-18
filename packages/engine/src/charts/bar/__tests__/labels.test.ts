@@ -308,3 +308,122 @@ describe('computeBarLabels knockout halo', () => {
     expect(labels[0].halo).not.toBe(false);
   });
 });
+
+describe('explicit bar label placement', () => {
+  const options = (placement: 'inside' | 'outside' | 'column') => ({
+    placement,
+    measureText: () => ({ width: 80, height: 14 }),
+    columnWidth: 80,
+  });
+  it('inside hides text that cannot fit a bar even when above the adaptive threshold', () => {
+    const mark = makeMark(0, 10); // 50px wide, too short for 80px text
+    const label = computeBarLabels(
+      [mark],
+      chartArea,
+      'all',
+      null,
+      undefined,
+      'value',
+      undefined,
+      false,
+      undefined,
+      undefined,
+      'Georgia',
+      options('inside'),
+    )[0];
+    expect(label.visible).toBe(false);
+  });
+  it('outside follows the raw signed value, including format strings without a minus', () => {
+    const signed = [makeMark(0, -10), makeMark(1, 0), makeMark(2, 20)];
+    const labels = computeBarLabels(
+      signed,
+      chartArea,
+      'all',
+      () => 'ten',
+      undefined,
+      'value',
+      undefined,
+      false,
+      undefined,
+      undefined,
+      'Georgia',
+      options('outside'),
+    );
+    expect(labels[0].x).toBe(signed[0].x - 6);
+    expect(labels[0].style.textAnchor).toBe('end');
+    expect(labels[1].style.textAnchor).toBe('start');
+    expect(labels[2].x).toBe(signed[2].x + signed[2].width + 6);
+  });
+  it('column aligns every signed value at the measured gutter edge', () => {
+    const labels = computeBarLabels(
+      [makeMark(0, -10), makeMark(1, 0), makeMark(2, 20)],
+      chartArea,
+      'all',
+      null,
+      undefined,
+      'value',
+      undefined,
+      false,
+      undefined,
+      undefined,
+      'Georgia',
+      options('column'),
+    );
+    expect(labels.map((label) => label.x)).toEqual([492, 492, 492]);
+    expect(labels.every((label) => label.style.textAnchor === 'end')).toBe(true);
+  });
+});
+
+it('explicit adaptive preserves omitted placement geometry', () => {
+  const input = [makeMark(0, -10), makeMark(1, 0), makeMark(2, 20)];
+  const omitted = computeBarLabels(input, chartArea, 'all', null, undefined, 'value');
+  const adaptive = computeBarLabels(
+    input,
+    chartArea,
+    'all',
+    null,
+    undefined,
+    'value',
+    undefined,
+    false,
+    undefined,
+    undefined,
+    undefined,
+    { placement: 'adaptive' },
+  );
+  expect(adaptive).toEqual(omitted);
+});
+
+it('adaptive measures large text before choosing an inside anchor', () => {
+  const mark = makeMark(0, 10);
+  const label = computeBarLabels(
+    [mark],
+    chartArea,
+    'all',
+    () => '350M',
+    undefined,
+    'value',
+    undefined,
+    false,
+    26,
+  )[0];
+  expect(label.style.textAnchor).toBe('start');
+  expect(label.x).toBe(mark.x + mark.width + 6);
+  expect(label.visible).toBe(true);
+});
+
+it('adaptive suppresses a label when neither inside nor its outside endpoint can fit', () => {
+  const mark = makeMark(0, 80);
+  const label = computeBarLabels(
+    [mark],
+    chartArea,
+    'all',
+    () => 'An exceptionally long value that cannot fit into this chart',
+    undefined,
+    'value',
+    undefined,
+    false,
+    26,
+  )[0];
+  expect(label.visible).toBe(false);
+});

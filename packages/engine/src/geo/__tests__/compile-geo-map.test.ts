@@ -1,3 +1,5 @@
+import { contrastRatio, estimateTextWidth } from '@opendata-ai/openchart-core';
+import { interpolateRgb } from 'd3-interpolate';
 import { describe, expect, it } from 'vitest';
 import { compileGeoMap } from '../../compile';
 
@@ -1488,10 +1490,10 @@ describe('compileGeoMap', () => {
         { ...spec, legend: { show: true, position: 'top-left' } },
         DEFAULT_OPTIONS,
       );
-      const bottom = compileGeoMap({ ...spec, legend: { show: true } }, DEFAULT_OPTIONS);
+      const top = compileGeoMap({ ...spec, legend: { show: true } }, DEFAULT_OPTIONS);
 
       // Overlay reserves no figure height: map area fills the full frame.
-      expect(overlay.area.height).toBeGreaterThan(bottom.area.height);
+      expect(overlay.area.height).toBeGreaterThan(top.area.height);
       expect(overlay.area.height).toBe(DEFAULT_OPTIONS.height);
 
       // Legend floats inside the map area's top-left corner, inset from the
@@ -1504,11 +1506,11 @@ describe('compileGeoMap', () => {
         overlay.area.y + overlay.area.height,
       );
 
-      // Default (no position) keeps the bottom-row placement.
-      expect(bottom.pointContinuousLegend!.position).toBe('bottom');
-      expect(bottom.pointContinuousLegend!.bounds.y).toBeGreaterThan(
-        overlay.pointContinuousLegend!.bounds.y,
-      );
+      // Default (no position) now paints the key in its reserved top band.
+      expect(top.pointContinuousLegend!.position).toBe('top');
+      expect(
+        top.pointContinuousLegend!.bounds.y + top.pointContinuousLegend!.bounds.height,
+      ).toBeLessThanOrEqual(top.area.y);
     });
 
     it("legend position 'top-left' overlays a categorical point legend too", () => {
@@ -1668,5 +1670,340 @@ describe('map numeric observations', () => {
     for (const mark of layout.pointMarks) {
       expect([mark.cx, mark.cy, mark.r].every(Number.isFinite)).toBe(true);
     }
+  });
+});
+
+describe('map side legend composition', () => {
+  const spec = {
+    type: 'map',
+    geo: { features: MINI_TOPO, projection: 'mercator' },
+    data: [
+      { fips: '06', value: 0 },
+      { fips: '48', value: 20 },
+    ],
+    encoding: {
+      key: { field: 'fips', type: 'nominal' },
+      color: { field: 'value', type: 'quantitative' },
+    },
+  };
+  it.each(['redBlue', 'brownTeal'])('accepts a quantitative diverging map palette %s', (scheme) => {
+    expect(() =>
+      compileGeoMap(
+        {
+          ...spec,
+          encoding: { ...spec.encoding, color: { ...spec.encoding.color, scale: { scheme } } },
+        },
+        DEFAULT_OPTIONS,
+      ),
+    ).not.toThrow();
+  });
+  it('rejects a categorical palette for quantitative map color', () => {
+    expect(() =>
+      compileGeoMap(
+        {
+          ...spec,
+          encoding: {
+            ...spec.encoding,
+            color: { ...spec.encoding.color, scale: { scheme: 'categorical' } },
+          },
+        },
+        DEFAULT_OPTIONS,
+      ),
+    ).toThrow('not a supported map palette');
+  });
+  it.each(['right', 'bottom-right'])('honors an authored %s key outside geography', (position) => {
+    const layout = compileGeoMap({ ...spec, legend: { position } }, { width: 1024, height: 400 });
+    const key = layout.continuousLegend!;
+    expect(key.position).toBe(position);
+    expect(key.bounds.x).toBeGreaterThanOrEqual(layout.area.x + layout.area.width);
+    expect(key.bounds.y).toBeGreaterThanOrEqual(layout.area.y);
+    expect(key.bounds.y + key.bounds.height).toBeLessThanOrEqual(
+      layout.area.y + layout.area.height,
+    );
+    expect(layout.features.find((f) => f.id === '06')?.noData).not.toBe(true);
+    expect(layout.features.find((f) => f.id === '36')?.noData).toBe(true);
+  });
+  it.each([
+    false,
+    true,
+  ])('keeps the explicit G8 hatch candidate distinct from low and midpoint classes (dark=%s)', (darkMode) => {
+    for (const scheme of ['blue', 'redBlue']) {
+      const layout = compileGeoMap(
+        {
+          ...spec,
+          theme: {
+            colors: {
+              mapNoDataFill: { light: '#f5f5f5', dark: '#252525' },
+              mapNoDataHatch: { light: '#707070', dark: '#aaaaaa' },
+              mapInteriorBorder: { light: 'rgba(0,0,0,0.14)', dark: 'rgba(255,255,255,0.18)' },
+            },
+          },
+          encoding: {
+            ...spec.encoding,
+            color: { ...spec.encoding.color, scale: { scheme, domain: [-20, 20] } },
+          },
+        },
+        { ...DEFAULT_OPTIONS, darkMode },
+      );
+      const pattern = layout.features.find((feature) => feature.noData)!.pattern!;
+      // The renderer paints hatch strokes at 0.55 opacity over the authored base.
+      const visibleHatch = interpolateRgb(pattern.base, pattern.line)(0.55);
+      const bins = layout.continuousLegend!.bins;
+      if (scheme === 'blue')
+        expect(contrastRatio(visibleHatch, bins[0].color)).toBeGreaterThanOrEqual(1.5);
+      if (scheme === 'redBlue')
+        expect(
+          contrastRatio(visibleHatch, bins[Math.floor(bins.length / 2)].color),
+        ).toBeGreaterThanOrEqual(1.5);
+      expect(layout.borders.interiorStroke).toBe(
+        darkMode ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.14)',
+      );
+    }
+  });
+  it('keys a threshold boundary by the same inclusive interval as its fill', () => {
+    const layout = compileGeoMap(
+      {
+        ...spec,
+        encoding: {
+          ...spec.encoding,
+          color: {
+            ...spec.encoding.color,
+            scale: {
+              type: 'threshold',
+              domain: [-10, 0, 10],
+              range: ['#123456', '#345678', '#56789a', '#789abc'],
+            },
+          },
+        },
+      },
+      DEFAULT_OPTIONS,
+    );
+    const zero = layout.features.find((feature) => feature.id === '06')!;
+    expect(zero.binIndex).toBe(2);
+    expect(zero.fill).toBe(layout.continuousLegend!.bins[2].color);
+    expect(layout.tooltipDescriptors.get('06')!.fields).toContainEqual({
+      label: 'Color range',
+      value: '0 inclusive to 10 exclusive',
+    });
+    expect(layout.a11y.altText).toContain('0 inclusive to 10 exclusive');
+  });
+  it.each(['right', 'bottom-right'])('budgets three independent keys at %s', (position) => {
+    const layout = compileGeoMap(
+      {
+        ...spec,
+        legend: { position },
+        points: {
+          data: [
+            { lon: -100, lat: 31, group: 'Small metro', size: 1 },
+            { lon: -95, lat: 30, group: 'Large metro', size: 100 },
+          ],
+          longitude: { field: 'lon', type: 'quantitative' },
+          latitude: { field: 'lat', type: 'quantitative' },
+          color: { field: 'group', type: 'nominal' },
+          size: { field: 'size', type: 'quantitative' },
+        },
+      },
+      { width: 1024, height: 600 },
+    );
+    const keys = [
+      layout.continuousLegend!,
+      layout.pointCategoricalLegend!,
+      layout.pointSizeLegend!,
+    ];
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
+      expect(key.position).toBe(position);
+      expect(key.bounds.x).toBeGreaterThanOrEqual(layout.area.x + layout.area.width);
+      expect(key.bounds.y + key.bounds.height).toBeLessThanOrEqual(
+        layout.area.y + layout.area.height,
+      );
+      if (i)
+        expect(key.bounds.y).toBeGreaterThanOrEqual(
+          keys[i - 1].bounds.y + keys[i - 1].bounds.height,
+        );
+    }
+  });
+  it('keeps projection and coverage identical when only side alignment changes', () => {
+    const right = compileGeoMap(
+      { ...spec, legend: { position: 'right' } },
+      { width: 1024, height: 400 },
+    );
+    const bottom = compileGeoMap(
+      { ...spec, legend: { position: 'bottom-right' } },
+      { width: 1024, height: 400 },
+    );
+    expect(bottom.area).toEqual(right.area);
+    expect(bottom.features.map((feature) => [feature.id, feature.path])).toEqual(
+      right.features.map((feature) => [feature.id, feature.path]),
+    );
+    expect(bottom.height).toBe(right.height);
+    expect(bottom.continuousLegend!.bounds.y).toBeGreaterThan(right.continuousLegend!.bounds.y);
+  });
+  it.each([
+    'nominal',
+    'quantitative',
+  ])('places a top point %s key in its already reserved band without refitting geography', (type) => {
+    const map = {
+      ...spec,
+      points: {
+        data: [
+          { lon: -100, lat: 31, group: type === 'nominal' ? 'Metros' : 10 },
+          { lon: -95, lat: 30, group: type === 'nominal' ? 'Coastal cities' : 20 },
+        ],
+        longitude: { field: 'lon', type: 'quantitative' },
+        latitude: { field: 'lat', type: 'quantitative' },
+        color: { field: 'group', type },
+      },
+    };
+    const top = compileGeoMap({ ...map, legend: { position: 'top' } }, DEFAULT_OPTIONS);
+    const bottom = compileGeoMap({ ...map, legend: { position: 'bottom' } }, DEFAULT_OPTIONS);
+    const key = top.pointCategoricalLegend ?? top.pointContinuousLegend!;
+    expect(key.position).toBe('top');
+    expect(key.bounds.y + key.bounds.height + 8).toBeLessThanOrEqual(top.area.y);
+    expect(top.mapSize).toEqual(bottom.mapSize);
+    expect(top.features.map((feature) => feature.path)).toEqual(
+      bottom.features.map((feature) => feature.path),
+    );
+    expect(top.pointMarks.map((point) => [point.cx, point.cy, point.r])).toEqual(
+      bottom.pointMarks.map((point) => [point.cx, point.cy, point.r]),
+    );
+  });
+  it('keeps independent bottom color keys inside the reserved band', () => {
+    const layout = compileGeoMap(
+      {
+        ...spec,
+        legend: { position: 'bottom' },
+        points: {
+          data: [
+            { lon: -100, lat: 31, value: 10 },
+            { lon: -95, lat: 30, value: 20 },
+          ],
+          longitude: { field: 'lon', type: 'quantitative' },
+          latitude: { field: 'lat', type: 'quantitative' },
+          color: { field: 'value', type: 'quantitative' },
+        },
+      },
+      DEFAULT_OPTIONS,
+    );
+    expect(layout.pointContinuousLegend!.bounds.y).toBeGreaterThanOrEqual(
+      layout.continuousLegend!.bounds.y + layout.continuousLegend!.bounds.height,
+    );
+    expect(
+      layout.pointContinuousLegend!.bounds.y + layout.pointContinuousLegend!.bounds.height,
+    ).toBeLessThanOrEqual(layout.chrome.bottomAnchorY!);
+  });
+  it('reserves every wrapped point category row above a narrow map', () => {
+    const layout = compileGeoMap(
+      {
+        ...spec,
+        legend: { position: 'top' },
+        points: {
+          data: Array.from({ length: 8 }, (_, index) => ({
+            lon: -100,
+            lat: 31,
+            category: `Long category ${index}`,
+          })),
+          longitude: { field: 'lon', type: 'quantitative' },
+          latitude: { field: 'lat', type: 'quantitative' },
+          color: { field: 'category', type: 'nominal' },
+        },
+      },
+      { width: 390, height: 600 },
+    );
+    const key = layout.pointCategoricalLegend!;
+    expect(key.entryPositions).toHaveLength(8);
+    expect(new Set(key.entryPositions!.map((position) => position.row)).size).toBeGreaterThan(1);
+    expect(
+      key.entryPositions!.every(
+        (position) =>
+          position.y >= key.bounds.y &&
+          position.y + key.swatchSize <= key.bounds.y + key.bounds.height,
+      ),
+    ).toBe(true);
+    expect(key.bounds.y + key.bounds.height + 8).toBeLessThanOrEqual(layout.area.y);
+  });
+  it.each([24, 32])('contains the entire side No data key at %dpx type', (fontSize) => {
+    const measureText = (text: string, size: number, weight?: number) => ({
+      width: estimateTextWidth(text, size, weight),
+      height: size,
+    });
+    const layout = compileGeoMap(
+      { ...spec, legend: { position: 'right' }, theme: { fonts: { sizes: { small: fontSize } } } },
+      { width: 1024, height: 400, measureText },
+    );
+    const key = layout.continuousLegend!;
+    expect(key.position).toBe('right');
+    expect(key.noData).toBeDefined();
+    const right =
+      key.noData!.labelX +
+      measureText(key.noData!.label, key.labelStyle.fontSize, key.labelStyle.fontWeight).width;
+    expect(right).toBeLessThanOrEqual(key.bounds.x + key.bounds.width);
+    expect(right).toBeLessThanOrEqual(layout.width - layout.area.x);
+  });
+  it('budgets host-measured No data width before projection and falls back when the complete side key cannot fit', () => {
+    const diagnostics: Array<{ code: string }> = [];
+    const measureText = (text: string, size: number, weight?: number) => ({
+      width: text === 'No data' ? 700 : estimateTextWidth(text, size, weight),
+      height: size,
+    });
+    const input = { ...spec, theme: { fonts: { sizes: { small: 32 } } } };
+    const options = { width: 1024, height: 400, measureText };
+    const side = compileGeoMap(
+      { ...input, legend: { position: 'bottom-right' } },
+      { ...options, onDiagnostic: (diagnostic) => diagnostics.push(diagnostic) },
+    );
+    const top = compileGeoMap({ ...input, legend: { position: 'top' } }, options);
+    expect(side.continuousLegend!.position).toBe('top');
+    expect(diagnostics).toContainEqual(
+      expect.objectContaining({ code: 'MAP_SIDE_LEGEND_FALLBACK' }),
+    );
+    expect(side.area).toEqual(top.area);
+    expect(side.features.map((feature) => feature.path)).toEqual(
+      top.features.map((feature) => feature.path),
+    );
+  });
+  it('does not reserve a hidden side key or shrink text when measured names are too wide', () => {
+    const hidden = compileGeoMap(
+      { ...spec, legend: { position: 'right', show: false } },
+      DEFAULT_OPTIONS,
+    );
+    const absent = compileGeoMap({ ...spec, legend: { show: false } }, DEFAULT_OPTIONS);
+    expect(hidden.area).toEqual(absent.area);
+    const diagnostics: Array<{ code: string }> = [];
+    const long = compileGeoMap(
+      {
+        ...spec,
+        encoding: { ...spec.encoding, color: { field: 'fips', type: 'nominal' } },
+        legend: { position: 'right' },
+      },
+      {
+        width: 1024,
+        height: 400,
+        measureText: () => ({ width: 800, height: 12 }),
+        onDiagnostic: (diagnostic) => diagnostics.push(diagnostic),
+      },
+    );
+    expect(long.categoricalLegend!.position).toBe('top');
+    expect(long.categoricalLegend!.labelStyle.fontSize).toBe(11);
+    expect(diagnostics).toContainEqual(
+      expect.objectContaining({ code: 'MAP_SIDE_LEGEND_FALLBACK' }),
+    );
+  });
+  it('diagnoses a side key fallback before fitting a narrow map', () => {
+    const diagnostics: Array<{ code: string; path: string }> = [];
+    const layout = compileGeoMap(
+      { ...spec, legend: { position: 'right' } },
+      {
+        width: 320,
+        height: 400,
+        onDiagnostic: (diagnostic) => diagnostics.push(diagnostic),
+      },
+    );
+    expect(layout.continuousLegend!.position).toBe('top');
+    expect(diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'MAP_SIDE_LEGEND_FALLBACK', path: '/legend/position' }),
+      ]),
+    );
   });
 });

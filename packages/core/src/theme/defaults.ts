@@ -26,6 +26,8 @@ const FONT_SIZES = {
   axisTick: 12,
   metricLabel: 11,
   metricValue: 22,
+  endpointLabel: 13,
+  endpointValue: 12,
 };
 
 /**
@@ -86,6 +88,9 @@ export const DEFAULT_THEME: ThemeBase = {
     // dominant-baseline:hanging, which WebKit positions from different metrics),
     // so the gap holds regardless of font size.
     xAxisLabelPadding: 4,
+    endpointEntryGap: 6,
+    endpointValueGap: 4,
+    endpointColumnGap: 18,
   },
   /** Containers and tooltips. Marks carry their own 2px radius constant. */
   borderRadius: 8,

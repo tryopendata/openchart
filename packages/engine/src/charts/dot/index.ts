@@ -42,6 +42,7 @@ export const dotRenderer: ChartRenderer = (spec, scales, chartArea, strategy, th
     spec.labels.prefix,
     labelFormatter,
     valueField,
+    theme.fonts.family,
   );
   let labelIdx = 0;
   for (const mark of marks) {

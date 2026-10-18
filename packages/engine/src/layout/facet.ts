@@ -5,6 +5,8 @@ import {
   type ReferenceReserve,
   referenceLaneHeights,
 } from '../annotations/reference-layout';
+import type { BarLabelPlan } from '../charts/bar/label-plan';
+import type { AxisTitleHeader } from './axis-title-plan';
 import { fitReferenceLane, REFERENCE_LANE_SHARE_MAX } from './stack';
 
 const MIN_PANEL_WIDTH = 200;
@@ -29,6 +31,8 @@ export interface FacetGridResult {
   columns: number;
   rows: number;
   minimumHeight?: number;
+  valueLabelPlan?: BarLabelPlan;
+  axisTitleHeader?: AxisTitleHeader;
 }
 
 export function autoColumns(panelCount: number, availableWidth: number): number {
@@ -51,6 +55,11 @@ export function computeFacetGrid(
     measure: (width: number) => ReferenceReserve;
     innerAxisWidth: number;
   },
+  valueInsets?: {
+    measure: (width: number, height?: number) => BarLabelPlan;
+    innerAxisWidth: number;
+  },
+  measureAxisHeader?: (width: number) => AxisTitleHeader | undefined,
 ): FacetGridResult {
   const n = facetValues.length;
   if (n === 0) return { panels: [], columns: 0, rows: 0 };
@@ -61,9 +70,17 @@ export function computeFacetGrid(
   // Responsive degradation: reduce columns until panels are wide enough
   while (columns > 1) {
     const panelWidth = (usableWidth - (columns - 1) * PANEL_GAP) / columns;
-    const innerAxis = referenceInsets?.innerAxisWidth ?? 0;
+    const innerAxis = Math.max(
+      referenceInsets?.innerAxisWidth ?? 0,
+      valueInsets?.innerAxisWidth ?? 0,
+    );
     const right = referenceInsets?.measure(panelWidth - innerAxis).right ?? 0;
-    if (panelWidth - innerAxis - right >= MIN_PANEL_WIDTH) break;
+    const labels = valueInsets?.measure(panelWidth - innerAxis - right);
+    if (
+      panelWidth - innerAxis - right - (labels?.reserveLeft ?? 0) - (labels?.reserveRight ?? 0) >=
+      MIN_PANEL_WIDTH
+    )
+      break;
     columns--;
   }
 
@@ -101,13 +118,33 @@ export function computeFacetGrid(
             MIN_PANEL_HEIGHT,
           ).reserve;
   }
-  const panelHeight = Math.max(
+  const rawPanelHeight = Math.max(
     0,
     (usableHeight - rows * (HEADER_HEIGHT + topInset + xAxisPerRow) - (rows - 1) * PANEL_GAP) /
       rows,
   );
 
-  const rowStride = HEADER_HEIGHT + topInset + panelHeight + xAxisPerRow + PANEL_GAP;
+  const innerAxisWidth = Math.max(
+    referenceInsets?.innerAxisWidth ?? 0,
+    valueInsets?.innerAxisWidth ?? 0,
+  );
+  const narrowestWidth = panelWidth - (columns > 1 ? innerAxisWidth : 0);
+  const referenceRight = referenceInsets?.measure(narrowestWidth).right ?? 0;
+  // One figure-level measurement and mode decision applies to every panel.
+  const valueLabelPlan = valueInsets?.measure(narrowestWidth - referenceRight, rawPanelHeight);
+  const axisTitleHeader = measureAxisHeader?.(
+    narrowestWidth -
+      referenceRight -
+      (valueLabelPlan?.reserveLeft ?? 0) -
+      (valueLabelPlan?.reserveRight ?? 0),
+  );
+  const valueTop = (valueLabelPlan?.reserveTop ?? 0) + (axisTitleHeader?.height ?? 0);
+  const valueBottom = valueLabelPlan?.reserveBottom ?? 0;
+  const valueLeft = valueLabelPlan?.reserveLeft ?? 0;
+  const valueRight = valueLabelPlan?.reserveRight ?? 0;
+  const panelHeight = Math.max(0, rawPanelHeight - valueTop - valueBottom);
+  const rowStride =
+    HEADER_HEIGHT + topInset + valueTop + panelHeight + valueBottom + xAxisPerRow + PANEL_GAP;
   const panels: FacetGridPanel[] = [];
 
   for (let i = 0; i < n; i++) {
@@ -116,17 +153,17 @@ export function computeFacetGrid(
     const x = totalArea.x + outerAxisReservation.left + col * (panelWidth + PANEL_GAP);
     const y = totalArea.y + row * rowStride;
 
-    const leftInset = col > 0 ? (referenceInsets?.innerAxisWidth ?? 0) : 0;
+    const leftInset = col > 0 ? innerAxisWidth : 0;
     const measured = referenceInsets?.measure(panelWidth - leftInset);
     const reserve =
       measured && admitReferenceRows(measured, packReferenceRows(measured.labels), topInset);
-    const areaY = y + HEADER_HEIGHT + topInset;
+    const areaY = y + HEADER_HEIGHT + topInset + valueTop;
     panels.push({
       key: facetValues[i],
       area: {
-        x: x + leftInset,
+        x: x + leftInset + valueLeft,
         y: areaY,
-        width: Math.max(0, panelWidth - leftInset - (reserve?.right ?? 0)),
+        width: Math.max(0, panelWidth - leftInset - (reserve?.right ?? 0) - valueLeft - valueRight),
         height: panelHeight,
       },
       ...(referenceInsets
@@ -155,10 +192,13 @@ export function computeFacetGrid(
     panels,
     columns,
     rows,
-    ...(referenceInsets
+    ...(valueLabelPlan ? { valueLabelPlan } : {}),
+    ...(axisTitleHeader ? { axisTitleHeader } : {}),
+    ...(referenceInsets || valueInsets || axisTitleHeader
       ? {
           minimumHeight:
-            rows * (MIN_PANEL_HEIGHT + HEADER_HEIGHT + topInset + xAxisPerRow) +
+            rows *
+              (MIN_PANEL_HEIGHT + HEADER_HEIGHT + topInset + valueTop + valueBottom + xAxisPerRow) +
             (rows - 1) * PANEL_GAP,
         }
       : {}),

@@ -119,6 +119,8 @@ export interface NormalizedChartSpec {
   /** Resolved mark definition with defaults filled in. */
   markDef: NormalizedMarkDef;
   data: DataRow[];
+  /** @internal Compile-local stack reuse; never authored or emitted in a layout. */
+  areaStackCache?: import('../data/area-stack').AreaStackCache;
   encoding: Encoding;
   chrome: NormalizedChrome;
   /**
@@ -140,7 +142,7 @@ export interface NormalizedChartSpec {
   annotations: Annotation[];
   /** Normalized label configuration with defaults applied. density, format, and prefix are always set; offsets and color stay optional. */
   labels: Required<Pick<LabelConfig, 'density' | 'format' | 'prefix'>> &
-    Pick<LabelConfig, 'color' | 'fontSize' | 'suffix'>;
+    Pick<LabelConfig, 'color' | 'fontSize' | 'suffix' | 'placement'>;
   /** Legend configuration (position override). */
   legend?: LegendConfig;
   /** Right-side endpoint labels column config (multi-series line/area only). */

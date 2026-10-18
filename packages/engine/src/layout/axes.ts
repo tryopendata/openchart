@@ -39,6 +39,12 @@ import {
   scaleSupportsTickCount,
   targetTickCount,
 } from './axes/ticks';
+import {
+  type AxisTitleHeader,
+  authoredTitleFootprint,
+  isYAxisHeader,
+  measureYAxisHeader,
+} from './axis-title-plan';
 import type { ResolvedScales } from './scales';
 
 // Re-export pure helpers so external consumers (and tests) continue to import
@@ -409,6 +415,7 @@ export interface AxesResult {
 
 /** Optional data context for axis computation (enables labelField subtitles). */
 export interface AxesDataContext {
+  axisTitleHeader?: AxisTitleHeader;
   preserveEnd?: boolean;
   /** The data rows for subtitle lookup. */
   data: DataRow[];
@@ -563,6 +570,9 @@ export function computeAxes(
     const gridlines: Gridline[] = allTicks.map((t) => ({
       position: t.position,
       major: true,
+      ...(t.value === 0 && !CATEGORICAL_SCALE_TYPES.has(scales.x!.type) && theme.colors.gridlineZero
+        ? { color: theme.colors.gridlineZero }
+        : {}),
     }));
 
     // Band-label policy: choose the shallowest angle at which every label
@@ -792,6 +802,9 @@ export function computeAxes(
     const gridlines: Gridline[] = ticks.map((t) => ({
       position: t.position,
       major: true,
+      ...(t.value === 0 && !CATEGORICAL_SCALE_TYPES.has(scales.y!.type) && theme.colors.gridlineZero
+        ? { color: theme.colors.gridlineZero }
+        : {}),
     }));
 
     const axisTitle = axisConfig?.title;
@@ -874,12 +887,19 @@ export function computeAxes(
     });
 
     if (result.x.label) {
-      const titleBand = isRotated ? X_AXIS_TITLE_BAND_ROTATED : X_AXIS_TITLE_BAND;
+      const extraTitleHeight = Math.max(
+        0,
+        (authoredTitleFootprint(scales.x?.channel, theme, measureText)?.height ??
+          theme.fonts.sizes.body) - theme.fonts.sizes.body,
+      );
+      result.x.extent += extraTitleHeight;
+      const titleBand =
+        (isRotated ? X_AXIS_TITLE_BAND_ROTATED : X_AXIS_TITLE_BAND) + extraTitleHeight;
       const tickBand = result.x.extent - titleBand;
       const titleY = isRotated ? tickBand + 14 : tickBand + 9;
       result.x.titlePosition = {
         x: chartArea.x + chartArea.width / 2,
-        y: chartArea.y + chartArea.height + titleY,
+        y: chartArea.y + chartArea.height + titleY + extraTitleHeight / 2,
       };
     }
   }
@@ -929,5 +949,77 @@ export function computeAxes(
     }
   }
 
+  const xConfig = scales.x?.channel.axis;
+  if (result.x?.titlePosition && xConfig) {
+    if (xConfig.titleAngle !== undefined) result.x.titlePosition.angle = xConfig.titleAngle;
+    if (xConfig.titleAnchor) {
+      const anchor = xConfig.titleAnchor;
+      result.x.titlePosition.x =
+        chartArea.x + chartArea.width * (anchor === 'start' ? 0 : anchor === 'end' ? 1 : 0.5);
+      const footprint = authoredTitleFootprint(scales.x?.channel, theme, measureText);
+      if (footprint && xConfig.titleAngle) {
+        result.x.titlePosition.x = Math.max(
+          chartArea.x + footprint.width / 2,
+          Math.min(chartArea.x + chartArea.width - footprint.width / 2, result.x.titlePosition.x),
+        );
+        result.x.titlePosition.textAnchor = 'middle';
+      } else result.x.titlePosition.textAnchor = anchor;
+    }
+  }
+  const yConfig = scales.y?.channel.axis;
+  if (result.y?.titlePosition && yConfig) {
+    if (isYAxisHeader(scales.y?.channel)) {
+      const header =
+        dataContext?.axisTitleHeader ??
+        measureYAxisHeader(scales.y?.channel, theme, chartArea.width, measureText)!;
+      result.y.titleLines = header.lines;
+      result.y.titlePosition = {
+        x: result.y.orient === 'right' ? chartArea.x + chartArea.width : chartArea.x,
+        y:
+          chartArea.y -
+          theme.fonts.sizes.axisTick -
+          header.padding -
+          (header.lines.length - 1) * header.lineHeight,
+        angle: 0,
+        textAnchor: result.y.orient === 'right' ? 'end' : 'start',
+      };
+    } else {
+      const footprint = authoredTitleFootprint(scales.y?.channel, theme, measureText);
+      if (yConfig.titleAngle !== undefined) {
+        result.y.titlePosition.angle = yConfig.titleAngle;
+        const extra = Math.max(
+          0,
+          (footprint?.width ?? theme.fonts.sizes.body) - theme.fonts.sizes.body,
+        );
+        result.y.titlePosition.x += ((result.y.orient === 'right' ? 1 : -1) * extra) / 2;
+      }
+      if (yConfig.titleAnchor) {
+        const anchor = yConfig.titleAnchor;
+        result.y.titlePosition.y =
+          chartArea.y + chartArea.height * (anchor === 'start' ? 1 : anchor === 'end' ? 0 : 0.5);
+        const half =
+          (footprint?.height ??
+            estimateTextWidth(
+              result.y.label ?? '',
+              theme.fonts.sizes.body,
+              theme.fonts.weights.medium,
+            )) / 2;
+        result.y.titlePosition.y = Math.max(
+          chartArea.y + half,
+          Math.min(chartArea.y + chartArea.height - half, result.y.titlePosition.y),
+        );
+        result.y.titlePosition.textAnchor = 'middle';
+      }
+    }
+  }
+  // SVG text uses an alphabetic baseline: after a quarter-turn its ascent
+  // extends almost a full font size toward the viewport edge. The historical
+  // half-glyph estimate is insufficient for enlarged accessibility text.
+  if (result.y?.titlePosition && result.y.labelStyle) {
+    const position = result.y.titlePosition;
+    if (position.angle === -90) position.x = Math.max(result.y.labelStyle.fontSize, position.x);
+    else if (position.angle === 90)
+      position.x = Math.min(totalWidth - result.y.labelStyle.fontSize, position.x);
+  }
   return result;
 }

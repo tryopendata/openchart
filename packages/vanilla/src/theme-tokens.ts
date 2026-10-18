@@ -61,6 +61,11 @@ export function stampThemeProperties(
     ['--oc-source-size', `${theme.chrome.source.fontSize}px`],
     ['--oc-source-weight', `${theme.chrome.source.fontWeight}`],
     ['--oc-body-size', `${theme.fonts.sizes.body}px`],
+    ['--oc-endpoint-label-size', `${theme.fonts.sizes.endpointLabel}px`],
+    ['--oc-endpoint-value-size', `${theme.fonts.sizes.endpointValue}px`],
+    ['--oc-endpoint-entry-gap', `${theme.spacing.endpointEntryGap}px`],
+    ['--oc-endpoint-value-gap', `${theme.spacing.endpointValueGap}px`],
+    ['--oc-endpoint-column-gap', `${theme.spacing.endpointColumnGap}px`],
     ['--oc-eyebrow-size', `${theme.chrome.eyebrow.fontSize}px`],
     ['--oc-eyebrow-weight', `${theme.chrome.eyebrow.fontWeight}`],
     ['--oc-bg', bg],
@@ -115,6 +120,11 @@ export function stampThemeProperties(
     '--oc-source-size': chromeAuthored('source', 'fontSize'),
     '--oc-source-weight': chromeAuthored('source', 'fontWeight'),
     '--oc-body-size': authored?.fonts?.sizes?.body !== undefined,
+    '--oc-endpoint-label-size': authored?.fonts?.sizes?.endpointLabel !== undefined,
+    '--oc-endpoint-value-size': authored?.fonts?.sizes?.endpointValue !== undefined,
+    '--oc-endpoint-entry-gap': authored?.spacing?.endpointEntryGap !== undefined,
+    '--oc-endpoint-value-gap': authored?.spacing?.endpointValueGap !== undefined,
+    '--oc-endpoint-column-gap': authored?.spacing?.endpointColumnGap !== undefined,
     '--oc-eyebrow-size': chromeAuthored('eyebrow', 'fontSize'),
     '--oc-eyebrow-weight': chromeAuthored('eyebrow', 'fontWeight'),
     '--oc-bg': colorAuthored('background'),
@@ -147,6 +157,17 @@ export function stampThemeProperties(
     enabled[name] =
       colorAuthored(key) ||
       ((key === 'annotationMarkerFill' || key === 'annotationPlate') && neutralAuthored);
+  }
+  for (const key of [
+    'gridlineZero',
+    'mapNoDataFill',
+    'mapNoDataHatch',
+    'mapInteriorBorder',
+    'mapOutlineBorder',
+  ] as const) {
+    const name = `--oc-${key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`;
+    if (theme.colors[key] !== undefined) props.push([name, theme.colors[key]]);
+    enabled[name] = colorAuthored(key);
   }
   for (const level of [100, 200, 300, 400, 600, 800])
     enabled[`--oc-gray-${level}`] = neutralAuthored;

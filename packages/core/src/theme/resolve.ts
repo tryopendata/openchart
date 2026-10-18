@@ -65,6 +65,16 @@ function themeConfigToPartial(config: ThemeConfig, base: ThemeBase): Partial<The
         colors.annotationMarkerFill = resolveTokenLight(config.colors.annotationMarkerFill);
       if (config.colors.annotationPlate)
         colors.annotationPlate = resolveTokenLight(config.colors.annotationPlate);
+      for (const key of [
+        'gridlineZero',
+        'mapNoDataFill',
+        'mapNoDataHatch',
+        'mapInteriorBorder',
+        'mapOutlineBorder',
+      ] as const) {
+        const value = config.colors[key];
+        if (value !== undefined) colors[key] = resolveTokenLight(value);
+      }
       if (config.colors.positive) colors.positive = resolveTokenLight(config.colors.positive);
       if (config.colors.negative) colors.negative = resolveTokenLight(config.colors.negative);
     }
@@ -98,6 +108,9 @@ function themeConfigToPartial(config: ThemeConfig, base: ThemeBase): Partial<The
     if (config.spacing.xAxisHeight !== undefined) spacing.xAxisHeight = config.spacing.xAxisHeight;
     if (config.spacing.xAxisLabelPadding !== undefined)
       spacing.xAxisLabelPadding = config.spacing.xAxisLabelPadding;
+    for (const key of ['endpointEntryGap', 'endpointValueGap', 'endpointColumnGap'] as const) {
+      if (config.spacing[key] !== undefined) spacing[key] = config.spacing[key];
+    }
     partial.spacing = spacing as ThemeBase['spacing'];
   }
 
@@ -159,6 +172,7 @@ function collectTokenPairs(
       'background',
       'text',
       'gridline',
+      'gridlineZero',
       'hairline',
       'axis',
       'annotationFill',
@@ -170,6 +184,10 @@ function collectTokenPairs(
       'annotationRangeFill',
       'annotationMarkerFill',
       'annotationPlate',
+      'mapNoDataFill',
+      'mapNoDataHatch',
+      'mapInteriorBorder',
+      'mapOutlineBorder',
       'positive',
       'negative',
     ] as const;

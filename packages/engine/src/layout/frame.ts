@@ -1,3 +1,4 @@
+import type { AxisTitleHeader } from './axis-title-plan';
 /**
  * Figure frame: the single owner of where the plot sits inside the figure.
  *
@@ -27,6 +28,7 @@ import {
   TOP_PAD_EXTRA_NARROW,
 } from '@opendata-ai/openchart-core';
 import type { ReferenceReserve } from '../annotations/reference-layout';
+import type { BarLabelPlan } from '../charts/bar/label-plan';
 import type { InternalCompileOptions } from '../compile/internal-options';
 import type { NormalizedChartSpec } from '../compiler/types';
 import { isEndsBoth, predictEndpointLabelsWidth } from '../endpoint-labels/predict';
@@ -57,9 +59,22 @@ import {
   type VerticalBands,
 } from './stack';
 
+/** Established usable Cartesian width, shared by planning and budget degradation. */
+export const MIN_CHART_WIDTH = 60;
+
+export function hasUsablePlotWidth(
+  width: number,
+  margins: { left: number; right: number },
+  inlineInset = 0,
+): boolean {
+  return width - margins.left - margins.right - inlineInset >= MIN_CHART_WIDTH;
+}
+
 /** Authored reserves the frame places: the note band and the outside reference lanes. */
 export interface BudgetReserves {
   noteBand: number;
+  /** Measured summary reserve activated only when endpoints yield to identification fallback. */
+  endpointSummaryBand?: number;
   reference: ReferenceReserve;
   /** Rule positions for packing the top lane; without it each label gets its own row. */
   referenceX?: ReferenceXResolver;
@@ -76,6 +91,9 @@ export interface FrameContext {
 
 /** What the plan measures and the frame places. */
 export interface FrameMeasures {
+  /** Authored value-label reserve, chosen before scale placement. */
+  valueLabelPlan?: BarLabelPlan;
+  axisTitleHeader?: AxisTitleHeader;
   legendContent: LegendContent;
   sizeLegendContent?: SizeLegendContent | null;
   leftGutter: number;
@@ -158,16 +176,18 @@ export function frameMargins(
   });
   // The policy accounts for compact demotion and explicit author opt-ins.
   if (sup.showEndpointLabels) {
-    const endpointWidth = predictEndpointLabelsWidth(spec, theme);
+    const endpointWidth = predictEndpointLabelsWidth(spec, theme, options.measureText);
     if (endpointWidth > 0) {
-      // 16px gap between chart area edge and the column.
-      right = Math.max(right, hPad) + endpointWidth + 16;
+      // The theme gap is reserved for each enabled endpoint column.
+      right = Math.max(right, hPad) + endpointWidth + theme.spacing.endpointColumnGap;
       // Both-ends mode: mirror the column on the left for first-value labels.
-      if (isEndsBoth(spec)) left = Math.max(left, hPad) + endpointWidth + 16;
+      if (isEndsBoth(spec))
+        left = Math.max(left, hPad) + endpointWidth + theme.spacing.endpointColumnGap;
     }
   }
 
-  left = Math.max(left, measures.leftGutter);
+  left = Math.max(left, measures.leftGutter) + (measures.valueLabelPlan?.reserveLeft ?? 0);
+  right += measures.valueLabelPlan?.reserveRight ?? 0;
 
   // Reserve space for a secondary (right) y-axis in dual-axis charts.
   // Use Math.max (not +=) to mirror the left-margin pattern: the reserve
@@ -237,7 +257,10 @@ export function createFrame(
   const spacing = frameSpacing(ctx);
   const { padding, hPad, axisMargin, topPad, isRadial, chromeMode, chromeLayout } = spacing;
   const reference = frameReference(ctx, spacing);
-  const noteBand = ctx.reserves.noteBand;
+  const noteBand = Math.max(
+    ctx.reserves.noteBand,
+    measures.endpointLabelsDemoted ? (ctx.reserves.endpointSummaryBand ?? 0) : 0,
+  );
 
   // Bands outside the budget grow the figure instead of shrinking the plot.
   // effectiveHeight is the height the plot-area math derives from; the band
@@ -286,10 +309,16 @@ export function createFrame(
       metrics: header.metrics,
       search: header.search,
       topLegendBand,
-      axisGap: hasTopLegend ? inlineTickOverhang : topAxisGap,
+      axisGap:
+        (hasTopLegend ? inlineTickOverhang : topAxisGap) +
+        (measures.valueLabelPlan?.reserveTop ?? 0) +
+        (measures.axisTitleHeader?.height ?? 0),
       // Additive: the note list stacks above the source/byline/footer row that
       // bottomHeight already covers, rather than replacing it.
-      bottom: bottomMargin(block.bottomHeight, padding, measures.xAxisExtent) + noteBand,
+      bottom:
+        bottomMargin(block.bottomHeight, padding, measures.xAxisExtent) +
+        noteBand +
+        (measures.valueLabelPlan?.reserveBottom ?? 0),
     };
   };
 

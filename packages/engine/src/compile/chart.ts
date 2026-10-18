@@ -33,6 +33,8 @@ import { annotationNoteLineCount, wrapAnnotationNotes } from '../annotations/not
 import { resolvePosition } from '../annotations/position';
 import { admitReferenceRows } from '../annotations/reference-layout';
 import { thinAnnotations } from '../annotations/thinning';
+import type { BarLabelPlan } from '../charts/bar/label-plan';
+import { emitValueLabelDiagnostic, offsetValueLabelAxes } from '../charts/bar/label-plan';
 import {
   assignAnimationIndices,
   isBinnedBarEncoding,
@@ -44,7 +46,6 @@ import { resolveMarkRenderMode } from '../compiler/mark-render-mode';
 import type { NormalizedChartSpec } from '../compiler/types';
 import { diagnoseChart, noteCapacityDiagnostic } from '../design/diagnostics';
 import { computeEndpointLabels } from '../endpoint-labels/compute';
-import { ENDPOINT_COLUMN_GAP } from '../endpoint-labels/constants';
 import { computeAxes } from '../layout/axes';
 import {
   annotationMeasureFn,
@@ -57,6 +58,7 @@ import {
   seriesSummaryLineCount,
 } from '../layout/budget';
 import { computeDimensions } from '../layout/dimensions';
+import { MIN_CHART_WIDTH } from '../layout/frame';
 import { computeGridlines } from '../layout/gridlines';
 import { createMeasureFn, endpointLabelsDemotedAt, resolveLayoutPlan } from '../layout/plan';
 import { computeScales, type ResolvedScales } from '../layout/scales';
@@ -222,8 +224,14 @@ function layoutSingleChart(input: SingleChartInput): ChartLayout {
   // last values, never on plot geometry, so it is measured before the plot is
   // sized and joins the note reserve.
   const wantsSummary = !!responsiveConfig?.labelSummary;
+  let endpointSummaryBand = 0;
   if (wantsSummary && !options.frozenBudget) {
-    const endpointLabelsDemoted = endpointLabelsDemotedAt(chartSpec, theme, options.width);
+    const endpointLabelsDemoted = endpointLabelsDemotedAt(
+      chartSpec,
+      theme,
+      options.width,
+      options.measureText,
+    );
     const summaryLines = seriesSummaryLineCount(
       previewSeriesSummary(chartSpec, renderSpec, strategy, theme, options, {
         endpointLabelsDemoted,
@@ -231,10 +239,23 @@ function layoutSingleChart(input: SingleChartInput): ChartLayout {
     );
     if (summaryLines > 0)
       noteReserve = Math.max(noteReserve, noteBandHeight(noteCapacity, summaryLines, theme));
+    // Complete fallback strings are known now. The frame activates this reserve
+    // only if its measured endpoint fit chooses fallback; no late re-budget.
+    const fallbackLines = seriesSummaryLineCount(
+      previewSeriesSummary(chartSpec, renderSpec, strategy, theme, options, {
+        endpointLabelsDemoted: true,
+      }),
+    );
+    if (fallbackLines > 0) endpointSummaryBand = noteBandHeight(noteCapacity, fallbackLines, theme);
   }
 
   // The plan and the budget build the same figure frame from these reserves.
-  const budgetReserves = { noteBand: noteReserve, reference: reserves.reference, referenceX };
+  const budgetReserves = {
+    noteBand: noteReserve,
+    endpointSummaryBand,
+    reference: reserves.reference,
+    referenceX,
+  };
   const plan = resolveLayoutPlan(
     chartSpec,
     renderSpec,
@@ -245,6 +266,8 @@ function layoutSingleChart(input: SingleChartInput): ChartLayout {
     measure,
     budgetReserves,
   );
+
+  if (plan.endpointLabelsDemoted) noteReserve = Math.max(noteReserve, endpointSummaryBand);
 
   // Compute dimensions (accounts for chrome + legend + responsive strategy).
   // The plan provides measured leftGutter, xAxisExtent, and chrome so
@@ -338,6 +361,7 @@ function layoutSingleChart(input: SingleChartInput): ChartLayout {
     ? { x: undefined, y: undefined }
     : computeAxes(scales, chartArea, strategy, theme, options.measureText, {
         data: renderSpec.data,
+        axisTitleHeader: plan.axisTitleHeader,
         preserveEnd: responsiveConfig ? responsiveConfig.preserveEnd : false,
         encoding: renderSpec.encoding as Encoding,
         skipX,
@@ -353,9 +377,13 @@ function layoutSingleChart(input: SingleChartInput): ChartLayout {
           !dims.chromeStripped && plan.yTickValues.length > 0 ? plan.yTickValues : undefined,
       });
 
+  offsetValueLabelAxes(axes, plan.valueLabelPlan);
+  emitValueLabelDiagnostic(plan.valueLabelPlan, options);
+
   // Intentional post-hoc mutation: axes must resolve before we know the x-axis extent.
   const xAxisExtent = axes.x?.extent ?? 0;
-  dims.chrome.bottomAnchorY = chartArea.y + chartArea.height + xAxisExtent;
+  dims.chrome.bottomAnchorY =
+    chartArea.y + chartArea.height + xAxisExtent + (plan.valueLabelPlan?.reserveBottom ?? 0);
 
   // INVARIANT 2 — computeGridlines mutates `axes` in place. Downstream consumers read
   // axes.y.gridlines off the same object. Do not introduce a copy-on-write.
@@ -371,6 +399,7 @@ function layoutSingleChart(input: SingleChartInput): ChartLayout {
     strategy,
     theme,
     options,
+    plan.valueLabelPlan,
   );
 
   // Resolve "you draw it" geometry (pixel fromX, x-sample positions, target
@@ -391,7 +420,27 @@ function layoutSingleChart(input: SingleChartInput): ChartLayout {
     chartArea,
     strategy,
     plan.endpointLabelsDemoted,
+    options.measureText,
+    scales.x?.type,
   );
+  // Inline ticks occupy scale space inside the chart rect. The public geometry
+  // diagnostic cannot infer that private inset from the outer rect alone.
+  if (
+    endpointLabels.entries.length > 0 &&
+    chartArea.width >= MIN_CHART_WIDTH &&
+    chartArea.width - plan.inlineYLabelInset < MIN_CHART_WIDTH
+  ) {
+    options.onDiagnostic?.({
+      code: 'endpoint-labels.constrained',
+      path: '/endpointLabels',
+      severity: 'warning',
+      status: 'failed',
+      origin: chartSpec.endpointLabels !== undefined ? 'author' : 'default',
+      viewport: { width: options.width, height: options.height },
+      message:
+        'Endpoint columns and inline ticks leave less than the minimum usable plot width. Increase the figure width, shorten endpoint text, disable one endpoint column, or enable an identification fallback.',
+    });
+  }
 
   // Place legend in its final position relative to the computed chart area.
   // effectiveAxisGap lifts a top legend above the inline-tick overhang zone
@@ -402,7 +451,10 @@ function layoutSingleChart(input: SingleChartInput): ChartLayout {
     // endpoint column instead of drawing both at the plot's right edge.
     (plan.legendContent.position === 'right' || plan.legendContent.position === 'bottom-right') &&
       endpointLabels.entries.length > 0
-      ? { ...chartArea, width: chartArea.width + ENDPOINT_COLUMN_GAP + endpointLabels.bounds.width }
+      ? {
+          ...chartArea,
+          width: chartArea.width + theme.spacing.endpointColumnGap + endpointLabels.bounds.width,
+        }
       : chartArea,
     options.width,
     theme,
@@ -495,7 +547,16 @@ function layoutSingleChart(input: SingleChartInput): ChartLayout {
   const seriesSummary =
     wantsSummary && endpointLabels.entries.length === 0
       ? buildSeriesSummary(
-          computeEndpointLabels(chartSpec, marks, theme, chartArea, undefined, false).entries,
+          computeEndpointLabels(
+            chartSpec,
+            marks,
+            theme,
+            chartArea,
+            undefined,
+            false,
+            options.measureText,
+            scales.x?.type,
+          ).entries,
           options.width,
           theme,
           options.measureText,
@@ -580,6 +641,7 @@ function computeChartMarks(
   strategy: LayoutStrategy,
   theme: ResolvedTheme,
   options: InternalCompileOptions,
+  valueLabelPlan?: BarLabelPlan,
 ): { marks: Mark[]; markRenderMode: ReturnType<typeof resolveMarkRenderMode> } {
   // Get chart renderer and compute marks (using filtered data).
   const rendererKey = resolveRendererKey(
@@ -589,7 +651,16 @@ function computeChartMarks(
   );
   const renderer = getChartRenderer(rendererKey);
   const marks: Mark[] = renderer
-    ? renderer(renderSpec, scales, chartArea, strategy, theme, options.width)
+    ? renderer(
+        renderSpec,
+        scales,
+        chartArea,
+        strategy,
+        theme,
+        options.width,
+        valueLabelPlan,
+        options.measureText,
+      )
     : [];
 
   // Opt-in per-series fill patterns (mark.fillPattern: 'auto'). Mutates

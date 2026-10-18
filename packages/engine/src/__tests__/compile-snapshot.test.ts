@@ -1,10 +1,10 @@
 /**
- * Integration snapshot test: the backstop for Step 7 refactor.
+ * Integration snapshots for the complete compiled chart contract.
  *
  * Compiles three representative ChartSpecs that exercise the extracted paths
  * (legend-heavy, clipped-domain, watermark + gradient) and snapshots the full
- * ChartLayout. Pre-refactor snapshots are captured before helper extraction;
- * post-refactor snapshots must match exactly without --update-snapshots.
+ * ChartLayout. These began as the Step 7 extraction oracle; subsequent intended
+ * contract changes are reviewed alongside focused semantic and visual tests.
  *
  * Non-serializable fields (Map, Function) are normalized into plain structures
  * so the snapshot can round-trip through the default serializer.

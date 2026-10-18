@@ -15,6 +15,7 @@ import type {
 import { getBreakpoint, resolveChromeEconomy } from '@opendata-ai/openchart-core';
 import { compile as compileSpec } from '../compiler/index';
 import type { NormalizedChartSpec } from '../compiler/types';
+import { validatePreparedLabelPlacement } from '../compiler/validation/label-placement';
 import { runTransforms } from '../transforms';
 import {
   applyBreakpointOverride,
@@ -145,6 +146,11 @@ export function prepareChartSpec(
   }
 
   chartSpec = applySparklineLabelDefault(chartSpec);
+  const placementErrors = validatePreparedLabelPlacement(chartSpec);
+  if (placementErrors.length)
+    throw new Error(
+      `Invalid spec:\n${placementErrors.map((error) => `${error.path}: ${error.message}`).join('\n')}`,
+    );
   const resolvedAnimation = resolveChartAnimation(rawSpec, bp, chartSpec);
   const crosshair = resolveCrosshair(rawSpec, bp, chartSpec);
 

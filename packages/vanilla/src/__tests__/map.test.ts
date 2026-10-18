@@ -85,6 +85,27 @@ describe('createGeoMap', () => {
     document.body.innerHTML = '';
   });
 
+  it('clips a focused side composition to its measured map viewport with unique IDs', () => {
+    const firstHost = createContainer(1024, 400);
+    const secondHost = createContainer(1024, 400);
+    const spec = {
+      ...basicMapSpec,
+      geo: { ...basicMapSpec.geo, focus: '48' },
+      legend: { position: 'right' as const },
+    };
+    const first = createGeoMap(firstHost, spec, { autoResize: false });
+    const second = createGeoMap(secondHost, spec, { autoResize: false });
+    const clip = firstHost.querySelector('clipPath')!;
+    expect(clip).not.toBeNull();
+    expect(firstHost.querySelector('.oc-map-group')!.getAttribute('clip-path')).toBe(
+      `url(#${clip.id})`,
+    );
+    expect(clip.id).not.toBe(secondHost.querySelector('clipPath')!.id);
+    expect(Number(clip.querySelector('rect')!.getAttribute('width'))).toBe(first.layout.area.width);
+    first.destroy();
+    second.destroy();
+  });
+
   it('mounts an SVG with path elements', () => {
     const instance = createGeoMap(container, basicMapSpec, { autoResize: false });
 

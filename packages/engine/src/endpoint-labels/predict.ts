@@ -12,22 +12,21 @@
  * weight, max width) so the predicted width matches the eventual layout.
  */
 
-import type { ResolvedTheme } from '@opendata-ai/openchart-core';
-import { estimateTextWidth, wrapText } from '@opendata-ai/openchart-core';
-
+import type { MeasureTextFn, ResolvedTheme } from '@opendata-ai/openchart-core';
+import { estimateTextWidth, formatDate, wrapText } from '@opendata-ai/openchart-core';
 import type { NormalizedChartSpec } from '../compiler/types';
-import { resolveFieldFormatter } from '../format/field-format';
+import { type ResolvedScaleType, resolveTemporalScaleType } from '../layout/scales';
 import { endpointLabelsExplicitlyOn, seriesField } from '../legend/suppression';
 import {
   ENDPOINT_GAP,
-  ENDPOINT_LABEL_FONT_SIZE,
   ENDPOINT_LABEL_FONT_WEIGHT,
   ENDPOINT_SWATCH_SIZE,
-  ENDPOINT_VALUE_FONT_SIZE,
   ENDPOINT_VALUE_FONT_WEIGHT,
   ENDPOINT_WRAP_WIDTH_DEFAULT,
 } from './constants';
 import { composeEndpointText, formatEndpointValue, resolveEndpointContent } from './format';
+import { endpointFormatter } from './formatter';
+import { endpointSourceRows } from './source';
 
 /**
  * Predict the pixel width the endpoint-labels column will need, including
@@ -39,9 +38,14 @@ import { composeEndpointText, formatEndpointValue, resolveEndpointContent } from
  */
 export function predictEndpointLabelsWidth(
   spec: NormalizedChartSpec,
-  _theme: ResolvedTheme,
+  theme: ResolvedTheme,
+  measureText?: MeasureTextFn,
+  xScaleType?: ResolvedScaleType,
 ): number {
   if (spec.endpointLabels === false) return 0;
+  if (xScaleType === undefined && spec.encoding.x?.type === 'temporal')
+    xScaleType =
+      spec.encoding.x.scale?.type ?? resolveTemporalScaleType(spec.encoding.x, spec.data);
   if (spec.markType !== 'line' && spec.markType !== 'area') return 0;
   // Distinct series count (color, or strokeDash on a color-less line).
   const field = seriesField(spec);
@@ -66,47 +70,69 @@ export function predictEndpointLabelsWidth(
   const config = typeof spec.endpointLabels === 'object' ? spec.endpointLabels : undefined;
   const wrapWidth = config?.width ?? ENDPOINT_WRAP_WIDTH_DEFAULT;
 
-  // Estimate the formatted value from the spec's data + format. We don't know
-  // which row is "last" without computing scales/marks, so we sample the
-  // largest absolute value to bound the formatted width.
-  const yField = config?.valueField ?? spec.encoding.y?.field;
-  const surfaceFormat =
-    config?.format ??
-    ((spec.encoding.y?.axis as Record<string, unknown> | undefined)?.format as string | undefined);
-  let sample = '';
-  if (yField) {
-    const values = spec.data.map((r) => r[yField]);
-    let maxAbs = 0;
-    for (const v of values) {
-      const n = Number(v);
-      if (Number.isFinite(n) && Math.abs(n) > maxAbs) maxAbs = Math.abs(n);
-    }
-    const formatter = resolveFieldFormatter({
-      surfaceFormat,
-      channelFormat: spec.encoding.y?.format,
-      values,
-    });
-    sample = formatEndpointValue(maxAbs, formatter);
-  }
+  const valueField = config?.valueField ?? spec.encoding.y?.field;
+  const groups = endpointSourceRows(spec);
+  const sideRows = (side: 'leading' | 'trailing') =>
+    Array.from(groups, ([name, rows]) => ({
+      name,
+      row: rows[side === 'leading' ? 0 : rows.length - 1],
+    }));
+  const displayed = sideRows('trailing');
+  if (config?.ends === 'both') displayed.push(...sideRows('leading'));
+  const formatter = endpointFormatter(
+    spec,
+    displayed.map(({ row }) => row[valueField ?? '']),
+  );
+  const measure = (text: string, size: number, weight?: number) =>
+    measureText?.(text, size, weight).width ?? estimateTextWidth(text, size, weight);
 
-  // Text-column width for one side, using the same composition + wrapping
-  // math as compute.ts. Default (no content mode): widest wrapped series name
-  // vs. the sampled value on its own second line. Content mode: the composed
-  // single-line text in the label font.
   const sideTextWidth = (side: 'leading' | 'trailing'): number => {
     const content = resolveEndpointContent(config?.content, side);
+    const rows = sideRows(side);
+    const xField = spec.encoding.x?.field ?? '';
+    const qualify =
+      config?.placement === 'interior' ||
+      new Set(rows.map(({ row }) => String(row[xField]))).size > 1;
     let maxWidth = 0;
-    for (const name of seriesNames) {
-      const text = content ? composeEndpointText(content, name, sample) : name;
-      const lines = wrapText(text, ENDPOINT_LABEL_FONT_SIZE, ENDPOINT_LABEL_FONT_WEIGHT, wrapWidth);
-      for (const line of lines) {
-        const w = estimateTextWidth(line, ENDPOINT_LABEL_FONT_SIZE, ENDPOINT_LABEL_FONT_WEIGHT);
-        if (w > maxWidth) maxWidth = w;
+    for (const { name, row } of rows) {
+      const raw = row[valueField ?? ''];
+      const formatted = formatEndpointValue(
+        typeof raw === 'number' || typeof raw === 'string' ? raw : null,
+        formatter,
+      );
+      const text = content ? composeEndpointText(content, name, formatted) : name;
+      for (const line of wrapText(
+        text,
+        theme.fonts.sizes.endpointLabel,
+        ENDPOINT_LABEL_FONT_WEIGHT,
+        wrapWidth,
+        measureText,
+      )) {
+        maxWidth = Math.max(
+          maxWidth,
+          measure(line, theme.fonts.sizes.endpointLabel, ENDPOINT_LABEL_FONT_WEIGHT),
+        );
       }
-    }
-    if (!content && sample) {
-      const w = estimateTextWidth(sample, ENDPOINT_VALUE_FONT_SIZE, ENDPOINT_VALUE_FONT_WEIGHT);
-      if (w > maxWidth) maxWidth = w;
+      if (!content)
+        maxWidth = Math.max(
+          maxWidth,
+          measure(formatted, theme.fonts.sizes.endpointValue, ENDPOINT_VALUE_FONT_WEIGHT),
+        );
+      if (qualify && (spec.encoding.x?.type !== 'temporal' || xScaleType)) {
+        const date =
+          spec.encoding.x?.type === 'temporal'
+            ? formatDate(
+                row[xField] as Date | string | number,
+                undefined,
+                undefined,
+                xScaleType === 'utc',
+              )
+            : String(row[xField]);
+        maxWidth = Math.max(
+          maxWidth,
+          measure(date, theme.fonts.sizes.endpointValue, ENDPOINT_VALUE_FONT_WEIGHT),
+        );
+      }
     }
     return maxWidth;
   };
@@ -120,7 +146,7 @@ export function predictEndpointLabelsWidth(
   }
 
   // Column = swatch + gap + text column + small trailing pad.
-  return ENDPOINT_SWATCH_SIZE + ENDPOINT_GAP + textColumn + 4;
+  return Math.max(ENDPOINT_SWATCH_SIZE + ENDPOINT_GAP + textColumn + 4, 32);
 }
 
 /**

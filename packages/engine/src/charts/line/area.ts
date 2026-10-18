@@ -20,18 +20,10 @@ import type {
 } from '@opendata-ai/openchart-core';
 import { getRepresentativeColor, isGradientDef } from '@opendata-ai/openchart-core';
 import type { ScaleLinear } from 'd3-scale';
-import {
-  area,
-  line,
-  stack,
-  stackOffsetExpand,
-  stackOffsetNone,
-  stackOffsetSilhouette,
-  stackOrderNone,
-} from 'd3-shape';
+import { area, line } from 'd3-shape';
 import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
-import { finiteNumber } from '../../data/finite-number';
+import { computeAreaStack } from '../../data/area-stack';
 import type { ResolvedScales } from '../../layout/scales';
 import { getColor, resolveSeriesStroke, scaleValue, sortByField } from '../utils';
 import { LINE_STROKE_WIDTH } from './compute';
@@ -284,77 +276,16 @@ function computeStackedArea(
     return computeSingleArea(spec, scales, chartArea, theme);
   }
 
-  // Sort data by x field so stacked areas render left-to-right.
-  // For nominal/ordinal axes, preserve data order.
-  const sortedData =
-    xChannel.type === 'nominal' || xChannel.type === 'ordinal'
-      ? spec.data
-      : sortByField(spec.data, xChannel.field);
-
-  // Collect unique series keys and x values, and build a lookup from
-  // (x-value, series-key) -> original data row so stacked area marks
-  // get original rows instead of pivot rows.
-  const seriesKeys = new Set<string>();
-  const xValueSet = new Set<string>();
-  const rowsByXSeries = new Map<string, DataRow>();
-  const rowsByX = new Map<string, DataRow[]>();
-
-  for (const row of sortedData) {
-    const xStr = String(row[xChannel.field]);
-    const series = String(row[colorField]);
-    seriesKeys.add(series);
-    xValueSet.add(xStr);
-    rowsByXSeries.set(`${xStr}::${series}`, row);
-
-    const existing = rowsByX.get(xStr);
-    if (existing) {
-      existing.push(row);
-    } else {
-      rowsByX.set(xStr, [row]);
-    }
-  }
-
-  const keys = Array.from(seriesKeys);
-  const xValues = Array.from(xValueSet);
-
-  // An explicitly missing observation makes the cumulative boundary unknown.
-  // Keep a shared gap at that x rather than inventing a zero-width segment.
-  const missingBoundaries = new Set<string>();
-  // Build a pivot table: one row per x value, one column per series
-  const pivotData: Record<string, unknown>[] = xValues.map((xVal) => {
-    const pivot: Record<string, unknown> = { __x__: xVal };
-    for (const key of keys) {
-      pivot[key] = 0;
-    }
-    // Fill in actual values from pre-grouped data
-    const xRows = rowsByX.get(xVal);
-    if (xRows) {
-      for (const row of xRows) {
-        const series = String(row[colorField]);
-        const value = finiteNumber(row[yChannel.field]);
-        if (value === undefined) missingBoundaries.add(xVal);
-        pivot[series] = value ?? 0;
-      }
-    }
-    return pivot;
-  });
-
-  // Resolve stack offset from the y channel's stack property
   const stackProp = yChannel.stack;
-  const offsetFn =
-    stackProp === 'normalize'
-      ? stackOffsetExpand
-      : stackProp === 'center'
-        ? stackOffsetSilhouette
-        : stackOffsetNone;
-
-  // Use d3 stack to compute the stacked layout
-  const stackGenerator = stack<Record<string, unknown>>()
-    .keys(keys)
-    .order(stackOrderNone)
-    .offset(offsetFn);
-
-  const stackedData = stackGenerator(pivotData);
+  const { stackedData, rowsByXSeries, missingBoundaries } = computeAreaStack(
+    spec.data,
+    xChannel.field,
+    yChannel.field,
+    colorField,
+    xChannel.type,
+    yChannel.stack,
+    spec.areaStackCache,
+  );
   const yScale = scales.y.scale as ScaleLinear<number, number>;
   const marks: AreaMark[] = [];
 
@@ -368,6 +299,8 @@ function computeStackedArea(
       yBottom: number;
       xKey: string;
       datum: DataRow;
+      observed: boolean;
+      segment: number;
     }[] = [];
     const segments: (typeof validPoints)[] = [[]];
 
@@ -388,7 +321,15 @@ function computeStackedArea(
       }
 
       const datum = rowsByXSeries.get(`${xKey}::${seriesKey}`) ?? d.data;
-      const point = { x: xVal, yTop, yBottom, xKey, datum };
+      const point = {
+        x: xVal,
+        yTop,
+        yBottom,
+        xKey,
+        datum,
+        observed: rowsByXSeries.has(`${xKey}::${seriesKey}`),
+        segment: segments.length - 1,
+      };
       validPoints.push(point);
       segments[segments.length - 1].push(point);
     }
@@ -454,7 +395,14 @@ function computeStackedArea(
       stacked: true,
       stackNormalized: stackProp === 'normalize',
       data: validPoints.map((point) => point.datum),
-      dataPoints: validPoints.map((point) => ({ x: point.x, y: point.yTop, datum: point.datum })),
+      dataPoints: validPoints.map((point) => ({
+        x: point.x,
+        y: point.yTop,
+        yBottom: point.yBottom,
+        datum: point.datum,
+        observed: point.observed,
+        segment: point.segment,
+      })),
       aria,
     });
   }

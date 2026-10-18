@@ -18,6 +18,7 @@ import { FOCUS_DIM_OPACITY } from './map-camera';
 import { buildPatternDefs, resolvePatternFill } from './pattern-utils';
 import { renderChromeElement } from './renderers/chrome';
 import { renderLegend } from './renderers/legend';
+import { nextSvgId } from './svg-ids';
 import { resolvedSurface, stampThemeProperties } from './theme-tokens';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -415,6 +416,28 @@ export function renderMapSVG(layout: GeoMapLayout, opts?: { animate?: boolean })
   const mapGroup = createSVGElement('g');
   mapGroup.setAttribute('class', 'oc-map-group');
   mapGroup.setAttribute('transform', `translate(${layout.area.x},${layout.area.y})`);
+  // Side gutters are outside the camera viewport, including authored focus/zoom.
+  const hasSideGutter = [
+    layout.continuousLegend,
+    layout.categoricalLegend,
+    layout.pointContinuousLegend,
+    layout.pointCategoricalLegend,
+    layout.pointSizeLegend,
+  ].some(
+    (legend) =>
+      legend?.position === 'right' ||
+      (legend?.position === 'bottom-right' && legend.bounds.x >= layout.area.x + layout.area.width),
+  );
+  if (hasSideGutter) {
+    const clipId = nextSvgId('oc-map-viewport');
+    const clip = createSVGElement('clipPath');
+    clip.setAttribute('id', clipId);
+    const rect = createSVGElement('rect');
+    setAttrs(rect, { x: 0, y: 0, width: layout.area.width, height: layout.area.height });
+    clip.appendChild(rect);
+    defs.appendChild(clip);
+    mapGroup.setAttribute('clip-path', `url(#${clipId})`);
+  }
 
   // Camera group wraps features + borders only (chrome, legend, watermark stay outside)
   const cameraGroup = createSVGElement('g');

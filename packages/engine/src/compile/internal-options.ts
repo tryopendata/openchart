@@ -1,4 +1,5 @@
-import type { CompileOptions, Rect } from '@opendata-ai/openchart-core';
+import type { CompileOptions, LegendEntry, Rect } from '@opendata-ai/openchart-core';
+import type { NormalizedChartSpec } from '../compiler/types';
 import type { FigureBudget } from '../layout/budget';
 import type { LayoutPlan } from '../layout/plan';
 
@@ -19,6 +20,8 @@ export interface LeafContext {
   budget?: FigureBudget;
   /** The layout plan the budget was resolved from (provisional plot height). */
   plan?: LayoutPlan;
+  /** Eligible entries collected from transformed rows before per-leaf truncation. */
+  categoricalLegend?: { entries: LegendEntry[]; config: NormalizedChartSpec['legend'] };
 }
 
 /**
@@ -32,8 +35,12 @@ export interface InternalCompileOptions extends CompileOptions {
    * charts because the layer layout concatenates marks from several compiles.
    */
   layered?: boolean;
+  /** Complete eligible categorical legend for an independent-layer figure. */
+  categoricalLegend?: { entries: LegendEntry[]; config: NormalizedChartSpec['legend'] };
   /** Right-margin reserve for a dual-axis secondary y-axis. */
   rightAxisReserve?: number;
+  /** Share the measured title band between independent y-axis headers. */
+  axisHeaderWidthFraction?: number;
   /** Use the assembly's plot and note band instead of resolving a budget. */
   frozenBudget?: FrozenBudget;
   /** Receives the leaf's budget for the layer assembly. */

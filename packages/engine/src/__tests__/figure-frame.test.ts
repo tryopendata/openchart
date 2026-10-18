@@ -26,6 +26,53 @@ const lineBase = {
 };
 
 const SPECS: Record<string, Record<string, unknown>> = {
+  'bar value column': {
+    mark: 'bar',
+    data: [
+      { name: 'A long category name', value: -12.34 },
+      { name: 'Other', value: 0 },
+      { name: 'Third', value: 123.45 },
+    ],
+    encoding: {
+      x: { field: 'value', type: 'quantitative' },
+      y: { field: 'name', type: 'nominal' },
+    },
+    labels: { placement: 'column', format: ',.2f', suffix: ' million' },
+  },
+  'outside signed columns': {
+    mark: 'bar',
+    data: [
+      { name: 'Negative', value: -12.34 },
+      { name: 'Zero', value: 0 },
+      { name: 'Positive', value: 123.45 },
+    ],
+    encoding: {
+      x: { field: 'name', type: 'nominal' },
+      y: { field: 'value', type: 'quantitative' },
+    },
+    labels: { placement: 'outside', format: ',.2f', suffix: ' million' },
+  },
+  'value column with axis header': {
+    mark: 'bar',
+    data: [
+      { name: 'Negative', value: -12.34 },
+      { name: 'Zero', value: 0 },
+      { name: 'Positive', value: 123.45 },
+    ],
+    encoding: {
+      x: { field: 'value', type: 'quantitative' },
+      y: {
+        field: 'name',
+        type: 'nominal',
+        axis: {
+          title: 'Department with a deliberately long header',
+          titleAngle: 0,
+          titleAnchor: 'end',
+        },
+      },
+    },
+    labels: { placement: 'column', format: ',.2f' },
+  },
   'endpoint label column': { ...lineBase, endpointLabels: true },
   'right legend column': { ...lineBase, endpointLabels: false, legend: { position: 'right' } },
   'nominal x beside a right legend': {

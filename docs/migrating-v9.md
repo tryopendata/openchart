@@ -39,9 +39,91 @@ const spec = preserved.spec;
 
 The helper is pure and idempotent. Repairs report `path`, `from`, `to`, and `reason`. Explicit authored values, including `false` and `null` opt-outs, remain authoritative. Keep the original document until you have reviewed and saved the result. The helper migrates spec data; it cannot rewrite JavaScript callbacks, TypeScript imports, or host CSS.
 
-The default styling mode writes former annotation weights, subtitle sizes, curve arrows, unlimited wrapping/compact limits, legacy reference anchors, `chromeLayout: 'subtract'`, and v8 theme typography, spacing, and annotation colors. `legacyEditorial` remains available for v8 typography alone; it is not a full document migration.
+The default styling mode writes former annotation weights, subtitle sizes, curve arrows, unlimited wrapping/compact limits, legacy reference anchors, `chromeLayout: 'subtract'`, and v8 theme typography, spacing, and annotation colors. Endpoint controls are materialized at their released v8 values: 13px names, 12px values, 6px entry spacing, 4px name/value spacing and an 18px column gap. `legacyEditorial` remains available for v8 typography alone; it is not a full document migration.
 
 **Keeping v8 styling does not promise pixel-identical v8 layout.** Placement scoring, note numbering, theme composition, rich-text notes, and other v9 layout rules still apply. Review migrated charts at their actual embed sizes. In particular, the legacy series-label rewrite moves labels into the endpoint column and drops manual per-series offsets; each dropped offset appears in `repairs`.
+
+## Value labels, endpoint correctness, and chart craft
+
+Value labels now use the resolved theme font in horizontal bars, vertical columns, lollipop/dot plots and dumbbell ranges. Pie labels already did so. This fixes the former hardcoded system font. Even the default migration cannot preserve that font mismatch independently: there is no value-label-only font-family control. Its theme repair records the limitation when applicable, and repeated migration remains idempotent. To use a system font throughout a chart, author `theme.fonts.family`; this also changes its axes and chrome. Review custom-font charts and exported labels.
+
+Adaptive horizontal bars also check the complete formatted text width before putting a value inside a mark, including at large font sizes. If neither inside nor outside fits, the value stays available in accessible data and tooltips instead of overflowing. Negative column labels now follow the source number even when the formatted value uses a Unicode minus or omits its sign. Endpoint values share precision across the displayed field, measure all formatted values, and honor the host text measurer. Explicit endpoint formatting still wins, followed by the existing channel/axis format. These correctness fixes can change text width and placement in migrated documents. They do not change source observations or units.
+
+Endpoint budgeting now includes both columns, their gaps, date context and the final axis reservations. Automatic endpoints can yield to the existing legend or requested keyed summary to retain a usable plot. Explicit endpoint choices remain authoritative; an impossible fit emits an `onDiagnostic` message at `/endpointLabels`. Rotated y-axis titles also keep their full glyph ascent inside the figure, including with enlarged fonts.
+
+The following chart-craft options are additive. Omitting them keeps the existing placement policy. Broader bar-row/column-rhythm, endpoint, gridline and map appearance retunes remain pending their before/after review; adding controls does not adopt those candidate defaults.
+
+### Bar and column placement
+
+`labels.placement` accepts `'adaptive'`, `'inside'`, `'outside'` or `'column'` on bar marks. Omission uses adaptive placement. Inside labels are hidden when their complete text box cannot fit; their values remain in accessible data and tooltips. Outside labels follow the positive or negative endpoint, with space reserved before scales are computed.
+
+In a short fixed-height figure, outside labels yield to suppression if their reserves would leave less than the usable plot height after axes, chrome, notes and headers. The diagnostic identifies `/labels/placement`; values remain available through tooltips and accessible data.
+
+A value column is for simple horizontal bars with one value per category. It is unsupported on vertical, grouped or stacked bars. It measures the complete formatted values, including affixes, and reserves that width plus 12px. Facets share the measurement and align columns. If it cannot retain a usable plot, the entire chart falls back to outside labels, then suppression if necessary, with an `onDiagnostic` message at `/labels/placement`.
+
+```ts
+{
+  mark: 'bar',
+  data: [{ department: 'Research', budget: 128.4 }, { department: 'Operations', budget: 75.2 }],
+  encoding: {
+    x: { field: 'budget', type: 'quantitative', axis: false },
+    y: { field: 'department', type: 'nominal', axis: { grid: false } },
+  },
+  labels: { placement: 'column', format: '.1f', suffix: 'M' },
+}
+```
+
+Dot/lollipop, range and pie marks reject explicit placement at `/labels/placement`; their existing label configuration remains supported.
+
+### Stacked-area identification
+
+Stacked areas can opt into a band-midpoint endpoint anchor and fit-tested interior series names:
+
+```ts
+endpointLabels: { anchor: 'band', placement: 'interior' }
+```
+
+Omitted placement remains `'end'`; the current anchor default remains `'boundary'` pending the default-design gate. Explicit `'band'` anchors the series' own endpoint value at the middle of its compiled band. It leaves the mark's hover/crosshair points unchanged. Interior labels identify series by name; they do not select a new numerical observation. A series without a fitting interior box retains endpoint identification. Missing and synthetic pivot rows do not become observed zero labels, and endpoints on different dates retain date context.
+
+Layers with independent y-scales fall back from interior names to endpoint names with a diagnostic: one independently scaled band can cover another's accepted text box. This choice happens before the shared columns are measured. Band anchors, value formats and leading/trailing settings remain authored, and band leaders remain visible on the assembled chart.
+
+Independent-layer legends now measure the complete eligible series set before the shared frame is fixed. Authored hiding, row and symbol limits remain in force; previously overflowing wrapped keys can reserve more space.
+
+Stacked-area domains now cover the complete bands, including when stacking is omitted and the existing area default applies. Independent scales no longer pin stacked data to raw row extrema. This corrects clipped bands; it can change axes and geometry in older affected charts. `stack: null` or `false` still requests overlapping areas. Endpoint collision placement also separates labels whose natural anchors lie above the visible domain when the label stack fits.
+
+### Horizontal axis-title headers
+
+Use the existing axis vocabulary to put a y-axis title above its top tick:
+
+```ts
+encoding: {
+  y: {
+    field: 'revenue', type: 'quantitative',
+    axis: { title: 'Revenue per customer ($)', titleAngle: 0, titleAnchor: 'end' },
+  },
+}
+```
+
+Rotated y-axis titles also receive enough left-edge clearance for their SVG alphabetic baseline. Previously, large text could clip past the figure edge. This correctness fix can move a migrated title while keeping its plot, ticks and observations unchanged; migration does not restore that clipping.
+
+The engine measures and reserves the header, including wrapping, before scales and placement. Omission keeps the rotated title. This example documents the header combination; inspect other authored title angles at the actual embed size.
+
+### Map legend positions and theme controls
+
+Point category keys now paint in their resolved legend band. v8 could reserve a top band while painting that key at the bottom; omission now correctly paints at the top. Migration does not preserve that misplaced-key bug. Authoring `legend.position: 'bottom'` requests a real bottom reservation, so it can also change map geometry and is not a pixel-identical substitute. Review maps with categorical point keys after migration.
+
+Maps now honor `legend.position: 'right'` and `'bottom-right'` as a measured side gutter. Both previously type-checked but rendered at the top, so documents already setting them change appearance. A side key that cannot fit falls back to the top with a diagnostic. Top/bottom behavior stays available; `'top-left'` retains its existing point-key overlay meaning, and unsupported map `'inline'` warns and uses a top band. Projection proportions and geographic coverage are preserved.
+
+Endpoint typography and spacing are theme controls with the current, released-v8 numerical values:
+
+```ts
+theme: {
+  fonts: { sizes: { endpointLabel: 13, endpointValue: 12 } },
+  spacing: { endpointEntryGap: 6, endpointValueGap: 4, endpointColumnGap: 18 },
+}
+```
+
+Map authors may set `colors.mapNoDataFill`, `mapNoDataHatch`, `mapInteriorBorder` and `mapOutlineBorder`, including light/dark color pairs. Omission keeps the existing map palette and pattern treatment. Keep no-data patterns distinguishable from valid zero and diverging midpoints. These controls do not introduce an automatic crop, drop regions, reorder points or transform measures.
 
 ## Changed annotation and figure defaults
 

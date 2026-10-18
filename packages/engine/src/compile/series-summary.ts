@@ -32,10 +32,21 @@ export function previewSeriesSummary(
     area,
     strategy,
     plan.endpointLabelsDemoted,
+    options.measureText,
+    scales.x?.type,
   );
   if (endpointLabels.entries.length > 0) return [];
   return buildSeriesSummary(
-    computeEndpointLabels(chartSpec, marks, theme, area, undefined, false).entries,
+    computeEndpointLabels(
+      chartSpec,
+      marks,
+      theme,
+      area,
+      undefined,
+      false,
+      options.measureText,
+      scales.x?.type,
+    ).entries,
     options.width,
     theme,
     options.measureText,

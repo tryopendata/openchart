@@ -172,6 +172,8 @@ export interface AxisTick {
 
 /** A single gridline with computed positions. */
 export interface Gridline {
+  /** Optional resolved semantic stroke, such as an authored zero guide. */
+  color?: string;
   /** Pixel position along the axis. */
   position: number;
   /** Whether this is a major or minor gridline. */
@@ -222,7 +224,9 @@ export interface AxisLayout {
   /** Extent in px beyond the chart-area edge occupied by tick labels + title. Engine-resolved from the final (post-thinning) tick set. */
   extent?: number;
   /** Absolute anchor for the axis title. Replaces renderer-side offset math. */
-  titlePosition?: { x: number; y: number; angle?: number };
+  titlePosition?: { x: number; y: number; angle?: number; textAnchor?: 'start' | 'middle' | 'end' };
+  /** Engine-wrapped title lines, used by a measured header band. */
+  titleLines?: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -360,6 +364,12 @@ export interface AreaMark {
     y: number;
     datum: Record<string, unknown>;
     tooltip?: TooltipContent;
+    /** False for synthetic pivot rows; geometry does not imply an observed zero. */
+    observed?: boolean;
+    /** Lower band boundary in pixels; y remains the upper boundary for interactions. */
+    yBottom?: number;
+    /** Contiguous area segment identity, split by explicit missing observations. */
+    segment?: number;
   }>;
   /** Accessibility attributes. */
   aria: MarkAria;
@@ -1066,6 +1076,12 @@ export type LegendLayout =
 
 /** A single resolved endpoint-label entry, fully positioned. */
 export interface EndpointLabelEntry {
+  /** Actual observation x in pixels; leaders must not imply a shared final date. */
+  dataX?: number;
+  /** Source observation retained without parsing display text. */
+  source?: { datum: Record<string, unknown>; x: unknown; observed: true };
+  /** Resolved date qualification for unequal series endpoints. */
+  date?: string;
   /** Series identifier (matches mark.seriesKey). */
   seriesKey: string;
   /** Pre-wrapped label text lines. */
@@ -1098,6 +1114,16 @@ export interface EndpointLabelEntry {
 
 /** Resolved layout for the endpoint labels column. */
 export interface EndpointLabelsLayout {
+  /** Fit-tested, series-name-only labels in stacked bands. */
+  interior?: Array<{
+    seriesKey: string;
+    text: string;
+    x: number;
+    y: number;
+    color: string;
+    width: number;
+    height: number;
+  }>;
   /** Per-series resolved entries. */
   entries: EndpointLabelEntry[];
   /** Bounding box for the column. */

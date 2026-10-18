@@ -6,6 +6,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Chart and map design
+
+- Add measured bar value placement (`adaptive`, `inside`, `outside`, `column`),
+  including shared value columns in facets and diagnostics when labels cannot fit.
+- Add horizontal y-axis unit headers through `titleAngle: 0` and `titleAnchor: 'end'`.
+- Align endpoint precision across a displayed column, preserve source values and
+  missing observations, and measure formatted labels with the host font metrics.
+- Budget both endpoint columns, gaps and date context against the measured axes;
+  automatic layouts retain a usable plot, while impossible authored fits diagnose.
+- Add optional stacked-area band anchors and fit-tested interior series names.
+- Preserve complete series names and band leaders in independent-scale layers;
+  resolve stacked domains from accumulated bands and separate clipped endpoint anchors.
+- Measure the complete independent-layer legend before placing either axis, so
+  wrapped rows and side keys reserve space for every eligible series.
+- Honor the resolved label font on bars, columns, dots and ranges; determine
+  column label direction from the source number instead of its formatted text.
+- Add useful endpoint typography/spacing and map ink theme controls, preserving
+  existing values when omitted. An optional zero-gridline color paints the same
+  resolved rules in SVG and canvas without changing the scale domain.
+- Keep enlarged bar labels within available space, and keep enlarged rotated
+  axis titles inside the viewport.
+- Place top point-color keys in their reserved band; reserve wrapped category
+  rows accurately and avoid double-counting mixed bottom key heights.
+- Honor right and bottom-right map legends with measured gutters, narrow-layout
+  fallback diagnostics, and camera clipping that keeps geography out of the key.
+- Describe actual map scale intervals in accessible legend text and accept the
+  built-in diverging palettes for quantitative geographic color encodings.
+
 ## [9.0.0] - 2026-10-17
 
 ### Annotation and figure defaults

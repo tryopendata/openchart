@@ -1,5 +1,6 @@
 /** Shared validation helpers: field-type checks, did-you-mean column suggestions, and color scheme name checks. */
 import {
+  DIVERGING_PALETTES,
   jsonPointer,
   resolveSchemeName,
   SEQUENTIAL_PALETTES,
@@ -145,7 +146,10 @@ export function checkSchemeUnused(
 }
 
 /** Palette names the map compile path actually supports (sequential only). */
-export const MAP_PALETTE_NAMES = Object.keys(SEQUENTIAL_PALETTES).join(', ');
+export const MAP_PALETTE_NAMES = Object.keys({
+  ...SEQUENTIAL_PALETTES,
+  ...DIVERGING_PALETTES,
+}).join(', ');
 
 /**
  * Map color channels resolve scale.scheme against SEQUENTIAL_PALETTES with a
@@ -173,12 +177,12 @@ export function checkMapSchemeName(
     return;
   }
 
-  if (!(scale.scheme in SEQUENTIAL_PALETTES)) {
+  if (!(scale.scheme in SEQUENTIAL_PALETTES) && !(scale.scheme in DIVERGING_PALETTES)) {
     errors.push({
       message: `Spec error: ${channelPath.join('.')}.scale.scheme "${scale.scheme}" is not a supported map palette`,
       path: jsonPointer(...channelPath, 'scale', 'scheme'),
       code: 'INVALID_VALUE',
-      suggestion: `Maps support the sequential palettes: ${MAP_PALETTE_NAMES}. The default is "blue".`,
+      suggestion: `Maps support sequential and diverging palettes: ${MAP_PALETTE_NAMES}. The default is "blue".`,
     });
   }
 }

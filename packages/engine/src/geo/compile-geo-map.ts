@@ -51,6 +51,13 @@ import {
 } from '../legend/continuous';
 import { computeSizeLegendContent, sizeLegendTitleStyle } from '../legend/size';
 import { joinDataToFeatures } from './join';
+import {
+  geoMapFullArea,
+  measureGeoContinuousKey,
+  moveGeoMapLegend,
+  planGeoMapFrame,
+} from './layout';
+import { classIntervalText } from './legend-semantics';
 import { createProjection, resolveDefaultProjection } from './projections';
 import type { NormalizedGeoMapSpec } from './types';
 
@@ -277,15 +284,14 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
     spec as { chromeLayout?: 'subtract' | 'grow' } | undefined,
     options,
   );
-  const fullArea = {
-    x: padding,
-    y: padding + chrome.topHeight,
-    width: options.width - padding * 2,
-    height:
-      chromeLayout === 'grow'
-        ? options.height - padding * 2
-        : options.height - chrome.topHeight - chrome.bottomHeight - padding * 2,
-  };
+  const fullArea = geoMapFullArea(
+    options.width,
+    options.height,
+    padding,
+    chrome.topHeight,
+    chrome.bottomHeight,
+    chromeLayout,
+  );
 
   if (fullArea.width <= 0 || fullArea.height <= 0) {
     return emptyLayout(chrome, theme, options, watermark);
@@ -376,6 +382,7 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
     legendBlockHeight = rows * (Math.max(10, labelHeight) + 6);
   }
 
+  const choroplethLegendBlockHeight = legendBlockHeight;
   const pointColor = mapSpec.points?.color;
   const pointColorChannel: EncodingChannel | undefined =
     pointColor?.type === 'quantitative'
@@ -402,6 +409,25 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
         )
       : null;
 
+  const pointCategoryRowHeight = Math.max(
+    CATEGORICAL_ROW_HEIGHT,
+    Math.ceil(theme.fonts.sizes.small * 1.2),
+  );
+  const pointCategoryWidths =
+    pointColor && pointColor.type !== 'quantitative'
+      ? collectCategories(mapSpec.points!.data, pointColor.field, pointColor.scale?.domain).map(
+          (label) =>
+            CATEGORICAL_SWATCH_SIZE +
+            CATEGORICAL_SWATCH_GAP +
+            estimateTextWidth(label, theme.fonts.sizes.small, theme.fonts.weights.normal) +
+            CATEGORICAL_ENTRY_GAP,
+        )
+      : [];
+  const pointCategoryRows = wrapCategoricalEntries(pointCategoryWidths, fullArea.width);
+  const pointCategoryRowCount = pointCategoryRows.length
+    ? pointCategoryRows[pointCategoryRows.length - 1].row + 1
+    : 1;
+
   // Reserve height for point color legend if applicable (overlay legends
   // float inside the map area and reserve nothing)
   if (showLegend && !pointLegendOverlay && mapSpec.points?.color) {
@@ -414,13 +440,137 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
         8;
     } else {
       const ptLabelHeight = Math.ceil(theme.fonts.sizes.small * 1.3);
-      legendBlockHeight += Math.max(10, ptLabelHeight) + 6 + 8; // swatch row + gap
+      legendBlockHeight +=
+        Math.max(10, ptLabelHeight) + 6 + 8 + (pointCategoryRowCount - 1) * pointCategoryRowHeight;
     }
   }
 
-  const legendReserveGap = legendBlockHeight > 0 ? 8 : 0;
-
-  const mapAreaHeight = fullArea.height - legendBlockHeight - legendReserveGap;
+  const requestedSide = mapSpec.legend?.position;
+  const sidePosition =
+    requestedSide === 'right' || requestedSide === 'bottom-right' ? requestedSide : undefined;
+  const sideRowHeight = Math.max(22, Math.ceil(theme.fonts.sizes.small * 1.3) + 6);
+  const categoryHeight = (channel: EncodingChannel | undefined, rows: Record<string, unknown>[]) =>
+    channel && channel.type !== 'quantitative'
+      ? (collectCategories(rows, channel.field, channel.scale?.domain).length + 1) * sideRowHeight
+      : 0;
+  const sizeContent =
+    sidePosition && showLegend && mapSpec.points?.size
+      ? computeSizeLegendContent(mapSpec.points.size, mapSpec.points.data, theme, {
+          curve: SIZE_SCALE_DEFAULTS.mapPoint.curve,
+          range: (mapSpec.points.size.scale?.range as [number, number] | undefined) ?? [
+            ...SIZE_SCALE_DEFAULTS.mapPoint.range,
+          ],
+        })
+      : null;
+  const sideLabelStyle: TextStyle = {
+    fontFamily: theme.fonts.family,
+    fontSize: theme.fonts.sizes.small,
+    fontWeight: theme.fonts.weights.normal,
+    fill: theme.colors.text,
+    lineHeight: 1.3,
+  };
+  const measureSideText =
+    options.measureText ??
+    ((text: string, size: number, weight?: number) => ({
+      width: estimateTextWidth(text, size, weight),
+      height: size,
+    }));
+  // Missingness is known after joining; conservatively reserve its full key now,
+  // just as categorical reservation counts the potential No data entry.
+  const choroplethSideExtent =
+    sidePosition && continuousContent
+      ? measureGeoContinuousKey({
+          content: continuousContent,
+          labelStyle: sideLabelStyle,
+          measureText: measureSideText,
+          title: legendTitle
+            ? { text: legendTitle, weight: theme.fonts.weights.medium }
+            : undefined,
+          noData: { label: 'No data', swatchGap: NO_DATA_SWATCH_GAP, labelGap: NO_DATA_LABEL_GAP },
+        })
+      : undefined;
+  const pointSideExtent =
+    sidePosition && pointContinuousContent
+      ? measureGeoContinuousKey({
+          content: pointContinuousContent,
+          labelStyle: sideLabelStyle,
+          measureText: measureSideText,
+        })
+      : undefined;
+  const sideWidth = sidePosition
+    ? Math.max(
+        320,
+        choroplethSideExtent?.width ?? 0,
+        pointSideExtent?.width ?? 0,
+        sizeContent?.width ?? 0,
+        ...[colorEncoding, pointColor].flatMap((channel) =>
+          channel
+            ? [
+                options.measureText?.(
+                  legendTitleFor(channel) ?? '',
+                  theme.fonts.sizes.small,
+                  theme.fonts.weights.medium,
+                ).width ??
+                  estimateTextWidth(legendTitleFor(channel) ?? '', theme.fonts.sizes.small),
+                ...collectCategories(
+                  channel.type === 'quantitative'
+                    ? []
+                    : channel === colorEncoding
+                      ? mapSpec.data
+                      : mapSpec.points!.data,
+                  channel.field,
+                  channel.scale?.domain,
+                ).map(
+                  (label) =>
+                    CATEGORICAL_SWATCH_SIZE +
+                    CATEGORICAL_SWATCH_GAP +
+                    CATEGORICAL_ENTRY_GAP +
+                    (options.measureText?.(
+                      label,
+                      theme.fonts.sizes.small,
+                      theme.fonts.weights.normal,
+                    ).width ?? estimateTextWidth(label, theme.fonts.sizes.small)),
+                ),
+              ]
+            : [],
+        ),
+      )
+    : 0;
+  const choroplethSideHeight = continuousContent
+    ? (legendTitle ? Math.ceil(theme.fonts.sizes.small * 1.3) : 0) +
+      continuousContent.barHeight +
+      CONTINUOUS_LABEL_GAP +
+      Math.ceil(theme.fonts.sizes.small * 1.3) * (continuousContent.labelRows ?? 1)
+    : categoryHeight(colorEncoding, mapSpec.data);
+  const pointSideHeight =
+    showLegend && pointColor
+      ? pointContinuousContent
+        ? pointContinuousContent.barHeight +
+          CONTINUOUS_LABEL_GAP +
+          Math.ceil(theme.fonts.sizes.small * 1.3) * (pointContinuousContent.labelRows ?? 1)
+        : categoryHeight(pointColor, mapSpec.points!.data)
+      : 0;
+  const sideKeyHeights = [
+    showChoroplethLegend && colorEncoding ? choroplethSideHeight : 0,
+    pointSideHeight,
+    sizeContent?.height ?? 0,
+  ].filter((height) => height > 0);
+  const sideHeight =
+    sideKeyHeights.reduce((sum, height) => sum + height, 0) +
+    Math.max(0, sideKeyHeights.length - 1) * 16;
+  const frame = planGeoMapFrame(
+    fullArea,
+    legendBlockHeight,
+    legendPosition,
+    showLegend ? requestedSide : undefined,
+    sideWidth,
+    sideHeight,
+    { width: options.width, height: options.height },
+  );
+  for (const diagnostic of frame.diagnostics) options.onDiagnostic?.(diagnostic);
+  const sideFrame = frame.sideLegend ? { area: frame.area, legend: frame.sideLegend } : null;
+  const legendReserveGap = frame.legendReserveGap;
+  const mapAreaHeight = frame.area.height;
   if (mapAreaHeight <= 0) {
     return emptyLayout(chrome, theme, options, watermark);
   }
@@ -449,7 +599,7 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
   }
   const projection = createProjection(
     projectionType,
-    fullArea.width,
+    frame.area.width,
     mapAreaHeight,
     geoCollection,
     pointInset,
@@ -511,7 +661,7 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
   };
   // The theme's own neutral ramp, so a warm or cool theme gets a warm or cool
   // "no data" gray instead of an uninvited zinc.
-  const neutralFill = theme.colors.neutral[100];
+  const neutralFill = theme.colors.mapNoDataFill ?? theme.colors.neutral[100];
   // A solid neutral is indistinguishable from the middle class of a diverging
   // ramp (redBlue's center is #f7f7f7), so holes in the join get a diagonal
   // hatch over the same neutral. Only under a color encoding: a basemap-only
@@ -519,7 +669,7 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
   const noDataPattern: ResolvedFillPattern = {
     type: 'diagonal',
     base: neutralFill,
-    line: theme.colors.neutral[300],
+    line: theme.colors.mapNoDataHatch ?? theme.colors.neutral[300],
   };
 
   let featureMarks: GeoMapFeatureMark[];
@@ -576,11 +726,11 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
       const bounds = {
         x: legendX,
         y: legendY,
-        width: continuousContent.barWidth,
-        height: legendBlockHeight,
+        width: sideFrame ? sideWidth : continuousContent.barWidth,
+        height: choroplethLegendBlockHeight,
       };
       const bar = {
-        x: bounds.x,
+        x: bounds.x + (sideFrame ? (choroplethSideExtent?.inset ?? 0) : 0),
         y: bounds.y + titleRowHeight,
         width: continuousContent.barWidth,
         height: continuousContent.barHeight,
@@ -594,14 +744,15 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
       const noDataX = bar.x + bar.width + NO_DATA_SWATCH_GAP;
       // The label is part of the block, so the fit check has to carry it too --
       // a swatch that fits with its text hanging off the frame is not a fit.
-      const noDataLabelWidth = estimateTextWidth(
-        'No data',
-        labelStyle.fontSize,
-        labelStyle.fontWeight,
-      );
+      const noDataLabelWidth = sideFrame
+        ? measureSideText('No data', labelStyle.fontSize, labelStyle.fontWeight).width
+        : estimateTextWidth('No data', labelStyle.fontSize, labelStyle.fontWeight);
+      const noDataRight = noDataX + bar.height + NO_DATA_LABEL_GAP + noDataLabelWidth;
+      const noDataFits = sideFrame
+        ? noDataRight <= bounds.x + sideWidth
+        : noDataRight < fullArea.x + fullArea.width;
       const noData =
-        hasUnmatched &&
-        noDataX + bar.height + NO_DATA_LABEL_GAP + noDataLabelWidth < fullArea.x + fullArea.width
+        hasUnmatched && noDataFits
           ? {
               x: noDataX,
               y: bar.y,
@@ -685,8 +836,10 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
   // Border hierarchy: interior lines are hairline-thin and quiet so they read as
   // divisions inside one shape; the outline is heavier and darker so the country
   // (or state set) reads as a single silhouette against the page.
-  const interiorStroke = isDarkMode ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.25)';
-  const outlineStroke = isDarkMode ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.55)';
+  const interiorStroke =
+    theme.colors.mapInteriorBorder ?? (isDarkMode ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.25)');
+  const outlineStroke =
+    theme.colors.mapOutlineBorder ?? (isDarkMode ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.55)');
   const borders: GeoMapBorders = {
     interiorPath,
     outlinePath,
@@ -854,8 +1007,8 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
         shape: 'circle' as const,
       }));
 
-      // Default: position below the map, offset by choropleth legend height
-      // when that legend is also at the bottom (not 'top'). Overlay
+      // Bottom-band placement is offset by the choropleth key. Top keys
+      // are moved into their measured band after all content is built. Overlay
       // ('top-left'): float inside the map area's top-left corner — the
       // renderer's backdrop keeps it readable over geography, and the inset
       // clears the frame edge (plus the backdrop's own 10px x-padding).
@@ -882,7 +1035,27 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
       pointCategoricalLegend = {
         type: 'categorical',
         position: pointLegendOverlay ? 'top-left' : 'bottom',
-        bounds: { x: legendX, y: legendY, width: legendWidth, height: swatchSize + 6 },
+        bounds: {
+          x: legendX,
+          y: legendY,
+          width: legendWidth,
+          height: pointLegendOverlay
+            ? swatchSize + 6
+            : pointCategoryRowCount * pointCategoryRowHeight,
+        },
+        ...(!pointLegendOverlay
+          ? {
+              rowHeight: pointCategoryRowHeight,
+              entryPositions: pointCategoryRows.map((position, index) => ({
+                x: legendX + position.x,
+                y: legendY + position.row * pointCategoryRowHeight,
+                labelX: legendX + position.x + swatchSize + swatchGap,
+                labelY: legendY + position.row * pointCategoryRowHeight + swatchSize / 2,
+                width: pointCategoryWidths[index],
+                row: position.row,
+              })),
+            }
+          : {}),
         labelStyle,
         entries,
         swatchSize,
@@ -921,11 +1094,11 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
         const bounds = {
           x: legendX,
           y: legendY,
-          width: ptContinuousContent.barWidth,
+          width: sideFrame ? sideWidth : ptContinuousContent.barWidth,
           height: ptLegendHeight,
         };
         const bar = {
-          x: bounds.x,
+          x: bounds.x + (sideFrame ? (pointSideExtent?.inset ?? 0) : 0),
           y: bounds.y,
           width: ptContinuousContent.barWidth,
           height: ptContinuousContent.barHeight,
@@ -1023,6 +1196,18 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
         value: String(mark.data[colorEncoding.field]),
       });
     }
+    const colorValue = colorEncoding ? finiteNumber(mark.data[colorEncoding.field]) : undefined;
+    if (
+      !tooltipChannels &&
+      classScale &&
+      colorValue !== undefined &&
+      classScale.breaks.includes(colorValue)
+    ) {
+      fields.push({
+        label: 'Color range',
+        value: classIntervalText(classScale, classScale.binIndex(colorValue), formatter),
+      });
+    }
     tooltipDescriptors.set(String(mark.id), { fields });
   }
 
@@ -1100,31 +1285,72 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
     keyboardNavigable: featureMarks.length > 0 || pointMarks.length > 0,
   };
 
+  if (showChoroplethLegend && classScale) {
+    a11y.altText += `. Color ranges: ${classScale.colors.map((_, index) => classIntervalText(classScale, index, formatter)).join('; ')}.`;
+  }
+
   // 18. Resolve focus
   const resolvedFocus = resolveFocus(mapSpec.geo.focus, featureMarks, pointMarks, compileWarnings);
 
   // 19. Animation
   const resolvedAnimation: ResolvedAnimation | undefined = resolveAnimation(mapSpec.animation);
 
-  // 20. Compute the map drawing area (offset when legend is at top)
-  const mapAreaY =
-    legendPosition === 'top' && legendBlockHeight > 0
-      ? fullArea.y + legendBlockHeight + legendReserveGap
-      : fullArea.y;
-  const mapArea = {
-    x: fullArea.x,
-    y: mapAreaY,
-    width: fullArea.width,
-    height: mapAreaHeight,
-  };
+  // 20. Map drawing area is owned by the measured geographic frame.
+  const mapArea = frame.area;
+
+  // The top band already includes point-color key height. Paint the key in
+  // that reservation rather than over the lower part of the geography.
+  if (!sideFrame && !pointLegendOverlay && legendPosition === 'top') {
+    const key = pointContinuousLegend ?? pointCategoricalLegend;
+    if (key) moveGeoMapLegend(key, fullArea.x, mapArea.y - key.bounds.height - 8, 'top');
+  }
+
+  if (sideFrame && sidePosition) {
+    let keyY = sideFrame.legend.y;
+    const keys = [
+      continuousLegend,
+      categoricalLegend,
+      pointContinuousLegend,
+      pointCategoricalLegend,
+      pointSizeLegend,
+    ];
+    for (const key of keys) {
+      if (!key) continue;
+      if (key === continuousLegend) key.bounds.height = choroplethSideHeight;
+      if (key === pointContinuousLegend) key.bounds.height = pointSideHeight;
+      if (key.type !== 'continuous' && key.type !== 'size') {
+        const rowHeight = sideRowHeight;
+        key.entryPositions = key.entries.map((_, index) => ({
+          x: key.bounds.x,
+          y: key.bounds.y + index * rowHeight,
+          labelX: key.bounds.x + key.swatchSize + key.swatchGap,
+          labelY: key.bounds.y + index * rowHeight + key.swatchSize / 2,
+          width: sideWidth,
+          row: index,
+        }));
+        if (key.noData) {
+          const noDataY = key.bounds.y + key.entries.length * rowHeight;
+          key.noData = {
+            ...key.noData,
+            x: key.bounds.x,
+            y: noDataY,
+            labelX: key.bounds.x + key.swatchSize + NO_DATA_LABEL_GAP,
+            labelY: noDataY + key.swatchSize / 2,
+          };
+        }
+        key.bounds.height = key === categoricalLegend ? choroplethSideHeight : pointSideHeight;
+        key.bounds.width = sideWidth;
+      }
+      moveGeoMapLegend(key, sideFrame.legend.x, keyY, sidePosition);
+      keyY += key.bounds.height + 16;
+    }
+  }
 
   // 21. Anchor bottom chrome below the map + legend, then compute total height
   chrome.bottomAnchorY = fullArea.y + fullArea.height;
   const contentHeight =
     fullArea.y +
-    mapAreaHeight +
-    legendReserveGap +
-    legendBlockHeight +
+    (sideFrame ? fullArea.height : mapAreaHeight + legendReserveGap + legendBlockHeight) +
     chrome.bottomHeight +
     padding;
 
@@ -1157,7 +1383,7 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
       options.measureText ??
       ((text, fontSize) => ({ width: estimateTextWidth(text, fontSize), height: fontSize })),
     warnings: compileWarnings,
-    mapSize: { width: fullArea.width, height: mapAreaHeight },
+    mapSize: { width: frame.area.width, height: mapAreaHeight },
     focus: resolvedFocus,
   };
 }

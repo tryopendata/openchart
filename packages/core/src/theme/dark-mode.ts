@@ -186,6 +186,7 @@ export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
       background: darkBg,
       text: darkText,
       gridline: darkGridline,
+      gridlineZero: pairs?.['colors.gridlineZero']?.dark ?? theme.colors.gridlineZero,
       axis: darkAxis,
       annotationFill: pairs?.['colors.annotationFill']
         ? pairs['colors.annotationFill'].dark
@@ -208,6 +209,11 @@ export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
         (authoredColors.annotationPlate !== undefined
           ? theme.colors.annotationPlate
           : neutral.surface),
+      mapNoDataFill: pairs?.['colors.mapNoDataFill']?.dark ?? theme.colors.mapNoDataFill,
+      mapNoDataHatch: pairs?.['colors.mapNoDataHatch']?.dark ?? theme.colors.mapNoDataHatch,
+      mapInteriorBorder:
+        pairs?.['colors.mapInteriorBorder']?.dark ?? theme.colors.mapInteriorBorder,
+      mapOutlineBorder: pairs?.['colors.mapOutlineBorder']?.dark ?? theme.colors.mapOutlineBorder,
       categorical,
       categoricalFill,
       hairline: darkHairline,

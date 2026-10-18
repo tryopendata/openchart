@@ -41,6 +41,11 @@
     --oc-legend-text: #d0d6e0;
 
     /* Annotation and neutral colors */
+    --oc-gridline-zero: rgba(255, 255, 255, 0.06);
+    --oc-map-no-data-fill: #171719;
+    --oc-map-no-data-hatch: #3d3e3f;
+    --oc-map-interior-border: rgba(255, 255, 255, 0.22);
+    --oc-map-outline-border: rgba(255, 255, 255, 0.45);
     --oc-annotation-label: #d1d5db;
     --oc-annotation-muted: #9ca3af;
     --oc-annotation-leader: #9aa0a6;

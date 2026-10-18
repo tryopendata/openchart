@@ -95,6 +95,16 @@
     --oc-source-size: 12px;
     --oc-source-weight: 400;
     --oc-body-size: 13px;
+    --oc-gridline-zero: rgba(0, 0, 0, 0.08); /* Omission uses the active theme gridline color */
+    --oc-endpoint-label-size: 13px;
+    --oc-endpoint-value-size: 12px;
+    --oc-endpoint-entry-gap: 6px;
+    --oc-endpoint-value-gap: 4px;
+    --oc-endpoint-column-gap: 18px;
+    --oc-map-no-data-fill: #f0f0f0; /* Engine omission derives neutral[100] from the active theme */
+    --oc-map-no-data-hatch: #c9c9c9; /* Engine omission derives neutral[300] from the active theme */
+    --oc-map-interior-border: rgba(0, 0, 0, 0.25);
+    --oc-map-outline-border: rgba(0, 0, 0, 0.55);
     --oc-annotation-label: #333333;
     --oc-annotation-muted: #6b7280;
     --oc-annotation-leader: #8f8f8f;

@@ -14,6 +14,7 @@ import {
   isParseableDate,
   VALID_FIELD_TYPES,
 } from './helpers';
+import { validateLabelPlacement } from './label-placement';
 import {
   validateCalendarSpec,
   validateCenterLabel,
@@ -26,6 +27,7 @@ import {
 // ---------------------------------------------------------------------------
 
 export function validateChartSpec(spec: Record<string, unknown>, errors: ValidationError[]): void {
+  validateLabelPlacement(spec, errors);
   const markType =
     typeof spec.mark === 'string' ? spec.mark : (spec.mark as Record<string, unknown>)?.type;
 

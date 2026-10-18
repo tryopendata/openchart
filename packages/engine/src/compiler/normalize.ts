@@ -181,6 +181,7 @@ function normalizeLabels(labels?: LabelSpec): NormalizedChartSpec['labels'] {
     suffix: labels.suffix,
     color: labels.color,
     fontSize: labels.fontSize,
+    ...(labels.placement ? { placement: labels.placement } : {}),
   };
 }
 

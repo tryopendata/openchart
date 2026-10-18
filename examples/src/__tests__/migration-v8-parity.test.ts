@@ -9,7 +9,8 @@
  *
  * Gate (RFC section 7 acceptance: "migrated v8 specs keep v8 styling; layout is
  * not promised pixel-identical"):
- * - style must equal v8 exactly (every flattened field, in both directions).
+ * - style equals v8 except the exact additive control metadata and B1 font fixes
+ *   listed below (every other flattened field compares in both directions).
  * - geometry must be identical unless a D14 layout heuristic applies. Of the D14
  *   items, only placement order, connector-crossing scoring, source-order note
  *   numbering and wrapped rich-text notes can move geometry, and all four act on
@@ -46,6 +47,13 @@ import {
   compileTileMap,
 } from '../../../packages/engine/src/compile';
 import { migrateSpecV8 } from '../../../packages/engine/src/migration/v8';
+import {
+  APPROVED_AXIS_TITLE_LAYOUT,
+  APPROVED_ENDPOINT_TOP_SWEEP,
+  APPROVED_MAP_KEY_PLACEMENT,
+  APPROVED_PRE_RFC_LAYOUT,
+  APPROVED_RFC_B1_LAYOUT,
+} from './migration-v8-approved-changes';
 import {
   flatten,
   GEOMETRY_CATEGORIES,
@@ -243,6 +251,49 @@ const CORPUS_STYLE_CHANGES: Array<{ pattern: RegExp; reason: string }> = [
     reason: 'endpoint markers center on the data point with an opaque knockout fill',
   },
 ];
+// These are additive resolved metadata, not a license to change existing style.
+const ENDPOINT_CONTROL_METADATA: Record<string, number> = {
+  'theme.fonts.sizes.endpointLabel': 13,
+  'theme.fonts.sizes.endpointValue': 12,
+  'theme.spacing.endpointEntryGap': 6,
+  'theme.spacing.endpointValueGap': 4,
+  'theme.spacing.endpointColumnGap': 18,
+};
+const VALUE_FONT_PATH = /^marks(?:\.facet\[[^\]]+\])?\.\d+\.label\.style\.fontFamily$/;
+const VALUE_FONT_REASON =
+  'B1: bar/column, dot and range value labels follow the resolved theme font instead of hardcoded system-ui; pie already did so.';
+function sanctionedValueFontChange(diff: StyleDiff, next: Signature | undefined): boolean {
+  if (
+    !next ||
+    !VALUE_FONT_PATH.test(diff.path) ||
+    diff.v8 !== 'system-ui, -apple-system, sans-serif'
+  )
+    return false;
+  const fields = flatten(next.style);
+  const mark = diff.path.slice(0, -'.label.style.fontFamily'.length);
+  return (
+    ['rect', 'point'].includes(String(fields[`${mark}.type`])) &&
+    diff.v9 === fields['theme.fonts.family']
+  );
+}
+const sanctionedEndpointPrecisionChange = (diff: StyleDiff) => {
+  if (
+    !/^endpointLabels\.(entries|leading)\.\d+\.value$/.test(diff.path) ||
+    typeof diff.v8 !== 'string' ||
+    typeof diff.v9 !== 'string'
+  )
+    return false;
+  if (!/^[+−-]?\d+(?:\.\d+)?$/.test(diff.v8) || !/^[+−-]?\d+(?:\.\d+)?$/.test(diff.v9))
+    return false;
+  const trimPrecision = (value: string) =>
+    value.includes('.') ? value.replace(/0+$/, '').replace(/\.$/, '') : value;
+  return trimPrecision(diff.v8) === trimPrecision(diff.v9);
+};
+const additiveEndpointMetadata = (diff: StyleDiff) =>
+  diff.v8 === undefined &&
+  Object.hasOwn(ENDPOINT_CONTROL_METADATA, diff.path) &&
+  diff.v9 === ENDPOINT_CONTROL_METADATA[diff.path];
+
 const underPrefix = (path: string, prefix: string) =>
   path === prefix || path.startsWith(`${prefix}.`);
 
@@ -306,6 +357,21 @@ describe(`v8 migration parity against ${capture.tag}`, () => {
     expect(new Set(capture.entries.map((entry) => entry.name)).size).toBeGreaterThan(200);
   });
 
+  it('adds only released endpoint control values and narrowly scoped B1 value fonts', () => {
+    expect(VALUE_FONT_REASON).toContain('B1');
+    for (const result of results) {
+      if (!result.v9) continue;
+      const fields = flatten(result.v9.style);
+      for (const [path, value] of Object.entries(ENDPOINT_CONTROL_METADATA))
+        expect(fields[path]).toBe(value);
+    }
+    expect(
+      results.some((result) =>
+        result.style.some((diff) => sanctionedValueFontChange(diff, result.v9)),
+      ),
+    ).toBe(true);
+  });
+
   it('allowlist only names text-annotated fixtures that move in every listed category', () => {
     const stale = Object.entries(GEOMETRY_ALLOWLIST).flatMap(([name, { categories }]) => {
       const mine = results.filter((result) => result.name === name);
@@ -322,6 +388,45 @@ describe(`v8 migration parity against ${capture.tag}`, () => {
         .map((category) => `${name}: ${category} never moves`);
     });
     expect(stale).toEqual([]);
+  });
+
+  it('pre-RFC geometry exceptions match every exact approved path value', () => {
+    for (const [key, approval] of [
+      ...Object.entries(APPROVED_PRE_RFC_LAYOUT),
+      ...Object.entries(APPROVED_RFC_B1_LAYOUT),
+      ...Object.entries(APPROVED_MAP_KEY_PLACEMENT),
+      ...Object.entries(APPROVED_AXIS_TITLE_LAYOUT),
+      ...Object.entries(APPROVED_ENDPOINT_TOP_SWEEP),
+    ]) {
+      const result = results.find((result) => `${result.name} @${result.width}` === key)!;
+      expect(result, key).toBeDefined();
+      expect(approval.reason.length).toBeGreaterThan(20);
+      for (const [category, paths] of Object.entries(approval.changes)) {
+        for (const [path, [before, after]] of Object.entries(paths)) {
+          expect(
+            result.signature.geometry[category][path],
+            `${key} before ${category}.${path}`,
+          ).toBe(before);
+          expect(result.v9!.geometry[category][path], `${key} after ${category}.${path}`).toBe(
+            after,
+          );
+          expect(before).not.toBe(after);
+        }
+      }
+    }
+  });
+
+  it('map key corrections match exact before/after style values', () => {
+    for (const [key, approval] of Object.entries(APPROVED_MAP_KEY_PLACEMENT)) {
+      const result = results.find((result) => `${result.name} @${result.width}` === key)!;
+      const before = flatten(result.signature.style);
+      const after = flatten(result.v9!.style);
+      for (const [path, pair] of Object.entries(approval.style)) {
+        expect(before[path]).toBe(pair[0]);
+        expect(after[path]).toBe(pair[1]);
+        expect(pair[0]).not.toBe(pair[1]);
+      }
+    }
   });
 
   it('style allowlist only names prefixes and categories that actually differ', () => {
@@ -358,7 +463,15 @@ describe(`v8 migration parity against ${capture.tag}`, () => {
           result.style.filter(
             (diff) =>
               !allowed.some((prefix) => underPrefix(diff.path, prefix)) &&
-              !CORPUS_STYLE_CHANGES.some(({ pattern }) => pattern.test(diff.path)),
+              !CORPUS_STYLE_CHANGES.some(({ pattern }) => pattern.test(diff.path)) &&
+              !additiveEndpointMetadata(diff) &&
+              !sanctionedValueFontChange(diff, result.v9) &&
+              !sanctionedEndpointPrecisionChange(diff) &&
+              !Object.entries(
+                APPROVED_MAP_KEY_PLACEMENT[`${result.name} @${result.width}`]?.style ?? {},
+              ).some(
+                ([path, pair]) => path === diff.path && pair[0] === diff.v8 && pair[1] === diff.v9,
+              ),
           ),
         ).toEqual([]);
       });
@@ -367,12 +480,29 @@ describe(`v8 migration parity against ${capture.tag}`, () => {
           ...(GEOMETRY_ALLOWLIST[result.name]?.categories ?? []),
           ...(STYLE_ALLOWLIST[result.name]?.geometry ?? []),
         ]);
-        const unexpected = Object.fromEntries(
-          Object.entries(result.geometry ?? {}).filter(
-            ([category, delta]) =>
-              !allowed.has(category as Category) && (delta.maxAbs > 0 || delta.structural > 0),
-          ),
-        );
+        const approved = [
+          APPROVED_PRE_RFC_LAYOUT[`${result.name} @${result.width}`],
+          APPROVED_RFC_B1_LAYOUT[`${result.name} @${result.width}`],
+          APPROVED_MAP_KEY_PLACEMENT[`${result.name} @${result.width}`],
+          APPROVED_AXIS_TITLE_LAYOUT[`${result.name} @${result.width}`],
+          APPROVED_ENDPOINT_TOP_SWEEP[`${result.name} @${result.width}`],
+        ];
+        const unexpected: Record<string, unknown> = {};
+        for (const [category, delta] of Object.entries(result.geometry ?? {})) {
+          if (allowed.has(category as Category) || (!delta.maxAbs && !delta.structural)) continue;
+          const before = result.signature.geometry[category];
+          const after = result.v9!.geometry[category];
+          for (const path of new Set([...Object.keys(before), ...Object.keys(after)])) {
+            if (before[path] === after[path]) continue;
+            const matches = approved.some((approval) => {
+              const pair = approval?.changes[category]?.[path];
+              return pair && pair[0] === before[path] && pair[1] === after[path];
+            });
+            if (!matches) {
+              unexpected[`${category}.${path}`] = { before: before[path], after: after[path] };
+            }
+          }
+        }
         expect(unexpected).toEqual({});
       });
     });

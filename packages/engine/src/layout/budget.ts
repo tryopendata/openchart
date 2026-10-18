@@ -32,7 +32,7 @@ import type { InternalCompileOptions } from '../compile/internal-options';
 import type { NormalizedChartSpec } from '../compiler/types';
 import { hasLegendContent } from '../legend/compute';
 import { legendGap } from '../legend/wrap';
-import { type BudgetReserves, createFrame, type FramePlacement } from './frame';
+import { type BudgetReserves, createFrame, type FramePlacement, MIN_CHART_WIDTH } from './frame';
 import { createMeasureFn, type LayoutPlan } from './plan';
 import { type ChromeLayoutMode, chromeToInput } from './shared';
 import {
@@ -283,7 +283,6 @@ export interface FigureBudget {
 }
 
 /** Minimum chart area dimensions before guardrails kick in. */
-const MIN_CHART_WIDTH = 60;
 
 /** Chrome may not exceed this fraction of a fixed-height plot budget. */
 const PLOT_SHARE_MAX = 0.4;
@@ -364,6 +363,8 @@ export function resolveFigureBudget(
       xAxisExtent: plan.xAxisExtent,
       inlineYLabelInset: plan.inlineYLabelInset,
       endpointLabelsDemoted: plan.endpointLabelsDemoted,
+      valueLabelPlan: plan.valueLabelPlan,
+      axisTitleHeader: plan.axisTitleHeader,
     },
     plan.chrome,
   );

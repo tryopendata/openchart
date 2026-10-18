@@ -34,3 +34,30 @@ describe('authored CSS theme tokens', () => {
     expect(el.classList.contains('oc-dark')).toBe(true);
   });
 });
+
+it('stamps authored endpoint and map controls while preserving unauthored host tokens', () => {
+  const el = document.createElement('div');
+  el.style.setProperty('--oc-endpoint-entry-gap', '11px');
+  const theme = resolveTheme({
+    fonts: { sizes: { endpointLabel: 15, endpointValue: 14 } },
+    spacing: { endpointEntryGap: 8, endpointValueGap: 5, endpointColumnGap: 22 },
+    colors: {
+      mapNoDataHatch: { light: '#808080', dark: '#aaaaaa' },
+      gridlineZero: { light: '#333333', dark: '#cccccc' },
+    },
+  });
+  stampThemeProperties(el, theme);
+  expect(el.style.getPropertyValue('--oc-endpoint-label-size')).toBe('15px');
+  expect(el.style.getPropertyValue('--oc-endpoint-value-size')).toBe('14px');
+  expect(el.style.getPropertyValue('--oc-endpoint-entry-gap')).toBe('8px');
+  expect(el.style.getPropertyValue('--oc-map-no-data-hatch')).toBe('#808080');
+  expect(el.style.getPropertyValue('--oc-gridline-zero')).toBe('#333333');
+  expect(el.style.getPropertyValue('--oc-map-no-data-fill')).toBe('');
+  stampThemeProperties(el, adaptTheme(theme));
+  expect(el.style.getPropertyValue('--oc-map-no-data-hatch')).toBe('#aaaaaa');
+  expect(el.style.getPropertyValue('--oc-gridline-zero')).toBe('#cccccc');
+  stampThemeProperties(el, resolveTheme());
+  expect(el.style.getPropertyValue('--oc-endpoint-entry-gap')).toBe('11px');
+  expect(el.style.getPropertyValue('--oc-map-no-data-hatch')).toBe('');
+  expect(el.style.getPropertyValue('--oc-gridline-zero')).toBe('');
+});

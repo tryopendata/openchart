@@ -294,8 +294,19 @@ it.each(v8Fixtures)('preserves released v8 styling: $name', ({ source, expected 
   const layout = compile(spec as never, { width: 640, height: 500 });
   expect(source).toEqual(before);
   expect(migrateSpecV8(spec)).toEqual({ spec, repairs: [] });
-  expect(layout.theme.fonts).toEqual(expected.fonts);
-  expect(layout.theme.spacing).toEqual(expected.spacing);
+  // New resolved control metadata did not exist in the released capture.
+  // Compare every old field unchanged; assert each added endpoint constant separately.
+  const { endpointLabel, endpointValue, ...releasedSizes } = layout.theme.fonts.sizes;
+  const { endpointEntryGap, endpointValueGap, endpointColumnGap, ...releasedSpacing } =
+    layout.theme.spacing;
+  expect({ ...layout.theme.fonts, sizes: releasedSizes }).toEqual(expected.fonts);
+  expect(releasedSpacing).toEqual(expected.spacing);
+  expect({ endpointLabel, endpointValue }).toEqual({ endpointLabel: 13, endpointValue: 12 });
+  expect({ endpointEntryGap, endpointValueGap, endpointColumnGap }).toEqual({
+    endpointEntryGap: 6,
+    endpointValueGap: 4,
+    endpointColumnGap: 18,
+  });
   expect(layout.theme.chrome).toEqual(expected.chrome);
   expect(layout.theme.colors).toEqual(expected.colors);
   const annotations = layout.annotations.map((a) => ({
@@ -427,4 +438,50 @@ it('drops dual-axis leaf themes that v8 ignored under a layer theme', () => {
   const { theme: _omit, ...noLayerTheme } = source;
   // (The leaf theme itself stays, keeping its own palette.)
   expect(migrateSpecV8(noLayerTheme).spec.layer[0].theme.colors.categorical).toEqual(['#00ff00']);
+});
+
+it('materializes released v8 endpoint constants without replacing authored controls', () => {
+  const defaults = migrateSpecV8(chart).spec as typeof chart & {
+    theme: { fonts: { sizes: Record<string, number> }; spacing: Record<string, number> };
+  };
+  expect(defaults.theme.fonts.sizes).toMatchObject({ endpointLabel: 13, endpointValue: 12 });
+  expect(defaults.theme.spacing).toMatchObject({
+    endpointEntryGap: 6,
+    endpointValueGap: 4,
+    endpointColumnGap: 18,
+  });
+  const source = {
+    ...chart,
+    theme: { fonts: { sizes: { endpointLabel: 17 } }, spacing: { endpointColumnGap: 24 } },
+  };
+  const migrated = migrateSpecV8(source);
+  expect(migrated.spec.theme.fonts.sizes.endpointLabel).toBe(17);
+  expect(migrated.spec.theme.spacing.endpointColumnGap).toBe(24);
+  expect(migrateSpecV8(migrated.spec).repairs).toEqual([]);
+  expect(migrateSpecV8(chart, { styling: 'v9' }).spec).not.toHaveProperty('theme');
+});
+
+it('reports the value-label font correction once without offering a false v8 styling guarantee', () => {
+  const source = {
+    mark: 'bar',
+    data: [{ name: 'A', value: 4 }],
+    encoding: {
+      x: { field: 'value', type: 'quantitative' },
+      y: { field: 'name', type: 'nominal' },
+    },
+    theme: { fonts: { family: 'Georgia, serif' } },
+  };
+  const migrated = migrateSpecV8(source);
+  expect(
+    migrated.repairs.some((repair) =>
+      repair.reason.includes('value labels now follow the resolved theme font'),
+    ),
+  ).toBe(true);
+  const layout = compileChart(migrated.spec, { width: 680, height: 400 });
+  expect(
+    layout.marks.some(
+      (mark) => mark.type === 'rect' && mark.label?.style.fontFamily === 'Georgia, serif',
+    ),
+  ).toBe(true);
+  expect(migrateSpecV8(migrated.spec).repairs).toEqual([]);
 });

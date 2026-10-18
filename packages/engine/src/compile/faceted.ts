@@ -20,6 +20,11 @@ import { isAxislessMark } from '@opendata-ai/openchart-core';
 import { computeAnnotations } from '../annotations/compute';
 import { annotationNoteLineCount, wrapAnnotationNotes } from '../annotations/notes';
 import { thinAnnotations } from '../annotations/thinning';
+import {
+  emitValueLabelDiagnostic,
+  offsetValueLabelAxes,
+  planBarLabels,
+} from '../charts/bar/label-plan';
 import { assignAnimationIndices, resolveRendererKey } from '../charts/post-process';
 import { getChartRenderer } from '../charts/registry';
 import { groupByField } from '../charts/utils';
@@ -27,6 +32,7 @@ import { collectContrastWarnings } from '../compiler/a11y-warnings';
 import { resolveMarkRenderMode } from '../compiler/mark-render-mode';
 import type { NormalizedChartSpec } from '../compiler/types';
 import { computeAxes } from '../layout/axes';
+import { isYAxisHeader, measureYAxisHeader } from '../layout/axis-title-plan';
 import {
   annotationMeasureFn,
   NO_REFERENCE_RESERVE,
@@ -69,6 +75,20 @@ export function compileFaceted(
   delete (panelEncoding as Record<string, unknown>).facet;
   const panelSpec = { ...renderSpec, encoding: panelEncoding };
   const panelChartSpec = { ...chartSpec, encoding: panelEncoding };
+  // Value lanes belong to each panel, never also to the outer figure frame.
+  let figureSpec = renderSpec.labels.placement
+    ? { ...panelSpec, labels: { ...panelSpec.labels, placement: undefined } }
+    : panelSpec;
+  const hasAxisHeader = isYAxisHeader(panelEncoding.y);
+  if (hasAxisHeader && figureSpec.encoding.y?.axis) {
+    figureSpec = {
+      ...figureSpec,
+      encoding: {
+        ...figureSpec.encoding,
+        y: { ...figureSpec.encoding.y, axis: { ...figureSpec.encoding.y.axis, title: '' } },
+      },
+    };
+  }
 
   // Partition data by facet field
   const groups = groupByField(renderSpec.data, facetChannel.field);
@@ -91,7 +111,7 @@ export function compileFaceted(
     const reserves = { noteBand: sizing.noteReserve, reference: NO_REFERENCE_RESERVE };
     const plan = resolveLayoutPlan(
       panelChartSpec,
-      panelSpec,
+      figureSpec,
       options,
       theme,
       strategy,
@@ -121,6 +141,33 @@ export function compileFaceted(
     // the budget), so leftmost-panel tick labels render into that margin just
     // like the single-chart path. The x-axis extent is the bottom reservation
     // for the outer axes.
+    const labelMeasurements = new Map<string, { width: number; height: number }>();
+    const measureLabel: typeof options.measureText = options.measureText
+      ? (text, fontSize, weight) => {
+          const key = JSON.stringify([text, fontSize, weight]);
+          const cached = labelMeasurements.get(key);
+          if (cached) return cached;
+          const measured = options.measureText!(text, fontSize, weight);
+          labelMeasurements.set(key, measured);
+          return measured;
+        }
+      : undefined;
+    const valueInsets =
+      renderSpec.markType === 'bar' && renderSpec.labels.placement
+        ? {
+            measure: (width: number, height?: number) =>
+              planBarLabels(panelSpec, theme, {
+                availableWidth: width,
+                availableHeight: height,
+                measureText: measureLabel,
+              }),
+            innerAxisWidth:
+              (chartSpec.resolve?.scale?.y ??
+                (facetDirection === 'row' ? 'independent' : 'shared')) === 'independent'
+                ? plan.leftGutter
+                : 0,
+          }
+        : undefined;
     const grid = computeFacetGrid(
       facetValues,
       effectiveColumns,
@@ -135,6 +182,10 @@ export function compileFaceted(
                 ? plan.leftGutter
                 : 0,
           }
+        : undefined,
+      valueInsets,
+      hasAxisHeader
+        ? (width) => measureYAxisHeader(panelEncoding.y, theme, width, options.measureText)
         : undefined,
     );
     return { sizing, plan, dims, grid };
@@ -160,6 +211,7 @@ export function compileFaceted(
   const { plan, dims, grid } = solved;
   const { options, strategy, watermark, noteReserve } = solved.sizing;
   const chartArea = dims.chartArea;
+  emitValueLabelDiagnostic(grid.valueLabelPlan, options);
 
   // Same effectiveAxisGap threading as the regular (non-faceted) path.
   const finalLegend = placeLegend(
@@ -252,6 +304,7 @@ export function compileFaceted(
       ? { x: undefined, y: undefined }
       : computeAxes(panelScales, gridPanel.area, strategy, theme, options.measureText, {
           data: panelData,
+          axisTitleHeader: grid.axisTitleHeader,
           encoding: panelSpecWithDomains.encoding as Encoding,
           markType: chartSpec.markType,
           // Outside-label cells use figure coordinates throughout, including
@@ -261,6 +314,7 @@ export function compileFaceted(
             : gridPanel.area.width,
         });
 
+    offsetValueLabelAxes(panelAxes, grid.valueLabelPlan);
     if (!isRadial) {
       computeGridlines(panelAxes, gridPanel.area);
     }
@@ -297,6 +351,8 @@ export function compileFaceted(
           strategy,
           theme,
           gridPanel.area.width,
+          grid.valueLabelPlan,
+          options.measureText,
         )
       : [];
 

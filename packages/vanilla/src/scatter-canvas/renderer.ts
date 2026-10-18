@@ -132,16 +132,19 @@ export class ScatterCanvasRenderer {
     if (state.gridlines.length === 0) return;
     const area = state.plotRect;
 
-    const byAlpha = new Map<number, ScatterCanvasState['gridlines']>();
+    const byAlpha = new Map<string, ScatterCanvasState['gridlines']>();
     for (const gridline of state.gridlines) {
-      const bucket = byAlpha.get(gridline.alpha);
+      const key = JSON.stringify([gridline.alpha, gridline.color ?? state.gridlineStroke]);
+      const bucket = byAlpha.get(key);
       if (bucket) bucket.push(gridline);
-      else byAlpha.set(gridline.alpha, [gridline]);
+      else byAlpha.set(key, [gridline]);
     }
 
     ctx.strokeStyle = state.gridlineStroke;
     ctx.lineWidth = state.gridlineWidth;
-    for (const [alpha, bucket] of byAlpha) {
+    for (const bucket of byAlpha.values()) {
+      const alpha = bucket[0].alpha;
+      ctx.strokeStyle = bucket[0].color ?? state.gridlineStroke;
       if (alpha <= 0) continue;
       ctx.globalAlpha = alpha;
       ctx.beginPath();

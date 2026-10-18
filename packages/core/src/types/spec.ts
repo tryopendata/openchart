@@ -519,6 +519,10 @@ export interface AxisConfig {
   ticks?: boolean;
   /** Axis position offset in pixels. */
   offset?: number;
+  /** Angle of the title in degrees. A y-axis title at angle 0 and anchor end becomes a header. */
+  titleAngle?: number;
+  /** Position along the axis for the title; omission keeps the centered title. */
+  titleAnchor?: 'start' | 'middle' | 'end';
   /** Padding between axis title and axis. */
   titlePadding?: number;
   /** Padding between tick labels and axis. */
@@ -1378,6 +1382,12 @@ export interface ThemeConfig {
         annotationMarkerFill?: TokenValue;
         /** Annotation plate color. Accepts a TokenValue light/dark pair. */
         annotationPlate?: TokenValue;
+        /** Optional map missing-data and geographic border ink. */
+        gridlineZero?: TokenValue;
+        mapNoDataFill?: TokenValue;
+        mapNoDataHatch?: TokenValue;
+        mapInteriorBorder?: TokenValue;
+        mapOutlineBorder?: TokenValue;
         /** Semantic color for positive/up-trend values. Accepts a TokenValue for light/dark pairs. */
         positive?: TokenValue;
         /** Semantic color for negative/down-trend values. Accepts a TokenValue for light/dark pairs. */
@@ -1405,6 +1415,9 @@ export interface ThemeConfig {
       metricLabel?: number;
       /** KPI metric primary value. Default: 22. Delta/secondary derive from this. */
       metricValue?: number;
+      /** Series-name and numerical endpoint font sizes in pixels. */
+      endpointLabel?: number;
+      endpointValue?: number;
     };
     /** Font weight overrides. Partial — only specified keys are overridden. */
     weights?: {
@@ -1434,6 +1447,10 @@ export interface ThemeConfig {
     xAxisHeight?: number;
     /** Gap in pixels between the x-axis line and tick label text. Increase when larger axisTick fonts sit too close to the axis line. */
     xAxisLabelPadding?: number;
+    /** Endpoint block separation, internal value gap, and plot-to-column gap. */
+    endpointEntryGap?: number;
+    endpointValueGap?: number;
+    endpointColumnGap?: number;
   };
   /** Border radius for chart container and tooltips. */
   borderRadius?: number;
@@ -1491,6 +1508,8 @@ export type LabelDensity = 'all' | 'auto' | 'endpoints' | 'none';
 
 /** Label display configuration for chart data labels. */
 export interface LabelConfig {
+  /** Placement for bar/column values. Column is only supported for simple horizontal bars. */
+  placement?: 'adaptive' | 'inside' | 'outside' | 'column';
   /** How many labels to show. Defaults to 'auto'. */
   density?: LabelDensity;
   /** Number format override for label values (d3-format string, e.g. ",.0f"). */
@@ -1598,6 +1617,10 @@ export type EndpointLabelContent = 'label' | 'value' | 'label value';
  * in `legend/__tests__/suppression.test.ts` enforce every cell.
  */
 export interface EndpointLabelsConfig {
+  /** Stacked-area anchor: cumulative boundary or the middle of the band. */
+  anchor?: 'boundary' | 'band';
+  /** Series identification in the end column or fitted inside stacked bands. */
+  placement?: 'end' | 'interior';
   /** Explicit on/off. When undefined, the chart auto-decides based on series count. */
   show?: boolean;
   /** Maximum number of series before endpoint labels switch to a legend. Default 8. */
@@ -2892,7 +2915,7 @@ export interface GeoMapPointsLayer {
   longitude: EncodingChannel;
   /** Field holding latitude (y coordinate). */
   latitude: EncodingChannel;
-  /** Optional quantitative size encoding. Area-proportional: r proportional to sqrt(value). No size legend is rendered in v1; explain the scale in chrome.subtitle if needed. */
+  /** Optional quantitative size encoding. Area-proportional: r proportional to sqrt(value). A proportional size key explains the resolved radius scale. */
   size?: EncodingChannel;
   /** Optional color encoding (nominal or quantitative). Independent scale from choropleth. */
   color?: EncodingChannel;
