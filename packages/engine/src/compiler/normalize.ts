@@ -662,6 +662,7 @@ function normalizeGeoMapSpec(spec: GeoMapSpec, _warnings: string[]): NormalizedG
     watermark: spec.watermark ?? true,
     animation: spec.animation,
     points: spec.points,
+    fields: spec.fields,
   };
 }
 

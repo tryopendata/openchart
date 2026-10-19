@@ -251,3 +251,9 @@ describe('interaction prop', () => {
     });
   });
 });
+it('forwards rowHover and removes its runtime treatment when toggled off', async () => {
+  const { container, rerender } = await renderChart({ spec: barSpec, rowHover: true });
+  expect(container.querySelector('.oc-row-hover')).not.toBeNull();
+  rerender(<Chart spec={barSpec} rowHover={false} />);
+  await waitFor(() => expect(container.querySelector('.oc-row-hover')).toBeNull());
+});

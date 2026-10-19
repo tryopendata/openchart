@@ -22,9 +22,12 @@ function mockReducedMotion() {
 // Shared fixtures
 // ---------------------------------------------------------------------------
 
-// Minimal valid TopoJSON with 3 US states (delta-encoded arcs).
+// Identity quantization declares the following arcs delta-encoded. Without a
+// transform TopoJSON treats their pairs as absolute coordinates (and NY spans
+// the Atlantic instead of being a small, closed focus target).
 const MINI_TOPO = {
   type: 'Topology',
+  transform: { scale: [1, 1], translate: [0, 0] },
   objects: {
     states: {
       type: 'GeometryCollection',

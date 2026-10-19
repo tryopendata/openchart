@@ -4388,7 +4388,7 @@
             "boundary",
             "band"
           ],
-          "description": "Stacked-area anchor: cumulative boundary or the middle of the band."
+          "description": "Stacked-area anchor: cumulative boundary or the middle of the band. Default band."
         },
         "placement": {
           "type": "string",

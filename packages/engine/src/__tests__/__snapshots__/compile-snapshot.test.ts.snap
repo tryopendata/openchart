@@ -383,6 +383,7 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
       "extent": 27,
       "gridlines": [
         {
+          "color": "rgba(0,0,0,0.22)",
           "major": true,
           "position": 47.016000000000005,
         },
@@ -450,6 +451,7 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
       },
       "gridlines": [
         {
+          "color": "rgba(0,0,0,0.22)",
           "major": true,
           "position": 376,
         },
@@ -939,8 +941,11 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
           "#2166ac",
         ],
       },
-      "gridline": "rgba(0,0,0,0.08)",
+      "gridline": "rgba(0,0,0,0.05)",
+      "gridlineZero": "rgba(0,0,0,0.22)",
       "hairline": "rgba(0,0,0,0.14)",
+      "mapInteriorBorder": "rgba(0,0,0,0.14)",
+      "mapOutlineBorder": "rgba(0,0,0,0.40)",
       "negative": "#dc2626",
       "neutral": {
         "100": "#f0f0f0",
@@ -1717,8 +1722,11 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
           "#2166ac",
         ],
       },
-      "gridline": "rgba(0,0,0,0.08)",
+      "gridline": "rgba(0,0,0,0.05)",
+      "gridlineZero": "rgba(0,0,0,0.22)",
       "hairline": "rgba(0,0,0,0.14)",
+      "mapInteriorBorder": "rgba(0,0,0,0.14)",
+      "mapOutlineBorder": "rgba(0,0,0,0.40)",
       "negative": "#dc2626",
       "neutral": {
         "100": "#f0f0f0",
@@ -2879,8 +2887,11 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
           "#2166ac",
         ],
       },
-      "gridline": "rgba(0,0,0,0.08)",
+      "gridline": "rgba(0,0,0,0.05)",
+      "gridlineZero": "rgba(0,0,0,0.22)",
       "hairline": "rgba(0,0,0,0.14)",
+      "mapInteriorBorder": "rgba(0,0,0,0.14)",
+      "mapOutlineBorder": "rgba(0,0,0,0.40)",
       "negative": "#dc2626",
       "neutral": {
         "100": "#f0f0f0",
@@ -3102,6 +3113,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
       },
       "gridlines": [
         {
+          "color": "rgba(0,0,0,0.22)",
           "major": true,
           "position": 287.40000000000003,
         },
@@ -3608,8 +3620,11 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
           "#2166ac",
         ],
       },
-      "gridline": "rgba(0,0,0,0.08)",
+      "gridline": "rgba(0,0,0,0.05)",
+      "gridlineZero": "rgba(0,0,0,0.22)",
       "hairline": "rgba(0,0,0,0.14)",
+      "mapInteriorBorder": "rgba(0,0,0,0.14)",
+      "mapOutlineBorder": "rgba(0,0,0,0.40)",
       "negative": "#dc2626",
       "neutral": {
         "100": "#f0f0f0",

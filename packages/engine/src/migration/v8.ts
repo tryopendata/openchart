@@ -208,6 +208,41 @@ export function migrateSpecV8<T>(
             setDefault('labelAnchor', annotation.y !== undefined ? 'top' : 'left');
           }
         }
+      const effectiveEndpoint = current.endpointLabels ?? inherited.endpointLabels;
+      const hasStackedArea = (value: Node, parentEncoding: Node = {}): boolean => {
+        const merged = { ...parentEncoding, ...node(value.encoding) };
+        const type = typeof value.mark === 'string' ? value.mark : node(value.mark)?.type;
+        const quantitative =
+          node(merged.y)?.type === 'quantitative' ? node(merged.y) : node(merged.x);
+        return (
+          (type === 'area' && quantitative?.stack !== null && quantitative?.stack !== false) ||
+          (Array.isArray(value.layer) &&
+            value.layer.some((child) => {
+              const leaf = node(child);
+              return leaf ? hasStackedArea(leaf, merged) : false;
+            }))
+        );
+      };
+      const endpointSource: Node = {
+        ...inherited,
+        ...current,
+        encoding: { ...node(inherited.encoding), ...encoding },
+      };
+      if (
+        (endpointSource.mark === 'area' ||
+          node(endpointSource.mark)?.type === 'area' ||
+          current.endpointLabels !== undefined) &&
+        hasStackedArea(endpointSource) &&
+        effectiveEndpoint !== undefined &&
+        effectiveEndpoint !== false &&
+        node(effectiveEndpoint)?.show !== false &&
+        node(effectiveEndpoint)?.anchor === undefined
+      )
+        rewrite(
+          'endpointLabels',
+          { ...node(effectiveEndpoint), anchor: 'boundary' },
+          'Preserve the v8 stacked-area cumulative-boundary endpoint anchor.',
+        );
       const isChart = current.mark !== undefined || Array.isArray(current.layer);
       const isLayer = Array.isArray(current.layer);
       if (isChart && !isLayer && current.chromeLayout === undefined)
@@ -279,13 +314,23 @@ export function migrateSpecV8<T>(
         for (const [key, value] of Object.entries(legacyEditorial.fonts!.sizes!)) {
           if (newSizes[key] === undefined) newSizes[key] = value;
         }
-        const legacySurface = resolveTheme(oldTheme).isDark ? '#0a0a0a' : '#ffffff';
+        const legacyDark = resolveTheme(oldTheme).isDark;
+        const legacySurface = legacyDark ? '#0a0a0a' : '#ffffff';
         const newChrome = { ...chromeDefaults };
         for (const key of ['byline', 'source', 'footer']) {
           const entry = node(newChrome[key]) ?? {};
           if (entry.fontSize === undefined)
             newChrome[key] = { ...entry, fontSize: sizes.small ?? 11 };
         }
+        const authoredColors = Array.isArray(oldTheme.colors)
+          ? { categorical: oldTheme.colors }
+          : (node(oldTheme.colors) ?? {});
+        const legacyGridline = { light: 'rgba(0,0,0,0.08)', dark: 'rgba(255,255,255,0.06)' };
+        // A plain default-valued v8 gridline string adapted to the old dark ink.
+        const gridline =
+          authoredColors.gridline === legacyGridline.light
+            ? legacyGridline
+            : (authoredColors.gridline ?? legacyGridline);
         const materialized = {
           ...oldTheme,
           colors: {
@@ -293,9 +338,22 @@ export function migrateSpecV8<T>(
             annotationRangeFill: { light: '#000000', dark: '#000000' },
             annotationMarkerFill: { light: legacySurface, dark: '#0a0a0a' },
             annotationPlate: { light: legacySurface, dark: '#0a0a0a' },
-            ...(Array.isArray(oldTheme.colors)
-              ? { categorical: oldTheme.colors }
-              : node(oldTheme.colors)),
+            gridlineZero: gridline,
+            ...(current.type === 'map'
+              ? {
+                  mapInteriorBorder: {
+                    light: legacyDark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.25)',
+                    dark: 'rgba(255,255,255,0.22)',
+                  },
+                  mapOutlineBorder: {
+                    light: legacyDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.55)',
+                    dark: 'rgba(255,255,255,0.45)',
+                  },
+                }
+              : {}),
+            ...authoredColors,
+            // Preserve v8's default-valued string adaptation as a mode pair.
+            gridline,
           },
           fonts: { ...fonts, sizes: newSizes },
           spacing: {
@@ -311,7 +369,10 @@ export function migrateSpecV8<T>(
           rewrite(
             'theme',
             materialized,
-            'Preserve v8 typography without overriding authored chrome sizes.' +
+            'Preserve v8 typography and scaffolding ink without overriding authored chrome sizes.' +
+              (current.type === 'map'
+                ? ' Updated static map captions, neutral-class context geometry and occupied size-key placement have no legacy opt-out; their layout cannot be preserved.'
+                : '') +
               (hasCorrectedValueLabels(current) &&
               resolveTheme(oldTheme).fonts.family !== 'system-ui, -apple-system, sans-serif'
                 ? ' Corrected value labels now follow the resolved theme font; their former system-font mismatch cannot be preserved independently.'

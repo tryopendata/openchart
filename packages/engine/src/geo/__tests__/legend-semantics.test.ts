@@ -30,3 +30,22 @@ describe('map key caption prototype', () => {
     });
   });
 });
+
+it('never labels a sequential or off-center class as neutral', async () => {
+  const { mapNeutralClassContext } = await import('../legend-semantics');
+  const scale = {
+    breaks: [-2.5, 2.5],
+    colors: ['red', '#f7f7f7', 'blue'],
+    binIndex: () => 1,
+    color: () => 'a',
+  };
+  expect(mapNeutralClassContext(scale, String, ['#f7f7f7'])).toEqual({
+    index: 1,
+    label: '0',
+    caption: 'Near zero: -2.5 to <2.5',
+  });
+  expect(mapNeutralClassContext(scale, String, [])).toBeUndefined();
+  expect(
+    mapNeutralClassContext({ ...scale, binIndex: () => 0 }, String, ['#f7f7f7']),
+  ).toBeUndefined();
+});

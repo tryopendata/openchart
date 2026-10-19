@@ -1617,7 +1617,7 @@ export type EndpointLabelContent = 'label' | 'value' | 'label value';
  * in `legend/__tests__/suppression.test.ts` enforce every cell.
  */
 export interface EndpointLabelsConfig {
-  /** Stacked-area anchor: cumulative boundary or the middle of the band. */
+  /** Stacked-area anchor: cumulative boundary or the middle of the band. Default band. */
   anchor?: 'boundary' | 'band';
   /** Series identification in the end column or fitted inside stacked bands. */
   placement?: 'end' | 'interior';

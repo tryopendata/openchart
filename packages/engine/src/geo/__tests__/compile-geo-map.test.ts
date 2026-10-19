@@ -2007,3 +2007,234 @@ describe('map side legend composition', () => {
     );
   });
 });
+
+describe('measured map size key', () => {
+  const spec = {
+    type: 'map' as const,
+    geo: { features: MINI_TOPO, projection: 'mercator' as const },
+    data: [],
+    encoding: {},
+    points: {
+      data: [
+        { lon: -100, lat: 31, value: 10 },
+        { lon: -74, lat: 41, value: 100 },
+      ],
+      longitude: { field: 'lon', type: 'quantitative' as const },
+      latitude: { field: 'lat', type: 'quantitative' as const },
+      size: { field: 'value', type: 'quantitative' as const, title: 'Population', format: ',.0f' },
+    },
+  };
+  it('uses host measurement for the complete label and title width at 200% text', () => {
+    const layout = compileGeoMap(spec, {
+      width: 1280,
+      height: 600,
+      theme: { fonts: { sizes: { small: 24 } } },
+      measureText: (text, size) => ({ width: text.length * size, height: size }),
+    });
+    expect(layout.pointSizeLegend!.bounds.width).toBeGreaterThanOrEqual('Population'.length * 24);
+  });
+  it('omits an infeasible key with a truthful diagnostic', () => {
+    const diagnostics: string[] = [];
+    const layout = compileGeoMap(spec, {
+      width: 390,
+      height: 260,
+      measureText: (text, size) => ({ width: text.length * size * 20, height: size }),
+      onDiagnostic: (diagnostic) => diagnostics.push(diagnostic.code),
+    });
+    expect(layout.pointSizeLegend).toBeNull();
+    expect(diagnostics).toContain('MAP_SIZE_LEGEND_UNFIT');
+  });
+});
+
+describe('static map key semantics and measured frame', () => {
+  it.each([
+    'top',
+    'bottom',
+    'right',
+  ] as const)('reserves metadata and exact neutral context before fitting (%s)', (position) => {
+    const layout = compileGeoMap(
+      {
+        type: 'map',
+        geo: { features: MINI_TOPO, projection: 'mercator' },
+        data: [
+          { id: '06', value: -10 },
+          { id: '48', value: 0 },
+          { id: '36', value: 10 },
+        ],
+        encoding: {
+          key: { field: 'id', type: 'nominal' },
+          color: {
+            field: 'value',
+            type: 'quantitative',
+            format: '.1f',
+            scale: { scheme: 'redBlue' },
+          },
+        },
+        fields: { value: { label: 'Rate change', unit: 'percentage points' } },
+        legend: { position },
+      },
+      {
+        width: 1280,
+        height: 600,
+        theme: { fonts: { sizes: { small: 24 } } },
+        measureText: (text, size) => ({ width: text.length * size * 0.6, height: size }),
+      },
+    );
+    const key = layout.continuousLegend!;
+    expect(key.title).toBe('Rate change');
+    expect(
+      key.textRows
+        ?.filter((row) => row.role === 'unit')
+        .map((row) => row.text)
+        .join(' '),
+    ).toBe('percentage points');
+    expect(key.textRows?.find((row) => row.role === 'context')?.text).toContain('Near zero:');
+    expect(key.textRows?.find((row) => row.role === 'midpoint')?.text).toBe('0.0');
+    for (const row of key.textRows ?? []) {
+      expect(row.y).toBeGreaterThanOrEqual(key.bounds.y);
+      expect(row.y).toBeLessThanOrEqual(key.bounds.y + key.bounds.height);
+    }
+    if (key.position === 'top')
+      expect(key.bounds.y + key.bounds.height).toBeLessThanOrEqual(layout.area.y);
+    if (key.position === 'bottom')
+      expect(key.bounds.y).toBeGreaterThanOrEqual(layout.area.y + layout.area.height);
+  });
+  it('preserves an explicit empty title and does not invent neutral context for sequential data', () => {
+    const layout = compileGeoMap(
+      {
+        type: 'map',
+        geo: { features: MINI_TOPO },
+        data: [
+          { id: '06', value: 0 },
+          { id: '48', value: 10 },
+        ],
+        encoding: {
+          key: { field: 'id', type: 'nominal' },
+          color: { field: 'value', title: '', type: 'quantitative', format: '.0%' },
+        },
+        fields: { value: { label: 'Ignored', unit: 'share' } },
+      },
+      DEFAULT_OPTIONS,
+    );
+    expect(layout.continuousLegend!.title).toBeUndefined();
+    expect(layout.continuousLegend!.textRows?.some((row) => row.role === 'context')).toBe(false);
+    expect(layout.continuousLegend!.textRows?.find((row) => row.role === 'unit')?.text).toBe(
+      'share',
+    );
+  });
+  it('gives categorical keys supplied names while retaining category text', () => {
+    const layout = compileGeoMap(
+      {
+        type: 'map',
+        geo: { features: MINI_TOPO },
+        data: [
+          { id: '06', value: 'A' },
+          { id: '48', value: 'B' },
+        ],
+        encoding: {
+          key: { field: 'id', type: 'nominal' },
+          color: { field: 'value', type: 'nominal' },
+        },
+        fields: { value: { label: 'Category name' } },
+      },
+      DEFAULT_OPTIONS,
+    );
+    expect(layout.categoricalLegend!.textRows?.[0].text).toBe('Category name');
+    expect(layout.categoricalLegend!.entries.map((entry) => entry.label)).toEqual(['A', 'B']);
+    expect(layout.categoricalLegend!.entryPositions![0].y).toBeGreaterThan(
+      layout.categoricalLegend!.textRows![0].y,
+    );
+  });
+});
+
+it('reserves a no-data row only for actual unmatched or invalid observations, preserving zero', () => {
+  const spec = {
+    type: 'map' as const,
+    geo: { features: MINI_TOPO, projection: 'mercator' as const },
+    encoding: {
+      key: { field: 'id', type: 'nominal' as const },
+      color: { field: 'value', type: 'quantitative' as const },
+    },
+    data: [
+      { id: '06', value: 0 },
+      { id: '48', value: 10 },
+      { id: '36', value: 20 },
+    ],
+  };
+  const complete = compileGeoMap(spec, DEFAULT_OPTIONS);
+  const unmatched = compileGeoMap({ ...spec, data: spec.data.slice(0, 2) }, DEFAULT_OPTIONS);
+  const invalid = compileGeoMap(
+    { ...spec, data: [...spec.data.slice(0, 2), { id: '36', value: null }] },
+    DEFAULT_OPTIONS,
+  );
+  expect(complete.continuousLegend!.noData).toBeUndefined();
+  expect(complete.features.find((feature) => feature.id === '06')?.noData).not.toBe(true);
+  expect(unmatched.continuousLegend!.noData).toBeDefined();
+  expect(invalid.continuousLegend!.noData).toBeDefined();
+  expect(unmatched.continuousLegend!.bounds.height).toBeGreaterThan(
+    complete.continuousLegend!.bounds.height,
+  );
+  expect(invalid.continuousLegend!.bounds.height).toBe(unmatched.continuousLegend!.bounds.height);
+});
+
+it.each([
+  'top-left',
+  'right',
+  'top',
+  'bottom',
+] as const)('contains point continuous captions in complete key bounds (%s)', (position) => {
+  const title = 'A very long quantitative measure title';
+  const layout = compileGeoMap(
+    {
+      type: 'map',
+      geo: { features: MINI_TOPO, projection: 'mercator' },
+      data: [],
+      encoding: {},
+      legend: { position },
+      points: {
+        data: [
+          { lon: -100, lat: 31, value: 10 },
+          { lon: -74, lat: 41, value: 100 },
+        ],
+        longitude: { field: 'lon', type: 'quantitative' },
+        latitude: { field: 'lat', type: 'quantitative' },
+        color: { field: 'value', type: 'quantitative', title },
+        size: { field: 'value', type: 'quantitative' },
+      },
+      fields: { value: { unit: 'A separately supplied long measurement unit' } },
+    },
+    {
+      width: 1280,
+      height: 600,
+      measureText: (text, size) => ({ width: text.length * size * 0.6, height: size }),
+    },
+  );
+  const key = layout.pointContinuousLegend!;
+  for (const row of key.textRows ?? []) {
+    expect(row.x + row.text.length * row.style.fontSize * 0.6).toBeLessThanOrEqual(
+      key.bounds.x + key.bounds.width,
+    );
+  }
+  for (const tick of key.ticks) {
+    const width = tick.label.length * key.labelStyle.fontSize * 0.6;
+    const left =
+      tick.x - (tick.anchor === 'middle' ? width / 2 : tick.anchor === 'end' ? width : 0);
+    expect(left).toBeGreaterThanOrEqual(key.bounds.x);
+    expect(left + width).toBeLessThanOrEqual(key.bounds.x + key.bounds.width);
+  }
+  if (position === 'top-left') {
+    const size = layout.pointSizeLegend!.bounds;
+    const overlap =
+      Math.max(
+        0,
+        Math.min(size.x + size.width, key.bounds.x + key.bounds.width) -
+          Math.max(size.x, key.bounds.x),
+      ) *
+      Math.max(
+        0,
+        Math.min(size.y + size.height, key.bounds.y + key.bounds.height) -
+          Math.max(size.y, key.bounds.y),
+      );
+    expect(overlap).toBe(0);
+  }
+});

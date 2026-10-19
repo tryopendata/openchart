@@ -10,21 +10,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - Add measured bar value placement (`adaptive`, `inside`, `outside`, `column`),
   including shared value columns in facets and diagnostics when labels cannot fit.
+- Add opt-in `rowHover` across vanilla and all Chart wrappers: quiet full-row
+  inspection for simple horizontal bars, shared with keyboard focus and passive
+  around annotations, legends and editing.
 - Add horizontal y-axis unit headers through `titleAngle: 0` and `titleAnchor: 'end'`.
 - Align endpoint precision across a displayed column, preserve source values and
   missing observations, and measure formatted labels with the host font metrics.
 - Budget both endpoint columns, gaps and date context against the measured axes;
   automatic layouts retain a usable plot, while impossible authored fits diagnose.
-- Add optional stacked-area band anchors and fit-tested interior series names.
+- Default stacked-area endpoints to their band midpoint; retain explicit boundary
+  anchors and opt-in fit-tested interior series names. Hover geometry is unchanged.
 - Preserve complete series names and band leaders in independent-scale layers;
   resolve stacked domains from accumulated bands and separate clipped endpoint anchors.
 - Measure the complete independent-layer legend before placing either axis, so
   wrapped rows and side keys reserve space for every eligible series.
 - Honor the resolved label font on bars, columns, dots and ranges; determine
   column label direction from the source number instead of its formatted text.
-- Add useful endpoint typography/spacing and map ink theme controls, preserving
-  existing values when omitted. An optional zero-gridline color paints the same
-  resolved rules in SVG and canvas without changing the scale domain.
+- Add useful endpoint typography/spacing and map ink theme controls. Keep current
+  bar proportions and endpoint spacing; use quieter ordinary gridlines and stronger
+  existing zero rules in SVG and canvas without changing scale domains.
+- Adopt quieter map borders while retaining the current no-data hatch. Measure
+  static map key titles/units/context before fitting geography, and place size keys
+  using their full bounds and geographic obstacles.
+- Preserve expressible v8 grid, band-anchor and border styling in migration; report
+  the unavoidable new map-key layout behavior.
 - Keep enlarged bar labels within available space, and keep enlarged rotated
   axis titles inside the viewport.
 - Place top point-color keys in their reserved band; reserve wrapped category

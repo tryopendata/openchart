@@ -49,6 +49,7 @@ import {
 import { migrateSpecV8 } from '../../../packages/engine/src/migration/v8';
 import {
   APPROVED_AXIS_TITLE_LAYOUT,
+  APPROVED_B3_MAP_LAYOUT,
   APPROVED_ENDPOINT_TOP_SWEEP,
   APPROVED_MAP_KEY_PLACEMENT,
   APPROVED_PRE_RFC_LAYOUT,
@@ -294,6 +295,22 @@ const additiveEndpointMetadata = (diff: StyleDiff) =>
   Object.hasOwn(ENDPOINT_CONTROL_METADATA, diff.path) &&
   diff.v9 === ENDPOINT_CONTROL_METADATA[diff.path];
 
+const additiveV8ScaffoldingMetadata = (
+  diff: StyleDiff,
+  next: Signature | undefined,
+  isMap: boolean,
+) => {
+  if (diff.v8 !== undefined || !next) return false;
+  const fields = flatten(next.style);
+  if (diff.path === 'theme.colors.gridlineZero') return diff.v9 === fields['theme.colors.gridline'];
+  return (
+    (diff.path === 'theme.colors.mapInteriorBorder' &&
+      diff.v9 === (isMap ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.14)')) ||
+    (diff.path === 'theme.colors.mapOutlineBorder' &&
+      diff.v9 === (isMap ? 'rgba(0,0,0,0.55)' : 'rgba(0,0,0,0.40)'))
+  );
+};
+
 const underPrefix = (path: string, prefix: string) =>
   path === prefix || path.startsWith(`${prefix}.`);
 
@@ -390,8 +407,9 @@ describe(`v8 migration parity against ${capture.tag}`, () => {
     expect(stale).toEqual([]);
   });
 
-  it('pre-RFC geometry exceptions match every exact approved path value', () => {
+  it('approved geometry exceptions match every exact before/final path value', () => {
     for (const [key, approval] of [
+      ...Object.entries(APPROVED_B3_MAP_LAYOUT),
       ...Object.entries(APPROVED_PRE_RFC_LAYOUT),
       ...Object.entries(APPROVED_RFC_B1_LAYOUT),
       ...Object.entries(APPROVED_MAP_KEY_PLACEMENT),
@@ -407,8 +425,11 @@ describe(`v8 migration parity against ${capture.tag}`, () => {
             result.signature.geometry[category][path],
             `${key} before ${category}.${path}`,
           ).toBe(before);
+          // Later B3 reservations can move a path already corrected before the RFC.
+          // The new approval still guards the original v8 value and final v9 value.
+          const finalAfter = APPROVED_B3_MAP_LAYOUT[key]?.changes[category]?.[path]?.[1] ?? after;
           expect(result.v9!.geometry[category][path], `${key} after ${category}.${path}`).toBe(
-            after,
+            finalAfter,
           );
           expect(before).not.toBe(after);
         }
@@ -417,7 +438,10 @@ describe(`v8 migration parity against ${capture.tag}`, () => {
   });
 
   it('map key corrections match exact before/after style values', () => {
-    for (const [key, approval] of Object.entries(APPROVED_MAP_KEY_PLACEMENT)) {
+    for (const [key, approval] of [
+      ...Object.entries(APPROVED_MAP_KEY_PLACEMENT),
+      ...Object.entries(APPROVED_B3_MAP_LAYOUT),
+    ]) {
       const result = results.find((result) => `${result.name} @${result.width}` === key)!;
       const before = flatten(result.signature.style);
       const after = flatten(result.v9!.style);
@@ -465,11 +489,17 @@ describe(`v8 migration parity against ${capture.tag}`, () => {
               !allowed.some((prefix) => underPrefix(diff.path, prefix)) &&
               !CORPUS_STYLE_CHANGES.some(({ pattern }) => pattern.test(diff.path)) &&
               !additiveEndpointMetadata(diff) &&
+              !additiveV8ScaffoldingMetadata(
+                diff,
+                result.v9,
+                (result.spec as { type?: string }).type === 'map',
+              ) &&
               !sanctionedValueFontChange(diff, result.v9) &&
               !sanctionedEndpointPrecisionChange(diff) &&
-              !Object.entries(
-                APPROVED_MAP_KEY_PLACEMENT[`${result.name} @${result.width}`]?.style ?? {},
-              ).some(
+              !Object.entries({
+                ...APPROVED_MAP_KEY_PLACEMENT[`${result.name} @${result.width}`]?.style,
+                ...APPROVED_B3_MAP_LAYOUT[`${result.name} @${result.width}`]?.style,
+              }).some(
                 ([path, pair]) => path === diff.path && pair[0] === diff.v8 && pair[1] === diff.v9,
               ),
           ),
@@ -481,6 +511,7 @@ describe(`v8 migration parity against ${capture.tag}`, () => {
           ...(STYLE_ALLOWLIST[result.name]?.geometry ?? []),
         ]);
         const approved = [
+          APPROVED_B3_MAP_LAYOUT[`${result.name} @${result.width}`],
           APPROVED_PRE_RFC_LAYOUT[`${result.name} @${result.width}`],
           APPROVED_RFC_B1_LAYOUT[`${result.name} @${result.width}`],
           APPROVED_MAP_KEY_PLACEMENT[`${result.name} @${result.width}`],

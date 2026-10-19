@@ -345,7 +345,7 @@ export function resolveTheme(
   const dark = isDarkBackground(merged.colors.background);
   if (dark) {
     merged = adaptChromeForDarkBg({ ...merged, colors: { ...merged.colors } }, merged.colors.text);
-    // These defaults historically followed a dark canvas even without darkMode.
+    // Default ink follows a dark authored canvas even without a runtime mode flag.
     const authoredColors =
       userTheme?.colors && !Array.isArray(userTheme.colors) ? userTheme.colors : {};
     for (const key of [
@@ -356,6 +356,9 @@ export function resolveTheme(
       'annotationRangeFill',
       'annotationMarkerFill',
       'annotationPlate',
+      'gridlineZero',
+      'mapInteriorBorder',
+      'mapOutlineBorder',
     ] as const) {
       if (authoredColors[key] === undefined)
         merged.colors[key] = cssTokenDefault(

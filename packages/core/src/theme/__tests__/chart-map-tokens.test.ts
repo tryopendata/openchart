@@ -28,8 +28,6 @@ describe('endpoint and map theme controls', () => {
     ]) {
       expect(theme.colors.mapNoDataFill).toBeUndefined();
       expect(theme.colors.mapNoDataHatch).toBeUndefined();
-      expect(theme.colors.mapInteriorBorder).toBeUndefined();
-      expect(theme.colors.mapOutlineBorder).toBeUndefined();
     }
   });
   it('honors explicit map light/dark pairs and plain colors', () => {
@@ -50,9 +48,19 @@ describe('endpoint and map theme controls', () => {
   });
 });
 
-it('leaves zero-rule ink optional and honors authored mode pairs', () => {
-  expect(resolveTheme().colors.gridlineZero).toBeUndefined();
-  expect(adaptTheme(resolveTheme()).colors.gridlineZero).toBeUndefined();
+it('uses approved hierarchy defaults and honors authored mode pairs', () => {
+  expect(resolveTheme().colors).toMatchObject({
+    gridline: 'rgba(0,0,0,0.05)',
+    gridlineZero: 'rgba(0,0,0,0.22)',
+    mapInteriorBorder: 'rgba(0,0,0,0.14)',
+    mapOutlineBorder: 'rgba(0,0,0,0.40)',
+  });
+  expect(adaptTheme(resolveTheme()).colors).toMatchObject({
+    gridline: 'rgba(255,255,255,0.06)',
+    gridlineZero: 'rgba(255,255,255,0.24)',
+    mapInteriorBorder: 'rgba(255,255,255,0.18)',
+    mapOutlineBorder: 'rgba(255,255,255,0.38)',
+  });
   const theme = resolveTheme({
     colors: { gridlineZero: { light: 'rgba(0,0,0,0.22)', dark: 'rgba(255,255,255,0.24)' } },
   });
@@ -61,4 +69,21 @@ it('leaves zero-rule ink optional and honors authored mode pairs', () => {
   expect(
     adaptTheme(resolveTheme({ colors: { gridlineZero: '#123456' } })).colors.gridlineZero,
   ).toBe('#123456');
+});
+
+it('preserves explicit plain hierarchy colors even when equal to light defaults', () => {
+  const colors = {
+    gridlineZero: 'rgba(0,0,0,0.22)',
+    mapInteriorBorder: 'rgba(0,0,0,0.14)',
+    mapOutlineBorder: 'rgba(0,0,0,0.40)',
+  };
+  expect(adaptTheme(resolveTheme({ colors })).colors).toMatchObject(colors);
+});
+
+it('keeps new default roles visible on a dark authored canvas without a mode flag', () => {
+  const theme = resolveTheme({ colors: { background: '#121212', text: '#eeeeee' } });
+  expect(theme.colors.gridlineZero?.replaceAll(' ', '')).toBe('rgba(255,255,255,0.24)');
+  expect(theme.colors.mapInteriorBorder?.replaceAll(' ', '')).toBe('rgba(255,255,255,0.18)');
+  expect(theme.colors.mapOutlineBorder?.replaceAll(' ', '')).toBe('rgba(255,255,255,0.38)');
+  expect(theme.colors.mapNoDataHatch).toBeUndefined();
 });

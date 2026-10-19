@@ -43,6 +43,8 @@ export interface ChartProps {
   darkMode?: DarkMode;
   /** Rendering backend for point marks; see the vanilla `MountOptions.renderer`. */
   renderer?: 'auto' | 'svg' | 'canvas';
+  /** Quiet row inspection for simple horizontal bars. */
+  rowHover?: boolean;
   autoResize?: boolean;
   revision?: string | number;
   /** Interaction mode; inferred from the edit/select listeners when omitted. */
@@ -89,6 +91,7 @@ export const Chart = defineComponent({
       type: Function as PropType<(element: ElementRef) => void>,
       default: undefined,
     },
+    rowHover: { type: Boolean, default: undefined },
     autoResize: { type: Boolean, default: undefined },
     revision: { type: [String, Number] as PropType<string | number>, default: undefined },
     class: {
@@ -163,6 +166,7 @@ export const Chart = defineComponent({
           : {}),
         ...(props.interaction != null ? { interaction: props.interaction } : {}),
         ...(props.selectedElement ? { selectedElement: props.selectedElement } : {}),
+        rowHover: props.rowHover,
         autoResize: props.autoResize,
         revision: props.revision,
         ...(props.onEdit ? { onEdit: (tx: EditTransaction) => props.onEdit?.(tx) } : {}),
@@ -249,6 +253,7 @@ export const Chart = defineComponent({
         () => Boolean(props.onEdit),
         () => Boolean(props.onSelect),
         () => Boolean(props.onDeselect),
+        () => props.rowHover,
         () => props.autoResize,
         () => props.theme,
         () => props.darkMode,

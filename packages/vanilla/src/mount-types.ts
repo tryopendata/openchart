@@ -42,6 +42,8 @@ export function resolveInteractionMode(opts?: {
 }
 
 export interface MountOptions extends ChartEventHandlers {
+  /** Quiet row inspection for simple horizontal bars. Runtime only; omitted by default. */
+  rowHover?: boolean;
   /**
    * Interaction mode. When omitted it is inferred once from the callbacks:
    * `onEdit` -> `'edit'`, `onSelect`/`onDeselect` -> `'select'`, else `'read'`.

@@ -66,7 +66,7 @@ export interface ThemeColors {
   text: string;
   /** Gridline color. */
   gridline: string;
-  /** Optional zero-rule ink; omission uses the regular gridline color. */
+  /** Zero-rule ink. Defaults to stronger contrast than ordinary gridlines. */
   gridlineZero?: string;
   /** Axis line and tick color. */
   axis: string;

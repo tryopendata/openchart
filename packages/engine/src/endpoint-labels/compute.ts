@@ -242,7 +242,7 @@ export function computeEndpointLabels(
   const config = typeof spec.endpointLabels === 'object' ? spec.endpointLabels : undefined;
   const wrapWidth = config?.width ?? ENDPOINT_WRAP_WIDTH_DEFAULT;
   const valueField = config?.valueField ?? spec.encoding.y?.field;
-  const anchor = config?.anchor ?? 'boundary';
+  const anchor = config?.anchor ?? 'band';
   const endpointValues = lineOrAreaMarks.flatMap((mark) => {
     const trailing = endpointObservation(mark, 'trailing', anchor)?.datum[valueField ?? ''];
     return config?.ends === 'both'

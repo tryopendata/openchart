@@ -41,7 +41,10 @@ export const DEFAULT_THEME: ThemeBase = {
     diverging: DIVERGING_PALETTES,
     background: 'transparent',
     text: '#09090b',
-    gridline: 'rgba(0,0,0,0.08)',
+    gridline: 'rgba(0,0,0,0.05)',
+    gridlineZero: 'rgba(0,0,0,0.22)',
+    mapInteriorBorder: 'rgba(0,0,0,0.14)',
+    mapOutlineBorder: 'rgba(0,0,0,0.40)',
     // Structural hairline: axis lines, separators. Deliberately heavier than
     // the gridline and lighter than any ink, so structure reads as structure.
     hairline: 'rgba(0,0,0,0.14)',

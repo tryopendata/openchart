@@ -51,7 +51,7 @@ Adaptive horizontal bars also check the complete formatted text width before put
 
 Endpoint budgeting now includes both columns, their gaps, date context and the final axis reservations. Automatic endpoints can yield to the existing legend or requested keyed summary to retain a usable plot. Explicit endpoint choices remain authoritative; an impossible fit emits an `onDiagnostic` message at `/endpointLabels`. Rotated y-axis titles also keep their full glyph ascent inside the figure, including with enlarged fonts.
 
-The following chart-craft options are additive. Omitting them keeps the existing placement policy. Broader bar-row/column-rhythm, endpoint, gridline and map appearance retunes remain pending their before/after review; adding controls does not adopt those candidate defaults.
+Bar placement and interior names remain opt-in. The approved defaults below change grid/zero hierarchy, stacked-area endpoint anchors, static map keys and map borders. Bar/column proportions, endpoint sizes/gaps and the no-data hatch retain their previous values.
 
 ### Bar and column placement
 
@@ -75,15 +75,19 @@ A value column is for simple horizontal bars with one value per category. It is 
 
 Dot/lollipop, range and pie marks reject explicit placement at `/labels/placement`; their existing label configuration remains supported.
 
+### Optional bar row inspection
+
+Pass `{ rowHover: true }` to `createChart` or the `rowHover` prop on any Chart wrapper. Pointer inspection spans the category, plot and value-column zones; the existing keyboard navigation highlights the same row. It applies to simple horizontal bars, and yields to editing. Omission adds no hover presentation. Grouped, stacked, layered and faceted charts retain their existing behavior. The highlight is transient and does not appear in settled chart exports.
+
 ### Stacked-area identification
 
-Stacked areas can opt into a band-midpoint endpoint anchor and fit-tested interior series names:
+Stacked areas now anchor endpoints at the band midpoint. Interior series names remain opt-in:
 
 ```ts
 endpointLabels: { anchor: 'band', placement: 'interior' }
 ```
 
-Omitted placement remains `'end'`; the current anchor default remains `'boundary'` pending the default-design gate. Explicit `'band'` anchors the series' own endpoint value at the middle of its compiled band. It leaves the mark's hover/crosshair points unchanged. Interior labels identify series by name; they do not select a new numerical observation. A series without a fitting interior box retains endpoint identification. Missing and synthetic pivot rows do not become observed zero labels, and endpoints on different dates retain date context.
+Omitted placement remains `'end'`; the anchor default is now `'band'`. Set `anchor: 'boundary'` to retain cumulative-edge anchors; `migrateSpecV8` materializes this when preserving v8 styling. Band anchoring places the series' own endpoint value at the middle of its compiled band. It leaves the mark's hover/crosshair points unchanged. Interior labels identify series by name; they do not select a new numerical observation. A series without a fitting interior box retains endpoint identification. Missing and synthetic pivot rows do not become observed zero labels, and endpoints on different dates retain date context.
 
 Layers with independent y-scales fall back from interior names to endpoint names with a diagnostic: one independently scaled band can cover another's accepted text box. This choice happens before the shared columns are measured. Band anchors, value formats and leading/trailing settings remain authored, and band leaders remain visible on the assembled chart.
 
@@ -123,7 +127,7 @@ theme: {
 }
 ```
 
-Map authors may set `colors.mapNoDataFill`, `mapNoDataHatch`, `mapInteriorBorder` and `mapOutlineBorder`, including light/dark color pairs. Omission keeps the existing map palette and pattern treatment. Keep no-data patterns distinguishable from valid zero and diverging midpoints. These controls do not introduce an automatic crop, drop regions, reorder points or transform measures.
+Map authors may set `colors.mapNoDataFill`, `mapNoDataHatch`, `mapInteriorBorder` and `mapOutlineBorder`, including light/dark color pairs. Omission uses the quieter v9 borders and the existing map palette and pattern treatment. Keep no-data patterns distinguishable from valid zero and diverging midpoints. These controls do not introduce an automatic crop, drop regions, reorder points or transform measures.
 
 ## Changed annotation and figure defaults
 
@@ -482,3 +486,11 @@ A custom `measureText` whose note wrapping needs more lines than the reserved no
 ## Validate the upgrade
 
 Review exact-height embeds, narrow charts, custom fonts/themes, layers/facets, and exported SVG/PNG. Exercise one edit, undo, cancelled drag, and keyboard nudge with the new transaction handler. Test application persistence against stale annotation identity. Library migration does not upgrade OpenStudio storage or publish packages; those release steps have their own validation.
+
+### Approved chart and map defaults
+
+Ordinary gridlines are quieter, and existing zero rules have stronger contrast. This does not add ticks, expand domains or enable disabled grids. Set `theme.colors.gridline` and `gridlineZero` to override either role. Explicit colors and light/dark pairs remain supported. Bar/column padding and endpoint sizes/gaps are unchanged.
+
+Map interior borders and outlines are quieter in both modes. The no-data hatch and fill remain unchanged: missing observations still differ from valid zero and neutral classes. `migrateSpecV8` restores old grid and border colors where the theme can express them; `{ styling: 'v9' }` adopts the new defaults.
+
+Map keys now reserve measured title/unit/context rows before projection fitting, and size keys choose a less obstructed location using their complete text/circle bounds. These layout changes have no legacy switch; migration reports that limitation rather than claiming pixel parity. Scale values, class boundaries, point sizes and paint order are unchanged. In fixed-height maps, fuller keys leave less height for geography; increase the authored container height when both detailed keys and a large map are required. The library does not crop coverage or move keys automatically to recover that space.

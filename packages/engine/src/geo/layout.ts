@@ -82,6 +82,12 @@ export function moveGeoMapLegend(
   const dy = y - legend.bounds.y;
   legend.bounds = { ...legend.bounds, x, y };
   legend.position = position;
+  if (legend.textRows)
+    legend.textRows = legend.textRows.map((row) => ({
+      ...row,
+      x: row.x + dx,
+      y: row.y + dy,
+    }));
   if (legend.type === 'continuous') {
     legend.bar = { ...legend.bar, x: legend.bar.x + dx, y: legend.bar.y + dy };
     legend.bins = legend.bins.map((bin) => ({ ...bin, x: bin.x + dx }));
@@ -108,7 +114,7 @@ export function moveGeoMapLegend(
   }
 }
 
-/** B3 candidate only: score fixed-size corner keys against occupied screen bounds. */
+/** Score complete measured corner keys against occupied screen bounds; first wins ties. */
 export function occupiedBoundsSizeKeyCandidate(
   area: Rect,
   width: number,
@@ -209,4 +215,89 @@ export function measureGeoContinuousKey(options: {
     );
   }
   return { width: Math.ceil(right - left), inset: -left };
+}
+
+/** Include every circle, label and title in a map size key's placement extent. */
+export function measureGeoSizeKey(
+  content: import('../legend/size').SizeLegendContent,
+  style: import('@opendata-ai/openchart-core').TextStyle,
+  measure: import('@opendata-ai/openchart-core').MeasureTextFn,
+  maxWidth = Number.POSITIVE_INFINITY,
+): import('../legend/size').SizeLegendContent & { titleLines?: string[]; titleAdvance?: number } {
+  const titlePlan = content.title
+    ? measureGeoKeyText(content.title, maxWidth, { ...style, fontWeight: 500 }, measure)
+    : undefined;
+  const oldTitleHeight = content.title ? Math.ceil(style.fontSize * 1.3) + 6 : 0;
+  const shift = titlePlan ? titlePlan.height + 6 - oldTitleHeight : 0;
+  const circles = content.circles.map((circle) => ({
+    ...circle,
+    cy: circle.cy + shift,
+    labelY: circle.labelY + shift,
+  }));
+  const first = circles[0];
+  const labelX = first.cx + first.radius + 8;
+  const width = Math.max(
+    ...circles.map(
+      (circle) => labelX + measure(circle.label, style.fontSize, style.fontWeight).width,
+    ),
+    ...(titlePlan?.lines.map((line) => measure(line, style.fontSize, 500).width) ?? [0]),
+    ...circles.map((circle) => circle.cx + circle.radius),
+  );
+  const height = Math.max(
+    content.height + shift,
+    ...circles.map(
+      (circle) =>
+        circle.labelY +
+        Math.max(
+          style.fontSize * 0.5,
+          measure(circle.label, style.fontSize, style.fontWeight).height * 0.5,
+        ),
+    ),
+  );
+  return {
+    ...content,
+    circles,
+    width: Math.ceil(width),
+    height: Math.ceil(height),
+    titleLines: titlePlan?.lines,
+    titleAdvance: titlePlan?.advance,
+  };
+}
+
+/** Wrap static key prose using the host's metrics before projection fitting. */
+export function measureGeoKeyText(
+  text: string,
+  width: number,
+  style: import('@opendata-ai/openchart-core').TextStyle,
+  measure: import('@opendata-ai/openchart-core').MeasureTextFn,
+): { lines: string[]; height: number; advance: number } {
+  const lines: string[] = [];
+  for (const paragraph of text.split('\n')) {
+    let line = '';
+    const words = paragraph.split(/\s+/).flatMap((word) => {
+      if (measure(word, style.fontSize, style.fontWeight).width <= width) return [word];
+      const parts: string[] = [];
+      let part = '';
+      for (const char of word) {
+        if (part && measure(part + char, style.fontSize, style.fontWeight).width > width) {
+          parts.push(part);
+          part = char;
+        } else part += char;
+      }
+      if (part) parts.push(part);
+      return parts;
+    });
+    for (const word of words) {
+      const next = line ? `${line} ${word}` : word;
+      if (line && measure(next, style.fontSize, style.fontWeight).width > width) {
+        lines.push(line);
+        line = word;
+      } else line = next;
+    }
+    lines.push(line);
+  }
+  const advance = Math.ceil(
+    Math.max(style.fontSize * 1.35, measure('Mg', style.fontSize, style.fontWeight).height + 4),
+  );
+  return { lines, height: lines.length * advance, advance };
 }

@@ -860,6 +860,15 @@ export interface BaseLegendLayout {
   position: 'top' | 'top-left' | 'right' | 'bottom' | 'bottom-right' | 'inline';
   /** Bounding box for the legend (pixel coordinates). */
   bounds: Rect;
+  /** Measured static key text in figure coordinates; absent on traditional chart keys. */
+  textRows?: Array<{
+    text: string;
+    x: number;
+    y: number;
+    style: TextStyle;
+    role: 'title' | 'unit' | 'context' | 'midpoint';
+    anchor?: 'start' | 'middle' | 'end';
+  }>;
   /** Entry label style. */
   labelStyle: TextStyle;
 }
@@ -2116,7 +2125,8 @@ export interface GeoMapLayout {
   pointContinuousLegend: ContinuousLegendLayout | null;
   /**
    * Nested-circle size key for the point layer's `size` channel (null when the
-   * layer has no size encoding). Drawn bottom-right over the map.
+   * layer has no size encoding). Placed in a measured map corner that avoids
+   * occupied feature/point bounds; bottom-right wins clear or tied candidates.
    */
   pointSizeLegend: SizeLegendLayout | null;
   /** Continuous color legend for quantitative mode (null if hidden or categorical). */

@@ -1,6 +1,6 @@
 # Desktop chart and GeoMap RFC execution
 
-Status: P1/P2 foundations verified and committed as `9be168d9` after review handoff at `93112314` (2026-10-18). The full RFC remains open at the concrete B3/P0 decisions and subsequent work listed below.
+Status: P1/P2 foundations and approved B3 defaults/row-hover verified (2026-10-19). Foundation commit `9be168d9` follows review handoff `93112314`; the next checkpoint contains the approved defaults. P3/P4, the separate P5 gate and C7 remain open.
 Authorized: implement the reviewed RFC and commit the work to `codex/openchart-v9`.
 Merge/release: explicitly on hold. No publishing or external repository work.
 Source: [RFC](rfc-desktop-chart-and-geomap-design.md).
@@ -29,9 +29,9 @@ Acceptance: each proposed default has a visible before/after, semantic justifica
 ### P1 — Desktop chart craft and narrow-layout completion
 
 - [x] Test first: placement modes, signed/zero bars, measured gutters, all labels too wide, explicit sizing, unsupported grouped/stacked column mode.
-- [ ] Implement C1/C2 via bar/column label planning, existing scale padding, and optional row emphasis.
+- [x] Implement C1/C2 via bar/column label planning, existing scale padding, and optional row emphasis.
 - [x] Implement C3 shared endpoint formatting/budgeting and C4 band anchors/interior labels.
-- [ ] Implement C5 optional scale headers and approved hierarchy changes; preserve explicit grid/domain decisions.
+- [x] Implement C5 optional scale headers and approved hierarchy changes; preserve explicit grid/domain decisions.
 - [x] Reconcile C7 with existing v9 responsive and note infrastructure; fix only remaining gaps.
 - [x] Add focus/overlap/composition gallery examples and update docs/migration fixtures.
 - [x] Validate signed/normalized stacks, absent series rows versus explicit null/nonfinite/true zero, both endpoint columns, mixed units, facets, and layers. Assert synthetic pivot geometry never becomes an observed label value and resize never changes numeric provenance.
@@ -41,8 +41,8 @@ Acceptance: no accidental geometry changes in feature-disabled fixtures; all int
 ### P2 — Map composition, legend, and symbol craft
 
 - [x] Test first: top/bottom/side legend budgets, fixed-height aspect ratio, multiple point/color/size keys, no-data versus zero, class-boundary labels.
-- [ ] Implement G1/G3 static legend layout and semantic units/midpoints.
-- [ ] Refine G6's existing point paint order with stable equal-radius ties and improved size-key placement; retain the current knockout outline and correct stale size-legend documentation.
+- [x] Implement G1/G3 static legend layout and semantic units/midpoints.
+- [x] Preserve G6's existing point paint order/equal-radius ties; improve size-key placement, retain the knockout outline and correct size-legend documentation.
 - [x] Implement G8 semantic border/no-data tokens with dark-mode and export parity.
 - [x] Keep feature coverage/projection/fit semantics unchanged; no automatic map crop.
 - [x] Add desktop world, US categorical, county, diverging, sparse-data, and bubble comparison plates.
@@ -171,3 +171,55 @@ The paired compile guard is met. Earlier regression, loaded runs and smaller qui
 Evidence: `/Users/riley/.codex/visualizations/2026/10/18/openchart-design/`. The static review gallery remains served at `http://127.0.0.1:61900/index.html` for the pending B3 choices. The task's Ladle server and browser are stopped. The temporary source-only performance comparison directory and its dependency symlink were removed; no dependencies or build caches were copied.
 
 Worktree cleanup verification: no new worktrees were created. `/Users/riley/.codex/worktrees/openchart-v9/openchart` is retained for the unmerged branch and unfinished RFC. Supported archival requests for `/Users/riley/.codex/worktrees/v9-mark-contract/openchart` and `/Users/riley/.codex/worktrees/v9-themes/openchart` returned queued; final checks still find both checkout directories and Git registrations. Their patch-equivalent work is preserved, but removal is not confirmed. No chat was archived, and unrelated trees/caches were untouched.
+
+
+## Approved-default batch (2026-10-19)
+
+User approved grid/zero hierarchy, stacked-area band anchors, clearer map keys, collision-aware size-key placement, and quieter map borders from the reviewed gallery. Retain existing bar/column proportions, endpoint sizes/gaps, and no-data hatch. No merge/release approval.
+
+- [x] Test and adopt exact approved light/dark grid and border colors; preserve authored overrides, absent grids and domains.
+- [x] Default stacked-area endpoints to band centers without changing source values, mark geometry or nonstacked anchors; preserve explicit boundary.
+- [x] Measure static map title/unit/neutral-context rows before projection fit; retain authored formats and class semantics.
+- [x] Place size keys against measured text/circle bounds and projected obstacles; preserve old corner on clear/tie and diagnose infeasible placement.
+- [x] Materialize expressible v8 appearance in migration; test styles, inheritance, explicit values, repeat runs; report unavoidable map-key layout differences with exact parity guards.
+- [x] Update docs, migration guide, generated schema/tokens/references and changelog; preserve before/after review stories.
+- [x] Run focused/full gates, review every intended visual baseline change, manually inspect narrow/desktop/dark/enlarged text, and obtain code review before committing.
+
+This batch implements B3 adoption and the row-hover opt-in. P3/P4, the separate P5 spike and C7 remain tracked above. Full-RFC completion is not claimed.
+
+Row-hover runtime contract is finalized as `MountOptions.rowHover?: boolean`, forwarded by all three Chart wrappers. It is independent passive presentation for simple horizontal ungrouped bars; omission adds no DOM/listeners. Editor/layer/facet/stack/color grouping exclude the treatment. The existing keyboard navigation supplies logical focus; this option creates no persistent reader state. Focused tests cover pointer/cancel/touch/control exclusion, update/destroy, and all wrapper toggles.
+
+
+### B3 and row-hover verification
+
+The user approved the selected B3 defaults on 2026-10-19. All approved choices are implemented; rejected proportion, spacing and hatch retunes remain unchanged. The required code review approved after three fixes: cache row-hover screen coordinates with scroll/resize invalidation, restrict the opt-in to actual bar specs (range bars are excluded), and include the complete point-color title/unit/tick ink in overlay bounds and collision obstacles. Each correction has a failing-first regression test.
+
+| Gate | Result |
+| --- | --- |
+| Unit tests | 7,966 passed; three intentional expected-failure cases; 362 files |
+| Lint / build / typecheck | Passed, including React/Vue/Svelte |
+| Generated files | Schema, LLM references and CSS tokens current |
+| Visual | 115 passed after seven individually reviewed approved baseline changes; no further baseline changes for review fixes |
+| General browser invariants | 177 passed; 11 existing platform skips |
+| Annotation invariants | 106 passed in existing Chromium/WebKit projects |
+| Boundaries / library bundle | Passed; zero product dependencies; 205,453 gzip bytes (+1,042 vs foundation) |
+| Migration | 1,903 focused tests passed (53 migration, 1,584 released-v8 corpus, 266 existing parity); released capture unchanged |
+| Code review | APPROVE; zero outstanding findings |
+
+The exact migration manifest records 18 affected fixture-widths and 7,603 old→new geometry paths, rather than exempting whole fixtures. Expressible v8 grid/border/endpoint styling remains materialized; fuller static keys and size-key placement have a documented preservation limitation.
+
+Seven baseline changes and their before/after/diff images are listed in `/Users/riley/.codex/visualizations/2026/10/19/openchart-b3/baselines/manifest.json`. Chrome, axes, plot, legend and edges were inspected; map coverage, border hierarchy, no-data texture and key bounds were checked at 390/1280, with enlarged-text variants. Desktop chart plates include 1024/1440 and light/dark at 200% text. Row-hover pointer/keyboard checks at 390/1280 keep logical row identity; controls, touch/cancel and editing exclusions have focused regression tests. Fixed-height world maps can shrink to accommodate honest key content; the migration guide tells hosts to increase height rather than promising automatic crop or key relocation.
+
+Quiet paired compile on Apple M3 Max, same built core runtime, e049c87f versus B3 engine; 100 warmups/1,000 alternating samples at 1024×400:
+
+| Fixture | Before median / p95 | After median / p95 |
+| --- | --- | --- |
+| US topology, 56 data rows | 17.858 / 20.225 ms | 17.780 / 19.973 ms |
+| Line, 1,000 observations | 1.720 / 2.982 ms | 1.698 / 2.921 ms |
+| Four-series area, 1,000 observations | 3.709 / 5.789 ms | 3.677 / 5.909 ms |
+
+All median compile changes meet the 10% guard. The source-only benchmark directory and dependency symlink were removed; dependencies were not copied. Evidence and gate logs: `/Users/riley/.codex/visualizations/2026/10/19/openchart-b3/`.
+
+Cleanup corrective pass: supported archival again returned `queued` for `/Users/riley/.codex/worktrees/v9-mark-contract/openchart` and `/Users/riley/.codex/worktrees/v9-themes/openchart`. Both checkout directories and Git registrations still exist. Their commits are patch-equivalent to v9, source trees are clean and ignored review logs were preserved; no active task process uses them. Removal is unconfirmed, so both are reported retained pending app archival. The active v9 checkout remains needed for the unmerged branch and P3/P4. No unrelated worktree or chat was removed.
+
+Final corrected point-key caption browser checks at 390/1280 confirm long title/unit/tick ink stays inside the overlay backdrop and clear of the size key. Evidence: `maps/final-point-caption-390.png` and `maps/final-point-caption-1280.png`.

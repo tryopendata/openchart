@@ -156,3 +156,28 @@ it.each([
   expect(endpoint.dataY).toBe((point.y + point.yBottom!) / 2);
   expect(endpoint.source?.datum.value).toBe(-50);
 });
+
+it.each([
+  'zero',
+  'normalize',
+  'center',
+] as const)('defaults %s stacks to band anchors while preserving geometry and explicit boundary', (stack) => {
+  const input = spec(stack);
+  const band = compileChart(input, { width: 900, height: 450 });
+  const omitted = compileChart(
+    { ...input, endpointLabels: { ends: 'both' } },
+    { width: 900, height: 450 },
+  );
+  const boundary = compileChart(
+    { ...input, endpointLabels: { ends: 'both', anchor: 'boundary' } },
+    { width: 900, height: 450 },
+  );
+  expect(omitted.endpointLabels).toEqual(band.endpointLabels);
+  expect(omitted.marks).toEqual(boundary.marks);
+  expect(omitted.endpointLabels!.entries.map((e) => e.source)).toEqual(
+    boundary.endpointLabels!.entries.map((e) => e.source),
+  );
+  expect(omitted.endpointLabels!.entries.map((e) => e.dataY)).not.toEqual(
+    boundary.endpointLabels!.entries.map((e) => e.dataY),
+  );
+});

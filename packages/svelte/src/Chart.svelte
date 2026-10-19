@@ -31,6 +31,7 @@ let {
   theme,
   darkMode,
   renderer,
+  rowHover,
   autoResize,
   revision,
   onedit,
@@ -53,6 +54,8 @@ let {
   theme?: ThemeConfig;
   darkMode?: DarkMode;
   renderer?: 'auto' | 'svg' | 'canvas';
+  /** Quiet row inspection for simple horizontal bars. */
+  rowHover?: boolean;
   autoResize?: boolean;
   revision?: string | number;
   onedit?: (tx: EditTransaction) => void;
@@ -132,6 +135,7 @@ $effect(() => {
     theme: resolvedTheme,
     darkMode: resolvedDarkMode,
     renderer: resolvedRenderer,
+    rowHover,
     autoResize,
     revision: untrack(() => revision),
     ...(hasEditListener ? { onEdit: stableOnEdit } : {}),

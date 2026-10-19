@@ -28,6 +28,20 @@ describe('authored zero gridline role', () => {
         .every((g) => g.color === undefined),
     ).toBe(true);
   });
+  it('uses the default zero hierarchy only on existing enabled rules', () => {
+    const layout = compileChart(base, { width: 640, height: 400 });
+    const zero = layout.axes.y!.ticks.find((t) => t.value === 0)!;
+    expect(layout.axes.y!.gridlines.find((g) => g.position === zero.position)?.color).toBe(
+      'rgba(0,0,0,0.22)',
+    );
+    const without = compileChart(
+      { ...base, encoding: { ...base.encoding, y: { ...base.encoding.y, axis: { grid: false } } } },
+      { width: 640, height: 400 },
+    );
+    expect(without.axes.y!.gridlines).toHaveLength(0);
+    expect(without.axes.y!.ticks).toEqual(layout.axes.y!.ticks);
+    expect(without.area).toEqual(layout.area);
+  });
   it('does not add zero to a positive log domain', () => {
     const chart = compileChart(
       {

@@ -29,10 +29,16 @@ function chartCraftSpec(kind: Case, candidate: boolean, _dark: boolean, textScal
       },
     },
   };
-  if (kind === 'grid' && candidate)
+  if (kind === 'grid')
     theme.colors = {
-      gridline: { light: 'rgba(0,0,0,0.05)', dark: 'rgba(255,255,255,0.06)' },
-      gridlineZero: { light: 'rgba(0,0,0,0.22)', dark: 'rgba(255,255,255,0.24)' },
+      gridline: {
+        light: candidate ? 'rgba(0,0,0,0.05)' : 'rgba(0,0,0,0.08)',
+        dark: 'rgba(255,255,255,0.06)',
+      },
+      gridlineZero: {
+        light: candidate ? 'rgba(0,0,0,0.22)' : 'rgba(0,0,0,0.08)',
+        dark: candidate ? 'rgba(255,255,255,0.24)' : 'rgba(255,255,255,0.06)',
+      },
     };
   const shared: Partial<ChartSpec> = { animation: false, theme };
   if (kind === 'endpoint')

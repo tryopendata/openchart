@@ -314,3 +314,9 @@ describe('interaction mode and listener parity', () => {
     expect(onhighlightchange).toHaveBeenCalledWith(['Germany']);
   });
 });
+it('forwards rowHover and removes it when toggled off', async () => {
+  const { container, rerender } = await renderChart({ spec: barSpec, rowHover: true });
+  expect(container.querySelector('.oc-row-hover')).not.toBeNull();
+  await rerender({ spec: barSpec, rowHover: false });
+  await waitFor(() => expect(container.querySelector('.oc-row-hover')).toBeNull());
+});

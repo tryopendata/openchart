@@ -65,3 +65,23 @@ describe('occupied size-key prototype', () => {
     });
   });
 });
+
+it('scores point bounds as occupied and keeps deterministic ties', () => {
+  const point = { x: 880, y: 400, width: 40, height: 40 };
+  const first = occupiedBoundsSizeKeyCandidate(fullArea, 100, 80, [point]);
+  expect(first?.x).toBe(42);
+  expect(occupiedBoundsSizeKeyCandidate(fullArea, 100, 80, [point])).toEqual(first);
+});
+
+it('wraps long unbroken caption text at doubled size without reducing font size', async () => {
+  const { measureGeoKeyText } = await import('../layout');
+  const measured = measureGeoKeyText(
+    'ExtraordinarilyLongUnitWithoutSpaces',
+    180,
+    { fontFamily: 'Arial', fontSize: 24, fontWeight: 400, fill: '#222', lineHeight: 1.35 },
+    (text, size) => ({ width: text.length * size, height: size }),
+  );
+  expect(measured.lines.join('')).toBe('ExtraordinarilyLongUnitWithoutSpaces');
+  for (const line of measured.lines) expect(line.length * 24).toBeLessThanOrEqual(180);
+  expect(measured.height).toBeGreaterThan(24);
+});

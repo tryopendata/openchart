@@ -1,4 +1,5 @@
 import { annotationSource } from './interactions/edit-transactions';
+import { wireRowHover } from './interactions/row-hover';
 import { canTransitionSpecShape } from './transition/gate';
 import { reconcileSVG } from './transition/reconcile';
 import { sampleLayout } from './transition/scene';
@@ -375,6 +376,16 @@ export function createChart<TData extends DataRow = DataRow>(
           crosshairController,
         ),
       );
+    }
+
+    if (
+      options?.rowHover &&
+      !editing &&
+      !('layer' in currentSpec) &&
+      (typeof currentSpec.mark === 'string' ? currentSpec.mark : currentSpec.mark.type) === 'bar' &&
+      !currentSpec.encoding.color
+    ) {
+      track(wireRowHover(svgElement, container, currentLayout));
     }
 
     // seriesSearch and edit mode are mutually exclusive per instance: when

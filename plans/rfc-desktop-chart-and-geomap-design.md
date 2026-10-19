@@ -146,7 +146,7 @@ The value column is outside the quantitative scale, within the figure's layout b
 - Proposed `labels.placement?: 'adaptive' | 'inside' | 'outside' | 'column'` (B2). Omission equals current adaptive placement. Validation is per chart type: `column` is valid only for simple horizontal bars with one value per row; `inside`/`outside` are valid for bar and column marks; dot, range and pie reject every explicit placement with a path-specific error, since `LabelConfig` is shared across them.
 - `inside` needs new text-fit logic. Today's inside/outside choice is a fixed bar-width threshold (`MIN_WIDTH_FOR_INSIDE_LABEL` in `charts/bar/labels.ts`); only stacked segments get a fit test. `inside` measures each formatted label against its bar, hides labels that don't fit (keeping them in tooltip/accessible data), and never overflows a short bar. It gets its own fixtures. `outside` reserves enough space before scale computation and follows the signed value end.
 - `adaptive` keeps current behavior. A per-chart consistent outside placement can be authored without a global flip.
-- Row rhythm is a B3 default. Reuse band-scale padding; in auto-height gallery examples, target a 28px row pitch with roughly 16px marks and at least 8px group separation as prototype targets. Respect explicit dimensions and padding.
+- Row-rhythm prototypes were reviewed on 2026-10-19; retain current default proportions. Existing explicit band-scale padding remains available. The proposed 28px pitch/16px mark retune is not adopted because the plates did not show a consistent improvement.
 - `column` mode measures the complete formatted value set once, adds 12px separation, and reserves a right gutter as a `FrameMeasures` field, so the plan and budget both see it. The column/outside/suppress choice is made in the layout plan before placement: value strings, the category gutter and the width are all known there. No re-budget pass. Names wrap at their existing category budget; values do not wrap. If insufficient width remains, the plan falls back as a whole to outside placement and emits a diagnostic; if still infeasible, current density suppression applies, retaining values in accessible data/tooltip. Do not alternate modes row by row. Faceted bars measure the value column at figure level so columns align across panels, the same way the reference lane is shared.
 - A labeled value column makes the quantitative axis redundant. Gallery examples using `column` hide the axis and gridlines; the default does not change.
 - Row hover is a runtime presentation option, not a spec field. It is spelled in P0 alongside `ReaderPresentationOptions` (§7). Treatment: a very quiet background across category/plot/value zones, with the selected bar outlined. Pointer hit regions must not intercept annotation handles, legends, or editor controls. Keyboard activation targets the same logical row.
@@ -162,7 +162,7 @@ B1 fixes, verified against the 9.0 branch:
 - Measurement. Predict and compute use `estimateTextWidth` even when the host supplies `measureText`; both should use the host measure when present, falling back to the estimate.
 - Gallery precedence. Endpoints inherit `axis.format` before field context, which is correct when the axis format carries units (`$`, `%`), but the "Three Economies" story's `+.0f` rounds 2.8 to `+3`. Its `labels.format: '.1f'` has no effect on endpoints. Fix the story with `endpointLabels.format: '+.1f'` and drop the dead `labels` field. Precedence does not change.
 
-B3 default for 9.0, subject to the P0 plates: a deliberate endpoint block with series name in the series ink, value in primary/secondary numeric ink, 4px internal gap and 8px minimum separation between resolved blocks. Endpoint sizes are constants today (`ENDPOINT_LABEL_FONT_SIZE` in `endpoint-labels/constants.ts`); moving them to theme tokens changes every multi-series line chart and lands under the v9 theme-schema rules. D4 (no theme knobs solely for migration) applies: the new tokens must be useful design controls in their own right, which also gives `migrateSpecV8` a way to restore the v8 sizes.
+The P0 plates were reviewed on 2026-10-19: retain the current endpoint typography and 6px entry gap, with the existing 4px internal gap. The proposed 8px separation did not show a consistent benefit. Endpoint sizes are constants today (`ENDPOINT_LABEL_FONT_SIZE` in `endpoint-labels/constants.ts`); moving them to theme tokens changes every multi-series line chart and lands under the v9 theme-schema rules. D4 (no theme knobs solely for migration) applies: the new tokens must be useful design controls in their own right, which also gives `migrateSpecV8` a way to restore the v8 sizes.
 
 - Existing `content`, `width`, `ends`, `format`, `showMarker`, and `showLeader` remain the public controls. No new generic “modern labels” preset.
 - Do not use rendered strings to recover raw numbers. Do not unify unlike units across a dual-axis or layered chart, and do not change table/tooltip formatting globally to fix an endpoint-only issue.
@@ -218,7 +218,7 @@ The gutter holds legends only. The P4 selected-region panel is host-placed HTML 
 - Auto-height gallery examples may allocate more height to world geography. Fixed-height embeds retain aspect ratio and whitespace when unavoidable. Do not claim a right sidebar inherently enlarges the world map.
 - Introduce no automatic removal of Antarctica, overseas territories, or unmatched polygons to enlarge the data region. Preserve the existing Mercator fit policy in `geo/projections.ts`, which excludes features entirely south of -60° from fit bounds while still rendering them if in view; this RFC does not change that behavior. Existing `geo.focus` remains an explicit camera choice. New persistent geographic exclusion requires authored feature selection with disclosed coverage, addressed in P5.
 - Interior borders stay quieter than silhouettes. Existing border hierarchy is real; refine its tokens and tests rather than rebuild meshes. Map context should be quietest on symbol maps.
-- No-data hatching remains a distinct visible pattern. The hatch exists because a solid neutral is indistinguishable from a diverging ramp's midpoint (redBlue's center is `#f7f7f7`; see the comment above `noDataPattern` in `compile-geo-map.ts`). The quieter hatch (B3 default) must keep a contrast floor: the hatch line stays at least 1.5:1 against both the diverging midpoint class and the lowest sequential class, in light and dark themes. Its acceptance gate is a diverging-ramp, small-feature (county-scale), dark-mode fixture where no-data stays distinguishable from both. Zero retains a valid scale color. Do not conflate no observation, zero, and explicitly excluded geography. If richer missingness statuses are needed, require authored metadata and separate keys; P2 does not infer them.
+- No-data hatching remains a distinct visible pattern. The hatch exists because a solid neutral is indistinguishable from a diverging ramp's midpoint (redBlue's center is `#f7f7f7`; see the comment above `noDataPattern` in `compile-geo-map.ts`). The user retained the existing hatch after reviewing the alternatives (2026-10-19). A future hatch retune must keep a contrast floor: the hatch line stays at least 1.5:1 against both the diverging midpoint class and the lowest sequential class, in light and dark themes. Its acceptance gate is a diverging-ramp, small-feature (county-scale), dark-mode fixture where no-data stays distinguishable from both. Zero retains a valid scale color. Do not conflate no observation, zero, and explicitly excluded geography. If richer missingness statuses are needed, require authored metadata and separate keys; P2 does not infer them.
 - Color class boundaries, fills, legends, tooltips, and distribution counts consume the same class-scale descriptor. Do not recompute breaks in the legend renderer.
 - Diverging legends show the authored midpoint or zero when the existing scale actually uses it. Include interval inclusivity in accessible text and threshold edge tooltips. Never insert a visual zero label that does not match the scale.
 
@@ -361,7 +361,9 @@ Spec fields describe durable visual meaning and static composition. Reader enabl
 
 Add optional visual fields only after TypeScript, normalizer, runtime validator, JSON schema, generated authoring reference, exports, and examples agree. No loose `Record<string, unknown>` extension bag. New map text channels and `callouts` extend only the GeoMap branch of `VizSpec`; helpers must narrow by visualization kind.
 
-Proposed runtime shape, to be finalized against the reviewed reader API:
+Row inspection uses `MountOptions.rowHover?: boolean` (equivalent `rowHover` props in React/Vue/Svelte), independently of persistent reader state. Omission adds no DOM or handlers. The opt-in applies to simple horizontal bars without color grouping, layers, facets or stacking; existing keyboard mark inspection paints the same row. Editing suppresses it. Pointer treatment is passive and clears over annotations, legends and controls.
+
+Proposed persistent-reader runtime shape, to be finalized against the reviewed reader API:
 
 ```ts
 interface ReaderPresentationOptions {
@@ -493,11 +495,11 @@ B3, design defaults for 9.0. P0 completes this table with the affected story nam
 | Default change | Visible effect | Blast radius | v8 look preserved through |
 | --- | --- | --- | --- |
 | Gridline/zero hierarchy (C5) | Quieter ordinary rules, recognizable zero | Every Cartesian chart | Theme tokens set to v8 values |
-| Endpoint spacing/typography (C3b) | Deliberate name/value blocks, collision clearance | Every multi-series line/area chart with endpoints | Theme tokens set to v8 values |
-| Column rhythm and zero baseline (C2) | Label rhythm, grouped/stacked spacing | Every column chart | Explicit band padding; zero rule via theme token |
-| Bar row proportions (C1) | 28px row pitch targets | Auto-height bar charts | Explicit band padding |
+| Endpoint spacing/typography (C3b): retain | Current name/value blocks and spacing | No default retune | Existing values unchanged |
+| Column rhythm (C2): retain; zero hierarchy: approved | Keep spacing; strengthen existing zero rules | Existing zero rules | Zero rule via theme token |
+| Bar row proportions (C1): retain | Keep existing proportions | No default retune | Existing values unchanged |
 | Stacked-area band anchors (C4) | Endpoint labels sit on the band they describe instead of the cumulative boundary | Stacked area charts with endpoint labels | `endpointLabels.anchor: 'boundary'` |
-| Quieter no-data hatch and border tokens (G8) | Data takes visual priority | Every choropleth with missing data | Theme tokens set to v8 values (contrast floor in §5.4) |
+| Quieter borders (G8): approved; hatch: retain | Quieter geographic context; existing missing-data pattern | Map borders | Theme border tokens set to v8 values |
 | Static legend polish (G3) | Units, ranges, midpoint in map keys | Every choropleth legend | Not preservable; reported |
 | Size-key placement (G6) | Size key placed against occupied bounds | Every bubble map | Not preservable; reported |
 
@@ -515,7 +517,7 @@ Execution is authorized in the existing v9 worktree, with subsystem ownership an
 
 - [x] Confirm final PR #137 state and source symbols against `93112314` or its successor. PR remains open at `3585ecb3`; local `93112314` descends from it and contains the completed review handoff.
 - [x] Reconcile existing plan statuses and the reader/layout changes already delivered.
-- [ ] Produce before/after plates for every B3 row (§12) at 390, 1024 and 1440 px, light and dark, plus 200% text checks: desktop bar, column, line, stacked area, choropleth and bubble map. The user approves or drops each B3 row from these plates; this is the "genuine improvement" gate.
+- [x] Produce before/after plates for every B3 row (§12) at 390, 1024 and 1440 px, light and dark, plus 200% text checks: desktop bar, column, line, stacked area, choropleth and bubble map. The user approves or drops each B3 row from these plates; this is the "genuine improvement" gate.
 - [ ] Spell the B2 APIs (`labels.placement`, `endpointLabels.anchor`/`placement`, `axis.titleAngle`/`titleAnchor`, map `text`/`textPriority`/`callouts`) and the runtime options for row hover and the inventory disclosure, alongside `ReaderPresentationOptions`.
 - [x] Hard gates before P2: map layout lives in an extracted `geo/layout.ts` (§6, decided), GeoMap emits `DesignDiagnostic` through `onDiagnostic` (decided), and P4 panels are host-placed with no engine reserve (§5.4, decided). P0 confirms each still holds against the final branch.
 - [x] Capture performance/bundle baseline and use concrete examples for reader tasks. Formative user study remains a later reader acceptance task; no measured usability claim is made.
@@ -538,7 +540,7 @@ Acceptance: each fix has a test that fails before it; every changed baseline is 
 - [x] Add the bar value column as a `FrameMeasures` field with the column/outside/suppress choice in the layout plan; `inside` text-fit logic.
 - [x] Add `endpointLabels.anchor: 'band'` (endpoint-only, `dataPoints` unchanged) and `endpointLabels.placement: 'interior'`; date qualification through the resolved x scale type.
 - [x] Add `axis.titleAngle`/`titleAnchor` with the header reservation in `FrameMeasures`.
-- [ ] Ship the approved chart B3 defaults: gridline/zero hierarchy, endpoint spacing/typography, column rhythm, bar row proportions, band anchors. Add their theme tokens and `migrateSpecV8` materializations of the v8 values, with fixtures showing a migrated v8 spec keeps its v8 look.
+- [x] Ship approved chart B3 gridline/zero hierarchy and band anchors. Retain endpoint spacing/typography, column rhythm and bar row proportions per the user’s 2026-10-19 decision. Materialize v8 theme/anchor values with migration fixtures.
 - [x] Add focus/overlap/composition gallery examples and update docs.
 - [x] Validate zero/normalize/center stacks, absent series rows versus explicit null/nonfinite/true zero, both endpoint columns, mixed units, facets, and layers. Assert synthetic pivot geometry never becomes an observed label value and resize never changes numeric provenance.
 
@@ -549,7 +551,7 @@ Acceptance: feature-disabled fixtures match the post-P1a baseline except the app
 - [x] Extract `geo/layout.ts` from `compileGeoMap` with zero visual diff; route new map diagnostics through `onDiagnostic`.
 - [x] Test first: top/bottom/right/bottom-right legend budgets, side-legend fallback with diagnostic, fixed-height aspect ratio, multiple point/color/size keys, no-data versus zero, class-boundary labels.
 - [x] Implement side legends per the §5.4 position table; changelog entry for specs that already set side positions.
-- [ ] Ship the approved map B3 defaults: static legend polish, size-key placement, and quieter no-data/border treatment with the §5.4 contrast floor. Theme tokens and `migrateSpecV8` materializations where expressible. Paint order unchanged.
+- [x] Ship approved map B3 static legend polish, size-key placement and quieter borders. Retain the current no-data hatch per the user’s 2026-10-19 decision. Materialize expressible v8 colors; report unavoidable key-layout changes and guard exact geometry transitions. Paint order unchanged.
 - [x] Correct the stale “no size legend in v1” type comment.
 - [x] Keep feature coverage/projection/fit semantics unchanged; no automatic map crop.
 - [x] Add desktop world, US categorical, county, diverging, sparse-data, and bubble comparison plates.
@@ -657,7 +659,7 @@ Primary risks are scope expansion, inconsistent identity across maps/series, lay
 
 Assumptions requiring validation: aligned columns help actual ranking tasks; more map height is acceptable to hosts; 200 candidate labels covers practical editorial maps; caller-supplied panel containers are ergonomic in all wrappers. These are not claims about existing user demand. P0/P3/P4 validation can change their implementation without reopening the core package boundaries.
 
-Decided 2026-10-18 by the user: v9.0 is a major release and visual breaking changes are expected, provided they are genuine improvements. Execution of the program is authorized. Pending user decisions: approving or dropping each B3 row from its P0 plates and the separately specified P5 geometry spike. Release staging of P3/P4 into 9.x is not cancellation of that authorized work. No decision here authorizes merge/release. Remaining API spelling/spike gates are called out in P0/P5 and must be resolved before those contracts ship.
+Decided 2026-10-18 by the user: v9.0 is a major release and visual breaking changes are expected, provided they are genuine improvements. Execution of the program is authorized. B3 decisions are recorded in the 2026-10-19 approval below. The separately specified P5 geometry spike remains pending. Release staging of P3/P4 into 9.x is not cancellation of that authorized work. No decision here authorizes merge/release. Remaining API spelling/spike gates are called out in P0/P5 and must be resolved before those contracts ship.
 
 ## 16. Adversarial review and disposition
 
@@ -728,3 +730,10 @@ Implementation evidence: `FieldFormatContext.step` alone trims integral trailing
 P1/P2 foundations are committed on the existing v9 branch as `9be168d9`. The required code reviewer approved the full foundation diff and subsequent signed-stack/legend/capacity/performance corrections. Final results: 7,919 unit tests passed (three intentional expected-failure cases), 115 visual checks, 177 general browser checks (11 platform skips), 106 annotation checks; lint, typecheck, build, generated files and package boundaries passed. The original v8 capture is unchanged. See [the execution record](desktop-chart-and-geomap-execution.md) for exact gate, baseline, performance, cleanup and remaining-work details.
 
 B3 adoption, the row-hover runtime contract and implementation, P3/P4, the P5 spike, and C7 follow-up remain open. No merge or release is authorized by this checkpoint. The review improved architecture and semantic correctness; release staging and integration cost have not been used to remove the broader reader/design outcomes.
+
+
+## B3 visual decisions — approved 2026-10-19
+
+The user reviewed the gallery and approved grid/zero hierarchy, stacked-area band anchors, clearer static map keys, collision-aware size-key placement, and quieter borders. Ordinary grid light/dark: rgba(0,0,0,0.05) / rgba(255,255,255,0.06); zero: rgba(0,0,0,0.22) / rgba(255,255,255,0.24). Interior map borders: rgba(0,0,0,0.14) / rgba(255,255,255,0.18); outline: rgba(0,0,0,0.40) / rgba(255,255,255,0.38).
+
+Retain current bar/column proportions, endpoint sizes/spacing, and the current no-data hatch. These choices supersede earlier proposed retunes and the proposed hatch adoption; useful opt-in controls remain. Expressible v8 appearance must be materialized by migration; static key and collision-placement changes need truthful limitation reporting. P5 remains a separate gate. Merge and release remain on hold.

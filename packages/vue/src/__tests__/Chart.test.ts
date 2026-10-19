@@ -306,3 +306,25 @@ describe('interaction mode and listener parity', () => {
     wrapper.unmount();
   });
 });
+it('forwards rowHover and removes it when toggled off', async () => {
+  const wrapper = mount(Chart, {
+    props: {
+      spec: {
+        mark: 'bar',
+        animation: false,
+        data: [{ name: 'A', value: 3 }],
+        encoding: {
+          y: { field: 'name', type: 'nominal' },
+          x: { field: 'value', type: 'quantitative' },
+        },
+      } as ChartSpec,
+      rowHover: true,
+    },
+  });
+  await flushPromises();
+  expect(wrapper.element.querySelector('.oc-row-hover')).not.toBeNull();
+  await wrapper.setProps({ rowHover: false });
+  await flushPromises();
+  expect(wrapper.element.querySelector('.oc-row-hover')).toBeNull();
+  wrapper.unmount();
+});

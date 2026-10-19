@@ -75,9 +75,9 @@ export const CSS_TOKENS: readonly CssTokenDef[] = [
   { name: '--oc-body-size', light: '13px' },
   {
     name: '--oc-gridline-zero',
-    light: 'rgba(0, 0, 0, 0.08)',
-    dark: 'rgba(255, 255, 255, 0.06)',
-    comment: 'Omission uses the active theme gridline color',
+    light: 'rgba(0, 0, 0, 0.22)',
+    dark: 'rgba(255, 255, 255, 0.24)',
+    comment: 'Emphasis for existing zero rules; does not change the domain',
   },
   {
     name: '--oc-endpoint-label-size',
@@ -110,13 +110,13 @@ export const CSS_TOKENS: readonly CssTokenDef[] = [
   },
   {
     name: '--oc-map-interior-border',
-    light: 'rgba(0, 0, 0, 0.25)',
-    dark: 'rgba(255, 255, 255, 0.22)',
+    light: 'rgba(0, 0, 0, 0.14)',
+    dark: 'rgba(255, 255, 255, 0.18)',
   },
   {
     name: '--oc-map-outline-border',
-    light: 'rgba(0, 0, 0, 0.55)',
-    dark: 'rgba(255, 255, 255, 0.45)',
+    light: 'rgba(0, 0, 0, 0.4)',
+    dark: 'rgba(255, 255, 255, 0.38)',
   },
 
   { name: '--oc-annotation-label', light: '#333333', dark: '#d1d5db' },
@@ -177,7 +177,7 @@ export const CSS_TOKENS: readonly CssTokenDef[] = [
   {
     section: 'Lines',
     name: '--oc-gridline',
-    light: 'rgba(0, 0, 0, 0.08)',
+    light: 'rgba(0, 0, 0, 0.05)',
     dark: 'rgba(255, 255, 255, 0.06)',
   },
   {

@@ -30,6 +30,7 @@ import {
   HPAD_COMPACT_FRACTION,
   HPAD_COMPACT_MIN,
   mergeThemeConfig,
+  pickLabelColor,
   resolveTheme,
 } from '@opendata-ai/openchart-core';
 import { geoArea, geoPath } from 'd3-geo';
@@ -54,10 +55,17 @@ import { joinDataToFeatures } from './join';
 import {
   geoMapFullArea,
   measureGeoContinuousKey,
+  measureGeoKeyText,
+  measureGeoSizeKey,
   moveGeoMapLegend,
+  occupiedBoundsSizeKeyCandidate,
   planGeoMapFrame,
 } from './layout';
-import { classIntervalText } from './legend-semantics';
+import {
+  classIntervalText,
+  mapLegendCaptionCandidate,
+  mapNeutralClassContext,
+} from './legend-semantics';
 import { createProjection, resolveDefaultProjection } from './projections';
 import type { NormalizedGeoMapSpec } from './types';
 
@@ -305,7 +313,38 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
   // 7. Compile warnings
   const compileWarnings: CompileWarning[] = [];
 
+  // Join before measuring keys; missingness does not depend on projection.
+  // Join data to features (skip when no key channel, e.g. basemap-only mode)
+  let joinWarnings: CompileWarning[] = [];
+  let joined = new Map<string | number, Record<string, unknown>>();
+  if (mapSpec.encoding.key) {
+    const featureObjs = geoFeatures.map((f) => ({
+      id: f.id as string | number,
+      properties: (f.properties ?? {}) as Record<string, unknown>,
+    }));
+    const joinResult = joinDataToFeatures(
+      featureObjs,
+      mapSpec.data,
+      mapSpec.encoding.key.field,
+      mapSpec.geo.idField,
+    );
+    joined = joinResult.joined;
+    // In basemap-only mode (empty data + points layer), all features are intentionally unmatched
+    const filteredJoinWarnings =
+      mapSpec.data.length === 0 && mapSpec.points
+        ? joinResult.warnings.filter((w) => w.code !== 'UNMATCHED_FEATURES')
+        : joinResult.warnings;
+    joinWarnings = filteredJoinWarnings;
+  }
+
   // 8. Legend height reserve
+  const mapFields = mapSpec.fields;
+  const measureKeyText =
+    options.measureText ??
+    ((text: string, size: number, weight?: number) => ({
+      width: estimateTextWidth(text, size, weight),
+      height: size,
+    }));
   const showLegend = mapSpec.legend?.show !== false;
   const colorEncoding = mapSpec.encoding.color;
   // Channel-level `legend: null` suppresses the choropleth legend (the VL
@@ -352,7 +391,8 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
       );
     }
     if (continuousContent) {
-      legendTitle = legendTitleFor(colorEncoding);
+      const caption = mapLegendCaptionCandidate(colorEncoding, mapFields?.[colorEncoding.field]);
+      legendTitle = caption.title || undefined;
       const labelRowHeight = Math.ceil(theme.fonts.sizes.small * 1.3);
       const titleRowHeight = legendTitle ? labelRowHeight : 0;
       legendBlockHeight =
@@ -362,6 +402,84 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
         labelRowHeight * (continuousContent.labelRows ?? 1);
     }
   }
+  if (colorEncoding && !isQuantitative && showChoroplethLegend)
+    legendTitle =
+      mapLegendCaptionCandidate(colorEncoding, mapFields?.[colorEncoding.field]).title || undefined;
+  if (continuousContent) {
+    const barWidth = Math.min(
+      fullArea.width,
+      350,
+      continuousContent.barWidth * Math.max(1, theme.fonts.sizes.small / 12),
+    );
+    const ratio = barWidth / continuousContent.barWidth;
+    continuousContent = {
+      ...continuousContent,
+      barWidth,
+      bins: continuousContent.bins.map((bin) => ({
+        ...bin,
+        x: bin.x * ratio,
+        width: bin.width * ratio,
+      })),
+      ticks: continuousContent.ticks.map((tick) => ({ ...tick, x: tick.x * ratio })),
+    };
+  }
+  const keyStyle: TextStyle = {
+    fontFamily: theme.fonts.family,
+    fontSize: theme.fonts.sizes.small,
+    fontWeight: theme.fonts.weights.normal,
+    fill: theme.colors.neutral.secondary,
+    lineHeight: 1.35,
+  };
+  const keyTextWidth = Math.min(fullArea.width, Math.max(continuousContent?.barWidth ?? 220, 350));
+  const titlePlan = legendTitle
+    ? measureGeoKeyText(
+        legendTitle,
+        keyTextWidth,
+        { ...keyStyle, fontWeight: theme.fonts.weights.medium },
+        measureKeyText,
+      )
+    : undefined;
+  const unit = colorEncoding
+    ? mapLegendCaptionCandidate(colorEncoding, mapFields?.[colorEncoding.field]).unit
+    : undefined;
+  const unitPlan =
+    showChoroplethLegend && colorEncoding && unit
+      ? measureGeoKeyText(unit, keyTextWidth, keyStyle, measureKeyText)
+      : undefined;
+  const keyFormat = colorEncoding?.format ? buildD3Formatter(colorEncoding.format) : undefined;
+  const neutralContext = classScale
+    ? mapNeutralClassContext(
+        classScale,
+        keyFormat ?? ((value) => formatNumber(value)),
+        Object.values(theme.colors.diverging).map(
+          (colors) => colors[Math.floor(colors.length / 2)],
+        ),
+      )
+    : undefined;
+  if (continuousContent && neutralContext) {
+    const barHeight = Math.max(continuousContent.barHeight, Math.ceil(keyStyle.fontSize * 1.35));
+    legendBlockHeight += barHeight - continuousContent.barHeight;
+    continuousContent = { ...continuousContent, barHeight };
+  }
+  const contextPlan =
+    continuousContent && neutralContext
+      ? measureGeoKeyText(neutralContext.caption, keyTextWidth, keyStyle, measureKeyText)
+      : undefined;
+  const oldTitleHeight = legendTitle ? Math.ceil(theme.fonts.sizes.small * 1.3) : 0;
+  const titleHeight = (titlePlan?.height ?? 0) + (unitPlan?.height ?? 0);
+  const contextHeight = contextPlan ? contextPlan.height + 8 : 0;
+  const hasNoData =
+    colorEncoding &&
+    isQuantitative &&
+    geoFeatures.some(
+      (feature) =>
+        finiteNumber(joined.get(feature.id as string | number)?.[colorEncoding.field]) ===
+        undefined,
+    );
+  const noDataRowHeight =
+    continuousContent && hasNoData ? Math.ceil(keyStyle.fontSize * 1.35) + 8 : 0;
+  if (continuousContent)
+    legendBlockHeight += titleHeight - oldTitleHeight + contextHeight + noDataRowHeight;
   if (legendBlockHeight === 0 && showChoroplethLegend && colorEncoding && !isQuantitative) {
     const labelHeight = Math.ceil(theme.fonts.sizes.small * 1.3);
     // The legend wraps once the entries run past the frame, so reserve every
@@ -379,7 +497,7 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
     widths.push(noDataBlockWidth(labelStyle));
     const placed = wrapCategoricalEntries(widths, fullArea.width);
     const rows = placed.length > 0 ? placed[placed.length - 1].row + 1 : 1;
-    legendBlockHeight = rows * (Math.max(10, labelHeight) + 6);
+    legendBlockHeight = titleHeight + rows * (Math.max(10, labelHeight) + 6);
   }
 
   const choroplethLegendBlockHeight = legendBlockHeight;
@@ -409,6 +527,37 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
         )
       : null;
 
+  const pointCaption = pointColor
+    ? mapLegendCaptionCandidate(pointColor, mapFields?.[pointColor.field])
+    : undefined;
+  const pointTitlePlan = pointCaption?.title
+    ? measureGeoKeyText(
+        pointCaption.title,
+        keyTextWidth,
+        { ...keyStyle, fontWeight: theme.fonts.weights.medium },
+        measureKeyText,
+      )
+    : undefined;
+  const pointUnitPlan = pointCaption?.unit
+    ? measureGeoKeyText(pointCaption.unit, keyTextWidth, keyStyle, measureKeyText)
+    : undefined;
+  const pointTitleHeight = (pointTitlePlan?.height ?? 0) + (pointUnitPlan?.height ?? 0);
+  const pointTextRows = (x: number, y: number) => [
+    ...(pointTitlePlan?.lines.map((text, index) => ({
+      text,
+      x,
+      y: y + keyStyle.fontSize + index * pointTitlePlan.advance,
+      style: { ...keyStyle, fontWeight: theme.fonts.weights.medium },
+      role: 'title' as const,
+    })) ?? []),
+    ...(pointUnitPlan?.lines.map((text, index) => ({
+      text,
+      x,
+      y: y + (pointTitlePlan?.height ?? 0) + keyStyle.fontSize + index * pointUnitPlan.advance,
+      style: keyStyle,
+      role: 'unit' as const,
+    })) ?? []),
+  ];
   const pointCategoryRowHeight = Math.max(
     CATEGORICAL_ROW_HEIGHT,
     Math.ceil(theme.fonts.sizes.small * 1.2),
@@ -431,6 +580,7 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
   // Reserve height for point color legend if applicable (overlay legends
   // float inside the map area and reserve nothing)
   if (showLegend && !pointLegendOverlay && mapSpec.points?.color) {
+    legendBlockHeight += pointTitleHeight;
     if (mapSpec.points.color.type === 'quantitative') {
       const labelRowHeight = Math.ceil(theme.fonts.sizes.small * 1.3);
       legendBlockHeight +=
@@ -454,13 +604,27 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
       ? (collectCategories(rows, channel.field, channel.scale?.domain).length + 1) * sideRowHeight
       : 0;
   const sizeContent =
-    sidePosition && showLegend && mapSpec.points?.size
-      ? computeSizeLegendContent(mapSpec.points.size, mapSpec.points.data, theme, {
-          curve: SIZE_SCALE_DEFAULTS.mapPoint.curve,
-          range: (mapSpec.points.size.scale?.range as [number, number] | undefined) ?? [
-            ...SIZE_SCALE_DEFAULTS.mapPoint.range,
-          ],
-        })
+    showLegend && mapSpec.points?.size
+      ? computeSizeLegendContent(
+          {
+            ...mapSpec.points.size,
+            title: (() => {
+              const caption = mapLegendCaptionCandidate(
+                mapSpec.points.size!,
+                mapFields?.[mapSpec.points.size!.field],
+              );
+              return [caption.title, caption.unit].filter(Boolean).join('\n');
+            })(),
+          },
+          mapSpec.points.data,
+          theme,
+          {
+            curve: SIZE_SCALE_DEFAULTS.mapPoint.curve,
+            range: (mapSpec.points.size.scale?.range as [number, number] | undefined) ?? [
+              ...SIZE_SCALE_DEFAULTS.mapPoint.range,
+            ],
+          },
+        )
       : null;
   const sideLabelStyle: TextStyle = {
     fontFamily: theme.fonts.family,
@@ -475,6 +639,14 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
       width: estimateTextWidth(text, size, weight),
       height: size,
     }));
+  const measuredSizeContent = sizeContent
+    ? measureGeoSizeKey(
+        sizeContent,
+        sideLabelStyle,
+        measureSideText,
+        fullArea.width - OVERLAY_LEGEND_INSET * 2,
+      )
+    : null;
   // Missingness is known after joining; conservatively reserve its full key now,
   // just as categorical reservation counts the potential No data entry.
   const choroplethSideExtent =
@@ -489,20 +661,26 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
           noData: { label: 'No data', swatchGap: NO_DATA_SWATCH_GAP, labelGap: NO_DATA_LABEL_GAP },
         })
       : undefined;
-  const pointSideExtent =
-    sidePosition && pointContinuousContent
-      ? measureGeoContinuousKey({
-          content: pointContinuousContent,
-          labelStyle: sideLabelStyle,
-          measureText: measureSideText,
-        })
-      : undefined;
+  const pointKeyExtent = pointContinuousContent
+    ? measureGeoContinuousKey({
+        content: pointContinuousContent,
+        labelStyle: sideLabelStyle,
+        measureText: measureSideText,
+      })
+    : undefined;
+  const pointKeyWidth = Math.max(
+    pointKeyExtent?.width ?? 0,
+    ...pointTextRows(0, 0).map(
+      (row) => measureSideText(row.text, row.style.fontSize, row.style.fontWeight).width,
+    ),
+  );
   const sideWidth = sidePosition
     ? Math.max(
         320,
+        keyTextWidth,
         choroplethSideExtent?.width ?? 0,
-        pointSideExtent?.width ?? 0,
-        sizeContent?.width ?? 0,
+        pointKeyWidth,
+        measuredSizeContent?.width ?? 0,
         ...[colorEncoding, pointColor].flatMap((channel) =>
           channel
             ? [
@@ -537,23 +715,26 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
       )
     : 0;
   const choroplethSideHeight = continuousContent
-    ? (legendTitle ? Math.ceil(theme.fonts.sizes.small * 1.3) : 0) +
+    ? titleHeight +
+      contextHeight +
+      noDataRowHeight +
       continuousContent.barHeight +
       CONTINUOUS_LABEL_GAP +
       Math.ceil(theme.fonts.sizes.small * 1.3) * (continuousContent.labelRows ?? 1)
-    : categoryHeight(colorEncoding, mapSpec.data);
+    : titleHeight + categoryHeight(colorEncoding, mapSpec.data);
   const pointSideHeight =
     showLegend && pointColor
       ? pointContinuousContent
-        ? pointContinuousContent.barHeight +
+        ? pointTitleHeight +
+          pointContinuousContent.barHeight +
           CONTINUOUS_LABEL_GAP +
           Math.ceil(theme.fonts.sizes.small * 1.3) * (pointContinuousContent.labelRows ?? 1)
-        : categoryHeight(pointColor, mapSpec.points!.data)
+        : pointTitleHeight + categoryHeight(pointColor, mapSpec.points!.data)
       : 0;
   const sideKeyHeights = [
     showChoroplethLegend && colorEncoding ? choroplethSideHeight : 0,
     pointSideHeight,
-    sizeContent?.height ?? 0,
+    measuredSizeContent?.height ?? 0,
   ].filter((height) => height > 0);
   const sideHeight =
     sideKeyHeights.reduce((sum, height) => sum + height, 0) +
@@ -628,27 +809,7 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
     }
   }
 
-  // 11. Join data to features (skip when no key channel, e.g. basemap-only mode)
-  let joined = new Map<string | number, Record<string, unknown>>();
-  if (mapSpec.encoding.key) {
-    const featureObjs = geoFeatures.map((f) => ({
-      id: f.id as string | number,
-      properties: (f.properties ?? {}) as Record<string, unknown>,
-    }));
-    const joinResult = joinDataToFeatures(
-      featureObjs,
-      mapSpec.data,
-      mapSpec.encoding.key.field,
-      mapSpec.geo.idField,
-    );
-    joined = joinResult.joined;
-    // In basemap-only mode (empty data + points layer), all features are intentionally unmatched
-    const filteredJoinWarnings =
-      mapSpec.data.length === 0 && mapSpec.points
-        ? joinResult.warnings.filter((w) => w.code !== 'UNMATCHED_FEATURES')
-        : joinResult.warnings;
-    compileWarnings.push(...filteredJoinWarnings);
-  }
+  compileWarnings.push(...joinWarnings);
 
   // 12. Check for null-projecting features (albersUsa drops territories)
   const droppedFeatures: string[] = [];
@@ -722,7 +883,7 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
             fill: theme.colors.neutral.secondary,
           }
         : undefined;
-      const titleRowHeight = legendTitle ? Math.ceil(theme.fonts.sizes.small * 1.3) : 0;
+      const titleRowHeight = titleHeight;
       const bounds = {
         x: legendX,
         y: legendY,
@@ -741,29 +902,30 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
       // it as the low end of the scale. Only drawn when the map actually has
       // holes in it.
       const hasUnmatched = featureMarks.some((m) => m.noData);
-      const noDataX = bar.x + bar.width + NO_DATA_SWATCH_GAP;
-      // The label is part of the block, so the fit check has to carry it too --
-      // a swatch that fits with its text hanging off the frame is not a fit.
-      const noDataLabelWidth = sideFrame
-        ? measureSideText('No data', labelStyle.fontSize, labelStyle.fontWeight).width
-        : estimateTextWidth('No data', labelStyle.fontSize, labelStyle.fontWeight);
-      const noDataRight = noDataX + bar.height + NO_DATA_LABEL_GAP + noDataLabelWidth;
-      const noDataFits = sideFrame
-        ? noDataRight <= bounds.x + sideWidth
-        : noDataRight < fullArea.x + fullArea.width;
+      const noDataX = bounds.x;
+      const noDataY = bounds.y + bounds.height - noDataRowHeight + 8;
+      const noDataSize = labelStyle.fontSize;
+      const noDataLabelWidth = measureSideText(
+        'No data',
+        labelStyle.fontSize,
+        labelStyle.fontWeight,
+      ).width;
+      const noDataFits =
+        noDataX + noDataSize + NO_DATA_LABEL_GAP + noDataLabelWidth <=
+        bounds.x + (sideFrame ? sideWidth : fullArea.width);
       const noData =
         hasUnmatched && noDataFits
           ? {
               x: noDataX,
-              y: bar.y,
-              size: bar.height,
+              y: noDataY,
+              size: noDataSize,
               fill: neutralFill,
               // Same hatch the no-data features carry, so the key matches what
               // is on the map rather than a neutral the ramp's center mimics.
               pattern: noDataPattern,
               label: 'No data',
-              labelX: noDataX + bar.height + NO_DATA_LABEL_GAP,
-              labelY: bar.y + bar.height,
+              labelX: noDataX + noDataSize + NO_DATA_LABEL_GAP,
+              labelY: noDataY + labelStyle.fontSize,
             }
           : undefined;
 
@@ -782,6 +944,55 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
         titleStyle,
         titleY: legendTitle ? bounds.y + labelStyle.fontSize : undefined,
         noData,
+        textRows: [
+          ...(neutralContext &&
+          measureKeyText(neutralContext.label, labelStyle.fontSize).width <=
+            continuousContent.bins[neutralContext.index].width - 4
+            ? [
+                {
+                  text: neutralContext.label,
+                  x:
+                    bar.x +
+                    continuousContent.bins[neutralContext.index].x +
+                    continuousContent.bins[neutralContext.index].width / 2,
+                  y: bar.y + (bar.height + labelStyle.fontSize * 0.7) / 2,
+                  style: {
+                    ...labelStyle,
+                    fill: pickLabelColor(continuousContent.bins[neutralContext.index].color),
+                  },
+                  role: 'midpoint' as const,
+                  anchor: 'middle' as const,
+                },
+              ]
+            : []),
+          ...(titlePlan?.lines.map((text, index) => ({
+            text,
+            x: bounds.x,
+            y: bounds.y + labelStyle.fontSize + index * titlePlan.advance,
+            style: titleStyle!,
+            role: 'title' as const,
+          })) ?? []),
+          ...(unitPlan?.lines.map((text, index) => ({
+            text,
+            x: bounds.x,
+            y: bounds.y + (titlePlan?.height ?? 0) + labelStyle.fontSize + index * unitPlan.advance,
+            style: keyStyle,
+            role: 'unit' as const,
+          })) ?? []),
+          ...(contextPlan?.lines.map((text, index) => ({
+            text,
+            x: bounds.x,
+            y:
+              bounds.y +
+              bounds.height -
+              noDataRowHeight -
+              contextPlan.height +
+              labelStyle.fontSize +
+              index * contextPlan.advance,
+            style: keyStyle,
+            role: 'context' as const,
+          })) ?? []),
+        ],
       };
     }
   } else {
@@ -804,6 +1015,38 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
     });
     featureMarks = result.marks;
     categoricalLegend = result.legend;
+    if (categoricalLegend) {
+      const key = categoricalLegend;
+      if (key.entryPositions)
+        key.entryPositions = key.entryPositions.map((entry) => ({
+          ...entry,
+          y: entry.y + titleHeight,
+          labelY: entry.labelY + titleHeight,
+        }));
+      if (key.noData)
+        key.noData = {
+          ...key.noData,
+          y: key.noData.y + titleHeight,
+          labelY: key.noData.labelY + titleHeight,
+        };
+      key.bounds.height += titleHeight;
+      key.textRows = [
+        ...(titlePlan?.lines.map((text, index) => ({
+          text,
+          x: key.bounds.x,
+          y: key.bounds.y + keyStyle.fontSize + index * titlePlan.advance,
+          style: { ...keyStyle, fontWeight: theme.fonts.weights.medium },
+          role: 'title' as const,
+        })) ?? []),
+        ...(unitPlan?.lines.map((text, index) => ({
+          text,
+          x: key.bounds.x,
+          y: key.bounds.y + (titlePlan?.height ?? 0) + keyStyle.fontSize + index * unitPlan.advance,
+          style: keyStyle,
+          role: 'unit' as const,
+        })) ?? []),
+      ];
+    }
   }
 
   // Report dropped features (null-projecting)
@@ -1039,23 +1282,21 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
           x: legendX,
           y: legendY,
           width: legendWidth,
-          height: pointLegendOverlay
-            ? swatchSize + 6
-            : pointCategoryRowCount * pointCategoryRowHeight,
+          height: pointTitleHeight + pointCategoryRowCount * pointCategoryRowHeight,
         },
-        ...(!pointLegendOverlay
-          ? {
-              rowHeight: pointCategoryRowHeight,
-              entryPositions: pointCategoryRows.map((position, index) => ({
-                x: legendX + position.x,
-                y: legendY + position.row * pointCategoryRowHeight,
-                labelX: legendX + position.x + swatchSize + swatchGap,
-                labelY: legendY + position.row * pointCategoryRowHeight + swatchSize / 2,
-                width: pointCategoryWidths[index],
-                row: position.row,
-              })),
-            }
-          : {}),
+        ...{
+          rowHeight: pointCategoryRowHeight,
+          entryPositions: pointCategoryRows.map((position, index) => ({
+            x: legendX + position.x,
+            y: legendY + pointTitleHeight + position.row * pointCategoryRowHeight,
+            labelX: legendX + position.x + swatchSize + swatchGap,
+            labelY:
+              legendY + pointTitleHeight + position.row * pointCategoryRowHeight + swatchSize / 2,
+            width: pointCategoryWidths[index],
+            row: position.row,
+          })),
+        },
+        textRows: pointTextRows(legendX, legendY),
         labelStyle,
         entries,
         swatchSize,
@@ -1088,18 +1329,19 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
           : fullArea.y + mapAreaHeight + legendReserveGap + bottomChoroplethH + choroplethLegendGap;
         const ptLabelRowHeight = Math.ceil(theme.fonts.sizes.small * 1.3);
         const ptLegendHeight =
+          pointTitleHeight +
           ptContinuousContent.barHeight +
           CONTINUOUS_LABEL_GAP +
           ptLabelRowHeight * (ptContinuousContent.labelRows ?? 1);
         const bounds = {
           x: legendX,
           y: legendY,
-          width: sideFrame ? sideWidth : ptContinuousContent.barWidth,
+          width: sideFrame ? sideWidth : pointKeyWidth,
           height: ptLegendHeight,
         };
         const bar = {
-          x: bounds.x + (sideFrame ? (pointSideExtent?.inset ?? 0) : 0),
-          y: bounds.y,
+          x: bounds.x + (pointKeyExtent?.inset ?? 0),
+          y: bounds.y + pointTitleHeight,
           width: ptContinuousContent.barWidth,
           height: ptContinuousContent.barHeight,
         };
@@ -1110,6 +1352,7 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
           bounds,
           labelStyle,
           bar,
+          textRows: pointTextRows(bounds.x, bounds.y),
           colorStops: ptContinuousContent.colorStops,
           bins: ptContinuousContent.bins.map((b) => ({ ...b, x: b.x + bar.x })),
           ticks: ptContinuousContent.ticks.map((t) => ({ ...t, x: t.x + bar.x })),
@@ -1121,42 +1364,73 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
     // Point size key: nested circles, bottom-right over the map. Without it a
     // bubble map asks the reader to guess what "twice the area" is worth.
     if (pts.size && showLegend) {
-      const sizeRange = (pts.size.scale?.range as [number, number] | undefined) ?? [
-        ...SIZE_SCALE_DEFAULTS.mapPoint.range,
-      ];
-      const content = computeSizeLegendContent(pts.size, pts.data, theme, {
-        curve: SIZE_SCALE_DEFAULTS.mapPoint.curve,
-        range: sizeRange,
-      });
+      const content = measuredSizeContent;
       if (content) {
-        const mapTop =
-          legendPosition === 'top' && legendBlockHeight > 0
-            ? fullArea.y + legendBlockHeight + legendReserveGap
-            : fullArea.y;
-        pointSizeLegend = {
-          type: 'size',
-          channel: 'size',
-          position: 'bottom-right',
-          bounds: {
-            x: fullArea.x + fullArea.width - content.width - OVERLAY_LEGEND_INSET,
-            y: mapTop + mapAreaHeight - content.height - OVERLAY_LEGEND_INSET,
-            width: content.width,
-            height: content.height,
-          },
-          circles: content.circles,
-          stroke: theme.colors.neutral[400],
-          labelStyle: {
-            fontFamily: theme.fonts.family,
-            fontSize: theme.fonts.sizes.small,
-            fontWeight: theme.fonts.weights.normal,
-            fill: theme.colors.neutral.secondary,
-            lineHeight: 1.2,
-            fontVariant: 'tabular-nums',
-          },
-          title: content.title,
-          titleStyle: content.title ? sizeLegendTitleStyle(theme) : undefined,
-          titleY: content.titleY,
-        };
+        const obstacles = [
+          ...(pointLegendOverlay
+            ? [pointContinuousLegend?.bounds, pointCategoricalLegend?.bounds].filter(
+                (bounds): bounds is NonNullable<typeof bounds> => !!bounds,
+              )
+            : []),
+          ...featureMarks.map(({ bounds }) => ({
+            ...bounds,
+            x: bounds.x + frame.area.x,
+            y: bounds.y + frame.area.y,
+          })),
+          ...pointMarks.map((point) => ({
+            x: frame.area.x + point.cx - point.r,
+            y: frame.area.y + point.cy - point.r,
+            width: point.r * 2,
+            height: point.r * 2,
+          })),
+        ];
+        const placement = sideFrame
+          ? { ...sideFrame.legend, width: content.width, height: content.height }
+          : occupiedBoundsSizeKeyCandidate(
+              frame.area,
+              content.width,
+              content.height,
+              obstacles,
+              OVERLAY_LEGEND_INSET,
+            );
+        if (!placement) {
+          options.onDiagnostic?.({
+            code: 'MAP_SIZE_LEGEND_UNFIT',
+            severity: 'warning',
+            status: 'failed',
+            path: '/points/size',
+            origin: 'default',
+            viewport: { width: options.width, height: options.height },
+            message: 'The complete size key does not fit the map viewport; the key is omitted.',
+          });
+        } else {
+          pointSizeLegend = {
+            type: 'size',
+            channel: 'size',
+            position: 'bottom-right',
+            bounds: placement,
+            circles: content.circles,
+            stroke: theme.colors.neutral[400],
+            labelStyle: {
+              fontFamily: theme.fonts.family,
+              fontSize: theme.fonts.sizes.small,
+              fontWeight: theme.fonts.weights.normal,
+              fill: theme.colors.neutral.secondary,
+              lineHeight: 1.2,
+              fontVariant: 'tabular-nums',
+            },
+            title: content.title,
+            titleStyle: content.title ? sizeLegendTitleStyle(theme) : undefined,
+            titleY: content.titleY,
+            textRows: content.titleLines?.map((text, index) => ({
+              text,
+              x: placement.x,
+              y: placement.y + sideLabelStyle.fontSize + index * (content.titleAdvance ?? 0),
+              role: 'title' as const,
+              style: sizeLegendTitleStyle(theme),
+            })),
+          };
+        }
       }
     }
   }
@@ -1322,14 +1596,24 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
         const rowHeight = sideRowHeight;
         key.entryPositions = key.entries.map((_, index) => ({
           x: key.bounds.x,
-          y: key.bounds.y + index * rowHeight,
+          y:
+            key.bounds.y +
+            (key === categoricalLegend ? titleHeight : pointTitleHeight) +
+            index * rowHeight,
           labelX: key.bounds.x + key.swatchSize + key.swatchGap,
-          labelY: key.bounds.y + index * rowHeight + key.swatchSize / 2,
+          labelY:
+            key.bounds.y +
+            (key === categoricalLegend ? titleHeight : pointTitleHeight) +
+            index * rowHeight +
+            key.swatchSize / 2,
           width: sideWidth,
           row: index,
         }));
         if (key.noData) {
-          const noDataY = key.bounds.y + key.entries.length * rowHeight;
+          const noDataY =
+            key.bounds.y +
+            (key === categoricalLegend ? titleHeight : pointTitleHeight) +
+            key.entries.length * rowHeight;
           key.noData = {
             ...key.noData,
             x: key.bounds.x,

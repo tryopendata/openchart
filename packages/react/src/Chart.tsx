@@ -63,6 +63,8 @@ export interface ChartProps<TData extends DataRow = DataRow> extends ChartEventH
    * option). `'auto'` (default) promotes dense scatters to canvas.
    */
   renderer?: 'auto' | 'svg' | 'canvas';
+  /** Quiet row inspection for simple horizontal bars. */
+  rowHover?: boolean;
   /** Observe container resizes. */
   autoResize?: boolean;
   /** The currently selected element (controlled). */
@@ -104,6 +106,7 @@ function ChartInner(
     theme: themeProp,
     darkMode,
     renderer,
+    rowHover,
     autoResize,
     revision,
     onEdit,
@@ -255,6 +258,7 @@ function ChartInner(
       ...(handlersRef.current.onReveal ? { onReveal: stableOnReveal } : {}),
       ...(interaction != null ? { interaction } : {}),
       ...(selectedElementProp ? { selectedElement: selectedElementProp } : {}),
+      rowHover,
       autoResize,
       revision,
       ...(handlersRef.current.onEdit ? { onEdit: stableOnEdit } : {}),
@@ -279,6 +283,7 @@ function ChartInner(
     hasEditListener,
     hasSelectListener,
     hasDeselectListener,
+    rowHover,
     autoResize,
     stableOnLegendToggle,
     stableOnHighlightChange,

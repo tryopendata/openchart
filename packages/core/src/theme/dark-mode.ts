@@ -167,17 +167,20 @@ export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
   const neutral = deriveNeutralRamp(darkText, darkBg, true);
   const authoredColors =
     theme._authored?.colors && !Array.isArray(theme._authored.colors) ? theme._authored.colors : {};
-  const annotationColor = (
+  const authoredColor = (
     key:
       | 'annotationLabel'
       | 'annotationMuted'
       | 'annotationLeader'
       | 'annotationRule'
-      | 'annotationRangeFill',
+      | 'annotationRangeFill'
+      | 'gridlineZero'
+      | 'mapInteriorBorder'
+      | 'mapOutlineBorder',
     fallback: string,
   ): string =>
     pairs?.[`colors.${key}`]?.dark ??
-    (authoredColors[key] !== undefined ? theme.colors[key] : fallback);
+    (authoredColors[key] !== undefined ? (theme.colors[key] ?? fallback) : fallback);
   return {
     ...theme,
     isDark: true,
@@ -186,7 +189,7 @@ export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
       background: darkBg,
       text: darkText,
       gridline: darkGridline,
-      gridlineZero: pairs?.['colors.gridlineZero']?.dark ?? theme.colors.gridlineZero,
+      gridlineZero: authoredColor('gridlineZero', 'rgba(255,255,255,0.24)'),
       axis: darkAxis,
       annotationFill: pairs?.['colors.annotationFill']
         ? pairs['colors.annotationFill'].dark
@@ -194,11 +197,11 @@ export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
       annotationText: pairs?.['colors.annotationText']
         ? pairs['colors.annotationText'].dark
         : overridden(theme.colors.annotationText, light.annotationText, darkMuted),
-      annotationLabel: annotationColor('annotationLabel', '#d1d5db'),
-      annotationMuted: annotationColor('annotationMuted', '#9ca3af'),
-      annotationLeader: annotationColor('annotationLeader', '#9aa0a6'),
-      annotationRule: annotationColor('annotationRule', '#9ca3af'),
-      annotationRangeFill: annotationColor('annotationRangeFill', '#f0c040'),
+      annotationLabel: authoredColor('annotationLabel', '#d1d5db'),
+      annotationMuted: authoredColor('annotationMuted', '#9ca3af'),
+      annotationLeader: authoredColor('annotationLeader', '#9aa0a6'),
+      annotationRule: authoredColor('annotationRule', '#9ca3af'),
+      annotationRangeFill: authoredColor('annotationRangeFill', '#f0c040'),
       annotationMarkerFill:
         pairs?.['colors.annotationMarkerFill']?.dark ??
         (authoredColors.annotationMarkerFill !== undefined
@@ -211,9 +214,8 @@ export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
           : neutral.surface),
       mapNoDataFill: pairs?.['colors.mapNoDataFill']?.dark ?? theme.colors.mapNoDataFill,
       mapNoDataHatch: pairs?.['colors.mapNoDataHatch']?.dark ?? theme.colors.mapNoDataHatch,
-      mapInteriorBorder:
-        pairs?.['colors.mapInteriorBorder']?.dark ?? theme.colors.mapInteriorBorder,
-      mapOutlineBorder: pairs?.['colors.mapOutlineBorder']?.dark ?? theme.colors.mapOutlineBorder,
+      mapInteriorBorder: authoredColor('mapInteriorBorder', 'rgba(255,255,255,0.18)'),
+      mapOutlineBorder: authoredColor('mapOutlineBorder', 'rgba(255,255,255,0.38)'),
       categorical,
       categoricalFill,
       hairline: darkHairline,

@@ -1,5 +1,6 @@
 import type {
   AnimationSpec,
+  FieldMetadata,
   GeoMapEncoding,
   GeoMapGeo,
   GeoMapPointsLayer,
@@ -24,4 +25,5 @@ export interface NormalizedGeoMapSpec {
   watermark: boolean;
   animation?: AnimationSpec;
   points?: GeoMapPointsLayer;
+  fields?: Record<string, FieldMetadata>;
 }
