@@ -456,8 +456,25 @@ colors retain their previous uses.
 | Connector crossing score | `engine/src/annotations/connector-crossings.ts`: internal `ConnectorCrossings`; geometry tests in `annotations/__tests__/connector-crossings.test.ts`. |
 | Layer theme ownership | `engine/src/compile/layer.ts`: public `resolveLayerTheme` (root theme: `layer.theme ?? leaves[0].theme`) is shared with mount font measurement; leaf marks deep-merge `layer.theme` + `leaf.theme`. |
 | Former line label implementation | `engine/src/charts/line/labels.ts` removed; endpoint columns use `engine/src/endpoint-labels/` and `vanilla/src/renderers/endpoint-labels.ts`. |
+| Typed date slices and conservative comparison | `core/src/types/reader-slices.ts`; `engine/src/design/reader-slices.ts` indexes actual compiled observations and reconciles binding identity. `tooltips/metadata.ts` assigns explicit role/source metadata. |
+| Chart reader lifecycle | `vanilla/src/{reader,slice-reader,observation-reader,reader-binding,reader-options}.ts`; `interactions/reader-arbitration.ts` owns private gesture/layout subscriptions. Existing observation overload remains available. |
+| Host-owned comparison and place search | `vanilla/src/{reader-panel,reader-view-model,map-reader,map-companion,map-reader-overlays}.ts`; shared styling in `core/src/styles/reader.css`. Public `createGeoReader`, `GeoReaderController`, `GeoReaderOptions`. |
+| Map index and key context | `core/src/types/{geo-reader,geo-color-key}.ts`; `engine/src/geo/{reader-index,color-key}.ts`; `vanilla/src/map-color-key.ts`. Static distribution and transient active selection have separate paint paths. |
+| Shared measured attribution | `core/src/layout/chrome.ts` resolves `watermark` and `attributionLayout`; `vanilla/src/renderers/{brand,attribution-footer}.ts` paints the portable footer. Graph shell and table renderer reuse it. Exact v8 migration exceptions live in `examples/src/__tests__/migration-v8-attribution-changes.ts`. |
+| Reader and attribution journeys | `examples/src/gallery/{reader,attribution}.stories.tsx`; Chromium/WebKit cases in `e2e/chart-map-design/{reader,attribution}.spec.ts`. |
 
 The migration guide records remaining type/field removals. The built-in `editorial`
 preset, public `Theme`, `footnoteBandHeight`, and responsive padding-cap constants
 are removed. CSS defaults and theme configuration remain supported for all mount
 families; `clarity` is a deprecated colors-only migration bridge.
+
+
+## Geographic detail and inset views
+
+| Concern | Source / exports |
+|---|---|
+| Optional authoring/layout contracts | `core/src/types/geo-views.ts`: `GeoDetailLayer`, `GeoInset`, `GeoViewLayout`, `GeoProjectionContext`; `GeoMapSpec.geo` references these optional fields. |
+| Object selection, source-plane validation and immutable projection fit | `engine/src/geo/view-geometry.ts`; `compiler/validation/geo-map.ts`; `geo/compile-geo-map.ts` creates root/inset layouts with shared joins and explicit coverage. |
+| Independent cameras and scenes | `vanilla/src/map-view-camera.ts`, `map-view-renderer.ts`; `map-mount.ts` exposes scoped camera methods and preserves root compatibility. |
+| Labels, identity and portable export | `map-labels.ts`, `map-label-inventory.ts`, `map-reader.ts`, `map-reader-overlays.ts`, `static.ts`; view scope changes representation, not observation identity. |
+| Real geography and browser journeys | `engine/src/geo/__tests__/fixtures/travis-tracts-2020.geojson` with source provenance; `examples/src/gallery/geo-views.stories.tsx`; `e2e/chart-map-design/geo-views.spec.ts`. |

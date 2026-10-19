@@ -51,6 +51,7 @@ import {
   computeContinuousLegendContentForChannel,
 } from '../legend/continuous';
 import { computeSizeLegendContent, sizeLegendTitleStyle } from '../legend/size';
+import { buildGeoColorKey, geoColorKeyReserve } from './color-key';
 import { joinDataToFeatures } from './join';
 import { compilePreparedGeoLabels, hasGeoLabels, prepareGeoLabels } from './labels';
 import {
@@ -71,6 +72,16 @@ import {
 } from './legend-semantics';
 import { createProjection, resolveDefaultProjection } from './projections';
 import type { NormalizedGeoMapSpec } from './types';
+import {
+  decodeGeoViewSource,
+  GeoViewGeometryError,
+  planGeoInsetViewports,
+  projectGeoDetailLayers,
+  resolveGeoInsetProjection,
+  resolveGeoViewSources,
+  selectGeoInsetFeatures,
+  selectGeoInsetPoints,
+} from './view-geometry';
 
 /**
  * Inset from the map area's edges for overlay ('top-left') point legends.
@@ -227,6 +238,23 @@ function validateGeoFeatures(geo: NormalizedGeoMapSpec['geo']): Topology {
 }
 
 export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLayout {
+  try {
+    return compileGeoMapImpl(spec, options);
+  } catch (error) {
+    if (error instanceof GeoViewGeometryError)
+      options.onDiagnostic?.({
+        code: error.code,
+        message: error.message,
+        path: '/geo',
+        severity: 'warning',
+        status: 'failed',
+        origin: 'author',
+        viewport: { width: options.width, height: options.height },
+      });
+    throw error;
+  }
+}
+function compileGeoMapImpl(spec: unknown, options: CompileOptions): GeoMapLayout {
   // 1. Sugar expansion + validate + normalize
   const sugarWarnings: string[] = [];
   const expandedSpec =
@@ -268,13 +296,7 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
 
   // 4. Chrome
   const chrome = computeChrome(
-    {
-      title: mapSpec.chrome.title,
-      subtitle: mapSpec.chrome.subtitle,
-      source: mapSpec.chrome.source,
-      byline: mapSpec.chrome.byline,
-      footer: mapSpec.chrome.footer,
-    },
+    mapSpec.chrome,
     theme,
     options.width,
     options.measureText,
@@ -304,13 +326,30 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
     chromeLayout,
   );
 
+  if ((fullArea.width <= 0 || fullArea.height <= 0) && mapSpec.geo.insets?.length)
+    throw new GeoViewGeometryError(
+      'GEO_INSET_SPACE',
+      'No positive geographic frame is available for the authored insets.',
+    );
   if ((fullArea.width <= 0 || fullArea.height <= 0) && !hasGeoLabels(mapSpec)) {
     return emptyLayout(chrome, theme, options, watermark);
   }
 
   // 6. Parse TopoJSON -> GeoJSON
-  const objectKey = Object.keys(topology.objects)[0];
-  const geoCollection = topoFeature(topology, topology.objects[objectKey] as GeometryCollection);
+  const viewsEnabled =
+    mapSpec.geo.objectKey !== undefined ||
+    mapSpec.geo.fitObjectKey !== undefined ||
+    mapSpec.geo.sourcePlane !== undefined ||
+    !!mapSpec.geo.detailLayers?.length ||
+    !!mapSpec.geo.insets?.length;
+  const viewSources = viewsEnabled ? resolveGeoViewSources(mapSpec.geo) : undefined;
+  const objectKey = viewSources?.primary.objectKey ?? Object.keys(topology.objects)[0];
+  const geoCollection =
+    viewSources?.primary.collection ??
+    topoFeature(topology, topology.objects[objectKey] as GeometryCollection);
+  const insetSelection = viewSources
+    ? selectGeoInsetFeatures(geoCollection.features, mapSpec.geo.insets ?? [])
+    : undefined;
   const geoFeatures = geoCollection.features;
 
   // 7. Compile warnings
@@ -548,6 +587,60 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
     legendBlockHeight = titleHeight + rows * (Math.max(10, labelHeight) + 6);
   }
 
+  const prepareActiveKey = (
+    channel: EncodingChannel | undefined,
+    rows: Array<Record<string, unknown>>,
+  ) => {
+    const labels: Record<string, string[]> = {};
+    let lines = 1,
+      width = 0;
+    if (mapSpec.colorKey?.activeValue && channel) {
+      const format = buildD3Formatter(channel.format) ?? formatNumber;
+      const domain = channel.scale?.domain;
+      const clamp =
+        channel.scale?.type !== 'threshold' &&
+        channel.scale?.type !== 'quantile' &&
+        Array.isArray(domain) &&
+        domain.length === 2 &&
+        domain.every((value) => typeof value === 'number' && Number.isFinite(value))
+          ? (domain as [number, number])
+          : undefined;
+      for (const raw of [undefined, ...rows.map((row) => row[channel.field])]) {
+        const value = finiteNumber(raw);
+        const exact =
+          raw == null || (channel.type === 'quantitative' && value === undefined)
+            ? 'No data'
+            : channel.type === 'quantitative'
+              ? format(value!)
+              : raw === ''
+                ? '(empty)'
+                : String(raw);
+        const outside = value !== undefined && clamp && (value < clamp[0] || value > clamp[1]);
+        const text = `A: ${exact}${outside ? ' · outside displayed range' : ''}`;
+        const plan = measureGeoKeyText(
+          text,
+          Math.min(fullArea.width, 220),
+          keyStyle,
+          measureKeyText,
+        );
+        labels[`${typeof raw}:${String(raw)}`] = plan.lines;
+        lines = Math.max(lines, plan.lines.length);
+        width = Math.max(
+          width,
+          ...plan.lines.map(
+            (line) => measureKeyText(line, keyStyle.fontSize, keyStyle.fontWeight).width,
+          ),
+        );
+      }
+    }
+    return { labels, lines, width };
+  };
+  const featureActivePlan = prepareActiveKey(colorEncoding, mapSpec.data);
+  const featureKeyExtra =
+    showChoroplethLegend && colorEncoding && legendBlockHeight > 0
+      ? geoColorKeyReserve(mapSpec.colorKey, theme.fonts.sizes.small, featureActivePlan.lines)
+      : 0;
+  legendBlockHeight += featureKeyExtra;
   const choroplethLegendBlockHeight = legendBlockHeight;
   const pointColor = mapSpec.points?.color;
   const pointColorChannel: EncodingChannel | undefined =
@@ -625,10 +718,15 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
     ? pointCategoryRows[pointCategoryRows.length - 1].row + 1
     : 1;
 
+  const pointActivePlan = prepareActiveKey(pointColor, mapSpec.points?.data ?? []);
+  const pointKeyExtra =
+    showLegend && pointColor
+      ? geoColorKeyReserve(mapSpec.colorKey, theme.fonts.sizes.small, pointActivePlan.lines)
+      : 0;
   // Reserve height for point color legend if applicable (overlay legends
   // float inside the map area and reserve nothing)
   if (showLegend && !pointLegendOverlay && mapSpec.points?.color) {
-    legendBlockHeight += pointTitleHeight;
+    legendBlockHeight += pointTitleHeight + pointKeyExtra;
     if (mapSpec.points.color.type === 'quantitative') {
       const labelRowHeight = Math.ceil(theme.fonts.sizes.small * 1.3);
       legendBlockHeight +=
@@ -692,7 +790,9 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
         sizeContent,
         sideLabelStyle,
         measureSideText,
-        fullArea.width - OVERLAY_LEGEND_INSET * 2,
+        sidePosition
+          ? Math.min(260, fullArea.width - OVERLAY_LEGEND_INSET * 2)
+          : fullArea.width - OVERLAY_LEGEND_INSET * 2,
       )
     : null;
   // Missingness is known after joining; conservatively reserve its full key now,
@@ -718,16 +818,62 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
     : undefined;
   const pointKeyWidth = Math.max(
     pointKeyExtent?.width ?? 0,
+    pointActivePlan.width,
+    ...pointTextRows(0, 0).map(
+      (row) => measureSideText(row.text, row.style.fontSize, row.style.fontWeight).width,
+    ),
+  );
+  const pointFormatter = buildD3Formatter(pointColor?.format) ?? formatNumber;
+  const sideRangeLabel = (scale: ClassScale, index: number, format: (value: number) => string) => {
+    const lo = index ? scale.breaks[index - 1] : undefined;
+    const hi = scale.breaks[index];
+    return lo === undefined
+      ? hi === undefined
+        ? 'All finite values'
+        : `< ${format(hi)}`
+      : hi === undefined
+        ? `≥ ${format(lo)}`
+        : `${format(lo)} – < ${format(hi)}`;
+  };
+  const sideRangeRowHeight = Math.max(14, Math.ceil(sideLabelStyle.fontSize * 1.3)) + 6;
+  const rangeWidth = (scale: ClassScale | null | undefined, format: (value: number) => string) =>
+    scale
+      ? Math.max(
+          ...scale.colors.map(
+            (_, index) =>
+              22 +
+              measureSideText(
+                sideRangeLabel(scale, index, format),
+                sideLabelStyle.fontSize,
+                sideLabelStyle.fontWeight,
+              ).width,
+          ),
+        )
+      : 0;
+  const captionWidth = Math.max(
+    0,
+    ...(titlePlan?.lines ?? []).map(
+      (text) => measureSideText(text, sideLabelStyle.fontSize, theme.fonts.weights.medium).width,
+    ),
+    ...[...(unitPlan?.lines ?? []), ...(contextPlan?.lines ?? [])].map(
+      (text) => measureSideText(text, sideLabelStyle.fontSize, sideLabelStyle.fontWeight).width,
+    ),
     ...pointTextRows(0, 0).map(
       (row) => measureSideText(row.text, row.style.fontSize, row.style.fontWeight).width,
     ),
   );
   const sideWidth = sidePosition
     ? Math.max(
-        320,
-        keyTextWidth,
-        choroplethSideExtent?.width ?? 0,
-        pointKeyWidth,
+        captionWidth,
+        featureActivePlan.width,
+        pointActivePlan.width,
+        hasNoData
+          ? sideLabelStyle.fontSize +
+              NO_DATA_LABEL_GAP +
+              measureSideText('No data', sideLabelStyle.fontSize).width
+          : 0,
+        rangeWidth(classScale, keyFormat ?? formatNumber),
+        rangeWidth(pointClassScale, pointFormatter),
         measuredSizeContent?.width ?? 0,
         ...[colorEncoding, pointColor].flatMap((channel) =>
           channel
@@ -766,18 +912,16 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
     ? titleHeight +
       contextHeight +
       noDataRowHeight +
-      continuousContent.barHeight +
-      CONTINUOUS_LABEL_GAP +
-      Math.ceil(theme.fonts.sizes.small * 1.3) * (continuousContent.labelRows ?? 1)
-    : titleHeight + categoryHeight(colorEncoding, mapSpec.data);
+      featureKeyExtra +
+      (classScale?.colors.length ?? 0) * sideRangeRowHeight
+    : titleHeight + categoryHeight(colorEncoding, mapSpec.data) + featureKeyExtra;
   const pointSideHeight =
     showLegend && pointColor
       ? pointContinuousContent
         ? pointTitleHeight +
-          pointContinuousContent.barHeight +
-          CONTINUOUS_LABEL_GAP +
-          Math.ceil(theme.fonts.sizes.small * 1.3) * (pointContinuousContent.labelRows ?? 1)
-        : pointTitleHeight + categoryHeight(pointColor, mapSpec.points!.data)
+          pointKeyExtra +
+          (pointClassScale?.colors.length ?? 0) * sideRangeRowHeight
+        : pointTitleHeight + pointKeyExtra + categoryHeight(pointColor, mapSpec.points!.data)
       : 0;
   const sideKeyHeights = [
     showChoroplethLegend && colorEncoding ? choroplethSideHeight : 0,
@@ -806,6 +950,11 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
       ? geoMapZoomControlsBounds(frame.area)
       : undefined;
   if (mapAreaHeight <= 0) {
+    if (viewsEnabled)
+      throw new GeoViewGeometryError(
+        'GEO_INSET_SPACE',
+        'Authored keys and notes leave no positive geographic frame for the requested views.',
+      );
     return emptyWithLabels();
   }
 
@@ -831,11 +980,77 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
     const sizeRange = mapSpec.points.size?.scale?.range as readonly [number, number] | undefined;
     pointInset = sizeRange ? sizeRange[1] : SIZE_SCALE_DEFAULTS.mapPoint.range[1];
   }
+  const insetLabels = (mapSpec.geo.insets ?? []).map((inset) => {
+    const coverage = (insetSelection?.views.get(inset.id) ?? [])
+      .map((feature) => String(feature.properties?.name ?? feature.properties?.NAME ?? feature.id))
+      .join(', ');
+    const caption = `${inset.label} · Separate scale${coverage === inset.label ? '' : ` · ${coverage}`}`;
+    const captionPadding = 6;
+    const plan = measureGeoKeyText(
+      caption,
+      Math.max(1, inset.width - captionPadding * 2),
+      sideLabelStyle,
+      measureSideText,
+    );
+    return {
+      inset,
+      coverage,
+      labelHeight: plan.height + captionPadding * 2,
+      label: {
+        width:
+          captionPadding * 2 +
+          Math.max(
+            ...plan.lines.map((line) => measureSideText(line, sideLabelStyle.fontSize).width),
+          ),
+        height: plan.height + captionPadding * 2,
+        lines: plan.lines.map((text, index) => ({
+          text,
+          x: captionPadding,
+          y: captionPadding + sideLabelStyle.fontSize + index * plan.advance,
+          style: sideLabelStyle,
+        })),
+      },
+    };
+  });
+  const viewFrame = viewSources
+    ? planGeoInsetViewports(
+        { x: 0, y: 0, width: frame.area.width, height: frame.area.height },
+        insetLabels,
+      )
+    : undefined;
+  const rootViewport = viewFrame?.rootViewport ?? {
+    x: 0,
+    y: 0,
+    width: frame.area.width,
+    height: frame.area.height,
+  };
+  const removedIds = new Set(
+    (mapSpec.geo.insets ?? [])
+      .filter((inset) => inset.removeFromMain !== false)
+      .flatMap((inset) => inset.featureIds.map(String)),
+  );
+  const sourceFeatureId = (feature: {
+    id?: string | number;
+    properties?: Record<string, unknown> | null;
+  }) => String(feature.id);
+  const fitCollection = viewSources
+    ? {
+        ...viewSources.fit.collection,
+        features: viewSources.fit.collection.features.filter(
+          (feature) => !removedIds.has(sourceFeatureId(feature)),
+        ),
+      }
+    : geoCollection;
+  if (viewSources && !fitCollection.features.length)
+    throw new GeoViewGeometryError(
+      'GEO_VIEW_FIT',
+      'No primary fit geometry remains after explicit inset removal.',
+    );
   const projection = createProjection(
     projectionType,
-    frame.area.width,
-    mapAreaHeight,
-    geoCollection,
+    rootViewport.width,
+    rootViewport.height,
+    fitCollection,
     pointInset,
   );
   const pathGen = geoPath(projection);
@@ -956,7 +1171,7 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
       // holes in it.
       const hasUnmatched = featureMarks.some((m) => m.noData);
       const noDataX = bounds.x;
-      const noDataY = bounds.y + bounds.height - noDataRowHeight + 8;
+      const noDataY = bounds.y + bounds.height - featureKeyExtra - noDataRowHeight + 8;
       const noDataSize = labelStyle.fontSize;
       const noDataLabelWidth = measureSideText(
         'No data',
@@ -1038,6 +1253,7 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
             y:
               bounds.y +
               bounds.height -
+              featureKeyExtra -
               noDataRowHeight -
               contextPlan.height +
               labelStyle.fontSize +
@@ -1082,7 +1298,7 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
           y: key.noData.y + titleHeight,
           labelY: key.noData.labelY + titleHeight,
         };
-      key.bounds.height += titleHeight;
+      key.bounds.height += titleHeight + featureKeyExtra;
       key.textRows = [
         ...(titlePlan?.lines.map((text, index) => ({
           text,
@@ -1147,6 +1363,7 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
 
   // 15b. Point marks (symbol layer above choropleth)
   const pointMarks: GeoMapPointMark[] = [];
+  const pointViewTemplates: GeoMapPointMark[] = [];
   let pointCategoricalLegend: CategoricalLegendLayout | null = null;
   let pointContinuousLegend: ContinuousLegendLayout | null = null;
   let pointSizeLegend: SizeLegendLayout | null = null;
@@ -1224,12 +1441,6 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
       const sizeValue = pts.size ? finiteNumber(row[pts.size.field]) : undefined;
       if (pts.size && sizeValue === undefined) continue;
 
-      const projected = projection([lon, lat]);
-      if (!projected || !projected.every(Number.isFinite)) {
-        droppedPoints.push([lon, lat]);
-        continue;
-      }
-
       const r = sizeScale && sizeValue !== undefined ? sizeScale.scale(sizeValue) : 5;
       if (!Number.isFinite(r) || r < 0) continue;
       const fill =
@@ -1242,10 +1453,10 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
       // Knockout ring in the canvas color: overlapping bubbles stay countable.
       const stroke = resolveKnockoutColor(theme);
 
-      pointMarks.push({
+      const template: GeoMapPointMark = {
         type: 'map-point',
-        cx: projected[0],
-        cy: projected[1],
+        cx: 0,
+        cy: 0,
         r,
         fill,
         stroke,
@@ -1255,7 +1466,14 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
         data: row as Record<string, unknown>,
         aria: { role: 'img', label: key },
         animationIndex: 0,
-      });
+      };
+      pointViewTemplates.push(template);
+      const projected = projection([lon, lat]);
+      if (!projected || !projected.every(Number.isFinite)) {
+        droppedPoints.push([lon, lat]);
+        continue;
+      }
+      pointMarks.push({ ...template, cx: projected[0], cy: projected[1] });
     }
 
     // Large under small: a big bubble drawn last swallows every small one
@@ -1335,7 +1553,7 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
           x: legendX,
           y: legendY,
           width: legendWidth,
-          height: pointTitleHeight + pointCategoryRowCount * pointCategoryRowHeight,
+          height: pointTitleHeight + pointCategoryRowCount * pointCategoryRowHeight + pointKeyExtra,
         },
         ...{
           rowHeight: pointCategoryRowHeight,
@@ -1383,6 +1601,7 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
         const ptLabelRowHeight = Math.ceil(theme.fonts.sizes.small * 1.3);
         const ptLegendHeight =
           pointTitleHeight +
+          pointKeyExtra +
           ptContinuousContent.barHeight +
           CONTINUOUS_LABEL_GAP +
           ptLabelRowHeight * (ptContinuousContent.labelRows ?? 1);
@@ -1419,7 +1638,13 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
     if (pts.size && showLegend) {
       const content = measuredSizeContent;
       if (content) {
+        const insetObstacles = (viewFrame?.insets ?? []).map((view) => ({
+          ...view.frame,
+          x: frame.area.x + view.frame.x,
+          y: frame.area.y + view.frame.y,
+        }));
         const obstacles = [
+          ...insetObstacles,
           ...(zoomControlBounds ? [zoomControlBounds] : []),
           ...(pointLegendOverlay
             ? [pointContinuousLegend?.bounds, pointCategoricalLegend?.bounds].filter(
@@ -1446,7 +1671,7 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
               content.height,
               obstacles,
               OVERLAY_LEGEND_INSET,
-              zoomControlBounds ? [zoomControlBounds] : [],
+              [...(zoomControlBounds ? [zoomControlBounds] : []), ...insetObstacles],
             );
         if (!placement) {
           options.onDiagnostic?.({
@@ -1502,7 +1727,12 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
     if (!mark.data) continue;
     const fields: TooltipField[] = [];
     const name = mark.name ?? String(mark.id);
-    fields.push({ label: 'Region', value: name });
+    fields.push({
+      label: 'Region',
+      value: name,
+      role: 'series',
+      source: { field: mapSpec.geo.idField, channel: 'geo' },
+    });
 
     if (tooltipChannels) {
       for (const ch of tooltipChannels) {
@@ -1510,6 +1740,8 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
         if (val != null || ch.type === 'quantitative') {
           fields.push({
             label: ch.title ?? ch.field,
+            role: 'value',
+            source: { field: ch.field, channel: 'tooltip' },
             value: ch.type === 'quantitative' ? formatQuantitative(val) : String(val),
           });
         }
@@ -1517,11 +1749,15 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
     } else if (colorEncoding && isQuantitative) {
       fields.push({
         label: colorEncoding.title ?? colorEncoding.field,
+        role: 'value',
+        source: { field: colorEncoding.field, channel: 'color' },
         value: formatQuantitative(mark.data[colorEncoding.field]),
       });
     } else if (colorEncoding && !isQuantitative && mark.data[colorEncoding.field] != null) {
       fields.push({
         label: colorEncoding.title ?? colorEncoding.field,
+        role: 'value',
+        source: { field: colorEncoding.field, channel: 'color' },
         value: String(mark.data[colorEncoding.field]),
       });
     }
@@ -1534,6 +1770,8 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
     ) {
       fields.push({
         label: 'Color range',
+        role: 'value',
+        source: { field: colorEncoding!.field, channel: 'color' },
         value: classIntervalText(classScale, classScale.binIndex(colorValue), formatter),
       });
     }
@@ -1556,6 +1794,8 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
           if (val != null || ch.type === 'quantitative') {
             fields.push({
               label: ch.title ?? ch.field,
+              role: 'value',
+              source: { field: ch.field, channel: 'tooltip' },
               value: ch.type === 'quantitative' ? formatQuantitative(val) : String(val),
             });
           }
@@ -1566,19 +1806,31 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
         if (pts.key) {
           const val = pm.data[pts.key.field];
           if (val != null)
-            fields.push({ label: pts.key.title ?? pts.key.field, value: String(val) });
+            fields.push({
+              label: pts.key.title ?? pts.key.field,
+              value: String(val),
+              role: 'series',
+              source: { field: pts.key.field, channel: 'key' },
+            });
         }
         if (pts.color) {
           const val = pm.data[pts.color.field];
           if (val != null || pts.color.type === 'quantitative')
             fields.push({
               label: pts.color.title ?? pts.color.field,
+              role: 'value',
+              source: { field: pts.color.field, channel: 'color' },
               value: pts.color.type === 'quantitative' ? formatQuantitative(val) : String(val),
             });
         }
         if (pts.size) {
           const val = pm.data[pts.size.field];
-          fields.push({ label: pts.size.title ?? pts.size.field, value: formatQuantitative(val) });
+          fields.push({
+            label: pts.size.title ?? pts.size.field,
+            value: formatQuantitative(val),
+            role: 'value',
+            source: { field: pts.size.field, channel: 'size' },
+          });
         }
       }
       if (fields.length > 0) {
@@ -1680,18 +1932,352 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
         key.bounds.height = key === categoricalLegend ? choroplethSideHeight : pointSideHeight;
         key.bounds.width = sideWidth;
       }
+      if (key.type === 'continuous') {
+        const scale = key === continuousLegend ? classScale : pointClassScale;
+        const format = key === continuousLegend ? formatter : pointFormatter;
+        const headerHeight = key === continuousLegend ? titleHeight : pointTitleHeight;
+        key.bounds.width = sideWidth;
+        key.rangeEntries = key.bins.map((_, index) => ({
+          index,
+          bounds: {
+            x: key.bounds.x,
+            y: key.bounds.y + headerHeight + index * sideRangeRowHeight,
+            width: 14,
+            height: 14,
+          },
+        }));
+        key.bar = {
+          x: key.bounds.x,
+          y: key.bounds.y + headerHeight,
+          width: 14,
+          height: Math.max(14, (scale?.colors.length ?? 0) * sideRangeRowHeight - 6),
+        };
+        key.ticks = [];
+        key.textRows = (key.textRows ?? []).filter((row) => row.role !== 'midpoint');
+        let contextLine = 0;
+        key.textRows = key.textRows.map((row) =>
+          row.role === 'context'
+            ? {
+                ...row,
+                y:
+                  key.bounds.y +
+                  headerHeight +
+                  (scale?.colors.length ?? 0) * sideRangeRowHeight +
+                  8 +
+                  sideLabelStyle.fontSize +
+                  contextLine++ * (contextPlan?.advance ?? sideRangeRowHeight),
+              }
+            : row,
+        );
+        for (const entry of key.rangeEntries)
+          if (scale)
+            key.textRows.push({
+              text: sideRangeLabel(scale, entry.index, format),
+              x: entry.bounds.x + 22,
+              y: entry.bounds.y + sideLabelStyle.fontSize,
+              style: sideLabelStyle,
+              role: 'context',
+            });
+        if (key.noData) {
+          const y =
+            key.bounds.y +
+            key.bounds.height -
+            (key === continuousLegend ? featureKeyExtra : pointKeyExtra) -
+            noDataRowHeight +
+            8;
+          key.noData = {
+            ...key.noData,
+            x: key.bounds.x,
+            y,
+            labelX: key.bounds.x + key.noData.size + NO_DATA_LABEL_GAP,
+            labelY: y + sideLabelStyle.fontSize,
+          };
+        }
+      }
       moveGeoMapLegend(key, sideFrame.legend.x, keyY, sidePosition);
       keyY += key.bounds.height + 16;
     }
   }
 
-  const labels = preparedLabels
+  let views: import('@opendata-ai/openchart-core').GeoViewLayout[] | undefined;
+  const viewProjections = new Map<string, typeof projection>();
+  const viewFeatures = new Map<string, GeoJSON.Feature[]>();
+  if (viewSources && viewFrame && insetSelection) {
+    const rootIds = new Set(insetSelection.root.map((feature) => String(feature.id)));
+    featureMarks = featureMarks.filter((mark) => rootIds.has(String(mark.id)));
+    const insetPointRows = new Map(
+      (mapSpec.geo.insets ?? []).map((inset) => [
+        inset.id,
+        selectGeoInsetPoints(mapSpec.points?.data ?? [], inset, mapSpec.points?.key?.field),
+      ]),
+    );
+    const removedPointRows = new Set(
+      (mapSpec.geo.insets ?? [])
+        .filter((inset) => inset.removeFromMain !== false)
+        .flatMap((inset) => insetPointRows.get(inset.id) ?? []),
+    );
+    pointMarks.splice(
+      0,
+      pointMarks.length,
+      ...pointMarks.filter((mark) => !removedPointRows.has(mark.data)),
+    );
+    const viewBorders = (features: GeoJSON.Feature[], path: ReturnType<typeof geoPath>) => {
+      const ids = new Set(features.map(sourceFeatureId));
+      const includes = (geometry: unknown) => ids.has(sourceFeatureId(geometry as GeoJSON.Feature));
+      return {
+        ...borders,
+        interiorPath:
+          path(
+            topoMesh(
+              topology,
+              topology.objects[objectKey] as GeometryCollection,
+              (a, b) => a !== b && includes(a) && includes(b),
+            ),
+          ) ?? '',
+        outlinePath:
+          path(
+            topoMesh(topology, topology.objects[objectKey] as GeometryCollection, (a, b) =>
+              a === b ? includes(a) : includes(a) !== includes(b),
+            ),
+          ) ?? '',
+      };
+    };
+    const rootBorders = viewBorders(insetSelection.root, pathGen);
+    Object.assign(borders, rootBorders);
+    viewProjections.set('root', projection);
+    viewFeatures.set('root', insetSelection.root);
+    views = [
+      {
+        viewId: 'root',
+        frame: rootViewport,
+        viewport: rootViewport,
+        mapSize: { width: rootViewport.width, height: rootViewport.height },
+        features: featureMarks,
+        borders,
+        pointMarks,
+        focus: resolveFocus(mapSpec.geo.focus, featureMarks, pointMarks, []),
+        detailLayers: projectGeoDetailLayers(
+          mapSpec.geo.detailLayers ?? [],
+          projection,
+          viewSources.context,
+        ),
+        projectionContext: viewSources.context,
+      },
+    ];
+    for (const placement of viewFrame.insets) {
+      const authored = mapSpec.geo.insets!.find((inset) => inset.id === placement.viewId)!;
+      const source = insetSelection.views.get(authored.id)!;
+      const context = resolveGeoInsetProjection(authored, viewSources.context);
+      const fitted = createProjection(
+        context.projection,
+        placement.viewport.width,
+        placement.viewport.height,
+        { type: 'FeatureCollection', features: source },
+        pointInset,
+      );
+      const path = geoPath(fitted);
+      viewProjections.set(authored.id, fitted);
+      viewFeatures.set(authored.id, source);
+      const marks = isBasemapOnly
+        ? buildBasemapMarks({
+            geoFeatures: source,
+            pathGen: path,
+            neutralFill,
+            droppedFeatures: [],
+          })
+        : isQuantitative
+          ? buildQuantitativeMarks({
+              geoFeatures: source,
+              pathGen: path,
+              joined,
+              colorField: colorEncoding.field,
+              classScale,
+              neutralFill,
+              noDataPattern,
+              formatter,
+              droppedFeatures: [],
+            }).marks
+          : buildCategoricalMarks({
+              geoFeatures: source,
+              pathGen: path,
+              joined,
+              colorField: colorEncoding.field,
+              colorScale: colorEncoding.scale,
+              isDarkMode: !!isDarkMode,
+              neutralFill,
+              noDataPattern,
+              theme,
+              fullArea,
+              mapAreaHeight,
+              legendReserveGap,
+              legendPosition,
+              showLegend: false,
+              droppedFeatures: [],
+            }).marks;
+      if (marks.length !== source.length)
+        throw new GeoViewGeometryError(
+          'GEO_INSET_COVERAGE',
+          `Inset ${authored.id} cannot project every explicitly requested feature.`,
+        );
+      const selected = new Set(insetPointRows.get(authored.id));
+      const points = pointViewTemplates
+        .filter((mark) => selected.has(mark.data))
+        .map((mark) => {
+          const row = mark.data;
+          const center = fitted([
+            Number(row[mapSpec.points!.longitude.field]),
+            Number(row[mapSpec.points!.latitude.field]),
+          ]);
+          if (!center || !center.every(Number.isFinite))
+            throw new GeoViewGeometryError(
+              'GEO_INSET_POINT',
+              `Inset ${authored.id} cannot project an explicitly requested point.`,
+            );
+          return { ...mark, cx: center[0], cy: center[1] };
+        })
+        .sort((a, b) => b.r - a.r)
+        .map((mark, index) => ({ ...mark, animationIndex: index }));
+      const caption = insetLabels.find((entry) => entry.inset.id === authored.id)!;
+      views.push({
+        viewId: authored.id,
+        frame: placement.frame,
+        viewport: placement.viewport,
+        labelBounds: placement.labelBounds,
+        label: caption.label,
+        coverage: `${authored.label}. Separate scale. Coverage: ${caption.coverage}.`,
+        mapSize: { width: placement.viewport.width, height: placement.viewport.height },
+        features: marks,
+        borders: viewBorders(source, path),
+        pointMarks: points,
+        focus: null,
+        detailLayers: [],
+        projectionContext: context,
+      });
+    }
+  }
+  let colorKeys: import('@opendata-ai/openchart-core').GeoColorKeyDescriptor | undefined;
+  if (featureKeyExtra || pointKeyExtra) {
+    const featureGroups = new Map<string, GeoJSON.Feature[]>();
+    for (const feature of geoFeatures) {
+      const id = String(feature.id);
+      const group = featureGroups.get(id) ?? [];
+      group.push(feature);
+      featureGroups.set(id, group);
+    }
+    const representedFeatureIds = new Set(
+      (views?.flatMap((view) => view.features) ?? featureMarks).map((mark) => String(mark.id)),
+    );
+    const countedFeatures = [...featureGroups.values()]
+      .filter((group) => group.length === 1 && representedFeatureIds.has(String(group[0].id)))
+      .map((group) => joined.get(group[0].id as string | number) ?? null);
+    if (
+      mapSpec.colorKey?.distribution &&
+      [...featureGroups.values()].some((group) => group.length > 1)
+    )
+      labelDiagnostic(
+        'GEO_COLOR_KEY_AMBIGUOUS_ID',
+        'Distribution excludes ambiguous duplicate feature identities; each canonical region is counted at most once.',
+        '/colorKey/distribution',
+      );
+
+    const features = buildGeoColorKey(
+      mapSpec.colorKey,
+      colorEncoding,
+      continuousLegend ?? categoricalLegend,
+      countedFeatures,
+      classScale ?? undefined,
+      theme.fonts.sizes.small,
+      featureKeyExtra,
+      featureActivePlan,
+    );
+    const representedPointRows: Array<Record<string, unknown>> = [];
+    const retainedPointOccurrences = new Map<Record<string, unknown>, number>();
+    for (const marks of views?.map((view) => view.pointMarks) ?? [pointMarks]) {
+      const occurrences = new Map<Record<string, unknown>, number>();
+      for (const mark of marks) {
+        const count = (occurrences.get(mark.data) ?? 0) + 1;
+        occurrences.set(mark.data, count);
+        if (count <= (retainedPointOccurrences.get(mark.data) ?? 0)) continue;
+        retainedPointOccurrences.set(mark.data, count);
+        representedPointRows.push(mark.data);
+      }
+    }
+    const points = buildGeoColorKey(
+      mapSpec.colorKey,
+      pointColor,
+      pointContinuousLegend ?? pointCategoricalLegend,
+      representedPointRows,
+      pointClassScale,
+      theme.fonts.sizes.small,
+      pointKeyExtra,
+      pointActivePlan,
+    );
+    if (features || points)
+      colorKeys = { ...(features ? { features } : {}), ...(points ? { points } : {}) };
+  }
+
+  const scopedPrepared = (viewId: string) => {
+    if (!preparedLabels || !views) return preparedLabels;
+    const view = views.find((view) => view.viewId === viewId)!;
+    const ids = new Set(view.features.map((mark) => String(mark.id))),
+      points = new Set(view.pointMarks.map((mark) => String(mark.key)));
+    return {
+      ...preparedLabels,
+      candidates: preparedLabels.candidates.filter((candidate) => {
+        if (candidate.anchor.viewId)
+          return (
+            candidate.anchor.viewId === viewId ||
+            (viewId === 'root' && !views!.some((view) => view.viewId === candidate.anchor.viewId))
+          );
+        if (candidate.anchor.kind === 'feature')
+          return candidate.anchor.layerId
+            ? viewId === 'root'
+            : ids.has(String(candidate.anchor.id)) ||
+                (viewId === 'root' &&
+                  !geoFeatures.some(
+                    (feature) =>
+                      String(feature.id) ===
+                      String(candidate.anchor.kind === 'feature' ? candidate.anchor.id : ''),
+                  ));
+        if (candidate.anchor.kind === 'point')
+          return (
+            points.has(String(candidate.anchor.id)) ||
+            (viewId === 'root' &&
+              !pointViewTemplates.some(
+                (mark) =>
+                  String(mark.key) ===
+                  String(candidate.anchor.kind === 'point' ? candidate.anchor.id : ''),
+              ))
+          );
+        return viewId === 'root';
+      }),
+    };
+  };
+  const labelFeatures = (viewId: string) => {
+    const features = viewFeatures.get(viewId) ?? geoFeatures;
+    if (viewId !== 'root') return features;
+    return [
+      ...features,
+      ...(mapSpec.geo.detailLayers ?? []).flatMap((layer) => {
+        const decoded = decodeGeoViewSource(layer.features, layer.objectKey).collection.features;
+        const counts = new Map<string, number>();
+        for (const feature of decoded)
+          if (feature.id !== undefined)
+            counts.set(String(feature.id), (counts.get(String(feature.id)) ?? 0) + 1);
+        return decoded
+          .filter((feature) => feature.id !== undefined && counts.get(String(feature.id)) === 1)
+          .map((feature) => ({ ...feature, id: `${layer.id}:${String(feature.id)}` }));
+      }),
+    ];
+  };
+  const rootPrepared = scopedPrepared('root');
+  const labels = rootPrepared
     ? compilePreparedGeoLabels(
-        preparedLabels,
-        geoFeatures,
+        rootPrepared,
+        labelFeatures('root'),
         projection,
         pointMarks,
-        mapArea,
+        { ...mapArea, width: rootViewport.width, height: rootViewport.height },
         [
           zoomControlBounds,
           continuousLegend?.bounds,
@@ -1702,8 +2288,42 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
         ].filter((bounds): bounds is NonNullable<typeof bounds> => !!bounds),
         fullArea.y + fullArea.height - mapArea.y,
         labelDiagnostic,
+        'root',
+        new Set((mapSpec.geo.detailLayers ?? []).map((layer) => layer.id)),
       )
     : undefined;
+  if (views) {
+    views[0].labels = labels;
+    for (const view of views.slice(1)) {
+      const prepared = scopedPrepared(view.viewId);
+      if (prepared)
+        view.labels = compilePreparedGeoLabels(
+          prepared,
+          labelFeatures(view.viewId),
+          viewProjections.get(view.viewId),
+          view.pointMarks,
+          {
+            x: mapArea.x + view.viewport.x,
+            y: mapArea.y + view.viewport.y,
+            width: view.viewport.width,
+            height: view.viewport.height,
+          },
+          zoom && (zoom === true || zoom.controls !== false)
+            ? [
+                geoMapZoomControlsBounds({
+                  x: mapArea.x + view.viewport.x,
+                  y: mapArea.y + view.viewport.y,
+                  width: view.viewport.width,
+                  height: view.viewport.height,
+                }),
+              ]
+            : [],
+          fullArea.y + fullArea.height - mapArea.y - view.viewport.y,
+          labelDiagnostic,
+          view.viewId,
+        );
+    }
+  }
   if (labels) {
     for (const diagnostic of labels.initialOverlay.diagnostics ?? [])
       options.onDiagnostic?.(diagnostic);
@@ -1728,6 +2348,8 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
   return {
     area: mapArea,
     ...(labels ? { labels } : {}),
+    ...(views ? { views } : {}),
+    ...(colorKeys ? { colorKeys } : {}),
     chrome,
     features: featureMarks,
     borders,
@@ -1748,8 +2370,8 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
       options.measureText ??
       ((text, fontSize) => ({ width: estimateTextWidth(text, fontSize), height: fontSize })),
     warnings: compileWarnings,
-    mapSize: { width: frame.area.width, height: mapAreaHeight },
-    focus: resolvedFocus,
+    mapSize: views ? views[0].mapSize : { width: frame.area.width, height: mapAreaHeight },
+    focus: views ? views[0].focus : resolvedFocus,
   };
 }
 

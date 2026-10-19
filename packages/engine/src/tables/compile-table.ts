@@ -638,13 +638,7 @@ export function compileTableLayout(
   // 9. Compute chrome
   const watermark = spec.watermark;
   const chrome = computeChrome(
-    {
-      title: spec.chrome.title,
-      subtitle: spec.chrome.subtitle,
-      source: spec.chrome.source,
-      byline: spec.chrome.byline,
-      footer: spec.chrome.footer,
-    },
+    spec.chrome,
     theme,
     options.width,
     options.measureText,
@@ -658,6 +652,8 @@ export function compileTableLayout(
   const caption = titleText ? `Table: ${titleText}` : `Data table with ${data.length} rows`;
 
   return {
+    width: options.width,
+    measureText: options.measureText,
     chrome,
     columns: resolvedColumns,
     rows,

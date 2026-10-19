@@ -35,6 +35,7 @@ import { NO_REFERENCE_RESERVE, outsideBudget } from '../layout/budget';
 import type { MeasureFn } from '../layout/plan';
 import { createMeasureFn } from '../layout/plan';
 import { resolveChromeLayout } from '../layout/shared';
+import { scopeTooltipContent } from '../tooltips/metadata';
 import type { InternalCompileOptions, LeafContext } from './internal-options';
 import { emitSpecWarnings } from './spec-sugar';
 
@@ -78,7 +79,15 @@ function appendLayerMarks(
   const scope = `layer:${leafIndex}:`;
   for (const [index, mark] of sourceMarks.entries()) {
     const content = layout.tooltipDescriptors.get(`${mark.type}-${index}`);
-    if (content) tooltips.set(`${mark.type}-${marks.length}`, content);
+    if (content)
+      tooltips.set(
+        `${mark.type}-${marks.length}`,
+        scopeTooltipContent(content, { layer: `layer:${leafIndex}` }),
+      );
+    if (mark.type === 'line' || mark.type === 'area')
+      for (const point of mark.dataPoints ?? [])
+        if (point.tooltip)
+          point.tooltip = scopeTooltipContent(point.tooltip, { layer: `layer:${leafIndex}` });
     const key = `${scope}${mark.type}:${mark.key !== undefined ? `key:${mark.key}` : `index:${index}`}`;
     marks.push({
       ...mark,

@@ -202,17 +202,31 @@ export function renderGeoLabelOverlay(
   }
   const mapGroup = svg.querySelector('.oc-map-group');
   mapGroup?.insertAdjacentElement('afterend', group);
+  renderGeoLabelNotes(svg, layout, overlay.notes, group);
+}
+/** Measured fallback notes can be shared by several map views. */
+export function renderGeoLabelNotes(
+  svg: SVGElement,
+  layout: GeoMapLayout,
+  entries: GeoLabelOverlay['notes'],
+  after?: SVGElement,
+): void {
+  const halo =
+    layout.theme.colors.background === 'transparent'
+      ? 'var(--oc-bg, #fff)'
+      : layout.theme.colors.background;
   const notes = element('g', {
     class: 'oc-map-label-notes',
     'aria-hidden': 'true',
     transform: `translate(${layout.area.x},${layout.area.y})`,
   });
-  for (const { id, slot } of overlay.notes) {
+  for (const { id, slot } of entries) {
     const item = element('g', { 'data-geo-note-id': id });
     textBlock(item, slot.block, slot.bounds.x, slot.bounds.y, halo);
     notes.appendChild(item);
   }
-  group.insertAdjacentElement('afterend', notes);
+  if (after) after.insertAdjacentElement('afterend', notes);
+  else svg.appendChild(notes);
 }
 export function describeGeoLabelInventory(svg: SVGElement, overlay: GeoLabelOverlay): void {
   const previous = svg.querySelector('desc[data-geo-label-inventory]');

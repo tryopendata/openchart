@@ -19,6 +19,7 @@ export * from '@opendata-ai/openchart-core';
 // ---------------------------------------------------------------------------
 
 export type {
+  GeoMapCameraChangeMeta,
   InteractionMode,
   JPGExportOptions,
   PNGExportOptions,
@@ -75,7 +76,7 @@ export {
 } from '@opendata-ai/openchart-engine';
 export type { BarListHandle, BarListProps } from './BarList';
 export { BarList } from './BarList';
-export type { ChartHandle, ChartProps } from './Chart';
+export type { ChartHandle, ChartProps, ObservationChartProps, SliceChartProps } from './Chart';
 // Components
 export { Chart } from './Chart';
 export type { ChartStoryHandle, ChartStoryProps } from './ChartStory';

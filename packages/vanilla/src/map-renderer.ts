@@ -1,9 +1,11 @@
 import { cameraForTarget } from './map-camera';
+import { renderStaticGeoColorKeys } from './map-color-key';
 import {
   describeGeoLabelInventory,
   renderGeoLabelOverlay,
   resolveMapLabelOverlay,
 } from './map-labels';
+import { renderGeoMapViews } from './map-view-renderer';
 /**
  * Map SVG renderer: converts a GeoMapLayout into SVG DOM elements.
  *
@@ -22,14 +24,13 @@ import type {
 import { stampAnimationVars } from './animation-vars';
 import { FOCUS_DIM_OPACITY } from './map-camera';
 import { buildPatternDefs, resolvePatternFill } from './pattern-utils';
+import { renderAttributionBrand } from './renderers/brand';
 import { renderChromeElement } from './renderers/chrome';
 import { renderLegend } from './renderers/legend';
 import { nextSvgId } from './svg-ids';
 import { resolvedSurface, stampThemeProperties } from './theme-tokens';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
-const XLINK_NS = 'http://www.w3.org/1999/xlink';
-const BRAND_URL = 'https://tryopendata.ai';
 
 // Above this count, skip per-feature CSS fill animations (not GPU-compositable)
 // and fade the entire features group with a single opacity animation instead.
@@ -129,40 +130,6 @@ function renderChrome(parent: SVGElement, layout: GeoMapLayout): void {
 // ---------------------------------------------------------------------------
 // Watermark rendering
 // ---------------------------------------------------------------------------
-
-function renderWatermark(parent: SVGElement, layout: GeoMapLayout): void {
-  if (layout.width < 480) return;
-
-  const { width, height, theme } = layout;
-  const padding = theme.spacing.padding;
-  const rightEdge = width - padding;
-  const bottomEdge = height - padding;
-  const fill = theme.colors.axis;
-
-  const a = createSVGElement('a');
-  a.setAttribute('href', BRAND_URL);
-  a.setAttributeNS(XLINK_NS, 'xlink:href', BRAND_URL);
-  a.setAttribute('target', '_blank');
-  a.setAttribute('rel', 'noopener');
-  a.setAttribute('class', 'oc-chrome-ref');
-
-  const text = createSVGElement('text');
-  setAttrs(text, {
-    x: rightEdge,
-    y: bottomEdge,
-    'dominant-baseline': 'alphabetic',
-    'text-anchor': 'end',
-    'font-family': theme.fonts.family,
-    'font-size': 12,
-    'fill-opacity': 0.55,
-  });
-  (text as SVGElement & ElementCSSInlineStyle).style.setProperty('fill', fill);
-
-  setAttrs(text, { 'font-weight': 600, 'font-size': 16 });
-  text.textContent = 'OpenData';
-  a.appendChild(text);
-  parent.appendChild(a);
-}
 
 // ---------------------------------------------------------------------------
 // Border rendering
@@ -365,7 +332,7 @@ function renderPointMarks(
  * Render a GeoMapLayout to an SVG element.
  */
 export function renderMapSVG(layout: GeoMapLayout, opts?: { animate?: boolean }): SVGSVGElement {
-  const { width, height, features, borders, a11y, watermark, animation } = layout;
+  const { width, height, features, borders, a11y, animation } = layout;
   const animate = opts?.animate && !!animation?.enter;
 
   const svg = createSVGElement('svg') as SVGSVGElement;
@@ -418,71 +385,83 @@ export function renderMapSVG(layout: GeoMapLayout, opts?: { animate?: boolean })
   const noDataSwatch = layout.continuousLegend?.noData ?? layout.categoricalLegend?.noData;
   const patternMap = buildPatternDefs(noDataSwatch ? [...features, noDataSwatch] : features, defs);
 
-  // Create map group offset to the drawing area
-  const mapGroup = createSVGElement('g');
-  mapGroup.setAttribute('class', 'oc-map-group');
-  mapGroup.setAttribute('transform', `translate(${layout.area.x},${layout.area.y})`);
-  // Side gutters are outside the camera viewport, including authored focus/zoom.
-  const hasSideGutter = [
-    layout.continuousLegend,
-    layout.categoricalLegend,
-    layout.pointContinuousLegend,
-    layout.pointCategoricalLegend,
-    layout.pointSizeLegend,
-  ].some(
-    (legend) =>
-      legend?.position === 'right' ||
-      (legend?.position === 'bottom-right' && legend.bounds.x >= layout.area.x + layout.area.width),
-  );
-  if (hasSideGutter) {
-    const clipId = nextSvgId('oc-map-viewport');
-    const clip = createSVGElement('clipPath');
-    clip.setAttribute('id', clipId);
-    const rect = createSVGElement('rect');
-    setAttrs(rect, { x: 0, y: 0, width: layout.area.width, height: layout.area.height });
-    clip.appendChild(rect);
-    defs.appendChild(clip);
-    mapGroup.setAttribute('clip-path', `url(#${clipId})`);
+  if (layout.views) {
+    renderGeoMapViews(svg, layout, patternMap, {
+      features: (parent, marks, patterns) =>
+        renderFeatures(parent, marks, undefined, 0, undefined, patterns),
+      borders: renderBorders,
+      points: (parent, marks) => renderPointMarks(parent, marks),
+    });
+  } else {
+    // Create map group offset to the drawing area
+    const mapGroup = createSVGElement('g');
+    mapGroup.setAttribute('class', 'oc-map-group');
+    mapGroup.setAttribute('transform', `translate(${layout.area.x},${layout.area.y})`);
+    // Side gutters are outside the camera viewport, including authored focus/zoom.
+    const hasSideGutter = [
+      layout.continuousLegend,
+      layout.categoricalLegend,
+      layout.pointContinuousLegend,
+      layout.pointCategoricalLegend,
+      layout.pointSizeLegend,
+    ].some(
+      (legend) =>
+        legend?.position === 'right' ||
+        (legend?.position === 'bottom-right' &&
+          legend.bounds.x >= layout.area.x + layout.area.width),
+    );
+    if (hasSideGutter) {
+      const clipId = nextSvgId('oc-map-viewport');
+      const clip = createSVGElement('clipPath');
+      clip.setAttribute('id', clipId);
+      const rect = createSVGElement('rect');
+      setAttrs(rect, { x: 0, y: 0, width: layout.area.width, height: layout.area.height });
+      clip.appendChild(rect);
+      defs.appendChild(clip);
+      mapGroup.setAttribute('clip-path', `url(#${clipId})`);
+    }
+
+    // Camera group wraps features + borders only (chrome, legend, watermark stay outside)
+    const cameraGroup = createSVGElement('g');
+    cameraGroup.setAttribute('class', 'oc-map-camera');
+    cameraGroup.setAttribute('data-oc-map-camera', '');
+
+    // Features outside the focus set rest dimmed; the renderer stamps that so it's
+    // correct in every render path and the entrance fades straight to it. This
+    // handles *declarative* focus (layout.focus from the spec) only. Imperative
+    // focus set via zoomTo()/panTo() never re-renders, so it dims through
+    // applyMapCamera + applyFocusDim on the live SVG instead.
+    const focusIdSet =
+      layout.focus && layout.focus.ids.length > 0
+        ? new Set(layout.focus.ids.map(String))
+        : undefined;
+
+    // Render features first (so borders overlay them)
+    renderFeatures(
+      cameraGroup,
+      features,
+      animate ? animation : undefined,
+      mapStaggerBudget,
+      focusIdSet,
+      patternMap,
+    );
+
+    // Render borders on top of features
+    renderBorders(cameraGroup, borders);
+
+    // Render point marks inside camera group (above borders).
+    // Stamp a per-point stagger so the total spread stays bounded regardless of
+    // point count (the CSS hardcoded 60ms per point which explodes past ~15 pts).
+    if (animate && animation?.enter && layout.pointMarks.length > 1) {
+      const pointStaggerBudget = animation.enter.duration * 0.5;
+      const perPoint = pointStaggerBudget / (layout.pointMarks.length - 1);
+      svg.style.setProperty('--oc-point-stagger', `${perPoint}ms`);
+    }
+    renderPointMarks(cameraGroup, layout.pointMarks, animate ? animation : undefined);
+
+    mapGroup.appendChild(cameraGroup);
+    svg.appendChild(mapGroup);
   }
-
-  // Camera group wraps features + borders only (chrome, legend, watermark stay outside)
-  const cameraGroup = createSVGElement('g');
-  cameraGroup.setAttribute('class', 'oc-map-camera');
-  cameraGroup.setAttribute('data-oc-map-camera', '');
-
-  // Features outside the focus set rest dimmed; the renderer stamps that so it's
-  // correct in every render path and the entrance fades straight to it. This
-  // handles *declarative* focus (layout.focus from the spec) only. Imperative
-  // focus set via zoomTo()/panTo() never re-renders, so it dims through
-  // applyMapCamera + applyFocusDim on the live SVG instead.
-  const focusIdSet =
-    layout.focus && layout.focus.ids.length > 0 ? new Set(layout.focus.ids.map(String)) : undefined;
-
-  // Render features first (so borders overlay them)
-  renderFeatures(
-    cameraGroup,
-    features,
-    animate ? animation : undefined,
-    mapStaggerBudget,
-    focusIdSet,
-    patternMap,
-  );
-
-  // Render borders on top of features
-  renderBorders(cameraGroup, borders);
-
-  // Render point marks inside camera group (above borders).
-  // Stamp a per-point stagger so the total spread stays bounded regardless of
-  // point count (the CSS hardcoded 60ms per point which explodes past ~15 pts).
-  if (animate && animation?.enter && layout.pointMarks.length > 1) {
-    const pointStaggerBudget = animation.enter.duration * 0.5;
-    const perPoint = pointStaggerBudget / (layout.pointMarks.length - 1);
-    svg.style.setProperty('--oc-point-stagger', `${perPoint}ms`);
-  }
-  renderPointMarks(cameraGroup, layout.pointMarks, animate ? animation : undefined);
-
-  mapGroup.appendChild(cameraGroup);
-  svg.appendChild(mapGroup);
 
   // Render chrome AFTER the map group so the title/subtitle paint on top of a
   // focus-zoomed map that overflows up into the chrome band. Earlier SVG
@@ -520,52 +499,18 @@ export function renderMapSVG(layout: GeoMapLayout, opts?: { animate?: boolean })
   // clearly over map geography (e.g. AK/HI insets in Albers USA).
   const ptLegend = layout.pointCategoricalLegend ?? layout.pointContinuousLegend;
   if (ptLegend) {
-    const padX = 10;
-    const padY = 8;
-
-    // Compute content width from entries so the background wraps tightly
-    const swatchSize =
-      'swatchSize' in ptLegend ? (ptLegend as { swatchSize: number }).swatchSize : 10;
-    const swatchGap = 'swatchGap' in ptLegend ? (ptLegend as { swatchGap: number }).swatchGap : 6;
-    const entryGap = 'entryGap' in ptLegend ? (ptLegend as { entryGap: number }).entryGap : 16;
-    let contentWidth = ptLegend.bounds.width;
-    if ('entries' in ptLegend && ptLegend.entries) {
-      const cat = ptLegend as typeof layout.pointCategoricalLegend & {
-        entries: Array<{ label: string }>;
-      };
-      if (cat && cat.entries.length > 0) {
-        const fontSize = ptLegend.labelStyle.fontSize;
-        let w = 0;
-        for (const entry of cat.entries) {
-          w += swatchSize + swatchGap + entry.label.length * fontSize * 0.6 + entryGap;
-        }
-        w -= entryGap;
-        contentWidth = Math.min(w, ptLegend.bounds.width);
-      }
+    if (ptLegend.position === 'top-left') {
+      const bg = createSVGElement('rect');
+      setAttrs(bg, {
+        x: ptLegend.bounds.x - 10,
+        y: ptLegend.bounds.y - 8,
+        width: ptLegend.bounds.width + 20,
+        height: ptLegend.bounds.height + 16,
+        rx: 4,
+        fill: legendBackdrop(layout.theme),
+      });
+      svg.appendChild(bg);
     }
-
-    // Center the background rect vertically around the swatch content.
-    // Overlay continuous legends ('top-left') float over map geography, so
-    // their backdrop must cover the full bounds (tick labels hang below the
-    // bar) instead of just the swatch row. Categorical rows keep the
-    // swatch-centered backdrop in both positions.
-    const isOverlayContinuous =
-      ptLegend.position === 'top-left' && !('entries' in ptLegend && ptLegend.entries);
-    const contentCenterY = ptLegend.bounds.y + swatchSize / 2;
-    const bgHeight = isOverlayContinuous
-      ? ptLegend.bounds.height + padY * 2
-      : swatchSize + padY * 2;
-    const bgY = isOverlayContinuous ? ptLegend.bounds.y - padY : contentCenterY - bgHeight / 2;
-    const bg = createSVGElement('rect');
-    setAttrs(bg, {
-      x: ptLegend.bounds.x - padX,
-      y: bgY,
-      width: contentWidth + padX * 2,
-      height: bgHeight,
-      rx: 4,
-      fill: legendBackdrop(layout.theme),
-    });
-    svg.appendChild(bg);
     renderLegend(svg, ptLegend);
   }
 
@@ -583,21 +528,29 @@ export function renderMapSVG(layout: GeoMapLayout, opts?: { animate?: boolean })
       rx: 6,
       fill: legendBackdrop(layout.theme),
     });
-    svg.appendChild(bg);
+    if (
+      sizeLegend.bounds.x < layout.area.x + layout.area.width &&
+      sizeLegend.bounds.y < layout.area.y + layout.area.height
+    )
+      svg.appendChild(bg);
     renderLegend(svg, sizeLegend);
   }
 
   // Render watermark
-  if (watermark) {
-    renderWatermark(svg, layout);
-  }
+  renderAttributionBrand(
+    svg,
+    layout.chrome,
+    layout.chrome.bottomAnchorY ?? layout.area.y + layout.area.height,
+    layout.measureText,
+  );
 
-  if (layout.labels) {
+  if (layout.labels && !layout.views) {
     const overlay = resolveMapLabelOverlay(layout, cameraForTarget(layout, layout.focus?.target));
     if (overlay) {
       renderGeoLabelOverlay(svg, layout, overlay);
       describeGeoLabelInventory(svg, overlay);
     }
   }
+  renderStaticGeoColorKeys(svg, layout);
   return svg;
 }

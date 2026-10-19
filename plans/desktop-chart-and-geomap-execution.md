@@ -1,6 +1,6 @@
 # Desktop chart and GeoMap RFC execution
 
-Status: P1/P2/B3 and P3 verified (2026-10-19). P4, P5 and C7 are authorized and in progress; main merge and release remain on hold.
+Status: P0–P5 and C7 implemented, independently reviewed and verified on v9 (2026-10-19). Main merge and release remain on hold.
 Authorized: implement the reviewed RFC and commit the work to `codex/openchart-v9`.
 Merge/release: explicitly on hold. No publishing or external repository work.
 Source: [RFC](rfc-desktop-chart-and-geomap-design.md).
@@ -64,26 +64,26 @@ Acceptance: names remain attached through camera movement; no text jumps due to 
 
 ### P4 — Reader comparison and map exploration
 
-- [ ] Land role/source metadata for crosshair fields and close the remaining crosshair plan only after tests.
-- [ ] Test typed slice keys, duplicate x ambiguity, sparse series, metadata compatibility, percent-point math, zero baseline, filtered/deleted/reordered pins.
-- [ ] Extend existing reader with opt-in slice mode; preserve old observation-mode API/behavior.
-- [ ] Add the GeoMap reader adapter with canonical join identity and selection outline.
-- [ ] Implement fixed readout, local search/ranked companion, overlap chooser, active legend markers, and optional distribution counts.
-- [ ] Integrate pointer/keyboard/camera/editor ownership and touch cancel/no-pin paths.
-- [ ] Add matching wrapper lifecycle/controlled-state tests and accessibility checks.
-- [ ] Implement explicit snapshot-readout export only with a portable layout; otherwise leave the feature excluded and clearly documented.
-- [ ] Run formative reader tasks; record limitations instead of claiming untested usability gains.
+- [x] Land role/source metadata for crosshair fields and close the remaining crosshair plan only after tests.
+- [x] Test typed slice keys, duplicate x ambiguity, sparse series, metadata compatibility, percent-point math, zero baseline, filtered/deleted/reordered pins.
+- [x] Extend existing reader with opt-in slice mode; preserve old observation-mode API/behavior.
+- [x] Add the GeoMap reader adapter with canonical join identity and selection outline.
+- [x] Implement fixed readout, local search/ranked companion, overlap chooser, active legend markers, and optional distribution counts.
+- [x] Integrate pointer/keyboard/camera/editor ownership and touch cancel/no-pin paths.
+- [x] Add matching wrapper lifecycle/controlled-state tests and accessibility checks.
+- [x] Implement explicit snapshot-readout export only with a portable layout; otherwise leave the feature excluded and clearly documented.
+- [x] Run formative reader tasks; record limitations instead of claiming untested usability gains.
 
 Acceptance: a reader can compare two dates or places without remembering a vanished tooltip; no conflicting gesture fires twice; raw identity/value semantics survive data updates; unsupported bindings never display invented deltas. New interaction remains opt-in.
 
 ### P5 — Detail geography and intentional insets
 
-- [ ] Prove fixed shared fit with Texas/Austin/RGV fixture and valid preprojected/geographic input contracts.
-- [ ] Finalize view/layer scope and event compatibility before implementation.
-- [ ] Add object selection, fixed fit object, contextual detail layers, and explicit inset views.
-- [ ] Test point positions are unchanged when context detail becomes visible; test inset coverage/scale labels and shared observation selection.
-- [ ] Verify focus, clipping, dark theme, label decluttering, SSR/export, and multi-map IDs in each view.
-- [ ] Update and close the open multi-layer geo request only when its actual Austin use case passes.
+- [x] Prove fixed shared fit with Texas/Austin/RGV fixture and valid preprojected/geographic input contracts.
+- [x] Finalize view/layer scope and event compatibility before implementation.
+- [x] Add object selection, fixed fit object, contextual detail layers, and explicit inset views.
+- [x] Test point positions are unchanged when context detail becomes visible; test inset coverage/scale labels and shared observation selection.
+- [x] Verify focus, clipping, dark theme, label decluttering, SSR/export, and multi-map IDs in each view.
+- [x] Update and close the open multi-layer geo request only when its actual Austin use case passes.
 
 Acceptance: detail context never changes primary projection fitting; insets are explicitly labeled separate views; no feature/data disappearance or ambiguous camera target. P5 remains a separately approved follow-up rather than an implicit v9.0 gate.
 
@@ -120,7 +120,7 @@ The revised RFC §13 is the authoritative detailed checklist; the earlier phase 
 - [x] Finish measured map candidate 200% text evidence (24 measured profiles and 36 browser zoom captures; method recorded).
 - [x] User B3 row decisions, then adopt only approved defaults with migration materializations.
 - [x] Full final gates and ce:code-reviewer passed; findings fixed; source committed as `9be168d9`, this record committed separately.
-- [ ] P3/P4 implementation and P5 spike gate remain outstanding; not marked complete.
+- [x] P3/P4 implementation and the P5 spike are complete; see the final completion record below.
 
 Final source checkpoint: 7,919 unit tests passed across 360 files (three intentional expected failures). Build, lint, typecheck, generated files, boundaries and bundle checks passed. All 115 visual checks, 177 general browser checks (11 existing platform skips), and 106 annotation checks passed. The final cache optimization also passed cached/uncached equivalence, update-freshness and positive-corpus tests. The code reviewer independently passed 94 affected tests and approved the final correction set. No merge, push, release or publication.
 
@@ -260,25 +260,25 @@ The user explicitly requested finishing the remaining implementation, all checks
 
 ### P4 execution checklist (before coding)
 
-- [ ] Add explicit/default tooltip role and source metadata, remove display-string crosshair guessing, preserve authored supplemental field ordering and test duplicate display strings.
-- [ ] Publish discriminated typed-domain slice and comparison contracts; preserve existing four-argument observation API and last-two policy.
-- [ ] Build per-revision indexed slices from actual transformed observations, with panel-scoped facets, sparse-member states and duplicate `(series,x)` ambiguity; never persist pixel coordinates or invent pivot observations.
-- [ ] Reconcile reorder, filter, delete, dataset/measure/transform/key changes, ID-less replacement and theme/resize; silent controlled set/clear with equality guards and reason metadata.
-- [ ] Implement opt-in chart slice preview, persistent A/B guides and fixed host-placed readout; third pin replaces B, toggling A promotes B; missing/ambiguous/filtered data cannot produce deltas.
-- [ ] Share conservative comparison semantics through the existing numeric helper: explicit matching measure/unit/representation/grouping, percentage points, unavailable zero-relative change, negative-relative opt-in.
-- [ ] Add map reader from actual joined feature/point layout, separate canonical namespaces, no-data findable places, selection outlines and explicit Show on map; selection never implicitly zooms or filters.
-- [ ] Add local name search, opt-in ranking with stable ties and missing values unranked, paginated keyboard-accessible companion, and actual screen-space overlapping-symbol chooser.
-- [ ] Add optional `colorKey.activeValue`/`distribution`, measured fixed reserves, exact existing scale/bin mapping, A/B/no-data/out-of-range/category markers, finite joined feature counts and static export of distribution.
-- [ ] Introduce explicit private navigation ownership and successful-layout subscriptions; editor priority, camera drag/pinch cancellation, stationary touch only, controls excluded, cached coordinate bounds and at-most-once-per-frame pointer processing.
-- [ ] Forward options/state/events in React/Vue/Svelte Chart and GeoMap wrappers; StrictMode/reactive lifecycle, callback/host replacement without visualization recreation, controlled no-echo and complete cleanup.
-- [ ] Keep transient pins/panels out of static export; document snapshot-readout exclusion until a portable layout exists. Do not use DOM screenshots or foreignObject.
-- [ ] Add gallery journeys and Chromium/WebKit interactions, desktop/narrow/dark/large-text/manual keyboard/touch verification, 1k-observation pointer p95<8ms, no hover compilation, whole-phase gates and required code review.
-- [ ] Record that expert/manual reader tasks are not a recruited human usability study; do not claim untested usability gains.
+- [x] Add explicit/default tooltip role and source metadata, remove display-string crosshair guessing, preserve authored supplemental field ordering and test duplicate display strings.
+- [x] Publish discriminated typed-domain slice and comparison contracts; preserve existing four-argument observation API and last-two policy.
+- [x] Build per-revision indexed slices from actual transformed observations, with panel-scoped facets, sparse-member states and duplicate `(series,x)` ambiguity; never persist pixel coordinates or invent pivot observations.
+- [x] Reconcile reorder, filter, delete, dataset/measure/transform/key changes, ID-less replacement and theme/resize; silent controlled set/clear with equality guards and reason metadata.
+- [x] Implement opt-in chart slice preview, persistent A/B guides and fixed host-placed readout; third pin replaces B, toggling A promotes B; missing/ambiguous/filtered data cannot produce deltas.
+- [x] Share conservative comparison semantics through the existing numeric helper: explicit matching measure/unit/representation/grouping, percentage points, unavailable zero-relative change, negative-relative opt-in.
+- [x] Add map reader from actual joined feature/point layout, separate canonical namespaces, no-data findable places, selection outlines and explicit Show on map; selection never implicitly zooms or filters.
+- [x] Add local name search, opt-in ranking with stable ties and missing values unranked, paginated keyboard-accessible companion, and actual screen-space overlapping-symbol chooser.
+- [x] Add optional `colorKey.activeValue`/`distribution`, measured fixed reserves, exact existing scale/bin mapping, A/B/no-data/out-of-range/category markers, finite joined feature counts and static export of distribution.
+- [x] Introduce explicit private navigation ownership and successful-layout subscriptions; editor priority, camera drag/pinch cancellation, stationary touch only, controls excluded, cached coordinate bounds and at-most-once-per-frame pointer processing.
+- [x] Forward options/state/events in React/Vue/Svelte Chart and GeoMap wrappers; StrictMode/reactive lifecycle, callback/host replacement without visualization recreation, controlled no-echo and complete cleanup.
+- [x] Keep transient pins/panels out of static export; document snapshot-readout exclusion until a portable layout exists. Do not use DOM screenshots or foreignObject.
+- [x] Add gallery journeys and Chromium/WebKit interactions, desktop/narrow/dark/large-text/manual keyboard/touch verification, 1k-observation pointer p95<8ms, no hover compilation, whole-phase gates and required code review.
+- [x] Record that expert/manual reader tasks are not a recruited human usability study; do not claim untested usability gains.
 
 ### P5 and C7 follow-through
 
-- [ ] P5: prove fixed primary fit using Texas/Austin/RGV geographic and source-space fixtures before API freeze; then object/fit selection, contextual detail thresholds, independently labeled/covered inset views, scoped camera/events/anchors, shared observation identity, multi-map/export IDs and all gates.
-- [ ] C7: measure attribution and branding together in shared chrome; preserve explicit text/style/offsets and stable note bands; verify chart, map, table, sankey, barlist, tilemap and graph paths at narrow/desktop widths, long text, large fonts, dark themes, hidden/compact modes and export. Record intentional appearance changes and v8 migration behavior.
+- [x] P5: prove fixed primary fit using Texas/Austin/RGV geographic and source-space fixtures before API freeze; then object/fit selection, contextual detail thresholds, independently labeled/covered inset views, scoped camera/events/anchors, shared observation identity, multi-map/export IDs and all gates.
+- [x] C7: measure attribution and branding together in shared chrome; preserve explicit text/style/offsets and stable note bands; verify chart, map, table, sankey, barlist, tilemap and graph paths at narrow/desktop widths, long text, large fonts, dark themes, hidden/compact modes and export. Record intentional appearance changes and v8 migration behavior.
 
 
 ### P5 spike evidence before public API implementation
@@ -297,3 +297,46 @@ Final gates: 8,050 unit tests passed (three intentional expected failures), 20 n
 Quiet final geometry measurement after all browser workers exited: real 200 counties p95 0.786ms; clipped dense 200 polygons/50k vertices p95 15.753ms; same with 1,000 symbol obstacles p95 15.447ms, all below 20ms. Retained county geometry 227,662 JSON bytes; dense geometry 2,352,611 bytes. The final run supersedes the loaded 21.06ms result without discarding it. Logs: /tmp/v9-p3-final-*.log and /tmp/v9-p3-geometry-final.log; durable manual/review evidence in the P3 visualization directory.
 
 The reported multiple-map error came from a gallery button deliberately submitting duplicate callout IDs. Normal controls no longer expose that failure action. Validation coverage remains through a private fixture event; new 390/1280 browser tests prove ordinary controls never show an error or change the second map. Manual preview scans on the user's localhost:6006 server passed at both widths, including zoom and complete narrow-layout notes.
+
+
+### P4/C7 integration checkpoint (2026-10-19; not final completion)
+
+The full unit suite passes 8,131 tests with three intentional expected failures at this checkpoint. The C7 real-browser matrix passes all12 Chromium/WebKit cases: seven visualization families at390/1280px with default/custom brands and large authored text. The four compile snapshots were inspected before updating: new attribution metadata/measured source widths and tooltip role/source metadata, with no unexplained changes. The released-v8 corpus is unchanged; 1,584 parity assertions pass with exact C7 path pairs. Measured footer width changes433 fixture-width layouts; automatic tile label sizing and one connector disappearance are specifically recorded, not exempted by category.
+
+C7 manual verification found and fixed tile-map footer anchoring against the authored height instead of the actual tile grid, and graph canvas stretching into its new footer. Desktop dark and narrow normal/large-text evidence is retained under `/Users/riley/.codex/visualizations/2026/10/19/openchart-c7/`. Static chart export carries all attribution text/custom branding without foreignObject. Graphs retain their existing export API limitations. Full visual baseline review, final whole-repository gates and independent review remain pending.
+
+Reader browser journeys pass date-slice keyboard pins, sparse-member states, third-pin behavior, keyed reorder/deletion and panel-host replacement at both widths. Place-list pointer testing exposed a real preview-height feedback loop; this is being fixed before accepting the map journeys. A manual/expert verification is not a recruited usability study.
+
+### P5 API frozen after the geometry spike
+
+- Optional `geo.objectKey` chooses a decoded primary topology object; `fitObjectKey` chooses fitting geography, defaulting to that object. Detail layers never refit the primary projection.
+- Optional `geo.sourcePlane` is an explicit assertion about decoded identity coordinates. Identity detail must declare the same nonempty plane; geographical coordinates and source coordinates are not implicitly converted.
+- Optional `geo.detailLayers` carries keyed context geometry with zoom thresholds. It has no independent data join, color domain or selection identity.
+- Optional `geo.insets` carries a label, explicit primary feature IDs, optional keyed point IDs, placement, width and optional compatible projection. `removeFromMain` defaults true; false explicitly duplicates coverage. Frames are reserved before fitting, labeled with separate scale/coverage and reject impossible fits instead of dropping geography.
+- `GeoMapLayout.views` is additive only for authored insets/details. Viewports are map-local; geometry is viewport-local. Runtime applies the view offset once and then that view's camera. Existing root fields remain aliases for root geometry.
+- Camera options accept optional `viewId`; `getCamera(viewId?)`, `setCamera(camera,{viewId?})` and `getCameras()` expose defensive snapshots. Existing calls target root. Unknown views and ambiguous duplicated targets reject before mutation. Camera events retain their first argument and add optional scope metadata only for multiview layouts.
+- Observation identity excludes view/layer; duplicated geography has one pin and highlights all representations. Geographic anchors may explicitly scope view/layer. Export preserves every current view camera and unique SVG IDs.
+
+Implementation remains divided by subsystem: core contracts/pure helpers and gallery journeys; compiler/normalization/validation; renderer/controller/wrappers. The orchestrator owns full verification, commits, push and cleanup.
+
+
+### Final source review — 2026-10-19
+
+P4, P5 and C7 implementation is complete. All checklist items above are implemented or explicitly satisfied by the documented exclusion (transient HTML readouts are not exported). Expert/manual reader tasks were exercised; this is not a recruited human usability study. The user-approved desktop defaults, retained hatch/proportions, and all additional requested fixes remain intact.
+
+The full ce:code-reviewer review covered641 tracked and53 untracked files against main. Every actionable finding was fixed with regressions; final verdict APPROVE with89 independent focused tests. Fixes include inferred/transformed reader values, exclusive input leases, duplicate observations, controlled companion page/focus retention, resize preview, removed-inset actions, post-destroy guards, explicit source revisions, filtered values, empty categories, represented distribution counts, and topology-ID inset references independent of data joins.
+
+- [x] Frozen-source unit8177 passed +3 intentional expected failures,387 files.
+- [x] Lint1077 files, all package/example typechecks, six-package build, generated files, boundaries, script tests2, bundle gate213339gzip bytes/zero product dependencies.
+- [x] All60 new chart/map browser journeys passed in Chromium/WebKit.
+- [x] Final integrated browser matrix:458 passed,11 existing skips, no retries. Visual115, annotation106, existing general177 and new chart/map60.
+- [x] Commit-ready source and six rebuilt Bun-linked packages verified; all public targets exist, built imports and a real compile pass. Parent pushes this completion commit to v9 and records the remote revision in the handoff.
+
+Manual evidence: `/Users/riley/.codex/visualizations/2026/10/19/openchart-{c7,p5,side-legend}/`. All41 changed existing visual images were inspected with before/after/diff manifests. The actual user6006 side-key story was checked at390/1280 in Default dark mode; wider1920/2168 views were also checked within the gallery's990px content cap. No key backplates, clipped text or browser errors remain.
+
+Feature-disabled paired compile after per-compile tooltip semantic caching: map median17.932→17.718ms,p9520.327→20.187; line1.745→1.825,p952.817→2.952; area3.509→3.789,p955.143→5.502. The largest median increase is8.0%, within10%. Earlier noisy/pre-cache runs are retained. The source-only benchmark fixture and dependency symlink were removed.
+
+
+Final gate logs and review disposition are retained in the C7 evidence directory (`gates/`, `review-disposition.md`, `visual-diffs/review-manifest.json`). No new baseline updates were needed in the final458-case run. All approved visual differences are accounted for; no implementation work remains open. Local crosshair-tooltip and multi-layer geography follow-up plans are closed when this completion is committed. The overarching v9 rollout stays open solely for the held merge/release steps.
+
+Cleanup: the source-only performance fixture and owned prototype gallery server were removed. The parent verification server is stopped after this run; the user's6006 server stays running. `v9-edit-api` was previously archived and removal verified. Supported archival for `/Users/riley/.codex/worktrees/v9-mark-contract/openchart` and `/Users/riley/.codex/worktrees/v9-themes/openchart` remains queued: both directories and Git registrations still exist, so removal is not claimed. Both are source-clean, integrated, with unique ignored review evidence preserved and regenerable outputs already removed. Retain `/Users/riley/.codex/worktrees/openchart-v9/openchart` and its builds for the unmerged PR and linked applications. No unrelated tree or chat is removed.

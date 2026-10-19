@@ -44,6 +44,26 @@ function validateGeoMapZoom(zoom: unknown, errors: ValidationError[]): void {
 
 export function validateGeoMapSpec(spec: Record<string, unknown>, errors: ValidationError[]): void {
   validateGeoMapLabels(spec, errors);
+  validateGeoMapViews(spec, errors);
+  if (spec.colorKey !== undefined) {
+    const key = spec.colorKey;
+    if (!key || typeof key !== 'object' || Array.isArray(key))
+      errors.push({
+        code: 'INVALID_TYPE',
+        path: '/colorKey',
+        message: 'colorKey must be an object.',
+        suggestion: 'Use {activeValue:true,distribution:true}.',
+      });
+    else
+      for (const [name, value] of Object.entries(key))
+        if (!['activeValue', 'distribution'].includes(name) || typeof value !== 'boolean')
+          errors.push({
+            code: 'INVALID_VALUE',
+            path: jsonPointer('colorKey', name),
+            message: 'colorKey accepts only boolean activeValue and distribution.',
+            suggestion: 'Omit either option or set it to true or false.',
+          });
+  }
   if (!spec.geo || typeof spec.geo !== 'object') {
     errors.push({
       message: 'Spec error: map spec requires a "geo" object with a TopoJSON "features" field',
@@ -443,7 +463,11 @@ function validateGeoMapLabels(spec: Record<string, unknown>, errors: ValidationE
   }
   if (featureReferences) {
     const objects = object(object(geo?.features)?.objects);
-    const first = objects ? object(Object.values(objects)[0]) : undefined;
+    const first = objects
+      ? object(
+          geo?.objectKey === undefined ? Object.values(objects)[0] : objects[String(geo.objectKey)],
+        )
+      : undefined;
     const features =
       first?.type === 'GeometryCollection' && Array.isArray(first.geometries)
         ? first.geometries
@@ -451,5 +475,138 @@ function validateGeoMapLabels(spec: Record<string, unknown>, errors: ValidationE
           ? [first]
           : [];
     checkIds(features, (feature) => feature.id, '/geo/features');
+  }
+}
+
+/** New view fields are validated only when authored; legacy maps keep their fast path. */
+function validateGeoMapViews(spec: Record<string, unknown>, errors: ValidationError[]): void {
+  const object = (value: unknown): Record<string, unknown> | undefined =>
+    value && typeof value === 'object' && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : undefined;
+  const geo = object(spec.geo);
+  if (!geo) return;
+  const fail = (path: string, message: string) =>
+    errors.push({
+      path,
+      message,
+      code: 'INVALID_VALUE',
+      suggestion:
+        'Use explicit compatible sources, unique identifiers and finite viewport/zoom bounds.',
+    });
+  const string = (value: unknown) => typeof value === 'string' && !!value.trim();
+  const finite = (value: unknown): value is number =>
+    typeof value === 'number' && Number.isFinite(value);
+  for (const key of ['objectKey', 'fitObjectKey', 'sourcePlane'])
+    if (geo[key] !== undefined && !string(geo[key]))
+      fail(`/geo/${key}`, `${key} must be a nonempty string.`);
+  const used = new Set<string>(['root']);
+  const checkId = (entry: Record<string, unknown>, path: string) => {
+    if (!string(entry.id) || used.has(String(entry.id)))
+      fail(
+        `${path}/id`,
+        'View and detail layer identifiers must be nonempty, globally unique and cannot be root.',
+      );
+    else used.add(String(entry.id));
+  };
+  for (const key of ['detailLayers', 'insets']) {
+    if (geo[key] === undefined) continue;
+    if (!Array.isArray(geo[key])) {
+      fail(`/geo/${key}`, `${key} must be an array.`);
+      continue;
+    }
+    for (const [index, raw] of (geo[key] as unknown[]).entries()) {
+      const path = `/geo/${key}/${index}`,
+        entry = object(raw);
+      if (!entry) {
+        fail(path, 'Each geographic view must be an object.');
+        continue;
+      }
+      checkId(entry, path);
+      if (key === 'detailLayers') {
+        if (!entry.features)
+          fail(`${path}/features`, 'A detail layer requires an explicit geometry source.');
+        for (const name of ['objectKey', 'sourcePlane'])
+          if (entry[name] !== undefined && !string(entry[name]))
+            fail(`${path}/${name}`, `${name} must be a nonempty string.`);
+        if (!finite(entry.minZoom) || entry.minZoom < 1)
+          fail(`${path}/minZoom`, 'minZoom must be finite and at least 1.');
+        if (
+          entry.maxZoom !== undefined &&
+          (!finite(entry.maxZoom) || entry.maxZoom < (finite(entry.minZoom) ? entry.minZoom : 1))
+        )
+          fail(`${path}/maxZoom`, 'maxZoom must be finite and at least minZoom.');
+      } else {
+        if (!string(entry.label)) fail(`${path}/label`, 'An inset requires a readable label.');
+        if (!finite(entry.width) || entry.width < 32)
+          fail(`${path}/width`, 'Inset width must be finite and at least 32 CSS pixels.');
+        if (!['bottom-left', 'bottom-right'].includes(String(entry.placement)))
+          fail(`${path}/placement`, 'Inset placement must be bottom-left or bottom-right.');
+        if (
+          entry.projection !== undefined &&
+          !['identity', 'mercator', 'equalEarth', 'albersUsa'].includes(String(entry.projection))
+        )
+          fail(`${path}/projection`, 'Unknown inset projection.');
+        if (entry.removeFromMain !== undefined && typeof entry.removeFromMain !== 'boolean')
+          fail(`${path}/removeFromMain`, 'removeFromMain must be boolean.');
+        for (const name of ['featureIds', 'pointIds']) {
+          if (name === 'pointIds' && entry[name] === undefined) continue;
+          const ids = entry[name];
+          if (!Array.isArray(ids) || (name === 'featureIds' && !ids.length)) {
+            fail(`${path}/${name}`, `${name} must be an explicit nonempty coverage array.`);
+            continue;
+          }
+          const seen = new Set<string>();
+          for (const [j, id] of ids.entries()) {
+            if ((!string(id) && !finite(id)) || seen.has(String(id)))
+              fail(
+                `${path}/${name}/${j}`,
+                'Coverage references must be unique canonical strings or finite numbers.',
+              );
+            seen.add(String(id));
+          }
+          if (name === 'pointIds' && ids.length && !object(object(spec.points)?.key)?.field)
+            fail(`${path}/pointIds`, 'Explicit inset points require points.key.');
+        }
+      }
+    }
+  }
+  const viewIds = new Set([
+    'root',
+    ...(Array.isArray(geo.insets) ? geo.insets : [])
+      .map((raw) => object(raw)?.id)
+      .filter((id): id is string => typeof id === 'string'),
+  ]);
+  const layerIds = new Set(
+    (Array.isArray(geo.detailLayers) ? geo.detailLayers : [])
+      .map((raw) => object(raw)?.id)
+      .filter((id): id is string => typeof id === 'string'),
+  );
+  for (const [index, raw] of (Array.isArray(spec.callouts) ? spec.callouts : []).entries()) {
+    const anchor = object(object(raw)?.anchor);
+    if (!anchor) continue;
+    for (const name of ['viewId', 'layerId'])
+      if (anchor[name] !== undefined && !string(anchor[name]))
+        fail(`/callouts/${index}/anchor/${name}`, `${name} must be a nonempty string.`);
+    if (anchor.viewId !== undefined && !viewIds.has(String(anchor.viewId)))
+      fail(
+        `/callouts/${index}/anchor/viewId`,
+        'Unknown viewId; use root or an explicitly authored inset id.',
+      );
+    if (anchor.layerId !== undefined && !layerIds.has(String(anchor.layerId)))
+      fail(
+        `/callouts/${index}/anchor/layerId`,
+        'Unknown layerId; use an explicitly authored detail layer id.',
+      );
+    if (anchor.layerId !== undefined && anchor.viewId !== undefined && anchor.viewId !== 'root')
+      fail(
+        `/callouts/${index}/anchor/layerId`,
+        'Detail layers belong to the root view; an inset cannot reference a root detail layer.',
+      );
+    if (anchor.kind === 'point' && anchor.layerId !== undefined)
+      fail(
+        `/callouts/${index}/anchor/layerId`,
+        'Context detail layers do not contain selectable point observations.',
+      );
   }
 }

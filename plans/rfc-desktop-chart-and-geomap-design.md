@@ -1,6 +1,6 @@
 # RFC: Desktop chart craft, reader comparison, and GeoMap design
 
-Status: EXECUTION AUTHORIZED (2026-10-18). Review handoff complete at `93112314`. Implement in the existing `codex/openchart-v9` worktree; commit there. Merge/release remain on hold. B3 candidates still require their concrete before/after review before adoption.
+Status: IMPLEMENTED AND VERIFIED ON V9 (2026-10-19). Review handoff complete at `93112314`. Implement in the existing `codex/openchart-v9` worktree; commit there. Merge/release remain on hold. B3 choices were approved2026-10-19; P5/C7 execution was also explicitly included. Final completion evidence is in the execution checklist.
 Date: 2026-10-17, revised 2026-10-18
 Scope: OpenChart library, framework wrappers, documentation, and gallery only.
 Related: [v9 plan](v9-chart-clarity-and-annotation-ux.md), [v9 execution checklist](v9-execution-checklist.md).
@@ -14,12 +14,12 @@ Approve a staged program, not one large renderer rewrite. v9.0 is a major releas
 | Bucket | Contents | Release |
 | --- | --- | --- |
 | B1: verified bug fixes | Endpoint shared precision and width prediction, endpoint measurement through the host `measureText`, value labels that ignore the theme font, the GDP gallery example's lost precision (§5.2, §12) | 9.0. Each is a correctness fix with a reproducing test. |
-| B2: additive opt-ins | Bar `labels.placement`, interior area labels, VL axis title angle/anchor and map side legends (§5.4) are built in P1b/P2 next to the B3 work; map callouts and text channels (P3), reader comparison (P4), detail/insets (P5) | P1b/P2 opt-ins ship in 9.0 if ready, otherwise 9.x; P3–P5 in 9.x minors. Omission reproduces the 9.0 baseline. |
+| B2: additive opt-ins | Bar `labels.placement`, interior area labels, VL axis title angle/anchor and map side legends (§5.4) are built in P1b/P2 next to the B3 work; map callouts and text channels (P3), reader comparison (P4), detail/insets (P5) | P1b/P2 opt-ins ship in 9.0 if ready, otherwise 9.x; P3–P5 included in the current v9 branch by the2026-10-19 completion authorization. Omission reproduces the 9.0 baseline. |
 | B3: design defaults | Gridline/zero hierarchy, endpoint spacing and typography, column rhythm and bar row proportions, quieter no-data hatch and border tokens, static map legend polish, size-key placement | 9.0 defaults. Each must show it is an improvement: before/after plates at 390, 1024 and 1440 px in P0, reviewed by the user. A candidate whose plates don't clearly improve on the current output is dropped, not shipped as opt-in. |
 
 Phases still organize the work (P0–P5, §13); the buckets decide when each piece ships. Designs for P3–P5 are included so early choices do not block them. Taking B3 into 9.0 delays it: PR #137 needs a second full baseline review, `migrateSpecV8` gains materializations for the changed defaults, and the annotation invariants rerun. Merge is already paused, and the visual work is the point of this RFC, so that cost is accepted.
 
-This document is a proposal. It does not supersede the binding decisions in the existing v9 plan, authorize changes to PR #137, authorize merging, or authorize publishing. Execution starts only after the user approves this RFC and its phase scope.
+This RFC preserves the binding decisions in the existing v9 plan. The user approved execution, the concrete B3 choices, and inclusion of P5/C7; those later authorizations are recorded below. Merge and publishing remain on hold.
 
 The RFC lives in the primary checkout's `plans/` so drafting does not touch the active review worktree. Source observations were rechecked on 2026-10-18 in `/Users/riley/.codex/worktrees/openchart-v9/openchart` at commit `93112314` (branch `codex/openchart-v9`), which added `layout/frame.ts` as the single owner of plot sizing, split `compile/chart.ts` into `compile/*` modules, and moved date-only temporal fields to UTC scales. Symbol names below are more durable than line numbers.
 
@@ -574,28 +574,28 @@ Acceptance: names remain attached through camera movement; no text jumps due to 
 
 ### P4 — Reader comparison and map exploration
 
-- [ ] Land role/source metadata for crosshair fields and close the remaining crosshair plan only after tests.
-- [ ] Test typed slice keys, duplicate x ambiguity, sparse series, metadata compatibility, percent-point math, zero baseline, filtered/deleted/reordered pins.
-- [ ] Extend existing reader with opt-in slice mode; preserve old observation-mode API/behavior.
-- [ ] Add the GeoMap reader adapter with canonical join identity and selection outline.
-- [ ] Implement fixed readout, local search/ranked companion, overlap chooser, active legend markers, and optional distribution counts.
-- [ ] Integrate pointer/keyboard/camera/editor ownership and touch cancel/no-pin paths.
-- [ ] Add matching wrapper lifecycle/controlled-state tests and accessibility checks.
-- [ ] Implement explicit snapshot-readout export only with a portable layout; otherwise leave the feature excluded and clearly documented.
-- [ ] Run formative reader tasks; record limitations instead of claiming untested usability gains.
+- [x] Land role/source metadata for crosshair fields and close the remaining crosshair plan only after tests.
+- [x] Test typed slice keys, duplicate x ambiguity, sparse series, metadata compatibility, percent-point math, zero baseline, filtered/deleted/reordered pins.
+- [x] Extend existing reader with opt-in slice mode; preserve old observation-mode API/behavior.
+- [x] Add the GeoMap reader adapter with canonical join identity and selection outline.
+- [x] Implement fixed readout, local search/ranked companion, overlap chooser, active legend markers, and optional distribution counts.
+- [x] Integrate pointer/keyboard/camera/editor ownership and touch cancel/no-pin paths.
+- [x] Add matching wrapper lifecycle/controlled-state tests and accessibility checks.
+- [x] Implement explicit snapshot-readout export only with a portable layout; otherwise leave the feature excluded and clearly documented.
+- [x] Run formative reader tasks; record limitations instead of claiming untested usability gains.
 
 Acceptance: a reader can compare two dates or places without remembering a vanished tooltip; no conflicting gesture fires twice; raw identity/value semantics survive data updates; unsupported bindings never display invented deltas. New interaction remains opt-in.
 
 ### P5 — Detail geography and intentional insets
 
-- [ ] Prove fixed shared fit with Texas/Austin/RGV fixture and valid preprojected/geographic input contracts.
-- [ ] Finalize view/layer scope and event compatibility before implementation.
-- [ ] Add object selection, fixed fit object, contextual detail layers, and explicit inset views.
-- [ ] Test point positions are unchanged when context detail becomes visible; test inset coverage/scale labels and shared observation selection.
-- [ ] Verify focus, clipping, dark theme, label decluttering, SSR/export, and multi-map IDs in each view.
-- [ ] Update and close the open multi-layer geo request only when its actual Austin use case passes.
+- [x] Prove fixed shared fit with Texas/Austin/RGV fixture and valid preprojected/geographic input contracts.
+- [x] Finalize view/layer scope and event compatibility before implementation.
+- [x] Add object selection, fixed fit object, contextual detail layers, and explicit inset views.
+- [x] Test point positions are unchanged when context detail becomes visible; test inset coverage/scale labels and shared observation selection.
+- [x] Verify focus, clipping, dark theme, label decluttering, SSR/export, and multi-map IDs in each view.
+- [x] Update and close the open multi-layer geo request only when its actual Austin use case passes.
 
-Acceptance: detail context never changes primary projection fitting; insets are explicitly labeled separate views; no feature/data disappearance or ambiguous camera target. P5 remains a separately approved follow-up.
+Acceptance: detail context never changes primary projection fitting; insets are explicitly labeled separate views; no feature/data disappearance or ambiguous camera target. P5 was explicitly included in this v9 completion on2026-10-19; its spike and acceptance gates remain mandatory.
 
 ## 14. Verification and visual change control
 
@@ -741,4 +741,4 @@ Retain current bar/column proportions, endpoint sizes/spacing, and the current n
 
 ### Completion scope update — 2026-10-19
 
-The user explicitly included P5 and C7 in this completion. Their earlier separate-follow-up status is superseded for implementation; the P5 spike remains mandatory and its fixed-fit Texas/Austin/RGV and labeled-inset proof is recorded in the execution plan. P3 is implemented and fully verified with no baseline changes. P4, P5 and C7 remain unfinished. Commit and push to v9 are authorized; merge to main and release remain prohibited.
+The user explicitly included P5 and C7 in this completion. Their earlier separate-follow-up status is superseded for implementation; the P5 spike remains mandatory and its fixed-fit Texas/Austin/RGV and labeled-inset proof is recorded in the execution plan. P3 is implemented and fully verified with no baseline changes. P4, P5 and C7 are complete and independently approved. Final gates:8177 unit tests plus3 intentional expected failures;458 browser tests with11 existing skips; all builds, typechecks, lint, generated and package checks pass. The execution checklist records evidence, limitations and cleanup status. Commit and push to v9 are authorized; merge to main and release remain prohibited.

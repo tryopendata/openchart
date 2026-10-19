@@ -257,3 +257,54 @@ it('forwards rowHover and removes its runtime treatment when toggled off', async
   rerender(<Chart spec={barSpec} rowHover={false} />);
   await waitFor(() => expect(container.querySelector('.oc-row-hover')).toBeNull());
 });
+it('keeps slice pins through host, callback and theme changes without controlled echoes in StrictMode', async () => {
+  const { StrictMode } = await import('react');
+  const first = document.createElement('aside'),
+    second = document.createElement('aside');
+  const before = vi.fn(),
+    after = vi.fn();
+  const reader = { mode: 'slices' as const, panel: { container: first } };
+  const result = render(
+    <StrictMode>
+      <Chart spec={lineSpec} reader={reader} onReaderChange={before} />
+    </StrictMode>,
+  );
+  const root = () => result.container.querySelector('.oc-root')!;
+  root().dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  root().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+  const state = before.mock.calls.at(
+    -1,
+  )![0] as import('@opendata-ai/openchart-core').ReaderSliceSelection;
+  expect(state.pinned).toHaveLength(1);
+  const svg = result.container.querySelector('svg');
+  result.rerender(
+    <StrictMode>
+      <Chart
+        spec={lineSpec}
+        reader={{ mode: 'slices', panel: { container: second } }}
+        readerSelection={state}
+        onReaderChange={after}
+      />
+    </StrictMode>,
+  );
+  await waitFor(() => expect(second.querySelector('.oc-reader-panel')).not.toBeNull());
+  expect(first.querySelector('.oc-reader-panel')).toBeNull();
+  expect(result.container.querySelector('svg')).toBe(svg);
+  expect(after).not.toHaveBeenCalled();
+  expect(second.textContent).toContain('A:');
+  result.rerender(
+    <StrictMode>
+      <Chart
+        spec={lineSpec}
+        reader={{ mode: 'slices', panel: { container: second } }}
+        readerSelection={state}
+        onReaderChange={after}
+        theme={{ fonts: { sizes: { small: 14 } } }}
+      />
+    </StrictMode>,
+  );
+  await waitFor(() => expect(second.textContent).toContain('A:'));
+  expect(result.container.querySelectorAll('.oc-reader-guides')).toHaveLength(1);
+  result.unmount();
+  expect(second.querySelector('.oc-reader-panel')).toBeNull();
+});

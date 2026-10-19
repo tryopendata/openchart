@@ -71,11 +71,29 @@ describe('layered observation identity', () => {
     expect(rows).toEqual([
       {
         name: 'Share',
-        content: expect.objectContaining({ fields: [{ label: 'Share', value: '25%' }] }),
+        content: expect.objectContaining({
+          fields: [
+            {
+              label: 'Share',
+              value: '25%',
+              role: 'value',
+              source: { field: 'value', channel: 'tooltip', tooltipIndex: 0, layer: 'layer:1' },
+            },
+          ],
+        }),
       },
       {
         name: 'Revenue',
-        content: expect.objectContaining({ fields: [{ label: 'Revenue', value: '$1,250' }] }),
+        content: expect.objectContaining({
+          fields: [
+            {
+              label: 'Revenue',
+              value: '$1,250',
+              role: 'value',
+              source: { field: 'value', channel: 'tooltip', tooltipIndex: 0, layer: 'layer:0' },
+            },
+          ],
+        }),
       },
     ]);
     expect(layout.tooltipDescriptors.size).toBe(2);
@@ -132,8 +150,22 @@ describe('layered observation identity', () => {
     expect(series).toHaveLength(2);
     expect(series.map((item) => item.seriesKey)).toEqual(['Shared', 'Shared']);
     expect(series.map((item) => item.dataPoints?.[0].tooltip?.fields)).toEqual([
-      [{ label: 'Money', value: '$10' }],
-      [{ label: 'Rate', value: '10%' }],
+      [
+        {
+          label: 'Money',
+          value: '$10',
+          role: 'value',
+          source: { field: 'value', channel: 'tooltip', tooltipIndex: 0, layer: 'layer:0' },
+        },
+      ],
+      [
+        {
+          label: 'Rate',
+          value: '10%',
+          role: 'value',
+          source: { field: 'value', channel: 'tooltip', tooltipIndex: 0, layer: 'layer:1' },
+        },
+      ],
     ]);
     expect(series[0].pointKeys?.[0]).not.toBe(series[1].pointKeys?.[0]);
   });

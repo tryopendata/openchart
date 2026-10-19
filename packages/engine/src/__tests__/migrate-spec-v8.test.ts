@@ -14,6 +14,11 @@ const chart = {
   encoding: { x: { field: 'x', type: 'quantitative' }, y: { field: 'y', type: 'quantitative' } },
 };
 describe('migrateSpecV8 alias repairs', () => {
+  it('reports measured attribution as a layout limitation without repeated repairs', () => {
+    const result = migrateSpecV8({ ...chart, chrome: { source: 'Source: Research team' } });
+    expect(result.repairs.some((repair) => /measured attribution/.test(repair.reason))).toBe(true);
+    expect(migrateSpecV8(result.spec).repairs).toEqual([]);
+  });
   it('preserves hardcoded v8 reference typography independently of the small theme size', () => {
     const source = {
       ...chart,

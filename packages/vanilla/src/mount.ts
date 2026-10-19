@@ -1,4 +1,5 @@
 import { annotationSource } from './interactions/edit-transactions';
+import { type ReaderHostEvent, registerReaderHost } from './interactions/reader-arbitration';
 import { wireRowHover } from './interactions/row-hover';
 import { canTransitionSpecShape } from './transition/gate';
 import { reconcileSVG } from './transition/reconcile';
@@ -187,6 +188,14 @@ export function createChart<TData extends DataRow = DataRow>(
 
   // Teardown for everything one render wires up. render() runs it before
   // rebuilding and destroy() runs it on the way out, newest first.
+  let readerOwnsNavigation = false;
+  let disposeNavigation: (() => void) | undefined;
+  let restoreNavigation: (() => void) | undefined;
+  const readerListeners = new Set<(event: ReaderHostEvent) => void>();
+  const readerEvent = (kind: ReaderHostEvent['kind']) => {
+    for (const listener of [...readerListeners]) listener({ kind });
+  };
+  let unregisterReaderHost: (() => void) | undefined;
   const renderDisposers: Array<() => void> = [];
   function track(dispose: () => void): void {
     renderDisposers.push(dispose);
@@ -339,44 +348,50 @@ export function createChart<TData extends DataRow = DataRow>(
     const hoverEmphasis = createHoverEmphasis(svgElement, currentLayout);
     track(() => hoverEmphasis.destroy());
 
-    // Wire tooltip events on mark elements
-    track(
-      wireTooltipEvents(
-        svgElement,
-        currentLayout.tooltipDescriptors,
-        tooltipManager,
-        hoverEmphasis,
-      ),
-    );
-
-    // Wire voronoi overlay tooltip events for line/area charts
-    const crosshairController = wireVoronoiTooltipEvents(
-      svgElement,
-      currentLayout,
-      tooltipManager,
-      hoverEmphasis,
-    );
-    if (crosshairController) track(() => crosshairController.cleanup());
-
-    // The endpoint-label column is the legend on charts that have none.
-    track(wireEndpointLabelHover(svgElement, hoverEmphasis));
-
-    // Wire keyboard navigation. Skipped when the author hid the chart from
-    // assistive technology (a11y.hidden): a hidden chart must not be a tab stop.
-    // Edit mode takes the arrow keys for nudges; read and select keep reader nav.
-    const keyboardEditing = !wantsSeriesSearch(currentSpec) && editing;
-    if (!currentLayout.a11y.hidden && !keyboardEditing) {
-      track(
-        wireKeyboardNav(
+    const wireNavigation = () => {
+      if (!svgElement || !tooltipManager || readerOwnsNavigation || destroyed) return;
+      const cleanups: Array<() => void> = [];
+      cleanups.push(
+        wireTooltipEvents(
           svgElement,
-          container,
           currentLayout.tooltipDescriptors,
           tooltipManager,
-          currentLayout,
-          crosshairController,
+          hoverEmphasis,
         ),
       );
-    }
+      const crosshairController = wireVoronoiTooltipEvents(
+        svgElement,
+        currentLayout,
+        tooltipManager,
+        hoverEmphasis,
+      );
+      if (crosshairController) cleanups.push(() => crosshairController.cleanup());
+      const keyboardEditing = !wantsSeriesSearch(currentSpec) && editing;
+      if (!currentLayout.a11y.hidden && !keyboardEditing)
+        cleanups.push(
+          wireKeyboardNav(
+            svgElement,
+            container,
+            currentLayout.tooltipDescriptors,
+            tooltipManager,
+            currentLayout,
+            crosshairController,
+          ),
+        );
+      disposeNavigation = () => {
+        for (const cleanup of cleanups.splice(0)) cleanup();
+        tooltipManager?.hide();
+        hoverEmphasis.clear();
+        disposeNavigation = undefined;
+      };
+    };
+    restoreNavigation = wireNavigation;
+    wireNavigation();
+    track(() => {
+      disposeNavigation?.();
+      restoreNavigation = undefined;
+    });
+    track(wireEndpointLabelHover(svgElement, hoverEmphasis));
 
     if (
       options?.rowHover &&
@@ -593,6 +608,7 @@ export function createChart<TData extends DataRow = DataRow>(
     // full recompile, including the post-font-load one.
     renderGen += 1;
     container.dataset.ocRenderGen = String(renderGen);
+    readerEvent('layout');
 
     // This render recompiled with the loaded webfonts, so the layout now
     // reflects final font metrics. Publish 'ready' only now (not right after
@@ -787,6 +803,9 @@ export function createChart<TData extends DataRow = DataRow>(
     edits.flush();
     if (destroyed) return;
     destroyed = true;
+    readerEvent('destroy');
+    unregisterReaderHost?.();
+    readerListeners.clear();
 
     // Cancel any in-progress data-update transition
     if (transitionHandle) {
@@ -864,7 +883,7 @@ export function createChart<TData extends DataRow = DataRow>(
     });
   }
 
-  return {
+  const instance: ChartInstance = {
     update,
     beginManualUpdate,
     resize,
@@ -902,4 +921,23 @@ export function createChart<TData extends DataRow = DataRow>(
       youDrawIt?.reveal();
     },
   };
+  unregisterReaderHost = registerReaderHost(instance, {
+    isEditing: () => selectable || edits.isTextEditing,
+    getSpec: () => currentSpec,
+    suspendNavigation() {
+      readerOwnsNavigation = true;
+      disposeNavigation?.();
+      return () => {
+        readerOwnsNavigation = false;
+        if (!destroyed) restoreNavigation?.();
+      };
+    },
+    subscribe(listener) {
+      readerListeners.add(listener);
+      return () => {
+        readerListeners.delete(listener);
+      };
+    },
+  });
+  return instance;
 }

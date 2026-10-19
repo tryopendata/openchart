@@ -14,14 +14,18 @@ import type {
   ElementRef,
   LayerSpec,
   MarkEvent,
+  ReaderChangeMeta,
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
 import { mergeThemeConfig } from '@opendata-ai/openchart-core';
 import {
   type ChartInstance,
+  type ChartReaderSelection,
   createChart,
+  createChartReaderBinding,
   type InteractionMode,
   type MountOptions,
+  type ReaderPresentationOptions,
 } from '@opendata-ai/openchart-vanilla';
 import {
   type CSSProperties,
@@ -37,6 +41,8 @@ import {
 import { VizDarkModeKey, VizThemeKey } from './context';
 
 export interface ChartProps {
+  reader?: false | ReaderPresentationOptions;
+  readerSelection?: ChartReaderSelection;
   /** The chart spec. Graph specs render through `<Graph />` or `<Visualization />`. */
   spec: ChartSpec | LayerSpec;
   theme?: ThemeConfig;
@@ -59,6 +65,11 @@ export interface ChartProps {
 export const Chart = defineComponent({
   name: 'Chart',
   props: {
+    reader: {
+      type: [Boolean, Object] as PropType<false | ReaderPresentationOptions>,
+      default: undefined,
+    },
+    readerSelection: { type: Object as PropType<ChartReaderSelection>, default: undefined },
     spec: {
       type: Object as PropType<ChartSpec | LayerSpec>,
       required: true,
@@ -116,6 +127,7 @@ export const Chart = defineComponent({
     },
   },
   emits: {
+    'reader-change': (_selection: ChartReaderSelection, _meta: ReaderChangeMeta) => true,
     'mark-click': (_event: MarkEvent) => true,
     'mark-hover': (_event: MarkEvent) => true,
     'mark-leave': () => true,
@@ -128,6 +140,18 @@ export const Chart = defineComponent({
     const containerRef = ref<HTMLDivElement | null>(null);
     let instance: ChartInstance | null = null;
     let prevSpec = '';
+    const readerBinding = createChartReaderBinding();
+    function syncReader() {
+      if (containerRef.value && instance)
+        readerBinding.sync(
+          containerRef.value,
+          instance,
+          props.spec,
+          props.reader,
+          props.readerSelection,
+          (state, meta) => emit('reader-change', state, meta),
+        );
+    }
 
     // Inject theme/darkMode from provider as fallbacks
     const contextTheme = inject(VizThemeKey, undefined);
@@ -174,12 +198,14 @@ export const Chart = defineComponent({
 
       instance = createChart(container, props.spec, options);
       prevSpec = JSON.stringify(props.spec);
+      syncReader();
       if (props.highlight !== undefined) {
         instance.setHighlight(props.highlight ?? null);
       }
     }
 
     function destroyChart() {
+      readerBinding.detach();
       instance?.destroy();
       instance = null;
       prevSpec = '';
@@ -220,6 +246,7 @@ export const Chart = defineComponent({
             selectedElement: props.selectedElement,
             revision: props.revision,
           });
+          syncReader();
         }
       },
     );
@@ -245,6 +272,8 @@ export const Chart = defineComponent({
         instance.setHighlight(newVal ?? null);
       },
     );
+
+    watch([() => props.reader, () => props.readerSelection], () => syncReader(), { deep: false });
 
     // Recreate chart when theme, darkMode, renderer, or the interaction mode
     // (explicit or inferred from listener presence) change

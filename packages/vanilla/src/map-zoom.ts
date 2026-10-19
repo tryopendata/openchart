@@ -35,6 +35,10 @@ import type { Camera } from './story/camera-math';
 /** What the controller needs from the mount. */
 export interface MapZoomHost {
   container: HTMLElement;
+  viewId?: string;
+  viewLabel?: string;
+  getScene?(): SVGElement | null;
+  getFocusTarget?(): SVGElement | null;
   getSvg(): SVGSVGElement | null;
   getLayout(): GeoMapLayout;
   /** Resolved `geo.zoom` for the current spec, or null when off. */
@@ -220,6 +224,11 @@ export function createMapZoomController(host: MapZoomHost): MapZoomController {
   // -------------------------------------------------------------------------
 
   function onWheel(e: WheelEvent): void {
+    const targetView =
+      e.target instanceof Element
+        ? e.target.closest('[data-geo-view-id]')?.getAttribute('data-geo-view-id')
+        : null;
+    if (targetView && targetView !== (host.viewId ?? 'root')) return;
     if (!host.getConfig() || fromControls(e)) return;
     const p = toMapFrame(e.clientX, e.clientY);
     if (!p?.inside) return;
@@ -237,7 +246,16 @@ export function createMapZoomController(host: MapZoomHost): MapZoomController {
   }
 
   function onGestureStart(e: Event): void {
+    const targetView =
+      e.target instanceof Element
+        ? e.target.closest('[data-geo-view-id]')?.getAttribute('data-geo-view-id')
+        : null;
+    if (targetView && targetView !== (host.viewId ?? 'root')) return;
     if (!host.getConfig()) return;
+    if (host.getScene?.()) {
+      const gesture = e as GestureEventLike;
+      if (!toMapFrame(gesture.clientX, gesture.clientY)?.inside) return;
+    }
     e.preventDefault();
     gestureStartK = host.getCamera().k;
     beginGesture();
@@ -268,6 +286,11 @@ export function createMapZoomController(host: MapZoomHost): MapZoomController {
   // -------------------------------------------------------------------------
 
   function onPointerDown(e: PointerEvent): void {
+    const targetView =
+      e.target instanceof Element
+        ? e.target.closest('[data-geo-view-id]')?.getAttribute('data-geo-view-id')
+        : null;
+    if (targetView && targetView !== (host.viewId ?? 'root')) return;
     if (e.pointerType === 'touch' || e.button !== 0) return;
     if (!host.getConfig() || fromControls(e) || !isZoomed()) return;
     const p = toMapFrame(e.clientX, e.clientY);
@@ -289,12 +312,17 @@ export function createMapZoomController(host: MapZoomHost): MapZoomController {
    * default action would have given.
    */
   function onMouseDown(e: MouseEvent): void {
+    const targetView =
+      e.target instanceof Element
+        ? e.target.closest('[data-geo-view-id]')?.getAttribute('data-geo-view-id')
+        : null;
+    if (targetView && targetView !== (host.viewId ?? 'root')) return;
     if (e.button !== 0 || !host.getConfig() || fromControls(e)) return;
     if (!isZoomed() && e.detail < 2) return;
     const p = toMapFrame(e.clientX, e.clientY);
     if (!p?.inside) return;
     e.preventDefault();
-    host.getSvg()?.focus({ preventScroll: true });
+    (host.getFocusTarget?.() ?? host.getSvg())?.focus({ preventScroll: true });
   }
 
   function onPointerMove(e: PointerEvent): void {
@@ -350,6 +378,11 @@ export function createMapZoomController(host: MapZoomHost): MapZoomController {
   }
 
   function onDblClick(e: MouseEvent): void {
+    const targetView =
+      e.target instanceof Element
+        ? e.target.closest('[data-geo-view-id]')?.getAttribute('data-geo-view-id')
+        : null;
+    if (targetView && targetView !== (host.viewId ?? 'root')) return;
     if (!host.getConfig() || fromControls(e)) return;
     const p = toMapFrame(e.clientX, e.clientY);
     if (!p?.inside) return;
@@ -382,6 +415,11 @@ export function createMapZoomController(host: MapZoomHost): MapZoomController {
   }
 
   function onTouchStart(e: TouchEvent): void {
+    const targetView =
+      e.target instanceof Element
+        ? e.target.closest('[data-geo-view-id]')?.getAttribute('data-geo-view-id')
+        : null;
+    if (targetView && targetView !== (host.viewId ?? 'root')) return;
     if (!host.getConfig() || fromControls(e)) return;
     if (e.touches.length >= 2) {
       const a = touchPoint(e.touches[0]!);
@@ -456,7 +494,7 @@ export function createMapZoomController(host: MapZoomHost): MapZoomController {
   // -------------------------------------------------------------------------
 
   function onKeyDown(e: KeyboardEvent): void {
-    if (!host.getConfig() || e.target !== host.getSvg()) return;
+    if (!host.getConfig() || e.target !== (host.getFocusTarget?.() ?? host.getSvg())) return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     const { width, height } = vb();
     switch (e.key) {
@@ -507,7 +545,7 @@ export function createMapZoomController(host: MapZoomHost): MapZoomController {
     btn.type = 'button';
     btn.className = 'oc-map-zoom-btn';
     btn.setAttribute('data-zoom', kind);
-    btn.setAttribute('aria-label', label);
+    btn.setAttribute('aria-label', host.viewLabel ? `${label} (${host.viewLabel})` : label);
     btn.title = label;
     btn.innerHTML = `<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${ICONS[kind]}</svg>`;
     btn.addEventListener('click', (e) => {
@@ -523,6 +561,7 @@ export function createMapZoomController(host: MapZoomHost): MapZoomController {
     if (!overlay) {
       overlay = document.createElement('div');
       overlay.className = 'oc-map-zoom';
+      if (host.viewId) overlay.setAttribute('data-geo-view-controls', host.viewId);
       hint = document.createElement('div');
       hint.className = 'oc-map-zoom-hint';
       hint.setAttribute('aria-hidden', 'true');
@@ -539,7 +578,10 @@ export function createMapZoomController(host: MapZoomHost): MapZoomController {
       const group = document.createElement('div');
       group.className = 'oc-map-zoom-controls';
       group.setAttribute('role', 'group');
-      group.setAttribute('aria-label', 'Map zoom');
+      group.setAttribute(
+        'aria-label',
+        host.viewLabel ? `Map zoom (${host.viewLabel})` : 'Map zoom',
+      );
       buttons = {
         in: makeButton('in', 'Zoom in'),
         out: makeButton('out', 'Zoom out'),
@@ -584,12 +626,15 @@ export function createMapZoomController(host: MapZoomHost): MapZoomController {
       return;
     }
     const layout = host.getLayout();
-    svg.setAttribute('tabindex', '0');
-    svg.setAttribute('aria-keyshortcuts', '+ - 0 ArrowUp ArrowDown ArrowLeft ArrowRight');
+    (host.getFocusTarget?.() ?? svg).setAttribute('tabindex', '0');
+    (host.getFocusTarget?.() ?? svg).setAttribute(
+      'aria-keyshortcuts',
+      '+ - 0 ArrowUp ArrowDown ArrowLeft ArrowRight',
+    );
     ensureMapClip(svg, layout, clipId);
     ensureOverlay(cfg.controls);
     placeOverlay(layout);
-    if (restoreFocus) svg.focus({ preventScroll: true });
+    if (restoreFocus) (host.getFocusTarget?.() ?? svg).focus({ preventScroll: true });
     onCamera();
   }
 
@@ -605,16 +650,17 @@ export function createMapZoomController(host: MapZoomHost): MapZoomController {
 
     // Clip only while zoomed: at the full view nothing overflows, and a clip
     // would shave points that straddle the frame edge.
-    const group = svg.querySelector('.oc-map-group');
+    const group = (host.getScene?.() ?? svg).querySelector('.oc-map-group');
     if (zoomed) group?.setAttribute('clip-path', `url(#${clipId})`);
+    else if (group?.hasAttribute('data-geo-view-clip'))
+      group.setAttribute('clip-path', group.getAttribute('data-geo-view-clip')!);
     else group?.removeAttribute('clip-path');
 
     // One finger scrolls the page at the full view; once zoomed it pans.
-    (svg as SVGSVGElement & ElementCSSInlineStyle).style.touchAction = zoomed
-      ? 'none'
-      : 'pan-x pan-y';
-    if (zoomed) svg.setAttribute('data-oc-zoomed', '');
-    else svg.removeAttribute('data-oc-zoomed');
+    ((host.getFocusTarget?.() ?? svg) as SVGElement & ElementCSSInlineStyle).style.touchAction =
+      zoomed ? 'none' : 'pan-x pan-y';
+    if (zoomed) (host.getFocusTarget?.() ?? svg).setAttribute('data-oc-zoomed', '');
+    else (host.getFocusTarget?.() ?? svg).removeAttribute('data-oc-zoomed');
 
     if (buttons) {
       setDisabled(buttons.in, cam.k >= cfg.maxZoom - EPS, svg);
@@ -629,7 +675,7 @@ export function createMapZoomController(host: MapZoomHost): MapZoomController {
     // keyboard users keep their place.
     const hadFocus = disabled && document.activeElement === btn;
     btn.disabled = disabled;
-    if (hadFocus) svg.focus({ preventScroll: true });
+    if (hadFocus) (host.getFocusTarget?.() ?? svg).focus({ preventScroll: true });
   }
 
   const touchOpts: AddEventListenerOptions = { passive: false };
@@ -674,7 +720,7 @@ export function createMapZoomController(host: MapZoomHost): MapZoomController {
       container.removeEventListener('gestureend', onGestureEnd);
       container.removeEventListener('keydown', onKeyDown);
       const svg = host.getSvg();
-      svg?.removeAttribute('tabindex');
+      (host.getFocusTarget?.() ?? svg)?.removeAttribute('tabindex');
       removeOverlay();
     },
   };

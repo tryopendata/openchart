@@ -489,7 +489,7 @@ Review exact-height embeds, narrow charts, custom fonts/themes, layers/facets, a
 
 ### Approved chart and map defaults
 
-Ordinary gridlines are quieter, and existing zero rules have stronger contrast. This does not add ticks, expand domains or enable disabled grids. Set `theme.colors.gridline` and `gridlineZero` to override either role. Explicit colors and light/dark pairs remain supported. Bar/column padding and endpoint sizes/gaps are unchanged.
+Ordinary gridlines are quieter, and existing zero rules have stronger contrast. This does not add ticks, expand domains or enable disabled grids. Set `theme.colors.gridline` and `gridlineZero` to override either role. Explicit colors and light/dark pairs remain supported. Bar/column padding and endpoint sizes/gaps are unchanged. When two automatic slope-axis endpoint labels overlap, their text positions now spread apart while the data anchors remain fixed. Explicit tick values retain their authored behavior.
 
 Map interior borders and outlines are quieter in both modes. The no-data hatch and fill remain unchanged: missing observations still differ from valid zero and neutral classes. `migrateSpecV8` restores old grid and border colors where the theme can express them; `{ styling: 'v9' }` adopts the new defaults.
 
@@ -503,3 +503,77 @@ Existing maps do not gain place labels or note bands automatically. Add `encodin
 Callouts reserve complete note capacity before the map is fitted. Review fixed-height embeds when enabling them; panning and zooming never change that reserve. Hidden inventory text remains available when visual labels collide or are outside their zoom range. Enable `labelInventory: { container }` on a vanilla mount or GeoMap wrapper for a visible host-placed list. This option does not enable reader comparison or annotation editing.
 
 `renderStaticSVG` accepts maps. Use a distinct stable `idPrefix` for each static figure embedded in one document, so clip paths, patterns and descriptions cannot refer to another figure's IDs. Omission retains the existing deterministic standalone-ID behavior. See [geographic labels and callouts](geographic-labels.md) for authoring, camera, accessibility and export details.
+
+### Shared attribution and side map keys
+
+Source, byline, footer and branding now use the same measured footer across all visualization families. The default OpenData mark is 12px. A custom `chrome.brand` replaces it, including in maps, tables and graphs. Long attribution uses the full row and stacks the brand below when that needs less space than a shared row. Explicit text, font size, offsets and `maxLines` still take precedence; an authored offset can intentionally move text beyond its reserved area.
+
+There is no legacy footer-layout switch. `migrateSpecV8` reports this limitation: even with preserved v8 typography, the measured brand reserve can change wrapping and available plot height. Automatic tile labels may become larger when more room is available, and automatic chart connectors may disappear when a label can sit beside its mark. Source observations, domains and units do not change. Review fixed-height embeds and exports after migrating. Compact/hidden chrome retains its existing attribution visibility policy; `watermark: false` removes the default mark and its reserve.
+
+Side map keys now reserve their actual measured content width. Quantitative side keys show explicit range rows using the existing class boundaries, with accessible inclusive/exclusive descriptions. Reserved gutters have no legend plate; overlays keep a background where geography sits behind them. Narrow frames can fall back to the existing top key before projection fitting. These changes preserve coverage and projection proportions; they do not crop geography to enlarge a map.
+
+### Optional reader comparison
+
+The existing four-argument `createReader` observation API is unchanged. To inspect complete date slices, pass a fifth argument with `mode: 'slices'` and a host-owned panel container:
+
+```ts
+const reader = createReader(container, chart, spec, onReaderChange, {
+  mode: 'slices',
+  panel: { container: comparisonHost },
+  comparison: 'absolute',
+});
+```
+
+Slice mode currently supports a single line or area binding; unsupported layered slice readers report a diagnostic. Declare matching field metadata (`measure`, `unit`, `representation`) before expecting numerical comparisons. Date slices use actual transformed observations; sparse series remain missing, and duplicate series/date observations are ambiguous. A third pin replaces B; removing A promotes B. Durable keyed observations reconcile through updates. Replacing unkeyed data or changing the explicit source `revision` clears ephemeral pins; geometry-only updates retain them. `setSelection` is silent; user and data-driven changes include a reason in the callback.
+
+Maps opt in through `createGeoReader`, or the `reader` option on framework GeoMap wrappers. A companion container enables local name search, explicit ranking and pagination. Pins never automatically move the camera: Show on map is a separate action. `colorKey: { activeValue: true, distribution: true }` reserves its complete context before projection fitting. Missing places remain findable and unranked, and distribution counts include only finite joined feature observations represented in the root or an inset, counting duplicated coverage once. Source-only places that the projection cannot display remain searchable without inflating the visible distribution.
+
+Reader pins, preview outlines and HTML comparison panels are transient UI and are excluded from static export. Authored geographic labels and distribution keys are portable and remain in SVG. A snapshot of the comparison readout is intentionally not offered until it has a portable layout; no HTML screenshot or `foreignObject` is embedded. Graph mounts retain their existing export API limitations.
+
+
+### Optional detail geography and inset views
+
+Existing maps keep one root view. To add contextual boundaries without moving the
+primary map, author `geo.detailLayers` with a unique `id`, `features`, and `minZoom`.
+An optional `maxZoom` bounds visibility. Layers use the root view's original fitted
+projection; they do not change joins, values, class boundaries or reader identity.
+`geo.objectKey` selects the primary TopoJSON object and `fitObjectKey` selects its
+fitting geography. Each topology is decoded independently, including its own
+transform. GeoJSON should use the winding expected by the selected D3 projection.
+
+Identity-projection detail requires matching nonempty `sourcePlane` values on the
+primary geography and every detail layer. This is an explicit assertion about
+already decoded coordinates, not a coordinate-system conversion or proof. Source-space insets use identity projection. Mixing
+geographic and source coordinates is rejected before updating the mounted map.
+
+Insets reserve independent labeled frames before the primary fit. For example:
+
+```ts
+geo: {
+  features: states,
+  objectKey: 'states',
+  projection: 'albersUsa',
+  zoom: true,
+  insets: [{
+    id: 'alaska', label: 'Alaska', featureIds: ['02'],
+    placement: 'bottom-left', width: 140,
+  }],
+}
+```
+
+Inset feature IDs refer to primary geography. `removeFromMain` defaults to true;
+set it false to explicitly duplicate coverage. Points are included only through
+explicit `pointIds` matching `points.key`. Shared observations retain one color
+scale and reader identity across views. Inset `featureIds` use topology feature IDs, even when `geo.idField` selects a different property for the data join. Insets disclose their separate scale and
+coverage; impossible frame packing rejects rather than silently dropping a view.
+Choose a projection compatible with the inset geography: not every projection
+produces a useful local fit around an antimeridian or a composite projection clip.
+
+Existing camera methods target the root. Use `getCamera('alaska')`,
+`setCamera(camera, { viewId: 'alaska' })`, and `getCameras()` for independent views.
+Camera callbacks retain the existing first argument and add scope metadata for
+multiview layouts. Geographic anchors can specify `viewId` and `layerId`; unknown
+explicit scopes reject, while a missing feature in a known scope retains its note
+and accessible inventory. Context detail layers currently belong to the root view.
+SVG export preserves every current camera. Keep unique `idPrefix` values for
+multiple static figures; transient reader pins remain excluded.

@@ -8,6 +8,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Chart and map design
 
+- Keep the two endpoint date labels readable when a slope chart has a narrow plot,
+  without moving the data anchors or overriding explicit tick values.
+
+- Add optional detail geography with zoom thresholds and explicit topology-object
+  selection, preserving the primary fitted projection. Validate decoded source
+  planes for identity maps before updates mutate the figure.
+- Add explicitly covered, independently labeled geographic insets with scoped
+  cameras, callouts and mark events across vanilla and all wrappers. Share place
+  identity and scale semantics across views; export all current view cameras.
+
+- Add opt-in date-slice A/B comparison and geographic reader controllers, with
+  host-placed readouts, local place search/ranking, keyboard inspection and explicit
+  Show on map actions. Missing observations remain distinct from zero; controlled
+  selection updates are silent in vanilla and React/Vue/Svelte.
+- Add optional active-value and distribution map keys without changing authored
+  scale domains or class boundaries. Size side gutters to their content, use compact
+  quantitative range lists, and remove unnecessary backgrounds from reserved keys.
+- Measure source, byline, footer and branding together across chart, map, bar list,
+  Sankey, tile map, table and graph. Stack long attribution when it fits better,
+  preserve custom brands, and use a consistent 12px default watermark. This can
+  change footer wrapping and available plot space in migrated documents.
 - Add opt-in geographic `text`/`textPriority` channels and keyed `callouts`, with
   polygon-interior anchors, bounded collision placement, fixed note capacity and
   constant-screen-size labels through camera movement.

@@ -36,7 +36,16 @@ export type {
   MarkEvent,
 } from './events';
 export { elementRef } from './events';
+export type { GeoColorKeyDescriptor, GeoColorKeyLayout } from './geo-color-key';
 export type * from './geo-labels';
+export type * from './geo-reader';
+export type {
+  GeoDetailLayer,
+  GeoDetailLayerLayout,
+  GeoInset,
+  GeoProjectionContext,
+  GeoViewLayout,
+} from './geo-views';
 // Layout types (engine output)
 export type {
   A11yMetadata,
@@ -132,6 +141,7 @@ export type {
   YouDrawItSample,
   YouDrawItYInvert,
 } from './layout';
+export type * from './reader-slices';
 // Spec types (user input)
 export type {
   A11yConfig,

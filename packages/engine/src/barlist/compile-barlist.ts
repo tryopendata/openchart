@@ -91,13 +91,7 @@ export function compileBarList(spec: unknown, options: CompileOptions): BarListL
 
   // Compute chrome
   const chrome = computeChrome(
-    {
-      title: barlistSpec.chrome.title,
-      subtitle: barlistSpec.chrome.subtitle,
-      source: barlistSpec.chrome.source,
-      byline: barlistSpec.chrome.byline,
-      footer: barlistSpec.chrome.footer,
-    },
+    barlistSpec.chrome,
     theme,
     options.width,
     options.measureText,

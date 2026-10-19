@@ -23,6 +23,18 @@ export function geographicInventoryText(entry: GeoLabelInventoryEntry): string {
       : `${entry.anchor.kind} ${entry.anchor.id}`;
   return `${entry.id}: ${entry.text}${entry.subtitle ? `. ${entry.subtitle}` : ''}. ${anchor}. ${explanations[entry.visibility]}${entry.presentation === 'note' ? '; available in map notes' : ''}${entry.limitation ? `. ${limitations[entry.limitation]}` : ''}.`;
 }
+/** One authored place/note stays one inventory entry across duplicated views. */
+export function mergeGeoLabelInventory(
+  entries: GeoLabelInventoryEntry[],
+): GeoLabelInventoryEntry[] {
+  const merged = new Map<string, GeoLabelInventoryEntry>();
+  for (const entry of entries) {
+    const prior = merged.get(entry.id);
+    if (!prior || (entry.visibility === 'visible' && prior.visibility !== 'visible'))
+      merged.set(entry.id, entry);
+  }
+  return [...merged.values()];
+}
 /** Owns only its two list trees; host contents and map dimensions are untouched. */
 export function createMapLabelInventory(container: HTMLElement, initial?: LabelInventoryOptions) {
   let id: string | undefined;

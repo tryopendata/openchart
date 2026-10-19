@@ -163,6 +163,9 @@ export function prepareGeoLabels(
       { ...style, fontWeight: theme.fonts.weights.medium },
       measure,
     );
+    const layer = callout.anchor.layerId
+      ? spec.geo.detailLayers?.find((layer) => layer.id === callout.anchor.layerId)
+      : undefined;
     candidates.push({
       id,
       kind: 'callout',
@@ -171,11 +174,20 @@ export function prepareGeoLabels(
       subtitle: callout.subtitle,
       priority: callout.priority ?? 0,
       block,
-      minZoom: callout.minZoom,
-      maxZoom: callout.maxZoom,
+      minZoom: layer ? Math.max(layer.minZoom, callout.minZoom ?? 1) : callout.minZoom,
+      maxZoom:
+        layer?.maxZoom === undefined
+          ? callout.maxZoom
+          : Math.min(layer.maxZoom, callout.maxZoom ?? Infinity),
       offset: callout.offset,
       noteSlot: index,
-      ...(callout.anchor.kind === 'feature' ? { geometryId: String(callout.anchor.id) } : {}),
+      ...(callout.anchor.kind === 'feature'
+        ? {
+            geometryId: callout.anchor.layerId
+              ? `${callout.anchor.layerId}:${String(callout.anchor.id)}`
+              : String(callout.anchor.id),
+          }
+        : {}),
     });
     const note = textBlock(
       `${index + 1}. ${callout.text}`,
@@ -210,9 +222,16 @@ export function compilePreparedGeoLabels(
   obstacles: import('@opendata-ai/openchart-core').Rect[],
   noteY: number,
   diagnostic: (code: string, message: string, path?: string) => void,
+  viewId = 'root',
+  layerIds: ReadonlySet<string> = new Set(),
 ): import('@opendata-ai/openchart-core').GeoLabelsBundle {
   const pointById = new Map(points.map((point) => [String(point.key), point]));
   const candidates = prepared.candidates.map((candidate) => {
+    if (
+      (candidate.anchor.viewId && candidate.anchor.viewId !== viewId) ||
+      (candidate.anchor.layerId && !layerIds.has(candidate.anchor.layerId))
+    )
+      return { ...candidate, geometryId: undefined, resolvedAnchor: undefined };
     if (candidate.anchor.kind === 'point') {
       const point = pointById.get(String(candidate.anchor.id));
       return {

@@ -16,10 +16,11 @@ export interface NormalizedGeoMapSpec {
   type: 'map';
   // Projection stays optional until topology inference. Zoom remains runtime
   // interaction; compilation reads only its portable control obstacle.
-  geo: Required<Omit<GeoMapGeo, 'projection' | 'zoom'>> & {
-    projection?: GeoMapProjection;
-    zoom?: GeoMapGeo['zoom'];
-  };
+  geo: Required<Pick<GeoMapGeo, 'features' | 'idField' | 'focus'>> &
+    Omit<GeoMapGeo, 'features' | 'idField' | 'focus'> & {
+      projection?: GeoMapProjection;
+      zoom?: GeoMapGeo['zoom'];
+    };
   data: Record<string, unknown>[];
   encoding: GeoMapEncoding;
   chrome: NormalizedChrome;
@@ -30,4 +31,5 @@ export interface NormalizedGeoMapSpec {
   points?: GeoMapPointsLayer;
   fields?: Record<string, FieldMetadata>;
   callouts?: GeoCallout[];
+  colorKey?: { activeValue?: boolean; distribution?: boolean };
 }

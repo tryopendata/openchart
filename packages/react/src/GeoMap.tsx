@@ -8,14 +8,23 @@
  * Supports forwardRef for imperative control via the instance getter.
  */
 
-import type { DarkMode, GeoMapSpec, ThemeConfig } from '@opendata-ai/openchart-core';
+import type {
+  DarkMode,
+  GeoMapSpec,
+  GeoReaderSelection,
+  ReaderChangeMeta,
+  ThemeConfig,
+} from '@opendata-ai/openchart-core';
 import { mergeThemeConfig } from '@opendata-ai/openchart-core';
 import {
   type Camera,
   createGeoMap,
+  createGeoReaderBinding,
+  type GeoMapCameraChangeMeta,
   type GeoMapInstance,
   type GeoMapMarkEvent,
   type GeoMapMountOptions,
+  type GeoReaderOptions,
 } from '@opendata-ai/openchart-vanilla';
 import {
   type CSSProperties,
@@ -29,6 +38,9 @@ import {
 import { useVizDarkMode, useVizTheme } from './ThemeContext';
 
 export interface GeoMapProps {
+  reader?: false | GeoReaderOptions;
+  readerSelection?: GeoReaderSelection;
+  onReaderChange?: (selection: GeoReaderSelection, meta: ReaderChangeMeta) => void;
   labelInventory?: GeoMapMountOptions['labelInventory'];
   /** The map spec to render. */
   spec: GeoMapSpec;
@@ -41,7 +53,7 @@ export interface GeoMapProps {
   /** Callback when a map feature is hovered (null when hover ends). */
   onMarkHover?: (feature: GeoMapMarkEvent | null) => void;
   /** Called whenever the camera moves (reader zoom/pan, zoomTo, focus). */
-  onCameraChange?: (camera: Camera) => void;
+  onCameraChange?: (camera: Camera, meta?: GeoMapCameraChangeMeta) => void;
   /** CSS class name for the wrapper div. */
   className?: string;
   /** Inline styles for the wrapper div. */
@@ -56,6 +68,9 @@ export interface GeoMapHandle {
 export const GeoMap = forwardRef<GeoMapHandle, GeoMapProps>(function GeoMap(
   {
     spec,
+    reader,
+    readerSelection,
+    onReaderChange,
     theme: themeProp,
     darkMode,
     labelInventory,
@@ -74,6 +89,23 @@ export const GeoMap = forwardRef<GeoMapHandle, GeoMapProps>(function GeoMap(
   const containerRef = useRef<HTMLDivElement>(null);
   const instanceRef = useRef<GeoMapInstance | null>(null);
   const specRef = useRef<string>('');
+  const readerBinding = useRef<ReturnType<typeof createGeoReaderBinding> | null>(null);
+  readerBinding.current ??= createGeoReaderBinding();
+  const readerConfig = useRef({ reader, readerSelection, onReaderChange });
+  readerConfig.current = { reader, readerSelection, onReaderChange };
+  const syncReader = () => {
+    if (containerRef.current && instanceRef.current) {
+      const config = readerConfig.current;
+      readerBinding.current!.sync(
+        containerRef.current,
+        instanceRef.current,
+        spec,
+        config.reader,
+        config.readerSelection,
+        config.onReaderChange,
+      );
+    }
+  };
 
   const handlersRef = useRef<{
     onMarkClick?: GeoMapProps['onMarkClick'];
@@ -95,7 +127,10 @@ export const GeoMap = forwardRef<GeoMapHandle, GeoMapProps>(function GeoMap(
     [],
   );
   const stableOnCameraChange = useCallback(
-    (camera: Camera) => handlersRef.current.onCameraChange?.(camera),
+    (camera: Camera, meta?: GeoMapCameraChangeMeta) =>
+      meta
+        ? handlersRef.current.onCameraChange?.(camera, meta)
+        : handlersRef.current.onCameraChange?.(camera),
     [],
   );
 
@@ -125,13 +160,16 @@ export const GeoMap = forwardRef<GeoMapHandle, GeoMapProps>(function GeoMap(
 
     instanceRef.current = createGeoMap(container, spec, options);
     specRef.current = JSON.stringify(spec);
+    syncReader();
 
     return () => {
+      readerBinding.current?.detach();
       instanceRef.current?.destroy();
       instanceRef.current = null;
     };
   }, [theme, resolvedDarkMode, stableOnMarkClick, stableOnMarkHover, stableOnCameraChange]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: sync reads current reader refs after the committed spec update
   useEffect(() => {
     const instance = instanceRef.current;
     if (!instance) return;
@@ -141,12 +179,18 @@ export const GeoMap = forwardRef<GeoMapHandle, GeoMapProps>(function GeoMap(
 
     specRef.current = specString;
     instance.update(spec);
+    syncReader();
   }, [spec]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: reapply the host after theme-driven instance recreation
   useEffect(() => {
     instanceRef.current?.setLabelInventory(labelInventory);
   }, [labelInventory, theme, resolvedDarkMode]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: sync uses stable instance and callback refs
+  useEffect(() => {
+    syncReader();
+  }, [reader, readerSelection, onReaderChange]);
 
   return (
     <div

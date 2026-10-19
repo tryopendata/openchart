@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
+import { waitForResizeSettled } from '../settle';
 
 const story = '/?story=gallery--geographic-labels--places-and-notes&mode=preview';
 async function settle(page: Page) {
@@ -129,8 +130,16 @@ test('zoom keeps text at screen size and map controls clear of the size key', as
   const host = page.getByTestId('geo-label-host');
   await expect(host.locator('[data-geo-label-id]').first()).toBeVisible();
   await settle(page);
-  const controls = await host.locator('.oc-map-zoom-controls').boundingBox();
-  const title = await host.locator('svg text').filter({ hasText: /^Metro population$/ }).boundingBox();
+  // Fonts and the initial debounced ResizeObserver can replace the SVG after
+  // its first label is visible. Wait for that render, then read one DOM snapshot.
+  await expect(host).toHaveAttribute('data-oc-fonts-state', 'ready');
+  await waitForResizeSettled(host);
+  await expect(host.locator('svg text').filter({ hasText: /^Metro population$/ })).toBeVisible();
+  const { controls, title } = await host.evaluate((element) => ({
+    controls: element.querySelector('.oc-map-zoom-controls')?.getBoundingClientRect().toJSON() ?? null,
+    title: [...element.querySelectorAll('svg text')]
+      .find((text) => text.textContent === 'Metro population')?.getBoundingClientRect().toJSON() ?? null,
+  }));
   expect(controls).not.toBeNull();
   expect(title).not.toBeNull();
   expect(controls!.x >= title!.x + title!.width || title!.x >= controls!.x + controls!.width ||

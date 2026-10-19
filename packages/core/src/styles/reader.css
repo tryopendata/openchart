@@ -1,0 +1,140 @@
+@layer oc.components {
+  .oc-reader-panel,
+  .oc-map-companion {
+    color: var(--oc-text);
+    font-family: var(--oc-font-family);
+    font-size: 14px;
+    line-height: 1.5;
+    min-width: 0;
+  }
+
+  .oc-reader-panel {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+    gap: 16px;
+    padding: 16px 0;
+    border-block: 1px solid var(--oc-border);
+  }
+
+  .oc-reader-panel article {
+    min-width: 0;
+    padding-inline-end: 16px;
+    overflow-wrap: anywhere;
+  }
+
+  .oc-reader-panel h3 {
+    margin: 0 0 6px;
+    font-size: 15px;
+    line-height: 1.4;
+    font-weight: 600;
+  }
+
+  .oc-reader-panel p {
+    margin: 0 0 8px;
+    color: var(--oc-text-secondary);
+  }
+
+  .oc-reader-panel dl {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 16px;
+    margin: 12px 0;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .oc-reader-panel dt {
+    color: var(--oc-text-muted);
+  }
+  .oc-reader-panel dd {
+    margin: 0;
+    text-align: end;
+  }
+  .oc-reader-empty,
+  .oc-reader-comparison {
+    grid-column: 1 / -1;
+  }
+  .oc-reader-panel > button {
+    justify-self: start;
+    align-self: end;
+  }
+
+  .oc-reader-panel button,
+  .oc-map-companion button,
+  .oc-map-inspect-places {
+    font: inherit;
+    font-size: 13px;
+    color: var(--oc-text-secondary);
+    background: transparent;
+    border: 1px solid var(--oc-border);
+    border-radius: 5px;
+    padding: 6px 10px;
+    min-height: 36px;
+    cursor: pointer;
+    margin-inline-end: 6px;
+    margin-block: 3px;
+    white-space: normal;
+    text-align: start;
+  }
+
+  .oc-reader-panel button:hover,
+  .oc-map-companion button:hover,
+  .oc-map-inspect-places:hover {
+    background: var(--oc-hover-bg);
+  }
+  .oc-reader-panel button:focus-visible,
+  .oc-map-companion :is(button, input):focus-visible,
+  .oc-map-inspect-places:focus-visible {
+    outline: 2px solid var(--oc-focus);
+    outline-offset: 2px;
+  }
+
+  .oc-map-companion input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 1px solid var(--oc-border);
+    border-radius: 5px;
+    background: transparent;
+    color: var(--oc-text);
+    font: inherit;
+  }
+
+  .oc-map-companion ol {
+    margin: 12px 0;
+    padding: 0;
+    list-style: none;
+  }
+  .oc-map-companion li {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding-block: 6px;
+    border-bottom: 1px solid var(--oc-border);
+  }
+  .oc-map-companion li > button:first-child {
+    flex: 1 1 auto;
+    border-color: transparent;
+    padding-inline-start: 0;
+    font-variant-numeric: tabular-nums;
+  }
+  .oc-map-companion button:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+  .oc-map-inspect-places {
+    position: absolute;
+    inset-inline-start: 8px;
+    top: 8px;
+  }
+  .oc-map-inspect-places:not(:focus-visible) {
+    width: 1px;
+    height: 1px;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}

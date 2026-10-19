@@ -132,7 +132,10 @@ export function renderStaticSVG(
     if (isGeoMapSpec(spec)) {
       const mapLayout = compileGeoMap(spec, compileOpts);
       svg = renderMapSVG(mapLayout, { animate: false });
-      applyMapCamera(svg, cameraForTarget(mapLayout, mapLayout.focus?.target), mapLayout);
+      // Multi-view rendering already resolves every authored camera and its labels
+      // through the same per-view renderer used by live mounts.
+      if (!mapLayout.views)
+        applyMapCamera(svg, cameraForTarget(mapLayout, mapLayout.focus?.target), mapLayout);
       themeForStyle = mapLayout.theme;
     } else if (isTileMapSpec(spec)) {
       const tileMapLayout = compileTileMap(spec, compileOpts);

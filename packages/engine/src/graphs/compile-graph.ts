@@ -503,13 +503,7 @@ export function compileGraph(spec: unknown, options: CompileOptions): GraphCompi
 
   // 11. Build chrome
   const chrome = computeChrome(
-    {
-      title: graphSpec.chrome.title,
-      subtitle: graphSpec.chrome.subtitle,
-      source: graphSpec.chrome.source,
-      byline: graphSpec.chrome.byline,
-      footer: graphSpec.chrome.footer,
-    },
+    graphSpec.chrome,
     theme,
     options.width,
     options.measureText,

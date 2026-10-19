@@ -89,7 +89,16 @@ function renderContinuousLegend(parent: SVGElement, legend: ContinuousLegendLayo
   g.setAttribute('role', 'img');
   const first = legend.ticks[0];
   const last = legend.ticks[legend.ticks.length - 1];
-  if (first && last) {
+  if (legend.rangeEntries) {
+    g.setAttribute(
+      'aria-label',
+      [
+        'Color ranges',
+        ...(legend.textRows ?? []).map((row) => row.text),
+        ...(legend.noData ? [legend.noData.label] : []),
+      ].join('; '),
+    );
+  } else if (first && last) {
     g.setAttribute('aria-label', `Color scale from ${first.label} to ${last.label}`);
   } else {
     g.setAttribute('aria-label', 'Color scale');
@@ -139,10 +148,10 @@ function renderContinuousLegend(parent: SVGElement, legend: ContinuousLegendLayo
       const rect = createSVGElement('rect');
       rect.setAttribute('class', 'oc-legend-bin');
       setAttrs(rect, {
-        x: bin.x,
-        y: legend.bar.y,
-        width: bin.width,
-        height: legend.bar.height,
+        x: legend.rangeEntries?.[i]?.bounds.x ?? bin.x,
+        y: legend.rangeEntries?.[i]?.bounds.y ?? legend.bar.y,
+        width: legend.rangeEntries?.[i]?.bounds.width ?? bin.width,
+        height: legend.rangeEntries?.[i]?.bounds.height ?? legend.bar.height,
         fill: bin.color,
         'shape-rendering': 'crispEdges',
       });

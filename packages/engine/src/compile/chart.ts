@@ -481,6 +481,7 @@ function layoutSingleChart(input: SingleChartInput): ChartLayout {
     axes,
     theme,
     endpointLabels,
+    measureText: options.measureText,
   });
 
   const annotationMeasure = annotationMeasureFn(options.measureText);

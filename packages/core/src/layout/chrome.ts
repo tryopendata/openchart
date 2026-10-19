@@ -26,7 +26,6 @@ import type { ChromeDefaults, ResolvedTheme } from '../types/theme';
 import {
   BRAND_FONT_SIZE,
   BRAND_MIN_WIDTH,
-  BRAND_RESERVE_WIDTH,
   COMPACT_WIDTH,
   estimateCharWidth,
   estimateTextHeight,
@@ -195,6 +194,33 @@ export function computeNoteBandHeight(
     : count * theme.fonts.sizes.small * FOOTNOTE_LINE_HEIGHT + FOOTNOTE_BAND_GAP;
 }
 
+function measuredWatermark(
+  theme: ResolvedTheme,
+  width: number,
+  pad: number,
+  y: number,
+  measureText?: MeasureTextFn,
+): ResolvedChromeElement | undefined {
+  if (width < BRAND_MIN_WIDTH) return undefined;
+  const style: TextStyle = {
+    fontFamily: theme.fonts.family,
+    fontSize: BRAND_FONT_SIZE,
+    fontWeight: 600,
+    fill: theme.colors.axis,
+    textAnchor: 'end',
+    lineHeight: 1.3,
+  };
+  return {
+    text: 'OpenData',
+    x: width - pad,
+    y,
+    maxWidth:
+      measureText?.('OpenData', BRAND_FONT_SIZE, 600).width ??
+      'OpenData'.length * estimateCharWidth(BRAND_FONT_SIZE, 600),
+    style,
+  };
+}
+
 /**
  * Compute resolved chrome layout from a Chrome spec and resolved theme.
  *
@@ -242,6 +268,13 @@ export function computeChrome(
       return {
         topHeight: 0,
         bottomHeight: theme.spacing.chartToFooter + brandHeight + hiddenPad + bottomLegendHeight,
+        watermark: measuredWatermark(
+          theme,
+          width,
+          hiddenPad,
+          theme.spacing.chartToFooter + bottomLegendHeight,
+          measureText,
+        ),
       };
     }
     if (bottomLegendHeight > 0) {
@@ -380,156 +413,132 @@ export function computeChrome(
     return {
       topHeight,
       bottomHeight: compactBottom,
+      ...(watermark
+        ? {
+            watermark: measuredWatermark(
+              theme,
+              width,
+              pad,
+              theme.spacing.chartToFooter + bottomLegendHeight,
+              measureText,
+            ),
+          }
+        : {}),
       ...(ruleElement ? { rule: ruleElement } : {}),
       ...topElements,
     };
   }
 
-  // Bottom elements: source, byline, footer, and an optional custom brand
-  // (`chrome.brand`). When a custom brand is supplied it suppresses the default
-  // OpenData watermark and renders right-anchored on the same baseline.
+  // Attribution is measured as a unit. Compare inline versus stacked using
+  // the same wrapping model as painted text; ties favor inline. Never reduce
+  // an authored font size or remeasure in response to interaction state.
+  const startY = theme.spacing.chartToFooter + bottomLegendHeight;
   const brandNorm = normalizeChromeText(chrome.brand);
-  const showWatermark = watermark && !brandNorm;
-  // Reserve space on the right for the brand watermark or custom brand so the
-  // left-anchored bottom chrome items don't overlap.
-  const shouldReserveBrandWidth = (showWatermark || !!brandNorm) && width >= BRAND_MIN_WIDTH;
-  const bottomMaxWidth = maxWidth - (shouldReserveBrandWidth ? BRAND_RESERVE_WIDTH : 0);
-  const bottomElements: Partial<Pick<ResolvedChrome, 'source' | 'byline' | 'footer'>> = {};
-  let bottomHeight = 0;
-
-  const bottomItems: Array<{
-    key: 'source' | 'byline' | 'footer';
-    norm: { text: string; style?: ChromeText['style']; offset?: ChromeText['offset'] };
-    defaults: ChromeDefaults;
-  }> = [];
-
-  const sourceNorm = normalizeChromeText(chrome.source);
-  if (sourceNorm) {
-    bottomItems.push({
-      key: 'source',
-      norm: sourceNorm,
-      defaults: theme.chrome.source,
-    });
-  }
-
-  const bylineNorm = normalizeChromeText(chrome.byline);
-  if (bylineNorm) {
-    bottomItems.push({
-      key: 'byline',
-      norm: bylineNorm,
-      defaults: theme.chrome.byline,
-    });
-  }
-
-  const footerNorm = normalizeChromeText(chrome.footer);
-  if (footerNorm) {
-    bottomItems.push({
-      key: 'footer',
-      norm: footerNorm,
-      defaults: theme.chrome.footer,
-    });
-  }
-
-  if (bottomItems.length > 0) {
-    bottomHeight += theme.spacing.chartToFooter;
-    // Push bottom chrome below the bottom legend (if reserved). Stored y values
-    // include this offset so renderers don't need to know about the legend band.
-    bottomHeight += bottomLegendHeight;
-
-    for (const item of bottomItems) {
-      const style = buildTextStyle(
-        item.defaults,
-        fontFamily,
-        item.defaults.color,
-        width,
-        item.norm.style,
-      );
-      const maxLines = item.norm.style?.maxLines;
-      const lineCount = estimateLineCount(
-        item.norm.text,
-        style,
-        bottomMaxWidth,
-        measureText,
-        maxLines,
-      );
-      const height = estimateTextHeight(style.fontSize, lineCount, style.lineHeight);
-
-      // y positions will be computed relative to the bottom of the
-      // chart area by the engine. We store offsets from bottom start.
-      bottomElements[item.key] = {
-        text: item.norm.text,
-        x: pad + (item.norm.offset?.dx ?? 0),
-        y: bottomHeight + (item.norm.offset?.dy ?? 0), // offset from where bottom chrome starts
-        maxWidth: bottomMaxWidth,
-        ...(maxLines != null ? { maxLines } : {}),
-        style,
-      };
-
-      bottomHeight += height + chromeGap;
-    }
-
-    // Remove trailing gap
-    bottomHeight -= chromeGap;
-
-    // Ensure bottom height accommodates the brand watermark, which renders
-    // at the same Y as the first bottom chrome item but is taller (20px font
-    // vs 12px source). Without this, the brand overflows the SVG viewBox.
-    if (showWatermark && width >= BRAND_MIN_WIDTH) {
-      const brandHeight = estimateTextHeight(BRAND_FONT_SIZE, 1);
-      // firstItemY is chartToFooter (the Y offset of the first bottom item).
-      // The brand needs brandHeight below that point; bottom chrome content
-      // needs (bottomHeight - chartToFooter). Take the max.
-      const contentBelowFirstItem = bottomHeight - theme.spacing.chartToFooter;
-      if (brandHeight > contentBelowFirstItem) {
-        bottomHeight += brandHeight - contentBelowFirstItem;
-      }
-    }
-
-    // Add bottom padding
-    bottomHeight += pad;
-  } else if (showWatermark && width >= BRAND_MIN_WIDTH) {
-    // No bottom chrome items, but brand watermark still renders.
-    // Reserve space: chartToFooter gap + brand text height + padding,
-    // plus the bottom-legend reservation so the watermark sits below it.
-    const brandHeight = estimateTextHeight(BRAND_FONT_SIZE, 1);
-    bottomHeight = theme.spacing.chartToFooter + brandHeight + pad + bottomLegendHeight;
-  } else if (bottomLegendHeight > 0) {
-    // No bottom chrome content and no watermark, but a bottom legend was
-    // reserved upstream. Surface the reservation so callers don't need to
-    // re-add it on top of bottomHeight.
-    bottomHeight = bottomLegendHeight;
-  }
-
-  // Custom brand is right-anchored on the same row as the first bottom chrome
-  // item. Compute its style/position once we know whether bottom chrome exists.
+  const watermarkElement =
+    watermark && !brandNorm ? measuredWatermark(theme, width, pad, startY, measureText) : undefined;
   let brandElement: ResolvedChromeElement | undefined;
   if (brandNorm && width >= BRAND_MIN_WIDTH) {
-    const brandStyle = buildTextStyle(
+    const style = buildTextStyle(
       theme.chrome.footer,
       fontFamily,
       theme.chrome.footer.color,
       width,
       brandNorm.style,
     );
-    brandStyle.textAnchor = 'end';
-    // Y matches the first bottom item (chartToFooter offset). When there are
-    // no bottom items, the brand becomes the sole footer element and we need
-    // to allocate the same baseline.
-    const brandY =
-      bottomItems.length > 0 ? theme.spacing.chartToFooter : theme.spacing.chartToFooter;
+    style.textAnchor = 'end';
+    const naturalWidth = Math.max(
+      ...brandNorm.text
+        .split('\n')
+        .map(
+          (line) =>
+            measureText?.(line, style.fontSize, style.fontWeight).width ??
+            line.length * estimateCharWidth(style.fontSize, style.fontWeight),
+        ),
+    );
     brandElement = {
       text: brandNorm.text,
       x: width - pad + (brandNorm.offset?.dx ?? 0),
-      y: brandY + (brandNorm.offset?.dy ?? 0),
-      maxWidth: BRAND_RESERVE_WIDTH,
-      style: brandStyle,
+      y: startY + (brandNorm.offset?.dy ?? 0),
+      maxWidth: Math.max(1, Math.min(maxWidth, naturalWidth)),
+      ...(brandNorm.style?.maxLines != null ? { maxLines: brandNorm.style.maxLines } : {}),
+      style,
     };
-    // Ensure bottomHeight reserves space when brand is the only footer item.
-    if (bottomItems.length === 0) {
-      const brandHeight = estimateTextHeight(brandStyle.fontSize, 1, brandStyle.lineHeight);
-      bottomHeight = theme.spacing.chartToFooter + brandHeight + pad;
-    }
   }
+  const brand = brandElement ?? watermarkElement;
+  const brandHeight = brand
+    ? estimateTextHeight(
+        brand.style.fontSize,
+        estimateLineCount(brand.text, brand.style, brand.maxWidth, measureText, brand.maxLines),
+        brand.style.lineHeight,
+      )
+    : 0;
+  const items = (['source', 'byline', 'footer'] as const).flatMap((key) => {
+    const norm = normalizeChromeText(chrome[key]);
+    return norm
+      ? [
+          {
+            key,
+            norm,
+            style: buildTextStyle(
+              theme.chrome[key],
+              fontFamily,
+              theme.chrome[key].color,
+              width,
+              norm.style,
+            ),
+          },
+        ]
+      : [];
+  });
+  const gap = Math.max(12, chromeGap);
+  // Account for authored horizontal movement when deciding fit. Explicit
+  // offsets still win; the planner doesn't silently rewrite their intent.
+  const inlineWidth = brand ? Math.max(0, brand.x - brand.maxWidth - gap - pad) : maxWidth;
+  function resolveItems(availableWidth: number) {
+    const elements: Partial<Pick<ResolvedChrome, 'source' | 'byline' | 'footer'>> = {};
+    let y = startY;
+    let extent = startY;
+    for (const { key, norm, style } of items) {
+      const available = Math.max(1, availableWidth - Math.max(0, norm.offset?.dx ?? 0));
+      const count = estimateLineCount(
+        norm.text,
+        style,
+        available,
+        measureText,
+        norm.style?.maxLines,
+      );
+      const height = estimateTextHeight(style.fontSize, count, style.lineHeight);
+      const itemY = y + (norm.offset?.dy ?? 0);
+      elements[key] = {
+        text: norm.text,
+        x: pad + (norm.offset?.dx ?? 0),
+        y: itemY,
+        maxWidth: available,
+        ...(norm.style?.maxLines != null ? { maxLines: norm.style.maxLines } : {}),
+        style,
+      };
+      extent = Math.max(extent, itemY + height);
+      y += height + chromeGap;
+    }
+    return {
+      elements,
+      extent,
+      height: items.length ? Math.max(y - chromeGap, extent) - startY : 0,
+    };
+  }
+  const full = resolveItems(maxWidth);
+  const inline = resolveItems(inlineWidth);
+  const inlineHeight = Math.max(inline.height, (brand?.y ?? startY) - startY + brandHeight);
+  const stackedHeight =
+    full.height +
+    (items.length ? chromeGap : 0) +
+    brandHeight +
+    Math.max(0, brandNorm?.offset?.dy ?? 0);
+  const stacked = !!brand && items.length > 0 && (inlineWidth < 40 || stackedHeight < inlineHeight);
+  const bottomElements = stacked ? full.elements : inline.elements;
+  if (stacked && brand) brand.y += full.height + chromeGap;
+  const contentHeight = stacked ? stackedHeight : inlineHeight;
+  const bottomHeight = items.length || brand ? startY + contentHeight + pad : bottomLegendHeight;
 
   return {
     topHeight,
@@ -538,5 +547,7 @@ export function computeChrome(
     ...topElements,
     ...bottomElements,
     ...(brandElement ? { brand: brandElement } : {}),
+    ...(watermarkElement ? { watermark: watermarkElement } : {}),
+    ...(items.length || brand ? { attributionLayout: stacked ? 'stacked' : 'inline' } : {}),
   };
 }

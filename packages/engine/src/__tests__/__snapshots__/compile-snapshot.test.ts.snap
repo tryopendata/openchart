@@ -1050,10 +1050,20 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
           {
             "color": "#06b6d4",
             "label": "y",
+            "role": "value",
+            "source": {
+              "channel": "y",
+              "field": "y",
+            },
             "value": "0",
           },
           {
             "label": "x",
+            "role": "x",
+            "source": {
+              "channel": "x",
+              "field": "x",
+            },
             "value": "0",
           },
         ],
@@ -1067,10 +1077,20 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
           {
             "color": "#06b6d4",
             "label": "y",
+            "role": "value",
+            "source": {
+              "channel": "y",
+              "field": "y",
+            },
             "value": "37",
           },
           {
             "label": "x",
+            "role": "x",
+            "source": {
+              "channel": "x",
+              "field": "x",
+            },
             "value": "10",
           },
         ],
@@ -1084,10 +1104,20 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
           {
             "color": "#06b6d4",
             "label": "y",
+            "role": "value",
+            "source": {
+              "channel": "y",
+              "field": "y",
+            },
             "value": "74",
           },
           {
             "label": "x",
+            "role": "x",
+            "source": {
+              "channel": "x",
+              "field": "x",
+            },
             "value": "20",
           },
         ],
@@ -1101,10 +1131,20 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
           {
             "color": "#06b6d4",
             "label": "y",
+            "role": "value",
+            "source": {
+              "channel": "y",
+              "field": "y",
+            },
             "value": "11",
           },
           {
             "label": "x",
+            "role": "x",
+            "source": {
+              "channel": "x",
+              "field": "x",
+            },
             "value": "30",
           },
         ],
@@ -1118,10 +1158,20 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
           {
             "color": "#06b6d4",
             "label": "y",
+            "role": "value",
+            "source": {
+              "channel": "y",
+              "field": "y",
+            },
             "value": "48",
           },
           {
             "label": "x",
+            "role": "x",
+            "source": {
+              "channel": "x",
+              "field": "x",
+            },
             "value": "40",
           },
         ],
@@ -1135,10 +1185,20 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
           {
             "color": "#06b6d4",
             "label": "y",
+            "role": "value",
+            "source": {
+              "channel": "y",
+              "field": "y",
+            },
             "value": "85",
           },
           {
             "label": "x",
+            "role": "x",
+            "source": {
+              "channel": "x",
+              "field": "x",
+            },
             "value": "50",
           },
         ],
@@ -1152,10 +1212,20 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
           {
             "color": "#06b6d4",
             "label": "y",
+            "role": "value",
+            "source": {
+              "channel": "y",
+              "field": "y",
+            },
             "value": "22",
           },
           {
             "label": "x",
+            "role": "x",
+            "source": {
+              "channel": "x",
+              "field": "x",
+            },
             "value": "60",
           },
         ],
@@ -1169,10 +1239,20 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
           {
             "color": "#06b6d4",
             "label": "y",
+            "role": "value",
+            "source": {
+              "channel": "y",
+              "field": "y",
+            },
             "value": "59",
           },
           {
             "label": "x",
+            "role": "x",
+            "source": {
+              "channel": "x",
+              "field": "x",
+            },
             "value": "70",
           },
         ],
@@ -1186,10 +1266,20 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
           {
             "color": "#06b6d4",
             "label": "y",
+            "role": "value",
+            "source": {
+              "channel": "y",
+              "field": "y",
+            },
             "value": "96",
           },
           {
             "label": "x",
+            "role": "x",
+            "source": {
+              "channel": "x",
+              "field": "x",
+            },
             "value": "80",
           },
         ],
@@ -1203,10 +1293,20 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
           {
             "color": "#06b6d4",
             "label": "y",
+            "role": "value",
+            "source": {
+              "channel": "y",
+              "field": "y",
+            },
             "value": "33",
           },
           {
             "label": "x",
+            "role": "x",
+            "source": {
+              "channel": "x",
+              "field": "x",
+            },
             "value": "90",
           },
         ],
@@ -1220,10 +1320,20 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
           {
             "color": "#06b6d4",
             "label": "y",
+            "role": "value",
+            "source": {
+              "channel": "y",
+              "field": "y",
+            },
             "value": "70",
           },
           {
             "label": "x",
+            "role": "x",
+            "source": {
+              "channel": "x",
+              "field": "x",
+            },
             "value": "100",
           },
         ],
@@ -1237,10 +1347,20 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
           {
             "color": "#06b6d4",
             "label": "y",
+            "role": "value",
+            "source": {
+              "channel": "y",
+              "field": "y",
+            },
             "value": "7",
           },
           {
             "label": "x",
+            "role": "x",
+            "source": {
+              "channel": "x",
+              "field": "x",
+            },
             "value": "110",
           },
         ],
@@ -1830,6 +1950,11 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
         "fields": [
           {
             "label": "value",
+            "role": "value",
+            "source": {
+              "channel": "x",
+              "field": "value",
+            },
             "value": "10",
           },
         ],
@@ -1842,6 +1967,11 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
         "fields": [
           {
             "label": "value",
+            "role": "value",
+            "source": {
+              "channel": "x",
+              "field": "value",
+            },
             "value": "25",
           },
         ],
@@ -1854,6 +1984,11 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
         "fields": [
           {
             "label": "value",
+            "role": "value",
+            "source": {
+              "channel": "x",
+              "field": "value",
+            },
             "value": "40",
           },
         ],
@@ -2057,6 +2192,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
     },
   },
   "chrome": {
+    "attributionLayout": "inline",
     "bottomAnchorY": 431.2,
     "bottomHeight": 48.8,
     "grownHeight": 0,
@@ -2463,11 +2599,21 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
               {
                 "color": "#048398",
                 "label": "country",
+                "role": "series",
+                "source": {
+                  "channel": "color",
+                  "field": "country",
+                },
                 "value": "US",
               },
               {
                 "color": undefined,
                 "label": "value",
+                "role": "value",
+                "source": {
+                  "channel": "y",
+                  "field": "value",
+                },
                 "value": "10",
               },
             ],
@@ -2487,11 +2633,21 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
               {
                 "color": "#048398",
                 "label": "country",
+                "role": "series",
+                "source": {
+                  "channel": "color",
+                  "field": "country",
+                },
                 "value": "US",
               },
               {
                 "color": undefined,
                 "label": "value",
+                "role": "value",
+                "source": {
+                  "channel": "y",
+                  "field": "value",
+                },
                 "value": "40",
               },
             ],
@@ -2553,11 +2709,21 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
               {
                 "color": "#cc8020",
                 "label": "country",
+                "role": "series",
+                "source": {
+                  "channel": "color",
+                  "field": "country",
+                },
                 "value": "UK",
               },
               {
                 "color": undefined,
                 "label": "value",
+                "role": "value",
+                "source": {
+                  "channel": "y",
+                  "field": "value",
+                },
                 "value": "15",
               },
             ],
@@ -2577,11 +2743,21 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
               {
                 "color": "#cc8020",
                 "label": "country",
+                "role": "series",
+                "source": {
+                  "channel": "color",
+                  "field": "country",
+                },
                 "value": "UK",
               },
               {
                 "color": undefined,
                 "label": "value",
+                "role": "value",
+                "source": {
+                  "channel": "y",
+                  "field": "value",
+                },
                 "value": "35",
               },
             ],
@@ -2643,11 +2819,21 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
               {
                 "color": "#2c55a2",
                 "label": "country",
+                "role": "series",
+                "source": {
+                  "channel": "color",
+                  "field": "country",
+                },
                 "value": "FR",
               },
               {
                 "color": undefined,
                 "label": "value",
+                "role": "value",
+                "source": {
+                  "channel": "y",
+                  "field": "value",
+                },
                 "value": "8",
               },
             ],
@@ -2667,11 +2853,21 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
               {
                 "color": "#2c55a2",
                 "label": "country",
+                "role": "series",
+                "source": {
+                  "channel": "color",
+                  "field": "country",
+                },
                 "value": "FR",
               },
               {
                 "color": undefined,
                 "label": "value",
+                "role": "value",
+                "source": {
+                  "channel": "y",
+                  "field": "value",
+                },
                 "value": "22",
               },
             ],
@@ -2733,11 +2929,21 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
               {
                 "color": "#85315f",
                 "label": "country",
+                "role": "series",
+                "source": {
+                  "channel": "color",
+                  "field": "country",
+                },
                 "value": "DE",
               },
               {
                 "color": undefined,
                 "label": "value",
+                "role": "value",
+                "source": {
+                  "channel": "y",
+                  "field": "value",
+                },
                 "value": "12",
               },
             ],
@@ -2757,11 +2963,21 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
               {
                 "color": "#85315f",
                 "label": "country",
+                "role": "series",
+                "source": {
+                  "channel": "color",
+                  "field": "country",
+                },
                 "value": "DE",
               },
               {
                 "color": undefined,
                 "label": "value",
+                "role": "value",
+                "source": {
+                  "channel": "y",
+                  "field": "value",
+                },
                 "value": "28",
               },
             ],
@@ -3220,10 +3436,11 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
     },
   },
   "chrome": {
+    "attributionLayout": "inline",
     "bottomAnchorY": 314.40000000000003,
     "bottomHeight": 68.6,
     "byline": {
-      "maxWidth": 431,
+      "maxWidth": 500.576,
       "style": {
         "fill": "#71717a",
         "fontFamily": ""Inter Variable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif",
@@ -3238,7 +3455,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
     },
     "grownHeight": 0,
     "source": {
-      "maxWidth": 431,
+      "maxWidth": 500.576,
       "style": {
         "fill": "#71717a",
         "fontFamily": ""Inter Variable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif",
@@ -3266,6 +3483,20 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
       "y": 17,
     },
     "topHeight": 45.9,
+    "watermark": {
+      "maxWidth": 53.42400000000001,
+      "style": {
+        "fill": "#71717a",
+        "fontFamily": ""Inter Variable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif",
+        "fontSize": 12,
+        "fontWeight": 600,
+        "lineHeight": 1.3,
+        "textAnchor": "end",
+      },
+      "text": "OpenData",
+      "x": 583,
+      "y": 12,
+    },
   },
   "crosshair": false,
   "dimensions": {
@@ -3729,6 +3960,11 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
           {
             "color": "#0000ff",
             "label": "score",
+            "role": "value",
+            "source": {
+              "channel": "y",
+              "field": "score",
+            },
             "value": "30",
           },
         ],
@@ -3742,6 +3978,11 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
           {
             "color": "#0000ff",
             "label": "score",
+            "role": "value",
+            "source": {
+              "channel": "y",
+              "field": "score",
+            },
             "value": "55",
           },
         ],
@@ -3755,6 +3996,11 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
           {
             "color": "#0000ff",
             "label": "score",
+            "role": "value",
+            "source": {
+              "channel": "y",
+              "field": "score",
+            },
             "value": "70",
           },
         ],
@@ -3768,6 +4014,11 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
           {
             "color": "#0000ff",
             "label": "score",
+            "role": "value",
+            "source": {
+              "channel": "y",
+              "field": "score",
+            },
             "value": "45",
           },
         ],

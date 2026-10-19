@@ -14,20 +14,27 @@ import type {
   ElementRef,
   LayerSpec,
   MarkEvent,
+  ReaderChangeMeta,
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
 import { mergeThemeConfig } from '@opendata-ai/openchart-core';
 import {
   type ChartInstance,
+  type ChartReaderSelection,
   createChart,
+  createChartReaderBinding,
   type InteractionMode,
   type MountOptions,
+  type ReaderPresentationOptions,
 } from '@opendata-ai/openchart-vanilla';
 import { onMount, untrack } from 'svelte';
 import { getVizDarkMode, getVizTheme } from './context.js';
 
 let {
   spec,
+  reader,
+  readerSelection,
+  onreaderchange,
   theme,
   darkMode,
   renderer,
@@ -50,6 +57,9 @@ let {
   class: className,
   style,
 }: {
+  reader?: false | ReaderPresentationOptions;
+  readerSelection?: ChartReaderSelection;
+  onreaderchange?: (selection: ChartReaderSelection, meta: ReaderChangeMeta) => void;
   spec: ChartSpec | LayerSpec;
   theme?: ThemeConfig;
   darkMode?: DarkMode;
@@ -77,12 +87,20 @@ let {
 
 let containerEl: HTMLDivElement;
 let instance: ChartInstance | null = null;
+const readerBinding = createChartReaderBinding();
+function syncReader() {
+  if (instance && containerEl)
+    readerBinding.sync(containerEl, instance, spec, reader, readerSelection, (state, meta) =>
+      untrack(() => onreaderchange)?.(state, meta),
+    );
+}
 
 const ctxTheme = getVizTheme();
 const ctxDarkMode = getVizDarkMode();
 
 onMount(() => {
   return () => {
+    readerBinding.detach();
     instance?.destroy();
     instance = null;
   };
@@ -115,6 +133,7 @@ const hasDeselectListener = $derived(Boolean(ondeselect));
 const stableOnEdit = (tx: EditTransaction) => untrack(() => onedit)?.(tx);
 
 let prevSpec = '';
+let mountedConfig = '';
 let prevRevision: string | number | undefined;
 
 // Effect 1: Mount/recreate chart on theme/darkMode/renderer/interaction changes.
@@ -127,6 +146,20 @@ $effect(() => {
   // Read spec without tracking - spec changes handled in Effect 2
   const currentSpec = untrack(() => spec);
 
+  const config = JSON.stringify([
+    resolvedTheme,
+    resolvedDarkMode,
+    resolvedRenderer,
+    resolvedInteraction,
+    rowHover,
+    autoResize,
+    hasEditListener,
+    hasSelectListener,
+    hasDeselectListener,
+  ]);
+  if (instance && config === mountedConfig) return;
+  mountedConfig = config;
+  readerBinding.detach();
   instance?.destroy();
 
   const currentSelectedElement = untrack(() => selectedElementProp);
@@ -146,9 +179,17 @@ $effect(() => {
     ...(currentSelectedElement ? { selectedElement: currentSelectedElement } : {}),
   };
 
-  instance = createChart(containerEl, currentSpec, options);
+  instance = untrack(() => createChart(containerEl, currentSpec, options));
+  untrack(() => syncReader());
   prevSpec = JSON.stringify(currentSpec);
   prevRevision = options.revision;
+});
+
+$effect(() => {
+  reader;
+  readerSelection;
+  onreaderchange;
+  untrack(() => syncReader());
 });
 
 // Effect 2: Update chart when spec changes (no destroy/recreate).
@@ -165,6 +206,7 @@ $effect(() => {
       selectedElement: untrack(() => selectedElementProp),
       revision: currentRevision,
     });
+    untrack(() => syncReader());
   }
 });
 

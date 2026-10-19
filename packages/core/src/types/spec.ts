@@ -11,6 +11,7 @@
 // Re-import for use in LegendConfig and overrides (avoids circular by importing from sibling)
 import type { Breakpoint, LegendPosition } from '../responsive/breakpoints';
 import type { FieldMetadata } from './design';
+import type { GeoDetailLayer, GeoInset } from './geo-views';
 import type { SortState } from './layout';
 import type { ColumnConfig } from './table';
 import type { SeriesStrategy, TokenValue } from './theme';
@@ -2867,6 +2868,14 @@ export interface GeoMapZoomConfig {
 
 /** Geo configuration for map specs. */
 export interface GeoMapGeo {
+  /** Primary topology object; omission retains first-object behavior. */
+  objectKey?: string;
+  /** Fit against this primary-topology object, independent of contextual detail. */
+  fitObjectKey?: string;
+  /** Named assertion of the decoded coordinate plane for identity detail. */
+  sourcePlane?: string;
+  detailLayers?: GeoDetailLayer[];
+  insets?: GeoInset[];
   /** TopoJSON topology object. User imports this from us-atlas, world-atlas, or their own source. */
   features: unknown;
   /** Field in the TopoJSON feature properties to use as the join key. Defaults to 'id'. */
@@ -2898,10 +2907,11 @@ export interface GeoMapGeo {
 }
 
 /** Explicit map anchor; feature and point identities occupy separate namespaces. */
-export type GeoAnchor =
+export type GeoAnchor = (
   | { kind: 'feature'; id: string | number }
   | { kind: 'point'; id: string | number }
-  | { kind: 'coordinate'; space: 'geographic' | 'source'; x: number; y: number };
+  | { kind: 'coordinate'; space: 'geographic' | 'source'; x: number; y: number }
+) & { viewId?: string; layerId?: string };
 
 /** Static authored geographic explanation; plain text, without chart editing semantics. */
 export interface GeoCallout {
@@ -2968,6 +2978,8 @@ export interface GeoMapSpec {
   encoding: GeoMapEncoding;
   /** Editorial chrome (title, subtitle, source, byline, footer). */
   chrome?: Chrome;
+  /** Optional static distribution and reader active-value presentation. Both default to false. */
+  colorKey?: { activeValue?: boolean; distribution?: boolean };
   /** Legend display configuration. */
   legend?: LegendConfig;
   /** Theme configuration overrides. */

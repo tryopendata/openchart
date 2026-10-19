@@ -211,3 +211,68 @@ describe('reader identity and visibility on compiled charts', () => {
     expect(reader.selection.announcement).toMatch(/layered charts/i);
   });
 });
+it('keeps the four-argument reader last-two-observations policy and silent controlled setters', () => {
+  const third = { id: 'c', name: 'Gamma', value: 40 };
+  const { reader, changes } = mount({ ...spec, data: [...spec.data, third] });
+  reader.pin(spec.data[0]);
+  reader.pin(spec.data[1]);
+  reader.pin(third);
+  expect(reader.selection.pinned.map((pin) => pin.datum.id)).toEqual(['b', 'c']);
+  const count = changes.length;
+  reader.setSelection({ ...reader.selection, pinned: [reader.selection.pinned[0]] });
+  expect(changes).toHaveLength(count);
+  reader.clear();
+  expect(reader.selection.pinned).toHaveLength(0);
+});
+
+it('permits only the reader holding the actual chart navigation lease to handle keys', () => {
+  const { container, chart, reader, changes } = mount();
+  const secondChanges: ReaderSelection[] = [];
+  const second = createReader(container, chart, spec, (state) => secondChanges.push(state));
+  cleanup.push(() => second.destroy());
+  container.dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }),
+  );
+  expect(reader.selection.preview).not.toBeNull();
+  expect(changes).toHaveLength(1);
+  expect(secondChanges).toHaveLength(0);
+  expect(second.selection.preview).toBeNull();
+  reader.destroy();
+  second.update(spec);
+  const resumedCount = secondChanges.length;
+  container.dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }),
+  );
+  expect(secondChanges).toHaveLength(resumedCount + 1);
+  expect(container.getAttribute('tabindex')).toBe('0');
+});
+
+it('keeps stable source identity while inspecting calculated destination values', () => {
+  const transformed: ChartSpec = {
+    ...spec,
+    data: [{ id: 'a', name: 'Alpha', value: 10 }],
+    transform: [{ calculate: { op: '*', field: 'value', value: 2 }, as: 'doubled' }],
+    encoding: { ...spec.encoding, y: { field: 'doubled', type: 'quantitative' } },
+  };
+  const { container, reader } = mount(transformed);
+  container.dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }),
+  );
+  expect(reader.selection.preview?.datum.doubled).toBe(20);
+  expect(reader.selection.preview?.persistent).toBe(true);
+});
+
+it('clears unkeyed pins on options-only source revision and keyed pins on binding replacement', () => {
+  const unkeyed = { ...spec, encoding: { ...spec.encoding, key: undefined } };
+  const { reader } = mount(unkeyed);
+  reader.pin(unkeyed.data[0]);
+  expect(reader.selection.pinned).toHaveLength(1);
+  reader.setOptions({ revision: 'source-2' });
+  expect(reader.selection.pinned).toHaveLength(0);
+  const keyed = mount();
+  keyed.reader.pin(spec.data[0]);
+  keyed.reader.setOptions({ revision: 'source-2' });
+  expect(keyed.reader.selection.pinned).toHaveLength(1);
+  keyed.reader.setOptions({ revision: 'source-2', binding: { dataset: 'replacement' } });
+  expect(keyed.reader.selection.pinned).toHaveLength(0);
+});

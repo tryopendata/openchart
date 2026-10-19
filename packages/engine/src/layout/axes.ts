@@ -872,6 +872,51 @@ export function computeAxes(
       measureText,
     );
 
+    // Two slope endpoints can survive thinning after their plot has been
+    // compressed by both endpoint columns. Spread only their text, retaining
+    // the data anchors and horizontal axis reservation.
+    if (
+      scales.x?.type === 'point' &&
+      !isRotated &&
+      result.x.ticks.length === 2 &&
+      !(scales.x.channel.axis || undefined)?.values
+    ) {
+      const [first, last] = result.x.ticks;
+      const firstWidth = measureLabel(
+        first.label,
+        result.x.tickLabelStyle.fontSize,
+        result.x.tickLabelStyle.fontWeight,
+        measureText,
+      );
+      const lastWidth = measureLabel(
+        last.label,
+        result.x.tickLabelStyle.fontSize,
+        result.x.tickLabelStyle.fontWeight,
+        measureText,
+      );
+      const gap = result.x.tickLabelStyle.fontSize * 0.5;
+      const required = (firstWidth + lastWidth) / 2 + gap;
+      const left = first.labelPosition ?? first.position,
+        right = last.labelPosition ?? last.position;
+      if (
+        right - left < required &&
+        firstWidth + lastWidth + gap <= totalWidth - 2 * LABEL_EDGE_GUARD
+      ) {
+        const center = (left + right) / 2;
+        let a = center - required / 2,
+          b = center + required / 2;
+        const shift =
+          Math.max(0, LABEL_EDGE_GUARD + firstWidth / 2 - a) -
+          Math.max(0, b + lastWidth / 2 - (totalWidth - LABEL_EDGE_GUARD));
+        a += shift;
+        b += shift;
+        result.x.ticks = [
+          { ...first, labelPosition: a },
+          { ...last, labelPosition: b },
+        ];
+      }
+    }
+
     // Single source of truth for the x-axis vertical extent (rotated or flat).
     // computeXAxisExtentFromLabels applies the correct rotated-extent math
     // (textWidth*|sin θ| + lineHeight*|cos θ|), so the reserved bottom margin

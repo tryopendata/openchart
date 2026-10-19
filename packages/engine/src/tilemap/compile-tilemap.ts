@@ -170,13 +170,7 @@ export function compileTileMap(spec: unknown, options: CompileOptions): TileMapL
 
   // 3. Compute chrome
   const chrome = computeChrome(
-    {
-      title: tilemapSpec.chrome.title,
-      subtitle: tilemapSpec.chrome.subtitle,
-      source: tilemapSpec.chrome.source,
-      byline: tilemapSpec.chrome.byline,
-      footer: tilemapSpec.chrome.footer,
-    },
+    tilemapSpec.chrome,
     theme,
     options.width,
     options.measureText,
@@ -421,7 +415,10 @@ function compileQuantitative(
 
   return {
     area: fullArea,
-    chrome,
+    chrome: {
+      ...chrome,
+      bottomAnchorY: tileGridOffsetY + tilePositions.gridHeight + legendGap + legendTotalHeight,
+    },
     tiles,
     gradientLegend,
     categoricalLegend: null,
@@ -617,7 +614,10 @@ function compileCategorical(
 
   return {
     area: fullArea,
-    chrome,
+    chrome: {
+      ...chrome,
+      bottomAnchorY: tileGridOffsetY + tilePositions.gridHeight + legendGap + legendTotalHeight,
+    },
     tiles,
     gradientLegend: null,
     categoricalLegend,

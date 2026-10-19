@@ -702,3 +702,28 @@ describe('tilemap numeric observations', () => {
     expect(layout.tiles.every((tile) => Number.isFinite(tile.fillOpacity))).toBe(true);
   });
 });
+
+it.each([
+  390, 1280,
+])('anchors complete attribution to the actual tile-grid content at %spx', (width) => {
+  const layout = compileTileMap(
+    {
+      ...basicSpec,
+      chrome: {
+        source: 'Source: Long county administrative records and open research data, 2020–2025',
+        byline: 'Analysis: Research team',
+        footer: 'Methods and coverage',
+        brand: { text: 'Our research\nOpen methods', style: { fontSize: 20 } },
+      },
+    },
+    { width, height: 500 },
+  );
+  expect(layout.chrome.brand?.text).toContain('Open methods');
+  expect(layout.chrome.watermark).toBeUndefined();
+  const anchor = layout.chrome.bottomAnchorY!;
+  expect(anchor).toBeGreaterThan(Math.max(...layout.tiles.map((t) => t.y + t.size)));
+  for (const key of ['source', 'byline', 'footer', 'brand'] as const) {
+    const item = layout.chrome[key]!;
+    expect(anchor + item.y + item.style.fontSize).toBeLessThan(layout.height);
+  }
+});

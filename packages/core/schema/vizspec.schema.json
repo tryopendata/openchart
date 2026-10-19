@@ -14505,6 +14505,19 @@
           "$ref": "#/definitions/Chrome",
           "description": "Editorial chrome (title, subtitle, source, byline, footer)."
         },
+        "colorKey": {
+          "type": "object",
+          "properties": {
+            "activeValue": {
+              "type": "boolean"
+            },
+            "distribution": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "description": "Optional static distribution and reader active-value presentation. Both default to false."
+        },
         "legend": {
           "$ref": "#/definitions/LegendConfig",
           "description": "Legend display configuration."
@@ -14544,6 +14557,30 @@
     "GeoMapGeo": {
       "type": "object",
       "properties": {
+        "objectKey": {
+          "type": "string",
+          "description": "Primary topology object; omission retains first-object behavior."
+        },
+        "fitObjectKey": {
+          "type": "string",
+          "description": "Fit against this primary-topology object, independent of contextual detail."
+        },
+        "sourcePlane": {
+          "type": "string",
+          "description": "Named assertion of the decoded coordinate plane for identity detail."
+        },
+        "detailLayers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/GeoDetailLayer"
+          }
+        },
+        "insets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/GeoInset"
+          }
+        },
         "features": {
           "description": "TopoJSON topology object. User imports this from us-atlas, world-atlas, or their own source."
         },
@@ -14583,6 +14620,91 @@
       ],
       "additionalProperties": false,
       "description": "Geo configuration for map specs."
+    },
+    "GeoDetailLayer": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "features": {},
+        "objectKey": {
+          "type": "string"
+        },
+        "minZoom": {
+          "type": "number"
+        },
+        "maxZoom": {
+          "type": "number"
+        },
+        "sourcePlane": {
+          "type": "string",
+          "description": "Assertion that decoded identity coordinates share the primary source plane."
+        }
+      },
+      "required": [
+        "id",
+        "features",
+        "minZoom"
+      ],
+      "additionalProperties": false,
+      "description": "Context geometry uses the primary view's immutable fitted projection."
+    },
+    "GeoInset": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "featureIds": {
+          "type": "array",
+          "items": {
+            "type": [
+              "string",
+              "number"
+            ]
+          },
+          "description": "Canonical topology feature IDs, independent of the geo.idField data-join field."
+        },
+        "placement": {
+          "type": "string",
+          "enum": [
+            "bottom-left",
+            "bottom-right"
+          ]
+        },
+        "width": {
+          "type": "number"
+        },
+        "projection": {
+          "$ref": "#/definitions/GeoMapProjection"
+        },
+        "removeFromMain": {
+          "type": "boolean",
+          "description": "Defaults true; false explicitly duplicates primary feature coverage."
+        },
+        "pointIds": {
+          "type": "array",
+          "items": {
+            "type": [
+              "string",
+              "number"
+            ]
+          },
+          "description": "Explicit existing points.key values; omission includes no points."
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "featureIds",
+        "placement",
+        "width"
+      ],
+      "additionalProperties": false
     },
     "GeoMapProjection": {
       "type": "string",
@@ -14860,7 +14982,14 @@
       "anyOf": [
         {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
+            "viewId": {
+              "type": "string"
+            },
+            "layerId": {
+              "type": "string"
+            },
             "kind": {
               "type": "string",
               "const": "feature"
@@ -14873,14 +15002,20 @@
             }
           },
           "required": [
-            "kind",
-            "id"
-          ],
-          "additionalProperties": false
+            "id",
+            "kind"
+          ]
         },
         {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
+            "viewId": {
+              "type": "string"
+            },
+            "layerId": {
+              "type": "string"
+            },
             "kind": {
               "type": "string",
               "const": "point"
@@ -14893,14 +15028,20 @@
             }
           },
           "required": [
-            "kind",
-            "id"
-          ],
-          "additionalProperties": false
+            "id",
+            "kind"
+          ]
         },
         {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
+            "viewId": {
+              "type": "string"
+            },
+            "layerId": {
+              "type": "string"
+            },
             "kind": {
               "type": "string",
               "const": "coordinate"
@@ -14924,8 +15065,7 @@
             "space",
             "x",
             "y"
-          ],
-          "additionalProperties": false
+          ]
         }
       ],
       "description": "Explicit map anchor; feature and point identities occupy separate namespaces."

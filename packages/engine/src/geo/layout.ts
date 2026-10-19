@@ -89,6 +89,11 @@ export function moveGeoMapLegend(
       y: row.y + dy,
     }));
   if (legend.type === 'continuous') {
+    if (legend.rangeEntries)
+      legend.rangeEntries = legend.rangeEntries.map((entry) => ({
+        ...entry,
+        bounds: { ...entry.bounds, x: entry.bounds.x + dx, y: entry.bounds.y + dy },
+      }));
     legend.bar = { ...legend.bar, x: legend.bar.x + dx, y: legend.bar.y + dy };
     legend.bins = legend.bins.map((bin) => ({ ...bin, x: bin.x + dx }));
     legend.ticks = legend.ticks.map((tick) => ({ ...tick, x: tick.x + dx }));

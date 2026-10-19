@@ -1622,6 +1622,8 @@ describe('map numeric observations', () => {
     expect(layout.tooltipDescriptors.get('06')?.fields).toContainEqual({
       label: 'value',
       value: 'No data',
+      role: 'value',
+      source: { field: 'value', channel: 'color' },
     });
     expect(layout.features.find((feature) => feature.id === '48')?.aria.label).toBe('Texas: 0');
     expect(layout.features.find((feature) => feature.id === '36')?.aria.label).toBe('New York: 20');
@@ -1784,6 +1786,8 @@ describe('map side legend composition', () => {
     expect(layout.tooltipDescriptors.get('06')!.fields).toContainEqual({
       label: 'Color range',
       value: '0 inclusive to 10 exclusive',
+      role: 'value',
+      source: { field: 'value', channel: 'color' },
     });
     expect(layout.a11y.altText).toContain('0 inclusive to 10 exclusive');
   });
@@ -1989,12 +1993,12 @@ describe('map side legend composition', () => {
       expect.objectContaining({ code: 'MAP_SIDE_LEGEND_FALLBACK' }),
     );
   });
-  it('diagnoses a side key fallback before fitting a narrow map', () => {
+  it('diagnoses a side key fallback before fitting an infeasible narrow map', () => {
     const diagnostics: Array<{ code: string; path: string }> = [];
     const layout = compileGeoMap(
       { ...spec, legend: { position: 'right' } },
       {
-        width: 320,
+        width: 240,
         height: 400,
         onDiagnostic: (diagnostic) => diagnostics.push(diagnostic),
       },
@@ -2089,7 +2093,8 @@ describe('static map key semantics and measured frame', () => {
         .join(' '),
     ).toBe('percentage points');
     expect(key.textRows?.find((row) => row.role === 'context')?.text).toContain('Near zero:');
-    expect(key.textRows?.find((row) => row.role === 'midpoint')?.text).toBe('0.0');
+    if (key.rangeEntries) expect(key.rangeEntries).toHaveLength(key.bins.length);
+    else expect(key.textRows?.find((row) => row.role === 'midpoint')?.text).toBe('0.0');
     for (const row of key.textRows ?? []) {
       expect(row.y).toBeGreaterThanOrEqual(key.bounds.y);
       expect(row.y).toBeLessThanOrEqual(key.bounds.y + key.bounds.height);
@@ -2237,4 +2242,57 @@ it.each([
       );
     expect(overlap).toBe(0);
   }
+});
+
+it('uses compact measured right gutters and truthful vertical range entries', () => {
+  const layout = compileGeoMap(
+    {
+      type: 'map',
+      geo: { features: MINI_TOPO, projection: 'mercator' },
+      data: [
+        { id: '06', v: 10 },
+        { id: '48', v: 40 },
+        { id: '36', v: 100 },
+      ],
+      encoding: {
+        key: { field: 'id', type: 'nominal' },
+        color: { field: 'v', type: 'quantitative', title: 'Rate', format: '.0f' },
+      },
+      legend: { position: 'right' },
+    },
+    { width: 1280, height: 500 },
+  );
+  const key = layout.continuousLegend!;
+  expect(key.position).toBe('right');
+  expect(key.bounds.width).toBeLessThan(240);
+  expect(key.rangeEntries).toHaveLength(key.bins.length);
+  expect(key.textRows?.some((row) => row.text.includes('<'))).toBe(true);
+  expect(key.bounds.x + key.bounds.width).toBeCloseTo(1260);
+  expect(layout.features).toHaveLength(3);
+});
+it('does not reserve a wide empty gutter for short categorical and size keys', () => {
+  const layout = compileGeoMap(
+    {
+      type: 'map',
+      geo: { features: MINI_TOPO, projection: 'mercator' },
+      data: [],
+      encoding: {},
+      legend: { position: 'bottom-right' },
+      points: {
+        data: [
+          { lon: -100, lat: 31, pop: 100, c: 'A' },
+          { lon: -74, lat: 41, pop: 10, c: 'B' },
+        ],
+        longitude: { field: 'lon' },
+        latitude: { field: 'lat' },
+        color: { field: 'c', type: 'nominal' },
+        size: { field: 'pop', type: 'quantitative' },
+      },
+    },
+    { width: 1280, height: 500 },
+  );
+  const key = layout.pointCategoricalLegend!;
+  expect(1280 - 20 - (layout.area.x + layout.area.width)).toBeLessThan(200);
+  expect(key.bounds.x).toBe(layout.pointSizeLegend!.bounds.x);
+  expect(layout.pointSizeLegend!.bounds.x + layout.pointSizeLegend!.bounds.width).toBeCloseTo(1260);
 });

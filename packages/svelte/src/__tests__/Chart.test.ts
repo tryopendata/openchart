@@ -320,3 +320,34 @@ it('forwards rowHover and removes it when toggled off', async () => {
   await rerender({ spec: barSpec, rowHover: false });
   await waitFor(() => expect(container.querySelector('.oc-row-hover')).toBeNull());
 });
+it('moves a slice readout and changes callbacks without remounting or controlled echoes', async () => {
+  const first = document.createElement('aside'),
+    second = document.createElement('aside'),
+    before = vi.fn(),
+    after = vi.fn();
+  const result = await renderChart({
+    spec: lineSpec,
+    reader: { mode: 'slices', panel: { container: first } },
+    onreaderchange: before,
+  });
+  const root = result.container.querySelector('.oc-root')!;
+  root.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  root.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+  const state = before.mock.calls.at(
+    -1,
+  )![0] as import('@opendata-ai/openchart-core').ReaderSliceSelection;
+  expect(state.pinned).toHaveLength(1);
+  const svg = result.container.querySelector('svg');
+  await result.rerender({
+    spec: lineSpec,
+    reader: { mode: 'slices', panel: { container: second } },
+    readerSelection: state,
+    onreaderchange: after,
+  });
+  expect(result.container.querySelector('svg')).toBe(svg);
+  expect(after).not.toHaveBeenCalled();
+  expect(first.querySelector('.oc-reader-panel')).toBeNull();
+  expect(second.textContent).toContain('A:');
+  result.unmount();
+  expect(second.querySelector('.oc-reader-panel')).toBeNull();
+});

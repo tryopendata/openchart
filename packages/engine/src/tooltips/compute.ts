@@ -71,6 +71,10 @@ function resolveFormat(ch: EncodingChannel): string | undefined {
 }
 
 type ChannelFormatter = NumberFormatter | ((v: Date | string | number) => string) | null;
+type FieldSemantics = Pick<TooltipField, 'role' | 'source'>;
+type FormatterCache = Map<string, ChannelFormatter> & {
+  semantics: Map<EncodingChannel, Map<string, FieldSemantics>>;
+};
 
 function cacheKey(ch: EncodingChannel): string {
   const fmt = resolveFormat(ch);
@@ -78,11 +82,10 @@ function cacheKey(ch: EncodingChannel): string {
 }
 
 /** Build a per-channel formatter cache for tooltip display. */
-function buildFormatterCache(
-  data: DataRow[],
-  channels: EncodingChannel[],
-): Map<string, ChannelFormatter> {
-  const cache = new Map<string, ChannelFormatter>();
+function buildFormatterCache(data: DataRow[], channels: EncodingChannel[]): FormatterCache {
+  const cache: FormatterCache = Object.assign(new Map<string, ChannelFormatter>(), {
+    semantics: new Map<EncodingChannel, Map<string, FieldSemantics>>(),
+  });
   for (const ch of channels) {
     const key = cacheKey(ch);
     if (cache.has(key)) continue;
@@ -105,20 +108,79 @@ function buildFormatterCache(
   return cache;
 }
 
-function getFormatter(
-  cache: Map<string, ChannelFormatter>,
-  ch: EncodingChannel,
-): ChannelFormatter | undefined {
+function getFormatter(cache: FormatterCache, ch: EncodingChannel): ChannelFormatter | undefined {
   return cache.get(cacheKey(ch));
+}
+
+function semanticField(
+  ch: EncodingChannel,
+  encoding: Encoding,
+  channel?: string,
+  tooltipIndex?: number,
+  cache?: FormatterCache,
+): FieldSemantics {
+  // Channel identity and tooltip position are stable within one compile. Avoid
+  // rediscovering this metadata for every observation in a dense series.
+  const scope = `${channel ?? 'auto'}:${tooltipIndex ?? ''}`;
+  const existing = cache?.semantics.get(ch)?.get(scope);
+  if (existing) return existing;
+  const primary =
+    encoding.y?.type === 'quantitative'
+      ? encoding.y
+      : encoding.x?.type === 'quantitative'
+        ? encoding.x
+        : encoding.theta;
+  const series =
+    encoding.color && 'field' in encoding.color && encoding.color.type !== 'quantitative'
+      ? encoding.color
+      : encoding.strokeDash && 'field' in encoding.strokeDash
+        ? encoding.strokeDash
+        : undefined;
+  const role: TooltipField['role'] =
+    ch.field === primary?.field
+      ? 'value'
+      : ch.field === series?.field
+        ? 'series'
+        : ch.field === encoding.x?.field || ch.field === encoding.y?.field
+          ? 'x'
+          : undefined;
+  const sourceChannel =
+    channel ??
+    ['x', 'y', 'color', 'size', 'theta', 'x2', 'y2', 'detail', 'strokeDash'].find((key) => {
+      const item = (encoding as unknown as Record<string, unknown>)[key];
+      return (
+        item &&
+        typeof item === 'object' &&
+        'field' in item &&
+        (item as EncodingChannel).field === ch.field
+      );
+    }) ??
+    'tooltip';
+  const result: FieldSemantics = {
+    ...(role ? { role } : {}),
+    source: {
+      field: ch.field,
+      channel: sourceChannel,
+      ...(tooltipIndex !== undefined ? { tooltipIndex } : {}),
+    },
+  };
+  if (cache) {
+    let scopes = cache.semantics.get(ch);
+    if (!scopes) cache.semantics.set(ch, (scopes = new Map()));
+    scopes.set(scope, result);
+  }
+  return result;
 }
 
 /** Build tooltip fields from explicit tooltip encoding channels. */
 function buildExplicitTooltipFields(
   row: DataRow,
   channels: EncodingChannel[],
-  formatters: Map<string, ChannelFormatter>,
+  formatters: FormatterCache,
+  encoding: Encoding,
 ): TooltipField[] {
-  return channels.map((ch) => ({
+  return channels.map((ch, index) => ({
+    ...semanticField(ch, encoding, 'tooltip', index, formatters),
     label: resolveLabel(ch),
     value: formatValue(row[ch.field], ch.type, getFormatter(formatters, ch)),
   }));
@@ -134,13 +196,13 @@ function buildExplicitTooltipFields(
 function buildFields(
   row: DataRow,
   encoding: Encoding,
-  formatters: Map<string, ChannelFormatter>,
+  formatters: FormatterCache,
   color?: string,
   titleChannel?: TitleChannel,
 ): TooltipField[] {
   if (encoding.tooltip) {
     const channels = Array.isArray(encoding.tooltip) ? encoding.tooltip : [encoding.tooltip];
-    return buildExplicitTooltipFields(row, channels, formatters);
+    return buildExplicitTooltipFields(row, channels, formatters, encoding);
   }
 
   const fields: TooltipField[] = [];
@@ -148,6 +210,7 @@ function buildFields(
 
   if (encoding.color && 'field' in encoding.color) {
     (titleChannel === 'color' ? skipped : fields).push({
+      ...semanticField(encoding.color, encoding, 'color', undefined, formatters),
       label: resolveLabel(encoding.color),
       value: formatValue(
         row[encoding.color.field],
@@ -160,6 +223,7 @@ function buildFields(
 
   if (encoding.y) {
     (titleChannel === 'y' ? skipped : fields).push({
+      ...semanticField(encoding.y, encoding, 'y', undefined, formatters),
       label: resolveLabel(encoding.y),
       value: formatValue(
         row[encoding.y.field],
@@ -172,6 +236,7 @@ function buildFields(
 
   if (encoding.x) {
     (titleChannel === 'x' ? skipped : fields).push({
+      ...semanticField(encoding.x, encoding, 'x', undefined, formatters),
       label: resolveLabel(encoding.x),
       value: formatValue(
         row[encoding.x.field],
@@ -183,6 +248,7 @@ function buildFields(
 
   if (encoding.size && 'field' in encoding.size) {
     fields.push({
+      ...semanticField(encoding.size, encoding, 'size', undefined, formatters),
       label: resolveLabel(encoding.size),
       value: formatValue(
         row[encoding.size.field],
@@ -280,7 +346,7 @@ function getTooltipTitle(
 function tooltipsForLine(
   mark: LineMark,
   encoding: Encoding,
-  formatters: Map<string, ChannelFormatter>,
+  formatters: FormatterCache,
   _markIndex: number,
   encodedFields?: Set<string>,
   stackTotals?: Map<string, TooltipField>,
@@ -306,7 +372,7 @@ function tooltipsForLine(
 function tooltipsForPoint(
   mark: PointMark,
   encoding: Encoding,
-  formatters: Map<string, ChannelFormatter>,
+  formatters: FormatterCache,
   markIndex: number,
   encodedFields?: Set<string>,
 ): Array<[string, TooltipContent]> {
@@ -325,7 +391,7 @@ function tooltipsForPoint(
 function tooltipsForRect(
   mark: RectMark,
   encoding: Encoding,
-  formatters: Map<string, ChannelFormatter>,
+  formatters: FormatterCache,
   markIndex: number,
   encodedFields?: Set<string>,
   stackTotals?: Map<string, TooltipField>,
@@ -348,7 +414,7 @@ function tooltipsForRect(
 function tooltipsForArc(
   mark: ArcMark,
   encoding: Encoding,
-  formatters: Map<string, ChannelFormatter>,
+  formatters: FormatterCache,
   markIndex: number,
 ): Array<[string, TooltipContent]> {
   const row = mark.data;
@@ -359,6 +425,7 @@ function tooltipsForArc(
     const categoryName = String(row[colorEnc.field] ?? '');
     if (encoding.y) {
       fields.push({
+        ...semanticField(encoding.y, encoding, 'y', undefined, formatters),
         label: categoryName,
         value: formatValue(
           row[encoding.y.field],
@@ -370,6 +437,7 @@ function tooltipsForArc(
     }
   } else if (encoding.y) {
     fields.push({
+      ...semanticField(encoding.y, encoding, 'y', undefined, formatters),
       label: resolveLabel(encoding.y),
       value: formatValue(
         row[encoding.y.field],
@@ -388,7 +456,7 @@ function tooltipsForArc(
 function tooltipsForArea(
   mark: AreaMark,
   encoding: Encoding,
-  formatters: Map<string, ChannelFormatter>,
+  formatters: FormatterCache,
   _markIndex: number,
   encodedFields?: Set<string>,
   stackTotals?: Map<string, TooltipField>,
@@ -449,7 +517,7 @@ function isNormalizedStack(encoding: Encoding): boolean {
 function computeRectStackTotals(
   marks: Mark[],
   encoding: Encoding,
-  formatters: Map<string, ChannelFormatter>,
+  formatters: FormatterCache,
 ): Map<string, TooltipField> | undefined {
   if (isNormalizedStack(encoding)) return undefined;
   const valueCh = stackValueChannel(encoding);
@@ -474,6 +542,7 @@ function computeRectStackTotals(
       label: TOTAL_LABEL,
       value: formatValue(sum, valueCh.type, formatter),
       role: 'total',
+      source: { field: valueCh.field, channel: valueCh === encoding.x ? 'x' : 'y' },
     });
   }
   return totals.size > 0 ? totals : undefined;
@@ -483,7 +552,7 @@ function computeRectStackTotals(
 function computeAreaStackTotals(
   marks: Mark[],
   encoding: Encoding,
-  formatters: Map<string, ChannelFormatter>,
+  formatters: FormatterCache,
 ): Map<string, TooltipField> | undefined {
   const xCh = encoding.x;
   const yCh = encoding.y;
@@ -509,6 +578,7 @@ function computeAreaStackTotals(
       label: TOTAL_LABEL,
       value: formatValue(sum, yCh.type, formatter),
       role: 'total',
+      source: { field: yCh.field, channel: 'y' },
     });
   }
   return totals;
@@ -548,15 +618,17 @@ function computeRangeTooltips(
     const { title } = getTooltipTitle(row, encoding, encodedFields);
     if (encoding.tooltip) {
       const channels = Array.isArray(encoding.tooltip) ? encoding.tooltip : [encoding.tooltip];
-      return { title, fields: buildExplicitTooltipFields(row, channels, fmtCache) };
+      return { title, fields: buildExplicitTooltipFields(row, channels, fmtCache, encoding) };
     }
 
     const fields: TooltipField[] = [
       {
+        ...semanticField(startCh, encoding),
         label: resolveLabel(startCh),
         value: formatValue(row[startCh.field], startCh.type, getFormatter(fmtCache, startCh)),
       },
       {
+        ...semanticField(endCh, encoding),
         label: resolveLabel(endCh),
         value: formatValue(row[endCh.field], endCh.type, getFormatter(fmtCache, endCh)),
       },
@@ -624,7 +696,7 @@ function computeCalendarTooltips(
       const channels = Array.isArray(encoding.tooltip) ? encoding.tooltip : [encoding.tooltip];
       descriptors.set(`rect-${i}`, {
         title,
-        fields: buildExplicitTooltipFields(row, channels, fmtCache),
+        fields: buildExplicitTooltipFields(row, channels, fmtCache, encoding),
       });
       continue;
     }
@@ -633,6 +705,7 @@ function computeCalendarTooltips(
       title,
       fields: [
         {
+          ...semanticField(colorEnc, encoding),
           label: resolveLabel(colorEnc),
           value: formatValue(row[colorEnc.field], colorEnc.type, getFormatter(fmtCache, colorEnc)),
           color: getRepresentativeColor(mark.fill),
@@ -699,12 +772,16 @@ function computeWaffleTooltips(
     if (!content) {
       if (encoding.tooltip) {
         const channels = Array.isArray(encoding.tooltip) ? encoding.tooltip : [encoding.tooltip];
-        content = { title: category, fields: buildExplicitTooltipFields(row, channels, fmtCache) };
+        content = {
+          title: category,
+          fields: buildExplicitTooltipFields(row, channels, fmtCache, encoding),
+        };
       } else {
         content = {
           title: category,
           fields: [
             {
+              ...semanticField(valueCh, encoding),
               label: resolveLabel(valueCh),
               value: formatValue(row[valueCh.field], valueCh.type, getFormatter(fmtCache, valueCh)),
               color: getRepresentativeColor(mark.fill),
@@ -782,7 +859,7 @@ function computeBinnedBarTooltips(
       const channels = Array.isArray(encoding.tooltip) ? encoding.tooltip : [encoding.tooltip];
       if (channels.length === 0) continue;
       descriptors.set(`rect-${i}`, {
-        fields: buildExplicitTooltipFields(row, channels, fmtCache),
+        fields: buildExplicitTooltipFields(row, channels, fmtCache, encoding),
       });
       continue;
     }
@@ -790,12 +867,14 @@ function computeBinnedBarTooltips(
     const fields: TooltipField[] = [];
     if (colorEnc) {
       fields.push({
+        ...semanticField(colorEnc, encoding),
         label: resolveLabel(colorEnc),
         value: String(row[colorEnc.field] ?? ''),
         color: getRepresentativeColor(mark.fill),
       });
     }
     fields.push({
+      ...semanticField(yCh, encoding),
       label: resolveLabel(yCh),
       value: formatValue(row[yCh.field], yCh.type, getFormatter(fmtCache, yCh)),
       ...(colorEnc ? {} : { color: getRepresentativeColor(mark.fill) }),
@@ -864,7 +943,10 @@ function computeParliamentTooltips(
     if (!content) {
       if (encoding.tooltip) {
         const channels = Array.isArray(encoding.tooltip) ? encoding.tooltip : [encoding.tooltip];
-        content = { title: party, fields: buildExplicitTooltipFields(row, channels, fmtCache) };
+        content = {
+          title: party,
+          fields: buildExplicitTooltipFields(row, channels, fmtCache, encoding),
+        };
       } else {
         const count = seatCounts.get(party) ?? 0;
         const share = totalSeats > 0 ? formatPercent(count / totalSeats) : '';
@@ -872,6 +954,7 @@ function computeParliamentTooltips(
           title: party,
           fields: [
             {
+              ...semanticField(valueCh, encoding),
               label: resolveLabel(valueCh),
               value: formatValue(row[valueCh.field], valueCh.type, getFormatter(fmtCache, valueCh)),
               color: getRepresentativeColor(mark.fill),

@@ -1637,3 +1637,37 @@ describe('compact temporal ticks: fitting rung', () => {
     expect(labels).toEqual(['2025-01', '2025-10']);
   });
 });
+
+it('separates two categorical endpoint labels in a compressed plot without moving ticks', () => {
+  const spec: NormalizedChartSpec = {
+    ...lineSpec,
+    data: [
+      { year: '2019', value: 1 },
+      { year: '2024', value: 2 },
+    ],
+    encoding: {
+      x: { field: 'year', type: 'ordinal' },
+      y: { field: 'value', type: 'quantitative' },
+    },
+  };
+  const area = { x: 150, y: 20, width: 18, height: 180 };
+  const scales = computeScales(spec, area, spec.data);
+  const axes = computeAxes(scales, area, fullStrategy, theme, undefined, {
+    data: spec.data,
+    encoding: spec.encoding as Encoding,
+    markType: 'line',
+    totalWidth: 320,
+  });
+  const [a, b] = axes.x!.ticks;
+  expect(a.position).toBe(150);
+  expect(b.position).toBe(168);
+  const half = (tick: AxisTick) =>
+    estimateTextWidth(
+      tick.label,
+      axes.x!.tickLabelStyle.fontSize,
+      axes.x!.tickLabelStyle.fontWeight,
+    ) / 2;
+  expect((a.labelPosition ?? a.position) + half(a) + 5).toBeLessThanOrEqual(
+    (b.labelPosition ?? b.position) - half(b),
+  );
+});

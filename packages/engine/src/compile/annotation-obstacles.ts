@@ -8,6 +8,7 @@ import type {
   EndpointLabelsLayout,
   LegendLayout,
   Mark,
+  MeasureTextFn,
   ResolvedTheme,
 } from '@opendata-ai/openchart-core';
 import { computeLabelBounds } from '@opendata-ai/openchart-core';
@@ -27,6 +28,7 @@ export function collectAnnotationObstacles(params: {
   axes: AxesResult;
   theme: ResolvedTheme;
   endpointLabels: EndpointLabelsLayout;
+  measureText?: MeasureTextFn;
 }): PlacementObstacle[] {
   const { legend, marks, scales, dims, watermark, axes, theme, endpointLabels } = params;
   const obstacles: PlacementObstacle[] = [];
@@ -43,7 +45,7 @@ export function collectAnnotationObstacles(params: {
   }
 
   // Add brand watermark as an obstacle so annotations avoid overlapping it.
-  const watermarkRect = computeWatermarkObstacle(dims, watermark, axes, theme);
+  const watermarkRect = computeWatermarkObstacle(dims, watermark, axes, theme, params.measureText);
   if (watermarkRect) obstacles.push({ ...watermarkRect, kind: 'watermark' });
 
   // Add endpoint label bounds as obstacles

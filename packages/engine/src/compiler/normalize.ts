@@ -647,6 +647,11 @@ function normalizeGeoMapSpec(spec: GeoMapSpec, _warnings: string[]): NormalizedG
     type: 'map',
     geo: {
       features: spec.geo.features,
+      ...(spec.geo.objectKey !== undefined ? { objectKey: spec.geo.objectKey } : {}),
+      ...(spec.geo.fitObjectKey !== undefined ? { fitObjectKey: spec.geo.fitObjectKey } : {}),
+      ...(spec.geo.sourcePlane !== undefined ? { sourcePlane: spec.geo.sourcePlane } : {}),
+      ...(spec.geo.detailLayers !== undefined ? { detailLayers: spec.geo.detailLayers } : {}),
+      ...(spec.geo.insets !== undefined ? { insets: spec.geo.insets } : {}),
       idField: spec.geo.idField ?? 'id',
       // Left undefined on purpose: compileGeoMap infers the projection from the
       // topology (resolveDefaultProjection) so a pre-projected atlas doesn't get
@@ -665,6 +670,7 @@ function normalizeGeoMapSpec(spec: GeoMapSpec, _warnings: string[]): NormalizedG
     points: spec.points,
     fields: spec.fields,
     callouts: spec.callouts,
+    colorKey: spec.colorKey,
   };
 }
 

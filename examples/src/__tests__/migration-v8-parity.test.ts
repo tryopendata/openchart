@@ -55,6 +55,7 @@ import {
   APPROVED_PRE_RFC_LAYOUT,
   APPROVED_RFC_B1_LAYOUT,
 } from './migration-v8-approved-changes';
+import { APPROVED_C7_ATTRIBUTION } from './migration-v8-attribution-changes';
 import {
   flatten,
   GEOMETRY_CATEGORIES,
@@ -409,6 +410,7 @@ describe(`v8 migration parity against ${capture.tag}`, () => {
 
   it('approved geometry exceptions match every exact before/final path value', () => {
     for (const [key, approval] of [
+      ...Object.entries(APPROVED_C7_ATTRIBUTION),
       ...Object.entries(APPROVED_B3_MAP_LAYOUT),
       ...Object.entries(APPROVED_PRE_RFC_LAYOUT),
       ...Object.entries(APPROVED_RFC_B1_LAYOUT),
@@ -425,9 +427,12 @@ describe(`v8 migration parity against ${capture.tag}`, () => {
             result.signature.geometry[category][path],
             `${key} before ${category}.${path}`,
           ).toBe(before);
-          // Later B3 reservations can move a path already corrected before the RFC.
+          // Later B3 and C7 reservations can move a previously corrected path.
           // The new approval still guards the original v8 value and final v9 value.
-          const finalAfter = APPROVED_B3_MAP_LAYOUT[key]?.changes[category]?.[path]?.[1] ?? after;
+          const latestPair =
+            APPROVED_C7_ATTRIBUTION[key]?.changes[category]?.[path] ??
+            APPROVED_B3_MAP_LAYOUT[key]?.changes[category]?.[path];
+          const finalAfter = latestPair ? latestPair[1] : after;
           expect(result.v9!.geometry[category][path], `${key} after ${category}.${path}`).toBe(
             finalAfter,
           );
@@ -440,6 +445,7 @@ describe(`v8 migration parity against ${capture.tag}`, () => {
   it('map key corrections match exact before/after style values', () => {
     for (const [key, approval] of [
       ...Object.entries(APPROVED_MAP_KEY_PLACEMENT),
+      ...Object.entries(APPROVED_C7_ATTRIBUTION),
       ...Object.entries(APPROVED_B3_MAP_LAYOUT),
     ]) {
       const result = results.find((result) => `${result.name} @${result.width}` === key)!;
@@ -499,6 +505,7 @@ describe(`v8 migration parity against ${capture.tag}`, () => {
               !Object.entries({
                 ...APPROVED_MAP_KEY_PLACEMENT[`${result.name} @${result.width}`]?.style,
                 ...APPROVED_B3_MAP_LAYOUT[`${result.name} @${result.width}`]?.style,
+                ...APPROVED_C7_ATTRIBUTION[`${result.name} @${result.width}`]?.style,
               }).some(
                 ([path, pair]) => path === diff.path && pair[0] === diff.v8 && pair[1] === diff.v9,
               ),
@@ -511,6 +518,7 @@ describe(`v8 migration parity against ${capture.tag}`, () => {
           ...(STYLE_ALLOWLIST[result.name]?.geometry ?? []),
         ]);
         const approved = [
+          APPROVED_C7_ATTRIBUTION[`${result.name} @${result.width}`],
           APPROVED_B3_MAP_LAYOUT[`${result.name} @${result.width}`],
           APPROVED_PRE_RFC_LAYOUT[`${result.name} @${result.width}`],
           APPROVED_RFC_B1_LAYOUT[`${result.name} @${result.width}`],

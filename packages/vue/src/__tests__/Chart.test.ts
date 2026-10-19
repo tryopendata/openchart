@@ -328,3 +328,29 @@ it('forwards rowHover and removes it when toggled off', async () => {
   expect(wrapper.element.querySelector('.oc-row-hover')).toBeNull();
   wrapper.unmount();
 });
+it('replaces slice reader panel hosts silently without losing pins or recreating the chart', async () => {
+  const first = document.createElement('aside'),
+    second = document.createElement('aside');
+  const wrapper = mount(Chart, {
+    props: { spec: lineSpec, reader: { mode: 'slices', panel: { container: first } } },
+  });
+  await flushPromises();
+  wrapper.element.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  wrapper.element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+  const state = wrapper
+    .emitted('reader-change')!
+    .at(-1)![0] as import('@opendata-ai/openchart-core').ReaderSliceSelection;
+  expect(state.pinned).toHaveLength(1);
+  const svg = wrapper.element.querySelector('svg'),
+    count = wrapper.emitted('reader-change')!.length;
+  await wrapper.setProps({
+    reader: { mode: 'slices', panel: { container: second } },
+    readerSelection: state,
+  });
+  expect(wrapper.element.querySelector('svg')).toBe(svg);
+  expect(wrapper.emitted('reader-change')).toHaveLength(count);
+  expect(first.querySelector('.oc-reader-panel')).toBeNull();
+  expect(second.textContent).toContain('A:');
+  wrapper.unmount();
+  expect(second.querySelector('.oc-reader-panel')).toBeNull();
+});

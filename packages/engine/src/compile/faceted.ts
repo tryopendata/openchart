@@ -47,6 +47,7 @@ import { computeScales } from '../layout/scales';
 import { resolveChromeLayout } from '../layout/shared';
 import { placeLegend } from '../legend/compute';
 import { computeTooltipDescriptors } from '../tooltips/compute';
+import { scopeTooltipContent } from '../tooltips/metadata';
 import { buildChartA11y } from './accessibility';
 import { computeChartScales } from './chart-scales';
 import { applyFillPatterns } from './fill-patterns';
@@ -449,6 +450,23 @@ export function compileFaceted(
 
   // Compute tooltip descriptors from all marks across panels
   const tooltipDescriptors = computeTooltipDescriptors(panelChartSpec, allMarks);
+  for (const panel of panelLayouts)
+    for (const mark of panel.marks)
+      if (mark.type === 'line' || mark.type === 'area')
+        for (const point of mark.dataPoints ?? [])
+          if (point.tooltip)
+            point.tooltip = scopeTooltipContent(point.tooltip, { panel: `facet:${panel.key}` });
+
+  const panelByMark = new Map(
+    panelLayouts.flatMap((panel) => panel.marks.map((mark) => [mark, panel.key] as const)),
+  );
+  allMarks.forEach((mark, index) => {
+    const key = `${mark.type}-${index}`;
+    const content = tooltipDescriptors.get(key);
+    const panel = panelByMark.get(mark);
+    if (content && panel !== undefined)
+      tooltipDescriptors.set(key, scopeTooltipContent(content, { panel: `facet:${panel}` }));
+  });
 
   // Opt-in per-series fill patterns across all panels at once so a series
   // gets the same pattern in every panel.

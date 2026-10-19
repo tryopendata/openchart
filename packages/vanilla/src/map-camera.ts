@@ -16,6 +16,8 @@ export type { Camera } from './story/camera-math';
 export const FOCUS_DIM_OPACITY = 0.25;
 
 export interface GeoMapCameraOptions {
+  /** Explicit camera scope for an authored inset or the root view. */
+  viewId?: string;
   /** Transition duration in ms. 0 snaps instantly. Default 600. */
   duration?: number;
   /** Padding in map-local units around the target. Default 16. */
@@ -147,7 +149,8 @@ export function wheelZoomFactor(e: Pick<WheelEvent, 'deltaY' | 'deltaMode' | 'ct
  * Toggles vector-effect="non-scaling-stroke" on features/borders while zoomed.
  */
 export function applyMapCamera(svg: SVGElement, camera: Camera, layout: GeoMapLayout): void {
-  const cameraGroup = svg.querySelector('[data-oc-map-camera]');
+  const scope = svg.querySelector<SVGElement>('[data-geo-view-id="root"]') ?? svg;
+  const cameraGroup = scope.querySelector('[data-oc-map-camera]');
   if (!cameraGroup) return;
 
   const vb = layout.mapSize;
@@ -156,7 +159,7 @@ export function applyMapCamera(svg: SVGElement, camera: Camera, layout: GeoMapLa
   if (isZoomed) {
     cameraGroup.setAttribute('transform', cameraTransform(camera, vb));
     // Toggle non-scaling-stroke so strokes don't fatten when zoomed
-    const paths = svg.querySelectorAll('.oc-map-feature, .oc-map-borders path');
+    const paths = scope.querySelectorAll('.oc-map-feature, .oc-map-borders path');
     for (const p of paths) {
       p.setAttribute('vector-effect', 'non-scaling-stroke');
     }
@@ -164,7 +167,7 @@ export function applyMapCamera(svg: SVGElement, camera: Camera, layout: GeoMapLa
     // Only use attribute counter-scaling (r/k, stroke-width/k) without
     // vector-effect: the group transform scales both back to constant screen
     // size. Adding vector-effect on top would double-compensate stroke.
-    const points = svg.querySelectorAll('.oc-map-point');
+    const points = scope.querySelectorAll('.oc-map-point');
     for (const p of points) {
       const baseR = Number(p.getAttribute('data-base-r') ?? 5);
       const baseSW = Number(p.getAttribute('data-base-stroke-width') ?? 1);
@@ -173,12 +176,12 @@ export function applyMapCamera(svg: SVGElement, camera: Camera, layout: GeoMapLa
     }
   } else {
     cameraGroup.removeAttribute('transform');
-    const paths = svg.querySelectorAll('.oc-map-feature, .oc-map-borders path');
+    const paths = scope.querySelectorAll('.oc-map-feature, .oc-map-borders path');
     for (const p of paths) {
       p.removeAttribute('vector-effect');
     }
     // Reset point radii when not zoomed
-    const points = svg.querySelectorAll('.oc-map-point');
+    const points = scope.querySelectorAll('.oc-map-point');
     for (const p of points) {
       const baseR = Number(p.getAttribute('data-base-r') ?? 5);
       const baseSW = Number(p.getAttribute('data-base-stroke-width') ?? 1);

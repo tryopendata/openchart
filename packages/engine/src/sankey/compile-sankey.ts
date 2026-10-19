@@ -356,13 +356,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
 
   // 3. Compute chrome
   const chrome = computeChrome(
-    {
-      title: sankeySpec.chrome.title,
-      subtitle: sankeySpec.chrome.subtitle,
-      source: sankeySpec.chrome.source,
-      byline: sankeySpec.chrome.byline,
-      footer: sankeySpec.chrome.footer,
-    },
+    sankeySpec.chrome,
     theme,
     options.width,
     options.measureText,

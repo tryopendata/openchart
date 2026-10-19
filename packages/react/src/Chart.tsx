@@ -14,12 +14,16 @@ import type {
   DataRow,
   ElementRef,
   LayerSpec,
+  ReaderChangeMeta,
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
 import { mergeThemeConfig } from '@opendata-ai/openchart-core';
 import {
   type ChartInstance,
+  type ChartReaderProps,
+  type ChartReaderSelection,
   createChart,
+  createChartReaderBinding,
   type InteractionMode,
   type MountOptions,
 } from '@opendata-ai/openchart-vanilla';
@@ -45,7 +49,7 @@ export interface ChartHandle {
   readonly instance: ChartInstance | null;
 }
 
-export interface ChartProps<TData extends DataRow = DataRow> extends ChartEventHandlers {
+export interface ChartBaseProps<TData extends DataRow = DataRow> extends ChartEventHandlers {
   /** The chart spec to render. Graph specs render through `<Graph />` or `<Visualization />`. */
   spec: ChartSpec<TData> | LayerSpec<TData>;
   /**
@@ -77,6 +81,12 @@ export interface ChartProps<TData extends DataRow = DataRow> extends ChartEventH
   style?: CSSProperties;
 }
 
+export type ChartProps<TData extends DataRow = DataRow> = ChartBaseProps<TData> & ChartReaderProps;
+export type SliceChartProps<TData extends DataRow = DataRow> = ChartBaseProps<TData> &
+  Extract<ChartReaderProps, { reader: { mode: 'slices' } }>;
+export type ObservationChartProps<TData extends DataRow = DataRow> = ChartBaseProps<TData> &
+  Exclude<ChartReaderProps, { reader: { mode: 'slices' } }>;
+
 /**
  * React component that renders a visualization from a spec.
  *
@@ -103,6 +113,9 @@ function ChartInner(
 function ChartInner(
   {
     spec,
+    reader,
+    readerSelection,
+    onReaderChange,
     theme: themeProp,
     darkMode,
     renderer,
@@ -138,6 +151,25 @@ function ChartInner(
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<ChartInstance | null>(null);
   const specRef = useRef<string>('');
+  const readerBinding = useRef<ReturnType<typeof createChartReaderBinding> | null>(null);
+  readerBinding.current ??= createChartReaderBinding();
+  const readerConfig = useRef({ reader, readerSelection, onReaderChange });
+  readerConfig.current = { reader, readerSelection, onReaderChange };
+  const syncReader = () => {
+    if (containerRef.current && chartRef.current) {
+      const config = readerConfig.current;
+      readerBinding.current!.sync(
+        containerRef.current,
+        chartRef.current,
+        spec,
+        config.reader,
+        config.readerSelection,
+        config.onReaderChange as
+          | ((selection: ChartReaderSelection, meta: ReaderChangeMeta) => void)
+          | undefined,
+      );
+    }
+  };
   const revisionRef = useRef(revision);
 
   // Store event handlers in refs so they don't trigger chart recreation.
@@ -266,8 +298,10 @@ function ChartInner(
 
     chartRef.current = createChart(container, spec, options);
     specRef.current = JSON.stringify(spec);
+    syncReader();
 
     return () => {
+      readerBinding.current?.detach();
       chartRef.current?.destroy();
       chartRef.current = null;
     };
@@ -295,7 +329,14 @@ function ChartInner(
     stableOnReveal,
   ]);
 
+  // Stable callbacks and host changes update only the reader controller.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: sync reads the current stable instance and callback ref
+  useEffect(() => {
+    syncReader();
+  }, [reader, readerSelection, onReaderChange]);
+
   // Update chart when spec changes
+  // biome-ignore lint/correctness/useExhaustiveDependencies: sync reads current reader refs after the committed spec update
   useEffect(() => {
     const chart = chartRef.current;
     if (!chart) return;
@@ -307,6 +348,7 @@ function ChartInner(
       revisionRef.current = revision;
       if (revision !== undefined || revisionChanged) chart.update(spec, { revision });
       else chart.update(spec);
+      syncReader();
     }
   }, [spec, revision]);
 
@@ -349,8 +391,13 @@ function ChartInner(
  *
  * Without a type parameter, behaves identically to before — no migration needed.
  */
-export const Chart = forwardRef(ChartInner) as <TData extends DataRow = DataRow>(
-  props: ChartProps<TData> & { ref?: React.Ref<ChartHandle> },
-) => React.ReactElement | null;
+export const Chart = forwardRef(ChartInner) as {
+  <TData extends DataRow = DataRow>(
+    props: SliceChartProps<TData> & { ref?: React.Ref<ChartHandle> },
+  ): React.ReactElement | null;
+  <TData extends DataRow = DataRow>(
+    props: ObservationChartProps<TData> & { ref?: React.Ref<ChartHandle> },
+  ): React.ReactElement | null;
+};
 // Restore display name lost by the forwardRef + cast pattern
 (Chart as React.FC).displayName = 'Chart';

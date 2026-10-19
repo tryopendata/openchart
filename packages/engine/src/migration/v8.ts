@@ -370,6 +370,7 @@ export function migrateSpecV8<T>(
             'theme',
             materialized,
             'Preserve v8 typography and scaffolding ink without overriding authored chrome sizes.' +
+              ' Shared measured attribution replaces the fixed brand reserve; footer wrapping, default watermark size and resulting automatic geometry have no legacy opt-out.' +
               (current.type === 'map'
                 ? ' Updated static map captions, neutral-class context geometry and occupied size-key placement have no legacy opt-out; their layout cannot be preserved.'
                 : '') +

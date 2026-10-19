@@ -6,7 +6,7 @@
  * manager, and search manager, then runs an animation loop driven by
  * simulation ticks. Returns a GraphInstance with update/search/zoom/destroy.
  */
-import type { CompileOptions, GraphSpec } from '@opendata-ai/openchart-core';
+import { type CompileOptions, computeChrome, type GraphSpec } from '@opendata-ai/openchart-core';
 import { compileGraph, type GraphCompilation } from '@opendata-ai/openchart-engine';
 import {
   type CameraFlightOptions,
@@ -285,6 +285,10 @@ export function createGraph(
 
   function renderChrome(): void {
     shell?.renderChrome(compilation);
+    if (shell && renderer) {
+      const size = shell.getSize();
+      renderer.resize(size.width, size.height);
+    }
   }
 
   /**
@@ -673,7 +677,8 @@ export function createGraph(
       searchMatches: searchManager.getMatches(),
       exemptIds: seedIds,
       isGesturing,
-      watermark: compilation.watermark,
+      // Shared shell paints the complete measured attribution footer.
+      watermark: false,
       ...focusState,
       entrance:
         entranceActive && entranceProgress < 1
@@ -1146,6 +1151,21 @@ export function createGraph(
 
   function doResize(): void {
     if (destroyed || !canvas || !renderer || !shell) return;
+    const dimensions = getContainerDimensions();
+    compilation = {
+      ...compilation,
+      dimensions,
+      chrome: computeChrome(
+        currentSpec.chrome,
+        compilation.theme,
+        dimensions.width,
+        undefined,
+        'full',
+        undefined,
+        compilation.watermark,
+      ),
+    };
+    shell.renderChrome(compilation);
     const { width, height } = shell.getSize();
     renderer.resize(width, height);
     // A width change can rewrap the title or move the legend; re-derive the
