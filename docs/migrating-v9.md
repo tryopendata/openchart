@@ -494,3 +494,12 @@ Ordinary gridlines are quieter, and existing zero rules have stronger contrast. 
 Map interior borders and outlines are quieter in both modes. The no-data hatch and fill remain unchanged: missing observations still differ from valid zero and neutral classes. `migrateSpecV8` restores old grid and border colors where the theme can express them; `{ styling: 'v9' }` adopts the new defaults.
 
 Map keys now reserve measured title/unit/context rows before projection fitting, and size keys choose a less obstructed location using their complete text/circle bounds. These layout changes have no legacy switch; migration reports that limitation rather than claiming pixel parity. Scale values, class boundaries, point sizes and paint order are unchanged. In fixed-height maps, fuller keys leave less height for geography; increase the authored container height when both detailed keys and a large map are required. The library does not crop coverage or move keys automatically to recover that space.
+
+
+### Optional geographic labels
+
+Existing maps do not gain place labels or note bands automatically. Add `encoding.text` or `points.text` for data-driven labels, and `callouts` for authored geographic findings. Point labels and point-anchored callouts require a unique `points.key`. Feature anchors use topology IDs; geographic longitude/latitude and preprojected source coordinates are separate explicit anchor kinds.
+
+Callouts reserve complete note capacity before the map is fitted. Review fixed-height embeds when enabling them; panning and zooming never change that reserve. Hidden inventory text remains available when visual labels collide or are outside their zoom range. Enable `labelInventory: { container }` on a vanilla mount or GeoMap wrapper for a visible host-placed list. This option does not enable reader comparison or annotation editing.
+
+`renderStaticSVG` accepts maps. Use a distinct stable `idPrefix` for each static figure embedded in one document, so clip paths, patterns and descriptions cannot refer to another figure's IDs. Omission retains the existing deterministic standalone-ID behavior. See [geographic labels and callouts](geographic-labels.md) for authoring, camera, accessibility and export details.

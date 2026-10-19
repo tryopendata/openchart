@@ -1,3 +1,12 @@
+import type { GeoLabelAffine, GeoLabelOverlay } from '@opendata-ai/openchart-core';
+import { createMapLabelInventory, type LabelInventoryOptions } from './map-label-inventory';
+import {
+  describeGeoLabelInventory,
+  mapLabelAffine,
+  projectAcceptedGeoOverlay,
+  renderGeoLabelOverlay,
+  resolveMapLabelOverlay,
+} from './map-labels';
 /**
  * Map mount API: the main entry point for vanilla JS map usage.
  *
@@ -112,6 +121,8 @@ export type GeoMapMarkEvent = {
 };
 
 export interface GeoMapMountOptions {
+  /** Optional host for the visible Map places and notes disclosure. */
+  labelInventory?: LabelInventoryOptions;
   /** Theme overrides. */
   theme?: ThemeConfig;
   /** Dark mode setting: "auto" (system pref), "force", or "off". */
@@ -136,6 +147,8 @@ export interface GeoMapMountOptions {
 }
 
 export interface GeoMapInstance {
+  /** Replace the disclosure host without resetting the camera or map. */
+  setLabelInventory(options?: LabelInventoryOptions): void;
   /** Re-compile and re-render with a new spec. */
   update(spec: GeoMapSpec): void;
   /** Re-compile at current container dimensions. */
@@ -197,6 +210,30 @@ export function createGeoMap(
   let currentSpec = spec;
   let currentLayout: GeoMapLayout;
   let destroyed = false;
+  const labelInventory = createMapLabelInventory(container, options?.labelInventory);
+  let acceptedOverlay: GeoLabelOverlay | undefined;
+  let acceptedAffine: GeoLabelAffine = { k: 1, tx: 0, ty: 0 };
+  let labelSettleFrame: number | null = null;
+  let labelGesture = false;
+  function cancelLabelSettle() {
+    if (labelSettleFrame !== null) cancelAnimationFrame(labelSettleFrame);
+    labelSettleFrame = null;
+  }
+  function settleLabels() {
+    cancelLabelSettle();
+    if (destroyed || !svgElement) return;
+    acceptedOverlay = resolveMapLabelOverlay(currentLayout, currentCamera);
+    acceptedAffine = mapLabelAffine(currentCamera, currentLayout);
+    if (acceptedOverlay) renderGeoLabelOverlay(svgElement, currentLayout, acceptedOverlay);
+    labelInventory.update(svgElement, acceptedOverlay?.inventory ?? [], currentLayout.theme);
+  }
+  function scheduleLabelSettle() {
+    if (!currentLayout.labels || labelGesture || cameraTween || labelSettleFrame !== null) return;
+    labelSettleFrame = requestAnimationFrame(() => {
+      labelSettleFrame = null;
+      settleLabels();
+    });
+  }
 
   // DOM
   let svgElement: SVGSVGElement | null = null;
@@ -518,6 +555,19 @@ export function createGeoMap(
   function commitCamera(cam: Camera): void {
     currentCamera = cam;
     if (svgElement) applyMapCamera(svgElement, cam, currentLayout);
+    if (svgElement && acceptedOverlay && currentLayout.labels) {
+      renderGeoLabelOverlay(
+        svgElement,
+        currentLayout,
+        projectAcceptedGeoOverlay(
+          acceptedOverlay,
+          acceptedAffine,
+          mapLabelAffine(cam, currentLayout),
+          currentLayout,
+        ),
+      );
+    }
+    scheduleLabelSettle();
     zoomController?.onCamera();
     options?.onCameraChange?.({ ...cam });
   }
@@ -538,6 +588,10 @@ export function createGeoMap(
       ease: easingFns.easeInOutCubic,
       onFrame(cam) {
         commitCamera(cam);
+      },
+      onComplete() {
+        cameraTween = null;
+        settleLabels();
       },
     });
     cameraTween.to(target);
@@ -602,6 +656,14 @@ export function createGeoMap(
         },
         reset: () => resetCamera(USER_ZOOM_MS),
         hideTooltip: () => tooltipManager?.hide(),
+        onGestureStart() {
+          labelGesture = true;
+          cancelLabelSettle();
+        },
+        onGestureEnd() {
+          labelGesture = false;
+          scheduleLabelSettle();
+        },
       });
     }
     zoomController.onRender(restoreFocus);
@@ -677,6 +739,11 @@ export function createGeoMap(
       container.appendChild(newSvg);
     }
     svgElement = newSvg;
+    const labelDesc = newSvg.querySelector('desc[data-geo-label-inventory]');
+    if (labelDesc) {
+      newSvg.removeAttribute('aria-describedby');
+      labelDesc.remove();
+    }
 
     // Wire interactions
     cleanupTooltipEvents = wireTooltipAndInteraction(newSvg, currentLayout);
@@ -735,6 +802,7 @@ export function createGeoMap(
 
     syncZoomController(oldSvgHadFocus);
     if (svgElement) restoreMarkFocus(svgElement, focusedMark);
+    settleLabels();
   }
 
   function update(newSpec: GeoMapSpec): void {
@@ -826,6 +894,7 @@ export function createGeoMap(
     }
     applyFocusDim(currentFocusIds);
     zoomController?.onCamera();
+    settleLabels();
   }
 
   // ---------------------------------------------------------------------------
@@ -841,6 +910,11 @@ export function createGeoMap(
     // Export settled geometry, independent of transient hover and animation.
     const terminalSvg = renderMapSVG(currentLayout, { animate: false });
     applyMapCamera(terminalSvg, currentCamera, currentLayout);
+    const exportOverlay = resolveMapLabelOverlay(currentLayout, currentCamera);
+    if (exportOverlay) {
+      renderGeoLabelOverlay(terminalSvg, currentLayout, exportOverlay);
+      describeGeoLabelInventory(terminalSvg, exportOverlay);
+    }
     const clip = svgElement.querySelector('.oc-map-group')?.getAttribute('clip-path');
     if (clip) {
       const clipId = clip.slice(5, -1);
@@ -872,6 +946,8 @@ export function createGeoMap(
   function destroy(): void {
     if (destroyed) return;
     destroyed = true;
+    cancelLabelSettle();
+    labelInventory.destroy();
 
     // Cancel running animations
     if (animationCleanup) {
@@ -955,6 +1031,9 @@ export function createGeoMap(
     update,
     resize,
     export: exportChart,
+    setLabelInventory(next) {
+      if (!destroyed) labelInventory.setOptions(next);
+    },
     destroy,
     get layout(): GeoMapLayout {
       return currentLayout;

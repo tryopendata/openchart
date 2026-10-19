@@ -22,6 +22,7 @@ let {
   spec,
   theme,
   darkMode,
+  labelInventory,
   onmarkclick,
   onmarkhover,
   oncamerachange,
@@ -31,6 +32,7 @@ let {
   spec: GeoMapSpec;
   theme?: ThemeConfig;
   darkMode?: DarkMode;
+  labelInventory?: GeoMapMountOptions['labelInventory'];
   onmarkclick?: (event: GeoMapMarkEvent) => void;
   onmarkhover?: (event: GeoMapMarkEvent | null) => void;
   oncamerachange?: (camera: Camera) => void;
@@ -52,12 +54,16 @@ onMount(() => {
 });
 
 let prevSpec = '';
+let mountedConfig = '';
 
 // Effect 1: Mount/recreate map on theme/darkMode changes.
 $effect(() => {
   const resolvedTheme = mergeThemeConfig(ctxTheme?.(), theme);
   const resolvedDarkMode = darkMode ?? ctxDarkMode?.();
   const currentSpec = untrack(() => spec);
+  const config = JSON.stringify([resolvedTheme, resolvedDarkMode]);
+  if (instance && config === mountedConfig) return;
+  mountedConfig = config;
 
   instance?.destroy();
 
@@ -68,10 +74,17 @@ $effect(() => {
     onMarkHover: (feature) => untrack(() => onmarkhover)?.(feature),
     onCameraChange: (camera) => untrack(() => oncamerachange)?.(camera),
     autoResize: true,
+    labelInventory: untrack(() =>
+      labelInventory ? { container: labelInventory.container } : labelInventory,
+    ),
   };
 
-  instance = createGeoMap(containerEl, currentSpec, options);
-  prevSpec = JSON.stringify(currentSpec);
+  instance = untrack(() => createGeoMap(containerEl, currentSpec, options));
+  prevSpec = untrack(() => JSON.stringify(currentSpec));
+});
+
+$effect(() => {
+  instance?.setLabelInventory(labelInventory);
 });
 
 // Effect 2: Update map when spec changes (no destroy/recreate).

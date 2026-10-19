@@ -5,15 +5,23 @@ import type {
   ChartSpec,
   CompileOptions,
   DarkMode,
+  GeoMapSpec,
   LayerSpec,
   ResolvedTheme,
   ThemeConfig,
   TileMapSpec,
 } from '@opendata-ai/openchart-core';
-import { isLayerSpec, isTileMapSpec } from '@opendata-ai/openchart-core';
-import { compileChart, compileLayer, compileTileMap } from '@opendata-ai/openchart-engine';
+import { isGeoMapSpec, isLayerSpec, isTileMapSpec } from '@opendata-ai/openchart-core';
+import {
+  compileChart,
+  compileGeoMap,
+  compileLayer,
+  compileTileMap,
+} from '@opendata-ai/openchart-engine';
+import { applyMapCamera, cameraForTarget } from './map-camera';
+import { renderMapSVG } from './map-renderer';
 import { SVG_NS } from './renderers/svg-dom';
-import { resetSvgIdCounter } from './svg-ids';
+import { captureSvgIdState, resetSvgIdCounter, restoreSvgIdState } from './svg-ids';
 import { renderChartSVG } from './svg-renderer';
 import { buildThemeStyleBlock } from './theme-style-block';
 import { renderTileMapSVG } from './tilemap-renderer';
@@ -36,6 +44,8 @@ function getHappyDomWindow(): typeof import('happy-dom').Window {
 let rendering = false;
 
 export interface StaticRenderOptions {
+  /** Stable XML-safe prefix. Use distinct prefixes for figures sharing one document. */
+  idPrefix?: string;
   width?: number;
   height?: number;
   theme?: ThemeConfig;
@@ -78,9 +88,13 @@ function stripInteractiveElements(svg: Element): void {
  * as no code schedules microtasks that outlive the call.
  */
 export function renderStaticSVG(
-  spec: ChartSpec | LayerSpec | TileMapSpec,
+  spec: ChartSpec | LayerSpec | TileMapSpec | GeoMapSpec,
   options?: StaticRenderOptions,
 ): string {
+  if (options?.idPrefix !== undefined && !/^[A-Za-z_][A-Za-z0-9_.-]*$/.test(options.idPrefix))
+    throw new Error(
+      'idPrefix must start with a letter or underscore and contain only letters, digits, underscores, periods or hyphens.',
+    );
   if (rendering) {
     throw new Error('renderStaticSVG is not reentrant — serialize calls through a queue or mutex');
   }
@@ -89,6 +103,7 @@ export function renderStaticSVG(
   const Window = getHappyDomWindow();
   const win = new Window({ url: 'about:blank' });
 
+  const svgIdState = captureSvgIdState();
   const prevDocument = globalThis.document;
   const prevWindow = (globalThis as Record<string, unknown>).window;
 
@@ -96,7 +111,7 @@ export function renderStaticSVG(
     (globalThis as Record<string, unknown>).document = win.document;
     (globalThis as Record<string, unknown>).window = win;
 
-    resetSvgIdCounter();
+    resetSvgIdCounter(options?.idPrefix);
 
     const width = options?.width ?? 640;
     const height = options?.height ?? 420;
@@ -114,7 +129,12 @@ export function renderStaticSVG(
     let svg: SVGElement;
     let themeForStyle: ResolvedTheme;
 
-    if (isTileMapSpec(spec)) {
+    if (isGeoMapSpec(spec)) {
+      const mapLayout = compileGeoMap(spec, compileOpts);
+      svg = renderMapSVG(mapLayout, { animate: false });
+      applyMapCamera(svg, cameraForTarget(mapLayout, mapLayout.focus?.target), mapLayout);
+      themeForStyle = mapLayout.theme;
+    } else if (isTileMapSpec(spec)) {
       const tileMapLayout = compileTileMap(spec, compileOpts);
       svg = renderTileMapSVG(tileMapLayout, { animate: false });
       themeForStyle = tileMapLayout.theme;
@@ -165,6 +185,7 @@ export function renderStaticSVG(
     ).XMLSerializer();
     return serializer.serializeToString(svg as unknown as Node);
   } finally {
+    restoreSvgIdState(svgIdState);
     rendering = false;
     if (prevDocument !== undefined) {
       (globalThis as Record<string, unknown>).document = prevDocument;

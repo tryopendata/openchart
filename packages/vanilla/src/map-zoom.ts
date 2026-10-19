@@ -47,6 +47,8 @@ export interface MapZoomHost {
   /** Return to the full map. */
   reset(): void;
   hideTooltip(): void;
+  onGestureStart?(): void;
+  onGestureEnd?(): void;
 }
 
 export interface MapZoomController {
@@ -110,6 +112,27 @@ export function createMapZoomController(host: MapZoomHost): MapZoomController {
   let pinch: { dist: number; x: number; y: number } | null = null;
   let touchPan: { x: number; y: number; moved: boolean } | null = null;
   let gestureStartK: number | null = null;
+  let labelGestureActive = false;
+  let wheelIdle: ReturnType<typeof setTimeout> | null = null;
+  function beginGesture() {
+    if (!labelGestureActive) {
+      labelGestureActive = true;
+      host.onGestureStart?.();
+    }
+  }
+  function finishGesture() {
+    if (labelGestureActive) {
+      labelGestureActive = false;
+      host.onGestureEnd?.();
+    }
+  }
+  function wheelSettles() {
+    if (wheelIdle !== null) clearTimeout(wheelIdle);
+    wheelIdle = setTimeout(() => {
+      wheelIdle = null;
+      finishGesture();
+    }, 120);
+  }
 
   // -------------------------------------------------------------------------
   // Geometry helpers
@@ -208,13 +231,16 @@ export function createMapZoomController(host: MapZoomHost): MapZoomController {
     e.preventDefault();
     // The reader found the gesture; drop any hint still on screen.
     hint?.removeAttribute('data-visible');
+    beginGesture();
     zoomAround(wheelZoomFactor(e), p.x, p.y, false);
+    wheelSettles();
   }
 
   function onGestureStart(e: Event): void {
     if (!host.getConfig()) return;
     e.preventDefault();
     gestureStartK = host.getCamera().k;
+    beginGesture();
   }
 
   function onGestureChange(e: Event): void {
@@ -234,6 +260,7 @@ export function createMapZoomController(host: MapZoomHost): MapZoomController {
     if (gestureStartK === null) return;
     e.preventDefault();
     gestureStartK = null;
+    finishGesture();
   }
 
   // -------------------------------------------------------------------------
@@ -275,6 +302,7 @@ export function createMapZoomController(host: MapZoomHost): MapZoomController {
     if (!drag.moved) {
       if (Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) < DRAG_THRESHOLD) return;
       drag.moved = true;
+      beginGesture();
       const svg = host.getSvg();
       try {
         svg?.setPointerCapture(e.pointerId);
@@ -311,6 +339,7 @@ export function createMapZoomController(host: MapZoomHost): MapZoomController {
     }
     svg?.classList.remove('oc-map--panning');
     drag = null;
+    finishGesture();
   }
 
   function onClickCapture(e: MouseEvent): void {
@@ -360,6 +389,7 @@ export function createMapZoomController(host: MapZoomHost): MapZoomController {
       // Claim the pinch before the browser does (page zoom / scroll).
       e.preventDefault();
       host.hideTooltip();
+      beginGesture();
       startPinch(e);
     } else if (e.touches.length === 1) {
       const p = touchPoint(e.touches[0]!);
@@ -391,6 +421,7 @@ export function createMapZoomController(host: MapZoomHost): MapZoomController {
       if (!touchPan.moved) {
         if (Math.hypot(t.clientX - touchPan.x, t.clientY - touchPan.y) < DRAG_THRESHOLD) return;
         touchPan.moved = true;
+        beginGesture();
         host.hideTooltip();
       }
       if (e.cancelable) e.preventDefault();
@@ -405,6 +436,7 @@ export function createMapZoomController(host: MapZoomHost): MapZoomController {
 
   function onTouchEnd(e: TouchEvent): void {
     if (e.touches.length >= 2) {
+      beginGesture();
       startPinch(e);
       return;
     }
@@ -415,6 +447,7 @@ export function createMapZoomController(host: MapZoomHost): MapZoomController {
       if (touchPan) touchPan.moved = true;
     } else {
       touchPan = null;
+      finishGesture();
     }
   }
 
@@ -621,6 +654,9 @@ export function createMapZoomController(host: MapZoomHost): MapZoomController {
     onRender,
     onCamera,
     destroy() {
+      if (wheelIdle !== null) clearTimeout(wheelIdle);
+      wheelIdle = null;
+      labelGestureActive = false;
       container.removeEventListener('wheel', onWheel);
       container.removeEventListener('pointerdown', onPointerDown);
       container.removeEventListener('mousedown', onMouseDown);

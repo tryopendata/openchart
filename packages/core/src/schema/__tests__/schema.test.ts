@@ -219,3 +219,70 @@ describe('table.schema.json', () => {
     expect(validateTable(spec)).toBe(false);
   });
 });
+
+describe('geographic label authoring schema', () => {
+  const map = {
+    type: 'map',
+    geo: { features: {}, projection: 'identity' },
+    data: [{ id: 'area', caption: 'Authored name', score: 10 }],
+    encoding: {
+      key: { field: 'id', type: 'nominal' },
+      color: { field: 'score', type: 'quantitative' },
+    },
+  };
+  it('keeps label-free maps valid and accepts explicit text channels and typed callout anchors', () => {
+    expect(validateViz(map)).toBe(true);
+    for (const anchor of [
+      { kind: 'feature', id: 'area' },
+      { kind: 'point', id: 1 },
+      { kind: 'coordinate', space: 'source', x: 10, y: 20 },
+      { kind: 'coordinate', space: 'geographic', x: -97, y: 30 },
+    ]) {
+      const valid = validateViz({
+        ...map,
+        encoding: {
+          ...map.encoding,
+          text: { field: 'caption', type: 'nominal' },
+          textPriority: { field: 'score', type: 'quantitative' },
+        },
+        callouts: [
+          {
+            id: 'finding',
+            anchor,
+            text: 'A finding',
+            subtitle: 'Exact authored text',
+            minZoom: 1,
+            maxZoom: 4,
+            maxWidth: 240,
+            offset: { dx: 0, dy: 0 },
+          },
+        ],
+      });
+      expect(valid, JSON.stringify(validateViz.errors)).toBe(true);
+    }
+  });
+  it('rejects malformed coordinate and entity anchors instead of accepting an extension bag', () => {
+    for (const anchor of [
+      { kind: 'coordinate', space: 'pixels', x: 0, y: 0 },
+      { kind: 'coordinate', space: 'source', x: 10 },
+      { kind: 'feature', id: {} },
+      { kind: 'unknown', id: 'area' },
+    ])
+      expect(
+        validateViz({ ...map, callouts: [{ id: 'finding', anchor, text: 'A finding' }] }),
+      ).toBe(false);
+  });
+  it('does not introduce geographic callouts into Cartesian charts', () => {
+    expect(
+      validateChart({
+        mark: 'bar',
+        data: sampleData,
+        encoding: {
+          x: { field: 'cat', type: 'nominal' },
+          y: { field: 'amount', type: 'quantitative' },
+        },
+        callouts: [{ id: 'finding', anchor: { kind: 'feature', id: 'area' }, text: 'A finding' }],
+      }),
+    ).toBe(false);
+  });
+});

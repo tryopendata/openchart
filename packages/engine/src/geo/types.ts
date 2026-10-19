@@ -1,6 +1,7 @@
 import type {
   AnimationSpec,
   FieldMetadata,
+  GeoCallout,
   GeoMapEncoding,
   GeoMapGeo,
   GeoMapPointsLayer,
@@ -13,10 +14,12 @@ import type { NormalizedChrome } from '../compiler/types';
 
 export interface NormalizedGeoMapSpec {
   type: 'map';
-  // `projection` stays optional: it is resolved from the topology in
-  // compileGeoMap, not filled in by normalize. `zoom` is reader interaction,
-  // read by the vanilla mount from the spec; the compiler never sees it.
-  geo: Required<Omit<GeoMapGeo, 'projection' | 'zoom'>> & { projection?: GeoMapProjection };
+  // Projection stays optional until topology inference. Zoom remains runtime
+  // interaction; compilation reads only its portable control obstacle.
+  geo: Required<Omit<GeoMapGeo, 'projection' | 'zoom'>> & {
+    projection?: GeoMapProjection;
+    zoom?: GeoMapGeo['zoom'];
+  };
   data: Record<string, unknown>[];
   encoding: GeoMapEncoding;
   chrome: NormalizedChrome;
@@ -26,4 +29,5 @@ export interface NormalizedGeoMapSpec {
   animation?: AnimationSpec;
   points?: GeoMapPointsLayer;
   fields?: Record<string, FieldMetadata>;
+  callouts?: GeoCallout[];
 }

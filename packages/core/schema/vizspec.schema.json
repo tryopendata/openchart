@@ -14521,6 +14521,13 @@
           "$ref": "#/definitions/GeoMapPointsLayer",
           "description": "Optional point/symbol layer rendered above choropleth features."
         },
+        "callouts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/GeoCallout"
+          },
+          "description": "Authored labels with explicit feature, point, or coordinate anchors."
+        },
         "animation": {
           "$ref": "#/definitions/AnimationSpec",
           "description": "Animation configuration for entrance animations."
@@ -14706,6 +14713,14 @@
           "$ref": "#/definitions/EncodingChannel",
           "description": "Color encoding (quantitative or nominal). Drives fill color of features. Optional when a points layer is present (basemap-only mode)."
         },
+        "text": {
+          "$ref": "#/definitions/EncodingChannel",
+          "description": "Explicit feature label field, read from its joined row or same-named topology property."
+        },
+        "textPriority": {
+          "$ref": "#/definitions/EncodingChannel",
+          "description": "Higher finite quantitative values win label placement priority. Requires text."
+        },
         "tooltip": {
           "anyOf": [
             {
@@ -14750,6 +14765,14 @@
           "$ref": "#/definitions/EncodingChannel",
           "description": "Optional color encoding (nominal or quantitative). Independent scale from choropleth."
         },
+        "text": {
+          "$ref": "#/definitions/EncodingChannel",
+          "description": "Explicit point label field. Requires a unique points.key."
+        },
+        "textPriority": {
+          "$ref": "#/definitions/EncodingChannel",
+          "description": "Quantitative label priority; defaults to the point size value. Requires text."
+        },
         "tooltip": {
           "anyOf": [
             {
@@ -14780,6 +14803,132 @@
       ],
       "additionalProperties": false,
       "description": "Point/symbol layer rendered above choropleth features."
+    },
+    "GeoCallout": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "anchor": {
+          "$ref": "#/definitions/GeoAnchor"
+        },
+        "text": {
+          "type": "string"
+        },
+        "subtitle": {
+          "type": "string"
+        },
+        "priority": {
+          "type": "number"
+        },
+        "minZoom": {
+          "type": "number"
+        },
+        "maxZoom": {
+          "type": "number"
+        },
+        "offset": {
+          "type": "object",
+          "properties": {
+            "dx": {
+              "type": "number"
+            },
+            "dy": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "dx",
+            "dy"
+          ],
+          "additionalProperties": false
+        },
+        "maxWidth": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "anchor",
+        "text"
+      ],
+      "additionalProperties": false,
+      "description": "Static authored geographic explanation; plain text, without chart editing semantics."
+    },
+    "GeoAnchor": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "feature"
+            },
+            "id": {
+              "type": [
+                "string",
+                "number"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "point"
+            },
+            "id": {
+              "type": [
+                "string",
+                "number"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "coordinate"
+            },
+            "space": {
+              "type": "string",
+              "enum": [
+                "geographic",
+                "source"
+              ]
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "kind",
+            "space",
+            "x",
+            "y"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "description": "Explicit map anchor; feature and point identities occupy separate namespaces."
     },
     "BarListSpec": {
       "type": "object",

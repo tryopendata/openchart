@@ -652,6 +652,7 @@ function normalizeGeoMapSpec(spec: GeoMapSpec, _warnings: string[]): NormalizedG
       // topology (resolveDefaultProjection) so a pre-projected atlas doesn't get
       // silently re-projected by an albersUsa default.
       projection: spec.geo.projection,
+      zoom: spec.geo.zoom,
       focus: spec.geo.focus ?? null,
     },
     data: spec.data,
@@ -663,6 +664,7 @@ function normalizeGeoMapSpec(spec: GeoMapSpec, _warnings: string[]): NormalizedG
     animation: spec.animation,
     points: spec.points,
     fields: spec.fields,
+    callouts: spec.callouts,
   };
 }
 

@@ -1,5 +1,6 @@
 /** Geographic map spec validation. */
 import { jsonPointer } from '@opendata-ai/openchart-core';
+import { resolveDefaultProjection } from '../../geo/projections';
 import type { ValidationError } from '../types';
 import { checkMapSchemeName } from './helpers';
 
@@ -42,6 +43,7 @@ function validateGeoMapZoom(zoom: unknown, errors: ValidationError[]): void {
 }
 
 export function validateGeoMapSpec(spec: Record<string, unknown>, errors: ValidationError[]): void {
+  validateGeoMapLabels(spec, errors);
   if (!spec.geo || typeof spec.geo !== 'object') {
     errors.push({
       message: 'Spec error: map spec requires a "geo" object with a TopoJSON "features" field',
@@ -283,5 +285,171 @@ export function validateGeoMapSpec(spec: Record<string, unknown>, errors: Valida
         });
       }
     }
+  }
+}
+
+/** New persistent identity requirements apply only to the authored label path. */
+function validateGeoMapLabels(spec: Record<string, unknown>, errors: ValidationError[]): void {
+  const object = (value: unknown): Record<string, unknown> | undefined =>
+    value && typeof value === 'object' && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : undefined;
+  const encoding = object(spec.encoding);
+  const points = object(spec.points);
+  const geo = object(spec.geo);
+  if (
+    encoding?.text === undefined &&
+    encoding?.textPriority === undefined &&
+    points?.text === undefined &&
+    points?.textPriority === undefined &&
+    (spec.callouts === undefined || (Array.isArray(spec.callouts) && spec.callouts.length === 0))
+  )
+    return;
+  const fail = (path: string, message: string, code: ValidationError['code'] = 'INVALID_VALUE') =>
+    errors.push({
+      path,
+      message,
+      code,
+      suggestion: 'Provide finite values and explicit, unique identities for authored map labels.',
+    });
+  const finite = (value: unknown): value is number =>
+    typeof value === 'number' && Number.isFinite(value);
+  const validId = (value: unknown) =>
+    finite(value) || (typeof value === 'string' && value.trim().length > 0);
+  const channels = (scope: Record<string, unknown> | undefined, path: string) => {
+    if (!scope) return;
+    for (const name of ['text', 'textPriority']) {
+      if (scope[name] === undefined) continue;
+      const channel = object(scope[name]);
+      if (!channel || typeof channel.field !== 'string' || !channel.field.trim())
+        fail(`${path}/${name}/field`, `${name} requires a field string.`, 'INVALID_TYPE');
+      if (name === 'textPriority' && (!scope.text || channel?.type !== 'quantitative'))
+        fail(`${path}/${name}`, 'textPriority requires text and a quantitative channel.');
+    }
+  };
+  channels(encoding, '/encoding');
+  channels(points, '/points');
+  if (spec.callouts !== undefined && !Array.isArray(spec.callouts))
+    fail('/callouts', 'callouts must be an array.', 'INVALID_TYPE');
+  const callouts = Array.isArray(spec.callouts) ? spec.callouts : [];
+  const ids = new Set<string>();
+  let pointReferences = !!points?.text;
+  let featureReferences = !!encoding?.text;
+  const projection = callouts.some((raw) => object(object(raw)?.anchor)?.kind === 'coordinate')
+    ? (geo?.projection ?? resolveDefaultProjection(geo?.features))
+    : undefined;
+  for (const [index, raw] of callouts.entries()) {
+    const path = `/callouts/${index}`;
+    const callout = object(raw);
+    if (!callout) {
+      fail(path, 'A callout must be an object.', 'INVALID_TYPE');
+      continue;
+    }
+    if (typeof callout.id !== 'string' || !callout.id.trim())
+      fail(`${path}/id`, 'Callout id must be a nonempty string.');
+    else if (ids.has(callout.id))
+      fail(`${path}/id`, 'Callout ids must be unique.', 'INVALID_VALUE');
+    else ids.add(callout.id);
+    if (typeof callout.text !== 'string' || !callout.text.trim())
+      fail(`${path}/text`, 'Callout text must be a nonempty plain-text string.', 'INVALID_TYPE');
+    if (callout.subtitle !== undefined && typeof callout.subtitle !== 'string')
+      fail(`${path}/subtitle`, 'subtitle must be a string.', 'INVALID_TYPE');
+    for (const name of ['priority', 'minZoom', 'maxZoom', 'maxWidth']) {
+      const value = callout[name];
+      if (
+        value !== undefined &&
+        (!finite(value) ||
+          (name === 'maxWidth' && value <= 0) ||
+          ((name === 'minZoom' || name === 'maxZoom') && value < 1))
+      )
+        fail(
+          `${path}/${name}`,
+          `${name} must be finite${name === 'maxWidth' ? ' and positive' : name.includes('Zoom') ? ' and at least 1' : ''}.`,
+        );
+    }
+    if (
+      finite(callout.maxZoom) &&
+      callout.maxZoom < (finite(callout.minZoom) ? callout.minZoom : 1)
+    )
+      fail(`${path}/maxZoom`, 'maxZoom must be at least minZoom.');
+    if (callout.offset !== undefined) {
+      const offset = object(callout.offset);
+      if (!offset || !finite(offset.dx) || !finite(offset.dy))
+        fail(`${path}/offset`, 'offset.dx and offset.dy must be finite.');
+    }
+    const anchor = object(callout.anchor);
+    if (!anchor || !['feature', 'point', 'coordinate'].includes(String(anchor.kind))) {
+      fail(`${path}/anchor`, 'anchor.kind must be feature, point or coordinate.');
+      continue;
+    }
+    if (anchor.kind === 'coordinate') {
+      if (!['source', 'geographic'].includes(String(anchor.space)))
+        fail(`${path}/anchor/space`, 'Coordinate space must be source or geographic.');
+      if (!finite(anchor.x) || !finite(anchor.y))
+        fail(`${path}/anchor`, 'Coordinate x and y must be finite.');
+      if (anchor.space === 'geographic') {
+        if (projection === 'identity')
+          fail(
+            `${path}/anchor/space`,
+            'Geographic coordinates cannot anchor a preprojected identity map without a geographic transform.',
+          );
+        if (
+          (finite(anchor.x) && (anchor.x < -180 || anchor.x > 180)) ||
+          (finite(anchor.y) && (anchor.y < -90 || anchor.y > 90))
+        )
+          fail(`${path}/anchor`, 'Geographic coordinates must be valid longitude and latitude.');
+      }
+      if (anchor.space === 'source' && projection !== 'identity')
+        fail(
+          `${path}/anchor/space`,
+          'Source-space coordinates require an identity map of the preprojected source.',
+        );
+    } else {
+      if (!validId(anchor.id))
+        fail(`${path}/anchor/id`, 'Anchor id must be a nonempty string or finite number.');
+      if (anchor.kind === 'point') pointReferences = true;
+      else featureReferences = true;
+    }
+  }
+  const checkIds = (
+    rows: unknown[],
+    key: (row: Record<string, unknown>) => unknown,
+    path: string,
+  ) => {
+    const seen = new Set<string>();
+    for (const [index, raw] of rows.entries()) {
+      const id = key(object(raw) ?? {});
+      if (!validId(id))
+        fail(`${path}/${index}`, 'Persistent label identities must be present and valid.');
+      else if (seen.has(String(id)))
+        fail(
+          `${path}/${index}`,
+          'Persistent label identities are ambiguous after String normalization.',
+          'INVALID_VALUE',
+        );
+      else seen.add(String(id));
+    }
+  };
+  if (pointReferences) {
+    const key = object(points?.key);
+    if (!key || typeof key.field !== 'string' || !key.field.trim())
+      fail(
+        '/points/key',
+        'Point labels and point callouts require a unique points.key.',
+        'MISSING_FIELD',
+      );
+    else if (Array.isArray(points?.data))
+      checkIds(points.data, (row) => row[String(key.field)], '/points/data');
+  }
+  if (featureReferences) {
+    const objects = object(object(geo?.features)?.objects);
+    const first = objects ? object(Object.values(objects)[0]) : undefined;
+    const features =
+      first?.type === 'GeometryCollection' && Array.isArray(first.geometries)
+        ? first.geometries
+        : first
+          ? [first]
+          : [];
+    checkIds(features, (feature) => feature.id, '/geo/features');
   }
 }

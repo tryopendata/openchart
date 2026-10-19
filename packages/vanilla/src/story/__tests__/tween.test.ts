@@ -157,3 +157,26 @@ describe('createTween', () => {
     expect(rafCallbacks.size).toBe(0);
   });
 });
+it('completes natural and snapped tweens once, but never cancelled tweens', () => {
+  const complete = vi.fn();
+  const tween = createTween({
+    initial: 0,
+    lerp,
+    duration: 100,
+    onFrame: () => {},
+    onComplete: complete,
+  });
+  tween.to(10);
+  advanceFrame(50);
+  expect(complete).not.toHaveBeenCalled();
+  advanceFrame(50);
+  expect(complete).toHaveBeenLastCalledWith(10);
+  tween.to(20, { snap: true });
+  expect(complete).toHaveBeenLastCalledWith(20);
+  expect(complete).toHaveBeenCalledTimes(2);
+  tween.to(30);
+  advanceFrame(20);
+  tween.cancel();
+  advanceFrame(200);
+  expect(complete).toHaveBeenCalledTimes(2);
+});

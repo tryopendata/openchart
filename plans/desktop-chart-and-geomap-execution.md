@@ -1,6 +1,6 @@
 # Desktop chart and GeoMap RFC execution
 
-Status: P1/P2 foundations and approved B3 defaults/row-hover verified (2026-10-19). Foundation commit `9be168d9` follows review handoff `93112314`; the next checkpoint contains the approved defaults. P3/P4, the separate P5 gate and C7 remain open.
+Status: P1/P2/B3 and P3 verified (2026-10-19). P4, P5 and C7 are authorized and in progress; main merge and release remain on hold.
 Authorized: implement the reviewed RFC and commit the work to `codex/openchart-v9`.
 Merge/release: explicitly on hold. No publishing or external repository work.
 Source: [RFC](rfc-desktop-chart-and-geomap-design.md).
@@ -21,7 +21,7 @@ Source: [RFC](rfc-desktop-chart-and-geomap-design.md).
 - [x] Confirm final PR #137 state and source symbols; preserve concurrent reviewer work.
 - [x] Reconcile existing plan statuses and the reader/layout changes already delivered.
 - [x] Produce before/after design prototypes for desktop bar, line, stacked area, choropleth, and bubble map at 1024px and 1440px; also 390px and 200% text checks.
-- [ ] Freeze the P1/P2 default-change manifest and proposed API spellings; record exclusions.
+- [x] Freeze the P1/P2 default-change manifest and proposed API spellings; record exclusions.
 - [x] Capture performance/bundle baseline and use concrete examples for reader tasks.
 
 Acceptance: each proposed default has a visible before/after, semantic justification, and migration/opt-out policy. P0 is validation, not permission to merge implementation. No public API should be invented solely to make a single screenshot fit.
@@ -52,13 +52,13 @@ Acceptance: map scale and color bins match legend values exactly; legends clear 
 
 ### P3 — Geographic labels and callouts
 
-- [ ] Test first: feature/point/source/geographic anchors; concave/multipolygon interior points; preprojected rejection; stable IDs and duplicate errors.
-- [ ] Add typed spec/normalization/validation, bounded projected-ring records with hole/component associations, canonical fallback anchors, and the accessible label inventory.
-- [ ] Implement deterministic camera-dependent label placement, callout leaders, fixed note reserve, and bounded decluttering.
-- [ ] Add constant-screen-size rendering, zoom visibility thresholds, camera-settle reconciliation, and lifecycle cleanup.
-- [ ] Verify static export/SSR and multiple maps' clip/pattern ID isolation.
-- [ ] Test alternate visible multipolygon components, holes, geometry-budget fallback, coordinate-only labels omitted by collision, custom versus topology names, unjoined features, and zoom-hidden inventory entries. Verify the P3 disclosure works without enabling P4.
-- [ ] Add GeoMap API/docs/wrapper coverage; explicitly exclude annotation editing.
+- [x] Test first: feature/point/source/geographic anchors; concave/multipolygon interior points; preprojected rejection; stable IDs and duplicate errors.
+- [x] Add typed spec/normalization/validation, bounded projected-ring records with hole/component associations, canonical fallback anchors, and the accessible label inventory.
+- [x] Implement deterministic camera-dependent label placement, callout leaders, fixed note reserve, and bounded decluttering.
+- [x] Add constant-screen-size rendering, zoom visibility thresholds, camera-settle reconciliation, and lifecycle cleanup.
+- [x] Verify static export/SSR and multiple maps' clip/pattern ID isolation.
+- [x] Test alternate visible multipolygon components, holes, geometry-budget fallback, coordinate-only labels omitted by collision, custom versus topology names, unjoined features, and zoom-hidden inventory entries. Verify the P3 disclosure works without enabling P4.
+- [x] Add GeoMap API/docs/wrapper coverage; explicitly exclude annotation editing.
 
 Acceptance: names remain attached through camera movement; no text jumps due to a second projection fit; callout content is never lost when moved to notes; same spec/camera/size gives the same exported placement regardless of interaction history.
 
@@ -118,7 +118,7 @@ The revised RFC §13 is the authoritative detailed checklist; the earlier phase 
 - [x] 144 chart plates, map alternatives, desktop/narrow/manual/doubled-text checks; rejected visually worse continuous hatch.
 - [x] Finish endpoint minimum-plot fallback and specific impossible-layout diagnostic.
 - [x] Finish measured map candidate 200% text evidence (24 measured profiles and 36 browser zoom captures; method recorded).
-- [ ] User B3 row decisions, then adopt only approved defaults with migration materializations.
+- [x] User B3 row decisions, then adopt only approved defaults with migration materializations.
 - [x] Full final gates and ce:code-reviewer passed; findings fixed; source committed as `9be168d9`, this record committed separately.
 - [ ] P3/P4 implementation and P5 spike gate remain outstanding; not marked complete.
 
@@ -223,3 +223,77 @@ All median compile changes meet the 10% guard. The source-only benchmark directo
 Cleanup corrective pass: supported archival again returned `queued` for `/Users/riley/.codex/worktrees/v9-mark-contract/openchart` and `/Users/riley/.codex/worktrees/v9-themes/openchart`. Both checkout directories and Git registrations still exist. Their commits are patch-equivalent to v9, source trees are clean and ignored review logs were preserved; no active task process uses them. Removal is unconfirmed, so both are reported retained pending app archival. The active v9 checkout remains needed for the unmerged branch and P3/P4. No unrelated worktree or chat was removed.
 
 Final corrected point-key caption browser checks at 390/1280 confirm long title/unit/tick ink stays inside the overlay backdrop and clear of the size key. Evidence: `maps/final-point-caption-390.png` and `maps/final-point-caption-1280.png`.
+
+
+## P3 implementation start — after `ca0782a8`
+
+P1/P2 approved-default checkpoint is committed on `codex/openchart-v9`. The user again requested integration into v9 and cleanup; work continues directly in that branch. No main-branch merge is authorized.
+
+- [x] Freeze portable projected geometry, measured text, note-slot and inventory types; emit one optional `GeoMapLayout.labels` bundle only on enabled paths.
+- [x] Add optional text/textPriority/callouts authoring types, normalization, strict validation, schema/reference generation and keyed feature/point/source/geographic anchor tests.
+- [x] Prove projection-stream ring capture, holes and cuts, largest visible multipolygon component, validated bounded interior anchors, atomic 50k vertex fallback and 200 text-candidate limit.
+- [x] Resolve overlays statelessly for camera/spec/viewport; reserve complete authored callout-note capacity before fit, retain every custom/unjoined/coordinate/zoom-hidden entry in the inventory.
+- [x] Paint constant-screen text and leaders; preserve accepted identities during gesture, settle/coalesce programmatic camera changes, cancel owned work on replacement/destroy.
+- [x] Ship hidden accessible inventory and independent host-placed disclosure; reconcile host replacement without remount/camera loss in all three framework wrappers.
+- [x] Verify current-camera export, deterministic SSR, complete descriptions and multi-map clip/pattern/inventory IDs.
+- [x] Add separate chart/map design browser invariants and editorial examples; no new visual baselines or modification of existing invariant projects.
+- [x] Measure memory and 200-candidate placement p95; feature-disabled compile budget, all phase gates, 390/1024/1280/1440 manual zones, required code review and commit.
+
+Ownership: `design_b3_migration` owns portable layout types plus pure projected geometry/overlay modules; `design_map_defaults` owns spec/validation/normalization, candidates and compile/note integration; `design_row_hover` owns vanilla rendering/camera/inventory/SSR and wrapper lifecycle. Parent owns integration, examples/browser invariants, docs/generated files, gates and commits. All use the shared v9 checkout; no additional worktrees.
+
+### P3 integration checkpoint before review fixes
+
+All phase gates passed: 8,039 unit tests plus three intentional expected-failure cases; 115 visual checks with no baseline change; 177 existing general invariants with 11 existing skips; 106 annotation invariants; 16 new Chromium/WebKit geographic-label checks. Build, all framework/example typechecks, lint, generated artifacts, two script tests, package boundaries and the public chart bundle check passed (210,187 gzip bytes, zero product dependencies). Manual preview scans cover 390/1024/1280/1440, light/dark, doubled text, schematic holes/islands, SVG/SSR and PNG/JPG rasterization. Evidence: `/Users/riley/.codex/visualizations/2026/10/19/openchart-p3/`.
+
+Parent integration fixes preserve feature/point geometry: labels avoid every point symbol; zoom controls are a hard size-key obstacle; numbered note markers scale with theme text, use engine-measured radius, and disappear when obstructed while complete notes remain. No new baseline story or changes to existing invariant projects. The control/key correction is part of the approved collision-aware key policy.
+
+Paired feature-disabled compile (Apple M3 Max, owned browsers/dev server stopped, same core runtime, 100 warmups/1,000 alternating samples, ca0782a8 versus P3): map median 26.445→26.007 ms and p95 41.357→40.910; line 2.232→2.221 and 7.290→7.617; area 4.744→4.610 and 13.988→14.309. All changes are inside the 10% budget; raw paired results retain machine noise rather than claiming a speedup. Placement p95: 200 real counties 0.84 ms; 200 dense polygons/50k retained vertices at clipped zoom 16.02 ms; the same plus 1,000 point obstacles 15.15 ms (20 ms target). Retained JSON payloads: 221,240 bytes for the counties, 2,352,611 for the dense fixture. Capture memory deltas are GC-sensitive and include projection buffers: the 120k-vertex fallback retained no rings, with ~7.3 MB heap and ~18.1 MB RSS delta in this run. Source-only benchmark checkout/symlink was removed; no dependencies copied.
+
+The required full P3 code review found two geometry issues, now being fixed before commit: quadratic ring nesting at only 18,004 vertices, and false anchors for opposite-wound coincident polygon groups whose SVG fill cancels. The review examined all 52 changed/new files and found no other actionable API, lifecycle, wrapper or export issue. P3 remains uncommitted pending regression fixes and reviewer recheck.
+
+The user's linked-app build request was completed successfully on `codex/openchart-v9`; all six global Bun link registrations resolve to this worktree, all export targets exist, and built core/engine/vanilla/React/Vue imports plus a real engine compile passed. This is an active consumer checkout: retain its build outputs while linked apps use them. No merge to main or release occurred.
+
+
+## Completion authorization — 2026-10-19
+
+The user explicitly requested finishing the remaining implementation, all checks, committing and pushing `codex/openchart-v9`, rebuilding every Bun-linked package, and removing disposable worktrees. Main merge and release remain prohibited. The user then explicitly included P5 detail geography/insets and C7 cross-visualization attribution in this completion. P5's geometry spike still precedes freezing its API; its separate follow-up status no longer excludes execution.
+
+### P4 execution checklist (before coding)
+
+- [ ] Add explicit/default tooltip role and source metadata, remove display-string crosshair guessing, preserve authored supplemental field ordering and test duplicate display strings.
+- [ ] Publish discriminated typed-domain slice and comparison contracts; preserve existing four-argument observation API and last-two policy.
+- [ ] Build per-revision indexed slices from actual transformed observations, with panel-scoped facets, sparse-member states and duplicate `(series,x)` ambiguity; never persist pixel coordinates or invent pivot observations.
+- [ ] Reconcile reorder, filter, delete, dataset/measure/transform/key changes, ID-less replacement and theme/resize; silent controlled set/clear with equality guards and reason metadata.
+- [ ] Implement opt-in chart slice preview, persistent A/B guides and fixed host-placed readout; third pin replaces B, toggling A promotes B; missing/ambiguous/filtered data cannot produce deltas.
+- [ ] Share conservative comparison semantics through the existing numeric helper: explicit matching measure/unit/representation/grouping, percentage points, unavailable zero-relative change, negative-relative opt-in.
+- [ ] Add map reader from actual joined feature/point layout, separate canonical namespaces, no-data findable places, selection outlines and explicit Show on map; selection never implicitly zooms or filters.
+- [ ] Add local name search, opt-in ranking with stable ties and missing values unranked, paginated keyboard-accessible companion, and actual screen-space overlapping-symbol chooser.
+- [ ] Add optional `colorKey.activeValue`/`distribution`, measured fixed reserves, exact existing scale/bin mapping, A/B/no-data/out-of-range/category markers, finite joined feature counts and static export of distribution.
+- [ ] Introduce explicit private navigation ownership and successful-layout subscriptions; editor priority, camera drag/pinch cancellation, stationary touch only, controls excluded, cached coordinate bounds and at-most-once-per-frame pointer processing.
+- [ ] Forward options/state/events in React/Vue/Svelte Chart and GeoMap wrappers; StrictMode/reactive lifecycle, callback/host replacement without visualization recreation, controlled no-echo and complete cleanup.
+- [ ] Keep transient pins/panels out of static export; document snapshot-readout exclusion until a portable layout exists. Do not use DOM screenshots or foreignObject.
+- [ ] Add gallery journeys and Chromium/WebKit interactions, desktop/narrow/dark/large-text/manual keyboard/touch verification, 1k-observation pointer p95<8ms, no hover compilation, whole-phase gates and required code review.
+- [ ] Record that expert/manual reader tasks are not a recruited human usability study; do not claim untested usability gains.
+
+### P5 and C7 follow-through
+
+- [ ] P5: prove fixed primary fit using Texas/Austin/RGV geographic and source-space fixtures before API freeze; then object/fit selection, contextual detail thresholds, independently labeled/covered inset views, scoped camera/events/anchors, shared observation identity, multi-map/export IDs and all gates.
+- [ ] C7: measure attribution and branding together in shared chrome; preserve explicit text/style/offsets and stable note bands; verify chart, map, table, sankey, barlist, tilemap and graph paths at narrow/desktop widths, long text, large fonts, dark themes, hidden/compact modes and export. Record intentional appearance changes and v8 migration behavior.
+
+
+### P5 spike evidence before public API implementation
+
+`/Users/riley/.codex/visualizations/2026/10/19/openchart-p5/` contains the executable prototype, source URL/provenance, measured coordinates and manually inspected1440px plate. A fixed projection of254 Texas counties paints290 real Travis County Census2020 tracts without changing any Austin/McAllen/Brownsville/San Antonio point coordinate (0px drift). Refitting against tract detail instead moves points by up to2750.50px at the tested frame. An identity-projection source-space fixture also preserves the fitted coordinates. Tract geometry came from the official Census TIGERweb2020 service, simplified0.002° and normalized to D3's spherical ring orientation; no new runtime dependency.
+
+Independent Alaska/Hawaii feature insets were inspected. EqualEarth with its default central meridian gave Alaska an unusably wide antimeridian fit; using the existing Albers USA projection produced coherent labeled views. Implementation must make inset projection choice explicit when the parent's projection cannot represent a compact inset; do not claim arbitrary projection/topology combinations work. Source-space detail must explicitly declare the same decoded coordinate plane as its primary topology; reject geographic detail under identity projection. Inset view labels must disclose separate scale and coverage. This prototype freezes fit independence, not a claim that the later view/controller implementation is already complete.
+
+
+### P3 final verified checkpoint
+
+All review findings are fixed, including bounded topology/nesting work and proof against the complete SVG nonzero fill. Camera candidates use the original transformed geometry; cancelled coincident rings and degenerate components cannot produce false anchors. The independent focused re-review approved all 41 geometry tests with no outstanding findings.
+
+Final gates: 8,050 unit tests passed (three intentional expected failures), 20 new Chromium/WebKit geographic-label tests passed, and 398 existing browser checks passed with 11 existing skips (115 visual, 177 general, 106 annotation). No visual baseline changed. Lint, typecheck, six-package build, generated files, boundaries, script tests and bundle gate passed; public bundle 210,189 gzip bytes with zero product dependencies.
+
+Quiet final geometry measurement after all browser workers exited: real 200 counties p95 0.786ms; clipped dense 200 polygons/50k vertices p95 15.753ms; same with 1,000 symbol obstacles p95 15.447ms, all below 20ms. Retained county geometry 227,662 JSON bytes; dense geometry 2,352,611 bytes. The final run supersedes the loaded 21.06ms result without discarding it. Logs: /tmp/v9-p3-final-*.log and /tmp/v9-p3-geometry-final.log; durable manual/review evidence in the P3 visualization directory.
+
+The reported multiple-map error came from a gallery button deliberately submitting duplicate callout IDs. Normal controls no longer expose that failure action. Validation coverage remains through a private fixture event; new 390/1280 browser tests prove ordinary controls never show an error or change the second map. Manual preview scans on the user's localhost:6006 server passed at both widths, including zoom and complete narrow-layout notes.

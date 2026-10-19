@@ -52,14 +52,17 @@ import {
 } from '../legend/continuous';
 import { computeSizeLegendContent, sizeLegendTitleStyle } from '../legend/size';
 import { joinDataToFeatures } from './join';
+import { compilePreparedGeoLabels, hasGeoLabels, prepareGeoLabels } from './labels';
 import {
   geoMapFullArea,
+  geoMapZoomControlsBounds,
   measureGeoContinuousKey,
   measureGeoKeyText,
   measureGeoSizeKey,
   moveGeoMapLegend,
   occupiedBoundsSizeKeyCandidate,
   planGeoMapFrame,
+  reserveGeoCalloutNotes,
 } from './layout';
 import {
   classIntervalText,
@@ -292,7 +295,7 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
     spec as { chromeLayout?: 'subtract' | 'grow' } | undefined,
     options,
   );
-  const fullArea = geoMapFullArea(
+  let fullArea = geoMapFullArea(
     options.width,
     options.height,
     padding,
@@ -301,7 +304,7 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
     chromeLayout,
   );
 
-  if (fullArea.width <= 0 || fullArea.height <= 0) {
+  if ((fullArea.width <= 0 || fullArea.height <= 0) && !hasGeoLabels(mapSpec)) {
     return emptyLayout(chrome, theme, options, watermark);
   }
 
@@ -345,6 +348,51 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
       width: estimateTextWidth(text, size, weight),
       height: size,
     }));
+  const preparedLabels = prepareGeoLabels(
+    mapSpec,
+    geoFeatures,
+    joined,
+    theme,
+    measureKeyText,
+    Math.max(1, fullArea.width),
+  );
+  const noteHeight = preparedLabels?.noteHeight ?? 0;
+  fullArea = reserveGeoCalloutNotes(fullArea, noteHeight, chromeLayout);
+  const labelDiagnostic = (code: string, message: string, path = '/callouts') =>
+    options.onDiagnostic?.({
+      code,
+      message,
+      severity: 'warning',
+      status: 'failed',
+      path,
+      origin: 'author',
+      viewport: { width: options.width, height: options.height },
+    });
+  const emptyWithLabels = () => {
+    const empty = emptyLayout(chrome, theme, options, watermark);
+    if (preparedLabels) {
+      labelDiagnostic(
+        'MAP_LABEL_FRAME_UNFIT',
+        'The authored labels or note capacity leave no map viewport; complete authored text remains in the inventory and note slots.',
+      );
+      const area = { x: Math.max(0, fullArea.x), y: Math.max(0, fullArea.y), width: 0, height: 0 };
+      empty.area = area;
+      empty.labels = compilePreparedGeoLabels(
+        preparedLabels,
+        geoFeatures,
+        undefined,
+        [],
+        area,
+        [],
+        0,
+        labelDiagnostic,
+      );
+      if (chromeLayout !== 'subtract')
+        empty.height = Math.max(empty.height, area.y + noteHeight + chrome.bottomHeight + padding);
+    }
+    return empty;
+  };
+  if (fullArea.width <= 0 || fullArea.height <= 0) return emptyWithLabels();
   const showLegend = mapSpec.legend?.show !== false;
   const colorEncoding = mapSpec.encoding.color;
   // Channel-level `legend: null` suppresses the choropleth legend (the VL
@@ -752,8 +800,13 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
   const sideFrame = frame.sideLegend ? { area: frame.area, legend: frame.sideLegend } : null;
   const legendReserveGap = frame.legendReserveGap;
   const mapAreaHeight = frame.area.height;
+  const zoom = mapSpec.geo.zoom;
+  const zoomControlBounds =
+    zoom && (zoom === true || zoom.controls !== false)
+      ? geoMapZoomControlsBounds(frame.area)
+      : undefined;
   if (mapAreaHeight <= 0) {
-    return emptyLayout(chrome, theme, options, watermark);
+    return emptyWithLabels();
   }
 
   // 9. Projection + path generator
@@ -1367,6 +1420,7 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
       const content = measuredSizeContent;
       if (content) {
         const obstacles = [
+          ...(zoomControlBounds ? [zoomControlBounds] : []),
           ...(pointLegendOverlay
             ? [pointContinuousLegend?.bounds, pointCategoricalLegend?.bounds].filter(
                 (bounds): bounds is NonNullable<typeof bounds> => !!bounds,
@@ -1392,6 +1446,7 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
               content.height,
               obstacles,
               OVERLAY_LEGEND_INSET,
+              zoomControlBounds ? [zoomControlBounds] : [],
             );
         if (!placement) {
           options.onDiagnostic?.({
@@ -1630,13 +1685,38 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
     }
   }
 
+  const labels = preparedLabels
+    ? compilePreparedGeoLabels(
+        preparedLabels,
+        geoFeatures,
+        projection,
+        pointMarks,
+        mapArea,
+        [
+          zoomControlBounds,
+          continuousLegend?.bounds,
+          categoricalLegend?.bounds,
+          pointContinuousLegend?.bounds,
+          pointCategoricalLegend?.bounds,
+          pointSizeLegend?.bounds,
+        ].filter((bounds): bounds is NonNullable<typeof bounds> => !!bounds),
+        fullArea.y + fullArea.height - mapArea.y,
+        labelDiagnostic,
+      )
+    : undefined;
+  if (labels) {
+    for (const diagnostic of labels.initialOverlay.diagnostics ?? [])
+      options.onDiagnostic?.(diagnostic);
+  }
+
   // 21. Anchor bottom chrome below the map + legend, then compute total height
-  chrome.bottomAnchorY = fullArea.y + fullArea.height;
+  chrome.bottomAnchorY = fullArea.y + fullArea.height + noteHeight;
   const contentHeight =
     fullArea.y +
     (sideFrame ? fullArea.height : mapAreaHeight + legendReserveGap + legendBlockHeight) +
     chrome.bottomHeight +
-    padding;
+    padding +
+    noteHeight;
 
   // 22. Emit compile warnings
   for (const w of compileWarnings) {
@@ -1647,6 +1727,7 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
 
   return {
     area: mapArea,
+    ...(labels ? { labels } : {}),
     chrome,
     features: featureMarks,
     borders,

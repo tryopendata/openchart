@@ -562,13 +562,13 @@ Acceptance: map scale and color bins match legend values exactly; legends clear 
 
 ### P3 — Geographic labels and callouts
 
-- [ ] Test first: feature/point/source/geographic anchors; concave/multipolygon interior points; preprojected rejection; stable IDs and duplicate errors.
-- [ ] Add typed spec/normalization/validation, bounded projected-ring records with hole/component associations, canonical fallback anchors, and the accessible label inventory.
-- [ ] Implement deterministic camera-dependent label placement, callout leaders, the callout-note reserve in `geo/layout.ts`, and bounded decluttering.
-- [ ] Add constant-screen-size rendering, zoom visibility thresholds, camera-settle reconciliation, and lifecycle cleanup.
-- [ ] Verify static export/SSR and multiple maps' clip/pattern ID isolation.
-- [ ] Test alternate visible multipolygon components, holes, geometry-budget fallback, coordinate-only labels omitted by collision, custom versus topology names, unjoined features, and zoom-hidden inventory entries. Verify the P3 disclosure works without enabling P4.
-- [ ] Add GeoMap API/docs/wrapper coverage; explicitly exclude annotation editing.
+- [x] Test first: feature/point/source/geographic anchors; concave/multipolygon interior points; preprojected rejection; stable IDs and duplicate errors.
+- [x] Add typed spec/normalization/validation, bounded projected-ring records with hole/component associations, canonical fallback anchors, and the accessible label inventory.
+- [x] Implement deterministic camera-dependent label placement, callout leaders, the callout-note reserve in `geo/layout.ts`, and bounded decluttering.
+- [x] Add constant-screen-size rendering, zoom visibility thresholds, camera-settle reconciliation, and lifecycle cleanup.
+- [x] Verify static export/SSR and multiple maps' clip/pattern ID isolation.
+- [x] Test alternate visible multipolygon components, holes, geometry-budget fallback, coordinate-only labels omitted by collision, custom versus topology names, unjoined features, and zoom-hidden inventory entries. Verify the P3 disclosure works without enabling P4.
+- [x] Add GeoMap API/docs/wrapper coverage; explicitly exclude annotation editing.
 
 Acceptance: names remain attached through camera movement; no text jumps due to a second projection fit; callout content is never lost when moved to notes; same spec/camera/size gives the same exported placement regardless of interaction history.
 
@@ -737,3 +737,8 @@ B3 adoption, the row-hover runtime contract and implementation, P3/P4, the P5 sp
 The user reviewed the gallery and approved grid/zero hierarchy, stacked-area band anchors, clearer static map keys, collision-aware size-key placement, and quieter borders. Ordinary grid light/dark: rgba(0,0,0,0.05) / rgba(255,255,255,0.06); zero: rgba(0,0,0,0.22) / rgba(255,255,255,0.24). Interior map borders: rgba(0,0,0,0.14) / rgba(255,255,255,0.18); outline: rgba(0,0,0,0.40) / rgba(255,255,255,0.38).
 
 Retain current bar/column proportions, endpoint sizes/spacing, and the current no-data hatch. These choices supersede earlier proposed retunes and the proposed hatch adoption; useful opt-in controls remain. Expressible v8 appearance must be materialized by migration; static key and collision-placement changes need truthful limitation reporting. P5 remains a separate gate. Merge and release remain on hold.
+
+
+### Completion scope update — 2026-10-19
+
+The user explicitly included P5 and C7 in this completion. Their earlier separate-follow-up status is superseded for implementation; the P5 spike remains mandatory and its fixed-fit Texas/Austin/RGV and labeled-inset proof is recorded in the execution plan. P3 is implemented and fully verified with no baseline changes. P4, P5 and C7 remain unfinished. Commit and push to v9 are authorized; merge to main and release remain prohibited.

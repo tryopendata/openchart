@@ -98,6 +98,14 @@ Step by step:
 
 The output is a `ChartLayout` with everything the renderer needs: positioned marks, resolved chrome, axes, gridlines, annotations, tooltips, accessibility metadata, and the resolved theme.
 
+### Geographic label compilation
+
+GeoMap place labels and callouts are optional. The compiler measures their complete text and fixed authored callout-note capacity before the single projection fit. `geo/labels.ts` builds stable candidates from explicit text channels and typed anchors. `geo/label-geometry.ts` captures projected components and holes through the same projection stream as feature paths, retaining only candidate geometry within a bounded vertex budget.
+
+The portable `GeoMapLayout.labels` bundle contains measured text, projected geometry, obstacles, note slots and the initial overlay. It contains no DOM nodes or projection functions. The pure `resolveGeoOverlay` applies a camera affine transform, validates visible interior anchors and places labels deterministically. Camera settlement and export share this resolver; neither refits the topology.
+
+The vanilla adapter paints constant-screen-size text in a sibling of the transformed camera group. During movement it projects accepted anchors and culls offscreen boxes; settlement recomputes placement. The separate inventory controller owns a hidden accessible list and an optional disclosure in a host-supplied container. It cannot reserve SVG space or change camera state. Framework wrappers forward the runtime option and reconcile container replacement without remounting.
+
 ### Table compilation
 
 Tables follow a similar validate-normalize-theme pipeline, then run a different set of computations:

@@ -29,6 +29,7 @@ import {
 import { VizDarkModeKey, VizThemeKey } from './context';
 
 export interface GeoMapProps {
+  labelInventory?: GeoMapMountOptions['labelInventory'];
   spec: GeoMapSpec;
   theme?: ThemeConfig;
   darkMode?: DarkMode;
@@ -39,6 +40,10 @@ export interface GeoMapProps {
 export const GeoMap = defineComponent({
   name: 'GeoMap',
   props: {
+    labelInventory: {
+      type: [Boolean, Object] as PropType<GeoMapMountOptions['labelInventory']>,
+      default: undefined,
+    },
     spec: {
       type: Object as PropType<GeoMapSpec>,
       required: true,
@@ -93,6 +98,7 @@ export const GeoMap = defineComponent({
         onMarkHover: (feature) => emit('mark-hover', feature),
         onCameraChange: (camera) => emit('camera-change', camera),
         autoResize: true,
+        labelInventory: props.labelInventory,
       };
 
       instance = createGeoMap(container, props.spec, options);
@@ -130,6 +136,11 @@ export const GeoMap = defineComponent({
           instance.update(props.spec);
         }
       },
+    );
+
+    watch(
+      () => props.labelInventory,
+      (value) => instance?.setLabelInventory(value),
     );
 
     // Recreate map when theme or darkMode change

@@ -1,3 +1,9 @@
+import { cameraForTarget } from './map-camera';
+import {
+  describeGeoLabelInventory,
+  renderGeoLabelOverlay,
+  resolveMapLabelOverlay,
+} from './map-labels';
 /**
  * Map SVG renderer: converts a GeoMapLayout into SVG DOM elements.
  *
@@ -586,5 +592,12 @@ export function renderMapSVG(layout: GeoMapLayout, opts?: { animate?: boolean })
     renderWatermark(svg, layout);
   }
 
+  if (layout.labels) {
+    const overlay = resolveMapLabelOverlay(layout, cameraForTarget(layout, layout.focus?.target));
+    if (overlay) {
+      renderGeoLabelOverlay(svg, layout, overlay);
+      describeGeoLabelInventory(svg, overlay);
+    }
+  }
   return svg;
 }

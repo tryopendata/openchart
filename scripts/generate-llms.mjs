@@ -105,7 +105,7 @@ The engine validates the spec, compiles layout and scales, and renders SVG (char
 
 ## VizSpec
 
-VizSpec is a union of six spec kinds, discriminated differently per kind:
+VizSpec is a union of these spec kinds, discriminated differently per kind:
 
 - **ChartSpec**: has a \`mark\` field (a mark string or MarkDef object). No \`type\`.
 - **LayerSpec**: has a \`layer\` array (overlay multiple charts on shared scales).
@@ -114,6 +114,7 @@ VizSpec is a union of six spec kinds, discriminated differently per kind:
 - **SankeySpec**: \`type: "sankey"\`.
 - **TileMapSpec**: \`type: "tilemap"\`.
 - **BarListSpec**: \`type: "barlist"\`.
+- **GeoMapSpec**: \`type: "map"\`.
 
 There is no \`type: "line"\` grammar. Charts use \`mark\`, following Vega-Lite. \`mark: "line"\`, not \`type: "line"\`.
 
@@ -242,6 +243,26 @@ Each accepts a string or \`{ text, style?, offset? }\`.
   chrome?: Chrome,
 }
 \`\`\`
+
+## GeoMapSpec
+
+\`\`\`typescript
+{
+  type: "map",
+  geo: { features: topology, projection?: "albersUsa" | "mercator" | "equalEarth" | "identity", zoom?: boolean },
+  data: rows,
+  encoding: { key?, color?, tooltip?, text?, textPriority? },
+  points?: { data, longitude, latitude, key?, size?, color?, tooltip?, text?, textPriority? },
+  callouts?: [{ id, anchor, text, subtitle?, priority?, minZoom?, maxZoom?, offset?, maxWidth? }],
+  chrome?, legend?, theme?, fields?,
+}
+\`\`\`
+
+Use \`createGeoMap(container, spec)\` or the \`GeoMap\` framework component. Labels are opt-in: \`text: { field: "placeName" }\`; quantitative \`textPriority\` orders bounded placement. Point labels and point-anchored callouts require a unique \`points.key\`.
+
+Callout anchors are \`{ kind: "feature", id }\`, \`{ kind: "point", id }\`, or \`{ kind: "coordinate", space: "geographic" | "source", x, y }\`. Feature IDs refer to topology features; point IDs refer to the point key. Geographic anchors use longitude/latitude and require a geographic projection; source anchors use the preprojected identity map's coordinate system. Do not interchange these spaces. Callout IDs must be unique.
+
+Labels retain constant text size during camera movement. Decluttered text remains in the accessible inventory; callouts that do not fit use reserved numbered notes. Complete authored inventory is included in standalone SVG descriptions. A visible place-list disclosure is a runtime \`labelInventory: { container: hostElement }\` option, independent of any reader panel. The host owns its position. Omission does not add visible HTML or labels, and map callouts are not Cartesian editable annotations.
 
 ## SankeySpec, TileMapSpec, BarListSpec
 

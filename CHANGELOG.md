@@ -8,6 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Chart and map design
 
+- Add opt-in geographic `text`/`textPriority` channels and keyed `callouts`, with
+  polygon-interior anchors, bounded collision placement, fixed note capacity and
+  constant-screen-size labels through camera movement.
+- Preserve every authored place name and callout in an accessible inventory; add
+  a host-placed `labelInventory` disclosure in vanilla and all GeoMap wrappers.
+- Include settled geographic labels and full inventory descriptions in SVG export
+  and GeoMap static rendering; add stable `idPrefix` for multiple static figures.
+
 - Add measured bar value placement (`adaptive`, `inside`, `outside`, `column`),
   including shared value columns in facets and diagnostics when labels cannot fit.
 - Add opt-in `rowHover` across vanilla and all Chart wrappers: quiet full-row

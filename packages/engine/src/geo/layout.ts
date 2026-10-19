@@ -121,6 +121,7 @@ export function occupiedBoundsSizeKeyCandidate(
   height: number,
   obstacles: readonly Rect[],
   inset = 18,
+  hardObstacles: readonly Rect[] = [],
 ): Rect | null {
   if (width + inset * 2 > area.width || height + inset * 2 > area.height) return null;
   const candidates = [
@@ -132,7 +133,11 @@ export function occupiedBoundsSizeKeyCandidate(
   const overlap = (a: Rect, b: Rect) =>
     Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)) *
     Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y));
-  return candidates.reduce((best, candidate) =>
+  const eligible = candidates.filter((candidate) =>
+    hardObstacles.every((obstacle) => overlap(candidate, obstacle) === 0),
+  );
+  if (!eligible.length) return null;
+  return eligible.reduce((best, candidate) =>
     obstacles.reduce((sum, obstacle) => sum + overlap(candidate, obstacle), 0) <
     obstacles.reduce((sum, obstacle) => sum + overlap(best, obstacle), 0)
       ? candidate
@@ -300,4 +305,18 @@ export function measureGeoKeyText(
     Math.max(style.fontSize * 1.35, measure('Mg', style.fontSize, style.fontWeight).height + 4),
   );
   return { lines, height: lines.length * advance, advance };
+}
+
+/** Authored callout capacity is fixed before fitting and never follows camera state. */
+export function reserveGeoCalloutNotes(
+  area: Rect,
+  height: number,
+  mode: 'grow' | 'subtract' | 'notes',
+): Rect {
+  return height > 0 && mode === 'subtract' ? { ...area, height: area.height - height } : area;
+}
+
+/** Portable bounds of the 3 × 28px zoom buttons, 1px border and 8px inset. */
+export function geoMapZoomControlsBounds(area: Rect): Rect {
+  return { x: area.x + area.width - 38, y: area.y + 8, width: 30, height: 86 };
 }

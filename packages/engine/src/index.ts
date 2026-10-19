@@ -206,5 +206,6 @@ export type { AppliedSpecPatch } from './design/patch';
 export { applySpecPatch } from './design/patch';
 export type { RecommendationResult, RecommendationRoles } from './design/recommend';
 export { recommendCompositions } from './design/recommend';
+export { resolveGeoOverlay } from './geo/overlay-layout';
 export type { SpecRepair } from './migration/v8';
 export { migrateSpecV8 } from './migration/v8';

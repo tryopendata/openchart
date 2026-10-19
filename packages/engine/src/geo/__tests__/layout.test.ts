@@ -85,3 +85,15 @@ it('wraps long unbroken caption text at doubled size without reducing font size'
   for (const line of measured.lines) expect(line.length * 24).toBeLessThanOrEqual(180);
   expect(measured.height).toBeGreaterThan(24);
 });
+
+it('excludes zoom controls from size-key choices even when geography occupies other corners', () => {
+  const area = { x: 0, y: 0, width: 350, height: 300 };
+  const controls = { x: 312, y: 8, width: 30, height: 86 };
+  const occupied = [
+    { x: 18, y: 202, width: 100, height: 80 },
+    { x: 232, y: 202, width: 100, height: 80 },
+    { x: 18, y: 18, width: 100, height: 80 },
+  ];
+  const key = occupiedBoundsSizeKeyCandidate(area, 100, 80, occupied, 18, [controls])!;
+  expect(key.y).toBe(202);
+});

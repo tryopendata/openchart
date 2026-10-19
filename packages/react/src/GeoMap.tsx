@@ -29,6 +29,7 @@ import {
 import { useVizDarkMode, useVizTheme } from './ThemeContext';
 
 export interface GeoMapProps {
+  labelInventory?: GeoMapMountOptions['labelInventory'];
   /** The map spec to render. */
   spec: GeoMapSpec;
   /** Theme overrides. */
@@ -53,7 +54,17 @@ export interface GeoMapHandle {
 }
 
 export const GeoMap = forwardRef<GeoMapHandle, GeoMapProps>(function GeoMap(
-  { spec, theme: themeProp, darkMode, onMarkClick, onMarkHover, onCameraChange, className, style },
+  {
+    spec,
+    theme: themeProp,
+    darkMode,
+    labelInventory,
+    onMarkClick,
+    onMarkHover,
+    onCameraChange,
+    className,
+    style,
+  },
   ref,
 ) {
   const contextTheme = useVizTheme();
@@ -131,6 +142,11 @@ export const GeoMap = forwardRef<GeoMapHandle, GeoMapProps>(function GeoMap(
     specRef.current = specString;
     instance.update(spec);
   }, [spec]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reapply the host after theme-driven instance recreation
+  useEffect(() => {
+    instanceRef.current?.setLabelInventory(labelInventory);
+  }, [labelInventory, theme, resolvedDarkMode]);
 
   return (
     <div

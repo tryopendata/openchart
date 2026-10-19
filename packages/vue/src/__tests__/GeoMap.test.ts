@@ -173,3 +173,34 @@ describe('GeoMap', () => {
     wrapper.unmount();
   });
 });
+it('forwards the inventory host and replaces it without remounting or losing the camera', async () => {
+  const spec: GeoMapSpec = {
+    ...mapSpec,
+    animation: false,
+    callouts: [
+      {
+        id: 'custom',
+        anchor: { kind: 'coordinate', space: 'geographic', x: -100, y: 35 },
+        text: 'Exact coordinate note',
+        minZoom: 2,
+      },
+    ],
+  };
+  const first = document.createElement('aside'),
+    second = document.createElement('aside');
+  const wrapper = mount(GeoMap, { props: { spec, labelInventory: { container: first } } });
+  await flushPromises();
+  expect(first.querySelector('details')).not.toBeNull();
+  const instance = (
+    wrapper.vm as unknown as { instance: import('@opendata-ai/openchart-vanilla').GeoMapInstance }
+  ).instance;
+  const svg = wrapper.element.querySelector('svg');
+  instance.setCamera({ ...instance.getCamera(), k: 2 });
+  await wrapper.setProps({ labelInventory: { container: second } });
+  expect(first.querySelector('details')).toBeNull();
+  expect(second.querySelector('details')).not.toBeNull();
+  expect(wrapper.element.querySelector('svg')).toBe(svg);
+  expect(instance.getCamera().k).toBe(2);
+  wrapper.unmount();
+  expect(second.querySelector('details')).toBeNull();
+});

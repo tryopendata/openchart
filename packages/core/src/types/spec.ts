@@ -2897,12 +2897,35 @@ export interface GeoMapGeo {
   zoom?: boolean | GeoMapZoomConfig;
 }
 
+/** Explicit map anchor; feature and point identities occupy separate namespaces. */
+export type GeoAnchor =
+  | { kind: 'feature'; id: string | number }
+  | { kind: 'point'; id: string | number }
+  | { kind: 'coordinate'; space: 'geographic' | 'source'; x: number; y: number };
+
+/** Static authored geographic explanation; plain text, without chart editing semantics. */
+export interface GeoCallout {
+  id: string;
+  anchor: GeoAnchor;
+  text: string;
+  subtitle?: string;
+  priority?: number;
+  minZoom?: number;
+  maxZoom?: number;
+  offset?: { dx: number; dy: number };
+  maxWidth?: number;
+}
+
 /** Encoding channels specific to map visualizations. */
 export interface GeoMapEncoding {
   /** Join key field in the data. Required for choropleth; optional in basemap-only mode (points layer with empty data). */
   key?: EncodingChannel;
   /** Color encoding (quantitative or nominal). Drives fill color of features. Optional when a points layer is present (basemap-only mode). */
   color?: EncodingChannel;
+  /** Explicit feature label field, read from its joined row or same-named topology property. */
+  text?: EncodingChannel;
+  /** Higher finite quantitative values win label placement priority. Requires text. */
+  textPriority?: EncodingChannel;
   /** Tooltip encoding (optional). */
   tooltip?: EncodingChannel | EncodingChannel[];
 }
@@ -2919,6 +2942,10 @@ export interface GeoMapPointsLayer {
   size?: EncodingChannel;
   /** Optional color encoding (nominal or quantitative). Independent scale from choropleth. */
   color?: EncodingChannel;
+  /** Explicit point label field. Requires a unique points.key. */
+  text?: EncodingChannel;
+  /** Quantitative label priority; defaults to the point size value. Requires text. */
+  textPriority?: EncodingChannel;
   /** Tooltip channel(s), same shape as GeoMapEncoding.tooltip. */
   tooltip?: EncodingChannel | EncodingChannel[];
   /** Stable id for event callbacks, and the key used to match points across
@@ -2949,6 +2976,8 @@ export interface GeoMapSpec {
   watermark?: boolean;
   /** Optional point/symbol layer rendered above choropleth features. */
   points?: GeoMapPointsLayer;
+  /** Authored labels with explicit feature, point, or coordinate anchors. */
+  callouts?: GeoCallout[];
   /** Animation configuration for entrance animations. */
   animation?: AnimationSpec;
 }

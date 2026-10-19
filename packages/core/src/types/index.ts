@@ -36,6 +36,7 @@ export type {
   MarkEvent,
 } from './events';
 export { elementRef } from './events';
+export type * from './geo-labels';
 // Layout types (engine output)
 export type {
   A11yMetadata,
@@ -185,6 +186,8 @@ export type {
   FilterPredicate,
   FilterTransform,
   FoldTransform,
+  GeoAnchor,
+  GeoCallout,
   GeoMapEncoding,
   GeoMapFocus,
   GeoMapGeo,

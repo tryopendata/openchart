@@ -9,6 +9,7 @@
  * fully resolved with computed positions, colors, and dimensions.
  */
 
+import type { GeoLabelsBundle } from './geo-labels';
 import type { GradientDef } from './spec';
 import type { ResolvedTheme } from './theme';
 
@@ -2109,6 +2110,8 @@ export interface GeoMapBorders {
  * accessibility metadata.
  */
 export interface GeoMapLayout {
+  /** Omitted entirely unless geographic labels or callouts are authored. */
+  labels?: GeoLabelsBundle;
   /** The map drawing area (after chrome and legend are subtracted). */
   area: Rect;
   /** Resolved chrome text elements with positions and styles. */

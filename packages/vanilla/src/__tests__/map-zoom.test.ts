@@ -602,3 +602,77 @@ describe('GeoMap reader zoom (geo.zoom)', () => {
     expect(e.defaultPrevented).toBe(false);
   });
 });
+it('notifies gesture settlement for wheel idle and drag cancellation, and clears idle work on destroy', async () => {
+  vi.useFakeTimers();
+  const { compileGeoMap } = await import('@opendata-ai/openchart-engine');
+  const { createMapZoomController } = await import('../map-zoom');
+  const layout = compileGeoMap(zoomSpec(), { width: 600, height: 400 });
+  const container = createContainer();
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  container.append(svg);
+  let camera: Camera = { cx: layout.mapSize.width / 2, cy: layout.mapSize.height / 2, k: 2 };
+  const begin = vi.fn(),
+    end = vi.fn();
+  const controller = createMapZoomController({
+    container,
+    getSvg: () => svg,
+    getLayout: () => layout,
+    getConfig: () => ({ maxZoom: 12, controls: false }),
+    getCamera: () => camera,
+    setCamera: (next) => {
+      camera = next;
+    },
+    animateCamera: (next) => {
+      camera = next;
+    },
+    reset: () => {},
+    hideTooltip: () => {},
+    onGestureStart: begin,
+    onGestureEnd: end,
+  });
+  controller.onRender(false);
+  const x = layout.area.x + layout.area.width / 2,
+    y = layout.area.y + layout.area.height / 2;
+  wheel(container, {
+    clientX: x,
+    clientY: y,
+    ctrlKey: true,
+    deltaY: -20,
+    bubbles: true,
+    cancelable: true,
+  });
+  expect(begin).toHaveBeenCalledTimes(1);
+  vi.advanceTimersByTime(119);
+  expect(end).not.toHaveBeenCalled();
+  vi.advanceTimersByTime(1);
+  expect(end).toHaveBeenCalledTimes(1);
+  const pointer = (type: string, dx = 0) => {
+    const event = new MouseEvent(type, {
+      clientX: x + dx,
+      clientY: y,
+      button: 0,
+      bubbles: true,
+      cancelable: true,
+    });
+    Object.defineProperties(event, { pointerId: { value: 1 }, pointerType: { value: 'mouse' } });
+    container.dispatchEvent(event);
+  };
+  pointer('pointerdown');
+  pointer('pointermove', 20);
+  expect(begin).toHaveBeenCalledTimes(2);
+  pointer('pointercancel', 20);
+  expect(end).toHaveBeenCalledTimes(2);
+  wheel(container, {
+    clientX: x,
+    clientY: y,
+    ctrlKey: true,
+    deltaY: -20,
+    bubbles: true,
+    cancelable: true,
+  });
+  controller.destroy();
+  vi.runAllTimers();
+  expect(end).toHaveBeenCalledTimes(2);
+  vi.useRealTimers();
+  container.remove();
+});
