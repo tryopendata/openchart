@@ -3,6 +3,7 @@
 -->
 <script lang="ts">
 import type { BarListSpec, DarkMode, ThemeConfig } from '@opendata-ai/openchart-core';
+import { mergeThemeConfig } from '@opendata-ai/openchart-core';
 import {
   type BarListInstance,
   type BarListMountOptions,
@@ -51,7 +52,7 @@ onMount(() => {
 let prevSpec = '';
 
 $effect(() => {
-  const resolvedTheme = theme ?? ctxTheme?.();
+  const resolvedTheme = mergeThemeConfig(ctxTheme?.(), theme);
   const resolvedDarkMode = darkMode ?? ctxDarkMode?.();
   const currentSpec = untrack(() => spec);
 
@@ -69,7 +70,7 @@ $effect(() => {
         data: Record<string, unknown>;
       } | null,
     ) => untrack(() => onrowhover)?.(row),
-    responsive: true,
+    autoResize: true,
   };
 
   instance = createBarList(containerEl, currentSpec, options);

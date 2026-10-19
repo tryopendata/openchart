@@ -223,7 +223,7 @@ describe('GeoMap reader zoom (geo.zoom)', () => {
   it('is off by default: no controls, no focus stop, wheel untouched', () => {
     const spec = zoomSpec();
     delete spec.geo.zoom;
-    const inst = createGeoMap(container, spec, { responsive: false });
+    const inst = createGeoMap(container, spec, { autoResize: false });
     expect(container.querySelector('.oc-map-zoom')).toBeNull();
     expect(container.querySelector('svg')!.hasAttribute('tabindex')).toBe(false);
 
@@ -238,7 +238,7 @@ describe('GeoMap reader zoom (geo.zoom)', () => {
   });
 
   it('renders accessible zoom buttons; out/reset start disabled', () => {
-    const inst = createGeoMap(container, zoomSpec(), { responsive: false });
+    const inst = createGeoMap(container, zoomSpec(), { autoResize: false });
     const group = container.querySelector('.oc-map-zoom-controls')!;
     expect(group.getAttribute('role')).toBe('group');
     expect(button(container, 'in').getAttribute('aria-label')).toBe('Zoom in');
@@ -252,7 +252,7 @@ describe('GeoMap reader zoom (geo.zoom)', () => {
   });
 
   it('controls: false keeps gestures but hides the buttons', () => {
-    const inst = createGeoMap(container, zoomSpec({ controls: false }), { responsive: false });
+    const inst = createGeoMap(container, zoomSpec({ controls: false }), { autoResize: false });
     expect(container.querySelector('.oc-map-zoom-controls')).toBeNull();
     wheel(container.querySelector('svg')!, { deltaY: -100, ctrlKey: true, ...mapCenter(inst) });
     expect(inst.getCamera().k).toBeGreaterThan(1);
@@ -260,7 +260,7 @@ describe('GeoMap reader zoom (geo.zoom)', () => {
   });
 
   it('ctrl + wheel zooms around the cursor', () => {
-    const inst = createGeoMap(container, zoomSpec(), { responsive: false });
+    const inst = createGeoMap(container, zoomSpec(), { autoResize: false });
     const vb = inst.layout.mapSize;
     const pivot = { x: vb.width * 0.3, y: vb.height * 0.4 };
     const before = mapPointUnder(inst.getCamera(), vb, pivot.x, pivot.y);
@@ -281,7 +281,7 @@ describe('GeoMap reader zoom (geo.zoom)', () => {
   });
 
   it('meta (cmd) + wheel also zooms', () => {
-    const inst = createGeoMap(container, zoomSpec(), { responsive: false });
+    const inst = createGeoMap(container, zoomSpec(), { autoResize: false });
     wheel(container.querySelector('svg')!, { deltaY: -100, metaKey: true, ...mapCenter(inst) });
     expect(inst.getCamera().k).toBeGreaterThan(1);
     inst.destroy();
@@ -290,7 +290,7 @@ describe('GeoMap reader zoom (geo.zoom)', () => {
   it('a plain wheel scrolls the page and flashes the hint', () => {
     vi.useFakeTimers();
     try {
-      const inst = createGeoMap(container, zoomSpec(), { responsive: false });
+      const inst = createGeoMap(container, zoomSpec(), { autoResize: false });
       const e = wheel(container.querySelector('svg')!, { deltaY: 100, ...mapCenter(inst) });
       expect(e.defaultPrevented).toBe(false);
       expect(inst.getCamera().k).toBe(1);
@@ -310,7 +310,7 @@ describe('GeoMap reader zoom (geo.zoom)', () => {
   });
 
   it('ignores wheels outside the map area (chrome, legend)', () => {
-    const inst = createGeoMap(container, zoomSpec(), { responsive: false });
+    const inst = createGeoMap(container, zoomSpec(), { autoResize: false });
     const { area } = inst.layout;
     const e = wheel(container.querySelector('svg')!, {
       deltaY: -100,
@@ -325,7 +325,7 @@ describe('GeoMap reader zoom (geo.zoom)', () => {
 
   it('buttons zoom in, clamp at maxZoom, zoom out, and reset (reduced motion snaps)', () => {
     mockReducedMotion();
-    const inst = createGeoMap(container, zoomSpec({ maxZoom: 4 }), { responsive: false });
+    const inst = createGeoMap(container, zoomSpec({ maxZoom: 4 }), { autoResize: false });
     button(container, 'in').click();
     expect(inst.getCamera().k).toBeCloseTo(2);
     expect(button(container, 'out').disabled).toBe(false);
@@ -349,7 +349,7 @@ describe('GeoMap reader zoom (geo.zoom)', () => {
 
   it('zoom buttons tween when motion is allowed', () => {
     const raf = vi.spyOn(window, 'requestAnimationFrame');
-    const inst = createGeoMap(container, zoomSpec(), { responsive: false });
+    const inst = createGeoMap(container, zoomSpec(), { autoResize: false });
     button(container, 'in').click();
     expect(raf).toHaveBeenCalled();
     inst.destroy();
@@ -357,7 +357,7 @@ describe('GeoMap reader zoom (geo.zoom)', () => {
 
   it('drag pans once zoomed, stays inside the map, and swallows the click', () => {
     const onMarkClick = vi.fn();
-    const inst = createGeoMap(container, zoomSpec(), { responsive: false, onMarkClick });
+    const inst = createGeoMap(container, zoomSpec(), { autoResize: false, onMarkClick });
     inst.setCamera({ ...inst.getCamera(), k: 3 });
     const svg = container.querySelector('svg')!;
     const start = inst.getCamera();
@@ -388,7 +388,7 @@ describe('GeoMap reader zoom (geo.zoom)', () => {
 
   it('a press without movement is still a click', () => {
     const onMarkClick = vi.fn();
-    const inst = createGeoMap(container, zoomSpec(), { responsive: false, onMarkClick });
+    const inst = createGeoMap(container, zoomSpec(), { autoResize: false, onMarkClick });
     inst.setCamera({ ...inst.getCamera(), k: 3 });
     const svg = container.querySelector('svg')!;
     const c = mapCenter(inst);
@@ -402,7 +402,7 @@ describe('GeoMap reader zoom (geo.zoom)', () => {
   });
 
   it('blocks text selection for map presses that can become a drag or double-click', () => {
-    const inst = createGeoMap(container, zoomSpec(), { responsive: false });
+    const inst = createGeoMap(container, zoomSpec(), { autoResize: false });
     const svg = container.querySelector('svg')!;
     const c = mapCenter(inst);
     const down = (detail: number) => {
@@ -421,7 +421,7 @@ describe('GeoMap reader zoom (geo.zoom)', () => {
   });
 
   it('drag does nothing at the full view', () => {
-    const inst = createGeoMap(container, zoomSpec(), { responsive: false });
+    const inst = createGeoMap(container, zoomSpec(), { autoResize: false });
     const svg = container.querySelector('svg')!;
     const c = mapCenter(inst);
     pointer(svg, 'pointerdown', c);
@@ -433,7 +433,7 @@ describe('GeoMap reader zoom (geo.zoom)', () => {
 
   it('double-click zooms in 2x at the cursor; shift + double-click zooms out', () => {
     mockReducedMotion();
-    const inst = createGeoMap(container, zoomSpec(), { responsive: false });
+    const inst = createGeoMap(container, zoomSpec(), { autoResize: false });
     const svg = container.querySelector('svg')!;
     svg.dispatchEvent(
       new MouseEvent('dblclick', { bubbles: true, cancelable: true, ...mapCenter(inst) }),
@@ -453,7 +453,7 @@ describe('GeoMap reader zoom (geo.zoom)', () => {
 
   it('keyboard: + zooms, arrows pan, 0 resets; arrows at full view scroll the page', () => {
     mockReducedMotion();
-    const inst = createGeoMap(container, zoomSpec(), { responsive: false });
+    const inst = createGeoMap(container, zoomSpec(), { autoResize: false });
     const svg = container.querySelector('svg')!;
     svg.focus();
 
@@ -477,7 +477,7 @@ describe('GeoMap reader zoom (geo.zoom)', () => {
   });
 
   it('touch: pinch zooms; one finger scrolls the page until zoomed, then pans', () => {
-    const inst = createGeoMap(container, zoomSpec(), { responsive: false });
+    const inst = createGeoMap(container, zoomSpec(), { autoResize: false });
     const svg = container.querySelector('svg')!;
     const c = mapCenter(inst);
     expect((svg as SVGSVGElement & ElementCSSInlineStyle).style.touchAction).toBe('pan-x pan-y');
@@ -513,7 +513,7 @@ describe('GeoMap reader zoom (geo.zoom)', () => {
   });
 
   it('points keep their screen radius and still show tooltips while zoomed', () => {
-    const inst = createGeoMap(container, zoomSpec(), { responsive: false });
+    const inst = createGeoMap(container, zoomSpec(), { autoResize: false });
     wheel(container.querySelector('svg')!, { deltaY: -300, ctrlKey: true, ...mapCenter(inst) });
     const k = inst.getCamera().k;
     expect(k).toBeGreaterThan(1);
@@ -533,7 +533,7 @@ describe('GeoMap reader zoom (geo.zoom)', () => {
 
   it('clips the map to its frame only while zoomed', () => {
     mockReducedMotion();
-    const inst = createGeoMap(container, zoomSpec(), { responsive: false });
+    const inst = createGeoMap(container, zoomSpec(), { autoResize: false });
     const group = () => container.querySelector('.oc-map-group')!;
     expect(group().hasAttribute('clip-path')).toBe(false);
     button(container, 'in').click();
@@ -556,7 +556,7 @@ describe('GeoMap reader zoom (geo.zoom)', () => {
 
   it('gestures and the imperative API share one camera, reported via onCameraChange', () => {
     const onCameraChange = vi.fn();
-    const inst = createGeoMap(container, zoomSpec(), { responsive: false, onCameraChange });
+    const inst = createGeoMap(container, zoomSpec(), { autoResize: false, onCameraChange });
 
     inst.zoomTo('36', { duration: 0 });
     const focused = inst.getCamera();
@@ -574,7 +574,7 @@ describe('GeoMap reader zoom (geo.zoom)', () => {
   });
 
   it('keeps the reader view across a data update and survives re-render focus', () => {
-    const inst = createGeoMap(container, zoomSpec(), { responsive: false });
+    const inst = createGeoMap(container, zoomSpec(), { autoResize: false });
     const svg = container.querySelector('svg')!;
     svg.focus();
     wheel(svg, { deltaY: -200, ctrlKey: true, ...mapCenter(inst) });
@@ -595,10 +595,84 @@ describe('GeoMap reader zoom (geo.zoom)', () => {
   });
 
   it('destroy removes the overlay and listeners', () => {
-    const inst = createGeoMap(container, zoomSpec(), { responsive: false });
+    const inst = createGeoMap(container, zoomSpec(), { autoResize: false });
     inst.destroy();
     expect(container.querySelector('.oc-map-zoom')).toBeNull();
     const e = wheel(container, { deltaY: -100, ctrlKey: true, clientX: 300, clientY: 200 });
     expect(e.defaultPrevented).toBe(false);
   });
+});
+it('notifies gesture settlement for wheel idle and drag cancellation, and clears idle work on destroy', async () => {
+  vi.useFakeTimers();
+  const { compileGeoMap } = await import('@opendata-ai/openchart-engine');
+  const { createMapZoomController } = await import('../map-zoom');
+  const layout = compileGeoMap(zoomSpec(), { width: 600, height: 400 });
+  const container = createContainer();
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  container.append(svg);
+  let camera: Camera = { cx: layout.mapSize.width / 2, cy: layout.mapSize.height / 2, k: 2 };
+  const begin = vi.fn(),
+    end = vi.fn();
+  const controller = createMapZoomController({
+    container,
+    getSvg: () => svg,
+    getLayout: () => layout,
+    getConfig: () => ({ maxZoom: 12, controls: false }),
+    getCamera: () => camera,
+    setCamera: (next) => {
+      camera = next;
+    },
+    animateCamera: (next) => {
+      camera = next;
+    },
+    reset: () => {},
+    hideTooltip: () => {},
+    onGestureStart: begin,
+    onGestureEnd: end,
+  });
+  controller.onRender(false);
+  const x = layout.area.x + layout.area.width / 2,
+    y = layout.area.y + layout.area.height / 2;
+  wheel(container, {
+    clientX: x,
+    clientY: y,
+    ctrlKey: true,
+    deltaY: -20,
+    bubbles: true,
+    cancelable: true,
+  });
+  expect(begin).toHaveBeenCalledTimes(1);
+  vi.advanceTimersByTime(119);
+  expect(end).not.toHaveBeenCalled();
+  vi.advanceTimersByTime(1);
+  expect(end).toHaveBeenCalledTimes(1);
+  const pointer = (type: string, dx = 0) => {
+    const event = new MouseEvent(type, {
+      clientX: x + dx,
+      clientY: y,
+      button: 0,
+      bubbles: true,
+      cancelable: true,
+    });
+    Object.defineProperties(event, { pointerId: { value: 1 }, pointerType: { value: 'mouse' } });
+    container.dispatchEvent(event);
+  };
+  pointer('pointerdown');
+  pointer('pointermove', 20);
+  expect(begin).toHaveBeenCalledTimes(2);
+  pointer('pointercancel', 20);
+  expect(end).toHaveBeenCalledTimes(2);
+  wheel(container, {
+    clientX: x,
+    clientY: y,
+    ctrlKey: true,
+    deltaY: -20,
+    bubbles: true,
+    cancelable: true,
+  });
+  controller.destroy();
+  vi.runAllTimers();
+  expect(end).toHaveBeenCalledTimes(2);
+  vi.useRealTimers();
+  container.remove();
 });

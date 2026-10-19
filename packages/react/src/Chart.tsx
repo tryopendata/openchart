@@ -13,17 +13,27 @@ import type {
   DarkMode,
   DataRow,
   ElementRef,
-  GraphSpec,
   LayerSpec,
+  ReaderChangeMeta,
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
-import { type ChartInstance, createChart, type MountOptions } from '@opendata-ai/openchart-vanilla';
+import { mergeThemeConfig } from '@opendata-ai/openchart-core';
+import {
+  type ChartInstance,
+  type ChartReaderProps,
+  type ChartReaderSelection,
+  createChart,
+  createChartReaderBinding,
+  type InteractionMode,
+  type MountOptions,
+} from '@opendata-ai/openchart-vanilla';
 import {
   type CSSProperties,
   forwardRef,
   useCallback,
   useEffect,
   useImperativeHandle,
+  useMemo,
   useRef,
 } from 'react';
 import { useVizDarkMode, useVizTheme } from './ThemeContext';
@@ -39,9 +49,15 @@ export interface ChartHandle {
   readonly instance: ChartInstance | null;
 }
 
-export interface ChartProps<TData extends DataRow = DataRow> extends ChartEventHandlers {
-  /** The visualization spec to render. */
-  spec: ChartSpec<TData> | LayerSpec<TData> | GraphSpec;
+export interface ChartBaseProps<TData extends DataRow = DataRow> extends ChartEventHandlers {
+  /** The chart spec to render. Graph specs render through `<Graph />` or `<Visualization />`. */
+  spec: ChartSpec<TData> | LayerSpec<TData>;
+  /**
+   * Interaction mode: `'read'`, `'select'`, or `'edit'`. When omitted it is
+   * inferred from the callbacks (`onEdit` -> edit, `onSelect`/`onDeselect` ->
+   * select, otherwise read). Changing it recreates the chart.
+   */
+  interaction?: InteractionMode;
   /** Theme overrides. */
   theme?: ThemeConfig;
   /** Dark mode: "auto", "force", or "off". */
@@ -51,12 +67,10 @@ export interface ChartProps<TData extends DataRow = DataRow> extends ChartEventH
    * option). `'auto'` (default) promotes dense scatters to canvas.
    */
   renderer?: 'auto' | 'svg' | 'canvas';
+  /** Quiet row inspection for simple horizontal bars. */
+  rowHover?: boolean;
   /** Observe container resizes. */
   autoResize?: boolean;
-  /** @deprecated Use autoResize. */
-  responsive?: boolean;
-  /** Callback when a data point is clicked. @deprecated Use onMarkClick instead. */
-  onDataPointClick?: (data: Record<string, unknown>) => void;
   /** The currently selected element (controlled). */
   selectedElement?: ElementRef;
   /** Highlight specific color-encoding values. Pass null to clear. */
@@ -66,6 +80,12 @@ export interface ChartProps<TData extends DataRow = DataRow> extends ChartEventH
   /** Inline styles for the wrapper div. */
   style?: CSSProperties;
 }
+
+export type ChartProps<TData extends DataRow = DataRow> = ChartBaseProps<TData> & ChartReaderProps;
+export type SliceChartProps<TData extends DataRow = DataRow> = ChartBaseProps<TData> &
+  Extract<ChartReaderProps, { reader: { mode: 'slices' } }>;
+export type ObservationChartProps<TData extends DataRow = DataRow> = ChartBaseProps<TData> &
+  Exclude<ChartReaderProps, { reader: { mode: 'slices' } }>;
 
 /**
  * React component that renders a visualization from a spec.
@@ -93,27 +113,26 @@ function ChartInner(
 function ChartInner(
   {
     spec,
+    reader,
+    readerSelection,
+    onReaderChange,
     theme: themeProp,
     darkMode,
     renderer,
+    rowHover,
     autoResize,
-    responsive,
     revision,
-    onEditTransaction,
-    onDataPointClick,
+    onEdit,
     onMarkClick,
     onMarkHover,
     onMarkLeave,
     onLegendToggle,
     onHighlightChange,
     onAnnotationClick,
-    onAnnotationEdit,
-    onEdit,
     onSelect,
     onDeselect,
-    onTextEdit,
     onReveal,
-    editable,
+    interaction,
     selectedElement: selectedElementProp,
     highlight,
     className,
@@ -121,57 +140,67 @@ function ChartInner(
   }: ChartProps,
   ref: React.Ref<ChartHandle>,
 ) {
-  const hasTransactionListener = Boolean(onEditTransaction);
+  // Callback presence feeds the inferred interaction mode, so it recreates the chart.
+  const hasEditListener = Boolean(onEdit);
+  const hasSelectListener = Boolean(onSelect);
+  const hasDeselectListener = Boolean(onDeselect);
   const contextTheme = useVizTheme();
   const contextDarkMode = useVizDarkMode();
-  const theme = themeProp ?? contextTheme;
+  const theme = useMemo(() => mergeThemeConfig(contextTheme, themeProp), [contextTheme, themeProp]);
   const resolvedDarkMode = darkMode ?? contextDarkMode;
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<ChartInstance | null>(null);
   const specRef = useRef<string>('');
+  const readerBinding = useRef<ReturnType<typeof createChartReaderBinding> | null>(null);
+  readerBinding.current ??= createChartReaderBinding();
+  const readerConfig = useRef({ reader, readerSelection, onReaderChange });
+  readerConfig.current = { reader, readerSelection, onReaderChange };
+  const syncReader = () => {
+    if (containerRef.current && chartRef.current) {
+      const config = readerConfig.current;
+      readerBinding.current!.sync(
+        containerRef.current,
+        chartRef.current,
+        spec,
+        config.reader,
+        config.readerSelection,
+        config.onReaderChange as
+          | ((selection: ChartReaderSelection, meta: ReaderChangeMeta) => void)
+          | undefined,
+      );
+    }
+  };
   const revisionRef = useRef(revision);
 
   // Store event handlers in refs so they don't trigger chart recreation.
   // Inline arrow functions create new references every render, which would
   // destroy and recreate the entire chart instance without this pattern.
   const handlersRef = useRef<{
-    onDataPointClick?: ChartProps['onDataPointClick'];
     onMarkClick?: ChartProps['onMarkClick'];
     onMarkHover?: ChartProps['onMarkHover'];
     onMarkLeave?: ChartProps['onMarkLeave'];
     onLegendToggle?: ChartProps['onLegendToggle'];
     onHighlightChange?: ChartProps['onHighlightChange'];
     onAnnotationClick?: ChartProps['onAnnotationClick'];
-    onAnnotationEdit?: ChartProps['onAnnotationEdit'];
     onEdit?: ChartProps['onEdit'];
-    onEditTransaction?: ChartProps['onEditTransaction'];
     onSelect?: ChartProps['onSelect'];
     onDeselect?: ChartProps['onDeselect'];
-    onTextEdit?: ChartProps['onTextEdit'];
     onReveal?: ChartProps['onReveal'];
   }>({});
   handlersRef.current = {
-    onEditTransaction,
-    onDataPointClick,
+    onEdit,
     onMarkClick,
     onMarkHover,
     onMarkLeave,
     onLegendToggle,
     onHighlightChange,
     onAnnotationClick,
-    onAnnotationEdit,
-    onEdit,
     onSelect,
     onDeselect,
-    onTextEdit,
     onReveal,
   };
 
   // Stable callback wrappers that read from refs
-  const stableOnDataPointClick = useCallback(
-    (data: Record<string, unknown>) => handlersRef.current.onDataPointClick?.(data),
-    [],
-  );
   const stableOnMarkClick = useCallback(
     (event: import('@opendata-ai/openchart-core').MarkEvent) =>
       handlersRef.current.onMarkClick?.(event),
@@ -199,20 +228,8 @@ function ChartInner(
     ) => handlersRef.current.onAnnotationClick?.(annotation, event, element),
     [],
   );
-  const stableOnAnnotationEdit = useCallback(
-    (
-      annotation: import('@opendata-ai/openchart-core').TextAnnotation,
-      updatedOffset: import('@opendata-ai/openchart-core').AnnotationOffset,
-    ) => handlersRef.current.onAnnotationEdit?.(annotation, updatedOffset),
-    [],
-  );
   const stableOnEdit = useCallback(
-    (edit: import('@opendata-ai/openchart-core').ElementEdit) => handlersRef.current.onEdit?.(edit),
-    [],
-  );
-  const stableOnEditTransaction = useCallback(
-    (tx: import('@opendata-ai/openchart-core').EditTransaction) =>
-      handlersRef.current.onEditTransaction?.(tx),
+    (tx: import('@opendata-ai/openchart-core').EditTransaction) => handlersRef.current.onEdit?.(tx),
     [],
   );
   const stableOnSelect = useCallback(
@@ -221,11 +238,6 @@ function ChartInner(
   );
   const stableOnDeselect = useCallback(
     (element: ElementRef) => handlersRef.current.onDeselect?.(element),
-    [],
-  );
-  const stableOnTextEdit = useCallback(
-    (element: ElementRef, oldText: string, newText: string) =>
-      handlersRef.current.onTextEdit?.(element, oldText, newText),
     [],
   );
   const stableOnReveal = useCallback(
@@ -264,7 +276,6 @@ function ChartInner(
       theme,
       darkMode: resolvedDarkMode,
       renderer,
-      ...(handlersRef.current.onDataPointClick ? { onDataPointClick: stableOnDataPointClick } : {}),
       onMarkClick: stableOnMarkClick,
       onMarkHover: stableOnMarkHover,
       onMarkLeave: stableOnMarkLeave,
@@ -274,26 +285,23 @@ function ChartInner(
       // Only include editing callbacks when the consumer provides them.
       // The stable wrappers are always truthy, so gating on handlersRef
       // avoids adding unstable prop references to the effect deps.
-      ...(handlersRef.current.onAnnotationEdit ? { onAnnotationEdit: stableOnAnnotationEdit } : {}),
-      ...(handlersRef.current.onEdit ? { onEdit: stableOnEdit } : {}),
       ...(handlersRef.current.onSelect ? { onSelect: stableOnSelect } : {}),
       ...(handlersRef.current.onDeselect ? { onDeselect: stableOnDeselect } : {}),
-      ...(handlersRef.current.onTextEdit ? { onTextEdit: stableOnTextEdit } : {}),
       ...(handlersRef.current.onReveal ? { onReveal: stableOnReveal } : {}),
-      ...(editable != null ? { editable } : {}),
+      ...(interaction != null ? { interaction } : {}),
       ...(selectedElementProp ? { selectedElement: selectedElementProp } : {}),
+      rowHover,
       autoResize,
-      responsive,
       revision,
-      ...(handlersRef.current.onEditTransaction
-        ? { onEditTransaction: stableOnEditTransaction }
-        : {}),
+      ...(handlersRef.current.onEdit ? { onEdit: stableOnEdit } : {}),
     };
 
     chartRef.current = createChart(container, spec, options);
     specRef.current = JSON.stringify(spec);
+    syncReader();
 
     return () => {
+      readerBinding.current?.detach();
       chartRef.current?.destroy();
       chartRef.current = null;
     };
@@ -303,27 +311,32 @@ function ChartInner(
     theme,
     resolvedDarkMode,
     renderer,
-    editable,
+    interaction,
     stableOnAnnotationClick,
-    stableOnDataPointClick,
     stableOnEdit,
-    stableOnEditTransaction,
-    hasTransactionListener,
+    hasEditListener,
+    hasSelectListener,
+    hasDeselectListener,
+    rowHover,
     autoResize,
-    responsive,
     stableOnLegendToggle,
     stableOnHighlightChange,
     stableOnMarkClick,
     stableOnMarkHover,
     stableOnMarkLeave,
-    stableOnAnnotationEdit,
     stableOnSelect,
     stableOnDeselect,
-    stableOnTextEdit,
     stableOnReveal,
   ]);
 
+  // Stable callbacks and host changes update only the reader controller.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: sync reads the current stable instance and callback ref
+  useEffect(() => {
+    syncReader();
+  }, [reader, readerSelection, onReaderChange]);
+
   // Update chart when spec changes
+  // biome-ignore lint/correctness/useExhaustiveDependencies: sync reads current reader refs after the committed spec update
   useEffect(() => {
     const chart = chartRef.current;
     if (!chart) return;
@@ -335,6 +348,7 @@ function ChartInner(
       revisionRef.current = revision;
       if (revision !== undefined || revisionChanged) chart.update(spec, { revision });
       else chart.update(spec);
+      syncReader();
     }
   }, [spec, revision]);
 
@@ -377,8 +391,13 @@ function ChartInner(
  *
  * Without a type parameter, behaves identically to before — no migration needed.
  */
-export const Chart = forwardRef(ChartInner) as <TData extends DataRow = DataRow>(
-  props: ChartProps<TData> & { ref?: React.Ref<ChartHandle> },
-) => React.ReactElement | null;
+export const Chart = forwardRef(ChartInner) as {
+  <TData extends DataRow = DataRow>(
+    props: SliceChartProps<TData> & { ref?: React.Ref<ChartHandle> },
+  ): React.ReactElement | null;
+  <TData extends DataRow = DataRow>(
+    props: ObservationChartProps<TData> & { ref?: React.Ref<ChartHandle> },
+  ): React.ReactElement | null;
+};
 // Restore display name lost by the forwardRef + cast pattern
 (Chart as React.FC).displayName = 'Chart';

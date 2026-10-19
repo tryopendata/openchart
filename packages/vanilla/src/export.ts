@@ -9,7 +9,7 @@
  */
 
 import type { ResolvedTheme } from '@opendata-ai/openchart-core';
-import { injectThemeStyleBlock } from './theme-style-block';
+import { copyComputedThemeProperties, injectThemeStyleBlock } from './theme-style-block';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -309,11 +309,22 @@ export function getSVGBackgroundColor(svgElement: SVGElement, fallback?: string)
  * @returns The SVG markup as a string.
  */
 export function exportSVG(svgElement: SVGElement): string {
-  if (!svgElement.getAttribute('xmlns')) {
-    svgElement.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  // Export a clean snapshot without changing the live chart's focus/selection.
+  // Every SVG and raster path serializes here, including font-embedded exports.
+  const clone = svgElement.cloneNode(true) as SVGElement;
+  for (const control of clone.querySelectorAll(
+    '.oc-selection-overlay, .oc-anchor-handle, .oc-connector-handle',
+  ))
+    control.remove();
+  clone.classList.remove('oc-note-active');
+  for (const element of clone.querySelectorAll('.oc-note-active')) {
+    element.classList.remove('oc-note-active');
+  }
+  if (!clone.getAttribute('xmlns')) {
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
   }
   const serializer = new XMLSerializer();
-  return serializer.serializeToString(svgElement);
+  return serializer.serializeToString(clone);
 }
 
 /**
@@ -333,6 +344,7 @@ export async function exportSVGWithFonts(
   options?: SVGExportOptions,
 ): Promise<string> {
   const clone = svgElement.cloneNode(true) as SVGElement;
+  copyComputedThemeProperties(svgElement, clone);
   const shouldEmbed = options?.embedFonts ?? true;
   injectThemeStyleBlock(clone, options?.theme);
   if (shouldEmbed) {
@@ -458,6 +470,7 @@ async function prepareRasterSVG(
 ): Promise<{ svgString: string; width: number; height: number }> {
   const { width, height } = getSVGDimensions(svgElement);
   const clone = svgElement.cloneNode(true) as SVGElement;
+  copyComputedThemeProperties(svgElement, clone);
   // Inline the theme style block so class-based fills survive the detach from
   // the page stylesheet. No-op when theme is undefined.
   injectThemeStyleBlock(clone, theme);

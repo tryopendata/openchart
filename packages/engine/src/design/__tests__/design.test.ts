@@ -1,4 +1,5 @@
 import type { ChartSpec, ReaderSelection } from '@opendata-ai/openchart-core';
+import { FLUID_SPRING } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import { compileChart } from '../../compile';
 import { resolveAnimation } from '../../compiler/animation';
@@ -15,6 +16,7 @@ import { recommendCompositions } from '../recommend';
 
 const spec: ChartSpec = {
   mark: 'bar',
+  theme: { fonts: { sizes: { axisTick: 11 } } },
   data: [
     { id: 'a', category: 'Alpha', value: 10 },
     { id: 'b', category: 'Beta', value: 20 },
@@ -86,13 +88,37 @@ describe('design contracts', () => {
   it('makes fixes reversible and refuses stale or unsafe paths', () => {
     const layout = compileChart(spec, { width: 600, height: 400 });
     const patch = diagnoseChart(spec, layout).find((item) => item.fix)!.fix!;
-    const next = applySpecPatch(spec, patch);
+    expect(patch.changes).toEqual([{ op: 'set', path: '/theme/fonts/sizes/axisTick', value: 12 }]);
+    const { spec: next, inverse } = applySpecPatch(spec, patch);
     expect(next.theme?.fonts?.sizes?.axisTick).toBe(12);
-    expect(spec.theme).toBeUndefined();
+    expect(spec.theme?.fonts?.sizes?.axisTick).toBe(11);
     expect(() => applySpecPatch(next, patch)).toThrow('stale');
+    expect(applySpecPatch(next, inverse).spec).toEqual(spec);
+    expect(() => applySpecPatch(spec, inverse)).toThrow('stale');
     expect(() =>
-      applySpecPatch(spec, { ...patch, changes: [{ path: '/__proto__/polluted', value: true }] }),
+      applySpecPatch(spec, {
+        ...patch,
+        changes: [{ op: 'add', path: '/__proto__/polluted', value: true }],
+      }),
     ).toThrow('Unsafe');
+  });
+  it('creates missing theme containers with add and removes them on undo', () => {
+    const bare: ChartSpec = { ...spec };
+    delete bare.theme;
+    // A host theme can shrink axis text without the spec authoring any theme.
+    const layout = compileChart(bare, {
+      width: 600,
+      height: 400,
+      theme: { fonts: { sizes: { axisTick: 10 } } },
+    });
+    const patch = diagnoseChart(bare, layout).find((item) => item.fix)!.fix!;
+    expect(patch.changes).toEqual([{ op: 'add', path: '/theme/fonts/sizes/axisTick', value: 12 }]);
+    const { spec: next, inverse } = applySpecPatch(bare, patch);
+    expect(next.theme).toEqual({ fonts: { sizes: { axisTick: 12 } } });
+    expect(applySpecPatch(next, inverse).spec).toEqual(bare);
+    expect(() =>
+      applySpecPatch(bare, { ...patch, changes: [{ ...patch.changes[0], op: 'set' }] }),
+    ).toThrow('Intermediate container is missing');
   });
   it('distinguishes uncheckable contrast and emits compiler diagnostics', () => {
     const codes: string[] = [];
@@ -170,7 +196,7 @@ describe('design contracts', () => {
     ).toContain('aggregation or a unique category');
   });
   it('resolves phase overrides without silently mixing motion modes', () => {
-    expect(resolveAnimation('fluid')?.update?.spring).toBeDefined();
+    expect(resolveAnimation('fluid')?.update?.spring).toEqual(FLUID_SPRING);
     expect(
       resolveAnimation({ preset: 'fluid', update: { duration: 200 } })?.update?.spring,
     ).toBeUndefined();

@@ -110,6 +110,8 @@ beforeEach(() => {
     rafCallbacks.delete(id);
   });
   vi.stubGlobal('performance', { now: () => nowValue });
+  // happy-dom paints no canvas pixels, so the per-frame render state is the only
+  // view of fades and ghosts.
   renderSpy = vi.spyOn(GraphCanvasRenderer.prototype, 'render').mockImplementation(function (
     this: unknown,
     state: GraphRenderState,
@@ -208,6 +210,7 @@ describe('update() with identical spec', () => {
     const graph = createGraph(container, spec);
     await settle();
 
+    // Pass-through spy: node positions aren't public, so a sim rebuild is only visible here.
     const createSpy = vi.spyOn(SimulationManager, 'create');
     // Same ids, same config (only re-passing the same spec).
     graph.update(graphSpec(['a', 'b'], [['a', 'b']]));
@@ -223,6 +226,7 @@ describe('update() with identical spec', () => {
     const graph = createGraph(container, graphSpec(['a', 'b'], [['a', 'b']]));
     await settle();
 
+    // Pass-through spy: node positions aren't public, so a sim rebuild is only visible here.
     const createSpy = vi.spyOn(SimulationManager, 'create');
     graph.update(
       graphSpec(
@@ -396,27 +400,5 @@ describe('update() search reconciliation', () => {
 });
 
 // ---------------------------------------------------------------------------
-// updateVisuals alias
+// Unified graph updates
 // ---------------------------------------------------------------------------
-
-describe('updateVisuals deprecated alias', () => {
-  it('routes through update() (structural change still reheats)', async () => {
-    container = makeContainer();
-    const graph = createGraph(container, graphSpec(['a', 'b'], [['a', 'b']]));
-    await settle();
-
-    const createSpy = vi.spyOn(SimulationManager, 'create');
-    graph.updateVisuals(
-      graphSpec(
-        ['a', 'b', 'c'],
-        [
-          ['a', 'b'],
-          ['b', 'c'],
-        ],
-      ),
-    );
-    expect(createSpy).toHaveBeenCalledTimes(1);
-    createSpy.mockRestore();
-    graph.destroy();
-  });
-});

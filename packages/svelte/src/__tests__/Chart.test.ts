@@ -1,6 +1,6 @@
 import type { ChartSpec } from '@opendata-ai/openchart-core';
 import { cleanup, render, waitFor } from '@testing-library/svelte';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import Chart from '../Chart.svelte';
 
 // ---------------------------------------------------------------------------
@@ -151,17 +151,17 @@ describe('annotation transactions', () => {
     const transactions: unknown[] = [];
     const { container, rerender } = await renderChart({
       spec,
-      editable: true,
+      interaction: 'edit' as const,
       autoResize: false,
       revision: 'one',
-      onedittransaction: (tx: unknown) => transactions.push(tx),
+      onedit: (tx: unknown) => transactions.push(tx),
     });
     await rerender({
       spec,
-      editable: true,
+      interaction: 'edit' as const,
       autoResize: false,
       revision: 'two',
-      onedittransaction: (tx: unknown) => transactions.push(tx),
+      onedit: (tx: unknown) => transactions.push(tx),
     });
     container
       .querySelector('[data-annotation-index="0"]')!
@@ -197,7 +197,7 @@ it('reacts to transaction listener presence without enabling all charts for edit
   const cursor = () =>
     (container.querySelector('[data-annotation-index="0"]') as SVGElement).style.cursor;
   expect(cursor()).not.toBe('grab');
-  await rerender({ spec, onedittransaction: (tx: unknown) => transactions.push(tx) });
+  await rerender({ spec, onedit: (tx: unknown) => transactions.push(tx) });
   expect(cursor()).toBe('grab');
   container
     .querySelector('[data-annotation-index="0"]')!
@@ -206,7 +206,7 @@ it('reacts to transaction listener presence without enabling all charts for edit
     .querySelector('svg')!
     .dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
   expect(transactions).toHaveLength(1);
-  await rerender({ spec, onedittransaction: undefined });
+  await rerender({ spec, onedit: undefined });
   expect(cursor()).not.toBe('grab');
 });
 
@@ -237,4 +237,117 @@ it.each([
   expect(container.querySelector('svg')!.getAttribute('viewBox')).toBe(initial);
   unmount();
   expect(container.querySelector('svg')).toBeNull();
+});
+
+describe('interaction mode and listener parity', () => {
+  const clickTitle = (container: HTMLElement) =>
+    container
+      .querySelector('[data-chrome-key="title"]')!
+      .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+  it('re-infers select mode when onselect is added later', async () => {
+    const onselect = vi.fn();
+    const { container, rerender } = await renderChart({ spec: lineSpec, autoResize: false });
+    clickTitle(container);
+    await rerender({ spec: lineSpec, autoResize: false, onselect });
+    clickTitle(container);
+    expect(onselect).toHaveBeenCalledTimes(1);
+    expect(onselect.mock.calls[0][0]).toMatchObject({ type: 'chrome', path: '/chrome/title' });
+  });
+
+  it("interaction='read' suppresses selection; switching to 'select' recreates", async () => {
+    const onselect = vi.fn();
+    const { container, rerender } = await renderChart({
+      spec: lineSpec,
+      autoResize: false,
+      interaction: 'read' as const,
+      onselect,
+    });
+    clickTitle(container);
+    expect(onselect).not.toHaveBeenCalled();
+    await rerender({ spec: lineSpec, autoResize: false, interaction: 'select' as const, onselect });
+    clickTitle(container);
+    expect(onselect).toHaveBeenCalledTimes(1);
+  });
+
+  it('forwards onreveal and exposes the instance via getInstance()', async () => {
+    const onreveal = vi.fn();
+    const spec = {
+      mark: 'line',
+      data: [2000, 2005, 2010, 2015, 2020].map((year, i) => ({ year: `${year}`, value: i })),
+      encoding: {
+        x: { field: 'year', type: 'temporal' },
+        y: { field: 'value', type: 'quantitative' },
+      },
+      youDrawIt: { from: '2010' },
+      animation: false,
+    } as ChartSpec;
+    const { component } = await renderChart({ spec, autoResize: false, onreveal });
+    const instance = (
+      component as unknown as { getInstance(): { revealDrawing(): void } | null }
+    ).getInstance();
+    expect(instance).not.toBeNull();
+    instance!.revealDrawing();
+    expect(onreveal).toHaveBeenCalledTimes(1);
+  });
+
+  it('forwards onhighlightchange from the series search', async () => {
+    const onhighlightchange = vi.fn();
+    const spec = {
+      mark: 'line',
+      data: ['Germany', 'France'].flatMap((country, i) => [
+        { year: '2020-01-01', value: i, country },
+        { year: '2021-01-01', value: i + 1, country },
+      ]),
+      encoding: {
+        x: { field: 'year', type: 'temporal' },
+        y: { field: 'value', type: 'quantitative' },
+        color: { field: 'country', type: 'nominal' },
+      },
+      seriesSearch: true,
+    } as ChartSpec;
+    const { container } = await renderChart({ spec, autoResize: false, onhighlightchange });
+    const input = container.querySelector('.oc-series-search-input') as HTMLInputElement;
+    input.value = 'ger';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(onhighlightchange).toHaveBeenCalledWith(['Germany']);
+  });
+});
+it('forwards rowHover and removes it when toggled off', async () => {
+  const { container, rerender } = await renderChart({ spec: barSpec, rowHover: true });
+  expect(container.querySelector('.oc-row-hover')).not.toBeNull();
+  await rerender({ spec: barSpec, rowHover: false });
+  await waitFor(() => expect(container.querySelector('.oc-row-hover')).toBeNull());
+});
+it('moves a slice readout and changes callbacks without remounting or controlled echoes', async () => {
+  const first = document.createElement('aside'),
+    second = document.createElement('aside'),
+    before = vi.fn(),
+    after = vi.fn();
+  const result = await renderChart({
+    spec: lineSpec,
+    reader: { mode: 'slices', panel: { container: first } },
+    onreaderchange: before,
+  });
+  const root = result.container.querySelector('.oc-root')!;
+  root.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  root.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+  const state = before.mock.calls.at(
+    -1,
+  )![0] as import('@opendata-ai/openchart-core').ReaderSliceSelection;
+  expect(state.pinned).toHaveLength(1);
+  const svg = result.container.querySelector('svg');
+  await result.rerender({
+    spec: lineSpec,
+    reader: { mode: 'slices', panel: { container: second } },
+    readerSelection: state,
+    onreaderchange: after,
+  });
+  expect(result.container.querySelector('svg')).toBe(svg);
+  expect(after).not.toHaveBeenCalled();
+  expect(first.querySelector('.oc-reader-panel')).toBeNull();
+  expect(second.textContent).toContain('A:');
+  result.unmount();
+  expect(second.querySelector('.oc-reader-panel')).toBeNull();
 });

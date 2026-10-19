@@ -1,6 +1,10 @@
 import { resolveTheme } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
-import { buildThemeStyleBlock, injectThemeStyleBlock } from '../theme-style-block';
+import {
+  buildThemeStyleBlock,
+  copyComputedThemeProperties,
+  injectThemeStyleBlock,
+} from '../theme-style-block';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -22,7 +26,7 @@ describe('buildThemeStyleBlock', () => {
 
     // The custom properties the rules reference must be defined on svg.oc-chart,
     // else the var() lookups resolve to nothing once detached from the page.
-    expect(css).toMatch(/svg\.oc-chart\s*\{[^}]*--oc-text:/);
+    expect(css).toMatch(/svg\.oc-chart[^{}]*\{[^}]*--oc-text:/);
     expect(css).toMatch(/--oc-positive:/);
     expect(css).toMatch(/--oc-negative:/);
   });
@@ -56,9 +60,30 @@ describe('injectThemeStyleBlock', () => {
     expect(svg.querySelector('defs')).not.toBeNull();
   });
 
+  it('replaces its existing block when preparation repeats with a new theme', () => {
+    const svg = makeSvg();
+    injectThemeStyleBlock(svg, resolveTheme());
+    injectThemeStyleBlock(svg, resolveTheme({ colors: { text: '#abcdef' } }));
+    expect(svg.querySelectorAll('style[data-oc-theme]')).toHaveLength(1);
+    expect(svg.querySelector('style')?.textContent).toContain('--oc-text: #abcdef');
+  });
+
   it('is a no-op when theme is undefined', () => {
     const svg = makeSvg();
     injectThemeStyleBlock(svg, undefined);
     expect(svg.querySelector('style[data-oc-theme]')).toBeNull();
   });
+});
+
+it('keeps host CSS token overrides when the SVG is exported', () => {
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.style.setProperty('--oc-positive', '#123456');
+  svg.style.setProperty('--oc-border-radius', '18px');
+  document.body.appendChild(svg);
+  const clone = svg.cloneNode(true) as SVGElement;
+  copyComputedThemeProperties(svg, clone);
+  injectThemeStyleBlock(clone, resolveTheme());
+  expect(clone.style.getPropertyValue('--oc-positive')).toBe('#123456');
+  expect(clone.style.getPropertyValue('--oc-border-radius')).toBe('18px');
+  svg.remove();
 });

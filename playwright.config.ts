@@ -24,6 +24,16 @@ export default defineConfig({
   },
   projects: [
     {
+      name: 'chart-map-design',
+      testDir: './e2e/chart-map-design',
+      use: { ...devices['Desktop Chrome'], deviceScaleFactor: 1 },
+    },
+    {
+      name: 'chart-map-design-webkit',
+      testDir: './e2e/chart-map-design',
+      use: { ...devices['Desktop Safari'], deviceScaleFactor: 1 },
+    },
+    {
       name: 'annotation-invariants',
       testDir: './e2e/annotation-invariants',
       use: { ...devices['Desktop Chrome'], deviceScaleFactor: 1 },

@@ -23,36 +23,40 @@ import type {
   LayoutStrategy,
   LineMark,
   Mark,
+  MeasureTextFn,
   Rect,
   ResolvedTheme,
   TextStyle,
 } from '@opendata-ai/openchart-core';
-import { estimateTextWidth, wrapText } from '@opendata-ai/openchart-core';
-
+import {
+  estimateTextWidth,
+  formatDate,
+  pickLabelColor,
+  wrapText,
+} from '@opendata-ai/openchart-core';
+import { resolveKnockoutColor } from '../charts/utils';
 import type { NormalizedChartSpec } from '../compiler/types';
-import { resolveFieldFormatter } from '../format/field-format';
+import type { ResolvedScaleType } from '../layout/scales';
 import {
   countColorSeries,
   endpointLabelsExplicitlyOn,
   resolveSuppression,
 } from '../legend/suppression';
 import {
-  ENDPOINT_COLUMN_GAP,
-  ENDPOINT_ENTRY_GAP,
   ENDPOINT_GAP,
-  ENDPOINT_LABEL_FONT_SIZE,
   ENDPOINT_LABEL_FONT_WEIGHT,
   ENDPOINT_LEADER_THRESHOLD,
   ENDPOINT_LINE_HEIGHT,
   ENDPOINT_MARKER_RADIUS,
   ENDPOINT_MARKER_STROKE_WIDTH,
   ENDPOINT_SWATCH_SIZE,
-  ENDPOINT_VALUE_FONT_SIZE,
   ENDPOINT_VALUE_FONT_WEIGHT,
-  ENDPOINT_VALUE_GAP,
   ENDPOINT_WRAP_WIDTH_DEFAULT,
 } from './constants';
 import { composeEndpointText, formatEndpointValue, resolveEndpointContent } from './format';
+import { endpointFormatter as resolveEndpointFormatter } from './formatter';
+import { fitInteriorLabel } from './interior';
+import { endpointObservation } from './observations';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -62,14 +66,14 @@ import { composeEndpointText, formatEndpointValue, resolveEndpointContent } from
 function emptyLayout(theme: ResolvedTheme): EndpointLabelsLayout {
   const labelStyle: TextStyle = {
     fontFamily: theme.fonts.family,
-    fontSize: ENDPOINT_LABEL_FONT_SIZE,
+    fontSize: theme.fonts.sizes.endpointLabel,
     fontWeight: ENDPOINT_LABEL_FONT_WEIGHT,
     fill: theme.colors.text,
     lineHeight: ENDPOINT_LINE_HEIGHT,
   };
   const valueStyle: TextStyle = {
     fontFamily: theme.fonts.family,
-    fontSize: ENDPOINT_VALUE_FONT_SIZE,
+    fontSize: theme.fonts.sizes.endpointValue,
     fontWeight: ENDPOINT_VALUE_FONT_WEIGHT,
     fill: theme.colors.annotationText ?? theme.colors.text,
     lineHeight: ENDPOINT_LINE_HEIGHT,
@@ -82,85 +86,13 @@ function emptyLayout(theme: ResolvedTheme): EndpointLabelsLayout {
     valueStyle,
     swatchSize: ENDPOINT_SWATCH_SIZE,
     gap: ENDPOINT_GAP,
-    valueGap: ENDPOINT_VALUE_GAP,
+    valueGap: theme.spacing.endpointValueGap,
     swatchChipFill: theme.colors.annotationFill ?? theme.colors.background,
   };
 }
 
 function isLineOrArea(mark: Mark): mark is LineMark | AreaMark {
   return mark.type === 'line' || mark.type === 'area';
-}
-
-/** Get the last data-point pixel position for a line/area mark. */
-function lastDataPoint(mark: LineMark | AreaMark): { x: number; y: number } | null {
-  if (mark.dataPoints && mark.dataPoints.length > 0) {
-    const last = mark.dataPoints[mark.dataPoints.length - 1];
-    return { x: last.x, y: last.y };
-  }
-  if (mark.type === 'line' && mark.points.length > 0) {
-    const last = mark.points[mark.points.length - 1];
-    return { x: last.x, y: last.y };
-  }
-  if (mark.type === 'area' && mark.topPoints.length > 0) {
-    const last = mark.topPoints[mark.topPoints.length - 1];
-    return { x: last.x, y: last.y };
-  }
-  return null;
-}
-
-/** Get the first data-point pixel position for a line/area mark. */
-function firstDataPoint(mark: LineMark | AreaMark): { x: number; y: number } | null {
-  if (mark.dataPoints && mark.dataPoints.length > 0) {
-    const first = mark.dataPoints[0];
-    return { x: first.x, y: first.y };
-  }
-  if (mark.type === 'line' && mark.points.length > 0) {
-    const first = mark.points[0];
-    return { x: first.x, y: first.y };
-  }
-  if (mark.type === 'area' && mark.topPoints.length > 0) {
-    const first = mark.topPoints[0];
-    return { x: first.x, y: first.y };
-  }
-  return null;
-}
-
-/** Get the value to display from the last data row. */
-function readValue(
-  mark: LineMark | AreaMark,
-  valueField: string | undefined,
-): number | string | null {
-  if (!valueField) return null;
-  const dp = mark.dataPoints;
-  if (dp && dp.length > 0) {
-    const datum = dp[dp.length - 1].datum;
-    const v = datum[valueField];
-    return typeof v === 'number' || typeof v === 'string' ? v : null;
-  }
-  if (mark.data.length > 0) {
-    const v = mark.data[mark.data.length - 1][valueField];
-    return typeof v === 'number' || typeof v === 'string' ? v : null;
-  }
-  return null;
-}
-
-/** Get the value to display from the first data row. */
-function readFirstValue(
-  mark: LineMark | AreaMark,
-  valueField: string | undefined,
-): number | string | null {
-  if (!valueField) return null;
-  const dp = mark.dataPoints;
-  if (dp && dp.length > 0) {
-    const datum = dp[0].datum;
-    const v = datum[valueField];
-    return typeof v === 'number' || typeof v === 'string' ? v : null;
-  }
-  if (mark.data.length > 0) {
-    const v = mark.data[0][valueField];
-    return typeof v === 'number' || typeof v === 'string' ? v : null;
-  }
-  return null;
 }
 
 /**
@@ -198,8 +130,9 @@ export function bidirectionalSweep(
   // Sort by naturalTop ascending so neighbors in the chart are neighbors here.
   const sorted = [...entries].sort((a, b) => a.naturalTop - b.naturalTop);
 
-  // Initialize tops at the natural (anchored-to-dataY) positions.
-  const tops = sorted.map((e) => e.naturalTop);
+  // Clamp the first edge before separating neighbors. Clamping only in the
+  // reverse pass collapses multiple above-domain anchors onto the same top.
+  const tops = sorted.map((e) => Math.max(areaTop, e.naturalTop));
 
   // Forward pass: push down only when overlapping the previous entry, then
   // cap at the chart's bottom edge so we don't run off the canvas.
@@ -254,6 +187,8 @@ export function computeEndpointLabels(
   chartArea: Rect,
   strategy?: LayoutStrategy,
   endpointLabelsDemoted?: boolean,
+  measureText?: MeasureTextFn,
+  xScaleType?: ResolvedScaleType,
 ): EndpointLabelsLayout {
   // Compact strategy: drop the column entirely. The traditional legend takes
   // over series identification at the compact breakpoint. Explicit user
@@ -271,7 +206,6 @@ export function computeEndpointLabels(
     // The 'none' branch above returned unless the user explicitly opted in,
     // in which case resolveSuppression's explicit-on override applies anyway.
     labelsHiddenByStrategy: false,
-    labelsDensityNone: spec.labels.density === 'none',
     endpointLabelsDemoted,
   });
   const epExplicitlyOff =
@@ -282,7 +216,8 @@ export function computeEndpointLabels(
   // Dedupe by seriesKey: for area charts, the engine emits BOTH an AreaMark
   // and a derived LineMark per series (see `linesFromAreas` in
   // `charts/line/index.ts`). Without dedupe each series would produce two
-  // endpoint entries. Prefer the line mark — its `stroke` is the canonical
+  // endpoint entries. Prefer stacked area marks because they retain source presence and band bounds.
+  // For other areas prefer the line mark — its `stroke` is the canonical
   // series color and matches the visible line, whereas the area mark's
   // `stroke` may be derived from a gradient via `getRepresentativeColor`.
   // Same-type collisions (area→area, line→line) keep the first mark; the
@@ -291,62 +226,123 @@ export function computeEndpointLabels(
   for (const mark of marks) {
     if (!isLineOrArea(mark) || !mark.seriesKey) continue;
     const existing = bySeriesKey.get(mark.seriesKey);
-    if (!existing || (existing.type === 'area' && mark.type === 'line')) {
+    if (
+      !existing ||
+      (existing.type === 'area' && !existing.stacked && mark.type === 'line') ||
+      (mark.type === 'area' && mark.stacked)
+    ) {
       bySeriesKey.set(mark.seriesKey, mark);
     }
   }
-  const lineOrAreaMarks = Array.from(bySeriesKey.values());
-  if (lineOrAreaMarks.length < 2) return emptyLayout(theme);
+  const lineOrAreaMarks = Array.from(bySeriesKey.values()).filter(
+    (mark) => !highlightActive || highlight.includes(mark.seriesKey!),
+  );
+  if (lineOrAreaMarks.length < 2 && !highlightActive) return emptyLayout(theme);
 
   const config = typeof spec.endpointLabels === 'object' ? spec.endpointLabels : undefined;
   const wrapWidth = config?.width ?? ENDPOINT_WRAP_WIDTH_DEFAULT;
   const valueField = config?.valueField ?? spec.encoding.y?.field;
-  const surfaceFormat =
-    config?.format ??
-    ((spec.encoding.y?.axis as Record<string, unknown> | undefined)?.format as string | undefined);
-  const endpointFormatter = resolveFieldFormatter({
-    surfaceFormat,
-    channelFormat: spec.encoding.y?.format,
-    values: valueField ? spec.data.map((r) => r[valueField]) : [],
+  const anchor = config?.anchor ?? 'band';
+  const endpointValues = lineOrAreaMarks.flatMap((mark) => {
+    const trailing = endpointObservation(mark, 'trailing', anchor)?.datum[valueField ?? ''];
+    return config?.ends === 'both'
+      ? [trailing, endpointObservation(mark, 'leading', anchor)?.datum[valueField ?? '']]
+      : [trailing];
   });
+  const endpointFormatter = resolveEndpointFormatter(spec, endpointValues);
+  const measure = (text: string, size: number, weight?: number) =>
+    measureText?.(text, size, weight).width ?? estimateTextWidth(text, size, weight);
+  const dateFor = (value: unknown): string | undefined => {
+    if (spec.encoding.x?.type !== 'temporal') return value == null ? undefined : String(value);
+    if (!xScaleType) return undefined;
+    return formatDate(value as Date | string | number, undefined, undefined, xScaleType === 'utc');
+  };
+  const endpointDates = (side: 'leading' | 'trailing') =>
+    new Set(
+      lineOrAreaMarks.map((mark) =>
+        String(endpointObservation(mark, side, anchor)?.datum[spec.encoding.x?.field ?? '']),
+      ),
+    );
+  const qualifyTrailing = config?.placement === 'interior' || endpointDates('trailing').size > 1;
+  const qualifyLeading = config?.placement === 'interior' || endpointDates('leading').size > 1;
   const showMarker = config?.showMarker !== false;
   const markerRadius = config?.markerStyle?.radius ?? ENDPOINT_MARKER_RADIUS;
   const markerStrokeWidth = config?.markerStyle?.strokeWidth ?? ENDPOINT_MARKER_STROKE_WIDTH;
-  const markerFill = config?.markerStyle?.fill ?? theme.colors.background;
+  // Opaque by default: the marker sits on the line's last point and its fill
+  // covers the line end, so the ring isn't pierced.
+  const markerFill = config?.markerStyle?.fill ?? resolveKnockoutColor(theme);
   const trailingContent = resolveEndpointContent(config?.content, 'trailing');
   const leadingContent = resolveEndpointContent(config?.content, 'leading');
 
   // Resolve the styles once.
   const labelStyle: TextStyle = {
     fontFamily: theme.fonts.family,
-    fontSize: ENDPOINT_LABEL_FONT_SIZE,
+    fontSize: theme.fonts.sizes.endpointLabel,
     fontWeight: ENDPOINT_LABEL_FONT_WEIGHT,
     fill: theme.colors.text,
     lineHeight: ENDPOINT_LINE_HEIGHT,
   };
   const valueStyle: TextStyle = {
     fontFamily: theme.fonts.family,
-    fontSize: ENDPOINT_VALUE_FONT_SIZE,
+    fontSize: theme.fonts.sizes.endpointValue,
     fontWeight: ENDPOINT_VALUE_FONT_WEIGHT,
     fill: theme.colors.annotationText ?? theme.colors.text,
     lineHeight: ENDPOINT_LINE_HEIGHT,
     fontVariant: 'tabular-nums',
   };
 
+  const interior =
+    config?.placement === 'interior'
+      ? lineOrAreaMarks.flatMap((mark) => {
+          if (mark.type !== 'area' || !mark.stacked) return [];
+          const color =
+            mark.stroke ?? (typeof mark.fill === 'string' ? mark.fill : theme.colors.text);
+          const label = fitInteriorLabel(
+            mark,
+            labelStyle,
+            pickLabelColor(typeof mark.fill === 'string' ? mark.fill : color),
+            measureText,
+          );
+          return label ? [label] : [];
+        })
+      : [];
+  // Inverted/overlapping bands can share screen space; keep deterministic
+  // identification and leave any rejected name in its endpoint column.
+  interior.sort((a, b) => b.width - a.width || b.x - a.x || a.seriesKey.localeCompare(b.seriesKey));
+  for (let index = interior.length - 1; index >= 0; index--) {
+    const candidate = interior[index];
+    if (
+      interior
+        .slice(0, index)
+        .some(
+          (other) =>
+            candidate.x < other.x + other.width &&
+            candidate.x + candidate.width > other.x &&
+            candidate.y < other.y + other.height &&
+            candidate.y + candidate.height > other.y,
+        )
+    )
+      interior.splice(index, 1);
+  }
+  const interiorSeries = new Set(interior.map((label) => label.seriesKey));
   // First pass: build entries with wrapped labels and dataY (no positions yet).
   type Provisional = {
     seriesKey: string;
     labelLines: string[];
     value: string;
     color: string;
+    strokeDasharray?: string;
+    source: NonNullable<EndpointLabelEntry['source']>;
+    date?: string;
+    band: boolean;
     dataX: number;
     dataY: number;
     height: number;
     width: number;
   };
   const provisional: Provisional[] = [];
-  const labelLineHeight = ENDPOINT_LABEL_FONT_SIZE * ENDPOINT_LINE_HEIGHT;
-  const valueLineHeight = ENDPOINT_VALUE_FONT_SIZE * ENDPOINT_LINE_HEIGHT;
+  const labelLineHeight = theme.fonts.sizes.endpointLabel * ENDPOINT_LINE_HEIGHT;
+  const valueLineHeight = theme.fonts.sizes.endpointValue * ENDPOINT_LINE_HEIGHT;
 
   for (const mark of lineOrAreaMarks) {
     const seriesKey = mark.seriesKey;
@@ -354,39 +350,55 @@ export function computeEndpointLabels(
 
     if (highlightActive && !highlight.includes(seriesKey)) continue;
 
-    const last = lastDataPoint(mark);
+    const last = endpointObservation(mark, 'trailing', anchor);
     if (!last) continue;
 
-    const rawValue = readValue(mark, valueField);
-    const formatted = formatEndpointValue(rawValue, endpointFormatter);
+    const rawValue = last.datum[valueField ?? ''];
+    const date = qualifyTrailing ? dateFor(last.datum[spec.encoding.x?.field ?? '']) : undefined;
+    const formatted = formatEndpointValue(
+      typeof rawValue === 'number' || typeof rawValue === 'string' ? rawValue : null,
+      endpointFormatter,
+    );
 
     // Content composition: when `content` is set, the composed text becomes
     // the label lines and the second-line value is dropped.
-    const labelText = trailingContent
-      ? composeEndpointText(trailingContent, seriesKey, formatted)
+    const effectiveContent =
+      interiorSeries.has(seriesKey) && trailingContent === undefined ? 'value' : trailingContent;
+    const labelText = effectiveContent
+      ? composeEndpointText(effectiveContent, seriesKey, formatted)
       : seriesKey;
-    const value = trailingContent ? '' : formatted;
+    const value = effectiveContent ? '' : formatted;
     const labelLines = wrapText(
       labelText,
-      ENDPOINT_LABEL_FONT_SIZE,
+      theme.fonts.sizes.endpointLabel,
       ENDPOINT_LABEL_FONT_WEIGHT,
       wrapWidth,
+      measureText,
     );
 
     // Width of the widest line in this entry (used to size the column).
     let entryWidth = 0;
     for (const line of labelLines) {
-      const w = estimateTextWidth(line, ENDPOINT_LABEL_FONT_SIZE, ENDPOINT_LABEL_FONT_WEIGHT);
+      const w = measure(line, theme.fonts.sizes.endpointLabel, ENDPOINT_LABEL_FONT_WEIGHT);
       if (w > entryWidth) entryWidth = w;
     }
     const valueWidth = value
-      ? estimateTextWidth(value, ENDPOINT_VALUE_FONT_SIZE, ENDPOINT_VALUE_FONT_WEIGHT)
+      ? measure(value, theme.fonts.sizes.endpointValue, ENDPOINT_VALUE_FONT_WEIGHT)
       : 0;
     if (valueWidth > entryWidth) entryWidth = valueWidth;
+    if (date)
+      entryWidth = Math.max(
+        entryWidth,
+        measure(date, theme.fonts.sizes.endpointValue, ENDPOINT_VALUE_FONT_WEIGHT),
+      );
 
     const labelHeight = labelLines.length * labelLineHeight;
     const valueHeight = value ? valueLineHeight : 0;
-    const entryHeight = labelHeight + (value ? ENDPOINT_VALUE_GAP : 0) + valueHeight;
+    const entryHeight =
+      labelHeight +
+      (value ? theme.spacing.endpointValueGap : 0) +
+      valueHeight +
+      (date ? valueLineHeight + theme.spacing.endpointValueGap : 0);
 
     // Determine the line stroke color. AreaMark may have a string fill; prefer
     // mark.stroke for visual continuity with the line drawn on top of the area.
@@ -401,6 +413,10 @@ export function computeEndpointLabels(
       labelLines,
       value,
       color,
+      strokeDasharray: mark.type === 'line' ? mark.strokeDasharray : undefined,
+      source: { datum: last.datum, x: last.datum[spec.encoding.x?.field ?? ''], observed: true },
+      date,
+      band: last.band,
       dataX: last.x,
       dataY: last.y,
       height: entryHeight,
@@ -415,12 +431,12 @@ export function computeEndpointLabels(
   // so the label's first-line baseline-center aligns with the line's last data point.
   // The marker sits on this same baseline-center row, putting the open ring directly
   // where the line terminates when undisplaced.
-  // Add ENDPOINT_ENTRY_GAP to each entry's claimed height so the sweep leaves
+  // Add theme.spacing.endpointEntryGap to each entry's claimed height so the sweep leaves
   // breathing room between stacked labels. The renderer doesn't draw the gap,
   // so it's invisible when entries are well-separated.
   const sweepInput = provisional.map((p, i) => ({
-    naturalTop: p.dataY - ENDPOINT_LABEL_FONT_SIZE / 2,
-    height: p.height + ENDPOINT_ENTRY_GAP,
+    naturalTop: p.dataY - theme.fonts.sizes.endpointLabel / 2,
+    height: p.height + theme.spacing.endpointEntryGap,
     index: i,
   }));
   const sweptTops = bidirectionalSweep(sweepInput, chartArea.y, chartArea.y + chartArea.height);
@@ -430,7 +446,7 @@ export function computeEndpointLabels(
     ENDPOINT_SWATCH_SIZE + ENDPOINT_GAP + Math.max(...provisional.map((p) => p.width), 0) + 4,
     32,
   );
-  const columnX = chartArea.x + chartArea.width + ENDPOINT_COLUMN_GAP;
+  const columnX = chartArea.x + chartArea.width + theme.spacing.endpointColumnGap;
 
   // The marker is the line's visual terminator — always at (chartRightX, dataY).
   // The swatch + label first-line baseline-center sit at `labelY + fontSize/2`.
@@ -445,22 +461,24 @@ export function computeEndpointLabels(
   const showLeader = config?.showLeader === true;
   const entries: EndpointLabelEntry[] = provisional.map((p, i) => {
     const labelY = sweptTops[i];
-    const swatchRowY = labelY + ENDPOINT_LABEL_FONT_SIZE / 2;
+    const swatchRowY = labelY + theme.fonts.sizes.endpointLabel / 2;
     const displaced = Math.abs(swatchRowY - p.dataY) > ENDPOINT_LEADER_THRESHOLD;
     const entry: EndpointLabelEntry = {
       seriesKey: p.seriesKey,
+      dataX: p.dataX,
+      source: p.source,
+      date: p.date,
       labelLines: p.labelLines,
       value: p.value,
       color: p.color,
       dataY: p.dataY,
       labelY,
-      showLeader: showLeader && displaced,
+      showLeader: p.band || (showLeader && displaced),
     };
-    if (showMarker) {
-      // Offset cx right by markerRadius so the line terminates at the circle's
-      // left edge rather than its center — prevents the line from piercing the ring.
+    if (p.strokeDasharray) entry.strokeDasharray = p.strokeDasharray;
+    if (showMarker && !p.band) {
       entry.marker = {
-        x: p.dataX + markerRadius,
+        x: p.dataX,
         y: p.dataY,
         dataX: p.dataX,
         fill: markerFill,
@@ -483,6 +501,10 @@ export function computeEndpointLabels(
       labelLines: string[];
       value: string;
       color: string;
+      strokeDasharray?: string;
+      source: NonNullable<EndpointLabelEntry['source']>;
+      date?: string;
+      band: boolean;
       dataX: number;
       dataY: number;
       height: number;
@@ -496,35 +518,51 @@ export function computeEndpointLabels(
 
       if (highlightActive && !highlight.includes(seriesKey)) continue;
 
-      const first = firstDataPoint(mark);
+      const first = endpointObservation(mark, 'leading', anchor);
       if (!first) continue;
 
-      const rawValue = readFirstValue(mark, valueField);
-      const formatted = formatEndpointValue(rawValue, endpointFormatter);
-      const labelText = leadingContent
-        ? composeEndpointText(leadingContent, seriesKey, formatted)
+      const rawValue = first.datum[valueField ?? ''];
+      const date = qualifyLeading ? dateFor(first.datum[spec.encoding.x?.field ?? '']) : undefined;
+      const formatted = formatEndpointValue(
+        typeof rawValue === 'number' || typeof rawValue === 'string' ? rawValue : null,
+        endpointFormatter,
+      );
+      const effectiveContent =
+        interiorSeries.has(seriesKey) && leadingContent === undefined ? 'value' : leadingContent;
+      const labelText = effectiveContent
+        ? composeEndpointText(effectiveContent, seriesKey, formatted)
         : seriesKey;
-      const value = leadingContent ? '' : formatted;
+      const value = effectiveContent ? '' : formatted;
       const labelLines = wrapText(
         labelText,
-        ENDPOINT_LABEL_FONT_SIZE,
+        theme.fonts.sizes.endpointLabel,
         ENDPOINT_LABEL_FONT_WEIGHT,
         wrapWidth,
+        measureText,
       );
 
       let entryWidth = 0;
       for (const line of labelLines) {
-        const w = estimateTextWidth(line, ENDPOINT_LABEL_FONT_SIZE, ENDPOINT_LABEL_FONT_WEIGHT);
+        const w = measure(line, theme.fonts.sizes.endpointLabel, ENDPOINT_LABEL_FONT_WEIGHT);
         if (w > entryWidth) entryWidth = w;
       }
       const valueWidth = value
-        ? estimateTextWidth(value, ENDPOINT_VALUE_FONT_SIZE, ENDPOINT_VALUE_FONT_WEIGHT)
+        ? measure(value, theme.fonts.sizes.endpointValue, ENDPOINT_VALUE_FONT_WEIGHT)
         : 0;
       if (valueWidth > entryWidth) entryWidth = valueWidth;
+      if (date)
+        entryWidth = Math.max(
+          entryWidth,
+          measure(date, theme.fonts.sizes.endpointValue, ENDPOINT_VALUE_FONT_WEIGHT),
+        );
 
       const labelHeight = labelLines.length * labelLineHeight;
       const valueHeight = value ? valueLineHeight : 0;
-      const entryHeight = labelHeight + (value ? ENDPOINT_VALUE_GAP : 0) + valueHeight;
+      const entryHeight =
+        labelHeight +
+        (value ? theme.spacing.endpointValueGap : 0) +
+        valueHeight +
+        (date ? valueLineHeight + theme.spacing.endpointValueGap : 0);
 
       const color =
         mark.type === 'line'
@@ -537,6 +575,14 @@ export function computeEndpointLabels(
         labelLines,
         value,
         color,
+        strokeDasharray: mark.type === 'line' ? mark.strokeDasharray : undefined,
+        source: {
+          datum: first.datum,
+          x: first.datum[spec.encoding.x?.field ?? ''],
+          observed: true,
+        },
+        date,
+        band: first.band,
         dataX: first.x,
         dataY: first.y,
         height: entryHeight,
@@ -546,8 +592,8 @@ export function computeEndpointLabels(
 
     if (leadingProvisional.length >= 2 || (leadingProvisional.length === 1 && highlightActive)) {
       const leadingSweepInput = leadingProvisional.map((p, i) => ({
-        naturalTop: p.dataY - ENDPOINT_LABEL_FONT_SIZE / 2,
-        height: p.height + ENDPOINT_ENTRY_GAP,
+        naturalTop: p.dataY - theme.fonts.sizes.endpointLabel / 2,
+        height: p.height + theme.spacing.endpointEntryGap,
         index: i,
       }));
       const leadingSweptTops = bidirectionalSweep(
@@ -563,24 +609,28 @@ export function computeEndpointLabels(
           4,
         32,
       );
-      const leadingColumnX = chartArea.x - ENDPOINT_COLUMN_GAP - leadingColumnWidth;
+      const leadingColumnX = chartArea.x - theme.spacing.endpointColumnGap - leadingColumnWidth;
 
       leading = leadingProvisional.map((p, i) => {
         const labelY = leadingSweptTops[i];
-        const swatchRowY = labelY + ENDPOINT_LABEL_FONT_SIZE / 2;
+        const swatchRowY = labelY + theme.fonts.sizes.endpointLabel / 2;
         const displaced = Math.abs(swatchRowY - p.dataY) > ENDPOINT_LEADER_THRESHOLD;
         const entry: EndpointLabelEntry = {
           seriesKey: p.seriesKey,
+          dataX: p.dataX,
+          source: p.source,
+          date: p.date,
           labelLines: p.labelLines,
           value: p.value,
           color: p.color,
           dataY: p.dataY,
           labelY,
-          showLeader: showLeader && displaced,
+          showLeader: p.band || (showLeader && displaced),
         };
-        if (showMarker) {
+        if (p.strokeDasharray) entry.strokeDasharray = p.strokeDasharray;
+        if (showMarker && !p.band) {
           entry.marker = {
-            x: p.dataX - markerRadius,
+            x: p.dataX,
             y: p.dataY,
             dataX: p.dataX,
             fill: markerFill,
@@ -603,6 +653,7 @@ export function computeEndpointLabels(
 
   return {
     entries,
+    interior: interior.length ? interior : undefined,
     bounds: {
       x: columnX,
       y: chartArea.y,
@@ -613,7 +664,7 @@ export function computeEndpointLabels(
     valueStyle,
     swatchSize: ENDPOINT_SWATCH_SIZE,
     gap: ENDPOINT_GAP,
-    valueGap: ENDPOINT_VALUE_GAP,
+    valueGap: theme.spacing.endpointValueGap,
     swatchChipFill: theme.colors.annotationFill ?? theme.colors.background,
     leading,
     leadingBounds,

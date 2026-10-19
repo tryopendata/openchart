@@ -37,7 +37,6 @@ import {
   DEFAULT_ANNOTATION_FONT_WEIGHT,
   DEFAULT_DOT_RADIUS,
   DEFAULT_DOT_STROKE_WIDTH,
-  LEDE_FONT_WEIGHT,
   MIN_CONNECTOR_LENGTH,
   SUBTITLE_FONT_WEIGHT,
   subtitleFontSize,
@@ -467,19 +466,19 @@ describe('the words are styled the way the design says', () => {
     expect(a.label!.style.fontWeight).toBe(DEFAULT_ANNOTATION_FONT_WEIGHT);
   });
 
-  test('adding a subtitle promotes the first line to a bold lede', () => {
+  test('adding a subtitle preserves the regular primary weight', () => {
     const a = first([
       { type: 'text', x: 'Mar', y: 30, text: '+1.17°C', subtitle: 'the warmest year' },
     ]);
 
-    // This is the pairing the whole lede rule exists for. It once shipped dead.
-    expect(a.label!.style.fontWeight).toBe(LEDE_FONT_WEIGHT);
+    // Both lines remain regular unless the author explicitly sets a weight.
+    expect(a.label!.style.fontWeight).toBe(DEFAULT_ANNOTATION_FONT_WEIGHT);
     expect(a.subtitle!.text).toBe('the warmest year');
     expect(a.subtitle!.style.fontWeight).toBe(SUBTITLE_FONT_WEIGHT);
     expect(a.subtitle!.style.fontSize).toBe(subtitleFontSize(DEFAULT_ANNOTATION_FONT_SIZE));
   });
 
-  test('an explicit weight beats the lede rule', () => {
+  test('an explicit weight is preserved alongside a subtitle', () => {
     const a = first([
       { type: 'text', x: 'Mar', y: 30, text: 'Peak', subtitle: 'context', fontWeight: 500 },
     ]);
@@ -498,7 +497,7 @@ describe('the words are styled the way the design says', () => {
       { type: 'text', x: 'Mar', y: 30, text: 'Peak', subtitle: 'context', connector: 'drop-line' },
     ]);
     expect(a.subtitle?.text).toBe('context');
-    expect(a.label!.style.fontWeight).toBe(LEDE_FONT_WEIGHT);
+    expect(a.label!.style.fontWeight).toBe(DEFAULT_ANNOTATION_FONT_WEIGHT);
   });
 
   test('text is never center-aligned; it faces the data', () => {

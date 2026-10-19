@@ -7,12 +7,12 @@
  */
 
 import type { ResolvedColumn, TableLayout, TableRow } from '@opendata-ai/openchart-core';
-import { BRAND_FONT_SIZE, cssTokenDefault } from '@opendata-ai/openchart-core';
 import { clampStaggerDelay } from '@opendata-ai/openchart-engine';
 import { stampAnimationVars } from './animation-vars';
 import { applySrOnlyStyles } from './dom-helpers';
+import { createAttributionFooter } from './renderers/attribution-footer';
 import { renderCell } from './renderers/table-cells';
-import { resolvedSurface } from './theme-tokens';
+import { stampThemeProperties } from './theme-tokens';
 
 /** Options for renderTable(). */
 export interface TableRenderOptions {
@@ -23,8 +23,6 @@ export interface TableRenderOptions {
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-
-const BRAND_URL = 'https://tryopendata.ai';
 
 // ---------------------------------------------------------------------------
 // Chrome rendering
@@ -302,38 +300,10 @@ export function renderTable(
   // Without this, dark-background themes show invisible text since the
   // CSS defaults (--oc-text etc.) are light-mode values.
   const { theme, chrome } = layout;
-  if (theme) {
-    const s = wrapper.style;
-    const n = theme.colors.neutral;
-    // Sticky header/column/footer cells paint this to occlude the rows sliding
-    // under them, so it has to be an opaque surface. theme.colors.background is
-    // 'transparent' on the default theme.
-    s.setProperty('--oc-bg', resolvedSurface(theme));
-    s.setProperty('--oc-text', theme.colors.text);
-    // Secondary grays come from the theme's own text/background mix, the same
-    // ramp charts stamp. Deriving them from colors.axis (the tick-label ink)
-    // used to pin every table gray to one value and shut token changes out.
-    s.setProperty('--oc-text-secondary', n.secondary);
-    s.setProperty('--oc-text-muted', n[600]);
-    s.setProperty('--oc-text-faint', n.faint);
-    s.setProperty('--oc-gray-100', n[100]);
-    s.setProperty('--oc-gray-200', n[200]);
-    s.setProperty('--oc-gray-300', n[300]);
-    s.setProperty('--oc-gray-400', n[400]);
-    s.setProperty('--oc-gridline', theme.colors.gridline);
-    // The table hairline is a border, not a gridline. Only a theme that sets
-    // gridline explicitly gets to drive it; otherwise the derived ramp wins.
-    // Compare whitespace-stripped: the theme literal is 'rgba(0,0,0,0.08)' but
-    // the CSS token is written 'rgba(0, 0, 0, 0.08)'.
-    const stripWs = (c: string) => c.replace(/\s+/g, '');
-    const defaultGridline = cssTokenDefault('--oc-gridline', theme.isDark ? 'dark' : 'light');
-    const gridlineOverridden = stripWs(theme.colors.gridline) !== stripWs(defaultGridline);
-    s.setProperty('--oc-border', gridlineOverridden ? theme.colors.gridline : n.border);
-    s.setProperty('--oc-positive', theme.colors.positive);
-    s.setProperty('--oc-negative', theme.colors.negative);
-    s.setProperty('--oc-font-family', theme.fonts.family);
-    s.fontFamily = theme.fonts.family;
-  }
+  if (theme) stampThemeProperties(wrapper, theme, 'table');
+  // Paint the theme background like a chart does: transparent by default, so
+  // the table sits on the host surface instead of the mode's canvas token.
+  if (theme) wrapper.style.background = theme.colors.background;
 
   // Set computed chrome CSS custom properties so chrome elements pick up
   // theme-resolved values via CSS fallbacks (e.g. --oc-title-computed-size).
@@ -361,10 +331,6 @@ export function renderTable(
 
   // Apply class modifiers
   wrapper.classList.add(`oc-table--${layout.density}`);
-  if (layout.density === 'condensed') {
-    // Deprecated alias, kept one release for stylesheets targeting it.
-    wrapper.classList.add('oc-table--compact');
-  }
   if (layout.striped) {
     wrapper.classList.add('oc-table--striped');
   }
@@ -428,17 +394,6 @@ export function renderTable(
     wrapper.appendChild(pagination);
   }
 
-  // Footer row: source/footer chrome on the left, brand watermark on the
-  // right, laid out on a single line via flex. Built up here and appended
-  // after the live region so source text and watermark share a baseline.
-  const footerRow = document.createElement('div');
-  footerRow.className = 'oc-table-footer-row';
-
-  const footerChrome = renderChromeBlock(layout, 'footer');
-  if (footerChrome) {
-    footerRow.appendChild(footerChrome);
-  }
-
   // Live region for screen reader announcements (sort changes, search results)
   const liveRegion = document.createElement('div');
   liveRegion.className = 'oc-table-live-region oc-sr-only';
@@ -448,26 +403,8 @@ export function renderTable(
   liveRegion.setAttribute('role', 'status');
   wrapper.appendChild(liveRegion);
 
-  // Brand watermark — joins the footer row, pushed to the right by the
-  // flex container so it sits on the same line as the source text.
-  if (layout.watermark) {
-    const brandColor = theme ? theme.colors.axis : '#999999';
-    const brand = document.createElement('div');
-    brand.className = 'oc-table-ref';
-    const brandLink = document.createElement('a');
-    brandLink.href = BRAND_URL;
-    brandLink.target = '_blank';
-    brandLink.rel = 'noopener';
-    brandLink.style.cssText = `font-size: ${BRAND_FONT_SIZE}px; font-weight: 600; color: ${brandColor}; opacity: 0.55; text-decoration: none; font-family: ${theme ? theme.fonts.family : 'sans-serif'};`;
-    brandLink.textContent = 'OpenData';
-    brand.appendChild(brandLink);
-    footerRow.appendChild(brand);
-  }
-
-  // Append the footer row only when it has content (source/footer/watermark).
-  if (footerRow.childElementCount > 0) {
-    wrapper.appendChild(footerRow);
-  }
+  const footer = createAttributionFooter(layout.chrome, layout.width ?? 600, layout.measureText);
+  if (footer) wrapper.appendChild(footer);
 
   // Animation: stamp CSS custom properties and add oc-animate class BEFORE
   // DOM insertion to avoid a flash of final state.

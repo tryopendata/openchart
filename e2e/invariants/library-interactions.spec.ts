@@ -79,9 +79,13 @@ test('table: Escape wins over pending search, sort retains focus and priority ce
   await search.press('Escape');
   await expect(search).toHaveValue('');
   await expect(host.locator('tbody')).toBeFocused();
-  // Wait past the debounce and prove the stale query never returns.
+  // Prove the stale query never returns. The pending search is a 200ms
+  // setTimeout in table-mount.ts (handleSearchInput), scheduled before Escape.
+  // A page-side timer of the same delay scheduled now runs after it (equal
+  // delays run in scheduling order), so if the stale search were going to
+  // fire it has already re-rendered by the time this resolves.
   await expect(host.locator('tbody tr')).toHaveCount(10);
-  await page.waitForTimeout(250);
+  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 200)));
   await expect(host.locator('tbody tr')).toHaveCount(10);
   const header = host.locator('th[data-column="state"]');
   await header.focus();

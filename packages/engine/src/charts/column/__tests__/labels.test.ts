@@ -208,3 +208,87 @@ describe('computeColumnLabels knockout halo', () => {
     }
   });
 });
+
+describe('explicit column label placement', () => {
+  it('inside hides labels that do not fit and honors raw negative provenance', () => {
+    const marks: RectMark[] = [
+      {
+        type: 'rect',
+        x: 20,
+        y: 20,
+        width: 30,
+        height: 60,
+        fill: '#4682b4',
+        data: { value: -20 },
+        aria: { label: 'A: -20' },
+      },
+    ];
+    const label = computeColumnLabels(
+      marks,
+      { x: 0, y: 0, width: 400, height: 300 },
+      'all',
+      () => 'unsigned',
+      undefined,
+      'value',
+      undefined,
+      false,
+      undefined,
+      undefined,
+      'Georgia',
+      { placement: 'inside', measureText: () => ({ width: 80, height: 14 }) },
+    )[0];
+    expect(label.visible).toBe(false);
+  });
+  it('outside places a negative label below its mark even when formatting removes sign', () => {
+    const mark: RectMark = {
+      type: 'rect',
+      x: 20,
+      y: 20,
+      width: 80,
+      height: 60,
+      fill: '#4682b4',
+      data: { value: -20 },
+      aria: { label: 'A: -20' },
+    };
+    const label = computeColumnLabels(
+      [mark],
+      { x: 0, y: 0, width: 400, height: 300 },
+      'all',
+      () => 'unsigned',
+      undefined,
+      'value',
+      undefined,
+      false,
+      undefined,
+      undefined,
+      'Georgia',
+      { placement: 'outside' },
+    )[0];
+    expect(label.y).toBeGreaterThan(mark.y + mark.height);
+    expect(label.halo).not.toBe(false);
+  });
+});
+
+it('adaptive negative columns follow the raw value with Unicode minus or unsigned formatting', () => {
+  const mark: RectMark = {
+    type: 'rect',
+    x: 20,
+    y: 20,
+    width: 80,
+    height: 60,
+    fill: '#4682b4',
+    data: { value: -20 },
+    aria: { label: 'A: -20' },
+  };
+  for (const format of [() => '−20', () => 'unsigned']) {
+    const label = computeColumnLabels(
+      [mark],
+      { x: 0, y: 0, width: 400, height: 300 },
+      'all',
+      format,
+      undefined,
+      'value',
+    )[0];
+    expect(label.y).toBeGreaterThan(mark.y + mark.height);
+  }
+});

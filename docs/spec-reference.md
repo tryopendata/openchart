@@ -68,12 +68,12 @@ The primary input for standard chart types. Source: `core/src/types/spec.ts`.
 | `data`        | `DataRow[]`    | (required)  | Array of data rows. Each row is a `Record<string, unknown>`. Must be non-empty.               |
 | `encoding`    | `Encoding`     | (required)  | Maps data fields to visual channels. See [Encoding](#encoding).                               |
 | `chrome`      | `Chrome`       | `undefined` | Editorial text: title, subtitle, source, byline, footer. See [Chrome](#chrome).               |
-| `chromeLayout`| `'subtract' \| 'grow'` | `'subtract'` | How chrome text interacts with the container height budget. See [Chrome layout](#chrome-layout). |
+| `chromeLayout`| `'subtract' \| 'grow'` | note-band growth | How chrome text interacts with the container height budget. See [Chrome layout](#chrome-layout). |
 | `annotations` | `Annotation[]` | `undefined` | Text callouts, highlighted ranges, reference lines. See [Annotations](#annotations).          |
 | `labels`      | `LabelConfig`  | `undefined` | Data label display controls. See [Labels](#labels).                                           |
-| `responsive`  | `boolean`      | `true`      | Whether the chart adapts to container width via ResizeObserver.                               |
+| `responsive`  | `boolean \| ResponsiveConfig` | `true` | Layout adaptations at compact sizes; mount `autoResize` controls ResizeObserver.                               |
 | `theme`       | `ThemeConfig`  | `undefined` | Theme overrides. Deep-merged onto the default theme. See [ThemeConfig](#themeconfig).         |
-| `watermark`   | `boolean`      | `true`      | Whether to show the tryOpenData.ai watermark. Spec-level value takes precedence over mount/compile options. Defaults to `true`; auto-hides when the container is under 200px tall unless explicitly set. |
+| `watermark`   | `boolean`      | `true`      | Whether to show the tryOpenData.ai watermark. Mount/compile options take precedence over spec and active breakpoint values. Defaults to `true`; auto-hides when the container is under 200px tall unless explicitly set. |
 | `animation`   | `AnimationSpec`| `undefined` | Animation configuration. `true` enables entrance + update/exit animations. See [Animation](#animation). |
 | `description` | `string`       | `undefined` | Alt text for the chart (Vega-Lite aligned). Sugar for `a11y.description`. Auto-generated when absent. See the [accessibility guide](accessibility.md). |
 | `a11y`        | `A11yConfig`   | `undefined` | Accessibility overrides: `description` (custom alt text, wins over top-level `description`) and `hidden` (hide from assistive technology). |
@@ -87,6 +87,8 @@ type DataRow = Record<string, unknown>;
 A plain object with string keys. Values can be numbers, strings, dates, nulls, arrays (for sparklines), or booleans. The engine inspects values at runtime to validate encoding types.
 
 ### Mark properties
+
+`MarkDef` is a discriminated union: each object accepts only options for its mark type. TypeScript, JSON Schema, and runtime validation enforce the same contract before sugar expansion. Extend it with an intersection type rather than an interface.
 
 The `mark` field on ChartSpec accepts either a string (`'line'`) or an object with additional mark configuration. LayerSpec children are ChartSpecs, so they use `mark` too.
 
@@ -187,7 +189,7 @@ Overlay multiple chart types on shared scales. Source: `core/src/types/spec.ts`.
 | `annotations`  | `Annotation[]`               | `undefined` | Annotations on the layered view.                                                              |
 | `labels`       | `LabelConfig`                | `undefined` | Label display configuration.                                                                  |
 | `legend`       | `LegendConfig`               | `undefined` | Legend display configuration.                                                                 |
-| `responsive`   | `boolean`                    | `true`      | Whether the chart adapts to container width.                                                  |
+| `responsive`   | `boolean \| ResponsiveConfig` | `undefined` | Same as `ChartSpec.responsive`. When omitted, the first leaf's value applies.                 |
 | `theme`        | `ThemeConfig`                | `undefined` | Theme overrides.                                                                              |
 | `watermark`    | `boolean`                    | `true`      | Whether to show the watermark. Defaults to `true`; auto-hides when the container is under 200px tall unless explicitly set. |
 | `resolve`      | `ResolveConfig`              | `undefined` | Resolution strategy for shared vs. independent scales/axes/legends.                           |
@@ -234,6 +236,7 @@ interface Encoding {
   y?: EncodingChannel;
   color?: EncodingChannel;
   size?: EncodingChannel;
+  theta?: EncodingChannel; // arc/waffle/parliament quantitative value
   detail?: EncodingChannel;
   facet?: FacetChannel;   // small multiples -- see Faceting
   row?: FacetChannel;     // vertical facet stack -- see Faceting
@@ -311,14 +314,14 @@ The engine validates encoding channels at runtime using `MARK_ENCODING_RULES`. S
 | `area`     | temporal, ordinal (req)          | quantitative (req)     | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | Same encoding as line, filled region              |
 | `bar`      | quantitative (req)               | nominal, ordinal (req) | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | Horizontal bars. x = values, y = categories       |
 | `column`   | nominal, ordinal, temporal (req) | quantitative (req)     | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | Vertical bars. x = categories, y = values         |
-| `pie`      | -- (opt, unused)                 | quantitative (req)     | nominal, ordinal (req) | quantitative (opt) | nominal (opt) | color = slice categories, y = slice values        |
-| `donut`    | -- (opt, unused)                 | quantitative (req)     | nominal, ordinal (req) | quantitative (opt) | nominal (opt) | Same as pie with inner radius                     |
+| `pie`      | -- (opt, unused)                 | -- (use theta) | nominal, ordinal (req) | quantitative (opt) | nominal (opt) | color = slice categories, theta = slice values        |
+| `donut`    | -- (opt, unused)                 | -- (use theta) | nominal, ordinal (req) | quantitative (opt) | nominal (opt) | theta = slice values; same as pie with inner radius                     |
 | `dot`      | quantitative (req)               | nominal, ordinal (req) | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | Dot plot. x = values, y = categories              |
 | `scatter`  | quantitative (req)               | quantitative (req)     | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | Both axes quantitative. size creates bubble chart |
 | `beeswarm` | quantitative or nominal (opt)    | quantitative or nominal (opt) | nominal, ordinal, quantitative (opt) | quantitative (opt) | nominal (opt) | One position is the quantitative value axis; the other (nominal/ordinal) splits into grouped lanes |
 | `range`    | quantitative or nominal (req)    | quantitative or nominal (req) | nominal, ordinal (opt) | -- | nominal (opt) | Dumbbell/arrow/range-bar. x+x2 (horizontal) or y+y2 (vertical); orientation-dependent second endpoint |
-| `waffle`   | -- (opt, unused)                 | quantitative (req, via `theta`) | nominal, ordinal (req) | -- | nominal (opt) | Unit grid. `theta` (alias for y) = share, color = category |
-| `parliament` | -- (opt, unused)               | quantitative (req, via `theta`) | nominal, ordinal (req) | -- | nominal (opt) | Hemicycle seats. `theta` (alias for y) = seat count, color = party |
+| `waffle`   | -- (opt, unused)                 | -- (use theta) | nominal, ordinal (req) | -- | nominal (opt) | Unit grid. `theta` = share, color = category |
+| `parliament` | -- (opt, unused)               | -- (use theta) | nominal, ordinal (req) | -- | nominal (opt) | Hemicycle seats. `theta` = seat count, color = party |
 | `histogram` | quantitative (req)              | quantitative (opt)     | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | Raw values on x; y defaults to the per-bin count. Color groups overlap rather than dodge |
 | `density`  | quantitative (req)               | -- (computed)          | nominal, ordinal (opt) | -- | nominal (opt) | KDE over raw x values; y is the estimated density |
 | `calendar` | temporal (req)                   | -- (not allowed)       | quantitative (req)     | -- | nominal (opt) | Calendar heatmap. x = daily date, color = per-day value; owns its own geometry |
@@ -328,6 +331,8 @@ The engine validates encoding channels at runtime using `MARK_ENCODING_RULES`. S
 **x channel**: Horizontal position. Temporal/ordinal for time series (line, area), nominal/ordinal for categories (bar, column), quantitative for values (bar, dot, scatter).
 
 **y channel**: Vertical position. Quantitative values for most types. Nominal/ordinal categories for bar and dot (horizontal layout).
+
+**theta channel**: Quantitative part-to-whole values for arc, waffle, and parliament. Their former authored `y` alias is rejected; use `theta`.
 
 **color channel**: Series differentiation. Assigns colors from the categorical palette. Required for pie/donut (defines slices). Optional for all others (creates multi-series with legend).
 
@@ -422,12 +427,12 @@ Each field accepts either a plain string or a `ChromeText` object for style over
 
 | Field      | Position                        | Default style                                                |
 | ---------- | ------------------------------- | ------------------------------------------------------------ |
-| `eyebrow`  | Above title                     | 11px, semibold, uppercase, theme accent — leading accent dot |
-| `title`    | Top, above chart                | 22px, bold (700), `#333333`                                  |
-| `subtitle` | Below title                     | 15px, normal (400), `#666666`                                |
-| `source`   | Below chart area                | 12px, normal (400), `#999999`                                |
-| `byline`   | Below source                    | 12px, normal (400), `#999999`                                |
-| `footer`   | Below byline                    | 12px, normal (400), `#999999`                                |
+| `eyebrow`  | Above title                     | 11px, medium (500), uppercase, theme accent — leading accent dot |
+| `title`    | Top, above chart                | 26px, semibold (600), `#09090b`                                  |
+| `subtitle` | Below title                     | 14px, normal (400), `#71717a`                                |
+| `source`   | Below chart area                | 12px, normal (400), `#71717a`                                |
+| `byline`   | Below source                    | 12px, normal (400), `#71717a`                                |
+| `footer`   | Below byline                    | 12px, normal (400), `#71717a`                                |
 | `brand`    | Right-aligned on the source row | 12px, suppresses the default watermark                       |
 
 **KPI metric row** is a separate top-level field on chart specs, not part of `Chrome`. Use `metrics: Metric[]` on the chart spec for a horizontal row of label+value cells rendered between the subtitle and the chart area. Each cell can carry a delta and a secondary value. See `Metric` in `core/src/types/spec.ts` for the full shape.
@@ -481,7 +486,8 @@ The top-level `chromeLayout` property controls how chrome text height interacts 
 
 | Value        | Behavior                                                                                                                                       |
 | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `'subtract'` | Default. The container height is fixed and chrome text (title, subtitle, source) is subtracted from it, shrinking the plot. Historical behavior. |
+| omitted | Notes and the series summary grow the figure; title, subtitle, source, and other chrome subtract from the container height budget. |
+| `'subtract'` | Keep the exact outer height; all chrome and notes subtract from it, shrinking the plot. |
 | `'grow'`     | The container height is treated as the plot budget. The rendered SVG grows taller by the measured chrome height, so the plot keeps its full budget (minus axis and padding overhead) no matter how many lines the title wraps to. |
 
 Reach for `'grow'` on fixed-height article or blog charts where a long title on a narrow phone must not compress the plot.
@@ -496,7 +502,7 @@ Reach for `'grow'` on fixed-height article or blog charts where a long title on 
 }
 ```
 
-`chromeLayout: 'grow'` is a no-op for faceted (small-multiples) specs in this version and falls back to `'subtract'`. It is also honored by bar list, sankey, map, and tilemap specs via the spec or compile option.
+`chromeLayout: 'grow'` supports faceted charts and layers; engine-added height is counted once. Read `layout.dimensions.height` for the final height and `layout.chrome.grownHeight` for the added height. The default note-growth policy is internal: `'notes'` is not a public spec value. Bar list, Sankey, map, and tilemap also honor the public spec/compile policies.
 
 ---
 
@@ -533,6 +539,8 @@ Carrying both bin edges matters: the end edge goes to `x2`, which is what puts t
 
 Data-positioned overlays. Source: `core/src/types/spec.ts`.
 
+Use unique annotation `id` values for durable selection and editing. Notes preserve complete primary/subtitle text and rich spans; their numbers follow source text-annotation order before filtering, so gaps are intentional. Notes and markers support linked focus and click/tap emphasis.
+
 Three annotation types are available, discriminated by the `type` field:
 
 ### TextAnnotation
@@ -546,15 +554,16 @@ A callout label positioned at a data coordinate.
 | `y`          | `string \| number`   | (required)             | Y-axis data value or position.                                                                                         |
 | `text`       | `string`             | (required)             | The annotation text. Supports `\n` for line breaks and `**bold**` spans.                                               |
 | `subtitle`   | `string`             | `undefined`            | Optional muted second-tone text rendered below `text`. Use for supporting context (methodology, source, etc.). Supports `**bold**` too. |
-| `maxWidth` | `number \| null` | unlimited | Optional positive wrapping width in pixels; null disables wrapping. |
-| `subtitleFontSize` | `number` | `round(fontSize * 0.85)` | Optional positive subtitle size in pixels. |
+| `maxWidth` | `number \| null` | `min(240, plotWidth - 2 * padding)`, at least 1px | Positive display wrapping width in pixels; null disables wrapping. |
+| `subtitleFontSize` | `number` | `round(fontSize * 12 / 13)` | Optional positive subtitle size in pixels. |
 | `dot`        | `boolean \| AnnotationDot` | see below        | Open-ring marker on the data point. Appears by default on non-arrowed connectors. `false` for none, an object to restyle. |
-| `label`      | `string`             | `undefined`            | Additional label text.                                                                                                 |
 | `fontSize`   | `number`             | `13`                   | Font size override in pixels.                                                                                          |
-| `fontWeight` | `number`             | `400` (`700` with a `subtitle`) | Font weight override.                                                                                         |
+| `priority` | `number` | source order | Lower values get placement and compact-inline preference; ties retain source order. |
+| `responsive` | `boolean` | `true` | `false` pins the annotation inline and exempts it from thinning/count limits. |
+| `fontWeight` | `number`             | `400` | Font weight override.                                                                                         |
 | `offset`     | `AnnotationOffset`   | `undefined`            | Pixel offset from computed position. `{ dx?: number, dy?: number }`.                                                   |
 | `anchor`     | `AnnotationAnchor`   | `'auto'`               | Label placement direction: `'top'`, `'bottom'`, `'left'`, `'right'`, `'auto'`.                                         |
-| `connector`  | `boolean \| ConnectorType \| ConnectorConfig` | `true` | `'straight'`, `'curve'`, or `'drop-line'`; `{ type, arrow? }` for explicit arrow control; `false` disables it.     |
+| `connector`  | `boolean \| ConnectorType \| ConnectorConfig` | `true` | `'straight'`, `'curve'`, or `'drop-line'`; `{ type, arrow?, bend? }` for explicit control; `false` disables it.     |
 | `connectorOffset` | `{ from?, to? }` | `undefined`            | Per-endpoint pixel offsets for the connector line.                                                                     |
 | `background` | `string \| true`     | `undefined`            | Background plate behind the text, for readability over chart lines. `true` follows the theme surface.                  |
 | `fill`       | `string`             | theme `annotationFill` | Fill color.                                                                                                            |
@@ -562,7 +571,7 @@ A callout label positioned at a data coordinate.
 | `opacity`    | `number`             | `1`                    | Opacity (0 to 1).                                                                                                      |
 | `zIndex`     | `number`             | `0`                    | Render ordering. Higher values render on top.                                                                          |
 
-#### Text: line breaks, bold spans, and the lede rule
+#### Text: wrapping, line breaks, and bold spans
 
 Curve connectors accept optional `bend: -1..1`; omitted or zero preserves the
 existing automatic curve. Other connector types ignore `bend` with a warning.
@@ -578,14 +587,14 @@ An authored `offset` object pins placement even when both values are zero.
 
 Only matched pairs turn bold. An unmatched `**` (and an empty `****`) renders literally, so specs with stray asterisks aren't mangled. Bold spans are measured at weight 700, so bounds, collision nudging, and connector exits all account for them.
 
-When a `subtitle` is present and you set no `fontWeight`, the primary text resolves to weight 700 and the subtitle stays 400. That's the lede + context stack ("Feb. 25" over "2015 maximum"). Setting `fontWeight` explicitly opts out.
+Primary text and subtitles default to weight 400. Set `fontWeight: 700` for a bold primary line or use `**bold**` for selective emphasis; adding a subtitle does not change the primary weight.
 
 #### Connectors
 
-The connector leaves the text block (primary text plus subtitle, treated as one box) on the side facing the data point, with a 6px standoff gap, and stops short of the marker at the other end. Two voices:
+The connector leaves the text block (primary text plus subtitle, treated as one box) on the side facing the data point, with a 6px standoff gap, and stops short of the marker at the other end. A curved connector is shaped to the data point and then pulled back along its end tangent, so the tail still aims at the marker. Two voices:
 
-- **Emphasis.** An arrowed connector (`'curve'` defaults to `arrow: true`) is drawn in the label's text ink with a small open-V arrowhead, so the gesture reads as part of the sentence.
-- **Quiet.** A non-arrowed straight leader or a `'drop-line'` is a gray hairline. It points without competing with the words.
+- **Emphasis.** An explicitly arrowed connector (`{ type: 'curve', arrow: true }`) is drawn in the label's text ink with a small open-V arrowhead, so the gesture reads as part of the sentence.
+- **Quiet.** A non-arrowed curve, straight leader, or `'drop-line'` is a gray hairline. It points without competing with the words.
 
 Connectors are dropped when they'd be noise rather than signal: a leader shorter than 8px, or one whose data point sits inside the text block. The marker still renders. A default annotation sits far enough off its point (28px) to draw a real leader without any `offset` authoring; you only lose the line by pulling the label back onto its own marker.
 
@@ -594,11 +603,11 @@ Connectors are dropped when they'd be noise rather than signal: a leader shorter
 | Field         | Type     | Default                     | Description                       |
 | ------------- | -------- | --------------------------- | --------------------------------- |
 | `radius`      | `number` | `4`                         | Circle radius in pixels.          |
-| `fill`        | `string` | theme background            | Interior fill (the "open ring").  |
+| `fill`        | `string` | theme `annotationMarkerFill` (neutral surface by default)            | Interior fill (the "open ring").  |
 | `stroke`      | `string` | the connector's stroke      | Ring color.                       |
 | `strokeWidth` | `number` | `1.5`                       | Ring width in pixels.             |
 
-The marker sits on the data point itself, not on the pulled-back connector tip. You get one by default when a connector is enabled and carries no arrowhead, including drop-lines. An arrowed connector gets no marker unless you ask for one, since the arrowhead already marks the spot. `dot: false` is always bare; an explicit `dot` always wins.
+The marker sits on the data point itself, not on the pulled-back connector tip. You get one by default when a connector is enabled and carries no arrowhead, including drop-lines. An arrowed connector gets no marker unless you ask for one, since the arrowhead already marks the spot. `dot: false` is always bare; an explicit `dot` always wins. A default dot that lands on a line's endpoint marker takes the marker's fill and stroke, so the two draw as one ring.
 
 ### RangeAnnotation
 
@@ -615,9 +624,9 @@ A highlighted band or rectangle.
 | `label`       | `string`           | `undefined`            | Range label text.                                           |
 | `labelOffset` | `AnnotationOffset` | `undefined`            | Pixel offset for the label. `{ dx?: number, dy?: number }`. |
 | `labelAnchor` | `AnnotationAnchor` | `'auto'`               | Label placement direction.                                  |
-| `fontSize`    | `number`           | `11`                   | Font size override for the range label (px).                |
+| `fontSize`    | `number`           | theme `small` (12px)                   | Font size override for the range label (px).                |
 | `fontWeight`  | `number`           | `500`                  | Font weight override for the range label.                   |
-| `fill`        | `string`           | theme `annotationFill` | Fill color.                                                 |
+| `fill`        | `string`           | theme `annotationRangeFill` (`#f0c040`) | Fill color.                                                 |
 | `stroke`      | `string`           | `undefined`            | Stroke color.                                               |
 | `opacity`     | `number`           | `1`                    | Opacity (0 to 1).                                           |
 | `zIndex`      | `number`           | `0`                    | Render ordering.                                            |
@@ -642,15 +651,17 @@ A horizontal or vertical reference line.
 | `strokeWidth` | `number`                          | `1`                    | Line width in pixels.               |
 | `labelOffset` | `AnnotationOffset`                | `undefined`            | Pixel offset for the label.         |
 | `labelAnchor` | `AnnotationAnchor`                | `'auto'`               | Label placement direction.          |
-| `labelPlacement` | `'auto' \| 'start' \| 'end' \| 'outside'` | legacy anchor behavior | Opt-in screen-space end selection, automatic containment, or a reserved outside gutter/lane. `labelAnchor` selects the side; an authored offset pins the base. |
-| `fontSize`    | `number`                          | `11`                   | Font size override for the label (px). |
+| `labelPlacement` | `'auto' \| 'start' \| 'end' \| 'outside'` | `'auto'` unless `labelAnchor` is authored | Screen-space end selection, automatic containment, or a reserved outside gutter/lane. `labelAnchor` selects the side; an authored offset pins the base. |
+| `fontSize`    | `number`                          | theme `small` (12px)                   | Font size override for the label (px). |
 | `fontWeight`  | `number`                          | `400`                  | Font weight override for the label. |
 | `fill`        | `string`                          | `undefined`            | Fill color.                         |
-| `stroke`      | `string`                          | theme `annotationText` | Stroke/line color.                  |
+| `stroke`      | `string`                          | theme `annotationRule` | Stroke/line color.                  |
 | `opacity`     | `number`                          | `1`                    | Opacity (0 to 1).                   |
 | `zIndex`      | `number`                          | `0`                    | Render ordering.                    |
 
 Provide `x` for a vertical line or `y` for a horizontal line. Both can be set for a crosshair.
+
+With `labelPlacement: 'outside'`, horizontal lines reserve a right lane as wide as the widest wrapped label (capped at 160px or 25% of the width). Vertical lines share a lane above the plot: labels whose extents don't overlap pack into one row, and whole rows are admitted while the lane stays within 25% of the height. A label whose row doesn't fit falls back to automatic placement inside the plot with a warning. The lane shrinks before the title or subtitle does.
 
 ### Annotation example
 
@@ -920,124 +931,80 @@ For line/area marks, mid-morph interruption uses a crossfade from the frozen int
 
 ## ThemeConfig
 
-User-facing theme overrides. Source: `core/src/types/spec.ts`.
+Public authored theme overrides live in `core/src/types/spec.ts`. Every field is optional. Use `ThemeConfig` for input and `ResolvedTheme` for compiled output; the former public `Theme` alias is removed.
 
-All fields are optional. The engine deep-merges these onto `DEFAULT_THEME`. You only specify what you want to change.
+`mergeThemeConfig()` deep-merges authored layers before `resolveTheme()` supplies defaults. Component theme props override provider themes; mount/compile options override the spec. In a `LayerSpec`, chrome, axes and legend use the layer theme (falling back to the first leaf's); each leaf's marks use its theme merged over the layer theme. Nested objects merge, arrays and `{ light, dark }` TokenValues replace atomically, and null replaces. `colors: string[]` is shorthand for `colors.categorical`.
 
 ```ts
-interface ThemeConfig {
-  colors?: {
-    categorical?: string[];
-    categoricalFill?: string[];
-    sequential?: Record<string, string[]>;
-    diverging?: Record<string, string[]>;
-    background?: string;
-    text?: string;
-    gridline?: string;
-    hairline?: string;
-    axis?: string;
-  };
-  fonts?: {
-    family?: string;
-    mono?: string;
-  };
-  spacing?: {
-    padding?: number;
-    chromeGap?: number;
-  };
-  rule?: { color: TokenValue; width: number; thickness: number };
-  borderRadius?: number;
-}
+import { broadsheet, mergeThemeConfig } from '@opendata-ai/openchart-core';
+import type { ThemeConfig } from '@opendata-ai/openchart-core';
+
+const theme: ThemeConfig = mergeThemeConfig(broadsheet, {
+  fonts: { sizes: { small: 12, axisTick: 12 } },
+  chrome: { title: { fontSize: 28 } },
+  rule: { width: 80 },
+});
 ```
+
+Authored `chrome.<element>.fontSize` takes precedence over propagation from `fonts.sizes`, including across theme layers. Theme chrome values are objects such as `{ color: '#333' }`; string color shorthand is removed. Spec chrome text shorthand (`chrome: { title: 'A title' }`) remains valid.
 
 ### Color overrides
 
-| Field                | Type                       | Default                           | Description                                                       |
-| -------------------- | -------------------------- | --------------------------------- | ----------------------------------------------------------------- |
-| `colors.categorical` | `string[]`                 | 8-color palette                   | Categorical palette for nominal data. Array of CSS color strings. |
-| `colors.categoricalFill` | `string[]`             | copied from `categorical`         | Quieter palette used for area-filling marks (bar, area, arc, waffle, calendar, rect). Set it only to control fills and strokes independently; leaving it unset copies `categorical` so a custom palette never drifts between the two. |
-| `colors.sequential`  | `Record<string, string[]>` | `{ blue, green, orange, purple }` | Sequential palettes keyed by name.                                |
-| `colors.diverging`   | `Record<string, string[]>` | `{ redBlue, brownTeal }`          | Diverging palettes keyed by name.                                 |
-| `colors.background`  | `string`                   | `'#ffffff'`                       | Visualization background color.                                   |
-| `colors.text`        | `string`                   | `'#1d1d1d'`                       | Default text color.                                               |
-| `colors.gridline`    | `string`                   | `'#e8e8e8'`                       | Gridline color.                                                   |
-| `colors.hairline`    | `string`                   | `'rgba(0,0,0,0.14)'`              | Structural line color for axis lines and separators. Distinct from `gridline`, which is lighter. |
-| `colors.axis`        | `string`                   | `'#888888'`                       | Axis line and tick color.                                         |
+Single colors accept `TokenValue` (`string | { light: string; dark: string }`). Palette arrays contain color strings. These are light-mode defaults unless a pair is shown:
 
-### Font overrides
+| Field | Default | Description |
+|---|---|---|
+| `colors.categorical` | Six-hue palette | Nominal-series stroke palette |
+| `colors.categoricalFill` | Default fill palette; inherits an authored categorical palette when omitted | Quieter fill colors for area-filling marks |
+| `colors.sequential` / `diverging` | Named palette maps | Numeric color scales |
+| `colors.background` | `transparent` | Visualization background; opaque surfaces derive from the neutral surface |
+| `colors.text` | `#09090b` | Main text ink |
+| `colors.gridline` | `rgba(0,0,0,0.08)` | Grid lines |
+| `colors.hairline` | `rgba(0,0,0,0.14)` | Structural separators |
+| `colors.axis` | `#71717a` | Axis lines and tick text |
+| `colors.annotationLabel` | `#333333` | Primary callout ink |
+| `colors.annotationMuted` | `#6b7280` | Subtitle and note ink |
+| `colors.annotationLeader` | `#8f8f8f` | Quiet connector ink |
+| `colors.annotationRule` | `#888888` / `#9ca3af` | Reference line ink, light/dark |
+| `colors.annotationRangeFill` | `#f0c040` | Range fill before opacity |
+| `colors.annotationMarkerFill` / `annotationPlate` | Resolved neutral surface | Marker interior and label plate; explicit colors win |
 
-| Field          | Type     | Default                                   | Description                         |
-| -------------- | -------- | ----------------------------------------- | ----------------------------------- |
-| `fonts.family` | `string` | `'Inter, -apple-system, ..., sans-serif'` | Primary font family.                |
-| `fonts.mono`   | `string` | `'"JetBrains Mono", ..., monospace'`      | Monospace font for tabular numbers. |
+Generic `annotationFill` and `annotationText` retain their other uses. See [Theming tokens](theming-tokens.md) for the complete token and dark-mode mapping.
 
-### Spacing overrides
+### Fonts, chrome, and spacing
 
-| Field               | Type     | Default | Description                              |
-| ------------------- | -------- | ------- | ---------------------------------------- |
-| `spacing.padding`   | `number` | `12`    | Padding inside the chart container (px). |
-| `spacing.chromeGap` | `number` | `4`     | Gap between chrome elements (px).        |
+| Field | Default | Description |
+|---|---|---|
+| `fonts.family` | Inter Variable, Inter, system sans-serif | Primary font family |
+| `fonts.mono` | JetBrains Mono, Fira Code, Cascadia Code, monospace | Tabular/monospace family |
+| `fonts.sizes.title` / `subtitle` | 26 / 14 | General title sizes |
+| `fonts.sizes.body` / `small` / `axisTick` | 13 / 12 / 12 | Body, small, and tick sizes |
+| `fonts.sizes.metricLabel` / `metricValue` | 11 / 22 | Metric row sizes |
+| `fonts.weights.normal` / `medium` / `semibold` / `bold` | 400 / 500 / 600 / 700 | Weight ladder |
+| `chrome.eyebrow` | 11px, 500, `#06b6d4`, 1.4 line-height | Eyebrow style |
+| `chrome.title` | 26px, 600, `#09090b`, 1.15 line-height | Title style |
+| `chrome.subtitle` | 14px, 400, `#71717a`, 1.45 line-height | Subtitle style |
+| `chrome.source` / `byline` / `footer` | 12px, 400, `#71717a`, 1.4 line-height | Attribution styles |
+| `spacing.padding` / `chromeGap` | 20 / 6 | Container padding / gap between chrome elements |
+| `spacing.chromeToChart` / `chartToFooter` | 16 / 12 | Gaps above and below the chart |
+| `spacing.axisMargin` | 6 | Axis margin |
+| `borderRadius` | 8 | Containers and tooltips |
 
 ### The editorial rule
 
-`rule` draws a short colored bar above the chrome block — the Economist/FT
-masthead device. Omit it (the default on every preset but `broadsheet`) for no
-rule.
+`rule` draws a short colored bar above top chrome. Omission inherits a preset rule, or draws none on the default theme. `rule: null` removes an inherited rule; partial objects preserve unmodified fields.
 
-```ts
-theme: {
-  rule: { color: { light: '#e3120b', dark: '#f4463f' }, width: 40, thickness: 3 },
-}
-```
-
-| Field            | Type         | Default     | Description                                                        |
-| ---------------- | ------------ | ----------- | ------------------------------------------------------------------ |
-| `rule.color`     | `TokenValue` | (required)  | Rule color. A `TokenValue` accepts a `{ light, dark }` pair, so it needs no dark-mode branch. |
-| `rule.width`     | `number`     | (required)  | Rule length in pixels.                                             |
-| `rule.thickness` | `number`     | (required)  | Rule height in pixels. `computeChrome` reserves `thickness + chromeGap` above the eyebrow/title. |
+| Field | Fallback when a rule is authored without a preset | Description |
+|---|---|---|
+| `rule.color` | Theme text ink | TokenValue color, including light/dark pairs |
+| `rule.width` | 40px | Rule length |
+| `rule.thickness` | 3px | Rule height; chrome reserves thickness plus chromeGap |
 
 No top chrome means no rule.
 
-### Other
+The named presets are `essay`, `wire`, `broadsheet`, and `terminal`. Omit `theme` or pass `{}` for the default; `editorial` is removed. `clarity` is deprecated and contains only its background, axis, and eyebrow colors. `legacyEditorial` retains v8 typography for migration.
 
-| Field          | Type     | Default | Description                                              |
-| -------------- | -------- | ------- | -------------------------------------------------------- |
-| `borderRadius` | `number` | `4`     | Border radius for the chart container and tooltips (px). |
-
-### DEFAULT_THEME reference
-
-The full default theme (from `core/src/theme/defaults.ts`):
-
-| Property                 | Value                                                                    |
-| ------------------------ | ------------------------------------------------------------------------ |
-| `colors.background`      | `#ffffff`                                                                |
-| `colors.text`            | `#1d1d1d`                                                                |
-| `colors.gridline`        | `#e8e8e8`                                                                |
-| `colors.axis`            | `#888888`                                                                |
-| `colors.annotationFill`  | `rgba(0,0,0,0.04)`                                                       |
-| `colors.annotationText`  | `#555555`                                                                |
-| `fonts.family`           | Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif |
-| `fonts.mono`             | "JetBrains Mono", "Fira Code", "Cascadia Code", monospace                |
-| `fonts.sizes.title`      | 22                                                                       |
-| `fonts.sizes.subtitle`   | 15                                                                       |
-| `fonts.sizes.body`       | 13                                                                       |
-| `fonts.sizes.small`      | 11                                                                       |
-| `fonts.sizes.axisTick`   | 11                                                                       |
-| `fonts.weights.normal`   | 400                                                                      |
-| `fonts.weights.medium`   | 500                                                                      |
-| `fonts.weights.semibold` | 600                                                                      |
-| `fonts.weights.bold`     | 700                                                                      |
-| `spacing.padding`        | 12                                                                       |
-| `spacing.chromeGap`      | 4                                                                        |
-| `spacing.chromeToChart`  | 8                                                                        |
-| `spacing.chartToFooter`  | 8                                                                        |
-| `spacing.axisMargin`     | 6                                                                        |
-| `borderRadius`           | 4                                                                        |
-| `chrome.title`           | 22px, 700 weight, `#333333`, 1.3 line-height                             |
-| `chrome.subtitle`        | 15px, 400 weight, `#666666`, 1.4 line-height                             |
-| `chrome.source`          | 12px, 400 weight, `#999999`, 1.3 line-height                             |
-| `chrome.byline`          | 12px, 400 weight, `#999999`, 1.3 line-height                             |
-| `chrome.footer`          | 12px, 400 weight, `#999999`, 1.3 line-height                             |
+Only authored theme overrides and derived values are stamped inline. Omitted CSS tokens remain overridable by host styles, including `--oc-border-radius`; removing an override restores the host's previous inline value. Export captures live token values.
 
 ---
 
@@ -1080,9 +1047,8 @@ Input for data table visualizations. Source: `core/src/types/spec.ts`.
 | `striped`           | `boolean`                         | `false`        | Zebra striping on body rows. Hairlines only by default.                           |
 | `sort`              | `SortState`                       | first inline-bar column, descending | Initial sort applied before the user touches a header. `{ column: string, direction: 'asc' \| 'desc' }`. |
 | `totalRow`          | `boolean \| { label?: string }`   | `false`        | Sticky footer summing every quantitative column over the filtered rows (the whole result set, not just the current page). `true` uses the label `'Total'`. |
-| `compact`           | `boolean`                         | `false`        | **Deprecated.** Alias for `density: 'condensed'`; still honored, with a warning.  |
 | `responsive`        | `boolean`                         | `true`         | Whether the table adapts to container width.                                      |
-| `watermark`         | `boolean`                         | `true`         | Whether to show the tryOpenData.ai watermark. Spec-level value takes precedence over mount/compile options. |
+| `watermark`         | `boolean`                         | `true`         | Whether to show the tryOpenData.ai watermark. Mount/compile options take precedence over spec and active breakpoint values. |
 
 ### ColumnConfig
 
@@ -1198,8 +1164,13 @@ Pass these through `MountOptions` (vanilla) or `ChartProps` (React).
 | `onMarkClick`       | `(event: MarkEvent) => void`                          | User clicks a data mark (bar, point, line, arc).  |
 | `onMarkHover`       | `(event: MarkEvent) => void`                          | Mouse enters a data mark.                         |
 | `onMarkLeave`       | `() => void`                                          | Mouse leaves a data mark.                         |
+| `onEdit` | `(transaction: EditTransaction) => void` | One committed authored edit; apply atomically with `applyEditTransaction` and retain its inverse for undo. |
 | `onLegendToggle`    | `(series: string, visible: boolean) => void`          | User clicks a legend entry to show/hide a series. |
-| `onAnnotationClick` | `(annotation: Annotation, event: MouseEvent) => void` | User clicks an annotation element.                |
+| `onAnnotationClick` | `(annotation: Annotation, event: MouseEvent, element: ElementRef) => void` | User clicks an annotation element.                |
+| `onSelect` | `(element: ElementRef) => void` | An element is selected by click, Tab, or `select()`. Requires `interaction` `'select'` or `'edit'`. |
+| `onDeselect` | `(element: ElementRef) => void` | The selected element is deselected. |
+
+The `interaction` mount option (`'read' | 'select' | 'edit'`) gates selection and editing; when omitted, `onEdit` implies `'edit'` and `onSelect`/`onDeselect` imply `'select'`. Every `ElementRef` carries a JSON Pointer `path`. See [Editing and keyboard navigation](migrating-v9.md#editing-and-keyboard-navigation) for transaction persistence and cancelled-gesture behavior. See [Interaction mode](integration-guide.md#interaction-mode) for the full table.
 
 ### MarkEvent
 
@@ -1242,7 +1213,7 @@ Graphs render force-directed network visualizations on canvas. They support node
 | `chrome`         | `Chrome`                         | `undefined` | Editorial text.                                                                       |
 | `annotations`    | `Annotation[]`                   | `undefined` | Annotations.                                                                          |
 | `theme`          | `ThemeConfig`                    | `undefined` | Theme overrides.                                                                      |
-| `watermark`      | `boolean`                        | `true`      | Whether to show the tryOpenData.ai watermark. Spec-level value takes precedence over mount/compile options. |
+| `watermark`      | `boolean`                        | `true`      | Whether to show the tryOpenData.ai watermark. Mount/compile options take precedence over spec and active breakpoint values. |
 
 ### GraphEncoding
 
@@ -1305,7 +1276,6 @@ Sankey diagrams show flows between stages. Each data row represents a link from 
 | `linkStyle`     | `SankeyLinkColor` | `'gradient'`| Link coloring: `'gradient'`, `'source'`, `'target'`, `'neutral'`.                  |
 | `linkOpacity`   | `number`          | `0.5`       | Link fill opacity (0-1). Defaults to 0.75 in dark mode.                            |
 | `nodeLabelAlign`| `string`          | `'auto'`    | Label placement: `'auto'`, `'left'`, `'right'`.                                    |
-| `valueFormat`   | `string`          | `undefined` | d3-format string for values in tooltips and ARIA labels (e.g. `"$,.0f"`, `"~s"`).  |
 | `chrome`        | `Chrome`          | `undefined` | Editorial text (title, subtitle, source, byline, footer).                           |
 | `legend`        | `LegendConfig`    | `undefined` | Legend display configuration.                                                       |
 | `theme`         | `ThemeConfig`     | `undefined` | Theme overrides.                                                                    |
@@ -1370,7 +1340,6 @@ Maps render TopoJSON geometries as SVG, join tabular data rows to features by id
 | `theme`       | `ThemeConfig`     | `undefined` | Theme overrides.                                                                     |
 | `watermark`   | `boolean`         | `true`      | Whether to show the tryOpenData.ai watermark.                                        |
 | `animation`   | `AnimationSpec`   | `undefined` | Entrance animation configuration.                                                    |
-| `valueFormat` | `string`          | `undefined` | Deprecated: use `encoding.color.format` instead. d3-format string for color values in tooltips and the legend (e.g. `".1f"`). `encoding.color.format` wins when both are set. |
 
 ### GeoMapGeo
 
@@ -1509,7 +1478,7 @@ Every state renders as an equal-size square in a fixed 12x8 grid, so small state
 | `theme`       | `ThemeConfig`                                         | `undefined` | Theme overrides.                                                                |
 | `watermark`   | `boolean`                                             | `true`      | Whether to show the tryOpenData.ai watermark.                                   |
 | `animation`   | `AnimationSpec`                                       | `undefined` | Entrance animation configuration.                                               |
-| `valueFormat` | `string`                                              | `undefined` | Deprecated: use `encoding.value.format` instead. d3-format string for tile values, legend labels, and tooltips. |
+| `valueFormat` | `string` | `undefined` | Tilemap fallback d3-format string for values, legend labels, and tooltips; `encoding.value.format` takes precedence. |
 
 ### TileMapEncoding
 
@@ -1524,7 +1493,7 @@ Every state renders as an equal-size square in a fixed 12x8 grid, so small state
 
 - **Quantitative mode** renders a gradient legend bar with min/max labels below the grid. **Categorical mode** (string values, a `color` channel, or a `colors` map) renders swatch rows instead.
 - States missing from the data render as empty tiles, keeping their place on the grid.
-- **Number formatting:** set `encoding.value.format` (d3-format string, e.g. `".1f"`, `"$,.0f"`, `"~s"`). It applies to tile values, legend labels, and tooltips, and wins over the deprecated top-level `valueFormat`. With record-map data and no explicit encoding, `valueFormat` still applies (with a deprecation warning).
+- **Number formatting:** set `encoding.value.format` (d3-format string, e.g. `".1f"`, `"$,.0f"`, `"~s"`). It applies to tile values, legend labels, and tooltips, and wins over top-level `valueFormat`. With record-map data and no explicit encoding, `valueFormat` remains supported.
 - **`scale.scheme` fails validation on tilemap encoding channels.** The tilemap compile path never reads it; the top-level `palette` property is the mechanism tilemaps use for color.
 
 ### Tilemap example
@@ -1677,7 +1646,7 @@ const spec: ChartSpec = {
     { category: "Tablet", share: 7 },
   ],
   encoding: {
-    y: { field: "share", type: "quantitative" },
+    theta: { field: "share", type: "quantitative" },
     color: { field: "category", type: "nominal" },
   },
   chrome: { title: "Traffic by device" },
@@ -1697,7 +1666,7 @@ const spec: ChartSpec = {
     { status: "Blocked", count: 5 },
   ],
   encoding: {
-    y: { field: "count", type: "quantitative" },
+    theta: { field: "count", type: "quantitative" },
     color: { field: "status", type: "nominal" },
   },
   chrome: { title: "Task status" },
@@ -1837,9 +1806,9 @@ All builders accept field names as strings (auto-infer type from data) or full `
 | `annotations` | `Annotation[]` | Annotations.                               |
 | `responsive`  | `boolean`      | Responsive behavior.                       |
 | `theme`       | `ThemeConfig`  | Theme overrides.                           |
-| `watermark`   | `boolean`      | Whether to show the tryOpenData.ai watermark. Spec-level value takes precedence over mount/compile options; defaults to `true`. |
+| `watermark`   | `boolean`      | Whether to show the tryOpenData.ai watermark. Mount/compile options take precedence over the spec; defaults to `true`. |
 
-`FieldRef` is `string | EncodingChannel`. When a string is provided, `inferFieldType()` samples up to 20 data values to determine the encoding type (quantitative, temporal, or nominal).
+`FieldRef` is `string | EncodingChannel`. When a string is provided, `inferFieldType()` uses the shared builder/compiler inference: sample up to 50 rows, ignore nulls, and require more than 80% agreement. Numeric strings are considered before dates, so a column of `'2020'` values is quantitative. Set the channel type explicitly when years should be ordinal or temporal.
 
 ### Builder example
 
@@ -1870,12 +1839,12 @@ const result = validateSpec(spec);
 
 ### ValidationError
 
-| Field        | Type                  | Description                                                   |
-| ------------ | --------------------- | ------------------------------------------------------------- |
-| `message`    | `string`              | Human-readable error description.                             |
-| `path`       | `string \| undefined` | Dot-path to the field that failed, e.g. `'encoding.x.field'`. |
-| `code`       | `ValidationErrorCode` | Machine-readable error code.                                  |
-| `suggestion` | `string`              | Actionable fix suggestion.                                    |
+| Field        | Type                  | Description                                                                                                                     |
+| ------------ | --------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `message`    | `string`              | Human-readable error description.                                                                                               |
+| `path`       | `string`              | Root-relative RFC 6901 JSON Pointer to the value that failed, e.g. `'/encoding/x/field'` or `'/layer/1/data/0/value'`. The root is `''`. |
+| `code`       | `ValidationErrorCode` | Machine-readable error code.                                                                                                    |
+| `suggestion` | `string`              | Actionable fix suggestion.                                                                                                      |
 
 ### ValidationErrorCode
 
@@ -1901,14 +1870,14 @@ const result = validateSpec(spec);
 
 ## Authoring foundation additions
 
-The separate [OpenStudio application](https://github.com/tryopendata/openstudio) consumes these additive interfaces. Existing v8 visual and animation defaults remain unchanged.
+These library interfaces support authoring and reader applications. OpenStudio adoption is separate; see [Migrating to v9](migrating-v9.md) for the changed defaults and removed APIs.
 
-- **Theme:** import `clarity` for white/ink surfaces, Inter titles and 12px axes; `legacyEditorial` restores documented v8 typography without freezing layout behavior.
+- **Theme:** v9 defaults include 12px axes/small text and larger chrome gaps. `clarity` is deprecated and retains only background, axis, and eyebrow colors. `legacyEditorial` restores v8 typography; `migrateSpecV8` can materialize the wider v8 styling contract without freezing layout behavior.
 - **Motion:** `animation: 'fluid' | 'subtle' (omit the preset for v8 timing)`; explicit phases override their preset. A phase can use `spring: { stiffness: 320, damping: 36, mass: 1 }` or the existing duration/easing configuration. Combining a spring with duration/easing in the same phase is an error. Quantitative springs are bounded, with a finite terminal state. Omitted/false animation remains disabled.
 - **Responsiveness:** `responsive: { preserveEnd: true, labelSummary: true }` retains the final x-axis boundary and moves overflowing endpoint identities to a wrapped list. Explicit axis values and author choices remain authoritative. `chromeLayout: 'grow'` gives that content space. Tables may opt into `mobileLayout: 'priority'`; `cards` remains the default, with `scroll` also available.
 - **Field metadata:** chart, table and map documents accept `fields`, keyed by field name. Each entry may declare `type` (`text`, `number`, `date`), `role: 'identity'`, `label`, `unit`, `measure`, `provenance`, `representation` (`number`, `percent`, `proportion`), `interval: { lower: 'lowerField', upper: 'upperField' }`, or `statusField`. Supplied intervals are never synthesized. Percent means 0–100 and proportion means 0–1.
 - **Reader identity:** a unique authored `encoding.key` supports observation persistence. Missing/duplicate keys clear observation pins on data replacement. Aggregated observations are groups, not raw rows, and the reference reader clears them on data/grouping revision. The `createReader` controller is independent from editor selection and uses `ChartInstance.sampleLayout()` for supported moving geometry. Call `reader.update(spec)` after `chart.update(spec)`; it reconciles visibility against the compiled destination marks even when the source data array is unchanged. An explicit `visibleKeys` override remains supported. Layered charts retain per-layer hover/crosshair inspection, but reader pinning across layers is not yet supported: a `LayerSpec` clears pins with an announcement rather than guessing cross-layer identity.
-- **Design review:** `diagnoseChart(spec, layout)` returns structured checks with code, severity, checkability, path, viewport, explanation and origin. `CompileOptions.onDiagnostic` receives these checks. `recommendCompositions(data, question, roles)` requires explicit field roles and returns explained alternatives. `applySpecPatch` rejects stale snapshot preconditions; hosts should preview patches and retain undo. The reference editor uses the full authored document for patches even while previewing a filtered scene.
+- **Design review:** `diagnoseChart(spec, layout)` returns structured checks with code, severity, checkability, path, viewport, explanation and origin. `CompileOptions.onDiagnostic` receives these checks. `recommendCompositions(data, question, roles)` requires explicit field roles and returns explained alternatives. A diagnostic `fix` is a `SpecPatch` whose `changes` are `EditOp`s. `applySpecPatch(spec, patch)` rejects stale snapshot preconditions, applies the operations atomically through `applyEditTransaction`, and returns `{ spec, inverse }`; apply `inverse` to the patched document to undo. Hosts should preview patches before applying them. The reference editor uses the full authored document for patches even while previewing a filtered scene.
 
 Host-neutral identity, comparison and explicit dataset-binding helpers are also exported from the engine. They provide foundations for future linked views, without implicitly declaring compatible measures or raw-row/aggregate relationships. See the [delivery record](design-evolution.md) for the advanced capabilities and release gates still pending.
 
@@ -1921,15 +1890,15 @@ Maps, tile maps, bar lists and Sankey support arrows for inspection and Enter/Sp
 Table `rowKey` values must be unique to support identity across revisions. Numeric `1` and string `"1"` are distinct. Missing/duplicate keys emit `TABLE_ROW_KEY_AMBIGUOUS` and use revision-local identities. Treat compiled row IDs as opaque. CSV export includes all filtered and sorted rows, not just the current pagination page.
 
 
-### Compact callout limits and note sizing (8.9.1)
+### Compact callout limits and note sizing
 
 `responsive.compactAnnotationLimit?: number | null` is an optional nonnegative
-integer limit below 400px outer width. Omitted/null means unlimited; zero demotes
-all eligible callouts. `responsive: false` callouts are exempt. Priority/source
+integer limit below 400px outer width. Omitted means one; null means unlimited,
+and zero demotes all eligible callouts. `responsive: false` callouts are exempt. Priority/source
 order precedes coverage/collision thinning. Existing disabled-response and
 short-height rules still apply. Facet panel width does not trigger this limit.
 
 Read `layout.chrome.noteBandHeight` for note space and `layout.dimensions.height`
 for the final rendered/exported height. `chromeLayout: 'grow'` also supports facets;
 `chrome.grownHeight` reports engine-added height for auto-height consumers.
-See [annotation migration guidance](./migrating-v8.md#annotation-layout-opt-ins).
+See [annotation migration guidance](./migrating-v9.md#changed-annotation-and-figure-defaults).

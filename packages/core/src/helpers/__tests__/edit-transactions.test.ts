@@ -111,6 +111,23 @@ describe('applyEditTransaction', () => {
     expect(spec).toEqual(before);
   });
 
+  it('rejects reordered ID-less reflines by label', () => {
+    const spec = {
+      annotations: [
+        { type: 'refline', y: 1, label: 'Max' },
+        { type: 'refline', y: 2, label: 'Target' },
+      ],
+    };
+    const op = (index: number) => ({
+      op: 'set' as const,
+      path: `/annotations/${index}/labelOffset`,
+      value: { dx: 4 },
+      expect: { type: 'refline', text: 'Target' },
+    });
+    expect(applyEditTransaction(spec, { ops: [op(0)] }).ok).toBe(false);
+    expect(applyEditTransaction(spec, { ops: [op(1)] }).ok).toBe(true);
+  });
+
   it.each([
     { op: 'set', path: '/missing/child', value: 1 },
     { op: 'remove', path: '/annotations/0' },

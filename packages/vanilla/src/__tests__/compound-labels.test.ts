@@ -113,9 +113,11 @@ describe('compound axis labels rendering', () => {
       const tspans = tick.querySelectorAll('tspan');
       // No tspan elements when there's no subtitle
       expect(tspans.length).toBe(0);
-      // Should have plain text content
-      expect(tick.textContent).toBeTruthy();
     }
+    // Plain text content is the category value itself
+    expect([...yAxisTicks].map((t) => t.textContent).sort()).toEqual(
+      albumData.map((d) => d.album).sort(),
+    );
 
     chart.destroy();
   });

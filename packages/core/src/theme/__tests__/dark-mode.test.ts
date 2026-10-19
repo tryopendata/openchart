@@ -142,7 +142,7 @@ describe('adaptTheme', () => {
   it('preserves explicit chrome color overrides in dark mode', () => {
     const light = resolveTheme({
       colors: { background: '#ffffff' },
-      chrome: { subtitle: '#d0d6e0', source: '#d0d6e0' },
+      chrome: { subtitle: { color: '#d0d6e0' }, source: { color: '#d0d6e0' } },
     });
     const dark = adaptTheme(light);
     expect(dark.chrome.subtitle.color).toBe('#d0d6e0');
@@ -222,7 +222,7 @@ describe('adaptTheme', () => {
     expect(dark.chrome.eyebrow.color).toBe('#ff6b64');
 
     // Without a pair, the eyebrow keeps its accent tint across modes.
-    const noPair = adaptTheme(resolveTheme({ chrome: { eyebrow: '#e3120b' } }));
+    const noPair = adaptTheme(resolveTheme({ chrome: { eyebrow: { color: '#e3120b' } } }));
     expect(noPair.chrome.eyebrow.color).toBe('#e3120b');
   });
 
@@ -233,6 +233,9 @@ describe('adaptTheme', () => {
     const dark = adaptTheme(light);
     // Text should be adapted to a light color for dark bg readability
     expect(dark.colors.text).not.toBe(light.colors.text);
-    expect(dark.colors.text).toBeDefined();
+    // ...lighter: more contrast against black than the light-mode text has.
+    expect(contrastRatio(dark.colors.text, '#000000')).toBeGreaterThan(
+      contrastRatio(light.colors.text, '#000000'),
+    );
   });
 });

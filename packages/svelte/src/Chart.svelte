@@ -8,72 +8,77 @@
 <script lang="ts">
 import type {
   Annotation,
-  AnnotationOffset,
   ChartSpec,
   DarkMode,
   EditTransaction,
-  ElementEdit,
   ElementRef,
-  GraphSpec,
   LayerSpec,
   MarkEvent,
-  TextAnnotation,
+  ReaderChangeMeta,
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
-import { type ChartInstance, createChart, type MountOptions } from '@opendata-ai/openchart-vanilla';
+import { mergeThemeConfig } from '@opendata-ai/openchart-core';
+import {
+  type ChartInstance,
+  type ChartReaderSelection,
+  createChart,
+  createChartReaderBinding,
+  type InteractionMode,
+  type MountOptions,
+  type ReaderPresentationOptions,
+} from '@opendata-ai/openchart-vanilla';
 import { onMount, untrack } from 'svelte';
 import { getVizDarkMode, getVizTheme } from './context.js';
 
 let {
   spec,
+  reader,
+  readerSelection,
+  onreaderchange,
   theme,
   darkMode,
   renderer,
+  rowHover,
   autoResize,
-  responsive,
   revision,
-  onedittransaction,
+  onedit,
   onmarkclick,
   onmarkhover,
   onmarkleave,
   onlegendtoggle,
   onannotationclick,
-  onannotationedit,
-  onedit,
+  onhighlightchange,
+  onreveal,
   onselect,
   ondeselect,
-  ontextedit,
-  ondatapointclick,
-  editable,
+  interaction,
   selectedElement: selectedElementProp,
   highlight,
   class: className,
   style,
 }: {
-  spec: ChartSpec | LayerSpec | GraphSpec;
+  reader?: false | ReaderPresentationOptions;
+  readerSelection?: ChartReaderSelection;
+  onreaderchange?: (selection: ChartReaderSelection, meta: ReaderChangeMeta) => void;
+  spec: ChartSpec | LayerSpec;
   theme?: ThemeConfig;
   darkMode?: DarkMode;
   renderer?: 'auto' | 'svg' | 'canvas';
+  /** Quiet row inspection for simple horizontal bars. */
+  rowHover?: boolean;
   autoResize?: boolean;
-  /** @deprecated Use autoResize. */
-  responsive?: boolean;
   revision?: string | number;
-  onedittransaction?: (tx: EditTransaction) => void;
+  onedit?: (tx: EditTransaction) => void;
   onmarkclick?: (event: MarkEvent) => void;
   onmarkhover?: (event: MarkEvent) => void;
   onmarkleave?: () => void;
   onlegendtoggle?: (series: string, visible: boolean) => void;
   onannotationclick?: (annotation: Annotation, event: MouseEvent, element: ElementRef) => void;
-  /** @deprecated Use onedittransaction. */
-  onannotationedit?: (annotation: TextAnnotation, offset: AnnotationOffset) => void;
-  onedit?: (edit: ElementEdit) => void;
+  onhighlightchange?: (values: string[]) => void;
+  onreveal?: (guess: Array<{ x: string | number; y: number }>) => void;
   onselect?: (element: ElementRef) => void;
   ondeselect?: (element: ElementRef) => void;
-  /** @deprecated Use onedittransaction. */
-  ontextedit?: (element: ElementRef, oldText: string, newText: string) => void;
-  /** @deprecated Use onmarkclick. */
-  ondatapointclick?: (data: Record<string, unknown>) => void;
-  editable?: boolean;
+  interaction?: InteractionMode;
   selectedElement?: ElementRef;
   highlight?: string[] | null;
   class?: string;
@@ -82,12 +87,20 @@ let {
 
 let containerEl: HTMLDivElement;
 let instance: ChartInstance | null = null;
+const readerBinding = createChartReaderBinding();
+function syncReader() {
+  if (instance && containerEl)
+    readerBinding.sync(containerEl, instance, spec, reader, readerSelection, (state, meta) =>
+      untrack(() => onreaderchange)?.(state, meta),
+    );
+}
 
 const ctxTheme = getVizTheme();
 const ctxDarkMode = getVizDarkMode();
 
 onMount(() => {
   return () => {
+    readerBinding.detach();
     instance?.destroy();
     instance = null;
   };
@@ -104,69 +117,79 @@ const stableHandlers: MountOptions = {
     untrack(() => onlegendtoggle)?.(series, visible),
   onAnnotationClick: (annotation: Annotation, event: MouseEvent, element: ElementRef) =>
     untrack(() => onannotationclick)?.(annotation, event, element),
+  onHighlightChange: (values: string[]) => untrack(() => onhighlightchange)?.(values),
+  onReveal: (guess: Array<{ x: string | number; y: number }>) => untrack(() => onreveal)?.(guess),
 };
 
-// Editing callbacks - only defined as stable wrappers, but only
-// included in options when the consumer provides the prop.
-const stableOnAnnotationEdit = (annotation: TextAnnotation, offset: AnnotationOffset) =>
-  untrack(() => onannotationedit)?.(annotation, offset);
-const stableOnEdit = (edit: ElementEdit) => untrack(() => onedit)?.(edit);
+// Selection/edit callbacks - stable wrappers, included in options only when
+// the consumer provides the prop. Their presence infers the interaction mode
+// when `interaction` is omitted, so presence (not identity) recreates the chart.
 const stableOnSelect = (element: ElementRef) => untrack(() => onselect)?.(element);
 const stableOnDeselect = (element: ElementRef) => untrack(() => ondeselect)?.(element);
-const stableOnTextEdit = (element: ElementRef, oldText: string, newText: string) =>
-  untrack(() => ontextedit)?.(element, oldText, newText);
 
-const hasTransactionListener = $derived(Boolean(onedittransaction));
-const stableOnEditTransaction = (tx: EditTransaction) => untrack(() => onedittransaction)?.(tx);
+const hasEditListener = $derived(Boolean(onedit));
+const hasSelectListener = $derived(Boolean(onselect));
+const hasDeselectListener = $derived(Boolean(ondeselect));
+const stableOnEdit = (tx: EditTransaction) => untrack(() => onedit)?.(tx);
 
 let prevSpec = '';
+let mountedConfig = '';
 let prevRevision: string | number | undefined;
 
-// Effect 1: Mount/recreate chart on theme/darkMode changes.
+// Effect 1: Mount/recreate chart on theme/darkMode/renderer/interaction changes.
 // Reads spec via untrack() so spec changes don't trigger full recreate.
 $effect(() => {
-  const resolvedTheme = theme ?? ctxTheme?.();
+  const resolvedTheme = mergeThemeConfig(ctxTheme?.(), theme);
   const resolvedDarkMode = darkMode ?? ctxDarkMode?.();
   const resolvedRenderer = renderer;
-  const resolvedEditable = editable;
+  const resolvedInteraction = interaction;
   // Read spec without tracking - spec changes handled in Effect 2
   const currentSpec = untrack(() => spec);
 
+  const config = JSON.stringify([
+    resolvedTheme,
+    resolvedDarkMode,
+    resolvedRenderer,
+    resolvedInteraction,
+    rowHover,
+    autoResize,
+    hasEditListener,
+    hasSelectListener,
+    hasDeselectListener,
+  ]);
+  if (instance && config === mountedConfig) return;
+  mountedConfig = config;
+  readerBinding.detach();
   instance?.destroy();
 
-  const hasAnnotationEdit = untrack(() => onannotationedit) !== undefined;
-  const hasEdit = untrack(() => onedit) !== undefined;
-  const hasSelect = untrack(() => onselect) !== undefined;
-  const hasDeselect = untrack(() => ondeselect) !== undefined;
-  const hasTextEdit = untrack(() => ontextedit) !== undefined;
   const currentSelectedElement = untrack(() => selectedElementProp);
 
   const options: MountOptions = {
     theme: resolvedTheme,
     darkMode: resolvedDarkMode,
     renderer: resolvedRenderer,
+    rowHover,
     autoResize,
-    responsive,
     revision: untrack(() => revision),
-    ...(untrack(() => ondatapointclick)
-      ? {
-          onDataPointClick: (data: Record<string, unknown>) =>
-            untrack(() => ondatapointclick)?.(data),
-        }
-      : {}),
-    ...(hasTransactionListener ? { onEditTransaction: stableOnEditTransaction } : {}),
+    ...(hasEditListener ? { onEdit: stableOnEdit } : {}),
     ...stableHandlers,
-    ...(resolvedEditable != null ? { editable: resolvedEditable } : {}),
-    ...(hasAnnotationEdit ? { onAnnotationEdit: stableOnAnnotationEdit } : {}),
-    ...(hasEdit ? { onEdit: stableOnEdit } : {}),
-    ...(hasSelect ? { onSelect: stableOnSelect } : {}),
-    ...(hasDeselect ? { onDeselect: stableOnDeselect } : {}),
-    ...(hasTextEdit ? { onTextEdit: stableOnTextEdit } : {}),
+    ...(resolvedInteraction != null ? { interaction: resolvedInteraction } : {}),
+    ...(hasSelectListener ? { onSelect: stableOnSelect } : {}),
+    ...(hasDeselectListener ? { onDeselect: stableOnDeselect } : {}),
     ...(currentSelectedElement ? { selectedElement: currentSelectedElement } : {}),
   };
 
-  instance = createChart(containerEl, currentSpec, options);
+  instance = untrack(() => createChart(containerEl, currentSpec, options));
+  untrack(() => syncReader());
   prevSpec = JSON.stringify(currentSpec);
+  prevRevision = options.revision;
+});
+
+$effect(() => {
+  reader;
+  readerSelection;
+  onreaderchange;
+  untrack(() => syncReader());
 });
 
 // Effect 2: Update chart when spec changes (no destroy/recreate).
@@ -183,6 +206,7 @@ $effect(() => {
       selectedElement: untrack(() => selectedElementProp),
       revision: currentRevision,
     });
+    untrack(() => syncReader());
   }
 });
 
@@ -220,6 +244,11 @@ export function select(ref: ElementRef): void {
 
 export function deselect(): void {
   instance?.deselect();
+}
+
+/** The underlying vanilla chart instance (null until mounted). */
+export function getInstance(): ChartInstance | null {
+  return instance;
 }
 </script>
 

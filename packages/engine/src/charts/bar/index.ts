@@ -6,6 +6,7 @@
 
 import type { Mark } from '@opendata-ai/openchart-core';
 import { resolveFieldFormatter } from '../../format/field-format';
+import { filterByDensity } from '../_shared/density-filter';
 import type { ChartRenderer } from '../registry';
 import { computeBarMarks } from './compute';
 import { computeBarLabels } from './labels';
@@ -21,6 +22,8 @@ export const barRenderer: ChartRenderer = (
   strategy,
   theme,
   containerWidth,
+  labelPlan,
+  measureText,
 ) => {
   const marks = computeBarMarks(spec, scales, chartArea, strategy, containerWidth, theme);
 
@@ -44,9 +47,16 @@ export const barRenderer: ChartRenderer = (
     theme.isDark,
     spec.labels.fontSize,
     spec.labels.suffix,
+    theme.fonts.family,
+    {
+      placement: labelPlan?.placement ?? spec.labels.placement,
+      columnWidth: labelPlan?.columnWidth,
+      measureText: spec.labels.placement ? measureText : undefined,
+    },
   );
-  for (let i = 0; i < marks.length && i < labels.length; i++) {
-    marks[i].label = labels[i];
+  const labelMarks = spec.labels.placement ? filterByDensity(marks, spec.labels.density) : marks;
+  for (let i = 0; i < labelMarks.length && i < labels.length; i++) {
+    labelMarks[i].label = labels[i];
   }
 
   return marks as Mark[];

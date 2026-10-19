@@ -24,7 +24,10 @@ const spec: ChartSpec = {
 };
 describe('facet chrome growth', () => {
   it('appends one chrome/note band while preserving the non-chrome plot budget', () => {
-    const subtract = compileChart(spec, { width: 390, height: 650 });
+    const subtract = compileChart(
+      { ...spec, chromeLayout: 'subtract' },
+      { width: 390, height: 650 },
+    );
     const grow = compileChart({ ...spec, chromeLayout: 'grow' }, { width: 390, height: 650 });
     const added =
       grow.chrome.topHeight + grow.chrome.bottomHeight + (grow.chrome.noteBandHeight ?? 0);
@@ -36,10 +39,15 @@ describe('facet chrome growth', () => {
       grow.facet!.panels.every((panel) => panel.annotations.every((a) => a.footnoteIndex)),
     ).toBe(true);
   });
-  it('keeps default/subtract identical and accepts the compile option', () => {
+  it('grows only notes by default and accepts the compile option', () => {
     const opts = { width: 800, height: 650 };
-    expect(compileChart(spec, opts)).toEqual(
-      compileChart({ ...spec, chromeLayout: 'subtract' }, opts),
+    const defaultLayout = compileChart(spec, opts);
+    const subtract = compileChart({ ...spec, chromeLayout: 'subtract' }, opts);
+    expect(defaultLayout.dimensions.height - subtract.dimensions.height).toBeCloseTo(
+      defaultLayout.chrome.noteBandHeight ?? 0,
+    );
+    expect(defaultLayout.chrome.grownHeight ?? 0).toBeCloseTo(
+      defaultLayout.chrome.noteBandHeight ?? 0,
     );
     expect(compileChart(spec, { ...opts, chromeLayout: 'grow' })).toEqual(
       compileChart({ ...spec, chromeLayout: 'grow' }, opts),

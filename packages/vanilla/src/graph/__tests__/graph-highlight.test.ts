@@ -81,6 +81,7 @@ describe('highlight API', () => {
   it('highlight() never recompiles the graph', () => {
     container = makeContainer();
     const graph = createGraph(container, catSpec);
+    // Pass-through spy: a recompile changes nothing visible, so the call is the only signal.
     const spy = vi.spyOn(engine, 'compileGraph');
     graph.highlight({ category: { field: 'kind', value: 'x' } });
     graph.clearHighlight();
@@ -419,6 +420,7 @@ describe('setActiveCategories / getActiveCategories', () => {
   it('never recompiles the graph', () => {
     container = makeContainer();
     const graph = createGraph(container, catSpec);
+    // Pass-through spy: a recompile changes nothing visible, so the call is the only signal.
     const spy = vi.spyOn(engine, 'compileGraph');
     graph.setActiveCategories(['x']);
     graph.setActiveCategories([]);

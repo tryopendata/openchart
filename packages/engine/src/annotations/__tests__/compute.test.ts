@@ -1,9 +1,10 @@
 import type { Annotation, LayoutStrategy, Rect } from '@opendata-ai/openchart-core';
 import type { ScaleBand, ScalePoint } from 'd3-scale';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import { computeScales } from '../../layout/scales';
 import { computeAnnotations } from '../compute';
+import { ConnectorCrossings } from '../connector-crossings';
 import { heuristicMeasure as annotationMeasureForTest } from '../geometry';
 import { normalizeObstacles as normalizeObstaclesForTest } from '../placement';
 import { resolvePosition } from '../position';
@@ -311,7 +312,7 @@ describe('computeAnnotations', () => {
       expect(annotations[0].label!.text).toBe('Recession');
     });
 
-    it('range label defaults to 11px / weight 500', () => {
+    it('range label defaults to 12px / weight 500', () => {
       const spec = makeSpec([
         { type: 'range', x1: '2020-01-01', x2: '2021-01-01', label: 'Period' },
       ]);
@@ -326,7 +327,7 @@ describe('computeAnnotations', () => {
         measure: annotationMeasureForTest,
       });
 
-      expect(annotations[0].label!.style.fontSize).toBe(11);
+      expect(annotations[0].label!.style.fontSize).toBe(12);
       expect(annotations[0].label!.style.fontWeight).toBe(500);
     });
 
@@ -845,7 +846,7 @@ describe('computeAnnotations', () => {
       expect(annotations[0].strokeDasharray).toBeDefined();
     });
 
-    it('refline label defaults to fontSize 11', () => {
+    it('refline label defaults to fontSize 12', () => {
       const spec = makeSpec([{ type: 'refline', x: '2020-06-01', label: 'Event' }]);
       const scales = computeScales(spec, chartArea, spec.data);
       const annotations = computeAnnotations(spec, {
@@ -858,7 +859,7 @@ describe('computeAnnotations', () => {
         measure: annotationMeasureForTest,
       });
 
-      expect(annotations[0].label!.style.fontSize).toBe(11);
+      expect(annotations[0].label!.style.fontSize).toBe(12);
     });
 
     it('refline label honors fontSize and fontWeight overrides', () => {
@@ -2401,5 +2402,75 @@ describe('computeAnnotations', () => {
       expect(blocked).toHaveLength(1);
       expect(blocked[0].bounds!.y).toBeGreaterThanOrEqual(CHROME_BOTTOM);
     });
+  });
+});
+
+describe('default callout wrap width', () => {
+  it('keeps a usable minimum width on tiny plots instead of wrapping per character', () => {
+    const tiny: Rect = { x: 10, y: 10, width: 24, height: 200 };
+    const spec = makeSpec([
+      { type: 'text', x: '2020-01-01', y: 20, text: 'Peak demand', offset: { dx: 0, dy: -40 } },
+    ]);
+    const scales = computeScales(spec, tiny, spec.data);
+    const [annotation] = computeAnnotations(spec, {
+      scales,
+      chartArea: tiny,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: 60, height: 240 },
+      measure: annotationMeasureForTest,
+      padding: 16,
+    });
+    const lines = annotation.label!.lines ?? [annotation.label!.text];
+    expect(lines.every((line) => line.length > 1)).toBe(true);
+  });
+});
+
+describe('auto placement order and scoring', () => {
+  const run = (annotations: Annotation[]) => {
+    const spec = makeSpec(annotations);
+    return computeAnnotations(spec, {
+      scales: computeScales(spec, chartArea, spec.data),
+      chartArea,
+      strategy: fullStrategy,
+      isDark: false,
+      obstacles: [],
+      svg: { width: 600, height: 340 },
+      measure: annotationMeasureForTest,
+    });
+  };
+  const at = (layout: ReturnType<typeof run>, text: string) =>
+    layout.find((a) => a.label?.text === text)!.label!;
+
+  it('lets a later, higher-priority callout claim its preferred position first', () => {
+    const alone = at(run([{ type: 'text', x: '2020-01-01', y: 20, text: 'Urgent' }]), 'Urgent');
+    const both = run([
+      { type: 'text', x: '2020-01-01', y: 20, text: 'Routine', priority: 2 },
+      { type: 'text', x: '2020-01-01', y: 20, text: 'Urgent', priority: 1 },
+    ]);
+    expect([at(both, 'Urgent').x, at(both, 'Urgent').y]).toEqual([alone.x, alone.y]);
+    const routine = at(both, 'Routine');
+    expect([routine.x, routine.y]).not.toEqual([alone.x, alone.y]);
+  });
+
+  it('moves an auto callout whose preferred leader would cross a placed callout', () => {
+    const annotations: Annotation[] = [
+      { type: 'text', x: '2020-01-01', y: 20, text: 'Pinned note', offset: { dx: 0, dy: 80 } },
+      { type: 'text', x: '2020-03-01', y: 15, text: 'Auto note' },
+    ];
+    const scored = run(annotations);
+    const spy = vi.spyOn(ConnectorCrossings.prototype, 'score').mockReturnValue(0);
+    const unscored = run(annotations);
+    spy.mockRestore();
+
+    const pinned = new ConnectorCrossings();
+    const placed = scored.find((a) => a.label?.text === 'Pinned note')!;
+    pinned.addBox({ ...placed.bounds!, kind: 'annotation' });
+    pinned.addConnector(placed.label!.connector);
+    const crossings = (layout: ReturnType<typeof run>) =>
+      pinned.score(at(layout, 'Auto note').connector);
+    expect(crossings(unscored)).toBeGreaterThan(0);
+    expect(crossings(scored)).toBe(0);
   });
 });

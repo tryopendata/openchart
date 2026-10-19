@@ -22,9 +22,12 @@ function mockReducedMotion() {
 // Shared fixtures
 // ---------------------------------------------------------------------------
 
-// Minimal valid TopoJSON with 3 US states (delta-encoded arcs).
+// Identity quantization declares the following arcs delta-encoded. Without a
+// transform TopoJSON treats their pairs as absolute coordinates (and NY spans
+// the Atlantic instead of being a small, closed focus target).
 const MINI_TOPO = {
   type: 'Topology',
+  transform: { scale: [1, 1], translate: [0, 0] },
   objects: {
     states: {
       type: 'GeometryCollection',
@@ -85,8 +88,29 @@ describe('createGeoMap', () => {
     document.body.innerHTML = '';
   });
 
+  it('clips a focused side composition to its measured map viewport with unique IDs', () => {
+    const firstHost = createContainer(1024, 400);
+    const secondHost = createContainer(1024, 400);
+    const spec = {
+      ...basicMapSpec,
+      geo: { ...basicMapSpec.geo, focus: '48' },
+      legend: { position: 'right' as const },
+    };
+    const first = createGeoMap(firstHost, spec, { autoResize: false });
+    const second = createGeoMap(secondHost, spec, { autoResize: false });
+    const clip = firstHost.querySelector('clipPath')!;
+    expect(clip).not.toBeNull();
+    expect(firstHost.querySelector('.oc-map-group')!.getAttribute('clip-path')).toBe(
+      `url(#${clip.id})`,
+    );
+    expect(clip.id).not.toBe(secondHost.querySelector('clipPath')!.id);
+    expect(Number(clip.querySelector('rect')!.getAttribute('width'))).toBe(first.layout.area.width);
+    first.destroy();
+    second.destroy();
+  });
+
   it('mounts an SVG with path elements', () => {
-    const instance = createGeoMap(container, basicMapSpec, { responsive: false });
+    const instance = createGeoMap(container, basicMapSpec, { autoResize: false });
 
     const svg = container.querySelector('svg');
     expect(svg).not.toBeNull();
@@ -112,7 +136,7 @@ describe('createGeoMap', () => {
       const instance = createGeoMap(
         host,
         { ...basicMapSpec, chrome: wrappedChrome },
-        { responsive: false, theme: { fonts: { sizes: { axisTick } } } },
+        { autoResize: false, theme: { fonts: { sizes: { axisTick } } } },
       );
       expect(instance.layout.area.height).toBeGreaterThan(width * 0.3);
       expect(instance.layout.height).toBeGreaterThan(width * 0.625);
@@ -134,7 +158,7 @@ describe('createGeoMap', () => {
       const instance = createGeoMap(
         host,
         { ...basicMapSpec, chrome: wrappedChrome },
-        { responsive: false },
+        { autoResize: false },
       );
       expect(instance.layout.height).toBeLessThanOrEqual(420);
       instance.resize();
@@ -145,7 +169,7 @@ describe('createGeoMap', () => {
 
   describe('hover', () => {
     it('outlines and raises the hovered feature, then puts it back', () => {
-      const instance = createGeoMap(container, basicMapSpec, { responsive: false });
+      const instance = createGeoMap(container, basicMapSpec, { autoResize: false });
       const group = container.querySelector('.oc-map-features')!;
       const first = group.firstElementChild as SVGElement;
       const originalOrder = [...group.children];
@@ -168,7 +192,7 @@ describe('createGeoMap', () => {
     });
 
     it('does not reorder features while the entrance is still running', () => {
-      const instance = createGeoMap(container, basicMapSpec, { responsive: false });
+      const instance = createGeoMap(container, basicMapSpec, { autoResize: false });
       const svg = container.querySelector('svg')!;
       const group = container.querySelector('.oc-map-features')!;
       const first = group.firstElementChild as SVGElement;
@@ -190,7 +214,7 @@ describe('createGeoMap', () => {
     });
 
     it('marks the features group with the hovered legend bin', () => {
-      const instance = createGeoMap(container, basicMapSpec, { responsive: false });
+      const instance = createGeoMap(container, basicMapSpec, { autoResize: false });
       const group = container.querySelector('.oc-map-features')!;
       const bins = container.querySelectorAll('.oc-legend-bin[data-bin-index]');
       expect(bins.length).toBeGreaterThan(0);
@@ -212,7 +236,7 @@ describe('createGeoMap', () => {
   });
 
   it('renders a titled legend with a no-data swatch', () => {
-    const instance = createGeoMap(container, basicMapSpec, { responsive: false });
+    const instance = createGeoMap(container, basicMapSpec, { autoResize: false });
 
     const legend = container.querySelector('.oc-legend--continuous')!;
     expect(legend.querySelector('.oc-legend-title')?.textContent).toBe('value');
@@ -224,7 +248,7 @@ describe('createGeoMap', () => {
   });
 
   it('shares one hatch def between every no-data feature and the legend swatch', () => {
-    const instance = createGeoMap(container, basicMapSpec, { responsive: false });
+    const instance = createGeoMap(container, basicMapSpec, { autoResize: false });
 
     const svg = container.querySelector('svg')!;
     const patterns = [...svg.querySelectorAll('defs > pattern')];
@@ -260,7 +284,7 @@ describe('createGeoMap', () => {
           color: { field: 'party', type: 'nominal' as const },
         },
       },
-      { responsive: false },
+      { autoResize: false },
     );
 
     const svg = container.querySelector('svg')!;
@@ -279,7 +303,7 @@ describe('createGeoMap', () => {
   });
 
   it('update() re-renders with new data', () => {
-    const instance = createGeoMap(container, basicMapSpec, { responsive: false });
+    const instance = createGeoMap(container, basicMapSpec, { autoResize: false });
 
     instance.update({
       ...basicMapSpec,
@@ -297,7 +321,7 @@ describe('createGeoMap', () => {
   });
 
   it('destroy() removes SVG from DOM', () => {
-    const instance = createGeoMap(container, basicMapSpec, { responsive: false });
+    const instance = createGeoMap(container, basicMapSpec, { autoResize: false });
 
     expect(container.querySelector('svg')).not.toBeNull();
     instance.destroy();
@@ -305,7 +329,7 @@ describe('createGeoMap', () => {
   });
 
   it('SVG does not have oc-chart-root class', () => {
-    const instance = createGeoMap(container, basicMapSpec, { responsive: false });
+    const instance = createGeoMap(container, basicMapSpec, { autoResize: false });
 
     const svg = container.querySelector('svg');
     expect(svg).not.toBeNull();
@@ -316,7 +340,7 @@ describe('createGeoMap', () => {
   });
 
   it('viewBox matches layout dimensions', () => {
-    const instance = createGeoMap(container, basicMapSpec, { responsive: false });
+    const instance = createGeoMap(container, basicMapSpec, { autoResize: false });
 
     const svg = container.querySelector('svg');
     expect(svg).not.toBeNull();
@@ -327,7 +351,7 @@ describe('createGeoMap', () => {
   });
 
   it('no gradient legend group present for quantitative map', () => {
-    const instance = createGeoMap(container, basicMapSpec, { responsive: false });
+    const instance = createGeoMap(container, basicMapSpec, { autoResize: false });
 
     // Old hand-rolled gradient legend used .oc-map-legend; it should be gone
     const oldLegend = container.querySelector('.oc-map-legend');
@@ -341,7 +365,7 @@ describe('createGeoMap', () => {
   });
 
   it('exposes layout property', () => {
-    const instance = createGeoMap(container, basicMapSpec, { responsive: false });
+    const instance = createGeoMap(container, basicMapSpec, { autoResize: false });
 
     expect(instance.layout).toBeDefined();
     expect(instance.layout.features.length).toBeGreaterThan(0);
@@ -350,7 +374,7 @@ describe('createGeoMap', () => {
   });
 
   it('export("svg") returns a string containing SVG content', () => {
-    const instance = createGeoMap(container, basicMapSpec, { responsive: false });
+    const instance = createGeoMap(container, basicMapSpec, { autoResize: false });
 
     const svgString = instance.export('svg');
     expect(typeof svgString).toBe('string');
@@ -361,7 +385,7 @@ describe('createGeoMap', () => {
   });
 
   it('stamps data-key on feature paths equal to feature id', () => {
-    const instance = createGeoMap(container, basicMapSpec, { responsive: false });
+    const instance = createGeoMap(container, basicMapSpec, { autoResize: false });
 
     const features = container.querySelectorAll('.oc-map-feature');
     for (const feature of features) {
@@ -375,7 +399,7 @@ describe('createGeoMap', () => {
   });
 
   it('stagger custom property is at most 80ms for any feature count', () => {
-    const instance = createGeoMap(container, basicMapSpec, { responsive: false });
+    const instance = createGeoMap(container, basicMapSpec, { autoResize: false });
 
     const svg = container.querySelector('svg');
     expect(svg).not.toBeNull();
@@ -390,7 +414,7 @@ describe('createGeoMap', () => {
   });
 
   it('camera group [data-oc-map-camera] wraps features and borders', () => {
-    const instance = createGeoMap(container, basicMapSpec, { responsive: false });
+    const instance = createGeoMap(container, basicMapSpec, { autoResize: false });
 
     const cameraGroup = container.querySelector('[data-oc-map-camera]');
     expect(cameraGroup).not.toBeNull();
@@ -409,7 +433,7 @@ describe('createGeoMap', () => {
   });
 
   it('zoomTo applies a transform with scale > 1 and sets vector-effect', () => {
-    const instance = createGeoMap(container, basicMapSpec, { responsive: false });
+    const instance = createGeoMap(container, basicMapSpec, { autoResize: false });
 
     // Use New York ('36') which is small enough relative to the full map to produce a zoom > 1
     instance.zoomTo('36', { duration: 0 });
@@ -434,7 +458,7 @@ describe('createGeoMap', () => {
   });
 
   it('resetView removes the transform and vector-effect', () => {
-    const instance = createGeoMap(container, basicMapSpec, { responsive: false });
+    const instance = createGeoMap(container, basicMapSpec, { autoResize: false });
 
     // First zoom in to New York (small enough to produce zoom > 1)
     instance.zoomTo('36', { duration: 0 });
@@ -455,7 +479,7 @@ describe('createGeoMap', () => {
   });
 
   it('zoomTo with unknown feature id warns via console.warn', () => {
-    const instance = createGeoMap(container, basicMapSpec, { responsive: false });
+    const instance = createGeoMap(container, basicMapSpec, { autoResize: false });
 
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
@@ -472,7 +496,7 @@ describe('createGeoMap', () => {
       ...basicMapSpec,
       geo: { ...basicMapSpec.geo, focus: '36' },
     };
-    const instance = createGeoMap(container, focusSpec, { responsive: false });
+    const instance = createGeoMap(container, focusSpec, { autoResize: false });
 
     const cameraGroup = container.querySelector('[data-oc-map-camera]');
     expect(cameraGroup).not.toBeNull();
@@ -492,7 +516,7 @@ describe('createGeoMap', () => {
       ...basicMapSpec,
       chrome: { title: 'Test Title' },
     };
-    const instance = createGeoMap(container, chromeSpec, { responsive: false });
+    const instance = createGeoMap(container, chromeSpec, { autoResize: false });
 
     const svg = container.querySelector('svg')!;
     const kids = [...svg.children];
@@ -509,7 +533,7 @@ describe('createGeoMap', () => {
       ...basicMapSpec,
       geo: { ...basicMapSpec.geo, focus: '36' },
     };
-    const instance = createGeoMap(container, focusSpec, { responsive: false });
+    const instance = createGeoMap(container, focusSpec, { autoResize: false });
 
     const focused = container.querySelector('.oc-map-feature[data-feature-id="36"]') as SVGElement;
     const dimmed = container.querySelector('.oc-map-feature[data-feature-id="06"]') as SVGElement;
@@ -547,7 +571,7 @@ describe('createGeoMap', () => {
     };
 
     it('renders point circles inside camera group', () => {
-      const instance = createGeoMap(container, pointSpec, { responsive: false });
+      const instance = createGeoMap(container, pointSpec, { autoResize: false });
 
       const cameraGroup = container.querySelector('[data-oc-map-camera]');
       expect(cameraGroup).not.toBeNull();
@@ -564,14 +588,14 @@ describe('createGeoMap', () => {
           .map((r) => r.getAttribute('fill') ?? '')
           .filter((f) => f.startsWith('rgba('));
 
-      const plain = createGeoMap(container, pointSpec, { responsive: false });
+      const plain = createGeoMap(container, pointSpec, { autoResize: false });
       // Default light theme: white at scrim alpha, not a hardcoded literal that
       // ignores whatever surface the theme actually uses.
       expect(backdrops()).toContain('rgba(255,255,255,0.9)');
       plain.destroy();
 
       const themed = createGeoMap(container, pointSpec, {
-        responsive: false,
+        autoResize: false,
         theme: { colors: { background: '#102030' } },
       });
       expect(backdrops()).toContain('rgba(16,32,48,0.9)');
@@ -579,7 +603,7 @@ describe('createGeoMap', () => {
     });
 
     it('stores data-base-r on point circles', () => {
-      const instance = createGeoMap(container, pointSpec, { responsive: false });
+      const instance = createGeoMap(container, pointSpec, { autoResize: false });
 
       const points = container.querySelectorAll('.oc-map-point');
       expect(points.length).toBe(2);
@@ -596,7 +620,7 @@ describe('createGeoMap', () => {
     });
 
     it('counter-scales radius when camera is zoomed', () => {
-      const instance = createGeoMap(container, pointSpec, { responsive: false });
+      const instance = createGeoMap(container, pointSpec, { autoResize: false });
 
       // Grab initial radii
       const pointsBefore = container.querySelectorAll('.oc-map-point');
@@ -628,7 +652,7 @@ describe('createGeoMap', () => {
         geo: { ...pointSpec.geo, focus: { points: true, padding: 8 } },
         animation: false,
       };
-      const instance = createGeoMap(container, focusPointsSpec, { responsive: false });
+      const instance = createGeoMap(container, focusPointsSpec, { autoResize: false });
 
       const cameraGroup = container.querySelector('[data-oc-map-camera]');
       expect(cameraGroup).not.toBeNull();
@@ -648,7 +672,7 @@ describe('createGeoMap', () => {
         geo: { ...pointSpec.geo, focus: { points: true, padding: 8 } },
         animation: true,
       };
-      const instance = createGeoMap(container, focusPointsSpec, { responsive: false });
+      const instance = createGeoMap(container, focusPointsSpec, { autoResize: false });
 
       const cameraGroup = container.querySelector('[data-oc-map-camera]');
       expect(cameraGroup).not.toBeNull();
@@ -668,7 +692,7 @@ describe('createGeoMap', () => {
         geo: { ...pointSpec.geo, focus: { points: true, padding: 8 } },
         animation: false,
       };
-      const instance = createGeoMap(container, focusPointsSpec, { responsive: false });
+      const instance = createGeoMap(container, focusPointsSpec, { autoResize: false });
 
       // First render should have camera applied
       const cameraGroup1 = container.querySelector('[data-oc-map-camera]');
@@ -698,7 +722,7 @@ describe('createGeoMap', () => {
         },
         animation: false,
       };
-      const instance = createGeoMap(container, focusPointsSpec, { responsive: false });
+      const instance = createGeoMap(container, focusPointsSpec, { autoResize: false });
 
       const cameraGroup = container.querySelector('[data-oc-map-camera]');
       expect(cameraGroup).not.toBeNull();
@@ -718,7 +742,7 @@ describe('createGeoMap', () => {
         geo: { ...pointSpec.geo, focus: { points: true, padding: 8 } },
         animation: false,
       };
-      const instance = createGeoMap(container, spec1, { responsive: false });
+      const instance = createGeoMap(container, spec1, { autoResize: false });
 
       const transform1 = container.querySelector('[data-oc-map-camera]')!.getAttribute('transform');
       expect(transform1).not.toBeNull();
@@ -757,7 +781,7 @@ describe('createGeoMap', () => {
         geo: { ...pointSpec.geo, focus: null },
         animation: false,
       };
-      const instance = createGeoMap(container, specStep0, { responsive: false });
+      const instance = createGeoMap(container, specStep0, { autoResize: false });
       const cg0 = container.querySelector('[data-oc-map-camera]')!;
       expect(cg0.getAttribute('transform')).toBeNull();
 
@@ -810,7 +834,7 @@ describe('createGeoMap', () => {
         geo: { ...pointSpec.geo, focus: { points: true, padding: 8 } },
         animation: false,
       };
-      const instance = createGeoMap(container, spec1, { responsive: false });
+      const instance = createGeoMap(container, spec1, { autoResize: false });
 
       expect(
         container.querySelector('[data-oc-map-camera]')!.getAttribute('transform'),

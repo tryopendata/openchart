@@ -8,11 +8,12 @@
  * counterpart must equal it in both modes.
  */
 
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { adaptTheme } from '../../theme/dark-mode';
 import { DEFAULT_THEME } from '../../theme/defaults';
 import { resolveTheme } from '../../theme/resolve';
-import { cssTokenDefault } from '../token-definitions';
+import { CSS_TOKENS, cssTokenDefault } from '../token-definitions';
 
 /** `rgba(0, 0, 0, 0.08)` and `rgba(0,0,0,0.08)` are the same color. */
 const norm = (v: string) => v.replace(/\s+/g, '').toLowerCase();
@@ -116,5 +117,12 @@ it('annotation tokens preserve both legacy modes and authored pairs', () => {
     expect(cssTokenDefault(css, 'dark')).toBe(dark.colors[name]);
     expect(custom.colors[name]).toBe('#123456');
     expect(adaptTheme(custom).colors[name]).toBe('#abcdef');
+  }
+});
+
+it('emits every registered dark token in the generated stylesheet', () => {
+  const css = readFileSync(new URL('../dark.css', import.meta.url), 'utf8');
+  for (const token of CSS_TOKENS) {
+    if (token.dark !== undefined) expect(css).toContain(`${token.name}: ${token.dark};`);
   }
 });

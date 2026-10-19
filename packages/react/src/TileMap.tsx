@@ -9,6 +9,7 @@
  */
 
 import type { DarkMode, ThemeConfig, TileMapSpec } from '@opendata-ai/openchart-core';
+import { mergeThemeConfig } from '@opendata-ai/openchart-core';
 import {
   createTileMap,
   type TileMapInstance,
@@ -20,6 +21,7 @@ import {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useMemo,
   useRef,
 } from 'react';
 import { useVizDarkMode, useVizTheme } from './ThemeContext';
@@ -71,7 +73,7 @@ export const TileMap = forwardRef<TileMapHandle, TileMapProps>(function TileMap(
 ) {
   const contextTheme = useVizTheme();
   const contextDarkMode = useVizDarkMode();
-  const theme = themeProp ?? contextTheme;
+  const theme = useMemo(() => mergeThemeConfig(contextTheme, themeProp), [contextTheme, themeProp]);
   const resolvedDarkMode = darkMode ?? contextDarkMode;
   const containerRef = useRef<HTMLDivElement>(null);
   const instanceRef = useRef<TileMapInstance | null>(null);
@@ -131,7 +133,7 @@ export const TileMap = forwardRef<TileMapHandle, TileMapProps>(function TileMap(
       darkMode: resolvedDarkMode,
       onTileClick: stableOnTileClick,
       onTileHover: stableOnTileHover,
-      responsive: true,
+      autoResize: true,
     };
 
     instanceRef.current = createTileMap(container, spec, options);

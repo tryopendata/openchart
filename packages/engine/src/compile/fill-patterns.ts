@@ -1,3 +1,4 @@
+import type { NormalizedMarkDef } from '../compiler/types';
 /**
  * Per-series fill pattern assignment for `mark.fillPattern: 'auto'`.
  *
@@ -15,7 +16,6 @@ import type {
   FillPatternType,
   GradientDef,
   Mark,
-  MarkDef,
   ResolvedFillPattern,
   ResolvedTheme,
 } from '@opendata-ai/openchart-core';
@@ -36,7 +36,11 @@ const MIN_PATTERN_EXTENT = 12;
  * in with `fillPattern: 'auto'`. Mutates marks in place (same convention as
  * assignAnimationIndices). No-op otherwise.
  */
-export function applyFillPatterns(marks: Mark[], markDef: MarkDef, theme: ResolvedTheme): void {
+export function applyFillPatterns(
+  marks: Mark[],
+  markDef: NormalizedMarkDef,
+  theme: ResolvedTheme,
+): void {
   if (markDef.fillPattern !== 'auto') return;
 
   const assignment = new Map<string, ResolvedFillPattern>();

@@ -50,6 +50,7 @@ export function computeDotLabels(
   labelPrefix?: string,
   labelFormatter?: NumberFormatter | null,
   valueField?: string,
+  fontFamily = 'system-ui, -apple-system, sans-serif',
 ): ResolvedLabel[] {
   const targetMarks = filterByDensity(marks, density);
 
@@ -92,7 +93,7 @@ export function computeDotLabels(
       height: textHeight,
       priority: 'data',
       style: {
-        fontFamily: 'system-ui, -apple-system, sans-serif',
+        fontFamily,
         fontSize: LABEL_FONT_SIZE,
         fontWeight: LABEL_FONT_WEIGHT,
         fill: getRepresentativeColor(mark.fill),

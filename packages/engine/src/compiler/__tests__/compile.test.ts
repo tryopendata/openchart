@@ -27,7 +27,7 @@ describe('compile (validate + normalize pipeline)', () => {
     const result = compile(validSpec);
     const spec = result.spec as NormalizedChartSpec;
     expect(spec.responsive).toBe(true);
-    expect(spec.darkMode).toBe('off');
+    expect(spec).not.toHaveProperty('darkMode');
     expect(spec.annotations).toEqual([]);
   });
 

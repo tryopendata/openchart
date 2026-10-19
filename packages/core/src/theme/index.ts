@@ -5,5 +5,5 @@
 export { adaptColorForDarkMode, adaptForLightLineStroke, adaptTheme } from './dark-mode';
 export { DEFAULT_THEME } from './defaults';
 export { mergeThemeConfig } from './merge';
-export { broadsheet, clarity, editorial, essay, legacyEditorial, terminal, wire } from './presets';
+export { broadsheet, clarity, essay, legacyEditorial, terminal, wire } from './presets';
 export { resolveTheme } from './resolve';

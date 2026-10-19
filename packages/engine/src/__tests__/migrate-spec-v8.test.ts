@@ -1,5 +1,8 @@
+import { broadsheet, essay, resolveTheme, terminal, wire } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
+import v8Fixtures from '../__test-fixtures__/v8-styling.json';
 import { compileChart, compileLayer } from '../compile';
+import { validateSpec } from '../compiler/validate';
 import { migrateSpecV8 } from '../migration/v8';
 
 const chart = {
@@ -11,6 +14,35 @@ const chart = {
   encoding: { x: { field: 'x', type: 'quantitative' }, y: { field: 'y', type: 'quantitative' } },
 };
 describe('migrateSpecV8 alias repairs', () => {
+  it('reports measured attribution as a layout limitation without repeated repairs', () => {
+    const result = migrateSpecV8({ ...chart, chrome: { source: 'Source: Research team' } });
+    expect(result.repairs.some((repair) => /measured attribution/.test(repair.reason))).toBe(true);
+    expect(migrateSpecV8(result.spec).repairs).toEqual([]);
+  });
+  it('preserves hardcoded v8 reference typography independently of the small theme size', () => {
+    const source = {
+      ...chart,
+      theme: { fonts: { sizes: { small: 20 } } },
+      annotations: [
+        { type: 'refline', y: 0, label: 'Threshold' },
+        { type: 'range', x1: 0, x2: 1, label: 'Interval' },
+        { type: 'refline', y: 1, label: 'Authored', fontSize: 17 },
+      ],
+    };
+    const migrated = migrateSpecV8(source);
+    expect(
+      compileChart(migrated.spec, { width: 800, height: 600 }).annotations.map(
+        (a) => a.label?.style.fontSize,
+      ),
+    ).toEqual([11, 11, 17]);
+    expect(migrateSpecV8(migrated.spec).repairs).toEqual([]);
+    expect(
+      compileChart(migrateSpecV8(source, { styling: 'v9' }).spec, {
+        width: 800,
+        height: 600,
+      }).annotations.map((a) => a.label?.style.fontSize),
+    ).toEqual([20, 20, 17]);
+  });
   it.each([
     [
       { type: 'table', compact: true },
@@ -23,6 +55,11 @@ describe('migrateSpecV8 alias repairs', () => {
     [
       { type: 'map', valueFormat: '.2f', encoding: { color: { field: 'v' } } },
       { type: 'map', encoding: { color: { field: 'v', format: '.2f' } } },
+    ],
+    [{ type: 'map', valueFormat: '.2f' }, { type: 'map' }],
+    [
+      { type: 'barlist', valueFormat: '.2f', encoding: { label: { field: 'k' } } },
+      { type: 'barlist', encoding: { label: { field: 'k' } } },
     ],
     [
       { type: 'sankey', valueFormat: '.2f', encoding: { value: { field: 'v', format: '.1f' } } },
@@ -51,6 +88,24 @@ describe('migrateSpecV8 alias repairs', () => {
     expect(migrateSpecV8(result.spec)).toEqual({ spec: result.spec, repairs: [] });
   });
 
+  it('drops a channel-less map valueFormat so the migrated spec validates', () => {
+    const { spec, repairs } = migrateSpecV8({
+      type: 'map',
+      geography: 'us-states',
+      data: [],
+      valueFormat: '.1f',
+      points: {
+        data: [{ lat: 1, lon: 2 }],
+        encoding: { latitude: { field: 'lat' }, longitude: { field: 'lon' } },
+      },
+    });
+    expect(spec).not.toHaveProperty('valueFormat');
+    expect(repairs.find((r) => r.path === '/valueFormat')?.reason).toMatch(/no effect/);
+    expect(validateSpec(spec).errors.filter((e) => /valueFormat/.test(e.path + e.message))).toEqual(
+      [],
+    );
+  });
+
   it('keeps record tilemap valueFormat', () => {
     const spec = { type: 'tilemap', data: { CA: 4 }, valueFormat: '.2f' };
     expect(migrateSpecV8(spec).spec).toMatchObject(spec);
@@ -63,7 +118,7 @@ describe('migrateSpecV8 alias repairs', () => {
     expect(result.repairs.map((r) => r.path)).toContain('/layer/0/annotations/0/type');
   });
 
-  it('preserves rendering for nonvisual aliases', () => {
+  it('compiles the repaired aliases under v9', () => {
     const spec = {
       ...chart,
       animation: { preset: 'legacy' },
@@ -71,9 +126,11 @@ describe('migrateSpecV8 alias repairs', () => {
       theme: { chrome: { title: '#333333' } },
       chrome: { title: 'Title' },
     };
-    expect(compileChart(migrateSpecV8(spec).spec, { width: 640, height: 400 })).toEqual(
-      compileChart(spec, { width: 640, height: 400 }),
-    );
+    const layout = compileChart(migrateSpecV8(spec).spec, { width: 640, height: 400 });
+    expect(layout.annotations[0].type).toBe('refline');
+    expect(layout.theme.chrome.title.color).toBe('#333333');
+    // The legacy preset is dropped, so the default entrance applies.
+    expect(layout.animation?.enter?.duration).toBe(450);
   });
 
   it('replaces legacy labels and records each lost offset (explicit 8.10 exception)', () => {
@@ -152,21 +209,15 @@ it('rewrites the parent endpoint owner of a legacy-label layer', () => {
   const migrated = migrateSpecV8(spec);
   expect(migrated.spec.endpointLabels).toEqual({ content: 'label', showMarker: false });
   expect(migrated.repairs.map((repair) => repair.path)).toContain('/endpointLabels');
-  expect(compileLayer(migrated.spec, { width: 1280, height: 400 }).endpointLabels).toBeDefined();
+  const endpointLabels = compileLayer(migrated.spec, { width: 1280, height: 400 }).endpointLabels;
+  expect(endpointLabels!.entries.map((e) => e.seriesKey).sort()).toEqual(['A', 'B']);
   expect(migrateSpecV8(migrated.spec).repairs).toEqual([]);
 });
 
-it('warns once for legacy chrome colors supplied through compile options', () => {
-  const warnings: string[] = [];
-  const options = {
-    width: 640,
-    height: 400,
-    theme: { chrome: { title: 'red' } },
-    onWarn: (message: string) => warnings.push(message),
-  };
-  compileChart(chart, options);
-  compileChart(chart, options);
-  expect(warnings.filter((message) => message.includes('theme.chrome'))).toHaveLength(1);
+it('rejects removed chrome color strings in compile options', () => {
+  expect(() =>
+    compileChart(chart, { width: 640, height: 400, theme: { chrome: { title: 'red' } } } as never),
+  ).toThrow('theme.chrome');
 });
 
 describe('migrateSpecV8 default materialization', () => {
@@ -221,48 +272,408 @@ describe('migrateSpecV8 default materialization', () => {
     );
     if (responsive === false || responsive === undefined) expect(migrated.responsive).toBe(false);
   });
-  it.each([
-    { chrome: { title: { fontSize: 31 }, source: { fontSize: 16 } } },
-    { fonts: { sizes: { small: 15, title: 32 } } },
-    { fonts: { sizes: { body: 16 } }, chrome: { footer: { fontSize: 19 } } },
-  ])('preserves authored typography %j', (theme) => {
-    const source = {
-      ...chart,
-      theme,
-      chrome: { title: 'Title', source: 'Source', footer: 'Footer' },
+});
+
+it('can adopt v9 styling while performing every necessary alias repair', () => {
+  const source = {
+    ...chart,
+    darkMode: 'off',
+    annotations: [
+      { type: 'rule', y: 0, label: 'Rule' },
+      { type: 'text', x: 0, y: 0, text: 'Text', subtitle: 'Details' },
+    ],
+  };
+  const migrated = migrateSpecV8(source, { styling: 'v9' });
+  expect(migrated.spec.annotations[0].type).toBe('refline');
+  expect(migrated.spec).not.toHaveProperty('darkMode');
+  expect(migrated.spec).not.toHaveProperty('theme');
+  expect(migrated.spec.annotations[1]).not.toHaveProperty('fontWeight');
+  expect(migrateSpecV8(migrated.spec, { styling: 'v9' }).repairs).toEqual([]);
+});
+
+// Captured from released v8.9.1 (8baef9e8), not regenerated by v9 snapshots.
+// Layout coordinates intentionally are not part of the styling compatibility promise.
+it.each(v8Fixtures)('preserves released v8 styling: $name', ({ source, expected }) => {
+  const before = structuredClone(source);
+  const { spec } = migrateSpecV8(source);
+  const compile = 'layer' in source ? compileLayer : compileChart;
+  const layout = compile(spec as never, { width: 640, height: 500 });
+  expect(source).toEqual(before);
+  expect(migrateSpecV8(spec)).toEqual({ spec, repairs: [] });
+  // New resolved control metadata did not exist in the released capture.
+  // Compare every old field unchanged; assert each added endpoint constant separately.
+  const { endpointLabel, endpointValue, ...releasedSizes } = layout.theme.fonts.sizes;
+  const { endpointEntryGap, endpointValueGap, endpointColumnGap, ...releasedSpacing } =
+    layout.theme.spacing;
+  expect({ ...layout.theme.fonts, sizes: releasedSizes }).toEqual(expected.fonts);
+  expect(releasedSpacing).toEqual(expected.spacing);
+  expect({ endpointLabel, endpointValue }).toEqual({ endpointLabel: 13, endpointValue: 12 });
+  expect({ endpointEntryGap, endpointValueGap, endpointColumnGap }).toEqual({
+    endpointEntryGap: 6,
+    endpointValueGap: 4,
+    endpointColumnGap: 18,
+  });
+  expect(layout.theme.chrome).toEqual(expected.chrome);
+  const { gridlineZero, mapInteriorBorder, mapOutlineBorder, ...releasedColors } =
+    layout.theme.colors;
+  expect(releasedColors).toEqual(expected.colors);
+  expect(gridlineZero).toBe(layout.theme.colors.gridline);
+  // Map roles were introduced after the released capture.
+  expect(mapInteriorBorder).toBe(
+    layout.theme.isDark ? 'rgba(255, 255, 255, 0.18)' : 'rgba(0,0,0,0.14)',
+  );
+  expect(mapOutlineBorder).toBe(
+    layout.theme.isDark ? 'rgba(255, 255, 255, 0.38)' : 'rgba(0,0,0,0.40)',
+  );
+  const annotations = layout.annotations.map((a) => ({
+    type: a.type,
+    label: a.label ? { text: a.label.text, style: a.label.style } : undefined,
+    subtitle: a.subtitle ? { text: a.subtitle.text, style: a.subtitle.style } : undefined,
+    connector: a.label?.connector
+      ? { arrow: a.label.connector.arrow, stroke: a.label.connector.stroke }
+      : undefined,
+  }));
+  expect(JSON.parse(JSON.stringify(annotations))).toEqual(expected.annotations);
+  if ('marks' in expected)
+    expect(
+      JSON.parse(
+        JSON.stringify(
+          layout.marks.map((m) => ({
+            type: m.type,
+            fill: 'fill' in m ? m.fill : undefined,
+            stroke: 'stroke' in m ? m.stroke : undefined,
+          })),
+        ),
+      ),
+    ).toEqual(expected.marks);
+});
+
+it('keeps v8 general font sizes ahead of authored chrome sizes', () => {
+  const source = {
+    ...chart,
+    chrome: { title: 'T', subtitle: 'S', source: 'S', byline: 'B', footer: 'F' },
+    theme: {
+      fonts: { sizes: { title: 30, subtitle: 17, small: 13 } },
+      chrome: {
+        title: { fontSize: 18 },
+        subtitle: { fontSize: 9 },
+        source: { fontSize: 10 },
+        byline: { fontSize: 8 },
+        footer: { fontSize: 7, color: 'red' },
+      },
+    },
+  };
+  const { spec, repairs } = migrateSpecV8(source);
+  const { chrome } = compileChart(spec, { width: 640, height: 400 }).theme;
+  // Captured from released v8.9.1.
+  expect(
+    ['title', 'subtitle', 'source', 'byline', 'footer'].map(
+      (key) => chrome[key as keyof typeof chrome].fontSize,
+    ),
+  ).toEqual([30, 17, 13, 13, 13]);
+  expect(chrome.footer.color).toBe('red');
+  expect(repairs.map((r) => r.path)).toContain('/theme/chrome/title/fontSize');
+  expect(migrateSpecV8(spec).repairs).toEqual([]);
+  const v9 = migrateSpecV8(source, { styling: 'v9' }).spec;
+  expect(compileChart(v9, { width: 640, height: 400 }).theme.chrome.title.fontSize).toBe(18);
+});
+
+it('keeps each leaf palette while the layer theme keeps owning root chrome', () => {
+  const source = {
+    theme: { colors: { categorical: ['#111111'] }, fonts: { sizes: { title: 30 } } },
+    chrome: { title: 'Title' },
+    layer: [
+      {
+        ...chart,
+        theme: { colors: { categorical: ['#00ff00'] }, fonts: { sizes: { title: 12 } } },
+      },
+      { ...chart, theme: { colors: { categorical: ['#ff0000'] } } },
+    ],
+  };
+  const { spec } = migrateSpecV8(source);
+  const layout = compileLayer(spec as never, { width: 640, height: 500 });
+  // Captured from released v8.9.1.
+  expect(layout.marks.filter((m) => m.type === 'point').map((m) => m.fill)).toEqual([
+    '#00ff00',
+    '#00ff00',
+    '#ff0000',
+    '#ff0000',
+  ]);
+  expect(layout.theme.chrome.title.fontSize).toBe(30);
+  expect(migrateSpecV8(spec).repairs).toEqual([]);
+  // v9 resolves root and leaf themes the way v8 did, so the leaf keeps its
+  // own non-color keys rather than taking a copy of the parent theme.
+  expect(spec.layer[0].theme.fonts.sizes.title).toBe(12);
+  expect(spec.layer[0].theme.colors.categorical).toEqual(['#00ff00']);
+});
+
+it('repairs aliases in a line-layer before inspecting its legacy label policy', () => {
+  const source = {
+    layer: [
+      {
+        ...chart,
+        mark: 'line',
+        annotations: [{ type: 'rule', y: 0, label: 'Baseline' }],
+        encoding: {
+          ...chart.encoding,
+          x: { field: 'x', type: 'ordinal' },
+          radius: { field: 'unused' },
+        },
+      },
+    ],
+  };
+  const result = migrateSpecV8(source);
+  expect(result.spec.layer[0].annotations[0].type).toBe('refline');
+  expect(result.spec.layer[0].encoding).not.toHaveProperty('radius');
+  const layout = compileLayer(result.spec, { width: 640, height: 400 });
+  expect(layout.annotations.map((a) => a.type)).toEqual(['refline']);
+  expect(migrateSpecV8(result.spec).repairs).toEqual([]);
+});
+
+it('drops dual-axis leaf themes that v8 ignored under a layer theme', () => {
+  const leafWith = (fill: string) => ({ ...chart, theme: { colors: { categorical: [fill] } } });
+  const source = {
+    theme: { colors: { categorical: ['#111111'] } },
+    resolve: { scale: { y: 'independent' } },
+    layer: [leafWith('#00ff00'), leafWith('#ff0000')],
+  };
+  const { spec, repairs } = migrateSpecV8(source);
+  expect(spec.layer.map((leaf: { theme?: unknown }) => leaf.theme)).toEqual([undefined, undefined]);
+  expect(repairs.map((r) => r.path)).toEqual(
+    expect.arrayContaining(['/layer/0/theme', '/layer/1/theme']),
+  );
+  expect(migrateSpecV8(spec).repairs).toEqual([]);
+  const layout = compileLayer(spec as never, { width: 640, height: 500 });
+  // v8.9.1 drew both sides with the layer palette.
+  expect(
+    new Set(
+      layout.marks.filter((m) => m.type === 'point').map((m) => (m as { fill: string }).fill),
+    ),
+  ).toEqual(new Set(['#111111']));
+  // Without a layer theme each leaf kept its own in v8, so nothing changes.
+  const { theme: _omit, ...noLayerTheme } = source;
+  // (The leaf theme itself stays, keeping its own palette.)
+  expect(migrateSpecV8(noLayerTheme).spec.layer[0].theme.colors.categorical).toEqual(['#00ff00']);
+});
+
+it('materializes released v8 endpoint constants without replacing authored controls', () => {
+  const defaults = migrateSpecV8(chart).spec as typeof chart & {
+    theme: { fonts: { sizes: Record<string, number> }; spacing: Record<string, number> };
+  };
+  expect(defaults.theme.fonts.sizes).toMatchObject({ endpointLabel: 13, endpointValue: 12 });
+  expect(defaults.theme.spacing).toMatchObject({
+    endpointEntryGap: 6,
+    endpointValueGap: 4,
+    endpointColumnGap: 18,
+  });
+  const source = {
+    ...chart,
+    theme: { fonts: { sizes: { endpointLabel: 17 } }, spacing: { endpointColumnGap: 24 } },
+  };
+  const migrated = migrateSpecV8(source);
+  expect(migrated.spec.theme.fonts.sizes.endpointLabel).toBe(17);
+  expect(migrated.spec.theme.spacing.endpointColumnGap).toBe(24);
+  expect(migrateSpecV8(migrated.spec).repairs).toEqual([]);
+  expect(migrateSpecV8(chart, { styling: 'v9' }).spec).not.toHaveProperty('theme');
+});
+
+it('reports the value-label font correction once without offering a false v8 styling guarantee', () => {
+  const source = {
+    mark: 'bar',
+    data: [{ name: 'A', value: 4 }],
+    encoding: {
+      x: { field: 'value', type: 'quantitative' },
+      y: { field: 'name', type: 'nominal' },
+    },
+    theme: { fonts: { family: 'Georgia, serif' } },
+  };
+  const migrated = migrateSpecV8(source);
+  expect(
+    migrated.repairs.some((repair) =>
+      repair.reason.includes('value labels now follow the resolved theme font'),
+    ),
+  ).toBe(true);
+  const layout = compileChart(migrated.spec, { width: 680, height: 400 });
+  expect(
+    layout.marks.some(
+      (mark) => mark.type === 'rect' && mark.label?.style.fontFamily === 'Georgia, serif',
+    ),
+  ).toBe(true);
+  expect(migrateSpecV8(migrated.spec).repairs).toEqual([]);
+});
+
+describe('approved B3 defaults preserve v8 styling on migration', () => {
+  it('pins old scaffolding ink in both modes and leaves v9 adoption unmaterialized', () => {
+    const migrated = migrateSpecV8(chart);
+    expect(migrated.spec).toMatchObject({
+      theme: {
+        colors: {
+          gridline: { light: 'rgba(0,0,0,0.08)', dark: 'rgba(255,255,255,0.06)' },
+          gridlineZero: { light: 'rgba(0,0,0,0.08)', dark: 'rgba(255,255,255,0.06)' },
+        },
+      },
+    });
+    expect(migrateSpecV8(migrated.spec).repairs).toEqual([]);
+    expect(migrateSpecV8(chart, { styling: 'v9' }).spec).not.toHaveProperty('theme');
+    for (const darkMode of [false, true]) {
+      const old = compileChart(migrated.spec, { width: 640, height: 400, darkMode }).theme;
+      expect(old.colors.gridline).toBe(darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)');
+      expect(old.colors.gridlineZero).toBe(old.colors.gridline);
+      const adopted = compileChart(migrateSpecV8(chart, { styling: 'v9' }).spec, {
+        width: 640,
+        height: 400,
+        darkMode,
+      }).theme;
+      expect(adopted.colors.gridline).toBe(
+        darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+      );
+      expect(adopted.colors.gridlineZero).toBe(
+        darkMode ? 'rgba(255,255,255,0.24)' : 'rgba(0,0,0,0.22)',
+      );
+    }
+  });
+  it('preserves authored gridline/zero and map-border modes', () => {
+    const gridline = { light: '#abcdef', dark: '#fedcba' };
+    const source = { ...chart, theme: { colors: { gridline } } };
+    expect(migrateSpecV8(source).spec).toMatchObject({
+      theme: { colors: { gridline, gridlineZero: gridline } },
+    });
+    const colors = {
+      gridline,
+      gridlineZero: '#445566',
+      mapInteriorBorder: '#123456',
+      mapOutlineBorder: { light: '#654321', dark: '#abcdef' },
     };
-    const migrated = migrateSpecV8(source).spec;
-    expect(compileChart(migrated, { width: 640, height: 500 }).chrome).toEqual(
-      compileChart(source, { width: 640, height: 500 }).chrome,
-    );
+    expect(migrateSpecV8({ type: 'map', theme: { colors } }).spec).toMatchObject({
+      theme: { colors },
+    });
+  });
+  it('pins the old map borders and reports unpreservable map-key layout', () => {
+    const result = migrateSpecV8({ type: 'map' });
+    expect(result.spec).toMatchObject({
+      theme: {
+        colors: {
+          mapInteriorBorder: { light: 'rgba(0,0,0,0.25)', dark: 'rgba(255,255,255,0.22)' },
+          mapOutlineBorder: { light: 'rgba(0,0,0,0.55)', dark: 'rgba(255,255,255,0.45)' },
+        },
+      },
+    });
+    expect(
+      result.repairs.some((r) => /static map captions.*size-key placement/.test(r.reason)),
+    ).toBe(true);
+    expect(migrateSpecV8(result.spec).repairs).toEqual([]);
+  });
+  it('pins boundary anchors without overriding authored anchor, disabled labels or unstacked areas', () => {
+    const area = { ...chart, mark: 'area', endpointLabels: { ends: 'both' } };
+    expect(migrateSpecV8(area).spec.endpointLabels).toEqual({ ends: 'both', anchor: 'boundary' });
+    expect(migrateSpecV8({ ...area, endpointLabels: false }).spec.endpointLabels).toBe(false);
+    expect(
+      migrateSpecV8({ ...area, endpointLabels: { anchor: 'band' } }).spec.endpointLabels,
+    ).toEqual({ anchor: 'band' });
+    expect(
+      migrateSpecV8({
+        ...area,
+        encoding: { ...area.encoding, y: { ...area.encoding.y, stack: null } },
+      }).spec.endpointLabels,
+    ).toEqual({ ends: 'both' });
+    expect(migrateSpecV8(area, { styling: 'v9' }).spec.endpointLabels).toEqual({ ends: 'both' });
+    const result = migrateSpecV8(area);
+    expect(migrateSpecV8(result.spec).repairs).toEqual([]);
+  });
+  it('keeps theme-less layer inheritance and an inherited authored anchor', () => {
+    const source = {
+      theme: { colors: { gridline: '#abcdef' } },
+      endpointLabels: { anchor: 'band' },
+      layer: [{ ...chart, mark: 'area' }],
+    };
+    const result = migrateSpecV8(source);
+    expect(result.spec.layer[0]).not.toHaveProperty('theme');
+    expect(result.spec.layer[0]).not.toHaveProperty('endpointLabels');
+    expect(result.spec.theme).toMatchObject({
+      colors: { gridline: '#abcdef', gridlineZero: '#abcdef' },
+    });
+    expect(migrateSpecV8(result.spec).repairs).toEqual([]);
   });
 });
 
-it('does not merge a parent theme into an authored partial child theme', () => {
-  const source = {
-    theme: { colors: { categorical: ['green'] } },
-    layer: [chart, { ...chart, theme: { fonts: { sizes: { small: 16 } } } }],
-  };
-  const opts = { width: 640, height: 500 };
-  expect(compileLayer(migrateSpecV8(source).spec, opts).marks).toEqual(
-    compileLayer(source, opts).marks,
-  );
+it.each([
+  broadsheet,
+  essay,
+  terminal,
+  wire,
+])('preserves preset gridline modes and keeps zero on the same ink', (theme) => {
+  const result = migrateSpecV8({ ...chart, theme });
+  for (const darkMode of [false, true]) {
+    const layout = compileChart(result.spec, { width: 640, height: 400, darkMode });
+    const authored =
+      theme.colors && !Array.isArray(theme.colors) ? theme.colors.gridline : undefined;
+    expect(layout.theme.colors.gridline).toBe(
+      typeof authored === 'string' ? authored : authored?.[darkMode ? 'dark' : 'light'],
+    );
+    expect(layout.theme.colors.gridlineZero).toBe(layout.theme.colors.gridline);
+  }
+  expect(migrateSpecV8(result.spec).repairs).toEqual([]);
 });
 
-it.each([false, true])('preserves first-leaf ownership in nested=%s layers', (nested) => {
-  const leaf = {
-    ...chart,
-    responsive: false,
-    theme: { colors: { background: 'pink' }, fonts: { sizes: { title: 40 } } },
-    chrome: { title: 'Owned by first leaf' },
-    annotations: [{ type: 'text', x: 0, y: 0, text: 'Hidden' }],
+it('preserves inherited area endpoint visibility and boundary geometry', () => {
+  const area = {
+    mark: 'area',
+    data: [
+      { x: 0, y: 2, s: 'A' },
+      { x: 1, y: 3, s: 'A' },
+      { x: 0, y: 4, s: 'B' },
+      { x: 1, y: 5, s: 'B' },
+    ],
+    encoding: { ...chart.encoding, color: { field: 's', type: 'nominal' } },
   };
-  const source = { layer: [nested ? { layer: [leaf] } : leaf, chart] };
-  const opts = { width: 390, height: 500 };
-  const before = compileLayer(source, opts),
-    after = compileLayer(migrateSpecV8(source).spec, opts);
-  expect(after.annotations).toEqual(before.annotations);
-  expect(after.chrome).toEqual(before.chrome);
-  expect(after.theme.colors).toEqual(before.theme.colors);
-  expect(after.marks).toEqual(before.marks);
+  for (const endpointLabels of [undefined, false, { show: false }]) {
+    const result = migrateSpecV8({ ...area, endpointLabels });
+    expect(result.spec.endpointLabels).toEqual(endpointLabels);
+    expect(compileChart(result.spec, { width: 800, height: 500 }).endpointLabels).toBeUndefined();
+  }
+  for (const independent of [false, true]) {
+    const source = {
+      endpointLabels: { ends: 'both' },
+      layer: [area],
+      ...(independent ? { resolve: { scale: { y: 'independent' } } } : {}),
+    };
+    const result = migrateSpecV8(source);
+    expect(result.spec.endpointLabels).toEqual({ ends: 'both', anchor: 'boundary' });
+    const layout = compileLayer(result.spec as never, { width: 800, height: 500 });
+    expect(layout.endpointLabels?.entries).toHaveLength(2);
+    for (const entry of layout.endpointLabels!.entries) {
+      const mark = layout.marks.find(
+        (mark) => mark.type === 'area' && mark.seriesKey === entry.seriesKey,
+      );
+      if (mark?.type !== 'area') throw new Error('Missing area for endpoint');
+      expect(entry.dataY).toBe(mark.dataPoints!.at(-1)!.y);
+      expect(entry.source?.datum.y).toBe(entry.seriesKey === 'A' ? 3 : 5);
+    }
+    expect(migrateSpecV8(result.spec).repairs).toEqual([]);
+  }
+});
+
+it('preserves old map border ink on an authored dark canvas without a dark-mode option', () => {
+  const result = migrateSpecV8({ type: 'map', theme: { colors: { background: '#111111' } } });
+  const theme = resolveTheme(result.spec.theme);
+  expect(theme.colors.mapInteriorBorder).toBe('rgba(255,255,255,0.22)');
+  expect(theme.colors.mapOutlineBorder).toBe('rgba(255,255,255,0.45)');
+  expect(theme.colors.gridlineZero).toBe(theme.colors.gridline);
+  expect(migrateSpecV8(result.spec).repairs).toEqual([]);
+});
+
+it('pins an area endpoint override enabled at a breakpoint without enabling the base chart', () => {
+  const source = {
+    ...chart,
+    mark: 'area',
+    endpointLabels: false,
+    overrides: { compact: { endpointLabels: { ends: 'both' } } },
+  };
+  const result = migrateSpecV8(source);
+  expect(result.spec.endpointLabels).toBe(false);
+  expect(result.spec.overrides.compact.endpointLabels).toEqual({
+    ends: 'both',
+    anchor: 'boundary',
+  });
+  expect(migrateSpecV8(result.spec).repairs).toEqual([]);
 });

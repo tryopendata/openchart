@@ -41,7 +41,7 @@ describe('point size validation', () => {
   it('rejects VL-area mark.size values with the radius conversion', () => {
     const result = validateSpec(scatter({ mark: { type: 'point', size: 110 } }));
     expect(result.valid).toBe(false);
-    const error = result.errors.find((e) => e.path === 'mark.size');
+    const error = result.errors.find((e) => e.path === '/mark/size');
     expect(error).toBeDefined();
     expect(error?.code).toBe('INVALID_VALUE');
     // sqrt(110 / pi) ~ 5.9 -> 6
@@ -54,7 +54,7 @@ describe('point size validation', () => {
     (spec.encoding as Record<string, unknown>).size = { value: 130 };
     const result = validateSpec(spec);
     expect(result.valid).toBe(false);
-    expect(result.errors.some((e) => e.path === 'encoding.size.value')).toBe(true);
+    expect(result.errors.some((e) => e.path === '/encoding/size/value')).toBe(true);
   });
 
   it('rejects VL-area encoding.size scale ranges', () => {
@@ -66,8 +66,10 @@ describe('point size validation', () => {
     };
     const result = validateSpec(spec);
     expect(result.valid).toBe(false);
-    const error = result.errors.find((e) => e.path === 'encoding.size.scale.range');
-    expect(error).toBeDefined();
+    const error = result.errors.find((e) => e.path === '/encoding/size/scale/range');
+    expect(error!.code).toBe('INVALID_VALUE');
+    // Names the unit mix-up: OpenChart sizes are radii, Vega-Lite's are areas.
+    expect(error!.message).toContain('radius in pixels');
   });
 
   it('accepts radius-scale encoding.size ranges', () => {

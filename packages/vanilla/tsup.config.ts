@@ -25,7 +25,7 @@ export default defineConfig({
     'three-spritetext',
   ],
   onSuccess: async () => {
-    const src = resolve('node_modules/@opendata-ai/openchart-core/dist/styles.css');
+    const src = resolve('../core/dist/styles.css');
     const dest = resolve('dist/styles.css');
     mkdirSync(dirname(dest), { recursive: true });
     copyFileSync(src, dest);

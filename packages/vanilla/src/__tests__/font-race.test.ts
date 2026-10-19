@@ -107,6 +107,60 @@ describe('createChart font-load recompile', () => {
     document.body.innerHTML = '';
   });
 
+  it.each([
+    false,
+    true,
+  ])('measures the effective root font through updates (nested=%s)', (nested) => {
+    installFonts(makeFontFaceSet(true));
+    const ctx = stubCanvasContext();
+    // Without a layer theme the first leaf's theme owns the root.
+    const spec = (family: string, parent?: string) => ({
+      ...(parent ? { theme: { fonts: { family: parent } } } : {}),
+      layer: nested
+        ? [{ layer: [{ ...lineSpec, theme: { fonts: { family } } }] }]
+        : [{ ...lineSpec, theme: { fonts: { family } } }],
+    });
+    for (const hostFamily of [undefined, 'HostFont']) {
+      const chart = createChart(container, spec('LeafFont'), {
+        theme: hostFamily ? { fonts: { family: hostFamily } } : undefined,
+      });
+      expect(chart.layout.theme.fonts.family).toBe(hostFamily ?? 'LeafFont');
+      expect(ctx.font).toContain(hostFamily ?? 'LeafFont');
+      chart.update(spec('NextLeafFont'));
+      expect(chart.layout.theme.fonts.family).toBe(hostFamily ?? 'NextLeafFont');
+      expect(ctx.font).toContain(hostFamily ?? 'NextLeafFont');
+      // A layer theme owns the root whole, ahead of the leaf.
+      chart.update(spec('NextLeafFont', 'ParentFont'));
+      expect(chart.layout.theme.fonts.family).toBe(hostFamily ?? 'ParentFont');
+      expect(ctx.font).toContain(hostFamily ?? 'ParentFont');
+      chart.destroy();
+    }
+  });
+
+  it.each([
+    undefined,
+    'HostFont',
+  ])('restores host font measurement after removing a leaf theme (%s)', (hostFont) => {
+    const fonts = makeFontFaceSet(false);
+    const check = vi.fn(() => false);
+    fonts.check = check;
+    installFonts(fonts);
+    const ctx = stubCanvasContext();
+    const defaults = document.createElement('style');
+    defaults.textContent = '.oc-root { --oc-font-family: Inter, sans-serif; }';
+    document.body.appendChild(defaults);
+    if (hostFont) container.style.setProperty('--oc-font-family', hostFont);
+    const chart = createChart(container, {
+      layer: [{ ...lineSpec, animation: false, theme: { fonts: { family: 'LeafFont' } } }],
+    });
+    chart.update({ layer: [{ ...lineSpec, animation: false }] });
+    expect(ctx.font).toContain(hostFont ?? 'Inter');
+    expect(ctx.font).not.toContain('LeafFont');
+    expect(check).toHaveBeenLastCalledWith(`12px "${hostFont ?? 'Inter'}"`);
+    expect(container.style.getPropertyValue('--oc-font-family')).toBe(hostFont ?? '');
+    chart.destroy();
+  });
+
   it('marks pending then ready and re-renders once when fonts resolve late', async () => {
     const fonts = makeFontFaceSet(false);
     installFonts(fonts);
@@ -126,6 +180,27 @@ describe('createChart font-load recompile', () => {
     const genAfter = Number(container.dataset.ocRenderGen);
     expect(genAfter).toBe(genBefore + 1);
 
+    chart.destroy();
+  });
+
+  it('watches the updated leaf font and ignores the superseded font reload', async () => {
+    const fonts = makeFontFaceSet(false);
+    const check = vi.fn(() => false);
+    fonts.check = check;
+    installFonts(fonts);
+    stubCanvasContext();
+    const spec = (family: string) => ({
+      layer: [{ ...lineSpec, animation: false, theme: { fonts: { family } } }],
+    });
+    const chart = createChart(container, spec('FirstLeaf'));
+    chart.update(spec('SecondLeaf'));
+    expect(check).toHaveBeenLastCalledWith('12px "SecondLeaf"');
+    const before = Number(container.dataset.ocRenderGen);
+    fonts.resolveReady();
+    await fonts.ready;
+    await Promise.resolve();
+    expect(container.dataset.ocFontsState).toBe('ready');
+    expect(Number(container.dataset.ocRenderGen)).toBe(before + 1);
     chart.destroy();
   });
 

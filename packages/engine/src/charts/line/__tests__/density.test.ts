@@ -90,7 +90,7 @@ describe('mark: density', () => {
         y: { axis: { title: 'Density' } },
       },
     } as unknown as ChartSpec);
-    expect(layout.axes.y).toBeDefined();
+    expect(layout.axes.y!.label).toBe('Density');
   });
 
   it('rises monotonically when cumulative', () => {

@@ -168,9 +168,9 @@ describe('resolved annotation editing', () => {
       layer: [{ layer: [{ ...editSpec, annotations: [bad] }] }],
     });
     expect(result.valid).toBe(false);
-    expect(result.errors.map((error) => error.path)).toContain('annotations[0].connector.bend');
+    expect(result.errors.map((error) => error.path)).toContain('/annotations/0/connector/bend');
     expect(result.errors.map((error) => error.path)).toContain(
-      'layer[0].layer[0].annotations[0].connector.bend',
+      '/layer/0/layer/0/annotations/0/connector/bend',
     );
   });
   it('preserves the existing null connector fallback without throwing a warning error', () => {
@@ -194,7 +194,7 @@ describe('resolved annotation editing', () => {
       ],
     });
     expect(result.valid).toBe(false);
-    expect(result.errors.map((error) => error.path)).toContain('annotations[0].connector.bend');
+    expect(result.errors.map((error) => error.path)).toContain('/annotations/0/connector/bend');
   });
   it('freezes the original layout and source during a gesture', () => {
     const spec = structuredClone(editSpec);

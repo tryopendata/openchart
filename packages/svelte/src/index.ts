@@ -20,6 +20,8 @@ export * from '@opendata-ai/openchart-core';
 // ---------------------------------------------------------------------------
 
 export type {
+  GeoMapCameraChangeMeta,
+  InteractionMode,
   JPGExportOptions,
   PNGExportOptions,
   SpecSequenceOptions,

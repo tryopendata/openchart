@@ -2,8 +2,8 @@
  * Theme context: provides a theme and dark mode preference to all
  * descendant Chart, DataTable, and Graph components without prop drilling.
  *
- * Components use the context values as fallbacks when no explicit
- * `theme` or `darkMode` prop is passed.
+ * Components deep-merge the provider theme with their theme prop.
+ * An explicit `darkMode` prop wins over the provider preference.
  */
 
 import type { DarkMode, ThemeConfig } from '@opendata-ai/openchart-core';

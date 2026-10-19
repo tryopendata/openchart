@@ -13,7 +13,6 @@ import type {
   AxisConfig,
   ChromeText,
   ColumnConfig,
-  DarkMode,
   DataRow,
   Display,
   Encoding,
@@ -101,13 +100,27 @@ export interface UserExplicit {
   crosshair: boolean;
 }
 
+/** Internal renderer configuration: sugar can change the mark type while
+ * retaining visual options. Keep this wide shape outside the authored contract. */
+type UnionKeys<T> = T extends unknown ? keyof T : never;
+type UnionValue<T, K extends PropertyKey> = T extends unknown
+  ? K extends keyof T
+    ? T[K]
+    : never
+  : never;
+export type NormalizedMarkDef = { type: MarkType } & {
+  [K in Exclude<UnionKeys<MarkDef>, 'type'>]?: UnionValue<MarkDef, K>;
+};
+
 /** A ChartSpec with all optional fields filled with sensible defaults. */
 export interface NormalizedChartSpec {
   /** Resolved mark type string (extracted from spec.mark). */
   markType: MarkType;
   /** Resolved mark definition with defaults filled in. */
-  markDef: MarkDef;
+  markDef: NormalizedMarkDef;
   data: DataRow[];
+  /** @internal Compile-local stack reuse; never authored or emitted in a layout. */
+  areaStackCache?: import('../data/area-stack').AreaStackCache;
   encoding: Encoding;
   chrome: NormalizedChrome;
   /**
@@ -116,7 +129,7 @@ export interface NormalizedChartSpec {
    * `'subtract'` (default) shrinks the plot to fit chrome. Carried through from
    * the spec so the layout pipeline can honor it.
    */
-  chromeLayout?: 'subtract' | 'grow';
+  chromeLayout: 'subtract' | 'grow' | 'notes';
   /** Optional KPI metric cells, passed through unchanged. */
   metrics?: import('@opendata-ai/openchart-core').Metric[];
   /**
@@ -129,7 +142,7 @@ export interface NormalizedChartSpec {
   annotations: Annotation[];
   /** Normalized label configuration with defaults applied. density, format, and prefix are always set; offsets and color stay optional. */
   labels: Required<Pick<LabelConfig, 'density' | 'format' | 'prefix'>> &
-    Pick<LabelConfig, 'offsets' | 'color' | 'fontSize' | 'suffix'>;
+    Pick<LabelConfig, 'color' | 'fontSize' | 'suffix' | 'placement'>;
   /** Legend configuration (position override). */
   legend?: LegendConfig;
   /** Right-side endpoint labels column config (multi-series line/area only). */
@@ -139,7 +152,6 @@ export interface NormalizedChartSpec {
   autoThin: boolean;
   compactAnnotationLimit?: number | null;
   theme: ThemeConfig;
-  darkMode: DarkMode;
   /** Whether the OpenData watermark is enabled. */
   watermark: boolean;
   /** Series names to hide from rendering. */
@@ -174,7 +186,6 @@ export interface NormalizedTableSpec {
   rowKey?: string;
   chrome: NormalizedChrome;
   theme: ThemeConfig;
-  darkMode: DarkMode;
   watermark: boolean;
   search: boolean;
   pagination: boolean | { pageSize: number };
@@ -184,7 +195,6 @@ export interface NormalizedTableSpec {
   sort?: SortState;
   totalRow?: { label: string };
   /** Mirrors `density === 'condensed'` for back-compat. */
-  compact: boolean;
   responsive: boolean;
   animation?: AnimationSpec;
 }
@@ -202,7 +212,6 @@ export interface NormalizedGraphSpec {
   chrome: NormalizedChrome;
   annotations: Annotation[];
   theme: ThemeConfig;
-  darkMode: DarkMode;
   watermark: boolean;
   animation?: GraphAnimationSpec;
   interaction?: GraphInteractionConfig;
@@ -238,8 +247,11 @@ export type ValidationErrorCode =
 export interface ValidationError {
   /** Error message describing what's wrong. */
   message: string;
-  /** The path to the problematic value (e.g. "encoding.x.field"). */
-  path?: string;
+  /**
+   * Root-relative RFC 6901 JSON Pointer to the problematic value, e.g.
+   * `/encoding/x/field` or `/layer/1/data/0/value`. The root is `''`.
+   */
+  path: string;
   /** Machine-readable error code for programmatic handling. */
   code: ValidationErrorCode;
   /** Actionable suggestion for fixing the error. */
@@ -248,8 +260,6 @@ export interface ValidationError {
 
 /** Result of spec validation. */
 export interface ValidationResult {
-  /** Advisory authored-option warnings; incompatible options remain accepted in 8.x. */
-  warnings?: string[];
   /** Whether the spec is valid. */
   valid: boolean;
   /** Validation errors (empty if valid). */

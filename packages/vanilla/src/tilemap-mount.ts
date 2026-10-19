@@ -33,6 +33,7 @@ import {
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
 import { observeResize } from './resize-observer';
 import { resolveDarkMode } from './resolve-dark-mode';
+import { prepareSettledExportTheme } from './theme-style-block';
 import { renderTileMapSVG } from './tilemap-renderer';
 import { createTooltipManager, type TooltipManager } from './tooltip';
 
@@ -72,8 +73,8 @@ export interface TileMapMountOptions {
   theme?: ThemeConfig;
   /** Dark mode setting: "auto" (system pref), "force", or "off". */
   darkMode?: DarkMode;
-  /** Enable responsive resizing. Defaults to true. */
-  responsive?: boolean;
+  /** Observe container resizing. Defaults to true. */
+  autoResize?: boolean;
   /** Show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
   /** Show tooltips on hover. Defaults to true. */
@@ -435,6 +436,7 @@ export function createTileMap(
     // Export settled geometry, independent of transient hover and animation.
     const terminalSvg = renderTileMapSVG(currentLayout, { animate: false });
     const resolvedOptions = { theme: currentLayout.theme, ...options_ };
+    prepareSettledExportTheme(svgElement, terminalSvg, resolvedOptions.theme, !!options_?.theme);
 
     switch (format) {
       case 'svg':
@@ -523,7 +525,7 @@ export function createTileMap(
   container.dataset.ocFontsState = fontsPending ? 'pending' : 'ready';
 
   // Setup responsive resizing
-  if (options?.responsive !== false) {
+  if (options?.autoResize !== false) {
     disconnectResize = observeResize(container, () => {
       resize();
     });

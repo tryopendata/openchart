@@ -7,7 +7,7 @@
  * chart must produce the same bytes as exporting the SVG-mode twin.
  */
 
-import type { ChartSpec } from '@opendata-ai/openchart-core';
+import { type ChartSpec, resolveTheme } from '@opendata-ai/openchart-core';
 import { compileChart } from '@opendata-ai/openchart-engine';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createContainer } from '../__test-fixtures__/dom';
@@ -66,6 +66,39 @@ const normalize = (s: string) => s.replace(/oc-(clip|grad|pattern)-\d+/g, 'oc-$1
 // that to flake when the rest of the suite is saturating the machine -- and a
 // timeout here would read as a canvas bug rather than a busy runner.
 vi.setConfig({ testTimeout: 20_000 });
+
+it.each([
+  'svg',
+  'canvas',
+] as const)('preserves live host tokens in mounted %s exports', async (renderer) => {
+  const { container, chart } = mount(scatter(10), renderer);
+  const live = container.querySelector('svg.oc-chart') as SVGElement;
+  live.style.setProperty('--oc-text', '#123456');
+  const plain = chart.export('svg');
+  expect(plain).toContain('--oc-text: #123456');
+  expect(plain).toContain('data-oc-theme');
+  expect(await chart.export('svg-with-fonts', { embedFonts: false })).toContain(
+    '--oc-text: #123456',
+  );
+  chart.destroy();
+});
+
+it.each([
+  'svg',
+  'canvas',
+] as const)('explicit export theme wins over authored %s tokens', async (renderer) => {
+  const spec = { ...scatter(10), theme: { colors: { text: '#123456' } } };
+  const { chart } = mount(spec, renderer);
+  const out = await chart.export('svg-with-fonts', {
+    embedFonts: false,
+    theme: resolveTheme({ colors: { text: '#abcdef' } }),
+  });
+  const svg = new DOMParser().parseFromString(out, 'image/svg+xml').documentElement;
+  expect(svg.getAttribute('style') ?? '').not.toContain('--oc-text: #123456');
+  expect(svg.querySelector('style[data-oc-theme]')?.textContent).toContain('--oc-text: #abcdef');
+  expect(svg.querySelectorAll('style[data-oc-theme]')).toHaveLength(1);
+  chart.destroy();
+});
 
 describe('vector export (at or below the point cap)', () => {
   it('re-materializes the dots, gridlines and background the canvas took over', () => {

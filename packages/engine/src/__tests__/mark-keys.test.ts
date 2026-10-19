@@ -34,12 +34,9 @@ describe('column chart mark keys', () => {
     const rects = layout.marks.filter((m) => m.type === 'rect');
     expect(rects.length).toBe(3);
 
-    for (const m of rects) {
-      expect((m as { key?: string }).key).toBeDefined();
-    }
-
+    // Keyed by series|category; a single-series column has an empty series part.
     const keys = rects.map((m) => (m as { key?: string }).key);
-    expect(new Set(keys).size).toBe(3);
+    expect(keys).toEqual(['|A', '|B', '|C']);
   });
 
   it('deduplicates keys for duplicate category values', () => {
@@ -58,8 +55,9 @@ describe('column chart mark keys', () => {
     const layout = compileChart(spec, dims);
     const rects = layout.marks.filter((m) => m.type === 'rect');
     const keys = rects.map((m) => (m as { key?: string }).key);
-    // All keys must be unique even with duplicate categories
-    expect(new Set(keys).size).toBe(keys.length);
+    // All keys must be unique even with duplicate categories: repeats get an
+    // occurrence suffix, unique keys pass through unchanged.
+    expect(keys).toEqual(['|A⸱0', '|A⸱1', '|B']);
   });
 
   it('stamps keys on grouped columns', () => {
@@ -82,10 +80,7 @@ describe('column chart mark keys', () => {
     expect(rects.length).toBeGreaterThanOrEqual(4);
 
     const keys = rects.map((m) => (m as { key?: string }).key);
-    for (const k of keys) {
-      expect(k).toBeDefined();
-    }
-    expect(new Set(keys).size).toBe(keys.length);
+    expect(keys).toEqual(['Revenue|Q1', 'Cost|Q1', 'Revenue|Q2', 'Cost|Q2']);
   });
 });
 
@@ -110,10 +105,7 @@ describe('bar chart mark keys', () => {
     const layout = compileChart(spec, dims);
     const rects = layout.marks.filter((m) => m.type === 'rect');
     const keys = rects.map((m) => (m as { key?: string }).key);
-    for (const k of keys) {
-      expect(k).toBeDefined();
-    }
-    expect(new Set(keys).size).toBe(keys.length);
+    expect(keys).toEqual(['|Alpha', '|Beta', '|Gamma']);
   });
 });
 
@@ -141,11 +133,9 @@ describe('line chart mark keys', () => {
     const lines = layout.marks.filter((m) => m.type === 'line');
     expect(lines.length).toBe(2);
 
+    // One line per series, keyed by the series value.
     const keys = lines.map((m) => (m as { key?: string }).key);
-    for (const k of keys) {
-      expect(k).toBeDefined();
-    }
-    expect(new Set(keys).size).toBe(2);
+    expect(keys).toEqual(['US', 'UK']);
   });
 
   it('stamps pointKeys on line marks with temporal x', () => {
@@ -166,15 +156,8 @@ describe('line chart mark keys', () => {
     expect(lines.length).toBe(1);
 
     const line = lines[0] as { pointKeys?: string[] };
-    expect(line.pointKeys).toBeDefined();
-    expect(line.pointKeys!.length).toBe(3);
-
-    // Each point key should be a unique, defined string
-    for (const pk of line.pointKeys!) {
-      expect(pk).toBeDefined();
-      expect(typeof pk).toBe('string');
-    }
-    expect(new Set(line.pointKeys!).size).toBe(3);
+    // Point keys serialize each datum's x value.
+    expect(line.pointKeys).toEqual(['2020-01-01', '2021-01-01', '2022-01-01']);
   });
 });
 
@@ -200,11 +183,9 @@ describe('scatter chart mark keys', () => {
     const points = layout.marks.filter((m) => m.type === 'point');
     expect(points.length).toBe(3);
 
+    // No key field or color: keys derive from the x value (spec-reference, encoding.key).
     const keys = points.map((m) => (m as { key?: string }).key);
-    for (const k of keys) {
-      expect(k).toBeDefined();
-    }
-    expect(new Set(keys).size).toBe(3);
+    expect(keys).toEqual(['10', '30', '50']);
   });
 
   it('uses encoding.key field when specified', () => {
@@ -245,7 +226,7 @@ describe('pie chart mark keys', () => {
         { category: 'Tablet', share: 10 },
       ],
       encoding: {
-        y: { field: 'share', type: 'quantitative' },
+        theta: { field: 'share', type: 'quantitative' },
         color: { field: 'category', type: 'nominal' },
       },
     };
@@ -254,10 +235,7 @@ describe('pie chart mark keys', () => {
     expect(arcs.length).toBe(3);
 
     const keys = arcs.map((m) => (m as { key?: string }).key);
-    for (const k of keys) {
-      expect(k).toBeDefined();
-    }
-    expect(new Set(keys).size).toBe(3);
+    expect(keys).toEqual(['Desktop', 'Mobile', 'Tablet']);
   });
 });
 
@@ -286,9 +264,6 @@ describe('area chart mark keys', () => {
     expect(areas.length).toBe(2);
 
     const keys = areas.map((m) => (m as { key?: string }).key);
-    for (const k of keys) {
-      expect(k).toBeDefined();
-    }
-    expect(new Set(keys).size).toBe(2);
+    expect(keys).toEqual(['A', 'B']);
   });
 });

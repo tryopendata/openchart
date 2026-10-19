@@ -127,8 +127,9 @@ describe('computePieLabels positioning', () => {
     for (const label of visibleLabels) {
       expect(label.connector).toBeDefined();
       expect(label.connector!.from).toEqual({ x: label.x, y: label.y });
-      expect(label.connector!.to).toBeDefined();
-      expect(label.connector!.stroke).toBeDefined();
+      // Ends on its own slice's centroid, in the default text color.
+      expect(label.connector!.to).toEqual(marks[label.index!].centroid);
+      expect(label.connector!.stroke).toBe('#333333');
     }
   });
 

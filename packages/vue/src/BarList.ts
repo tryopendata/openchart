@@ -3,6 +3,7 @@
  */
 
 import type { BarListSpec, DarkMode, ThemeConfig } from '@opendata-ai/openchart-core';
+import { mergeThemeConfig } from '@opendata-ai/openchart-core';
 import {
   type BarListInstance,
   type BarListMountOptions,
@@ -72,7 +73,7 @@ export const BarList = defineComponent({
     const contextDarkMode = inject(VizDarkModeKey, undefined);
 
     function resolveTheme(): ThemeConfig | undefined {
-      return props.theme ?? contextTheme?.value;
+      return mergeThemeConfig(contextTheme?.value, props.theme);
     }
 
     function resolveDarkMode(): DarkMode | undefined {
@@ -88,7 +89,7 @@ export const BarList = defineComponent({
         darkMode: resolveDarkMode(),
         onRowClick: (row: BarListRowEvent) => emit('row-click', row),
         onRowHover: (row: BarListRowEvent | null) => emit('row-hover', row),
-        responsive: true,
+        autoResize: true,
       };
 
       instance = createBarList(container, props.spec, options);

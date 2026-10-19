@@ -37,7 +37,7 @@ describe('createSankey', () => {
   });
 
   it('mounts an SVG element into the container', () => {
-    const instance = createSankey(container, basicSankeySpec, { responsive: false });
+    const instance = createSankey(container, basicSankeySpec, { autoResize: false });
 
     const svg = container.querySelector('svg');
     expect(svg).not.toBeNull();
@@ -47,7 +47,7 @@ describe('createSankey', () => {
   });
 
   it('renders the correct number of sankey node elements', () => {
-    const instance = createSankey(container, basicSankeySpec, { responsive: false });
+    const instance = createSankey(container, basicSankeySpec, { autoResize: false });
 
     const nodes = container.querySelectorAll('.oc-sankey-node');
     // A, B, C, D, E = 5 nodes
@@ -57,7 +57,7 @@ describe('createSankey', () => {
   });
 
   it('renders the correct number of sankey link elements', () => {
-    const instance = createSankey(container, basicSankeySpec, { responsive: false });
+    const instance = createSankey(container, basicSankeySpec, { autoResize: false });
 
     const links = container.querySelectorAll('.oc-sankey-link');
     // A->C, B->C, C->D, C->E = 4 links
@@ -68,7 +68,7 @@ describe('createSankey', () => {
 
   it('creates gradient defs when linkStyle is gradient', () => {
     const spec = { ...basicSankeySpec, linkStyle: 'gradient' as const };
-    const instance = createSankey(container, spec, { responsive: false });
+    const instance = createSankey(container, spec, { autoResize: false });
 
     const gradients = container.querySelectorAll('linearGradient');
     expect(gradients.length).toBeGreaterThan(0);
@@ -77,7 +77,7 @@ describe('createSankey', () => {
   });
 
   it('update() replaces the SVG with new content', () => {
-    const instance = createSankey(container, basicSankeySpec, { responsive: false });
+    const instance = createSankey(container, basicSankeySpec, { autoResize: false });
 
     const svgBefore = container.querySelector('svg');
     expect(svgBefore).not.toBeNull();
@@ -100,7 +100,7 @@ describe('createSankey', () => {
   });
 
   it('destroy() removes the SVG from the container', () => {
-    const instance = createSankey(container, basicSankeySpec, { responsive: false });
+    const instance = createSankey(container, basicSankeySpec, { autoResize: false });
 
     const svgBefore = container.querySelector('svg');
     expect(svgBefore).not.toBeNull();
@@ -113,7 +113,7 @@ describe('createSankey', () => {
 
   it('has oc-animate class when animation is enabled', () => {
     const spec = { ...basicSankeySpec, animation: true };
-    const instance = createSankey(container, spec, { responsive: false });
+    const instance = createSankey(container, spec, { autoResize: false });
 
     const svg = container.querySelector('svg');
     expect(svg?.classList.contains('oc-animate')).toBe(true);
@@ -122,7 +122,7 @@ describe('createSankey', () => {
   });
 
   it('layout property returns the compiled layout', () => {
-    const instance = createSankey(container, basicSankeySpec, { responsive: false });
+    const instance = createSankey(container, basicSankeySpec, { autoResize: false });
 
     expect(instance.layout).toBeDefined();
     expect(instance.layout.nodes).toHaveLength(5);
@@ -181,7 +181,7 @@ describe('sankey path highlighting', () => {
   }
 
   it('traces upstream and downstream from the hovered node', () => {
-    const instance = createSankey(container, branching, { responsive: false });
+    const instance = createSankey(container, branching, { autoResize: false });
 
     hover('B');
     expect(linkOpacity('A', 'B')).toBe(0.7);
@@ -200,7 +200,7 @@ describe('sankey path highlighting', () => {
   });
 
   it('restores the compiled opacities on mouseleave', () => {
-    const instance = createSankey(container, branching, { responsive: false });
+    const instance = createSankey(container, branching, { autoResize: false });
 
     hover('B');
     const el = container.querySelector('.oc-sankey-node[data-node-id="B"]');
@@ -213,7 +213,7 @@ describe('sankey path highlighting', () => {
   });
 
   it('a link hover lights only the path running through that link', () => {
-    const instance = createSankey(container, branching, { responsive: false });
+    const instance = createSankey(container, branching, { autoResize: false });
 
     const link = container.querySelector('.oc-sankey-link[data-source="A"][data-target="D"]');
     link?.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }));
@@ -228,7 +228,7 @@ describe('sankey path highlighting', () => {
   });
 
   it('labels carry their node id and the value tspan', () => {
-    const instance = createSankey(container, branching, { responsive: false });
+    const instance = createSankey(container, branching, { autoResize: false });
 
     const label = container.querySelector('.oc-sankey-label[data-node-id="B"]');
     expect(label).not.toBeNull();

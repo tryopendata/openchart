@@ -24,7 +24,7 @@ The engine validates the spec, compiles layout and scales, and renders SVG (char
 
 ## VizSpec
 
-VizSpec is a union of six spec kinds, discriminated differently per kind:
+VizSpec is a union of these spec kinds, discriminated differently per kind:
 
 - **ChartSpec**: has a `mark` field (a mark string or MarkDef object). No `type`.
 - **LayerSpec**: has a `layer` array (overlay multiple charts on shared scales).
@@ -33,6 +33,7 @@ VizSpec is a union of six spec kinds, discriminated differently per kind:
 - **SankeySpec**: `type: "sankey"`.
 - **TileMapSpec**: `type: "tilemap"`.
 - **BarListSpec**: `type: "barlist"`.
+- **GeoMapSpec**: `type: "map"`.
 
 There is no `type: "line"` grammar. Charts use `mark`, following Vega-Lite. `mark: "line"`, not `type: "line"`.
 
@@ -56,7 +57,6 @@ There is no `type: "line"` grammar. Charts use `mark`, following Vega-Lite. `mar
   labels?:    boolean | LabelConfig,          // direct data labels
   legend?:    LegendConfig,      // { position, show, columns, ... }
   theme?:     ThemeConfig,       // colors, fonts, spacing overrides
-  darkMode?:  "auto" | "force" | "off",
   a11y?:      { description?: string, hidden?: boolean },
   description?: string,          // sugar -> a11y.description (alt text)
   width?: number, height?: number,
@@ -137,7 +137,7 @@ A bin plus a count aggregate is a histogram. Take both bin edges (`as: ["bin_x",
 
 - `{ type: "text", x, y, text, subtitle?, connector?, dot?, anchor? }` - callout at a data coordinate.
 - `{ type: "range", x1?, x2?, y1?, y2?, label? }` - highlighted band.
-- `{ type: "refline" | "rule", x?, y?, style?, label? }` - reference line at a value.
+- `{ type: "refline", x?, y?, style?, label?, labelPlacement? }` - reference line at a value.
 
 ## Chrome
 
@@ -151,7 +151,7 @@ Each accepts a string or `{ text, style?, offset? }`.
 
 ## Theme
 
-`theme` overrides design tokens: `{ colors?, fonts?, spacing?, borderRadius?, chrome? }`. `colors` accepts a categorical array or an object (`categorical`, `sequential`, `diverging`, `background`, `text`, `gridline`, `positive`, `negative`, ...). `darkMode` ("auto" | "force" | "off") controls automatic dark adaptation.
+`theme` overrides design tokens: `{ colors?, fonts?, spacing?, borderRadius?, chrome? }`. `colors` accepts a categorical array or an object (`categorical`, `sequential`, `diverging`, `background`, `text`, `gridline`, `positive`, `negative`, ...). Dark mode is not a spec field: pass `darkMode` ("auto" | "force" | "off") as a mount option or component prop.
 
 ## TableSpec
 
@@ -164,9 +164,8 @@ Each accepts a string or `{ text, style?, offset? }`.
   search?: boolean,
   pagination?: boolean | { pageSize: number },
   stickyFirstColumn?: boolean,
-  compact?: boolean,
+  density?: "condensed" | "regular" | "relaxed",
   theme?: ThemeConfig,
-  darkMode?: "auto" | "force" | "off",
 }
 ```
 
@@ -180,9 +179,28 @@ Each accepts a string or `{ text, style?, offset? }`.
   encoding?: { nodeColor?, nodeSize?, edgeColor?, edgeWidth?, nodeLabel? },
   layout?: { type: "force" | "radial" | "hierarchical", clustering?, chargeStrength?, linkDistance? },
   chrome?: Chrome,
-  darkMode?: "auto" | "force" | "off",
 }
 ```
+
+## GeoMapSpec
+
+```typescript
+{
+  type: "map",
+  geo: { features: topology, projection?: "albersUsa" | "mercator" | "equalEarth" | "identity", zoom?: boolean },
+  data: rows,
+  encoding: { key?, color?, tooltip?, text?, textPriority? },
+  points?: { data, longitude, latitude, key?, size?, color?, tooltip?, text?, textPriority? },
+  callouts?: [{ id, anchor, text, subtitle?, priority?, minZoom?, maxZoom?, offset?, maxWidth? }],
+  chrome?, legend?, theme?, fields?,
+}
+```
+
+Use `createGeoMap(container, spec)` or the `GeoMap` framework component. Labels are opt-in: `text: { field: "placeName" }`; quantitative `textPriority` orders bounded placement. Point labels and point-anchored callouts require a unique `points.key`.
+
+Callout anchors are `{ kind: "feature", id }`, `{ kind: "point", id }`, or `{ kind: "coordinate", space: "geographic" | "source", x, y }`. Feature IDs refer to topology features; point IDs refer to the point key. Geographic anchors use longitude/latitude and require a geographic projection; source anchors use the preprojected identity map's coordinate system. Do not interchange these spaces. Callout IDs must be unique.
+
+Labels retain constant text size during camera movement. Decluttered text remains in the accessible inventory; callouts that do not fit use reserved numbered notes. Complete authored inventory is included in standalone SVG descriptions. A visible place-list disclosure is a runtime `labelInventory: { container: hostElement }` option, independent of any reader panel. The host owns its position. Omission does not add visible HTML or labels, and map callouts are not Cartesian editable annotations.
 
 ## SankeySpec, TileMapSpec, BarListSpec
 
@@ -196,7 +214,7 @@ Every chart ships a screen-reader description, a hidden data table, and keyboard
 
 ## Validation and repair
 
-Validate a spec before rendering with `validateSpec(spec)` from `@opendata-ai/openchart-engine`. It returns `{ valid, errors, normalized }`. Each error carries a machine-readable `code`, the offending `path`, and a repair-friendly `suggestion`. Field references are checked against the columns in the provided `data`; a misspelled field name suggests the nearest actual column ("did you mean").
+Validate a spec before rendering with `validateSpec(spec)` from `@opendata-ai/openchart-engine`. It returns `{ valid, errors, normalized }`. Each error carries a machine-readable `code`, the offending `path` as a root-relative JSON Pointer (e.g. `/encoding/y/field`, `/layer/1/data/0/value`), and a repair-friendly `suggestion`. Field references are checked against the columns in the provided `data`; a misspelled field name suggests the nearest actual column ("did you mean").
 
 ## JSON Schema
 

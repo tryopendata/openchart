@@ -82,8 +82,8 @@ export interface GraphHandle {
   getLegend: () => GraphLegendData | null;
   setActiveCategories: (values: string[]) => void;
   getActiveCategories: () => string[];
-  /** Re-compile encoding/legend/chrome without restarting the simulation. */
-  updateVisuals: (spec: GraphSpec) => void;
+  /** Update graph data, encoding, or presentation through the unified update path. */
+  update: (spec: GraphSpec) => void;
   /** The underlying GraphInstance from the vanilla adapter. */
   instance: GraphInstance | null;
 }

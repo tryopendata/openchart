@@ -13,6 +13,9 @@ for (const width of [320, 390, 768, 1280])
       const charts = page.getByTestId('annotation-curve');
       await expect(charts).toHaveCount(10);
       for (const chart of await charts.all()) {
+        await expect(chart).toHaveAttribute('data-oc-fonts-state', 'ready');
+        if (colorScheme === 'dark') await expect(chart).toHaveClass(/oc-dark/);
+        else await expect(chart).not.toHaveClass(/oc-dark/);
         await expect(chart.locator('.oc-annotation-label')).toBeVisible();
         await chart.dispatchEvent('fixture-layout');
         const layout: ChartLayout = JSON.parse((await chart.getAttribute('data-layout'))!);

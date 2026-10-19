@@ -46,8 +46,8 @@ describe('mark label halo', () => {
     expect(label).toBeTruthy();
     expect(label!.getAttribute('paint-order')).toBe('stroke');
     const stroke = label!.getAttribute('stroke');
-    expect(stroke).toBeTruthy();
-    expect(stroke).not.toBe('transparent');
+    // An opaque color: a transparent halo cuts nothing.
+    expect(stroke).toMatch(/^(#[0-9a-f]{6}|rgb\()/i);
     expect(label!.getAttribute('stroke-linejoin')).toBe('round');
   });
 
@@ -99,7 +99,7 @@ describe('mark label halo', () => {
 });
 
 describe('annotation label halo', () => {
-  it('cuts an opaque halo behind a refline label under the default theme', () => {
+  it('cuts an opaque halo behind an explicitly anchored refline label', () => {
     const container = render({
       mark: 'line',
       data: [
@@ -111,15 +111,15 @@ describe('annotation label halo', () => {
         x: { field: 'date', type: 'temporal' },
         y: { field: 'value', type: 'quantitative' },
       },
-      annotations: [{ type: 'refline', y: 20, label: 'avg: 20' }],
+      annotations: [{ type: 'refline', y: 20, label: 'avg: 20', labelAnchor: 'top' }],
     });
 
     const label = container.querySelector('.oc-annotation-label') as SVGElement | null;
     expect(label).toBeTruthy();
     expect(label!.getAttribute('paint-order')).toBe('stroke');
     const stroke = label!.getAttribute('stroke');
-    expect(stroke).toBeTruthy();
-    expect(stroke).not.toBe('transparent');
+    // An opaque color: a transparent halo cuts nothing.
+    expect(stroke).toMatch(/^(#[0-9a-f]{6}|rgb\()/i);
     expect(label!.getAttribute('stroke-linejoin')).toBe('round');
   });
 });

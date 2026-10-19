@@ -19,6 +19,7 @@
 import type {
   LabelCandidate,
   LabelDensity,
+  MeasureTextFn,
   NumberFormatter,
   RectMark,
   ResolvedLabel,
@@ -32,6 +33,7 @@ import {
 } from '@opendata-ai/openchart-core';
 import { filterByDensity } from '../_shared/density-filter';
 import { formatLabelValue } from '../_shared/format-label-value';
+import type { BarLabelPlacement } from '../bar/label-plan';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -63,7 +65,15 @@ export function computeColumnLabels(
   darkMode = false,
   fontSize?: number,
   labelSuffix?: string,
+  fontFamily = 'system-ui, -apple-system, sans-serif',
+  options: {
+    placement?: BarLabelPlacement;
+    columnWidth?: number;
+    measureText?: MeasureTextFn;
+  } = {},
 ): ResolvedLabel[] {
+  if (options.placement === 'suppress') return [];
+  const placement = options.placement ?? 'adaptive';
   const FONT_SIZE = fontSize ?? LABEL_FONT_SIZE;
   const targetMarks = filterByDensity(marks, density);
 
@@ -72,6 +82,7 @@ export function computeColumnLabels(
   const candidates: LabelCandidate[] = [];
   // Per-candidate knockout-halo flag; false for labels drawn inside a segment.
   const haloFlags: boolean[] = [];
+  const horizontalShifts: number[] = [];
   // Track whether each candidate fits inside its stacked segment. Non-stacked
   // columns label into open space above the bar, so they always fit.
   const fitsInSegment: boolean[] = [];
@@ -102,13 +113,16 @@ export function computeColumnLabels(
       }
     }
     const numericValue = parseFloat(valuePart);
-    const isNegative = Number.isFinite(numericValue) && numericValue < 0;
+    const isNegative = Number.isFinite(rawNum)
+      ? rawNum < 0
+      : Number.isFinite(numericValue) && numericValue < 0;
 
     if (labelPrefix) valuePart = labelPrefix + valuePart;
     if (labelSuffix) valuePart = valuePart + labelSuffix;
 
-    const textWidth = estimateTextWidth(valuePart, FONT_SIZE, LABEL_FONT_WEIGHT);
-    const textHeight = FONT_SIZE * 1.2;
+    const measured = options.measureText?.(valuePart, FONT_SIZE, LABEL_FONT_WEIGHT);
+    const textWidth = measured?.width ?? estimateTextWidth(valuePart, FONT_SIZE, LABEL_FONT_WEIGHT);
+    const textHeight = Math.max(FONT_SIZE * 1.2, measured?.height ?? 0);
 
     // A stacked segment has another segment sitting directly on top of it, so
     // the "float above the top edge" placement used for plain columns would
@@ -128,7 +142,8 @@ export function computeColumnLabels(
     let anchorY: number;
     let fill: string;
 
-    if (isStacked) {
+    const isInside = placement === 'inside' || (isStacked && placement === 'adaptive');
+    if (isInside) {
       anchorY = mark.y + mark.height / 2 - textHeight / 2;
       fill = labelColor ?? pickLabelColor(getRepresentativeColor(mark.fill), darkMode);
     } else {
@@ -141,22 +156,30 @@ export function computeColumnLabels(
     // A label only belongs inside a stacked segment if the segment is tall
     // enough to hold it; short segments (Nuclear at ~4%) would otherwise
     // overflow into their neighbours.
-    fitsInSegment.push(!(isStacked && textHeight > mark.height - 2 * LABEL_PADDING_Y));
+    fitsInSegment.push(
+      !(
+        isInside &&
+        (textHeight > mark.height - 2 * LABEL_PADDING_Y ||
+          (placement === 'inside' && textWidth > mark.width - 4))
+      ),
+    );
 
     // A stacked label sits ON its own segment fill, contrast-picked against it.
     // A surface-colored knockout stroke would ring every glyph, so only the
     // labels floating outside the bar get the halo.
-    haloFlags.push(!isStacked);
+    haloFlags.push(!isInside);
 
+    const horizontalShift = placement === 'adaptive' ? 0 : textWidth / 2;
+    horizontalShifts.push(horizontalShift);
     candidates.push({
       text: valuePart,
-      anchorX,
+      anchorX: anchorX - horizontalShift,
       anchorY,
       width: textWidth,
       height: textHeight,
       priority: 'data',
       style: {
-        fontFamily: 'system-ui, -apple-system, sans-serif',
+        fontFamily,
         fontSize: FONT_SIZE,
         fontWeight: LABEL_FONT_WEIGHT,
         fill,
@@ -206,7 +229,7 @@ export function computeColumnLabels(
     if (unfittingIndices.has(i)) {
       results.push({
         text: candidates[i].text,
-        x: candidates[i].anchorX,
+        x: candidates[i].anchorX + horizontalShifts[i],
         y: candidates[i].anchorY + ascent,
         style: candidates[i].style,
         visible: false,
@@ -222,13 +245,19 @@ export function computeColumnLabels(
     results.push({
       ...rest,
       ...(haloFlags[i] ? {} : { halo: false }),
+      x: r.x + horizontalShifts[i],
       y: r.y + ascent,
       // The connector originates at the label; shift its start to the baseline
       // too so the leader stays glued to the shifted text.
       connector: r.connector
         ? {
             ...r.connector,
-            from: { ...r.connector.from, y: r.connector.from.y + ascent },
+            from: {
+              ...r.connector.from,
+              x: r.connector.from.x + horizontalShifts[i],
+              y: r.connector.from.y + ascent,
+            },
+            to: { ...r.connector.to, x: r.connector.to.x + horizontalShifts[i] },
           }
         : undefined,
     });

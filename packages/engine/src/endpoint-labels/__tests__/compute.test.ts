@@ -19,7 +19,6 @@ import { describe, expect, it } from 'vitest';
 
 import type { NormalizedChartSpec } from '../../compiler/types';
 import { bidirectionalSweep, computeEndpointLabels } from '../compute';
-import { ENDPOINT_MARKER_RADIUS } from '../constants';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -282,13 +281,14 @@ describe('computeEndpointLabels', () => {
 
     for (const entry of layout.entries) {
       expect(entry.marker).toBeDefined();
-      // dataX is the original line endpoint; x is offset right by radius so the
-      // line terminates at the circle edge rather than its center.
+      // Centered on the data point, where hover dots and annotation anchors
+      // also sit; the opaque fill covers the line end.
       expect(entry.marker!.dataX).toBe(lastX);
-      expect(entry.marker!.x).toBe(lastX + ENDPOINT_MARKER_RADIUS);
+      expect(entry.marker!.x).toBe(lastX);
+      expect(entry.marker!.fill).toBe(theme.colors.neutral.surface);
       // Marker y is at the actual data point (not displaced labelY).
       expect(entry.marker!.y).toBe(entry.dataY);
-      // Open-circle convention: fill = background, stroke = series color.
+      // Stroke = series color.
       expect(entry.marker!.stroke).toBe(entry.color);
     }
   });
@@ -407,7 +407,7 @@ describe('computeEndpointLabels', () => {
       if (totalHeight > areaHeight) continue;
 
       const sweepEntries = heights.map((h, idx) => ({
-        naturalTop: areaTop + rand() * (areaBottom - h),
+        naturalTop: areaTop - 100 + rand() * (areaBottom - h + 200),
         height: h,
         index: idx,
       }));
@@ -514,8 +514,7 @@ describe('computeEndpointLabels', () => {
     for (const entry of layout.leading!) {
       expect(entry.marker).toBeDefined();
       expect(entry.marker!.dataX).toBe(chartArea.x);
-      // Leading marker offset: x = dataX - radius (left side).
-      expect(entry.marker!.x).toBe(chartArea.x - ENDPOINT_MARKER_RADIUS);
+      expect(entry.marker!.x).toBe(chartArea.x);
     }
   });
 
@@ -584,4 +583,116 @@ describe('computeEndpointLabels', () => {
     expect(layout.entries).toHaveLength(2);
     expect(layout.leading).toHaveLength(2);
   });
+});
+
+describe('endpoint precision and host measurement', () => {
+  it('uses one decimal precision across the displayed endpoint values', () => {
+    const marks = [makeLineMark('US', 100, 5), makeLineMark('UK', 180, 2.8)];
+    const result = computeEndpointLabels(makeSpec(), marks, theme, chartArea);
+    expect(result.entries.map((entry) => entry.value)).toEqual(['5.0', '2.8']);
+  });
+
+  it('measures endpoint values through the supplied host measurer', () => {
+    const marks = [makeLineMark('US', 100, 5), makeLineMark('UK', 180, 2.8)];
+    const result = computeEndpointLabels(
+      makeSpec(),
+      marks,
+      theme,
+      chartArea,
+      undefined,
+      false,
+      (text, size) => ({ width: text.length * 50, height: size }),
+    );
+    expect(result.bounds.width).toBeGreaterThanOrEqual(150);
+  });
+});
+
+it('predicts the widest displayed signed value instead of max absolute value', async () => {
+  const { predictEndpointLabelsWidth } = await import('../predict');
+  const spec = makeSpec({
+    endpointLabels: { content: 'value' },
+    data: [
+      { date: '2020', value: 99, country: 'US' },
+      { date: '2021', value: 5, country: 'US' },
+      { date: '2020', value: 80, country: 'UK' },
+      { date: '2021', value: -0.8, country: 'UK' },
+    ],
+  });
+  const marks = [makeLineMark('US', 100, 5), makeLineMark('UK', 180, -0.8)];
+  const measure = (text: string, size: number) => ({ width: text.length * 30, height: size });
+  const predicted = predictEndpointLabelsWidth(spec, theme, measure);
+  const actual = computeEndpointLabels(spec, marks, theme, chartArea, undefined, false, measure);
+  expect(predicted).toBe(actual.bounds.width);
+  expect(actual.entries.map((entry) => entry.labelLines.join(' '))).toEqual(['5.0', '−0.8']);
+});
+
+it.each([
+  12, 14,
+])('uses authored endpoint typography and measured layout with axisTick %s', (axisTick) => {
+  const customTheme = resolveTheme({
+    fonts: { sizes: { axisTick, endpointLabel: 16, endpointValue: 15 } },
+    spacing: { endpointEntryGap: 8, endpointValueGap: 7, endpointColumnGap: 24 },
+  });
+  for (const width of [330, 360, 680]) {
+    const area = { ...chartArea, width };
+    const result = computeEndpointLabels(
+      makeSpec(),
+      [makeLineMark('US', 100, 5), makeLineMark('UK', 180, 2.8)],
+      customTheme,
+      area,
+    );
+    expect(result.labelStyle.fontSize).toBe(16);
+    expect(result.valueStyle.fontSize).toBe(15);
+    expect(result.valueGap).toBe(7);
+    expect(result.bounds.x).toBe(area.x + area.width + 24);
+  }
+});
+
+it('shares precision for measured numeric-string observations and retains explicit formats', () => {
+  const marks = [makeLineMark('US', 100, 5), makeLineMark('UK', 180, 2.8)];
+  marks[0].dataPoints!.at(-1)!.datum.value = '5';
+  marks[1].dataPoints!.at(-1)!.datum.value = '2.8';
+  const input = makeSpec({
+    data: marks.flatMap((mark) => mark.dataPoints!.map((point) => point.datum)),
+  });
+  expect(
+    computeEndpointLabels(input, marks, theme, chartArea).entries.map((entry) => entry.value),
+  ).toEqual(['5.0', '2.8']);
+  input.endpointLabels = { format: '+.2f' };
+  expect(
+    computeEndpointLabels(input, marks, theme, chartArea).entries.map((entry) => entry.value),
+  ).toEqual(['+5.00', '+2.80']);
+});
+
+it('preserves compact endpoint magnitudes for numbers and numeric strings', () => {
+  const marks = [makeLineMark('US', 100, 2580), makeLineMark('UK', 180, 1630)];
+  marks[1].dataPoints!.at(-1)!.datum.value = '1630';
+  const input = makeSpec({
+    data: marks.flatMap((mark) => mark.dataPoints!.map((point) => point.datum)),
+  });
+  expect(
+    computeEndpointLabels(input, marks, theme, chartArea).entries.map((entry) => entry.value),
+  ).toEqual(['2.6k', '1.6k']);
+});
+
+it('predicts unequal temporal endpoint date widths through the shared pre-layout scale resolver', async () => {
+  const { predictEndpointLabelsWidth } = await import('../predict');
+  const marks = [makeLineMark('US', 100, 5), makeLineMark('UK', 180, 2.8)];
+  marks[1].dataPoints!.at(-1)!.datum.date = '2020';
+  const input = makeSpec({
+    data: marks.flatMap((mark) => mark.dataPoints!.map((point) => point.datum)),
+  });
+  const measure = (text: string, size: number) => ({ width: text.length * 10, height: size });
+  const actual = computeEndpointLabels(
+    input,
+    marks,
+    theme,
+    chartArea,
+    undefined,
+    false,
+    measure,
+    'utc',
+  );
+  expect(actual.entries.every((entry) => entry.date !== undefined)).toBe(true);
+  expect(predictEndpointLabelsWidth(input, theme, measure)).toBe(actual.bounds.width);
 });

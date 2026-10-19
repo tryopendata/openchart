@@ -146,8 +146,9 @@ describe('parliament majority line', () => {
     const layout = compileHouse();
     const rule = layout.marks.find((m): m is RuleMarkLayout => m.type === 'rule');
     const label = layout.marks.find((m): m is TextMarkLayout => m.type === 'textMark');
-    expect(rule).toBeDefined();
-    expect(label).toBeDefined();
+    // A vertical rule through the hemicycle's center at the simple majority.
+    expect(rule!.x1).toBe(rule!.x2);
+    expect(rule!.data).toEqual({ majority: 218 });
     expect(label?.text).toBe('218 to win');
     // The label sits at `lineTop - 6`, which assumes the SVG default (alphabetic)
     // baseline. Stamping a dominantBaseline would shift it off the rule.

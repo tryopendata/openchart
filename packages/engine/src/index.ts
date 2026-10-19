@@ -22,6 +22,7 @@ export {
   compileTable,
   compileTileMap,
 } from './compile';
+export { resolveLayerTheme } from './compile/layer';
 
 // Lazy edge-tooltip builder (graph edge hover content on demand).
 export { buildEdgeTooltip } from './graphs/compile-graph';
@@ -201,8 +202,23 @@ export {
   reconcileReaderSelection,
   resolveObservationIdentities,
 } from './design/identity';
+export type { AppliedSpecPatch } from './design/patch';
 export { applySpecPatch } from './design/patch';
+export type { ReaderPanelIndex, ReaderSliceIndex } from './design/reader-slices';
+export {
+  buildReaderSliceIndex,
+  compareReaderValues,
+  nearestReaderSlice,
+  readerDomainValue,
+  readerSliceByKey,
+  reconcileReaderSlices,
+} from './design/reader-slices';
 export type { RecommendationResult, RecommendationRoles } from './design/recommend';
 export { recommendCompositions } from './design/recommend';
+export { geoColorKeyPosition } from './geo/color-key';
+export { resolveGeoOverlay } from './geo/overlay-layout';
+export type { GeoReaderIndex, GeoReaderRecord } from './geo/reader-index';
+export { buildGeoReaderIndex, queryGeoReaderRecords } from './geo/reader-index';
 export type { SpecRepair } from './migration/v8';
 export { migrateSpecV8 } from './migration/v8';
+export { sharedTooltipFields } from './tooltips/metadata';

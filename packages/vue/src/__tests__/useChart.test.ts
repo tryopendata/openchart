@@ -8,7 +8,7 @@
 import type { ChartSpec } from '@opendata-ai/openchart-core';
 import type { ChartInstance } from '@opendata-ai/openchart-vanilla';
 import { flushPromises, mount } from '@vue/test-utils';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { defineComponent, h, type PropType, toRef } from 'vue';
 import { useChart } from '../composables/useChart';
 
@@ -115,13 +115,15 @@ describe('useChart', () => {
     const wrapper = await mountHarness(lineSpec);
 
     const vm = wrapper.vm as unknown as { chart: ChartInstance | null };
-    const instance = vm.chart;
-    expect(instance).not.toBeNull();
+    expect(vm.chart).not.toBeNull();
+    const svg = wrapper.element.querySelector('svg');
+    expect(svg?.parentNode).not.toBeNull();
 
-    const destroySpy = vi.spyOn(instance as ChartInstance, 'destroy');
     wrapper.unmount();
 
-    expect(destroySpy).toHaveBeenCalledTimes(1);
+    // Vue only detaches the component root; destroy() removes the SVG from its
+    // container, so a still-attached SVG means the instance leaked.
+    expect(svg?.parentNode).toBeNull();
   });
 });
 

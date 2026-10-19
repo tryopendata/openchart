@@ -143,11 +143,11 @@ describe('computeChrome', () => {
     };
     const result = computeChrome(chrome, theme, 600);
 
-    expect(result.title).toBeDefined();
-    expect(result.subtitle).toBeDefined();
-    expect(result.source).toBeDefined();
-    expect(result.byline).toBeDefined();
-    expect(result.footer).toBeDefined();
+    expect(result.title!.text).toBe('Title');
+    expect(result.subtitle!.text).toBe('Subtitle');
+    expect(result.source!.text).toBe('Source');
+    expect(result.byline!.text).toBe('By Author');
+    expect(result.footer!.text).toBe('Footer note');
     expect(result.topHeight).toBeGreaterThan(0);
     expect(result.bottomHeight).toBeGreaterThan(0);
   });
@@ -242,15 +242,22 @@ describe('computeChrome', () => {
   });
 
   it('uses measureText function when provided', () => {
-    const measureText = (text: string, fontSize: number) => ({
-      width: text.length * fontSize * 0.6,
+    // Same text, two measurers: one says every word is huge, one says tiny.
+    // If the measurer drives wrapping, the huge one wraps onto more lines.
+    const wide = (text: string, fontSize: number) => ({
+      width: text.length * fontSize * 10,
+      height: fontSize * 1.2,
+    });
+    const narrow = (text: string, fontSize: number) => ({
+      width: text.length * fontSize * 0.1,
       height: fontSize * 1.2,
     });
 
-    const chrome: Chrome = { title: 'Title' };
-    const result = computeChrome(chrome, theme, 600, measureText);
-    expect(result.title).toBeDefined();
-    // Just verify it runs without error; exact values depend on measure fn
+    const chrome: Chrome = { title: 'Quarterly revenue by region' };
+    const wideResult = computeChrome(chrome, theme, 600, wide);
+    const narrowResult = computeChrome(chrome, theme, 600, narrow);
+    expect(wideResult.title!.text).toBe('Quarterly revenue by region');
+    expect(wideResult.topHeight).toBeGreaterThan(narrowResult.topHeight);
   });
 
   it('returns zero bottom height when watermark is false and no bottom chrome', () => {

@@ -450,6 +450,7 @@ export function findBestPlacement(
   svgRect: Rect,
   measure: AnnotationMeasureTextFn = heuristicMeasure,
   debug = false,
+  connectorScore?: (x: number, y: number, anchor: 'start' | 'end') => number,
 ): PlacementResult {
   const isUpperHalf = anchorY < chartArea.y + chartArea.height / 2;
   const dirOrder = isUpperHalf ? UPPER_HALF_ORDER : LOWER_HALF_ORDER;
@@ -466,7 +467,23 @@ export function findBestPlacement(
     },
     measure,
   );
-  const boxHeight = sampleBounds.height;
+  const subtitleSample =
+    subtitleText && subtitleStyle
+      ? computeTextBlockBounds(
+          0,
+          subtitleBaselineY(
+            style.fontSize,
+            style.fontSize * style.lineHeight,
+            text.split('\n').length,
+          ),
+          subtitleText,
+          { ...subtitleStyle, textAnchor: 'start' },
+          measure,
+        )
+      : undefined;
+  const boxHeight = subtitleSample
+    ? unionRects(sampleBounds, subtitleSample).height
+    : sampleBounds.height;
 
   // Centering a `*-center` attach needs the width of the WHOLE block, not just
   // the primary line: a subtitle is often the wider of the two, and centering on
@@ -566,7 +583,7 @@ export function findBestPlacement(
           box,
           directionIndex: di,
           ring: ring as 1 | 2 | 3,
-          score,
+          score: score + (connectorScore?.(labelX, labelY, dir.textAnchor) ?? 0),
           candidateIdx: idx,
         });
       }
@@ -603,6 +620,7 @@ export function findBestPlacement(
       );
       return {
         ...breakdown!,
+        total: c.score,
         direction: dirNames[c.directionIndex],
         ring: c.ring,
       };

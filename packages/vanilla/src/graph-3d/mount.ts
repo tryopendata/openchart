@@ -1,4 +1,3 @@
-import { warnDeprecated } from '../deprecations';
 /**
  * The 3D graph renderer: a `GraphInstance` backed by `3d-force-graph`.
  *
@@ -26,7 +25,12 @@ import { warnDeprecated } from '../deprecations';
  * alpha setter, so `beginUpdateReheat` damps it from outside instead.
  */
 
-import type { GraphSpec, ThemeConfig, TooltipContent } from '@opendata-ai/openchart-core';
+import {
+  computeChrome,
+  type GraphSpec,
+  type ThemeConfig,
+  type TooltipContent,
+} from '@opendata-ai/openchart-core';
 import type { CompiledGraphEdge, CompiledGraphNode } from '@opendata-ai/openchart-engine';
 import { buildEdgeTooltip } from '@opendata-ai/openchart-engine';
 import ForceGraph3D from '3d-force-graph';
@@ -47,6 +51,7 @@ import { createGraphLegend, type GraphLegendController } from '../graph/legend';
 import type { GraphRendererContext } from '../graph/renderer-registry';
 import { GraphSearchManager } from '../graph/search';
 import { seedNodePositions } from '../graph/seed';
+import { getContainerDimensions } from '../graph/shell';
 import type { GraphCamera, GraphFlyTarget, PositionedEdge, PositionedNode } from '../graph/types';
 import { diffGraphUpdate, reheatAlpha } from '../graph/update-diff';
 import type { SimNode } from '../graph/worker-protocol';
@@ -1365,6 +1370,21 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
       | undefined;
     const dpr = Math.min(MAX_PIXEL_RATIO, globalThis.devicePixelRatio || 1);
     if (renderer?.getPixelRatio?.() !== dpr) renderer?.setPixelRatio?.(dpr);
+    const dimensions = getContainerDimensions(shell.container);
+    compilation = {
+      ...compilation,
+      dimensions,
+      chrome: computeChrome(
+        currentSpec.chrome,
+        compilation.theme,
+        dimensions.width,
+        undefined,
+        'full',
+        undefined,
+        compilation.watermark,
+      ),
+    };
+    shell.renderChrome(compilation);
     const { width, height } = shell.getSize();
     graph.width(width).height(height);
     shell.syncChromeInset();
@@ -1427,6 +1447,7 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
 
     rebuildDerived();
     shell.renderChrome(compilation);
+    graph.width(shell.getSize().width).height(shell.getSize().height);
     renderLegend();
     refreshTransientHighlight();
     recomputeHighlight();
@@ -1828,12 +1849,6 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
 
   return {
     update,
-    // `update()` already routes an id-set-preserving change through the
-    // material-mutation path, which never touches `graphData()`.
-    updateVisuals: (spec) => {
-      warnDeprecated('updateVisuals is deprecated; use update.');
-      update(spec);
-    },
     search,
     clearSearch,
     zoomToFit,

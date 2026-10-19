@@ -54,7 +54,10 @@ describe('auto-thinning footnote reserve', () => {
   });
 
   it('reserves bottom space so the footnote list clears the footer row', () => {
-    const withFootnotes = compileChart(crowdedSpec, { width: 200, height: 340 });
+    const withFootnotes = compileChart(
+      { ...crowdedSpec, chromeLayout: 'subtract' },
+      { width: 200, height: 340 },
+    );
     const footnotes = withFootnotes.chrome.footnotes ?? [];
     expect(footnotes.length).toBeGreaterThan(0);
 
@@ -149,7 +152,8 @@ describe('auto-thinning footnote reserve', () => {
     const baseline = compileChart({ ...spec, annotations: [] }, options);
     const reserved = compileChart(spec, options);
     expect(reserved.chrome.noteBandHeight).toBeGreaterThan(0);
-    expect(reserved.area).toEqual(baseline.area);
+    for (const key of ['x', 'y', 'width', 'height'] as const)
+      expect(reserved.area[key]).toBeCloseTo(baseline.area[key], 8);
     expect(reserved.dimensions.height - baseline.dimensions.height).toBeCloseTo(
       reserved.chrome.noteBandHeight!,
       8,
@@ -316,7 +320,7 @@ describe('auto-thinning in faceted charts', () => {
 
   it.each([false, true])('grows facet chrome once with spec-level grow=%s', (onSpec) => {
     const options = { width: 640, height: 600 };
-    const baseline = compileChart(facetedSpec, options);
+    const baseline = compileChart({ ...facetedSpec, chromeLayout: 'subtract' }, options);
     const grown = compileChart(
       onSpec ? { ...facetedSpec, chromeLayout: 'grow' } : facetedSpec,
       onSpec ? options : { ...options, chromeLayout: 'grow' },
@@ -393,18 +397,27 @@ describe('auto-thinning in faceted charts', () => {
   });
 
   it('reserves a band for the footnote list below the grid', () => {
-    const withFootnotes = compileChart(facetedSpec, { width: 640, height: 400 });
+    const withFootnotes = compileChart(
+      { ...facetedSpec, chromeLayout: 'subtract' },
+      { width: 640, height: 400 },
+    );
     const footnotes = withFootnotes.chrome.footnotes ?? [];
     expect(footnotes.length).toBeGreaterThan(0);
 
     const { annotations: _dropped, ...noAnnotations } = facetedSpec;
-    const baseline = compileChart(noAnnotations as ChartSpec, { width: 640, height: 400 });
+    const baseline = compileChart({ ...noAnnotations, chromeLayout: 'subtract' } as ChartSpec, {
+      width: 640,
+      height: 400,
+    });
 
     const plotBottom = (l: typeof withFootnotes) => l.area.y + l.area.height;
     const pulledUpBy = plotBottom(baseline) - plotBottom(withFootnotes);
     const band = footnotes.length * withFootnotes.theme.fonts.sizes.small * 1.3 + 4;
 
-    expect(pulledUpBy).toBeGreaterThanOrEqual(band - 1e-9);
+    // Short facet panels retain a minimum plot budget. If it raises the figure
+    // height, that growth contributes to the reserved band as well.
+    const minimumPanelGrowth = withFootnotes.dimensions.height - baseline.dimensions.height;
+    expect(pulledUpBy + minimumPanelGrowth).toBeGreaterThanOrEqual(band - 1e-9);
   });
 
   // Regression: footnote numbers were keyed on the annotation's position in the

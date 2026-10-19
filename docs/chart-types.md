@@ -195,13 +195,13 @@ const spec = {
     { os: "Other", share: 1 },
   ],
   encoding: {
-    y: { field: "share", type: "quantitative" },
+    theta: { field: "share", type: "quantitative" },
     color: { field: "os", type: "nominal" },
   },
 };
 ```
 
-The `y` channel maps to slice values, `color` maps to slice categories. No `x` encoding is needed.
+The `theta` channel maps to slice values, `color` maps to slice categories. No `x` encoding is needed.
 
 **Live examples**: [Basic pie](https://tryopendata.github.io/openchart/?story=charts--pie-and-donut#pie-inline-labels) | [Small slice grouping](https://tryopendata.github.io/openchart/?story=charts--pie-and-donut#small-slice-grouping) | [Seven categories](https://tryopendata.github.io/openchart/?story=charts--pie-and-donut#many-categories)
 
@@ -222,7 +222,7 @@ const spec = {
     { category: "All Other", spending: 29 },
   ],
   encoding: {
-    y: { field: "spending", type: "quantitative" },
+    theta: { field: "spending", type: "quantitative" },
     color: { field: "category", type: "nominal" },
   },
 };
@@ -347,7 +347,7 @@ const spec = {
 <Sankey spec={spec} />
 ```
 
-Options: `nodeWidth`, `nodePadding`, `nodeAlign` (`'justify'` | `'left'` | `'right'` | `'center'`), `linkStyle` (`'gradient'` | `'source'` | `'target'` | `'neutral'`), `encoding.value.format` for number formatting (top-level `valueFormat` is deprecated in v8).
+Options: `nodeWidth`, `nodePadding`, `nodeAlign` (`'justify'` | `'left'` | `'right'` | `'center'`), `linkStyle` (`'gradient'` | `'source'` | `'target'` | `'neutral'`), `encoding.value.format` for number formatting (top-level `valueFormat` is removed in v9).
 
 For the full field reference, see [SankeySpec in spec-reference.md](spec-reference.md#sankeyspec).
 
@@ -566,7 +566,7 @@ const spec = {
 };
 ```
 
-`theta` is the quantitative share value (the same part-to-whole channel arc marks use; it is an alias for `y`, so provide one of the two). `color` is the required category. Values normalize to the grid via largest-remainder rounding, so the cells always sum exactly even when the shares are fractional.
+`theta` is the quantitative share value (the same part-to-whole channel arc marks use; the old authored `y` alias is removed). `color` is the required category. Values normalize to the grid via largest-remainder rounding, so the cells always sum exactly even when the shares are fractional.
 
 **Mark options:**
 - `units` (default 100) -- total number of cells in the grid
@@ -632,7 +632,7 @@ const spec = {
 };
 ```
 
-`theta` is the quantitative seat count (an alias for `y`; provide one of the two) and `color` is the required party. Order the data left to right by political group; the layout preserves that order across the arc. Party colors typically come from an explicit `color.scale.range` rather than the default palette.
+`theta` is the quantitative seat count (the old authored `y` alias is removed) and `color` is the required party. Order the data left to right by political group; the layout preserves that order across the arc. Party colors typically come from an explicit `color.scale.range` rather than the default palette.
 
 **Mark options:**
 - `shape` (`'hemicycle'`, the default and only shape)

@@ -10,6 +10,7 @@
 -->
 <script lang="ts">
 import type { DarkMode, GraphSpec, ThemeConfig } from '@opendata-ai/openchart-core';
+import { mergeThemeConfig } from '@opendata-ai/openchart-core';
 import {
   type CameraFlightOptions,
   createGraph,
@@ -118,7 +119,7 @@ let prevDimensions = 2;
 
 // Effect 1: Mount/recreate graph on theme/darkMode/structural option changes.
 $effect(() => {
-  const resolvedTheme = theme ?? ctxTheme?.();
+  const resolvedTheme = mergeThemeConfig(ctxTheme?.(), theme);
   const resolvedDarkMode = darkMode ?? ctxDarkMode?.();
   // Read the structural tooltip/legend keys + fitOnLoad so a change to any of
   // them recreates the graph; the tooltip formatter is deliberately NOT tracked
@@ -152,7 +153,7 @@ $effect(() => {
     onLegendToggle: (activeValues) => untrack(() => onlegendtoggle)?.(activeValues),
     onHighlightChange: (nodeIds) => untrack(() => onhighlightchange)?.(nodeIds),
     onCameraChange: (camera) => untrack(() => oncamerachange)?.(camera),
-    responsive: true,
+    autoResize: true,
     // untrack so reading the flag doesn't add a dependency; the value is set
     // after the first mount and reset only on component teardown. A dimension
     // change is exempt: the incoming renderer should play its entrance.
@@ -242,9 +243,8 @@ export function setActiveCategories(values: string[]): void {
 export function getActiveCategories(): string[] {
   return instance?.getActiveCategories() ?? [];
 }
-
-export function updateVisuals(nextSpec: GraphSpec): void {
-  instance?.updateVisuals(nextSpec);
+export function update(nextSpec: GraphSpec): void {
+  instance?.update(nextSpec);
 }
 </script>
 

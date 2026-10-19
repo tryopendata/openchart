@@ -1,0 +1,8 @@
+{
+  "url": "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Tracts_Blocks/MapServer/10/query?where=STATE%3D%2748%27+AND+COUNTY%3D%27453%27&outFields=GEOID%2CNAME&returnGeometry=true&outSR=4326&maxAllowableOffset=0.002&geometryPrecision=5&f=geojson",
+  "source": "US Census Bureau TIGERweb, Census2020 tract layer",
+  "retrieved": "2026-10-19",
+  "simplificationDegrees": 0.002,
+  "coordinatePrecision": 5,
+  "features": 290
+}

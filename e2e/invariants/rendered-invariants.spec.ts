@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { waitForResizeSettled } from '../settle';
 
 /**
  * Layout invariant checks on real rendered charts.
@@ -25,7 +26,10 @@ for (const { name, slug } of stories) {
     await page.goto(`/?story=${encodeURIComponent(slug)}&mode=preview`);
     await page.waitForSelector('.oc-root');
     await page.evaluate(() => document.fonts.ready);
-    await page.waitForTimeout(100);
+    // Settled render: the post-font recompile ran and the entrance animation
+    // (which defers resizes) finished, then any debounced resize was handled.
+    await page.waitForSelector('.oc-root[data-oc-fonts-state="ready"] svg.oc-chart:not(.oc-animate)');
+    await waitForResizeSettled(page.locator('.oc-root').first());
 
     const violations = await page.evaluate(() => {
       const violations: string[] = [];
@@ -187,7 +191,10 @@ for (const { name, slug } of stories) {
     await page.goto(`/?story=${encodeURIComponent(slug)}&mode=preview`);
     await page.waitForSelector('.oc-root');
     await page.evaluate(() => document.fonts.ready);
-    await page.waitForTimeout(100);
+    // Settled render: the post-font recompile ran and the entrance animation
+    // (which defers resizes) finished, then any debounced resize was handled.
+    await page.waitForSelector('.oc-root[data-oc-fonts-state="ready"] svg.oc-chart:not(.oc-animate)');
+    await waitForResizeSettled(page.locator('.oc-root').first());
 
     const violations = await page.evaluate(() => {
       const violations: string[] = [];
@@ -261,7 +268,8 @@ test('map legend anatomy: us-states-light', async ({ page }) => {
   );
   await page.waitForSelector('svg.oc-map');
   await page.evaluate(() => document.fonts.ready);
-  await page.waitForTimeout(100);
+  await page.waitForSelector('.oc-map-root[data-oc-fonts-state="ready"] svg.oc-map:not(.oc-animate)');
+  await waitForResizeSettled(page.locator('.oc-map-root').first());
 
   const violations = await page.evaluate(() => {
     const violations: string[] = [];
@@ -321,7 +329,8 @@ test('sankey labels stay inside the svg: sankey-energy', async ({ page }) => {
   await page.goto(`/?story=${encodeURIComponent('testing--fixtures-sankey--energy')}&mode=preview`);
   await page.waitForSelector('svg.oc-sankey');
   await page.evaluate(() => document.fonts.ready);
-  await page.waitForTimeout(100);
+  await page.waitForSelector('.oc-sankey-root[data-oc-fonts-state="ready"] svg.oc-sankey:not(.oc-animate)');
+  await waitForResizeSettled(page.locator('.oc-sankey-root').first());
 
   const violations = await page.evaluate(() => {
     const violations: string[] = [];
@@ -372,7 +381,8 @@ test('no-data features render a hatch pattern: world-diverging-quantize', async 
   );
   await page.waitForSelector('svg.oc-map');
   await page.evaluate(() => document.fonts.ready);
-  await page.waitForTimeout(100);
+  await page.waitForSelector('.oc-map-root[data-oc-fonts-state="ready"] svg.oc-map:not(.oc-animate)');
+  await waitForResizeSettled(page.locator('.oc-map-root').first());
 
   const fills = await page.evaluate(() => {
     const svg = document.querySelector('svg.oc-map');

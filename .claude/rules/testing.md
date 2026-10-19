@@ -25,7 +25,7 @@ When fixing flaky tests, load the ce:writing-tests skill (flaky-test guidance is
 Collision and fitting logic (label rotation, thinning, tick density) is
 font-size- and width-dependent. Tests for it must sweep both dimensions:
 
-- Font: `axisTick: 11` (default) AND `axisTick: 14` (the deployed blog theme)
+- Font: `axisTick: 12` (default) AND `axisTick: 14` (the deployed blog theme)
 - Width: ~330 (blog mobile), ~360 (small phone), ~680 (desktop-ish)
 
 Why: the 7.9.x dropped-label bug passed every default-theme test across three

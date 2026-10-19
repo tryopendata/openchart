@@ -5,7 +5,7 @@
  * and computes pixel positions from a given available area.
  */
 
-export const US_STATE_TILES: Array<{ state: string; col: number; row: number }> = [
+export const US_STATE_TILES: ReadonlyArray<{ state: string; col: number; row: number }> = [
   // Row 0
   { state: 'ME', col: 10, row: 0 },
 
@@ -76,7 +76,7 @@ export const US_STATE_TILES: Array<{ state: string; col: number; row: number }> 
 
 export const STATE_CODE_SET = new Set(US_STATE_TILES.map((t) => t.state));
 
-export const STATE_NAMES: Record<string, string> = {
+export const STATE_NAMES: Readonly<Record<string, string>> = {
   AL: 'Alabama',
   AK: 'Alaska',
   AZ: 'Arizona',

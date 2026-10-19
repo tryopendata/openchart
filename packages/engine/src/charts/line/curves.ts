@@ -1,3 +1,4 @@
+import type { NormalizedMarkDef } from '../../compiler/types';
 /**
  * Curve interpolation mapping and path builders.
  *
@@ -9,7 +10,7 @@
  * SVG paths from point arrays without pulling in chart-specific code.
  */
 
-import type { MarkDef, Point } from '@opendata-ai/openchart-core';
+import type { Point } from '@opendata-ai/openchart-core';
 import type { CurveFactory } from 'd3-shape';
 import {
   area,
@@ -25,7 +26,7 @@ import {
 } from 'd3-shape';
 
 /** Map of interpolation string names to d3 curve factories. */
-const CURVE_MAP: Record<NonNullable<MarkDef['interpolate']>, CurveFactory> = {
+const CURVE_MAP: Record<NonNullable<NormalizedMarkDef['interpolate']>, CurveFactory> = {
   linear: curveLinear,
   monotone: curveMonotoneX,
   step: curveStep,
@@ -40,7 +41,7 @@ const CURVE_MAP: Record<NonNullable<MarkDef['interpolate']>, CurveFactory> = {
  * Resolve an interpolation string to a d3 curve factory.
  * Defaults to `curveMonotoneX` when no interpolation is specified.
  */
-export function resolveCurve(interpolate?: MarkDef['interpolate']): CurveFactory {
+export function resolveCurve(interpolate?: NormalizedMarkDef['interpolate']): CurveFactory {
   if (!interpolate) return curveMonotoneX;
   return CURVE_MAP[interpolate] ?? curveMonotoneX;
 }
@@ -51,7 +52,7 @@ export function resolveCurve(interpolate?: MarkDef['interpolate']): CurveFactory
  */
 export function buildLinePath(points: Point[], interpolate?: string): string {
   if (points.length === 0) return '';
-  const curve = resolveCurve(interpolate as MarkDef['interpolate']);
+  const curve = resolveCurve(interpolate as NormalizedMarkDef['interpolate']);
   const generator = line<Point>()
     .x((d) => d.x)
     .y((d) => d.y)
@@ -69,7 +70,7 @@ export function buildAreaPath(
   interpolate?: string,
 ): string {
   if (topPoints.length === 0) return '';
-  const curve = resolveCurve(interpolate as MarkDef['interpolate']);
+  const curve = resolveCurve(interpolate as NormalizedMarkDef['interpolate']);
   // Pair top and bottom points for the area generator
   const paired = topPoints.map((tp, i) => ({
     x: tp.x,

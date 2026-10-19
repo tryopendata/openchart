@@ -738,7 +738,7 @@ describe('computeDimensions', () => {
     const dims = computeDimensions(spec, { width: 600, height: 400 }, emptyLegend, lightTheme);
 
     expect(dims.chromeStripped).toBeFalsy();
-    expect(dims.chrome.title).toBeDefined();
+    expect(dims.chrome.title?.text).toBe('Short title');
   });
 
   it('does not trip the plot-share guardrail in grow mode', () => {
@@ -751,7 +751,7 @@ describe('computeDimensions', () => {
     };
     const dims = computeDimensions(spec, { width: 300, height: 360 }, emptyLegend, lightTheme);
 
-    expect(dims.chrome.subtitle).toBeDefined();
+    expect(dims.chrome.subtitle?.text).toBe(plotEatingChrome.subtitle.text);
     expect(dims.chromeStripped).toBeFalsy();
   });
 

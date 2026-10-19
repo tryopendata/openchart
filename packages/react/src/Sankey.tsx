@@ -9,6 +9,7 @@
  */
 
 import type { DarkMode, SankeySpec, ThemeConfig } from '@opendata-ai/openchart-core';
+import { mergeThemeConfig } from '@opendata-ai/openchart-core';
 import {
   createSankey,
   type SankeyInstance,
@@ -20,6 +21,7 @@ import {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useMemo,
   useRef,
 } from 'react';
 import { useVizDarkMode, useVizTheme } from './ThemeContext';
@@ -73,7 +75,7 @@ export const Sankey = forwardRef<SankeyHandle, SankeyProps>(function Sankey(
 ) {
   const contextTheme = useVizTheme();
   const contextDarkMode = useVizDarkMode();
-  const theme = themeProp ?? contextTheme;
+  const theme = useMemo(() => mergeThemeConfig(contextTheme, themeProp), [contextTheme, themeProp]);
   const resolvedDarkMode = darkMode ?? contextDarkMode;
   const containerRef = useRef<HTMLDivElement>(null);
   const instanceRef = useRef<SankeyInstance | null>(null);
@@ -135,7 +137,7 @@ export const Sankey = forwardRef<SankeyHandle, SankeyProps>(function Sankey(
       onLinkClick: stableOnLinkClick,
       onNodeHover: stableOnNodeHover,
       onLinkHover: stableOnLinkHover,
-      responsive: true,
+      autoResize: true,
     };
 
     instanceRef.current = createSankey(container, spec, options);

@@ -129,9 +129,6 @@ export const NARROW_VIEWPORT_MAX = 500;
 /** Extra top padding added below NARROW_VIEWPORT_MAX to clear iOS Safari browser chrome. */
 export const TOP_PAD_EXTRA_NARROW = 10;
 
-/** @deprecated Use NARROW_VIEWPORT_MAX instead. */
-export const TOP_PAD_NARROW_MAX = NARROW_VIEWPORT_MAX;
-
 // ---------------------------------------------------------------------------
 // Category label gaps (left-axis bar/dot charts)
 // ---------------------------------------------------------------------------
@@ -141,9 +138,6 @@ export const LABEL_GAP_COMPACT = 8;
 
 /** Gap between category label text and chart edge on standard viewports. */
 export const LABEL_GAP_DEFAULT = 12;
-
-/** @deprecated Use NARROW_VIEWPORT_MAX instead. */
-export const LABEL_GAP_NARROW_MAX = NARROW_VIEWPORT_MAX;
 
 // ---------------------------------------------------------------------------
 // Max left-axis label fraction

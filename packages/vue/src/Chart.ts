@@ -8,23 +8,28 @@
 
 import type {
   Annotation,
-  AnnotationOffset,
   ChartSpec,
   DarkMode,
   EditTransaction,
-  ElementEdit,
   ElementRef,
-  GraphSpec,
   LayerSpec,
   MarkEvent,
-  TextAnnotation,
+  ReaderChangeMeta,
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
-import { type ChartInstance, createChart, type MountOptions } from '@opendata-ai/openchart-vanilla';
+import { mergeThemeConfig } from '@opendata-ai/openchart-core';
+import {
+  type ChartInstance,
+  type ChartReaderSelection,
+  createChart,
+  createChartReaderBinding,
+  type InteractionMode,
+  type MountOptions,
+  type ReaderPresentationOptions,
+} from '@opendata-ai/openchart-vanilla';
 import {
   type CSSProperties,
   defineComponent,
-  getCurrentInstance,
   h,
   inject,
   onMounted,
@@ -36,16 +41,23 @@ import {
 import { VizDarkModeKey, VizThemeKey } from './context';
 
 export interface ChartProps {
-  spec: ChartSpec | LayerSpec | GraphSpec;
+  reader?: false | ReaderPresentationOptions;
+  readerSelection?: ChartReaderSelection;
+  /** The chart spec. Graph specs render through `<Graph />` or `<Visualization />`. */
+  spec: ChartSpec | LayerSpec;
   theme?: ThemeConfig;
   darkMode?: DarkMode;
   /** Rendering backend for point marks; see the vanilla `MountOptions.renderer`. */
   renderer?: 'auto' | 'svg' | 'canvas';
+  /** Quiet row inspection for simple horizontal bars. */
+  rowHover?: boolean;
   autoResize?: boolean;
-  /** @deprecated Use autoResize. */
-  responsive?: boolean;
   revision?: string | number;
-  onEditTransaction?: (tx: EditTransaction) => void;
+  /** Interaction mode; inferred from the edit/select listeners when omitted. */
+  interaction?: InteractionMode;
+  onEdit?: (tx: EditTransaction) => void;
+  onSelect?: (element: ElementRef) => void;
+  onDeselect?: (element: ElementRef) => void;
   class?: string;
   style?: string | CSSProperties;
 }
@@ -53,8 +65,13 @@ export interface ChartProps {
 export const Chart = defineComponent({
   name: 'Chart',
   props: {
+    reader: {
+      type: [Boolean, Object] as PropType<false | ReaderPresentationOptions>,
+      default: undefined,
+    },
+    readerSelection: { type: Object as PropType<ChartReaderSelection>, default: undefined },
     spec: {
-      type: Object as PropType<ChartSpec | LayerSpec | GraphSpec>,
+      type: Object as PropType<ChartSpec | LayerSpec>,
       required: true,
     },
     theme: {
@@ -69,15 +86,24 @@ export const Chart = defineComponent({
       type: String as PropType<'auto' | 'svg' | 'canvas'>,
       default: undefined,
     },
-    // A declared listener prop makes presence reactive. Vue excludes declared
-    // emits listeners from update checks, which would leave editing enabled
-    // when a parent removes its transaction listener.
-    onEditTransaction: {
+    // Declared listener props make presence reactive. Vue excludes declared
+    // emits listeners from update checks, which would leave the inferred
+    // interaction mode stale when a parent adds or removes a listener.
+    // `@edit`, `@select`, and `@deselect` bind to these props.
+    onEdit: {
       type: Function as PropType<(tx: EditTransaction) => void>,
       default: undefined,
     },
+    onSelect: {
+      type: Function as PropType<(element: ElementRef) => void>,
+      default: undefined,
+    },
+    onDeselect: {
+      type: Function as PropType<(element: ElementRef) => void>,
+      default: undefined,
+    },
+    rowHover: { type: Boolean, default: undefined },
     autoResize: { type: Boolean, default: undefined },
-    responsive: { type: Boolean, default: undefined },
     revision: { type: [String, Number] as PropType<string | number>, default: undefined },
     class: {
       type: String,
@@ -95,51 +121,44 @@ export const Chart = defineComponent({
       type: [Array, null] as unknown as PropType<string[] | null>,
       default: undefined,
     },
-    editable: {
-      type: Boolean as PropType<boolean>,
+    interaction: {
+      type: String as PropType<InteractionMode>,
       default: undefined,
     },
   },
   emits: {
+    'reader-change': (_selection: ChartReaderSelection, _meta: ReaderChangeMeta) => true,
     'mark-click': (_event: MarkEvent) => true,
     'mark-hover': (_event: MarkEvent) => true,
     'mark-leave': () => true,
     'legend-toggle': (_series: string, _visible: boolean) => true,
     'annotation-click': (_annotation: Annotation, _event: MouseEvent, _element: ElementRef) => true,
-    /** @deprecated Use edit-transaction. */
-    'annotation-edit': (_annotation: TextAnnotation, _updatedOffset: AnnotationOffset) => true,
-    edit: (_edit: ElementEdit) => true,
-    select: (_element: ElementRef) => true,
-    deselect: (_element: ElementRef) => true,
-    /** @deprecated Use edit-transaction. */
-    'text-edit': (_element: ElementRef, _oldText: string, _newText: string) => true,
-    /** @deprecated Has no effect; use mark-click. */
-    'data-point-click': (_data: Record<string, unknown>) => true,
+    'highlight-change': (_values: string[]) => true,
+    reveal: (_guess: Array<{ x: string | number; y: number }>) => true,
   },
   setup(props, { emit, expose }) {
     const containerRef = ref<HTMLDivElement | null>(null);
     let instance: ChartInstance | null = null;
     let prevSpec = '';
+    const readerBinding = createChartReaderBinding();
+    function syncReader() {
+      if (containerRef.value && instance)
+        readerBinding.sync(
+          containerRef.value,
+          instance,
+          props.spec,
+          props.reader,
+          props.readerSelection,
+          (state, meta) => emit('reader-change', state, meta),
+        );
+    }
 
     // Inject theme/darkMode from provider as fallbacks
     const contextTheme = inject(VizThemeKey, undefined);
     const contextDarkMode = inject(VizDarkModeKey, undefined);
 
-    // Check which event listeners are bound by the parent.
-    // Vue 3 passes listeners as onXxx props on the component vnode.
-    // Legacy listener gates retain their 8.x setup behavior; transaction
-    // listener presence is a reactive prop below.
-    const vm = getCurrentInstance();
-    const vnodeProps = vm?.vnode.props ?? {};
-    const hasAnnotationEditListener =
-      'onAnnotation-edit' in vnodeProps || 'onAnnotationEdit' in vnodeProps;
-    const hasEditListener = 'onEdit' in vnodeProps;
-    const hasSelectListener = 'onSelect' in vnodeProps;
-    const hasDeselectListener = 'onDeselect' in vnodeProps;
-    const hasTextEditListener = 'onText-edit' in vnodeProps || 'onTextEdit' in vnodeProps;
-
     function resolveTheme(): ThemeConfig | undefined {
-      return props.theme ?? contextTheme?.value;
+      return mergeThemeConfig(contextTheme?.value, props.theme);
     }
 
     function resolveDarkMode(): DarkMode | undefined {
@@ -154,9 +173,6 @@ export const Chart = defineComponent({
         theme: resolveTheme(),
         darkMode: resolveDarkMode(),
         renderer: props.renderer,
-        ...('onDataPointClick' in vnodeProps || 'onData-point-click' in vnodeProps
-          ? { onDataPointClick: (data: Record<string, unknown>) => emit('data-point-click', data) }
-          : {}),
         onMarkClick: (event: MarkEvent) => emit('mark-click', event),
         onMarkHover: (event: MarkEvent) => emit('mark-hover', event),
         onMarkLeave: () => emit('mark-leave'),
@@ -164,45 +180,32 @@ export const Chart = defineComponent({
           emit('legend-toggle', series, visible),
         onAnnotationClick: (annotation: Annotation, event: MouseEvent, element: ElementRef) =>
           emit('annotation-click', annotation, event, element),
-        // Only include editing callbacks when the parent binds a listener.
-        // Without this gate, every chart gets drag editing wired up.
-        ...(hasAnnotationEditListener
-          ? {
-              onAnnotationEdit: (annotation: TextAnnotation, updatedOffset: AnnotationOffset) =>
-                emit('annotation-edit', annotation, updatedOffset),
-            }
+        onHighlightChange: (values: string[]) => emit('highlight-change', values),
+        onReveal: (guess) => emit('reveal', guess),
+        // Only include selection/edit callbacks when the parent binds a listener:
+        // their presence infers the interaction mode when `interaction` is omitted.
+        ...(props.onSelect ? { onSelect: (element: ElementRef) => props.onSelect?.(element) } : {}),
+        ...(props.onDeselect
+          ? { onDeselect: (element: ElementRef) => props.onDeselect?.(element) }
           : {}),
-        ...(hasEditListener ? { onEdit: (edit: ElementEdit) => emit('edit', edit) } : {}),
-        ...(hasSelectListener
-          ? { onSelect: (element: ElementRef) => emit('select', element) }
-          : {}),
-        ...(hasDeselectListener
-          ? { onDeselect: (element: ElementRef) => emit('deselect', element) }
-          : {}),
-        ...(hasTextEditListener
-          ? {
-              onTextEdit: (element: ElementRef, oldText: string, newText: string) =>
-                emit('text-edit', element, oldText, newText),
-            }
-          : {}),
-        ...(props.editable != null ? { editable: props.editable } : {}),
+        ...(props.interaction != null ? { interaction: props.interaction } : {}),
         ...(props.selectedElement ? { selectedElement: props.selectedElement } : {}),
+        rowHover: props.rowHover,
         autoResize: props.autoResize,
-        responsive: props.responsive,
         revision: props.revision,
-        ...(props.onEditTransaction
-          ? { onEditTransaction: (tx: EditTransaction) => vm?.emit('edit-transaction', tx) }
-          : {}),
+        ...(props.onEdit ? { onEdit: (tx: EditTransaction) => props.onEdit?.(tx) } : {}),
       };
 
       instance = createChart(container, props.spec, options);
       prevSpec = JSON.stringify(props.spec);
+      syncReader();
       if (props.highlight !== undefined) {
         instance.setHighlight(props.highlight ?? null);
       }
     }
 
     function destroyChart() {
+      readerBinding.detach();
       instance?.destroy();
       instance = null;
       prevSpec = '';
@@ -232,24 +235,20 @@ export const Chart = defineComponent({
       destroyChart();
     });
 
-    // Watch spec changes: update if only spec changed, recreate if theme/darkMode changed
+    // Watch spec and revision together so an undo that changes both updates once
     watch(
-      () => JSON.stringify(props.spec),
-      (newVal) => {
+      () => [JSON.stringify(props.spec), props.revision] as const,
+      ([newSpec, newRevision], [, oldRevision]) => {
         if (!instance) return;
-        if (newVal !== prevSpec) {
-          prevSpec = newVal;
+        if (newSpec !== prevSpec || newRevision !== oldRevision) {
+          prevSpec = newSpec;
           instance.update(props.spec, {
             selectedElement: props.selectedElement,
             revision: props.revision,
           });
+          syncReader();
         }
       },
-    );
-
-    watch(
-      () => props.revision,
-      () => instance?.update(props.spec, { revision: props.revision }),
     );
 
     // Watch selectedElement prop changes
@@ -274,16 +273,21 @@ export const Chart = defineComponent({
       },
     );
 
-    // Recreate chart when theme, darkMode, renderer, or editable change
+    watch([() => props.reader, () => props.readerSelection], () => syncReader(), { deep: false });
+
+    // Recreate chart when theme, darkMode, renderer, or the interaction mode
+    // (explicit or inferred from listener presence) change
     watch(
       [
-        () => Boolean(props.onEditTransaction),
+        () => Boolean(props.onEdit),
+        () => Boolean(props.onSelect),
+        () => Boolean(props.onDeselect),
+        () => props.rowHover,
         () => props.autoResize,
-        () => props.responsive,
         () => props.theme,
         () => props.darkMode,
         () => props.renderer,
-        () => props.editable,
+        () => props.interaction,
         () => contextTheme?.value,
         () => contextDarkMode?.value,
       ],

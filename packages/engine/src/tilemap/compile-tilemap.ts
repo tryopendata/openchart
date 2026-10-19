@@ -46,7 +46,7 @@ import {
 } from '@opendata-ai/openchart-core';
 import { interpolateRgb } from 'd3-interpolate';
 import { scaleLinear } from 'd3-scale';
-import { emitSpecWarnings, emitThemeWarnings, expandSpecSugar } from '../compile/spec-sugar';
+import { emitSpecWarnings, expandSpecSugar } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
 import { finiteNumber } from '../data/finite-number';
@@ -110,7 +110,7 @@ function blendOnSurface(fill: string, fillOpacity: number, theme: ResolvedTheme)
  */
 function growContentHeight(
   contentHeight: number,
-  chromeLayout: 'subtract' | 'grow',
+  chromeLayout: 'subtract' | 'grow' | 'notes',
   budgetHeight: number,
   chrome: { topHeight: number; bottomHeight: number },
 ): number {
@@ -159,7 +159,6 @@ export function compileTileMap(spec: unknown, options: CompileOptions): TileMapL
     rawWatermark !== undefined ? tilemapSpec.watermark : (options.watermark ?? true);
 
   // 2. Resolve theme
-  emitThemeWarnings(options.theme, options.onWarn);
   const mergedThemeConfig = mergeThemeConfig(tilemapSpec.theme, options.theme);
   const lightTheme: ResolvedTheme = resolveTheme(mergedThemeConfig);
   let theme: ResolvedTheme = lightTheme;
@@ -171,13 +170,7 @@ export function compileTileMap(spec: unknown, options: CompileOptions): TileMapL
 
   // 3. Compute chrome
   const chrome = computeChrome(
-    {
-      title: tilemapSpec.chrome.title,
-      subtitle: tilemapSpec.chrome.subtitle,
-      source: tilemapSpec.chrome.source,
-      byline: tilemapSpec.chrome.byline,
-      footer: tilemapSpec.chrome.footer,
-    },
+    tilemapSpec.chrome,
     theme,
     options.width,
     options.measureText,
@@ -262,7 +255,7 @@ function compileQuantitative(
   fullArea: { x: number; y: number; width: number; height: number },
   isDarkMode: boolean | undefined,
   watermark: boolean,
-  chromeLayout: 'subtract' | 'grow',
+  chromeLayout: 'subtract' | 'grow' | 'notes',
 ): TileMapLayout {
   const stateField = tilemapSpec.encoding.state.field;
   const valueField = tilemapSpec.encoding.value.field;
@@ -422,7 +415,10 @@ function compileQuantitative(
 
   return {
     area: fullArea,
-    chrome,
+    chrome: {
+      ...chrome,
+      bottomAnchorY: tileGridOffsetY + tilePositions.gridHeight + legendGap + legendTotalHeight,
+    },
     tiles,
     gradientLegend,
     categoricalLegend: null,
@@ -451,7 +447,7 @@ function compileCategorical(
   fullArea: { x: number; y: number; width: number; height: number },
   isDarkMode: boolean | undefined,
   watermark: boolean,
-  chromeLayout: 'subtract' | 'grow',
+  chromeLayout: 'subtract' | 'grow' | 'notes',
 ): TileMapLayout {
   const stateField = tilemapSpec.encoding.state.field;
   const colorField = tilemapSpec.encoding.color?.field ?? tilemapSpec.encoding.value.field;
@@ -618,7 +614,10 @@ function compileCategorical(
 
   return {
     area: fullArea,
-    chrome,
+    chrome: {
+      ...chrome,
+      bottomAnchorY: tileGridOffsetY + tilePositions.gridHeight + legendGap + legendTotalHeight,
+    },
     tiles,
     gradientLegend: null,
     categoricalLegend,

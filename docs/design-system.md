@@ -111,12 +111,14 @@ and the mode's `--oc-bg` token (`#ffffff` light, `#09090b` dark) when the
 background is transparent. Everything that has to knock a hole in the canvas
 reads it, so there is exactly one answer: knockout rings and stacked-segment
 seams (`resolveKnockoutColor`), table cell fills (`resolveTableSurface`),
-graph node rings (`resolveGraphSurface`), tilemap label contrast, and the
-`--oc-bg` the vanilla mount stamps (`resolvedSurface`).
+graph node rings (`resolveGraphSurface`), annotation marker/plate fills, and
+tilemap label contrast. Authored backgrounds also feed the `--oc-bg` token
+stamped by the shared renderer helper (`resolvedSurface`).
 
 Source: `packages/core/src/colors/neutral.ts` — `deriveNeutralRamp(text, bg,
 isDark)`. Computed once in `resolveTheme`/`adaptTheme` and carried on
-`ResolvedTheme.colors.neutral`; mounts stamp the CSS tokens from it. The
+`ResolvedTheme.colors.neutral`. Mounts stamp authored theme overrides and
+their derived tokens; omitted tokens keep the CSS cascade available to hosts. The
 direction is one-way (theme → CSS): engine code reads `theme.colors.neutral.*`
 directly and never calls `cssTokenDefault`. When the background is
 transparent (the default theme's is) the ramp falls back to the static CSS
@@ -133,6 +135,9 @@ case.
 | `colors.gridline` | `rgba(0,0,0,0.08)` | `rgba(255,255,255,0.06)` |
 | `colors.hairline` | `rgba(0,0,0,0.14)` | `rgba(255,255,255,0.14)` |
 | `colors.axis` | `#71717a` | `#a1a1aa` |
+| `colors.annotationRule` | `#888888` | `#9ca3af` |
+| `colors.annotationRangeFill` | `#f0c040` | `#f0c040` |
+| `colors.annotationMarkerFill` / `annotationPlate` | Resolved neutral surface | Resolved neutral surface |
 
 `axis` is both the axis-line color and the tick-label ink, and must clear
 WCAG AA (4.5:1) on its background — zinc-500 hits roughly 5.7:1 on white,
@@ -148,17 +153,18 @@ Source: `packages/core/src/theme/defaults.ts` (`DEFAULT_THEME`),
 
 One weight ladder everywhere: 400 regular (body), 500 medium (eyebrow,
 labels, UI chrome, values), 600 semibold (title, series names, tooltip
-title, annotation lede), 700 bold (`**bold**` spans only). Tabular numerals
-apply to every number, including static SVG chrome.
+title), 700 bold (`**bold**` spans or explicit author emphasis). Annotation
+primary text stays regular when a subtitle is present. Tabular numerals apply
+to every number, including static SVG chrome.
 
 | Element | Size | Weight | Color |
 |---|---|---|---|
 | Title | 26px | 600, -0.022em tracking | `#09090b` |
 | Subtitle | 14px | 400 | `#71717a` (muted) |
 | Eyebrow | 11px | 500 | `#06b6d4` (accent) |
-| Source / byline / footer | 11px | 400 | `#71717a` |
+| Source / byline / footer | 12px | 400 | `#71717a` |
 | Body | 13px | 400 | — |
-| Axis tick / small | 11px | 400 | — |
+| Axis tick / small | 12px | 400 | — |
 | Metric label | 11px | 500 | muted |
 | Metric value | 22px | 600 | — |
 
@@ -167,14 +173,21 @@ Source: `packages/core/src/theme/defaults.ts` (`fonts.sizes`, `fonts.weights`,
 fallback stack; nothing is bundled. Monospace is JetBrains Mono, used by the
 `terminal` preset and any mono-family theme.
 
+Annotation primary text defaults to 13px/400 with a 12px subtitle at that size
+(the ratio is 12/13, rounded). Reference/range labels use the theme small size.
+Callouts wrap within 240px or the available plot width; compact charts keep one
+eligible inline callout by default and move the rest to complete numbered notes.
+Curves use quiet leaders unless an arrow is authored. Explicit weights, colors,
+widths, and responsive opt-outs remain authoritative.
+
 ## Spacing, lines, and radius
 
 | Token | Default |
 |---|---|
 | `spacing.padding` | 20px |
 | `spacing.chromeGap` | 6px |
-| `spacing.chromeToChart` | 8px |
-| `spacing.chartToFooter` | 8px |
+| `spacing.chromeToChart` | 16px |
+| `spacing.chartToFooter` | 12px |
 | `spacing.axisMargin` | 6px |
 
 Hairline vs. gridline is a deliberate two-tier system: the hairline (14%
@@ -392,18 +405,19 @@ the committed values diverge from the in-progress edit.
 
 ## Presets
 
-Five named presets, exported from `@opendata-ai/openchart-core`:
+Four named presets, exported from `@opendata-ai/openchart-core`, alongside the default configuration:
 
 | Preset | Palette | Background | Title | Radius | Notable |
 |---|---|---|---|---|---|
-| `editorial` | default six-hue | white / `#09090b` | 26/600 | 8px | The default; empty `ThemeConfig` |
+| Default (omit theme) | default six-hue | transparent | 26/600 | 8px | Empty `ThemeConfig`; follows the host surface |
 | `essay` | default | warm paper `#faf8f5` / `#1a1816` | 28/600 | 0px | Serif feel via larger sizes, generous spacing |
 | `wire` | default | `#ffffff` / `#0a0a0a` | 16/600 | 2px | Dense, tight chrome, dashboard feel |
 | `broadsheet` | `#1d5f8a #e3120b #7fb0d3 #e0a63b #3a8a6e #8c8680` | warm paper `#fffdf9` / `#171513` | 24/700 | 0px | Red masthead `rule` (40×3px) and eyebrow; hairline 0.28 alpha |
 | `terminal` | dark-mode categorical variants | `#0b0f14` (both modes) | 15/600 | 4px | `seriesStrategy: 'accent-neutral'`, JetBrains Mono available, dense spacing |
 
-`editorial` is `{}` — every other theme value in this document is its
-default. `broadsheet`'s slot-2 red (`#e3120b`, OKLCH chroma 0.232) is a
+`editorial` has been removed; omit `theme` or use `{}` for the default.
+`clarity` is deprecated and retains only its background, axis, and eyebrow
+colors. `legacyEditorial` retains the v8 typography for migrations. `broadsheet`'s slot-2 red (`#e3120b`, OKLCH chroma 0.232) is a
 deliberate deviation from the palette's usual chroma ceiling: it's the one
 loud hue in an otherwise quiet ramp (the other five broadsheet slots run
 0.011–0.137 chroma), kept because it still clears both CVD checks at a

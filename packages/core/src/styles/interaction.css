@@ -135,3 +135,17 @@
     stroke-width: 1.5;
   }
 }
+
+@layer oc.components {
+  /* Source-linked annotation inspection; exports render a fresh, inactive scene. */
+  .oc-footnotes,
+  [data-note-marker-index] {
+    cursor: pointer;
+  }
+  .oc-footnotes.oc-note-active {
+    text-decoration: underline;
+  }
+  [data-note-marker-index].oc-note-active .oc-annotation-footnote-marker {
+    stroke-width: 3;
+  }
+}

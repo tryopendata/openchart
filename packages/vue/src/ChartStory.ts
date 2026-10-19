@@ -11,7 +11,7 @@
  * to drive it externally; omit for self-driving scroll.
  */
 
-import type { ChartSpec, GeoMapSpec, GraphSpec, LayerSpec } from '@opendata-ai/openchart-core';
+import type { ChartSpec, GeoMapSpec, LayerSpec } from '@opendata-ai/openchart-core';
 import type { MountOptions } from '@opendata-ai/openchart-vanilla';
 import {
   type ChartStoryInstance,
@@ -31,7 +31,7 @@ import {
 } from 'vue';
 
 export interface ChartStoryProps {
-  spec: ChartSpec | LayerSpec | GraphSpec | GeoMapSpec;
+  spec: ChartSpec | LayerSpec | GeoMapSpec;
   steps: ChartStoryOptions['steps'];
   narrative?: VNode[];
   step?: number;
@@ -67,7 +67,7 @@ export const ChartStory = defineComponent({
   name: 'ChartStory',
   props: {
     spec: {
-      type: Object as PropType<ChartSpec | LayerSpec | GraphSpec | GeoMapSpec>,
+      type: Object as PropType<ChartSpec | LayerSpec | GeoMapSpec>,
       required: true,
     },
     steps: {

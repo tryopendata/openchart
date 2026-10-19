@@ -13,6 +13,7 @@
 
 export type { EditTransactionResult } from './helpers/edit-transactions';
 export { applyEditTransaction } from './helpers/edit-transactions';
+export { encodePointerToken, jsonPointer } from './helpers/json-pointer';
 export * from './types/index';
 
 // ---------------------------------------------------------------------------
@@ -61,7 +62,6 @@ export {
   broadsheet,
   clarity,
   DEFAULT_THEME,
-  editorial,
   essay,
   legacyEditorial,
   mergeThemeConfig,
@@ -83,7 +83,6 @@ export {
   computeNoteBandHeight,
   estimateTextWidth,
   FOOTNOTE_LINE_HEIGHT,
-  footnoteBandHeight,
   heuristicMeasure,
   resolveMeasurer,
   textAscent,
@@ -128,7 +127,6 @@ export {
   HPAD_COMPACT_MIN,
   LABEL_GAP_COMPACT,
   LABEL_GAP_DEFAULT,
-  LABEL_GAP_NARROW_MAX,
   MAX_LEFT_LABEL_FRACTION_COMPACT,
   MAX_LEFT_LABEL_FRACTION_DEFAULT,
   MAX_LEFT_LABEL_FRACTION_MEDIUM,
@@ -139,7 +137,6 @@ export {
   TICK_LABEL_OFFSET,
   TICK_LINE_HEIGHT_FACTOR,
   TOP_PAD_EXTRA_NARROW,
-  TOP_PAD_NARROW_MAX,
   truncateRotatedLabel,
   truncateToWidth,
   X_AXIS_BAND_HEIGHT,

@@ -67,7 +67,7 @@ describe('generateAltText', () => {
 
   it('handles missing chrome gracefully', () => {
     const alt = generateAltText(barSpec, barSpec.data);
-    expect(alt).toBeTruthy();
+    expect(alt).toContain('Bar chart');
     expect(alt).not.toContain('showing undefined');
   });
 });

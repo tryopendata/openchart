@@ -16,7 +16,7 @@
  * .svelte components.
  */
 
-import type { ChartLayout, ChartSpec, GraphSpec, LayerSpec } from '@opendata-ai/openchart-core';
+import type { ChartLayout, ChartSpec, LayerSpec } from '@opendata-ai/openchart-core';
 import { type ChartInstance, createChart, type MountOptions } from '@opendata-ai/openchart-vanilla';
 import { untrack } from 'svelte';
 
@@ -25,10 +25,8 @@ export interface UseChartOptions {
   theme?: MountOptions['theme'];
   /** Dark mode setting. */
   darkMode?: MountOptions['darkMode'];
-  /** Data point click handler. */
-  onDataPointClick?: MountOptions['onDataPointClick'];
-  /** Enable responsive resizing. Defaults to true. */
-  responsive?: boolean;
+  /** Observe container resizes. Defaults to true. */
+  autoResize?: boolean;
   /** Rendering backend for point marks; see the vanilla `MountOptions.renderer`. */
   renderer?: MountOptions['renderer'];
 }
@@ -43,7 +41,7 @@ export interface UseChartReturn {
 }
 
 export function useChart(
-  spec: () => ChartSpec | LayerSpec | GraphSpec,
+  spec: () => ChartSpec | LayerSpec,
   options?: () => UseChartOptions | undefined,
 ): UseChartReturn {
   let chart = $state<ChartInstance | null>(null);
@@ -59,8 +57,7 @@ export function useChart(
       const mountOpts: MountOptions = {
         theme: opts?.theme,
         darkMode: opts?.darkMode,
-        onDataPointClick: opts?.onDataPointClick,
-        responsive: opts?.responsive ?? true,
+        autoResize: opts?.autoResize ?? true,
         renderer: opts?.renderer,
       };
 

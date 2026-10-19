@@ -1,5 +1,5 @@
 {
-  "$comment": "Eval fixtures for plan 20. Each task pairs a natural-language charting request with inline data. The runner asks a reference model to produce an openchart ChartSpec (via the published chart.schema.json as a tool input_schema), then measures (a) schema-valid rate and (b) compile-success rate. `expect.marks` lists mark types that are a reasonable answer for render-correctness scoring; `expect.field` names a data column the spec should reference. Seeded from the VL-guessability idioms in packages/engine/src/compiler/__tests__/fixtures/vl-parity plus a spread across all 16 mark types.",
+  "$comment": "Eval fixtures for plan 20. Each task pairs a natural-language charting request with inline data. The runner asks a reference model to produce an openchart ChartSpec (via the published chart.schema.json as a tool input_schema), then measures (a) schema-valid rate and (b) compile-success rate. `expect.marks` lists mark types that are a reasonable answer for render-correctness scoring; `expect.field` names a data column the spec should reference. Seeded from the VL-guessability idioms in packages/engine/src/compiler/__tests__/fixtures/vl-parity plus a spread across all 18 mark types. `expect.markOptions` pins specialized mark options.",
   "tasks": [
     {
       "id": "bar-popularity",
@@ -300,6 +300,24 @@
       "prompt": "Bar chart of pageviews per article, top articles only.",
       "data": [{ "article": "Guide", "views": 5000 }, { "article": "News", "views": 3200 }, { "article": "FAQ", "views": 1800 }],
       "expect": { "marks": ["bar", "barlist"], "field": "views" }
+    },
+    {
+      "id": "histogram-normalized-contract",
+      "prompt": "Use a histogram mark with 8 bins and normalize each group's own total. Do not use density bandwidth on a histogram.",
+      "data": [{ "amount": 5 }, { "amount": 12 }, { "amount": 45 }, { "amount": 8 }, { "amount": 33 }],
+      "expect": { "marks": ["histogram"], "field": "amount", "markOptions": { "binCount": 8, "normalize": true } }
+    },
+    {
+      "id": "density-cumulative-contract",
+      "prompt": "Use a density mark with Gaussian bandwidth 2, cumulative true, and 50 evaluation steps for the response times. Density marks have no binCount option.",
+      "data": [{ "ms": 10 }, { "ms": 15 }, { "ms": 20 }, { "ms": 30 }],
+      "expect": { "marks": ["density"], "field": "ms", "markOptions": { "bandwidth": 2, "cumulative": true, "steps": 50 } }
+    },
+    {
+      "id": "text-offset-contract",
+      "prompt": "Use text marks at each product's price and rating, with label text from name, horizontal offset dx 8, vertical offset dy -10, and left alignment. Text offsets belong to text marks, not points.",
+      "data": [{ "price": 10, "rating": 4.2, "name": "A" }, { "price": 25, "rating": 3.8, "name": "B" }],
+      "expect": { "marks": ["text"], "field": "rating", "markOptions": { "dx": 8, "dy": -10, "align": "left" } }
     }
   ]
 }

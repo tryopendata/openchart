@@ -28,7 +28,6 @@ import {
   DEFAULT_LINE_HEIGHT,
   DROP_LINE_TOP_GAP,
   FALLBACK_FONT_FAMILY,
-  LEDE_FONT_WEIGHT,
   LIGHT_CONNECTOR_STROKE,
   LIGHT_DOT_FILL,
   LIGHT_LABEL_BACKGROUND,
@@ -42,13 +41,13 @@ import {
 import {
   type AnnotationMeasureTextFn,
   applyOffset,
-  automaticControlPoint,
   computeAnchorOffset,
   computeTextBlockBounds,
   connectorExit,
   connectorPullbackGap,
   heuristicMeasure,
   measureRichLine,
+  pullBackConnector,
   unionRects,
 } from './geometry';
 import { resolvePosition } from './position';
@@ -123,7 +122,7 @@ function resolveConnectorConfig(
 
   if (typeof connector === 'object' && connector !== null && 'type' in connector) {
     const cfg = connector as ConnectorConfig;
-    const arrow = cfg.type === 'drop-line' ? false : (cfg.arrow ?? cfg.type === 'curve');
+    const arrow = cfg.type === 'drop-line' ? false : (cfg.arrow ?? false);
     return {
       type: cfg.type,
       arrow,
@@ -131,7 +130,7 @@ function resolveConnectorConfig(
     };
   }
 
-  if (connector === 'curve') return { type: 'curve', arrow: true };
+  if (connector === 'curve') return { type: 'curve', arrow: false };
   if (connector === 'drop-line') return { type: 'drop-line', arrow: false };
 
   // true, 'straight', or undefined all map to straight with no arrow
@@ -215,13 +214,9 @@ export function makeAnnotationLabelStyle(
   };
 }
 
-/**
- * The primary text's resolved weight. A subtitle turns the primary line into a
- * lede, so it goes bold unless the author asked for a specific weight.
- */
+/** Primary text stays regular unless the author supplies a weight. */
 export function resolveLedeFontWeight(annotation: TextAnnotation): number | undefined {
-  if (annotation.fontWeight !== undefined) return annotation.fontWeight;
-  return annotation.subtitle ? LEDE_FONT_WEIGHT : undefined;
+  return annotation.fontWeight;
 }
 
 /** Resolve wrapped display geometry, retaining authored text as the identity. */
@@ -449,14 +444,12 @@ function resolveTextAnnotationDisplay(
       };
 
       // Pull the data-point end back so the line stops short of the marker.
-      const gap = connectorPullbackGap(markerClearance(dot), connectorArrow);
-      const cdx = endpoint.x - from.x;
-      const cdy = endpoint.y - from.y;
-      const dist = Math.sqrt(cdx * cdx + cdy * cdy);
-      const to =
-        dist > 0
-          ? { x: endpoint.x - (cdx / dist) * gap, y: endpoint.y - (cdy / dist) * gap }
-          : { ...endpoint };
+      const { to, control } = pullBackConnector(
+        from,
+        endpoint,
+        connectorPullbackGap(markerClearance(dot), connectorArrow),
+        connectorStyle === 'curve' ? { exit: exit.exit, bend: connectorConfig?.bend } : undefined,
+      );
 
       // Min-length check runs after the pullback: it can flip a near-degenerate
       // line's direction, and a stub shorter than MIN_CONNECTOR_LENGTH reads as
@@ -482,7 +475,7 @@ function resolveTextAnnotationDisplay(
           exit: exit.exit,
           ...(connectorStyle === 'curve'
             ? {
-                control: automaticControlPoint(from, to, exit.exit, connectorConfig?.bend),
+                control,
                 ...(connectorConfig?.bend !== undefined ? { bend: connectorConfig.bend } : {}),
               }
             : {}),
@@ -627,9 +620,7 @@ function resolveDropLineAnnotation(
     measure,
   );
 
-  // A subtitle works on a drop-line the same as on any other connector style:
-  // the lede rule already bolded the primary line on the way in, so dropping the
-  // subtitle here would leave a mystery-bold label with no context under it.
+  // A subtitle works on a drop-line the same as on any other connector style.
   let subtitle: ResolvedAnnotation['subtitle'] | undefined;
   let annotationBounds = labelBounds;
   if (annotation.subtitle) {

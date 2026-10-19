@@ -58,11 +58,12 @@ describe('annotation text layout opt-ins', () => {
     expect(a.subtitle!.style.fontSize).toBe(15);
     expect(a.bounds!.width).toBeLessThanOrEqual(85);
   });
-  it('null and omission reproduce identical layout', () => {
+  it('null explicitly disables the v9 wrapping default', () => {
     const compile = (a: TextAnnotation) =>
       compileChart({ ...base, annotations: [a] }, { width: 600, height: 500 }).annotations;
-    expect(compile({ ...annotation, maxWidth: null })).toEqual(compile(annotation));
-    expect(compile({ ...annotation, subtitleFontSize: 11 })).toEqual(compile(annotation));
+    expect(compile({ ...annotation, maxWidth: null })[0].label?.lines).toBeUndefined();
+    expect(compile(annotation)[0].label!.lines!.length).toBeGreaterThan(1);
+    expect(compile({ ...annotation, subtitleFontSize: 12 })).toEqual(compile(annotation));
   });
 });
 
@@ -94,7 +95,9 @@ describe('compact annotation limit', () => {
         { width, height: 700 },
       );
     expect(compile(400, 0).annotations).toEqual(compile(400).annotations);
-    expect(compile(390, null).annotations).toEqual(compile(390).annotations);
+    expect(
+      compile(390).annotations.filter((a) => !a.footnoteIndex && a.id !== 'pinned').length,
+    ).toBeLessThanOrEqual(1);
   });
   it('does not override D15 hide-all', () => {
     const result = compileChart(
@@ -155,7 +158,7 @@ it('resolves authored annotation tokens and keeps explicit ink authoritative', (
           anchor: 'left',
           offset: { dx: -60, dy: -100 },
           fill: '#aabbcc',
-          connector: 'curve',
+          connector: { type: 'curve', arrow: true },
         },
       ],
     },
@@ -228,7 +231,7 @@ it.each([
 it.each([
   false,
   true,
-])('preserves compiled rule/range defaults while honoring tokens (dark=%s)', (darkMode) => {
+])('applies v9 rule/range defaults while honoring tokens (dark=%s)', (darkMode) => {
   const annotations: ChartSpec['annotations'] = [
     { type: 'refline', id: 'rule', y: 3, label: 'Rule' },
     { type: 'range', id: 'range', x1: 1, x2: 2, label: 'Range' },
@@ -239,11 +242,10 @@ it.each([
     { ...annotations[1], fill: '#000000' },
   ];
   const defaults = compileChart({ ...base, annotations }, options);
-  expect(defaults.theme.colors.annotationRule).toBe('#666666');
-  expect(defaults.theme.colors.annotationRangeFill).toBe('#000000');
-  expect(defaults.annotations).toEqual(
-    compileChart({ ...base, annotations: legacyInk }, options).annotations,
-  );
+  expect(defaults.theme.colors.annotationRule).toBe(darkMode ? '#9ca3af' : '#888888');
+  expect(defaults.theme.colors.annotationRangeFill).toBe('#f0c040');
+  expect(defaults.annotations[0].stroke).toBe(defaults.theme.colors.annotationRule);
+  expect(defaults.annotations[1].fill).toBe('#f0c040');
   const theme = {
     colors: {
       annotationRule: { light: '#445566', dark: '#aabbcc' },

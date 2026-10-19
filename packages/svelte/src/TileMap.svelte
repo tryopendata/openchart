@@ -7,6 +7,7 @@
 -->
 <script lang="ts">
 import type { DarkMode, ThemeConfig, TileMapSpec } from '@opendata-ai/openchart-core';
+import { mergeThemeConfig } from '@opendata-ai/openchart-core';
 import {
   createTileMap,
   type TileMapInstance,
@@ -62,7 +63,7 @@ let prevSpec = '';
 
 // Effect 1: Mount/recreate tilemap on theme/darkMode changes.
 $effect(() => {
-  const resolvedTheme = theme ?? ctxTheme?.();
+  const resolvedTheme = mergeThemeConfig(ctxTheme?.(), theme);
   const resolvedDarkMode = darkMode ?? ctxDarkMode?.();
   const currentSpec = untrack(() => spec);
 
@@ -85,7 +86,7 @@ $effect(() => {
         data: Record<string, unknown>;
       } | null,
     ) => untrack(() => ontilehover)?.(tile),
-    responsive: true,
+    autoResize: true,
   };
 
   instance = createTileMap(containerEl, currentSpec, options);

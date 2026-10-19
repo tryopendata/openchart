@@ -66,7 +66,7 @@ describe('annotation connectors', () => {
         x: '2020-02-01',
         y: 30,
         text: 'Peak',
-        connector: 'curve',
+        connector: { type: 'curve', arrow: true },
         offset: { dx: 60, dy: -50 },
       },
     ]);
@@ -118,7 +118,7 @@ describe('annotation connectors', () => {
         x: '2020-02-01',
         y: 30,
         text: 'Peak',
-        connector: 'curve',
+        connector: { type: 'curve', arrow: true },
         offset: { dx: 60, dy: -50 },
       },
     ]);

@@ -489,8 +489,7 @@ export function compileTableLayout(
     data,
     options.width,
     theme,
-    // The deprecated `compact` flag renders condensed padding too.
-    spec.density ?? (spec.compact ? 'condensed' : undefined),
+    spec.density,
     columnWarnings,
   );
   emitSpecWarnings(columnWarnings, options.onWarn);
@@ -639,13 +638,7 @@ export function compileTableLayout(
   // 9. Compute chrome
   const watermark = spec.watermark;
   const chrome = computeChrome(
-    {
-      title: spec.chrome.title,
-      subtitle: spec.chrome.subtitle,
-      source: spec.chrome.source,
-      byline: spec.chrome.byline,
-      footer: spec.chrome.footer,
-    },
+    spec.chrome,
     theme,
     options.width,
     options.measureText,
@@ -659,6 +652,8 @@ export function compileTableLayout(
   const caption = titleText ? `Table: ${titleText}` : `Data table with ${data.length} rows`;
 
   return {
+    width: options.width,
+    measureText: options.measureText,
     chrome,
     columns: resolvedColumns,
     rows,
@@ -675,7 +670,6 @@ export function compileTableLayout(
     totalRow: spec.totalRow
       ? buildTotalRow(spec.totalRow.label, spec.columns, resolvedColumns, filteredData)
       : undefined,
-    compact: spec.compact,
     a11y: {
       caption,
       summary: `${resolvedColumns.length} columns, ${totalFiltered} rows`,

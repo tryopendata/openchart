@@ -10,12 +10,9 @@ import { createChart } from '../mount';
 
 const annotatedSpec: ChartSpec = {
   ...barSpec,
-  annotations: [{ type: 'refline', y: 0, label: 'Zero' }],
-};
-
-const textAnnotatedSpec: ChartSpec = {
-  ...barSpec,
-  annotations: [{ type: 'text', x: 10, y: 'A', text: 'Peak', offset: { dx: 10, dy: -20 } }],
+  // barSpec's x is the quantitative axis (y is the category band), so the
+  // refline has to sit on x to resolve inside the plot.
+  annotations: [{ type: 'refline', x: 20, label: 'Twenty' }],
 };
 
 // ---------------------------------------------------------------------------
@@ -46,10 +43,10 @@ describe('chart event handlers', () => {
 
       expect(onMarkClick).toHaveBeenCalledTimes(1);
       const event = onMarkClick.mock.calls[0][0];
-      expect(event.datum).toBeDefined();
-      expect(event.position).toBeDefined();
-      expect(event.position.x).toBeTypeOf('number');
-      expect(event.position.y).toBeTypeOf('number');
+      expect(barSpec.data).toContainEqual(event.datum);
+      // Position is the click point relative to the chart SVG.
+      const svgRect = container.querySelector('svg')!.getBoundingClientRect();
+      expect(event.position).toEqual({ x: 150 - svgRect.left, y: 200 - svgRect.top });
       expect(event.event).toBeInstanceOf(MouseEvent);
 
       chart.destroy();
@@ -67,8 +64,9 @@ describe('chart event handlers', () => {
 
       expect(onMarkClick).toHaveBeenCalledTimes(1);
       const event = onMarkClick.mock.calls[0][0];
-      // Line marks should have series info
-      expect(event.series).toBeDefined();
+      // Line marks should have series info, naming the clicked datum's series
+      expect(['US', 'UK']).toContain(event.series);
+      expect(event.datum.country).toBe(event.series);
 
       chart.destroy();
     });
@@ -86,8 +84,9 @@ describe('chart event handlers', () => {
 
       expect(onMarkHover).toHaveBeenCalledTimes(1);
       const event = onMarkHover.mock.calls[0][0];
-      expect(event.datum).toBeDefined();
-      expect(event.position).toBeDefined();
+      expect(barSpec.data).toContainEqual(event.datum);
+      const svgRect = container.querySelector('svg')!.getBoundingClientRect();
+      expect(event.position).toEqual({ x: 120 - svgRect.left, y: 180 - svgRect.top });
 
       chart.destroy();
     });
@@ -186,6 +185,34 @@ describe('chart event handlers', () => {
 
       chart.destroy();
     });
+
+    it('refuses to hide the last visible series of a strokeDash-only legend', () => {
+      const { color: _color, ...encoding } = lineSpec.encoding;
+      const onLegendToggle = vi.fn();
+      const chart = createChart(
+        container,
+        {
+          ...lineSpec,
+          encoding: { ...encoding, strokeDash: { field: 'country', type: 'nominal' } },
+          legend: { show: true },
+        },
+        { onLegendToggle },
+      );
+
+      const labels = Array.from(container.querySelectorAll('[data-legend-label]')).map(
+        (el) => (el as HTMLElement).getAttribute('data-legend-label')!,
+      );
+      expect(labels).toEqual(['US', 'UK']);
+      for (const label of labels) {
+        const entry = container.querySelector(`[data-legend-label="${label}"]`) as HTMLElement;
+        entry.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      }
+
+      expect(onLegendToggle.mock.calls.map(([, visible]) => visible)).toEqual([false, true]);
+      expect(container.querySelectorAll('.oc-mark-line')).toHaveLength(1);
+
+      chart.destroy();
+    });
   });
 
   describe('onAnnotationClick', () => {
@@ -194,163 +221,16 @@ describe('chart event handlers', () => {
       const chart = createChart(container, annotatedSpec, { onAnnotationClick });
 
       const annotation = container.querySelector('.oc-annotation');
-      if (!annotation) {
-        // Refline at y=0 may resolve outside the chart area in test env
-        chart.destroy();
-        return;
-      }
+      if (!annotation) throw new Error('refline annotation was not rendered');
 
       annotation.dispatchEvent(createMouseEvent('click'));
 
       expect(onAnnotationClick).toHaveBeenCalledTimes(1);
       const [annotationArg, mouseEvent] = onAnnotationClick.mock.calls[0];
-      expect(annotationArg).toBeDefined();
-      expect(annotationArg.type).toBe('refline');
+      expect(annotationArg).toEqual({ type: 'refline', x: 20, label: 'Twenty' });
       expect(mouseEvent).toBeInstanceOf(MouseEvent);
 
       chart.destroy();
-    });
-  });
-
-  describe('onAnnotationEdit', () => {
-    it('sets cursor:grab on text annotations when onAnnotationEdit is provided', () => {
-      const onAnnotationEdit = vi.fn();
-      const chart = createChart(container, textAnnotatedSpec, { onAnnotationEdit });
-
-      const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotation) {
-        chart.destroy();
-        return;
-      }
-
-      expect(annotation.style.cursor).toBe('grab');
-      chart.destroy();
-    });
-
-    it('does not set cursor:grab on non-text annotations', () => {
-      const onAnnotationEdit = vi.fn();
-      const chart = createChart(container, annotatedSpec, { onAnnotationEdit });
-
-      const annotation = container.querySelector('.oc-annotation-refline') as SVGGElement | null;
-      if (!annotation) {
-        chart.destroy();
-        return;
-      }
-
-      expect(annotation.style.cursor).not.toBe('grab');
-      chart.destroy();
-    });
-
-    it('fires with original annotation and updated offset after drag', () => {
-      const onAnnotationEdit = vi.fn();
-      const chart = createChart(container, textAnnotatedSpec, { onAnnotationEdit });
-
-      const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotation) {
-        chart.destroy();
-        return;
-      }
-
-      // Simulate drag: mousedown -> mousemove -> mouseup
-      annotation.dispatchEvent(createMouseEvent('mousedown', 100, 100));
-      document.dispatchEvent(createMouseEvent('mousemove', 150, 130));
-      document.dispatchEvent(createMouseEvent('mouseup', 150, 130));
-
-      expect(onAnnotationEdit).toHaveBeenCalledTimes(1);
-      const [annotationArg, offsetArg] = onAnnotationEdit.mock.calls[0];
-      expect(annotationArg.type).toBe('text');
-      expect(annotationArg.text).toBe('Peak');
-      // Original offset (10, -20) + drag delta (50, 30) = (60, 10)
-      expect(offsetArg.dx).toBe(60);
-      expect(offsetArg.dy).toBe(10);
-
-      chart.destroy();
-    });
-
-    it('does not fire when drag movement is below threshold', () => {
-      const onAnnotationEdit = vi.fn();
-      const chart = createChart(container, textAnnotatedSpec, { onAnnotationEdit });
-
-      const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotation) {
-        chart.destroy();
-        return;
-      }
-
-      // Simulate drag with minimal movement (< 3px)
-      annotation.dispatchEvent(createMouseEvent('mousedown', 100, 100));
-      document.dispatchEvent(createMouseEvent('mousemove', 101, 101));
-      document.dispatchEvent(createMouseEvent('mouseup', 101, 101));
-
-      expect(onAnnotationEdit).not.toHaveBeenCalled();
-      chart.destroy();
-    });
-
-    it('suppresses click after drag', () => {
-      const onAnnotationClick = vi.fn();
-      const onAnnotationEdit = vi.fn();
-      const chart = createChart(container, textAnnotatedSpec, {
-        onAnnotationClick,
-        onAnnotationEdit,
-      });
-
-      const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotation) {
-        chart.destroy();
-        return;
-      }
-
-      // Drag > 3px
-      annotation.dispatchEvent(createMouseEvent('mousedown', 100, 100));
-      document.dispatchEvent(createMouseEvent('mousemove', 150, 130));
-      document.dispatchEvent(createMouseEvent('mouseup', 150, 130));
-
-      // Fire a click after the drag
-      annotation.dispatchEvent(createMouseEvent('click', 150, 130));
-
-      expect(onAnnotationEdit).toHaveBeenCalledTimes(1);
-      // Click should have been suppressed by the one-time capture handler
-      expect(onAnnotationClick).not.toHaveBeenCalled();
-
-      chart.destroy();
-    });
-
-    it('moves label geometry without translating the data anchor during drag', async () => {
-      const onAnnotationEdit = vi.fn();
-      const chart = createChart(container, textAnnotatedSpec, { onAnnotationEdit });
-
-      const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotation) {
-        chart.destroy();
-        return;
-      }
-
-      const startX = Number(annotation.querySelector('.oc-annotation-label')!.getAttribute('x'));
-      annotation.dispatchEvent(createMouseEvent('mousedown', 100, 100));
-      document.dispatchEvent(createMouseEvent('mousemove', 140, 120));
-
-      await new Promise(requestAnimationFrame);
-      expect(annotation.hasAttribute('transform')).toBe(false);
-      expect(Number(annotation.querySelector('.oc-annotation-label')!.getAttribute('x'))).not.toBe(
-        startX,
-      );
-
-      // Complete the drag to clean up
-      document.dispatchEvent(createMouseEvent('mouseup', 140, 120));
-      chart.destroy();
-    });
-
-    it('cleans up listeners on destroy', () => {
-      const onAnnotationEdit = vi.fn();
-      const chart = createChart(container, textAnnotatedSpec, { onAnnotationEdit });
-
-      chart.destroy();
-
-      // After destroy, dispatching events should not cause errors
-      document.dispatchEvent(createMouseEvent('mousemove', 200, 200));
-      document.dispatchEvent(createMouseEvent('mouseup', 200, 200));
-
-      expect(onAnnotationEdit).not.toHaveBeenCalled();
     });
   });
 
@@ -364,8 +244,8 @@ describe('chart event handlers', () => {
 
       chart.destroy();
 
-      // After destroy, clicking should not fire the handler
-      // (the SVG is removed, but we verify the handler reference is cleaned up)
+      // After destroy, clicking the detached mark should not fire the handler.
+      mark!.dispatchEvent(createMouseEvent('click'));
       expect(onMarkClick).not.toHaveBeenCalled();
     });
 

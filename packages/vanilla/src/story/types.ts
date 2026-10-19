@@ -1,17 +1,10 @@
-import type {
-  ChartSpec,
-  DataRow,
-  GeoMapSpec,
-  GraphSpec,
-  LayerSpec,
-} from '@opendata-ai/openchart-core';
+import type { ChartSpec, DataRow, GeoMapSpec, LayerSpec } from '@opendata-ai/openchart-core';
 import type { CameraTarget } from './camera-math';
 
-/** A spec a story can drive: same union `ChartInstance.update()` accepts. */
+/** A spec a story can drive: what `ChartInstance.update()` accepts, plus geo maps. */
 export type StorySpec<TData extends DataRow = DataRow> =
   | ChartSpec<TData>
   | LayerSpec<TData>
-  | GraphSpec
   | GeoMapSpec;
 
 /** Deep-partial patch applied onto the accumulated spec at each step. */

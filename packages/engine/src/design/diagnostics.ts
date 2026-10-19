@@ -1,5 +1,6 @@
 import type { ChartLayout, ChartSpec, DesignDiagnostic } from '@opendata-ai/openchart-core';
 import { computeLabelBounds, contrastRatio, isOpaqueColor } from '@opendata-ai/openchart-core';
+import { MIN_CHART_WIDTH } from '../layout/frame';
 import { resolveObservationIdentities } from './identity';
 
 /** A fixed figure budget may be exhausted by the stable source-note capacity. */
@@ -137,6 +138,13 @@ export function diagnoseChart(spec: ChartSpec, layout: ChartLayout): DesignDiagn
   }
   const exhaustedNotes = noteCapacityDiagnostic(layout);
   if (exhaustedNotes) diagnostics.push(exhaustedNotes);
+  else if (layout.endpointLabels?.entries.length && layout.area.width < MIN_CHART_WIDTH)
+    emit(
+      'endpoint-labels.constrained',
+      '/endpointLabels',
+      'Endpoint columns leave less than the minimum usable plot width. Increase the figure width, shorten endpoint text, disable one endpoint column, or enable an identification fallback.',
+      spec.endpointLabels !== undefined ? 'author' : 'default',
+    );
   else if (layout.area.width < 80 || layout.area.height < 80)
     emit(
       'layout.constrained',
@@ -153,10 +161,17 @@ export function diagnoseChart(spec: ChartSpec, layout: ChartLayout): DesignDiagn
       'failed',
       'info',
     );
+    // `set` needs the parent object; `add` creates any missing theme containers.
     diagnostics[diagnostics.length - 1].fix = {
       label: 'Use 12px axis labels',
       precondition: JSON.stringify(spec),
-      changes: [{ path: '/theme/fonts/sizes/axisTick', value: 12 }],
+      changes: [
+        {
+          op: spec.theme?.fonts?.sizes ? 'set' : 'add',
+          path: '/theme/fonts/sizes/axisTick',
+          value: 12,
+        },
+      ],
     };
   }
   return diagnostics;

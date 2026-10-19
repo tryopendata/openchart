@@ -13,9 +13,10 @@
 import type { GraphSpec } from '@opendata-ai/openchart-core';
 import type { GraphCompilation } from '@opendata-ai/openchart-engine';
 import type { GraphMountOptions } from '../graph-mount';
+import { createAttributionFooter } from '../renderers/attribution-footer';
 import { observeResize } from '../resize-observer';
 import { resolveDarkMode } from '../resolve-dark-mode';
-import { resolvedSurface } from '../theme-tokens';
+import { stampThemeProperties } from '../theme-tokens';
 import { createTooltipManager } from '../tooltip';
 import type { GraphShell } from './renderer-registry';
 
@@ -63,19 +64,7 @@ export function createGraphShell(
   // Without this, consumer-supplied theme.colors.text only affects canvas-drawn
   // labels but not the HTML title/subtitle which read from --oc-text.
   const resolvedTheme = compilation.theme;
-  if (resolvedTheme) {
-    const s = wrapper.style;
-    // The graph paints on an opaque canvas, so a transparent theme background
-    // resolves to the mode's --oc-bg token. This is the single source for the
-    // graph surface: the node knockout rings are cut in the same color.
-    s.setProperty('--oc-bg', resolvedSurface(resolvedTheme));
-    s.setProperty('--oc-text', resolvedTheme.colors.text);
-    s.setProperty('--oc-text-secondary', resolvedTheme.colors.neutral.secondary);
-    s.setProperty('--oc-text-muted', resolvedTheme.colors.axis);
-    s.setProperty('--oc-border', resolvedTheme.colors.neutral.border);
-    s.setProperty('--oc-font-family', resolvedTheme.fonts.family);
-    s.fontFamily = resolvedTheme.fonts.family;
-  }
+  if (resolvedTheme) stampThemeProperties(wrapper, resolvedTheme);
 
   const chromeEl = document.createElement('div');
   chromeEl.className = 'oc-graph-chrome';
@@ -97,6 +86,10 @@ export function createGraphShell(
 
   const tooltipManager = options?.tooltip !== false ? createTooltipManager(wrapper) : null;
 
+  let footerHeight = compilation.chrome.bottomHeight;
+  let footer: SVGSVGElement | null = null;
+  let surface: HTMLElement | null = null;
+
   const shell: GraphShell = {
     container,
     wrapper,
@@ -106,6 +99,8 @@ export function createGraphShell(
     isDark,
 
     mountSurface(el: HTMLElement): void {
+      surface = el;
+      el.style.height = `calc(100% - ${footerHeight}px)`;
       if (legendEl) wrapper.insertBefore(el, legendEl);
       else wrapper.appendChild(el);
     },
@@ -124,6 +119,16 @@ export function createGraphShell(
 
       // Hide chrome if empty
       chromeEl.style.display = html ? '' : 'none';
+      footer?.remove();
+      footer = createAttributionFooter(next.chrome, next.dimensions.width);
+      footerHeight = footer ? next.chrome.bottomHeight : 0;
+      if (surface) surface.style.height = `calc(100% - ${footerHeight}px)`;
+      if (footer) {
+        footer.style.position = 'absolute';
+        footer.style.bottom = '0';
+        footer.style.left = '0';
+        wrapper.appendChild(footer);
+      }
     },
 
     /**
@@ -138,11 +143,11 @@ export function createGraphShell(
 
     getSize(): { width: number; height: number } {
       const { width, height } = getContainerDimensions(container);
-      return { width, height: Math.max(height, MIN_SURFACE_HEIGHT) };
+      return { width, height: Math.max(1, Math.max(height, MIN_SURFACE_HEIGHT) - footerHeight) };
     },
 
     observeResize(callback: () => void): () => void {
-      if (options?.responsive === false) return () => {};
+      if (options?.autoResize === false) return () => {};
       return observeResize(container, () => {
         callback();
       });

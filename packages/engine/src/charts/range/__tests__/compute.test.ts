@@ -422,7 +422,7 @@ describe('compileChart with range marks', () => {
     const ruleIndex = layout.marks.findIndex(
       (m) => m.type === 'rule' && (m as RuleMarkLayout).key === 'Japan|range',
     );
-    expect(layout.tooltipDescriptors.get(`rule-${ruleIndex}`)).toBeDefined();
+    expect(layout.tooltipDescriptors.get(`rule-${ruleIndex}`)).toEqual(content);
   });
 
   it('compiles the vertical form with y/y2 and nominal x', () => {

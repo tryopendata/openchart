@@ -123,7 +123,7 @@ import { VizThemeProvider, Chart } from '@opendata-ai/openchart-vue';
 
 `darkMode` accepts `"auto"` (follows system preference), `"force"` (always dark), or `"off"` (always light).
 
-For one-off overrides, pass `dark-mode` or `theme` directly on an individual component. Component-level props take priority over the provider.
+For one-off overrides, pass `dark-mode` or `theme` directly on an individual component. Component-level props take priority over the provider: a component `theme` deep-merges over the provider theme (which itself merges over the spec `theme`), and a component dark mode replaces the provider's.
 
 ## Composables
 

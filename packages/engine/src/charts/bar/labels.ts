@@ -16,6 +16,7 @@
 import type {
   LabelCandidate,
   LabelDensity,
+  MeasureTextFn,
   NumberFormatter,
   RectMark,
   ResolvedLabel,
@@ -28,6 +29,7 @@ import {
 } from '@opendata-ai/openchart-core';
 import { filterByDensity } from '../_shared/density-filter';
 import { formatLabelValue } from '../_shared/format-label-value';
+import type { BarLabelPlacement } from './label-plan';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -100,7 +102,15 @@ export function computeBarLabels(
   darkMode = false,
   fontSize?: number,
   labelSuffix?: string,
+  fontFamily = 'system-ui, -apple-system, sans-serif',
+  options: {
+    placement?: BarLabelPlacement;
+    columnWidth?: number;
+    measureText?: MeasureTextFn;
+  } = {},
 ): ResolvedLabel[] {
+  if (options.placement === 'suppress') return [];
+  const placement = options.placement ?? 'adaptive';
   const FONT_SIZE = fontSize ?? LABEL_FONT_SIZE;
   const targetMarks = filterByDensity(marks, density);
 
@@ -145,14 +155,19 @@ export function computeBarLabels(
     if (labelPrefix) valuePart = labelPrefix + valuePart;
     if (labelSuffix) valuePart = valuePart + labelSuffix;
 
-    const textWidth = estimateTextWidth(valuePart, FONT_SIZE, LABEL_FONT_WEIGHT);
-    const textHeight = FONT_SIZE * 1.2;
+    const measured = options.measureText?.(valuePart, FONT_SIZE, LABEL_FONT_WEIGHT);
+    const textWidth = measured?.width ?? estimateTextWidth(valuePart, FONT_SIZE, LABEL_FONT_WEIGHT);
+    const textHeight = Math.max(FONT_SIZE * 1.2, measured?.height ?? 0);
 
     // Detect stacked bars: cornerRadius 0 indicates stacked segment
     const isStacked = mark.stackGroup !== undefined;
 
     // Determine if label goes inside or outside the bar
-    const isInside = mark.width >= MIN_WIDTH_FOR_INSIDE_LABEL;
+    const isInside =
+      placement === 'inside' ||
+      (placement === 'adaptive' &&
+        mark.width >= MIN_WIDTH_FOR_INSIDE_LABEL &&
+        textWidth <= mark.width - 2 * LABEL_PADDING);
     const isNegative = Number.isFinite(rawNum) ? rawNum < 0 : false;
     const bgColor = getRepresentativeColor(mark.fill);
 
@@ -160,7 +175,11 @@ export function computeBarLabels(
     let fill: string;
     let textAnchor: 'start' | 'end' | 'middle';
 
-    if (isStacked && isInside) {
+    if (placement === 'column') {
+      anchorX = chartArea.x + chartArea.width + 12 + (options.columnWidth ?? textWidth);
+      fill = labelColor ?? bgColor;
+      textAnchor = 'end';
+    } else if (isStacked && isInside) {
       // Stacked: centered within segment
       anchorX = mark.x + mark.width / 2;
       fill = pickLabelColor(bgColor, darkMode);
@@ -212,7 +231,15 @@ export function computeBarLabels(
           : anchorX;
 
     // Check if label text fits within the stacked segment
-    const fits = !(isStacked && textWidth > mark.width - 2 * LABEL_PADDING);
+    const adaptiveOutsideFits =
+      placement !== 'adaptive' ||
+      isInside ||
+      (leftEdgeX >= chartArea.x && leftEdgeX + textWidth <= chartArea.x + chartArea.width);
+    const fits =
+      adaptiveOutsideFits &&
+      (placement === 'inside'
+        ? textWidth <= mark.width - 2 * LABEL_PADDING && textHeight <= mark.height
+        : !(isStacked && placement === 'adaptive' && textWidth > mark.width - 2 * LABEL_PADDING));
 
     // An inside label sits ON the bar fill, contrast-picked against it. A
     // surface-colored knockout stroke would ring every glyph, so only labels
@@ -229,7 +256,7 @@ export function computeBarLabels(
       height: textHeight,
       priority: 'data',
       style: {
-        fontFamily: 'system-ui, -apple-system, sans-serif',
+        fontFamily,
         fontSize: FONT_SIZE,
         fontWeight: LABEL_FONT_WEIGHT,
         fill,
@@ -268,11 +295,10 @@ export function computeBarLabels(
 
   // Shift resolved y back from top-edge space to the vertical center that the
   // central-baseline renderer expects (see anchorY derivation above).
-  const halfHeight = FONT_SIZE * 1.2 * 0.5;
-
   // Re-insert hidden labels for candidates that didn't fit, preserving order
   const results: ResolvedLabel[] = [];
   for (let i = 0; i < candidates.length; i++) {
+    const halfHeight = candidates[i].height / 2;
     if (unfittingIndices.has(i)) {
       results.push({
         text: candidates[i].text,

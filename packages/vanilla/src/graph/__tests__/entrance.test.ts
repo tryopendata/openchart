@@ -56,7 +56,9 @@ describe('nodeEnterProgress', () => {
   });
 
   it('handles total=0 without dividing by zero', () => {
-    expect(() => nodeEnterProgress(0.5, 0, 0)).not.toThrow();
+    // No stagger offset: same as the first node of any graph (0.5 / 0.6, quantized to eighths)
+    expect(nodeEnterProgress(0.5, 0, 0)).toBe(0.875);
+    expect(nodeEnterProgress(0.5, 0, 0)).toBe(nodeEnterProgress(0.5, 0, 10));
   });
 });
 

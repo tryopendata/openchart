@@ -27,7 +27,7 @@ export function generateAltText(spec: ChartSpec, data: DataRow[]): string {
   let chartName = MARK_DISPLAY_NAMES[markType] ?? `${markType} chart`;
 
   // Special case: donut detection
-  if (markType === 'arc' && markDef.innerRadius && markDef.innerRadius > 0) {
+  if (markDef.type === 'arc' && markDef.innerRadius && markDef.innerRadius > 0) {
     chartName = 'Donut chart';
   }
 
@@ -56,7 +56,7 @@ export function generateAltText(spec: ChartSpec, data: DataRow[]): string {
 
   // Waffle: name the unit framing. Per-category "x of N units" phrasing
   // lives on the mark aria labels; the chart-level text carries the total.
-  if (markType === 'waffle') {
+  if (markDef.type === 'waffle') {
     const units = markDef.units ?? 100;
     parts.push(`dividing ${units} units`);
   }

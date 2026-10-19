@@ -6,6 +6,7 @@
 
 import type { Mark } from '@opendata-ai/openchart-core';
 import { resolveFieldFormatter } from '../../format/field-format';
+import { filterByDensity } from '../_shared/density-filter';
 import type { ChartRenderer } from '../registry';
 import { computeColumnMarks } from './compute';
 import { computeColumnLabels } from './labels';
@@ -14,7 +15,16 @@ import { computeColumnLabels } from './labels';
 // Column chart renderer
 // ---------------------------------------------------------------------------
 
-export const columnRenderer: ChartRenderer = (spec, scales, chartArea, strategy, theme) => {
+export const columnRenderer: ChartRenderer = (
+  spec,
+  scales,
+  chartArea,
+  strategy,
+  theme,
+  _containerWidth,
+  labelPlan,
+  measureText,
+) => {
   const marks = computeColumnMarks(spec, scales, chartArea, strategy, theme);
 
   // Compute and attach value labels (respects spec.labels.density)
@@ -37,9 +47,16 @@ export const columnRenderer: ChartRenderer = (spec, scales, chartArea, strategy,
     theme.isDark,
     spec.labels.fontSize,
     spec.labels.suffix,
+    theme.fonts.family,
+    {
+      placement: labelPlan?.placement ?? spec.labels.placement,
+      columnWidth: labelPlan?.columnWidth,
+      measureText: spec.labels.placement ? measureText : undefined,
+    },
   );
-  for (let i = 0; i < marks.length && i < labels.length; i++) {
-    marks[i].label = labels[i];
+  const labelMarks = spec.labels.placement ? filterByDensity(marks, spec.labels.density) : marks;
+  for (let i = 0; i < labelMarks.length && i < labels.length; i++) {
+    labelMarks[i].label = labels[i];
   }
 
   return marks as Mark[];

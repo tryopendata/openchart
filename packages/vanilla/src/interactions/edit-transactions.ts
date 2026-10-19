@@ -1,4 +1,5 @@
-import type { EditOp, EditTransaction, ElementEdit } from '@opendata-ai/openchart-core';
+import type { EditOp, EditTransaction } from '@opendata-ai/openchart-core';
+import type { GestureEdit } from './gesture-edit';
 
 type Node = Record<string, unknown>;
 const object = (value: unknown): Node | undefined =>
@@ -10,10 +11,10 @@ export { annotationSource } from '@opendata-ai/openchart-core';
 
 import { annotationSource } from '@opendata-ai/openchart-core';
 
-/** Bridge existing gesture events to authored operations without changing legacy callbacks. */
+/** Convert internal gesture descriptions to atomic authored operations. */
 export function editToTransaction(
   spec: unknown,
-  edit: ElementEdit,
+  edit: GestureEdit,
   revision?: string | number,
 ): EditTransaction | null {
   const root = object(spec) ?? {};
@@ -21,7 +22,6 @@ export function editToTransaction(
   const ops: EditOp[] = [];
   const set = (path: string, value: unknown, expect?: EditOp['expect']) =>
     ops.push({ op: 'set', path, value, ...(expect ? { expect } : {}) });
-  if (edit.type === 'legend-toggle') return null;
   if (edit.type === 'add') {
     ops.push({ op: 'add', path: `${source.path}/-`, value: edit.annotation });
   } else if ('element' in edit && edit.element.type === 'annotation') {
@@ -36,14 +36,14 @@ export function editToTransaction(
     if (!annotation || (edit.element.id !== undefined && annotation.id !== edit.element.id))
       return null;
     const authored = 'annotation' in edit ? edit.annotation : annotation;
+    // Non-text annotations carry their identifying text in `label`; the
+    // precondition checks it there so reordered ID-less reflines still fail.
+    const text = authored.type === 'text' ? authored.text : authored.label;
     const expected: EditOp['expect'] = {
       type: authored.type,
-      text: authored.type === 'text' ? authored.text : (authored.label ?? ''),
+      ...(text !== undefined ? { text } : {}),
       ...(authored.id !== undefined ? { id: authored.id } : {}),
     };
-    // Non-text annotations have a label rather than a text property. The
-    // precondition uses their authored text value (absent), not the display label.
-    if (authored.type !== 'text') expected.text = undefined;
     const path = `${source.path}/${edit.element.index}`;
     switch (edit.type) {
       case 'annotation':
@@ -75,6 +75,8 @@ export function editToTransaction(
       case 'delete':
         ops.push({ op: 'remove', path, expect: expected });
         break;
+      default:
+        edit satisfies never;
     }
   } else if (edit.type === 'chrome' || ('element' in edit && edit.element.type === 'chrome')) {
     const key =
@@ -114,9 +116,6 @@ export function editToTransaction(
       path: '/legend',
       value: { ...(object(root.legend) ?? {}), show: false },
     });
-  } else if (edit.type === 'series-label') {
-    const key = edit.series.replace(/~/g, '~0').replace(/\//g, '~1');
-    ops.push({ op: 'add', path: `/labels/offsets/${key}`, value: edit.offset });
   }
   return ops.length ? { ...(revision !== undefined ? { revision } : {}), ops } : null;
 }

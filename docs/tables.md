@@ -185,7 +185,6 @@ All features are opt-in via top-level `TableSpec` properties.
 | Striping | `striped: true` | `false` | Zebra rows. Hairlines only by default |
 | Initial sort | `sort: { column, direction }` | first inline-bar column, desc | Sort applied before the user touches a header |
 | Total row | `totalRow: true` | `false` | Sticky footer summing every quantitative column with a summable cell type (text/bar/heatmap). Set `columns[].total: false` to leave an individual column's total cell blank |
-| Compact mode | `compact: true` | `false` | **Deprecated.** Alias for `density: 'condensed'`; warns |
 | Responsive | `responsive: true` | `true` | Table adapts to container width |
 
 In controlled mode a `sort` of `null` means "the user cleared sorting" and
@@ -231,6 +230,15 @@ an exact pixel size or a fraction of the container width; unwidthed columns
 share whatever space is left. If the explicit widths on their own would
 exceed the container, they're scaled down proportionally (floored at 60px)
 and the engine emits a `TABLE_WIDTH_OVERFLOW` warning through `onWarn`.
+
+### Surface
+
+Tables paint `theme.colors.background`, which is transparent by default, so a
+table sits on the host surface like a chart does. The header, totals row,
+search input and pager buttons are transparent too; the opt-in sticky first
+column keeps the mode's `--oc-bg` so scrolled cells don't show through. Inline
+bar fills render at 40% opacity in dark mode (18% in light). Set
+`theme.colors.background` for an opaque table.
 
 ### Full-featured example
 

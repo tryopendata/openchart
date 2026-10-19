@@ -259,25 +259,16 @@ describe('density', () => {
     expect(layout.striped).toBe(false);
   });
 
-  it('maps the deprecated compact flag to condensed with a warning', () => {
-    const warnings: string[] = [];
-    const layout = compileTable(
-      { ...base, compact: true },
-      { ...options, onWarn: (m) => warnings.push(m) },
-    );
+  it('uses condensed density without exposing a compact alias', () => {
+    const layout = compileTable({ ...base, density: 'condensed' }, options);
     expect(layout.density).toBe('condensed');
-    expect(layout.compact).toBe(true);
-    expect(warnings.join('\n')).toContain('density: "condensed"');
+    expect(layout).not.toHaveProperty('compact');
   });
 
-  it('lets density win and warns about the authored compact alias', () => {
-    const warnings: string[] = [];
-    const layout = compileTable(
-      { ...base, compact: true, density: 'relaxed' },
-      { ...options, onWarn: (m) => warnings.push(m) },
+  it.each([undefined, 'relaxed'] as const)('rejects compact even with density %s', (density) => {
+    expect(() => compileTable({ ...base, compact: true, density }, options)).toThrow(
+      /compact.*removed in v9/,
     );
-    expect(layout.density).toBe('relaxed');
-    expect(warnings.some((warning) => warning.includes('compact'))).toBe(true);
   });
 });
 

@@ -15,20 +15,15 @@ import type {
   SankeyLinkMark,
   SankeyNodeMark,
 } from '@opendata-ai/openchart-core';
-import {
-  BRAND_FONT_SIZE,
-  BRAND_MIN_WIDTH,
-  estimateTextWidth,
-  wrapText,
-} from '@opendata-ai/openchart-core';
+import { estimateTextWidth, wrapText } from '@opendata-ai/openchart-core';
 import { clampStaggerDelay } from '@opendata-ai/openchart-engine';
 import { stampAnimationVars } from './animation-vars';
+import { renderAttributionBrand } from './renderers/brand';
 import { renderChromeElement } from './renderers/chrome';
 import { applyTextStyle } from './renderers/svg-dom';
+import { stampThemeProperties } from './theme-tokens';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
-const XLINK_NS = 'http://www.w3.org/1999/xlink';
-const BRAND_URL = 'https://tryopendata.ai';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -113,60 +108,6 @@ function renderChrome(parent: SVGElement, layout: SankeyLayout): void {
 // ---------------------------------------------------------------------------
 // Brand rendering
 // ---------------------------------------------------------------------------
-
-function renderBrand(parent: SVGElement, layout: SankeyLayout): void {
-  if (layout.dimensions.width < BRAND_MIN_WIDTH) return;
-
-  const { width } = layout.dimensions;
-  const padding = layout.theme.spacing.padding;
-  const rightEdge = width - padding;
-  const fill = layout.theme.colors.axis;
-
-  const bottomOffset = layout.area.y + layout.area.height;
-  const { chrome } = layout;
-  const firstBottom = chrome.source ?? chrome.byline ?? chrome.footer;
-  const chromeY = firstBottom
-    ? bottomOffset + firstBottom.y
-    : bottomOffset + layout.theme.spacing.chartToFooter;
-
-  const a = createSVGElement('a');
-  a.setAttribute('href', BRAND_URL);
-  a.setAttributeNS(XLINK_NS, 'xlink:href', BRAND_URL);
-  a.setAttribute('target', '_blank');
-  a.setAttribute('rel', 'noopener');
-  a.setAttribute('class', 'oc-chrome-ref');
-
-  const BRAND_LARGE = 16;
-  const text = createSVGElement('text');
-  setAttrs(text, {
-    x: rightEdge,
-    y: chromeY + BRAND_LARGE,
-    'dominant-baseline': 'alphabetic',
-    'text-anchor': 'end',
-    'font-family': layout.theme.fonts.family,
-    'font-size': BRAND_FONT_SIZE,
-    'fill-opacity': 0.55,
-  });
-  (text as SVGElement & ElementCSSInlineStyle).style.setProperty('fill', fill);
-
-  const trySpan = createSVGElement('tspan');
-  setAttrs(trySpan, { 'font-weight': 500 });
-  trySpan.textContent = 'try';
-
-  const openDataSpan = createSVGElement('tspan');
-  setAttrs(openDataSpan, { 'font-weight': 600, 'font-size': BRAND_LARGE });
-  openDataSpan.textContent = 'OpenData';
-
-  const aiSpan = createSVGElement('tspan');
-  setAttrs(aiSpan, { 'font-weight': 500 });
-  aiSpan.textContent = '.ai';
-
-  text.appendChild(trySpan);
-  text.appendChild(openDataSpan);
-  text.appendChild(aiSpan);
-  a.appendChild(text);
-  parent.appendChild(a);
-}
 
 // ---------------------------------------------------------------------------
 // Legend rendering
@@ -526,6 +467,7 @@ export function renderSankeySVG(
   const animate = !!enterPhase;
   const classes = animate ? 'oc-chart oc-sankey oc-animate' : 'oc-chart oc-sankey';
   svg.setAttribute('class', classes);
+  stampThemeProperties(svg, layout.theme);
 
   // Set animation CSS custom properties when the enter phase is enabled
   if (enterPhase) {
@@ -574,9 +516,12 @@ export function renderSankeySVG(
   renderChrome(svg, layout);
 
   // Brand
-  if (layout.watermark) {
-    renderBrand(svg, layout);
-  }
+  renderAttributionBrand(
+    svg,
+    layout.chrome,
+    layout.chrome.bottomAnchorY ?? layout.area.y + layout.area.height,
+    layout.measureText,
+  );
 
   return svg;
 }

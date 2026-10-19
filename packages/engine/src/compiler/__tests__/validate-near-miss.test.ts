@@ -20,7 +20,7 @@ describe('near-miss validation messages', () => {
   it('rejects data.url with a pointer to inline data', () => {
     const result = validateSpec({ mark: 'bar', data: { url: '/data.json' }, encoding });
     expect(result.valid).toBe(false);
-    const error = result.errors.find((e) => e.path === 'data.url');
+    const error = result.errors.find((e) => e.path === '/data/url');
     expect(error?.message).toContain('does not fetch remote data');
     expect(error?.suggestion).toContain('inline');
   });
@@ -33,7 +33,7 @@ describe('near-miss validation messages', () => {
       encoding,
     });
     expect(result.valid).toBe(false);
-    const error = result.errors.find((e) => e.path === 'transform[0].calculate');
+    const error = result.errors.find((e) => e.path === '/transform/0/calculate');
     expect(error?.message).toContain('structured expression object');
     expect(error?.suggestion).toContain('calculate: { op:');
   });
@@ -42,7 +42,7 @@ describe('near-miss validation messages', () => {
     for (const key of ['hconcat', 'vconcat']) {
       const result = validateSpec({ [key]: [] });
       expect(result.valid).toBe(false);
-      const error = result.errors.find((e) => e.path === key);
+      const error = result.errors.find((e) => e.path === `/${key}`);
       expect(error?.message).toContain(`"${key}" composition is not supported`);
       expect(error?.suggestion).toContain('facet');
     }
@@ -54,7 +54,7 @@ describe('near-miss validation messages', () => {
       spec: { mark: 'bar', encoding },
     });
     expect(result.valid).toBe(false);
-    const error = result.errors.find((e) => e.path === 'facet');
+    const error = result.errors.find((e) => e.path === '/facet');
     expect(error?.message).toContain('"facet" operator is not supported');
     expect(error?.suggestion).toContain('encoding.facet');
   });
@@ -69,7 +69,7 @@ describe('near-miss validation messages', () => {
       },
     });
     expect(result.valid).toBe(false);
-    const error = result.errors.find((e) => e.path === 'encoding.color.scale.scheme');
+    const error = result.errors.find((e) => e.path === '/encoding/color/scale/scheme');
     expect(error?.message).toContain('"viridis" is not a supported scheme name');
     expect(error?.suggestion).toContain('blues');
     expect(error?.suggestion).toContain('scale.range');
@@ -84,7 +84,7 @@ describe('near-miss validation messages', () => {
         color: { field: 'value', type: 'quantitative', scale: { scheme: 'blues' } },
       },
     });
-    expect(result.errors.filter((e) => e.path === 'encoding.color.scale.scheme')).toHaveLength(0);
+    expect(result.errors.filter((e) => e.path === '/encoding/color/scale/scheme')).toHaveLength(0);
   });
 });
 
@@ -104,7 +104,7 @@ describe('scale.scheme on non-chart specs', () => {
         },
       });
       expect(result.valid).toBe(false);
-      const error = result.errors.find((e) => e.path === 'encoding.color.scale.scheme');
+      const error = result.errors.find((e) => e.path === '/encoding/color/scale/scheme');
       expect(error?.code).toBe('INVALID_VALUE');
       expect(error?.message).toContain('has no effect');
       expect(error?.suggestion).toContain('theme.colors.categorical');
@@ -121,7 +121,7 @@ describe('scale.scheme on non-chart specs', () => {
       },
     });
     expect(result.valid).toBe(false);
-    const error = result.errors.find((e) => e.path === 'encoding.value.scale.scheme');
+    const error = result.errors.find((e) => e.path === '/encoding/value/scale/scheme');
     expect(error?.code).toBe('INVALID_VALUE');
     expect(error?.message).toContain('has no effect');
     expect(error?.suggestion).toContain('palette: "green"');
@@ -138,7 +138,7 @@ describe('scale.scheme on non-chart specs', () => {
       },
     });
     expect(result.valid).toBe(false);
-    const error = result.errors.find((e) => e.path === 'encoding.color.scale.scheme');
+    const error = result.errors.find((e) => e.path === '/encoding/color/scale/scheme');
     expect(error?.code).toBe('INVALID_VALUE');
     expect(error?.message).toContain('has no effect');
   });
@@ -156,7 +156,7 @@ describe('scale.scheme on non-chart specs', () => {
         },
       });
       expect(result.valid).toBe(false);
-      const error = result.errors.find((e) => e.path === 'encoding.nodeColor.scale.scheme');
+      const error = result.errors.find((e) => e.path === '/encoding/nodeColor/scale/scheme');
       expect(error?.code).toBe('INVALID_VALUE');
       expect(error?.message).toContain('has no effect');
       expect(error?.suggestion).toContain('scale.range');
@@ -195,7 +195,7 @@ describe('scale.scheme on map specs', () => {
       },
     });
     expect(result.valid).toBe(false);
-    const error = result.errors.find((e) => e.path === 'encoding.color.scale.scheme');
+    const error = result.errors.find((e) => e.path === '/encoding/color/scale/scheme');
     expect(error?.code).toBe('INVALID_VALUE');
     expect(error?.message).toContain('"viridis" is not a supported map palette');
     expect(error?.suggestion).toContain('green');
@@ -211,7 +211,7 @@ describe('scale.scheme on map specs', () => {
         color: { field: 'value', type: 'quantitative', scale: { scheme: 'green' } },
       },
     });
-    expect(result.errors.filter((e) => e.path === 'encoding.color.scale.scheme')).toHaveLength(0);
+    expect(result.errors.filter((e) => e.path === '/encoding/color/scale/scheme')).toHaveLength(0);
   });
 
   it('rejects any scheme on a categorical map color channel as dead config', () => {
@@ -225,7 +225,7 @@ describe('scale.scheme on map specs', () => {
       },
     });
     expect(result.valid).toBe(false);
-    const error = result.errors.find((e) => e.path === 'encoding.color.scale.scheme');
+    const error = result.errors.find((e) => e.path === '/encoding/color/scale/scheme');
     expect(error?.code).toBe('INVALID_VALUE');
     expect(error?.message).toContain('has no effect');
     expect(error?.suggestion).toContain('scale.range');
@@ -244,7 +244,7 @@ describe('scale.scheme on map specs', () => {
         color: { field: 'score', type: 'quantitative', scale: { scheme: 'magma' } },
       },
     });
-    const error = result.errors.find((e) => e.path === 'points.color.scale.scheme');
+    const error = result.errors.find((e) => e.path === '/points/color/scale/scheme');
     expect(error?.code).toBe('INVALID_VALUE');
     expect(error?.message).toContain('"magma" is not a supported map palette');
   });

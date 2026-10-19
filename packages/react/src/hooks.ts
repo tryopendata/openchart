@@ -5,13 +5,7 @@
  * useDarkMode: resolves the DarkMode preference to a boolean.
  */
 
-import type {
-  ChartLayout,
-  ChartSpec,
-  DarkMode,
-  GraphSpec,
-  LayerSpec,
-} from '@opendata-ai/openchart-core';
+import type { ChartLayout, ChartSpec, DarkMode, LayerSpec } from '@opendata-ai/openchart-core';
 import { type ChartInstance, createChart, type MountOptions } from '@opendata-ai/openchart-vanilla';
 import { useEffect, useRef, useState } from 'react';
 
@@ -24,10 +18,8 @@ export interface UseChartOptions {
   theme?: MountOptions['theme'];
   /** Dark mode setting. */
   darkMode?: MountOptions['darkMode'];
-  /** Data point click handler. */
-  onDataPointClick?: MountOptions['onDataPointClick'];
-  /** Enable responsive resizing. Defaults to true. */
-  responsive?: boolean;
+  /** Observe container resizes. Defaults to true. */
+  autoResize?: boolean;
   /** Rendering backend for point marks; see the vanilla `MountOptions.renderer`. */
   renderer?: MountOptions['renderer'];
 }
@@ -51,10 +43,7 @@ export interface UseChartReturn {
  * @param options - Mount options.
  * @returns { ref, chart, layout }
  */
-export function useChart(
-  spec: ChartSpec | LayerSpec | GraphSpec,
-  options?: UseChartOptions,
-): UseChartReturn {
+export function useChart(spec: ChartSpec | LayerSpec, options?: UseChartOptions): UseChartReturn {
   const ref = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<ChartInstance | null>(null);
   const [layout, setLayout] = useState<ChartLayout | null>(null);
@@ -69,8 +58,7 @@ export function useChart(
     const mountOpts: MountOptions = {
       theme: options?.theme,
       darkMode: options?.darkMode,
-      onDataPointClick: options?.onDataPointClick,
-      responsive: options?.responsive,
+      autoResize: options?.autoResize,
       renderer: options?.renderer,
     };
 
@@ -85,13 +73,7 @@ export function useChart(
       setLayout(null);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    options?.theme,
-    options?.darkMode,
-    options?.onDataPointClick,
-    options?.responsive,
-    options?.renderer,
-  ]);
+  }, [options?.theme, options?.darkMode, options?.autoResize, options?.renderer]);
 
   // Update on spec change
   useEffect(() => {

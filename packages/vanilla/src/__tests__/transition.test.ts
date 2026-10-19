@@ -1467,8 +1467,8 @@ describe('axis tick transitions', () => {
     // Q1 should exist in both
     const prevQ1 = prevXTicks.find((t) => t.label === 'Q1');
     const nextQ1 = nextXTicks.find((t) => t.label === 'Q1');
-    expect(prevQ1).toBeDefined();
-    expect(nextQ1).toBeDefined();
+    // Adding Q4 narrows the bands, so the surviving Q1 tick moves.
+    expect(nextQ1!.position).not.toBeCloseTo(prevQ1!.position, 1);
 
     // Now render and transition
     const container = createContainer();
@@ -1487,6 +1487,11 @@ describe('axis tick transitions', () => {
     // After transition, verify tick labels are at final positions
     const tickLabels = svg.querySelectorAll('.oc-axis-x .oc-axis-tick[data-tick-key]');
     expect(tickLabels.length).toBe(nextXTicks.length);
+    const q1Label = [...tickLabels].find((el) => el.textContent === 'Q1')!;
+    expect(Number(q1Label.getAttribute('x'))).toBeCloseTo(
+      nextQ1!.labelPosition ?? nextQ1!.position,
+      3,
+    );
 
     // No ghost elements remain
     expect(svg.querySelectorAll('.oc-ghost').length).toBe(0);

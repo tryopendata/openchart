@@ -534,8 +534,9 @@ describe('stack modes', () => {
 
     expect(marks.length).toBe(4);
     // All stacked marks should have stackGroup set
+    // Segments stack per category: the group is the x value.
     for (const mark of marks) {
-      expect(mark.stackGroup).toBeDefined();
+      expect(mark.stackGroup).toBe(mark.data.cat);
     }
   });
 
@@ -564,8 +565,9 @@ describe('stack modes', () => {
     const marks = computeColumnMarks(spec, scales, chartArea, fullStrategy);
 
     expect(marks.length).toBe(4);
+    // Segments stack per category: the group is the x value.
     for (const mark of marks) {
-      expect(mark.stackGroup).toBeDefined();
+      expect(mark.stackGroup).toBe(mark.data.cat);
     }
   });
 });

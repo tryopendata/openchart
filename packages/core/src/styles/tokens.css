@@ -4,11 +4,8 @@
   /* ---------------------------------------------------------------------------
    * Custom properties (light mode defaults)
    *
-   * These are FALLBACK defaults. At runtime, the JS theme engine stamps the
-   * resolved theme as inline --oc-* custom properties on each .oc-root
-   * container (see packages/vanilla/src/theme-tokens.ts). These CSS values
-   * serve as fallbacks for contexts where JS hasn't mounted yet (SSR, static
-   * HTML examples).
+   * Defaults remain in CSS so host styles can override them. The JS theme
+   * engine stamps only authored theme overrides (theme-tokens.ts).
    * --------------------------------------------------------------------------- */
 
   .oc-root,
@@ -95,14 +92,25 @@
     --oc-title-tracking: -0.022em;
     --oc-subtitle-size: 14px;
     --oc-subtitle-weight: 400;
-    --oc-source-size: 11px;
+    --oc-source-size: 12px;
     --oc-source-weight: 400;
     --oc-body-size: 13px;
+    /* Emphasis for existing zero rules; does not change the domain */
+    --oc-gridline-zero: rgba(0, 0, 0, 0.22);
+    --oc-endpoint-label-size: 13px;
+    --oc-endpoint-value-size: 12px;
+    --oc-endpoint-entry-gap: 6px;
+    --oc-endpoint-value-gap: 4px;
+    --oc-endpoint-column-gap: 18px;
+    --oc-map-no-data-fill: #f0f0f0; /* Engine omission derives neutral[100] from the active theme */
+    --oc-map-no-data-hatch: #c9c9c9; /* Engine omission derives neutral[300] from the active theme */
+    --oc-map-interior-border: rgba(0, 0, 0, 0.14);
+    --oc-map-outline-border: rgba(0, 0, 0, 0.4);
     --oc-annotation-label: #333333;
     --oc-annotation-muted: #6b7280;
     --oc-annotation-leader: #8f8f8f;
-    --oc-annotation-rule: #666666;
-    --oc-annotation-range-fill: #000000;
+    --oc-annotation-rule: #888888;
+    --oc-annotation-range-fill: #f0c040;
     --oc-annotation-marker-fill: #ffffff;
     --oc-annotation-plate: #ffffff;
     --oc-eyebrow-size: 11px;
@@ -146,7 +154,7 @@
     --oc-gray-800: #474748;
 
     /* Lines */
-    --oc-gridline: rgba(0, 0, 0, 0.08);
+    --oc-gridline: rgba(0, 0, 0, 0.05);
     --oc-axis: rgba(0, 0, 0, 0.14); /* hairline = theme.colors.hairline, not the tick-label ink */
     --oc-border: rgba(0, 0, 0, 0.08);
     --oc-border-radius: 8px; /* containers and tooltips; marks use --oc-radius-sm */

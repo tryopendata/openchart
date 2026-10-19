@@ -1,3 +1,24 @@
+import type { GeoLabelAffine, GeoLabelOverlay } from '@opendata-ai/openchart-core';
+import { type ReaderHostEvent, registerReaderHost } from './interactions/reader-arbitration';
+import {
+  createMapLabelInventory,
+  type LabelInventoryOptions,
+  mergeGeoLabelInventory,
+} from './map-label-inventory';
+import {
+  describeGeoLabelInventory,
+  mapLabelAffine,
+  projectAcceptedGeoOverlay,
+  renderGeoLabelOverlay,
+  resolveMapLabelOverlay,
+} from './map-labels';
+import { cameraForGeoView, createMapViewCameras } from './map-view-camera';
+import {
+  applyGeoDetailVisibility,
+  findGeoViewScene,
+  geoViewMapLayout,
+  renderGeoViewNotes,
+} from './map-view-renderer';
 /**
  * Map mount API: the main entry point for vanilla JS map usage.
  *
@@ -49,6 +70,7 @@ import type { Camera } from './story/camera-math';
 import { interpolateCamera } from './story/camera-math';
 import type { Tween } from './story/tween';
 import { createTween, easingFns, storyMotion } from './story/tween';
+import { prepareSettledExportTheme } from './theme-style-block';
 import { createTooltipManager, type TooltipManager } from './tooltip';
 
 /**
@@ -108,15 +130,23 @@ export type GeoMapMarkEvent = {
   id: string | number;
   name?: string;
   data: Record<string, unknown> | null;
+  viewId?: string;
+  layerId?: string;
 };
 
+export interface GeoMapCameraChangeMeta {
+  viewId: string;
+}
+
 export interface GeoMapMountOptions {
+  /** Optional host for the visible Map places and notes disclosure. */
+  labelInventory?: LabelInventoryOptions;
   /** Theme overrides. */
   theme?: ThemeConfig;
   /** Dark mode setting: "auto" (system pref), "force", or "off". */
   darkMode?: DarkMode;
-  /** Enable responsive resizing. Defaults to true. */
-  responsive?: boolean;
+  /** Observe container resizing. Defaults to true. */
+  autoResize?: boolean;
   /** Show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
   /** Show tooltips on hover. Defaults to true. */
@@ -131,10 +161,12 @@ export interface GeoMapMountOptions {
    * animated move. `cx`/`cy` are the view center in map-frame units, `k` the
    * zoom factor (1 = full map).
    */
-  onCameraChange?: (camera: Camera) => void;
+  onCameraChange?: (camera: Camera, meta?: GeoMapCameraChangeMeta) => void;
 }
 
 export interface GeoMapInstance {
+  /** Replace the disclosure host without resetting the camera or map. */
+  setLabelInventory(options?: LabelInventoryOptions): void;
   /** Re-compile and re-render with a new spec. */
   update(spec: GeoMapSpec): void;
   /** Re-compile at current container dimensions. */
@@ -160,9 +192,11 @@ export interface GeoMapInstance {
   /** Reset the camera to the full map view. */
   resetView(opts?: GeoMapCameraOptions): void;
   /** Get a snapshot of the current camera state. */
-  getCamera(): Camera;
+  getCamera(viewId?: string): Camera;
+  /** Defensive snapshots of every current view camera, including root. */
+  getCameras(): Readonly<Record<string, Camera>>;
   /** Set the camera to an exact state (no animation). */
-  setCamera(camera: Camera): void;
+  setCamera(camera: Camera, options?: { viewId?: string }): void;
 }
 
 /** Tween length for button, key, and double-click zoom steps. */
@@ -196,6 +230,41 @@ export function createGeoMap(
   let currentSpec = spec;
   let currentLayout: GeoMapLayout;
   let destroyed = false;
+  let readerOwned = false;
+  const readerListeners = new Set<(event: ReaderHostEvent) => void>();
+  const emitReader = (kind: ReaderHostEvent['kind']) => {
+    for (const listener of readerListeners) listener({ kind });
+  };
+  let unregisterReader: (() => void) | undefined;
+  const labelInventory = createMapLabelInventory(container, options?.labelInventory);
+  let acceptedOverlay: GeoLabelOverlay | undefined;
+  let acceptedAffine: GeoLabelAffine = { k: 1, tx: 0, ty: 0 };
+  let labelSettleFrame: number | null = null;
+  let labelGesture = false;
+  function cancelLabelSettle() {
+    if (labelSettleFrame !== null) cancelAnimationFrame(labelSettleFrame);
+    labelSettleFrame = null;
+  }
+  function settleLabels() {
+    cancelLabelSettle();
+    if (destroyed || !svgElement) return;
+    if (currentLayout.views) {
+      for (const view of currentLayout.views) settleViewLabels(view.viewId);
+      refreshViewInventory();
+      return;
+    }
+    acceptedOverlay = resolveMapLabelOverlay(currentLayout, currentCamera);
+    acceptedAffine = mapLabelAffine(currentCamera, currentLayout);
+    if (acceptedOverlay) renderGeoLabelOverlay(svgElement, currentLayout, acceptedOverlay);
+    labelInventory.update(svgElement, acceptedOverlay?.inventory ?? [], currentLayout.theme);
+  }
+  function scheduleLabelSettle() {
+    if (!currentLayout.labels || labelGesture || cameraTween || labelSettleFrame !== null) return;
+    labelSettleFrame = requestAnimationFrame(() => {
+      labelSettleFrame = null;
+      settleLabels();
+    });
+  }
 
   // DOM
   let svgElement: SVGSVGElement | null = null;
@@ -214,9 +283,117 @@ export function createGeoMap(
   let currentCamera: Camera = { cx: 0, cy: 0, k: 1 };
   let currentFocusIds: Array<string | number> | null = null;
   let cameraTween: Tween<Camera> | null = null;
+  const viewOverlays = new Map<string, { overlay: GeoLabelOverlay; affine: GeoLabelAffine }>();
+  const viewCameras = createMapViewCameras(
+    (viewId, cam) => {
+      if (!svgElement) return;
+      const view = currentLayout.views?.find((view) => view.viewId === viewId);
+      if (!view) return;
+      const scene = findGeoViewScene(svgElement, viewId);
+      if (!scene) return;
+      const frame = geoViewMapLayout(currentLayout, view);
+      applyMapCamera(scene, cam, frame);
+      applyGeoDetailVisibility(scene, cam.k);
+      const accepted = viewOverlays.get(viewId);
+      if (accepted)
+        renderGeoLabelOverlay(
+          scene,
+          frame,
+          projectAcceptedGeoOverlay(
+            accepted.overlay,
+            accepted.affine,
+            mapLabelAffine(cam, frame),
+            frame,
+          ),
+        );
+      insetZoomControllers.get(viewId)?.onCamera();
+      emitReader('camera');
+      options?.onCameraChange?.({ ...cam }, { viewId });
+    },
+    (viewId) => {
+      settleViewLabels(viewId);
+      refreshViewInventory();
+    },
+  );
+  function settleViewLabels(viewId: string) {
+    if (!svgElement) return;
+    const view = currentLayout.views?.find((view) => view.viewId === viewId);
+    if (!view) return;
+    const frame = geoViewMapLayout(currentLayout, view),
+      cam = viewId === 'root' ? currentCamera : viewCameras.get(viewId);
+    const overlay = resolveMapLabelOverlay(frame, cam);
+    if (!overlay) {
+      viewOverlays.delete(viewId);
+      return;
+    }
+    viewOverlays.set(viewId, { overlay, affine: mapLabelAffine(cam, frame) });
+    const scene = findGeoViewScene(svgElement, viewId);
+    if (scene) renderGeoLabelOverlay(scene, frame, { ...overlay, notes: [] });
+  }
+  function refreshViewInventory() {
+    if (svgElement && currentLayout.views)
+      renderGeoViewNotes(
+        svgElement,
+        currentLayout,
+        new Map([...viewOverlays].map(([id, value]) => [id, value.overlay])),
+      );
+    if (svgElement)
+      labelInventory.update(
+        svgElement,
+        mergeGeoLabelInventory(
+          [...viewOverlays.values()].flatMap((value) => value.overlay.inventory),
+        ),
+        currentLayout.theme,
+      );
+  }
 
   // Reader zoom/pan (geo.zoom). Created lazily on the first render with zoom on.
   let zoomController: MapZoomController | null = null;
+  const insetZoomControllers = new Map<string, MapZoomController>();
+  function syncInsetZoomControllers() {
+    const views = currentLayout.views?.filter((view) => view.viewId !== 'root') ?? [];
+    const ids = new Set(views.map((view) => view.viewId));
+    for (const [id, controller] of insetZoomControllers)
+      if (!ids.has(id)) {
+        controller.destroy();
+        insetZoomControllers.delete(id);
+      }
+    for (const view of views) {
+      let controller = insetZoomControllers.get(view.viewId);
+      if (!controller) {
+        const id = view.viewId;
+        controller = createMapZoomController({
+          container,
+          viewId: id,
+          viewLabel: view.label?.lines.map((line) => line.text).join(' ') ?? id,
+          getSvg: () => svgElement,
+          getScene: () => (svgElement ? findGeoViewScene(svgElement, id) : null),
+          getFocusTarget: () => (svgElement ? findGeoViewScene(svgElement, id) : null),
+          getLayout: () => geoViewMapLayout(currentLayout, viewCameras.view(id)),
+          getConfig: () => resolveMapZoom(currentSpec.geo?.zoom),
+          getCamera: () => viewCameras.get(id),
+          setCamera: (camera) => viewCameras.set(id, camera, false),
+          animateCamera: (camera) => driveInset(id, camera, USER_ZOOM_MS),
+          reset: () => {
+            const view = viewCameras.view(id);
+            driveInset(id, cameraForGeoView({ ...view, focus: null }), USER_ZOOM_MS);
+          },
+          hideTooltip: () => tooltipManager?.hide(),
+          onGestureStart() {
+            labelGesture = true;
+            emitReader('gesture-start');
+          },
+          onGestureEnd() {
+            labelGesture = false;
+            viewCameras.settle(id);
+            emitReader('gesture-end');
+          },
+        });
+        insetZoomControllers.set(id, controller);
+      }
+      controller.onRender(false);
+    }
+  }
 
   // Track whether this is the first render (for snap-to-focus).
   let isFirstRender = true;
@@ -305,7 +482,12 @@ export function createGeoMap(
       if (!featureId) continue;
 
       const content = layout.tooltipDescriptors.get(featureId);
-      const feature = featuresById.get(featureId);
+      const viewId = el.closest('[data-geo-view-id]')?.getAttribute('data-geo-view-id');
+      const scoped = currentLayout.views?.find((view) => view.viewId === viewId);
+      const feature = scoped
+        ? scoped.features.find((feature) => String(feature.id) === featureId)
+        : featuresById.get(featureId);
+      const scope = currentLayout.views && viewId ? { viewId } : {};
 
       const handleMouseEnter = (e: Event) => {
         activeLeave?.();
@@ -324,6 +506,7 @@ export function createGeoMap(
         if (feature) {
           options?.onMarkHover?.({
             kind: 'feature',
+            ...scope,
             id: feature.id,
             name: feature.name,
             data: feature.data,
@@ -355,6 +538,7 @@ export function createGeoMap(
         if (feature) {
           options?.onMarkClick?.({
             kind: 'feature',
+            ...scope,
             id: feature.id,
             name: feature.name,
             data: feature.data,
@@ -364,7 +548,7 @@ export function createGeoMap(
 
       navigation.push({
         element: el,
-        key: `feature:${featureId}`,
+        key: viewId ? `view:${viewId}:feature:${featureId}` : `feature:${featureId}`,
         enter: handleMouseEnter,
         leave: handleMouseLeave,
         activate: handleClick,
@@ -411,7 +595,12 @@ export function createGeoMap(
       if (!pointKey) continue;
 
       const content = layout.tooltipDescriptors.get(`point:${pointKey}`);
-      const pointMark = pointMarksByKey.get(pointKey);
+      const viewId = el.closest('[data-geo-view-id]')?.getAttribute('data-geo-view-id');
+      const scoped = currentLayout.views?.find((view) => view.viewId === viewId);
+      const pointMark = scoped
+        ? scoped.pointMarks.find((point) => point.key === pointKey)
+        : pointMarksByKey.get(pointKey);
+      const scope = currentLayout.views && viewId ? { viewId } : {};
 
       const handlePointMouseEnter = (e: Event) => {
         activeLeave?.();
@@ -428,6 +617,7 @@ export function createGeoMap(
         if (pointMark) {
           options?.onMarkHover?.({
             kind: 'point',
+            ...scope,
             id: pointKey,
             data: pointMark.data,
           });
@@ -457,6 +647,7 @@ export function createGeoMap(
         if (pointMark) {
           options?.onMarkClick?.({
             kind: 'point',
+            ...scope,
             id: pointKey,
             data: pointMark.data,
           });
@@ -465,7 +656,7 @@ export function createGeoMap(
 
       navigation.push({
         element: el,
-        key: `point:${pointKey}`,
+        key: viewId ? `view:${viewId}:point:${pointKey}` : `point:${pointKey}`,
         enter: handlePointMouseEnter,
         leave: handlePointMouseLeave,
         activate: handlePointClick,
@@ -516,9 +707,47 @@ export function createGeoMap(
   /** The one place the live camera changes after mount. */
   function commitCamera(cam: Camera): void {
     currentCamera = cam;
+    if (currentLayout.views && viewCameras.has('root')) viewCameras.seed('root', cam);
     if (svgElement) applyMapCamera(svgElement, cam, currentLayout);
+    if (svgElement && currentLayout.views) {
+      const root = currentLayout.views.find((view) => view.viewId === 'root');
+      if (root) {
+        const scene = findGeoViewScene(svgElement, 'root');
+        if (scene) {
+          applyGeoDetailVisibility(scene, cam.k);
+          const accepted = viewOverlays.get('root'),
+            frame = geoViewMapLayout(currentLayout, root);
+          if (accepted)
+            renderGeoLabelOverlay(
+              scene,
+              frame,
+              projectAcceptedGeoOverlay(
+                accepted.overlay,
+                accepted.affine,
+                mapLabelAffine(cam, frame),
+                frame,
+              ),
+            );
+        }
+      }
+    }
+    if (svgElement && !currentLayout.views && acceptedOverlay && currentLayout.labels) {
+      renderGeoLabelOverlay(
+        svgElement,
+        currentLayout,
+        projectAcceptedGeoOverlay(
+          acceptedOverlay,
+          acceptedAffine,
+          mapLabelAffine(cam, currentLayout),
+          currentLayout,
+        ),
+      );
+    }
+    scheduleLabelSettle();
     zoomController?.onCamera();
-    options?.onCameraChange?.({ ...cam });
+    emitReader('camera');
+    if (currentLayout.views) options?.onCameraChange?.({ ...cam }, { viewId: 'root' });
+    else options?.onCameraChange?.({ ...cam });
   }
 
   function cancelCameraTween(): void {
@@ -537,6 +766,10 @@ export function createGeoMap(
       ease: easingFns.easeInOutCubic,
       onFrame(cam) {
         commitCamera(cam);
+      },
+      onComplete() {
+        cameraTween = null;
+        settleLabels();
       },
     });
     cameraTween.to(target);
@@ -585,7 +818,11 @@ export function createGeoMap(
       zoomController = createMapZoomController({
         container,
         getSvg: () => svgElement,
-        getLayout: () => currentLayout,
+        getScene: () => (svgElement ? findGeoViewScene(svgElement, 'root') : null),
+        getLayout: () => {
+          const root = currentLayout.views?.find((view) => view.viewId === 'root');
+          return root ? geoViewMapLayout(currentLayout, root) : currentLayout;
+        },
         getConfig: () => resolveMapZoom(currentSpec.geo?.zoom),
         getCamera: () => ({ ...currentCamera }),
         setCamera(cam) {
@@ -601,6 +838,16 @@ export function createGeoMap(
         },
         reset: () => resetCamera(USER_ZOOM_MS),
         hideTooltip: () => tooltipManager?.hide(),
+        onGestureStart() {
+          labelGesture = true;
+          emitReader('gesture-start');
+          cancelLabelSettle();
+        },
+        onGestureEnd() {
+          labelGesture = false;
+          emitReader('gesture-end');
+          scheduleLabelSettle();
+        },
       });
     }
     zoomController.onRender(restoreFocus);
@@ -627,7 +874,9 @@ export function createGeoMap(
 
   function applyFocusDim(ids: Array<string | number> | null, target = svgElement): void {
     if (!target) return;
-    const features = target.querySelectorAll('.oc-map-feature');
+    const features = (findGeoViewScene(target, 'root') ?? target).querySelectorAll(
+      '.oc-map-feature',
+    );
     if (!ids || ids.length === 0) {
       for (const el of features) {
         (el as SVGElement & ElementCSSInlineStyle).style.removeProperty('opacity');
@@ -664,6 +913,8 @@ export function createGeoMap(
     // Render new SVG before removing old to avoid a paint gap
     const oldSvg = svgElement;
     const oldSvgHadFocus = !!oldSvg && document.activeElement === oldSvg;
+    viewCameras.update(currentLayout.views ?? []);
+    for (const id of viewOverlays.keys()) if (!viewCameras.has(id)) viewOverlays.delete(id);
     const newSvg = renderMapSVG(currentLayout, { animate });
 
     if (oldSvg) {
@@ -676,9 +927,14 @@ export function createGeoMap(
       container.appendChild(newSvg);
     }
     svgElement = newSvg;
+    const labelDesc = newSvg.querySelector('desc[data-geo-label-inventory]');
+    if (labelDesc) {
+      newSvg.removeAttribute('aria-describedby');
+      labelDesc.remove();
+    }
 
     // Wire interactions
-    cleanupTooltipEvents = wireTooltipAndInteraction(newSvg, currentLayout);
+    cleanupTooltipEvents = readerOwned ? null : wireTooltipAndInteraction(newSvg, currentLayout);
 
     // Setup tooltips if enabled
     if (options?.tooltip !== false) {
@@ -731,9 +987,23 @@ export function createGeoMap(
       }
     }
     isFirstRender = false;
+    if (currentLayout.views) {
+      viewCameras.seed('root', currentCamera);
+      for (const view of currentLayout.views) {
+        const scene = findGeoViewScene(newSvg, view.viewId);
+        if (scene) {
+          const camera = view.viewId === 'root' ? currentCamera : viewCameras.get(view.viewId);
+          applyMapCamera(scene, camera, geoViewMapLayout(currentLayout, view));
+          applyGeoDetailVisibility(scene, camera.k);
+        }
+      }
+    }
 
     syncZoomController(oldSvgHadFocus);
+    syncInsetZoomControllers();
     if (svgElement) restoreMarkFocus(svgElement, focusedMark);
+    settleLabels();
+    emitReader('layout');
   }
 
   function update(newSpec: GeoMapSpec): void {
@@ -825,6 +1095,13 @@ export function createGeoMap(
     }
     applyFocusDim(currentFocusIds);
     zoomController?.onCamera();
+    if (currentLayout.views) {
+      viewCameras.seed('root', currentCamera);
+      const root = svgElement && findGeoViewScene(svgElement, 'root');
+      if (root) applyGeoDetailVisibility(root, currentCamera.k);
+    }
+    settleLabels();
+    emitReader('camera');
   }
 
   // ---------------------------------------------------------------------------
@@ -839,15 +1116,48 @@ export function createGeoMap(
 
     // Export settled geometry, independent of transient hover and animation.
     const terminalSvg = renderMapSVG(currentLayout, { animate: false });
-    applyMapCamera(terminalSvg, currentCamera, currentLayout);
-    const clip = svgElement.querySelector('.oc-map-group')?.getAttribute('clip-path');
-    if (clip) {
-      const clipId = clip.slice(5, -1);
-      ensureMapClip(terminalSvg, currentLayout, clipId);
-      terminalSvg.querySelector('.oc-map-group')?.setAttribute('clip-path', clip);
+    if (currentLayout.views) {
+      const overlays = new Map<string, GeoLabelOverlay>();
+      const inventory: NonNullable<GeoMapLayout['labels']>['initialOverlay']['inventory'] = [];
+      for (const view of currentLayout.views) {
+        const scene = findGeoViewScene(terminalSvg, view.viewId);
+        if (!scene) continue;
+        const frame = geoViewMapLayout(currentLayout, view);
+        const camera = view.viewId === 'root' ? currentCamera : viewCameras.get(view.viewId);
+        applyMapCamera(scene, camera, frame);
+        applyGeoDetailVisibility(scene, camera.k);
+        const overlay = resolveMapLabelOverlay(frame, camera);
+        if (overlay) {
+          renderGeoLabelOverlay(scene, frame, { ...overlay, notes: [] });
+          overlays.set(view.viewId, overlay);
+          inventory.push(...overlay.inventory);
+        }
+      }
+      renderGeoViewNotes(terminalSvg, currentLayout, overlays);
+      describeGeoLabelInventory(terminalSvg, {
+        labels: [],
+        leaders: [],
+        markers: [],
+        notes: [],
+        inventory: mergeGeoLabelInventory(inventory),
+      });
+    } else {
+      applyMapCamera(terminalSvg, currentCamera, currentLayout);
+      const exportOverlay = resolveMapLabelOverlay(currentLayout, currentCamera);
+      if (exportOverlay) {
+        renderGeoLabelOverlay(terminalSvg, currentLayout, exportOverlay);
+        describeGeoLabelInventory(terminalSvg, exportOverlay);
+      }
+      const clip = svgElement.querySelector('.oc-map-group')?.getAttribute('clip-path');
+      if (clip) {
+        const clipId = clip.slice(5, -1);
+        ensureMapClip(terminalSvg, currentLayout, clipId);
+        terminalSvg.querySelector('.oc-map-group')?.setAttribute('clip-path', clip);
+      }
     }
     applyFocusDim(currentFocusIds, terminalSvg);
     const resolvedOptions = { theme: currentLayout.theme, ...options_ };
+    prepareSettledExportTheme(svgElement, terminalSvg, resolvedOptions.theme, !!options_?.theme);
 
     switch (format) {
       case 'svg':
@@ -870,6 +1180,14 @@ export function createGeoMap(
   function destroy(): void {
     if (destroyed) return;
     destroyed = true;
+    emitReader('destroy');
+    unregisterReader?.();
+    readerListeners.clear();
+    cancelLabelSettle();
+    viewCameras.destroy();
+    for (const controller of insetZoomControllers.values()) controller.destroy();
+    insetZoomControllers.clear();
+    labelInventory.destroy();
 
     // Cancel running animations
     if (animationCleanup) {
@@ -943,22 +1261,68 @@ export function createGeoMap(
   container.dataset.ocFontsState = fontsPending ? 'pending' : 'ready';
 
   // Setup responsive resizing
-  if (options?.responsive !== false) {
+  if (options?.autoResize !== false) {
     disconnectResize = observeResize(container, () => {
       resize();
     });
   }
 
-  return {
+  function scopedView(options?: GeoMapCameraOptions, ids?: Array<string | number>) {
+    const id = options?.viewId ?? 'root';
+    if (id !== 'root' && !viewCameras.has(id))
+      throw new Error(
+        `Unknown map view "${id}". Available views: root, ${
+          currentLayout.views
+            ?.filter((v) => v.viewId !== 'root')
+            .map((v) => v.viewId)
+            .join(', ') ?? ''
+        }.`,
+      );
+    if (currentLayout.views && ids) {
+      const matches = currentLayout.views.filter((view) =>
+        ids.some((id) => view.features.some((feature) => String(feature.id) === String(id))),
+      );
+      if (!options?.viewId && matches.length > 1)
+        throw new Error(
+          `Feature focus is ambiguous across views ${matches.map((view) => view.viewId).join(', ')}. Pass viewId explicitly.`,
+        );
+      const view = currentLayout.views.find((view) => view.viewId === id)!;
+      const missing = ids.filter(
+        (id) => !view.features.some((feature) => String(feature.id) === String(id)),
+      );
+      if (missing.length)
+        throw new Error(
+          `Features ${missing.join(', ')} are absent from map view "${id}". Available matching views: ${matches.map((view) => view.viewId).join(', ') || 'none'}. Pass viewId explicitly.`,
+        );
+    }
+    return id;
+  }
+  function driveInset(viewId: string, camera: Camera, duration: number) {
+    if (prefersReducedMotion() || duration === 0) viewCameras.set(viewId, camera);
+    else viewCameras.animate(viewId, camera, duration);
+  }
+  const instance: GeoMapInstance = {
     update,
     resize,
     export: exportChart,
+    setLabelInventory(next) {
+      if (!destroyed) labelInventory.setOptions(next);
+    },
     destroy,
     get layout(): GeoMapLayout {
       return currentLayout;
     },
     zoomTo(featureId: string | number | Array<string | number>, opts?: GeoMapCameraOptions): void {
       const ids = Array.isArray(featureId) ? featureId : [featureId];
+      const viewId = scopedView(opts, ids);
+      if (viewId !== 'root') {
+        const view = viewCameras.view(viewId),
+          frame = geoViewMapLayout(currentLayout, view);
+        const target = focusTargetForFeatures(frame, ids, opts?.padding ?? 16);
+        if (target)
+          driveInset(viewId, cameraForGeoView(view, target), opts?.duration ?? storyMotion.camera);
+        return;
+      }
       const target = focusTargetForFeatures(currentLayout, ids, opts?.padding ?? 16);
       if (!target) {
         console.warn(`[openchart] zoomTo: no features found for ids: ${ids.join(', ')}`);
@@ -971,6 +1335,23 @@ export function createGeoMap(
       updateA11yLive(ids);
     },
     panTo(featureId: string | number, opts?: GeoMapCameraOptions): void {
+      const viewId = scopedView(opts, [featureId]);
+      if (viewId !== 'root') {
+        const view = viewCameras.view(viewId),
+          frame = geoViewMapLayout(currentLayout, view),
+          target = focusTargetForFeatures(frame, [featureId], opts?.padding ?? 16);
+        if (target)
+          driveInset(
+            viewId,
+            {
+              cx: target.x + target.width / 2,
+              cy: target.y + target.height / 2,
+              k: viewCameras.get(viewId).k,
+            },
+            opts?.duration ?? storyMotion.camera,
+          );
+        return;
+      }
       const target = focusTargetForFeatures(currentLayout, [featureId], opts?.padding ?? 16);
       if (!target) {
         console.warn(`[openchart] panTo: no feature found for id: ${featureId}`);
@@ -988,21 +1369,69 @@ export function createGeoMap(
       target?: { x: number; y: number; width: number; height: number; padding?: number },
       opts?: GeoMapCameraOptions,
     ): void {
+      const viewId = scopedView(opts);
+      if (viewId !== 'root') {
+        const view = viewCameras.view(viewId);
+        driveInset(
+          viewId,
+          cameraForGeoView({ ...view, focus: null }, target),
+          opts?.duration ?? storyMotion.camera,
+        );
+        return;
+      }
       currentFocusIds = null;
       const cam = cameraForTarget(currentLayout, target ?? null);
       driveCamera(cam, opts?.duration ?? storyMotion.camera);
       applyFocusDim(null);
     },
     resetView(opts?: GeoMapCameraOptions): void {
+      const viewId = scopedView(opts);
+      if (viewId !== 'root') {
+        const view = viewCameras.view(viewId);
+        driveInset(
+          viewId,
+          cameraForGeoView({ ...view, focus: null }),
+          opts?.duration ?? storyMotion.camera,
+        );
+        return;
+      }
       resetCamera(opts?.duration ?? storyMotion.camera);
     },
-    getCamera(): Camera {
+    getCamera(viewId = 'root'): Camera {
+      if (viewId !== 'root') return viewCameras.get(viewId);
       return { ...currentCamera };
     },
-    setCamera(camera: Camera): void {
+    getCameras() {
+      return { ...viewCameras.snapshots(), root: { ...currentCamera } };
+    },
+    setCamera(camera: Camera, options?: { viewId?: string }): void {
+      if (options?.viewId && options.viewId !== 'root') {
+        viewCameras.set(options.viewId, camera);
+        return;
+      }
       cancelCameraTween();
       currentFocusIds = null;
       commitCamera(camera);
     },
   };
+  unregisterReader = registerReaderHost(instance, {
+    getSpec: () => currentSpec,
+    isEditing: () => false,
+    subscribe(listener) {
+      readerListeners.add(listener);
+      return () => readerListeners.delete(listener);
+    },
+    suspendNavigation() {
+      readerOwned = true;
+      cleanupTooltipEvents?.();
+      cleanupTooltipEvents = null;
+      tooltipManager?.hide();
+      return () => {
+        readerOwned = false;
+        if (!destroyed && svgElement)
+          cleanupTooltipEvents = wireTooltipAndInteraction(svgElement, currentLayout);
+      };
+    },
+  });
+  return instance;
 }

@@ -58,6 +58,7 @@ export const rangeRenderer: ChartRenderer = (spec, scales, chartArea, strategy, 
     labelFormatter,
     startField,
     endField,
+    theme.fonts.family,
   );
 
   // Attach labels back onto their dots via the index carried through the

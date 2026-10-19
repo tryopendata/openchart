@@ -1,4 +1,4 @@
-import type { ChartLayout, ElementEdit } from '@opendata-ai/openchart-core';
+import type { ChartLayout } from '@opendata-ai/openchart-core';
 import type { HoverEmphasis } from './hover-emphasis';
 
 /**
@@ -11,7 +11,6 @@ export function wireLegendInteraction(
   _layout: ChartLayout,
   toggleSeries: (series: string) => boolean,
   onLegendToggle?: (series: string, visible: boolean) => void,
-  onEdit?: (edit: ElementEdit) => void,
   emphasis?: HoverEmphasis,
 ): () => void {
   // Scoped OUT of the size legend explicitly. Clicking a legend entry toggles a
@@ -34,7 +33,6 @@ export function wireLegendInteraction(
 
       const nowHidden = toggleSeries(label);
       onLegendToggle?.(label, !nowHidden);
-      onEdit?.({ type: 'legend-toggle', series: label, hidden: nowHidden });
     };
 
     const handleClick = () => toggle();

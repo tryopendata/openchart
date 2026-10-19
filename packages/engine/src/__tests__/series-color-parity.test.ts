@@ -3,8 +3,7 @@
  *
  * A line's stroke is darkened on a light canvas (`adaptSeriesStroke`) because
  * the palette hues are tuned as fills. Every place that echoes a series color
- * as chrome — the legend swatch, the endpoint-label column, the end-of-line
- * direct label, the area's top edge — has to show the SAME rendered color, or
+ * as chrome — the legend swatch, the endpoint-label column, the area's top edge — has to show the SAME rendered color, or
  * the reader sees one cyan in the legend and a different one on the line.
  */
 
@@ -139,7 +138,7 @@ describe('series color parity', () => {
   });
 
   it('legend swatches match line strokes in dark mode too', () => {
-    const layout = compileChart(lineSpec({ darkMode: 'force' }), SIZE);
+    const layout = compileChart(lineSpec(), { ...SIZE, darkMode: true });
     const strokes = lineStrokes(layout);
     for (const entry of layout.legend.entries) {
       expect(entry.color).toBe(strokes.get(entry.label));
@@ -194,22 +193,73 @@ describe('series color parity', () => {
     }
   });
 
-  it('end-of-line direct labels carry the rendered stroke color', () => {
+  it.each([
+    false,
+    { show: false },
+  ] as const)('does not recreate legacy line labels when both surfaces are hidden (%j)', (endpointLabels) => {
+    const warnings: string[] = [];
     const layout = compileChart(
+      lineSpec({ legend: { show: false }, endpointLabels, labels: { density: 'all' } }),
+      { ...SIZE, onWarn: (warning) => warnings.push(warning) },
+    );
+    const lines = layout.marks.filter((mark): mark is LineMark => mark.type === 'line');
+    expect(lines).toHaveLength(2);
+    expect(lines.every((line) => line.label === undefined)).toBe(true);
+    expect(layout.endpointLabels?.entries ?? []).toEqual([]);
+    expect(layout.legend.entries).toEqual([]);
+    expect(
+      warnings.filter((warning) => warning.includes('Both legend and endpointLabels')),
+    ).toEqual([
+      '[openchart a11y] Both legend and endpointLabels are disabled on a multi-series chart. Enable either to identify the series.',
+    ]);
+  });
+
+  it('warns once when annotation notes re-run the compile', () => {
+    const warnings: string[] = [];
+    compileChart(
       lineSpec({
         legend: { show: false },
         endpointLabels: false,
-        labels: { density: 'all' },
+        annotations: [
+          { type: 'text', x: multiSeries[0].date, y: multiSeries[0].value, text: 'One' },
+          { type: 'text', x: multiSeries[1].date, y: multiSeries[1].value, text: 'Two' },
+        ],
       } as Partial<ChartSpec>),
-      SIZE,
+      { ...SIZE, onWarn: (warning) => warnings.push(warning) },
     );
-    const lines = layout.marks.filter((m): m is LineMark => m.type === 'line');
-    const labelled = lines.filter((l) => l.label);
+    expect(
+      warnings.filter((warning) => warning.includes('Both legend and endpointLabels')),
+    ).toHaveLength(1);
+  });
 
-    expect(labelled.length).toBeGreaterThan(0);
-    for (const line of labelled) {
-      expect(line.label!.style.fill).toBe(line.stroke);
-    }
+  it.each([
+    { legend: { show: true }, endpointLabels: false },
+    { legend: { show: false }, endpointLabels: true },
+  ])('does not warn while a series identification surface is enabled', (identification) => {
+    const warnings: string[] = [];
+    const layout = compileChart(lineSpec(identification), {
+      ...SIZE,
+      onWarn: (warning) => warnings.push(warning),
+    });
+    expect(layout.legend.entries.length + (layout.endpointLabels?.entries.length ?? 0)).toBe(2);
+    expect(warnings.some((warning) => warning.includes('Both legend and endpointLabels'))).toBe(
+      false,
+    );
+  });
+
+  it('does not demand a series identification surface for a single series', () => {
+    const warnings: string[] = [];
+    compileChart(
+      lineSpec({
+        data: multiSeries.filter((row) => row.series === 'North'),
+        legend: { show: false },
+        endpointLabels: false,
+      }),
+      { ...SIZE, onWarn: (warning) => warnings.push(warning) },
+    );
+    expect(warnings.some((warning) => warning.includes('Both legend and endpointLabels'))).toBe(
+      false,
+    );
   });
 });
 
@@ -222,7 +272,7 @@ describe('donut centerLabel', () => {
         { category: 'B', value: 60 },
       ],
       encoding: {
-        y: { field: 'value', type: 'quantitative' },
+        theta: { field: 'value', type: 'quantitative' },
         color: { field: 'category', type: 'nominal' },
       },
     }) as ChartSpec;

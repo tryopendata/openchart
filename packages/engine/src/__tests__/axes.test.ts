@@ -54,8 +54,11 @@ describe('computeAxes', () => {
     const scales = computeScales(lineSpec, chartArea, lineSpec.data);
     const axes = computeAxes(scales, chartArea, fullStrategy, theme);
 
-    expect(axes.x).toBeDefined();
-    expect(axes.y).toBeDefined();
+    // x runs along the bottom edge of the plot, y up the left edge.
+    expect(axes.x!.start.y).toBe(chartArea.y + chartArea.height);
+    expect(axes.x!.ticks.length).toBeGreaterThan(1);
+    expect(axes.y!.start.x).toBe(chartArea.x);
+    expect(axes.y!.ticks.length).toBeGreaterThan(1);
   });
 
   it('generates ticks for both axes', () => {
@@ -681,7 +684,7 @@ describe('text-aware tick density', () => {
   it('applies the last-anchored stride when even vertical labels cannot fit', () => {
     // 40 short categories on a 360px chart: ~9px steps fit nothing at any
     // angle (a vertical label ribbon needs ~17px), so the safety net keeps
-    // every 2nd label counting back from the LAST category.
+    // every 3rd label counting back from the LAST category.
     const categories = Array.from({ length: 40 }, (_, i) => `C${i + 1}`);
     const barSpec: NormalizedChartSpec = {
       ...lineSpec,
@@ -700,7 +703,7 @@ describe('text-aware tick density', () => {
 
     expect(axes.x!.tickAngle).toBe(-90);
     const kept = axes.x!.ticks.map((t) => t.label);
-    expect(kept.length).toBe(20);
+    expect(kept).toEqual(Array.from({ length: 14 }, (_, i) => `C${1 + i * 3}`));
     // The stride anchors at the final category — the most recent one is
     // always labeled.
     expect(kept[kept.length - 1]).toBe('C40');
@@ -1633,4 +1636,38 @@ describe('compact temporal ticks: fitting rung', () => {
     }
     expect(labels).toEqual(['2025-01', '2025-10']);
   });
+});
+
+it('separates two categorical endpoint labels in a compressed plot without moving ticks', () => {
+  const spec: NormalizedChartSpec = {
+    ...lineSpec,
+    data: [
+      { year: '2019', value: 1 },
+      { year: '2024', value: 2 },
+    ],
+    encoding: {
+      x: { field: 'year', type: 'ordinal' },
+      y: { field: 'value', type: 'quantitative' },
+    },
+  };
+  const area = { x: 150, y: 20, width: 18, height: 180 };
+  const scales = computeScales(spec, area, spec.data);
+  const axes = computeAxes(scales, area, fullStrategy, theme, undefined, {
+    data: spec.data,
+    encoding: spec.encoding as Encoding,
+    markType: 'line',
+    totalWidth: 320,
+  });
+  const [a, b] = axes.x!.ticks;
+  expect(a.position).toBe(150);
+  expect(b.position).toBe(168);
+  const half = (tick: AxisTick) =>
+    estimateTextWidth(
+      tick.label,
+      axes.x!.tickLabelStyle.fontSize,
+      axes.x!.tickLabelStyle.fontWeight,
+    ) / 2;
+  expect((a.labelPosition ?? a.position) + half(a) + 5).toBeLessThanOrEqual(
+    (b.labelPosition ?? b.position) - half(b),
+  );
 });

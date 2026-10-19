@@ -66,6 +66,8 @@ export interface ThemeColors {
   text: string;
   /** Gridline color. */
   gridline: string;
+  /** Zero-rule ink. Defaults to stronger contrast than ordinary gridlines. */
+  gridlineZero?: string;
   /** Axis line and tick color. */
   axis: string;
   /** Annotation fill color. */
@@ -86,6 +88,14 @@ export interface ThemeColors {
   annotationMarkerFill: string;
   /** Annotation plate color. */
   annotationPlate: string;
+  /** Missing-data map surface; omission derives from the current neutral ramp. */
+  mapNoDataFill?: string;
+  /** Missing-data map hatch ink; omission derives from the current neutral ramp. */
+  mapNoDataHatch?: string;
+  /** Interior geographic borders; omission uses the current mode-specific rule. */
+  mapInteriorBorder?: string;
+  /** Geographic outline ink; omission uses the current mode-specific rule. */
+  mapOutlineBorder?: string;
   /** Semantic color for positive/up-trend values (e.g. sparkline trend coloring). */
   positive: string;
   /** Semantic color for negative/down-trend values (e.g. sparkline trend coloring). */
@@ -117,6 +127,10 @@ export interface ThemeFontSizes {
   small: number;
   /** Axis tick label font size in pixels. */
   axisTick: number;
+  /** Series-name text in endpoint columns and interior area labels. */
+  endpointLabel: number;
+  /** Numerical endpoint value text. */
+  endpointValue: number;
   /** KPI metric uppercase label font size in pixels. */
   metricLabel: number;
   /** KPI metric primary value font size in pixels. The delta and secondary
@@ -156,6 +170,12 @@ export interface ThemeFonts {
 export interface ThemeSpacing {
   /** Padding inside the visualization container (all sides). */
   padding: number;
+  /** Minimum separation between resolved endpoint label blocks. */
+  endpointEntryGap: number;
+  /** Gap between the endpoint name and its numerical value. */
+  endpointValueGap: number;
+  /** Gap between plot bounds and the endpoint column. */
+  endpointColumnGap: number;
   /** Gap between chrome elements (title to subtitle, subtitle to chart, etc.). */
   chromeGap: number;
   /** Gap between the last chrome element and the chart area. */
@@ -243,15 +263,14 @@ export interface ThemeBase {
   seriesStrategy: SeriesStrategy;
 }
 
-/** @deprecated Use ThemeConfig for input or ResolvedTheme for resolved output. */
-export type Theme = ThemeBase;
-
 /** Fully resolved runtime theme, including color adaptation and token metadata. */
 export interface ResolvedTheme extends ThemeBase {
   /** Colors plus the neutral ramp derived from `text` and `background`. */
   colors: ResolvedThemeColors;
   /** Whether dark mode adaptations have been applied to this theme. */
   isDark: boolean;
+  /** Authored theme leaves, retained for CSS overrides and mode adaptation. @internal */
+  _authored?: import('./spec').ThemeConfig;
   /**
    * Original light/dark token pairs from the user's ThemeConfig. Used
    * by adaptTheme() to skip algorithmic adaptation for tokens with

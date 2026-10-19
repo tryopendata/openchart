@@ -11,6 +11,7 @@
 // Re-import for use in LegendConfig and overrides (avoids circular by importing from sibling)
 import type { Breakpoint, LegendPosition } from '../responsive/breakpoints';
 import type { FieldMetadata } from './design';
+import type { GeoDetailLayer, GeoInset } from './geo-views';
 import type { SortState } from './layout';
 import type { ColumnConfig } from './table';
 import type { SeriesStrategy, TokenValue } from './theme';
@@ -179,7 +180,7 @@ export interface TrendlineConfig {
  * When it's an object, it can include properties like interpolation,
  * point markers, orientation, and more.
  */
-export interface MarkDef {
+interface MarkOptions {
   /** The mark type. */
   type: MarkType;
   /**
@@ -410,6 +411,64 @@ export interface MarkDef {
   majorityLine?: boolean | { seats?: number; label?: string };
 }
 
+/** Shared visual options accepted by every authored mark. */
+type SharedMarkOptions = Pick<
+  MarkOptions,
+  | 'size'
+  | 'filled'
+  | 'opacity'
+  | 'fillOpacity'
+  | 'fill'
+  | 'stroke'
+  | 'strokeWidth'
+  | 'tooltip'
+  | 'clip'
+  | 'fillPattern'
+>;
+
+/**
+ * Authored mark configuration. Each mark accepts only options it understands.
+ * String marks remain shorthand for `{ type: mark }`.
+ * Extend this union with `type CustomMark = MarkDef & { ... }`, not an interface.
+ */
+export type MarkDef =
+  | (SharedMarkOptions & { type: 'bar' } & Pick<MarkOptions, 'orient' | 'cornerRadius'>)
+  | (SharedMarkOptions & { type: 'line' } & Pick<MarkOptions, 'point' | 'interpolate'>)
+  | (SharedMarkOptions & { type: 'area' } & Pick<MarkOptions, 'point' | 'interpolate'>)
+  | (SharedMarkOptions & { type: 'point' } & Pick<MarkOptions, 'trendline'>)
+  | (SharedMarkOptions & { type: 'circle' })
+  | (SharedMarkOptions & { type: 'arc' } & Pick<
+        MarkOptions,
+        'innerRadius' | 'outerRadius' | 'startAngle' | 'endAngle' | 'centerLabel'
+      >)
+  | (SharedMarkOptions & { type: 'text' } & Pick<
+        MarkOptions,
+        'dx' | 'dy' | 'align' | 'baseline' | 'fontSize'
+      >)
+  | (SharedMarkOptions & { type: 'rule' })
+  | (SharedMarkOptions & { type: 'tick' })
+  | (SharedMarkOptions & { type: 'rect' } & Pick<MarkOptions, 'cornerRadius'>)
+  | (SharedMarkOptions & { type: 'lollipop' })
+  | (SharedMarkOptions & { type: 'beeswarm' })
+  | (SharedMarkOptions & { type: 'range' } & Pick<MarkOptions, 'style' | 'colorByDirection'>)
+  | (SharedMarkOptions & { type: 'waffle' } & Pick<
+        MarkOptions,
+        'units' | 'columns' | 'other' | 'cornerRadius'
+      >)
+  | (SharedMarkOptions & { type: 'calendar' } & Pick<MarkOptions, 'weekStart' | 'cellRadius'>)
+  | (SharedMarkOptions & { type: 'parliament' } & Pick<
+        MarkOptions,
+        'shape' | 'seatRadius' | 'majorityLine'
+      >)
+  | (SharedMarkOptions & { type: 'histogram' } & Pick<
+        MarkOptions,
+        'orient' | 'cornerRadius' | 'binCount' | 'normalize'
+      >)
+  | (SharedMarkOptions & { type: 'density' } & Pick<
+        MarkOptions,
+        'point' | 'interpolate' | 'bandwidth' | 'cumulative' | 'steps'
+      >);
+
 // ---------------------------------------------------------------------------
 // Encoding
 // ---------------------------------------------------------------------------
@@ -461,6 +520,10 @@ export interface AxisConfig {
   ticks?: boolean;
   /** Axis position offset in pixels. */
   offset?: number;
+  /** Angle of the title in degrees. A y-axis title at angle 0 and anchor end becomes a header. */
+  titleAngle?: number;
+  /** Position along the axis for the title; omission keeps the centered title. */
+  titleAnchor?: 'start' | 'middle' | 'end';
   /** Padding between axis title and axis. */
   titlePadding?: number;
   /** Padding between tick labels and axis. */
@@ -812,9 +875,8 @@ export interface Encoding<TData extends DataRow = DataRow> {
   /**
    * Angular position (slice value) for arc marks (pie/donut), the canonical
    * value channel in v8. Waffle and parliament marks accept it too (the same
-   * part-to-whole value channel). `y` is still accepted on these marks as a
-   * deprecated alias for backward compatibility (a compile warning is emitted
-   * and `y` is populated from `theta` internally). Not used by any other mark
+   * part-to-whole value channel). The compiler populates internal `y` from
+   * `theta`; authored `y` aliases are rejected. Not used by any other mark
    * type.
    */
   theta?: EncodingChannel<TData>;
@@ -1040,7 +1102,7 @@ export interface ConnectorConfig {
   type: ConnectorType;
   /** Curve displacement along the chord normal, from -1 to 1. Omitted or zero preserves the automatic curve. Ignored for other connector types. */
   bend?: number;
-  /** Whether to draw an arrowhead at the data-point end. Default: true for curve, false for straight. Drop-line never takes a head. */
+  /** Whether to draw an arrowhead at the data-point end. Default: false for both curve and straight. Drop-line never takes a head. */
   arrow?: boolean;
 }
 
@@ -1048,7 +1110,11 @@ export interface ConnectorConfig {
 export interface AnnotationDot {
   /** Circle radius in pixels. Default 4. */
   radius?: number;
-  /** Fill color. Defaults to theme background for an "open ring" look. */
+  /**
+   * Fill color. Defaults to `theme.colors.annotationMarkerFill`, which resolves to
+   * the theme's opaque surface. A default dot on an endpoint marker takes the
+   * marker's fill and stroke.
+   */
   fill?: string;
   /** Stroke color. Defaults to the connector's resolved stroke, so marker and leader read as one system. */
   stroke?: string;
@@ -1060,8 +1126,6 @@ export interface AnnotationDot {
 interface AnnotationBase {
   /** Stable identifier for selection and edit callbacks. When provided, edit events include this ID for reliable element matching. */
   id?: string;
-  /** Human-readable label for the annotation. */
-  label?: string;
   /** Fill color for the annotation element. */
   fill?: string;
   /** Stroke color for the annotation element. */
@@ -1099,14 +1163,14 @@ export interface TextAnnotation extends AnnotationBase {
    * Used for supporting context (e.g. methodology, source). Newlines in
    * `text` still produce multi-line primary; subtitle is a separate block.
    *
-   * Supports the same inline `**bold**` spans as `text`. When a subtitle is
-   * present and no `fontWeight` is set, the primary `text` resolves to weight
-   * 700 — the lede + context stack.
+   * Supports the same inline `**bold**` spans as `text`. The primary `text`
+   * keeps its own weight (default 400); use `fontWeight` or `**bold**` spans
+   * for a bold lede.
    */
   subtitle?: string;
-  /** Subtitle size in pixels. Default: round(fontSize * 0.85). */
+  /** Subtitle size in pixels. Default: round(fontSize * 12 / 13). */
   subtitleFontSize?: number;
-  /** Optional display wrap width in pixels. Omitted or null keeps unbounded lines. */
+  /** Display wrap width in pixels. Omitted uses min(240, plot width minus twice the padding); null disables wrapping. */
   maxWidth?: number | null;
   /**
    * Open-ring marker drawn on the data point itself (not on the pulled-back
@@ -1133,7 +1197,7 @@ export interface TextAnnotation extends AnnotationBase {
    * Connector from label to anchor point.
    * - `true` (default): straight line, no arrow
    * - `'straight'`: straight line, no arrow
-   * - `'curve'`: curved arrow with arrowhead
+   * - `'curve'`: curved leader; set arrow: true for an arrowhead
    * - `'drop-line'`: vertical line through the data point's x
    * - `{ type, arrow? }`: object form for explicit arrow control
    * - `false`: no connector
@@ -1169,6 +1233,8 @@ export interface TextAnnotation extends AnnotationBase {
  */
 export interface RangeAnnotation extends AnnotationBase {
   type: 'range';
+  /** Text drawn with the range band. */
+  label?: string;
   /** Start of the range on the x-axis. */
   x1?: string | number;
   /** End of the range on the x-axis. */
@@ -1191,7 +1257,7 @@ export interface RangeAnnotation extends AnnotationBase {
   labelOffset?: AnnotationOffset;
   /** Anchor direction for the range label. */
   labelAnchor?: AnnotationAnchor;
-  /** Font size override for the range label (px). Default: 11. */
+  /** Font size override for the range label (px). Default: theme small (12px). */
   fontSize?: number;
   /** Font weight override for the range label. Default: 500. */
   fontWeight?: number;
@@ -1202,14 +1268,10 @@ export interface RangeAnnotation extends AnnotationBase {
  * Useful for baselines (zero), targets, or thresholds.
  */
 export interface RefLineAnnotation extends AnnotationBase {
-  /**
-   * Discriminant. `'refline'` is canonical and the only value in the type.
-   * `'rule'` (it collides with the `rule` mark type) is still accepted at
-   * runtime for backward compatibility -- the spec-sugar pass rewrites it to
-   * `'refline'` with a deprecation warning before validation -- but it is not
-   * part of this type. Use `'refline'`.
-   */
+  /** Reference-line annotation discriminant. Older rule aliases require migrateSpecV8. */
   type: 'refline';
+  /** Text drawn with the reference line. */
+  label?: string;
   /** X-axis value for a vertical reference line. */
   x?: string | number;
   /** Y-axis value for a horizontal reference line. */
@@ -1222,11 +1284,11 @@ export interface RefLineAnnotation extends AnnotationBase {
   strokeWidth?: number;
   /** Pixel offset for the reference line label. */
   labelOffset?: AnnotationOffset;
-  /** Opt-in screen-space label placement. Outside reserves a right gutter or top lane; omission preserves legacy labelAnchor behavior. */
+  /** Screen-space label placement. Outside reserves a right gutter or top lane; omission uses auto unless labelAnchor is authored. */
   labelPlacement?: 'auto' | 'start' | 'end' | 'outside';
   /** Anchor direction for the reference line label. */
   labelAnchor?: AnnotationAnchor;
-  /** Label font size in pixels. Default: 11. */
+  /** Label font size in pixels. Default: theme small (12px). */
   fontSize?: number;
   /** Label font weight. Default: 400. */
   fontWeight?: number;
@@ -1256,8 +1318,7 @@ export type Annotation = TextAnnotation | RangeAnnotation | RefLineAnnotation;
 export type DarkMode = 'auto' | 'force' | 'off';
 
 /**
- * Per-element chrome theme override. Pass a plain string (color only,
- * backward-compatible) or an object with full typography control.
+ * Per-element chrome theme typography controls.
  */
 export interface ChromeThemeOverride {
   /** Text color. Accepts a TokenValue for light/dark pairs. */
@@ -1322,6 +1383,12 @@ export interface ThemeConfig {
         annotationMarkerFill?: TokenValue;
         /** Annotation plate color. Accepts a TokenValue light/dark pair. */
         annotationPlate?: TokenValue;
+        /** Optional map missing-data and geographic border ink. */
+        gridlineZero?: TokenValue;
+        mapNoDataFill?: TokenValue;
+        mapNoDataHatch?: TokenValue;
+        mapInteriorBorder?: TokenValue;
+        mapOutlineBorder?: TokenValue;
         /** Semantic color for positive/up-trend values. Accepts a TokenValue for light/dark pairs. */
         positive?: TokenValue;
         /** Semantic color for negative/down-trend values. Accepts a TokenValue for light/dark pairs. */
@@ -1341,14 +1408,17 @@ export interface ThemeConfig {
       subtitle?: number;
       /** Body text (tooltips, legend labels). Default: 13. */
       body?: number;
-      /** Small text (source line, footer). Default: 11. */
+      /** Small text (source line, footer). Default: 12. */
       small?: number;
-      /** Axis tick labels. Default: 11. */
+      /** Axis tick labels. Default: 12. */
       axisTick?: number;
       /** KPI metric uppercase label. Default: 10. */
       metricLabel?: number;
       /** KPI metric primary value. Default: 22. Delta/secondary derive from this. */
       metricValue?: number;
+      /** Series-name and numerical endpoint font sizes in pixels. */
+      endpointLabel?: number;
+      endpointValue?: number;
     };
     /** Font weight overrides. Partial — only specified keys are overridden. */
     weights?: {
@@ -1378,27 +1448,29 @@ export interface ThemeConfig {
     xAxisHeight?: number;
     /** Gap in pixels between the x-axis line and tick label text. Increase when larger axisTick fonts sit too close to the axis line. */
     xAxisLabelPadding?: number;
+    /** Endpoint block separation, internal value gap, and plot-to-column gap. */
+    endpointEntryGap?: number;
+    endpointValueGap?: number;
+    endpointColumnGap?: number;
   };
   /** Border radius for chart container and tooltips. */
   borderRadius?: number;
   /**
-   * Per-element chrome style overrides. Pass a plain string for color-only
-   * (backward-compatible), or a ChromeThemeOverride object for full
-   * typography control (color, fontSize, fontWeight, lineHeight).
+   * Per-element chrome typography control (color, fontSize, fontWeight, lineHeight).
    */
   chrome?: {
     /** Eyebrow (kicker) style override. */
-    eyebrow?: ChromeThemeOverride | /** @deprecated Use { color }. */ string;
+    eyebrow?: ChromeThemeOverride;
     /** Title style override. */
-    title?: ChromeThemeOverride | /** @deprecated Use { color }. */ string;
+    title?: ChromeThemeOverride;
     /** Subtitle style override. */
-    subtitle?: ChromeThemeOverride | /** @deprecated Use { color }. */ string;
+    subtitle?: ChromeThemeOverride;
     /** Source/attribution style override. */
-    source?: ChromeThemeOverride | /** @deprecated Use { color }. */ string;
+    source?: ChromeThemeOverride;
     /** Byline style override. */
-    byline?: ChromeThemeOverride | /** @deprecated Use { color }. */ string;
+    byline?: ChromeThemeOverride;
     /** Footer style override. */
-    footer?: ChromeThemeOverride | /** @deprecated Use { color }. */ string;
+    footer?: ChromeThemeOverride;
   };
   /**
    * Editorial rule above the chrome block: a short colored bar (the
@@ -1406,12 +1478,12 @@ export interface ThemeConfig {
    */
   rule?: {
     /** Rule color. Accepts a TokenValue for light/dark pairs. */
-    color: TokenValue;
+    color?: TokenValue;
     /** Rule length in pixels. */
-    width: number;
+    width?: number;
     /** Rule height in pixels. */
-    thickness: number;
-  };
+    thickness?: number;
+  } | null;
   /**
    * Series color assignment strategy.
    * Default: 'palette' (full categorical palette always, zero visual drift).
@@ -1427,13 +1499,18 @@ export interface ThemeConfig {
  * Label density mode controlling how many data labels are shown.
  * - 'all': show every label, skip collision detection
  * - 'auto': show labels with collision detection (default)
- * - 'endpoints': show only first and last per series (useful for line charts)
+ * - 'endpoints': show only first and last per series
+ *
+ * Line and area marks draw no value labels; identify their series with
+ * `endpointLabels` or the legend.
  * - 'none': hide all labels (rely on tooltips and legend)
  */
 export type LabelDensity = 'all' | 'auto' | 'endpoints' | 'none';
 
 /** Label display configuration for chart data labels. */
 export interface LabelConfig {
+  /** Placement for bar/column values. Column is only supported for simple horizontal bars. */
+  placement?: 'adaptive' | 'inside' | 'outside' | 'column';
   /** How many labels to show. Defaults to 'auto'. */
   density?: LabelDensity;
   /** Number format override for label values (d3-format string, e.g. ",.0f"). */
@@ -1444,12 +1521,6 @@ export interface LabelConfig {
   suffix?: string;
   /** Fixed CSS color for all labels. Overrides the default fill-derived color. */
   color?: string;
-  /**
-   * Per-series pixel offsets for fine-tuning label positions, keyed by series name.
-   * @deprecated Per-series pixel offsets are a workaround for collision bugs
-   * now fixed by the layout engine. Will be removed in a future version.
-   */
-  offsets?: Record<string, AnnotationOffset>;
   /** Font size in pixels for bar/column value labels. */
   fontSize?: number;
 }
@@ -1526,19 +1597,18 @@ export type EndpointLabelContent = 'label' | 'value' | 'label value';
  * for multi-series line/area charts. Each entry pairs the series name with its
  * last formatted value, optionally anchored to the line by an open-circle marker.
  *
- * The column is independent of the traditional `legend` and the legacy
- * end-of-line labels. Together with `legend.show`, the three suppression toggles
- * follow this truth table for ≥2-series line/area charts:
+ * The column and traditional legend are independent identification surfaces.
+ * For multi-series line/area charts:
  *
- * | `legend.show` | `endpointLabels` | Traditional legend | Endpoint column | End-of-line labels |
- * |--|--|--|--|--|
- * | unset | unset | hidden (auto-suppressed) | shown (default) | hidden |
- * | true  | unset | shown                    | shown           | hidden |
- * | unset | false | shown (auto-suppress revoked) | hidden     | hidden |
- * | false | false | hidden                   | hidden          | shown (last-resort) |
- * | true  | false | shown                    | hidden          | hidden |
- * | false | true  | hidden                   | shown           | hidden |
- * | true  | true  | shown                    | shown           | hidden |
+ * | `legend.show` | `endpointLabels` | Traditional legend | Endpoint column |
+ * |--|--|--|--|
+ * | unset | unset | hidden | shown |
+ * | true | unset | shown | shown |
+ * | unset | false | shown | hidden |
+ * | false | false | hidden (accessibility warning) | hidden |
+ * | true | false | shown | hidden |
+ * | false | true | hidden | shown |
+ * | true | true | shown | shown |
  *
  * Single-series charts: column is hidden by default (nothing to identify).
  *
@@ -1548,6 +1618,10 @@ export type EndpointLabelContent = 'label' | 'value' | 'label value';
  * in `legend/__tests__/suppression.test.ts` enforce every cell.
  */
 export interface EndpointLabelsConfig {
+  /** Stacked-area anchor: cumulative boundary or the middle of the band. Default band. */
+  anchor?: 'boundary' | 'band';
+  /** Series identification in the end column or fitted inside stacked bands. */
+  placement?: 'end' | 'interior';
   /** Explicit on/off. When undefined, the chart auto-decides based on series count. */
   show?: boolean;
   /** Maximum number of series before endpoint labels switch to a legend. Default 8. */
@@ -1578,9 +1652,12 @@ export interface EndpointLabelsConfig {
   format?: string;
   /** Max wrap width in pixels for long series names. Default 96. */
   width?: number;
-  /** Render an open-circle marker on the line at the right edge. Default true. */
+  /**
+   * Render a ring marker centered on the line's end point. Default true. Its
+   * fill defaults to the opaque canvas color so the ring covers the line end.
+   */
   showMarker?: boolean;
-  /** Override the marker style. */
+  /** Override the marker style. `fill: 'transparent'` keeps a see-through ring. */
   markerStyle?: {
     fill?: string;
     stroke?: string;
@@ -1627,11 +1704,7 @@ export interface SeriesStyle {
 export type AnimationEase = 'smooth' | 'snappy';
 
 /** Opt-in motion language. */
-export type AnimationPreset =
-  | 'fluid'
-  | 'subtle'
-  /** @deprecated Omit preset for v8 timing. */
-  | 'legacy';
+export type AnimationPreset = 'fluid' | 'subtle';
 
 /** Physical spring parameters. Quantitative motion is bounded at critical damping. */
 export interface SpringConfig {
@@ -1650,7 +1723,7 @@ export interface AnimationStagger {
 
 /** Fine-grained responsive behavior configuration. */
 export interface ResponsiveConfig {
-  /** Maximum eligible inline callouts below 400px container width; null or omitted is unlimited. Pinned annotations are exempt. */
+  /** Maximum eligible inline callouts below 400px container width; default 1; null is unlimited. Pinned annotations are exempt. */
   compactAnnotationLimit?: number | null;
   /** Preserve the final temporal boundary before thinning interior ticks. */
   preserveEnd?: boolean;
@@ -1743,6 +1816,8 @@ export interface ChartSpecOverride {
   chrome?: Chrome;
   /** Override label configuration at this breakpoint. */
   labels?: LabelSpec;
+  /** Override endpoint labels at this breakpoint, including migrated v8 line labels. */
+  endpointLabels?: boolean | EndpointLabelsConfig;
   /** Override legend configuration at this breakpoint. */
   legend?: LegendConfig;
   /** Override annotations at this breakpoint. */
@@ -1788,7 +1863,6 @@ export interface Metric {
  * Encoding for arc marks (pie/donut charts).
  * - `theta`: required (quantitative — the canonical slice value channel)
  * - `color`: required (nominal/ordinal — the category)
- * - `y`: deprecated alias for `theta`, accepted for backward compatibility
  */
 export interface ArcEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
   /** Canonical value channel for arc marks (quantitative — the slice value). */
@@ -1885,8 +1959,7 @@ export interface RangeEncoding<TData extends DataRow = DataRow> extends Encoding
  * Encoding for waffle marks (unit grids for part-to-whole counts).
  * - `color`: required (nominal/ordinal, the category)
  * - `theta`: the canonical quantitative share, the same part-to-whole value
- *   channel arc marks use. `y` is a deprecated alias, accepted for backward
- *   compatibility.
+ *   channel arc marks use.
  */
 export interface WaffleEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
   color: EncodingChannel<TData> | ConditionalValueDef<TData>;
@@ -1896,8 +1969,7 @@ export interface WaffleEncoding<TData extends DataRow = DataRow> extends Encodin
  * Encoding for parliament marks (hemicycle seat-dot charts).
  * - `color`: required (nominal/ordinal, the party)
  * - `theta`: the canonical quantitative seat count, the same part-to-whole
- *   value channel arc/waffle marks use. `y` is a deprecated alias, accepted
- *   for backward compatibility.
+ *   value channel arc/waffle marks use.
  */
 export interface ParliamentEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
   color: EncodingChannel<TData> | ConditionalValueDef<TData>;
@@ -2021,7 +2093,9 @@ interface BaseChartSpec<TData extends DataRow = DataRow> {
   /**
    * How chrome height interacts with the container height budget.
    *
-   * - `'subtract'` (default): the container height is fixed and chrome text
+   * - omitted: only notes and the series summary grow the figure; title,
+   *   subtitle, and source subtract from the height budget.
+   * - `'subtract'`: the container height is fixed and chrome text
    *   (title/subtitle/source) is subtracted from it, shrinking the plot. This
    *   is the historical behavior.
    * - `'grow'`: the container height is treated as the *plot* budget, and the
@@ -2029,7 +2103,7 @@ interface BaseChartSpec<TData extends DataRow = DataRow> {
    *   its full budget (minus axis/padding overhead) regardless of how many
    *   lines the title wraps to.
    *
-   * `'grow'` is a no-op for faceted specs in this version.
+   * Facets and layers report engine-owned growth once.
    */
   chromeLayout?: 'subtract' | 'grow';
   /**
@@ -2080,7 +2154,7 @@ interface BaseChartSpec<TData extends DataRow = DataRow> {
    * - omitted: auto-enable for multi-series line/area charts, hide otherwise.
    *
    * See {@link EndpointLabelsConfig} for the full suppression truth table that
-   * relates this flag to `legend.show` and the legacy end-of-line labels.
+   * relates this flag to `legend.show`.
    */
   endpointLabels?: boolean | EndpointLabelsConfig;
   /**
@@ -2091,9 +2165,6 @@ interface BaseChartSpec<TData extends DataRow = DataRow> {
   responsive?: boolean | ResponsiveConfig;
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
-  /** Dark mode behavior. Defaults to "off". */
-  /** @deprecated Use the mount darkMode option; the spec field has no effect. */
-  darkMode?: DarkMode;
   /**
    * Whether to show the OpenData watermark. Defaults to true; auto-hides
    * when the container is under 200px tall (the cramped height class) unless
@@ -2213,75 +2284,75 @@ interface BaseChartSpec<TData extends DataRow = DataRow> {
  */
 export type ChartSpec<TData extends DataRow = DataRow> =
   | (BaseChartSpec<TData> & {
-      mark: 'arc' | (MarkDef & { type: 'arc' });
+      mark: 'arc' | Extract<MarkDef, { type: 'arc' }>;
       encoding: ArcEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
-      mark: 'line' | (MarkDef & { type: 'line' });
+      mark: 'line' | Extract<MarkDef, { type: 'line' }>;
       encoding: LineEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
-      mark: 'bar' | (MarkDef & { type: 'bar' });
+      mark: 'bar' | Extract<MarkDef, { type: 'bar' }>;
       encoding: BarEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
-      mark: 'area' | (MarkDef & { type: 'area' });
+      mark: 'area' | Extract<MarkDef, { type: 'area' }>;
       encoding: AreaEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
-      mark: 'point' | (MarkDef & { type: 'point' });
+      mark: 'point' | Extract<MarkDef, { type: 'point' }>;
       encoding: PointEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
-      mark: 'circle' | (MarkDef & { type: 'circle' });
+      mark: 'circle' | Extract<MarkDef, { type: 'circle' }>;
       encoding: CircleEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
-      mark: 'lollipop' | (MarkDef & { type: 'lollipop' });
+      mark: 'lollipop' | Extract<MarkDef, { type: 'lollipop' }>;
       encoding: LollipopEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
-      mark: 'beeswarm' | (MarkDef & { type: 'beeswarm' });
+      mark: 'beeswarm' | Extract<MarkDef, { type: 'beeswarm' }>;
       encoding: BeeswarmEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
-      mark: 'range' | (MarkDef & { type: 'range' });
+      mark: 'range' | Extract<MarkDef, { type: 'range' }>;
       encoding: RangeEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
-      mark: 'waffle' | (MarkDef & { type: 'waffle' });
+      mark: 'waffle' | Extract<MarkDef, { type: 'waffle' }>;
       encoding: WaffleEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
-      mark: 'text' | (MarkDef & { type: 'text' });
+      mark: 'text' | Extract<MarkDef, { type: 'text' }>;
       encoding: TextEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
-      mark: 'tick' | (MarkDef & { type: 'tick' });
+      mark: 'tick' | Extract<MarkDef, { type: 'tick' }>;
       encoding: TickEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
-      mark: 'rect' | (MarkDef & { type: 'rect' });
+      mark: 'rect' | Extract<MarkDef, { type: 'rect' }>;
       encoding: RectEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
-      mark: 'rule' | (MarkDef & { type: 'rule' });
+      mark: 'rule' | Extract<MarkDef, { type: 'rule' }>;
       encoding: Encoding<TData>;
     })
   | (BaseChartSpec<TData> & {
-      mark: 'calendar' | (MarkDef & { type: 'calendar' });
+      mark: 'calendar' | Extract<MarkDef, { type: 'calendar' }>;
       encoding: CalendarEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
-      mark: 'parliament' | (MarkDef & { type: 'parliament' });
+      mark: 'parliament' | Extract<MarkDef, { type: 'parliament' }>;
       encoding: ParliamentEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
-      mark: 'histogram' | (MarkDef & { type: 'histogram' });
+      mark: 'histogram' | Extract<MarkDef, { type: 'histogram' }>;
       encoding: HistogramEncoding<TData>;
     })
   | (BaseChartSpec<TData> & {
-      mark: 'density' | (MarkDef & { type: 'density' });
+      mark: 'density' | Extract<MarkDef, { type: 'density' }>;
       encoding: DensityEncoding<TData>;
     });
 
@@ -2311,9 +2382,6 @@ export interface TableSpec {
   chrome?: Chrome;
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
-  /** Dark mode behavior. */
-  /** @deprecated Use the mount darkMode option; the spec field has no effect. */
-  darkMode?: DarkMode;
   /** Whether to show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
   /** Enable client-side search/filter. */
@@ -2338,10 +2406,6 @@ export interface TableSpec {
    * "Total".
    */
   totalRow?: boolean | { label?: string };
-  /**
-   * @deprecated Use `density: 'condensed'`. Still honored, with a warning.
-   */
-  compact?: boolean;
   /** Whether the table adapts to container width. Defaults to true. */
   responsive?: boolean;
   /** Animation configuration for entrance animations. */
@@ -2473,9 +2537,6 @@ export interface GraphSpec {
   annotations?: Annotation[];
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
-  /** Dark mode behavior. */
-  /** @deprecated Use the mount darkMode option; the spec field has no effect. */
-  darkMode?: DarkMode;
   /**
    * Motion configuration. DEFAULT-ON: omit for full defaults, `false` to opt
    * out of choreography (layout warmup still applies).
@@ -2599,13 +2660,16 @@ export interface LayerSpec<TData extends DataRow = DataRow> {
   labels?: LabelSpec;
   /** Legend display configuration. */
   legend?: LegendConfig;
-  /** Whether the chart adapts to container width. Defaults to true. */
-  responsive?: boolean;
+  /**
+   * Responsive behavior for the composed chart, with the same meaning as
+   * `ChartSpec.responsive`: `true`/`false` enables/disables container-width
+   * adaptation, and a `ResponsiveConfig` object gives fine-grained control
+   * (e.g. `{ compactAnnotationLimit: null }`). When omitted, the first leaf
+   * layer's `responsive` applies.
+   */
+  responsive?: boolean | ResponsiveConfig;
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
-  /** Dark mode behavior. Defaults to "off". */
-  /** @deprecated Use the mount darkMode option; the spec field has no effect. */
-  darkMode?: DarkMode;
   /** Whether to show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
   /** Resolution strategy for shared scales/axes/legends. */
@@ -2696,23 +2760,10 @@ export interface SankeySpec {
   legend?: LegendConfig;
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
-  /** Dark mode behavior. Defaults to "off". */
-  /** @deprecated Use the mount darkMode option; the spec field has no effect. */
-  darkMode?: DarkMode;
   /** Whether to show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
   /** Animation configuration for entrance animations. */
   animation?: AnimationSpec;
-  /**
-   * d3-format string applied to flow values in tooltips and ARIA labels.
-   * Uses the literal suffix extension: ".0f%" appends "%" to the formatted
-   * number (data value 28 renders as "28%"). For currency: "$,.0f" or "$~s".
-   * For SI suffixes: "~s" (renders 1000 as "1k"). When not set, values use
-   * the default number formatter.
-   * @deprecated Use the encoding channel's `format` field instead. This
-   * property is expanded into the encoding during compilation.
-   */
-  valueFormat?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -2768,9 +2819,6 @@ export interface TileMapSpec {
   legend?: LegendConfig;
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
-  /** Dark mode behavior. Defaults to "off". */
-  /** @deprecated Use the mount darkMode option; the spec field has no effect. */
-  darkMode?: DarkMode;
   /** Whether to show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
   /** Animation configuration for entrance animations. */
@@ -2820,6 +2868,14 @@ export interface GeoMapZoomConfig {
 
 /** Geo configuration for map specs. */
 export interface GeoMapGeo {
+  /** Primary topology object; omission retains first-object behavior. */
+  objectKey?: string;
+  /** Fit against this primary-topology object, independent of contextual detail. */
+  fitObjectKey?: string;
+  /** Named assertion of the decoded coordinate plane for identity detail. */
+  sourcePlane?: string;
+  detailLayers?: GeoDetailLayer[];
+  insets?: GeoInset[];
   /** TopoJSON topology object. User imports this from us-atlas, world-atlas, or their own source. */
   features: unknown;
   /** Field in the TopoJSON feature properties to use as the join key. Defaults to 'id'. */
@@ -2850,12 +2906,36 @@ export interface GeoMapGeo {
   zoom?: boolean | GeoMapZoomConfig;
 }
 
+/** Explicit map anchor; feature and point identities occupy separate namespaces. */
+export type GeoAnchor = (
+  | { kind: 'feature'; id: string | number }
+  | { kind: 'point'; id: string | number }
+  | { kind: 'coordinate'; space: 'geographic' | 'source'; x: number; y: number }
+) & { viewId?: string; layerId?: string };
+
+/** Static authored geographic explanation; plain text, without chart editing semantics. */
+export interface GeoCallout {
+  id: string;
+  anchor: GeoAnchor;
+  text: string;
+  subtitle?: string;
+  priority?: number;
+  minZoom?: number;
+  maxZoom?: number;
+  offset?: { dx: number; dy: number };
+  maxWidth?: number;
+}
+
 /** Encoding channels specific to map visualizations. */
 export interface GeoMapEncoding {
   /** Join key field in the data. Required for choropleth; optional in basemap-only mode (points layer with empty data). */
   key?: EncodingChannel;
   /** Color encoding (quantitative or nominal). Drives fill color of features. Optional when a points layer is present (basemap-only mode). */
   color?: EncodingChannel;
+  /** Explicit feature label field, read from its joined row or same-named topology property. */
+  text?: EncodingChannel;
+  /** Higher finite quantitative values win label placement priority. Requires text. */
+  textPriority?: EncodingChannel;
   /** Tooltip encoding (optional). */
   tooltip?: EncodingChannel | EncodingChannel[];
 }
@@ -2868,10 +2948,14 @@ export interface GeoMapPointsLayer {
   longitude: EncodingChannel;
   /** Field holding latitude (y coordinate). */
   latitude: EncodingChannel;
-  /** Optional quantitative size encoding. Area-proportional: r proportional to sqrt(value). No size legend is rendered in v1; explain the scale in chrome.subtitle if needed. */
+  /** Optional quantitative size encoding. Area-proportional: r proportional to sqrt(value). A proportional size key explains the resolved radius scale. */
   size?: EncodingChannel;
   /** Optional color encoding (nominal or quantitative). Independent scale from choropleth. */
   color?: EncodingChannel;
+  /** Explicit point label field. Requires a unique points.key. */
+  text?: EncodingChannel;
+  /** Quantitative label priority; defaults to the point size value. Requires text. */
+  textPriority?: EncodingChannel;
   /** Tooltip channel(s), same shape as GeoMapEncoding.tooltip. */
   tooltip?: EncodingChannel | EncodingChannel[];
   /** Stable id for event callbacks, and the key used to match points across
@@ -2894,24 +2978,20 @@ export interface GeoMapSpec {
   encoding: GeoMapEncoding;
   /** Editorial chrome (title, subtitle, source, byline, footer). */
   chrome?: Chrome;
+  /** Optional static distribution and reader active-value presentation. Both default to false. */
+  colorKey?: { activeValue?: boolean; distribution?: boolean };
   /** Legend display configuration. */
   legend?: LegendConfig;
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
-  /** Dark mode behavior. Defaults to "off". */
-  /** @deprecated Use the mount darkMode option; the spec field has no effect. */
-  darkMode?: DarkMode;
   /** Whether to show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
   /** Optional point/symbol layer rendered above choropleth features. */
   points?: GeoMapPointsLayer;
+  /** Authored labels with explicit feature, point, or coordinate anchors. */
+  callouts?: GeoCallout[];
   /** Animation configuration for entrance animations. */
   animation?: AnimationSpec;
-  /**
-   * d3-format string applied to color values in tooltips and legend.
-   * @deprecated Use the encoding channel's `format` field instead.
-   */
-  valueFormat?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -2938,20 +3018,10 @@ export interface BarListSpec {
   chrome?: Chrome;
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
-  /** Dark mode behavior. Defaults to "off". */
-  /** @deprecated Use the mount darkMode option; the spec field has no effect. */
-  darkMode?: DarkMode;
   /** Whether to show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
   /** Animation configuration for entrance animations. */
   animation?: AnimationSpec;
-  /**
-   * d3-format string applied to bar values and tooltips.
-   * Examples: ".1f" for one decimal, "$,.0f" for currency, "~s" for SI.
-   * @deprecated Use the encoding channel's `format` field instead. This
-   * property is expanded into the encoding during compilation.
-   */
-  valueFormat?: string;
 }
 
 /** Encoding channels for a barlist visualization. */
@@ -3456,14 +3526,9 @@ export function isRangeAnnotation(annotation: Annotation): annotation is RangeAn
   return annotation.type === 'range';
 }
 
-/**
- * Check if an annotation is a RefLineAnnotation. Also accepts the deprecated
- * `'rule'` type at runtime (pre-sugar-expansion input), since `annotation.type`
- * may not yet be narrowed to the canonical `'refline'` form.
- */
+/** Check if an annotation is a RefLineAnnotation. */
 export function isRefLineAnnotation(annotation: Annotation): annotation is RefLineAnnotation {
-  const type: string = annotation.type;
-  return type === 'refline' || type === 'rule';
+  return annotation.type === 'refline';
 }
 
 // ---------------------------------------------------------------------------

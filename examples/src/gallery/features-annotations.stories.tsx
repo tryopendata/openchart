@@ -184,8 +184,7 @@ const richTextSpec: ChartSpec = {
   },
 };
 
-// The lede stack: set `subtitle` and the primary line takes bold automatically,
-// with the subtitle in muted regular below it. No fontWeight authoring.
+// Primary text and subtitle are regular by default; author emphasis explicitly.
 const ledeSpec: ChartSpec = {
   animation: true,
   mark: 'line',
@@ -220,7 +219,7 @@ const ledeSpec: ChartSpec = {
   ],
   chrome: {
     title: 'A Lede, Then the Context',
-    subtitle: 'Global surface temperature anomaly — subtitle promotes the first line to bold',
+    subtitle: 'Global surface temperature anomaly — a primary line with supporting context',
     source: temperatureAnomaly.source,
     byline: 'Chart: OpenChart',
   },
@@ -328,9 +327,7 @@ const reflineSpec: ChartSpec = {
   },
   labels: { density: 'none' },
   annotations: [
-    // Horizontal target line, dashed. At the right edge the label sat on the
-    // Nov/Dec bars; slide it into the Jun–Aug valley, where the line runs
-    // clear above every bar top.
+    // Auto placement keeps the average label beside its rule as the chart resizes.
     {
       type: 'refline',
       y: 216,
@@ -338,14 +335,9 @@ const reflineSpec: ChartSpec = {
       style: 'dashed',
       stroke: '#64748b',
       strokeWidth: 1,
-      labelAnchor: 'right',
-      labelOffset: { dx: -245 },
+      labelPlacement: 'auto',
     },
-    // Horizontal threshold, dotted, styled as a soft floor. Every bar except
-    // October crosses the 100K line, and October's gap has the storm-marker
-    // line running through it, so there is no bar-free stretch at label height.
-    // Park the label in the Jun–Aug valley above the bar tops instead; the red
-    // text ties it to the red dotted line below it.
+    // A reserved right gutter keeps the low threshold label clear of the bars.
     {
       type: 'refline',
       y: 100,
@@ -353,10 +345,9 @@ const reflineSpec: ChartSpec = {
       style: 'dotted',
       stroke: '#d1495b',
       strokeWidth: 1,
-      labelAnchor: 'left',
-      labelOffset: { dx: 381, dy: -30 },
+      labelPlacement: 'outside',
     },
-    // Vertical marker with a raw strokeDash override (takes precedence over style).
+    // The event label uses the top lane; strokeDash takes precedence over style.
     {
       type: 'refline',
       x: 'Oct',
@@ -364,7 +355,7 @@ const reflineSpec: ChartSpec = {
       strokeDash: [2, 3],
       stroke: '#94a3b8',
       strokeWidth: 1,
-      labelAnchor: 'top',
+      labelPlacement: 'outside',
     },
   ],
   chrome: {
@@ -629,7 +620,7 @@ export const Annotations = () => (
     <Section
       id="rich-text"
       title="Rich text"
-      lede="Annotation text is a regular-weight sentence with the key phrase wrapped in double asterisks — emphasis rides inside the copy, never as a bold block. Add a subtitle and the primary line promotes to a bold lede with muted context beneath it, no fontWeight authoring. Spans work in text and subtitle alike; an unmatched pair of asterisks renders literally."
+      lede="Annotation text is a regular-weight sentence with the key phrase wrapped in double asterisks — emphasis rides inside the copy, never as a bold block. Add a subtitle for muted supporting context beneath a regular-weight primary line. Set fontWeight explicitly when the whole primary line needs emphasis. Spans work in text and subtitle alike; an unmatched pair of asterisks renders literally."
     >
       <Demo
         id="rich-text-emphasis"
@@ -641,7 +632,7 @@ export const Annotations = () => (
       <Demo
         id="rich-text-lede"
         title="The lede + subtitle stack"
-        description="Setting subtitle promotes the primary line to bold automatically. The subtitle takes its own bold spans and renders muted at 85% of the primary size."
+        description="Both lines stay regular by default. The subtitle supports its own bold spans and renders at 12px beneath a 13px primary line."
         spec={ledeSpec}
         height={460}
       />
@@ -715,9 +706,10 @@ export function AnnotationGestures() {
     let spec = structuredClone(annotationGestureSpec);
     let revision = 0;
     const chart = createChart(host.current, spec, {
-      editable: true,
+      interaction: 'edit',
+      darkMode: 'auto',
       revision,
-      onEditTransaction: (tx) => {
+      onEdit: (tx) => {
         const result = applyEditTransaction(spec, tx);
         if (!result.ok) throw new Error(result.error.reason);
         spec = result.spec;

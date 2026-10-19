@@ -18,7 +18,12 @@ import type { DataRow, GeoMapSpec } from '@opendata-ai/openchart-core';
 import { deepMergeSpec, isGeoMapSpec } from '@opendata-ai/openchart-core';
 import { AUTO_CANVAS_THRESHOLD } from '@opendata-ai/openchart-engine';
 import { createGeoMap, type GeoMapInstance, type GeoMapMountOptions } from '../map-mount';
-import { type ChartInstance, createChart, type MountOptions } from '../mount';
+import {
+  type ChartInstance,
+  createChart,
+  type MountOptions,
+  resolveInteractionMode,
+} from '../mount';
 import {
   CANVAS_DEFAULT_UPDATE_MAX_MARKS,
   canTransitionSpecShape,
@@ -127,7 +132,7 @@ function morphWithinMarkCap(
  * the base spec, then drives it through cumulative patch steps as the
  * reader scrolls (or via `goTo`).
  *
- * `editMode` (any of `onEdit`/`onSelect`/`onDeselect`/`onTextEdit` on
+ * `editMode` (any of `onEdit`/`onSelect`/`onDeselect` on
  * `mountOptions`) and an active story are mutually exclusive in v1: passing
  * both warns once and disables the story's own drive loop, matching the
  * seriesSearch/edit-mode precedent in `mount.ts`.
@@ -143,7 +148,7 @@ export function createChartStory<TData extends DataRow = DataRow>(
   // Widen once here so the internal helpers don't have to thread `TData`
   // through a discriminated union that TS can't narrow across variants.
   const baseSpec = spec as StorySpec;
-  const isMap = isGeoMapSpec(baseSpec as unknown as Record<string, unknown>);
+  const isMap = isGeoMapSpec(baseSpec);
 
   if (isMap && cameraMode === 'scrub') {
     console.warn(
@@ -157,15 +162,10 @@ export function createChartStory<TData extends DataRow = DataRow>(
     );
   }
 
-  const editModeRequested = !!(
-    mountOptions?.onEdit ||
-    mountOptions?.onSelect ||
-    mountOptions?.onDeselect ||
-    mountOptions?.onTextEdit
-  );
+  const editModeRequested = resolveInteractionMode(mountOptions) !== 'read';
   if (editModeRequested) {
     console.warn(
-      '[openchart] a chart story and edit mode are mutually exclusive; the story will not drive updates while editing callbacks are active.',
+      "[openchart] a chart story and edit mode are mutually exclusive; the story will not drive updates unless interaction is 'read'.",
     );
   }
 
@@ -183,7 +183,7 @@ export function createChartStory<TData extends DataRow = DataRow>(
       theme: mountOptions?.theme,
       darkMode: mountOptions?.darkMode,
       watermark: mountOptions?.watermark,
-      responsive: mountOptions?.responsive,
+      autoResize: mountOptions?.autoResize,
     };
     instance = createGeoMap(container, initialSpec as GeoMapSpec, mapOpts);
   } else {

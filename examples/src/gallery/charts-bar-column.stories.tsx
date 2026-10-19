@@ -30,14 +30,24 @@ const ACCENT = '#0e7490';
 
 const simpleBarsSpec: ChartSpec = {
   animation: true,
-  mark: { type: 'bar', fill: hBarGradient(ACCENT) },
+  mark: 'bar',
   data: [...populationByCountry.data],
   encoding: {
     x: { field: 'population', type: 'quantitative', axis: { title: 'Population', format: '.2~s' } },
-    y: { field: 'country', type: 'nominal' },
+    y: { field: 'country', type: 'nominal', sort: 'x' },
+    color: { field: 'country', type: 'nominal', highlight: ['India', 'China'] },
   },
+  legend: { show: false },
+  labels: { color: 'var(--oc-text)' },
   annotations: [
-    { type: 'refline', x: 1_000_000_000, label: '1 billion', style: 'dashed', stroke: '#cc4444' },
+    {
+      type: 'refline',
+      x: 1_000_000_000,
+      label: '1 billion',
+      labelPlacement: 'outside',
+      style: 'dashed',
+      stroke: '#cc4444',
+    },
   ],
   chrome: {
     title: 'India Has Overtaken China as the Most Populous Country',
@@ -76,7 +86,7 @@ const columnsSpec: ChartSpec = {
       style: 'dashed',
       stroke: '#64748b',
       strokeWidth: 1,
-      labelOffset: { dx: -560, dy: -10 },
+      labelPlacement: 'outside',
     },
   ],
   labels: { density: 'all', format: ',.0f' },
@@ -486,6 +496,143 @@ export const BarAndColumn = () => (
       >
         <InteractiveBars />
       </Demo>
+    </Section>
+  </GalleryPage>
+);
+
+/** Explicit candidates for the desktop craft review; established defaults stay intact. */
+export const ValuePlacement = () => {
+  const ranked: ChartSpec = {
+    mark: { type: 'bar', size: 16 },
+    data: [
+      { name: 'Research', value: 128.4 },
+      { name: 'Operations', value: 75.2 },
+      { name: 'Training', value: 8.6 },
+      { name: 'Contingency', value: 0 },
+      { name: 'Adjustments', value: -24.3 },
+    ],
+    encoding: {
+      x: { field: 'value', type: 'quantitative', axis: false },
+      y: {
+        field: 'name',
+        type: 'nominal',
+        sort: null,
+        scale: { paddingInner: 0.35 },
+        axis: { grid: false },
+      },
+    },
+    labels: {
+      placement: 'column',
+      density: 'all',
+      format: '.1f',
+      suffix: 'M',
+      color: 'var(--oc-text)',
+    },
+    legend: { show: false },
+    chrome: {
+      title: 'Every budget adjustment has a place',
+      subtitle: 'Illustrative budget allocations, millions',
+    },
+  };
+  const signed: ChartSpec = {
+    ...ranked,
+    mark: { type: 'bar', size: 28 },
+    encoding: {
+      x: { field: 'name', type: 'nominal', sort: null, scale: { paddingInner: 0.4 } },
+      y: { field: 'value', type: 'quantitative', axis: { title: 'Millions' } },
+    },
+    labels: {
+      placement: 'outside',
+      density: 'all',
+      format: '.1f',
+      suffix: 'M',
+      color: 'var(--oc-text)',
+    },
+    chrome: {
+      title: 'Positive and negative values follow their endpoints',
+      subtitle: 'The same observations, with explicit outside labels',
+    },
+  };
+  return (
+    <GalleryPage
+      title="Value placement"
+      lede="Choose an aligned value column for rankings or fit labels inside their own marks. These examples use explicit sizing and placement for review."
+    >
+      <Section id="placement-candidates" title="Placement candidates">
+        <Demo
+          id="aligned-values"
+          title="Aligned values"
+          description="A measured value column keeps the same numerical edge across positive, zero and negative bars."
+          spec={ranked}
+          height={300}
+        />
+        <Demo
+          id="inside-values"
+          title="Inside, when the text fits"
+          description="Short bars retain their values in accessible data and tooltips when the full label cannot fit."
+          spec={{
+            ...ranked,
+            labels: { placement: 'inside', density: 'all', format: '.1f', suffix: 'M' },
+          }}
+          height={300}
+        />
+        <Demo
+          id="outside-columns"
+          title="Signed column endpoints"
+          description="Labels follow the positive or negative end without changing the observations or their order."
+          spec={signed}
+          height={360}
+        />
+      </Section>
+    </GalleryPage>
+  );
+};
+
+export const FacetedValues = () => (
+  <GalleryPage
+    title="Faceted values"
+    lede="Compare regional budgets with the same measured value column in each panel."
+  >
+    <Section id="faceted-value-columns" title="Aligned panels">
+      <Demo
+        id="faceted-values"
+        title="Regional budget changes"
+        description="Signed values, zero and long numbers keep their own row and align between panels."
+        height={560}
+        spec={{
+          mark: { type: 'bar', size: 16 },
+          data: [
+            { region: 'North', name: 'Research', value: 1250.4 },
+            { region: 'North', name: 'Operations', value: 75.2 },
+            { region: 'North', name: 'Adjustments', value: -24.3 },
+            { region: 'South', name: 'Research', value: 148.2 },
+            { region: 'South', name: 'Operations', value: 92.8 },
+            { region: 'South', name: 'Contingency', value: 0 },
+          ],
+          encoding: {
+            x: { field: 'value', type: 'quantitative', axis: false },
+            y: {
+              field: 'name',
+              type: 'nominal',
+              sort: null,
+              axis: { grid: false, title: 'Budget item', titleAngle: 0, titleAnchor: 'end' },
+            },
+            row: { field: 'region', type: 'nominal' },
+          },
+          labels: {
+            placement: 'column',
+            density: 'all',
+            format: ',.1f',
+            suffix: 'M',
+            color: 'var(--oc-text)',
+          },
+          legend: { show: false },
+          chrome: {
+            title: 'Regional budgets at a glance',
+            subtitle: 'Illustrative allocations, millions',
+          },
+        }}
+      />
     </Section>
   </GalleryPage>
 );

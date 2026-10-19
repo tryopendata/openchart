@@ -114,7 +114,8 @@ describe('compileBarList', () => {
     expect(layout.tooltipDescriptors.size).toBe(4);
     const tooltip = layout.tooltipDescriptors.get('0');
     expect(tooltip?.title).toBe('Alpha');
-    expect(tooltip?.fields[0].value).toBeDefined();
+    // One field: the value channel's field name and Alpha's formatted count.
+    expect(tooltip?.fields).toEqual([{ label: 'count', value: '100' }]);
   });
 
   it('builds a11y metadata', () => {
@@ -136,8 +137,13 @@ describe('compileBarList', () => {
     expect(() => compileBarList(spec, BASE_OPTIONS)).toThrow(/empty/i);
   });
 
-  it('formats values with valueFormat', () => {
-    const spec = makeSpec({ valueFormat: '$,.0f' });
+  it('formats values with encoding.value.format', () => {
+    const spec = makeSpec({
+      encoding: {
+        ...makeSpec().encoding,
+        value: { ...makeSpec().encoding.value, format: '$,.0f' },
+      },
+    });
     const layout = compileBarList(spec, BASE_OPTIONS);
     expect(layout.rows[0].formattedValue).toBe('$100');
   });
@@ -148,7 +154,7 @@ describe('compileBarList', () => {
         { label: 'Big', count: 1500 },
         { label: 'Small', count: 200 },
       ],
-      valueFormat: '~s',
+      encoding: { ...makeSpec().encoding, value: { ...makeSpec().encoding.value, format: '~s' } },
     });
     const layout = compileBarList(spec, BASE_OPTIONS);
     expect(layout.rows[0].formattedValue).toBe('1.5k');

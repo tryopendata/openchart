@@ -22,7 +22,7 @@ const columns = columnChart(data, 'month', 'revenue');
 const bars = barChart(data, 'category', 'count');
 ```
 
-All chart builders accept an optional `options` argument for color encoding, annotations, chrome (title/subtitle/source), theme overrides, and dark mode.
+All chart builders accept an optional `options` argument for color encoding, annotations, chrome (title/subtitle/source), theme overrides, and responsive behavior. Dark mode is a mount/component option, not a spec field.
 
 ```typescript
 const spec = lineChart(data, 'date', 'value', {
@@ -122,7 +122,8 @@ function describe(spec: VizSpec): string {
 
 Beyond spec builders, this package provides:
 
-- **Theme system** - `DEFAULT_THEME`, `resolveTheme()`, `adaptTheme()` for dark mode adaptation
+- **Theme system** - `DEFAULT_THEME`, `resolveTheme()`, `mergeThemeConfig()` for deep-merging authored theme layers, `adaptTheme()` for dark mode adaptation
+- **Editing** - `applyEditTransaction()` applies the `EditTransaction` emitted by `onEdit` and returns the new spec plus its inverse
 - **Color palettes** - `CATEGORICAL_PALETTE`, `SEQUENTIAL_PALETTES`, `DIVERGING_PALETTES`
 - **Accessibility** - `generateAltText()`, `generateAriaLabels()`, contrast ratio utilities
 - **Formatting** - `formatNumber()`, `formatDate()`, `abbreviateNumber()`

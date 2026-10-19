@@ -1,16 +1,12 @@
-# Migration Guide
+# Theming Design Tokens
 
-## Theming Design Tokens
+`ThemeConfig` controls colors, typography, spacing, rules, and component surfaces.
+Defaults are shared by the JavaScript theme and generated CSS tokens. v9
+consolidates authored deep merging and leaves omitted CSS tokens available to
+host styles. For removed forms and legacy styling, see [Migrating to v9](migrating-v9.md).
 
-This release widens `ThemeConfig` to expose every design-decision field and unifies CSS custom properties with the JS theme engine. All changes are backward-compatible. Existing theme configs continue to work without modification.
+### ThemeConfig fields
 
-### What changed
-
-**Before:** `ThemeConfig` covered colors, font family/sizes, 4 spacing fields, border radius, and chrome color (string only). Font weights, chrome typography, semantic colors, and additional spacing fields were hardcoded in `DEFAULT_THEME` with no override path. CSS custom properties in `tokens.css`/`dark.css` were hand-maintained separately from the JS theme.
-
-**After:** `ThemeConfig` covers everything. CSS custom properties are generated from the resolved JS theme at mount time. The static CSS files serve as SSR/pre-mount fallback defaults.
-
-### New ThemeConfig fields
 
 ```ts
 const theme: ThemeConfig = {
@@ -52,8 +48,8 @@ const theme: ThemeConfig = {
     subtitle: { fontWeight: 400, lineHeight: 1.4 },
     eyebrow: { color: '#e3120b', fontWeight: 700 },
 
-    // Plain strings still work (color-only, backward-compatible)
-    source: '#666',
+    // Color-only overrides use the same object form.
+    source: { color: '#666' },
   },
 
   // New: series color assignment strategy
@@ -93,11 +89,10 @@ The neutral grays are surface-aware: on light backgrounds the second series gets
 
 ### Named presets
 
-Five presets exported from `@opendata-ai/openchart-core`:
+Four primary presets exported from `@opendata-ai/openchart-core`:
 
 | Preset | Feel |
 |--------|------|
-| `editorial` | Current default (empty config, zero drift) |
 | `essay` | Serif titles, warm background, generous spacing |
 | `wire` | Monospace, dense, tight chrome, dashboard feel |
 | `broadsheet` | Newspaper editorial: warm paper, red masthead `rule` and eyebrow, 24/700 title, square corners |
@@ -147,11 +142,11 @@ fixed zinc ladder. A warm or cool custom theme gets warm or cool grays for
 free instead of zinc showing up uninvited beside the palette. The ramp lives
 on `ResolvedTheme.colors.neutral` (`100`/`200`/`300`/`400`/`600`/`800`, plus
 `secondary` = `800`, `faint` = `300`, `border` = `100`, plus `surface`) and is
-computed once in `resolveTheme`/`adaptTheme`; mounts stamp the CSS tokens from
-it. `surface` is the opaque color the theme paints on — the background itself
+computed once in `resolveTheme`/`adaptTheme`. Mounts stamp derived tokens when
+the relevant theme colors are authored; omitted tokens use the CSS cascade. `surface` is the opaque color the theme paints on — the background itself
 when it is opaque, otherwise the mode's `--oc-bg` token — and is the single
 source for knockout rings, stacked-segment seams, table cell fills, graph node
-rings and the stamped `--oc-bg`. When the
+rings, annotation marker/plate fills, and authored background tokens. When the
 background is transparent (the default) the ramp falls back to the static
 token defaults, which is why the default theme and the generated `tokens.css`
 never disagree.
@@ -169,9 +164,9 @@ never disagree.
 | `--oc-map-hover-dim` | 0.75 | map-local override; dimming 3000 county paths at 0.3 reads as a blackout, so maps use a lighter dim and only on legend-bin hover, never on feature hover |
 | `--oc-positive-tint` / `--oc-negative-tint` | 10% color-mix toward `--oc-bg` | delta chip backgrounds |
 
-`--oc-border-radius` (8px) drives containers and tooltips. In v8, mounts stamp
-resolved theme tokens inline, so ordinary stylesheet overrides of these tokens
-do not win. Set `theme.borderRadius` to change this value. Mark geometry uses the fixed `--oc-radius-sm`
+`--oc-border-radius` (8px) drives containers and tooltips. In v9, CSS overrides
+work when `theme.borderRadius` is omitted. An authored `theme.borderRadius`
+takes precedence. Mark geometry uses the fixed `--oc-radius-sm`
 regardless, so a theme with `borderRadius: 0` still draws a 2px bar-end
 radius.
 
@@ -180,7 +175,7 @@ radius.
 `token-theme-parity` test asserts this, along with the four weight tokens,
 `--oc-gridline`, `--oc-axis`, `--oc-border-radius`, `colors.neutral`, and
 `--oc-animation-stagger`, so the JS theme and the generated CSS tokens can't
-drift apart the way they did before this release.
+drift apart.
 
 ### The editorial rule
 
@@ -200,16 +195,32 @@ as `chrome.*.color` and needs no dark-mode branch. `computeChrome` reserves
 
 ### CSS custom properties
 
-`--oc-*` custom properties are now stamped on each `.oc-root` container from the resolved JS theme at mount time. This means:
+Defaults remain in `tokens.css` and `dark.css`. The shared renderer helper stamps
+only authored theme leaves and values derived from them. A host stylesheet can
+override omitted tokens, including `--oc-border-radius`; an authored theme value
+wins via its inline style. Removing a theme override restores the host value.
+SVG and raster exports retain the live CSS token values before leaving the page.
 
-- **Two charts with different themes on the same page** each get correct `--oc-*` values (per-container scoping).
-- **`tokens.css` and `dark.css` are fallback defaults**, not the source of truth. They still work for SSR, static HTML, and pre-mount styling.
-- **If you were reading `--oc-*` values from CSS** to style surrounding UI, those values now reflect the actual resolved theme rather than the hardcoded defaults. This is almost certainly what you wanted, but worth noting.
+Theme layers deep-merge in this order: spec theme, provider theme, component prop
+(or mount/compile option). For layered charts, chrome, axes and legend use the
+layer theme (or the first leaf's when the layer sets none), and each leaf's marks
+use its own theme merged over the layer theme.
+Objects merge by leaf; arrays and `{ light, dark }` pairs replace atomically.
+`colors: string[]` remains shorthand for `colors.categorical`. `null` replaces:
+use `rule: null` to remove a preset rule. Partial rules inherit unspecified
+preset values; without a preset, width is 40px, thickness is 3px, and color is
+theme text ink. Authored `chrome.<element>.fontSize` overrides the general
+`fonts.sizes` scale. Chrome color shorthand is now `{ color: '...' }`.
 
-No action required. If you import `tokens.css`/`dark.css`, keep doing so. The JS-stamped properties take precedence via inline style specificity.
+The default small/axis tick/source/byline/footer size is 12px; chrome-to-chart
+spacing is 16px and chart-to-footer spacing is 12px. The background remains
+transparent. The empty `editorial` preset was removed (omit `theme` instead).
+`clarity` is deprecated and retains only its background, axis, and eyebrow
+colors. Use `ThemeConfig` for input and `ResolvedTheme` for output; the `Theme`
+alias was removed.
 
 
-### Annotation tokens (8.9.1)
+### Annotation tokens
 
 `theme.colors` accepts `annotationLabel`, `annotationMuted`, `annotationLeader`,
 `annotationRule`, `annotationRangeFill`, `annotationMarkerFill`, and
@@ -218,4 +229,6 @@ are `--oc-annotation-label`, `--oc-annotation-muted`, `--oc-annotation-leader`,
 `--oc-annotation-rule`, `--oc-annotation-range-fill`, `--oc-annotation-marker-fill`,
 and `--oc-annotation-plate`. Explicit annotation colors override the tokens.
 Arrow connectors match label ink. Existing `annotationText`/`annotationFill`
-uses are unchanged. Omitted annotation tokens preserve current 8.x output.
+uses are unchanged. Default rule ink is #888888 in light mode and #9ca3af in
+dark mode; range fill is #f0c040. Marker and plate fills follow the resolved
+neutral surface unless explicitly authored.

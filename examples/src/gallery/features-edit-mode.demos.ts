@@ -15,6 +15,6 @@ export const page: PageEntry = {
   export: 'Edit Mode',
   demos: [
     { id: 'editor', title: 'The editor' },
-    { id: 'editable-toggle', title: 'The editable prop' },
+    { id: 'interaction-mode', title: 'The interaction prop' },
   ],
 };

@@ -1,10 +1,10 @@
 /**
- * Integration snapshot test: the backstop for Step 7 refactor.
+ * Integration snapshots for the complete compiled chart contract.
  *
  * Compiles three representative ChartSpecs that exercise the extracted paths
  * (legend-heavy, clipped-domain, watermark + gradient) and snapshots the full
- * ChartLayout. Pre-refactor snapshots are captured before helper extraction;
- * post-refactor snapshots must match exactly without --update-snapshots.
+ * ChartLayout. These began as the Step 7 extraction oracle; subsequent intended
+ * contract changes are reviewed alongside focused semantic and visual tests.
  *
  * Non-serializable fields (Map, Function) are normalized into plain structures
  * so the snapshot can round-trip through the default serializer.
@@ -151,6 +151,50 @@ describe('compileChart snapshot (Step 7 oracle)', () => {
     };
 
     const layout = compileChart(spec, { width: 600, height: 400 });
+    expect(serializeLayout(layout)).toMatchSnapshot();
+  });
+
+  it('annotated scatter with auto, pinned, reference and range annotations', () => {
+    const spec = {
+      mark: 'point' as const,
+      data: Array.from({ length: 12 }, (_, i) => ({ x: i * 10, y: (i * 37) % 100 })),
+      encoding: {
+        x: { field: 'x', type: 'quantitative' as const },
+        y: { field: 'y', type: 'quantitative' as const },
+      },
+      chrome: { title: 'Annotated scatter' },
+      annotations: [
+        { id: 'auto', type: 'text' as const, x: 30, y: 11, text: 'Automatic callout', priority: 1 },
+        {
+          id: 'pinned',
+          type: 'text' as const,
+          x: 70,
+          y: 59,
+          text: 'Pinned callout',
+          subtitle: 'with a subtitle',
+          connector: 'curve' as const,
+          offset: { dx: -60, dy: -50 },
+        },
+        {
+          id: 'target',
+          type: 'refline' as const,
+          y: 50,
+          label: 'Target',
+          labelPlacement: 'outside' as const,
+        },
+        {
+          id: 'event',
+          type: 'refline' as const,
+          x: 40,
+          label: 'Policy change',
+          labelPlacement: 'outside' as const,
+        },
+        { id: 'band', type: 'range' as const, x1: 80, x2: 100, label: 'Forecast' },
+      ],
+      watermark: false,
+    };
+
+    const layout = compileChart(spec, { width: 640, height: 420 });
     expect(serializeLayout(layout)).toMatchSnapshot();
   });
 });

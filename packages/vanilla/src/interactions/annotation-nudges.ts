@@ -1,6 +1,5 @@
 import type {
   ChartLayout,
-  ElementEdit,
   ElementRef,
   ResolvedAnnotation,
   TextAnnotation,
@@ -12,6 +11,7 @@ import {
   previewAnnotationMove,
 } from '@opendata-ai/openchart-engine';
 import { updateAnnotationGeometry } from '../renderers/annotations';
+import type { GestureEdit } from './gesture-edit';
 import { findElementByRef } from './selection';
 
 /** Batch keyboard repeats into one placement transaction; flush before other gestures. */
@@ -22,7 +22,7 @@ export function createAnnotationNudges(
     svg: SVGElement | null;
     selected: ElementRef | null;
   },
-  emit: (edit: ElementEdit) => void,
+  emit: (edit: GestureEdit) => void,
 ) {
   let pending:
     | {
@@ -57,7 +57,12 @@ export function createAnnotationNudges(
     });
   };
   const keydown = (event: KeyboardEvent): boolean => {
-    if (!event.altKey || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key))
+    if (
+      event.altKey ||
+      event.ctrlKey ||
+      event.metaKey ||
+      !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)
+    )
       return false;
     const { layout, spec, svg, selected } = read();
     if (!svg || selected?.type !== 'annotation') return false;
@@ -90,8 +95,14 @@ export function createAnnotationNudges(
         layout.theme.colors.neutral.surface,
       );
     if (timer !== undefined) clearTimeout(timer);
-    timer = setTimeout(flush, 120);
+    timer = undefined;
     return true;
   };
-  return { keydown, flush };
+  const keyup = (event: KeyboardEvent) => {
+    if (!pending || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key))
+      return;
+    if (timer !== undefined) clearTimeout(timer);
+    timer = setTimeout(flush, 500);
+  };
+  return { keydown, keyup, flush };
 }

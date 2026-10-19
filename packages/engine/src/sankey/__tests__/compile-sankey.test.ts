@@ -66,10 +66,9 @@ describe('compileSankey', () => {
   it('nodes get default colors from theme categorical palette', () => {
     const result = compileSankey(basicSpec, defaultOptions);
 
+    const palette = result.theme.colors.categorical;
     for (const node of result.nodes) {
-      expect(node.fill).toBeTruthy();
-      // Should be a color string (hex, rgb, etc.)
-      expect(typeof node.fill).toBe('string');
+      expect(palette).toContain(node.fill);
     }
 
     // With 5 nodes and no color encoding, each node gets a different palette slot
@@ -173,10 +172,13 @@ describe('compileSankey', () => {
       const result = compileSankey(spec, defaultOptions);
 
       // Legend should have entries for the unique color categories
-      expect(result.legend.entries.length).toBeGreaterThan(0);
-      for (const entry of result.legend.entries) {
-        expect(entry.label).toBeTruthy();
-        expect(entry.color).toBeTruthy();
+      // One entry per unique `from` value, each with its own color...
+      expect(result.legend.entries.map((e) => e.label)).toEqual(['A', 'B', 'C']);
+      const legendColors = result.legend.entries.map((e) => e.color);
+      expect(new Set(legendColors).size).toBe(3);
+      // ...and every node is painted with one of those colors.
+      for (const node of result.nodes) {
+        expect(legendColors).toContain(node.fill);
       }
     });
 
@@ -215,9 +217,9 @@ describe('compileSankey', () => {
       const result = compileSankey(basicSpec, defaultOptions);
 
       const tooltip = result.tooltipDescriptors.get('node-A')!;
-      expect(tooltip.title).toBeTruthy();
-      expect(tooltip.fields.length).toBeGreaterThan(0);
-      expect(tooltip.fields.some((f) => f.label === 'Total flow')).toBe(true);
+      expect(tooltip.title).toBe('A');
+      // A's only flow is A -> C (10).
+      expect(tooltip.fields).toEqual([{ label: 'Total flow', value: '10' }]);
     });
 
     it('link tooltip has title and flow field', () => {
@@ -408,9 +410,12 @@ describe('compileSankey', () => {
     });
   });
 
-  describe('valueFormat', () => {
-    it('formats tooltip values when valueFormat is set', () => {
-      const spec = { ...basicSpec, valueFormat: '.0f%' };
+  describe('encoding.value.format', () => {
+    it('formats tooltip values when the channel format is set', () => {
+      const spec = {
+        ...basicSpec,
+        encoding: { ...basicSpec.encoding, value: { ...basicSpec.encoding.value, format: '.0f%' } },
+      };
       const result = compileSankey(spec, defaultOptions);
 
       // Check that node tooltips use the format
@@ -418,7 +423,7 @@ describe('compileSankey', () => {
       expect(nodeTooltip?.fields[0].value).toContain('%');
     });
 
-    it('uses default formatting when valueFormat is undefined', () => {
+    it('uses default formatting when the channel format is omitted', () => {
       const result = compileSankey(basicSpec, defaultOptions);
 
       const nodeTooltip = result.tooltipDescriptors.get('node-C');
@@ -426,7 +431,13 @@ describe('compileSankey', () => {
     });
 
     it('falls back to default on invalid format string', () => {
-      const spec = { ...basicSpec, valueFormat: 'not-a-format' };
+      const spec = {
+        ...basicSpec,
+        encoding: {
+          ...basicSpec.encoding,
+          value: { ...basicSpec.encoding.value, format: 'not-a-format' },
+        },
+      };
       // Should not throw
       const result = compileSankey(spec, defaultOptions);
       expect(result.nodes.length).toBeGreaterThan(0);

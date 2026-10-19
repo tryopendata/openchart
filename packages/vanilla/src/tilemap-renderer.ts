@@ -12,13 +12,13 @@ import type {
   TileMapTileMark,
 } from '@opendata-ai/openchart-core';
 import { stampAnimationVars } from './animation-vars';
+import { renderAttributionBrand } from './renderers/brand';
 import { renderChromeElement } from './renderers/chrome';
 import { renderLegend } from './renderers/legend';
 import { nextSvgId } from './svg-ids';
+import { stampThemeProperties } from './theme-tokens';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
-const XLINK_NS = 'http://www.w3.org/1999/xlink';
-const BRAND_URL = 'https://tryopendata.ai';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -43,7 +43,7 @@ function renderChrome(parent: SVGElement, layout: TileMapLayout): void {
   g.setAttribute('class', 'oc-chrome');
 
   const { chrome, measureText } = layout;
-  const bottomOffset = layout.area.y + layout.area.height;
+  const bottomOffset = chrome.bottomAnchorY ?? layout.area.y + layout.area.height;
 
   if (chrome.title) {
     renderChromeElement(g, chrome.title, 'oc-title', 'title', measureText);
@@ -85,54 +85,6 @@ function renderChrome(parent: SVGElement, layout: TileMapLayout): void {
 // ---------------------------------------------------------------------------
 // Watermark rendering
 // ---------------------------------------------------------------------------
-
-function renderWatermark(parent: SVGElement, layout: TileMapLayout): void {
-  if (layout.width < 480) return; // Don't render if too narrow
-
-  const { width, height } = layout;
-  const { theme } = layout;
-  const padding = theme.spacing.padding;
-  const rightEdge = width - padding;
-  const bottomEdge = height - padding;
-  const fill = theme.colors.axis;
-
-  const a = createSVGElement('a');
-  a.setAttribute('href', BRAND_URL);
-  a.setAttributeNS(XLINK_NS, 'xlink:href', BRAND_URL);
-  a.setAttribute('target', '_blank');
-  a.setAttribute('rel', 'noopener');
-  a.setAttribute('class', 'oc-chrome-ref');
-
-  const text = createSVGElement('text');
-  setAttrs(text, {
-    x: rightEdge,
-    y: bottomEdge,
-    'dominant-baseline': 'alphabetic',
-    'text-anchor': 'end',
-    'font-family': theme.fonts.family,
-    'font-size': 12,
-    'fill-opacity': 0.55,
-  });
-  (text as SVGElement & ElementCSSInlineStyle).style.setProperty('fill', fill);
-
-  const trySpan = createSVGElement('tspan');
-  setAttrs(trySpan, { 'font-weight': 500 });
-  trySpan.textContent = 'try';
-
-  const openDataSpan = createSVGElement('tspan');
-  setAttrs(openDataSpan, { 'font-weight': 600, 'font-size': 16 });
-  openDataSpan.textContent = 'OpenData';
-
-  const aiSpan = createSVGElement('tspan');
-  setAttrs(aiSpan, { 'font-weight': 500 });
-  aiSpan.textContent = '.ai';
-
-  text.appendChild(trySpan);
-  text.appendChild(openDataSpan);
-  text.appendChild(aiSpan);
-  a.appendChild(text);
-  parent.appendChild(a);
-}
 
 // ---------------------------------------------------------------------------
 // Tiles rendering
@@ -382,7 +334,7 @@ export function renderTileMapSVG(
   layout: TileMapLayout,
   opts?: { animate?: boolean },
 ): SVGSVGElement {
-  const { width, height, tiles, a11y, watermark, animation } = layout;
+  const { width, height, tiles, a11y, animation } = layout;
   const animate = opts?.animate && !!animation?.enter;
 
   const svg = createSVGElement('svg') as SVGSVGElement;
@@ -394,6 +346,7 @@ export function renderTileMapSVG(
 
   const classes = animate ? 'oc-tilemap oc-animate' : 'oc-tilemap';
   svg.setAttribute('class', classes);
+  stampThemeProperties(svg, layout.theme);
 
   if (animate && animation?.enter) {
     // Target ~1s total: stagger window ~800ms + per-tile pop ~200ms
@@ -425,9 +378,12 @@ export function renderTileMapSVG(
   }
 
   // Render watermark
-  if (watermark) {
-    renderWatermark(svg, layout);
-  }
+  renderAttributionBrand(
+    svg,
+    layout.chrome,
+    layout.chrome.bottomAnchorY ?? layout.area.y + layout.area.height,
+    layout.measureText,
+  );
 
   return svg;
 }

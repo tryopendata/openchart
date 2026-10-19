@@ -242,7 +242,7 @@ describe('resolveNodeVisuals', () => {
       const surface = resolveGraphSurface(theme);
 
       for (const node of nodes) {
-        expect(node.fill).toBeTruthy();
+        expect(node.fill).toBe(theme.colors.categorical[0]);
         expect(node.stroke).toBe(surface);
         expect(node.stroke).not.toBe(node.fill);
       }

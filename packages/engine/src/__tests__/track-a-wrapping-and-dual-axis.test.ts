@@ -68,7 +68,7 @@ describe('wrapped annotation notes', () => {
     expect(notes.every((note) => (note.lines?.length ?? 0) > 1)).toBe(true);
     for (const note of notes) {
       expect(note.lines!.join(' ').replaceAll(' ', '')).toBe(
-        `${note.index}. ${note.text}`.replaceAll(' ', ''),
+        `${note.index}. ${note.text}${note.subtitle ?? ''}`.replaceAll(' ', ''),
       );
       for (const line of note.lines!)
         expect(

@@ -63,11 +63,8 @@ function generateTokensCss() {
   /* ---------------------------------------------------------------------------
    * Custom properties (light mode defaults)
    *
-   * These are FALLBACK defaults. At runtime, the JS theme engine stamps the
-   * resolved theme as inline --oc-* custom properties on each .oc-root
-   * container (see packages/vanilla/src/theme-tokens.ts). These CSS values
-   * serve as fallbacks for contexts where JS hasn't mounted yet (SSR, static
-   * HTML examples).
+   * Defaults remain in CSS so host styles can override them. The JS theme
+   * engine stamps only authored theme overrides (theme-tokens.ts).
    * --------------------------------------------------------------------------- */
 
   ${selectorList.replace(/\n/g, '\n  ')} {
@@ -138,15 +135,21 @@ function generateDarkCss() {
     lines.push(`    ${t.name}: ${t.dark};`);
   }
 
+  const emitted = new Set([...surfaces, ...textLevels, ...lineTokens, ...brandTokens, ...interactiveTokens].map((token) => token.name));
+  const remaining = darkTokens.filter((token) => !emitted.has(token.name));
+  if (remaining.length) {
+    lines.push('');
+    emitGroup('Annotation and neutral colors', remaining);
+  }
+
   return `${GENERATED_HEADER}
 
 @layer oc.tokens {
   /* ---------------------------------------------------------------------------
    * Dark mode overrides (fallback defaults)
    *
-   * At runtime, the JS theme engine stamps dark-adapted --oc-* custom
-   * properties on each .oc-root container. These CSS values serve as
-   * fallbacks for contexts where JS hasn't mounted yet.
+   * Dark defaults stay in CSS; authored theme overrides are resolved and
+   * stamped by the JS theme engine.
    * --------------------------------------------------------------------------- */
 
   .oc-dark {

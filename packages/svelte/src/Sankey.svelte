@@ -7,6 +7,7 @@
 -->
 <script lang="ts">
 import type { DarkMode, SankeySpec, ThemeConfig } from '@opendata-ai/openchart-core';
+import { mergeThemeConfig } from '@opendata-ai/openchart-core';
 import {
   createSankey,
   type SankeyInstance,
@@ -54,7 +55,7 @@ let prevSpec = '';
 
 // Effect 1: Mount/recreate sankey on theme/darkMode changes.
 $effect(() => {
-  const resolvedTheme = theme ?? ctxTheme?.();
+  const resolvedTheme = mergeThemeConfig(ctxTheme?.(), theme);
   const resolvedDarkMode = darkMode ?? ctxDarkMode?.();
   const currentSpec = untrack(() => spec);
 
@@ -67,7 +68,7 @@ $effect(() => {
     onLinkClick: (link: Record<string, unknown>) => untrack(() => onlinkclick)?.(link),
     onNodeHover: (node: Record<string, unknown> | null) => untrack(() => onnodehover)?.(node),
     onLinkHover: (link: Record<string, unknown> | null) => untrack(() => onlinkhover)?.(link),
-    responsive: true,
+    autoResize: true,
   };
 
   instance = createSankey(containerEl, currentSpec, options);

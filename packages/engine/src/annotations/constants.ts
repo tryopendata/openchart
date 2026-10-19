@@ -7,13 +7,7 @@ export const DEFAULT_ANNOTATION_FONT_SIZE = 13;
  */
 export const DEFAULT_ANNOTATION_FONT_WEIGHT = 400;
 
-/**
- * Weight the primary text takes when a subtitle is present and the author set no
- * explicit `fontWeight` — the "Feb. 25 / 2015 maximum" lede + context stack.
- */
-export const LEDE_FONT_WEIGHT = 700;
-
-/** Subtitles are always regular, so they never inherit a lede weight. */
+/** Subtitles are always regular, whatever the primary text's weight. */
 export const SUBTITLE_FONT_WEIGHT = 400;
 
 /** Font stack used when the theme font isn't threaded through (SSR/legacy paths). */
@@ -67,7 +61,7 @@ export const DEFAULT_DOT_STROKE_WIDTH = 1.5;
 export const SUBTITLE_GAP = 2;
 
 /** Subtitle font size multiplier (relative to primary annotation font size). */
-export const SUBTITLE_FONT_SIZE_RATIO = 0.85;
+export const SUBTITLE_FONT_SIZE_RATIO = 12 / 13;
 
 /**
  * The subtitle's resolved font size. Rounded, and shared by every caller: the
@@ -103,6 +97,15 @@ export function subtitleBaselineY(
 
 /** Gap (px) between the label bounding box and the start of its connector. */
 export const CONNECTOR_STANDOFF = 6;
+
+/** Gap (px) between a connector's data end and the value label it stops at. */
+export const TARGET_LABEL_STANDOFF = 3;
+
+/**
+ * A value label whose box sits within this distance (px) of a connector's data
+ * point is that point's own label. Column value labels sit a few px above the bar.
+ */
+export const TARGET_LABEL_REACH = 16;
 
 /**
  * Connectors shorter than this are suppressed: a nub between a label and the

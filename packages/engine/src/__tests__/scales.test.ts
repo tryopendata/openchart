@@ -46,10 +46,10 @@ const barSpec: NormalizedChartSpec = {
 const chartArea = { x: 50, y: 50, width: 500, height: 300 };
 
 describe('computeScales', () => {
-  it('creates a time scale for temporal x encoding', () => {
+  it('creates a UTC time scale for date-only temporal x encoding', () => {
     const scales = computeScales(lineSpec, chartArea, lineSpec.data);
     expect(scales.x).toBeDefined();
-    expect(scales.x!.type).toBe('time');
+    expect(scales.x!.type).toBe('utc');
 
     // The scale should map dates within the range
     const pos = scales.x!.scale(new Date('2020-06-01'));
@@ -312,7 +312,7 @@ describe('scale config properties', () => {
   it('backward compatible: existing specs still work', () => {
     // lineSpec and barSpec from before should still produce valid scales
     const lineScales = computeScales(lineSpec, chartArea, lineSpec.data);
-    expect(lineScales.x!.type).toBe('time');
+    expect(lineScales.x!.type).toBe('utc');
     expect(lineScales.y!.type).toBe('linear');
     expect(lineScales.color!.type).toBe('ordinal');
 

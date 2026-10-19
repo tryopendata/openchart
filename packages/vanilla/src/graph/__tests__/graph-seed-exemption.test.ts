@@ -382,6 +382,8 @@ describe('seedNode dim exemption (mount)', () => {
       rafCallbacks.delete(id);
     });
     vi.stubGlobal('performance', { now: () => nowValue });
+    // happy-dom paints no canvas pixels, so the per-frame render state is the
+    // only view of which nodes are lit or dimmed.
     renderSpy = vi.spyOn(GraphCanvasRenderer.prototype, 'render').mockImplementation(function (
       this: unknown,
       state: GraphRenderState,

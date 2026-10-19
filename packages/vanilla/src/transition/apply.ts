@@ -198,6 +198,8 @@ export function applyTweenState(
         );
       break;
     }
+    default:
+      tw satisfies never;
   }
 
   // Apply opacity interpolation if defined
@@ -299,6 +301,8 @@ export function snapTweenToFinal(tw: Tween): void {
       if (tw.after) updateAnnotationGeometry(tw.el, tw.after, tw.background);
       tw.el.removeAttribute('transform');
       break;
+    default:
+      tw satisfies never;
   }
 
   if (tw.toOpacity !== undefined) {

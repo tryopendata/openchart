@@ -18,34 +18,51 @@ import {
   computeNoteBandHeight,
   defaultNumberFormatter,
   estimateTextWidth,
-  getBreakpoint,
-  getHeightClass,
-  getLayoutStrategy,
+  mergeThemeConfig,
   resolveNumberFormatter,
   resolveTheme,
   TICK_LABEL_OFFSET,
 } from '@opendata-ai/openchart-core';
 import { scaleLinear } from 'd3-scale';
 import { curveMonotoneX, area as d3area, line as d3line } from 'd3-shape';
-import { heuristicMeasure } from '../annotations/geometry';
 import { annotationNoteLineCount } from '../annotations/notes';
-import { referenceLabelReserve } from '../annotations/reference-layout';
 import { flattenLayers } from '../compiler/index';
-import { normalizeSpec } from '../compiler/normalize';
-import type { NormalizedChartSpec } from '../compiler/types';
 import { finiteNumber } from '../data/finite-number';
 import { bidirectionalSweep } from '../endpoint-labels/compute';
-import {
-  ENDPOINT_COLUMN_GAP,
-  ENDPOINT_ENTRY_GAP,
-  ENDPOINT_LEADER_THRESHOLD,
-} from '../endpoint-labels/constants';
+import { ENDPOINT_LEADER_THRESHOLD } from '../endpoint-labels/constants';
+import { authoredTitleFootprint, isYAxisHeader } from '../layout/axis-title-plan';
+import { NO_REFERENCE_RESERVE, outsideBudget } from '../layout/budget';
 import type { MeasureFn } from '../layout/plan';
 import { createMeasureFn } from '../layout/plan';
-import { measureCategoricalLegendContent, placeLegend } from '../legend/compute';
-import { expandSpecSugar } from './spec-sugar';
+import { resolveChromeLayout } from '../layout/shared';
+import { scopeTooltipContent } from '../tooltips/metadata';
+import type { InternalCompileOptions, LeafContext } from './internal-options';
+import { emitSpecWarnings } from './spec-sugar';
 
-type ChartCompiler = (spec: unknown, options: CompileOptions) => ChartLayout;
+type ChartCompiler = (spec: unknown, options: InternalCompileOptions) => ChartLayout;
+
+/**
+ * Hold a measure-pass compile's warnings and diagnostics. A leaf whose measure
+ * layout is final releases them; a leaf the assembly recompiles drops them, so
+ * each leaf reports once.
+ */
+function holdReports(options: CompileOptions) {
+  const warnings: string[] = [];
+  const diagnostics: Parameters<NonNullable<CompileOptions['onDiagnostic']>>[0][] = [];
+  return {
+    sinks: {
+      onWarn: (message: string) => warnings.push(message),
+      onDiagnostic: options.onDiagnostic
+        ? (diagnostic: (typeof diagnostics)[number]) => diagnostics.push(diagnostic)
+        : undefined,
+    },
+    release() {
+      // One call per message keeps the per-sink deprecation de-duplication.
+      for (const message of warnings) emitSpecWarnings([message], options.onWarn);
+      for (const diagnostic of diagnostics) options.onDiagnostic?.(diagnostic);
+    },
+  };
+}
 
 /**
  * Paint order controls interaction IDs; authored leaf order controls identity.
@@ -62,7 +79,15 @@ function appendLayerMarks(
   const scope = `layer:${leafIndex}:`;
   for (const [index, mark] of sourceMarks.entries()) {
     const content = layout.tooltipDescriptors.get(`${mark.type}-${index}`);
-    if (content) tooltips.set(`${mark.type}-${marks.length}`, content);
+    if (content)
+      tooltips.set(
+        `${mark.type}-${marks.length}`,
+        scopeTooltipContent(content, { layer: `layer:${leafIndex}` }),
+      );
+    if (mark.type === 'line' || mark.type === 'area')
+      for (const point of mark.dataPoints ?? [])
+        if (point.tooltip)
+          point.tooltip = scopeTooltipContent(point.tooltip, { layer: `layer:${leafIndex}` });
     const key = `${scope}${mark.type}:${mark.key !== undefined ? `key:${mark.key}` : `index:${index}`}`;
     marks.push({
       ...mark,
@@ -104,7 +129,7 @@ export function compileLayer(
   // Past this point every compile is one piece of a multi-leaf layer, not a
   // standalone chart. Flagged so per-chart resolutions that only make sense for
   // a whole figure (the canvas mark layer) opt out.
-  const layerOptions: CompileOptions = { ...options, layered: true };
+  const layerOptions: InternalCompileOptions = { ...options, layered: true };
 
   if (spec.resolve?.scale?.y === 'independent') {
     return compileLayerIndependent(leaves, spec, layerOptions, compileChart);
@@ -131,8 +156,12 @@ export function compileLayer(
 
   // Leaf specs lack the layer-level chrome/legend, so left alone they compute
   // a different chart area than the primary and their marks drift off the
-  // axes. Freeze the primary's area (and inherit its theme) for every leaf.
-  const leafOptions: CompileOptions = { ...layerOptions, frozenChartArea: primaryLayout.area };
+  // axes. Freeze the primary's area for every leaf. Each leaf's own theme
+  // deep-merges over the layer theme for its marks.
+  const leafOptions: InternalCompileOptions = {
+    ...layerOptions,
+    frozenBudget: { chartArea: primaryLayout.area },
+  };
 
   // Shared scales means shared *domains*, not just a shared plot rect. Each leaf
   // otherwise re-fits its own domain from its own rows, so a layer holding fewer
@@ -144,8 +173,7 @@ export function compileLayer(
   for (const { leaf, leafIndex } of indexedLeaves) {
     const themedLeaf = {
       ...withSharedDomains(leaf as ChartSpec, sharedDomains),
-      theme: (leaf as ChartSpec).theme ?? spec.theme,
-      darkMode: (leaf as ChartSpec).darkMode ?? spec.darkMode,
+      theme: mergeThemeConfig(spec.theme, (leaf as ChartSpec).theme),
     };
     const leafLayout = compileChart(themedLeaf as unknown, leafOptions);
 
@@ -241,7 +269,7 @@ function estimateYAxisLabelWidth(
 function compileLayerIndependent(
   leaves: ChartSpec[],
   layerSpec: LayerSpec,
-  options: CompileOptions,
+  options: InternalCompileOptions,
   compileChart: ChartCompiler,
 ): ChartLayout {
   if (leaves.length > 2) {
@@ -251,6 +279,23 @@ function compileLayerIndependent(
     );
   }
 
+  // Independently scaled bands can cover each other's accepted interior boxes.
+  // Choose endpoint identification before measuring either leaf, so no name is
+  // lost and the shared column reserves the complete fallback text up front.
+  const endpointIdentification = (leaf: ChartSpec, index: number): ChartSpec => {
+    if (typeof leaf.endpointLabels !== 'object' || leaf.endpointLabels?.placement !== 'interior')
+      return leaf;
+    options.onDiagnostic?.({
+      code: 'LAYER_INTERIOR_LABEL_FALLBACK',
+      severity: 'warning',
+      status: 'failed',
+      origin: 'author',
+      path: '/resolve/scale/y',
+      viewport: { width: options.width, height: options.height },
+      message: `Layer ${index + 1}: interior names cannot be reconciled across independent y-scales; using endpoint names while preserving the authored anchor and value format.`,
+    });
+    return { ...leaf, endpointLabels: { ...leaf.endpointLabels, placement: 'end' } };
+  };
   const leaf0 = leaves[0];
   const leaf1 = leaves[1];
 
@@ -263,7 +308,11 @@ function compileLayerIndependent(
     );
   }
 
-  const theme = resolveTheme(layerSpec.theme ?? leaf1.theme);
+  // Each side's axis and marks belong to its leaf, so they use the leaf theme
+  // deep-merged over the layer's (as shared-axis leaf marks do). Root chrome
+  // and the shared legend come from leaf 0's compile with the root theme.
+  const leafTheme1 = mergeThemeConfig(layerSpec.theme, leaf1.theme);
+  const theme = resolveTheme(mergeThemeConfig(leafTheme1, options.theme));
   const axisFontSize = theme.fonts?.sizes?.axisTick ?? 11;
   const measureFn = createMeasureFn(options.measureText);
   const rightAxisWidth = estimateYAxisLabelWidth(
@@ -273,7 +322,10 @@ function compileLayerIndependent(
     measureFn,
   );
   const yAxisConfig = leaf1.encoding?.y?.axis || undefined;
-  const hasRightAxisTitle = !!yAxisConfig?.title;
+  const rightHeader = isYAxisHeader(leaf1.encoding?.y);
+  const hasHeader = rightHeader || isYAxisHeader(leaf0.encoding?.y);
+  const hasRightAxisTitle = !!yAxisConfig?.title && !rightHeader;
+  const titleFootprint = authoredTitleFootprint(leaf1.encoding?.y, theme, options.measureText);
   const tickExtent = TICK_LABEL_OFFSET + rightAxisWidth;
   const bodyFontSize = theme.fonts?.sizes?.body ?? 13;
   const halfGlyph = Math.ceil(bodyFontSize / 2);
@@ -285,13 +337,15 @@ function compileLayerIndependent(
   const titleExtent = hasRightAxisTitle
     ? titleCenterOffset +
       halfGlyph +
+      Math.max(0, (titleFootprint?.width ?? bodyFontSize) - bodyFontSize) +
       (options.width < BREAKPOINT_COMPACT_MAX ? 0 : AXIS_TITLE_TRAILING_PAD)
     : 0;
   const rightReserve = Math.max(tickExtent, titleExtent);
 
-  const optionsWithReserve: CompileOptions = {
+  const optionsWithReserve: InternalCompileOptions = {
     ...options,
     rightAxisReserve: rightReserve,
+    ...(rightHeader && isYAxisHeader(leaf0.encoding?.y) ? { axisHeaderWidthFraction: 0.45 } : {}),
   };
 
   const xField0 = leaf0.encoding?.x?.field;
@@ -307,12 +361,67 @@ function compileLayerIndependent(
     leaf1WithUnionX = withYDomain(leaf1WithUnionX, aligned.domain1);
   }
 
-  const primary0 = buildPrimarySpec([leaf0WithUnionX], layerSpec);
-  let layout0 = compileChart(primary0, optionsWithReserve);
+  // Measure pass: each leaf compiled on its own resolves the plot, legend,
+  // endpoint column and reserves the assembly sizes against. The primary
+  // leaf's budget carries the figure's authored reserves.
+  const primary0 = endpointIdentification(buildPrimarySpec([leaf0WithUnionX], layerSpec), 0);
+  const measure0 = holdReports(options);
+  const leaf0Budget: LeafContext = {};
+  let layout0 = compileChart(primary0, {
+    ...optionsWithReserve,
+    ...measure0.sinks,
+    leafContext: leaf0Budget,
+  });
 
-  const primary1 = buildPrimarySpec([leaf1WithUnionX], layerSpec);
+  const primary1 = endpointIdentification(buildPrimarySpec([leaf1WithUnionX], layerSpec), 1);
+  primary1.theme = leafTheme1;
   primary1.annotations = [];
-  let layout1 = compileChart(primary1, optionsWithReserve);
+  if (hasHeader && primary1.encoding?.y) {
+    primary1.encoding = {
+      ...primary1.encoding,
+      y: { ...primary1.encoding.y, axis: { ...(primary1.encoding.y.axis || {}), orient: 'right' } },
+    };
+  }
+  const measure1 = holdReports(options);
+  const leaf1Legend: LeafContext = {};
+  let layout1 = compileChart(primary1, {
+    ...optionsWithReserve,
+    ...measure1.sinks,
+    leafContext: leaf1Legend,
+  });
+
+  // Gather every eligible categorical entry before applying figure-level limits.
+  // The source compiles retain each leaf's show/suppression policy; extraction
+  // only removes truncation so an authored limit is applied once to the union.
+  const eligible = [leaf0Budget.categoricalLegend, leaf1Legend.categoricalLegend].filter(
+    (content): content is NonNullable<typeof content> => !!content,
+  );
+  const legendLabels = new Set<string>();
+  const completeLegendEntries = eligible
+    .flatMap((item) => item.entries)
+    .filter((entry) => {
+      if (legendLabels.has(entry.label)) return false;
+      legendLabels.add(entry.label);
+      return true;
+    });
+  const primaryOptions: InternalCompileOptions = eligible.length
+    ? {
+        ...optionsWithReserve,
+        categoricalLegend: {
+          entries: completeLegendEntries,
+          config: eligible[0].config,
+        },
+      }
+    : optionsWithReserve;
+  if (eligible.length) {
+    // Still the measure phase: the complete legend now participates in the
+    // primary frame's rows, right gutter and chrome before shared geometry freezes.
+    layout0 = compileChart(primary0, {
+      ...primaryOptions,
+      ...measure0.sinks,
+      leafContext: leaf0Budget,
+    });
+  }
 
   // Endpoint columns belong to the assembled figure. Both axes must use the
   // same plot rectangle, with the trailing column outside the right axis.
@@ -328,13 +437,15 @@ function compileLayerIndependent(
       layout0.area.x -
         pad -
         (layout0.endpointLabels?.leadingBounds
-          ? layout0.endpointLabels.leadingBounds.width + 16
+          ? layout0.endpointLabels.leadingBounds.width + layout0.theme.spacing.endpointColumnGap
           : 0),
     );
     const x = Math.max(
       layout0.area.x,
       layout1.area.x,
-      leadingWidth ? pad + leadingWidth + ENDPOINT_COLUMN_GAP + leftAxisReserve : 0,
+      leadingWidth
+        ? pad + leadingWidth + layout0.theme.spacing.endpointColumnGap + leftAxisReserve
+        : 0,
     );
     leadingColumnX = leadingWidth ? pad : undefined;
     const y = Math.max(layout0.area.y, layout1.area.y);
@@ -343,61 +454,37 @@ function compileLayerIndependent(
     const legendReserve = rightLegends.length
       ? Math.max(...rightLegends.map((legend) => legend.bounds.width)) + 8
       : 0;
-    const referenceReserve = referenceLabelReserve(
-      primary0.annotations ?? [],
-      options.width,
-      options.measureText
-        ? (text, font) => options.measureText!(text, font.fontSize, font.fontWeight).width
-        : heuristicMeasure,
-    );
+    const referenceReserve = leaf0Budget.budget?.reference ?? NO_REFERENCE_RESERVE;
     const right =
       options.width -
       pad -
       rightReserve -
-      ENDPOINT_COLUMN_GAP -
+      layout0.theme.spacing.endpointColumnGap -
       endpointWidth -
       legendReserve -
       referenceReserve.right;
-    const grow = (primary0.chromeLayout ?? options.chromeLayout) === 'grow';
-    const bottom = grow
+    // With the note band outside the budget the primary plot keeps its
+    // height; inside it, both axes share the shorter plot.
+    const bottom = outsideBudget(resolveChromeLayout(primary0, options), 'notes')
       ? layout0.area.y + layout0.area.height
       : Math.min(layout0.area.y + layout0.area.height, layout1.area.y + layout1.area.height);
-    const area = {
-      ...(options.frozenChartArea ?? {
-        x,
-        y,
-        width: Math.max(1, right - x),
-        height: Math.max(1, bottom - y),
-      }),
+    // Frozen pass: both leaves draw into the shared plot with the primary's
+    // note band. The reserve is measured from authored text up front, so a
+    // narrower plot that demotes more labels never needs another pass.
+    const frozenBudget = {
+      chartArea: { x, y, width: Math.max(1, right - x), height: Math.max(1, bottom - y) },
+      noteReserve: noteReserve(layout0),
     };
-    let reserve = noteReserve(layout0);
-    // Narrowing the plot can demote more annotations. Carry the old reserve
-    // through frozen compilation, then reconcile any new note lines. The
-    // reserve only grows and is bounded by the authored annotation count.
-    for (let pass = 0; pass <= (primary0.annotations?.length ?? 0) + 1; pass++) {
-      const alignedOptions = {
-        ...optionsWithReserve,
-        frozenChartArea: area,
-        footnoteReserve: reserve,
-      };
-      layout0 = compileChart(primary0, alignedOptions);
-      layout1 = compileChart(primary1, alignedOptions);
-      const nextReserve = noteReserve(layout0);
-      if (nextReserve <= reserve) break;
-      const delta = nextReserve - reserve;
-      reserve = nextReserve;
-      if (grow) continue;
-      if (options.frozenChartArea) break;
-      area.height = Math.max(1, area.height - delta);
-    }
+    layout0 = compileChart(primary0, { ...primaryOptions, frozenBudget });
+    layout1 = compileChart(primary1, { ...optionsWithReserve, frozenBudget });
     // The compiler places right legends next to the plot. In this assembly
     // the right axis and endpoint column occupy that space first.
-    const legendShift = rightReserve + ENDPOINT_COLUMN_GAP + endpointWidth;
+    const legendShift = rightReserve + layout0.theme.spacing.endpointColumnGap + endpointWidth;
     // Each leaf already places its legend after its own endpoint column. The
     // assembled figure adds the right axis and the widest merged column.
     const localColumnReserve = (layout: ChartLayout) =>
       layout.endpointLabels?.entries.length
-        ? ENDPOINT_COLUMN_GAP + layout.endpointLabels.bounds.width
+        ? layout0.theme.spacing.endpointColumnGap + layout.endpointLabels.bounds.width
         : 0;
     layout0 = moveRightLegends(layout0, legendShift - localColumnReserve(layout0));
     layout1 = moveRightLegends(layout1, legendShift - localColumnReserve(layout1));
@@ -406,13 +493,49 @@ function compileLayerIndependent(
   // Without endpoint columns the secondary leaf still needs the primary's
   // stable note band. It owns no annotations, so an independent compile would
   // otherwise stretch its scale below the assembled plot.
-  if (!columns.length && noteReserve(layout0) > 0) {
-    const reserve = noteReserve(layout0);
-    layout1 = compileChart(primary1, {
-      ...optionsWithReserve,
-      frozenChartArea: layout0.area,
-      footnoteReserve: reserve,
-    });
+  if (!columns.length && (hasHeader || eligible.length)) {
+    const y = Math.max(layout0.area.y, layout1.area.y);
+    const bottom = Math.min(
+      layout0.area.y + layout0.area.height,
+      layout1.area.y + layout1.area.height,
+    );
+    const frozenBudget = {
+      chartArea: { ...layout0.area, y, height: Math.max(1, bottom - y) },
+      noteReserve: noteReserve(layout0),
+    };
+    layout0 = compileChart(primary0, { ...primaryOptions, frozenBudget });
+    layout1 = compileChart(primary1, { ...optionsWithReserve, frozenBudget });
+    layout0 = moveRightLegends(layout0, rightReserve);
+    layout1 = moveRightLegends(layout1, rightReserve);
+  } else if (!columns.length) {
+    measure0.release();
+    if (noteReserve(layout0) > 0) {
+      layout1 = compileChart(primary1, {
+        ...optionsWithReserve,
+        frozenBudget: { chartArea: layout0.area, noteReserve: noteReserve(layout0) },
+      });
+    } else measure1.release();
+  }
+
+  // Leaf 0's marks and axes take its merged theme. Its compile above used the
+  // root theme for chrome, so redraw them in the same plot when the two differ.
+  if (layerSpec.theme && leaf0.theme) {
+    const leafView = compileChart(
+      { ...primary0, theme: mergeThemeConfig(layerSpec.theme, leaf0.theme) },
+      {
+        ...primaryOptions,
+        // The root-theme compile already reported this leaf's warnings.
+        ...holdReports(options).sinks,
+        frozenBudget: { chartArea: layout0.area, noteReserve: noteReserve(layout0) },
+      },
+    );
+    layout0 = {
+      ...layout0,
+      marks: leafView.marks,
+      axes: leafView.axes,
+      tooltipDescriptors: leafView.tooltipDescriptors,
+      ...(layout0.endpointLabels ? { endpointLabels: leafView.endpointLabels } : {}),
+    };
   }
 
   const y2Axis = layout1.axes.y
@@ -430,14 +553,20 @@ function compileLayerIndependent(
         },
         ...(layout1.axes.y.label
           ? {
-              titlePosition: {
-                x:
-                  layout0.area.x +
-                  layout0.area.width +
-                  axisTitleOffset(rawTickWidth, bodyFontSize, layout0.dimensions.width),
-                y: layout0.area.y + layout0.area.height / 2,
-                angle: 90,
-              },
+              titlePosition: rightHeader
+                ? layout1.axes.y.titlePosition
+                : {
+                    x:
+                      layout0.area.x +
+                      layout0.area.width +
+                      axisTitleOffset(rawTickWidth, bodyFontSize, layout0.dimensions.width) +
+                      Math.max(0, (titleFootprint?.width ?? bodyFontSize) - bodyFontSize) / 2,
+                    y: yAxisConfig?.titleAnchor
+                      ? (layout1.axes.y.titlePosition?.y ??
+                        layout0.area.y + layout0.area.height / 2)
+                      : layout0.area.y + layout0.area.height / 2,
+                    angle: yAxisConfig?.titleAngle ?? 90,
+                  },
             }
           : {}),
       }
@@ -552,15 +681,23 @@ function compileLayerIndependent(
         marker: {
           ...entry.marker,
           dataX: point.x,
-          x: point.x + (leading ? -1 : 1) * entry.marker.radius,
+          x: point.x,
         },
       };
     };
     const endpointConfig = (index === 0 ? primary0 : primary1).endpointLabels;
+    const bandSeries = new Set(
+      typeof endpointConfig === 'object' && endpointConfig.anchor === 'band'
+        ? sourceMarks.flatMap((mark) =>
+            mark.type === 'area' && mark.stacked && mark.seriesKey ? [mark.seriesKey] : [],
+          )
+        : [],
+    );
     return [
       {
         ...column,
         leadersEnabled: typeof endpointConfig === 'object' && endpointConfig.showLeader === true,
+        bandSeries,
         entries: column.entries.map((entry) => remap(entry)),
         leading: column.leading?.map((entry) => remap(entry, true)),
       },
@@ -571,20 +708,9 @@ function compileLayerIndependent(
     layout0.area,
     rightReserve,
     leadingColumnX,
+    layout0.theme.spacing.endpointColumnGap,
+    layout0.theme.spacing.endpointEntryGap,
   );
-
-  const seenLabels = new Set<string>();
-  const l0Legend = layout0.legend;
-  const l1Legend = layout1.legend;
-  const mergedLegendEntries = 'entries' in l0Legend ? [...l0Legend.entries] : [];
-  for (const entry of mergedLegendEntries) seenLabels.add(entry.label);
-  const l1Entries = 'entries' in l1Legend ? l1Legend.entries : [];
-  for (const entry of l1Entries) {
-    if (!seenLabels.has(entry.label)) {
-      seenLabels.add(entry.label);
-      mergedLegendEntries.push(entry);
-    }
-  }
 
   const z0 = leaf0.zIndex ?? 0;
   const z1 = leaf1.zIndex ?? 1;
@@ -598,40 +724,7 @@ function compileLayerIndependent(
     appendLayerMarks(layer.layout, layer.leafIndex, marks, mergedTooltips, layer.sourceMarks);
   }
 
-  let mergedLegend = {
-    ...layout0.legend,
-    ...('entries' in l0Legend ? { entries: mergedLegendEntries } : {}),
-  } as typeof layout0.legend;
-  if (endpointLabels) {
-    const owner = l0Legend.bounds.width > 0 ? layout0 : layout1;
-    if (isRightLegend(owner.legend) && 'entries' in owner.legend) {
-      const ownerSpec = owner === layout0 ? primary0 : primary1;
-      const normalized = normalizeSpec(
-        expandSpecSugar(ownerSpec as unknown as Record<string, unknown>) as unknown as ChartSpec,
-      ) as NormalizedChartSpec;
-      const content = measureCategoricalLegendContent(
-        mergedLegendEntries,
-        normalized.legend,
-        getLayoutStrategy(getBreakpoint(options.width), getHeightClass(options.height)),
-        owner.theme,
-        options.width,
-        layout0.area.height,
-        owner.watermark,
-        measureFn,
-      );
-      mergedLegend = placeLegend(
-        content,
-        {
-          ...layout0.area,
-          width:
-            layout0.area.width + rightReserve + ENDPOINT_COLUMN_GAP + endpointLabels.bounds.width,
-        },
-        options.width,
-        owner.theme,
-        0, // Right legends do not depend on the x-axis extent.
-      );
-    }
-  }
+  const mergedLegend = layout0.legend;
 
   return {
     ...layout0,
@@ -694,14 +787,18 @@ function moveRightLegends(layout: ChartLayout, dx: number): ChartLayout {
 
 /** Keep each axis's formatted entries, then resolve collisions in one column. */
 function mergeEndpointColumns(
-  columns: (EndpointLabelsLayout & { leadersEnabled: boolean })[],
+  columns: (EndpointLabelsLayout & { leadersEnabled: boolean; bandSeries: Set<string> })[],
   area: ChartLayout['area'],
   rightReserve: number,
-  leadingColumnX?: number,
+  leadingColumnX: number | undefined,
+  columnGap: number,
+  entryGap: number,
 ): EndpointLabelsLayout | undefined {
   if (!columns.length) return undefined;
-  const { leadersEnabled: _leadersEnabled, ...first } = columns[0];
-  const sweep = (entries: (EndpointLabelEntry & { leadersEnabled: boolean })[]) => {
+  const { leadersEnabled: _leadersEnabled, bandSeries: _bandSeries, ...first } = columns[0];
+  const sweep = (
+    entries: (EndpointLabelEntry & { leadersEnabled: boolean; bandLeader: boolean })[],
+  ) => {
     const size = first.labelStyle.fontSize;
     const tops = bidirectionalSweep(
       entries.map((entry, index) => ({
@@ -711,18 +808,22 @@ function mergeEndpointColumns(
           (entry.value
             ? first.valueGap + first.valueStyle.fontSize * (first.valueStyle.lineHeight ?? 1.25)
             : 0) +
-          ENDPOINT_ENTRY_GAP,
+          (entry.date
+            ? first.valueStyle.fontSize * (first.valueStyle.lineHeight ?? 1.25) + first.valueGap
+            : 0) +
+          entryGap,
         index,
       })),
       area.y,
       area.y + area.height,
     );
-    return entries.map(({ leadersEnabled, ...entry }, index) => ({
+    return entries.map(({ leadersEnabled, bandLeader, ...entry }, index) => ({
       ...entry,
       labelY: tops[index],
       showLeader:
-        leadersEnabled &&
-        Math.abs(tops[index] + size / 2 - entry.dataY) > ENDPOINT_LEADER_THRESHOLD,
+        bandLeader ||
+        (leadersEnabled &&
+          Math.abs(tops[index] + size / 2 - entry.dataY) > ENDPOINT_LEADER_THRESHOLD),
     }));
   };
   const leadingColumns = columns.filter((column) => column.leadingBounds);
@@ -731,11 +832,15 @@ function mergeEndpointColumns(
     ...first,
     entries: sweep(
       columns.flatMap((column) =>
-        column.entries.map((entry) => ({ ...entry, leadersEnabled: column.leadersEnabled })),
+        column.entries.map((entry) => ({
+          ...entry,
+          leadersEnabled: column.leadersEnabled,
+          bandLeader: column.bandSeries.has(entry.seriesKey),
+        })),
       ),
     ),
     bounds: {
-      x: area.x + area.width + rightReserve + ENDPOINT_COLUMN_GAP,
+      x: area.x + area.width + rightReserve + columnGap,
       y: area.y,
       width: Math.max(...columns.map((column) => column.bounds.width)),
       height: area.height,
@@ -747,11 +852,12 @@ function mergeEndpointColumns(
               (column.leading ?? []).map((entry) => ({
                 ...entry,
                 leadersEnabled: column.leadersEnabled,
+                bandLeader: column.bandSeries.has(entry.seriesKey),
               })),
             ),
           ),
           leadingBounds: {
-            x: leadingColumnX ?? area.x - ENDPOINT_COLUMN_GAP - leadingWidth,
+            x: leadingColumnX ?? area.x - columnGap - leadingWidth,
             y: area.y,
             width: leadingWidth,
             height: area.height,
@@ -879,6 +985,21 @@ function alignYDomains(
   if (yEnc0.type !== 'quantitative' || yEnc1.type !== 'quantitative') return undefined;
 
   if (yEnc0.scale?.domain || yEnc1.scale?.domain) return undefined;
+
+  // Raw row extrema cannot represent a stack's accumulated/normalized domain.
+  // Leave those domains to the existing per-leaf stack scale resolver instead
+  // of pinning a smaller domain before the stack has been computed.
+  const hasStackedY = (leaf: ChartSpec) => {
+    if (!leaf.encoding?.color) return false;
+    const mark = typeof leaf.mark === 'string' ? leaf.mark : leaf.mark.type;
+    const stack = leaf.encoding.y?.stack;
+    return (
+      (mark === 'area' && stack !== null && stack !== false) ||
+      (mark === 'bar' &&
+        (stack === true || stack === 'zero' || stack === 'normalize' || stack === 'center'))
+    );
+  };
+  if (hasStackedY(leaf0) || hasStackedY(leaf1)) return undefined;
 
   const includeZero0 = yEnc0.scale?.zero !== false;
   const includeZero1 = yEnc1.scale?.zero !== false;
@@ -1038,6 +1159,16 @@ function withSharedDomains(leaf: ChartSpec, shared: SharedDomains): ChartSpec {
   return { ...leaf, encoding } as unknown as ChartSpec;
 }
 
+/**
+ * Root (chrome, axes, legend) theme of a layer, shared by layer compilation and
+ * host text measurement. Like every other root property, the layer's value wins
+ * whole and the first leaf's is the fallback. Leaf marks are themed separately:
+ * each leaf's theme deep-merges over the layer theme for its own marks.
+ */
+export function resolveLayerTheme(layerSpec: LayerSpec, primary = flattenLayers(layerSpec)[0]) {
+  return layerSpec.theme ?? primary?.theme;
+}
+
 export function buildPrimarySpec(leaves: ChartSpec[], layerSpec: LayerSpec): ChartSpec {
   const allData = leaves.flatMap((leaf) => leaf.data);
 
@@ -1053,8 +1184,7 @@ export function buildPrimarySpec(leaves: ChartSpec[], layerSpec: LayerSpec): Cha
     labels: layerSpec.labels ?? leaves[0].labels,
     legend: layerSpec.legend ?? leaves[0].legend,
     responsive: layerSpec.responsive ?? leaves[0].responsive,
-    theme: layerSpec.theme ?? leaves[0].theme,
-    darkMode: layerSpec.darkMode ?? leaves[0].darkMode,
+    theme: resolveLayerTheme(layerSpec, leaves[0]),
     watermark: layerSpec.watermark ?? leaves[0].watermark,
     hiddenSeries: layerSpec.hiddenSeries ?? leaves[0].hiddenSeries,
     endpointLabels: layerSpec.endpointLabels ?? leaves[0].endpointLabels,

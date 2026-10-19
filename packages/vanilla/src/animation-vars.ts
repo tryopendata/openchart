@@ -1,4 +1,4 @@
-import { motionCSS, type SpringConfig } from '@opendata-ai/openchart-core';
+import { type AnimationEase, motionCSS, type SpringConfig } from '@opendata-ai/openchart-core';
 
 /**
  * Shared animation CSS custom-property stamping for vanilla renderers.
@@ -10,7 +10,7 @@ import { motionCSS, type SpringConfig } from '@opendata-ai/openchart-core';
  */
 
 /** CSS easing preset map for inline style custom properties. */
-export const EASE_VAR_MAP: Record<string, string> = {
+export const EASE_VAR_MAP: Readonly<Record<AnimationEase, string>> = {
   smooth: 'var(--oc-ease-smooth)',
   snappy: 'var(--oc-ease-snappy)',
 };
@@ -24,7 +24,7 @@ export interface AnimationVars {
   /** Delay before annotations begin animating, in ms. */
   annotationDelay?: number;
   /** Easing preset name, mapped through EASE_VAR_MAP (defaults to smooth). */
-  ease?: string;
+  ease?: AnimationEase;
   /** Per-segment duration for stacked bar sequencing, in ms (svg-renderer only). */
   stackSegmentDuration?: number;
 }

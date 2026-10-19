@@ -65,6 +65,7 @@ function buildCandidate(
   horizontal: boolean,
   outerSide: 'min' | 'max',
   index: number,
+  fontFamily: string,
 ): LabelCandidate {
   const textWidth = estimateTextWidth(text, LABEL_FONT_SIZE, LABEL_FONT_WEIGHT);
   const textHeight = LABEL_FONT_SIZE * 1.2;
@@ -96,7 +97,7 @@ function buildCandidate(
     priority: 'data',
     index,
     style: {
-      fontFamily: 'system-ui, -apple-system, sans-serif',
+      fontFamily,
       fontSize: LABEL_FONT_SIZE,
       fontWeight: LABEL_FONT_WEIGHT,
       fill: getRepresentativeColor(mark.fill),
@@ -128,6 +129,7 @@ export function computeRangeLabels(
   labelFormatter?: NumberFormatter | null,
   startField?: string,
   endField?: string,
+  fontFamily = 'system-ui, -apple-system, sans-serif',
 ): ResolvedLabel[] {
   if (density === 'none' || !startField || !endField) return [];
 
@@ -146,8 +148,22 @@ export function computeRangeLabels(
     // grows downward), so the larger cy is the lower-value dot.
     const startIsMin = horizontal ? pair.start.cx <= pair.end.cx : pair.start.cy >= pair.end.cy;
     candidates.push(
-      buildCandidate(pair.start, startText, horizontal, startIsMin ? 'min' : 'max', pairIndex * 2),
-      buildCandidate(pair.end, endText, horizontal, startIsMin ? 'max' : 'min', pairIndex * 2 + 1),
+      buildCandidate(
+        pair.start,
+        startText,
+        horizontal,
+        startIsMin ? 'min' : 'max',
+        pairIndex * 2,
+        fontFamily,
+      ),
+      buildCandidate(
+        pair.end,
+        endText,
+        horizontal,
+        startIsMin ? 'max' : 'min',
+        pairIndex * 2 + 1,
+        fontFamily,
+      ),
     );
   }
 

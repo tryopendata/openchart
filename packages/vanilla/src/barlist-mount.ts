@@ -33,6 +33,7 @@ import {
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
 import { observeResize } from './resize-observer';
 import { resolveDarkMode } from './resolve-dark-mode';
+import { prepareSettledExportTheme } from './theme-style-block';
 import { createTooltipManager, type TooltipManager } from './tooltip';
 
 // ---------------------------------------------------------------------------
@@ -42,7 +43,8 @@ import { createTooltipManager, type TooltipManager } from './tooltip';
 export interface BarListMountOptions {
   theme?: ThemeConfig;
   darkMode?: DarkMode;
-  responsive?: boolean;
+  /** Observe container resizing. Defaults to true. */
+  autoResize?: boolean;
   watermark?: boolean;
   tooltip?: boolean;
   onRowClick?: (row: { label: string; value: number; data: Record<string, unknown> }) => void;
@@ -317,6 +319,7 @@ export function createBarList(
     // Export settled geometry, independent of transient hover and animation.
     const terminalSvg = renderBarListSVG(currentLayout, { animate: false });
     const resolvedOptions = { theme: currentLayout.theme, ...options_ };
+    prepareSettledExportTheme(svgElement, terminalSvg, resolvedOptions.theme, !!options_?.theme);
 
     switch (format) {
       case 'svg':
@@ -388,7 +391,7 @@ export function createBarList(
   );
   container.dataset.ocFontsState = fontsPending ? 'pending' : 'ready';
 
-  if (options?.responsive !== false) {
+  if (options?.autoResize !== false) {
     disconnectResize = observeResize(container, () => resize());
   }
 

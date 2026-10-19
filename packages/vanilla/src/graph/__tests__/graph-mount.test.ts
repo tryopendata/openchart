@@ -142,6 +142,9 @@ describe('createGraph', () => {
     expect(() => graph.zoomToFit()).not.toThrow();
     expect(() => graph.resize()).not.toThrow();
     expect(graph.getSelectedNodes()).toEqual([]);
+    // A post-destroy update is a no-op: it must not resurrect the graph.
+    expect(container.querySelector('.oc-graph-wrapper')).toBeNull();
+    expect(container.querySelector('.oc-graph-canvas')).toBeNull();
   });
 
   it('update re-initializes with new spec', () => {
@@ -168,16 +171,6 @@ describe('createGraph', () => {
     // Community graph should have visible legend items
     const items = container.querySelectorAll('.oc-graph-legend-item');
     expect(items.length).toBeGreaterThan(0);
-
-    graph.destroy();
-  });
-
-  it('search and clearSearch update without errors', () => {
-    container = makeContainer();
-    const graph = createGraph(container, basicSpec);
-
-    expect(() => graph.search('Node')).not.toThrow();
-    expect(() => graph.clearSearch()).not.toThrow();
 
     graph.destroy();
   });
@@ -309,6 +302,34 @@ describe('createGraph entrance', () => {
     restoreGetContext?.();
     restoreGetContext = null;
     vi.unstubAllGlobals();
+  });
+
+  it('search and clearSearch update the match set', async () => {
+    container = makeContainer();
+    const graph = createGraph(container, warmedSpec);
+    // Search runs against positioned nodes, which exist after the first tick.
+    await Promise.resolve();
+    pumpRaf(0);
+
+    // Case-insensitive substring match against node labels/ids. warmedSpec has
+    // no nodeLabel encoding, so each node's label is its id.
+    graph.search('B');
+    expect(graph.getSearchMatches()).toEqual(['b']);
+    graph.clearSearch();
+    expect(graph.getSearchMatches()).toEqual([]);
+
+    graph.destroy();
+  });
+
+  it('search before the first simulation tick still matches', () => {
+    container = makeContainer();
+    const graph = createGraph(container, warmedSpec);
+
+    // A host restoring a query from its URL searches right after mount.
+    graph.search('B');
+    expect(graph.getSearchMatches()).toEqual(['b']);
+
+    graph.destroy();
   });
 
   it('first frame is pulled back (≠ fit); post-duration it lands on the fit', async () => {
@@ -562,6 +583,8 @@ describe('createGraph physics-feel gates', () => {
     stubCanvas2D();
     stubMatchMedia(false);
     vi.stubGlobal('performance', { now: () => nowValue });
+    // Pass-through spies: node positions aren't public, so the physics calls the
+    // mount emits are the only way to observe these gates.
     setPointerSpy = vi.spyOn(SimulationManager.prototype, 'setPointer');
     pinSpy = vi.spyOn(SimulationManager.prototype, 'pinNode');
     unpinSpy = vi.spyOn(SimulationManager.prototype, 'unpinNode');

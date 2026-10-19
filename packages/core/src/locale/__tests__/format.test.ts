@@ -353,6 +353,15 @@ describe('defaultNumberFormatter', () => {
     const fmt = defaultNumberFormatter({ extent: [-2000, 2000], allIntegers: true });
     expect(fmt(2000)).toBe('2k');
   });
+
+  it('step below 1000: least precision that tells ticks apart, no trailing zeros', () => {
+    const half = defaultNumberFormatter({ step: 0.5, stepReference: 5 });
+    expect([4, 4.5, 5].map(half)).toEqual(['4', '4.5', '5']);
+    const twentieth = defaultNumberFormatter({ step: 0.05, stepReference: 4.4 });
+    expect([4.1, 4.15, 4.2].map(twentieth)).toEqual(['4.1', '4.15', '4.2']);
+    const tens = defaultNumberFormatter({ step: 50, stepReference: 900 });
+    expect(tens(850)).toBe('850');
+  });
 });
 
 describe('buildCompactStepFormatter', () => {

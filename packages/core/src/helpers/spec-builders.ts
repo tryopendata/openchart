@@ -14,7 +14,6 @@ import type {
   Annotation,
   ChartSpec,
   Chrome,
-  DarkMode,
   DataRow,
   Encoding,
   EncodingChannel,
@@ -38,20 +37,6 @@ import type { ColumnConfig } from '../types/table';
 /** A field reference: either a plain string (field name) or a full EncodingChannel. */
 export type FieldRef = string | EncodingChannel;
 
-const warnedBuilderOptions = new Set<string>();
-function warnBuilderOption(key: string, message: string): void {
-  if (warnedBuilderOptions.has(key)) return;
-  warnedBuilderOptions.add(key);
-  console.warn(`[openchart] ${message}`);
-}
-function warnDarkMode(options?: { darkMode?: DarkMode }): void {
-  if (options?.darkMode !== undefined)
-    warnBuilderOption(
-      'darkMode',
-      'Builder darkMode is deprecated and has no effect; use the mount option.',
-    );
-}
-
 /** Common options shared by all chart builder functions. */
 export interface ChartBuilderOptions {
   /** Color encoding: field name or full channel config for series differentiation. */
@@ -66,8 +51,6 @@ export interface ChartBuilderOptions {
   responsive?: boolean;
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
-  /** @deprecated Set darkMode on the mount instead; this option has no effect. */
-  darkMode?: DarkMode;
 }
 
 /** Options for the dataTable builder. */
@@ -80,8 +63,6 @@ export interface TableBuilderOptions {
   chrome?: Chrome;
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
-  /** @deprecated Set darkMode on the mount instead; this option has no effect. */
-  darkMode?: DarkMode;
   /** Enable client-side search/filter. */
   search?: boolean;
   /** Pagination configuration. */
@@ -90,8 +71,6 @@ export interface TableBuilderOptions {
   stickyFirstColumn?: boolean;
   /** Row density. */
   density?: TableDensity;
-  /** @deprecated Use density. */
-  compact?: boolean;
   /** Whether the table adapts to container width. */
   responsive?: boolean;
 }
@@ -100,49 +79,71 @@ export interface TableBuilderOptions {
 // Type inference
 // ---------------------------------------------------------------------------
 
-/** ISO 8601 date patterns we recognize for temporal inference. */
-const ISO_DATE_RE = /^\d{4}(-\d{2}(-\d{2}(T\d{2}(:\d{2}(:\d{2})?)?)?)?)?$/;
+/**
+ * Date-shaped strings: ISO 8601 dates and date-times, month-name dates
+ * ("Jan 2020", "March 3, 2020"), and slash dates. `Date` parsing alone is
+ * engine-dependent and accepts labels such as "Product 1".
+ */
+const DATE_STRING_RES = [
+  /^\d{4}-\d{2}(-\d{2}([T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?)?$/,
+  /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?( \d{1,2},?)? \d{4}$/i,
+  /^(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}\/\d{1,2}\/\d{1,2})$/,
+];
 
 /**
  * Infer the encoding field type from data values.
  *
- * Samples up to 20 values from the data array for the given field.
- * - If all sampled values are numbers (or null/undefined), returns "quantitative".
- * - If all sampled string values match ISO date patterns, returns "temporal".
- * - Otherwise returns "nominal".
+ * Samples 50 rows, ignoring nulls; more than 80% numeric or temporal values
+ * establish a type. Numeric strings (including ISO years) are quantitative.
+ * Strings count as temporal only when date-shaped and parseable.
  */
 export function inferFieldType(data: DataRow[], field: string): FieldType {
-  const sampleSize = Math.min(data.length, 20);
-  let hasNumber = false;
-  let hasDateString = false;
-  let hasOtherString = false;
+  // Sample up to 50 rows for more reliable inference on mixed/messy data
+  const sampleSize = Math.min(50, data.length);
+  let numericCount = 0;
+  let dateCount = 0;
+  let totalNonNull = 0;
 
   for (let i = 0; i < sampleSize; i++) {
     const value = data[i][field];
-
-    // Skip null/undefined
     if (value == null) continue;
+    totalNonNull++;
 
-    if (typeof value === 'number') {
-      hasNumber = true;
-    } else if (typeof value === 'string') {
-      if (ISO_DATE_RE.test(value) && !Number.isNaN(Date.parse(value))) {
-        hasDateString = true;
-      } else {
-        hasOtherString = true;
+    // Check numeric
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      numericCount++;
+      continue;
+    }
+
+    // Check date-like strings
+    if (typeof value === 'string') {
+      // Try as number first
+      const num = Number(value);
+      if (!Number.isNaN(num) && Number.isFinite(num) && value.trim() !== '') {
+        numericCount++;
+        continue;
       }
-    } else if (value instanceof Date) {
-      hasDateString = true;
-    } else {
-      hasOtherString = true;
+
+      // Try as date
+      const date = new Date(value);
+      if (DATE_STRING_RES.some((re) => re.test(value)) && !Number.isNaN(date.getTime())) {
+        dateCount++;
+        continue;
+      }
+    }
+
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+      dateCount++;
     }
   }
 
-  // Numbers-only: quantitative
-  if (hasNumber && !hasDateString && !hasOtherString) return 'quantitative';
-  // Date strings/Date objects only: temporal
-  if (hasDateString && !hasNumber && !hasOtherString) return 'temporal';
-  // Everything else: nominal
+  if (totalNonNull === 0) return 'nominal';
+
+  // If >80% of sampled values are dates, it's temporal
+  if (dateCount / totalNonNull > 0.8) return 'temporal';
+  // If >80% are numeric, it's quantitative
+  if (numericCount / totalNonNull > 0.8) return 'quantitative';
+  // Otherwise it's nominal
   return 'nominal';
 }
 
@@ -184,7 +185,6 @@ function buildChartSpec(
   encoding: Encoding,
   options?: ChartBuilderOptions,
 ): ChartSpec {
-  warnDarkMode(options);
   // Cast needed because the generic discriminated union can't be constructed
   // from a runtime MarkType variable — the caller always pairs mark+encoding correctly.
   const spec = { mark, data, encoding } as ChartSpec;
@@ -399,9 +399,6 @@ export function scatterChart(
  * @param options - Column definitions, chrome, pagination, search, etc.
  */
 export function dataTable(data: DataRow[], options?: TableBuilderOptions): TableSpec {
-  warnDarkMode(options);
-  if (options?.compact !== undefined)
-    warnBuilderOption('compact', 'dataTable compact is deprecated; use density.');
   // Auto-generate columns from data keys if not provided
   let columns = options?.columns;
   if (!columns && data.length > 0) {
@@ -431,7 +428,6 @@ export function dataTable(data: DataRow[], options?: TableBuilderOptions): Table
   if (options?.pagination !== undefined) spec.pagination = options.pagination;
   if (options?.stickyFirstColumn !== undefined) spec.stickyFirstColumn = options.stickyFirstColumn;
   if (options?.density !== undefined) spec.density = options.density;
-  else if (options?.compact !== undefined) spec.density = options.compact ? 'condensed' : 'regular';
   if (options?.responsive !== undefined) spec.responsive = options.responsive;
 
   return spec;
@@ -455,8 +451,6 @@ export interface TileMapBuilderOptions {
   legend?: LegendConfig;
   /** Theme overrides. */
   theme?: ThemeConfig;
-  /** @deprecated Set darkMode on the mount instead; this option has no effect. */
-  darkMode?: DarkMode;
   /** Whether to show the watermark. */
   watermark?: boolean;
   /** Animation configuration. */
@@ -482,7 +476,6 @@ export function tileMap(
   data: Record<string, number | string | null> | DataRow[],
   options?: TileMapBuilderOptions,
 ): TileMapSpec {
-  warnDarkMode(options);
   return {
     type: 'tilemap' as const,
     data,

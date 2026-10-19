@@ -82,7 +82,7 @@ function renderAxis(
         // Rotated labels: anchor at the rotation pivot point
         const labelX = tick.labelPosition ?? tick.position;
         const xLabelPad = axis.labelPadding ?? layout.theme.spacing.xAxisLabelPadding;
-        const labelY = area.y + area.height + xLabelPad;
+        const labelY = axis.start.y + xLabelPad;
         setAttrs(label, {
           x: labelX,
           y: labelY,
@@ -99,7 +99,7 @@ function renderAxis(
         // font metrics than Blink, drifting labels on iOS Safari.)
         setAttrs(label, {
           x: tick.labelPosition ?? tick.position,
-          y: area.y + area.height + xLabelPad + textAscent(axis.tickLabelStyle.fontSize),
+          y: axis.start.y + xLabelPad + textAscent(axis.tickLabelStyle.fontSize),
           'text-anchor': 'middle',
         });
       }
@@ -135,7 +135,7 @@ function renderAxis(
       label.setAttribute('class', 'oc-axis-tick');
       label.setAttribute('data-tick-key', tickKey);
       setAttrs(label, {
-        x: isRight ? area.x + area.width + TICK_LABEL_OFFSET : area.x - TICK_LABEL_OFFSET,
+        x: isRight ? axis.start.x + TICK_LABEL_OFFSET : axis.start.x - TICK_LABEL_OFFSET,
         y: tick.position,
         'text-anchor': isRight ? 'start' : 'end',
         'dominant-baseline': 'central',
@@ -143,7 +143,7 @@ function renderAxis(
       applyTextStyle(label, axis.tickLabelStyle);
       if (!isRight) {
         // Truncate categorical left y-axis labels that exceed available space
-        const availableWidth = area.x - TICK_LABEL_OFFSET;
+        const availableWidth = axis.start.x - TICK_LABEL_OFFSET;
         const fontSize = axis.tickLabelStyle.fontSize;
         const fontWeight = axis.tickLabelStyle.fontWeight;
 
@@ -243,7 +243,7 @@ function renderAxis(
           y1: gridline.position,
           x2: area.x + area.width,
           y2: gridline.position,
-          stroke: layout.theme.colors.gridline,
+          stroke: gridline.color ?? layout.theme.colors.gridline,
           'stroke-width': 1,
           'stroke-opacity': 0.6,
         });
@@ -253,7 +253,7 @@ function renderAxis(
           y1: area.y,
           x2: gridline.position,
           y2: area.y + area.height,
-          stroke: layout.theme.colors.gridline,
+          stroke: gridline.color ?? layout.theme.colors.gridline,
           'stroke-width': 1,
           'stroke-opacity': 0.6,
         });
@@ -274,16 +274,28 @@ function renderAxis(
       const attrs: Record<string, string | number> = {
         x: tp.x,
         y: tp.y,
-        'text-anchor': 'middle',
+        'text-anchor': tp.textAnchor ?? 'middle',
       };
       if (tp.angle) {
         attrs.transform = `rotate(${tp.angle}, ${tp.x}, ${tp.y})`;
       }
       setAttrs(axisLabel, attrs);
+      if (axis.titleLines && axis.titleLines.length > 1) {
+        axisLabel.textContent = '';
+        for (const [index, line] of axis.titleLines.entries()) {
+          const span = createSVGElement('tspan');
+          setAttrs(span, {
+            x: tp.x,
+            dy: index === 0 ? 0 : axis.labelStyle.fontSize * (axis.labelStyle.lineHeight ?? 1.3),
+          });
+          span.textContent = line;
+          axisLabel.appendChild(span);
+        }
+      }
     } else if (orientation === 'x') {
       const tickFontSize = axis.tickLabelStyle.fontSize;
       const tickBand = Math.max(26, 4 + tickFontSize + Math.max(11, Math.ceil(tickFontSize * 0.7)));
-      let titleY = area.y + area.height + tickBand + 9;
+      let titleY = axis.start.y + tickBand + 9;
       if (axis.tickAngle && Math.abs(axis.tickAngle) > 10) {
         const angleRad = Math.abs(axis.tickAngle) * (Math.PI / 180);
         let maxLabelWidth = 40;
@@ -292,7 +304,7 @@ function renderAxis(
           if (w > maxLabelWidth) maxLabelWidth = w;
         }
         const rotatedHeight = Math.min(maxLabelWidth * Math.sin(angleRad) + 6, 120);
-        titleY = area.y + area.height + rotatedHeight + 14;
+        titleY = axis.start.y + rotatedHeight + 14;
       }
       setAttrs(axisLabel, {
         x: area.x + area.width / 2,

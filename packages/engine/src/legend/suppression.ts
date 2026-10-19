@@ -1,33 +1,4 @@
-/**
- * Single source of truth for legend / endpoint-column / end-of-line label
- * suppression on multi-series line/area charts.
- *
- * Three independent toggles drive the chart's series identification surface:
- *
- *   - `legend.show` — the traditional swatch legend (top/bottom/right).
- *   - `endpointLabels` — the right-side per-series column with last value.
- *   - end-of-line labels — the legacy series-name label glued to the last point.
- *
- * For ≥2-series line/area charts the resolution table is:
- *
- * | `legend.show` | `endpointLabels` | Traditional legend | Endpoint column | End-of-line labels |
- * |--|--|--|--|--|
- * | unset | unset | hidden (auto-suppressed) | shown                  | hidden |
- * | true  | unset | shown                    | shown                  | hidden |
- * | unset | false | shown (auto-revoked)     | hidden                 | hidden |
- * | false | false | hidden                   | hidden                 | shown  |
- * | true  | false | shown                    | hidden                 | hidden |
- * | false | true  | hidden                   | shown                  | hidden |
- * | true  | true  | shown                    | shown                  | hidden |
- *
- * Single-series and non-line/area charts: column always hidden, legend hidden
- * (single-series rule), end-of-line labels never render.
- *
- * Rule of thumb: end-of-line labels are the fallback identifier of last resort.
- * They render only when neither the traditional legend nor the endpoint column
- * is showing. The endpoint column "owns" the right zone and absorbs the
- * suppression role the traditional legend used to have for end-of-line labels.
- */
+/** Series identification uses two independent surfaces: legend and endpoint column. */
 
 import type { Encoding } from '@opendata-ai/openchart-core';
 
@@ -39,18 +10,14 @@ export interface SuppressionResult {
   showTraditionalLegend: boolean;
   /** Whether the right-side endpoint column should render. */
   showEndpointLabels: boolean;
-  /** Whether the legacy end-of-line labels should render. */
-  showEndOfLineLabels: boolean;
 }
 
 /** Inputs needed by the resolution helper. */
 export interface SuppressionContext {
-  /** Number of distinct series (color-encoding domain values). 0 if no color encoding. */
+  /** Number of distinct series (`seriesField` values). 0 when the chart has no series field. */
   seriesCount: number;
   /** True when responsive strategy strips inline labels (compact breakpoint). */
   labelsHiddenByStrategy: boolean;
-  /** True when spec.labels.density === 'none'. */
-  labelsDensityNone: boolean;
   /** When true, endpoint labels are demoted because they don't fit at the current width. */
   endpointLabelsDemoted?: boolean;
 }
@@ -106,29 +73,23 @@ function getMaxSeries(spec: NormalizedChartSpec): number {
 }
 
 /**
- * Resolve the three booleans from spec + context.
+ * Resolve legend and endpoint visibility from spec + context.
  *
- * Pure: no theme, no chart area, no scales. Both `computeLegend` and
- * `computeLineLabels` and `computeEndpointLabels` share this exact logic.
+ * Pure: no theme, no chart area, no scales. `computeLegend` and `computeEndpointLabels` share this exact logic.
  */
 export function resolveSuppression(
   spec: NormalizedChartSpec,
   ctx: SuppressionContext,
 ): SuppressionResult {
   const isLineOrArea = spec.markType === 'line' || spec.markType === 'area';
-  const hasColorEncoding = spec.encoding.color != null;
-  const isMultiSeries = isLineOrArea && hasColorEncoding && ctx.seriesCount >= 2;
+  const isMultiSeries = isLineOrArea && seriesField(spec) != null && ctx.seriesCount >= 2;
 
   // Single-series, non-line/area, or compact strategy: never show endpoint
-  // column or end-of-line labels. Legend follows its own rules elsewhere.
+  // column. Legend follows its own rules elsewhere.
   // Explicit user opt-in (endpointLabels config) overrides the compact
   // strip: slope/bump recipes carry their values on the labels, so an
   // author who wrote endpointLabels config keeps the column at 320px.
   //
-  // Note: `labelsDensityNone` is intentionally NOT in this short-circuit.
-  // `labels.density: 'none'` is the legacy switch for end-of-line labels and
-  // must not affect the endpoint column or the traditional legend (those
-  // are independent concerns governed by the truth table below).
   const strategyHidesEndpoint = ctx.labelsHiddenByStrategy && !endpointLabelsExplicitlyOn(spec);
   if (!isMultiSeries || strategyHidesEndpoint) {
     return {
@@ -136,7 +97,6 @@ export function resolveSuppression(
       // doesn't override the existing legend behavior for non-multi-series.
       showTraditionalLegend: !legendHiddenExplicitly(spec),
       showEndpointLabels: false,
-      showEndOfLineLabels: false,
     };
   }
 
@@ -158,7 +118,6 @@ export function resolveSuppression(
     return {
       showTraditionalLegend: !legendHiddenExplicitly(spec),
       showEndpointLabels: explicitOn,
-      showEndOfLineLabels: false,
     };
   }
 
@@ -191,32 +150,35 @@ export function resolveSuppression(
     showTraditionalLegend = !showEndpointLabels;
   }
 
-  // End-of-line labels are the last-resort series identifier: they render
-  // only when both the traditional legend and the endpoint column are off.
-  // `labels.density: 'none'` is the legacy switch that explicitly disables
-  // end-of-line labels regardless of the other toggles.
-  const showEndOfLineLabels =
-    !showTraditionalLegend && !showEndpointLabels && !ctx.labelsDensityNone;
-
   return {
     showTraditionalLegend,
     showEndpointLabels,
-    showEndOfLineLabels,
   };
 }
 
 /**
- * Count distinct series for the color encoding (for use in
- * SuppressionContext.seriesCount). Returns 0 when no color encoding is set
- * or when the encoding is conditional/quantitative.
+ * The field that splits a line/area chart into identifiable series: a
+ * categorical color field, or, on a line without one, the strokeDash field
+ * (the line compute groups by it). `detail` is deliberately excluded: as in
+ * Vega-Lite it groups without identifying, so it gets no legend or endpoint
+ * column. Conditional and quantitative color never define series themselves.
+ */
+export function seriesField(spec: NormalizedChartSpec): string | undefined {
+  const color = spec.encoding.color;
+  if (color && !('condition' in color) && 'field' in color && color.type !== 'quantitative')
+    return color.field || undefined;
+  if (spec.markType !== 'line') return undefined;
+  const dash = spec.encoding.strokeDash;
+  return dash && 'field' in dash ? dash.field || undefined : undefined;
+}
+
+/**
+ * Count distinct series (for use in SuppressionContext.seriesCount): values of
+ * `seriesField`, so color series and strokeDash-only line series both count.
+ * Returns 0 when the chart has no series field.
  */
 export function countColorSeries(spec: NormalizedChartSpec): number {
-  const colorEnc = spec.encoding.color;
-  if (!colorEnc) return 0;
-  if ('condition' in colorEnc) return 0;
-  if (!('field' in colorEnc)) return 0;
-  if (colorEnc.type === 'quantitative') return 0;
-  const field = colorEnc.field;
+  const field = seriesField(spec);
   if (!field) return 0;
   const seen = new Set<string>();
   for (const row of spec.data) {

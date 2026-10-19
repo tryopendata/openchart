@@ -47,6 +47,8 @@ export interface TweenConfig<T> {
   /** Default `easingFns.easeOutCubic` */
   ease?: EasingFn;
   onFrame: (value: T) => void;
+  /** Runs after natural completion or a snap; cancellation never completes. */
+  onComplete?: (value: T) => void;
 }
 
 export interface Tween<T> {
@@ -87,6 +89,7 @@ export function createTween<T>(config: TweenConfig<T>): Tween<T> {
     if (opts?.snap || duration <= 0) {
       current = target;
       onFrame(current);
+      config.onComplete?.(current);
       return;
     }
 
@@ -102,6 +105,7 @@ export function createTween<T>(config: TweenConfig<T>): Tween<T> {
         rafId = requestAnimationFrame(tick);
       } else {
         running = false;
+        config.onComplete?.(current);
       }
     };
 

@@ -9,9 +9,6 @@
 import { CATEGORICAL_FILL_PALETTE_DARK, CATEGORICAL_PALETTE_DARK } from '../colors/palettes';
 import type { ThemeConfig } from '../types/spec';
 
-/** Editorial preset: the current default look. Exported for explicit selection. */
-export const editorial: ThemeConfig = {};
-
 /** Essay preset: serif display titles, warmer background, generous spacing. */
 export const essay: ThemeConfig = {
   colors: {
@@ -103,7 +100,7 @@ export const broadsheet: ThemeConfig = {
   },
   chrome: {
     eyebrow: { color: { light: '#e3120b', dark: '#f4463f' }, fontSize: 11, fontWeight: 700 },
-    title: { fontSize: 24, fontWeight: 700, lineHeight: 1.18 },
+    title: { fontWeight: 700, lineHeight: 1.18 },
     subtitle: { fontWeight: 400, lineHeight: 1.45 },
   },
   /** The masthead device: a short red bar above the eyebrow. */
@@ -149,26 +146,22 @@ export const terminal: ThemeConfig = {
   },
   chrome: {
     eyebrow: { color: { light: '#22d3ee', dark: '#22d3ee' }, fontSize: 10, fontWeight: 500 },
-    title: { fontSize: 15, fontWeight: 600, lineHeight: 1.3 },
+    title: { fontWeight: 600, lineHeight: 1.3 },
     subtitle: { fontWeight: 400, lineHeight: 1.4 },
   },
   borderRadius: 4,
   seriesStrategy: 'accent-neutral',
 };
 
-/** Next-generation editorial composition; opt in during v8. */
+/** @deprecated v9 adopts clarity typography by default. Set its remaining colors explicitly; removed in v10. */
 export const clarity: ThemeConfig = {
   colors: {
     background: { light: '#ffffff', dark: '#09090b' },
     axis: { light: '#52525b', dark: '#a1a1aa' },
   },
-  fonts: { sizes: { title: 26, subtitle: 14, body: 13, small: 12, axisTick: 12 } },
   chrome: {
     eyebrow: { color: { light: '#0f766e', dark: '#5eead4' } },
-    source: { fontSize: 12 },
-    footer: { fontSize: 12 },
   },
-  spacing: { chromeToChart: 16, chartToFooter: 12 },
 };
 
 /** Documented v8 typography. This does not freeze the layout engine. */

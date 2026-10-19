@@ -79,9 +79,9 @@ graph LR
 
 Step by step:
 
-1. **Validate**: Runtime type checking of the raw spec. Catches missing fields, wrong types, invalid encoding combinations. On a missing data field, the validator suggests the nearest real column name (Levenshtein) so the error tells the author how to fix it.
-2. **Normalize**: Fill in defaults, resolve shorthand, produce a `NormalizedChartSpec` with all optional fields resolved. This stage also expands spec sugar (Vega-Lite idioms, bin/timeUnit) and collects deprecation warnings. The engine never calls `console.*`; it returns a structured warnings array that the vanilla adapter surfaces once at its boundary (see Compile warnings below).
-3. **Resolve theme**: Deep-merge user theme overrides onto the default theme. Produces a `ResolvedTheme` with every property set.
+1. **Validate**: Reject removed fields and inapplicable mark options against authored paths before sugar expansion, then validate the canonical spec. Catches missing fields, wrong types, invalid encoding combinations. On a missing data field, the validator suggests the nearest real column name (Levenshtein) so the error tells the author how to fix it.
+2. **Normalize**: Fill in defaults, resolve shorthand, produce a `NormalizedChartSpec` with all optional fields resolved. The pre-validation sugar pass expands supported Vega-Lite idioms and bin/timeUnit transforms. Deprecated v8 aliases are no longer normalized silently. The engine never calls `console.*`; it returns a structured warnings array that the vanilla adapter surfaces once at its boundary (see Compile warnings below).
+3. **Resolve theme**: Deep-merge authored layers with `mergeThemeConfig`, then resolve defaults into `ResolvedTheme`. Leaf themes override their parent and mount/compile options override the spec.
 4. **Dark mode adapt**: If dark mode is active, transform colors (lighten backgrounds, adjust palette brightness, swap text colors).
 5. **Compute legend**: Determine legend entries from the color encoding. Calculate space needed for legend positioning. Categorical color produces swatch entries; a quantitative color scale produces a continuous legend instead, either a gradient bar (sequential/diverging scales) or discrete swatches with class breaks (binned scales like quantile/quantize/threshold).
 6. **Compute dimensions**: Account for chrome (title, subtitle, source, footer), legend, axis labels. Produce the chart area `Rect`.
@@ -92,11 +92,19 @@ Step by step:
 11. **Compute endpoint labels**: For line/area charts with `layout.endpointLabels` enabled, place a chip+swatch label at each series' trailing point. A capped iterative sweep (`endpoint-labels/compute.ts`) resolves vertical overlaps and clamps to the chart edges so the tail label never falls off-canvas.
 12. **Compute metric bar**: When `chrome.metrics` is set, lay out the chrome metric pills (label + value + delta) so the renderer can paint them above the chart area.
 13. **Apply suppression truth table**: A single source of truth (`legend/suppression.ts`) decides what disappears for each hidden series — endpoint label, leader line, dot annotation, and series-anchored text annotations all consult the same table so legend toggles, `hiddenSeries`, and runtime hides never disagree.
-14. **Compute annotations**: Map annotation specs (reference lines, ranges, text callouts) to pixel positions using the scales.
+14. **Compute annotations**: Resolve reference lines, ranges, and text callouts using the scales. Automatic placement follows priority/source order and scores leader crossings; compact thinning creates source-numbered rich notes. Resolved note bands participate in figure growth.
 15. **Compute tooltips**: Build tooltip content descriptors keyed by mark ID.
 16. **Compute a11y**: Generate alt text, ARIA labels, and a screen-reader data table from the spec and data.
 
 The output is a `ChartLayout` with everything the renderer needs: positioned marks, resolved chrome, axes, gridlines, annotations, tooltips, accessibility metadata, and the resolved theme.
+
+### Geographic label compilation
+
+GeoMap place labels and callouts are optional. The compiler measures their complete text and fixed authored callout-note capacity before the single projection fit. `geo/labels.ts` builds stable candidates from explicit text channels and typed anchors. `geo/label-geometry.ts` captures projected components and holes through the same projection stream as feature paths, retaining only candidate geometry within a bounded vertex budget.
+
+The portable `GeoMapLayout.labels` bundle contains measured text, projected geometry, obstacles, note slots and the initial overlay. It contains no DOM nodes or projection functions. The pure `resolveGeoOverlay` applies a camera affine transform, validates visible interior anchors and places labels deterministically. Camera settlement and export share this resolver; neither refits the topology.
+
+The vanilla adapter paints constant-screen-size text in a sibling of the transformed camera group. During movement it projects accepted anchors and culls offscreen boxes; settlement recomputes placement. The separate inventory controller owns a hidden accessible list and an optional disclosure in a host-supplied container. It cannot reserve SVG space or change camera state. Framework wrappers forward the runtime option and reconcile container replacement without remounting.
 
 ### Table compilation
 
@@ -204,7 +212,7 @@ Maps, tile maps, bar lists and Sankey diagrams share mark keyboard navigation. A
 
 Static chart exports render the terminal layout rather than serializing hover or in-flight geometry. Map exports retain the current camera, authored focus and zoom viewport clipping. Font embedding resolves inline styles before presentation attributes and inherits font declarations for text spans, including detached export scenes. Table CSV exports use all filtered/sorted rows, independently of the displayed page.
 
-Both adapters use `ResizeObserver` to detect container size changes and trigger recompilation at the new dimensions. The responsive system uses breakpoints to adjust layout strategy (label density, legend position, annotation placement).
+Both adapters use `ResizeObserver` to detect container size changes and trigger recompilation at the new dimensions; every mount takes `autoResize: false` to opt out. The responsive system uses breakpoints to adjust layout strategy (label density, legend position, annotation placement).
 
 ### Update flow
 
@@ -224,17 +232,32 @@ sequenceDiagram
   Vanilla->>DOM: Restore valid focus and wire interactions
 ```
 
+## Annotation editing and figure ownership
+
+The engine owns resolved annotation geometry and frozen edit contexts. Vanilla
+previews gestures from that geometry and emits one `EditTransaction` through
+`onEdit` at commit. Core's `applyEditTransaction` validates all operations before
+returning a new spec and inverse; cancelled gestures emit nothing. Internal
+gesture payloads are not public editing APIs. Framework wrappers forward the
+same transaction contract.
+
+Omitted `chromeLayout` grows only the note band. `subtract` preserves exact outer
+height; `grow` keeps the full plot budget and adds all chrome. Layers and facets
+report `chrome.grownHeight` once, and mounts consume final `dimensions.height`
+without double counting. Notes preserve source identity across thinning and
+facet instances. Their linked marker emphasis is transient renderer state.
+
 ## Theme resolution
 
-Themes flow through three stages:
+Themes flow through authored composition, default resolution, and mode adaptation:
 
-1. **User config** (`ThemeConfig`): Partial overrides. Only specify what you want to change.
-2. **Deep merge** (`resolveTheme()`): Merge user config onto `DEFAULT_THEME`. Produces a `ResolvedTheme` with every field set.
+1. **Authored composition** (`ThemeConfig`, `mergeThemeConfig`): Deep-merge partial spec/provider/host overrides. Arrays and TokenValues are atomic; null replaces. In a layer, the root scope (chrome, axes, legend) uses the layer theme, falling back to the first leaf's theme when the layer has none; each leaf's marks use the leaf theme merged over the layer theme. Host options apply on top of both.
+2. **Default resolution** (`resolveTheme()`): Fill omitted fields from `DEFAULT_THEME`. Produces `ResolvedTheme`, with authored metadata retained for token stamping. Authored chrome font sizes win over general size propagation; partial rules inherit and null clears them.
 3. **Dark mode adaptation** (`adaptTheme()`): If dark mode is active, transform the resolved theme. Swap background/text, adjust palette brightness, lighten gridlines.
 
-The default theme uses Inter as the primary font and a categorical palette tuned for distinguishability. Theme tokens remain the source of truth for typography; the opt-in `clarity` preset provides the newer editorial hierarchy without changing v8 defaults.
+The default theme uses Inter, 12px small/tick text, 16px/12px chrome gaps, and a categorical palette tuned for distinguishability. Background remains transparent. `clarity` is deprecated and retains only its remaining colors; `legacyEditorial` provides v8 typography. The public `Theme` alias and empty `editorial` preset are removed.
 
-Themes can be applied per-component (via prop) or globally (via `VizThemeProvider` in React, or the `theme` option in vanilla).
+Themes can be applied per component or through `VizThemeProvider` in React/Vue/Svelte. Provider and component props deep-merge; vanilla mount options take highest precedence. A shared renderer helper stamps only authored token overrides and restores previous host inline values when overrides disappear. Unauthored values remain CSS defaults; exports capture live token values.
 
 ## Accessibility
 
@@ -243,6 +266,6 @@ The engine generates accessibility metadata as part of compilation:
 - **Alt text**: Auto-generated description of the chart (type, data summary, encoding).
 - **Data table fallback**: A screen-reader-only HTML table with the chart's data.
 - **ARIA labels**: Role, roledescription, and label attributes for the SVG container.
-- **Keyboard navigation**: Arrow keys navigate between marks. Enter/Space shows tooltip. Escape hides it.
+- **Keyboard navigation**: Arrow keys navigate between marks. Enter/Space shows tooltip. Escape hides it. In edit mode (`interaction: 'edit'`) arrows nudge the selected annotation instead.
 
 The vanilla adapter creates a visually-hidden data table alongside the SVG, and wires keyboard event handlers on the container. React components inherit this through the vanilla adapter.

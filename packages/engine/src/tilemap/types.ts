@@ -7,7 +7,6 @@
 
 import type {
   AnimationSpec,
-  DarkMode,
   LegendConfig,
   ThemeConfig,
   TileMapEncoding,
@@ -26,7 +25,6 @@ export interface NormalizedTileMapSpec {
   chrome: NormalizedChrome;
   legend?: LegendConfig;
   theme: ThemeConfig;
-  darkMode: DarkMode;
   watermark: boolean;
   animation?: AnimationSpec;
   valueFormat?: string;

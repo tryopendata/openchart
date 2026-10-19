@@ -95,12 +95,12 @@ export interface AnimatedTarget {
  * `linear()` interpolates piecewise-linearly between evenly-spaced samples, so
  * we reproduce it exactly rather than approximating with a cubic-bezier.
  */
-export const EASE_SMOOTH_SAMPLES = [
+export const EASE_SMOOTH_SAMPLES: readonly number[] = [
   0, 0.157, 0.438, 0.64, 0.766, 0.85, 0.906, 0.941, 0.964, 0.978, 0.988, 0.994, 0.998, 1,
 ];
 
 /** Piecewise-linear evaluation of a CSS linear() sample array at t in [0,1]. */
-export function evalLinearSamples(samples: number[], t: number): number {
+export function evalLinearSamples(samples: readonly number[], t: number): number {
   if (t <= 0) return samples[0];
   if (t >= 1) return samples[samples.length - 1];
   const scaled = t * (samples.length - 1);
@@ -290,6 +290,8 @@ export function applyFrameState(
       style.opacity = String(eased);
       break;
     }
+    default:
+      target.kind satisfies never;
   }
 }
 

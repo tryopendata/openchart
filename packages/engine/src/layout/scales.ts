@@ -47,6 +47,7 @@ import {
 
 import { isBinnedBarEncoding } from '../charts/post-process';
 import type { NormalizedChartSpec } from '../compiler/types';
+import { computeAreaStack } from '../data/area-stack';
 import { finiteNumber } from '../data/finite-number';
 import { DEFAULT_BIN_COUNT, sampleRampColors } from '../legend/continuous';
 import { fieldIterable } from './shared';
@@ -123,6 +124,35 @@ function numericFieldValues(data: DataRow[], field: string): number[] {
     if (value !== undefined) result.push(value);
   }
   return result;
+}
+
+/** ISO date forms JavaScript parses as UTC midnight: YYYY, YYYY-MM, YYYY-MM-DD. */
+const DATE_ONLY_ISO = /^\d{4}(-\d{2}(-\d{2})?)?$/;
+
+/**
+ * Whether every value of a temporal field is a date-only ISO string. Those
+ * parse as UTC midnight, so their axis is built in UTC: a local-time scale
+ * would tick local midnights, shifted off the data by the host's offset, and
+ * drop the first or last date depending on the machine's timezone.
+ */
+function isDateOnlyField(data: DataRow[], field: string): boolean {
+  let any = false;
+  for (const d of data) {
+    const v = d[field];
+    if (v == null) continue;
+    if (typeof v !== 'string' || !DATE_ONLY_ISO.test(v)) return false;
+    any = true;
+  }
+  return any;
+}
+
+/** One temporal interpretation shared by axes and pre-layout value labels. */
+export function resolveTemporalScaleType(
+  channel: EncodingChannel,
+  data: DataRow[],
+): 'utc' | 'time' {
+  if (channel.scale?.type === 'utc' || channel.scale?.type === 'time') return channel.scale.type;
+  return isDateOnlyField(data, channel.field) ? 'utc' : 'time';
 }
 
 /**
@@ -746,7 +776,9 @@ function buildPositionalScale(
   // Infer from field type
   switch (channel.type) {
     case 'temporal':
-      return buildTimeScale(channel, data, rangeStart, rangeEnd);
+      return resolveTemporalScaleType(channel, data) === 'utc'
+        ? buildUtcScale(channel, data, rangeStart, rangeEnd)
+        : buildTimeScale(channel, data, rangeStart, rangeEnd);
     case 'quantitative':
       return buildLinearScale(channel, data, rangeStart, rangeEnd);
     case 'nominal':
@@ -755,6 +787,21 @@ function buildPositionalScale(
     default:
       return buildLinearScale(channel, data, rangeStart, rangeEnd);
   }
+}
+
+/**
+ * Whether a nominal/ordinal position channel without an explicit scale type
+ * resolves to a band scale (true) or a point scale (false). Only band axes
+ * auto-rotate their labels, so the layout plan asks this too.
+ */
+export function categoricalAxisIsBand(chartType: string, axis: 'x' | 'y'): boolean {
+  return (
+    chartType === 'rect' ||
+    chartType === 'bar' ||
+    chartType === 'beeswarm' ||
+    chartType === 'range' ||
+    ((chartType === 'circle' || chartType === 'lollipop') && axis === 'y')
+  );
 }
 
 /**
@@ -786,12 +833,7 @@ function buildCategoricalScale(
   if (chartType === 'rect') {
     return buildBandScale(channel, data, rangeStart, rangeEnd, HEATMAP_BAND_PADDING);
   }
-  if (
-    chartType === 'bar' ||
-    chartType === 'beeswarm' ||
-    chartType === 'range' ||
-    ((chartType === 'circle' || chartType === 'lollipop') && axis === 'y')
-  ) {
+  if (categoricalAxisIsBand(chartType, axis)) {
     return buildBandScale(channel, data, rangeStart, rangeEnd);
   }
   // Line/area marks read as a continuous trend, like a time scale -- the first
@@ -999,14 +1041,20 @@ export function computeScales(
       spec.markType === 'bar' &&
       (encoding.x?.type === 'nominal' || encoding.x?.type === 'ordinal') &&
       encoding.y.type === 'quantitative';
-    // Both bar and area require explicit opt-in for stacked domain expansion.
+    // Bars require explicit stacking; multi-series areas stack by default.
+    // Match the area renderer so omission cannot clip accumulated bands.
     const stackProp = encoding.y.stack;
     const isExplicitlyStacked =
       stackProp === true ||
       stackProp === 'zero' ||
       stackProp === 'normalize' ||
       stackProp === 'center';
-    const isAreaStacked = spec.markType === 'area' && isExplicitlyStacked;
+    const isAreaStacked =
+      spec.markType === 'area' &&
+      !!encoding.color &&
+      'field' in encoding.color &&
+      stackProp !== null &&
+      stackProp !== false;
     const isBarStacked = isVerticalBar && isExplicitlyStacked;
 
     // Sparkline tightening: drop the default `zero: true` baseline so the
@@ -1040,7 +1088,50 @@ export function computeScales(
         scale: { ...encoding.y.scale, zero: false },
       };
     }
-    if ((isBarStacked || isAreaStacked) && encoding.color && encoding.y.type === 'quantitative') {
+    if (
+      isAreaStacked &&
+      encoding.x &&
+      encoding.color &&
+      'field' in encoding.color &&
+      encoding.y.type === 'quantitative'
+    ) {
+      const { extent: stackExtent } = computeAreaStack(
+        data,
+        encoding.x.field,
+        encoding.y.field,
+        encoding.color.field,
+        encoding.x.type,
+        stackProp,
+        spec.areaStackCache,
+      );
+      const lower = stackExtent[0];
+      let upper = stackExtent[1];
+      // Use actual cumulative boundaries, including mixed-sign intermediate
+      // extrema. Raw duplicate rows are not additional stacked observations.
+      yData = [{ [encoding.y.field]: lower }, { [encoding.y.field]: upper }];
+      // Keep the conventional normalized envelope for zero/all-missing stacks,
+      // extending it only when signed cumulative boundaries exceed it.
+      if (stackProp === 'normalize') upper = Math.max(1, upper);
+      if (stackProp === 'normalize' || stackProp === 'center') {
+        const existingAxis = encoding.y.axis;
+        yChannel = {
+          ...encoding.y,
+          scale: {
+            ...encoding.y.scale,
+            domain: encoding.y.scale?.domain ?? [lower, upper],
+            ...(stackProp === 'normalize' ? { nice: false } : {}),
+          },
+          ...(stackProp === 'normalize'
+            ? {
+                axis:
+                  existingAxis === false || existingAxis?.format
+                    ? existingAxis
+                    : { ...(typeof existingAxis === 'object' ? existingAxis : {}), format: '.0%' },
+              }
+            : {}),
+        };
+      }
+    } else if (isBarStacked && encoding.color && encoding.y.type === 'quantitative') {
       if (encoding.y.stack === 'normalize') {
         // Normalize: domain is [0, 1] (VL convention), default to percentage axis
         const existingAxis = encoding.y.axis;

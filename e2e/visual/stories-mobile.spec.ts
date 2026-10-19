@@ -15,6 +15,11 @@ import { captureStory } from './capture';
  */
 
 const stories = [
+  { name: 'v9-reference-labels', slug: 'features--annotation-reference-labels' },
+  { name: 'v9-crowded-callouts', slug: 'features--annotation-crowded-callouts' },
+  { name: 'v9-notes-sizing', slug: 'features--annotation-notes-sizing' },
+  { name: 'v9-curves', slug: 'features--annotation-curves' },
+
   { name: 'mr-long-title', slug: 'testing--mobile-regression--long-title-mobile' },
   { name: 'mr-grouped-columns-labels-all', slug: 'testing--mobile-regression--grouped-columns-labels-all' },
   { name: 'mr-grouped-bars-many-rows', slug: 'testing--mobile-regression--grouped-bars-many-rows' },
@@ -31,6 +36,8 @@ const stories = [
   { name: 'mr-chrome-layout-grow', slug: 'testing--mobile-regression--chrome-layout-grow' },
   // maxLines — the same runaway title capped at 2 lines with an ellipsis.
   { name: 'mr-chrome-max-lines', slug: 'testing--mobile-regression--chrome-max-lines' },
+  // Outside reference lanes that cannot fit: labels must stay on canvas.
+  { name: 'mr-reference-lane-overflow', slug: 'testing--mobile-regression--reference-lane-overflow' },
   { name: 'bar-vertical', slug: 'testing--fixtures--simple-columns' },
   { name: 'line-multi-series', slug: 'testing--fixtures--gdp-growth' },
   { name: 'stacked-column', slug: 'testing--fixtures--energy-mix' },

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { waitForResizeSettled } from '../settle';
 
 const story = '/?story=features--annotation-gestures&mode=preview';
 for (const width of [320, 390, 768, 1280])
@@ -115,7 +116,9 @@ for (const cancellation of ['Escape', 'pointercancel', 'touchcancel', 'replaceme
     else if (cancellation === 'width') {
       await page.setViewportSize({ width: 700, height: 900 });
       await expect.poll(() => host.locator('svg').getAttribute('viewBox')).not.toContain('768');
-      await page.waitForTimeout(100);
+      // Release only after every debounced resize render has landed, so the
+      // pointerup meets the rebuilt chart rather than a pending re-render.
+      await waitForResizeSettled(host);
     } else await page.evaluate((type) => document.dispatchEvent(new Event(type)), cancellation);
     await page.mouse.up();
     await expect(page.getByTestId('edit-count')).toHaveText('0');

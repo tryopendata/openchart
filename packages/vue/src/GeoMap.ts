@@ -6,13 +6,23 @@
  * createGeoMap() function.
  */
 
-import type { DarkMode, GeoMapSpec, ThemeConfig } from '@opendata-ai/openchart-core';
+import type {
+  DarkMode,
+  GeoMapSpec,
+  GeoReaderSelection,
+  ReaderChangeMeta,
+  ThemeConfig,
+} from '@opendata-ai/openchart-core';
+import { mergeThemeConfig } from '@opendata-ai/openchart-core';
 import {
   type Camera,
   createGeoMap,
+  createGeoReaderBinding,
+  type GeoMapCameraChangeMeta,
   type GeoMapInstance,
   type GeoMapMarkEvent,
   type GeoMapMountOptions,
+  type GeoReaderOptions,
 } from '@opendata-ai/openchart-vanilla';
 import {
   type CSSProperties,
@@ -28,6 +38,9 @@ import {
 import { VizDarkModeKey, VizThemeKey } from './context';
 
 export interface GeoMapProps {
+  reader?: false | GeoReaderOptions;
+  readerSelection?: GeoReaderSelection;
+  labelInventory?: GeoMapMountOptions['labelInventory'];
   spec: GeoMapSpec;
   theme?: ThemeConfig;
   darkMode?: DarkMode;
@@ -38,6 +51,12 @@ export interface GeoMapProps {
 export const GeoMap = defineComponent({
   name: 'GeoMap',
   props: {
+    reader: { type: [Boolean, Object] as PropType<false | GeoReaderOptions>, default: undefined },
+    readerSelection: { type: Object as PropType<GeoReaderSelection>, default: undefined },
+    labelInventory: {
+      type: [Boolean, Object] as PropType<GeoMapMountOptions['labelInventory']>,
+      default: undefined,
+    },
     spec: {
       type: Object as PropType<GeoMapSpec>,
       required: true,
@@ -60,21 +79,34 @@ export const GeoMap = defineComponent({
     },
   },
   emits: {
+    'reader-change': (_selection: GeoReaderSelection, _meta: ReaderChangeMeta) => true,
     'mark-click': (_event: GeoMapMarkEvent) => true,
     'mark-hover': (_event: GeoMapMarkEvent | null) => true,
-    'camera-change': (_camera: Camera) => true,
+    'camera-change': (_camera: Camera, _meta?: GeoMapCameraChangeMeta) => true,
   },
   setup(props, { emit, expose }) {
     const containerRef = ref<HTMLDivElement | null>(null);
     let instance: GeoMapInstance | null = null;
     let prevSpec = '';
+    const readerBinding = createGeoReaderBinding();
+    function syncReader() {
+      if (containerRef.value && instance)
+        readerBinding.sync(
+          containerRef.value,
+          instance,
+          props.spec,
+          props.reader,
+          props.readerSelection,
+          (state, meta) => emit('reader-change', state, meta),
+        );
+    }
 
     // Inject theme/darkMode from provider as fallbacks
     const contextTheme = inject(VizThemeKey, undefined);
     const contextDarkMode = inject(VizDarkModeKey, undefined);
 
     function resolveTheme(): ThemeConfig | undefined {
-      return props.theme ?? contextTheme?.value;
+      return mergeThemeConfig(contextTheme?.value, props.theme);
     }
 
     function resolveDarkMode(): DarkMode | undefined {
@@ -90,15 +122,19 @@ export const GeoMap = defineComponent({
         darkMode: resolveDarkMode(),
         onMarkClick: (feature) => emit('mark-click', feature),
         onMarkHover: (feature) => emit('mark-hover', feature),
-        onCameraChange: (camera) => emit('camera-change', camera),
-        responsive: true,
+        onCameraChange: (camera, meta) =>
+          meta ? emit('camera-change', camera, meta) : emit('camera-change', camera),
+        autoResize: true,
+        labelInventory: props.labelInventory,
       };
 
       instance = createGeoMap(container, props.spec, options);
       prevSpec = JSON.stringify(props.spec);
+      syncReader();
     }
 
     function destroyMap() {
+      readerBinding.detach();
       instance?.destroy();
       instance = null;
       prevSpec = '';
@@ -127,9 +163,17 @@ export const GeoMap = defineComponent({
         if (newVal !== prevSpec) {
           prevSpec = newVal;
           instance.update(props.spec);
+          syncReader();
         }
       },
     );
+
+    watch(
+      () => props.labelInventory,
+      (value) => instance?.setLabelInventory(value),
+    );
+
+    watch([() => props.reader, () => props.readerSelection], () => syncReader(), { deep: false });
 
     // Recreate map when theme or darkMode change
     watch(

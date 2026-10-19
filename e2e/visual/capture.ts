@@ -11,6 +11,24 @@ export async function captureStory(
   screenshotName: string,
   query = '',
 ) {
+  // React may replace head styles while a story mounts. Hide only development
+  // overlays at their DOM owner as well, including any remount during capture.
+  await page.addInitScript(() => {
+    const hide = () => {
+      for (const element of document.querySelectorAll<HTMLElement>(
+        '.ladle-theme-picker, .oc-github-link',
+      )) {
+        if (element.style.getPropertyValue('display') !== 'none')
+          element.style.setProperty('display', 'none', 'important');
+      }
+    };
+    new MutationObserver(hide).observe(document, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'style'],
+    });
+  });
   await page.goto(`/?mode=preview&story=${encodeURIComponent(slug)}${query}`);
 
   // Kill animations so enter/stagger/annotation-delay timings don't leak

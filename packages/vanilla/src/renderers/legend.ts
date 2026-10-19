@@ -15,6 +15,18 @@ import { estimateTextWidth } from '@opendata-ai/openchart-core';
 import { nextSvgId } from '../svg-ids';
 import { applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
 
+/** Paint resolved key text without measuring or choosing placement in the renderer. */
+function renderKeyText(parent: SVGElement, legend: LegendLayout): void {
+  for (const row of legend.textRows ?? []) {
+    const text = createSVGElement('text');
+    text.setAttribute('class', `oc-legend-${row.role}`);
+    setAttrs(text, { x: row.x, y: row.y, 'text-anchor': row.anchor ?? 'start' });
+    applyTextStyle(text, row.style);
+    text.textContent = row.text;
+    parent.appendChild(text);
+  }
+}
+
 /** Minimum legend hit-target height in px (WCAG 2.2 SC 2.5.8). */
 const LEGEND_HIT_HEIGHT = 24;
 /** Horizontal slack on each side of the legend hit rect. */
@@ -77,7 +89,16 @@ function renderContinuousLegend(parent: SVGElement, legend: ContinuousLegendLayo
   g.setAttribute('role', 'img');
   const first = legend.ticks[0];
   const last = legend.ticks[legend.ticks.length - 1];
-  if (first && last) {
+  if (legend.rangeEntries) {
+    g.setAttribute(
+      'aria-label',
+      [
+        'Color ranges',
+        ...(legend.textRows ?? []).map((row) => row.text),
+        ...(legend.noData ? [legend.noData.label] : []),
+      ].join('; '),
+    );
+  } else if (first && last) {
     g.setAttribute('aria-label', `Color scale from ${first.label} to ${last.label}`);
   } else {
     g.setAttribute('aria-label', 'Color scale');
@@ -127,10 +148,10 @@ function renderContinuousLegend(parent: SVGElement, legend: ContinuousLegendLayo
       const rect = createSVGElement('rect');
       rect.setAttribute('class', 'oc-legend-bin');
       setAttrs(rect, {
-        x: bin.x,
-        y: legend.bar.y,
-        width: bin.width,
-        height: legend.bar.height,
+        x: legend.rangeEntries?.[i]?.bounds.x ?? bin.x,
+        y: legend.rangeEntries?.[i]?.bounds.y ?? legend.bar.y,
+        width: legend.rangeEntries?.[i]?.bounds.width ?? bin.width,
+        height: legend.rangeEntries?.[i]?.bounds.height ?? legend.bar.height,
         fill: bin.color,
         'shape-rendering': 'crispEdges',
       });
@@ -139,7 +160,11 @@ function renderContinuousLegend(parent: SVGElement, legend: ContinuousLegendLayo
     }
   }
 
-  if (legend.title && legend.titleY !== undefined) {
+  if (
+    !legend.textRows?.some((row) => row.role === 'title') &&
+    legend.title &&
+    legend.titleY !== undefined
+  ) {
     const title = createSVGElement('text');
     title.setAttribute('class', 'oc-legend-title');
     setAttrs(title, { x: legend.bar.x, y: legend.titleY, 'text-anchor': 'start' });
@@ -164,6 +189,7 @@ function renderContinuousLegend(parent: SVGElement, legend: ContinuousLegendLayo
     renderNoDataSwatch(g, legend.noData, legend.labelStyle);
   }
 
+  renderKeyText(g, legend);
   parent.appendChild(g);
 }
 
@@ -199,7 +225,11 @@ function renderSizeLegend(parent: SVGElement, legend: SizeLegendLayout): void {
   const labelX = ox + legend.circles[0].cx + legend.circles[0].radius + 8;
   const leaderX = ox + legend.circles[0].cx + legend.circles[0].radius + 4;
 
-  if (legend.title && legend.titleY !== undefined) {
+  if (
+    !legend.textRows?.some((row) => row.role === 'title') &&
+    legend.title &&
+    legend.titleY !== undefined
+  ) {
     const title = createSVGElement('text');
     title.setAttribute('class', 'oc-legend-title');
     setAttrs(title, { x: ox, y: oy + legend.titleY, 'text-anchor': 'start' });
@@ -243,6 +273,7 @@ function renderSizeLegend(parent: SVGElement, legend: SizeLegendLayout): void {
     g.appendChild(label);
   }
 
+  renderKeyText(g, legend);
   parent.appendChild(g);
 }
 
@@ -360,6 +391,7 @@ export function renderLegend(parent: SVGElement, legend: LegendLayout): void {
         'stroke-width': 2,
         'stroke-linecap': 'round',
       });
+      if (entry.strokeDasharray) line.setAttribute('stroke-dasharray', entry.strokeDasharray);
       entryG.appendChild(line);
     } else {
       const rectSize = Math.round(legend.swatchSize * 0.6);
@@ -412,5 +444,6 @@ export function renderLegend(parent: SVGElement, legend: LegendLayout): void {
     renderNoDataSwatch(g, legend.noData, legend.labelStyle, { rx: 2, baseline: 'central' });
   }
 
+  renderKeyText(g, legend);
   parent.appendChild(g);
 }

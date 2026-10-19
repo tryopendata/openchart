@@ -5,8 +5,8 @@
  * Covers: data {values} unwrapping, top-level title/subtitle, bare value
  * defs, channel-level legend, axis: null, scale.scheme resolution, theta as
  * the arc value channel, count-without-field, VL sort forms, width/height
- * fixed sizing, strokeDash on line marks, and the exactly-one-warning
- * contract for v8-deprecated surface (radius/shape/href/order, $schema).
+ * fixed sizing, strokeDash on line marks, rejection of removed channels, and
+ * warning routing for retained sugar such as $schema.
  */
 
 import type { LayerSpec, LineMark } from '@opendata-ai/openchart-core';
@@ -326,44 +326,39 @@ describe('theta on arc marks', () => {
     expect(warned()).toEqual([]);
   });
 
-  it('warns once when only the deprecated y alias is used', () => {
-    const layout = compileChart(
-      {
-        mark: 'arc',
-        data,
-        encoding: {
-          y: { field: 'amount', type: 'quantitative' },
-          color: { field: 'category', type: 'nominal' },
+  it('rejects y-only arc specs with the canonical theta replacement', () => {
+    expect(() =>
+      compileChart(
+        {
+          mark: 'arc',
+          data,
+          encoding: {
+            y: { field: 'amount', type: 'quantitative' },
+            color: { field: 'category', type: 'nominal' },
+          },
         },
-      },
-      OPTIONS,
-    );
-    const arcs = layout.marks.filter((m) => m.type === 'arc');
-    expect(arcs.length).toBe(2);
-    const messages = warned().filter((m) => m.includes('encoding.y'));
-    expect(messages).toHaveLength(1);
-    expect(messages[0]).toContain('v8');
-    expect(messages[0]).toContain('theta');
+        OPTIONS,
+      ),
+    ).toThrow(/encoding.y.*Use encoding.theta/);
+    expect(warned()).toEqual([]);
   });
 
-  it('prefers theta over y when both are present (theta is canonical)', () => {
-    const layout = compileChart(
-      {
-        mark: 'arc',
-        data,
-        encoding: {
-          y: { field: 'category', type: 'quantitative' },
-          theta: { field: 'amount', type: 'quantitative' },
-          color: { field: 'category', type: 'nominal' },
+  it('rejects a differing y when theta is present instead of silently dropping it', () => {
+    expect(() =>
+      compileChart(
+        {
+          mark: 'arc',
+          data,
+          encoding: {
+            y: { field: 'category', type: 'quantitative' },
+            theta: { field: 'amount', type: 'quantitative' },
+            color: { field: 'category', type: 'nominal' },
+          },
         },
-      },
-      OPTIONS,
-    );
-    const arcs = layout.marks.filter((m) => m.type === 'arc');
-    expect(arcs.length).toBe(2);
-    expect(warned()).toEqual([
-      '[openchart] encoding.theta and encoding.y are both set on arc; theta takes precedence and y was dropped.',
-    ]);
+        OPTIONS,
+      ),
+    ).toThrow(/\/encoding\/y was removed in v9\. Remove encoding\.y/);
+    expect(warned()).toEqual([]);
   });
 
   it('does not warn when theta and y are identical', () => {
@@ -628,10 +623,10 @@ describe('strokeDash on line marks', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Deprecation warnings (v8 clock)
+// Removed spec fields and retained sugar warnings
 // ---------------------------------------------------------------------------
 
-describe('deprecation warnings', () => {
+describe('removed fields and retained warnings', () => {
   const base = {
     mark: 'bar',
     data: [{ cat: 'A', value: 1 }],
@@ -646,17 +641,14 @@ describe('deprecation warnings', () => {
     'shape',
     'href',
     'order',
-  ] as const)('warns exactly once for the dead %s channel, naming the removal version', (channel) => {
-    compileChart(
-      {
-        ...base,
-        encoding: { ...base.encoding, [channel]: { field: 'value', type: 'quantitative' } },
-      },
-      OPTIONS,
-    );
-    const messages = warned().filter((m) => m.includes(`encoding.${channel}`));
-    expect(messages).toHaveLength(1);
-    expect(messages[0]).toContain('v8');
+  ] as const)('rejects the removed %s channel before sugar strips it', (channel) => {
+    const spec = {
+      ...base,
+      encoding: { ...base.encoding, [channel]: { field: 'value', type: 'quantitative' } },
+    };
+    expect(() => compileChart(spec, OPTIONS)).toThrow(`/encoding/${channel} was removed in v9`);
+    expect(() => expandSpecSugar(spec)).toThrow(`/encoding/${channel} was removed in v9`);
+    expect(warned()).toEqual([]);
   });
 
   it('warns once for $schema and strips it', () => {
@@ -669,17 +661,17 @@ describe('deprecation warnings', () => {
     expect(warned().filter((m) => m.includes('$schema'))).toHaveLength(1);
   });
 
-  it("warns once for the deprecated 'rule' annotation type, naming the refline replacement", () => {
-    compileChart(
-      {
-        ...base,
-        annotations: [{ type: 'rule', y: 1, label: 'target' }],
-      },
-      OPTIONS,
-    );
-    const messages = warned().filter((m) => m.includes("annotation type 'rule'"));
-    expect(messages).toHaveLength(1);
-    expect(messages[0]).toContain("'refline'");
+  it("rejects the removed 'rule' annotation type with the refline replacement", () => {
+    expect(() =>
+      compileChart(
+        {
+          ...base,
+          annotations: [{ type: 'rule', y: 1, label: 'target' }],
+        },
+        OPTIONS,
+      ),
+    ).toThrow(/\/annotations\/0\/type.*Use refline/);
+    expect(warned()).toEqual([]);
   });
 
   it("does not warn for the canonical 'refline' annotation type", () => {
@@ -731,35 +723,24 @@ describe('layer specs', () => {
     }
   });
 
-  it('emits each deprecation warning once per compile even across layer children', () => {
-    compileLayer(
-      {
-        data: [
-          { cat: 'A', value: 1 },
-          { cat: 'B', value: 2 },
-        ],
-        layer: [
-          {
-            mark: 'bar',
-            encoding: {
-              x: { field: 'cat', type: 'nominal' },
-              y: { field: 'value', type: 'quantitative' },
-              href: { field: 'cat', type: 'nominal' },
-            },
-          },
-          {
-            mark: 'line',
-            encoding: {
-              x: { field: 'cat', type: 'ordinal' },
-              y: { field: 'value', type: 'quantitative' },
-              href: { field: 'cat', type: 'nominal' },
-            },
-          },
-        ],
-      } as unknown as LayerSpec,
-      OPTIONS,
-    );
-    expect(warned().filter((m) => m.includes('encoding.href'))).toHaveLength(1);
+  it('reports each removed field with its authored layer path', () => {
+    const spec = {
+      data: [
+        { cat: 'A', value: 1 },
+        { cat: 'B', value: 2 },
+      ],
+      layer: ['bar', 'line'].map((mark) => ({
+        mark,
+        encoding: {
+          x: { field: 'cat', type: 'nominal' },
+          y: { field: 'value', type: 'quantitative' },
+          href: { field: 'cat', type: 'nominal' },
+        },
+      })),
+    };
+    expect(() => compileLayer(spec as LayerSpec, OPTIONS)).toThrow('/layer/0/encoding/href');
+    expect(() => compileLayer(spec as LayerSpec, OPTIONS)).toThrow('/layer/1/encoding/href');
+    expect(warned()).toEqual([]);
   });
 });
 
@@ -769,13 +750,12 @@ describe('layer specs', () => {
 
 describe('options.onWarn warning sink', () => {
   const deprecated = {
+    $schema: 'https://vega.github.io/schema/vega-lite/v5.json',
     mark: 'bar',
     data: [{ cat: 'A', value: 1 }],
     encoding: {
       x: { field: 'cat', type: 'nominal' },
       y: { field: 'value', type: 'quantitative' },
-      // A dead v8 channel: guaranteed to produce a deprecation warning.
-      href: { field: 'value', type: 'quantitative' },
     },
   };
 
@@ -784,9 +764,9 @@ describe('options.onWarn warning sink', () => {
     compileChart(deprecated, { ...OPTIONS, onWarn: (m) => sink.push(m) });
 
     // The warning reached the sink...
-    expect(sink.some((m) => m.includes('encoding.href'))).toBe(true);
+    expect(sink.some((m) => m.includes('$schema'))).toBe(true);
     // ...and console.warn was NOT touched (the spy caught nothing).
-    expect(warned().filter((m) => m.includes('encoding.href'))).toEqual([]);
+    expect(warned().filter((m) => m.includes('$schema'))).toEqual([]);
   });
 
   it('a no-op sink silences warnings entirely (e.g. SSR)', () => {
@@ -796,6 +776,6 @@ describe('options.onWarn warning sink', () => {
 
   it('falls back to console.warn when no sink is provided', () => {
     compileChart(deprecated, OPTIONS);
-    expect(warned().some((m) => m.includes('encoding.href'))).toBe(true);
+    expect(warned().some((m) => m.includes('$schema'))).toBe(true);
   });
 });

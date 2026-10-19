@@ -1,4 +1,5 @@
-import { collectMarkOptionWarnings } from '../compiler/mark-options';
+import { assertMarkOptions } from '../compiler/mark-options';
+import { collectRemovedSpecErrors } from '../compiler/removed-spec-fields';
 /**
  * Pre-validation spec sugar expansion.
  *
@@ -38,7 +39,6 @@ import type {
   BinTransform,
   DataRow,
   EncodingChannel,
-  ThemeConfig,
   TimeUnit,
   TimeUnitTransform,
   Transform,
@@ -262,25 +262,6 @@ function stripIgnoredKeys(
 }
 
 /**
- * `mark.render` was removed in v8: backend selection is host policy, passed as
- * the `renderer` compile/mount option (mirroring vega-embed). Warned once and
- * stripped so pre-v8 specs keep compiling.
- */
-function stripRemovedMarkRender(
-  spec: Record<string, unknown>,
-  warnings: string[],
-): Record<string, unknown> {
-  const mark = spec.mark;
-  if (!mark || typeof mark !== 'object' || Array.isArray(mark)) return spec;
-  if (!('render' in mark)) return spec;
-  warnings.push(
-    '[openchart] mark.render was removed in v8. This field is stripped for backward compatibility. Pass { renderer } to createChart() or the compile options instead.',
-  );
-  const { render: _render, ...restMark } = mark as Record<string, unknown>;
-  return { ...spec, mark: restMark };
-}
-
-/**
  * Fixed-size specs (both `width` and `height` set) imply `responsive: false`
  * unless the user set `responsive` explicitly. The width/height override
  * itself is applied by compileChart/compileLayer on the compile options.
@@ -295,46 +276,6 @@ function applyFixedSizeDefault(spec: Record<string, unknown>): Record<string, un
   }
   return spec;
 }
-
-/**
- * Rewrite the deprecated annotation `type: 'rule'` to the canonical
- * `'refline'` (they collide with the `rule` mark type otherwise). Runs before
- * validation so the canonical form is all validation/normalization ever sees.
- */
-function expandAnnotationSugar(
-  spec: Record<string, unknown>,
-  warnings: string[],
-): Record<string, unknown> {
-  const annotations = spec.annotations;
-  if (!Array.isArray(annotations) || annotations.length === 0) return spec;
-
-  let changed = false;
-  const updated = annotations.map((ann) => {
-    if (ann && typeof ann === 'object' && (ann as Record<string, unknown>).type === 'rule') {
-      warnings.push("[openchart] annotation type 'rule' is deprecated; use 'refline'.");
-      changed = true;
-      return { ...(ann as Record<string, unknown>), type: 'refline' };
-    }
-    return ann;
-  });
-
-  return changed ? { ...spec, annotations: updated } : spec;
-}
-
-// ---------------------------------------------------------------------------
-// Channel-level sugar (value defs, legend, axis null, scheme, theta, dead channels)
-// ---------------------------------------------------------------------------
-
-/** Channels declared in the spec types with zero engine implementation, warned and stripped. */
-const DEAD_CHANNEL_MESSAGES: Record<string, string> = {
-  radius:
-    '[openchart] encoding.radius was removed in v8. This channel is stripped for backward compatibility. Use mark.innerRadius / mark.outerRadius to control donut radii.',
-  shape:
-    '[openchart] encoding.shape was removed in v8. This channel is stripped for backward compatibility. Differentiate series with encoding.color or encoding.strokeDash instead.',
-  href: '[openchart] encoding.href was removed in v8. This channel is stripped for backward compatibility. Handle link navigation in the host application instead.',
-  order:
-    '[openchart] encoding.order was removed in v8. This channel is stripped for backward compatibility. Use encoding.<channel>.sort or pre-sorted data order instead.',
-};
 
 /**
  * Expand channel-level VL sugar. Mark-dependent sugar (value defs, theta) only
@@ -436,27 +377,15 @@ function expandChannelSugar(
   // theta: the canonical arc value channel in v8, shared by waffle and
   // parliament marks (the same part-to-whole value). The engine still reads
   // encoding.y internally, so both directions of the alias converge on y:
-  // - theta present -> y is populated from theta (theta wins if both are set,
-  //   since it's canonical now)
+  // - theta present -> y is populated from theta (a differing authored y is
+  //   rejected earlier by collectRemovedSpecErrors)
   // - only y present -> y is kept and theta is populated from it, with a
   //   deprecation warning nudging authors toward theta
   if (markType && (updated.theta || updated.y)) {
     const thetaMark = markType === 'arc' || markType === 'waffle' || markType === 'parliament';
     const hasTheta = updated.theta && typeof updated.theta === 'object';
-    const hasY = updated.y && typeof updated.y === 'object';
     if (thetaMark && hasTheta) {
-      if (hasY && JSON.stringify(updated.y) !== JSON.stringify(updated.theta)) {
-        warnings.push(
-          `[openchart] encoding.theta and encoding.y are both set on ${markType}; theta takes precedence and y was dropped.`,
-        );
-      }
       updated.y = updated.theta;
-      changed = true;
-    } else if (thetaMark && hasY && !hasTheta) {
-      updated.theta = updated.y;
-      warnings.push(
-        `[openchart] encoding.y on ${markType} marks is deprecated in v8; use encoding.theta for the value channel.`,
-      );
       changed = true;
     } else if (hasTheta && !thetaMark) {
       warnings.push(
@@ -479,15 +408,6 @@ function expandChannelSugar(
       warnings.push(
         '[openchart] parliament chart is using auto-palette colors. Party colors carry meaning; set them explicitly via encoding.color.scale.range (in party order), e.g. color: { field: "party", scale: { range: ["#1b7fa3", "#c44e52"] } }.',
       );
-    }
-  }
-
-  // Dead channels: warn once and strip (behavior-identical; the engine ignores them)
-  for (const channel of Object.keys(DEAD_CHANNEL_MESSAGES)) {
-    if (updated[channel] !== undefined) {
-      warnings.push(DEAD_CHANNEL_MESSAGES[channel]);
-      delete updated[channel];
-      changed = true;
     }
   }
 
@@ -914,9 +834,7 @@ function expandChartSugar(
   out = expandTopLevelTitle(out);
   out = expandDescriptionSugar(out);
   out = stripIgnoredKeys(out, warnings);
-  out = stripRemovedMarkRender(out, warnings);
   out = applyFixedSizeDefault(out);
-  out = expandAnnotationSugar(out, warnings);
   out = expandChannelSugar(out, warnings);
   out = expandHistogramMark(out);
   out = expandDensityMark(out);
@@ -936,7 +854,6 @@ function expandLayerSugar(
   let out = unwrapDataValues(spec);
   out = expandTopLevelTitle(out);
   out = stripIgnoredKeys(out, warnings);
-  out = expandAnnotationSugar(out, warnings);
   // Shared encoding gets the mark-independent channel sugar (axis, scheme,
   // legend, dead channels) and sort resolution; mark-dependent sugar (value
   // defs, theta) resolves per leaf after encoding inheritance.
@@ -978,11 +895,11 @@ function expandValueFormatSugar(
   warnings: string[],
 ): Record<string, unknown> {
   const type = spec.type as string | undefined;
-  if (type !== 'sankey' && type !== 'tilemap' && type !== 'barlist' && type !== 'map') return spec;
+  if (type !== 'tilemap') return spec;
   if (typeof spec.valueFormat !== 'string') return spec;
 
   const encoding = spec.encoding as Record<string, unknown> | undefined;
-  const channelKey = type === 'map' ? 'color' : 'value';
+  const channelKey = 'value';
   const valueCh = encoding?.[channelKey] as Record<string, unknown> | undefined;
 
   // Only expand into encoding when encoding.value already exists (the shorthand
@@ -1019,10 +936,13 @@ function expandValueFormatSugar(
 export function expandSpecSugar(
   spec: Record<string, unknown>,
   warnings: string[] = [],
-  markOptionWarnings = true,
+  checkMarkOptions = true,
 ): Record<string, unknown> {
   if (!spec || typeof spec !== 'object' || Array.isArray(spec)) return spec;
-  if (markOptionWarnings) warnings.push(...collectMarkOptionWarnings(spec));
+  const removed = collectRemovedSpecErrors(spec);
+  if (removed.length)
+    throw new Error(`Invalid spec:\n${removed.map((error) => error.message).join('\n')}`);
+  if (checkMarkOptions) assertMarkOptions(spec);
   if (Array.isArray(spec.layer) && typeof spec.type !== 'string') {
     return expandLayerSugar(spec, warnings);
   }
@@ -1066,15 +986,5 @@ export function emitSpecWarnings(warnings: string[], sink: WarnSink = defaultWar
     if (seen.has(warning)) continue;
     seen.add(warning);
     sink(warning);
-  }
-}
-
-/** Warn for compile/mount/provider theme inputs, beyond spec.theme. */
-export function emitThemeWarnings(theme: ThemeConfig | undefined, sink?: WarnSink): void {
-  if (theme?.chrome && Object.values(theme.chrome).some((value) => typeof value === 'string')) {
-    emitSpecWarnings(
-      ['[openchart] theme.chrome string colors are deprecated; use { color } objects.'],
-      sink,
-    );
   }
 }

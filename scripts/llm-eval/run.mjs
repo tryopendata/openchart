@@ -97,6 +97,12 @@ function matchesExpectation(spec, expect) {
     const mark = markOf(spec);
     if (!mark || !expect.marks.includes(mark)) return false;
   }
+  if (expect.markOptions) {
+    if (!spec.mark || typeof spec.mark !== 'object') return false;
+    for (const [key, value] of Object.entries(expect.markOptions)) {
+      if (JSON.stringify(spec.mark[key]) !== JSON.stringify(value)) return false;
+    }
+  }
   if (expect.field) {
     if (!encodedFields(spec).has(expect.field)) return false;
   }

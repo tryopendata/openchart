@@ -54,6 +54,24 @@ const ENDPOINT_DOT_RADIUS = 4;
  *  renders solid so single-value charts keep the default look. */
 const STROKE_DASH_PATTERNS = ['', '6 4', '2 3', '8 4 2 4', '4 4', '1 3'];
 
+/**
+ * Dash pattern per strokeDash value, in explicit `scale.domain` order, then
+ * first-seen data order. Shared with the legend so swatches match the lines.
+ */
+export function strokeDashPatterns(spec: NormalizedChartSpec): Map<string, string> {
+  const patterns = new Map<string, string>();
+  const dash = spec.encoding.strokeDash;
+  if (!dash || !('field' in dash) || !dash.field) return patterns;
+  const domain = (dash.scale?.domain as unknown[] | undefined) ?? [];
+  for (const value of [...domain, ...spec.data.map((row) => row[dash.field])]) {
+    if (value == null) continue;
+    const key = String(value);
+    if (!patterns.has(key))
+      patterns.set(key, STROKE_DASH_PATTERNS[patterns.size % STROKE_DASH_PATTERNS.length]);
+  }
+  return patterns;
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -92,15 +110,7 @@ export function computeLineMarks(
   const dashEnc =
     encoding.strokeDash && 'field' in encoding.strokeDash ? encoding.strokeDash : undefined;
   const dashField = dashEnc?.field;
-  const dashIndexByValue = new Map<string, number>();
-  if (dashField) {
-    for (const row of spec.data) {
-      const value = row[dashField];
-      if (value == null) continue;
-      const key = String(value);
-      if (!dashIndexByValue.has(key)) dashIndexByValue.set(key, dashIndexByValue.size);
-    }
-  }
+  const dashPatterns = strokeDashPatterns(spec);
   const groups = groupByField(spec.data, colorField ?? dashField);
   // Point separator stroke: the classic white halo reads as a bright ring grid
   // on a dark canvas, so match the resolved background when it is opaque
@@ -230,11 +240,8 @@ export function computeLineMarks(
     else if (styleOverride?.lineStyle === 'dotted') strokeDasharray = '2 3';
     else if (dashField) {
       const dashValue = rows[0]?.[dashField];
-      if (dashValue != null) {
-        const idx = dashIndexByValue.get(String(dashValue)) ?? 0;
-        const pattern = STROKE_DASH_PATTERNS[idx % STROKE_DASH_PATTERNS.length];
-        if (pattern) strokeDasharray = pattern;
-      }
+      const pattern = dashValue == null ? undefined : dashPatterns.get(String(dashValue));
+      if (pattern) strokeDasharray = pattern;
     }
 
     // Create the LineMark with the combined path points.

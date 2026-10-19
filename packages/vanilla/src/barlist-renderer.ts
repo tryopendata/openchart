@@ -7,11 +7,11 @@
 
 import type { BarListLayout, BarListRowMark, ResolvedAnimation } from '@opendata-ai/openchart-core';
 import { stampAnimationVars } from './animation-vars';
+import { renderAttributionBrand } from './renderers/brand';
 import { renderChromeElement } from './renderers/chrome';
+import { stampThemeProperties } from './theme-tokens';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
-const XLINK_NS = 'http://www.w3.org/1999/xlink';
-const BRAND_URL = 'https://tryopendata.ai';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -58,40 +58,6 @@ function renderChrome(parent: SVGElement, layout: BarListLayout): void {
 // ---------------------------------------------------------------------------
 // Watermark rendering
 // ---------------------------------------------------------------------------
-
-function renderWatermark(parent: SVGElement, layout: BarListLayout): void {
-  if (layout.width < 480) return;
-
-  const { width, height, theme } = layout;
-  const padding = theme.spacing.padding;
-  const rightEdge = width - padding;
-  const bottomEdge = height - padding;
-  const fill = theme.colors.axis;
-
-  const a = createSVGElement('a');
-  a.setAttribute('href', BRAND_URL);
-  a.setAttributeNS(XLINK_NS, 'xlink:href', BRAND_URL);
-  a.setAttribute('target', '_blank');
-  a.setAttribute('rel', 'noopener');
-  a.setAttribute('class', 'oc-chrome-ref');
-
-  const text = createSVGElement('text');
-  setAttrs(text, {
-    x: rightEdge,
-    y: bottomEdge,
-    'dominant-baseline': 'alphabetic',
-    'text-anchor': 'end',
-    'font-family': theme.fonts.family,
-    'font-size': 12,
-    'fill-opacity': 0.55,
-  });
-  (text as SVGElement & ElementCSSInlineStyle).style.setProperty('fill', fill);
-
-  setAttrs(text, { 'font-weight': 600, 'font-size': 16 });
-  text.textContent = 'OpenData';
-  a.appendChild(text);
-  parent.appendChild(a);
-}
 
 // ---------------------------------------------------------------------------
 // Row rendering
@@ -216,7 +182,7 @@ export function renderBarListSVG(
   layout: BarListLayout,
   opts?: { animate?: boolean },
 ): SVGSVGElement {
-  const { width, height, rows, a11y, watermark, animation } = layout;
+  const { width, height, rows, a11y, animation } = layout;
   const animate = opts?.animate && !!animation?.enter;
 
   const svg = createSVGElement('svg') as SVGSVGElement;
@@ -231,6 +197,7 @@ export function renderBarListSVG(
 
   const classes = animate ? 'oc-barlist oc-animate' : 'oc-barlist';
   svg.setAttribute('class', classes);
+  stampThemeProperties(svg, layout.theme);
 
   if (animate && animation?.enter) {
     stampAnimationVars(svg, {
@@ -243,9 +210,12 @@ export function renderBarListSVG(
   renderChrome(svg, layout);
   renderRows(svg, rows, animate ? animation : undefined);
 
-  if (watermark) {
-    renderWatermark(svg, layout);
-  }
+  renderAttributionBrand(
+    svg,
+    layout.chrome,
+    layout.chrome.bottomAnchorY ?? layout.area.y + layout.area.height,
+    layout.measureText,
+  );
 
   return svg;
 }

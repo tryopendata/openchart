@@ -5,7 +5,6 @@
 import type {
   AnimationSpec,
   BarListEncoding,
-  DarkMode,
   DataRow,
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
@@ -21,8 +20,6 @@ export interface NormalizedBarListSpec {
   maxItems: number;
   chrome: NormalizedChrome;
   theme: ThemeConfig;
-  darkMode: DarkMode;
   watermark: boolean;
   animation?: AnimationSpec;
-  valueFormat?: string;
 }

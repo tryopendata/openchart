@@ -16,7 +16,7 @@
 
 import type { Story } from '@ladle/react';
 import type { ChartSpec, ThemeConfig } from '@opendata-ai/openchart-core';
-import { editorial, essay, wire } from '@opendata-ai/openchart-core';
+import { essay, wire } from '@opendata-ai/openchart-core';
 import { Demo, GalleryPage } from '../components';
 import { bigTechRevenue } from '../data';
 
@@ -54,7 +54,7 @@ const DONUT_DATA = SERIES.filter((d) => d.year === '2024-01-01').map((d) => ({
   revenue: d.revenue,
 }));
 
-const THEMES: Record<ThemeArg, ThemeConfig> = { editorial, essay, wire };
+const THEMES: Record<ThemeArg, ThemeConfig> = { editorial: {}, essay, wire };
 
 /** Presets that support stacking (parts-of-a-whole marks). */
 const STACKABLE: ReadonlySet<ChartTypeArg> = new Set<ChartTypeArg>(['bar', 'column', 'area']);

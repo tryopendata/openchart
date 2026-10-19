@@ -213,6 +213,28 @@ describe('ScatterCanvasRenderer per-point compositing', () => {
     expect(stub.callsTo('arc')).toHaveLength(1);
   });
 
+  it('keeps authored zero-rule color separate from ordinary gridlines', () => {
+    stub = stubCanvas2D();
+    const renderer = new ScatterCanvasRenderer(document.createElement('canvas'));
+    renderer.resize(400, 300);
+    renderer.render(
+      makeState({
+        gridlines: [
+          { orient: 'y', position: 50, alpha: 0.6 },
+          { orient: 'y', position: 100, alpha: 0.6, color: '#778899' },
+          { orient: 'x', position: 120, alpha: 0.6 },
+        ],
+      }),
+    );
+    expect(stub.callsTo('stroke')).toHaveLength(2);
+    expect(
+      stub.sets
+        .filter((s) => s.prop === 'strokeStyle')
+        .map((s) => s.value)
+        .slice(-2),
+    ).toEqual(['#eeeeee', '#778899']);
+  });
+
   it('batches gridlines into one stroke per alpha', () => {
     stub = stubCanvas2D();
     const renderer = new ScatterCanvasRenderer(document.createElement('canvas'));

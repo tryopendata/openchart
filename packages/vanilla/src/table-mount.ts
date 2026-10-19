@@ -50,7 +50,8 @@ export interface TableState {
 export interface TableMountOptions {
   theme?: ThemeConfig;
   darkMode?: DarkMode;
-  responsive?: boolean;
+  /** Observe container resizing (and re-apply width breakpoints). Defaults to true. */
+  autoResize?: boolean;
   /** Show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
   onRowClick?: (row: Record<string, unknown>) => void;
@@ -251,7 +252,7 @@ export function createTable(
         compact && currentSpec.mobileLayout === 'priority',
       );
 
-    if (currentSpec.density !== undefined || currentSpec.compact === true) return;
+    if (currentSpec.density !== undefined) return;
 
     const columns = currentLayout?.columns.length ?? 0;
     const condensed =
@@ -654,7 +655,7 @@ export function createTable(
   render();
 
   // Set up responsive resize with breakpoint detection
-  if (options?.responsive !== false) {
+  if (options?.autoResize !== false) {
     disconnectResize = observeResize(container, () => {
       if (resizeDebounceTimer !== null) {
         clearTimeout(resizeDebounceTimer);

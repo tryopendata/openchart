@@ -196,8 +196,17 @@ describe('binned bar (histogram)', () => {
     expect(tooltips).toHaveLength(2);
     expect(tooltips[1].title).toBeUndefined();
     expect(tooltips[1].fields).toEqual([
-      { label: 'Contribution size', value: '$1,000 or more' },
-      { label: 'Share', value: '<0.1%' },
+      {
+        label: 'Contribution size',
+        value: '$1,000 or more',
+        source: { field: 'range', channel: 'tooltip', tooltipIndex: 0 },
+      },
+      {
+        label: 'Share',
+        value: '<0.1%',
+        role: 'value',
+        source: { field: 'share', channel: 'tooltip', tooltipIndex: 1 },
+      },
     ]);
     expect(tooltips[0].fields[0].value).toBe('Below $1,000');
   });

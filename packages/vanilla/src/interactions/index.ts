@@ -10,7 +10,6 @@ export {
   wireChromeDrag,
   wireConnectorEndpointDrag,
   wireLegendDrag,
-  wireSeriesLabelDrag,
 } from './editing-drags';
 export type { HoverEmphasis } from './hover-emphasis';
 export { createHoverEmphasis, wireEndpointLabelHover } from './hover-emphasis';
@@ -26,5 +25,6 @@ export {
   isTextEditable,
   refsEqual,
   renderSelectionOverlay,
+  withElementPath,
 } from './selection';
 export { wireTooltipEvents } from './tooltip-events';

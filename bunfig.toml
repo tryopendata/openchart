@@ -1,0 +1,4 @@
+[install]
+# Keep tools that require TypeScript's JS API on the root JS compiler alias.
+# Isolated installs hoist the native CLI-only package into .bun/node_modules.
+linker = "hoisted"

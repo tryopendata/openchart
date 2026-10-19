@@ -1,5 +1,6 @@
 import type { ChartLayout, TooltipContent, TooltipField } from '@opendata-ai/openchart-core';
 import { getRepresentativeColor } from '@opendata-ai/openchart-core';
+import { sharedTooltipFields } from '@opendata-ai/openchart-engine';
 import type { TooltipManager } from '../tooltip';
 import type { HoverEmphasis } from './hover-emphasis';
 
@@ -133,35 +134,21 @@ function buildSliceTooltip(
     const tip = point.tooltip;
     if (!tip) continue;
     if (!total) total = tip.fields.find((f) => f.role === 'total');
-    if (isMulti) {
-      // Find the primary value field for this series. Skip fields that are
-      // series indicators (have color), the stack total, or match the tooltip
-      // title by label or value (the x-axis field), or match the series key by
-      // value (the color-encoding field in explicit tooltip channels).
-      const candidates = tip.fields.filter((f) => f.role !== 'total');
-      const yField =
-        candidates.find(
-          (f) => !f.color && f.label !== title && f.value !== title && f.value !== group.seriesKey,
-        ) ??
-        candidates[candidates.length - 1] ??
-        null;
-      if (!yField) continue;
+    const selected = sharedTooltipFields(tip);
+    for (const field of selected) {
+      const identifySeries = isMulti && group.seriesKey !== '__default__';
       fields.push({
-        label:
-          group.seriesKey === '__default__'
-            ? yField.label
-            : (seriesCounts.get(group.seriesKey) ?? 0) > 1
-              ? `${group.seriesKey} · ${yField.label}`
-              : group.seriesKey,
-        value: yField.value,
-        color: group.color,
+        ...field,
+        label: identifySeries
+          ? (seriesCounts.get(group.seriesKey) ?? 0) > 1 ||
+            selected.length > 1 ||
+            field.source?.tooltipIndex !== undefined
+            ? `${group.seriesKey} · ${field.label}`
+            : group.seriesKey
+          : field.label,
+        color: field.color ?? group.color,
         ...(emphasisKey === group.key ? { emphasis: true } : {}),
       });
-    } else {
-      for (const f of tip.fields) {
-        if (f.role === 'total') continue;
-        fields.push({ ...f, color: f.color ?? group.color });
-      }
     }
   }
 
@@ -220,7 +207,7 @@ export function wireVoronoiTooltipEvents(
   let currentEmphasis: string | null = null;
 
   function containerScale(): number {
-    const svgEl = svg as unknown as SVGSVGElement;
+    const svgEl = svg as SVGSVGElement;
     const rect = svgEl.getBoundingClientRect();
     const viewBox = svgEl.viewBox?.baseVal;
     const scaleX = viewBox?.width && rect.width ? viewBox.width / rect.width : 1;
@@ -310,7 +297,7 @@ export function wireVoronoiTooltipEvents(
   };
 
   const toSvgCoords = (clientX: number, clientY: number) => {
-    const svgEl = svg as unknown as SVGSVGElement;
+    const svgEl = svg as SVGSVGElement;
     const svgRect = svgEl.getBoundingClientRect();
     const viewBox = svgEl.viewBox?.baseVal;
     const scaleX = viewBox?.width && svgRect.width ? viewBox.width / svgRect.width : 1;

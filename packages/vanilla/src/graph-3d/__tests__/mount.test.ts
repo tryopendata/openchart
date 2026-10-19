@@ -141,10 +141,13 @@ describe('construction', () => {
     expect(fake.props.linkLabel).toBe('');
   });
 
-  it('sizes the scene from the shell', () => {
-    const { fake } = mount();
+  it('sizes the scene clear of the measured attribution footer', () => {
+    const { fake, container } = mount();
     expect(fake.props.width).toBe(600);
-    expect(fake.props.height).toBe(400);
+    const footerHeight = Number(
+      container.querySelector('.oc-attribution-footer')?.getAttribute('height') ?? 0,
+    );
+    expect(fake.props.height + footerHeight).toBe(400);
   });
 
   it('re-applies the device pixel ratio, clamped like the library does', () => {
@@ -1220,11 +1223,14 @@ describe('webgl context loss', () => {
 
 describe('resize', () => {
   it('pushes the shell size onto the scene', () => {
-    const { instance, fake } = mount();
+    const { instance, fake, container } = mount();
     fake.props.width = 0;
     instance.resize();
     expect(fake.props.width).toBe(600);
-    expect(fake.props.height).toBe(400);
+    const footerHeight = Number(
+      container.querySelector('.oc-attribution-footer')?.getAttribute('height') ?? 0,
+    );
+    expect(fake.props.height + footerHeight).toBe(400);
   });
 });
 

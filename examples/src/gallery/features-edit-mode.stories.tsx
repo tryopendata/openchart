@@ -1,3 +1,4 @@
+import { applyEditTransaction } from '@opendata-ai/openchart-core';
 /**
  * Features / Edit Mode — the interactive editing experience.
  *
@@ -12,15 +13,8 @@
  * Absorbs and replaces the old annotation-editing story.
  */
 
-import type {
-  AnnotationOffset,
-  ChartSpec,
-  ElementEdit,
-  ElementRef,
-  RangeAnnotation,
-  RefLineAnnotation,
-} from '@opendata-ai/openchart-core';
-import { Chart, type ChartHandle } from '@opendata-ai/openchart-react';
+import type { ChartSpec, EditTransaction, ElementRef } from '@opendata-ai/openchart-core';
+import { Chart, type ChartHandle, type InteractionMode } from '@opendata-ai/openchart-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { GalleryPage, Section } from '../components';
 import { segmentRevenue } from '../data';
@@ -255,7 +249,7 @@ function StudioStyles() {
 // The editable spec surface (the parts a host app persists back)
 // ---------------------------------------------------------------------------
 
-type EditableState = Pick<ChartSpec, 'annotations' | 'chrome'>;
+type EditableState = Pick<ChartSpec, 'annotations' | 'chrome' | 'legend'>;
 
 function makePristineState(): EditableState {
   return {
@@ -282,9 +276,7 @@ function makePristineState(): EditableState {
         y: 71.42,
         text: 'Holiday peak:\n$71.4B devices',
         fontSize: 11,
-        anchor: 'left',
         connector: true,
-        offset: { dx: -110, dy: -50 },
       },
       {
         type: 'text',
@@ -292,9 +284,8 @@ function makePristineState(): EditableState {
         y: 22.17,
         text: 'Cloud overtakes\n2022 devices floor',
         fontSize: 11,
-        anchor: 'left',
+        anchor: 'top',
         connector: true,
-        offset: { dx: -30, dy: -34 },
       },
     ],
     chrome: {
@@ -323,7 +314,7 @@ function buildSpec(state: EditableState): ChartSpec {
       },
       color: { field: 'segment', type: 'nominal' },
     },
-    legend: { position: 'top' },
+    legend: state.legend ?? { position: 'top' },
     annotations: state.annotations,
     chrome: state.chrome,
   };
@@ -334,7 +325,7 @@ function buildSpec(state: EditableState): ChartSpec {
 // ---------------------------------------------------------------------------
 
 type LogEntry = {
-  callback: 'onSelect' | 'onDeselect' | 'onEdit' | 'onAnnotationEdit' | 'onTextEdit';
+  callback: 'onSelect' | 'onDeselect' | 'onEdit';
   detail: string;
   ts: number;
 };
@@ -343,13 +334,7 @@ const CALLBACK_COLOR: Record<LogEntry['callback'], string> = {
   onSelect: '#06b6d4',
   onDeselect: '#94a3b8',
   onEdit: '#6366f1',
-  onAnnotationEdit: '#8b5cf6',
-  onTextEdit: '#ec4899',
 };
-
-const oneLine = (s: string) => s.replace(/\n/g, ' ');
-const fmtOffset = (o?: AnnotationOffset) =>
-  `{ dx: ${Math.round(o?.dx ?? 0)}, dy: ${Math.round(o?.dy ?? 0)} }`;
 
 function describeRef(ref: ElementRef): string {
   switch (ref.type) {
@@ -357,8 +342,6 @@ function describeRef(ref: ElementRef): string {
       return `annotation[${ref.index}]`;
     case 'chrome':
       return `chrome.${ref.key}`;
-    case 'series-label':
-      return `series "${ref.series}"`;
     case 'legend':
       return 'legend';
     case 'legend-entry':
@@ -458,130 +441,19 @@ function EditModeStudio() {
     [pushLog],
   );
 
-  // Unified edit callback: covers connector drags, range/refline label drags,
-  // chrome/series/legend moves, and text edits. We persist the ones that map to
-  // our editable surface (annotations + chrome).
+  // Persist all authored operations atomically, including add/remove and legend edits.
   const handleEdit = useCallback(
-    (edit: ElementEdit) => {
-      switch (edit.type) {
-        case 'annotation':
-          setState((prev) => ({
-            ...prev,
-            annotations: prev.annotations?.map((annotation, index) =>
-              edit.element.type === 'annotation' &&
-              index === edit.element.index &&
-              annotation.type === 'text'
-                ? {
-                    ...annotation,
-                    offset: edit.offset,
-                    ...(edit.anchor !== undefined ? { anchor: edit.anchor } : {}),
-                    ...(edit.responsive !== undefined ? { responsive: edit.responsive } : {}),
-                  }
-                : annotation,
-            ),
-          }));
-          pushLog(
-            'onEdit',
-            `annotation[${'index' in edit.element ? edit.element.index : '?'}] "${oneLine(edit.annotation.text)}" → ${fmtOffset(edit.offset)}`,
-          );
-          break;
-        case 'annotation-connector':
-          setState((prev) => ({
-            ...prev,
-            annotations: prev.annotations?.map((a) => {
-              if (a.type === 'text' && a.text === edit.annotation.text) {
-                return {
-                  ...a,
-                  connectorOffset: { ...a.connectorOffset, [edit.endpoint]: edit.offset },
-                };
-              }
-              return a;
-            }),
-          }));
-          pushLog(
-            'onEdit',
-            `connector[${'index' in edit.element ? edit.element.index : '?'}] ${edit.endpoint} → ${fmtOffset(edit.offset)}`,
-          );
-          break;
-        case 'annotation-anchor':
-          {
-            const anchorIdx = edit.element.type === 'annotation' ? edit.element.index : -1;
-            setState((prev) => ({
-              ...prev,
-              annotations: prev.annotations?.map((a, i) =>
-                a.type === 'text' && i === anchorIdx ? { ...a, x: edit.x, y: edit.y } : a,
-              ),
-            }));
-            pushLog('onEdit', `anchor → x: ${edit.x}, y: ${String(edit.y).slice(0, 6)}`);
-          }
-          break;
-        case 'range-label':
-          setState((prev) => ({
-            ...prev,
-            annotations: prev.annotations?.map((a) =>
-              a.type === 'range' && (a as RangeAnnotation).label === edit.annotation.label
-                ? { ...a, labelOffset: edit.labelOffset }
-                : a,
-            ),
-          }));
-          pushLog(
-            'onEdit',
-            `range label[${'index' in edit.element ? edit.element.index : '?'}] → ${fmtOffset(edit.labelOffset)}`,
-          );
-          break;
-        case 'refline-label':
-          setState((prev) => ({
-            ...prev,
-            annotations: prev.annotations?.map((a) =>
-              a.type === 'refline' && (a as RefLineAnnotation).label === edit.annotation.label
-                ? { ...a, labelOffset: edit.labelOffset }
-                : a,
-            ),
-          }));
-          pushLog(
-            'onEdit',
-            `refline label[${'index' in edit.element ? edit.element.index : '?'}] → ${fmtOffset(edit.labelOffset)}`,
-          );
-          break;
-        case 'chrome':
-          setState((prev) => ({
-            ...prev,
-            chrome: { ...prev.chrome, [edit.key]: { text: edit.text, offset: edit.offset } },
-          }));
-          pushLog('onEdit', `chrome.${edit.key} → ${fmtOffset(edit.offset)}`);
-          break;
-        case 'text-edit':
-          setState((prev) => {
-            const annotations = [...(prev.annotations ?? [])];
-            const chrome = { ...prev.chrome };
-            if (edit.element.type === 'annotation') {
-              const ann = annotations[edit.element.index];
-              if (ann?.type === 'text')
-                annotations[edit.element.index] = { ...ann, text: edit.newText };
-              else if (ann?.type === 'range')
-                annotations[edit.element.index] = { ...ann, label: edit.newText };
-              else if (ann?.type === 'refline')
-                annotations[edit.element.index] = { ...ann, label: edit.newText };
-            } else if (edit.element.type === 'chrome') {
-              const cur = chrome[edit.element.key];
-              chrome[edit.element.key] =
-                cur && typeof cur === 'object' ? { ...cur, text: edit.newText } : edit.newText;
-            }
-            return { ...prev, annotations, chrome };
-          });
-          pushLog('onEdit', `text "${oneLine(edit.oldText)}" → "${oneLine(edit.newText)}"`);
-          break;
-        case 'add':
-          setState((prev) => ({
-            ...prev,
-            annotations: [...(prev.annotations ?? []), edit.annotation],
-          }));
-          pushLog('onEdit', `add annotation "${oneLine(edit.annotation.text)}"`);
-          break;
-        default:
-          pushLog('onEdit', edit.type);
-          break;
-      }
+    (transaction: EditTransaction) => {
+      setState((previous) => {
+        const result = applyEditTransaction(buildSpec(previous), transaction);
+        if (!result.ok) return previous;
+        return {
+          annotations: result.spec.annotations,
+          chrome: result.spec.chrome,
+          legend: result.spec.legend,
+        };
+      });
+      pushLog('onEdit', transaction.ops.map((op) => `${op.op} ${op.path}`).join(', '));
     },
     [pushLog],
   );
@@ -619,7 +491,7 @@ function EditModeStudio() {
       <div className="ocem-grid">
         {/* Editor */}
         <div className="ocem-chart-card">
-          <div className="story-chart" style={{ height: 460 }}>
+          <div className="story-chart" style={{ height: 600 }}>
             <Chart
               ref={chartRef}
               spec={spec}
@@ -633,7 +505,8 @@ function EditModeStudio() {
             Click any title, label, or annotation to select it. Drag an annotation label to
             reposition, its connector endpoints to reshape, or its anchor dot to move the data
             point. Double-click text to rewrite it. Double-click empty space to add a new
-            annotation. Press <kbd className="ocem-kbd">Esc</kbd> to deselect.
+            annotation. Use arrows to nudge, Shift+arrow for 10px, and Tab/Shift+Tab to select.
+            Press <kbd className="ocem-kbd">Esc</kbd> to deselect.
           </p>
         </div>
 
@@ -735,8 +608,14 @@ const TOGGLE_CSS = `
 }
 `;
 
-function EditableToggleDemo() {
-  const [editable, setEditable] = useState(false);
+const MODE_STATUS: Record<InteractionMode, string> = {
+  read: 'No selection or editing; arrow keys move between data points',
+  select: 'Click or Tab selects; arrows still navigate data; nothing is edited',
+  edit: 'Select, drag, nudge, retitle, and delete; arrows nudge the selection',
+};
+
+function InteractionModeDemo() {
+  const [mode, setMode] = useState<InteractionMode>('read');
   const [eventLog, setEventLog] = useState<Array<{ text: string; ts: number }>>([]);
 
   const spec: ChartSpec = {
@@ -760,14 +639,12 @@ function EditableToggleDemo() {
         y: 71.42,
         text: 'Holiday peak',
         fontSize: 11,
-        anchor: 'left',
         connector: true,
-        offset: { dx: -90, dy: -40 },
       },
     ],
     chrome: {
-      title: 'Editable Toggle Demo',
-      subtitle: 'Toggle editable to enable/disable editing',
+      title: 'Interaction Mode Demo',
+      subtitle: 'Switch between read, select, and edit',
     },
   };
 
@@ -777,8 +654,16 @@ function EditableToggleDemo() {
     );
   }, []);
 
-  const handleEdit = useCallback((edit: ElementEdit) => {
-    setEventLog((prev) => [{ text: `onEdit: ${edit.type}`, ts: Date.now() }, ...prev].slice(0, 20));
+  const handleEdit = useCallback((edit: EditTransaction) => {
+    setEventLog((prev) =>
+      [
+        {
+          text: `onEdit: ${edit.ops.map((op) => `${op.op} ${op.path}`).join(', ')}`,
+          ts: Date.now(),
+        },
+        ...prev,
+      ].slice(0, 20),
+    );
   }, []);
 
   return (
@@ -786,27 +671,28 @@ function EditableToggleDemo() {
       {/* biome-ignore lint/security/noDangerouslySetInnerHtml: static CSS constant, no user input */}
       <style dangerouslySetInnerHTML={{ __html: TOGGLE_CSS }} />
       <div className="ocem-toggle-bar">
-        <button
-          type="button"
-          className="ocem-toggle-btn"
-          data-active={String(editable)}
-          onClick={() => setEditable((v) => !v)}
-        >
-          editable: {String(editable)}
-        </button>
-        <span className="ocem-toggle-status">
-          {editable ? 'Drag, select, and edit are active' : 'Edit interactions are suppressed'}
-        </span>
+        {(['read', 'select', 'edit'] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            className="ocem-toggle-btn"
+            data-active={String(mode === m)}
+            onClick={() => setMode(m)}
+          >
+            interaction: '{m}'
+          </button>
+        ))}
+        <span className="ocem-toggle-status">{MODE_STATUS[mode]}</span>
       </div>
       <div className="story-chart" style={{ height: 400 }}>
-        <Chart spec={spec} editable={editable} onSelect={handleSelect} onEdit={handleEdit} />
+        <Chart spec={spec} interaction={mode} onSelect={handleSelect} onEdit={handleEdit} />
       </div>
       <div className="ocem-toggle-log">
         {eventLog.length === 0 ? (
           <span className="ocem-toggle-log-empty">
-            {editable
-              ? 'Try selecting or dragging an element...'
-              : 'Enable editable to interact with the chart.'}
+            {mode === 'read'
+              ? 'Switch to select or edit to interact with the chart.'
+              : 'Try selecting or dragging an element...'}
           </span>
         ) : (
           eventLog.map((e) => <div key={e.ts + e.text}>{e.text}</div>)
@@ -828,8 +714,8 @@ export const EditMode = () => (
     lede={
       <>
         OpenChart charts are editable in place. Wire the edit callbacks and every drag, retitle, and
-        reposition comes back as a typed event you fold into your spec — the same JSON you persist
-        and re-render. Host apps drive selection through the controlled{' '}
+        reposition comes back as a transaction you apply atomically to your spec — the same JSON you
+        persist and re-render. Host apps drive selection through the controlled{' '}
         <code className="ocem-inline-code">selectedElement</code> prop and the imperative{' '}
         <code className="ocem-inline-code">ChartHandle</code> (
         <code className="ocem-inline-code">select</code> /{' '}
@@ -846,11 +732,11 @@ export const EditMode = () => (
       <EditModeStudio />
     </Section>
     <Section
-      id="editable-toggle"
-      title="The editable prop"
-      lede="Decouple edit interactions from callback presence. Toggle editable to enable or disable drag, delete, and text editing independently."
+      id="interaction-mode"
+      title="The interaction prop"
+      lede="Pick the interaction mode explicitly instead of inferring it from callbacks. read is a plain reader chart, select reports selections while arrows keep navigating data, and edit turns on every gesture."
     >
-      <EditableToggleDemo />
+      <InteractionModeDemo />
     </Section>
   </GalleryPage>
 );

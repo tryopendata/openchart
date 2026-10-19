@@ -103,6 +103,7 @@ export function buildAnnotationTweens(
   prevLayout: ChartLayout,
   nextLayout: ChartLayout,
   tweens: Tween[],
+  settled?: ReadonlySet<number>,
 ): void {
   const prev = prevLayout.annotations ?? [];
   const next = nextLayout.annotations ?? [];
@@ -136,6 +137,9 @@ export function buildAnnotationTweens(
     }
 
     if (JSON.stringify(before) === JSON.stringify(next[i])) continue;
+    // A gesture already previewed this annotation at its committed geometry.
+    const specIndex = next[i].specIndex;
+    if (specIndex !== undefined && settled?.has(specIndex)) continue;
     tweens.push({
       tweenType: 'annotation',
       kind: 'update',

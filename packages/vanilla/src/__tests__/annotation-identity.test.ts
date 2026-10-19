@@ -78,7 +78,7 @@ describe('annotation source and instance identity', () => {
     const container = createContainer();
     const chart = createChart(container, spec, {
       revision: 1,
-      onEditTransaction: (tx) => transactions.push(tx),
+      onEdit: (tx) => transactions.push(tx),
     });
     const el = container.querySelector('[data-annotation-index="0"]')!;
     el.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -116,7 +116,7 @@ describe('annotation source and instance identity', () => {
       ],
     } as ChartSpec;
     const container = createContainer();
-    const chart = createChart(container, spec, { editable: true });
+    const chart = createChart(container, spec, { interaction: 'edit' });
     const elements = container.querySelectorAll<SVGElement>('[data-annotation-index="0"]');
     expect(elements).toHaveLength(2);
     const ref = buildElementRef(elements[1], spec.annotations!)!;

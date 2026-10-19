@@ -14,14 +14,7 @@ import {
   truncateToWidth,
   wrapText,
 } from '@opendata-ai/openchart-core';
-import { warnDeprecated } from '../deprecations';
 import { applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
-
-/** @deprecated Read layout.chrome.noteBandHeight. */
-export function footnoteBandHeight(layout: ChartLayout): number {
-  warnDeprecated('footnoteBandHeight is deprecated; read layout.chrome.noteBandHeight.');
-  return computeNoteBandHeight(layout.chrome, layout.theme);
-}
 
 export function renderChromeElement(
   parent: SVGElement,
@@ -168,6 +161,10 @@ export function renderChrome(parent: SVGElement, layout: ChartLayout): void {
       textAnchor: 'start' as const,
     };
 
+    const list = createSVGElement('g');
+    list.setAttribute('role', 'list');
+    list.setAttribute('aria-label', 'Annotation notes, in source order');
+    g.appendChild(list);
     for (let i = 0; i < chrome.footnotes.length; i++) {
       const f = chrome.footnotes[i];
       const y =
@@ -177,20 +174,33 @@ export function renderChrome(parent: SVGElement, layout: ChartLayout): void {
         noteLine * lineHeight;
       const el = createSVGElement('text');
       el.setAttribute('class', 'oc-footnotes');
+      el.setAttribute('role', 'listitem');
+      if (!layout.a11y.hidden) el.setAttribute('tabindex', '0');
+      el.setAttribute(
+        'aria-label',
+        `${f.index}. ${f.text.replaceAll('**', '')}${f.subtitle ? `. ${f.subtitle.replaceAll('**', '')}` : ''}`,
+      );
       if (f.specIndex !== undefined) el.setAttribute('data-note-spec-index', String(f.specIndex));
       if (f.id !== undefined) el.setAttribute('data-note-id', f.id);
       setAttrs(el, { x: pad, y });
       applyTextStyle(el, style);
-      if (f.lines) {
-        f.lines.forEach((line, index) => {
-          const span = createSVGElement('tspan');
-          setAttrs(span, { x: pad, dy: index === 0 ? 0 : lineHeight });
-          span.textContent = line;
-          el.appendChild(span);
-        });
-      } else el.textContent = `${f.index}. ${f.text}`;
+      const lines = f.lines ?? [`${f.index}. ${f.text}`];
+      lines.forEach((line, index) => {
+        const span = createSVGElement('tspan');
+        setAttrs(span, { x: pad, dy: index === 0 ? 0 : lineHeight });
+        const runs = f.spans?.[index];
+        if (runs) {
+          for (const run of runs) {
+            const part = createSVGElement('tspan');
+            if (run.bold) part.setAttribute('font-weight', '700');
+            part.textContent = run.text;
+            span.appendChild(part);
+          }
+        } else span.textContent = line;
+        el.appendChild(span);
+      });
       noteLine += f.lines?.length ?? 1;
-      g.appendChild(el);
+      list.appendChild(el);
     }
   }
 

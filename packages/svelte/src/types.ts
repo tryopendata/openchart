@@ -7,11 +7,11 @@
 
 import type {
   Annotation,
-  AnnotationOffset,
   BarListSpec,
   ChartSpec,
   DarkMode,
-  ElementEdit,
+  EditTransaction,
+  ElementRef,
   GeoMapSpec,
   GraphSpec,
   LayerSpec,
@@ -19,15 +19,16 @@ import type {
   SankeySpec,
   SortState,
   TableSpec,
-  TextAnnotation,
   ThemeConfig,
   TileMapSpec,
   VizSpec,
 } from '@opendata-ai/openchart-core';
+import type { InteractionMode } from '@opendata-ai/openchart-vanilla';
 import type { Snippet } from 'svelte';
 
 export interface ChartProps {
-  spec: ChartSpec | LayerSpec | GraphSpec;
+  /** The chart spec. Graph specs render through `<Graph />` or `<Visualization />`. */
+  spec: ChartSpec | LayerSpec;
   theme?: ThemeConfig;
   darkMode?: DarkMode;
   /** Rendering backend for point marks; see the vanilla `MountOptions.renderer`. */
@@ -36,10 +37,18 @@ export interface ChartProps {
   onmarkhover?: (event: MarkEvent) => void;
   onmarkleave?: () => void;
   onlegendtoggle?: (series: string, visible: boolean) => void;
-  onannotationclick?: (annotation: Annotation, event: MouseEvent) => void;
-  onannotationedit?: (annotation: TextAnnotation, offset: AnnotationOffset) => void;
-  onedit?: (edit: ElementEdit) => void;
-  ondatapointclick?: (data: Record<string, unknown>) => void;
+  autoResize?: boolean;
+  revision?: string | number;
+  /** Interaction mode; inferred from `onedit`/`onselect`/`ondeselect` when omitted. */
+  interaction?: InteractionMode;
+  selectedElement?: ElementRef;
+  highlight?: string[] | null;
+  onedit?: (transaction: EditTransaction) => void;
+  onselect?: (element: ElementRef) => void;
+  ondeselect?: (element: ElementRef) => void;
+  onannotationclick?: (annotation: Annotation, event: MouseEvent, element: ElementRef) => void;
+  onhighlightchange?: (values: string[]) => void;
+  onreveal?: (guess: Array<{ x: string | number; y: number }>) => void;
   class?: string;
   style?: string;
 }

@@ -18,35 +18,7 @@ import type { ChromeDefaults, ResolvedTheme, ThemeBase, TokenValue } from '../ty
 
 import { DEFAULT_THEME } from './defaults';
 
-/**
- * Deep merge source into target, creating a new object.
- * Only merges plain objects; arrays and primitives replace directly.
- */
-// biome-ignore lint/suspicious/noExplicitAny: recursive object merge requires dynamic typing
-function deepMerge(target: any, source: any): any {
-  const result = { ...target };
-
-  for (const key of Object.keys(source)) {
-    const sourceVal = source[key];
-    const targetVal = target[key];
-
-    if (
-      sourceVal !== undefined &&
-      sourceVal !== null &&
-      typeof sourceVal === 'object' &&
-      !Array.isArray(sourceVal) &&
-      typeof targetVal === 'object' &&
-      targetVal !== null &&
-      !Array.isArray(targetVal)
-    ) {
-      result[key] = deepMerge(targetVal, sourceVal);
-    } else if (sourceVal !== undefined) {
-      result[key] = sourceVal;
-    }
-  }
-
-  return result;
-}
+import { mergeThemeObjects } from './merge';
 
 /** Extract the light-mode string from a TokenValue. */
 function resolveTokenLight(v: TokenValue): string {
@@ -57,7 +29,7 @@ function resolveTokenLight(v: TokenValue): string {
  * Convert a user-facing ThemeConfig (partial) into the full ThemeBase shape
  * that deepMerge can work with.
  */
-function themeConfigToPartial(config: ThemeConfig): Partial<ThemeBase> {
+function themeConfigToPartial(config: ThemeConfig, base: ThemeBase): Partial<ThemeBase> {
   const partial: Partial<ThemeBase> = {};
 
   if (config.colors) {
@@ -93,6 +65,16 @@ function themeConfigToPartial(config: ThemeConfig): Partial<ThemeBase> {
         colors.annotationMarkerFill = resolveTokenLight(config.colors.annotationMarkerFill);
       if (config.colors.annotationPlate)
         colors.annotationPlate = resolveTokenLight(config.colors.annotationPlate);
+      for (const key of [
+        'gridlineZero',
+        'mapNoDataFill',
+        'mapNoDataHatch',
+        'mapInteriorBorder',
+        'mapOutlineBorder',
+      ] as const) {
+        const value = config.colors[key];
+        if (value !== undefined) colors[key] = resolveTokenLight(value);
+      }
       if (config.colors.positive) colors.positive = resolveTokenLight(config.colors.positive);
       if (config.colors.negative) colors.negative = resolveTokenLight(config.colors.negative);
     }
@@ -126,6 +108,9 @@ function themeConfigToPartial(config: ThemeConfig): Partial<ThemeBase> {
     if (config.spacing.xAxisHeight !== undefined) spacing.xAxisHeight = config.spacing.xAxisHeight;
     if (config.spacing.xAxisLabelPadding !== undefined)
       spacing.xAxisLabelPadding = config.spacing.xAxisLabelPadding;
+    for (const key of ['endpointEntryGap', 'endpointValueGap', 'endpointColumnGap'] as const) {
+      if (config.spacing[key] !== undefined) spacing[key] = config.spacing[key];
+    }
     partial.spacing = spacing as ThemeBase['spacing'];
   }
 
@@ -137,9 +122,9 @@ function themeConfigToPartial(config: ThemeConfig): Partial<ThemeBase> {
     const chrome: Record<string, Partial<ChromeDefaults>> = {};
     for (const [element, value] of Object.entries(config.chrome)) {
       if (value === undefined) continue;
-      if (typeof value === 'string') {
-        chrome[element] = { color: value };
-      } else {
+      if (typeof value === 'string')
+        throw new Error('theme.chrome string colors were removed in v9; use { color }.');
+      {
         const override: Partial<ChromeDefaults> = {};
         const obj = value as ChromeThemeOverride;
         if (obj.color !== undefined) override.color = resolveTokenLight(obj.color);
@@ -154,11 +139,18 @@ function themeConfigToPartial(config: ThemeConfig): Partial<ThemeBase> {
 
   if (config.rule) {
     partial.rule = {
-      color: resolveTokenLight(config.rule.color),
-      width: config.rule.width,
-      thickness: config.rule.thickness,
+      color: resolveTokenLight(
+        config.rule.color ??
+          base.rule?.color ??
+          (config.colors && !Array.isArray(config.colors) ? config.colors.text : undefined) ??
+          DEFAULT_THEME.colors.text,
+      ),
+      width: config.rule.width ?? base.rule?.width ?? 40,
+      thickness: config.rule.thickness ?? base.rule?.thickness ?? 3,
     };
   }
+
+  if (config.rule === null) partial.rule = null;
 
   if (config.seriesStrategy) {
     partial.seriesStrategy = config.seriesStrategy;
@@ -180,6 +172,7 @@ function collectTokenPairs(
       'background',
       'text',
       'gridline',
+      'gridlineZero',
       'hairline',
       'axis',
       'annotationFill',
@@ -191,6 +184,10 @@ function collectTokenPairs(
       'annotationRangeFill',
       'annotationMarkerFill',
       'annotationPlate',
+      'mapNoDataFill',
+      'mapNoDataHatch',
+      'mapInteriorBorder',
+      'mapOutlineBorder',
       'positive',
       'negative',
     ] as const;
@@ -322,38 +319,33 @@ export function resolveTheme(
   base: ThemeBase = DEFAULT_THEME,
 ): ResolvedTheme {
   let merged: ThemeBase = userTheme
-    ? deepMerge(base, themeConfigToPartial(userTheme))
+    ? mergeThemeObjects(base, themeConfigToPartial(userTheme, base))
     : { ...base };
 
-  // Propagate fonts.sizes overrides onto the chrome element fontSizes.
-  // The chrome defaults hard-code fontSize independently from fonts.sizes,
-  // so we sync them here after merging so a single sizes override applies everywhere.
-  if (userTheme?.fonts?.sizes) {
-    const s = userTheme.fonts.sizes;
-    merged = {
-      ...merged,
-      chrome: {
-        ...merged.chrome,
-        ...(s.title !== undefined && {
-          title: { ...merged.chrome.title, fontSize: s.title },
-        }),
-        ...(s.subtitle !== undefined && {
-          subtitle: { ...merged.chrome.subtitle, fontSize: s.subtitle },
-        }),
-        ...(s.small !== undefined && {
-          source: { ...merged.chrome.source, fontSize: s.small },
-          byline: { ...merged.chrome.byline, fontSize: s.small },
-          footer: { ...merged.chrome.footer, fontSize: s.small },
-        }),
-      },
-    };
+  // General font sizes supply defaults; authored chrome leaves are more specific.
+  for (const [element, size] of Object.entries({
+    title: 'title',
+    subtitle: 'subtitle',
+    source: 'small',
+    byline: 'small',
+    footer: 'small',
+  }) as [keyof ThemeBase['chrome'], 'title' | 'subtitle' | 'small'][]) {
+    if (userTheme?.chrome?.[element]?.fontSize === undefined) {
+      merged = {
+        ...merged,
+        chrome: {
+          ...merged.chrome,
+          [element]: { ...merged.chrome[element], fontSize: merged.fonts.sizes[size] },
+        },
+      };
+    }
   }
 
   // Auto-adapt chrome for dark backgrounds
   const dark = isDarkBackground(merged.colors.background);
   if (dark) {
-    merged = adaptChromeForDarkBg(merged, merged.colors.text);
-    // These defaults historically followed a dark canvas even without darkMode.
+    merged = adaptChromeForDarkBg({ ...merged, colors: { ...merged.colors } }, merged.colors.text);
+    // Default ink follows a dark authored canvas even without a runtime mode flag.
     const authoredColors =
       userTheme?.colors && !Array.isArray(userTheme.colors) ? userTheme.colors : {};
     for (const key of [
@@ -364,6 +356,9 @@ export function resolveTheme(
       'annotationRangeFill',
       'annotationMarkerFill',
       'annotationPlate',
+      'gridlineZero',
+      'mapInteriorBorder',
+      'mapOutlineBorder',
     ] as const) {
       if (authoredColors[key] === undefined)
         merged.colors[key] = cssTokenDefault(
@@ -373,11 +368,23 @@ export function resolveTheme(
     }
   }
 
+  const neutral = deriveNeutralRamp(merged.colors.text, merged.colors.background, dark);
+  const authoredColors =
+    userTheme?.colors && !Array.isArray(userTheme.colors) ? userTheme.colors : {};
   return {
     ...merged,
+    _authored: userTheme,
     colors: {
       ...merged.colors,
-      neutral: deriveNeutralRamp(merged.colors.text, merged.colors.background, dark),
+      neutral,
+      annotationMarkerFill:
+        authoredColors.annotationMarkerFill === undefined
+          ? neutral.surface
+          : merged.colors.annotationMarkerFill,
+      annotationPlate:
+        authoredColors.annotationPlate === undefined
+          ? neutral.surface
+          : merged.colors.annotationPlate,
     },
     isDark: dark,
     _tokenPairs: userTheme ? collectTokenPairs(userTheme) : undefined,

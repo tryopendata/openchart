@@ -6,10 +6,17 @@
  * The registry pattern decouples chart-type logic from the compile pipeline.
  */
 
-import type { LayoutStrategy, Mark, Rect, ResolvedTheme } from '@opendata-ai/openchart-core';
+import type {
+  LayoutStrategy,
+  Mark,
+  MeasureTextFn,
+  Rect,
+  ResolvedTheme,
+} from '@opendata-ai/openchart-core';
 
 import type { NormalizedChartSpec } from '../compiler/types';
 import type { ResolvedScales } from '../layout/scales';
+import type { BarLabelPlan } from './bar/label-plan';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -30,6 +37,8 @@ export type ChartRenderer = (
   strategy: LayoutStrategy,
   theme: ResolvedTheme,
   containerWidth: number,
+  labelPlan?: BarLabelPlan,
+  measureText?: MeasureTextFn,
 ) => Mark[];
 
 // ---------------------------------------------------------------------------

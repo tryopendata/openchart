@@ -1,4 +1,4 @@
-import type { ChartSpec, ElementEdit } from '@opendata-ai/openchart-engine';
+import type { ChartSpec, EditTransaction } from '@opendata-ai/openchart-engine';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createContainer, createMouseEvent } from '../__test-fixtures__/dom';
 import { barSpec, lineSpec } from '../__test-fixtures__/specs';
@@ -34,6 +34,12 @@ const fullEditSpec: ChartSpec = {
     source: 'World Bank',
   },
 };
+
+/**
+ * v9 identifies multi-series lines with the endpoint column by default; turning
+ * it off brings back the traditional legend these drag tests need.
+ */
+const legendEditSpec: ChartSpec = { ...fullEditSpec, endpointLabels: false };
 
 /** Simple text annotation spec for focused annotation tests. */
 const textAnnotatedSpec: ChartSpec = {
@@ -75,7 +81,7 @@ const curvedAnnotatedSpec: ChartSpec = {
       y: 'A',
       text: 'Peak',
       offset: { dx: 40, dy: -50 },
-      connector: 'curve',
+      connector: { type: 'curve', arrow: true },
     },
   ],
 };
@@ -144,10 +150,7 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
       const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotation) {
-        chart.destroy();
-        return;
-      }
+      if (!annotation) throw new Error('annotation was not rendered');
 
       expect(annotation.style.cursor).toBe('grab');
       chart.destroy();
@@ -158,25 +161,23 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
       const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotation) {
-        chart.destroy();
-        return;
-      }
+      if (!annotation) throw new Error('annotation was not rendered');
 
       simulateDrag(annotation, 100, 100, 150, 130);
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('annotation');
-      if (edit.type === 'annotation') {
-        // Canonical placement converts the implicit diagonal anchor into explicit right.
-        expect(edit.offset.dx).toBe(60);
-        expect(edit.offset.dy).toBe(-18);
-        expect(edit.anchor).toBe('right');
-        expect(edit.responsive).toBe(false);
-        // RFC 6901 path to the offset property
-        expect(edit.element.path).toBe('/annotations/0/offset');
-      }
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+      expect(edit.ops.some((op) => op.path.endsWith('/offset'))).toBe(true);
+
+      // Canonical placement converts the implicit diagonal anchor into explicit right.
+      expect(valueAt<{ dx: number; dy: number }>(edit, '/offset').dx).toBe(60);
+      expect(valueAt<{ dx: number; dy: number }>(edit, '/offset').dy).toBe(-18);
+      expect(valueAt<string>(edit, '/anchor')).toBe('right');
+      expect(valueAt<boolean>(edit, '/responsive')).toBe(false);
+      // RFC 6901 path to the offset property
+      expect(edit.ops.find((op) => op.path.endsWith('/offset'))?.path).toBe(
+        '/annotations/0/offset',
+      );
 
       chart.destroy();
     });
@@ -186,10 +187,7 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
       const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotation) {
-        chart.destroy();
-        return;
-      }
+      if (!annotation) throw new Error('annotation was not rendered');
 
       // Move less than 3px
       simulateDrag(annotation, 100, 100, 101, 101);
@@ -204,10 +202,7 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onAnnotationClick, onEdit });
 
       const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotation) {
-        chart.destroy();
-        return;
-      }
+      if (!annotation) throw new Error('annotation was not rendered');
 
       // Drag beyond threshold
       simulateDrag(annotation, 100, 100, 150, 130);
@@ -227,10 +222,7 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
       const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotation) {
-        chart.destroy();
-        return;
-      }
+      if (!annotation) throw new Error('annotation was not rendered');
 
       annotation.dispatchEvent(createMouseEvent('mousedown', 100, 100));
       // During drag (after mousedown, before mouseup) the cursor should be grabbing
@@ -305,49 +297,6 @@ describe('edit events', () => {
         expect(legendG.style.cursor).toBe('grab');
       }
 
-      // Series labels should have grab cursor (if any rendered with data-series)
-      const seriesLabels = container.querySelectorAll('.oc-mark-label[data-series]');
-      for (const el of seriesLabels) {
-        expect((el as HTMLElement).style.cursor).toBe('grab');
-      }
-
-      chart.destroy();
-    });
-
-    it('dragging a text annotation fires BOTH onAnnotationEdit and onEdit when both are provided', () => {
-      const onAnnotationEdit = vi.fn();
-      const onEdit = vi.fn();
-      const chart = createChart(container, textAnnotatedSpec, { onAnnotationEdit, onEdit });
-
-      const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotation) {
-        chart.destroy();
-        return;
-      }
-
-      simulateDrag(annotation, 100, 100, 150, 130);
-
-      expect(onAnnotationEdit).toHaveBeenCalledTimes(1);
-      expect(onEdit).toHaveBeenCalledTimes(1);
-
-      // Verify onAnnotationEdit received the text annotation and offset
-      const [annotationArg, offsetArg] = onAnnotationEdit.mock.calls[0];
-      expect(annotationArg.type).toBe('text');
-      expect(annotationArg.text).toBe('Peak');
-      expect(offsetArg.dx).toBe(60);
-      expect(offsetArg.dy).toBe(10);
-
-      // Verify onEdit received an annotation edit
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('annotation');
-      if (edit.type === 'annotation') {
-        expect(edit.annotation.text).toBe('Peak');
-        expect(edit.offset.dx).toBe(60);
-        expect(edit.offset.dy).toBe(-18);
-        expect(edit.anchor).toBe('right');
-        expect(edit.responsive).toBe(false);
-      }
-
       chart.destroy();
     });
 
@@ -356,16 +305,13 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
       const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotation) {
-        chart.destroy();
-        return;
-      }
+      if (!annotation) throw new Error('annotation was not rendered');
 
       simulateDrag(annotation, 100, 100, 150, 130);
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('annotation');
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+      expect(edit.ops.some((op) => op.path.endsWith('/offset'))).toBe(true);
 
       chart.destroy();
     });
@@ -382,11 +328,7 @@ describe('edit events', () => {
       const rangeLabel = container.querySelector(
         '.oc-annotation-range .oc-annotation-label',
       ) as SVGTextElement | null;
-      if (!rangeLabel) {
-        // Range may not render a visible label in test env
-        chart.destroy();
-        return;
-      }
+      if (!rangeLabel) throw new Error('rangeLabel was not rendered');
 
       expect(rangeLabel.style.cursor).toBe('grab');
       chart.destroy();
@@ -399,23 +341,21 @@ describe('edit events', () => {
       const rangeLabel = container.querySelector(
         '.oc-annotation-range .oc-annotation-label',
       ) as SVGTextElement | null;
-      if (!rangeLabel) {
-        chart.destroy();
-        return;
-      }
+      if (!rangeLabel) throw new Error('rangeLabel was not rendered');
 
       simulateDrag(rangeLabel, 100, 100, 140, 120);
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('range-label');
-      if (edit.type === 'range-label') {
-        expect(edit.annotation.type).toBe('range');
-        // Original labelOffset (5, 3) + drag delta (40, 20) = (45, 23)
-        expect(edit.labelOffset.dx).toBe(45);
-        expect(edit.labelOffset.dy).toBe(23);
-        expect(edit.element.path).toBe('/annotations/0/labelOffset');
-      }
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+      expect(edit.ops.some((op) => op.path.endsWith('/labelOffset'))).toBe(true);
+
+      expect(edit.ops[0].expect?.type).toBe('range');
+      // Original labelOffset (5, 3) + drag delta (40, 20) = (45, 23)
+      expect(valueAt<{ dx: number; dy: number }>(edit, '/labelOffset').dx).toBe(45);
+      expect(valueAt<{ dx: number; dy: number }>(edit, '/labelOffset').dy).toBe(23);
+      expect(edit.ops.find((op) => op.path.endsWith('/labelOffset'))?.path).toBe(
+        '/annotations/0/labelOffset',
+      );
 
       chart.destroy();
     });
@@ -427,10 +367,7 @@ describe('edit events', () => {
       const reflineLabel = container.querySelector(
         '.oc-annotation-refline .oc-annotation-label',
       ) as SVGTextElement | null;
-      if (!reflineLabel) {
-        chart.destroy();
-        return;
-      }
+      if (!reflineLabel) throw new Error('reflineLabel was not rendered');
 
       expect(reflineLabel.style.cursor).toBe('grab');
       chart.destroy();
@@ -443,23 +380,21 @@ describe('edit events', () => {
       const reflineLabel = container.querySelector(
         '.oc-annotation-refline .oc-annotation-label',
       ) as SVGTextElement | null;
-      if (!reflineLabel) {
-        chart.destroy();
-        return;
-      }
+      if (!reflineLabel) throw new Error('reflineLabel was not rendered');
 
       simulateDrag(reflineLabel, 100, 100, 130, 115);
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('refline-label');
-      if (edit.type === 'refline-label') {
-        expect(edit.annotation.type).toBe('refline');
-        // Original labelOffset (2, -4) + drag delta (30, 15) = (32, 11)
-        expect(edit.labelOffset.dx).toBe(32);
-        expect(edit.labelOffset.dy).toBe(11);
-        expect(edit.element.path).toBe('/annotations/0/labelOffset');
-      }
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+      expect(edit.ops.some((op) => op.path.endsWith('/labelOffset'))).toBe(true);
+
+      expect(edit.ops[0].expect?.type).toBe('refline');
+      // Original labelOffset (2, -4) + drag delta (30, 15) = (32, 11)
+      expect(valueAt<{ dx: number; dy: number }>(edit, '/labelOffset').dx).toBe(32);
+      expect(valueAt<{ dx: number; dy: number }>(edit, '/labelOffset').dy).toBe(11);
+      expect(edit.ops.find((op) => op.path.endsWith('/labelOffset'))?.path).toBe(
+        '/annotations/0/labelOffset',
+      );
 
       chart.destroy();
     });
@@ -490,23 +425,26 @@ describe('edit events', () => {
       const titleEl = container.querySelector(
         '.oc-chrome text[data-chrome-key="title"]',
       ) as SVGTextElement | null;
-      if (!titleEl) {
-        chart.destroy();
-        return;
-      }
+      if (!titleEl) throw new Error('titleEl was not rendered');
 
       simulateDrag(titleEl, 100, 100, 130, 115);
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('chrome');
-      if (edit.type === 'chrome') {
-        expect(edit.key).toBe('title');
-        expect(edit.text).toBeTruthy();
-        // No existing offset, so offset = delta (30, 15)
-        expect(edit.offset.dx).toBe(30);
-        expect(edit.offset.dy).toBe(15);
-      }
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+      expect(edit.ops.some((op) => op.path.endsWith('/chrome/title'))).toBe(true);
+
+      expect(edit.ops[0].path).toBe('/chrome/title');
+      // The title's text is carried through unchanged; only its offset moves.
+      expect(valueAt<{ text: string }>(edit, '/chrome/title').text).toBe('GDP Growth');
+      // No existing offset, so offset = delta (30, 15)
+      expect(
+        valueAt<{ offset: { dx: number; dy: number }; text: string }>(edit, '/chrome/title').offset
+          .dx,
+      ).toBe(30);
+      expect(
+        valueAt<{ offset: { dx: number; dy: number }; text: string }>(edit, '/chrome/title').offset
+          .dy,
+      ).toBe(15);
 
       chart.destroy();
     });
@@ -518,13 +456,10 @@ describe('edit events', () => {
   describe('wireLegendDrag', () => {
     it('legend group gets cursor:grab when onEdit is provided', () => {
       const onEdit = vi.fn();
-      const chart = createChart(container, fullEditSpec, { onEdit });
+      const chart = createChart(container, legendEditSpec, { onEdit });
 
       const legendG = container.querySelector('.oc-legend') as SVGGElement | null;
-      if (!legendG) {
-        chart.destroy();
-        return;
-      }
+      if (!legendG) throw new Error('legendG was not rendered');
 
       expect(legendG.style.cursor).toBe('grab');
       chart.destroy();
@@ -532,23 +467,19 @@ describe('edit events', () => {
 
     it('dragging legend fires onEdit with type legend and accumulated offset', () => {
       const onEdit = vi.fn();
-      const chart = createChart(container, fullEditSpec, { onEdit });
+      const chart = createChart(container, legendEditSpec, { onEdit });
 
       const legendG = container.querySelector('.oc-legend') as SVGGElement | null;
-      if (!legendG) {
-        chart.destroy();
-        return;
-      }
+      if (!legendG) throw new Error('legendG was not rendered');
 
       simulateDrag(legendG, 200, 50, 250, 70);
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('legend');
-      if (edit.type === 'legend') {
-        expect(edit.offset.dx).toBe(50);
-        expect(edit.offset.dy).toBe(20);
-      }
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+      expect(edit.ops.some((op) => op.path.endsWith('/legend'))).toBe(true);
+
+      expect(valueAt<{ offset: { dx: number; dy: number } }>(edit, '/legend').offset.dx).toBe(50);
+      expect(valueAt<{ offset: { dx: number; dy: number } }>(edit, '/legend').offset.dy).toBe(20);
 
       chart.destroy();
     });
@@ -556,13 +487,10 @@ describe('edit events', () => {
     it('click event after drag is suppressed (does not fire onLegendToggle)', () => {
       const onLegendToggle = vi.fn();
       const onEdit = vi.fn();
-      const chart = createChart(container, fullEditSpec, { onLegendToggle, onEdit });
+      const chart = createChart(container, legendEditSpec, { onLegendToggle, onEdit });
 
       const legendG = container.querySelector('.oc-legend') as SVGGElement | null;
-      if (!legendG) {
-        chart.destroy();
-        return;
-      }
+      if (!legendG) throw new Error('legendG was not rendered');
 
       // Drag the legend
       simulateDrag(legendG, 200, 50, 250, 70);
@@ -587,10 +515,7 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
       const annotationG = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotationG) {
-        chart.destroy();
-        return;
-      }
+      if (!annotationG) throw new Error('annotationG was not rendered');
 
       // Check that connector handles exist within the annotation group
       const handles = annotationG.querySelectorAll('.oc-connector-handle');
@@ -612,10 +537,7 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
       const annotationG = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotationG) {
-        chart.destroy();
-        return;
-      }
+      if (!annotationG) throw new Error('annotationG was not rendered');
 
       const handles = annotationG.querySelectorAll('.oc-connector-handle');
       if (handles.length === 0) {
@@ -644,10 +566,7 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
       const annotationG = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotationG) {
-        chart.destroy();
-        return;
-      }
+      if (!annotationG) throw new Error('annotationG was not rendered');
 
       const handles = annotationG.querySelectorAll('.oc-connector-handle');
       if (handles.length === 0) {
@@ -672,34 +591,32 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
       const annotationG = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotationG) {
-        chart.destroy();
-        return;
-      }
+      if (!annotationG) throw new Error('annotationG was not rendered');
 
       // Find the "from" handle
       const fromHandle = annotationG.querySelector(
         '.oc-connector-handle[data-endpoint="from"]',
       ) as SVGCircleElement | null;
 
-      if (!fromHandle) {
-        chart.destroy();
-        return;
-      }
+      if (!fromHandle) throw new Error('fromHandle was not rendered');
 
       simulateDrag(fromHandle, 100, 100, 130, 115);
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('annotation-connector');
-      if (edit.type === 'annotation-connector') {
-        expect(edit.endpoint).toBe('from');
-        expect(edit.annotation.type).toBe('text');
-        // No existing connectorOffset, so offset = delta (30, 15)
-        expect(edit.offset.dx).toBe(30);
-        expect(edit.offset.dy).toBe(15);
-        expect(edit.element.path).toBe('/annotations/0/connectorOffset/from');
-      }
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+      expect(edit.ops.some((op) => op.path.endsWith('/connectorOffset'))).toBe(true);
+
+      expect(edit.ops[0].expect?.type).toBe('text');
+      // No existing connectorOffset, so offset = delta (30, 15)
+      expect(
+        valueAt<Record<string, { dx: number; dy: number }>>(edit, '/connectorOffset').from.dx,
+      ).toBe(30);
+      expect(
+        valueAt<Record<string, { dx: number; dy: number }>>(edit, '/connectorOffset').from.dy,
+      ).toBe(15);
+      expect(edit.ops.find((op) => op.path.endsWith('/connectorOffset'))?.path).toBe(
+        '/annotations/0/connectorOffset',
+      );
 
       chart.destroy();
     });
@@ -730,16 +647,23 @@ describe('edit events', () => {
       simulateDrag(fromHandle!, 100, 100, 130, 118);
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('annotation-connector');
-      if (edit.type !== 'annotation-connector') return;
-      expect(edit.endpoint).toBe('from');
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+      expect(edit.ops.some((op) => op.path.endsWith('/connectorOffset'))).toBe(true);
+      expect(
+        valueAt<Record<string, { dx: number; dy: number }>>(edit, '/connectorOffset').from,
+      ).toEqual({ dx: 30, dy: 18 });
 
       // Host writes the edit back to the spec and re-renders.
       chart.update({
         ...autoAnnotatedSpec,
         annotations: [
-          { ...autoAnnotatedSpec.annotations![0], connectorOffset: { from: edit.offset } },
+          {
+            ...autoAnnotatedSpec.annotations![0],
+            connectorOffset: {
+              from: valueAt<Record<string, { dx: number; dy: number }>>(edit, '/connectorOffset')
+                .from,
+            },
+          },
         ],
       } as ChartSpec);
 
@@ -757,29 +681,27 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
       const annotationG = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotationG) {
-        chart.destroy();
-        return;
-      }
+      if (!annotationG) throw new Error('annotationG was not rendered');
 
       const toHandle = annotationG.querySelector(
         '.oc-connector-handle[data-endpoint="to"]',
       ) as SVGCircleElement | null;
 
-      if (!toHandle) {
-        chart.destroy();
-        return;
-      }
+      if (!toHandle) throw new Error('toHandle was not rendered');
 
       simulateDrag(toHandle, 100, 100, 140, 125);
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('annotation-connector');
-      if (edit.type === 'annotation-connector') {
-        expect(edit.endpoint).toBe('to');
-        expect(edit.element.path).toBe('/annotations/0/connectorOffset/to');
-      }
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+      expect(edit.ops.some((op) => op.path.endsWith('/connectorOffset'))).toBe(true);
+
+      // No existing connectorOffset, so offset = delta (40, 25)
+      expect(
+        valueAt<Record<string, { dx: number; dy: number }>>(edit, '/connectorOffset').to,
+      ).toEqual({ dx: 40, dy: 25 });
+      expect(edit.ops.find((op) => op.path.endsWith('/connectorOffset'))?.path).toBe(
+        '/annotations/0/connectorOffset',
+      );
 
       chart.destroy();
     });
@@ -802,13 +724,12 @@ describe('edit events', () => {
         simulateDrag(secondG, 100, 100, 120, 110);
 
         expect(onEdit).toHaveBeenCalledTimes(1);
-        const edit: ElementEdit = onEdit.mock.calls[0][0];
-        expect(edit.type).toBe('annotation');
-        if (edit.type === 'annotation') {
-          // The edit must carry the annotation whose label was actually dragged.
-          // Pre-fix this returned the *other* one (zIndex had swapped their slots).
-          expect(edit.annotation.id).toBe('second');
-        }
+        const edit: EditTransaction = onEdit.mock.calls[0][0];
+        expect(edit.ops.some((op) => op.path.endsWith('/offset'))).toBe(true);
+
+        // The edit must carry the annotation whose label was actually dragged.
+        // Pre-fix this returned the *other* one (zIndex had swapped their slots).
+        expect(edit.ops[0].expect?.id).toBe('second');
 
         chart.destroy();
       });
@@ -890,13 +811,15 @@ describe('edit events', () => {
         simulateDrag(toHandle, 100, 100, 130, 115);
 
         expect(onEdit).toHaveBeenCalledTimes(1);
-        const edit: ElementEdit = onEdit.mock.calls[0][0];
-        expect(edit.type).toBe('annotation-connector');
-        if (edit.type === 'annotation-connector') {
-          expect(edit.endpoint).toBe('to');
-          expect(edit.offset.dx).toBe(30);
-          expect(edit.offset.dy).toBe(15);
-        }
+        const edit: EditTransaction = onEdit.mock.calls[0][0];
+        expect(edit.ops.some((op) => op.path.endsWith('/connectorOffset'))).toBe(true);
+
+        expect(
+          valueAt<Record<string, { dx: number; dy: number }>>(edit, '/connectorOffset').to.dx,
+        ).toBe(30);
+        expect(
+          valueAt<Record<string, { dx: number; dy: number }>>(edit, '/connectorOffset').to.dy,
+        ).toBe(15);
 
         chart.destroy();
       });
@@ -906,109 +829,27 @@ describe('edit events', () => {
   // =========================================================================
   // 7. legend-toggle onEdit payload
   // =========================================================================
-  describe('legend-toggle onEdit payload', () => {
-    /** Multi-series line chart with explicit top legend so entries always render. */
-    const legendToggleSpec: ChartSpec = {
-      ...lineSpec,
-      legend: { show: true, position: 'top' },
-    };
-
-    it('legend click fires onEdit with correct payload', () => {
+  describe('transient legend visibility', () => {
+    it('reports visibility through onLegendToggle without a durable transaction', () => {
       const onEdit = vi.fn();
       const onLegendToggle = vi.fn();
-      const chart = createChart(container, legendToggleSpec, { onEdit, onLegendToggle });
-
-      const entry = container.querySelector(
-        '.oc-legend:not(.oc-legend--size) [data-legend-index]',
-      ) as SVGGElement | null;
-      if (!entry) {
-        chart.destroy();
-        return;
-      }
-
-      const label = entry.getAttribute('data-legend-label')!;
-      entry.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-
-      expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('legend-toggle');
-      if (edit.type === 'legend-toggle') {
-        expect(edit.series).toBe(label);
-        expect(edit.hidden).toBe(true);
-      }
-
-      chart.destroy();
-    });
-
-    it('second click re-shows (hidden: false)', () => {
-      const onEdit = vi.fn();
-      const chart = createChart(container, legendToggleSpec, { onEdit });
-
-      const entry = container.querySelector(
-        '.oc-legend:not(.oc-legend--size) [data-legend-index]',
-      ) as SVGGElement | null;
-      if (!entry) {
-        chart.destroy();
-        return;
-      }
-      const label = entry.getAttribute('data-legend-label')!;
-
-      // First click hides (triggers re-render, so DOM reference goes stale)
-      entry.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      expect(onEdit).toHaveBeenCalledTimes(1);
-      expect((onEdit.mock.calls[0][0] as ElementEdit & { type: 'legend-toggle' }).hidden).toBe(
-        true,
+      const chart = createChart(
+        container,
+        { ...lineSpec, legend: { show: true, position: 'top' } },
+        { onEdit, onLegendToggle },
       );
-
-      // Re-query after re-render for the same series
-      const entry2 = container.querySelector(
-        `.oc-legend:not(.oc-legend--size) [data-legend-label="${label}"]`,
-      ) as SVGGElement | null;
-      expect(entry2).toBeTruthy();
-
-      // Second click re-shows
-      entry2!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      expect(onEdit).toHaveBeenCalledTimes(2);
-      const edit: ElementEdit = onEdit.mock.calls[1][0];
-      expect(edit.type).toBe('legend-toggle');
-      if (edit.type === 'legend-toggle') {
-        expect(edit.hidden).toBe(false);
-      }
-
-      chart.destroy();
-    });
-
-    it('onLegendToggle polarity is opposite of hidden', () => {
-      const onEdit = vi.fn();
-      const onLegendToggle = vi.fn();
-      const chart = createChart(container, legendToggleSpec, { onEdit, onLegendToggle });
-
       const entry = container.querySelector(
         '.oc-legend:not(.oc-legend--size) [data-legend-index]',
-      ) as SVGGElement | null;
-      if (!entry) {
-        chart.destroy();
-        return;
-      }
-
-      const label = entry.getAttribute('data-legend-label')!;
-
-      // First click: hidden=true, visible=false (triggers re-render)
+      )!;
+      expect(entry).not.toBeNull();
+      const series = entry.getAttribute('data-legend-label')!;
       entry.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      expect(onLegendToggle).toHaveBeenCalledTimes(1);
-      expect(onLegendToggle).toHaveBeenCalledWith(label, false);
-
-      // Re-query after re-render for the same series
-      const entry2 = container.querySelector(
-        `.oc-legend:not(.oc-legend--size) [data-legend-label="${label}"]`,
-      ) as SVGGElement | null;
-      expect(entry2).toBeTruthy();
-
-      // Second click: hidden=false, visible=true
-      entry2!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      expect(onLegendToggle).toHaveBeenCalledTimes(2);
-      expect(onLegendToggle).toHaveBeenCalledWith(label, true);
-
+      expect(onLegendToggle).toHaveBeenLastCalledWith(series, false);
+      container
+        .querySelector(`[data-legend-label="${series}"]`)!
+        .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      expect(onLegendToggle).toHaveBeenLastCalledWith(series, true);
+      expect(onEdit).not.toHaveBeenCalled();
       chart.destroy();
     });
   });
@@ -1023,10 +864,7 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onEdit, onSelect });
 
       const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotation) {
-        chart.destroy();
-        return;
-      }
+      if (!annotation) throw new Error('annotation was not rendered');
 
       annotation.dispatchEvent(createMouseEvent('click', 100, 100));
       expect(onSelect).toHaveBeenCalled();
@@ -1034,13 +872,16 @@ describe('edit events', () => {
       const svg = container.querySelector('svg')!;
       svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
 
-      const deleteCall = onEdit.mock.calls.find((call: [ElementEdit]) => call[0].type === 'delete');
+      const deleteCall = onEdit.mock.calls.find((call: [EditTransaction]) =>
+        call[0].ops.some((op) => op.op === 'remove'),
+      );
       expect(deleteCall).toBeDefined();
-      const edit: ElementEdit = deleteCall![0];
-      expect(edit.type).toBe('delete');
-      if (edit.type === 'delete') {
-        expect(edit.element.path).toBe('/annotations/0');
-      }
+      const edit: EditTransaction = deleteCall![0];
+      expect(edit.ops.some((op) => op.op === 'remove')).toBe(true);
+
+      expect(edit.ops.find((op) => op.path.endsWith('/annotations/0'))?.path).toBe(
+        '/annotations/0',
+      );
 
       chart.destroy();
     });
@@ -1050,10 +891,7 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onEdit: vi.fn(), onSelect });
 
       const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotation) {
-        chart.destroy();
-        return;
-      }
+      if (!annotation) throw new Error('annotation was not rendered');
 
       annotation.dispatchEvent(createMouseEvent('click', 100, 100));
       expect(onSelect).toHaveBeenCalled();
@@ -1074,10 +912,7 @@ describe('edit events', () => {
       const titleEl = container.querySelector(
         '.oc-chrome text[data-chrome-key="title"]',
       ) as SVGTextElement | null;
-      if (!titleEl) {
-        chart.destroy();
-        return;
-      }
+      if (!titleEl) throw new Error('titleEl was not rendered');
 
       titleEl.dispatchEvent(createMouseEvent('click', 100, 100));
       expect(onSelect).toHaveBeenCalled();
@@ -1093,13 +928,10 @@ describe('edit events', () => {
 
     it('buildElementRef produces /legend path for legend clicks', () => {
       const onSelect = vi.fn();
-      const chart = createChart(container, fullEditSpec, { onEdit: vi.fn(), onSelect });
+      const chart = createChart(container, legendEditSpec, { onEdit: vi.fn(), onSelect });
 
       const legendG = container.querySelector('.oc-legend') as SVGGElement | null;
-      if (!legendG) {
-        chart.destroy();
-        return;
-      }
+      if (!legendG) throw new Error('legendG was not rendered');
 
       legendG.dispatchEvent(createMouseEvent('click', 200, 50));
       expect(onSelect).toHaveBeenCalled();
@@ -1121,18 +953,16 @@ describe('edit events', () => {
       const toHandle = annotationG?.querySelector(
         '.oc-connector-handle[data-endpoint="to"]',
       ) as SVGCircleElement;
-      if (!toHandle) {
-        chart.destroy();
-        return;
-      }
+      if (!toHandle) throw new Error('toHandle was not rendered');
 
       simulateDrag(toHandle, 100, 100, 130, 115);
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      if (edit.type === 'annotation-connector') {
-        expect(edit.element.path).toBe('/annotations/0/connectorOffset/to');
-      }
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+
+      expect(edit.ops.find((op) => op.path.endsWith('/connectorOffset'))?.path).toBe(
+        '/annotations/0/connectorOffset',
+      );
 
       chart.destroy();
     });
@@ -1151,84 +981,20 @@ describe('edit events', () => {
   });
 
   // =========================================================================
-  // 10. wireSeriesLabelDrag
-  // =========================================================================
-  describe('wireSeriesLabelDrag', () => {
-    it('series labels get cursor:grab when onEdit is provided', () => {
-      const onEdit = vi.fn();
-      const chart = createChart(container, fullEditSpec, { onEdit });
-
-      const seriesLabels = container.querySelectorAll('.oc-mark-label[data-series]');
-      if (seriesLabels.length === 0) {
-        // Labels may not render in the test env depending on layout
-        chart.destroy();
-        return;
-      }
-
-      for (const el of seriesLabels) {
-        expect((el as HTMLElement).style.cursor).toBe('grab');
-      }
-
-      chart.destroy();
-    });
-
-    it('dragging fires onEdit with type series-label, correct series name, and accumulated offset', () => {
-      const onEdit = vi.fn();
-      const chart = createChart(container, fullEditSpec, { onEdit });
-
-      const seriesLabel = container.querySelector(
-        '.oc-mark-label[data-series]',
-      ) as SVGTextElement | null;
-      if (!seriesLabel) {
-        chart.destroy();
-        return;
-      }
-
-      const seriesName = seriesLabel.getAttribute('data-series')!;
-      simulateDrag(seriesLabel, 100, 100, 135, 118);
-
-      // Find the onEdit call for a series-label (could have other edits from other elements)
-      const seriesLabelCall = onEdit.mock.calls.find(
-        (call: [ElementEdit]) => call[0].type === 'series-label',
-      );
-      expect(seriesLabelCall).toBeDefined();
-
-      const edit: ElementEdit = seriesLabelCall![0];
-      expect(edit.type).toBe('series-label');
-      if (edit.type === 'series-label') {
-        expect(edit.series).toBe(seriesName);
-        // No existing offset, so offset = delta (35, 18)
-        expect(edit.offset.dx).toBe(35);
-        expect(edit.offset.dy).toBe(18);
-      }
-
-      chart.destroy();
-    });
-  });
-
-  // =========================================================================
   // 8. element field on annotation edit payloads
   // =========================================================================
   describe('element field on annotation edit payloads', () => {
-    it('keeps first-leaf drag pointers canonical in both callbacks', () => {
+    it('keeps first-leaf drag pointers canonical', () => {
       const onEdit = vi.fn();
-      const onEditTransaction = vi.fn();
-      const chart = createChart(
-        container,
-        { layer: [textAnnotatedSpec] },
-        { onEdit, onEditTransaction },
-      );
+      const chart = createChart(container, { layer: [textAnnotatedSpec] }, { onEdit });
       const annotation = container.querySelector('.oc-annotation-text');
       expect(annotation).not.toBeNull();
       simulateDrag(annotation!, 100, 100, 150, 130);
-      expect(onEdit.mock.calls[0][0].element.path).toBe('/layer/0/annotations/0/offset');
-      expect(onEditTransaction.mock.calls[0][0].ops.map((op: { path: string }) => op.path)).toEqual(
-        [
-          '/layer/0/annotations/0/anchor',
-          '/layer/0/annotations/0/offset',
-          '/layer/0/annotations/0/responsive',
-        ],
-      );
+      expect(onEdit.mock.calls[0][0].ops.map((op: { path: string }) => op.path)).toEqual([
+        '/layer/0/annotations/0/anchor',
+        '/layer/0/annotations/0/offset',
+        '/layer/0/annotations/0/responsive',
+      ]);
       chart.destroy();
     });
 
@@ -1237,20 +1003,18 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
       const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotation) {
-        chart.destroy();
-        return;
-      }
+      if (!annotation) throw new Error('annotation was not rendered');
 
       simulateDrag(annotation, 100, 100, 150, 130);
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('annotation');
-      if (edit.type === 'annotation') {
-        expect(edit.element).toMatchObject({ type: 'annotation', index: 0 });
-        expect(edit.element.path).toBe('/annotations/0/offset');
-      }
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+      expect(edit.ops.some((op) => op.path.endsWith('/offset'))).toBe(true);
+
+      expect(edit.ops[0].path).toMatch(/^\/annotations\/0\//);
+      expect(edit.ops.find((op) => op.path.endsWith('/offset'))?.path).toBe(
+        '/annotations/0/offset',
+      );
 
       chart.destroy();
     });
@@ -1274,19 +1038,15 @@ describe('edit events', () => {
       const chart = createChart(container, specWithId, { onEdit });
 
       const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotation) {
-        chart.destroy();
-        return;
-      }
+      if (!annotation) throw new Error('annotation was not rendered');
 
       simulateDrag(annotation, 100, 100, 150, 130);
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('annotation');
-      if (edit.type === 'annotation') {
-        expect(edit.element.id).toBe('test-id');
-      }
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+      expect(edit.ops.some((op) => op.path.endsWith('/offset'))).toBe(true);
+
+      expect(edit.ops[0].expect?.id).toBe('test-id');
 
       chart.destroy();
     });
@@ -1296,19 +1056,15 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
       const annotation = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotation) {
-        chart.destroy();
-        return;
-      }
+      if (!annotation) throw new Error('annotation was not rendered');
 
       simulateDrag(annotation, 100, 100, 150, 130);
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('annotation');
-      if (edit.type === 'annotation') {
-        expect(edit.element.id).toBeUndefined();
-      }
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+      expect(edit.ops.some((op) => op.path.endsWith('/offset'))).toBe(true);
+
+      expect(edit.ops[0].expect?.id).toBeUndefined();
 
       chart.destroy();
     });
@@ -1332,29 +1088,25 @@ describe('edit events', () => {
       const chart = createChart(container, specWithId, { onEdit });
 
       const annotationG = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotationG) {
-        chart.destroy();
-        return;
-      }
+      if (!annotationG) throw new Error('annotationG was not rendered');
 
       const fromHandle = annotationG.querySelector(
         '.oc-connector-handle[data-endpoint="from"]',
       ) as SVGCircleElement | null;
 
-      if (!fromHandle) {
-        chart.destroy();
-        return;
-      }
+      if (!fromHandle) throw new Error('fromHandle was not rendered');
 
       simulateDrag(fromHandle, 100, 100, 130, 115);
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('annotation-connector');
-      if (edit.type === 'annotation-connector') {
-        expect(edit.element).toMatchObject({ type: 'annotation', index: 0, id: 'conn-id' });
-        expect(edit.element.path).toBe('/annotations/0/connectorOffset/from');
-      }
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+      expect(edit.ops.some((op) => op.path.endsWith('/connectorOffset'))).toBe(true);
+
+      expect(edit.ops[0].path).toMatch(/^\/annotations\/0\//);
+      expect(edit.ops[0].expect?.id).toBe('conn-id');
+      expect(edit.ops.find((op) => op.path.endsWith('/connectorOffset'))?.path).toBe(
+        '/annotations/0/connectorOffset',
+      );
 
       chart.destroy();
     });
@@ -1366,22 +1118,17 @@ describe('edit events', () => {
       const rangeLabel = container.querySelector(
         '.oc-annotation-range .oc-annotation-label',
       ) as SVGTextElement | null;
-      if (!rangeLabel) {
-        chart.destroy();
-        return;
-      }
+      if (!rangeLabel) throw new Error('rangeLabel was not rendered');
 
       simulateDrag(rangeLabel, 100, 100, 140, 120);
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('range-label');
-      if (edit.type === 'range-label') {
-        expect(edit.element.type).toBe('annotation');
-        if (edit.element.type === 'annotation') {
-          expect(edit.element.index).toBe(0);
-        }
-      }
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+      expect(edit.ops.some((op) => op.path.endsWith('/labelOffset'))).toBe(true);
+
+      expect(edit.ops[0].path).toMatch(/^\/annotations\//);
+
+      expect(edit.ops[0].path).toMatch(/^\/annotations\/0\//);
 
       chart.destroy();
     });
@@ -1393,22 +1140,17 @@ describe('edit events', () => {
       const reflineLabel = container.querySelector(
         '.oc-annotation-refline .oc-annotation-label',
       ) as SVGTextElement | null;
-      if (!reflineLabel) {
-        chart.destroy();
-        return;
-      }
+      if (!reflineLabel) throw new Error('reflineLabel was not rendered');
 
       simulateDrag(reflineLabel, 100, 100, 130, 115);
 
       expect(onEdit).toHaveBeenCalledTimes(1);
-      const edit: ElementEdit = onEdit.mock.calls[0][0];
-      expect(edit.type).toBe('refline-label');
-      if (edit.type === 'refline-label') {
-        expect(edit.element.type).toBe('annotation');
-        if (edit.element.type === 'annotation') {
-          expect(edit.element.index).toBe(0);
-        }
-      }
+      const edit: EditTransaction = onEdit.mock.calls[0][0];
+      expect(edit.ops.some((op) => op.path.endsWith('/labelOffset'))).toBe(true);
+
+      expect(edit.ops[0].path).toMatch(/^\/annotations\//);
+
+      expect(edit.ops[0].path).toMatch(/^\/annotations\/0\//);
 
       chart.destroy();
     });
@@ -1423,10 +1165,7 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
       const annotationG = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotationG) {
-        chart.destroy();
-        return;
-      }
+      if (!annotationG) throw new Error('annotationG was not rendered');
 
       const handle = annotationG.querySelector('.oc-anchor-handle');
       if (handle) {
@@ -1442,16 +1181,10 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
       const annotationG = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotationG) {
-        chart.destroy();
-        return;
-      }
+      if (!annotationG) throw new Error('annotationG was not rendered');
 
       const handle = annotationG.querySelector('.oc-anchor-handle');
-      if (!handle) {
-        chart.destroy();
-        return;
-      }
+      if (!handle) throw new Error('handle was not rendered');
 
       expect(handle.getAttribute('opacity')).toBe('0');
 
@@ -1469,35 +1202,41 @@ describe('edit events', () => {
       const chart = createChart(container, textAnnotatedSpec, { onEdit });
 
       const annotationG = container.querySelector('.oc-annotation-text') as SVGGElement | null;
-      if (!annotationG) {
-        chart.destroy();
-        return;
-      }
+      if (!annotationG) throw new Error('annotationG was not rendered');
 
       const handle = annotationG.querySelector('.oc-anchor-handle') as SVGCircleElement | null;
-      if (!handle) {
-        chart.destroy();
-        return;
-      }
+      if (!handle) throw new Error('handle was not rendered');
 
       const cx = Number(handle.getAttribute('cx'));
       const cy = Number(handle.getAttribute('cy'));
       simulateDrag(handle, cx, cy, cx + 30, cy + 20);
 
-      const anchorCall = onEdit.mock.calls.find(
-        (call: [ElementEdit]) => call[0].type === 'annotation-anchor',
+      const anchorCall = onEdit.mock.calls.find((call: [EditTransaction]) =>
+        call[0].ops.some((op) => op.path.endsWith('/x')),
       );
       expect(anchorCall).toBeDefined();
-      const edit: ElementEdit = anchorCall![0];
-      expect(edit.type).toBe('annotation-anchor');
-      if (edit.type === 'annotation-anchor') {
-        expect(edit.annotation).toBeDefined();
-        expect(edit.element.type).toBe('annotation');
-        expect(edit.x).toBeDefined();
-        expect(edit.y).toBeDefined();
-      }
+      const edit: EditTransaction = anchorCall![0];
+      expect(edit.ops.some((op) => op.path.endsWith('/x'))).toBe(true);
+
+      // Each op guards against a concurrent edit replacing the annotation.
+      for (const op of edit.ops) expect(op.expect).toEqual({ type: 'text', text: 'Peak' });
+      expect(edit.ops.map((op) => op.path)).toEqual(['/annotations/0/x', '/annotations/0/y']);
+      // x is quantitative: the 30px move converts through the x scale's px-per-unit.
+      const ticks = chart.layout.axes.x!.ticks;
+      const pxPerUnit =
+        (ticks[1].position - ticks[0].position) /
+        ((ticks[1].value as number) - (ticks[0].value as number));
+      expect(valueAt<number>(edit, '/x')).toBeCloseTo(10 + 30 / pxPerUnit, 6);
+      // y is a band: 20px stays inside the 'A' band.
+      expect(valueAt(edit, '/y')).toBe('A');
 
       chart.destroy();
     });
   });
 });
+
+function valueAt<T>(tx: EditTransaction, suffix: string): T {
+  const op = tx.ops.find((op) => op.path.endsWith(suffix));
+  expect(op, `transaction operation ending in ${suffix}`).toBeDefined();
+  return op!.value as T;
+}

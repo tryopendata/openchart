@@ -36,7 +36,7 @@ import {
   estimateTextWidth,
   resolveTheme,
 } from '@opendata-ai/openchart-core';
-import { emitSpecWarnings, emitThemeWarnings, expandSpecSugar } from '../compile/spec-sugar';
+import { emitSpecWarnings, expandSpecSugar } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
 import { finiteNumber } from '../data/finite-number';
@@ -332,14 +332,13 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
   const sankeySpec = normalized as NormalizedSankeySpec;
 
   // Resolve format: encoding-level (v8 canonical) wins over deprecated top-level valueFormat
-  const resolvedValueFormat = sankeySpec.encoding.value.format ?? sankeySpec.valueFormat;
+  const resolvedValueFormat = sankeySpec.encoding.value.format;
 
   // Resolve watermark: explicit spec value wins, then options fallback, then default true.
   const rawWatermark = (spec as Record<string, unknown>).watermark;
   const watermark = rawWatermark !== undefined ? sankeySpec.watermark : (options.watermark ?? true);
 
   // 2. Resolve theme
-  emitThemeWarnings(options.theme, options.onWarn);
   const mergedThemeConfig = mergeThemeConfig(sankeySpec.theme, options.theme);
   const lightTheme: ResolvedTheme = resolveTheme(mergedThemeConfig);
   let theme: ResolvedTheme = lightTheme;
@@ -357,13 +356,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
 
   // 3. Compute chrome
   const chrome = computeChrome(
-    {
-      title: sankeySpec.chrome.title,
-      subtitle: sankeySpec.chrome.subtitle,
-      source: sankeySpec.chrome.source,
-      byline: sankeySpec.chrome.byline,
-      footer: sankeySpec.chrome.footer,
-    },
+    sankeySpec.chrome,
     theme,
     options.width,
     options.measureText,

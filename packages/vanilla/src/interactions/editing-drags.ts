@@ -1,10 +1,8 @@
 import {
   type Annotation,
-  type AnnotationOffset,
   type ChartLayout,
   type ChartSpec,
   type ChromeKey,
-  type ElementEdit,
   elementRef,
   type GraphSpec,
   type RangeAnnotation,
@@ -20,6 +18,7 @@ import {
 } from '@opendata-ai/openchart-engine';
 import { updateAnnotationGeometry } from '../renderers/annotations';
 import { createDragHandler } from './drag-handler';
+import type { GestureEdit } from './gesture-edit';
 import { invertScale } from './invert';
 import { buildElementRef } from './selection';
 
@@ -30,10 +29,7 @@ import { buildElementRef } from './selection';
 export function wireAnnotationDrag(
   svg: SVGElement,
   specAnnotations: Annotation[],
-  onAnnotationEdit:
-    | ((annotation: TextAnnotation, updatedOffset: AnnotationOffset) => void)
-    | undefined,
-  onEdit: ((edit: ElementEdit) => void) | undefined,
+  onEdit: ((edit: GestureEdit) => void) | undefined,
   setDragging: (dragging: boolean) => void,
   layout: ChartLayout,
   spec: unknown,
@@ -53,8 +49,14 @@ export function wireAnnotationDrag(
     }
     if (!initial.label?.visible || initial.footnoteIndex !== undefined) continue;
     const original = initial;
-    const restore = () =>
+    let previewed = false;
+    const restore = () => {
+      // Preserve the click target when a pointer gesture never changed geometry.
+      // Replacing label children on mouseup prevents the browser's click bubbling.
+      if (!previewed) return;
       updateAnnotationGeometry(group, original, layout.theme.colors.neutral.surface);
+      previewed = false;
+    };
     group.style.cursor = 'grab';
     cleanups.push(
       createDragHandler({
@@ -62,29 +64,20 @@ export function wireAnnotationDrag(
         svg: svg as SVGSVGElement,
         setDragging,
         animationFrame: true,
-        onMove: (dx, dy) =>
+        onMove: (dx, dy) => {
+          previewed = true;
           updateAnnotationGeometry(
             group,
             previewAnnotationMove(ctx, ref, { dx, dy }),
             layout.theme.colors.neutral.surface,
-          ),
+          );
+        },
         onCancel: restore,
         onEnd: (dx, dy, moved) => {
           restore();
           if (!moved) return;
           const preview = previewAnnotationMove(ctx, ref, { dx, dy });
           const placement = inverseLabelPlacement(ctx, ref, preview.bounds!);
-          // Preserve the deprecated callback's original-reference/relative-offset contract.
-          onAnnotationEdit?.(authored, {
-            dx:
-              Math.round(
-                ((authored.offset?.dx ?? 0) + preview.label!.x - original.label!.x) * 1e10,
-              ) / 1e10,
-            dy:
-              Math.round(
-                ((authored.offset?.dy ?? 0) + preview.label!.y - original.label!.y) * 1e10,
-              ) / 1e10,
-          });
           onEdit?.({
             type: 'annotation',
             element: { ...ref, path: `${ref.path}/offset` },
@@ -109,7 +102,7 @@ export function wireAnnotationDrag(
 export function wireConnectorEndpointDrag(
   svg: SVGElement,
   specAnnotations: Annotation[],
-  onEdit: (edit: ElementEdit) => void,
+  onEdit: (edit: GestureEdit) => void,
   setDragging: (dragging: boolean) => void,
   layout: ChartLayout,
   spec: unknown,
@@ -213,7 +206,7 @@ export function wireConnectorEndpointDrag(
 export function wireAnnotationLabelDrag(
   svg: SVGElement,
   specAnnotations: Annotation[],
-  onEdit: (edit: ElementEdit) => void,
+  onEdit: (edit: GestureEdit) => void,
   setDragging: (dragging: boolean) => void,
 ): () => void {
   const cleanups: Array<() => void> = [];
@@ -249,7 +242,7 @@ export function wireAnnotationLabelDrag(
 
       const cleanup = createDragHandler({
         element: labelEl,
-        svg: svg as unknown as SVGSVGElement,
+        svg: svg as SVGSVGElement,
         onMove: (dx, dy) => {
           (labelEl as SVGElement & ElementCSSInlineStyle).style.transform =
             `translate(${dx}px, ${dy}px)`;
@@ -307,7 +300,7 @@ export function wireAnnotationLabelDrag(
 export function wireChromeDrag(
   svg: SVGElement,
   spec: ChartSpec | GraphSpec,
-  onEdit: (edit: ElementEdit) => void,
+  onEdit: (edit: GestureEdit) => void,
   setDragging: (dragging: boolean) => void,
 ): () => void {
   const chromeTexts = svg.querySelectorAll('.oc-chrome text[data-chrome-key]');
@@ -330,7 +323,7 @@ export function wireChromeDrag(
 
     const cleanup = createDragHandler({
       element: textEl,
-      svg: svg as unknown as SVGSVGElement,
+      svg: svg as SVGSVGElement,
       onMove: (dx, dy) => {
         (textEl as SVGElement & ElementCSSInlineStyle).style.transform =
           `translate(${dx}px, ${dy}px)`;
@@ -370,7 +363,7 @@ export function wireChromeDrag(
 export function wireLegendDrag(
   svg: SVGElement,
   spec: ChartSpec | GraphSpec,
-  onEdit: (edit: ElementEdit) => void,
+  onEdit: (edit: GestureEdit) => void,
   setDragging: (dragging: boolean) => void,
 ): () => void {
   // The color legend: it owns `spec.legend.offset`, which is what a drag writes
@@ -394,7 +387,7 @@ export function wireLegendDrag(
 
   const cleanup = createDragHandler({
     element: legendG,
-    svg: svg as unknown as SVGSVGElement,
+    svg: svg as SVGSVGElement,
     onMove: (dx, dy) => {
       (legendG as SVGElement & ElementCSSInlineStyle).style.transform =
         `translate(${dx}px, ${dy}px)`;
@@ -422,69 +415,6 @@ export function wireLegendDrag(
 }
 
 /**
- * Wire drag on series label elements (.oc-mark-label[data-series]).
- * Returns a cleanup function.
- */
-export function wireSeriesLabelDrag(
-  svg: SVGElement,
-  spec: ChartSpec | GraphSpec,
-  onEdit: (edit: ElementEdit) => void,
-  setDragging: (dragging: boolean) => void,
-): () => void {
-  const labels = svg.querySelectorAll('.oc-mark-label');
-  const cleanups: Array<() => void> = [];
-
-  const rawLabels = 'labels' in spec ? spec.labels : undefined;
-  const labelsConfig = typeof rawLabels === 'object' ? rawLabels : undefined;
-
-  for (const label of labels) {
-    const labelEl = label as SVGTextElement;
-    const series =
-      labelEl.getAttribute('data-series') ??
-      labelEl.closest('[data-series]')?.getAttribute('data-series');
-    if (!series) continue;
-
-    const existingSeriesOffset = labelsConfig?.offsets?.[series];
-    const origSeriesDx = existingSeriesOffset?.dx ?? 0;
-    const origSeriesDy = existingSeriesOffset?.dy ?? 0;
-
-    labelEl.style.cursor = 'grab';
-
-    const cleanup = createDragHandler({
-      element: labelEl,
-      svg: svg as unknown as SVGSVGElement,
-      onMove: (dx, dy) => {
-        (labelEl as SVGElement & ElementCSSInlineStyle).style.transform =
-          `translate(${dx}px, ${dy}px)`;
-      },
-      onCancel: () => {
-        labelEl.style.transform = '';
-      },
-      onEnd: (dx, dy, moved) => {
-        (labelEl as SVGElement & ElementCSSInlineStyle).style.transform = '';
-
-        if (moved) {
-          onEdit({
-            type: 'series-label',
-            series,
-            offset: { dx: origSeriesDx + dx, dy: origSeriesDy + dy },
-          });
-        }
-      },
-      setDragging,
-    });
-
-    cleanups.push(cleanup);
-  }
-
-  return () => {
-    for (const cleanup of cleanups) {
-      cleanup();
-    }
-  };
-}
-
-/**
  * Wire drag on annotation anchor handles (the data-point dot).
  * Dragging the anchor repositions the annotation in data space, emitting
  * new x/y values via onEdit. Returns a cleanup function.
@@ -493,7 +423,7 @@ export function wireAnchorDrag(
   svg: SVGElement,
   specAnnotations: Annotation[],
   layout: ChartLayout,
-  onEdit: ((edit: ElementEdit) => void) | undefined,
+  onEdit: ((edit: GestureEdit) => void) | undefined,
   setDragging: (d: boolean) => void,
 ): () => void {
   if (!onEdit || !layout.xInvert || !layout.yInvert) return () => {};
@@ -542,7 +472,7 @@ export function wireAnchorDrag(
 
     const cleanup = createDragHandler({
       element: handleEl,
-      svg: svg as unknown as SVGSVGElement,
+      svg: svg as SVGSVGElement,
       onMove: (dx, dy) => {
         handleEl.setAttribute('cx', String(anchorX + dx));
         handleEl.setAttribute('cy', String(anchorY + dy));

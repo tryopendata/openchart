@@ -1,7 +1,8 @@
 import type { ChartSpec } from '@opendata-ai/openchart-core';
 import { cleanup, render, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Chart } from '../Chart';
+import { VizThemeProvider } from '../ThemeContext';
 
 // ---------------------------------------------------------------------------
 // Test data
@@ -193,4 +194,117 @@ it.each([
   expect(container.querySelector('svg')!.getAttribute('viewBox')).toBe(initial);
   unmount();
   expect(container.querySelector('svg')).toBeNull();
+});
+
+it('merges spec, provider, and prop themes at authored leaves', async () => {
+  const { container } = render(
+    <VizThemeProvider theme={{ fonts: { sizes: { title: 33 } } }}>
+      <Chart
+        spec={{ ...lineSpec, theme: { fonts: { family: 'Georgia' } } }}
+        theme={{ fonts: { sizes: { small: 15 } } }}
+      />
+    </VizThemeProvider>,
+  );
+  await waitFor(() => expect(container.querySelector('.oc-title')).not.toBeNull());
+  const title = container.querySelector<SVGElement>('.oc-title')!;
+  expect(title.style.fontSize).toBe('33px');
+  expect(title.style.fontFamily).toBe('Georgia');
+  expect(container.querySelector<SVGElement>('.oc-source')!.style.fontSize).toBe('15px');
+});
+
+describe('interaction prop', () => {
+  afterEach(cleanup);
+  const clickTitle = (container: HTMLElement) =>
+    container
+      .querySelector('[data-chrome-key="title"]')!
+      .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+  it("interaction='read' suppresses selection even with onSelect", async () => {
+    const onSelect = vi.fn();
+    const { container } = await renderChart({ spec: lineSpec, interaction: 'read', onSelect });
+    clickTitle(container);
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('changing interaction recreates the chart in the new mode', async () => {
+    const onSelect = vi.fn();
+    const { container, rerender } = await renderChart({
+      spec: lineSpec,
+      interaction: 'read',
+      onSelect,
+    });
+    rerender(<Chart spec={lineSpec} interaction="select" onSelect={onSelect} />);
+    await waitFor(() => {
+      clickTitle(container);
+      expect(onSelect).toHaveBeenCalled();
+    });
+  });
+
+  it('adding onSelect later re-infers select mode', async () => {
+    const onSelect = vi.fn();
+    const { container, rerender } = await renderChart({ spec: lineSpec });
+    clickTitle(container);
+    rerender(<Chart spec={lineSpec} onSelect={onSelect} />);
+    await waitFor(() => {
+      clickTitle(container);
+      expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ path: '/chrome/title' }));
+    });
+  });
+});
+it('forwards rowHover and removes its runtime treatment when toggled off', async () => {
+  const { container, rerender } = await renderChart({ spec: barSpec, rowHover: true });
+  expect(container.querySelector('.oc-row-hover')).not.toBeNull();
+  rerender(<Chart spec={barSpec} rowHover={false} />);
+  await waitFor(() => expect(container.querySelector('.oc-row-hover')).toBeNull());
+});
+it('keeps slice pins through host, callback and theme changes without controlled echoes in StrictMode', async () => {
+  const { StrictMode } = await import('react');
+  const first = document.createElement('aside'),
+    second = document.createElement('aside');
+  const before = vi.fn(),
+    after = vi.fn();
+  const reader = { mode: 'slices' as const, panel: { container: first } };
+  const result = render(
+    <StrictMode>
+      <Chart spec={lineSpec} reader={reader} onReaderChange={before} />
+    </StrictMode>,
+  );
+  const root = () => result.container.querySelector('.oc-root')!;
+  root().dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  root().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+  const state = before.mock.calls.at(
+    -1,
+  )![0] as import('@opendata-ai/openchart-core').ReaderSliceSelection;
+  expect(state.pinned).toHaveLength(1);
+  const svg = result.container.querySelector('svg');
+  result.rerender(
+    <StrictMode>
+      <Chart
+        spec={lineSpec}
+        reader={{ mode: 'slices', panel: { container: second } }}
+        readerSelection={state}
+        onReaderChange={after}
+      />
+    </StrictMode>,
+  );
+  await waitFor(() => expect(second.querySelector('.oc-reader-panel')).not.toBeNull());
+  expect(first.querySelector('.oc-reader-panel')).toBeNull();
+  expect(result.container.querySelector('svg')).toBe(svg);
+  expect(after).not.toHaveBeenCalled();
+  expect(second.textContent).toContain('A:');
+  result.rerender(
+    <StrictMode>
+      <Chart
+        spec={lineSpec}
+        reader={{ mode: 'slices', panel: { container: second } }}
+        readerSelection={state}
+        onReaderChange={after}
+        theme={{ fonts: { sizes: { small: 14 } } }}
+      />
+    </StrictMode>,
+  );
+  await waitFor(() => expect(second.textContent).toContain('A:'));
+  expect(result.container.querySelectorAll('.oc-reader-guides')).toHaveLength(1);
+  result.unmount();
+  expect(second.querySelector('.oc-reader-panel')).toBeNull();
 });

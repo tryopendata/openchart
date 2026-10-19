@@ -6,7 +6,7 @@ import { defineConfig } from 'vitest/config';
 const packages = path.resolve(__dirname, '..');
 
 export default defineConfig({
-  plugins: [svelte({ hot: false }), svelteTesting()],
+  plugins: [svelte({ configFile: false }), svelteTesting()],
   resolve: {
     alias: [
       // Workspace packages -> source (so side-effect imports fire)

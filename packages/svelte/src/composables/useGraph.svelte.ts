@@ -64,8 +64,8 @@ export interface UseGraphOptions {
   onHighlightChange?: GraphMountOptions['onHighlightChange'];
   /** Camera change handler. */
   onCameraChange?: GraphMountOptions['onCameraChange'];
-  /** Enable responsive resizing. Defaults to true. */
-  responsive?: boolean;
+  /** Observe container resizing. Defaults to true. */
+  autoResize?: boolean;
 }
 
 export interface UseGraphReturn {
@@ -138,7 +138,7 @@ export function useGraph(
         onLegendToggle: opts?.onLegendToggle,
         onHighlightChange: opts?.onHighlightChange,
         onCameraChange: opts?.onCameraChange,
-        responsive: opts?.responsive ?? true,
+        autoResize: opts?.autoResize ?? true,
       };
 
       const graph = createGraph(node, currentSpec, mountOpts);

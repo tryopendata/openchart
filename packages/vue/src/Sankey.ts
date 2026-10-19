@@ -7,6 +7,7 @@
  */
 
 import type { DarkMode, SankeySpec, ThemeConfig } from '@opendata-ai/openchart-core';
+import { mergeThemeConfig } from '@opendata-ai/openchart-core';
 import {
   createSankey,
   type SankeyInstance,
@@ -73,7 +74,7 @@ export const Sankey = defineComponent({
     const contextDarkMode = inject(VizDarkModeKey, undefined);
 
     function resolveTheme(): ThemeConfig | undefined {
-      return props.theme ?? contextTheme?.value;
+      return mergeThemeConfig(contextTheme?.value, props.theme);
     }
 
     function resolveDarkMode(): DarkMode | undefined {
@@ -91,7 +92,7 @@ export const Sankey = defineComponent({
         onLinkClick: (link: Record<string, unknown>) => emit('link-click', link),
         onNodeHover: (node: Record<string, unknown> | null) => emit('node-hover', node),
         onLinkHover: (link: Record<string, unknown> | null) => emit('link-hover', link),
-        responsive: true,
+        autoResize: true,
       };
 
       instance = createSankey(container, props.spec, options);

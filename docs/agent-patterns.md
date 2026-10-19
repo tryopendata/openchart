@@ -64,7 +64,7 @@ All specs use realistic data with plausible numbers. Copy and adapt.
 }
 ```
 
-**Multi-series variant:** Add a `color` encoding to split by category. Keep to 5 series max for readability.
+**Multi-series variant:** Add a `color` encoding to split by category. Keep to 5 series max for readability. Use the legend or `endpointLabels` to identify series; legacy line-end labels and manual series-label offsets are removed.
 
 ```json
 {
@@ -182,7 +182,7 @@ All specs use realistic data with plausible numbers. Copy and adapt.
     { "browser": "Other", "share": 8.4 }
   ],
   "encoding": {
-    "y": { "field": "share", "type": "quantitative" },
+    "theta": { "field": "share", "type": "quantitative" },
     "color": { "field": "browser", "type": "nominal" }
   },
   "chrome": {
@@ -552,6 +552,8 @@ All specs use realistic data with plausible numbers. Copy and adapt.
 | `text` | Callouts at specific data points | Use `anchor` to avoid overlapping the line. `offset` for fine-tuning. |
 | `range` | Time periods, regions, phases | Use low `opacity` (0.05-0.1) so data is still visible. |
 | `refline` | Thresholds, baselines, averages | Use `dashed` or `dotted` style to visually separate from data. |
+
+**Responsive annotation defaults:** Omit offsets and anchors when automatic placement is sufficient. Lower `priority` values stay inline first; compact charts keep one eligible text callout and put the rest in wrapped notes, including subtitles. `responsive: false` pins a callout inline and can cause overlap at narrow widths. Use `maxWidth: null` or `responsive.compactAnnotationLimit: null` only when an unlimited layout is intentional. Source-order note numbers may have gaps. Curves do not imply arrows; use `{ "type": "curve", "arrow": true }` explicitly.
 
 **Combining annotations:** Layer them. Ranges go behind the data (low opacity). Reference lines mark horizontal/vertical thresholds. Text callouts highlight specific inflection points or notable data values. This layering creates visual depth.
 

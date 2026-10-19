@@ -53,7 +53,12 @@ function collectGridlines(
   // left axis already supplies them).
   if (orient === 'y' && axis.orient === 'right') return;
   for (const gridline of axis.gridlines) {
-    out.push({ orient, position: gridline.position, alpha: GRIDLINE_ALPHA });
+    out.push({
+      orient,
+      position: gridline.position,
+      alpha: GRIDLINE_ALPHA,
+      ...(gridline.color ? { color: gridline.color } : {}),
+    });
   }
 }
 

@@ -23,7 +23,7 @@ export (not the main barrel, so a large JSON never lands in a consumer bundle):
 | Import | Covers | Use for |
 |--------|--------|---------|
 | `@opendata-ai/openchart-core/schema` | Full `VizSpec` union (every spec kind) | Plain, non-strict tool `input_schema` |
-| `@opendata-ai/openchart-core/schema/chart.schema.json` | `ChartSpec` (all 16 marks) | The LLM chart workhorse; strict-mode subset |
+| `@opendata-ai/openchart-core/schema/chart.schema.json` | `ChartSpec` (all 18 marks) | The LLM chart workhorse; strict-mode subset |
 | `@opendata-ai/openchart-core/schema/table.schema.json` | `TableSpec` | Data tables; strict-mode subset |
 
 The schemas are draft-07 and generated directly from the TypeScript spec types,
@@ -36,7 +36,7 @@ import chartSchema from '@opendata-ai/openchart-core/schema/chart.schema.json' w
 
 ## Which schema to use
 
-- **Charts** (bar, line, area, point, arc, and the rest of the 16 marks): use
+- **Charts** (bar, line, area, point, arc, and the rest of the 18 marks): use
   `chart.schema.json`. It is the primary generation surface.
 - **Tables**: use `table.schema.json`.
 - **Anything, or "let the model pick the visualization"**: use the full VizSpec
@@ -108,6 +108,18 @@ For strict modes, use a per-type **subset** schema (`chart.schema.json` or
 3. Strip keywords the target API does not support (`$comment`, format
    annotations it rejects, etc.).
 
+Preserve each `anyOf` branch separately, including nested mark unions. In v9,
+`{ type: 'density', bandwidth: 2 }` is valid, while
+`{ type: 'bar', bandwidth: 2 }` is rejected by the TypeScript contract, the
+published schema, and runtime validation. Merging branch properties into one
+object would erase this contract. The mark-option matrix tests the published
+schema after the required-and-nullable transform for every mark and option.
+
+Nulls added by the strict transform represent omitted fields. Remove those
+placeholder nulls before calling `validateSpec`; preserve authored nulls only for
+fields whose public contract accepts them (for example `mark.tooltip`). Strict
+schema transforms are provider-specific adapters, not a different chart format.
+
 Never claim strict-mode compatibility for the full VizSpec schema — ship the
 subset. Measure the serialized token size of the subset against your API's limit
 before shipping; the ChartSpec subset is the tightest surface the library offers.
@@ -117,8 +129,9 @@ before shipping; the ChartSpec subset is the tightest surface the library offers
 Field-level validation against the provided data is what kills the dominant
 failure mode (a spec that references a hallucinated column and renders an empty
 chart). `validateSpec` returns machine-readable errors: each carries a `code`, the
-offending `path`, and a repair-friendly `suggestion`. Misspelled field names get a
-nearest-column "did you mean" hint.
+offending `path` as a root-relative JSON Pointer (`/encoding/y/field`), and a
+repair-friendly `suggestion`. Misspelled field names get a nearest-column "did you
+mean" hint.
 
 ```js
 const { valid, errors } = validateSpec(withData);

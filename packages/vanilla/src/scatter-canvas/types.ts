@@ -56,6 +56,8 @@ export interface ScatterPointsSoA {
 
 /** A gridline resolved to canvas coordinates. */
 export interface CanvasGridline {
+  /** Resolved semantic color override; absent uses the ordinary gridline stroke. */
+  color?: string;
   /** Which axis produced it: `'y'` spans horizontally, `'x'` spans vertically. */
   orient: 'x' | 'y';
   /** Pixel position along the axis (y for `'y'`, x for `'x'`). */

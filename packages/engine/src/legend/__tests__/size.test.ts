@@ -331,14 +331,14 @@ describe('size legend', () => {
   /** The block is a fixed ~90px and can't reflow; on a phone it eats the plot. */
   it('is suppressed below the compact width', () => {
     expect(sizeLegendOf(bubbles, { width: 380, height: 300 })).toBeUndefined();
-    expect(sizeLegendOf(bubbles, { width: 800, height: 500 })).toBeDefined();
+    expect(sizeLegendOf(bubbles, { width: 800, height: 500 })?.channel).toBe('size');
   });
 
   /** KEYED_SIZE_MARKS covers point AND beeswarm, but only point was exercised. */
   it('is emitted for a beeswarm, whose size channel is also keyed', () => {
     const legend = sizeLegendOf(swarmSpec);
-    expect(legend).toBeDefined();
-    expect((legend?.circles.length ?? 0) >= 2).toBe(true);
+    expect(legend?.channel).toBe('size');
+    expect(legend!.circles.length).toBeGreaterThanOrEqual(2);
   });
 
   /**

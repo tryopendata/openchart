@@ -7,6 +7,7 @@
 -->
 <script lang="ts">
 import type { DarkMode, SortState, TableSpec, ThemeConfig } from '@opendata-ai/openchart-core';
+import { mergeThemeConfig } from '@opendata-ai/openchart-core';
 import {
   createTable,
   type TableInstance,
@@ -62,7 +63,7 @@ let prevSpec = '';
 
 // Effect 1: Mount/recreate table on theme/darkMode changes.
 $effect(() => {
-  const resolvedTheme = theme ?? ctxTheme?.();
+  const resolvedTheme = mergeThemeConfig(ctxTheme?.(), theme);
   const resolvedDarkMode = darkMode ?? ctxDarkMode?.();
   // Read spec and controlled state without tracking
   const currentSpec = untrack(() => spec);
@@ -77,7 +78,7 @@ $effect(() => {
     theme: resolvedTheme,
     darkMode: resolvedDarkMode,
     onRowClick: (row: Record<string, unknown>) => untrack(() => onrowclick)?.(row),
-    responsive: true,
+    autoResize: true,
     onStateChange: (state) => {
       if (state.sort !== undefined) untrack(() => onsortchange)?.(state.sort);
       if (state.search !== undefined) untrack(() => onsearchchange)?.(state.search);

@@ -193,3 +193,114 @@ describe('<GeoMap />', () => {
     expect(container.querySelector('.oc-map-zoom')).toBeNull();
   });
 });
+it('keeps one inventory in StrictMode and replaces its host and callbacks without recreating the map', async () => {
+  const { createRef, StrictMode } = await import('react');
+  const ref = createRef<import('../GeoMap').GeoMapHandle>();
+  const spec: GeoMapSpec = {
+    ...mapSpec,
+    animation: false,
+    callouts: [
+      {
+        id: 'custom',
+        anchor: { kind: 'coordinate', space: 'geographic', x: -100, y: 35 },
+        text: 'Exact coordinate note',
+        minZoom: 2,
+      },
+    ],
+  };
+  const first = document.createElement('aside'),
+    second = document.createElement('aside');
+  const before = vi.fn(),
+    after = vi.fn();
+  const result = render(
+    <StrictMode>
+      <GeoMap ref={ref} spec={spec} labelInventory={{ container: first }} onCameraChange={before} />
+    </StrictMode>,
+  );
+  await waitFor(() => expect(first.querySelectorAll('details')).toHaveLength(1));
+  const instance = ref.current!.instance!;
+  const svg = result.container.querySelector('svg');
+  instance.setCamera({ ...instance.getCamera(), k: 2 });
+  result.rerender(
+    <StrictMode>
+      <GeoMap ref={ref} spec={spec} labelInventory={{ container: second }} onCameraChange={after} />
+    </StrictMode>,
+  );
+  await waitFor(() => expect(second.querySelectorAll('details')).toHaveLength(1));
+  expect(first.querySelector('details')).toBeNull();
+  expect(ref.current?.instance).toBe(instance);
+  expect(result.container.querySelector('svg')).toBe(svg);
+  expect(instance.getCamera().k).toBe(2);
+  const count = before.mock.calls.length;
+  instance.setCamera({ ...instance.getCamera(), k: 3 });
+  expect(before).toHaveBeenCalledTimes(count);
+  expect(after).toHaveBeenCalledTimes(1);
+  expect(result.container.querySelectorAll('.oc-map-label-inventory')).toHaveLength(1);
+  result.unmount();
+  expect(second.querySelector('details')).toBeNull();
+});
+it('keeps reader pins and silently applies controlled state while panel hosts and callbacks change', async () => {
+  const first = document.createElement('aside'),
+    second = document.createElement('aside');
+  const before = vi.fn(),
+    after = vi.fn();
+  const result = await renderGeoMap({
+    spec: { ...mapSpec, animation: false },
+    reader: { panel: { container: first } },
+    onReaderChange: before,
+  });
+  const root = result.container.querySelector('.oc-map-inspect-places')!;
+  root.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  root.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+  const state = before.mock.calls.at(
+    -1,
+  )![0] as import('@opendata-ai/openchart-core').GeoReaderSelection;
+  expect(state.pinned).toHaveLength(1);
+  const svg = result.container.querySelector('svg');
+  result.rerender(
+    <GeoMap
+      spec={{ ...mapSpec, animation: false }}
+      reader={{ panel: { container: second } }}
+      readerSelection={state}
+      onReaderChange={after}
+    />,
+  );
+  await waitFor(() => expect(second.querySelector('.oc-reader-panel')).not.toBeNull());
+  expect(first.querySelector('.oc-reader-panel')).toBeNull();
+  expect(result.container.querySelector('svg')).toBe(svg);
+  expect(after).not.toHaveBeenCalled();
+  expect(second.textContent).toContain('A:');
+  result.unmount();
+  expect(second.querySelector('.oc-reader-panel')).toBeNull();
+});
+
+it('forwards scoped camera metadata through the stable imperative instance', async () => {
+  const { createRef } = await import('react');
+  const ref = createRef<import('../GeoMap').GeoMapHandle>();
+  const changed = vi.fn();
+  const spec: GeoMapSpec = {
+    ...mapSpec,
+    chrome: undefined,
+    animation: false,
+    geo: {
+      ...mapSpec.geo,
+      insets: [
+        {
+          id: 'texas',
+          label: 'Texas',
+          featureIds: ['48'],
+          placement: 'bottom-left',
+          width: 80,
+          removeFromMain: false,
+        },
+      ],
+    },
+  };
+  const result = render(<GeoMap ref={ref} spec={spec} onCameraChange={changed} />);
+  await waitFor(() => expect(ref.current?.instance?.getCameras().texas).toBeDefined());
+  const instance = ref.current!.instance!;
+  const camera = { ...instance.getCamera('texas'), k: 2 };
+  instance.setCamera(camera, { viewId: 'texas' });
+  expect(changed).toHaveBeenLastCalledWith(camera, { viewId: 'texas' });
+  result.unmount();
+});

@@ -31,7 +31,7 @@ import {
   defaultNumberFormatter,
   resolveTheme,
 } from '@opendata-ai/openchart-core';
-import { emitSpecWarnings, emitThemeWarnings } from '../compile/spec-sugar';
+import { emitSpecWarnings } from '../compile/spec-sugar';
 import { compile as compileSpec } from '../compiler/index';
 import type { NormalizedGraphSpec } from '../compiler/types';
 import { resolveGraphAnimation } from './animation';
@@ -271,7 +271,7 @@ function buildGraphTooltips(nodes: CompiledGraphNode[]): Map<string, TooltipCont
  *
  * Construction is LAZY (called for the one hovered edge), not an eager O(E)
  * descriptor map — edges outnumber nodes 5–10× and an eager map on every
- * compile (including updateVisuals) would be pure bloat. Shows source → target
+ * compile (including graph updates) would be pure bloat. Shows source → target
  * and all non-structural data fields.
  */
 export function buildEdgeTooltip(edge: CompiledGraphEdge): TooltipContent {
@@ -349,7 +349,6 @@ export function compileGraph(spec: unknown, options: CompileOptions): GraphCompi
   const watermark = rawWatermark !== undefined ? graphSpec.watermark : (options.watermark ?? true);
 
   // 2. Resolve theme
-  emitThemeWarnings(options.theme, options.onWarn);
   const mergedThemeConfig = mergeThemeConfig(graphSpec.theme, options.theme);
   let theme: ResolvedTheme = resolveTheme(mergedThemeConfig);
   if (options.darkMode) {
@@ -504,13 +503,7 @@ export function compileGraph(spec: unknown, options: CompileOptions): GraphCompi
 
   // 11. Build chrome
   const chrome = computeChrome(
-    {
-      title: graphSpec.chrome.title,
-      subtitle: graphSpec.chrome.subtitle,
-      source: graphSpec.chrome.source,
-      byline: graphSpec.chrome.byline,
-      footer: graphSpec.chrome.footer,
-    },
+    graphSpec.chrome,
     theme,
     options.width,
     options.measureText,

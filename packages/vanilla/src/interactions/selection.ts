@@ -4,7 +4,6 @@ import type {
   ChartSpec,
   ChromeKey,
   ElementRef,
-  GraphSpec,
   LayerSpec,
   TextAnnotation,
 } from '@opendata-ai/openchart-core';
@@ -34,8 +33,6 @@ export function findElementByRef(svg: SVGElement, ref: ElementRef): SVGElement |
     }
     case 'chrome':
       return svg.querySelector(`[data-chrome-key="${ref.key}"]`) as SVGElement | null;
-    case 'series-label':
-      return svg.querySelector(`.oc-mark-label[data-series="${ref.series}"]`) as SVGElement | null;
     // The editable legend is the color legend. Excluding the size legend
     // explicitly rather than relying on it rendering second: `querySelector`
     // takes the first match, so a bare `.oc-legend` would silently retarget
@@ -82,18 +79,11 @@ export function buildElementRef(
     if (key) return elementRef.chrome(key, `/chrome/${key}`);
   }
 
-  const seriesLabelEl = element.closest('.oc-mark-label[data-series]');
-  if (seriesLabelEl) {
-    const series = seriesLabelEl.getAttribute('data-series');
-    if (series)
-      return elementRef.seriesLabel(series, `/labels/offsets/${encodePointerToken(series)}`);
-  }
-
   const legendEntryEl = element.closest('[data-legend-index]');
   if (legendEntryEl) {
     const index = Number(legendEntryEl.getAttribute('data-legend-index'));
     const series = legendEntryEl.getAttribute('data-legend-label') ?? '';
-    return elementRef.legendEntry(series, index);
+    return elementRef.legendEntry(series, index, '/legend');
   }
 
   // Only the color legend is selectable/editable. A click inside the size legend
@@ -107,10 +97,29 @@ export function buildElementRef(
 }
 
 /**
+ * Return `ref` with its authored-object `path` filled in when the caller left
+ * it out (e.g. a programmatic `select()`), so every emitted ref carries one.
+ * Chrome refs use `/chrome/<key>`; legend and legend-entry refs use `/legend`
+ * (entries are derived from data, so the legend config is their authored object).
+ */
+export function withElementPath(ref: ElementRef, spec: ChartSpec | LayerSpec): ElementRef {
+  if (ref.path !== undefined) return ref;
+  switch (ref.type) {
+    case 'annotation':
+      return { ...ref, path: `${annotationSource(spec).path}/${ref.index}` };
+    case 'chrome':
+      return { ...ref, path: `/chrome/${ref.key}` };
+    case 'legend':
+    case 'legend-entry':
+      return { ...ref, path: '/legend' };
+  }
+}
+
+/**
  * Get an ordered list of all editable ElementRefs from the current spec and layout.
  */
 export function getEditableElements(
-  spec: ChartSpec | LayerSpec | GraphSpec,
+  spec: ChartSpec | LayerSpec,
   layout: ChartLayout,
 ): ElementRef[] {
   const refs: ElementRef[] = [];
@@ -118,7 +127,7 @@ export function getEditableElements(
   const chromeKeys: ChromeKey[] = ['title', 'subtitle', 'source', 'byline', 'footer'];
   for (const key of chromeKeys) {
     if (layout.chrome[key]) {
-      refs.push(elementRef.chrome(key));
+      refs.push(elementRef.chrome(key, `/chrome/${key}`));
     }
   }
 
@@ -137,19 +146,8 @@ export function getEditableElements(
       refs.push(elementRef.annotation(i, annotations[i].id, `${path}/${i}`));
   }
 
-  const seriesLabels: string[] = [];
-  for (const mark of layout.marks) {
-    if (mark.type === 'line' && mark.label?.visible && mark.seriesKey) {
-      seriesLabels.push(mark.seriesKey);
-    }
-  }
-  seriesLabels.sort();
-  for (const series of seriesLabels) {
-    refs.push(elementRef.seriesLabel(series));
-  }
-
   if ('entries' in layout.legend && layout.legend.entries.length > 0) {
-    refs.push(elementRef.legend());
+    refs.push(elementRef.legend('/legend'));
   }
 
   return refs;
@@ -170,10 +168,7 @@ export function isTextEditable(ref: ElementRef, specAnnotations: Annotation[]): 
 /**
  * Get the current text content for an element ref.
  */
-export function getElementText(
-  ref: ElementRef,
-  spec: ChartSpec | LayerSpec | GraphSpec,
-): string | null {
+export function getElementText(ref: ElementRef, spec: ChartSpec | LayerSpec): string | null {
   if (ref.type === 'chrome') {
     const chromeConfig = 'chrome' in spec ? spec.chrome : undefined;
     const entry = chromeConfig?.[ref.key] ?? (spec as unknown as Record<string, unknown>)[ref.key];
@@ -208,8 +203,6 @@ export function refsEqual(a: ElementRef | null, b: ElementRef | null): boolean {
     }
     case 'chrome':
       return a.key === (b as typeof a).key;
-    case 'series-label':
-      return a.series === (b as typeof a).series;
     case 'legend':
       return true;
     case 'legend-entry': {

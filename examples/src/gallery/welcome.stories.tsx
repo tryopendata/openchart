@@ -367,10 +367,18 @@ const heroSpec: ChartSpec = {
       type: 'quantitative',
       axis: { title: 'Annual revenue ($B)', format: ',.0f', grid: true },
     },
-    color: { field: 'company', type: 'nominal' },
+    color: {
+      field: 'company',
+      type: 'nominal',
+      scale: {
+        domain: ['Amazon', 'Apple', 'Alphabet', 'Microsoft', 'Meta'],
+        range: ['#0e7490', '#7a858f', '#7a858f', '#7a858f', '#7a858f'],
+      },
+    },
   },
-  legend: { position: 'top' },
-  endpointLabels: false,
+  legend: { show: false },
+  endpointLabels: { content: 'label', showMarker: true },
+  seriesStyles: { Amazon: { strokeWidth: 3 } },
   labels: { density: 'none' },
   annotations: [
     {

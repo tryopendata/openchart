@@ -44,7 +44,10 @@ function renderColumn(
     entryG.setAttribute('data-endpoint-index', String(i));
     entryG.setAttribute('data-endpoint-key', entry.seriesKey);
     entryG.setAttribute('data-endpoint-side', side);
-    entryG.setAttribute('aria-label', `${entry.seriesKey}: ${entry.value}`);
+    entryG.setAttribute(
+      'aria-label',
+      `${entry.seriesKey}: ${entry.value}${entry.date ? ` (${entry.date})` : ''}`,
+    );
 
     if (entry.showLeader) {
       const leader = createSVGElement('line');
@@ -52,7 +55,7 @@ function renderColumn(
       setAttrs(leader, {
         x1: chipX,
         y1: entry.labelY + labelFontSize / 2,
-        x2: leaderAnchorX,
+        x2: entry.dataX ?? leaderAnchorX,
         y2: entry.dataY,
         stroke: entry.color,
         'stroke-width': LEADER_STROKE_WIDTH,
@@ -73,6 +76,7 @@ function renderColumn(
       'stroke-width': 2,
       'stroke-linecap': 'round',
     });
+    if (entry.strokeDasharray) line.setAttribute('stroke-dasharray', entry.strokeDasharray);
     entryG.appendChild(line);
 
     const label = createSVGElement('text');
@@ -106,6 +110,17 @@ function renderColumn(
     applyTextStyle(value, ep.valueStyle);
     value.textContent = entry.value;
     entryG.appendChild(value);
+    if (entry.date) {
+      const date = createSVGElement('text');
+      date.setAttribute('class', 'oc-endpoint-date');
+      const dateY =
+        valueY +
+        (entry.value ? valueFontSize * (ep.valueStyle.lineHeight ?? 1.25) + ep.valueGap : 0);
+      setAttrs(date, { x: textX, y: dateY });
+      applyTextStyle(date, ep.valueStyle);
+      date.textContent = entry.date;
+      entryG.appendChild(date);
+    }
 
     if (entry.marker) {
       const marker = createSVGElement('circle');
@@ -127,7 +142,7 @@ function renderColumn(
 
 export function renderEndpointLabels(parent: SVGElement, layout: ChartLayout): void {
   const ep = layout.endpointLabels;
-  if (!ep || ep.entries.length === 0) return;
+  if (!ep || (ep.entries.length === 0 && !ep.interior?.length)) return;
 
   const chartArea = layout.area;
 
@@ -144,6 +159,18 @@ export function renderEndpointLabels(parent: SVGElement, layout: ChartLayout): v
   if (ep.leading && ep.leading.length > 0 && ep.leadingBounds) {
     const chartLeftX = chartArea.x;
     renderColumn(root, ep.leading, ep.leadingBounds, ep, chartLeftX, 'leading');
+  }
+
+  for (const entry of ep.interior ?? []) {
+    const label = createSVGElement('text');
+    label.setAttribute('class', 'oc-area-interior-label');
+    label.setAttribute('data-endpoint-key', entry.seriesKey);
+    label.setAttribute('aria-label', entry.text);
+    setAttrs(label, { x: entry.x, y: entry.y + (ep.labelStyle.fontSize ?? 11) });
+    applyTextStyle(label, ep.labelStyle);
+    label.style.setProperty('fill', entry.color);
+    label.textContent = entry.text;
+    root.appendChild(label);
   }
 
   parent.appendChild(root);

@@ -6,6 +6,7 @@
 
 import type { EndpointLabelContent, NumberFormatter } from '@opendata-ai/openchart-core';
 import { defaultNumberFormatter } from '@opendata-ai/openchart-core';
+import { finiteNumber } from '../data/finite-number';
 
 const defaultFmt = defaultNumberFormatter();
 
@@ -20,7 +21,10 @@ export function formatEndpointValue(
   formatter?: NumberFormatter | null,
 ): string {
   if (value == null) return '';
-  if (typeof value === 'string') return value;
+  if (typeof value === 'string') {
+    const number = finiteNumber(value);
+    return formatter && number !== undefined ? formatter(number) : value;
+  }
   if (formatter) return formatter(value);
   return defaultFmt(value);
 }

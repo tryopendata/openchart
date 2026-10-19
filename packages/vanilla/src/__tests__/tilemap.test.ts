@@ -27,7 +27,7 @@ describe('createTileMap', () => {
   });
 
   it('mounts an SVG element into the container', () => {
-    const instance = createTileMap(container, basicTileMapSpec, { responsive: false });
+    const instance = createTileMap(container, basicTileMapSpec, { autoResize: false });
 
     const svg = container.querySelector('svg');
     expect(svg).not.toBeNull();
@@ -37,7 +37,7 @@ describe('createTileMap', () => {
   });
 
   it('hovering a tile arms the group dim and outlines that tile', () => {
-    const instance = createTileMap(container, basicTileMapSpec, { responsive: false });
+    const instance = createTileMap(container, basicTileMapSpec, { autoResize: false });
 
     const group = container.querySelector('.oc-tilemap-tiles')!;
     const tile = container.querySelector('.oc-tilemap-tile')!;
@@ -54,7 +54,7 @@ describe('createTileMap', () => {
   });
 
   it('renders all 51 state tiles', () => {
-    const instance = createTileMap(container, basicTileMapSpec, { responsive: false });
+    const instance = createTileMap(container, basicTileMapSpec, { autoResize: false });
 
     const tiles = container.querySelectorAll('.oc-tilemap-tile');
     expect(tiles).toHaveLength(51);
@@ -63,7 +63,7 @@ describe('createTileMap', () => {
   });
 
   it('update() re-renders with new data', () => {
-    const instance = createTileMap(container, basicTileMapSpec, { responsive: false });
+    const instance = createTileMap(container, basicTileMapSpec, { autoResize: false });
 
     // Update with full data
     const updatedSpec = {
@@ -132,7 +132,7 @@ describe('createTileMap', () => {
   });
 
   it('destroy() removes the SVG from the container', () => {
-    const instance = createTileMap(container, basicTileMapSpec, { responsive: false });
+    const instance = createTileMap(container, basicTileMapSpec, { autoResize: false });
 
     const svgBefore = container.querySelector('svg');
     expect(svgBefore).not.toBeNull();
@@ -144,7 +144,7 @@ describe('createTileMap', () => {
   });
 
   it('gradient legend renders', () => {
-    const instance = createTileMap(container, basicTileMapSpec, { responsive: false });
+    const instance = createTileMap(container, basicTileMapSpec, { autoResize: false });
 
     const legend = container.querySelector('.oc-tilemap-legend');
     expect(legend).not.toBeNull();
@@ -153,7 +153,7 @@ describe('createTileMap', () => {
   });
 
   it('layout property returns the compiled layout', () => {
-    const instance = createTileMap(container, basicTileMapSpec, { responsive: false });
+    const instance = createTileMap(container, basicTileMapSpec, { autoResize: false });
 
     expect(instance.layout).toBeDefined();
     expect(instance.layout.tiles).toHaveLength(51);
@@ -163,7 +163,7 @@ describe('createTileMap', () => {
   });
 
   it('export("svg") returns a string containing SVG content', () => {
-    const instance = createTileMap(container, basicTileMapSpec, { responsive: false });
+    const instance = createTileMap(container, basicTileMapSpec, { autoResize: false });
 
     const svgString = instance.export('svg');
     expect(typeof svgString).toBe('string');

@@ -280,6 +280,30 @@ export function buildContinuousTicks(
   }));
 }
 
+/** Closest two y ticks may sit when densifying a sparse d3 result. */
+const MIN_Y_TICK_SPACING = 20;
+
+/**
+ * Default y-axis ticks at a target count. D3 snaps steps to 1/2/5 multiples,
+ * so a target of 4 can come back as two ticks (step 50 over 408..520); this
+ * asks for more until there are at least three, keeping them
+ * MIN_Y_TICK_SPACING apart. Not for authored tick counts or thinning loops.
+ */
+export function buildDefaultYTicks(resolvedScale: ResolvedScale, count: number): AxisTick[] {
+  let ticks = buildContinuousTicks(resolvedScale, count);
+  if (resolvedScale.type === 'log' || count < 4 || ticks.length >= 3) return ticks;
+  const [r0, r1] = (resolvedScale.scale as D3ContinuousScale).range() as [number, number];
+  const length = Math.abs(r1 - r0);
+  for (let next = count + 1; next <= count * 3; next++) {
+    const denser = buildContinuousTicks(resolvedScale, next);
+    if (denser.length <= ticks.length) continue;
+    if (length / (denser.length - 1) < MIN_Y_TICK_SPACING) break;
+    ticks = denser;
+    if (ticks.length >= 3) break;
+  }
+  return ticks;
+}
+
 /** True if this scale supports regenerating ticks at an arbitrary count. */
 export function scaleSupportsTickCount(resolvedScale: ResolvedScale): boolean {
   const scale = resolvedScale.scale as D3ContinuousScale;

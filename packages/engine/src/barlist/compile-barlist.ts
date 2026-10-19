@@ -29,7 +29,7 @@ import {
   estimateTextWidth,
   resolveTheme,
 } from '@opendata-ai/openchart-core';
-import { emitSpecWarnings, emitThemeWarnings, expandSpecSugar } from '../compile/spec-sugar';
+import { emitSpecWarnings, expandSpecSugar } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
 import { finiteNumber } from '../data/finite-number';
@@ -82,7 +82,6 @@ export function compileBarList(spec: unknown, options: CompileOptions): BarListL
     rawWatermark !== undefined ? barlistSpec.watermark : (options.watermark ?? true);
 
   // Resolve theme
-  emitThemeWarnings(options.theme, options.onWarn);
   const mergedThemeConfig = mergeThemeConfig(barlistSpec.theme, options.theme);
   const lightTheme: ResolvedTheme = resolveTheme(mergedThemeConfig);
   let theme: ResolvedTheme = lightTheme;
@@ -92,13 +91,7 @@ export function compileBarList(spec: unknown, options: CompileOptions): BarListL
 
   // Compute chrome
   const chrome = computeChrome(
-    {
-      title: barlistSpec.chrome.title,
-      subtitle: barlistSpec.chrome.subtitle,
-      source: barlistSpec.chrome.source,
-      byline: barlistSpec.chrome.byline,
-      footer: barlistSpec.chrome.footer,
-    },
+    barlistSpec.chrome,
     theme,
     options.width,
     options.measureText,
@@ -182,7 +175,7 @@ export function compileBarList(spec: unknown, options: CompileOptions): BarListL
 
   // Value formatter: prefer encoding-level format (v8 canonical), fall back to deprecated valueFormat
   const formatter = resolveFieldFormatter({
-    surfaceFormat: barlistSpec.encoding.value.format ?? barlistSpec.valueFormat,
+    surfaceFormat: barlistSpec.encoding.value.format,
     values: validRows.map((r) => r[valueField]),
   });
 

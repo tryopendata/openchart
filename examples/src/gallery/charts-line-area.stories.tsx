@@ -146,7 +146,7 @@ const multiSeriesSpec: ChartSpec = {
       opacity: 0.06,
     },
   ],
-  labels: { density: 'endpoints', format: '.1f' },
+  endpointLabels: { format: '+.1f' },
   chrome: {
     title: 'Three Economies, Three Recoveries',
     subtitle: 'Annual real GDP growth rate, 2018-2024',
@@ -156,7 +156,7 @@ const multiSeriesSpec: ChartSpec = {
 };
 
 // ---------------------------------------------------------------------------
-// 3. Five series with legend — when direct labels stop working
+// 3. Five series with explicit focus and readable comparison labels
 // ---------------------------------------------------------------------------
 
 const fiveSeriesSpec: ChartSpec = {
@@ -170,13 +170,19 @@ const fiveSeriesSpec: ChartSpec = {
       type: 'quantitative',
       axis: { title: 'Annual revenue ($B)', format: ',.0f', grid: true },
     },
-    color: { field: 'company', type: 'nominal' },
+    color: {
+      field: 'company',
+      type: 'nominal',
+      scale: {
+        domain: ['Amazon', 'Apple', 'Alphabet', 'Microsoft', 'Meta'],
+        range: ['#0e7490', '#7a858f', '#7a858f', '#7a858f', '#7a858f'],
+      },
+    },
   },
-  // legend.position implies show:true; endpointLabels:false hands series
-  // identification to the legend alone (see the suppression truth table in
-  // packages/core/src/types/spec.ts) so the two keys don't duplicate.
-  legend: { position: 'top' },
-  endpointLabels: false,
+  // Explicit focus mutes comparison strokes; direct labels keep every company identifiable.
+  legend: { show: false },
+  endpointLabels: { content: 'label', showMarker: true },
+  seriesStyles: { Amazon: { strokeWidth: 3 } },
   labels: { density: 'none' },
   chrome: {
     title: 'Amazon Pulls Away at the Top of Big Tech',
@@ -235,8 +241,7 @@ const stackedAreaSpec: ChartSpec = {
     y: {
       field: 'energy',
       type: 'quantitative',
-      // Multi-series areas default to overlap; opt back into stacking with
-      // `stack: 'zero'` on the position channel when the story is parts-of-a-whole.
+      // Explicit zero stacking makes the composition over time clear.
       stack: 'zero',
       axis: { title: 'Share of primary energy (%)', format: '.0f', grid: true },
     },
@@ -465,7 +470,7 @@ export const LineAndArea = () => (
     <Section
       id="lines"
       title="Lines"
-      lede="One series, a few series with direct labels, or many with a legend — the choice is about how readers tell the lines apart."
+      lede="One series, several with direct labels, or a focused series against its peers — make the comparison explicit."
     >
       <Demo
         id="single-line"
@@ -483,8 +488,8 @@ export const LineAndArea = () => (
       />
       <Demo
         id="five-series-legend"
-        title="Five-plus series with legend"
-        description="Past four or five crossing lines, endpoint labels collide and a legend earns its place. Set legend.position to pin it; the legend is interactive out of the box — click an entry to toggle that series."
+        title="Focus one series, keep the comparisons"
+        description="An explicit color scale and thicker Amazon stroke establish the focus. Endpoint labels identify every company even when comparison lines share a neutral color."
         spec={fiveSeriesSpec}
         height={460}
       />
@@ -500,12 +505,12 @@ export const LineAndArea = () => (
     <Section
       id="areas"
       title="Areas"
-      lede="A filled line is an area. Single areas show magnitude; stacked areas show parts of a whole. Multi-series areas default to overlap — opt into stacking on the position channel."
+      lede="A filled line is an area. Single areas show magnitude; stacked areas show parts of a whole. Multi-series areas stack by default; set stack: null on the position channel to compare overlapping series."
     >
       <Demo
         id="area"
         title="Area (single series)"
-        description="Fill under one line to emphasize accumulated magnitude. Multi-series areas default to overlap, so a single series needs no stack setting."
+        description="Fill under one line to emphasize accumulated magnitude. A single series needs no stack setting; multiple series can stack or overlap explicitly."
         spec={singleAreaSpec}
         height={440}
       />
@@ -557,4 +562,49 @@ export const LineAndArea = () => (
       </Demo>
     </Section>
   </GalleryPage>
+);
+
+/** Opt-in prototype: boundary geometry and source values remain unchanged. */
+export const StackedBandLabels = () => (
+  <div style={{ height: 500 }}>
+    <Chart
+      spec={{
+        ...stackedAreaSpec,
+        animation: false,
+        endpointLabels: { anchor: 'band', placement: 'interior' },
+        legend: { show: false },
+      }}
+    />
+  </div>
+);
+
+/** Candidate spacing comparison only: the library default remains 6px. */
+export const EndpointSpacingCandidate = () => (
+  <div style={{ display: 'grid', gap: 24 }}>
+    {[6, 8].map((endpointEntryGap) => (
+      <div key={endpointEntryGap} style={{ height: 420 }}>
+        <Chart
+          spec={{
+            mark: 'line',
+            data: ['A', 'B', 'C', 'D'].flatMap((series, index) => [
+              { date: '2020-01-01', value: 5 + index * 3, series },
+              { date: '2021-01-01', value: 10 + index * 0.1, series },
+            ]),
+            encoding: {
+              x: { field: 'date', type: 'temporal' },
+              y: { field: 'value', type: 'quantitative', scale: { domain: [0, 20] } },
+              color: { field: 'series', type: 'nominal' },
+            },
+            endpointLabels: true,
+            animation: false,
+            theme: { spacing: { endpointEntryGap } },
+            chrome: {
+              subtitle: 'Synthetic fixture with close final values; typography stays unchanged.',
+              title: `Endpoint block separation: ${endpointEntryGap}px`,
+            },
+          }}
+        />
+      </div>
+    ))}
+  </div>
 );

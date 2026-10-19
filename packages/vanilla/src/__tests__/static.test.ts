@@ -4,6 +4,28 @@ import { barSpec, lineSpec, pieSpec } from '../__test-fixtures__/specs';
 import { renderStaticSVG } from '../static';
 
 describe('renderStaticSVG', () => {
+  it('exports complete measured attribution and a custom brand without HTML or a second mark', () => {
+    for (const width of [390, 1280]) {
+      const svg = renderStaticSVG(
+        {
+          ...barSpec,
+          chrome: {
+            source: 'Source: County administrative observations and research records',
+            byline: 'Analysis: Research team',
+            footer: 'Methods remain available',
+            brand: { text: 'Local research\nOpen methods', style: { fontSize: 20 } },
+          },
+        },
+        { width, height: 600 },
+      );
+      const doc = new DOMParser().parseFromString(svg, 'image/svg+xml');
+      for (const key of ['source', 'byline', 'footer', 'brand'])
+        expect(doc.querySelector(`.oc-${key}`)).not.toBeNull();
+      expect(doc.querySelector('.oc-brand')?.textContent).toContain('Open methods');
+      expect(doc.querySelector('.oc-watermark')).toBeNull();
+      expect(svg).not.toContain('foreignObject');
+    }
+  });
   it('returns a valid SVG string', () => {
     const svg = renderStaticSVG(lineSpec);
     expect(svg).toContain('<svg');

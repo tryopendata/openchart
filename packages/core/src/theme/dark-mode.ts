@@ -164,6 +164,23 @@ export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
     ...CATEGORICAL_FILL_PALETTE_DARK,
   ]);
 
+  const neutral = deriveNeutralRamp(darkText, darkBg, true);
+  const authoredColors =
+    theme._authored?.colors && !Array.isArray(theme._authored.colors) ? theme._authored.colors : {};
+  const authoredColor = (
+    key:
+      | 'annotationLabel'
+      | 'annotationMuted'
+      | 'annotationLeader'
+      | 'annotationRule'
+      | 'annotationRangeFill'
+      | 'gridlineZero'
+      | 'mapInteriorBorder'
+      | 'mapOutlineBorder',
+    fallback: string,
+  ): string =>
+    pairs?.[`colors.${key}`]?.dark ??
+    (authoredColors[key] !== undefined ? (theme.colors[key] ?? fallback) : fallback);
   return {
     ...theme,
     isDark: true,
@@ -172,6 +189,7 @@ export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
       background: darkBg,
       text: darkText,
       gridline: darkGridline,
+      gridlineZero: authoredColor('gridlineZero', 'rgba(255,255,255,0.24)'),
       axis: darkAxis,
       annotationFill: pairs?.['colors.annotationFill']
         ? pairs['colors.annotationFill'].dark
@@ -179,27 +197,25 @@ export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
       annotationText: pairs?.['colors.annotationText']
         ? pairs['colors.annotationText'].dark
         : overridden(theme.colors.annotationText, light.annotationText, darkMuted),
-      annotationLabel:
-        pairs?.['colors.annotationLabel']?.dark ??
-        overridden(theme.colors.annotationLabel, light.annotationLabel, '#d1d5db'),
-      annotationMuted:
-        pairs?.['colors.annotationMuted']?.dark ??
-        overridden(theme.colors.annotationMuted, light.annotationMuted, '#9ca3af'),
-      annotationLeader:
-        pairs?.['colors.annotationLeader']?.dark ??
-        overridden(theme.colors.annotationLeader, light.annotationLeader, '#9aa0a6'),
-      annotationRule:
-        pairs?.['colors.annotationRule']?.dark ??
-        overridden(theme.colors.annotationRule, light.annotationRule, '#666666'),
-      annotationRangeFill:
-        pairs?.['colors.annotationRangeFill']?.dark ??
-        overridden(theme.colors.annotationRangeFill, light.annotationRangeFill, '#000000'),
+      annotationLabel: authoredColor('annotationLabel', '#d1d5db'),
+      annotationMuted: authoredColor('annotationMuted', '#9ca3af'),
+      annotationLeader: authoredColor('annotationLeader', '#9aa0a6'),
+      annotationRule: authoredColor('annotationRule', '#9ca3af'),
+      annotationRangeFill: authoredColor('annotationRangeFill', '#f0c040'),
       annotationMarkerFill:
         pairs?.['colors.annotationMarkerFill']?.dark ??
-        overridden(theme.colors.annotationMarkerFill, light.annotationMarkerFill, '#0a0a0a'),
+        (authoredColors.annotationMarkerFill !== undefined
+          ? theme.colors.annotationMarkerFill
+          : neutral.surface),
       annotationPlate:
         pairs?.['colors.annotationPlate']?.dark ??
-        overridden(theme.colors.annotationPlate, light.annotationPlate, '#0a0a0a'),
+        (authoredColors.annotationPlate !== undefined
+          ? theme.colors.annotationPlate
+          : neutral.surface),
+      mapNoDataFill: pairs?.['colors.mapNoDataFill']?.dark ?? theme.colors.mapNoDataFill,
+      mapNoDataHatch: pairs?.['colors.mapNoDataHatch']?.dark ?? theme.colors.mapNoDataHatch,
+      mapInteriorBorder: authoredColor('mapInteriorBorder', 'rgba(255,255,255,0.18)'),
+      mapOutlineBorder: authoredColor('mapOutlineBorder', 'rgba(255,255,255,0.38)'),
       categorical,
       categoricalFill,
       hairline: darkHairline,
@@ -209,7 +225,7 @@ export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
       negative: pairs?.['colors.negative']
         ? pairs['colors.negative'].dark
         : overridden(theme.colors.negative, light.negative, '#f87171'),
-      neutral: deriveNeutralRamp(darkText, darkBg, true),
+      neutral,
     },
     chrome: {
       // Eyebrow keeps its accent tint (cyan in both modes) unless the user
@@ -253,11 +269,16 @@ export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
       },
     },
     // The editorial rule is a brand device: it keeps its authored color unless
-    // the theme gave an explicit dark half of the pair.
+    // the theme gave an explicit dark half of the pair. A partial rule with no
+    // color derives from text ink, so it follows the dark text.
     rule:
       theme.rule && pairs?.['rule.color']
         ? { ...theme.rule, color: pairs['rule.color'].dark }
-        : theme.rule,
+        : theme.rule &&
+            theme._authored?.rule?.color === undefined &&
+            theme.rule.color === theme.colors.text
+          ? { ...theme.rule, color: darkText }
+          : theme.rule,
   };
 }
 

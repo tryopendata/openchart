@@ -14,8 +14,9 @@ import type {
 import { detectCollision, overlapArea } from '@opendata-ai/openchart-core';
 import type { NormalizedChartSpec } from '../compiler/types';
 import type { ResolvedScales } from '../layout/scales';
+import { ConnectorCrossings } from './connector-crossings';
 import { CLAMP_MARGIN, DEFAULT_ANNOTATION_FONT_SIZE, NUDGE_PADDING } from './constants';
-import { type AnnotationMeasureTextFn, heuristicMeasure } from './geometry';
+import { type AnnotationMeasureTextFn, heuristicMeasure, stopAtTargetLabel } from './geometry';
 import { annotationBlockBounds, moveAnnotationBy } from './move';
 import { isAutoPlacement, type ObstacleKind, type PlacementObstacle } from './placement';
 import { resolvePosition } from './position';
@@ -117,6 +118,15 @@ export function nudgeAnnotationFromObstacles(
   const dropLineEndpointY =
     label.connector?.style === 'drop-line' ? label.connector.endpoint?.y : undefined;
 
+  // Prefer a spot whose leader stays off the value labels; the first clear box
+  // is still the fallback when every leader crosses one.
+  const dataLabels = obstacles.filter(
+    (obs): obs is PlacementObstacle => 'kind' in obs && obs.kind === 'data-label',
+  );
+  const crossings = new ConnectorCrossings();
+  for (const box of dataLabels) crossings.addBox(box);
+  let fallback: { dx: number; dy: number } | undefined;
+
   for (const { dx, dy } of candidates) {
     const candidateBounds: Rect = { ...bounds, x: bounds.x + dx, y: bounds.y + dy };
 
@@ -147,12 +157,25 @@ export function nudgeAnnotationFromObstacles(
       labelCenterY >= chartArea.y - fontSize &&
       labelCenterY <= chartArea.y + chartArea.height + fontSize * 3;
 
-    if (inBounds) {
-      moveAnnotationBy(annotation, label, dx, dy, measure);
-      return true;
+    if (!inBounds) continue;
+    if (label.connector && dataLabels.length > 0) {
+      // The mover replaces label, subtitle and bounds, so a shallow copy is a trial.
+      const trial = { ...annotation };
+      moveAnnotationBy(trial, label, dx, dy, measure);
+      const connector = trial.label?.connector;
+      if (crossings.score((connector && stopAtTargetLabel(connector, dataLabels)) || connector)) {
+        fallback ??= { dx, dy };
+        continue;
+      }
     }
+    moveAnnotationBy(annotation, label, dx, dy, measure);
+    return true;
   }
 
+  if (fallback) {
+    moveAnnotationBy(annotation, label, fallback.dx, fallback.dy, measure);
+    return true;
+  }
   return false;
 }
 

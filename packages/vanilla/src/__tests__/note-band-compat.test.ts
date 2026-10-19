@@ -1,10 +1,10 @@
 import { compileChart } from '@opendata-ai/openchart-engine';
 import { expect, it, vi } from 'vitest';
 import { createContainer } from '../__test-fixtures__/dom';
-import { footnoteBandHeight } from '../renderers/chrome';
+import * as chromeRenderer from '../renderers/chrome';
 import { renderChartSVG } from '../svg-renderer';
 
-it('normal rendering does not call the deprecated adapter, which warns once when used', () => {
+it('renders resolved notes without the removed footnoteBandHeight adapter', () => {
   const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
   try {
     const layout = compileChart(
@@ -27,11 +27,9 @@ it('normal rendering does not call the deprecated adapter, which warns once when
     expect(
       warn.mock.calls.some(([message]) => String(message).includes('footnoteBandHeight')),
     ).toBe(false);
-    expect(footnoteBandHeight(layout)).toBe(layout.chrome.noteBandHeight);
-    expect(footnoteBandHeight(layout)).toBe(layout.chrome.noteBandHeight);
-    expect(
-      warn.mock.calls.filter(([message]) => String(message).includes('footnoteBandHeight')),
-    ).toHaveLength(1);
+    expect(chromeRenderer).not.toHaveProperty('footnoteBandHeight');
+    expect(layout.chrome.noteBandHeight).toBeGreaterThan(0);
+    expect(document.querySelector('.oc-footnotes')?.textContent).toContain('A note');
   } finally {
     warn.mockRestore();
     document.body.innerHTML = '';

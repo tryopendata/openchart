@@ -143,6 +143,8 @@ describe('compileChart dev-mode gating', () => {
 
   it('never throws, even for unparseable colors', () => {
     const spec = stackedBarSpec(['not-a-color', 'also-not-a-color']);
-    expect(() => compileChart(spec, { width: 600, height: 400, dev: true })).not.toThrow();
+    const layout = compileChart(spec, { width: 600, height: 400, dev: true });
+    // Still a full chart: one segment per row.
+    expect(layout.marks.filter((m) => m.type === 'rect')).toHaveLength(4);
   });
 });
