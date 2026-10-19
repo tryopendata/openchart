@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [9.0.0-rc.1] - 2026-10-19
+
+First v9 release candidate. Published under npm `next`; the stable `latest` release remains 8.9.1. See [the v9 migration guide](https://github.com/tryopendata/openchart/blob/core-v9.0.0-rc.1/docs/migrating-v9.md) before upgrading.
+
 ### Chart and map design
 
 - Keep the two endpoint date labels readable when a slope chart has a narrow plot,
@@ -72,8 +76,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Describe actual map scale intervals in accessible legend text and accept the
   built-in diverging palettes for quantitative geographic color encodings.
 
-## [9.0.0] - 2026-10-17
-
 ### Annotation and figure defaults
 
 - Adopt 12px small/axis/source/byline/footer text and 16px/12px chrome spacing.
@@ -138,9 +140,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Extend `migrateSpecV8` with `{ styling: 'v9' }` for alias-only migration. Default
   migration materializes former v8 styling, including annotation colors/spacing,
   and reports repairs without mutating input. Layout pixel parity is not promised.
-- Add [the v9 migration guide](docs/migrating-v9.md), including persistence handler,
+- Add [the v9 migration guide](https://github.com/tryopendata/openchart/blob/core-v9.0.0-rc.1/docs/migrating-v9.md), including persistence handler,
   exact-height embed, theme, CSS, and mark-union changes.
-
 
 ## [8.9.1] - 2026-10-17
 

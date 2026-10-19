@@ -120,6 +120,13 @@ jobs:
             NOTES="Release openchart v${VERSION}"
           fi
 
+          # Keep release candidates out of GitHub's stable/latest release listing,
+          # matching the npm next tag selected above.
+          RELEASE_FLAGS=()
+          case "$VERSION" in
+            *-*) RELEASE_FLAGS=(--prerelease --latest=false) ;;
+          esac
+
           # Idempotent: a re-run after a partial failure should converge, not fail.
           if gh release view "core-v${VERSION}" >/dev/null 2>&1; then
             echo "Release core-v${VERSION} already exists, skipping"
@@ -127,5 +134,5 @@ jobs:
             gh release create "core-v${VERSION}" \
               --title "openchart v${VERSION}" \
               --notes "$NOTES" \
-              --verify-tag
+              --verify-tag "${RELEASE_FLAGS[@]}"
           fi
