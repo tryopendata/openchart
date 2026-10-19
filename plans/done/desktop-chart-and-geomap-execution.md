@@ -1,6 +1,6 @@
 # Desktop chart and GeoMap RFC execution
 
-Status: P0–P5 and C7 implemented, independently reviewed and verified on v9 (2026-10-19). Main merge and release remain on hold.
+Status: COMPLETED — merged in PR137 and included in9.0.0-rc.1 (2026-10-19). Stable9.0.0 publication remains a separate decision.
 Authorized: implement the reviewed RFC and commit the work to `codex/openchart-v9`.
 Merge/release: explicitly on hold. No publishing or external repository work.
 Source: [RFC](rfc-desktop-chart-and-geomap-design.md).
@@ -340,3 +340,12 @@ Feature-disabled paired compile after per-compile tooltip semantic caching: map 
 Final gate logs and review disposition are retained in the C7 evidence directory (`gates/`, `review-disposition.md`, `visual-diffs/review-manifest.json`). No new baseline updates were needed in the final458-case run. All approved visual differences are accounted for; no implementation work remains open. Local crosshair-tooltip and multi-layer geography follow-up plans are closed when this completion is committed. The overarching v9 rollout stays open solely for the held merge/release steps.
 
 Cleanup: the source-only performance fixture and owned prototype gallery server were removed. The parent verification server is stopped after this run; the user's6006 server stays running. `v9-edit-api` was previously archived and removal verified. Supported archival for `/Users/riley/.codex/worktrees/v9-mark-contract/openchart` and `/Users/riley/.codex/worktrees/v9-themes/openchart` remains queued: both directories and Git registrations still exist, so removal is not claimed. Both are source-clean, integrated, with unique ignored review evidence preserved and regenerable outputs already removed. Retain `/Users/riley/.codex/worktrees/openchart-v9/openchart` and its builds for the unmerged PR and linked applications. No unrelated tree or chat is removed.
+
+
+## Merged and release-candidate checkpoint — 2026-10-19
+
+The user merged PR137 at308aaec2 and then authorized a v9 RC. Release commit9d868e33 publishes9.0.0-rc.1 for all six packages under npm `next`; GitHub marks it as a prerelease and leaves8.9.1 as the latest stable release. [Release workflow](https://github.com/tryopendata/openchart/actions/runs/39307424162) passed build, typecheck and the full test suite before publication.
+
+CI's fresh isolated installation exposed a wrapper mock-resolution issue: tests resolved different WebGL library copies than the vanilla renderer. Commitc4560d8c makes the three wrapper test projects resolve through vanilla's dependencies. The original four failures were reproduced locally, all eight affected tests passed after the fix, and the full8177-test suite and release CI passed. Production rendering is unchanged. The release workflow now marks GitHub RCs as prereleases in addition to npm's existing `next` policy.
+
+The active v9 checkout was fast-forwarded to the release revision, all six linked packages rebuilt and public imports/exports verified. Keep that checkout for the user's running6006 gallery and Bun links. The old mark-contract/theme managed trees still have queued app archival requests and remain explicitly unremoved; source work is integrated. Stable v9 release approval and the app archival blocker are outside this completed design RFC.

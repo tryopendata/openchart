@@ -1,9 +1,9 @@
 # RFC: Desktop chart craft, reader comparison, and GeoMap design
 
-Status: IMPLEMENTED AND VERIFIED ON V9 (2026-10-19). Review handoff complete at `93112314`. Implement in the existing `codex/openchart-v9` worktree; commit there. Merge/release remain on hold. B3 choices were approved2026-10-19; P5/C7 execution was also explicitly included. Final completion evidence is in the execution checklist.
+Status: COMPLETED — merged in PR137 and included in9.0.0-rc.1 (2026-10-19). Stable9.0.0 publication remains a separate decision.
 Date: 2026-10-17, revised 2026-10-18
 Scope: OpenChart library, framework wrappers, documentation, and gallery only.
-Related: [v9 plan](v9-chart-clarity-and-annotation-ux.md), [v9 execution checklist](v9-execution-checklist.md).
+Related: [v9 plan](../v9-chart-clarity-and-annotation-ux.md), [v9 execution checklist](../v9-execution-checklist.md).
 
 ## 1. Recommendation and approval boundary
 
@@ -117,8 +117,8 @@ Paths in this table are package-relative under `packages/` unless stated otherwi
 
 Open plans:
 
-- [Crosshair explicit tooltip encoding](crosshair-tooltip-explicit-encoding.md): P4 owns the remaining typed role/source-channel work. The older v8 fixes already shipped. Close this plan only after role-based tests cover explicit ordering and duplicate display strings.
-- [Multi-layer geo features](requests/multi-layer-geo-features.md): P5 extends its shared projection/fit proposal. The source plan remains open until this phase is approved and delivered. Insets and detail layers are related but distinct: insets have independent views; detail layers share their parent's projection and camera.
+- [Crosshair explicit tooltip encoding](../crosshair-tooltip-explicit-encoding.md): P4 owns the remaining typed role/source-channel work. The older v8 fixes already shipped. Close this plan only after role-based tests cover explicit ordering and duplicate display strings.
+- [Multi-layer geo features](../requests/multi-layer-geo-features.md): P5 extends its shared projection/fit proposal. The source plan remains open until this phase is approved and delivered. Insets and detail layers are related but distinct: insets have independent views; detail layers share their parent's projection and camera.
 - The existing v9 RFC owns annotation editing, stable notes, mark contracts, theme migration, and responsive behavior. This RFC does not relax D1–D19, recreate those systems, or override zero-diff commitments retroactively.
 - Completed direct-labeling, default-number-formatting, choropleth, point-layer, responsive, and theming plans are evidence of existing capabilities. Do not reactivate them wholesale.
 - No files move to `plans/done/` as part of writing this RFC. Completion is verified against code, tests, docs, and the merged implementation, not inferred from a plan title.
@@ -742,3 +742,12 @@ Retain current bar/column proportions, endpoint sizes/spacing, and the current n
 ### Completion scope update — 2026-10-19
 
 The user explicitly included P5 and C7 in this completion. Their earlier separate-follow-up status is superseded for implementation; the P5 spike remains mandatory and its fixed-fit Texas/Austin/RGV and labeled-inset proof is recorded in the execution plan. P3 is implemented and fully verified with no baseline changes. P4, P5 and C7 are complete and independently approved. Final gates:8177 unit tests plus3 intentional expected failures;458 browser tests with11 existing skips; all builds, typechecks, lint, generated and package checks pass. The execution checklist records evidence, limitations and cleanup status. Commit and push to v9 are authorized; merge to main and release remain prohibited.
+
+
+## Merged and release-candidate checkpoint — 2026-10-19
+
+The user merged PR137 at308aaec2 and then authorized a v9 RC. Release commit9d868e33 publishes9.0.0-rc.1 for all six packages under npm `next`; GitHub marks it as a prerelease and leaves8.9.1 as the latest stable release. [Release workflow](https://github.com/tryopendata/openchart/actions/runs/39307424162) passed build, typecheck and the full test suite before publication.
+
+CI's fresh isolated installation exposed a wrapper mock-resolution issue: tests resolved different WebGL library copies than the vanilla renderer. Commitc4560d8c makes the three wrapper test projects resolve through vanilla's dependencies. The original four failures were reproduced locally, all eight affected tests passed after the fix, and the full8177-test suite and release CI passed. Production rendering is unchanged. The release workflow now marks GitHub RCs as prereleases in addition to npm's existing `next` policy.
+
+The active v9 checkout was fast-forwarded to the release revision, all six linked packages rebuilt and public imports/exports verified. Keep that checkout for the user's running6006 gallery and Bun links. The old mark-contract/theme managed trees still have queued app archival requests and remain explicitly unremoved; source work is integrated. Stable v9 release approval and the app archival blocker are outside this completed design RFC.
