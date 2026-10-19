@@ -9,11 +9,18 @@ const reactDomPackage = require.resolve('react-dom/package.json');
 const reactDomReal = path.dirname(reactDomPackage);
 const reactFromDom = path.dirname(createRequire(reactDomPackage).resolve('react/package.json'));
 const packages = path.resolve(__dirname, '..');
+const vanillaRequire = createRequire(path.join(packages, 'vanilla/package.json'));
 
 export default defineConfig({
   resolve: {
     dedupe: ['react', 'react-dom'],
     alias: [
+      // Wrapper mocks and the real vanilla renderer must resolve the same library
+      // instance under Bun's isolated install, even if a hoisted copy also exists.
+      ...['three', 'three-spritetext', '3d-force-graph'].map((name) => ({
+        find: new RegExp(`^${name}$`),
+        replacement: vanillaRequire.resolve(name),
+      })),
       // Workspace packages -> source (so side-effect imports fire)
       { find: '@opendata-ai/openchart-core', replacement: `${packages}/core/src/index.ts` },
       { find: '@opendata-ai/openchart-engine', replacement: `${packages}/engine/src/index.ts` },
