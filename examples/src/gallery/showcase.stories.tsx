@@ -34,7 +34,7 @@ import {
   worldGdp,
 } from '../data';
 import { StatCard, useDashRootClass } from './dashboards.layouts';
-import { hBarGradient } from './helpers';
+import { hBarGradient, narrowRevenueLegend } from './helpers';
 
 const ACCENT = '#0e7490';
 
@@ -64,6 +64,7 @@ const multiLineSpec: ChartSpec = {
   },
   legend: { show: false },
   endpointLabels: { content: 'label', showMarker: true },
+  overrides: { compact: narrowRevenueLegend, medium: narrowRevenueLegend },
   seriesStyles: { Amazon: { strokeWidth: 3 } },
   annotations: [
     {

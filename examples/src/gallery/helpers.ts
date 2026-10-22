@@ -2,7 +2,18 @@
  * Small spec helpers shared across gallery pages.
  */
 
-import type { GradientDef } from '@opendata-ai/openchart-core';
+import type { ChartSpecOverride, GradientDef } from '@opendata-ai/openchart-core';
+
+/** Replace the Big Tech endpoint column with a full-width plot and a keyed legend on phones. */
+export const narrowRevenueLegend: ChartSpecOverride = {
+  endpointLabels: false,
+  legend: { show: true, position: 'top', maxRows: 3 },
+  encoding: {
+    color: {
+      scale: { range: ['#0e7490', '#c2410c', '#7c3aed', '#15803d', '#be185d'] },
+    },
+  },
+};
 
 /** Horizontal-bar fill: a left-to-right linear gradient fading in from the base. */
 export const hBarGradient = (color: string): GradientDef => ({

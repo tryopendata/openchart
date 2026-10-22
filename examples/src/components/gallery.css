@@ -95,6 +95,12 @@
   container-name: gallery-root;
 }
 
+@media (max-width: 640px) {
+  .oc-gallery {
+    padding: var(--gx-space-5) var(--gx-space-3) var(--gx-space-8);
+  }
+}
+
 .oc-gallery *,
 .oc-gallery *::before,
 .oc-gallery *::after {
@@ -536,6 +542,67 @@
   outline: 2px solid var(--gx-accent);
   outline-offset: 2px;
   border-radius: var(--gx-radius-control);
+}
+
+/* Narrow content columns, including Ladle's phone-width iframe. */
+@container gallery-root (max-width: 640px) {
+  .oc-gallery-title {
+    font-size: 1.75rem;
+  }
+
+  .oc-gallery-lede {
+    font-size: var(--gx-type-body);
+  }
+
+  .oc-gallery-header {
+    margin-bottom: var(--gx-space-5);
+  }
+
+  .oc-section {
+    margin-top: var(--gx-space-8);
+  }
+
+  .oc-section:first-of-type {
+    margin-top: var(--gx-space-5);
+  }
+
+  .oc-section-body {
+    margin-top: var(--gx-space-4);
+    gap: var(--gx-space-4);
+  }
+
+  .oc-demo-header {
+    padding: var(--gx-space-4) var(--gx-space-3) var(--gx-space-2);
+  }
+
+  .oc-demo-viz,
+  .oc-demo--headless .oc-demo-viz {
+    padding: var(--gx-space-2) 0 var(--gx-space-3);
+  }
+
+  .oc-spec-summary {
+    padding: var(--gx-space-1) var(--gx-space-3);
+  }
+
+  .oc-spec-toggle,
+  .oc-spec-copy,
+  .oc-anchor-btn {
+    min-height: 44px;
+  }
+
+  .oc-anchor-btn {
+    opacity: 1;
+    min-width: 32px;
+  }
+
+  .oc-spec-code {
+    padding: var(--gx-space-3);
+  }
+
+  .story-grid-2 {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--gx-space-4);
+  }
 }
 
 /* ---------------------------------------------------------------------------

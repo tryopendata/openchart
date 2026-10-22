@@ -19,6 +19,7 @@ import {
   monthlyTemperature,
   usInflation,
 } from '../data';
+import { narrowRevenueLegend } from './helpers';
 
 const ACCENT = '#0e7490';
 
@@ -182,6 +183,7 @@ const fiveSeriesSpec: ChartSpec = {
   // Explicit focus mutes comparison strokes; direct labels keep every company identifiable.
   legend: { show: false },
   endpointLabels: { content: 'label', showMarker: true },
+  overrides: { compact: narrowRevenueLegend, medium: narrowRevenueLegend },
   seriesStyles: { Amazon: { strokeWidth: 3 } },
   labels: { density: 'none' },
   chrome: {

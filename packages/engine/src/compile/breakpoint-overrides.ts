@@ -173,26 +173,32 @@ function mergeEncoding(
   for (const channel of Object.keys(bpEnc)) {
     const baseCh = mergedEncoding[channel];
     const bpCh = bpEnc[channel];
-    if (bpCh && baseCh) {
-      const merged: Record<string, unknown> = { ...baseCh, ...bpCh };
-      for (const key of NESTED_CHANNEL_KEYS) {
-        const baseNested = baseCh[key];
-        const bpNested = bpCh[key];
-        if (
-          baseNested &&
-          bpNested &&
-          typeof baseNested === 'object' &&
-          typeof bpNested === 'object' &&
-          !Array.isArray(baseNested) &&
-          !Array.isArray(bpNested)
-        ) {
-          merged[key] = { ...baseNested, ...bpNested };
-        }
-      }
-      mergedEncoding[channel] = merged;
-    } else if (bpCh) {
-      mergedEncoding[channel] = bpCh;
+    if (
+      !baseCh ||
+      typeof baseCh !== 'object' ||
+      Array.isArray(baseCh) ||
+      !bpCh ||
+      typeof bpCh !== 'object' ||
+      Array.isArray(bpCh)
+    ) {
+      continue;
     }
+    const merged: Record<string, unknown> = { ...baseCh, ...bpCh };
+    for (const key of NESTED_CHANNEL_KEYS) {
+      const baseNested = baseCh[key];
+      const bpNested = bpCh[key];
+      if (
+        baseNested &&
+        bpNested &&
+        typeof baseNested === 'object' &&
+        typeof bpNested === 'object' &&
+        !Array.isArray(baseNested) &&
+        !Array.isArray(bpNested)
+      ) {
+        merged[key] = { ...baseNested, ...bpNested };
+      }
+    }
+    mergedEncoding[channel] = merged;
   }
   return mergedEncoding as unknown as NormalizedChartSpec['encoding'];
 }

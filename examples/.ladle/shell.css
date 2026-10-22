@@ -113,6 +113,44 @@ body {
     /* biome-ignore lint/complexity/noImportantStyles: must beat the component's inline right: 280px */
     right: 12px !important;
   }
+
+  /* Gallery pages own their gutters. Keep fixture story padding unchanged. */
+  .ladle-main:has(.oc-gallery) {
+    padding: 0;
+  }
+
+  .oc-gallery-toolbar:has(+ .ladle-story-root .oc-gallery) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--gx-surface);
+    border-bottom: 1px solid var(--gx-border);
+  }
+
+  .oc-gallery-toolbar:has(+ .ladle-story-root .oc-gallery) > * {
+    /* biome-ignore lint/complexity/noImportantStyles: mobile layout replaces inline fixed positioning */
+    position: relative !important;
+    /* biome-ignore lint/complexity/noImportantStyles: reset inline desktop offsets */
+    inset: auto !important;
+  }
+
+  .oc-gallery-toolbar:has(+ .ladle-story-root .oc-gallery) .ladle-theme-picker button,
+  .oc-gallery-toolbar:has(+ .ladle-story-root .oc-gallery) .oc-github-link {
+    min-height: 44px;
+  }
+
+  .oc-gallery-toolbar:has(+ .ladle-story-root .oc-gallery) .ladle-theme-picker > button {
+    max-width: calc(100vw - 124px);
+  }
+
+  .oc-gallery-toolbar:has(+ .ladle-story-root .oc-gallery) .oc-theme-options {
+    max-width: calc(100vw - 24px);
+    max-height: calc(100dvh - 76px);
+    /* biome-ignore lint/complexity/noImportantStyles: override the dropdown's inline overflow */
+    overflow-y: auto !important;
+  }
 }
 
 /* ---------------------------------------------------------------------------
