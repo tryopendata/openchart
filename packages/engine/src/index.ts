@@ -118,6 +118,7 @@ export type {
 } from './compiler/index';
 export {
   compile,
+  flattenLayers,
   normalizeSpec,
   validateSpec,
 } from './compiler/index';

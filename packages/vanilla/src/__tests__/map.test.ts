@@ -591,14 +591,14 @@ describe('createGeoMap', () => {
       const plain = createGeoMap(container, pointSpec, { autoResize: false });
       // Default light theme: white at scrim alpha, not a hardcoded literal that
       // ignores whatever surface the theme actually uses.
-      expect(backdrops()).toContain('rgba(255,255,255,0.9)');
+      expect(backdrops()).toContain('rgba(255,255,255,0.5)');
       plain.destroy();
 
       const themed = createGeoMap(container, pointSpec, {
         autoResize: false,
         theme: { colors: { background: '#102030' } },
       });
-      expect(backdrops()).toContain('rgba(16,32,48,0.9)');
+      expect(backdrops()).toContain('rgba(16,32,48,0.5)');
       themed.destroy();
     });
 

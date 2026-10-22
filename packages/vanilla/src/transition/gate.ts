@@ -1,4 +1,5 @@
-import type { ChartLayout } from '@opendata-ai/openchart-core';
+import { type ChartLayout, isLayerSpec } from '@opendata-ai/openchart-core';
+import { flattenLayers } from '@opendata-ai/openchart-engine';
 
 import { keyAnnotations } from './keys';
 
@@ -21,6 +22,7 @@ export const TRANSITIONABLE_MARKS = new Set([
   'line',
   'area',
   'point',
+  'rule',
   'beeswarm',
   'arc',
   'histogram',
@@ -59,7 +61,21 @@ export const CANVAS_DEFAULT_UPDATE_MAX_MARKS = 20_000;
 export function canTransitionSpecShape(prevSpec: unknown, nextSpec: unknown): boolean {
   const prev = prevSpec as Record<string, unknown>;
   const next = nextSpec as Record<string, unknown>;
-  if (!prev || !next || !('mark' in prev) || !('mark' in next)) return false;
+  if (!prev || !next) return false;
+  if (isLayerSpec(prev) || isLayerSpec(next)) {
+    if (!isLayerSpec(prev) || !isLayerSpec(next)) return false;
+    if (JSON.stringify(prev.resolve) !== JSON.stringify(next.resolve)) return false;
+    // Reuse compiler inheritance so parent encodings and transforms participate
+    // in the same identity checks as standalone marks. Leaf order defines keys.
+    const prevLeaves = flattenLayers(prev);
+    const nextLeaves = flattenLayers(next);
+    return (
+      prevLeaves.length > 0 &&
+      prevLeaves.length === nextLeaves.length &&
+      prevLeaves.every((leaf, index) => canTransitionSpecShape(leaf, nextLeaves[index]))
+    );
+  }
+  if (!('mark' in prev) || !('mark' in next)) return false;
   const prevMark =
     typeof prev.mark === 'string' ? prev.mark : (prev.mark as Record<string, unknown>)?.type;
   const nextMark =

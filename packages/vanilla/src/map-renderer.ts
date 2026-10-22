@@ -41,7 +41,7 @@ const BULK_ANIMATION_THRESHOLD = 200;
 // ---------------------------------------------------------------------------
 
 /** Opacity of the legend backdrops that float over map geography. */
-const LEGEND_BACKDROP_ALPHA = 0.9;
+const LEGEND_BACKDROP_ALPHA = 0.5;
 
 /**
  * The theme's own surface, at legend-backdrop alpha.

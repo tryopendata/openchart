@@ -120,8 +120,11 @@ export function computeRuleMarks(
     });
   }
 
-  // Stamp keys: position-defining values, fall back to index
-  const posField = xChannel?.field ?? yChannel?.field;
+  // Honor explicit identity when an interval moves; otherwise use its position.
+  const posField =
+    (encoding.key && 'field' in encoding.key ? encoding.key.field : undefined) ??
+    xChannel?.field ??
+    yChannel?.field;
   const rawKeys = marks.map((m, i) => (posField ? serializeKeyValue(m.data[posField]) : String(i)));
   const keys = dedupeKeys(rawKeys);
   for (let i = 0; i < marks.length; i++) {

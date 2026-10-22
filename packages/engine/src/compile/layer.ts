@@ -1176,6 +1176,7 @@ export function buildPrimarySpec(leaves: ChartSpec[], layerSpec: LayerSpec): Cha
     ...leaves[0],
     data: allData,
     chrome: layerSpec.chrome ?? leaves[0].chrome,
+    animation: layerSpec.animation ?? leaves[0].animation,
     // Annotations come from the parent LayerSpec when present, otherwise
     // the first flattened leaf's. Later leaves' annotations are silently
     // dropped. The dual-axis path (compileLayerIndependent) explicitly
