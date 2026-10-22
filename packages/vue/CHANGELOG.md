@@ -1,5 +1,29 @@
 # Changelog
 
+## [9.0.0-rc.2](https://github.com/tryopendata/openchart/compare/core-v9.0.0-rc.1...core-v9.0.0-rc.2) (2026-10-22)
+
+Second v9 release candidate. Published under npm `next`; the stable `latest` release remains 8.9.1.
+
+### Animation
+
+- Animate layered specs on update when every flattened leaf keeps the previous
+  leaf's mark and identity shape. Layer-level `animation` now reaches the
+  compiled chart, and `flattenLayers` is exported from the engine.
+- Transition `rule` marks on update, keyed by `encoding.key` when present and by
+  position otherwise.
+
+### Responsive specs
+
+- Breakpoint overrides can patch `axis` and `scale` on existing `x`, `y`, `color`
+  and `size` channels; nested properties merge with the base. Overrides for
+  channels the base spec does not define are ignored, and `scheme` and `reverse`
+  cannot be overridden.
+
+### Chart and map design
+
+- Lower map legend backdrop opacity from 0.9 to 0.5 so geography stays visible
+  beneath floating keys.
+
 ## [9.0.0-rc.1](https://github.com/tryopendata/openchart/compare/core-v8.9.1...core-v9.0.0-rc.1) (2026-10-19)
 
 First v9 release candidate. Published under npm `next`; the stable `latest` release remains 8.9.1. See [the v9 migration guide](https://github.com/tryopendata/openchart/blob/core-v9.0.0-rc.1/docs/migrating-v9.md) before upgrading.
