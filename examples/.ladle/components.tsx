@@ -15,7 +15,7 @@
  *    capture.ts hides them (C1).
  * 5. Shell chrome styling via `.ladle/shell.css` (imported here).
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import '@opendata-ai/openchart-core/styles.css';
 import '../src/stories.css';
 import './shell.css';
@@ -236,14 +236,26 @@ function ThemePicker({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const popupId = useId();
 
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    const ownerDocument = ref.current?.ownerDocument ?? document;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOpen(false);
+        ref.current?.querySelector('button')?.focus();
+      }
+    };
+    ownerDocument.addEventListener('mousedown', handler);
+    ownerDocument.addEventListener('keydown', onKeyDown);
+    return () => {
+      ownerDocument.removeEventListener('mousedown', handler);
+      ownerDocument.removeEventListener('keydown', onKeyDown);
+    };
   }, [open]);
 
   const p = PALETTE[mode];
@@ -262,6 +274,8 @@ function ThemePicker({
     >
       <button
         type="button"
+        aria-expanded={open}
+        aria-controls={popupId}
         onClick={() => setOpen(!open)}
         style={{
           display: 'flex',
@@ -318,6 +332,8 @@ function ThemePicker({
 
       {open ? (
         <div
+          id={popupId}
+          className="oc-theme-options"
           style={{
             position: 'absolute',
             top: 'calc(100% + 4px)',
@@ -445,11 +461,13 @@ export const Provider: GlobalProvider = ({ children, globalState }) => {
   return (
     <OcModeContext.Provider value={modeCtx}>
       <VizThemeProvider theme={theme} darkMode={darkMode}>
-        <ThemePicker selected={selected} onChange={setSelected} mode={mode} />
+        <div className="oc-gallery-toolbar" data-oc-mode={mode}>
+          <ThemePicker selected={selected} onChange={setSelected} mode={mode} />
+          <GitHubLink mode={mode} />
+        </div>
         <div className="ladle-story-root" style={{ background: bg, color: fg }}>
           {children}
         </div>
-        <GitHubLink mode={mode} />
       </VizThemeProvider>
     </OcModeContext.Provider>
   );

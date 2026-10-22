@@ -21,6 +21,7 @@ import type {
 import { BarList, Chart, DataTable, Graph, Sankey } from '@opendata-ai/openchart-react';
 import { Demo, GalleryPage } from '../components';
 import { bigTechRevenue, programmingLanguages, stockPerformance } from '../data';
+import { narrowRevenueLegend } from './helpers';
 import { GALLERY, type PageEntry } from './registry';
 
 // ---------------------------------------------------------------------------
@@ -157,14 +158,14 @@ const WELCOME_CSS = `
 [data-oc-mode='dark'] .ocw-agents-good {
   color: #4ade80;
 }
-@media (max-width: 720px) {
+@container gallery-root (max-width: 720px) {
   .ocw-agents {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 .ocw-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
   gap: var(--gx-space-4);
 }
 .ocw-card {
@@ -343,6 +344,24 @@ const WELCOME_CSS = `
   color: var(--gx-text-muted);
   margin: 0;
 }
+@container gallery-root (max-width: 640px) {
+  .ocw-hero,
+  .ocw-block {
+    margin-bottom: var(--gx-space-6);
+  }
+  .ocw-hero-chart {
+    margin-top: var(--gx-space-4);
+    padding: var(--gx-space-2) 0;
+  }
+  .ocw-agents {
+    padding: var(--gx-space-4);
+    gap: var(--gx-space-4);
+  }
+  .ocw-install-cmd,
+  .ocw-install-note {
+    overflow-wrap: anywhere;
+  }
+}
 `;
 
 function WelcomeStyles() {
@@ -378,6 +397,24 @@ const heroSpec: ChartSpec = {
   },
   legend: { show: false },
   endpointLabels: { content: 'label', showMarker: true },
+  overrides: {
+    compact: {
+      ...narrowRevenueLegend,
+      annotations: [
+        {
+          type: 'text',
+          x: '2024-01-01',
+          y: 638,
+          text: 'Amazon crosses\n$600B in 2024',
+          anchor: 'left',
+          offset: { dx: -12, dy: 32 },
+          connector: true,
+          background: true,
+        },
+      ],
+    },
+    medium: narrowRevenueLegend,
+  },
   seriesStyles: { Amazon: { strokeWidth: 3 } },
   labels: { density: 'none' },
   annotations: [

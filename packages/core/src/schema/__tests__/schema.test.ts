@@ -132,6 +132,45 @@ describe('chart.schema.json', () => {
     };
     expect(validateChart(spec), JSON.stringify(validateChart.errors)).toBe(true);
   });
+
+  it('accepts partial encoding overrides for compact legends', () => {
+    const spec = {
+      ...minimalSpecForMark('line'),
+      overrides: {
+        compact: {
+          endpointLabels: false,
+          legend: { show: true, position: 'top', maxRows: 3 },
+          encoding: {
+            x: { axis: { tickCount: 3 } },
+            color: { scale: { range: ['#0e7490', '#c2410c'] } },
+          },
+        },
+      },
+    };
+    for (const validate of [validateChart, validateViz]) {
+      expect(validate(spec), JSON.stringify(validate.errors)).toBe(true);
+    }
+  });
+
+  it.each([
+    { name: 'constant color', encoding: { color: { value: '#0e7490' } } },
+    {
+      name: 'conditional color',
+      encoding: { color: { condition: { test: 'datum.amount > 10', value: '#0e7490' } } },
+    },
+    { name: 'binning', encoding: { x: { bin: true } } },
+    { name: 'time units', encoding: { x: { timeUnit: 'year' } } },
+    { name: 'named color schemes', encoding: { color: { scale: { scheme: 'blues' } } } },
+    { name: 'null axis shorthand', encoding: { x: { axis: null } } },
+  ])('rejects unsupported $name in breakpoint encoding overrides', ({ encoding }) => {
+    const spec = {
+      ...minimalSpecForMark('line'),
+      overrides: { compact: { encoding } },
+    };
+    for (const validate of [validateChart, validateViz]) {
+      expect(validate(spec)).toBe(false);
+    }
+  });
 });
 
 describe('vizspec.schema.json', () => {

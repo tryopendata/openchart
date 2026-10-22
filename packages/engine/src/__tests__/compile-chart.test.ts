@@ -1,4 +1,4 @@
-import { contrastRatio } from '@opendata-ai/openchart-core';
+import { type ChartSpec, contrastRatio, type LineMark } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import { compileChart, compileGraph, compileTable } from '../compile';
 
@@ -1244,6 +1244,32 @@ describe('compileChart', () => {
     expect(layout.axes.x?.label).toBe('d');
     // Tick count flows from base spec — if shallow-merged, tickCount would be lost.
     expect(layout.axes.x?.ticks.length).toBeGreaterThan(0);
+  });
+
+  it('breakpoint axis and color range patches preserve base fields and scale domain', () => {
+    const spec: ChartSpec = {
+      ...lineSpec,
+      encoding: {
+        ...lineSpec.encoding,
+        x: { ...lineSpec.encoding.x, axis: { title: 'Year', format: '%Y' } },
+        color: { ...lineSpec.encoding.color, scale: { domain: ['UK', 'US'] } },
+      },
+      overrides: {
+        compact: {
+          encoding: {
+            x: { axis: { tickCount: 2 } },
+            color: { scale: { range: ['#0e7490', '#c2410c'] } },
+          },
+        },
+      },
+    };
+    const layout = compileChart(spec, { width: 320, height: 240 });
+    expect(layout.axes.x?.label).toBe('Year');
+    expect(layout.axes.x?.ticks.map((tick) => tick.label)).toEqual(['2020', '2021']);
+    const lines = layout.marks.filter((mark): mark is LineMark => mark.type === 'line');
+    expect(lines).toHaveLength(2);
+    expect(lines.find((line) => line.seriesKey === 'UK')?.stroke).toBe('#0e7490');
+    expect(lines.find((line) => line.seriesKey === 'US')?.stroke).toBe('#c2410c');
   });
 });
 

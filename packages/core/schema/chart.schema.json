@@ -4897,6 +4897,1594 @@
     "ChartSpecOverride": {
       "type": "object",
       "properties": {
+        "encoding": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "object",
+              "properties": {
+                "axis": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/AxisConfig"
+                    },
+                    {
+                      "type": "boolean",
+                      "const": false
+                    }
+                  ]
+                },
+                "scale": {
+                  "type": "object",
+                  "properties": {
+                    "domain": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          }
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ],
+                      "description": "Explicit domain override. Auto-derived from data if omitted. Continuous scales take `[min, max]`; threshold scales take the full list of class break values; categorical scales take the value list."
+                    },
+                    "type": {
+                      "$ref": "#/definitions/ScaleType",
+                      "description": "Scale type override. Usually inferred from field type."
+                    },
+                    "nice": {
+                      "type": "boolean",
+                      "description": "Whether to nice-ify the domain for clean tick values. Defaults to true."
+                    },
+                    "zero": {
+                      "type": "boolean",
+                      "description": "Whether the domain should include zero. Defaults to true for quantitative."
+                    },
+                    "clip": {
+                      "type": "boolean",
+                      "description": "When true and domain is set, filter out data rows with values outside the domain range."
+                    },
+                    "range": {
+                      "type": "array",
+                      "items": {},
+                      "description": "Explicit range override."
+                    },
+                    "reverse": {
+                      "type": "boolean",
+                      "description": "Reverse the range direction."
+                    },
+                    "clamp": {
+                      "type": "boolean",
+                      "description": "Clamp output to the range."
+                    },
+                    "padding": {
+                      "type": "number",
+                      "description": "Padding for band/point scales. Point-scale default (a categorical x/y on a line/area/point mark) is 0 for line and area marks (the trend runs flush to the plot edges) and 0.5 for other marks (e.g. scatter, so points don't collide with the axis). `paddingOuter` is accepted as an alias here since point scales have no inner bands."
+                    },
+                    "paddingInner": {
+                      "type": "number",
+                      "description": "Inner padding for band scales."
+                    },
+                    "paddingOuter": {
+                      "type": "number",
+                      "description": "Outer padding for band scales."
+                    },
+                    "exponent": {
+                      "type": "number",
+                      "description": "Exponent for pow scales."
+                    },
+                    "base": {
+                      "type": "number",
+                      "description": "Base for log scales (default 10)."
+                    },
+                    "constant": {
+                      "type": "number",
+                      "description": "Constant for symlog scales."
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            "y": {
+              "type": "object",
+              "properties": {
+                "axis": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/AxisConfig"
+                    },
+                    {
+                      "type": "boolean",
+                      "const": false
+                    }
+                  ]
+                },
+                "scale": {
+                  "type": "object",
+                  "properties": {
+                    "domain": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          }
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ],
+                      "description": "Explicit domain override. Auto-derived from data if omitted. Continuous scales take `[min, max]`; threshold scales take the full list of class break values; categorical scales take the value list."
+                    },
+                    "type": {
+                      "$ref": "#/definitions/ScaleType",
+                      "description": "Scale type override. Usually inferred from field type."
+                    },
+                    "nice": {
+                      "type": "boolean",
+                      "description": "Whether to nice-ify the domain for clean tick values. Defaults to true."
+                    },
+                    "zero": {
+                      "type": "boolean",
+                      "description": "Whether the domain should include zero. Defaults to true for quantitative."
+                    },
+                    "clip": {
+                      "type": "boolean",
+                      "description": "When true and domain is set, filter out data rows with values outside the domain range."
+                    },
+                    "range": {
+                      "type": "array",
+                      "items": {},
+                      "description": "Explicit range override."
+                    },
+                    "reverse": {
+                      "type": "boolean",
+                      "description": "Reverse the range direction."
+                    },
+                    "clamp": {
+                      "type": "boolean",
+                      "description": "Clamp output to the range."
+                    },
+                    "padding": {
+                      "type": "number",
+                      "description": "Padding for band/point scales. Point-scale default (a categorical x/y on a line/area/point mark) is 0 for line and area marks (the trend runs flush to the plot edges) and 0.5 for other marks (e.g. scatter, so points don't collide with the axis). `paddingOuter` is accepted as an alias here since point scales have no inner bands."
+                    },
+                    "paddingInner": {
+                      "type": "number",
+                      "description": "Inner padding for band scales."
+                    },
+                    "paddingOuter": {
+                      "type": "number",
+                      "description": "Outer padding for band scales."
+                    },
+                    "exponent": {
+                      "type": "number",
+                      "description": "Exponent for pow scales."
+                    },
+                    "base": {
+                      "type": "number",
+                      "description": "Base for log scales (default 10)."
+                    },
+                    "constant": {
+                      "type": "number",
+                      "description": "Constant for symlog scales."
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            "color": {
+              "type": "object",
+              "properties": {
+                "axis": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/AxisConfig"
+                    },
+                    {
+                      "type": "boolean",
+                      "const": false
+                    }
+                  ]
+                },
+                "scale": {
+                  "type": "object",
+                  "properties": {
+                    "domain": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          }
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ],
+                      "description": "Explicit domain override. Auto-derived from data if omitted. Continuous scales take `[min, max]`; threshold scales take the full list of class break values; categorical scales take the value list."
+                    },
+                    "type": {
+                      "$ref": "#/definitions/ScaleType",
+                      "description": "Scale type override. Usually inferred from field type."
+                    },
+                    "nice": {
+                      "type": "boolean",
+                      "description": "Whether to nice-ify the domain for clean tick values. Defaults to true."
+                    },
+                    "zero": {
+                      "type": "boolean",
+                      "description": "Whether the domain should include zero. Defaults to true for quantitative."
+                    },
+                    "clip": {
+                      "type": "boolean",
+                      "description": "When true and domain is set, filter out data rows with values outside the domain range."
+                    },
+                    "range": {
+                      "type": "array",
+                      "items": {},
+                      "description": "Explicit range override."
+                    },
+                    "reverse": {
+                      "type": "boolean",
+                      "description": "Reverse the range direction."
+                    },
+                    "clamp": {
+                      "type": "boolean",
+                      "description": "Clamp output to the range."
+                    },
+                    "padding": {
+                      "type": "number",
+                      "description": "Padding for band/point scales. Point-scale default (a categorical x/y on a line/area/point mark) is 0 for line and area marks (the trend runs flush to the plot edges) and 0.5 for other marks (e.g. scatter, so points don't collide with the axis). `paddingOuter` is accepted as an alias here since point scales have no inner bands."
+                    },
+                    "paddingInner": {
+                      "type": "number",
+                      "description": "Inner padding for band scales."
+                    },
+                    "paddingOuter": {
+                      "type": "number",
+                      "description": "Outer padding for band scales."
+                    },
+                    "exponent": {
+                      "type": "number",
+                      "description": "Exponent for pow scales."
+                    },
+                    "base": {
+                      "type": "number",
+                      "description": "Base for log scales (default 10)."
+                    },
+                    "constant": {
+                      "type": "number",
+                      "description": "Constant for symlog scales."
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            "size": {
+              "type": "object",
+              "properties": {
+                "axis": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/AxisConfig"
+                    },
+                    {
+                      "type": "boolean",
+                      "const": false
+                    }
+                  ]
+                },
+                "scale": {
+                  "type": "object",
+                  "properties": {
+                    "domain": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          }
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ],
+                      "description": "Explicit domain override. Auto-derived from data if omitted. Continuous scales take `[min, max]`; threshold scales take the full list of class break values; categorical scales take the value list."
+                    },
+                    "type": {
+                      "$ref": "#/definitions/ScaleType",
+                      "description": "Scale type override. Usually inferred from field type."
+                    },
+                    "nice": {
+                      "type": "boolean",
+                      "description": "Whether to nice-ify the domain for clean tick values. Defaults to true."
+                    },
+                    "zero": {
+                      "type": "boolean",
+                      "description": "Whether the domain should include zero. Defaults to true for quantitative."
+                    },
+                    "clip": {
+                      "type": "boolean",
+                      "description": "When true and domain is set, filter out data rows with values outside the domain range."
+                    },
+                    "range": {
+                      "type": "array",
+                      "items": {},
+                      "description": "Explicit range override."
+                    },
+                    "reverse": {
+                      "type": "boolean",
+                      "description": "Reverse the range direction."
+                    },
+                    "clamp": {
+                      "type": "boolean",
+                      "description": "Clamp output to the range."
+                    },
+                    "padding": {
+                      "type": "number",
+                      "description": "Padding for band/point scales. Point-scale default (a categorical x/y on a line/area/point mark) is 0 for line and area marks (the trend runs flush to the plot edges) and 0.5 for other marks (e.g. scatter, so points don't collide with the axis). `paddingOuter` is accepted as an alias here since point scales have no inner bands."
+                    },
+                    "paddingInner": {
+                      "type": "number",
+                      "description": "Inner padding for band scales."
+                    },
+                    "paddingOuter": {
+                      "type": "number",
+                      "description": "Outer padding for band scales."
+                    },
+                    "exponent": {
+                      "type": "number",
+                      "description": "Exponent for pow scales."
+                    },
+                    "base": {
+                      "type": "number",
+                      "description": "Base for log scales (default 10)."
+                    },
+                    "constant": {
+                      "type": "number",
+                      "description": "Constant for symlog scales."
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            "detail": {
+              "type": "object",
+              "properties": {
+                "axis": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/AxisConfig"
+                    },
+                    {
+                      "type": "boolean",
+                      "const": false
+                    }
+                  ]
+                },
+                "scale": {
+                  "type": "object",
+                  "properties": {
+                    "domain": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          }
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ],
+                      "description": "Explicit domain override. Auto-derived from data if omitted. Continuous scales take `[min, max]`; threshold scales take the full list of class break values; categorical scales take the value list."
+                    },
+                    "type": {
+                      "$ref": "#/definitions/ScaleType",
+                      "description": "Scale type override. Usually inferred from field type."
+                    },
+                    "nice": {
+                      "type": "boolean",
+                      "description": "Whether to nice-ify the domain for clean tick values. Defaults to true."
+                    },
+                    "zero": {
+                      "type": "boolean",
+                      "description": "Whether the domain should include zero. Defaults to true for quantitative."
+                    },
+                    "clip": {
+                      "type": "boolean",
+                      "description": "When true and domain is set, filter out data rows with values outside the domain range."
+                    },
+                    "range": {
+                      "type": "array",
+                      "items": {},
+                      "description": "Explicit range override."
+                    },
+                    "reverse": {
+                      "type": "boolean",
+                      "description": "Reverse the range direction."
+                    },
+                    "clamp": {
+                      "type": "boolean",
+                      "description": "Clamp output to the range."
+                    },
+                    "padding": {
+                      "type": "number",
+                      "description": "Padding for band/point scales. Point-scale default (a categorical x/y on a line/area/point mark) is 0 for line and area marks (the trend runs flush to the plot edges) and 0.5 for other marks (e.g. scatter, so points don't collide with the axis). `paddingOuter` is accepted as an alias here since point scales have no inner bands."
+                    },
+                    "paddingInner": {
+                      "type": "number",
+                      "description": "Inner padding for band scales."
+                    },
+                    "paddingOuter": {
+                      "type": "number",
+                      "description": "Outer padding for band scales."
+                    },
+                    "exponent": {
+                      "type": "number",
+                      "description": "Exponent for pow scales."
+                    },
+                    "base": {
+                      "type": "number",
+                      "description": "Base for log scales (default 10)."
+                    },
+                    "constant": {
+                      "type": "number",
+                      "description": "Constant for symlog scales."
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            "key": {
+              "type": "object",
+              "properties": {
+                "axis": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/AxisConfig"
+                    },
+                    {
+                      "type": "boolean",
+                      "const": false
+                    }
+                  ]
+                },
+                "scale": {
+                  "type": "object",
+                  "properties": {
+                    "domain": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          }
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ],
+                      "description": "Explicit domain override. Auto-derived from data if omitted. Continuous scales take `[min, max]`; threshold scales take the full list of class break values; categorical scales take the value list."
+                    },
+                    "type": {
+                      "$ref": "#/definitions/ScaleType",
+                      "description": "Scale type override. Usually inferred from field type."
+                    },
+                    "nice": {
+                      "type": "boolean",
+                      "description": "Whether to nice-ify the domain for clean tick values. Defaults to true."
+                    },
+                    "zero": {
+                      "type": "boolean",
+                      "description": "Whether the domain should include zero. Defaults to true for quantitative."
+                    },
+                    "clip": {
+                      "type": "boolean",
+                      "description": "When true and domain is set, filter out data rows with values outside the domain range."
+                    },
+                    "range": {
+                      "type": "array",
+                      "items": {},
+                      "description": "Explicit range override."
+                    },
+                    "reverse": {
+                      "type": "boolean",
+                      "description": "Reverse the range direction."
+                    },
+                    "clamp": {
+                      "type": "boolean",
+                      "description": "Clamp output to the range."
+                    },
+                    "padding": {
+                      "type": "number",
+                      "description": "Padding for band/point scales. Point-scale default (a categorical x/y on a line/area/point mark) is 0 for line and area marks (the trend runs flush to the plot edges) and 0.5 for other marks (e.g. scatter, so points don't collide with the axis). `paddingOuter` is accepted as an alias here since point scales have no inner bands."
+                    },
+                    "paddingInner": {
+                      "type": "number",
+                      "description": "Inner padding for band scales."
+                    },
+                    "paddingOuter": {
+                      "type": "number",
+                      "description": "Outer padding for band scales."
+                    },
+                    "exponent": {
+                      "type": "number",
+                      "description": "Exponent for pow scales."
+                    },
+                    "base": {
+                      "type": "number",
+                      "description": "Base for log scales (default 10)."
+                    },
+                    "constant": {
+                      "type": "number",
+                      "description": "Constant for symlog scales."
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            "x2": {
+              "type": "object",
+              "properties": {
+                "axis": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/AxisConfig"
+                    },
+                    {
+                      "type": "boolean",
+                      "const": false
+                    }
+                  ]
+                },
+                "scale": {
+                  "type": "object",
+                  "properties": {
+                    "domain": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          }
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ],
+                      "description": "Explicit domain override. Auto-derived from data if omitted. Continuous scales take `[min, max]`; threshold scales take the full list of class break values; categorical scales take the value list."
+                    },
+                    "type": {
+                      "$ref": "#/definitions/ScaleType",
+                      "description": "Scale type override. Usually inferred from field type."
+                    },
+                    "nice": {
+                      "type": "boolean",
+                      "description": "Whether to nice-ify the domain for clean tick values. Defaults to true."
+                    },
+                    "zero": {
+                      "type": "boolean",
+                      "description": "Whether the domain should include zero. Defaults to true for quantitative."
+                    },
+                    "clip": {
+                      "type": "boolean",
+                      "description": "When true and domain is set, filter out data rows with values outside the domain range."
+                    },
+                    "range": {
+                      "type": "array",
+                      "items": {},
+                      "description": "Explicit range override."
+                    },
+                    "reverse": {
+                      "type": "boolean",
+                      "description": "Reverse the range direction."
+                    },
+                    "clamp": {
+                      "type": "boolean",
+                      "description": "Clamp output to the range."
+                    },
+                    "padding": {
+                      "type": "number",
+                      "description": "Padding for band/point scales. Point-scale default (a categorical x/y on a line/area/point mark) is 0 for line and area marks (the trend runs flush to the plot edges) and 0.5 for other marks (e.g. scatter, so points don't collide with the axis). `paddingOuter` is accepted as an alias here since point scales have no inner bands."
+                    },
+                    "paddingInner": {
+                      "type": "number",
+                      "description": "Inner padding for band scales."
+                    },
+                    "paddingOuter": {
+                      "type": "number",
+                      "description": "Outer padding for band scales."
+                    },
+                    "exponent": {
+                      "type": "number",
+                      "description": "Exponent for pow scales."
+                    },
+                    "base": {
+                      "type": "number",
+                      "description": "Base for log scales (default 10)."
+                    },
+                    "constant": {
+                      "type": "number",
+                      "description": "Constant for symlog scales."
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            "y2": {
+              "type": "object",
+              "properties": {
+                "axis": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/AxisConfig"
+                    },
+                    {
+                      "type": "boolean",
+                      "const": false
+                    }
+                  ]
+                },
+                "scale": {
+                  "type": "object",
+                  "properties": {
+                    "domain": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          }
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ],
+                      "description": "Explicit domain override. Auto-derived from data if omitted. Continuous scales take `[min, max]`; threshold scales take the full list of class break values; categorical scales take the value list."
+                    },
+                    "type": {
+                      "$ref": "#/definitions/ScaleType",
+                      "description": "Scale type override. Usually inferred from field type."
+                    },
+                    "nice": {
+                      "type": "boolean",
+                      "description": "Whether to nice-ify the domain for clean tick values. Defaults to true."
+                    },
+                    "zero": {
+                      "type": "boolean",
+                      "description": "Whether the domain should include zero. Defaults to true for quantitative."
+                    },
+                    "clip": {
+                      "type": "boolean",
+                      "description": "When true and domain is set, filter out data rows with values outside the domain range."
+                    },
+                    "range": {
+                      "type": "array",
+                      "items": {},
+                      "description": "Explicit range override."
+                    },
+                    "reverse": {
+                      "type": "boolean",
+                      "description": "Reverse the range direction."
+                    },
+                    "clamp": {
+                      "type": "boolean",
+                      "description": "Clamp output to the range."
+                    },
+                    "padding": {
+                      "type": "number",
+                      "description": "Padding for band/point scales. Point-scale default (a categorical x/y on a line/area/point mark) is 0 for line and area marks (the trend runs flush to the plot edges) and 0.5 for other marks (e.g. scatter, so points don't collide with the axis). `paddingOuter` is accepted as an alias here since point scales have no inner bands."
+                    },
+                    "paddingInner": {
+                      "type": "number",
+                      "description": "Inner padding for band scales."
+                    },
+                    "paddingOuter": {
+                      "type": "number",
+                      "description": "Outer padding for band scales."
+                    },
+                    "exponent": {
+                      "type": "number",
+                      "description": "Exponent for pow scales."
+                    },
+                    "base": {
+                      "type": "number",
+                      "description": "Base for log scales (default 10)."
+                    },
+                    "constant": {
+                      "type": "number",
+                      "description": "Constant for symlog scales."
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            "opacity": {
+              "type": "object",
+              "properties": {
+                "axis": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/AxisConfig"
+                    },
+                    {
+                      "type": "boolean",
+                      "const": false
+                    }
+                  ]
+                },
+                "scale": {
+                  "type": "object",
+                  "properties": {
+                    "domain": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          }
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ],
+                      "description": "Explicit domain override. Auto-derived from data if omitted. Continuous scales take `[min, max]`; threshold scales take the full list of class break values; categorical scales take the value list."
+                    },
+                    "type": {
+                      "$ref": "#/definitions/ScaleType",
+                      "description": "Scale type override. Usually inferred from field type."
+                    },
+                    "nice": {
+                      "type": "boolean",
+                      "description": "Whether to nice-ify the domain for clean tick values. Defaults to true."
+                    },
+                    "zero": {
+                      "type": "boolean",
+                      "description": "Whether the domain should include zero. Defaults to true for quantitative."
+                    },
+                    "clip": {
+                      "type": "boolean",
+                      "description": "When true and domain is set, filter out data rows with values outside the domain range."
+                    },
+                    "range": {
+                      "type": "array",
+                      "items": {},
+                      "description": "Explicit range override."
+                    },
+                    "reverse": {
+                      "type": "boolean",
+                      "description": "Reverse the range direction."
+                    },
+                    "clamp": {
+                      "type": "boolean",
+                      "description": "Clamp output to the range."
+                    },
+                    "padding": {
+                      "type": "number",
+                      "description": "Padding for band/point scales. Point-scale default (a categorical x/y on a line/area/point mark) is 0 for line and area marks (the trend runs flush to the plot edges) and 0.5 for other marks (e.g. scatter, so points don't collide with the axis). `paddingOuter` is accepted as an alias here since point scales have no inner bands."
+                    },
+                    "paddingInner": {
+                      "type": "number",
+                      "description": "Inner padding for band scales."
+                    },
+                    "paddingOuter": {
+                      "type": "number",
+                      "description": "Outer padding for band scales."
+                    },
+                    "exponent": {
+                      "type": "number",
+                      "description": "Exponent for pow scales."
+                    },
+                    "base": {
+                      "type": "number",
+                      "description": "Base for log scales (default 10)."
+                    },
+                    "constant": {
+                      "type": "number",
+                      "description": "Constant for symlog scales."
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            "strokeDash": {
+              "type": "object",
+              "properties": {
+                "axis": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/AxisConfig"
+                    },
+                    {
+                      "type": "boolean",
+                      "const": false
+                    }
+                  ]
+                },
+                "scale": {
+                  "type": "object",
+                  "properties": {
+                    "domain": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          }
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ],
+                      "description": "Explicit domain override. Auto-derived from data if omitted. Continuous scales take `[min, max]`; threshold scales take the full list of class break values; categorical scales take the value list."
+                    },
+                    "type": {
+                      "$ref": "#/definitions/ScaleType",
+                      "description": "Scale type override. Usually inferred from field type."
+                    },
+                    "nice": {
+                      "type": "boolean",
+                      "description": "Whether to nice-ify the domain for clean tick values. Defaults to true."
+                    },
+                    "zero": {
+                      "type": "boolean",
+                      "description": "Whether the domain should include zero. Defaults to true for quantitative."
+                    },
+                    "clip": {
+                      "type": "boolean",
+                      "description": "When true and domain is set, filter out data rows with values outside the domain range."
+                    },
+                    "range": {
+                      "type": "array",
+                      "items": {},
+                      "description": "Explicit range override."
+                    },
+                    "reverse": {
+                      "type": "boolean",
+                      "description": "Reverse the range direction."
+                    },
+                    "clamp": {
+                      "type": "boolean",
+                      "description": "Clamp output to the range."
+                    },
+                    "padding": {
+                      "type": "number",
+                      "description": "Padding for band/point scales. Point-scale default (a categorical x/y on a line/area/point mark) is 0 for line and area marks (the trend runs flush to the plot edges) and 0.5 for other marks (e.g. scatter, so points don't collide with the axis). `paddingOuter` is accepted as an alias here since point scales have no inner bands."
+                    },
+                    "paddingInner": {
+                      "type": "number",
+                      "description": "Inner padding for band scales."
+                    },
+                    "paddingOuter": {
+                      "type": "number",
+                      "description": "Outer padding for band scales."
+                    },
+                    "exponent": {
+                      "type": "number",
+                      "description": "Exponent for pow scales."
+                    },
+                    "base": {
+                      "type": "number",
+                      "description": "Base for log scales (default 10)."
+                    },
+                    "constant": {
+                      "type": "number",
+                      "description": "Constant for symlog scales."
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            "angle": {
+              "type": "object",
+              "properties": {
+                "axis": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/AxisConfig"
+                    },
+                    {
+                      "type": "boolean",
+                      "const": false
+                    }
+                  ]
+                },
+                "scale": {
+                  "type": "object",
+                  "properties": {
+                    "domain": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          }
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ],
+                      "description": "Explicit domain override. Auto-derived from data if omitted. Continuous scales take `[min, max]`; threshold scales take the full list of class break values; categorical scales take the value list."
+                    },
+                    "type": {
+                      "$ref": "#/definitions/ScaleType",
+                      "description": "Scale type override. Usually inferred from field type."
+                    },
+                    "nice": {
+                      "type": "boolean",
+                      "description": "Whether to nice-ify the domain for clean tick values. Defaults to true."
+                    },
+                    "zero": {
+                      "type": "boolean",
+                      "description": "Whether the domain should include zero. Defaults to true for quantitative."
+                    },
+                    "clip": {
+                      "type": "boolean",
+                      "description": "When true and domain is set, filter out data rows with values outside the domain range."
+                    },
+                    "range": {
+                      "type": "array",
+                      "items": {},
+                      "description": "Explicit range override."
+                    },
+                    "reverse": {
+                      "type": "boolean",
+                      "description": "Reverse the range direction."
+                    },
+                    "clamp": {
+                      "type": "boolean",
+                      "description": "Clamp output to the range."
+                    },
+                    "padding": {
+                      "type": "number",
+                      "description": "Padding for band/point scales. Point-scale default (a categorical x/y on a line/area/point mark) is 0 for line and area marks (the trend runs flush to the plot edges) and 0.5 for other marks (e.g. scatter, so points don't collide with the axis). `paddingOuter` is accepted as an alias here since point scales have no inner bands."
+                    },
+                    "paddingInner": {
+                      "type": "number",
+                      "description": "Inner padding for band scales."
+                    },
+                    "paddingOuter": {
+                      "type": "number",
+                      "description": "Outer padding for band scales."
+                    },
+                    "exponent": {
+                      "type": "number",
+                      "description": "Exponent for pow scales."
+                    },
+                    "base": {
+                      "type": "number",
+                      "description": "Base for log scales (default 10)."
+                    },
+                    "constant": {
+                      "type": "number",
+                      "description": "Constant for symlog scales."
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            "text": {
+              "type": "object",
+              "properties": {
+                "axis": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/AxisConfig"
+                    },
+                    {
+                      "type": "boolean",
+                      "const": false
+                    }
+                  ]
+                },
+                "scale": {
+                  "type": "object",
+                  "properties": {
+                    "domain": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          }
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ],
+                      "description": "Explicit domain override. Auto-derived from data if omitted. Continuous scales take `[min, max]`; threshold scales take the full list of class break values; categorical scales take the value list."
+                    },
+                    "type": {
+                      "$ref": "#/definitions/ScaleType",
+                      "description": "Scale type override. Usually inferred from field type."
+                    },
+                    "nice": {
+                      "type": "boolean",
+                      "description": "Whether to nice-ify the domain for clean tick values. Defaults to true."
+                    },
+                    "zero": {
+                      "type": "boolean",
+                      "description": "Whether the domain should include zero. Defaults to true for quantitative."
+                    },
+                    "clip": {
+                      "type": "boolean",
+                      "description": "When true and domain is set, filter out data rows with values outside the domain range."
+                    },
+                    "range": {
+                      "type": "array",
+                      "items": {},
+                      "description": "Explicit range override."
+                    },
+                    "reverse": {
+                      "type": "boolean",
+                      "description": "Reverse the range direction."
+                    },
+                    "clamp": {
+                      "type": "boolean",
+                      "description": "Clamp output to the range."
+                    },
+                    "padding": {
+                      "type": "number",
+                      "description": "Padding for band/point scales. Point-scale default (a categorical x/y on a line/area/point mark) is 0 for line and area marks (the trend runs flush to the plot edges) and 0.5 for other marks (e.g. scatter, so points don't collide with the axis). `paddingOuter` is accepted as an alias here since point scales have no inner bands."
+                    },
+                    "paddingInner": {
+                      "type": "number",
+                      "description": "Inner padding for band scales."
+                    },
+                    "paddingOuter": {
+                      "type": "number",
+                      "description": "Outer padding for band scales."
+                    },
+                    "exponent": {
+                      "type": "number",
+                      "description": "Exponent for pow scales."
+                    },
+                    "base": {
+                      "type": "number",
+                      "description": "Base for log scales (default 10)."
+                    },
+                    "constant": {
+                      "type": "number",
+                      "description": "Constant for symlog scales."
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            "tooltip": {
+              "type": "object",
+              "properties": {
+                "axis": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/AxisConfig"
+                    },
+                    {
+                      "type": "boolean",
+                      "const": false
+                    }
+                  ]
+                },
+                "scale": {
+                  "type": "object",
+                  "properties": {
+                    "domain": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          }
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ],
+                      "description": "Explicit domain override. Auto-derived from data if omitted. Continuous scales take `[min, max]`; threshold scales take the full list of class break values; categorical scales take the value list."
+                    },
+                    "type": {
+                      "$ref": "#/definitions/ScaleType",
+                      "description": "Scale type override. Usually inferred from field type."
+                    },
+                    "nice": {
+                      "type": "boolean",
+                      "description": "Whether to nice-ify the domain for clean tick values. Defaults to true."
+                    },
+                    "zero": {
+                      "type": "boolean",
+                      "description": "Whether the domain should include zero. Defaults to true for quantitative."
+                    },
+                    "clip": {
+                      "type": "boolean",
+                      "description": "When true and domain is set, filter out data rows with values outside the domain range."
+                    },
+                    "range": {
+                      "type": "array",
+                      "items": {},
+                      "description": "Explicit range override."
+                    },
+                    "reverse": {
+                      "type": "boolean",
+                      "description": "Reverse the range direction."
+                    },
+                    "clamp": {
+                      "type": "boolean",
+                      "description": "Clamp output to the range."
+                    },
+                    "padding": {
+                      "type": "number",
+                      "description": "Padding for band/point scales. Point-scale default (a categorical x/y on a line/area/point mark) is 0 for line and area marks (the trend runs flush to the plot edges) and 0.5 for other marks (e.g. scatter, so points don't collide with the axis). `paddingOuter` is accepted as an alias here since point scales have no inner bands."
+                    },
+                    "paddingInner": {
+                      "type": "number",
+                      "description": "Inner padding for band scales."
+                    },
+                    "paddingOuter": {
+                      "type": "number",
+                      "description": "Outer padding for band scales."
+                    },
+                    "exponent": {
+                      "type": "number",
+                      "description": "Exponent for pow scales."
+                    },
+                    "base": {
+                      "type": "number",
+                      "description": "Base for log scales (default 10)."
+                    },
+                    "constant": {
+                      "type": "number",
+                      "description": "Constant for symlog scales."
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            "theta": {
+              "type": "object",
+              "properties": {
+                "axis": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/AxisConfig"
+                    },
+                    {
+                      "type": "boolean",
+                      "const": false
+                    }
+                  ]
+                },
+                "scale": {
+                  "type": "object",
+                  "properties": {
+                    "domain": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          }
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ],
+                      "description": "Explicit domain override. Auto-derived from data if omitted. Continuous scales take `[min, max]`; threshold scales take the full list of class break values; categorical scales take the value list."
+                    },
+                    "type": {
+                      "$ref": "#/definitions/ScaleType",
+                      "description": "Scale type override. Usually inferred from field type."
+                    },
+                    "nice": {
+                      "type": "boolean",
+                      "description": "Whether to nice-ify the domain for clean tick values. Defaults to true."
+                    },
+                    "zero": {
+                      "type": "boolean",
+                      "description": "Whether the domain should include zero. Defaults to true for quantitative."
+                    },
+                    "clip": {
+                      "type": "boolean",
+                      "description": "When true and domain is set, filter out data rows with values outside the domain range."
+                    },
+                    "range": {
+                      "type": "array",
+                      "items": {},
+                      "description": "Explicit range override."
+                    },
+                    "reverse": {
+                      "type": "boolean",
+                      "description": "Reverse the range direction."
+                    },
+                    "clamp": {
+                      "type": "boolean",
+                      "description": "Clamp output to the range."
+                    },
+                    "padding": {
+                      "type": "number",
+                      "description": "Padding for band/point scales. Point-scale default (a categorical x/y on a line/area/point mark) is 0 for line and area marks (the trend runs flush to the plot edges) and 0.5 for other marks (e.g. scatter, so points don't collide with the axis). `paddingOuter` is accepted as an alias here since point scales have no inner bands."
+                    },
+                    "paddingInner": {
+                      "type": "number",
+                      "description": "Inner padding for band scales."
+                    },
+                    "paddingOuter": {
+                      "type": "number",
+                      "description": "Outer padding for band scales."
+                    },
+                    "exponent": {
+                      "type": "number",
+                      "description": "Exponent for pow scales."
+                    },
+                    "base": {
+                      "type": "number",
+                      "description": "Base for log scales (default 10)."
+                    },
+                    "constant": {
+                      "type": "number",
+                      "description": "Constant for symlog scales."
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            "facet": {
+              "type": "object",
+              "properties": {
+                "axis": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/AxisConfig"
+                    },
+                    {
+                      "type": "boolean",
+                      "const": false
+                    }
+                  ]
+                },
+                "scale": {
+                  "type": "object",
+                  "properties": {
+                    "domain": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          }
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ],
+                      "description": "Explicit domain override. Auto-derived from data if omitted. Continuous scales take `[min, max]`; threshold scales take the full list of class break values; categorical scales take the value list."
+                    },
+                    "type": {
+                      "$ref": "#/definitions/ScaleType",
+                      "description": "Scale type override. Usually inferred from field type."
+                    },
+                    "nice": {
+                      "type": "boolean",
+                      "description": "Whether to nice-ify the domain for clean tick values. Defaults to true."
+                    },
+                    "zero": {
+                      "type": "boolean",
+                      "description": "Whether the domain should include zero. Defaults to true for quantitative."
+                    },
+                    "clip": {
+                      "type": "boolean",
+                      "description": "When true and domain is set, filter out data rows with values outside the domain range."
+                    },
+                    "range": {
+                      "type": "array",
+                      "items": {},
+                      "description": "Explicit range override."
+                    },
+                    "reverse": {
+                      "type": "boolean",
+                      "description": "Reverse the range direction."
+                    },
+                    "clamp": {
+                      "type": "boolean",
+                      "description": "Clamp output to the range."
+                    },
+                    "padding": {
+                      "type": "number",
+                      "description": "Padding for band/point scales. Point-scale default (a categorical x/y on a line/area/point mark) is 0 for line and area marks (the trend runs flush to the plot edges) and 0.5 for other marks (e.g. scatter, so points don't collide with the axis). `paddingOuter` is accepted as an alias here since point scales have no inner bands."
+                    },
+                    "paddingInner": {
+                      "type": "number",
+                      "description": "Inner padding for band scales."
+                    },
+                    "paddingOuter": {
+                      "type": "number",
+                      "description": "Outer padding for band scales."
+                    },
+                    "exponent": {
+                      "type": "number",
+                      "description": "Exponent for pow scales."
+                    },
+                    "base": {
+                      "type": "number",
+                      "description": "Base for log scales (default 10)."
+                    },
+                    "constant": {
+                      "type": "number",
+                      "description": "Constant for symlog scales."
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            "row": {
+              "type": "object",
+              "properties": {
+                "axis": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/AxisConfig"
+                    },
+                    {
+                      "type": "boolean",
+                      "const": false
+                    }
+                  ]
+                },
+                "scale": {
+                  "type": "object",
+                  "properties": {
+                    "domain": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          }
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ],
+                      "description": "Explicit domain override. Auto-derived from data if omitted. Continuous scales take `[min, max]`; threshold scales take the full list of class break values; categorical scales take the value list."
+                    },
+                    "type": {
+                      "$ref": "#/definitions/ScaleType",
+                      "description": "Scale type override. Usually inferred from field type."
+                    },
+                    "nice": {
+                      "type": "boolean",
+                      "description": "Whether to nice-ify the domain for clean tick values. Defaults to true."
+                    },
+                    "zero": {
+                      "type": "boolean",
+                      "description": "Whether the domain should include zero. Defaults to true for quantitative."
+                    },
+                    "clip": {
+                      "type": "boolean",
+                      "description": "When true and domain is set, filter out data rows with values outside the domain range."
+                    },
+                    "range": {
+                      "type": "array",
+                      "items": {},
+                      "description": "Explicit range override."
+                    },
+                    "reverse": {
+                      "type": "boolean",
+                      "description": "Reverse the range direction."
+                    },
+                    "clamp": {
+                      "type": "boolean",
+                      "description": "Clamp output to the range."
+                    },
+                    "padding": {
+                      "type": "number",
+                      "description": "Padding for band/point scales. Point-scale default (a categorical x/y on a line/area/point mark) is 0 for line and area marks (the trend runs flush to the plot edges) and 0.5 for other marks (e.g. scatter, so points don't collide with the axis). `paddingOuter` is accepted as an alias here since point scales have no inner bands."
+                    },
+                    "paddingInner": {
+                      "type": "number",
+                      "description": "Inner padding for band scales."
+                    },
+                    "paddingOuter": {
+                      "type": "number",
+                      "description": "Outer padding for band scales."
+                    },
+                    "exponent": {
+                      "type": "number",
+                      "description": "Exponent for pow scales."
+                    },
+                    "base": {
+                      "type": "number",
+                      "description": "Base for log scales (default 10)."
+                    },
+                    "constant": {
+                      "type": "number",
+                      "description": "Constant for symlog scales."
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            "column": {
+              "type": "object",
+              "properties": {
+                "axis": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/AxisConfig"
+                    },
+                    {
+                      "type": "boolean",
+                      "const": false
+                    }
+                  ]
+                },
+                "scale": {
+                  "type": "object",
+                  "properties": {
+                    "domain": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          }
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ],
+                      "description": "Explicit domain override. Auto-derived from data if omitted. Continuous scales take `[min, max]`; threshold scales take the full list of class break values; categorical scales take the value list."
+                    },
+                    "type": {
+                      "$ref": "#/definitions/ScaleType",
+                      "description": "Scale type override. Usually inferred from field type."
+                    },
+                    "nice": {
+                      "type": "boolean",
+                      "description": "Whether to nice-ify the domain for clean tick values. Defaults to true."
+                    },
+                    "zero": {
+                      "type": "boolean",
+                      "description": "Whether the domain should include zero. Defaults to true for quantitative."
+                    },
+                    "clip": {
+                      "type": "boolean",
+                      "description": "When true and domain is set, filter out data rows with values outside the domain range."
+                    },
+                    "range": {
+                      "type": "array",
+                      "items": {},
+                      "description": "Explicit range override."
+                    },
+                    "reverse": {
+                      "type": "boolean",
+                      "description": "Reverse the range direction."
+                    },
+                    "clamp": {
+                      "type": "boolean",
+                      "description": "Clamp output to the range."
+                    },
+                    "padding": {
+                      "type": "number",
+                      "description": "Padding for band/point scales. Point-scale default (a categorical x/y on a line/area/point mark) is 0 for line and area marks (the trend runs flush to the plot edges) and 0.5 for other marks (e.g. scatter, so points don't collide with the axis). `paddingOuter` is accepted as an alias here since point scales have no inner bands."
+                    },
+                    "paddingInner": {
+                      "type": "number",
+                      "description": "Inner padding for band scales."
+                    },
+                    "paddingOuter": {
+                      "type": "number",
+                      "description": "Outer padding for band scales."
+                    },
+                    "exponent": {
+                      "type": "number",
+                      "description": "Exponent for pow scales."
+                    },
+                    "base": {
+                      "type": "number",
+                      "description": "Base for log scales (default 10)."
+                    },
+                    "constant": {
+                      "type": "number",
+                      "description": "Constant for symlog scales."
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false,
+          "description": "Patch axis and scale settings on existing channels; nested properties merge with the base."
+        },
         "chrome": {
           "$ref": "#/definitions/Chrome",
           "description": "Override editorial chrome at this breakpoint."

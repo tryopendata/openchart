@@ -52,14 +52,15 @@ describe('v9 authored editorial choices', () => {
 
   it.each(
     amazonExamples,
-  )('%s explicitly focuses Amazon and labels every comparison series', (file, name) => {
+  )('%s focuses Amazon and identifies every comparison series at each width', (file, name) => {
     const spec = specFor(file, name);
     expect(spec.encoding.color).toMatchObject({
       field: 'company',
       scale: { domain: ['Amazon', 'Apple', 'Alphabet', 'Microsoft', 'Meta'] },
     });
     expect(spec.seriesStyles).toMatchObject({ Amazon: { strokeWidth: 3 } });
-    for (const width of [390, 1280]) {
+    const series = ['Alphabet', 'Amazon', 'Apple', 'Meta', 'Microsoft'];
+    for (const width of [320, 390, 700, 701, 1280]) {
       const layout = compileChart(spec, { width, height: 460, onWarn: () => {} });
       const lines = layout.marks.filter((mark): mark is LineMark => mark.type === 'line');
       const amazon = lines.find((line) => line.seriesKey === 'Amazon')!;
@@ -69,13 +70,23 @@ describe('v9 authored editorial choices', () => {
           .filter((line) => line.seriesKey !== 'Amazon')
           .every((line) => line.stroke !== amazon.stroke && line.strokeWidth < amazon.strokeWidth),
       ).toBe(true);
-      expect(layout.endpointLabels?.entries.map((entry) => entry.seriesKey).sort()).toEqual([
-        'Alphabet',
-        'Amazon',
-        'Apple',
-        'Meta',
-        'Microsoft',
-      ]);
+      if (!('entries' in layout.legend)) throw new Error('Expected a categorical revenue legend');
+      if (width <= 700) {
+        expect(layout.endpointLabels).toBeUndefined();
+        expect(layout.legend.position).toBe('top');
+        expect(layout.legend.entries.map((entry) => entry.label).sort()).toEqual(series);
+        expect(layout.legend.bounds.y + layout.legend.bounds.height).toBeLessThanOrEqual(
+          layout.area.y,
+        );
+        for (const entry of layout.legend.entries) {
+          expect(entry.color).toBe(lines.find((line) => line.seriesKey === entry.label)?.stroke);
+        }
+      } else {
+        expect(layout.endpointLabels?.entries.map((entry) => entry.seriesKey).sort()).toEqual(
+          series,
+        );
+        expect(layout.legend.entries).toHaveLength(0);
+      }
     }
   });
 

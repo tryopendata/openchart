@@ -1812,6 +1812,10 @@ export type Display = 'full' | 'sparkline';
  * when the container matches the breakpoint.
  */
 export interface ChartSpecOverride {
+  /** Patch axis and scale settings on existing channels; nested properties merge with the base. */
+  encoding?: {
+    [K in keyof Encoding]?: { axis?: AxisConfig | false; scale?: Omit<ScaleConfig, 'scheme'> };
+  };
   /** Override editorial chrome at this breakpoint. */
   chrome?: Chrome;
   /** Override label configuration at this breakpoint. */
