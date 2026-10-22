@@ -1271,6 +1271,48 @@ describe('compileChart', () => {
     expect(lines.find((line) => line.seriesKey === 'UK')?.stroke).toBe('#0e7490');
     expect(lines.find((line) => line.seriesKey === 'US')?.stroke).toBe('#c2410c');
   });
+
+  it('ignores a breakpoint color patch when the base chart has no color channel', () => {
+    const spec: ChartSpec = {
+      ...lineSpec,
+      encoding: { x: lineSpec.encoding.x, y: lineSpec.encoding.y },
+    };
+    const options = { width: 320, height: 240 };
+    const layout = compileChart(
+      {
+        ...spec,
+        overrides: { compact: { encoding: { color: { scale: { range: ['#0e7490'] } } } } },
+      },
+      options,
+    );
+    expect(layout).toEqual(compileChart(spec, options));
+  });
+
+  it('preserves explicit tooltip arrays when unchecked overrides attempt to patch them', () => {
+    const spec = {
+      ...barSpec,
+      encoding: {
+        ...barSpec.encoding,
+        tooltip: [
+          { field: 'name', type: 'nominal' as const },
+          { field: 'value', type: 'quantitative' as const, title: 'Amount' },
+        ],
+      },
+    };
+    const options = { width: 320, height: 240 };
+    const layout = compileChart(
+      {
+        ...spec,
+        overrides: { compact: { encoding: { tooltip: { axis: { title: 'Ignored' } } } } },
+      },
+      options,
+    );
+    expect(layout.tooltipDescriptors).toEqual(compileChart(spec, options).tooltipDescriptors);
+    expect(layout.tooltipDescriptors.get('rect-0')?.fields.map((field) => field.label)).toEqual([
+      'name',
+      'Amount',
+    ]);
+  });
 });
 
 describe('compileTable', () => {

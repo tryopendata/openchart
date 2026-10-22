@@ -161,7 +161,26 @@ describe('chart.schema.json', () => {
     { name: 'binning', encoding: { x: { bin: true } } },
     { name: 'time units', encoding: { x: { timeUnit: 'year' } } },
     { name: 'named color schemes', encoding: { color: { scale: { scheme: 'blues' } } } },
+    { name: 'reversed color scales', encoding: { color: { scale: { reverse: true } } } },
     { name: 'null axis shorthand', encoding: { x: { axis: null } } },
+    ...[
+      'tooltip',
+      'facet',
+      'row',
+      'column',
+      'detail',
+      'key',
+      'text',
+      'theta',
+      'x2',
+      'y2',
+      'opacity',
+      'angle',
+      'strokeDash',
+    ].map((channel) => ({
+      name: `${channel} channel`,
+      encoding: { [channel]: { scale: { range: [0, 1] } } },
+    })),
   ])('rejects unsupported $name in breakpoint encoding overrides', ({ encoding }) => {
     const spec = {
       ...minimalSpecForMark('line'),
