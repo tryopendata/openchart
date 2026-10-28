@@ -350,6 +350,7 @@ export function computeLineMarks(
         }
         const pointMark: PointMark = {
           type: 'point',
+          ...(isolated && seriesStyleKey !== undefined ? { seriesKey: seriesStyleKey } : {}),
           key: pointKey,
           cx: p.x,
           cy: p.y,
