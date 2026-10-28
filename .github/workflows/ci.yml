@@ -57,7 +57,8 @@ jobs:
   invariants:
     name: Playwright layout invariants
     if: "!startsWith(github.event.head_commit.message || '', 'release:')"
-    runs-on: ubuntu-latest
+    # Playwright 1.59 does not support Ubuntu 26.04 yet.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
 
     permissions:
