@@ -1,5 +1,206 @@
 # Changelog
 
+## [9.0.0](https://github.com/tryopendata/openchart/compare/core-v9.0.0-rc.2...core-v9.0.0) (2026-10-28)
+
+Stable v9 release. Upgrade all six packages together and review [the v9 migration guide](https://github.com/tryopendata/openchart/blob/core-v9.0.0/docs/migrating-v9.md). This entry includes the changes introduced in both release candidates since 8.9.1.
+
+### Static rendering and statistics
+
+- Render standalone chart, layer, barlist, tilemap and geomap SVG without a browser,
+  `happy-dom`, global document mutation or a shared render lock. Use per-call factories,
+  ID scopes, theme and text metrics; validate `idPrefix` and `precision` (0–15 or null).
+- Inline chart, layer and barlist role styles as attributes; stamp root theme and scoped
+  root IDs, serialize geometry at three decimals by default, preserve literal nonbreaking
+  spaces, and declare the xlink namespace when needed. Map theme styles remain scoped.
+- Add `encoding.description` for authored mark text and stable shape identity attributes.
+  Static marks receive titles without per-mark ARIA labels; live descriptions remain
+  keyboard accessible. Warn and omit varying descriptions on series paths; use a point layer
+  for observation text. Decorative geometry does not duplicate mark identity.
+- Add horizontal and vertical `errorbar` marks with optional caps for caller-computed
+  bounds. Preserve isolated observations as points and isolated area intervals as rules
+  spanning both bounds. Reserve layered sparkline padding for point radii and caps, and
+  honor explicit nominal domains, including empty rows.
+- Include both area interval bounds in automatic y domains so isolated bands remain
+  visible and inspectable; explicit domains remain authoritative.
+- Keep layered marks and axes on the same resolved domains and plot insets, including
+  interval bounds, transformed values and normalized stacks.
+- Add fixed horizontal `frame` margins for aligned figures and temporal columns with
+  explicit calendar or millisecond intervals, inferred interval diagnostics and shared
+  date reference positions. Fixed margins take precedence over automatic label reserves.
+- Add grouped bar lists, retained input ordering with `sort: null`, explicit value domains,
+  x reference lines and label affixes. Fit nominal ticks, honor explicit legend
+  suppression, and compose category/series names and values in labels.
+- Measure range end labels with the host text metrics (`measureText`) when provided.
+- Add `onMarkFocus` with a dedicated `MarkFocusEvent` carrying the resolved accessible
+  label, including authored descriptions, across vanilla and framework Chart wrappers.
+  Keep connected and isolated observations inspectable together, including interval bands.
+- Allow hosts to suppress generated live tables with `a11y.table: false`, remove static
+  control roles and tab stops, preserve live root theme identity, and respect reduced motion.
+- Retune cyan, ochre and violet light strokes, plus cyan, ochre, green and violet
+  light fills, for contrast.
+  Accept light/dark color pairs in categorical palette slots so default v8 migration
+  preserves both released palettes; `styling: 'v9'` adopts the new defaults.
+- Add consuming-site contracts, light/dark SVG goldens, interval/label/gap gallery coverage,
+  Node-only static tests and a two-theme page budget report with an 80,000-byte gzip guard.
+  Document host-owned tables, two-theme embedding and the shared-frame recipe in
+  [static rendering](https://github.com/tryopendata/openchart/blob/core-v9.0.0/docs/static-rendering.md).
+
+### Animation
+
+- Animate layered specs on update when every flattened leaf keeps the previous
+  leaf's mark and identity shape. Layer-level `animation` now reaches the
+  compiled chart, and `flattenLayers` is exported from the engine.
+- Transition `rule` marks on update, keyed by `encoding.key` when present and by
+  position otherwise.
+
+### Responsive specs
+
+- Breakpoint overrides can patch `axis` and `scale` on existing `x`, `y`, `color`
+  and `size` channels; nested properties merge with the base. Overrides for
+  channels the base spec does not define are ignored, and `scheme` and `reverse`
+  cannot be overridden.
+
+### Chart and map design
+
+- Lower map legend backdrop opacity from 0.9 to 0.5 so geography stays visible
+  beneath floating keys.
+
+- Keep the two endpoint date labels readable when a slope chart has a narrow plot,
+  without moving the data anchors or overriding explicit tick values.
+
+- Add optional detail geography with zoom thresholds and explicit topology-object
+  selection, preserving the primary fitted projection. Validate decoded source
+  planes for identity maps before updates mutate the figure.
+- Add explicitly covered, independently labeled geographic insets with scoped
+  cameras, callouts and mark events across vanilla and all wrappers. Share place
+  identity and scale semantics across views; export all current view cameras.
+
+- Add opt-in date-slice A/B comparison and geographic reader controllers, with
+  host-placed readouts, local place search/ranking, keyboard inspection and explicit
+  Show on map actions. Missing observations remain distinct from zero; controlled
+  selection updates are silent in vanilla and React/Vue/Svelte.
+- Add optional active-value and distribution map keys without changing authored
+  scale domains or class boundaries. Size side gutters to their content, use compact
+  quantitative range lists, and remove unnecessary backgrounds from reserved keys.
+- Measure source, byline, footer and branding together across chart, map, bar list,
+  Sankey, tile map, table and graph. Stack long attribution when it fits better,
+  preserve custom brands, and use a consistent 12px default watermark. This can
+  change footer wrapping and available plot space in migrated documents.
+- Add opt-in geographic `text`/`textPriority` channels and keyed `callouts`, with
+  polygon-interior anchors, bounded collision placement, fixed note capacity and
+  constant-screen-size labels through camera movement.
+- Preserve every authored place name and callout in an accessible inventory; add
+  a host-placed `labelInventory` disclosure in vanilla and all GeoMap wrappers.
+- Include settled geographic labels and full inventory descriptions in SVG export
+  and GeoMap static rendering; add stable `idPrefix` for multiple static figures.
+
+- Add measured bar value placement (`adaptive`, `inside`, `outside`, `column`),
+  including shared value columns in facets and diagnostics when labels cannot fit.
+- Add opt-in `rowHover` across vanilla and all Chart wrappers: quiet full-row
+  inspection for simple horizontal bars, shared with keyboard focus and passive
+  around annotations, legends and editing.
+- Add horizontal y-axis unit headers through `titleAngle: 0` and `titleAnchor: 'end'`.
+- Align endpoint precision across a displayed column, preserve source values and
+  missing observations, and measure formatted labels with the host font metrics.
+- Budget both endpoint columns, gaps and date context against the measured axes;
+  automatic layouts retain a usable plot, while impossible authored fits diagnose.
+- Default stacked-area endpoints to their band midpoint; retain explicit boundary
+  anchors and opt-in fit-tested interior series names. Hover geometry is unchanged.
+- Preserve complete series names and band leaders in independent-scale layers;
+  resolve stacked domains from accumulated bands and separate clipped endpoint anchors.
+- Measure the complete independent-layer legend before placing either axis, so
+  wrapped rows and side keys reserve space for every eligible series.
+- Honor the resolved label font on bars, columns, dots and ranges; determine
+  column label direction from the source number instead of its formatted text.
+- Add useful endpoint typography/spacing and map ink theme controls. Keep current
+  bar proportions and endpoint spacing; use quieter ordinary gridlines and stronger
+  existing zero rules in SVG and canvas without changing scale domains.
+- Adopt quieter map borders while retaining the current no-data hatch. Measure
+  static map key titles/units/context before fitting geography, and place size keys
+  using their full bounds and geographic obstacles.
+- Preserve expressible v8 grid, band-anchor and border styling in migration; report
+  the unavoidable new map-key layout behavior.
+- Keep enlarged bar labels within available space, and keep enlarged rotated
+  axis titles inside the viewport.
+- Place top point-color keys in their reserved band; reserve wrapped category
+  rows accurately and avoid double-counting mixed bottom key heights.
+- Honor right and bottom-right map legends with measured gutters, narrow-layout
+  fallback diagnostics, and camera clipping that keeps geography out of the key.
+- Describe actual map scale intervals in accessible legend text and accept the
+  built-in diverging palettes for quantitative geographic color encodings.
+
+### Annotation and figure defaults
+
+- Adopt 12px small/axis/source/byline/footer text and 16px/12px chrome spacing.
+  Background stays transparent; default axis and eyebrow colors are unchanged.
+- Default callouts to measured wrapping, regular primary text, 12/13 subtitle
+  sizing, and curves without implied arrows. Explicit author settings still win.
+- Default reference labels to automatic placement and reference/range labels to
+  theme small text. Process automatic annotations by priority then source order,
+  and score connector crossings when selecting placements.
+- Keep one eligible inline callout at compact widths by default. Per-annotation
+  `responsive: false` stays pinned; existing chart-level responsive opt-outs retain
+  their compact behavior. Null still disables count and wrap limits.
+- Grow omitted `chromeLayout` by the note band only. Explicit `subtract` keeps an
+  exact outer budget; `grow` grows by all chrome. Resolved heights avoid double
+  counting in mounts and exports, including layered and faceted figures.
+- Render complete wrapped rich-text notes with source-order numbering. Number
+  gaps are intentional and facet instances share source identity. Notes and
+  markers support transient linked focus/click/tap emphasis.
+- Retune default reference-rule and range ink; derive marker and plate fills from
+  the resolved neutral surface while preserving authored colors.
+
+### Breaking API and authoring changes
+
+- Make `onEdit(EditTransaction)` the sole durable editing callback. Remove
+  `ElementEdit`, `onEditTransaction`, `onAnnotationEdit`, and `onTextEdit`; use
+  `applyEditTransaction` for atomic application, stale-target rejection, and undo.
+- In edit mode, arrows nudge 1px, Shift+arrows nudge 10px, and Tab/Shift+Tab cycle
+  selection. Native text editing keeps its normal keyboard behavior.
+- Remove the inert `onDataPointClick`, graph `updateVisuals()`, and the Chart
+  mount/wrapper `responsive` resize alias. Use `onMarkClick`, `update()`, and
+  `autoResize`, respectively; spec `responsive` is unchanged.
+- Enforce the discriminated `MarkDef` union and reject inapplicable authored mark
+  options before sugar expansion, with matching TypeScript/schema/runtime checks.
+- Reject retired table `compact`, Sankey/map/barlist `valueFormat`, annotation
+  `rule`, spec `darkMode`, theme chrome color strings, arc-family `encoding.y`
+  aliases, dead encoding channels, `mark.render`, and explicit `legacy` animation
+  presets. Tilemap `valueFormat` and ordinary chrome text shorthand remain valid.
+- Remove legacy line-end series labels, manual series-label offsets/dragging, and
+  series-label element refs. Use the endpoint column; warn when both identifiers
+  are explicitly disabled on a multi-series line chart.
+- Remove `footnoteBandHeight` helpers and narrow-breakpoint constant aliases.
+  Read `layout.chrome.noteBandHeight` and use `NARROW_VIEWPORT_MAX`.
+- Unify builder/compiler field inference: sample up to 50 rows, require more than
+  80% agreement, and recognize numeric strings before dates. Explicit field types
+  remain authoritative.
+- Label normalized stacked bar and column segments with their share of the stack,
+  formatted `.0%` unless `labels.format` is set, whether or not `labels.content` is
+  given. rc.2 printed the raw field value.
+- Draw both leaves of an independent-y dual-axis layer into one plot rectangle, so
+  series share x positions and temporal columns stay inside the plot.
+
+### Themes and migration
+
+- Deep-merge spec/provider/host themes; leaf themes override parent themes and
+  mount/compile options have highest precedence. Arrays and color pairs replace
+  atomically; partial rules inherit and `rule: null` clears a preset rule.
+- Prefer authored chrome font sizes over general font propagation. Remove public
+  `Theme` and the empty `editorial` preset; use `ThemeConfig` / `ResolvedTheme` and
+  omit the preset. Deprecate `clarity`, retaining its remaining color choices.
+- Stamp only authored CSS theme overrides through one renderer helper. Host CSS
+  can override omitted tokens; dark defaults include all registered tokens and
+  SVG/raster exports retain live CSS token values.
+- Keep layer font measurement and font-load updates aligned with the primary
+  leaf theme; keep hidden annotation notes out of keyboard navigation.
+- Normalize breakpoint annotations and apply endpoint-label patches consistently
+  with root specs, including migrated legacy labels.
+- Extend `migrateSpecV8` with `{ styling: 'v9' }` for alias-only migration. Default
+  migration materializes former v8 styling, including annotation colors/spacing,
+  and reports repairs without mutating input. Layout pixel parity is not promised.
+- Add [the v9 migration guide](https://github.com/tryopendata/openchart/blob/core-v9.0.0/docs/migrating-v9.md), including persistence handler,
+  exact-height embed, theme, CSS, and mark-union changes.
+
 ## [9.0.0-rc.2](https://github.com/tryopendata/openchart/compare/core-v9.0.0-rc.1...core-v9.0.0-rc.2) (2026-10-22)
 
 Second v9 release candidate. Published under npm `next`; the stable `latest` release remains 8.9.1.
