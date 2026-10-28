@@ -482,3 +482,5 @@ families; `clarity` is a deprecated colors-only migration bridge.
 ### Static statistics implementation
 
 `packages/vanilla/src/static-dom.ts` serializes the per-call SVG tree; `render-context.ts` owns factories and scoped IDs. `packages/engine/src/charts/errorbar/` computes authored intervals, and `packages/engine/src/layout/axes/fit-labels.ts` fits nominal ticks. Shared consuming-site fixtures, byte goldens and the Node-only static test project cover server rendering. `scripts/static-budget.ts` measures the two-theme page allocation.
+
+The static site gallery lives in `examples/src/testing/fixtures-static.stories.tsx`: all 13 shared §8 site fixtures render through `renderStaticSVG`, with light/dark pairs, scoped IDs, 120×16 cells and 680×320 figures. Its 13 desktop entries in `e2e/visual/stories.spec.ts` complement the byte goldens; `fixtures-stats.stories.tsx` separately exercises the live grammar.

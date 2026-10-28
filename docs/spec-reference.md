@@ -15,8 +15,12 @@ All types are importable from `@opendata-ai/openchart-core` or from the convenie
 - [Transforms](#transforms) (filter, bin, aggregate, joinaggregate, calculate, timeUnit, fold, window, density)
 - [Annotations](#annotations) (refline, text, range)
 - [Labels](#labels) (density, format, position)
+- [Endpoint labels](#endpoint-labels) (series names and last values)
 - [Chrome](#chrome) (title, subtitle, source, byline, footer)
 - [ThemeConfig](#themeconfig) (colors, fonts, spacing, editorial rule)
+- [A11yConfig](#a11yconfig) (figure name, hidden table, decorative charts)
+- [FrameConfig](#frameconfig) (fixed left/right plot margins)
+- [BarListSpec](#barlistspec) (grouped ranked lists and value references)
 - [DarkMode](#darkmode) (auto, force, off)
 - [TableSpec](#tablespec) (data tables: density, striping, sort, totals)
 - [ColumnConfig](#columnconfig) (column definitions and visual types)
@@ -64,7 +68,7 @@ The primary input for standard chart types. Source: `core/src/types/spec.ts`.
 
 | Field         | Type           | Default     | Description                                                                                   |
 | ------------- | -------------- | ----------- | --------------------------------------------------------------------------------------------- |
-| `mark`        | `MarkType \| MarkDef` | (required) | The mark: `'bar'`, `'line'`, `'area'`, `'point'`, `'circle'`, `'arc'`, `'text'`, `'rule'`, `'tick'`, `'rect'`, `'lollipop'`, `'beeswarm'`, `'histogram'`, `'density'`, `'range'`, `'waffle'`, `'calendar'`, `'parliament'`. See [Mark properties](#mark-properties) for the object form. |
+| `mark`        | `MarkType \| MarkDef` | (required) | The mark: `'bar'`, `'line'`, `'area'`, `'point'`, `'circle'`, `'arc'`, `'text'`, `'rule'`, `'tick'`, `'rect'`, `'lollipop'`, `'beeswarm'`, `'histogram'`, `'density'`, `'range'`, `'errorbar'`, `'waffle'`, `'calendar'`, `'parliament'`. See [Mark properties](#mark-properties) for the object form. |
 | `data`        | `DataRow[]`    | (required)  | Array of data rows. Each row is a `Record<string, unknown>`. Must be non-empty.               |
 | `encoding`    | `Encoding`     | (required)  | Maps data fields to visual channels. See [Encoding](#encoding).                               |
 | `chrome`      | `Chrome`       | `undefined` | Editorial text: title, subtitle, source, byline, footer. See [Chrome](#chrome).               |
@@ -76,7 +80,10 @@ The primary input for standard chart types. Source: `core/src/types/spec.ts`.
 | `watermark`   | `boolean`      | `true`      | Whether to show the tryOpenData.ai watermark. Mount/compile options take precedence over spec and active breakpoint values. Defaults to `true`; auto-hides when the container is under 200px tall unless explicitly set. |
 | `animation`   | `AnimationSpec`| `undefined` | Animation configuration. `true` enables entrance + update/exit animations. See [Animation](#animation). |
 | `description` | `string`       | `undefined` | Alt text for the chart (Vega-Lite aligned). Sugar for `a11y.description`. Auto-generated when absent. See the [accessibility guide](accessibility.md). |
-| `a11y`        | `A11yConfig`   | `undefined` | Accessibility overrides: `description` (custom alt text, wins over top-level `description`) and `hidden` (hide from assistive technology). |
+| `a11y` | `A11yConfig` | `undefined` | Figure name, generated live table and visibility. See [A11yConfig](#a11yconfig). |
+| `display` | `'full' \| 'sparkline'` | `'full'` | Compact sparkline defaults omit chrome, axes, legend and watermark. |
+| `frame` | `FrameConfig` | automatic gutters | Fixed horizontal plot margins. See [FrameConfig](#frameconfig). |
+| `endpointLabels` | `boolean \| EndpointLabelsConfig` | automatic | Series names and last values; see [Endpoint labels](#endpoint-labels). |
 
 ### DataRow
 
@@ -115,11 +122,12 @@ The `mark` field on ChartSpec accepts either a string (`'line'`) or an object wi
 | `cornerRadius` | `number \| 'pill'`      | `0`         | bar, arc       | Corner rounding in pixels. `'pill'` sets `rx` to half the bar thickness. |
 | `centerLabel`  | `string \| { text, subtitle? }` | `undefined` | arc    | Donut center stat. A string renders one line; the object form adds a caption under it. Decorative (the number is already in the slices), and only meaningful with an inner radius. |
 | `filled`       | `boolean`               | `true`      | all            | Whether the mark is filled vs stroked only. |
-| `opacity`      | `number`                | `1`         | all            | Overall mark opacity (0-1). |
+| `opacity` | `number` | `0.35` on errorbar; otherwise `1` | applicable marks | Overall mark opacity (0–1). Errorbar field opacity overrides mark opacity. |
 | `fillOpacity`  | `number`                | varies      | histogram, density, area, bar | Fill opacity independent of stroke. Defaults to 0.55 on overlapping histogram groups and 0.4 on grouped density curves. On an area it replaces the auto gradient with a flat translucent fill. |
 | `fill`         | `string \| GradientDef` | theme color | all            | Fill color or gradient. See [Gradients](#gradients). |
 | `stroke`       | `string`                | `undefined` | all            | Stroke color. |
-| `strokeWidth`  | `number`                | varies      | all            | Stroke width in pixels. |
+| `strokeWidth` | `number` | `2` on errorbar; otherwise mark-specific | applicable stroked marks | Stroke width in pixels. |
+| `ticks` | `boolean` | `false` | errorbar | Draw 6px perpendicular end caps. Cap length is fixed, not an authored option. |
 | `tooltip`      | `boolean \| null`       | `true`      | all            | Tooltip behavior. `null` disables tooltips. |
 | `clip`         | `boolean`               | `false`     | all            | Clip marks to the chart area. |
 | `fillPattern`  | `'auto' \| 'none'`      | `'none'`    | bar, area, arc | `'auto'` layers a per-series SVG pattern (hatch, dots, crosshatch, vertical) over the series color. See the [accessibility guide](accessibility.md#pattern-fills). |
@@ -146,6 +154,10 @@ include a nominal field such as `{ field: 'rangeLabel', type: 'nominal', title:
 `x`/`x2` still position the bars; a finite display boundary need not be presented
 as the actual upper bound. Without explicit tooltip fields, the bin-edge range
 remains the default title.
+
+#### Errorbar
+
+`mark: 'errorbar'` (or `{ type: 'errorbar', ticks: true }`) draws supplied interval bounds. Horizontal intervals require quantitative `x` and `x2` plus a nominal, ordinal or temporal `y`; vertical intervals require quantitative `y` and `y2` plus a nominal, ordinal or temporal `x`. Supply exactly one of `x2` and `y2`. The domain includes both bounds. Missing bounds produce no interval mark. Stroke defaults to the resolved series color, width to 2px and opacity to 0.35; `mark.stroke`, `mark.strokeWidth`, `mark.opacity` and a field opacity encoding override those defaults. Optional caps are 6px long and decorative. OpenChart does not compute intervals from samples or accept an `extent` estimator. Layer a point to show the estimate.
 
 #### Gradients
 
@@ -187,7 +199,11 @@ Overlay multiple chart types on shared scales. Source: `core/src/types/spec.ts`.
 | `transform`    | `Transform[]`                | `undefined` | Shared transforms. Parent transforms run before child transforms.                             |
 | `chrome`       | `Chrome`                     | `undefined` | Editorial text (title, subtitle, source, etc.) for the layered view.                          |
 | `annotations`  | `Annotation[]`               | `undefined` | Annotations on the layered view.                                                              |
-| `labels`       | `LabelConfig`                | `undefined` | Label display configuration.                                                                  |
+| `labels` | `LabelSpec` | `undefined` | Figure label configuration; explicit composed `content` propagates to bar/range leaves without child labels. |
+| `display` | `'full' \| 'sparkline'` | first leaf, then `'full'` | Shared display defaults, including layered compact cells. |
+| `a11y` | `A11yConfig` | first leaf | Figure name, live table and visibility. |
+| `frame` | `FrameConfig` | first leaf, then automatic | Shared fixed plot margins. |
+| `endpointLabels` | `boolean \| EndpointLabelsConfig` | inherited/automatic | Propagates to children that omit it. See [Endpoint labels](#endpoint-labels). |
 | `legend`       | `LegendConfig`               | `undefined` | Legend display configuration.                                                                 |
 | `responsive`   | `boolean \| ResponsiveConfig` | `undefined` | Same as `ChartSpec.responsive`. When omitted, the first leaf's value applies.                 |
 | `theme`        | `ThemeConfig`                | `undefined` | Theme overrides.                                                                              |
@@ -195,6 +211,8 @@ Overlay multiple chart types on shared scales. Source: `core/src/types/spec.ts`.
 | `resolve`      | `ResolveConfig`              | `undefined` | Resolution strategy for shared vs. independent scales/axes/legends.                           |
 | `hiddenSeries` | `string[]`                   | `undefined` | Series names to hide from rendering.                                                          |
 | `animation`    | `AnimationSpec`              | `undefined` | Animation configuration. `true` enables entrance + update/exit animations. See [Animation](#animation). |
+
+**Figure inheritance:** `display`, `a11y` and `frame` flow through nested layers to leaves that omit them. A child can replace each inherited value; these objects are not merged property by property. The composed figure uses its root value, falling back to the first flattened leaf. Root `labels` likewise controls the composed figure. A parent labels object with explicit `content` is inherited only by bar and range leaves without their own `labels`; interval peers such as ticks do not inherit inapplicable composed-label options. Other parent labels configurations are not copied to every leaf. Child `labels` wins as a whole.
 
 **Scale behavior:** All layers share scales by default. The engine unions data from all layers to compute a single scale domain, so marks from different layers are positioned on the same coordinate system.
 
@@ -238,6 +256,7 @@ interface Encoding {
   size?: EncodingChannel;
   theta?: EncodingChannel; // arc/waffle/parliament quantitative value
   detail?: EncodingChannel;
+  description?: DescriptionEncoding;
   facet?: FacetChannel;   // small multiples -- see Faceting
   row?: FacetChannel;     // vertical facet stack -- see Faceting
   column?: FacetChannel;  // horizontal facet row -- see Faceting
@@ -252,10 +271,25 @@ Which channels are required depends on the chart type. See [Encoding by chart ty
 | ----------- | ------------- | ----------- | ---------------------------------------------------------------------------------------------- |
 | `field`     | `string`      | (required)  | Data field name. Must match a key in the data rows.                                            |
 | `type`      | `FieldType`   | (required)  | How to interpret values: `'quantitative'`, `'temporal'`, `'nominal'`, `'ordinal'`.             |
+| `interval` | `'day' \| 'week' \| 'month' \| 'quarter' \| 'year' \| number` | inferred | Temporal position interval; see below. |
 | `aggregate` | `AggregateOp` | `undefined` | Aggregate applied before encoding: `'count'`, `'sum'`, `'mean'`, `'median'`, `'min'`, `'max'`. |
 | `axis`      | `AxisConfig`  | `undefined` | Axis configuration. Only relevant for `x` and `y` channels.                                    |
 | `scale`     | `ScaleConfig` | `undefined` | Scale configuration (domain, type, nice, zero).                                                |
 | `stack`     | `boolean \| 'zero' \| 'normalize' \| 'center' \| null` | `'zero'` for bar/column/area (Vega-Lite aligned) | Stacking behavior for quantitative channels. `null`/`false` disables stacking (grouped/dodged bars, or overlap gradients for area). `'normalize'` for 100% stacked. `'center'` for streamgraph. |
+
+`interval` is accepted on temporal position channels (`x`, `y`, `x2` or `y2`) of `bar`, `rect` and `errorbar`; other channel/mark combinations are rejected. A numeric interval must be finite, positive milliseconds. Temporal bars use the interval to size bands around timestamps on a continuous time scale. Omission infers the smallest positive difference between distinct dates. With fewer than two distinct dates, it falls back to one day and warns. Dates whose spacing is not a multiple of the chosen interval produce a warning. Calendar intervals follow the scale's local-time or UTC interpretation, including month/quarter/year boundaries; numeric intervals are fixed durations.
+
+### DescriptionEncoding
+
+`encoding.description` is optional (default `undefined`) and does not create a scale, axis or legend:
+
+```ts
+type DescriptionEncoding =
+  | { field: string; type?: FieldType; format?: string }
+  | { value: string };
+```
+
+Field `type` and `format` default to omission. String fields are retained verbatim, numeric fields use the field formatter (with optional `format`), and temporal fields/Dates use date formatting. A null or missing field value emits no authored description. `{ value }` supplies constant text. Individual data shapes receive their row text; a line/area path requires the same field value throughout its series. Mixed series values warn and omit that path's description. Add a point layer to expose per-observation text. Static output writes a direct `<title>` on the data shape; live keyboard marks use the authored description. This channel is distinct from the figure's top-level `description` / `a11y.description`.
 
 ### FieldType
 
@@ -308,23 +342,24 @@ The engine validates encoding channels at runtime using `MARK_ENCODING_RULES`. S
 
 **Legend**: (req) = required, (opt) = optional, -- = not applicable
 
-| Chart Type | x                                | y                      | color                  | size               | detail        | Notes                                             |
-| ---------- | -------------------------------- | ---------------------- | ---------------------- | ------------------ | ------------- | ------------------------------------------------- |
-| `line`     | temporal, ordinal (req)          | quantitative (req)     | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | color splits into multi-series with auto legend   |
-| `area`     | temporal, ordinal (req)          | quantitative (req)     | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | Same encoding as line, filled region              |
-| `bar`      | quantitative (req)               | nominal, ordinal (req) | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | Horizontal bars. x = values, y = categories       |
-| `column`   | nominal, ordinal, temporal (req) | quantitative (req)     | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | Vertical bars. x = categories, y = values         |
-| `pie`      | -- (opt, unused)                 | -- (use theta) | nominal, ordinal (req) | quantitative (opt) | nominal (opt) | color = slice categories, theta = slice values        |
-| `donut`    | -- (opt, unused)                 | -- (use theta) | nominal, ordinal (req) | quantitative (opt) | nominal (opt) | theta = slice values; same as pie with inner radius                     |
-| `dot`      | quantitative (req)               | nominal, ordinal (req) | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | Dot plot. x = values, y = categories              |
-| `scatter`  | quantitative (req)               | quantitative (req)     | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | Both axes quantitative. size creates bubble chart |
-| `beeswarm` | quantitative or nominal (opt)    | quantitative or nominal (opt) | nominal, ordinal, quantitative (opt) | quantitative (opt) | nominal (opt) | One position is the quantitative value axis; the other (nominal/ordinal) splits into grouped lanes |
-| `range`    | quantitative or nominal (req)    | quantitative or nominal (req) | nominal, ordinal (opt) | -- | nominal (opt) | Dumbbell/arrow/range-bar. x+x2 (horizontal) or y+y2 (vertical); orientation-dependent second endpoint |
-| `waffle`   | -- (opt, unused)                 | -- (use theta) | nominal, ordinal (req) | -- | nominal (opt) | Unit grid. `theta` = share, color = category |
-| `parliament` | -- (opt, unused)               | -- (use theta) | nominal, ordinal (req) | -- | nominal (opt) | Hemicycle seats. `theta` = seat count, color = party |
-| `histogram` | quantitative (req)              | quantitative (opt)     | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | Raw values on x; y defaults to the per-bin count. Color groups overlap rather than dodge |
-| `density`  | quantitative (req)               | -- (computed)          | nominal, ordinal (opt) | -- | nominal (opt) | KDE over raw x values; y is the estimated density |
-| `calendar` | temporal (req)                   | -- (not allowed)       | quantitative (req)     | -- | nominal (opt) | Calendar heatmap. x = daily date, color = per-day value; owns its own geometry |
+| Chart Type | x                                | y                      | color                  | size               | detail        | description | Notes                                             |
+| ---------- | -------------------------------- | ---------------------- | ---------------------- | ------------------ | ------------- | --- | ------------------------------------------------- |
+| `line`     | temporal, ordinal (req)          | quantitative (req)     | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | optional | color splits into multi-series with auto legend   |
+| `area`     | temporal, ordinal (req)          | quantitative (req)     | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | optional | Same encoding as line, filled region              |
+| `bar`      | quantitative (req)               | nominal, ordinal (req) | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | optional | Horizontal bars. x = values, y = categories       |
+| `column`   | nominal, ordinal, temporal (req) | quantitative (req)     | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | optional | Vertical bars. x = categories, y = values         |
+| `pie`      | -- (opt, unused)                 | -- (use theta) | nominal, ordinal (req) | quantitative (opt) | nominal (opt) | optional | color = slice categories, theta = slice values        |
+| `donut`    | -- (opt, unused)                 | -- (use theta) | nominal, ordinal (req) | quantitative (opt) | nominal (opt) | optional | theta = slice values; same as pie with inner radius                     |
+| `dot`      | quantitative (req)               | nominal, ordinal (req) | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | optional | Dot plot. x = values, y = categories              |
+| `scatter`  | quantitative (req)               | quantitative (req)     | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | optional | Both axes quantitative. size creates bubble chart |
+| `beeswarm` | quantitative or nominal (opt)    | quantitative or nominal (opt) | nominal, ordinal, quantitative (opt) | quantitative (opt) | nominal (opt) | optional | One position is the quantitative value axis; the other (nominal/ordinal) splits into grouped lanes |
+| `range`    | quantitative or nominal (req)    | quantitative or nominal (req) | nominal, ordinal (opt) | -- | nominal (opt) | optional | Dumbbell/arrow/range-bar. x+x2 (horizontal) or y+y2 (vertical); orientation-dependent second endpoint |
+| `errorbar` | quantitative or nominal/ordinal/temporal (req) | quantitative or nominal/ordinal/temporal (req) | optional | optional | optional | optional | Quantitative x+x2 bounds with categorical/temporal y, or quantitative y+y2 bounds with categorical/temporal x; exactly one second endpoint |
+| `waffle`   | -- (opt, unused)                 | -- (use theta) | nominal, ordinal (req) | -- | nominal (opt) | optional | Unit grid. `theta` = share, color = category |
+| `parliament` | -- (opt, unused)               | -- (use theta) | nominal, ordinal (req) | -- | nominal (opt) | optional | Hemicycle seats. `theta` = seat count, color = party |
+| `histogram` | quantitative (req)              | quantitative (opt)     | nominal, ordinal (opt) | quantitative (opt) | nominal (opt) | optional | Raw values on x; y defaults to the per-bin count. Color groups overlap rather than dodge |
+| `density`  | quantitative (req)               | -- (computed)          | nominal, ordinal (opt) | -- | nominal (opt) | optional | KDE over raw x values; y is the estimated density |
+| `calendar` | temporal (req)                   | -- (not allowed)       | quantitative (req)     | -- | nominal (opt) | optional | Calendar heatmap. x = daily date, color = per-day value; owns its own geometry |
 
 ### Channel purpose per chart type
 
@@ -706,15 +741,29 @@ library's existing default d3 locale; runtime locale replacement is unsupported.
 
 ```ts
 interface LabelConfig {
+  content?: 'label' | 'value' | 'label value';
+  placement?: 'adaptive' | 'inside' | 'outside' | 'column';
   density?: LabelDensity;
   format?: string;
+  prefix?: string;
+  suffix?: string;
+  color?: string;
+  fontSize?: number;
 }
 ```
 
 | Field     | Type           | Default  | Description                                         |
 | --------- | -------------- | -------- | --------------------------------------------------- |
+| `content` | `'label' \| 'value' \| 'label value'` | `'value'` | Compose category/series names with formatted values on bar and range marks. |
+| `prefix` | `string` | `''` | Literal text before the formatted value, not before the name. |
+| `suffix` | `string` | `''` | Literal text after the formatted value. |
+| `placement` | `'adaptive' \| 'inside' \| 'outside' \| 'column'` | `'adaptive'` | Bar/column placement; column is for simple horizontal bars. |
+| `color` | `string` | fill-derived | Fixed label color. |
+| `fontSize` | `number` | mark/theme default | Bar/column value-label size in pixels. |
 | `density` | `LabelDensity` | `'auto'` | How many data labels to show.                       |
 | `format`  | `string`       | auto     | d3-format override for label values, e.g. `",.0f"`. |
+
+For stacked bars, `label` is the series name; for simple bars it is the category. Range endpoint names come from the corresponding channel title, falling back to its field. For example, `labels: { content: 'label value', suffix: 'm' }` can produce `median 14m` and `p75 26m`. Range marks reserve measured endpoint space when `content` is explicit; fixed `frame` margins remain authoritative. Barlist labels accept only `format`, `prefix` and `suffix`, as documented below.
 
 ### LabelDensity
 
@@ -724,6 +773,41 @@ interface LabelConfig {
 | `'auto'`      | Show labels with collision detection. Overlapping labels are hidden and only appear in tooltips.                         |
 | `'endpoints'` | Show only the first and last label per series. Good for line charts where the trend matters more than individual values. |
 | `'none'`      | Hide all labels. Rely on tooltips and the legend for value readout.                                                      |
+
+---
+
+## Endpoint labels
+
+`ChartSpec.endpointLabels` and `LayerSpec.endpointLabels` accept `boolean | EndpointLabelsConfig`. Omission automatically shows a trailing endpoint column for two through eight identified line or overlapping-area series, normally replacing the traditional legend. Single-series charts have no column by default. Stacked areas and stacked columns require explicit opt-in, such as `endpointLabels: true` or `{ show: true }`. `false` or `{ show: false }` disables the column. An explicit `legend.show: true` can show the legend alongside it; `legend.show: false` keeps the legend hidden.
+
+On stacked columns, each entry uses that series' rightmost available segment, anchors at the segment midpoint, and displays its own segment value rather than the cumulative stack total. A missing final series segment uses its last available segment; differing endpoint dates can qualify entries with dates. Column entries have no ring markers. The value field defaults to `encoding.y.field`.
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `show` | `boolean` | automatic | Force the endpoint visibility choice on/off. |
+| `maxSeries` | `number` | `8` | Automatic labels yield to a legend above this series count; explicit opt-in overrides the cutoff. This field alone is not opt-in. |
+| `ends` | `'end' \| 'both'` | `'end'` | Trailing column only, or leading and trailing columns. |
+| `content` | `'label' \| 'value' \| 'label value' \| { leading?: EndpointLabelContent; trailing?: EndpointLabelContent }` | name plus value on two lines | Select one-line composition or independent leading/trailing content. Omitted object sides retain the two-line default. |
+| `valueField` | `string` | `encoding.y.field` | Field read from each endpoint observation. |
+| `format` | `string` | y-axis format, then y-channel format, then automatic shared precision | Explicit value format. Source observations are not rounded. |
+| `width` | `number` | `110` | Maximum series-name wrap width in pixels. |
+| `anchor` | `'boundary' \| 'band'` | `'band'` | Stacked-area endpoint at cumulative boundary or band midpoint. |
+| `placement` | `'end' \| 'interior'` | `'end'` | Endpoint column or fit-tested stacked-area interior names; entries that cannot fit inside retain end-column identification. |
+| `showMarker` | `boolean` | `true` for eligible line endpoints | Draw a ring at the data endpoint; stacked bands and columns omit rings. |
+| `markerStyle` | `{ fill?: string; stroke?: string; strokeWidth?: number; radius?: number }` | opaque canvas fill, series stroke, 2px stroke, 4px radius | Ring overrides; transparent fill is supported. |
+| `showLeader` | `boolean` | `false` | Connect displaced end-column entries to their line endpoints. Stacked-band leaders remain automatic. |
+
+Display-affecting configuration (such as `content` or `ends`) also counts as explicit opt-in unless `show: false` is set. Compact layouts and automatic width budgeting can demote automatic endpoint columns to the legend. Explicit opt-in survives the normal compact-width suppression, but fixed `frame.right` (and `frame.left` for `ends: 'both'`) remains authoritative: if the measured column and gap cannot fit, the endpoint column is demoted even when requested. The legend can provide identification unless explicitly hidden; fixed gutters do not expand to fit the column.
+
+```ts
+endpointLabels: {
+  show: true,
+  content: 'label value',
+  format: ',.0f',
+}
+```
+
+For a weekly stacked-column/history pair, author the same temporal domain and `frame` on both figures, leaving a right gutter large enough for the measured endpoint labels. See [static rendering](static-rendering.md#aligned-figures).
 
 ---
 
@@ -1028,6 +1112,85 @@ You don't need to define a separate dark theme. The engine handles the color tra
 
 ---
 
+## A11yConfig
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `description` | `string` | generated figure description | Figure's accessible name; wins over chart top-level `description`. |
+| `table` | `boolean` | `true` | Generate the hidden screen-reader table on live chart mounts. `false` leaves keyboard navigation enabled so a host can supply its own table. Static SVG never generates an HTML table, regardless of this value. |
+| `hidden` | `boolean` | `false` | Set `aria-hidden`, omit the image role, and suppress the live table and keyboard mark navigation. Use for decorative cells. |
+
+## FrameConfig
+
+`frame` defaults to omission: left and right gutters are measured automatically. Each omitted side remains automatic independently.
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `left` | `number` | automatic | Fixed left plot margin in CSS pixels. |
+| `right` | `number` | automatic | Fixed right plot margin in CSS pixels. |
+
+Values must be finite and non-negative and leave usable plot width. There are no `top` or `bottom` frame fields. Fixed values win over automatic axis, endpoint and outside-reference label reserves. Leave enough room for authored labels; fixed gutters do not expand automatically. Use matching widths, frames and temporal domains for aligned history/column figures. See [static rendering](static-rendering.md#aligned-figures).
+
+## BarListSpec
+
+Ranked rows with proportional tracks and value labels. `type: 'barlist'` selects this spec; it is not a Cartesian `ChartSpec`.
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `type` | `'barlist'` | required | Spec discriminant. |
+| `data` | `DataRow[]` | required | Source rows. Non-finite value rows do not produce bars. |
+| `encoding` | `BarListEncoding` | required | Label, value and optional group/color/description channels below. |
+| `sort` | `'descending' \| 'ascending' \| null` | `'descending'` | Sort by numeric value within each group. `null` retains input order within groups. Groups remain in first-seen order. |
+| `height` | `number \| 'auto'` | adapter-dependent when omitted | `'auto'` fits all rows admitted by `maxItems`, group headers, annotations and chrome; a number supplies a fixed height. See height behavior below. |
+| `maxItems` | `number` | `20` | Maximum rows after grouping/sorting, across all groups. |
+| `barHeight` | `number` | `6` | Bar thickness in pixels. |
+| `cornerRadius` | `number \| 'pill'` | `'pill'` | Radius in pixels or half the bar height. |
+| `annotations` | x-only refline array | `undefined` | Numeric value reference lines; supported subset below. |
+| `labels` | `{ format?: string; prefix?: string; suffix?: string }` | `undefined` | Value label formatting, not the full Chart `LabelConfig`. Format defaults to `encoding.value.format`, then automatic; affixes default to empty strings. |
+| `a11y` | `A11yConfig` | `undefined` | Accessible figure name and visibility; generated name when omitted. Static output is an image without row listitem roles. |
+| `chrome` | `Chrome` | `undefined` | Title, subtitle, source, byline and footer. |
+| `theme` | `ThemeConfig` | default theme | Theme overrides. |
+| `watermark` | `boolean` | `true` | Show the brand. |
+| `animation` | `AnimationSpec` | disabled when omitted | Live entrance animation; static output never animates. |
+
+### BarListEncoding
+
+| Channel | Type | Default | Description |
+| --- | --- | --- | --- |
+| `label` | `EncodingChannel` (nominal) | required | Row name. Long visible names ellipsize; full text remains available in titles/accessibility. |
+| `value` | `EncodingChannel` (quantitative) | required | Bar value and label; `format` is the default value format. |
+| `group` | `EncodingChannel` (nominal or ordinal) | `undefined` | Section headings; first-seen group order is retained. |
+| `subtitle` | `EncodingChannel` (nominal) | `undefined` | Secondary row text. |
+| `color` | `EncodingChannel` (nominal) | row-index color cycle | Category-to-color mapping. |
+| `description` | `DescriptionEncoding` | `undefined` | Authored row text; static bars receive titles. |
+| `tooltip` | `EncodingChannel \| EncodingChannel[]` | `undefined` | Accepted by the spec; current barlist tooltips still show the default label and formatted value. |
+
+`encoding.value.scale.domain: [lower, upper]` defaults to omission, which scales tracks against the largest absolute admitted value. An explicit domain must contain two finite increasing numbers and provides a shared comparison scale. Track lengths clamp to its bounds; value labels retain the source number. Use `[0, 1]` for rates or `[0, 3]` for lift.
+
+Barlist annotations have type `Array<Omit<RefLineAnnotation, 'x' | 'y'> & { x: number; y?: never }>`: supply `type: 'refline'` and numeric `x`; `y` is not accepted. The renderer uses `stroke` (theme axis by default), `strokeWidth` (1px), `strokeDash` or `style` (solid by default; dashed/dotted supported), plus optional `label`, `fill`, `fontSize` and `fontWeight` for the label. A labeled refline reserves a top lane. This subset does not implement the Cartesian outside-placement or connector layout options.
+
+**Height behavior:** the compiler uses a numeric spec height or the compile height budget when `height` is omitted, dropping rows that cannot fit with a warning. The live mount derives that budget from its container and can shrink a short list to content. It does not turn omission into unbounded auto height. `renderStaticSVG` instead defaults an omitted barlist height to `'auto'`; its numeric `options.height` overrides the spec. Set `height: 'auto'` explicitly when a live list must fit every admitted row. `maxItems` still limits the row count in every mode.
+
+```ts
+const spec: BarListSpec = {
+  type: 'barlist',
+  data: rows,
+  encoding: {
+    label: { field: 'step', type: 'nominal' },
+    value: { field: 'share', type: 'quantitative', format: 'percent', scale: { domain: [0, 1] } },
+    group: { field: 'section', type: 'nominal' },
+    description: { field: 'rowText' },
+  },
+  sort: null,
+  height: 'auto',
+  annotations: [{ type: 'refline', x: 0.5, label: 'Target', style: 'dashed' }],
+  labels: { prefix: '', suffix: '' },
+  a11y: { description: 'Half of completed projects reach the target.' },
+};
+```
+
+---
+
 ## TableSpec
 
 Input for data table visualizations. Source: `core/src/types/spec.ts`.
@@ -1162,6 +1325,7 @@ Pass these through `MountOptions` (vanilla) or `ChartProps` (React).
 | Handler             | Signature                                             | When it fires                                     |
 | ------------------- | ----------------------------------------------------- | ------------------------------------------------- |
 | `onMarkClick`       | `(event: MarkEvent) => void`                          | User clicks a data mark (bar, point, line, arc).  |
+| `onMarkFocus` | `(event: MarkFocusEvent) => void` | Keyboard navigation reaches a different data mark. |
 | `onMarkHover`       | `(event: MarkEvent) => void`                          | Mouse enters a data mark.                         |
 | `onMarkLeave`       | `() => void`                                          | Mouse leaves a data mark.                         |
 | `onEdit` | `(transaction: EditTransaction) => void` | One committed authored edit; apply atomically with `applyEditTransaction` and retain its inverse for undo. |
@@ -1180,6 +1344,19 @@ The `interaction` mount option (`'read' | 'select' | 'edit'`) gates selection an
 | `series`   | `string \| undefined`      | Series identifier for multi-series charts. Matches the color encoding field value.               |
 | `position` | `{ x: number, y: number }` | Click/hover position relative to the chart container.                                            |
 | `event`    | `MouseEvent`               | The raw browser MouseEvent.                                                                      |
+
+### MarkFocusEvent
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `datum` | `DataRow` | Data row associated with the focused mark. |
+| `series` | `string \| undefined` | Optional series identifier. |
+| `key` | `string` | Stable mark key. |
+| `description` | `string \| undefined` | The navigated element's current `aria-label`: authored description when supplied, otherwise its generated mark label. Undefined only when that element has no label. |
+| `element` | `SVGElement` | Navigated element selected by `data-mark-id`; it may be a wrapper `<g>` for bar, line or area marks rather than the inner data shape. |
+| `event` | `FocusEvent \| KeyboardEvent` | Event that moved focus; not a `MouseEvent`. |
+
+Use `onMarkFocus` to update a host-owned live region; see the [accessibility example](accessibility.md#keyboard-inspection-and-host-announcements).
 
 ### Table event handlers
 
@@ -1902,13 +2079,3 @@ Read `layout.chrome.noteBandHeight` for note space and `layout.dimensions.height
 for the final rendered/exported height. `chromeLayout: 'grow'` also supports facets;
 `chrome.grownHeight` reports engine-added height for auto-height consumers.
 See [annotation migration guidance](./migrating-v9.md#changed-annotation-and-figure-defaults).
-
-## Static statistics controls
-
-- `encoding.description` accepts a field or constant value. Series paths require constant text within a series; use a point layer for row descriptions.
-- `frame: { left, right }` fixes horizontal plot margins before scale layout. Fixed margins override automatic endpoint and outside-reference label reserves. Both values are non-negative and must leave usable plot width.
-- `encoding.x.interval` accepts `day`, `week`, `month`, `quarter`, `year`, or a positive millisecond number for temporal columns. Omission infers the smallest positive timestamp difference.
-- `labels.content` composes label and value text on bar and range marks; `prefix` and `suffix` surround the formatted value. Barlist labels support `format`, `prefix` and `suffix`.
-- `a11y.table: false` suppresses the generated live table; `a11y.hidden: true` hides a decorative figure.
-
-See [static rendering](static-rendering.md) for render options, identity attributes, descriptions and two-theme embedding.

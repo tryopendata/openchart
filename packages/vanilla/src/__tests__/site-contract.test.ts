@@ -222,6 +222,26 @@ describe('consuming site contract (RFC §5.2 and §8)', () => {
     );
     expect(empty.querySelector('path[data-mark], rect[data-mark], circle[data-mark]')).toBeNull();
   });
+  it('rate cells omit axes and retain their authored boundary descriptions', () => {
+    for (const darkMode of ['off', 'force'] as const) {
+      const doc = parse(render(rateSpec([rateRows[0], rateRows[3]], true), 'rate-cell', darkMode));
+      expect(doc.querySelectorAll('text')).toHaveLength(0);
+      expect(doc.querySelectorAll('[data-mark="point"]')).toHaveLength(2);
+      expect(
+        [...doc.querySelectorAll('[data-mark="point"] > title')].map((el) => el.textContent),
+      ).toEqual(['claude: 0% n=40', 'other: 100% n=40']);
+    }
+  });
+  it('full rate figures retain percent axes without a regression across nominal rows', () => {
+    for (const spec of [siteSpecs.byAgent, siteSpecs.byPreset]) {
+      const doc = parse(render(spec));
+      expect([...doc.querySelectorAll('text')].some((el) => el.textContent?.includes('%'))).toBe(
+        true,
+      );
+      expect(doc.querySelectorAll('[data-mark="point"]')).toHaveLength(rateRows.length);
+      expect(doc.querySelectorAll('path[stroke-dasharray]')).toHaveLength(0);
+    }
+  });
   it('[4.2f#23] zero and perfect whiskers stay within shared viewBox [U5/U6/U7]', () => {
     const doc = parse(render(rateSpec([rateRows[0], rateRows[3]], true)));
     const whiskers = doc.querySelectorAll('[data-mark="errorbar"]');

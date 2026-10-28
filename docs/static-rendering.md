@@ -16,6 +16,20 @@ const svg = renderStaticSVG(spec, {
 
 Options include `width`, `height`, `theme`, `darkMode`, `renderer`, `watermark`, `measureText`, `idPrefix` and `precision`. `precision` is an integer from 0 through 15, or `null` for raw doubles; it defaults to 3. Text, labels, identity values and authored descriptions are not rounded. `measureText` is a per-call compiler text measurer; provide the same font metrics in each build for stable layout. `renderer` does not turn the returned SVG into a canvas.
 
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `width` | `640` | Compile width in pixels; authored chart/layer dimensions remain authoritative. |
+| `height` | `420` | Compile height in pixels; authored chart/layer dimensions remain authoritative. For barlists, an explicit option overrides spec height; omission defaults an omitted spec height to `'auto'`. |
+| `theme` | `undefined` | Per-call overrides composed with the spec/default theme. |
+| `darkMode` | light | `'force'` selects dark; `'off'`, `'auto'` and omission select light on the server. |
+| `renderer` | `'auto'` | Compile renderer selection; the returned artifact is always SVG. |
+| `watermark` | spec/default policy | Optional brand override; explicitly authored spec and family precedence still apply. |
+| `measureText` | compiler estimate | Per-call font measurement function. |
+| `idPrefix` | `undefined` | Stable XML-safe scope prefix; omitted calls use deterministic standalone IDs. |
+| `precision` | `3` | Integer 0–15 for geometry, or `null` to retain raw doubles. |
+
+Static output contains no scripts, animation controls, focusable mark navigation, hidden HTML table or per-mark `aria-label`. Its authored mark tooltip is a `<title>`; the figure owns the accessible name.
+
 Use a unique, stable `idPrefix` for each figure in a document. It must start with a letter or underscore and contain only letters, digits, underscores, periods or hyphens. IDs and their references share a per-call scope, so calls can interleave safely. Identical inputs and options produce identical bytes in the same environment. Temporal scales and date formatting can depend on the host timezone; use a consistent timezone, such as `TZ=UTC`, across builds.
 
 Chart, layer and barlist colors and role styles are serialized as attributes, without CSS variables or a theme stylesheet. Theme them through the `theme` option. Map and tilemap output retains its scoped theme style block. The root carries `data-theme`; a prefixed root also has `id="<idPrefix>-oc-root"`. Serialization escapes XML and adds `xmlns:xlink` when an xlink attribute needs it.

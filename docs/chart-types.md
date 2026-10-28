@@ -46,6 +46,8 @@ const spec = {
 
 Add a `color` encoding to split into multi-series lines. Use `mark: { type: "line", interpolate: "monotone" }` for smooth curves, or `"step"` for stepped lines.
 
+Missing/null observations split line paths; they are not connected across the gap. A published observation with no adjacent published neighbor renders as a visible 3px-radius point even when `mark.point` is omitted. A one-point series emits that point and no line path. This preserves isolated values in gapped series. Add a separate point layer when each observation needs its own `encoding.description`; a line path's description must be constant within its series.
+
 **Live examples**: [Single line](https://tryopendata.github.io/openchart/?story=charts--line-and-area#single-line) | [Multi-series](https://tryopendata.github.io/openchart/?story=charts--line-and-area#multi-series-labels) | [Five series](https://tryopendata.github.io/openchart/?story=charts--line-and-area#five-series-legend) | [Interpolation modes](https://tryopendata.github.io/openchart/?story=charts--line-and-area#interpolation)
 
 ---
@@ -71,6 +73,8 @@ const spec = {
 ```
 
 Add a `color` encoding to split into series. Multi-series area charts default to **stacked** composition (`stack: 'zero'`), Vega-Lite aligned. Pass `encoding.y.stack: null` (or `false`) to opt into overlap mode instead — translucent gradient fills layered on a shared baseline, so each series's curve stays readable, comparison-first rather than composition-first.
+
+Area paths follow the same missing-value gap rule as lines. An isolated published observation renders as a point instead of a degenerate filled path; null observations stay missing. An area path describes its series or band, so use constant series text and a point layer for per-observation descriptions.
 
 **Live examples**: [Area chart](https://tryopendata.github.io/openchart/?story=charts--line-and-area#area) | [Multi-series overlap](https://tryopendata.github.io/openchart/?story=charts--line-and-area#area) | [Stacked area](https://tryopendata.github.io/openchart/?story=charts--line-and-area#stacked-area) | [Step area](https://tryopendata.github.io/openchart/?story=charts--line-and-area#interpolation)
 
@@ -125,7 +129,9 @@ const spec = {
 };
 ```
 
-The mark is still `"bar"`, but the engine flips to vertical columns when x is nominal/ordinal and y is quantitative.
+The mark is still `"bar"`, but the engine flips to vertical columns when x is nominal/ordinal or temporal and y is quantitative. Temporal x uses a continuous time scale, preserving gaps between dates and aligning date reference lines with an accompanying line chart. Set `encoding.x.interval: 'week'` for weekly columns; `day`, `month`, `quarter`, `year`, or a positive millisecond number are also accepted. Omission infers the smallest positive timestamp difference (one day with a warning when fewer than two distinct dates exist). Irregular spacing that is not a multiple of the interval warns. Calendar intervals follow the scale's local/UTC mode.
+
+For aligned history and weekly figures, use the same temporal `scale.domain`, width and `frame: { left: 48, right: 96 }` on both. Fixed margins win over automatic label reserves; leave enough space for outside reference labels and endpoints.
 
 **Live examples**: [Simple columns](https://tryopendata.github.io/openchart/?story=charts--bar-and-column#columns) | [Grouped columns](https://tryopendata.github.io/openchart/?story=charts--bar-and-column#grouped-columns) | [Negative values](https://tryopendata.github.io/openchart/?story=charts--bar-and-column#diverging-columns)
 
@@ -824,4 +830,29 @@ Publication-quality charts with responsive variants at different breakpoints:
 
 ## Error bars
 
-`mark: { type: 'errorbar', ticks: true }` draws an authored interval, with horizontal `x`/`x2` bounds or vertical `y`/`y2` bounds and the other axis identifying the row. `ticks` controls end caps. Layer a point for the estimate. OpenChart never computes confidence intervals, standard errors or quartiles: aggregate observations and supply the bounds upstream. Error bars work in layered sparkline cells. Temporal `bar` x channels render continuous-time columns; set `encoding.x.interval: 'week'` for weekly data. See [static rendering](static-rendering.md).
+`mark: { type: 'errorbar', ticks: true }` draws supplied bounds: quantitative `x`/`x2` for a horizontal interval or quantitative `y`/`y2` for a vertical interval. The other axis identifies the row/category or date. Supply exactly one second endpoint. Missing bounds produce no whisker. `ticks` defaults to `false`; enabling it adds decorative 6px caps. Default stroke width is 2px and opacity is 0.35, with series color unless `mark.stroke` overrides it. Layer a point for the estimate:
+
+```ts
+const spec = {
+  data: [{ agent: 'codex', lower: 0.7, upper: 0.96, value: 0.88 }],
+  layer: [
+    {
+      mark: { type: 'errorbar', ticks: true },
+      encoding: {
+        x: { field: 'lower', type: 'quantitative', scale: { domain: [0, 1] } },
+        x2: { field: 'upper', type: 'quantitative' },
+        y: { field: 'agent', type: 'nominal' },
+      },
+    },
+    {
+      mark: { type: 'point', trendline: false },
+      encoding: {
+        x: { field: 'value', type: 'quantitative' },
+        y: { field: 'agent', type: 'nominal' },
+      },
+    },
+  ],
+};
+```
+
+OpenChart never computes confidence intervals, standard errors or quartiles: aggregate observations and supply bounds upstream. `extent` estimators are not supported. Error bars also work in layered sparkline cells. See [static rendering](static-rendering.md) and the [mark reference](spec-reference.md#errorbar).

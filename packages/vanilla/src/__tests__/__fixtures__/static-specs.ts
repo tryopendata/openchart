@@ -34,7 +34,7 @@ export const rateRows = agentDomain
     upper: i === 3 ? 1 : 0.95,
     value: i === 0 ? 0 : i === 3 ? 1 : 0.85,
     intervalText: `${i === 0 ? 0 : 70}-${i === 3 ? 100 : 95}% n=40`,
-    rateText: `${agent}: 85% n=40`,
+    rateText: `${agent}: ${i === 0 ? 0 : i === 3 ? 100 : 85}% n=40`,
   }));
 export function rateSpec(data: DataRow[] = rateRows, cell = true) {
   return siteSpec({
@@ -48,7 +48,7 @@ export function rateSpec(data: DataRow[] = rateRows, cell = true) {
             field: 'lower',
             type: 'quantitative',
             scale: { domain: [0, 1] },
-            axis: { format: 'percent' },
+            ...(cell ? {} : { axis: { format: 'percent' } }),
           },
           x2: { field: 'upper', type: 'quantitative' },
           y: { field: 'agent', type: 'nominal', scale: { domain: agentDomain } },
@@ -57,7 +57,7 @@ export function rateSpec(data: DataRow[] = rateRows, cell = true) {
       },
       {
         data,
-        mark: 'point',
+        mark: { type: 'point', trendline: false },
         encoding: {
           x: { field: 'value', type: 'quantitative' },
           y: { field: 'agent', type: 'nominal' },
