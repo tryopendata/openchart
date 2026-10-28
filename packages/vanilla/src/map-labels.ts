@@ -8,11 +8,14 @@ import type {
 import { resolveGeoOverlay } from '@opendata-ai/openchart-engine';
 import type { Camera } from './map-camera';
 import { geographicInventoryText } from './map-label-inventory';
-import { nextSvgId } from './svg-ids';
+import { createRenderContext, type RenderContext } from './render-context';
 
-const NS = 'http://www.w3.org/2000/svg';
-function element(tag: string, attrs: Record<string, string | number> = {}) {
-  const el = document.createElementNS(NS, tag);
+function element(
+  tag: string,
+  attrs: Record<string, string | number> = {},
+  ctx: RenderContext = createRenderContext(),
+) {
+  const el = ctx.factory.svg(tag);
   for (const [key, value] of Object.entries(attrs)) el.setAttribute(key, String(value));
   return el;
 }
@@ -23,22 +26,33 @@ export function mapLabelAffine(camera: Camera, layout: GeoMapLayout): GeoLabelAf
     ty: layout.mapSize.height / 2 - camera.cy * camera.k,
   };
 }
-function textBlock(parent: Element, block: GeoTextBlock, x: number, y: number, halo: string) {
+function textBlock(
+  parent: Element,
+  block: GeoTextBlock,
+  x: number,
+  y: number,
+  halo: string,
+  ctx: RenderContext = createRenderContext(),
+) {
   for (const line of block.lines) {
-    const text = element('text', {
-      x: x + line.x,
-      y: y + line.y,
-      'font-family': line.style.fontFamily,
-      'font-size': line.style.fontSize,
-      'font-weight': line.style.fontWeight,
-      fill: line.style.fill,
-      'text-anchor': line.style.textAnchor ?? 'start',
-      stroke: halo,
-      'stroke-width': 2,
-      'stroke-opacity': 0.85,
-      'paint-order': 'stroke fill',
-      'stroke-linejoin': 'round',
-    });
+    const text = element(
+      'text',
+      {
+        x: x + line.x,
+        y: y + line.y,
+        'font-family': line.style.fontFamily,
+        'font-size': line.style.fontSize,
+        'font-weight': line.style.fontWeight,
+        fill: line.style.fill,
+        'text-anchor': line.style.textAnchor ?? 'start',
+        stroke: halo,
+        'stroke-width': 2,
+        'stroke-opacity': 0.85,
+        'paint-order': 'stroke fill',
+        'stroke-linejoin': 'round',
+      },
+      ctx,
+    );
     if (line.style.fontVariant) text.setAttribute('font-variant', line.style.fontVariant);
     text.textContent = line.text;
     parent.appendChild(text);
@@ -128,23 +142,28 @@ export function renderGeoLabelOverlay(
   svg: SVGElement,
   layout: GeoMapLayout,
   overlay: GeoLabelOverlay,
+  ctx: RenderContext = createRenderContext(),
 ): void {
   svg.querySelector('.oc-map-labels')?.remove();
   svg.querySelector('.oc-map-label-notes')?.remove();
   if (!layout.labels) return;
-  const group = element('g', {
-    class: 'oc-map-labels',
-    'pointer-events': 'none',
-    'aria-hidden': 'true',
-    transform: `translate(${layout.area.x},${layout.area.y})`,
-  });
-  const clipId = nextSvgId('oc-map-label-clip');
-  const defs = element('defs');
-  const clip = element('clipPath', { id: clipId });
-  clip.appendChild(element('rect', { ...layout.labels.viewport }));
+  const group = element(
+    'g',
+    {
+      class: 'oc-map-labels',
+      'pointer-events': 'none',
+      'aria-hidden': 'true',
+      transform: `translate(${layout.area.x},${layout.area.y})`,
+    },
+    ctx,
+  );
+  const clipId = ctx.ids.next('oc-map-label-clip');
+  const defs = element('defs', undefined, ctx);
+  const clip = element('clipPath', { id: clipId }, ctx);
+  clip.appendChild(element('rect', { ...layout.labels.viewport }, ctx));
   defs.appendChild(clip);
   group.appendChild(defs);
-  const viewport = element('g', { 'clip-path': `url(#${clipId})` });
+  const viewport = element('g', { 'clip-path': `url(#${clipId})` }, ctx);
   group.appendChild(viewport);
   const halo =
     layout.theme.colors.background === 'transparent'
@@ -152,19 +171,23 @@ export function renderGeoLabelOverlay(
       : layout.theme.colors.background;
   for (const leader of overlay.leaders)
     viewport.appendChild(
-      element('line', {
-        x1: leader.from.x,
-        y1: leader.from.y,
-        x2: leader.to.x,
-        y2: leader.to.y,
-        stroke: layout.theme.colors.text,
-        'stroke-opacity': 0.6,
-        'stroke-width': 1,
-      }),
+      element(
+        'line',
+        {
+          x1: leader.from.x,
+          y1: leader.from.y,
+          x2: leader.to.x,
+          y2: leader.to.y,
+          stroke: layout.theme.colors.text,
+          'stroke-opacity': 0.6,
+          'stroke-width': 1,
+        },
+        ctx,
+      ),
     );
   for (const label of overlay.labels) {
-    const item = element('g', { 'data-geo-label-id': label.id });
-    textBlock(item, label.block, label.bounds.x, label.bounds.y, halo);
+    const item = element('g', { 'data-geo-label-id': label.id }, ctx);
+    textBlock(item, label.block, label.bounds.x, label.bounds.y, halo, ctx);
     viewport.appendChild(item);
   }
   const markerRadius = layout.labels.markerRadius ?? (7 * layout.theme.fonts.sizes.small) / 12;
@@ -178,31 +201,39 @@ export function renderGeoLabelOverlay(
       marker.anchor.y + markerRadius > markerViewport.y + markerViewport.height
     )
       continue;
-    const item = element('g', { 'data-geo-note-id': marker.id });
+    const item = element('g', { 'data-geo-note-id': marker.id }, ctx);
     item.appendChild(
-      element('circle', {
-        cx: marker.anchor.x,
-        cy: marker.anchor.y,
-        r: markerRadius,
-        fill: halo,
-        stroke: layout.theme.colors.text,
-      }),
+      element(
+        'circle',
+        {
+          cx: marker.anchor.x,
+          cy: marker.anchor.y,
+          r: markerRadius,
+          fill: halo,
+          stroke: layout.theme.colors.text,
+        },
+        ctx,
+      ),
     );
-    const number = element('text', {
-      x: marker.anchor.x,
-      y: marker.anchor.y + 3 * markerScale,
-      'font-size': 9 * markerScale,
-      'font-family': layout.theme.fonts.family,
-      'text-anchor': 'middle',
-      fill: layout.theme.colors.text,
-    });
+    const number = element(
+      'text',
+      {
+        x: marker.anchor.x,
+        y: marker.anchor.y + 3 * markerScale,
+        'font-size': 9 * markerScale,
+        'font-family': layout.theme.fonts.family,
+        'text-anchor': 'middle',
+        fill: layout.theme.colors.text,
+      },
+      ctx,
+    );
     number.textContent = String(marker.number);
     item.appendChild(number);
     viewport.appendChild(item);
   }
   const mapGroup = svg.querySelector('.oc-map-group');
   mapGroup?.insertAdjacentElement('afterend', group);
-  renderGeoLabelNotes(svg, layout, overlay.notes, group);
+  renderGeoLabelNotes(svg, layout, overlay.notes, group, ctx);
 }
 /** Measured fallback notes can be shared by several map views. */
 export function renderGeoLabelNotes(
@@ -210,25 +241,34 @@ export function renderGeoLabelNotes(
   layout: GeoMapLayout,
   entries: GeoLabelOverlay['notes'],
   after?: SVGElement,
+  ctx: RenderContext = createRenderContext(),
 ): void {
   const halo =
     layout.theme.colors.background === 'transparent'
       ? 'var(--oc-bg, #fff)'
       : layout.theme.colors.background;
-  const notes = element('g', {
-    class: 'oc-map-label-notes',
-    'aria-hidden': 'true',
-    transform: `translate(${layout.area.x},${layout.area.y})`,
-  });
+  const notes = element(
+    'g',
+    {
+      class: 'oc-map-label-notes',
+      'aria-hidden': 'true',
+      transform: `translate(${layout.area.x},${layout.area.y})`,
+    },
+    ctx,
+  );
   for (const { id, slot } of entries) {
-    const item = element('g', { 'data-geo-note-id': id });
-    textBlock(item, slot.block, slot.bounds.x, slot.bounds.y, halo);
+    const item = element('g', { 'data-geo-note-id': id }, ctx);
+    textBlock(item, slot.block, slot.bounds.x, slot.bounds.y, halo, ctx);
     notes.appendChild(item);
   }
   if (after) after.insertAdjacentElement('afterend', notes);
   else svg.appendChild(notes);
 }
-export function describeGeoLabelInventory(svg: SVGElement, overlay: GeoLabelOverlay): void {
+export function describeGeoLabelInventory(
+  svg: SVGElement,
+  overlay: GeoLabelOverlay,
+  ctx: RenderContext = createRenderContext(),
+): void {
   const previous = svg.querySelector('desc[data-geo-label-inventory]');
   if (previous) {
     const ids = (svg.getAttribute('aria-describedby') ?? '')
@@ -239,10 +279,14 @@ export function describeGeoLabelInventory(svg: SVGElement, overlay: GeoLabelOver
     previous.remove();
   }
   if (!overlay.inventory.length) return;
-  const desc = element('desc', {
-    'data-geo-label-inventory': '',
-    id: nextSvgId('oc-map-label-description'),
-  });
+  const desc = element(
+    'desc',
+    {
+      'data-geo-label-inventory': '',
+      id: ctx.ids.next('oc-map-label-description'),
+    },
+    ctx,
+  );
   desc.textContent = `Map places and notes. ${overlay.inventory.map(geographicInventoryText).join(' ')}`;
   svg.appendChild(desc);
   const ids = (svg.getAttribute('aria-describedby') ?? '').split(/\s+/).filter(Boolean);

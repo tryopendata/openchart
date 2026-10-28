@@ -10,6 +10,8 @@ import type { LayoutPlan } from '../layout/plan';
 export interface FrozenBudget {
   /** The plot rectangle every leaf draws into. */
   chartArea: Rect;
+  /** Shared x-scale inset measured for the primary axis labels. */
+  inlineYLabelInset?: number;
   /** Note band the assembly reserved below the plot. */
   noteReserve?: number;
 }
@@ -29,6 +31,8 @@ export interface LeafContext {
  * compiles; they are not part of the public `CompileOptions` contract.
  */
 export interface InternalCompileOptions extends CompileOptions {
+  /** Maximum stroke/cap/dot reserve across a sparkline layer's leaves. */
+  sparklinePad?: { left: number; right: number; top: number; bottom: number };
   /**
    * Marks this compile as one leaf (or the primary spec) of a multi-leaf
    * layer. The canvas mark-layer resolution refuses canvas mode for layered

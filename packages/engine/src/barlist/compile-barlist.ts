@@ -17,6 +17,7 @@ import type {
   BarListLayout,
   BarListRowMark,
   CompileOptions,
+  CompileWarning,
   ResolvedAnimation,
   ResolvedTheme,
   TextStyle,
@@ -29,6 +30,7 @@ import {
   estimateTextWidth,
   resolveTheme,
 } from '@opendata-ai/openchart-core';
+import { descriptionForRows, identityForRows } from '../charts/_shared/mark-metadata';
 import { emitSpecWarnings, expandSpecSugar } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
@@ -100,57 +102,109 @@ export function compileBarList(spec: unknown, options: CompileOptions): BarListL
     watermark,
   );
 
-  // Compute drawing area. In 'grow' mode the plot keeps the full height budget
-  // (chrome is not subtracted) and the returned SVG height grows by the chrome
-  // height. In the default 'subtract' mode both are unchanged.
   const padding = theme.spacing.padding;
-  // Read chromeLayout from the raw spec: normalizeBarListSpec does not carry it
-  // through, and BarListSpec has no chromeLayout field, so the option default is
-  // the primary control (a user-authored spec.chromeLayout still wins here).
-  const chromeLayout = resolveChromeLayout(
-    spec as { chromeLayout?: 'subtract' | 'grow' } | undefined,
-    options,
-  );
-  const grownHeight =
-    chromeLayout === 'grow'
-      ? options.height + chrome.topHeight + chrome.bottomHeight
-      : options.height;
-  const fullArea = {
-    x: padding,
-    y: padding + chrome.topHeight,
-    width: options.width - padding * 2,
-    height:
-      chromeLayout === 'grow'
-        ? options.height - padding * 2
-        : options.height - chrome.topHeight - chrome.bottomHeight - padding * 2,
-  };
-
-  if (fullArea.width <= 0 || fullArea.height <= 0) {
-    return emptyLayout(chrome, theme, { ...options, height: grownHeight }, watermark);
-  }
-
-  // Extract data
   const labelField = barlistSpec.encoding.label.field;
   const valueField = barlistSpec.encoding.value.field;
   const subtitleField = barlistSpec.encoding.subtitle?.field;
   const colorField = barlistSpec.encoding.color?.field;
-
-  // Compute row dimensions up front so we can auto-cap maxItems to fit available height
+  const groupField = barlistSpec.encoding.group?.field;
   const barHeight = barlistSpec.barHeight;
   const cornerRadius =
     barlistSpec.cornerRadius === 'pill' ? barHeight / 2 : barlistSpec.cornerRadius;
   const rowContentHeight = Math.max(barHeight, LABEL_FONT_SIZE * 1.4);
   const rowHeight = rowContentHeight + DEFAULT_ROW_GAP;
-  const maxFittingRows = Math.max(1, Math.floor(fullArea.height / rowHeight));
-
-  // Filter valid rows, sort descending, cap to the lesser of maxItems and available height
-  const validRows = barlistSpec.data
-    .filter((row) => finiteNumber(row[valueField]) !== undefined)
-    .sort((a, b) => Number(b[valueField]) - Number(a[valueField]))
-    .slice(0, Math.min(barlistSpec.maxItems, maxFittingRows));
-
-  if (validRows.length === 0) {
-    return emptyLayout(chrome, theme, options, watermark);
+  const groupHeight = groupField ? LABEL_FONT_SIZE * 1.4 + DEFAULT_ROW_GAP : 0;
+  const annotationLane = barlistSpec.annotations?.some((annotation) => annotation.label)
+    ? theme.fonts.sizes.small * 1.5
+    : 0;
+  const buckets = new Map<string, Record<string, unknown>[]>();
+  for (const row of barlistSpec.data) {
+    if (finiteNumber(row[valueField]) === undefined) continue;
+    const group = groupField ? String(row[groupField] ?? '') : '';
+    if (!buckets.has(group)) buckets.set(group, []);
+    buckets.get(group)!.push(row);
+  }
+  const candidates = [...buckets.values()]
+    .flatMap((rows) =>
+      barlistSpec.sort === null
+        ? rows
+        : rows
+            .slice()
+            .sort(
+              (a, b) =>
+                (barlistSpec.sort === 'ascending' ? 1 : -1) *
+                (Number(a[valueField]) - Number(b[valueField])),
+            ),
+    )
+    .slice(0, barlistSpec.maxItems);
+  const groupsCount = groupField
+    ? new Set(candidates.map((row) => String(row[groupField] ?? ''))).size
+    : 0;
+  const chromeLayout = resolveChromeLayout(spec as { chromeLayout?: 'subtract' | 'grow' }, options);
+  const auto = barlistSpec.height === 'auto';
+  const baseHeight = auto
+    ? candidates.length * rowHeight +
+      groupsCount * groupHeight +
+      annotationLane +
+      padding * 2 +
+      (chromeLayout === 'grow' ? 0 : chrome.topHeight + chrome.bottomHeight)
+    : typeof barlistSpec.height === 'number'
+      ? barlistSpec.height
+      : options.height;
+  const grownHeight =
+    chromeLayout === 'grow' ? baseHeight + chrome.topHeight + chrome.bottomHeight : baseHeight;
+  const fullArea = {
+    x: padding,
+    y: padding + chrome.topHeight + annotationLane,
+    width: options.width - padding * 2,
+    height:
+      baseHeight -
+      padding * 2 -
+      annotationLane -
+      (chromeLayout === 'grow' ? 0 : chrome.topHeight + chrome.bottomHeight),
+  };
+  const validRows: Record<string, unknown>[] = [];
+  const rowPositions: number[] = [];
+  const groupPositions: Array<{ key: string; y: number }> = [];
+  let cursorY = fullArea.y;
+  let previousGroup: string | undefined;
+  for (const row of candidates) {
+    const group = groupField ? String(row[groupField] ?? '') : '';
+    const newGroup = groupField !== undefined && group !== previousGroup;
+    const header = newGroup ? groupHeight : 0;
+    // Always keep the first row when there is any plot area, as rc.2 did:
+    // a height shorter than one row still shows the top item.
+    const fits = cursorY + header + rowHeight <= fullArea.y + fullArea.height + 1e-9;
+    if (!fits && (validRows.length > 0 || fullArea.height <= 0)) break;
+    if (newGroup) {
+      groupPositions.push({ key: group, y: cursorY });
+      cursorY += groupHeight;
+    }
+    validRows.push(row);
+    rowPositions.push(cursorY);
+    cursorY += rowHeight;
+    previousGroup = group;
+  }
+  const compileWarnings: CompileWarning[] = [];
+  const droppedCount = candidates.length - validRows.length;
+  // Only an authored numeric height warns: the author can switch it to 'auto'.
+  // A container-driven cap re-fits on every resize and stays silent, as in rc.2.
+  if (droppedCount > 0 && typeof barlistSpec.height === 'number') {
+    const message = `Bar list height drops ${droppedCount} rows; use height: 'auto' to fit every row.`;
+    compileWarnings.push({ code: 'BARLIST_ROWS_DROPPED', message, context: { droppedCount } });
+    emitSpecWarnings([message], options.onWarn);
+  }
+  if (fullArea.width <= 0 || validRows.length === 0) {
+    const empty = emptyLayout(chrome, theme, { ...options, height: grownHeight }, watermark);
+    return {
+      ...empty,
+      warnings: compileWarnings,
+      a11y: {
+        ...empty.a11y,
+        altText: barlistSpec.a11y?.description ?? 'Empty bar list',
+        hidden: barlistSpec.a11y?.hidden,
+      },
+    };
   }
 
   // Use absolute max so negative-only datasets produce valid proportions (e.g. [-100,-50] -> maxAbs=100)
@@ -175,9 +229,12 @@ export function compileBarList(spec: unknown, options: CompileOptions): BarListL
 
   // Value formatter: prefer encoding-level format (v8 canonical), fall back to deprecated valueFormat
   const formatter = resolveFieldFormatter({
-    surfaceFormat: barlistSpec.encoding.value.format,
+    surfaceFormat: barlistSpec.labels?.format ?? barlistSpec.encoding.value.format,
     values: validRows.map((r) => r[valueField]),
   });
+
+  const formatValue = (value: number) =>
+    `${barlistSpec.labels?.prefix ?? ''}${formatter(value)}${barlistSpec.labels?.suffix ?? ''}`;
 
   // Compute label width: measure all labels and use a consistent width
   const measureText =
@@ -206,7 +263,17 @@ export function compileBarList(spec: unknown, options: CompileOptions): BarListL
   const isNarrow = fullArea.width < 400;
   const labelBarGap = isNarrow ? 8 : LABEL_BAR_GAP;
   const barValueGap = isNarrow ? 6 : BAR_VALUE_GAP;
-  const valueWidth = isNarrow ? 44 : VALUE_WIDTH;
+  const defaultValueWidth = isNarrow ? 44 : VALUE_WIDTH;
+  const valueWidth = barlistSpec.labels
+    ? Math.max(
+        defaultValueWidth,
+        ...validRows.map(
+          (row) =>
+            measureText(formatValue(Number(row[valueField])), VALUE_FONT_SIZE, VALUE_FONT_WEIGHT)
+              .width + 4,
+        ),
+      )
+    : defaultValueWidth;
   const maxLabelPct = isNarrow ? 0.35 : 0.4;
   const labelWidth = Math.max(50, Math.min(maxCombinedWidth, fullArea.width * maxLabelPct));
 
@@ -242,11 +309,16 @@ export function compileBarList(spec: unknown, options: CompileOptions): BarListL
     const row = validRows[i];
     const value = Number(row[valueField]);
     const labelText = String(row[labelField] ?? '');
-    const formattedValue = formatter(value);
+    const formattedValue = formatValue(value);
     const barColor = getColor(row, i);
-    const pct = maxValue > 0 ? Math.abs(value) / maxValue : 0;
+    const domain = barlistSpec.encoding.value.scale?.domain as number[] | undefined;
+    const pct = domain
+      ? Math.max(0, Math.min(1, (value - domain[0]) / (domain[1] - domain[0])))
+      : maxValue > 0
+        ? Math.abs(value) / maxValue
+        : 0;
 
-    const rowY = fullArea.y + i * rowHeight;
+    const rowY = rowPositions[i];
     const centerY = rowY + rowContentHeight / 2;
 
     // Label (left-aligned). Labels longer than the label column are
@@ -335,6 +407,21 @@ export function compileBarList(spec: unknown, options: CompileOptions): BarListL
 
     const rowMark: BarListRowMark = {
       type: 'barlist-row',
+      markType: 'bar',
+      fullLabel: labelText,
+      identity: identityForRows(
+        {
+          y: { ...barlistSpec.encoding.label, type: 'nominal' },
+          color: barlistSpec.encoding.color,
+          detail: barlistSpec.encoding.group,
+        },
+        [row],
+      ),
+      authoredDescription: descriptionForRows(
+        { description: barlistSpec.encoding.description },
+        [row],
+        [],
+      ),
       index: i,
       y: rowY,
       height: rowHeight,
@@ -372,7 +459,9 @@ export function compileBarList(spec: unknown, options: CompileOptions): BarListL
       formattedValue,
       aria: {
         role: 'listitem',
-        label: `${labelText}: ${formattedValue}`,
+        label:
+          descriptionForRows({ description: barlistSpec.encoding.description }, [row], []) ??
+          `${labelText}: ${formattedValue}`,
       },
       animationIndex: i,
       data: row,
@@ -396,11 +485,68 @@ export function compileBarList(spec: unknown, options: CompileOptions): BarListL
 
   // Build a11y metadata
   const a11y = {
-    altText: `Bar list showing ${rows.length} items ranked by ${valueField}`,
+    altText:
+      barlistSpec.a11y?.description ??
+      `Bar list showing ${rows.length} items ranked by ${valueField}`,
+    hidden: barlistSpec.a11y?.hidden,
     dataTableFallback: rows.map((r) => [r.label.text, r.formattedValue]),
     role: 'list' as const,
-    keyboardNavigable: rows.length > 0,
+    keyboardNavigable: !barlistSpec.a11y?.hidden && rows.length > 0,
   };
+
+  const groups = groupPositions.map(({ key, y }, index) => ({
+    key,
+    label: {
+      text: key,
+      x: fullArea.x,
+      y: y + groupHeight / 2,
+      visible: true,
+      style: {
+        fontFamily: theme.fonts.family,
+        fontSize: LABEL_FONT_SIZE,
+        fontWeight: LABEL_FONT_WEIGHT,
+        fill: theme.colors.neutral.secondary,
+        lineHeight: 1.4,
+      },
+    },
+    ...(index ? { separator: { x1: fullArea.x, x2: fullArea.x + fullArea.width, y } } : {}),
+  }));
+  const firstTrack = rows[0].track;
+  const domain = barlistSpec.encoding.value.scale?.domain as number[] | undefined;
+  const [lower, upper] = domain ?? [0, maxValue];
+  // Like chart reference lines whose value is off the scale, a reference
+  // outside the value domain is dropped rather than drawn past the track.
+  const referenceLines = (barlistSpec.annotations ?? []).flatMap((annotation) => {
+    if (annotation.x < Math.min(lower, upper) || annotation.x > Math.max(lower, upper)) return [];
+    const x = firstTrack.x + ((annotation.x - lower) / (upper - lower || 1)) * firstTrack.width;
+    return {
+      x,
+      y1: fullArea.y,
+      y2: cursorY,
+      stroke: annotation.stroke ?? theme.colors.axis,
+      strokeWidth: annotation.strokeWidth ?? 1,
+      strokeDasharray:
+        annotation.strokeDash?.join(',') ??
+        (annotation.style === 'dashed' ? '4,4' : annotation.style === 'dotted' ? '1,3' : undefined),
+      ...(annotation.label
+        ? {
+            label: {
+              text: annotation.label,
+              x,
+              y: fullArea.y - 6,
+              visible: true,
+              style: {
+                fontFamily: theme.fonts.family,
+                fontSize: annotation.fontSize ?? theme.fonts.sizes.small,
+                fontWeight: annotation.fontWeight ?? 400,
+                fill: annotation.fill ?? theme.colors.axis,
+                lineHeight: 1.4,
+              },
+            },
+          }
+        : {}),
+    };
+  });
 
   // Resolve animation
   const resolvedAnimation: ResolvedAnimation | undefined = resolveAnimation(barlistSpec.animation);
@@ -409,6 +555,9 @@ export function compileBarList(spec: unknown, options: CompileOptions): BarListL
     area: fullArea,
     chrome,
     rows,
+    groups,
+    referenceLines,
+    warnings: compileWarnings,
     tooltipDescriptors,
     a11y,
     theme,

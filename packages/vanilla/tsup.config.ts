@@ -17,7 +17,6 @@ export default defineConfig({
   external: [
     '@opendata-ai/openchart-engine',
     '@opendata-ai/openchart-core',
-    'happy-dom',
     'gifenc',
     // Optional 3D peers: they must never be pulled into the default bundle.
     'three',

@@ -26,6 +26,7 @@ import { finiteNumber } from '../../data/finite-number';
 import type { ResolvedScales } from '../../layout/scales';
 import { isConditionalValueDef, resolveConditionalValue } from '../../transforms/conditional';
 import { formatLabelValue } from '../_shared/format-label-value';
+import { type TemporalGrouping, temporalBands, temporalGrouping } from '../_shared/temporal-bands';
 import {
   BAR_CORNER_RADIUS,
   getColor,
@@ -106,6 +107,7 @@ export function computeBarMarks(
   _strategy: LayoutStrategy,
   containerWidth: number,
   theme?: ResolvedTheme,
+  grouping?: TemporalGrouping,
 ): RectMark[] {
   const encoding = spec.encoding as Encoding;
   const xChannel = encoding.x;
@@ -113,6 +115,23 @@ export function computeBarMarks(
 
   if (!xChannel || !yChannel || !scales.x || !scales.y) {
     return [];
+  }
+
+  if (scales.y.type === 'utc' || scales.y.type === 'time') {
+    const colorField =
+      encoding.color && 'field' in encoding.color ? encoding.color.field : undefined;
+    const membership = temporalGrouping(spec.data, yChannel.field, colorField);
+    return temporalBands(scales.y, yChannel, spec.data).flatMap((slot) =>
+      computeBarMarks(
+        { ...spec, data: slot.data },
+        { ...scales, y: slot.position },
+        _chartArea,
+        _strategy,
+        containerWidth,
+        theme,
+        membership,
+      ),
+    );
   }
 
   const yScale = scales.y.scale as ScaleBand<string>;
@@ -163,6 +182,7 @@ export function computeBarMarks(
     // Color encoding present: decide between colored simple bars vs stacked
     const categoryGroups = groupByField(spec.data, yChannel.field);
     const needsStacking =
+      grouping?.multipleRows ||
       xChannel.stack === 'normalize' ||
       xChannel.stack === 'center' ||
       Array.from(categoryGroups.values()).some((rows) => rows.length > 1);
@@ -183,6 +203,7 @@ export function computeBarMarks(
           baseline,
           scales,
           containerWidth,
+          grouping?.order,
         );
       } else {
         const stackMode =
@@ -327,17 +348,15 @@ function computeGroupedBars(
   baseline: number,
   scales: ResolvedScales,
   containerWidth: number,
+  groupOrder?: readonly string[],
 ): RectMark[] {
   const marks: RectMark[] = [];
   const categoryGroups = groupByField(data, categoryField);
 
   // Build a stable group order from first appearance in data (Map for O(1) lookup)
   const groupIndexMap = new Map<string, number>();
-  for (const row of data) {
-    const key = String(row[colorField] ?? '');
-    if (!groupIndexMap.has(key)) {
-      groupIndexMap.set(key, groupIndexMap.size);
-    }
+  for (const key of groupOrder ?? data.map((row) => String(row[colorField] ?? ''))) {
+    if (!groupIndexMap.has(key)) groupIndexMap.set(key, groupIndexMap.size);
   }
   const groupCount = groupIndexMap.size;
   if (groupCount === 0) return marks;

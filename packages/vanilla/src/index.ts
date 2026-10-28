@@ -94,8 +94,12 @@ export { createReader } from './reader';
 export type { ChartReaderProps, ChartReaderSelection } from './reader-binding';
 /** @internal Framework lifecycle adapters. */
 export { createChartReaderBinding, createGeoReaderBinding } from './reader-binding';
+export type { IdScope, RenderContext } from './render-context';
+export { createIdScope, createRenderContext } from './render-context';
+export type { MarkRenderer } from './renderers/marks';
 // Geometry helpers for mark path reconstruction
 export { rectPathWithCorners } from './renderers/marks';
+export type { ElementFactory } from './renderers/svg-dom';
 // Cell renderers
 export {
   renderBarCell,

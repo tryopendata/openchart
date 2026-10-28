@@ -19,6 +19,7 @@ import {
   geoViewMapLayout,
   renderGeoViewNotes,
 } from './map-view-renderer';
+import { createRenderContext, pageIdScope } from './render-context';
 /**
  * Map mount API: the main entry point for vanilla JS map usage.
  *
@@ -915,7 +916,10 @@ export function createGeoMap(
     const oldSvgHadFocus = !!oldSvg && document.activeElement === oldSvg;
     viewCameras.update(currentLayout.views ?? []);
     for (const id of viewOverlays.keys()) if (!viewCameras.has(id)) viewOverlays.delete(id);
-    const newSvg = renderMapSVG(currentLayout, { animate });
+    const newSvg = renderMapSVG(currentLayout, {
+      context: createRenderContext({ ids: pageIdScope }),
+      animate,
+    });
 
     if (oldSvg) {
       if (cleanupTooltipEvents) {
@@ -1115,7 +1119,10 @@ export function createGeoMap(
     if (!svgElement) return '';
 
     // Export settled geometry, independent of transient hover and animation.
-    const terminalSvg = renderMapSVG(currentLayout, { animate: false });
+    const terminalSvg = renderMapSVG(currentLayout, {
+      context: createRenderContext({ ids: pageIdScope }),
+      animate: false,
+    });
     if (currentLayout.views) {
       const overlays = new Map<string, GeoLabelOverlay>();
       const inventory: NonNullable<GeoMapLayout['labels']>['initialOverlay']['inventory'] = [];

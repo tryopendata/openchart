@@ -10,11 +10,13 @@ What openchart does for accessibility automatically, what you can opt into, and 
 - [Pattern fills](#pattern-fills)
 - [Dev-mode contrast warnings](#dev-mode-contrast-warnings)
 - [Colorblind-safe palettes](#colorblind-safe-palettes)
+- [Static output](#static-output)
+- [Keyboard inspection and host announcements](#keyboard-inspection-and-host-announcements)
 - [WCAG mapping](#wcag-mapping)
 
 ## What's automatic
 
-Every chart gets these without configuration, in the vanilla adapter and all framework components (React, Vue, Svelte):
+Live chart mounts get these without configuration, in the vanilla adapter and all framework components (React, Vue, Svelte). Standalone SVG follows the [static output](#static-output) contract below:
 
 - **Alt text**: a generated description of the chart (mark type, title, data range, series, point count) set as `aria-label` on the SVG with `role="img"`.
 - **Screen reader data table**: a visually hidden HTML `<table>` with the chart's data rendered alongside the SVG, so screen reader users can read the actual values.
@@ -139,3 +141,36 @@ For guaranteed series identification independent of color, combine palettes with
 | 2.4.7 Focus Visible | Visible focus indicator | `--oc-focus` outline on container and focused marks, light and dark values |
 
 Sonification and VPAT paperwork are out of scope for the library itself.
+
+## Static output
+
+`renderStaticSVG` returns SVG only. It never generates an HTML data table or keyboard mark navigation. The root uses `role="img"` and `aria-label` from the figure description. Because an image's children are presentational to assistive technology, authored mark descriptions become native `<title>` pointer tooltips instead of per-mark ARIA labels. Static legends, footnotes and note markers have no button roles or tab stops. The host supplies its own finding sentence, caption and accessible HTML table, including row links or details disclosures.
+
+Set `encoding.description: { field: 'rowText' }` for an individual mark, or `{ value: 'Published green rate' }` for constant series text. Strings are preserved; numeric and temporal fields can use `format`. A line/area path represents a series and requires constant description text across that series. Mixed field values warn and omit the path description; add a point layer for per-observation descriptions. Figure text belongs in `a11y.description`, independently of mark descriptions. Authored mark text does not replace generated series metadata or rename series in the figure summary.
+
+Use `a11y: { hidden: true }` for a decorative static cell whose host table already states the value. It sets `aria-hidden` and omits the image role. Static rendering does not add a table even with `a11y.table: true`. On live chart mounts, `a11y.table` defaults to `true`; setting it to `false` suppresses the generated table while keeping mark keyboard navigation available. This supports a host-owned table beside a live island as well as a static fallback. See [static rendering](static-rendering.md) for the complete two-theme pattern.
+
+## Keyboard inspection and host announcements
+
+Live charts prefer authored `encoding.description` text for focusable mark labels. Pass `onMarkFocus` to `createChart` (or the Chart wrapper) to announce the focused observation in a host-owned region. The callback fires when keyboard navigation reaches a different mark. Its `MarkFocusEvent` includes `datum`, optional `series`, stable `key`, optional `description`, the navigated `SVGElement` and the triggering `FocusEvent | KeyboardEvent`. `description` reads that element's current `aria-label`, so it contains authored text when supplied and otherwise the generated mark label. `element` is selected by `data-mark-id` and can be a wrapper `<g>` for bars, lines or areas rather than the inner data shape. It is separate from mouse `MarkEvent` callbacks.
+
+```html
+<div id="chart"></div>
+<p id="chart-status" role="status" aria-live="polite"></p>
+```
+
+```ts
+import type { MarkFocusEvent } from '@opendata-ai/openchart-core';
+import { createChart } from '@opendata-ai/openchart-vanilla';
+
+const container = document.querySelector<HTMLDivElement>('#chart')!;
+const status = document.querySelector<HTMLParagraphElement>('#chart-status')!;
+
+createChart(container, spec, {
+  onMarkFocus: ({ description }: MarkFocusEvent) => {
+    status.textContent = description ?? '';
+  },
+});
+```
+
+The example announces the current mark label, including the generated fallback when no authored description exists. Provide `encoding.description` when the host needs specific authored wording. `description` is undefined only when the navigated element lacks an `aria-label`; it is not an indicator of whether the author supplied text. Update `textContent`, as above, to keep the announcement literal. `a11y.hidden: true` disables live navigation; `a11y.table: false` does not.

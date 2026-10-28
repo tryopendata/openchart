@@ -17,6 +17,7 @@ import { binnedBarRenderer } from './binned-bar';
 import { calendarRenderer } from './calendar';
 import { columnRenderer } from './column';
 import { dotRenderer } from './dot';
+import { errorbarRenderer } from './errorbar';
 import { areaRenderer, lineRenderer } from './line';
 import { parliamentRenderer } from './parliament';
 import { donutRenderer, pieRenderer } from './pie';
@@ -42,6 +43,7 @@ import { waffleRenderer } from './waffle';
 // renderer. We register both barRenderer and columnRenderer; the compile
 // function picks based on orientation.
 const builtinRenderers: Record<string, ChartRenderer> = {
+  errorbar: errorbarRenderer,
   line: lineRenderer,
   area: areaRenderer,
   bar: barRenderer, // horizontal bars

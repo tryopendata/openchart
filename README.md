@@ -153,3 +153,7 @@ OpenChart is the visualization layer for [OpenData](https://tryopendata.ai), an 
 ## License
 
 Apache 2.0
+
+### Static SVG
+
+Render standalone charts, layers, bar lists and maps on the server with `renderStaticSVG` from `@opendata-ai/openchart-vanilla/static`. No browser or DOM shim is required. See [static rendering](docs/static-rendering.md) for deterministic IDs, two-theme figures, accessible table cells and aligned temporal charts.

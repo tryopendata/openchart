@@ -1,5 +1,6 @@
 import { assertMarkOptions } from '../compiler/mark-options';
 import { collectRemovedSpecErrors } from '../compiler/removed-spec-fields';
+import { SOURCE_MARK_TYPE, type SourceMarkSpec } from './source-mark';
 /**
  * Pre-validation spec sugar expansion.
  *
@@ -831,6 +832,10 @@ function expandChartSugar(
   inheritedData?: DataRow[],
 ): Record<string, unknown> {
   let out = unwrapDataValues(spec);
+  out = {
+    ...out,
+    [SOURCE_MARK_TYPE]: (spec as SourceMarkSpec)[SOURCE_MARK_TYPE] ?? markTypeOf(spec),
+  };
   out = expandTopLevelTitle(out);
   out = expandDescriptionSugar(out);
   out = stripIgnoredKeys(out, warnings);
@@ -852,6 +857,10 @@ function expandLayerSugar(
   parentEncoding?: Record<string, unknown>,
 ): Record<string, unknown> {
   let out = unwrapDataValues(spec);
+  out = {
+    ...out,
+    [SOURCE_MARK_TYPE]: (spec as SourceMarkSpec)[SOURCE_MARK_TYPE] ?? markTypeOf(spec),
+  };
   out = expandTopLevelTitle(out);
   out = stripIgnoredKeys(out, warnings);
   // Shared encoding gets the mark-independent channel sugar (axis, scheme,

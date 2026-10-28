@@ -355,3 +355,61 @@ export function validatePointSize(spec: Record<string, unknown>, errors: Validat
     }
   }
 }
+
+/** Exactly one explicit quantitative interval and one categorical/temporal position. */
+export function validateErrorbarSpec(
+  spec: Record<string, unknown>,
+  errors: ValidationError[],
+): void {
+  const encoding = spec.encoding as Record<string, Record<string, unknown> | undefined>;
+  const data = spec.data as Record<string, unknown>[];
+  const horizontal = !!encoding.x2;
+  if (horizontal === !!encoding.y2) {
+    errors.push({
+      message: 'Spec error: errorbar requires exactly one of encoding.x2 or encoding.y2',
+      path: '/encoding',
+      code: 'ENCODING_MISMATCH',
+      suggestion: 'Supply x/x2 for horizontal bounds or y/y2 for vertical bounds.',
+    });
+    return;
+  }
+  const value = horizontal ? encoding.x : encoding.y;
+  const category = horizontal ? encoding.y : encoding.x;
+  const end = horizontal ? encoding.x2 : encoding.y2;
+  for (const [channel, name] of [
+    [value, horizontal ? 'x' : 'y'],
+    [end, horizontal ? 'x2' : 'y2'],
+  ] as const) {
+    if (typeof channel?.field !== 'string') continue;
+    const type =
+      channel.type ??
+      (data.some((row) => row[channel.field as string] != null)
+        ? inferFieldType(data, channel.field)
+        : 'quantitative');
+    if (type !== 'quantitative')
+      errors.push({
+        message: `Spec error: errorbar encoding.${name} must be quantitative`,
+        path: `/encoding/${name}`,
+        code: 'ENCODING_MISMATCH',
+        suggestion: 'Map the interval bound to a quantitative field.',
+      });
+  }
+  if (typeof category?.field === 'string') {
+    const type = category.type ?? inferFieldType(data, category.field);
+    if (!['nominal', 'ordinal', 'temporal'].includes(String(type)))
+      errors.push({
+        message: 'Spec error: errorbar requires a nominal, ordinal or temporal category axis',
+        path: horizontal ? '/encoding/y' : '/encoding/x',
+        code: 'ENCODING_MISMATCH',
+        suggestion: 'Place each interval on a category or date.',
+      });
+  }
+  const mark = spec.mark;
+  if (mark && typeof mark === 'object' && 'ticks' in mark && typeof mark.ticks !== 'boolean')
+    errors.push({
+      message: 'Spec error: mark.ticks must be boolean',
+      path: '/mark/ticks',
+      code: 'INVALID_VALUE',
+      suggestion: 'Use ticks: true or false.',
+    });
+}

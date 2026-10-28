@@ -19,6 +19,7 @@ import {
   defaultNumberFormatter,
   estimateTextWidth,
   mergeThemeConfig,
+  resolveMarkDef,
   resolveNumberFormatter,
   resolveTheme,
   TICK_LABEL_OFFSET,
@@ -31,12 +32,16 @@ import { finiteNumber } from '../data/finite-number';
 import { bidirectionalSweep } from '../endpoint-labels/compute';
 import { ENDPOINT_LEADER_THRESHOLD } from '../endpoint-labels/constants';
 import { authoredTitleFootprint, isYAxisHeader } from '../layout/axis-title-plan';
-import { NO_REFERENCE_RESERVE, outsideBudget } from '../layout/budget';
+import { getSparklinePad, NO_REFERENCE_RESERVE, outsideBudget } from '../layout/budget';
 import type { MeasureFn } from '../layout/plan';
 import { createMeasureFn } from '../layout/plan';
+import { computeScales, resolveTemporalScaleType } from '../layout/scales';
 import { resolveChromeLayout } from '../layout/shared';
+import { resolveTemporalInterval } from '../layout/temporal-interval';
 import { scopeTooltipContent } from '../tooltips/metadata';
 import type { InternalCompileOptions, LeafContext } from './internal-options';
+import { prepareChartSpec } from './prepare';
+import { buildRenderSpec } from './render-spec';
 import { emitSpecWarnings } from './spec-sugar';
 
 type ChartCompiler = (spec: unknown, options: InternalCompileOptions) => ChartLayout;
@@ -111,6 +116,18 @@ export function compileLayer(
   options: CompileOptions,
   compileChart: ChartCompiler,
 ): ChartLayout {
+  const onWarn = options.onWarn;
+  let frameLabelWarning = false;
+  options = {
+    ...options,
+    onWarn: (message) => {
+      if (message.includes('Y-axis labels were shortened to fit frame.left')) {
+        if (frameLabelWarning) return;
+        frameLabelWarning = true;
+      }
+      emitSpecWarnings([message], onWarn);
+    },
+  };
   const leaves = flattenLayers(spec);
 
   if (leaves.length === 0) {
@@ -129,14 +146,41 @@ export function compileLayer(
   // Past this point every compile is one piece of a multi-leaf layer, not a
   // standalone chart. Flagged so per-chart resolutions that only make sense for
   // a whole figure (the canvas mark layer) opt out.
-  const layerOptions: InternalCompileOptions = { ...options, layered: true };
+  const sparklinePad =
+    spec.display === 'sparkline'
+      ? leaves.reduce(
+          (pad, leaf) => {
+            const markDef = resolveMarkDef(leaf.mark);
+            const isTrend = markDef.type === 'line' || markDef.type === 'area';
+            const defaults =
+              isTrend && !leaf.encoding.color && !('point' in markDef)
+                ? { ...markDef, point: 'last' as const }
+                : markDef;
+            const reserve = getSparklinePad({ markDef: defaults, markType: markDef.type });
+            return {
+              left: Math.max(pad.left, reserve.left),
+              right: Math.max(pad.right, reserve.right),
+              top: Math.max(pad.top, reserve.top),
+              bottom: Math.max(pad.bottom, reserve.bottom),
+            };
+          },
+          { left: 0, right: 0, top: 0, bottom: 0 },
+        )
+      : undefined;
+  const layerOptions: InternalCompileOptions = {
+    ...options,
+    layered: true,
+    ...(sparklinePad ? { sparklinePad } : {}),
+  };
 
   if (spec.resolve?.scale?.y === 'independent') {
     return compileLayerIndependent(leaves, spec, layerOptions, compileChart);
   }
 
-  const primarySpec = buildPrimarySpec(leaves, spec);
-  const primaryLayout = compileChart(primarySpec, layerOptions);
+  const sharedDomains = computeSharedDomains(leaves, layerOptions);
+  const primarySpec = withSharedDomains(buildPrimarySpec(leaves, spec), sharedDomains);
+  const primaryContext: LeafContext = {};
+  const primaryLayout = compileChart(primarySpec, { ...layerOptions, leafContext: primaryContext });
 
   const allMarks: Mark[] = [];
   const tooltipDescriptors: ChartLayout['tooltipDescriptors'] = new Map();
@@ -160,7 +204,10 @@ export function compileLayer(
   // deep-merges over the layer theme for its marks.
   const leafOptions: InternalCompileOptions = {
     ...layerOptions,
-    frozenBudget: { chartArea: primaryLayout.area },
+    frozenBudget: {
+      chartArea: primaryLayout.area,
+      inlineYLabelInset: primaryContext.plan?.inlineYLabelInset,
+    },
   };
 
   // Shared scales means shared *domains*, not just a shared plot rect. Each leaf
@@ -168,7 +215,6 @@ export function compileLayer(
   // or narrower rows than its siblings (a label layer naming only the notable
   // points, say) lands on a different scale and its marks slide off the ones
   // they annotate. Union the quantitative domains across every leaf and pin them.
-  const sharedDomains = computeSharedDomains(leaves);
 
   for (const { leaf, leafIndex } of indexedLeaves) {
     const themedLeaf = {
@@ -423,6 +469,10 @@ function compileLayerIndependent(
     });
   }
 
+  // The secondary leaf draws its y labels on the right, so its x range takes
+  // the primary's inline-label inset rather than one measured from its own ticks.
+  const primaryInlineInset = leaf0Budget.plan?.inlineYLabelInset ?? 0;
+
   // Endpoint columns belong to the assembled figure. Both axes must use the
   // same plot rectangle, with the trailing column outside the right axis.
   const columns = [layout0.endpointLabels, layout1.endpointLabels].filter(
@@ -476,7 +526,10 @@ function compileLayerIndependent(
       noteReserve: noteReserve(layout0),
     };
     layout0 = compileChart(primary0, { ...primaryOptions, frozenBudget });
-    layout1 = compileChart(primary1, { ...optionsWithReserve, frozenBudget });
+    layout1 = compileChart(primary1, {
+      ...optionsWithReserve,
+      frozenBudget: { ...frozenBudget, inlineYLabelInset: primaryInlineInset },
+    });
     // The compiler places right legends next to the plot. In this assembly
     // the right axis and endpoint column occupy that space first.
     const legendShift = rightReserve + layout0.theme.spacing.endpointColumnGap + endpointWidth;
@@ -504,17 +557,24 @@ function compileLayerIndependent(
       noteReserve: noteReserve(layout0),
     };
     layout0 = compileChart(primary0, { ...primaryOptions, frozenBudget });
-    layout1 = compileChart(primary1, { ...optionsWithReserve, frozenBudget });
+    layout1 = compileChart(primary1, {
+      ...optionsWithReserve,
+      frozenBudget: { ...frozenBudget, inlineYLabelInset: primaryInlineInset },
+    });
     layout0 = moveRightLegends(layout0, rightReserve);
     layout1 = moveRightLegends(layout1, rightReserve);
   } else if (!columns.length) {
     measure0.release();
-    if (noteReserve(layout0) > 0) {
-      layout1 = compileChart(primary1, {
-        ...optionsWithReserve,
-        frozenBudget: { chartArea: layout0.area, noteReserve: noteReserve(layout0) },
-      });
-    } else measure1.release();
+    // The secondary leaf's own y-axis ticks size its plot differently; draw
+    // it into the primary's plot so both leaves place x identically.
+    layout1 = compileChart(primary1, {
+      ...optionsWithReserve,
+      frozenBudget: {
+        chartArea: layout0.area,
+        noteReserve: noteReserve(layout0),
+        inlineYLabelInset: primaryInlineInset,
+      },
+    });
   }
 
   // Leaf 0's marks and axes take its merged theme. Its compile above used the
@@ -938,6 +998,23 @@ function withUnionXDomain(
       if (ms > maxMs) maxMs = ms;
     }
     if (minMs <= maxMs) {
+      // A temporal bar leaf would pad its own domain by half an interval so
+      // edge columns stay inside the plot; the pinned union must carry that pad.
+      // Every candidate pads the raw union, not an earlier leaf's padded extent.
+      const start = new Date(minMs);
+      const end = new Date(maxMs);
+      for (const leaf of [leaf0, leaf1]) {
+        const mark = typeof leaf.mark === 'string' ? leaf.mark : leaf.mark.type;
+        const channel = leaf.encoding?.x;
+        if (mark !== 'bar' || channel?.type !== 'temporal' || channel.scale?.domain) continue;
+        const interval = resolveTemporalInterval(
+          channel,
+          leaf.data,
+          resolveTemporalScaleType(channel, leaf.data),
+        );
+        minMs = Math.min(minMs, +start - (+interval.offset(start) - +start) / 2);
+        maxMs = Math.max(maxMs, +end + (+interval.offset(end) - +end) / 2);
+      }
       domain = [new Date(minMs).toISOString(), new Date(maxMs).toISOString()];
     }
   } else if (xType === 'quantitative') {
@@ -1079,66 +1156,73 @@ function withYDomain(leaf: ChartSpec, domain: [number, number]): ChartSpec {
   } as ChartSpec;
 }
 
-type SharedDomains = { x?: [number, number]; y?: [number, number] };
+type SharedDomains = { x?: number[] | string[]; y?: number[] | string[] };
 
 /**
  * Union the quantitative x/y extents across every leaf.
  *
  * Only channels that every leaf encodes *quantitatively* are unioned — a leaf
  * mixing a nominal x with a quantitative one has no common numeric domain, and
- * an author-pinned `scale.domain` on any leaf is left to win on its own.
+ * an author-pinned domain is inherited by unpinned leaves of the same type.
+ * Each explicitly authored domain remains exact, even if leaves disagree.
  */
-function computeSharedDomains(leaves: ChartSpec[]): SharedDomains {
+function computeSharedDomains(leaves: ChartSpec[], options: InternalCompileOptions): SharedDomains {
   const shared: SharedDomains = {};
+  // Use the same transformed observations and domain rules as the leaf
+  // compiles. Raw extents cannot represent stacked or normalized marks.
+  const prepared = leaves.map((leaf) =>
+    buildRenderSpec(prepareChartSpec(leaf, { ...options, onWarn: () => {} }).chartSpec),
+  );
+  const domains = prepared.map((spec) => {
+    // Scale-default resolution must not stamp defaults onto authored channels.
+    const encoding = { ...spec.encoding };
+    for (const axis of ['x', 'y'] as const) {
+      const channel = encoding[axis];
+      if (channel)
+        encoding[axis] = { ...channel, ...(channel.scale ? { scale: { ...channel.scale } } : {}) };
+    }
+    return computeScales({ ...spec, encoding }, { x: 0, y: 0, width: 1, height: 1 }, spec.data);
+  });
 
   for (const channel of ['x', 'y'] as const) {
-    let lo = Number.POSITIVE_INFINITY;
-    let hi = Number.NEGATIVE_INFINITY;
-    let sawAny = false;
-    let usable = true;
-
-    for (const leaf of leaves) {
-      const enc = (leaf.encoding as Encoding | undefined)?.[channel];
-      // Skip *this channel* if any leaf can't take part: no encoding, a
-      // non-quantitative type, or a domain the author already pinned. Bailing
-      // out of the whole function here would abandon the other channel too --
-      // a nominal x would silently strand a quantitative y, which is the most
-      // common layered shape there is (bars plus their value labels).
-      if (!enc || !('field' in enc) || enc.type !== 'quantitative' || enc.scale?.domain) {
-        usable = false;
-        break;
-      }
-
-      for (const row of leaf.data ?? []) {
-        const v = finiteNumber((row as DataRow)[enc.field]);
-        if (v === undefined) continue;
-        if (v < lo) lo = v;
-        if (v > hi) hi = v;
-        sawAny = true;
-      }
+    const explicitIndex = leaves.findIndex((leaf) => leaf.encoding?.[channel]?.scale?.domain);
+    const explicit = leaves[explicitIndex]?.encoding?.[channel];
+    if (
+      explicit?.scale?.domain &&
+      prepared.every(
+        (spec) => spec.encoding[channel]?.type === prepared[explicitIndex].encoding[channel]?.type,
+      )
+    ) {
+      shared[channel] = explicit.scale.domain;
+      continue;
     }
-
-    if (!usable || !sawAny || lo > hi) continue;
-
-    // Pin the union through zero the way an unpinned scale would.
-    //
-    // `withSharedDomains` writes this extent onto each leaf as `scale.domain`,
-    // and `resolveQuantitativeScale` takes an explicit domain *verbatim* --
-    // skipping the `zero !== false` baselining it would otherwise apply. So a
-    // raw [50, 100] union lands as a literal domain and the 50-bar collapses
-    // to a sliver against its own baseline. Fold zero in here, honouring an
-    // explicit `zero: false` on any leaf (a sparkline opting out of it).
-    const wantsZero = leaves.every((leaf) => {
-      const enc = (leaf.encoding as Encoding | undefined)?.[channel];
-      return enc && 'scale' in enc ? enc.scale?.zero !== false : true;
-    });
-    shared[channel] = wantsZero ? [Math.min(0, lo), Math.max(0, hi)] : [lo, hi];
+    // A temporal bar leaf pads its domain by half an interval so edge columns
+    // are whole; other leaves fit their raw extent. Share the union so every
+    // leaf places the same date at the same x.
+    if (
+      domains.some((scales) => scales[channel]?.temporalInterval) &&
+      prepared.every((spec) => spec.encoding[channel]?.type === 'temporal')
+    ) {
+      const times = domains
+        .flatMap((scales) => (scales[channel]?.scale.domain() ?? []).map(Number))
+        .filter(Number.isFinite);
+      if (times.length)
+        shared[channel] = [
+          new Date(Math.min(...times)).toISOString(),
+          new Date(Math.max(...times)).toISOString(),
+        ];
+      continue;
+    }
+    if (!prepared.every((spec) => spec.encoding[channel]?.type === 'quantitative')) continue;
+    const values = domains
+      .flatMap((scales) => (scales[channel]?.scale.domain() ?? []).map(Number))
+      .filter(Number.isFinite);
+    if (values.length) shared[channel] = [Math.min(...values), Math.max(...values)];
   }
-
   return shared;
 }
 
-/** Pin the shared domains onto a leaf's quantitative x/y channels. */
+/** Share inferred numeric extents and authored domains without replacing authored values. */
 function withSharedDomains(leaf: ChartSpec, shared: SharedDomains): ChartSpec {
   if (!shared.x && !shared.y) return leaf;
 
@@ -1147,7 +1231,7 @@ function withSharedDomains(leaf: ChartSpec, shared: SharedDomains): ChartSpec {
   for (const channel of ['x', 'y'] as const) {
     const domain = shared[channel];
     const ch = encoding[channel] as Record<string, unknown> | undefined;
-    if (!domain || !ch) continue;
+    if (!domain || !ch || (ch.scale as { domain?: unknown } | undefined)?.domain) continue;
     encoding[channel] = {
       ...ch,
       scale: { ...((ch.scale as object) ?? {}), domain },
@@ -1176,6 +1260,9 @@ export function buildPrimarySpec(leaves: ChartSpec[], layerSpec: LayerSpec): Cha
     ...leaves[0],
     data: allData,
     chrome: layerSpec.chrome ?? leaves[0].chrome,
+    display: layerSpec.display ?? leaves[0].display,
+    a11y: layerSpec.a11y ?? leaves[0].a11y,
+    frame: layerSpec.frame ?? leaves[0].frame,
     animation: layerSpec.animation ?? leaves[0].animation,
     // Annotations come from the parent LayerSpec when present, otherwise
     // the first flattened leaf's. Later leaves' annotations are silently

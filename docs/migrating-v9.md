@@ -75,6 +75,8 @@ A value column is for simple horizontal bars with one value per category. It is 
 
 Dot/lollipop, range and pie marks reject explicit placement at `/labels/placement`; their existing label configuration remains supported.
 
+On a normalized stack (`stack: 'normalize'`), segment labels now show each segment's share of its stack. Formatting prefers explicit `labels.format`, then the value channel's `format`, then the inferred `.0%` fallback. Earlier releases printed the raw field value, which disagreed with the percent axis. Set `labels.format` to change the share format; there is no option to restore raw values on a normalized stack.
+
 ### Optional bar row inspection
 
 Pass `{ rowHover: true }` to `createChart` or the `rowHover` prop on any Chart wrapper. Pointer inspection spans the category, plot and value-column zones; the existing keyboard navigation highlights the same row. It applies to simple horizontal bars, and yields to editing. Omission adds no hover presentation. Grouped, stacked, layered and faceted charts retain their existing behavior. The highlight is transient and does not appear in settled chart exports.
@@ -502,7 +504,7 @@ Existing maps do not gain place labels or note bands automatically. Add `encodin
 
 Callouts reserve complete note capacity before the map is fitted. Review fixed-height embeds when enabling them; panning and zooming never change that reserve. Hidden inventory text remains available when visual labels collide or are outside their zoom range. Enable `labelInventory: { container }` on a vanilla mount or GeoMap wrapper for a visible host-placed list. This option does not enable reader comparison or annotation editing.
 
-`renderStaticSVG` accepts maps. Use a distinct stable `idPrefix` for each static figure embedded in one document, so clip paths, patterns and descriptions cannot refer to another figure's IDs. Omission retains the existing deterministic standalone-ID behavior. See [geographic labels and callouts](geographic-labels.md) for authoring, camera, accessibility and export details.
+`renderStaticSVG` accepts maps. Use a distinct stable `idPrefix` for each static figure embedded in one document, so clip paths, patterns and descriptions cannot refer to another figure's IDs. Without a prefix, static IDs use a deterministic `ocs-<hash>-…` scope derived from the spec and options, distinct from live `oc-…` IDs. Identical calls still share the same IDs; give repeated copies unique explicit prefixes. See [geographic labels and callouts](geographic-labels.md) for authoring, camera, accessibility and export details.
 
 ### Shared attribution and side map keys
 
@@ -577,3 +579,15 @@ explicit scopes reject, while a missing feature in a known scope retains its not
 and accessible inventory. Context detail layers currently belong to the root view.
 SVG export preserves every current camera. Keep unique `idPrefix` values for
 multiple static figures; transient reader pins remain excluded.
+
+## Static rendering
+
+`renderStaticSVG` no longer needs `happy-dom` or a mutex around calls. Remove that dependency if it was installed only for OpenChart. Calls accept per-render `theme`, `measureText` and stable `idPrefix`, plus `precision` from 0 through 15 or `null` (default 3). Keep build timezones consistent for temporal output.
+
+Custom mark renderers now receive `(mark, index, ctx)` and must create elements through `ctx.factory`; static rendering has no global `document`. `renderChartSVG` accepts a render context. The mutable helpers `captureSvgIdState`, `restoreSvgIdState`, `resetSvgIdCounter`, `setMarkRenderState` and `resetMarkRenderState` are removed; `nextSvgId` remains the page-scope helper.
+
+Rebaseline static output once: chart/layer styles become attributes, ancestor CSS variables no longer theme them, roots carry `data-theme`, prefixed roots receive an ID, geometry defaults to three decimals, and nonbreaking spaces serialize literally. Needed xlink namespace declarations are explicit. Static mark descriptions become `<title>` text without per-mark ARIA labels; static legends, notes and barlist rows lose interactive roles and tab stops. Identity attributes are stamped on the data shape. Use the `theme` option and the retained CSS classes for host integration.
+
+Shared layered marks now use the same compiled domain and scale inset as the displayed primary axis (RFC R14). This can move marks that previously used raw extents while the axis used niced extents. For example, a composed GDP point/text chart displayed `[0.8, 4]` but positioned its marks on `[0.8, 3.9]`; the marks now agree with the displayed ticks. Authored domains remain exact, and shared inference includes transformed values and stack extents.
+
+Isolated line/ordinary-area observations now render as points; isolated observations in an ungrouped `y`/`y2` interval band render as rules spanning both bounds. Temporal bars now render columns instead of an empty plot. Light categorical cyan, ochre and violet strokes, plus cyan, ochre, green and violet fills, are retuned for contrast; review palette-sensitive documents. Default `migrateSpecV8` preserves the released v8 light palette and unchanged dark palette through per-slot color pairs; `{ styling: 'v9' }` adopts the retuned palette. See [static rendering](static-rendering.md) for supported spec types, descriptions, aligned frames and host-owned tables.

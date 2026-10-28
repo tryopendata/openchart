@@ -116,6 +116,11 @@ export type NormalizedMarkDef = { type: MarkType } & {
 export interface NormalizedChartSpec {
   /** Resolved mark type string (extracted from spec.mark). */
   markType: MarkType;
+  /** Original authored mark before histogram/density sugar. */
+  sourceMarkType?: MarkType;
+  /** Compile-local mark warnings, emitted once after geometry computation. */
+  markWarnings?: string[];
+  frame?: import('@opendata-ai/openchart-core').FrameConfig;
   /** Resolved mark definition with defaults filled in. */
   markDef: NormalizedMarkDef;
   data: DataRow[];
@@ -142,7 +147,7 @@ export interface NormalizedChartSpec {
   annotations: Annotation[];
   /** Normalized label configuration with defaults applied. density, format, and prefix are always set; offsets and color stay optional. */
   labels: Required<Pick<LabelConfig, 'density' | 'format' | 'prefix'>> &
-    Pick<LabelConfig, 'color' | 'fontSize' | 'suffix' | 'placement'>;
+    Pick<LabelConfig, 'color' | 'fontSize' | 'suffix' | 'placement' | 'content'>;
   /** Legend configuration (position override). */
   legend?: LegendConfig;
   /** Right-side endpoint labels column config (multi-series line/area only). */

@@ -280,6 +280,43 @@ describe('computeTooltipDescriptors', () => {
     });
   });
 
+  it('describes only semantic area interval rules and respects explicit tooltip fields', () => {
+    const spec: NormalizedChartSpec = {
+      ...makeLineSpec(),
+      markType: 'area',
+      markDef: { type: 'area' },
+      encoding: {
+        x: { field: 'date', type: 'temporal' },
+        y: { field: 'value', type: 'quantitative' },
+        y2: { field: 'upper' },
+      },
+    };
+    const rule: Mark = {
+      type: 'rule',
+      markType: 'area',
+      x1: 10,
+      x2: 10,
+      y1: 20,
+      y2: 30,
+      stroke: '#123456',
+      strokeWidth: 2,
+      data: { date: '2026-10-10', value: 0.6, upper: 0.9 },
+      aria: { label: 'interval' },
+    };
+    const descriptors = computeTooltipDescriptors(spec, [rule]);
+    expect(descriptors.get('rule-0')?.fields.map((field) => [field.label, field.value])).toEqual([
+      ['value', '0.60'],
+      ['upper', '0.90'],
+    ]);
+    expect(descriptors.get('rule-0')?.fields[1].source).toEqual({ field: 'upper', channel: 'y2' });
+    expect(computeTooltipDescriptors(spec, [{ ...rule, markType: 'rule' }]).size).toBe(0);
+    expect(
+      computeTooltipDescriptors(spec, [{ ...rule, aria: { label: '', decorative: true } }]).size,
+    ).toBe(0);
+    spec.encoding.tooltip = [{ field: 'upper', type: 'quantitative' }];
+    expect(computeTooltipDescriptors(spec, [rule]).get('rule-0')?.fields).toHaveLength(1);
+  });
+
   describe('line and area marks', () => {
     it('line marks do not generate tooltips (points do instead)', () => {
       const spec = makeLineSpec();

@@ -142,7 +142,13 @@ function computeSingleArea(
         : sortByField(rows, xChannel.field);
 
     // Compute points, filtering out null values
-    const validPoints: { x: number; yTop: number; yBottom: number; row: DataRow }[] = [];
+    const validPoints: {
+      x: number;
+      yTop: number;
+      yBottom: number;
+      row: DataRow;
+      segment: number;
+    }[] = [];
     const segments: (typeof validPoints)[] = [[]];
 
     // Check for y2 channel (band between y and y2)
@@ -160,7 +166,7 @@ function computeSingleArea(
         continue;
       }
 
-      const point = { x: xVal, yTop: yVal, yBottom: yBottomVal, row };
+      const point = { x: xVal, yTop: yVal, yBottom: yBottomVal, row, segment: segments.length - 1 };
       validPoints.push(point);
       segments[segments.length - 1].push(point);
     }
@@ -175,14 +181,15 @@ function computeSingleArea(
       .y1((d) => d.yTop)
       .curve(curve);
 
-    const pathStr = segments.map((segment) => areaGenerator(segment) ?? '').join(' ');
+    const bandSegments = segments.filter((segment) => segment.length > 1);
+    const pathStr = bandSegments.map((segment) => areaGenerator(segment) ?? '').join(' ');
 
     // Top-line path for stroking only the data line (not the baseline)
     const topLineGenerator = line<{ x: number; yTop: number }>()
       .x((d) => d.x)
       .y((d) => d.yTop)
       .curve(curve);
-    const topPathStr = segments.map((segment) => topLineGenerator(segment) ?? '').join(' ');
+    const topPathStr = bandSegments.map((segment) => topLineGenerator(segment) ?? '').join(' ');
 
     const topPoints = validPoints.map((p) => ({ x: p.x, y: p.yTop }));
     const bottomPoints = validPoints.map((p) => ({ x: p.x, y: p.yBottom }));
@@ -248,7 +255,7 @@ function computeSingleArea(
       strokeWidth: spec.markDef.strokeWidth ?? LINE_STROKE_WIDTH,
       seriesKey: seriesKey === '__default__' ? undefined : seriesKey,
       data: validPoints.map((p) => p.row),
-      dataPoints: validPoints.map((p) => ({ x: p.x, y: p.yTop, datum: p.row })),
+      dataPoints: validPoints.map((p) => ({ x: p.x, y: p.yTop, datum: p.row, segment: p.segment })),
       aria,
     });
   }
@@ -343,13 +350,14 @@ function computeStackedArea(
       .y1((p) => p.yTop)
       .curve(stackCurve);
 
-    const pathStr = segments.map((segment) => areaGenerator(segment) ?? '').join(' ');
+    const bandSegments = segments.filter((segment) => segment.length > 1);
+    const pathStr = bandSegments.map((segment) => areaGenerator(segment) ?? '').join(' ');
 
     const topLineGenerator = line<{ x: number; yTop: number }>()
       .x((p) => p.x)
       .y((p) => p.yTop)
       .curve(stackCurve);
-    const topPathStr = segments.map((segment) => topLineGenerator(segment) ?? '').join(' ');
+    const topPathStr = bandSegments.map((segment) => topLineGenerator(segment) ?? '').join(' ');
 
     const topPoints = validPoints.map((p) => ({ x: p.x, y: p.yTop }));
     const bottomPoints = validPoints.map((p) => ({ x: p.x, y: p.yBottom }));
@@ -424,7 +432,7 @@ function computeStackedArea(
  * Single-series specs always render one gradient-filled area; the `stack`
  * branch only matters when a `color` encoding is present.
  */
-export function computeAreaMarks(
+export function computeAreaGeometry(
   spec: NormalizedChartSpec,
   scales: ResolvedScales,
   chartArea: Rect,
@@ -458,4 +466,14 @@ export function computeAreaMarks(
   }
 
   return marks;
+}
+
+/** Only multi-observation segments form filled bands. */
+export function computeAreaMarks(
+  spec: NormalizedChartSpec,
+  scales: ResolvedScales,
+  chartArea: Rect,
+  theme?: ResolvedTheme,
+): AreaMark[] {
+  return computeAreaGeometry(spec, scales, chartArea, theme).filter((mark) => !!mark.path?.trim());
 }

@@ -157,12 +157,15 @@ export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
   // chroma trimmed) rather than reusing the light hexes or running them
   // through contrast-equivalence, which dulls cyan into teal. A palette the
   // spec overrode passes through untouched, same rule as every other color.
-  const categorical = overridden(theme.colors.categorical, light.categorical, [
-    ...CATEGORICAL_PALETTE_DARK,
-  ]);
-  const categoricalFill = overridden(theme.colors.categoricalFill, light.categoricalFill, [
-    ...CATEGORICAL_FILL_PALETTE_DARK,
-  ]);
+  const paletteForDark = (
+    field: 'categorical' | 'categoricalFill',
+    defaults: readonly string[],
+  ) => {
+    const palette = overridden(theme.colors[field], light[field], [...defaults]);
+    return palette.map((color, index) => pairs?.[`colors.${field}.${index}`]?.dark ?? color);
+  };
+  const categorical = paletteForDark('categorical', CATEGORICAL_PALETTE_DARK);
+  const categoricalFill = paletteForDark('categoricalFill', CATEGORICAL_FILL_PALETTE_DARK);
 
   const neutral = deriveNeutralRamp(darkText, darkBg, true);
   const authoredColors =

@@ -23,6 +23,8 @@ export function computeChartScales(
     spec.highlight,
     chartSpec.markType,
   );
+  for (const scale of [scales.x, scales.y])
+    warnings.push(...(scale?.temporalInterval?.warnings ?? []));
   // INVARIANT 3 -- post-hoc defaultColor: must run AFTER computeScales since resolution needs
   // theme context. Do not move into computeScales (would require threading theme through).
   // fill wins for bar/area/arc marks; stroke wins for line marks (the stroke IS the color).

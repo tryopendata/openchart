@@ -34,6 +34,7 @@ export interface EncodingRule {
   tooltip?: ChannelRule;
   theta?: ChannelRule;
   detail: ChannelRule;
+  description?: ChannelRule;
 }
 
 // ---------------------------------------------------------------------------
@@ -77,15 +78,28 @@ function optional(...types: FieldType[]): ChannelRule {
  *   (quantitative), color the party
  */
 export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
+  errorbar: {
+    x: required('quantitative', 'nominal', 'ordinal', 'temporal'),
+    y: required('quantitative', 'nominal', 'ordinal', 'temporal'),
+    x2: optional('quantitative'),
+    y2: optional('quantitative'),
+    color: optional(),
+    size: optional(),
+    opacity: optional(),
+    detail: optional(),
+    description: optional(),
+    tooltip: optional(),
+  },
   bar: {
     x: required('quantitative', 'nominal', 'ordinal', 'temporal'),
-    y: required('quantitative', 'nominal', 'ordinal'),
+    y: required('quantitative', 'nominal', 'ordinal', 'temporal'),
     x2: optional('quantitative'),
     y2: optional('quantitative'),
     color: optional('nominal', 'ordinal', 'quantitative'),
     size: optional(),
     opacity: optional('quantitative'),
     tooltip: optional(),
+    description: optional(),
     detail: optional('nominal'),
   },
   line: {
@@ -96,6 +110,7 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     opacity: optional('quantitative'),
     strokeDash: optional('nominal', 'ordinal'),
     tooltip: optional(),
+    description: optional(),
     detail: optional('nominal'),
   },
   area: {
@@ -108,6 +123,7 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     size: optional(),
     opacity: optional('quantitative'),
     tooltip: optional(),
+    description: optional(),
     detail: optional('nominal'),
   },
   point: {
@@ -117,6 +133,7 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     size: optional('quantitative'),
     opacity: optional('quantitative'),
     tooltip: optional(),
+    description: optional(),
     detail: optional('nominal'),
   },
   circle: {
@@ -126,6 +143,7 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     size: optional('quantitative'),
     opacity: optional('quantitative'),
     tooltip: optional(),
+    description: optional(),
     detail: optional('nominal'),
   },
   lollipop: {
@@ -135,6 +153,7 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     size: optional('quantitative'),
     opacity: optional('quantitative'),
     tooltip: optional(),
+    description: optional(),
     detail: optional('nominal'),
   },
   beeswarm: {
@@ -144,6 +163,7 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     size: optional('quantitative'),
     opacity: optional('quantitative'),
     tooltip: optional(),
+    description: optional(),
     detail: optional('nominal'),
   },
   // Range: x+x2 with nominal y (horizontal) or y+y2 with nominal x (vertical).
@@ -158,6 +178,7 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     size: optional(),
     opacity: optional('quantitative'),
     tooltip: optional(),
+    description: optional(),
     detail: optional('nominal'),
   },
   arc: {
@@ -168,6 +189,7 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     size: optional(),
     opacity: optional('quantitative'),
     tooltip: optional(),
+    description: optional(),
     detail: optional('nominal'),
   },
   waffle: {
@@ -178,6 +200,7 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     opacity: optional('quantitative'),
     tooltip: optional(),
     theta: optional('quantitative'),
+    description: optional(),
     detail: optional('nominal'),
   },
   // parliament: hemicycle seat chart. Like arc/waffle, no positional axes;
@@ -192,6 +215,7 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     opacity: optional('quantitative'),
     tooltip: optional(),
     theta: optional('quantitative'),
+    description: optional(),
     detail: optional('nominal'),
   },
   text: {
@@ -202,6 +226,7 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     opacity: optional('quantitative'),
     text: required(),
     tooltip: optional(),
+    description: optional(),
     detail: optional('nominal'),
   },
   rule: {
@@ -214,6 +239,7 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     opacity: optional('quantitative'),
     strokeDash: optional('nominal', 'ordinal'),
     tooltip: optional(),
+    description: optional(),
     detail: optional('nominal'),
   },
   tick: {
@@ -223,6 +249,7 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     size: optional(),
     opacity: optional('quantitative'),
     tooltip: optional(),
+    description: optional(),
     detail: optional('nominal'),
   },
   rect: {
@@ -234,6 +261,7 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     size: optional(),
     opacity: optional('quantitative'),
     tooltip: optional(),
+    description: optional(),
     detail: optional('nominal'),
   },
   // calendar: x is the daily date (temporal), color the per-day value
@@ -247,6 +275,7 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     size: optional(),
     opacity: optional('quantitative'),
     tooltip: optional(),
+    description: optional(),
     detail: optional('nominal'),
   },
   // histogram: x is the raw quantitative field to bin. y is optional because
@@ -260,6 +289,7 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     size: optional(),
     opacity: optional('quantitative'),
     tooltip: optional(),
+    description: optional(),
     detail: optional('nominal'),
   },
   // density: x is the raw quantitative field to estimate over. y is computed
@@ -272,6 +302,7 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     size: optional(),
     opacity: optional('quantitative'),
     tooltip: optional(),
+    description: optional(),
     detail: optional('nominal'),
   },
 };

@@ -15,6 +15,7 @@ export default {
       '@opendata-ai/openchart-core/styles.css': path.resolve(__dirname, '../packages/core/src/styles/index.css'),
       '@opendata-ai/openchart-core': path.resolve(__dirname, '../packages/core/src/index.ts'),
       '@opendata-ai/openchart-engine': path.resolve(__dirname, '../packages/engine/src/index.ts'),
+      '@opendata-ai/openchart-vanilla/static': path.resolve(__dirname, '../packages/vanilla/src/static.ts'),
       '@opendata-ai/openchart-vanilla/story': path.resolve(__dirname, '../packages/vanilla/src/story/index.ts'),
       '@opendata-ai/openchart-vanilla/graph-3d': path.resolve(__dirname, '../packages/vanilla/src/graph-3d/index.ts'),
       '@opendata-ai/openchart-vanilla': path.resolve(__dirname, '../packages/vanilla/src/index.ts'),

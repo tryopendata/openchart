@@ -48,7 +48,7 @@ There is no `type: "line"` grammar. Charts use `mark`, following Vega-Lite. `mar
     y?:     EncodingChannel,
     color?: EncodingChannel | { value: string },
     size?:  EncodingChannel,
-    // also: x2, y2, theta, opacity, strokeDash, text, tooltip, detail, facet
+    // also: x2, y2, theta, opacity, strokeDash, text, tooltip, detail, description, facet
   },
   transform?: Transform[],       // filter, bin, calculate, timeUnit, aggregate, joinaggregate, fold, window, density
   chrome?:    Chrome,            // title, subtitle, source, byline, footer, eyebrow, brand
@@ -57,7 +57,8 @@ There is no `type: "line"` grammar. Charts use `mark`, following Vega-Lite. `mar
   labels?:    boolean | LabelConfig,          // direct data labels
   legend?:    LegendConfig,      // { position, show, columns, ... }
   theme?:     ThemeConfig,       // colors, fonts, spacing overrides
-  a11y?:      { description?: string, hidden?: boolean },
+  a11y?:      { description?: string, hidden?: boolean, table?: boolean },
+  frame?:     { left?: number, right?: number }, // fixed horizontal plot margins
   description?: string,          // sugar -> a11y.description (alt text)
   width?: number, height?: number,
   animation?: boolean | AnimationConfig,
@@ -84,13 +85,22 @@ Common MarkDef options:
 - **range**: `style` ("dumbbell" | "arrow" | "bar").
 - **filled marks (bar/area/arc)**: `fillPattern` ("auto" | "none"). "auto" layers a per-series SVG pattern for color-vision-safe distinction.
 
+### Static SVG and statistics
+
+Import `renderStaticSVG` from `@opendata-ai/openchart-vanilla/static`. It renders chart, layer, barlist, tilemap and geomap specs without a browser or DOM shim. Options include per-call `theme`, `measureText`, `idPrefix`, `darkMode` and `precision` (0–15 or null; default 3). Render separate light/dark SVGs with distinct stable prefixes; keep build timezones consistent. The host supplies captions and HTML tables. See [static rendering](./docs/static-rendering.md).
+
+`encoding.description` accepts a constant value or field. A series path needs constant text within each series; add a point layer for per-observation descriptions. Static data shapes carry titles and identity attributes; live mounts use authored descriptions for keyboard inspection. `a11y.table: false` suppresses the generated live table, while `a11y.hidden: true` hides decorative cells.
+
+`errorbar` draws caller-computed horizontal x/x2 or vertical y/y2 intervals with optional `ticks` caps; it does not estimate intervals. Layer with points in compact `display: 'sparkline'` cells. Temporal bar x channels support `interval: 'day' | 'week' | 'month' | 'quarter' | 'year' | number` (positive milliseconds). Fixed `frame.left` and `frame.right` align paired plots and override automatic label reserves. `labels.content` accepts `'label'`, `'value'` or `'label value'`; `prefix` and `suffix` surround formatted values. Bar lists support groups, explicit value domains, input order with `sort: null`, and x reference lines.
+
 ### Encoding requirements by mark
 
-`req`/`opt` = required/optional; parentheses list allowed field types. Every mark also accepts optional `tooltip` and `detail` channels. `theta` is the value channel for arc, waffle, and parliament marks.
+`req`/`opt` = required/optional; parentheses list allowed field types. Every mark also accepts optional `tooltip`, `detail` and `description` channels. `theta` is the value channel for arc, waffle, and parliament marks.
 
 | mark | x | y | theta | color | size | Renders as |
 |------|---|---|-------|-------|------|------------|
-| `bar` | req (quantitative, nominal, ordinal, temporal) | req (quantitative, nominal, ordinal) | - | opt (nominal, ordinal, quantitative) | opt | Bar chart |
+| `errorbar` | req (quantitative, nominal, ordinal, temporal) | req (quantitative, nominal, ordinal, temporal) | - | opt | opt | Error bar plot |
+| `bar` | req (quantitative, nominal, ordinal, temporal) | req (quantitative, nominal, ordinal, temporal) | - | opt (nominal, ordinal, quantitative) | opt | Bar chart |
 | `line` | req (temporal, ordinal) | req (quantitative) | - | opt (nominal, ordinal, quantitative) | opt | Line chart |
 | `area` | req (temporal, ordinal, quantitative) | req (quantitative) | - | opt (nominal, ordinal, quantitative) | opt | Area chart |
 | `point` | req (quantitative, temporal, nominal, ordinal) | req (quantitative, temporal, nominal, ordinal) | - | opt (nominal, ordinal, quantitative) | opt (quantitative) | Scatter plot |
@@ -109,7 +119,7 @@ Common MarkDef options:
 | `histogram` | req (quantitative) | opt (quantitative) | - | opt (nominal, ordinal) | opt | Histogram |
 | `density` | req (quantitative) | opt (quantitative) | - | opt (nominal, ordinal) | opt | Density plot |
 
-An EncodingChannel is `{ field, type, aggregate?, bin?, timeUnit?, sort?, scale?, axis?, legend?, format?, title?, stack?, highlight? }`. `type` is one of `quantitative`, `temporal`, `nominal`, `ordinal`. Multi-series bar and area charts default to stacked (Vega-Lite aligned); set `stack: null` on the value channel for grouped bars or overlapping areas.
+An EncodingChannel is `{ field, type, aggregate?, bin?, timeUnit?, sort?, scale?, axis?, legend?, format?, title?, stack?, highlight?, interval? }`. `type` is one of `quantitative`, `temporal`, `nominal`, `ordinal`. Multi-series bar and area charts default to stacked (Vega-Lite aligned); set `stack: null` on the value channel for grouped bars or overlapping areas.
 
 ### Color legends
 
@@ -221,7 +231,7 @@ Validate a spec before rendering with `validateSpec(spec)` from `@opendata-ai/op
 The published JSON Schema for structured LLM outputs (Anthropic tools, etc.) ships in `@opendata-ai/openchart-core`:
 
 - `@opendata-ai/openchart-core/schema` - full VizSpec schema (plain, non-strict tool `input_schema`).
-- `@opendata-ai/openchart-core/schema/chart.schema.json` - ChartSpec subset (all 16 marks).
+- `@opendata-ai/openchart-core/schema/chart.schema.json` - ChartSpec subset (all 19 marks).
 - `@opendata-ai/openchart-core/schema/table.schema.json` - TableSpec subset.
 
 Fetch-capable agents without a local install can pull the schema from unpkg or GitHub raw. See `docs/generating-specs.md` for tool-use and strict-mode guidance.

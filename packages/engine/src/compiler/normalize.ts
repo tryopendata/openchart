@@ -1,3 +1,4 @@
+import { SOURCE_MARK_TYPE, type SourceMarkSpec } from '../compile/source-mark';
 import type { NormalizedMarkDef } from './types';
 /**
  * Spec normalization: fill in defaults and infer types.
@@ -179,6 +180,7 @@ function normalizeLabels(labels?: LabelSpec): NormalizedChartSpec['labels'] {
     format: labels.format ?? '',
     prefix: labels.prefix ?? '',
     suffix: labels.suffix,
+    content: labels.content,
     color: labels.color,
     fontSize: labels.fontSize,
     ...(labels.placement ? { placement: labels.placement } : {}),
@@ -418,7 +420,8 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
     markType !== 'line' &&
     markType !== 'area' &&
     markType !== 'bar' &&
-    markType !== 'point'
+    markType !== 'point' &&
+    markType !== 'errorbar'
   ) {
     warnings.push(
       `[openchart] display: 'sparkline' works best with mark: 'line' | 'area' | 'bar' | 'point'. Got mark: '${markType}' — rendering may degrade.`,
@@ -437,6 +440,7 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
 
   return {
     markType,
+    sourceMarkType: (spec as SourceMarkSpec)[SOURCE_MARK_TYPE] ?? markType,
     markDef,
     data,
     encoding,
@@ -464,6 +468,7 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
     watermark: spec.watermark ?? true,
     highlight: normalizeHighlight(encoding, spec.data, warnings),
     a11y: spec.a11y,
+    frame: spec.frame,
     display,
     resolve: spec.resolve,
     // Default empty userExplicit; compileChart overwrites this with the real
@@ -679,6 +684,11 @@ function normalizeBarListSpec(spec: BarListSpec, _warnings: string[]): Normalize
     type: 'barlist',
     data: spec.data,
     encoding: spec.encoding,
+    sort: spec.sort === undefined ? 'descending' : spec.sort,
+    height: spec.height,
+    annotations: spec.annotations,
+    labels: spec.labels,
+    a11y: spec.a11y,
     barHeight: spec.barHeight ?? 6,
     cornerRadius: spec.cornerRadius ?? 'pill',
     maxItems: spec.maxItems ?? 20,
@@ -766,6 +776,7 @@ export function flattenLayers(
   parentTransforms?: import('@opendata-ai/openchart-core').Transform[],
   parentWatermark?: boolean,
   parentEndpointLabels?: boolean | import('@opendata-ai/openchart-core').EndpointLabelsConfig,
+  parentFigure?: Pick<LayerSpec, 'display' | 'a11y' | 'frame' | 'labels'>,
 ): ChartSpec[] {
   const resolvedData = spec.data ?? parentData;
   const resolvedEncoding: Encoding | undefined =
@@ -776,6 +787,12 @@ export function flattenLayers(
   // Layer-level watermark propagates to children (child can still override)
   const resolvedWatermark = spec.watermark ?? parentWatermark;
   const resolvedEndpointLabels = spec.endpointLabels ?? parentEndpointLabels;
+  const figure = {
+    display: spec.display ?? parentFigure?.display,
+    a11y: spec.a11y ?? parentFigure?.a11y,
+    frame: spec.frame ?? parentFigure?.frame,
+    labels: spec.labels ?? parentFigure?.labels,
+  };
 
   const leaves: ChartSpec[] = [];
 
@@ -790,6 +807,7 @@ export function flattenLayers(
           resolvedTransforms,
           resolvedWatermark,
           resolvedEndpointLabels,
+          figure,
         ),
       );
     } else {
@@ -802,6 +820,18 @@ export function flattenLayers(
 
       leaves.push({
         ...child,
+        display: child.display ?? figure.display,
+        a11y: child.a11y ?? figure.a11y,
+        frame: child.frame ?? figure.frame,
+        // Composed labels belong to bar/range leaves; interval peers such as
+        // ticks must not inherit an inapplicable placement/content option.
+        labels:
+          child.labels ??
+          (typeof figure.labels === 'object' &&
+          figure.labels.content !== undefined &&
+          ['bar', 'range'].includes(typeof child.mark === 'string' ? child.mark : child.mark.type)
+            ? figure.labels
+            : undefined),
         data: mergedData,
         encoding: mergedEncoding,
         transform: mergedTransforms.length > 0 ? mergedTransforms : undefined,

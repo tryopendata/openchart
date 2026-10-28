@@ -1,3 +1,4 @@
+import { createRenderContext, type RenderContext } from './render-context';
 /**
  * SVG gradient utilities: creates <linearGradient> and <radialGradient>
  * elements from GradientDef specs and resolves mark fills to url(#id) refs.
@@ -5,9 +6,6 @@
 
 import type { GradientDef, LinearGradient, RadialGradient } from '@opendata-ai/openchart-core';
 import { isGradientDef } from '@opendata-ai/openchart-core';
-import { nextSvgId } from './svg-ids';
-
-const SVG_NS = 'http://www.w3.org/2000/svg';
 
 /**
  * Produce a stable, deterministic key for a GradientDef.
@@ -34,15 +32,23 @@ function sortedStringify(value: unknown): string {
  * Create a single SVG gradient element (<linearGradient> or <radialGradient>).
  * Uses gradientUnits="objectBoundingBox" so coordinates are in [0,1] space.
  */
-function createGradientElement(def: GradientDef, id: string): SVGElement {
+function createGradientElement(
+  def: GradientDef,
+  id: string,
+  ctx: RenderContext = createRenderContext(),
+): SVGElement {
   if (def.gradient === 'linear') {
-    return createLinearGradient(def, id);
+    return createLinearGradient(def, id, ctx);
   }
-  return createRadialGradient(def, id);
+  return createRadialGradient(def, id, ctx);
 }
 
-function createLinearGradient(def: LinearGradient, id: string): SVGElement {
-  const el = document.createElementNS(SVG_NS, 'linearGradient');
+function createLinearGradient(
+  def: LinearGradient,
+  id: string,
+  ctx: RenderContext = createRenderContext(),
+): SVGElement {
+  const el = ctx.factory.svg('linearGradient');
   el.setAttribute('id', id);
   el.setAttribute('gradientUnits', 'objectBoundingBox');
   el.setAttribute('x1', String(def.x1 ?? 0));
@@ -51,14 +57,18 @@ function createLinearGradient(def: LinearGradient, id: string): SVGElement {
   el.setAttribute('y2', String(def.y2 ?? 1));
 
   for (const stop of def.stops) {
-    appendStop(el, stop);
+    appendStop(el, stop, ctx);
   }
 
   return el;
 }
 
-function createRadialGradient(def: RadialGradient, id: string): SVGElement {
-  const el = document.createElementNS(SVG_NS, 'radialGradient');
+function createRadialGradient(
+  def: RadialGradient,
+  id: string,
+  ctx: RenderContext = createRenderContext(),
+): SVGElement {
+  const el = ctx.factory.svg('radialGradient');
   el.setAttribute('id', id);
   el.setAttribute('gradientUnits', 'objectBoundingBox');
   // SVG radialGradient: cx/cy/r = outer circle, fx/fy/fr = focal (inner) circle
@@ -71,7 +81,7 @@ function createRadialGradient(def: RadialGradient, id: string): SVGElement {
   el.setAttribute('fr', String(def.r1 ?? 0));
 
   for (const stop of def.stops) {
-    appendStop(el, stop);
+    appendStop(el, stop, ctx);
   }
 
   return el;
@@ -80,8 +90,9 @@ function createRadialGradient(def: RadialGradient, id: string): SVGElement {
 function appendStop(
   parent: SVGElement,
   stop: { offset: number; color: string; opacity?: number },
+  ctx: RenderContext = createRenderContext(),
 ): void {
-  const stopEl = document.createElementNS(SVG_NS, 'stop');
+  const stopEl = ctx.factory.svg('stop');
   stopEl.setAttribute('offset', String(stop.offset));
   stopEl.setAttribute('stop-color', stop.color);
   if (stop.opacity !== undefined) {
@@ -103,6 +114,7 @@ function appendStop(
 export function buildGradientDefs(
   marks: Array<{ fill?: unknown }>,
   defs: SVGElement,
+  ctx: RenderContext = createRenderContext(),
 ): Map<string, string> {
   const map = new Map<string, string>();
 
@@ -111,8 +123,8 @@ export function buildGradientDefs(
     if (fill && isGradientDef(fill)) {
       const key = gradientKey(fill);
       if (!map.has(key)) {
-        const id = nextSvgId('oc-grad');
-        const el = createGradientElement(fill, id);
+        const id = ctx.ids.next('oc-grad');
+        const el = createGradientElement(fill, id, ctx);
         defs.appendChild(el);
         map.set(key, id);
       }

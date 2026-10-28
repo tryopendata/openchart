@@ -77,7 +77,8 @@ export function wireMarkNavigation(svg: SVGSVGElement, marks: NavigableMark[]): 
       }
       event.preventDefault();
       event.stopPropagation();
-      if (next !== undefined) (marks[next].element as SVGElement).focus({ preventScroll: true });
+      if (next !== undefined && next !== index)
+        (marks[next].element as SVGElement).focus({ preventScroll: true });
     };
     element.addEventListener('focus', focus);
     element.addEventListener('blur', mark.leave);

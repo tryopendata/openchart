@@ -72,6 +72,21 @@ function getMaxSeries(spec: NormalizedChartSpec): number {
   return DEFAULT_MAX_SERIES;
 }
 
+/** Vertical categorical/temporal columns with an authored series stack. */
+export function isStackedColumn(spec: NormalizedChartSpec): boolean {
+  const x = spec.encoding.x,
+    y = spec.encoding.y;
+  return (
+    spec.markType === 'bar' &&
+    !!x &&
+    ['nominal', 'ordinal', 'temporal'].includes(x.type) &&
+    y?.type === 'quantitative' &&
+    y.stack !== null &&
+    y.stack !== false &&
+    seriesField(spec) !== undefined
+  );
+}
+
 /**
  * Resolve legend and endpoint visibility from spec + context.
  *
@@ -81,7 +96,10 @@ export function resolveSuppression(
   spec: NormalizedChartSpec,
   ctx: SuppressionContext,
 ): SuppressionResult {
-  const isLineOrArea = spec.markType === 'line' || spec.markType === 'area';
+  const isLineOrArea =
+    spec.markType === 'line' ||
+    spec.markType === 'area' ||
+    (isStackedColumn(spec) && endpointLabelsExplicitlyOn(spec));
   const isMultiSeries = isLineOrArea && seriesField(spec) != null && ctx.seriesCount >= 2;
 
   // Single-series, non-line/area, or compact strategy: never show endpoint
@@ -117,7 +135,12 @@ export function resolveSuppression(
     const explicitOn = endpointLabelsExplicitlyOn(spec);
     return {
       showTraditionalLegend: !legendHiddenExplicitly(spec),
-      showEndpointLabels: explicitOn,
+      showEndpointLabels:
+        explicitOn &&
+        !(
+          (spec.frame?.right !== undefined || spec.frame?.left !== undefined) &&
+          ctx.endpointLabelsDemoted
+        ),
     };
   }
 
@@ -126,7 +149,11 @@ export function resolveSuppression(
   const exceedsCutoff = !endpointLabelsExplicitlyOn(spec) && ctx.seriesCount > getMaxSeries(spec);
 
   // Auto-thinning demotion: endpoint labels don't fit at the current width.
-  const demoted = !endpointLabelsExplicitlyOn(spec) && !!ctx.endpointLabelsDemoted;
+  const demoted =
+    !!ctx.endpointLabelsDemoted &&
+    (spec.frame?.right !== undefined ||
+      spec.frame?.left !== undefined ||
+      !endpointLabelsExplicitlyOn(spec));
 
   // The eight-cell truth table for ≥2-series overlap line/area charts.
   const epExplicitOff = endpointLabelsExplicitlyOff(spec) || exceedsCutoff || demoted;

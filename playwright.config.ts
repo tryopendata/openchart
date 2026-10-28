@@ -24,6 +24,11 @@ export default defineConfig({
   },
   projects: [
     {
+      name: 'a11y',
+      testDir: './e2e/a11y',
+      use: { ...devices['Desktop Chrome'], deviceScaleFactor: 1 },
+    },
+    {
       name: 'chart-map-design',
       testDir: './e2e/chart-map-design',
       use: { ...devices['Desktop Chrome'], deviceScaleFactor: 1 },

@@ -1,3 +1,5 @@
+import { createRenderContext, type RenderContext } from './render-context';
+import { createSVGElement } from './renderers/svg-dom';
 /**
  * TileMap SVG renderer: converts a TileMapLayout into SVG DOM elements.
  *
@@ -15,18 +17,11 @@ import { stampAnimationVars } from './animation-vars';
 import { renderAttributionBrand } from './renderers/brand';
 import { renderChromeElement } from './renderers/chrome';
 import { renderLegend } from './renderers/legend';
-import { nextSvgId } from './svg-ids';
 import { stampThemeProperties } from './theme-tokens';
-
-const SVG_NS = 'http://www.w3.org/2000/svg';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function createSVGElement(tag: string): SVGElement {
-  return document.createElementNS(SVG_NS, tag);
-}
 
 function setAttrs(el: SVGElement, attrs: Record<string, string | number>): void {
   for (const [key, value] of Object.entries(attrs)) {
@@ -38,18 +33,22 @@ function setAttrs(el: SVGElement, attrs: Record<string, string | number>): void 
 // Chrome rendering (delegates to the shared helper for text wrapping)
 // ---------------------------------------------------------------------------
 
-function renderChrome(parent: SVGElement, layout: TileMapLayout): void {
-  const g = createSVGElement('g');
+function renderChrome(
+  parent: SVGElement,
+  layout: TileMapLayout,
+  ctx: RenderContext = createRenderContext(),
+): void {
+  const g = createSVGElement('g', ctx.factory);
   g.setAttribute('class', 'oc-chrome');
 
   const { chrome, measureText } = layout;
   const bottomOffset = chrome.bottomAnchorY ?? layout.area.y + layout.area.height;
 
   if (chrome.title) {
-    renderChromeElement(g, chrome.title, 'oc-title', 'title', measureText);
+    renderChromeElement(g, chrome.title, 'oc-title', 'title', measureText, undefined, ctx);
   }
   if (chrome.subtitle) {
-    renderChromeElement(g, chrome.subtitle, 'oc-subtitle', 'subtitle', measureText);
+    renderChromeElement(g, chrome.subtitle, 'oc-subtitle', 'subtitle', measureText, undefined, ctx);
   }
   if (chrome.source) {
     renderChromeElement(
@@ -58,6 +57,8 @@ function renderChrome(parent: SVGElement, layout: TileMapLayout): void {
       'oc-source',
       'source',
       measureText,
+      undefined,
+      ctx,
     );
   }
   if (chrome.byline) {
@@ -67,6 +68,8 @@ function renderChrome(parent: SVGElement, layout: TileMapLayout): void {
       'oc-byline',
       'byline',
       measureText,
+      undefined,
+      ctx,
     );
   }
   if (chrome.footer) {
@@ -76,6 +79,8 @@ function renderChrome(parent: SVGElement, layout: TileMapLayout): void {
       'oc-footer',
       'footer',
       measureText,
+      undefined,
+      ctx,
     );
   }
 
@@ -94,8 +99,9 @@ function renderTiles(
   parent: SVGElement,
   tiles: TileMapTileMark[],
   animation?: ResolvedAnimation,
+  ctx: RenderContext = createRenderContext(),
 ): void {
-  const g = createSVGElement('g');
+  const g = createSVGElement('g', ctx.factory);
   g.setAttribute('class', 'oc-tilemap-tiles');
   g.setAttribute('role', 'list');
 
@@ -116,7 +122,7 @@ function renderTiles(
 
   for (let i = 0; i < tiles.length; i++) {
     const tile = tiles[i];
-    const tileGroup = createSVGElement('g');
+    const tileGroup = createSVGElement('g', ctx.factory);
     tileGroup.setAttribute('class', 'oc-tilemap-tile');
     tileGroup.setAttribute('data-state', tile.stateCode);
     tileGroup.setAttribute('role', 'listitem');
@@ -138,7 +144,7 @@ function renderTiles(
     }
 
     // Tile background rect
-    const rect = createSVGElement('rect');
+    const rect = createSVGElement('rect', ctx.factory);
     setAttrs(rect, {
       x: tile.x,
       y: tile.y,
@@ -153,7 +159,7 @@ function renderTiles(
     tileGroup.appendChild(rect);
 
     // State code label
-    const codeLabel = createSVGElement('text');
+    const codeLabel = createSVGElement('text', ctx.factory);
     setAttrs(codeLabel, {
       x: tile.label.x,
       y: tile.label.y,
@@ -175,7 +181,7 @@ function renderTiles(
 
     // Value label (if visible)
     if (tile.valueLabel.visible && tile.valueLabel.text) {
-      const valueLabel = createSVGElement('text');
+      const valueLabel = createSVGElement('text', ctx.factory);
       setAttrs(valueLabel, {
         x: tile.valueLabel.x,
         y: tile.valueLabel.y,
@@ -203,22 +209,26 @@ function renderTiles(
 // Gradient legend rendering
 // ---------------------------------------------------------------------------
 
-function renderGradientLegend(parent: SVGElement, layout: TileMapLayout): void {
+function renderGradientLegend(
+  parent: SVGElement,
+  layout: TileMapLayout,
+  ctx: RenderContext = createRenderContext(),
+): void {
   if (!layout.gradientLegend) return;
 
   const { gradientLegend } = layout;
-  const g = createSVGElement('g');
+  const g = createSVGElement('g', ctx.factory);
   g.setAttribute('class', 'oc-tilemap-legend');
 
   // Build linear gradient in defs
-  const defs = parent.querySelector('defs') || createSVGElement('defs');
+  const defs = parent.querySelector('defs') || createSVGElement('defs', ctx.factory);
   const exists = parent.querySelector('defs');
   if (!exists) {
     parent.insertBefore(defs, parent.firstChild);
   }
 
-  const gradientId = nextSvgId('oc-tilemap-legend-gradient');
-  const grad = createSVGElement('linearGradient');
+  const gradientId = ctx.ids.next('oc-tilemap-legend-gradient');
+  const grad = createSVGElement('linearGradient', ctx.factory);
   grad.id = gradientId;
   grad.setAttribute('x1', '0%');
   grad.setAttribute('y1', '0%');
@@ -226,7 +236,7 @@ function renderGradientLegend(parent: SVGElement, layout: TileMapLayout): void {
   grad.setAttribute('y2', '0%');
 
   for (const stop of gradientLegend.colorStops) {
-    const s = createSVGElement('stop');
+    const s = createSVGElement('stop', ctx.factory);
     const attrs: Record<string, string | number> = {
       offset: `${stop.offset * 100}%`,
       'stop-color': stop.color,
@@ -243,7 +253,7 @@ function renderGradientLegend(parent: SVGElement, layout: TileMapLayout): void {
   // Gradient bar: square-cornered, so it reads as a color scale rather than a
   // pill-shaped UI control.
   const barHeight = gradientLegend.bounds.height;
-  const bar = createSVGElement('rect');
+  const bar = createSVGElement('rect', ctx.factory);
   setAttrs(bar, {
     x: gradientLegend.bounds.x,
     y: gradientLegend.bounds.y,
@@ -255,7 +265,7 @@ function renderGradientLegend(parent: SVGElement, layout: TileMapLayout): void {
   g.appendChild(bar);
 
   // Min label
-  const minText = createSVGElement('text');
+  const minText = createSVGElement('text', ctx.factory);
   setAttrs(minText, {
     x: gradientLegend.bounds.x,
     y: gradientLegend.bounds.y + gradientLegend.bounds.height + 14,
@@ -272,7 +282,7 @@ function renderGradientLegend(parent: SVGElement, layout: TileMapLayout): void {
   g.appendChild(minText);
 
   // Max label
-  const maxText = createSVGElement('text');
+  const maxText = createSVGElement('text', ctx.factory);
   setAttrs(maxText, {
     x: gradientLegend.bounds.x + gradientLegend.bounds.width,
     y: gradientLegend.bounds.y + gradientLegend.bounds.height + 14,
@@ -291,7 +301,7 @@ function renderGradientLegend(parent: SVGElement, layout: TileMapLayout): void {
   // Detached "no data" swatch, keyed beside the ramp rather than at its low end.
   if (gradientLegend.noData) {
     const nd = gradientLegend.noData;
-    const swatch = createSVGElement('rect');
+    const swatch = createSVGElement('rect', ctx.factory);
     swatch.setAttribute('class', 'oc-legend-nodata');
     setAttrs(swatch, {
       x: nd.x,
@@ -303,7 +313,7 @@ function renderGradientLegend(parent: SVGElement, layout: TileMapLayout): void {
     });
     g.appendChild(swatch);
 
-    const ndLabel = createSVGElement('text');
+    const ndLabel = createSVGElement('text', ctx.factory);
     setAttrs(ndLabel, {
       x: nd.labelX,
       y: nd.labelY,
@@ -332,12 +342,13 @@ function renderGradientLegend(parent: SVGElement, layout: TileMapLayout): void {
  */
 export function renderTileMapSVG(
   layout: TileMapLayout,
-  opts?: { animate?: boolean },
+  opts?: { animate?: boolean; context?: RenderContext },
 ): SVGSVGElement {
+  const ctx = opts?.context ?? createRenderContext();
   const { width, height, tiles, a11y, animation } = layout;
   const animate = opts?.animate && !!animation?.enter;
 
-  const svg = createSVGElement('svg') as SVGSVGElement;
+  const svg = createSVGElement('svg', ctx.factory) as SVGSVGElement;
   svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
   svg.setAttribute('role', 'img');
   if (a11y.altText) {
@@ -361,20 +372,20 @@ export function renderTileMapSVG(
   }
 
   // Empty defs element (will be filled by gradient legend)
-  const defs = createSVGElement('defs');
+  const defs = createSVGElement('defs', ctx.factory);
   svg.appendChild(defs);
 
   // Render chrome
-  renderChrome(svg, layout);
+  renderChrome(svg, layout, ctx);
 
   // Render tiles
-  renderTiles(svg, tiles, animate ? animation : undefined);
+  renderTiles(svg, tiles, animate ? animation : undefined, ctx);
 
   // Render legend (gradient for quantitative, categorical for nominal)
   if (layout.categoricalLegend) {
-    renderLegend(svg, layout.categoricalLegend);
+    renderLegend(svg, layout.categoricalLegend, undefined, ctx);
   } else {
-    renderGradientLegend(svg, layout);
+    renderGradientLegend(svg, layout, ctx);
   }
 
   // Render watermark
@@ -383,6 +394,8 @@ export function renderTileMapSVG(
     layout.chrome,
     layout.chrome.bottomAnchorY ?? layout.area.y + layout.area.height,
     layout.measureText,
+    undefined,
+    ctx,
   );
 
   return svg;

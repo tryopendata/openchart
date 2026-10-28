@@ -114,60 +114,6 @@ export const APPROVED_PRE_RFC_LAYOUT: Record<
       },
     },
   },
-  '../gallery/charts-building-blocks.stories.tsx.dualAxisSpec @390': {
-    reason:
-      '93112314 shared figure frame aligns independent-axis marks and y2 ticks to the same plot.',
-    changes: {
-      axes: {
-        'y2.tick.0.position': [271.97, 283.66],
-        'y2.tick.1.position': [232.2, 240.24],
-        'y2.tick.2.position': [192.42, 196.81],
-        'y2.tick.3.position': [152.65, 153.39],
-      },
-      marks: {
-        '11.height': [96.24, 105.09],
-        '11.y': [173.33, 175.97],
-        '12.cy': [182.88, 186.39],
-        '13.cy': [173.33, 175.97],
-        '14.cy': [180.49, 183.78],
-        '15.cy': [190.04, 194.2],
-        '16.cy': [201.17, 206.36],
-        '17.cy': [215.49, 222],
-        '18.cy': [229.01, 236.76],
-        '19.cy': [238.56, 247.18],
-        '20.cy': [249.69, 259.34],
-        '21.cy': [259.24, 269.76],
-        '22.cy': [269.58, 281.05],
-      },
-    },
-  },
-  '../testing/fixtures-dual-axis.stories.tsx.dualAxisSpec @390': {
-    reason:
-      '93112314 shared figure frame aligns independent-axis marks and y2 ticks to the same plot.',
-    changes: {
-      axes: {
-        'y2.tick.0.position': [271.97, 283.66],
-        'y2.tick.1.position': [232.2, 240.24],
-        'y2.tick.2.position': [192.42, 196.81],
-        'y2.tick.3.position': [152.65, 153.39],
-      },
-      marks: {
-        '11.height': [96.24, 105.09],
-        '11.y': [173.33, 175.97],
-        '12.cy': [182.88, 186.39],
-        '13.cy': [173.33, 175.97],
-        '14.cy': [180.49, 183.78],
-        '15.cy': [190.04, 194.2],
-        '16.cy': [201.17, 206.36],
-        '17.cy': [215.49, 222],
-        '18.cy': [229.01, 236.76],
-        '19.cy': [238.56, 247.18],
-        '20.cy': [249.69, 259.34],
-        '21.cy': [259.24, 269.76],
-        '22.cy': [269.58, 281.05],
-      },
-    },
-  },
   '../gallery/charts-building-blocks.stories.tsx.spanSpec @390': {
     reason: '93112314 frame: point-scale x labels reserve their actual flat extent.',
     changes: {
@@ -9342,5 +9288,197 @@ export const APPROVED_B3_MAP_LAYOUT: typeof APPROVED_MAP_KEY_PLACEMENT = {
       },
     },
     style: {},
+  },
+};
+
+/** R14: exact x/cx corrections for this composed scatter/text fixture only. */
+export const APPROVED_R14_SHARED_AXIS: typeof APPROVED_PRE_RFC_LAYOUT = {
+  '../gallery/charts-building-blocks.stories.tsx.composedSpecForPanel @390': {
+    reason:
+      'R14 shared-axis correction: v8 displayed the niced GDP domain [0.8, 4] but placed these points and labels on raw [0.8, 3.9]. Their x coordinates now use the displayed axis; y, styles and the released oracle stay unchanged.',
+    changes: {
+      marks: {
+        '0.cx': [376, 365.81],
+        '1.cx': [239.29, 233.38],
+        '2.cx': [186.71, 182.44],
+        '3.cx': [134.13, 131.5],
+        '4.cx': [81.55, 80.56],
+        '5.cx': [71.03, 70.38],
+        '6.cx': [60.52, 60.19],
+        '10.x': [376, 365.81],
+        '11.x': [239.29, 233.38],
+        '12.x': [186.71, 182.44],
+        '13.x': [134.13, 131.5],
+        '14.x': [81.55, 80.56],
+        '15.x': [71.03, 70.38],
+        '16.x': [60.52, 60.19],
+      },
+    },
+  },
+  '../gallery/charts-building-blocks.stories.tsx.composedSpecForPanel @1280': {
+    reason:
+      'R14 shared-axis correction: v8 displayed the niced GDP domain [0.8, 4] but placed these points and labels on raw [0.8, 3.9]. Their x coordinates now use the displayed axis; y, styles and the released oracle stay unchanged.',
+    changes: {
+      marks: {
+        '0.cx': [1257, 1220],
+        '1.cx': [760.48, 739],
+        '2.cx': [569.52, 554],
+        '3.cx': [378.55, 369],
+        '4.cx': [187.58, 184],
+        '5.cx': [149.39, 147],
+        '6.cx': [111.19, 110],
+        '10.x': [1257, 1220],
+        '11.x': [760.48, 739],
+        '12.x': [569.52, 554],
+        '13.x': [378.55, 369],
+        '14.x': [187.58, 184],
+        '15.x': [149.39, 147],
+        '16.x': [111.19, 110],
+      },
+    },
+  },
+};
+
+/** Independent-y dual-axis leaves share one plot rectangle and the primary's
+ * inline-label inset, so the secondary axis and series are drawn against the
+ * same plot as the primary. Exact before/after values only. */
+export const APPROVED_DUAL_AXIS_SHARED_PLOT: typeof APPROVED_PRE_RFC_LAYOUT = {
+  '../gallery/charts-building-blocks.stories.tsx.dualAxisSpec @390': {
+    reason:
+      'The secondary leaf compiled its own plot, so its y2 ticks and series sat off the primary plot; it now draws into the primary plot.',
+    changes: {
+      axes: {
+        'y2.tick.0.position': [271.97, 268.57],
+        'y2.tick.1.position': [232.2, 224.55],
+        'y2.tick.2.position': [192.42, 180.52],
+        'y2.tick.3.position': [152.65, 136.5],
+      },
+      marks: {
+        '11.height': [96.24, 106.53],
+        '11.y': [173.33, 159.39],
+        '12.cy': [182.88, 169.96],
+        '13.cy': [173.33, 159.39],
+        '14.cy': [180.49, 167.32],
+        '15.cy': [190.04, 177.88],
+        '16.cy': [201.17, 190.21],
+        '17.cy': [215.49, 206.06],
+        '18.cy': [229.01, 221.02],
+        '19.cy': [238.56, 231.59],
+        '20.cy': [249.69, 243.91],
+        '21.cy': [259.24, 254.48],
+        '22.cy': [269.58, 265.92],
+      },
+    },
+  },
+  '../gallery/charts-building-blocks.stories.tsx.dualAxisSpec @1280': {
+    reason:
+      'The secondary leaf compiled its own plot, so its y2 ticks and series sat off the primary plot; it now draws into the primary plot.',
+    changes: {
+      axes: {
+        'y2.tick.0.position': [273.96, 270.56],
+        'y2.tick.1.position': [220.91, 213.26],
+        'y2.tick.2.position': [167.86, 155.96],
+        'y2.tick.3.position': [114.81, 98.66],
+      },
+      marks: {
+        '11.height': [128.38, 138.67],
+        '11.y': [142.4, 128.46],
+        '12.cy': [155.13, 142.21],
+        '13.cy': [142.4, 128.46],
+        '14.cy': [151.95, 138.77],
+        '15.cy': [164.68, 152.52],
+        '16.cy': [179.53, 168.57],
+        '17.cy': [198.63, 189.19],
+        '18.cy': [216.67, 208.68],
+        '19.cy': [229.4, 222.43],
+        '20.cy': [244.25, 238.47],
+        '21.cy': [256.98, 252.22],
+        '22.cy': [270.78, 267.12],
+      },
+    },
+  },
+  '../gallery/charts-building-blocks.stories.tsx.temporalDualAxisSpec @390': {
+    reason:
+      'The secondary leaf compiled its own plot, so its y2 ticks and series sat off the primary plot; it now draws into the primary plot.',
+    changes: {
+      marks: {
+        '13.width': [131.53, 128.79],
+        '13.x': [208.47, 211.21],
+        '14.cx': [208.47, 211.21],
+        '15.cx': [235.12, 237.3],
+        '16.cx': [261.77, 263.4],
+        '17.cx': [287.56, 288.65],
+        '18.cx': [314.21, 314.75],
+      },
+    },
+  },
+  '../gallery/charts-building-blocks.stories.tsx.temporalDualAxisSpec @1280': {
+    reason:
+      'The secondary leaf compiled its own plot, so its y2 ticks and series sat off the primary plot; it now draws into the primary plot.',
+    changes: {
+      marks: {
+        '13.width': [521.57, 518.83],
+        '13.x': [685.43, 688.17],
+        '14.cx': [685.43, 688.17],
+        '15.cx': [791.11, 793.29],
+        '16.cx': [896.79, 898.41],
+        '17.cx': [999.05, 1000.15],
+        '18.cx': [1104.73, 1105.27],
+      },
+    },
+  },
+  '../testing/fixtures-dual-axis.stories.tsx.dualAxisSpec @390': {
+    reason:
+      'The secondary leaf compiled its own plot, so its y2 ticks and series sat off the primary plot; it now draws into the primary plot.',
+    changes: {
+      axes: {
+        'y2.tick.0.position': [271.97, 268.57],
+        'y2.tick.1.position': [232.2, 224.55],
+        'y2.tick.2.position': [192.42, 180.52],
+        'y2.tick.3.position': [152.65, 136.5],
+      },
+      marks: {
+        '11.height': [96.24, 106.53],
+        '11.y': [173.33, 159.39],
+        '12.cy': [182.88, 169.96],
+        '13.cy': [173.33, 159.39],
+        '14.cy': [180.49, 167.32],
+        '15.cy': [190.04, 177.88],
+        '16.cy': [201.17, 190.21],
+        '17.cy': [215.49, 206.06],
+        '18.cy': [229.01, 221.02],
+        '19.cy': [238.56, 231.59],
+        '20.cy': [249.69, 243.91],
+        '21.cy': [259.24, 254.48],
+        '22.cy': [269.58, 265.92],
+      },
+    },
+  },
+  '../testing/fixtures-dual-axis.stories.tsx.dualAxisSpec @1280': {
+    reason:
+      'The secondary leaf compiled its own plot, so its y2 ticks and series sat off the primary plot; it now draws into the primary plot.',
+    changes: {
+      axes: {
+        'y2.tick.0.position': [273.96, 270.56],
+        'y2.tick.1.position': [220.91, 213.26],
+        'y2.tick.2.position': [167.86, 155.96],
+        'y2.tick.3.position': [114.81, 98.66],
+      },
+      marks: {
+        '11.height': [128.38, 138.67],
+        '11.y': [142.4, 128.46],
+        '12.cy': [155.13, 142.21],
+        '13.cy': [142.4, 128.46],
+        '14.cy': [151.95, 138.77],
+        '15.cy': [164.68, 152.52],
+        '16.cy': [179.53, 168.57],
+        '17.cy': [198.63, 189.19],
+        '18.cy': [216.67, 208.68],
+        '19.cy': [229.4, 222.43],
+        '20.cy': [244.25, 238.47],
+        '21.cy': [256.98, 252.22],
+        '22.cy': [270.78, 267.12],
+      },
+    },
   },
 };

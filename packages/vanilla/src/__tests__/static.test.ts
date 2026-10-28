@@ -57,25 +57,11 @@ describe('renderStaticSVG', () => {
     expect(svg).not.toContain('oc-animate');
   });
 
-  it('includes the inlined style block with theme values', () => {
+  it('inlines theme values without a stylesheet or custom properties', () => {
     const svg = renderStaticSVG(lineSpec);
-    expect(svg).toContain('<style');
-    expect(svg).toContain('.oc-eyebrow-dot');
-  });
-
-  it('scopes custom properties to svg.oc-chart, not :root', () => {
-    const svg = renderStaticSVG(lineSpec);
-    expect(svg).toContain('svg.oc-chart');
-    expect(svg).not.toContain(':root');
-  });
-
-  it('uses var() references in class rules for theme overridability', () => {
-    const svg = renderStaticSVG(lineSpec);
-    expect(svg).toContain('fill: var(--oc-accent)');
-    expect(svg).toContain('fill: var(--oc-text)');
-    expect(svg).toContain('fill: var(--oc-text-muted)');
-    expect(svg).toContain('font-family: var(--oc-font-family)');
-    expect(svg).not.toMatch(/\.oc-eyebrow-dot \{ fill: #[0-9a-f]{6}/i);
+    expect(svg).not.toContain('<style');
+    expect(svg).not.toContain('--oc-');
+    expect(svg).toContain('font-family=');
   });
 
   it('renders bar charts', () => {
@@ -141,7 +127,7 @@ describe('renderStaticSVG', () => {
   it('produces deterministic IDs across calls', () => {
     const first = renderStaticSVG(lineSpec, { width: 640, height: 420 });
     const second = renderStaticSVG(lineSpec, { width: 640, height: 420 });
-    const idPattern = /id="oc-[a-z]+-\d+"/g;
+    const idPattern = /id="ocs-[a-z0-9]+-oc-[a-z-]+-\d+"/g;
     const firstIds = first.match(idPattern) ?? [];
     const secondIds = second.match(idPattern) ?? [];
     expect(firstIds).toEqual(secondIds);

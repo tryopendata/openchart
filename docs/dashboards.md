@@ -26,7 +26,7 @@ For a tiny trend indicator inside a stat card, set `display: 'sparkline'` on the
 
 ```ts
 const spec = {
-  mark: 'area',
+  mark: { type: 'area', stroke: '#0891b2' },
   data: series, // [{ t: 0, value: 42 }, ...]
   encoding: {
     x: { field: 't', type: 'ordinal' },
@@ -35,6 +35,8 @@ const spec = {
   display: 'sparkline',
 };
 ```
+
+Give a tiny line or area an explicit `mark.stroke` (for example `'#0891b2'` above) so it uses the host's chosen accent rather than an implicit default series color. For a multi-point series, keep `encoding.description` constant across the series; the host's table retains per-week text. Layered sparkline cells can combine an errorbar with a point, and shared display defaults reserve space for caps and point radii.
 
 Mount it in a small fixed-height box (36–56px is typical; the gallery tiles run 36) next to a headline number and delta you render as plain HTML:
 
@@ -96,7 +98,7 @@ Convention for a composed dashboard: **one watermark per dashboard**. Give the h
 
 The auto-hide is chart-only. Sankey, tilemap, graph, geo-map, and table specs resolve `watermark` independently and are not affected by container height — set `watermark: false` explicitly on those in a dashboard tile.
 
-One SSR note: `renderStaticSVG` defaults to a compile height of 420px, above the 200px threshold. If you server-render a tile and hydrate it into a container under 200px tall, the watermark (and chrome) will flip off at hydration — the same class of layout shift `chromeMode` already causes at that boundary. Size the SSR call to match the eventual container height to avoid the flip.
+One SSR note: `renderStaticSVG` defaults to a compile height of 420px, above the 200px threshold. If you server-render a tile and replace it with a live chart in a container under 200px tall, the watermark (and chrome) can flip off on mount — the same class of layout shift `chromeMode` already causes at that boundary. Size the SSR call to match the eventual container height to avoid the flip.
 
 ## Grid composition
 
@@ -144,3 +146,7 @@ See [Tables](tables.md) for the full column feature set (heatmaps, inline bars, 
 - [Spec reference](spec-reference.md) for field-by-field type details
 - [Tables](tables.md) for `TableSpec` column features
 - [Theming tokens](theming-tokens.md) for dashboard surface theming
+
+## Server-rendered table cells
+
+Use `renderStaticSVG` for rate intervals, count bars and sparkline cells. Set `display: 'sparkline'` and `a11y.hidden: true` when the containing table already states the values. A rate cell can layer an `errorbar` and a `point` on a shared domain. Render light and dark separately with unique prefixes. See [static rendering](static-rendering.md) for the full contract and aligned-figure recipe.

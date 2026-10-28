@@ -45,6 +45,10 @@ jobs:
           # (runs after build: generate:llms imports the built core).
           bun run check:generated || { echo "::error::Generated schema or llms.txt is stale. Run: bun run generate"; exit 1; }
 
+      # Needs the dist built by the step above; not part of `bun run test`.
+      - name: Test built static entry
+        run: bun run test:static
+
       - name: Test
         run: |
           bun run test
@@ -53,7 +57,8 @@ jobs:
   invariants:
     name: Playwright layout invariants
     if: "!startsWith(github.event.head_commit.message || '', 'release:')"
-    runs-on: ubuntu-latest
+    # Playwright 1.59 does not support Ubuntu 26.04 yet.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
 
     permissions:
@@ -80,7 +85,7 @@ jobs:
         run: bunx playwright install --with-deps chromium
 
       - name: Run invariants
-        run: bunx playwright test --project=invariants --project=invariants-chromium-mobile --project=invariants-chromium-mobile-narrow
+        run: bunx playwright test --project=invariants --project=invariants-chromium-mobile --project=invariants-chromium-mobile-narrow --project=a11y
 
       - name: Upload report on failure
         if: failure()

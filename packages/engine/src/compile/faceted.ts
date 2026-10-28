@@ -20,6 +20,7 @@ import { isAxislessMark } from '@opendata-ai/openchart-core';
 import { computeAnnotations } from '../annotations/compute';
 import { annotationNoteLineCount, wrapAnnotationNotes } from '../annotations/notes';
 import { thinAnnotations } from '../annotations/thinning';
+import { attachMarkMetadata } from '../charts/_shared/mark-metadata';
 import {
   emitValueLabelDiagnostic,
   offsetValueLabelAxes,
@@ -356,6 +357,13 @@ export function compileFaceted(
           options.measureText,
         )
       : [];
+
+    attachMarkMetadata(
+      panelMarks,
+      panelSpecWithDomains.encoding as Encoding,
+      panelSpecWithDomains.sourceMarkType ?? panelSpecWithDomains.markType,
+      seriesWarnings,
+    );
 
     // Compute annotations for this panel
     const annotationMeasure = annotationMeasureFn(options.measureText);

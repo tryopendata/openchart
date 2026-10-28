@@ -58,6 +58,7 @@ export type MarkType =
   | 'lollipop'
   | 'beeswarm'
   | 'range'
+  | 'errorbar'
   | 'waffle'
   | 'calendar'
   | 'parliament'
@@ -183,6 +184,8 @@ export interface TrendlineConfig {
 interface MarkOptions {
   /** The mark type. */
   type: MarkType;
+  /** Draw decorative end caps on an explicit interval; default false. */
+  ticks?: boolean;
   /**
    * Show point markers on line/area marks.
    * - true: filled circles at each data point
@@ -450,6 +453,7 @@ export type MarkDef =
   | (SharedMarkOptions & { type: 'rect' } & Pick<MarkOptions, 'cornerRadius'>)
   | (SharedMarkOptions & { type: 'lollipop' })
   | (SharedMarkOptions & { type: 'beeswarm' })
+  | (SharedMarkOptions & { type: 'errorbar' } & Pick<MarkOptions, 'ticks'>)
   | (SharedMarkOptions & { type: 'range' } & Pick<MarkOptions, 'style' | 'colorByDirection'>)
   | (SharedMarkOptions & { type: 'waffle' } & Pick<
         MarkOptions,
@@ -664,6 +668,8 @@ export interface EncodingChannel<TData extends DataRow = DataRow> {
    * - ordinal: ordered categories (scale: ordinal)
    */
   type: FieldType;
+  /** Temporal bar position interval; numbers are milliseconds. Bar marks only. */
+  interval?: 'day' | 'week' | 'month' | 'quarter' | 'year' | number;
   /** Optional aggregate to apply before encoding. */
   aggregate?: AggregateOp;
   /**
@@ -798,7 +804,15 @@ export interface FacetChannel<TData extends DataRow = DataRow> {
  * @template TData - Propagated from ChartSpec<TData>. Constrains `field` in
  * every channel to `keyof TData & string` when a typed data row is provided.
  */
+/** Authored mark text, kept verbatim for strings and formatted for numeric fields. */
+export type DescriptionEncoding<TData extends DataRow = DataRow> =
+  | (Pick<EncodingChannel<TData>, 'field'> &
+      Partial<Pick<EncodingChannel<TData>, 'type' | 'format'>>)
+  | { value: string };
+
 export interface Encoding<TData extends DataRow = DataRow> {
+  /** Accessible mark description; static output exposes it as a native title. */
+  description?: DescriptionEncoding<TData>;
   /**
    * Horizontal position channel. Required for: bar, line, area, point, tick, rect, lollipop.
    * Maps a field to the x-axis. Use `type: 'temporal'` for dates, `'nominal'` for categories,
@@ -1344,13 +1358,13 @@ export interface ThemeConfig {
   colors?:
     | string[]
     | {
-        /** Categorical stroke palette for nominal data (array of CSS color strings). */
-        categorical?: string[];
+        /** Categorical stroke palette: CSS colors or explicit light/dark pairs. */
+        categorical?: TokenValue[];
         /**
          * Categorical palette for area-filling marks (bar, area, arc, waffle,
          * calendar, rect). Defaults to `categorical` when only that is set.
          */
-        categoricalFill?: string[];
+        categoricalFill?: TokenValue[];
         /** Hairline color for axis lines and separators. Accepts a TokenValue for light/dark pairs. */
         hairline?: TokenValue;
         /** Sequential palettes keyed by name. Each is an array of color stops. */
@@ -1509,6 +1523,8 @@ export type LabelDensity = 'all' | 'auto' | 'endpoints' | 'none';
 
 /** Label display configuration for chart data labels. */
 export interface LabelConfig {
+  /** Compose category/series names and formatted values; default value only. */
+  content?: EndpointLabelContent;
   /** Placement for bar/column values. Column is only supported for simple horizontal bars. */
   placement?: 'adaptive' | 'inside' | 'outside' | 'column';
   /** How many labels to show. Defaults to 'auto'. */
@@ -1957,6 +1973,12 @@ export interface BeeswarmEncoding<TData extends DataRow = DataRow> extends Encod
  * - Vertical: `x` nominal/ordinal category, `y` quantitative start,
  *   `y2` quantitative end.
  */
+/** Explicit interval bounds; runtime validation requires exactly one of x2/y2. */
+export interface ErrorbarEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
+  x: EncodingChannel<TData>;
+  y: EncodingChannel<TData>;
+}
+
 export interface RangeEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
   x: EncodingChannel<TData>;
   y: EncodingChannel<TData>;
@@ -2064,6 +2086,8 @@ export interface A11yConfig {
    * are present.
    */
   description?: string;
+  /** Render the hidden screen-reader data table. Defaults to true; navigation stays enabled. */
+  table?: boolean;
   /**
    * Hide the chart from assistive technology entirely (`aria-hidden`).
    * Use only when the chart is decorative or the surrounding content
@@ -2083,7 +2107,15 @@ export interface A11yConfig {
  *
  * @internal
  */
+/** Fixed horizontal figure gutters in CSS pixels. */
+export interface FrameConfig {
+  left?: number;
+  right?: number;
+}
+
 interface BaseChartSpec<TData extends DataRow = DataRow> {
+  /** Fixed horizontal plot gutters. */
+  frame?: FrameConfig;
   /** Optional authored measure, unit, provenance, and supplied interval metadata. */
   fields?: Record<string, FieldMetadata>;
   /**
@@ -2290,6 +2322,10 @@ interface BaseChartSpec<TData extends DataRow = DataRow> {
  * };
  */
 export type ChartSpec<TData extends DataRow = DataRow> =
+  | (BaseChartSpec<TData> & {
+      mark: 'errorbar' | Extract<MarkDef, { type: 'errorbar' }>;
+      encoding: ErrorbarEncoding<TData>;
+    })
   | (BaseChartSpec<TData> & {
       mark: 'arc' | Extract<MarkDef, { type: 'arc' }>;
       encoding: ArcEncoding<TData>;
@@ -2632,6 +2668,12 @@ export interface ResolveConfig {
  * `DataRow`) — children can be independently typed.
  */
 export interface LayerSpec<TData extends DataRow = DataRow> {
+  /** Display defaults shared by every leaf. */
+  display?: Display;
+  /** Figure accessibility; hidden cells omit the image role. */
+  a11y?: A11yConfig;
+  /** Fixed horizontal plot gutters shared by the figure. */
+  frame?: FrameConfig;
   /** Array of child layers (ChartSpec or nested LayerSpec). */
   layer: (ChartSpec<TData> | LayerSpec<TData>)[];
   /** Shared data inherited by children without their own data. */
@@ -3015,6 +3057,16 @@ export interface BarListSpec {
   data: DataRow[];
   /** Encoding channels mapping data fields to visual properties. */
   encoding: BarListEncoding;
+  /** Ordering within each first-seen group. Default descending; null preserves input order. */
+  sort?: 'descending' | 'ascending' | null;
+  /** Auto height fits every admitted row and its group headers. */
+  height?: number | 'auto';
+  /** Vertical value reference lines. */
+  annotations?: Array<Omit<RefLineAnnotation, 'x' | 'y'> & { x: number; y?: never }>;
+  /** Value label formatting. */
+  labels?: Pick<LabelConfig, 'format' | 'prefix' | 'suffix'>;
+  /** Accessible figure name and visibility. */
+  a11y?: A11yConfig;
   /** Bar height in pixels. Defaults to 6. */
   barHeight?: number;
   /** Corner radius: number in px or "pill" for fully rounded ends. Defaults to "pill". */
@@ -3033,6 +3085,10 @@ export interface BarListSpec {
 
 /** Encoding channels for a barlist visualization. */
 export interface BarListEncoding {
+  /** Authored row description. */
+  description?: DescriptionEncoding;
+  /** Nominal group labels, retained in first-seen order. */
+  group?: EncodingChannel;
   /** Label field (required, nominal). The category name for each row. */
   label: EncodingChannel;
   /** Value field (required, quantitative). The numeric value that drives bar width. */
@@ -3441,6 +3497,7 @@ export const MARK_TYPES: ReadonlySet<string> = new Set<MarkType>([
   'lollipop',
   'beeswarm',
   'range',
+  'errorbar',
   'waffle',
   'calendar',
   'parliament',
@@ -3557,6 +3614,7 @@ export const MARK_DISPLAY_NAMES: Record<MarkType, string> = {
   lollipop: 'Lollipop chart',
   beeswarm: 'Beeswarm chart',
   range: 'Range plot',
+  errorbar: 'Error bar plot',
   waffle: 'Waffle chart',
   calendar: 'Calendar heatmap',
   parliament: 'Parliament chart',

@@ -125,6 +125,7 @@ function ChartInner(
     onEdit,
     onMarkClick,
     onMarkHover,
+    onMarkFocus,
     onMarkLeave,
     onLegendToggle,
     onHighlightChange,
@@ -178,6 +179,7 @@ function ChartInner(
   const handlersRef = useRef<{
     onMarkClick?: ChartProps['onMarkClick'];
     onMarkHover?: ChartProps['onMarkHover'];
+    onMarkFocus?: ChartProps['onMarkFocus'];
     onMarkLeave?: ChartProps['onMarkLeave'];
     onLegendToggle?: ChartProps['onLegendToggle'];
     onHighlightChange?: ChartProps['onHighlightChange'];
@@ -191,6 +193,7 @@ function ChartInner(
     onEdit,
     onMarkClick,
     onMarkHover,
+    onMarkFocus,
     onMarkLeave,
     onLegendToggle,
     onHighlightChange,
@@ -209,6 +212,11 @@ function ChartInner(
   const stableOnMarkHover = useCallback(
     (event: import('@opendata-ai/openchart-core').MarkEvent) =>
       handlersRef.current.onMarkHover?.(event),
+    [],
+  );
+  const stableOnMarkFocus = useCallback(
+    (event: import('@opendata-ai/openchart-core').MarkFocusEvent) =>
+      handlersRef.current.onMarkFocus?.(event),
     [],
   );
   const stableOnMarkLeave = useCallback(() => handlersRef.current.onMarkLeave?.(), []);
@@ -278,6 +286,7 @@ function ChartInner(
       renderer,
       onMarkClick: stableOnMarkClick,
       onMarkHover: stableOnMarkHover,
+      onMarkFocus: stableOnMarkFocus,
       onMarkLeave: stableOnMarkLeave,
       onLegendToggle: stableOnLegendToggle,
       onHighlightChange: stableOnHighlightChange,
@@ -323,6 +332,7 @@ function ChartInner(
     stableOnHighlightChange,
     stableOnMarkClick,
     stableOnMarkHover,
+    stableOnMarkFocus,
     stableOnMarkLeave,
     stableOnSelect,
     stableOnDeselect,

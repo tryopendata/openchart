@@ -4,11 +4,17 @@ import { sharedTooltipFields } from '@opendata-ai/openchart-engine';
 import type { TooltipManager } from '../tooltip';
 import type { HoverEmphasis } from './hover-emphasis';
 
+/** Shapes that represent individual observations in the trend slice index. */
+export function isTrendObservation(mark: ChartLayout['marks'][number]): boolean {
+  return mark.type === 'point' || (mark.type === 'rule' && mark.markType === 'area');
+}
+
 interface SeriesPoint {
   x: number;
   y: number;
   datum: Record<string, unknown>;
   tooltip?: TooltipContent;
+  markId?: string;
 }
 
 interface SeriesGroup {
@@ -41,6 +47,8 @@ export interface CrosshairController {
    * left off instead of restarting at the first x.
    */
   readonly currentIndex: number;
+  /** Observation and series currently selected by keyboard navigation. */
+  readonly focusedMark: { markId: string; datum: Record<string, unknown>; series: string } | null;
   /** Show the slice at a snap index (wraps). Used by keyboard nav. */
   stepTo(index: number): void;
   /** Cycle the emphasized series at the current x by `delta` (wraps). */
@@ -64,6 +72,7 @@ function collectSeriesGroups(layout: ChartLayout): SeriesGroup[] {
   // "line-0" / "area-1" in the tooltip instead of the actual data fields.
   // Prefer the line mark (same logic as endpoint-labels).
   const byKey = new Map<string, SeriesGroup>();
+  const connectedRows = new Map<string, Set<Record<string, unknown>>>();
   const markTypeByKey = new Map<string, 'line' | 'area'>();
   for (let i = 0; i < layout.marks.length; i++) {
     const mark = layout.marks[i];
@@ -72,6 +81,17 @@ function collectSeriesGroups(layout: ChartLayout): SeriesGroup[] {
       // of paint order. Equal series names in separate leaves are distinct
       // evidence; a band's derived line still shares its leaf's series group.
       const scope = mark.key?.match(/^layer:\d+:/)?.[0] ?? '';
+      const segmentOf = (point: { datum: Record<string, unknown>; segment?: unknown }) =>
+        typeof point.segment === 'number' ? point.segment : 0;
+      const segments = new Map<number, number>();
+      for (const point of mark.dataPoints) {
+        const segment = segmentOf(point);
+        segments.set(segment, (segments.get(segment) ?? 0) + 1);
+      }
+      const connected = connectedRows.get(scope) ?? new Set<Record<string, unknown>>();
+      for (const point of mark.dataPoints)
+        if (segments.get(segmentOf(point))! > 1) connected.add(point.datum);
+      connectedRows.set(scope, connected);
       const seriesKey = mark.seriesKey ?? '__default__';
       const key = `${scope}${seriesKey}`;
       const existingType = markTypeByKey.get(key);
@@ -84,6 +104,44 @@ function collectSeriesGroups(layout: ChartLayout): SeriesGroup[] {
       byKey.set(key, { key, seriesKey, markId: `${mark.type}-${i}`, color, pointsByX });
       markTypeByKey.set(key, mark.type);
     }
+  }
+  // Semantic points and isolated area intervals share the trend slice index.
+  // Authored point layers remain independent evidence.
+  for (const [index, mark] of layout.marks.entries()) {
+    if (
+      (mark.type !== 'point' && !(mark.type === 'rule' && isTrendObservation(mark))) ||
+      mark.aria.decorative
+    )
+      continue;
+    const markId = `${mark.type}-${index}`;
+    const scope = mark.key?.match(/^layer:\d+:/)?.[0] ?? '';
+    const tooltip = layout.tooltipDescriptors.get(markId);
+    if (!tooltip) continue;
+    // Visible connected markers duplicate their trend observation. Dedupe
+    // only within this leaf; another authored point layer remains evidence.
+    if (connectedRows.get(scope)?.has(mark.data)) continue;
+    const seriesKey = (mark.type === 'point' ? mark.seriesKey : undefined) ?? '__default__';
+    let key = `${scope}${seriesKey}`;
+    let group = byKey.get(key);
+    const observationX = mark.type === 'point' ? mark.cx : mark.x1;
+    const observationY = mark.type === 'point' ? mark.cy : (mark.y1 + mark.y2) / 2;
+    const x = snapKey(observationX);
+    // Separate observations at the same x remain independent evidence.
+    if (group?.pointsByX.has(x) && group.pointsByX.get(x)!.datum !== mark.data) {
+      key = `${key}:point:${mark.key ?? index}`;
+      group = byKey.get(key);
+    }
+    if (!group) {
+      group = {
+        key,
+        seriesKey,
+        markId,
+        color: mark.type === 'point' ? getRepresentativeColor(mark.fill) : mark.stroke,
+        pointsByX: new Map(),
+      };
+      byKey.set(key, group);
+    }
+    group.pointsByX.set(x, { x: observationX, y: observationY, datum: mark.data, tooltip, markId });
   }
   return Array.from(byKey.values());
 }
@@ -250,7 +308,11 @@ export function wireVoronoiTooltipEvents(
     currentEmphasis = emphasisKey;
     const emphasizedGroup = groups.find((group) => group.key === emphasisKey);
     if (emphasizedGroup) {
-      emphasis?.setMark(svg.querySelector(`[data-mark-id="${emphasizedGroup.markId}"]`));
+      emphasis?.setMark(
+        svg.querySelector(
+          `[data-mark-id="${emphasizedGroup.pointsByX.get(snappedX)?.markId ?? emphasizedGroup.markId}"]`,
+        ),
+      );
     } else emphasis?.clear();
 
     const tooltip = buildSliceTooltip(hits, emphasisKey);
@@ -367,6 +429,17 @@ export function wireVoronoiTooltipEvents(
     },
     get currentIndex() {
       return currentIndex;
+    },
+    get focusedMark() {
+      if (currentIndex < 0) return null;
+      const x = snapXs[currentIndex];
+      const candidates = groups.filter((group) => group.pointsByX.has(x));
+      const group =
+        candidates.find((candidate) => candidate.key === currentEmphasis) ?? candidates[0];
+      const point = group?.pointsByX.get(x);
+      return group && point
+        ? { markId: point.markId ?? group.markId, datum: point.datum, series: group.seriesKey }
+        : null;
     },
     stepTo,
     cycleSeries(delta: number) {

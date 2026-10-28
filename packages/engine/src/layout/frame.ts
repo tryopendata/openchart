@@ -1,3 +1,4 @@
+import { rangeLabelReserve } from '../charts/range/label-plan';
 import type { AxisTitleHeader } from './axis-title-plan';
 /**
  * Figure frame: the single owner of where the plot sits inside the figure.
@@ -142,7 +143,7 @@ export function frameSpacing(ctx: FrameContext): FrameSpacing {
 
 /** The figure's outside reference reserve, its right lane inset to the chrome padding. */
 export function frameReference(ctx: FrameContext, spacing: FrameSpacing): ReferenceReserve {
-  return chromeInsetReference(
+  const reference = chromeInsetReference(
     ctx.reserves.reference,
     ctx.spec.annotations,
     ctx.options.width,
@@ -150,6 +151,21 @@ export function frameReference(ctx: FrameContext, spacing: FrameSpacing): Refere
     ctx.theme,
     spacing.padding,
   );
+  // A fixed gutter cannot expand for outside labels; the existing placement
+  // fallback handles a lane that cannot hold their measured width.
+  const fixedRight = ctx.spec.frame?.right;
+  if (fixedRight === undefined) return reference;
+  const suppression = resolveSuppression(ctx.spec, {
+    seriesCount: countColorSeries(ctx.spec),
+    labelsHiddenByStrategy: ctx.strategy?.labelMode === 'none',
+  });
+  const endpointWidth = predictEndpointLabelsWidth(ctx.spec, ctx.theme, ctx.options.measureText);
+  const endpointReserve = endpointWidth + ctx.theme.spacing.endpointColumnGap;
+  const available =
+    suppression.showEndpointLabels && endpointWidth > 0 && endpointReserve <= fixedRight
+      ? fixedRight - endpointReserve
+      : fixedRight;
+  return reference.right > available ? { ...reference, right: 0 } : reference;
 }
 
 /**
@@ -188,6 +204,9 @@ export function frameMargins(
 
   left = Math.max(left, measures.leftGutter) + (measures.valueLabelPlan?.reserveLeft ?? 0);
   right += measures.valueLabelPlan?.reserveRight ?? 0;
+  const rangeReserve = rangeLabelReserve(spec, options.measureText);
+  left = Math.max(left, rangeReserve);
+  right = Math.max(right, rangeReserve);
 
   // Reserve space for a secondary (right) y-axis in dual-axis charts.
   // Use Math.max (not +=) to mirror the left-margin pattern: the reserve
@@ -208,7 +227,7 @@ export function frameMargins(
     ? measures.sizeLegendContent.width + SIZE_LEGEND_GAP
     : 0;
   right += Math.max(colorReserve, sizeReserve) + reference.right;
-  return { left, right };
+  return { left: spec.frame?.left ?? left, right: spec.frame?.right ?? right };
 }
 
 /** One chrome block placed in the frame. */

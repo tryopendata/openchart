@@ -1,3 +1,4 @@
+import { createRenderContext, type RenderContext } from '../render-context';
 /**
  * Endpoint-labels rendering: per-series label columns for multi-series
  * line/area charts. Supports trailing (right) and optional leading (left)
@@ -26,6 +27,7 @@ function renderColumn(
   ep: EndpointLabelsLayout,
   leaderAnchorX: number,
   side: 'trailing' | 'leading',
+  ctx: RenderContext = createRenderContext(),
 ): void {
   const labelFontSize = ep.labelStyle.fontSize ?? 11;
   const labelLineHeight = labelFontSize * (ep.labelStyle.lineHeight ?? 1.25);
@@ -38,7 +40,7 @@ function renderColumn(
   for (let i = 0; i < entries.length; i++) {
     const entry = entries[i];
 
-    const entryG = createSVGElement('g');
+    const entryG = createSVGElement('g', ctx.factory);
     entryG.setAttribute('class', 'oc-endpoint-label-entry');
     entryG.setAttribute('role', 'listitem');
     entryG.setAttribute('data-endpoint-index', String(i));
@@ -50,7 +52,7 @@ function renderColumn(
     );
 
     if (entry.showLeader) {
-      const leader = createSVGElement('line');
+      const leader = createSVGElement('line', ctx.factory);
       leader.setAttribute('class', 'oc-endpoint-leader');
       setAttrs(leader, {
         x1: chipX,
@@ -65,7 +67,7 @@ function renderColumn(
     }
 
     const rowY = entry.labelY + labelFontSize / 2;
-    const line = createSVGElement('line');
+    const line = createSVGElement('line', ctx.factory);
     line.setAttribute('class', 'oc-endpoint-swatch-line');
     setAttrs(line, {
       x1: chipX,
@@ -79,7 +81,7 @@ function renderColumn(
     if (entry.strokeDasharray) line.setAttribute('stroke-dasharray', entry.strokeDasharray);
     entryG.appendChild(line);
 
-    const label = createSVGElement('text');
+    const label = createSVGElement('text', ctx.factory);
     label.setAttribute('class', 'oc-endpoint-label');
     setAttrs(label, { x: textX, y: entry.labelY + labelFontSize });
     applyTextStyle(label, ep.labelStyle);
@@ -89,7 +91,7 @@ function renderColumn(
       label.textContent = entry.labelLines[0] ?? entry.seriesKey;
     } else {
       for (let li = 0; li < entry.labelLines.length; li++) {
-        const tspan = createSVGElement('tspan');
+        const tspan = createSVGElement('tspan', ctx.factory);
         setAttrs(tspan, { x: textX, dy: li === 0 ? 0 : labelLineHeight });
         tspan.textContent = entry.labelLines[li];
         label.appendChild(tspan);
@@ -104,14 +106,14 @@ function renderColumn(
       (lineCount - 1) * labelLineHeight +
       ep.valueGap +
       valueFontSize;
-    const value = createSVGElement('text');
+    const value = createSVGElement('text', ctx.factory);
     value.setAttribute('class', 'oc-endpoint-value');
     setAttrs(value, { x: textX, y: valueY });
     applyTextStyle(value, ep.valueStyle);
     value.textContent = entry.value;
     entryG.appendChild(value);
     if (entry.date) {
-      const date = createSVGElement('text');
+      const date = createSVGElement('text', ctx.factory);
       date.setAttribute('class', 'oc-endpoint-date');
       const dateY =
         valueY +
@@ -123,7 +125,7 @@ function renderColumn(
     }
 
     if (entry.marker) {
-      const marker = createSVGElement('circle');
+      const marker = createSVGElement('circle', ctx.factory);
       marker.setAttribute('class', 'oc-endpoint-marker');
       setAttrs(marker, {
         cx: entry.marker.x,
@@ -140,29 +142,33 @@ function renderColumn(
   }
 }
 
-export function renderEndpointLabels(parent: SVGElement, layout: ChartLayout): void {
+export function renderEndpointLabels(
+  parent: SVGElement,
+  layout: ChartLayout,
+  ctx: RenderContext = createRenderContext(),
+): void {
   const ep = layout.endpointLabels;
   if (!ep || (ep.entries.length === 0 && !ep.interior?.length)) return;
 
   const chartArea = layout.area;
 
-  const root = createSVGElement('g');
+  const root = createSVGElement('g', ctx.factory);
   root.setAttribute('class', 'oc-endpoint-labels');
   root.setAttribute('role', 'list');
   root.setAttribute('aria-label', 'Endpoint labels');
 
   // Trailing column (right side).
   const chartRightX = chartArea.x + chartArea.width;
-  renderColumn(root, ep.entries, ep.bounds, ep, chartRightX, 'trailing');
+  renderColumn(root, ep.entries, ep.bounds, ep, chartRightX, 'trailing', ctx);
 
   // Leading column (left side) when `ends: 'both'`.
   if (ep.leading && ep.leading.length > 0 && ep.leadingBounds) {
     const chartLeftX = chartArea.x;
-    renderColumn(root, ep.leading, ep.leadingBounds, ep, chartLeftX, 'leading');
+    renderColumn(root, ep.leading, ep.leadingBounds, ep, chartLeftX, 'leading', ctx);
   }
 
   for (const entry of ep.interior ?? []) {
-    const label = createSVGElement('text');
+    const label = createSVGElement('text', ctx.factory);
     label.setAttribute('class', 'oc-area-interior-label');
     label.setAttribute('data-endpoint-key', entry.seriesKey);
     label.setAttribute('aria-label', entry.text);

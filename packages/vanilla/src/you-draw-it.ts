@@ -1,3 +1,4 @@
+import { createRenderContext } from './render-context';
 /**
  * "You draw it" interaction layer: the DOM/SVG overlay for the `youDrawIt`
  * spec option (NYT-style draw-then-reveal engagement format).
@@ -23,7 +24,6 @@
 import type { Point, ResolvedYouDrawIt } from '@opendata-ai/openchart-core';
 import { applySrOnlyStyles } from './dom-helpers';
 import { createSVGElement, SVG_NS, setAttrs } from './renderers/svg-dom';
-import { nextSvgId } from './svg-ids';
 
 export interface YouDrawItOptions {
   /** The chart container (`.oc-root`). Must be position: relative. */
@@ -73,7 +73,10 @@ function round2(n: number): number {
  * across re-renders so the in-progress drawing survives; `update()` re-syncs
  * geometry and re-wires pointer capture after each render.
  */
-export function createYouDrawIt(options: YouDrawItOptions): YouDrawItController {
+export function createYouDrawIt(
+  options: YouDrawItOptions,
+  ctx = createRenderContext(),
+): YouDrawItController {
   const { container, onReveal } = options;
 
   let destroyed = false;
@@ -136,13 +139,13 @@ export function createYouDrawIt(options: YouDrawItOptions): YouDrawItController 
 
     // Hatch pattern + reveal clip defs.
     const defs = createSVGElement('defs');
-    const patternId = nextSvgId('oc-ydi-hatch');
+    const patternId = ctx.ids.next('oc-ydi-hatch');
     defs.appendChild(buildHatchPattern(patternId, cfg.lineColor));
 
     // Reveal clip: masks the real line's post-from segment until reveal.
     // Applied to the target line path element itself (not a <g>), matching
     // the SVG clip-path gotcha in .claude/rules/svg-animation.md.
-    const clipId = nextSvgId('oc-ydi-clip');
+    const clipId = ctx.ids.next('oc-ydi-clip');
     const clipPath = createSVGElement('clipPath');
     clipPath.setAttribute('id', clipId);
     const clipRect = createSVGElement('rect');

@@ -171,6 +171,16 @@ export function endpointLabelsDemotedAt(
   width: number,
   measureText?: MeasureTextFn,
 ): boolean {
+  const fixedRight = chartSpec.frame?.right;
+  const fixedLeft = isEndsBoth(chartSpec) ? chartSpec.frame?.left : undefined;
+  const measuredWidth = predictEndpointLabelsWidth(chartSpec, theme, measureText);
+  const required = measuredWidth + theme.spacing.endpointColumnGap;
+  if (
+    measuredWidth > 0 &&
+    ((fixedRight !== undefined && required > fixedRight) ||
+      (fixedLeft !== undefined && required > fixedLeft))
+  )
+    return true;
   if (
     !chartSpec.autoThin ||
     chartSpec.legend?.show === false ||
@@ -728,7 +738,13 @@ export function resolveLayoutPlan(
 
       // Compute inline y-label inset
       let inlineYLabelInset = 0;
-      if (yIsInline && encoding.y && yIsContinuous && encoding.y.axis !== false) {
+      if (
+        chartSpec.frame?.left === undefined &&
+        yIsInline &&
+        encoding.y &&
+        yIsContinuous &&
+        encoding.y.axis !== false
+      ) {
         if (yTickValues.length > 0) {
           // Build ticks from the final scales to get formatted labels
           const scales = computeScales(renderSpec, finalArea, renderSpec.data);

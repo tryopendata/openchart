@@ -144,7 +144,7 @@ Graphs use a separate compilation function (`compileGraph`) rather than the char
 
 The engine knows nothing about the DOM, React, or any rendering target. This is intentional:
 
-- **SSR**: The engine runs in Node.js. `renderStaticSVG()` from `@opendata-ai/openchart-vanilla/static` generates standalone SVG strings server-side using happy-dom as a DOM shim.
+- **SSR**: The engine runs in Node.js. `renderStaticSVG()` from `@opendata-ai/openchart-vanilla/static` generates standalone SVG strings with a per-call element tree and ID scope; it needs no DOM shim. See [static rendering](static-rendering.md).
 - **Testing**: Engine output is pure data. Test chart layout math without a browser.
 - **Multiple renderers**: The same spec and layout can be rendered by the vanilla SVG adapter, the React wrapper, the Vue wrapper, the Svelte wrapper, or a hypothetical Canvas/WebGL renderer.
 - **LLM generation**: Specs are plain JSON. An LLM writes data, the engine does the math, an adapter renders. A JSON Schema for the full spec is published from core's `./schema` subpath (with `additionalProperties: false`, so hallucinated fields and unknown marks are rejected when the schema constrains a model's tool output), and a `llms.txt` summary ships at the repo root. Both are generated from the TS spec types, and a CI check fails the build if either drifts from the types.

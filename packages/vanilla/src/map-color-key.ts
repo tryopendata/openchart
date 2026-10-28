@@ -5,15 +5,26 @@ import type {
 } from '@opendata-ai/openchart-core';
 import { buildD3Formatter, formatNumber } from '@opendata-ai/openchart-core';
 import { type GeoReaderIndex, geoColorKeyPosition } from '@opendata-ai/openchart-engine';
+import { createRenderContext, type RenderContext } from './render-context';
 
-const NS = 'http://www.w3.org/2000/svg';
-const node = (tag: string, attrs: Record<string, string | number>, content?: string) => {
-  const el = document.createElementNS(NS, tag);
+const node = (
+  tag: string,
+  attrs: Record<string, string | number>,
+  content?: string,
+  ctx: RenderContext = createRenderContext(),
+) => {
+  const el = ctx.factory.svg(tag);
   for (const [key, value] of Object.entries(attrs)) el.setAttribute(key, String(value));
   if (content !== undefined) el.textContent = content;
   return el;
 };
-const text = (layout: GeoMapLayout, x: number, y: number, value: string) =>
+const text = (
+  layout: GeoMapLayout,
+  x: number,
+  y: number,
+  value: string,
+  ctx: RenderContext = createRenderContext(),
+) =>
   node(
     'text',
     {
@@ -24,19 +35,24 @@ const text = (layout: GeoMapLayout, x: number, y: number, value: string) =>
       'font-size': layout.theme.fonts.sizes.small,
     },
     value,
+    ctx,
   );
-export function renderStaticGeoColorKeys(svg: SVGSVGElement, layout: GeoMapLayout) {
+export function renderStaticGeoColorKeys(
+  svg: SVGSVGElement,
+  layout: GeoMapLayout,
+  ctx: RenderContext = createRenderContext(),
+) {
   if (!layout.colorKeys) return;
   for (const [scope, key] of Object.entries(layout.colorKeys) as Array<
     ['features' | 'points', GeoColorKeyLayout]
   >) {
     const bounds = key?.distributionBounds;
     if (!key?.distribution || !bounds) continue;
-    const group = node('g', { 'data-geo-distribution': scope, role: 'img' });
+    const group = node('g', { 'data-geo-distribution': scope, role: 'img' }, undefined, ctx);
     const line = Math.ceil(layout.theme.fonts.sizes.small * 1.4);
     const noun = scope === 'features' ? 'Regions' : 'Points';
     group.append(
-      text(layout, bounds.x, bounds.y + layout.theme.fonts.sizes.small, `${noun} per range`),
+      text(layout, bounds.x, bounds.y + layout.theme.fonts.sizes.small, `${noun} per range`, ctx),
     );
     group.append(
       text(
@@ -44,6 +60,7 @@ export function renderStaticGeoColorKeys(svg: SVGSVGElement, layout: GeoMapLayou
         bounds.x,
         bounds.y + line + layout.theme.fonts.sizes.small,
         `No data: ${key.missing}`,
+        ctx,
       ),
     );
     const bars =
@@ -65,20 +82,26 @@ export function renderStaticGeoColorKeys(svg: SVGSVGElement, layout: GeoMapLayou
     const chartY = bounds.y + line * 2 + 4;
     for (const bar of bars) {
       const height = (20 * bar.count) / max;
-      const rectangle = node('rect', {
-        x: bar.x,
-        y: chartY + 20 - height,
-        width: Math.max(1, bar.width - 2),
-        height,
-        fill: bar.color,
-      });
-      rectangle.append(node('title', {}, `${bar.label}: ${bar.count} ${noun.toLowerCase()}`));
+      const rectangle = node(
+        'rect',
+        {
+          x: bar.x,
+          y: chartY + 20 - height,
+          width: Math.max(1, bar.width - 2),
+          height,
+          fill: bar.color,
+        },
+        undefined,
+        ctx,
+      );
+      rectangle.append(node('title', {}, `${bar.label}: ${bar.count} ${noun.toLowerCase()}`, ctx));
       group.append(rectangle);
       const label = text(
         layout,
         bar.x + bar.width / 2,
         chartY + 20 + layout.theme.fonts.sizes.small,
         String(bar.count),
+        ctx,
       );
       label.setAttribute('text-anchor', 'middle');
       group.append(label);
@@ -95,6 +118,7 @@ export function renderActiveGeoColorKeys(
   layout: GeoMapLayout,
   index: GeoReaderIndex,
   selection: GeoReaderSelection,
+  ctx: RenderContext = createRenderContext(),
 ) {
   if (!layout.colorKeys) return;
   const active = selection.pinned.length
@@ -133,6 +157,7 @@ export function renderActiveGeoColorKeys(
           row.x,
           row.y + layout.theme.fonts.sizes.small + lineIndex * advance,
           lineIndex === 0 ? line.replace(/^A:/, `${slot === 0 ? 'A' : 'B'}:`) : line,
+          ctx,
         );
         label.setAttribute('data-geo-active-value', scope);
         if (key.kind === 'binned') {
@@ -140,6 +165,7 @@ export function renderActiveGeoColorKeys(
             'title',
             {},
             `${suffix}; marker identifies the range containing this value`,
+            ctx,
           );
           label.append(title);
         }
@@ -149,24 +175,34 @@ export function renderActiveGeoColorKeys(
         const category = key.categories.find((category) => category.value === position.category);
         if (category)
           parent.append(
-            node('rect', {
-              ...category.bounds,
-              fill: 'none',
-              stroke: layout.theme.colors.text,
-              'stroke-width': 2,
-            }),
+            node(
+              'rect',
+              {
+                ...category.bounds,
+                fill: 'none',
+                stroke: layout.theme.colors.text,
+                'stroke-width': 2,
+              },
+              undefined,
+              ctx,
+            ),
           );
       } else if (position.x !== undefined && key.bar)
         parent.append(
-          node('path', {
-            d:
-              position.y === undefined
-                ? `M${position.x - 3},${key.bar.y - 4} L${position.x},${key.bar.y} L${position.x + 3},${key.bar.y - 4}`
-                : `M${position.x - 14},${position.y - 3} L${position.x - 10},${position.y} L${position.x - 14},${position.y + 3}`,
-            stroke: layout.theme.colors.text,
-            'stroke-width': 2,
-            fill: 'none',
-          }),
+          node(
+            'path',
+            {
+              d:
+                position.y === undefined
+                  ? `M${position.x - 3},${key.bar.y - 4} L${position.x},${key.bar.y} L${position.x + 3},${key.bar.y - 4}`
+                  : `M${position.x - 14},${position.y - 3} L${position.x - 10},${position.y} L${position.x - 14},${position.y + 3}`,
+              stroke: layout.theme.colors.text,
+              'stroke-width': 2,
+              fill: 'none',
+            },
+            undefined,
+            ctx,
+          ),
         );
     }
   }

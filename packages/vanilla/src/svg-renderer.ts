@@ -1,4 +1,5 @@
 import { wireAnnotationNotes } from './interactions/annotation-notes';
+import { createRenderContext, type RenderContext } from './render-context';
 /**
  * SVG renderer: converts a ChartLayout into SVG DOM elements.
  *
@@ -26,10 +27,9 @@ import { renderBrand } from './renderers/brand';
 import { renderChrome } from './renderers/chrome';
 import { renderEndpointLabels } from './renderers/endpoint-labels';
 import { renderLegend } from './renderers/legend';
-import { renderMarks, resetMarkRenderState, setMarkRenderState } from './renderers/marks';
+import { renderMarks } from './renderers/marks';
 import { renderMetrics } from './renderers/metrics';
 import { createSVGElement, SVG_NS, setAttrs } from './renderers/svg-dom';
-import { nextSvgId } from './svg-ids';
 import { resolvedSurface } from './theme-tokens';
 
 // Re-export registerMarkRenderer so external consumers can still register
@@ -46,12 +46,20 @@ export { registerMarkRenderer } from './renderers/marks';
 export function renderChartSVG(
   layout: ChartLayout,
   container: HTMLElement,
-  opts?: { animate?: boolean; crosshair?: boolean; canvasMarks?: boolean },
+  opts?: {
+    animate?: boolean;
+    crosshair?: boolean;
+    canvasMarks?: boolean;
+    interactive?: boolean;
+    context?: RenderContext;
+  },
 ): SVGElement {
+  const ctx = opts?.context ?? createRenderContext();
   const { width, height } = layout.dimensions;
-  const animation = layout.animation;
+  const interactive = ctx.interactive && opts?.interactive !== false;
+  const animation = interactive ? layout.animation : undefined;
 
-  const svg = createSVGElement('svg') as SVGSVGElement;
+  const svg = createSVGElement('svg', ctx.factory) as SVGSVGElement;
   setAttrs(svg, {
     viewBox: `0 0 ${width} ${height}`,
     xmlns: SVG_NS,
@@ -90,6 +98,7 @@ export function renderChartSVG(
   // of the final state. mount.ts passes animate: true only on genuine first render.
   const classes = opts?.animate ? 'oc-chart oc-animate' : 'oc-chart';
   svg.setAttribute('class', classes);
+  svg.setAttribute('data-theme', layout.theme.isDark ? 'dark' : 'light');
 
   // Set animation CSS custom properties when the enter phase is enabled
   const enterPhase = animation?.enter;
@@ -136,7 +145,7 @@ export function renderChartSVG(
   // complete SVG -- background, gridlines, and point marks included.
   const canvasMarks = opts?.canvasMarks === true;
   if (layout.display !== 'sparkline' && !canvasMarks) {
-    const bg = createSVGElement('rect');
+    const bg = createSVGElement('rect', ctx.factory);
     setAttrs(bg, {
       x: 0,
       y: 0,
@@ -150,9 +159,9 @@ export function renderChartSVG(
   // Clip path to prevent marks (especially area fills) from overflowing
   // into the chrome region (title/subtitle). Extends full width so
   // end-of-line labels aren't clipped, but constrains vertically.
-  const clipId = nextSvgId('oc-clip');
-  const defs = createSVGElement('defs');
-  const clipPath = createSVGElement('clipPath');
+  const clipId = ctx.ids.next('oc-clip');
+  const defs = createSVGElement('defs', ctx.factory);
+  const clipPath = createSVGElement('clipPath', ctx.factory);
   clipPath.setAttribute('id', clipId);
   const maxPointR = layout.marks.reduce(
     (max, m) =>
@@ -160,7 +169,7 @@ export function renderChartSVG(
     0,
   );
   const clipPad = Math.max(maxPointR, 2);
-  const clipRect = createSVGElement('rect');
+  const clipRect = createSVGElement('rect', ctx.factory);
   setAttrs(clipRect, {
     x: 0,
     y: layout.area.y - clipPad,
@@ -171,205 +180,199 @@ export function renderChartSVG(
   defs.appendChild(clipPath);
 
   // Build gradient defs for marks with gradient fills
-  const gradientMap = buildGradientDefs(layout.marks as Array<{ fill?: unknown }>, defs);
+  const gradientMap = buildGradientDefs(layout.marks as Array<{ fill?: unknown }>, defs, ctx);
 
   // Build pattern defs for marks with engine-assigned fill patterns
   const patternMap = buildPatternDefs(
     layout.marks as Array<{ pattern?: ResolvedFillPattern }>,
     defs,
+    ctx,
   );
 
   svg.appendChild(defs);
 
-  // Prime mark-renderer module-level state so mark sub-renderers can resolve
-  // animation + gradient/pattern fills without signature changes. try/finally
-  // guarantees the reset fires even if any downstream renderer throws, so the
-  // next render starts with a clean slate.
-  setMarkRenderState({
+  // Gradient, pattern and animation state belongs to this render only.
+  Object.assign(ctx.marks, {
     animation,
     gradientMap,
     patternMap,
     surface: resolvedSurface(layout.theme),
   });
-  try {
-    if (layout.facet) {
-      // Faceted rendering: per-panel axes, marks, annotations
-      renderFacetedPanels(svg, layout, layout.facet.panels, defs);
-    } else {
-      // Standard (non-faceted) rendering
-      // Axes render outside clip (labels extend beyond chart area).
-      // In canvas mark mode the canvas paints gridlines under the marks;
-      // ticks, tick labels, and axis titles stay SVG.
-      renderAxes(svg, layout, { skipGridlines: canvasMarks });
+  if (layout.facet) {
+    // Faceted rendering: per-panel axes, marks, annotations
+    renderFacetedPanels(svg, layout, layout.facet.panels, defs, interactive, ctx);
+  } else {
+    // Standard (non-faceted) rendering
+    // Axes render outside clip (labels extend beyond chart area).
+    // In canvas mark mode the canvas paints gridlines under the marks;
+    // ticks, tick labels, and axis titles stay SVG.
+    renderAxes(svg, layout, { skipGridlines: canvasMarks }, ctx);
 
-      // Marks are clipped to chart area so area fills don't cover chrome.
-      // The clip and the camera transform must live on SEPARATE, nested groups:
-      // `clip-path` with the default userSpaceOnUse resolves in the coordinate
-      // system of the element's own `transform`, so putting both on one group
-      // would drag the clip rect along with a story-camera zoom/pan and stop it
-      // masking at the chart-area boundary. The outer group holds the clip fixed
-      // to the area; the inner `data-oc-marks-group` is the stable hook external
-      // features (e.g. the scrollytelling story camera) transform, so the camera
-      // moves inside the clip. SVG transform (not CSS) so it composes with each
-      // mark's own transform rather than replacing it.
-      const clipGroup = createSVGElement('g');
-      clipGroup.setAttribute('clip-path', `url(#${clipId})`);
-      const clippedGroup = createSVGElement('g');
-      clippedGroup.setAttribute('data-oc-marks-group', 'true');
-      clipGroup.appendChild(clippedGroup);
-      const markLabelsOverlay = renderMarks(clippedGroup, layout, { skipPoints: canvasMarks });
-      // A fluid stack is one quantitative object: reveal its shared extent,
-      // never chain independently eased segments that can appear to separate.
-      if (
-        enterPhase?.spring &&
-        layout.marks.some((mark) => mark.type === 'rect' && mark.stackPos !== undefined)
-      ) {
-        const stacks = new Map<string, SVGElement>();
-        for (const mark of layout.marks) {
-          if (mark.type !== 'rect' || mark.stackPos === undefined || !mark.key) continue;
-          const element = Array.from(clippedGroup.children).find(
-            (child) => child.getAttribute('data-key') === mark.key,
-          );
-          if (!element) continue;
-          const horizontal = element.getAttribute('data-orient') === 'horizontal';
-          const key = `${horizontal ? 'h' : 'v'}:${horizontal ? mark.y : mark.x}`;
-          let stack = stacks.get(key);
-          if (!stack) {
-            stack = createSVGElement('g');
-            setAttrs(stack, {
-              class: 'oc-stack-reveal',
-              'data-key': `stack:${key}`,
-              'data-orient': horizontal ? 'horizontal' : 'vertical',
-              'data-animation-index': 0,
-            });
-            clippedGroup.insertBefore(stack, element);
-            stacks.set(key, stack);
-          }
-          stack.appendChild(element);
-        }
-      }
-
-      // Single query+parse pass over point circles, reused below by both the
-      // voronoi-overlay pointer-events pass and the endpoint-label suppression
-      // pass, instead of each separately re-querying/re-parsing the subtree.
-      let pointCircles: SVGCircleElement[] | null = null;
-      let pointCircleCoords: { cx: number; cy: number }[] | null = null;
-      const getPointCircles = () => {
-        if (pointCircles === null) {
-          pointCircles = Array.from(
-            clippedGroup.querySelectorAll<SVGCircleElement>('circle.oc-mark-point'),
-          );
-        }
-        return pointCircles;
-      };
-      const getPointCircleCoords = () => {
-        if (pointCircleCoords === null) {
-          pointCircleCoords = getPointCircles().map((el) => ({
-            cx: Number(el.getAttribute('cx')),
-            cy: Number(el.getAttribute('cy')),
-          }));
-        }
-        return pointCircleCoords;
-      };
-
-      // Add transparent overlay rect for line/area charts to enable voronoi tooltip lookup.
-      const hasLineOrAreaWithDataPoints = layout.marks.some(
-        (m) => (m.type === 'line' || m.type === 'area') && m.dataPoints && m.dataPoints.length > 0,
-      );
-      if (hasLineOrAreaWithDataPoints) {
-        for (const el of getPointCircles()) {
-          el.setAttribute('pointer-events', 'none');
-        }
-
-        const overlay = createSVGElement('rect');
-        setAttrs(overlay, {
-          x: layout.area.x,
-          y: layout.area.y,
-          width: layout.area.width,
-          height: layout.area.height,
-          fill: 'transparent',
-        });
-        overlay.setAttribute('class', 'oc-voronoi-overlay');
-        overlay.setAttribute('data-voronoi-overlay', 'true');
-        clippedGroup.appendChild(overlay);
-
-        if (opts?.crosshair) {
-          const crosshairLine = createSVGElement('line');
-          crosshairLine.setAttribute('data-crosshair', 'true');
-          crosshairLine.setAttribute('class', 'oc-crosshair');
-          setAttrs(crosshairLine, {
-            x1: 0,
-            y1: layout.area.y,
-            x2: 0,
-            y2: layout.area.y + layout.area.height,
-            stroke: layout.theme.colors.axis,
-            'stroke-opacity': '0.4',
-            'stroke-dasharray': '3,3',
-            'stroke-width': '1',
-            'pointer-events': 'none',
+    // Marks are clipped to chart area so area fills don't cover chrome.
+    // The clip and the camera transform must live on SEPARATE, nested groups:
+    // `clip-path` with the default userSpaceOnUse resolves in the coordinate
+    // system of the element's own `transform`, so putting both on one group
+    // would drag the clip rect along with a story-camera zoom/pan and stop it
+    // masking at the chart-area boundary. The outer group holds the clip fixed
+    // to the area; the inner `data-oc-marks-group` is the stable hook external
+    // features (e.g. the scrollytelling story camera) transform, so the camera
+    // moves inside the clip. SVG transform (not CSS) so it composes with each
+    // mark's own transform rather than replacing it.
+    const clipGroup = createSVGElement('g', ctx.factory);
+    clipGroup.setAttribute('clip-path', `url(#${clipId})`);
+    const clippedGroup = createSVGElement('g', ctx.factory);
+    clippedGroup.setAttribute('data-oc-marks-group', 'true');
+    clipGroup.appendChild(clippedGroup);
+    const markLabelsOverlay = renderMarks(clippedGroup, layout, { skipPoints: canvasMarks }, ctx);
+    // A fluid stack is one quantitative object: reveal its shared extent,
+    // never chain independently eased segments that can appear to separate.
+    if (
+      enterPhase?.spring &&
+      layout.marks.some((mark) => mark.type === 'rect' && mark.stackPos !== undefined)
+    ) {
+      const stacks = new Map<string, SVGElement>();
+      for (const mark of layout.marks) {
+        if (mark.type !== 'rect' || mark.stackPos === undefined || !mark.key) continue;
+        const element = Array.from(clippedGroup.children).find(
+          (child) => child.getAttribute('data-key') === mark.key,
+        );
+        if (!element) continue;
+        const horizontal = element.getAttribute('data-orient') === 'horizontal';
+        const key = `${horizontal ? 'h' : 'v'}:${horizontal ? mark.y : mark.x}`;
+        let stack = stacks.get(key);
+        if (!stack) {
+          stack = createSVGElement('g', ctx.factory);
+          setAttrs(stack, {
+            class: 'oc-stack-reveal',
+            'data-key': `stack:${key}`,
+            'data-orient': horizontal ? 'horizontal' : 'vertical',
+            'data-animation-index': 0,
           });
-          crosshairLine.style.display = 'none';
-          clippedGroup.appendChild(crosshairLine);
+          clippedGroup.insertBefore(stack, element);
+          stacks.set(key, stack);
         }
+        stack.appendChild(element);
+      }
+    }
 
-        const dotsGroup = createSVGElement('g');
-        dotsGroup.setAttribute('data-snap-dots', 'true');
-        dotsGroup.setAttribute('class', 'oc-snap-dots');
-        dotsGroup.setAttribute('pointer-events', 'none');
-        clippedGroup.appendChild(dotsGroup);
+    // Single query+parse pass over point circles, reused below by both the
+    // voronoi-overlay pointer-events pass and the endpoint-label suppression
+    // pass, instead of each separately re-querying/re-parsing the subtree.
+    let pointCircles: SVGCircleElement[] | null = null;
+    let pointCircleCoords: { cx: number; cy: number }[] | null = null;
+    const getPointCircles = () => {
+      if (pointCircles === null) {
+        pointCircles = Array.from(
+          clippedGroup.querySelectorAll<SVGCircleElement>('circle.oc-mark-point'),
+        );
+      }
+      return pointCircles;
+    };
+    const getPointCircleCoords = () => {
+      if (pointCircleCoords === null) {
+        pointCircleCoords = getPointCircles().map((el) => ({
+          cx: Number(el.getAttribute('cx')),
+          cy: Number(el.getAttribute('cy')),
+        }));
+      }
+      return pointCircleCoords;
+    };
+
+    // Add transparent overlay rect for line/area charts to enable voronoi tooltip lookup.
+    const hasLineOrAreaWithDataPoints = layout.marks.some(
+      (m) => (m.type === 'line' || m.type === 'area') && m.dataPoints && m.dataPoints.length > 0,
+    );
+    if (interactive && hasLineOrAreaWithDataPoints) {
+      for (const el of getPointCircles()) {
+        el.setAttribute('pointer-events', 'none');
       }
 
-      svg.appendChild(clipGroup);
+      const overlay = createSVGElement('rect', ctx.factory);
+      setAttrs(overlay, {
+        x: layout.area.x,
+        y: layout.area.y,
+        width: layout.area.width,
+        height: layout.area.height,
+        fill: 'transparent',
+      });
+      overlay.setAttribute('class', 'oc-voronoi-overlay');
+      overlay.setAttribute('data-voronoi-overlay', 'true');
+      clippedGroup.appendChild(overlay);
 
-      // Annotations go under the data-label overlay so a refline or range
-      // passes behind a label's knockout halo instead of over it; auto
-      // placement already keeps annotation text clear of data labels.
-      renderAnnotations(svg, layout);
-
-      if (markLabelsOverlay) {
-        svg.appendChild(markLabelsOverlay);
+      if (opts?.crosshair) {
+        const crosshairLine = createSVGElement('line', ctx.factory);
+        crosshairLine.setAttribute('data-crosshair', 'true');
+        crosshairLine.setAttribute('class', 'oc-crosshair');
+        setAttrs(crosshairLine, {
+          x1: 0,
+          y1: layout.area.y,
+          x2: 0,
+          y2: layout.area.y + layout.area.height,
+          stroke: layout.theme.colors.axis,
+          'stroke-opacity': '0.4',
+          'stroke-dasharray': '3,3',
+          'stroke-width': '1',
+          'pointer-events': 'none',
+        });
+        crosshairLine.style.display = 'none';
+        clippedGroup.appendChild(crosshairLine);
       }
 
-      renderEndpointLabels(svg, layout);
+      const dotsGroup = createSVGElement('g', ctx.factory);
+      dotsGroup.setAttribute('data-snap-dots', 'true');
+      dotsGroup.setAttribute('class', 'oc-snap-dots');
+      dotsGroup.setAttribute('pointer-events', 'none');
+      clippedGroup.appendChild(dotsGroup);
+    }
 
-      // Suppress decorative point marks under endpoint markers
-      const epEntries = layout.endpointLabels?.entries ?? [];
-      if (epEntries.length > 0) {
-        const pointEls = getPointCircles();
-        const coords = getPointCircleCoords();
-        for (const entry of epEntries) {
-          if (!entry.marker) continue;
-          const mx = entry.marker.dataX;
-          const my = entry.marker.y;
-          for (let i = 0; i < pointEls.length; i++) {
-            const { cx, cy } = coords[i];
-            if (Math.abs(cx - mx) < 0.5 && Math.abs(cy - my) < 0.5) {
-              pointEls[i].setAttribute('opacity', '0');
-            }
+    svg.appendChild(clipGroup);
+
+    // Annotations go under the data-label overlay so a refline or range
+    // passes behind a label's knockout halo instead of over it; auto
+    // placement already keeps annotation text clear of data labels.
+    renderAnnotations(svg, layout, interactive, ctx);
+
+    if (markLabelsOverlay) {
+      svg.appendChild(markLabelsOverlay);
+    }
+
+    renderEndpointLabels(svg, layout, ctx);
+
+    // Suppress decorative point marks under endpoint markers
+    const epEntries = layout.endpointLabels?.entries ?? [];
+    if (epEntries.length > 0) {
+      const pointEls = getPointCircles();
+      const coords = getPointCircleCoords();
+      for (const entry of epEntries) {
+        if (!entry.marker) continue;
+        const mx = entry.marker.dataX;
+        const my = entry.marker.y;
+        for (let i = 0; i < pointEls.length; i++) {
+          const { cx, cy } = coords[i];
+          if (Math.abs(cx - mx) < 0.5 && Math.abs(cy - my) < 0.5) {
+            pointEls[i].setAttribute('opacity', '0');
           }
         }
       }
     }
+  }
 
-    // Every legend, not just the primary: a bubble chart carries a color legend
-    // AND a size legend. Falls back to the singular slot for layouts built by
-    // paths that don't populate `legends` (graph, sankey).
-    for (const legend of layout.legends ?? [layout.legend]) {
-      renderLegend(svg, legend);
-    }
+  // Every legend, not just the primary: a bubble chart carries a color legend
+  // AND a size legend. Falls back to the singular slot for layouts built by
+  // paths that don't populate `legends` (graph, sankey).
+  for (const legend of layout.legends ?? [layout.legend]) {
+    renderLegend(svg, legend, interactive, ctx);
+  }
 
-    // Chrome renders on top so titles are never obscured by chart elements
-    renderChrome(svg, layout);
-    renderMetrics(svg, layout);
+  // Chrome renders on top so titles are never obscured by chart elements
+  renderChrome(svg, layout, interactive, ctx);
+  renderMetrics(svg, layout, ctx);
 
-    // Brand renders as a footer item, right-aligned on the source/footer row.
-    // Suppressed when the spec supplies a custom chrome.brand so the two
-    // brand blocks don't stack.
-    if (layout.watermark && !layout.chrome.brand) {
-      renderBrand(svg, layout);
-    }
-  } finally {
-    resetMarkRenderState();
+  // Brand renders as a footer item, right-aligned on the source/footer row.
+  // Suppressed when the spec supplies a custom chrome.brand so the two
+  // brand blocks don't stack.
+  if (layout.watermark && !layout.chrome.brand) {
+    renderBrand(svg, layout, ctx);
   }
 
   if (canvasMarks) {
@@ -387,7 +390,7 @@ export function renderChartSVG(
     svg.style.position = 'relative';
   }
 
-  wireAnnotationNotes(svg);
+  if (interactive) wireAnnotationNotes(svg);
   container.appendChild(svg);
   return svg;
 }
@@ -397,14 +400,17 @@ function renderFacetedPanels(
   layout: ChartLayout,
   panels: FacetPanelLayout[],
   defs: SVGElement,
+  interactive = true,
+  ctx: RenderContext = createRenderContext(),
 ): void {
+  let markIndexOffset = 0;
   for (const panel of panels) {
-    const g = createSVGElement('g');
+    const g = createSVGElement('g', ctx.factory);
     g.setAttribute('class', 'oc-facet-panel');
     g.setAttribute('data-facet', panel.key);
 
     // Panel background for visual grouping (starts below the header)
-    const bg = createSVGElement('rect');
+    const bg = createSVGElement('rect', ctx.factory);
     setAttrs(bg, {
       x: panel.area.x,
       y: panel.area.y,
@@ -416,7 +422,7 @@ function renderFacetedPanels(
     g.appendChild(bg);
 
     // Panel header label
-    const headerText = createSVGElement('text');
+    const headerText = createSVGElement('text', ctx.factory);
     setAttrs(headerText, {
       x: panel.header.x,
       y: panel.header.y,
@@ -439,13 +445,13 @@ function renderFacetedPanels(
     };
 
     // Panel axes (ticks already suppressed for inner panels by the engine)
-    renderAxes(g, panelLayout);
+    renderAxes(g, panelLayout, undefined, ctx);
 
     // Panel clip path
-    const panelClipId = nextSvgId('oc-facet-clip');
-    const clipPath = createSVGElement('clipPath');
+    const panelClipId = ctx.ids.next('oc-facet-clip');
+    const clipPath = createSVGElement('clipPath', ctx.factory);
     clipPath.setAttribute('id', panelClipId);
-    const clipRect = createSVGElement('rect');
+    const clipRect = createSVGElement('rect', ctx.factory);
     setAttrs(clipRect, {
       x: panel.area.x,
       y: panel.area.y,
@@ -456,13 +462,15 @@ function renderFacetedPanels(
     defs.appendChild(clipPath);
 
     // Panel marks (clipped)
-    const clippedGroup = createSVGElement('g');
+    const clippedGroup = createSVGElement('g', ctx.factory);
     clippedGroup.setAttribute('clip-path', `url(#${panelClipId})`);
-    const panelLabelsOverlay = renderMarks(clippedGroup, panelLayout);
+    // Figure-level tooltip descriptors and navigation index the pooled marks.
+    const panelLabelsOverlay = renderMarks(clippedGroup, panelLayout, { markIndexOffset }, ctx);
+    markIndexOffset += panel.marks.length;
     g.appendChild(clippedGroup);
 
     // Panel annotations, under the label overlay (same order as the single path)
-    renderAnnotations(g, panelLayout);
+    renderAnnotations(g, panelLayout, interactive, ctx);
 
     if (panelLabelsOverlay) {
       g.appendChild(panelLabelsOverlay);

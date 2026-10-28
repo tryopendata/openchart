@@ -1,3 +1,4 @@
+import { createRenderContext, type RenderContext } from '../render-context';
 /**
  * Axis rendering: axis line, ticks, tick labels, gridlines, axis title.
  */
@@ -17,13 +18,14 @@ function appendCompoundLabel(
   primaryText: string,
   subtitle: string,
   fontWeight: number,
+  ctx: RenderContext = createRenderContext(),
 ): void {
-  const primarySpan = createSVGElement('tspan');
+  const primarySpan = createSVGElement('tspan', ctx.factory);
   primarySpan.setAttribute('font-weight', String(fontWeight));
   primarySpan.textContent = primaryText;
   parent.appendChild(primarySpan);
 
-  const subtitleSpan = createSVGElement('tspan');
+  const subtitleSpan = createSVGElement('tspan', ctx.factory);
   subtitleSpan.setAttribute('dx', '0.5em');
   subtitleSpan.textContent = subtitle;
   subtitleSpan.setAttribute('font-weight', '400');
@@ -37,8 +39,9 @@ function renderAxis(
   orientation: 'x' | 'y',
   layout: ChartLayout,
   opts?: { skipGridlines?: boolean },
+  ctx: RenderContext = createRenderContext(),
 ): void {
-  const g = createSVGElement('g');
+  const g = createSVGElement('g', ctx.factory);
   const isRight = orientation === 'y' && axis.orient === 'right';
   const isInlineY = orientation === 'y' && axis.tickPosition === 'inline' && !isRight;
   g.setAttribute(
@@ -51,7 +54,7 @@ function renderAxis(
   // Only draw axis line for x-axis (bottom baseline), unless explicitly disabled.
   // Horizontal gridlines already guide y-values, so the vertical y-axis line is redundant.
   if (orientation === 'x' && axis.domainLine !== false) {
-    const line = createSVGElement('line');
+    const line = createSVGElement('line', ctx.factory);
     line.setAttribute('class', 'oc-axis-line');
     setAttrs(line, {
       x1: axis.start.x,
@@ -74,7 +77,7 @@ function renderAxis(
 
     if (orientation === 'x') {
       // Label (no tick marks -- gridlines provide sufficient reference)
-      const label = createSVGElement('text');
+      const label = createSVGElement('text', ctx.factory);
       label.setAttribute('class', 'oc-axis-tick');
       label.setAttribute('data-tick-key', tickKey);
 
@@ -111,7 +114,7 @@ function renderAxis(
       // the complete category is still reachable on hover and to a screen
       // reader — truncation is a visual affordance, not data loss.
       if (tick.fullLabel) {
-        const title = createSVGElement('title');
+        const title = createSVGElement('title', ctx.factory);
         title.textContent = tick.fullLabel;
         label.appendChild(title);
       }
@@ -119,7 +122,7 @@ function renderAxis(
     } else if (isInlineY) {
       // Inline y-tick: label sits above its gridline at the chart-area left
       // edge, no gutter reserved. The gridline itself is the visual axis.
-      const label = createSVGElement('text');
+      const label = createSVGElement('text', ctx.factory);
       label.setAttribute('class', 'oc-axis-tick oc-axis-tick-inline');
       label.setAttribute('data-tick-key', tickKey);
       setAttrs(label, {
@@ -131,7 +134,7 @@ function renderAxis(
       label.textContent = tick.label;
       g.appendChild(label);
     } else {
-      const label = createSVGElement('text');
+      const label = createSVGElement('text', ctx.factory);
       label.setAttribute('class', 'oc-axis-tick');
       label.setAttribute('data-tick-key', tickKey);
       setAttrs(label, {
@@ -177,13 +180,13 @@ function renderAxis(
               primaryText = ellipsis;
             }
 
-            appendCompoundLabel(label, primaryText, tick.subtitle, fontWeight);
+            appendCompoundLabel(label, primaryText, tick.subtitle, fontWeight, ctx);
 
-            const titleEl = createSVGElement('title');
+            const titleEl = createSVGElement('title', ctx.factory);
             titleEl.textContent = `${tick.label}  ${tick.subtitle}`;
             label.appendChild(titleEl);
           } else {
-            appendCompoundLabel(label, tick.label, tick.subtitle, fontWeight);
+            appendCompoundLabel(label, tick.label, tick.subtitle, fontWeight, ctx);
           }
         } else {
           // Plain label (no subtitle)
@@ -206,7 +209,7 @@ function renderAxis(
               }
             }
             label.textContent = lo > 0 ? tick.label.slice(0, lo).trimEnd() + ellipsis : ellipsis;
-            const titleEl = createSVGElement('title');
+            const titleEl = createSVGElement('title', ctx.factory);
             titleEl.textContent = tick.label;
             label.appendChild(titleEl);
           } else {
@@ -215,6 +218,11 @@ function renderAxis(
         }
       } else {
         label.textContent = tick.label;
+      }
+      if (tick.fullLabel) {
+        const title = label.querySelector('title') ?? createSVGElement('title', ctx.factory);
+        title.textContent = tick.subtitle ? `${tick.fullLabel}  ${tick.subtitle}` : tick.fullLabel;
+        if (!title.parentNode) label.appendChild(title);
       }
       g.appendChild(label);
     }
@@ -230,7 +238,7 @@ function renderAxis(
     }
 
     for (const gridline of axis.gridlines) {
-      const gl = createSVGElement('line');
+      const gl = createSVGElement('line', ctx.factory);
       gl.setAttribute('class', 'oc-gridline');
       // Stamp data-tick-key for data-update transitions
       const glKey = posToTickKey.get(gridline.position);
@@ -264,7 +272,7 @@ function renderAxis(
 
   // Axis label
   if (axis.label && axis.labelStyle) {
-    const axisLabel = createSVGElement('text');
+    const axisLabel = createSVGElement('text', ctx.factory);
     axisLabel.setAttribute('class', 'oc-axis-title');
     applyTextStyle(axisLabel, axis.labelStyle);
     axisLabel.textContent = axis.label;
@@ -283,7 +291,7 @@ function renderAxis(
       if (axis.titleLines && axis.titleLines.length > 1) {
         axisLabel.textContent = '';
         for (const [index, line] of axis.titleLines.entries()) {
-          const span = createSVGElement('tspan');
+          const span = createSVGElement('tspan', ctx.factory);
           setAttrs(span, {
             x: tp.x,
             dy: index === 0 ? 0 : axis.labelStyle.fontSize * (axis.labelStyle.lineHeight ?? 1.3),
@@ -373,14 +381,15 @@ export function renderAxes(
   parent: SVGElement,
   layout: ChartLayout,
   opts?: { skipGridlines?: boolean },
+  ctx: RenderContext = createRenderContext(),
 ): void {
   if (layout.axes.x) {
-    renderAxis(parent, layout.axes.x, 'x', layout, opts);
+    renderAxis(parent, layout.axes.x, 'x', layout, opts, ctx);
   }
   if (layout.axes.y) {
-    renderAxis(parent, layout.axes.y, 'y', layout, opts);
+    renderAxis(parent, layout.axes.y, 'y', layout, opts, ctx);
   }
   if (layout.axes.y2) {
-    renderAxis(parent, layout.axes.y2, 'y', layout, opts);
+    renderAxis(parent, layout.axes.y2, 'y', layout, opts, ctx);
   }
 }

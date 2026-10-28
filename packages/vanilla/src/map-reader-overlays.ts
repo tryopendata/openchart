@@ -4,7 +4,7 @@ import type { Camera } from './map-camera';
 import { renderActiveGeoColorKeys } from './map-color-key';
 import { mapLabelAffine } from './map-labels';
 import { geoViewMapLayout } from './map-view-renderer';
-import { nextSvgId } from './svg-ids';
+import { createRenderContext } from './render-context';
 
 const NS = 'http://www.w3.org/2000/svg';
 export function renderMapReaderOverlay(
@@ -14,6 +14,7 @@ export function renderMapReaderOverlay(
   index: GeoReaderIndex,
   selection: GeoReaderSelection,
   getCamera?: (viewId: string) => Camera,
+  ctx = createRenderContext(),
 ) {
   svg.querySelector('[data-oc-reader-overlay]')?.remove();
   const group = document.createElementNS(NS, 'g');
@@ -22,7 +23,7 @@ export function renderMapReaderOverlay(
   group.setAttribute('aria-hidden', 'true');
   for (const view of layout.views ?? [undefined]) {
     const frame = view ? geoViewMapLayout(layout, view) : layout;
-    const clipId = nextSvgId('oc-reader-clip');
+    const clipId = ctx.ids.next('oc-reader-clip');
     const clip = document.createElementNS(NS, 'clipPath');
     clip.id = clipId;
     const rect = document.createElementNS(NS, 'rect');

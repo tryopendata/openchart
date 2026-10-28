@@ -38,6 +38,7 @@ jobs:
       - name: Test
         run: |
           bun run test
+          bun run test:static
           bun run test:scripts
 
       - name: Extract version from commit message

@@ -1,3 +1,4 @@
+import { createRenderContext, type RenderContext } from './render-context';
 /**
  * SVG pattern utilities: creates <pattern> elements from ResolvedFillPattern
  * specs (engine output for `mark.fillPattern: 'auto'`) and resolves mark
@@ -6,9 +7,6 @@
  */
 
 import type { ResolvedFillPattern } from '@opendata-ai/openchart-core';
-import { nextSvgId } from './svg-ids';
-
-const SVG_NS = 'http://www.w3.org/2000/svg';
 
 /** Pattern tile size in px (userSpaceOnUse, so zoom-stable within the SVG). */
 const TILE = 6;
@@ -26,21 +24,25 @@ function patternKey(p: ResolvedFillPattern): string {
 }
 
 /** Create one <pattern> tile: base-color rect + line-colored geometry. */
-function createPatternElement(p: ResolvedFillPattern, id: string): SVGElement {
-  const el = document.createElementNS(SVG_NS, 'pattern');
+function createPatternElement(
+  p: ResolvedFillPattern,
+  id: string,
+  ctx: RenderContext = createRenderContext(),
+): SVGElement {
+  const el = ctx.factory.svg('pattern');
   el.setAttribute('id', id);
   el.setAttribute('patternUnits', 'userSpaceOnUse');
   el.setAttribute('width', String(TILE));
   el.setAttribute('height', String(TILE));
 
-  const bg = document.createElementNS(SVG_NS, 'rect');
+  const bg = ctx.factory.svg('rect');
   bg.setAttribute('width', String(TILE));
   bg.setAttribute('height', String(TILE));
   bg.setAttribute('fill', p.base);
   el.appendChild(bg);
 
   if (p.type === 'dot') {
-    const dot = document.createElementNS(SVG_NS, 'circle');
+    const dot = ctx.factory.svg('circle');
     dot.setAttribute('cx', String(TILE / 2));
     dot.setAttribute('cy', String(TILE / 2));
     dot.setAttribute('r', '1.2');
@@ -59,7 +61,7 @@ function createPatternElement(p: ResolvedFillPattern, id: string): SVGElement {
         ? `M0,0 l${TILE},${TILE} M${TILE},0 l-${TILE},${TILE}`
         : `M${TILE / 2},0 V${TILE}`;
 
-  const path = document.createElementNS(SVG_NS, 'path');
+  const path = ctx.factory.svg('path');
   path.setAttribute('d', d);
   path.setAttribute('stroke', p.line);
   path.setAttribute('stroke-width', '1');
@@ -79,6 +81,7 @@ function createPatternElement(p: ResolvedFillPattern, id: string): SVGElement {
 export function buildPatternDefs(
   marks: Array<{ pattern?: ResolvedFillPattern }>,
   defs: SVGElement,
+  ctx: RenderContext = createRenderContext(),
 ): Map<string, string> {
   const map = new Map<string, string>();
 
@@ -87,8 +90,8 @@ export function buildPatternDefs(
     if (!pattern) continue;
     const key = patternKey(pattern);
     if (!map.has(key)) {
-      const id = nextSvgId('oc-pattern');
-      defs.appendChild(createPatternElement(pattern, id));
+      const id = ctx.ids.next('oc-pattern');
+      defs.appendChild(createPatternElement(pattern, id, ctx));
       map.set(key, id);
     }
   }

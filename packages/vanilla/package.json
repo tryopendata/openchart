@@ -62,6 +62,7 @@
   "scripts": {
     "build": "tsup && bun build src/graph/simulation-worker.ts --outfile dist/simulation-worker.js --target=browser --format=iife",
     "test": "vitest run",
+    "test:static": "vitest run --config vitest.static.config.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -76,7 +77,6 @@
   "peerDependencies": {
     "3d-force-graph": ">=1.80.0",
     "gifenc": ">=1.0.0",
-    "happy-dom": ">=14.0.0",
     "three": ">=0.179 <1",
     "three-spritetext": ">=1.9.0"
   },
@@ -85,9 +85,6 @@
       "optional": true
     },
     "gifenc": {
-      "optional": true
-    },
-    "happy-dom": {
       "optional": true
     },
     "three": {

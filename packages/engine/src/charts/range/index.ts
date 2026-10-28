@@ -4,7 +4,7 @@
  * Exports the range chart renderer and computation functions.
  */
 
-import type { PointMark } from '@opendata-ai/openchart-core';
+import type { PointMark, TextMarkLayout } from '@opendata-ai/openchart-core';
 import { resolveFieldFormatter } from '../../format/field-format';
 import type { ChartRenderer } from '../registry';
 import { computeRangeMarks, resolveRangeOrientation } from './compute';
@@ -21,11 +21,20 @@ import { computeRangeLabels, type RangeDotPair } from './labels';
  * Both-end value labels are attached to the dumbbell dot marks; arrow and
  * bar styles have no dot anchors and render without value labels.
  */
-export const rangeRenderer: ChartRenderer = (spec, scales, chartArea, strategy, theme) => {
+export const rangeRenderer: ChartRenderer = (
+  spec,
+  scales,
+  chartArea,
+  strategy,
+  theme,
+  _width,
+  _plan,
+  measureText,
+) => {
   const marks = computeRangeMarks(spec, scales, chartArea, strategy, theme);
 
   const style = spec.markDef.style ?? 'dumbbell';
-  if (style !== 'dumbbell') return marks;
+  if (style !== 'dumbbell' && spec.labels.content === undefined) return marks;
 
   // Dumbbell dots are emitted in (start, end) order per row; pair them up
   // for the both-end label pass.
@@ -33,6 +42,44 @@ export const rangeRenderer: ChartRenderer = (spec, scales, chartArea, strategy, 
   const pairs: RangeDotPair[] = [];
   for (let i = 0; i + 1 < dots.length; i += 2) {
     pairs.push({ start: dots[i], end: dots[i + 1] });
+  }
+
+  if (style !== 'dumbbell') {
+    for (const mark of marks) {
+      if (mark.aria.decorative) continue;
+      let start: { cx: number; cy: number }, end: { cx: number; cy: number };
+      if (mark.type === 'rect') {
+        const horizontal = mark.orient !== 'vertical';
+        start = {
+          cx: horizontal ? mark.x : mark.x + mark.width / 2,
+          cy: horizontal ? mark.y + mark.height / 2 : mark.y + mark.height,
+        };
+        end = {
+          cx: horizontal ? mark.x + mark.width : mark.x + mark.width / 2,
+          cy: horizontal ? mark.y + mark.height / 2 : mark.y,
+        };
+      } else if (mark.type === 'rule') {
+        start = { cx: mark.x1, cy: mark.y1 };
+        end = { cx: mark.x2, cy: mark.y2 };
+      } else continue;
+      if (mark.type === 'rect') {
+        const horizontal = mark.orient !== 'vertical';
+        const first = horizontal ? spec.encoding.x : spec.encoding.y;
+        const second = horizontal ? spec.encoding.x2 : spec.encoding.y2;
+        if (first && second && Number(mark.data[first.field]) > Number(mark.data[second.field]))
+          [start, end] = [end, start];
+      }
+      const base = {
+        type: 'point' as const,
+        r: 0,
+        fill: theme.colors.text,
+        stroke: 'none',
+        strokeWidth: 0,
+        data: mark.data,
+        aria: { decorative: true },
+      };
+      pairs.push({ start: { ...base, ...start }, end: { ...base, ...end } });
+    }
   }
 
   const orientation = resolveRangeOrientation(scales);
@@ -59,6 +106,13 @@ export const rangeRenderer: ChartRenderer = (spec, scales, chartArea, strategy, 
     startField,
     endField,
     theme.fonts.family,
+    {
+      content: spec.labels.content,
+      suffix: spec.labels.suffix,
+      startTitle: startChannel?.title,
+      endTitle: endChannel?.title,
+      measureText,
+    },
   );
 
   // Attach labels back onto their dots via the index carried through the
@@ -71,6 +125,25 @@ export const rangeRenderer: ChartRenderer = (spec, scales, chartArea, strategy, 
     dot.label = label;
   }
 
+  if (spec.labels.content !== undefined) {
+    const textMarks: TextMarkLayout[] = labels
+      .filter((label) => label.visible)
+      .map((label) => ({
+        type: 'textMark',
+        x: label.x,
+        y: label.y,
+        text: label.text,
+        fill: label.style.fill,
+        fontSize: label.style.fontSize,
+        fontWeight: label.style.fontWeight,
+        fontFamily: label.style.fontFamily,
+        textAnchor: label.style.textAnchor ?? 'start',
+        dominantBaseline: 'central',
+        data: {},
+        aria: { decorative: true },
+      }));
+    return [...marks, ...textMarks];
+  }
   return marks;
 };
 

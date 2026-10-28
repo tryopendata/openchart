@@ -51,6 +51,7 @@ import { computeAreaStack } from '../data/area-stack';
 import { finiteNumber } from '../data/finite-number';
 import { DEFAULT_BIN_COUNT, sampleRampColors } from '../legend/continuous';
 import { fieldIterable } from './shared';
+import { type ResolvedTemporalInterval, resolveTemporalInterval } from './temporal-interval';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -100,6 +101,7 @@ export interface ResolvedScale {
   channel: EncodingChannel;
   /** Per-field formatting context (extent, allIntegers) from the ORIGINAL data. */
   formatContext?: FieldFormatContext;
+  temporalInterval?: ResolvedTemporalInterval;
 }
 
 /** All resolved scales for a chart. */
@@ -857,6 +859,24 @@ function buildCategoricalScale(
  * @param data - Data rows.
  * @returns ResolvedScales with d3 scale instances.
  */
+/** Temporal bars reserve half their local interval at each domain edge. */
+function applyTemporalBarInterval(
+  scale: ResolvedScale | undefined,
+  spec: NormalizedChartSpec,
+  data: DataRow[],
+): void {
+  if (spec.markType !== 'bar' || !scale || (scale.type !== 'utc' && scale.type !== 'time')) return;
+  const interval = resolveTemporalInterval(scale.channel, data, scale.type);
+  scale.temporalInterval = interval;
+  if (scale.channel.scale?.domain) return;
+  const continuous = scale.scale as ScaleTime<number, number>;
+  const [start, end] = continuous.domain();
+  continuous.domain([
+    new Date(+start - (+interval.offset(start) - +start) / 2),
+    new Date(+end + (+interval.offset(end) - +end) / 2),
+  ]);
+}
+
 export function computeScales(
   spec: NormalizedChartSpec,
   chartArea: Rect,
@@ -930,7 +950,7 @@ export function computeScales(
     // Binned bars span x to x2 exactly like range marks do: without this the
     // final bin's right edge falls outside the scale and the bar clips.
     if (
-      (spec.markType === 'range' || spec.markType === 'bar') &&
+      (spec.markType === 'range' || spec.markType === 'bar' || spec.markType === 'errorbar') &&
       encoding.x2 &&
       encoding.x.type === 'quantitative'
     ) {
@@ -939,6 +959,7 @@ export function computeScales(
       xData = [...data, ...data.map((row) => ({ [xField]: row[x2Field] }) as DataRow)];
     }
     const xStackEnabled =
+      (encoding.y?.type === 'temporal' && encoding.x.stack === undefined) ||
       encoding.x.stack === true ||
       encoding.x.stack === 'zero' ||
       encoding.x.stack === 'normalize' ||
@@ -1015,6 +1036,7 @@ export function computeScales(
       spec.markType,
       'x',
     );
+    applyTemporalBarInterval(result.x, spec, data);
     if (result.x && encoding.x.type === 'quantitative' && encoding.x.field) {
       result.x.formatContext = computeFieldFormatContext(fieldIterable(data, encoding.x!.field));
     }
@@ -1027,9 +1049,12 @@ export function computeScales(
     // Vertical bar = x is categorical and y is quantitative (old 'column' chart type).
     let yData = data;
     let yChannel = encoding.y;
-    // Range charts span y to y2 (vertical form): cover both endpoint fields.
+    // Interval marks span y to y2: cover both endpoint fields.
     if (
-      (spec.markType === 'range' || spec.markType === 'bar') &&
+      (spec.markType === 'range' ||
+        spec.markType === 'bar' ||
+        spec.markType === 'errorbar' ||
+        spec.markType === 'area') &&
       encoding.y2 &&
       encoding.y.type === 'quantitative'
     ) {
@@ -1039,7 +1064,9 @@ export function computeScales(
     }
     const isVerticalBar =
       spec.markType === 'bar' &&
-      (encoding.x?.type === 'nominal' || encoding.x?.type === 'ordinal') &&
+      (encoding.x?.type === 'nominal' ||
+        encoding.x?.type === 'ordinal' ||
+        encoding.x?.type === 'temporal') &&
       encoding.y.type === 'quantitative';
     // Bars require explicit stacking; multi-series areas stack by default.
     // Match the area renderer so omission cannot clip accumulated bands.
@@ -1055,7 +1082,10 @@ export function computeScales(
       'field' in encoding.color &&
       stackProp !== null &&
       stackProp !== false;
-    const isBarStacked = isVerticalBar && isExplicitlyStacked;
+    const isBarStacked =
+      isVerticalBar &&
+      (isExplicitlyStacked ||
+        (encoding.x?.type === 'temporal' && stackProp === undefined && !!encoding.color));
 
     // Sparkline tightening: drop the default `zero: true` baseline so the
     // y-domain hugs the actual data range. Without this, a series with
@@ -1199,6 +1229,7 @@ export function computeScales(
       spec.markType,
       'y',
     );
+    applyTemporalBarInterval(result.y, spec, data);
     if (result.y && encoding.y.type === 'quantitative' && encoding.y.field) {
       result.y.formatContext = computeFieldFormatContext(fieldIterable(data, encoding.y!.field));
     }

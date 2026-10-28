@@ -52,3 +52,8 @@ export const ENDPOINT_MARKER_STROKE_WIDTH = 2;
 
 /** Threshold (px) above which a leader line connects label back to data point. */
 export const ENDPOINT_LEADER_THRESHOLD = 8;
+
+/** A fixed lane spends its full width on drawn ink; automatic lanes keep a trailing cushion. */
+export function endpointTrailingPadding(fixedLane?: number): number {
+  return fixedLane === undefined ? 4 : 0;
+}

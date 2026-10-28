@@ -22,7 +22,6 @@ import type {
 import {
   adaptTheme,
   buildD3Formatter,
-  CATEGORICAL_PALETTE,
   computeChrome,
   estimateTextWidth,
   formatNumber,
@@ -1275,6 +1274,7 @@ function compileGeoMapImpl(spec: unknown, options: CompileOptions): GeoMapLayout
       neutralFill,
       noDataPattern,
       theme,
+      palette: lightTheme.colors.categorical,
       fullArea,
       mapAreaHeight,
       legendReserveGap,
@@ -1414,7 +1414,9 @@ function compileGeoMapImpl(spec: unknown, options: CompileOptions): GeoMapLayout
         }
 
         const colorSource =
-          explicitRange && Array.isArray(explicitRange) ? explicitRange : CATEGORICAL_PALETTE;
+          explicitRange && Array.isArray(explicitRange)
+            ? explicitRange
+            : lightTheme.colors.categorical;
         for (let i = 0; i < pointCategories.length; i++) {
           pointCategoryColors.set(pointCategories[i], colorSource[i % colorSource.length]);
         }
@@ -1426,7 +1428,7 @@ function compileGeoMapImpl(spec: unknown, options: CompileOptions): GeoMapLayout
       }
     }
 
-    const defaultFill = CATEGORICAL_PALETTE[0];
+    const defaultFill = lightTheme.colors.categorical[0];
     // Bubbles read as one map layer, not as tinted glass: the knockout stroke
     // (below) is what separates overlapping circles, so the fill can stay near
     // full ink instead of muddying every overlap into a third color.
@@ -2107,6 +2109,7 @@ function compileGeoMapImpl(spec: unknown, options: CompileOptions): GeoMapLayout
               neutralFill,
               noDataPattern,
               theme,
+              palette: lightTheme.colors.categorical,
               fullArea,
               mapAreaHeight,
               legendReserveGap,
@@ -2538,6 +2541,7 @@ function buildQuantitativeMarks(opts: QuantitativeOptions): {
 // ---------------------------------------------------------------------------
 
 interface CategoricalOptions {
+  palette: string[];
   geoFeatures: GeoJSON.Feature[];
   pathGen: ReturnType<typeof geoPath>;
   joined: Map<string | number, Record<string, unknown>>;
@@ -2581,8 +2585,7 @@ function buildCategoricalMarks(opts: CategoricalOptions): {
   const categories = collectCategories(joined.values(), colorField, scaleConfig?.domain);
 
   const explicitRange = scaleConfig?.range;
-  const colorSource =
-    explicitRange && Array.isArray(explicitRange) ? explicitRange : CATEGORICAL_PALETTE;
+  const colorSource = explicitRange && Array.isArray(explicitRange) ? explicitRange : opts.palette;
   const categoryColors = new Map<string, string>();
   for (let i = 0; i < categories.length; i++) {
     categoryColors.set(categories[i], colorSource[i % colorSource.length]);

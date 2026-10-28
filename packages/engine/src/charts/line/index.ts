@@ -10,12 +10,18 @@
  *   `'normalize'`, or `'center'`.
  */
 
-import type { AreaMark, LineMark, Mark, PointMark } from '@opendata-ai/openchart-core';
+import type {
+  AreaMark,
+  LineMark,
+  Mark,
+  PointMark,
+  RuleMarkLayout,
+} from '@opendata-ai/openchart-core';
 import { getRepresentativeColor } from '@opendata-ai/openchart-core';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ChartRenderer } from '../registry';
 import { resolveKnockoutColor } from '../utils';
-import { computeAreaMarks } from './area';
+import { computeAreaGeometry } from './area';
 import { computeLineMarks } from './compute';
 
 /** Radius for area-chart data points, matching the line renderer. */
@@ -54,7 +60,8 @@ export const lineRenderer: ChartRenderer = (spec, scales, chartArea, strategy, t
  * raw values).
  */
 export const areaRenderer: ChartRenderer = (spec, scales, chartArea, strategy, theme) => {
-  const areas = computeAreaMarks(spec, scales, chartArea, theme);
+  const geometry = computeAreaGeometry(spec, scales, chartArea, theme);
+  const areas = geometry.filter((mark) => !!mark.path?.trim());
 
   const encoding = spec.encoding;
   const hasColor = !!(encoding.color && 'field' in encoding.color);
@@ -75,8 +82,73 @@ export const areaRenderer: ChartRenderer = (spec, scales, chartArea, strategy, t
       ? pointsFromAreas(areas, spec.markDef.point, resolveKnockoutColor(theme))
       : [];
 
-  // Areas go first (rendered behind lines), then lines, then points on top
-  return [...areas, ...lines, ...points] as Mark[];
+  const isolatedPoints: PointMark[] = [];
+  if (hasColor)
+    for (const area of geometry) {
+      const counts = new Map<number, number>();
+      for (const point of area.dataPoints ?? [])
+        counts.set(point.segment ?? 0, (counts.get(point.segment ?? 0) ?? 0) + 1);
+      for (const [index, point] of (area.dataPoints ?? []).entries()) {
+        if (counts.get(point.segment ?? 0) !== 1 || point.observed === false) continue;
+        if (spec.markDef.point === false) {
+          spec.markWarnings?.push(
+            `[openchart] Isolated point in series "${area.seriesKey ?? 'series'}" at index ${index} is hidden by point: false.`,
+          );
+          continue;
+        }
+        isolatedPoints.push({
+          type: 'point',
+          ...(area.seriesKey !== undefined ? { seriesKey: area.seriesKey } : {}),
+          key: area.pointKeys?.[index],
+          cx: point.x,
+          cy: point.y,
+          r: AREA_POINT_RADIUS,
+          fill: area.stroke ?? getRepresentativeColor(area.fill),
+          stroke: resolveKnockoutColor(theme),
+          strokeWidth: 1.5,
+          data: point.datum,
+          aria: {
+            label: `${area.seriesKey ?? 'Series'}: ${point.datum[spec.encoding.y?.field ?? '']}`,
+          },
+        });
+      }
+    }
+  // An isolated observation of a y/y2 interval band is the interval itself:
+  // a rule from y to y2, not a dot on the lower bound.
+  const isolatedIntervals: RuleMarkLayout[] = [];
+  if (!hasColor && encoding.y2 && 'field' in encoding.y2)
+    for (const area of geometry) {
+      const counts = new Map<number, number>();
+      for (const point of area.dataPoints ?? [])
+        counts.set(point.segment ?? 0, (counts.get(point.segment ?? 0) ?? 0) + 1);
+      for (const [index, point] of (area.dataPoints ?? []).entries()) {
+        if (counts.get(point.segment ?? 0) !== 1) continue;
+        isolatedIntervals.push({
+          type: 'rule',
+          key: area.pointKeys?.[index],
+          x1: point.x,
+          y1: point.y,
+          x2: point.x,
+          y2: area.bottomPoints[index]?.y ?? point.y,
+          stroke: area.stroke ?? getRepresentativeColor(area.fill),
+          strokeWidth: area.strokeWidth ?? 1,
+          data: point.datum,
+          aria: {
+            label: `Interval: ${point.datum[encoding.y?.field ?? '']} to ${point.datum[encoding.y2.field]}`,
+          },
+        });
+      }
+    }
+  const intervalRows = new Set(isolatedIntervals.map((rule) => rule.data));
+  return [
+    ...areas,
+    ...(intervalRows.size
+      ? lines.filter((mark) => mark.type !== 'point' || !intervalRows.has(mark.data))
+      : lines),
+    ...isolatedIntervals,
+    ...points.filter((point) => !isolatedPoints.some((isolated) => isolated.data === point.data)),
+    ...isolatedPoints,
+  ] as Mark[];
 };
 
 // ---------------------------------------------------------------------------
