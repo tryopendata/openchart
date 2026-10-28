@@ -57,8 +57,23 @@ describe('authored data-mark metadata', () => {
         },
         options,
       );
+      // Dumbbell heads and lollipop stems are navigable parts of a row whose
+      // provenance lives on the primary shape.
+      const isPart = (shape: (typeof layout.marks)[number]) =>
+        (mark === 'range' && shape.type === 'point') ||
+        ((mark === 'lollipop' || mark === 'circle') && shape.type === 'rect');
+      for (const part of layout.marks.filter(isPart)) {
+        expect(part.aria.decorative).not.toBe(true);
+        expect(part.aria.label).toBe('Exact & <authored> text');
+        expect(part.markType).toBeUndefined();
+        expect(part.identity).toBeUndefined();
+        expect(part.authoredDescription).toBe('Exact & <authored> text');
+      }
       const marks = layout.marks.filter(
-        (mark) => !mark.aria.decorative && (!Array.isArray(mark.data) || mark.data.length > 0),
+        (shape) =>
+          !shape.aria.decorative &&
+          !isPart(shape) &&
+          (!Array.isArray(shape.data) || shape.data.length > 0),
       );
       expect(marks.length).toBeGreaterThan(0);
       for (const shape of marks) {

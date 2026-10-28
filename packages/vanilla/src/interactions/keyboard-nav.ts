@@ -29,6 +29,24 @@ export function wireKeyboardNav(
   container.setAttribute('aria-roledescription', 'chart');
   container.setAttribute('aria-label', layout.a11y.altText);
 
+  // A click or tap focuses the container too. Only keyboard focus starts
+  // navigation; a pointer keeps its own position. Touch focuses after
+  // pointerup, so the flag lives until the focus, click or cancel that ends it.
+  let pointerFocus = false;
+  const handlePointerDown = () => {
+    pointerFocus = true;
+  };
+  const clearPointerFocus = () => {
+    pointerFocus = false;
+  };
+  const pointerEvents = ['click', 'pointercancel'] as const;
+  container.addEventListener('pointerdown', handlePointerDown);
+  for (const type of pointerEvents) container.addEventListener(type, clearPointerFocus);
+  const removePointerListeners = () => {
+    container.removeEventListener('pointerdown', handlePointerDown);
+    for (const type of pointerEvents) container.removeEventListener(type, clearPointerFocus);
+  };
+
   if (tooltipDescriptors.size === 0 && crosshair) {
     let lastFocus: { datum: Record<string, unknown>; series: string } | null = null;
     const announceCrosshair = (event: FocusEvent | KeyboardEvent) => {
@@ -49,6 +67,7 @@ export function wireKeyboardNav(
         });
     };
     const handleCrosshairFocus = (event: FocusEvent) => {
+      if (pointerFocus) return clearPointerFocus();
       crosshair.hide(true);
       crosshair.stepTo(0);
       crosshair.cycleSeries(1);
@@ -105,6 +124,7 @@ export function wireKeyboardNav(
       container.removeEventListener('focus', handleCrosshairFocus);
       container.removeEventListener('keydown', handleCrosshairKeys);
       container.removeEventListener('blur', handleCrosshairBlur);
+      removePointerListeners();
       container.removeAttribute('tabindex');
       container.removeAttribute('aria-roledescription');
       container.removeAttribute('aria-label');
@@ -218,6 +238,7 @@ export function wireKeyboardNav(
   };
 
   const handleFocus = (event: FocusEvent) => {
+    if (pointerFocus) return clearPointerFocus();
     if (markElements.length) highlightMark(0, event);
   };
   container.addEventListener('focus', handleFocus);
@@ -228,6 +249,7 @@ export function wireKeyboardNav(
     container.removeEventListener('focus', handleFocus);
     container.removeEventListener('keydown', handleKeyDown);
     container.removeEventListener('blur', handleBlur);
+    removePointerListeners();
     container.removeAttribute('tabindex');
     container.removeAttribute('aria-roledescription');
     container.removeAttribute('aria-label');

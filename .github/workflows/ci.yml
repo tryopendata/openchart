@@ -45,6 +45,10 @@ jobs:
           # (runs after build: generate:llms imports the built core).
           bun run check:generated || { echo "::error::Generated schema or llms.txt is stale. Run: bun run generate"; exit 1; }
 
+      # Needs the dist built by the step above; not part of `bun run test`.
+      - name: Test built static entry
+        run: bun run test:static
+
       - name: Test
         run: |
           bun run test

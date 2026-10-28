@@ -55,6 +55,7 @@ import { migrateSpecV8 } from '../../../packages/engine/src/migration/v8';
 import {
   APPROVED_AXIS_TITLE_LAYOUT,
   APPROVED_B3_MAP_LAYOUT,
+  APPROVED_DUAL_AXIS_SHARED_PLOT,
   APPROVED_ENDPOINT_TOP_SWEEP,
   APPROVED_MAP_KEY_PLACEMENT,
   APPROVED_PRE_RFC_LAYOUT,
@@ -456,6 +457,7 @@ describe(`v8 migration parity against ${capture.tag}`, () => {
       ...Object.entries(APPROVED_B3_MAP_LAYOUT),
       ...Object.entries(APPROVED_PRE_RFC_LAYOUT),
       ...Object.entries(APPROVED_R14_SHARED_AXIS),
+      ...Object.entries(APPROVED_DUAL_AXIS_SHARED_PLOT),
       ...Object.entries(APPROVED_RFC_B1_LAYOUT),
       ...Object.entries(APPROVED_MAP_KEY_PLACEMENT),
       ...Object.entries(APPROVED_AXIS_TITLE_LAYOUT),
@@ -565,6 +567,7 @@ describe(`v8 migration parity against ${capture.tag}`, () => {
           APPROVED_B3_MAP_LAYOUT[`${result.name} @${result.width}`],
           APPROVED_PRE_RFC_LAYOUT[`${result.name} @${result.width}`],
           APPROVED_R14_SHARED_AXIS[`${result.name} @${result.width}`],
+          APPROVED_DUAL_AXIS_SHARED_PLOT[`${result.name} @${result.width}`],
           APPROVED_RFC_B1_LAYOUT[`${result.name} @${result.width}`],
           APPROVED_MAP_KEY_PLACEMENT[`${result.name} @${result.width}`],
           APPROVED_AXIS_TITLE_LAYOUT[`${result.name} @${result.width}`],

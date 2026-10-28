@@ -127,7 +127,7 @@ describe('renderStaticSVG', () => {
   it('produces deterministic IDs across calls', () => {
     const first = renderStaticSVG(lineSpec, { width: 640, height: 420 });
     const second = renderStaticSVG(lineSpec, { width: 640, height: 420 });
-    const idPattern = /id="oc-[a-z]+-\d+"/g;
+    const idPattern = /id="ocs-[a-z0-9]+-oc-[a-z-]+-\d+"/g;
     const firstIds = first.match(idPattern) ?? [];
     const secondIds = second.match(idPattern) ?? [];
     expect(firstIds).toEqual(secondIds);

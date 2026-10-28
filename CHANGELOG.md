@@ -33,6 +33,7 @@ Stable v9 release. Upgrade all six packages together and review [the v9 migratio
 - Add grouped bar lists, retained input ordering with `sort: null`, explicit value domains,
   x reference lines and label affixes. Fit nominal ticks, honor explicit legend
   suppression, and compose category/series names and values in labels.
+- Measure range end labels with the host text metrics (`measureText`) when provided.
 - Add `onMarkFocus` with a dedicated `MarkFocusEvent` carrying authored descriptions
   across vanilla and framework Chart wrappers.
 - Allow hosts to suppress generated live tables with `a11y.table: false`, remove static
@@ -175,6 +176,11 @@ Stable v9 release. Upgrade all six packages together and review [the v9 migratio
 - Unify builder/compiler field inference: sample up to 50 rows, require more than
   80% agreement, and recognize numeric strings before dates. Explicit field types
   remain authoritative.
+- Label normalized stacked bar and column segments with their share of the stack,
+  formatted `.0%` unless `labels.format` is set, whether or not `labels.content` is
+  given. rc.2 printed the raw field value.
+- Draw both leaves of an independent-y dual-axis layer into one plot rectangle, so
+  series share x positions and temporal columns stay inside the plot.
 
 ### Themes and migration
 

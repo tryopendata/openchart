@@ -75,6 +75,8 @@ A value column is for simple horizontal bars with one value per category. It is 
 
 Dot/lollipop, range and pie marks reject explicit placement at `/labels/placement`; their existing label configuration remains supported.
 
+On a normalized stack (`stack: 'normalize'`), segment labels now show each segment's share of its stack, formatted `.0%` unless you set `labels.format`. Earlier releases printed the raw field value, which disagreed with the percent axis. Set `labels.format` to change the share format; there is no option to restore raw values on a normalized stack.
+
 ### Optional bar row inspection
 
 Pass `{ rowHover: true }` to `createChart` or the `rowHover` prop on any Chart wrapper. Pointer inspection spans the category, plot and value-column zones; the existing keyboard navigation highlights the same row. It applies to simple horizontal bars, and yields to editing. Omission adds no hover presentation. Grouped, stacked, layered and faceted charts retain their existing behavior. The highlight is transient and does not appear in settled chart exports.

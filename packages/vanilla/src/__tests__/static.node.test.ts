@@ -1,11 +1,11 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { Worker } from 'node:worker_threads';
 import { describe, expect, it } from 'vitest';
 import { barSpec, lineSpec } from '../__test-fixtures__/specs';
 import { createIdScope } from '../render-context';
-import { __renderStaticParts, renderStaticSVG } from '../static';
+import { renderStaticSVG } from '../static';
 import { roundGeometryValue, StaticElement, StaticText, serialize } from '../static-dom';
+import { renderStaticParts } from '../static-render';
 
 describe('DOM-free static rendering', () => {
   it('renders fixture goldens without a DOM', async () => {
@@ -45,9 +45,9 @@ describe('DOM-free static rendering', () => {
     expect(globalThis.window).toBeUndefined();
   });
   it('keeps paused renders and A-B-A render order independent', async () => {
-    const a = __renderStaticParts(lineSpec, { idPrefix: 'a' });
+    const a = renderStaticParts(lineSpec, { idPrefix: 'a' });
     await Promise.resolve();
-    const b = __renderStaticParts(barSpec, { idPrefix: 'b' });
+    const b = renderStaticParts(barSpec, { idPrefix: 'b' });
     await Promise.resolve();
     expect(a.serialize()).toBe(renderStaticSVG(lineSpec, { idPrefix: 'a' }));
     expect(b.serialize()).toBe(renderStaticSVG(barSpec, { idPrefix: 'b' }));
@@ -84,6 +84,35 @@ describe('DOM-free static rendering', () => {
     expect(roundGeometryValue(input, 3)).toBe(expected);
     expect(roundGeometryValue(input, null)).toBe(input);
   });
+  it('rounds unitless geometry but keeps unit lengths such as em baseline shifts', () => {
+    const root = new StaticElement('svg');
+    const text = root.appendChild(new StaticElement('text'));
+    text.setAttribute('x', '10.46');
+    text.setAttribute('dy', '0.35em');
+    text.appendChild(new StaticElement('tspan')).setAttribute('dx', '0.71em');
+    root.appendChild(new StaticElement('rect')).setAttribute('width', '12.5%');
+    expect(serialize(root, { precision: 0 })).toBe(
+      '<svg xmlns="http://www.w3.org/2000/svg"><text x="10" dy="0.35em"><tspan dx="0.71em"/></text><rect width="12.5%"/></svg>',
+    );
+    expect(roundGeometryValue('0.71em', 1)).toBe('0.71em');
+    expect(roundGeometryValue('M1.26 2.24L3.25 4Z', 1)).toBe('M1.3 2.2L3.3 4Z');
+  });
+  it('matches descendant and child combinators like the DOM', () => {
+    const root = new StaticElement('svg');
+    const group = root.appendChild(new StaticElement('g'));
+    group.setAttribute('class', 'oc-legend');
+    const inner = group.appendChild(new StaticElement('g'));
+    const text = inner.appendChild(new StaticElement('text'));
+    text.setAttribute('data-label', 'a b > c');
+    expect(root.querySelectorAll('svg > g').length).toBe(1);
+    expect(root.querySelectorAll('.oc-legend > g')).toEqual([inner]);
+    expect(root.querySelectorAll('.oc-legend>text')).toEqual([]);
+    expect(root.querySelectorAll('.oc-legend text')).toEqual([text]);
+    expect(root.querySelectorAll('svg > g > g > text')).toEqual([text]);
+    expect(text.matches('g > [data-label="a b > c"]')).toBe(true);
+    expect(text.closest('svg > .oc-legend')).toBe(group);
+    expect(() => root.querySelectorAll('g + g')).toThrow('Unsupported static selector');
+  });
   it('serializes styles and namespace transitions in declaration order', () => {
     const root = new StaticElement('svg');
     root.style.height = '20px';
@@ -98,6 +127,7 @@ describe('DOM-free static rendering', () => {
     const sourceRoot = path.resolve(import.meta.dirname, '..');
     const paths = [
       'static.ts',
+      'static-render.ts',
       'svg-renderer.ts',
       'barlist-renderer.ts',
       'theme-tokens.ts',
@@ -128,7 +158,7 @@ describe('DOM-free static rendering', () => {
       'renderers/legend.ts',
       'renderers/marks.ts',
       'renderers/svg-dom.ts',
-      'static.ts',
+      'static-render.ts',
       'svg-renderer.ts',
       'theme-tokens.ts',
       'tilemap-renderer.ts',
@@ -151,31 +181,4 @@ describe('DOM-free static rendering', () => {
       );
     }
   });
-  it('renders forty specs deterministically in eight built-JavaScript workers', async () => {
-    const specs = Array.from({ length: 40 }, (_, i) => ({
-      ...barSpec,
-      chrome: { title: `Worker figure ${i}` },
-    }));
-    const expected = specs.map((spec) => renderStaticSVG(spec));
-    const entry = new URL('../../dist/static.js', import.meta.url).href;
-    const batches = await Promise.all(
-      Array.from(
-        { length: 8 },
-        () =>
-          new Promise<string[]>((resolve, reject) => {
-            const worker = new Worker(
-              `const { parentPort, workerData } = require('node:worker_threads'); import(workerData.entry).then(({renderStaticSVG}) => parentPort.postMessage(workerData.specs.map(spec => renderStaticSVG(spec)))).catch(error => { throw error });`,
-              { eval: true, workerData: { specs, entry } },
-            );
-            worker.once('message', resolve);
-            worker.once('error', reject);
-            worker.once('exit', (code) => {
-              if (code) reject(new Error(`Worker exited ${code}`));
-            });
-          }),
-      ),
-    );
-    for (const batch of batches) expect(batch).toEqual(expected);
-    expect(new Set(batches.flat()).size).toBe(40);
-  }, 30000);
 });

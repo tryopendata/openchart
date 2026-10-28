@@ -36,6 +36,17 @@ import type { BarLabelPlacement } from './label-plan';
 // Helpers
 // ---------------------------------------------------------------------------
 
+/** Sum of each stack's positive segment values, keyed by stack group. */
+export function stackTotals(marks: RectMark[], valueField: string): Map<string, number> {
+  const totals = new Map<string, number>();
+  for (const mark of marks) {
+    if (mark.stackGroup === undefined) continue;
+    const value = Math.max(0, Number(mark.data[valueField]) || 0);
+    totals.set(mark.stackGroup, (totals.get(mark.stackGroup) ?? 0) + value);
+  }
+  return totals;
+}
+
 /** Suffix multipliers mirroring core's abbreviateNumber output (K/M/B/T). */
 const SUFFIX_MULTIPLIERS: Record<string, number> = {
   K: 1_000,
@@ -107,7 +118,8 @@ export function computeBarLabels(
   options: {
     content?: EndpointLabelContent;
     labelField?: string;
-    normalize?: boolean;
+    /** Per-stack totals of a normalized stack; labels then show each segment's share. */
+    stackTotals?: Map<string, number>;
     placement?: BarLabelPlacement;
     columnWidth?: number;
     measureText?: MeasureTextFn;
@@ -137,10 +149,8 @@ export function computeBarLabels(
     // due to abbreviation rounding, e.g. 1955 → "2K" → 2000).
     let valuePart: string;
     let rawNum = valueField != null ? Number(mark.data[valueField]) : NaN;
-    if (options.normalize && mark.stackGroup !== undefined && valueField) {
-      const total = marks
-        .filter((other) => other.stackGroup === mark.stackGroup)
-        .reduce((sum, other) => sum + Math.max(0, Number(other.data[valueField]) || 0), 0);
+    if (options.stackTotals && mark.stackGroup !== undefined) {
+      const total = options.stackTotals.get(mark.stackGroup) ?? 0;
       rawNum = total > 0 ? rawNum / total : 0;
     }
 

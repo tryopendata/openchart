@@ -7,6 +7,7 @@
 import type { Mark } from '@opendata-ai/openchart-core';
 import { resolveFieldFormatter } from '../../format/field-format';
 import { filterByDensity } from '../_shared/density-filter';
+import { stackTotals } from '../bar/labels';
 import type { ChartRenderer } from '../registry';
 import { computeColumnMarks } from './compute';
 import { computeColumnLabels } from './labels';
@@ -30,16 +31,20 @@ export const columnRenderer: ChartRenderer = (
   // Compute and attach value labels (respects spec.labels.density)
   const valueField =
     spec.encoding?.y && 'field' in spec.encoding.y ? spec.encoding.y.field : undefined;
+  // A normalized stack labels each segment with its share of the stack,
+  // formatted as a percent like the normalized axis unless a format is set.
+  const totals =
+    valueField && spec.encoding.y?.stack === 'normalize'
+      ? stackTotals(marks, valueField)
+      : undefined;
   const labelFormatter = resolveFieldFormatter({
-    surfaceFormat: spec.labels.format,
+    surfaceFormat: spec.labels.format || (totals ? '.0%' : undefined),
     channelFormat:
       spec.encoding?.y && 'format' in spec.encoding.y ? spec.encoding.y.format : undefined,
     values:
-      valueField && spec.labels.content !== undefined && spec.encoding.y?.stack === 'normalize'
+      valueField && totals
         ? marks.map((mark) => {
-            const total = marks
-              .filter((other) => other.stackGroup === mark.stackGroup)
-              .reduce((sum, other) => sum + Math.max(0, Number(other.data[valueField]) || 0), 0);
+            const total = totals.get(mark.stackGroup ?? '') ?? 0;
             return total > 0 ? Number(mark.data[valueField]) / total : 0;
           })
         : valueField
@@ -61,7 +66,7 @@ export const columnRenderer: ChartRenderer = (
     {
       content: spec.labels.content,
       labelField: spec.encoding.x?.field,
-      normalize: spec.labels.content !== undefined && spec.encoding.y?.stack === 'normalize',
+      stackTotals: totals,
       placement: labelPlan?.placement ?? spec.labels.placement,
       columnWidth: labelPlan?.columnWidth,
       measureText: spec.labels.placement ? measureText : undefined,

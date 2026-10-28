@@ -34,6 +34,39 @@ describe('authored label content', () => {
     );
     expect(narrow.marks.filter((mark) => mark.type === 'rect')[1].label?.visible).toBe(false);
   });
+  it.each([
+    'bar',
+    'column',
+  ] as const)('labels normalized %s segments with shares whether or not content is authored', (orientation) => {
+    const value = { field: 'count', type: 'quantitative', stack: 'normalize' };
+    const category = { field: 'dependency', type: 'nominal' };
+    const textFor = (labels: Record<string, unknown>) =>
+      compileChart(
+        {
+          data: [
+            { dependency: 'runtime', major: 'v1', count: 17 },
+            { dependency: 'runtime', major: 'v2', count: 3 },
+            { dependency: 'build', major: 'v1', count: 5 },
+            { dependency: 'build', major: 'v2', count: 5 },
+          ],
+          mark: 'bar',
+          encoding:
+            orientation === 'bar'
+              ? { x: value, y: category, color: { field: 'major', type: 'nominal' } }
+              : { y: value, x: category, color: { field: 'major', type: 'nominal' } },
+          labels: { density: 'all', ...labels },
+        },
+        options,
+      )
+        .marks.filter((mark) => mark.type === 'rect')
+        .map((mark) => mark.label?.text);
+    const expected = ['85%', '15%', '50%', '50%'];
+    expect(textFor({})).toEqual(expected);
+    expect(textFor({ content: 'value' })).toEqual(expected);
+    expect(textFor({ placement: 'inside' })).toEqual(expected);
+    expect(textFor({ placement: 'inside', content: 'value' })).toEqual(expected);
+    expect(textFor({ format: '.1%' })[0]).toBe('85.0%');
+  });
   for (const style of ['bar', 'dumbbell', 'arrow'])
     it(`${style} range composes endpoint channel titles and suffix`, () => {
       const layout = compileChart(
@@ -58,6 +91,25 @@ describe('authored label content', () => {
           .every((mark) => mark.aria.decorative),
       ).toBe(true);
     });
+  it('keeps rc.2 dumbbell labels without content free of the label suffix', () => {
+    const layout = compileChart(
+      {
+        data: [{ row: 'one', start: 42, end: 58 }],
+        mark: 'range',
+        encoding: {
+          x: { field: 'start', type: 'quantitative', format: '.0f' },
+          x2: { field: 'end' },
+          y: { field: 'row', type: 'nominal' },
+        },
+        labels: { density: 'all', format: '.0f', suffix: '%' },
+      },
+      options,
+    );
+    const texts = layout.marks.flatMap((mark) =>
+      mark.type === 'point' && mark.label ? [mark.label.text] : [],
+    );
+    expect(texts).toEqual(['42', '58']);
+  });
   for (const width of [330, 360, 680])
     it(`reserves measured range-end labels inside a ${width}px figure`, () => {
       const measureText = (text: string) => ({ width: text.length * 8, height: 13 });

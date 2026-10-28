@@ -35,8 +35,9 @@ import { authoredTitleFootprint, isYAxisHeader } from '../layout/axis-title-plan
 import { getSparklinePad, NO_REFERENCE_RESERVE, outsideBudget } from '../layout/budget';
 import type { MeasureFn } from '../layout/plan';
 import { createMeasureFn } from '../layout/plan';
-import { computeScales } from '../layout/scales';
+import { computeScales, resolveTemporalScaleType } from '../layout/scales';
 import { resolveChromeLayout } from '../layout/shared';
+import { resolveTemporalInterval } from '../layout/temporal-interval';
 import { scopeTooltipContent } from '../tooltips/metadata';
 import type { InternalCompileOptions, LeafContext } from './internal-options';
 import { prepareChartSpec } from './prepare';
@@ -468,6 +469,10 @@ function compileLayerIndependent(
     });
   }
 
+  // The secondary leaf draws its y labels on the right, so its x range takes
+  // the primary's inline-label inset rather than one measured from its own ticks.
+  const primaryInlineInset = leaf0Budget.plan?.inlineYLabelInset ?? 0;
+
   // Endpoint columns belong to the assembled figure. Both axes must use the
   // same plot rectangle, with the trailing column outside the right axis.
   const columns = [layout0.endpointLabels, layout1.endpointLabels].filter(
@@ -521,7 +526,10 @@ function compileLayerIndependent(
       noteReserve: noteReserve(layout0),
     };
     layout0 = compileChart(primary0, { ...primaryOptions, frozenBudget });
-    layout1 = compileChart(primary1, { ...optionsWithReserve, frozenBudget });
+    layout1 = compileChart(primary1, {
+      ...optionsWithReserve,
+      frozenBudget: { ...frozenBudget, inlineYLabelInset: primaryInlineInset },
+    });
     // The compiler places right legends next to the plot. In this assembly
     // the right axis and endpoint column occupy that space first.
     const legendShift = rightReserve + layout0.theme.spacing.endpointColumnGap + endpointWidth;
@@ -549,17 +557,24 @@ function compileLayerIndependent(
       noteReserve: noteReserve(layout0),
     };
     layout0 = compileChart(primary0, { ...primaryOptions, frozenBudget });
-    layout1 = compileChart(primary1, { ...optionsWithReserve, frozenBudget });
+    layout1 = compileChart(primary1, {
+      ...optionsWithReserve,
+      frozenBudget: { ...frozenBudget, inlineYLabelInset: primaryInlineInset },
+    });
     layout0 = moveRightLegends(layout0, rightReserve);
     layout1 = moveRightLegends(layout1, rightReserve);
   } else if (!columns.length) {
     measure0.release();
-    if (noteReserve(layout0) > 0) {
-      layout1 = compileChart(primary1, {
-        ...optionsWithReserve,
-        frozenBudget: { chartArea: layout0.area, noteReserve: noteReserve(layout0) },
-      });
-    } else measure1.release();
+    // The secondary leaf's own y-axis ticks size its plot differently; draw
+    // it into the primary's plot so both leaves place x identically.
+    layout1 = compileChart(primary1, {
+      ...optionsWithReserve,
+      frozenBudget: {
+        chartArea: layout0.area,
+        noteReserve: noteReserve(layout0),
+        inlineYLabelInset: primaryInlineInset,
+      },
+    });
   }
 
   // Leaf 0's marks and axes take its merged theme. Its compile above used the
@@ -983,6 +998,22 @@ function withUnionXDomain(
       if (ms > maxMs) maxMs = ms;
     }
     if (minMs <= maxMs) {
+      // A temporal bar leaf would pad its own domain by half an interval so
+      // edge columns stay inside the plot; the pinned union must carry that pad.
+      for (const leaf of [leaf0, leaf1]) {
+        const mark = typeof leaf.mark === 'string' ? leaf.mark : leaf.mark.type;
+        const channel = leaf.encoding?.x;
+        if (mark !== 'bar' || channel?.type !== 'temporal' || channel.scale?.domain) continue;
+        const interval = resolveTemporalInterval(
+          channel,
+          leaf.data,
+          resolveTemporalScaleType(channel, leaf.data),
+        );
+        const start = new Date(minMs);
+        const end = new Date(maxMs);
+        minMs = Math.min(minMs, +start - (+interval.offset(start) - +start) / 2);
+        maxMs = Math.max(maxMs, +end + (+interval.offset(end) - +end) / 2);
+      }
       domain = [new Date(minMs).toISOString(), new Date(maxMs).toISOString()];
     }
   } else if (xType === 'quantitative') {
@@ -1162,6 +1193,23 @@ function computeSharedDomains(leaves: ChartSpec[], options: InternalCompileOptio
       )
     ) {
       shared[channel] = explicit.scale.domain;
+      continue;
+    }
+    // A temporal bar leaf pads its domain by half an interval so edge columns
+    // are whole; other leaves fit their raw extent. Share the union so every
+    // leaf places the same date at the same x.
+    if (
+      domains.some((scales) => scales[channel]?.temporalInterval) &&
+      prepared.every((spec) => spec.encoding[channel]?.type === 'temporal')
+    ) {
+      const times = domains
+        .flatMap((scales) => (scales[channel]?.scale.domain() ?? []).map(Number))
+        .filter(Number.isFinite);
+      if (times.length)
+        shared[channel] = [
+          new Date(Math.min(...times)).toISOString(),
+          new Date(Math.max(...times)).toISOString(),
+        ];
       continue;
     }
     if (!prepared.every((spec) => spec.encoding[channel]?.type === 'quantitative')) continue;

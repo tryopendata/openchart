@@ -81,19 +81,9 @@ export function attachMarkMetadata(
   warnings: string[],
 ): void {
   for (const mark of marks) {
-    if (
-      (sourceMarkType === 'range' && mark.type === 'point') ||
-      ((sourceMarkType === 'lollipop' || sourceMarkType === 'circle') && mark.type === 'rect')
-    )
-      mark.aria = { ...mark.aria, decorative: true };
     if (mark.aria.decorative) continue;
     const rows: DataRow[] = mark.type === 'line' || mark.type === 'area' ? mark.data : [mark.data];
     if (!rows.length) continue;
-    mark.markType =
-      (sourceMarkType === 'line' || sourceMarkType === 'area') && mark.type === 'point'
-        ? 'point'
-        : sourceMarkType;
-    mark.identity = identityForRows(encoding, rows);
     const description = descriptionForRows(
       encoding,
       rows,
@@ -104,5 +94,17 @@ export function attachMarkMetadata(
       mark.authoredDescription = description;
       mark.aria = { ...mark.aria, label: description };
     }
+    // Dumbbell heads and lollipop stems stay keyboard-navigable, so they keep
+    // the accessible label, but data-mark provenance belongs to the primary shape.
+    if (
+      (sourceMarkType === 'range' && mark.type === 'point') ||
+      ((sourceMarkType === 'lollipop' || sourceMarkType === 'circle') && mark.type === 'rect')
+    )
+      continue;
+    mark.markType =
+      (sourceMarkType === 'line' || sourceMarkType === 'area') && mark.type === 'point'
+        ? 'point'
+        : sourceMarkType;
+    mark.identity = identityForRows(encoding, rows);
   }
 }

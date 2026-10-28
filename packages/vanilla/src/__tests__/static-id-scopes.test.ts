@@ -1,11 +1,36 @@
 import { expect, it } from 'vitest';
 import { createContainer } from '../__test-fixtures__/dom';
 import { geoLabelSpec } from '../__test-fixtures__/geo-label-spec';
-import { lineSpec } from '../__test-fixtures__/specs';
+import { barSpec, lineSpec } from '../__test-fixtures__/specs';
 import { createGeoMap } from '../map-mount';
 import { createChart } from '../mount';
 import { createSankey } from '../sankey-mount';
 import { renderStaticSVG } from '../static';
+
+it('keeps unprefixed static ids apart from live charts and from other static figures', () => {
+  const live = createContainer();
+  const host = createContainer();
+  const chart = createChart(live, lineSpec, { autoResize: false });
+  try {
+    for (const spec of [lineSpec, barSpec, { ...lineSpec, chrome: { title: 'Other' } }])
+      host.insertAdjacentHTML('beforeend', renderStaticSVG(spec));
+    const ids = [...document.querySelectorAll('[id]')].map((node) => node.id);
+    expect(ids.length).toBeGreaterThan(3);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const svg of host.querySelectorAll('svg'))
+      for (const node of svg.querySelectorAll('[clip-path], [fill]')) {
+        const ref = /^url\(#(.+)\)$/.exec(
+          node.getAttribute('clip-path') ?? node.getAttribute('fill') ?? '',
+        )?.[1];
+        if (ref) expect(svg.querySelector(`[id="${ref}"]`), ref).not.toBeNull();
+      }
+    expect(renderStaticSVG(lineSpec)).toBe(renderStaticSVG(lineSpec));
+  } finally {
+    chart.destroy();
+    live.remove();
+    host.remove();
+  }
+});
 
 it('keeps all live figure ids disjoint across charts, maps and sankeys around static renders', () => {
   const sankey = {

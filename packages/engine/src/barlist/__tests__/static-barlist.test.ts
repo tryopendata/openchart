@@ -101,4 +101,52 @@ describe('static barlist contract', () => {
     expect(onWarn.mock.calls.flat().join(' ')).toContain(`${14 - capped.rows.length}`);
     expect(capped.warnings?.[0].context?.droppedCount).toBe(14 - capped.rows.length);
   });
+  it('keeps one row when an explicit height cannot fit any, and warns once per compile', () => {
+    const onWarn = vi.fn();
+    const { padding } = compileBarList(spec, options).theme.spacing;
+    // A positive plot area shorter than one row.
+    const height = padding * 2 + 8;
+    const layout = compileBarList({ ...spec, height }, { ...options, onWarn });
+    expect(layout.area.height).toBeLessThan(layout.rows[0]?.height ?? Infinity);
+    expect(layout.rows).toHaveLength(1);
+    expect(layout.rows[0].data.name).toBe('second');
+    expect(onWarn).toHaveBeenCalledTimes(1);
+    expect(layout.warnings?.[0].context?.droppedCount).toBe(3);
+  });
+  it('does not warn when the container, not an authored height, limits the rows', () => {
+    const onWarn = vi.fn();
+    const layout = compileBarList(spec, { ...options, height: 60, onWarn });
+    expect(layout.rows.length).toBeGreaterThanOrEqual(1);
+    expect(layout.rows.length).toBeLessThan(4);
+    expect(onWarn).not.toHaveBeenCalled();
+  });
+  it('drops reference lines outside the value domain, like chart reference lines resolve to nothing off-scale', () => {
+    const layout = compileBarList(
+      {
+        ...spec,
+        encoding: { ...spec.encoding, value: { field: 'value', scale: { domain: [1, 3] } } },
+        annotations: [
+          { type: 'refline', x: 10, label: 'Too high' },
+          { type: 'refline', x: 2 },
+          { type: 'refline', x: 0 },
+        ],
+      },
+      options,
+    );
+    expect(layout.referenceLines).toHaveLength(1);
+    const track = layout.rows[0].track;
+    expect(layout.referenceLines?.[0].x).toBeCloseTo(track.x + track.width / 2);
+    const inferred = compileBarList(
+      {
+        ...spec,
+        annotations: [
+          { type: 'refline', x: 5 },
+          { type: 'refline', x: 4 },
+        ],
+      },
+      options,
+    );
+    expect(inferred.referenceLines).toHaveLength(1);
+    expect(inferred.referenceLines?.[0].x).toBeCloseTo(track.x + track.width);
+  });
 });

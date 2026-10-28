@@ -97,6 +97,66 @@ describe('data mark shapes', () => {
       else expect(doc.querySelector('rect[data-mark]')).toBeNull();
     }
   });
+  it('keeps an accessible label on every keyboard-navigable mark', () => {
+    for (const mark of ['range', 'lollipop', 'circle'])
+      for (const description of [undefined, { value: 'span' }]) {
+        const host = document.createElement('div');
+        const layout = compileChart(
+          {
+            data,
+            mark,
+            encoding: {
+              x: { field: 'value', type: 'quantitative' },
+              x2: mark === 'range' ? { field: 'upper' } : undefined,
+              y: { field: 'category', type: 'nominal' },
+              description,
+            },
+          },
+          options,
+        );
+        renderChartSVG(layout, host, { animate: false });
+        const navigable = [...host.querySelectorAll('[data-mark-id]')].filter((el) =>
+          layout.tooltipDescriptors.has(el.getAttribute('data-mark-id') ?? ''),
+        );
+        expect(navigable.length).toBeGreaterThan(0);
+        for (const el of navigable) {
+          expect(el.getAttribute('aria-hidden')).toBeNull();
+          expect(el.getAttribute('aria-label')).toBeTruthy();
+          if (description) expect(el.getAttribute('aria-label')).toBe('span');
+        }
+      }
+  });
+  it('never derives data-series from an authored description', () => {
+    const rows = ['North', 'South'].flatMap((region) =>
+      data.map((row, i) => ({ ...row, region, text: `row ${i} ${region}` })),
+    );
+    for (const mark of [{ type: 'line', point: true }, 'bar'] as const) {
+      const host = document.createElement('div');
+      const layout = compileChart(
+        {
+          data: rows,
+          mark,
+          encoding: {
+            ...(mark === 'bar'
+              ? {
+                  x: { field: 'value', type: 'quantitative' },
+                  y: { field: 'day', type: 'nominal' },
+                }
+              : { x: encoding.x, y: encoding.y }),
+            color: { field: 'region', type: 'nominal' },
+            description: { field: 'text' },
+          },
+        },
+        options,
+      );
+      renderChartSVG(layout, host, { animate: false });
+      const series = [...host.querySelectorAll('.oc-marks > [data-series]')].map((el) =>
+        el.getAttribute('data-series'),
+      );
+      expect(series.length).toBeGreaterThan(0);
+      for (const value of series) expect(['North', 'South']).toContain(value);
+    }
+  });
   it("renders the time-to-green layer's composed range labels without giving its tick a label", () => {
     const doc = parse(renderStaticSVG(siteSpecs.timeToGreen, options));
     const labels = [...doc.querySelectorAll('text')].map((label) => label.textContent);

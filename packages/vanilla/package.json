@@ -62,6 +62,7 @@
   "scripts": {
     "build": "tsup && bun build src/graph/simulation-worker.ts --outfile dist/simulation-worker.js --target=browser --format=iife",
     "test": "vitest run",
+    "test:static": "vitest run --config vitest.static.config.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

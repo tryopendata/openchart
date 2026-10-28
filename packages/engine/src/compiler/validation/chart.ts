@@ -47,7 +47,9 @@ export function validateChartSpec(spec: Record<string, unknown>, errors: Validat
             ['day', 'week', 'month', 'quarter', 'year'].includes(interval);
       if (
         !validValue ||
-        !['bar', 'rect', 'errorbar'].includes(String(markType)) ||
+        // Only bar marks size columns from the interval; rect cells and
+        // errorbar whiskers ignore it, so accepting it there would be a no-op.
+        markType !== 'bar' ||
         !['x', 'y', 'x2', 'y2'].includes(name) ||
         channel.type !== 'temporal'
       )
@@ -55,9 +57,9 @@ export function validateChartSpec(spec: Record<string, unknown>, errors: Validat
           code: 'INVALID_VALUE',
           path: jsonPointer('encoding', name, 'interval'),
           message:
-            'interval requires a temporal position channel of bar, rect or errorbar and a calendar unit or finite positive milliseconds.',
+            'interval requires a temporal position channel of a bar mark and a calendar unit or finite positive milliseconds.',
           suggestion:
-            'Use day, week, month, quarter, year, or a positive millisecond interval on a temporal position channel.',
+            'Use day, week, month, quarter, year, or a positive millisecond interval on a temporal position channel of a bar mark.',
         });
     }
   }
