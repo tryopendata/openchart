@@ -93,7 +93,7 @@ export function validateBarListSpec(
   }
 
   // Validate optional encoding channels
-  for (const channel of ['subtitle', 'color', 'tooltip'] as const) {
+  for (const channel of ['subtitle', 'color', 'tooltip', 'group', 'description'] as const) {
     const ch = encoding[channel] as Record<string, unknown> | undefined;
     if (!ch) continue;
     const field = ch.field;
@@ -105,6 +105,86 @@ export function validateBarListSpec(
         suggestion: `Use one of the available data columns: ${availableColumns}.${didYouMean(field, columnList)}`,
       });
     }
+  }
+
+  if (
+    spec.sort !== undefined &&
+    spec.sort !== null &&
+    spec.sort !== 'ascending' &&
+    spec.sort !== 'descending'
+  )
+    errors.push({
+      code: 'INVALID_TYPE',
+      path: '/sort',
+      message: 'Bar list sort must be ascending, descending, or null.',
+      suggestion: 'Set sort to ascending, descending, or null.',
+    });
+  if (
+    spec.height !== undefined &&
+    spec.height !== 'auto' &&
+    (typeof spec.height !== 'number' || !Number.isFinite(spec.height) || spec.height <= 0)
+  )
+    errors.push({
+      code: 'INVALID_TYPE',
+      path: '/height',
+      message: 'Bar list height must be a positive number or auto.',
+      suggestion: 'Use height: auto to fit every row, or a positive pixel height.',
+    });
+  const group = encoding.group as Record<string, unknown> | undefined;
+  if (
+    group &&
+    (!group.field ||
+      typeof group.field !== 'string' ||
+      (group.type !== undefined && group.type !== 'nominal' && group.type !== 'ordinal'))
+  )
+    errors.push({
+      code: 'INVALID_TYPE',
+      path: '/encoding/group',
+      message: 'Bar list group must name a nominal or ordinal field.',
+      suggestion: 'Set encoding.group to a field with type nominal or ordinal.',
+    });
+  const domain = (
+    (encoding.value as Record<string, unknown>)?.scale as Record<string, unknown> | undefined
+  )?.domain;
+  if (
+    domain !== undefined &&
+    (!Array.isArray(domain) ||
+      domain.length !== 2 ||
+      !domain.every((value) => typeof value === 'number' && Number.isFinite(value)) ||
+      domain[1] <= domain[0])
+  )
+    errors.push({
+      code: 'INVALID_TYPE',
+      path: '/encoding/value/scale/domain',
+      message: 'Bar list value domain must be two finite numbers in increasing order.',
+      suggestion: 'Use a numeric domain such as [0, 1] with lower bound below upper bound.',
+    });
+  if (spec.annotations !== undefined) {
+    if (!Array.isArray(spec.annotations))
+      errors.push({
+        code: 'INVALID_TYPE',
+        path: '/annotations',
+        message: 'Bar list annotations must be an array of vertical reference lines.',
+        suggestion: 'Use annotations: [{ type: refline, x: 1 }].',
+      });
+    else
+      spec.annotations.forEach((annotation, index) => {
+        const item = annotation as Record<string, unknown> | null;
+        if (
+          !item ||
+          item.type !== 'refline' ||
+          typeof item.x !== 'number' ||
+          !Number.isFinite(item.x) ||
+          item.y !== undefined
+        )
+          errors.push({
+            code: 'INVALID_TYPE',
+            path: `/annotations/${index}`,
+            message:
+              'Bar list annotations require type refline and a finite numeric x; y is not supported.',
+            suggestion: 'Use { type: refline, x: 1 } and remove y.',
+          });
+      });
   }
 
   // Barlist never reads scale.scheme: bars cycle the built-in barlist palette

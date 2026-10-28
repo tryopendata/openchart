@@ -1,3 +1,4 @@
+import { ERRORBAR_CAP_LENGTH } from '../charts/errorbar/constants';
 /**
  * Figure budget: every reserve the layout makes for authored content.
  *
@@ -295,7 +296,7 @@ const PLOT_SHARE_MAX = 0.4;
  * `true | 'endpoints' | 'transparent'` on both. This keeps tiny sparklines
  * flush left when the endpoint dot only renders at the right edge.
  */
-function getSparklinePad(spec: NormalizedChartSpec): {
+export function getSparklinePad(spec: Pick<NormalizedChartSpec, 'markDef' | 'markType'>): {
   left: number;
   right: number;
   top: number;
@@ -304,7 +305,13 @@ function getSparklinePad(spec: NormalizedChartSpec): {
   const strokeWidth = (spec.markDef as { strokeWidth?: number }).strokeWidth ?? 2;
   const point = (spec.markDef as { point?: unknown }).point;
   const strokePad = Math.max(strokeWidth / 2 + 1, 2);
-  const dotPad = 4; // r=3.5 + 0.5 — matches the terminator dot size
+  const radius = spec.markType === 'point' ? (spec.markDef.size ?? 4) : 0;
+  const cap =
+    spec.markType === 'errorbar' && spec.markDef.ticks
+      ? ERRORBAR_CAP_LENGTH / 2 + strokeWidth / 2
+      : 0;
+  const shapePad = Math.max(strokePad, radius > 3.5 ? radius + 0.5 : 0, cap);
+  const dotPad = 4; // existing endpoint-dot reserve
 
   const dotRight =
     point === 'last' || point === true || point === 'endpoints' || point === 'transparent';
@@ -313,10 +320,10 @@ function getSparklinePad(spec: NormalizedChartSpec): {
   const hasDots = dotRight || dotLeft;
 
   return {
-    left: dotLeft ? Math.max(strokePad, dotPad) : strokePad,
-    right: dotRight ? Math.max(strokePad, dotPad) : strokePad,
-    top: hasDots ? Math.max(strokePad, dotPad) : strokePad,
-    bottom: hasDots ? Math.max(strokePad, dotPad) : strokePad,
+    left: dotLeft ? Math.max(shapePad, dotPad) : shapePad,
+    right: dotRight ? Math.max(shapePad, dotPad) : shapePad,
+    top: hasDots ? Math.max(shapePad, dotPad) : shapePad,
+    bottom: hasDots ? Math.max(shapePad, dotPad) : shapePad,
   };
 }
 
@@ -395,7 +402,7 @@ export function resolveFigureBudget(
   // reservations, annotation reservations, and legend reservations unless the
   // user opted in to those individually.
   if (spec.display === 'sparkline') {
-    const sparkPad = getSparklinePad(spec);
+    const sparkPad = options.sparklinePad ?? getSparklinePad(spec);
 
     // Axis space only when user explicitly set encoding.x/y.axis.
     const xAxisSpace = userExplicit.xAxis ? 26 : 0;
@@ -424,6 +431,9 @@ export function resolveFigureBudget(
     };
     if (legend && (legendLayout.position === 'right' || legendLayout.position === 'bottom-right'))
       margins.right += legendLayout.bounds.width + 8;
+
+    margins.left = spec.frame?.left ?? margins.left;
+    margins.right = spec.frame?.right ?? margins.right;
 
     const chartArea: Rect = {
       x: margins.left,

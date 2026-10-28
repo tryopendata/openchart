@@ -7,6 +7,8 @@ const source = {
   data: [
     { x: 'same', y: 5, s: '5', extra: 'same' },
     { x: 'next', y: 7, s: 'other', extra: 'same' },
+    { x: 'end', y: 6, s: '5', extra: 'same' },
+    { x: 'last', y: 8, s: 'other', extra: 'same' },
   ],
   encoding: {
     x: { field: 'x', type: 'ordinal' },

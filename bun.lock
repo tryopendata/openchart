@@ -45,7 +45,7 @@
     },
     "packages/core": {
       "name": "@opendata-ai/openchart-core",
-      "version": "8.8.0",
+      "version": "9.0.0-rc.2",
       "dependencies": {
         "d3-color": "^3.1.0",
         "d3-format": "^3.1.0",
@@ -61,7 +61,7 @@
     },
     "packages/engine": {
       "name": "@opendata-ai/openchart-engine",
-      "version": "8.8.0",
+      "version": "9.0.0-rc.2",
       "dependencies": {
         "@opendata-ai/openchart-core": "workspace:*",
         "d3-array": "^3.2.0",
@@ -89,7 +89,7 @@
     },
     "packages/react": {
       "name": "@opendata-ai/openchart-react",
-      "version": "8.8.0",
+      "version": "9.0.0-rc.2",
       "dependencies": {
         "@opendata-ai/openchart-core": "workspace:*",
         "@opendata-ai/openchart-engine": "workspace:*",
@@ -108,7 +108,7 @@
     },
     "packages/svelte": {
       "name": "@opendata-ai/openchart-svelte",
-      "version": "8.8.0",
+      "version": "9.0.0-rc.2",
       "dependencies": {
         "@opendata-ai/openchart-core": "workspace:*",
         "@opendata-ai/openchart-engine": "workspace:*",
@@ -127,7 +127,7 @@
     },
     "packages/vanilla": {
       "name": "@opendata-ai/openchart-vanilla",
-      "version": "8.8.0",
+      "version": "9.0.0-rc.2",
       "dependencies": {
         "@floating-ui/dom": "^1.7.6",
         "@opendata-ai/openchart-core": "workspace:*",
@@ -150,21 +150,19 @@
       "peerDependencies": {
         "3d-force-graph": ">=1.80.0",
         "gifenc": ">=1.0.0",
-        "happy-dom": ">=14.0.0",
         "three": ">=0.179 <1",
         "three-spritetext": ">=1.9.0",
       },
       "optionalPeers": [
         "3d-force-graph",
         "gifenc",
-        "happy-dom",
         "three",
         "three-spritetext",
       ],
     },
     "packages/vue": {
       "name": "@opendata-ai/openchart-vue",
-      "version": "8.8.0",
+      "version": "9.0.0-rc.2",
       "dependencies": {
         "@opendata-ai/openchart-core": "workspace:*",
         "@opendata-ai/openchart-engine": "workspace:*",

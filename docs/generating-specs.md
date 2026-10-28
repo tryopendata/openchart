@@ -23,7 +23,7 @@ export (not the main barrel, so a large JSON never lands in a consumer bundle):
 | Import | Covers | Use for |
 |--------|--------|---------|
 | `@opendata-ai/openchart-core/schema` | Full `VizSpec` union (every spec kind) | Plain, non-strict tool `input_schema` |
-| `@opendata-ai/openchart-core/schema/chart.schema.json` | `ChartSpec` (all 18 marks) | The LLM chart workhorse; strict-mode subset |
+| `@opendata-ai/openchart-core/schema/chart.schema.json` | `ChartSpec` (all 19 marks) | The LLM chart workhorse; strict-mode subset |
 | `@opendata-ai/openchart-core/schema/table.schema.json` | `TableSpec` | Data tables; strict-mode subset |
 
 The schemas are draft-07 and generated directly from the TypeScript spec types,
@@ -36,7 +36,7 @@ import chartSchema from '@opendata-ai/openchart-core/schema/chart.schema.json' w
 
 ## Which schema to use
 
-- **Charts** (bar, line, area, point, arc, and the rest of the 18 marks): use
+- **Charts** (bar, line, area, point, arc, and the rest of the 19 marks): use
   `chart.schema.json`. It is the primary generation surface.
 - **Tables**: use `table.schema.json`.
 - **Anything, or "let the model pick the visualization"**: use the full VizSpec

@@ -9344,3 +9344,51 @@ export const APPROVED_B3_MAP_LAYOUT: typeof APPROVED_MAP_KEY_PLACEMENT = {
     style: {},
   },
 };
+
+/** R14: exact x/cx corrections for this composed scatter/text fixture only. */
+export const APPROVED_R14_SHARED_AXIS: typeof APPROVED_PRE_RFC_LAYOUT = {
+  '../gallery/charts-building-blocks.stories.tsx.composedSpecForPanel @390': {
+    reason:
+      'R14 shared-axis correction: v8 displayed the niced GDP domain [0.8, 4] but placed these points and labels on raw [0.8, 3.9]. Their x coordinates now use the displayed axis; y, styles and the released oracle stay unchanged.',
+    changes: {
+      marks: {
+        '0.cx': [376, 365.81],
+        '1.cx': [239.29, 233.38],
+        '2.cx': [186.71, 182.44],
+        '3.cx': [134.13, 131.5],
+        '4.cx': [81.55, 80.56],
+        '5.cx': [71.03, 70.38],
+        '6.cx': [60.52, 60.19],
+        '10.x': [376, 365.81],
+        '11.x': [239.29, 233.38],
+        '12.x': [186.71, 182.44],
+        '13.x': [134.13, 131.5],
+        '14.x': [81.55, 80.56],
+        '15.x': [71.03, 70.38],
+        '16.x': [60.52, 60.19],
+      },
+    },
+  },
+  '../gallery/charts-building-blocks.stories.tsx.composedSpecForPanel @1280': {
+    reason:
+      'R14 shared-axis correction: v8 displayed the niced GDP domain [0.8, 4] but placed these points and labels on raw [0.8, 3.9]. Their x coordinates now use the displayed axis; y, styles and the released oracle stay unchanged.',
+    changes: {
+      marks: {
+        '0.cx': [1257, 1220],
+        '1.cx': [760.48, 739],
+        '2.cx': [569.52, 554],
+        '3.cx': [378.55, 369],
+        '4.cx': [187.58, 184],
+        '5.cx': [149.39, 147],
+        '6.cx': [111.19, 110],
+        '10.x': [1257, 1220],
+        '11.x': [760.48, 739],
+        '12.x': [569.52, 554],
+        '13.x': [378.55, 369],
+        '14.x': [187.58, 184],
+        '15.x': [149.39, 147],
+        '16.x': [111.19, 110],
+      },
+    },
+  },
+};

@@ -18,7 +18,10 @@ function leaf(
     mark,
     zIndex,
     animation: false,
-    data: [{ id: 'same-key', series: 'Shared', name, x: 1, value }],
+    data: [
+      { id: 'same-key', series: 'Shared', name, x: 1, value },
+      ...(mark === 'point' ? [] : [{ id: 'next-key', series: 'Shared', name, x: 2, value }]),
+    ],
     encoding: {
       key: { field: 'id', type: 'nominal' },
       x: { field: 'x', type: mark === 'point' ? 'quantitative' : 'ordinal' },

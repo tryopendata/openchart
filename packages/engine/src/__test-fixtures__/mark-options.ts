@@ -16,6 +16,7 @@ export const MARK_CONTRACT_TYPES = [
   'lollipop',
   'beeswarm',
   'range',
+  'errorbar',
   'waffle',
   'calendar',
   'parliament',
@@ -24,6 +25,7 @@ export const MARK_CONTRACT_TYPES = [
 ] as const satisfies readonly MarkType[];
 
 export const MARK_OPTION_CASES = {
+  ticks: { value: true, marks: ['errorbar'] },
   orient: { value: 'horizontal', marks: ['bar', 'histogram'] },
   cornerRadius: { value: 3, marks: ['bar', 'rect', 'histogram', 'waffle'] },
   point: { value: true, marks: ['line', 'area', 'density'] },

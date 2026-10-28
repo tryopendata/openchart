@@ -201,9 +201,8 @@ describe('computeLineMarks', () => {
       const scales = computeScales(spec, chartArea, spec.data);
       const marks = computeLineMarks(spec, scales, chartArea, fullStrategy);
 
-      const lineMark = marks.find((m): m is LineMark => m.type === 'line')!;
-      // null value is excluded, so only 2 valid points remain
-      expect(lineMark.points).toHaveLength(2);
+      expect(marks.filter((mark) => mark.type === 'line')).toHaveLength(0);
+      expect(marks.filter((mark) => mark.type === 'point')).toHaveLength(2);
     });
 
     it('produces point marks only for valid data points', () => {
@@ -334,11 +333,10 @@ describe('computeLineMarks', () => {
       const scales = computeScales(spec, chartArea, spec.data);
       const marks = computeLineMarks(spec, scales, chartArea, fullStrategy);
 
-      const lineMark = marks.find((m): m is LineMark => m.type === 'line')!;
-      // Null is excluded, so only 2 valid points
-      expect(lineMark.points).toHaveLength(2);
-      // The two valid points should still be left-to-right
-      expect(lineMark.points[1].x).toBeGreaterThan(lineMark.points[0].x);
+      expect(marks.filter((mark) => mark.type === 'line')).toHaveLength(0);
+      const points = marks.filter((mark): mark is PointMark => mark.type === 'point');
+      expect(points).toHaveLength(2);
+      expect(points[1].cx).toBeGreaterThan(points[0].cx);
     });
 
     it('produces identical output for already-sorted data', () => {
@@ -1087,18 +1085,19 @@ describe('line and area numeric observations', () => {
     ];
     const scales = computeScales(spec, chartArea, spec.data);
     const marks = computeLineMarks(spec, scales, chartArea, fullStrategy);
-    const line = marks.find((mark) => mark.type === 'line')!;
-    expect(line.data).toHaveLength(2);
-    expect(line.path.match(/M/g)).toHaveLength(2);
+    expect(marks.filter((mark) => mark.type === 'line')).toHaveLength(0);
+    const points = marks.filter((mark): mark is PointMark => mark.type === 'point');
+    expect(points.map((point) => point.data.x)).toEqual([0, 2]);
+    expect(points.every((point) => Number.isFinite(point.cx) && Number.isFinite(point.cy))).toBe(
+      true,
+    );
     const areas = computeAreaMarks(
       { ...spec, markType: 'area', markDef: { type: 'area' } },
       scales,
       chartArea,
       fullStrategy,
     );
-    expect(areas[0].data).toHaveLength(2);
-    expect(areas[0].path.match(/M/g)).toHaveLength(2);
-    expect(areas[0].path).not.toMatch(/NaN|Infinity/);
+    expect(areas).toHaveLength(0);
   });
 
   it('leaves a shared gap in a stack when an authored boundary observation is missing', () => {
@@ -1115,14 +1114,7 @@ describe('line and area numeric observations', () => {
     );
     const scales = computeScales(spec, chartArea, spec.data);
     const marks = computeAreaMarks(spec, scales, chartArea, fullStrategy);
-    expect(marks).toHaveLength(2);
-    for (const mark of marks) {
-      expect(mark.data.map((row) => row.x)).toEqual([0, 2]);
-      expect(mark.dataPoints?.map((point) => point.datum.x)).toEqual([0, 2]);
-      expect(mark.pointKeys).toHaveLength(2);
-      expect(mark.path.match(/M/g)).toHaveLength(2);
-      expect(mark.path).not.toMatch(/NaN|Infinity/);
-    }
+    expect(marks).toHaveLength(0);
   });
 
   it('does not fill an interval down to zero when its authored lower bound is missing', () => {
@@ -1138,7 +1130,6 @@ describe('line and area numeric observations', () => {
     ];
     const scales = computeScales(spec, chartArea, spec.data);
     const marks = computeAreaMarks(spec, scales, chartArea, fullStrategy);
-    expect(marks[0].data.map((row) => row.x)).toEqual([0, 2]);
-    expect(marks[0].path.match(/M/g)).toHaveLength(2);
+    expect(marks).toHaveLength(0);
   });
 });

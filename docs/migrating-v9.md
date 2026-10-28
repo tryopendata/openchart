@@ -577,3 +577,15 @@ explicit scopes reject, while a missing feature in a known scope retains its not
 and accessible inventory. Context detail layers currently belong to the root view.
 SVG export preserves every current camera. Keep unique `idPrefix` values for
 multiple static figures; transient reader pins remain excluded.
+
+## Static rendering
+
+`renderStaticSVG` no longer needs `happy-dom` or a mutex around calls. Remove that dependency if it was installed only for OpenChart. Calls accept per-render `theme`, `measureText` and stable `idPrefix`, plus `precision` from 0 through 15 or `null` (default 3). Keep build timezones consistent for temporal output.
+
+Custom mark renderers now receive `(mark, index, ctx)` and must create elements through `ctx.factory`; static rendering has no global `document`. `renderChartSVG` accepts a render context. The mutable helpers `captureSvgIdState`, `restoreSvgIdState`, `resetSvgIdCounter`, `setMarkRenderState` and `resetMarkRenderState` are removed; `nextSvgId` remains the page-scope helper.
+
+Rebaseline static output once: chart/layer styles become attributes, ancestor CSS variables no longer theme them, roots carry `data-theme`, prefixed roots receive an ID, geometry defaults to three decimals, and nonbreaking spaces serialize literally. Needed xlink namespace declarations are explicit. Static mark descriptions become `<title>` text without per-mark ARIA labels; static legends, notes and barlist rows lose interactive roles and tab stops. Identity attributes are stamped on the data shape. Use the `theme` option and the retained CSS classes for host integration.
+
+Shared layered marks now use the same compiled domain and scale inset as the displayed primary axis (RFC R14). This can move marks that previously used raw extents while the axis used niced extents. For example, a composed GDP point/text chart displayed `[0.8, 4]` but positioned its marks on `[0.8, 3.9]`; the marks now agree with the displayed ticks. Authored domains remain exact, and shared inference includes transformed values and stack extents.
+
+Isolated line/area observations now render as points. Temporal bars now render columns instead of an empty plot. Light categorical cyan, ochre and violet strokes, plus cyan, ochre, green and violet fills, are retuned for contrast; review palette-sensitive documents. Default `migrateSpecV8` preserves the released v8 light palette and unchanged dark palette through per-slot color pairs; `{ styling: 'v9' }` adopts the retuned palette. See [static rendering](static-rendering.md) for supported spec types, descriptions, aligned frames and host-owned tables.

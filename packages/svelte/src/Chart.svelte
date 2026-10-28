@@ -14,6 +14,7 @@ import type {
   ElementRef,
   LayerSpec,
   MarkEvent,
+  MarkFocusEvent,
   ReaderChangeMeta,
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
@@ -44,6 +45,7 @@ let {
   onedit,
   onmarkclick,
   onmarkhover,
+  onmarkfocus,
   onmarkleave,
   onlegendtoggle,
   onannotationclick,
@@ -71,6 +73,7 @@ let {
   onedit?: (tx: EditTransaction) => void;
   onmarkclick?: (event: MarkEvent) => void;
   onmarkhover?: (event: MarkEvent) => void;
+  onmarkfocus?: (event: MarkFocusEvent) => void;
   onmarkleave?: () => void;
   onlegendtoggle?: (series: string, visible: boolean) => void;
   onannotationclick?: (annotation: Annotation, event: MouseEvent, element: ElementRef) => void;
@@ -112,6 +115,7 @@ onMount(() => {
 const stableHandlers: MountOptions = {
   onMarkClick: (event: MarkEvent) => untrack(() => onmarkclick)?.(event),
   onMarkHover: (event: MarkEvent) => untrack(() => onmarkhover)?.(event),
+  onMarkFocus: (event: MarkFocusEvent) => untrack(() => onmarkfocus)?.(event),
   onMarkLeave: () => untrack(() => onmarkleave)?.(),
   onLegendToggle: (series: string, visible: boolean) =>
     untrack(() => onlegendtoggle)?.(series, visible),

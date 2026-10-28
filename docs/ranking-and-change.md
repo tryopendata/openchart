@@ -228,3 +228,7 @@ const spec = {
 - [Chart types](chart-types.md) for the full gallery of supported forms
 - [Spec reference](spec-reference.md) for field-by-field type details, including `endpointLabels` and scale options
 - [Visualization patterns](agent-patterns.md) for more data storytelling recipes
+
+## Grouped bar lists and uncertainty
+
+Bar lists support `encoding.group` for section headers, `sort: null` to retain input order, an explicit `encoding.value.scale.domain` for comparisons, and x reference lines such as a lift baseline at 1. `labels.format`, `prefix` and `suffix` control the displayed row value. Bar and range marks separately support `labels.content` to compose names and values. For estimates with uncertainty, layer an `errorbar` with a `point` instead of encoding the interval as a filled bar. Supply all interval bounds upstream. See [static rendering](static-rendering.md) for server output.

@@ -139,3 +139,7 @@ For guaranteed series identification independent of color, combine palettes with
 | 2.4.7 Focus Visible | Visible focus indicator | `--oc-focus` outline on container and focused marks, light and dark values |
 
 Sonification and VPAT paperwork are out of scope for the library itself.
+
+## Static figures and mark descriptions
+
+Static SVG uses a root image name and authored mark `<title>` text. Live mounts additionally expose mark descriptions through keyboard inspection. Set `encoding.description` to a row field for individual marks, or a constant value for a series path. Add points when a line needs per-row descriptions. `a11y.table: false` suppresses the live generated table when the host supplies one; `a11y.hidden: true` hides decorative cells. See [static rendering](static-rendering.md) for the two-theme figure and host-table pattern.

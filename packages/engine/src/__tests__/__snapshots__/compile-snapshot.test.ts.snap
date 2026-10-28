@@ -643,9 +643,11 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
         "x": 0,
         "y": 0,
       },
-      "fill": "#06b6d4",
+      "fill": "#0a879e",
       "fillOpacity": 0.85,
+      "identity": {},
       "key": "0",
+      "markType": "point",
       "r": 5,
       "stroke": "#ffffff",
       "strokeWidth": 1.5,
@@ -661,9 +663,11 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
         "x": 10,
         "y": 37,
       },
-      "fill": "#06b6d4",
+      "fill": "#0a879e",
       "fillOpacity": 0.85,
+      "identity": {},
       "key": "10",
+      "markType": "point",
       "r": 5,
       "stroke": "#ffffff",
       "strokeWidth": 1.5,
@@ -679,9 +683,11 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
         "x": 20,
         "y": 74,
       },
-      "fill": "#06b6d4",
+      "fill": "#0a879e",
       "fillOpacity": 0.85,
+      "identity": {},
       "key": "20",
+      "markType": "point",
       "r": 5,
       "stroke": "#ffffff",
       "strokeWidth": 1.5,
@@ -697,9 +703,11 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
         "x": 30,
         "y": 11,
       },
-      "fill": "#06b6d4",
+      "fill": "#0a879e",
       "fillOpacity": 0.85,
+      "identity": {},
       "key": "30",
+      "markType": "point",
       "r": 5,
       "stroke": "#ffffff",
       "strokeWidth": 1.5,
@@ -715,9 +723,11 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
         "x": 40,
         "y": 48,
       },
-      "fill": "#06b6d4",
+      "fill": "#0a879e",
       "fillOpacity": 0.85,
+      "identity": {},
       "key": "40",
+      "markType": "point",
       "r": 5,
       "stroke": "#ffffff",
       "strokeWidth": 1.5,
@@ -733,9 +743,11 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
         "x": 50,
         "y": 85,
       },
-      "fill": "#06b6d4",
+      "fill": "#0a879e",
       "fillOpacity": 0.85,
+      "identity": {},
       "key": "50",
+      "markType": "point",
       "r": 5,
       "stroke": "#ffffff",
       "strokeWidth": 1.5,
@@ -751,9 +763,11 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
         "x": 60,
         "y": 22,
       },
-      "fill": "#06b6d4",
+      "fill": "#0a879e",
       "fillOpacity": 0.85,
+      "identity": {},
       "key": "60",
+      "markType": "point",
       "r": 5,
       "stroke": "#ffffff",
       "strokeWidth": 1.5,
@@ -769,9 +783,11 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
         "x": 70,
         "y": 59,
       },
-      "fill": "#06b6d4",
+      "fill": "#0a879e",
       "fillOpacity": 0.85,
+      "identity": {},
       "key": "70",
+      "markType": "point",
       "r": 5,
       "stroke": "#ffffff",
       "strokeWidth": 1.5,
@@ -787,9 +803,11 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
         "x": 80,
         "y": 96,
       },
-      "fill": "#06b6d4",
+      "fill": "#0a879e",
       "fillOpacity": 0.85,
+      "identity": {},
       "key": "80",
+      "markType": "point",
       "r": 5,
       "stroke": "#ffffff",
       "strokeWidth": 1.5,
@@ -805,9 +823,11 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
         "x": 90,
         "y": 33,
       },
-      "fill": "#06b6d4",
+      "fill": "#0a879e",
       "fillOpacity": 0.85,
+      "identity": {},
       "key": "90",
+      "markType": "point",
       "r": 5,
       "stroke": "#ffffff",
       "strokeWidth": 1.5,
@@ -823,9 +843,11 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
         "x": 100,
         "y": 70,
       },
-      "fill": "#06b6d4",
+      "fill": "#0a879e",
       "fillOpacity": 0.85,
+      "identity": {},
       "key": "100",
+      "markType": "point",
       "r": 5,
       "stroke": "#ffffff",
       "strokeWidth": 1.5,
@@ -841,9 +863,11 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
         "x": 110,
         "y": 7,
       },
-      "fill": "#06b6d4",
+      "fill": "#0a879e",
       "fillOpacity": 0.85,
+      "identity": {},
       "key": "110",
+      "markType": "point",
       "r": 5,
       "stroke": "#ffffff",
       "strokeWidth": 1.5,
@@ -906,20 +930,20 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
       "axis": "#71717a",
       "background": "transparent",
       "categorical": [
-        "#06b6d4",
-        "#e29e47",
+        "#0a879e",
+        "#bf7e1f",
         "#4170cb",
         "#b2417f",
         "#3ca368",
-        "#a584dc",
+        "#9c7bd2",
       ],
       "categoricalFill": [
-        "#51bccc",
-        "#dda96b",
+        "#1390a0",
+        "#b58245",
         "#587fc8",
         "#bf6291",
-        "#62ab7d",
-        "#ae96da",
+        "#57a072",
+        "#9981c3",
       ],
       "diverging": {
         "brownTeal": [
@@ -1048,7 +1072,7 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
       {
         "fields": [
           {
-            "color": "#06b6d4",
+            "color": "#0a879e",
             "label": "y",
             "role": "value",
             "source": {
@@ -1075,7 +1099,7 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
       {
         "fields": [
           {
-            "color": "#06b6d4",
+            "color": "#0a879e",
             "label": "y",
             "role": "value",
             "source": {
@@ -1102,7 +1126,7 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
       {
         "fields": [
           {
-            "color": "#06b6d4",
+            "color": "#0a879e",
             "label": "y",
             "role": "value",
             "source": {
@@ -1129,7 +1153,7 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
       {
         "fields": [
           {
-            "color": "#06b6d4",
+            "color": "#0a879e",
             "label": "y",
             "role": "value",
             "source": {
@@ -1156,7 +1180,7 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
       {
         "fields": [
           {
-            "color": "#06b6d4",
+            "color": "#0a879e",
             "label": "y",
             "role": "value",
             "source": {
@@ -1183,7 +1207,7 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
       {
         "fields": [
           {
-            "color": "#06b6d4",
+            "color": "#0a879e",
             "label": "y",
             "role": "value",
             "source": {
@@ -1210,7 +1234,7 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
       {
         "fields": [
           {
-            "color": "#06b6d4",
+            "color": "#0a879e",
             "label": "y",
             "role": "value",
             "source": {
@@ -1237,7 +1261,7 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
       {
         "fields": [
           {
-            "color": "#06b6d4",
+            "color": "#0a879e",
             "label": "y",
             "role": "value",
             "source": {
@@ -1264,7 +1288,7 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
       {
         "fields": [
           {
-            "color": "#06b6d4",
+            "color": "#0a879e",
             "label": "y",
             "role": "value",
             "source": {
@@ -1291,7 +1315,7 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
       {
         "fields": [
           {
-            "color": "#06b6d4",
+            "color": "#0a879e",
             "label": "y",
             "role": "value",
             "source": {
@@ -1318,7 +1342,7 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
       {
         "fields": [
           {
-            "color": "#06b6d4",
+            "color": "#0a879e",
             "label": "y",
             "role": "value",
             "source": {
@@ -1345,7 +1369,7 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
       {
         "fields": [
           {
-            "color": "#06b6d4",
+            "color": "#0a879e",
             "label": "y",
             "role": "value",
             "source": {
@@ -1639,15 +1663,18 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
         "name": "A",
         "value": 10,
       },
-      "fill": "#51bccc",
+      "fill": "#1390a0",
       "height": 66.25384615384615,
+      "identity": {
+        "name": "A",
+      },
       "key": "|A",
       "label": {
         "connector": undefined,
         "halo": false,
         "style": {
           "dominantBaseline": "central",
-          "fill": "#111111",
+          "fill": "#ffffff",
           "fontFamily": ""Inter Variable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif",
           "fontSize": 11,
           "fontVariant": "tabular-nums",
@@ -1660,6 +1687,7 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
         "x": 139.5312,
         "y": 300.78846153846155,
       },
+      "markType": "bar",
       "orient": "horizontal",
       "type": "rect",
       "width": 107.86720000000001,
@@ -1681,15 +1709,18 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
         "name": "B",
         "value": 25,
       },
-      "fill": "#51bccc",
+      "fill": "#1390a0",
       "height": 66.25384615384615,
+      "identity": {
+        "name": "B",
+      },
       "key": "|B",
       "label": {
         "connector": undefined,
         "halo": false,
         "style": {
           "dominantBaseline": "central",
-          "fill": "#111111",
+          "fill": "#ffffff",
           "fontFamily": ""Inter Variable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif",
           "fontSize": 11,
           "fontVariant": "tabular-nums",
@@ -1702,6 +1733,7 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
         "x": 301.332,
         "y": 212.45000000000002,
       },
+      "markType": "bar",
       "orient": "horizontal",
       "type": "rect",
       "width": 269.668,
@@ -1723,15 +1755,18 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
         "name": "C",
         "value": 40,
       },
-      "fill": "#51bccc",
+      "fill": "#1390a0",
       "height": 66.25384615384615,
+      "identity": {
+        "name": "C",
+      },
       "key": "|C",
       "label": {
         "connector": undefined,
         "halo": false,
         "style": {
           "dominantBaseline": "central",
-          "fill": "#111111",
+          "fill": "#ffffff",
           "fontFamily": ""Inter Variable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif",
           "fontSize": 11,
           "fontVariant": "tabular-nums",
@@ -1744,6 +1779,7 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
         "x": 463.13280000000003,
         "y": 124.11153846153847,
       },
+      "markType": "bar",
       "orient": "horizontal",
       "type": "rect",
       "width": 431.46880000000004,
@@ -1807,20 +1843,20 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
       "axis": "#71717a",
       "background": "transparent",
       "categorical": [
-        "#06b6d4",
-        "#e29e47",
+        "#0a879e",
+        "#bf7e1f",
         "#4170cb",
         "#b2417f",
         "#3ca368",
-        "#a584dc",
+        "#9c7bd2",
       ],
       "categoricalFill": [
-        "#51bccc",
-        "#dda96b",
+        "#1390a0",
+        "#b58245",
         "#587fc8",
         "#bf6291",
-        "#62ab7d",
-        "#ae96da",
+        "#57a072",
+        "#9981c3",
       ],
       "diverging": {
         "brownTeal": [
@@ -2255,7 +2291,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
     },
     "entries": [
       {
-        "color": "#048398",
+        "color": "#0a879e",
         "dataX": 707.04015,
         "dataY": 156.2,
         "date": undefined,
@@ -2267,7 +2303,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
           "dataX": 707.04015,
           "fill": "#ffffff",
           "radius": 4,
-          "stroke": "#048398",
+          "stroke": "#0a879e",
           "strokeWidth": 2,
           "x": 707.04015,
           "y": 156.2,
@@ -2286,7 +2322,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
         "value": "40",
       },
       {
-        "color": "#cc8020",
+        "color": "#8a5b16",
         "dataX": 707.04015,
         "dataY": 194.95,
         "date": undefined,
@@ -2298,7 +2334,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
           "dataX": 707.04015,
           "fill": "#ffffff",
           "radius": 4,
-          "stroke": "#cc8020",
+          "stroke": "#8a5b16",
           "strokeWidth": 2,
           "x": 707.04015,
           "y": 194.95,
@@ -2412,13 +2448,13 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
     "entries": [
       {
         "active": true,
-        "color": "#048398",
+        "color": "#0a879e",
         "label": "US",
         "shape": "line",
       },
       {
         "active": true,
-        "color": "#cc8020",
+        "color": "#8a5b16",
         "label": "UK",
         "shape": "line",
       },
@@ -2496,13 +2532,13 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
       "entries": [
         {
           "active": true,
-          "color": "#048398",
+          "color": "#0a879e",
           "label": "US",
           "shape": "line",
         },
         {
           "active": true,
-          "color": "#cc8020",
+          "color": "#8a5b16",
           "label": "UK",
           "shape": "line",
         },
@@ -2597,7 +2633,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
           "tooltip": {
             "fields": [
               {
-                "color": "#048398",
+                "color": "#0a879e",
                 "label": "country",
                 "role": "series",
                 "source": {
@@ -2631,7 +2667,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
           "tooltip": {
             "fields": [
               {
-                "color": "#048398",
+                "color": "#0a879e",
                 "label": "country",
                 "role": "series",
                 "source": {
@@ -2657,8 +2693,12 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
           "y": 156.2,
         },
       ],
+      "identity": {
+        "country": "US",
+      },
       "interpolate": "monotone",
       "key": "US",
+      "markType": "line",
       "opacity": undefined,
       "path": "M48,388.7L707.04,156.2",
       "pointKeys": [
@@ -2667,16 +2707,26 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
       ],
       "points": [
         {
+          "row": {
+            "country": "US",
+            "date": "2020-01-01",
+            "value": 10,
+          },
           "x": 48,
           "y": 388.7,
         },
         {
+          "row": {
+            "country": "US",
+            "date": "2021-01-01",
+            "value": 40,
+          },
           "x": 707.04015,
           "y": 156.2,
         },
       ],
       "seriesKey": "US",
-      "stroke": "#048398",
+      "stroke": "#0a879e",
       "strokeDasharray": undefined,
       "strokeWidth": 2,
       "type": "line",
@@ -2707,7 +2757,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
           "tooltip": {
             "fields": [
               {
-                "color": "#cc8020",
+                "color": "#8a5b16",
                 "label": "country",
                 "role": "series",
                 "source": {
@@ -2741,7 +2791,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
           "tooltip": {
             "fields": [
               {
-                "color": "#cc8020",
+                "color": "#8a5b16",
                 "label": "country",
                 "role": "series",
                 "source": {
@@ -2767,8 +2817,12 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
           "y": 194.95,
         },
       ],
+      "identity": {
+        "country": "UK",
+      },
       "interpolate": "monotone",
       "key": "UK",
+      "markType": "line",
       "opacity": undefined,
       "path": "M48,349.95L707.04,194.95",
       "pointKeys": [
@@ -2777,16 +2831,26 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
       ],
       "points": [
         {
+          "row": {
+            "country": "UK",
+            "date": "2020-01-01",
+            "value": 15,
+          },
           "x": 48,
           "y": 349.95,
         },
         {
+          "row": {
+            "country": "UK",
+            "date": "2021-01-01",
+            "value": 35,
+          },
           "x": 707.04015,
           "y": 194.95,
         },
       ],
       "seriesKey": "UK",
-      "stroke": "#cc8020",
+      "stroke": "#8a5b16",
       "strokeDasharray": undefined,
       "strokeWidth": 2,
       "type": "line",
@@ -2877,8 +2941,12 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
           "y": 295.7,
         },
       ],
+      "identity": {
+        "country": "FR",
+      },
       "interpolate": "monotone",
       "key": "FR",
+      "markType": "line",
       "opacity": undefined,
       "path": "M48,404.2L707.04,295.7",
       "pointKeys": [
@@ -2887,10 +2955,20 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
       ],
       "points": [
         {
+          "row": {
+            "country": "FR",
+            "date": "2020-01-01",
+            "value": 8,
+          },
           "x": 48,
           "y": 404.2,
         },
         {
+          "row": {
+            "country": "FR",
+            "date": "2021-01-01",
+            "value": 22,
+          },
           "x": 707.04015,
           "y": 295.7,
         },
@@ -2987,8 +3065,12 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
           "y": 249.2,
         },
       ],
+      "identity": {
+        "country": "DE",
+      },
       "interpolate": "monotone",
       "key": "DE",
+      "markType": "line",
       "opacity": undefined,
       "path": "M48,373.2L707.04,249.2",
       "pointKeys": [
@@ -2997,10 +3079,20 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
       ],
       "points": [
         {
+          "row": {
+            "country": "DE",
+            "date": "2020-01-01",
+            "value": 12,
+          },
           "x": 48,
           "y": 373.2,
         },
         {
+          "row": {
+            "country": "DE",
+            "date": "2021-01-01",
+            "value": 28,
+          },
           "x": 707.04015,
           "y": 249.2,
         },
@@ -3068,20 +3160,20 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
       "axis": "#71717a",
       "background": "transparent",
       "categorical": [
-        "#06b6d4",
-        "#e29e47",
+        "#0a879e",
+        "#bf7e1f",
         "#4170cb",
         "#b2417f",
         "#3ca368",
-        "#a584dc",
+        "#9c7bd2",
       ],
       "categoricalFill": [
-        "#51bccc",
-        "#dda96b",
+        "#1390a0",
+        "#b58245",
         "#587fc8",
         "#bf6291",
-        "#62ab7d",
-        "#ae96da",
+        "#57a072",
+        "#9981c3",
       ],
       "diverging": {
         "brownTeal": [
@@ -3580,6 +3672,9 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         "type": "linear",
       },
       "height": 93.64285714285717,
+      "identity": {
+        "category": "A",
+      },
       "key": "|A",
       "label": {
         "connector": undefined,
@@ -3597,6 +3692,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         "x": 119.26399999999998,
         "y": 181.75714285714287,
       },
+      "markType": "bar",
       "orient": "vertical",
       "type": "rect",
       "width": 94.704,
@@ -3632,6 +3728,9 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         "type": "linear",
       },
       "height": 171.67857142857144,
+      "identity": {
+        "category": "B",
+      },
       "key": "|B",
       "label": {
         "connector": undefined,
@@ -3649,6 +3748,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         "x": 245.53599999999997,
         "y": 103.72142857142859,
       },
+      "markType": "bar",
       "orient": "vertical",
       "type": "rect",
       "width": 94.704,
@@ -3684,6 +3784,9 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         "type": "linear",
       },
       "height": 218.50000000000003,
+      "identity": {
+        "category": "C",
+      },
       "key": "|C",
       "label": {
         "connector": undefined,
@@ -3701,6 +3804,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         "x": 371.80799999999994,
         "y": 56.900000000000006,
       },
+      "markType": "bar",
       "orient": "vertical",
       "type": "rect",
       "width": 94.704,
@@ -3736,6 +3840,9 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         "type": "linear",
       },
       "height": 140.46428571428575,
+      "identity": {
+        "category": "D",
+      },
       "key": "|D",
       "label": {
         "connector": undefined,
@@ -3753,6 +3860,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
         "x": 498.0799999999999,
         "y": 134.93571428571428,
       },
+      "markType": "bar",
       "orient": "vertical",
       "type": "rect",
       "width": 94.704,
@@ -3816,20 +3924,20 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
       "axis": "#71717a",
       "background": "transparent",
       "categorical": [
-        "#06b6d4",
-        "#e29e47",
+        "#0a879e",
+        "#bf7e1f",
         "#4170cb",
         "#b2417f",
         "#3ca368",
-        "#a584dc",
+        "#9c7bd2",
       ],
       "categoricalFill": [
-        "#51bccc",
-        "#dda96b",
+        "#1390a0",
+        "#b58245",
         "#587fc8",
         "#bf6291",
-        "#62ab7d",
-        "#ae96da",
+        "#57a072",
+        "#9981c3",
       ],
       "diverging": {
         "brownTeal": [

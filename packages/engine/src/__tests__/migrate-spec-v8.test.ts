@@ -197,6 +197,8 @@ it('rewrites the parent endpoint owner of a legacy-label layer', () => {
         data: [
           { x: 0, y: 1, s: 'A' },
           { x: 1, y: 2, s: 'B' },
+          { x: 2, y: 3, s: 'A' },
+          { x: 3, y: 4, s: 'B' },
         ],
         encoding: {
           x: { field: 'x', type: 'ordinal' as const },

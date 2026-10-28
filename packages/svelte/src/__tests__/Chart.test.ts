@@ -240,6 +240,27 @@ it.each([
 });
 
 describe('interaction mode and listener parity', () => {
+  it('rewires mark focus to the current handler without replacing the chart', async () => {
+    const before = vi.fn(),
+      after = vi.fn();
+    const { container, rerender } = await renderChart({
+      spec: barSpec,
+      autoResize: false,
+      onmarkfocus: before,
+    });
+    const host = container.querySelector<HTMLElement>('.oc-chart-root')!;
+    const svg = host.querySelector('svg');
+    host.dispatchEvent(new FocusEvent('focus'));
+    expect(before).toHaveBeenCalledTimes(1);
+    expect(before.mock.calls[0][0].datum).toEqual(barSpec.data[0]);
+    await rerender({ spec: barSpec, autoResize: false, onmarkfocus: after });
+    host.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    expect(host.querySelector('svg')).toBe(svg);
+    expect(before).toHaveBeenCalledTimes(1);
+    expect(after).toHaveBeenCalledTimes(1);
+    expect(after.mock.calls[0][0].datum).toEqual(barSpec.data[1]);
+  });
+
   const clickTitle = (container: HTMLElement) =>
     container
       .querySelector('[data-chrome-key="title"]')!

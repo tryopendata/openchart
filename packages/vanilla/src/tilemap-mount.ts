@@ -1,3 +1,4 @@
+import { createRenderContext, pageIdScope } from './render-context';
 /**
  * TileMap mount API: the main entry point for vanilla JS tilemap usage.
  *
@@ -356,7 +357,10 @@ export function createTileMap(
     }
 
     // Render new SVG
-    const newSvg = renderTileMapSVG(currentLayout, { animate });
+    const newSvg = renderTileMapSVG(currentLayout, {
+      context: createRenderContext({ ids: pageIdScope }),
+      animate,
+    });
     container.appendChild(newSvg);
     svgElement = newSvg;
 
@@ -434,7 +438,10 @@ export function createTileMap(
     if (!svgElement) return '';
 
     // Export settled geometry, independent of transient hover and animation.
-    const terminalSvg = renderTileMapSVG(currentLayout, { animate: false });
+    const terminalSvg = renderTileMapSVG(currentLayout, {
+      context: createRenderContext({ ids: pageIdScope }),
+      animate: false,
+    });
     const resolvedOptions = { theme: currentLayout.theme, ...options_ };
     prepareSettledExportTheme(svgElement, terminalSvg, resolvedOptions.theme, !!options_?.theme);
 

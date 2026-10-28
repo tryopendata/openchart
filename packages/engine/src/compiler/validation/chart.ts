@@ -7,6 +7,7 @@ import {
   type MarkType,
 } from '@opendata-ai/openchart-core';
 import type { ValidationError } from '../types';
+import { validateFrame } from './frame';
 import {
   checkSchemeName,
   didYouMean,
@@ -18,6 +19,7 @@ import { validateLabelPlacement } from './label-placement';
 import {
   validateCalendarSpec,
   validateCenterLabel,
+  validateErrorbarSpec,
   validatePointSize,
   validateRangeSpec,
 } from './mark-rules';
@@ -28,8 +30,37 @@ import {
 
 export function validateChartSpec(spec: Record<string, unknown>, errors: ValidationError[]): void {
   validateLabelPlacement(spec, errors);
+  validateFrame(spec, errors);
   const markType =
     typeof spec.mark === 'string' ? spec.mark : (spec.mark as Record<string, unknown>)?.type;
+
+  if (spec.encoding && typeof spec.encoding === 'object') {
+    for (const [name, raw] of Object.entries(spec.encoding)) {
+      if (!raw || typeof raw !== 'object' || !('interval' in raw)) continue;
+      const channel = raw as Record<string, unknown>;
+      const interval = channel.interval;
+      if (interval === undefined) continue;
+      const validValue =
+        typeof interval === 'number'
+          ? Number.isFinite(interval) && interval > 0
+          : typeof interval === 'string' &&
+            ['day', 'week', 'month', 'quarter', 'year'].includes(interval);
+      if (
+        !validValue ||
+        !['bar', 'rect', 'errorbar'].includes(String(markType)) ||
+        !['x', 'y', 'x2', 'y2'].includes(name) ||
+        channel.type !== 'temporal'
+      )
+        errors.push({
+          code: 'INVALID_VALUE',
+          path: jsonPointer('encoding', name, 'interval'),
+          message:
+            'interval requires a temporal position channel of bar, rect or errorbar and a calendar unit or finite positive milliseconds.',
+          suggestion:
+            'Use day, week, month, quarter, year, or a positive millisecond interval on a temporal position channel.',
+        });
+    }
+  }
 
   // Check data
   if (!Array.isArray(spec.data)) {
@@ -169,6 +200,8 @@ export function validateChartSpec(spec: Record<string, unknown>, errors: Validat
   // Donut center stat: arc-only, and the object form needs a text string.
   validateCenterLabel(spec, markType, errors);
 
+  if (markType === 'errorbar') validateErrorbarSpec(spec, errors);
+
   // Range marks: orientation-dependent x2/y2 requirement + mark.style options
   if (markType === 'range') {
     validateRangeSpec(spec, errors);
@@ -276,6 +309,17 @@ export function validateChartSpec(spec: Record<string, unknown>, errors: Validat
 
     const channelObj = channelSpec as Record<string, unknown>;
     const channelRule = rules[channel as keyof typeof rules];
+
+    if (channel === 'description' && 'value' in channelObj) {
+      if (typeof channelObj.value !== 'string' || 'field' in channelObj)
+        errors.push({
+          message: 'Spec error: encoding.description must be a field reference or a string value',
+          path: '/encoding/description',
+          code: 'INVALID_VALUE',
+          suggestion: 'Use description: { field: "text" } or { value: "Description" }',
+        });
+      continue;
+    }
 
     // Skip ConditionalValueDef channels (they have 'condition' instead of 'field')
     if ('condition' in channelObj) continue;

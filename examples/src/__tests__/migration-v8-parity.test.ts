@@ -22,6 +22,11 @@
  *   and the entry cites the D14 item. Entries must have text annotations and must
  *   move in every listed category, so the list cannot go stale silently.
  *
+ * R14 additionally permits exact x/cx changes for composedSpecForPanel only:
+ * its primary axis already used [0.8, 4], while v8 marks incorrectly used
+ * [0.8, 3.9]. The approval lists every before/final pair; the numerical test
+ * below requires every point and label to agree with the displayed axis.
+ *
  * PARITY_REPORT=1 prints a summary table; PARITY_DUMP=<file> also writes every
  * fixture's v8/v9 signatures and deltas as JSON for investigation.
  */
@@ -53,6 +58,7 @@ import {
   APPROVED_ENDPOINT_TOP_SWEEP,
   APPROVED_MAP_KEY_PLACEMENT,
   APPROVED_PRE_RFC_LAYOUT,
+  APPROVED_R14_SHARED_AXIS,
   APPROVED_RFC_B1_LAYOUT,
 } from './migration-v8-approved-changes';
 import { APPROVED_C7_ATTRIBUTION } from './migration-v8-attribution-changes';
@@ -408,11 +414,48 @@ describe(`v8 migration parity against ${capture.tag}`, () => {
     expect(stale).toEqual([]);
   });
 
+  it('R14 composed GDP points and labels agree with their displayed quantitative axis', () => {
+    for (const width of [390, 1280]) {
+      const entry = capture.entries.find(
+        (entry) =>
+          entry.name === '../gallery/charts-building-blocks.stories.tsx.composedSpecForPanel' &&
+          entry.width === width,
+      )!;
+      const migrated = migrateSpecV8(entry.spec).spec;
+      const layout = compileLayer(migrated as Parameters<typeof compileLayer>[0], {
+        width,
+        height: 400,
+        onWarn: () => {},
+      });
+      const ticks = layout.axes.x!.ticks;
+      expect(ticks.length).toBeGreaterThanOrEqual(2);
+      const first = ticks[0],
+        last = ticks[ticks.length - 1];
+      const position = (value: number) =>
+        first.position +
+        ((value - Number(first.value)) / (Number(last.value) - Number(first.value))) *
+          (last.position - first.position);
+      expect(layout.xInvert?.bottomData).toBe(4);
+      const dataMarks = layout.marks.filter(
+        (mark) => mark.type === 'point' || mark.type === 'textMark',
+      );
+      expect(dataMarks).toHaveLength(20);
+      for (const mark of dataMarks) {
+        const actual = mark.type === 'point' ? mark.cx : mark.x;
+        expect(actual, `${width}: GDP ${mark.data.gdp}`).toBeCloseTo(
+          position(Number(mark.data.gdp)),
+          8,
+        );
+      }
+    }
+  });
+
   it('approved geometry exceptions match every exact before/final path value', () => {
     for (const [key, approval] of [
       ...Object.entries(APPROVED_C7_ATTRIBUTION),
       ...Object.entries(APPROVED_B3_MAP_LAYOUT),
       ...Object.entries(APPROVED_PRE_RFC_LAYOUT),
+      ...Object.entries(APPROVED_R14_SHARED_AXIS),
       ...Object.entries(APPROVED_RFC_B1_LAYOUT),
       ...Object.entries(APPROVED_MAP_KEY_PLACEMENT),
       ...Object.entries(APPROVED_AXIS_TITLE_LAYOUT),
@@ -521,6 +564,7 @@ describe(`v8 migration parity against ${capture.tag}`, () => {
           APPROVED_C7_ATTRIBUTION[`${result.name} @${result.width}`],
           APPROVED_B3_MAP_LAYOUT[`${result.name} @${result.width}`],
           APPROVED_PRE_RFC_LAYOUT[`${result.name} @${result.width}`],
+          APPROVED_R14_SHARED_AXIS[`${result.name} @${result.width}`],
           APPROVED_RFC_B1_LAYOUT[`${result.name} @${result.width}`],
           APPROVED_MAP_KEY_PLACEMENT[`${result.name} @${result.width}`],
           APPROVED_AXIS_TITLE_LAYOUT[`${result.name} @${result.width}`],

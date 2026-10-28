@@ -58,8 +58,8 @@ describe('series color parity', () => {
     }
   });
 
-  it('the swatch is the darkened stroke, not the raw palette fill', () => {
-    const layout = compileChart(lineSpec(), SIZE);
+  it('the swatch follows stroke adaptation for an authored bright palette', () => {
+    const layout = compileChart(lineSpec({ theme: { colors: ['#06b6d4', '#e29e47'] } }), SIZE);
     const palette = layout.theme.colors.categorical;
     const north = layout.legend.entries.find((e) => e.label === 'North')!;
 

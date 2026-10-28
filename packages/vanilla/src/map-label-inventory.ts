@@ -1,6 +1,6 @@
 import type { GeoLabelInventoryEntry, ResolvedTheme } from '@opendata-ai/openchart-core';
 import { applySrOnlyStyles } from './dom-helpers';
-import { nextSvgId } from './svg-ids';
+import { createRenderContext } from './render-context';
 
 export type LabelInventoryOptions = false | { container: HTMLElement };
 const explanations = {
@@ -36,7 +36,11 @@ export function mergeGeoLabelInventory(
   return [...merged.values()];
 }
 /** Owns only its two list trees; host contents and map dimensions are untouched. */
-export function createMapLabelInventory(container: HTMLElement, initial?: LabelInventoryOptions) {
+export function createMapLabelInventory(
+  container: HTMLElement,
+  initial?: LabelInventoryOptions,
+  ctx = createRenderContext(),
+) {
   let id: string | undefined;
   let hidden: HTMLDivElement | null = null;
   let disclosure: HTMLDetailsElement | null = null;
@@ -71,7 +75,7 @@ export function createMapLabelInventory(container: HTMLElement, initial?: LabelI
       return;
     }
     if (!hidden) {
-      id ??= nextSvgId('oc-map-label-inventory');
+      id ??= ctx.ids.next('oc-map-label-inventory');
       hidden = document.createElement('div');
       hidden.id = id;
       hidden.className = 'oc-map-label-inventory oc-sr-only';

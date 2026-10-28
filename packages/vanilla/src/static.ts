@@ -1,7 +1,5 @@
-// Node.js only — do not import from browser code.
-import { createRequire } from 'node:module';
 import type {
-  ChartLayout,
+  BarListSpec,
   ChartSpec,
   CompileOptions,
   DarkMode,
@@ -11,195 +9,137 @@ import type {
   ThemeConfig,
   TileMapSpec,
 } from '@opendata-ai/openchart-core';
-import { isGeoMapSpec, isLayerSpec, isTileMapSpec } from '@opendata-ai/openchart-core';
 import {
+  isBarListSpec,
+  isGeoMapSpec,
+  isLayerSpec,
+  isTileMapSpec,
+} from '@opendata-ai/openchart-core';
+import {
+  compileBarList,
   compileChart,
   compileGeoMap,
   compileLayer,
   compileTileMap,
 } from '@opendata-ai/openchart-engine';
+import { renderBarListSVG } from './barlist-renderer';
 import { applyMapCamera, cameraForTarget } from './map-camera';
 import { renderMapSVG } from './map-renderer';
-import { SVG_NS } from './renderers/svg-dom';
-import { captureSvgIdState, resetSvgIdCounter, restoreSvgIdState } from './svg-ids';
+import { createIdScope, createRenderContext } from './render-context';
+import { applyRoleStyle, type ElementFactory } from './renderers/svg-dom';
+import { type StaticElement, serialize, staticFactory } from './static-dom';
 import { renderChartSVG } from './svg-renderer';
 import { buildThemeStyleBlock } from './theme-style-block';
 import { renderTileMapSVG } from './tilemap-renderer';
-
-const esmRequire = createRequire(import.meta.url);
-
-let cachedWindow: typeof import('happy-dom').Window | undefined;
-function getHappyDomWindow(): typeof import('happy-dom').Window {
-  if (cachedWindow) return cachedWindow;
-  try {
-    ({ Window: cachedWindow } = esmRequire('happy-dom') as typeof import('happy-dom'));
-  } catch {
-    throw new Error(
-      "renderStaticSVG requires 'happy-dom' as a peer dependency. Install it with: npm add happy-dom",
-    );
-  }
-  return cachedWindow;
-}
-
-let rendering = false;
-
 export interface StaticRenderOptions {
-  /** Stable XML-safe prefix. Use distinct prefixes for figures sharing one document. */
+  /** Stable XML-safe prefix, unique for figures sharing one document. */
   idPrefix?: string;
   width?: number;
   height?: number;
   theme?: ThemeConfig;
-  /**
-   * Dark mode setting. In static rendering `'auto'` resolves to light mode
-   * since there is no `matchMedia` to query. Use `'force'` for dark output.
-   */
+  /** `auto` resolves to light without a browser. */
   darkMode?: DarkMode;
-  /** Rendering backend for point marks; see `MountOptions.renderer`. */
   renderer?: 'auto' | 'svg' | 'canvas';
   watermark?: boolean;
+  measureText?: CompileOptions['measureText'];
+  /** Geometry decimal places; null preserves raw doubles. Default 3. */
+  precision?: number | null;
 }
-
-function resolveStaticDarkMode(mode?: DarkMode): boolean {
-  if (mode === 'force') return true;
-  return false;
+type StaticSpec = ChartSpec | LayerSpec | TileMapSpec | GeoMapSpec | BarListSpec;
+/** Render standalone SVG using a per-call element tree and id scope. */
+export function renderStaticSVG(spec: StaticSpec, options?: StaticRenderOptions): string {
+  return __renderStaticParts(spec, options).serialize();
 }
-
-function stripInteractiveElements(svg: Element): void {
-  const selectors = ['[data-voronoi-overlay]', '[data-crosshair]', '[data-snap-dots]'];
-  for (const selector of selectors) {
-    const els = svg.querySelectorAll(selector);
-    for (const el of els) {
-      el.parentNode?.removeChild(el);
-    }
-  }
-}
-
-/**
- * Render a chart spec to a standalone SVG string without a browser DOM.
- *
- * Requires `happy-dom` as a peer dependency (`bun add happy-dom`).
- *
- * Not safe for concurrent invocation: the render pipeline relies on a global
- * SVG ID counter and a temporary global `document` swap, both of which are
- * single-threaded. In a server handling parallel requests, serialize calls
- * through a queue or mutex.
- *
- * The entire render pipeline is synchronous; the global swap is safe as long
- * as no code schedules microtasks that outlive the call.
- */
-export function renderStaticSVG(
-  spec: ChartSpec | LayerSpec | TileMapSpec | GeoMapSpec,
-  options?: StaticRenderOptions,
-): string {
-  if (options?.idPrefix !== undefined && !/^[A-Za-z_][A-Za-z0-9_.-]*$/.test(options.idPrefix))
+/** @internal Split rendering from serialization for parity and interleaving tests. */
+export function __renderStaticParts(
+  spec: StaticSpec,
+  options: StaticRenderOptions = {},
+  factory: ElementFactory = staticFactory,
+) {
+  if (options.idPrefix !== undefined && !/^[A-Za-z_][A-Za-z0-9_.-]*$/.test(options.idPrefix))
     throw new Error(
       'idPrefix must start with a letter or underscore and contain only letters, digits, underscores, periods or hyphens.',
     );
-  if (rendering) {
-    throw new Error('renderStaticSVG is not reentrant — serialize calls through a queue or mutex');
+  const precision = options.precision === undefined ? 3 : options.precision;
+  if (precision !== null && (!Number.isInteger(precision) || precision < 0 || precision > 15))
+    throw new Error('precision must be an integer between 0 and 15, or null.');
+  const type = (spec as { type?: string }).type;
+  if (type && !['chart', 'layer', 'barlist', 'tilemap', 'map', 'geomap'].includes(type))
+    throw new Error(
+      `renderStaticSVG does not render "${type}"; supported: chart, layer, barlist, tilemap, geomap`,
+    );
+  const ctx = createRenderContext({
+    factory,
+    ids: createIdScope(options.idPrefix),
+    interactive: false,
+    precision,
+  });
+  const compileOpts: CompileOptions = {
+    width: options.width ?? 640,
+    height: options.height ?? 420,
+    theme: options.theme,
+    darkMode: options.darkMode === 'force',
+    renderer: options.renderer,
+    watermark: options.watermark,
+    measureText: options.measureText,
+    onWarn: () => {},
+  };
+  let svg: SVGElement;
+  let theme: ResolvedTheme;
+  const map = isGeoMapSpec(spec),
+    tilemap = isTileMapSpec(spec);
+  if (map) {
+    const layout = compileGeoMap(spec, compileOpts);
+    svg = renderMapSVG(layout, { animate: false, context: ctx });
+    if (!layout.views) applyMapCamera(svg, cameraForTarget(layout, layout.focus?.target), layout);
+    theme = layout.theme;
+  } else if (tilemap) {
+    const layout = compileTileMap(spec, compileOpts);
+    svg = renderTileMapSVG(layout, { animate: false, context: ctx });
+    theme = layout.theme;
+  } else if (isBarListSpec(spec)) {
+    const layout = compileBarList(
+      { ...spec, height: options.height ?? spec.height ?? 'auto' },
+      compileOpts,
+    );
+    svg = renderBarListSVG(layout, { animate: false, context: ctx });
+    theme = layout.theme;
+  } else {
+    const layout = isLayerSpec(spec)
+      ? compileLayer(spec, compileOpts)
+      : compileChart(spec, compileOpts);
+    svg = renderChartSVG(layout, factory.html('div'), {
+      animate: false,
+      crosshair: false,
+      context: ctx,
+    });
+    theme = layout.theme;
   }
-  rendering = true;
-
-  const Window = getHappyDomWindow();
-  const win = new Window({ url: 'about:blank' });
-
-  const svgIdState = captureSvgIdState();
-  const prevDocument = globalThis.document;
-  const prevWindow = (globalThis as Record<string, unknown>).window;
-
-  try {
-    (globalThis as Record<string, unknown>).document = win.document;
-    (globalThis as Record<string, unknown>).window = win;
-
-    resetSvgIdCounter(options?.idPrefix);
-
-    const width = options?.width ?? 640;
-    const height = options?.height ?? 420;
-    const darkMode = resolveStaticDarkMode(options?.darkMode);
-
-    const compileOpts: CompileOptions = {
-      width,
-      height,
-      theme: options?.theme,
-      darkMode,
-      renderer: options?.renderer,
-      watermark: options?.watermark,
-    };
-
-    let svg: SVGElement;
-    let themeForStyle: ResolvedTheme;
-
-    if (isGeoMapSpec(spec)) {
-      const mapLayout = compileGeoMap(spec, compileOpts);
-      svg = renderMapSVG(mapLayout, { animate: false });
-      // Multi-view rendering already resolves every authored camera and its labels
-      // through the same per-view renderer used by live mounts.
-      if (!mapLayout.views)
-        applyMapCamera(svg, cameraForTarget(mapLayout, mapLayout.focus?.target), mapLayout);
-      themeForStyle = mapLayout.theme;
-    } else if (isTileMapSpec(spec)) {
-      const tileMapLayout = compileTileMap(spec, compileOpts);
-      svg = renderTileMapSVG(tileMapLayout, { animate: false });
-      themeForStyle = tileMapLayout.theme;
-    } else {
-      let layout: ChartLayout;
-      if (isLayerSpec(spec)) {
-        layout = compileLayer(spec, compileOpts);
-      } else {
-        layout = compileChart(spec, compileOpts);
-      }
-
-      const container = win.document.createElement('div');
-      Object.defineProperty(container, 'getBoundingClientRect', {
-        value: () => ({
-          width,
-          height,
-          top: 0,
-          left: 0,
-          right: width,
-          bottom: height,
-          x: 0,
-          y: 0,
-          toJSON: () => ({}),
-        }),
-      });
-
-      svg = renderChartSVG(layout, container as unknown as HTMLElement, {
-        animate: false,
-        crosshair: false,
-      });
-
-      stripInteractiveElements(svg);
-      themeForStyle = layout.theme;
-    }
-
-    const doc = win.document as unknown as Document;
-    let defs = svg.querySelector('defs');
+  svg.setAttribute('data-theme', theme.isDark ? 'dark' : 'light');
+  if (options.idPrefix) svg.setAttribute('id', `${options.idPrefix}-oc-root`);
+  if (map || tilemap) {
+    let defs: SVGElement | null = svg.querySelector('defs');
     if (!defs) {
-      defs = doc.createElementNS(SVG_NS, 'defs');
-      svg.insertBefore(defs as unknown as Node, svg.firstChild);
+      defs = factory.svg('defs');
+      svg.insertBefore(defs, svg.firstChild);
     }
-    const styleEl = doc.createElementNS(SVG_NS, 'style');
-    styleEl.textContent = buildThemeStyleBlock(themeForStyle);
-    defs.insertBefore(styleEl as unknown as Node, defs.firstChild);
-
-    const serializer = new (
-      win as unknown as { XMLSerializer: typeof XMLSerializer }
-    ).XMLSerializer();
-    return serializer.serializeToString(svg as unknown as Node);
-  } finally {
-    restoreSvgIdState(svgIdState);
-    rendering = false;
-    if (prevDocument !== undefined) {
-      (globalThis as Record<string, unknown>).document = prevDocument;
-    } else {
-      delete (globalThis as Record<string, unknown>).document;
-    }
-    if (prevWindow !== undefined) {
-      (globalThis as Record<string, unknown>).window = prevWindow;
-    } else {
-      delete (globalThis as Record<string, unknown>).window;
-    }
-    win.close();
+    const style = factory.svg('style');
+    style.textContent = buildThemeStyleBlock(
+      theme,
+      options.idPrefix ? `${options.idPrefix}-oc-root` : undefined,
+    );
+    defs.insertBefore(style, defs.firstChild);
+  } else inlineStaticStyles(svg, theme);
+  return { svg, serialize: () => serialize(svg as unknown as StaticElement, { precision }) };
+}
+function inlineStaticStyles(svg: SVGElement, theme: ResolvedTheme): void {
+  const roleContext = { theme };
+  svg.setAttribute('font-family', theme.fonts.family);
+  svg.style.setProperty('font-variant-numeric', 'tabular-nums');
+  for (const el of [svg, ...svg.querySelectorAll('*')]) {
+    for (const role of (el.getAttribute('class') ?? '').split(/\s+/))
+      applyRoleStyle(roleContext, el as SVGElement, role);
+    if (el.tagName.toLowerCase() === 'text' && el.closest('.oc-legend'))
+      applyRoleStyle(roleContext, el as SVGElement, 'oc-legend-text');
   }
 }

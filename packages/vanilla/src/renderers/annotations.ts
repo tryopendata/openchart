@@ -1,3 +1,4 @@
+import { createRenderContext, type RenderContext } from '../render-context';
 /**
  * Annotation rendering: range rects, reference lines, labels with connectors.
  */
@@ -29,9 +30,10 @@ function renderArrowhead(
   tangentX: number,
   tangentY: number,
   stroke: string,
+  ctx: RenderContext = createRenderContext(),
 ): void {
   const head = computeArrowheadPoints(tipX, tipY, tangentX, tangentY);
-  const arrow = createSVGElement('polyline');
+  const arrow = createSVGElement('polyline', ctx.factory);
   // `oc-annotation-arrowhead` is what edit mode selects on to find the tip. Both
   // the straight and the curved connector draw their head through here, and both
   // keep the shared `oc-annotation-connector` class for styling -- without the
@@ -67,6 +69,7 @@ function renderCurvedConnector(
   showArrow: boolean,
   exit: 'horizontal' | 'vertical' | undefined,
   control?: Point,
+  ctx: RenderContext = createRenderContext(),
 ): void {
   const { x: cpx, y: cpy } = control ?? automaticControlPoint(from, to, exit);
 
@@ -80,7 +83,7 @@ function renderCurvedConnector(
   const endX = showArrow ? to.x - (tx / tLen) * ARROWHEAD_LENGTH : to.x;
   const endY = showArrow ? to.y - (ty / tLen) * ARROWHEAD_LENGTH : to.y;
 
-  const path = createSVGElement('path');
+  const path = createSVGElement('path', ctx.factory);
   path.setAttribute('class', 'oc-annotation-connector');
   setAttrs(path, {
     d: `M ${from.x} ${from.y} Q ${cpx} ${cpy} ${endX} ${endY}`,
@@ -92,7 +95,7 @@ function renderCurvedConnector(
   parent.appendChild(path);
 
   if (showArrow) {
-    renderArrowhead(parent, to.x, to.y, tx, ty, stroke);
+    renderArrowhead(parent, to.x, to.y, tx, ty, stroke, ctx);
   }
 }
 
@@ -102,12 +105,18 @@ function renderCurvedConnector(
  * line advance, so multi-line and inline-bold compose. The engine measures these
  * same spans at these same weights, so bounds match what lands on screen.
  */
-function fillRichText(text: SVGElement, content: string, x: number, lineHeight: number): void {
+function fillRichText(
+  text: SVGElement,
+  content: string,
+  x: number,
+  lineHeight: number,
+  ctx: RenderContext = createRenderContext(),
+): void {
   const lines = content.split('\n');
   for (let i = 0; i < lines.length; i++) {
     const spans = parseAnnotationSpans(lines[i]);
     for (let s = 0; s < spans.length; s++) {
-      const tspan = createSVGElement('tspan');
+      const tspan = createSVGElement('tspan', ctx.factory);
       if (s === 0) {
         setAttrs(tspan, { x, dy: i === 0 ? 0 : lineHeight });
       }
@@ -126,8 +135,10 @@ function renderAnnotation(
   index: number,
   bgColor?: string,
   hidden = false,
+  interactive = true,
+  ctx: RenderContext = createRenderContext(),
 ): void {
-  const g = createSVGElement('g');
+  const g = createSVGElement('g', ctx.factory);
   g.setAttribute('class', `oc-annotation oc-annotation-${annotation.type}`);
   // Edit mode reads this back as `spec.annotations[index]`, so it has to be the
   // SPEC index, not the render position. `layout.annotations` is both filtered
@@ -144,7 +155,7 @@ function renderAnnotation(
 
   // Range rect
   if (annotation.rect) {
-    const rect = createSVGElement('rect');
+    const rect = createSVGElement('rect', ctx.factory);
     rect.setAttribute('class', 'oc-annotation-range');
     // Range fills cover large chart-area regions; if they intercept pointer
     // events the voronoi tooltip overlay below stops receiving mousemove
@@ -166,7 +177,7 @@ function renderAnnotation(
 
   // Reference line
   if (annotation.line) {
-    const line = createSVGElement('line');
+    const line = createSVGElement('line', ctx.factory);
     line.setAttribute('class', 'oc-annotation-line');
     setAttrs(line, {
       x1: annotation.line.start.x,
@@ -187,11 +198,13 @@ function renderAnnotation(
   if (annotation.footnoteIndex != null && annotation.label) {
     if (annotation.specIndex !== undefined)
       g.setAttribute('data-note-marker-index', String(annotation.specIndex));
-    if (!hidden) g.setAttribute('tabindex', '0');
-    g.setAttribute('role', 'button');
+    if (interactive) {
+      if (!hidden) g.setAttribute('tabindex', '0');
+      g.setAttribute('role', 'button');
+    }
     g.setAttribute(
       'aria-label',
-      `Annotation ${annotation.footnoteIndex}: ${annotation.label.text.replaceAll('**', '')}. Activate to read the note.`,
+      `Annotation ${annotation.footnoteIndex}: ${annotation.label.text.replaceAll('**', '')}${interactive ? '. Activate to read the note.' : ''}`,
     );
     // Prefer the data point. A suppressed connector (too short to be worth
     // drawing) still leaves a resolved dot there, so fall through to it before
@@ -207,7 +220,7 @@ function renderAnnotation(
       annotation.dot?.y ??
       annotation.label.y;
     const r = 8;
-    const circle = createSVGElement('circle');
+    const circle = createSVGElement('circle', ctx.factory);
     circle.setAttribute('class', 'oc-annotation-footnote-marker');
     setAttrs(circle, {
       cx,
@@ -219,7 +232,7 @@ function renderAnnotation(
     });
     g.appendChild(circle);
 
-    const num = createSVGElement('text');
+    const num = createSVGElement('text', ctx.factory);
     num.setAttribute('class', 'oc-annotation-footnote-number');
     setAttrs(num, {
       x: cx,
@@ -246,10 +259,10 @@ function renderAnnotation(
     if (annotation.label.connector) {
       const c = annotation.label.connector;
       if (c.style === 'curve') {
-        renderCurvedConnector(g, c.from, c.to, c.stroke, c.arrow, c.exit, c.control);
+        renderCurvedConnector(g, c.from, c.to, c.stroke, c.arrow, c.exit, c.control, ctx);
       } else if (c.style === 'drop-line') {
         // Quiet voice: hairline, slightly recessed, snapped to the pixel grid.
-        const connector = createSVGElement('line');
+        const connector = createSVGElement('line', ctx.factory);
         connector.setAttribute('class', 'oc-annotation-connector oc-annotation-drop-line');
         setAttrs(connector, {
           x1: c.from.x,
@@ -271,7 +284,7 @@ function renderAnnotation(
         const lineEndX = c.to.x - ux * ARROWHEAD_LENGTH;
         const lineEndY = c.to.y - uy * ARROWHEAD_LENGTH;
 
-        const connector = createSVGElement('line');
+        const connector = createSVGElement('line', ctx.factory);
         connector.setAttribute('class', 'oc-annotation-connector');
         setAttrs(connector, {
           x1: c.from.x,
@@ -284,9 +297,9 @@ function renderAnnotation(
         });
         g.appendChild(connector);
 
-        renderArrowhead(g, c.to.x, c.to.y, dx, dy, c.stroke);
+        renderArrowhead(g, c.to.x, c.to.y, dx, dy, c.stroke, ctx);
       } else {
-        const connector = createSVGElement('line');
+        const connector = createSVGElement('line', ctx.factory);
         connector.setAttribute('class', 'oc-annotation-connector');
         setAttrs(connector, {
           x1: c.from.x,
@@ -306,7 +319,7 @@ function renderAnnotation(
     // dot.x/y at the data point (never the pulled-back connector tip) and picks
     // the stroke so marker and leader read as one system.
     if (annotation.dot) {
-      const dot = createSVGElement('circle');
+      const dot = createSVGElement('circle', ctx.factory);
       dot.setAttribute('class', 'oc-annotation-dot');
       setAttrs(dot, {
         cx: annotation.dot.x,
@@ -319,7 +332,7 @@ function renderAnnotation(
       g.appendChild(dot);
     }
 
-    const text = createSVGElement('text');
+    const text = createSVGElement('text', ctx.factory);
     text.setAttribute('class', 'oc-annotation-label');
     setAttrs(text, { x: annotation.label.x, y: annotation.label.y });
     applyTextStyle(text, annotation.label.style);
@@ -332,6 +345,7 @@ function renderAnnotation(
       annotation.label.lines?.join('\n') ?? annotation.label.text,
       annotation.label.x,
       lineHeight,
+      ctx,
     );
 
     // Render background rect behind text if specified, otherwise use
@@ -351,7 +365,7 @@ function renderAnnotation(
       const bgW = b.width + pad * 2;
       const bgH = b.height + pad * 2;
 
-      const bgRect = createSVGElement('rect');
+      const bgRect = createSVGElement('rect', ctx.factory);
       bgRect.setAttribute('class', 'oc-annotation-bg');
       setAttrs(bgRect, {
         x: bgX,
@@ -370,7 +384,7 @@ function renderAnnotation(
 
     // Optional muted subtitle, positioned by the engine below the primary label.
     if (annotation.subtitle) {
-      const sub = createSVGElement('text');
+      const sub = createSVGElement('text', ctx.factory);
       sub.setAttribute('class', 'oc-annotation-subtitle');
       setAttrs(sub, { x: annotation.subtitle.x, y: annotation.subtitle.y });
       applyTextStyle(sub, annotation.subtitle.style);
@@ -382,6 +396,7 @@ function renderAnnotation(
         annotation.subtitle.lines?.join('\n') ?? annotation.subtitle.text,
         annotation.subtitle.x,
         subLineHeight,
+        ctx,
       );
       g.appendChild(sub);
     }
@@ -390,10 +405,15 @@ function renderAnnotation(
   parent.appendChild(g);
 }
 
-export function renderAnnotations(parent: SVGElement, layout: ChartLayout): void {
+export function renderAnnotations(
+  parent: SVGElement,
+  layout: ChartLayout,
+  interactive = true,
+  ctx: RenderContext = createRenderContext(),
+): void {
   if (layout.annotations.length === 0) return;
 
-  const g = createSVGElement('g');
+  const g = createSVGElement('g', ctx.factory);
   g.setAttribute('class', 'oc-annotations');
   parent.appendChild(g);
 
@@ -402,7 +422,7 @@ export function renderAnnotations(parent: SVGElement, layout: ChartLayout): void
   // defaults to 'transparent', which made every halo a no-op on default themes.
   const bgColor = resolvedSurface(layout.theme);
   for (let i = 0; i < layout.annotations.length; i++) {
-    renderAnnotation(g, layout.annotations[i], i, bgColor, layout.a11y.hidden);
+    renderAnnotation(g, layout.annotations[i], i, bgColor, layout.a11y.hidden, interactive, ctx);
   }
 }
 
@@ -411,9 +431,18 @@ export function updateAnnotationGeometry(
   group: SVGElement,
   annotation: ResolvedAnnotation,
   bgColor?: string,
+  ctx: RenderContext = createRenderContext(),
 ): void {
-  const scratch = createSVGElement('g');
-  renderAnnotation(scratch, annotation, annotation.specIndex ?? 0, bgColor);
+  const scratch = createSVGElement('g', ctx.factory);
+  renderAnnotation(
+    scratch,
+    annotation,
+    annotation.specIndex ?? 0,
+    bgColor,
+    undefined,
+    undefined,
+    ctx,
+  );
   const fresh = scratch.firstElementChild!;
   const previous = [...group.children].filter((child) =>
     [...child.classList].some((name) => name.startsWith('oc-annotation-')),

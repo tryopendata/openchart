@@ -1,4 +1,4 @@
-import type { ChartLayout, TooltipContent } from '@opendata-ai/openchart-core';
+import type { ChartLayout, MarkFocusEvent, TooltipContent } from '@opendata-ai/openchart-core';
 import type { TooltipManager } from '../tooltip';
 import type { CrosshairController } from './crosshair';
 
@@ -19,13 +19,41 @@ export function wireKeyboardNav(
   tooltipDescriptors: Map<string, TooltipContent>,
   tooltipManager: TooltipManager,
   layout: ChartLayout,
-  crosshair?: CrosshairController | null,
+  options: {
+    crosshair?: CrosshairController | null;
+    onFocus?: (event: MarkFocusEvent) => void;
+  } = {},
 ): () => void {
+  const { crosshair, onFocus } = options;
   container.setAttribute('tabindex', '0');
   container.setAttribute('aria-roledescription', 'chart');
   container.setAttribute('aria-label', layout.a11y.altText);
 
   if (tooltipDescriptors.size === 0 && crosshair) {
+    let lastFocus: { datum: Record<string, unknown>; series: string } | null = null;
+    const announceCrosshair = (event: FocusEvent | KeyboardEvent) => {
+      const focused = crosshair.focusedMark;
+      if (!focused || (lastFocus?.datum === focused.datum && lastFocus.series === focused.series))
+        return;
+      lastFocus = focused;
+      const element = svg.querySelector<SVGElement>(`[data-mark-id="${focused.markId}"]`);
+      const mark = layout.marks[Number(focused.markId.slice(focused.markId.lastIndexOf('-') + 1))];
+      if (element && mark)
+        onFocus?.({
+          datum: focused.datum,
+          series: focused.series === '__default__' ? undefined : focused.series,
+          key: `${mark.key ?? focused.markId}:${crosshair.currentIndex}`,
+          description: element.getAttribute('aria-label') ?? undefined,
+          element,
+          event,
+        });
+    };
+    const handleCrosshairFocus = (event: FocusEvent) => {
+      crosshair.hide(true);
+      crosshair.stepTo(0);
+      crosshair.cycleSeries(1);
+      announceCrosshair(event);
+    };
     // No local step index: the crosshair owns it, so ArrowRight after the
     // pointer left the chart at index 8 goes to 9 rather than restarting.
     const handleCrosshairKeys = (e: KeyboardEvent) => {
@@ -56,20 +84,25 @@ export function wireKeyboardNav(
           break;
         case 'Escape':
           e.preventDefault();
+          lastFocus = null;
           crosshair.hide(true);
           break;
       }
+      announceCrosshair(e);
     };
 
     // Tabbing away leaves the crosshair and its tooltip painted otherwise.
     const handleCrosshairBlur = () => {
       crosshair.hide(true);
+      lastFocus = null;
     };
 
+    container.addEventListener('focus', handleCrosshairFocus);
     container.addEventListener('keydown', handleCrosshairKeys);
     container.addEventListener('blur', handleCrosshairBlur);
 
     return () => {
+      container.removeEventListener('focus', handleCrosshairFocus);
       container.removeEventListener('keydown', handleCrosshairKeys);
       container.removeEventListener('blur', handleCrosshairBlur);
       container.removeAttribute('tabindex');
@@ -89,7 +122,8 @@ export function wireKeyboardNav(
 
   let focusIndex = -1;
 
-  function highlightMark(index: number): void {
+  function highlightMark(index: number, event?: FocusEvent | KeyboardEvent): void {
+    const changed = focusIndex !== index;
     if (focusIndex >= 0 && focusIndex < markElements.length) {
       markElements[focusIndex].classList.remove('oc-mark-focused');
       markElements[focusIndex].removeAttribute('aria-selected');
@@ -101,6 +135,22 @@ export function wireKeyboardNav(
       const el = markElements[focusIndex];
       el.classList.add('oc-mark-focused');
       el.setAttribute('aria-selected', 'true');
+      if (changed && event && onFocus) {
+        const id = el.getAttribute('data-mark-id')!;
+        const mark = layout.marks[Number(id.slice(id.lastIndexOf('-') + 1))];
+        if (mark)
+          onFocus({
+            datum: Array.isArray(mark.data) ? (mark.data[0] ?? {}) : mark.data,
+            series:
+              ('seriesKey' in mark ? mark.seriesKey : undefined) ??
+              el.getAttribute('data-series') ??
+              undefined,
+            key: mark.key ?? id,
+            description: el.getAttribute('aria-label') ?? undefined,
+            element: el,
+            event,
+          });
+      }
     }
   }
 
@@ -129,7 +179,7 @@ export function wireKeyboardNav(
       case 'ArrowDown': {
         e.preventDefault();
         const next = focusIndex < markElements.length - 1 ? focusIndex + 1 : 0;
-        highlightMark(next);
+        highlightMark(next, e);
         showTooltipForFocused();
         break;
       }
@@ -137,7 +187,7 @@ export function wireKeyboardNav(
       case 'ArrowUp': {
         e.preventDefault();
         const prev = focusIndex > 0 ? focusIndex - 1 : markElements.length - 1;
-        highlightMark(prev);
+        highlightMark(prev, e);
         showTooltipForFocused();
         break;
       }
@@ -147,7 +197,7 @@ export function wireKeyboardNav(
         if (focusIndex >= 0) {
           showTooltipForFocused();
         } else if (markElements.length > 0) {
-          highlightMark(0);
+          highlightMark(0, e);
           showTooltipForFocused();
         }
         break;
@@ -167,10 +217,15 @@ export function wireKeyboardNav(
     highlightMark(-1);
   };
 
+  const handleFocus = (event: FocusEvent) => {
+    if (markElements.length) highlightMark(0, event);
+  };
+  container.addEventListener('focus', handleFocus);
   container.addEventListener('keydown', handleKeyDown);
   container.addEventListener('blur', handleBlur);
 
   return () => {
+    container.removeEventListener('focus', handleFocus);
     container.removeEventListener('keydown', handleKeyDown);
     container.removeEventListener('blur', handleBlur);
     container.removeAttribute('tabindex');

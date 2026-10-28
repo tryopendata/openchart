@@ -2,6 +2,7 @@
 import { jsonPointer, MARK_TYPES } from '@opendata-ai/openchart-core';
 import type { ValidationError } from '../types';
 import { validateChartSpec } from './chart';
+import { validateFrame } from './frame';
 
 // ---------------------------------------------------------------------------
 // Layer validation
@@ -34,6 +35,7 @@ export function validateLayerSpec(
   errors: ValidationError[],
   prefix = '',
 ): void {
+  validateFrame(spec, errors, prefix);
   const layer = spec.layer as unknown[];
 
   if (layer.length === 0) {

@@ -4,6 +4,7 @@ import type { NormalizedMarkDef, ValidationError } from './types';
 
 /** Authored options with a mark-specific meaning; shared visual properties remain common. */
 const APPLIES_TO: Partial<Record<keyof NormalizedMarkDef, readonly MarkType[]>> = {
+  ticks: ['errorbar'],
   point: ['line', 'area', 'density'],
   interpolate: ['line', 'area', 'density'],
   orient: ['bar', 'histogram'],

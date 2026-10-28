@@ -31,6 +31,7 @@ import type {
 import {
   estimateTextWidth,
   formatDate,
+  getRepresentativeColor,
   pickLabelColor,
   wrapText,
 } from '@opendata-ai/openchart-core';
@@ -40,6 +41,7 @@ import type { ResolvedScaleType } from '../layout/scales';
 import {
   countColorSeries,
   endpointLabelsExplicitlyOn,
+  isStackedColumn,
   resolveSuppression,
 } from '../legend/suppression';
 import {
@@ -52,6 +54,7 @@ import {
   ENDPOINT_SWATCH_SIZE,
   ENDPOINT_VALUE_FONT_WEIGHT,
   ENDPOINT_WRAP_WIDTH_DEFAULT,
+  endpointTrailingPadding,
 } from './constants';
 import { composeEndpointText, formatEndpointValue, resolveEndpointContent } from './format';
 import { endpointFormatter as resolveEndpointFormatter } from './formatter';
@@ -198,6 +201,8 @@ export function computeEndpointLabels(
     return emptyLayout(theme);
   }
 
+  if ((spec.frame?.right !== undefined || spec.frame?.left !== undefined) && endpointLabelsDemoted)
+    return emptyLayout(theme);
   const highlight = spec.highlight ?? [];
   const highlightActive = highlight.length > 0;
   const seriesCount = countColorSeries(spec);
@@ -223,7 +228,35 @@ export function computeEndpointLabels(
   // Same-type collisions (area→area, line→line) keep the first mark; the
   // engine never emits two of the same type per seriesKey.
   const bySeriesKey = new Map<string, LineMark | AreaMark>();
-  for (const mark of marks) {
+  const endpointMarks = [...marks];
+  if (isStackedColumn(spec) && endpointLabelsExplicitlyOn(spec)) {
+    const columns = new Map<string, Extract<Mark, { type: 'rect' }>[]>();
+    for (const mark of marks) {
+      if (mark.type !== 'rect' || !mark.seriesKey) continue;
+      const group = columns.get(mark.seriesKey) ?? [];
+      group.push(mark);
+      columns.set(mark.seriesKey, group);
+    }
+    for (const [seriesKey, segments] of columns) {
+      segments.sort((a, b) => a.x - b.x);
+      const dataPoints = segments.map((segment) => ({
+        x: segment.x + segment.width / 2,
+        y: segment.y + segment.height / 2,
+        datum: segment.data,
+      }));
+      endpointMarks.push({
+        type: 'line',
+        seriesKey,
+        points: dataPoints,
+        dataPoints,
+        data: segments.map((segment) => segment.data),
+        stroke: getRepresentativeColor(segments[segments.length - 1].fill),
+        strokeWidth: 0,
+        aria: { decorative: true },
+      });
+    }
+  }
+  for (const mark of endpointMarks) {
     if (!isLineOrArea(mark) || !mark.seriesKey) continue;
     const existing = bySeriesKey.get(mark.seriesKey);
     if (
@@ -265,7 +298,7 @@ export function computeEndpointLabels(
     );
   const qualifyTrailing = config?.placement === 'interior' || endpointDates('trailing').size > 1;
   const qualifyLeading = config?.placement === 'interior' || endpointDates('leading').size > 1;
-  const showMarker = config?.showMarker !== false;
+  const showMarker = !isStackedColumn(spec) && config?.showMarker !== false;
   const markerRadius = config?.markerStyle?.radius ?? ENDPOINT_MARKER_RADIUS;
   const markerStrokeWidth = config?.markerStyle?.strokeWidth ?? ENDPOINT_MARKER_STROKE_WIDTH;
   // Opaque by default: the marker sits on the line's last point and its fill
@@ -443,7 +476,10 @@ export function computeEndpointLabels(
 
   // Build final entries.
   const columnWidth = Math.max(
-    ENDPOINT_SWATCH_SIZE + ENDPOINT_GAP + Math.max(...provisional.map((p) => p.width), 0) + 4,
+    ENDPOINT_SWATCH_SIZE +
+      ENDPOINT_GAP +
+      Math.max(...provisional.map((p) => p.width), 0) +
+      endpointTrailingPadding(spec.frame?.right),
     32,
   );
   const columnX = chartArea.x + chartArea.width + theme.spacing.endpointColumnGap;
@@ -606,7 +642,7 @@ export function computeEndpointLabels(
         ENDPOINT_SWATCH_SIZE +
           ENDPOINT_GAP +
           Math.max(...leadingProvisional.map((p) => p.width), 0) +
-          4,
+          endpointTrailingPadding(spec.frame?.left),
         32,
       );
       const leadingColumnX = chartArea.x - theme.spacing.endpointColumnGap - leadingColumnWidth;

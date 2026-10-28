@@ -1,3 +1,4 @@
+import { createRenderContext, type RenderContext } from '../render-context';
 /**
  * Legend rendering: swatches + labels with wrap/overflow handling, plus the
  * continuous variant (gradient bar / binned swatch row) for quantitative
@@ -12,13 +13,16 @@ import type {
   TextStyle,
 } from '@opendata-ai/openchart-core';
 import { estimateTextWidth } from '@opendata-ai/openchart-core';
-import { nextSvgId } from '../svg-ids';
 import { applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
 
 /** Paint resolved key text without measuring or choosing placement in the renderer. */
-function renderKeyText(parent: SVGElement, legend: LegendLayout): void {
+function renderKeyText(
+  parent: SVGElement,
+  legend: LegendLayout,
+  ctx: RenderContext = createRenderContext(),
+): void {
   for (const row of legend.textRows ?? []) {
-    const text = createSVGElement('text');
+    const text = createSVGElement('text', ctx.factory);
     text.setAttribute('class', `oc-legend-${row.role}`);
     setAttrs(text, { x: row.x, y: row.y, 'text-anchor': row.anchor ?? 'start' });
     applyTextStyle(text, row.style);
@@ -49,8 +53,9 @@ function renderNoDataSwatch(
   noData: NonNullable<CategoricalLegendLayout['noData']>,
   labelStyle: TextStyle,
   chip?: { rx: number; baseline: string },
+  ctx: RenderContext = createRenderContext(),
 ): void {
-  const swatch = createSVGElement('rect');
+  const swatch = createSVGElement('rect', ctx.factory);
   swatch.setAttribute('class', 'oc-legend-nodata');
   setAttrs(swatch, {
     x: noData.x,
@@ -62,7 +67,7 @@ function renderNoDataSwatch(
   });
   parent.appendChild(swatch);
 
-  const label = createSVGElement('text');
+  const label = createSVGElement('text', ctx.factory);
   setAttrs(label, {
     x: noData.labelX,
     y: noData.labelY,
@@ -81,10 +86,14 @@ function renderNoDataSwatch(
  * The gradient ID comes from the shared `nextSvgId` counter like every other
  * gradient/clip-path def, so IDs stay deterministic at generation time.
  */
-function renderContinuousLegend(parent: SVGElement, legend: ContinuousLegendLayout): void {
+function renderContinuousLegend(
+  parent: SVGElement,
+  legend: ContinuousLegendLayout,
+  ctx: RenderContext = createRenderContext(),
+): void {
   if (legend.bounds.width <= 0 || legend.bounds.height <= 0) return;
 
-  const g = createSVGElement('g');
+  const g = createSVGElement('g', ctx.factory);
   g.setAttribute('class', 'oc-legend oc-legend--continuous');
   g.setAttribute('role', 'img');
   const first = legend.ticks[0];
@@ -108,15 +117,15 @@ function renderContinuousLegend(parent: SVGElement, legend: ContinuousLegendLayo
     // linearGradient def + one rect. Defs may already exist (clip paths).
     let defs: SVGElement | null = parent.querySelector('defs');
     if (!defs) {
-      defs = createSVGElement('defs');
+      defs = createSVGElement('defs', ctx.factory);
       parent.insertBefore(defs, parent.firstChild);
     }
-    const gradientId = nextSvgId('oc-legend-gradient');
-    const grad = createSVGElement('linearGradient');
+    const gradientId = ctx.ids.next('oc-legend-gradient');
+    const grad = createSVGElement('linearGradient', ctx.factory);
     grad.setAttribute('id', gradientId);
     setAttrs(grad, { x1: '0%', y1: '0%', x2: '100%', y2: '0%' });
     for (const stop of legend.colorStops) {
-      const s = createSVGElement('stop');
+      const s = createSVGElement('stop', ctx.factory);
       const attrs: Record<string, string | number> = {
         offset: `${stop.offset * 100}%`,
         'stop-color': stop.color,
@@ -127,7 +136,7 @@ function renderContinuousLegend(parent: SVGElement, legend: ContinuousLegendLayo
     }
     defs.appendChild(grad);
 
-    const bar = createSVGElement('rect');
+    const bar = createSVGElement('rect', ctx.factory);
     bar.setAttribute('class', 'oc-legend-gradient-bar');
     setAttrs(bar, {
       x: legend.bar.x,
@@ -145,7 +154,7 @@ function renderContinuousLegend(parent: SVGElement, legend: ContinuousLegendLayo
     // tall an antialiased seam reads as a sixth, paler class.
     for (let i = 0; i < legend.bins.length; i++) {
       const bin = legend.bins[i];
-      const rect = createSVGElement('rect');
+      const rect = createSVGElement('rect', ctx.factory);
       rect.setAttribute('class', 'oc-legend-bin');
       setAttrs(rect, {
         x: legend.rangeEntries?.[i]?.bounds.x ?? bin.x,
@@ -165,7 +174,7 @@ function renderContinuousLegend(parent: SVGElement, legend: ContinuousLegendLayo
     legend.title &&
     legend.titleY !== undefined
   ) {
-    const title = createSVGElement('text');
+    const title = createSVGElement('text', ctx.factory);
     title.setAttribute('class', 'oc-legend-title');
     setAttrs(title, { x: legend.bar.x, y: legend.titleY, 'text-anchor': 'start' });
     applyTextStyle(title, legend.titleStyle ?? legend.labelStyle);
@@ -174,7 +183,7 @@ function renderContinuousLegend(parent: SVGElement, legend: ContinuousLegendLayo
   }
 
   for (const tick of legend.ticks) {
-    const label = createSVGElement('text');
+    const label = createSVGElement('text', ctx.factory);
     setAttrs(label, {
       x: tick.x,
       y: legend.labelY + (tick.offsetY ?? 0),
@@ -186,10 +195,10 @@ function renderContinuousLegend(parent: SVGElement, legend: ContinuousLegendLayo
   }
 
   if (legend.noData) {
-    renderNoDataSwatch(g, legend.noData, legend.labelStyle);
+    renderNoDataSwatch(g, legend.noData, legend.labelStyle, undefined, ctx);
   }
 
-  renderKeyText(g, legend);
+  renderKeyText(g, legend, ctx);
   parent.appendChild(g);
 }
 
@@ -203,10 +212,14 @@ function renderContinuousLegend(parent: SVGElement, legend: ContinuousLegendLayo
  * "500M". The circles are inert, and `aria-hidden` keeps them out of the AT tree
  * as decorative chrome (the values are already in each mark's aria label).
  */
-function renderSizeLegend(parent: SVGElement, legend: SizeLegendLayout): void {
+function renderSizeLegend(
+  parent: SVGElement,
+  legend: SizeLegendLayout,
+  ctx: RenderContext = createRenderContext(),
+): void {
   if (legend.circles.length === 0) return;
 
-  const g = createSVGElement('g');
+  const g = createSVGElement('g', ctx.factory);
   g.setAttribute('class', 'oc-legend oc-legend--size');
   // Decorative, not announced. `role="img"` + a bare "Size legend" label would
   // tell a screen-reader user a key exists while conveying none of the values it
@@ -230,7 +243,7 @@ function renderSizeLegend(parent: SVGElement, legend: SizeLegendLayout): void {
     legend.title &&
     legend.titleY !== undefined
   ) {
-    const title = createSVGElement('text');
+    const title = createSVGElement('text', ctx.factory);
     title.setAttribute('class', 'oc-legend-title');
     setAttrs(title, { x: ox, y: oy + legend.titleY, 'text-anchor': 'start' });
     applyTextStyle(title, legend.titleStyle ?? legend.labelStyle);
@@ -239,7 +252,7 @@ function renderSizeLegend(parent: SVGElement, legend: SizeLegendLayout): void {
   }
 
   for (const circle of legend.circles) {
-    const c = createSVGElement('circle');
+    const c = createSVGElement('circle', ctx.factory);
     setAttrs(c, {
       cx: ox + circle.cx,
       cy: oy + circle.cy,
@@ -251,7 +264,7 @@ function renderSizeLegend(parent: SVGElement, legend: SizeLegendLayout): void {
     g.appendChild(c);
 
     // Leader line from the circle's top edge out to its label.
-    const line = createSVGElement('line');
+    const line = createSVGElement('line', ctx.factory);
     setAttrs(line, {
       x1: ox + circle.cx,
       y1: oy + circle.cy - circle.radius,
@@ -263,7 +276,7 @@ function renderSizeLegend(parent: SVGElement, legend: SizeLegendLayout): void {
     });
     g.appendChild(line);
 
-    const label = createSVGElement('text');
+    const label = createSVGElement('text', ctx.factory);
     setAttrs(label, {
       x: labelX,
       y: oy + circle.labelY,
@@ -273,22 +286,28 @@ function renderSizeLegend(parent: SVGElement, legend: SizeLegendLayout): void {
     g.appendChild(label);
   }
 
-  renderKeyText(g, legend);
+  renderKeyText(g, legend, ctx);
   parent.appendChild(g);
 }
 
-export function renderLegend(parent: SVGElement, legend: LegendLayout): void {
+export function renderLegend(
+  parent: SVGElement,
+  legend: LegendLayout,
+  interactive = true,
+  ctx: RenderContext = createRenderContext(),
+): void {
+  interactive = interactive && ctx.interactive;
   if (legend.type === 'continuous') {
-    renderContinuousLegend(parent, legend);
+    renderContinuousLegend(parent, legend, ctx);
     return;
   }
   if (legend.type === 'size') {
-    renderSizeLegend(parent, legend);
+    renderSizeLegend(parent, legend, ctx);
     return;
   }
   if (!isCategorical(legend) || legend.entries.length === 0) return;
 
-  const g = createSVGElement('g');
+  const g = createSVGElement('g', ctx.factory);
   g.setAttribute('class', 'oc-legend');
   // A group of toggle buttons, not a list: each entry is an interactive
   // control with aria-pressed, and role="listitem" inside role="list" would
@@ -321,7 +340,7 @@ export function renderLegend(parent: SVGElement, legend: LegendLayout): void {
         offsetY += legend.swatchSize + 6;
       }
     }
-    const entryG = createSVGElement('g');
+    const entryG = createSVGElement('g', ctx.factory);
     entryG.setAttribute('class', 'oc-legend-entry');
     entryG.setAttribute('data-legend-index', String(i));
     entryG.setAttribute('data-legend-label', entry.label);
@@ -331,14 +350,16 @@ export function renderLegend(parent: SVGElement, legend: LegendLayout): void {
       entryG.setAttribute('opacity', '0.5');
     } else {
       const visible = entry.active !== false;
-      entryG.setAttribute('role', 'button');
-      entryG.setAttribute('tabindex', '0');
-      entryG.setAttribute('aria-pressed', String(visible));
+      if (interactive) {
+        entryG.setAttribute('role', 'button');
+        entryG.setAttribute('tabindex', '0');
+        entryG.setAttribute('aria-pressed', String(visible));
+      }
       // Read by the hover-emphasis controller, which must not touch a
       // toggled-off entry (it already carries opacity 0.3 as an attribute).
       entryG.setAttribute('data-legend-active', String(visible));
       entryG.setAttribute('aria-label', `${entry.label}: ${visible ? 'visible' : 'hidden'}`);
-      entryG.setAttribute('style', 'cursor: pointer');
+      if (interactive) entryG.setAttribute('style', 'cursor: pointer');
 
       // Apply dimming for inactive entries
       if (!visible) {
@@ -352,7 +373,7 @@ export function renderLegend(parent: SVGElement, legend: LegendLayout): void {
         legend.labelStyle.fontSize,
         legend.labelStyle.fontWeight,
       );
-      const hit = createSVGElement('rect');
+      const hit = createSVGElement('rect', ctx.factory);
       hit.setAttribute('class', 'oc-legend-hit');
       setAttrs(hit, {
         x: offsetX - LEGEND_HIT_PAD,
@@ -370,7 +391,7 @@ export function renderLegend(parent: SVGElement, legend: LegendLayout): void {
     const midX = offsetX + legend.swatchSize / 2;
     const midY = offsetY + legend.swatchSize / 2;
     if (entry.shape === 'circle') {
-      const circle = createSVGElement('circle');
+      const circle = createSVGElement('circle', ctx.factory);
       setAttrs(circle, {
         cx: midX,
         cy: midY,
@@ -380,7 +401,7 @@ export function renderLegend(parent: SVGElement, legend: LegendLayout): void {
       entryG.appendChild(circle);
     } else if (entry.shape === 'line') {
       const lineWidth = legend.swatchSize;
-      const line = createSVGElement('line');
+      const line = createSVGElement('line', ctx.factory);
       line.setAttribute('class', 'oc-legend-swatch-line');
       setAttrs(line, {
         x1: offsetX,
@@ -395,7 +416,7 @@ export function renderLegend(parent: SVGElement, legend: LegendLayout): void {
       entryG.appendChild(line);
     } else {
       const rectSize = Math.round(legend.swatchSize * 0.6);
-      const rect = createSVGElement('rect');
+      const rect = createSVGElement('rect', ctx.factory);
       rect.setAttribute('class', 'oc-legend-swatch-rect');
       setAttrs(rect, {
         x: offsetX + (legend.swatchSize - rectSize) / 2,
@@ -410,7 +431,7 @@ export function renderLegend(parent: SVGElement, legend: LegendLayout): void {
     }
 
     // Label
-    const label = createSVGElement('text');
+    const label = createSVGElement('text', ctx.factory);
     setAttrs(label, {
       x: offsetX + legend.swatchSize + legend.swatchGap,
       y: offsetY + legend.swatchSize / 2,
@@ -441,9 +462,9 @@ export function renderLegend(parent: SVGElement, legend: LegendLayout): void {
   }
 
   if (legend.noData) {
-    renderNoDataSwatch(g, legend.noData, legend.labelStyle, { rx: 2, baseline: 'central' });
+    renderNoDataSwatch(g, legend.noData, legend.labelStyle, { rx: 2, baseline: 'central' }, ctx);
   }
 
-  renderKeyText(g, legend);
+  renderKeyText(g, legend, ctx);
   parent.appendChild(g);
 }

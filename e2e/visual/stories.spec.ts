@@ -13,6 +13,16 @@ import { captureStory } from './capture';
  * compress the chart area.
  */
 const stories: Array<{ name: string; slug: string; query?: string; note?: string }> = [
+  { name: 'static-barlist-grouped', slug: 'static--barlist--grouped' },
+  { name: 'static-barlist-reference-line', slug: 'static--barlist--reference-line' },
+  { name: 'temporal-columns', slug: 'bar--temporal-columns' },
+  { name: 'static-aligned-pair', slug: 'static--aligned-pair' },
+  { name: 'stats-horizontal-intervals', slug: 'testing--static-stats-grammar--horizontal-intervals' },
+  { name: 'stats-vertical-intervals', slug: 'testing--static-stats-grammar--vertical-intervals' },
+  { name: 'stats-rate-cell', slug: 'testing--static-stats-grammar--rate-cell' },
+  { name: 'stats-lone-published-point', slug: 'testing--static-stats-grammar--lone-published-point' },
+  { name: 'stats-segment-labels', slug: 'testing--static-stats-grammar--segment-labels' },
+  { name: 'stats-range-endpoint-labels', slug: 'testing--static-stats-grammar--range-endpoint-labels' },
   { name: 'v9-reference-labels', slug: 'features--annotation-reference-labels' },
   { name: 'v9-crowded-callouts', slug: 'features--annotation-crowded-callouts' },
   { name: 'v9-notes-sizing', slug: 'features--annotation-notes-sizing' },

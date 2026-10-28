@@ -29,6 +29,7 @@ import { finiteNumber } from '../../data/finite-number';
 import type { ResolvedScales } from '../../layout/scales';
 import { isConditionalValueDef, resolveConditionalValue } from '../../transforms/conditional';
 import { formatLabelValue } from '../_shared/format-label-value';
+import { type TemporalGrouping, temporalBands, temporalGrouping } from '../_shared/temporal-bands';
 import {
   BAR_CORNER_RADIUS,
   getColor,
@@ -75,6 +76,7 @@ export function computeColumnMarks(
   _chartArea: Rect,
   _strategy: LayoutStrategy,
   theme?: ResolvedTheme,
+  grouping?: TemporalGrouping,
 ): RectMark[] {
   const encoding = spec.encoding as Encoding;
   const xChannel = encoding.x;
@@ -82,6 +84,22 @@ export function computeColumnMarks(
 
   if (!xChannel || !yChannel || !scales.x || !scales.y) {
     return [];
+  }
+
+  if (scales.x.type === 'utc' || scales.x.type === 'time') {
+    const colorField =
+      encoding.color && 'field' in encoding.color ? encoding.color.field : undefined;
+    const membership = temporalGrouping(spec.data, xChannel.field, colorField);
+    return temporalBands(scales.x, xChannel, spec.data).flatMap((slot) =>
+      computeColumnMarks(
+        { ...spec, data: slot.data },
+        { ...scales, x: slot.position },
+        _chartArea,
+        _strategy,
+        theme,
+        membership,
+      ),
+    );
   }
 
   const xScale = scales.x.scale as ScaleBand<string>;
@@ -120,6 +138,7 @@ export function computeColumnMarks(
     // Check if any category has multiple rows (actual stacking needed)
     const categoryGroups = groupByField(spec.data, xChannel.field);
     const needsStacking =
+      grouping?.multipleRows ||
       yChannel.stack === 'normalize' ||
       yChannel.stack === 'center' ||
       Array.from(categoryGroups.values()).some((rows) => rows.length > 1);
@@ -139,6 +158,7 @@ export function computeColumnMarks(
           bandwidth,
           baseline,
           scales,
+          grouping?.order,
         );
       } else {
         const stackMode =
@@ -341,17 +361,15 @@ function computeGroupedColumns(
   bandwidth: number,
   baseline: number,
   scales: ResolvedScales,
+  groupOrder?: readonly string[],
 ): RectMark[] {
   const marks: RectMark[] = [];
   const categoryGroups = groupByField(data, categoryField);
 
   // Build a stable group order from first appearance in data (Map for O(1) lookup)
   const groupIndexMap = new Map<string, number>();
-  for (const row of data) {
-    const key = String(row[colorField] ?? '');
-    if (!groupIndexMap.has(key)) {
-      groupIndexMap.set(key, groupIndexMap.size);
-    }
+  for (const key of groupOrder ?? data.map((row) => String(row[colorField] ?? ''))) {
+    if (!groupIndexMap.has(key)) groupIndexMap.set(key, groupIndexMap.size);
   }
   const groupCount = groupIndexMap.size;
   if (groupCount === 0) return marks;

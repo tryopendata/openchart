@@ -1,10 +1,20 @@
 import type { ChartSpec, LayerSpec } from '@opendata-ai/openchart-core';
-import { encodePointerToken, legacyEditorial, resolveTheme } from '@opendata-ai/openchart-core';
+import {
+  CATEGORICAL_FILL_PALETTE_DARK,
+  CATEGORICAL_PALETTE_DARK,
+  encodePointerToken,
+  legacyEditorial,
+  resolveTheme,
+} from '@opendata-ai/openchart-core';
 import { buildPrimarySpec } from '../compile/layer';
 import { expandSpecSugar } from '../compile/spec-sugar';
 import { flattenLayers, normalizeSpec } from '../compiler/normalize';
 import type { NormalizedChartSpec } from '../compiler/types';
 import { countColorSeries, resolveSuppression } from '../legend/suppression';
+
+// Released v8 defaults are migration data, independent of the current palette.
+const V8_CATEGORICAL = ['#06b6d4', '#e29e47', '#4170cb', '#b2417f', '#3ca368', '#a584dc'];
+const V8_CATEGORICAL_FILL = ['#51bccc', '#dda96b', '#587fc8', '#bf6291', '#62ab7d', '#ae96da'];
 
 /** A documented authored-spec change made by migrateSpecV8. */
 export interface SpecRepair {
@@ -334,6 +344,16 @@ export function migrateSpecV8<T>(
         const materialized = {
           ...oldTheme,
           colors: {
+            categorical: V8_CATEGORICAL.map((light, index) => ({
+              light,
+              dark: CATEGORICAL_PALETTE_DARK[index],
+            })),
+            categoricalFill:
+              authoredColors.categorical ??
+              V8_CATEGORICAL_FILL.map((light, index) => ({
+                light,
+                dark: CATEGORICAL_FILL_PALETTE_DARK[index],
+              })),
             annotationRule: { light: '#666666', dark: '#666666' },
             annotationRangeFill: { light: '#000000', dark: '#000000' },
             annotationMarkerFill: { light: legacySurface, dark: '#0a0a0a' },
@@ -369,7 +389,7 @@ export function migrateSpecV8<T>(
           rewrite(
             'theme',
             materialized,
-            'Preserve v8 typography and scaffolding ink without overriding authored chrome sizes.' +
+            'Preserve v8 palettes, typography and scaffolding ink without overriding authored chrome sizes.' +
               ' Shared measured attribution replaces the fixed brand reserve; footer wrapping, default watermark size and resulting automatic geometry have no legacy opt-out.' +
               (current.type === 'map'
                 ? ' Updated static map captions, neutral-class context geometry and occupied size-key placement have no legacy opt-out; their layout cannot be preserved.'

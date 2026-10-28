@@ -1,3 +1,4 @@
+import { hsl } from 'd3-color';
 import { describe, expect, it } from 'vitest';
 import { adaptColorForDarkMode } from '../../theme/dark-mode';
 import {
@@ -14,8 +15,9 @@ describe('palettes', () => {
     expect(CATEGORICAL_PALETTE).toHaveLength(6);
   });
 
-  it('categorical palette leads with cyan #06b6d4', () => {
-    expect(CATEGORICAL_PALETTE[0]).toBe('#06b6d4');
+  it('categorical palette leads with cyan', () => {
+    expect(hsl(CATEGORICAL_PALETTE[0]).h).toBeGreaterThanOrEqual(180);
+    expect(hsl(CATEGORICAL_PALETTE[0]).h).toBeLessThanOrEqual(200);
   });
 
   it('categorical palette colors are valid hex', () => {

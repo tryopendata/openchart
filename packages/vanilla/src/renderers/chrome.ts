@@ -1,3 +1,4 @@
+import { createRenderContext, type RenderContext } from '../render-context';
 /**
  * Chrome rendering: title, subtitle, source, byline, footer.
  */
@@ -23,8 +24,9 @@ export function renderChromeElement(
   chromeKey: string,
   measureText?: MeasureTextFn,
   uppercase = false,
+  ctx: RenderContext = createRenderContext(),
 ): void {
-  const text = createSVGElement('text');
+  const text = createSVGElement('text', ctx.factory);
   // element.y is the TOP of the text box; convert to the alphabetic baseline
   // here instead of relying on dominant-baseline:hanging, which WebKit
   // positions from different font metrics and never inherits into tspans.
@@ -77,7 +79,7 @@ export function renderChromeElement(
   } else {
     const lineHeight = element.style.fontSize * (element.style.lineHeight ?? 1.3);
     for (let i = 0; i < lines.length; i++) {
-      const tspan = createSVGElement('tspan');
+      const tspan = createSVGElement('tspan', ctx.factory);
       setAttrs(tspan, { x: element.x, dy: i === 0 ? 0 : lineHeight });
       tspan.textContent = lines[i];
       text.appendChild(tspan);
@@ -87,15 +89,20 @@ export function renderChromeElement(
   parent.appendChild(text);
 }
 
-export function renderChrome(parent: SVGElement, layout: ChartLayout): void {
-  const g = createSVGElement('g');
+export function renderChrome(
+  parent: SVGElement,
+  layout: ChartLayout,
+  interactive = true,
+  ctx: RenderContext = createRenderContext(),
+): void {
+  const g = createSVGElement('g', ctx.factory);
   g.setAttribute('class', 'oc-chrome');
 
   const { chrome, measureText } = layout;
 
   // Editorial rule: a short colored bar above the top chrome block.
   if (chrome.rule) {
-    const rule = createSVGElement('rect');
+    const rule = createSVGElement('rect', ctx.factory);
     rule.setAttribute('class', 'oc-chrome-rule');
     setAttrs(rule, {
       x: chrome.rule.x,
@@ -112,7 +119,7 @@ export function renderChrome(parent: SVGElement, layout: ChartLayout): void {
   if (chrome.eyebrow && chrome.rule) {
     // The rule already carries the accent above the block; a dot as well is
     // two pieces of furniture saying the same thing.
-    renderChromeElement(g, chrome.eyebrow, 'oc-eyebrow', 'eyebrow', measureText, true);
+    renderChromeElement(g, chrome.eyebrow, 'oc-eyebrow', 'eyebrow', measureText, true, ctx);
   } else if (chrome.eyebrow) {
     // Leading accent dot — matches the editorial design system mock.
     // eyebrow.y is the top of the text box. Visual center is roughly
@@ -122,7 +129,7 @@ export function renderChrome(parent: SVGElement, layout: ChartLayout): void {
     const dotGap = 8;
     const dotX = eyebrow.x + dotR;
     const dotY = eyebrow.y + eyebrow.style.fontSize * 0.42;
-    const dot = createSVGElement('circle');
+    const dot = createSVGElement('circle', ctx.factory);
     dot.setAttribute('class', 'oc-eyebrow-dot');
     setAttrs(dot, { cx: dotX, cy: dotY, r: dotR });
     dot.setAttribute('fill', eyebrow.style.fill ?? 'currentColor');
@@ -132,13 +139,13 @@ export function renderChrome(parent: SVGElement, layout: ChartLayout): void {
       ...eyebrow,
       x: eyebrow.x + dotR * 2 + dotGap,
     };
-    renderChromeElement(g, shifted, 'oc-eyebrow', 'eyebrow', measureText, true);
+    renderChromeElement(g, shifted, 'oc-eyebrow', 'eyebrow', measureText, true, ctx);
   }
   if (chrome.title) {
-    renderChromeElement(g, chrome.title, 'oc-title', 'title', measureText);
+    renderChromeElement(g, chrome.title, 'oc-title', 'title', measureText, undefined, ctx);
   }
   if (chrome.subtitle) {
-    renderChromeElement(g, chrome.subtitle, 'oc-subtitle', 'subtitle', measureText);
+    renderChromeElement(g, chrome.subtitle, 'oc-subtitle', 'subtitle', measureText, undefined, ctx);
   }
 
   const bottomOffset = layout.chrome.bottomAnchorY ?? layout.area.y + layout.area.height;
@@ -161,7 +168,7 @@ export function renderChrome(parent: SVGElement, layout: ChartLayout): void {
       textAnchor: 'start' as const,
     };
 
-    const list = createSVGElement('g');
+    const list = createSVGElement('g', ctx.factory);
     list.setAttribute('role', 'list');
     list.setAttribute('aria-label', 'Annotation notes, in source order');
     g.appendChild(list);
@@ -172,10 +179,10 @@ export function renderChrome(parent: SVGElement, layout: ChartLayout): void {
         layout.theme.spacing.chartToFooter +
         textAscent(fontSize) +
         noteLine * lineHeight;
-      const el = createSVGElement('text');
+      const el = createSVGElement('text', ctx.factory);
       el.setAttribute('class', 'oc-footnotes');
       el.setAttribute('role', 'listitem');
-      if (!layout.a11y.hidden) el.setAttribute('tabindex', '0');
+      if (interactive && !layout.a11y.hidden) el.setAttribute('tabindex', '0');
       el.setAttribute(
         'aria-label',
         `${f.index}. ${f.text.replaceAll('**', '')}${f.subtitle ? `. ${f.subtitle.replaceAll('**', '')}` : ''}`,
@@ -186,12 +193,12 @@ export function renderChrome(parent: SVGElement, layout: ChartLayout): void {
       applyTextStyle(el, style);
       const lines = f.lines ?? [`${f.index}. ${f.text}`];
       lines.forEach((line, index) => {
-        const span = createSVGElement('tspan');
+        const span = createSVGElement('tspan', ctx.factory);
         setAttrs(span, { x: pad, dy: index === 0 ? 0 : lineHeight });
         const runs = f.spans?.[index];
         if (runs) {
           for (const run of runs) {
-            const part = createSVGElement('tspan');
+            const part = createSVGElement('tspan', ctx.factory);
             if (run.bold) part.setAttribute('font-weight', '700');
             part.textContent = run.text;
             span.appendChild(part);
@@ -207,7 +214,7 @@ export function renderChrome(parent: SVGElement, layout: ChartLayout): void {
   let summaryLine = noteLine;
   for (const entry of chrome.seriesSummary ?? []) {
     const size = layout.theme.fonts.sizes.small;
-    const el = createSVGElement('text');
+    const el = createSVGElement('text', ctx.factory);
     el.setAttribute('class', 'oc-series-summary');
     el.setAttribute('data-series', entry.key);
     setAttrs(el, {
@@ -226,7 +233,7 @@ export function renderChrome(parent: SVGElement, layout: ChartLayout): void {
       fill: entry.color,
     });
     entry.lines.forEach((line, index) => {
-      const span = createSVGElement('tspan');
+      const span = createSVGElement('tspan', ctx.factory);
       setAttrs(span, {
         x: layout.theme.spacing.padding,
         dy: index === 0 ? 0 : size * FOOTNOTE_LINE_HEIGHT,
@@ -245,6 +252,8 @@ export function renderChrome(parent: SVGElement, layout: ChartLayout): void {
       'oc-source',
       'source',
       measureText,
+      undefined,
+      ctx,
     );
   }
   if (chrome.byline) {
@@ -254,6 +263,8 @@ export function renderChrome(parent: SVGElement, layout: ChartLayout): void {
       'oc-byline',
       'byline',
       measureText,
+      undefined,
+      ctx,
     );
   }
   if (chrome.footer) {
@@ -263,11 +274,21 @@ export function renderChrome(parent: SVGElement, layout: ChartLayout): void {
       'oc-footer',
       'footer',
       measureText,
+      undefined,
+      ctx,
     );
   }
   if (chrome.brand) {
     const brandY = bottomOffset + chrome.brand.y + bandHeight;
-    renderChromeElement(g, { ...chrome.brand, y: brandY }, 'oc-brand', 'brand', measureText);
+    renderChromeElement(
+      g,
+      { ...chrome.brand, y: brandY },
+      'oc-brand',
+      'brand',
+      measureText,
+      undefined,
+      ctx,
+    );
   }
 
   parent.appendChild(g);

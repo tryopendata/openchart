@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { contrastRatio } from '../../colors/contrast';
-import { ACHROMATIC_RAMP } from '../../colors/palettes';
+import { ACHROMATIC_RAMP, CATEGORICAL_PALETTE } from '../../colors/palettes';
 import { adaptColorForDarkMode } from '../dark-mode';
 import { DEFAULT_THEME } from '../defaults';
 
@@ -43,15 +43,8 @@ describe('DEFAULT_THEME', () => {
     expect(DEFAULT_THEME.fonts.weights.bold).toBe(700);
   });
 
-  it('categorical palette is non-empty and primary accent is cyan', () => {
-    // Palette is a designed OKLCH multi-hue ramp tuned for dark surfaces
-    // (L~=0.70). It does not guarantee WCAG-AA-large-text contrast on
-    // pure white; light-mode line strokes route through the strong
-    // accent token (`adaptForLightLineStroke`) instead. Per-token
-    // accessibility is enforced via dedicated contrast helpers, not
-    // here.
-    expect(DEFAULT_THEME.colors.categorical.length).toBeGreaterThanOrEqual(5);
-    expect(DEFAULT_THEME.colors.categorical[0]).toBe('#06b6d4');
+  it('categorical defaults use the canonical palette', () => {
+    expect(DEFAULT_THEME.colors.categorical).toEqual(CATEGORICAL_PALETTE);
   });
 
   it('dark canvas surface tokens are part of the achromatic ramp', () => {

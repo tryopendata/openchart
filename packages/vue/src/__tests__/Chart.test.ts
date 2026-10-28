@@ -1,6 +1,6 @@
 import type { ChartSpec } from '@opendata-ai/openchart-core';
 import { flushPromises, mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ref } from 'vue';
 import { Chart } from '../Chart';
 import { VizThemeKey } from '../context';
@@ -229,6 +229,37 @@ it('merges spec, provider, and prop themes at authored leaves', async () => {
 });
 
 describe('interaction mode and listener parity', () => {
+  it('rewires mark focus to the current listener without replacing the chart', async () => {
+    const before = vi.fn(),
+      after = vi.fn();
+    const spec: ChartSpec = {
+      mark: 'bar',
+      animation: false,
+      data: [
+        { name: 'A', value: 3 },
+        { name: 'B', value: 5 },
+      ],
+      encoding: {
+        x: { field: 'value', type: 'quantitative' },
+        y: { field: 'name', type: 'nominal' },
+      },
+    };
+    const wrapper = mount(Chart, { props: { spec, autoResize: false, onMarkFocus: before } });
+    await flushPromises();
+    const host = wrapper.element as HTMLElement;
+    const svg = host.querySelector('svg');
+    host.dispatchEvent(new FocusEvent('focus'));
+    expect(before).toHaveBeenCalledTimes(1);
+    expect(before.mock.calls[0][0].datum).toEqual(spec.data[0]);
+    await wrapper.setProps({ onMarkFocus: after });
+    host.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    expect(host.querySelector('svg')).toBe(svg);
+    expect(before).toHaveBeenCalledTimes(1);
+    expect(after).toHaveBeenCalledTimes(1);
+    expect(after.mock.calls[0][0].datum).toEqual(spec.data[1]);
+    wrapper.unmount();
+  });
+
   const clickTitle = (wrapper: ReturnType<typeof mount>) =>
     wrapper.find('[data-chrome-key="title"]').trigger('click');
 

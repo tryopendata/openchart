@@ -144,3 +144,7 @@ See [Tables](tables.md) for the full column feature set (heatmaps, inline bars, 
 - [Spec reference](spec-reference.md) for field-by-field type details
 - [Tables](tables.md) for `TableSpec` column features
 - [Theming tokens](theming-tokens.md) for dashboard surface theming
+
+## Server-rendered table cells
+
+Use `renderStaticSVG` for rate intervals, count bars and sparkline cells. Set `display: 'sparkline'` and `a11y.hidden: true` when the containing table already states the values. A rate cell can layer an `errorbar` and a `point` on a shared domain. Render light and dark separately with unique prefixes. See [static rendering](static-rendering.md) for the full contract and aligned-figure recipe.

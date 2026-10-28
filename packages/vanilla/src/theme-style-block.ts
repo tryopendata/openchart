@@ -24,7 +24,7 @@ import { SVG_NS } from './renderers/svg-dom';
  * `--oc-*` custom properties on each supported SVG root and defines every class-based
  * chrome rule against them.
  */
-export function buildThemeStyleBlock(theme: ResolvedTheme): string {
+export function buildThemeStyleBlock(theme: ResolvedTheme, rootId?: string): string {
   const accent = theme.colors.categorical[0] ?? cssTokenDefault('--oc-accent', 'light');
   const bg = theme.colors.neutral.surface;
 
@@ -89,7 +89,20 @@ export function buildThemeStyleBlock(theme: ResolvedTheme): string {
     `.oc-legend text { fill: var(--oc-legend-text); }`,
   ];
 
-  return rules.join('\n');
+  const css = rules.join('\n');
+  if (!rootId) return css;
+  const selectorId = rootId.replaceAll('.', '\\.');
+  return css.replace(
+    /([^{}]+)\{/g,
+    (_match, selectors: string) =>
+      `${selectors
+        .split(',')
+        .map((selector) => {
+          const value = selector.trim();
+          return value.startsWith('svg.') ? `${value}#${selectorId}` : `#${selectorId} ${value}`;
+        })
+        .join(', ')} {`,
+  );
 }
 
 /**

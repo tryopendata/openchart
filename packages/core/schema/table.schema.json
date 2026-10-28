@@ -597,14 +597,14 @@
                 "categorical": {
                   "type": "array",
                   "items": {
-                    "type": "string"
+                    "$ref": "#/definitions/TokenValue"
                   },
-                  "description": "Categorical stroke palette for nominal data (array of CSS color strings)."
+                  "description": "Categorical stroke palette: CSS colors or explicit light/dark pairs."
                 },
                 "categoricalFill": {
                   "type": "array",
                   "items": {
-                    "type": "string"
+                    "$ref": "#/definitions/TokenValue"
                   },
                   "description": "Categorical palette for area-filling marks (bar, area, arc, waffle, calendar, rect). Defaults to `categorical` when only that is set."
                 },

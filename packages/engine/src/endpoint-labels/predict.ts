@@ -16,13 +16,14 @@ import type { MeasureTextFn, ResolvedTheme } from '@opendata-ai/openchart-core';
 import { estimateTextWidth, formatDate, wrapText } from '@opendata-ai/openchart-core';
 import type { NormalizedChartSpec } from '../compiler/types';
 import { type ResolvedScaleType, resolveTemporalScaleType } from '../layout/scales';
-import { endpointLabelsExplicitlyOn, seriesField } from '../legend/suppression';
+import { endpointLabelsExplicitlyOn, isStackedColumn, seriesField } from '../legend/suppression';
 import {
   ENDPOINT_GAP,
   ENDPOINT_LABEL_FONT_WEIGHT,
   ENDPOINT_SWATCH_SIZE,
   ENDPOINT_VALUE_FONT_WEIGHT,
   ENDPOINT_WRAP_WIDTH_DEFAULT,
+  endpointTrailingPadding,
 } from './constants';
 import { composeEndpointText, formatEndpointValue, resolveEndpointContent } from './format';
 import { endpointFormatter } from './formatter';
@@ -46,7 +47,12 @@ export function predictEndpointLabelsWidth(
   if (xScaleType === undefined && spec.encoding.x?.type === 'temporal')
     xScaleType =
       spec.encoding.x.scale?.type ?? resolveTemporalScaleType(spec.encoding.x, spec.data);
-  if (spec.markType !== 'line' && spec.markType !== 'area') return 0;
+  if (
+    spec.markType !== 'line' &&
+    spec.markType !== 'area' &&
+    !(isStackedColumn(spec) && endpointLabelsExplicitlyOn(spec))
+  )
+    return 0;
   // Distinct series count (color, or strokeDash on a color-less line).
   const field = seriesField(spec);
   if (!field) return 0;
@@ -146,7 +152,10 @@ export function predictEndpointLabelsWidth(
   }
 
   // Column = swatch + gap + text column + small trailing pad.
-  return Math.max(ENDPOINT_SWATCH_SIZE + ENDPOINT_GAP + textColumn + 4, 32);
+  return Math.max(
+    ENDPOINT_SWATCH_SIZE + ENDPOINT_GAP + textColumn + endpointTrailingPadding(spec.frame?.right),
+    32,
+  );
 }
 
 /**

@@ -14,6 +14,7 @@
  */
 
 import type {
+  EndpointLabelContent,
   LabelCandidate,
   LabelDensity,
   MeasureTextFn,
@@ -104,6 +105,9 @@ export function computeBarLabels(
   labelSuffix?: string,
   fontFamily = 'system-ui, -apple-system, sans-serif',
   options: {
+    content?: EndpointLabelContent;
+    labelField?: string;
+    normalize?: boolean;
     placement?: BarLabelPlacement;
     columnWidth?: number;
     measureText?: MeasureTextFn;
@@ -132,7 +136,13 @@ export function computeBarLabels(
     // falling back to parsing the aria label (which may lose precision
     // due to abbreviation rounding, e.g. 1955 → "2K" → 2000).
     let valuePart: string;
-    const rawNum = valueField != null ? Number(mark.data[valueField]) : NaN;
+    let rawNum = valueField != null ? Number(mark.data[valueField]) : NaN;
+    if (options.normalize && mark.stackGroup !== undefined && valueField) {
+      const total = marks
+        .filter((other) => other.stackGroup === mark.stackGroup)
+        .reduce((sum, other) => sum + Math.max(0, Number(other.data[valueField]) || 0), 0);
+      rawNum = total > 0 ? rawNum / total : 0;
+    }
 
     if (formatter && Number.isFinite(rawNum)) {
       valuePart = formatter(rawNum);
@@ -154,6 +164,10 @@ export function computeBarLabels(
     }
     if (labelPrefix) valuePart = labelPrefix + valuePart;
     if (labelSuffix) valuePart = valuePart + labelSuffix;
+    if (options.content && options.content !== 'value') {
+      const label = mark.seriesKey ?? String(mark.data[options.labelField ?? ''] ?? '');
+      valuePart = options.content === 'label' ? label : `${label} ${valuePart}`;
+    }
 
     const measured = options.measureText?.(valuePart, FONT_SIZE, LABEL_FONT_WEIGHT);
     const textWidth = measured?.width ?? estimateTextWidth(valuePart, FONT_SIZE, LABEL_FONT_WEIGHT);

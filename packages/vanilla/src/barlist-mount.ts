@@ -1,3 +1,4 @@
+import { createRenderContext, pageIdScope } from './render-context';
 /**
  * BarList mount API: the main entry point for vanilla JS barlist usage.
  *
@@ -226,7 +227,7 @@ export function createBarList(
       });
     }
 
-    cleanups.push(wireMarkNavigation(svg, navigation));
+    if (!layout.a11y.hidden) cleanups.push(wireMarkNavigation(svg, navigation));
     return () => {
       activeLeave?.();
       for (const cleanup of cleanups) cleanup();
@@ -249,7 +250,10 @@ export function createBarList(
       svgElement.remove();
     }
 
-    const newSvg = renderBarListSVG(currentLayout, { animate });
+    const newSvg = renderBarListSVG(currentLayout, {
+      context: createRenderContext({ ids: pageIdScope }),
+      animate,
+    });
     container.appendChild(newSvg);
     svgElement = newSvg;
 
@@ -317,7 +321,10 @@ export function createBarList(
   ): string | Promise<Blob> | Promise<string> {
     if (!svgElement) return '';
     // Export settled geometry, independent of transient hover and animation.
-    const terminalSvg = renderBarListSVG(currentLayout, { animate: false });
+    const terminalSvg = renderBarListSVG(currentLayout, {
+      context: createRenderContext({ ids: pageIdScope }),
+      animate: false,
+    });
     const resolvedOptions = { theme: currentLayout.theme, ...options_ };
     prepareSettledExportTheme(svgElement, terminalSvg, resolvedOptions.theme, !!options_?.theme);
 

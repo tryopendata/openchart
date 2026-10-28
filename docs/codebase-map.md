@@ -91,7 +91,7 @@
 | `chart.export()` | `packages/vanilla/src/chart-export.ts` → `createChartExporter()` |
 | Auto-height growth contract (400px is the viz budget; chrome/legend/metrics overheads grow the figure) | `packages/vanilla/src/chart-sizing.ts` → `createChartSizer()`: `dimensions()` (auto-height latch), `compile()` (bounded 3-pass convergence), `verticalOverheads()`, and `shouldResize()` (self-induced-resize guard) |
 | Vanilla SVG renderer entry | `packages/vanilla/src/svg-renderer.ts` → `renderChartSVG()`, `renderFacetedPanels()` |
-| Static SVG renderer (SSR) | `packages/vanilla/src/static.ts` → `renderStaticSVG()`. Subpath: `@opendata-ai/openchart-vanilla/static`. Requires `happy-dom` peer dep. |
+| Static SVG renderer (SSR) | `packages/vanilla/src/static.ts` → `renderStaticSVG()`. Subpath: `@opendata-ai/openchart-vanilla/static`. Uses `static-dom.ts` and `render-context.ts`; no DOM peer dependency. See [static rendering](static-rendering.md). |
 | Renderer: chrome (title/subtitle/source/byline/footer) | `packages/vanilla/src/renderers/chrome.ts` → `renderChrome()` |
 | Renderer: marks (line, area, rect, arc, point, text, rule, tick) | `packages/vanilla/src/renderers/marks.ts` → `renderMarks()`. Returns an optional `<g class="oc-mark-labels">` overlay that `svg-renderer.ts` appends outside the clip path so value labels on tall columns aren't clipped — `.oc-annotations` is appended *before* that overlay, so annotations paint under the data labels. Label halos: `applyLabelHalo` (skipped when the engine set `halo: false`) delegates to the one `applyKnockoutHalo(el, color, fontSize)` in `renderers/svg-dom.ts`, shared with the annotation labels; presentation attributes, stroke width `round(fontSize * 0.3)`. |
 | Renderer: axes | `packages/vanilla/src/renderers/axes.ts` → `renderAxes()` |
@@ -213,7 +213,7 @@
 | Published JSON Schema (LLM tool-use) | `packages/core/schema/{vizspec,chart,table}.schema.json` — generated, committed, exported via the core `./schema` subpath (NOT the barrel). Generator: `scripts/generate-schema.mjs` (ts-json-schema-generator over `packages/core/src/types/schema-roots.ts`; hoists a shared `ChartSpecBase` def). |
 | `llms.txt` generator | `scripts/generate-llms.mjs` — hand-written narrative + a mark-encoding table generated from the built core's `MARK_ENCODING_RULES`/`MARK_DISPLAY_NAMES`. Build core first. |
 | Freshness CI (schema + llms.txt) | `bun run check:generated` (both generators in `--check` mode); wired into `.github/workflows/ci.yml` after typecheck. Editing spec types without regenerating fails CI. |
-| Schema/artifact tests | `packages/core/src/schema/__tests__/{schema,generated-artifacts}.test.ts` (ajv-validates all 16 marks, rejects hallucinated fields, asserts artifacts cover every mark). |
+| Schema/artifact tests | `packages/core/src/schema/__tests__/{schema,generated-artifacts}.test.ts` (ajv-validates all 19 marks, rejects hallucinated fields, asserts artifacts cover every mark). |
 | "Did you mean" repair hints | levenshtein `editDistance`/`nearestColumn`/`didYouMean` in `packages/engine/src/compiler/validation/helpers.ts` (wired into DATA_FIELD_MISSING suggestions). Test: `validate-did-you-mean.test.ts`. |
 | LLM spec-generation eval (manual, per-release) | `scripts/llm-eval/` (`fixtures.json`, `run.mjs`, `README.md`). Hits the Anthropic API; not in CI; `@anthropic-ai/sdk` is not a monorepo dep (dynamic import). |
 | Generating-specs guide | `docs/generating-specs.md` (schema usage, tool-use, strict-mode transform, validate-repair loop). |
@@ -478,3 +478,7 @@ families; `clarity` is a deprecated colors-only migration bridge.
 | Independent cameras and scenes | `vanilla/src/map-view-camera.ts`, `map-view-renderer.ts`; `map-mount.ts` exposes scoped camera methods and preserves root compatibility. |
 | Labels, identity and portable export | `map-labels.ts`, `map-label-inventory.ts`, `map-reader.ts`, `map-reader-overlays.ts`, `static.ts`; view scope changes representation, not observation identity. |
 | Real geography and browser journeys | `engine/src/geo/__tests__/fixtures/travis-tracts-2020.geojson` with source provenance; `examples/src/gallery/geo-views.stories.tsx`; `e2e/chart-map-design/geo-views.spec.ts`. |
+
+### Static statistics implementation
+
+`packages/vanilla/src/static-dom.ts` serializes the per-call SVG tree; `render-context.ts` owns factories and scoped IDs. `packages/engine/src/charts/errorbar/` computes authored intervals, and `packages/engine/src/layout/axes/fit-labels.ts` fits nominal ticks. Shared consuming-site fixtures, byte goldens and the Node-only static test project cover server rendering. `scripts/static-budget.ts` measures the two-theme page allocation.

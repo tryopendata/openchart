@@ -5,7 +5,7 @@
  * ajv, the same draft-07 validator an LLM tool-use harness would use. They
  * prove three properties the plan requires:
  *
- *   1. Every one of the 16 mark types has a minimal valid spec the schema
+ *   1. Every one of the 19 mark types has a minimal valid spec the schema
  *      accepts (guards against a future mark being added to the types but not
  *      reflected in the generated schema).
  *   2. Hallucinated fields (unknown top-level keys, unknown marks, unknown
@@ -77,7 +77,7 @@ function minimalSpecForMark(mark: string): Record<string, unknown> {
 }
 
 describe('chart.schema.json', () => {
-  it('has a schema definition for exactly the 16 declared mark types', () => {
+  it('has a schema definition for exactly the 19 declared mark types', () => {
     // Every MARK_TYPES entry must produce a spec the schema accepts.
     for (const mark of MARK_TYPES) {
       const spec = minimalSpecForMark(mark);

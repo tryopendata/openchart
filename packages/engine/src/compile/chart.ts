@@ -1,3 +1,5 @@
+import { attachMarkMetadata } from '../charts/_shared/mark-metadata';
+import { fitAxisLabels } from '../layout/axes/fit-labels';
 /**
  * Single-chart compilation, in phases:
  *
@@ -23,6 +25,7 @@ import type {
 } from '@opendata-ai/openchart-core';
 import {
   adaptTheme,
+  estimateTextWidth,
   isAxislessMark,
   mergeThemeConfig,
   resolveTheme,
@@ -300,7 +303,10 @@ function layoutSingleChart(input: SingleChartInput): ChartLayout {
   // Inline y-axis labels: inset the x-scale range start by the widest tick
   // label width so data marks start to the right of the labels. The plan
   // already measured the real tick labels.
-  const scaleArea = scaleAreaFor(chartArea, plan.inlineYLabelInset);
+  const scaleArea = scaleAreaFor(
+    chartArea,
+    options.frozenBudget?.inlineYLabelInset ?? plan.inlineYLabelInset,
+  );
 
   // A frozen plot can sit at different x than the budget packed the top lane
   // for: repack against it, within the lane height the budget reserved.
@@ -376,6 +382,22 @@ function layoutSingleChart(input: SingleChartInput): ChartLayout {
         precomputedYTicks:
           !dims.chromeStripped && plan.yTickValues.length > 0 ? plan.yTickValues : undefined,
       });
+
+  if (chartSpec.frame?.left !== undefined && axes.y && axes.y.tickPosition !== 'inline') {
+    const style = axes.y.tickLabelStyle;
+    const available = Math.max(0, chartSpec.frame.left - (axes.y.labelPadding ?? 6) - 4);
+    const fitted = fitAxisLabels(axes.y.ticks, available, (text) =>
+      options.measureText
+        ? options.measureText(text, style.fontSize, style.fontWeight).width
+        : estimateTextWidth(text, style.fontSize, style.fontWeight),
+    );
+    axes.y.ticks = fitted.ticks;
+    if (fitted.shortened)
+      emitSpecWarnings(
+        ['[openchart] Y-axis labels were shortened to fit frame.left.'],
+        options.onWarn,
+      );
+  }
 
   offsetValueLabelAxes(axes, plan.valueLabelPlan);
   emitValueLabelDiagnostic(plan.valueLabelPlan, options);
@@ -651,9 +673,10 @@ function computeChartMarks(
     renderSpec.markDef,
   );
   const renderer = getChartRenderer(rendererKey);
+  const markWarnings: string[] = [];
   const marks: Mark[] = renderer
     ? renderer(
-        renderSpec,
+        { ...renderSpec, markWarnings },
         scales,
         chartArea,
         strategy,
@@ -663,6 +686,15 @@ function computeChartMarks(
         options.measureText,
       )
     : [];
+
+  const metadataWarnings: string[] = [];
+  attachMarkMetadata(
+    marks,
+    renderSpec.encoding,
+    renderSpec.sourceMarkType ?? renderSpec.markType,
+    metadataWarnings,
+  );
+  emitSpecWarnings([...markWarnings, ...metadataWarnings], options.onWarn);
 
   // Opt-in per-series fill patterns (mark.fillPattern: 'auto'). Mutates
   // filled marks in place; assignment is deterministic and theme-aware.

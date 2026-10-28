@@ -821,3 +821,7 @@ Publication-quality charts with responsive variants at different breakpoints:
 - [Getting started](getting-started.md) for a hands-on tutorial
 - [Integration guide](integration-guide.md) for events, export, responsive patterns, and framework-specific code
 - [Visualization patterns](agent-patterns.md) for data storytelling recipes with real-world data
+
+## Error bars
+
+`mark: { type: 'errorbar', ticks: true }` draws an authored interval, with horizontal `x`/`x2` bounds or vertical `y`/`y2` bounds and the other axis identifying the row. `ticks` controls end caps. Layer a point for the estimate. OpenChart never computes confidence intervals, standard errors or quartiles: aggregate observations and supply the bounds upstream. Error bars work in layered sparkline cells. Temporal `bar` x channels render continuous-time columns; set `encoding.x.interval: 'week'` for weekly data. See [static rendering](static-rendering.md).

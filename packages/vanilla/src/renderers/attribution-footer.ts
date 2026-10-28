@@ -1,5 +1,6 @@
 /** Portable SVG attribution embedded in HTML table and graph shells. */
 import type { MeasureTextFn, ResolvedChrome } from '@opendata-ai/openchart-core';
+import { createRenderContext, type RenderContext } from '../render-context';
 import { renderAttributionBrand } from './brand';
 import { renderChromeElement } from './chrome';
 import { createSVGElement, setAttrs } from './svg-dom';
@@ -8,10 +9,11 @@ export function createAttributionFooter(
   chrome: ResolvedChrome,
   width: number,
   measureText?: MeasureTextFn,
+  ctx: RenderContext = createRenderContext(),
 ): SVGSVGElement | null {
   if (!chrome.source && !chrome.byline && !chrome.footer && !chrome.brand && !chrome.watermark)
     return null;
-  const svg = createSVGElement('svg') as SVGSVGElement;
+  const svg = createSVGElement('svg', ctx.factory) as SVGSVGElement;
   svg.setAttribute('class', 'oc-attribution-footer');
   setAttrs(svg, {
     width: '100%',
@@ -22,8 +24,8 @@ export function createAttributionFooter(
   svg.style.flex = '0 0 auto';
   for (const key of ['source', 'byline', 'footer'] as const) {
     const element = chrome[key];
-    if (element) renderChromeElement(svg, element, `oc-${key}`, key, measureText);
+    if (element) renderChromeElement(svg, element, `oc-${key}`, key, measureText, undefined, ctx);
   }
-  renderAttributionBrand(svg, chrome, 0, measureText);
+  renderAttributionBrand(svg, chrome, 0, measureText, undefined, ctx);
   return svg;
 }

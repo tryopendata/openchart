@@ -10,7 +10,7 @@
  */
 
 import type { GeoLabelsBundle } from './geo-labels';
-import type { GradientDef } from './spec';
+import type { GradientDef, MarkType } from './spec';
 import type { ResolvedTheme } from './theme';
 
 // ---------------------------------------------------------------------------
@@ -276,7 +276,16 @@ export interface MarkAria {
  * Line mark: a series of connected points.
  * Used by line charts and area chart boundaries.
  */
-export interface LineMark {
+/** Provenance for data shapes. Decorative marks omit this metadata. */
+export interface MarkMetadata {
+  markType?: MarkType;
+  /** Sanitized field suffixes; series retain only fields constant across their rows. */
+  identity?: Record<string, string>;
+  /** Authored encoding.description, distinct from generated aria labels and aria.description. */
+  authoredDescription?: string;
+}
+
+export interface LineMark extends MarkMetadata {
   type: 'line';
   /** Stable identity key for data-update transitions. */
   key?: string;
@@ -326,7 +335,7 @@ export interface LineMark {
  * Area mark: a filled region bounded by a top line and a baseline.
  * Used by area charts.
  */
-export interface AreaMark {
+export interface AreaMark extends MarkMetadata {
   type: 'area';
   /** Stable identity key for data-update transitions. */
   key?: string;
@@ -388,7 +397,7 @@ export interface AreaMark {
  * Rect mark: a rectangle.
  * Used by bar charts, column charts, and heatmap cells.
  */
-export interface RectMark {
+export interface RectMark extends MarkMetadata {
   type: 'rect';
   /** Stable identity key for data-update transitions. */
   key?: string;
@@ -458,7 +467,7 @@ export interface RectMark {
  * Arc mark: a pie/donut slice.
  * Used by pie and donut charts.
  */
-export interface ArcMark {
+export interface ArcMark extends MarkMetadata {
   type: 'arc';
   /** SVG path string for the arc. */
   path: string;
@@ -500,7 +509,7 @@ export interface ArcMark {
  * Point mark: a circle or dot.
  * Used by scatter/bubble charts and dot plots.
  */
-export interface PointMark {
+export interface PointMark extends MarkMetadata {
   type: 'point';
   /** Stable identity key for data-update transitions. */
   key?: string;
@@ -539,7 +548,7 @@ export interface PointMark {
  * Text mark: data-positioned text label.
  * Used by text charts for showing values directly at data coordinates.
  */
-export interface TextMarkLayout {
+export interface TextMarkLayout extends MarkMetadata {
   type: 'textMark';
   /** Stable identity key for data-update transitions. */
   key?: string;
@@ -586,7 +595,7 @@ export interface TextMarkLayout {
  * Rule mark: a line segment between two points.
  * Used for reference lines rendered as data marks.
  */
-export interface RuleMarkLayout {
+export interface RuleMarkLayout extends MarkMetadata {
   type: 'rule';
   /** Stable identity key for data-update transitions. */
   key?: string;
@@ -627,7 +636,7 @@ export interface RuleMarkLayout {
  * Tick mark: a short line segment at a data coordinate.
  * Used for strip plots and rug plots.
  */
-export interface TickMarkLayout {
+export interface TickMarkLayout extends MarkMetadata {
   type: 'tick';
   /** Stable identity key for data-update transitions. */
   key?: string;
@@ -2186,8 +2195,10 @@ export interface GeoMapLayout {
 // ---------------------------------------------------------------------------
 
 /** A resolved bar list row with computed positions and visual properties. */
-export interface BarListRowMark {
+export interface BarListRowMark extends MarkMetadata {
   type: 'barlist-row';
+  /** Full authored label, including text omitted by display truncation. */
+  fullLabel?: string;
   /** Row index (0-based). */
   index: number;
   /** Row top y position. */
@@ -2199,7 +2210,13 @@ export interface BarListRowMark {
   /** Optional subtitle text. */
   subtitle?: ResolvedLabel;
   /** Track rectangle (the muted background bar). */
-  track: { x: number; y: number; width: number; height: number; cornerRadius: number };
+  track: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    cornerRadius: number;
+  };
   /** Fill bar rectangle (the colored bar proportional to value). */
   bar: { x: number; y: number; width: number; height: number; cornerRadius: number; fill: string };
   /** Formatted value label (right-aligned). */
@@ -2229,6 +2246,23 @@ export interface BarListLayout {
   chrome: ResolvedChrome;
   /** Resolved row marks with positions, colors, and labels. */
   rows: BarListRowMark[];
+  /** Measured group headers and separators. */
+  groups?: Array<{
+    key: string;
+    label: ResolvedLabel;
+    separator?: { x1: number; y: number; x2: number };
+  }>;
+  /** Value-axis reference rules, in SVG coordinates. */
+  referenceLines?: Array<{
+    x: number;
+    y1: number;
+    y2: number;
+    stroke: string;
+    strokeWidth: number;
+    strokeDasharray?: string;
+    label?: ResolvedLabel;
+  }>;
+  warnings?: CompileWarning[];
   /** Tooltip content descriptors keyed by row index. */
   tooltipDescriptors: Map<string, TooltipContent>;
   /** Accessibility metadata. */

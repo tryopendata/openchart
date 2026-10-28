@@ -54,6 +54,105 @@
                   "anyOf": [
                     {
                       "type": "string",
+                      "const": "errorbar"
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "ticks": {
+                          "type": "boolean",
+                          "description": "Draw decorative end caps on an explicit interval; default false."
+                        },
+                        "type": {
+                          "type": "string",
+                          "const": "errorbar"
+                        },
+                        "size": {
+                          "type": "number",
+                          "description": "Bar/column marks: fixed bar thickness in pixels. When set, bars are this height (horizontal) or width (vertical), centered within the band.\n\nPoint marks: the dot RADIUS in pixels (default 5, typical 2-12). This is NOT Vega-Lite's point `size`, which is an area in px^2 -- a VL size of 110 corresponds to `size: 6` here (r = sqrt(area / pi)). Validation rejects values above 50 with the conversion."
+                        },
+                        "filled": {
+                          "type": "boolean",
+                          "description": "Whether the mark is filled (vs stroked only)."
+                        },
+                        "opacity": {
+                          "type": "number",
+                          "description": "Default opacity (0-1)."
+                        },
+                        "fillOpacity": {
+                          "type": "number",
+                          "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                        },
+                        "fill": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "$ref": "#/definitions/GradientDef"
+                            }
+                          ],
+                          "description": "Default fill color or gradient."
+                        },
+                        "stroke": {
+                          "type": "string",
+                          "description": "Default stroke color."
+                        },
+                        "strokeWidth": {
+                          "type": "number",
+                          "description": "Default stroke width."
+                        },
+                        "tooltip": {
+                          "type": [
+                            "boolean",
+                            "null"
+                          ],
+                          "description": "Tooltip behavior. null disables tooltips."
+                        },
+                        "clip": {
+                          "type": "boolean",
+                          "description": "Clip marks to the chart area."
+                        },
+                        "fillPattern": {
+                          "type": "string",
+                          "enum": [
+                            "auto",
+                            "none"
+                          ],
+                          "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ]
+                    }
+                  ]
+                },
+                "encoding": {
+                  "$ref": "#/definitions/ErrorbarEncoding%3CDataRow%3E"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/definitions/ChartSpecBase"
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "encoding",
+                "mark"
+              ],
+              "properties": {
+                "mark": {
+                  "anyOf": [
+                    {
+                      "type": "string",
                       "const": "arc"
                     },
                     {
@@ -2239,9 +2338,13 @@
       "additionalProperties": false,
       "description": "Radial gradient definition. Coordinates are in [0,1] normalized space relative to the mark's bounding box."
     },
-    "ArcEncoding<DataRow>": {
+    "ErrorbarEncoding<DataRow>": {
       "type": "object",
       "properties": {
+        "description": {
+          "$ref": "#/definitions/DescriptionEncoding%3CDataRow%3E",
+          "description": "Accessible mark description; static output exposes it as a native title."
+        },
         "x": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Horizontal position channel. Required for: bar, line, area, point, tick, rect, lollipop. Maps a field to the x-axis. Use `type: 'temporal'` for dates, `'nominal'` for categories, `'quantitative'` for numbers."
@@ -2257,6 +2360,9 @@
             },
             {
               "$ref": "#/definitions/ConditionalValueDef%3CDataRow%3E"
+            },
+            {
+              "$ref": "#/definitions/ValueDef"
             }
           ],
           "description": "Color channel. Required for arc marks (determines pie/donut slice coloring). Optional for all other marks -- used for series differentiation on multi-series charts, or heatmap intensity. Accepts a conditional definition to apply colors based on data predicates, or a bare `{ value }` constant (VL aligned; expanded to the mark-level fill/stroke)."
@@ -2333,7 +2439,7 @@
         },
         "theta": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
-          "description": "Canonical value channel for arc marks (quantitative — the slice value)."
+          "description": "Angular position (slice value) for arc marks (pie/donut), the canonical value channel in v8. Waffle and parliament marks accept it too (the same part-to-whole value channel). The compiler populates internal `y` from `theta`; authored `y` aliases are rejected. Not used by any other mark type."
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -2349,11 +2455,59 @@
         }
       },
       "required": [
-        "theta",
-        "color"
+        "x",
+        "y"
       ],
       "additionalProperties": false,
-      "description": "Encoding for arc marks (pie/donut charts).\n- `theta`: required (quantitative — the canonical slice value channel)\n- `color`: required (nominal/ordinal — the category)"
+      "description": "Explicit interval bounds; runtime validation requires exactly one of x2/y2."
+    },
+    "DescriptionEncoding<DataRow>": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "$ref": "#/definitions/FieldType",
+              "description": "How to interpret the field values.\n- quantitative: continuous numbers (scale: linear)\n- temporal: dates/times (scale: time)\n- nominal: unordered categories (scale: ordinal)\n- ordinal: ordered categories (scale: ordinal)"
+            },
+            "format": {
+              "type": "string",
+              "description": "Format string for values (Vega-Lite aligned). For quantitative fields: d3-format string (e.g. \",.0f\", \"$,.2f\"), or semantic keyword `'percent'` / `'currency'`. For temporal fields: d3-time-format string (e.g. \"%Y\", \"%b %d\"). Used in tooltips; `axis.format` takes precedence for axis tick labels."
+            },
+            "field": {
+              "type": "string",
+              "description": "Data field name (column in the data array).\n\nWhen using `ChartSpec<TData>` with a typed data array, this is constrained to the actual column names of `TData`. Typos fail at compile time and IDEs autocomplete your column names."
+            }
+          },
+          "required": [
+            "field"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "value"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "description": "Authored mark text, kept verbatim for strings and formatted for numeric fields."
+    },
+    "FieldType": {
+      "type": "string",
+      "enum": [
+        "quantitative",
+        "temporal",
+        "nominal",
+        "ordinal"
+      ],
+      "description": "Data field type, following Vega-Lite conventions."
     },
     "EncodingChannel<DataRow>": {
       "type": "object",
@@ -2365,6 +2519,34 @@
         "type": {
           "$ref": "#/definitions/FieldType",
           "description": "How to interpret the field values.\n- quantitative: continuous numbers (scale: linear)\n- temporal: dates/times (scale: time)\n- nominal: unordered categories (scale: ordinal)\n- ordinal: ordered categories (scale: ordinal)"
+        },
+        "interval": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "day"
+            },
+            {
+              "type": "string",
+              "const": "week"
+            },
+            {
+              "type": "string",
+              "const": "month"
+            },
+            {
+              "type": "string",
+              "const": "quarter"
+            },
+            {
+              "type": "string",
+              "const": "year"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "description": "Temporal bar/rect/errorbar position interval; numbers are milliseconds."
         },
         "aggregate": {
           "$ref": "#/definitions/AggregateOp",
@@ -2508,16 +2690,6 @@
       ],
       "additionalProperties": false,
       "description": "A single encoding channel mapping a data field to a visual property.\n\nFollows the Vega-Lite encoding model: field identifies the column, type determines how the engine interprets values, aggregate applies a transformation before encoding."
-    },
-    "FieldType": {
-      "type": "string",
-      "enum": [
-        "quantitative",
-        "temporal",
-        "nominal",
-        "ordinal"
-      ],
-      "description": "Data field type, following Vega-Lite conventions."
     },
     "AggregateOp": {
       "type": "string",
@@ -3234,6 +3406,19 @@
       "additionalProperties": false,
       "description": "Facet channel definition: partitions data into small-multiple panels.\n\nUnlike positional channels, facet only needs a field, a categorical type, and optional layout hints (columns, sort). It does not carry scale/axis config because it produces a grid, not a visual encoding."
     },
+    "FrameConfig": {
+      "type": "object",
+      "properties": {
+        "left": {
+          "type": "number"
+        },
+        "right": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Fixed horizontal figure gutters in CSS pixels."
+    },
     "FieldMetadata": {
       "type": "object",
       "properties": {
@@ -3852,6 +4037,10 @@
           "type": "string",
           "description": "Alt text announced by screen readers for the chart as a whole. Replaces the auto-generated description. Also settable via the top-level `description` field (Vega-Lite convention); this field wins when both are present."
         },
+        "table": {
+          "type": "boolean",
+          "description": "Render the hidden screen-reader data table. Defaults to true; navigation stays enabled."
+        },
         "hidden": {
           "type": "boolean",
           "description": "Hide the chart from assistive technology entirely (`aria-hidden`). Use only when the chart is decorative or the surrounding content already conveys the same information. Also suppresses the hidden screen-reader data table and keyboard mark navigation."
@@ -4331,6 +4520,10 @@
     "LabelConfig": {
       "type": "object",
       "properties": {
+        "content": {
+          "$ref": "#/definitions/EndpointLabelContent",
+          "description": "Compose category/series names and formatted values; default value only."
+        },
         "placement": {
           "type": "string",
           "enum": [
@@ -4368,6 +4561,15 @@
       },
       "additionalProperties": false,
       "description": "Label display configuration for chart data labels."
+    },
+    "EndpointLabelContent": {
+      "type": "string",
+      "enum": [
+        "label",
+        "value",
+        "label value"
+      ],
+      "description": "Content composition for an endpoint-label entry: the series name, the formatted value, or both joined on one line. See  {@link  EndpointLabelsConfig.content } ."
     },
     "LabelDensity": {
       "type": "string",
@@ -4477,15 +4679,6 @@
       "additionalProperties": false,
       "description": "Configuration for the endpoint labels column rendered at the chart's right edge for multi-series line/area charts. Each entry pairs the series name with its last formatted value, optionally anchored to the line by an open-circle marker.\n\nThe column and traditional legend are independent identification surfaces. For multi-series line/area charts:\n\n| `legend.show` | `endpointLabels` | Traditional legend | Endpoint column | |--|--|--|--| | unset | unset | hidden | shown | | true | unset | shown | shown | | unset | false | shown | hidden | | false | false | hidden (accessibility warning) | hidden | | true | false | shown | hidden | | false | true | hidden | shown | | true | true | shown | shown |\n\nSingle-series charts: column is hidden by default (nothing to identify).\n\nThe implementation is in `packages/engine/src/legend/suppression.ts` — `resolveSuppression` is the single source of truth. The table above is a user-facing mirror; if the two ever diverge, the engine wins. Tests in `legend/__tests__/suppression.test.ts` enforce every cell."
     },
-    "EndpointLabelContent": {
-      "type": "string",
-      "enum": [
-        "label",
-        "value",
-        "label value"
-      ],
-      "description": "Content composition for an endpoint-label entry: the series name, the formatted value, or both joined on one line. See  {@link  EndpointLabelsConfig.content } ."
-    },
     "ResponsiveConfig": {
       "type": "object",
       "properties": {
@@ -4529,14 +4722,14 @@
                 "categorical": {
                   "type": "array",
                   "items": {
-                    "type": "string"
+                    "$ref": "#/definitions/TokenValue"
                   },
-                  "description": "Categorical stroke palette for nominal data (array of CSS color strings)."
+                  "description": "Categorical stroke palette: CSS colors or explicit light/dark pairs."
                 },
                 "categoricalFill": {
                   "type": "array",
                   "items": {
-                    "type": "string"
+                    "$ref": "#/definitions/TokenValue"
                   },
                   "description": "Categorical palette for area-filling marks (bar, area, arc, waffle, calendar, rect). Defaults to `categorical` when only that is set."
                 },
@@ -5645,9 +5838,133 @@
       ],
       "description": "Resolution strategy for shared resources across layers. 'shared' (default): union domains, single axis/legend. 'independent': each layer gets its own scale/axis/legend."
     },
+    "ArcEncoding<DataRow>": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "$ref": "#/definitions/DescriptionEncoding%3CDataRow%3E",
+          "description": "Accessible mark description; static output exposes it as a native title."
+        },
+        "x": {
+          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
+          "description": "Horizontal position channel. Required for: bar, line, area, point, tick, rect, lollipop. Maps a field to the x-axis. Use `type: 'temporal'` for dates, `'nominal'` for categories, `'quantitative'` for numbers."
+        },
+        "y": {
+          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
+          "description": "Vertical position channel. Required for: bar, line, area, point, tick, rect, arc, lollipop. For arc marks, this is the value field (slice size). For all others it's the y-axis position."
+        },
+        "color": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/EncodingChannel%3CDataRow%3E"
+            },
+            {
+              "$ref": "#/definitions/ConditionalValueDef%3CDataRow%3E"
+            }
+          ],
+          "description": "Color channel. Required for arc marks (determines pie/donut slice coloring). Optional for all other marks -- used for series differentiation on multi-series charts, or heatmap intensity. Accepts a conditional definition to apply colors based on data predicates, or a bare `{ value }` constant (VL aligned; expanded to the mark-level fill/stroke)."
+        },
+        "size": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/EncodingChannel%3CDataRow%3E"
+            },
+            {
+              "$ref": "#/definitions/ConditionalValueDef%3CDataRow%3E"
+            },
+            {
+              "$ref": "#/definitions/ValueDef"
+            }
+          ],
+          "description": "Size channel. Used by point/bubble charts to scale dots by a quantitative field, area-proportionally (sqrt curve). The units are dot RADII in px: `scale.range` defaults to [3, 30] for scatter, and a bare `{ value }` constant expands to `mark.size`, also a radius. This differs from Vega-Lite, where point size is an area in px^2 -- VL-scale values (60-900) are rejected by validation with the conversion. Accepts a conditional definition to vary size based on data predicates."
+        },
+        "detail": {
+          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
+          "description": "Detail channel. Groups data into multiple series without mapping to a visual property. Useful when you want separate lines per category but don't need the color to differ."
+        },
+        "key": {
+          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
+          "description": "Identity channel for data-update transitions. Maps a field whose value uniquely identifies each datum across updates. Mirrors Vega-Lite's key channel. Not visually encoded. Optional: charts derive sensible default keys."
+        },
+        "x2": {
+          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
+          "description": "Secondary x position. Used with `x` to define a horizontal span (rect marks, error bars). Both `x` and `x2` must be quantitative."
+        },
+        "y2": {
+          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
+          "description": "Secondary y position. Used with `y` to define a vertical span (rect marks, error bands). Both `y` and `y2` must be quantitative."
+        },
+        "opacity": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/EncodingChannel%3CDataRow%3E"
+            },
+            {
+              "$ref": "#/definitions/ConditionalValueDef%3CDataRow%3E"
+            },
+            {
+              "$ref": "#/definitions/ValueDef"
+            }
+          ],
+          "description": "Data-driven opacity (0-1 range). Accepts a conditional definition to vary opacity based on data predicates (e.g., highlight selected points), or a bare `{ value }` constant (VL aligned; expanded to `mark.opacity`)."
+        },
+        "strokeDash": {
+          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
+          "description": "Stroke dash pattern encoding. Maps a nominal/ordinal field to different dash patterns on line and rule marks. Useful when color alone doesn't distinguish series well."
+        },
+        "angle": {
+          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
+          "description": "Rotation angle encoding for point marks. Maps a quantitative field to 0-360 degrees."
+        },
+        "text": {
+          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
+          "description": "Text content for `text` marks. Required when mark is `'text'`. Not meaningful for other mark types."
+        },
+        "tooltip": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/EncodingChannel%3CDataRow%3E"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/EncodingChannel%3CDataRow%3E"
+              }
+            }
+          ],
+          "description": "Tooltip field(s). Shown on hover. Can be a single channel or an array for multi-field tooltips. Independent of the x/y/color encoding."
+        },
+        "theta": {
+          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
+          "description": "Canonical value channel for arc marks (quantitative — the slice value)."
+        },
+        "facet": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+        },
+        "row": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Row facet channel: partitions data into vertically-stacked panels. Each unique value of the row field produces one panel, arranged in a single column. Shares the x-axis scale by default; y-axis is independent. Mutually exclusive with `facet` and `column`."
+        },
+        "column": {
+          "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
+          "description": "Column facet channel: partitions data into side-by-side panels. Each unique value of the column field produces one panel, arranged in a single row. Shares the y-axis scale by default; x-axis is independent. Mutually exclusive with `facet` and `row`."
+        }
+      },
+      "required": [
+        "theta",
+        "color"
+      ],
+      "additionalProperties": false,
+      "description": "Encoding for arc marks (pie/donut charts).\n- `theta`: required (quantitative — the canonical slice value channel)\n- `color`: required (nominal/ordinal — the category)"
+    },
     "LineEncoding<DataRow>": {
       "type": "object",
       "properties": {
+        "description": {
+          "$ref": "#/definitions/DescriptionEncoding%3CDataRow%3E",
+          "description": "Accessible mark description; static output exposes it as a native title."
+        },
         "x": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Horizontal position channel. Required for: bar, line, area, point, tick, rect, lollipop. Maps a field to the x-axis. Use `type: 'temporal'` for dates, `'nominal'` for categories, `'quantitative'` for numbers."
@@ -5767,6 +6084,10 @@
     "BarEncoding<DataRow>": {
       "type": "object",
       "properties": {
+        "description": {
+          "$ref": "#/definitions/DescriptionEncoding%3CDataRow%3E",
+          "description": "Accessible mark description; static output exposes it as a native title."
+        },
         "x": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Horizontal position channel. Required for: bar, line, area, point, tick, rect, lollipop. Maps a field to the x-axis. Use `type: 'temporal'` for dates, `'nominal'` for categories, `'quantitative'` for numbers."
@@ -5886,6 +6207,10 @@
     "AreaEncoding<DataRow>": {
       "type": "object",
       "properties": {
+        "description": {
+          "$ref": "#/definitions/DescriptionEncoding%3CDataRow%3E",
+          "description": "Accessible mark description; static output exposes it as a native title."
+        },
         "x": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Horizontal position channel. Required for: bar, line, area, point, tick, rect, lollipop. Maps a field to the x-axis. Use `type: 'temporal'` for dates, `'nominal'` for categories, `'quantitative'` for numbers."
@@ -6028,6 +6353,10 @@
     "PointEncoding<DataRow>": {
       "type": "object",
       "properties": {
+        "description": {
+          "$ref": "#/definitions/DescriptionEncoding%3CDataRow%3E",
+          "description": "Accessible mark description; static output exposes it as a native title."
+        },
         "x": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Horizontal position channel. Required for: bar, line, area, point, tick, rect, lollipop. Maps a field to the x-axis. Use `type: 'temporal'` for dates, `'nominal'` for categories, `'quantitative'` for numbers."
@@ -6147,6 +6476,10 @@
     "CircleEncoding<DataRow>": {
       "type": "object",
       "properties": {
+        "description": {
+          "$ref": "#/definitions/DescriptionEncoding%3CDataRow%3E",
+          "description": "Accessible mark description; static output exposes it as a native title."
+        },
         "x": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Horizontal position channel. Required for: bar, line, area, point, tick, rect, lollipop. Maps a field to the x-axis. Use `type: 'temporal'` for dates, `'nominal'` for categories, `'quantitative'` for numbers."
@@ -6266,6 +6599,10 @@
     "LollipopEncoding<DataRow>": {
       "type": "object",
       "properties": {
+        "description": {
+          "$ref": "#/definitions/DescriptionEncoding%3CDataRow%3E",
+          "description": "Accessible mark description; static output exposes it as a native title."
+        },
         "x": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Horizontal position channel. Required for: bar, line, area, point, tick, rect, lollipop. Maps a field to the x-axis. Use `type: 'temporal'` for dates, `'nominal'` for categories, `'quantitative'` for numbers."
@@ -6385,6 +6722,10 @@
     "BeeswarmEncoding<DataRow>": {
       "type": "object",
       "properties": {
+        "description": {
+          "$ref": "#/definitions/DescriptionEncoding%3CDataRow%3E",
+          "description": "Accessible mark description; static output exposes it as a native title."
+        },
         "x": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Horizontal position channel. Required for: bar, line, area, point, tick, rect, lollipop. Maps a field to the x-axis. Use `type: 'temporal'` for dates, `'nominal'` for categories, `'quantitative'` for numbers."
@@ -6500,6 +6841,10 @@
     "RangeEncoding<DataRow>": {
       "type": "object",
       "properties": {
+        "description": {
+          "$ref": "#/definitions/DescriptionEncoding%3CDataRow%3E",
+          "description": "Accessible mark description; static output exposes it as a native title."
+        },
         "x": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Horizontal position channel. Required for: bar, line, area, point, tick, rect, lollipop. Maps a field to the x-axis. Use `type: 'temporal'` for dates, `'nominal'` for categories, `'quantitative'` for numbers."
@@ -6613,12 +6958,15 @@
         "x",
         "y"
       ],
-      "additionalProperties": false,
-      "description": "Encoding for range marks (dumbbell / arrow / range-bar plots).\n- Horizontal (the common editorial form): `y` nominal/ordinal category,   `x` quantitative start, `x2` quantitative end.\n- Vertical: `x` nominal/ordinal category, `y` quantitative start,   `y2` quantitative end."
+      "additionalProperties": false
     },
     "WaffleEncoding<DataRow>": {
       "type": "object",
       "properties": {
+        "description": {
+          "$ref": "#/definitions/DescriptionEncoding%3CDataRow%3E",
+          "description": "Accessible mark description; static output exposes it as a native title."
+        },
         "x": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Horizontal position channel. Required for: bar, line, area, point, tick, rect, lollipop. Maps a field to the x-axis. Use `type: 'temporal'` for dates, `'nominal'` for categories, `'quantitative'` for numbers."
@@ -6734,6 +7082,10 @@
     "TextEncoding<DataRow>": {
       "type": "object",
       "properties": {
+        "description": {
+          "$ref": "#/definitions/DescriptionEncoding%3CDataRow%3E",
+          "description": "Accessible mark description; static output exposes it as a native title."
+        },
         "x": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Horizontal position channel. Required for: bar, line, area, point, tick, rect, lollipop. Maps a field to the x-axis. Use `type: 'temporal'` for dates, `'nominal'` for categories, `'quantitative'` for numbers."
@@ -6852,6 +7204,10 @@
     "TickEncoding<DataRow>": {
       "type": "object",
       "properties": {
+        "description": {
+          "$ref": "#/definitions/DescriptionEncoding%3CDataRow%3E",
+          "description": "Accessible mark description; static output exposes it as a native title."
+        },
         "x": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Horizontal position channel. Required for: bar, line, area, point, tick, rect, lollipop. Maps a field to the x-axis. Use `type: 'temporal'` for dates, `'nominal'` for categories, `'quantitative'` for numbers."
@@ -6971,6 +7327,10 @@
     "RectEncoding<DataRow>": {
       "type": "object",
       "properties": {
+        "description": {
+          "$ref": "#/definitions/DescriptionEncoding%3CDataRow%3E",
+          "description": "Accessible mark description; static output exposes it as a native title."
+        },
         "x": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Horizontal position channel. Required for: bar, line, area, point, tick, rect, lollipop. Maps a field to the x-axis. Use `type: 'temporal'` for dates, `'nominal'` for categories, `'quantitative'` for numbers."
@@ -7090,6 +7450,10 @@
     "Encoding<DataRow>": {
       "type": "object",
       "properties": {
+        "description": {
+          "$ref": "#/definitions/DescriptionEncoding%3CDataRow%3E",
+          "description": "Accessible mark description; static output exposes it as a native title."
+        },
         "x": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Horizontal position channel. Required for: bar, line, area, point, tick, rect, lollipop. Maps a field to the x-axis. Use `type: 'temporal'` for dates, `'nominal'` for categories, `'quantitative'` for numbers."
@@ -7199,12 +7563,15 @@
           "description": "Column facet channel: partitions data into side-by-side panels. Each unique value of the column field produces one panel, arranged in a single row. Shares the y-axis scale by default; x-axis is independent. Mutually exclusive with `facet` and `row`."
         }
       },
-      "additionalProperties": false,
-      "description": "Encoding object mapping visual channels to data fields. Which channels are required depends on the mark type — see the per-mark encoding interfaces (ArcEncoding, LineEncoding, etc.) and MARK_ENCODING_RULES in encoding.ts for the full requirements table."
+      "additionalProperties": false
     },
     "CalendarEncoding<DataRow>": {
       "type": "object",
       "properties": {
+        "description": {
+          "$ref": "#/definitions/DescriptionEncoding%3CDataRow%3E",
+          "description": "Accessible mark description; static output exposes it as a native title."
+        },
         "x": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Horizontal position channel. Required for: bar, line, area, point, tick, rect, lollipop. Maps a field to the x-axis. Use `type: 'temporal'` for dates, `'nominal'` for categories, `'quantitative'` for numbers."
@@ -7314,6 +7681,10 @@
     "ParliamentEncoding<DataRow>": {
       "type": "object",
       "properties": {
+        "description": {
+          "$ref": "#/definitions/DescriptionEncoding%3CDataRow%3E",
+          "description": "Accessible mark description; static output exposes it as a native title."
+        },
         "x": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Horizontal position channel. Required for: bar, line, area, point, tick, rect, lollipop. Maps a field to the x-axis. Use `type: 'temporal'` for dates, `'nominal'` for categories, `'quantitative'` for numbers."
@@ -7429,6 +7800,10 @@
     "HistogramEncoding<DataRow>": {
       "type": "object",
       "properties": {
+        "description": {
+          "$ref": "#/definitions/DescriptionEncoding%3CDataRow%3E",
+          "description": "Accessible mark description; static output exposes it as a native title."
+        },
         "x": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Horizontal position channel. Required for: bar, line, area, point, tick, rect, lollipop. Maps a field to the x-axis. Use `type: 'temporal'` for dates, `'nominal'` for categories, `'quantitative'` for numbers."
@@ -7547,6 +7922,10 @@
     "DensityEncoding<DataRow>": {
       "type": "object",
       "properties": {
+        "description": {
+          "$ref": "#/definitions/DescriptionEncoding%3CDataRow%3E",
+          "description": "Accessible mark description; static output exposes it as a native title."
+        },
         "x": {
           "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
           "description": "Horizontal position channel. Required for: bar, line, area, point, tick, rect, lollipop. Maps a field to the x-axis. Use `type: 'temporal'` for dates, `'nominal'` for categories, `'quantitative'` for numbers."
@@ -7665,6 +8044,18 @@
     "LayerSpec": {
       "type": "object",
       "properties": {
+        "display": {
+          "$ref": "#/definitions/Display",
+          "description": "Display defaults shared by every leaf."
+        },
+        "a11y": {
+          "$ref": "#/definitions/A11yConfig",
+          "description": "Figure accessibility; hidden cells omit the image role."
+        },
+        "frame": {
+          "$ref": "#/definitions/FrameConfig",
+          "description": "Fixed horizontal plot gutters shared by the figure."
+        },
         "layer": {
           "type": "array",
           "items": {
@@ -7817,6 +8208,300 @@
               "anyOf": [
                 {
                   "type": "string",
+                  "const": "errorbar"
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "ticks": {
+                      "type": "boolean",
+                      "description": "Draw decorative end caps on an explicit interval; default false."
+                    },
+                    "type": {
+                      "type": "string",
+                      "const": "errorbar"
+                    },
+                    "size": {
+                      "type": "number",
+                      "description": "Bar/column marks: fixed bar thickness in pixels. When set, bars are this height (horizontal) or width (vertical), centered within the band.\n\nPoint marks: the dot RADIUS in pixels (default 5, typical 2-12). This is NOT Vega-Lite's point `size`, which is an area in px^2 -- a VL size of 110 corresponds to `size: 6` here (r = sqrt(area / pi)). Validation rejects values above 50 with the conversion."
+                    },
+                    "filled": {
+                      "type": "boolean",
+                      "description": "Whether the mark is filled (vs stroked only)."
+                    },
+                    "opacity": {
+                      "type": "number",
+                      "description": "Default opacity (0-1)."
+                    },
+                    "fillOpacity": {
+                      "type": "number",
+                      "description": "Fill opacity (0-1), independent of stroke (Vega-Lite aligned).\n\nOn a binned bar with more than one color group this defaults to 0.55 so overlapping distributions stay readable; set it explicitly to override. On an area, setting it switches the fill from the default gradient to a flat translucent series color — gradients and overlapping fills don't mix."
+                    },
+                    "fill": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "$ref": "#/definitions/GradientDef"
+                        }
+                      ],
+                      "description": "Default fill color or gradient."
+                    },
+                    "stroke": {
+                      "type": "string",
+                      "description": "Default stroke color."
+                    },
+                    "strokeWidth": {
+                      "type": "number",
+                      "description": "Default stroke width."
+                    },
+                    "tooltip": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ],
+                      "description": "Tooltip behavior. null disables tooltips."
+                    },
+                    "clip": {
+                      "type": "boolean",
+                      "description": "Clip marks to the chart area."
+                    },
+                    "fillPattern": {
+                      "type": "string",
+                      "enum": [
+                        "auto",
+                        "none"
+                      ],
+                      "description": "Pattern-fill reinforcement for filled marks (bar, area, arc).\n\n- `'auto'`: assign a per-series SVG pattern (diagonal hatch, dots,   crosshatch, vertical lines) layered over each series color so series   remain distinguishable without color vision. Marks too small to show   a legible pattern keep their solid fill.\n- `'none'` (default): solid fills only."
+                    }
+                  },
+                  "required": [
+                    "type"
+                  ]
+                }
+              ]
+            },
+            "encoding": {
+              "$ref": "#/definitions/ErrorbarEncoding%3CDataRow%3E"
+            },
+            "frame": {
+              "$ref": "#/definitions/FrameConfig",
+              "description": "Fixed horizontal plot gutters."
+            },
+            "fields": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/definitions/FieldMetadata"
+              },
+              "description": "Optional authored measure, unit, provenance, and supplied interval metadata."
+            },
+            "data": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/DataRow"
+              },
+              "description": "Data array: each element is a row with field values. The Vega-Lite object form `{ values: [...] }` is also accepted at runtime and unwrapped during the pre-validation sugar expansion. `{ url }` is not supported (openchart does not fetch data)."
+            },
+            "transform": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Transform"
+              },
+              "description": "Data transforms applied in order before encoding (filter, bin, calculate, timeUnit)."
+            },
+            "chrome": {
+              "$ref": "#/definitions/Chrome",
+              "description": "Editorial chrome (title, subtitle, source, etc.)."
+            },
+            "chromeLayout": {
+              "type": "string",
+              "enum": [
+                "subtract",
+                "grow"
+              ],
+              "description": "How chrome height interacts with the container height budget.\n\n- omitted: only notes and the series summary grow the figure; title,   subtitle, and source subtract from the height budget.\n- `'subtract'`: the container height is fixed and chrome text   (title/subtitle/source) is subtracted from it, shrinking the plot. This   is the historical behavior.\n- `'grow'`: the container height is treated as the *plot* budget, and the   rendered SVG grows taller by the measured chrome height. The plot keeps   its full budget (minus axis/padding overhead) regardless of how many   lines the title wraps to.\n\nFacets and layers report engine-owned growth once."
+            },
+            "title": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "text": {
+                      "type": "string"
+                    },
+                    "subtitle": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "text"
+                  ],
+                  "additionalProperties": false
+                }
+              ],
+              "description": "Top-level title sugar (Vega-Lite aligned). Expanded into `chrome.title` (and `chrome.subtitle` for the object form). `chrome.title` wins when both are set."
+            },
+            "subtitle": {
+              "type": "string",
+              "description": "Top-level subtitle sugar. Expanded into `chrome.subtitle`; `chrome.subtitle` wins."
+            },
+            "description": {
+              "type": "string",
+              "description": "Alt text for the rendered chart (Vega-Lite aligned). Sugar for `a11y.description`; `a11y.description` wins when both are set. When absent, alt text is auto-generated from the spec and data."
+            },
+            "a11y": {
+              "$ref": "#/definitions/A11yConfig",
+              "description": "Accessibility overrides. See  {@link  A11yConfig } ."
+            },
+            "width": {
+              "type": "number",
+              "description": "Fixed render width in pixels (Vega-Lite aligned). Overrides the container-derived width. When both `width` and `height` are set, `responsive: false` is implied unless `responsive` is set explicitly. Omit for the default container-driven sizing."
+            },
+            "height": {
+              "type": "number",
+              "description": "Fixed render height in pixels (Vega-Lite aligned). See `width`."
+            },
+            "$schema": {
+              "type": "string",
+              "description": "Accepted for Vega-Lite compatibility and ignored (with a compile warning)."
+            },
+            "metrics": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Metric"
+              },
+              "description": "KPI/metric cells rendered as a horizontal row between subtitle and chart area. Each cell shows a label/value pair with optional delta and secondary value. Hidden in sparkline mode and auto-stripped when the container is too narrow or short, or when value text would overflow its cell."
+            },
+            "annotations": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Annotation"
+              },
+              "description": "Data annotations (text callouts, highlighted ranges, reference lines)."
+            },
+            "labels": {
+              "$ref": "#/definitions/LabelSpec",
+              "description": "Label display configuration. `false` disables all labels, `true` uses defaults."
+            },
+            "legend": {
+              "$ref": "#/definitions/LegendConfig",
+              "description": "Legend display configuration (position override)."
+            },
+            "endpointLabels": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "$ref": "#/definitions/EndpointLabelsConfig"
+                }
+              ],
+              "description": "Right-side endpoint labels column for multi-series line/area charts.\n\n- `true` or `EndpointLabelsConfig`: render the column.\n- `false`: hide the column.\n- omitted: auto-enable for multi-series line/area charts, hide otherwise.\n\nSee  {@link  EndpointLabelsConfig }  for the full suppression truth table that relates this flag to `legend.show`."
+            },
+            "responsive": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "$ref": "#/definitions/ResponsiveConfig"
+                }
+              ],
+              "description": "Responsive behavior. `true`/`false` enables/disables container-width adaptation. Pass a `ResponsiveConfig` object for fine-grained control (e.g. `{ autoThin: false }` to disable automatic annotation thinning)."
+            },
+            "theme": {
+              "$ref": "#/definitions/ThemeConfig",
+              "description": "Theme configuration overrides."
+            },
+            "watermark": {
+              "type": "boolean",
+              "description": "Whether to show the OpenData watermark. Defaults to true; auto-hides when the container is under 200px tall (the cramped height class) unless explicitly set."
+            },
+            "hiddenSeries": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Series names to hide from rendering by default. This is the authored persistence target for legend visibility. Runtime legend toggles (legend-toggle edit events) layer on top of this via ephemeral runtime sets but never modify it."
+            },
+            "seriesStyles": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/definitions/SeriesStyle"
+              },
+              "description": "Per-series visual overrides, keyed by series name (the color field value)."
+            },
+            "overrides": {
+              "type": "object",
+              "properties": {
+                "compact": {
+                  "$ref": "#/definitions/ChartSpecOverride"
+                },
+                "medium": {
+                  "$ref": "#/definitions/ChartSpecOverride"
+                },
+                "full": {
+                  "$ref": "#/definitions/ChartSpecOverride"
+                }
+              },
+              "additionalProperties": false,
+              "description": "Breakpoint-conditional overrides. Keys are breakpoint names. At compile time, if the container matches a breakpoint, its overrides are shallow-merged into the spec before layout computation."
+            },
+            "animation": {
+              "$ref": "#/definitions/AnimationSpec",
+              "description": "Animation configuration.\n- true: enable entrance animation with sensible defaults\n- false/omitted: no animation (current behavior)\n- AnimationConfig: full control via enter/update/exit phases"
+            },
+            "crosshair": {
+              "type": "boolean",
+              "description": "Show a vertical crosshair line that tracks the nearest data point on line and area charts. Only active when a voronoi overlay is present. Defaults to false. In sparkline display mode, defaults to false unless explicitly set."
+            },
+            "seriesSearch": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "$ref": "#/definitions/SeriesSearchConfig"
+                }
+              ],
+              "description": "Searchable series highlight (\"find your country\"). Renders a compact search input above the chart with typeahead over the color channel's distinct values. Selecting a value adds it to the highlight set (multi-select chips, removable); clearing restores the authored `encoding.color.highlight` baseline. Requires a categorical color encoding. Mutually exclusive with edit mode (search wins)."
+            },
+            "youDrawIt": {
+              "$ref": "#/definitions/YouDrawItConfig",
+              "description": "\"You draw it\" interactive engagement format: the reader draws their guess of the trend before the real line reveals. Line marks only, single-series only. Mutually exclusive with edit mode (validation warning if both are enabled; youDrawIt is disabled)."
+            },
+            "display": {
+              "$ref": "#/definitions/Display",
+              "description": "Display mode controlling how much chart chrome is rendered.\n\n- `'full'` (default): full publication chart with chrome, axes, legend, padding.\n- `'sparkline'`: inline mini-chart for dashboards/KPI cards. Strips chrome,   axes, legend, watermark, animation, and crosshair. The mark fills the   container edge-to-edge with a small safety margin. Best with   `mark: 'line' | 'area' | 'bar' | 'point'`.\n\n**Override precedence:** explicit user fields always win, even in sparkline mode. Setting `chrome.title` on a sparkline still renders the title. Setting `legend: { show: true }` still renders the legend. This applies at top-level and per-breakpoint overrides."
+            },
+            "resolve": {
+              "$ref": "#/definitions/ResolveConfig",
+              "description": "Resolution strategy for shared/independent scales and axes across facet panels. Only meaningful when `encoding.facet` is present. Shared scales (the default) let readers compare across panels; independent scales give each panel its own domain."
+            },
+            "zIndex": {
+              "type": "number",
+              "description": "Render order within a LayerSpec. Higher values render on top. When omitted, layers render in array order (later layers paint on top). Axis assignment (left/right y) is always determined by array position, not zIndex."
+            }
+          },
+          "required": [
+            "data",
+            "encoding",
+            "mark"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mark": {
+              "anyOf": [
+                {
+                  "type": "string",
                   "const": "arc"
                 },
                 {
@@ -7929,6 +8614,10 @@
             },
             "encoding": {
               "$ref": "#/definitions/ArcEncoding%3CDataRow%3E"
+            },
+            "frame": {
+              "$ref": "#/definitions/FrameConfig",
+              "description": "Fixed horizontal plot gutters."
             },
             "fields": {
               "type": "object",
@@ -8254,6 +8943,10 @@
             "encoding": {
               "$ref": "#/definitions/LineEncoding%3CDataRow%3E"
             },
+            "frame": {
+              "$ref": "#/definitions/FrameConfig",
+              "description": "Fixed horizontal plot gutters."
+            },
             "fields": {
               "type": "object",
               "additionalProperties": {
@@ -8559,6 +9252,10 @@
             },
             "encoding": {
               "$ref": "#/definitions/BarEncoding%3CDataRow%3E"
+            },
+            "frame": {
+              "$ref": "#/definitions/FrameConfig",
+              "description": "Fixed horizontal plot gutters."
             },
             "fields": {
               "type": "object",
@@ -8884,6 +9581,10 @@
             "encoding": {
               "$ref": "#/definitions/AreaEncoding%3CDataRow%3E"
             },
+            "frame": {
+              "$ref": "#/definitions/FrameConfig",
+              "description": "Fixed horizontal plot gutters."
+            },
             "fields": {
               "type": "object",
               "additionalProperties": {
@@ -9181,6 +9882,10 @@
             "encoding": {
               "$ref": "#/definitions/PointEncoding%3CDataRow%3E"
             },
+            "frame": {
+              "$ref": "#/definitions/FrameConfig",
+              "description": "Fixed horizontal plot gutters."
+            },
             "fields": {
               "type": "object",
               "additionalProperties": {
@@ -9466,6 +10171,10 @@
             },
             "encoding": {
               "$ref": "#/definitions/CircleEncoding%3CDataRow%3E"
+            },
+            "frame": {
+              "$ref": "#/definitions/FrameConfig",
+              "description": "Fixed horizontal plot gutters."
             },
             "fields": {
               "type": "object",
@@ -9753,6 +10462,10 @@
             "encoding": {
               "$ref": "#/definitions/LollipopEncoding%3CDataRow%3E"
             },
+            "frame": {
+              "$ref": "#/definitions/FrameConfig",
+              "description": "Fixed horizontal plot gutters."
+            },
             "fields": {
               "type": "object",
               "additionalProperties": {
@@ -10038,6 +10751,10 @@
             },
             "encoding": {
               "$ref": "#/definitions/BeeswarmEncoding%3CDataRow%3E"
+            },
+            "frame": {
+              "$ref": "#/definitions/FrameConfig",
+              "description": "Fixed horizontal plot gutters."
             },
             "fields": {
               "type": "object",
@@ -10337,6 +11054,10 @@
             },
             "encoding": {
               "$ref": "#/definitions/RangeEncoding%3CDataRow%3E"
+            },
+            "frame": {
+              "$ref": "#/definitions/FrameConfig",
+              "description": "Fixed horizontal plot gutters."
             },
             "fields": {
               "type": "object",
@@ -10667,6 +11388,10 @@
             "encoding": {
               "$ref": "#/definitions/WaffleEncoding%3CDataRow%3E"
             },
+            "frame": {
+              "$ref": "#/definitions/FrameConfig",
+              "description": "Fixed horizontal plot gutters."
+            },
             "fields": {
               "type": "object",
               "additionalProperties": {
@@ -10983,6 +11708,10 @@
             "encoding": {
               "$ref": "#/definitions/TextEncoding%3CDataRow%3E"
             },
+            "frame": {
+              "$ref": "#/definitions/FrameConfig",
+              "description": "Fixed horizontal plot gutters."
+            },
             "fields": {
               "type": "object",
               "additionalProperties": {
@@ -11268,6 +11997,10 @@
             },
             "encoding": {
               "$ref": "#/definitions/TickEncoding%3CDataRow%3E"
+            },
+            "frame": {
+              "$ref": "#/definitions/FrameConfig",
+              "description": "Fixed horizontal plot gutters."
             },
             "fields": {
               "type": "object",
@@ -11567,6 +12300,10 @@
             "encoding": {
               "$ref": "#/definitions/RectEncoding%3CDataRow%3E"
             },
+            "frame": {
+              "$ref": "#/definitions/FrameConfig",
+              "description": "Fixed horizontal plot gutters."
+            },
             "fields": {
               "type": "object",
               "additionalProperties": {
@@ -11852,6 +12589,10 @@
             },
             "encoding": {
               "$ref": "#/definitions/Encoding%3CDataRow%3E"
+            },
+            "frame": {
+              "$ref": "#/definitions/FrameConfig",
+              "description": "Fixed horizontal plot gutters."
             },
             "fields": {
               "type": "object",
@@ -12150,6 +12891,10 @@
             },
             "encoding": {
               "$ref": "#/definitions/CalendarEncoding%3CDataRow%3E"
+            },
+            "frame": {
+              "$ref": "#/definitions/FrameConfig",
+              "description": "Fixed horizontal plot gutters."
             },
             "fields": {
               "type": "object",
@@ -12474,6 +13219,10 @@
             "encoding": {
               "$ref": "#/definitions/ParliamentEncoding%3CDataRow%3E"
             },
+            "frame": {
+              "$ref": "#/definitions/FrameConfig",
+              "description": "Fixed horizontal plot gutters."
+            },
             "fields": {
               "type": "object",
               "additionalProperties": {
@@ -12787,6 +13536,10 @@
             },
             "encoding": {
               "$ref": "#/definitions/HistogramEncoding%3CDataRow%3E"
+            },
+            "frame": {
+              "$ref": "#/definitions/FrameConfig",
+              "description": "Fixed horizontal plot gutters."
             },
             "fields": {
               "type": "object",
@@ -13124,6 +13877,10 @@
             "encoding": {
               "$ref": "#/definitions/DensityEncoding%3CDataRow%3E"
             },
+            "frame": {
+              "$ref": "#/definitions/FrameConfig",
+              "description": "Fixed horizontal plot gutters."
+            },
             "fields": {
               "type": "object",
               "additionalProperties": {
@@ -13334,6 +14091,18 @@
     "LayerSpec<DataRow>": {
       "type": "object",
       "properties": {
+        "display": {
+          "$ref": "#/definitions/Display",
+          "description": "Display defaults shared by every leaf."
+        },
+        "a11y": {
+          "$ref": "#/definitions/A11yConfig",
+          "description": "Figure accessibility; hidden cells omit the image role."
+        },
+        "frame": {
+          "$ref": "#/definitions/FrameConfig",
+          "description": "Fixed horizontal plot gutters shared by the figure."
+        },
         "layer": {
           "type": "array",
           "items": {
@@ -14548,6 +15317,34 @@
           "$ref": "#/definitions/FieldType",
           "description": "How to interpret the field values.\n- quantitative: continuous numbers (scale: linear)\n- temporal: dates/times (scale: time)\n- nominal: unordered categories (scale: ordinal)\n- ordinal: ordered categories (scale: ordinal)"
         },
+        "interval": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "day"
+            },
+            {
+              "type": "string",
+              "const": "week"
+            },
+            {
+              "type": "string",
+              "const": "month"
+            },
+            {
+              "type": "string",
+              "const": "quarter"
+            },
+            {
+              "type": "string",
+              "const": "year"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "description": "Temporal bar/rect/errorbar position interval; numbers are milliseconds."
+        },
         "aggregate": {
           "$ref": "#/definitions/AggregateOp",
           "description": "Optional aggregate to apply before encoding."
@@ -15452,6 +16249,149 @@
           "$ref": "#/definitions/BarListEncoding",
           "description": "Encoding channels mapping data fields to visual properties."
         },
+        "sort": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "descending",
+            "ascending",
+            null
+          ],
+          "description": "Ordering within each first-seen group. Default descending; null preserves input order."
+        },
+        "height": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string",
+              "const": "auto"
+            }
+          ],
+          "description": "Auto height fits every admitted row and its group headers."
+        },
+        "annotations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "type": {
+                "type": "string",
+                "const": "refline",
+                "description": "Reference-line annotation discriminant. Older rule aliases require migrateSpecV8."
+              },
+              "label": {
+                "type": "string",
+                "description": "Text drawn with the reference line."
+              },
+              "style": {
+                "type": "string",
+                "enum": [
+                  "solid",
+                  "dashed",
+                  "dotted"
+                ],
+                "description": "Line style."
+              },
+              "strokeDash": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "description": "Raw SVG dash pattern override, e.g. [4, 4]. Takes precedence over style."
+              },
+              "strokeWidth": {
+                "type": "number",
+                "description": "Line width in pixels."
+              },
+              "labelOffset": {
+                "$ref": "#/definitions/AnnotationOffset",
+                "description": "Pixel offset for the reference line label."
+              },
+              "labelPlacement": {
+                "type": "string",
+                "enum": [
+                  "auto",
+                  "start",
+                  "end",
+                  "outside"
+                ],
+                "description": "Screen-space label placement. Outside reserves a right gutter or top lane; omission uses auto unless labelAnchor is authored."
+              },
+              "labelAnchor": {
+                "$ref": "#/definitions/AnnotationAnchor",
+                "description": "Anchor direction for the reference line label."
+              },
+              "fontSize": {
+                "type": "number",
+                "description": "Label font size in pixels. Default: theme small (12px)."
+              },
+              "fontWeight": {
+                "type": "number",
+                "description": "Label font weight. Default: 400."
+              },
+              "id": {
+                "type": "string",
+                "description": "Stable identifier for selection and edit callbacks. When provided, edit events include this ID for reliable element matching."
+              },
+              "fill": {
+                "type": "string",
+                "description": "Fill color for the annotation element."
+              },
+              "stroke": {
+                "type": "string",
+                "description": "Stroke color for the annotation element."
+              },
+              "opacity": {
+                "type": "number",
+                "description": "Opacity from 0 to 1."
+              },
+              "zIndex": {
+                "type": "number",
+                "description": "Z-index for render ordering. Higher values render on top."
+              },
+              "responsive": {
+                "type": "boolean",
+                "description": "When false, the annotation is always shown even at compact breakpoints. Default true."
+              }
+            },
+            "required": [
+              "type",
+              "x"
+            ]
+          },
+          "description": "Vertical value reference lines."
+        },
+        "labels": {
+          "type": "object",
+          "properties": {
+            "format": {
+              "type": "string",
+              "description": "Number format override for label values (d3-format string, e.g. \",.0f\")."
+            },
+            "prefix": {
+              "type": "string",
+              "description": "Literal string prepended to each formatted label value (e.g. \"-\" or \"$\")."
+            },
+            "suffix": {
+              "type": "string",
+              "description": "Literal string appended to each formatted label value (e.g. \"%\" or \"x\")."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Value label formatting."
+        },
+        "a11y": {
+          "$ref": "#/definitions/A11yConfig",
+          "description": "Accessible figure name and visibility."
+        },
         "barHeight": {
           "type": "number",
           "description": "Bar height in pixels. Defaults to 6."
@@ -15499,6 +16439,14 @@
     "BarListEncoding": {
       "type": "object",
       "properties": {
+        "description": {
+          "$ref": "#/definitions/DescriptionEncoding",
+          "description": "Authored row description."
+        },
+        "group": {
+          "$ref": "#/definitions/EncodingChannel",
+          "description": "Nominal group labels, retained in first-seen order."
+        },
         "label": {
           "$ref": "#/definitions/EncodingChannel",
           "description": "Label field (required, nominal). The category name for each row."
@@ -15537,6 +16485,44 @@
       "additionalProperties": false,
       "description": "Encoding channels for a barlist visualization."
     },
+    "DescriptionEncoding": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "$ref": "#/definitions/FieldType",
+              "description": "How to interpret the field values.\n- quantitative: continuous numbers (scale: linear)\n- temporal: dates/times (scale: time)\n- nominal: unordered categories (scale: ordinal)\n- ordinal: ordered categories (scale: ordinal)"
+            },
+            "format": {
+              "type": "string",
+              "description": "Format string for values (Vega-Lite aligned). For quantitative fields: d3-format string (e.g. \",.0f\", \"$,.2f\"), or semantic keyword `'percent'` / `'currency'`. For temporal fields: d3-time-format string (e.g. \"%Y\", \"%b %d\"). Used in tooltips; `axis.format` takes precedence for axis tick labels."
+            },
+            "field": {
+              "type": "string",
+              "description": "Data field name (column in the data array).\n\nWhen using `ChartSpec<TData>` with a typed data array, this is constrained to the actual column names of `TData`. Typos fail at compile time and IDEs autocomplete your column names."
+            }
+          },
+          "required": [
+            "field"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "value"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "description": "Authored mark text, kept verbatim for strings and formatted for numeric fields."
+    },
     "ChartSpecBase": {
       "type": "object",
       "additionalProperties": false,
@@ -15546,6 +16532,10 @@
         },
         "encoding": {
           "description": "Encoding channel map."
+        },
+        "frame": {
+          "$ref": "#/definitions/FrameConfig",
+          "description": "Fixed horizontal plot gutters."
         },
         "fields": {
           "type": "object",

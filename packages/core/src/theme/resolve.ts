@@ -38,8 +38,10 @@ function themeConfigToPartial(config: ThemeConfig, base: ThemeBase): Partial<The
     if (Array.isArray(config.colors)) {
       colors.categorical = config.colors;
     } else {
-      if (config.colors.categorical) colors.categorical = config.colors.categorical;
-      if (config.colors.categoricalFill) colors.categoricalFill = config.colors.categoricalFill;
+      if (config.colors.categorical)
+        colors.categorical = config.colors.categorical.map(resolveTokenLight);
+      if (config.colors.categoricalFill)
+        colors.categoricalFill = config.colors.categoricalFill.map(resolveTokenLight);
       if (config.colors.sequential) colors.sequential = config.colors.sequential;
       if (config.colors.diverging) colors.diverging = config.colors.diverging;
       if (config.colors.background) colors.background = resolveTokenLight(config.colors.background);
@@ -168,6 +170,14 @@ function collectTokenPairs(
 ): Record<string, { light: string; dark: string }> | undefined {
   const pairs: Record<string, { light: string; dark: string }> = {};
   if (config.colors && !Array.isArray(config.colors)) {
+    for (const field of ['categorical', 'categoricalFill'] as const) {
+      const palette =
+        config.colors[field] ??
+        (field === 'categoricalFill' ? config.colors.categorical : undefined);
+      palette?.forEach((value, index) => {
+        if (typeof value === 'object') pairs[`colors.${field}.${index}`] = value;
+      });
+    }
     const colorFields = [
       'background',
       'text',

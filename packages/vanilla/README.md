@@ -159,3 +159,13 @@ import { exportSVG, exportPNG, exportCSV } from '@opendata-ai/openchart-vanilla'
 - [Getting started](../../docs/getting-started.md) for a hands-on tutorial
 - [Integration guide](../../docs/integration-guide.md) for lifecycle management and events
 - [Spec reference](../../docs/spec-reference.md) for field-by-field type details
+
+## Static SVG
+
+```typescript
+import { renderStaticSVG } from '@opendata-ai/openchart-vanilla/static';
+
+const svg = renderStaticSVG(spec, { idPrefix: 'figure-light', darkMode: 'off' });
+```
+
+Server rendering supports charts, layers, bar lists and maps without a browser or DOM shim. Render each theme separately with distinct stable prefixes. See [static rendering](../../docs/static-rendering.md) for options, authored descriptions and host-owned tables.

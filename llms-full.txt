@@ -48,7 +48,7 @@ There is no `type: "line"` grammar. Charts use `mark`, following Vega-Lite. `mar
     y?:     EncodingChannel,
     color?: EncodingChannel | { value: string },
     size?:  EncodingChannel,
-    // also: x2, y2, theta, opacity, strokeDash, text, tooltip, detail, facet
+    // also: x2, y2, theta, opacity, strokeDash, text, tooltip, detail, description, facet
   },
   transform?: Transform[],       // filter, bin, calculate, timeUnit, aggregate, joinaggregate, fold, window, density
   chrome?:    Chrome,            // title, subtitle, source, byline, footer, eyebrow, brand
@@ -57,7 +57,8 @@ There is no `type: "line"` grammar. Charts use `mark`, following Vega-Lite. `mar
   labels?:    boolean | LabelConfig,          // direct data labels
   legend?:    LegendConfig,      // { position, show, columns, ... }
   theme?:     ThemeConfig,       // colors, fonts, spacing overrides
-  a11y?:      { description?: string, hidden?: boolean },
+  a11y?:      { description?: string, hidden?: boolean, table?: boolean },
+  frame?:     { left?: number, right?: number }, // fixed horizontal plot margins
   description?: string,          // sugar -> a11y.description (alt text)
   width?: number, height?: number,
   animation?: boolean | AnimationConfig,
@@ -84,13 +85,22 @@ Common MarkDef options:
 - **range**: `style` ("dumbbell" | "arrow" | "bar").
 - **filled marks (bar/area/arc)**: `fillPattern` ("auto" | "none"). "auto" layers a per-series SVG pattern for color-vision-safe distinction.
 
+### Static SVG and statistics
+
+Import `renderStaticSVG` from `@opendata-ai/openchart-vanilla/static`. It renders chart, layer, barlist, tilemap and geomap specs without a browser or DOM shim. Options include per-call `theme`, `measureText`, `idPrefix`, `darkMode` and `precision` (0–15 or null; default 3). Render separate light/dark SVGs with distinct stable prefixes; keep build timezones consistent. The host supplies captions and HTML tables. See [static rendering](./docs/static-rendering.md).
+
+`encoding.description` accepts a constant value or field. A series path needs constant text within each series; add a point layer for per-observation descriptions. Static data shapes carry titles and identity attributes; live mounts use authored descriptions for keyboard inspection. `a11y.table: false` suppresses the generated live table, while `a11y.hidden: true` hides decorative cells.
+
+`errorbar` draws caller-computed horizontal x/x2 or vertical y/y2 intervals with optional `ticks` caps; it does not estimate intervals. Layer with points in compact `display: 'sparkline'` cells. Temporal bar x channels support `interval: 'day' | 'week' | 'month' | 'quarter' | 'year' | number` (positive milliseconds). Fixed `frame.left` and `frame.right` align paired plots and override automatic label reserves. `labels.content` accepts `'label'`, `'value'` or `'label value'`; `prefix` and `suffix` surround formatted values. Bar lists support groups, explicit value domains, input order with `sort: null`, and x reference lines.
+
 ### Encoding requirements by mark
 
-`req`/`opt` = required/optional; parentheses list allowed field types. Every mark also accepts optional `tooltip` and `detail` channels. `theta` is the value channel for arc, waffle, and parliament marks.
+`req`/`opt` = required/optional; parentheses list allowed field types. Every mark also accepts optional `tooltip`, `detail` and `description` channels. `theta` is the value channel for arc, waffle, and parliament marks.
 
 | mark | x | y | theta | color | size | Renders as |
 |------|---|---|-------|-------|------|------------|
-| `bar` | req (quantitative, nominal, ordinal, temporal) | req (quantitative, nominal, ordinal) | - | opt (nominal, ordinal, quantitative) | opt | Bar chart |
+| `errorbar` | req (quantitative, nominal, ordinal, temporal) | req (quantitative, nominal, ordinal, temporal) | - | opt | opt | Error bar plot |
+| `bar` | req (quantitative, nominal, ordinal, temporal) | req (quantitative, nominal, ordinal, temporal) | - | opt (nominal, ordinal, quantitative) | opt | Bar chart |
 | `line` | req (temporal, ordinal) | req (quantitative) | - | opt (nominal, ordinal, quantitative) | opt | Line chart |
 | `area` | req (temporal, ordinal, quantitative) | req (quantitative) | - | opt (nominal, ordinal, quantitative) | opt | Area chart |
 | `point` | req (quantitative, temporal, nominal, ordinal) | req (quantitative, temporal, nominal, ordinal) | - | opt (nominal, ordinal, quantitative) | opt (quantitative) | Scatter plot |
@@ -109,7 +119,7 @@ Common MarkDef options:
 | `histogram` | req (quantitative) | opt (quantitative) | - | opt (nominal, ordinal) | opt | Histogram |
 | `density` | req (quantitative) | opt (quantitative) | - | opt (nominal, ordinal) | opt | Density plot |
 
-An EncodingChannel is `{ field, type, aggregate?, bin?, timeUnit?, sort?, scale?, axis?, legend?, format?, title?, stack?, highlight? }`. `type` is one of `quantitative`, `temporal`, `nominal`, `ordinal`. Multi-series bar and area charts default to stacked (Vega-Lite aligned); set `stack: null` on the value channel for grouped bars or overlapping areas.
+An EncodingChannel is `{ field, type, aggregate?, bin?, timeUnit?, sort?, scale?, axis?, legend?, format?, title?, stack?, highlight?, interval? }`. `type` is one of `quantitative`, `temporal`, `nominal`, `ordinal`. Multi-series bar and area charts default to stacked (Vega-Lite aligned); set `stack: null` on the value channel for grouped bars or overlapping areas.
 
 ### Color legends
 
@@ -221,7 +231,7 @@ Validate a spec before rendering with `validateSpec(spec)` from `@opendata-ai/op
 The published JSON Schema for structured LLM outputs (Anthropic tools, etc.) ships in `@opendata-ai/openchart-core`:
 
 - `@opendata-ai/openchart-core/schema` - full VizSpec schema (plain, non-strict tool `input_schema`).
-- `@opendata-ai/openchart-core/schema/chart.schema.json` - ChartSpec subset (all 16 marks).
+- `@opendata-ai/openchart-core/schema/chart.schema.json` - ChartSpec subset (all 19 marks).
 - `@opendata-ai/openchart-core/schema/table.schema.json` - TableSpec subset.
 
 Fetch-capable agents without a local install can pull the schema from unpkg or GitHub raw. See `docs/generating-specs.md` for tool-use and strict-mode guidance.
@@ -2846,6 +2856,16 @@ for the final rendered/exported height. `chromeLayout: 'grow'` also supports fac
 `chrome.grownHeight` reports engine-added height for auto-height consumers.
 See [annotation migration guidance](./migrating-v9.md#changed-annotation-and-figure-defaults).
 
+## Static statistics controls
+
+- `encoding.description` accepts a field or constant value. Series paths require constant text within a series; use a point layer for row descriptions.
+- `frame: { left, right }` fixes horizontal plot margins before scale layout. Fixed margins override automatic endpoint and outside-reference label reserves. Both values are non-negative and must leave usable plot width.
+- `encoding.x.interval` accepts `day`, `week`, `month`, `quarter`, `year`, or a positive millisecond number for temporal columns. Omission infers the smallest positive timestamp difference.
+- `labels.content` composes label and value text on bar and range marks; `prefix` and `suffix` surround the formatted value. Barlist labels support `format`, `prefix` and `suffix`.
+- `a11y.table: false` suppresses the generated live table; `a11y.hidden: true` hides a decorative figure.
+
+See [static rendering](static-rendering.md) for render options, identity attributes, descriptions and two-theme embedding.
+
 ---
 
 <!-- docs/chart-types.md -->
@@ -3674,6 +3694,54 @@ Publication-quality charts with responsive variants at different breakpoints:
 - [Integration guide](integration-guide.md) for events, export, responsive patterns, and framework-specific code
 - [Visualization patterns](agent-patterns.md) for data storytelling recipes with real-world data
 
+## Error bars
+
+`mark: { type: 'errorbar', ticks: true }` draws an authored interval, with horizontal `x`/`x2` bounds or vertical `y`/`y2` bounds and the other axis identifying the row. `ticks` controls end caps. Layer a point for the estimate. OpenChart never computes confidence intervals, standard errors or quartiles: aggregate observations and supply the bounds upstream. Error bars work in layered sparkline cells. Temporal `bar` x channels render continuous-time columns; set `encoding.x.interval: 'week'` for weekly data. See [static rendering](static-rendering.md).
+
+---
+
+<!-- docs/static-rendering.md -->
+
+# Static rendering
+
+Import `renderStaticSVG` from `@opendata-ai/openchart-vanilla/static` for server builds, reports and framework server components. It returns a standalone SVG string without `window`, `document`, `happy-dom`, animation, or a shared render lock. Supported specs are chart, layer, barlist, tilemap and geomap; table, Sankey and graph are not supported.
+
+```ts
+import { renderStaticSVG } from '@opendata-ai/openchart-vanilla/static';
+
+const svg = renderStaticSVG(spec, {
+  width: 680,
+  height: 320,
+  idPrefix: 'weekly-light',
+  darkMode: 'off',
+  precision: 3,
+});
+```
+
+Options include `width`, `height`, `theme`, `darkMode`, `renderer`, `watermark`, `measureText`, `idPrefix` and `precision`. `precision` is an integer from 0 through 15, or `null` for raw doubles; it defaults to 3. Text, labels, identity values and authored descriptions are not rounded. `measureText` is a per-call compiler text measurer; provide the same font metrics in each build for stable layout. `renderer` does not turn the returned SVG into a canvas.
+
+Use a unique, stable `idPrefix` for each figure in a document. It must start with a letter or underscore and contain only letters, digits, underscores, periods or hyphens. IDs and their references share a per-call scope, so calls can interleave safely. Identical inputs and options produce identical bytes in the same environment. Temporal scales and date formatting can depend on the host timezone; use a consistent timezone, such as `TZ=UTC`, across builds.
+
+Chart, layer and barlist colors and role styles are serialized as attributes, without CSS variables or a theme stylesheet. Theme them through the `theme` option. Map and tilemap output retains its scoped theme style block. The root carries `data-theme`; a prefixed root also has `id="<idPrefix>-oc-root"`. Serialization escapes XML and adds `xmlns:xlink` when an xlink attribute needs it.
+
+## Two themes and accessible tables
+
+Render once with `darkMode: 'off'` and once with `darkMode: 'force'`, using distinct prefixes. `auto` resolves to light on the server. The host chooses which SVG to display and supplies its own figure caption, theme-switching CSS and HTML data table. Static legends and note markers have no button roles or tab stops.
+
+Use `a11y.description` for the figure's finding. Use `encoding.description: { field: 'rowText' }` for a data mark's authored text, or `{ value: 'Published green rate' }` for a constant description. Static shapes receive a direct `<title>` for pointer inspection, without per-mark `aria-label`; live mounts use mark descriptions for keyboard inspection. A line or area is one path per series: a description field must be constant within that series. For per-observation text, add a point layer and put the row description there.
+
+Every data shape has `data-mark`. Identity attributes such as `data-agent` or `data-day` come from non-quantitative position channels, color, detail and key fields; a series path includes only identities shared by every observation. Identity field names are normalized for attributes; reserved names receive `field-` prefixes. Decorative caps and stems carry no duplicate identity. Isolated published observations in line and area series render as points; missing observations remain gaps.
+
+For a decorative cell inside a host table, use `display: 'sparkline'` and `a11y: { hidden: true }`. Supply the value and interval text in the table itself. Layered sparkline cells share the compact display defaults and reserve space for errorbar caps and point radii.
+
+## Aligned figures
+
+Use identical widths, `frame: { left: 48, right: 96 }`, temporal x domains and annotation dates on both figures. Fixed left and right values set plot margins and win over automatic label reserves; leave enough right margin for endpoint labels and outside reference labels. Neither margin may be negative, and they must leave a usable plot width. Temporal columns can specify `encoding.x.interval: 'week'`; irregular timestamps otherwise use the smallest positive interval and produce a diagnostic.
+
+For a history figure, use a constant line description, an area interval band, and a point layer with row descriptions. Use the same temporal domain and frame for the weekly column figure below it. The gallery's `static/aligned-pair` demonstrates the shared plot bounds.
+
+Run `bun scripts/static-budget.ts` to measure the consuming page's eight figures and 30 cells of each of three kinds, all in two themes. It reports combined gzip bytes, per-cell gzip bytes and rendering duration, and rejects totals above 80,000 bytes. The host's HTML and stylesheets need their own budget.
+
 ---
 
 <!-- docs/graphs.md -->
@@ -4489,3 +4557,7 @@ Arrow connectors match label ink. Existing `annotationText`/`annotationFill`
 uses are unchanged. Default rule ink is #888888 in light mode and #9ca3af in
 dark mode; range fill is #f0c040. Marker and plate fills follow the resolved
 neutral surface unless explicitly authored.
+
+## Categorical palette slots
+
+`ThemeConfig.colors.categorical` and `categoricalFill` accept arrays of CSS color strings or `{ light, dark }` color pairs. Arrays replace inherited palettes as a whole. Omitted `categoricalFill` inherits the categorical palette, including its pairs; resolved theme colors remain plain strings for the selected mode. Use paired slots when preserving a light palette while retaining a different dark palette. Default v8 migration writes the released v8 colors this way; migration with `{ styling: 'v9' }` adopts the current defaults.

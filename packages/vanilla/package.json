@@ -76,7 +76,6 @@
   "peerDependencies": {
     "3d-force-graph": ">=1.80.0",
     "gifenc": ">=1.0.0",
-    "happy-dom": ">=14.0.0",
     "three": ">=0.179 <1",
     "three-spritetext": ">=1.9.0"
   },
@@ -85,9 +84,6 @@
       "optional": true
     },
     "gifenc": {
-      "optional": true
-    },
-    "happy-dom": {
       "optional": true
     },
     "three": {

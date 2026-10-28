@@ -1,6 +1,7 @@
 import { annotationSource } from './interactions/edit-transactions';
 import { type ReaderHostEvent, registerReaderHost } from './interactions/reader-arbitration';
 import { wireRowHover } from './interactions/row-hover';
+import { createRenderContext, pageIdScope } from './render-context';
 import { canTransitionSpecShape } from './transition/gate';
 import { reconcileSVG } from './transition/reconcile';
 import { sampleLayout } from './transition/scene';
@@ -318,6 +319,7 @@ export function createChart<TData extends DataRow = DataRow>(
 
     const sceneHost = retainedSVG ? document.createElement('div') : container;
     svgElement = renderChartSVG(currentLayout, sceneHost, {
+      context: createRenderContext({ ids: pageIdScope }),
       animate: shouldAnimate,
       crosshair,
       canvasMarks: canvasMode,
@@ -375,7 +377,7 @@ export function createChart<TData extends DataRow = DataRow>(
             currentLayout.tooltipDescriptors,
             tooltipManager,
             currentLayout,
-            crosshairController,
+            { crosshair: crosshairController, onFocus: options?.onMarkFocus },
           ),
         );
       disposeNavigation = () => {
@@ -509,7 +511,10 @@ export function createChart<TData extends DataRow = DataRow>(
 
     // Create hidden data table for screen readers (not when the author hid
     // the chart from assistive technology)
-    if (!currentLayout.a11y.hidden) {
+    if (
+      !currentLayout.a11y.hidden &&
+      (!('a11y' in currentSpec) || currentSpec.a11y?.table !== false)
+    ) {
       srTableWrapper = createScreenReaderTable(currentLayout, container);
     }
 

@@ -14,6 +14,7 @@ import type {
   ElementRef,
   LayerSpec,
   MarkEvent,
+  MarkFocusEvent,
   ReaderChangeMeta,
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
@@ -130,6 +131,7 @@ export const Chart = defineComponent({
     'reader-change': (_selection: ChartReaderSelection, _meta: ReaderChangeMeta) => true,
     'mark-click': (_event: MarkEvent) => true,
     'mark-hover': (_event: MarkEvent) => true,
+    'mark-focus': (_event: MarkFocusEvent) => true,
     'mark-leave': () => true,
     'legend-toggle': (_series: string, _visible: boolean) => true,
     'annotation-click': (_annotation: Annotation, _event: MouseEvent, _element: ElementRef) => true,
@@ -175,6 +177,7 @@ export const Chart = defineComponent({
         renderer: props.renderer,
         onMarkClick: (event: MarkEvent) => emit('mark-click', event),
         onMarkHover: (event: MarkEvent) => emit('mark-hover', event),
+        onMarkFocus: (event: MarkFocusEvent) => emit('mark-focus', event),
         onMarkLeave: () => emit('mark-leave'),
         onLegendToggle: (series: string, visible: boolean) =>
           emit('legend-toggle', series, visible),

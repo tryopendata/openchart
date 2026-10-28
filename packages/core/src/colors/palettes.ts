@@ -2,7 +2,8 @@
  * Color palettes for @opendata-ai.
  *
  * Categorical palette leads with cyan and uses an OKLCH-balanced multi-hue
- * ramp tuned to L≈0.70, C≈0.13–0.15. Hex values are precomputed sRGB
+ * ramp with light-mode contrast of at least 3:1 on white and near-white.
+ * Hex values are precomputed sRGB
  * (rather than raw `oklch()` strings) because raw OKLCH strings parse
  * unreliably through d3-color and the dark-mode adapter's hsl-based
  * binary search. Source OKLCH values are documented inline so the ramp
@@ -47,13 +48,14 @@ export const ACHROMATIC_RAMP = {
  * Quiet ordered editorial categorical palette: six hues, cyan in slot 1.
  *
  * Construction rules (the contract; the hexes below are output, not input):
- *   - Hue order cyan 208 -> ochre 70 -> blue 262 -> rose 350 -> green 155 ->
+ *   - Hue order cyan 216 -> ochre 70 -> blue 262 -> rose 350 -> green 155 ->
  *     violet 300, so every adjacent pair including the wrap is >= 80° apart.
  *   - Lightness varies rather than matching: colour-vision deficiency
  *     collapses hue and only lightness survives, so a matched-lightness ramp
  *     fails the repo's own Brettel simulator on ochre/rose and blue/violet.
- *   - Strokes carry more chroma than fills; a fill is the same hue one step
- *     lighter and quieter, so a bar or slice never shouts as loud as a line.
+ *   - Fills use equal or lower chroma and equal or higher lightness than
+ *     strokes (within sRGB rounding), while clearing 3:1 on near-white.
+ *     Cyan uses reduced chroma to remain in gamut at its darker lightness.
  *   - Dark variants raise L and trim chroma instead of reusing the light hexes.
  *
  * Hex values are precomputed sRGB via the Ottosson OKLab -> linear sRGB ->
@@ -66,30 +68,31 @@ export const ACHROMATIC_RAMP = {
  * `colors/__tests__/palette-a11y.test.ts`, which is the guard on any change.
  */
 export const CATEGORICAL_PALETTE = [
-  '#06b6d4', // cyan   — oklch(0.715 0.126 215) — sRGB literal, primary accent
-  '#e29e47', // ochre  — oklch(0.750 0.130 70)
+  '#0a879e', // cyan   — oklch(0.575 0.100 216)
+  '#bf7e1f', // ochre  — oklch(0.646 0.130 70)
   '#4170cb', // blue   — oklch(0.559 0.150 262)
   '#b2417f', // rose   — oklch(0.550 0.161 350)
   '#3ca368', // green  — oklch(0.640 0.130 155)
-  '#a584dc', // violet — oklch(0.679 0.130 300)
+  '#9c7bd2', // violet — oklch(0.650 0.130 300)
 ] as const;
 
 /**
- * Fill counterparts of {@link CATEGORICAL_PALETTE}: same hues, ~0.03 lighter
- * and ~0.03 lower chroma. Used for area-filling marks (bar, area, arc,
+ * Fill counterparts of {@link CATEGORICAL_PALETTE}: the same hue families,
+ * with equal or lower chroma and equal or higher lightness (within rounding).
+ * Used for area-filling marks (bar, area, arc,
  * waffle, calendar, rect) so large blocks of colour read quieter than the
  * strokes of a line chart drawn beside them.
  */
 export const CATEGORICAL_FILL_PALETTE = [
-  '#51bccc', // cyan   — oklch(0.739 0.100 209)
-  '#dda96b', // ochre  — oklch(0.770 0.100 70)
+  '#1390a0', // cyan   — oklch(0.599 0.100 209)
+  '#b58245', // ochre  — oklch(0.645 0.100 69)
   '#587fc8', // blue   — oklch(0.601 0.120 262)
   '#bf6291', // rose   — oklch(0.619 0.131 350)
-  '#62ab7d', // green  — oklch(0.681 0.101 155)
-  '#ae96da', // violet — oklch(0.719 0.100 300)
+  '#57a072', // green  — oklch(0.645 0.101 155)
+  '#9981c3', // violet — oklch(0.651 0.100 300)
 ] as const;
 
-/** Dark-mode stroke palette: L raised ~0.10, chroma trimmed. */
+/** Dark-mode stroke palette: raised lightness, with chroma tuned per hue. */
 export const CATEGORICAL_PALETTE_DARK = [
   '#22d3ee', // cyan   — oklch(0.797 0.134 212) — sRGB literal
   '#f9be78', // ochre  — oklch(0.840 0.111 70)
@@ -134,10 +137,10 @@ export const CATEGORICAL_EXTENDED_PALETTE = [
  * order. Exported so the adjacency test can assert the ordering rule without
  * re-deriving OKLCH from the hexes.
  */
-export const CATEGORICAL_HUES = [215.2, 70.0, 262.1, 349.7, 154.8, 300.2] as const;
+export const CATEGORICAL_HUES = [215.6, 70.4, 262.1, 349.7, 154.8, 300.3] as const;
 
 /** Measured OKLCH lightness of each {@link CATEGORICAL_PALETTE} slot. */
-export const CATEGORICAL_LIGHTNESS = [0.715, 0.75, 0.559, 0.55, 0.64, 0.679] as const;
+export const CATEGORICAL_LIGHTNESS = [0.575, 0.646, 0.559, 0.55, 0.64, 0.65] as const;
 
 export type CategoricalPalette = typeof CATEGORICAL_PALETTE;
 

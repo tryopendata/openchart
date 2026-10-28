@@ -1,3 +1,4 @@
+import { createRenderContext } from './render-context';
 /**
  * Sankey SVG renderer: converts a SankeyLayout into SVG DOM elements.
  *
@@ -231,6 +232,7 @@ function renderGradientDefs(
   defs: SVGElement,
   links: SankeyLinkMark[],
   nodePositions: Map<string, { x: number; width: number }>,
+  gradientIds: Map<number, string>,
 ): void {
   for (let i = 0; i < links.length; i++) {
     const link = links[i];
@@ -238,7 +240,7 @@ function renderGradientDefs(
     if (link.sourceColor === link.targetColor) continue;
 
     // Use sanitized node names for debuggability, with index suffix for uniqueness
-    const gradId = `oc-sg-${sanitizeId(link.sourceId)}-${sanitizeId(link.targetId)}-${i}`;
+    const gradId = gradientIds.get(i)!;
     const gradient = createSVGElement('linearGradient');
     gradient.setAttribute('id', gradId);
     gradient.setAttribute('gradientUnits', 'userSpaceOnUse');
@@ -272,7 +274,8 @@ function renderLinks(
   parent: SVGElement,
   links: SankeyLinkMark[],
   _nodePositions: Map<string, { x: number; width: number }>,
-  animation?: ResolvedAnimation,
+  animation: ResolvedAnimation | undefined,
+  gradientIds: Map<number, string>,
 ): void {
   const g = createSVGElement('g');
   g.setAttribute('class', 'oc-sankey-links');
@@ -299,7 +302,7 @@ function renderLinks(
 
     // Use gradient fill when colors differ, otherwise solid fill
     if (link.sourceColor !== link.targetColor) {
-      const gradId = `oc-sg-${sanitizeId(link.sourceId)}-${sanitizeId(link.targetId)}-${i}`;
+      const gradId = gradientIds.get(i)!;
       path.setAttribute('fill', `url(#${gradId})`);
     } else {
       path.setAttribute('fill', link.sourceColor);
@@ -449,6 +452,7 @@ function renderLabels(
 export function renderSankeySVG(
   layout: SankeyLayout,
   animation?: ResolvedAnimation,
+  ctx = createRenderContext(),
 ): SVGSVGElement {
   const { width, height } = layout.dimensions;
 
@@ -497,11 +501,17 @@ export function renderSankeySVG(
   // Defs: gradient definitions for links
   const nodePositions = buildNodePositionMap(layout.nodes);
   const defs = createSVGElement('defs');
-  renderGradientDefs(defs, layout.links, nodePositions);
+  const gradientIds = new Map(
+    layout.links.map((link, i) => [
+      i,
+      ctx.ids.next(`oc-sg-${sanitizeId(link.sourceId)}-${sanitizeId(link.targetId)}`),
+    ]),
+  );
+  renderGradientDefs(defs, layout.links, nodePositions, gradientIds);
   svg.appendChild(defs);
 
   // Links (behind nodes)
-  renderLinks(svg, layout.links, nodePositions, animation);
+  renderLinks(svg, layout.links, nodePositions, animation, gradientIds);
 
   // Nodes
   renderNodes(svg, layout.nodes, animation);

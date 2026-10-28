@@ -1,3 +1,4 @@
+import { createRenderContext } from './render-context';
 /**
  * Reader zoom and pan for GeoMap (`geo.zoom`).
  *
@@ -73,8 +74,6 @@ const DRAG_THRESHOLD = 3;
 const HINT_MS = 1500;
 const EPS = 1e-3;
 
-let clipIdCounter = 0;
-
 const ICONS = {
   in: '<path d="M8 3v10M3 8h10"/>',
   out: '<path d="M3 8h10"/>',
@@ -93,9 +92,12 @@ interface GestureEventLike extends UIEvent {
   clientY: number;
 }
 
-export function createMapZoomController(host: MapZoomHost): MapZoomController {
+export function createMapZoomController(
+  host: MapZoomHost,
+  ctx = createRenderContext(),
+): MapZoomController {
   const { container } = host;
-  const clipId = `oc-map-zoom-clip-${++clipIdCounter}`;
+  const clipId = ctx.ids.next('oc-map-zoom-clip');
 
   let overlay: HTMLDivElement | null = null;
   let buttons: { in: HTMLButtonElement; out: HTMLButtonElement; reset: HTMLButtonElement } | null =

@@ -44,7 +44,7 @@ import { resolveCurve } from './curves';
 export const LINE_STROKE_WIDTH = 2;
 
 /** Default radius for point marks (hover targets). */
-const DEFAULT_POINT_RADIUS = 3;
+export const DEFAULT_POINT_RADIUS = 3;
 
 /** Radius of the terminator dot emitted by `mark.point: 'last' | 'first'`. */
 const ENDPOINT_DOT_RADIUS = 4;
@@ -157,8 +157,8 @@ export function computeLineMarks(
     }[] = [];
 
     // We need to track segments separated by null values
-    const segments: { x: number; y: number }[][] = [];
-    let currentSegment: { x: number; y: number }[] = [];
+    const segments: { x: number; y: number; row: DataRow }[][] = [];
+    let currentSegment: { x: number; y: number; row: DataRow }[] = [];
 
     for (const row of sortedRows) {
       const xVal = scaleValue(scales.x.scale, scales.x.type, row[xChannel.field]);
@@ -173,9 +173,9 @@ export function computeLineMarks(
         continue;
       }
 
-      const point = { x: xVal, y: yVal };
+      const point = { x: xVal, y: yVal, row };
       currentSegment.push(point);
-      pointsWithData.push({ ...point, row });
+      pointsWithData.push(point);
     }
 
     // Push the last segment
@@ -196,8 +196,12 @@ export function computeLineMarks(
     const allPoints: { x: number; y: number }[] = [];
     const pathParts: string[] = [];
 
+    const isolatedRows = new Set(
+      segments.filter((segment) => segment.length === 1).map((segment) => segment[0].row),
+    );
+    const linePointsWithData = pointsWithData.filter((point) => !isolatedRows.has(point.row));
     for (const segment of segments) {
-      if (segment.length === 0) continue;
+      if (segment.length < 2) continue;
       const pathStr = lineGenerator(segment);
       if (pathStr) {
         pathParts.push(pathStr);
@@ -206,7 +210,7 @@ export function computeLineMarks(
     }
 
     // Skip this series if there are no valid data points
-    if (allPoints.length === 0) continue;
+    if (pointsWithData.length === 0) continue;
 
     const ariaLabel =
       seriesKey === '__default__'
@@ -248,7 +252,7 @@ export function computeLineMarks(
     // The points array includes all valid points across all segments.
     // dataPoints carries pixel coordinates + original data for voronoi tooltip overlay.
     const keyField = encoding.key && 'field' in encoding.key ? encoding.key.field : undefined;
-    const rawPointKeys = pointsWithData.map((p) =>
+    const rawPointKeys = linePointsWithData.map((p) =>
       keyField ? serializeKeyValue(p.row[keyField]) : serializeKeyValue(p.row[xChannel.field]),
     );
 
@@ -264,13 +268,13 @@ export function computeLineMarks(
       strokeDasharray,
       opacity: styleOverride?.opacity,
       seriesKey: seriesStyleKey,
-      data: pointsWithData.map((p) => p.row),
-      dataPoints: pointsWithData.map((p) => ({ x: p.x, y: p.y, datum: p.row })),
+      data: linePointsWithData.map((p) => p.row),
+      dataPoints: linePointsWithData.map((p) => ({ x: p.x, y: p.y, datum: p.row })),
       aria,
     };
 
     const bucket = isMuted ? mutedMarks : highlightedMarks;
-    bucket.push(lineMark);
+    if (allPoints.length > 1) bucket.push(lineMark);
 
     // Emit PointMark objects when markDef.point is truthy, or when sequential
     // color is active (points carry the gradient since SVG paths are single-color).
@@ -283,7 +287,7 @@ export function computeLineMarks(
       isSingleEndpoint ||
       isSequentialColor;
 
-    if (showPoints) {
+    if (showPoints || isolatedRows.size > 0) {
       const isTransparent = markPoint === 'transparent';
       const isEndpoints = markPoint === 'endpoints';
       // Also respect per-series showPoints override
@@ -292,23 +296,32 @@ export function computeLineMarks(
 
       for (let i = 0; i < pointsWithData.length; i++) {
         const p = pointsWithData[i];
+        const isolated = isolatedRows.has(p.row);
+        if (isolated && markPoint === false) {
+          spec.markWarnings?.push(
+            `[openchart] Isolated point in series "${seriesKey}" at index ${i} is hidden by point: false.`,
+          );
+          continue;
+        }
+        if (!isolated && !showPoints) continue;
         const isEndpoint = i === 0 || i === lastIdx;
         const isLast = i === lastIdx;
         const isFirst = i === 0;
         // Single-endpoint mode ('last' / 'first'): emit only the chosen point.
         // Skip the others entirely instead of emitting invisible placeholders.
-        if (isSingleEndpoint) {
+        if (isSingleEndpoint && !isolated) {
           if (markPoint === 'last' && !isLast) continue;
           if (markPoint === 'first' && !isFirst) continue;
         }
-        const visible = seriesShowPoints && !isTransparent && (!isEndpoints || isEndpoint);
+        const visible =
+          isolated || (seriesShowPoints && !isTransparent && (!isEndpoints || isEndpoint));
         // Sequential color: each point gets colored by its data value
         let pointColor = color;
         if (isSequentialColor) {
           const value = finiteNumber(p.row[sequentialColorField!]);
           pointColor = value !== undefined ? getSequentialColor(scales, value) : color;
         }
-        const hollow = isEndpoints && visible;
+        const hollow = !isolated && isEndpoints && visible;
         const pointColorStr = getRepresentativeColor(pointColor);
         // 'last' / 'first' render as a tight filled terminator dot in the line
         // color — no white halo, no hollow ring. Marked decorative because the
@@ -319,7 +332,7 @@ export function computeLineMarks(
           : seriesStyleKey
             ? `${seriesStyleKey}|${serializeKeyValue(p.row[xChannel.field])}`
             : serializeKeyValue(p.row[xChannel.field]);
-        if (isSingleEndpoint) {
+        if (isSingleEndpoint && !isolated) {
           bucket.push({
             type: 'point',
             key: pointKey,
@@ -344,7 +357,7 @@ export function computeLineMarks(
           fill: hollow ? 'transparent' : pointColorStr,
           stroke: hollow ? pointColorStr : visible ? pointSeparator : 'transparent',
           strokeWidth: visible ? 1.5 : 0,
-          fillOpacity: isTransparent ? 0 : 1,
+          fillOpacity: isTransparent && !isolated ? 0 : 1,
           data: p.row,
           aria: {
             label: `Data point: ${xChannel.field}=${String(p.row[xChannel.field])}, ${yChannel.field}=${String(p.row[yChannel.field])}`,

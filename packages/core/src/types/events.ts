@@ -126,6 +126,16 @@ export interface MarkEvent {
 // Chart event handler interface
 // ---------------------------------------------------------------------------
 
+/** A data mark reached through keyboard navigation. */
+export interface MarkFocusEvent {
+  datum: DataRow;
+  series?: string;
+  key: string;
+  description?: string;
+  element: SVGElement;
+  event: FocusEvent | KeyboardEvent;
+}
+
 /**
  * Event handler callbacks for chart interactions.
  *
@@ -137,6 +147,8 @@ export interface ChartEventHandlers {
   onMarkClick?: (event: MarkEvent) => void;
   /** Called when the mouse enters a data mark. */
   onMarkHover?: (event: MarkEvent) => void;
+  /** Called when keyboard focus reaches a different data mark. */
+  onMarkFocus?: (event: MarkFocusEvent) => void;
   /** Called when the mouse leaves a data mark. */
   onMarkLeave?: () => void;
   /** Called when a legend entry is toggled (clicked to show/hide a series). */

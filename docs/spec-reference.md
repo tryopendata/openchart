@@ -1902,3 +1902,13 @@ Read `layout.chrome.noteBandHeight` for note space and `layout.dimensions.height
 for the final rendered/exported height. `chromeLayout: 'grow'` also supports facets;
 `chrome.grownHeight` reports engine-added height for auto-height consumers.
 See [annotation migration guidance](./migrating-v9.md#changed-annotation-and-figure-defaults).
+
+## Static statistics controls
+
+- `encoding.description` accepts a field or constant value. Series paths require constant text within a series; use a point layer for row descriptions.
+- `frame: { left, right }` fixes horizontal plot margins before scale layout. Fixed margins override automatic endpoint and outside-reference label reserves. Both values are non-negative and must leave usable plot width.
+- `encoding.x.interval` accepts `day`, `week`, `month`, `quarter`, `year`, or a positive millisecond number for temporal columns. Omission infers the smallest positive timestamp difference.
+- `labels.content` composes label and value text on bar and range marks; `prefix` and `suffix` surround the formatted value. Barlist labels support `format`, `prefix` and `suffix`.
+- `a11y.table: false` suppresses the generated live table; `a11y.hidden: true` hides a decorative figure.
+
+See [static rendering](static-rendering.md) for render options, identity attributes, descriptions and two-theme embedding.

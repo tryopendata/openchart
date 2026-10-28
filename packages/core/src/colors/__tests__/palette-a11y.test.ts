@@ -40,18 +40,15 @@ describe('categorical palette accessibility', () => {
     }
   });
 
-  it('light strokes clear 2.2:1 on white', () => {
-    // 2.2 is the documented floor, set by the cyan accent (#06b6d4 at 2.43:1).
-    // Line strokes are drawn through adaptForLightLineStroke and clear 3:1;
-    // that is asserted separately in the line-compute test.
+  it('light strokes clear 3:1 on white', () => {
     for (const c of CATEGORICAL_PALETTE) {
-      expect(contrastRatio(c, WHITE), c).toBeGreaterThanOrEqual(2.2);
+      expect(contrastRatio(c, WHITE), c).toBeGreaterThanOrEqual(3);
     }
   });
 
-  it('light fills clear 2.0:1 on white', () => {
+  it('light fills clear 3:1 on white', () => {
     for (const c of CATEGORICAL_FILL_PALETTE) {
-      expect(contrastRatio(c, WHITE), c).toBeGreaterThanOrEqual(2.0);
+      expect(contrastRatio(c, WHITE), c).toBeGreaterThanOrEqual(3);
     }
   });
 
@@ -79,13 +76,8 @@ describe('categorical palette accessibility', () => {
   });
 
   it('every array survives deuteranopia and protanopia', () => {
-    // This is the load-bearing separation check. The design brief also asked
-    // for >= 0.08 OKLCH lightness between adjacent slots, but that is not
-    // satisfiable alongside the fixed hue order and the pinned cyan literal
-    // (L 0.715): the ramp's tightest adjacent pair is blue/rose at 0.009.
-    // Colour-vision simulation is the stronger test anyway — it collapses hue
-    // and leaves lightness and residual chroma, so a pair that is genuinely
-    // indistinguishable fails here regardless of how it got that way.
+    // Check the rendered colors in simulated space rather than imposing a
+    // fixed lightness gap: hue and residual chroma also affect separation.
     for (const [name, arr] of ALL_ARRAYS) {
       expect(checkPaletteDistinguishability([...arr], 'deuteranopia'), `${name} deuteranopia`).toBe(
         true,

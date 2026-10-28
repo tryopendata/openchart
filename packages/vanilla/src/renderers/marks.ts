@@ -1,11 +1,9 @@
+import { createRenderContext, type RenderContext } from '../render-context';
 /**
  * Mark rendering: dispatches to per-mark-type sub-renderers (line, area, rect,
  * arc, point, text, rule, tick).
  *
- * Mark renderers read module-level animation and gradient state so their
- * signatures stay `(mark, index) => SVGElement`. Callers must invoke
- * `setMarkRenderState()` before `renderMarks()` and `resetMarkRenderState()`
- * after.
+ * Each renderer receives the element factory and mark state of its scene.
  */
 
 import type {
@@ -16,7 +14,6 @@ import type {
   Mark,
   PointMark,
   RectMark,
-  ResolvedAnimation,
   ResolvedFillPattern,
   ResolvedLabel,
   RuleMarkLayout,
@@ -28,60 +25,15 @@ import { resolvePatternFill } from '../pattern-utils';
 import { applyKnockoutHalo, applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
 
 /**
- * Module-level animation state. Set by the orchestrator before rendering marks
- * so mark renderers can read it without changing their function signatures.
- */
-let currentAnimation: ResolvedAnimation | undefined;
-
-/**
- * Module-level gradient map. Set by the orchestrator after building gradient defs
- * so mark renderers can resolve gradient fills without signature changes.
- */
-let currentGradientMap: Map<string, string> = new Map();
-
-/**
- * Module-level pattern map. Same lifecycle as the gradient map, built from
- * pattern defs (see pattern-utils.ts).
- */
-let currentPatternMap: Map<string, string> = new Map();
-
-/**
- * Module-level opaque surface color, used to cut the knockout halo behind mark
- * labels. Empty string means "no halo" (state was never primed).
- */
-let currentSurface = '';
-
-/** Set animation + gradient + pattern + surface state before rendering marks. */
-export function setMarkRenderState(state: {
-  animation: ResolvedAnimation | undefined;
-  gradientMap: Map<string, string>;
-  patternMap?: Map<string, string>;
-  surface?: string;
-}): void {
-  currentAnimation = state.animation;
-  currentGradientMap = state.gradientMap;
-  currentPatternMap = state.patternMap ?? new Map();
-  currentSurface = state.surface ?? '';
-}
-
-/** Reset animation + gradient + pattern + surface state after rendering. */
-export function resetMarkRenderState(): void {
-  currentAnimation = undefined;
-  currentGradientMap = new Map();
-  currentPatternMap = new Map();
-  currentSurface = '';
-}
-
-/**
  * Cut a knockout halo behind a mark label so it stays legible where it crosses
  * gridlines, marks, or a neighbouring series. Skipped when the engine set
  * `halo: false` -- labels drawn *inside* a filled bar are already
  * contrast-picked against that fill, and a surface-colored stroke there would
  * ring every glyph.
  */
-function applyLabelHalo(text: SVGElement, label: ResolvedLabel): void {
-  if (!currentSurface || label.halo === false) return;
-  applyKnockoutHalo(text, currentSurface, label.style.fontSize);
+function applyLabelHalo(text: SVGElement, label: ResolvedLabel, ctx: RenderContext): void {
+  if (!ctx.marks.surface || label.halo === false) return;
+  applyKnockoutHalo(text, ctx.marks.surface, label.style.fontSize);
 }
 
 /**
@@ -91,9 +43,10 @@ function applyLabelHalo(text: SVGElement, label: ResolvedLabel): void {
 function resolveFillOrPattern(
   fill: Parameters<typeof resolveMarkFill>[0],
   pattern: ResolvedFillPattern | undefined,
+  ctx: RenderContext,
 ): string {
-  if (pattern) return resolvePatternFill(pattern, currentPatternMap);
-  return resolveMarkFill(fill, currentGradientMap);
+  if (pattern) return resolvePatternFill(pattern, ctx.marks.patternMap);
+  return resolveMarkFill(fill, ctx.marks.gradientMap);
 }
 
 /**
@@ -105,18 +58,23 @@ function stampAnimationAttrs(
   el: SVGElement,
   mark: { animationIndex?: number; key?: string },
   fallbackIndex: number,
+  ctx: RenderContext,
 ): void {
   // Stamp stable identity key for data-update transitions (always, not just enter)
   if (mark.key) {
     el.setAttribute('data-key', mark.key);
   }
-  if (!currentAnimation?.enter) return;
+  if (!ctx.marks.animation?.enter) return;
   const idx = mark.animationIndex ?? fallbackIndex;
   el.setAttribute('data-animation-index', String(idx));
   (el as SVGElement & ElementCSSInlineStyle).style.setProperty('--oc-mark-index', String(idx));
 }
 
-type MarkRenderer<T extends Mark> = (mark: T, index: number) => SVGElement;
+export type MarkRenderer<T extends Mark> = (
+  mark: T,
+  index: number,
+  ctx: RenderContext,
+) => SVGElement;
 
 const markRenderers: Record<string, MarkRenderer<Mark>> = {};
 
@@ -131,14 +89,18 @@ export function registerMarkRenderer<T extends Mark>(
   markRenderers[type] = renderer as MarkRenderer<Mark>;
 }
 
-function renderLineMark(mark: LineMark, index: number): SVGElement {
-  const g = createSVGElement('g');
+function renderLineMark(
+  mark: LineMark,
+  index: number,
+  ctx: RenderContext = createRenderContext(),
+): SVGElement {
+  const g = createSVGElement('g', ctx.factory);
   g.setAttribute('data-mark-id', `line-${index}`);
   g.setAttribute('class', 'oc-mark oc-mark-line');
-  stampAnimationAttrs(g, mark, index);
+  stampAnimationAttrs(g, mark, index, ctx);
 
   if (mark.points.length > 1) {
-    const path = createSVGElement('path');
+    const path = createSVGElement('path', ctx.factory);
     // Use the pre-computed D3 curve path when available (smooth monotone),
     // otherwise fall back to straight M/L segments.
     const d =
@@ -166,7 +128,7 @@ function renderLineMark(mark: LineMark, index: number): SVGElement {
 
   // Render end-of-line label if present and visible
   if (mark.label?.visible) {
-    const label = createSVGElement('text');
+    const label = createSVGElement('text', ctx.factory);
     label.setAttribute('class', 'oc-mark-label');
     if (mark.key) label.setAttribute('data-label-key', mark.key);
     if (mark.seriesKey) {
@@ -174,13 +136,13 @@ function renderLineMark(mark: LineMark, index: number): SVGElement {
     }
     setAttrs(label, { x: mark.label.x, y: mark.label.y });
     applyTextStyle(label, mark.label.style);
-    applyLabelHalo(label, mark.label);
+    applyLabelHalo(label, mark.label, ctx);
     label.textContent = mark.label.text;
     g.appendChild(label);
 
     // Render connector line if label was offset from anchor
     if (mark.label.connector) {
-      const connector = createSVGElement('line');
+      const connector = createSVGElement('line', ctx.factory);
       connector.setAttribute('class', 'oc-mark-connector');
       setAttrs(connector, {
         x1: mark.label.connector.from.x,
@@ -198,18 +160,22 @@ function renderLineMark(mark: LineMark, index: number): SVGElement {
   return g;
 }
 
-function renderAreaMark(mark: AreaMark, index: number): SVGElement {
-  const g = createSVGElement('g');
+function renderAreaMark(
+  mark: AreaMark,
+  index: number,
+  ctx: RenderContext = createRenderContext(),
+): SVGElement {
+  const g = createSVGElement('g', ctx.factory);
   g.setAttribute('data-mark-id', `area-${index}`);
   g.setAttribute('class', 'oc-mark oc-mark-area');
-  stampAnimationAttrs(g, mark, index);
+  stampAnimationAttrs(g, mark, index, ctx);
 
   if (mark.path) {
     // Area fill: the full closed shape (top line + baseline), no stroke
-    const fill = createSVGElement('path');
+    const fill = createSVGElement('path', ctx.factory);
     setAttrs(fill, {
       d: mark.path,
-      fill: resolveFillOrPattern(mark.fill, mark.pattern),
+      fill: resolveFillOrPattern(mark.fill, mark.pattern, ctx),
       'fill-opacity': mark.fillOpacity,
       stroke: 'none',
     });
@@ -217,7 +183,7 @@ function renderAreaMark(mark: AreaMark, index: number): SVGElement {
 
     // Top-line stroke: only along the data points, not the baseline
     if (mark.stroke && mark.topPath) {
-      const strokePath = createSVGElement('path');
+      const strokePath = createSVGElement('path', ctx.factory);
       strokePath.setAttribute('class', 'oc-area-top');
       setAttrs(strokePath, {
         d: mark.topPath,
@@ -270,13 +236,17 @@ export function rectPathWithCorners(
     .join(' ');
 }
 
-function renderRectMark(mark: RectMark, index: number): SVGElement {
-  const g = createSVGElement('g');
+function renderRectMark(
+  mark: RectMark,
+  index: number,
+  ctx: RenderContext = createRenderContext(),
+): SVGElement {
+  const g = createSVGElement('g', ctx.factory);
   g.setAttribute('data-mark-id', `rect-${index}`);
   g.setAttribute('class', 'oc-mark oc-mark-rect');
-  stampAnimationAttrs(g, mark, index);
+  stampAnimationAttrs(g, mark, index, ctx);
   // Use engine-provided orientation for animation direction
-  if (currentAnimation?.enter && mark.orient === 'horizontal') {
+  if (ctx.marks.animation?.enter && mark.orient === 'horizontal') {
     g.setAttribute('data-orient', 'horizontal');
   }
 
@@ -287,7 +257,9 @@ function renderRectMark(mark: RectMark, index: number): SVGElement {
   const sides = mark.cornerRadiusSides;
   const partialCorners =
     !!sides && (!sides.tl || !sides.tr || !sides.br || !sides.bl) && !!mark.cornerRadius;
-  const shapeEl = partialCorners ? createSVGElement('path') : createSVGElement('rect');
+  const shapeEl = partialCorners
+    ? createSVGElement('path', ctx.factory)
+    : createSVGElement('rect', ctx.factory);
   if (partialCorners) {
     shapeEl.setAttribute('d', rectPathWithCorners(mark, sides));
   } else {
@@ -301,7 +273,7 @@ function renderRectMark(mark: RectMark, index: number): SVGElement {
       setAttrs(shapeEl, { rx: mark.cornerRadius, ry: mark.cornerRadius });
     }
   }
-  shapeEl.setAttribute('fill', resolveFillOrPattern(mark.fill, mark.pattern));
+  shapeEl.setAttribute('fill', resolveFillOrPattern(mark.fill, mark.pattern, ctx));
   // Only when set: an unconditional fill-opacity="1" would change the
   // serialized SVG of every existing bar and churn the visual baselines.
   // `fill-opacity` is a different property from the `opacity` that the
@@ -327,17 +299,21 @@ function renderRectMark(mark: RectMark, index: number): SVGElement {
   return g;
 }
 
-function renderArcMark(mark: ArcMark, index: number): SVGElement {
-  const g = createSVGElement('g');
+function renderArcMark(
+  mark: ArcMark,
+  index: number,
+  ctx: RenderContext = createRenderContext(),
+): SVGElement {
+  const g = createSVGElement('g', ctx.factory);
   g.setAttribute('data-mark-id', `arc-${index}`);
   g.setAttribute('class', 'oc-mark oc-mark-arc');
   g.setAttribute('transform', `translate(${mark.center.x},${mark.center.y})`);
-  stampAnimationAttrs(g, mark, index);
+  stampAnimationAttrs(g, mark, index, ctx);
 
-  const path = createSVGElement('path');
+  const path = createSVGElement('path', ctx.factory);
   setAttrs(path, {
     d: mark.path,
-    fill: resolveFillOrPattern(mark.fill, mark.pattern),
+    fill: resolveFillOrPattern(mark.fill, mark.pattern, ctx),
     stroke: mark.stroke,
     'stroke-width': mark.strokeWidth,
   });
@@ -345,7 +321,7 @@ function renderArcMark(mark: ArcMark, index: number): SVGElement {
 
   // Render label if present and visible
   if (mark.label?.visible) {
-    const label = createSVGElement('text');
+    const label = createSVGElement('text', ctx.factory);
     label.setAttribute('class', 'oc-mark-label');
     if (mark.key) label.setAttribute('data-label-key', mark.key);
     // Label position is in absolute coords, but we're in a translated group,
@@ -355,7 +331,7 @@ function renderArcMark(mark: ArcMark, index: number): SVGElement {
       y: mark.label.y - mark.center.y,
     });
     applyTextStyle(label, mark.label.style);
-    applyLabelHalo(label, mark.label);
+    applyLabelHalo(label, mark.label, ctx);
     label.textContent = mark.label.text;
     g.appendChild(label);
   }
@@ -363,17 +339,21 @@ function renderArcMark(mark: ArcMark, index: number): SVGElement {
   return g;
 }
 
-function renderPointMark(mark: PointMark, index: number): SVGElement {
-  const circle = createSVGElement('circle');
+function renderPointMark(
+  mark: PointMark,
+  index: number,
+  ctx: RenderContext = createRenderContext(),
+): SVGElement {
+  const circle = createSVGElement('circle', ctx.factory);
   circle.setAttribute('data-mark-id', `point-${index}`);
   circle.setAttribute('class', 'oc-mark oc-mark-point');
-  stampAnimationAttrs(circle, mark, index);
+  stampAnimationAttrs(circle, mark, index, ctx);
 
   setAttrs(circle, {
     cx: mark.cx,
     cy: mark.cy,
     r: mark.r,
-    fill: resolveMarkFill(mark.fill, currentGradientMap),
+    fill: resolveMarkFill(mark.fill, ctx.marks.gradientMap),
     stroke: mark.stroke,
     'stroke-width': mark.strokeWidth,
   });
@@ -383,11 +363,15 @@ function renderPointMark(mark: PointMark, index: number): SVGElement {
   return circle;
 }
 
-function renderTextMark(mark: TextMarkLayout, index: number): SVGElement {
-  const text = createSVGElement('text');
+function renderTextMark(
+  mark: TextMarkLayout,
+  index: number,
+  ctx: RenderContext = createRenderContext(),
+): SVGElement {
+  const text = createSVGElement('text', ctx.factory);
   text.setAttribute('data-mark-id', `textMark-${index}`);
   text.setAttribute('class', 'oc-mark oc-mark-text');
-  stampAnimationAttrs(text, mark, index);
+  stampAnimationAttrs(text, mark, index, ctx);
 
   setAttrs(text, {
     x: mark.x,
@@ -414,11 +398,15 @@ function renderTextMark(mark: TextMarkLayout, index: number): SVGElement {
   return text;
 }
 
-function renderRuleMark(mark: RuleMarkLayout, index: number): SVGElement {
-  const line = createSVGElement('line');
+function renderRuleMark(
+  mark: RuleMarkLayout,
+  index: number,
+  ctx: RenderContext = createRenderContext(),
+): SVGElement {
+  const line = createSVGElement('line', ctx.factory);
   line.setAttribute('data-mark-id', `rule-${index}`);
   line.setAttribute('class', 'oc-mark oc-mark-rule');
-  stampAnimationAttrs(line, mark, index);
+  stampAnimationAttrs(line, mark, index, ctx);
 
   setAttrs(line, {
     x1: mark.x1,
@@ -440,11 +428,15 @@ function renderRuleMark(mark: RuleMarkLayout, index: number): SVGElement {
   return line;
 }
 
-function renderTickMark(mark: TickMarkLayout, index: number): SVGElement {
-  const line = createSVGElement('line');
+function renderTickMark(
+  mark: TickMarkLayout,
+  index: number,
+  ctx: RenderContext = createRenderContext(),
+): SVGElement {
+  const line = createSVGElement('line', ctx.factory);
   line.setAttribute('data-mark-id', `tick-${index}`);
   line.setAttribute('class', 'oc-mark oc-mark-tick');
-  stampAnimationAttrs(line, mark, index);
+  stampAnimationAttrs(line, mark, index, ctx);
 
   // Tick is a short line segment centered at (x, y)
   const half = mark.length / 2;
@@ -484,14 +476,39 @@ registerMarkRenderer('textMark', renderTextMark as MarkRenderer<Mark>);
 registerMarkRenderer('rule', renderRuleMark as MarkRenderer<Mark>);
 registerMarkRenderer('tick', renderTickMark as MarkRenderer<Mark>);
 
+/** Mark provenance belongs to the geometry, never the label wrapper. */
+function stampMarkMetadata(mark: Mark, el: SVGElement, ctx: RenderContext): void {
+  if (mark.aria?.decorative || !mark.markType) return;
+  const shape = el.tagName.toLowerCase() === 'g' ? el.firstElementChild : el;
+  if (
+    !shape ||
+    ((mark.type === 'line' || mark.type === 'area') && shape.tagName.toLowerCase() !== 'path')
+  )
+    return;
+  shape.setAttribute('data-mark', mark.markType);
+  for (const [field, value] of Object.entries(mark.identity ?? {}))
+    shape.setAttribute(`data-${field}`, value);
+  if (!ctx.interactive && mark.authoredDescription !== undefined) {
+    const title = createSVGElement('title', ctx.factory);
+    title.textContent = mark.authoredDescription;
+    shape.insertBefore(title, shape.firstChild);
+  }
+}
+
 /**
  * Render a single mark to an SVG element without appending it anywhere.
  * Used by the transition module to create ghost elements for exiting marks.
  */
-export function renderSingleMark(mark: Mark, index: number): SVGElement | undefined {
+export function renderSingleMark(
+  mark: Mark,
+  index: number,
+  ctx = createRenderContext(),
+): SVGElement | undefined {
   const renderer = markRenderers[mark.type];
   if (!renderer) return undefined;
-  return renderer(mark, index);
+  const element = renderer(mark, index, ctx);
+  stampMarkMetadata(mark, element, ctx);
+  return element;
 }
 
 /** Extract series name from a mark for legend toggle matching. */
@@ -536,9 +553,10 @@ function getMarkSeries(mark: Mark): string | undefined {
 export function renderMarks(
   parent: SVGElement,
   layout: ChartLayout,
-  opts?: { skipPoints?: boolean },
+  opts?: { skipPoints?: boolean; markIndexOffset?: number },
+  ctx: RenderContext = createRenderContext(),
 ): SVGElement | undefined {
-  const g = createSVGElement('g');
+  const g = createSVGElement('g', ctx.factory);
   g.setAttribute('class', 'oc-marks');
 
   for (let i = 0; i < layout.marks.length; i++) {
@@ -550,14 +568,15 @@ export function renderMarks(
     const renderer = markRenderers[mark.type];
     if (!renderer) continue;
 
-    const el = renderer(mark, i);
+    const el = renderer(mark, i + (opts?.markIndexOffset ?? 0), ctx);
     // Decorative marks (e.g. sparkline endpoint dots) are hidden from
     // assistive tech because they duplicate an existing data point.
     if (mark.aria?.decorative) {
       el.setAttribute('aria-hidden', 'true');
-    } else if (mark.aria?.label) {
+    } else if (ctx.interactive && mark.aria?.label !== undefined) {
       el.setAttribute('aria-label', mark.aria.label);
     }
+    stampMarkMetadata(mark, el, ctx);
     // Add data-series attribute for legend toggle matching
     const series = getMarkSeries(mark);
     if (series) {
@@ -566,7 +585,7 @@ export function renderMarks(
 
     // For stacked segments, set stack position for sequential animation chaining.
     // stackPos is computed by the engine on RectMark during compilation.
-    if (currentAnimation?.enter && mark.type === 'rect') {
+    if (ctx.marks.animation?.enter && mark.type === 'rect') {
       const rect = mark as RectMark;
       if (rect.stackGroup && rect.stackPos !== undefined) {
         el.setAttribute('data-stack-pos', String(rect.stackPos));
@@ -598,21 +617,21 @@ export function renderMarks(
     if (!rect.label?.visible) continue;
 
     if (!labelsGroup) {
-      labelsGroup = createSVGElement('g');
+      labelsGroup = createSVGElement('g', ctx.factory);
       labelsGroup.setAttribute('class', 'oc-mark-labels');
     }
 
-    const label = createSVGElement('text');
+    const label = createSVGElement('text', ctx.factory);
     label.setAttribute('class', 'oc-mark-label');
     if (mark.key) label.setAttribute('data-label-key', mark.key);
     setAttrs(label, { x: rect.label.x, y: rect.label.y });
     applyTextStyle(label, rect.label.style);
-    applyLabelHalo(label, rect.label);
+    applyLabelHalo(label, rect.label, ctx);
     label.textContent = rect.label.text;
 
     // Stamp animation index so the CSS stagger delay works for overlay labels
     // (they're not children of a .oc-mark-rect group that carries --oc-mark-index).
-    if (currentAnimation?.enter) {
+    if (ctx.marks.animation?.enter) {
       const idx = rect.animationIndex ?? i;
       label.setAttribute('data-animation-index', String(idx));
       (label as SVGElement & ElementCSSInlineStyle).style.setProperty(

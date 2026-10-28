@@ -1,6 +1,7 @@
 /** Shared measured attribution painting for SVG visualizations. */
 import type { ChartLayout, MeasureTextFn, ResolvedChrome } from '@opendata-ai/openchart-core';
 import { computeNoteBandHeight } from '@opendata-ai/openchart-core';
+import { createRenderContext, type RenderContext } from '../render-context';
 import { renderChromeElement } from './chrome';
 import { createSVGElement, XLINK_NS } from './svg-dom';
 
@@ -13,6 +14,7 @@ export function renderAttributionBrand(
   bottomOffset: number,
   measureText?: MeasureTextFn,
   includeCustom = true,
+  ctx: RenderContext = createRenderContext(),
 ): void {
   if (includeCustom && chrome.brand) {
     renderChromeElement(
@@ -21,11 +23,13 @@ export function renderAttributionBrand(
       'oc-brand',
       'brand',
       measureText,
+      undefined,
+      ctx,
     );
   }
   const mark = chrome.watermark;
   if (!mark) return;
-  const link = createSVGElement('a');
+  const link = createSVGElement('a', ctx.factory);
   link.setAttribute('href', BRAND_URL);
   link.setAttributeNS(XLINK_NS, 'xlink:href', BRAND_URL);
   link.setAttribute('target', '_blank');
@@ -38,14 +42,20 @@ export function renderAttributionBrand(
     'oc-watermark',
     'watermark',
     measureText,
+    undefined,
+    ctx,
   );
   parent.appendChild(link);
 }
 
-export function renderBrand(parent: SVGElement, layout: ChartLayout): void {
+export function renderBrand(
+  parent: SVGElement,
+  layout: ChartLayout,
+  ctx: RenderContext = createRenderContext(),
+): void {
   const bandHeight =
     layout.chrome.noteBandHeight ?? computeNoteBandHeight(layout.chrome, layout.theme);
   const bottomOffset =
     (layout.chrome.bottomAnchorY ?? layout.area.y + layout.area.height) + bandHeight;
-  renderAttributionBrand(parent, layout.chrome, bottomOffset, layout.measureText, false);
+  renderAttributionBrand(parent, layout.chrome, bottomOffset, layout.measureText, false, ctx);
 }

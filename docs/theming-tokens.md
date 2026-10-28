@@ -232,3 +232,7 @@ Arrow connectors match label ink. Existing `annotationText`/`annotationFill`
 uses are unchanged. Default rule ink is #888888 in light mode and #9ca3af in
 dark mode; range fill is #f0c040. Marker and plate fills follow the resolved
 neutral surface unless explicitly authored.
+
+## Categorical palette slots
+
+`ThemeConfig.colors.categorical` and `categoricalFill` accept arrays of CSS color strings or `{ light, dark }` color pairs. Arrays replace inherited palettes as a whole. Omitted `categoricalFill` inherits the categorical palette, including its pairs; resolved theme colors remain plain strings for the selected mode. Use paired slots when preserving a light palette while retaining a different dark palette. Default v8 migration writes the released v8 colors this way; migration with `{ styling: 'v9' }` adopts the current defaults.

@@ -41,6 +41,8 @@ export interface CrosshairController {
    * left off instead of restarting at the first x.
    */
   readonly currentIndex: number;
+  /** Observation and series currently selected by keyboard navigation. */
+  readonly focusedMark: { markId: string; datum: Record<string, unknown>; series: string } | null;
   /** Show the slice at a snap index (wraps). Used by keyboard nav. */
   stepTo(index: number): void;
   /** Cycle the emphasized series at the current x by `delta` (wraps). */
@@ -367,6 +369,17 @@ export function wireVoronoiTooltipEvents(
     },
     get currentIndex() {
       return currentIndex;
+    },
+    get focusedMark() {
+      if (currentIndex < 0) return null;
+      const x = snapXs[currentIndex];
+      const candidates = groups.filter((group) => group.pointsByX.has(x));
+      const group =
+        candidates.find((candidate) => candidate.key === currentEmphasis) ?? candidates[0];
+      const point = group?.pointsByX.get(x);
+      return group && point
+        ? { markId: group.markId, datum: point.datum, series: group.seriesKey }
+        : null;
     },
     stepTo,
     cycleSeries(delta: number) {

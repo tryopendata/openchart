@@ -6,6 +6,8 @@ import {
   resolveMapLabelOverlay,
 } from './map-labels';
 import { renderGeoMapViews } from './map-view-renderer';
+import { createRenderContext, type RenderContext } from './render-context';
+import { createSVGElement } from './renderers/svg-dom';
 /**
  * Map SVG renderer: converts a GeoMapLayout into SVG DOM elements.
  *
@@ -27,10 +29,7 @@ import { buildPatternDefs, resolvePatternFill } from './pattern-utils';
 import { renderAttributionBrand } from './renderers/brand';
 import { renderChromeElement } from './renderers/chrome';
 import { renderLegend } from './renderers/legend';
-import { nextSvgId } from './svg-ids';
 import { resolvedSurface, stampThemeProperties } from './theme-tokens';
-
-const SVG_NS = 'http://www.w3.org/2000/svg';
 
 // Above this count, skip per-feature CSS fill animations (not GPU-compositable)
 // and fade the entire features group with a single opacity animation instead.
@@ -69,10 +68,6 @@ function legendBackdrop(theme: GeoMapLayout['theme']): string {
   return surface;
 }
 
-function createSVGElement(tag: string): SVGElement {
-  return document.createElementNS(SVG_NS, tag);
-}
-
 function setAttrs(el: SVGElement, attrs: Record<string, string | number>): void {
   for (const [key, value] of Object.entries(attrs)) {
     el.setAttribute(key, String(value));
@@ -83,18 +78,22 @@ function setAttrs(el: SVGElement, attrs: Record<string, string | number>): void 
 // Chrome rendering (delegates to the shared helper for text wrapping)
 // ---------------------------------------------------------------------------
 
-function renderChrome(parent: SVGElement, layout: GeoMapLayout): void {
-  const g = createSVGElement('g');
+function renderChrome(
+  parent: SVGElement,
+  layout: GeoMapLayout,
+  ctx: RenderContext = createRenderContext(),
+): void {
+  const g = createSVGElement('g', ctx.factory);
   g.setAttribute('class', 'oc-chrome');
 
   const { chrome, measureText } = layout;
   const bottomOffset = chrome.bottomAnchorY ?? layout.area.y + layout.area.height;
 
   if (chrome.title) {
-    renderChromeElement(g, chrome.title, 'oc-title', 'title', measureText);
+    renderChromeElement(g, chrome.title, 'oc-title', 'title', measureText, undefined, ctx);
   }
   if (chrome.subtitle) {
-    renderChromeElement(g, chrome.subtitle, 'oc-subtitle', 'subtitle', measureText);
+    renderChromeElement(g, chrome.subtitle, 'oc-subtitle', 'subtitle', measureText, undefined, ctx);
   }
   if (chrome.source) {
     renderChromeElement(
@@ -103,6 +102,8 @@ function renderChrome(parent: SVGElement, layout: GeoMapLayout): void {
       'oc-source',
       'source',
       measureText,
+      undefined,
+      ctx,
     );
   }
   if (chrome.byline) {
@@ -112,6 +113,8 @@ function renderChrome(parent: SVGElement, layout: GeoMapLayout): void {
       'oc-byline',
       'byline',
       measureText,
+      undefined,
+      ctx,
     );
   }
   if (chrome.footer) {
@@ -121,6 +124,8 @@ function renderChrome(parent: SVGElement, layout: GeoMapLayout): void {
       'oc-footer',
       'footer',
       measureText,
+      undefined,
+      ctx,
     );
   }
 
@@ -135,13 +140,17 @@ function renderChrome(parent: SVGElement, layout: GeoMapLayout): void {
 // Border rendering
 // ---------------------------------------------------------------------------
 
-function renderBorders(parent: SVGElement, borders: GeoMapBorders): void {
-  const g = createSVGElement('g');
+function renderBorders(
+  parent: SVGElement,
+  borders: GeoMapBorders,
+  ctx: RenderContext = createRenderContext(),
+): void {
+  const g = createSVGElement('g', ctx.factory);
   g.setAttribute('class', 'oc-map-borders');
 
   // Interior borders (between features)
   if (borders.interiorPath) {
-    const interior = createSVGElement('path');
+    const interior = createSVGElement('path', ctx.factory);
     setAttrs(interior, {
       d: borders.interiorPath,
       fill: 'none',
@@ -156,7 +165,7 @@ function renderBorders(parent: SVGElement, borders: GeoMapBorders): void {
 
   // Outline border (coastline / outer boundary)
   if (borders.outlinePath) {
-    const outline = createSVGElement('path');
+    const outline = createSVGElement('path', ctx.factory);
     setAttrs(outline, {
       d: borders.outlinePath,
       fill: 'none',
@@ -183,8 +192,9 @@ function renderFeatures(
   staggerBudget = 0,
   focusIds?: Set<string>,
   patternMap?: Map<string, string>,
+  ctx: RenderContext = createRenderContext(),
 ): void {
-  const g = createSVGElement('g');
+  const g = createSVGElement('g', ctx.factory);
   g.setAttribute('class', 'oc-map-features');
   g.setAttribute('role', 'list');
 
@@ -217,7 +227,7 @@ function renderFeatures(
 
   for (let i = 0; i < features.length; i++) {
     const feature = features[i];
-    const path = createSVGElement('path');
+    const path = createSVGElement('path', ctx.factory);
     path.setAttribute('class', 'oc-map-feature');
     path.setAttribute('role', 'listitem');
     // No-data features carry a hatch pattern so they never read as a class of
@@ -289,14 +299,15 @@ function renderPointMarks(
   parent: SVGElement,
   points: GeoMapPointMark[],
   animation?: ResolvedAnimation,
+  ctx: RenderContext = createRenderContext(),
 ): void {
   if (points.length === 0) return;
 
-  const g = createSVGElement('g');
+  const g = createSVGElement('g', ctx.factory);
   g.setAttribute('class', 'oc-map-points');
 
   for (const pt of points) {
-    const circle = createSVGElement('circle');
+    const circle = createSVGElement('circle', ctx.factory);
     circle.setAttribute('class', 'oc-map-point');
     setAttrs(circle, {
       cx: pt.cx,
@@ -331,11 +342,15 @@ function renderPointMarks(
 /**
  * Render a GeoMapLayout to an SVG element.
  */
-export function renderMapSVG(layout: GeoMapLayout, opts?: { animate?: boolean }): SVGSVGElement {
+export function renderMapSVG(
+  layout: GeoMapLayout,
+  opts?: { animate?: boolean; context?: RenderContext },
+): SVGSVGElement {
+  const ctx = opts?.context ?? createRenderContext();
   const { width, height, features, borders, a11y, animation } = layout;
   const animate = opts?.animate && !!animation?.enter;
 
-  const svg = createSVGElement('svg') as SVGSVGElement;
+  const svg = createSVGElement('svg', ctx.factory) as SVGSVGElement;
   svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
   svg.setAttribute('role', 'img');
   if (a11y.altText) {
@@ -347,7 +362,7 @@ export function renderMapSVG(layout: GeoMapLayout, opts?: { animate?: boolean })
   stampThemeProperties(svg, layout.theme);
 
   // Export must carry the same authored surface as the embedded map.
-  const background = createSVGElement('rect');
+  const background = createSVGElement('rect', ctx.factory);
   setAttrs(background, {
     width,
     height,
@@ -376,25 +391,35 @@ export function renderMapSVG(layout: GeoMapLayout, opts?: { animate?: boolean })
   }
 
   // Empty defs element (will be filled by gradient legend)
-  const defs = createSVGElement('defs');
+  const defs = createSVGElement('defs', ctx.factory);
   svg.appendChild(defs);
 
   // One <pattern> per unique hatch, shared by every no-data feature and the
   // legend's no-data swatch (the legend entry carries the same pattern object,
   // so buildPatternDefs dedups them onto a single def).
   const noDataSwatch = layout.continuousLegend?.noData ?? layout.categoricalLegend?.noData;
-  const patternMap = buildPatternDefs(noDataSwatch ? [...features, noDataSwatch] : features, defs);
+  const patternMap = buildPatternDefs(
+    noDataSwatch ? [...features, noDataSwatch] : features,
+    defs,
+    ctx,
+  );
 
   if (layout.views) {
-    renderGeoMapViews(svg, layout, patternMap, {
-      features: (parent, marks, patterns) =>
-        renderFeatures(parent, marks, undefined, 0, undefined, patterns),
-      borders: renderBorders,
-      points: (parent, marks) => renderPointMarks(parent, marks),
-    });
+    renderGeoMapViews(
+      svg,
+      layout,
+      patternMap,
+      {
+        features: (parent, marks, patterns) =>
+          renderFeatures(parent, marks, undefined, 0, undefined, patterns, ctx),
+        borders: (parent, borders) => renderBorders(parent, borders, ctx),
+        points: (parent, marks) => renderPointMarks(parent, marks, undefined, ctx),
+      },
+      ctx,
+    );
   } else {
     // Create map group offset to the drawing area
-    const mapGroup = createSVGElement('g');
+    const mapGroup = createSVGElement('g', ctx.factory);
     mapGroup.setAttribute('class', 'oc-map-group');
     mapGroup.setAttribute('transform', `translate(${layout.area.x},${layout.area.y})`);
     // Side gutters are outside the camera viewport, including authored focus/zoom.
@@ -411,10 +436,10 @@ export function renderMapSVG(layout: GeoMapLayout, opts?: { animate?: boolean })
           legend.bounds.x >= layout.area.x + layout.area.width),
     );
     if (hasSideGutter) {
-      const clipId = nextSvgId('oc-map-viewport');
-      const clip = createSVGElement('clipPath');
+      const clipId = ctx.ids.next('oc-map-viewport');
+      const clip = createSVGElement('clipPath', ctx.factory);
       clip.setAttribute('id', clipId);
-      const rect = createSVGElement('rect');
+      const rect = createSVGElement('rect', ctx.factory);
       setAttrs(rect, { x: 0, y: 0, width: layout.area.width, height: layout.area.height });
       clip.appendChild(rect);
       defs.appendChild(clip);
@@ -422,7 +447,7 @@ export function renderMapSVG(layout: GeoMapLayout, opts?: { animate?: boolean })
     }
 
     // Camera group wraps features + borders only (chrome, legend, watermark stay outside)
-    const cameraGroup = createSVGElement('g');
+    const cameraGroup = createSVGElement('g', ctx.factory);
     cameraGroup.setAttribute('class', 'oc-map-camera');
     cameraGroup.setAttribute('data-oc-map-camera', '');
 
@@ -444,10 +469,11 @@ export function renderMapSVG(layout: GeoMapLayout, opts?: { animate?: boolean })
       mapStaggerBudget,
       focusIdSet,
       patternMap,
+      ctx,
     );
 
     // Render borders on top of features
-    renderBorders(cameraGroup, borders);
+    renderBorders(cameraGroup, borders, ctx);
 
     // Render point marks inside camera group (above borders).
     // Stamp a per-point stagger so the total spread stays bounded regardless of
@@ -457,7 +483,7 @@ export function renderMapSVG(layout: GeoMapLayout, opts?: { animate?: boolean })
       const perPoint = pointStaggerBudget / (layout.pointMarks.length - 1);
       svg.style.setProperty('--oc-point-stagger', `${perPoint}ms`);
     }
-    renderPointMarks(cameraGroup, layout.pointMarks, animate ? animation : undefined);
+    renderPointMarks(cameraGroup, layout.pointMarks, animate ? animation : undefined, ctx);
 
     mapGroup.appendChild(cameraGroup);
     svg.appendChild(mapGroup);
@@ -466,7 +492,7 @@ export function renderMapSVG(layout: GeoMapLayout, opts?: { animate?: boolean })
   // Render chrome AFTER the map group so the title/subtitle paint on top of a
   // focus-zoomed map that overflows up into the chrome band. Earlier SVG
   // children paint underneath later ones, so chrome must come last of the two.
-  renderChrome(svg, layout);
+  renderChrome(svg, layout, ctx);
 
   // Render legend (continuous for quantitative, categorical for nominal)
   if (layout.continuousLegend) {
@@ -481,6 +507,8 @@ export function renderMapSVG(layout: GeoMapLayout, opts?: { animate?: boolean })
             noData: { ...contNoData, fill: resolvePatternFill(contNoData.pattern, patternMap) },
           }
         : layout.continuousLegend,
+      undefined,
+      ctx,
     );
   } else if (layout.categoricalLegend) {
     const catNoData = layout.categoricalLegend.noData;
@@ -492,6 +520,8 @@ export function renderMapSVG(layout: GeoMapLayout, opts?: { animate?: boolean })
             noData: { ...catNoData, fill: resolvePatternFill(catNoData.pattern, patternMap) },
           }
         : layout.categoricalLegend,
+      undefined,
+      ctx,
     );
   }
 
@@ -500,7 +530,7 @@ export function renderMapSVG(layout: GeoMapLayout, opts?: { animate?: boolean })
   const ptLegend = layout.pointCategoricalLegend ?? layout.pointContinuousLegend;
   if (ptLegend) {
     if (ptLegend.position === 'top-left') {
-      const bg = createSVGElement('rect');
+      const bg = createSVGElement('rect', ctx.factory);
       setAttrs(bg, {
         x: ptLegend.bounds.x - 10,
         y: ptLegend.bounds.y - 8,
@@ -511,7 +541,7 @@ export function renderMapSVG(layout: GeoMapLayout, opts?: { animate?: boolean })
       });
       svg.appendChild(bg);
     }
-    renderLegend(svg, ptLegend);
+    renderLegend(svg, ptLegend, undefined, ctx);
   }
 
   // Point size key: nested circles bottom-right, on the same backdrop treatment
@@ -519,7 +549,7 @@ export function renderMapSVG(layout: GeoMapLayout, opts?: { animate?: boolean })
   if (layout.pointSizeLegend) {
     const sizeLegend = layout.pointSizeLegend;
     const pad = 10;
-    const bg = createSVGElement('rect');
+    const bg = createSVGElement('rect', ctx.factory);
     setAttrs(bg, {
       x: sizeLegend.bounds.x - pad,
       y: sizeLegend.bounds.y - pad,
@@ -533,7 +563,7 @@ export function renderMapSVG(layout: GeoMapLayout, opts?: { animate?: boolean })
       sizeLegend.bounds.y < layout.area.y + layout.area.height
     )
       svg.appendChild(bg);
-    renderLegend(svg, sizeLegend);
+    renderLegend(svg, sizeLegend, undefined, ctx);
   }
 
   // Render watermark
@@ -542,15 +572,17 @@ export function renderMapSVG(layout: GeoMapLayout, opts?: { animate?: boolean })
     layout.chrome,
     layout.chrome.bottomAnchorY ?? layout.area.y + layout.area.height,
     layout.measureText,
+    undefined,
+    ctx,
   );
 
   if (layout.labels && !layout.views) {
     const overlay = resolveMapLabelOverlay(layout, cameraForTarget(layout, layout.focus?.target));
     if (overlay) {
-      renderGeoLabelOverlay(svg, layout, overlay);
-      describeGeoLabelInventory(svg, overlay);
+      renderGeoLabelOverlay(svg, layout, overlay, ctx);
+      describeGeoLabelInventory(svg, overlay, ctx);
     }
   }
-  renderStaticGeoColorKeys(svg, layout);
+  renderStaticGeoColorKeys(svg, layout, ctx);
   return svg;
 }

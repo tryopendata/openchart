@@ -34,7 +34,17 @@ export const barRenderer: ChartRenderer = (
     surfaceFormat: spec.labels.format,
     channelFormat:
       spec.encoding?.x && 'format' in spec.encoding.x ? spec.encoding.x.format : undefined,
-    values: valueField ? spec.data.map((r) => r[valueField]) : [],
+    values:
+      valueField && spec.labels.content !== undefined && spec.encoding.x?.stack === 'normalize'
+        ? marks.map((mark) => {
+            const total = marks
+              .filter((other) => other.stackGroup === mark.stackGroup)
+              .reduce((sum, other) => sum + Math.max(0, Number(other.data[valueField]) || 0), 0);
+            return total > 0 ? Number(mark.data[valueField]) / total : 0;
+          })
+        : valueField
+          ? spec.data.map((r) => r[valueField])
+          : [],
   });
   const labels = computeBarLabels(
     marks,
@@ -49,6 +59,9 @@ export const barRenderer: ChartRenderer = (
     spec.labels.suffix,
     theme.fonts.family,
     {
+      content: spec.labels.content,
+      labelField: spec.encoding.y?.field,
+      normalize: spec.labels.content !== undefined && spec.encoding.x?.stack === 'normalize',
       placement: labelPlan?.placement ?? spec.labels.placement,
       columnWidth: labelPlan?.columnWidth,
       measureText: spec.labels.placement ? measureText : undefined,
