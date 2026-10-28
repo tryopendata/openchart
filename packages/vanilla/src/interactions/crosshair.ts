@@ -9,6 +9,7 @@ interface SeriesPoint {
   y: number;
   datum: Record<string, unknown>;
   tooltip?: TooltipContent;
+  markId?: string;
 }
 
 interface SeriesGroup {
@@ -66,6 +67,7 @@ function collectSeriesGroups(layout: ChartLayout): SeriesGroup[] {
   // "line-0" / "area-1" in the tooltip instead of the actual data fields.
   // Prefer the line mark (same logic as endpoint-labels).
   const byKey = new Map<string, SeriesGroup>();
+  const connectedRows = new Map<string, Set<Record<string, unknown>>>();
   const markTypeByKey = new Map<string, 'line' | 'area'>();
   for (let i = 0; i < layout.marks.length; i++) {
     const mark = layout.marks[i];
@@ -74,6 +76,17 @@ function collectSeriesGroups(layout: ChartLayout): SeriesGroup[] {
       // of paint order. Equal series names in separate leaves are distinct
       // evidence; a band's derived line still shares its leaf's series group.
       const scope = mark.key?.match(/^layer:\d+:/)?.[0] ?? '';
+      const segmentOf = (point: { datum: Record<string, unknown>; segment?: unknown }) =>
+        typeof point.segment === 'number' ? point.segment : 0;
+      const segments = new Map<number, number>();
+      for (const point of mark.dataPoints) {
+        const segment = segmentOf(point);
+        segments.set(segment, (segments.get(segment) ?? 0) + 1);
+      }
+      const connected = connectedRows.get(scope) ?? new Set<Record<string, unknown>>();
+      for (const point of mark.dataPoints)
+        if (segments.get(segmentOf(point))! > 1) connected.add(point.datum);
+      connectedRows.set(scope, connected);
       const seriesKey = mark.seriesKey ?? '__default__';
       const key = `${scope}${seriesKey}`;
       const existingType = markTypeByKey.get(key);
@@ -86,6 +99,38 @@ function collectSeriesGroups(layout: ChartLayout): SeriesGroup[] {
       byKey.set(key, { key, seriesKey, markId: `${mark.type}-${i}`, color, pointsByX });
       markTypeByKey.set(key, mark.type);
     }
+  }
+  // Semantic points include isolated trend observations and authored point
+  // layers. Keep them on the same slice index without inventing line geometry.
+  for (const [index, mark] of layout.marks.entries()) {
+    if (mark.type !== 'point' || mark.aria.decorative) continue;
+    const markId = `point-${index}`;
+    const tooltip = layout.tooltipDescriptors.get(markId);
+    if (!tooltip) continue;
+    const scope = mark.key?.match(/^layer:\d+:/)?.[0] ?? '';
+    // Visible connected markers duplicate their trend observation. Dedupe
+    // only within this leaf; another authored point layer remains evidence.
+    if (connectedRows.get(scope)?.has(mark.data)) continue;
+    const seriesKey = mark.seriesKey ?? '__default__';
+    let key = `${scope}${seriesKey}`;
+    let group = byKey.get(key);
+    const x = snapKey(mark.cx);
+    // Separate observations at the same x remain independent evidence.
+    if (group?.pointsByX.has(x) && group.pointsByX.get(x)!.datum !== mark.data) {
+      key = `${key}:point:${mark.key ?? index}`;
+      group = byKey.get(key);
+    }
+    if (!group) {
+      group = {
+        key,
+        seriesKey,
+        markId,
+        color: getRepresentativeColor(mark.fill),
+        pointsByX: new Map(),
+      };
+      byKey.set(key, group);
+    }
+    group.pointsByX.set(x, { x: mark.cx, y: mark.cy, datum: mark.data, tooltip, markId });
   }
   return Array.from(byKey.values());
 }
@@ -252,7 +297,11 @@ export function wireVoronoiTooltipEvents(
     currentEmphasis = emphasisKey;
     const emphasizedGroup = groups.find((group) => group.key === emphasisKey);
     if (emphasizedGroup) {
-      emphasis?.setMark(svg.querySelector(`[data-mark-id="${emphasizedGroup.markId}"]`));
+      emphasis?.setMark(
+        svg.querySelector(
+          `[data-mark-id="${emphasizedGroup.pointsByX.get(snappedX)?.markId ?? emphasizedGroup.markId}"]`,
+        ),
+      );
     } else emphasis?.clear();
 
     const tooltip = buildSliceTooltip(hits, emphasisKey);
@@ -378,7 +427,7 @@ export function wireVoronoiTooltipEvents(
         candidates.find((candidate) => candidate.key === currentEmphasis) ?? candidates[0];
       const point = group?.pointsByX.get(x);
       return group && point
-        ? { markId: group.markId, datum: point.datum, series: group.seriesKey }
+        ? { markId: point.markId ?? group.markId, datum: point.datum, series: group.seriesKey }
         : null;
     },
     stepTo,

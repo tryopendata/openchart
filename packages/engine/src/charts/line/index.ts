@@ -98,6 +98,7 @@ export const areaRenderer: ChartRenderer = (spec, scales, chartArea, strategy, t
         }
         isolatedPoints.push({
           type: 'point',
+          ...(area.seriesKey !== undefined ? { seriesKey: area.seriesKey } : {}),
           key: area.pointKeys?.[index],
           cx: point.x,
           cy: point.y,

@@ -7,11 +7,9 @@ import type { CrosshairController } from './crosshair';
  * Arrow keys move focus between mark elements. Enter/Space shows tooltip.
  * Escape hides tooltip. Returns a cleanup function.
  *
- * Line and area charts have no per-mark tooltip descriptors (their values live
- * on the snap overlay), so they drive the crosshair instead: left/right step
- * snapped x positions, up/down cycle the raised series at that x. The gate is
- * an empty descriptor map, not the absence of `[data-mark-id]` -- line groups
- * do carry mark ids.
+ * Line/area observations and their point descriptors share the crosshair
+ * index: left/right step snapped x positions, up/down cycle the series at x.
+ * Other mark descriptors retain per-mark navigation.
  */
 export function wireKeyboardNav(
   svg: SVGElement,
@@ -47,11 +45,19 @@ export function wireKeyboardNav(
     for (const type of pointerEvents) container.removeEventListener(type, clearPointerFocus);
   };
 
-  if (tooltipDescriptors.size === 0 && crosshair) {
-    let lastFocus: { datum: Record<string, unknown>; series: string } | null = null;
+  const pointDescriptorsOnly = [...tooltipDescriptors.keys()].every((key) =>
+    key.startsWith('point-'),
+  );
+  if (pointDescriptorsOnly && crosshair) {
+    let lastFocus: { datum: Record<string, unknown>; series: string; markId: string } | null = null;
     const announceCrosshair = (event: FocusEvent | KeyboardEvent) => {
       const focused = crosshair.focusedMark;
-      if (!focused || (lastFocus?.datum === focused.datum && lastFocus.series === focused.series))
+      if (
+        !focused ||
+        (lastFocus?.datum === focused.datum &&
+          lastFocus.series === focused.series &&
+          lastFocus.markId === focused.markId)
+      )
         return;
       lastFocus = focused;
       const element = svg.querySelector<SVGElement>(`[data-mark-id="${focused.markId}"]`);
