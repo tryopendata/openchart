@@ -4,6 +4,11 @@ import { sharedTooltipFields } from '@opendata-ai/openchart-engine';
 import type { TooltipManager } from '../tooltip';
 import type { HoverEmphasis } from './hover-emphasis';
 
+/** Shapes that represent individual observations in the trend slice index. */
+export function isTrendObservation(mark: ChartLayout['marks'][number]): boolean {
+  return mark.type === 'point' || (mark.type === 'rule' && mark.markType === 'area');
+}
+
 interface SeriesPoint {
   x: number;
   y: number;
@@ -100,21 +105,27 @@ function collectSeriesGroups(layout: ChartLayout): SeriesGroup[] {
       markTypeByKey.set(key, mark.type);
     }
   }
-  // Semantic points include isolated trend observations and authored point
-  // layers. Keep them on the same slice index without inventing line geometry.
+  // Semantic points and isolated area intervals share the trend slice index.
+  // Authored point layers remain independent evidence.
   for (const [index, mark] of layout.marks.entries()) {
-    if (mark.type !== 'point' || mark.aria.decorative) continue;
-    const markId = `point-${index}`;
+    if (
+      (mark.type !== 'point' && !(mark.type === 'rule' && isTrendObservation(mark))) ||
+      mark.aria.decorative
+    )
+      continue;
+    const markId = `${mark.type}-${index}`;
+    const scope = mark.key?.match(/^layer:\d+:/)?.[0] ?? '';
     const tooltip = layout.tooltipDescriptors.get(markId);
     if (!tooltip) continue;
-    const scope = mark.key?.match(/^layer:\d+:/)?.[0] ?? '';
     // Visible connected markers duplicate their trend observation. Dedupe
     // only within this leaf; another authored point layer remains evidence.
     if (connectedRows.get(scope)?.has(mark.data)) continue;
-    const seriesKey = mark.seriesKey ?? '__default__';
+    const seriesKey = (mark.type === 'point' ? mark.seriesKey : undefined) ?? '__default__';
     let key = `${scope}${seriesKey}`;
     let group = byKey.get(key);
-    const x = snapKey(mark.cx);
+    const observationX = mark.type === 'point' ? mark.cx : mark.x1;
+    const observationY = mark.type === 'point' ? mark.cy : (mark.y1 + mark.y2) / 2;
+    const x = snapKey(observationX);
     // Separate observations at the same x remain independent evidence.
     if (group?.pointsByX.has(x) && group.pointsByX.get(x)!.datum !== mark.data) {
       key = `${key}:point:${mark.key ?? index}`;
@@ -125,12 +136,12 @@ function collectSeriesGroups(layout: ChartLayout): SeriesGroup[] {
         key,
         seriesKey,
         markId,
-        color: getRepresentativeColor(mark.fill),
+        color: mark.type === 'point' ? getRepresentativeColor(mark.fill) : mark.stroke,
         pointsByX: new Map(),
       };
       byKey.set(key, group);
     }
-    group.pointsByX.set(x, { x: mark.cx, y: mark.cy, datum: mark.data, tooltip, markId });
+    group.pointsByX.set(x, { x: observationX, y: observationY, datum: mark.data, tooltip, markId });
   }
   return Array.from(byKey.values());
 }

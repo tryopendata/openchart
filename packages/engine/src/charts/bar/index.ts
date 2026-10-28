@@ -9,7 +9,7 @@ import { resolveFieldFormatter } from '../../format/field-format';
 import { filterByDensity } from '../_shared/density-filter';
 import type { ChartRenderer } from '../registry';
 import { computeBarMarks } from './compute';
-import { computeBarLabels } from './labels';
+import { computeBarLabels, stackTotals } from './labels';
 
 // ---------------------------------------------------------------------------
 // Bar chart renderer
@@ -30,16 +30,20 @@ export const barRenderer: ChartRenderer = (
   // Compute and attach value labels (respects spec.labels.density)
   const valueField =
     spec.encoding?.x && 'field' in spec.encoding.x ? spec.encoding.x.field : undefined;
+  // A normalized stack labels each segment with its share of the stack,
+  // formatted as a percent like the normalized axis unless a format is set.
+  const totals =
+    valueField && spec.encoding.x?.stack === 'normalize'
+      ? stackTotals(marks, valueField)
+      : undefined;
   const labelFormatter = resolveFieldFormatter({
-    surfaceFormat: spec.labels.format,
+    surfaceFormat: spec.labels.format || spec.encoding.x?.format || (totals ? '.0%' : undefined),
     channelFormat:
       spec.encoding?.x && 'format' in spec.encoding.x ? spec.encoding.x.format : undefined,
     values:
-      valueField && spec.labels.content !== undefined && spec.encoding.x?.stack === 'normalize'
+      valueField && totals
         ? marks.map((mark) => {
-            const total = marks
-              .filter((other) => other.stackGroup === mark.stackGroup)
-              .reduce((sum, other) => sum + Math.max(0, Number(other.data[valueField]) || 0), 0);
+            const total = totals.get(mark.stackGroup ?? '') ?? 0;
             return total > 0 ? Number(mark.data[valueField]) / total : 0;
           })
         : valueField
@@ -61,7 +65,7 @@ export const barRenderer: ChartRenderer = (
     {
       content: spec.labels.content,
       labelField: spec.encoding.y?.field,
-      normalize: spec.labels.content !== undefined && spec.encoding.x?.stack === 'normalize',
+      stackTotals: totals,
       placement: labelPlan?.placement ?? spec.labels.placement,
       columnWidth: labelPlan?.columnWidth,
       measureText: spec.labels.placement ? measureText : undefined,

@@ -2517,7 +2517,7 @@
               "type": "number"
             }
           ],
-          "description": "Temporal bar/rect/errorbar position interval; numbers are milliseconds."
+          "description": "Temporal bar position interval; numbers are milliseconds. Bar marks only."
         },
         "aggregate": {
           "$ref": "#/definitions/AggregateOp",

@@ -71,7 +71,8 @@ export function rangeEndpointText(
 ): string | null {
   const formatted = formatEndpoint(value, formatter, prefix);
   if (formatted === null) return null;
-  const number = `${formatted}${suffix ?? ''}`;
+  // Default (rc.2) labels never carried the suffix; only authored content does.
+  const number = content === undefined ? formatted : `${formatted}${suffix ?? ''}`;
   return content === 'label' ? title : content === 'label value' ? `${title} ${number}` : number;
 }
 

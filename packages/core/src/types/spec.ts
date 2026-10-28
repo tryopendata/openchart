@@ -668,7 +668,7 @@ export interface EncodingChannel<TData extends DataRow = DataRow> {
    * - ordinal: ordered categories (scale: ordinal)
    */
   type: FieldType;
-  /** Temporal bar/rect/errorbar position interval; numbers are milliseconds. */
+  /** Temporal bar position interval; numbers are milliseconds. Bar marks only. */
   interval?: 'day' | 'week' | 'month' | 'quarter' | 'year' | number;
   /** Optional aggregate to apply before encoding. */
   aggregate?: AggregateOp;

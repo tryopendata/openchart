@@ -172,7 +172,10 @@ export function compileBarList(spec: unknown, options: CompileOptions): BarListL
     const group = groupField ? String(row[groupField] ?? '') : '';
     const newGroup = groupField !== undefined && group !== previousGroup;
     const header = newGroup ? groupHeight : 0;
-    if (cursorY + header + rowHeight > fullArea.y + fullArea.height + 1e-9) break;
+    // Always keep the first row when there is any plot area, as rc.2 did:
+    // a height shorter than one row still shows the top item.
+    const fits = cursorY + header + rowHeight <= fullArea.y + fullArea.height + 1e-9;
+    if (!fits && (validRows.length > 0 || fullArea.height <= 0)) break;
     if (newGroup) {
       groupPositions.push({ key: group, y: cursorY });
       cursorY += groupHeight;
@@ -184,7 +187,9 @@ export function compileBarList(spec: unknown, options: CompileOptions): BarListL
   }
   const compileWarnings: CompileWarning[] = [];
   const droppedCount = candidates.length - validRows.length;
-  if (droppedCount > 0) {
+  // Only an authored numeric height warns: the author can switch it to 'auto'.
+  // A container-driven cap re-fits on every resize and stays silent, as in rc.2.
+  if (droppedCount > 0 && typeof barlistSpec.height === 'number') {
     const message = `Bar list height drops ${droppedCount} rows; use height: 'auto' to fit every row.`;
     compileWarnings.push({ code: 'BARLIST_ROWS_DROPPED', message, context: { droppedCount } });
     emitSpecWarnings([message], options.onWarn);
@@ -508,8 +513,11 @@ export function compileBarList(spec: unknown, options: CompileOptions): BarListL
   }));
   const firstTrack = rows[0].track;
   const domain = barlistSpec.encoding.value.scale?.domain as number[] | undefined;
-  const referenceLines = (barlistSpec.annotations ?? []).map((annotation) => {
-    const [lower, upper] = domain ?? [0, maxValue];
+  const [lower, upper] = domain ?? [0, maxValue];
+  // Like chart reference lines whose value is off the scale, a reference
+  // outside the value domain is dropped rather than drawn past the track.
+  const referenceLines = (barlistSpec.annotations ?? []).flatMap((annotation) => {
+    if (annotation.x < Math.min(lower, upper) || annotation.x > Math.max(lower, upper)) return [];
     const x = firstTrack.x + ((annotation.x - lower) / (upper - lower || 1)) * firstTrack.width;
     return {
       x,

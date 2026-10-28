@@ -3,6 +3,8 @@ import { defineConfig } from 'vitest/config';
 
 const packages = path.resolve(__dirname, '..');
 
+// Tests of the built `dist/static.js` in worker threads. Not part of the root
+// `bun run test`; run `bun run build` and then `bun run test:static`.
 export default defineConfig({
   resolve: {
     alias: [
@@ -13,7 +15,6 @@ export default defineConfig({
   test: {
     name: 'vanilla-static',
     environment: 'node',
-    include: ['src/**/*.node.test.ts', 'src/__tests__/site-contract.test.ts'],
-    globalSetup: ['./vitest.static.setup.ts'],
+    include: ['src/**/*.dist.test.ts'],
   },
 });

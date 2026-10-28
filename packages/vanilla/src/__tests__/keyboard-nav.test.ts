@@ -6,7 +6,7 @@
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createContainer } from '../__test-fixtures__/dom';
-import { barSpec } from '../__test-fixtures__/specs';
+import { barSpec, lineSpec } from '../__test-fixtures__/specs';
 import { createChart } from '../mount';
 
 function keydown(el: HTMLElement, key: string): void {
@@ -72,6 +72,35 @@ describe('mark keyboard navigation', () => {
     keydown(container, 'ArrowRight');
     keydown(container, 'ArrowRight');
     expect(container.querySelector('.oc-mark-focused')).not.toBeNull();
+    chart.destroy();
+  });
+
+  it('a pointer-initiated focus does not start mark navigation', () => {
+    const chart = createChart(container, barSpec);
+
+    container.dispatchEvent(new Event('pointerdown'));
+    container.dispatchEvent(new FocusEvent('focus'));
+    expect(container.querySelector('.oc-mark-focused')).toBeNull();
+
+    // Keyboard focus after the pointer gesture ended still lands on mark 0.
+    container.dispatchEvent(new FocusEvent('blur'));
+    container.dispatchEvent(new FocusEvent('focus'));
+    expect(container.querySelector('.oc-mark-focused')).not.toBeNull();
+
+    chart.destroy();
+  });
+
+  it('a pointer-initiated focus leaves the crosshair where the pointer put it', () => {
+    const chart = createChart(container, { ...lineSpec, animation: false });
+
+    container.dispatchEvent(new Event('pointerdown'));
+    container.dispatchEvent(new FocusEvent('focus'));
+    expect(tooltipDisplay()).not.toBe('block');
+
+    container.dispatchEvent(new FocusEvent('blur'));
+    container.dispatchEvent(new FocusEvent('focus'));
+    expect(tooltipDisplay()).toBe('block');
+
     chart.destroy();
   });
 });

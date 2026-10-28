@@ -1230,7 +1230,7 @@ Which channels are required depends on the chart type. See [Encoding by chart ty
 | `scale`     | `ScaleConfig` | `undefined` | Scale configuration (domain, type, nice, zero).                                                |
 | `stack`     | `boolean \| 'zero' \| 'normalize' \| 'center' \| null` | `'zero'` for bar/column/area (Vega-Lite aligned) | Stacking behavior for quantitative channels. `null`/`false` disables stacking (grouped/dodged bars, or overlap gradients for area). `'normalize'` for 100% stacked. `'center'` for streamgraph. |
 
-`interval` is accepted on temporal position channels (`x`, `y`, `x2` or `y2`) of `bar`, `rect` and `errorbar`; other channel/mark combinations are rejected. A numeric interval must be finite, positive milliseconds. Temporal bars use the interval to size bands around timestamps on a continuous time scale. Omission infers the smallest positive difference between distinct dates. With fewer than two distinct dates, it falls back to one day and warns. Dates whose spacing is not a multiple of the chosen interval produce a warning. Calendar intervals follow the scale's local-time or UTC interpretation, including month/quarter/year boundaries; numeric intervals are fixed durations.
+`interval` is accepted only on temporal position channels (`x`, `y`, `x2` or `y2`) of `bar` marks; rect, errorbar and other channel/mark combinations are rejected. A numeric interval must be finite, positive milliseconds. Temporal bars use the interval to size bands around timestamps on a continuous time scale. Omission first looks for a calendar cadence (year, quarter, month, week, then day) whose smallest observed gap is one unit and whose other gaps are whole units. This preserves weekly cadence across daylight-saving changes and month-end runs. Otherwise it uses the smallest positive millisecond difference. With fewer than two distinct dates, it falls back to one day and warns. Dates whose spacing is not aligned with the chosen interval produce a warning. Calendar intervals follow the scale's local-time or UTC interpretation; month-based offsets clamp to the target month's last day. Numeric intervals are fixed durations.
 
 ### DescriptionEncoding
 
@@ -1242,7 +1242,7 @@ type DescriptionEncoding =
   | { value: string };
 ```
 
-Field `type` and `format` default to omission. String fields are retained verbatim, numeric fields use the field formatter (with optional `format`), and temporal fields/Dates use date formatting. A null or missing field value emits no authored description. `{ value }` supplies constant text. Individual data shapes receive their row text; a line/area path requires the same field value throughout its series. Mixed series values warn and omit that path's description. Add a point layer to expose per-observation text. Static output writes a direct `<title>` on the data shape; live keyboard marks use the authored description. This channel is distinct from the figure's top-level `description` / `a11y.description`.
+Field `type` and `format` default to omission. String fields are retained verbatim, numeric fields use the field formatter (with optional `format`), and temporal fields/Dates use date formatting. A null or missing field value emits no authored description. `{ value }` supplies constant text. Individual data shapes receive their row text; a line/area path requires the same field value throughout its series. Mixed series values warn and omit that path's description. Add a point layer to expose per-observation text. Static output writes a direct `<title>` on the data shape; live keyboard marks use the authored description. This channel is distinct from the figure's top-level `description` / `a11y.description` and from generated series metadata; it does not rename the series or replace its computed summary.
 
 ### FieldType
 
@@ -1716,6 +1716,8 @@ interface LabelConfig {
 | `density` | `LabelDensity` | `'auto'` | How many data labels to show.                       |
 | `format`  | `string`       | auto     | d3-format override for label values, e.g. `",.0f"`. |
 
+On `stack: 'normalize'`, value labels always show each segment's share of its stack, including when `content` is omitted or `'value'`. Share formatting prefers explicit `labels.format`, then the value channel's `format`, then the inferred `.0%` fallback. There is no raw-value label mode on normalized stacks.
+
 For stacked bars, `label` is the series name; for simple bars it is the category. Range endpoint names come from the corresponding channel title, falling back to its field. For example, `labels: { content: 'label value', suffix: 'm' }` can produce `median 14m` and `p75 26m`. Range marks reserve measured endpoint space when `content` is explicit; fixed `frame` margins remain authoritative. Barlist labels accept only `format`, `prefix` and `suffix`, as documented below.
 
 ### LabelDensity
@@ -2120,9 +2122,9 @@ Ranked rows with proportional tracks and value labels. `type: 'barlist'` selects
 
 `encoding.value.scale.domain: [lower, upper]` defaults to omission, which scales tracks against the largest absolute admitted value. An explicit domain must contain two finite increasing numbers and provides a shared comparison scale. Track lengths clamp to its bounds; value labels retain the source number. Use `[0, 1]` for rates or `[0, 3]` for lift.
 
-Barlist annotations have type `Array<Omit<RefLineAnnotation, 'x' | 'y'> & { x: number; y?: never }>`: supply `type: 'refline'` and numeric `x`; `y` is not accepted. The renderer uses `stroke` (theme axis by default), `strokeWidth` (1px), `strokeDash` or `style` (solid by default; dashed/dotted supported), plus optional `label`, `fill`, `fontSize` and `fontWeight` for the label. A labeled refline reserves a top lane. This subset does not implement the Cartesian outside-placement or connector layout options.
+Barlist annotations have type `Array<Omit<RefLineAnnotation, 'x' | 'y'> & { x: number; y?: never }>`: supply `type: 'refline'` and numeric `x`; `y` is not accepted. The renderer uses `stroke` (theme axis by default), `strokeWidth` (1px), `strokeDash` or `style` (solid by default; dashed/dotted supported), plus optional `label`, `fill`, `fontSize` and `fontWeight` for the label. A labeled refline reserves a top lane. References outside the value domain are omitted. This subset does not implement the Cartesian outside-placement or connector layout options.
 
-**Height behavior:** the compiler uses a numeric spec height or the compile height budget when `height` is omitted, dropping rows that cannot fit with a warning. The live mount derives that budget from its container and can shrink a short list to content. It does not turn omission into unbounded auto height. `renderStaticSVG` instead defaults an omitted barlist height to `'auto'`; its numeric `options.height` overrides the spec. Set `height: 'auto'` explicitly when a live list must fit every admitted row. `maxItems` still limits the row count in every mode.
+**Height behavior:** the compiler uses a numeric spec height or the compile height budget when `height` is omitted. It drops rows that cannot fit, but retains the first row whenever there is positive plot area, even if the row is taller than that area. Dropped rows warn only when the spec authors a numeric `height`; an omitted, container-driven height cap stays silent. The live mount derives that budget from its container and can shrink a short list to content. It does not turn omission into unbounded auto height. `renderStaticSVG` instead defaults an omitted barlist height to `'auto'`; its numeric `options.height` overrides the spec. Set `height: 'auto'` explicitly when a live list must fit every admitted row. `maxItems` still limits the row count in every mode.
 
 ```ts
 const spec: BarListSpec = {
@@ -3113,7 +3115,7 @@ const spec = {
 
 Add a `color` encoding to split into series. Multi-series area charts default to **stacked** composition (`stack: 'zero'`), Vega-Lite aligned. Pass `encoding.y.stack: null` (or `false`) to opt into overlap mode instead — translucent gradient fills layered on a shared baseline, so each series's curve stays readable, comparison-first rather than composition-first.
 
-Area paths follow the same missing-value gap rule as lines. An isolated published observation renders as a point instead of a degenerate filled path; null observations stay missing. An area path describes its series or band, so use constant series text and a point layer for per-observation descriptions.
+Area paths follow the same missing-value gap rule as lines. An isolated published observation renders as a point instead of a degenerate filled path; for an ungrouped interval band with `y` and `y2`, it renders as a vertical rule spanning both bounds rather than a point on the lower bound. Null observations stay missing. An area path describes its series or band, so use constant series text and a point layer for per-observation descriptions.
 
 **Live examples**: [Area chart](https://tryopendata.github.io/openchart/?story=charts--line-and-area#area) | [Multi-series overlap](https://tryopendata.github.io/openchart/?story=charts--line-and-area#area) | [Stacked area](https://tryopendata.github.io/openchart/?story=charts--line-and-area#stacked-area) | [Step area](https://tryopendata.github.io/openchart/?story=charts--line-and-area#interpolation)
 
@@ -3168,7 +3170,7 @@ const spec = {
 };
 ```
 
-The mark is still `"bar"`, but the engine flips to vertical columns when x is nominal/ordinal or temporal and y is quantitative. Temporal x uses a continuous time scale, preserving gaps between dates and aligning date reference lines with an accompanying line chart. Set `encoding.x.interval: 'week'` for weekly columns; `day`, `month`, `quarter`, `year`, or a positive millisecond number are also accepted. Omission infers the smallest positive timestamp difference (one day with a warning when fewer than two distinct dates exist). Irregular spacing that is not a multiple of the interval warns. Calendar intervals follow the scale's local/UTC mode.
+The mark is still `"bar"`, but the engine flips to vertical columns when x is nominal/ordinal or temporal and y is quantitative. Temporal x uses a continuous time scale, preserving gaps between dates and aligning date reference lines with an accompanying line chart. Set `encoding.x.interval: 'week'` for weekly columns; `day`, `month`, `quarter`, `year`, or a positive millisecond number are also accepted. Omission prefers a calendar cadence (year, quarter, month, week or day) when dates follow whole units and the smallest gap is one unit, then falls back to the smallest positive millisecond difference. With fewer than two distinct dates it uses one day and warns. Spacing that does not align with the chosen interval warns. Calendar intervals follow the scale's local/UTC mode, preserving daylight-saving and month-end cadence; month-based offsets clamp to the target month's last day.
 
 For aligned history and weekly figures, use the same temporal `scale.domain`, width and `frame: { left: 48, right: 96 }` on both. Fixed margins win over automatic label reserves; leave enough space for outside reference labels and endpoints.
 
@@ -3177,6 +3179,8 @@ For aligned history and weekly figures, use the same temporal `scale.domain`, wi
 ---
 
 ## Stacking
+
+With `stack: 'normalize'`, segment value labels show each segment's share of the stack, regardless of `labels.content`. Share formatting prefers explicit `labels.format`, then the value channel's `format`, then the inferred `.0%` fallback. Raw source values remain available in data, but normalized value labels do not expose a raw-value mode.
 
 When a bar or column chart has a `color` encoding, values are **stacked by default** (one segment per series, stacked from zero). Control this with the `stack` property on the quantitative encoding channel.
 
@@ -3932,7 +3936,7 @@ Options include `width`, `height`, `theme`, `darkMode`, `renderer`, `watermark`,
 
 Static output contains no scripts, animation controls, focusable mark navigation, hidden HTML table or per-mark `aria-label`. Its authored mark tooltip is a `<title>`; the figure owns the accessible name.
 
-Use a unique, stable `idPrefix` for each figure in a document. It must start with a letter or underscore and contain only letters, digits, underscores, periods or hyphens. IDs and their references share a per-call scope, so calls can interleave safely. Identical inputs and options produce identical bytes in the same environment. Temporal scales and date formatting can depend on the host timezone; use a consistent timezone, such as `TZ=UTC`, across builds.
+Use a unique, stable `idPrefix` for each figure in a document. It must start with a letter or underscore and contain only letters, digits, underscores, periods or hyphens. IDs and their references share a per-call scope, so calls can interleave safely. Without `idPrefix`, ids are namespaced `ocs-<hash>-…`, where the hash covers the spec and options, so they never repeat the live charts' `oc-…` ids or those of a different unprefixed figure; identical calls still produce identical ids. The root `id` and map style scoping need an explicit prefix. Identical inputs and options produce identical bytes in the same environment. Temporal scales and date formatting can depend on the host timezone; use a consistent timezone, such as `TZ=UTC`, across builds.
 
 Chart, layer and barlist colors and role styles are serialized as attributes, without CSS variables or a theme stylesheet. Theme them through the `theme` option. Map and tilemap output retains its scoped theme style block. The root carries `data-theme`; a prefixed root also has `id="<idPrefix>-oc-root"`. Serialization escapes XML and adds `xmlns:xlink` when an xlink attribute needs it.
 
@@ -3942,13 +3946,13 @@ Render once with `darkMode: 'off'` and once with `darkMode: 'force'`, using dist
 
 Use `a11y.description` for the figure's finding. Use `encoding.description: { field: 'rowText' }` for a data mark's authored text, or `{ value: 'Published green rate' }` for a constant description. Static shapes receive a direct `<title>` for pointer inspection, without per-mark `aria-label`; live mounts use mark descriptions for keyboard inspection. A line or area is one path per series: a description field must be constant within that series. For per-observation text, add a point layer and put the row description there.
 
-Every data shape has `data-mark`. Identity attributes such as `data-agent` or `data-day` come from non-quantitative position channels, color, detail and key fields; a series path includes only identities shared by every observation. Identity field names are normalized for attributes; reserved names receive `field-` prefixes. Decorative caps and stems carry no duplicate identity. Isolated published observations in line and area series render as points; missing observations remain gaps.
+Primary data shapes carry `data-mark`. Identity attributes such as `data-agent` or `data-day` come from non-quantitative position channels, color, detail and key fields; a series path includes only identities shared by every observation. Identity field names are normalized for attributes; reserved names receive `field-` prefixes. Errorbar caps carry no duplicate identity. Dumbbell heads and lollipop stems retain live labels and keyboard navigation, while provenance attributes belong to their primary connector or point. Isolated published observations in line and ordinary area series render as points; an ungrouped `y`/`y2` area band instead renders an isolated observation as a rule spanning its interval. Missing observations remain gaps.
 
 For a decorative cell inside a host table, use `display: 'sparkline'` and `a11y: { hidden: true }`. Supply the value and interval text in the table itself. Layered sparkline cells share the compact display defaults and reserve space for errorbar caps and point radii.
 
 ## Aligned figures
 
-Use identical widths, `frame: { left: 48, right: 96 }`, temporal x domains and annotation dates on both figures. Fixed left and right values set plot margins and win over automatic label reserves; leave enough right margin for endpoint labels and outside reference labels. Neither margin may be negative, and they must leave a usable plot width. Temporal columns can specify `encoding.x.interval: 'week'`; irregular timestamps otherwise use the smallest positive interval and produce a diagnostic.
+Use identical widths, `frame: { left: 48, right: 96 }`, temporal x domains and annotation dates on both figures. Fixed left and right values set plot margins and win over automatic label reserves; leave enough right margin for endpoint labels and outside reference labels. Neither margin may be negative, and they must leave a usable plot width. Temporal columns can specify `encoding.x.interval: 'week'`. Omission prefers an aligned calendar cadence, then falls back to the smallest positive millisecond gap; spacing that does not align with the chosen interval warns.
 
 For a history figure, use a constant line description, an area interval band, and a point layer with row descriptions. Use the same temporal domain and frame for the weekly column figure below it. The gallery's `static/aligned-pair` demonstrates the shared plot bounds.
 

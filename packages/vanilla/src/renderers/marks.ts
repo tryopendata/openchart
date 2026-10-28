@@ -524,6 +524,8 @@ function getMarkSeries(mark: Mark): string | undefined {
   if (explicitSeries) {
     return explicitSeries;
   }
+  // An authored description replaces the generated label, so it names no series.
+  if (mark.authoredDescription !== undefined) return undefined;
   // For arc marks, the category name is the first part of the aria label (before ':')
   if (mark.type === 'arc') {
     const label = mark.aria.label;

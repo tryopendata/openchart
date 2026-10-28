@@ -70,7 +70,8 @@ export function computeColumnLabels(
   options: {
     content?: EndpointLabelContent;
     labelField?: string;
-    normalize?: boolean;
+    /** Per-stack totals of a normalized stack; labels then show each segment's share. */
+    stackTotals?: Map<string, number>;
     placement?: BarLabelPlacement;
     columnWidth?: number;
     measureText?: MeasureTextFn;
@@ -97,10 +98,8 @@ export function computeColumnLabels(
     // due to abbreviation rounding, e.g. 1955 → "2K" → 2000).
     let valuePart: string;
     let rawNum = valueField != null ? Number(mark.data[valueField]) : NaN;
-    if (options.normalize && mark.stackGroup !== undefined && valueField) {
-      const total = marks
-        .filter((other) => other.stackGroup === mark.stackGroup)
-        .reduce((sum, other) => sum + Math.max(0, Number(other.data[valueField]) || 0), 0);
+    if (options.stackTotals && mark.stackGroup !== undefined) {
+      const total = options.stackTotals.get(mark.stackGroup) ?? 0;
       rawNum = total > 0 ? rawNum / total : 0;
     }
 

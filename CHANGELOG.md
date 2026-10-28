@@ -23,8 +23,11 @@ Stable v9 release. Upgrade all six packages together and review [the v9 migratio
   keyboard accessible. Warn and omit varying descriptions on series paths; use a point layer
   for observation text. Decorative geometry does not duplicate mark identity.
 - Add horizontal and vertical `errorbar` marks with optional caps for caller-computed
-  bounds. Preserve isolated observations as points and reserve layered sparkline padding
-  for point radii and caps. Honor explicit nominal domains, including empty rows.
+  bounds. Preserve isolated observations as points and isolated area intervals as rules
+  spanning both bounds. Reserve layered sparkline padding for point radii and caps, and
+  honor explicit nominal domains, including empty rows.
+- Include both area interval bounds in automatic y domains so isolated bands remain
+  visible and inspectable; explicit domains remain authoritative.
 - Keep layered marks and axes on the same resolved domains and plot insets, including
   interval bounds, transformed values and normalized stacks.
 - Add fixed horizontal `frame` margins for aligned figures and temporal columns with
@@ -33,8 +36,10 @@ Stable v9 release. Upgrade all six packages together and review [the v9 migratio
 - Add grouped bar lists, retained input ordering with `sort: null`, explicit value domains,
   x reference lines and label affixes. Fit nominal ticks, honor explicit legend
   suppression, and compose category/series names and values in labels.
-- Add `onMarkFocus` with a dedicated `MarkFocusEvent` carrying authored descriptions
-  across vanilla and framework Chart wrappers.
+- Measure range end labels with the host text metrics (`measureText`) when provided.
+- Add `onMarkFocus` with a dedicated `MarkFocusEvent` carrying the resolved accessible
+  label, including authored descriptions, across vanilla and framework Chart wrappers.
+  Keep connected and isolated observations inspectable together, including interval bands.
 - Allow hosts to suppress generated live tables with `a11y.table: false`, remove static
   control roles and tab stops, preserve live root theme identity, and respect reduced motion.
 - Retune cyan, ochre and violet light strokes, plus cyan, ochre, green and violet
@@ -175,6 +180,11 @@ Stable v9 release. Upgrade all six packages together and review [the v9 migratio
 - Unify builder/compiler field inference: sample up to 50 rows, require more than
   80% agreement, and recognize numeric strings before dates. Explicit field types
   remain authoritative.
+- Label normalized stacked bar and column segments with their share of the stack,
+  formatted `.0%` unless `labels.format` is set, whether or not `labels.content` is
+  given. rc.2 printed the raw field value.
+- Draw both leaves of an independent-y dual-axis layer into one plot rectangle, so
+  series share x positions and temporal columns stay inside the plot.
 
 ### Themes and migration
 

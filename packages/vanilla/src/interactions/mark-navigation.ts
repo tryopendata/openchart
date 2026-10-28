@@ -29,21 +29,15 @@ export function restoreMarkFocus(svg: SVGSVGElement, key: string | null): void {
  * One tab stop per chart; arrows traverse marks, Enter/Space activate, Escape
  * dismisses inspection. Tab always retains its native page-navigation behavior.
  */
-export function wireMarkNavigation(
-  svg: SVGSVGElement,
-  marks: NavigableMark[],
-  options: { onFocus?: (mark: NavigableMark, event: FocusEvent | KeyboardEvent) => void } = {},
-): () => void {
+export function wireMarkNavigation(svg: SVGSVGElement, marks: NavigableMark[]): () => void {
   const cleanups: Array<() => void> = [];
   // An image is atomic to assistive technology; a group exposes its focusable marks.
   if (svg.getAttribute('role') === 'img') svg.setAttribute('role', 'group');
-  let navigationEvent: KeyboardEvent | undefined;
   marks.forEach((mark, index) => {
     const element = mark.element as SVGElement;
     element.setAttribute('tabindex', index === 0 ? '0' : '-1');
     element.setAttribute('data-navigation-key', mark.key);
-    const focus = (event: FocusEvent) => {
-      options.onFocus?.(mark, navigationEvent ?? event);
+    const focus = () => {
       for (const other of marks) other.element.setAttribute('tabindex', '-1');
       element.setAttribute('tabindex', '0');
       const bounds = element.getBoundingClientRect();
@@ -83,11 +77,8 @@ export function wireMarkNavigation(
       }
       event.preventDefault();
       event.stopPropagation();
-      if (next !== undefined && next !== index) {
-        navigationEvent = event;
+      if (next !== undefined && next !== index)
         (marks[next].element as SVGElement).focus({ preventScroll: true });
-        navigationEvent = undefined;
-      }
     };
     element.addEventListener('focus', focus);
     element.addEventListener('blur', mark.leave);

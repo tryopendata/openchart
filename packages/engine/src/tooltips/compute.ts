@@ -1017,9 +1017,15 @@ export function computeTooltipDescriptors(
   const encoding = spec.encoding as Encoding;
   const descriptors = new Map<string, TooltipContent>();
 
+  const intervalEnd =
+    spec.markType === 'area' && encoding.y && encoding.y2 && 'field' in encoding.y2
+      ? { ...encoding.y, ...encoding.y2 }
+      : undefined;
+
   const allChannels = [
     encoding.x,
     encoding.y,
+    intervalEnd,
     encoding.color && 'field' in encoding.color ? encoding.color : undefined,
     encoding.size && 'field' in encoding.size ? encoding.size : undefined,
     ...(encoding.tooltip
@@ -1043,6 +1049,24 @@ export function computeTooltipDescriptors(
         break;
       case 'area':
         entries = tooltipsForArea(mark, encoding, formatters, i, encodedFields, areaStackTotals);
+        break;
+      case 'rule':
+        // Isolated interval areas retain their full y/y2 span as one data mark.
+        if (mark.markType === 'area' && intervalEnd && !mark.aria.decorative) {
+          const { title, channel } = getTooltipTitle(mark.data, encoding, encodedFields);
+          const fields = buildFields(mark.data, encoding, formatters, mark.stroke, channel);
+          if (!encoding.tooltip)
+            fields.push({
+              ...semanticField(intervalEnd, encoding, 'y2', undefined, formatters),
+              label: resolveLabel(intervalEnd),
+              value: formatValue(
+                mark.data[intervalEnd.field],
+                intervalEnd.type,
+                getFormatter(formatters, intervalEnd),
+              ),
+            });
+          entries = [[`rule-${i}`, { title, fields }]];
+        }
         break;
       case 'point':
         entries = tooltipsForPoint(mark, encoding, formatters, i, encodedFields);

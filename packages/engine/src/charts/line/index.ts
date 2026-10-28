@@ -10,7 +10,13 @@
  *   `'normalize'`, or `'center'`.
  */
 
-import type { AreaMark, LineMark, Mark, PointMark } from '@opendata-ai/openchart-core';
+import type {
+  AreaMark,
+  LineMark,
+  Mark,
+  PointMark,
+  RuleMarkLayout,
+} from '@opendata-ai/openchart-core';
 import { getRepresentativeColor } from '@opendata-ai/openchart-core';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ChartRenderer } from '../registry';
@@ -107,9 +113,39 @@ export const areaRenderer: ChartRenderer = (spec, scales, chartArea, strategy, t
         });
       }
     }
+  // An isolated observation of a y/y2 interval band is the interval itself:
+  // a rule from y to y2, not a dot on the lower bound.
+  const isolatedIntervals: RuleMarkLayout[] = [];
+  if (!hasColor && encoding.y2 && 'field' in encoding.y2)
+    for (const area of geometry) {
+      const counts = new Map<number, number>();
+      for (const point of area.dataPoints ?? [])
+        counts.set(point.segment ?? 0, (counts.get(point.segment ?? 0) ?? 0) + 1);
+      for (const [index, point] of (area.dataPoints ?? []).entries()) {
+        if (counts.get(point.segment ?? 0) !== 1) continue;
+        isolatedIntervals.push({
+          type: 'rule',
+          key: area.pointKeys?.[index],
+          x1: point.x,
+          y1: point.y,
+          x2: point.x,
+          y2: area.bottomPoints[index]?.y ?? point.y,
+          stroke: area.stroke ?? getRepresentativeColor(area.fill),
+          strokeWidth: area.strokeWidth ?? 1,
+          data: point.datum,
+          aria: {
+            label: `Interval: ${point.datum[encoding.y?.field ?? '']} to ${point.datum[encoding.y2.field]}`,
+          },
+        });
+      }
+    }
+  const intervalRows = new Set(isolatedIntervals.map((rule) => rule.data));
   return [
     ...areas,
-    ...lines,
+    ...(intervalRows.size
+      ? lines.filter((mark) => mark.type !== 'point' || !intervalRows.has(mark.data))
+      : lines),
+    ...isolatedIntervals,
     ...points.filter((point) => !isolatedPoints.some((isolated) => isolated.data === point.data)),
     ...isolatedPoints,
   ] as Mark[];

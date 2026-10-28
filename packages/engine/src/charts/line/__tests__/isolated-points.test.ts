@@ -148,4 +148,37 @@ describe('isolated observations', () => {
           }
         }
       });
+  it('draws an isolated interval observation as a rule spanning y to y2', () => {
+    const rows = [
+      { day: '2026-10-10', lower: 0.6, upper: 0.9 },
+      { day: '2026-10-11', lower: null, upper: null },
+      { day: '2026-10-12', lower: 0.5, upper: 0.8 },
+      { day: '2026-10-13', lower: 0.55, upper: 0.85 },
+    ];
+    const layout = compileChart(
+      {
+        data: rows,
+        mark: 'area',
+        encoding: {
+          x: encoding.x,
+          y: { field: 'lower', type: 'quantitative', scale: { domain: [0, 1] } },
+          y2: { field: 'upper' },
+          description: { value: 'Published interval' },
+        },
+      },
+      options,
+    );
+    expect(layout.marks.filter((mark) => mark.type === 'point')).toHaveLength(0);
+    const rules = layout.marks.filter((mark) => mark.type === 'rule');
+    expect(rules).toHaveLength(1);
+    const [rule] = rules;
+    expect(rule.data).toEqual(rows[0]);
+    expect(rule.x1).toBe(rule.x2);
+    // Pixel positions of the bounds come from the band's own [0, 1] y scale.
+    const scaleY = (value: number) => layout.area.y + layout.area.height * (1 - value);
+    expect(Math.min(rule.y1, rule.y2)).toBeCloseTo(scaleY(0.9), 1);
+    expect(Math.max(rule.y1, rule.y2)).toBeCloseTo(scaleY(0.6), 1);
+    expect(rule.markType).toBe('area');
+    expect(rule.authoredDescription).toBe('Published interval');
+  });
 });

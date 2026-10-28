@@ -194,9 +194,15 @@ export class StaticElement {
     return null;
   }
   matches(selector: string): boolean {
-    return selector
-      .split(',')
-      .some((part) => matchesChain(this, part.trim().split(/\s+(?![^[]*\])/)));
+    return selector.split(',').some((part) =>
+      matchesChain(
+        this,
+        part
+          .replace(/\s*>\s*(?![^[]*\])/g, ' > ')
+          .trim()
+          .split(/\s+(?![^[]*\])/),
+      ),
+    );
   }
   closest(selector: string): StaticElement | null {
     for (let node: StaticElement | null = this; node; node = node.parentNode)
@@ -234,9 +240,17 @@ function matchesSimple(element: StaticElement, selector: string): boolean {
   }
   return true;
 }
+/** Compound selectors joined by descendant (space) or child (`>`) combinators. */
 function matchesChain(element: StaticElement, parts: string[]): boolean {
-  if (!parts.length || !matchesSimple(element, parts[parts.length - 1])) return false;
+  const last = parts[parts.length - 1];
+  if (!last || last === '>' || /^[+~]$/.test(last))
+    throw new Error(`Unsupported static selector: ${parts.join(' ')}`);
+  if (/[+~]/.test(last.replace(/\[[^\]]*\]/g, '')))
+    throw new Error(`Unsupported static selector combinator in ${last}`);
+  if (!matchesSimple(element, last)) return false;
   if (parts.length === 1) return true;
+  if (parts[parts.length - 2] === '>')
+    return !!element.parentNode && matchesChain(element.parentNode, parts.slice(0, -2));
   for (let parent = element.parentNode; parent; parent = parent.parentNode)
     if (matchesChain(parent, parts.slice(0, -1))) return true;
   return false;
@@ -250,12 +264,15 @@ export const GEOMETRY_ATTRIBUTES = new Set(
   'x y x1 y1 x2 y2 width height r rx ry cx cy dx dy d points transform viewBox'.split(' '),
 );
 const NUMBER_TOKEN = /[-+]?(?:\d*\.\d+|\d+\.?\d*)(?:[eE][-+]?\d+)?/g;
+// Lengths with a unit (`dy="0.35em"`) are typographic offsets, not user-unit geometry.
+const UNIT_SUFFIX = /^(?:%|em|ex|ch|rem|px|pt|pc|cm|mm|in|vw|vh|vmin|vmax)/;
 export function roundGeometryValue(value: string, precision: number | null): string {
   if (precision === null) return value;
   let previousEnd = -1;
   return value.replace(NUMBER_TOKEN, (token, offset: number) => {
     const separator = offset === previousEnd ? ' ' : '';
     previousEnd = offset + token.length;
+    if (UNIT_SUFFIX.test(value.slice(previousEnd))) return separator + token;
     return separator + String(Number(Number(token).toFixed(precision)));
   });
 }
@@ -284,7 +301,7 @@ export function serialize(node: StaticNode, options: { precision?: number | null
     if (root) {
       head += ` xmlns="${escapeAttribute(attributes.get('xmlns') ?? current.namespaceURI)}"`;
       attributes.delete('xmlns');
-      if (hasXlink(current)) {
+      if (attributes.has('xmlns:xlink') || hasXlink(current)) {
         head += ` xmlns:xlink="${XLINK_NS}"`;
         attributes.delete('xmlns:xlink');
       }

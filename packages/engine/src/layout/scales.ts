@@ -1049,9 +1049,12 @@ export function computeScales(
     // Vertical bar = x is categorical and y is quantitative (old 'column' chart type).
     let yData = data;
     let yChannel = encoding.y;
-    // Range charts span y to y2 (vertical form): cover both endpoint fields.
+    // Interval marks span y to y2: cover both endpoint fields.
     if (
-      (spec.markType === 'range' || spec.markType === 'bar' || spec.markType === 'errorbar') &&
+      (spec.markType === 'range' ||
+        spec.markType === 'bar' ||
+        spec.markType === 'errorbar' ||
+        spec.markType === 'area') &&
       encoding.y2 &&
       encoding.y.type === 'quantitative'
     ) {

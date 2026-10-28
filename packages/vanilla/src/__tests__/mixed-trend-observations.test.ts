@@ -28,6 +28,121 @@ function setSvgBounds(host: HTMLElement): SVGElement {
 
 describe('mixed connected and isolated observations', () => {
   it.each([
+    1, 3,
+  ])('inspects %i isolated interval observations without a connected path', (count) => {
+    const host = createContainer();
+    const rows = Array.from({ length: count * 2 - 1 }, (_, index) => ({
+      date: `2026-10-${10 + index}`,
+      lower: index % 2 ? null : 0.6,
+      upper: index % 2 ? null : 0.9,
+    }));
+    const focused: MarkFocusEvent[] = [];
+    const chart = createChart(
+      host,
+      {
+        mark: 'area',
+        data: rows,
+        animation: false,
+        encoding: {
+          x: { field: 'date', type: 'temporal' },
+          y: { field: 'lower', type: 'quantitative' },
+          y2: { field: 'upper' },
+          description: { value: 'interval' },
+        },
+      } as ChartSpec,
+      { autoResize: false, onMarkFocus: (event) => focused.push(event) },
+    );
+    try {
+      const rules = chart.layout.marks.filter((mark) => mark.type === 'rule');
+      expect(chart.layout.tooltipDescriptors.size).toBe(count);
+      for (const rule of rules) {
+        expect(Math.min(rule.y1, rule.y2)).toBeGreaterThanOrEqual(chart.layout.area.y);
+        expect(Math.max(rule.y1, rule.y2)).toBeLessThanOrEqual(
+          chart.layout.area.y + chart.layout.area.height,
+        );
+      }
+      host.dispatchEvent(new FocusEvent('focus'));
+      for (let i = 1; i < count; i++)
+        host.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+      expect(focused.map((event) => event.datum)).toEqual(rows.filter((row) => row.lower !== null));
+      expect(focused.every((event) => event.description === 'interval')).toBe(true);
+      host.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+      expect(focused).toHaveLength(count);
+      const tooltip = host.querySelector('[role="tooltip"]')!;
+      expect(tooltip.textContent).toContain('lower0.6');
+      expect(tooltip.textContent).toContain('upper0.9');
+      const element = host.querySelector(
+        `[data-mark-id="rule-${chart.layout.marks.indexOf(rules[0])}"]`,
+      )!;
+      host.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      expect((tooltip as HTMLElement).style.display).toBe('none');
+      element.dispatchEvent(createMouseEvent('mouseenter', 200, 200));
+      expect((tooltip as HTMLElement).style.display).not.toBe('none');
+      expect(tooltip.textContent).toContain('upper0.9');
+    } finally {
+      chart.destroy();
+      host.remove();
+    }
+  });
+
+  it('keeps interval-area bounds reachable through the shared observation index', () => {
+    const host = createContainer();
+    const rows = data.map((row) => ({ ...row, upper: row.value === null ? null : row.value + 1 }));
+    const focused: MarkFocusEvent[] = [];
+    const chart = createChart(
+      host,
+      {
+        mark: 'area',
+        data: rows,
+        animation: false,
+        encoding: {
+          ...encoding,
+          y2: { field: 'upper' },
+          tooltip: [...encoding.tooltip, { field: 'upper', type: 'quantitative' }],
+        },
+      } as ChartSpec,
+      { autoResize: false, onMarkFocus: (event) => focused.push(event) },
+    );
+    try {
+      const svg = setSvgBounds(host);
+      const interval = chart.layout.marks.find(
+        (mark) => mark.type === 'rule' && mark.data === rows[3],
+      )!;
+      expect(interval.type).toBe('rule');
+      if (interval.type !== 'rule') throw Error();
+      expect(interval.y1).not.toBe(interval.y2);
+      svg
+        .querySelector('[data-voronoi-overlay]')!
+        .dispatchEvent(createMouseEvent('mousemove', interval.x1, (interval.y1 + interval.y2) / 2));
+      expect(host.querySelector('[role="tooltip"]')?.textContent).toContain(rows[3].note);
+      expect(host.querySelector('[role="tooltip"]')?.textContent).toContain('upper');
+      for (const row of rows.filter((row) => row.value !== null)) {
+        const observation = chart.layout.marks
+          .flatMap((mark) => (mark.type === 'area' ? (mark.dataPoints ?? []) : []))
+          .find((point) => point.datum === row)!;
+        svg
+          .querySelector('[data-voronoi-overlay]')!
+          .dispatchEvent(createMouseEvent('mousemove', observation.x, observation.y));
+        expect(host.querySelector('[role="tooltip"]')?.textContent).toContain(row.note);
+        expect(host.querySelector('[role="tooltip"]')?.textContent).toContain(`upper${row.upper}`);
+      }
+      host.dispatchEvent(new FocusEvent('focus'));
+      for (let i = 0; i < 4; i++)
+        host.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+      expect(focused.map((event) => event.datum)).toEqual(rows.filter((row) => row.value !== null));
+      expect(focused[2].element.getAttribute('data-mark-id')).toBe(
+        `rule-${chart.layout.marks.indexOf(interval)}`,
+      );
+      expect(focused[2].description).toBe(rows[3].note);
+      expect(focused[2].datum.upper).toBe(6);
+      expect(focused[2].datum.value).toBe(5);
+    } finally {
+      chart.destroy();
+      host.remove();
+    }
+  });
+
+  it.each([
     'line',
     'area',
   ] as const)('%s keeps every valid row available to pointer and keyboard', (mark) => {
