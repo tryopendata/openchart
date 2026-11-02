@@ -430,7 +430,7 @@
 
     "@sindresorhus/merge-streams": ["@sindresorhus/merge-streams@2.3.0", "", {}, "sha512-LtoMMhxAlorcGhmFYI+LhPgbPZCkgP6ra1YL604EeF6U98pLlQ3iWIGMdWSC+vWmPBWBNgmDBAhnAobLROJmwg=="],
 
-    "@steamfield/ui": ["@steamfield/ui@/Users/riley/Projects/.sfui-worktrees/_dist/steamfield-ui-0.0.0.tgz", { "peerDependencies": { "@types/react": "^19.2", "github-slugger": "^2.0.0", "react": "^19.2", "react-dom": "^19.2", "satteri": "^0.10.5", "shiki": "^4.5.0", "vue": "^3.5" }, "optionalPeers": ["@types/react", "github-slugger", "react", "react-dom", "satteri", "shiki", "vue"] }, "sha512-sMni+UBZgHNlowd7b+zzY2cI14150BmuOzUHKhKwsr5RALMzP2snGtbv20Gdku45B06g45JV8syihO3NeATChQ=="],
+    "@steamfield/ui": ["@steamfield/ui@/Users/riley/Projects/.sfui-worktrees/_dist/steamfield-ui-0.0.0.tgz", { "peerDependencies": { "@types/react": "^19.2", "github-slugger": "^2.0.0", "react": "^19.2", "react-dom": "^19.2", "satteri": "^0.10.5", "shiki": "^4.5.0", "vue": "^3.5" }, "optionalPeers": ["@types/react", "github-slugger", "react", "react-dom", "satteri", "shiki", "vue"] }, "sha512-jJv6IWxOw4jnnFObAZfiuTDeSR0Jx0i8Bz4T+YZN4ss1ucCCuW7HoPhocx23D+E/L2qhMPNa47YPHHQWqRJVJg=="],
 
     "@sveltejs/acorn-typescript": ["@sveltejs/acorn-typescript@1.0.9", "", { "peerDependencies": { "acorn": "^8.9.0" } }, "sha512-lVJX6qEgs/4DOcRTpo56tmKzVPtoWAaVbL4hfO7t7NVwl9AAXzQR6cihesW1BmNMPl+bK6dreu2sOKBP2Q9CIA=="],
 
