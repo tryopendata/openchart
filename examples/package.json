@@ -13,6 +13,7 @@
     "@opendata-ai/openchart-engine": "workspace:*",
     "@opendata-ai/openchart-react": "workspace:*",
     "@opendata-ai/openchart-vanilla": "workspace:*",
+    "@steamfield/ui": "file:/Users/riley/Projects/.sfui-worktrees/_dist/steamfield-ui-0.0.0.tgz",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },

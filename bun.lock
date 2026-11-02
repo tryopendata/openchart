@@ -32,6 +32,7 @@
         "@opendata-ai/openchart-engine": "workspace:*",
         "@opendata-ai/openchart-react": "workspace:*",
         "@opendata-ai/openchart-vanilla": "workspace:*",
+        "@steamfield/ui": "file:/Users/riley/Projects/.sfui-worktrees/_dist/steamfield-ui-0.0.0.tgz",
         "react": "^19.3.0",
         "react-dom": "^19.3.0",
       },
@@ -45,7 +46,7 @@
     },
     "packages/core": {
       "name": "@opendata-ai/openchart-core",
-      "version": "9.0.0-rc.2",
+      "version": "9.0.0",
       "dependencies": {
         "d3-color": "^3.1.0",
         "d3-format": "^3.1.0",
@@ -61,7 +62,7 @@
     },
     "packages/engine": {
       "name": "@opendata-ai/openchart-engine",
-      "version": "9.0.0-rc.2",
+      "version": "9.0.0",
       "dependencies": {
         "@opendata-ai/openchart-core": "workspace:*",
         "d3-array": "^3.2.0",
@@ -89,7 +90,7 @@
     },
     "packages/react": {
       "name": "@opendata-ai/openchart-react",
-      "version": "9.0.0-rc.2",
+      "version": "9.0.0",
       "dependencies": {
         "@opendata-ai/openchart-core": "workspace:*",
         "@opendata-ai/openchart-engine": "workspace:*",
@@ -108,7 +109,7 @@
     },
     "packages/svelte": {
       "name": "@opendata-ai/openchart-svelte",
-      "version": "9.0.0-rc.2",
+      "version": "9.0.0",
       "dependencies": {
         "@opendata-ai/openchart-core": "workspace:*",
         "@opendata-ai/openchart-engine": "workspace:*",
@@ -127,7 +128,7 @@
     },
     "packages/vanilla": {
       "name": "@opendata-ai/openchart-vanilla",
-      "version": "9.0.0-rc.2",
+      "version": "9.0.0",
       "dependencies": {
         "@floating-ui/dom": "^1.7.6",
         "@opendata-ai/openchart-core": "workspace:*",
@@ -162,7 +163,7 @@
     },
     "packages/vue": {
       "name": "@opendata-ai/openchart-vue",
-      "version": "9.0.0-rc.2",
+      "version": "9.0.0",
       "dependencies": {
         "@opendata-ai/openchart-core": "workspace:*",
         "@opendata-ai/openchart-engine": "workspace:*",
@@ -428,6 +429,8 @@
     "@rollup/rollup-win32-x64-msvc": ["@rollup/rollup-win32-x64-msvc@4.59.0", "", { "os": "win32", "cpu": "x64" }, "sha512-2HRCml6OztYXyJXAvdDXPKcawukWY2GpR5/nxKp4iBgiO3wcoEGkAaqctIbZcNB6KlUQBIqt8VYkNSj2397EfA=="],
 
     "@sindresorhus/merge-streams": ["@sindresorhus/merge-streams@2.3.0", "", {}, "sha512-LtoMMhxAlorcGhmFYI+LhPgbPZCkgP6ra1YL604EeF6U98pLlQ3iWIGMdWSC+vWmPBWBNgmDBAhnAobLROJmwg=="],
+
+    "@steamfield/ui": ["@steamfield/ui@/Users/riley/Projects/.sfui-worktrees/_dist/steamfield-ui-0.0.0.tgz", { "peerDependencies": { "@types/react": "^19.2", "github-slugger": "^2.0.0", "react": "^19.2", "react-dom": "^19.2", "satteri": "^0.10.5", "shiki": "^4.5.0", "vue": "^3.5" }, "optionalPeers": ["@types/react", "github-slugger", "react", "react-dom", "satteri", "shiki", "vue"] }, "sha512-n7QAa6YbHGFPNySNLbueVMiqO93flpjOkXv3xk5JCqd4a+EWLhlTenWHncNceZjWUI0NWSOraU1JYwl1tjDzbg=="],
 
     "@sveltejs/acorn-typescript": ["@sveltejs/acorn-typescript@1.0.9", "", { "peerDependencies": { "acorn": "^8.9.0" } }, "sha512-lVJX6qEgs/4DOcRTpo56tmKzVPtoWAaVbL4hfO7t7NVwl9AAXzQR6cihesW1BmNMPl+bK6dreu2sOKBP2Q9CIA=="],
 

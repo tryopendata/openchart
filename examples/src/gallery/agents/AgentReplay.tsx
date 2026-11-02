@@ -1,34 +1,32 @@
 /**
  * AgentReplay: plays a scripted agent session against the real engine.
  *
- * The only state is elapsed time (plus play/pause and speed). Everything on
- * screen comes from `deriveView(timeline, elapsed)`, so scrubbing to a turn,
- * replaying, and the reduced-motion path are all just different `elapsed`
- * values. Charts receive the same spec object for as long as it's current,
- * and `<Chart>` calls `update()` when it changes, so refinements animate from
- * the previous layout instead of remounting.
+ * The clock, play/pause, speed, in-view start, reduced motion and the position
+ * come from `@steamfield/ui`'s `useAgentDemo` (headless: the markup and the
+ * look are this gallery's own). Everything on screen comes from `viewFrom` on
+ * the hook's view, so scrubbing to a turn, replaying, and the reduced-motion
+ * path are all just different positions. Charts receive the same spec object
+ * for as long as it's current, and `<Chart>` calls `update()` when it changes,
+ * so refinements animate from the previous layout instead of remounting.
  */
 
 import type { VizSpec } from '@opendata-ai/openchart-core';
 import { Visualization } from '@opendata-ai/openchart-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useAgentDemo } from '@steamfield/ui/react/agent-demo';
+import { useMemo } from 'react';
 import { Conversation } from './Conversation';
 import { DashboardStage } from './DashboardStage';
 import type { Scenario } from './replay';
-import { buildTimeline, deriveView, nextTarget, turnTarget } from './replay';
+import {
+  buildTimeline,
+  DEMO_TIMING,
+  firstTurnOnly,
+  nextTarget,
+  type StepData,
+  turnTarget,
+  viewFrom,
+} from './replay';
 import { SpecPane } from './SpecPane';
-
-const TICK_MS = 40;
-/** Cap one tick's advance so a backgrounded tab doesn't skip ahead on return. */
-const MAX_STEP_MS = 250;
-
-function prefersReducedMotion(): boolean {
-  try {
-    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  } catch {
-    return false;
-  }
-}
 
 function VizSlot({
   spec,
@@ -60,78 +58,45 @@ export type AgentReplayProps = {
 
 export function AgentReplay({ scenario, layout, final = false }: AgentReplayProps) {
   const timeline = useMemo(() => buildTimeline(scenario), [scenario]);
-  const [reduced] = useState(prefersReducedMotion);
-  const still = final || reduced;
-  const [elapsed, setElapsed] = useState(() =>
-    final ? timeline.total : reduced ? timeline.turnEnds[0] : 0,
-  );
-  const [playing, setPlaying] = useState(false);
-  const [speed, setSpeed] = useState(1);
-  const rootRef = useRef<HTMLDivElement>(null);
-  const started = useRef(false);
-
-  // Autoplay the first time the player scrolls into view, unless the reader
-  // already took over with the controls.
-  useEffect(() => {
-    const el = rootRef.current;
-    if (!el || still) return;
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting) return;
-        io.disconnect();
-        if (!started.current) {
-          started.current = true;
-          setPlaying(true);
-        }
-      },
-      { threshold: 0.25 },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [still]);
-
-  // Advance by real elapsed time, so a busy main thread (four charts mounting)
-  // doesn't slow the replay down.
-  useEffect(() => {
-    if (!playing) return;
-    let prev = performance.now();
-    const id = setInterval(() => {
-      const now = performance.now();
-      const step = Math.min(now - prev, MAX_STEP_MS) * speed;
-      prev = now;
-      setElapsed((e) => Math.min(timeline.total, e + step));
-    }, TICK_MS);
-    return () => clearInterval(id);
-  }, [playing, speed, timeline.total]);
-
-  useEffect(() => {
-    if (elapsed >= timeline.total) setPlaying(false);
-  }, [elapsed, timeline.total]);
-
-  const view = deriveView(timeline, elapsed);
+  const demo = useAgentDemo<StepData>(timeline.script, {
+    scriptKey: scenario.id,
+    timing: DEMO_TIMING,
+    // Motion off shows the first turn finished (a jump moves on from there);
+    // `final` shows the whole session, which is what the visual baseline wants.
+    finalPolicy: final ? 'all' : firstTurnOnly(timeline),
+    reducedPolicy: 'hold',
+    motion: final ? 'reduce' : 'auto',
+    // Autoplay the first time the player scrolls into view, unless the reader
+    // already took over with the controls.
+    threshold: 0.25,
+  });
+  const { controls, speed } = demo;
+  const still = demo.reduced;
+  const view = useMemo(() => viewFrom(timeline, demo.view), [timeline, demo.view]);
+  // Motion off shows whole finished turns, so the position is the end of the
+  // turn on screen. Otherwise it's the clock, and the controls read a session
+  // that hasn't started as sitting at 0.
+  const engaged = demo.started || demo.playing || demo.complete;
+  const elapsed = still ? (timeline.turnEnds[view.turn] ?? 0) : engaged ? demo.view.elapsed : 0;
   const atEnd = elapsed >= timeline.total;
   const turnCount = timeline.turnStarts.length;
 
   const goToTurn = (i: number) => {
-    started.current = true;
-    setElapsed(turnTarget(timeline, i, still));
-    if (!still) setPlaying(true);
+    controls.seek(turnTarget(timeline, i, still));
+    if (!still) controls.play();
   };
   const next = () => {
-    started.current = true;
     const target = nextTarget(timeline, elapsed, still);
-    setElapsed(target);
-    if (!still && target < timeline.total) setPlaying(true);
+    controls.seek(target);
+    if (!still && target < timeline.total) controls.play();
   };
-  const replay = () => goToTurn(0);
   const togglePlay = () => {
-    started.current = true;
-    if (atEnd) replay();
-    else setPlaying((p) => !p);
+    if (atEnd) controls.replay();
+    else controls.toggle();
   };
 
   return (
-    <div className={`oca-player oca-layout-${layout}`} ref={rootRef}>
+    <div className={`oca-player oca-layout-${layout}`} ref={demo.ref}>
       <div className="oca-toolbar">
         <span className="oca-caption">
           Scripted replay · validation, diffs, and rendering run live
@@ -154,7 +119,7 @@ export function AgentReplay({ scenario, layout, final = false }: AgentReplayProp
           )}
           {!still && (
             <button type="button" className="oca-btn" onClick={togglePlay}>
-              {atEnd ? 'Replay' : playing ? 'Pause' : 'Play'}
+              {atEnd ? 'Replay' : demo.playing ? 'Pause' : 'Play'}
             </button>
           )}
           {turnCount > 1 && (
@@ -167,7 +132,7 @@ export function AgentReplay({ scenario, layout, final = false }: AgentReplayProp
               type="button"
               className="oca-btn oca-btn-speed"
               aria-label={`Playback speed ${speed}x`}
-              onClick={() => setSpeed((s) => (s === 1 ? 2 : 1))}
+              onClick={() => controls.setSpeed(speed === 1 ? 2 : 1)}
             >
               {speed}x
             </button>

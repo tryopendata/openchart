@@ -41,8 +41,17 @@ function setReducedMotion(reduced: boolean) {
   })) as unknown as typeof window.matchMedia;
 }
 
-class NoopObserver {
-  observe() {}
+/** Whether the player counts as scrolled into view; the playback gate only runs while it is. */
+let inView = false;
+
+class FakeObserver {
+  constructor(private cb: IntersectionObserverCallback) {}
+  observe(el: Element) {
+    this.cb(
+      [{ isIntersecting: inView, target: el, intersectionRatio: inView ? 1 : 0 }] as never,
+      this as never,
+    );
+  }
   disconnect() {}
   unobserve() {}
   takeRecords() {
@@ -52,8 +61,9 @@ class NoopObserver {
 
 beforeEach(() => {
   seenSpecs.length = 0;
+  inView = false;
   setReducedMotion(false);
-  (globalThis as unknown as { IntersectionObserver: unknown }).IntersectionObserver = NoopObserver;
+  (globalThis as unknown as { IntersectionObserver: unknown }).IntersectionObserver = FakeObserver;
 });
 
 afterEach(() => {
@@ -143,16 +153,33 @@ describe('reduced motion', () => {
 });
 
 describe('playback controls', () => {
-  it('starts paused, plays on click, pauses, and toggles speed', () => {
+  // Intentional library behavior: the session autoplays when it scrolls into
+  // view and only runs while it is in view (the old player kept going once
+  // started, even offscreen).
+  it('sits at the start, not playing, until it scrolls into view', () => {
     vi.useFakeTimers();
     render(createElement(AgentReplay, { scenario: chatAnalyst, layout: 'single' }));
     const convo = screen.getByRole('region', { name: 'Agent transcript' });
-    // Nothing has played yet; the empty spec pane placeholder shows.
-    expect(screen.getByText("The agent's spec streams here.")).toBeTruthy();
+    expect(within(convo).getByText(chatAnalyst.turns[0].user)).toBeTruthy();
     expect(within(convo).queryByText(chatAnalyst.turns[1].user)).toBeNull();
+    expect(screen.getByText("The agent's spec streams here.")).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Play' })).toBeTruthy();
+    // Controls still read as the start: nothing is current and Next is available.
+    expect(screen.getByRole('button', { name: '3' }).getAttribute('aria-current')).toBeNull();
+    expect((screen.getByRole('button', { name: 'Next' }) as HTMLButtonElement).disabled).toBe(
+      false,
+    );
+  });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+  it('autoplays from the start once in view, pauses, and toggles speed', () => {
+    vi.useFakeTimers();
+    inView = true;
+    render(createElement(AgentReplay, { scenario: chatAnalyst, layout: 'single' }));
+    const convo = screen.getByRole('region', { name: 'Agent transcript' });
     expect(screen.getByRole('button', { name: 'Pause' })).toBeTruthy();
+    expect(within(convo).getByText(chatAnalyst.turns[0].user)).toBeTruthy();
+    expect(within(convo).queryByText(chatAnalyst.turns[1].user)).toBeNull();
+    expect(screen.getByText("The agent's spec streams here.")).toBeTruthy();
 
     const speed = screen.getByRole('button', { name: 'Playback speed 1x' });
     expect(speed.textContent).toBe('1x');
@@ -170,8 +197,8 @@ describe('playback controls', () => {
 
   it('plays to the end, then offers Replay and disables Next', () => {
     vi.useFakeTimers();
+    inView = true;
     render(createElement(AgentReplay, { scenario: chatAnalyst, layout: 'single' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Play' }));
     // Ticks cap each step at 250ms of session time, so walk the clock in small hops.
     const hops = Math.ceil(chatTimeline.total / 250) + 20;
     for (let i = 0; i < hops; i++) {
@@ -186,6 +213,7 @@ describe('playback controls', () => {
 
   it('turn buttons jump to the start of that turn and start playing', () => {
     vi.useFakeTimers();
+    inView = true;
     render(createElement(AgentReplay, { scenario: chatAnalyst, layout: 'single' }));
     fireEvent.click(screen.getByRole('button', { name: '3' }));
     expect(screen.getByRole('button', { name: 'Pause' })).toBeTruthy();

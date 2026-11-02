@@ -2,10 +2,11 @@
  * Replay engine for the Agents page: pure, DOM-free, unit-tested.
  *
  * A scenario (see `scenarios.ts`) is a script of user turns and agent steps.
- * `buildTimeline` flattens it into beats with start/end times, attaches data,
- * runs the REAL `validateSpec` on every spec the agent emits, and precomputes
- * the text the spec pane streams. The player then only tracks one number,
- * elapsed milliseconds, and `deriveView` turns that into what's on screen.
+ * `buildTimeline` turns it into a `@steamfield/ui` sequencer script and lays
+ * it out in time, attaches data, runs the REAL `validateSpec` on every spec
+ * the agent emits, and precomputes the text the spec pane streams. The
+ * sequencer owns the clock position and what is on screen at it; `viewFrom`
+ * reads that into the beats, streamed text and charts this player draws.
  *
  * Nothing about validation or diffs is pre-baked into the scripts: error text
  * comes from the engine and diffs come from `lineDiff`, so the page can't
@@ -14,6 +15,9 @@
 
 import type { AnimationSpec, VizSpec } from '@opendata-ai/openchart-core';
 import { validateSpec } from '@opendata-ai/openchart-engine';
+import type { DemoScript, Step as DemoStep } from '@steamfield/ui/script';
+import type { DemoView, Timeline as SequencerTimeline, Timing } from '@steamfield/ui/sequencer';
+import { compile, stateAt } from '@steamfield/ui/sequencer';
 
 // ---------------------------------------------------------------------------
 // Script types
@@ -180,10 +184,10 @@ export function validate(spec: Record<string, unknown>, rows: readonly DataRow[]
 }
 
 // ---------------------------------------------------------------------------
-// Timeline
+// Timeline (laid out by @steamfield/ui's sequencer)
 // ---------------------------------------------------------------------------
 
-/** Pacing at 1x. Exported so tests and the reduced-motion path agree. */
+/** Pacing at 1x. Exported so tests and the sequencer timing agree. */
 export const PACE = {
   specCharsPerSec: 600,
   proseCharsPerSec: 90,
@@ -195,6 +199,36 @@ export const PACE = {
   errorHoldMs: 1800,
   turnGapMs: 2600,
 } as const;
+
+/** What a tool-call step carries so `toolMs` can size it: how long it runs, in ms. */
+export type StepData = { runMs: number };
+
+/**
+ * PACE as sequencer timing. Every gap the sequencer would otherwise add is zero:
+ * the script spells its holds out as `pause` steps, so the schedule is exactly
+ * the one PACE describes. A user message "plays" for `userMs` (the thinking
+ * phase, which the transcript doesn't draw), prose streams a character at a
+ * time, and a tool call runs for the `runMs` its step carries.
+ */
+export const DEMO_TIMING: Partial<Timing<StepData>> = {
+  startDelay: 0,
+  typeMsPerChar: 0,
+  jitter: 0,
+  preTypedHoldMs: 0,
+  submitHoldMs: 0,
+  flashMs: 0,
+  thinkingAfterUser: PACE.userMs,
+  thinkingMs: 0,
+  streamUnit: 'char',
+  streamLeadMs: 0,
+  wordMs: 1000 / PACE.proseCharsPerSec,
+  punctuationMs: 1000 / PACE.proseCharsPerSec,
+  readMs: 0,
+  lineMs: 0,
+  revealCapMs: 0,
+  toolMs: (step) => (step.body?.kind === 'custom' ? step.body.data.runMs : PACE.toolMs),
+  gapMs: 0,
+};
 
 type BeatBase = { start: number; end: number; turn: number };
 
@@ -225,43 +259,73 @@ export type Beat = BeatBase &
   );
 
 export type Timeline = {
+  /** One beat per visible step, with the sequencer's start and end times. */
   beats: Beat[];
   /** Start time of each turn. */
   turnStarts: number[];
   /** Time at which each turn is fully played (before the turn gap). */
   turnEnds: number[];
   total: number;
+  /** The scenario as a sequencer script: hand this to `useAgentDemo`. */
+  script: DemoScript<StepData>;
+  /** The script laid out with `DEMO_TIMING`. */
+  compiled: SequencerTimeline;
+  /** Script step index of each beat (pause steps have none), parallel to `beats`. */
+  stepIndex: number[];
+  /** Turn of each script step, pauses included. */
+  turnOfStep: number[];
 };
+
+type BeatBody = DistributiveOmit<Beat, keyof BeatBase>;
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
 
 function durationOf(chars: number, perSec: number): number {
   return Math.ceil((chars / perSec) * 1000);
 }
 
-export function buildTimeline(scenario: Scenario): Timeline {
-  const beats: Beat[] = [];
-  const turnStarts: number[] = [];
-  const turnEnds: number[] = [];
+/**
+ * Turns a scenario into a sequencer script, running the real validator and
+ * the diffs on the way. Beats and script steps are built together so a beat
+ * knows which step it is.
+ */
+function toScript(scenario: Scenario) {
+  const steps: DemoStep<StepData>[] = [];
+  const bodies: (BeatBody | null)[] = [];
+  const turnOfStep: number[] = [];
+  /** Index of each turn's closing gap, whose start is the turn's end. */
+  const turnGapAt: number[] = [];
   const lastValidText = new Map<Slot, string>();
   const rejectedText = new Map<Slot, string>();
-  let t = 0;
+
+  const push = (turn: number, step: DemoStep<StepData>, body: BeatBody | null) => {
+    steps.push(step);
+    bodies.push(body);
+    turnOfStep.push(turn);
+  };
+  const hold = (turn: number, ms: number) => push(turn, { kind: 'pause', ms }, null);
 
   scenario.turns.forEach((turn, turnIdx) => {
-    turnStarts.push(t);
-    beats.push({ kind: 'user', text: turn.user, start: t, end: t + PACE.userMs, turn: turnIdx });
-    t += PACE.userMs + PACE.stepGapMs / 2;
+    push(turnIdx, { kind: 'user', text: turn.user }, { kind: 'user', text: turn.user });
+    hold(turnIdx, PACE.stepGapMs / 2);
 
     for (const step of turn.steps) {
       if (step.kind === 'tool') {
-        beats.push({ ...step, start: t, end: t + PACE.toolMs, turn: turnIdx });
-        t += PACE.toolMs + PACE.stepGapMs / 2;
+        push(
+          turnIdx,
+          {
+            kind: 'tool-call',
+            name: step.label,
+            body: { kind: 'custom', data: { runMs: PACE.toolMs } },
+          },
+          { kind: 'tool', label: step.label, result: step.result },
+        );
+        hold(turnIdx, PACE.stepGapMs / 2);
       } else if (step.kind === 'prose') {
-        const d = durationOf(step.text.length, PACE.proseCharsPerSec);
-        beats.push({ ...step, start: t, end: t + d, turn: turnIdx });
-        t += d + PACE.stepGapMs;
+        push(turnIdx, { kind: 'agent-text', text: step.text }, { kind: 'prose', text: step.text });
+        hold(turnIdx, PACE.stepGapMs);
       } else {
         const text = serializeForStream(step.spec);
         const validation = validate(step.spec, step.rows);
-        const d = durationOf(text.length, PACE.specCharsPerSec);
         const renderSpec = validation.valid
           ? ({
               ...step.spec,
@@ -272,38 +336,85 @@ export function buildTimeline(scenario: Scenario): Timeline {
         const rejected = rejectedText.get(step.slot);
         const base = rejected ?? lastValidText.get(step.slot);
         const full = base !== undefined ? lineDiff(base, text) : null;
-        beats.push({
-          kind: 'spec',
-          slot: step.slot,
-          text,
-          rowCount: step.rows.length,
-          validation,
-          renderSpec,
-          diff: full && withContext(full),
-          changes: full && {
-            add: full.filter((l) => l.type === 'add').length,
-            del: full.filter((l) => l.type === 'del').length,
+        push(
+          turnIdx,
+          {
+            kind: 'tool-call',
+            name: 'emit_spec',
+            status: validation.valid ? 'done' : 'error',
+            body: {
+              kind: 'custom',
+              data: { runMs: durationOf(text.length, PACE.specCharsPerSec) },
+            },
           },
-          repairing: rejected !== undefined,
-          expectInvalid: step.expectInvalid ?? false,
-          start: t,
-          end: t + d,
-          turn: turnIdx,
-        });
+          {
+            kind: 'spec',
+            slot: step.slot,
+            text,
+            rowCount: step.rows.length,
+            validation,
+            renderSpec,
+            diff: full && withContext(full),
+            changes: full && {
+              add: full.filter((l) => l.type === 'add').length,
+              del: full.filter((l) => l.type === 'del').length,
+            },
+            repairing: rejected !== undefined,
+            expectInvalid: step.expectInvalid ?? false,
+          },
+        );
         if (validation.valid) {
           lastValidText.set(step.slot, text);
           rejectedText.delete(step.slot);
         } else {
           rejectedText.set(step.slot, text);
         }
-        t += d + (validation.valid ? PACE.stepGapMs : PACE.errorHoldMs);
+        hold(turnIdx, validation.valid ? PACE.stepGapMs : PACE.errorHoldMs);
       }
     }
-    turnEnds.push(t);
-    t += PACE.turnGapMs;
+    if (turnIdx < scenario.turns.length - 1) {
+      turnGapAt.push(steps.length);
+      hold(turnIdx, PACE.turnGapMs);
+    }
   });
 
-  return { beats, turnStarts, turnEnds, total: turnEnds[turnEnds.length - 1] ?? 0 };
+  return {
+    script: { id: scenario.id, steps } satisfies DemoScript<StepData>,
+    bodies,
+    turnOfStep,
+    turnGapAt,
+  };
+}
+
+export function buildTimeline(scenario: Scenario): Timeline {
+  const { script, bodies, turnOfStep, turnGapAt } = toScript(scenario);
+  const compiled = compile(script, { timing: DEMO_TIMING });
+
+  const beats: Beat[] = [];
+  const stepIndex: number[] = [];
+  bodies.forEach((body, i) => {
+    const step = compiled.steps[i];
+    if (!body || !step) return;
+    beats.push({ ...body, start: step.start, end: step.end, turn: turnOfStep[i] ?? 0 } as Beat);
+    stepIndex.push(i);
+  });
+
+  // A turn ends where its closing gap starts; the last turn ends with the session.
+  const turnEnds = [
+    ...turnGapAt.map((i) => compiled.steps[i]?.start ?? compiled.duration),
+    compiled.duration,
+  ].slice(0, scenario.turns.length);
+
+  return {
+    beats,
+    turnStarts: [...compiled.turnStarts],
+    turnEnds,
+    total: compiled.duration,
+    script,
+    compiled,
+    stepIndex,
+    turnOfStep,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -323,23 +434,30 @@ export type View = {
   turn: number;
 };
 
-export function deriveView(timeline: Timeline, elapsed: number): View {
+/**
+ * What the sequencer's view means for this player: which beats show, how much
+ * of the spec and prose has streamed, and which chart each slot holds. The
+ * sequencer decides what's on screen; this only reads it.
+ */
+export function viewFrom(timeline: Timeline, demoView: DemoView): View {
+  const beatAt = new Map(timeline.stepIndex.map((step, i) => [step, timeline.beats[i]] as const));
   const visible: VisibleBeat[] = [];
   const slots: Partial<Record<Slot, VizSpec>> = {};
   let paneBeat: VisibleBeat | null = null;
   let turn = 0;
 
-  for (const beat of timeline.beats) {
-    if (beat.start > elapsed) break;
+  for (const entry of demoView.entries) {
+    const beat = beatAt.get(entry.index);
+    if (!beat) continue; // a pause: nothing to draw
     turn = beat.turn;
-    const done = elapsed >= beat.end;
+    const done = entry.phase === 'done';
     let visibleText = '';
-    if (beat.kind === 'spec' || beat.kind === 'prose') {
-      const span = beat.end - beat.start;
-      const n = done
-        ? beat.text.length
-        : Math.floor(((elapsed - beat.start) / span) * beat.text.length);
-      visibleText = streamPrefix(beat.text, n);
+    if (beat.kind === 'prose') {
+      visibleText = done ? beat.text : streamPrefix(beat.text, entry.visibleText?.length ?? 0);
+    } else if (beat.kind === 'spec') {
+      visibleText = done
+        ? beat.text
+        : streamPrefix(beat.text, Math.floor(entry.progress * beat.text.length));
     }
     const vb: VisibleBeat = { beat, done, visibleText };
     visible.push(vb);
@@ -352,6 +470,16 @@ export function deriveView(timeline: Timeline, elapsed: number): View {
   return { visible, slots, paneBeat, turn };
 }
 
+/** The view at `elapsed` ms, for tests and anything that isn't the live player. */
+export function deriveView(timeline: Timeline, elapsed: number): View {
+  return viewFrom(timeline, stateAt(timeline.compiled, { ms: elapsed }));
+}
+
+/** `finalPolicy` that keeps only the first turn: what motion-off shows before a jump. */
+export function firstTurnOnly(timeline: Timeline): (steps: readonly unknown[]) => number[] {
+  return (steps) => steps.flatMap((_, i) => (timeline.turnOfStep[i] === 0 ? [i] : []));
+}
+
 // ---------------------------------------------------------------------------
 // Controls
 // ---------------------------------------------------------------------------
@@ -361,7 +489,7 @@ export function deriveView(timeline: Timeline, elapsed: number): View {
  * the user's message), its finished state when motion is off.
  */
 export function turnTarget(timeline: Timeline, i: number, still: boolean): number {
-  return still ? timeline.turnEnds[i] : timeline.turnStarts[i];
+  return still ? (timeline.turnEnds[i] ?? timeline.total) : (timeline.turnStarts[i] ?? 0);
 }
 
 /**
@@ -371,5 +499,5 @@ export function turnTarget(timeline: Timeline, i: number, still: boolean): numbe
 export function nextTarget(timeline: Timeline, elapsed: number, still: boolean): number {
   const marks = still ? timeline.turnEnds : timeline.turnStarts;
   const i = marks.findIndex((m) => m > elapsed);
-  return i >= 0 ? marks[i] : timeline.total;
+  return i >= 0 ? (marks[i] ?? timeline.total) : timeline.total;
 }
