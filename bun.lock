@@ -32,7 +32,7 @@
         "@opendata-ai/openchart-engine": "workspace:*",
         "@opendata-ai/openchart-react": "workspace:*",
         "@opendata-ai/openchart-vanilla": "workspace:*",
-        "@steamfield/ui": "file:/Users/riley/Projects/.sfui-worktrees/_dist/steamfield-ui-0.0.0.tgz",
+        "@steamfield/ui": "~0.1.0",
         "react": "^19.3.0",
         "react-dom": "^19.3.0",
       },
@@ -430,7 +430,7 @@
 
     "@sindresorhus/merge-streams": ["@sindresorhus/merge-streams@2.3.0", "", {}, "sha512-LtoMMhxAlorcGhmFYI+LhPgbPZCkgP6ra1YL604EeF6U98pLlQ3iWIGMdWSC+vWmPBWBNgmDBAhnAobLROJmwg=="],
 
-    "@steamfield/ui": ["@steamfield/ui@/Users/riley/Projects/.sfui-worktrees/_dist/steamfield-ui-0.0.0.tgz", { "peerDependencies": { "@types/react": "^19.2", "github-slugger": "^2.0.0", "react": "^19.2", "react-dom": "^19.2", "satteri": "^0.10.5", "shiki": "^4.5.0", "vue": "^3.5" }, "optionalPeers": ["@types/react", "github-slugger", "react", "react-dom", "satteri", "shiki", "vue"] }, "sha512-ZkO0QWkEF4KC8ExhOZoYe68x9KmjWXAMtqrh8g6oQw1s7QuKp9btQvA+euAQBM44HLYrrk5foONkDQ9TcllBvA=="],
+    "@steamfield/ui": ["@steamfield/ui@0.1.0", "", { "peerDependencies": { "@types/react": "^19.2", "github-slugger": "^2.0.0", "react": "^19.2", "react-dom": "^19.2", "satteri": "^0.10.5", "shiki": "^4.5.0", "vue": "^3.5" }, "optionalPeers": ["@types/react", "github-slugger", "react", "react-dom", "satteri", "shiki", "vue"] }, "sha512-BhqyHraJVbFzZ7oLLApxXMIpGu4pOIW2/BvpH16karR+TjnyvbGIKvZsZkEtZqiCNzsxpUF42sjdlf5kuH6Pxg=="],
 
     "@sveltejs/acorn-typescript": ["@sveltejs/acorn-typescript@1.0.9", "", { "peerDependencies": { "acorn": "^8.9.0" } }, "sha512-lVJX6qEgs/4DOcRTpo56tmKzVPtoWAaVbL4hfO7t7NVwl9AAXzQR6cihesW1BmNMPl+bK6dreu2sOKBP2Q9CIA=="],
 
