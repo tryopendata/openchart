@@ -22,6 +22,7 @@ import {
   Sankey,
   TileMap,
 } from '@opendata-ai/openchart-react';
+import { useCopy } from '@steamfield/ui/react/copy';
 import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
 
@@ -246,7 +247,12 @@ export function Demo({
   const [visible, setVisible] = useState(false);
   const [specOpen, setSpecOpen] = useState(false);
   const [dataExpanded, setDataExpanded] = useState(false);
-  const [copied, setCopied] = useState<'idle' | 'spec' | 'link'>('idle');
+  const linkCopy = useCopy({ resetMs: 1400 });
+  const specCopy = useCopy({ resetMs: 1400 });
+  // One state at a time: the most recent successful copy owns the label.
+  const [lastCopied, setLastCopied] = useState<'link' | 'spec'>('link');
+  const copied: 'idle' | 'spec' | 'link' =
+    lastCopied === 'spec' ? (specCopy.copied ? 'spec' : 'idle') : linkCopy.copied ? 'link' : 'idle';
   const cardRef = useRef<HTMLDivElement>(null);
 
   // Lazy mount on scroll-in.
@@ -319,24 +325,12 @@ export function Demo({
     if (typeof location === 'undefined') return;
     const base = `${location.origin}${location.pathname}${location.search}`;
     const url = `${base.replace(/#.*$/, '')}#${id}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied('link');
-      setTimeout(() => setCopied('idle'), 1400);
-    } catch {
-      /* clipboard may be blocked; no-op */
-    }
+    if (await linkCopy.copy(url)) setLastCopied('link');
   };
 
   const copySpec = async () => {
     if (!specView) return;
-    try {
-      await navigator.clipboard.writeText(specView.copyText);
-      setCopied('spec');
-      setTimeout(() => setCopied('idle'), 1400);
-    } catch {
-      /* no-op */
-    }
+    if (await specCopy.copy(specView.copyText)) setLastCopied('spec');
   };
 
   // `width: 100%` is load-bearing next to the auto margins: the card is a flex

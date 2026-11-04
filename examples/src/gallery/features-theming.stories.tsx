@@ -17,6 +17,7 @@
 import type { ChartSpec, ThemeConfig } from '@opendata-ai/openchart-core';
 import { broadsheet, essay, terminal, wire } from '@opendata-ai/openchart-core';
 import { Chart, VizThemeProvider } from '@opendata-ai/openchart-react';
+import { useCopy } from '@steamfield/ui/react/copy';
 import type { CSSProperties } from 'react';
 import { useState } from 'react';
 import { themeNames, themes } from '../../.ladle/themes';
@@ -222,18 +223,8 @@ function Chevron() {
 
 function JsonPanel({ label, value }: { label: string; value: unknown }) {
   const [open, setOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const { copied, copy } = useCopy({ resetMs: 1400 });
   const json = JSON.stringify(value, null, 2);
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(json);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1400);
-    } catch {
-      /* clipboard may be blocked; no-op */
-    }
-  };
 
   return (
     <div className="oc-spec">
@@ -247,7 +238,7 @@ function JsonPanel({ label, value }: { label: string; value: unknown }) {
           <Chevron />
           {open ? `Hide ${label}` : `View ${label}`}
         </button>
-        <button type="button" className="oc-spec-copy" onClick={copy}>
+        <button type="button" className="oc-spec-copy" onClick={() => copy(json)}>
           {copied ? 'Copied' : `Copy ${label}`}
         </button>
       </div>

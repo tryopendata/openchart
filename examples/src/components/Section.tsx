@@ -5,8 +5,8 @@
  * GalleryPage reads `id`/`title` off each Section child's props to build the
  * right-rail TOC, so those two props are the TOC contract.
  */
+import { useCopy } from '@steamfield/ui/react/copy';
 import type { ReactNode } from 'react';
-import { useState } from 'react';
 
 export type SectionProps = {
   /** Anchor slug, unique per page; also the TOC target. */
@@ -37,18 +37,12 @@ function LinkIcon() {
 }
 
 export function Section({ id, title, lede, children }: SectionProps) {
-  const [copied, setCopied] = useState(false);
+  const { copied, copy } = useCopy({ resetMs: 1400 });
 
   const copyLink = async () => {
     if (typeof location === 'undefined') return;
     const base = `${location.origin}${location.pathname}${location.search}`.replace(/#.*$/, '');
-    try {
-      await navigator.clipboard.writeText(`${base}#${id}`);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1400);
-    } catch {
-      /* no-op */
-    }
+    await copy(`${base}#${id}`);
   };
 
   return (
