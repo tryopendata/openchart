@@ -51,6 +51,7 @@ describe('animation in compiled layout', () => {
       ease: 'smooth',
       staggerDelay: 80,
       staggerOrder: 'index',
+      trigger: 'visible',
     });
   });
 

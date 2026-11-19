@@ -37,6 +37,7 @@ import { resolveDarkMode } from './resolve-dark-mode';
 import { renderSankeySVG } from './sankey-renderer';
 import { prepareSettledExportTheme } from './theme-style-block';
 import { createTooltipManager, type TooltipManager } from './tooltip';
+import { playWhenSeen } from './visibility';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -133,6 +134,9 @@ export function createSankey(
   let isFirstRender = true;
   let animationCleanup: (() => void) | null = null;
   let pendingResize = false;
+  // Set while the entrance waits for the chart to scroll into view; calling it
+  // drops the visibility subscription. A render while waiting re-arms it.
+  let cancelSeen: (() => void) | null = null;
 
   // Set when webfonts have loaded and a recompile is owed. The next render()
   // that recompiles flips data-oc-fonts-state to 'ready' and clears this, so
@@ -447,7 +451,35 @@ export function createSankey(
   // Render
   // ---------------------------------------------------------------------------
 
-  function render(prepared?: SankeyLayout): void {
+  /**
+   * Hold the entrance paused until the chart scrolls into view, then start
+   * the cleanup. Under reduced motion nothing plays, so no entrance window
+   * opens.
+   */
+  function armEntrance(svg: SVGElement): void {
+    const enter = currentLayout.animation?.enter;
+    if (!enter) return;
+    cancelSeen = playWhenSeen(container, svg, enter.trigger, () => {
+      cancelSeen = null;
+      if (prefersReducedMotion()) return;
+      animationCleanup = setupAnimationCleanup(svg, {
+        onComplete: () => {
+          animationCleanup = null;
+          if (pendingResize) {
+            pendingResize = false;
+            resize();
+          }
+        },
+      });
+    });
+  }
+
+  /**
+   * `dropEntrance`: an update while the entrance still waits to be seen
+   * renders the new data in its final state; other re-renders while waiting
+   * (resize, font reload) re-arm the paused entrance.
+   */
+  function render(prepared?: SankeyLayout, dropEntrance = false): void {
     if (destroyed) return;
     const nextLayout = prepared ?? compile();
     const focusedMark = captureMarkFocus(svgElement);
@@ -461,6 +493,9 @@ export function createSankey(
     if (svgElement) {
       cancelAnimations(svgElement);
     }
+    const rearmEntrance = cancelSeen !== null && !dropEntrance;
+    cancelSeen?.();
+    cancelSeen = null;
 
     // Clean up previous tooltip listeners
     if (cleanupTooltipEvents) {
@@ -476,7 +511,7 @@ export function createSankey(
     currentLayout = nextLayout;
 
     // Determine if we should animate
-    const shouldAnimate = isFirstRender && !!currentLayout.animation?.enter;
+    const shouldAnimate = (isFirstRender || rearmEntrance) && !!currentLayout.animation?.enter;
     isFirstRender = false;
 
     // Render
@@ -500,19 +535,7 @@ export function createSankey(
     }
     cleanupTooltipEvents = wireTooltipAndInteraction(svgElement, currentLayout);
 
-    // Animation cleanup on first render
-    // Under reduced motion nothing plays, so no entrance window opens.
-    if (shouldAnimate && svgElement && !prefersReducedMotion()) {
-      animationCleanup = setupAnimationCleanup(svgElement, {
-        onComplete: () => {
-          animationCleanup = null;
-          if (pendingResize) {
-            pendingResize = false;
-            resize();
-          }
-        },
-      });
-    }
+    if (shouldAnimate && svgElement) armEntrance(svgElement);
 
     renderGen += 1;
     container.dataset.ocRenderGen = String(renderGen);
@@ -542,7 +565,7 @@ export function createSankey(
     fontFamily = nextFont;
     measureText = nextMeasure;
 
-    render(nextLayout);
+    render(nextLayout, true);
   }
 
   function resize(): void {
@@ -598,6 +621,8 @@ export function createSankey(
       animationCleanup = null;
       pendingResize = false;
     }
+    cancelSeen?.();
+    cancelSeen = null;
     if (svgElement) {
       cancelAnimations(svgElement);
     }
@@ -660,19 +685,7 @@ export function createSankey(
     }
     cleanupTooltipEvents = wireTooltipAndInteraction(svgElement, currentLayout);
 
-    // Animation cleanup
-    // Under reduced motion nothing plays, so no entrance window opens.
-    if (shouldAnimate && svgElement && !prefersReducedMotion()) {
-      animationCleanup = setupAnimationCleanup(svgElement, {
-        onComplete: () => {
-          animationCleanup = null;
-          if (pendingResize) {
-            pendingResize = false;
-            resize();
-          }
-        },
-      });
-    }
+    if (shouldAnimate && svgElement) armEntrance(svgElement);
 
     renderGen += 1;
     container.dataset.ocRenderGen = String(renderGen);

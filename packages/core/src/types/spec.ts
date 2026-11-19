@@ -1776,6 +1776,22 @@ export interface AnimationPhaseConfig {
 }
 
 /**
+ * Entrance phase config. Adds `trigger` on top of the shared phase options.
+ */
+export interface EnterPhaseConfig extends AnimationPhaseConfig {
+  /**
+   * When the entrance starts. Default: 'visible'.
+   * - `visible`: hold the from-state until at least 25% of the chart (or 25% of
+   *   the viewport's height, for a chart taller than the viewport) is on
+   *   screen, then play. A chart already in view at mount plays at once.
+   * - `mount`: play as soon as the chart mounts, scrolled into view or not.
+   *
+   * Ignored by export and server-side rendering, which never animate.
+   */
+  trigger?: 'visible' | 'mount';
+}
+
+/**
  * Data-update phase config. Adds `maxMarks` on top of the shared phase
  * options; the cap is meaningless for enter/exit, which animate via CSS.
  */
@@ -1797,8 +1813,8 @@ export interface UpdatePhaseConfig extends AnimationPhaseConfig {
 export interface AnimationConfig {
   /** Base preset; explicit phase settings take precedence. */
   preset?: AnimationPreset;
-  /** Entrance animation when chart first renders. */
-  enter?: AnimationPhaseConfig | boolean;
+  /** Entrance animation when chart first renders (by default, once it scrolls into view). */
+  enter?: EnterPhaseConfig | boolean;
   /** Transition animation when data updates. */
   update?: UpdatePhaseConfig | boolean;
   /** Exit animation when marks are removed. */

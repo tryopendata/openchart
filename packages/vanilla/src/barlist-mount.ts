@@ -37,6 +37,7 @@ import { observeResize } from './resize-observer';
 import { resolveDarkMode } from './resolve-dark-mode';
 import { prepareSettledExportTheme } from './theme-style-block';
 import { createTooltipManager, type TooltipManager } from './tooltip';
+import { playWhenSeen } from './visibility';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -85,6 +86,9 @@ export function createBarList(
   let disconnectResize: (() => void) | null = null;
   let animationCleanup: (() => void) | null = null;
   let pendingResize = false;
+  // Set while the entrance waits for the chart to scroll into view; calling it
+  // drops the visibility subscription. A render while waiting re-arms it.
+  let cancelSeen: (() => void) | null = null;
 
   // Set when webfonts have loaded and a recompile is owed. The next render()
   // that recompiles flips data-oc-fonts-state to 'ready' and clears this, so
@@ -242,6 +246,11 @@ export function createBarList(
       animationCleanup();
       animationCleanup = null;
     }
+    if (cancelSeen) {
+      cancelSeen();
+      cancelSeen = null;
+      animate = true;
+    }
 
     if (svgElement) {
       if (cleanupTooltipEvents) {
@@ -266,18 +275,24 @@ export function createBarList(
       }
     }
 
-    // Under reduced motion nothing plays, so no entrance window opens.
-    if (animate && currentLayout.animation?.enter && !prefersReducedMotion()) {
-      animationCleanup = setupAnimationCleanup(newSvg, {
-        onComplete: () => {
-          // Null the handle BEFORE replaying, or the deferred resize hits the
-          // entrance-in-flight gate and re-defers forever (mount.ts pattern).
-          animationCleanup = null;
-          if (pendingResize && !destroyed) {
-            pendingResize = false;
-            resize();
-          }
-        },
+    // The entrance holds paused until the chart scrolls into view; cleanup
+    // starts when it plays. Under reduced motion nothing plays, so no
+    // entrance window opens.
+    if (animate && currentLayout.animation?.enter) {
+      cancelSeen = playWhenSeen(container, newSvg, currentLayout.animation.enter.trigger, () => {
+        cancelSeen = null;
+        if (prefersReducedMotion()) return;
+        animationCleanup = setupAnimationCleanup(newSvg, {
+          onComplete: () => {
+            // Null the handle BEFORE replaying, or the deferred resize hits the
+            // entrance-in-flight gate and re-defers forever (mount.ts pattern).
+            animationCleanup = null;
+            if (pendingResize && !destroyed) {
+              pendingResize = false;
+              resize();
+            }
+          },
+        });
       });
     }
 
@@ -306,6 +321,10 @@ export function createBarList(
     measureText = nextMeasure;
 
     currentLayout = nextLayout;
+    // An update while the entrance waits to be seen drops it: the new data
+    // renders in its final state.
+    cancelSeen?.();
+    cancelSeen = null;
     render();
   }
 
@@ -355,6 +374,8 @@ export function createBarList(
       animationCleanup();
       animationCleanup = null;
     }
+    cancelSeen?.();
+    cancelSeen = null;
 
     if (cleanupTooltipEvents) {
       cleanupTooltipEvents();

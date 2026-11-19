@@ -16,7 +16,7 @@
 import type { ChartLayout, ResolvedAnimationPhase } from '@opendata-ai/openchart-core';
 import { AnimationScheduler } from '../motion/scheduler';
 import { SpatialIndex } from '../spatial-index';
-import { type EntranceHandle, playCanvasEntrance } from './entrance';
+import { type EntranceHandle, holdCanvasEntrance, playCanvasEntrance } from './entrance';
 import { ScatterCanvasRenderer } from './renderer';
 import { buildScatterCanvasState } from './state';
 import type { ScatterCanvasState } from './types';
@@ -53,6 +53,11 @@ export interface ScatterCanvasLayer {
    * for the DOM-counting estimate to find.
    */
   playEntrance(enter: ResolvedAnimationPhase, onDone?: () => void): EntranceHandle | null;
+  /**
+   * Hold the points transparent (the entrance's from-state) until
+   * `playEntrance` runs. Used while the chart waits to scroll into view.
+   */
+  holdEntrance(): void;
   /** Suspend/resume pointer interactions (used while a transition runs). */
   setInteractionSuspended(suspended: boolean): void;
   /** True while interactions are suspended. */
@@ -157,6 +162,9 @@ export function createScatterCanvasLayer(
         requestPaint: scheduleRepaint,
         onDone,
       });
+    },
+    holdEntrance() {
+      holdCanvasEntrance(state, repaint);
     },
     setInteractionSuspended(suspended: boolean) {
       interactionSuspended = suspended;

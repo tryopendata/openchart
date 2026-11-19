@@ -5564,13 +5564,13 @@
         "enter": {
           "anyOf": [
             {
-              "$ref": "#/definitions/AnimationPhaseConfig"
+              "$ref": "#/definitions/EnterPhaseConfig"
             },
             {
               "type": "boolean"
             }
           ],
-          "description": "Entrance animation when chart first renders."
+          "description": "Entrance animation when chart first renders (by default, once it scrolls into view)."
         },
         "update": {
           "anyOf": [
@@ -5602,7 +5602,7 @@
       "additionalProperties": false,
       "description": "Full animation config object. Structured as enter/update/exit phases following Vega's encoding set model."
     },
-    "AnimationPhaseConfig": {
+    "EnterPhaseConfig": {
       "type": "object",
       "properties": {
         "spring": {
@@ -5627,10 +5627,18 @@
             }
           ],
           "description": "Stagger config. true = defaults, false = no stagger. Default: true for enter."
+        },
+        "trigger": {
+          "type": "string",
+          "enum": [
+            "visible",
+            "mount"
+          ],
+          "description": "When the entrance starts. Default: 'visible'.\n- `visible`: hold the from-state until at least 25% of the chart (or 25% of   the viewport's height, for a chart taller than the viewport) is on   screen, then play. A chart already in view at mount plays at once.\n- `mount`: play as soon as the chart mounts, scrolled into view or not.\n\nIgnored by export and server-side rendering, which never animate."
         }
       },
       "additionalProperties": false,
-      "description": "Animation phase config. Follows Vega's enter/update/exit model. Each phase can be true (use defaults) or a config object."
+      "description": "Entrance phase config. Adds `trigger` on top of the shared phase options."
     },
     "SpringConfig": {
       "type": "object",
@@ -5710,6 +5718,36 @@
       },
       "additionalProperties": false,
       "description": "Data-update phase config. Adds `maxMarks` on top of the shared phase options; the cap is meaningless for enter/exit, which animate via CSS."
+    },
+    "AnimationPhaseConfig": {
+      "type": "object",
+      "properties": {
+        "spring": {
+          "$ref": "#/definitions/SpringConfig",
+          "description": "Spring mode. Cannot be combined with duration or ease in this phase."
+        },
+        "duration": {
+          "type": "number",
+          "description": "Duration in ms. Default: 600 for enter, 500 for update, 250 for exit."
+        },
+        "ease": {
+          "$ref": "#/definitions/AnimationEase",
+          "description": "Easing preset. Default: 'smooth'."
+        },
+        "stagger": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/AnimationStagger"
+            },
+            {
+              "type": "boolean"
+            }
+          ],
+          "description": "Stagger config. true = defaults, false = no stagger. Default: true for enter."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Animation phase config. Follows Vega's enter/update/exit model. Each phase can be true (use defaults) or a config object."
     },
     "Display": {
       "type": "string",

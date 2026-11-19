@@ -27,6 +27,7 @@ import { observeResize } from './resize-observer';
 import { resolveDarkMode } from './resolve-dark-mode';
 import { attachKeyboardNav } from './table-keyboard';
 import { renderTable } from './table-renderer';
+import { playWhenSeen } from './visibility';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -124,6 +125,9 @@ export function createTable(
   let cleanupAnimations: (() => void) | null = null;
   let pendingResize = false;
   let isFirstRender = true;
+  // Set while the entrance waits for the table to scroll into view; calling it
+  // drops the visibility subscription.
+  let cancelSeen: (() => void) | null = null;
   let destroyed = false;
   // Whether the user has touched sorting. Once they have, a null sort means
   // "explicitly unsorted" and must not fall back to the spec/bar-column default.
@@ -264,7 +268,12 @@ export function createTable(
     wrapperElement.classList.toggle('oc-table--regular', !condensed);
   }
 
-  function render(candidate = currentSpec): void {
+  /**
+   * `dropEntrance`: an update while the entrance still waits to be seen
+   * renders the new data in its final state. Other re-renders while waiting
+   * (resize, sort, search, paging) re-arm the paused entrance.
+   */
+  function render(candidate = currentSpec, dropEntrance = false): void {
     if (destroyed) return;
 
     // Keep the previous view usable if validation or compilation rejects an edit.
@@ -291,6 +300,9 @@ export function createTable(
       cleanupAnimations();
       cleanupAnimations = null;
     }
+    const rearmEntrance = cancelSeen !== null && !dropEntrance;
+    cancelSeen?.();
+    cancelSeen = null;
 
     // Clean up previous keyboard nav
     if (cleanupKeyboard) {
@@ -305,18 +317,24 @@ export function createTable(
     }
 
     currentLayout = nextLayout;
-    const shouldAnimate = isFirstRender && !!currentLayout.animation?.enter;
+    const shouldAnimate = (isFirstRender || rearmEntrance) && !!currentLayout.animation?.enter;
     wrapperElement = renderTable(currentLayout, container, { animate: shouldAnimate });
 
-    // Set up animation cleanup on first animated render
+    // Set up the entrance on first animated render. It holds paused until the
+    // table scrolls into view; the cleanup only starts once it plays.
     // Under reduced motion nothing plays, so no entrance window opens.
-    if (shouldAnimate && wrapperElement && !prefersReducedMotion()) {
-      cleanupAnimations = setupTableAnimationCleanup(wrapperElement, () => {
-        cleanupAnimations = null;
-        if (pendingResize && !destroyed) {
-          pendingResize = false;
-          resize();
-        }
+    if (shouldAnimate && wrapperElement && currentLayout.animation?.enter) {
+      const wrapper = wrapperElement;
+      cancelSeen = playWhenSeen(container, wrapper, currentLayout.animation.enter.trigger, () => {
+        cancelSeen = null;
+        if (prefersReducedMotion()) return;
+        cleanupAnimations = setupTableAnimationCleanup(wrapper, () => {
+          cleanupAnimations = null;
+          if (pendingResize && !destroyed) {
+            pendingResize = false;
+            resize();
+          }
+        });
       });
     }
     if (isFirstRender) {
@@ -508,7 +526,7 @@ export function createTable(
   /**
    * Re-render the table, preserving search input focus across the DOM rebuild.
    */
-  function rerender(candidate = currentSpec): void {
+  function rerender(candidate = currentSpec, dropEntrance = false): void {
     if (destroyed) return;
 
     // Capture current search input state before re-render
@@ -520,7 +538,7 @@ export function createTable(
     const selectionStart = searchInput?.selectionStart ?? 0;
     const selectionEnd = searchInput?.selectionEnd ?? 0;
 
-    render(candidate);
+    render(candidate, dropEntrance);
 
     // Restore search focus after re-render
     if (hadFocus) {
@@ -537,7 +555,7 @@ export function createTable(
 
   function update(newSpec: TableSpec): void {
     if (destroyed) return;
-    rerender(newSpec);
+    rerender(newSpec, true);
   }
 
   function resize(): void {
@@ -630,6 +648,8 @@ export function createTable(
       cleanupAnimations();
       cleanupAnimations = null;
     }
+    cancelSeen?.();
+    cancelSeen = null;
     if (cleanupKeyboard) {
       cleanupKeyboard();
       cleanupKeyboard = null;

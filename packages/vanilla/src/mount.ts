@@ -62,6 +62,7 @@ import { renderChartSVG } from './svg-renderer';
 import { readWithoutThemeStamp, stampThemeProperties } from './theme-tokens';
 import { createTooltipManager, type TooltipManager } from './tooltip';
 import { canTransition, runTransition, type TransitionHandle } from './transition';
+import { playWhenSeen } from './visibility';
 import { createYouDrawIt, type YouDrawItController } from './you-draw-it';
 
 export {
@@ -141,6 +142,11 @@ export function createChart<TData extends DataRow = DataRow>(
   let isFirstRender = true;
   let cleanupAnimations: (() => void) | null = null;
   let pendingResize = false;
+  // Set while the entrance waits for the chart to scroll into view (the SVG
+  // holds its from-state under --oc-play-state: paused). Calling it drops the
+  // visibility subscription. Waiting, not playing: resizes re-render at once
+  // and re-arm the paused entrance; only a playing entrance defers them.
+  let cancelSeen: (() => void) | null = null;
 
   // Data-update transition state
   let transitionHandle: TransitionHandle | null = null;
@@ -269,6 +275,12 @@ export function createChart<TData extends DataRow = DataRow>(
     canvasEntrance?.cancel();
     canvasEntrance = null;
     cancelAnimations(svgElement);
+    // A render while the entrance waits to be seen (resize, font reload,
+    // highlight) re-arms it on the new SVG. update() drops the wait before
+    // calling render(), so new data shows in its final state.
+    const rearmEntrance = cancelSeen !== null;
+    cancelSeen?.();
+    cancelSeen = null;
 
     // Clean up previous render
     disposeRender();
@@ -287,7 +299,7 @@ export function createChart<TData extends DataRow = DataRow>(
     currentLayout = nextLayout;
     // Recorded for the ResizeObserver's self-induced-resize guard.
     sizer.rendered(currentLayout);
-    const shouldAnimate = isFirstRender && !!currentLayout.animation?.enter;
+    const shouldAnimate = (isFirstRender || rearmEntrance) && !!currentLayout.animation?.enter;
     const crosshair = !!currentLayout.crosshair;
 
     // Canvas mark mode: the canvas is created BEFORE the SVG so DOM order puts
@@ -579,41 +591,54 @@ export function createChart<TData extends DataRow = DataRow>(
     // so CSS consumers read from the same source of truth as the JS engine.
     stampThemeProperties(container, currentLayout.theme);
 
-    // Set up animation cleanup on first render only
-    if (shouldAnimate && svgElement) {
-      // Canvas mode animates points on the canvas scheduler, not via CSS, so
-      // the cleanup timer must be told how long that actually takes. The
-      // DOM-counting estimate sees no point elements and would fire early.
-      let entranceTotalMs: number | undefined;
-      if (canvasMode && canvasLayer && currentLayout.animation?.enter) {
-        canvasEntrance = canvasLayer.playEntrance(currentLayout.animation.enter);
-        if (canvasEntrance) {
-          // Take the longer of the two clocks: the SVG side still animates
-          // axes, chrome, and annotations on its own schedule.
-          entranceTotalMs = Math.max(
-            computeAnimationDuration(svgElement),
-            canvasEntrance.totalMs + (currentLayout.animation.annotationDelay ?? 0) + 500,
-          );
+    // Arm the entrance on first render (or re-arm it while still waiting to be
+    // seen). It holds paused until the chart scrolls into view, and only then
+    // do the canvas entrance and the cleanup (getAnimations promises and the
+    // fallback timer) start.
+    if (shouldAnimate && svgElement && currentLayout.animation?.enter) {
+      const svg = svgElement;
+      const animation = currentLayout.animation;
+      const enter = animation.enter!;
+      const layer = canvasMode ? canvasLayer : null;
+      const play = () => {
+        cancelSeen = null;
+        // Canvas mode animates points on the canvas scheduler, not via CSS, so
+        // the cleanup timer must be told how long that actually takes. The
+        // DOM-counting estimate sees no point elements and would fire early.
+        let entranceTotalMs: number | undefined;
+        if (layer) {
+          canvasEntrance = layer.playEntrance(enter);
+          if (canvasEntrance) {
+            // Take the longer of the two clocks: the SVG side still animates
+            // axes, chrome, and annotations on its own schedule.
+            entranceTotalMs = Math.max(
+              computeAnimationDuration(svg),
+              canvasEntrance.totalMs + (animation.annotationDelay ?? 0) + 500,
+            );
+          }
         }
-      }
 
-      // Under reduced motion the CSS plays nothing (reduced-motion.css), so
-      // the entrance is complete at once: no window that would defer resizes
-      // and updates. oc-animate stays on the SVG; it is inert there.
-      if (!prefersReducedMotion() || canvasEntrance) {
-        cleanupAnimations = setupAnimationCleanup(svgElement, {
-          onComplete: () => {
-            cleanupAnimations = null;
-            canvasEntrance = null;
-            if (pendingResize) {
-              pendingResize = false;
-              resize();
-            }
-          },
-          totalMs: entranceTotalMs,
-          canvasFinished: canvasEntrance?.finished,
-        });
-      }
+        // Under reduced motion the CSS plays nothing (reduced-motion.css), so
+        // the entrance is complete at once: no window that would defer resizes
+        // and updates. oc-animate stays on the SVG; it is inert there.
+        if (!prefersReducedMotion() || canvasEntrance) {
+          cleanupAnimations = setupAnimationCleanup(svg, {
+            onComplete: () => {
+              cleanupAnimations = null;
+              canvasEntrance = null;
+              if (pendingResize) {
+                pendingResize = false;
+                resize();
+              }
+            },
+            totalMs: entranceTotalMs,
+            canvasFinished: canvasEntrance?.finished,
+          });
+        }
+      };
+      // Canvas points have no CSS to pause: hold them transparent instead.
+      if (layer && enter.trigger !== 'mount' && !prefersReducedMotion()) layer.holdEntrance();
+      cancelSeen = playWhenSeen(container, svg, enter.trigger, play);
     }
     // Bump the render generation so tests (and consumers) can observe every
     // full recompile, including the post-font-load one.
@@ -708,6 +733,11 @@ export function createChart<TData extends DataRow = DataRow>(
     if (updateOpts && 'selectedElement' in updateOpts) {
       edits.setSelection(updateOpts.selectedElement);
     }
+    // An update while the entrance still waits to be seen drops the entrance:
+    // the new data renders in its final state (or tweens, if a transition
+    // applies), like any update after the entrance.
+    cancelSeen?.();
+    cancelSeen = null;
     render(canTransitionSpecShape(prevSpec, newSpec), nextLayout);
     if (fontChanged) watchCurrentFont();
 
@@ -749,6 +779,13 @@ export function createChart<TData extends DataRow = DataRow>(
 
   function resize(): void {
     if (destroyed) return;
+    // Waiting to be seen: nothing is moving yet, so re-render now (render()
+    // re-arms the paused entrance on the new SVG). This also lets the webfont
+    // reload publish data-oc-fonts-state='ready' without a scroll.
+    if (cancelSeen) {
+      render();
+      return;
+    }
     if (cleanupAnimations) {
       // Canvas mode cancels the entrance and re-renders immediately instead of
       // deferring. The SVG is fluid (`.oc-chart { width: 100% }`) while the
@@ -828,6 +865,8 @@ export function createChart<TData extends DataRow = DataRow>(
       cleanupAnimations = null;
       pendingResize = false;
     }
+    cancelSeen?.();
+    cancelSeen = null;
     cancelAnimations(svgElement);
 
     // Cancel before destroying the layer, matching render()/resize(). The

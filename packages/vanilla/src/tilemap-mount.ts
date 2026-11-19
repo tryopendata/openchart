@@ -38,6 +38,7 @@ import { resolveDarkMode } from './resolve-dark-mode';
 import { prepareSettledExportTheme } from './theme-style-block';
 import { renderTileMapSVG } from './tilemap-renderer';
 import { createTooltipManager, type TooltipManager } from './tooltip';
+import { playWhenSeen } from './visibility';
 
 // ---------------------------------------------------------------------------
 // Responsive tile sizing
@@ -142,6 +143,9 @@ export function createTileMap(
   // Animation state
   let animationCleanup: (() => void) | null = null;
   let pendingResize = false;
+  // Set while the entrance waits for the chart to scroll into view; calling it
+  // drops the visibility subscription. A render while waiting re-arms it.
+  let cancelSeen: (() => void) | null = null;
 
   // Latches whether the host constrains our height. Measured once, on the
   // first render that produces a real rect: height 0 with a real width means
@@ -347,6 +351,11 @@ export function createTileMap(
       animationCleanup();
       animationCleanup = null;
     }
+    if (cancelSeen) {
+      cancelSeen();
+      cancelSeen = null;
+      animate = true;
+    }
 
     // Remove old SVG
     if (svgElement) {
@@ -375,18 +384,23 @@ export function createTileMap(
       }
     }
 
-    // Setup animation cleanup only when actually animating
-    // Under reduced motion nothing plays, so no entrance window opens.
-    if (animate && currentLayout.animation?.enter && !prefersReducedMotion()) {
-      animationCleanup = setupAnimationCleanup(newSvg, {
-        onComplete: () => {
-          animationCleanup = null;
-          // On animation complete, check if resize was pending
-          if (pendingResize && !destroyed) {
-            pendingResize = false;
-            resize();
-          }
-        },
+    // The entrance holds paused until the chart scrolls into view; cleanup
+    // starts when it plays. Under reduced motion nothing plays, so no
+    // entrance window opens.
+    if (animate && currentLayout.animation?.enter) {
+      cancelSeen = playWhenSeen(container, newSvg, currentLayout.animation.enter.trigger, () => {
+        cancelSeen = null;
+        if (prefersReducedMotion()) return;
+        animationCleanup = setupAnimationCleanup(newSvg, {
+          onComplete: () => {
+            animationCleanup = null;
+            // On animation complete, check if resize was pending
+            if (pendingResize && !destroyed) {
+              pendingResize = false;
+              resize();
+            }
+          },
+        });
       });
     }
 
@@ -415,6 +429,10 @@ export function createTileMap(
     measureText = nextMeasure;
 
     currentLayout = nextLayout;
+    // An update while the entrance waits to be seen drops it: the new data
+    // renders in its final state.
+    cancelSeen?.();
+    cancelSeen = null;
     render();
   }
 
@@ -477,6 +495,8 @@ export function createTileMap(
       animationCleanup();
       animationCleanup = null;
     }
+    cancelSeen?.();
+    cancelSeen = null;
 
     // Clean up events
     if (cleanupTooltipEvents) {

@@ -1270,6 +1270,11 @@ export interface ResolvedAnimationPhase {
    * spec — the renderer supplies the default so it can vary by render mode.
    */
   maxMarks?: number;
+  /**
+   * When the entrance starts (enter phase only; always set there, default
+   * 'visible'). 'mount' plays at once; 'visible' waits until the chart is seen.
+   */
+  trigger?: 'visible' | 'mount';
 }
 
 /** Resolved animation config. A phase is present iff that phase is enabled. */

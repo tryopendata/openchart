@@ -829,7 +829,7 @@ Controls entrance animations and data-update transitions. Source: `core/src/type
 // Full control
 {
   animation: {
-    enter: { duration: 600, ease: 'smooth', stagger: true },
+    enter: { duration: 600, ease: 'smooth', stagger: true, trigger: 'visible' },
     update: { duration: 500, ease: 'smooth' },
     exit: { duration: 250, ease: 'smooth' },
     annotationDelay: 150,
@@ -849,7 +849,7 @@ Controls entrance animations and data-update transitions. Source: `core/src/type
 
 | Field             | Type                              | Default     | Description                                        |
 | ----------------- | --------------------------------- | ----------- | -------------------------------------------------- |
-| `enter`           | `AnimationPhaseConfig \| boolean` | `true`      | Entrance animation when chart first renders.       |
+| `enter`           | `EnterPhaseConfig \| boolean`     | `true`      | Entrance animation, played when the chart first scrolls into view (see `trigger`). |
 | `update`          | `UpdatePhaseConfig \| boolean`    | `true`      | Transition animation when data updates via `.update()`. |
 | `exit`            | `AnimationPhaseConfig \| boolean` | `true`      | Exit animation when marks are removed during updates. |
 | `annotationDelay` | `number`                          | `150`       | Gap in ms after the last mark reaches 90% of its entrance before annotations start (`0` under a preset). |
@@ -861,6 +861,25 @@ Controls entrance animations and data-update transitions. Source: `core/src/type
 | `duration` | `number`                      | `600` enter / `500` update / `250` exit | Duration in ms.                              |
 | `ease`     | `AnimationEase`               | `'smooth'` | Easing preset: `'smooth'` (fast attack, quick settle), `'snappy'` (faster, settles by about half the duration), `'gentle'` (the previous slower ease-out). |
 | `stagger`  | `AnimationStagger \| boolean` | `true`     | Stagger config for entrance. `false` = simultaneous. `delay` (default `80`) is a ceiling: the whole stagger spans at most 300ms, so n elements land `min(delay, 300 / (n - 1))` apart. |
+
+### EnterPhaseConfig
+
+Everything in `AnimationPhaseConfig`, plus:
+
+| Field     | Type                     | Default     | Description |
+| --------- | ------------------------ | ----------- | ----------- |
+| `trigger` | `'visible' \| 'mount'`   | `'visible'` | When the entrance starts. `'visible'` holds every element in its from-state until at least 25% of the chart is in the viewport (or, for a chart taller than four viewports, until it fills 25% of the viewport's height), then plays. A chart already in view at mount plays at once. `'mount'` plays at mount whether or not the chart is on screen. |
+
+Play-when-seen uses one shared `IntersectionObserver` per page on the chart's
+container. It applies to charts, tables, bar lists, tile maps, geo maps and
+sankeys (graphs keep their own animation). Without an `IntersectionObserver` or
+a layout engine (server rendering, jsdom/happy-dom) the entrance plays at once,
+and under `prefers-reduced-motion` nothing waits. Export (SVG, PNG, JPG, GIF)
+never animates and is never gated. Resizes and the webfont reload re-render a
+waiting chart immediately and keep it waiting. An `.update()` while the
+entrance is still waiting drops the entrance: the new data renders in its final
+state, as it would after the entrance. Hosts whose tests or screenshots assume
+the entrance runs at mount should set `trigger: 'mount'`.
 
 ### UpdatePhaseConfig
 

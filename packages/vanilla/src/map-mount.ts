@@ -73,6 +73,7 @@ import type { Tween } from './story/tween';
 import { createTween, easingFns, storyMotion } from './story/tween';
 import { prepareSettledExportTheme } from './theme-style-block';
 import { createTooltipManager, type TooltipManager } from './tooltip';
+import { playWhenSeen } from './visibility';
 
 /**
  * A stable string for a resolved focus, used to detect focus changes between
@@ -280,6 +281,9 @@ export function createGeoMap(
   let animationCleanup: (() => void) | null = null;
   let fillTransitionHandle: { cancel: () => void } | null = null;
   let pendingResize = false;
+  // Set while the entrance waits for the map to scroll into view; calling it
+  // drops the visibility subscription. A render while waiting re-arms it.
+  let cancelSeen: (() => void) | null = null;
 
   // Camera state
   let currentCamera: Camera = { cx: 0, cy: 0, k: 1 };
@@ -911,6 +915,11 @@ export function createGeoMap(
       fillTransitionHandle.cancel();
       fillTransitionHandle = null;
     }
+    if (cancelSeen) {
+      cancelSeen();
+      cancelSeen = null;
+      animate = true;
+    }
 
     // Render new SVG before removing old to avoid a paint gap
     const oldSvg = svgElement;
@@ -951,20 +960,25 @@ export function createGeoMap(
     // Setup animation cleanup only when actually animating
     // Under reduced motion nothing plays, so no entrance window opens and the
     // focus dim applies at once.
+    // The entrance holds paused until the map scrolls into view; cleanup
+    // starts when it plays.
     const isAnimating = animate && !!currentLayout.animation?.enter && !prefersReducedMotion();
-    if (isAnimating) {
-      animationCleanup = setupAnimationCleanup(newSvg, {
-        onComplete: () => {
-          animationCleanup = null;
-          if (pendingResize && !destroyed) {
-            pendingResize = false;
-            resize();
-          }
-          // Apply deferred focus dim after animation completes
-          if (currentFocusIds && currentFocusIds.length > 0) {
-            applyFocusDim(currentFocusIds);
-          }
-        },
+    if (isAnimating && currentLayout.animation?.enter) {
+      cancelSeen = playWhenSeen(container, newSvg, currentLayout.animation.enter.trigger, () => {
+        cancelSeen = null;
+        animationCleanup = setupAnimationCleanup(newSvg, {
+          onComplete: () => {
+            animationCleanup = null;
+            if (pendingResize && !destroyed) {
+              pendingResize = false;
+              resize();
+            }
+            // Apply deferred focus dim after animation completes
+            if (currentFocusIds && currentFocusIds.length > 0) {
+              applyFocusDim(currentFocusIds);
+            }
+          },
+        });
       });
     }
 
@@ -1041,7 +1055,15 @@ export function createGeoMap(
 
     currentLayout = nextLayout;
     if (!currentFocusIds) rescaleFreeCamera(prevMapSize);
+    // An update while the entrance waits to be seen drops it: the new data
+    // renders in its final state, with the focus dim the entrance deferred.
+    const droppedEntrance = cancelSeen !== null;
+    cancelSeen?.();
+    cancelSeen = null;
     render();
+    if (droppedEntrance && currentFocusIds && currentFocusIds.length > 0) {
+      applyFocusDim(currentFocusIds);
+    }
 
     // Run the update tween if the *new* layout enables update animation
     if (
@@ -1207,6 +1229,8 @@ export function createGeoMap(
       animationCleanup();
       animationCleanup = null;
     }
+    cancelSeen?.();
+    cancelSeen = null;
     if (fillTransitionHandle) {
       fillTransitionHandle.cancel();
       fillTransitionHandle = null;

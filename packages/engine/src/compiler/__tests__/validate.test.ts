@@ -788,6 +788,36 @@ describe('animation ease validation', () => {
   });
 });
 
+// animation.enter.trigger
+// ---------------------------------------------------------------------------
+
+describe('animation.enter.trigger validation', () => {
+  const specWith = (enter: unknown) => ({
+    mark: 'line',
+    data: validLineData,
+    animation: { enter },
+    encoding: {
+      x: { field: 'date', type: 'temporal' },
+      y: { field: 'value', type: 'quantitative' },
+    },
+  });
+  const triggerErrors = (spec: unknown) =>
+    validateSpec(spec).errors.filter((e) => e.path === '/animation/enter/trigger');
+
+  it.each([['visible'], ['mount']])('accepts trigger %p', (value) => {
+    expect(validateSpec(specWith({ trigger: value })).valid).toBe(true);
+  });
+
+  it.each([['scroll'], [true], [null], [1]])('rejects trigger %p', (value) => {
+    const errors = triggerErrors(specWith({ trigger: value }));
+    expect(errors).toHaveLength(1);
+    expect(errors[0].code).toBe('INVALID_VALUE');
+    expect(errors[0].message).toContain("'visible' or 'mount'");
+    expect(errors[0].suggestion).toContain("trigger: 'mount'");
+  });
+});
+
+// ---------------------------------------------------------------------------
 // animation.update.maxMarks
 // ---------------------------------------------------------------------------
 

@@ -19,6 +19,7 @@ import type {
   AnimationPhaseConfig,
   AnimationSpec,
   AnimationStagger,
+  EnterPhaseConfig,
   ResolvedAnimation,
   ResolvedAnimationPhase,
   UpdatePhaseConfig,
@@ -34,6 +35,7 @@ export const ENTER_DEFAULTS: ResolvedAnimationPhase = {
   ease: 'smooth',
   staggerDelay: 80,
   staggerOrder: 'index',
+  trigger: 'visible',
 };
 
 /** Default values for update (data transition) animation. */
@@ -88,6 +90,16 @@ export function resolveAnimation(spec: AnimationSpec | undefined): ResolvedAnima
     config.exit,
     preset === undefined ? EXIT_DEFAULTS : { ...EXIT_DEFAULTS, duration: 160 },
   );
+
+  // trigger is enter-only, so it is applied here like maxMarks below.
+  // resolvePhase rebuilds the phase from its own fields, dropping it.
+  if (enter) {
+    const authored =
+      config.enter && typeof config.enter === 'object'
+        ? (config.enter as EnterPhaseConfig).trigger
+        : undefined;
+    enter.trigger = authored === 'mount' ? 'mount' : 'visible';
+  }
 
   // maxMarks is update-only, so it is applied here rather than in the
   // phase-agnostic resolvePhase. No default is baked in: the renderer supplies

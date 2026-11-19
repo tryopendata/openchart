@@ -77,6 +77,18 @@ function applyEntranceAt(
   }
 }
 
+/**
+ * Hold the points at the entrance's from-state (transparent) until
+ * `playCanvasEntrance` starts: the canvas half of play-when-seen, where the
+ * SVG half pauses its CSS. Reduced motion and empty charts are left as is.
+ */
+export function holdCanvasEntrance(state: ScatterCanvasState, requestPaint: () => void): void {
+  const n = state.marks.n;
+  if (n === 0 || prefersReducedMotion()) return;
+  state.enterAlpha = new Float32Array(n);
+  requestPaint();
+}
+
 export interface EntranceHandle {
   /** Total duration in ms, including the full stagger sweep. */
   totalMs: number;

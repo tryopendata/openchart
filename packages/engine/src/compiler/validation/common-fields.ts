@@ -83,6 +83,20 @@ export function validateAnimation(spec: Record<string, unknown>, errors: Validat
     }
   }
 
+  const enter = config.enter;
+  if (enter && typeof enter === 'object' && !Array.isArray(enter)) {
+    const trigger = (enter as Record<string, unknown>).trigger;
+    if (trigger !== undefined && trigger !== 'visible' && trigger !== 'mount') {
+      errors.push({
+        message: `Spec error: animation.enter.trigger must be 'visible' or 'mount', got ${JSON.stringify(trigger)}`,
+        path: '/animation/enter/trigger',
+        code: 'INVALID_VALUE',
+        suggestion:
+          "Use animation: { enter: { trigger: 'mount' } } to play the entrance at mount, or omit trigger to play it when the chart scrolls into view.",
+      });
+    }
+  }
+
   const update = (animation as Record<string, unknown>).update;
   if (!update || typeof update !== 'object' || Array.isArray(update)) return;
 

@@ -193,6 +193,7 @@ export type {
   EncodingChannel,
   EndpointLabelContent,
   EndpointLabelsConfig,
+  EnterPhaseConfig,
   ErrorbarEncoding,
   FacetChannel,
   FieldPredicate,

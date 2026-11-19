@@ -27,6 +27,8 @@ import {
 export function cancelAnimations(svg: Element | null): void {
   if (svg) {
     svg.classList.remove('oc-animate');
+    // Drop a play-when-seen hold, so a scene kept across renders never stays paused.
+    (svg as Element & Partial<ElementCSSInlineStyle>).style?.removeProperty('--oc-play-state');
   }
 }
 

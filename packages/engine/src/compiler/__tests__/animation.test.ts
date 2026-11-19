@@ -60,6 +60,7 @@ describe('resolveAnimation', () => {
       ease: 'smooth',
       staggerDelay: 40,
       staggerOrder: 'value',
+      trigger: 'visible',
     });
     // Other phases still present with defaults
     expect(result!.update).toEqual(UPDATE_DEFAULTS);
@@ -118,6 +119,7 @@ describe('resolveAnimation', () => {
       ease: 'smooth',
       staggerDelay: 80,
       staggerOrder: 'index',
+      trigger: 'visible',
     });
   });
 
@@ -207,6 +209,29 @@ describe('resolveAnimation', () => {
   it('keeps the other update fields at their defaults when only maxMarks is set', () => {
     const result = resolveAnimation({ update: { maxMarks: 5000 } });
     expect(result!.update).toEqual({ ...UPDATE_DEFAULTS, maxMarks: 5000 });
+  });
+
+  it('defaults the enter trigger to visible for every shorthand', () => {
+    expect(resolveAnimation(true)!.enter!.trigger).toBe('visible');
+    expect(resolveAnimation({ enter: true })!.enter!.trigger).toBe('visible');
+    expect(resolveAnimation({})!.enter!.trigger).toBe('visible');
+    expect(resolveAnimation('fluid')!.enter!.trigger).toBe('visible');
+    expect(resolveAnimation('subtle')!.enter!.trigger).toBe('visible');
+    expect(resolveAnimation({ enter: { duration: 300 } })!.enter!.trigger).toBe('visible');
+  });
+
+  it("respects an explicit enter trigger of 'mount'", () => {
+    const result = resolveAnimation({ enter: { trigger: 'mount' } });
+    expect(result!.enter).toEqual({ ...ENTER_DEFAULTS, trigger: 'mount' });
+    expect(resolveAnimation({ preset: 'fluid', enter: { trigger: 'mount' } })!.enter!.trigger).toBe(
+      'mount',
+    );
+  });
+
+  it('keeps trigger off the update and exit phases', () => {
+    const result = resolveAnimation({ enter: { trigger: 'mount' } });
+    expect(result!.update!.trigger).toBeUndefined();
+    expect(result!.exit!.trigger).toBeUndefined();
   });
 
   it('does not resurrect a disabled update phase', () => {
