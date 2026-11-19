@@ -1,6 +1,6 @@
 import type { ChartLayout, ResolvedAnnotation } from '@opendata-ai/openchart-core';
 import { expect, test, type Page } from '@playwright/test';
-import { waitForResizeSettled } from '../settle';
+import { settleEntrances, waitForResizeSettled } from '../settle';
 
 for (const width of [320, 390, 768, 1280])
   for (const colorScheme of ['light', 'dark'] as const) {
@@ -12,6 +12,7 @@ for (const width of [320, 390, 768, 1280])
         const charts = page.getByTestId('annotation-layout');
         await expect(charts.first().locator('svg')).toBeVisible();
         await page.evaluate(() => document.fonts.ready);
+        await settleEntrances(page);
         for (const chart of await charts.all()) {
           await expect(chart).toHaveAttribute('data-oc-fonts-state', 'ready');
           if (colorScheme === 'dark') await expect(chart).toHaveClass(/oc-dark/);

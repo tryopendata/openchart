@@ -8,6 +8,7 @@
  */
 
 import { expect, test } from '@playwright/test';
+import { settleEntrances } from '../settle';
 
 test('a 200px explicit column width renders at exactly 200px with no horizontal overflow', async ({
   page,
@@ -15,6 +16,7 @@ test('a 200px explicit column width renders at exactly 200px with no horizontal 
   await page.goto('/?story=testing--fixtures-tables--explicit-column-width&mode=preview');
   await page.waitForSelector('.oc-table-wrapper table');
   await page.evaluate(() => document.fonts.ready);
+  await settleEntrances(page);
 
   const result = await page.evaluate(() => {
     const scroll = document.querySelector('.oc-table-scroll') as HTMLElement | null;

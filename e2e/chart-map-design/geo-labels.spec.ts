@@ -1,5 +1,5 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
-import { waitForResizeSettled } from '../settle';
+import { settleEntrances, waitForResizeSettled } from '../settle';
 
 const story = '/?story=gallery--geographic-labels--places-and-notes&mode=preview';
 async function settle(page: Page) {
@@ -8,6 +8,7 @@ async function settle(page: Page) {
     await new Promise(requestAnimationFrame);
     await new Promise(requestAnimationFrame);
   });
+  await settleEntrances(page);
 }
 
 async function exportGeometry(host: Locator) {

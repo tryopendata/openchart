@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { settleEntrances } from '../settle';
 
 /**
  * Geometry invariants that must hold at every viewport and in every engine.
@@ -149,10 +150,10 @@ for (const {
     // Wait on explicit render-state signals instead of a blind sleep:
     // data-oc-fonts-state='ready' means the post-font recompile ran (deferred
     // until after the entrance animation, so this also covers the animated
-    // path), and :not(.oc-animate) means any entrance animation finished
-    // (immediate for charts that don't animate or have a cached font).
+    // path), and settleEntrances plays every entrance on the page (each one
+    // waits until it is scrolled into view) to its end.
     await page.waitForSelector('.oc-root[data-oc-fonts-state="ready"]');
-    await page.waitForSelector('.oc-root svg.oc-chart:not(.oc-animate)');
+    await settleEntrances(page);
 
     const violations = await page.evaluate(({ quantAxisArg, minBarThicknessArg, expectedXTickLabelsArg, checkLegendTickClearanceArg }) => {
       const violations: string[] = [];

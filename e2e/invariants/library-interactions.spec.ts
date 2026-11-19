@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import path from 'node:path';
 import type { ChartInstance } from '../../packages/vanilla/src/mount';
+import { settleEntrances } from '../settle';
 
 type ReviewWindow = Window & { releaseChart: ChartInstance };
 const rendererModule = `/@fs${path.resolve(__dirname, '../../packages/vanilla/src/mount.ts')}`;
@@ -19,6 +20,7 @@ for (const [name, selector] of renderers) {
     const host = page.getByTestId('library-host');
     const first = host.locator(selector).first();
     await expect(first).toBeVisible();
+    await settleEntrances(page);
     await expect(host.locator('svg').first()).not.toHaveClass(/oc-animate/);
     await first.focus();
     await page.keyboard.press('ArrowRight');

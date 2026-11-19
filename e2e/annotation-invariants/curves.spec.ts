@@ -1,5 +1,6 @@
 import type { ChartLayout } from '@opendata-ai/openchart-core';
 import { expect, test } from '@playwright/test';
+import { settleEntrances } from '../settle';
 import { CONNECTOR_STANDOFF } from '../../packages/engine/src/annotations/constants';
 
 for (const width of [320, 390, 768, 1280])
@@ -12,6 +13,7 @@ for (const width of [320, 390, 768, 1280])
       await page.goto('/?story=features--annotation-curves&mode=preview');
       const charts = page.getByTestId('annotation-curve');
       await expect(charts).toHaveCount(10);
+      await settleEntrances(page);
       for (const chart of await charts.all()) {
         await expect(chart).toHaveAttribute('data-oc-fonts-state', 'ready');
         if (colorScheme === 'dark') await expect(chart).toHaveClass(/oc-dark/);

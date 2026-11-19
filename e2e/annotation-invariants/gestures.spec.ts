@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { waitForResizeSettled } from '../settle';
+import { settleEntrances, waitForResizeSettled } from '../settle';
 
 const story = '/?story=features--annotation-gestures&mode=preview';
 for (const width of [320, 390, 768, 1280])
@@ -11,6 +11,7 @@ for (const width of [320, 390, 768, 1280])
       const host = page.getByTestId('annotation-gesture-host');
       const label = host.locator('.oc-annotation-label');
       await expect(label).toBeVisible();
+      await settleEntrances(page);
       // WebKit briefly reports a text box at the origin before its first SVG paint.
       await page.evaluate(async () => {
         await document.fonts.ready;
@@ -96,6 +97,7 @@ for (const cancellation of ['Escape', 'pointercancel', 'touchcancel', 'replaceme
     const host = page.getByTestId('annotation-gesture-host');
     const label = host.locator('.oc-annotation-label');
     await expect(label).toBeVisible();
+    await settleEntrances(page);
     // WebKit briefly reports a text box at the origin before its first SVG paint.
     await page.evaluate(async () => {
       await document.fonts.ready;

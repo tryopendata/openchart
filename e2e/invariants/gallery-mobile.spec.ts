@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { settleEntrances } from '../settle';
 
 for (const width of [320, 390, 430, 640, 1280]) {
   for (const mode of ['light', 'dark'] as const) {
@@ -55,6 +56,7 @@ for (const demo of [
     await page.goto(`/?story=${demo.story}#${demo.id}`);
     const card = page.locator(`#${demo.id}`);
     await card.scrollIntoViewIfNeeded();
+    await settleEntrances(card);
     await expect(card.locator('.oc-legend-entry')).toHaveCount(5);
     await expect(card.locator('.oc-endpoint-label-entry')).toHaveCount(0);
     const box = await card.locator('.story-chart').boundingBox();
