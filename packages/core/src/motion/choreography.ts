@@ -338,6 +338,7 @@ function settleOffset(name: KeyframeName, props: KeyframeProperty[]): number {
 export type EntranceRole =
   | 'bar'
   | 'bar-h'
+  | 'cell'
   | 'stack-reveal'
   | 'stack-reveal-h'
   | 'line-area'
@@ -511,6 +512,19 @@ const ROLE_DEFS: readonly EntranceRoleDef[] = [
     timing: AUTHOR,
     durationBasis: 'phase',
     duration: base(1),
+    delay: { stagger: 'mark' },
+  },
+  {
+    name: 'cell',
+    scope: 'chart',
+    comment:
+      'Grid cells (heatmap, waffle, calendar) have no baseline to grow from:\na quick fade on the author curve, no clip.',
+    selectors: ['.oc-mark-rect[data-cell] :is(rect, path)'],
+    emit: 'shorthand',
+    keyframe: 'oc-enter-fade-only',
+    timing: AUTHOR,
+    durationBasis: 'phase',
+    duration: fixed(POINT_FADE_MS),
     delay: { stagger: 'mark' },
   },
   {

@@ -142,6 +142,14 @@ describe('classifyTarget', () => {
     expect(classifyTarget(g)).toBeNull();
   });
 
+  it('maps a grid cell (data-cell) to the cell role: a fade on its shape, no clip', () => {
+    const g = markGroup('oc-mark oc-mark-rect', 'rect');
+    g.setAttribute('data-cell', '');
+    const result = classifyTarget(g);
+    expect(result).toMatchObject({ kind: 'fade', role: 'cell' });
+    expect(result?.el.tagName.toLowerCase()).toBe('rect');
+  });
+
   it('maps line and area groups to line-area (the group itself clips)', () => {
     const line = svgEl('g', 'oc-mark oc-mark-line');
     const area = svgEl('g', 'oc-mark oc-mark-area');

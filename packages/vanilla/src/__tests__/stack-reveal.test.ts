@@ -3,11 +3,12 @@
  * group that clips as a unit on the author curve. Segments no longer chain.
  */
 
-import type { ChartSpec } from '@opendata-ai/openchart-core';
+import type { ChartSpec, RectMark } from '@opendata-ai/openchart-core';
 import { compileChart } from '@opendata-ai/openchart-engine';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createContainer } from '../__test-fixtures__/dom';
 import { scanEntrance } from '../animation';
+import { labelFromOffset, stackExtents } from '../renderers/entrance-geometry';
 import { renderChartSVG } from '../svg-renderer';
 
 const ROWS = ['A', 'B', 'C'].flatMap((category, i) =>
@@ -133,5 +134,75 @@ describe('stack reveal', () => {
     for (const w of svg.querySelectorAll<SVGElement>('.oc-stack-reveal')) {
       expect(w.style.getPropertyValue('--oc-stack-from')).toBe('');
     }
+  });
+});
+
+describe('grid cells', () => {
+  const CELLS: Record<string, ChartSpec> = {
+    heatmap: {
+      mark: 'rect',
+      data: ['a', 'b'].flatMap((x, i) => ['p', 'q'].map((y, j) => ({ x, y, v: i * 2 + j }))),
+      encoding: {
+        x: { field: 'x', type: 'nominal' },
+        y: { field: 'y', type: 'nominal' },
+        color: { field: 'v', type: 'quantitative' },
+      },
+    },
+    waffle: {
+      mark: 'waffle',
+      data: [
+        { source: 'Coal', share: 30 },
+        { source: 'Gas', share: 70 },
+      ],
+      encoding: {
+        theta: { field: 'share', type: 'quantitative' },
+        color: { field: 'source', type: 'nominal' },
+      },
+    },
+    calendar: {
+      mark: 'calendar',
+      data: Array.from({ length: 21 }, (_, i) => ({
+        date: `2024-01-${String(i + 1).padStart(2, '0')}`,
+        value: i % 5,
+      })),
+      encoding: {
+        x: { field: 'date', type: 'temporal' },
+        color: { field: 'value', type: 'quantitative' },
+      },
+    },
+  };
+
+  it.each(
+    Object.entries(CELLS),
+  )('%s cells fade: no stack wrapper, baseline or label carry', (_, spec) => {
+    const layout = compileChart({ ...spec, animation: true }, { width: 600, height: 400 });
+    const cells = layout.marks.filter((m): m is RectMark => m.type === 'rect' && !!m.cell);
+    expect(cells.length).toBeGreaterThan(0);
+    const stacks = stackExtents(layout.marks);
+    for (const cell of cells) {
+      expect(cell.baseline).toBeUndefined();
+      expect(stacks.has(cell)).toBe(false);
+      expect(labelFromOffset(cell, undefined)).toBeUndefined();
+      expect(labelFromOffset(cell, undefined, cell.y)).toBeUndefined();
+    }
+
+    const svg = renderChartSVG(layout, createContainer(), { animate: true });
+    expect(svg.querySelector('.oc-stack-reveal')).toBeNull();
+    const groups = svg.querySelectorAll<SVGElement>('.oc-mark-rect[data-cell]');
+    expect(groups).toHaveLength(cells.length);
+    for (const g of groups) {
+      expect(g.hasAttribute('data-orient')).toBe(false);
+      const shape = g.querySelector<SVGElement>('rect, path')!;
+      expect(shape.style.getPropertyValue('--oc-bar-from')).toBe('');
+    }
+    const roles = scanEntrance(svg).elements.map((e) => e.role);
+    expect(roles.filter((r) => r === 'cell')).toHaveLength(cells.length);
+    expect(roles).not.toContain('bar');
+  });
+
+  it.each(Object.entries(CELLS))('%s without an entrance stamps no data-cell', (_, spec) => {
+    const layout = compileChart({ ...spec, animation: false }, { width: 600, height: 400 });
+    const svg = renderChartSVG(layout, createContainer());
+    expect(svg.querySelector('[data-cell]')).toBeNull();
   });
 });

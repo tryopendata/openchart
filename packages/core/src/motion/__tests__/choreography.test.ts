@@ -34,6 +34,7 @@ const keyframesCss = readFileSync(resolve(stylesDir, 'keyframes.css'), 'utf8');
 const ROLE_NAMES: EntranceRole[] = [
   'bar',
   'bar-h',
+  'cell',
   'stack-reveal',
   'stack-reveal-h',
   'line-area',
@@ -192,6 +193,7 @@ function goldens(D: number, reach: (p: number) => number): Record<EntranceRole, 
     // delay, duration, geometry (non-opacity props), opacity settle
     bar: [S * I, D, D, 0],
     'bar-h': [S * I, D, D, 0],
+    cell: [S * I, 300, 0, 300],
     'stack-reveal': [S * I, D, D, 0],
     'stack-reveal-h': [S * I, D, D, 0],
     'line-area': [S * I, D, D, 0.15 * D],

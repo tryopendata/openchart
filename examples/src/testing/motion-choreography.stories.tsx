@@ -52,6 +52,19 @@ const stackSpec: ChartSpec = {
   },
 };
 
+const heatmapSpec: ChartSpec = {
+  animation: true,
+  mark: { type: 'rect' },
+  data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].flatMap((day, i) =>
+    ['9am', '12pm', '3pm', '6pm'].map((hour, j) => ({ day, hour, v: ((i * 4 + j) * 7) % 20 })),
+  ),
+  encoding: {
+    x: { field: 'day', type: 'nominal' },
+    y: { field: 'hour', type: 'nominal' },
+    color: { field: 'v', type: 'quantitative' },
+  },
+};
+
 const box = { width: 640, height: 360 };
 
 export const Bars = () => (
@@ -69,6 +82,12 @@ export const Line = () => (
 export const Stacks = () => (
   <div style={box}>
     <Chart spec={stackSpec} />
+  </div>
+);
+
+export const Heatmap = () => (
+  <div style={box}>
+    <Chart spec={heatmapSpec} />
   </div>
 );
 

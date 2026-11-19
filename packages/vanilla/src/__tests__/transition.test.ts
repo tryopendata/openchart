@@ -229,9 +229,9 @@ describe('canTransition gate', () => {
     const specA = columnSpec(DATA_A);
     const specB = columnSpec(DATA_B);
     const args = passingGateArgs(specA, specB);
-    // Override both specs to a mark type with no update-transition support
-    args.prevSpec = { ...specA, mark: 'waffle' };
-    args.nextSpec = { ...specB, mark: 'waffle' };
+    // Every built-in mark tweens now; a mark outside TRANSITIONABLE_MARKS snaps
+    args.prevSpec = { ...specA, mark: 'unsupported' };
+    args.nextSpec = { ...specB, mark: 'unsupported' };
     expect(canTransition(args)).toBe(false);
   });
 

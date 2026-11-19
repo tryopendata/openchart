@@ -27,6 +27,17 @@ export const TRANSITIONABLE_MARKS = new Set([
   'arc',
   'histogram',
   'density',
+  // Each mark from here on is proven by __tests__/transition-mark-coverage.test.ts.
+  'rect',
+  'waffle',
+  'calendar',
+  'parliament',
+  'range',
+  'errorbar',
+  'tick',
+  'circle',
+  'lollipop',
+  'text',
 ]);
 
 /**
