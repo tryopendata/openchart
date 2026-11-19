@@ -204,7 +204,7 @@ describe('design contracts', () => {
       validateSpec({ ...spec, animation: { update: { spring: {}, duration: 300 } } }).valid,
     ).toBe(false);
     expect(resolveAnimation(false)).toBeUndefined();
-    expect(resolveAnimation(undefined)).toBeUndefined();
+    expect(resolveAnimation(undefined)).toEqual(resolveAnimation(true));
   });
   it('compiles optional undefined spring settings while rejecting unknown settings', () => {
     const authored: ChartSpec = {

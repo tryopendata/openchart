@@ -82,6 +82,10 @@ describe('calendar grid shape', () => {
   const layout = compile(calendarSpec(dailyRows('2023-01-01', 365)));
   const rects = rectsOf(layout);
 
+  it('marks every day cell as a grid cell', () => {
+    for (const rect of rects) expect(rect.cell).toBe(true);
+  });
+
   it('renders 53 week columns x 7 weekday rows for a 365-day year', () => {
     expect(rects).toHaveLength(365);
     expect(columnsOf(rects)).toHaveLength(53);

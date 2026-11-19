@@ -102,6 +102,7 @@ export function computeRectMarks(
       width: cellWidth,
       height: cellHeight,
       fill,
+      cell: true,
       data: row as Record<string, unknown>,
       aria,
     });

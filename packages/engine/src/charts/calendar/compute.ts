@@ -304,6 +304,7 @@ export function computeCalendarMarks(
           fill: getSequentialColor(scales, datum.value),
           cornerRadius: cellRadius,
           shapeRendering: 'crispEdges',
+          cell: true,
           data: datum.row,
           aria: {
             label: `${dateLabel}, ${colorEnc.field}: ${calendarFmt(datum.value)}`,
@@ -320,6 +321,7 @@ export function computeCalendarMarks(
           fill: theme.colors.annotationFill,
           cornerRadius: cellRadius,
           shapeRendering: 'crispEdges',
+          cell: true,
           data: {},
           aria: { decorative: true },
         });

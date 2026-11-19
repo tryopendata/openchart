@@ -41,6 +41,10 @@ describe('rect mark (heatmap)', () => {
     expect(cells).toHaveLength(grid.length);
   });
 
+  it('marks every cell as a grid cell (fade entrance, not a baseline wipe)', () => {
+    for (const cell of cellsOf(heatmap())) expect(cell.cell).toBe(true);
+  });
+
   it('gives every cell a positive width and height', () => {
     for (const cell of cellsOf(heatmap())) {
       expect(cell.width).toBeGreaterThan(0);

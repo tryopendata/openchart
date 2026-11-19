@@ -1767,9 +1767,9 @@ export interface ResponsiveConfig {
 export interface AnimationPhaseConfig {
   /** Spring mode. Cannot be combined with duration or ease in this phase. */
   spring?: SpringConfig;
-  /** Duration in ms. Default: 600 for enter, 500 for update, 250 for exit. */
+  /** Duration in ms. Default: 600 for enter, 500 for update, 120 for exit. */
   duration?: number;
-  /** Easing preset. Default: 'smooth'. */
+  /** Easing preset. Default: 'smooth' ('gentle' for exit). */
   ease?: AnimationEase;
   /** Stagger config. true = defaults, false = no stagger. Default: true for enter. */
   stagger?: AnimationStagger | boolean;
@@ -1798,10 +1798,12 @@ export interface EnterPhaseConfig extends AnimationPhaseConfig {
 export interface UpdatePhaseConfig extends AnimationPhaseConfig {
   /**
    * Maximum mark count that still runs a tweened data-update transition.
-   * Default: 500. Above the cap the chart swaps instantly instead, because
-   * per-frame SVG attribute writes on thousands of elements drop frames on
-   * low-end devices. Raise it deliberately when the audience is desktop-heavy
-   * and you have measured the frame budget.
+   * Charts default to 500 (20000 in canvas mark mode); bar lists, tile maps,
+   * sankeys and maps have no cap unless you set one; tables ignore it. Above
+   * the cap the visualization swaps instantly instead, because per-frame SVG
+   * attribute writes on thousands of elements drop frames on low-end devices.
+   * Raise it deliberately when the audience is desktop-heavy and you have
+   * measured the frame budget.
    */
   maxMarks?: number;
 }
@@ -1828,8 +1830,9 @@ export interface AnimationConfig {
 
 /**
  * Animation spec property.
- * - true: enable entrance animation with sensible defaults
- * - false/omitted: no animation (current behavior)
+ * - omitted or true: every phase (enter, update, exit) with its defaults
+ * - false: all motion off
+ * - preset name: that motion language across every phase
  * - AnimationConfig: full control via enter/update/exit phases
  */
 export type AnimationSpec = boolean | AnimationPreset | AnimationConfig;
@@ -1838,7 +1841,7 @@ export type AnimationSpec = boolean | AnimationPreset | AnimationConfig;
  * Chart display mode.
  * - `'full'` (default): standard chart with chrome, axes, legend, padding.
  * - `'sparkline'`: minimal inline mini-chart. Strips chrome, axes, legend,
- *   watermark, animation, and reduces margins to a tiny safety pad. The mark
+ *   watermark, and reduces margins to a tiny safety pad. The mark
  *   fills the container edge-to-edge. Best with `mark: 'line' | 'area' | 'bar'`.
  *   Explicit user fields (chrome, legend, encoding.x.axis, etc.) still render
  *   when set, so users can opt in to specific elements.
@@ -2251,10 +2254,10 @@ interface BaseChartSpec<TData extends DataRow = DataRow> {
    */
   overrides?: Partial<Record<Breakpoint, ChartSpecOverride>>;
   /**
-   * Animation configuration.
-   * - true: enable entrance animation with sensible defaults
-   * - false/omitted: no animation (current behavior)
-   * - AnimationConfig: full control via enter/update/exit phases
+   * Motion. On by default: the entrance plays once the visualization scrolls
+   * into view, and data updates animate. Set false to turn all motion off, or
+   * pass an object to configure each phase. Static rendering and exports never
+   * animate, and prefers-reduced-motion always wins.
    */
   animation?: AnimationSpec;
   /**
@@ -2476,7 +2479,13 @@ export interface TableSpec {
   totalRow?: boolean | { label?: string };
   /** Whether the table adapts to container width. Defaults to true. */
   responsive?: boolean;
-  /** Animation configuration for entrance animations. */
+  /**
+   * Motion. On by default: the entrance plays once the visualization scrolls
+   * into view, and data updates animate. Set false to turn all motion off, or
+   * pass an object to configure each phase. Static rendering and exports never
+   * animate, and prefers-reduced-motion always wins. Tables animate their
+   * entrance only; updates re-render instantly.
+   */
   animation?: AnimationSpec;
 }
 
@@ -2516,22 +2525,45 @@ export interface NodeOverride {
 // Graph animation + interaction
 // ---------------------------------------------------------------------------
 
+/** One graph motion phase: a tween (duration + ease) or a spring. */
+export interface GraphPhaseConfig {
+  /** Duration in ms. */
+  duration?: number;
+  /** Easing preset. */
+  ease?: AnimationEase;
+  /** Spring mode. Cannot be combined with duration or ease in this phase. */
+  spring?: SpringConfig;
+}
+
+/** Graph entrance phase: adds the reveal stagger toggle and the trigger. */
+export interface GraphEnterPhaseConfig extends GraphPhaseConfig {
+  /**
+   * Stagger the reveal. Default: true. Graphs order their reveal by layout, so
+   * only on/off applies.
+   *
+   * @deprecated The object form (`{ delay, order }`) is ignored: any value
+   * other than `false` staggers. Use `true` or `false`.
+   */
+  stagger?: boolean | AnimationStagger;
+  /**
+   * When the entrance starts. Default: 'visible'.
+   * - `visible`: wait until the graph is on screen, then play.
+   * - `mount`: play as soon as the graph mounts.
+   */
+  trigger?: 'visible' | 'mount';
+}
+
 /**
- * Per-phase and per-behavior motion config for a graph.
- *
- * DEFAULT-ON semantics (deliberately different from charts, which are opt-in):
- * omit `animation` → the resolver returns full defaults; `animation: false` →
- * no choreography (but `layout.warmup` still applies); a per-phase `false`
- * disables just that phase. Graphs are default-on because physics motion
- * already exists on load and choreography reduces the chaos.
+ * Per-phase and per-behavior motion config for a graph. A per-phase `false`
+ * disables just that phase.
  */
 export interface GraphAnimationConfig {
-  /** Node/edge reveal on first render. Default `{ duration: 500, ease: 'smooth', stagger: true }`. */
-  enter?: AnimationPhaseConfig | boolean;
+  /** Node/edge reveal on first render. Default `{ duration: 500, ease: 'smooth', stagger: true, trigger: 'visible' }`. */
+  enter?: GraphEnterPhaseConfig | boolean;
   /** Data-update enter-fade for newly added marks. Default `{ duration: 300, ease: 'smooth' }`. */
-  update?: AnimationPhaseConfig | boolean;
+  update?: GraphPhaseConfig | boolean;
   /** Ghost fade-out for removed marks. Default `{ duration: 300, ease: 'smooth' }`. */
-  exit?: AnimationPhaseConfig | boolean;
+  exit?: GraphPhaseConfig | boolean;
   /** Camera flight easing. Default duration `'auto'` (derived from the zoom distance). */
   camera?: { duration?: number; ease?: AnimationEase } | boolean;
   /** Hover emphasis crossfade. Default `{ duration: 150, ease: 'smooth' }`. */
@@ -2540,7 +2572,7 @@ export interface GraphAnimationConfig {
 
 /**
  * Graph motion spec.
- * - omitted → full defaults (default-ON)
+ * - omitted or `true` → full defaults
  * - `false` → no choreography (warmup still applies)
  * - object → per-phase control
  *
@@ -2606,8 +2638,11 @@ export interface GraphSpec {
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
   /**
-   * Motion configuration. DEFAULT-ON: omit for full defaults, `false` to opt
-   * out of choreography (layout warmup still applies).
+   * Motion. On by default: the entrance plays once the visualization scrolls
+   * into view, and data updates animate. Set false to turn all motion off, or
+   * pass an object to configure each phase. Static rendering and exports never
+   * animate, and prefers-reduced-motion always wins. Layout warmup still runs
+   * when false.
    */
   animation?: GraphAnimationSpec;
   /** Interaction behavior (hover mode, select-fly, opt-in physics). */
@@ -2757,7 +2792,12 @@ export interface LayerSpec<TData extends DataRow = DataRow> {
   hiddenSeries?: string[];
   /** Endpoint labels column, inherited by child layers that don't set their own. */
   endpointLabels?: boolean | EndpointLabelsConfig;
-  /** Animation configuration. */
+  /**
+   * Motion. On by default: the entrance plays once the visualization scrolls
+   * into view, and data updates animate. Set false to turn all motion off, or
+   * pass an object to configure each phase. Static rendering and exports never
+   * animate, and prefers-reduced-motion always wins.
+   */
   animation?: AnimationSpec;
 }
 
@@ -2836,7 +2876,12 @@ export interface SankeySpec {
   theme?: ThemeConfig;
   /** Whether to show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
-  /** Animation configuration for entrance animations. */
+  /**
+   * Motion. On by default: the entrance plays once the visualization scrolls
+   * into view, and data updates animate. Set false to turn all motion off, or
+   * pass an object to configure each phase. Static rendering and exports never
+   * animate, and prefers-reduced-motion always wins.
+   */
   animation?: AnimationSpec;
 }
 
@@ -2895,7 +2940,12 @@ export interface TileMapSpec {
   theme?: ThemeConfig;
   /** Whether to show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
-  /** Animation configuration for entrance animations. */
+  /**
+   * Motion. On by default: the entrance plays once the visualization scrolls
+   * into view, and data updates animate. Set false to turn all motion off, or
+   * pass an object to configure each phase. Static rendering and exports never
+   * animate, and prefers-reduced-motion always wins.
+   */
   animation?: AnimationSpec;
   /**
    * d3-format string applied to tile values, legend labels, and tooltips.
@@ -3064,7 +3114,12 @@ export interface GeoMapSpec {
   points?: GeoMapPointsLayer;
   /** Authored labels with explicit feature, point, or coordinate anchors. */
   callouts?: GeoCallout[];
-  /** Animation configuration for entrance animations. */
+  /**
+   * Motion. On by default: the entrance plays once the visualization scrolls
+   * into view, and data updates animate. Set false to turn all motion off, or
+   * pass an object to configure each phase. Static rendering and exports never
+   * animate, and prefers-reduced-motion always wins.
+   */
   animation?: AnimationSpec;
 }
 
@@ -3104,7 +3159,12 @@ export interface BarListSpec {
   theme?: ThemeConfig;
   /** Whether to show the OpenData watermark. Defaults to true. */
   watermark?: boolean;
-  /** Animation configuration for entrance animations. */
+  /**
+   * Motion. On by default: the entrance plays once the visualization scrolls
+   * into view, and data updates animate. Set false to turn all motion off, or
+   * pass an object to configure each phase. Static rendering and exports never
+   * animate, and prefers-reduced-motion always wins.
+   */
   animation?: AnimationSpec;
 }
 

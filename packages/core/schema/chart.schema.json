@@ -5515,7 +5515,7 @@
           "$ref": "#/definitions/AnimationConfig"
         }
       ],
-      "description": "Animation spec property.\n- true: enable entrance animation with sensible defaults\n- false/omitted: no animation (current behavior)\n- AnimationConfig: full control via enter/update/exit phases"
+      "description": "Animation spec property.\n- omitted or true: every phase (enter, update, exit) with its defaults\n- false: all motion off\n- preset name: that motion language across every phase\n- AnimationConfig: full control via enter/update/exit phases"
     },
     "AnimationPreset": {
       "type": "string",
@@ -5582,11 +5582,11 @@
         },
         "duration": {
           "type": "number",
-          "description": "Duration in ms. Default: 600 for enter, 500 for update, 250 for exit."
+          "description": "Duration in ms. Default: 600 for enter, 500 for update, 120 for exit."
         },
         "ease": {
           "$ref": "#/definitions/AnimationEase",
-          "description": "Easing preset. Default: 'smooth'."
+          "description": "Easing preset. Default: 'smooth' ('gentle' for exit)."
         },
         "stagger": {
           "anyOf": [
@@ -5665,11 +5665,11 @@
         },
         "duration": {
           "type": "number",
-          "description": "Duration in ms. Default: 600 for enter, 500 for update, 250 for exit."
+          "description": "Duration in ms. Default: 600 for enter, 500 for update, 120 for exit."
         },
         "ease": {
           "$ref": "#/definitions/AnimationEase",
-          "description": "Easing preset. Default: 'smooth'."
+          "description": "Easing preset. Default: 'smooth' ('gentle' for exit)."
         },
         "stagger": {
           "anyOf": [
@@ -5684,7 +5684,7 @@
         },
         "maxMarks": {
           "type": "number",
-          "description": "Maximum mark count that still runs a tweened data-update transition. Default: 500. Above the cap the chart swaps instantly instead, because per-frame SVG attribute writes on thousands of elements drop frames on low-end devices. Raise it deliberately when the audience is desktop-heavy and you have measured the frame budget."
+          "description": "Maximum mark count that still runs a tweened data-update transition. Charts default to 500 (20000 in canvas mark mode); bar lists, tile maps, sankeys and maps have no cap unless you set one; tables ignore it. Above the cap the visualization swaps instantly instead, because per-frame SVG attribute writes on thousands of elements drop frames on low-end devices. Raise it deliberately when the audience is desktop-heavy and you have measured the frame budget."
         }
       },
       "additionalProperties": false,
@@ -5699,11 +5699,11 @@
         },
         "duration": {
           "type": "number",
-          "description": "Duration in ms. Default: 600 for enter, 500 for update, 250 for exit."
+          "description": "Duration in ms. Default: 600 for enter, 500 for update, 120 for exit."
         },
         "ease": {
           "$ref": "#/definitions/AnimationEase",
-          "description": "Easing preset. Default: 'smooth'."
+          "description": "Easing preset. Default: 'smooth' ('gentle' for exit)."
         },
         "stagger": {
           "anyOf": [
@@ -5726,7 +5726,7 @@
         "full",
         "sparkline"
       ],
-      "description": "Chart display mode.\n- `'full'` (default): standard chart with chrome, axes, legend, padding.\n- `'sparkline'`: minimal inline mini-chart. Strips chrome, axes, legend,   watermark, animation, and reduces margins to a tiny safety pad. The mark   fills the container edge-to-edge. Best with `mark: 'line' | 'area' | 'bar'`.   Explicit user fields (chrome, legend, encoding.x.axis, etc.) still render   when set, so users can opt in to specific elements."
+      "description": "Chart display mode.\n- `'full'` (default): standard chart with chrome, axes, legend, padding.\n- `'sparkline'`: minimal inline mini-chart. Strips chrome, axes, legend,   watermark, and reduces margins to a tiny safety pad. The mark   fills the container edge-to-edge. Best with `mark: 'line' | 'area' | 'bar'`.   Explicit user fields (chrome, legend, encoding.x.axis, etc.) still render   when set, so users can opt in to specific elements."
     },
     "SeriesSearchConfig": {
       "type": "object",
@@ -8229,7 +8229,7 @@
         },
         "animation": {
           "$ref": "#/definitions/AnimationSpec",
-          "description": "Animation configuration.\n- true: enable entrance animation with sensible defaults\n- false/omitted: no animation (current behavior)\n- AnimationConfig: full control via enter/update/exit phases"
+          "description": "Motion. On by default: the entrance plays once the visualization scrolls into view, and data updates animate. Set false to turn all motion off, or pass an object to configure each phase. Static rendering and exports never animate, and prefers-reduced-motion always wins."
         },
         "crosshair": {
           "type": "boolean",

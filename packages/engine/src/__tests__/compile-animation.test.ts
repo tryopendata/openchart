@@ -58,9 +58,12 @@ describe('compileChart with animation', () => {
     expect(layout.animation!.annotationDelay).toBe(150);
   });
 
-  it('omits animation from layout when animation is not specified', () => {
+  it('resolves full defaults when animation is not specified (on by default)', () => {
     const layout = compileChart(barSpec, { width: 600, height: 400 });
-    expect(layout.animation).toBeUndefined();
+    expect(layout.animation!.enter!.duration).toBe(600);
+    expect(layout.animation!.enter!.trigger).toBe('visible');
+    expect(layout.animation!.update!.duration).toBe(500);
+    expect(layout.animation!.exit).toBeDefined();
   });
 
   it('omits animation from layout when animation is false', () => {
@@ -158,8 +161,15 @@ describe('compileChart with animation', () => {
     // `animation: true` resolves the default entrance.
     expect(layoutCompact.animation!.enter!.duration).toBe(600);
 
-    // At full width (> 700), no override applies, so no animation
+    // At full width (> 700), no override applies, so the default (on) holds
     const layoutFull = compileChart(specNoAnim, { width: 800, height: 400 });
-    expect(layoutFull.animation).toBeUndefined();
+    expect(layoutFull.animation!.enter!.duration).toBe(600);
+
+    // An override can turn the default off at compact width
+    const specOffCompact = {
+      ...barSpec,
+      overrides: { compact: { animation: false } },
+    } as ChartSpec;
+    expect(compileChart(specOffCompact, { width: 350, height: 400 }).animation).toBeUndefined();
   });
 });

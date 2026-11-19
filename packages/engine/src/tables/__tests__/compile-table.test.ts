@@ -226,9 +226,9 @@ describe('compileTable', () => {
     expect(layout.animation!.enter!.ease).toBe('snappy');
   });
 
-  it('does not include animation when spec omits it', () => {
+  it('includes default animation when spec omits it (on by default)', () => {
     const layout = compileTable(baseSpec, baseOptions);
-    expect(layout.animation).toBeUndefined();
+    expect(layout.animation!.enter!.duration).toBe(600);
   });
 
   it('does not include animation when spec has animation: false', () => {

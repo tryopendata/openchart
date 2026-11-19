@@ -55,8 +55,17 @@ describe('animation in compiled layout', () => {
     });
   });
 
-  it('layout has no animation config when spec omits animation', () => {
+  it('layout carries the default animation when spec omits animation', () => {
     const layout = compileChart(barSpec, { width: 600, height: 400 });
+    expect(layout.animation?.enter?.trigger).toBe('visible');
+    expect(layout.animation?.update).toBeDefined();
+  });
+
+  it('layout has no animation config when animation is false', () => {
+    const layout = compileChart({ ...barSpec, animation: false } as ChartSpec, {
+      width: 600,
+      height: 400,
+    });
     expect(layout.animation).toBeUndefined();
   });
 });
@@ -146,7 +155,7 @@ describe('animation CSS custom properties', () => {
   });
 
   it('does not set animation custom properties when animation is disabled', () => {
-    const { svg } = compileAndRender(barSpec);
+    const { svg } = compileAndRender({ ...barSpec, animation: false } as ChartSpec);
     expect(svg.style.getPropertyValue('--oc-animation-duration')).toBe('');
     expect(svg.style.getPropertyValue('--oc-animation-stagger')).toBe('');
   });
@@ -186,7 +195,7 @@ describe('mark animation index attributes', () => {
   });
 
   it('does not stamp animation attributes when animation is disabled', () => {
-    const { svg } = compileAndRender(columnSpec);
+    const { svg } = compileAndRender({ ...columnSpec, animation: false } as ChartSpec);
 
     const withAnimIdx = svg.querySelectorAll('[data-animation-index]');
     expect(withAnimIdx.length).toBe(0);

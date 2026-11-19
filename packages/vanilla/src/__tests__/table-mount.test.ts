@@ -622,8 +622,17 @@ describe('createTable', () => {
       table.destroy();
     });
 
-    it('does not add oc-animate when animation is not set', () => {
+    it('adds oc-animate when animation is not set (on by default)', () => {
       const table = createTable(container, makeSpec());
+
+      const wrapper = container.querySelector('.oc-table-wrapper');
+      expect(wrapper?.classList.contains('oc-animate')).toBe(true);
+
+      table.destroy();
+    });
+
+    it('does not add oc-animate when animation is false', () => {
+      const table = createTable(container, makeSpec({ animation: false }));
 
       const wrapper = container.querySelector('.oc-table-wrapper');
       expect(wrapper?.classList.contains('oc-animate')).toBe(false);

@@ -61,7 +61,28 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
     "keyboardNavigable": true,
     "role": "img",
   },
-  "animation": undefined,
+  "animation": {
+    "annotationDelay": 150,
+    "enter": {
+      "duration": 600,
+      "ease": "smooth",
+      "staggerDelay": 80,
+      "staggerOrder": "index",
+      "trigger": "visible",
+    },
+    "exit": {
+      "duration": 120,
+      "ease": "gentle",
+      "staggerDelay": 0,
+      "staggerOrder": "index",
+    },
+    "update": {
+      "duration": 500,
+      "ease": "smooth",
+      "staggerDelay": 0,
+      "staggerOrder": "index",
+    },
+  },
   "annotations": [
     {
       "bounds": {
@@ -1443,7 +1464,28 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
     "keyboardNavigable": true,
     "role": "img",
   },
-  "animation": undefined,
+  "animation": {
+    "annotationDelay": 150,
+    "enter": {
+      "duration": 600,
+      "ease": "smooth",
+      "staggerDelay": 80,
+      "staggerOrder": "index",
+      "trigger": "visible",
+    },
+    "exit": {
+      "duration": 120,
+      "ease": "gentle",
+      "staggerDelay": 0,
+      "staggerOrder": "index",
+    },
+    "update": {
+      "duration": 500,
+      "ease": "smooth",
+      "staggerDelay": 0,
+      "staggerOrder": "index",
+    },
+  },
   "annotations": [],
   "area": {
     "height": 287.1,
@@ -2116,7 +2158,28 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
     "keyboardNavigable": true,
     "role": "img",
   },
-  "animation": undefined,
+  "animation": {
+    "annotationDelay": 150,
+    "enter": {
+      "duration": 600,
+      "ease": "smooth",
+      "staggerDelay": 80,
+      "staggerOrder": "index",
+      "trigger": "visible",
+    },
+    "exit": {
+      "duration": 120,
+      "ease": "gentle",
+      "staggerDelay": 0,
+      "staggerOrder": "index",
+    },
+    "update": {
+      "duration": 500,
+      "ease": "smooth",
+      "staggerDelay": 0,
+      "staggerOrder": "index",
+    },
+  },
   "annotations": [],
   "area": {
     "height": 248,
@@ -3347,7 +3410,28 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
     "keyboardNavigable": true,
     "role": "img",
   },
-  "animation": undefined,
+  "animation": {
+    "annotationDelay": 150,
+    "enter": {
+      "duration": 600,
+      "ease": "smooth",
+      "staggerDelay": 80,
+      "staggerOrder": "index",
+      "trigger": "visible",
+    },
+    "exit": {
+      "duration": 120,
+      "ease": "gentle",
+      "staggerDelay": 0,
+      "staggerOrder": "index",
+    },
+    "update": {
+      "duration": 500,
+      "ease": "smooth",
+      "staggerDelay": 0,
+      "staggerOrder": "index",
+    },
+  },
   "annotations": [],
   "area": {
     "height": 218.50000000000003,

@@ -1196,6 +1196,23 @@ describe('compileChart', () => {
     expect(layout.animation?.enter?.duration).toBe(1100);
   });
 
+  it('sparkline with animation omitted animates by default at 1100ms', () => {
+    const layout = compileChart(
+      { ...lineSpec, display: 'sparkline' as const },
+      { width: 600, height: 400 },
+    );
+    expect(layout.animation?.enter?.duration).toBe(1100);
+    expect(layout.animation?.update).toBeDefined();
+  });
+
+  it('sparkline + animation: false stays off', () => {
+    const layout = compileChart(
+      { ...lineSpec, display: 'sparkline' as const, animation: false },
+      { width: 600, height: 400 },
+    );
+    expect(layout.animation).toBeUndefined();
+  });
+
   it('sparkline + animation: { enter: { duration: 500 } } respects user duration', () => {
     const layout = compileChart(
       {

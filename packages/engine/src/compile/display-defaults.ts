@@ -97,8 +97,8 @@ export function applySparklineLabelDefault(chartSpec: NormalizedChartSpec): Norm
 /**
  * Resolve the animation spec. The breakpoint override wins over the base spec
  * (matching chrome, labels, legend, and annotation override precedence).
- * Sparkline mode defaults animation off and, when it is on without a duration,
- * paces the line/area reveal at 1100ms (the CSS pairs it with an expo-out
+ * Animation is on by default; in sparkline mode an entrance without an authored
+ * duration paces the line/area reveal at 1100ms (the CSS pairs it with an expo-out
  * easing curve).
  */
 export function resolveChartAnimation(
@@ -109,8 +109,9 @@ export function resolveChartAnimation(
   let rawAnimationSpec = ((bp as Record<string, unknown> | undefined)?.animation ??
     rawSpec.animation) as AnimationSpec | undefined;
   if (rawAnimationSpec === undefined && chartSpec.display === 'sparkline') {
-    // User-explicit (top OR bp) already short-circuits this branch.
-    rawAnimationSpec = false;
+    // Omitted means on (the default); route it through the `true` branch below
+    // so the sparkline gets its 1100ms reveal.
+    rawAnimationSpec = true;
   }
   // AnimationConfig nests duration under `enter`, so the default goes there.
   if (

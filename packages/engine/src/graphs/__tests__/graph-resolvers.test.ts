@@ -10,7 +10,7 @@ import type {
   GraphNode,
   ResolvedTheme,
 } from '@opendata-ai/openchart-core';
-import { resolveTheme } from '@opendata-ai/openchart-core';
+import { resolveTheme, springDuration } from '@opendata-ai/openchart-core';
 import { describe, expect, it, vi } from 'vitest';
 import { resolveGraphAnimation } from '../animation';
 import { compileGraph } from '../compile-graph';
@@ -24,7 +24,13 @@ describe('resolveGraphAnimation', () => {
   it('returns full defaults when omitted (default-ON)', () => {
     const r = resolveGraphAnimation(undefined);
     expect(r).toBeDefined();
-    expect(r?.enter).toEqual({ duration: 500, ease: 'smooth', stagger: true, cameraFit: true });
+    expect(r?.enter).toEqual({
+      duration: 500,
+      ease: 'smooth',
+      stagger: true,
+      cameraFit: true,
+      trigger: 'visible',
+    });
     expect(r?.update).toEqual({ duration: 300, ease: 'smooth' });
     expect(r?.exit).toEqual({ duration: 300, ease: 'smooth' });
     expect(r?.camera).toEqual({ duration: 'auto', ease: 'smooth' });
@@ -48,7 +54,35 @@ describe('resolveGraphAnimation', () => {
 
   it('merges partial phase config onto defaults', () => {
     const r = resolveGraphAnimation({ enter: { duration: 1000 } });
-    expect(r?.enter).toEqual({ duration: 1000, ease: 'smooth', stagger: true, cameraFit: true });
+    expect(r?.enter).toEqual({
+      duration: 1000,
+      ease: 'smooth',
+      stagger: true,
+      cameraFit: true,
+      trigger: 'visible',
+    });
+  });
+
+  it('resolves enter.trigger, defaulting to visible', () => {
+    expect(resolveGraphAnimation({ enter: { trigger: 'mount' } })?.enter?.trigger).toBe('mount');
+    expect(resolveGraphAnimation({ enter: {} })?.enter?.trigger).toBe('visible');
+  });
+
+  it('sets a spring phase duration to the spring settling time', () => {
+    const spring = { stiffness: 170, damping: 26 };
+    const r = resolveGraphAnimation({ enter: { spring }, update: { spring }, exit: { spring } });
+    for (const phase of [r?.enter, r?.update, r?.exit]) {
+      expect(phase?.spring).toEqual(spring);
+      expect(phase?.duration).toBe(springDuration(spring));
+    }
+    expect(resolveGraphAnimation(undefined)?.update?.spring).toBeUndefined();
+  });
+
+  it('treats any stagger other than false as true (object form is ignored)', () => {
+    expect(
+      resolveGraphAnimation({ enter: { stagger: { delay: 200, order: 'value' } } })?.enter?.stagger,
+    ).toBe(true);
+    expect(resolveGraphAnimation({ enter: { stagger: false } })?.enter?.stagger).toBe(false);
   });
 });
 
@@ -299,5 +333,22 @@ describe('layout presets + seed + highlight', () => {
       { ...compileOptions, onWarn },
     );
     expect(onWarn).toHaveBeenCalledWith(expect.stringContaining('sort is ignored'));
+  });
+
+  it('warns (not errors) on the deprecated enter.stagger object and still staggers', () => {
+    const onWarn = vi.fn();
+    const r = compileGraph(
+      {
+        type: 'graph' as const,
+        nodes: [{ id: 'a' }, { id: 'b' }],
+        edges: [{ source: 'a', target: 'b' }],
+        animation: { enter: { stagger: { delay: 40 } } },
+      },
+      { ...compileOptions, onWarn },
+    );
+    expect(onWarn).toHaveBeenCalledWith(
+      expect.stringContaining('stagger only takes true or false'),
+    );
+    expect(r.animation?.enter?.stagger).toBe(true);
   });
 });

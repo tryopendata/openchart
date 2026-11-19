@@ -69,7 +69,7 @@ describe('<Chart />', () => {
     const { container } = await renderChart({ spec: lineSpec });
     const svg = container.querySelector('svg');
     expect(svg).not.toBeNull();
-    expect(svg?.getAttribute('class')).toBe('oc-chart');
+    expect(svg?.getAttribute('class')).toBe('oc-chart oc-animate'); // animation is on by default
   });
 
   it('renders chrome text elements', async () => {

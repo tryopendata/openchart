@@ -114,7 +114,7 @@ describe('Visualization', () => {
 
     const svg = wrapper.find('svg');
     expect(svg.exists()).toBe(true);
-    expect(svg.attributes('class')).toBe('oc-chart');
+    expect(svg.attributes('class')).toBe('oc-chart oc-animate'); // animation is on by default
     expect(wrapper.find('.oc-title').text()).toBe('GDP Growth');
     wrapper.unmount();
   });

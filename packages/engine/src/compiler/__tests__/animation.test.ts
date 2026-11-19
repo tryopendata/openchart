@@ -23,8 +23,8 @@ describe('resolveAnimation', () => {
     expect(resolveAnimation(false)).toBeUndefined();
   });
 
-  it('returns undefined for undefined', () => {
-    expect(resolveAnimation(undefined)).toBeUndefined();
+  it('returns full defaults for undefined (on by default), the same as true', () => {
+    expect(resolveAnimation(undefined)).toEqual(resolveAnimation(true));
   });
 
   it('returns all three phases with defaults for true', () => {

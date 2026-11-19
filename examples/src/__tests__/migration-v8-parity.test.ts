@@ -319,6 +319,13 @@ const additiveV8ScaffoldingMetadata = (
   );
 };
 
+/** Bar list rows gained a stable key (the label value) for update transitions. */
+const additiveBarListRowKey = (diff: StyleDiff, next: Signature | undefined) => {
+  if (diff.v8 !== null || typeof diff.v9 !== 'string' || !next) return false;
+  const match = /^(marks\.\d+)\.key$/.exec(diff.path);
+  return !!match && flatten(next.style)[`${match[1]}.type`] === 'barlist-row';
+};
+
 const underPrefix = (path: string, prefix: string) =>
   path === prefix || path.startsWith(`${prefix}.`);
 
@@ -540,6 +547,7 @@ describe(`v8 migration parity against ${capture.tag}`, () => {
               !allowed.some((prefix) => underPrefix(diff.path, prefix)) &&
               !CORPUS_STYLE_CHANGES.some(({ pattern }) => pattern.test(diff.path)) &&
               !additiveEndpointMetadata(diff) &&
+              !additiveBarListRowKey(diff, result.v9) &&
               !additiveV8ScaffoldingMetadata(
                 diff,
                 result.v9,

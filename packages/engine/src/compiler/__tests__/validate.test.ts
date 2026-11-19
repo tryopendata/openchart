@@ -786,6 +786,79 @@ describe('animation ease validation', () => {
     expect(result.errors).toEqual([]);
     expect(result.valid).toBe(true);
   });
+
+  it.each(['enter', 'update', 'exit'])('rejects an unknown ease on %s', (phase) => {
+    const result = validateSpec({ ...validLineSpec, animation: { [phase]: { ease: 'bouncy' } } });
+    expect(result.valid).toBe(false);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]).toMatchObject({
+      code: 'INVALID_VALUE',
+      path: `/animation/${phase}/ease`,
+    });
+  });
+});
+
+describe('graph animation validation', () => {
+  const graphWith = (animation: unknown) => ({
+    type: 'graph',
+    nodes: [{ id: 'a' }, { id: 'b' }],
+    edges: [{ source: 'a', target: 'b' }],
+    animation,
+  });
+  const errorsAt = (animation: unknown, path: string) =>
+    validateSpec(graphWith(animation)).errors.filter((e) => e.path === path);
+
+  it('accepts booleans and full phase configs', () => {
+    for (const animation of [
+      undefined,
+      true,
+      false,
+      {
+        enter: { duration: 400, ease: 'snappy', stagger: false, trigger: 'mount' },
+        update: { spring: { stiffness: 170, damping: 26 } },
+        exit: false,
+        camera: { duration: 'auto', ease: 'gentle' },
+        hover: { duration: 100 },
+      },
+    ]) {
+      expect(validateSpec(graphWith(animation)).errors).toEqual([]);
+    }
+  });
+
+  it('accepts the deprecated stagger object (ignored, warned at compile)', () => {
+    expect(validateSpec(graphWith({ enter: { stagger: { delay: 40 } } })).valid).toBe(true);
+  });
+
+  it('rejects a non-boolean, non-object stagger', () => {
+    const errors = errorsAt({ enter: { stagger: 'yes' } }, '/animation/enter/stagger');
+    expect(errors).toHaveLength(1);
+    expect(errors[0].suggestion).toContain('use stagger: true or false');
+  });
+
+  it('rejects an unknown trigger on enter', () => {
+    expect(errorsAt({ enter: { trigger: 'scroll' } }, '/animation/enter/trigger')).toHaveLength(1);
+  });
+
+  it.each([
+    'enter',
+    'update',
+    'exit',
+    'camera',
+    'hover',
+  ])('rejects a bad ease and negative duration on %s', (phase) => {
+    expect(errorsAt({ [phase]: { ease: 'bouncy' } }, `/animation/${phase}/ease`)).toHaveLength(1);
+    expect(errorsAt({ [phase]: { duration: -1 } }, `/animation/${phase}/duration`)).toHaveLength(1);
+  });
+
+  it('rejects spring combined with duration, as for charts', () => {
+    expect(
+      errorsAt({ update: { spring: { stiffness: 100 }, duration: 300 } }, '/animation/update'),
+    ).toHaveLength(1);
+  });
+
+  it('rejects a preset string on a graph', () => {
+    expect(errorsAt('fluid', '/animation')).toHaveLength(1);
+  });
 });
 
 // animation.enter.trigger

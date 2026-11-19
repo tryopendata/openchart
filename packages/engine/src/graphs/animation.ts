@@ -1,14 +1,17 @@
 /**
  * Graph animation resolver.
  *
- * Modeled on `compiler/animation.ts` but DEFAULT-ON (the deliberate chart/graph
- * divergence): graphs already move on load, so choreography is the default and
- * must be opted out of, not into.
+ * Modeled on `compiler/animation.ts`. Like every visualization type, graphs
+ * animate by default.
  *
- * - `undefined` (omitted) -> full defaults
+ * - `undefined` (omitted) or `true` -> full defaults
  * - `false` -> undefined (no choreography; note `layout.warmup` still applies,
  *   resolved independently into SimulationConfig)
  * - object -> per-phase resolution; a per-phase `false` -> that phase is `null`
+ *
+ * A phase with `spring` lasts `springDuration(spring)`. The enter `stagger` is
+ * on/off only: graphs order their reveal by layout, so the deprecated object
+ * form counts as `true`.
  *
  * `reheatAlpha` for the update impulse and the entrance `cameraFit` toggle are
  * internal vanilla constants, not spec surface. Warmup is NOT part of this block
@@ -17,18 +20,33 @@
 
 import type {
   AnimationEase,
-  AnimationPhaseConfig,
   GraphAnimationSpec,
+  GraphEnterPhaseConfig,
+  GraphPhaseConfig,
+  SpringConfig,
 } from '@opendata-ai/openchart-core';
+import { springDuration } from '@opendata-ai/openchart-core';
+
+/** A resolved graph phase. `spring` is present only when authored; duration is then its settling time. */
+export interface ResolvedGraphPhase {
+  duration: number;
+  ease: AnimationEase;
+  spring?: SpringConfig;
+}
 
 /** Fully resolved graph animation config consumed by the vanilla adapter. */
 export interface ResolvedGraphAnimation {
-  /** Entrance reveal, or null if disabled. `cameraFit` flies the camera to the fit on load. */
-  enter: { duration: number; ease: AnimationEase; stagger: boolean; cameraFit: boolean } | null;
+  /**
+   * Entrance reveal, or null if disabled. `cameraFit` flies the camera to the
+   * fit on load. `trigger` is when it starts (default 'visible').
+   */
+  enter:
+    | (ResolvedGraphPhase & { stagger: boolean; cameraFit: boolean; trigger: 'visible' | 'mount' })
+    | null;
   /** Data-update enter-fade for newly added marks, or null. */
-  update: { duration: number; ease: AnimationEase } | null;
+  update: ResolvedGraphPhase | null;
   /** Ghost fade-out for removed marks, or null. */
-  exit: { duration: number; ease: AnimationEase } | null;
+  exit: ResolvedGraphPhase | null;
   /** Camera flight easing, or null. `'auto'` derives duration from zoom distance. */
   camera: { duration: number | 'auto'; ease: AnimationEase } | null;
   /** Hover emphasis crossfade, or null. */
@@ -40,6 +58,7 @@ const ENTER_DEFAULT = {
   ease: 'smooth' as AnimationEase,
   stagger: true,
   cameraFit: true,
+  trigger: 'visible' as 'visible' | 'mount',
 };
 const UPDATE_DEFAULT = { duration: 300, ease: 'smooth' as AnimationEase };
 const EXIT_DEFAULT = { duration: 300, ease: 'smooth' as AnimationEase };
@@ -72,24 +91,50 @@ export function resolveGraphAnimation(
 
   return {
     enter: resolveEnter(spec.enter),
-    update: resolveDurationPhase(spec.update, UPDATE_DEFAULT),
-    exit: resolveDurationPhase(spec.exit, EXIT_DEFAULT),
+    update: resolvePhase(spec.update, UPDATE_DEFAULT),
+    exit: resolvePhase(spec.exit, EXIT_DEFAULT),
     camera: resolveCamera(spec.camera),
     hover: resolveDurationPhase(spec.hover, HOVER_DEFAULT),
   };
 }
 
 function resolveEnter(
-  phase: AnimationPhaseConfig | boolean | undefined,
+  phase: GraphEnterPhaseConfig | boolean | undefined,
 ): ResolvedGraphAnimation['enter'] {
   if (phase === false) return null;
   if (phase === undefined || phase === true) return { ...ENTER_DEFAULT };
   return {
-    duration: phase.duration ?? ENTER_DEFAULT.duration,
-    ease: phase.ease ?? ENTER_DEFAULT.ease,
+    ...resolvePhaseConfig(phase, ENTER_DEFAULT),
     stagger: phase.stagger !== false,
     cameraFit: ENTER_DEFAULT.cameraFit,
+    trigger: phase.trigger === 'mount' ? 'mount' : 'visible',
   };
+}
+
+/** Resolve an enter/update/exit phase; a spring sets the duration to its settling time. */
+function resolvePhase(
+  phase: GraphPhaseConfig | boolean | undefined,
+  defaults: { duration: number; ease: AnimationEase },
+): ResolvedGraphPhase | null {
+  if (phase === false) return null;
+  if (phase === undefined || phase === true)
+    return { duration: defaults.duration, ease: defaults.ease };
+  return resolvePhaseConfig(phase, defaults);
+}
+
+function resolvePhaseConfig(
+  phase: GraphPhaseConfig,
+  defaults: { duration: number; ease: AnimationEase },
+): ResolvedGraphPhase {
+  const resolved: ResolvedGraphPhase = {
+    duration: phase.duration ?? defaults.duration,
+    ease: phase.ease ?? defaults.ease,
+  };
+  if (phase.spring) {
+    resolved.spring = { ...phase.spring };
+    resolved.duration = springDuration(phase.spring);
+  }
+  return resolved;
 }
 
 function resolveDurationPhase<T extends { duration: number; ease: AnimationEase }>(

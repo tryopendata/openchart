@@ -34,6 +34,7 @@ import { descriptionForRows, identityForRows } from '../charts/_shared/mark-meta
 import { emitSpecWarnings, expandSpecSugar } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
 import { compile as compileSpec } from '../compiler/index';
+import { dedupeKeys, serializeKeyValue } from '../compiler/keys';
 import { finiteNumber } from '../data/finite-number';
 import { resolveFieldFormatter } from '../format/field-format';
 import { resolveChromeLayout } from '../layout/shared';
@@ -302,8 +303,10 @@ export function compileBarList(spec: unknown, options: CompileOptions): BarListL
   const subtitleColor = options.darkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.45)';
   const valueColor = options.darkMode ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.55)';
 
-  // Build row marks
+  // Build row marks. Keys come from the raw label value (deduped), so a row
+  // keeps its identity across data updates for transitions.
   const rows: BarListRowMark[] = [];
+  const rowKeys = dedupeKeys(validRows.map((row) => serializeKeyValue(row[labelField])));
 
   for (let i = 0; i < validRows.length; i++) {
     const row = validRows[i];
@@ -407,6 +410,7 @@ export function compileBarList(spec: unknown, options: CompileOptions): BarListL
 
     const rowMark: BarListRowMark = {
       type: 'barlist-row',
+      key: rowKeys[i],
       markType: 'bar',
       fullLabel: labelText,
       identity: identityForRows(

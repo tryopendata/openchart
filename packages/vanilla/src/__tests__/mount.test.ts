@@ -30,7 +30,8 @@ describe('createChart', () => {
 
     const svg = container.querySelector('svg');
     expect(svg).not.toBeNull();
-    expect(svg?.getAttribute('class')).toBe('oc-chart');
+    // Animation is on by default, so the first render carries oc-animate.
+    expect(svg?.getAttribute('class')).toBe('oc-chart oc-animate');
 
     chart.destroy();
   });
@@ -258,13 +259,15 @@ describe('resize observer integration', () => {
   });
 
   it('resize() re-renders the chart', () => {
-    const chart = createChart(container, lineSpec);
+    // Not about motion: a resize during the entrance would defer until it ends.
+    const chart = createChart(container, { ...lineSpec, animation: false });
+    const genBefore = Number(container.dataset.ocRenderGen);
 
-    // Should not throw
     chart.resize();
 
     const svg = container.querySelector('svg');
     expect(svg).not.toBeNull();
+    expect(Number(container.dataset.ocRenderGen)).toBe(genBefore + 1);
 
     chart.destroy();
   });

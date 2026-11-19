@@ -165,7 +165,7 @@ describe('createChart font-load recompile', () => {
     const fonts = makeFontFaceSet(false);
     installFonts(fonts);
 
-    const chart = createChart(container, lineSpec);
+    const chart = createChart(container, { ...lineSpec, animation: false });
 
     expect(container.dataset.ocFontsState).toBe('pending');
     const genBefore = Number(container.dataset.ocRenderGen);

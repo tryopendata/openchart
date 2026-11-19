@@ -558,6 +558,16 @@ function normalizeGraphSpec(spec: GraphSpec, warnings: string[]): NormalizedGrap
     seedNode = undefined;
   }
 
+  // The object form of graph enter.stagger is deprecated: graphs order their
+  // reveal by layout, so delay/order have nothing to act on. It still staggers.
+  const enter =
+    spec.animation && typeof spec.animation === 'object' ? spec.animation.enter : undefined;
+  if (enter && typeof enter === 'object' && enter.stagger && typeof enter.stagger === 'object') {
+    warnings.push(
+      'Graph animation.enter.stagger only takes true or false; the object form is ignored (graphs order their reveal by layout).',
+    );
+  }
+
   return {
     type: 'graph',
     nodes: spec.nodes,
@@ -695,7 +705,7 @@ function normalizeBarListSpec(spec: BarListSpec, _warnings: string[]): Normalize
     chrome: normalizeChrome(spec.chrome),
     theme: spec.theme ?? {},
     watermark: spec.watermark ?? true,
-    animation: spec.animation ?? true,
+    animation: spec.animation,
   };
 }
 

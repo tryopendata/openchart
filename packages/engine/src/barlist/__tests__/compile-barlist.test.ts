@@ -31,6 +31,43 @@ describe('compileBarList', () => {
     expect(layout.rows).toHaveLength(4);
   });
 
+  it('keys each row by its label value, deduping repeats', () => {
+    const layout = compileBarList(
+      makeSpec({
+        data: [
+          { label: 'Alpha', count: 100 },
+          { label: 'Beta', count: 75 },
+          { label: 'Alpha', count: 50 },
+        ],
+      }),
+      BASE_OPTIONS,
+    );
+    const keys = layout.rows.map((row) => row.key);
+    expect(keys[1]).toBe('Beta');
+    expect(new Set(keys).size).toBe(3);
+    expect(keys.filter((key) => key.startsWith('Alpha'))).toHaveLength(2);
+  });
+
+  it('keeps a row key stable when its value and rank change', () => {
+    const before = compileBarList(makeSpec(), BASE_OPTIONS);
+    const after = compileBarList(
+      makeSpec({
+        data: [
+          { label: 'Alpha', count: 10 },
+          { label: 'Beta', count: 75 },
+          { label: 'Gamma', count: 50 },
+          { label: 'Delta', count: 25 },
+        ],
+      }),
+      BASE_OPTIONS,
+    );
+    const alphaBefore = before.rows.find((row) => row.label.text === 'Alpha')!;
+    const alphaAfter = after.rows.find((row) => row.label.text === 'Alpha')!;
+    expect(alphaBefore.key).toBe('Alpha');
+    expect(alphaAfter.key).toBe('Alpha');
+    expect(alphaAfter.index).not.toBe(alphaBefore.index);
+  });
+
   it('sorts rows by value descending', () => {
     const spec = makeSpec({
       data: [

@@ -1,3 +1,4 @@
+import { MAP_SWEEP_BUDGET_MS } from '@opendata-ai/openchart-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAutoHeightContainer, createContainer } from '../__test-fixtures__/dom';
 import { createGeoMap } from '../map-mount';
@@ -169,7 +170,12 @@ describe('createGeoMap', () => {
 
   describe('hover', () => {
     it('outlines and raises the hovered feature, then puts it back', () => {
-      const instance = createGeoMap(container, basicMapSpec, { autoResize: false });
+      // Not about motion: raising is suppressed while the entrance plays.
+      const instance = createGeoMap(
+        container,
+        { ...basicMapSpec, animation: false },
+        { autoResize: false },
+      );
       const group = container.querySelector('.oc-map-features')!;
       const first = group.firstElementChild as SVGElement;
       const originalOrder = [...group.children];
@@ -398,17 +404,17 @@ describe('createGeoMap', () => {
     instance.destroy();
   });
 
-  it('stagger custom property is at most 80ms for any feature count', () => {
+  it('feature start times spread across at most the map sweep budget', () => {
     const instance = createGeoMap(container, basicMapSpec, { autoResize: false });
 
     const svg = container.querySelector('svg');
     expect(svg).not.toBeNull();
 
-    const staggerValue = svg!.style.getPropertyValue('--oc-animation-stagger');
-    if (staggerValue) {
-      const numericMs = parseFloat(staggerValue);
-      expect(numericMs).toBeLessThanOrEqual(80);
-    }
+    // Animation is on by default, so the sweep stagger is stamped.
+    const stagger = parseFloat(svg!.style.getPropertyValue('--oc-animation-stagger'));
+    const features = container.querySelectorAll('.oc-map-feature').length;
+    expect(features).toBeGreaterThan(1);
+    expect(stagger * (features - 1)).toBeLessThanOrEqual(MAP_SWEEP_BUDGET_MS + 1e-6);
 
     instance.destroy();
   });

@@ -147,7 +147,12 @@ export function createChartStory<TData extends DataRow = DataRow>(
   // and hands specs to `update()`, which accepts the non-generic union).
   // Widen once here so the internal helpers don't have to thread `TData`
   // through a discriminated union that TS can't narrow across variants.
-  const baseSpec = spec as StorySpec;
+  // Animation is on by default, but a story's scroll position is its entrance:
+  // when the author omits `animation`, skip the entrance and keep updates so
+  // steps still morph.
+  const baseSpec = (
+    (spec as StorySpec).animation === undefined ? { ...spec, animation: { enter: false } } : spec
+  ) as StorySpec;
   const isMap = isGeoMapSpec(baseSpec);
 
   if (isMap && cameraMode === 'scrub') {

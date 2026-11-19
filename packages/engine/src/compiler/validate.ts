@@ -14,7 +14,11 @@ import { collectRemovedSpecErrors } from './removed-spec-fields';
 import type { ValidationError, ValidationResult } from './types';
 import { validateBarListSpec } from './validation/barlist';
 import { validateChartSpec } from './validation/chart';
-import { validateAnimation, validateFieldMetadata } from './validation/common-fields';
+import {
+  validateAnimation,
+  validateFieldMetadata,
+  validateGraphAnimation,
+} from './validation/common-fields';
 import { validateGeoMapSpec } from './validation/geo-map';
 import { validateGraphSpec } from './validation/graph';
 import { validateLayerSpec } from './validation/layer';
@@ -275,11 +279,12 @@ function validateSpecShape(spec: unknown): ValidationResult {
     validateBarListSpec(obj, errors);
   }
 
-  // animation is shared by every spec type except graph, so it validates
-  // outside the per-spec-type dispatch. Graph carries GraphAnimationSpec,
-  // which has no maxMarks -- flagging a bad value there would contradict the
-  // generated schema, which rejects the field on a graph outright.
-  if (!isGraph) {
+  // animation is shared by every spec type, so it validates outside the
+  // per-spec-type dispatch. Graph carries the narrower GraphAnimationSpec
+  // (no maxMarks or presets; camera/hover behaviors), so it has its own check.
+  if (isGraph) {
+    validateGraphAnimation(obj, errors);
+  } else {
     validateAnimation(obj, errors);
   }
 

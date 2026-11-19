@@ -192,6 +192,7 @@ export function computeWaffleMarks(
         fill,
         cornerRadius,
         shapeRendering: 'crispEdges',
+        cell: true,
         data: row as Record<string, unknown>,
         aria: k === 0 ? aria : { ...aria, decorative: true },
       });

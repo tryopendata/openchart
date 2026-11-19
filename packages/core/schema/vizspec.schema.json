@@ -5544,7 +5544,7 @@
           "$ref": "#/definitions/AnimationConfig"
         }
       ],
-      "description": "Animation spec property.\n- true: enable entrance animation with sensible defaults\n- false/omitted: no animation (current behavior)\n- AnimationConfig: full control via enter/update/exit phases"
+      "description": "Animation spec property.\n- omitted or true: every phase (enter, update, exit) with its defaults\n- false: all motion off\n- preset name: that motion language across every phase\n- AnimationConfig: full control via enter/update/exit phases"
     },
     "AnimationPreset": {
       "type": "string",
@@ -5611,11 +5611,11 @@
         },
         "duration": {
           "type": "number",
-          "description": "Duration in ms. Default: 600 for enter, 500 for update, 250 for exit."
+          "description": "Duration in ms. Default: 600 for enter, 500 for update, 120 for exit."
         },
         "ease": {
           "$ref": "#/definitions/AnimationEase",
-          "description": "Easing preset. Default: 'smooth'."
+          "description": "Easing preset. Default: 'smooth' ('gentle' for exit)."
         },
         "stagger": {
           "anyOf": [
@@ -5694,11 +5694,11 @@
         },
         "duration": {
           "type": "number",
-          "description": "Duration in ms. Default: 600 for enter, 500 for update, 250 for exit."
+          "description": "Duration in ms. Default: 600 for enter, 500 for update, 120 for exit."
         },
         "ease": {
           "$ref": "#/definitions/AnimationEase",
-          "description": "Easing preset. Default: 'smooth'."
+          "description": "Easing preset. Default: 'smooth' ('gentle' for exit)."
         },
         "stagger": {
           "anyOf": [
@@ -5713,7 +5713,7 @@
         },
         "maxMarks": {
           "type": "number",
-          "description": "Maximum mark count that still runs a tweened data-update transition. Default: 500. Above the cap the chart swaps instantly instead, because per-frame SVG attribute writes on thousands of elements drop frames on low-end devices. Raise it deliberately when the audience is desktop-heavy and you have measured the frame budget."
+          "description": "Maximum mark count that still runs a tweened data-update transition. Charts default to 500 (20000 in canvas mark mode); bar lists, tile maps, sankeys and maps have no cap unless you set one; tables ignore it. Above the cap the visualization swaps instantly instead, because per-frame SVG attribute writes on thousands of elements drop frames on low-end devices. Raise it deliberately when the audience is desktop-heavy and you have measured the frame budget."
         }
       },
       "additionalProperties": false,
@@ -5728,11 +5728,11 @@
         },
         "duration": {
           "type": "number",
-          "description": "Duration in ms. Default: 600 for enter, 500 for update, 250 for exit."
+          "description": "Duration in ms. Default: 600 for enter, 500 for update, 120 for exit."
         },
         "ease": {
           "$ref": "#/definitions/AnimationEase",
-          "description": "Easing preset. Default: 'smooth'."
+          "description": "Easing preset. Default: 'smooth' ('gentle' for exit)."
         },
         "stagger": {
           "anyOf": [
@@ -5755,7 +5755,7 @@
         "full",
         "sparkline"
       ],
-      "description": "Chart display mode.\n- `'full'` (default): standard chart with chrome, axes, legend, padding.\n- `'sparkline'`: minimal inline mini-chart. Strips chrome, axes, legend,   watermark, animation, and reduces margins to a tiny safety pad. The mark   fills the container edge-to-edge. Best with `mark: 'line' | 'area' | 'bar'`.   Explicit user fields (chrome, legend, encoding.x.axis, etc.) still render   when set, so users can opt in to specific elements."
+      "description": "Chart display mode.\n- `'full'` (default): standard chart with chrome, axes, legend, padding.\n- `'sparkline'`: minimal inline mini-chart. Strips chrome, axes, legend,   watermark, and reduces margins to a tiny safety pad. The mark   fills the container edge-to-edge. Best with `mark: 'line' | 'area' | 'bar'`.   Explicit user fields (chrome, legend, encoding.x.axis, etc.) still render   when set, so users can opt in to specific elements."
     },
     "SeriesSearchConfig": {
       "type": "object",
@@ -8228,7 +8228,7 @@
         },
         "animation": {
           "$ref": "#/definitions/AnimationSpec",
-          "description": "Animation configuration."
+          "description": "Motion. On by default: the entrance plays once the visualization scrolls into view, and data updates animate. Set false to turn all motion off, or pass an object to configure each phase. Static rendering and exports never animate, and prefers-reduced-motion always wins."
         }
       },
       "required": [
@@ -8493,7 +8493,7 @@
             },
             "animation": {
               "$ref": "#/definitions/AnimationSpec",
-              "description": "Animation configuration.\n- true: enable entrance animation with sensible defaults\n- false/omitted: no animation (current behavior)\n- AnimationConfig: full control via enter/update/exit phases"
+              "description": "Motion. On by default: the entrance plays once the visualization scrolls into view, and data updates animate. Set false to turn all motion off, or pass an object to configure each phase. Static rendering and exports never animate, and prefers-reduced-motion always wins."
             },
             "crosshair": {
               "type": "boolean",
@@ -8822,7 +8822,7 @@
             },
             "animation": {
               "$ref": "#/definitions/AnimationSpec",
-              "description": "Animation configuration.\n- true: enable entrance animation with sensible defaults\n- false/omitted: no animation (current behavior)\n- AnimationConfig: full control via enter/update/exit phases"
+              "description": "Motion. On by default: the entrance plays once the visualization scrolls into view, and data updates animate. Set false to turn all motion off, or pass an object to configure each phase. Static rendering and exports never animate, and prefers-reduced-motion always wins."
             },
             "crosshair": {
               "type": "boolean",
@@ -9150,7 +9150,7 @@
             },
             "animation": {
               "$ref": "#/definitions/AnimationSpec",
-              "description": "Animation configuration.\n- true: enable entrance animation with sensible defaults\n- false/omitted: no animation (current behavior)\n- AnimationConfig: full control via enter/update/exit phases"
+              "description": "Motion. On by default: the entrance plays once the visualization scrolls into view, and data updates animate. Set false to turn all motion off, or pass an object to configure each phase. Static rendering and exports never animate, and prefers-reduced-motion always wins."
             },
             "crosshair": {
               "type": "boolean",
@@ -9460,7 +9460,7 @@
             },
             "animation": {
               "$ref": "#/definitions/AnimationSpec",
-              "description": "Animation configuration.\n- true: enable entrance animation with sensible defaults\n- false/omitted: no animation (current behavior)\n- AnimationConfig: full control via enter/update/exit phases"
+              "description": "Motion. On by default: the entrance plays once the visualization scrolls into view, and data updates animate. Set false to turn all motion off, or pass an object to configure each phase. Static rendering and exports never animate, and prefers-reduced-motion always wins."
             },
             "crosshair": {
               "type": "boolean",
@@ -9788,7 +9788,7 @@
             },
             "animation": {
               "$ref": "#/definitions/AnimationSpec",
-              "description": "Animation configuration.\n- true: enable entrance animation with sensible defaults\n- false/omitted: no animation (current behavior)\n- AnimationConfig: full control via enter/update/exit phases"
+              "description": "Motion. On by default: the entrance plays once the visualization scrolls into view, and data updates animate. Set false to turn all motion off, or pass an object to configure each phase. Static rendering and exports never animate, and prefers-reduced-motion always wins."
             },
             "crosshair": {
               "type": "boolean",
@@ -10089,7 +10089,7 @@
             },
             "animation": {
               "$ref": "#/definitions/AnimationSpec",
-              "description": "Animation configuration.\n- true: enable entrance animation with sensible defaults\n- false/omitted: no animation (current behavior)\n- AnimationConfig: full control via enter/update/exit phases"
+              "description": "Motion. On by default: the entrance plays once the visualization scrolls into view, and data updates animate. Set false to turn all motion off, or pass an object to configure each phase. Static rendering and exports never animate, and prefers-reduced-motion always wins."
             },
             "crosshair": {
               "type": "boolean",
@@ -10379,7 +10379,7 @@
             },
             "animation": {
               "$ref": "#/definitions/AnimationSpec",
-              "description": "Animation configuration.\n- true: enable entrance animation with sensible defaults\n- false/omitted: no animation (current behavior)\n- AnimationConfig: full control via enter/update/exit phases"
+              "description": "Motion. On by default: the entrance plays once the visualization scrolls into view, and data updates animate. Set false to turn all motion off, or pass an object to configure each phase. Static rendering and exports never animate, and prefers-reduced-motion always wins."
             },
             "crosshair": {
               "type": "boolean",
@@ -10669,7 +10669,7 @@
             },
             "animation": {
               "$ref": "#/definitions/AnimationSpec",
-              "description": "Animation configuration.\n- true: enable entrance animation with sensible defaults\n- false/omitted: no animation (current behavior)\n- AnimationConfig: full control via enter/update/exit phases"
+              "description": "Motion. On by default: the entrance plays once the visualization scrolls into view, and data updates animate. Set false to turn all motion off, or pass an object to configure each phase. Static rendering and exports never animate, and prefers-reduced-motion always wins."
             },
             "crosshair": {
               "type": "boolean",
@@ -10959,7 +10959,7 @@
             },
             "animation": {
               "$ref": "#/definitions/AnimationSpec",
-              "description": "Animation configuration.\n- true: enable entrance animation with sensible defaults\n- false/omitted: no animation (current behavior)\n- AnimationConfig: full control via enter/update/exit phases"
+              "description": "Motion. On by default: the entrance plays once the visualization scrolls into view, and data updates animate. Set false to turn all motion off, or pass an object to configure each phase. Static rendering and exports never animate, and prefers-reduced-motion always wins."
             },
             "crosshair": {
               "type": "boolean",
@@ -11262,7 +11262,7 @@
             },
             "animation": {
               "$ref": "#/definitions/AnimationSpec",
-              "description": "Animation configuration.\n- true: enable entrance animation with sensible defaults\n- false/omitted: no animation (current behavior)\n- AnimationConfig: full control via enter/update/exit phases"
+              "description": "Motion. On by default: the entrance plays once the visualization scrolls into view, and data updates animate. Set false to turn all motion off, or pass an object to configure each phase. Static rendering and exports never animate, and prefers-reduced-motion always wins."
             },
             "crosshair": {
               "type": "boolean",
@@ -11595,7 +11595,7 @@
             },
             "animation": {
               "$ref": "#/definitions/AnimationSpec",
-              "description": "Animation configuration.\n- true: enable entrance animation with sensible defaults\n- false/omitted: no animation (current behavior)\n- AnimationConfig: full control via enter/update/exit phases"
+              "description": "Motion. On by default: the entrance plays once the visualization scrolls into view, and data updates animate. Set false to turn all motion off, or pass an object to configure each phase. Static rendering and exports never animate, and prefers-reduced-motion always wins."
             },
             "crosshair": {
               "type": "boolean",
@@ -11915,7 +11915,7 @@
             },
             "animation": {
               "$ref": "#/definitions/AnimationSpec",
-              "description": "Animation configuration.\n- true: enable entrance animation with sensible defaults\n- false/omitted: no animation (current behavior)\n- AnimationConfig: full control via enter/update/exit phases"
+              "description": "Motion. On by default: the entrance plays once the visualization scrolls into view, and data updates animate. Set false to turn all motion off, or pass an object to configure each phase. Static rendering and exports never animate, and prefers-reduced-motion always wins."
             },
             "crosshair": {
               "type": "boolean",
@@ -12205,7 +12205,7 @@
             },
             "animation": {
               "$ref": "#/definitions/AnimationSpec",
-              "description": "Animation configuration.\n- true: enable entrance animation with sensible defaults\n- false/omitted: no animation (current behavior)\n- AnimationConfig: full control via enter/update/exit phases"
+              "description": "Motion. On by default: the entrance plays once the visualization scrolls into view, and data updates animate. Set false to turn all motion off, or pass an object to configure each phase. Static rendering and exports never animate, and prefers-reduced-motion always wins."
             },
             "crosshair": {
               "type": "boolean",
@@ -12507,7 +12507,7 @@
             },
             "animation": {
               "$ref": "#/definitions/AnimationSpec",
-              "description": "Animation configuration.\n- true: enable entrance animation with sensible defaults\n- false/omitted: no animation (current behavior)\n- AnimationConfig: full control via enter/update/exit phases"
+              "description": "Motion. On by default: the entrance plays once the visualization scrolls into view, and data updates animate. Set false to turn all motion off, or pass an object to configure each phase. Static rendering and exports never animate, and prefers-reduced-motion always wins."
             },
             "crosshair": {
               "type": "boolean",
@@ -12797,7 +12797,7 @@
             },
             "animation": {
               "$ref": "#/definitions/AnimationSpec",
-              "description": "Animation configuration.\n- true: enable entrance animation with sensible defaults\n- false/omitted: no animation (current behavior)\n- AnimationConfig: full control via enter/update/exit phases"
+              "description": "Motion. On by default: the entrance plays once the visualization scrolls into view, and data updates animate. Set false to turn all motion off, or pass an object to configure each phase. Static rendering and exports never animate, and prefers-reduced-motion always wins."
             },
             "crosshair": {
               "type": "boolean",
@@ -13099,7 +13099,7 @@
             },
             "animation": {
               "$ref": "#/definitions/AnimationSpec",
-              "description": "Animation configuration.\n- true: enable entrance animation with sensible defaults\n- false/omitted: no animation (current behavior)\n- AnimationConfig: full control via enter/update/exit phases"
+              "description": "Motion. On by default: the entrance plays once the visualization scrolls into view, and data updates animate. Set false to turn all motion off, or pass an object to configure each phase. Static rendering and exports never animate, and prefers-reduced-motion always wins."
             },
             "crosshair": {
               "type": "boolean",
@@ -13426,7 +13426,7 @@
             },
             "animation": {
               "$ref": "#/definitions/AnimationSpec",
-              "description": "Animation configuration.\n- true: enable entrance animation with sensible defaults\n- false/omitted: no animation (current behavior)\n- AnimationConfig: full control via enter/update/exit phases"
+              "description": "Motion. On by default: the entrance plays once the visualization scrolls into view, and data updates animate. Set false to turn all motion off, or pass an object to configure each phase. Static rendering and exports never animate, and prefers-reduced-motion always wins."
             },
             "crosshair": {
               "type": "boolean",
@@ -13744,7 +13744,7 @@
             },
             "animation": {
               "$ref": "#/definitions/AnimationSpec",
-              "description": "Animation configuration.\n- true: enable entrance animation with sensible defaults\n- false/omitted: no animation (current behavior)\n- AnimationConfig: full control via enter/update/exit phases"
+              "description": "Motion. On by default: the entrance plays once the visualization scrolls into view, and data updates animate. Set false to turn all motion off, or pass an object to configure each phase. Static rendering and exports never animate, and prefers-reduced-motion always wins."
             },
             "crosshair": {
               "type": "boolean",
@@ -14084,7 +14084,7 @@
             },
             "animation": {
               "$ref": "#/definitions/AnimationSpec",
-              "description": "Animation configuration.\n- true: enable entrance animation with sensible defaults\n- false/omitted: no animation (current behavior)\n- AnimationConfig: full control via enter/update/exit phases"
+              "description": "Motion. On by default: the entrance plays once the visualization scrolls into view, and data updates animate. Set false to turn all motion off, or pass an object to configure each phase. Static rendering and exports never animate, and prefers-reduced-motion always wins."
             },
             "crosshair": {
               "type": "boolean",
@@ -14275,7 +14275,7 @@
         },
         "animation": {
           "$ref": "#/definitions/AnimationSpec",
-          "description": "Animation configuration."
+          "description": "Motion. On by default: the entrance plays once the visualization scrolls into view, and data updates animate. Set false to turn all motion off, or pass an object to configure each phase. Static rendering and exports never animate, and prefers-reduced-motion always wins."
         }
       },
       "required": [
@@ -14401,7 +14401,7 @@
         },
         "animation": {
           "$ref": "#/definitions/AnimationSpec",
-          "description": "Animation configuration for entrance animations."
+          "description": "Motion. On by default: the entrance plays once the visualization scrolls into view, and data updates animate. Set false to turn all motion off, or pass an object to configure each phase. Static rendering and exports never animate, and prefers-reduced-motion always wins. Tables animate their entrance only; updates re-render instantly."
         }
       },
       "required": [
@@ -14753,7 +14753,7 @@
         },
         "animation": {
           "$ref": "#/definitions/GraphAnimationSpec",
-          "description": "Motion configuration. DEFAULT-ON: omit for full defaults, `false` to opt out of choreography (layout warmup still applies)."
+          "description": "Motion. On by default: the entrance plays once the visualization scrolls into view, and data updates animate. Set false to turn all motion off, or pass an object to configure each phase. Static rendering and exports never animate, and prefers-reduced-motion always wins. Layout warmup still runs when false."
         },
         "interaction": {
           "$ref": "#/definitions/GraphInteractionConfig",
@@ -15051,7 +15051,7 @@
           "$ref": "#/definitions/GraphAnimationConfig"
         }
       ],
-      "description": "Graph motion spec.\n- omitted → full defaults (default-ON)\n- `false` → no choreography (warmup still applies)\n- object → per-phase control\n\n`prefers-reduced-motion` is always respected regardless of this value."
+      "description": "Graph motion spec.\n- omitted or `true` → full defaults\n- `false` → no choreography (warmup still applies)\n- object → per-phase control\n\n`prefers-reduced-motion` is always respected regardless of this value."
     },
     "GraphAnimationConfig": {
       "type": "object",
@@ -15059,18 +15059,18 @@
         "enter": {
           "anyOf": [
             {
-              "$ref": "#/definitions/AnimationPhaseConfig"
+              "$ref": "#/definitions/GraphEnterPhaseConfig"
             },
             {
               "type": "boolean"
             }
           ],
-          "description": "Node/edge reveal on first render. Default `{ duration: 500, ease: 'smooth', stagger: true }`."
+          "description": "Node/edge reveal on first render. Default `{ duration: 500, ease: 'smooth', stagger: true, trigger: 'visible' }`."
         },
         "update": {
           "anyOf": [
             {
-              "$ref": "#/definitions/AnimationPhaseConfig"
+              "$ref": "#/definitions/GraphPhaseConfig"
             },
             {
               "type": "boolean"
@@ -15081,7 +15081,7 @@
         "exit": {
           "anyOf": [
             {
-              "$ref": "#/definitions/AnimationPhaseConfig"
+              "$ref": "#/definitions/GraphPhaseConfig"
             },
             {
               "type": "boolean"
@@ -15131,7 +15131,65 @@
         }
       },
       "additionalProperties": false,
-      "description": "Per-phase and per-behavior motion config for a graph.\n\nDEFAULT-ON semantics (deliberately different from charts, which are opt-in): omit `animation` → the resolver returns full defaults; `animation: false` → no choreography (but `layout.warmup` still applies); a per-phase `false` disables just that phase. Graphs are default-on because physics motion already exists on load and choreography reduces the chaos."
+      "description": "Per-phase and per-behavior motion config for a graph. A per-phase `false` disables just that phase."
+    },
+    "GraphEnterPhaseConfig": {
+      "type": "object",
+      "properties": {
+        "duration": {
+          "type": "number",
+          "description": "Duration in ms."
+        },
+        "ease": {
+          "$ref": "#/definitions/AnimationEase",
+          "description": "Easing preset."
+        },
+        "spring": {
+          "$ref": "#/definitions/SpringConfig",
+          "description": "Spring mode. Cannot be combined with duration or ease in this phase."
+        },
+        "stagger": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/AnimationStagger"
+            }
+          ],
+          "description": "Stagger the reveal. Default: true. Graphs order their reveal by layout, so only on/off applies.",
+          "deprecated": "The object form (`{ delay, order }`) is ignored: any value\nother than `false` staggers. Use `true` or `false`."
+        },
+        "trigger": {
+          "type": "string",
+          "enum": [
+            "visible",
+            "mount"
+          ],
+          "description": "When the entrance starts. Default: 'visible'.\n- `visible`: wait until the graph is on screen, then play.\n- `mount`: play as soon as the graph mounts."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Graph entrance phase: adds the reveal stagger toggle and the trigger."
+    },
+    "GraphPhaseConfig": {
+      "type": "object",
+      "properties": {
+        "duration": {
+          "type": "number",
+          "description": "Duration in ms."
+        },
+        "ease": {
+          "$ref": "#/definitions/AnimationEase",
+          "description": "Easing preset."
+        },
+        "spring": {
+          "$ref": "#/definitions/SpringConfig",
+          "description": "Spring mode. Cannot be combined with duration or ease in this phase."
+        }
+      },
+      "additionalProperties": false,
+      "description": "One graph motion phase: a tween (duration + ease) or a spring."
     },
     "GraphInteractionConfig": {
       "type": "object",
@@ -15293,7 +15351,7 @@
         },
         "animation": {
           "$ref": "#/definitions/AnimationSpec",
-          "description": "Animation configuration for entrance animations."
+          "description": "Motion. On by default: the entrance plays once the visualization scrolls into view, and data updates animate. Set false to turn all motion off, or pass an object to configure each phase. Static rendering and exports never animate, and prefers-reduced-motion always wins."
         }
       },
       "required": [
@@ -15609,7 +15667,7 @@
         },
         "animation": {
           "$ref": "#/definitions/AnimationSpec",
-          "description": "Animation configuration for entrance animations."
+          "description": "Motion. On by default: the entrance plays once the visualization scrolls into view, and data updates animate. Set false to turn all motion off, or pass an object to configure each phase. Static rendering and exports never animate, and prefers-reduced-motion always wins."
         },
         "valueFormat": {
           "type": "string",
@@ -15742,7 +15800,7 @@
         },
         "animation": {
           "$ref": "#/definitions/AnimationSpec",
-          "description": "Animation configuration for entrance animations."
+          "description": "Motion. On by default: the entrance plays once the visualization scrolls into view, and data updates animate. Set false to turn all motion off, or pass an object to configure each phase. Static rendering and exports never animate, and prefers-reduced-motion always wins."
         }
       },
       "required": [
@@ -16465,7 +16523,7 @@
         },
         "animation": {
           "$ref": "#/definitions/AnimationSpec",
-          "description": "Animation configuration for entrance animations."
+          "description": "Motion. On by default: the entrance plays once the visualization scrolls into view, and data updates animate. Set false to turn all motion off, or pass an object to configure each phase. Static rendering and exports never animate, and prefers-reduced-motion always wins."
         }
       },
       "required": [
@@ -16740,7 +16798,7 @@
         },
         "animation": {
           "$ref": "#/definitions/AnimationSpec",
-          "description": "Animation configuration.\n- true: enable entrance animation with sensible defaults\n- false/omitted: no animation (current behavior)\n- AnimationConfig: full control via enter/update/exit phases"
+          "description": "Motion. On by default: the entrance plays once the visualization scrolls into view, and data updates animate. Set false to turn all motion off, or pass an object to configure each phase. Static rendering and exports never animate, and prefers-reduced-motion always wins."
         },
         "crosshair": {
           "type": "boolean",

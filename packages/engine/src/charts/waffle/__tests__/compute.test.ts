@@ -105,6 +105,10 @@ describe('largestRemainderCells', () => {
 // ---------------------------------------------------------------------------
 
 describe('computeWaffleMarks', () => {
+  it('marks every waffle unit as a grid cell', () => {
+    for (const mark of marksFor(makeWaffleSpec())) expect(mark.cell).toBe(true);
+  });
+
   it('emits square cells with a gap of cell/6', () => {
     const marks = marksFor(makeWaffleSpec());
     expect(marks).toHaveLength(100);

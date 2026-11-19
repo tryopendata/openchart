@@ -84,6 +84,27 @@ describe('createChartStory', () => {
     vi.unstubAllGlobals();
   });
 
+  it('skips the entrance but keeps updates when the author omits animation', () => {
+    const story = createChartStory(container, { spec: baseSpec, steps: [{}, {}] });
+
+    const svg = container.querySelector('svg')!;
+    expect(svg.classList.contains('oc-animate')).toBe(false);
+    expect(svg.style.getPropertyValue('--oc-animation-duration')).toBe('');
+
+    story.destroy();
+  });
+
+  it('keeps an authored animation as is', () => {
+    const story = createChartStory(container, {
+      spec: { ...baseSpec, animation: { enter: { trigger: 'mount' } } },
+      steps: [{}],
+    });
+
+    expect(container.querySelector('svg')!.classList.contains('oc-animate')).toBe(true);
+
+    story.destroy();
+  });
+
   it('mounts the base spec at step 0', () => {
     const story = createChartStory(container, {
       spec: baseSpec,
@@ -152,7 +173,8 @@ describe('createChartStory', () => {
 
   it('highlight sugar sets encoding.color.highlight without a nested spec patch', () => {
     const story = createChartStory(container, {
-      spec: baseSpec,
+      // Not about motion: snap the step update so the stroke is final at once.
+      spec: { ...baseSpec, animation: false },
       steps: [{}, { highlight: ['Germany'] }],
     });
 
@@ -169,7 +191,8 @@ describe('createChartStory', () => {
 
   it('highlight null clears an earlier highlight', () => {
     const story = createChartStory(container, {
-      spec: baseSpec,
+      // Not about motion: snap the step update so the stroke is final at once.
+      spec: { ...baseSpec, animation: false },
       steps: [{}, { highlight: ['Germany'] }, { highlight: null }],
     });
 

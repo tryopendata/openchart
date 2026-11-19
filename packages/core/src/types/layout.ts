@@ -401,6 +401,8 @@ export interface RectMark extends MarkMetadata {
   type: 'rect';
   /** Stable identity key for data-update transitions. */
   key?: string;
+  /** Grid cell (heatmap, waffle, calendar): enters with a fade, not a baseline wipe. */
+  cell?: true;
   /** X position. */
   x: number;
   /** Y position. */
@@ -2210,6 +2212,8 @@ export interface GeoMapLayout {
 /** A resolved bar list row with computed positions and visual properties. */
 export interface BarListRowMark extends MarkMetadata {
   type: 'barlist-row';
+  /** Stable identity for update transitions. */
+  key: string;
   /** Full authored label, including text omitted by display truncation. */
   fullLabel?: string;
   /** Row index (0-based). */

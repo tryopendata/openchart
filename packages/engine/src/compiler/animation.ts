@@ -2,9 +2,10 @@
  * Animation resolver: normalizes AnimationSpec into fully resolved config.
  *
  * Handles the shorthand forms:
- * - true -> all three phases with defaults
+ * - true/undefined -> all three phases with defaults (animation is on by
+ *   default; omitting the field is the same as `true`)
  * - { enter: { duration: 800 } } -> merge with defaults per phase
- * - false/undefined -> undefined (no animation)
+ * - false -> undefined (no animation)
  *
  * Each phase resolves independently:
  * - true/config-object -> resolved phase merged onto that phase's defaults
@@ -67,13 +68,14 @@ const DEFAULT_ANNOTATION_DELAY = 150;
 
 /**
  * Resolve an AnimationSpec into a fully resolved config with all defaults filled.
- * Returns undefined if animation is disabled (false or omitted).
+ * Omitted behaves like `true` (animation is on by default); returns undefined
+ * only when animation is disabled (`false`, or every phase set to false).
  */
 export function resolveAnimation(spec: AnimationSpec | undefined): ResolvedAnimation | undefined {
-  if (spec === undefined || spec === false) return undefined;
+  if (spec === false) return undefined;
 
-  // true -> all three phases with defaults
-  if (spec === true) {
+  // true/omitted -> all three phases with defaults
+  if (spec === undefined || spec === true) {
     return {
       enter: { ...ENTER_DEFAULTS },
       update: { ...UPDATE_DEFAULTS },
