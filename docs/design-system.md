@@ -374,7 +374,7 @@ the watermark interaction.
 
 ## Motion
 
-Entrance animation stays opt-in; when enabled, the defaults are 600ms
+Entrance animation is on by default (`animation: false` opts out); the defaults are 600ms
 duration, a per-mark gap of `min(80ms, 300ms / (n − 1))` so the whole sweep
 stays inside 300ms (`MAX_TOTAL_STAGGER_MS`), annotations starting once the
 last mark is 90% of the way plus a 150ms delay, and no overshoot on anything

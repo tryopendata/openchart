@@ -467,13 +467,13 @@ Scrollytelling steps are just spec patches: hold a base spec, patch `data` / `en
 
 - Mark type or encoding field/type changes — structurally different specs tear down and rebuild; there is no spec-to-spec crossfade
 - Removed annotations — they disappear immediately (no exit fade)
-- Container dimension changes, `display: "sparkline"`, or more than 500 marks — a >500-dot beeswarm or scatter needs `animation: { update: { maxMarks } }` to tween on `update()`; `createChartStory` steps over the cap fall back to a whole-chart crossfade instead of snapping
+- Container dimension changes or more than 500 marks — a >500-dot beeswarm or scatter needs `animation: { update: { maxMarks } }` to tween on `update()`; `createChartStory` steps over the cap fall back to a whole-chart crossfade instead of snapping
 - `prefers-reduced-motion` — every step snaps to its final state; no configuration needed
 - Updates during the entrance animation window (see below)
 
 **Scroll jitter is safe.** Calling `update()` while a transition is mid-flight retargets from the current interpolated position (mid-morph line/area paths freeze and crossfade). However fast the steps arrive, the chart settles on the last spec with no orphaned ghost elements.
 
-**Disable the entrance phase for scroll-driven charts.** With `animation: true`, an `update()` that lands while the entrance animation is still playing snaps instead of tweening. The window is the full entrance sequence — duration plus per-mark stagger plus buffer, roughly the first 1–3 seconds after mount depending on mark count. Use:
+**Disable the entrance phase for scroll-driven charts.** (`createChartStory` does this for you when the spec omits `animation`.) By default, an `update()` that lands while the entrance animation is still playing snaps instead of tweening. The window is the full entrance sequence — duration plus per-mark stagger plus buffer, roughly the first 1–3 seconds after mount depending on mark count. Use:
 
 ```ts
 const baseSpec = {

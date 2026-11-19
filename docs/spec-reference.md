@@ -78,7 +78,7 @@ The primary input for standard chart types. Source: `core/src/types/spec.ts`.
 | `responsive`  | `boolean \| ResponsiveConfig` | `true` | Layout adaptations at compact sizes; mount `autoResize` controls ResizeObserver.                               |
 | `theme`       | `ThemeConfig`  | `undefined` | Theme overrides. Deep-merged onto the default theme. See [ThemeConfig](#themeconfig).         |
 | `watermark`   | `boolean`      | `true`      | Whether to show the tryOpenData.ai watermark. Mount/compile options take precedence over spec and active breakpoint values. Defaults to `true`; auto-hides when the container is under 200px tall unless explicitly set. |
-| `animation`   | `AnimationSpec`| `undefined` | Animation configuration. `true` enables entrance + update/exit animations. See [Animation](#animation). |
+| `animation`   | `AnimationSpec`| on | Animation configuration. On by default; `false` disables it. See [Animation](#animation). |
 | `description` | `string`       | `undefined` | Alt text for the chart (Vega-Lite aligned). Sugar for `a11y.description`. Auto-generated when absent. See the [accessibility guide](accessibility.md). |
 | `a11y` | `A11yConfig` | `undefined` | Figure name, generated live table and visibility. See [A11yConfig](#a11yconfig). |
 | `display` | `'full' \| 'sparkline'` | `'full'` | Compact sparkline defaults omit chrome, axes, legend and watermark. |
@@ -210,7 +210,7 @@ Overlay multiple chart types on shared scales. Source: `core/src/types/spec.ts`.
 | `watermark`    | `boolean`                    | `true`      | Whether to show the watermark. Defaults to `true`; auto-hides when the container is under 200px tall unless explicitly set. |
 | `resolve`      | `ResolveConfig`              | `undefined` | Resolution strategy for shared vs. independent scales/axes/legends.                           |
 | `hiddenSeries` | `string[]`                   | `undefined` | Series names to hide from rendering.                                                          |
-| `animation`    | `AnimationSpec`              | `undefined` | Animation configuration. `true` enables entrance + update/exit animations. See [Animation](#animation). |
+| `animation`    | `AnimationSpec`              | on | Animation configuration. On by default; `false` disables it. See [Animation](#animation). |
 
 **Figure inheritance:** `display`, `a11y` and `frame` flow through nested layers to leaves that omit them. A child can replace each inherited value; these objects are not merged property by property. The composed figure uses its root value, falling back to the first flattened leaf. Root `labels` likewise controls the composed figure. A parent labels object with explicit `content` is inherited only by bar and range leaves without their own `labels`; interval peers such as ticks do not inherit inapplicable composed-label options. Other parent labels configurations are not copied to every leaf. Child `labels` wins as a whole.
 
@@ -841,8 +841,8 @@ Controls entrance animations and data-update transitions. Source: `core/src/type
 
 `boolean | AnimationConfig`
 
-- `true`: enables entrance animation with sensible defaults. When `animation: true`, all three phases (enter, update, exit) are enabled.
-- `false` / omitted: no animation.
+- `true` / omitted: sensible defaults for all three phases (enter, update, exit).
+- `false`: no animation.
 - `AnimationConfig`: per-phase control.
 
 ### AnimationConfig
@@ -872,7 +872,7 @@ Everything in `AnimationPhaseConfig`, plus:
 
 Play-when-seen uses one shared `IntersectionObserver` per page on the chart's
 container. It applies to charts, tables, bar lists, tile maps, geo maps and
-sankeys (graphs keep their own animation). Without an `IntersectionObserver` or
+sankeys and graphs. Without an `IntersectionObserver` or
 a layout engine (server rendering, jsdom/happy-dom) the entrance plays at once,
 and under `prefers-reduced-motion` nothing waits. Export (SVG, PNG, JPG, GIF)
 never animates and is never gated. Resizes and the webfont reload re-render a
@@ -930,9 +930,20 @@ When `animation.update` is enabled and `.update(newSpec)` is called, the chart a
   measured the frame budget: `animation: { update: { maxMarks: 5000 } }`.
 - `prefers-reduced-motion` is active
 - Entrance animation is still in flight
-- Chart is a sparkline
 
 **Legend-hidden series:** When series are hidden via legend toggle, they are removed from the data. On the next `.update()` call, those series re-enter with enter animations as new marks.
+
+**Tables:** entrance only (rows and cells on first render). Sort, search, pagination and data updates swap instantly. `animation: false` disables it.
+
+**Graphs** take `GraphAnimationSpec`: omitted or `true` is full defaults, `false` disables choreography (warmup still applies), and an object tunes each phase. A graph phase is a tween (`duration`, `ease`) or a `spring`, never both.
+
+| Phase    | Default                                                          | Notes |
+| -------- | ---------------------------------------------------------------- | ----- |
+| `enter`  | `{ duration: 500, ease: 'smooth', stagger: true, trigger: 'visible' }` | `trigger: 'mount'` plays at mount; `stagger` is on/off only (the `{ delay, order }` object is deprecated and ignored). |
+| `update` | `{ duration: 300, ease: 'smooth' }`                              | Enter-fade for newly added marks. |
+| `exit`   | `{ duration: 300, ease: 'smooth' }`                              | Ghost fade-out for removed marks. |
+| `camera` | duration `'auto'`                                                | Camera flight easing. |
+| `hover`  | `{ duration: 150, ease: 'smooth' }`                              | Emphasis crossfade. |
 
 ## Canvas mark mode
 
@@ -1172,7 +1183,7 @@ Ranked rows with proportional tracks and value labels. `type: 'barlist'` selects
 | `chrome` | `Chrome` | `undefined` | Title, subtitle, source, byline and footer. |
 | `theme` | `ThemeConfig` | default theme | Theme overrides. |
 | `watermark` | `boolean` | `true` | Show the brand. |
-| `animation` | `AnimationSpec` | disabled when omitted | Live entrance animation; static output never animates. |
+| `animation` | `AnimationSpec` | on | Live entrance animation (`false` disables it); static output never animates. |
 
 ### BarListEncoding
 
@@ -1478,7 +1489,7 @@ Sankey diagrams show flows between stages. Each data row represents a link from 
 | `legend`        | `LegendConfig`    | `undefined` | Legend display configuration.                                                       |
 | `theme`         | `ThemeConfig`     | `undefined` | Theme overrides.                                                                    |
 | `watermark`     | `boolean`         | `true`      | Whether to show the tryOpenData.ai watermark.                                       |
-| `animation`     | `AnimationSpec`   | `undefined` | Entrance animation configuration. Sankey charts support entrance animations only.   |
+| `animation`     | `AnimationSpec`   | on          | Animation configuration. On by default; `false` disables it.                        |
 
 ### SankeyEncoding
 
@@ -1537,7 +1548,7 @@ Maps render TopoJSON geometries as SVG, join tabular data rows to features by id
 | `legend`      | `LegendConfig`    | `undefined` | Legend display configuration. See [Map legends](#map-legends).                       |
 | `theme`       | `ThemeConfig`     | `undefined` | Theme overrides.                                                                     |
 | `watermark`   | `boolean`         | `true`      | Whether to show the tryOpenData.ai watermark.                                        |
-| `animation`   | `AnimationSpec`   | `undefined` | Entrance animation configuration.                                                    |
+| `animation`   | `AnimationSpec`   | on          | Animation configuration. On by default; `false` disables it.                         |
 
 ### GeoMapGeo
 
@@ -1675,7 +1686,7 @@ Every state renders as an equal-size square in a fixed 12x8 grid, so small state
 | `legend`      | `LegendConfig`                                        | `undefined` | Legend display configuration. `show: false` hides it.                           |
 | `theme`       | `ThemeConfig`                                         | `undefined` | Theme overrides.                                                                |
 | `watermark`   | `boolean`                                             | `true`      | Whether to show the tryOpenData.ai watermark.                                   |
-| `animation`   | `AnimationSpec`                                       | `undefined` | Entrance animation configuration.                                               |
+| `animation`   | `AnimationSpec`                                       | on          | Animation configuration. On by default.                                            |
 | `valueFormat` | `string` | `undefined` | Tilemap fallback d3-format string for values, legend labels, and tooltips; `encoding.value.format` takes precedence. |
 
 ### TileMapEncoding
@@ -2071,7 +2082,7 @@ const result = validateSpec(spec);
 These library interfaces support authoring and reader applications. OpenStudio adoption is separate; see [Migrating to v9](migrating-v9.md) for the changed defaults and removed APIs.
 
 - **Theme:** v9 defaults include 12px axes/small text and larger chrome gaps. `clarity` is deprecated and retains only background, axis, and eyebrow colors. `legacyEditorial` restores v8 typography; `migrateSpecV8` can materialize the wider v8 styling contract without freezing layout behavior.
-- **Motion:** `animation: 'fluid' | 'subtle' (omit the preset for v8 timing)`; explicit phases override their preset. A phase can use `spring: { stiffness: 320, damping: 36, mass: 1 }` or the existing duration/easing configuration. Combining a spring with duration/easing in the same phase is an error. Quantitative springs are bounded, with a finite terminal state. Omitted/false animation remains disabled.
+- **Motion:** `animation: 'fluid' | 'subtle' (omit the preset for v8 timing)`; explicit phases override their preset. A phase can use `spring: { stiffness: 320, damping: 36, mass: 1 }` or the existing duration/easing configuration. Combining a spring with duration/easing in the same phase is an error. Quantitative springs are bounded, with a finite terminal state. Omitted animation is on by default; `false` disables it.
 - **Responsiveness:** `responsive: { preserveEnd: true, labelSummary: true }` retains the final x-axis boundary and moves overflowing endpoint identities to a wrapped list. Explicit axis values and author choices remain authoritative. `chromeLayout: 'grow'` gives that content space. Tables may opt into `mobileLayout: 'priority'`; `cards` remains the default, with `scroll` also available.
 - **Field metadata:** chart, table and map documents accept `fields`, keyed by field name. Each entry may declare `type` (`text`, `number`, `date`), `role: 'identity'`, `label`, `unit`, `measure`, `provenance`, `representation` (`number`, `percent`, `proportion`), `interval: { lower: 'lowerField', upper: 'upperField' }`, or `statusField`. Supplied intervals are never synthesized. Percent means 0–100 and proportion means 0–1.
 - **Reader identity:** a unique authored `encoding.key` supports observation persistence. Missing/duplicate keys clear observation pins on data replacement. Aggregated observations are groups, not raw rows, and the reference reader clears them on data/grouping revision. The `createReader` controller is independent from editor selection and uses `ChartInstance.sampleLayout()` for supported moving geometry. Call `reader.update(spec)` after `chart.update(spec)`; it reconciles visibility against the compiled destination marks even when the source data array is unchanged. An explicit `visibleKeys` override remains supported. Layered charts retain per-layer hover/crosshair inspection, but reader pinning across layers is not yet supported: a `LayerSpec` clears pins with an announcement rather than guessing cross-layer identity.

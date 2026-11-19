@@ -591,3 +591,15 @@ Rebaseline static output once: chart/layer styles become attributes, ancestor CS
 Shared layered marks now use the same compiled domain and scale inset as the displayed primary axis (RFC R14). This can move marks that previously used raw extents while the axis used niced extents. For example, a composed GDP point/text chart displayed `[0.8, 4]` but positioned its marks on `[0.8, 3.9]`; the marks now agree with the displayed ticks. Authored domains remain exact, and shared inference includes transformed values and stack extents.
 
 Isolated line/ordinary-area observations now render as points; isolated observations in an ungrouped `y`/`y2` interval band render as rules spanning both bounds. Temporal bars now render columns instead of an empty plot. Light categorical cyan, ochre and violet strokes, plus cyan, ochre, green and violet fills, are retuned for contrast; review palette-sensitive documents. Default `migrateSpecV8` preserves the released v8 light palette and unchanged dark palette through per-slot color pairs; `{ styling: 'v9' }` adopts the retuned palette. See [static rendering](static-rendering.md) for supported spec types, descriptions, aligned frames and host-owned tables.
+
+## Motion on by default
+
+Charts, tables, bar lists, tile maps, geo maps, sankeys, sparklines and graphs now animate when `animation` is omitted. Before, omitted or `false` meant no motion (graphs were already on). Entrances play once when the chart is at least 25% in view (`enter.trigger: 'visible'`), not at mount. `prefers-reduced-motion` still disables everything, and static output (`renderStaticSVG`, exports) never animates.
+
+- **Opt out:** `animation: false` on the spec, or per phase (`animation: { enter: false }`, `update: false`, `exit: false`).
+- **Screenshot and e2e tests:** a chart that waits to be seen can still be in its from-state when the test captures it. Set `animation: { enter: { trigger: 'mount' } }` so the entrance plays at mount, or `animation: false` for pixel-exact captures.
+- **Scroll-driven charts:** use `animation: { enter: false }` to keep update and exit transitions without an entrance window; an `update()` that lands during a playing entrance snaps.
+- **Stories:** `createChartStory` resolves an omitted `animation` to `{ enter: false }`, so story charts have no entrance and keep step transitions. Set `animation` on the base spec to change that.
+- **Graphs:** the object form of `animation.enter.stagger` (`{ delay, order }`) is deprecated and ignored; only `true` or `false` applies, and the validator warns. Graph entrances gain `trigger` and `spring`.
+- **Resize:** a resize no longer tweens, and one that lands mid-update snaps the chart to its final geometry.
+- **Edit mode:** the entrance is skipped while a chart is editable.

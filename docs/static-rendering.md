@@ -28,7 +28,7 @@ Options include `width`, `height`, `theme`, `darkMode`, `renderer`, `watermark`,
 | `idPrefix` | `undefined` | Stable XML-safe scope prefix; omitted calls use deterministic standalone IDs. |
 | `precision` | `3` | Integer 0–15 for geometry, or `null` to retain raw doubles. |
 
-Static output contains no scripts, animation controls, focusable mark navigation, hidden HTML table or per-mark `aria-label`. Its authored mark tooltip is a `<title>`; the figure owns the accessible name.
+Static output never animates, even though live charts do by default, and contains no scripts, animation controls, focusable mark navigation, hidden HTML table or per-mark `aria-label`. Its authored mark tooltip is a `<title>`; the figure owns the accessible name.
 
 Use a unique, stable `idPrefix` for each figure in a document. It must start with a letter or underscore and contain only letters, digits, underscores, periods or hyphens. IDs and their references share a per-call scope, so calls can interleave safely. Without `idPrefix`, ids are namespaced `ocs-<hash>-…`, where the hash covers the spec and options, so they never repeat the live charts' `oc-…` ids or those of a different unprefixed figure; identical calls still produce identical ids. The root `id` and map style scoping need an explicit prefix. Identical inputs and options produce identical bytes in the same environment. Temporal scales and date formatting can depend on the host timezone; use a consistent timezone, such as `TZ=UTC`, across builds.
 

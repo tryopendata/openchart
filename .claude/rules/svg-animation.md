@@ -34,7 +34,7 @@ Don't use `animationend` events. The event fires per-element, so the first stagg
 
 `onComplete` fires only on natural completion, never after cancellation: a `cancelled` flag guards it. Mount uses this to null out the cleanup reference and replay any resize that was skipped during the animation window. The cancellation path (returned cleanup function) clears the frame/timer and removes `oc-animate`, which cancels the CSS animations and rejects their `finished` promises; `allSettled` absorbs those, so nothing goes unhandled. It does not fire `onComplete`, so destroy logic stays simple and doesn't trigger resize side effects.
 
-**Reduced motion opens no entrance window.** `reduced-motion.css` sets `animation: none`, so every mount checks `prefersReducedMotion()` and skips `setupAnimationCleanup`: resizes and updates aren't deferred. `oc-animate` stays on the root (inert there; `e2e/a11y/reduced-motion.spec.ts` asserts it with zero animations), so JS that keys on the class must also check reduced motion (see `raiseFeature` in `map-mount.ts`).
+**Reduced motion opens no entrance window.** Animation is on by default, so this is the path an unconfigured chart takes for users who prefer reduced motion. `reduced-motion.css` sets `animation: none`, so every mount checks `prefersReducedMotion()` and skips `setupAnimationCleanup`: resizes and updates aren't deferred. `oc-animate` stays on the root (inert there; `e2e/a11y/reduced-motion.spec.ts` asserts it with zero animations), so JS that keys on the class must also check reduced motion (see `raiseFeature` in `map-mount.ts`).
 
 ## Stacked Bar Sequencing
 

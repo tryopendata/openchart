@@ -46,7 +46,7 @@ Mount it in a small fixed-height box (36–56px is typical; the gallery tiles ru
 </div>
 ```
 
-When the tile is live and the spec keeps `animation: true`, a finished data update flashes the sparkline's terminator dot (`mark: { type: 'line', point: 'last' }`) for 600ms via the `oc-pulse` class. On a wall of tiles that is what tells the reader which number just moved. It is off under `prefers-reduced-motion`.
+Sparklines animate by default. When the tile is live and the spec doesn't set `animation: false`, a finished data update flashes the sparkline's terminator dot (`mark: { type: 'line', point: 'last' }`) for 600ms via the `oc-pulse` class. On a wall of tiles that is what tells the reader which number just moved. It is off under `prefers-reduced-motion`.
 
 ## KPI tile anatomy
 
