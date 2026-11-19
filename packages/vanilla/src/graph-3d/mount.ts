@@ -36,6 +36,7 @@ import { buildEdgeTooltip } from '@opendata-ai/openchart-engine';
 import ForceGraph3D from '3d-force-graph';
 import type { Object3D } from 'three';
 import { Raycaster, Vector2 } from 'three';
+import { createEntranceLifecycle, type EntrancePlay } from '../entrance-lifecycle';
 import type { CameraFlightOptions } from '../graph/camera';
 import { ENTRANCE_STAGGER_MAX_NODES, popAlpha, popScale } from '../graph/entrance';
 import {
@@ -65,9 +66,9 @@ import { AnimationScheduler, type Animation as GraphAnimation } from '../motion/
 import {
   createTween,
   linear,
+  motionEase,
   prefersReducedMotion,
   resolveCameraEase,
-  resolveEase,
 } from '../motion/tween';
 import { resolvedSurface } from '../theme-tokens';
 import { resolveEmphasis } from './emphasis';
@@ -241,6 +242,20 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
   const entranceEdgeAlpha = new Map<number, number>();
   /** Standoff multiplier the fit is scaled by while the camera flies in. */
   let entranceCameraPull = 1;
+  /**
+   * The playing entrance re-fits the camera each frame to ease the pull-in.
+   * Owned by the entrance rather than gated on `autoFit`, because `autoFit`
+   * ends when the layout stops, which an entrance waiting to be seen outlasts.
+   */
+  let entranceOwnsCamera = false;
+  /** The reader or host took the camera (orbit, wheel, fly/fit/zoom calls). */
+  let cameraTaken = false;
+  /** See `GraphInstance.entrancePlayed`. */
+  let entrancePlayed = false;
+  // Play-when-seen (`enter.trigger`): `primeEntrance` hides the marks at boot
+  // and arms; `playEntrance` runs once the container is seen. Resizes are not
+  // deferred (the per-frame fit already follows the viewport).
+  const entrance = createEntranceLifecycle({ onDeferredResize: () => doResize() });
   let emphasisTween: GraphAnimation | null = null;
 
   // -- Update transition state ---------------------------------------------
@@ -738,9 +753,23 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
     return Math.min(K_MAX, Math.max(K_MIN, k));
   }
 
+  /**
+   * The reader or host took the camera: the settle-phase auto-fit stops, and
+   * an entrance mid pull-in lets go of it (standing back at the true fit, so
+   * an explicit `zoomToFit` isn't framed pulled back).
+   */
+  function takeCamera(): void {
+    autoFit = false;
+    cameraTaken = true;
+    if (entranceOwnsCamera) {
+      entranceOwnsCamera = false;
+      entranceCameraPull = 1;
+    }
+  }
+
   function flyTo(target: FlyTarget3D, opts?: CameraFlightOptions): void {
     if (destroyed) return;
-    autoFit = false;
+    takeCamera();
     const ms = flightMs(opts);
     if (target.position) {
       graph.cameraPosition(
@@ -772,7 +801,7 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
   function zoomToFit(opts?: CameraFlightOptions & { padding?: number }): void {
     // An explicit fit is the host taking the camera, so the settle-phase
     // auto-fit stops second-guessing it.
-    autoFit = false;
+    takeCamera();
     fitNow(opts);
   }
 
@@ -827,7 +856,7 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
 
   function zoomToNode(nodeId: string, opts?: CameraFlightOptions & { scale?: number }): void {
     if (destroyed) return;
-    autoFit = false;
+    takeCamera();
     const datum = nodeById.get(nodeId);
     if (!datum) return;
     const at = { x: datum.x ?? 0, y: datum.y ?? 0, z: datum.z ?? 0 };
@@ -1073,7 +1102,7 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
   }
 
   const onCanvasCameraInput = (): void => {
-    autoFit = false;
+    takeCamera();
   };
 
   const onCanvasDblClick = (event: MouseEvent): void => {
@@ -1097,10 +1126,44 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
 
   /** Drop the entrance multipliers and restore every node to full scale. */
   function endEntrance(): void {
+    const pulled = entranceCameraPull !== 1;
+    const owned = entranceOwnsCamera;
     entranceActive = false;
     entranceCameraPull = 1;
+    entranceOwnsCamera = false;
     for (const obj of nodeObjects.values()) obj.mesh.scale.setScalar(1);
+    // An entrance that ended still standing back lands the camera on the fit.
+    if (pulled && owned && !cameraTaken) autoFitNow();
     paint();
+  }
+
+  /**
+   * Boot half of the entrance: hide every mark (alpha 0, minimum scale) and
+   * arm the trigger. The camera pull stays 1 while waiting, so the
+   * settle-phase auto-fit frames the layout truly; the pull-in starts on play.
+   * Suppressed, disabled or reduced-motion entrances draw at once.
+   */
+  function primeEntrance(): void {
+    const enter = compilation.animation?.enter ?? null;
+    if (options?.suppressEntrance || !enter || prefersReducedMotion()) {
+      entrancePlayed = true;
+      endEntrance();
+      return;
+    }
+    entranceActive = true;
+    for (const node of compilation.nodes) {
+      entranceNodeAlpha.set(node.id, 0);
+      entranceNodeScale.set(node.id, ENTRANCE_MIN_SCALE);
+    }
+    for (let i = 0; i < compilation.edges.length; i++) entranceEdgeAlpha.set(i, 0);
+    paint();
+    entrance.arm({
+      container: shell.container,
+      root: shell.wrapper,
+      trigger: enter.trigger,
+      completion: 'js',
+      onPlay: playEntrance,
+    });
   }
 
   /**
@@ -1114,16 +1177,17 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
    * tick while the layout expands from its seeded blob, and a
    * flight to a distance computed at t=0 would be re-targeting a framing that is
    * already stale. As a multiplier the two compose: the auto-fit keeps deciding
-   * WHAT to frame, the entrance only decides how far back to stand.
+   * WHAT to frame, the entrance only decides how far back to stand. The
+   * entrance re-fits every frame itself too, so a reveal first seen after the
+   * layout stopped still flies in. A camera the reader already took is left
+   * alone: only the reveal runs.
    *
-   * Runs once per mount. `update()` never calls it.
+   * Runs once per mount, from the trigger. `update()` never calls it.
    */
-  function startEntrance(): void {
+  function playEntrance(): EntrancePlay | undefined {
     const enter = compilation.animation?.enter ?? null;
-    if (options?.suppressEntrance || !enter || prefersReducedMotion()) {
-      endEntrance();
-      return;
-    }
+    if (destroyed || !enter) return undefined;
+    entrancePlayed = true;
 
     // Same gate as 2D: thousands of distinct start times read as noise, so
     // above the cap the whole graph reveals as one.
@@ -1134,10 +1198,12 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
       enter.duration,
       stagger,
     );
-    const ease = resolveEase(enter.ease);
+    // `motionEase` honours a spring (the phase duration is its settling time).
+    const ease = motionEase(enter);
 
     entranceActive = true;
-    entranceCameraPull = enter.cameraFit ? ENTRANCE_CAMERA_PULLBACK : 1;
+    entranceOwnsCamera = enter.cameraFit && options?.fitOnLoad !== false && !cameraTaken;
+    entranceCameraPull = entranceOwnsCamera ? ENTRANCE_CAMERA_PULLBACK : 1;
     for (const id of plan.nodeOffset.keys()) {
       entranceNodeAlpha.set(id, 0);
       entranceNodeScale.set(id, ENTRANCE_MIN_SCALE);
@@ -1145,6 +1211,10 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
     for (const index of plan.linkOffset.keys()) entranceEdgeAlpha.set(index, 0);
     paint();
 
+    let revealed: () => void = () => {};
+    const canvasFinished = new Promise<void>((resolve) => {
+      revealed = resolve;
+    });
     // The driver runs linear over the whole span so each element can apply the
     // spec's ease across its OWN window; easing the global clock instead would
     // squeeze the stagger rather than shape each pop.
@@ -1161,17 +1231,22 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
         for (const [index, offset] of plan.linkOffset) {
           entranceEdgeAlpha.set(index, elementProgress(elapsed, offset, enter.duration, ease));
         }
-        if (enter.cameraFit) {
+        if (entranceOwnsCamera) {
           entranceCameraPull = ENTRANCE_CAMERA_PULLBACK + (1 - ENTRANCE_CAMERA_PULLBACK) * ease(t);
           // The entrance clock and the engine tick are separate loops; re-fit
-          // here too so the pull-in eases every frame even between ticks.
-          if (autoFit && options?.fitOnLoad !== false) autoFitNow();
+          // here too so the pull-in eases every frame even between ticks, and
+          // after the layout has stopped.
+          autoFitNow();
         }
         paint();
       },
-      onDone: endEntrance,
+      onDone: () => {
+        endEntrance();
+        revealed();
+      },
     });
     scheduler.add(tween);
+    return { canvasFinished };
   }
 
   // =========================================================================
@@ -1248,7 +1323,7 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
     scheduler.add(
       createTween({
         duration: cfg.duration,
-        ease: resolveEase(cfg.ease),
+        ease: motionEase(cfg),
         apply: (t) => {
           for (const g of pending) {
             for (const f of g.fades) f.material.opacity = f.base * (1 - t);
@@ -1297,7 +1372,7 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
     scheduler.add(
       createTween({
         duration: cfg.duration,
-        ease: resolveEase(cfg.ease),
+        ease: motionEase(cfg),
         apply: (t) => {
           for (const id of enteringIds) {
             entranceNodeAlpha.set(id, popAlpha(t));
@@ -1421,6 +1496,8 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
       return;
     }
 
+    // An entrance still waiting to be seen is dropped: draw at full alpha.
+    if (entrance.drop()) endEntrance();
     scheduler.finishAll();
 
     const prevNodes: PositionedNode[] = nodeData.map((d, index) => ({
@@ -1655,6 +1732,7 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
     destroyed = true;
 
     scheduler.cancelAll();
+    entrance.destroy();
     // `cancelAll` does not run `onDone`, so the ghosts still have to be freed.
     removeGhosts(ghosts);
     if (pumpId !== null) {
@@ -1759,7 +1837,7 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
     displayEdgeAlpha.set(i, edgeBaseAlpha?.get(i) ?? 0.3);
   }
   armEmphasis();
-  startEntrance();
+  primeEntrance();
 
   graph
     .onNodeHover((node) => {
@@ -1873,6 +1951,9 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
     getActiveCategories: () => [...activeCategories],
     resize: doResize,
     destroy,
+    get entrancePlayed() {
+      return entrancePlayed;
+    },
   };
 }
 

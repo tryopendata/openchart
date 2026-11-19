@@ -15,7 +15,10 @@ import {
   type FrameClock,
   installFrameClock,
   playsEntrance,
+  playsEntranceOnSeen,
 } from '../../../vanilla/src/__test-fixtures__/graph-frame-clock';
+import { createFakeObserver } from '../../../vanilla/src/__test-fixtures__/visibility';
+import { setObserverFactory } from '../../../vanilla/src/visibility';
 import { Graph } from '../Graph';
 import type { GraphHandle } from '../hooks/useGraph';
 
@@ -33,6 +36,9 @@ const spec: GraphSpec = {
   ],
   encoding: { nodeColor: { field: 'kind', type: 'nominal' } },
   layout: { type: 'force', warmup: 30 },
+  // The setup's global getBoundingClientRect stub gives happy-dom a layout, so a
+  // 'visible' entrance would wait on an IntersectionObserver that never fires.
+  animation: { enter: { trigger: 'mount' } },
 };
 
 let clock: FrameClock;
@@ -68,6 +74,27 @@ describe('<Graph /> suppressEntrance', () => {
     expect(wrapperEl(container)).not.toBe(first);
     expect(wrapperEl(container)?.classList.contains('oc-dark')).toBe(true);
     expect(await playsEntrance(clock, () => ref.current!.getCamera().k, 2000)).toBe(false);
+  });
+
+  it('a theme change while the entrance still waits to be seen replays it on the new graph', async () => {
+    // Default trigger ('visible'), held by a fake observer the test drives.
+    const visibleSpec: GraphSpec = { ...spec, animation: undefined };
+    const observer = createFakeObserver();
+    setObserverFactory(observer.factory);
+    try {
+      const ref = createRef<GraphHandle>();
+      const { rerender } = render(<Graph ref={ref} spec={visibleSpec} darkMode="off" />);
+      await Promise.resolve();
+      clock.pump(0);
+      expect(ref.current!.instance!.entrancePlayed).toBe(false);
+
+      rerender(<Graph ref={ref} spec={visibleSpec} darkMode="force" />);
+      expect(
+        await playsEntranceOnSeen(clock, observer, () => ref.current!.getCamera().k, 100),
+      ).toBe(true);
+    } finally {
+      setObserverFactory(null);
+    }
   });
 
   it('StrictMode dev remount still plays the entrance (identical deps, no suppression)', async () => {

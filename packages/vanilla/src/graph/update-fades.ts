@@ -7,7 +7,7 @@
 
 import type { GraphCompilation } from '@opendata-ai/openchart-engine';
 import type { AnimationScheduler } from '../motion/scheduler';
-import { createTween, prefersReducedMotion, resolveEase } from '../motion/tween';
+import { createTween, motionEase, prefersReducedMotion } from '../motion/tween';
 import type { GraphRenderState, PositionedEdge, PositionedNode } from './types';
 import type { diffGraphUpdate } from './update-diff';
 
@@ -41,7 +41,7 @@ export function createGraphUpdateFades(
     if (diff.enteringIds.length > 0 && updateCfg && !reduced) {
       const entering = diff.enteringIds;
       enterAlphaMap = new Map(entering.map((id) => [id, 0]));
-      const ease = resolveEase(updateCfg.ease);
+      const ease = motionEase(updateCfg);
       const tween = createTween({
         duration: updateCfg.duration,
         ease,
@@ -62,7 +62,7 @@ export function createGraphUpdateFades(
     // -- Exit ghosts --
     if ((diff.exitingNodes.length > 0 || diff.exitingEdges.length > 0) && exitCfg && !reduced) {
       exitingGhosts = { nodes: diff.exitingNodes, edges: diff.exitingEdges, alpha: 1 };
-      const ease = resolveEase(exitCfg.ease);
+      const ease = motionEase(exitCfg);
       const tween = createTween({
         duration: exitCfg.duration,
         ease,
