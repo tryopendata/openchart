@@ -374,21 +374,23 @@ the watermark interaction.
 
 ## Motion
 
-Entrance animation stays opt-in; when enabled, the defaults are 450ms
-duration, 30ms per-mark stagger capped at 300ms total sweep time
-(`MAX_TOTAL_STAGGER_MS`), 150ms delay before annotations begin, and no
-overshoot. Easing defaults to `smooth` (the Decks `snap` curve: about 67% of
+Entrance animation stays opt-in; when enabled, the defaults are 600ms
+duration, a per-mark gap of `min(80ms, 300ms / (n − 1))` so the whole sweep
+stays inside 300ms (`MAX_TOTAL_STAGGER_MS`), annotations starting once the
+last mark is 90% of the way plus a 150ms delay, and no overshoot on anything
+that encodes a value. Entrances start when a quarter of the chart is in view
+(`animation.enter.trigger`, default `'visible'`). Easing defaults to `smooth` (the Decks `snap` curve: about 67% of
 the way at 10% of the duration, 89% at 20%). `snappy` settles sooner and
 `gentle` is the previous slower ease-out. A `punch` curve that overshoots
-to about 1.06 exists in the registry for accent roles only. Update transitions default to 450ms, exit
+to about 1.06 exists in the registry for accent roles only. Update transitions default to 500ms, exit
 to 120ms on `gentle` (survivors wait for removed marks to clear).
 
 | Phase | Duration | Stagger / delay |
 |---|---|---|
-| Enter | 450ms | 30ms per mark, 300ms total cap |
-| Update | 450ms | — |
+| Enter | 600ms | min(80ms, 300ms / (n − 1)) per mark |
+| Update | 500ms | — |
 | Exit | 120ms | survivors hold until exits finish |
-| Annotation delay | — | 150ms after marks finish |
+| Annotation delay | — | 150ms after the last mark reaches 90% |
 
 Source: `packages/engine/src/compiler/animation.ts` (`ENTER_DEFAULTS`,
 `UPDATE_DEFAULTS`, `EXIT_DEFAULTS`, `MAX_TOTAL_STAGGER_MS`,
