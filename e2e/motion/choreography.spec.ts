@@ -208,6 +208,57 @@ test('stacks share one clip each, spaced by the D5 gap', async ({ page }) => {
   }
 });
 
+test('heatmap cells fade in place: no clip, opaque 300ms after their delay', async ({ page }) => {
+  await open(page, 'heatmap');
+
+  const cells = await page.evaluate(() => {
+    const shapes = Array.from(
+      document.querySelectorAll('.oc-mark-rect[data-cell] :is(rect, path)'),
+    ) as SVGElement[];
+    // Global time: every animation at the same currentTime, so each cell's
+    // own stagger delay stays in play.
+    const seekAll = (t: number) => {
+      for (const a of document.getAnimations()) {
+        a.pause();
+        a.currentTime = t;
+      }
+    };
+    const clips = new Set<string>();
+    const sample = (t: number) => {
+      seekAll(t);
+      return shapes.map((shape) => {
+        clips.add(getComputedStyle(shape).clipPath);
+        clips.add(getComputedStyle(shape.parentElement as Element).clipPath);
+        return Number(getComputedStyle(shape).opacity);
+      });
+    };
+    const delays = shapes.map((shape) => Number(shape.getAnimations()[0]?.effect?.getTiming().delay));
+    const indices = shapes.map((shape) =>
+      Number(getComputedStyle(shape).getPropertyValue('--oc-mark-index') || 0),
+    );
+    const names = shapes.map((shape) => (shape.getAnimations()[0] as CSSAnimation | undefined)?.animationName);
+    const early = sample(0);
+    const atOwnEnd = shapes.map((_, i) => sample(delays[i] + 300)[i]);
+    const at300 = sample(300);
+    for (const t of [50, 150, 450, 600]) sample(t);
+    return { delays, indices, names, early, atOwnEnd, at300, clips: [...clips] };
+  });
+
+  expect(cells.names.length).toBe(20);
+  for (const name of cells.names) expect(name).toBe('oc-enter-fade-only');
+  expect(cells.clips).toEqual(['none']);
+  // Cells start hidden, not at full paint.
+  expect(Math.min(...cells.early)).toBeLessThan(1);
+  cells.indices.forEach((index, i) => {
+    if (index === 0) expect(cells.at300[i], 'cell index 0 at 300ms').toBe(1);
+  });
+  expect(cells.indices).toContain(0);
+  cells.delays.forEach((delay, i) => {
+    expect(delay + 300, `cell ${i} settles by 600ms`).toBeLessThanOrEqual(600);
+    expect(cells.atOwnEnd[i], `cell ${i} at its delay + 300ms`).toBe(1);
+  });
+});
+
 test('a chart below the fold waits until it is scrolled into view', async ({ page }) => {
   await page.goto(url('below-fold'));
   await page.waitForSelector('#below-fold .oc-root svg.oc-chart .oc-marks');

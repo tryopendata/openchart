@@ -28,6 +28,18 @@
       animation-play-state: var(--oc-play-state, running);
     }
 
+    /* Grid cells (heatmap, waffle, calendar) have no baseline to grow from:
+       a quick fade on the author curve, no clip. */
+    & .oc-mark-rect[data-cell] :is(rect, path) {
+      animation: oc-enter-fade-only var(--oc-cell-dur, 300ms)
+        var(--oc-animation-ease, var(--oc-ease-smooth)) both;
+      animation-delay: var(
+        --oc-cell-delay,
+        calc(var(--oc-animation-stagger) * var(--oc-mark-index, 0))
+      );
+      animation-play-state: var(--oc-play-state, running);
+    }
+
     /* Stacked bars reveal as one group per stack, each on its own stagger slot;
        their segments do not animate. A stack that crosses zero grows both ways
        from the baseline (--oc-stack-from). */

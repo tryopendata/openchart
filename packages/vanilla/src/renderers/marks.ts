@@ -257,6 +257,7 @@ function renderRectMark(
   if (ctx.marks.animation?.enter && mark.orient === 'horizontal') {
     g.setAttribute('data-orient', 'horizontal');
   }
+  if (ctx.marks.animation?.enter && mark.cell) g.setAttribute('data-cell', '');
 
   // When `cornerRadiusSides` selects a subset of corners (e.g. top-only for
   // the topmost segment of a stacked column), SVG's `rx`/`ry` won't do —
