@@ -36,7 +36,9 @@
 | CSS dark overrides (`.oc-dark`) — **generated** | `packages/core/src/styles/dark.css` |
 | CSS token generator | `scripts/generate-css-tokens.mjs` |
 | CSS chrome classes (`.oc-title`, `.oc-subtitle`, etc.) | `packages/core/src/styles/chrome.css` |
-| Entrance animation keyframes / CSS rules | `packages/core/src/styles/keyframes.css`, `animation.css`. Update/exit transitions use rAF, not CSS; see `packages/vanilla/src/transition/`. |
+| Entrance animation keyframes / CSS rules | **Generated** from `packages/core/src/motion/choreography.ts` (`KEYFRAMES`, `ENTRANCE_ROLES`) by `scripts/generate-motion-css.mjs` (`bun run generate:motion`) into `styles/keyframes.css`, `animation.css`, `table-animation.css`. Each role reads `--oc-<role>-delay` / `--oc-<role>-dur` first (annotation: `--oc-annotation-enter-delay`), falling back to the old calc(). JS timing: `entranceTiming()`, `entranceEndMs()`. Update/exit transitions use rAF, not CSS; see `packages/vanilla/src/transition/`. |
+| Curve registry (ease samples) | `packages/core/src/motion/curves.ts` → `evalCurve`, `evalValueCurve`, `invertCurve`, `curveToCSSLinear`; `--oc-ease-*` tokens derive from it. |
+| Stagger strategies | `packages/core/src/motion/stagger.ts` → `clampStaggerDelay`, `MAX_TOTAL_STAGGER_MS` (re-exported by engine), `barlistRowDelay`, `mapPointStagger`, `mapSweepTiming`, `tilemapTileDelays`. |
 | Text width estimation | `packages/core/src/layout/text-measure.ts` (`estimateTextWidth`, `estimateCharWidth`) |
 | X-axis extent helper + constants | `packages/core/src/responsive/metrics.ts` (`computeXAxisExtentFromLabels`, `X_AXIS_BAND_HEIGHT`, `X_AXIS_TITLE_BAND`, `X_AXIS_TITLE_BAND_ROTATED`) |
 | Text wrapping | `packages/core/src/layout/text-wrap.ts` (`wrapText`) |
@@ -303,6 +305,7 @@ The vanilla adapter (`mount.ts`) takes the resulting `ChartLayout` and calls `re
 - **Dark mode:** `adaptTheme(resolved)` in `dark-mode.ts` swaps surface tokens, adapts categorical palette via binary-search on lightness to preserve contrast against the dark background.
 - **Authored CSS tokens:** `packages/vanilla/src/theme-tokens.ts` → `stampThemeProperties()` is shared by chart/table/graph/map and specialized renderers. It stamps authored overrides only, restoring previous host inline values when an override disappears. `theme-style-block.ts` → `prepareSettledExportTheme()` preserves live computed tokens across chart, map, tilemap, Sankey, and barlist exports, or clears authored inline overrides when an explicit export theme wins.
 - **CSS tokens** (`tokens.css`, `dark.css`) are **generated** from `packages/core/src/styles/token-definitions.ts`. Run `bun run generate:tokens` after editing. CI enforces freshness via `check:generated`.
+- **Motion CSS** (`keyframes.css`, `animation.css`, `table-animation.css`) is **generated** from `packages/core/src/motion/choreography.ts`. Run `bun run generate:motion` after editing; never hand-edit those files.
 - **Cascade layers:** all CSS is wrapped in `@layer oc.*` sub-layers declared in `index.css`: `oc.tokens, oc.base, oc.components, oc.animation, oc.reduced-motion`. Consumer un-layered CSS beats all openchart rules (v8 breaking change, see `docs/migrating-v8.md` section 14).
 
 ## Chart-type registry (`engine/src/charts/registry.ts`)
@@ -339,7 +342,7 @@ Shared scales means shared **domains**, not just a shared plot rect. `compileLay
 
 ## Animation system
 
-- **Entrance animations** are pure CSS. Keyframes in `packages/core/src/styles/keyframes.css`, rules in `animation.css`. The renderer stamps CSS custom properties + `data-` attributes on the SVG; `oc-animate` class on the SVG root scopes everything.
+- **Entrance animations** are pure CSS. Keyframes and rules are generated from `packages/core/src/motion/choreography.ts` into `keyframes.css` / `animation.css`. The renderer stamps CSS custom properties + `data-` attributes on the SVG; `oc-animate` class on the SVG root scopes everything.
 - **Update/exit transitions** use a rAF loop in `packages/vanilla/src/transition/`, not CSS. The driver matches marks by `data-key`, tweens geometry (rect position/size, line/area path morphs, arc angle/radius morphs — path rebuilt per frame via the engine's `buildArcPath` — point cx/cy/r, rule/tick endpoints, text x/y), and also transitions axis ticks and gridlines. Supports interruption retargeting via `snapshot()`.
 - The engine resolves `AnimationSpec` → `ResolvedAnimation` (`engine/src/compiler/animation.ts`). Defaults: enter 450ms/30ms stagger, update 450ms, exit 250ms, annotation delay 150ms, `MAX_TOTAL_STAGGER_MS` 300 (mirrored in `vanilla/src/scatter-canvas/entrance.ts` for the canvas point layer, which cannot import the engine at runtime).
 - Mark keys for matching are serialized in `packages/engine/src/compiler/keys.ts`.

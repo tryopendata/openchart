@@ -1,3 +1,5 @@
+/* GENERATED FILE — do not edit. Source: packages/core/src/motion/choreography.ts. Regenerate: bun run generate:motion */
+
 @layer oc.animation {
   /* ---------------------------------------------------------------------------
    * Table entrance animations (.oc-table-wrapper.oc-animate)
@@ -6,88 +8,125 @@
   .oc-table-wrapper.oc-animate {
     /* Chrome (title/subtitle): fade + slide up */
     & > .oc-chrome {
-      animation: oc-enter-fade calc(var(--oc-animation-duration) * 0.6)
+      animation: oc-enter-fade var(--oc-table-chrome-dur, calc(var(--oc-animation-duration) * 0.6))
         var(--oc-animation-ease, var(--oc-ease-smooth)) both;
+      animation-delay: var(--oc-table-chrome-delay, 0ms);
+      animation-play-state: var(--oc-play-state, running);
     }
 
     /* Table header: quick fade before rows start */
     & thead {
-      animation: oc-enter-fade-only calc(var(--oc-animation-duration) * 0.4)
+      animation: oc-enter-fade-only
+        var(--oc-table-thead-dur, calc(var(--oc-animation-duration) * 0.4))
         var(--oc-animation-ease, var(--oc-ease-smooth)) both;
+      animation-delay: var(--oc-table-thead-delay, 0ms);
+      animation-play-state: var(--oc-play-state, running);
     }
 
     /* Row entrance: slide up only, no opacity (cells handle their own fading
        to avoid opacity compounding between row and cell animations) */
     & tbody tr {
-      animation: oc-table-enter-row var(--oc-animation-duration)
+      animation: oc-table-enter-row var(--oc-table-row-dur, var(--oc-animation-duration))
         var(--oc-animation-ease, var(--oc-ease-smooth)) both;
-      animation-delay: calc(var(--oc-animation-stagger) * var(--oc-row-index, 0));
+      animation-delay: var(
+        --oc-table-row-delay,
+        calc(var(--oc-animation-stagger) * var(--oc-row-index, 0))
+      );
+      animation-play-state: var(--oc-play-state, running);
     }
 
     /* Cell text: fade in synced with row slide */
     & tbody td {
-      animation: oc-enter-fade-only calc(var(--oc-animation-duration) * 0.5)
+      animation: oc-enter-fade-only
+        var(--oc-table-cell-dur, calc(var(--oc-animation-duration) * 0.5))
         var(--oc-animation-ease, var(--oc-ease-smooth)) both;
-      animation-delay: calc(var(--oc-animation-stagger) * var(--oc-row-index, 0));
+      animation-delay: var(
+        --oc-table-cell-delay,
+        calc(var(--oc-animation-stagger) * var(--oc-row-index, 0))
+      );
+      animation-play-state: var(--oc-play-state, running);
     }
 
     /* Heatmap/category cell backgrounds: longer fade, delayed after row appears */
     & td.oc-table-heatmap,
     & td.oc-table-category {
-      animation: oc-enter-fade-only calc(var(--oc-animation-duration) * 0.7)
+      animation: oc-enter-fade-only
+        var(--oc-table-heatmap-cell-dur, calc(var(--oc-animation-duration) * 0.7))
         var(--oc-animation-ease, var(--oc-ease-smooth)) both;
-      animation-delay: calc(
-        var(--oc-animation-stagger) *
-        var(--oc-row-index, 0) +
-        var(--oc-animation-duration) *
-        0.3
+      animation-delay: var(
+        --oc-table-heatmap-cell-delay,
+        calc(
+          var(--oc-animation-duration) *
+          0.3 +
+          var(--oc-animation-stagger) *
+          var(--oc-row-index, 0)
+        )
       );
+      animation-play-state: var(--oc-play-state, running);
     }
 
     /* Bar fill: clip-path grow only (no opacity change to preserve resting
        opacity: 0.15 from table.css) */
     & .oc-table-bar-fill {
-      animation: oc-table-enter-bar-fill calc(var(--oc-animation-duration) * 0.8)
+      animation: oc-table-enter-bar-fill
+        var(--oc-table-bar-fill-dur, calc(var(--oc-animation-duration) * 0.8))
         var(--oc-animation-ease, var(--oc-ease-smooth)) both;
-      animation-delay: calc(
-        var(--oc-animation-stagger) *
-        var(--oc-row-index, 0) +
-        var(--oc-animation-duration) *
-        0.3
+      animation-delay: var(
+        --oc-table-bar-fill-delay,
+        calc(
+          var(--oc-animation-duration) *
+          0.3 +
+          var(--oc-animation-stagger) *
+          var(--oc-row-index, 0)
+        )
       );
+      animation-play-state: var(--oc-play-state, running);
     }
 
     /* Sparkline SVG: clip-path reveal left-to-right. Targets the SVG directly
        (not the wrapper) to avoid clipping absolutely-positioned dots and labels. */
     & .oc-table-sparkline > svg {
-      animation: oc-enter-line calc(var(--oc-animation-duration) * 0.8)
+      animation: oc-enter-line
+        var(--oc-table-sparkline-dur, calc(var(--oc-animation-duration) * 0.8))
         var(--oc-animation-ease, var(--oc-ease-smooth)) both;
-      animation-delay: calc(
-        var(--oc-animation-stagger) *
-        var(--oc-row-index, 0) +
-        var(--oc-animation-duration) *
-        0.4
+      animation-delay: var(
+        --oc-table-sparkline-delay,
+        calc(
+          var(--oc-animation-duration) *
+          0.4 +
+          var(--oc-animation-stagger) *
+          var(--oc-row-index, 0)
+        )
       );
+      animation-play-state: var(--oc-play-state, running);
     }
 
     /* Sparkline dots and labels: fade in after the line draws through */
     & .oc-table-sparkline-dot,
     & .oc-table-sparkline-labels {
-      animation: oc-enter-fade-only calc(var(--oc-animation-duration) * 0.3)
+      animation: oc-enter-fade-only
+        var(--oc-table-sparkline-dot-dur, calc(var(--oc-animation-duration) * 0.3))
         var(--oc-animation-ease, var(--oc-ease-smooth)) both;
-      animation-delay: calc(
-        var(--oc-animation-stagger) *
-        var(--oc-row-index, 0) +
-        var(--oc-animation-duration) *
-        0.8
+      animation-delay: var(
+        --oc-table-sparkline-dot-delay,
+        calc(
+          var(--oc-animation-duration) *
+          0.8 +
+          var(--oc-animation-stagger) *
+          var(--oc-row-index, 0)
+        )
       );
+      animation-play-state: var(--oc-play-state, running);
     }
 
     /* Search and pagination: quick fade on mount */
     & .oc-table-search,
     & .oc-table-pagination {
-      animation: oc-enter-fade-only calc(var(--oc-animation-duration) * 0.5)
+      animation: oc-enter-fade-only
+        var(--oc-table-search-pagination-dur, calc(var(--oc-animation-duration) * 0.5))
         var(--oc-animation-ease, var(--oc-ease-smooth)) both;
+      animation-delay: var(--oc-table-search-pagination-delay, 0ms);
+      animation-play-state: var(--oc-play-state, running);
     }
   }
 }

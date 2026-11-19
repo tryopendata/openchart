@@ -1,3 +1,5 @@
+import { curveToCSSLinear } from '../motion/curves';
+
 export interface CssTokenDef {
   name: string;
   light: string;
@@ -47,13 +49,11 @@ export const CSS_TOKENS: readonly CssTokenDef[] = [
   {
     section: 'Animation easing presets via CSS linear()',
     name: '--oc-ease-smooth',
-    light:
-      'linear(\n      0,\n      0.157,\n      0.438,\n      0.64,\n      0.766,\n      0.85,\n      0.906,\n      0.941,\n      0.964,\n      0.978,\n      0.988,\n      0.994,\n      0.998,\n      1\n    )',
+    light: curveToCSSLinear('smooth', { indent: '    ' }),
   },
   {
     name: '--oc-ease-snappy',
-    light:
-      'linear(\n      0,\n      0.012,\n      0.048,\n      0.108,\n      0.194,\n      0.302,\n      0.426,\n      0.559,\n      0.69,\n      0.808,\n      0.905,\n      0.973,\n      1.013,\n      1.028,\n      1.023,\n      1.006,\n      0.984,\n      0.966,\n      0.957,\n      0.957,\n      0.964,\n      0.975,\n      0.986,\n      0.995,\n      1,\n      1.003,\n      1.002,\n      1,\n      0.998,\n      0.998,\n      0.999,\n      1\n    )',
+    light: curveToCSSLinear('snappy', { indent: '    ' }),
     consumers: 'EASE_VAR_MAP in vanilla renderers',
   },
 

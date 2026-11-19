@@ -35,6 +35,7 @@ export {
   clampStaggerDelay,
   ENTER_DEFAULTS,
   EXIT_DEFAULTS,
+  MAX_TOTAL_STAGGER_MS,
   resolveAnimation,
   UPDATE_DEFAULTS,
 } from './compiler/animation';

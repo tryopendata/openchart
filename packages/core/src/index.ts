@@ -230,6 +230,51 @@ export { deepMergeSpec } from './helpers/deep-merge';
 // ---------------------------------------------------------------------------
 
 export { annotationSource } from './helpers/annotation-source';
+export type {
+  DelayRule,
+  DurationRule,
+  EntranceEndContext,
+  EntranceRole,
+  EntranceRoleDef,
+  EntranceRoleExtent,
+  EntranceRoleRow,
+  EntranceTiming,
+  EntranceTimingContext,
+  KeyframeDef,
+  KeyframeName,
+  KeyframeProperty,
+  KeyframeStop,
+  KeyframeValue,
+  ProgressPoint,
+  RoleTiming,
+  StaggerRule,
+} from './motion/choreography';
+export {
+  DELAY_REFERENCE_CURVE,
+  ENTRANCE_ROLES,
+  entranceEndMs,
+  entranceRole,
+  entranceTiming,
+  evalCubicBezier,
+  evalKeyframes,
+  evalRoleEase,
+  KEYFRAMES,
+  keyframeProperties,
+  keyframeValueToCSS,
+  resolveProgressPoint,
+  roleBaseDuration,
+  roleVars,
+} from './motion/choreography';
+export type { CurveInput, CurveName, CurveStop, MonotoneCurveName } from './motion/curves';
+export {
+  CURVE_NAMES,
+  curveStops,
+  curveToCSSLinear,
+  evalCurve,
+  evalValueCurve,
+  invertCurve,
+  isMonotoneCurve,
+} from './motion/curves';
 export type { MotionPhase, MotionSample } from './motion/sample';
 export {
   FLUID_SPRING,
@@ -239,5 +284,18 @@ export {
   sampleMotion,
   springDuration,
 } from './motion/sample';
+export type { MapSweepTiming } from './motion/stagger';
+export {
+  BARLIST_ROW_STAGGER_MS,
+  barlistRowDelay,
+  clampStaggerDelay,
+  MAP_FEATURE_MAX_DURATION_MS,
+  MAP_POINT_STAGGER_FALLBACK_MS,
+  MAX_TOTAL_STAGGER_MS,
+  mapFeatureDuration,
+  mapPointStagger,
+  mapSweepTiming,
+  tilemapTileDelays,
+} from './motion/stagger';
 export type { CssTokenDef } from './styles/token-definitions';
 export { CSS_TOKEN_ROOT_SELECTORS, CSS_TOKENS, cssTokenDefault } from './styles/token-definitions';

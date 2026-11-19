@@ -1,3 +1,5 @@
+/* GENERATED FILE — do not edit. Source: packages/core/src/motion/choreography.ts. Regenerate: bun run generate:motion */
+
 @layer oc.animation {
   /* ---------------------------------------------------------------------------
    * Animation keyframes
@@ -146,7 +148,7 @@
      `r` is animated as a presentation attribute (SVG geometry properties are
      animatable in CSS); the fallback is simply no swell. */
   @keyframes oc-pulse {
-    0% {
+    from {
       r: var(--oc-pulse-r, 4px);
       fill-opacity: 1;
     }
@@ -154,7 +156,7 @@
       r: calc(var(--oc-pulse-r, 4px) * 1.8);
       fill-opacity: 0.5;
     }
-    100% {
+    to {
       r: var(--oc-pulse-r, 4px);
       fill-opacity: 1;
     }

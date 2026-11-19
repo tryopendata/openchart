@@ -25,6 +25,9 @@ import type {
 } from '@opendata-ai/openchart-core';
 import { FLUID_SPRING, springDuration } from '@opendata-ai/openchart-core';
 
+// The stagger cap lives in core so every renderer shares it; re-exported unchanged.
+export { clampStaggerDelay, MAX_TOTAL_STAGGER_MS } from '@opendata-ai/openchart-core';
+
 /** Default values for entrance animation. */
 export const ENTER_DEFAULTS: ResolvedAnimationPhase = {
   duration: 450,
@@ -51,9 +54,6 @@ export const EXIT_DEFAULTS: ResolvedAnimationPhase = {
 
 /** Default annotation delay in ms after marks finish. */
 const DEFAULT_ANNOTATION_DELAY = 150;
-
-/** Maximum total stagger time in ms. Keeps the whole sweep inside one beat. */
-const MAX_TOTAL_STAGGER_MS = 300;
 
 /**
  * Resolve an AnimationSpec into a fully resolved config with all defaults filled.
@@ -116,14 +116,6 @@ export function resolveAnimation(spec: AnimationSpec | undefined): ResolvedAnima
     annotationDelay:
       config.annotationDelay ?? (preset === undefined ? DEFAULT_ANNOTATION_DELAY : 0),
   };
-}
-
-/**
- * Clamp stagger delay so total stagger time doesn't exceed MAX_TOTAL_STAGGER_MS.
- */
-export function clampStaggerDelay(delay: number, elementCount: number): number {
-  if (elementCount <= 1) return 0;
-  return Math.min(delay, MAX_TOTAL_STAGGER_MS / elementCount);
 }
 
 /**
