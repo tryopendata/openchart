@@ -133,11 +133,11 @@ describe('resolveAnimation', () => {
     });
   });
 
-  it('exit phase uses EXIT_DEFAULTS (shorter duration)', () => {
+  it('exit phase uses EXIT_DEFAULTS (a 120ms fade on gentle)', () => {
     const result = resolveAnimation(true);
     expect(result!.exit).toEqual({
-      duration: 250,
-      ease: 'smooth',
+      duration: 120,
+      ease: 'gentle',
       staggerDelay: 0,
       staggerOrder: 'index',
     });

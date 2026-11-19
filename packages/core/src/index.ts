@@ -248,10 +248,13 @@ export type {
   KeyframeValue,
   RoleTiming,
   StaggerRule,
+  UpdateTimeline,
 } from './motion/choreography';
 export {
   anchorMs,
   ENTRANCE_ROLES,
+  EXIT_CURVE,
+  EXIT_FADE_MS,
   entranceAnchorVars,
   entranceEndMs,
   entranceRole,
@@ -267,6 +270,8 @@ export {
   progressTimeMs,
   roleBaseDuration,
   roleVars,
+  UPDATE_ENTER_START,
+  updateTimeline,
 } from './motion/choreography';
 export type { CurveInput, CurveName, CurveStop, MonotoneCurveName } from './motion/curves';
 export {

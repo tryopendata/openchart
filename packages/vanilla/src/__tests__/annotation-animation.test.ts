@@ -1,4 +1,4 @@
-import { type ChartSpec, sampleMotion } from '@opendata-ai/openchart-core';
+import { type ChartSpec, sampleMotion, updateTimeline } from '@opendata-ai/openchart-core';
 import { compileChart } from '@opendata-ai/openchart-engine';
 import { describe, expect, it } from 'vitest';
 import { renderChartSVG } from '../svg-renderer';
@@ -45,7 +45,12 @@ describe('annotation transition rendering', () => {
     buildAnnotationTweens(svg, before, after, tweens);
     const tween = tweens.find((t) => t.tweenType === 'annotation')!;
     expect(tween).toBeDefined();
-    applyTweenState(tween, 50, { duration: 100 }, { duration: 100 }, 0, 100);
+    const phase = { duration: 100 };
+    applyTweenState(tween, 50, {
+      update: phase,
+      exit: phase,
+      ...updateTimeline(phase, phase, false),
+    });
     const group = svg.querySelector('.oc-annotation')!;
     expect(group.hasAttribute('transform')).toBe(false);
     expect(Number(group.querySelector('.oc-annotation-dot')!.getAttribute('cx'))).toBe(

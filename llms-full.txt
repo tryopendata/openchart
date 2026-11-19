@@ -1784,7 +1784,7 @@ Controls entrance animations and data-update transitions. Source: `core/src/type
   animation: {
     enter: { duration: 600, ease: 'smooth', stagger: true, trigger: 'visible' },
     update: { duration: 500, ease: 'smooth' },
-    exit: { duration: 250, ease: 'smooth' },
+    exit: { duration: 120, ease: 'gentle' },
     annotationDelay: 150,
   }
 }
@@ -1804,15 +1804,15 @@ Controls entrance animations and data-update transitions. Source: `core/src/type
 | ----------------- | --------------------------------- | ----------- | -------------------------------------------------- |
 | `enter`           | `EnterPhaseConfig \| boolean`     | `true`      | Entrance animation, played when the chart first scrolls into view (see `trigger`). |
 | `update`          | `UpdatePhaseConfig \| boolean`    | `true`      | Transition animation when data updates via `.update()`. |
-| `exit`            | `AnimationPhaseConfig \| boolean` | `true`      | Exit animation when marks are removed during updates. |
+| `exit`            | `AnimationPhaseConfig \| boolean` | `true`      | Exit animation when marks are removed during updates. A removed mark fades out (bars and slices also collapse) over the exit duration, and surviving marks wait for it before they move, so nothing slides over a mark that is still fading. |
 | `annotationDelay` | `number`                          | `150`       | Gap in ms after the last mark reaches 90% of its entrance before annotations start (`0` under a preset). |
 
 ### AnimationPhaseConfig
 
 | Field      | Type                          | Default    | Description                                  |
 | ---------- | ----------------------------- | ---------- | -------------------------------------------- |
-| `duration` | `number`                      | `600` enter / `500` update / `250` exit | Duration in ms.                              |
-| `ease`     | `AnimationEase`               | `'smooth'` | Easing preset: `'smooth'` (fast attack, quick settle), `'snappy'` (faster, settles by about half the duration), `'gentle'` (the previous slower ease-out). |
+| `duration` | `number`                      | `600` enter / `500` update / `120` exit | Duration in ms.                              |
+| `ease`     | `AnimationEase`               | `'smooth'` (`'gentle'` for exit) | Easing preset: `'smooth'` (fast attack, quick settle), `'snappy'` (faster, settles by about half the duration), `'gentle'` (the previous slower ease-out). |
 | `stagger`  | `AnimationStagger \| boolean` | `true`     | Stagger config for entrance. `false` = simultaneous. `delay` (default `80`) is a ceiling: the whole stagger spans at most 300ms, so n elements land `min(delay, 300 / (n - 1))` apart. |
 
 ### EnterPhaseConfig

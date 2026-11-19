@@ -1,4 +1,4 @@
-import { type MotionPhase, sampleMotion } from '@opendata-ai/openchart-core';
+import { sampleMotion } from '@opendata-ai/openchart-core';
 import { buildArcPath, interpolateAnnotationGeometry } from '@opendata-ai/openchart-engine';
 import { updateAnnotationGeometry } from '../renderers/annotations';
 
@@ -18,7 +18,7 @@ import {
   lerpGeom,
   resolveRectShapeElement,
 } from './interpolate';
-import type { ArcGeom, ArcTween, RuleTween, TickTween, Tween } from './types';
+import type { ArcGeom, ArcTween, RuleTween, TickTween, TransitionClock, Tween } from './types';
 
 // ---------------------------------------------------------------------------
 // Arc helpers (shared by the per-frame step and the final snap)
@@ -71,34 +71,35 @@ function resolveTweenLineElement(tw: RuleTween | TickTween): SVGElement {
   return tw.lineEl ?? resolveLineElement(tw.el);
 }
 
-export function applyTweenState(
-  tw: Tween,
-  elapsed: number,
-  update: MotionPhase,
-  exit: MotionPhase,
-  enterDelay: number,
-  enterDuration: number,
-): void {
+export function applyTweenState(tw: Tween, elapsed: number, clock: TransitionClock): void {
   // Canvas points carry all three phases in one record and have no element for
   // the shared geometry/opacity steps below to write to, so they short-circuit.
   if (tw.tweenType === 'canvasPoints') {
-    applyCanvasPointsState(tw, elapsed, update, exit, enterDelay, enterDuration);
+    applyCanvasPointsState(tw, elapsed, clock);
     return;
   }
   if (tw.tweenType === 'canvasGridlines') {
-    applyCanvasGridlinesState(tw, elapsed, update, enterDelay, enterDuration);
+    applyCanvasGridlinesState(tw, elapsed, clock);
     return;
   }
 
   // sampleMotion clamps every curve to [0, 1], so update and exit-ghost
   // geometry never leaves [from, to] even on an overshooting ease.
-  const phase =
-    tw.kind === 'exit'
+  // Removal ghosts run on the exit clock from 0; survivors wait out the exit
+  // (`clock.updateDelayMs`); enters and crossfading ghosts share the enter
+  // window, so a crossfade's two paths cross over with no gap between them.
+  const { update, exit } = clock;
+  const onEnterClock = tw.kind === 'enter' || ('crossfade' in tw && tw.crossfade === true);
+  const phase = onEnterClock
+    ? enterMotionPhase(update, clock.enterMs)
+    : tw.kind === 'exit'
       ? exit
-      : tw.kind === 'enter'
-        ? enterMotionPhase(update, enterDuration)
-        : update;
-  const elapsedMs = tw.kind === 'enter' ? Math.max(0, elapsed - enterDelay) : elapsed;
+      : update;
+  const elapsedMs = onEnterClock
+    ? elapsed - clock.enterDelayMs
+    : tw.kind === 'exit'
+      ? elapsed
+      : elapsed - clock.updateDelayMs;
   const eased = sampleMotion(phase, elapsedMs).position;
 
   switch (tw.tweenType) {

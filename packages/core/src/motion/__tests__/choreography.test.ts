@@ -6,6 +6,8 @@ import {
   ENTRANCE_ROLES,
   type EntranceRole,
   type EntranceTimingContext,
+  EXIT_CURVE,
+  EXIT_FADE_MS,
   entranceAnchorVars,
   entranceEndMs,
   entranceRole,
@@ -17,6 +19,8 @@ import {
   KEYFRAMES,
   keyframeProperties,
   progressTimeMs,
+  UPDATE_ENTER_START,
+  updateTimeline,
 } from '../choreography';
 import { evalCurve, invertCurve } from '../curves';
 import { FLUID_SPRING, type MotionPhase, sampleMotion } from '../sample';
@@ -433,5 +437,40 @@ describe('evalKeyframes', () => {
       type: 'css',
       css: 'var(--oc-feature-fill)',
     });
+  });
+});
+
+describe('updateTimeline (D9 exits)', () => {
+  const update: MotionPhase = { duration: 500, ease: 'smooth' };
+  const exit: MotionPhase = { duration: EXIT_FADE_MS, ease: EXIT_CURVE };
+
+  it('runs exits, survivors and enters together when nothing is removed', () => {
+    expect(updateTimeline(update, exit, false)).toEqual({
+      exitMs: 120,
+      updateDelayMs: 0,
+      enterDelayMs: UPDATE_ENTER_START * 500,
+      enterMs: 500 - UPDATE_ENTER_START * 500,
+      totalMs: 500,
+    });
+  });
+
+  it('holds survivors and enters until removal ghosts have faded', () => {
+    const t = updateTimeline(update, exit, true);
+    expect(t.updateDelayMs).toBe(t.exitMs);
+    expect(t.enterDelayMs).toBe(t.exitMs + UPDATE_ENTER_START * 500);
+    expect(t.enterDelayMs + t.enterMs).toBe(t.totalMs);
+    expect(t.totalMs).toBe(620);
+  });
+
+  it('fades exits on a monotone ease-out that ends at exactly 1', () => {
+    let prev = 0;
+    for (let ms = 0; ms <= EXIT_FADE_MS; ms += 4) {
+      const p = sampleMotion(exit, ms).position;
+      expect(p).toBeGreaterThanOrEqual(prev);
+      prev = p;
+    }
+    expect(sampleMotion(exit, EXIT_FADE_MS).position).toBe(1);
+    // Ease-out: past halfway within the first third.
+    expect(sampleMotion(exit, EXIT_FADE_MS / 3).position).toBeGreaterThan(0.5);
   });
 });

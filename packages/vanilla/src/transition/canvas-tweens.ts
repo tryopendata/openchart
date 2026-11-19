@@ -9,6 +9,7 @@ import type {
   CanvasLayerLike,
   CanvasPointsTween,
   GeometrySnapshot,
+  TransitionClock,
   Tween,
 } from './types';
 
@@ -163,13 +164,11 @@ export function buildCanvasPointsTween(
 export function applyCanvasPointsState(
   tw: CanvasPointsTween,
   elapsed: number,
-  update: MotionPhase,
-  exit: MotionPhase,
-  enterDelay: number,
-  enterDuration: number,
+  clock: TransitionClock,
 ): void {
   const soa = tw.layer.state.marks;
-  const easedUpdate = sampleMotion(update, elapsed).position;
+  // Survivors hold while removal ghosts clear, exactly as on SVG.
+  const easedUpdate = sampleMotion(clock.update, elapsed - clock.updateDelayMs).position;
 
   for (let s = 0; s < tw.soaIndex.length; s++) {
     const i = tw.soaIndex[s];
@@ -183,8 +182,8 @@ export function applyCanvasPointsState(
   const alpha = tw.layer.state.enterAlpha;
   if (alpha && tw.enterSoaIndex.length > 0) {
     const easedEnter = sampleMotion(
-      enterMotionPhase(update, enterDuration),
-      elapsed - enterDelay,
+      enterMotionPhase(clock.update, clock.enterMs),
+      elapsed - clock.enterDelayMs,
     ).position;
     for (let e = 0; e < tw.enterSoaIndex.length; e++) {
       alpha[tw.enterSoaIndex[e]] = easedEnter;
@@ -194,7 +193,7 @@ export function applyCanvasPointsState(
   // Exit ghosts hold their prev position and fade out on the exit clock.
   // The record is preallocated; only alpha changes frame to frame.
   if (tw.exitState) {
-    const easedExit = sampleMotion(exit, elapsed).position;
+    const easedExit = sampleMotion(clock.exit, elapsed).position;
     tw.exitState.alpha = 1 - easedExit;
     tw.layer.state.exiting = tw.exitState;
   }
@@ -310,17 +309,15 @@ export function buildCanvasGridlinesTween(
 export function applyCanvasGridlinesState(
   tw: CanvasGridlinesTween,
   elapsed: number,
-  update: MotionPhase,
-  enterDelay: number,
-  enterDuration: number,
+  clock: TransitionClock,
 ): void {
   const live = tw.layer.state.gridlines;
-  const easedUpdate = sampleMotion(update, elapsed).position;
+  const easedUpdate = sampleMotion(clock.update, elapsed - clock.updateDelayMs).position;
   // Enters share the point tween's delayed-fade clock so the whole update
   // reads as one motion.
   const easedEnter = sampleMotion(
-    enterMotionPhase(update, enterDuration),
-    elapsed - enterDelay,
+    enterMotionPhase(clock.update, clock.enterMs),
+    elapsed - clock.enterDelayMs,
   ).position;
 
   for (let i = 0; i < tw.index.length; i++) {

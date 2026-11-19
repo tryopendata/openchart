@@ -1257,3 +1257,57 @@ export function invertRoleEase(role: EntranceRole, phase: MotionPhase, p: number
   }
   return firstReach((t) => evalRoleEase(role, phase, t), p);
 }
+
+// ---------------------------------------------------------------------------
+// Update transitions: exits, survivors, enters (D9)
+// ---------------------------------------------------------------------------
+
+/**
+ * Default exit: a removed mark's ghost fades (and collapses, for rects and
+ * arcs) over 120ms. `gentle` is the fast ease-out here: on a 120ms window
+ * `snap`/`snappy` are ~90% done in under 25ms, which reads as a pop, not a
+ * fade. Exit geometry goes through `sampleMotion`, so it stays in [from, to].
+ */
+export const EXIT_FADE_MS = 120;
+export const EXIT_CURVE = 'gentle' as const satisfies MonotoneCurveName;
+
+/** Marks entering during an update start once survivors reach this share of their tween's time. */
+export const UPDATE_ENTER_START = 0.4;
+
+/** When each track of an update transition runs, in ms from its start. */
+export interface UpdateTimeline {
+  /** Removal ghosts fade over [0, exitMs]. */
+  exitMs: number;
+  /** Survivors (and chrome, labels, color) start moving here. */
+  updateDelayMs: number;
+  /** Entering marks fade in from here... */
+  enterDelayMs: number;
+  /** ...over this long, ending with the survivors. */
+  enterMs: number;
+  /** End of the whole transition. */
+  totalMs: number;
+}
+
+/**
+ * Lay out an update transition. On `snap`, a survivor sliding into a removed
+ * mark's slot touches the ghost within ~25ms (a bar's neighbour covers the
+ * band gap at ~0.4 progress), so no fade short enough to run alongside it
+ * can clear first. When the update removes marks, survivors therefore hold
+ * until the exit has finished, and enters keep their place relative to the
+ * survivors. Without removals there is nothing to clear and nothing waits.
+ */
+export function updateTimeline(
+  update: MotionPhase,
+  exit: MotionPhase,
+  hasRemovals: boolean,
+): UpdateTimeline {
+  const updateDelayMs = hasRemovals ? Math.max(0, exit.duration) : 0;
+  const enterLead = UPDATE_ENTER_START * update.duration;
+  return {
+    exitMs: exit.duration,
+    updateDelayMs,
+    enterDelayMs: updateDelayMs + enterLead,
+    enterMs: update.duration - enterLead,
+    totalMs: Math.max(updateDelayMs + update.duration, exit.duration),
+  };
+}

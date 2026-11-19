@@ -211,11 +211,11 @@ describe('canvas keyed morph', () => {
     const handle = chart.beginManualUpdate(scatter(IDS_2025, 33));
     expect(handle).not.toBeNull();
 
-    // t=120 is inside the exit fade (300ms) and before the enter delay
-    // (40% of 500ms = 200ms), so: survivors drawn, exits ghosted, enters
-    // still at alpha 0 and culled entirely.
+    // t=60 is inside the exit fade (120ms) and before the enter delay (the
+    // 120ms exit hold plus 40% of 500ms), so: survivors drawn, exits ghosted,
+    // enters still at alpha 0 and culled entirely.
     stub.calls.length = 0;
-    handle!.step(120);
+    handle!.step(60);
     expect(filledArcs()).toBe(SURVIVORS + EXITS);
 
     // Past the end: ghosts cleared, enters at full opacity.

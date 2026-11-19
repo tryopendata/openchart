@@ -424,8 +424,8 @@ describe('exiting gridlines', () => {
       expect(num(ghost, 'x2')).toBeCloseTo(nextLayout.area.x + nextLayout.area.width, 4);
     }
 
-    // Mid-flight they are partly faded but have NOT moved.
-    pumpRaf(150);
+    // Mid-flight (inside the 120ms exit) they are partly faded but have NOT moved.
+    pumpRaf(60);
     for (const [i, ghost] of ghosts.entries()) {
       const o = Number(ghost.style.opacity);
       expect(o).toBeGreaterThan(0);

@@ -24,7 +24,12 @@ import type {
   ResolvedAnimationPhase,
   UpdatePhaseConfig,
 } from '@opendata-ai/openchart-core';
-import { FLUID_SPRING, springDuration } from '@opendata-ai/openchart-core';
+import {
+  EXIT_CURVE,
+  EXIT_FADE_MS,
+  FLUID_SPRING,
+  springDuration,
+} from '@opendata-ai/openchart-core';
 
 // The stagger cap lives in core so every renderer shares it; re-exported unchanged.
 export { clampStaggerDelay, MAX_TOTAL_STAGGER_MS } from '@opendata-ai/openchart-core';
@@ -46,10 +51,13 @@ export const UPDATE_DEFAULTS: ResolvedAnimationPhase = {
   staggerOrder: 'index',
 };
 
-/** Default values for exit animation. */
+/**
+ * Default values for exit animation: a quick fade that clears before survivors
+ * move into the removed mark's slot (choreography's EXIT_FADE_MS/EXIT_CURVE).
+ */
 export const EXIT_DEFAULTS: ResolvedAnimationPhase = {
-  duration: 250,
-  ease: 'smooth',
+  duration: EXIT_FADE_MS,
+  ease: EXIT_CURVE,
   staggerDelay: 0,
   staggerOrder: 'index',
 };
@@ -85,11 +93,9 @@ export function resolveAnimation(spec: AnimationSpec | undefined): ResolvedAnima
 
   const enter = resolvePhase(config.enter, base(ENTER_DEFAULTS));
   const update = resolvePhase(config.update, base(UPDATE_DEFAULTS));
-  // Exits are brief fades; only an authored phase opts into spring timing.
-  const exit = resolvePhase(
-    config.exit,
-    preset === undefined ? EXIT_DEFAULTS : { ...EXIT_DEFAULTS, duration: 160 },
-  );
+  // Exits are brief fades under every preset; only an authored phase opts
+  // into spring timing.
+  const exit = resolvePhase(config.exit, EXIT_DEFAULTS);
 
   // trigger is enter-only, so it is applied here like maxMarks below.
   // resolvePhase rebuilds the phase from its own fields, dropping it.

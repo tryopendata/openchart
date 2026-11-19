@@ -9,6 +9,7 @@ import {
   type ChartSpec,
   evalValueCurve,
   type MotionPhase,
+  updateTimeline,
 } from '@opendata-ai/openchart-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createContainer } from '../__test-fixtures__/dom';
@@ -146,9 +147,10 @@ describe('marks entering during an update', () => {
     const alphaFor = (ease: AnimationEase) => {
       const update: MotionPhase = { duration: UPDATE_MS, ease };
       const points = canvasPointsTween();
-      applyCanvasPointsState(points, at, update, exit, ENTER_DELAY, ENTER_MS);
+      const clock = { update, exit, ...updateTimeline(update, exit, false) };
+      applyCanvasPointsState(points, at, clock);
       const grid = canvasGridlinesTween();
-      applyCanvasGridlinesState(grid, at, update, ENTER_DELAY, ENTER_MS);
+      applyCanvasGridlinesState(grid, at, clock);
       return {
         point: points.layer.state.enterAlpha![0],
         gridline: grid.layer.state.gridlines[0].alpha,

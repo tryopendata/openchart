@@ -1,4 +1,11 @@
-import type { ArcMark, Point, RectMark, ResolvedAnnotation } from '@opendata-ai/openchart-core';
+import type {
+  ArcMark,
+  MotionPhase,
+  Point,
+  RectMark,
+  ResolvedAnnotation,
+  UpdateTimeline,
+} from '@opendata-ai/openchart-core';
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -53,8 +60,14 @@ export interface TransitionHandle {
    * (elapsed < total), false once it has reached its end.
    */
   step(elapsedMs: number): boolean;
-  /** The transition's total duration in ms (update/exit, whichever is longer). */
+  /** The transition's total duration in ms (see `updateTimeline`). */
   readonly totalMs: number;
+}
+
+/** One update transition's phases and where each track sits on its clock. */
+export interface TransitionClock extends UpdateTimeline {
+  update: MotionPhase;
+  exit: MotionPhase;
 }
 
 // ---------------------------------------------------------------------------
@@ -108,6 +121,13 @@ export interface LineTween {
   finalPoints: Point[];
   interpolate?: string;
   ghost?: SVGElement;
+  /**
+   * Set on an exit ghost that is crossfading into its own replacement (a
+   * frozen interrupted path, or a path redrawn instead of morphed). It fades
+   * out on the replacement's enter clock, so the two cross over instead of
+   * leaving a gap; it is not a removal and does not hold survivors.
+   */
+  crossfade?: boolean;
   fromOpacity?: number;
   toOpacity?: number;
   /** Cached `el.querySelector('path')`, resolved once at construction. */
@@ -132,6 +152,13 @@ export interface AreaTween {
   /** Whether to also write the topPath stroke element. */
   hasStroke: boolean;
   ghost?: SVGElement;
+  /**
+   * Set on an exit ghost that is crossfading into its own replacement (a
+   * frozen interrupted path, or a path redrawn instead of morphed). It fades
+   * out on the replacement's enter clock, so the two cross over instead of
+   * leaving a gap; it is not a removal and does not hold survivors.
+   */
+  crossfade?: boolean;
   fromOpacity?: number;
   toOpacity?: number;
   /** Cached `el.querySelectorAll('path')` results, resolved once at construction. */

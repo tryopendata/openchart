@@ -28,7 +28,7 @@ import type {
   LineMark,
   ResolvedAnimation,
 } from '@opendata-ai/openchart-core';
-import { isGradientDef, sampleMotion } from '@opendata-ai/openchart-core';
+import { isGradientDef, sampleMotion, updateTimeline } from '@opendata-ai/openchart-core';
 import { buildAreaPath, buildLinePath, EXIT_DEFAULTS } from '@opendata-ai/openchart-engine';
 import { buildGradientDefs } from '../gradient-utils';
 
@@ -60,6 +60,7 @@ import type {
   CanvasLayerLike,
   GeometrySnapshot,
   SnapshotGeometry,
+  TransitionClock,
   TransitionHandle,
   Tween,
 } from './types';
@@ -99,11 +100,6 @@ export function runTransition(args: {
   const { svg, prevLayout, nextLayout, animation, onComplete, fromSnapshot, manual, canvas } = args;
   const update = animation.update!;
   const exit = animation.exit ?? { ...EXIT_DEFAULTS };
-
-  // Total timeline
-  const totalMs = Math.max(update.duration, exit.duration);
-  const enterDelay = 0.4 * update.duration; // enters start at 40% of update duration
-  const enterDuration = update.duration - enterDelay; // remaining 60%
 
   // Find the marks container in the SVG
   const marksContainer = svg.querySelector('.oc-marks') as SVGElement | null;
@@ -268,9 +264,22 @@ export function runTransition(args: {
   const labelMotion = buildLabelMotion(svg, prevLayout, nextLayout, fromSnapshot);
   labelMotion.apply(0);
 
+  // Exits first: when marks are removed, survivors hold until the ghosts have
+  // faded (see `updateTimeline`). Axis-label and gridline ghosts don't count:
+  // nothing lands on them, and holding every rescale for them would be noise.
+  const clock: TransitionClock = {
+    update,
+    exit,
+    ...updateTimeline(update, exit, tweens.some(isRemovalExit)),
+  };
+  const { totalMs } = clock;
+  /** Survivors' eased progress at `elapsed` (labels and snapshots ride it). */
+  const updateProgress = (elapsed: number): number =>
+    sampleMotion(update, elapsed - clock.updateDelayMs).position;
+
   // Apply all from-states SYNCHRONOUSLY before scheduling the first rAF
   for (const tw of tweens) {
-    applyTweenState(tw, 0, update, exit, enterDelay, enterDuration);
+    applyTweenState(tw, 0, clock);
   }
   // ...and paint them. The state writes above only rewind the layer's data; the
   // bitmap still shows the final state until something repaints. Relying on
@@ -303,11 +312,11 @@ export function runTransition(args: {
     const tGlobal = Math.min(elapsed / totalMs, 1);
 
     for (const tw of tweens) {
-      applyTweenState(tw, elapsed, update, exit, enterDelay, enterDuration);
+      applyTweenState(tw, elapsed, clock);
     }
 
     // Attached labels share the marks' update clock.
-    labelMotion.apply(sampleMotion(update, elapsed).position);
+    labelMotion.apply(updateProgress(elapsed));
 
     // One paint per frame, after every tween has written its state.
     canvas?.repaint();
@@ -371,11 +380,9 @@ export function runTransition(args: {
     for (const tw of tweens) {
       const easedUpdate =
         tw.kind === 'enter'
-          ? sampleMotion(
-              enterMotionPhase(update, enterDuration),
-              Math.max(0, lastElapsed - enterDelay),
-            ).position
-          : sampleMotion(update, lastElapsed).position;
+          ? sampleMotion(enterMotionPhase(update, clock.enterMs), lastElapsed - clock.enterDelayMs)
+              .position
+          : updateProgress(lastElapsed);
       if (tw.kind === 'exit') continue;
 
       // Canvas points snapshot per-point from the packed arrays. The emitted
@@ -517,9 +524,9 @@ export function runTransition(args: {
       // between steps. Mirrors tick()'s body minus the rAF scheduling.
       lastElapsed = elapsedMs;
       for (const tw of tweens) {
-        applyTweenState(tw, elapsedMs, update, exit, enterDelay, enterDuration);
+        applyTweenState(tw, elapsedMs, clock);
       }
-      labelMotion.apply(sampleMotion(update, elapsedMs).position);
+      labelMotion.apply(updateProgress(elapsedMs));
       if (elapsedMs >= totalMs) {
         // Snap to exact final geometry (paths, ghosts removed) so the last frame
         // is pixel-correct, but do NOT flip `running` — the caller decides when
@@ -536,6 +543,29 @@ export function runTransition(args: {
     },
     totalMs,
   };
+}
+
+/**
+ * A ghost of a mark that left the data. Crossfade ghosts (a path redrawn into
+ * its own replacement), axis-label and gridline ghosts are not removals.
+ */
+function isRemovalExit(tw: Tween): boolean {
+  switch (tw.tweenType) {
+    case 'canvasPoints':
+      return tw.exitState !== null;
+    case 'line':
+    case 'area':
+      return tw.kind === 'exit' && tw.crossfade !== true;
+    case 'rect':
+    case 'arc':
+    case 'point':
+    case 'rule':
+    case 'tick':
+    case 'textMark':
+      return tw.kind === 'exit';
+    default:
+      return false;
+  }
 }
 
 // ---------------------------------------------------------------------------
