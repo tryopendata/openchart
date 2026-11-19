@@ -532,18 +532,43 @@ describe('runMapFillTransition point geometry', () => {
     // The re-render cancels the in-flight tween, snapping the old point.
     oldPoint.removeAttribute('opacity');
     oldPoint.setAttribute('r', '9');
+    oldPoint.setAttribute('fill', '#0000ff');
 
     runMapFillTransition(svg, prev, { update: { duration: 100 }, exit: { duration: 120 } });
 
     const ghost = camera.querySelector('.oc-ghost');
     expect(ghost).not.toBe(oldPoint);
     expect(ghost?.getAttribute('r')).toBe('6');
+    expect(ghost?.getAttribute('fill')).toBe('#ff0000');
     expect(Number(ghost?.getAttribute('opacity'))).toBeCloseTo(0.4);
     // The old SVG's point is untouched: the ghost is a clone.
     expect(oldPoint.getAttribute('r')).toBe('9');
     expect(oldPoint.classList.contains('oc-ghost')).toBe(false);
     runToCompletion();
     expect(camera.querySelector('.oc-ghost')).toBeNull();
+  });
+
+  it('keeps the re-homed url() paint on a removed point ghost', () => {
+    const svg = buildMapSvg([], []);
+    const camera = document.createElementNS(SVG_NS, 'g');
+    camera.setAttribute('data-oc-map-camera', '');
+    svg.appendChild(camera);
+    const old = buildMapSvg([], [{ key: 'gone', fill: 'url(#hatch)', r: 6, cx: 10, cy: 20 }]);
+    const defs = document.createElementNS(SVG_NS, 'defs');
+    const pattern = document.createElementNS(SVG_NS, 'pattern');
+    pattern.setAttribute('id', 'hatch');
+    defs.appendChild(pattern);
+    old.insertBefore(defs, old.firstChild);
+    const prev = captureMapSnapshot(old);
+
+    runMapFillTransition(svg, prev, { update: { duration: 100 }, exit: { duration: 120 } });
+
+    const fill = camera.querySelector('.oc-ghost')?.getAttribute('fill') ?? '';
+    const id = /^url\(#([^)]+)\)$/.exec(fill)?.[1];
+    expect(id).toBeDefined();
+    expect(id).not.toBe('hatch');
+    expect(svg.querySelector(`[id="${id}"]`)).not.toBeNull();
+    runToCompletion();
   });
 
   it('follows update.ease instead of a fixed curve', () => {

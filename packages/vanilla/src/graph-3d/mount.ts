@@ -1186,12 +1186,8 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
    */
   function playEntrance(): EntrancePlay | undefined {
     const enter = compilation.animation?.enter ?? null;
+    if (destroyed || !enter) return undefined;
     entrancePlayed = true;
-    if (destroyed || !enter) {
-      // Nothing to reveal: never leave the primed marks hidden.
-      if (!destroyed) endEntrance();
-      return undefined;
-    }
 
     // Same gate as 2D: thousands of distinct start times read as noise, so
     // above the cap the whole graph reveals as one.

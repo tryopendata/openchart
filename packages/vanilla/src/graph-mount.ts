@@ -591,15 +591,8 @@ export function createGraph(
    */
   function playEntrance(): EntrancePlay | undefined {
     const enter = compilation.animation?.enter ?? null;
+    if (destroyed || !interactionManager || !enter) return undefined;
     entrancePlayed = true;
-    if (destroyed || !interactionManager || !enter) {
-      // Nothing to reveal: never leave the nodes held hidden at progress 0.
-      entranceActive = false;
-      entranceProgress = 1;
-      needsRender = true;
-      scheduleRender();
-      return undefined;
-    }
 
     if (!cameraTouchedWhileWaiting && positionedNodes.length > 0) {
       // Re-fit: the viewport (or, after an update, the data) may have changed

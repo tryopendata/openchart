@@ -12,7 +12,10 @@
  *   entrance on the new root. The entrance is owed from mount until a render
  *   has content, and again whenever `reset()` cancels a waiting entrance, so
  *   an update that empties a waiting chart still enters when data returns.
- * - `drop()` on a data update: it cancels without the caller re-arming.
+ * - `drop()` cancels without the entrance staying owed. Only mounts that keep
+ *   their host across a change use it (canvas-mode resize, graph updates);
+ *   a CSS mount's update goes through `reset()` + `claim()`, or a waiting
+ *   entrance would be lost.
  * - `admitResize()` at the top of `resize()`. While the entrance plays it
  *   records the resize and returns false; the resize replays through
  *   `onDeferredResize` after the entrance settles (mounts that never call
@@ -72,7 +75,10 @@ export interface EntranceLifecycle {
    * settles the debt whether or not it animates.
    */
   claim(hasContent: boolean, enabled: boolean): boolean;
-  /** On update: cancel without re-arming. Returns whether it was waiting. */
+  /**
+   * Cancel without the entrance staying owed (canvas-mode resize, graph
+   * updates that keep their host). Returns whether it was waiting.
+   */
   drop(): boolean;
   /** True: run the resize now. False: deferred, replayed after the entrance settles. */
   admitResize(): boolean;
