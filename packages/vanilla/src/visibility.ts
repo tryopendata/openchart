@@ -119,11 +119,6 @@ export function whenSeen(element: Element, cb: () => void): () => void {
   };
 }
 
-/** Number of elements the shared observer is watching (tests). */
-export function observedCount(): number {
-  return targets.size;
-}
-
 /**
  * Hold a freshly rendered entrance until `container` is seen, then call
  * `play`. While held, `root` carries `--oc-play-state: paused`, which every

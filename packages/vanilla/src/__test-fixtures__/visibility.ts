@@ -45,6 +45,8 @@ export function createFakeObserver() {
     fire,
     observed,
     unobserved,
+    /** Elements the shared observer is watching now (visibility.ts observes each once). */
+    observedCount: () => observed.size,
     get created() {
       return created;
     },

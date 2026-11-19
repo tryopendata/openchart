@@ -126,9 +126,11 @@ export function injectThemeStyleBlock(svg: SVGElement, theme: ResolvedTheme | un
 }
 
 /**
- * Timing tokens an entrance also stamps inline on its live root
- * (`stampAnimationVars`). An inline value there is that render's motion state,
- * not theme, so a settled export doesn't carry it.
+ * Timing tokens an entrance stamps inline on the root it renders
+ * (`stampAnimationVars`). They are that render's motion state, not theme: an
+ * export never copies them from the live cascade (a settled export carries
+ * none) and never strips the ones its own clone stamped (the GIF's frame
+ * sampler reads them).
  */
 const ENTRANCE_TIMING_TOKENS = new Set([
   '--oc-animation-duration',
@@ -141,7 +143,7 @@ export function copyComputedThemeProperties(source: SVGElement, clone: SVGElemen
   if (!source.isConnected) return;
   const computed = getComputedStyle(source);
   for (const { name } of CSS_TOKENS) {
-    if (ENTRANCE_TIMING_TOKENS.has(name) && source.style.getPropertyValue(name)) continue;
+    if (ENTRANCE_TIMING_TOKENS.has(name)) continue;
     const value = computed.getPropertyValue(name).trim();
     if (value) clone.style.setProperty(name, value);
   }
@@ -157,7 +159,9 @@ export function prepareSettledExportTheme(
   if (explicitTheme) {
     // A re-render may stamp authored mount values inline. They would beat the
     // export theme's stylesheet even when copying the live cascade is skipped.
-    for (const { name } of CSS_TOKENS) settled.style.removeProperty(name);
+    for (const { name } of CSS_TOKENS) {
+      if (!ENTRANCE_TIMING_TOKENS.has(name)) settled.style.removeProperty(name);
+    }
   } else {
     copyComputedThemeProperties(source, settled);
   }

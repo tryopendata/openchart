@@ -163,6 +163,38 @@ describe('2D graph entrance trigger', () => {
     graph.destroy();
   });
 
+  it.each([
+    ['animation: false', { ...spec(), animation: false } as GraphSpec],
+    ['enter: false', { ...spec(), animation: { enter: false } } as GraphSpec],
+  ])('an update() while waiting that sets %s draws the graph at full alpha', async (_kind, next) => {
+    const graph = createGraph(container, spec());
+    await run(0, 500);
+    expect(lastEntrance()?.t).toBe(0);
+
+    graph.update(next);
+    await run(550, 800);
+    // Not left hidden at progress 0, and no longer waiting to be seen.
+    expect(lastEntrance()).toBeUndefined();
+    expect(fake.observed.size).toBe(0);
+    expect(graph.entrancePlayed).toBe(true);
+    graph.destroy();
+  });
+
+  it('an update() while the entrance plays ends it at full alpha', async () => {
+    const graph = createGraph(container, spec());
+    await run(0, 500);
+    seen();
+    clock.pump(550);
+    clock.pump(650);
+    expect(lastEntrance()?.t).toBeGreaterThan(0);
+    expect(lastEntrance()?.t).toBeLessThan(1);
+
+    graph.update(spec());
+    clock.pump(700);
+    expect(lastEntrance()).toBeUndefined();
+    graph.destroy();
+  });
+
   it('a camera the reader moved while waiting is kept: only the reveal runs', async () => {
     const graph = createGraph(container, spec());
     await run(0, 500);

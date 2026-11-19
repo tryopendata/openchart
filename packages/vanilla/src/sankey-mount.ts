@@ -353,7 +353,6 @@ export function createSankey(
   // Animation state
   // Owed until a render has nodes: a sankey mounted before its data arrives
   // enters on the first update that brings some.
-  let entranceOwed = true;
   // Waiting (held until seen): every re-render re-arms it on the new SVG.
   // Playing: resizes defer and replay after it settles; updates snap.
   const entrance = createEntranceLifecycle({ onDeferredResize: () => resize() });
@@ -685,11 +684,8 @@ export function createSankey(
   }
 
   /** Whether the entrance should play on a render of `layout`. */
-  function claimEntrance(layout: SankeyLayout, rearm: boolean): boolean {
-    const hasNodes = layout.nodes.length > 0;
-    const animate = (entranceOwed || rearm) && hasNodes && !!layout.animation?.enter;
-    if (hasNodes) entranceOwed = false;
-    return animate;
+  function claimEntrance(layout: SankeyLayout): boolean {
+    return entrance.claim(layout.nodes.length > 0, !!layout.animation?.enter);
   }
 
   /**
@@ -705,7 +701,7 @@ export function createSankey(
     // Cancel the in-progress entrance and update tween before tearing down
     updateTween?.cancel();
     updateTween = null;
-    const rearmEntrance = entrance.reset();
+    entrance.reset();
     if (svgElement) {
       cancelAnimations(svgElement);
     }
@@ -724,7 +720,7 @@ export function createSankey(
     currentLayout = nextLayout;
 
     // Determine if we should animate
-    const shouldAnimate = claimEntrance(currentLayout, rearmEntrance);
+    const shouldAnimate = claimEntrance(currentLayout);
 
     // Render
     const animation = shouldAnimate ? currentLayout.animation : undefined;
@@ -894,7 +890,7 @@ export function createSankey(
     currentLayout = compile();
 
     // Determine if we should animate
-    const shouldAnimate = claimEntrance(currentLayout, false);
+    const shouldAnimate = claimEntrance(currentLayout);
 
     // Render
     const animation = shouldAnimate ? currentLayout.animation : undefined;

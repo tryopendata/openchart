@@ -218,7 +218,6 @@ export function createTileMap(
   // Animation state
   // Owed until a render has a tile with data: a tile map mounted before its
   // data arrives enters on the first update that brings some.
-  let entranceOwed = true;
   // Waiting (held until seen): every re-render re-arms it on the new SVG.
   // Playing: resizes defer and replay after it settles; updates snap.
   const entrance = createEntranceLifecycle({ onDeferredResize: () => resize() });
@@ -427,10 +426,9 @@ export function createTileMap(
     updateTween?.cancel();
     updateTween = null;
     // Cancel the running entrance; one still waiting to be seen re-arms.
-    const rearm = entrance.reset();
+    entrance.reset();
     const hasData = currentLayout.tiles.some((tile) => tile.hasData);
-    const animate = (entranceOwed || rearm) && hasData && !!currentLayout.animation?.enter;
-    if (hasData) entranceOwed = false;
+    const animate = entrance.claim(hasData, !!currentLayout.animation?.enter);
 
     // Remove old SVG
     if (svgElement) {

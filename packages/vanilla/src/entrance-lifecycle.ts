@@ -6,13 +6,17 @@
  *
  * - `arm()` after rendering a root that should enter. The entrance holds
  *   (`--oc-play-state: paused`) until the container is seen, then plays.
- * - `reset()` before a re-render (resize, font reload). It cancels and
- *   returns whether the entrance was still waiting, so the caller re-arms it
- *   on the new root.
+ * - `reset()` before a re-render (resize, font reload, update). It cancels;
+ *   an entrance that was still waiting stays owed.
+ * - `claim(hasContent, enabled)` during that render: whether to arm the
+ *   entrance on the new root. The entrance is owed from mount until a render
+ *   has content, and again whenever `reset()` cancels a waiting entrance, so
+ *   an update that empties a waiting chart still enters when data returns.
  * - `drop()` on a data update: it cancels without the caller re-arming.
  * - `admitResize()` at the top of `resize()`. While the entrance plays it
  *   records the resize and returns false; the resize replays through
- *   `onDeferredResize` after the entrance settles.
+ *   `onDeferredResize` after the entrance settles (mounts that never call
+ *   `admitResize` omit the hook).
  * - `destroy()` on teardown.
  *
  * It wraps `playWhenSeen` (visibility.ts) and `setupAnimationCleanup`
@@ -60,8 +64,14 @@ export interface EntranceLifecycle {
   /** Seen and not yet settled. */
   readonly playing: boolean;
   arm(opts: EntranceArm): void;
-  /** Before a re-render: cancel. True if it was waiting (the caller re-arms on the new root). */
+  /** Before a re-render: cancel. True if it was waiting (the entrance stays owed). */
   reset(): boolean;
+  /**
+   * During a render, after `reset()`: true when the entrance is owed, the
+   * render has content, and entrances are enabled. A render with content
+   * settles the debt whether or not it animates.
+   */
+  claim(hasContent: boolean, enabled: boolean): boolean;
   /** On update: cancel without re-arming. Returns whether it was waiting. */
   drop(): boolean;
   /** True: run the resize now. False: deferred, replayed after the entrance settles. */
@@ -69,14 +79,16 @@ export interface EntranceLifecycle {
   destroy(): void;
 }
 
-export function createEntranceLifecycle(hooks: {
-  onDeferredResize: () => void;
-}): EntranceLifecycle {
+export function createEntranceLifecycle(
+  hooks: { onDeferredResize?: () => void } = {},
+): EntranceLifecycle {
   let cancelSeen: (() => void) | null = null;
   let cancelPlay: (() => void) | null = null;
   let root: (Element & ElementCSSInlineStyle) | null = null;
   let pendingResize = false;
   let destroyed = false;
+  // Owed until a render with content claims it (see `claim`).
+  let owed = true;
   // Bumped by every arm and cancel, so callbacks from a superseded arm (a
   // late canvas promise, a synchronous play re-entering arm) do nothing.
   let generation = 0;
@@ -108,7 +120,7 @@ export function createEntranceLifecycle(hooks: {
     // the playing gate and defer forever.
     if (pendingResize && !destroyed && gen === generation) {
       pendingResize = false;
-      hooks.onDeferredResize();
+      hooks.onDeferredResize?.();
     }
   }
 
@@ -150,10 +162,7 @@ export function createEntranceLifecycle(hooks: {
     },
     arm(opts) {
       if (destroyed) return;
-      // Keep a resize deferred by a previous arm's window across the cancel.
-      const deferred = pendingResize;
       cancel();
-      pendingResize = deferred;
       const gen = generation;
       root = opts.root;
       const held = playWhenSeen(opts.container, opts.root, opts.trigger, () => {
@@ -163,7 +172,16 @@ export function createEntranceLifecycle(hooks: {
       });
       if (gen === generation) cancelSeen = held;
     },
-    reset: cancel,
+    reset() {
+      const wasWaiting = cancel();
+      if (wasWaiting) owed = true;
+      return wasWaiting;
+    },
+    claim(hasContent, enabled) {
+      const animate = owed && hasContent && enabled;
+      if (hasContent) owed = false;
+      return animate;
+    },
     drop: cancel,
     admitResize() {
       if (destroyed) return false;

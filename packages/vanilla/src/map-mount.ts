@@ -92,14 +92,6 @@ function focusSignature(focus: GeoMapLayout['focus']): string | null {
 }
 
 /**
- * Where a raised feature came from, so leaving puts it back.
- *
- * SVG has no z-index: the only way to draw a hovered feature's outline over its
- * neighbours is to move it to the end of the group. That destroys paint order,
- * which the entrance animation and the border meshes both depend on, so the
- * original next sibling is remembered and restored on leave.
- */
-/**
  * Whether a map has anything to enter with: points, or features that aren't
  * all holes in a color join (a choropleth mounted before its data arrives).
  */
@@ -108,6 +100,14 @@ function layoutHasContent(layout: GeoMapLayout): boolean {
   return layout.features.some((feature) => !feature.noData);
 }
 
+/**
+ * Where a raised feature came from, so leaving puts it back.
+ *
+ * SVG has no z-index: the only way to draw a hovered feature's outline over its
+ * neighbours is to move it to the end of the group. That destroys paint order,
+ * which the entrance animation and the border meshes both depend on, so the
+ * original next sibling is remembered and restored on leave.
+ */
 const featureOrigin = new WeakMap<Element, Element | null>();
 
 function raiseFeature(el: Element, svg: SVGElement): void {
@@ -278,9 +278,8 @@ export function createGeoMap(
 
   // Animation state
   let fillTransitionHandle: { cancel: () => void } | null = null;
-  // Owed until a render has something to show: a choropleth mounted before
-  // its data arrives enters on the first update that brings some.
-  let entranceOwed = true;
+  // Owed until a render has something to show (entrance.claim): a choropleth
+  // mounted before its data arrives enters on the first update that brings some.
   // Waiting (held until seen): every re-render re-arms it on the new SVG.
   // Playing: resizes defer and replay after it settles; updates snap.
   const entrance = createEntranceLifecycle({ onDeferredResize: () => resize() });
@@ -907,14 +906,15 @@ export function createGeoMap(
     const focusedMark = captureMarkFocus(svgElement);
     tooltipManager?.hide();
     // Cancel the running entrance; one still waiting to be seen re-arms.
-    const rearm = entrance.reset();
+    entrance.reset();
     if (fillTransitionHandle) {
       fillTransitionHandle.cancel();
       fillTransitionHandle = null;
     }
-    const hasContent = layoutHasContent(currentLayout);
-    const animate = (entranceOwed || rearm) && hasContent && !!currentLayout.animation?.enter;
-    if (hasContent) entranceOwed = false;
+    const animate = entrance.claim(
+      layoutHasContent(currentLayout),
+      !!currentLayout.animation?.enter,
+    );
 
     // Render new SVG before removing old to avoid a paint gap
     const oldSvg = svgElement;

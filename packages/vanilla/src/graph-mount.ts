@@ -182,7 +182,7 @@ export function createGraph(
   // under 'visible' the reveal waits, nodes hidden at progress 0, until the
   // container is seen. The graph handles resizes mid-entrance itself (see
   // doResize), so it never defers one through the lifecycle.
-  const entrance = createEntranceLifecycle({ onDeferredResize: () => doResize() });
+  const entrance = createEntranceLifecycle();
   // True once the entrance played or was skipped on purpose (suppressed,
   // disabled, reduced motion). Wrappers suppress a remount's entrance only
   // when this is set, so an entrance the reader never saw isn't lost.
@@ -591,8 +591,15 @@ export function createGraph(
    */
   function playEntrance(): EntrancePlay | undefined {
     const enter = compilation.animation?.enter ?? null;
-    if (destroyed || !interactionManager || !enter) return undefined;
     entrancePlayed = true;
+    if (destroyed || !interactionManager || !enter) {
+      // Nothing to reveal: never leave the nodes held hidden at progress 0.
+      entranceActive = false;
+      entranceProgress = 1;
+      needsRender = true;
+      scheduleRender();
+      return undefined;
+    }
 
     if (!cameraTouchedWhileWaiting && positionedNodes.length > 0) {
       // Re-fit: the viewport (or, after an update, the data) may have changed
@@ -1278,9 +1285,11 @@ export function createGraph(
     // onDone rather than being hard-cancelled mid-flight. An entrance still
     // waiting to be seen stays armed on the same host and plays on the updated
     // graph once seen (mount empty, update when the fetch resolves); nodes stay
-    // hidden until then. One already playing finishes to full alpha.
-    const entranceWaiting = entrance.waiting;
-    if (!entranceWaiting) entrance.drop();
+    // hidden until then. One already playing finishes to full alpha, and so
+    // does a waiting one whose update turns the entrance off.
+    const entranceWaiting = entrance.waiting && !!nextCompilation.animation?.enter;
+    // A dropped waiting entrance was skipped on purpose (enter turned off).
+    if (!entranceWaiting && entrance.drop()) entrancePlayed = true;
     scheduler.finishAll();
     if (!entranceWaiting) {
       entranceActive = false;

@@ -255,7 +255,7 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
   // Play-when-seen (`enter.trigger`): `primeEntrance` hides the marks at boot
   // and arms; `playEntrance` runs once the container is seen. Resizes are not
   // deferred (the per-frame fit already follows the viewport).
-  const entrance = createEntranceLifecycle({ onDeferredResize: () => doResize() });
+  const entrance = createEntranceLifecycle();
   let emphasisTween: GraphAnimation | null = null;
 
   // -- Update transition state ---------------------------------------------
@@ -1186,8 +1186,12 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
    */
   function playEntrance(): EntrancePlay | undefined {
     const enter = compilation.animation?.enter ?? null;
-    if (destroyed || !enter) return undefined;
     entrancePlayed = true;
+    if (destroyed || !enter) {
+      // Nothing to reveal: never leave the primed marks hidden.
+      if (!destroyed) endEntrance();
+      return undefined;
+    }
 
     // Same gate as 2D: thousands of distinct start times read as noise, so
     // above the cap the whole graph reveals as one.
@@ -1498,8 +1502,15 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
 
     // An entrance still waiting to be seen stays primed (marks hidden, pull 1)
     // and armed on the same host, so it plays on the updated graph once seen.
-    // One already playing finishes to full alpha.
-    if (!entrance.waiting) entrance.drop();
+    // One already playing finishes to full alpha. A waiting one whose update
+    // turns the entrance off is skipped: the marks draw at once.
+    if (entrance.waiting && !next.animation?.enter) {
+      entrance.drop();
+      entrancePlayed = true;
+      endEntrance();
+    } else if (!entrance.waiting) {
+      entrance.drop();
+    }
     scheduler.finishAll();
 
     const prevNodes: PositionedNode[] = nodeData.map((d, index) => ({

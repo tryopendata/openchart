@@ -397,10 +397,8 @@ describe('captureMapSnapshot', () => {
       cy: 60,
       viewId: null,
     });
-    // A detached clone as drawn: the source of the exit ghost.
-    const ghost = snap.points.get('sf')?.ghost;
-    expect(ghost?.getAttribute('data-point-key')).toBe('sf');
-    expect(ghost?.isConnected).toBe(false);
+    // The live point itself, not a clone: the exit ghost's source.
+    expect(snap.points.get('sf')?.el).toBe(svg.querySelector('[data-point-key="sf"]'));
   });
 
   it('keeps point keys separate from feature keys', () => {
@@ -518,6 +516,32 @@ describe('runMapFillTransition point geometry', () => {
     const mid = Number(ghost?.getAttribute('opacity'));
     expect(mid).toBeGreaterThan(0);
     expect(mid).toBeLessThan(1);
+    runToCompletion();
+    expect(camera.querySelector('.oc-ghost')).toBeNull();
+  });
+
+  it('ghosts a removed point as drawn at capture, even after its old tween snapped', () => {
+    const svg = buildMapSvg([], []);
+    const camera = document.createElementNS(SVG_NS, 'g');
+    camera.setAttribute('data-oc-map-camera', '');
+    svg.appendChild(camera);
+    const old = buildMapSvg([], [{ key: 'gone', fill: '#ff0000', r: 6, cx: 10, cy: 20 }]);
+    const oldPoint = pointAt(old, 0);
+    oldPoint.setAttribute('opacity', '0.4'); // mid enter fade
+    const prev = captureMapSnapshot(old);
+    // The re-render cancels the in-flight tween, snapping the old point.
+    oldPoint.removeAttribute('opacity');
+    oldPoint.setAttribute('r', '9');
+
+    runMapFillTransition(svg, prev, { update: { duration: 100 }, exit: { duration: 120 } });
+
+    const ghost = camera.querySelector('.oc-ghost');
+    expect(ghost).not.toBe(oldPoint);
+    expect(ghost?.getAttribute('r')).toBe('6');
+    expect(Number(ghost?.getAttribute('opacity'))).toBeCloseTo(0.4);
+    // The old SVG's point is untouched: the ghost is a clone.
+    expect(oldPoint.getAttribute('r')).toBe('9');
+    expect(oldPoint.classList.contains('oc-ghost')).toBe(false);
     runToCompletion();
     expect(camera.querySelector('.oc-ghost')).toBeNull();
   });

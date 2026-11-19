@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createContainer } from '../__test-fixtures__/dom';
 import { createFakeObserver, stubPageLayout } from '../__test-fixtures__/visibility';
-import { isSeen, observedCount, playWhenSeen, setObserverFactory, whenSeen } from '../visibility';
+import { isSeen, playWhenSeen, setObserverFactory, whenSeen } from '../visibility';
 
 describe('isSeen', () => {
   const entry = (ratio: number, visibleHeight: number, rootHeight: number | null) => ({
@@ -57,7 +57,7 @@ describe('whenSeen', () => {
     fake.fire(el, 0.25, 100);
     expect(cb).toHaveBeenCalledTimes(1);
     expect(fake.unobserved).toContain(el);
-    expect(observedCount()).toBe(0);
+    expect(fake.observedCount()).toBe(0);
     // A later intersection no longer reaches the callback.
     fake.fire(el, 1, 400);
     expect(cb).toHaveBeenCalledTimes(1);
@@ -91,7 +91,7 @@ describe('whenSeen', () => {
     expect(fake.disconnected).toBe(0);
     fake.fire(b, 1, 400);
     expect(fake.disconnected).toBe(1);
-    expect(observedCount()).toBe(0);
+    expect(fake.observedCount()).toBe(0);
   });
 
   it('cancel unobserves without firing', () => {
@@ -99,7 +99,7 @@ describe('whenSeen', () => {
     const cb = vi.fn();
     const cancel = whenSeen(el, cb);
     cancel();
-    expect(observedCount()).toBe(0);
+    expect(fake.observedCount()).toBe(0);
     fake.fire(el, 1, 400);
     expect(cb).not.toHaveBeenCalled();
   });

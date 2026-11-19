@@ -145,9 +145,9 @@ export function createChart<TData extends DataRow = DataRow>(
   let gestureWidth = 0;
 
   // Animation state
-  // The entrance is owed until a render has marks to show: a chart mounted
-  // empty (data still loading) enters on the first update that brings data.
-  let entranceOwed = true;
+  // The entrance is owed until a render has marks to show (entrance.claim): a
+  // chart mounted empty (data still loading) enters on the first update that
+  // brings data.
   // Waiting (held until seen): resizes and updates re-render at once and
   // re-arm the paused entrance on the new SVG. Playing: resizes defer and
   // replay after it settles; updates snap.
@@ -275,7 +275,7 @@ export function createChart<TData extends DataRow = DataRow>(
     // Cancel any in-progress entrance before tearing down. A render while the
     // entrance waits to be seen (resize, font reload, highlight, update)
     // re-arms it on the new SVG.
-    const rearmEntrance = entrance.reset();
+    entrance.reset();
     canvasEntrance?.cancel();
     canvasEntrance = null;
     cancelAnimations(svgElement);
@@ -299,9 +299,7 @@ export function createChart<TData extends DataRow = DataRow>(
     sizer.rendered(currentLayout);
     const hasMarks = layoutHasMarks(currentLayout);
     // Edit mode is an authoring surface that re-mounts often: no entrance.
-    const shouldAnimate =
-      (entranceOwed || rearmEntrance) && hasMarks && !!currentLayout.animation?.enter && !editing;
-    if (hasMarks) entranceOwed = false;
+    const shouldAnimate = entrance.claim(hasMarks, !!currentLayout.animation?.enter && !editing);
     const crosshair = !!currentLayout.crosshair;
 
     // Canvas mark mode: the canvas is created BEFORE the SVG so DOM order puts

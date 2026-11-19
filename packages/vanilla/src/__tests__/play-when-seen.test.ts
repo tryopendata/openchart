@@ -18,7 +18,7 @@ import { createSankey } from '../sankey-mount';
 import { type CanvasStub, stubCanvas2D } from '../scatter-canvas/__tests__/canvas-stub';
 import { createTable } from '../table-mount';
 import { createTileMap } from '../tilemap-mount';
-import { observedCount, setObserverFactory } from '../visibility';
+import { setObserverFactory } from '../visibility';
 
 let fake: ReturnType<typeof createFakeObserver>;
 let layout: ReturnType<typeof stubPageLayout>;
@@ -66,7 +66,7 @@ describe('createChart', () => {
     fake.fire(container, 0.5, 200);
     expect(playState(svg)).toBe('');
     expect(svg.classList.contains('oc-animate')).toBe(true);
-    expect(observedCount()).toBe(0);
+    expect(fake.observedCount()).toBe(0);
 
     vi.advanceTimersByTime(10_000);
     expect(svg.classList.contains('oc-animate')).toBe(false);
@@ -85,7 +85,7 @@ describe('createChart', () => {
     const rearmed = container.querySelector('svg.oc-chart') as SVGElement;
     expect(rearmed.classList.contains('oc-animate')).toBe(true);
     expect(playState(rearmed)).toBe('paused');
-    expect(observedCount()).toBe(1);
+    expect(fake.observedCount()).toBe(1);
 
     // Playing: the resize waits for the entrance to finish.
     fake.fire(container, 1, 400);
@@ -105,7 +105,7 @@ describe('createChart', () => {
     const svg = container.querySelector('svg.oc-chart') as SVGElement;
     expect(svg.classList.contains('oc-animate')).toBe(true);
     expect(playState(svg)).toBe('paused');
-    expect(observedCount()).toBe(1);
+    expect(fake.observedCount()).toBe(1);
 
     chart.destroy();
   });
@@ -113,9 +113,9 @@ describe('createChart', () => {
   it('unsubscribes on destroy while waiting', () => {
     const container = createContainer();
     const chart = createChart(container, animated, { autoResize: false });
-    expect(observedCount()).toBe(1);
+    expect(fake.observedCount()).toBe(1);
     chart.destroy();
-    expect(observedCount()).toBe(0);
+    expect(fake.observedCount()).toBe(0);
     expect(fake.observed.size).toBe(0);
   });
 
@@ -123,9 +123,9 @@ describe('createChart', () => {
     const container = createContainer();
     createChart(container, animated, { autoResize: false }).destroy();
     const chart = createChart(container, animated, { autoResize: false });
-    expect(observedCount()).toBe(1);
+    expect(fake.observedCount()).toBe(1);
     chart.destroy();
-    expect(observedCount()).toBe(0);
+    expect(fake.observedCount()).toBe(0);
   });
 
   it("plays at once with trigger: 'mount'", () => {
@@ -137,7 +137,7 @@ describe('createChart', () => {
     );
     const svg = container.querySelector('svg.oc-chart') as SVGElement;
     expect(playState(svg)).toBe('');
-    expect(observedCount()).toBe(0);
+    expect(fake.observedCount()).toBe(0);
     vi.advanceTimersByTime(10_000);
     expect(svg.classList.contains('oc-animate')).toBe(false);
     chart.destroy();
@@ -154,7 +154,7 @@ describe('createChart', () => {
     const chart = createChart(container, animated, { autoResize: false });
     const svg = container.querySelector('svg.oc-chart') as SVGElement;
     expect(playState(svg)).toBe('');
-    expect(observedCount()).toBe(0);
+    expect(fake.observedCount()).toBe(0);
     // Complete at once: a resize is not deferred.
     chart.resize();
     expect(container.dataset.ocRenderGen).toBe('2');
@@ -313,6 +313,6 @@ describe('other mounts', () => {
   it.each(cases)('%s unsubscribes on destroy while waiting', (_, mount) => {
     const container = createContainer();
     mount(container).destroy();
-    expect(observedCount()).toBe(0);
+    expect(fake.observedCount()).toBe(0);
   });
 });

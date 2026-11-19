@@ -195,6 +195,31 @@ describe('createEntranceLifecycle', () => {
     expect(onDeferredResize).not.toHaveBeenCalled();
   });
 
+  it('claim: owed until a render has content, and again after a waiting reset', () => {
+    const entrance = createEntranceLifecycle();
+    // Mounted empty: nothing to claim, still owed.
+    expect(entrance.claim(false, true)).toBe(false);
+    expect(entrance.claim(true, true)).toBe(true);
+    entrance.arm(armOpts());
+    // Waiting, then an update that empties the chart: still owed.
+    entrance.reset();
+    expect(entrance.claim(false, true)).toBe(false);
+    expect(entrance.claim(true, true)).toBe(true);
+    // A render with content settles the debt even when entrances are off.
+    entrance.arm(armOpts({ root: makeRoot(container) }));
+    entrance.reset();
+    expect(entrance.claim(true, false)).toBe(false);
+    expect(entrance.claim(true, true)).toBe(false);
+  });
+
+  it('claim: a reset after the entrance played owes nothing', () => {
+    const entrance = createEntranceLifecycle();
+    expect(entrance.claim(true, true)).toBe(true);
+    entrance.arm(armOpts({ trigger: 'mount' }));
+    entrance.reset();
+    expect(entrance.claim(true, true)).toBe(false);
+  });
+
   it('settles synchronously under reduced motion without opening a window', () => {
     stubReducedMotion(true);
     const entrance = createEntranceLifecycle({ onDeferredResize });

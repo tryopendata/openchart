@@ -311,6 +311,9 @@ export function setupAnimationCleanup(
   const { onComplete, totalMs, canvasFinished } = options;
   let cancelled = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
+  // The `totalMs` floor, kept apart from `timer` (the collect fallback) so
+  // cancel clears both.
+  let minimumTimer: ReturnType<typeof setTimeout> | undefined;
   let frame: number | undefined;
 
   const complete = () => {
@@ -340,7 +343,7 @@ export function setupAnimationCleanup(
     const minimum =
       !canvasFinished && totalMs !== undefined
         ? new Promise<void>((resolve) => {
-            timer = setTimeout(resolve, totalMs);
+            minimumTimer = setTimeout(resolve, totalMs);
           })
         : undefined;
     const collect = () => {
@@ -363,6 +366,7 @@ export function setupAnimationCleanup(
   return () => {
     cancelled = true;
     if (timer !== undefined) clearTimeout(timer);
+    if (minimumTimer !== undefined) clearTimeout(minimumTimer);
     if (frame !== undefined && typeof cancelAnimationFrame === 'function') {
       cancelAnimationFrame(frame);
     }

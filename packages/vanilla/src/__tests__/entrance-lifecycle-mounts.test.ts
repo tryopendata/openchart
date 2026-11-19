@@ -5,17 +5,19 @@
  * - re-arm a waiting entrance on the new root when a resize or an update
  *   re-renders it (the data a fetch delivers enters when seen);
  * - not arm on a render with nothing to show, and arm on the first that has;
+ * - keep a waiting entrance owed across an update that empties the chart;
  * - snap an update while the entrance plays;
  * - defer a resize while the entrance plays and replay it once afterwards;
  * - cancel the entrance (observer and clock) on destroy;
  * - open no entrance window under reduced motion;
- * - export a settled scene with no entrance stamps.
+ * - export a settled scene with no entrance stamps, and a GIF that keeps its
+ *   own entrance timing whatever the live cascade says.
  *
  * happy-dom's IntersectionObserver never fires, so the tests inject a fake
  * observer and stub the page layout (visibility.ts plays at once without one).
  */
 
-import type { ChartSpec } from '@opendata-ai/openchart-core';
+import { type ChartSpec, CSS_TOKENS, resolveTheme } from '@opendata-ai/openchart-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createContainer } from '../__test-fixtures__/dom';
 import { makeTableSpec } from '../__test-fixtures__/specs';
@@ -27,8 +29,7 @@ import { createChart } from '../mount';
 import { createSankey } from '../sankey-mount';
 import { createTable } from '../table-mount';
 import { createTileMap } from '../tilemap-mount';
-import { runTransition } from '../transition';
-import { observedCount, setObserverFactory } from '../visibility';
+import { setObserverFactory } from '../visibility';
 
 // Capture the SVG each raster export receives (happy-dom can't rasterize).
 const rasterized: SVGElement[] = [];
@@ -49,11 +50,6 @@ vi.mock('../export-gif', async (importOriginal) => {
   return { ...actual, exportGIF: vi.fn(() => Promise.resolve(new Blob())) };
 });
 
-vi.mock('../transition', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../transition')>();
-  return { ...actual, runTransition: vi.fn(actual.runTransition) };
-});
-
 let fake: ReturnType<typeof createFakeObserver>;
 let layout: ReturnType<typeof stubPageLayout>;
 
@@ -63,7 +59,6 @@ beforeEach(() => {
   setObserverFactory(fake.factory);
   layout = stubPageLayout();
   rasterized.length = 0;
-  vi.mocked(runTransition).mockClear();
   vi.mocked(exportGIF).mockClear();
 });
 
@@ -77,6 +72,38 @@ afterEach(() => {
 
 const playState = (el: Element | null) =>
   (el as (Element & ElementCSSInlineStyle) | null)?.style.getPropertyValue('--oc-play-state');
+
+/** A timing value no render stamps, so a copy from the cascade is visible. */
+const CASCADE_TIMING = '987ms';
+const TIMING_TOKENS = [
+  '--oc-animation-duration',
+  '--oc-animation-stagger',
+  '--oc-annotation-delay',
+];
+
+/**
+ * A browser's computed style: every token resolves to its stylesheet default
+ * (happy-dom computes no custom properties). Timing tokens get a sentinel.
+ */
+function stubComputedTokens(): void {
+  const real = globalThis.getComputedStyle;
+  const defaults = new Map<string, string>();
+  for (const token of CSS_TOKENS) {
+    defaults.set(token.name, TIMING_TOKENS.includes(token.name) ? CASCADE_TIMING : token.light);
+  }
+  vi.stubGlobal('getComputedStyle', (el: Element, pseudo?: string | null) => {
+    const style = real(el, pseudo);
+    return new Proxy(style, {
+      get(target, prop) {
+        if (prop === 'getPropertyValue') {
+          return (name: string) => defaults.get(name) ?? target.getPropertyValue(name);
+        }
+        const value = Reflect.get(target, prop, target);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
+  });
+}
 
 function stubReducedMotion(): void {
   vi.stubGlobal('matchMedia', (query: string) => ({
@@ -95,7 +122,7 @@ interface Instance {
   update(spec: never): void;
   resize(): void;
   destroy(): void;
-  export?(format: 'svg' | 'png'): unknown;
+  export?(format: 'svg' | 'png' | 'gif', options?: { theme?: unknown }): unknown;
 }
 
 interface MountCase {
@@ -298,7 +325,7 @@ function renderCounter(container: HTMLElement, c: MountCase): () => number {
 function expectWaiting(root: Element): void {
   expect(root.classList.contains('oc-animate')).toBe(true);
   expect(playState(root)).toBe('paused');
-  expect(observedCount()).toBe(1);
+  expect(fake.observedCount()).toBe(1);
 }
 
 // ---------------------------------------------------------------------------
@@ -340,7 +367,7 @@ describe.each(cases)('$name entrance lifecycle', (c) => {
       const container = createContainer();
       const instance = c.mount(container, c.empty!());
       expect(rootOf(container, c).classList.contains('oc-animate')).toBe(false);
-      expect(observedCount()).toBe(0);
+      expect(fake.observedCount()).toBe(0);
 
       instance.resize();
       expect(rootOf(container, c).classList.contains('oc-animate')).toBe(false);
@@ -351,6 +378,28 @@ describe.each(cases)('$name entrance lifecycle', (c) => {
     },
   );
 
+  it.runIf(!!c.empty)('keeps a waiting entrance owed across an update that empties it', () => {
+    const container = createContainer();
+    const instance = c.mount(container, c.initial());
+    expectWaiting(rootOf(container, c));
+
+    // The data goes away while the entrance waits: nothing to arm.
+    instance.update(c.empty!() as never);
+    expect(rootOf(container, c).classList.contains('oc-animate')).toBe(false);
+    expect(fake.observedCount()).toBe(0);
+
+    // It comes back: the entrance the reader never saw is still owed.
+    instance.update(c.next() as never);
+    const root = rootOf(container, c);
+    expectWaiting(root);
+
+    fake.fire(container, 1, 400);
+    expect(playState(root)).toBe('');
+    vi.advanceTimersByTime(10_000);
+    expect(rootOf(container, c).classList.contains('oc-animate')).toBe(false);
+    instance.destroy();
+  });
+
   it('snaps an update while the entrance plays', () => {
     const container = createContainer();
     const instance = c.mount(container, c.initial());
@@ -358,7 +407,7 @@ describe.each(cases)('$name entrance lifecycle', (c) => {
 
     instance.update(c.next() as never);
     expect(rootOf(container, c).classList.contains('oc-animate')).toBe(false);
-    expect(observedCount()).toBe(0);
+    expect(fake.observedCount()).toBe(0);
     instance.destroy();
   });
 
@@ -386,9 +435,9 @@ describe.each(cases)('$name entrance lifecycle', (c) => {
   it('cancels a waiting entrance on destroy', () => {
     const container = createContainer();
     const instance = c.mount(container, c.initial());
-    expect(observedCount()).toBe(1);
+    expect(fake.observedCount()).toBe(1);
     instance.destroy();
-    expect(observedCount()).toBe(0);
+    expect(fake.observedCount()).toBe(0);
     expect(fake.observed.size).toBe(0);
   });
 
@@ -408,7 +457,7 @@ describe.each(cases)('$name entrance lifecycle', (c) => {
     const instance = c.mount(container, c.initial());
     const renders = renderCounter(container, c);
     expect(playState(rootOf(container, c))).toBe('');
-    expect(observedCount()).toBe(0);
+    expect(fake.observedCount()).toBe(0);
 
     // Complete at once: a resize is not deferred.
     const before = renders();
@@ -418,6 +467,7 @@ describe.each(cases)('$name entrance lifecycle', (c) => {
   });
 
   it.runIf(c.exports)('exports a settled scene with no entrance stamps', async () => {
+    stubComputedTokens();
     const container = createContainer();
     const instance = c.mount(container, c.initial());
     // Mid-entrance: waiting, then playing.
@@ -428,8 +478,12 @@ describe.each(cases)('$name entrance lifecycle', (c) => {
     await instance.export!('png');
     expect(rasterized).toHaveLength(1);
     const png = rasterized[0].outerHTML;
+    // Settled and re-rendered: the live root has no stamps of its own left.
+    vi.advanceTimersByTime(10_000);
+    instance.resize();
+    const svgSettled = instance.export!('svg') as string;
 
-    for (const out of [svgWaiting, svgPlaying, png]) {
+    for (const out of [svgWaiting, svgPlaying, png, svgSettled]) {
       expect(out).not.toContain('oc-animate');
       expect(out).not.toContain('--oc-play-state');
       expect(out).not.toContain('data-animation-index');
@@ -441,6 +495,34 @@ describe.each(cases)('$name entrance lifecycle', (c) => {
     }
     instance.destroy();
   });
+
+  it.runIf(c.exports)(
+    "keeps the GIF clone's own entrance timing after a post-entrance re-render",
+    async () => {
+      const container = createContainer();
+      const instance = c.mount(container, c.initial());
+      fake.fire(container, 1, 400);
+      vi.advanceTimersByTime(10_000);
+      // Settled, then re-rendered: the live root carries no timing stamps, so
+      // the browser cascade resolves the tokens to the stylesheet defaults.
+      instance.resize();
+      const live = rootOf(container, c) as Element & ElementCSSInlineStyle;
+      expect(live.style.getPropertyValue('--oc-animation-duration')).toBe('');
+      stubComputedTokens();
+
+      for (const options of [undefined, { theme: resolveTheme() }]) {
+        vi.mocked(exportGIF).mockClear();
+        await instance.export!('gif', options);
+        expect(exportGIF).toHaveBeenCalledTimes(1);
+        const gif = vi.mocked(exportGIF).mock.calls[0][0] as SVGElement & ElementCSSInlineStyle;
+        const duration = gif.style.getPropertyValue('--oc-animation-duration');
+        expect(duration).not.toBe('');
+        expect(duration).not.toBe(CASCADE_TIMING);
+        expect(gif.style.getPropertyValue('--oc-animation-stagger')).not.toBe(CASCADE_TIMING);
+      }
+      instance.destroy();
+    },
+  );
 });
 
 // ---------------------------------------------------------------------------
@@ -458,7 +540,7 @@ describe('chart', () => {
     const svg = container.querySelector('svg.oc-chart') as SVGElement;
     expect(svg.classList.contains('oc-animate')).toBe(false);
     expect(playState(svg)).toBe('');
-    expect(observedCount()).toBe(0);
+    expect(fake.observedCount()).toBe(0);
     chart.destroy();
   });
 
@@ -472,13 +554,27 @@ describe('chart', () => {
     const spec = { ...chartSpec(chartRows), animation: { enter: false } } as ChartSpec;
     const chart = createChart(container, spec, opts);
 
+    const drawnWidths = () =>
+      [...container.querySelectorAll('[data-key]')].map((el) => {
+        const shape = el.matches('rect, path') ? el : el.querySelector('rect, path');
+        return shape?.getAttribute('width') ?? shape?.getAttribute('d');
+      });
+    const before = drawnWidths();
+
     width = 420;
     chart.resize();
-    expect(runTransition).not.toHaveBeenCalled();
+    // Right after the resize the drawn geometry is already the new layout's:
+    // no from-state written back, no ghosts, nothing left to tween.
+    const after = drawnWidths();
+    expect(after).not.toEqual(before);
+    expect(container.querySelector('.oc-ghost')).toBeNull();
+    expect(chart.sampleLayout()).toBe(chart.layout);
+    vi.advanceTimersByTime(1000);
+    expect(drawnWidths()).toEqual(after);
 
-    // The same chart does tween a data update, so the spy is live.
+    // The same chart does tween a data update, so the check above is live.
     chart.update({ ...spec, data: chartRows.map((r) => ({ ...r, v: r.v * 2 })) } as ChartSpec);
-    expect(runTransition).toHaveBeenCalledTimes(1);
+    expect(chart.sampleLayout()).not.toBe(chart.layout);
     chart.destroy();
   });
 

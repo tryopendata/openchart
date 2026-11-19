@@ -165,6 +165,40 @@ describe('3D graph entrance trigger', () => {
     }
   });
 
+  it.each([
+    ['animation: false', { ...enterSpec(), animation: false } as GraphSpec],
+    ['enter: false', { ...enterSpec(), animation: { enter: false } } as GraphSpec],
+  ])('an update() while waiting that sets %s draws every mark at once', (_kind, next) => {
+    const { instance, fake } = mount(enterSpec());
+    vi.advanceTimersByTime(200);
+    expect(alpha(fake, 'a')).toBe(0);
+
+    instance.update(next);
+    fake.flush();
+    vi.advanceTimersByTime(100);
+    for (const id of ['a', 'b', 'c']) {
+      expect(alpha(fake, id)).toBeCloseTo(1);
+      expect(scale(fake, id)).toBe(1);
+    }
+    expect(observer.observed.size).toBe(0);
+    expect(instance.entrancePlayed).toBe(true);
+  });
+
+  it('an update() while the entrance plays ends it at full alpha', () => {
+    const { container, instance, fake } = mount(enterSpec());
+    observer.fire(container, 1, 600);
+    vi.advanceTimersByTime(300);
+    expect(scale(fake, 'c')).not.toBe(1);
+
+    instance.update(enterSpec());
+    fake.flush();
+    vi.advanceTimersByTime(32);
+    for (const id of ['a', 'b', 'c']) {
+      expect(alpha(fake, id)).toBeCloseTo(1);
+      expect(scale(fake, id)).toBe(1);
+    }
+  });
+
   it('first seen after the layout stopped: pulls back, flies in, lands on the fit', () => {
     const { container, fake } = mount(enterSpec());
     (fake.handlers.onEngineTick as () => void)();

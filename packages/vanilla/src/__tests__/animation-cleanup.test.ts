@@ -233,6 +233,15 @@ describe('setupAnimationCleanup with getAnimations', () => {
     expect(calls.count).toBe(0);
     expect(onComplete).not.toHaveBeenCalled();
   });
+  it('cancel without requestAnimationFrame clears both the collect and the totalMs timers', () => {
+    vi.stubGlobal('requestAnimationFrame', undefined);
+    stubGetAnimations(() => []);
+    const before = vi.getTimerCount();
+    const cancel = setupAnimationCleanup(animatedSVG(), { totalMs: 5000 });
+    expect(vi.getTimerCount()).toBe(before + 2);
+    cancel();
+    expect(vi.getTimerCount()).toBe(before);
+  });
 });
 
 describe('setupAnimationCleanup fallback (no getAnimations)', () => {

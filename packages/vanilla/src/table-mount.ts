@@ -121,9 +121,8 @@ export function createTable(
   let wrapperElement: HTMLElement | null = null;
   let disconnectResize: (() => void) | null = null;
   let cleanupKeyboard: (() => void) | null = null;
-  // Owed until a render has rows: a table mounted before its data arrives
-  // enters on the first update that brings some.
-  let entranceOwed = true;
+  // Owed until a render has rows (entrance.claim): a table mounted before its
+  // data arrives enters on the first update that brings some.
   // Waiting (held until seen): every re-render re-arms it on the new wrapper.
   // Playing: resizes defer and replay after it settles; other renders snap.
   const entrance = createEntranceLifecycle({ onDeferredResize: () => resize() });
@@ -291,7 +290,7 @@ export function createTable(
     currentSpec = candidate;
     // Cancel any in-flight entrance before re-rendering; one still waiting to
     // be seen (resize, sort, search, paging, update) re-arms on the new wrapper.
-    const rearmEntrance = entrance.reset();
+    entrance.reset();
 
     // Clean up previous keyboard nav
     if (cleanupKeyboard) {
@@ -306,10 +305,10 @@ export function createTable(
     }
 
     currentLayout = nextLayout;
-    const hasRows = currentLayout.rows.length > 0;
-    const shouldAnimate =
-      (entranceOwed || rearmEntrance) && hasRows && !!currentLayout.animation?.enter;
-    if (hasRows) entranceOwed = false;
+    const shouldAnimate = entrance.claim(
+      currentLayout.rows.length > 0,
+      !!currentLayout.animation?.enter,
+    );
     wrapperElement = renderTable(currentLayout, container, { animate: shouldAnimate });
 
     // Set up the entrance on first animated render. It holds paused until the

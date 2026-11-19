@@ -3,7 +3,7 @@
  * tween (`motion/element-tween.ts`).
  *
  * Captures current fill colors (and, for the point layer, radius, center and
- * a clone of each point) before a re-render, then hands the from/to pairs to
+ * the point element itself) before a re-render, then hands the from/to pairs to
  * `runElementTweens`, which owns timing (`update.ease`/spring and the exit
  * phase), the synchronous from-state, ghosts and cancellation.
  *
@@ -30,8 +30,14 @@ export interface MapPointSnapshot {
   r?: number;
   cx?: number;
   cy?: number;
-  /** Deep clone as drawn, the source of its exit ghost if the point is removed. */
-  ghost?: Element;
+  /** Opacity attribute as drawn (an in-flight enter fade writes it). */
+  opacity?: string | null;
+  /**
+   * The live point. The re-render detaches the old SVG intact, so this stays
+   * the exit ghost's source without a clone per point per update; `makeGhost`
+   * clones it only when the point is actually removed.
+   */
+  el?: Element;
   /** The geo view the point was drawn in (`data-geo-view-id`), null outside views. */
   viewId?: string | null;
 }
@@ -73,12 +79,27 @@ export function captureMapSnapshot(svg: SVGElement | null): MapTransitionSnapsho
       r: numAttr(p, 'r'),
       cx: numAttr(p, 'cx'),
       cy: numAttr(p, 'cy'),
-      ghost: p.cloneNode(true) as Element,
+      opacity: p.getAttribute('opacity'),
+      el: p,
       viewId: p.closest('[data-geo-view-id]')?.getAttribute('data-geo-view-id') ?? null,
     });
   }
 
   return { fills, points };
+}
+
+function restoreDrawn(ghost: Element, drawn: MapPointSnapshot): void {
+  // A url() paint never tweens (so it is already as drawn), and makeGhost has
+  // re-homed it onto the new SVG's defs: leave it.
+  if (drawn.fill !== undefined && !drawn.fill.includes('url(')) {
+    ghost.setAttribute('fill', drawn.fill);
+  }
+  for (const attr of POINT_GEOMETRY) {
+    const value = drawn[attr];
+    if (value !== undefined) ghost.setAttribute(attr, String(value));
+  }
+  if (drawn.opacity === null) ghost.removeAttribute('opacity');
+  else if (drawn.opacity !== undefined) ghost.setAttribute('opacity', drawn.opacity);
 }
 
 /** Where a removed point's ghost goes: its view's camera, beside the live points. */
@@ -145,12 +166,15 @@ export function runMapFillTransition(
   }
 
   for (const [key, before] of snapshot.points) {
-    if (kept.has(key) || !before.ghost) continue;
+    if (kept.has(key) || !before.el) continue;
     const parent = ghostParent(svg, before.viewId);
     if (!parent) continue;
-    const ghost = makeGhost(before.ghost, parent);
+    const ghost = makeGhost(before.el, parent);
     // Keyed lookups (the next snapshot, hover) must never find the ghost.
     ghost.removeAttribute('data-point-key');
+    // Cancelling an interrupted tween snapped the old point to its final
+    // state; the ghost leaves from where it was drawn at capture.
+    restoreDrawn(ghost, before);
     tweens.push({ kind: 'exit', ghost });
   }
 

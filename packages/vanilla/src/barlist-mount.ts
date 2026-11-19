@@ -160,9 +160,8 @@ export function createBarList(
   let tooltipManager: TooltipManager | null = null;
   let cleanupTooltipEvents: (() => void) | null = null;
   let disconnectResize: (() => void) | null = null;
-  // Owed until a render has rows: a bar list mounted before its data arrives
-  // enters on the first update that brings some.
-  let entranceOwed = true;
+  // Owed until a render has rows (entrance.claim): a bar list mounted before
+  // its data arrives enters on the first update that brings some.
   // Waiting (held until seen): every re-render re-arms it on the new SVG.
   // Playing: resizes defer and replay after it settles; updates snap.
   const entrance = createEntranceLifecycle({ onDeferredResize: () => resize() });
@@ -323,10 +322,8 @@ export function createBarList(
     tooltipManager?.hide();
     updateTween?.cancel();
     updateTween = null;
-    const rearm = entrance.reset();
-    const hasRows = currentLayout.rows.length > 0;
-    const animate = (entranceOwed || rearm) && hasRows && !!currentLayout.animation?.enter;
-    if (hasRows) entranceOwed = false;
+    entrance.reset();
+    const animate = entrance.claim(currentLayout.rows.length > 0, !!currentLayout.animation?.enter);
 
     if (svgElement) {
       if (cleanupTooltipEvents) {
