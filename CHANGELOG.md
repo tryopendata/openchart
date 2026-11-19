@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
-Motion is on by default for every visualization type and now follows one set of defaults. See the "Motion on by default" section of [the v9 migration guide](https://github.com/tryopendata/openchart/blob/main/docs/migrating-v9.md) for opt-outs.
+Motion is on by default for every visualization type. Graphs keep their own defaults (500ms enter, 300ms update and exit). See the "Motion on by default" section of [the v9 migration guide](https://github.com/tryopendata/openchart/blob/main/docs/migrating-v9.md) for opt-outs.
 
 ### Behaviour changes
 
@@ -33,7 +33,6 @@ Motion is on by default for every visualization type and now follows one set of 
   - Geo maps: feature fills and points tween, entering points fade in, removed points leave ghosts. Tables still snap on update (entrance only).
 - `export('gif')` for bar lists, tile maps, sankeys and geo maps, with their real entrance motion: map fill colour sweep and point scale-up, bar list row slide, and focus dim respected. Tables and graphs have no GIF export.
 - Graph `animation.enter.trigger` (`'visible'` or `'mount'`) and `spring` on every graph phase, for 2D and 3D. Graph instances expose `entrancePlayed`, and the React, Vue and Svelte wrappers suppress the entrance on a theme or dimension remount only if it already played.
-- Shared `createEntranceLifecycle` for every mount, and `runElementTweens` / `makeGhost` for keyed element tweens (internal to vanilla).
 - `BarListRowMark.key` and `RectMark.cell` layout metadata.
 
 ### Fixed
