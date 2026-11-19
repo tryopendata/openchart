@@ -16,7 +16,7 @@ import type {
 } from '@opendata-ai/openchart-core';
 import { BREAKPOINT_COMPACT_MAX, BREAKPOINT_MEDIUM_MAX } from '@opendata-ai/openchart-core';
 import { compileTileMap } from '@opendata-ai/openchart-engine';
-import { cancelAnimations, setupAnimationCleanup } from './animation';
+import { createEntranceLifecycle } from './entrance-lifecycle';
 import {
   exportJPG,
   exportPNG,
@@ -32,13 +32,11 @@ import {
   wireMarkNavigation,
 } from './interactions/mark-navigation';
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
-import { prefersReducedMotion } from './motion/tween';
 import { observeResize } from './resize-observer';
 import { resolveDarkMode } from './resolve-dark-mode';
 import { prepareSettledExportTheme } from './theme-style-block';
 import { renderTileMapSVG } from './tilemap-renderer';
 import { createTooltipManager, type TooltipManager } from './tooltip';
-import { playWhenSeen } from './visibility';
 
 // ---------------------------------------------------------------------------
 // Responsive tile sizing
@@ -141,11 +139,12 @@ export function createTileMap(
   let disconnectResize: (() => void) | null = null;
 
   // Animation state
-  let animationCleanup: (() => void) | null = null;
-  let pendingResize = false;
-  // Set while the entrance waits for the chart to scroll into view; calling it
-  // drops the visibility subscription. A render while waiting re-arms it.
-  let cancelSeen: (() => void) | null = null;
+  // Owed until a render has a tile with data: a tile map mounted before its
+  // data arrives enters on the first update that brings some.
+  let entranceOwed = true;
+  // Waiting (held until seen): every re-render re-arms it on the new SVG.
+  // Playing: resizes defer and replay after it settles; updates snap.
+  const entrance = createEntranceLifecycle({ onDeferredResize: () => resize() });
 
   // Latches whether the host constrains our height. Measured once, on the
   // first render that produces a real rect: height 0 with a real width means
@@ -343,19 +342,14 @@ export function createTileMap(
   // Render + update
   // ---------------------------------------------------------------------------
 
-  function render(animate = false): void {
+  function render(): void {
     const focusedMark = captureMarkFocus(svgElement);
     tooltipManager?.hide();
-    // Cancel running animations
-    if (animationCleanup) {
-      animationCleanup();
-      animationCleanup = null;
-    }
-    if (cancelSeen) {
-      cancelSeen();
-      cancelSeen = null;
-      animate = true;
-    }
+    // Cancel the running entrance; one still waiting to be seen re-arms.
+    const rearm = entrance.reset();
+    const hasData = currentLayout.tiles.some((tile) => tile.hasData);
+    const animate = (entranceOwed || rearm) && hasData && !!currentLayout.animation?.enter;
+    if (hasData) entranceOwed = false;
 
     // Remove old SVG
     if (svgElement) {
@@ -388,20 +382,7 @@ export function createTileMap(
     // starts when it plays. Under reduced motion nothing plays, so no
     // entrance window opens.
     if (animate && currentLayout.animation?.enter) {
-      cancelSeen = playWhenSeen(container, newSvg, currentLayout.animation.enter.trigger, () => {
-        cancelSeen = null;
-        if (prefersReducedMotion()) return;
-        animationCleanup = setupAnimationCleanup(newSvg, {
-          onComplete: () => {
-            animationCleanup = null;
-            // On animation complete, check if resize was pending
-            if (pendingResize && !destroyed) {
-              pendingResize = false;
-              resize();
-            }
-          },
-        });
-      });
+      entrance.arm({ container, root: newSvg, trigger: currentLayout.animation.enter.trigger });
     }
 
     renderGen += 1;
@@ -429,21 +410,16 @@ export function createTileMap(
     measureText = nextMeasure;
 
     currentLayout = nextLayout;
-    // An update while the entrance waits to be seen drops it: the new data
-    // renders in its final state.
-    cancelSeen?.();
-    cancelSeen = null;
+    // An update while the entrance waits to be seen re-arms it on the new
+    // data; one while it plays snaps.
     render();
   }
 
   function resize(): void {
     if (destroyed) return;
 
-    // If animation is running, queue the resize for after it completes
-    if (animationCleanup) {
-      pendingResize = true;
-      return;
-    }
+    // If the entrance is playing, queue the resize for after it settles
+    if (!entrance.admitResize()) return;
 
     currentLayout = compile();
     render();
@@ -489,14 +465,8 @@ export function createTileMap(
     if (destroyed) return;
     destroyed = true;
 
-    // Cancel running animations
-    if (animationCleanup) {
-      cancelAnimations(svgElement);
-      animationCleanup();
-      animationCleanup = null;
-    }
-    cancelSeen?.();
-    cancelSeen = null;
+    // Cancel the running entrance
+    entrance.destroy();
 
     // Clean up events
     if (cleanupTooltipEvents) {
@@ -538,7 +508,7 @@ export function createTileMap(
 
   // Initial compile and render (animate on first mount)
   currentLayout = compile();
-  render(true);
+  render();
 
   // Recompile once after webfonts load so labels aren't stuck measured
   // against fallback metrics on real devices.

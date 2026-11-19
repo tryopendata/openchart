@@ -1,6 +1,7 @@
 /** `chart.export()`: serialize the rendered chart as SVG, raster, GIF, or CSV. */
 
 import type { ChartLayout, ChartSpec, LayerSpec } from '@opendata-ai/openchart-core';
+import { cancelAnimations } from './animation';
 import {
   exportCSV,
   exportJPG,
@@ -45,12 +46,20 @@ export function createChartExporter(state: () => ExportState): ChartInstance['ex
     // empty chart, so every format works off a materialized SVG that has the
     // missing half folded back in. Raster formats force the vector path: they
     // are becoming pixels anyway, and it buys parity with SVG mode for free.
+    //
+    // Only the GIF keeps the entrance stamps (`--oc-*` timing, mark indexes,
+    // stack reveals), which its frame sampler reads; it renders animated and
+    // then drops the `oc-animate` class so nothing plays on the detached copy.
+    // Every other format serializes a settled scene with none of them.
+    const animate = format === 'gif';
     const svg =
       canvasLayer && currentLayout.markRenderMode === 'canvas'
         ? materializeCanvasModeSVG(currentLayout, {
             forceVector: format === 'png' || format === 'jpg' || format === 'gif',
+            animate,
           })
-        : renderChartSVG(currentLayout, document.createElement('div'), { animate: false });
+        : renderChartSVG(currentLayout, document.createElement('div'), { animate });
+    if (animate) cancelAnimations(svg);
     // The resolved theme, defaulted into the export options, so class-based
     // chrome fills (metrics, eyebrow dot, legend) survive serialization away from
     // the page stylesheet. An explicit options.theme still wins.

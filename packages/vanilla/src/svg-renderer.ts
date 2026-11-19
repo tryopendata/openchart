@@ -57,7 +57,10 @@ export function renderChartSVG(
   const ctx = opts?.context ?? createRenderContext();
   const { width, height } = layout.dimensions;
   const interactive = ctx.interactive && opts?.interactive !== false;
-  const animation = interactive ? layout.animation : undefined;
+  // Entrance stamps (`--oc-*` timing vars, mark indexes, stack reveals) only
+  // on a render that plays the entrance: re-renders, exports and resizes of an
+  // interactive chart carry none of them.
+  const animation = interactive && opts?.animate ? layout.animation : undefined;
 
   const svg = createSVGElement('svg', ctx.factory) as SVGSVGElement;
   setAttrs(svg, {

@@ -182,11 +182,7 @@ describe('interaction mode', () => {
 
     it("warns once when interaction: 'edit' has no onEdit sink", () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      // Not about motion: keep the resize from deferring behind the entrance.
-      const { chart, annotation } = mount(
-        { ...textAnnotatedSpec, animation: false },
-        { interaction: 'edit' },
-      );
+      const { chart, annotation } = mount(textAnnotatedSpec, { interaction: 'edit' });
       chart.resize();
       chart.update({ ...textAnnotatedSpec });
       const sinkWarnings = warn.mock.calls.filter((c) => String(c[0]).includes('onEdit'));

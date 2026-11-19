@@ -23,10 +23,11 @@ import type {
 } from '@opendata-ai/openchart-core';
 import { isLayerSpec } from '@opendata-ai/openchart-core';
 import { resolveLayerTheme } from '@opendata-ai/openchart-engine';
-import { cancelAnimations, computeAnimationDuration, setupAnimationCleanup } from './animation';
+import { cancelAnimations, computeAnimationDuration } from './animation';
 import { createEditSession } from './chart-editing';
 import { createChartExporter } from './chart-export';
 import { createChartSizer } from './chart-sizing';
+import { createEntranceLifecycle } from './entrance-lifecycle';
 import {
   createHoverEmphasis,
   createScreenReaderTable,
@@ -62,7 +63,6 @@ import { renderChartSVG } from './svg-renderer';
 import { readWithoutThemeStamp, stampThemeProperties } from './theme-tokens';
 import { createTooltipManager, type TooltipManager } from './tooltip';
 import { canTransition, runTransition, type TransitionHandle } from './transition';
-import { playWhenSeen } from './visibility';
 import { createYouDrawIt, type YouDrawItController } from './you-draw-it';
 
 export {
@@ -98,6 +98,12 @@ function wantsSeriesSearch(spec: ChartSpec | LayerSpec): boolean {
 function wantsYouDrawIt(spec: ChartSpec | LayerSpec): boolean {
   if (isLayerSpec(spec)) return false;
   return !!(spec as ChartSpec).youDrawIt;
+}
+
+/** Whether a layout draws any marks (a chart mounted before its data arrives has none). */
+function layoutHasMarks(layout: ChartLayout): boolean {
+  if (layout.marks.length > 0) return true;
+  return !!layout.facet?.panels.some((panel) => panel.marks.length > 0);
 }
 
 // ---------------------------------------------------------------------------
@@ -139,14 +145,13 @@ export function createChart<TData extends DataRow = DataRow>(
   let gestureWidth = 0;
 
   // Animation state
-  let isFirstRender = true;
-  let cleanupAnimations: (() => void) | null = null;
-  let pendingResize = false;
-  // Set while the entrance waits for the chart to scroll into view (the SVG
-  // holds its from-state under --oc-play-state: paused). Calling it drops the
-  // visibility subscription. Waiting, not playing: resizes re-render at once
-  // and re-arm the paused entrance; only a playing entrance defers them.
-  let cancelSeen: (() => void) | null = null;
+  // The entrance is owed until a render has marks to show: a chart mounted
+  // empty (data still loading) enters on the first update that brings data.
+  let entranceOwed = true;
+  // Waiting (held until seen): resizes and updates re-render at once and
+  // re-arm the paused entrance on the new SVG. Playing: resizes defer and
+  // replay after it settles; updates snap.
+  const entrance = createEntranceLifecycle({ onDeferredResize: () => resize() });
 
   // Data-update transition state
   let transitionHandle: TransitionHandle | null = null;
@@ -267,20 +272,13 @@ export function createChart<TData extends DataRow = DataRow>(
       transitionHandle = null;
     }
 
-    // Cancel any in-progress entrance animations before tearing down
-    if (cleanupAnimations) {
-      cleanupAnimations();
-      cleanupAnimations = null;
-    }
+    // Cancel any in-progress entrance before tearing down. A render while the
+    // entrance waits to be seen (resize, font reload, highlight, update)
+    // re-arms it on the new SVG.
+    const rearmEntrance = entrance.reset();
     canvasEntrance?.cancel();
     canvasEntrance = null;
     cancelAnimations(svgElement);
-    // A render while the entrance waits to be seen (resize, font reload,
-    // highlight) re-arms it on the new SVG. update() drops the wait before
-    // calling render(), so new data shows in its final state.
-    const rearmEntrance = cancelSeen !== null;
-    cancelSeen?.();
-    cancelSeen = null;
 
     // Clean up previous render
     disposeRender();
@@ -299,7 +297,11 @@ export function createChart<TData extends DataRow = DataRow>(
     currentLayout = nextLayout;
     // Recorded for the ResizeObserver's self-induced-resize guard.
     sizer.rendered(currentLayout);
-    const shouldAnimate = (isFirstRender || rearmEntrance) && !!currentLayout.animation?.enter;
+    const hasMarks = layoutHasMarks(currentLayout);
+    // Edit mode is an authoring surface that re-mounts often: no entrance.
+    const shouldAnimate =
+      (entranceOwed || rearmEntrance) && hasMarks && !!currentLayout.animation?.enter && !editing;
+    if (hasMarks) entranceOwed = false;
     const crosshair = !!currentLayout.crosshair;
 
     // Canvas mark mode: the canvas is created BEFORE the SVG so DOM order puts
@@ -600,45 +602,33 @@ export function createChart<TData extends DataRow = DataRow>(
       const animation = currentLayout.animation;
       const enter = animation.enter!;
       const layer = canvasMode ? canvasLayer : null;
-      const play = () => {
-        cancelSeen = null;
+      // Canvas points have no CSS to pause: hold them transparent instead.
+      if (layer && enter.trigger !== 'mount' && !prefersReducedMotion()) layer.holdEntrance();
+      entrance.arm({
+        container,
+        root: svg,
+        trigger: enter.trigger,
         // Canvas mode animates points on the canvas scheduler, not via CSS, so
         // the cleanup timer must be told how long that actually takes. The
         // DOM-counting estimate sees no point elements and would fire early.
-        let entranceTotalMs: number | undefined;
-        if (layer) {
+        onPlay: () => {
+          if (!layer) return undefined;
           canvasEntrance = layer.playEntrance(enter);
-          if (canvasEntrance) {
+          if (!canvasEntrance) return undefined;
+          return {
             // Take the longer of the two clocks: the SVG side still animates
             // axes, chrome, and annotations on its own schedule.
-            entranceTotalMs = Math.max(
+            totalMs: Math.max(
               computeAnimationDuration(svg),
               canvasEntrance.totalMs + (animation.annotationDelay ?? 0) + 500,
-            );
-          }
-        }
-
-        // Under reduced motion the CSS plays nothing (reduced-motion.css), so
-        // the entrance is complete at once: no window that would defer resizes
-        // and updates. oc-animate stays on the SVG; it is inert there.
-        if (!prefersReducedMotion() || canvasEntrance) {
-          cleanupAnimations = setupAnimationCleanup(svg, {
-            onComplete: () => {
-              cleanupAnimations = null;
-              canvasEntrance = null;
-              if (pendingResize) {
-                pendingResize = false;
-                resize();
-              }
-            },
-            totalMs: entranceTotalMs,
-            canvasFinished: canvasEntrance?.finished,
-          });
-        }
-      };
-      // Canvas points have no CSS to pause: hold them transparent instead.
-      if (layer && enter.trigger !== 'mount' && !prefersReducedMotion()) layer.holdEntrance();
-      cancelSeen = playWhenSeen(container, svg, enter.trigger, play);
+            ),
+            canvasFinished: canvasEntrance.finished,
+          };
+        },
+        onSettled: () => {
+          canvasEntrance = null;
+        },
+      });
     }
     // Bump the render generation so tests (and consumers) can observe every
     // full recompile, including the post-font-load one.
@@ -653,10 +643,6 @@ export function createChart<TData extends DataRow = DataRow>(
     if (fontsReloadPending) {
       fontsReloadPending = false;
       container.dataset.ocFontsState = 'ready';
-    }
-
-    if (isFirstRender) {
-      isFirstRender = false;
     }
   }
 
@@ -703,7 +689,7 @@ export function createChart<TData extends DataRow = DataRow>(
     // Capture pre-update state for transition gating
     const prevSpec = currentSpec;
     const prevLayout = currentLayout;
-    const entranceWasRunning = cleanupAnimations != null;
+    const entranceWasRunning = entrance.playing;
     const settledAnnotations = edits.takeSettled(prevLayout, layoutOnly);
 
     const nextFont = resolveEffectiveFont(newSpec);
@@ -733,17 +719,17 @@ export function createChart<TData extends DataRow = DataRow>(
     if (updateOpts && 'selectedElement' in updateOpts) {
       edits.setSelection(updateOpts.selectedElement);
     }
-    // An update while the entrance still waits to be seen drops the entrance:
-    // the new data renders in its final state (or tweens, if a transition
-    // applies), like any update after the entrance.
-    cancelSeen?.();
-    cancelSeen = null;
+    // An update while the entrance still waits to be seen re-arms it on the
+    // new data (the common "mount empty, update when the fetch resolves"
+    // case); one while it plays snaps.
     render(canTransitionSpecShape(prevSpec, newSpec), nextLayout);
     if (fontChanged) watchCurrentFont();
 
     // After render, check if we can run a smooth transition instead of the
     // instant swap that render() already performed.
+    // A resize re-layout snaps: it never tweens.
     if (
+      !layoutOnly &&
       svgElement &&
       canTransition({
         prevLayout,
@@ -751,7 +737,9 @@ export function createChart<TData extends DataRow = DataRow>(
         prevSpec,
         nextSpec: newSpec,
         isFirstRender: false,
-        entranceInFlight: entranceWasRunning,
+        // The render above may have armed the entrance (re-armed while
+        // waiting, or the first render with marks): it owns the motion.
+        entranceInFlight: entranceWasRunning || entrance.waiting || entrance.playing,
       })
     ) {
       const handle = runTransition({
@@ -782,26 +770,22 @@ export function createChart<TData extends DataRow = DataRow>(
     // Waiting to be seen: nothing is moving yet, so re-render now (render()
     // re-arms the paused entrance on the new SVG). This also lets the webfont
     // reload publish data-oc-fonts-state='ready' without a scroll.
-    if (cancelSeen) {
+    if (entrance.waiting) {
       render();
       return;
     }
-    if (cleanupAnimations) {
-      // Canvas mode cancels the entrance and re-renders immediately instead of
-      // deferring. The SVG is fluid (`.oc-chart { width: 100% }`) while the
-      // canvas is sized in fixed layout pixels, so deferring would leave the
-      // two layers visibly out of register for the rest of the entrance.
-      if (canvasEntrance) {
-        cleanupAnimations();
-        cleanupAnimations = null;
-        canvasEntrance.cancel();
-        canvasEntrance = null;
-        render();
-        return;
-      }
-      pendingResize = true;
+    // Canvas mode cancels the entrance and re-renders immediately instead of
+    // deferring. The SVG is fluid (`.oc-chart { width: 100% }`) while the
+    // canvas is sized in fixed layout pixels, so deferring would leave the
+    // two layers visibly out of register for the rest of the entrance.
+    if (entrance.playing && canvasEntrance) {
+      entrance.drop();
+      canvasEntrance.cancel();
+      canvasEntrance = null;
+      render();
       return;
     }
+    if (!entrance.admitResize()) return;
     doUpdate(currentSpec as ChartSpec, undefined, false, true);
   }
 
@@ -860,13 +844,7 @@ export function createChart<TData extends DataRow = DataRow>(
       transitionHandle.cancel();
       transitionHandle = null;
     }
-    if (cleanupAnimations) {
-      cleanupAnimations();
-      cleanupAnimations = null;
-      pendingResize = false;
-    }
-    cancelSeen?.();
-    cancelSeen = null;
+    entrance.destroy();
     cancelAnimations(svgElement);
 
     // Cancel before destroying the layer, matching render()/resize(). The

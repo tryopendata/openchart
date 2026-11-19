@@ -136,8 +136,6 @@ describe('data mark shapes', () => {
         {
           data: rows,
           mark,
-          // Not about motion: keep the stack-reveal wrappers out of .oc-marks.
-          animation: false,
           encoding: {
             ...(mark === 'bar'
               ? {

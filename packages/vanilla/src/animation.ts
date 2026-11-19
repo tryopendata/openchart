@@ -248,7 +248,7 @@ export function scanEntranceEndMs(scan: EntranceScan, phase?: Partial<MotionPhas
 /** Pad after the computed end for charts: the margin cleanup has always used. */
 const CHART_CLEANUP_PAD_MS = 500;
 /** Pad after the computed end for tables. */
-const TABLE_CLEANUP_PAD_MS = 300;
+export const TABLE_CLEANUP_PAD_MS = 300;
 
 /**
  * Compute the total entrance-animation time for a rendered SVG, in ms: the
@@ -368,15 +368,4 @@ export function setupAnimationCleanup(
     }
     cancelAnimations(root);
   };
-}
-
-/**
- * Set up animation cleanup for table entrance animations: the same mechanism
- * as charts, with the table's 300ms fallback pad.
- */
-export function setupTableAnimationCleanup(
-  wrapper: HTMLElement,
-  onComplete?: () => void,
-): () => void {
-  return setupAnimationCleanup(wrapper, { onComplete, fallbackPadMs: TABLE_CLEANUP_PAD_MS });
 }

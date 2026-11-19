@@ -36,7 +36,7 @@ import type {
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
 import { compileGeoMap } from '@opendata-ai/openchart-engine';
-import { cancelAnimations, setupAnimationCleanup } from './animation';
+import { createEntranceLifecycle } from './entrance-lifecycle';
 import {
   exportJPG,
   exportPNG,
@@ -74,7 +74,6 @@ import type { Tween } from './story/tween';
 import { createTween, easingFns, storyMotion } from './story/tween';
 import { prepareSettledExportTheme } from './theme-style-block';
 import { createTooltipManager, type TooltipManager } from './tooltip';
-import { playWhenSeen } from './visibility';
 
 /**
  * A stable string for a resolved focus, used to detect focus changes between
@@ -97,6 +96,15 @@ function focusSignature(focus: GeoMapLayout['focus']): string | null {
  * which the entrance animation and the border meshes both depend on, so the
  * original next sibling is remembered and restored on leave.
  */
+/**
+ * Whether a map has anything to enter with: points, or features that aren't
+ * all holes in a color join (a choropleth mounted before its data arrives).
+ */
+function layoutHasContent(layout: GeoMapLayout): boolean {
+  if (layout.pointMarks.length > 0) return true;
+  return layout.features.some((feature) => !feature.noData);
+}
+
 const featureOrigin = new WeakMap<Element, Element | null>();
 
 function raiseFeature(el: Element, svg: SVGElement): void {
@@ -266,12 +274,13 @@ export function createGeoMap(
   let disconnectResize: (() => void) | null = null;
 
   // Animation state
-  let animationCleanup: (() => void) | null = null;
   let fillTransitionHandle: { cancel: () => void } | null = null;
-  let pendingResize = false;
-  // Set while the entrance waits for the map to scroll into view; calling it
-  // drops the visibility subscription. A render while waiting re-arms it.
-  let cancelSeen: (() => void) | null = null;
+  // Owed until a render has something to show: a choropleth mounted before
+  // its data arrives enters on the first update that brings some.
+  let entranceOwed = true;
+  // Waiting (held until seen): every re-render re-arms it on the new SVG.
+  // Playing: resizes defer and replay after it settles; updates snap.
+  const entrance = createEntranceLifecycle({ onDeferredResize: () => resize() });
 
   // Camera state
   let currentCamera: Camera = { cx: 0, cy: 0, k: 1 };
@@ -891,23 +900,18 @@ export function createGeoMap(
   // Render + update
   // ---------------------------------------------------------------------------
 
-  function render(animate = false): void {
+  function render(): void {
     const focusedMark = captureMarkFocus(svgElement);
     tooltipManager?.hide();
-    // Cancel running animations
-    if (animationCleanup) {
-      animationCleanup();
-      animationCleanup = null;
-    }
+    // Cancel the running entrance; one still waiting to be seen re-arms.
+    const rearm = entrance.reset();
     if (fillTransitionHandle) {
       fillTransitionHandle.cancel();
       fillTransitionHandle = null;
     }
-    if (cancelSeen) {
-      cancelSeen();
-      cancelSeen = null;
-      animate = true;
-    }
+    const hasContent = layoutHasContent(currentLayout);
+    const animate = (entranceOwed || rearm) && hasContent && !!currentLayout.animation?.enter;
+    if (hasContent) entranceOwed = false;
 
     // Render new SVG before removing old to avoid a paint gap
     const oldSvg = svgElement;
@@ -945,31 +949,6 @@ export function createGeoMap(
       }
     }
 
-    // Setup animation cleanup only when actually animating
-    // Under reduced motion nothing plays, so no entrance window opens and the
-    // focus dim applies at once.
-    // The entrance holds paused until the map scrolls into view; cleanup
-    // starts when it plays.
-    const isAnimating = animate && !!currentLayout.animation?.enter && !prefersReducedMotion();
-    if (isAnimating && currentLayout.animation?.enter) {
-      cancelSeen = playWhenSeen(container, newSvg, currentLayout.animation.enter.trigger, () => {
-        cancelSeen = null;
-        animationCleanup = setupAnimationCleanup(newSvg, {
-          onComplete: () => {
-            animationCleanup = null;
-            if (pendingResize && !destroyed) {
-              pendingResize = false;
-              resize();
-            }
-            // Apply deferred focus dim after animation completes
-            if (currentFocusIds && currentFocusIds.length > 0) {
-              applyFocusDim(currentFocusIds);
-            }
-          },
-        });
-      });
-    }
-
     // Re-apply camera transform after render if zoomed or focused
     if (currentCamera.k > 1 + 1e-3 || (currentFocusIds && currentFocusIds.length > 0)) {
       applyMapCamera(newSvg, currentCamera, currentLayout);
@@ -992,12 +971,26 @@ export function createGeoMap(
         const cam = cameraForTarget(currentLayout, target);
         currentCamera = cam;
         if (svgElement) applyMapCamera(svgElement, cam, currentLayout);
-        if (!isAnimating) applyFocusDim(currentFocusIds);
+        if (!animate) applyFocusDim(currentFocusIds);
       } else {
         currentCamera = cameraForTarget(currentLayout, null);
       }
     }
     isFirstRender = false;
+
+    // Armed after the focus block so onSettled sees the focus ids even when it
+    // fires synchronously (reduced motion). The entrance holds paused until
+    // the map scrolls into view; the deferred focus dim lands when it settles.
+    if (animate && currentLayout.animation?.enter) {
+      entrance.arm({
+        container,
+        root: newSvg,
+        trigger: currentLayout.animation.enter.trigger,
+        onSettled: () => {
+          if (currentFocusIds && currentFocusIds.length > 0) applyFocusDim(currentFocusIds);
+        },
+      });
+    }
     if (currentLayout.views) {
       viewCameras.seed('root', currentCamera);
       for (const view of currentLayout.views) {
@@ -1030,7 +1023,7 @@ export function createGeoMap(
 
     // Capture paint + point geometry optimistically; gate the tween on the
     // *new* layout's animation config after compile
-    const canAnimate = !animationCleanup && !prefersReducedMotion();
+    const canAnimate = !entrance.playing && !entrance.waiting && !prefersReducedMotion();
     const prevPaint = canAnimate ? captureMapSnapshot(svgElement) : null;
 
     // Remember previous focus to detect changes. The signature includes the
@@ -1043,19 +1036,16 @@ export function createGeoMap(
 
     currentLayout = nextLayout;
     if (!currentFocusIds) rescaleFreeCamera(prevMapSize);
-    // An update while the entrance waits to be seen drops it: the new data
-    // renders in its final state, with the focus dim the entrance deferred.
-    const droppedEntrance = cancelSeen !== null;
-    cancelSeen?.();
-    cancelSeen = null;
+    // An update while the entrance waits to be seen re-arms it on the new
+    // data; one while it plays snaps.
     render();
-    if (droppedEntrance && currentFocusIds && currentFocusIds.length > 0) {
-      applyFocusDim(currentFocusIds);
-    }
 
-    // Run the update tween if the *new* layout enables update animation
+    // Run the update tween if the *new* layout enables update animation, and
+    // the render didn't arm an entrance (a map mounted before its data).
     if (
       canAnimate &&
+      !entrance.waiting &&
+      !entrance.playing &&
       prevPaint &&
       (prevPaint.fills.size > 0 || prevPaint.points.size > 0) &&
       svgElement &&
@@ -1087,11 +1077,8 @@ export function createGeoMap(
 
   function resize(): void {
     if (destroyed) return;
-    // If animation is running, queue the resize for after it completes
-    if (animationCleanup) {
-      pendingResize = true;
-      return;
-    }
+    // If the entrance is playing, queue the resize for after it settles
+    if (!entrance.admitResize()) return;
 
     // Cancel any running camera tween: the resize recomputes the camera for the
     // new dimensions, and a stale tween would overwrite it on the next frame.
@@ -1211,14 +1198,8 @@ export function createGeoMap(
     insetZoomControllers.clear();
     labelInventory.destroy();
 
-    // Cancel running animations
-    if (animationCleanup) {
-      cancelAnimations(svgElement);
-      animationCleanup();
-      animationCleanup = null;
-    }
-    cancelSeen?.();
-    cancelSeen = null;
+    // Cancel the running entrance
+    entrance.destroy();
     if (fillTransitionHandle) {
       fillTransitionHandle.cancel();
       fillTransitionHandle = null;
@@ -1271,7 +1252,7 @@ export function createGeoMap(
 
   // Initial compile and render (animate on first mount)
   currentLayout = compile();
-  render(true);
+  render();
 
   // Recompile once after webfonts load
   const fontsPending = scheduleFontReload(

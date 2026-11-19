@@ -15,8 +15,8 @@ import type {
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
 import { compileBarList } from '@opendata-ai/openchart-engine';
-import { cancelAnimations, setupAnimationCleanup } from './animation';
 import { renderBarListSVG } from './barlist-renderer';
+import { createEntranceLifecycle } from './entrance-lifecycle';
 import {
   exportJPG,
   exportPNG,
@@ -32,12 +32,10 @@ import {
   wireMarkNavigation,
 } from './interactions/mark-navigation';
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
-import { prefersReducedMotion } from './motion/tween';
 import { observeResize } from './resize-observer';
 import { resolveDarkMode } from './resolve-dark-mode';
 import { prepareSettledExportTheme } from './theme-style-block';
 import { createTooltipManager, type TooltipManager } from './tooltip';
-import { playWhenSeen } from './visibility';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -84,11 +82,12 @@ export function createBarList(
   let tooltipManager: TooltipManager | null = null;
   let cleanupTooltipEvents: (() => void) | null = null;
   let disconnectResize: (() => void) | null = null;
-  let animationCleanup: (() => void) | null = null;
-  let pendingResize = false;
-  // Set while the entrance waits for the chart to scroll into view; calling it
-  // drops the visibility subscription. A render while waiting re-arms it.
-  let cancelSeen: (() => void) | null = null;
+  // Owed until a render has rows: a bar list mounted before its data arrives
+  // enters on the first update that brings some.
+  let entranceOwed = true;
+  // Waiting (held until seen): every re-render re-arms it on the new SVG.
+  // Playing: resizes defer and replay after it settles; updates snap.
+  const entrance = createEntranceLifecycle({ onDeferredResize: () => resize() });
 
   // Set when webfonts have loaded and a recompile is owed. The next render()
   // that recompiles flips data-oc-fonts-state to 'ready' and clears this, so
@@ -239,18 +238,13 @@ export function createBarList(
     };
   }
 
-  function render(animate = false): void {
+  function render(): void {
     const focusedMark = captureMarkFocus(svgElement);
     tooltipManager?.hide();
-    if (animationCleanup) {
-      animationCleanup();
-      animationCleanup = null;
-    }
-    if (cancelSeen) {
-      cancelSeen();
-      cancelSeen = null;
-      animate = true;
-    }
+    const rearm = entrance.reset();
+    const hasRows = currentLayout.rows.length > 0;
+    const animate = (entranceOwed || rearm) && hasRows && !!currentLayout.animation?.enter;
+    if (hasRows) entranceOwed = false;
 
     if (svgElement) {
       if (cleanupTooltipEvents) {
@@ -279,21 +273,7 @@ export function createBarList(
     // starts when it plays. Under reduced motion nothing plays, so no
     // entrance window opens.
     if (animate && currentLayout.animation?.enter) {
-      cancelSeen = playWhenSeen(container, newSvg, currentLayout.animation.enter.trigger, () => {
-        cancelSeen = null;
-        if (prefersReducedMotion()) return;
-        animationCleanup = setupAnimationCleanup(newSvg, {
-          onComplete: () => {
-            // Null the handle BEFORE replaying, or the deferred resize hits the
-            // entrance-in-flight gate and re-defers forever (mount.ts pattern).
-            animationCleanup = null;
-            if (pendingResize && !destroyed) {
-              pendingResize = false;
-              resize();
-            }
-          },
-        });
-      });
+      entrance.arm({ container, root: newSvg, trigger: currentLayout.animation.enter.trigger });
     }
 
     renderGen += 1;
@@ -321,19 +301,14 @@ export function createBarList(
     measureText = nextMeasure;
 
     currentLayout = nextLayout;
-    // An update while the entrance waits to be seen drops it: the new data
-    // renders in its final state.
-    cancelSeen?.();
-    cancelSeen = null;
+    // An update while the entrance waits to be seen re-arms it on the new
+    // data; one while it plays snaps.
     render();
   }
 
   function resize(): void {
     if (destroyed) return;
-    if (animationCleanup) {
-      pendingResize = true;
-      return;
-    }
+    if (!entrance.admitResize()) return;
     currentLayout = compile();
     render();
   }
@@ -369,13 +344,7 @@ export function createBarList(
     if (destroyed) return;
     destroyed = true;
 
-    if (animationCleanup) {
-      cancelAnimations(svgElement);
-      animationCleanup();
-      animationCleanup = null;
-    }
-    cancelSeen?.();
-    cancelSeen = null;
+    entrance.destroy();
 
     if (cleanupTooltipEvents) {
       cleanupTooltipEvents();
@@ -406,7 +375,7 @@ export function createBarList(
   }
 
   currentLayout = compile();
-  render(true);
+  render();
 
   // Recompile once after webfonts load so row labels aren't stuck measured
   // against fallback metrics on real devices.
