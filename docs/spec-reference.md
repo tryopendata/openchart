@@ -859,7 +859,7 @@ Controls entrance animations and data-update transitions. Source: `core/src/type
 | Field      | Type                          | Default    | Description                                  |
 | ---------- | ----------------------------- | ---------- | -------------------------------------------- |
 | `duration` | `number`                      | `500`      | Duration in ms.                              |
-| `ease`     | `AnimationEase`               | `'smooth'` | Easing preset: `'smooth'`, `'snappy'`, `'linear'`. |
+| `ease`     | `AnimationEase`               | `'smooth'` | Easing preset: `'smooth'` (fast attack, quick settle), `'snappy'` (faster, settles by about half the duration), `'gentle'` (the previous slower ease-out). |
 | `stagger`  | `AnimationStagger \| boolean` | `true`     | Stagger config for entrance. `false` = simultaneous. |
 
 ### UpdatePhaseConfig

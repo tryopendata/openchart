@@ -20,7 +20,7 @@ export { cubicInOut, cubicOut, linear } from './easing';
 
 /** Resolve a named ease preset to an easing function. */
 export function resolveEase(ease: AnimationEase): (t: number) => number {
-  return ease === 'snappy' ? cubicOut : cubicInOut;
+  return ease === 'snappy' ? cubicOut : cubicInOut; // 'smooth' and 'gentle' share cubicInOut
 }
 
 // ---------------------------------------------------------------------------

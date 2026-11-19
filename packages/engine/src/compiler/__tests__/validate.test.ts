@@ -780,6 +780,14 @@ describe('validateSpec', () => {
 });
 
 // ---------------------------------------------------------------------------
+describe('animation ease validation', () => {
+  it.each(['smooth', 'snappy', 'gentle'])('accepts ease %s', (ease) => {
+    const result = validateSpec({ ...validLineSpec, animation: { enter: { ease } } });
+    expect(result.errors).toEqual([]);
+    expect(result.valid).toBe(true);
+  });
+});
+
 // animation.update.maxMarks
 // ---------------------------------------------------------------------------
 

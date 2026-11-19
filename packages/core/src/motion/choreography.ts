@@ -9,7 +9,7 @@
  * `evalKeyframes`, so the CSS and the JS paths cannot drift.
  *
  * Delays keyed to a parent's tween are progress points on a fixed reference
- * curve (`smooth`), resolved through `invertCurve`, never the author's ease.
+ * curve (`gentle`, the pre-Decks smooth), resolved through `invertCurve`, never the author's ease.
  * Phase 0 picks each point so it resolves to today's raw fraction of the
  * duration; spring phases keep the raw fraction.
  */
@@ -325,7 +325,6 @@ export type EntranceRole =
   | 'sankey-link'
   | 'barlist-row'
   | 'barlist-bar'
-  | 'sparkline-line-area'
   | 'table-chrome'
   | 'table-thead'
   | 'table-row'
@@ -392,7 +391,7 @@ export interface DelayRule {
 export interface EntranceRoleDef {
   name: EntranceRole;
   /** Which generated stylesheet and root selector the rule lives under. */
-  scope: 'chart' | 'chart-sparkline' | 'table';
+  scope: 'chart' | 'table';
   /** Selectors relative to the scope root. */
   selectors: readonly string[];
   /**
@@ -411,6 +410,8 @@ export interface EntranceRoleDef {
   delay: DelayRule;
   /** Descendant selectors whose own animation this role switches off. */
   suppress?: readonly string[];
+  /** Accent roles (annotation markers and the like) may use overshooting curves such as `punch`. */
+  accent?: boolean;
   comment?: string;
 }
 
@@ -428,7 +429,7 @@ export interface EntranceRoleRow extends EntranceRoleDef {
 }
 
 /** The fixed curve delay progress points are measured on. */
-export const DELAY_REFERENCE_CURVE: MonotoneCurveName = 'smooth';
+export const DELAY_REFERENCE_CURVE: MonotoneCurveName = 'gentle';
 
 /** A progress point that resolves to `fraction` of D on the reference curve. */
 function at(fraction: number): ProgressPoint {
@@ -442,11 +443,6 @@ function at(fraction: number): ProgressPoint {
 const AUTHOR: RoleTiming = { kind: 'author' };
 const EASE_IN: RoleTiming = { kind: 'css', css: 'ease-in', bezier: [0.42, 0, 1, 1] };
 const LINEAR: RoleTiming = { kind: 'css', css: 'linear', bezier: [0, 0, 1, 1] };
-const EXPO_OUT: RoleTiming = {
-  kind: 'css',
-  css: 'cubic-bezier(0.16, 1, 0.3, 1)',
-  bezier: [0.16, 1, 0.3, 1],
-};
 const base = (factor: number): DurationRule => ({ kind: 'base', factor });
 
 const ROLE_DEFS: readonly EntranceRoleDef[] = [
@@ -741,19 +737,6 @@ const ROLE_DEFS: readonly EntranceRoleDef[] = [
     durationBasis: 'phase',
     duration: base(1),
     delay: { stagger: 'barlist-row' },
-  },
-  {
-    name: 'sparkline-line-area',
-    scope: 'chart-sparkline',
-    comment:
-      'Sparkline mode: pair the line/area reveal with a stronger ease-out so it\ndoesn\'t read as a uniform left-to-right swipe. cubic-bezier(0.16, 1, 0.3, 1)\nis "expo-out": fast initial draw that decelerates noticeably at the end,\ngiving the trend a hand-drawn feel. Duration is bumped via the engine\n(compile.ts) so the cleanup timer stays in sync.',
-    selectors: ['.oc-mark-line', '.oc-mark-area'],
-    emit: ['timing'],
-    keyframe: 'oc-enter-line',
-    timing: EXPO_OUT,
-    durationBasis: 'phase',
-    duration: base(1),
-    delay: { stagger: 'mark' },
   },
   {
     name: 'table-chrome',
@@ -1103,7 +1086,7 @@ export function evalCubicBezier(
  * The eased progress a role's CSS timing function gives at time progress t of
  * one keyframe segment. Author-eased roles follow the phase: a spring is
  * sampled over the base duration D (as `motionCSS` stamps it), otherwise the
- * registry curve. Mirrors the CSS, so it can overshoot on `snappy`.
+ * registry curve. Mirrors the CSS, so it can overshoot on a spring.
  */
 export function evalRoleEase(role: EntranceRole, phase: MotionPhase, t: number): number {
   const { timing } = entranceRole(role);

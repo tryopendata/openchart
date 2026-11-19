@@ -1716,8 +1716,11 @@ export interface SeriesStyle {
 /**
  * Named easing presets for entrance animations.
  * Uses CSS linear() curves. Named 'ease' (not 'easing') to match Vega convention.
+ * - `smooth` (default): fast attack, quick settle, no overshoot.
+ * - `snappy`: faster still, settling by about half the duration.
+ * - `gentle`: the previous default, a slower ease-out.
  */
-export type AnimationEase = 'smooth' | 'snappy';
+export type AnimationEase = 'smooth' | 'snappy' | 'gentle';
 
 /** Opt-in motion language. */
 export type AnimationPreset = 'fluid' | 'subtle';

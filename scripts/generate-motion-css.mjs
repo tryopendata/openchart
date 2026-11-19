@@ -159,21 +159,6 @@ function sectionComment(title, indent) {
 
 function generateAnimationCss() {
   const chart = ENTRANCE_ROLES.filter((r) => r.scope === 'chart');
-  const sparkline = ENTRANCE_ROLES.filter((r) => r.scope === 'chart-sparkline');
-  const sparklineRules = sparkline
-    .map((role) =>
-      [
-        sectionComment(role.comment.split('\n').join('\n   * '), '  '),
-        '',
-        rule(
-          role.selectors.map((s) => `.oc-animate[data-display="sparkline"] ${s}`),
-          roleDeclarations(role),
-          '  ',
-        ),
-      ].join('\n'),
-    )
-    .join('\n\n');
-
   return `${GENERATED_HEADER}
 
 @layer oc.animation {
@@ -182,8 +167,6 @@ ${sectionComment('Animation scoped rules (.oc-animate enables animation on the c
   .oc-animate {
 ${nestedRoleRules(chart, '    ')}
   }
-
-${sparklineRules}
 }
 `;
 }

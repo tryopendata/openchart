@@ -377,7 +377,10 @@ the watermark interaction.
 Entrance animation stays opt-in; when enabled, the defaults are 450ms
 duration, 30ms per-mark stagger capped at 300ms total sweep time
 (`MAX_TOTAL_STAGGER_MS`), 150ms delay before annotations begin, and no
-overshoot (easing stays `smooth`). Update transitions default to 450ms, exit
+overshoot. Easing defaults to `smooth` (the Decks `snap` curve: about 67% of
+the way at 10% of the duration, 89% at 20%). `snappy` settles sooner and
+`gentle` is the previous slower ease-out. A `punch` curve that overshoots
+to about 1.06 exists in the registry for accent roles only. Update transitions default to 450ms, exit
 to 250ms.
 
 | Phase | Duration | Stagger / delay |

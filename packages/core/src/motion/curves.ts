@@ -5,7 +5,7 @@
  * `linear()`. Stops are either evenly spaced values (`[0, 0.4, 1]`) or
  * positioned `{ t, value }` pairs, so a curve can be dense where it moves fast.
  *
- * The CSS tokens `--oc-ease-smooth` / `--oc-ease-snappy` are generated from
+ * The CSS tokens `--oc-ease-smooth` / `--oc-ease-snappy` / `--oc-ease-gentle` are generated from
  * this registry (see `styles/token-definitions.ts`), and the JS paths evaluate
  * the same stops through `evalCurve`, so the two never drift.
  */
@@ -31,17 +31,123 @@ interface Curve {
   readonly envelope: readonly number[];
 }
 
+/**
+ * Decks `snap`: `M0,0 C0.06,0.6 0.12,0.9 0.3,0.97 C0.5,1 0.72,1 1,1`, two cubic
+ * segments, sampled by solving x -> t on each segment (offline) and rounding to
+ * 4 decimals. Stops are dense through the attack (every 0.02 up to 0.3, which
+ * includes t=0.2) and sparse in the tail. Reaches ~0.67 at t=0.1 and ~0.89 at
+ * t=0.2, then settles without overshoot.
+ */
+const SNAP: readonly CurveStop[] = [
+  { t: 0, value: 0 },
+  { t: 0.02, value: 0.1876 },
+  { t: 0.04, value: 0.3469 },
+  { t: 0.06, value: 0.4773 },
+  { t: 0.08, value: 0.582 },
+  { t: 0.1, value: 0.6656 },
+  { t: 0.12, value: 0.7325 },
+  { t: 0.14, value: 0.7862 },
+  { t: 0.16, value: 0.8296 },
+  { t: 0.18, value: 0.8647 },
+  { t: 0.2, value: 0.8931 },
+  { t: 0.22, value: 0.9161 },
+  { t: 0.24, value: 0.9346 },
+  { t: 0.26, value: 0.9494 },
+  { t: 0.28, value: 0.961 },
+  { t: 0.3, value: 0.97 },
+  { t: 0.35, value: 0.9768 },
+  { t: 0.4, value: 0.9825 },
+  { t: 0.45, value: 0.987 },
+  { t: 0.5, value: 0.9906 },
+  { t: 0.55, value: 0.9934 },
+  { t: 0.6, value: 0.9956 },
+  { t: 0.65, value: 0.9971 },
+  { t: 0.7, value: 0.9983 },
+  { t: 0.75, value: 0.999 },
+  { t: 0.8, value: 0.9995 },
+  { t: 0.85, value: 0.9998 },
+  { t: 0.9, value: 0.9999 },
+  { t: 0.95, value: 1 },
+  { t: 1, value: 1 },
+];
+
 const CURVE_INPUTS = {
-  /** Gentle ease-out. Today's CSS `smooth`. */
-  smooth: [0, 0.157, 0.438, 0.64, 0.766, 0.85, 0.906, 0.941, 0.964, 0.978, 0.988, 0.994, 0.998, 1],
+  /** Decks snap. The sampled source of the default `smooth`. */
+  snap: SNAP,
+  /** The default ease: an alias of `snap`, so the default improves with no spec change. */
+  smooth: SNAP,
+  /** Today's old `smooth` (a gentle ease-out), kept under its own name. */
+  gentle: [0, 0.157, 0.438, 0.64, 0.766, 0.85, 0.906, 0.941, 0.964, 0.978, 0.988, 0.994, 0.998, 1],
   /**
-   * Today's CSS `snappy`: starts slow, peaks at 1.028 and dips to 0.957, so it
-   * is spring-shaped and NOT monotone. Value roles go through evalValueCurve.
+   * Monotone, non-overshooting ease-out, faster than `smooth`. Sampled from
+   * `M0,0 C0.04,0.75 0.12,0.97 0.3,0.995 C0.4,1 0.5,1 0.6,1` then held at 1: it is
+   * ~0.78 at t=0.1 (smooth: ~0.67), 0.951 at 0.2, reaches 0.999 by t~0.45 and
+   * is exactly 1 from t=0.55, so it settles sooner than `smooth`.
    */
   snappy: [
-    0, 0.012, 0.048, 0.108, 0.194, 0.302, 0.426, 0.559, 0.69, 0.808, 0.905, 0.973, 1.013, 1.028,
-    1.023, 1.006, 0.984, 0.966, 0.957, 0.957, 0.964, 0.975, 0.986, 0.995, 1, 1.003, 1.002, 1, 0.998,
-    0.998, 0.999, 1,
+    { t: 0, value: 0 },
+    { t: 0.02, value: 0.2926 },
+    { t: 0.04, value: 0.4806 },
+    { t: 0.06, value: 0.6111 },
+    { t: 0.08, value: 0.7061 },
+    { t: 0.1, value: 0.7772 },
+    { t: 0.12, value: 0.8315 },
+    { t: 0.14, value: 0.8735 },
+    { t: 0.16, value: 0.9061 },
+    { t: 0.18, value: 0.9314 },
+    { t: 0.2, value: 0.951 },
+    { t: 0.22, value: 0.966 },
+    { t: 0.24, value: 0.9773 },
+    { t: 0.26, value: 0.9855 },
+    { t: 0.28, value: 0.9913 },
+    { t: 0.3, value: 0.995 },
+    { t: 0.35, value: 0.9971 },
+    { t: 0.4, value: 0.9985 },
+    { t: 0.45, value: 0.9994 },
+    { t: 0.5, value: 0.9998 },
+    { t: 0.55, value: 1 },
+    { t: 0.6, value: 1 },
+    { t: 0.8, value: 1 },
+    { t: 1, value: 1 },
+  ],
+  /**
+   * Accent only (annotation markers and the like): Decks
+   * `M0,0 C0.1,0.7 0.18,1.13 0.4,1.06 C0.58,0.99 0.8,1 1,1` overshoots to ~1.067
+   * near t=0.35 and settles by ~0.8. NOT monotone, so it is never an authored
+   * ease and never used for value-encoding geometry (use evalValueCurve there).
+   */
+  punch: [
+    { t: 0, value: 0 },
+    { t: 0.025, value: 0.1714 },
+    { t: 0.05, value: 0.3321 },
+    { t: 0.075, value: 0.4776 },
+    { t: 0.1, value: 0.605 },
+    { t: 0.125, value: 0.7132 },
+    { t: 0.15, value: 0.8029 },
+    { t: 0.175, value: 0.8757 },
+    { t: 0.2, value: 0.9336 },
+    { t: 0.225, value: 0.9787 },
+    { t: 0.25, value: 1.0127 },
+    { t: 0.275, value: 1.0373 },
+    { t: 0.3, value: 1.0539 },
+    { t: 0.325, value: 1.0636 },
+    { t: 0.35, value: 1.0673 },
+    { t: 0.375, value: 1.0659 },
+    { t: 0.4, value: 1.06 },
+    { t: 0.425, value: 1.0509 },
+    { t: 0.45, value: 1.0428 },
+    { t: 0.475, value: 1.0358 },
+    { t: 0.5, value: 1.0296 },
+    { t: 0.55, value: 1.0196 },
+    { t: 0.6, value: 1.0122 },
+    { t: 0.65, value: 1.0069 },
+    { t: 0.7, value: 1.0033 },
+    { t: 0.75, value: 1.0011 },
+    { t: 0.8, value: 0.9999 },
+    { t: 0.85, value: 0.9995 },
+    { t: 0.9, value: 0.9996 },
+    { t: 0.95, value: 0.9998 },
+    { t: 1, value: 1 },
   ],
 } as const satisfies Record<string, CurveInput>;
 
@@ -51,7 +157,7 @@ export type CurveName = keyof typeof CURVE_INPUTS;
  * Curves `invertCurve` accepts. Kept as a type so a non-monotone curve is a
  * compile error; a test pins it to the runtime monotonicity check.
  */
-export type MonotoneCurveName = 'smooth';
+export type MonotoneCurveName = 'snap' | 'smooth' | 'snappy' | 'gentle';
 
 // Every authored ease must have a curve.
 const _easeIsCurve: AnimationEase extends CurveName ? true : never = true;

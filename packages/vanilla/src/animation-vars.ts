@@ -13,6 +13,7 @@ import { type AnimationEase, motionCSS, type SpringConfig } from '@opendata-ai/o
 export const EASE_VAR_MAP: Readonly<Record<AnimationEase, string>> = {
   smooth: 'var(--oc-ease-smooth)',
   snappy: 'var(--oc-ease-snappy)',
+  gentle: 'var(--oc-ease-gentle)',
 };
 
 export interface AnimationVars {

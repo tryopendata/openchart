@@ -253,6 +253,36 @@ describe('vizspec.schema.json', () => {
   });
 });
 
+describe('animation ease presets', () => {
+  const animation = { enter: { ease: 'gentle' } };
+  const chart = {
+    mark: 'bar',
+    data: [{ cat: 'A', amount: 10 }],
+    encoding: {
+      x: { field: 'cat', type: 'nominal' },
+      y: { field: 'amount', type: 'quantitative' },
+    },
+    animation,
+  };
+  const table = { type: 'table', data: sampleData, columns: [{ key: 'cat' }], animation };
+
+  it.each(['smooth', 'snappy', 'gentle'])('accepts ease %s on charts and tables', (ease) => {
+    const a = { enter: { ease } };
+    expect(validateChart({ ...chart, animation: a }), JSON.stringify(validateChart.errors)).toBe(
+      true,
+    );
+    expect(validateViz({ ...chart, animation: a }), JSON.stringify(validateViz.errors)).toBe(true);
+    expect(validateTable({ ...table, animation: a }), JSON.stringify(validateTable.errors)).toBe(
+      true,
+    );
+  });
+
+  it('rejects an unknown ease', () => {
+    const bad = { ...chart, animation: { enter: { ease: 'linear' } } };
+    expect(validateChart(bad)).toBe(false);
+  });
+});
+
 describe('table.schema.json', () => {
   it('accepts a table with formatted columns', () => {
     const spec = {

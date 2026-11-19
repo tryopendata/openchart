@@ -44,7 +44,6 @@ const ROLE_NAMES: EntranceRole[] = [
   'sankey-link',
   'barlist-row',
   'barlist-bar',
-  'sparkline-line-area',
   'table-chrome',
   'table-thead',
   'table-row',
@@ -147,7 +146,6 @@ function goldens(D: number): Record<EntranceRole, Golden> {
     'sankey-link': [0.3 * D + S * I, D, 0, D],
     'barlist-row': [40 * I, 0.6 * D, 0.6 * D, 0.6 * D],
     'barlist-bar': [40 * I, D, D, 0.75 * D],
-    'sparkline-line-area': [S * I, D, D, 0.15 * D],
     'table-chrome': [0, 0.6 * D, 0.6 * D, 0.6 * D],
     'table-thead': [0, 0.4 * D, 0, 0.4 * D],
     'table-row': [S * I, D, D, 0],
@@ -189,6 +187,15 @@ describe.each([450, 800])('entranceTiming golden ms at D=%i', (D) => {
       expect(t.geometryMs).toBeCloseTo(geometry, 6);
       expect(t.opacityMs).toBeCloseTo(opacity, 6);
     });
+  });
+});
+
+describe('punch curve usage', () => {
+  it('is referenced only by roles flagged as accent', () => {
+    const users = ENTRANCE_ROLES.filter(
+      (r) => r.timing.kind === 'curve' && r.timing.curve === 'punch',
+    );
+    for (const role of users) expect(role.accent).toBe(true);
   });
 });
 

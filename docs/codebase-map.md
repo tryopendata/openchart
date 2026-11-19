@@ -37,7 +37,7 @@
 | CSS token generator | `scripts/generate-css-tokens.mjs` |
 | CSS chrome classes (`.oc-title`, `.oc-subtitle`, etc.) | `packages/core/src/styles/chrome.css` |
 | Entrance animation keyframes / CSS rules | **Generated** from `packages/core/src/motion/choreography.ts` (`KEYFRAMES`, `ENTRANCE_ROLES`) by `scripts/generate-motion-css.mjs` (`bun run generate:motion`) into `styles/keyframes.css`, `animation.css`, `table-animation.css`. Each role reads `--oc-<role>-delay` / `--oc-<role>-dur` first (annotation: `--oc-annotation-enter-delay`), falling back to the old calc(). JS timing: `entranceTiming()`, `entranceEndMs()`. Update/exit transitions use rAF, not CSS; see `packages/vanilla/src/transition/`. |
-| Curve registry (ease samples) | `packages/core/src/motion/curves.ts` → `evalCurve`, `evalValueCurve`, `invertCurve`, `curveToCSSLinear`; `--oc-ease-*` tokens derive from it. |
+| Curve registry (ease samples) | `packages/core/src/motion/curves.ts` → `evalCurve`, `evalValueCurve`, `invertCurve`, `curveToCSSLinear`; `--oc-ease-*` tokens derive from it. Curves: `snap` (= `smooth`, the default), `gentle` (old smooth), `snappy`, `punch` (accent only, overshoots). |
 | Stagger strategies | `packages/core/src/motion/stagger.ts` → `clampStaggerDelay`, `MAX_TOTAL_STAGGER_MS` (re-exported by engine), `barlistRowDelay`, `mapPointStagger`, `mapSweepTiming`, `tilemapTileDelays`. |
 | Text width estimation | `packages/core/src/layout/text-measure.ts` (`estimateTextWidth`, `estimateCharWidth`) |
 | X-axis extent helper + constants | `packages/core/src/responsive/metrics.ts` (`computeXAxisExtentFromLabels`, `X_AXIS_BAND_HEIGHT`, `X_AXIS_TITLE_BAND`, `X_AXIS_TITLE_BAND_ROTATED`) |

@@ -1115,9 +1115,10 @@
       "type": "string",
       "enum": [
         "smooth",
-        "snappy"
+        "snappy",
+        "gentle"
       ],
-      "description": "Named easing presets for entrance animations. Uses CSS linear() curves. Named 'ease' (not 'easing') to match Vega convention."
+      "description": "Named easing presets for entrance animations. Uses CSS linear() curves. Named 'ease' (not 'easing') to match Vega convention.\n- `smooth` (default): fast attack, quick settle, no overshoot.\n- `snappy`: faster still, settling by about half the duration.\n- `gentle`: the previous default, a slower ease-out."
     },
     "AnimationStagger": {
       "type": "object",

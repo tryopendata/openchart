@@ -82,10 +82,7 @@ function rolesFor(root: Element): EntranceRoleRow[] {
   if (root.classList.contains('oc-table-wrapper')) {
     return ENTRANCE_ROLES.filter((r) => r.scope === 'table');
   }
-  const sparkline = root.getAttribute('data-display') === 'sparkline';
-  return ENTRANCE_ROLES.filter(
-    (r) => r.scope === 'chart' || (sparkline && r.scope === 'chart-sparkline'),
-  );
+  return ENTRANCE_ROLES.filter((r) => r.scope === 'chart');
 }
 
 /**

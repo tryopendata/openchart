@@ -156,13 +156,15 @@ describe('marks entering during an update', () => {
     };
     const smooth = alphaFor('smooth');
     const snappy = alphaFor('snappy');
+    const gentle = alphaFor('gentle');
     for (const [ease, got] of [
       ['smooth', smooth],
       ['snappy', snappy],
+      ['gentle', gentle],
     ] as const) {
       expect(got.point).toBeCloseTo(evalValueCurve(ease, 0.3), 6);
       expect(got.gridline).toBeCloseTo(evalValueCurve(ease, 0.3), 6);
     }
-    expect(Math.abs(smooth.point - snappy.point)).toBeGreaterThan(0.05);
+    expect(Math.abs(smooth.point - gentle.point)).toBeGreaterThan(0.05);
   });
 });

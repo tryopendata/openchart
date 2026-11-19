@@ -56,6 +56,11 @@ export const CSS_TOKENS: readonly CssTokenDef[] = [
     light: curveToCSSLinear('snappy', { indent: '    ' }),
     consumers: 'EASE_VAR_MAP in vanilla renderers',
   },
+  {
+    name: '--oc-ease-gentle',
+    light: curveToCSSLinear('gentle', { indent: '    ' }),
+    consumers: 'EASE_VAR_MAP in vanilla renderers',
+  },
 
   { section: 'Animation timing defaults', name: '--oc-animation-duration', light: '450ms' },
   { name: '--oc-animation-stagger', light: '30ms' },
