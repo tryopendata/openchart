@@ -132,18 +132,37 @@ describe('3D graph entrance trigger', () => {
     for (const id of ['a', 'b', 'c']) expect(alpha(fake, id)).toBeCloseTo(1);
   });
 
-  it('update() while waiting drops the reveal and ends with every alpha at 1', () => {
+  it.each([
+    ['visual-only', enterSpec(), ['a', 'b', 'c']],
+    [
+      'structural',
+      {
+        ...enterSpec(),
+        nodes: [...NODES, { id: 'd', label: 'Delta', kind: 'lab' }],
+        edges: [...EDGES, { source: 'c', target: 'd' }],
+      } as GraphSpec,
+      ['a', 'b', 'c', 'd'],
+    ],
+  ])('a %s update() while waiting keeps every mark hidden, then plays it when seen', (_kind, next, ids) => {
     const { container, instance, fake } = mount(enterSpec());
     vi.advanceTimersByTime(200);
-    instance.update(enterSpec());
-    for (const id of ['a', 'b', 'c']) {
+    instance.update(next);
+    fake.flush();
+    vi.advanceTimersByTime(500);
+    for (const id of ids) {
+      expect(alpha(fake, id)).toBe(0);
+      expect(scale(fake, id)).toBeCloseTo(0.01);
+    }
+    expect(instance.entrancePlayed).toBe(false);
+    expect(observer.observed.size).toBe(1);
+
+    observer.fire(container, 1, 600);
+    expect(instance.entrancePlayed).toBe(true);
+    vi.advanceTimersByTime(SPAN_MS + 400);
+    for (const id of ids) {
       expect(alpha(fake, id)).toBeCloseTo(1);
       expect(scale(fake, id)).toBe(1);
     }
-    // Seeing it afterwards replays nothing.
-    observer.fire(container, 1, 600);
-    vi.advanceTimersByTime(100);
-    for (const id of ['a', 'b', 'c']) expect(alpha(fake, id)).toBeCloseTo(1);
   });
 
   it('first seen after the layout stopped: pulls back, flies in, lands on the fit', () => {

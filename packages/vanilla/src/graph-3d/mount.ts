@@ -1496,8 +1496,10 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
       return;
     }
 
-    // An entrance still waiting to be seen is dropped: draw at full alpha.
-    if (entrance.drop()) endEntrance();
+    // An entrance still waiting to be seen stays primed (marks hidden, pull 1)
+    // and armed on the same host, so it plays on the updated graph once seen.
+    // One already playing finishes to full alpha.
+    if (!entrance.waiting) entrance.drop();
     scheduler.finishAll();
 
     const prevNodes: PositionedNode[] = nodeData.map((d, index) => ({
@@ -1702,8 +1704,14 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
     reheatActive = true;
 
     graph.graphData({ nodes: nodeData, links: linkData });
-    startEnterFade(diff.enteringIds, enteringEdgeIndices);
-    startExitFade(pendingGhosts);
+    if (entrance.waiting) {
+      // Nothing is visible yet: enterers stay hidden with the rest (missing
+      // entrance entries read as hidden), and a ghost would flash in.
+      for (const g of pendingGhosts) g.dispose();
+    } else {
+      startEnterFade(diff.enteringIds, enteringEdgeIndices);
+      startExitFade(pendingGhosts);
+    }
     pruneInteractionState();
     armEmphasis();
   }

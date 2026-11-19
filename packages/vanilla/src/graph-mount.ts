@@ -594,8 +594,9 @@ export function createGraph(
     if (destroyed || !interactionManager || !enter) return undefined;
     entrancePlayed = true;
 
-    if (!cameraTouchedWhileWaiting) {
-      // Re-fit: the viewport may have resized while the entrance waited.
+    if (!cameraTouchedWhileWaiting && positionedNodes.length > 0) {
+      // Re-fit: the viewport (or, after an update, the data) may have changed
+      // while the entrance waited.
       const fit = computeInitialFit();
       // Start pulled back so the reveal has somewhere to fly in from. 0.7 gives a
       // clearly readable pull-in on load (0.85 was too subtle to register as motion).
@@ -1275,11 +1276,16 @@ export function createGraph(
     // Finish any in-flight animations (e.g. an entrance reveal or a prior
     // update's enter/exit fade) so they snap to their final state and fire
     // onDone rather than being hard-cancelled mid-flight. An entrance still
-    // waiting to be seen is dropped: the graph draws at full alpha from here.
-    entrance.drop();
+    // waiting to be seen stays armed on the same host and plays on the updated
+    // graph once seen (mount empty, update when the fetch resolves); nodes stay
+    // hidden until then. One already playing finishes to full alpha.
+    const entranceWaiting = entrance.waiting;
+    if (!entranceWaiting) entrance.drop();
     scheduler.finishAll();
-    entranceActive = false;
-    entranceProgress = 1;
+    if (!entranceWaiting) {
+      entranceActive = false;
+      entranceProgress = 1;
+    }
     entranceFitInFlight = false;
     entranceReveal = null;
     // Clear any lingering update-transition state (finishAll ran their onDone).
@@ -1405,8 +1411,9 @@ export function createGraph(
     // Reconcile interaction/highlight/search state against the new node set.
     reconcileStateAfterUpdate();
 
-    // Wire the enter-fade and exit-ghost transitions.
-    updateFades.start(diff, compilation);
+    // Wire the enter-fade and exit-ghost transitions. Skipped while the
+    // entrance waits: nothing is visible yet, so a ghost would flash in.
+    if (!entrance.waiting) updateFades.start(diff, compilation);
 
     needsRender = true;
     scheduleRender();

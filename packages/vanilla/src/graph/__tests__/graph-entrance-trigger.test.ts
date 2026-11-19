@@ -123,19 +123,43 @@ describe('2D graph entrance trigger', () => {
     graph.destroy();
   });
 
-  it('update() while waiting drops the reveal and draws at full alpha', async () => {
+  it.each([
+    ['visual-only', spec()],
+    [
+      'structural',
+      {
+        ...spec(),
+        nodes: [...spec().nodes, { id: 'e', label: 'E' }].filter((n) => n.id !== 'd'),
+        edges: [
+          { source: 'a', target: 'b' },
+          { source: 'b', target: 'e' },
+        ],
+      } as GraphSpec,
+    ],
+  ])('a %s update() while waiting keeps the entrance pending, then plays it when seen', async (_kind, next) => {
     const graph = createGraph(container, spec());
     await run(0, 500);
     expect(lastEntrance()?.t).toBe(0);
 
-    graph.update(spec());
-    clock.pump(550);
-    expect(lastEntrance()).toBeUndefined();
-    // Seeing it later replays nothing.
+    graph.update(next);
+    await run(550, 800);
+    // Still hidden, still armed, and no update fades or ghosts flashing in.
+    expect(lastEntrance()?.t).toBe(0);
+    expect(graph.entrancePlayed).toBe(false);
+    expect(fake.observed.size).toBe(1);
+    expect(states[states.length - 1].exiting).toBeUndefined();
+    expect(states[states.length - 1].enterAlpha).toBeUndefined();
+
     seen();
-    await run(600, 1000);
-    expect(states.slice(-5).every((s) => s.entrance === undefined)).toBe(true);
-    expect(fake.observed.size).toBe(0);
+    clock.pump(850);
+    expect(graph.entrancePlayed).toBe(true);
+    expect(lastEntrance()?.t).toBeLessThan(1);
+    await run(900, 2500);
+    // Revealed on the updated graph, at full alpha.
+    expect(lastEntrance()).toBeUndefined();
+    expect(states[states.length - 1].nodes.map((n) => n.id).sort()).toEqual(
+      next.nodes.map((n) => n.id).sort(),
+    );
     graph.destroy();
   });
 
