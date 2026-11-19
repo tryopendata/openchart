@@ -62,7 +62,13 @@ import type {
   GraphTooltipFormatter,
 } from '../graph-mount';
 import { AnimationScheduler, type Animation as GraphAnimation } from '../motion/scheduler';
-import { createTween, linear, prefersReducedMotion, resolveEase } from '../motion/tween';
+import {
+  createTween,
+  linear,
+  prefersReducedMotion,
+  resolveCameraEase,
+  resolveEase,
+} from '../motion/tween';
 import { resolvedSurface } from '../theme-tokens';
 import { resolveEmphasis } from './emphasis';
 import { ENTRANCE_CAMERA_PULLBACK, elementProgress, planEntrance } from './entrance';
@@ -529,7 +535,7 @@ export function createGraph3DRenderer(ctx: GraphRendererContext): GraphInstance 
     const fromEdges = new Map(displayEdgeAlpha);
     const tween = createTween({
       duration,
-      ease: resolveEase(hoverCfg?.ease ?? 'smooth'),
+      ease: resolveCameraEase(hoverCfg?.ease ?? 'smooth'),
       apply: (t) => {
         for (const [id, to] of targets.nodes) {
           const from = fromNodes.get(id) ?? to;

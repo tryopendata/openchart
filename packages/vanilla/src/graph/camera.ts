@@ -14,7 +14,7 @@
 import type { AnimationEase } from '@opendata-ai/openchart-core';
 import { interpolateZoom } from 'd3-interpolate';
 import type { Animation as GraphAnimation } from '../motion/scheduler';
-import { resolveEase } from '../motion/tween';
+import { resolveCameraEase } from '../motion/tween';
 import { ZoomTransform } from './zoom';
 
 /** Minimum/maximum zoom scale a flight may resolve to. */
@@ -102,7 +102,7 @@ export interface CameraFlightInputs {
  */
 export function createCameraFlight(inputs: CameraFlightInputs): GraphAnimation {
   const { from, viewport, apply, onDone, opts } = inputs;
-  const ease = resolveEase(opts?.ease ?? 'smooth');
+  const ease = resolveCameraEase(opts?.ease ?? 'smooth');
   const isProvider = typeof inputs.to === 'function';
 
   const fromView = transformToView(from, viewport);

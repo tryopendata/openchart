@@ -15,7 +15,7 @@
 
 import type { GraphCompilation } from '@opendata-ai/openchart-engine';
 import type { AnimationScheduler, Animation as GraphAnimation } from '../motion/scheduler';
-import { createTween, prefersReducedMotion, resolveEase } from '../motion/tween';
+import { createTween, prefersReducedMotion, resolveCameraEase } from '../motion/tween';
 import {
   composeStandingFocus,
   type FocusSnapshot,
@@ -123,7 +123,7 @@ export function createGraphFocusModel(ctx: GraphFocusContext): GraphFocusModel {
     const target = targetSnapshot();
     const hoverCfg = ctx.compilation().animation?.hover ?? null;
     const duration = hoverCfg && !prefersReducedMotion() ? hoverCfg.duration : 0;
-    const ease = resolveEase(hoverCfg?.ease ?? 'smooth');
+    const ease = resolveCameraEase(hoverCfg?.ease ?? 'smooth');
 
     if (!focusTransition) {
       focusTransition = new FocusTransition(target, duration, ease, now);
@@ -213,7 +213,7 @@ export function createGraphFocusModel(ctx: GraphFocusContext): GraphFocusModel {
       return;
     }
     hoverRadiusTween = { nodeId, scale: 1 };
-    const ease = resolveEase(hoverCfg.ease);
+    const ease = resolveCameraEase(hoverCfg.ease);
     const tween = createTween({
       duration: hoverCfg.duration,
       ease,

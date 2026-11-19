@@ -3,12 +3,17 @@
  * time-based tween.
  *
  * Canvas marks animate via a rAF scheduler (see scheduler.ts), NOT via CSS
- * keyframes like SVG charts. Only the easing vocabulary is shared with charts
- * (`'smooth'` / `'snappy'`). No `d3-ease` dependency — easings are hand-rolled,
- * matching `transition.ts`'s `cubicOut`.
+ * keyframes like SVG charts. Value, entrance and fade curves come from core's
+ * curve registry, the same one the CSS and the chart driver read. Camera and
+ * hover keep the hand-rolled analytic cubics (`resolveCameraEase`).
  */
 
-import type { AnimationEase } from '@opendata-ai/openchart-core';
+import {
+  type AnimationEase,
+  evalValueCurve,
+  type MotionPhase,
+  sampleMotion,
+} from '@opendata-ai/openchart-core';
 import { cubicInOut, cubicOut } from './easing';
 import type { Animation } from './scheduler';
 
@@ -18,9 +23,28 @@ import type { Animation } from './scheduler';
 
 export { cubicInOut, cubicOut, linear } from './easing';
 
-/** Resolve a named ease preset to an easing function. */
+/**
+ * Resolve a named ease preset to the registry's value curve: clamped to
+ * [0, 1] and never dipping back, so it is safe for geometry and alpha.
+ */
 export function resolveEase(ease: AnimationEase): (t: number) => number {
-  return ease === 'snappy' ? cubicOut : cubicInOut; // 'smooth' and 'gentle' share cubicInOut
+  return (t) => evalValueCurve(ease, t);
+}
+
+/**
+ * Normalized-progress easing for a whole phase, honouring `spring` (which a
+ * named curve can't express). Use with `createTween({ duration: phase.duration })`.
+ */
+export function motionEase(phase: MotionPhase): (t: number) => number {
+  return (t) => sampleMotion(phase, t * phase.duration).position;
+}
+
+/**
+ * Camera flights and hover emphasis keep the analytic cubics they always had:
+ * `'snappy'` decelerates (cubicOut); `'smooth'` and `'gentle'` ease in and out.
+ */
+export function resolveCameraEase(ease: AnimationEase): (t: number) => number {
+  return ease === 'snappy' ? cubicOut : cubicInOut;
 }
 
 // ---------------------------------------------------------------------------

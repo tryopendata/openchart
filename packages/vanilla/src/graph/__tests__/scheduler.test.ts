@@ -3,9 +3,17 @@
  * transitions, snapshot-safe reentrancy, and tween progress/easing.
  */
 
+import { evalValueCurve, sampleMotion, springDuration } from '@opendata-ai/openchart-core';
 import { describe, expect, it, vi } from 'vitest';
 import { AnimationScheduler, type Animation as GraphAnimation } from '../../motion/scheduler';
-import { createTween, cubicInOut, cubicOut, linear, resolveEase } from '../../motion/tween';
+import {
+  createTween,
+  cubicInOut,
+  cubicOut,
+  linear,
+  motionEase,
+  resolveEase,
+} from '../../motion/tween';
 
 /** Minimal controllable animation for scheduler tests. */
 function fakeAnim(runFrames: number, onDone?: () => void): GraphAnimation {
@@ -132,9 +140,22 @@ describe('motion easings', () => {
     expect(cubicInOut(0.5)).toBeCloseTo(0.5, 5);
   });
 
-  it('resolveEase maps smooth→cubicInOut and snappy→cubicOut', () => {
-    expect(resolveEase('smooth')(0.5)).toBeCloseTo(cubicInOut(0.5), 10);
-    expect(resolveEase('snappy')(0.5)).toBeCloseTo(cubicOut(0.5), 10);
+  it('resolveEase reads the curve registry', () => {
+    for (const ease of ['smooth', 'snappy', 'gentle'] as const) {
+      for (const t of [0, 0.25, 0.5, 0.75, 1]) {
+        expect(resolveEase(ease)(t)).toBe(evalValueCurve(ease, t));
+      }
+    }
+  });
+
+  it('motionEase follows sampleMotion, including springs', () => {
+    const curve = { duration: 400, ease: 'snappy' as const };
+    expect(motionEase(curve)(0.3)).toBe(sampleMotion(curve, 120).position);
+    const spring = { duration: springDuration({ stiffness: 200 }), spring: { stiffness: 200 } };
+    expect(motionEase(spring)(0.5)).toBe(sampleMotion(spring, spring.duration * 0.5).position);
+    expect(motionEase(spring)(0)).toBe(0);
+    expect(motionEase(spring)(1)).toBe(1);
+    expect(motionEase({ duration: 0 })(0)).toBe(1);
   });
 });
 

@@ -11,6 +11,7 @@ import {
 } from './export';
 import { materializeCanvasModeSVG } from './export-canvas';
 import type { GIFExportOptions } from './export-gif';
+import { exportEntranceGIF } from './export-gif-lazy';
 import type { ChartInstance, ExportOptions } from './mount-types';
 import type { ScatterCanvasLayer } from './scatter-canvas/layer';
 import { renderChartSVG } from './svg-renderer';
@@ -74,15 +75,12 @@ export function createChartExporter(state: () => ExportState): ChartInstance['ex
         return exportPNG(svg, withTheme(exportOptions as ExportOptions | undefined));
       case 'jpg':
         return exportJPG(svg, withTheme(exportOptions as ExportOptions | undefined));
-      case 'gif': {
-        // Dynamic import keeps the GIF encoder (optional `gifenc` peer) out of
-        // the core bundle — only consumers who export GIFs load this chunk.
-        const gifOptions = withTheme(exportOptions as GIFExportOptions | undefined);
-        const gifBlob: Promise<Blob> = import('./export-gif').then(({ exportGIF }) =>
-          exportGIF(svg, currentLayout.animation, gifOptions),
+      case 'gif':
+        return exportEntranceGIF(
+          svg,
+          currentLayout.animation,
+          withTheme(exportOptions as GIFExportOptions | undefined),
         );
-        return gifBlob;
-      }
       case 'csv':
         return exportCSV(
           'data' in currentSpec && Array.isArray(currentSpec.data) ? currentSpec.data : [],

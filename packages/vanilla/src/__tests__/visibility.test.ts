@@ -104,13 +104,17 @@ describe('whenSeen', () => {
     expect(cb).not.toHaveBeenCalled();
   });
 
-  it('fires at once for an element with no layout', () => {
+  it('observes a zero-size element and fires once it is seen', () => {
+    // A chart in a closed tab or accordion: the page lays out, the element has
+    // no size yet. It plays when it opens and scrolls into view, not at mount.
     const el = document.createElement('div');
     document.body.appendChild(el);
     const cb = vi.fn();
     whenSeen(el, cb);
+    expect(cb).not.toHaveBeenCalled();
+    expect(fake.observed.has(el)).toBe(true);
+    fake.fire(el, 1, 300);
     expect(cb).toHaveBeenCalledTimes(1);
-    expect(fake.created).toBe(0);
   });
 
   it('fires at once when the page has no layout engine', () => {

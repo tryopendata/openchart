@@ -9,10 +9,12 @@
  * when the visible part covers at least 25% of the viewport's height, so an
  * element taller than four viewports still plays.
  *
- * Without IntersectionObserver, or without layout (a zero-size element, a
+ * Without IntersectionObserver, or without page layout (no window, a
  * zero-height viewport, or a page whose root element has no width: happy-dom,
- * SSR, a detached node), the callback fires synchronously, which keeps those
- * environments on the play-at-mount path.
+ * SSR), the callback fires synchronously, which keeps those environments on
+ * the play-at-mount path. A zero-size element on a page that does lay out
+ * (a chart in a closed tab or accordion) is observed like any other: it plays
+ * once it gets a size and is seen.
  */
 
 import { prefersReducedMotion } from './motion/tween';
@@ -81,13 +83,13 @@ function onIntersect(entries: IntersectionObserverEntry[]): void {
 /**
  * Whether the page lays elements out at all. The root element always has a
  * width in a browser; DOM shims without a layout engine (happy-dom) report
- * zero for it even when a test stubs the container's own rect.
+ * zero for it even when a test stubs the container's own rect. Only the page
+ * is checked: an element's own size says nothing about whether it will be
+ * seen later.
  */
-function hasLayout(element: Element): boolean {
+function hasLayout(): boolean {
   if (typeof window === 'undefined' || !window.innerHeight) return false;
-  if (!(document.documentElement.getBoundingClientRect().width > 0)) return false;
-  const rect = element.getBoundingClientRect();
-  return rect.width > 0 || rect.height > 0;
+  return document.documentElement.getBoundingClientRect().width > 0;
 }
 
 /**
@@ -96,7 +98,7 @@ function hasLayout(element: Element): boolean {
  */
 export function whenSeen(element: Element, cb: () => void): () => void {
   const make = factory ?? (typeof IntersectionObserver === 'function' ? defaultFactory : null);
-  if (!make || !hasLayout(element)) {
+  if (!make || !hasLayout()) {
     cb();
     return () => {};
   }

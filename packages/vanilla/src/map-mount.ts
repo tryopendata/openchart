@@ -65,6 +65,7 @@ import { renderMapSVG } from './map-renderer';
 import { captureMapSnapshot, runMapFillTransition } from './map-transition';
 import { createMapZoomController, type MapZoomController } from './map-zoom';
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
+import { prefersReducedMotion } from './motion/tween';
 import { observeResize } from './resize-observer';
 import { resolveDarkMode } from './resolve-dark-mode';
 import type { Camera } from './story/camera-math';
@@ -204,19 +205,6 @@ export interface GeoMapInstance {
 
 /** Tween length for button, key, and double-click zoom steps. */
 const USER_ZOOM_MS = 250;
-
-// ---------------------------------------------------------------------------
-// Dark mode resolution
-// ---------------------------------------------------------------------------
-
-function prefersReducedMotion(): boolean {
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
-  try {
-    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  } catch {
-    return false;
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Main API
