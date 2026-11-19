@@ -257,7 +257,8 @@ describe('canvas entrance completion clock', () => {
     });
   });
 
-  it('does eventually clear the entrance', () => {
+  it('does eventually clear the entrance', async () => {
+    let done: { svg: SVGElement; destroy: () => void } | undefined;
     withEntranceClocks((pump) => {
       const container = createContainer();
       const chart = createChart(
@@ -277,10 +278,13 @@ describe('canvas entrance completion clock', () => {
         vi.advanceTimersByTime(250);
         pump(t);
       }
-      expect(svg.classList.contains('oc-animate')).toBe(false);
-
-      chart.destroy();
+      done = { svg, destroy: () => chart.destroy() };
     });
+    // Cleanup completes through the canvas entrance's `finished` promise,
+    // which settles a few microtasks after the fallback timer fires.
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    expect(done?.svg.classList.contains('oc-animate')).toBe(false);
+    done?.destroy();
   });
 });
 

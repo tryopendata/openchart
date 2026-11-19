@@ -611,6 +611,7 @@ export function createChart<TData extends DataRow = DataRow>(
             }
           },
           totalMs: entranceTotalMs,
+          canvasFinished: canvasEntrance?.finished,
         });
       }
     }
