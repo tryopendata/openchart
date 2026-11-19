@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
+import { settleEntrances } from '../settle';
 import type { ChartInstance } from '../../packages/vanilla/src/mount';
 
 const moduleUrl = `/@fs${path.resolve(__dirname, '../../packages/vanilla/src/mount.ts')}`;
@@ -16,6 +17,7 @@ for (const variant of ['line', 'area', 'interval-area', 'interval-single', 'inte
   test(`${variant}: isolated hover and connected keyboard observations share the overlay`, async ({ page }) => {
     await page.goto('/?story=testing--library-contracts--lifecycle&mode=preview');
     await expect(page.getByTestId('library-host').locator('svg').first()).toBeVisible();
+    await settleEntrances(page);
     await page.evaluate(async ({ moduleUrl, mark, interval, values }) => {
       const { createChart } = await import(moduleUrl);
       const host = document.createElement('div');

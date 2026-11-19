@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
+import { settleEntrances } from '../settle';
 
 async function settle(page: Page) {
   await page.evaluate(async () => {
@@ -6,6 +7,7 @@ async function settle(page: Page) {
     await new Promise(requestAnimationFrame);
     await new Promise(requestAnimationFrame);
   });
+  await settleEntrances(page);
 }
 async function pinNext(host: Locator) {
   await host.focus();

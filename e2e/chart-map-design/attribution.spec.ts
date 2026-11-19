@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { settleEntrances } from '../settle';
 
 for (const width of [390, 1280]) {
   for (const variant of ['all-visualizations', 'custom-brand', 'large-text']) {
@@ -11,6 +12,7 @@ for (const width of [390, 1280]) {
         await new Promise(requestAnimationFrame);
         await new Promise(requestAnimationFrame);
       });
+      await settleEntrances(page);
       for (const kind of ['chart', 'map', 'barlist', 'sankey', 'tilemap', 'table', 'graph']) {
         const card = page.locator(`[data-attribution-kind=${kind}]`);
         await expect(card.locator('.oc-source')).toContainText('2020–2025');

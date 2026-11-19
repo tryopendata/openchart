@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
+import { settleEntrances } from '../settle';
 
 const story = (name: string) => `/?story=gallery--geographic-views--${name}&mode=preview`;
 async function settle(page: Page) {
@@ -7,6 +8,7 @@ async function settle(page: Page) {
     await new Promise(requestAnimationFrame);
     await new Promise(requestAnimationFrame);
   });
+  await settleEntrances(page);
 }
 async function exported(host: Locator) {
   await host.dispatchEvent('fixture-export');

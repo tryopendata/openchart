@@ -893,8 +893,10 @@ export function AnnotationNotesSizing() {
             testId="annotation-layout"
           />
         ))}
+      {/* Baseline-captured canvas: its entrance runs on a JS scheduler the
+          visual harness can't freeze, so it renders static. */}
       <AnnotationInvariantChart
-        spec={annotationNotesSpecs[4]}
+        spec={{ ...annotationNotesSpecs[4], animation: false }}
         renderer="canvas"
         height={600}
         testId="annotation-canvas"
