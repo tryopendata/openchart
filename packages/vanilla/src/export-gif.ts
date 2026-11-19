@@ -22,6 +22,7 @@
 
 import {
   type AnimationEase,
+  cssTokenDefault,
   type EntranceRole,
   entranceRole,
   entranceTiming,
@@ -38,6 +39,7 @@ import {
   type ResolvedAnimation,
   type ResolvedTheme,
 } from '@opendata-ai/openchart-core';
+import { interpolateRgb } from 'd3-interpolate';
 import { type EntranceScan, entranceRoleOf, scanEntrance, scanEntranceEndMs } from './animation';
 import {
   embedFonts,
@@ -87,7 +89,14 @@ export interface GIFExportOptions {
 }
 
 /** The keyframe family an element's entrance plays (coarse; `role` is exact). */
-export type AnimationKind = 'bar-vertical' | 'bar-horizontal' | 'line-area' | 'fade';
+export type AnimationKind =
+  | 'bar-vertical'
+  | 'bar-horizontal'
+  | 'line-area'
+  | 'map-fill'
+  | 'map-point'
+  | 'slide'
+  | 'fade';
 
 export interface AnimatedTarget {
   /** The element in the CLONE that receives per-frame inline styles. */
@@ -103,7 +112,17 @@ export interface AnimatedTarget {
   durationMs: number;
   /** Duration of the role's separate quick fade track, when it has one (opacity follows it). */
   fadeMs?: number;
+  /**
+   * The element's own inline values for the properties frames overwrite,
+   * captured before the first frame so the settled frame restores them (a
+   * focus-dimmed map feature rests at its inline dim opacity, not 1).
+   */
+  rest?: Partial<Record<FrameProperty, string>>;
 }
+
+/** Inline properties a frame writes. */
+type FrameProperty = 'opacity' | 'transform' | 'clip-path' | 'fill';
+const FRAME_PROPERTIES: readonly FrameProperty[] = ['opacity', 'transform', 'clip-path', 'fill'];
 
 // ---------------------------------------------------------------------------
 // Target discovery
@@ -113,6 +132,9 @@ function kindOf(keyframe: KeyframeName): AnimationKind {
   if (keyframe === 'oc-enter-bar' || keyframe === 'oc-enter-stack') return 'bar-vertical';
   if (keyframe === 'oc-enter-bar-h' || keyframe === 'oc-enter-stack-h') return 'bar-horizontal';
   if (keyframe === 'oc-enter-line') return 'line-area';
+  if (keyframe === 'oc-enter-map-fill') return 'map-fill';
+  if (keyframe === 'oc-enter-map-point') return 'map-point';
+  if (keyframe === 'oc-enter-slide') return 'slide';
   return 'fade';
 }
 
@@ -145,8 +167,15 @@ export function classifyTarget(
 function collectTargets(scan: EntranceScan, phase: MotionPhase): AnimatedTarget[] {
   return scan.elements.map((e) => {
     const timing = entranceTiming(e.role, e.index, phase, { ...scan.context, ...e.context });
+    const el = e.el as SVGElement;
+    const rest: Partial<Record<FrameProperty, string>> = {};
+    for (const prop of FRAME_PROPERTIES) {
+      const value = el.style.getPropertyValue(prop);
+      if (value) rest[prop] = value;
+    }
     return {
-      el: e.el as SVGElement,
+      el,
+      rest,
       kind: kindOf(e.keyframe),
       role: e.role,
       keyframe: e.keyframe,
@@ -197,6 +226,60 @@ function formatInset(v: { top: number; right: number; bottom: number; left: numb
 }
 
 /**
+ * A custom property as the cascade hands it to `el`: its own inline value, or
+ * the nearest ancestor's (theme tokens such as `--oc-secondary` sit on the
+ * root). The export clone is detached, so computed style can't answer.
+ */
+function readVar(el: Element, name: string): string {
+  for (let node: Element | null = el; node; node = node.parentElement) {
+    const value = (node as Element & Partial<ElementCSSInlineStyle>).style
+      ?.getPropertyValue(name)
+      .trim();
+    if (value) return value;
+  }
+  return '';
+}
+
+/**
+ * A `fill` stop resolved against the element (`var(--oc-feature-fill)`), or
+ * undefined when the custom property isn't set anywhere up the tree.
+ */
+function resolveFill(el: SVGElement, value: KeyframeValue): string | undefined {
+  if (value.type !== 'css') return undefined;
+  return substituteVars(el, value.css).trim() || undefined;
+}
+
+/** Replace every `var(--x, fallback)` in `css` with its value as `el` sees it. */
+function substituteVars(el: Element, css: string): string {
+  return css.replace(
+    /var\((--[\w-]+)(?:,\s*([^()]*))?\)/g,
+    (_, name: string, fallback?: string) => readVar(el, name) || fallback || '',
+  );
+}
+
+/** A paint the browser interpolates as a color: not a pattern, gradient or `none`. */
+const isColorPaint = (paint: string): boolean =>
+  !/^(url\(|none$|inherit$|currentcolor$)/i.test(paint);
+
+/**
+ * Evaluate a two-stop `fill` keyframe on the eased progress `e`. Colors mix in
+ * sRGB, as CSS animates legacy colors; a paint that isn't a color (the
+ * `url(#hatch)` on no-data map features) switches at the eased midpoint, as
+ * the browser flips a non-interpolable value.
+ */
+function evalFill(el: SVGElement, keyframe: KeyframeName, e: number): string | undefined {
+  const stops = (KEYFRAMES[keyframe].stops as readonly KeyframeStop[]).filter(
+    (s) => s.values.fill !== undefined,
+  );
+  if (stops.length !== 2) return undefined;
+  const from = resolveFill(el, stops[0].values.fill!);
+  const to = resolveFill(el, stops[1].values.fill!);
+  if (!from || !to) return undefined;
+  if (!isColorPaint(from) || !isColorPaint(to)) return e < 0.5 ? from : to;
+  return interpolateRgb(from, to)(e);
+}
+
+/**
  * Resolve a keyframe value JS can't interpolate as written (`var(--x, 1)`,
  * `inset(var(--oc-stack-from, 100% 0 0 0))`) against the element's stamped
  * custom properties, as the browser does. Undefined when the result is not a
@@ -204,10 +287,7 @@ function formatInset(v: { top: number; right: number; bottom: number; left: numb
  * the settled value then.
  */
 function resolveCSSValue(el: SVGElement, css: string): KeyframeValue | undefined {
-  const substituted = css.replace(
-    /var\((--[\w-]+)(?:,\s*([^()]*))?\)/g,
-    (_, name: string, fallback?: string) => el.style.getPropertyValue(name) || fallback || '',
-  );
+  const substituted = substituteVars(el, css);
   const translateMatch = /^translate\(\s*([-\d.e]+)px\s*,\s*([-\d.e]+)px\s*\)$/.exec(
     substituted.trim(),
   );
@@ -282,6 +362,9 @@ const DEFAULT_ROLE: Record<AnimationKind, EntranceRole> = {
   'bar-vertical': 'bar',
   'bar-horizontal': 'bar-h',
   'line-area': 'line-area',
+  'map-fill': 'map-feature',
+  'map-point': 'map-point',
+  slide: 'barlist-row',
   fade: 'arc',
 };
 
@@ -312,6 +395,11 @@ export function applyFrameState(
   const style = target.el.style;
 
   for (const [prop, raw] of Object.entries(values) as [KeyframeProperty, KeyframeValue][]) {
+    if (prop === 'fill') {
+      const fill = evalFill(target.el, keyframe, ease(p));
+      if (fill) style.setProperty('fill', fill);
+      continue;
+    }
     // A stop holding a custom property (`--oc-bar-from`, `--oc-label-from`) is
     // resolved against the element, even past the midpoint where evalKeyframes
     // would hand back the literal end stop.
@@ -348,12 +436,74 @@ export function applyFrameState(
   }
 }
 
-/** Clear any inline entrance styles so the settled frame renders at rest. */
+/** Put back the element's own inline values so the settled frame renders at rest. */
 function clearFrameState(target: AnimatedTarget): void {
   const style = target.el.style;
-  style.clipPath = '';
-  style.opacity = '';
-  style.transform = '';
+  for (const prop of FRAME_PROPERTIES) {
+    const rest = target.rest?.[prop];
+    if (rest) style.setProperty(prop, rest);
+    else style.removeProperty(prop);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Frame sampler
+// ---------------------------------------------------------------------------
+
+/** Writes the entrance state at a given time onto one SVG, in place. */
+export interface FrameSampler {
+  /** When the last element settles, by the choreography table (ms). */
+  readonly endMs: number;
+  /** Write every target's state at `nowMs`, or restore the settled scene (`null`). */
+  apply(nowMs: number | null): void;
+}
+
+/**
+ * Prepare `svg` (a settled scene carrying its entrance stamps) for frame
+ * sampling: find every element the entrance animates and time it exactly as
+ * the CSS does. Frames then mutate `svg` in place.
+ */
+export function createFrameSampler(
+  svg: SVGElement,
+  animation: ResolvedAnimation | undefined,
+  theme?: ResolvedTheme,
+): FrameSampler {
+  // Resolve timing from the config with defaults as a fallback. The stamped
+  // custom properties on the SVG (read by scanEntrance) take precedence,
+  // since they are exactly what the live CSS used.
+  const enter = animation?.enter || undefined;
+  const easeKind: AnimationEase = enter?.ease ?? 'smooth';
+  // The map fill reveal starts from the theme's neutral `--oc-secondary`. A
+  // live export carries it over from the page cascade; an export with an
+  // explicit theme doesn't, so fall back to the token's default for its mode.
+  if (!readVar(svg, '--oc-secondary')) {
+    svg.style.setProperty(
+      '--oc-secondary',
+      cssTokenDefault('--oc-secondary', theme?.isDark ? 'dark' : 'light'),
+    );
+  }
+  const scan = scanEntrance(svg);
+  const phase: MotionPhase = {
+    ...enter,
+    duration: scan.durationMs ?? enter?.duration ?? DEFAULT_ENTER_MS,
+    ease: easeKind,
+  };
+  if (scan.context.annotationDelayMs === undefined && animation?.annotationDelay !== undefined) {
+    scan.context.annotationDelayMs = animation.annotationDelay;
+  }
+  if (scan.context.staggerMs === undefined && enter) {
+    scan.context.staggerMs = enter.staggerDelay;
+  }
+  const targets = collectTargets(scan, phase);
+  return {
+    endMs: scanEntranceEndMs(scan, phase),
+    apply(nowMs) {
+      for (const t of targets) {
+        if (nowMs === null) clearFrameState(t);
+        else applyFrameState(t, nowMs, easeKind, phase);
+      }
+    },
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -398,12 +548,6 @@ export async function exportGIF(
     throw new Error(`SVG has zero dimensions (width=${width}, height=${height})`);
   }
 
-  // Resolve timing from the config with defaults as a fallback. The stamped
-  // custom properties on the SVG (read by scanEntrance) take precedence,
-  // since they are exactly what the live CSS used.
-  const enter = animation?.enter || undefined;
-  const easeKind: AnimationEase = enter?.ease ?? 'smooth';
-
   // Build one font-embedded clone that represents the FINAL frame; every frame
   // derives from it, so fonts are embedded exactly once.
   const clone = svgElement.cloneNode(true) as SVGElement;
@@ -413,23 +557,11 @@ export async function exportGIF(
   if (shouldEmbed) {
     await embedFonts(clone);
   }
-  const scan = scanEntrance(clone);
-  const phase: MotionPhase = {
-    ...enter,
-    duration: scan.durationMs ?? enter?.duration ?? DEFAULT_ENTER_MS,
-    ease: easeKind,
-  };
-  if (scan.context.annotationDelayMs === undefined && animation?.annotationDelay !== undefined) {
-    scan.context.annotationDelayMs = animation.annotationDelay;
-  }
-  if (scan.context.staggerMs === undefined && enter) {
-    scan.context.staggerMs = enter.staggerDelay;
-  }
-  const targets = collectTargets(scan, phase);
+  const sampler = createFrameSampler(clone, animation, options?.theme);
 
   // Total capture window: explicit override, else the choreography table's end
   // for the elements present (the same figure cleanup uses) plus a short tail.
-  const totalMs = options?.durationMs ?? scanEntranceEndMs(scan, phase) + CAPTURE_TAIL_MS;
+  const totalMs = options?.durationMs ?? sampler.endMs + CAPTURE_TAIL_MS;
   const frameDelay = Math.round(1000 / fps);
   const totalFrames = Math.max(1, Math.round((totalMs / 1000) * fps));
 
@@ -456,17 +588,13 @@ export async function exportGIF(
   // small. gifenc writes the global color table from the palette on the first
   // frame; later frames reuse it.
   let globalPalette: number[][] = [];
-  await seedPalette(clone, targets, width, height, dpi, fillBackground, (data) => {
+  await seedPalette(clone, sampler, width, height, dpi, fillBackground, (data) => {
     globalPalette = quantize(data, 256);
   });
 
   let frameWritten = 0;
   const writeFrame = async (nowMs: number | null): Promise<void> => {
-    if (nowMs === null) {
-      for (const t of targets) clearFrameState(t);
-    } else {
-      for (const t of targets) applyFrameState(t, nowMs, easeKind, phase);
-    }
+    sampler.apply(nowMs);
     const svgString = ensureSVGDimensions(exportSVG(clone), width, height);
     const canvas = await rasterizeSVGToCanvas(svgString, width, height, dpi, fillBackground);
     const index = applyPalette(readCanvasSRGB(canvas), globalPalette);
@@ -499,14 +627,14 @@ export async function exportGIF(
  */
 async function seedPalette(
   clone: SVGElement,
-  targets: AnimatedTarget[],
+  sampler: FrameSampler,
   width: number,
   height: number,
   dpi: number,
   prepare: (ctx: CanvasRenderingContext2D, cv: HTMLCanvasElement) => void,
   use: (data: Uint8ClampedArray) => void,
 ): Promise<void> {
-  for (const t of targets) clearFrameState(t);
+  sampler.apply(null);
   const svgString = ensureSVGDimensions(exportSVG(clone), width, height);
   const canvas = await rasterizeSVGToCanvas(svgString, width, height, dpi, prepare);
   use(readCanvasSRGB(canvas));

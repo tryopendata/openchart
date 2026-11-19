@@ -282,20 +282,26 @@ export async function embedFonts(svgElement: SVGElement): Promise<void> {
 // SVG background color
 // ---------------------------------------------------------------------------
 
+/** A paint a canvas can flood-fill with: not `none`, transparent, `currentColor` or a pattern. */
+const isOpaquePaint = (paint: string | null | undefined): paint is string =>
+  !!paint && !/^(none|transparent|currentcolor|url\()/i.test(paint.trim());
+
 /**
- * Read the chart's background color from its first rect element. Falls back to
- * `fallback` (white when omitted) when the chart has no opaque background,
- * which matters for formats that can't carry alpha (JPEG, GIF).
+ * Read the chart's background color from its background rect (the root's
+ * first child rect; a nested rect is a mark, a track or a tile). Falls back to
+ * `fallback`, then white, when the chart has no opaque background, which
+ * matters for formats that can't carry alpha (JPEG, GIF).
  *
  * Pass the resolved theme's `colors.background` as `fallback` when the caller
  * has one: canvas mark mode suppresses the SVG background rect (the canvas
- * paints it), so without it a dark chart would flood-fill white.
+ * paints it), so without it a dark chart would flood-fill white. A transparent
+ * theme background falls through to white.
  */
 export function getSVGBackgroundColor(svgElement: SVGElement, fallback?: string): string {
-  const firstRect = svgElement.querySelector('rect');
-  const fill = firstRect?.getAttribute('fill');
-  if (!fill || fill === 'none' || fill === 'transparent') return fallback ?? '#ffffff';
-  return fill;
+  const rect = Array.from(svgElement.children).find((el) => el.tagName.toLowerCase() === 'rect');
+  const fill = rect?.getAttribute('fill');
+  if (isOpaquePaint(fill)) return fill;
+  return isOpaquePaint(fallback) ? fallback : '#ffffff';
 }
 
 // ---------------------------------------------------------------------------

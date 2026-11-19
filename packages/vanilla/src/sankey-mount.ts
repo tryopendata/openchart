@@ -25,6 +25,8 @@ import {
   type JPGExportOptions,
   type SVGExportOptions,
 } from './export';
+import type { GIFExportOptions } from './export-gif';
+import { exportEntranceGIF } from './export-gif-lazy';
 import {
   captureMarkFocus,
   type NavigableMark,
@@ -78,8 +80,8 @@ export interface SankeyInstance {
   resize(): void;
   /** Export the sankey diagram. */
   export(
-    format: 'svg' | 'svg-with-fonts' | 'png' | 'jpg',
-    options?: JPGExportOptions | SVGExportOptions,
+    format: 'svg' | 'svg-with-fonts' | 'png' | 'jpg' | 'gif',
+    options?: JPGExportOptions | SVGExportOptions | GIFExportOptions,
   ): string | Promise<Blob> | Promise<string>;
   /** Remove all DOM elements and disconnect observers. */
   destroy(): void;
@@ -804,15 +806,22 @@ export function createSankey(
   }
 
   function doExport(
-    format: 'svg' | 'svg-with-fonts' | 'png' | 'jpg',
-    exportOptions?: JPGExportOptions | SVGExportOptions,
+    format: 'svg' | 'svg-with-fonts' | 'png' | 'jpg' | 'gif',
+    exportOptions?: JPGExportOptions | SVGExportOptions | GIFExportOptions,
   ): string | Promise<Blob> | Promise<string> {
     if (!svgElement) {
       throw new Error('Sankey is not rendered yet');
     }
 
     // Export settled geometry, independent of transient hover and animation.
-    const terminalSvg = renderSankeySVG(currentLayout);
+    // Only the GIF keeps the entrance stamps its frame sampler reads; it drops
+    // `oc-animate` so nothing plays on the detached copy.
+    const animate = format === 'gif';
+    const terminalSvg = renderSankeySVG(
+      currentLayout,
+      animate ? currentLayout.animation : undefined,
+    );
+    if (animate) cancelAnimations(terminalSvg);
     const resolvedOptions = { theme: currentLayout.theme, ...exportOptions };
     prepareSettledExportTheme(
       svgElement,
@@ -830,6 +839,8 @@ export function createSankey(
         return exportPNG(terminalSvg, resolvedOptions);
       case 'jpg':
         return exportJPG(terminalSvg, resolvedOptions);
+      case 'gif':
+        return exportEntranceGIF(terminalSvg, currentLayout.animation, resolvedOptions);
       default:
         throw new Error(`Unsupported export format: ${format}`);
     }

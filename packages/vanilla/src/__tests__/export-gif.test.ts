@@ -162,6 +162,19 @@ describe('classifyTarget', () => {
     expect(classifyTarget(svgEl('g', 'oc-mark oc-mark-arc'))?.kind).toBe('fade');
   });
 
+  it('maps map features, map points and bar list rows to their own kinds', () => {
+    const svg = svgEl('svg', 'oc-map');
+    const feature = svgEl('path', 'oc-map-feature');
+    const point = svgEl('circle', 'oc-map-point');
+    svg.append(feature, point);
+    expect(classifyTarget(feature)).toEqual({ el: feature, kind: 'map-fill', role: 'map-feature' });
+    expect(classifyTarget(point)).toEqual({ el: point, kind: 'map-point', role: 'map-point' });
+    const barlist = svgEl('svg', 'oc-barlist');
+    const row = svgEl('g', 'oc-barlist-row');
+    barlist.appendChild(row);
+    expect(classifyTarget(row)).toMatchObject({ el: row, kind: 'slide', role: 'barlist-row' });
+  });
+
   it('treats unknown mark types as a generic fade (no hard pop-in)', () => {
     expect(classifyTarget(svgEl('text', 'oc-mark oc-mark-text'))?.kind).toBe('fade');
   });
@@ -300,6 +313,78 @@ describe('applyFrameState', () => {
     const plain: AnimatedTarget = { ...t, el: svgEl('g', 'oc-stack-reveal') };
     applyFrameState(plain, 0, 'smooth');
     expect(plain.el.style.clipPath).toBe('inset(100% 0 0 0)');
+  });
+
+  it('map feature: fill mixes from the neutral to its own color while fading in', () => {
+    const root = svgEl('svg', 'oc-map');
+    root.style.setProperty('--oc-secondary', '#ffffff');
+    const el = svgEl('path', 'oc-map-feature');
+    el.style.setProperty('--oc-feature-fill', '#ff0000');
+    root.appendChild(el);
+    const t: AnimatedTarget = { el, kind: 'map-fill', startMs: 0, durationMs: 500 };
+    applyFrameState(t, 0, 'smooth');
+    expect(el.style.fill).toBe('rgb(255, 255, 255)');
+    expect(Number(el.style.opacity)).toBe(0);
+    applyFrameState(t, 250, 'smooth');
+    const [r, g] = (el.style.fill.match(/\d+/g) ?? []).map(Number);
+    expect(r).toBe(255);
+    expect(g).toBeGreaterThan(0);
+    expect(g).toBeLessThan(255);
+    applyFrameState(t, 500, 'smooth');
+    expect(el.style.fill).toBe('rgb(255, 0, 0)');
+    expect(Number(el.style.opacity)).toBe(1);
+  });
+
+  it('map feature under a focus fades to its stamped dim opacity, not 1', () => {
+    const el = svgEl('path', 'oc-map-feature');
+    el.style.setProperty('--oc-feature-fill', '#ff0000');
+    el.style.setProperty('--oc-feature-target-opacity', '0.25');
+    const t: AnimatedTarget = { el, kind: 'map-fill', startMs: 0, durationMs: 500 };
+    applyFrameState(t, 250, 'smooth');
+    expect(Number(el.style.opacity)).toBeGreaterThan(0);
+    expect(Number(el.style.opacity)).toBeLessThan(0.25);
+    applyFrameState(t, 500, 'smooth');
+    expect(Number(el.style.opacity)).toBeCloseTo(0.25, 6);
+  });
+
+  it('map feature with a hatch pattern holds the neutral, then flips at the eased midpoint', () => {
+    const el = svgEl('path', 'oc-map-feature');
+    el.style.setProperty('--oc-secondary', '#eeeeee');
+    el.style.setProperty('--oc-feature-fill', 'url(#hatch)');
+    const t: AnimatedTarget = { el, kind: 'map-fill', startMs: 0, durationMs: 500 };
+    applyFrameState(t, 10, 'smooth');
+    expect(el.style.fill).toBe('#eeeeee');
+    applyFrameState(t, 490, 'smooth');
+    expect(el.style.fill).toMatch(/^url\(/);
+  });
+
+  it('map point: scales from 0.75 about its stamped transform-origin', () => {
+    const el = svgEl('circle', 'oc-map-point');
+    el.style.setProperty('transform-origin', '40px 60px');
+    const t: AnimatedTarget = { el, kind: 'map-point', startMs: 0, durationMs: 400 };
+    applyFrameState(t, 0, 'smooth');
+    expect(el.style.transform).toBe('scale(0.75)');
+    expect(Number(el.style.opacity)).toBe(0);
+    applyFrameState(t, 200, 'smooth');
+    const s = Number(el.style.transform.match(/scale\(([\d.]+)\)/)?.[1]);
+    expect(s).toBeGreaterThan(0.75);
+    expect(s).toBeLessThan(1);
+    expect(el.style.getPropertyValue('transform-origin')).toBe('40px 60px');
+    applyFrameState(t, 400, 'smooth');
+    expect(el.style.transform).toBe('scale(1)');
+  });
+
+  it('bar list row: slides up from 4px to rest on its own clock', () => {
+    const t: AnimatedTarget = { ...target('slide', 0, 600), fadeMs: 140 };
+    applyFrameState(t, 0, 'smooth');
+    expect(t.el.style.transform).toBe('translateY(4px)');
+    applyFrameState(t, 300, 'smooth');
+    const y = Number(t.el.style.transform.match(/translateY\(([\d.]+)px\)/)?.[1]);
+    expect(y).toBeGreaterThan(0);
+    expect(y).toBeLessThan(4);
+    expect(Number(t.el.style.opacity)).toBe(1);
+    applyFrameState(t, 600, 'smooth');
+    expect(t.el.style.transform).toBe('translateY(0px)');
   });
 
   it('opacity never leaves the [0,1] range across the whole timeline', () => {
