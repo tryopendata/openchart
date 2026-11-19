@@ -1,5 +1,6 @@
 /** Deterministic, bounded motion shared by rendering and timestamp-based export. */
 import type { AnimationEase, SpringConfig } from '../types/spec';
+import { evalValueCurve } from './curves';
 
 export interface MotionPhase {
   duration: number;
@@ -80,6 +81,9 @@ export function springDuration(config: SpringConfig): number {
   return MAX_SPRING_DURATION;
 }
 
+/** Normalized-time half-width of the finite difference behind curve velocity. */
+const VELOCITY_STEP = 1e-4;
+
 /** All callers, including exports, pass elapsed milliseconds explicitly. */
 export function sampleMotion(phase: MotionPhase, elapsedMs: number): MotionSample {
   if (phase.duration <= 0 || elapsedMs >= phase.duration) {
@@ -87,11 +91,18 @@ export function sampleMotion(phase: MotionPhase, elapsedMs: number): MotionSampl
   }
   if (elapsedMs <= 0) return { position: 0, velocity: 0, settled: false };
   if (phase.spring) return springState(elapsedMs, phase.spring);
+  // Curve phases evaluate the registry through the value envelope, so the
+  // position stays in [0, 1] and never dips back, even on overshooting curves.
+  const ease = phase.ease ?? 'smooth';
   const t = elapsedMs / phase.duration;
-  const power = phase.ease === 'snappy' ? 5 : 3;
+  // The curve is piecewise linear, so a small central difference recovers the
+  // local segment slope (one-sided at the ends).
+  const lo = Math.max(0, t - VELOCITY_STEP);
+  const hi = Math.min(1, t + VELOCITY_STEP);
+  const slope = (evalValueCurve(ease, hi) - evalValueCurve(ease, lo)) / (hi - lo);
   return {
-    position: 1 - (1 - t) ** power,
-    velocity: (power * (1 - t) ** (power - 1) * 1000) / phase.duration,
+    position: evalValueCurve(ease, t),
+    velocity: (slope * 1000) / phase.duration,
     settled: false,
   };
 }

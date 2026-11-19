@@ -1,38 +1,29 @@
 /**
  * Canvas entrance animation.
  *
- * Replicates the CSS point-mark entrance (`core/src/styles/animation.css`,
- * the `circle.oc-mark-point` rule) on canvas: fade-only, per-point duration
- * 40% of the configured enter duration, delayed by `stagger * markIndex`.
+ * Replicates the CSS point-mark entrance (the `point` role in core's
+ * choreography table, emitted as the `circle.oc-mark-point` rule) on canvas.
+ * Timing comes from `entranceTiming('point', ...)` and the per-point alpha from
+ * `evalRoleEase('point', ...)`, the same data the generated CSS is built from,
+ * so SVG and canvas scatters enter identically.
  *
  * Canvas mode emits no point elements, so the CSS rule matches nothing and this
  * scheduler-driven tween stands in for it. Everything else in the chart (axes,
  * chrome, annotations) still animates via CSS on the SVG above.
  */
 
-import { type ResolvedAnimationPhase, sampleMotion } from '@opendata-ai/openchart-core';
+import {
+  clampStaggerDelay,
+  entranceEndMs,
+  entranceTiming,
+  evalRoleEase,
+  type ResolvedAnimationPhase,
+} from '@opendata-ai/openchart-core';
 import type { Animation } from '../motion/scheduler';
-import { createTween, prefersReducedMotion, resolveEase } from '../motion/tween';
+import { createTween, prefersReducedMotion } from '../motion/tween';
 import type { ScatterCanvasState } from './types';
 
-/**
- * Maximum total stagger time in ms. Mirrors MAX_TOTAL_STAGGER_MS in
- * `engine/src/compiler/animation.ts` -- duplicated rather than imported
- * because vanilla does not depend on the engine at runtime.
- */
-export const MAX_TOTAL_STAGGER_MS = 300;
-
-/** Fraction of the enter duration a single point takes to fade in. */
-export const POINT_DURATION_FRACTION = 0.4;
-
-/**
- * Clamp the stagger so the whole sweep fits in MAX_TOTAL_STAGGER_MS.
- * Mirrors `clampStaggerDelay` in the engine.
- */
-export function clampStagger(delay: number, elementCount: number): number {
-  if (elementCount <= 1) return 0;
-  return Math.min(delay, MAX_TOTAL_STAGGER_MS / elementCount);
-}
+export { MAX_TOTAL_STAGGER_MS } from '@opendata-ai/openchart-core';
 
 /**
  * Total wall-clock time of the canvas entrance, in ms: the last point's delay
@@ -40,13 +31,16 @@ export function clampStagger(delay: number, elementCount: number): number {
  * cleanup timer, so the two cannot drift.
  */
 export function computeEntranceDuration(enter: ResolvedAnimationPhase, markCount: number): number {
-  const stagger = clampStagger(enter.staggerDelay, markCount);
-  const pointDuration = enter.duration * POINT_DURATION_FRACTION;
-  return stagger * Math.max(0, markCount - 1) + pointDuration;
+  return entranceEndMs({
+    phase: enter,
+    roles: { point: markCount },
+    staggerMs: clampStaggerDelay(enter.staggerDelay, markCount),
+  });
 }
 
 /**
  * Per-point alpha at time `t` (ms into the entrance), given its stagger slot.
+ * Equals the opacity the CSS point rule gives the same point at the same time.
  * Exported so GIF capture can step the entrance deterministically without a
  * scheduler.
  */
@@ -55,15 +49,18 @@ export function entranceAlphaAt(
   markIndex: number,
   enter: ResolvedAnimationPhase,
   markCount: number,
-  ease: (p: number) => number,
 ): number {
-  const stagger = clampStagger(enter.staggerDelay, markCount);
-  const pointDuration = enter.duration * POINT_DURATION_FRACTION;
-  if (pointDuration <= 0) return 1;
-  const local = (t - stagger * markIndex) / pointDuration;
+  const { delayMs, durationMs } = entranceTiming('point', markIndex, enter, {
+    staggerMs: clampStaggerDelay(enter.staggerDelay, markCount),
+  });
+  if (durationMs <= 0) return 1;
+  const local = (t - delayMs) / durationMs;
   if (local <= 0) return 0;
   if (local >= 1) return 1;
-  return enter.spring ? sampleMotion(enter, local * enter.duration).position : ease(local);
+  // The keyframe is opacity 0 -> 1, so opacity is the eased progress. CSS
+  // clamps an overshooting curve's opacity to [0, 1]; so does this.
+  const eased = evalRoleEase('point', enter, local);
+  return eased < 0 ? 0 : eased > 1 ? 1 : eased;
 }
 
 /** Write the alpha for every point at time `t` into `state.enterAlpha`. */
@@ -71,19 +68,24 @@ function applyEntranceAt(
   state: ScatterCanvasState,
   t: number,
   enter: ResolvedAnimationPhase,
-  ease: (p: number) => number,
 ): void {
   const alpha = state.enterAlpha;
   if (!alpha) return;
   const { n, animationIndex } = state.marks;
   for (let i = 0; i < n; i++) {
-    alpha[i] = entranceAlphaAt(t, animationIndex[i], enter, n, ease);
+    alpha[i] = entranceAlphaAt(t, animationIndex[i], enter, n);
   }
 }
 
 export interface EntranceHandle {
   /** Total duration in ms, including the full stagger sweep. */
   totalMs: number;
+  /**
+   * Resolves once the entrance is over: when the tween completes, and also
+   * (never rejecting) when it is cancelled, by `cancel()` or by the layer's
+   * scheduler.
+   */
+  finished: Promise<void>;
   /** Stop the entrance without snapping to the final state. */
   cancel(): void;
 }
@@ -112,14 +114,17 @@ export function playCanvasEntrance(args: {
     return null;
   }
 
-  const ease = resolveEase(enter.ease);
   const totalMs = computeEntranceDuration(enter, n);
+  let settle!: () => void;
+  const finished = new Promise<void>((resolve) => {
+    settle = resolve;
+  });
 
   const alpha = new Float32Array(n);
   state.enterAlpha = alpha;
   // Seed the from-state synchronously so the first painted frame is the start
   // of the entrance, not a flash of the final state.
-  applyEntranceAt(state, 0, enter, ease);
+  applyEntranceAt(state, 0, enter);
 
   const tween: Animation = createTween({
     duration: totalMs,
@@ -127,23 +132,36 @@ export function playCanvasEntrance(args: {
     // stagger slots land at the times the formula says they do.
     ease: (p) => p,
     apply: (p) => {
-      applyEntranceAt(state, p * totalMs, enter, ease);
+      applyEntranceAt(state, p * totalMs, enter);
     },
     onDone: () => {
       // Null rather than filled with 1s: the renderer treats null as "no
       // entrance in flight" and skips the per-point multiply entirely.
       state.enterAlpha = null;
       onDone?.();
+      settle();
     },
   });
+  // The scheduler's cancelAll (layer destroy) bypasses the handle, so the
+  // registered animation settles `finished` on cancel itself.
+  const scheduled: Animation = {
+    tick: (now) => tween.tick(now),
+    finish: () => tween.finish(),
+    cancel() {
+      tween.cancel();
+      settle();
+    },
+  };
 
-  addAnimation(tween);
+  addAnimation(scheduled);
   requestPaint();
 
   return {
     totalMs,
+    finished,
     cancel() {
-      removeAnimation(tween);
+      removeAnimation(scheduled);
+      scheduled.cancel();
       state.enterAlpha = null;
       requestPaint();
     },

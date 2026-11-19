@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { CURVE_NAMES, evalCurve, evalValueCurve } from '../curves';
 import { FLUID_SPRING, motionCSS, sampleMotion, springDuration } from '../sample';
 
 describe('deterministic quantitative motion', () => {
@@ -66,5 +67,48 @@ describe('deterministic quantitative motion', () => {
     expect(Number.isFinite(sample.velocity)).toBe(true);
     expect(sample.position).toBeGreaterThanOrEqual(0);
     expect(sample.position).toBeLessThanOrEqual(1);
+  });
+
+  describe('curve phases evaluate the registry', () => {
+    it.each(CURVE_NAMES)('%s stays monotone and within [0, 1]', (ease) => {
+      const duration = 450;
+      let previous = 0;
+      for (let t = 0; t <= duration; t += 1) {
+        const { position, velocity } = sampleMotion({ duration, ease }, t);
+        expect(position).toBeGreaterThanOrEqual(previous);
+        expect(position).toBeGreaterThanOrEqual(0);
+        expect(position).toBeLessThanOrEqual(1);
+        expect(velocity).toBeGreaterThanOrEqual(0);
+        previous = position;
+      }
+      expect(sampleMotion({ duration, ease }, duration).position).toBe(1);
+    });
+
+    it('matches evalValueCurve, which on smooth is evalCurve', () => {
+      for (let i = 1; i < 100; i++) {
+        const t = i / 100;
+        expect(sampleMotion({ duration: 600, ease: 'smooth' }, t * 600).position).toBeCloseTo(
+          evalCurve('smooth', t),
+          12,
+        );
+        expect(sampleMotion({ duration: 600, ease: 'snappy' }, t * 600).position).toBeCloseTo(
+          evalValueCurve('snappy', t),
+          12,
+        );
+      }
+    });
+
+    it('defaults to smooth when no ease is given', () => {
+      expect(sampleMotion({ duration: 400 }, 100).position).toBe(
+        sampleMotion({ duration: 400, ease: 'smooth' }, 100).position,
+      );
+    });
+
+    it('reports velocity as the local curve slope per second', () => {
+      // smooth's first segment: 0 -> 0.157 over t in [0, 1/13].
+      const duration = 1000;
+      const slope = 0.157 * 13;
+      expect(sampleMotion({ duration, ease: 'smooth' }, 20).velocity).toBeCloseTo(slope, 6);
+    });
   });
 });

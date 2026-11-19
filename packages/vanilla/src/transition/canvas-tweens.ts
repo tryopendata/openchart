@@ -1,7 +1,6 @@
 import type { AxisLayout, ChartLayout, PointMark } from '@opendata-ai/openchart-core';
 import { type MotionPhase, sampleMotion } from '@opendata-ai/openchart-core';
 import { serializeKeyValue } from '@opendata-ai/openchart-engine';
-import { cubicOut } from '../motion/easing';
 import { flattenFill } from '../scatter-canvas/state';
 
 import { computeGridlineDeltas } from './chrome-tweens';
@@ -12,6 +11,16 @@ import type {
   GeometrySnapshot,
   Tween,
 } from './types';
+
+/**
+ * The phase marks entering during an update fade in on: the window after the
+ * enter delay, on the update's own ease. A spring update drops its spring here
+ * because the window is a fixed fraction of the spring's settle time, so the
+ * enter follows the phase's curve instead of a truncated spring.
+ */
+export function enterMotionPhase(update: MotionPhase, enterDuration: number): MotionPhase {
+  return { duration: enterDuration, ease: update.ease };
+}
 
 // ---------------------------------------------------------------------------
 // Canvas point tween building
@@ -173,8 +182,10 @@ export function applyCanvasPointsState(
   // SVG point path uses, so both modes read as one motion.
   const alpha = tw.layer.state.enterAlpha;
   if (alpha && tw.enterSoaIndex.length > 0) {
-    const tEnter = elapsed < enterDelay ? 0 : Math.min((elapsed - enterDelay) / enterDuration, 1);
-    const easedEnter = cubicOut(tEnter);
+    const easedEnter = sampleMotion(
+      enterMotionPhase(update, enterDuration),
+      elapsed - enterDelay,
+    ).position;
     for (let e = 0; e < tw.enterSoaIndex.length; e++) {
       alpha[tw.enterSoaIndex[e]] = easedEnter;
     }
@@ -307,8 +318,10 @@ export function applyCanvasGridlinesState(
   const easedUpdate = sampleMotion(update, elapsed).position;
   // Enters share the point tween's delayed-fade clock so the whole update
   // reads as one motion.
-  const tEnter = elapsed < enterDelay ? 0 : Math.min((elapsed - enterDelay) / enterDuration, 1);
-  const easedEnter = cubicOut(tEnter);
+  const easedEnter = sampleMotion(
+    enterMotionPhase(update, enterDuration),
+    elapsed - enterDelay,
+  ).position;
 
   for (let i = 0; i < tw.index.length; i++) {
     const g = live[tw.index[i]];

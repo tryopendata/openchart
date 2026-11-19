@@ -6,8 +6,8 @@ import { buildLabelMotion } from './labels';
  *
  * Matches marks across layout snapshots by `key`, then animates geometry
  * changes (position, size, path) using a single rAF loop. Enter/exit/update
- * choreography runs in one timeline with cubic-out easing for a smooth
- * deceleration feel.
+ * choreography runs in one timeline, each phase sampled from the curve
+ * registry on its own ease (clamped, so geometry never overshoots).
  *
  * For rect marks: tweens position/size directly.
  * For line/area marks: normalizes point arrays to equal length, interpolates
@@ -33,7 +33,11 @@ import { buildAreaPath, buildLinePath, EXIT_DEFAULTS } from '@opendata-ai/opench
 import { buildGradientDefs } from '../gradient-utils';
 
 import { applyTweenState, getKeyForTween, lerpArcGeom, snapTweenToFinal } from './apply';
-import { buildCanvasGridlinesTween, buildCanvasPointsTween } from './canvas-tweens';
+import {
+  buildCanvasGridlinesTween,
+  buildCanvasPointsTween,
+  enterMotionPhase,
+} from './canvas-tweens';
 import { buildAnnotationTweens, buildAxisTweens, buildColorTweens } from './chrome-tweens';
 import { buildMarkDomIndex } from './dom-index';
 import {
@@ -367,8 +371,10 @@ export function runTransition(args: {
     for (const tw of tweens) {
       const easedUpdate =
         tw.kind === 'enter'
-          ? sampleMotion({ duration: enterDuration }, Math.max(0, lastElapsed - enterDelay))
-              .position
+          ? sampleMotion(
+              enterMotionPhase(update, enterDuration),
+              Math.max(0, lastElapsed - enterDelay),
+            ).position
           : sampleMotion(update, lastElapsed).position;
       if (tw.kind === 'exit') continue;
 

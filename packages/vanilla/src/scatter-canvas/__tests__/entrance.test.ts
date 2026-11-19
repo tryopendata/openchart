@@ -5,11 +5,17 @@
  * deterministic — no rAF timing, no wall-clock sleeps.
  */
 
-import type { ResolvedAnimationPhase } from '@opendata-ai/openchart-core';
+import {
+  type AnimationEase,
+  clampStaggerDelay,
+  entranceTiming,
+  evalKeyframes,
+  evalRoleEase,
+  type ResolvedAnimationPhase,
+} from '@opendata-ai/openchart-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AnimationScheduler } from '../../motion/scheduler';
 import {
-  clampStagger,
   computeEntranceDuration,
   entranceAlphaAt,
   MAX_TOTAL_STAGGER_MS,
@@ -66,6 +72,17 @@ function harness(n: number, enter: ResolvedAnimationPhase = ENTER) {
   };
 }
 
+/** Whether a promise has settled, checked after flushing microtasks. */
+async function isSettled(p: Promise<void>): Promise<boolean> {
+  let settled = false;
+  void p.then(() => {
+    settled = true;
+  });
+  await Promise.resolve();
+  await Promise.resolve();
+  return settled;
+}
+
 beforeEach(() => {
   vi.stubGlobal('matchMedia', () => ({
     matches: false,
@@ -78,23 +95,9 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('stagger clamping', () => {
-  it('returns 0 for a single element', () => {
-    expect(clampStagger(80, 1)).toBe(0);
-  });
-
-  it('keeps the authored delay when the sweep fits the budget', () => {
-    // 20 * 10 = 200ms, inside the 300ms budget.
-    expect(clampStagger(20, 10)).toBe(20);
-  });
-
-  it('compresses an authored delay that overruns the budget', () => {
-    // 80 * 10 = 800ms, so the budget hands back 300/10 = 30.
-    expect(clampStagger(80, 10)).toBe(30);
-  });
-
-  it('compresses the delay so 4k marks still fit the budget', () => {
-    const clamped = clampStagger(80, 4000);
+describe('entrance duration', () => {
+  it('uses the shared stagger cap, so 4k marks still fit the budget', () => {
+    const clamped = clampStaggerDelay(80, 4000);
     expect(clamped).toBeLessThan(80);
     expect(clamped * 4000).toBeLessThanOrEqual(MAX_TOTAL_STAGGER_MS);
   });
@@ -104,24 +107,50 @@ describe('stagger clamping', () => {
     const total = computeEntranceDuration(ENTER, 4000);
     expect(total).toBeLessThanOrEqual(MAX_TOTAL_STAGGER_MS + 200);
   });
+
+  it("ends when the last point's CSS point-role window ends", () => {
+    const last = entranceTiming('point', 9, ENTER, { staggerMs: clampStaggerDelay(80, 10) });
+    expect(computeEntranceDuration(ENTER, 10)).toBeCloseTo(last.delayMs + last.durationMs, 9);
+  });
 });
 
 describe('per-point alpha', () => {
   it("is 0 before a point's window opens and 1 after it closes", () => {
-    const ease = (p: number) => p;
     // 80ms authored, clamped to 30ms by the budget: point 5 starts at 150ms
     // and runs 200ms (40% of the 500ms enter duration).
-    expect(entranceAlphaAt(149, 5, ENTER, 10, ease)).toBe(0);
-    expect(entranceAlphaAt(150, 5, ENTER, 10, ease)).toBe(0);
-    expect(entranceAlphaAt(250, 5, ENTER, 10, ease)).toBeCloseTo(0.5, 5);
-    expect(entranceAlphaAt(350, 5, ENTER, 10, ease)).toBe(1);
+    expect(entranceAlphaAt(149, 5, ENTER, 10)).toBe(0);
+    expect(entranceAlphaAt(150, 5, ENTER, 10)).toBe(0);
+    expect(entranceAlphaAt(250, 5, ENTER, 10)).toBeGreaterThan(0);
+    expect(entranceAlphaAt(250, 5, ENTER, 10)).toBeLessThan(1);
+    expect(entranceAlphaAt(350, 5, ENTER, 10)).toBe(1);
   });
 
   it('fades earlier points before later ones', () => {
-    const ease = (p: number) => p;
-    const early = entranceAlphaAt(200, 0, ENTER, 10, ease);
-    const late = entranceAlphaAt(200, 5, ENTER, 10, ease);
+    const early = entranceAlphaAt(200, 0, ENTER, 10);
+    const late = entranceAlphaAt(200, 5, ENTER, 10);
     expect(early).toBeGreaterThan(late);
+  });
+
+  const phases: [string, ResolvedAnimationPhase][] = (['smooth', 'snappy'] as AnimationEase[])
+    .map((ease): [string, ResolvedAnimationPhase] => [ease, { ...ENTER, ease }])
+    .concat([['spring', { ...ENTER, duration: 700, spring: { stiffness: 100, damping: 22 } }]]);
+
+  it.each(phases)('equals the CSS point rule opacity at the same times (%s)', (_, enter) => {
+    const n = 10;
+    const ctx = { staggerMs: clampStaggerDelay(enter.staggerDelay, n) };
+    for (const index of [0, 4, 9]) {
+      const { delayMs, durationMs } = entranceTiming('point', index, enter, ctx);
+      for (let t = 0; t <= 800; t += 10) {
+        const local = (t - delayMs) / durationMs;
+        const frame = evalKeyframes('oc-enter-fade-only', local, (p) =>
+          evalRoleEase('point', enter, p),
+        );
+        const opacity = frame.opacity?.type === 'number' ? frame.opacity.value : Number.NaN;
+        // The browser clamps an overshooting opacity to [0, 1].
+        const css = Math.min(1, Math.max(0, opacity));
+        expect(entranceAlphaAt(t, index, enter, n)).toBeCloseTo(css, 9);
+      }
+    }
   });
 });
 
@@ -186,6 +215,31 @@ describe('playCanvasEntrance', () => {
     expect(h.scheduler.active).toBe(false);
     expect(h.state.enterAlpha).toBeNull();
     // A cancelled entrance must not fire completion.
+    expect(h.done).toBe(false);
+  });
+
+  it('resolves finished when the tween completes', async () => {
+    const h = harness(10);
+    h.tick(0);
+    h.tick(h.handle!.totalMs / 2);
+    expect(await isSettled(h.handle!.finished)).toBe(false);
+    h.tick(h.handle!.totalMs + 1);
+    await expect(h.handle!.finished).resolves.toBeUndefined();
+  });
+
+  it('resolves (does not reject) finished on cancel', async () => {
+    const h = harness(10);
+    h.tick(0);
+    h.handle!.cancel();
+    await expect(h.handle!.finished).resolves.toBeUndefined();
+    expect(h.done).toBe(false);
+  });
+
+  it('resolves finished when the scheduler cancels everything (layer destroy)', async () => {
+    const h = harness(10);
+    h.tick(0);
+    h.scheduler.cancelAll();
+    await expect(h.handle!.finished).resolves.toBeUndefined();
     expect(h.done).toBe(false);
   });
 });

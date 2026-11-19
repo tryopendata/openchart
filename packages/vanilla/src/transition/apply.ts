@@ -5,6 +5,7 @@ import { updateAnnotationGeometry } from '../renderers/annotations';
 import {
   applyCanvasGridlinesState,
   applyCanvasPointsState,
+  enterMotionPhase,
   snapCanvasGridlinesToFinal,
   snapCanvasPointsToFinal,
 } from './canvas-tweens';
@@ -89,8 +90,14 @@ export function applyTweenState(
     return;
   }
 
+  // sampleMotion clamps every curve to [0, 1], so update and exit-ghost
+  // geometry never leaves [from, to] even on an overshooting ease.
   const phase =
-    tw.kind === 'exit' ? exit : tw.kind === 'enter' ? { duration: enterDuration } : update;
+    tw.kind === 'exit'
+      ? exit
+      : tw.kind === 'enter'
+        ? enterMotionPhase(update, enterDuration)
+        : update;
   const elapsedMs = tw.kind === 'enter' ? Math.max(0, elapsed - enterDelay) : elapsed;
   const eased = sampleMotion(phase, elapsedMs).position;
 

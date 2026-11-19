@@ -163,7 +163,7 @@ describe('authoring and reading real compiled charts', () => {
     const t = enter.duration * 0.37;
     const expected = sampleMotion(enter, t).position;
     expect(samples[37]).toBeCloseTo(expected, 5);
-    expect(entranceAlphaAt(t * 0.4, 0, enter, 1, () => 0)).toBeCloseTo(expected, 6);
+    expect(entranceAlphaAt(t * 0.4, 0, enter, 1)).toBeCloseTo(expected, 6);
     applyFrameState(
       { el: element, kind: 'fade', startMs: 0, durationMs: enter.duration * 0.4 },
       t * 0.4,
