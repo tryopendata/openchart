@@ -5596,7 +5596,7 @@
         },
         "annotationDelay": {
           "type": "number",
-          "description": "Delay before annotations animate in (ms after marks). Default: 200."
+          "description": "Gap in ms between the last mark reaching 90% of its entrance and annotations starting. Default: 150 (0 under a preset)."
         }
       },
       "additionalProperties": false,
@@ -5611,7 +5611,7 @@
         },
         "duration": {
           "type": "number",
-          "description": "Duration in ms. Default: 500 for enter."
+          "description": "Duration in ms. Default: 600 for enter, 500 for update, 250 for exit."
         },
         "ease": {
           "$ref": "#/definitions/AnimationEase",
@@ -5662,7 +5662,7 @@
       "properties": {
         "delay": {
           "type": "number",
-          "description": "Delay between each element in ms. Default: 80"
+          "description": "Gap between consecutive elements in ms. Default: 80. A ceiling: the whole stagger spans at most 300ms, so n elements land min(delay, 300 / (n - 1)) apart."
         },
         "order": {
           "type": "string",
@@ -5686,7 +5686,7 @@
         },
         "duration": {
           "type": "number",
-          "description": "Duration in ms. Default: 500 for enter."
+          "description": "Duration in ms. Default: 600 for enter, 500 for update, 250 for exit."
         },
         "ease": {
           "$ref": "#/definitions/AnimationEase",

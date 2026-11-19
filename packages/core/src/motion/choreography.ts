@@ -8,16 +8,23 @@
  * the same data through `entranceTiming`, `entranceEndMs`, `evalRoleEase` and
  * `evalKeyframes`, so the CSS and the JS paths cannot drift.
  *
- * Delays keyed to a parent's tween are progress points on a fixed reference
- * curve (`gentle`, the pre-Decks smooth), resolved through `invertCurve`, never the author's ease.
- * Phase 0 picks each point so it resolves to today's raw fraction of the
- * duration; spring phases keep the raw fraction.
+ * Delays keyed to a parent's tween are progress points ("when the parent
+ * reaches p"), resolved through the parent's actual curve for the phase
+ * (`invertRoleEase`), never a raw fraction of the duration. CSS can't invert a
+ * curve, so renderers stamp the resolved offsets (`entranceAnchorVars`); the
+ * generated CSS falls back to the default `smooth` resolution.
  */
 
-import { type CurveName, evalCurve, invertCurve, type MonotoneCurveName } from './curves';
+import {
+  type CurveName,
+  evalCurve,
+  invertCurve,
+  isMonotoneCurve,
+  type MonotoneCurveName,
+} from './curves';
 import type { MotionPhase } from './sample';
 import { sampleMotion } from './sample';
-import { barlistRowDelay, MAP_POINT_STAGGER_FALLBACK_MS, mapFeatureDuration } from './stagger';
+import { MAP_POINT_STAGGER_FALLBACK_MS, MAP_SWEEP_BUDGET_MS, mapFeatureDuration } from './stagger';
 
 // ---------------------------------------------------------------------------
 // Keyframes
@@ -35,7 +42,8 @@ export type KeyframeValue =
   | { type: 'number'; value: number }
   /** clip-path: inset(top right bottom left), each in percent. */
   | { type: 'inset'; top: number; right: number; bottom: number; left: number }
-  | { type: 'translateY'; px: number }
+  | { type: 'translateY'; value: number; unit: 'px' | 'em' }
+  | { type: 'translate'; x: number; y: number }
   | { type: 'scale'; value: number }
   /** A value JS cannot interpolate (custom properties); switches discretely. */
   | { type: 'css'; css: string };
@@ -59,7 +67,12 @@ const inset = (top: number, right: number, bottom: number, left: number): Keyfra
   bottom,
   left,
 });
-const translateY = (px: number): KeyframeValue => ({ type: 'translateY', px });
+const translateY = (value: number, unit: 'px' | 'em' = 'px'): KeyframeValue => ({
+  type: 'translateY',
+  value,
+  unit,
+});
+const translate = (x: number, y: number): KeyframeValue => ({ type: 'translate', x, y });
 const scale = (value: number): KeyframeValue => ({ type: 'scale', value });
 const css = (value: string): KeyframeValue => ({ type: 'css', css: value });
 
@@ -67,44 +80,34 @@ const css = (value: string): KeyframeValue => ({ type: 'css', css: value });
 export const KEYFRAMES = {
   'oc-enter-bar': {
     comment:
-      'Bar entrance: clip-path reveal bottom-to-top + fade in (vertical columns).\nBars grow upward from baseline with a soft opacity fade.',
+      'Bar entrance: clip-path reveal from the baseline (vertical columns), no fade:\na value mark is solid from its first frame. Grows bottom-to-top unless the\nrenderer stamps --oc-bar-from (a negative column grows top-to-bottom).',
     stops: [
-      { offset: 0, values: { 'clip-path': inset(100, 0, 0, 0), opacity: num(0) } },
-      { offset: 0.75, values: { opacity: num(1) } },
-      { offset: 1, values: { 'clip-path': inset(0, 0, 0, 0), opacity: num(1) } },
+      { offset: 0, values: { 'clip-path': css('inset(var(--oc-bar-from, 100% 0 0 0))') } },
+      { offset: 1, values: { 'clip-path': inset(0, 0, 0, 0) } },
     ],
   },
   'oc-enter-bar-h': {
     comment:
-      'Bar entrance: clip-path reveal left-to-right + fade in (horizontal bars).\nBars grow rightward from axis with a soft opacity fade.',
+      'Bar entrance: clip-path reveal from the baseline (horizontal bars), no fade.\nGrows left-to-right unless --oc-bar-from is stamped (negative bars).',
     stops: [
-      { offset: 0, values: { 'clip-path': inset(0, 100, 0, 0), opacity: num(0) } },
-      { offset: 0.75, values: { opacity: num(1) } },
-      { offset: 1, values: { 'clip-path': inset(0, 0, 0, 0), opacity: num(1) } },
+      { offset: 0, values: { 'clip-path': css('inset(var(--oc-bar-from, 0 100% 0 0))') } },
+      { offset: 1, values: { 'clip-path': inset(0, 0, 0, 0) } },
     ],
   },
   'oc-enter-stack': {
     comment:
-      'Stack entrance: one clip over the whole stack. Grows bottom-to-top from\n--oc-stack-from, which the renderer stamps on a stack that crosses zero so\nthe clip starts collapsed on the baseline and grows both ways from it.',
+      'Stack entrance: one clip over the whole stack, no fade. Grows bottom-to-top\nfrom --oc-stack-from, which the renderer stamps when the baseline is not the\nbottom edge, so the clip starts collapsed on the baseline and grows both\nways from it.',
     stops: [
-      {
-        offset: 0,
-        values: { 'clip-path': css('inset(var(--oc-stack-from, 100% 0 0 0))'), opacity: num(0) },
-      },
-      { offset: 0.75, values: { opacity: num(1) } },
-      { offset: 1, values: { 'clip-path': inset(0, 0, 0, 0), opacity: num(1) } },
+      { offset: 0, values: { 'clip-path': css('inset(var(--oc-stack-from, 100% 0 0 0))') } },
+      { offset: 1, values: { 'clip-path': inset(0, 0, 0, 0) } },
     ],
   },
   'oc-enter-stack-h': {
     comment:
       'Horizontal stack entrance: grows left-to-right, or both ways from the\nbaseline when --oc-stack-from is stamped.',
     stops: [
-      {
-        offset: 0,
-        values: { 'clip-path': css('inset(var(--oc-stack-from, 0 100% 0 0))'), opacity: num(0) },
-      },
-      { offset: 0.75, values: { opacity: num(1) } },
-      { offset: 1, values: { 'clip-path': inset(0, 0, 0, 0), opacity: num(1) } },
+      { offset: 0, values: { 'clip-path': css('inset(var(--oc-stack-from, 0 100% 0 0))') } },
+      { offset: 1, values: { 'clip-path': inset(0, 0, 0, 0) } },
     ],
   },
   'oc-enter-line': {
@@ -154,10 +157,32 @@ export const KEYFRAMES = {
     ],
   },
   'oc-enter-fade': {
-    comment: 'Fade + subtle slide up for text, rule, tick, annotations',
+    comment: 'Fade + subtle slide up (table chrome)',
     stops: [
       { offset: 0, values: { opacity: num(0), transform: translateY(4) } },
       { offset: 1, values: { opacity: num(1), transform: translateY(0) } },
+    ],
+  },
+  'oc-enter-rise': {
+    comment: 'Text rise: 0.6em up to rest. Its opacity runs as a separate quick fade.',
+    stops: [
+      { offset: 0, values: { transform: translateY(0.6, 'em') } },
+      { offset: 1, values: { transform: translateY(0) } },
+    ],
+  },
+  'oc-enter-slide': {
+    comment: 'Row slide: 4px up to rest. Its opacity runs as a separate quick fade.',
+    stops: [
+      { offset: 0, values: { transform: translateY(4) } },
+      { offset: 1, values: { transform: translateY(0) } },
+    ],
+  },
+  'oc-enter-label': {
+    comment:
+      "Value label ride: translate from --oc-label-from (the bar's baseline-to-tip\nextent, stamped from layout) to rest on the bar's own delay, duration and\ncurve, so the label stays on the tip. Unstamped labels do not move.",
+    stops: [
+      { offset: 0, values: { transform: css('translate(var(--oc-label-from, 0px, 0px))') } },
+      { offset: 1, values: { transform: translate(0, 0) } },
     ],
   },
   'oc-table-enter-row': {
@@ -211,7 +236,9 @@ export function keyframeValueToCSS(value: KeyframeValue): string {
     case 'inset':
       return `inset(${pct(value.top)} ${pct(value.right)} ${pct(value.bottom)} ${pct(value.left)})`;
     case 'translateY':
-      return value.px === 0 ? 'translateY(0)' : `translateY(${value.px}px)`;
+      return value.value === 0 ? 'translateY(0)' : `translateY(${value.value}${value.unit})`;
+    case 'translate':
+      return `translate(${value.x}px, ${value.y}px)`;
     case 'scale':
       return `scale(${value.value})`;
     case 'css':
@@ -235,7 +262,14 @@ function interpolateValue(a: KeyframeValue, b: KeyframeValue, e: number): Keyfra
       lerp(a.left, b.left, e),
     );
   }
-  if (a.type === 'translateY' && b.type === 'translateY') return translateY(lerp(a.px, b.px, e));
+  if (a.type === 'translateY' && b.type === 'translateY') {
+    // A unitless 0 end takes the other end's unit.
+    const unit = a.value === 0 ? b.unit : a.unit;
+    return translateY(lerp(a.value, b.value, e), unit);
+  }
+  if (a.type === 'translate' && b.type === 'translate') {
+    return translate(lerp(a.x, b.x, e), lerp(a.y, b.y, e));
+  }
   if (a.type === 'scale' && b.type === 'scale') return scale(lerp(a.value, b.value, e));
   // Non-interpolable pairs flip at the eased midpoint, as the browser does.
   return e < 0.5 ? a : b;
@@ -281,7 +315,7 @@ export function keyframeProperties(name: KeyframeName): KeyframeProperty[] {
 
 /**
  * Offset at which the given properties stop changing (0 when none animate).
- * oc-enter-bar's opacity settles at 0.75; its clip-path at 1.
+ * oc-enter-line's opacity settles at 0.15; its clip-path at 1.
  */
 function settleOffset(name: KeyframeName, props: KeyframeProperty[]): number {
   let end = 0;
@@ -304,7 +338,6 @@ function settleOffset(name: KeyframeName, props: KeyframeProperty[]): number {
 export type EntranceRole =
   | 'bar'
   | 'bar-h'
-  | 'stack-segment'
   | 'stack-reveal'
   | 'stack-reveal-h'
   | 'line-area'
@@ -339,28 +372,29 @@ export type EntranceRole =
 export type RoleTiming =
   /** The author's ease: `var(--oc-animation-ease, var(--oc-ease-smooth))` (spring-aware). */
   | { kind: 'author' }
-  /** A registry curve regardless of the author's ease (labels, annotations). */
+  /** A registry curve regardless of the author's ease (annotations). */
   | { kind: 'curve'; curve: CurveName }
   /** A fixed CSS timing function, with its cubic-bezier control points for JS. */
   | { kind: 'css'; css: string; bezier: readonly [number, number, number, number] };
 
 /** Animation duration of a role, from the base duration D. */
-export type DurationRule =
-  | { kind: 'base'; factor: number }
-  | { kind: 'fixed'; ms: number }
-  /** Stacked segments: `--oc-stack-segment-duration` (150ms fallback). */
-  | { kind: 'stack-segment' };
+export type DurationRule = { kind: 'base'; factor: number } | { kind: 'fixed'; ms: number };
 
 /**
- * A progress point of a parent tween of length D on a fixed reference curve.
- * Resolves to `invertCurve(reference, progress) * D`; spring phases, whose
- * curves aren't in the registry, use `springFraction * D`.
+ * When a role starts, relative to something else's tween. Never a raw
+ * fraction of the duration: a progress point is resolved through the
+ * parent's actual curve, so it means "when the parent has visibly got there"
+ * whichever ease the author picked.
  */
-export interface ProgressPoint {
-  progress: number;
-  reference: MonotoneCurveName;
-  springFraction: number;
-}
+export type DelayAnchor =
+  /**
+   * When the parent role's tween reaches `progress`. The parent is taken at
+   * index 0 (its stagger is the child's own), or at the context's
+   * `lastMarkIndex` with `ofLast` (annotations wait for the last mark).
+   */
+  | { kind: 'progress'; progress: number; of: EntranceRole; ofLast?: boolean }
+  /** A progress point of the map feature sweep: `progress * MAP_SWEEP_BUDGET_MS`. */
+  | { kind: 'sweep'; progress: number };
 
 /** How entering elements of a role are spread out by index. */
 export type StaggerRule =
@@ -369,20 +403,16 @@ export type StaggerRule =
   | 'mark'
   /** `index * --oc-animation-stagger`, index from `--oc-row-index` (tables). */
   | 'row'
-  /** Mark stagger plus `--oc-stack-pos * --oc-stack-segment-duration`. */
-  | 'stack-segment'
-  /** `index * --oc-point-stagger` (60ms fallback); see mapPointStagger. */
+  /** `index * --oc-point-stagger` (60ms fallback); the map stamps clampStaggerDelay. */
   | 'map-point'
   /** Stamped `--oc-map-delay`; JS: shuffled slot index * map stagger (mapSweepTiming). */
   | 'map-sweep'
-  /** Stamped `--oc-row-delay`; JS: barlistRowDelay(index). */
-  | 'barlist-row'
   /** Stamped `--oc-tile-delay`; JS: the context's delayMs (tilemapTileDelays). */
   | 'tilemap-tile';
 
 export interface DelayRule {
-  /** Start at this progress point of the parent's tween (omitted = at once). */
-  after?: ProgressPoint;
+  /** Start at this anchor (omitted = at once), then add the stagger. */
+  after?: DelayAnchor;
   /** Add `--oc-annotation-delay` (150ms fallback) on top. */
   plusAnnotationDelay?: boolean;
   stagger: StaggerRule;
@@ -407,6 +437,12 @@ export interface EntranceRoleDef {
   /** What D is: the phase duration, or the map's capped feature duration. */
   durationBasis: 'phase' | 'map';
   duration: DurationRule;
+  /**
+   * A second, quick opacity animation on the same element and delay
+   * (`oc-enter-fade-only` over `ms` on FADE_CURVE), so text is readable almost
+   * at once while its geometry keeps settling. Needs `emit: 'shorthand'`.
+   */
+  fade?: { ms: number };
   delay: DelayRule;
   /** Descendant selectors whose own animation this role switches off. */
   suppress?: readonly string[];
@@ -419,38 +455,40 @@ export interface EntranceRoleDef {
 export interface EntranceRoleRow extends EntranceRoleDef {
   /** Share of the duration over which non-opacity properties move (0 if none). */
   geometryFraction: number;
-  /** Share of the duration after which opacity has settled (0 if it doesn't animate). */
+  /** Share of the duration after which the keyframe's own opacity has settled (0 if none). */
   opacityFraction: number;
   /**
-   * Role-scoped custom properties the generated CSS reads first. Their
-   * fallback is today's calc(), so unstamped elements behave as before.
+   * Role-scoped custom properties the generated CSS reads first: a full
+   * per-element delay, a duration, and the root-stamped anchor offset
+   * (`after`) that the anchor resolves to for this render's curve.
    */
-  vars: { delay: string; duration: string };
+  vars: { delay: string; duration: string; after: string };
 }
 
-/** The fixed curve delay progress points are measured on. */
-export const DELAY_REFERENCE_CURVE: MonotoneCurveName = 'gentle';
+/** Curve of the quick opacity track on roles with `fade`. */
+export const FADE_CURVE: CurveName = 'smooth';
 
-/** A progress point that resolves to `fraction` of D on the reference curve. */
-function at(fraction: number): ProgressPoint {
-  return {
-    progress: evalCurve(DELAY_REFERENCE_CURVE, fraction),
-    reference: DELAY_REFERENCE_CURVE,
-    springFraction: fraction,
-  };
-}
+/** The quick fade text and labels share: opaque well before their geometry settles. */
+const TEXT_FADE_MS = 140;
+/** Points and arcs: their only entrance is opacity. */
+const POINT_FADE_MS = 300;
 
 const AUTHOR: RoleTiming = { kind: 'author' };
 const EASE_IN: RoleTiming = { kind: 'css', css: 'ease-in', bezier: [0.42, 0, 1, 1] };
-const LINEAR: RoleTiming = { kind: 'css', css: 'linear', bezier: [0, 0, 1, 1] };
 const base = (factor: number): DurationRule => ({ kind: 'base', factor });
+const fixed = (ms: number): DurationRule => ({ kind: 'fixed', ms });
+const when = (of: EntranceRole, progress: number): DelayAnchor => ({
+  kind: 'progress',
+  progress,
+  of,
+});
 
 const ROLE_DEFS: readonly EntranceRoleDef[] = [
   {
     name: 'bar',
     scope: 'chart',
     comment:
-      'Vertical bars (default): smooth ease-out, no overshoot.\noc-mark-bar is reserved for future mark type aliases.\nA bar with a value-end radius draws as <path> rather than <rect>\n(SVG rx rounds all four corners or none), so both shapes match.',
+      'Vertical bars (default): the author curve over the full duration, no fade.\noc-mark-bar is reserved for future mark type aliases.\nA bar with a value-end radius draws as <path> rather than <rect>\n(SVG rx rounds all four corners or none), so both shapes match.',
     selectors: ['.oc-mark-rect :is(rect, path)', '.oc-mark-bar :is(rect, path)'],
     emit: 'shorthand',
     keyframe: 'oc-enter-bar',
@@ -476,24 +514,10 @@ const ROLE_DEFS: readonly EntranceRoleDef[] = [
     delay: { stagger: 'mark' },
   },
   {
-    name: 'stack-segment',
-    scope: 'chart',
-    comment:
-      'Stacked bar/column segments: chain sequentially so each segment starts\nright when the previous one finishes, creating one fluid reveal.\nUses linear easing so handoffs between segments are seamless (no\ndeceleration/acceleration stutter at segment boundaries).',
-    selectors: ['.oc-mark-rect[data-stack-pos] :is(rect, path)'],
-    emit: ['duration', 'timing', 'delay'],
-    keyframe: 'oc-enter-bar',
-    horizontalKeyframe: 'oc-enter-bar-h',
-    timing: LINEAR,
-    durationBasis: 'phase',
-    duration: { kind: 'stack-segment' },
-    delay: { stagger: 'stack-segment' },
-  },
-  {
     name: 'stack-reveal',
     scope: 'chart',
     comment:
-      'Spring stacks reveal as one group per stack, each on its own stagger slot;\ntheir segments do not animate. A stack that crosses zero grows both ways\nfrom the baseline (--oc-stack-from).',
+      'Stacked bars reveal as one group per stack, each on its own stagger slot;\ntheir segments do not animate. A stack that crosses zero grows both ways\nfrom the baseline (--oc-stack-from).',
     selectors: ['.oc-stack-reveal'],
     emit: 'shorthand',
     keyframe: 'oc-enter-stack',
@@ -531,59 +555,61 @@ const ROLE_DEFS: readonly EntranceRoleDef[] = [
     name: 'arc',
     scope: 'chart',
     comment:
-      'Arc marks (pie/donut slices): simple fade in.\nScale transforms break arc positioning because arcs use translate()\non parent groups. A clean fade is more elegant for pie/donut anyway.',
+      'Arc marks (pie/donut slices): a quick fade on the author curve.\nScale transforms break arc positioning because arcs use translate()\non parent groups.',
     selectors: ['.oc-mark-arc'],
     emit: 'shorthand',
     keyframe: 'oc-enter-fade-only',
     timing: AUTHOR,
     durationBasis: 'phase',
-    duration: base(1),
+    duration: fixed(POINT_FADE_MS),
     delay: { stagger: 'mark' },
   },
   {
     name: 'point',
     scope: 'chart',
     comment:
-      'Point marks (scatter, dot).\nPoints render as bare <circle> elements with class oc-mark-point directly,\nnot wrapped in a group, so we target circle.oc-mark-point (not descendant).\nDuration is 40% of the configured duration (quick pop-in relative to other marks).',
+      'Point marks (scatter, dot): a quick fade on the author curve, no scale.\nPoints render as bare <circle> elements with class oc-mark-point directly,\nnot wrapped in a group, so we target circle.oc-mark-point (not descendant).',
     selectors: ['circle.oc-mark-point', 'circle.oc-mark-circle'],
     emit: 'shorthand',
     keyframe: 'oc-enter-fade-only',
     timing: AUTHOR,
     durationBasis: 'phase',
-    duration: base(0.4),
+    duration: fixed(POINT_FADE_MS),
     delay: { stagger: 'mark' },
   },
   {
     name: 'line-point',
     scope: 'chart',
-    comment: 'Points on line/area charts: delay so they pop in as the line draws through.',
+    comment:
+      "Points on line/area charts appear as the line's clip edge reaches them: the\nrenderer stamps each point's delay from its x along its own series.",
     selectors: ['.oc-mark-line ~ circle.oc-mark-point', '.oc-mark-area ~ circle.oc-mark-point'],
     emit: ['duration', 'delay'],
     keyframe: 'oc-enter-fade-only',
     timing: AUTHOR,
     durationBasis: 'phase',
-    duration: base(0.4),
-    delay: { after: at(0.35), stagger: 'mark' },
+    duration: fixed(POINT_FADE_MS),
+    delay: { after: when('line-area', 0.5), stagger: 'mark' },
   },
   {
     name: 'text',
     scope: 'chart',
-    comment: 'Text marks: fade + slight slide up',
+    comment: 'Text marks: rise 0.6em on the author curve, with a quick fade',
     selectors: ['.oc-mark-text text'],
     emit: 'shorthand',
-    keyframe: 'oc-enter-fade',
+    keyframe: 'oc-enter-rise',
     timing: AUTHOR,
     durationBasis: 'phase',
-    duration: base(0.6),
+    duration: base(1),
+    fade: { ms: TEXT_FADE_MS },
     delay: { stagger: 'mark' },
   },
   {
     name: 'rule',
     scope: 'chart',
-    comment: 'Rule marks: fade in',
+    comment: 'Rule marks: fade in place, never translate (a moving rule reads a wrong value)',
     selectors: ['.oc-mark-rule line'],
     emit: 'shorthand',
-    keyframe: 'oc-enter-fade',
+    keyframe: 'oc-enter-fade-only',
     timing: AUTHOR,
     durationBasis: 'phase',
     duration: base(0.5),
@@ -592,10 +618,10 @@ const ROLE_DEFS: readonly EntranceRoleDef[] = [
   {
     name: 'tick',
     scope: 'chart',
-    comment: 'Tick marks: fade in',
+    comment: 'Tick marks: fade in place',
     selectors: ['.oc-mark-tick line'],
     emit: 'shorthand',
-    keyframe: 'oc-enter-fade',
+    keyframe: 'oc-enter-fade-only',
     timing: AUTHOR,
     durationBasis: 'phase',
     duration: base(0.5),
@@ -604,26 +630,32 @@ const ROLE_DEFS: readonly EntranceRoleDef[] = [
   {
     name: 'label',
     scope: 'chart',
-    comment: 'Data labels: fade after their parent mark',
+    comment:
+      "Data labels ride their mark: a bar's label translates from --oc-label-from\non the bar's own delay, duration and curve, so it stays on the tip, and\nfades in quickly. Other labels fade in place with their mark.",
     selectors: ['.oc-mark-label'],
     emit: 'shorthand',
-    keyframe: 'oc-enter-fade',
-    timing: { kind: 'curve', curve: 'smooth' },
+    keyframe: 'oc-enter-label',
+    timing: AUTHOR,
     durationBasis: 'phase',
-    duration: { kind: 'fixed', ms: 250 },
-    delay: { after: at(0.7), stagger: 'mark' },
+    duration: base(1),
+    fade: { ms: TEXT_FADE_MS },
+    delay: { stagger: 'mark' },
   },
   {
     name: 'annotation',
     scope: 'chart',
-    comment: 'Annotations: fade in after marks finish',
+    comment: 'Annotations: fade in once the last mark is 90% of the way there',
     selectors: ['.oc-annotation'],
     emit: 'shorthand',
-    keyframe: 'oc-enter-fade',
+    keyframe: 'oc-enter-fade-only',
     timing: { kind: 'curve', curve: 'smooth' },
     durationBasis: 'phase',
-    duration: { kind: 'fixed', ms: 300 },
-    delay: { after: at(1), plusAnnotationDelay: true, stagger: 'none' },
+    duration: fixed(300),
+    delay: {
+      after: { kind: 'progress', progress: 0.9, of: 'bar', ofLast: true },
+      plusAnnotationDelay: true,
+      stagger: 'none',
+    },
   },
   {
     name: 'tilemap-tile',
@@ -668,27 +700,27 @@ const ROLE_DEFS: readonly EntranceRoleDef[] = [
   {
     name: 'map-border',
     scope: 'chart',
-    comment: 'Map borders: fade in near the end of the feature sweep',
+    comment: 'Map borders: fade in once most of the feature sweep has started',
     selectors: ['.oc-map-borders path'],
     emit: 'shorthand',
     keyframe: 'oc-enter-fade-only',
     timing: EASE_IN,
     durationBasis: 'map',
     duration: base(0.4),
-    delay: { after: at(0.7), stagger: 'none' },
+    delay: { after: { kind: 'sweep', progress: 0.6 }, stagger: 'none' },
   },
   {
     name: 'map-point',
     scope: 'chart',
     comment:
-      "Map points: gentle scale (0.75->1) + fade pop-in after borders.\ntransform-origin set per-circle in the renderer so scale happens\naround each circle's own center, not the SVG origin.",
+      "Map points: gentle scale (0.75->1) + fade pop-in just after the borders.\ntransform-origin set per-circle in the renderer so scale happens\naround each circle's own center, not the SVG origin.",
     selectors: ['.oc-map-point'],
     emit: 'shorthand',
     keyframe: 'oc-enter-map-point',
     timing: AUTHOR,
     durationBasis: 'map',
     duration: base(0.4),
-    delay: { after: at(0.8), stagger: 'map-point' },
+    delay: { after: { kind: 'sweep', progress: 0.65 }, stagger: 'map-point' },
   },
   {
     name: 'sankey-node',
@@ -706,26 +738,27 @@ const ROLE_DEFS: readonly EntranceRoleDef[] = [
     name: 'sankey-link',
     scope: 'chart',
     comment:
-      'Sankey links: fade in after nodes, with stagger.\nLinks delay by 30% of duration so nodes appear first, then links flow in.',
+      "Sankey links: fade in when their source node is halfway in. Each link\ncarries its source node's --oc-mark-index.",
     selectors: ['.oc-sankey-link path'],
     emit: 'shorthand',
     keyframe: 'oc-enter-fade-only',
     timing: AUTHOR,
     durationBasis: 'phase',
     duration: base(1),
-    delay: { after: at(0.3), stagger: 'mark' },
+    delay: { after: when('sankey-node', 0.5), stagger: 'mark' },
   },
   {
     name: 'barlist-row',
     scope: 'chart',
-    comment: 'Barlist rows: fade + slide up per row, bars grow left-to-right',
+    comment: 'Barlist rows: slide up with a quick fade per row; bars grow left-to-right',
     selectors: ['.oc-barlist-row'],
     emit: 'shorthand',
-    keyframe: 'oc-enter-fade',
+    keyframe: 'oc-enter-slide',
     timing: AUTHOR,
     durationBasis: 'phase',
     duration: base(0.6),
-    delay: { stagger: 'barlist-row' },
+    fade: { ms: TEXT_FADE_MS },
+    delay: { stagger: 'mark' },
   },
   {
     name: 'barlist-bar',
@@ -736,7 +769,7 @@ const ROLE_DEFS: readonly EntranceRoleDef[] = [
     timing: AUTHOR,
     durationBasis: 'phase',
     duration: base(1),
-    delay: { stagger: 'barlist-row' },
+    delay: { stagger: 'mark' },
   },
   {
     name: 'table-chrome',
@@ -790,52 +823,52 @@ const ROLE_DEFS: readonly EntranceRoleDef[] = [
   {
     name: 'table-heatmap-cell',
     scope: 'table',
-    comment: 'Heatmap/category cell backgrounds: longer fade, delayed after row appears',
+    comment: 'Heatmap/category cell backgrounds: longer fade, once the row is halfway in',
     selectors: ['td.oc-table-heatmap', 'td.oc-table-category'],
     emit: 'shorthand',
     keyframe: 'oc-enter-fade-only',
     timing: AUTHOR,
     durationBasis: 'phase',
     duration: base(0.7),
-    delay: { after: at(0.3), stagger: 'row' },
+    delay: { after: when('table-row', 0.5), stagger: 'row' },
   },
   {
     name: 'table-bar-fill',
     scope: 'table',
     comment:
-      'Bar fill: clip-path grow only (no opacity change to preserve resting\nopacity: 0.15 from table.css)',
+      'Bar fill: clip-path grow only (no opacity change to preserve resting\nopacity: 0.15 from table.css), once the row is halfway in',
     selectors: ['.oc-table-bar-fill'],
     emit: 'shorthand',
     keyframe: 'oc-table-enter-bar-fill',
     timing: AUTHOR,
     durationBasis: 'phase',
-    duration: base(0.8),
-    delay: { after: at(0.3), stagger: 'row' },
+    duration: base(1),
+    delay: { after: when('table-row', 0.5), stagger: 'row' },
   },
   {
     name: 'table-sparkline',
     scope: 'table',
     comment:
-      'Sparkline SVG: clip-path reveal left-to-right. Targets the SVG directly\n(not the wrapper) to avoid clipping absolutely-positioned dots and labels.',
+      'Sparkline SVG: clip-path reveal left-to-right once the row is mostly in.\nTargets the SVG directly (not the wrapper) to avoid clipping\nabsolutely-positioned dots and labels.',
     selectors: ['.oc-table-sparkline > svg'],
     emit: 'shorthand',
     keyframe: 'oc-enter-line',
     timing: AUTHOR,
     durationBasis: 'phase',
     duration: base(0.8),
-    delay: { after: at(0.4), stagger: 'row' },
+    delay: { after: when('table-row', 0.7), stagger: 'row' },
   },
   {
     name: 'table-sparkline-dot',
     scope: 'table',
-    comment: 'Sparkline dots and labels: fade in after the line draws through',
+    comment: 'Sparkline dots and labels: fade in as the line draws through the end',
     selectors: ['.oc-table-sparkline-dot', '.oc-table-sparkline-labels'],
     emit: 'shorthand',
     keyframe: 'oc-enter-fade-only',
     timing: AUTHOR,
     durationBasis: 'phase',
     duration: base(0.3),
-    delay: { after: at(0.8), stagger: 'row' },
+    delay: { after: when('table-sparkline', 0.95), stagger: 'row' },
   },
   {
     name: 'table-search-pagination',
@@ -856,20 +889,23 @@ const ROLE_DEFS: readonly EntranceRoleDef[] = [
  * with a different meaning (`--oc-annotation-delay` is the gap after the marks,
  * read inside the annotation role's own fallback).
  */
-const ROLE_VAR_OVERRIDES: Partial<Record<EntranceRole, { delay?: string; duration?: string }>> = {
+const ROLE_VAR_OVERRIDES: Partial<
+  Record<EntranceRole, { delay?: string; duration?: string; after?: string }>
+> = {
   annotation: { delay: '--oc-annotation-enter-delay' },
 };
 
 /**
- * Role-scoped custom property names (`--oc-<role>-delay`, `--oc-<role>-dur`).
+ * Role-scoped custom property names (`--oc-<role>-delay`, `-dur`, `-after`).
  * Scoped per role because custom properties inherit: a barlist bar sits inside
  * its row, a table cell inside its row, a segment inside a stack wrapper.
  */
-export function roleVars(role: EntranceRole): { delay: string; duration: string } {
+export function roleVars(role: EntranceRole): { delay: string; duration: string; after: string } {
   const override = ROLE_VAR_OVERRIDES[role];
   return {
     delay: override?.delay ?? `--oc-${role}-delay`,
     duration: override?.duration ?? `--oc-${role}-dur`,
+    after: override?.after ?? `--oc-${role}-after`,
   };
 }
 
@@ -897,34 +933,40 @@ export function entranceRole(role: EntranceRole): EntranceRoleRow {
 
 /** Inputs the CSS reads from stamped custom properties. Defaults are the CSS fallbacks. */
 export interface EntranceTimingContext {
-  /** `--oc-animation-stagger`, already clamped (clampStaggerDelay / mapSweepTiming). Default 30. */
+  /** `--oc-animation-stagger`, already clamped (clampStaggerDelay / mapSweepTiming). Default 80. */
   staggerMs?: number;
   /** `--oc-annotation-delay`. Default 150. */
   annotationDelayMs?: number;
-  /** `--oc-stack-pos` of a stacked segment. Default 0. */
-  stackPos?: number;
-  /** `--oc-stack-segment-duration`. Default 150. */
-  stackSegmentMs?: number;
-  /** `--oc-point-stagger` for map points (mapPointStagger). Default 60. */
+  /** `--oc-point-stagger` for map points (clampStaggerDelay). Default 60. */
   pointStaggerMs?: number;
   /** A per-element stamped delay (tilemap tiles: tilemapTileDelays). Default 0. */
   delayMs?: number;
+  /**
+   * A per-element stamped role delay (`--oc-<role>-delay`, e.g. a line point
+   * keyed on its x). Replaces the whole delay rule, as the CSS does.
+   */
+  stampedDelayMs?: number;
+  /** Root-stamped anchor offsets (`--oc-<role>-after`), per role. */
+  afterMs?: Partial<Record<EntranceRole, number>>;
+  /** Stagger index of the last mark, for anchors with `ofLast`. Default 0. */
+  lastMarkIndex?: number;
 }
 
 export interface EntranceTiming {
   /** When the element starts, from the entrance start. */
   delayMs: number;
-  /** The CSS animation-duration. */
+  /** The CSS animation-duration of the role's keyframe. */
   durationMs: number;
   /** How long non-opacity properties (clip, transform, fill) move; 0 if none. */
   geometryMs: number;
   /** How long until opacity settles; 0 if opacity doesn't animate. */
   opacityMs: number;
+  /** Duration of the separate quick fade track; 0 when the role has none. */
+  fadeMs: number;
 }
 
-const DEFAULT_STAGGER_MS = 30;
+const DEFAULT_STAGGER_MS = 80;
 const DEFAULT_ANNOTATION_DELAY_MS = 150;
-const DEFAULT_STACK_SEGMENT_MS = 150;
 
 /** Round away float noise from inversion (1e-6 ms is far below a frame). */
 function clean(ms: number): number {
@@ -938,9 +980,11 @@ export function roleBaseDuration(role: EntranceRole, phase: MotionPhase): number
     : phase.duration;
 }
 
-/** Resolve a progress point to a fraction of D for this phase. */
-export function resolveProgressPoint(point: ProgressPoint, phase: MotionPhase): number {
-  return phase.spring ? point.springFraction : invertCurve(point.reference, point.progress);
+function roleDurationMs(role: EntranceRole, phase: MotionPhase): number {
+  const row = entranceRole(role);
+  return row.duration.kind === 'base'
+    ? roleBaseDuration(role, phase) * row.duration.factor
+    : row.duration.ms;
 }
 
 function staggerMs(rule: StaggerRule, index: number, ctx: EntranceTimingContext): number {
@@ -950,23 +994,79 @@ function staggerMs(rule: StaggerRule, index: number, ctx: EntranceTimingContext)
     case 'mark':
     case 'row':
       return index * (ctx.staggerMs ?? DEFAULT_STAGGER_MS);
-    case 'stack-segment':
-      return (
-        index * (ctx.staggerMs ?? DEFAULT_STAGGER_MS) +
-        (ctx.stackPos ?? 0) * (ctx.stackSegmentMs ?? DEFAULT_STACK_SEGMENT_MS)
-      );
     case 'map-point':
       return index * (ctx.pointStaggerMs ?? MAP_POINT_STAGGER_FALLBACK_MS);
     case 'map-sweep':
       // Unstamped --oc-map-delay is 0ms, so no stagger without a context value.
       return index * (ctx.staggerMs ?? 0);
-    case 'barlist-row':
-      return barlistRowDelay(index);
     case 'tilemap-tile':
       return ctx.delayMs ?? 0;
     default:
       return rule satisfies never;
   }
+}
+
+/** The context a parent role is timed in: shared inputs only, no per-element stamps. */
+function parentContext(ctx: EntranceTimingContext): EntranceTimingContext {
+  return {
+    staggerMs: ctx.staggerMs,
+    annotationDelayMs: ctx.annotationDelayMs,
+    pointStaggerMs: ctx.pointStaggerMs,
+    afterMs: ctx.afterMs,
+    lastMarkIndex: ctx.lastMarkIndex,
+  };
+}
+
+/**
+ * When the element at `index` of a role has reached `progress` of its own
+ * tween, in ms from the entrance start: its delay plus the first time its
+ * curve reaches that progress.
+ */
+export function progressTimeMs(
+  role: EntranceRole,
+  index: number,
+  phase: MotionPhase,
+  context: EntranceTimingContext,
+  progress: number,
+): number {
+  const { delayMs, durationMs } = entranceTiming(role, index, phase, context);
+  return clean(delayMs + invertRoleEase(role, phase, progress) * durationMs);
+}
+
+/**
+ * The index-free part of a role's delay: where its anchor lands for this
+ * phase, in ms. This is what the renderer stamps as `--oc-<role>-after`.
+ */
+export function anchorMs(
+  role: EntranceRole,
+  phase: MotionPhase,
+  context: EntranceTimingContext = {},
+): number {
+  const anchor = entranceRole(role).delay.after;
+  if (!anchor) return 0;
+  const stamped = context.afterMs?.[role];
+  if (stamped !== undefined) return stamped;
+  if (anchor.kind === 'sweep') return clean(anchor.progress * MAP_SWEEP_BUDGET_MS);
+  const index = anchor.ofLast ? (context.lastMarkIndex ?? 0) : 0;
+  return progressTimeMs(anchor.of, index, phase, parentContext(context), anchor.progress);
+}
+
+/**
+ * Root custom properties for every anchored role in a scope: the anchor
+ * offsets the generated CSS reads (`--oc-<role>-after`), resolved through
+ * this phase's curve. CSS can't invert a curve, so the renderer does it here.
+ */
+export function entranceAnchorVars(
+  phase: MotionPhase,
+  context: EntranceTimingContext = {},
+  scope: 'chart' | 'table' = 'chart',
+): Record<string, string> {
+  const vars: Record<string, string> = {};
+  for (const row of ENTRANCE_ROLES) {
+    if (row.scope !== scope || !row.delay.after) continue;
+    vars[row.vars.after] = `${anchorMs(row.name, phase, context)}ms`;
+  }
+  return vars;
 }
 
 /**
@@ -980,23 +1080,23 @@ export function entranceTiming(
   context: EntranceTimingContext = {},
 ): EntranceTiming {
   const row = entranceRole(role);
-  const d = roleBaseDuration(role, phase);
-  const durationMs =
-    row.duration.kind === 'base'
-      ? d * row.duration.factor
-      : row.duration.kind === 'fixed'
-        ? row.duration.ms
-        : (context.stackSegmentMs ?? DEFAULT_STACK_SEGMENT_MS);
-  let delayMs = staggerMs(row.delay.stagger, index, context);
-  if (row.delay.after) delayMs += d * resolveProgressPoint(row.delay.after, phase);
-  if (row.delay.plusAnnotationDelay) {
-    delayMs += context.annotationDelayMs ?? DEFAULT_ANNOTATION_DELAY_MS;
+  const durationMs = roleDurationMs(role, phase);
+  let delayMs: number;
+  if (context.stampedDelayMs !== undefined) {
+    delayMs = context.stampedDelayMs;
+  } else {
+    delayMs = staggerMs(row.delay.stagger, index, context) + anchorMs(role, phase, context);
+    if (row.delay.plusAnnotationDelay) {
+      delayMs += context.annotationDelayMs ?? DEFAULT_ANNOTATION_DELAY_MS;
+    }
   }
+  const fadeMs = row.fade?.ms ?? 0;
   return {
     delayMs: clean(delayMs),
     durationMs: clean(durationMs),
     geometryMs: clean(durationMs * row.geometryFraction),
-    opacityMs: clean(durationMs * row.opacityFraction),
+    opacityMs: clean(row.fade ? fadeMs : durationMs * row.opacityFraction),
+    fadeMs,
   };
 }
 
@@ -1005,13 +1105,16 @@ export interface EntranceRoleExtent {
   count: number;
   /** Highest index (default count - 1). */
   maxIndex?: number;
-  /** Highest `--oc-stack-pos` (stack-segment). */
-  maxStackPos?: number;
   /** Highest stamped delay (tilemap-tile). */
   maxDelayMs?: number;
+  /** Highest per-element stamped role delay (`--oc-<role>-delay`). */
+  maxStampedDelayMs?: number;
+  /** How many of `count` carry a stamped role delay (default 0). */
+  stampedCount?: number;
 }
 
-export interface EntranceEndContext extends Omit<EntranceTimingContext, 'stackPos' | 'delayMs'> {
+export interface EntranceEndContext
+  extends Omit<EntranceTimingContext, 'delayMs' | 'stampedDelayMs'> {
   phase: MotionPhase;
   /** Elements per role: a count, or an extent. Roles with no elements are skipped. */
   roles: Partial<Record<EntranceRole, number | EntranceRoleExtent>>;
@@ -1019,7 +1122,8 @@ export interface EntranceEndContext extends Omit<EntranceTimingContext, 'stackPo
 
 /**
  * When the last animated element finishes, in ms from the entrance start: the
- * max of `delay + duration` over every role present. No buffer is added.
+ * max of `delay + duration` (or its fade, if longer) over every role present.
+ * No buffer is added.
  */
 export function entranceEndMs(context: EntranceEndContext): number {
   const { phase, roles, ...timing } = context;
@@ -1030,12 +1134,20 @@ export function entranceEndMs(context: EntranceEndContext): number {
   ][]) {
     const extent = typeof value === 'number' ? { count: value } : value;
     if (!(extent.count > 0)) continue;
-    const t = entranceTiming(role, extent.maxIndex ?? extent.count - 1, phase, {
-      ...timing,
-      stackPos: extent.maxStackPos,
-      delayMs: extent.maxDelayMs,
-    });
-    end = Math.max(end, t.delayMs + t.durationMs);
+    const index = extent.maxIndex ?? extent.count - 1;
+    const endOf = (stampedDelayMs?: number) => {
+      const t = entranceTiming(role, index, phase, {
+        ...timing,
+        delayMs: extent.maxDelayMs,
+        stampedDelayMs,
+      });
+      return t.delayMs + Math.max(t.durationMs, t.fadeMs);
+    };
+    const stamped = extent.stampedCount ?? 0;
+    if (stamped > 0 && extent.maxStampedDelayMs !== undefined) {
+      end = Math.max(end, endOf(extent.maxStampedDelayMs));
+    }
+    if (extent.count > stamped) end = Math.max(end, endOf());
   }
   return clean(end);
 }
@@ -1106,4 +1218,42 @@ export function evalRoleEase(role: EntranceRole, phase: MotionPhase, t: number):
     default:
       return timing satisfies never;
   }
+}
+
+/** First t in [0, 1] at which f reaches p (scan, then bisect). */
+function firstReach(f: (t: number) => number, p: number): number {
+  if (f(0) >= p) return 0;
+  const steps = 256;
+  let prev = 0;
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps;
+    if (f(t) >= p) {
+      let lo = prev;
+      let hi = t;
+      for (let k = 0; k < 40; k++) {
+        const mid = (lo + hi) / 2;
+        if (f(mid) >= p) hi = mid;
+        else lo = mid;
+      }
+      return hi;
+    }
+    prev = t;
+  }
+  return 1;
+}
+
+/**
+ * The first share of a role's tween at which its eased progress reaches p:
+ * the inverse of `evalRoleEase`. Monotone registry curves invert exactly;
+ * springs and CSS beziers are searched.
+ */
+export function invertRoleEase(role: EntranceRole, phase: MotionPhase, p: number): number {
+  const { timing } = entranceRole(role);
+  if (timing.kind === 'author' && !phase.spring) {
+    return invertCurve(phase.ease ?? 'smooth', p);
+  }
+  if (timing.kind === 'curve' && isMonotoneCurve(timing.curve)) {
+    return invertCurve(timing.curve as MonotoneCurveName, p);
+  }
+  return firstReach((t) => evalRoleEase(role, phase, t), p);
 }

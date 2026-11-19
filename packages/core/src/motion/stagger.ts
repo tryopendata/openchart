@@ -2,45 +2,35 @@
  * Stagger strategies: how far apart entering elements start.
  *
  * Every renderer's per-index delay formula lives here so the CSS, canvas and
- * export paths share one copy. Phase 0 keeps each formula's current numbers.
+ * export paths share one copy.
  */
 
 /** Maximum total stagger time in ms. Keeps the whole sweep inside one beat. */
 export const MAX_TOTAL_STAGGER_MS = 300;
 
 /**
- * Clamp stagger delay so total stagger time doesn't exceed MAX_TOTAL_STAGGER_MS.
- * Divides by the element count (not count - 1).
+ * Gap between consecutive entering elements: the authored delay is a ceiling,
+ * and the whole spread never exceeds MAX_TOTAL_STAGGER_MS, so
+ * `gap = min(delay, 300 / (n - 1))`. Five bars at the default 80ms land 75ms
+ * apart; forty land 300/39 ms apart. A delay of 0 stays 0, and one element
+ * has no gap.
  */
 export function clampStaggerDelay(delay: number, elementCount: number): number {
-  if (elementCount <= 1) return 0;
-  return Math.min(delay, MAX_TOTAL_STAGGER_MS / elementCount);
-}
-
-/** Barlist rows start a fixed 40ms apart, uncapped. */
-export const BARLIST_ROW_STAGGER_MS = 40;
-
-/** Delay of barlist row `index` (and of its bar), in ms. */
-export function barlistRowDelay(index: number): number {
-  return index * BARLIST_ROW_STAGGER_MS;
+  if (elementCount <= 1 || !(delay > 0)) return 0;
+  return Math.min(delay, MAX_TOTAL_STAGGER_MS / (elementCount - 1));
 }
 
 /** Map point stagger fallback used by the CSS when the renderer stamps none. */
 export const MAP_POINT_STAGGER_FALLBACK_MS = 60;
 
-/**
- * Per-point stagger for map point marks: half the enter duration spread over
- * the points, so the total stays bounded at any count. `durationMs` is the
- * phase's enter duration (not the map's capped feature duration). Returns
- * undefined for a single point, where the renderer stamps nothing.
- */
-export function mapPointStagger(durationMs: number, pointCount: number): number | undefined {
-  if (pointCount <= 1) return undefined;
-  return (durationMs * 0.5) / (pointCount - 1);
-}
-
 /** Cap on a single map feature's fill animation, in ms. */
 export const MAP_FEATURE_MAX_DURATION_MS = 500;
+
+/**
+ * Spread of map feature start times, in ms. A constant (the old 1.2x budget at
+ * a 450ms enter), so a longer enter duration doesn't add waiting to maps.
+ */
+export const MAP_SWEEP_BUDGET_MS = 540;
 
 /** The duration the map renderer stamps as `--oc-animation-duration`. */
 export function mapFeatureDuration(durationMs: number): number {
@@ -50,7 +40,7 @@ export function mapFeatureDuration(durationMs: number): number {
 export interface MapSweepTiming {
   /** Per-feature animation duration (`min(duration, 500)`). */
   featureDurationMs: number;
-  /** Total spread of feature start times (`round(duration * 1.2)`, 0 in bulk mode). */
+  /** Total spread of feature start times (MAP_SWEEP_BUDGET_MS, 0 in bulk mode). */
   budgetMs: number;
   /** Gap between consecutive shuffled feature slots (`budget / (n - 1)`). */
   staggerMs: number;
@@ -58,8 +48,8 @@ export interface MapSweepTiming {
 
 /**
  * Map feature sweep: features start at evenly spaced (then shuffled) slots
- * across a budget of 1.2x the enter duration. Bulk mode fades the whole group
- * at once, so it has no budget.
+ * across a constant budget. Bulk mode fades the whole group at once, so it
+ * has no budget.
  */
 export function mapSweepTiming(
   durationMs: number,
@@ -67,7 +57,7 @@ export function mapSweepTiming(
   bulk: boolean,
 ): MapSweepTiming {
   const featureDurationMs = mapFeatureDuration(durationMs);
-  const budgetMs = bulk ? 0 : Math.round(durationMs * 1.2);
+  const budgetMs = bulk ? 0 : MAP_SWEEP_BUDGET_MS;
   const n = Math.max(featureCount, 1);
   const staggerMs = !bulk && n > 1 ? budgetMs / (n - 1) : 0;
   return { featureDurationMs, budgetMs, staggerMs };

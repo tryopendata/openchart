@@ -5,52 +5,39 @@
    * Animation keyframes
    * --------------------------------------------------------------------------- */
 
-  /* Bar entrance: clip-path reveal bottom-to-top + fade in (vertical columns).
-     Bars grow upward from baseline with a soft opacity fade. */
+  /* Bar entrance: clip-path reveal from the baseline (vertical columns), no fade:
+     a value mark is solid from its first frame. Grows bottom-to-top unless the
+     renderer stamps --oc-bar-from (a negative column grows top-to-bottom). */
   @keyframes oc-enter-bar {
     from {
-      clip-path: inset(100% 0 0 0);
-      opacity: 0;
-    }
-    75% {
-      opacity: 1;
+      clip-path: inset(var(--oc-bar-from, 100% 0 0 0));
     }
     to {
       clip-path: inset(0 0 0 0);
-      opacity: 1;
     }
   }
 
-  /* Bar entrance: clip-path reveal left-to-right + fade in (horizontal bars).
-     Bars grow rightward from axis with a soft opacity fade. */
+  /* Bar entrance: clip-path reveal from the baseline (horizontal bars), no fade.
+     Grows left-to-right unless --oc-bar-from is stamped (negative bars). */
   @keyframes oc-enter-bar-h {
     from {
-      clip-path: inset(0 100% 0 0);
-      opacity: 0;
-    }
-    75% {
-      opacity: 1;
+      clip-path: inset(var(--oc-bar-from, 0 100% 0 0));
     }
     to {
       clip-path: inset(0 0 0 0);
-      opacity: 1;
     }
   }
 
-  /* Stack entrance: one clip over the whole stack. Grows bottom-to-top from
-     --oc-stack-from, which the renderer stamps on a stack that crosses zero so
-     the clip starts collapsed on the baseline and grows both ways from it. */
+  /* Stack entrance: one clip over the whole stack, no fade. Grows bottom-to-top
+     from --oc-stack-from, which the renderer stamps when the baseline is not the
+     bottom edge, so the clip starts collapsed on the baseline and grows both
+     ways from it. */
   @keyframes oc-enter-stack {
     from {
       clip-path: inset(var(--oc-stack-from, 100% 0 0 0));
-      opacity: 0;
-    }
-    75% {
-      opacity: 1;
     }
     to {
       clip-path: inset(0 0 0 0);
-      opacity: 1;
     }
   }
 
@@ -59,14 +46,9 @@
   @keyframes oc-enter-stack-h {
     from {
       clip-path: inset(var(--oc-stack-from, 0 100% 0 0));
-      opacity: 0;
-    }
-    75% {
-      opacity: 1;
     }
     to {
       clip-path: inset(0 0 0 0);
-      opacity: 1;
     }
   }
 
@@ -142,7 +124,7 @@
     }
   }
 
-  /* Fade + subtle slide up for text, rule, tick, annotations */
+  /* Fade + subtle slide up (table chrome) */
   @keyframes oc-enter-fade {
     from {
       opacity: 0;
@@ -151,6 +133,38 @@
     to {
       opacity: 1;
       transform: translateY(0);
+    }
+  }
+
+  /* Text rise: 0.6em up to rest. Its opacity runs as a separate quick fade. */
+  @keyframes oc-enter-rise {
+    from {
+      transform: translateY(0.6em);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  /* Row slide: 4px up to rest. Its opacity runs as a separate quick fade. */
+  @keyframes oc-enter-slide {
+    from {
+      transform: translateY(4px);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  /* Value label ride: translate from --oc-label-from (the bar's baseline-to-tip
+     extent, stamped from layout) to rest on the bar's own delay, duration and
+     curve, so the label stays on the tip. Unstamped labels do not move. */
+  @keyframes oc-enter-label {
+    from {
+      transform: translate(var(--oc-label-from, 0px, 0px));
+    }
+    to {
+      transform: translate(0px, 0px);
     }
   }
 

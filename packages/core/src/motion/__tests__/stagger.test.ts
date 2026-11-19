@@ -1,43 +1,40 @@
 import { describe, expect, it } from 'vitest';
 import {
-  barlistRowDelay,
   clampStaggerDelay,
+  MAP_SWEEP_BUDGET_MS,
   MAX_TOTAL_STAGGER_MS,
-  mapPointStagger,
   mapSweepTiming,
   tilemapTileDelays,
 } from '../stagger';
 
 describe('stagger strategies', () => {
-  it('clampStaggerDelay caps the total at 300ms, dividing by n', () => {
+  it('clampStaggerDelay spreads at most 300ms over n - 1 gaps, the authored delay a ceiling', () => {
     expect(MAX_TOTAL_STAGGER_MS).toBe(300);
-    expect(clampStaggerDelay(30, 200)).toBe(1.5);
-    expect(clampStaggerDelay(30, 5)).toBe(30);
-    expect(clampStaggerDelay(30, 1)).toBe(0);
+    // 5 bars at the default 80ms: 300 / 4 = 75ms apart.
+    expect(clampStaggerDelay(80, 5)).toBe(75);
+    // 40 bars: 300 / 39.
+    expect(clampStaggerDelay(80, 40)).toBeCloseTo(300 / 39, 10);
+    // Few elements keep the authored gap.
+    expect(clampStaggerDelay(80, 3)).toBe(80);
+    expect(clampStaggerDelay(30, 200)).toBeCloseTo(300 / 199, 10);
+    // One element, or no stagger, has no gap.
+    expect(clampStaggerDelay(80, 1)).toBe(0);
+    expect(clampStaggerDelay(80, 0)).toBe(0);
+    expect(clampStaggerDelay(0, 5)).toBe(0);
   });
 
-  it('barlist rows are 40ms apart, uncapped', () => {
-    expect(barlistRowDelay(0)).toBe(0);
-    expect(barlistRowDelay(3)).toBe(120);
-    expect(barlistRowDelay(100)).toBe(4000);
-  });
-
-  it('map points spread half the enter duration over n - 1 gaps', () => {
-    expect(mapPointStagger(450, 11)).toBe(22.5);
-    expect(mapPointStagger(800, 2)).toBe(400);
-    expect(mapPointStagger(450, 1)).toBeUndefined();
-  });
-
-  it('map sweep: budget round(1.2 * duration), features capped at 500ms', () => {
+  it('map sweep: a constant 540ms budget, features capped at 500ms', () => {
+    expect(MAP_SWEEP_BUDGET_MS).toBe(540);
     expect(mapSweepTiming(450, 11, false)).toEqual({
       featureDurationMs: 450,
       budgetMs: 540,
       staggerMs: 54,
     });
+    // A longer enter doesn't stretch the sweep.
     expect(mapSweepTiming(800, 11, false)).toEqual({
       featureDurationMs: 500,
-      budgetMs: 960,
-      staggerMs: 96,
+      budgetMs: 540,
+      staggerMs: 54,
     });
     expect(mapSweepTiming(800, 4000, true)).toEqual({
       featureDurationMs: 500,

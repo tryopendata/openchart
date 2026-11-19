@@ -455,6 +455,14 @@ export interface RectMark extends MarkMetadata {
   animationIndex?: number;
   /** Bar orientation for animation direction. Set by the engine based on encoding. */
   orient?: 'horizontal' | 'vertical';
+  /**
+   * Pixel position of the value-axis baseline the bar grows from: an x for
+   * horizontal bars, a y for vertical columns. It is the zero line, or the
+   * domain minimum when the domain excludes zero; stacked segments carry their
+   * stack's baseline. Set by the bar and column charts, so the entrance can
+   * reveal a bar from its baseline and ride its value label on the tip.
+   */
+  baseline?: number;
   /** Stacking group key (e.g. category name). Segments sharing this key animate together. */
   stackGroup?: string;
   /** Position of this segment within its stack group (0, 1, 2...). Set by engine for stacked bars. */

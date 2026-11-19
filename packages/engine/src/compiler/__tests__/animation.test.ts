@@ -116,7 +116,7 @@ describe('resolveAnimation', () => {
     expect(result!.enter).toEqual({
       duration: 1000,
       ease: 'smooth',
-      staggerDelay: 30,
+      staggerDelay: 80,
       staggerOrder: 'index',
     });
   });
@@ -124,7 +124,7 @@ describe('resolveAnimation', () => {
   it('update phase uses UPDATE_DEFAULTS (no stagger by default)', () => {
     const result = resolveAnimation(true);
     expect(result!.update).toEqual({
-      duration: 450,
+      duration: 500,
       ease: 'smooth',
       staggerDelay: 0,
       staggerOrder: 'index',
@@ -233,18 +233,19 @@ describe('clampStaggerDelay', () => {
   });
 
   it('returns delay unchanged for small counts', () => {
-    // 30 * 10 = 300, right at the 300ms cap
+    // 9 gaps of 30 = 270, under the 300ms cap
     expect(clampStaggerDelay(30, 10)).toBe(30);
   });
 
   it('clamps delay for large counts', () => {
-    // 30 * 200 = 6000 > 300, so clamp to 300/200 = 1.5
-    expect(clampStaggerDelay(30, 200)).toBe(1.5);
+    // 199 gaps of 30 = 5970 > 300, so clamp to 300/199
+    expect(clampStaggerDelay(30, 200)).toBeCloseTo(300 / 199, 10);
   });
 
   it('clamps to cap total at 300ms', () => {
-    // 50 * 100 = 5000 > 300, so clamp to 300/100 = 3
-    expect(clampStaggerDelay(50, 100)).toBe(3);
+    // 5 bars at the default 80ms land 75ms apart (4 gaps); 40 bars 300/39 apart
+    expect(clampStaggerDelay(80, 5)).toBe(75);
+    expect(clampStaggerDelay(80, 40)).toBeCloseTo(300 / 39, 10);
   });
 
   it('does not increase delay when already under the cap', () => {

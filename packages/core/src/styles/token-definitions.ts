@@ -62,8 +62,8 @@ export const CSS_TOKENS: readonly CssTokenDef[] = [
     consumers: 'EASE_VAR_MAP in vanilla renderers',
   },
 
-  { section: 'Animation timing defaults', name: '--oc-animation-duration', light: '450ms' },
-  { name: '--oc-animation-stagger', light: '30ms' },
+  { section: 'Animation timing defaults', name: '--oc-animation-duration', light: '600ms' },
+  { name: '--oc-animation-stagger', light: '80ms' },
   { name: '--oc-annotation-delay', light: '150ms' },
 
   { section: 'Typography scale (editorial design system)', name: '--oc-title-size', light: '26px' },

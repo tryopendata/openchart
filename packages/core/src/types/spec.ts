@@ -1734,7 +1734,10 @@ export interface SpringConfig {
 
 /** Stagger configuration for sequential element reveal. */
 export interface AnimationStagger {
-  /** Delay between each element in ms. Default: 80 */
+  /**
+   * Gap between consecutive elements in ms. Default: 80. A ceiling: the whole
+   * stagger spans at most 300ms, so n elements land min(delay, 300 / (n - 1)) apart.
+   */
   delay?: number;
   /** Ordering strategy. Default: 'index' (DOM order) */
   order?: 'index' | 'value' | 'reverse';
@@ -1764,7 +1767,7 @@ export interface ResponsiveConfig {
 export interface AnimationPhaseConfig {
   /** Spring mode. Cannot be combined with duration or ease in this phase. */
   spring?: SpringConfig;
-  /** Duration in ms. Default: 500 for enter. */
+  /** Duration in ms. Default: 600 for enter, 500 for update, 250 for exit. */
   duration?: number;
   /** Easing preset. Default: 'smooth'. */
   ease?: AnimationEase;
@@ -1800,7 +1803,10 @@ export interface AnimationConfig {
   update?: UpdatePhaseConfig | boolean;
   /** Exit animation when marks are removed. */
   exit?: AnimationPhaseConfig | boolean;
-  /** Delay before annotations animate in (ms after marks). Default: 200. */
+  /**
+   * Gap in ms between the last mark reaching 90% of its entrance and
+   * annotations starting. Default: 150 (0 under a preset).
+   */
   annotationDelay?: number;
 }
 

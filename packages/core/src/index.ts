@@ -231,6 +231,7 @@ export { deepMergeSpec } from './helpers/deep-merge';
 
 export { annotationSource } from './helpers/annotation-source';
 export type {
+  DelayAnchor,
   DelayRule,
   DurationRule,
   EntranceEndContext,
@@ -245,23 +246,25 @@ export type {
   KeyframeProperty,
   KeyframeStop,
   KeyframeValue,
-  ProgressPoint,
   RoleTiming,
   StaggerRule,
 } from './motion/choreography';
 export {
-  DELAY_REFERENCE_CURVE,
+  anchorMs,
   ENTRANCE_ROLES,
+  entranceAnchorVars,
   entranceEndMs,
   entranceRole,
   entranceTiming,
   evalCubicBezier,
   evalKeyframes,
   evalRoleEase,
+  FADE_CURVE,
+  invertRoleEase,
   KEYFRAMES,
   keyframeProperties,
   keyframeValueToCSS,
-  resolveProgressPoint,
+  progressTimeMs,
   roleBaseDuration,
   roleVars,
 } from './motion/choreography';
@@ -286,14 +289,12 @@ export {
 } from './motion/sample';
 export type { MapSweepTiming } from './motion/stagger';
 export {
-  BARLIST_ROW_STAGGER_MS,
-  barlistRowDelay,
   clampStaggerDelay,
   MAP_FEATURE_MAX_DURATION_MS,
   MAP_POINT_STAGGER_FALLBACK_MS,
+  MAP_SWEEP_BUDGET_MS,
   MAX_TOTAL_STAGGER_MS,
   mapFeatureDuration,
-  mapPointStagger,
   mapSweepTiming,
   tilemapTileDelays,
 } from './motion/stagger';

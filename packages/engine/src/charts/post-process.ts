@@ -233,7 +233,7 @@ export function assignAnimationIndices(
   // Phase 2: For stacked bars/columns, assign the same animationIndex to all segments
   // sharing a stackGroup so they animate as one contiguous bar per category.
   // Also compute stackPos (segment position within each group: 0, 1, 2...)
-  // so the renderer can chain segment animations sequentially.
+  // so the renderer can group each stack's segments into one reveal.
   const groupIndexMap = new Map<string, number>();
   const groupStackPos = new Map<string, number>();
   let nextGroupIndex = 0;

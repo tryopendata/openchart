@@ -2,18 +2,25 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  anchorMs,
   ENTRANCE_ROLES,
   type EntranceRole,
   type EntranceTimingContext,
+  entranceAnchorVars,
   entranceEndMs,
+  entranceRole,
   entranceTiming,
   evalCubicBezier,
   evalKeyframes,
   evalRoleEase,
+  invertRoleEase,
   KEYFRAMES,
+  keyframeProperties,
+  progressTimeMs,
 } from '../choreography';
-import { evalCurve } from '../curves';
+import { evalCurve, invertCurve } from '../curves';
 import { FLUID_SPRING, type MotionPhase, sampleMotion } from '../sample';
+import { clampStaggerDelay } from '../stagger';
 
 const stylesDir = resolve(__dirname, '../../styles');
 const animationCss = readFileSync(resolve(stylesDir, 'animation.css'), 'utf8');
@@ -23,7 +30,6 @@ const keyframesCss = readFileSync(resolve(stylesDir, 'keyframes.css'), 'utf8');
 const ROLE_NAMES: EntranceRole[] = [
   'bar',
   'bar-h',
-  'stack-segment',
   'stack-reveal',
   'stack-reveal-h',
   'line-area',
@@ -55,6 +61,15 @@ const ROLE_NAMES: EntranceRole[] = [
   'table-search-pagination',
 ];
 
+const VALUE_ROLES: EntranceRole[] = [
+  'bar',
+  'bar-h',
+  'stack-reveal',
+  'stack-reveal-h',
+  'barlist-bar',
+  'table-bar-fill',
+];
+
 describe('choreography table', () => {
   it('has exactly one row per role', () => {
     const names = ENTRANCE_ROLES.map((r) => r.name);
@@ -69,11 +84,14 @@ describe('choreography table', () => {
         role.emit === 'shorthand' || role.emit.includes(part);
       expect(css.includes(role.vars.delay)).toBe(emits('delay'));
       expect(css.includes(role.vars.duration)).toBe(emits('duration'));
+      expect(css.includes(role.vars.after)).toBe(emits('delay') && !!role.delay.after);
     }
   });
 
   it('role vars never shadow a custom property the CSS reads for something else', () => {
-    const roleVars = new Set(ENTRANCE_ROLES.flatMap((r) => [r.vars.delay, r.vars.duration]));
+    const roleVars = new Set(
+      ENTRANCE_ROLES.flatMap((r) => [r.vars.delay, r.vars.duration, r.vars.after]),
+    );
     const read = new Set(
       [...`${animationCss}${tableCss}`.matchAll(/var\(\s*(--oc-[a-z0-9-]+)/g)].map((m) => m[1]),
     );
@@ -81,8 +99,13 @@ describe('choreography table', () => {
     const legacy = [...read].filter((name) => !roleVars.has(name));
     expect(legacy).toContain('--oc-annotation-delay');
     for (const name of legacy) expect(roleVars.has(name)).toBe(false);
-    // Each role reads its own pair at most; no two roles share a name.
-    expect(roleVars.size).toBe(ENTRANCE_ROLES.length * 2);
+    // Each role reads its own vars at most; no two roles share a name.
+    expect(roleVars.size).toBe(ENTRANCE_ROLES.length * 3);
+  });
+
+  it('no longer chains stacked segments', () => {
+    expect(animationCss).not.toContain('--oc-stack-segment-duration');
+    expect(animationCss).not.toContain('--oc-stack-pos');
   });
 
   it('every role rule carries the play-state hook', () => {
@@ -102,58 +125,99 @@ describe('choreography table', () => {
       expect(keyframesCss).toContain(`@keyframes ${name} {`);
     }
   });
+
+  it('value roles never fade: their keyframes animate geometry only', () => {
+    for (const role of VALUE_ROLES) {
+      const row = entranceRole(role);
+      for (const kf of [row.keyframe, row.horizontalKeyframe].filter(Boolean)) {
+        expect(keyframeProperties(kf!)).not.toContain('opacity');
+      }
+      expect(row.fade).toBeUndefined();
+      expect(row.timing.kind).toBe('author');
+    }
+    expect(keyframeProperties('oc-enter-bar')).toEqual(['clip-path']);
+  });
+
+  it('rules, ticks and annotations never translate', () => {
+    for (const role of ['rule', 'tick', 'annotation'] as const) {
+      expect(keyframeProperties(entranceRole(role).keyframe)).toEqual(['opacity']);
+    }
+  });
+
+  it('text and labels fade over 140ms under their geometry', () => {
+    for (const role of ['text', 'label'] as const) {
+      expect(entranceRole(role).fade).toEqual({ ms: 140 });
+      expect(keyframeProperties(entranceRole(role).keyframe)).toEqual(['transform']);
+    }
+    expect(KEYFRAMES['oc-enter-rise'].stops[0].values.transform).toEqual({
+      type: 'translateY',
+      value: 0.6,
+      unit: 'em',
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------
-// Golden timing: hand-computed from the pre-generation animation.css and
-// table-animation.css. D is --oc-animation-duration; maps stamp min(D, 500).
+// Golden timing. D is --oc-animation-duration; maps stamp min(D, 500).
+// A progress point resolves through the phase's own curve: `reach(p)` is the
+// first share of the tween at which it reaches p, found here by brute force,
+// independently of invertRoleEase.
 // ---------------------------------------------------------------------------
 
 const S = 20; // --oc-animation-stagger
 const I = 3; // element index
+const LAST = 5; // last mark's stagger index
 const ANNOTATION = 150;
-const SEGMENT = 120;
-const STACK_POS = 2;
 const POINT_STAGGER = 12;
 const TILE_DELAY = 77;
 
 type Golden = [delay: number, duration: number, geometry: number, opacity: number];
 
-function goldens(D: number): Record<EntranceRole, Golden> {
+function bruteReach(f: (t: number) => number): (p: number) => number {
+  return (p) => {
+    const steps = 200_000;
+    for (let i = 0; i <= steps; i++) if (f(i / steps) >= p) return i / steps;
+    return 1;
+  };
+}
+
+function goldens(D: number, reach: (p: number) => number): Record<EntranceRole, Golden> {
   const M = Math.min(D, 500);
+  const sparkline = S * I + D * reach(0.7);
   return {
     // delay, duration, geometry (non-opacity props), opacity settle
-    bar: [S * I, D, D, 0.75 * D],
-    'bar-h': [S * I, D, D, 0.75 * D],
-    'stack-segment': [S * I + STACK_POS * SEGMENT, SEGMENT, SEGMENT, 0.75 * SEGMENT],
-    'stack-reveal': [S * I, D, D, 0.75 * D],
-    'stack-reveal-h': [S * I, D, D, 0.75 * D],
+    bar: [S * I, D, D, 0],
+    'bar-h': [S * I, D, D, 0],
+    'stack-reveal': [S * I, D, D, 0],
+    'stack-reveal-h': [S * I, D, D, 0],
     'line-area': [S * I, D, D, 0.15 * D],
-    arc: [S * I, D, 0, D],
-    point: [S * I, 0.4 * D, 0, 0.4 * D],
-    'line-point': [0.35 * D + S * I, 0.4 * D, 0, 0.4 * D],
-    text: [S * I, 0.6 * D, 0.6 * D, 0.6 * D],
-    rule: [S * I, 0.5 * D, 0.5 * D, 0.5 * D],
-    tick: [S * I, 0.5 * D, 0.5 * D, 0.5 * D],
-    label: [S * I + 0.7 * D, 250, 250, 250],
-    annotation: [D + ANNOTATION, 300, 300, 300],
+    arc: [S * I, 300, 0, 300],
+    point: [S * I, 300, 0, 300],
+    // Unstamped: once the line (index 0) reaches 0.5, plus its own stagger.
+    'line-point': [S * I + D * reach(0.5), 300, 0, 300],
+    text: [S * I, D, D, 140],
+    rule: [S * I, 0.5 * D, 0, 0.5 * D],
+    tick: [S * I, 0.5 * D, 0, 0.5 * D],
+    label: [S * I, D, D, 140],
+    // When the last mark reaches 0.9, plus the authored gap.
+    annotation: [S * LAST + D * reach(0.9) + ANNOTATION, 300, 0, 300],
     'tilemap-tile': [TILE_DELAY, 0.35 * D, 0, 0.35 * D],
     'map-feature': [I * S, M, M, M],
     'map-bulk': [0, M, 0, M],
-    'map-border': [0.7 * M, 0.4 * M, 0, 0.4 * M],
-    'map-point': [0.8 * M + I * POINT_STAGGER, 0.4 * M, 0.4 * M, 0.4 * M],
+    'map-border': [0.6 * 540, 0.4 * M, 0, 0.4 * M],
+    'map-point': [0.65 * 540 + I * POINT_STAGGER, 0.4 * M, 0.4 * M, 0.4 * M],
     'sankey-node': [S * I, D, 0, D],
-    'sankey-link': [0.3 * D + S * I, D, 0, D],
-    'barlist-row': [40 * I, 0.6 * D, 0.6 * D, 0.6 * D],
-    'barlist-bar': [40 * I, D, D, 0.75 * D],
+    'sankey-link': [S * I + D * reach(0.5), D, 0, D],
+    'barlist-row': [S * I, 0.6 * D, 0.6 * D, 140],
+    'barlist-bar': [S * I, D, D, 0],
     'table-chrome': [0, 0.6 * D, 0.6 * D, 0.6 * D],
     'table-thead': [0, 0.4 * D, 0, 0.4 * D],
     'table-row': [S * I, D, D, 0],
     'table-cell': [S * I, 0.5 * D, 0, 0.5 * D],
-    'table-heatmap-cell': [S * I + 0.3 * D, 0.7 * D, 0, 0.7 * D],
-    'table-bar-fill': [S * I + 0.3 * D, 0.8 * D, 0.8 * D, 0],
-    'table-sparkline': [S * I + 0.4 * D, 0.8 * D, 0.8 * D, 0.15 * 0.8 * D],
-    'table-sparkline-dot': [S * I + 0.8 * D, 0.3 * D, 0, 0.3 * D],
+    'table-heatmap-cell': [S * I + D * reach(0.5), 0.7 * D, 0, 0.7 * D],
+    'table-bar-fill': [S * I + D * reach(0.5), D, D, 0],
+    'table-sparkline': [sparkline, 0.8 * D, 0.8 * D, 0.15 * 0.8 * D],
+    'table-sparkline-dot': [sparkline + 0.8 * D * reach(0.95), 0.3 * D, 0, 0.3 * D],
     'table-search-pagination': [0, 0.5 * D, 0, 0.5 * D],
   };
 }
@@ -161,32 +225,148 @@ function goldens(D: number): Record<EntranceRole, Golden> {
 const CONTEXT: EntranceTimingContext = {
   staggerMs: S,
   annotationDelayMs: ANNOTATION,
-  stackPos: STACK_POS,
-  stackSegmentMs: SEGMENT,
   pointStaggerMs: POINT_STAGGER,
   delayMs: TILE_DELAY,
+  lastMarkIndex: LAST,
 };
 
-const phases = (D: number): [string, MotionPhase][] => [
-  ['smooth', { duration: D, ease: 'smooth' }],
-  ['snappy', { duration: D, ease: 'snappy' }],
-  ['spring', { duration: D, spring: FLUID_SPRING }],
+const phases = (D: number): [string, MotionPhase, (t: number) => number][] => [
+  ['smooth', { duration: D, ease: 'smooth' }, (t) => evalCurve('smooth', t)],
+  ['snappy', { duration: D, ease: 'snappy' }, (t) => evalCurve('snappy', t)],
+  ['gentle', { duration: D, ease: 'gentle' }, (t) => evalCurve('gentle', t)],
+  [
+    'spring',
+    { duration: D, spring: FLUID_SPRING },
+    (t) => sampleMotion({ duration: D, spring: FLUID_SPRING }, t * D).position,
+  ],
 ];
 
-describe.each([450, 800])('entranceTiming golden ms at D=%i', (D) => {
-  const expected = goldens(D);
+describe.each([600, 800])('entranceTiming golden ms at D=%i', (D) => {
   it('covers every role', () => {
-    expect(Object.keys(expected).sort()).toEqual([...ROLE_NAMES].sort());
+    expect(Object.keys(goldens(D, () => 0)).sort()).toEqual([...ROLE_NAMES].sort());
   });
-  describe.each(phases(D))('ease %s', (_label, phase) => {
+  describe.each(phases(D))('ease %s', (_label, phase, curve) => {
+    const expected = goldens(D, bruteReach(curve));
     it.each(ROLE_NAMES)('%s', (role) => {
       const t = entranceTiming(role, I, phase, CONTEXT);
       const [delay, duration, geometry, opacity] = expected[role];
-      expect(t.delayMs).toBeCloseTo(delay, 6);
+      // Brute-force reach is exact to 1/200000 of the tween.
+      expect(Math.abs(t.delayMs - delay)).toBeLessThan(0.02);
       expect(t.durationMs).toBeCloseTo(duration, 6);
       expect(t.geometryMs).toBeCloseTo(geometry, 6);
       expect(t.opacityMs).toBeCloseTo(opacity, 6);
     });
+  });
+});
+
+describe('progress points follow the phase curve', () => {
+  it('a snap entrance reaches 0.9 far sooner than gentle, so annotations come sooner', () => {
+    const smooth = anchorMs('annotation', { duration: 600, ease: 'smooth' });
+    const gentle = anchorMs('annotation', { duration: 600, ease: 'gentle' });
+    expect(smooth).toBeCloseTo(600 * invertCurve('smooth', 0.9), 6);
+    expect(smooth).toBeLessThan(gentle);
+  });
+
+  it('annotation delay is when the last mark reaches 0.9, plus the authored gap', () => {
+    const phase: MotionPhase = { duration: 600, ease: 'smooth' };
+    const stagger = clampStaggerDelay(80, 5); // 75ms
+    const ctx = { staggerMs: stagger, lastMarkIndex: 4, annotationDelayMs: 0 };
+    const lastBarStart = 4 * stagger;
+    const reached = progressTimeMs('bar', 4, phase, ctx, 0.9);
+    expect(reached).toBeCloseTo(lastBarStart + 600 * invertCurve('smooth', 0.9), 6);
+    // At that moment the last bar's eased progress is 0.9.
+    expect(evalRoleEase('bar', phase, (reached - lastBarStart) / 600)).toBeCloseTo(0.9, 6);
+    expect(entranceTiming('annotation', 0, phase, ctx).delayMs).toBeCloseTo(reached, 6);
+    expect(
+      entranceTiming('annotation', 0, phase, { ...ctx, annotationDelayMs: 150 }).delayMs,
+    ).toBeCloseTo(reached + 150, 6);
+  });
+
+  it('invertRoleEase inverts evalRoleEase for curves, beziers and springs', () => {
+    const cases: [EntranceRole, MotionPhase][] = [
+      ['bar', { duration: 600, ease: 'smooth' }],
+      ['bar', { duration: 600, ease: 'snappy' }],
+      ['tilemap-tile', { duration: 600 }],
+      ['bar', { duration: 600, spring: FLUID_SPRING }],
+    ];
+    for (const [role, phase] of cases) {
+      for (const p of [0.1, 0.5, 0.9]) {
+        expect(evalRoleEase(role, phase, invertRoleEase(role, phase, p))).toBeCloseTo(p, 4);
+      }
+    }
+  });
+
+  it('stamped anchors are what the CSS reads, and win over the computed value', () => {
+    const phase: MotionPhase = { duration: 600, ease: 'snappy' };
+    const vars = entranceAnchorVars(phase, { staggerMs: 75, lastMarkIndex: 4 });
+    expect(Object.keys(vars).sort()).toEqual(
+      ENTRANCE_ROLES.filter((r) => r.scope === 'chart' && r.delay.after)
+        .map((r) => r.vars.after)
+        .sort(),
+    );
+    expect(parseFloat(vars['--oc-annotation-after'])).toBeCloseTo(
+      300 + 600 * invertCurve('snappy', 0.9),
+      6,
+    );
+    expect(
+      entranceTiming('sankey-link', 0, phase, { afterMs: { 'sankey-link': 42 } }).delayMs,
+    ).toBe(42);
+    const table = entranceAnchorVars(phase, {}, 'table');
+    expect(Object.keys(table)).toContain('--oc-table-sparkline-dot-after');
+  });
+
+  it('a per-element stamped delay replaces the whole delay rule', () => {
+    const phase: MotionPhase = { duration: 600 };
+    expect(entranceTiming('line-point', 7, phase, { stampedDelayMs: 123 }).delayMs).toBe(123);
+  });
+});
+
+describe('entranceTiming defaults', () => {
+  it('falls back to the CSS fallbacks when nothing is stamped', () => {
+    const phase = { duration: 600, ease: 'smooth' as const };
+    expect(entranceTiming('bar', 2, phase).delayMs).toBe(160); // --oc-animation-stagger: 80ms
+    expect(entranceTiming('annotation', 0, phase).delayMs).toBeCloseTo(
+      600 * invertCurve('smooth', 0.9) + 150,
+      6,
+    );
+    expect(entranceTiming('map-point', 2, phase).delayMs).toBeCloseTo(0.65 * 540 + 120, 6); // 60ms
+    expect(entranceTiming('map-feature', 5, phase).delayMs).toBe(0); // --oc-map-delay: 0ms
+  });
+});
+
+describe('entranceEndMs', () => {
+  const phase: MotionPhase = { duration: 600, ease: 'smooth' };
+
+  it('is the latest delay + duration over the roles present', () => {
+    // 5 bars 75ms apart: the last starts at 300 and ends at 900.
+    expect(entranceEndMs({ phase, staggerMs: 75, roles: { bar: 5 } })).toBe(900);
+    // A text mark's 140ms fade sits inside its 600ms rise.
+    expect(entranceEndMs({ phase, staggerMs: 75, roles: { text: 1 } })).toBe(600);
+  });
+
+  it('honours extents for stamped delays and map sweeps', () => {
+    expect(
+      entranceEndMs({ phase, roles: { 'tilemap-tile': { count: 50, maxDelayMs: 900 } } }),
+    ).toBeCloseTo(900 + 0.35 * 600, 6);
+    // Stamped line points: the latest stamped start plus the 300ms fade.
+    expect(
+      entranceEndMs({
+        phase,
+        roles: { 'line-point': { count: 20, maxStampedDelayMs: 480, stampedCount: 20 } },
+      }),
+    ).toBe(780);
+    // 11 features, 800ms phase: budget 540 over 10 gaps, each feature 500ms.
+    expect(
+      entranceEndMs({
+        phase: { duration: 800 },
+        staggerMs: 54,
+        roles: { 'map-feature': 11, 'map-border': 1 },
+      }),
+    ).toBe(540 + 500);
+  });
+
+  it('is 0 with no animated elements', () => {
+    expect(entranceEndMs({ phase, roles: { bar: 0 } })).toBe(0);
   });
 });
 
@@ -199,72 +379,14 @@ describe('punch curve usage', () => {
   });
 });
 
-describe('entranceTiming defaults', () => {
-  it('falls back to the CSS fallbacks when nothing is stamped', () => {
-    const phase = { duration: 450, ease: 'smooth' as const };
-    expect(entranceTiming('bar', 2, phase).delayMs).toBe(60); // --oc-animation-stagger: 30ms
-    expect(entranceTiming('annotation', 0, phase).delayMs).toBe(600); // + 150ms
-    expect(entranceTiming('stack-segment', 0, phase, { stackPos: 1 }).delayMs).toBe(150);
-    expect(entranceTiming('map-point', 2, phase).delayMs).toBe(0.8 * 450 + 120); // 60ms
-    expect(entranceTiming('map-feature', 5, phase).delayMs).toBe(0); // --oc-map-delay: 0ms
-  });
-});
-
-describe('entranceEndMs', () => {
-  const phase: MotionPhase = { duration: 450, ease: 'smooth' };
-
-  it('is the latest delay + duration over the roles present', () => {
-    // 5 bars: last starts at 4 * 30, ends at 120 + 450 = 570.
-    expect(entranceEndMs({ phase, staggerMs: 30, roles: { bar: 5 } })).toBe(570);
-    // Annotations end later: 450 + 150 + 300.
-    expect(
-      entranceEndMs({
-        phase,
-        staggerMs: 30,
-        annotationDelayMs: 150,
-        roles: { bar: 5, annotation: 1 },
-      }),
-    ).toBe(900);
-    // 20 line points outlast the line: 0.35D + 19 * 10 + 0.4D.
-    expect(
-      entranceEndMs({ phase, staggerMs: 10, roles: { 'line-area': 1, 'line-point': 20 } }),
-    ).toBeCloseTo(0.35 * 450 + 190 + 0.4 * 450, 6);
-  });
-
-  it('honours extents for stacks, stamped delays and map sweeps', () => {
-    expect(
-      entranceEndMs({
-        phase,
-        staggerMs: 30,
-        stackSegmentMs: 150,
-        roles: { 'stack-segment': { count: 12, maxIndex: 3, maxStackPos: 2 } },
-      }),
-    ).toBe(90 + 300 + 150);
-    expect(
-      entranceEndMs({ phase, roles: { 'tilemap-tile': { count: 50, maxDelayMs: 900 } } }),
-    ).toBeCloseTo(900 + 0.35 * 450, 6);
-    // 11 features, 800ms phase: budget 960 over 10 gaps, each feature 500ms.
-    expect(
-      entranceEndMs({
-        phase: { duration: 800 },
-        staggerMs: 96,
-        roles: { 'map-feature': 11, 'map-border': 1 },
-      }),
-    ).toBe(960 + 500);
-  });
-
-  it('is 0 with no animated elements', () => {
-    expect(entranceEndMs({ phase, roles: { bar: 0 } })).toBe(0);
-  });
-});
-
 describe('role easing', () => {
   it('follows the author ease, a fixed curve, or a fixed CSS function', () => {
-    const snappy: MotionPhase = { duration: 450, ease: 'snappy' };
+    const snappy: MotionPhase = { duration: 600, ease: 'snappy' };
     expect(evalRoleEase('bar', snappy, 0.4)).toBe(evalCurve('snappy', 0.4));
-    // Labels hard-code --oc-ease-smooth regardless of the author's ease.
-    expect(evalRoleEase('label', snappy, 0.4)).toBe(evalCurve('smooth', 0.4));
-    expect(evalRoleEase('stack-segment', snappy, 0.4)).toBeCloseTo(0.4, 6);
+    // Labels ride their bar, so they follow the author ease too.
+    expect(evalRoleEase('label', snappy, 0.4)).toBe(evalCurve('snappy', 0.4));
+    // Annotations hard-code --oc-ease-smooth regardless of the author's ease.
+    expect(evalRoleEase('annotation', snappy, 0.4)).toBe(evalCurve('smooth', 0.4));
     // CSS ease-in at 0.5 (cubic-bezier(0.42, 0, 1, 1)).
     expect(evalRoleEase('tilemap-tile', snappy, 0.5)).toBeCloseTo(0.3153568, 5);
   });
@@ -285,11 +407,20 @@ describe('role easing', () => {
 describe('evalKeyframes', () => {
   it('eases each property within its own keyframe segments, like CSS', () => {
     const linear = (x: number) => x;
-    const mid = evalKeyframes('oc-enter-bar', 0.5, linear);
-    expect(mid['clip-path']).toEqual({ type: 'inset', top: 50, right: 0, bottom: 0, left: 0 });
-    expect(mid.opacity).toEqual({ type: 'number', value: 0.5 / 0.75 });
-    const late = evalKeyframes('oc-enter-bar', 0.9, linear);
-    expect(late.opacity).toEqual({ type: 'number', value: 1 });
+    const mid = evalKeyframes('oc-enter-line', 0.5, linear);
+    expect(mid['clip-path']).toEqual({ type: 'inset', top: 0, right: 50, bottom: 0, left: 0 });
+    expect(mid.opacity).toEqual({ type: 'number', value: 1 });
+    const early = evalKeyframes('oc-enter-line', 0.075, linear);
+    expect(early.opacity).toEqual({ type: 'number', value: 0.5 });
+  });
+
+  it('interpolates em translations, keeping the unit', () => {
+    const linear = (x: number) => x;
+    expect(evalKeyframes('oc-enter-rise', 0.5, linear).transform).toEqual({
+      type: 'translateY',
+      value: 0.3,
+      unit: 'em',
+    });
   });
 
   it('switches non-interpolable values at the eased midpoint', () => {

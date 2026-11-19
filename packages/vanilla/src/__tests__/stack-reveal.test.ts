@@ -1,7 +1,6 @@
 /**
- * Stack reveal: under a spring enter phase each stack is wrapped in one
- * `.oc-stack-reveal` group that clips as a unit, instead of chaining linear
- * per-segment animations.
+ * Stack reveal: every animated stack is wrapped in one `.oc-stack-reveal`
+ * group that clips as a unit on the author curve. Segments no longer chain.
  */
 
 import type { ChartSpec } from '@opendata-ai/openchart-core';
@@ -52,13 +51,16 @@ describe('stack reveal', () => {
     // Each wrapper is a stack-reveal target; its segments are suppressed.
     const roles = scanEntrance(svg).elements.map((e) => e.role);
     expect(roles.filter((r) => r === 'stack-reveal')).toHaveLength(3);
-    expect(roles).not.toContain('stack-segment');
     expect(roles).not.toContain('bar');
   });
 
-  it('stays behind a spring: the default (eased) preset keeps segment chaining', () => {
+  it('is the default for eased presets too, with no per-segment chain', () => {
     const svg = render(stackedColumns({ animation: true }));
-    expect(svg.querySelectorAll('.oc-stack-reveal')).toHaveLength(0);
+    expect(svg.querySelectorAll('.oc-stack-reveal')).toHaveLength(3);
+    expect(svg.style.getPropertyValue('--oc-stack-segment-duration')).toBe('');
+    for (const rect of svg.querySelectorAll<SVGElement>('.oc-mark-rect')) {
+      expect(rect.style.getPropertyValue('--oc-stack-pos')).toBe('');
+    }
   });
 
   it('wraps stacks inside faceted panels too', () => {

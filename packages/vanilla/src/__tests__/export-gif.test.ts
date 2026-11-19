@@ -178,18 +178,28 @@ function target(kind: AnimatedTarget['kind'], startMs = 0, durationMs = 500): An
 }
 
 describe('applyFrameState', () => {
-  it('vertical bar: fully clipped and transparent before its start', () => {
+  it('vertical bar: fully clipped before its start, and never faded', () => {
     const t = target('bar-vertical', 100, 500);
     applyFrameState(t, 0, 'smooth'); // before startMs
     expect(t.el.style.clipPath).toBe('inset(100% 0 0 0)');
-    expect(Number(t.el.style.opacity)).toBe(0);
+    expect(t.el.style.opacity).toBe('');
   });
 
-  it('vertical bar: unclipped and opaque at/after its end', () => {
+  it('vertical bar: unclipped at/after its end', () => {
     const t = target('bar-vertical', 0, 500);
     applyFrameState(t, 500, 'smooth');
     expect(t.el.style.clipPath).toBe('inset(0 0 0 0)');
-    expect(Number(t.el.style.opacity)).toBe(1);
+    expect(t.el.style.opacity).toBe('');
+  });
+
+  it('a negative bar grows from its stamped --oc-bar-from (the baseline at the top)', () => {
+    const t = target('bar-vertical', 0, 500);
+    t.el.style.setProperty('--oc-bar-from', '0 0 100% 0');
+    applyFrameState(t, 0, 'smooth');
+    expect(t.el.style.clipPath).toBe('inset(0 0 100% 0)');
+    applyFrameState(t, 250, 'smooth');
+    const bottom = Number(t.el.style.clipPath.match(/^inset\(0 0 ([\d.]+)%/)?.[1]);
+    expect(bottom).toBeCloseTo((1 - evalCurve('smooth', 0.5)) * 100, 6);
   });
 
   it('vertical bar: mid-animation is partially revealed from the top', () => {
@@ -231,14 +241,28 @@ describe('applyFrameState', () => {
     expect(inset).not.toBeCloseTo((1 - evalCurve('smooth', 0.5)) * 100, 1);
   });
 
-  it('text slides up 4px as it fades (oc-enter-fade), then settles at 0', () => {
-    const t: AnimatedTarget = { ...target('fade', 0, 300), role: 'text' };
+  it('text rises 0.6em over the duration while a 140ms fade runs alongside', () => {
+    const t: AnimatedTarget = { ...target('fade', 0, 600), role: 'text', fadeMs: 140 };
     applyFrameState(t, 0, 'smooth');
-    expect(t.el.style.transform).toBe('translateY(4px)');
+    expect(t.el.style.transform).toBe('translateY(0.6em)');
     expect(Number(t.el.style.opacity)).toBe(0);
-    applyFrameState(t, 300, 'smooth');
-    expect(t.el.style.transform).toBe('translateY(0px)');
+    applyFrameState(t, 140, 'smooth');
     expect(Number(t.el.style.opacity)).toBe(1);
+    expect(t.el.style.transform).not.toBe('translateY(0em)');
+    applyFrameState(t, 600, 'smooth');
+    expect(t.el.style.transform).toBe('translateY(0em)');
+  });
+
+  it('a label rides from its stamped --oc-label-from offset to rest', () => {
+    const t: AnimatedTarget = { ...target('fade', 0, 600), role: 'label', fadeMs: 140 };
+    t.el.style.setProperty('--oc-label-from', '0px, 120px');
+    applyFrameState(t, 0, 'smooth');
+    expect(t.el.style.transform).toBe('translate(0px, 120px)');
+    applyFrameState(t, 300, 'smooth');
+    const y = Number(t.el.style.transform.match(/, ([\d.]+)px\)$/)?.[1]);
+    expect(y).toBeCloseTo(120 * (1 - evalCurve('smooth', 0.5)), 6);
+    applyFrameState(t, 600, 'smooth');
+    expect(t.el.style.transform).toBe('translate(0px, 0px)');
   });
 
   it('a spring phase eases the segment by the spring, as the stamped linear() does', () => {

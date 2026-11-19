@@ -248,6 +248,9 @@ export function computeBarMarks(
 
   applyStackSeams(marks, theme);
 
+  // The renderer reveals each bar from this edge and rides its label on the tip.
+  for (const mark of marks) mark.baseline = baseline;
+
   return applyMarkDefOverrides(marks, spec, bandwidth);
 }
 

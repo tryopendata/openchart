@@ -1782,10 +1782,10 @@ Controls entrance animations and data-update transitions. Source: `core/src/type
 // Full control
 {
   animation: {
-    enter: { duration: 500, ease: 'smooth', stagger: true },
+    enter: { duration: 600, ease: 'smooth', stagger: true },
     update: { duration: 500, ease: 'smooth' },
-    exit: { duration: 300, ease: 'smooth' },
-    annotationDelay: 200,
+    exit: { duration: 250, ease: 'smooth' },
+    annotationDelay: 150,
   }
 }
 ```
@@ -1805,15 +1805,15 @@ Controls entrance animations and data-update transitions. Source: `core/src/type
 | `enter`           | `AnimationPhaseConfig \| boolean` | `true`      | Entrance animation when chart first renders.       |
 | `update`          | `UpdatePhaseConfig \| boolean`    | `true`      | Transition animation when data updates via `.update()`. |
 | `exit`            | `AnimationPhaseConfig \| boolean` | `true`      | Exit animation when marks are removed during updates. |
-| `annotationDelay` | `number`                          | `200`       | Delay in ms before annotations animate in after marks. |
+| `annotationDelay` | `number`                          | `150`       | Gap in ms after the last mark reaches 90% of its entrance before annotations start (`0` under a preset). |
 
 ### AnimationPhaseConfig
 
 | Field      | Type                          | Default    | Description                                  |
 | ---------- | ----------------------------- | ---------- | -------------------------------------------- |
-| `duration` | `number`                      | `500`      | Duration in ms.                              |
+| `duration` | `number`                      | `600` enter / `500` update / `250` exit | Duration in ms.                              |
 | `ease`     | `AnimationEase`               | `'smooth'` | Easing preset: `'smooth'` (fast attack, quick settle), `'snappy'` (faster, settles by about half the duration), `'gentle'` (the previous slower ease-out). |
-| `stagger`  | `AnimationStagger \| boolean` | `true`     | Stagger config for entrance. `false` = simultaneous. |
+| `stagger`  | `AnimationStagger \| boolean` | `true`     | Stagger config for entrance. `false` = simultaneous. `delay` (default `80`) is a ceiling: the whole stagger spans at most 300ms, so n elements land `min(delay, 300 / (n - 1))` apart. |
 
 ### UpdatePhaseConfig
 

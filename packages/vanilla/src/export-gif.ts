@@ -25,8 +25,10 @@ import {
   type EntranceRole,
   entranceRole,
   entranceTiming,
+  evalCurve,
   evalKeyframes,
   evalRoleEase,
+  FADE_CURVE,
   KEYFRAMES,
   type KeyframeName,
   type KeyframeProperty,
@@ -99,6 +101,8 @@ export interface AnimatedTarget {
   startMs: number;
   /** Duration of this element's own animation in ms. */
   durationMs: number;
+  /** Duration of the role's separate quick fade track, when it has one (opacity follows it). */
+  fadeMs?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -148,6 +152,7 @@ function collectTargets(scan: EntranceScan, phase: MotionPhase): AnimatedTarget[
       keyframe: e.keyframe,
       startMs: timing.delayMs,
       durationMs: timing.durationMs,
+      ...(timing.fadeMs > 0 ? { fadeMs: timing.fadeMs } : {}),
     };
   });
 }
@@ -203,6 +208,14 @@ function resolveCSSValue(el: SVGElement, css: string): KeyframeValue | undefined
     /var\((--[\w-]+)(?:,\s*([^()]*))?\)/g,
     (_, name: string, fallback?: string) => el.style.getPropertyValue(name) || fallback || '',
   );
+  const translateMatch = /^translate\(\s*([-\d.e]+)px\s*,\s*([-\d.e]+)px\s*\)$/.exec(
+    substituted.trim(),
+  );
+  if (translateMatch) {
+    const x = Number.parseFloat(translateMatch[1]);
+    const y = Number.parseFloat(translateMatch[2]);
+    return Number.isFinite(x) && Number.isFinite(y) ? { type: 'translate', x, y } : undefined;
+  }
   const insetMatch = /^inset\(([^)]*)\)$/.exec(substituted.trim());
   if (insetMatch) {
     const sides = insetMatch[1]
@@ -243,6 +256,9 @@ function evalResolved(
   if (a?.type === 'number' && b?.type === 'number') {
     return { type: 'number', value: lerp(a.value, b.value) };
   }
+  if (a?.type === 'translate' && b?.type === 'translate') {
+    return { type: 'translate', x: lerp(a.x, b.x), y: lerp(a.y, b.y) };
+  }
   if (a?.type === 'inset' && b?.type === 'inset') {
     return {
       type: 'inset',
@@ -253,6 +269,12 @@ function evalResolved(
     };
   }
   return undefined;
+}
+
+function hasCssStop(keyframe: KeyframeName, prop: KeyframeProperty): boolean {
+  return (KEYFRAMES[keyframe].stops as readonly KeyframeStop[]).some(
+    (s) => s.values[prop]?.type === 'css',
+  );
 }
 
 /** The role a hand-built target without one plays, by keyframe family. */
@@ -290,7 +312,12 @@ export function applyFrameState(
   const style = target.el.style;
 
   for (const [prop, raw] of Object.entries(values) as [KeyframeProperty, KeyframeValue][]) {
-    const value = raw.type === 'css' ? evalResolved(target.el, keyframe, prop, p, ease) : raw;
+    // A stop holding a custom property (`--oc-bar-from`, `--oc-label-from`) is
+    // resolved against the element, even past the midpoint where evalKeyframes
+    // would hand back the literal end stop.
+    const value = hasCssStop(keyframe, prop)
+      ? evalResolved(target.el, keyframe, prop, p, ease)
+      : raw;
     if (!value) continue;
     switch (value.type) {
       case 'number':
@@ -300,7 +327,10 @@ export function applyFrameState(
         if (prop === 'clip-path') style.clipPath = formatInset(value);
         break;
       case 'translateY':
-        style.transform = `translateY(${value.px}px)`;
+        style.transform = `translateY(${value.value}${value.unit})`;
+        break;
+      case 'translate':
+        style.transform = `translate(${value.x}px, ${value.y}px)`;
         break;
       case 'scale':
         style.transform = `scale(${value.value})`;
@@ -310,6 +340,11 @@ export function applyFrameState(
       default:
         value satisfies never;
     }
+  }
+  // The quick fade track runs alongside the keyframe on its own clock.
+  if (target.fadeMs) {
+    const f = clamp01((nowMs - target.startMs) / target.fadeMs);
+    style.opacity = String(clamp01(evalCurve(FADE_CURVE, f)));
   }
 }
 

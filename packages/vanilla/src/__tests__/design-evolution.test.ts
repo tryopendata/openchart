@@ -1,4 +1,4 @@
-import { type ChartSpec, sampleMotion } from '@opendata-ai/openchart-core';
+import { type ChartSpec, entranceTiming, sampleMotion } from '@opendata-ai/openchart-core';
 import { compileChart, resolveAnimation, validateSpec } from '@opendata-ai/openchart-engine';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createContainer, createMouseEvent } from '../__test-fixtures__/dom';
@@ -163,10 +163,12 @@ describe('authoring and reading real compiled charts', () => {
     const t = enter.duration * 0.37;
     const expected = sampleMotion(enter, t).position;
     expect(samples[37]).toBeCloseTo(expected, 5);
-    expect(entranceAlphaAt(t * 0.4, 0, enter, 1)).toBeCloseTo(expected, 6);
+    // Points fade over a fixed window; the stamped linear() plays across it.
+    const fadeMs = entranceTiming('point', 0, enter).durationMs;
+    expect(entranceAlphaAt(fadeMs * 0.37, 0, enter, 1)).toBeCloseTo(expected, 6);
     applyFrameState(
-      { el: element, kind: 'fade', startMs: 0, durationMs: enter.duration * 0.4 },
-      t * 0.4,
+      { el: element, kind: 'fade', startMs: 0, durationMs: fadeMs },
+      fadeMs * 0.37,
       enter.ease,
       enter,
     );

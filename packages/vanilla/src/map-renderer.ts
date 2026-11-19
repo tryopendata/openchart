@@ -17,11 +17,11 @@ import { createSVGElement } from './renderers/svg-dom';
  */
 
 import {
+  clampStaggerDelay,
   type GeoMapBorders,
   type GeoMapFeatureMark,
   type GeoMapLayout,
   type GeoMapPointMark,
-  mapPointStagger,
   mapSweepTiming,
   type ResolvedAnimation,
 } from '@opendata-ai/openchart-core';
@@ -474,13 +474,10 @@ export function renderMapSVG(
     renderBorders(cameraGroup, borders, ctx);
 
     // Render point marks inside camera group (above borders).
-    // Stamp a per-point stagger so the total spread stays bounded regardless of
-    // point count (the CSS hardcoded 60ms per point which explodes past ~15 pts).
-    const perPoint =
-      animate && animation?.enter
-        ? mapPointStagger(animation.enter.duration, layout.pointMarks.length)
-        : undefined;
-    if (perPoint !== undefined) {
+    // Stamp the shared per-point stagger (authored gap, total capped at 300ms)
+    // so the spread stays bounded regardless of point count.
+    if (animate && animation?.enter && layout.pointMarks.length > 1) {
+      const perPoint = clampStaggerDelay(animation.enter.staggerDelay, layout.pointMarks.length);
       svg.style.setProperty('--oc-point-stagger', `${perPoint}ms`);
     }
     renderPointMarks(cameraGroup, layout.pointMarks, animate ? animation : undefined, ctx);

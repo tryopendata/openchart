@@ -47,9 +47,9 @@ describe('animation in compiled layout', () => {
     const spec = { ...barSpec, animation: true } as ChartSpec;
     const layout = compileChart(spec, { width: 600, height: 400 });
     expect(layout.animation?.enter).toEqual({
-      duration: 450,
+      duration: 600,
       ease: 'smooth',
-      staggerDelay: 30,
+      staggerDelay: 80,
       staggerOrder: 'index',
     });
   });

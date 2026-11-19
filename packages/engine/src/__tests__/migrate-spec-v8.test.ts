@@ -130,7 +130,7 @@ describe('migrateSpecV8 alias repairs', () => {
     expect(layout.annotations[0].type).toBe('refline');
     expect(layout.theme.chrome.title.color).toBe('#333333');
     // The legacy preset is dropped, so the default entrance applies.
-    expect(layout.animation?.enter?.duration).toBe(450);
+    expect(layout.animation?.enter?.duration).toBe(600);
   });
 
   it('replaces legacy labels and records each lost offset (explicit 8.10 exception)', () => {

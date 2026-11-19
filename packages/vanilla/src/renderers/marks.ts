@@ -22,6 +22,14 @@ import type {
 } from '@opendata-ai/openchart-core';
 import { resolveMarkFill } from '../gradient-utils';
 import { resolvePatternFill } from '../pattern-utils';
+import {
+  formatLabelFrom,
+  labelAnchor,
+  labelFromOffset,
+  linePointDelays,
+  revealFrom,
+  stackExtents,
+} from './entrance-geometry';
 import { applyKnockoutHalo, applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
 
 /**
@@ -274,6 +282,20 @@ function renderRectMark(
     }
   }
   shapeEl.setAttribute('fill', resolveFillOrPattern(mark.fill, mark.pattern, ctx));
+  // A bar grows from its baseline: a negative bar's clip opens from its far
+  // side. Stacked segments reveal through their stack's wrapper instead.
+  if (ctx.marks.animation?.enter && mark.stackPos === undefined) {
+    const horizontal = mark.orient === 'horizontal';
+    const start = horizontal ? mark.x : mark.y;
+    const from = revealFrom(
+      horizontal,
+      start,
+      start + (horizontal ? mark.width : mark.height),
+      mark.baseline,
+    );
+    if (from)
+      (shapeEl as SVGElement & ElementCSSInlineStyle).style.setProperty('--oc-bar-from', from);
+  }
   // Only when set: an unconditional fill-opacity="1" would change the
   // serialized SVG of every existing bar and churn the visual baselines.
   // `fill-opacity` is a different property from the `opacity` that the
@@ -561,6 +583,14 @@ export function renderMarks(
   const g = createSVGElement('g', ctx.factory);
   g.setAttribute('class', 'oc-marks');
 
+  // Entrance timing read from the layout: points on a line start as its
+  // drawing edge reaches them; stacked labels ride their stack.
+  const enter = ctx.marks.animation?.enter;
+  const pointDelays = enter
+    ? linePointDelays(layout.marks, enter, ctx.marks.staggerMs ?? 0, opts?.markIndexOffset)
+    : undefined;
+  const stacks = enter ? stackExtents(layout.marks) : undefined;
+
   for (let i = 0; i < layout.marks.length; i++) {
     const mark = layout.marks[i];
     // Canvas mark mode paints point marks on the canvas layer instead. The
@@ -585,17 +615,12 @@ export function renderMarks(
       el.setAttribute('data-series', series);
     }
 
-    // For stacked segments, set stack position for sequential animation chaining.
-    // stackPos is computed by the engine on RectMark during compilation.
-    if (ctx.marks.animation?.enter && mark.type === 'rect') {
-      const rect = mark as RectMark;
-      if (rect.stackGroup && rect.stackPos !== undefined) {
-        el.setAttribute('data-stack-pos', String(rect.stackPos));
-        (el as SVGElement & ElementCSSInlineStyle).style.setProperty(
-          '--oc-stack-pos',
-          String(rect.stackPos),
-        );
-      }
+    const pointDelay = pointDelays?.get(i);
+    if (pointDelay !== undefined) {
+      (el as SVGElement & ElementCSSInlineStyle).style.setProperty(
+        '--oc-line-point-delay',
+        `${pointDelay}ms`,
+      );
     }
 
     g.appendChild(el);
@@ -631,15 +656,17 @@ export function renderMarks(
     applyLabelHalo(label, rect.label, ctx);
     label.textContent = rect.label.text;
 
-    // Stamp animation index so the CSS stagger delay works for overlay labels
-    // (they're not children of a .oc-mark-rect group that carries --oc-mark-index).
-    if (ctx.marks.animation?.enter) {
-      const idx = rect.animationIndex ?? i;
+    // Stamp the bar's (or its stack's) stagger index so the label starts with
+    // it (overlay labels aren't children of the .oc-mark-rect group that
+    // carries --oc-mark-index), and the offset it travels with the reveal.
+    if (enter) {
+      const stack = stacks?.get(rect);
+      const idx = stack ? stack.index : (rect.animationIndex ?? i);
       label.setAttribute('data-animation-index', String(idx));
-      (label as SVGElement & ElementCSSInlineStyle).style.setProperty(
-        '--oc-mark-index',
-        String(idx),
-      );
+      const style = (label as SVGElement & ElementCSSInlineStyle).style;
+      style.setProperty('--oc-mark-index', String(idx));
+      const from = labelFromOffset(rect, stack, labelAnchor(rect));
+      if (from) style.setProperty('--oc-label-from', formatLabelFrom(from));
     }
 
     labelsGroup.appendChild(label);

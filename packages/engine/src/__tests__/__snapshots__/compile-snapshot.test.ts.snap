@@ -1652,6 +1652,7 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
       "aria": {
         "label": "A: 10",
       },
+      "baseline": 37.664,
       "cornerRadius": 2,
       "cornerRadiusSides": {
         "bl": false,
@@ -1698,6 +1699,7 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
       "aria": {
         "label": "B: 25",
       },
+      "baseline": 37.664,
       "cornerRadius": 2,
       "cornerRadiusSides": {
         "bl": false,
@@ -1744,6 +1746,7 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
       "aria": {
         "label": "C: 40",
       },
+      "baseline": 37.664,
       "cornerRadius": 2,
       "cornerRadiusSides": {
         "bl": false,
@@ -3647,6 +3650,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
       "aria": {
         "label": "A: 30",
       },
+      "baseline": 287.40000000000003,
       "cornerRadius": 2,
       "cornerRadiusSides": {
         "bl": false,
@@ -3703,6 +3707,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
       "aria": {
         "label": "B: 55",
       },
+      "baseline": 287.40000000000003,
       "cornerRadius": 2,
       "cornerRadiusSides": {
         "bl": false,
@@ -3759,6 +3764,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
       "aria": {
         "label": "C: 70",
       },
+      "baseline": 287.40000000000003,
       "cornerRadius": 2,
       "cornerRadiusSides": {
         "bl": false,
@@ -3815,6 +3821,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
       "aria": {
         "label": "D: 45",
       },
+      "baseline": 287.40000000000003,
       "cornerRadius": 2,
       "cornerRadiusSides": {
         "bl": false,

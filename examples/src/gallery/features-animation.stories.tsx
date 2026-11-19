@@ -594,12 +594,12 @@ export const Animation = () => (
     <Section
       id="by-mark"
       title="By mark type"
-      lede="Each mark family has its own entrance: lines draw, areas reveal under the fill, arcs scale from the center, stacked segments chain."
+      lede="Each mark family has its own entrance: lines draw, areas reveal under the fill, arcs fade in place, stacks rise as one bar."
     >
       <Demo
         id="line-drawing"
         title="Line drawing"
-        description="Paths sweep in left to right via a clip-path reveal; point markers fade in behind the sweep."
+        description="Paths sweep in left to right via a clip-path reveal; each point marker fades in as the drawing edge reaches it."
         specForPanel={lineDrawSpec}
       >
         <ReplayChart spec={lineDrawSpec} height={440} />
@@ -615,15 +615,15 @@ export const Animation = () => (
       <Demo
         id="pie-sweep"
         title="Pie sweep"
-        description="Arc marks fade and scale in from the center. Arcs use opacity-only animation because SVG translate positioning would clash with a CSS transform."
+        description="Arc marks fade in place over 300ms. Arcs use opacity-only animation because SVG translate positioning would clash with a CSS transform."
         specForPanel={pieSweepSpec}
       >
         <ReplayPair left={pieSweepSpec} right={donutSweepSpec} height={420} />
       </Demo>
       <Demo
         id="stacked-chain"
-        title="Stacked segment chaining"
-        description="Segments in a stacked column chain their reveal so the whole bar rises as one fluid sweep. The segments ease linearly to keep constant velocity across the handoffs."
+        title="Stacked reveal"
+        description="Each stacked column reveals as one shape on the entrance curve, so the whole bar rises in a single sweep from its baseline."
         specForPanel={stackedChainSpec}
       >
         <ReplayChart spec={stackedChainSpec} height={460} />

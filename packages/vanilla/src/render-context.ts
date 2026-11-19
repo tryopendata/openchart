@@ -5,6 +5,8 @@ import { type IdScope, pageIdScope } from './svg-ids';
 export { createIdScope, type IdScope, pageIdScope } from './svg-ids';
 export interface MarkRenderState {
   animation?: ResolvedAnimation;
+  /** Clamped entrance stagger stamped on the root, in ms. */
+  staggerMs?: number;
   gradientMap: Map<string, string>;
   patternMap: Map<string, string>;
   surface: string;

@@ -47,7 +47,7 @@
       animation-play-state: var(--oc-play-state, running);
     }
 
-    /* Heatmap/category cell backgrounds: longer fade, delayed after row appears */
+    /* Heatmap/category cell backgrounds: longer fade, once the row is halfway in */
     & td.oc-table-heatmap,
     & td.oc-table-category {
       animation: oc-enter-fade-only
@@ -56,8 +56,7 @@
       animation-delay: var(
         --oc-table-heatmap-cell-delay,
         calc(
-          var(--oc-animation-duration) *
-          0.3 +
+          var(--oc-table-heatmap-cell-after, calc(var(--oc-animation-duration) * 0.064336)) +
           var(--oc-animation-stagger) *
           var(--oc-row-index, 0)
         )
@@ -66,16 +65,14 @@
     }
 
     /* Bar fill: clip-path grow only (no opacity change to preserve resting
-       opacity: 0.15 from table.css) */
+       opacity: 0.15 from table.css), once the row is halfway in */
     & .oc-table-bar-fill {
-      animation: oc-table-enter-bar-fill
-        var(--oc-table-bar-fill-dur, calc(var(--oc-animation-duration) * 0.8))
+      animation: oc-table-enter-bar-fill var(--oc-table-bar-fill-dur, var(--oc-animation-duration))
         var(--oc-animation-ease, var(--oc-ease-smooth)) both;
       animation-delay: var(
         --oc-table-bar-fill-delay,
         calc(
-          var(--oc-animation-duration) *
-          0.3 +
+          var(--oc-table-bar-fill-after, calc(var(--oc-animation-duration) * 0.064336)) +
           var(--oc-animation-stagger) *
           var(--oc-row-index, 0)
         )
@@ -83,8 +80,9 @@
       animation-play-state: var(--oc-play-state, running);
     }
 
-    /* Sparkline SVG: clip-path reveal left-to-right. Targets the SVG directly
-       (not the wrapper) to avoid clipping absolutely-positioned dots and labels. */
+    /* Sparkline SVG: clip-path reveal left-to-right once the row is mostly in.
+       Targets the SVG directly (not the wrapper) to avoid clipping
+       absolutely-positioned dots and labels. */
     & .oc-table-sparkline > svg {
       animation: oc-enter-line
         var(--oc-table-sparkline-dur, calc(var(--oc-animation-duration) * 0.8))
@@ -92,8 +90,7 @@
       animation-delay: var(
         --oc-table-sparkline-delay,
         calc(
-          var(--oc-animation-duration) *
-          0.4 +
+          var(--oc-table-sparkline-after, calc(var(--oc-animation-duration) * 0.110284)) +
           var(--oc-animation-stagger) *
           var(--oc-row-index, 0)
         )
@@ -101,7 +98,7 @@
       animation-play-state: var(--oc-play-state, running);
     }
 
-    /* Sparkline dots and labels: fade in after the line draws through */
+    /* Sparkline dots and labels: fade in as the line draws through the end */
     & .oc-table-sparkline-dot,
     & .oc-table-sparkline-labels {
       animation: oc-enter-fade-only
@@ -110,8 +107,7 @@
       animation-delay: var(
         --oc-table-sparkline-dot-delay,
         calc(
-          var(--oc-animation-duration) *
-          0.8 +
+          var(--oc-table-sparkline-dot-after, calc(var(--oc-animation-duration) * 0.319112)) +
           var(--oc-animation-stagger) *
           var(--oc-row-index, 0)
         )

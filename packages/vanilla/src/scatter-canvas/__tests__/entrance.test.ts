@@ -99,13 +99,14 @@ describe('entrance duration', () => {
   it('uses the shared stagger cap, so 4k marks still fit the budget', () => {
     const clamped = clampStaggerDelay(80, 4000);
     expect(clamped).toBeLessThan(80);
-    expect(clamped * 4000).toBeLessThanOrEqual(MAX_TOTAL_STAGGER_MS);
+    // 3999 gaps between 4000 points.
+    expect(clamped * 3999).toBeCloseTo(MAX_TOTAL_STAGGER_MS, 9);
   });
 
   it('caps the total entrance for a 4k-point chart', () => {
-    // Budget + one point's fade (40% of 500ms).
+    // Budget + one point's fixed 300ms fade.
     const total = computeEntranceDuration(ENTER, 4000);
-    expect(total).toBeLessThanOrEqual(MAX_TOTAL_STAGGER_MS + 200);
+    expect(total).toBeCloseTo(MAX_TOTAL_STAGGER_MS + 300, 6);
   });
 
   it("ends when the last point's CSS point-role window ends", () => {
@@ -116,13 +117,14 @@ describe('entrance duration', () => {
 
 describe('per-point alpha', () => {
   it("is 0 before a point's window opens and 1 after it closes", () => {
-    // 80ms authored, clamped to 30ms by the budget: point 5 starts at 150ms
-    // and runs 200ms (40% of the 500ms enter duration).
-    expect(entranceAlphaAt(149, 5, ENTER, 10)).toBe(0);
-    expect(entranceAlphaAt(150, 5, ENTER, 10)).toBe(0);
-    expect(entranceAlphaAt(250, 5, ENTER, 10)).toBeGreaterThan(0);
-    expect(entranceAlphaAt(250, 5, ENTER, 10)).toBeLessThan(1);
-    expect(entranceAlphaAt(350, 5, ENTER, 10)).toBe(1);
+    // 80ms authored, clamped to 300 / 9 ms by the budget: point 5 starts at
+    // 166.7ms and fades over the point role's fixed 300ms.
+    const start = 5 * (300 / 9);
+    expect(entranceAlphaAt(start - 1, 5, ENTER, 10)).toBe(0);
+    expect(entranceAlphaAt(start, 5, ENTER, 10)).toBe(0);
+    expect(entranceAlphaAt(start + 100, 5, ENTER, 10)).toBeGreaterThan(0);
+    expect(entranceAlphaAt(start + 100, 5, ENTER, 10)).toBeLessThan(1);
+    expect(entranceAlphaAt(start + 300, 5, ENTER, 10)).toBe(1);
   });
 
   it('fades earlier points before later ones', () => {

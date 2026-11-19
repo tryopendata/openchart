@@ -1,4 +1,9 @@
-import { type AnimationEase, motionCSS, type SpringConfig } from '@opendata-ai/openchart-core';
+import {
+  type AnimationEase,
+  entranceAnchorVars,
+  motionCSS,
+  type SpringConfig,
+} from '@opendata-ai/openchart-core';
 
 /**
  * Shared animation CSS custom-property stamping for vanilla renderers.
@@ -26,11 +31,17 @@ export interface AnimationVars {
   annotationDelay?: number;
   /** Easing preset name, mapped through EASE_VAR_MAP (defaults to smooth). */
   ease?: AnimationEase;
-  /** Per-segment duration for stacked bar sequencing, in ms (svg-renderer only). */
-  stackSegmentDuration?: number;
+  /** Stagger index of the last mark, so annotations wait for it. Default 0. */
+  lastMarkIndex?: number;
+  /** Which stylesheet's anchored roles to resolve. Default 'chart'. */
+  scope?: 'chart' | 'table';
 }
 
-/** Stamp animation CSS custom properties onto an element's inline style. */
+/**
+ * Stamp animation CSS custom properties onto an element's inline style,
+ * including the progress-point offsets (`--oc-<role>-after`) resolved through
+ * this phase's curve, which the CSS can't compute itself.
+ */
 export function stampAnimationVars(el: ElementCSSInlineStyle, v: AnimationVars): void {
   el.style.setProperty('--oc-animation-duration', `${v.duration}ms`);
   el.style.setProperty('--oc-animation-stagger', `${v.stagger}ms`);
@@ -45,7 +56,10 @@ export function stampAnimationVars(el: ElementCSSInlineStyle, v: AnimationVars):
   } else if (v.ease !== undefined) {
     el.style.setProperty('--oc-animation-ease', EASE_VAR_MAP[v.ease] || EASE_VAR_MAP.smooth);
   }
-  if (v.stackSegmentDuration !== undefined) {
-    el.style.setProperty('--oc-stack-segment-duration', `${v.stackSegmentDuration}ms`);
-  }
+  const anchors = entranceAnchorVars(
+    { duration: v.duration, spring: v.spring, ease: v.ease },
+    { staggerMs: v.stagger, annotationDelayMs: v.annotationDelay, lastMarkIndex: v.lastMarkIndex },
+    v.scope,
+  );
+  for (const [name, value] of Object.entries(anchors)) el.style.setProperty(name, value);
 }

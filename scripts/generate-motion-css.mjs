@@ -21,7 +21,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, '..');
 const stylesDir = join(repoRoot, 'packages', 'core', 'src', 'styles');
 
-const { ENTRANCE_ROLES, KEYFRAMES, keyframeValueToCSS, resolveProgressPoint } = await import(
+const { anchorMs, ENTRANCE_ROLES, FADE_CURVE, KEYFRAMES, keyframeValueToCSS } = await import(
   join(repoRoot, 'packages', 'core', 'src', 'motion', 'choreography.ts')
 );
 
@@ -60,8 +60,6 @@ function durationFallback(rule) {
       return rule.factor === 1 ? D : `calc(${D} * ${rule.factor})`;
     case 'fixed':
       return `${rule.ms}ms`;
-    case 'stack-segment':
-      return 'var(--oc-stack-segment-duration, 150ms)';
     default:
       throw new Error(`Unknown duration kind ${rule.kind}`);
   }
@@ -71,29 +69,32 @@ const STAGGER_CSS = {
   none: null,
   mark: 'var(--oc-animation-stagger) * var(--oc-mark-index, 0)',
   row: 'var(--oc-animation-stagger) * var(--oc-row-index, 0)',
-  'stack-segment':
-    'var(--oc-animation-stagger) * var(--oc-mark-index, 0) + var(--oc-stack-pos, 0) * var(--oc-stack-segment-duration, 150ms)',
   'map-point': 'var(--oc-mark-index, 0) * var(--oc-point-stagger, 60ms)',
   'map-sweep': 'var(--oc-map-delay, 0ms)',
-  'barlist-row': 'var(--oc-row-delay, 0ms)',
   'tilemap-tile': 'var(--oc-tile-delay, 0ms)',
 };
 
-function delayFallback(rule) {
+/**
+ * The anchor offset the CSS falls back to when the renderer stamped none: the
+ * default (smooth) resolution, either a share of D or a constant.
+ */
+function anchorFallback(role) {
+  const a = anchorMs(role.name, { duration: 1000 });
+  const b = anchorMs(role.name, { duration: 2000 });
+  if (Math.abs(b - 2 * a) < 1e-6) {
+    const f = fraction(a / 1000);
+    return f === 1 ? D : `${D} * ${f}`;
+  }
+  if (Math.abs(b - a) < 1e-6) return `${fraction(a)}ms`;
+  throw new Error(`Anchor of ${role.name} is neither proportional to D nor constant`);
+}
+
+function delayFallback(role) {
+  const rule = role.delay;
   const parts = [];
   if (rule.after) {
-    // The CSS fallback holds the resolved fraction for non-spring phases. In
-    // phase 0 every progress point resolves to the same fraction as its spring
-    // fraction; fail loudly if the table ever splits them, since the CSS
-    // cannot tell a spring phase from an eased one.
-    const eased = fraction(resolveProgressPoint(rule.after, { duration: 1 }));
-    const spring = fraction(rule.after.springFraction);
-    if (eased !== spring) {
-      throw new Error(
-        `Progress point resolves to ${eased} eased but ${spring} under a spring; the CSS fallback can't express both`,
-      );
-    }
-    parts.push(eased === 1 ? D : `${D} * ${eased}`);
+    const fallback = anchorFallback(role);
+    parts.push(`var(${role.vars.after}, ${fallback.includes('*') ? `calc(${fallback})` : fallback})`);
   }
   if (rule.plusAnnotationDelay) parts.push('var(--oc-annotation-delay, 150ms)');
   if (!(rule.stagger in STAGGER_CSS)) throw new Error(`Unknown stagger rule ${rule.stagger}`);
@@ -106,11 +107,19 @@ function delayFallback(rule) {
 
 function roleDeclarations(role) {
   const duration = `var(${role.vars.duration}, ${durationFallback(role.duration)})`;
-  const delay = `var(${role.vars.delay}, ${delayFallback(role.delay)})`;
+  const delay = `var(${role.vars.delay}, ${delayFallback(role)})`;
   const timing = timingCSS(role.timing);
+  if (role.fade && role.emit !== 'shorthand') {
+    throw new Error(`Role ${role.name} has a fade track but does not emit the shorthand`);
+  }
   if (role.emit === 'shorthand') {
+    // The fade track shares the delay and play state (single values repeat
+    // across the animation list).
+    const fade = role.fade
+      ? `, oc-enter-fade-only ${role.fade.ms}ms var(--oc-ease-${FADE_CURVE}) both`
+      : '';
     return [
-      `animation: ${role.keyframe} ${duration} ${timing} both;`,
+      `animation: ${role.keyframe} ${duration} ${timing} both${fade};`,
       `animation-delay: ${delay};`,
       PLAY_STATE,
     ];

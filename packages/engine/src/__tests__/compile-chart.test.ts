@@ -1210,7 +1210,7 @@ describe('compileChart', () => {
 
   it('full mode + animation: true uses the default enter duration (sparkline bump does not leak)', () => {
     const layout = compileChart({ ...lineSpec, animation: true }, { width: 600, height: 400 });
-    expect(layout.animation?.enter?.duration).toBe(450);
+    expect(layout.animation?.enter?.duration).toBe(600);
   });
 
   // ---------------------------------------------------------------------------

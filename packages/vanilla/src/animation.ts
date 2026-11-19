@@ -137,9 +137,9 @@ function describe(
     default:
       index = inheritedMs(el, root, '--oc-mark-index') ?? 0;
   }
-  if (row.delay.stagger === 'stack-segment') {
-    context.stackPos = inheritedMs(el, root, '--oc-stack-pos') ?? 0;
-  }
+  // A per-element role delay replaces the whole rule, as in the CSS.
+  const stamped = inheritedMs(el, root, row.vars.delay);
+  if (stamped !== undefined) context.stampedDelayMs = stamped;
   if (row.delay.stagger === 'map-point') {
     const perPoint = inheritedMs(el, root, '--oc-point-stagger');
     if (perPoint !== undefined) context.pointStaggerMs = perPoint;
@@ -173,8 +173,12 @@ export function scanEntrance(root: StyledElement): EntranceScan {
   if (stagger !== undefined) context.staggerMs = stagger;
   const annotationDelay = readMs(root, '--oc-annotation-delay');
   if (annotationDelay !== undefined) context.annotationDelayMs = annotationDelay;
-  const segment = readMs(root, '--oc-stack-segment-duration');
-  if (segment !== undefined) context.stackSegmentMs = segment;
+  // Anchor offsets the renderer resolved through this render's curve.
+  for (const row of roles) {
+    if (!row.delay.after) continue;
+    const after = readMs(root, row.vars.after);
+    if (after !== undefined) (context.afterMs ??= {})[row.name] = after;
+  }
 
   const candidates = new Set<Element>();
   for (const row of roles) {
@@ -203,11 +207,15 @@ export function scanEntrance(root: StyledElement): EntranceScan {
 export function scanExtents(scan: EntranceScan): Partial<Record<EntranceRole, EntranceRoleExtent>> {
   const roles: Partial<Record<EntranceRole, EntranceRoleExtent>> = {};
   for (const e of scan.elements) {
-    const extent = (roles[e.role] ??= { count: 0, maxIndex: 0, maxStackPos: 0, maxDelayMs: 0 });
+    const extent = (roles[e.role] ??= { count: 0, maxIndex: 0, maxDelayMs: 0, stampedCount: 0 });
     extent.count++;
     extent.maxIndex = Math.max(extent.maxIndex ?? 0, e.index);
-    extent.maxStackPos = Math.max(extent.maxStackPos ?? 0, e.context.stackPos ?? 0);
     extent.maxDelayMs = Math.max(extent.maxDelayMs ?? 0, e.context.delayMs ?? 0);
+    const stamped = e.context.stampedDelayMs;
+    if (stamped !== undefined) {
+      extent.stampedCount = (extent.stampedCount ?? 0) + 1;
+      extent.maxStampedDelayMs = Math.max(extent.maxStampedDelayMs ?? stamped, stamped);
+    }
   }
   return roles;
 }

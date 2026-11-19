@@ -51,9 +51,9 @@ describe('compileChart with animation', () => {
 
     expect(layout.animation).toBeDefined();
     expect(layout.animation!.enter).toBeDefined();
-    expect(layout.animation!.enter!.duration).toBe(450);
+    expect(layout.animation!.enter!.duration).toBe(600);
     expect(layout.animation!.enter!.ease).toBe('smooth');
-    expect(layout.animation!.enter!.staggerDelay).toBe(30);
+    expect(layout.animation!.enter!.staggerDelay).toBe(80);
     expect(layout.animation!.enter!.staggerOrder).toBe('index');
     expect(layout.animation!.annotationDelay).toBe(150);
   });
@@ -156,7 +156,7 @@ describe('compileChart with animation', () => {
     } as ChartSpec;
     const layoutCompact = compileChart(specNoAnim, { width: 350, height: 400 });
     // `animation: true` resolves the default entrance.
-    expect(layoutCompact.animation!.enter!.duration).toBe(450);
+    expect(layoutCompact.animation!.enter!.duration).toBe(600);
 
     // At full width (> 700), no override applies, so no animation
     const layoutFull = compileChart(specNoAnim, { width: 800, height: 400 });

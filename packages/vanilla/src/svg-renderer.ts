@@ -12,11 +12,8 @@ import { createRenderContext, type RenderContext } from './render-context';
  */
 
 import type {
-  AxisLayout,
-  AxisTick,
   ChartLayout,
   FacetPanelLayout,
-  RectMark,
   ResolvedFillPattern,
 } from '@opendata-ai/openchart-core';
 import { clampStaggerDelay } from '@opendata-ai/openchart-engine';
@@ -28,6 +25,7 @@ import { renderAxes } from './renderers/axes';
 import { renderBrand } from './renderers/brand';
 import { renderChrome } from './renderers/chrome';
 import { renderEndpointLabels } from './renderers/endpoint-labels';
+import { revealFrom, stackExtents } from './renderers/entrance-geometry';
 import { renderLegend } from './renderers/legend';
 import { renderMarks } from './renderers/marks';
 import { renderMetrics } from './renderers/metrics';
@@ -104,32 +102,24 @@ export function renderChartSVG(
 
   // Set animation CSS custom properties when the enter phase is enabled
   const enterPhase = animation?.enter;
+  let staggerMs: number | undefined;
   if (enterPhase) {
     const markCount = layout.marks.length;
-    const stagger = clampStaggerDelay(enterPhase.staggerDelay, markCount);
-
-    // Compute per-segment duration for stacked bars so the total bar animation
-    // time stays consistent regardless of segment count.
-    // stackPos is set by the engine (0-indexed position within each stack group).
-    let maxSegments = 0;
-    for (const m of layout.marks) {
-      if (m.type === 'rect') {
-        const pos = (m as RectMark).stackPos;
-        if (pos !== undefined && pos + 1 > maxSegments) {
-          maxSegments = pos + 1;
-        }
-      }
-    }
-    const stackSegmentDuration =
-      maxSegments > 0 ? Math.round(enterPhase.duration / maxSegments) : undefined;
+    staggerMs = clampStaggerDelay(enterPhase.staggerDelay, markCount);
+    // Annotations wait for the last mark's stagger slot.
+    const panelMarks = layout.facet ? layout.facet.panels.flatMap((p) => p.marks) : layout.marks;
+    let lastMarkIndex = 0;
+    panelMarks.forEach((m, i) => {
+      lastMarkIndex = Math.max(lastMarkIndex, m.animationIndex ?? i);
+    });
 
     stampAnimationVars(svg, {
       duration: enterPhase.duration,
       spring: enterPhase.spring,
-      stagger,
+      stagger: staggerMs,
       annotationDelay: animation!.annotationDelay,
       ease: enterPhase.ease,
-      stackSegmentDuration,
+      lastMarkIndex,
     });
   }
 
@@ -196,6 +186,7 @@ export function renderChartSVG(
   // Gradient, pattern and animation state belongs to this render only.
   Object.assign(ctx.marks, {
     animation,
+    staggerMs,
     gradientMap,
     patternMap,
     surface: resolvedSurface(layout.theme),
@@ -226,7 +217,7 @@ export function renderChartSVG(
     clippedGroup.setAttribute('data-oc-marks-group', 'true');
     clipGroup.appendChild(clippedGroup);
     const markLabelsOverlay = renderMarks(clippedGroup, layout, { skipPoints: canvasMarks }, ctx);
-    if (enterPhase?.spring) wrapStackReveals(clippedGroup, layout, ctx);
+    if (enterPhase) wrapStackReveals(clippedGroup, layout, ctx);
 
     // Single query+parse pass over point circles, reused below by both the
     // voronoi-overlay pointer-events pass and the endpoint-label suppression
@@ -439,9 +430,7 @@ function renderFacetedPanels(
     clippedGroup.setAttribute('clip-path', `url(#${panelClipId})`);
     // Figure-level tooltip descriptors and navigation index the pooled marks.
     const panelLabelsOverlay = renderMarks(clippedGroup, panelLayout, { markIndexOffset }, ctx);
-    if (ctx.marks.animation?.enter?.spring) {
-      wrapStackReveals(clippedGroup, panelLayout, ctx);
-    }
+    if (ctx.marks.animation?.enter) wrapStackReveals(clippedGroup, panelLayout, ctx);
     markIndexOffset += panel.marks.length;
     g.appendChild(clippedGroup);
 
@@ -457,33 +446,14 @@ function renderFacetedPanels(
 }
 
 /**
- * Pixel position of value 0 on a numeric axis, read from its ticks (exact when
- * a tick sits at 0, else interpolated along the linear scale). Undefined for a
- * non-numeric axis.
- */
-function zeroPosition(axis: AxisLayout | undefined): number | undefined {
-  const ticks = (axis?.ticks ?? []).filter(
-    (t): t is AxisTick & { value: number } =>
-      typeof t.value === 'number' && Number.isFinite(t.value),
-  );
-  const zero = ticks.find((t) => t.value === 0);
-  if (zero) return zero.position;
-  if (ticks.length < 2) return undefined;
-  const a = ticks[0];
-  const b = ticks[ticks.length - 1];
-  if (a.value === b.value) return undefined;
-  return a.position + ((0 - a.value) * (b.position - a.position)) / (b.value - a.value);
-}
-
-/**
- * A spring-eased stack is one quantitative object: reveal its shared extent
- * as one clip, never chain independently eased segments that can appear to
- * separate. Wraps each stack's segments (found inside `g.oc-marks`) in one
- * `.oc-stack-reveal` group carrying the stack's stagger index. A stack that
- * crosses zero gets `--oc-stack-from`, the starting inset that collapses the
- * clip onto the baseline, so both sides grow away from zero together (a
- * segment straddling zero grows both ways, which separate per-side groups
- * could not do).
+ * A stack is one quantitative object: reveal its shared extent as one clip,
+ * never chain independently eased segments that can appear to separate.
+ * Wraps each stack's segments (found inside `g.oc-marks`) in one
+ * `.oc-stack-reveal` group carrying the stack's stagger index. When the
+ * baseline isn't the stack's bottom (left) edge, `--oc-stack-from` is the
+ * starting inset that collapses the clip onto it, so a stack that crosses
+ * zero grows both ways from zero together (a segment straddling zero grows
+ * both ways, which separate per-side groups could not do).
  */
 function wrapStackReveals(container: SVGElement, layout: ChartLayout, ctx: RenderContext): void {
   const marksGroup = container.querySelector<SVGElement>(':scope > .oc-marks');
@@ -494,60 +464,29 @@ function wrapStackReveals(container: SVGElement, layout: ChartLayout, ctx: Rende
     if (key) byKey.set(key, child);
   }
 
-  interface Stack {
-    wrapper: SVGElement;
-    horizontal: boolean;
-    zero: number | undefined;
-    /** Extent along the value axis, in px (top/left to bottom/right). */
-    start: number;
-    end: number;
-  }
-  const zeroY = zeroPosition(layout.axes.y);
-  const zeroY2 = zeroPosition(layout.axes.y2);
-  const zeroX = zeroPosition(layout.axes.x);
-  const stacks = new Map<string, Stack>();
+  const stacks = stackExtents(layout.marks);
+  const wrappers = new Map<string, SVGElement>();
   for (const mark of layout.marks) {
-    if (mark.type !== 'rect' || mark.stackPos === undefined || !mark.key) continue;
-    const element = byKey.get(mark.key);
-    if (!element) continue;
-    const horizontal = mark.orient === 'horizontal';
-    const start = horizontal ? mark.x : mark.y;
-    const end = start + (horizontal ? mark.width : mark.height);
-    const band = horizontal ? mark.y : mark.x;
-    const key = `${horizontal ? 'h' : 'v'}:${mark.stackGroup ?? ''}:${band}`;
-    let stack = stacks.get(key);
-    if (!stack) {
-      const index = mark.animationIndex ?? 0;
-      const wrapper = createSVGElement('g', ctx.factory);
+    if (mark.type !== 'rect' || !mark.key) continue;
+    const stack = stacks.get(mark);
+    const element = stack && byKey.get(mark.key);
+    if (!stack || !element) continue;
+    let wrapper = wrappers.get(stack.key);
+    if (!wrapper) {
+      wrapper = createSVGElement('g', ctx.factory);
       setAttrs(wrapper, {
         class: 'oc-stack-reveal',
-        'data-key': `stack:${key}`,
-        'data-orient': horizontal ? 'horizontal' : 'vertical',
-        'data-animation-index': index,
+        'data-key': `stack:${stack.key}`,
+        'data-orient': stack.horizontal ? 'horizontal' : 'vertical',
+        'data-animation-index': stack.index,
       });
-      (wrapper as SVGElement & ElementCSSInlineStyle).style.setProperty(
-        '--oc-mark-index',
-        String(index),
-      );
+      const style = (wrapper as SVGElement & ElementCSSInlineStyle).style;
+      style.setProperty('--oc-mark-index', String(stack.index));
+      const from = revealFrom(stack.horizontal, stack.start, stack.end, stack.baseline);
+      if (from) style.setProperty('--oc-stack-from', from);
       marksGroup.insertBefore(wrapper, element);
-      const zero = horizontal ? zeroX : mark.yScale === 'y2' ? zeroY2 : zeroY;
-      stack = { wrapper, horizontal, zero, start, end };
-      stacks.set(key, stack);
+      wrappers.set(stack.key, wrapper);
     }
-    stack.start = Math.min(stack.start, start);
-    stack.end = Math.max(stack.end, end);
-    stack.wrapper.appendChild(element);
-  }
-
-  for (const { wrapper, horizontal, zero, start, end } of stacks.values()) {
-    if (zero === undefined || !(zero > start && zero < end)) continue;
-    const pct = (px: number) => `${Number(((px / (end - start)) * 100).toFixed(4))}%`;
-    // Insets from the stack's own box: top/left side up to zero, the rest after.
-    const before = pct(zero - start);
-    const after = pct(end - zero);
-    (wrapper as SVGElement & ElementCSSInlineStyle).style.setProperty(
-      '--oc-stack-from',
-      horizontal ? `0 ${after} 0 ${before}` : `${before} 0 ${after} 0`,
-    );
+    wrapper.appendChild(element);
   }
 }

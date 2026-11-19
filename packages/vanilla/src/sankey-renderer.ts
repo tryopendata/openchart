@@ -273,12 +273,15 @@ function renderGradientDefs(
 function renderLinks(
   parent: SVGElement,
   links: SankeyLinkMark[],
-  _nodePositions: Map<string, { x: number; width: number }>,
+  nodes: SankeyNodeMark[],
   animation: ResolvedAnimation | undefined,
   gradientIds: Map<number, string>,
 ): void {
   const g = createSVGElement('g');
   g.setAttribute('class', 'oc-sankey-links');
+  // A link enters when its source node is halfway in, so it takes that
+  // node's stagger slot.
+  const nodeIndex = new Map(nodes.map((n, i) => [n.nodeId, n.animationIndex ?? i]));
 
   for (let i = 0; i < links.length; i++) {
     const link = links[i];
@@ -293,7 +296,12 @@ function renderLinks(
       linkG.setAttribute('aria-label', link.aria.label);
     }
 
-    stampAnimationAttrs(linkG, link, i, animation);
+    stampAnimationAttrs(
+      linkG,
+      { animationIndex: nodeIndex.get(link.sourceId) ?? link.animationIndex },
+      i,
+      animation,
+    );
 
     const path = createSVGElement('path');
     path.setAttribute('d', link.path);
@@ -475,8 +483,8 @@ export function renderSankeySVG(
 
   // Set animation CSS custom properties when the enter phase is enabled
   if (enterPhase) {
-    const totalMarks = layout.nodes.length + layout.links.length;
-    const stagger = clampStaggerDelay(enterPhase.staggerDelay, totalMarks);
+    // Links share their source node's slot, so only nodes spread the stagger.
+    const stagger = clampStaggerDelay(enterPhase.staggerDelay, layout.nodes.length);
     stampAnimationVars(svg, {
       duration: enterPhase.duration,
       spring: enterPhase.spring,
@@ -511,7 +519,7 @@ export function renderSankeySVG(
   svg.appendChild(defs);
 
   // Links (behind nodes)
-  renderLinks(svg, layout.links, nodePositions, animation, gradientIds);
+  renderLinks(svg, layout.links, layout.nodes, animation, gradientIds);
 
   // Nodes
   renderNodes(svg, layout.nodes, animation);

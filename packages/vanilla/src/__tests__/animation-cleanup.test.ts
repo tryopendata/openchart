@@ -9,9 +9,9 @@
 
 import {
   type ChartSpec,
+  clampStaggerDelay,
   entranceTiming,
   type GeoMapSpec,
-  mapPointStagger,
 } from '@opendata-ai/openchart-core';
 import { compileChart } from '@opendata-ai/openchart-engine';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -142,11 +142,12 @@ describe('setupAnimationCleanup with getAnimations', () => {
     stubGetAnimations(() => {
       const svg = document.querySelector('svg.oc-map') as SVGElement;
       return scanEntrance(svg).elements.map((e) => {
+        const scan = scanEntrance(svg);
         const t = entranceTiming(
           e.role,
           e.index,
-          { duration: 450 },
-          { ...scanEntrance(svg).context, ...e.context },
+          { duration: scan.durationMs! },
+          { ...scan.context, ...e.context },
         );
         lastEnd = Math.max(lastEnd, t.delayMs + t.durationMs);
         return fakeAnimation(
@@ -163,12 +164,12 @@ describe('setupAnimationCleanup with getAnimations', () => {
     const lastPoint = entranceTiming(
       'map-point',
       59,
-      { duration: 450 },
+      { duration: 500 },
       {
-        pointStaggerMs: mapPointStagger(450, 60),
+        pointStaggerMs: clampStaggerDelay(80, 60),
       },
     );
-    // The feature sweep (budget 1.2 x D) can end after the points; either way
+    // The feature sweep (a 540ms budget) can end after the points; either way
     // cleanup must hold until the last real finish.
     expect(lastEnd).toBeGreaterThanOrEqual(lastPoint.delayMs + lastPoint.durationMs);
 
@@ -259,7 +260,7 @@ describe('setupAnimationCleanup fallback (no getAnimations)', () => {
     svg.setAttribute('class', 'oc-map oc-animate');
     svg.style.setProperty('--oc-animation-duration', '450ms');
     svg.style.setProperty('--oc-animation-stagger', '0ms');
-    svg.style.setProperty('--oc-point-stagger', `${mapPointStagger(450, 200)}ms`);
+    svg.style.setProperty('--oc-point-stagger', `${clampStaggerDelay(80, 200)}ms`);
     for (let i = 0; i < 200; i++) {
       const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
       c.setAttribute('class', 'oc-map-point');
@@ -271,7 +272,7 @@ describe('setupAnimationCleanup fallback (no getAnimations)', () => {
       199,
       { duration: 450 },
       {
-        pointStaggerMs: mapPointStagger(450, 200),
+        pointStaggerMs: clampStaggerDelay(80, 200),
       },
     );
     expect(computeAnimationDuration(svg)).toBeCloseTo(last.delayMs + last.durationMs + 500, 6);
@@ -307,13 +308,22 @@ describe('setupAnimationCleanup fallback (no getAnimations)', () => {
 });
 
 describe('entrance scan', () => {
-  it('gives labels their choreography delay, not the bar stagger alone', () => {
+  it('starts each bar label with its bar, on the bar duration, riding from the baseline', () => {
     const svg = animatedSVG({ ...columnSpec, animation: true, labels: { density: 'all' } });
     const scan = scanEntrance(svg);
-    const label = scan.elements.find((e) => e.role === 'label');
-    expect(label).toBeDefined();
-    const t = entranceTiming('label', label!.index, { duration: scan.durationMs! }, scan.context);
-    expect(t.delayMs).toBeGreaterThan(label!.index * (scan.context.staggerMs ?? 0));
+    const labels = scan.elements.filter((e) => e.role === 'label');
+    const bars = scan.elements.filter((e) => e.role === 'bar');
+    expect(labels.length).toBeGreaterThan(1);
+    const phase = { duration: scan.durationMs! };
+    for (const label of labels) {
+      const bar = bars.find((b) => b.index === label.index)!;
+      const lt = entranceTiming('label', label.index, phase, { ...scan.context, ...label.context });
+      const bt = entranceTiming('bar', bar.index, phase, { ...scan.context, ...bar.context });
+      expect(lt.delayMs).toBe(bt.delayMs);
+      expect(lt.durationMs).toBe(bt.durationMs);
+      expect(lt.fadeMs).toBe(140);
+      expect(label.el.style.getPropertyValue('--oc-label-from')).toMatch(/^0px, [\d.]+px$/);
+    }
   });
 });
 

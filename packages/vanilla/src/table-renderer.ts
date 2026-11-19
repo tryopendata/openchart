@@ -417,6 +417,7 @@ export function renderTable(
       spring: enterPhase.spring,
       stagger,
       ease: enterPhase.ease,
+      scope: 'table',
     });
     wrapper.classList.add('oc-animate');
   }
