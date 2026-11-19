@@ -147,7 +147,7 @@ function toTrack(tween: ElementTween): Track {
       return {
         slot: 'exit',
         apply: (p) => ghost.setAttribute('opacity', String(start * (1 - p))),
-        final: () => ghost.remove(),
+        final: () => removeGhost(ghost),
       };
     }
   }
@@ -254,6 +254,15 @@ const HREF_ATTRS = ['href', 'xlink:href'];
 
 let ghostDefSeq = 0;
 
+/** Defs a ghost's paint was re-homed into; they leave with the ghost. */
+const ghostDefs = new WeakMap<Element, Element[]>();
+
+function removeGhost(ghost: Element): void {
+  ghost.remove();
+  for (const def of ghostDefs.get(ghost) ?? []) def.remove();
+  ghostDefs.delete(ghost);
+}
+
 function svgOf(el: Element): Element | null {
   return el.tagName.toLowerCase() === 'svg' ? el : el.closest('svg');
 }
@@ -280,7 +289,13 @@ function ensureDefs(svg: Element): Element {
  * `<defs>` under fresh ids. The old SVG is about to be removed, so the clone
  * would otherwise reference nothing (or a same-id def with other stops).
  */
-function rehomeRefs(el: Element, fromSvg: Element, toSvg: Element, moved: Map<string, string>) {
+function rehomeRefs(
+  el: Element,
+  fromSvg: Element,
+  toSvg: Element,
+  moved: Map<string, string>,
+  copies: Element[],
+) {
   const resolve = (id: string): string | null => {
     const known = moved.get(id);
     if (known) return known;
@@ -292,8 +307,9 @@ function rehomeRefs(el: Element, fromSvg: Element, toSvg: Element, moved: Map<st
     copy.setAttribute('id', fresh);
     // Ids inside the copied def would duplicate the live ones.
     for (const inner of copy.querySelectorAll('[id]')) inner.removeAttribute('id');
-    rehomeRefs(copy, fromSvg, toSvg, moved);
+    rehomeRefs(copy, fromSvg, toSvg, moved, copies);
     ensureDefs(toSvg).appendChild(copy);
+    copies.push(copy);
     return fresh;
   };
 
@@ -333,7 +349,32 @@ export function makeGhost(source: Element, parent: Element): Element {
   }
   const fromSvg = svgOf(source);
   const toSvg = svgOf(parent);
-  if (fromSvg && toSvg && fromSvg !== toSvg) rehomeRefs(ghost, fromSvg, toSvg, new Map());
+  if (fromSvg && toSvg && fromSvg !== toSvg) {
+    const copies: Element[] = [];
+    rehomeRefs(ghost, fromSvg, toSvg, new Map(), copies);
+    if (copies.length > 0) ghostDefs.set(ghost, copies);
+  }
   parent.appendChild(ghost);
   return ghost;
+}
+
+const TRAILING_TRANSLATE =
+  /translate\(\s*([-+]?[\d.]+(?:e[-+]?\d+)?)[\s,]+([-+]?[\d.]+(?:e[-+]?\d+)?)\s*\)\s*$/i;
+
+/**
+ * The displacement an in-flight `offset` tween last wrote on `el`, so an
+ * interrupting update starts from where the element is drawn. Only valid for
+ * elements that carry no `transform` of their own; (0, 0) when there is none.
+ */
+export function currentOffset(el: Element): { x: number; y: number } {
+  const m = TRAILING_TRANSLATE.exec(el.getAttribute('transform') ?? '');
+  return m ? { x: Number(m[1]), y: Number(m[2]) } : { x: 0, y: 0 };
+}
+
+/** A numeric attribute, or undefined when absent or not a number. */
+export function numAttr(el: Element, name: string): number | undefined {
+  const raw = el.getAttribute(name);
+  if (raw === null) return undefined;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : undefined;
 }

@@ -177,12 +177,12 @@ describe('runMapFillTransition', () => {
     runMapFillTransition(
       svg,
       { fills: prevFills, points: new Map([['sf', { fill: '#ff0000' }]]) },
-      { duration: 100 },
+      { update: { duration: 100 } },
     );
 
     // From-state is applied synchronously before the first frame, so there is
     // no flash of the final color while the first rAF is pending.
-    expect(featureAt(svg, 0).getAttribute('fill')).toBe('#ff0000');
+    expect(featureAt(svg, 0).getAttribute('fill')).toBe('rgb(255, 0, 0)');
 
     pumpRaf(0);
     pumpRaf(50);
@@ -192,11 +192,10 @@ describe('runMapFillTransition', () => {
     expect(mid).not.toBe('rgb(0, 0, 255)');
 
     pumpRaf(100);
-    // interpolateRgb serializes to rgb() form, so the final value is the
-    // rgb equivalent of the target hex, not the raw '#0000ff' string.
-    expect(featureAt(svg, 0).getAttribute('fill')).toBe('rgb(0, 0, 255)');
+    // The end snaps to the rendered value exactly, not its rgb() serialization.
+    expect(featureAt(svg, 0).getAttribute('fill')).toBe('#0000ff');
     const point = svg.querySelector('.oc-map-point');
-    expect(point!.getAttribute('fill')).toBe('rgb(0, 255, 0)');
+    expect(point!.getAttribute('fill')).toBe('#00ff00');
   });
 
   it('leaves a newly added fill untouched (no prev color to tween from)', () => {
@@ -205,7 +204,11 @@ describe('runMapFillTransition', () => {
     // from nothing.
     const svg = buildMapSvg([{ key: '36', fill: '#0000ff' }]);
 
-    runMapFillTransition(svg, { fills: new Map(), points: new Map() }, { duration: 100 });
+    runMapFillTransition(
+      svg,
+      { fills: new Map(), points: new Map() },
+      { update: { duration: 100 } },
+    );
 
     expect(featureAt(svg, 0).getAttribute('fill')).toBe('#0000ff');
     // No tweens means the early-return path: nothing scheduled on rAF.
@@ -222,7 +225,11 @@ describe('runMapFillTransition', () => {
     ]);
 
     expect(() => {
-      runMapFillTransition(svg, { fills: prevFills, points: new Map() }, { duration: 100 });
+      runMapFillTransition(
+        svg,
+        { fills: prevFills, points: new Map() },
+        { update: { duration: 100 } },
+      );
       runToCompletion();
     }).not.toThrow();
 
@@ -239,13 +246,17 @@ describe('runMapFillTransition', () => {
       ['48', '#ff0000'], // changed: should tween
     ]);
 
-    runMapFillTransition(svg, { fills: prevFills, points: new Map() }, { duration: 100 });
+    runMapFillTransition(
+      svg,
+      { fills: prevFills, points: new Map() },
+      { update: { duration: 100 } },
+    );
     runToCompletion();
 
     // The unchanged feature keeps its original attribute string; only the
     // changed one was rewritten by the interpolator.
     expect(featureAt(svg, 0).getAttribute('fill')).toBe('#0000ff');
-    expect(featureAt(svg, 1).getAttribute('fill')).toBe('rgb(0, 255, 0)');
+    expect(featureAt(svg, 1).getAttribute('fill')).toBe('#00ff00');
   });
 
   it('snaps changed fills to their final color when duration is zero', () => {
@@ -254,7 +265,7 @@ describe('runMapFillTransition', () => {
     const svg = buildMapSvg([{ key: '06', fill: '#0000ff' }]);
     const prevFills = new Map([['06', '#ff0000']]);
 
-    runMapFillTransition(svg, { fills: prevFills, points: new Map() }, { duration: 0 });
+    runMapFillTransition(svg, { fills: prevFills, points: new Map() }, { update: { duration: 0 } });
 
     expect(featureAt(svg, 0).getAttribute('fill')).toBe('#0000ff');
     expect(rafCallbacks.size).toBe(0);
@@ -267,7 +278,7 @@ describe('runMapFillTransition', () => {
     const handle = runMapFillTransition(
       svg,
       { fills: prevFills, points: new Map() },
-      { duration: 100 },
+      { update: { duration: 100 } },
     );
     pumpRaf(0);
     pumpRaf(50);
@@ -289,7 +300,7 @@ describe('runMapFillTransition', () => {
     const first = runMapFillTransition(
       svg,
       { fills: new Map([['06', '#ff0000']]), points: new Map() },
-      { duration: 100 },
+      { update: { duration: 100 } },
     );
     pumpRaf(0);
     pumpRaf(50);
@@ -301,11 +312,15 @@ describe('runMapFillTransition', () => {
     featureAt(svg, 0).setAttribute('fill', '#00ff00');
 
     expect(() => {
-      runMapFillTransition(svg, { fills: midFills, points: new Map() }, { duration: 100 });
+      runMapFillTransition(
+        svg,
+        { fills: midFills, points: new Map() },
+        { update: { duration: 100 } },
+      );
       runToCompletion();
     }).not.toThrow();
 
-    expect(featureAt(svg, 0).getAttribute('fill')).toBe('rgb(0, 255, 0)');
+    expect(featureAt(svg, 0).getAttribute('fill')).toBe('#00ff00');
   });
 
   it('cancel() after natural completion is a harmless no-op', () => {
@@ -313,7 +328,7 @@ describe('runMapFillTransition', () => {
     const handle = runMapFillTransition(
       svg,
       { fills: new Map([['06', '#ff0000']]), points: new Map() },
-      { duration: 100 },
+      { update: { duration: 100 } },
     );
     runToCompletion();
 
@@ -342,12 +357,16 @@ describe('runMapFillTransition', () => {
     ]);
 
     expect(() => {
-      runMapFillTransition(svg, { fills: prevFills, points: new Map() }, { duration: 100 });
+      runMapFillTransition(
+        svg,
+        { fills: prevFills, points: new Map() },
+        { update: { duration: 100 } },
+      );
       runToCompletion();
     }).not.toThrow();
 
-    expect(featureAt(svg, 0).getAttribute('fill')).toBe('rgb(0, 0, 255)');
-    expect(featureAt(svg, 1).getAttribute('fill')).toBe('rgb(0, 255, 0)');
+    expect(featureAt(svg, 0).getAttribute('fill')).toBe('#0000ff');
+    expect(featureAt(svg, 1).getAttribute('fill')).toBe('#00ff00');
   });
 });
 
@@ -371,12 +390,17 @@ describe('captureMapSnapshot', () => {
     const snap = captureMapSnapshot(svg);
 
     expect(snap.fills.get('06')).toBe('#ff0000');
-    expect(snap.points.get('sf')).toEqual({
+    expect(snap.points.get('sf')).toMatchObject({
       fill: '#0000ff',
       r: 12,
       cx: 40,
       cy: 60,
+      viewId: null,
     });
+    // A detached clone as drawn: the source of the exit ghost.
+    const ghost = snap.points.get('sf')?.ghost;
+    expect(ghost?.getAttribute('data-point-key')).toBe('sf');
+    expect(ghost?.isConnected).toBe(false);
   });
 
   it('keeps point keys separate from feature keys', () => {
@@ -393,7 +417,7 @@ describe('captureMapSnapshot', () => {
   it('records undefined for geometry attributes the renderer omitted', () => {
     const svg = buildMapSvg([], [{ key: 'sf', fill: '#00ff00' }]);
 
-    expect(captureMapSnapshot(svg).points.get('sf')).toEqual({
+    expect(captureMapSnapshot(svg).points.get('sf')).toMatchObject({
       fill: '#00ff00',
       r: undefined,
       cx: undefined,
@@ -407,7 +431,7 @@ describe('runMapFillTransition point geometry', () => {
     const svg = buildMapSvg([], [{ key: 'sf', fill: '#00ff00', r: 4 }]);
     const prev = captureMapSnapshot(buildMapSvg([], [{ key: 'sf', fill: '#00ff00', r: 20 }]));
 
-    runMapFillTransition(svg, prev, { duration: 100 });
+    runMapFillTransition(svg, prev, { update: { duration: 100 } });
 
     // Synchronous from-state: the dot starts at its OLD radius even though the
     // SVG was already rendered at the new one.
@@ -427,7 +451,7 @@ describe('runMapFillTransition point geometry', () => {
     const svg = buildMapSvg([], [{ key: 'sf', r: 5, cx: 100, cy: 200 }]);
     const prev = captureMapSnapshot(buildMapSvg([], [{ key: 'sf', r: 5, cx: 0, cy: 0 }]));
 
-    runMapFillTransition(svg, prev, { duration: 100 });
+    runMapFillTransition(svg, prev, { update: { duration: 100 } });
     pumpRaf(0);
     pumpRaf(50);
 
@@ -448,7 +472,7 @@ describe('runMapFillTransition point geometry', () => {
     const svg = buildMapSvg([], [{ key: 'sf', fill: '#808080', r: 3 }]);
     const prev = captureMapSnapshot(buildMapSvg([], [{ key: 'sf', fill: '#ff0000', r: 15 }]));
 
-    runMapFillTransition(svg, prev, { duration: 100 });
+    runMapFillTransition(svg, prev, { update: { duration: 100 } });
     pumpRaf(0);
     pumpRaf(50);
 
@@ -459,16 +483,60 @@ describe('runMapFillTransition point geometry', () => {
 
     pumpRaf(100);
     expect(Number(el.getAttribute('r'))).toBe(3);
-    expect(el.getAttribute('fill')).toBe('rgb(128, 128, 128)');
+    expect(el.getAttribute('fill')).toBe('#808080');
   });
 
-  it('leaves a new point at its final geometry when it has no previous state', () => {
+  it('fades a new point in at its final geometry when it has no previous state', () => {
     const svg = buildMapSvg([], [{ key: 'new', fill: '#00ff00', r: 8 }]);
 
-    runMapFillTransition(svg, captureMapSnapshot(null), { duration: 100 });
+    runMapFillTransition(svg, captureMapSnapshot(null), { update: { duration: 100 } });
 
     expect(pointAt(svg, 0).getAttribute('r')).toBe('8');
-    expect(rafCallbacks.size).toBe(0);
+    expect(pointAt(svg, 0).getAttribute('opacity')).toBe('0');
+    runToCompletion();
+    expect(pointAt(svg, 0).hasAttribute('opacity')).toBe(false);
+  });
+
+  it('ghosts a removed point and fades it out over the exit phase', () => {
+    const svg = buildMapSvg([], []);
+    const camera = document.createElementNS(SVG_NS, 'g');
+    camera.setAttribute('data-oc-map-camera', '');
+    svg.appendChild(camera);
+    const prev = captureMapSnapshot(buildMapSvg([], [{ key: 'gone', fill: '#ff0000', r: 6 }]));
+
+    runMapFillTransition(svg, prev, {
+      update: { duration: 100 },
+      exit: { duration: 120, ease: 'gentle' },
+    });
+
+    const ghost = camera.querySelector('.oc-ghost');
+    expect(ghost).not.toBeNull();
+    expect(ghost?.hasAttribute('data-point-key')).toBe(false);
+    expect(ghost?.getAttribute('aria-hidden')).toBe('true');
+    pumpRaf(0);
+    pumpRaf(60);
+    const mid = Number(ghost?.getAttribute('opacity'));
+    expect(mid).toBeGreaterThan(0);
+    expect(mid).toBeLessThan(1);
+    runToCompletion();
+    expect(camera.querySelector('.oc-ghost')).toBeNull();
+  });
+
+  it('follows update.ease instead of a fixed curve', () => {
+    const at = (ease: 'gentle' | 'snappy') => {
+      const svg = buildMapSvg([], [{ key: 'sf', r: 100 }]);
+      const prev = captureMapSnapshot(buildMapSvg([], [{ key: 'sf', r: 0 }]));
+      runMapFillTransition(svg, prev, { update: { duration: 100, ease } });
+      pumpRaf(0);
+      pumpRaf(25);
+      const r = Number(pointAt(svg, 0).getAttribute('r'));
+      document.body.innerHTML = '';
+      rafCallbacks.clear();
+      return r;
+    };
+    const snappy = at('snappy');
+    const gentle = at('gentle');
+    expect(Math.abs(snappy - gentle)).toBeGreaterThan(1);
   });
 
   it('skips geometry that did not change', () => {
@@ -477,7 +545,7 @@ describe('runMapFillTransition point geometry', () => {
       buildMapSvg([], [{ key: 'sf', fill: '#00ff00', r: 5, cx: 10, cy: 10 }]),
     );
 
-    runMapFillTransition(svg, prev, { duration: 100 });
+    runMapFillTransition(svg, prev, { update: { duration: 100 } });
 
     // Nothing differs, so no tweens are scheduled at all.
     expect(rafCallbacks.size).toBe(0);
@@ -487,7 +555,7 @@ describe('runMapFillTransition point geometry', () => {
     const svg = buildMapSvg([], [{ key: 'sf', r: 4, cx: 50 }]);
     const prev = captureMapSnapshot(buildMapSvg([], [{ key: 'sf', r: 20, cx: 0 }]));
 
-    const handle = runMapFillTransition(svg, prev, { duration: 100 });
+    const handle = runMapFillTransition(svg, prev, { update: { duration: 100 } });
     pumpRaf(0);
     pumpRaf(50);
     handle.cancel();
@@ -500,7 +568,7 @@ describe('runMapFillTransition point geometry', () => {
     const svg = buildMapSvg([], [{ key: 'sf', r: 4 }]);
     const prev = captureMapSnapshot(buildMapSvg([], [{ key: 'sf', r: 20 }]));
 
-    runMapFillTransition(svg, prev, { duration: 0 });
+    runMapFillTransition(svg, prev, { update: { duration: 0 } });
 
     expect(Number(pointAt(svg, 0).getAttribute('r'))).toBe(4);
     expect(rafCallbacks.size).toBe(0);
@@ -513,11 +581,11 @@ describe('runMapFillTransition point geometry', () => {
     runMapFillTransition(
       svg,
       { fills: new Map(), points: new Map([['sf', { fill: '#ff0000' }]]) },
-      { duration: 100 },
+      { update: { duration: 100 } },
     );
     runToCompletion();
 
-    expect(svg.querySelector('.oc-map-point')!.getAttribute('fill')).toBe('rgb(0, 255, 0)');
+    expect(svg.querySelector('.oc-map-point')!.getAttribute('fill')).toBe('#00ff00');
   });
 });
 
@@ -536,7 +604,7 @@ describe('missing-data paint during updates', () => {
         ]),
         points: new Map(),
       },
-      { duration: 300 },
+      { update: { duration: 300 } },
     );
     for (const time of [0, 150, 300]) {
       pumpRaf(time);

@@ -32,6 +32,12 @@ import {
   wireMarkNavigation,
 } from './interactions/mark-navigation';
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
+import {
+  type ElementTween,
+  type ElementTweenHandle,
+  numAttr,
+  runElementTweens,
+} from './motion/element-tween';
 import { observeResize } from './resize-observer';
 import { resolveDarkMode } from './resolve-dark-mode';
 import { prepareSettledExportTheme } from './theme-style-block';
@@ -115,6 +121,74 @@ export interface TileMapInstance {
 }
 
 // ---------------------------------------------------------------------------
+// Update tween
+// ---------------------------------------------------------------------------
+
+/** A tile's paint as drawn right now (mid-tween values included). */
+interface TilePaint {
+  fill: string | null;
+  fillOpacity: number | undefined;
+  /** Inline `fill` of the code label, then the value label. */
+  labels: string[];
+}
+
+const styleFill = (el: Element) =>
+  (el as Element & ElementCSSInlineStyle).style.getPropertyValue('fill');
+
+function captureTiles(svg: SVGSVGElement | null): Map<string, TilePaint> {
+  const tiles = new Map<string, TilePaint>();
+  if (!svg) return tiles;
+  for (const tile of svg.querySelectorAll('.oc-tilemap-tile[data-state]')) {
+    const rect = tile.querySelector('rect');
+    tiles.set(tile.getAttribute('data-state')!, {
+      fill: rect?.getAttribute('fill') ?? null,
+      fillOpacity: rect ? numAttr(rect, 'fill-opacity') : undefined,
+      labels: [...tile.querySelectorAll('text')].map(styleFill),
+    });
+  }
+  return tiles;
+}
+
+/** Geography is fixed, so tiles only recolour: fill, fill-opacity, label colour. */
+function buildTileTweens(prev: Map<string, TilePaint>, svg: SVGSVGElement): ElementTween[] {
+  const tweens: ElementTween[] = [];
+  for (const tile of svg.querySelectorAll('.oc-tilemap-tile[data-state]')) {
+    const before = prev.get(tile.getAttribute('data-state')!);
+    if (!before) continue;
+    const rect = tile.querySelector('rect');
+    if (rect) {
+      const fill = rect.getAttribute('fill');
+      if (before.fill && fill && before.fill !== fill) {
+        tweens.push({ kind: 'color', el: rect, attr: 'fill', from: before.fill, to: fill });
+      }
+      const opacity = numAttr(rect, 'fill-opacity');
+      if (
+        before.fillOpacity !== undefined &&
+        opacity !== undefined &&
+        before.fillOpacity !== opacity
+      ) {
+        tweens.push({
+          kind: 'number',
+          el: rect,
+          attr: 'fill-opacity',
+          from: before.fillOpacity,
+          to: opacity,
+        });
+      }
+    }
+    const labels = tile.querySelectorAll('text');
+    labels.forEach((label, i) => {
+      const from = before.labels[i];
+      const to = styleFill(label);
+      if (from && to && from !== to) {
+        tweens.push({ kind: 'color', el: label, attr: 'fill', from, to, style: true });
+      }
+    });
+  }
+  return tweens;
+}
+
+// ---------------------------------------------------------------------------
 // Main API
 // ---------------------------------------------------------------------------
 
@@ -145,6 +219,8 @@ export function createTileMap(
   // Waiting (held until seen): every re-render re-arms it on the new SVG.
   // Playing: resizes defer and replay after it settles; updates snap.
   const entrance = createEntranceLifecycle({ onDeferredResize: () => resize() });
+  // In-flight data-update tween; every render() and destroy() snaps it.
+  let updateTween: ElementTweenHandle | null = null;
 
   // Latches whether the host constrains our height. Measured once, on the
   // first render that produces a real rect: height 0 with a real width means
@@ -345,6 +421,8 @@ export function createTileMap(
   function render(): void {
     const focusedMark = captureMarkFocus(svgElement);
     tooltipManager?.hide();
+    updateTween?.cancel();
+    updateTween = null;
     // Cancel the running entrance; one still waiting to be seen re-arms.
     const rearm = entrance.reset();
     const hasData = currentLayout.tiles.some((tile) => tile.hasData);
@@ -409,10 +487,25 @@ export function createTileMap(
     fontFamily = nextFont;
     measureText = nextMeasure;
 
+    // Read the tiles as drawn before render() snaps any in-flight tween, so
+    // an interrupting update continues from what is on screen.
+    const update = nextLayout.animation?.update;
+    const prevTiles =
+      update && !entrance.playing && !entrance.waiting ? captureTiles(svgElement) : null;
+
     currentLayout = nextLayout;
     // An update while the entrance waits to be seen re-arms it on the new
     // data; one while it plays snaps.
     render();
+
+    // No tween when this render armed the entrance (the map's first data).
+    if (update && prevTiles?.size && svgElement && !entrance.waiting && !entrance.playing) {
+      updateTween = runElementTweens(buildTileTweens(prevTiles, svgElement), {
+        update,
+        exit: nextLayout.animation?.exit,
+        maxMarks: update.maxMarks,
+      });
+    }
   }
 
   function resize(): void {
@@ -465,8 +558,10 @@ export function createTileMap(
     if (destroyed) return;
     destroyed = true;
 
-    // Cancel the running entrance
+    // Cancel the running entrance and any update tween
     entrance.destroy();
+    updateTween?.cancel();
+    updateTween = null;
 
     // Clean up events
     if (cleanupTooltipEvents) {

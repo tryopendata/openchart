@@ -84,6 +84,9 @@ function renderRows(
     rowGroup.setAttribute('class', 'oc-barlist-row');
     rowGroup.setAttribute('data-row-index', String(row.index));
     if (ctx.interactive) rowGroup.setAttribute('role', 'listitem');
+    // Update tweens match rows across renders by key (live mounts only, so
+    // static output is unchanged).
+    if (ctx.interactive) rowGroup.setAttribute('data-key', row.key);
     if (ctx.interactive && row.aria?.label) {
       rowGroup.setAttribute('aria-label', row.aria.label);
     }

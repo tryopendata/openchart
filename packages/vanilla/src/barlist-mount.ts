@@ -32,6 +32,14 @@ import {
   wireMarkNavigation,
 } from './interactions/mark-navigation';
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
+import {
+  currentOffset,
+  type ElementTween,
+  type ElementTweenHandle,
+  makeGhost,
+  numAttr,
+  runElementTweens,
+} from './motion/element-tween';
 import { observeResize } from './resize-observer';
 import { resolveDarkMode } from './resolve-dark-mode';
 import { prepareSettledExportTheme } from './theme-style-block';
@@ -66,6 +74,73 @@ export interface BarListInstance {
 }
 
 // ---------------------------------------------------------------------------
+// Update tween
+// ---------------------------------------------------------------------------
+
+/** A rendered row as it is drawn right now (mid-tween values included). */
+interface RowSnapshot {
+  el: Element;
+  /** Drawn bar top: its `y` plus any in-flight reorder offset. */
+  y: number;
+  width: number | undefined;
+  fill: string | null;
+}
+
+function captureRows(svg: SVGSVGElement | null): Map<string, RowSnapshot> {
+  const rows = new Map<string, RowSnapshot>();
+  if (!svg) return rows;
+  for (const row of svg.querySelectorAll('.oc-barlist-row[data-key]')) {
+    const bar = row.querySelector('.oc-barlist-bar');
+    if (!bar) continue;
+    rows.set(row.getAttribute('data-key')!, {
+      el: row,
+      y: (numAttr(bar, 'y') ?? 0) + currentOffset(row).y,
+      width: numAttr(bar, 'width'),
+      fill: bar.getAttribute('fill'),
+    });
+  }
+  return rows;
+}
+
+/**
+ * Rows that stay slide to their new slot while the bar resizes and recolours
+ * (the value text swaps at the start); new rows fade in; removed rows leave a
+ * fading ghost.
+ */
+function buildRowTweens(prev: Map<string, RowSnapshot>, svg: SVGSVGElement): ElementTween[] {
+  const tweens: ElementTween[] = [];
+  const kept = new Set<string>();
+  for (const row of svg.querySelectorAll('.oc-barlist-row[data-key]')) {
+    const key = row.getAttribute('data-key')!;
+    const before = prev.get(key);
+    if (!before) {
+      tweens.push({ kind: 'enter', el: row });
+      continue;
+    }
+    kept.add(key);
+    const bar = row.querySelector('.oc-barlist-bar');
+    if (!bar) continue;
+    const dy = before.y - (numAttr(bar, 'y') ?? 0);
+    if (dy !== 0) tweens.push({ kind: 'offset', el: row, dx: 0, dy });
+    const width = numAttr(bar, 'width');
+    if (before.width !== undefined && width !== undefined && before.width !== width) {
+      tweens.push({ kind: 'number', el: bar, attr: 'width', from: before.width, to: width });
+    }
+    const fill = bar.getAttribute('fill');
+    if (before.fill && fill && before.fill !== fill) {
+      tweens.push({ kind: 'color', el: bar, attr: 'fill', from: before.fill, to: fill });
+    }
+  }
+  const ghostParent = svg.querySelector('.oc-barlist-rows');
+  if (ghostParent) {
+    for (const [key, before] of prev) {
+      if (!kept.has(key)) tweens.push({ kind: 'exit', ghost: makeGhost(before.el, ghostParent) });
+    }
+  }
+  return tweens;
+}
+
+// ---------------------------------------------------------------------------
 // Main API
 // ---------------------------------------------------------------------------
 
@@ -88,6 +163,8 @@ export function createBarList(
   // Waiting (held until seen): every re-render re-arms it on the new SVG.
   // Playing: resizes defer and replay after it settles; updates snap.
   const entrance = createEntranceLifecycle({ onDeferredResize: () => resize() });
+  // In-flight data-update tween; every render() and destroy() snaps it.
+  let updateTween: ElementTweenHandle | null = null;
 
   // Set when webfonts have loaded and a recompile is owed. The next render()
   // that recompiles flips data-oc-fonts-state to 'ready' and clears this, so
@@ -241,6 +318,8 @@ export function createBarList(
   function render(): void {
     const focusedMark = captureMarkFocus(svgElement);
     tooltipManager?.hide();
+    updateTween?.cancel();
+    updateTween = null;
     const rearm = entrance.reset();
     const hasRows = currentLayout.rows.length > 0;
     const animate = (entranceOwed || rearm) && hasRows && !!currentLayout.animation?.enter;
@@ -300,10 +379,25 @@ export function createBarList(
     fontFamily = nextFont;
     measureText = nextMeasure;
 
+    // Read the rows as drawn before render() snaps any in-flight tween, so an
+    // interrupting update continues from what is on screen.
+    const update = nextLayout.animation?.update;
+    const prevRows =
+      update && !entrance.playing && !entrance.waiting ? captureRows(svgElement) : null;
+
     currentLayout = nextLayout;
     // An update while the entrance waits to be seen re-arms it on the new
     // data; one while it plays snaps.
     render();
+
+    // No tween when this render armed the entrance (the list's first rows).
+    if (update && prevRows?.size && svgElement && !entrance.waiting && !entrance.playing) {
+      updateTween = runElementTweens(buildRowTweens(prevRows, svgElement), {
+        update,
+        exit: nextLayout.animation?.exit,
+        maxMarks: update.maxMarks,
+      });
+    }
   }
 
   function resize(): void {
@@ -345,6 +439,8 @@ export function createBarList(
     destroyed = true;
 
     entrance.destroy();
+    updateTween?.cancel();
+    updateTween = null;
 
     if (cleanupTooltipEvents) {
       cleanupTooltipEvents();

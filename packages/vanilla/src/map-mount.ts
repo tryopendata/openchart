@@ -1051,8 +1051,11 @@ export function createGeoMap(
       svgElement &&
       currentLayout.animation?.update
     ) {
+      const update = currentLayout.animation.update;
       fillTransitionHandle = runMapFillTransition(svgElement, prevPaint, {
-        duration: currentLayout.animation.update.duration,
+        update,
+        exit: currentLayout.animation.exit,
+        maxMarks: update.maxMarks,
       });
     }
 

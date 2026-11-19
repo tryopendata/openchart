@@ -1,20 +1,28 @@
 /**
- * Map update transition: tweens feature fills and point geometry between
- * layout snapshots.
+ * Map update transition: the geo map's adapter onto the shared keyed element
+ * tween (`motion/element-tween.ts`).
  *
- * Captures current fill colors (and, for the point layer, radius and center)
- * before a re-render, then interpolates from previous to new values using a
- * rAF loop. Same approach as the main chart transition driver, scoped to
- * map-specific concerns.
+ * Captures current fill colors (and, for the point layer, radius, center and
+ * a clone of each point) before a re-render, then hands the from/to pairs to
+ * `runElementTweens`, which owns timing (`update.ease`/spring and the exit
+ * phase), the synchronous from-state, ghosts and cancellation.
  *
  * Features tween fill only: their geometry is a projected path, and morphing
  * one path `d` string into another is the intractable case the chart driver
  * handles with freeze-and-crossfade. Points are bare circles, so `r`/`cx`/`cy`
- * are three numbers that interpolate directly.
+ * are three numbers that interpolate directly. Entering points fade in;
+ * removed points leave a fading ghost.
  */
 
-import { interpolateRgb } from 'd3-interpolate';
-import { easingFns } from './story/tween';
+import { findGeoViewScene } from './map-view-renderer';
+import {
+  type ElementTween,
+  type ElementTweenHandle,
+  type ElementTweenOptions,
+  makeGhost,
+  numAttr,
+  runElementTweens,
+} from './motion/element-tween';
 
 /** Per-point geometry captured alongside fill so it can be tweened. */
 export interface MapPointSnapshot {
@@ -22,6 +30,10 @@ export interface MapPointSnapshot {
   r?: number;
   cx?: number;
   cy?: number;
+  /** Deep clone as drawn, the source of its exit ghost if the point is removed. */
+  ghost?: Element;
+  /** The geo view the point was drawn in (`data-geo-view-id`), null outside views. */
+  viewId?: string | null;
 }
 
 export interface MapTransitionSnapshot {
@@ -31,12 +43,7 @@ export interface MapTransitionSnapshot {
   points: Map<string, MapPointSnapshot>;
 }
 
-function numAttr(el: Element, name: string): number | undefined {
-  const raw = el.getAttribute(name);
-  if (raw === null) return undefined;
-  const n = Number(raw);
-  return Number.isFinite(n) ? n : undefined;
-}
+const POINT_GEOMETRY = ['r', 'cx', 'cy'] as const;
 
 /**
  * Snapshot the current paint/geometry of a rendered map.
@@ -66,127 +73,86 @@ export function captureMapSnapshot(svg: SVGElement | null): MapTransitionSnapsho
       r: numAttr(p, 'r'),
       cx: numAttr(p, 'cx'),
       cy: numAttr(p, 'cy'),
+      ghost: p.cloneNode(true) as Element,
+      viewId: p.closest('[data-geo-view-id]')?.getAttribute('data-geo-view-id') ?? null,
     });
   }
 
   return { fills, points };
 }
 
-/** A single attribute being interpolated over the transition. */
-type Tween =
-  | { kind: 'fill'; el: Element; to: string; interp: (t: number) => string }
-  | { kind: 'num'; el: Element; attr: 'r' | 'cx' | 'cy'; from: number; to: number };
-
-function applyTween(tw: Tween, eased: number): void {
-  if (tw.kind === 'fill') {
-    tw.el.setAttribute('fill', tw.interp(eased));
-  } else {
-    tw.el.setAttribute(tw.attr, String(tw.from + (tw.to - tw.from) * eased));
+/** Where a removed point's ghost goes: its view's camera, beside the live points. */
+function ghostParent(svg: SVGElement, viewId: string | null | undefined): Element | null {
+  const scope = viewId ? findGeoViewScene(svg, viewId) : svg;
+  const camera = scope?.querySelector('[data-oc-map-camera]');
+  if (!camera) return null;
+  for (const child of camera.children) {
+    if (child.classList.contains('oc-map-points')) return child;
   }
-}
-
-function snapTween(tw: Tween): void {
-  if (tw.kind === 'fill') {
-    tw.el.setAttribute('fill', tw.to);
-  } else {
-    tw.el.setAttribute(tw.attr, String(tw.to));
-  }
+  return camera;
 }
 
 /**
  * Tween a re-rendered map from a previous snapshot to its current state.
  *
- * The SVG is already rendered in its final state when this is called, so every
- * from-value is written back synchronously before the first frame. Without that
- * the first painted frame would show the final state and the transition would
- * read as a snap (the same synchronous from-state rule the chart driver uses).
+ * The SVG is already rendered in its final state when this is called; the
+ * element tween writes every from-value back synchronously before the first
+ * frame, so the first painted frame never shows the final state.
  */
 export function runMapFillTransition(
   svg: SVGElement,
   snapshot: MapTransitionSnapshot,
-  opts: { duration: number },
-): { cancel: () => void } {
-  const tweens: Tween[] = [];
+  opts: ElementTweenOptions,
+): ElementTweenHandle {
+  const tweens: ElementTween[] = [];
 
   const features = svg.querySelectorAll('.oc-map-feature[data-key]');
   for (const p of features) {
     const key = p.getAttribute('data-key');
     const to = p.getAttribute('fill');
     const from = key ? snapshot.fills.get(key) : undefined;
-    // Pattern references belong to the newly rendered defs. Interpolating them
-    // as RGB produces black and can reference a removed pattern during updates.
-    if (from && to && from !== to && !from.startsWith('url(') && !to.startsWith('url(')) {
-      tweens.push({ kind: 'fill', el: p, to, interp: interpolateRgb(from, to) });
-      p.setAttribute('fill', from);
-    }
+    // A url() paint on either side snaps inside the element tween.
+    if (from && to && from !== to) tweens.push({ kind: 'color', el: p, attr: 'fill', from, to });
   }
 
+  const kept = new Set<string>();
   const points = svg.querySelectorAll('.oc-map-point[data-point-key]');
   for (const p of points) {
     const key = p.getAttribute('data-point-key');
-    const before = key === null ? undefined : snapshot.points.get(key);
-    if (!before) continue;
+    if (key === null) continue;
+    const before = snapshot.points.get(key);
+    if (!before) {
+      tweens.push({ kind: 'enter', el: p });
+      continue;
+    }
+    kept.add(key);
 
     const toFill = p.getAttribute('fill');
     if (before.fill && toFill && before.fill !== toFill) {
-      tweens.push({
-        kind: 'fill',
-        el: p,
-        to: toFill,
-        interp: interpolateRgb(before.fill, toFill),
-      });
-      p.setAttribute('fill', before.fill);
+      tweens.push({ kind: 'color', el: p, attr: 'fill', from: before.fill, to: toFill });
     }
 
     // Radius and center: a step that re-encodes the size channel, or one that
     // shifts the projection, moves these. Without tweening them the dots snap
     // to their new size/place while the color eases, which reads as a reset
     // rather than a transition.
-    for (const attr of ['r', 'cx', 'cy'] as const) {
+    for (const attr of POINT_GEOMETRY) {
       const from = before[attr];
       const to = numAttr(p, attr);
       if (from === undefined || to === undefined || from === to) continue;
-      tweens.push({ kind: 'num', el: p, attr, from, to });
-      p.setAttribute(attr, String(from));
+      tweens.push({ kind: 'number', el: p, attr, from, to });
     }
   }
 
-  if (tweens.length === 0 || opts.duration <= 0) {
-    for (const tw of tweens) snapTween(tw);
-    return { cancel: () => {} };
+  for (const [key, before] of snapshot.points) {
+    if (kept.has(key) || !before.ghost) continue;
+    const parent = ghostParent(svg, before.viewId);
+    if (!parent) continue;
+    const ghost = makeGhost(before.ghost, parent);
+    // Keyed lookups (the next snapshot, hover) must never find the ghost.
+    ghost.removeAttribute('data-point-key');
+    tweens.push({ kind: 'exit', ghost });
   }
 
-  const duration = opts.duration;
-  let startTime: number | null = null;
-  let rafId = 0;
-  let cancelled = false;
-
-  function tick(now: number) {
-    if (cancelled) return;
-    if (startTime === null) startTime = now;
-    const elapsed = now - startTime;
-    const t = Math.min(1, elapsed / duration);
-    const eased = easingFns.easeInOutCubic(t);
-
-    for (const tw of tweens) {
-      applyTween(tw, eased);
-    }
-
-    if (t < 1) {
-      rafId = requestAnimationFrame(tick);
-    }
-  }
-
-  rafId = requestAnimationFrame(tick);
-
-  return {
-    cancel() {
-      cancelled = true;
-      cancelAnimationFrame(rafId);
-      // Snap to final state
-      for (const tw of tweens) {
-        snapTween(tw);
-      }
-    },
-  };
+  return runElementTweens(tweens, opts);
 }

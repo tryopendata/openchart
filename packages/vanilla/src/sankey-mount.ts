@@ -32,6 +32,14 @@ import {
   wireMarkNavigation,
 } from './interactions/mark-navigation';
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
+import {
+  currentOffset,
+  type ElementTween,
+  type ElementTweenHandle,
+  makeGhost,
+  numAttr,
+  runElementTweens,
+} from './motion/element-tween';
 import { observeResize } from './resize-observer';
 import { resolveDarkMode } from './resolve-dark-mode';
 import { renderSankeySVG } from './sankey-renderer';
@@ -106,6 +114,217 @@ interface TraceSeeds {
 }
 
 // ---------------------------------------------------------------------------
+// Update tween
+// ---------------------------------------------------------------------------
+
+const RECT_ATTRS = ['x', 'y', 'width', 'height'] as const;
+const GRADIENT_ATTRS = ['x1', 'x2'] as const;
+type NumberMap = Partial<Record<string, number>>;
+
+interface DrawnNode {
+  el: Element;
+  rect: NumberMap;
+  fill: string | null;
+}
+interface DrawnLink {
+  el: Element;
+  d: string | null;
+  fill: string | null;
+  gradient: NumberMap | null;
+}
+interface DrawnLabel {
+  el: Element;
+  x: number;
+  y: number;
+}
+
+/** The sankey as drawn right now (mid-tween values included), keyed for matching. */
+interface SankeySnapshot {
+  nodes: Map<string, DrawnNode>;
+  links: Map<string, DrawnLink>;
+  labels: Map<string, DrawnLabel>;
+}
+
+function numbersOf(el: Element, attrs: readonly string[]): NumberMap {
+  const out: NumberMap = {};
+  for (const attr of attrs) out[attr] = numAttr(el, attr);
+  return out;
+}
+
+/** The `<linearGradient>` a link path paints with, if any. */
+function gradientOf(svg: Element, path: Element | null): Element | null {
+  const id = /^url\(\s*#([^)\s]+)\s*\)$/.exec(path?.getAttribute('fill')?.trim() ?? '')?.[1];
+  if (!id) return null;
+  for (const grad of svg.querySelectorAll('linearGradient')) {
+    if (grad.getAttribute('id') === id) return grad;
+  }
+  return null;
+}
+
+/**
+ * Links keyed `source->target`; repeats of one pair get an occurrence suffix
+ * so each still matches its counterpart in order.
+ */
+function linksByKey(svg: Element): Map<string, Element> {
+  const out = new Map<string, Element>();
+  const seen = new Map<string, number>();
+  for (const el of svg.querySelectorAll('.oc-sankey-link[data-source][data-target]')) {
+    const pair = `${el.getAttribute('data-source')}->${el.getAttribute('data-target')}`;
+    const n = seen.get(pair) ?? 0;
+    seen.set(pair, n + 1);
+    out.set(n === 0 ? pair : `${pair}#${n}`, el);
+  }
+  return out;
+}
+
+function byNodeId(svg: Element, selector: string): Map<string, Element> {
+  const out = new Map<string, Element>();
+  for (const el of svg.querySelectorAll(`${selector}[data-node-id]`)) {
+    out.set(el.getAttribute('data-node-id')!, el);
+  }
+  return out;
+}
+
+function captureSankey(svg: SVGSVGElement): SankeySnapshot {
+  const nodes = new Map<string, DrawnNode>();
+  for (const [id, el] of byNodeId(svg, '.oc-sankey-node')) {
+    const rect = el.querySelector('rect');
+    nodes.set(id, {
+      el,
+      rect: rect ? numbersOf(rect, RECT_ATTRS) : {},
+      fill: rect?.getAttribute('fill') ?? null,
+    });
+  }
+  const links = new Map<string, DrawnLink>();
+  for (const [key, el] of linksByKey(svg)) {
+    const path = el.querySelector('path');
+    const gradient = gradientOf(svg, path);
+    links.set(key, {
+      el,
+      d: path?.getAttribute('d') ?? null,
+      fill: path?.getAttribute('fill') ?? null,
+      gradient: gradient ? numbersOf(gradient, GRADIENT_ATTRS) : null,
+    });
+  }
+  const labels = new Map<string, DrawnLabel>();
+  for (const [id, el] of byNodeId(svg, '.oc-sankey-label')) {
+    const offset = currentOffset(el);
+    labels.set(id, {
+      el,
+      x: (numAttr(el, 'x') ?? 0) + offset.x,
+      y: (numAttr(el, 'y') ?? 0) + offset.y,
+    });
+  }
+  return { nodes, links, labels };
+}
+
+function pushNumbers(
+  tweens: ElementTween[],
+  el: Element,
+  from: NumberMap,
+  attrs: readonly string[],
+): void {
+  for (const attr of attrs) {
+    const a = from[attr];
+    const b = numAttr(el, attr);
+    if (a !== undefined && b !== undefined && a !== b) {
+      tweens.push({ kind: 'number', el, attr, from: a, to: b });
+    }
+  }
+}
+
+/**
+ * A removal ghost that no longer answers to the hover code's selectors or to
+ * the sankey's opacity transition (which would lag the fade), and drops any
+ * hover opacity it was cloned with.
+ */
+function sankeyGhost(source: Element, parent: Element, cls: string): Element {
+  const ghost = makeGhost(source, parent);
+  ghost.classList.remove(cls);
+  for (const node of [ghost, ...ghost.querySelectorAll('*')]) {
+    (node as Element & ElementCSSInlineStyle).style?.removeProperty('opacity');
+  }
+  return ghost;
+}
+
+/**
+ * Nodes move and resize, link ribbons morph (their gradient endpoints follow
+ * the nodes), labels slide. New nodes and links fade in; removed ones leave
+ * fading ghosts, their gradients re-homed into the new SVG.
+ */
+function buildSankeyTweens(prev: SankeySnapshot, svg: SVGSVGElement): ElementTween[] {
+  const tweens: ElementTween[] = [];
+
+  const nodes = byNodeId(svg, '.oc-sankey-node');
+  for (const [id, el] of nodes) {
+    const rect = el.querySelector('rect');
+    if (!rect) continue;
+    const before = prev.nodes.get(id);
+    if (!before) {
+      // The rect, not the group: the group's opacity carries a hover transition.
+      tweens.push({ kind: 'enter', el: rect });
+      continue;
+    }
+    pushNumbers(tweens, rect, before.rect, RECT_ATTRS);
+    const fill = rect.getAttribute('fill');
+    if (before.fill && fill && before.fill !== fill) {
+      tweens.push({ kind: 'color', el: rect, attr: 'fill', from: before.fill, to: fill });
+    }
+  }
+
+  const labels = byNodeId(svg, '.oc-sankey-label');
+  for (const [id, el] of labels) {
+    const before = prev.labels.get(id);
+    if (!before) {
+      tweens.push({ kind: 'enter', el });
+      continue;
+    }
+    const dx = before.x - (numAttr(el, 'x') ?? 0);
+    const dy = before.y - (numAttr(el, 'y') ?? 0);
+    if (dx !== 0 || dy !== 0) tweens.push({ kind: 'offset', el, dx, dy });
+  }
+
+  const links = linksByKey(svg);
+  for (const [key, el] of links) {
+    const before = prev.links.get(key);
+    if (!before) {
+      tweens.push({ kind: 'enter', el });
+      continue;
+    }
+    const path = el.querySelector('path');
+    if (!path) continue;
+    const d = path.getAttribute('d');
+    if (before.d && d && before.d !== d) {
+      tweens.push({ kind: 'path', el: path, attr: 'd', from: before.d, to: d });
+    }
+    const fill = path.getAttribute('fill');
+    if (before.fill && fill && before.fill !== fill) {
+      tweens.push({ kind: 'color', el: path, attr: 'fill', from: before.fill, to: fill });
+    }
+    const gradient = gradientOf(svg, path);
+    if (gradient && before.gradient) pushNumbers(tweens, gradient, before.gradient, GRADIENT_ATTRS);
+  }
+
+  const groups = (cls: string) => svg.querySelector(`.${cls}`);
+  const nodeParent = groups('oc-sankey-nodes');
+  const labelParent = groups('oc-sankey-labels');
+  const linkParent = groups('oc-sankey-links');
+  for (const [id, before] of prev.nodes) {
+    if (nodes.has(id) || !nodeParent) continue;
+    tweens.push({ kind: 'exit', ghost: sankeyGhost(before.el, nodeParent, 'oc-sankey-node') });
+  }
+  for (const [id, before] of prev.labels) {
+    if (labels.has(id) || !labelParent) continue;
+    tweens.push({ kind: 'exit', ghost: sankeyGhost(before.el, labelParent, 'oc-sankey-label') });
+  }
+  for (const [key, before] of prev.links) {
+    if (links.has(key) || !linkParent) continue;
+    tweens.push({ kind: 'exit', ghost: sankeyGhost(before.el, linkParent, 'oc-sankey-link') });
+  }
+  return tweens;
+}
+
+// ---------------------------------------------------------------------------
 // Main API
 // ---------------------------------------------------------------------------
 
@@ -136,6 +355,8 @@ export function createSankey(
   // Waiting (held until seen): every re-render re-arms it on the new SVG.
   // Playing: resizes defer and replay after it settles; updates snap.
   const entrance = createEntranceLifecycle({ onDeferredResize: () => resize() });
+  // In-flight data-update tween; every render() and destroy() snaps it.
+  let updateTween: ElementTweenHandle | null = null;
 
   // Set when webfonts have loaded and a recompile is owed. The next render()
   // that recompiles flips data-oc-fonts-state to 'ready' and clears this, so
@@ -479,7 +700,9 @@ export function createSankey(
     const focusedMark = captureMarkFocus(svgElement);
     tooltipManager?.hide();
 
-    // Cancel the in-progress entrance before tearing down
+    // Cancel the in-progress entrance and update tween before tearing down
+    updateTween?.cancel();
+    updateTween = null;
     const rearmEntrance = entrance.reset();
     if (svgElement) {
       cancelAnimations(svgElement);
@@ -552,7 +775,24 @@ export function createSankey(
     fontFamily = nextFont;
     measureText = nextMeasure;
 
+    // Read the sankey as drawn before render() snaps any in-flight tween, so
+    // an interrupting update continues from what is on screen.
+    const update = nextLayout.animation?.update;
+    const prev =
+      update && svgElement && !entrance.playing && !entrance.waiting
+        ? captureSankey(svgElement)
+        : null;
+
     render(nextLayout);
+
+    // No tween when this render armed the entrance (the sankey's first nodes).
+    if (update && prev?.nodes.size && svgElement && !entrance.waiting && !entrance.playing) {
+      updateTween = runElementTweens(buildSankeyTweens(prev, svgElement), {
+        update,
+        exit: nextLayout.animation?.exit,
+        maxMarks: update.maxMarks,
+      });
+    }
   }
 
   function resize(): void {
@@ -599,8 +839,10 @@ export function createSankey(
     if (destroyed) return;
     destroyed = true;
 
-    // Cancel entrance animations
+    // Cancel entrance animations and any update tween
     entrance.destroy();
+    updateTween?.cancel();
+    updateTween = null;
     if (svgElement) {
       cancelAnimations(svgElement);
     }
