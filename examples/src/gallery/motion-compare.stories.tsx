@@ -42,7 +42,7 @@ const barSpec: ChartSpec = {
   ],
   encoding: {
     x: { field: 'value', type: 'quantitative' },
-    y: { field: 'label', type: 'nominal' },
+    y: { field: 'label', type: 'nominal', sort: '-x' },
   },
   chrome: { title: 'Headcount by team' },
 };
