@@ -32,6 +32,7 @@ import {
   wireMarkNavigation,
 } from './interactions/mark-navigation';
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
+import { prefersReducedMotion } from './motion/tween';
 import { observeResize } from './resize-observer';
 import { resolveDarkMode } from './resolve-dark-mode';
 import { prepareSettledExportTheme } from './theme-style-block';
@@ -375,14 +376,17 @@ export function createTileMap(
     }
 
     // Setup animation cleanup only when actually animating
-    if (animate && currentLayout.animation?.enter) {
-      animationCleanup = setupAnimationCleanup(newSvg, () => {
-        animationCleanup = null;
-        // On animation complete, check if resize was pending
-        if (pendingResize && !destroyed) {
-          pendingResize = false;
-          resize();
-        }
+    // Under reduced motion nothing plays, so no entrance window opens.
+    if (animate && currentLayout.animation?.enter && !prefersReducedMotion()) {
+      animationCleanup = setupAnimationCleanup(newSvg, {
+        onComplete: () => {
+          animationCleanup = null;
+          // On animation complete, check if resize was pending
+          if (pendingResize && !destroyed) {
+            pendingResize = false;
+            resize();
+          }
+        },
       });
     }
 

@@ -101,7 +101,8 @@ function raiseFeature(el: Element, svg: SVGElement): void {
   // Re-appending restarts the element's CSS entrance keyframe. While the map is
   // still animating in, keep paint order and settle for the outline class
   // alone -- a hover this early is worth less than the entrance stuttering.
-  if (svg.classList.contains('oc-animate')) return;
+  // Under reduced motion oc-animate stays on but nothing plays.
+  if (svg.classList.contains('oc-animate') && !prefersReducedMotion()) return;
   const parent = el.parentNode;
   if (!parent || el === parent.lastChild) return;
   if (!featureOrigin.has(el)) {
@@ -948,18 +949,22 @@ export function createGeoMap(
     }
 
     // Setup animation cleanup only when actually animating
-    const isAnimating = animate && !!currentLayout.animation?.enter;
+    // Under reduced motion nothing plays, so no entrance window opens and the
+    // focus dim applies at once.
+    const isAnimating = animate && !!currentLayout.animation?.enter && !prefersReducedMotion();
     if (isAnimating) {
-      animationCleanup = setupAnimationCleanup(newSvg, () => {
-        animationCleanup = null;
-        if (pendingResize && !destroyed) {
-          pendingResize = false;
-          resize();
-        }
-        // Apply deferred focus dim after animation completes
-        if (currentFocusIds && currentFocusIds.length > 0) {
-          applyFocusDim(currentFocusIds);
-        }
+      animationCleanup = setupAnimationCleanup(newSvg, {
+        onComplete: () => {
+          animationCleanup = null;
+          if (pendingResize && !destroyed) {
+            pendingResize = false;
+            resize();
+          }
+          // Apply deferred focus dim after animation completes
+          if (currentFocusIds && currentFocusIds.length > 0) {
+            applyFocusDim(currentFocusIds);
+          }
+        },
       });
     }
 

@@ -163,7 +163,24 @@ function container() {
 afterEach(() => {
   document.body.replaceChildren();
   vi.useRealTimers();
+  vi.restoreAllMocks();
 });
+
+function mockReducedMotion() {
+  return vi.spyOn(window, 'matchMedia').mockImplementation(
+    (query) =>
+      ({
+        matches: query.includes('reduced-motion'),
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }) as MediaQueryList,
+  );
+}
 
 describe.each(fixtures)('$name lifecycle contract', ({ mount, selector, name }) => {
   it('keeps the last valid view and export usable after a rejected update', () => {
@@ -199,6 +216,20 @@ describe.each(fixtures)('$name lifecycle contract', ({ mount, selector, name }) 
     instance.destroy();
   });
 
+  it('opens no entrance window under reduced motion: a resize right after mount re-renders', () => {
+    vi.useFakeTimers();
+    mockReducedMotion();
+    const host = container();
+    const instance = mount(host.element, true);
+    // The class stays (reduced-motion.css plays nothing under it)...
+    expect(host.element.querySelector('svg')?.classList.contains('oc-animate')).toBe(true);
+    // ...but nothing defers: the resize lands without advancing any timer.
+    host.width(390);
+    instance.resize();
+    expect(host.element.querySelector('svg')?.getAttribute('viewBox')?.split(' ')[2]).toBe('390');
+    instance.destroy();
+  });
+
   if (name !== 'bar') {
     it('supports inspection, activation and native Tab exit, preserving focus on resize', () => {
       const host = container();
@@ -225,6 +256,18 @@ describe.each(fixtures)('$name lifecycle contract', ({ mount, selector, name }) 
       instance.destroy();
     });
   }
+});
+
+it('table opens no entrance window under reduced motion', () => {
+  vi.useFakeTimers();
+  mockReducedMotion();
+  const host = container();
+  const instance = createTable(host.element, { ...table, animation: true }, { autoResize: false });
+  const before = host.element.querySelector('.oc-table-wrapper');
+  expect(before?.classList.contains('oc-animate')).toBe(true);
+  instance.resize();
+  expect(host.element.querySelector('.oc-table-wrapper')).not.toBe(before);
+  instance.destroy();
 });
 
 it('Sankey callbacks work without tooltips and teardown clears active evidence', () => {

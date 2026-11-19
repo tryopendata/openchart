@@ -44,6 +44,7 @@ import {
   wireVoronoiTooltipEvents,
 } from './interactions';
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
+import { prefersReducedMotion } from './motion/tween';
 import {
   type ChartInstance,
   type MountOptions,
@@ -596,18 +597,22 @@ export function createChart<TData extends DataRow = DataRow>(
         }
       }
 
-      cleanupAnimations = setupAnimationCleanup(
-        svgElement,
-        () => {
-          cleanupAnimations = null;
-          canvasEntrance = null;
-          if (pendingResize) {
-            pendingResize = false;
-            resize();
-          }
-        },
-        entranceTotalMs,
-      );
+      // Under reduced motion the CSS plays nothing (reduced-motion.css), so
+      // the entrance is complete at once: no window that would defer resizes
+      // and updates. oc-animate stays on the SVG; it is inert there.
+      if (!prefersReducedMotion() || canvasEntrance) {
+        cleanupAnimations = setupAnimationCleanup(svgElement, {
+          onComplete: () => {
+            cleanupAnimations = null;
+            canvasEntrance = null;
+            if (pendingResize) {
+              pendingResize = false;
+              resize();
+            }
+          },
+          totalMs: entranceTotalMs,
+        });
+      }
     }
     // Bump the render generation so tests (and consumers) can observe every
     // full recompile, including the post-font-load one.

@@ -31,6 +31,7 @@ import {
   wireMarkNavigation,
 } from './interactions/mark-navigation';
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
+import { prefersReducedMotion } from './motion/tween';
 import { observeResize } from './resize-observer';
 import { resolveDarkMode } from './resolve-dark-mode';
 import { renderSankeySVG } from './sankey-renderer';
@@ -500,13 +501,16 @@ export function createSankey(
     cleanupTooltipEvents = wireTooltipAndInteraction(svgElement, currentLayout);
 
     // Animation cleanup on first render
-    if (shouldAnimate && svgElement) {
-      animationCleanup = setupAnimationCleanup(svgElement, () => {
-        animationCleanup = null;
-        if (pendingResize) {
-          pendingResize = false;
-          resize();
-        }
+    // Under reduced motion nothing plays, so no entrance window opens.
+    if (shouldAnimate && svgElement && !prefersReducedMotion()) {
+      animationCleanup = setupAnimationCleanup(svgElement, {
+        onComplete: () => {
+          animationCleanup = null;
+          if (pendingResize) {
+            pendingResize = false;
+            resize();
+          }
+        },
       });
     }
 
@@ -657,13 +661,16 @@ export function createSankey(
     cleanupTooltipEvents = wireTooltipAndInteraction(svgElement, currentLayout);
 
     // Animation cleanup
-    if (shouldAnimate && svgElement) {
-      animationCleanup = setupAnimationCleanup(svgElement, () => {
-        animationCleanup = null;
-        if (pendingResize) {
-          pendingResize = false;
-          resize();
-        }
+    // Under reduced motion nothing plays, so no entrance window opens.
+    if (shouldAnimate && svgElement && !prefersReducedMotion()) {
+      animationCleanup = setupAnimationCleanup(svgElement, {
+        onComplete: () => {
+          animationCleanup = null;
+          if (pendingResize) {
+            pendingResize = false;
+            resize();
+          }
+        },
       });
     }
 

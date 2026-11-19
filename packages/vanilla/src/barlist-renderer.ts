@@ -7,7 +7,12 @@ import { createSVGElement } from './renderers/svg-dom';
  * pure CSS, driven by data attributes and CSS custom properties.
  */
 
-import type { BarListLayout, ResolvedAnimation } from '@opendata-ai/openchart-core';
+import {
+  BARLIST_ROW_STAGGER_MS,
+  type BarListLayout,
+  barlistRowDelay,
+  type ResolvedAnimation,
+} from '@opendata-ai/openchart-core';
 import { stampAnimationVars } from './animation-vars';
 import { renderAttributionBrand } from './renderers/brand';
 import { renderChromeElement } from './renderers/chrome';
@@ -88,7 +93,7 @@ function renderRows(
       rowGroup.setAttribute('data-animation-index', String(row.animationIndex));
       const style = (rowGroup as SVGElement & ElementCSSInlineStyle).style;
       style.setProperty('--oc-mark-index', String(row.animationIndex));
-      style.setProperty('--oc-row-delay', `${row.animationIndex * 40}ms`);
+      style.setProperty('--oc-row-delay', `${barlistRowDelay(row.animationIndex)}ms`);
     }
 
     // Label text
@@ -225,7 +230,7 @@ export function renderBarListSVG(
     stampAnimationVars(svg, {
       duration: animation.enter.duration,
       spring: animation.enter.spring,
-      stagger: 40,
+      stagger: BARLIST_ROW_STAGGER_MS,
     });
   }
 

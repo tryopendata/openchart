@@ -16,12 +16,14 @@ import { createSVGElement } from './renderers/svg-dom';
  * layout data. Animation is pure CSS, driven by data attributes.
  */
 
-import type {
-  GeoMapBorders,
-  GeoMapFeatureMark,
-  GeoMapLayout,
-  GeoMapPointMark,
-  ResolvedAnimation,
+import {
+  type GeoMapBorders,
+  type GeoMapFeatureMark,
+  type GeoMapLayout,
+  type GeoMapPointMark,
+  mapPointStagger,
+  mapSweepTiming,
+  type ResolvedAnimation,
 } from '@opendata-ai/openchart-core';
 import { stampAnimationVars } from './animation-vars';
 import { FOCUS_DIM_OPACITY } from './map-camera';
@@ -374,15 +376,11 @@ export function renderMapSVG(
   const bulk = features.length > BULK_ANIMATION_THRESHOLD;
   let mapStaggerBudget = 0;
   if (animate && animation?.enter) {
-    const dur = animation.enter.duration;
-    const perFeature = Math.min(dur, 500);
-    if (!bulk) {
-      mapStaggerBudget = Math.round(dur * 1.2);
-    }
-    const n = Math.max(features.length, 1);
-    const stagger = !bulk && n > 1 ? mapStaggerBudget / (n - 1) : 0;
+    const sweep = mapSweepTiming(animation.enter.duration, features.length, bulk);
+    mapStaggerBudget = sweep.budgetMs;
+    const stagger = sweep.staggerMs;
     stampAnimationVars(svg, {
-      duration: perFeature,
+      duration: sweep.featureDurationMs,
       spring: animation.enter.spring,
       stagger,
       annotationDelay: animation.annotationDelay,
@@ -478,9 +476,11 @@ export function renderMapSVG(
     // Render point marks inside camera group (above borders).
     // Stamp a per-point stagger so the total spread stays bounded regardless of
     // point count (the CSS hardcoded 60ms per point which explodes past ~15 pts).
-    if (animate && animation?.enter && layout.pointMarks.length > 1) {
-      const pointStaggerBudget = animation.enter.duration * 0.5;
-      const perPoint = pointStaggerBudget / (layout.pointMarks.length - 1);
+    const perPoint =
+      animate && animation?.enter
+        ? mapPointStagger(animation.enter.duration, layout.pointMarks.length)
+        : undefined;
+    if (perPoint !== undefined) {
       svg.style.setProperty('--oc-point-stagger', `${perPoint}ms`);
     }
     renderPointMarks(cameraGroup, layout.pointMarks, animate ? animation : undefined, ctx);

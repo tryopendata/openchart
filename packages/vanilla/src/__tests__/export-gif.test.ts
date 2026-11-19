@@ -4,10 +4,16 @@
  * Pixel output can't be verified under happy-dom (no real canvas
  * rasterization), so — like the PNG/JPG tests — the interface tests only assert
  * the call returns a Promise and swallow the rejection. The pure logic
- * (loop→repeat mapping, easing sample interpolation) is unit-tested directly.
+ * (loop→repeat mapping, role classification, per-frame keyframe evaluation)
+ * is unit-tested directly.
  */
 
-import type { ChartSpec, ResolvedTheme } from '@opendata-ai/openchart-core';
+import {
+  type ChartSpec,
+  evalCurve,
+  FLUID_SPRING,
+  type ResolvedTheme,
+} from '@opendata-ai/openchart-core';
 import type { CompileOptions } from '@opendata-ai/openchart-engine';
 import { compileChart } from '@opendata-ai/openchart-engine';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -17,8 +23,6 @@ import type { AnimatedTarget } from '../export-gif';
 import {
   applyFrameState,
   classifyTarget,
-  EASE_SMOOTH_SAMPLES,
-  evalLinearSamples,
   exportGIF,
   isModuleNotFound,
   resolveRepeat,
@@ -86,41 +90,6 @@ describe('resolveRepeat', () => {
 });
 
 // ---------------------------------------------------------------------------
-// evalLinearSamples (CSS linear() easing replication)
-// ---------------------------------------------------------------------------
-
-describe('evalLinearSamples', () => {
-  it('pins the endpoints', () => {
-    expect(evalLinearSamples(EASE_SMOOTH_SAMPLES, 0)).toBe(0);
-    expect(evalLinearSamples(EASE_SMOOTH_SAMPLES, 1)).toBe(1);
-  });
-
-  it('clamps out-of-range input to the endpoints', () => {
-    expect(evalLinearSamples(EASE_SMOOTH_SAMPLES, -0.5)).toBe(0);
-    expect(evalLinearSamples(EASE_SMOOTH_SAMPLES, 2)).toBe(1);
-  });
-
-  it('is monotonic non-decreasing across the range (ease-out shape)', () => {
-    let prev = -1;
-    for (let t = 0; t <= 1.0001; t += 0.05) {
-      const v = evalLinearSamples(EASE_SMOOTH_SAMPLES, Math.min(t, 1));
-      expect(v).toBeGreaterThanOrEqual(prev);
-      prev = v;
-    }
-  });
-
-  it('front-loads progress (ease-out): halfway in time is past halfway in value', () => {
-    expect(evalLinearSamples(EASE_SMOOTH_SAMPLES, 0.5)).toBeGreaterThan(0.5);
-  });
-
-  it('interpolates linearly between adjacent samples', () => {
-    // Two samples: a straight line from 0 to 1 → identity.
-    expect(evalLinearSamples([0, 1], 0.25)).toBeCloseTo(0.25, 6);
-    expect(evalLinearSamples([0, 1], 0.75)).toBeCloseTo(0.75, 6);
-  });
-});
-
-// ---------------------------------------------------------------------------
 // isModuleNotFound (distinguishes "gifenc absent" from a real load failure)
 // ---------------------------------------------------------------------------
 
@@ -176,8 +145,8 @@ describe('classifyTarget', () => {
   it('maps line and area groups to line-area (the group itself clips)', () => {
     const line = svgEl('g', 'oc-mark oc-mark-line');
     const area = svgEl('g', 'oc-mark oc-mark-area');
-    expect(classifyTarget(line)).toEqual({ el: line, kind: 'line-area' });
-    expect(classifyTarget(area)).toEqual({ el: area, kind: 'line-area' });
+    expect(classifyTarget(line)).toEqual({ el: line, kind: 'line-area', role: 'line-area' });
+    expect(classifyTarget(area)).toEqual({ el: area, kind: 'line-area', role: 'line-area' });
   });
 
   it('maps arcs and points to fade (scale breaks their positioning)', () => {
@@ -187,6 +156,16 @@ describe('classifyTarget', () => {
 
   it('treats unknown mark types as a generic fade (no hard pop-in)', () => {
     expect(classifyTarget(svgEl('text', 'oc-mark oc-mark-text'))?.kind).toBe('fade');
+  });
+
+  it('maps elements to the choreography role whose CSS rule animates them', () => {
+    const textGroup = svgEl('g', 'oc-mark oc-mark-text');
+    textGroup.appendChild(svgEl('text', ''));
+    expect(classifyTarget(textGroup)?.role).toBe('text');
+    expect(classifyTarget(svgEl('text', 'oc-mark-label'))?.role).toBe('label');
+    expect(classifyTarget(svgEl('g', 'oc-annotation'))?.role).toBe('annotation');
+    const stack = svgEl('g', 'oc-stack-reveal', 'horizontal');
+    expect(classifyTarget(stack)).toMatchObject({ kind: 'bar-horizontal', role: 'stack-reveal-h' });
   });
 });
 
@@ -209,7 +188,7 @@ describe('applyFrameState', () => {
   it('vertical bar: unclipped and opaque at/after its end', () => {
     const t = target('bar-vertical', 0, 500);
     applyFrameState(t, 500, 'smooth');
-    expect(t.el.style.clipPath).toBe('inset(0% 0 0 0)');
+    expect(t.el.style.clipPath).toBe('inset(0 0 0 0)');
     expect(Number(t.el.style.opacity)).toBe(1);
   });
 
@@ -242,6 +221,53 @@ describe('applyFrameState', () => {
     expect(t.el.style.clipPath).toBe('');
     applyFrameState(t, 500, 'smooth');
     expect(Number(t.el.style.opacity)).toBe(1);
+  });
+
+  it("honours snappy: geometry follows the snappy curve, not smooth's samples", () => {
+    const t = target('bar-vertical', 0, 500);
+    applyFrameState(t, 250, 'snappy');
+    const inset = Number(t.el.style.clipPath.match(/inset\(([\d.]+)%/)?.[1]);
+    expect(inset).toBeCloseTo((1 - evalCurve('snappy', 0.5)) * 100, 6);
+    expect(inset).not.toBeCloseTo((1 - evalCurve('smooth', 0.5)) * 100, 1);
+  });
+
+  it('text slides up 4px as it fades (oc-enter-fade), then settles at 0', () => {
+    const t: AnimatedTarget = { ...target('fade', 0, 300), role: 'text' };
+    applyFrameState(t, 0, 'smooth');
+    expect(t.el.style.transform).toBe('translateY(4px)');
+    expect(Number(t.el.style.opacity)).toBe(0);
+    applyFrameState(t, 300, 'smooth');
+    expect(t.el.style.transform).toBe('translateY(0px)');
+    expect(Number(t.el.style.opacity)).toBe(1);
+  });
+
+  it('a spring phase eases the segment by the spring, as the stamped linear() does', () => {
+    const phase = { duration: 400, spring: FLUID_SPRING };
+    const t = target('line-area', 0, 400);
+    applyFrameState(t, 200, 'smooth', phase);
+    const inset = Number(t.el.style.clipPath.match(/inset\(0 ([\d.]+)%/)?.[1]);
+    expect(inset).toBeGreaterThan(0);
+    expect(inset).toBeLessThan(50);
+  });
+
+  it('stack reveal: starts from the stamped baseline inset and opens to inset(0)', () => {
+    const el = svgEl('g', 'oc-stack-reveal');
+    el.style.setProperty('--oc-stack-from', '40% 0 60% 0');
+    const t: AnimatedTarget = {
+      el,
+      kind: 'bar-vertical',
+      role: 'stack-reveal',
+      startMs: 0,
+      durationMs: 500,
+    };
+    applyFrameState(t, 0, 'smooth');
+    expect(el.style.clipPath).toBe('inset(40% 0 60% 0)');
+    applyFrameState(t, 500, 'smooth');
+    expect(el.style.clipPath).toBe('inset(0 0 0 0)');
+    // Unstamped, it falls back to the bottom-up reveal.
+    const plain: AnimatedTarget = { ...t, el: svgEl('g', 'oc-stack-reveal') };
+    applyFrameState(plain, 0, 'smooth');
+    expect(plain.el.style.clipPath).toBe('inset(100% 0 0 0)');
   });
 
   it('opacity never leaves the [0,1] range across the whole timeline', () => {

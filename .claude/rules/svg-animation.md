@@ -12,7 +12,7 @@ The `oc-animate` class on the SVG root scopes all animation rules. It gets added
 
 These will bite you if you assume SVG elements behave like HTML elements.
 
-**`clip-path: inset()` on `<g>` does nothing.** SVG groups have no intrinsic bounding box, so percentage-based insets resolve to zero. Apply clip-path to individual child elements (rect, path, circle), not groups. Groups containing `<path>` children sometimes work because the path provides a box, but don't count on it.
+**`clip-path: inset()` on `<g>` does nothing.** SVG groups have no intrinsic bounding box, so percentage-based insets resolve to zero. Apply clip-path to individual child elements (rect, path, circle), not groups. Groups whose children give them a box (the stack reveal's `<g>` of rects) do work, checked in Chromium and WebKit; verify in both before relying on it elsewhere.
 
 **CSS `transform` replaces SVG `transform` attributes.** An element with `<g transform="translate(100,50)">` can't also have `transform: scale(0.5)` in CSS. They occupy the same slot and CSS wins, displacing the element. Arc/pie marks use SVG translate for positioning, so only use opacity animations on those.
 
@@ -28,15 +28,21 @@ These will bite you if you assume SVG elements behave like HTML elements.
 
 ## Animation Cleanup
 
-Don't use `animationend` events. The event fires per-element, so the first staggered element to finish would trigger cleanup while the rest are still running. Instead, compute total time: `lastElementStagger + duration + annotationDelay + 500ms buffer`, then `setTimeout` to remove `oc-animate`.
+Don't use `animationend` events. The event fires per-element, so the first staggered element to finish would trigger cleanup while the rest are still running. And don't trust a mount-time timer: on a busy page (a 12-chart dashboard) the next style recalc, which is when CSS animations actually start, can land hundreds of ms after mount JS.
 
-`setupAnimationCleanup()` accepts an `onComplete` callback that fires only on natural completion (timer expiry), not on cancellation. Mount uses this to null out the cleanup reference and replay any resize that was skipped during the animation window. The cancellation path (returned cleanup function) clears the timer and cancels CSS animations but does not fire `onComplete`, so destroy logic stays simple and doesn't trigger resize side effects.
+`setupAnimationCleanup()` waits one rAF, then `Promise.allSettled(root.getAnimations({ subtree: true }).map(a => a.finished))` (plus `canvasFinished`, the canvas entrance's promise), then removes `oc-animate`. Collecting in the next frame avoids forcing a style recalc per chart at mount. Where `getAnimations` is missing (happy-dom in unit tests), it falls back to a timer at the choreography table's end for the elements present (`entranceEndMs` via `scanEntrance`) plus 500ms (tables 300ms). `totalMs` overrides that fallback window for canvas mark mode.
+
+`onComplete` fires only on natural completion, never after cancellation: a `cancelled` flag guards it. Mount uses this to null out the cleanup reference and replay any resize that was skipped during the animation window. The cancellation path (returned cleanup function) clears the frame/timer and removes `oc-animate`, which cancels the CSS animations and rejects their `finished` promises; `allSettled` absorbs those, so nothing goes unhandled. It does not fire `onComplete`, so destroy logic stays simple and doesn't trigger resize side effects.
+
+**Reduced motion opens no entrance window.** `reduced-motion.css` sets `animation: none`, so every mount checks `prefersReducedMotion()` and skips `setupAnimationCleanup`: resizes and updates aren't deferred. `oc-animate` stays on the root (inert there; `e2e/a11y/reduced-motion.spec.ts` asserts it with zero animations), so JS that keys on the class must also check reduced motion (see `raiseFeature` in `map-mount.ts`).
 
 ## Stacked Bar Sequencing
 
 Stacked bars chain segment animations so the full bar reveals as one fluid sweep. Each segment gets a `--oc-stack-pos` (0, 1, 2...) and the renderer computes `--oc-stack-segment-duration` as `duration / maxSegments`. Delay for each segment = category stagger + (position * segment duration).
 
 The segments must use `animation-timing-function: linear`. Non-linear easing (smooth, snappy) creates jitter at segment handoffs because segment N decelerates while segment N+1 accelerates. Linear keeps constant velocity across the whole bar.
+
+**Spring phases reveal the stack as one shape instead.** `wrapStackReveals()` in `svg-renderer.ts` finds the segments inside `g.oc-marks` (not the clip group's direct children, where they never are) and wraps each stack, in faceted panels too, in one `.oc-stack-reveal` `<g>` carrying the stack's `--oc-mark-index`; the segments' own animations are suppressed. `clip-path: inset()` on that `<g>` works in Chromium and WebKit because its rect children give it a box. A stack crossing zero (`stack: 'center'`) gets `--oc-stack-from`, the starting inset that collapses the clip onto the baseline, so it grows both ways from zero. Separate positive/negative groups can't do this: the middle segment straddles zero, so either group's box starts past the baseline.
 
 ## Orientation
 

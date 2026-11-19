@@ -13,19 +13,30 @@
  * `clip-path`/`opacity` as INLINE attributes on a clone (inline values DO
  * serialize), rasterizes that clone, and encodes each frame with gifenc.
  *
- * This mirrors the entrance keyframes in `packages/core/src/styles/*.css`:
- * bars clip bottom-up / left-right, line/area clip left-right, arcs and points
- * fade. Only the entrance is reproduced; the on-screen CSS animation is
- * untouched. `gifenc` is an optional peer dependency, loaded dynamically.
+ * Which elements animate, their keyframes, curves and delays all come from the
+ * choreography table in core (`ENTRANCE_ROLES`, `KEYFRAMES`), the same source
+ * the entrance CSS is generated from, so a GIF frame matches the live CSS at
+ * the same time. Only the entrance is reproduced; the on-screen CSS animation
+ * is untouched. `gifenc` is an optional peer dependency, loaded dynamically.
  */
 
 import {
   type AnimationEase,
+  type EntranceRole,
+  entranceRole,
+  entranceTiming,
+  evalKeyframes,
+  evalRoleEase,
+  KEYFRAMES,
+  type KeyframeName,
+  type KeyframeProperty,
+  type KeyframeStop,
+  type KeyframeValue,
   type MotionPhase,
   type ResolvedAnimation,
   type ResolvedTheme,
-  sampleMotion,
 } from '@opendata-ai/openchart-core';
+import { type EntranceScan, entranceRoleOf, scanEntrance, scanEntranceEndMs } from './animation';
 import {
   embedFonts,
   ensureSVGDimensions,
@@ -54,8 +65,8 @@ export interface GIFExportOptions {
    */
   loop?: boolean | number;
   /**
-   * Explicit capture duration in ms. Defaults to the resolved animation total
-   * (enter duration + last element's stagger delay + a small tail).
+   * Explicit capture duration in ms. Defaults to the choreography table's end
+   * for the elements present (`entranceEndMs`) plus a 300ms tail.
    */
   durationMs?: number;
   /** Embed fonts as base64 data URIs so text matches on-screen. Defaults to true. */
@@ -73,152 +84,82 @@ export interface GIFExportOptions {
   theme?: ResolvedTheme;
 }
 
-/** Which visual property an element's entrance keyframe animates. */
+/** The keyframe family an element's entrance plays (coarse; `role` is exact). */
 export type AnimationKind = 'bar-vertical' | 'bar-horizontal' | 'line-area' | 'fade';
 
 export interface AnimatedTarget {
   /** The element in the CLONE that receives per-frame inline styles. */
   el: SVGElement;
   kind: AnimationKind;
-  /** Start offset in ms (stagger * mark index). */
+  /** Choreography role. Defaults by `kind` (bar, bar-h, line-area, arc). */
+  role?: EntranceRole;
+  /** Keyframe to evaluate. Defaults to the role's. */
+  keyframe?: KeyframeName;
+  /** Start offset in ms (the role's delay rule). */
   startMs: number;
   /** Duration of this element's own animation in ms. */
   durationMs: number;
 }
 
 // ---------------------------------------------------------------------------
-// Easing — replicate --oc-ease-smooth (CSS linear() sample points)
-// ---------------------------------------------------------------------------
-
-/**
- * Sample points of the `--oc-ease-smooth` token (see tokens.css). CSS
- * `linear()` interpolates piecewise-linearly between evenly-spaced samples, so
- * we reproduce it exactly rather than approximating with a cubic-bezier.
- */
-export const EASE_SMOOTH_SAMPLES: readonly number[] = [
-  0, 0.157, 0.438, 0.64, 0.766, 0.85, 0.906, 0.941, 0.964, 0.978, 0.988, 0.994, 0.998, 1,
-];
-
-/** Piecewise-linear evaluation of a CSS linear() sample array at t in [0,1]. */
-export function evalLinearSamples(samples: readonly number[], t: number): number {
-  if (t <= 0) return samples[0];
-  if (t >= 1) return samples[samples.length - 1];
-  const scaled = t * (samples.length - 1);
-  const i = Math.floor(scaled);
-  const frac = scaled - i;
-  return samples[i] + (samples[i + 1] - samples[i]) * frac;
-}
-
-/** Ease a normalized progress value. Only 'smooth' is sample-accurate today. */
-function ease(p: number, _kind: AnimationEase): number {
-  // The entrance rules use --oc-ease-smooth (or fall back to it) in all cases
-  // GIF export handles today. Snappy/others could add their own samples later.
-  return evalLinearSamples(EASE_SMOOTH_SAMPLES, p);
-}
-
-// ---------------------------------------------------------------------------
 // Target discovery
 // ---------------------------------------------------------------------------
 
+function kindOf(keyframe: KeyframeName): AnimationKind {
+  if (keyframe === 'oc-enter-bar' || keyframe === 'oc-enter-stack') return 'bar-vertical';
+  if (keyframe === 'oc-enter-bar-h' || keyframe === 'oc-enter-stack-h') return 'bar-horizontal';
+  if (keyframe === 'oc-enter-line') return 'line-area';
+  return 'fade';
+}
+
 /**
- * Classify an animated element (identified by `data-animation-index`) into the
- * keyframe it plays, and return the element that should receive inline styles.
- * Returns null only when a bar group has no shape child to clip. Unrecognized
- * mark types (map/tilemap/table/text) fall back to a plain opacity fade rather
- * than a hard pop-in — see the generic case at the end.
+ * Classify an animated element (or the mark group holding it) into the
+ * choreography role whose CSS rule animates it, and return the element that
+ * receives inline styles. Roles come from the same selectors the generated
+ * CSS uses. Returns null when a bar group has no shape child to clip.
+ * Unrecognized elements fall back to a plain opacity fade rather than a hard
+ * pop-in.
  */
 export function classifyTarget(
   groupOrEl: SVGElement,
-): { el: SVGElement; kind: AnimationKind } | null {
+): { el: SVGElement; kind: AnimationKind; role?: EntranceRole } | null {
+  const candidates = [groupOrEl, ...Array.from(groupOrEl.querySelectorAll<SVGElement>('*'))];
+  for (const el of candidates) {
+    const match = entranceRoleOf(el);
+    if (match) return { el, kind: kindOf(match.keyframe), role: match.role };
+  }
   const cls = groupOrEl.getAttribute('class') ?? '';
-
-  if (cls.includes('oc-stack-reveal'))
-    return {
-      el: groupOrEl,
-      kind:
-        groupOrEl.getAttribute('data-orient') === 'horizontal' ? 'bar-horizontal' : 'bar-vertical',
-    };
-
-  // Bars: CSS animates the child <rect>; clip + fade. Orient on the group.
-  if (cls.includes('oc-mark-rect') || cls.includes('oc-mark-bar')) {
-    const rect = groupOrEl.querySelector('rect') ?? groupOrEl.querySelector('path');
-    if (!rect) return null;
-    const horizontal = groupOrEl.getAttribute('data-orient') === 'horizontal';
-    return { el: rect as SVGElement, kind: horizontal ? 'bar-horizontal' : 'bar-vertical' };
-  }
-
-  // Line/area: the whole group clips left-to-right + fades.
-  if (cls.includes('oc-mark-line') || cls.includes('oc-mark-area')) {
-    return { el: groupOrEl, kind: 'line-area' };
-  }
-
-  // Arcs and points: fade only (scale breaks arc/point positioning, so the CSS
-  // uses a plain opacity fade too).
-  if (
-    cls.includes('oc-mark-arc') ||
-    cls.includes('oc-mark-point') ||
-    cls.includes('oc-mark-circle')
-  ) {
-    return { el: groupOrEl, kind: 'fade' };
-  }
-
-  // Everything else (text labels, rules, ticks, map/tilemap/table marks) is a
-  // plain fade; treat generically so the frame isn't a hard pop-in.
+  if (cls.includes('oc-mark-rect') || cls.includes('oc-mark-bar')) return null;
   return { el: groupOrEl, kind: 'fade' };
 }
 
 /**
- * Build the list of animated targets from a cloned SVG, pairing each element
- * with its timing. Elements carry `data-animation-index` (the mark index that
- * drives stagger) stamped by the renderer.
+ * Build the list of animated targets from a cloned SVG: every element the
+ * generated entrance CSS animates, timed by the choreography table exactly as
+ * the CSS times it (same stamped custom properties, same delay rules).
  */
-function collectTargets(
-  clone: SVGElement,
-  enterDurationMs: number,
-  staggerMs: number,
-): AnimatedTarget[] {
-  const els = clone.querySelectorAll<SVGElement>('[data-animation-index]');
-  const targets: AnimatedTarget[] = [];
-
-  for (const el of els) {
-    if (!el.classList.contains('oc-stack-reveal') && el.closest('.oc-stack-reveal')) continue;
-    const classified = classifyTarget(el);
-    if (!classified) continue;
-    const idx = parseInt(el.getAttribute('data-animation-index') ?? '0', 10) || 0;
-    // Points animate at 40% of the base duration (matches animation.css).
-    const isPoint =
-      classified.kind === 'fade' && /oc-mark-(point|circle)/.test(el.getAttribute('class') ?? '');
-    // Points on line/area charts start 35% of a duration in, so they pop as the
-    // line draws through them (the `.oc-mark-line ~ circle.oc-mark-point` rule).
-    const lineOffset = isPoint && hasLineAreaSibling(el) ? enterDurationMs * 0.35 : 0;
-    targets.push({
-      el: classified.el,
-      kind: classified.kind,
-      startMs: staggerMs * idx + lineOffset,
-      durationMs: isPoint ? enterDurationMs * 0.4 : enterDurationMs,
-    });
-  }
-
-  return targets;
-}
-
-/**
- * Replicate the CSS sibling combinator `.oc-mark-line ~ circle.oc-mark-point`:
- * true when a line or area mark precedes this point among its siblings.
- */
-function hasLineAreaSibling(point: SVGElement): boolean {
-  let sib = point.previousElementSibling;
-  while (sib) {
-    const cls = sib.getAttribute('class') ?? '';
-    if (cls.includes('oc-mark-line') || cls.includes('oc-mark-area')) return true;
-    sib = sib.previousElementSibling;
-  }
-  return false;
+function collectTargets(scan: EntranceScan, phase: MotionPhase): AnimatedTarget[] {
+  return scan.elements.map((e) => {
+    const timing = entranceTiming(e.role, e.index, phase, { ...scan.context, ...e.context });
+    return {
+      el: e.el as SVGElement,
+      kind: kindOf(e.keyframe),
+      role: e.role,
+      keyframe: e.keyframe,
+      startMs: timing.delayMs,
+      durationMs: timing.durationMs,
+    };
+  });
 }
 
 // ---------------------------------------------------------------------------
 // Per-frame interpolation
 // ---------------------------------------------------------------------------
+
+/** Fallback enter duration when neither the SVG nor the config carries one. */
+const DEFAULT_ENTER_MS = 600;
+/** Frames held after the last element settles. */
+const CAPTURE_TAIL_MS = 300;
 
 const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
 
@@ -245,9 +186,90 @@ export function resolveRepeat(loop: boolean | number | undefined): number {
   return -1;
 }
 
+function formatInset(v: { top: number; right: number; bottom: number; left: number }): string {
+  const side = (n: number) => (n === 0 ? '0' : `${n}%`);
+  return `inset(${side(v.top)} ${side(v.right)} ${side(v.bottom)} ${side(v.left)})`;
+}
+
+/**
+ * Resolve a keyframe value JS can't interpolate as written (`var(--x, 1)`,
+ * `inset(var(--oc-stack-from, 100% 0 0 0))`) against the element's stamped
+ * custom properties, as the browser does. Undefined when the result is not a
+ * number or a percentage inset (a fill color); the attribute already holds
+ * the settled value then.
+ */
+function resolveCSSValue(el: SVGElement, css: string): KeyframeValue | undefined {
+  const substituted = css.replace(
+    /var\((--[\w-]+)(?:,\s*([^()]*))?\)/g,
+    (_, name: string, fallback?: string) => el.style.getPropertyValue(name) || fallback || '',
+  );
+  const insetMatch = /^inset\(([^)]*)\)$/.exec(substituted.trim());
+  if (insetMatch) {
+    const sides = insetMatch[1]
+      .trim()
+      .split(/\s+/)
+      .map((v) => Number.parseFloat(v));
+    if (sides.length < 1 || sides.length > 4 || sides.some((v) => !Number.isFinite(v))) {
+      return undefined;
+    }
+    // CSS shorthand expansion: top, right = top, bottom = top, left = right.
+    const [top, right = top, bottom = top, left = right] = sides;
+    return { type: 'inset', top, right, bottom, left };
+  }
+  const v = Number(substituted.trim());
+  return Number.isFinite(v) ? { type: 'number', value: v } : undefined;
+}
+
+/**
+ * Evaluate one property of a two-stop keyframe whose values hold custom
+ * properties: resolve both ends, then interpolate on the eased progress.
+ */
+function evalResolved(
+  el: SVGElement,
+  keyframe: KeyframeName,
+  prop: KeyframeProperty,
+  p: number,
+  ease: (t: number) => number,
+): KeyframeValue | undefined {
+  const stops = (KEYFRAMES[keyframe].stops as readonly KeyframeStop[]).filter(
+    (s) => s.values[prop] !== undefined,
+  );
+  if (stops.length !== 2 || stops[0].offset !== 0 || stops[1].offset !== 1) return undefined;
+  const resolve = (v: KeyframeValue) => (v.type === 'css' ? resolveCSSValue(el, v.css) : v);
+  const a = resolve(stops[0].values[prop]!);
+  const b = resolve(stops[1].values[prop]!);
+  const e = ease(p);
+  const lerp = (x: number, y: number) => x + (y - x) * e;
+  if (a?.type === 'number' && b?.type === 'number') {
+    return { type: 'number', value: lerp(a.value, b.value) };
+  }
+  if (a?.type === 'inset' && b?.type === 'inset') {
+    return {
+      type: 'inset',
+      top: lerp(a.top, b.top),
+      right: lerp(a.right, b.right),
+      bottom: lerp(a.bottom, b.bottom),
+      left: lerp(a.left, b.left),
+    };
+  }
+  return undefined;
+}
+
+/** The role a hand-built target without one plays, by keyframe family. */
+const DEFAULT_ROLE: Record<AnimationKind, EntranceRole> = {
+  'bar-vertical': 'bar',
+  'bar-horizontal': 'bar-h',
+  'line-area': 'line-area',
+  fade: 'arc',
+};
+
 /**
  * Apply the interpolated entrance state for a target at absolute time `nowMs`,
- * writing inline `clip-path`/`opacity` so it survives serialization.
+ * writing inline `clip-path`/`opacity`/`transform` so it survives
+ * serialization. The keyframe and its easing come from the choreography
+ * table: each keyframe segment is eased by the role's curve (`evalRoleEase`,
+ * which honours `snappy` and springs), as CSS applies the timing function per
+ * keyframe segment.
  */
 export function applyFrameState(
   target: AnimatedTarget,
@@ -255,43 +277,39 @@ export function applyFrameState(
   easeKind: AnimationEase,
   phase?: MotionPhase,
 ): void {
+  const role = target.role ?? DEFAULT_ROLE[target.kind];
+  const keyframe = target.keyframe ?? entranceRole(role).keyframe;
+  const motion: MotionPhase = {
+    ...phase,
+    duration: phase?.duration ?? target.durationMs,
+    ease: phase?.ease ?? easeKind,
+  };
   const p = clamp01((nowMs - target.startMs) / target.durationMs);
-  const progress = (fraction: number) =>
-    phase?.spring
-      ? sampleMotion(phase, clamp01(fraction) * phase.duration).position
-      : ease(clamp01(fraction), easeKind);
-  const eased = progress(p);
+  const ease = (t: number) => evalRoleEase(role, motion, t);
+  const values = evalKeyframes(keyframe, p, ease);
   const style = target.el.style;
 
-  switch (target.kind) {
-    case 'bar-vertical': {
-      // oc-enter-bar: clip-path inset(100%→0 from top) + opacity (full by 75%).
-      const inset = (1 - eased) * 100;
-      style.clipPath = `inset(${inset}% 0 0 0)`;
-      style.opacity = String(progress(p / 0.75));
-      break;
+  for (const [prop, raw] of Object.entries(values) as [KeyframeProperty, KeyframeValue][]) {
+    const value = raw.type === 'css' ? evalResolved(target.el, keyframe, prop, p, ease) : raw;
+    if (!value) continue;
+    switch (value.type) {
+      case 'number':
+        if (prop === 'opacity') style.opacity = String(clamp01(value.value));
+        break;
+      case 'inset':
+        if (prop === 'clip-path') style.clipPath = formatInset(value);
+        break;
+      case 'translateY':
+        style.transform = `translateY(${value.px}px)`;
+        break;
+      case 'scale':
+        style.transform = `scale(${value.value})`;
+        break;
+      case 'css':
+        break;
+      default:
+        value satisfies never;
     }
-    case 'bar-horizontal': {
-      // oc-enter-bar-h: clip-path inset(0 100%→0 from right) + opacity.
-      const inset = (1 - eased) * 100;
-      style.clipPath = `inset(0 ${inset}% 0 0)`;
-      style.opacity = String(progress(p / 0.75));
-      break;
-    }
-    case 'line-area': {
-      // oc-enter-line: clip-path inset(0 100%→0 from right); opacity full by 15%.
-      const inset = (1 - eased) * 100;
-      style.clipPath = `inset(0 ${inset}% 0 0)`;
-      style.opacity = String(progress(p / 0.15));
-      break;
-    }
-    case 'fade': {
-      // oc-enter-fade-only: opacity 0→1.
-      style.opacity = String(eased);
-      break;
-    }
-    default:
-      target.kind satisfies never;
   }
 }
 
@@ -300,6 +318,7 @@ function clearFrameState(target: AnimatedTarget): void {
   const style = target.el.style;
   style.clipPath = '';
   style.opacity = '';
+  style.transform = '';
 }
 
 // ---------------------------------------------------------------------------
@@ -344,10 +363,10 @@ export async function exportGIF(
     throw new Error(`SVG has zero dimensions (width=${width}, height=${height})`);
   }
 
-  // Resolve timing from the config (exact) with defaults as a fallback.
-  const enter = animation?.enter;
-  const enterDurationMs = enter?.duration ?? 600;
-  const staggerMs = enter?.staggerDelay ?? 0;
+  // Resolve timing from the config with defaults as a fallback. The stamped
+  // custom properties on the SVG (read by scanEntrance) take precedence,
+  // since they are exactly what the live CSS used.
+  const enter = animation?.enter || undefined;
   const easeKind: AnimationEase = enter?.ease ?? 'smooth';
 
   // Build one font-embedded clone that represents the FINAL frame; every frame
@@ -359,20 +378,23 @@ export async function exportGIF(
   if (shouldEmbed) {
     await embedFonts(clone);
   }
-  const targets = collectTargets(clone, enterDurationMs, staggerMs);
+  const scan = scanEntrance(clone);
+  const phase: MotionPhase = {
+    ...enter,
+    duration: scan.durationMs ?? enter?.duration ?? DEFAULT_ENTER_MS,
+    ease: easeKind,
+  };
+  if (scan.context.annotationDelayMs === undefined && animation?.annotationDelay !== undefined) {
+    scan.context.annotationDelayMs = animation.annotationDelay;
+  }
+  if (scan.context.staggerMs === undefined && enter) {
+    scan.context.staggerMs = enter.staggerDelay;
+  }
+  const targets = collectTargets(scan, phase);
 
-  // Total capture window: explicit override, else the animation total. Mirrors
-  // computeAnimationDuration (animation.ts): the window must cover the last
-  // mark's stagger + its own duration AND the annotation reveal, which animates
-  // at enterDuration + annotationDelay. Without the annotationDelay term, charts
-  // with annotations get cut off before the annotations finish fading in.
-  const annotationDelay = animation?.annotationDelay ?? 0;
-  const lastMarkEnd = targets.reduce(
-    (m, t) => Math.max(m, t.startMs + t.durationMs),
-    enterDurationMs,
-  );
-  const lastEnd = Math.max(lastMarkEnd, enterDurationMs + annotationDelay);
-  const totalMs = options?.durationMs ?? lastEnd + 300;
+  // Total capture window: explicit override, else the choreography table's end
+  // for the elements present (the same figure cleanup uses) plus a short tail.
+  const totalMs = options?.durationMs ?? scanEntranceEndMs(scan, phase) + CAPTURE_TAIL_MS;
   const frameDelay = Math.round(1000 / fps);
   const totalFrames = Math.max(1, Math.round((totalMs / 1000) * fps));
 
@@ -408,7 +430,7 @@ export async function exportGIF(
     if (nowMs === null) {
       for (const t of targets) clearFrameState(t);
     } else {
-      for (const t of targets) applyFrameState(t, nowMs, easeKind, enter || undefined);
+      for (const t of targets) applyFrameState(t, nowMs, easeKind, phase);
     }
     const svgString = ensureSVGDimensions(exportSVG(clone), width, height);
     const canvas = await rasterizeSVGToCanvas(svgString, width, height, dpi, fillBackground);

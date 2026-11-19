@@ -83,6 +83,30 @@ export const KEYFRAMES = {
       { offset: 1, values: { 'clip-path': inset(0, 0, 0, 0), opacity: num(1) } },
     ],
   },
+  'oc-enter-stack': {
+    comment:
+      'Stack entrance: one clip over the whole stack. Grows bottom-to-top from\n--oc-stack-from, which the renderer stamps on a stack that crosses zero so\nthe clip starts collapsed on the baseline and grows both ways from it.',
+    stops: [
+      {
+        offset: 0,
+        values: { 'clip-path': css('inset(var(--oc-stack-from, 100% 0 0 0))'), opacity: num(0) },
+      },
+      { offset: 0.75, values: { opacity: num(1) } },
+      { offset: 1, values: { 'clip-path': inset(0, 0, 0, 0), opacity: num(1) } },
+    ],
+  },
+  'oc-enter-stack-h': {
+    comment:
+      'Horizontal stack entrance: grows left-to-right, or both ways from the\nbaseline when --oc-stack-from is stamped.',
+    stops: [
+      {
+        offset: 0,
+        values: { 'clip-path': css('inset(var(--oc-stack-from, 0 100% 0 0))'), opacity: num(0) },
+      },
+      { offset: 0.75, values: { opacity: num(1) } },
+      { offset: 1, values: { 'clip-path': inset(0, 0, 0, 0), opacity: num(1) } },
+    ],
+  },
   'oc-enter-line': {
     comment:
       'Line/area entrance: clip-path reveal left-to-right + fade in.\nLines draw in following reading direction with a soft lead-in.',
@@ -472,15 +496,16 @@ const ROLE_DEFS: readonly EntranceRoleDef[] = [
   {
     name: 'stack-reveal',
     scope: 'chart',
-    comment: 'Spring stacks reveal as one group; their segments do not animate.',
+    comment:
+      'Spring stacks reveal as one group per stack, each on its own stagger slot;\ntheir segments do not animate. A stack that crosses zero grows both ways\nfrom the baseline (--oc-stack-from).',
     selectors: ['.oc-stack-reveal'],
     emit: 'shorthand',
-    keyframe: 'oc-enter-bar',
-    horizontalKeyframe: 'oc-enter-bar-h',
+    keyframe: 'oc-enter-stack',
+    horizontalKeyframe: 'oc-enter-stack-h',
     timing: AUTHOR,
     durationBasis: 'phase',
     duration: base(1),
-    delay: { stagger: 'none' },
+    delay: { stagger: 'mark' },
     suppress: ['.oc-stack-reveal .oc-mark-rect :is(rect, path)'],
   },
   {
@@ -488,11 +513,11 @@ const ROLE_DEFS: readonly EntranceRoleDef[] = [
     scope: 'chart',
     selectors: ['.oc-stack-reveal[data-orient="horizontal"]'],
     emit: ['name'],
-    keyframe: 'oc-enter-bar-h',
+    keyframe: 'oc-enter-stack-h',
     timing: AUTHOR,
     durationBasis: 'phase',
     duration: base(1),
-    delay: { stagger: 'none' },
+    delay: { stagger: 'mark' },
   },
   {
     name: 'line-area',

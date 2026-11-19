@@ -22,6 +22,7 @@ import type {
 import { BREAKPOINT_COMPACT_MAX } from '@opendata-ai/openchart-core';
 import { compileTable } from '@opendata-ai/openchart-engine';
 import { setupTableAnimationCleanup } from './animation';
+import { prefersReducedMotion } from './motion/tween';
 import { observeResize } from './resize-observer';
 import { resolveDarkMode } from './resolve-dark-mode';
 import { attachKeyboardNav } from './table-keyboard';
@@ -308,7 +309,8 @@ export function createTable(
     wrapperElement = renderTable(currentLayout, container, { animate: shouldAnimate });
 
     // Set up animation cleanup on first animated render
-    if (shouldAnimate && wrapperElement) {
+    // Under reduced motion nothing plays, so no entrance window opens.
+    if (shouldAnimate && wrapperElement && !prefersReducedMotion()) {
       cleanupAnimations = setupTableAnimationCleanup(wrapperElement, () => {
         cleanupAnimations = null;
         if (pendingResize && !destroyed) {

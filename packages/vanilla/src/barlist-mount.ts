@@ -32,6 +32,7 @@ import {
   wireMarkNavigation,
 } from './interactions/mark-navigation';
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
+import { prefersReducedMotion } from './motion/tween';
 import { observeResize } from './resize-observer';
 import { resolveDarkMode } from './resolve-dark-mode';
 import { prepareSettledExportTheme } from './theme-style-block';
@@ -265,15 +266,18 @@ export function createBarList(
       }
     }
 
-    if (animate && currentLayout.animation?.enter) {
-      animationCleanup = setupAnimationCleanup(newSvg, () => {
-        // Null the handle BEFORE replaying, or the deferred resize hits the
-        // entrance-in-flight gate and re-defers forever (mount.ts pattern).
-        animationCleanup = null;
-        if (pendingResize && !destroyed) {
-          pendingResize = false;
-          resize();
-        }
+    // Under reduced motion nothing plays, so no entrance window opens.
+    if (animate && currentLayout.animation?.enter && !prefersReducedMotion()) {
+      animationCleanup = setupAnimationCleanup(newSvg, {
+        onComplete: () => {
+          // Null the handle BEFORE replaying, or the deferred resize hits the
+          // entrance-in-flight gate and re-defers forever (mount.ts pattern).
+          animationCleanup = null;
+          if (pendingResize && !destroyed) {
+            pendingResize = false;
+            resize();
+          }
+        },
       });
     }
 

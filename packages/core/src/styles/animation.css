@@ -47,11 +47,16 @@
       animation-play-state: var(--oc-play-state, running);
     }
 
-    /* Spring stacks reveal as one group; their segments do not animate. */
+    /* Spring stacks reveal as one group per stack, each on its own stagger slot;
+       their segments do not animate. A stack that crosses zero grows both ways
+       from the baseline (--oc-stack-from). */
     & .oc-stack-reveal {
-      animation: oc-enter-bar var(--oc-stack-reveal-dur, var(--oc-animation-duration))
+      animation: oc-enter-stack var(--oc-stack-reveal-dur, var(--oc-animation-duration))
         var(--oc-animation-ease, var(--oc-ease-smooth)) both;
-      animation-delay: var(--oc-stack-reveal-delay, 0ms);
+      animation-delay: var(
+        --oc-stack-reveal-delay,
+        calc(var(--oc-animation-stagger) * var(--oc-mark-index, 0))
+      );
       animation-play-state: var(--oc-play-state, running);
     }
     & .oc-stack-reveal .oc-mark-rect :is(rect, path) {
@@ -59,7 +64,7 @@
     }
 
     & .oc-stack-reveal[data-orient="horizontal"] {
-      animation-name: oc-enter-bar-h;
+      animation-name: oc-enter-stack-h;
       animation-play-state: var(--oc-play-state, running);
     }
 

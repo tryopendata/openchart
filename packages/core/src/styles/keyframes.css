@@ -37,6 +37,39 @@
     }
   }
 
+  /* Stack entrance: one clip over the whole stack. Grows bottom-to-top from
+     --oc-stack-from, which the renderer stamps on a stack that crosses zero so
+     the clip starts collapsed on the baseline and grows both ways from it. */
+  @keyframes oc-enter-stack {
+    from {
+      clip-path: inset(var(--oc-stack-from, 100% 0 0 0));
+      opacity: 0;
+    }
+    75% {
+      opacity: 1;
+    }
+    to {
+      clip-path: inset(0 0 0 0);
+      opacity: 1;
+    }
+  }
+
+  /* Horizontal stack entrance: grows left-to-right, or both ways from the
+     baseline when --oc-stack-from is stamped. */
+  @keyframes oc-enter-stack-h {
+    from {
+      clip-path: inset(var(--oc-stack-from, 0 100% 0 0));
+      opacity: 0;
+    }
+    75% {
+      opacity: 1;
+    }
+    to {
+      clip-path: inset(0 0 0 0);
+      opacity: 1;
+    }
+  }
+
   /* Line/area entrance: clip-path reveal left-to-right + fade in.
      Lines draw in following reading direction with a soft lead-in. */
   @keyframes oc-enter-line {

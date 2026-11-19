@@ -12,6 +12,8 @@ import { createRenderContext, type RenderContext } from './render-context';
  */
 
 import type {
+  AxisLayout,
+  AxisTick,
   ChartLayout,
   FacetPanelLayout,
   RectMark,
@@ -224,36 +226,7 @@ export function renderChartSVG(
     clippedGroup.setAttribute('data-oc-marks-group', 'true');
     clipGroup.appendChild(clippedGroup);
     const markLabelsOverlay = renderMarks(clippedGroup, layout, { skipPoints: canvasMarks }, ctx);
-    // A fluid stack is one quantitative object: reveal its shared extent,
-    // never chain independently eased segments that can appear to separate.
-    if (
-      enterPhase?.spring &&
-      layout.marks.some((mark) => mark.type === 'rect' && mark.stackPos !== undefined)
-    ) {
-      const stacks = new Map<string, SVGElement>();
-      for (const mark of layout.marks) {
-        if (mark.type !== 'rect' || mark.stackPos === undefined || !mark.key) continue;
-        const element = Array.from(clippedGroup.children).find(
-          (child) => child.getAttribute('data-key') === mark.key,
-        );
-        if (!element) continue;
-        const horizontal = element.getAttribute('data-orient') === 'horizontal';
-        const key = `${horizontal ? 'h' : 'v'}:${horizontal ? mark.y : mark.x}`;
-        let stack = stacks.get(key);
-        if (!stack) {
-          stack = createSVGElement('g', ctx.factory);
-          setAttrs(stack, {
-            class: 'oc-stack-reveal',
-            'data-key': `stack:${key}`,
-            'data-orient': horizontal ? 'horizontal' : 'vertical',
-            'data-animation-index': 0,
-          });
-          clippedGroup.insertBefore(stack, element);
-          stacks.set(key, stack);
-        }
-        stack.appendChild(element);
-      }
-    }
+    if (enterPhase?.spring) wrapStackReveals(clippedGroup, layout, ctx);
 
     // Single query+parse pass over point circles, reused below by both the
     // voronoi-overlay pointer-events pass and the endpoint-label suppression
@@ -466,6 +439,9 @@ function renderFacetedPanels(
     clippedGroup.setAttribute('clip-path', `url(#${panelClipId})`);
     // Figure-level tooltip descriptors and navigation index the pooled marks.
     const panelLabelsOverlay = renderMarks(clippedGroup, panelLayout, { markIndexOffset }, ctx);
+    if (ctx.marks.animation?.enter?.spring) {
+      wrapStackReveals(clippedGroup, panelLayout, ctx);
+    }
     markIndexOffset += panel.marks.length;
     g.appendChild(clippedGroup);
 
@@ -477,5 +453,101 @@ function renderFacetedPanels(
     }
 
     svg.appendChild(g);
+  }
+}
+
+/**
+ * Pixel position of value 0 on a numeric axis, read from its ticks (exact when
+ * a tick sits at 0, else interpolated along the linear scale). Undefined for a
+ * non-numeric axis.
+ */
+function zeroPosition(axis: AxisLayout | undefined): number | undefined {
+  const ticks = (axis?.ticks ?? []).filter(
+    (t): t is AxisTick & { value: number } =>
+      typeof t.value === 'number' && Number.isFinite(t.value),
+  );
+  const zero = ticks.find((t) => t.value === 0);
+  if (zero) return zero.position;
+  if (ticks.length < 2) return undefined;
+  const a = ticks[0];
+  const b = ticks[ticks.length - 1];
+  if (a.value === b.value) return undefined;
+  return a.position + ((0 - a.value) * (b.position - a.position)) / (b.value - a.value);
+}
+
+/**
+ * A spring-eased stack is one quantitative object: reveal its shared extent
+ * as one clip, never chain independently eased segments that can appear to
+ * separate. Wraps each stack's segments (found inside `g.oc-marks`) in one
+ * `.oc-stack-reveal` group carrying the stack's stagger index. A stack that
+ * crosses zero gets `--oc-stack-from`, the starting inset that collapses the
+ * clip onto the baseline, so both sides grow away from zero together (a
+ * segment straddling zero grows both ways, which separate per-side groups
+ * could not do).
+ */
+function wrapStackReveals(container: SVGElement, layout: ChartLayout, ctx: RenderContext): void {
+  const marksGroup = container.querySelector<SVGElement>(':scope > .oc-marks');
+  if (!marksGroup) return;
+  const byKey = new Map<string, Element>();
+  for (const child of marksGroup.children) {
+    const key = child.getAttribute('data-key');
+    if (key) byKey.set(key, child);
+  }
+
+  interface Stack {
+    wrapper: SVGElement;
+    horizontal: boolean;
+    zero: number | undefined;
+    /** Extent along the value axis, in px (top/left to bottom/right). */
+    start: number;
+    end: number;
+  }
+  const zeroY = zeroPosition(layout.axes.y);
+  const zeroY2 = zeroPosition(layout.axes.y2);
+  const zeroX = zeroPosition(layout.axes.x);
+  const stacks = new Map<string, Stack>();
+  for (const mark of layout.marks) {
+    if (mark.type !== 'rect' || mark.stackPos === undefined || !mark.key) continue;
+    const element = byKey.get(mark.key);
+    if (!element) continue;
+    const horizontal = mark.orient === 'horizontal';
+    const start = horizontal ? mark.x : mark.y;
+    const end = start + (horizontal ? mark.width : mark.height);
+    const band = horizontal ? mark.y : mark.x;
+    const key = `${horizontal ? 'h' : 'v'}:${mark.stackGroup ?? ''}:${band}`;
+    let stack = stacks.get(key);
+    if (!stack) {
+      const index = mark.animationIndex ?? 0;
+      const wrapper = createSVGElement('g', ctx.factory);
+      setAttrs(wrapper, {
+        class: 'oc-stack-reveal',
+        'data-key': `stack:${key}`,
+        'data-orient': horizontal ? 'horizontal' : 'vertical',
+        'data-animation-index': index,
+      });
+      (wrapper as SVGElement & ElementCSSInlineStyle).style.setProperty(
+        '--oc-mark-index',
+        String(index),
+      );
+      marksGroup.insertBefore(wrapper, element);
+      const zero = horizontal ? zeroX : mark.yScale === 'y2' ? zeroY2 : zeroY;
+      stack = { wrapper, horizontal, zero, start, end };
+      stacks.set(key, stack);
+    }
+    stack.start = Math.min(stack.start, start);
+    stack.end = Math.max(stack.end, end);
+    stack.wrapper.appendChild(element);
+  }
+
+  for (const { wrapper, horizontal, zero, start, end } of stacks.values()) {
+    if (zero === undefined || !(zero > start && zero < end)) continue;
+    const pct = (px: number) => `${Number(((px / (end - start)) * 100).toFixed(4))}%`;
+    // Insets from the stack's own box: top/left side up to zero, the rest after.
+    const before = pct(zero - start);
+    const after = pct(end - zero);
+    (wrapper as SVGElement & ElementCSSInlineStyle).style.setProperty(
+      '--oc-stack-from',
+      horizontal ? `0 ${after} 0 ${before}` : `${before} 0 ${after} 0`,
+    );
   }
 }

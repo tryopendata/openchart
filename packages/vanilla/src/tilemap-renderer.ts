@@ -8,10 +8,11 @@ import { createSVGElement } from './renderers/svg-dom';
  * layout data. Animation is pure CSS, driven by data attributes.
  */
 
-import type {
-  ResolvedAnimation,
-  TileMapLayout,
-  TileMapTileMark,
+import {
+  type ResolvedAnimation,
+  type TileMapLayout,
+  type TileMapTileMark,
+  tilemapTileDelays,
 } from '@opendata-ai/openchart-core';
 import { stampAnimationVars } from './animation-vars';
 import { renderAttributionBrand } from './renderers/brand';
@@ -105,20 +106,10 @@ function renderTiles(
   g.setAttribute('class', 'oc-tilemap-tiles');
   g.setAttribute('role', 'list');
 
-  // Compute per-tile delays with jitter for organic feel.
-  // Base delay spreads tiles across ~800ms window, jitter adds +-40% variation
-  // so some tiles pop in clusters while others have longer gaps.
-  const tileDelays: number[] = [];
-  if (animation?.enter) {
-    const baseStagger = 800 / Math.max(tiles.length, 1);
-    let seed = 17;
-    for (let i = 0; i < tiles.length; i++) {
-      const idx = tiles[i].animationIndex ?? i;
-      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
-      const jitter = ((seed % 1000) / 1000 - 0.5) * 0.8;
-      tileDelays.push(Math.max(0, Math.round(idx * baseStagger * (1 + jitter))));
-    }
-  }
+  // Per-tile delays with jitter for organic feel (see tilemapTileDelays).
+  const tileDelays = animation?.enter
+    ? tilemapTileDelays(tiles.map((tile, i) => tile.animationIndex ?? i))
+    : [];
 
   for (let i = 0; i < tiles.length; i++) {
     const tile = tiles[i];
