@@ -1170,14 +1170,14 @@ const looping = await chart.export("gif", { loop: true });
 | `fps` | `25` | Frames per second captured. |
 | `dpi` | `2` | Resolution scaling, same as PNG. `2` keeps text crisp. |
 | `durationMs` | animation total | Override the capture window length. |
-| `backgroundColor` | chart background (or white) | Opaque fill. GIF can't carry partial alpha, so a transparent chart would composite onto black without this. |
+| `backgroundColor` | the SVG's root background (or white) | Opaque fill. GIF can't carry partial alpha. A transparent, `currentColor` or `url()` root background falls back to white. |
 | `embedFonts` | `true` | Embed fonts so text matches on-screen. |
 
 **Scope and caveats:**
 
-- It reproduces the entrance for the common marks (bar, column, line, area, point/scatter, arc, and fades). Other animated mark types (map fills, tilemap tiles, table rows) fall back to a plain opacity fade rather than their bespoke motion.
-- Stacked bars animate each segment as a full-height clip rather than the on-screen chained per-segment sweep. The result reads as a bar reveal but isn't a frame-exact match of the stacked sequencing.
-- Only the `smooth` easing curve is sample-accurate. A chart configured with a different `ease` still exports with smooth motion.
+- Every instance that animates an entrance on screen exports one: charts, bar lists, tile maps, sankeys and geo maps. Tables and graphs have no GIF export.
+- Frames follow the same keyframes, curves and timing the browser plays: bar and stack reveals, label slides, line draws, map fill colour sweeps and point scale-ups, bar list row slides. A map that has a focus keeps its dimmed features at the dim.
+- It evaluates the author's `ease` (including `snappy`, `gentle` and spring), not just `smooth`.
 - The motion is a faithful JS re-creation of the CSS entrance (same durations, stagger), not a pixel-for-pixel screen capture.
 - GIF is a 256-color format. Solid fills and text hold up well at `dpi: 2`; heavy gradients will band. File size grows with duration, dimensions, and fps.
 - A chart with no entrance animation configured produces a single-frame (effectively static) GIF.

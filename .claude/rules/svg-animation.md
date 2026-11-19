@@ -20,6 +20,8 @@ These will bite you if you assume SVG elements behave like HTML elements.
 
 ## Mount Lifecycle
 
+**Every mount owns one `createEntranceLifecycle`** (`vanilla/src/entrance-lifecycle.ts`): chart (incl. canvas mode), table, sankey, bar list, tile map, geo map, and the graphs (`completion: 'js'`). Don't hand-roll `cancelSeen`, cleanup or pending-resize state in a mount. `arm()` only when the render has something to draw; `reset()` before a resize/font re-render and re-arm if it was waiting; an `update()` while the entrance waits re-arms it on the new data, while it plays the update snaps. Edit mode skips the entrance. Stamps (`--oc-*` timing vars, mark indexes, stack reveals) render only when `animate` is set, so resizes and non-GIF exports carry none.
+
 **`oc-animate` goes on before DOM insertion.** The renderer accepts `{ animate: true }` from mount.ts. If you add the class after `appendChild`, elements flash in their final state for one frame before `animation-fill-mode: both` kicks in.
 
 **ResizeObserver fires on first layout, not just resizes.** When the SVG enters the DOM, the observer fires immediately. If the callback triggers `render()`, it tears down the animated SVG and rebuilds without animation. That's why `resize()` bails out when `cleanupAnimations` is set.
@@ -69,3 +71,5 @@ Data-update transitions live in `packages/vanilla/src/transition/` (barrel: `tra
 **Path-morph interruption.** Line snapshots retain sampled points and point keys, so the next update retargets from visible geometry when correspondence is available. Area snapshots (and line snapshots without point correspondence) retain the current path as a frozen ghost and crossfade to the new final path. Rects and points retarget from their sampled position. Preserve missing-observation gaps in both paths.
 
 **Arc transitions.** Pie/donut slices tween angles and radii (plus the pie center), rebuilding the path per frame via the engine's `buildArcPath` — geometry-based, so interruption retargets like rects (the snapshot stores angles/radii/center; no freeze-and-crossfade needed). Snap-to-final writes the engine's exact `mark.path`. Exiting slices ghost and collapse to their midpoint angle while fading. Sparklines are no longer excluded from transitions — a live-updating sparkline is the canonical real-time tile.
+
+**Non-chart mounts.** Bar list, tile map, sankey and geo map tween updates with `runElementTweens` (`motion/element-tween.ts`), not the chart driver. Same rules: from-states applied synchronously, `url()` paints never interpolated, ghosts for removed elements via `makeGhost` (which re-homes gradient defs), the drawn state captured before `render()` snaps an in-flight tween, and `transition: none` on driven elements while the tween runs (hover transitions would trail every frame). Updates during a playing entrance snap, and a resize never tweens. Tables snap on update.

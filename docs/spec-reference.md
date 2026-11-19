@@ -877,8 +877,11 @@ a layout engine (server rendering, jsdom/happy-dom) the entrance plays at once,
 and under `prefers-reduced-motion` nothing waits. Export (SVG, PNG, JPG, GIF)
 never animates and is never gated. Resizes and the webfont reload re-render a
 waiting chart immediately and keep it waiting. An `.update()` while the
-entrance is still waiting drops the entrance: the new data renders in its final
-state, as it would after the entrance. Hosts whose tests or screenshots assume
+entrance is still waiting keeps it armed: it plays on the updated data once the
+chart is seen, so mounting empty and updating when a fetch resolves still
+animates the real marks. A render with nothing to draw (no marks, rows, nodes
+or features yet) doesn't arm the entrance. An `.update()` while the entrance is
+playing snaps to the new data. Hosts whose tests or screenshots assume
 the entrance runs at mount should set `trigger: 'mount'`.
 
 ### UpdatePhaseConfig
@@ -905,7 +908,7 @@ still has ~3,600 departing marks to animate.
 
 When `animation.update` is enabled and `.update(newSpec)` is called, the chart animates marks from their previous positions to the new layout instead of doing an instant swap. The engine matches marks across layouts using keys derived from data values.
 
-**Supported mark types:** bar, line, area, point (scatter/dot), beeswarm.
+**Supported mark types:** bar, column, line, area, point (scatter/dot), beeswarm, arc (pie/donut), histogram, density, rect (heatmap), waffle, calendar, parliament, range, errorbar, tick, circle, lollipop, text. Bar lists, tile maps, sankeys and geo maps tween on update too (see below). Because the gate now covers these marks, a `createChartStory` step that changes data on one of them morphs instead of crossfading.
 
 **What transitions:**
 - Rect marks (bars/columns): position + size tween
@@ -917,6 +920,7 @@ When `animation.update` is enabled and `.update(newSpec)` is called, the chart a
   value does — duplicate values re-pair by row order and dots shuffle within the
   swarm instead of tracking. Keyed transitions are not supported on faceted
   beeswarms (panel marks share un-namespaced keys, matching scatter).
+- Heatmap, waffle and calendar cells fade in on entrance (a 300ms fade, no bar wipe); on update they tween fill and geometry.
 - Axis ticks and gridlines: position slide for updated, fade for enter/exit
 - Annotations, endpoint labels, mark labels: delayed crossfade (40% delay, 60% fade-in)
 
@@ -932,6 +936,16 @@ When `animation.update` is enabled and `.update(newSpec)` is called, the chart a
 - Entrance animation is still in flight
 
 **Legend-hidden series:** When series are hidden via legend toggle, they are removed from the data. On the next `.update()` call, those series re-enter with enter animations as new marks.
+
+**Bar lists:** rows slide to their new slot while bars resize and recolour; new rows fade in and removed rows fade out as ghosts. Rows are keyed by label.
+
+**Tile maps:** tile fill, fill-opacity and label colour tween.
+
+**Sankeys** support update and exit: nodes move and resize, link ribbons morph (including gradient endpoints), labels slide, new nodes and links fade in and removed ones fade out as ghosts.
+
+**Geo maps:** feature fills and points follow `update.ease` and `update.spring`. Entering points fade in and removed points fade out as ghosts. Set `encoding.key` on the points layer to track points across updates.
+
+For bar lists, tile maps, sankeys and geo maps, an `.update()` while the entrance is playing snaps, and a resize never tweens (a resize during an update tween snaps it). While an element tween runs, CSS hover transitions on those elements are held off.
 
 **Tables:** entrance only (rows and cells on first render). Sort, search, pagination and data updates swap instantly. `animation: false` disables it.
 
@@ -1489,7 +1503,7 @@ Sankey diagrams show flows between stages. Each data row represents a link from 
 | `legend`        | `LegendConfig`    | `undefined` | Legend display configuration.                                                       |
 | `theme`         | `ThemeConfig`     | `undefined` | Theme overrides.                                                                    |
 | `watermark`     | `boolean`         | `true`      | Whether to show the tryOpenData.ai watermark.                                       |
-| `animation`     | `AnimationSpec`   | on          | Animation configuration. On by default; `false` disables it.                        |
+| `animation`     | `AnimationSpec`   | on          | Animation configuration. On by default; `false` disables it. Supports entrance, update and exit (see [Data-update transitions](#data-update-transitions)). |
 
 ### SankeyEncoding
 
@@ -1586,7 +1600,7 @@ Symbol overlay projected through the same geo projection as the features. Indepe
 | `size`      | `EncodingChannel`                      | `undefined` | Quantitative radius encoding. Area-proportional (r proportional to sqrt of value), default radius range 3-20px. No size legend is rendered; explain the scale in `chrome.subtitle` if needed. |
 | `color`     | `EncodingChannel`                      | `undefined` | Nominal (categorical swatches) or quantitative (sequential scheme, same `scale.scheme` names as choropleth). Independent scale from the choropleth color. |
 | `tooltip`   | `EncodingChannel \| EncodingChannel[]` | `undefined` | Tooltip field(s) for point hover.                                                 |
-| `key`       | `EncodingChannel`                      | `undefined` | Stable id for event callbacks. Data-update transitions for points are not yet supported. |
+| `key`       | `EncodingChannel`                      | `undefined` | Stable id for event callbacks and for matching points across updates, so points tween, enter and exit on `.update()`. |
 | `opacity`   | `number`                               | `0.65`      | Fill opacity for point circles (0-1).                                             |
 
 ### Focus
@@ -1638,7 +1652,7 @@ A quantitative choropleth gets a class legend above the map by default; `legend:
 
 ### Map events and updates
 
-`onMarkClick` and `onMarkHover` (via `MountOptions`/component props) receive a `GeoMapMarkEvent` discriminated by `kind: 'feature' | 'point'`. Calling `.update()` with new data animates feature fills (recolor transition); the points layer re-renders without transitions.
+`onMarkClick` and `onMarkHover` (via `MountOptions`/component props) receive a `GeoMapMarkEvent` discriminated by `kind: 'feature' | 'point'`. Calling `.update()` with new data animates feature fills (recolor transition) and the points layer: points keyed by `encoding.key` move, resize and recolour, entering points fade in and removed points fade out. Both honour `animation.update`.
 
 ### Map example
 

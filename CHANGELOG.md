@@ -6,6 +6,43 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+Motion is on by default for every visualization type and now follows one set of defaults. See the "Motion on by default" section of [the v9 migration guide](https://github.com/tryopendata/openchart/blob/main/docs/migrating-v9.md) for opt-outs.
+
+### Behaviour changes
+
+- Animation is on by default for every type (charts, sparklines, tables, bar lists, tile maps, sankeys, geo maps, graphs). Omitting `animation` now resolves to the same defaults as `true`, including in `resolveAnimation(undefined)`. Set `animation: false` to opt out.
+- Entrances play when the chart scrolls into view (`animation.enter.trigger: 'visible'`, the default). A chart in a hidden (zero-size) container waits until it has size and is seen. Use `trigger: 'mount'` for the old play-at-mount behaviour, for example in screenshot tests.
+- Entrances use new choreography: 600ms enter, 80ms stagger clamped so the whole stagger spans at most 300ms, 500ms update. Annotations start after the last mark reaches 90%. Stacked bars reveal as one shape per stack on the author's curve (the stack segment duration is accepted and ignored). Value labels ride the bar tip. Heatmap, waffle and calendar cells fade in instead of the bar wipe.
+- The default curve is now the Decks snap curve, still named `smooth`. `gentle` is the previous `smooth`, and `snappy` is redefined as a non-overshooting curve.
+- Exits are a fast 120ms fade. When an update removes marks, surviving marks, chrome and entering marks wait for the exit to clear, so updates that remove marks start 120ms later.
+- An `.update()` that arrives while the entrance is still waiting to be seen re-arms the entrance on the new data, for every type including graphs. An update during a playing entrance snaps. A render with nothing to draw does not arm the entrance. Edit mode skips the entrance.
+- Resize no longer tweens, and a resize during an update tween snaps it.
+- Reduced motion opens no entrance window, so resizes and updates are not deferred.
+- `createChartStory` resolves an omitted `animation` to `{ enter: false }` (updates kept), since scroll drives the reveal. Because ten more marks now transition (see Added), story steps on those marks morph instead of crossfading.
+- Graph `animation.enter.stagger` as an object is deprecated and ignored; it warns through `onWarn` instead of failing validation. Use `stagger: true | false`.
+- GIF frames follow the real entrance keyframes, curves and timing, so exported frames change: labels, text, rules and annotations animate on their own schedule, `snappy` and spring curves are honoured, and the capture window is the entrance end plus 300ms.
+- Non-GIF exports (SVG, PNG, JPG) carry no animation stamps.
+
+### Added
+
+- Update tweens for chart marks that used to swap instantly: rect/heatmap, waffle, calendar, parliament, range, errorbar, tick, circle, lollipop and text. This widens `canTransitionSpecShape`.
+- Update tweens for non-chart types, all following `update.ease` and `update.spring`:
+  - Bar lists: rows slide to their slot, bar width and fill tween, new rows fade in and removed rows leave a fading ghost.
+  - Tile maps: tile fill, fill-opacity and label colour.
+  - Sankeys: nodes move and resize, links morph including their gradients, labels slide, new nodes and links fade in, removed ones fade out.
+  - Geo maps: feature fills and points tween, entering points fade in, removed points leave ghosts. Tables still snap on update (entrance only).
+- `export('gif')` for bar lists, tile maps, sankeys and geo maps, with their real entrance motion: map fill colour sweep and point scale-up, bar list row slide, and focus dim respected. Tables and graphs have no GIF export.
+- Graph `animation.enter.trigger` (`'visible'` or `'mount'`) and `spring` on every graph phase, for 2D and 3D. Graph instances expose `entrancePlayed`, and the React, Vue and Svelte wrappers suppress the entrance on a theme or dimension remount only if it already played.
+- Shared `createEntranceLifecycle` for every mount, and `runElementTweens` / `makeGhost` for keyed element tweens (internal to vanilla).
+- `BarListRowMark.key` and `RectMark.cell` layout metadata.
+
+### Fixed
+
+- GIF and JPG exports came out with a black background when the SVG had no root background rect or used a transparent, `currentColor` or `url()` paint. `getSVGBackgroundColor` now reads only the root background rect and falls back to white.
+- Sankey hover transitions no longer trail an entering label's fade, because element tweens hold CSS transitions off while they run.
+- A chart updated before it is seen no longer drops its entrance.
+- Canvas entrance cleanup now ends when the tween completes, instead of on a mount-time timer.
+
 ## [9.0.0] - 2026-10-28
 
 Stable v9 release. Upgrade all six packages together and review [the v9 migration guide](https://github.com/tryopendata/openchart/blob/core-v9.0.0/docs/migrating-v9.md). This entry includes the changes introduced in both release candidates since 8.9.1.
