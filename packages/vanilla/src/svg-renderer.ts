@@ -104,14 +104,15 @@ export function renderChartSVG(
   const enterPhase = animation?.enter;
   let staggerMs: number | undefined;
   if (enterPhase) {
-    const markCount = layout.marks.length;
-    staggerMs = clampStaggerDelay(enterPhase.staggerDelay, markCount);
     // Annotations wait for the last mark's stagger slot.
     const panelMarks = layout.facet ? layout.facet.panels.flatMap((p) => p.marks) : layout.marks;
     let lastMarkIndex = 0;
     panelMarks.forEach((m, i) => {
       lastMarkIndex = Math.max(lastMarkIndex, m.animationIndex ?? i);
     });
+    // Spread the stagger budget over stagger slots, not marks: every segment
+    // of a stack shares its stack's slot, so 4 stacks of 3 segments are 4 slots.
+    staggerMs = clampStaggerDelay(enterPhase.staggerDelay, lastMarkIndex + 1);
 
     stampAnimationVars(svg, {
       duration: enterPhase.duration,

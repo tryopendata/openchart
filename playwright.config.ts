@@ -28,6 +28,18 @@ export default defineConfig({
       testDir: './e2e/a11y',
       use: { ...devices['Desktop Chrome'], deviceScaleFactor: 1 },
     },
+    // Entrance choreography: seeks paused CSS animations to fixed times, so
+    // it never depends on the wall clock.
+    {
+      name: 'motion',
+      testDir: './e2e/motion',
+      use: { ...devices['Desktop Chrome'], deviceScaleFactor: 1 },
+    },
+    {
+      name: 'motion-webkit',
+      testDir: './e2e/motion',
+      use: { ...devices['Desktop Safari'], deviceScaleFactor: 1 },
+    },
     {
       name: 'chart-map-design',
       testDir: './e2e/chart-map-design',

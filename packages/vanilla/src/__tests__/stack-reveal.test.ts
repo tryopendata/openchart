@@ -54,6 +54,13 @@ describe('stack reveal', () => {
     expect(roles).not.toContain('bar');
   });
 
+  it('spreads the stagger over stacks, not segments', () => {
+    // 3 stacks of 3 segments are 3 stagger slots: min(80, 300 / 2) = 80ms.
+    // Counting the 9 segments would give 300 / 8 = 37.5ms.
+    const svg = render(stackedColumns({ animation: true }));
+    expect(svg.style.getPropertyValue('--oc-animation-stagger')).toBe('80ms');
+  });
+
   it('is the default for eased presets too, with no per-segment chain', () => {
     const svg = render(stackedColumns({ animation: true }));
     expect(svg.querySelectorAll('.oc-stack-reveal')).toHaveLength(3);
