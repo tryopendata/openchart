@@ -97,15 +97,15 @@ describe('createChart', () => {
     chart.destroy();
   });
 
-  it('drops the waiting entrance on update and shows the new data settled', () => {
+  it('re-arms the waiting entrance on update, so the new data enters when seen', () => {
     const container = createContainer();
     const chart = createChart(container, animated, { autoResize: false });
 
     chart.update({ ...animated, data: [{ category: 'Solo', revenue: 1 }] } as ChartSpec);
     const svg = container.querySelector('svg.oc-chart') as SVGElement;
-    expect(svg.classList.contains('oc-animate')).toBe(false);
-    expect(playState(svg)).toBe('');
-    expect(observedCount()).toBe(0);
+    expect(svg.classList.contains('oc-animate')).toBe(true);
+    expect(playState(svg)).toBe('paused');
+    expect(observedCount()).toBe(1);
 
     chart.destroy();
   });

@@ -15,7 +15,8 @@ import type {
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
 import { compileSankey } from '@opendata-ai/openchart-engine';
-import { cancelAnimations, setupAnimationCleanup } from './animation';
+import { cancelAnimations } from './animation';
+import { createEntranceLifecycle } from './entrance-lifecycle';
 import {
   exportJPG,
   exportPNG,
@@ -31,13 +32,11 @@ import {
   wireMarkNavigation,
 } from './interactions/mark-navigation';
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
-import { prefersReducedMotion } from './motion/tween';
 import { observeResize } from './resize-observer';
 import { resolveDarkMode } from './resolve-dark-mode';
 import { renderSankeySVG } from './sankey-renderer';
 import { prepareSettledExportTheme } from './theme-style-block';
 import { createTooltipManager, type TooltipManager } from './tooltip';
-import { playWhenSeen } from './visibility';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -131,12 +130,12 @@ export function createSankey(
   let disconnectResize: (() => void) | null = null;
 
   // Animation state
-  let isFirstRender = true;
-  let animationCleanup: (() => void) | null = null;
-  let pendingResize = false;
-  // Set while the entrance waits for the chart to scroll into view; calling it
-  // drops the visibility subscription. A render while waiting re-arms it.
-  let cancelSeen: (() => void) | null = null;
+  // Owed until a render has nodes: a sankey mounted before its data arrives
+  // enters on the first update that brings some.
+  let entranceOwed = true;
+  // Waiting (held until seen): every re-render re-arms it on the new SVG.
+  // Playing: resizes defer and replay after it settles; updates snap.
+  const entrance = createEntranceLifecycle({ onDeferredResize: () => resize() });
 
   // Set when webfonts have loaded and a recompile is owed. The next render()
   // that recompiles flips data-oc-fonts-state to 'ready' and clears this, so
@@ -456,46 +455,35 @@ export function createSankey(
    * the cleanup. Under reduced motion nothing plays, so no entrance window
    * opens.
    */
-  function armEntrance(svg: SVGElement): void {
+  function armEntrance(svg: SVGSVGElement): void {
     const enter = currentLayout.animation?.enter;
     if (!enter) return;
-    cancelSeen = playWhenSeen(container, svg, enter.trigger, () => {
-      cancelSeen = null;
-      if (prefersReducedMotion()) return;
-      animationCleanup = setupAnimationCleanup(svg, {
-        onComplete: () => {
-          animationCleanup = null;
-          if (pendingResize) {
-            pendingResize = false;
-            resize();
-          }
-        },
-      });
-    });
+    entrance.arm({ container, root: svg, trigger: enter.trigger });
+  }
+
+  /** Whether the entrance should play on a render of `layout`. */
+  function claimEntrance(layout: SankeyLayout, rearm: boolean): boolean {
+    const hasNodes = layout.nodes.length > 0;
+    const animate = (entranceOwed || rearm) && hasNodes && !!layout.animation?.enter;
+    if (hasNodes) entranceOwed = false;
+    return animate;
   }
 
   /**
-   * `dropEntrance`: an update while the entrance still waits to be seen
-   * renders the new data in its final state; other re-renders while waiting
-   * (resize, font reload) re-arm the paused entrance.
+   * A render while the entrance still waits to be seen (resize, font reload,
+   * update) re-arms it on the new SVG.
    */
-  function render(prepared?: SankeyLayout, dropEntrance = false): void {
+  function render(prepared?: SankeyLayout): void {
     if (destroyed) return;
     const nextLayout = prepared ?? compile();
     const focusedMark = captureMarkFocus(svgElement);
     tooltipManager?.hide();
 
-    // Cancel in-progress animations before tearing down
-    if (animationCleanup) {
-      animationCleanup();
-      animationCleanup = null;
-    }
+    // Cancel the in-progress entrance before tearing down
+    const rearmEntrance = entrance.reset();
     if (svgElement) {
       cancelAnimations(svgElement);
     }
-    const rearmEntrance = cancelSeen !== null && !dropEntrance;
-    cancelSeen?.();
-    cancelSeen = null;
 
     // Clean up previous tooltip listeners
     if (cleanupTooltipEvents) {
@@ -511,8 +499,7 @@ export function createSankey(
     currentLayout = nextLayout;
 
     // Determine if we should animate
-    const shouldAnimate = (isFirstRender || rearmEntrance) && !!currentLayout.animation?.enter;
-    isFirstRender = false;
+    const shouldAnimate = claimEntrance(currentLayout, rearmEntrance);
 
     // Render
     const animation = shouldAnimate ? currentLayout.animation : undefined;
@@ -565,17 +552,14 @@ export function createSankey(
     fontFamily = nextFont;
     measureText = nextMeasure;
 
-    render(nextLayout, true);
+    render(nextLayout);
   }
 
   function resize(): void {
     if (destroyed) return;
     // Skip resize during entrance animation to avoid tearing down the animated SVG.
     // Queued resizes replay once animation completes.
-    if (animationCleanup) {
-      pendingResize = true;
-      return;
-    }
+    if (!entrance.admitResize()) return;
     render();
   }
 
@@ -616,13 +600,7 @@ export function createSankey(
     destroyed = true;
 
     // Cancel entrance animations
-    if (animationCleanup) {
-      animationCleanup();
-      animationCleanup = null;
-      pendingResize = false;
-    }
-    cancelSeen?.();
-    cancelSeen = null;
+    entrance.destroy();
     if (svgElement) {
       cancelAnimations(svgElement);
     }
@@ -663,8 +641,7 @@ export function createSankey(
     currentLayout = compile();
 
     // Determine if we should animate
-    const shouldAnimate = !!currentLayout.animation?.enter;
-    isFirstRender = false;
+    const shouldAnimate = claimEntrance(currentLayout, false);
 
     // Render
     const animation = shouldAnimate ? currentLayout.animation : undefined;

@@ -128,12 +128,15 @@ describe('Chart update-vs-remount', () => {
   });
 
   it('does not replay the entrance when the mark type changes', async () => {
-    const { container, rerender } = render(<Chart spec={{ ...lineSpec, animation: true }} />);
+    // Played at mount: an update while the entrance still waits to be seen
+    // re-arms it on the new data instead, which is not a replay.
+    const animation = { enter: { trigger: 'mount' as const } };
+    const { container, rerender } = render(<Chart spec={{ ...lineSpec, animation }} />);
     await waitFor(() => expect(rootSvg(container)).not.toBeNull());
     // Only a freshly mounted chart plays its entrance.
     expect(rootSvg(container)?.classList.contains('oc-animate')).toBe(true);
 
-    rerender(<Chart spec={{ ...barSpec, animation: true }} />);
+    rerender(<Chart spec={{ ...barSpec, animation }} />);
     await waitFor(() => expect(container.querySelector('.oc-mark-rect')).not.toBeNull());
 
     expect(container.querySelectorAll('.oc-chart-root > svg')).toHaveLength(1);

@@ -125,11 +125,23 @@ export function injectThemeStyleBlock(svg: SVGElement, theme: ResolvedTheme | un
   defs.insertBefore(style, defs.firstChild);
 }
 
+/**
+ * Timing tokens an entrance also stamps inline on its live root
+ * (`stampAnimationVars`). An inline value there is that render's motion state,
+ * not theme, so a settled export doesn't carry it.
+ */
+const ENTRANCE_TIMING_TOKENS = new Set([
+  '--oc-animation-duration',
+  '--oc-animation-stagger',
+  '--oc-annotation-delay',
+]);
+
 /** Preserve the live host CSS tokens when an export leaves its document. */
 export function copyComputedThemeProperties(source: SVGElement, clone: SVGElement): void {
   if (!source.isConnected) return;
   const computed = getComputedStyle(source);
   for (const { name } of CSS_TOKENS) {
+    if (ENTRANCE_TIMING_TOKENS.has(name) && source.style.getPropertyValue(name)) continue;
     const value = computed.getPropertyValue(name).trim();
     if (value) clone.style.setProperty(name, value);
   }

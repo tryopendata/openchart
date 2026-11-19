@@ -55,11 +55,11 @@ function pointCount(layout: ChartLayout): number {
  * it injects nothing into `<head>`. The container is never inserted, so this
  * costs one render and no layout.
  */
-function materializeSvgModeSVG(layout: ChartLayout): SVGElement {
+function materializeSvgModeSVG(layout: ChartLayout, animate: boolean): SVGElement {
   const host = document.createElement('div');
   // No `canvasMarks` option: the renderer emits the full SVG -- background,
   // gridlines and every point circle.
-  return renderChartSVG(layout, host, { animate: false });
+  return renderChartSVG(layout, host, { animate });
 }
 
 /**
@@ -70,12 +70,12 @@ function materializeSvgModeSVG(layout: ChartLayout): SVGElement {
  * under the trendline and any overlays -- matching the on-screen stack, where
  * the canvas sits below the SVG.
  */
-function materializeRasterMarkSVG(layout: ChartLayout): SVGElement {
+function materializeRasterMarkSVG(layout: ChartLayout, animate: boolean): SVGElement {
   const host = document.createElement('div');
   // Full SVG first, then strip the circles. NOT `canvasMarks: true`: that
   // option also suppresses the background rect and the gridlines, and this
   // path wants both of those in vector -- only the dot cloud rasterizes.
-  const svg = renderChartSVG(layout, host, { animate: false });
+  const svg = renderChartSVG(layout, host, { animate });
 
   const dataUrl = rasterizeMarks(layout);
   // No raster available (no 2D context, no toDataURL): keep the vector circles
@@ -156,13 +156,17 @@ function rasterizeMarks(layout: ChartLayout): string | null {
  * encoder a complete SVG means the existing frame pipeline works unchanged: no
  * per-frame `drawImage` of the live mark canvas, no background sourced from a
  * suppressed rect, no second code path to keep in sync with the first.
+ *
+ * `animate` keeps the entrance stamps the GIF sampler reads; every other
+ * format renders without them.
  */
 export function materializeCanvasModeSVG(
   layout: ChartLayout,
-  opts?: { forceVector?: boolean },
+  opts?: { forceVector?: boolean; animate?: boolean },
 ): SVGElement {
+  const animate = opts?.animate ?? false;
   if (opts?.forceVector || pointCount(layout) <= VECTOR_EXPORT_MAX_POINTS) {
-    return materializeSvgModeSVG(layout);
+    return materializeSvgModeSVG(layout, animate);
   }
-  return materializeRasterMarkSVG(layout);
+  return materializeRasterMarkSVG(layout, animate);
 }

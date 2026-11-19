@@ -21,13 +21,12 @@ import type {
 } from '@opendata-ai/openchart-core';
 import { BREAKPOINT_COMPACT_MAX } from '@opendata-ai/openchart-core';
 import { compileTable } from '@opendata-ai/openchart-engine';
-import { setupTableAnimationCleanup } from './animation';
-import { prefersReducedMotion } from './motion/tween';
+import { TABLE_CLEANUP_PAD_MS } from './animation';
+import { createEntranceLifecycle } from './entrance-lifecycle';
 import { observeResize } from './resize-observer';
 import { resolveDarkMode } from './resolve-dark-mode';
 import { attachKeyboardNav } from './table-keyboard';
 import { renderTable } from './table-renderer';
-import { playWhenSeen } from './visibility';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -122,12 +121,12 @@ export function createTable(
   let wrapperElement: HTMLElement | null = null;
   let disconnectResize: (() => void) | null = null;
   let cleanupKeyboard: (() => void) | null = null;
-  let cleanupAnimations: (() => void) | null = null;
-  let pendingResize = false;
-  let isFirstRender = true;
-  // Set while the entrance waits for the table to scroll into view; calling it
-  // drops the visibility subscription.
-  let cancelSeen: (() => void) | null = null;
+  // Owed until a render has rows: a table mounted before its data arrives
+  // enters on the first update that brings some.
+  let entranceOwed = true;
+  // Waiting (held until seen): every re-render re-arms it on the new wrapper.
+  // Playing: resizes defer and replay after it settles; other renders snap.
+  const entrance = createEntranceLifecycle({ onDeferredResize: () => resize() });
   let destroyed = false;
   // Whether the user has touched sorting. Once they have, a null sort means
   // "explicitly unsorted" and must not fall back to the spec/bar-column default.
@@ -268,12 +267,7 @@ export function createTable(
     wrapperElement.classList.toggle('oc-table--regular', !condensed);
   }
 
-  /**
-   * `dropEntrance`: an update while the entrance still waits to be seen
-   * renders the new data in its final state. Other re-renders while waiting
-   * (resize, sort, search, paging) re-arm the paused entrance.
-   */
-  function render(candidate = currentSpec, dropEntrance = false): void {
+  function render(candidate = currentSpec): void {
     if (destroyed) return;
 
     // Keep the previous view usable if validation or compilation rejects an edit.
@@ -295,14 +289,9 @@ export function createTable(
       ? active?.getAttribute('data-page-action')
       : null;
     currentSpec = candidate;
-    // Cancel any in-flight animations before re-rendering
-    if (cleanupAnimations) {
-      cleanupAnimations();
-      cleanupAnimations = null;
-    }
-    const rearmEntrance = cancelSeen !== null && !dropEntrance;
-    cancelSeen?.();
-    cancelSeen = null;
+    // Cancel any in-flight entrance before re-rendering; one still waiting to
+    // be seen (resize, sort, search, paging, update) re-arms on the new wrapper.
+    const rearmEntrance = entrance.reset();
 
     // Clean up previous keyboard nav
     if (cleanupKeyboard) {
@@ -317,28 +306,22 @@ export function createTable(
     }
 
     currentLayout = nextLayout;
-    const shouldAnimate = (isFirstRender || rearmEntrance) && !!currentLayout.animation?.enter;
+    const hasRows = currentLayout.rows.length > 0;
+    const shouldAnimate =
+      (entranceOwed || rearmEntrance) && hasRows && !!currentLayout.animation?.enter;
+    if (hasRows) entranceOwed = false;
     wrapperElement = renderTable(currentLayout, container, { animate: shouldAnimate });
 
     // Set up the entrance on first animated render. It holds paused until the
     // table scrolls into view; the cleanup only starts once it plays.
     // Under reduced motion nothing plays, so no entrance window opens.
     if (shouldAnimate && wrapperElement && currentLayout.animation?.enter) {
-      const wrapper = wrapperElement;
-      cancelSeen = playWhenSeen(container, wrapper, currentLayout.animation.enter.trigger, () => {
-        cancelSeen = null;
-        if (prefersReducedMotion()) return;
-        cleanupAnimations = setupTableAnimationCleanup(wrapper, () => {
-          cleanupAnimations = null;
-          if (pendingResize && !destroyed) {
-            pendingResize = false;
-            resize();
-          }
-        });
+      entrance.arm({
+        container,
+        root: wrapperElement,
+        trigger: currentLayout.animation.enter.trigger,
+        fallbackPadMs: TABLE_CLEANUP_PAD_MS,
       });
-    }
-    if (isFirstRender) {
-      isFirstRender = false;
     }
 
     // Apply dark mode class
@@ -526,7 +509,7 @@ export function createTable(
   /**
    * Re-render the table, preserving search input focus across the DOM rebuild.
    */
-  function rerender(candidate = currentSpec, dropEntrance = false): void {
+  function rerender(candidate = currentSpec): void {
     if (destroyed) return;
 
     // Capture current search input state before re-render
@@ -538,7 +521,7 @@ export function createTable(
     const selectionStart = searchInput?.selectionStart ?? 0;
     const selectionEnd = searchInput?.selectionEnd ?? 0;
 
-    render(candidate, dropEntrance);
+    render(candidate);
 
     // Restore search focus after re-render
     if (hadFocus) {
@@ -555,15 +538,12 @@ export function createTable(
 
   function update(newSpec: TableSpec): void {
     if (destroyed) return;
-    rerender(newSpec, true);
+    rerender(newSpec);
   }
 
   function resize(): void {
     if (destroyed) return;
-    if (cleanupAnimations) {
-      pendingResize = true;
-      return;
-    }
+    if (!entrance.admitResize()) return;
     rerender();
   }
 
@@ -644,12 +624,7 @@ export function createTable(
     if (destroyed) return;
     destroyed = true;
 
-    if (cleanupAnimations) {
-      cleanupAnimations();
-      cleanupAnimations = null;
-    }
-    cancelSeen?.();
-    cancelSeen = null;
+    entrance.destroy();
     if (cleanupKeyboard) {
       cleanupKeyboard();
       cleanupKeyboard = null;

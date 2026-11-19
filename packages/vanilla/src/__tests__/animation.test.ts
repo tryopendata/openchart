@@ -23,10 +23,13 @@ import { renderChartSVG } from '../svg-renderer';
 // Helpers
 // ---------------------------------------------------------------------------
 
-function compileAndRender(spec: ChartSpec, width = 600, height = 400) {
+function compileAndRender(spec: ChartSpec, opts: { animate?: boolean } = {}) {
+  const width = 600;
+  const height = 400;
   const container = createContainer(width, height);
   const layout = compileChart(spec, { width, height });
-  const svg = renderChartSVG(layout, container);
+  // Entrance stamps only land on a render that plays the entrance.
+  const svg = renderChartSVG(layout, container, { animate: opts.animate });
   return { svg, container, layout };
 }
 
@@ -134,13 +137,13 @@ describe('animation CSS custom properties', () => {
       ...barSpec,
       animation: { enter: { duration: 800 } },
     } as ChartSpec;
-    const { svg } = compileAndRender(spec);
+    const { svg } = compileAndRender(spec, { animate: true });
     expect(svg.style.getPropertyValue('--oc-animation-duration')).toBe('800ms');
   });
 
   it('sets --oc-animation-stagger on SVG root', () => {
     const spec = { ...barSpec, animation: true } as ChartSpec;
-    const { svg } = compileAndRender(spec);
+    const { svg } = compileAndRender(spec, { animate: true });
     const stagger = svg.style.getPropertyValue('--oc-animation-stagger');
     expect(stagger).toMatch(/^\d+ms$/);
   });
@@ -150,12 +153,14 @@ describe('animation CSS custom properties', () => {
       ...barSpec,
       animation: { enter: true, annotationDelay: 500 },
     } as ChartSpec;
-    const { svg } = compileAndRender(spec);
+    const { svg } = compileAndRender(spec, { animate: true });
     expect(svg.style.getPropertyValue('--oc-annotation-delay')).toBe('500ms');
   });
 
   it('does not set animation custom properties when animation is disabled', () => {
-    const { svg } = compileAndRender({ ...barSpec, animation: false } as ChartSpec);
+    const { svg } = compileAndRender({ ...barSpec, animation: false } as ChartSpec, {
+      animate: true,
+    });
     expect(svg.style.getPropertyValue('--oc-animation-duration')).toBe('');
     expect(svg.style.getPropertyValue('--oc-animation-stagger')).toBe('');
   });
@@ -168,7 +173,7 @@ describe('animation CSS custom properties', () => {
 describe('mark animation index attributes', () => {
   it('stamps --oc-mark-index on rect mark groups', () => {
     const spec = { ...columnSpec, animation: true } as ChartSpec;
-    const { svg } = compileAndRender(spec);
+    const { svg } = compileAndRender(spec, { animate: true });
 
     const markGroups = svg.querySelectorAll('.oc-mark-rect');
     expect(markGroups.length).toBeGreaterThan(0);
@@ -182,7 +187,7 @@ describe('mark animation index attributes', () => {
 
   it('stamps data-animation-index attribute on mark groups', () => {
     const spec = { ...columnSpec, animation: true } as ChartSpec;
-    const { svg } = compileAndRender(spec);
+    const { svg } = compileAndRender(spec, { animate: true });
 
     const markGroups = svg.querySelectorAll('[data-animation-index]');
     expect(markGroups.length).toBeGreaterThan(0);
@@ -195,7 +200,9 @@ describe('mark animation index attributes', () => {
   });
 
   it('does not stamp animation attributes when animation is disabled', () => {
-    const { svg } = compileAndRender({ ...columnSpec, animation: false } as ChartSpec);
+    const { svg } = compileAndRender({ ...columnSpec, animation: false } as ChartSpec, {
+      animate: true,
+    });
 
     const withAnimIdx = svg.querySelectorAll('[data-animation-index]');
     expect(withAnimIdx.length).toBe(0);
@@ -203,7 +210,7 @@ describe('mark animation index attributes', () => {
 
   it('stamps --oc-mark-index on line mark groups', () => {
     const spec = { ...lineSpec, animation: true } as ChartSpec;
-    const { svg } = compileAndRender(spec);
+    const { svg } = compileAndRender(spec, { animate: true });
 
     const lineGroups = svg.querySelectorAll('.oc-mark-line');
     expect(lineGroups.length).toBeGreaterThan(0);
@@ -224,7 +231,7 @@ describe('data-orient for horizontal bars', () => {
   it('sets data-orient=horizontal on mark groups for horizontal bar charts', () => {
     // barSpec has x=quantitative, y=nominal which is a horizontal bar chart
     const spec = { ...barSpec, animation: true } as ChartSpec;
-    const { svg } = compileAndRender(spec);
+    const { svg } = compileAndRender(spec, { animate: true });
 
     const horizontalGroups = svg.querySelectorAll('[data-orient="horizontal"]');
     expect(horizontalGroups.length).toBeGreaterThan(0);
@@ -233,7 +240,7 @@ describe('data-orient for horizontal bars', () => {
   it('does not set data-orient=horizontal on vertical column charts', () => {
     // columnSpec has x=nominal, y=quantitative which is a vertical column chart
     const spec = { ...columnSpec, animation: true } as ChartSpec;
-    const { svg } = compileAndRender(spec);
+    const { svg } = compileAndRender(spec, { animate: true });
 
     const horizontalGroups = svg.querySelectorAll('[data-orient="horizontal"]');
     expect(horizontalGroups.length).toBe(0);
