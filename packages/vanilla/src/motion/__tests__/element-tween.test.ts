@@ -97,6 +97,24 @@ describe('runElementTweens', () => {
     await handle.finished;
   });
 
+  it('holds CSS transitions off on tweened elements and restores them at the end', async () => {
+    const label = svgEl('text', { style: 'transition: opacity 140ms ease-out' });
+    const rect = svgEl('rect');
+    const handle = runElementTweens(
+      [
+        { kind: 'enter', el: label },
+        { kind: 'number', el: rect, attr: 'width', from: 0, to: 10 },
+      ],
+      { update: { duration: 400 } },
+    );
+    expect(label.style.transition).toBe('none');
+    expect(rect.style.transition).toBe('none');
+    handle.cancel();
+    await handle.finished;
+    expect(label.style.transition).toBe('opacity 140ms ease-out');
+    expect(rect.style.transition).toBe('');
+  });
+
   it('follows a spring phase', () => {
     const rect = svgEl('rect');
     const spring = { stiffness: 180, damping: 30 };

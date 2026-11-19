@@ -202,6 +202,21 @@ export function runElementTweens(
     return evalValueCurve(FADE_CURVE, local / timeline.enterMs);
   };
 
+  // A CSS transition on a tweened property (hover fades on sankey labels and
+  // nodes) would trail every frame we write, so hold transitions off on the
+  // tweened elements until the tween ends, then restore what was inline.
+  const held = new Map<ElementCSSInlineStyle, string>();
+  for (const tween of tweens) {
+    const el = targetOf(tween) as Element & Partial<ElementCSSInlineStyle>;
+    if (!el.style || held.has(el as ElementCSSInlineStyle)) continue;
+    held.set(el as ElementCSSInlineStyle, el.style.transition);
+    el.style.transition = 'none';
+  }
+  const release = () => {
+    for (const [el, transition] of held) el.style.transition = transition;
+    held.clear();
+  };
+
   // Synchronous from-state, before the first frame.
   for (const track of tracks) track.apply(progressAt(track.slot, 0));
 
@@ -216,6 +231,8 @@ export function runElementTweens(
   const end = () => {
     running = false;
     snapAll();
+    // Restore after the final write lands, so the snap itself never transitions.
+    release();
     resolveFinished();
   };
 
