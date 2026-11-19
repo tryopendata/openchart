@@ -39,8 +39,6 @@ Motion is on by default for every visualization type and now follows one set of 
 ### Fixed
 
 - GIF and JPG exports came out with a black background when the SVG had no root background rect or used a transparent, `currentColor` or `url()` paint. `getSVGBackgroundColor` now reads only the root background rect and falls back to white.
-- Sankey hover transitions no longer trail an entering label's fade, because element tweens hold CSS transitions off while they run.
-- A chart updated before it is seen no longer drops its entrance.
 - Canvas entrance cleanup now ends when the tween completes, instead of on a mount-time timer.
 
 ## [9.0.0] - 2026-10-28
