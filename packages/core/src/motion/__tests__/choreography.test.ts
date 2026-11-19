@@ -45,6 +45,7 @@ const ROLE_NAMES: EntranceRole[] = [
   'rule',
   'tick',
   'label',
+  'endpoint-label',
   'annotation',
   'tilemap-tile',
   'map-feature',
@@ -205,6 +206,8 @@ function goldens(D: number, reach: (p: number) => number): Record<EntranceRole, 
     rule: [S * I, 0.5 * D, 0, 0.5 * D],
     tick: [S * I, 0.5 * D, 0, 0.5 * D],
     label: [S * I, D, D, 140],
+    // Once its own series' line (same index) is 95% of the way across.
+    'endpoint-label': [S * I + D * reach(0.95), 300, 0, 300],
     // When the last mark reaches 0.9, plus the authored gap.
     annotation: [S * LAST + D * reach(0.9) + ANNOTATION, 300, 0, 300],
     'tilemap-tile': [TILE_DELAY, 0.35 * D, 0, 0.35 * D],

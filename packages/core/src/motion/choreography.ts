@@ -349,6 +349,7 @@ export type EntranceRole =
   | 'rule'
   | 'tick'
   | 'label'
+  | 'endpoint-label'
   | 'annotation'
   | 'tilemap-tile'
   | 'map-feature'
@@ -654,6 +655,22 @@ const ROLE_DEFS: readonly EntranceRoleDef[] = [
     duration: base(1),
     fade: { ms: TEXT_FADE_MS },
     delay: { stagger: 'mark' },
+  },
+  {
+    name: 'endpoint-label',
+    scope: 'chart',
+    comment:
+      "Trailing endpoint labels (marker, name, value) and area interior labels:\nfade in as their own series' line reaches the end, never before it. The\nrenderer stamps each entry with its series' --oc-mark-index.",
+    selectors: [
+      '.oc-endpoint-label-entry[data-endpoint-side="trailing"]',
+      '.oc-area-interior-label',
+    ],
+    emit: 'shorthand',
+    keyframe: 'oc-enter-fade-only',
+    timing: AUTHOR,
+    durationBasis: 'phase',
+    duration: fixed(POINT_FADE_MS),
+    delay: { after: when('line-area', 0.95), stagger: 'mark' },
   },
   {
     name: 'annotation',

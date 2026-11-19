@@ -306,6 +306,24 @@ export function renderChartSVG(
 
     renderEndpointLabels(svg, layout, ctx);
 
+    // Endpoint labels enter with their own series' line (the endpoint-label
+    // role keys on --oc-mark-index), so a label never shows before its line.
+    if (enterPhase) {
+      const indexBySeries = new Map<string, number>();
+      layout.marks.forEach((m, i) => {
+        if ((m.type === 'line' || m.type === 'area') && m.seriesKey !== undefined) {
+          if (!indexBySeries.has(m.seriesKey))
+            indexBySeries.set(m.seriesKey, m.animationIndex ?? i);
+        }
+      });
+      for (const el of svg.querySelectorAll<SVGElement>(
+        '.oc-endpoint-label-entry, .oc-area-interior-label',
+      )) {
+        const idx = indexBySeries.get(el.getAttribute('data-endpoint-key') ?? '');
+        if (idx !== undefined) el.style.setProperty('--oc-mark-index', String(idx));
+      }
+    }
+
     // Suppress decorative point marks under endpoint markers
     const epEntries = layout.endpointLabels?.entries ?? [];
     if (epEntries.length > 0) {

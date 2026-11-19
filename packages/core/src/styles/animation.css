@@ -166,6 +166,24 @@
       animation-play-state: var(--oc-play-state, running);
     }
 
+    /* Trailing endpoint labels (marker, name, value) and area interior labels:
+       fade in as their own series' line reaches the end, never before it. The
+       renderer stamps each entry with its series' --oc-mark-index. */
+    & .oc-endpoint-label-entry[data-endpoint-side="trailing"],
+    & .oc-area-interior-label {
+      animation: oc-enter-fade-only var(--oc-endpoint-label-dur, 300ms)
+        var(--oc-animation-ease, var(--oc-ease-smooth)) both;
+      animation-delay: var(
+        --oc-endpoint-label-delay,
+        calc(
+          var(--oc-endpoint-label-after, calc(var(--oc-animation-duration) * 0.261034)) +
+          var(--oc-animation-stagger) *
+          var(--oc-mark-index, 0)
+        )
+      );
+      animation-play-state: var(--oc-play-state, running);
+    }
+
     /* Annotations: fade in once the last mark is 90% of the way there */
     & .oc-annotation {
       animation: oc-enter-fade-only var(--oc-annotation-dur, 300ms) var(--oc-ease-smooth) both;
