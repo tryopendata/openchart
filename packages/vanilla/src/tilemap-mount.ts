@@ -16,6 +16,7 @@ import type {
 } from '@opendata-ai/openchart-core';
 import { BREAKPOINT_COMPACT_MAX, BREAKPOINT_MEDIUM_MAX } from '@opendata-ai/openchart-core';
 import { compileTileMap } from '@opendata-ai/openchart-engine';
+import { cancelAnimations } from './animation';
 import { createEntranceLifecycle } from './entrance-lifecycle';
 import {
   exportJPG,
@@ -25,6 +26,8 @@ import {
   type JPGExportOptions,
   type SVGExportOptions,
 } from './export';
+import type { GIFExportOptions } from './export-gif';
+import { exportEntranceGIF } from './export-gif-lazy';
 import {
   captureMarkFocus,
   type NavigableMark,
@@ -105,8 +108,8 @@ export interface TileMapInstance {
   resize(): void;
   /** Export the tilemap. */
   export(
-    format: 'svg' | 'svg-with-fonts' | 'png' | 'jpg',
-    options?: JPGExportOptions | SVGExportOptions,
+    format: 'svg' | 'svg-with-fonts' | 'png' | 'jpg' | 'gif',
+    options?: JPGExportOptions | SVGExportOptions | GIFExportOptions,
   ): string | Promise<Blob> | Promise<string>;
   /** Remove all DOM elements and disconnect observers. */
   destroy(): void;
@@ -430,16 +433,20 @@ export function createTileMap(
   // ---------------------------------------------------------------------------
 
   function exportChart(
-    format: 'svg' | 'svg-with-fonts' | 'png' | 'jpg',
-    options_?: JPGExportOptions | SVGExportOptions,
+    format: 'svg' | 'svg-with-fonts' | 'png' | 'jpg' | 'gif',
+    options_?: JPGExportOptions | SVGExportOptions | GIFExportOptions,
   ): string | Promise<Blob> | Promise<string> {
     if (!svgElement) return '';
 
     // Export settled geometry, independent of transient hover and animation.
+    // Only the GIF keeps the entrance stamps its frame sampler reads; it drops
+    // `oc-animate` so nothing plays on the detached copy.
+    const animate = format === 'gif';
     const terminalSvg = renderTileMapSVG(currentLayout, {
       context: createRenderContext({ ids: pageIdScope }),
-      animate: false,
+      animate,
     });
+    if (animate) cancelAnimations(terminalSvg);
     const resolvedOptions = { theme: currentLayout.theme, ...options_ };
     prepareSettledExportTheme(svgElement, terminalSvg, resolvedOptions.theme, !!options_?.theme);
 
@@ -452,6 +459,8 @@ export function createTileMap(
         return exportPNG(terminalSvg, resolvedOptions);
       case 'jpg':
         return exportJPG(terminalSvg, resolvedOptions);
+      case 'gif':
+        return exportEntranceGIF(terminalSvg, currentLayout.animation, resolvedOptions);
       default:
         return '';
     }

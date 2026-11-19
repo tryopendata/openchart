@@ -36,6 +36,7 @@ import type {
   ThemeConfig,
 } from '@opendata-ai/openchart-core';
 import { compileGeoMap } from '@opendata-ai/openchart-engine';
+import { cancelAnimations } from './animation';
 import { createEntranceLifecycle } from './entrance-lifecycle';
 import {
   exportJPG,
@@ -45,6 +46,8 @@ import {
   type JPGExportOptions,
   type SVGExportOptions,
 } from './export';
+import type { GIFExportOptions } from './export-gif';
+import { exportEntranceGIF } from './export-gif-lazy';
 import {
   captureMarkFocus,
   type NavigableMark,
@@ -185,8 +188,8 @@ export interface GeoMapInstance {
   resize(): void;
   /** Export the map. */
   export(
-    format: 'svg' | 'svg-with-fonts' | 'png' | 'jpg',
-    options?: JPGExportOptions | SVGExportOptions,
+    format: 'svg' | 'svg-with-fonts' | 'png' | 'jpg' | 'gif',
+    options?: JPGExportOptions | SVGExportOptions | GIFExportOptions,
   ): string | Promise<Blob> | Promise<string>;
   /** Remove all DOM elements and disconnect observers. */
   destroy(): void;
@@ -1115,16 +1118,20 @@ export function createGeoMap(
   // ---------------------------------------------------------------------------
 
   function exportChart(
-    format: 'svg' | 'svg-with-fonts' | 'png' | 'jpg',
-    options_?: JPGExportOptions | SVGExportOptions,
+    format: 'svg' | 'svg-with-fonts' | 'png' | 'jpg' | 'gif',
+    options_?: JPGExportOptions | SVGExportOptions | GIFExportOptions,
   ): string | Promise<Blob> | Promise<string> {
     if (!svgElement) return '';
 
     // Export settled geometry, independent of transient hover and animation.
+    // Only the GIF keeps the entrance stamps its frame sampler reads; it drops
+    // `oc-animate` so nothing plays on the detached copy.
+    const animate = format === 'gif';
     const terminalSvg = renderMapSVG(currentLayout, {
       context: createRenderContext({ ids: pageIdScope }),
-      animate: false,
+      animate,
     });
+    if (animate) cancelAnimations(terminalSvg);
     if (currentLayout.views) {
       const overlays = new Map<string, GeoLabelOverlay>();
       const inventory: NonNullable<GeoMapLayout['labels']>['initialOverlay']['inventory'] = [];
@@ -1165,6 +1172,16 @@ export function createGeoMap(
       }
     }
     applyFocusDim(currentFocusIds, terminalSvg);
+    if (animate) {
+      // The fill reveal fades each feature to its resting opacity. The live
+      // focus may differ from the spec's, so take the rest from the dim just
+      // applied rather than the renderer's stamp.
+      for (const el of terminalSvg.querySelectorAll<SVGElement>('.oc-map-feature')) {
+        const rest = el.style.getPropertyValue('opacity');
+        if (rest) el.style.setProperty('--oc-feature-target-opacity', rest);
+        else el.style.removeProperty('--oc-feature-target-opacity');
+      }
+    }
     const resolvedOptions = { theme: currentLayout.theme, ...options_ };
     prepareSettledExportTheme(svgElement, terminalSvg, resolvedOptions.theme, !!options_?.theme);
 
@@ -1177,6 +1194,8 @@ export function createGeoMap(
         return exportPNG(terminalSvg, resolvedOptions);
       case 'jpg':
         return exportJPG(terminalSvg, resolvedOptions);
+      case 'gif':
+        return exportEntranceGIF(terminalSvg, currentLayout.animation, resolvedOptions);
       default:
         return '';
     }

@@ -389,6 +389,25 @@ describe('getSVGBackgroundColor', () => {
     expect(getSVGBackgroundColor(svg)).toBe('#ffffff');
   });
 
+  it('ignores nested rects and paints that cannot fill a canvas', () => {
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(NS, 'svg') as SVGElement;
+    const row = document.createElementNS(NS, 'g');
+    const track = document.createElementNS(NS, 'rect');
+    track.setAttribute('fill', '#123456');
+    row.appendChild(track);
+    svg.appendChild(row);
+    // A bar list track or a tile map tile is not the background.
+    expect(getSVGBackgroundColor(svg)).toBe('#ffffff');
+    const bg = document.createElementNS(NS, 'rect');
+    bg.setAttribute('fill', 'currentColor');
+    svg.insertBefore(bg, row);
+    expect(getSVGBackgroundColor(svg, '#101418')).toBe('#101418');
+    // The default theme's background is transparent: white, not black.
+    bg.setAttribute('fill', 'transparent');
+    expect(getSVGBackgroundColor(svg, 'transparent')).toBe('#ffffff');
+  });
+
   it("uses the theme's dark background for a canvas-mode chart, not white", () => {
     // happy-dom has no canvas 2D context, so the canvas layer needs a stub.
     const stub: CanvasStub = stubCanvas2D();
