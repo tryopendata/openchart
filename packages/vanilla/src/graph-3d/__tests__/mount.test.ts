@@ -1338,7 +1338,10 @@ describe('entrance', () => {
   it('reveals nodes in entranceOrder rank order', () => {
     const { fake } = mount(enterSpec());
     const rank = entranceOrder(NODES.map((n) => ({ id: n.id, x: 0, y: 0 })));
-    vi.advanceTimersByTime(600);
+    // Offsets are 0/250/500ms. The registry's 'smooth' front-loads progress, so
+    // a node's alpha saturates ~80ms into its window: sample while the second
+    // node is mid-pop and the third hasn't started.
+    vi.advanceTimersByTime(290);
     const byRank = [...rank.entries()].sort((a, b) => a[1] - b[1]).map(([id]) => id);
     const alphas = byRank.map((id) => nodeMaterial(fake, id).opacity);
     expect(alphas[0]).toBeGreaterThan(alphas[1]);
@@ -1432,7 +1435,9 @@ describe('entrance', () => {
       ...enterSpec(),
       animation: { enter: { duration: 1000, stagger: true }, hover: { duration: 0 } },
     } as GraphSpec);
-    vi.advanceTimersByTime(700);
+    // 'c' starts at 250ms and its alpha saturates ~80ms later on the
+    // registry's 'smooth' curve.
+    vi.advanceTimersByTime(280);
     const entranceAlpha = ['a', 'b', 'c'].map((id) => nodeMaterial(fake, id).opacity);
     // Mid-entrance: 'c' is partway in, so its entrance factor is neither 0 nor 1.
     expect(entranceAlpha[2]).toBeGreaterThan(0);

@@ -18,6 +18,7 @@ import type { DataRow, GeoMapSpec } from '@opendata-ai/openchart-core';
 import { deepMergeSpec, isGeoMapSpec } from '@opendata-ai/openchart-core';
 import { AUTO_CANVAS_THRESHOLD } from '@opendata-ai/openchart-engine';
 import { createGeoMap, type GeoMapInstance, type GeoMapMountOptions } from '../map-mount';
+import { prefersReducedMotion } from '../motion/tween';
 import {
   type ChartInstance,
   createChart,
@@ -51,15 +52,6 @@ import type {
   StorySpecPatch,
   StoryStep,
 } from './types';
-
-function prefersReducedMotion(): boolean {
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
-  try {
-    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  } catch {
-    return false;
-  }
-}
 
 /** Merge a step's `highlight` sugar into its `spec` patch as `encoding.color.highlight`. */
 function stepToPatch(step: StoryStep): StorySpecPatch {
