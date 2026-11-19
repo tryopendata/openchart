@@ -144,6 +144,9 @@ export const Graph = forwardRef<GraphHandle, GraphProps>(function Graph(
   // can't tell those apart — it would suppress the entrance in every
   // StrictMode app.
   const prevMountDepsRef = useRef<unknown[] | null>(null);
+  // Whether the last destroyed instance's entrance played. A recreation only
+  // suppresses the entrance when it did: one still waiting to be seen replays.
+  const prevEntrancePlayedRef = useRef(false);
 
   // Store event handlers AND function-valued options in refs so they don't
   // trigger graph recreation. Inline functions create new references every
@@ -307,13 +310,16 @@ export const Graph = forwardRef<GraphHandle, GraphProps>(function Graph(
       ? { formatter: stableTooltipFormatter }
       : false;
 
-    // Suppress the entrance only when a PREVIOUS mount existed and a dep
-    // actually changed (theme/darkMode/structural option — spec unchanged).
-    // Identical deps = StrictMode's dev remount of the same graph: play it.
+    // Suppress the entrance only when a PREVIOUS mount existed, played its
+    // entrance, and a dep actually changed (theme/darkMode/structural option —
+    // spec unchanged). Identical deps = StrictMode's dev remount of the same
+    // graph: play it.
     const mountDeps: unknown[] = [theme, resolvedDarkMode, tooltipOn, legendKey, fitOnLoad];
     const prevDeps = prevMountDepsRef.current;
     const suppressEntrance =
-      prevDeps !== null && mountDeps.some((d, i) => !Object.is(d, prevDeps[i]));
+      prevDeps !== null &&
+      prevEntrancePlayedRef.current &&
+      mountDeps.some((d, i) => !Object.is(d, prevDeps[i]));
 
     const options: GraphMountOptions = {
       theme,
@@ -341,6 +347,7 @@ export const Graph = forwardRef<GraphHandle, GraphProps>(function Graph(
     prevMountDepsRef.current = mountDeps;
 
     return () => {
+      prevEntrancePlayedRef.current = graphRef.current?.entrancePlayed ?? false;
       graphRef.current?.destroy();
       graphRef.current = null;
     };

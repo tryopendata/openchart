@@ -131,6 +131,9 @@ $effect(() => {
   const dims = dimensions;
   const currentSpec = untrack(() => spec);
 
+  // A recreation suppresses the entrance only when the previous instance's
+  // played: one still waiting to be seen replays on the new instance.
+  const prevEntrancePlayed = instance?.entrancePlayed ?? false;
   instance?.destroy();
 
   const tooltipOption: GraphMountOptions['tooltip'] = on
@@ -157,7 +160,7 @@ $effect(() => {
     // untrack so reading the flag doesn't add a dependency; the value is set
     // after the first mount and reset only on component teardown. A dimension
     // change is exempt: the incoming renderer should play its entrance.
-    suppressEntrance: untrack(() => mountedOnce) && dims === prevDimensions,
+    suppressEntrance: untrack(() => mountedOnce) && dims === prevDimensions && prevEntrancePlayed,
   };
 
   instance = createGraph(containerEl, currentSpec, options);

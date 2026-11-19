@@ -67,3 +67,24 @@ export async function playsEntrance(
   if (!(opening > 0 && settled > 0)) throw new Error('graph camera never framed the nodes');
   return opening < settled * 0.9;
 }
+
+/**
+ * Whether a freshly mounted graph whose entrance waits to be seen plays it once
+ * seen. Drains the first tick (which arms the entrance) at `start`, marks every
+ * element the fake observer watches as seen, then reads the opening framing
+ * like `playsEntrance`. A suppressed entrance never armed, so it stays on the fit.
+ */
+export async function playsEntranceOnSeen(
+  clock: FrameClock,
+  observer: {
+    observed: Set<Element>;
+    fire(target: Element, ratio: number, visibleHeight?: number): void;
+  },
+  getZoom: () => number,
+  start = 0,
+): Promise<boolean> {
+  await Promise.resolve();
+  clock.pump(start);
+  for (const el of [...observer.observed]) observer.fire(el, 1, 600);
+  return playsEntrance(clock, getZoom, start + 50);
+}

@@ -8,6 +8,7 @@
  */
 import { type CompileOptions, computeChrome, type GraphSpec } from '@opendata-ai/openchart-core';
 import { compileGraph, type GraphCompilation } from '@opendata-ai/openchart-engine';
+import { createEntranceLifecycle, type EntrancePlay } from './entrance-lifecycle';
 import {
   type CameraFlightOptions,
   clampK,
@@ -50,7 +51,7 @@ import { diffGraphUpdate, reheatAlpha } from './graph/update-diff';
 import { createGraphUpdateFades } from './graph/update-fades';
 import { ZoomTransform } from './graph/zoom';
 import { AnimationScheduler, type Animation as GraphAnimation } from './motion/scheduler';
-import { createTween, prefersReducedMotion, resolveEase } from './motion/tween';
+import { createTween, motionEase, prefersReducedMotion } from './motion/tween';
 import { resolveDarkMode } from './resolve-dark-mode';
 import { SpatialIndex } from './spatial-index';
 import type { TooltipManager } from './tooltip';
@@ -177,6 +178,18 @@ export function createGraph(
   // normal motion. Wrappers set this when recreating for a theme/darkMode-only
   // change so the entrance doesn't replay. Warmup still runs. One-shot.
   let suppressEntranceOnce = options?.suppressEntrance ?? false;
+  // Play-when-seen (`enter.trigger`). Warmup and the fit always run at mount;
+  // under 'visible' the reveal waits, nodes hidden at progress 0, until the
+  // container is seen. The graph handles resizes mid-entrance itself (see
+  // doResize), so it never defers one through the lifecycle.
+  const entrance = createEntranceLifecycle({ onDeferredResize: () => doResize() });
+  // True once the entrance played or was skipped on purpose (suppressed,
+  // disabled, reduced motion). Wrappers suppress a remount's entrance only
+  // when this is set, so an entrance the reader never saw isn't lost.
+  let entrancePlayed = false;
+  // The reader (or host) moved the camera while the entrance waited: the play
+  // then runs only the reveal, without the pull-back and flight.
+  let cameraTouchedWhileWaiting = false;
 
   // Data-update transition state (Phase 7): enter fades and exit ghosts.
   const updateFades = createGraphUpdateFades(scheduler, () => {
@@ -529,42 +542,85 @@ export function createGraph(
   }
 
   /**
-   * Fit + run the entrance reveal on the first post-warmup tick. Under an enabled
-   * `enter` phase and normal motion, the camera starts pulled back to 0.92× the
-   * fit and (optionally) flies in while a mount-level `entranceProgress` tween
-   * ramps node/edge/label reveal. Under reduced motion or `animation: false`,
-   * it's an instant fit (warmup still ran — it reduces motion, it isn't motion).
+   * Fit + arm the entrance reveal on the first post-warmup tick. Under an
+   * enabled `enter` phase and normal motion, the nodes stay hidden (progress 0)
+   * until the trigger fires (`'visible'`: the container is seen; `'mount'`: at
+   * once), then `playEntrance` runs. Under reduced motion, `animation: false`
+   * or `suppressEntrance`, it's an instant fit (warmup still ran — it reduces
+   * motion, it isn't motion).
    */
   function startEntrance(): void {
-    if (!interactionManager) return;
+    if (!interactionManager || !shell) return;
     const fit = computeInitialFit();
     const enter = compilation.animation?.enter ?? null;
     // One-shot mount-level suppression (theme/darkMode remount): take the same
     // instant-fit branch as reduced motion so the entrance doesn't replay.
     const suppressed = suppressEntranceOnce;
     suppressEntranceOnce = false;
+    interactionManager.setTransform(fit);
+    cameraChangePending = true;
     if (suppressed || !enter || prefersReducedMotion()) {
-      interactionManager.setTransform(fit);
-      cameraChangePending = true;
       entranceActive = false;
       entranceProgress = 1;
+      entrancePlayed = true;
       return;
     }
 
-    // Start pulled back so the reveal has somewhere to fly in from. 0.7 gives a
-    // clearly readable pull-in on load (0.85 was too subtle to register as motion).
-    const { width: cw, height: ch } = getCanvasDimensions();
-    const pulledBack = fit.zoomAt(fit.k * 0.7, cw / 2, ch / 2);
-    interactionManager.setTransform(pulledBack);
-    cameraChangePending = true;
+    // Hold: hidden until played. The sim keeps settling meanwhile, so a late
+    // reveal plays on a settled layout.
+    entranceActive = true;
+    entranceProgress = 0;
+    entranceStagger = false;
+    entranceOrderMap = null;
+    entranceOffsetMap = null;
+    cameraTouchedWhileWaiting = false;
+    entrance.arm({
+      container,
+      root: shell.wrapper,
+      trigger: enter.trigger,
+      completion: 'js',
+      onPlay: playEntrance,
+    });
+  }
+
+  /**
+   * Play the armed entrance: the camera starts pulled back to 0.7× the fit and
+   * (optionally) flies in while a mount-level `entranceProgress` tween ramps the
+   * node/edge/label reveal. A camera the reader moved while the entrance waited
+   * is left alone: only the reveal runs.
+   */
+  function playEntrance(): EntrancePlay | undefined {
+    const enter = compilation.animation?.enter ?? null;
+    if (destroyed || !interactionManager || !enter) return undefined;
+    entrancePlayed = true;
+
+    if (!cameraTouchedWhileWaiting && positionedNodes.length > 0) {
+      // Re-fit: the viewport (or, after an update, the data) may have changed
+      // while the entrance waited.
+      const fit = computeInitialFit();
+      // Start pulled back so the reveal has somewhere to fly in from. 0.7 gives a
+      // clearly readable pull-in on load (0.85 was too subtle to register as motion).
+      const { width: cw, height: ch } = getCanvasDimensions();
+      const pulledBack = fit.zoomAt(fit.k * 0.7, cw / 2, ch / 2);
+      interactionManager.setTransform(pulledBack);
+      cameraChangePending = true;
+
+      // Optional camera flight from the pulled-back framing to the true fit.
+      if (enter.cameraFit) {
+        entranceFitInFlight = true;
+        flyCamera(fit, { duration: enter.duration + 100 }, () => {
+          entranceFitInFlight = false;
+        });
+      }
+    }
 
     entranceActive = true;
     entranceProgress = 0;
     // Stagger only when the spec asks for it AND the graph is small enough that
     // per-node start times still batch. Above the cap: a single global fade.
     entranceStagger = enter.stagger && positionedNodes.length <= ENTRANCE_STAGGER_MAX_NODES;
-    // Pop choreography inputs, computed once against the warmed (near-final)
-    // positions: hash-scattered stagger order + per-node convergence drift.
+    // Pop choreography inputs, computed once against the current (warmed or
+    // settled) positions: hash-scattered stagger order + per-node convergence drift.
     if (entranceStagger) {
       entranceOrderMap = entranceOrder(positionedNodes);
       entranceOffsetMap = entranceOffsets(positionedNodes);
@@ -573,19 +629,15 @@ export function createGraph(
       entranceOffsetMap = null;
     }
 
-    // Optional camera flight from the pulled-back framing to the true fit.
-    if (enter.cameraFit) {
-      entranceFitInFlight = true;
-      flyCamera(fit, { duration: enter.duration + 100 }, () => {
-        entranceFitInFlight = false;
-      });
-    }
-
     // Reveal tween drives entranceProgress 0→1; ends the entrance on completion.
-    const ease = resolveEase(enter.ease);
+    // `motionEase` honours a spring (the phase duration is then its settling time).
+    let revealed: () => void = () => {};
+    const canvasFinished = new Promise<void>((resolve) => {
+      revealed = resolve;
+    });
     entranceReveal = createTween({
       duration: enter.duration,
-      ease,
+      ease: motionEase(enter),
       apply: (t) => {
         entranceProgress = t;
         needsRender = true;
@@ -595,9 +647,13 @@ export function createGraph(
         entranceActive = false;
         entranceReveal = null;
         needsRender = true;
+        revealed();
       },
     });
     scheduler.add(entranceReveal);
+    needsRender = true;
+    scheduleRender();
+    return { canvasFinished };
   }
 
   function getCanvasDimensions(): { width: number; height: number } {
@@ -728,6 +784,8 @@ export function createGraph(
     onDone?: () => void,
   ): void {
     if (destroyed || !interactionManager) return;
+    // A host camera move while the entrance waits keeps its framing on play.
+    if (entrance.waiting) cameraTouchedWhileWaiting = true;
 
     // Cancel any in-flight camera animation (and a lingering post-flight follow).
     cancelFlight();
@@ -819,6 +877,7 @@ export function createGraph(
         // node-drag correctly doesn't reach here either.
         cancelFlight();
         markGesture();
+        if (entrance.waiting) cameraTouchedWhileWaiting = true;
         // User pan/zoom is a camera change too — zoom UIs and camera
         // persistence rely on the coalesced onCameraChange, not polling.
         cameraChangePending = true;
@@ -1216,10 +1275,17 @@ export function createGraph(
 
     // Finish any in-flight animations (e.g. an entrance reveal or a prior
     // update's enter/exit fade) so they snap to their final state and fire
-    // onDone rather than being hard-cancelled mid-flight.
+    // onDone rather than being hard-cancelled mid-flight. An entrance still
+    // waiting to be seen stays armed on the same host and plays on the updated
+    // graph once seen (mount empty, update when the fetch resolves); nodes stay
+    // hidden until then. One already playing finishes to full alpha.
+    const entranceWaiting = entrance.waiting;
+    if (!entranceWaiting) entrance.drop();
     scheduler.finishAll();
-    entranceActive = false;
-    entranceProgress = 1;
+    if (!entranceWaiting) {
+      entranceActive = false;
+      entranceProgress = 1;
+    }
     entranceFitInFlight = false;
     entranceReveal = null;
     // Clear any lingering update-transition state (finishAll ran their onDone).
@@ -1345,8 +1411,9 @@ export function createGraph(
     // Reconcile interaction/highlight/search state against the new node set.
     reconcileStateAfterUpdate();
 
-    // Wire the enter-fade and exit-ghost transitions.
-    updateFades.start(diff, compilation);
+    // Wire the enter-fade and exit-ghost transitions. Skipped while the
+    // entrance waits: nothing is visible yet, so a ghost would flash in.
+    if (!entrance.waiting) updateFades.start(diff, compilation);
 
     needsRender = true;
     scheduleRender();
@@ -1411,6 +1478,7 @@ export function createGraph(
     // Cancel animations BEFORE tearing down the sim/DOM, so no in-flight tick
     // writes to removed state.
     scheduler.cancelAll();
+    entrance.destroy();
     activeFlight = null;
     activeFollow = null;
     // Reset entrance state so a remount (React StrictMode) starts clean.
@@ -1548,5 +1616,8 @@ export function createGraph(
     getActiveCategories,
     resize: doResize,
     destroy,
+    get entrancePlayed() {
+      return entrancePlayed;
+    },
   };
 }

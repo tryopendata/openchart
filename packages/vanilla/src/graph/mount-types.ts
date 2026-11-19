@@ -80,7 +80,14 @@ export interface GraphMountOptions {
   initialZoom?: number;
   /** Camera change callback, rAF-coalesced (fires at most once per rendered frame). */
   onCameraChange?: (camera: GraphCamera) => void;
-  /** Skip the entrance reveal/flight on mount (spec unchanged; used by wrappers when recreating for a theme/darkMode-only change so the entrance doesn't replay). Warmup still runs. */
+  /**
+   * Skip the entrance reveal/flight on mount (spec unchanged; used by wrappers
+   * when recreating for a theme/darkMode-only change so the entrance doesn't
+   * replay). Wins over `animation.enter.trigger`: a suppressed mount neither
+   * waits to be seen nor plays. Warmup still runs. Wrappers pass it only when
+   * the previous instance's `entrancePlayed` was true, so an entrance still
+   * waiting to be seen is replayed by the new instance rather than lost.
+   */
   suppressEntrance?: boolean;
 }
 
@@ -128,4 +135,11 @@ export interface GraphInstance {
   getActiveCategories(): string[];
   resize(): void;
   destroy(): void;
+  /**
+   * Whether this instance's entrance has played, or was skipped on purpose
+   * (`suppressEntrance`, `animation: false`, no `enter` phase, reduced
+   * motion). False while the entrance waits for its trigger (`'visible'`:
+   * the container hasn't been seen yet) or before warmup finishes.
+   */
+  readonly entrancePlayed: boolean;
 }

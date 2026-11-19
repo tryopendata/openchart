@@ -15,7 +15,10 @@ import {
   type FrameClock,
   installFrameClock,
   playsEntrance,
+  playsEntranceOnSeen,
 } from '../../../vanilla/src/__test-fixtures__/graph-frame-clock';
+import { createFakeObserver } from '../../../vanilla/src/__test-fixtures__/visibility';
+import { setObserverFactory } from '../../../vanilla/src/visibility';
 import { Graph } from '../Graph';
 
 interface Handle {
@@ -35,7 +38,7 @@ interface Handle {
   getLegend: () => GraphLegendData | null;
   setActiveCategories: (values: string[]) => void;
   getActiveCategories: () => string[];
-  instance: { getCamera: () => GraphCamera } | null;
+  instance: { getCamera: () => GraphCamera; entrancePlayed: boolean } | null;
 }
 
 // Warmed so the first delivered tick is near-settled and starts the entrance.
@@ -52,6 +55,9 @@ const spec: GraphSpec = {
   ],
   encoding: { nodeColor: { field: 'kind', type: 'nominal' } },
   layout: { type: 'force', warmup: 30 },
+  // The setup's global getBoundingClientRect stub gives happy-dom a layout, so a
+  // 'visible' entrance would wait on an IntersectionObserver that never fires.
+  animation: { enter: { trigger: 'mount' } },
 };
 
 let clock: FrameClock;
@@ -89,6 +95,30 @@ describe('Graph suppressEntrance', () => {
     expect(second).not.toBe(first);
     expect(second?.classList.contains('oc-dark')).toBe(true);
     expect(await playsEntrance(clock, () => handle().getCamera().k, 2000)).toBe(false);
+  });
+
+  it('a theme change while the entrance still waits to be seen replays it on the new graph', async () => {
+    // Default trigger ('visible'), held by a fake observer the test drives.
+    const visibleSpec: GraphSpec = { ...spec, animation: undefined };
+    const observer = createFakeObserver();
+    setObserverFactory(observer.factory);
+    try {
+      wrapper = mount(Graph, {
+        props: { spec: visibleSpec, darkMode: 'off' },
+        attachTo: document.body,
+      });
+      await Promise.resolve();
+      clock.pump(0);
+      expect(handle().instance?.entrancePlayed).toBe(false);
+
+      await wrapper.setProps({ darkMode: 'force' });
+      await flushPromises();
+      expect(await playsEntranceOnSeen(clock, observer, () => handle().getCamera().k, 100)).toBe(
+        true,
+      );
+    } finally {
+      setObserverFactory(null);
+    }
   });
 
   it('hover tooltips use the latest formatter prop, not the one from mount', async () => {

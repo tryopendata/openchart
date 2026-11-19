@@ -110,6 +110,8 @@ export const Graph = defineComponent({
     let prevSpec = '';
     // First mount plays the entrance; theme/darkMode-only recreations suppress it.
     let mountedOnce = false;
+    // Whether the last destroyed instance's entrance played (see mountGraph).
+    let prevEntrancePlayed = false;
 
     // Inject theme/darkMode from provider as fallbacks
     const contextTheme = inject(VizThemeKey, undefined);
@@ -162,7 +164,9 @@ export const Graph = defineComponent({
         onHighlightChange: (nodeIds) => emit('highlight-change', nodeIds),
         onCameraChange: (camera) => emit('camera-change', camera),
         autoResize: true,
-        suppressEntrance: mountedOnce && !playEntrance,
+        // Only when the previous instance's entrance played: one still
+        // waiting to be seen replays on the new instance instead of being lost.
+        suppressEntrance: mountedOnce && !playEntrance && prevEntrancePlayed,
       };
 
       instance = createGraph(container, props.spec, options);
@@ -171,6 +175,7 @@ export const Graph = defineComponent({
     }
 
     function destroyGraph() {
+      prevEntrancePlayed = instance?.entrancePlayed ?? false;
       instance?.destroy();
       instance = null;
       prevSpec = '';
