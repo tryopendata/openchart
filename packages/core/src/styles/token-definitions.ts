@@ -61,8 +61,23 @@ export const CSS_TOKENS: readonly CssTokenDef[] = [
     light: curveToCSSLinear('gentle', { indent: '    ' }),
     consumers: 'EASE_VAR_MAP in vanilla renderers',
   },
+  {
+    name: '--oc-ease-snap',
+    light: curveToCSSLinear('snap', { indent: '    ' }),
+    consumers: 'FADE_CURVE and curve-timed roles in the generated animation CSS',
+  },
+  {
+    name: '--oc-ease-punch',
+    light: curveToCSSLinear('punch', { indent: '    ' }),
+    consumers: 'Curve-timed accent roles in the generated animation CSS',
+  },
+  {
+    name: '--oc-ease-glide',
+    light: curveToCSSLinear('glide', { indent: '    ' }),
+    consumers: 'Curve-timed roles in the generated animation CSS',
+  },
 
-  { section: 'Animation timing defaults', name: '--oc-animation-duration', light: '600ms' },
+  { section: 'Animation timing defaults', name: '--oc-animation-duration', light: '800ms' },
   { name: '--oc-animation-stagger', light: '80ms' },
   { name: '--oc-annotation-delay', light: '150ms' },
 

@@ -5611,7 +5611,7 @@
         },
         "duration": {
           "type": "number",
-          "description": "Duration in ms. Default: 600 for enter, 500 for update, 120 for exit."
+          "description": "Duration in ms. Default: 800 for enter, 500 for update, 120 for exit."
         },
         "ease": {
           "$ref": "#/definitions/AnimationEase",
@@ -5663,14 +5663,14 @@
         "snappy",
         "gentle"
       ],
-      "description": "Named easing presets for entrance animations. Uses CSS linear() curves. Named 'ease' (not 'easing') to match Vega convention.\n- `smooth` (default): fast attack, quick settle, no overshoot.\n- `snappy`: faster still, settling by about half the duration.\n- `gentle`: the previous default, a slower ease-out."
+      "description": "Named easing presets for entrance animations. Uses CSS linear() curves. Named 'ease' (not 'easing') to match Vega convention.\n- `smooth` (default): soft ease-out with a gentle start that settles late, no overshoot.\n- `snappy`: a fast attack, settling by about half the duration.\n- `gentle`: the previous default, a slower ease-out."
     },
     "AnimationStagger": {
       "type": "object",
       "properties": {
         "delay": {
           "type": "number",
-          "description": "Gap between consecutive elements in ms. Default: 80. A ceiling: the whole stagger spans at most 300ms, so n elements land min(delay, 300 / (n - 1)) apart."
+          "description": "Gap between consecutive elements in ms. Default: 80. A ceiling: the whole stagger spans at most 450ms, so n elements land min(delay, 450 / (n - 1)) apart."
         },
         "order": {
           "type": "string",
@@ -5694,7 +5694,7 @@
         },
         "duration": {
           "type": "number",
-          "description": "Duration in ms. Default: 600 for enter, 500 for update, 120 for exit."
+          "description": "Duration in ms. Default: 800 for enter, 500 for update, 120 for exit."
         },
         "ease": {
           "$ref": "#/definitions/AnimationEase",
@@ -5728,7 +5728,7 @@
         },
         "duration": {
           "type": "number",
-          "description": "Duration in ms. Default: 600 for enter, 500 for update, 120 for exit."
+          "description": "Duration in ms. Default: 800 for enter, 500 for update, 120 for exit."
         },
         "ease": {
           "$ref": "#/definitions/AnimationEase",

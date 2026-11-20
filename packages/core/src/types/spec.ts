@@ -1716,8 +1716,8 @@ export interface SeriesStyle {
 /**
  * Named easing presets for entrance animations.
  * Uses CSS linear() curves. Named 'ease' (not 'easing') to match Vega convention.
- * - `smooth` (default): fast attack, quick settle, no overshoot.
- * - `snappy`: faster still, settling by about half the duration.
+ * - `smooth` (default): soft ease-out with a gentle start that settles late, no overshoot.
+ * - `snappy`: a fast attack, settling by about half the duration.
  * - `gentle`: the previous default, a slower ease-out.
  */
 export type AnimationEase = 'smooth' | 'snappy' | 'gentle';
@@ -1736,7 +1736,7 @@ export interface SpringConfig {
 export interface AnimationStagger {
   /**
    * Gap between consecutive elements in ms. Default: 80. A ceiling: the whole
-   * stagger spans at most 300ms, so n elements land min(delay, 300 / (n - 1)) apart.
+   * stagger spans at most 450ms, so n elements land min(delay, 450 / (n - 1)) apart.
    */
   delay?: number;
   /** Ordering strategy. Default: 'index' (DOM order) */
@@ -1767,7 +1767,7 @@ export interface ResponsiveConfig {
 export interface AnimationPhaseConfig {
   /** Spring mode. Cannot be combined with duration or ease in this phase. */
   spring?: SpringConfig;
-  /** Duration in ms. Default: 600 for enter, 500 for update, 120 for exit. */
+  /** Duration in ms. Default: 800 for enter, 500 for update, 120 for exit. */
   duration?: number;
   /** Easing preset. Default: 'smooth' ('gentle' for exit). */
   ease?: AnimationEase;

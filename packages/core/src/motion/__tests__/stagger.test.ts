@@ -8,15 +8,15 @@ import {
 } from '../stagger';
 
 describe('stagger strategies', () => {
-  it('clampStaggerDelay spreads at most 300ms over n - 1 gaps, the authored delay a ceiling', () => {
-    expect(MAX_TOTAL_STAGGER_MS).toBe(300);
-    // 5 bars at the default 80ms: 300 / 4 = 75ms apart.
-    expect(clampStaggerDelay(80, 5)).toBe(75);
-    // 40 bars: 300 / 39.
-    expect(clampStaggerDelay(80, 40)).toBeCloseTo(300 / 39, 10);
-    // Few elements keep the authored gap.
-    expect(clampStaggerDelay(80, 3)).toBe(80);
-    expect(clampStaggerDelay(30, 200)).toBeCloseTo(300 / 199, 10);
+  it('clampStaggerDelay spreads at most 450ms over n - 1 gaps, the authored delay a ceiling', () => {
+    expect(MAX_TOTAL_STAGGER_MS).toBe(450);
+    // 7 bars at the default 80ms: 450 / 6 = 75ms apart.
+    expect(clampStaggerDelay(80, 7)).toBe(75);
+    // 40 bars: 450 / 39.
+    expect(clampStaggerDelay(80, 40)).toBeCloseTo(450 / 39, 10);
+    // Few elements keep the authored gap: 5 bars could spread 112.5ms apart.
+    expect(clampStaggerDelay(80, 5)).toBe(80);
+    expect(clampStaggerDelay(30, 200)).toBeCloseTo(450 / 199, 10);
     // One element, or no stagger, has no gap.
     expect(clampStaggerDelay(80, 1)).toBe(0);
     expect(clampStaggerDelay(80, 0)).toBe(0);

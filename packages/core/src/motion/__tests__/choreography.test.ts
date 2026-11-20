@@ -279,16 +279,17 @@ describe.each([600, 800])('entranceTiming golden ms at D=%i', (D) => {
 });
 
 describe('progress points follow the phase curve', () => {
-  it('a snap entrance reaches 0.9 far sooner than gentle, so annotations come sooner', () => {
-    const smooth = anchorMs('annotation', { duration: 600, ease: 'smooth' });
-    const gentle = anchorMs('annotation', { duration: 600, ease: 'gentle' });
-    expect(smooth).toBeCloseTo(600 * invertCurve('smooth', 0.9), 6);
-    expect(smooth).toBeLessThan(gentle);
+  it('a snappy entrance reaches 0.9 far sooner than smooth, so annotations come sooner', () => {
+    const smooth = anchorMs('annotation', { duration: 800, ease: 'smooth' });
+    const snappy = anchorMs('annotation', { duration: 800, ease: 'snappy' });
+    expect(smooth).toBeCloseTo(800 * invertCurve('smooth', 0.9), 6);
+    expect(snappy).toBeCloseTo(800 * invertCurve('snappy', 0.9), 6);
+    expect(snappy).toBeLessThan(smooth / 2);
   });
 
   it('annotation delay is when the last mark reaches 0.9, plus the authored gap', () => {
     const phase: MotionPhase = { duration: 600, ease: 'smooth' };
-    const stagger = clampStaggerDelay(80, 5); // 75ms
+    const stagger = clampStaggerDelay(80, 5); // 80ms, under the cap
     const ctx = { staggerMs: stagger, lastMarkIndex: 4, annotationDelayMs: 0 };
     const lastBarStart = 4 * stagger;
     const reached = progressTimeMs('bar', 4, phase, ctx, 0.9);
@@ -404,8 +405,8 @@ describe('role easing', () => {
     expect(evalRoleEase('bar', snappy, 0.4)).toBe(evalCurve('snappy', 0.4));
     // Labels fade on the author ease.
     expect(evalRoleEase('label', snappy, 0.4)).toBe(evalCurve('snappy', 0.4));
-    // Annotations hard-code --oc-ease-smooth regardless of the author's ease.
-    expect(evalRoleEase('annotation', snappy, 0.4)).toBe(evalCurve('smooth', 0.4));
+    // Annotations hard-code --oc-ease-glide regardless of the author's ease.
+    expect(evalRoleEase('annotation', snappy, 0.4)).toBe(evalCurve('glide', 0.4));
     // CSS ease-in at 0.5 (cubic-bezier(0.42, 0, 1, 1)).
     expect(evalRoleEase('tilemap-tile', snappy, 0.5)).toBeCloseTo(0.3153568, 5);
   });
