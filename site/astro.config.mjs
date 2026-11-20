@@ -6,6 +6,7 @@ import sitemap from "@astrojs/sitemap";
 import tailwind from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
 import { site } from "./src/config.ts";
+import { shikiThemes } from "./src/lib/code-themes.ts";
 import { docsHastPlugins, docsShikiTransformers } from "./src/lib/markdown.ts";
 
 export default defineConfig({
@@ -32,7 +33,7 @@ export default defineConfig({
     // anchor plugin can read them.
     processor: satteri({ hastPlugins: [satteriHeadingIdsPlugin(), ...docsHastPlugins] }),
     shikiConfig: {
-      themes: { light: "github-light", dark: "github-dark-default" },
+      themes: shikiThemes,
       // Both themes as CSS variables; global.css picks one per theme.
       defaultColor: false,
       transformers: docsShikiTransformers,

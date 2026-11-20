@@ -7,12 +7,12 @@
  */
 import type { VizSpec } from "@opendata-ai/openchart-core";
 import { codeToHtml } from "shiki";
+import { shikiThemes } from "../../lib/code-themes";
 import { frameworkSnippets } from "../../lib/demo/snippets";
 
 type CodeTab = { id: string; label: string; lang: string; code: string };
 
 /** The same dual themes as the site's Markdown code blocks; demo.css picks one per page theme. */
-const SHIKI_THEMES = { light: "github-light", dark: "github-dark" } as const;
 
 function codeTabsFor(spec: VizSpec): CodeTab[] {
   const snippets = frameworkSnippets(spec);
@@ -36,7 +36,7 @@ function tabLink(domId: string, tab: CodeTab, index: number): string {
 async function panel(domId: string, tab: CodeTab): Promise<string> {
   const highlighted = await codeToHtml(tab.code, {
     lang: tab.lang,
-    themes: SHIKI_THEMES,
+    themes: shikiThemes,
     defaultColor: false,
   });
   const copy = '<button type="button" class="demo-copy" data-demo-copy hidden>Copy</button>';

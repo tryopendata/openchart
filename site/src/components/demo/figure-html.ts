@@ -75,7 +75,7 @@ export async function demoFigureHtml(figure: DemoFigure): Promise<string> {
   const spec = `<script type="application/json" data-demo-spec>${embeddedSpecJson(figure.spec)}</script>`;
   const code = figure.tabs ? await codeTabsHtml(domId, figure.spec) : "";
   return [
-    `<figure class="demo" data-demo="${escapeHtml(figure.id)}"${entrance}>`,
+    `<figure class="demo not-prose" data-demo="${escapeHtml(figure.id)}"${entrance}>`,
     stageHtml(figure, domId),
     spec,
     code,

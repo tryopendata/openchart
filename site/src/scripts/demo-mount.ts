@@ -58,7 +58,9 @@ export function mountDemo(
   const host = stage.ownerDocument.createElement("div");
   host.className = "demo-live";
   stage.append(host);
-  const playable = options.entrance ? spec : { ...spec, animation: false };
+  // No attribution link inside the chart: this is the library's own site.
+  const unbranded = { ...spec, watermark: false };
+  const playable = options.entrance ? unbranded : { ...unbranded, animation: false };
   try {
     const instance = mount(host, playable as never, {
       theme: chartTheme(options.dark),

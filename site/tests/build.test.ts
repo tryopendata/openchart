@@ -18,7 +18,17 @@ import { site } from "../src/config";
 
 const parser = new new Window().DOMParser();
 const read = (root: string, path: string) => readFileSync(join(root, path), "utf8");
-const page = (root: string, path: string) => parser.parseFromString(read(root, path), "text/html");
+// Parsed once per file: the link check asks for the same large pages many times.
+const parsed = new Map<string, Document>();
+function page(root: string, path: string): Document {
+  const file = join(root, path);
+  let document = parsed.get(file);
+  if (!document) {
+    document = parser.parseFromString(read(root, path), "text/html") as unknown as Document;
+    parsed.set(file, document);
+  }
+  return document;
+}
 const absolute = (path: string) => new URL(path, site.url).href;
 const pagePath = (id: string) => `docs/${id}/index.html`;
 

@@ -39,6 +39,8 @@ export function staticSvg(spec: VizSpec, options: StaticSvgOptions): string | nu
     height: options.height,
     theme: chartTheme(options.dark),
     darkMode: options.dark ? "force" : "off",
+    // The attribution is a link, and a link inside an image fails axe. The site's own footer credits the library.
+    watermark: false,
   });
   return markStatic(svg);
 }

@@ -105,7 +105,7 @@ describe("the json demo fence", () => {
     });
     await processor.render(once);
     const { code } = await processor.render(once);
-    expect(code).toContain('<figure class="demo"');
+    expect(code).toContain('<figure class="demo not-prose"');
   });
 
   it("escapes </script> inside a spec string so the embedded JSON stays in its element", async () => {
