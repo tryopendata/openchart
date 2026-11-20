@@ -11,6 +11,7 @@
 @import "tailwindcss";
 @import "./demo.css";
 @import "@steamfield/ui/consent/styles.css";
+@import "@steamfield/ui/reveal/styles.css";
 @plugin "@tailwindcss/typography";
 
 /*
@@ -22,6 +23,8 @@
  */
 @theme static {
   --font-sans: "Schibsted Grotesk Variable", ui-sans-serif, system-ui, sans-serif;
+  /* Headlines only: page titles, section headings and story prose, as a news page sets them. */
+  --font-display: "Newsreader Variable", Georgia, "Times New Roman", serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
   --color-canvas: #ffffff;
@@ -35,6 +38,11 @@
      4.5:1 on the panel as well as the page. */
   --color-accent: #07798d;
   --color-accent-ink: #ffffff;
+  /* The logo's four hues (brand/README.md). */
+  --brand-bar: #3d6fe0;
+  --brand-point: #e8a23a;
+  --brand-arc: #d1458f;
+  --brand-area: #0a9cb5;
 
   --radius-xs: 2px;
 }
@@ -51,6 +59,10 @@
     --color-line-strong: #f2f2ee;
     --color-accent: #22d3ee;
     --color-accent-ink: #0e0f10;
+    --brand-bar: #6591e1;
+    --brand-point: #f9be78;
+    --brand-arc: #d771a4;
+    --brand-area: #22d3ee;
     color-scheme: dark;
   }
 
@@ -66,6 +78,10 @@
       --color-line-strong: #f2f2ee;
       --color-accent: #22d3ee;
       --color-accent-ink: #0e0f10;
+      --brand-bar: #6591e1;
+      --brand-point: #f9be78;
+      --brand-arc: #d771a4;
+      --brand-area: #22d3ee;
       color-scheme: dark;
     }
   }
@@ -180,7 +196,13 @@
 }
 
 .prose :where(h2) {
-  @apply mt-14 text-[1.5rem] leading-tight;
+  @apply font-display mt-14 text-[1.75rem] leading-tight font-medium tracking-[-0.01em];
+}
+
+/* Page titles are headlines: the serif, with its optical size following the type size. */
+h1 {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
 }
 
 .prose :where(h3) {
