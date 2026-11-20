@@ -15,6 +15,7 @@ import {
   createTileMap,
 } from "@opendata-ai/openchart-vanilla";
 import { chartTheme } from "../lib/demo/chart-theme";
+import { DEMO_CLASS } from "../lib/demo/markup";
 
 /** Thrown when a spec cannot be mounted. `cause` is the original error. */
 export class DemoMountError extends Error {}
@@ -56,7 +57,7 @@ export function mountDemo(
     );
   }
   const host = stage.ownerDocument.createElement("div");
-  host.className = "demo-live";
+  host.className = DEMO_CLASS.live;
   stage.append(host);
   // No attribution link inside the chart: this is the library's own site.
   const unbranded = { ...spec, watermark: false };

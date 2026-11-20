@@ -5,7 +5,8 @@
  * buttons. BaseLayout loads it on every page; it does nothing without a demo.
  */
 import type { VizSpec } from "@opendata-ai/openchart-core";
-import { setupDemoCopyButtons } from "../components/demo/copy-buttons";
+import { DEMO_ATTR, DEMO_CLASS } from "../lib/demo/markup";
+import { setupDemoCopyButtons } from "./demo-copy";
 import { setupFrameworkChoice } from "./framework-choice";
 
 /** Mount this far ahead of the viewport so the chart is live before the reader reaches it. */
@@ -30,13 +31,13 @@ type DemoStage = {
 };
 
 function readDemoStage(stage: HTMLElement): DemoStage {
-  const figure = stage.closest<HTMLElement>("figure[data-demo]");
+  const figure = stage.closest<HTMLElement>(`figure[${DEMO_ATTR.figure}]`);
   return {
-    id: figure?.dataset.demo ?? "(unknown demo)",
+    id: figure?.getAttribute(DEMO_ATTR.figure) ?? "(unknown demo)",
     stage,
-    specJson: figure?.querySelector("[data-demo-spec]")?.textContent ?? "",
-    entrance: figure?.hasAttribute("data-demo-entrance") ?? false,
-    hasStatic: stage.querySelector("svg.demo-static") !== null,
+    specJson: figure?.querySelector(`[${DEMO_ATTR.spec}]`)?.textContent ?? "",
+    entrance: figure?.hasAttribute(DEMO_ATTR.entrance) ?? false,
+    hasStatic: stage.querySelector(`svg.${DEMO_CLASS.static}`) !== null,
     near: false,
     played: false,
     failed: false,
@@ -58,7 +59,7 @@ function distanceFromViewport(element: HTMLElement): number {
 function showFailure(demo: DemoStage, error: unknown): void {
   if (demo.failed) return;
   demo.failed = true;
-  demo.stage.setAttribute("data-demo-error", "");
+  demo.stage.setAttribute(DEMO_ATTR.error, "");
   if (!demo.hasStatic) {
     const message = demo.stage.ownerDocument.createElement("p");
     message.className = "demo-error";
@@ -71,7 +72,7 @@ function showFailure(demo: DemoStage, error: unknown): void {
 function unmount(demo: DemoStage): void {
   demo.live?.destroy();
   demo.live = null;
-  demo.stage.removeAttribute("data-demo-live");
+  demo.stage.removeAttribute(DEMO_ATTR.live);
 }
 
 /** Destroys the furthest off-screen evictable mount when the cap is reached. */
@@ -97,7 +98,7 @@ function mountNow(demos: DemoStage[], demo: DemoStage, mounter: DemoMounter): vo
     const dark = isDarkPage(demo.stage.ownerDocument);
     demo.live = mounter.mountDemo(demo.stage, spec, { dark, entrance });
     demo.played = true;
-    demo.stage.setAttribute("data-demo-live", "");
+    demo.stage.setAttribute(DEMO_ATTR.live, "");
   } catch (error) {
     showFailure(demo, error);
   }
@@ -131,7 +132,7 @@ function observeTheme(doc: Document, onChange: () => void): void {
 
 /** Observes every demo stage on the page and mounts each as it approaches. */
 export function startDemos(doc: Document): void {
-  const stages = [...doc.querySelectorAll<HTMLElement>("[data-demo-stage]")];
+  const stages = [...doc.querySelectorAll<HTMLElement>(`[${DEMO_ATTR.stage}]`)];
   if (stages.length === 0) return;
   const demos = stages.map(readDemoStage);
   let mounter: Promise<DemoMounter> | null = null;

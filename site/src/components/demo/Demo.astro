@@ -5,9 +5,9 @@
  * that is unknown or whose spec fails validation fails the build, naming the page.
  */
 import { getDemo } from "../../demos/registry";
-import type { DemoDef } from "../../demos/types";
+import { DEFAULT_DEMO_HEIGHT, type DemoDef } from "../../demos/types";
+import { demoFigureHtml } from "../../lib/demo/figure";
 import { validateDemo } from "../../lib/demo/validate";
-import { DEFAULT_DEMO_HEIGHT, demoFigureHtml } from "./figure-html";
 
 interface Props {
   id: string;

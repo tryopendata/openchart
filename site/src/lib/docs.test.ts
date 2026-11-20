@@ -15,6 +15,7 @@ import {
   UnknownSectionError,
 } from "./docs";
 import type { DocPage } from "./docs-types";
+import { DemoExportError } from "./mdx-markdown";
 
 function page(id: string, fields: Partial<DocPage> = {}): DocPage {
   const section = id.split("/")[0] ?? "";
@@ -162,6 +163,16 @@ describe("Markdown exports", () => {
     const body = `import Demo from "../Demo.astro";\n\nUse it like this:\n\n${fenced}\n\nimport is a keyword.\n`;
     expect(toMarkdownExport(page("comparison/bar", { title: "Bar" }), body, noDemos)).toBe(
       `# Bar\n\n> About comparison/bar\n\nUse it like this:\n\n${fenced}\n\nimport is a keyword.\n`,
+    );
+  });
+
+  it("fails an MDX page's export with DemoExportError naming the page and the unknown demo", () => {
+    const body = 'Intro.\n\n<Demo\n  id={"comparison/missing"}\n/>\n';
+    const exported = () => toMarkdownExport(page("comparison/bar"), body, noDemos);
+    expect(exported).toThrow(DemoExportError);
+    expect(exported).toThrow(/"comparison\/bar" shows demo "comparison\/missing"/);
+    expect(() => llmsFull([{ page: page("comparison/bar"), body }], noDemos)).toThrow(
+      DemoExportError,
     );
   });
 

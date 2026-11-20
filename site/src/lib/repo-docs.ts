@@ -2,7 +2,8 @@
  * Finds which of the repository's docs/*.md files are published on the site.
  * A file is a page when its frontmatter declares `section`; contributor docs
  * without frontmatter stay on GitHub only. Reads synchronously because
- * astro.config.mjs and content.config.ts both need the answer at load time.
+ * content.config.ts needs the answer at load time; `repoPages` reads once per
+ * process so the content collections and the link rewriter share one snapshot.
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -50,6 +51,25 @@ export function publishedRepoDocs(docsDir: string): ReadonlyMap<string, string> 
     pages.set(file, id);
   }
   return pages;
+}
+
+let repoPagesSnapshot: ReadonlyMap<string, string> | undefined;
+
+/**
+ * The published-page map of the repository's own docs folder, read on the first
+ * call and reused after it.
+ *
+ * @throws {InvalidRepoDocError} When a docs file's frontmatter cannot produce a page id.
+ * @throws {DuplicatePageError} When two docs files resolve to the same page id.
+ */
+export function repoPages(): ReadonlyMap<string, string> {
+  repoPagesSnapshot ??= publishedRepoDocs(repoDocsDir());
+  return repoPagesSnapshot;
+}
+
+/** The repository's docs folder, where the published repo pages live. */
+export function repoDocsDir(): string {
+  return join(repoRoot(), "docs");
 }
 
 /** The page id a docs file declares, or undefined when its frontmatter has no `section`. */

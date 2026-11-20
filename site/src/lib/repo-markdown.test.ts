@@ -10,9 +10,13 @@ const pages = new Map([["tables.md", "tables/data-table"]]);
 const repoDoc = pathToFileURL(resolve("../docs/getting-started.md"));
 const siteDoc = pathToFileURL(join(process.cwd(), "src/content/docs/comparison/notes.md"));
 
-async function render(markdown: string, fileURL: URL | undefined) {
+async function render(
+  markdown: string,
+  fileURL: URL | undefined,
+  pageMap: () => ReadonlyMap<string, string> = () => pages,
+) {
   const processor = await createSatteriMarkdownProcessor({
-    hastPlugins: [satteriHeadingIdsPlugin(), dropTitle(), repoLinks(pages)],
+    hastPlugins: [satteriHeadingIdsPlugin(), dropTitle(), repoLinks(pageMap)],
   });
   return (await processor.render(markdown, fileURL ? { fileURL } : {})).code;
 }
@@ -59,5 +63,19 @@ describe("repo Markdown", () => {
     const html = await render("# Notes\n\n[Tables](./tables.md)\n", undefined);
     expect(html).toContain("<h1");
     expect(html).toContain('href="./tables.md"');
+  });
+
+  it("asks for the page map only when a repo doc has a relative link to rewrite", async () => {
+    let reads = 0;
+    const counted = () => {
+      reads += 1;
+      return pages;
+    };
+    await render("# Notes\n\n[Tables](./tables.md)\n", siteDoc, counted);
+    await render("# Notes\n\n[Top](#top) [Out](https://example.com)\n", repoDoc, counted);
+    expect(reads).toBe(0);
+    const html = await render("[Sorting](./tables.md)\n", repoDoc, counted);
+    expect(html).toContain('href="/docs/tables/data-table/"');
+    expect(reads).toBe(1);
   });
 });

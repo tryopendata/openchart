@@ -6,9 +6,11 @@
  */
 import type { VizSpec } from "@opendata-ai/openchart-core";
 import type { DemoSource } from "../../demos/types";
-import { demoDomId } from "../../lib/demo/dom-id";
-import { staticSvg } from "../../lib/demo/static-svg";
-import { codeTabsHtml } from "./code-tabs-html";
+import { codeTabsHtml } from "./code-tabs";
+import { demoDomId } from "./dom-id";
+import { escapeHtml } from "./escape-html";
+import { DEMO_ATTR } from "./markup";
+import { staticSvg } from "./static-svg";
 
 /** Everything the figure shows, whether it came from the registry or a fence. */
 export type DemoFigure = {
@@ -22,25 +24,14 @@ export type DemoFigure = {
   tabs: boolean;
 };
 
-/** The default stage height in px when a demo sets none. */
-export const DEFAULT_DEMO_HEIGHT = 400;
 /** Static SVGs are laid out at this width; CSS scales them to the stage. */
 const STATIC_WIDTH = 720;
-
-const ESCAPES: Record<string, string> = {
-  "&": "&amp;",
-  "<": "&lt;",
-  ">": "&gt;",
-  '"': "&quot;",
-  "'": "&#39;",
-};
-const escapeHtml = (text: string) => text.replace(/[&<>"']/g, (char) => ESCAPES[char] ?? char);
 
 /**
  * The spec as JSON that is safe inside a `<script>` element: escaping `<` keeps a
  * string such as `</script>` from closing the element early, and JSON.parse reads it back.
  */
-export function embeddedSpecJson(spec: VizSpec): string {
+function embeddedSpecJson(spec: VizSpec): string {
   return JSON.stringify(spec).replaceAll("<", "\\u003c");
 }
 
@@ -49,7 +40,12 @@ function stageHtml(figure: DemoFigure, domId: string): string {
   const light = staticSvg(figure.spec, { ...size, idPrefix: `${domId}-l`, dark: false });
   const dark = staticSvg(figure.spec, { ...size, idPrefix: `${domId}-d`, dark: true });
   const style = `--demo-height: ${figure.height}px`;
-  return `<div class="demo-stage" data-demo-stage style="${style}">${light ?? ""}${dark ?? ""}</div>`;
+  return `<div class="demo-stage" ${DEMO_ATTR.stage} style="${style}">${light ?? ""}${dark ?? ""}</div>`;
+}
+
+function specHtml(spec: VizSpec): string {
+  // The spec is data for the live mount, not text for search.
+  return `<script type="application/json" ${DEMO_ATTR.spec} data-pagefind-ignore>${embeddedSpecJson(spec)}</script>`;
 }
 
 function asSentence(text: string): string {
@@ -71,13 +67,12 @@ function captionHtml(figure: DemoFigure): string {
  */
 export async function demoFigureHtml(figure: DemoFigure): Promise<string> {
   const domId = demoDomId(figure.id);
-  const entrance = figure.entrance ? " data-demo-entrance" : "";
-  const spec = `<script type="application/json" data-demo-spec>${embeddedSpecJson(figure.spec)}</script>`;
+  const entrance = figure.entrance ? ` ${DEMO_ATTR.entrance}` : "";
   const code = figure.tabs ? await codeTabsHtml(domId, figure.spec) : "";
   return [
-    `<figure class="demo not-prose" data-demo="${escapeHtml(figure.id)}"${entrance}>`,
+    `<figure class="demo not-prose" ${DEMO_ATTR.figure}="${escapeHtml(figure.id)}"${entrance}>`,
     stageHtml(figure, domId),
-    spec,
+    specHtml(figure.spec),
     code,
     captionHtml(figure),
     "</figure>",

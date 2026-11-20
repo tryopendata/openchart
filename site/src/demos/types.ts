@@ -15,11 +15,14 @@ export type DemoDef = {
   spec: VizSpec;
   source: DemoSource;
   caption?: string;
-  /** Fixed height of the stage in px. Default 400. */
+  /** Fixed height of the stage in px. Default `DEFAULT_DEMO_HEIGHT`. */
   height?: number;
   /** Play the library's entrance animation on live mount. Default false. */
   entrance?: boolean;
 };
+
+/** The stage height in px for a demo or a `json demo` fence that sets none. */
+export const DEFAULT_DEMO_HEIGHT = 400;
 
 const DEMO_ID = /^[a-z0-9-]+\/[a-z0-9-]+$/;
 

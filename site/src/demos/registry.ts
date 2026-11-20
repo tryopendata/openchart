@@ -4,6 +4,7 @@
  * never means editing a shared list. The index is built when this module loads,
  * so a duplicate id fails the build on the first page that renders a demo.
  */
+import type { VizSpec } from "@opendata-ai/openchart-core";
 import type { DemoDef } from "./types";
 
 /** Thrown when no demo has the requested id. */
@@ -72,6 +73,15 @@ export function getDemo(id: string): DemoDef {
     );
   }
   return demo;
+}
+
+/**
+ * The spec of the demo with this id, which the Markdown exports inline in place of `<Demo />`.
+ *
+ * @throws {UnknownDemoError} When no demo has the id.
+ */
+export function demoSpec(id: string): VizSpec {
+  return getDemo(id).spec;
 }
 
 /** Every registered demo, in id order. */

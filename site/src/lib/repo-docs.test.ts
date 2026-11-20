@@ -3,9 +3,9 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DuplicatePageError } from "./docs";
-import { InvalidRepoDocError, publishedRepoDocs } from "./repo-docs";
+import { InvalidRepoDocError, publishedRepoDocs, repoPages } from "./repo-docs";
 
 let docsDir: string;
 
@@ -65,5 +65,26 @@ describe("publishedRepoDocs", () => {
     write("notes.txt", "---\nsection: get-started\n---\n");
     mkdirSync(join(docsDir, "evidence"));
     expect(publishedRepoDocs(docsDir)).toEqual(new Map());
+  });
+});
+
+describe("repoPages", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("reads the repository's docs folder once and serves that snapshot after", () => {
+    const repo = mkdtempSync(join(tmpdir(), "repo-root-"));
+    try {
+      mkdirSync(join(repo, "docs"));
+      writeFileSync(join(repo, "docs/tables.md"), "---\nsection: tables\nslug: data-table\n---\n");
+      vi.stubEnv("OPENCHART_REPO_ROOT", repo);
+      const first = repoPages();
+      expect(first).toEqual(new Map([["tables.md", "tables/data-table"]]));
+      writeFileSync(join(repo, "docs/later.md"), "---\nsection: tables\n---\n");
+      expect(repoPages()).toBe(first);
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
   });
 });

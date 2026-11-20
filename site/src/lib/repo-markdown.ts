@@ -63,9 +63,13 @@ export function dropTitle(): HastPlugin {
 
 /**
  * Rewrites relative links between repo docs: to site URLs for published pages
- * (file name to page id in `pages`), and to GitHub for every other repo file.
+ * (file name to page id in the map `pages` returns), and to GitHub for every
+ * other repo file. `pages` is called on the first link to rewrite, so building
+ * the plugin reads nothing.
+ *
+ * @throws Whatever `pages` throws, from the first repo link the plugin visits.
  */
-export function repoLinks(pages: ReadonlyMap<string, string>): HastPlugin {
+export function repoLinks(pages: () => ReadonlyMap<string, string>): HastPlugin {
   return {
     name: "repo-links",
     element: {
@@ -73,7 +77,7 @@ export function repoLinks(pages: ReadonlyMap<string, string>): HastPlugin {
       visit(node, ctx) {
         const href = node.properties.href;
         if (typeof href !== "string" || !isRelativeLink(href) || !isRepoMarkdown(ctx)) return;
-        ctx.setProperty(node, "href", rewriteRepoLink(href, pages));
+        ctx.setProperty(node, "href", rewriteRepoLink(href, pages()));
       },
     },
   };

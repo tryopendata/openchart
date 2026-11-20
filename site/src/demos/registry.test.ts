@@ -1,11 +1,19 @@
 /** The demo registry: lookup over the real demo modules, and indexing rules. */
 import { describe, expect, it } from "vitest";
 import { fixtureBar } from "./fixtures/bar";
-import { allDemos, DuplicateDemoError, getDemo, indexDemos, UnknownDemoError } from "./registry";
+import {
+  allDemos,
+  DuplicateDemoError,
+  demoSpec,
+  getDemo,
+  indexDemos,
+  UnknownDemoError,
+} from "./registry";
 
 describe("the demo registry", () => {
   it("returns a demo a module under src/demos defines", () => {
     expect(getDemo("fixtures/bar")).toBe(fixtureBar);
+    expect(demoSpec("fixtures/bar")).toBe(fixtureBar.spec);
     expect(allDemos().map(({ id }) => id)).toEqual(
       expect.arrayContaining(["fixtures/bar", "fixtures/table"]),
     );
@@ -14,6 +22,7 @@ describe("the demo registry", () => {
   it("throws UnknownDemoError naming an id nothing defines", () => {
     expect(() => getDemo("fixtures/nope")).toThrow(UnknownDemoError);
     expect(() => getDemo("fixtures/nope")).toThrow('"fixtures/nope"');
+    expect(() => demoSpec("fixtures/nope")).toThrow(UnknownDemoError);
   });
 
   it("throws DuplicateDemoError naming both modules when two define the same id", () => {
