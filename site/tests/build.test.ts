@@ -263,7 +263,7 @@ describe("the whole site", () => {
     const home = page("dist", "index.html");
     expect(home.querySelector("h1")?.textContent).toBe(site.tagline);
     expect(home.querySelector('meta[property="og:image"]')?.getAttribute("content")).toBe(
-      absolute("/og/index.png"),
+      absolute("/og-image.png"),
     );
     const text = home.body.textContent ?? "";
     expect(text).toContain(site.install[0]?.command ?? "");
@@ -274,7 +274,19 @@ describe("the whole site", () => {
     const headings = [...home.querySelectorAll("h2")].map((heading) => heading.textContent);
     expect(headings.includes("Used by")).toBe(site.usedBy.length > 0);
     expect(headings.includes("Sponsors")).toBe(site.sponsors.logos.length > 0);
-    expect(readFileSync("dist/og/index.png").subarray(1, 4).toString()).toBe("PNG");
+    expect(readFileSync("dist/og-image.png").subarray(1, 4).toString()).toBe("PNG");
+    const icons: [string, string][] = [
+      ['link[rel="icon"][sizes]', "favicon.ico"],
+      ['link[rel="icon"][type="image/svg+xml"]', "favicon.svg"],
+      ['link[rel="apple-touch-icon"]', "apple-touch-icon.png"],
+      ['link[rel="manifest"]', "site.webmanifest"],
+    ];
+    for (const [selector, file] of icons) {
+      expect(home.querySelector(selector)?.getAttribute("href"), selector).toBe(`/${file}`);
+      expect(existsSync(`dist/${file}`), file).toBe(true);
+    }
+    const manifest = JSON.parse(read("dist", "site.webmanifest"));
+    for (const icon of manifest.icons) expect(existsSync(`dist${icon.src}`), icon.src).toBe(true);
   });
 
   it("serves robots.txt, the sitemap index and an unindexed 404 page", () => {

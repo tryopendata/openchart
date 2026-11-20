@@ -25,7 +25,7 @@ const {
   title,
   description = site.description,
   path,
-  image = "/og/index.png",
+  image = "/og-image.png",
   markdown,
   noindex = false,
 } = Astro.props;
@@ -42,7 +42,10 @@ const pageTitle = path === "/" ? `${site.name}: ${title}` : `${title} | ${site.n
     <title>{pageTitle}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
     <link rel="sitemap" href="/sitemap-index.xml" />
     <link rel="alternate" type="text/plain" href="/llms.txt" title="llms.txt" />
     {markdown && <link rel="alternate" type="text/markdown" href={markdown} />}

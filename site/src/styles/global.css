@@ -35,6 +35,11 @@
      4.5:1 on the panel as well as the page. */
   --color-accent: #07798d;
   --color-accent-ink: #ffffff;
+  /* The logo's four hues (brand/README.md). */
+  --brand-bar: #3d6fe0;
+  --brand-point: #e8a23a;
+  --brand-arc: #d1458f;
+  --brand-area: #0a9cb5;
 
   --radius-xs: 2px;
 }
@@ -51,6 +56,10 @@
     --color-line-strong: #f2f2ee;
     --color-accent: #22d3ee;
     --color-accent-ink: #0e0f10;
+    --brand-bar: #6591e1;
+    --brand-point: #f9be78;
+    --brand-arc: #d771a4;
+    --brand-area: #22d3ee;
     color-scheme: dark;
   }
 
@@ -66,6 +75,10 @@
       --color-line-strong: #f2f2ee;
       --color-accent: #22d3ee;
       --color-accent-ink: #0e0f10;
+      --brand-bar: #6591e1;
+      --brand-point: #f9be78;
+      --brand-arc: #d771a4;
+      --brand-area: #22d3ee;
       color-scheme: dark;
     }
   }
