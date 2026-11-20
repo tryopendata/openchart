@@ -1,7 +1,9 @@
 ---
 /**
- * The OpenChart mark: three columns standing on a ticked baseline, drawn in the
- * current text color. Decorative; the wordmark beside it carries the name.
+ * The OpenChart mark: bar, point, arc and area in four cells, each in its own series
+ * color. This is the 16-unit small cut from brand/source/build.mjs, colored through the
+ * --brand-* tokens so it follows the site theme. Decorative; the wordmark beside it
+ * carries the name.
  */
 interface Props {
   class?: string;
@@ -9,18 +11,9 @@ interface Props {
 const { class: className } = Astro.props;
 ---
 
-<svg
-  xmlns="http://www.w3.org/2000/svg"
-  viewBox="0 0 20 20"
-  fill="currentColor"
-  aria-hidden="true"
-  class={className}
->
-  <rect x="3" y="10" width="3.5" height="6" />
-  <rect x="8.25" y="3" width="3.5" height="13" />
-  <rect x="13.5" y="7" width="3.5" height="9" />
-  <rect x="1" y="16" width="18" height="1.25" />
-  <rect x="1" y="17.25" width="1.25" height="2" />
-  <rect x="9.375" y="17.25" width="1.25" height="2" />
-  <rect x="17.75" y="17.25" width="1.25" height="2" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" aria-hidden="true" class={className}>
+  <path fill="var(--brand-bar)" d="M0 0h7v7H0z"></path>
+  <circle fill="var(--brand-point)" cx="12.5" cy="3.5" r="3.5"></circle>
+  <path fill="var(--brand-arc)" d="M0 9a7 7 0 0 1 7 7H0z"></path>
+  <path fill="var(--brand-area)" d="M9 16l7-7v7z"></path>
 </svg>

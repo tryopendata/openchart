@@ -9,7 +9,7 @@ import { createRequire } from "node:module";
 
 /** The text one card shows. */
 export type Card = { title: string; description: string; siteName: string };
-type Node = { type: string; props: { style?: Record<string, unknown>; children?: unknown } };
+type Node = { type: string; props: Record<string, unknown> };
 
 const INK = "#101010";
 const INK_2 = "#3d3d3a";
@@ -39,6 +39,22 @@ function axisRule(): Node {
   ]);
 }
 
+/** The logo mark at `size` pixels: the small cut from brand/source/build.mjs in its light hues. */
+function brandMark(size: number): Node {
+  const shape = (type: string, props: Record<string, unknown>): Node => ({ type, props });
+  return shape("svg", {
+    width: size,
+    height: size,
+    viewBox: "0 0 16 16",
+    children: [
+      shape("path", { fill: "#3d6fe0", d: "M0 0h7v7H0z" }),
+      shape("circle", { fill: "#e8a23a", cx: 12.5, cy: 3.5, r: 3.5 }),
+      shape("path", { fill: "#d1458f", d: "M0 9a7 7 0 0 1 7 7H0z" }),
+      shape("path", { fill: "#0a9cb5", d: "M9 16l7-7v7z" }),
+    ],
+  });
+}
+
 /** The card's element tree, ready for satori. */
 export function ogCard({ title, description, siteName }: Card): Node {
   return div(
@@ -54,7 +70,10 @@ export function ogCard({ title, description, siteName }: Card): Node {
       fontFamily: "Inter",
     },
     [
-      div({ fontSize: 30, fontWeight: 700, letterSpacing: "-0.01em" }, siteName),
+      div({ display: "flex", alignItems: "center", gap: "14px" }, [
+        brandMark(36),
+        div({ fontSize: 30, fontWeight: 700, letterSpacing: "-0.01em" }, siteName),
+      ]),
       div({ display: "flex", flexDirection: "column", gap: "24px" }, [
         div(
           { fontSize: 68, fontWeight: 700, lineHeight: 1.08, letterSpacing: "-0.02em" },
