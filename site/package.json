@@ -17,6 +17,7 @@
     "@opendata-ai/openchart-engine": "workspace:*",
     "@opendata-ai/openchart-react": "workspace:*",
     "@opendata-ai/openchart-vanilla": "workspace:*",
+    "@shikijs/transformers": "4.6.0",
     "@steamfield/ui": "^0.5.0",
     "@tailwindcss/typography": "^0.5.20",
     "@tailwindcss/vite": "^4.3.5",

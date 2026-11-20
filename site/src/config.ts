@@ -113,15 +113,14 @@ export const docsAreas = [
   },
 ] as const satisfies readonly DocsArea[];
 
-/** Docs sidebar groups, in order. A page's `group` frontmatter must be one of these ids. */
-export const docsGroups = [
-  { id: "getting-started", label: "Getting started" },
-  { id: "concepts", label: "Concepts" },
-  { id: "guides", label: "Guides" },
-  { id: "reference", label: "Reference" },
-] as const;
+/** Every docs section id, across all areas. */
+export type SectionId = (typeof docsAreas)[number]["sections"][number]["id"];
 
-export type DocsGroupId = (typeof docsGroups)[number]["id"];
+/** The section ids of the Visualizations area: the intents a chart is filed under. */
+export type VisualizationSectionId = Extract<
+  (typeof docsAreas)[number],
+  { id: "visualizations" }
+>["sections"][number]["id"];
 
 if (!["https:", "http:"].includes(new URL(site.url).protocol)) {
   throw new Error("Set site.url to an absolute HTTP or HTTPS production URL.");
