@@ -1,0 +1,55 @@
+---
+title: Slope and bump
+description: Compare two moments with a slope chart or follow rank across many periods with a bump chart. Both are line charts with a few extra spec fields.
+section: change-over-time
+order: 4
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+A slope chart draws one line per series between two points in time, so every crossing is a change in rank and every steep line is a large move. A bump chart plots rank rather than value across several periods, and shows who moved up or down at each step.
+
+Neither is a separate mark. Both are `mark: "line"` with a few public spec fields. Use a regular [line chart](/docs/change-over-time/line/) when the exact values over many periods matter more than the order, and a [range chart](/docs/comparison/range/) when you want the size of each gap between two values.
+
+## A slope chart
+
+Two ordinal x values, one line per brand. The values live on the labels, so `axis: false` removes the y axis and its gridlines. Line marks already fit the y axis to the data range (`zero: false`) and curve monotonically. The recipe sets both explicitly so the spec stays readable on its own. `endpointLabels` with `ends: "both"` puts a label column at each edge.
+
+<Demo id="change-over-time/slope" />
+
+## Different labels on each side
+
+`content` takes an object to set the two columns separately. Here `leading` joins the name and value on the left and `trailing` prints the value alone on the right, so the name is not repeated. Because the spec sets `endpointLabels` explicitly, the label columns stay at narrow widths where automatic endpoint labels would hand off to a legend.
+
+<Demo id="change-over-time/slope-labels" />
+
+## A bump chart
+
+The y axis is the finishing position. `scale: { reverse: true }` puts first place at the top, and `axis.values` with `format: "ordinal"` prints one tick per rank as 1st, 2nd and so on. `point: true` marks every step. Line marks already curve monotonically; the recipe sets `interpolate: "monotone"` explicitly so the spec stays readable on its own. Series that tie share a row.
+
+<Demo id="change-over-time/bump" />
+
+## Ranks from scores
+
+If your data holds scores rather than ranks, derive the rank with a `window` transform. `op: "rank"` ranks the rows within each group, `groupby` makes each date its own ranking, and `sort` sets the direction. The result lands in the field named by `as`, which the y channel then reads. At the first date every index starts at 0% and ties for first.
+
+<Demo id="change-over-time/bump-rank" />
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `mark` | `"line"`. For a bump chart, an object with `point: true`, plus `interpolate: "monotone"` if you want it explicit. |
+| `encoding.y.axis` | `false` removes the axis, as on a slope chart. `values` and `format: "ordinal"` print rank ticks. |
+| `encoding.y.scale` | `zero: false` is already the line default and is set for clarity. `reverse: true` puts rank 1 at the top. |
+| `endpointLabels.ends` | `"both"` adds a label column on the left edge as well as the right. |
+| `endpointLabels.content` | `"label"`, `"value"` or `"label value"`, or an object with `leading` and `trailing`. |
+| `transform` | A `window` rank turns scores into positions grouped by period. |
+| `legend` | `{ show: false }` hides the legend when the labels name every series. |
+
+## Related
+
+- [Line](/docs/change-over-time/line/) for values over many periods.
+- [Range](/docs/comparison/range/) for the gap between two values.
+- [Bar](/docs/comparison/bar/) for a ranking at a single moment.
+- [Sparkline](/docs/change-over-time/sparkline/) for a trend with no axes.
