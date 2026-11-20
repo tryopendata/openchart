@@ -39,7 +39,7 @@ Run from `site/`.
 | `make deploy-preview BRANCH=<name>` | Upload a Cloudflare Pages preview (needs `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`; `main` is refused, use `make deploy`) |
 | `make deploy`                       | Upload to production (needs the same two variables)                  |
 
-The Site workflow (`.github/workflows/site.yml`) runs the checks on every change to the site and deploys `main` to Cloudflare Pages; see Deploy in [AGENTS.md](AGENTS.md).
+Cloudflare's Git integration deploys `main` to production and every other branch to a preview; the Site workflow (`.github/workflows/site.yml`) only runs the checks. The two upload targets are for manual uploads. See Deploy in [AGENTS.md](AGENTS.md).
 
 ## License
 
