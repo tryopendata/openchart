@@ -8,10 +8,17 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { createRequire } from "node:module";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { after, before, test } from "node:test";
+
+// The workspace hoists wrangler to the repository root, so resolve it.
+const wrangler = join(
+  dirname(createRequire(import.meta.url).resolve("wrangler/package.json")),
+  "bin/wrangler.js",
+);
 
 let base = "";
 let child;
@@ -32,7 +39,7 @@ before(async () => {
   child = spawn(
     process.execPath,
     [
-      "node_modules/wrangler/bin/wrangler.js",
+      wrangler,
       "pages",
       "dev",
       "--ip",
