@@ -20,6 +20,18 @@ export function clampStaggerDelay(delay: number, elementCount: number): number {
   return Math.min(delay, MAX_TOTAL_STAGGER_MS / (elementCount - 1));
 }
 
+/** Spread of grid-cell (heatmap, waffle, calendar) start times, in ms. */
+export const CELL_SWEEP_BUDGET_MS = 600;
+
+/**
+ * Start times for `count` elements spread evenly over `budgetMs`, then
+ * shuffled with a seeded Fisher-Yates so they fill in no visible pattern.
+ * The same seed always gives the same order.
+ */
+export function shuffledSweepDelays(count: number, budgetMs: number, seed: number): number[] {
+  throw new Error(`not implemented: shuffledSweepDelays(${count}, ${budgetMs}, ${seed})`);
+}
+
 /** Map point stagger fallback used by the CSS when the renderer stamps none. */
 export const MAP_POINT_STAGGER_FALLBACK_MS = 60;
 

@@ -151,6 +151,30 @@ export const KEYFRAMES = {
       { offset: 1, values: { opacity: num(1), transform: scale(1) } },
     ],
   },
+  'oc-enter-pop': {
+    comment:
+      'Line point pop: fade in while scaling up from 0.4. The renderer stamps an\ninline px transform-origin at the point centre, so it grows in place\n(and in GIF frames, which carry no animation CSS).',
+    stops: [
+      { offset: 0, values: { opacity: num(0), transform: scale(0.4) } },
+      { offset: 1, values: { opacity: num(1), transform: scale(1) } },
+    ],
+  },
+  'oc-enter-cell': {
+    comment:
+      'Grid cell pop: fade in while scaling up from 0.85 about the cell centre\n(inline px transform-origin stamped by the renderer).',
+    stops: [
+      { offset: 0, values: { opacity: num(0), transform: scale(0.85) } },
+      { offset: 1, values: { opacity: num(1), transform: scale(1) } },
+    ],
+  },
+  'oc-enter-arc': {
+    comment:
+      "Slice growth: fade in while scaling up from 0.94. The slice path is drawn\naround its group's local origin (the group carries translate(cx, cy)), so\nthe default transform-origin of 0 0 is the pie centre.",
+    stops: [
+      { offset: 0, values: { opacity: num(0), transform: scale(0.94) } },
+      { offset: 1, values: { opacity: num(1), transform: scale(1) } },
+    ],
+  },
   'oc-enter-fade-only': {
     comment:
       'Pure opacity fade (no transform). Safe for elements with existing transforms\nlike arc groups that use translate() for positioning.',
@@ -344,6 +368,7 @@ export type EntranceRole =
   | 'rule'
   | 'tick'
   | 'label'
+  | 'arc-label'
   | 'endpoint-label'
   | 'annotation'
   | 'tilemap-tile'
@@ -469,8 +494,16 @@ export const FADE_CURVE: CurveName = 'snap';
 const TEXT_FADE_MS = 140;
 /** Data labels fade in place after their mark lands. */
 const LABEL_FADE_MS = 260;
-/** Points and arcs: their only entrance is opacity. */
+/** Points: their only entrance is opacity. */
 const POINT_FADE_MS = 300;
+/** A grid cell's pop-in. */
+const CELL_POP_MS = 400;
+/** A pie/donut slice's fade-and-grow. */
+const ARC_GROW_MS = 450;
+/** A line point's pop. */
+const LINE_POINT_POP_MS = 320;
+/** Line points cascade left to right over this window once their line has drawn. */
+export const LINE_POINT_CASCADE_MS = 240;
 
 const AUTHOR: RoleTiming = { kind: 'author' };
 const EASE_IN: RoleTiming = { kind: 'css', css: 'ease-in', bezier: [0.42, 0, 1, 1] };
@@ -516,13 +549,13 @@ const ROLE_DEFS: readonly EntranceRoleDef[] = [
     name: 'cell',
     scope: 'chart',
     comment:
-      'Grid cells (heatmap, waffle, calendar) have no baseline to grow from:\na quick fade on the author curve, no clip.',
+      'Grid cells (heatmap, waffle, calendar) have no baseline to grow from:\neach pops in on its own scattered start. The renderer stamps\n--oc-cell-delay from a seeded shuffle over CELL_SWEEP_BUDGET_MS, so the\ngrid fills in no particular pattern.',
     selectors: ['.oc-mark-rect[data-cell] :is(rect, path)'],
     emit: 'shorthand',
-    keyframe: 'oc-enter-fade-only',
+    keyframe: 'oc-enter-cell',
     timing: AUTHOR,
     durationBasis: 'phase',
-    duration: fixed(POINT_FADE_MS),
+    duration: fixed(CELL_POP_MS),
     delay: { stagger: 'mark' },
   },
   {
@@ -567,13 +600,13 @@ const ROLE_DEFS: readonly EntranceRoleDef[] = [
     name: 'arc',
     scope: 'chart',
     comment:
-      'Arc marks (pie/donut slices): a quick fade on the author curve.\nScale transforms break arc positioning because arcs use translate()\non parent groups.',
-    selectors: ['.oc-mark-arc'],
+      'Arc marks (pie/donut slices): each slice path fades and grows from the pie\ncentre. The transform goes on the path, never the group, whose translate()\nattribute positions the slice.',
+    selectors: ['.oc-mark-arc > path'],
     emit: 'shorthand',
-    keyframe: 'oc-enter-fade-only',
+    keyframe: 'oc-enter-arc',
     timing: AUTHOR,
     durationBasis: 'phase',
-    duration: fixed(POINT_FADE_MS),
+    duration: fixed(ARC_GROW_MS),
     delay: { stagger: 'mark' },
   },
   {
@@ -593,14 +626,16 @@ const ROLE_DEFS: readonly EntranceRoleDef[] = [
     name: 'line-point',
     scope: 'chart',
     comment:
-      "Points on line/area charts appear as the line's clip edge reaches them: the\nrenderer stamps each point's delay from its x along its own series.",
+      "Points on line/area charts pop in once their own line has drawn (0.97),\ncascading left to right over LINE_POINT_CASCADE_MS; the renderer stamps\neach point's delay. Points hidden under an endpoint marker stay hidden.",
     selectors: ['.oc-mark-line ~ circle.oc-mark-point', '.oc-mark-area ~ circle.oc-mark-point'],
-    emit: ['duration', 'delay'],
-    keyframe: 'oc-enter-fade-only',
-    timing: AUTHOR,
+    emit: 'shorthand',
+    keyframe: 'oc-enter-pop',
+    timing: { kind: 'curve', curve: 'punch' },
+    accent: true,
     durationBasis: 'phase',
-    duration: fixed(POINT_FADE_MS),
-    delay: { after: when('line-area', 0.5), stagger: 'mark' },
+    duration: fixed(LINE_POINT_POP_MS),
+    delay: { after: when('line-area', 0.97), stagger: 'mark' },
+    suppress: ['circle.oc-mark-point[opacity="0"]'],
   },
   {
     name: 'text',
@@ -643,7 +678,7 @@ const ROLE_DEFS: readonly EntranceRoleDef[] = [
     name: 'label',
     scope: 'chart',
     comment:
-      "Data labels (bar values, line end labels, pie slice labels) fade in place\nonce their mark has landed: when the bar at the label's --oc-mark-index\nreaches 0.97. Lines and arcs share the bar's duration and curve, so the bar\nanchor stands in for them. Labels never move during the entrance.",
+      "Data labels (bar values, line end labels) fade in place once their mark has\nlanded: when the bar at the label's --oc-mark-index reaches 0.97. Lines\nshare the bar's duration and curve, so the bar anchor stands in for them.\nLabels never move during the entrance.",
     selectors: ['.oc-mark-label'],
     emit: 'shorthand',
     keyframe: 'oc-enter-fade-only',
@@ -651,6 +686,18 @@ const ROLE_DEFS: readonly EntranceRoleDef[] = [
     durationBasis: 'phase',
     duration: fixed(LABEL_FADE_MS),
     delay: { after: when('bar', 0.97), stagger: 'mark' },
+  },
+  {
+    name: 'arc-label',
+    scope: 'chart',
+    comment: 'Pie/donut slice labels fade in place once their own slice reaches 0.97.',
+    selectors: ['.oc-mark-arc > .oc-mark-label'],
+    emit: 'shorthand',
+    keyframe: 'oc-enter-fade-only',
+    timing: AUTHOR,
+    durationBasis: 'phase',
+    duration: fixed(LABEL_FADE_MS),
+    delay: { after: when('arc', 0.97), stagger: 'mark' },
   },
   {
     name: 'endpoint-label',

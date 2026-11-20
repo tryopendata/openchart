@@ -45,6 +45,7 @@ const ROLE_NAMES: EntranceRole[] = [
   'rule',
   'tick',
   'label',
+  'arc-label',
   'endpoint-label',
   'annotation',
   'tilemap-tile',
@@ -204,18 +205,19 @@ function goldens(D: number, reach: (p: number) => number): Record<EntranceRole, 
     // delay, duration, geometry (non-opacity props), opacity settle
     bar: [S * I, D, D, 0],
     'bar-h': [S * I, D, D, 0],
-    cell: [S * I, 300, 0, 300],
+    cell: [S * I, 400, 400, 400],
     'stack-reveal': [S * I, D, D, 0],
     'stack-reveal-h': [S * I, D, D, 0],
     'line-area': [S * I, D, D, 0.15 * D],
-    arc: [S * I, 300, 0, 300],
+    arc: [S * I, 450, 450, 450],
     point: [S * I, 300, 0, 300],
     // Unstamped: once the line (index 0) reaches 0.5, plus its own stagger.
-    'line-point': [S * I + D * reach(0.5), 300, 0, 300],
+    'line-point': [S * I + D * reach(0.97), 320, 320, 320],
     text: [S * I, D, D, 140],
     rule: [S * I, 0.5 * D, 0, 0.5 * D],
     tick: [S * I, 0.5 * D, 0, 0.5 * D],
     label: [S * I + D * reach(0.97), 260, 0, 260],
+    'arc-label': [S * I + 450 * reach(0.97), 260, 0, 260],
     // Once its own series' line (same index) is 95% of the way across.
     'endpoint-label': [S * I + D * reach(0.95), 300, 0, 300],
     // When the last mark reaches 0.9, plus the authored gap.
@@ -368,13 +370,13 @@ describe('entranceEndMs', () => {
     expect(
       entranceEndMs({ phase, roles: { 'tilemap-tile': { count: 50, maxDelayMs: 900 } } }),
     ).toBeCloseTo(900 + 0.35 * 600, 6);
-    // Stamped line points: the latest stamped start plus the 300ms fade.
+    // Stamped line points: the latest stamped start plus the 320ms pop.
     expect(
       entranceEndMs({
         phase,
         roles: { 'line-point': { count: 20, maxStampedDelayMs: 480, stampedCount: 20 } },
       }),
-    ).toBe(780);
+    ).toBe(800);
     // 11 features, 800ms phase: budget 540 over 10 gaps, each feature 500ms.
     expect(
       entranceEndMs({

@@ -113,6 +113,47 @@
     }
   }
 
+  /* Line point pop: fade in while scaling up from 0.4. The renderer stamps an
+     inline px transform-origin at the point centre, so it grows in place
+     (and in GIF frames, which carry no animation CSS). */
+  @keyframes oc-enter-pop {
+    from {
+      opacity: 0;
+      transform: scale(0.4);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* Grid cell pop: fade in while scaling up from 0.85 about the cell centre
+     (inline px transform-origin stamped by the renderer). */
+  @keyframes oc-enter-cell {
+    from {
+      opacity: 0;
+      transform: scale(0.85);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* Slice growth: fade in while scaling up from 0.94. The slice path is drawn
+     around its group's local origin (the group carries translate(cx, cy)), so
+     the default transform-origin of 0 0 is the pie centre. */
+  @keyframes oc-enter-arc {
+    from {
+      opacity: 0;
+      transform: scale(0.94);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
   /* Pure opacity fade (no transform). Safe for elements with existing transforms
      like arc groups that use translate() for positioning. */
   @keyframes oc-enter-fade-only {
