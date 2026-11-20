@@ -1,0 +1,57 @@
+---
+title: Scatter
+description: Plot two numeric fields against each other to find correlation, clusters and outliers, then add color, direct labels, a reference line and a log axis.
+section: correlation
+order: 1
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+A scatter chart places one dot per row at the position of two numbers, so a reader can see whether they move together, which rows cluster and which sit apart. Reach for it when the question is how one measure relates to another.
+
+Add a third number and it becomes a [bubble chart](/docs/correlation/bubble/). When both fields are categories, a [heatmap](/docs/correlation/heatmap/) fits better, and when the x field is time, a [line chart](/docs/change-over-time/line/) shows the trend directly.
+
+## A basic scatter
+
+Set `mark` to `"point"` and put one quantitative field on each of `x` and `y`. A `tooltip` channel lists the fields shown on hover. A scatter also draws a fitted trend line by default, which the [trendlines](/docs/correlation/trendlines/) page covers.
+
+<Demo id="correlation/scatter-basic" />
+
+## Direct labels
+
+Text annotations name the notable points on the chart, so a reader does not need to hover to find them. A `refline` marks a benchmark, here the OECD average. Anchor each label to the side of its point that has room.
+
+<Demo id="correlation/scatter-labelled" />
+
+## Color groups
+
+A categorical `color` channel splits the cloud into series. Setting `scale.domain` on each axis fixes the plot window to a range you choose.
+
+<Demo id="correlation/scatter-color" />
+
+## A log axis
+
+`scale: { type: "log" }` spaces the axis by orders of magnitude. It suits a field like GDP per capita that spans a wide range.
+
+<Demo id="correlation/scatter-log" />
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `mark` | `"point"` draws one dot per row. |
+| `encoding.x`, `encoding.y` | The two quantitative fields the dot is placed by. |
+| `encoding.color` | Optional. A categorical field that splits the dots into colored series. |
+| `encoding.tooltip` | Optional. The fields listed when a dot is hovered. |
+| `scale.domain` | Fixes the axis range to `[min, max]`. |
+| `scale.type` | Sets the scale type. `"log"` gives a logarithmic axis. |
+| `scale.zero` | Whether the axis must include zero. Point marks default to false, so the axis fits the data; set true to anchor at zero. |
+| `annotations` | Text labels and `refline` entries drawn in data units. |
+
+## Related
+
+- [Bubble](/docs/correlation/bubble/): add a third number as dot size.
+- [Trendlines](/docs/correlation/trendlines/): control the fitted line.
+- [Heatmap](/docs/correlation/heatmap/): relate two categories through a number.
+- [Beeswarm](/docs/distribution/beeswarm/): one number per dot, dodged along a lane.
+- [Line](/docs/change-over-time/line/): a trend over time.

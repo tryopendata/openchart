@@ -1,0 +1,56 @@
+---
+title: Heatmap
+description: Color a grid of two categories by a number to read patterns across rows and columns, then change the color scheme, pin the color domain and order the rows.
+section: correlation
+order: 3
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+A heatmap puts one cell on a grid of two categorical fields and colors it by a number. A reader scans for the diagonal, the dark rows and the empty corners, which is the standard way to read a source-by-year or feature-by-feature matrix.
+
+In OpenChart the heatmap is the `rect` mark. Use a [scatter chart](/docs/correlation/scatter/) when both fields are numbers. For a daily series laid out as a year grid, use the [calendar](/docs/change-over-time/calendar/), and for color inside table rows, see [column types](/docs/tables/column-types/).
+
+## A basic heatmap
+
+Set `mark` to `"rect"`, put one category on `x` and the other on `y`, and a quantitative field on `color`. `scale.scheme` names the color ramp and `format` is a d3-format string for the value in tooltips and on the color legend.
+
+<Demo id="correlation/heatmap-basic" />
+
+## Another color scheme
+
+`scale.scheme` takes a named scheme. The sequential names are `blue`, `green`, `orange`, `purple` and `teal`, and common Vega-Lite names such as `blues` are accepted as aliases. An unknown name fails validation and lists the supported ones.
+
+<Demo id="correlation/heatmap-scheme" />
+
+## A fixed color domain
+
+`scale.domain` pins the color range to `[min, max]`. A fixed 0 to 100 domain colors each cell against the full percentage range, so small shares stay pale.
+
+<Demo id="correlation/heatmap-domain" />
+
+## Ordering rows
+
+An array on the `sort` field of a nominal channel sets the order by hand. The array lists the rows from the bottom of the axis up, so this order puts Gas, the largest source, at the top.
+
+<Demo id="correlation/heatmap-ordered" />
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `mark` | `"rect"` draws one cell per row. |
+| `encoding.x`, `encoding.y` | The two nominal fields that form the grid. |
+| `encoding.y.sort` | An array of names that sets the row order by hand. |
+| `encoding.color` | The quantitative field that sets each cell's color. |
+| `encoding.color.scale.scheme` | The named color scheme, such as `"blues"` or `"orange"`. |
+| `encoding.color.scale.domain` | Pins the color range to `[min, max]`. |
+| `encoding.color.format` | A d3-format string for the value shown in tooltips and on the color legend. |
+
+## Related
+
+- [Scatter](/docs/correlation/scatter/): relate two numbers.
+- [Bubble](/docs/correlation/bubble/): add a third number as size.
+- [Calendar](/docs/change-over-time/calendar/): a daily value as a year grid.
+- [Column types](/docs/tables/column-types/): heatmap cells inside a table.
+- [Stacked 100%](/docs/part-to-whole/stacked-100/): the share of each part as stacked bars.

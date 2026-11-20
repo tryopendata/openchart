@@ -1,0 +1,55 @@
+---
+title: Tick strip
+description: Draw one short tick per observation along a shared axis to show the spread of values in each group, then color the strips and add a reference line.
+section: distribution
+order: 4
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+A tick strip draws one short line per observation along a value axis, so the whole spread of a group reads at once: where values cluster, where they thin out and where the extremes sit. Stacking one strip per group lets you compare spreads directly.
+
+Ticks overlap when the data is dense. Switch to a [beeswarm](/docs/distribution/beeswarm/) to dodge the points apart, or to a [histogram](/docs/distribution/histogram/) when counts matter more than individual values. To compare one summary number per group, use a [bar chart](/docs/comparison/bar/).
+
+## A basic tick strip
+
+Set `mark` to `"tick"`, put the value on `x` and the group on `y`. Each row of the data becomes one tick. The tick mark needs a `y` channel; the spec fails validation without one.
+
+<Demo id="distribution/tick-basic" />
+
+## Colored strips
+
+A `color` channel on the same field as `y` gives each strip its own color. The strips are already labeled on the axis, so `legend: { show: false }` drops the legend.
+
+<Demo id="distribution/tick-groups" />
+
+## A reference line
+
+A `refline` annotation draws a threshold in data units across every strip, so you can read how many ticks fall on each side. Here the line marks four hours.
+
+<Demo id="distribution/tick-reference" />
+
+## Another dataset
+
+The same spec works on any one-number-per-row data. This one shows invented household incomes in four Census regions, with the strips wider where incomes vary more.
+
+<Demo id="distribution/tick-income" />
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `mark` | `"tick"` draws one short line per row. |
+| `encoding.x` | The quantitative value each tick is placed at. |
+| `encoding.y` | A nominal field that names each strip. Required for the tick mark. |
+| `encoding.color` | Optional. Colors each strip by group. |
+| `legend.show` | Set to false to hide a legend the axis labels already replace. |
+| `annotations` | A `refline` with `x` draws a reference value across the strips. |
+
+## Related
+
+- [Beeswarm](/docs/distribution/beeswarm/): dodge dense points apart.
+- [Histogram](/docs/distribution/histogram/): count values in bins.
+- [Error bars](/docs/distribution/error-bars/): show an interval instead of every observation.
+- [Range](/docs/comparison/range/): compare a start and an end per category.
+- [Scatter](/docs/correlation/scatter/): place observations by two numbers.

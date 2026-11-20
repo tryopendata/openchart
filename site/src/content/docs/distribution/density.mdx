@@ -1,0 +1,56 @@
+---
+title: Density
+description: Smooth one numeric field into a density curve to compare the shape of groups, then change the bandwidth or switch to a cumulative curve.
+section: distribution
+order: 2
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+A density chart shows the shape of one number as a smooth curve. OpenChart runs a Gaussian kernel density estimate over the raw values and draws it as a translucent filled area, so several groups can overlap on one axis and still be compared.
+
+The smoothing is a choice you make through the bandwidth. A [histogram](/docs/distribution/histogram/) shows the same data with bin edges instead, and a [beeswarm](/docs/distribution/beeswarm/) keeps every observation visible. For a count per category, use a [bar chart](/docs/comparison/bar/).
+
+## A basic density curve
+
+Set `mark` to `{ type: "density" }` and put the raw field on `x`. The y axis is hidden by default, because the absolute height of a density is not a quantity readers interpret.
+
+<Demo id="distribution/density-basic" />
+
+## Grouped curves
+
+Add a `color` channel for one curve per group. All the curves are evaluated over a shared extent, so they are comparable, and the fill defaults to 0.4 opacity when the chart is grouped.
+
+<Demo id="distribution/density-grouped" />
+
+## Bandwidth
+
+`bandwidth` sets the width of the Gaussian kernel. When you omit it, OpenChart uses Silverman's rule of thumb. A narrow value, such as 15 here, follows every bump in the sample.
+
+<Demo id="distribution/density-bandwidth" />
+
+## Cumulative curves
+
+`cumulative: true` draws the cumulative distribution instead of a density. Each curve climbs to its group's total, so where one curve sits above another, that group has more of its values below that x.
+
+<Demo id="distribution/density-cumulative" />
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `mark.type` | `"density"` runs a kernel density estimate over the `x` values. |
+| `mark.bandwidth` | The Gaussian kernel bandwidth. Defaults to Silverman's rule of thumb. |
+| `mark.cumulative` | Draws a cumulative distribution instead of a density. Defaults to false. |
+| `mark.steps` | The number of points the curve is evaluated at. Defaults to 200. |
+| `mark.fillOpacity` | The fill opacity. Defaults to 0.4 when grouped. |
+| `encoding.x` | The raw quantitative field to estimate over. Required. |
+| `encoding.color` | Optional. One curve per group. |
+
+## Related
+
+- [Histogram](/docs/distribution/histogram/): bin and count the same values.
+- [Beeswarm](/docs/distribution/beeswarm/): one dot per observation.
+- [Error bars](/docs/distribution/error-bars/): show an interval around an estimate.
+- [Bar](/docs/comparison/bar/): compare one total per category.
+- [Scatter](/docs/correlation/scatter/): relate two numbers.
