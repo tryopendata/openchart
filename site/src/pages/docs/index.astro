@@ -1,15 +1,18 @@
 ---
-import { docsGroups, site } from "../../config";
+/** The docs home: every area with its sections and pages. */
+import { site } from "../../config";
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import { getDocs } from "../../lib/collection";
-import { docHref, docsNav } from "../../lib/docs";
+import { allPages } from "../../lib/collection";
+import { docsAreasNav } from "../../lib/docs";
 
-const nav = docsNav(await getDocs(), docsGroups);
+const pages = (await allPages()).map((entry) => entry.page);
+const descriptions = new Map(pages.map((page) => [page.id, page.description]));
+const areas = docsAreasNav(pages);
 ---
 
 <BaseLayout
   title="Documentation"
-  description={`Install, learn and configure ${site.name}.`}
+  description={`Guides, visualizations, building blocks and reference for ${site.name}.`}
   path="/docs/"
 >
   <div class="prose mx-auto max-w-4xl px-6 py-10">
@@ -18,19 +21,21 @@ const nav = docsNav(await getDocs(), docsGroups);
       Every page here is also served as Markdown, and <a href="/llms.txt">llms.txt</a> lists them
       all.
     </p>
-    {nav.map((group) => (
-      <section aria-labelledby={`group-${group.id}`}>
-        <h2 id={`group-${group.id}`}>{group.label}</h2>
-        <ul class="not-prose grid gap-4 sm:grid-cols-2">
-          {group.items.map((item) => (
-            <li class="border-line rounded-lg border p-4">
-              <a href={docHref(item.id)} class="font-semibold">
-                {item.title}
-              </a>
-              <p class="text-muted mt-1 text-sm">{item.description}</p>
-            </li>
-          ))}
-        </ul>
+    {areas.map((area) => (
+      <section aria-labelledby={`area-${area.id}`}>
+        <h2 id={`area-${area.id}`}>{area.label}</h2>
+        {area.sections.map((section) => (
+          <section aria-labelledby={`section-${section.id}`}>
+            <h3 id={`section-${section.id}`}>{section.label}</h3>
+            <ul>
+              {section.items.map((item) => (
+                <li>
+                  <a href={item.href}>{item.label}</a>: {descriptions.get(item.id)}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
       </section>
     ))}
   </div>

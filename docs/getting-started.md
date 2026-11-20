@@ -1,3 +1,10 @@
+---
+title: Getting started
+description: A hands-on walkthrough building from a bare chart to themed, annotated visualizations and data tables.
+section: get-started
+order: 1
+---
+
 # Getting started
 
 A hands-on walkthrough building from a bare chart to themed, annotated visualizations and data tables. Each section builds on the previous one. All examples are complete and runnable.
@@ -49,6 +56,24 @@ function App() {
       <Chart spec={spec} />
     </div>
   );
+}
+```
+
+The same spec, rendered live:
+
+```json demo
+{
+  "mark": "line",
+  "data": [
+    { "date": "2023-01-01", "value": 12 },
+    { "date": "2023-04-01", "value": 28 },
+    { "date": "2023-07-01", "value": 35 },
+    { "date": "2023-10-01", "value": 42 }
+  ],
+  "encoding": {
+    "x": { "field": "date", "type": "temporal" },
+    "y": { "field": "value", "type": "quantitative" }
+  }
 }
 ```
 

@@ -1,15 +1,19 @@
+/** Each docs page as Markdown at /docs/<id>.md, linked from the page head as rel="alternate". */
 import type { APIRoute, GetStaticPaths } from "astro";
-import { getDocs } from "../../lib/collection";
-import { type DocEntry, toMarkdownExport } from "../../lib/docs";
+import { getDemo } from "../../demos/registry";
+import { allPages, type PageEntry } from "../../lib/collection";
+import { toMarkdownExport } from "../../lib/docs";
 
-// Each docs page as Markdown at /docs/<id>.md, linked from the page head as rel="alternate".
 export const getStaticPaths = (async () =>
-  (await getDocs()).map((doc) => ({
-    params: { slug: doc.id },
-    props: doc,
+  (await allPages()).map((entry) => ({
+    params: { slug: entry.page.id },
+    props: entry,
   }))) satisfies GetStaticPaths;
 
-export const GET: APIRoute<DocEntry> = ({ props }) =>
-  new Response(toMarkdownExport(props), {
-    headers: { "Content-Type": "text/markdown; charset=utf-8" },
-  });
+export const GET: APIRoute<PageEntry> = ({ props }) =>
+  new Response(
+    toMarkdownExport(props.page, props.body, (id) => getDemo(id).spec),
+    {
+      headers: { "Content-Type": "text/markdown; charset=utf-8" },
+    },
+  );

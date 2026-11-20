@@ -1,48 +1,22 @@
 ---
+/**
+ * One docs page at /docs/<section>/<slug>/, rendered from either collection
+ * and handed to DocsLayout as exactly DocsLayoutProps.
+ */
 import type { GetStaticPaths } from "astro";
-import { getCollection, render } from "astro:content";
-import { docsGroups } from "../../config";
 import DocsLayout from "../../layouts/DocsLayout.astro";
-import { getDocs } from "../../lib/collection";
-import { docHref, docsNav, markdownHref, pageLinks } from "../../lib/docs";
-import type { DocsLayoutProps, Heading, NavItem } from "../../lib/docs-types";
+import { allPages } from "../../lib/collection";
+import { docsLayoutProps } from "../../lib/docs";
 
 export const getStaticPaths = (async () => {
-  const entries = await getCollection("docs");
-  return entries.map((entry) => ({ params: { slug: entry.id }, props: { entry } }));
+  const entries = await allPages();
+  const pages = entries.map((entry) => entry.page);
+  return entries.map((entry) => ({ params: { slug: entry.page.id }, props: { entry, pages } }));
 }) satisfies GetStaticPaths;
 
-const { entry } = Astro.props;
-const { Content, headings } = await render(entry);
-const groups = docsNav(await getDocs(), docsGroups);
-const { prev, next } = pageLinks(groups, entry.id);
-const link = (item: { id: string; label: string } | undefined): NavItem | undefined =>
-  item && { id: item.id, label: item.label, href: docHref(item.id) };
-const nav = groups.map((group) => ({
-  id: group.id,
-  label: group.label,
-  items: group.items.map((item) => ({ id: item.id, label: item.label, href: docHref(item.id) })),
-}));
-const props: DocsLayoutProps = {
-  page: {
-    id: entry.id,
-    area: "guides",
-    section: entry.data.group,
-    title: entry.data.title,
-    description: entry.data.description,
-    order: entry.data.order,
-    source: "site-mdx",
-    path: docHref(entry.id),
-    markdown: markdownHref(entry.id),
-  },
-  areas: [
-    { id: "guides", label: "Guides", href: nav[0]?.items[0]?.href ?? "/docs/", sections: nav },
-  ],
-  nav,
-  outline: headings.filter((heading) => heading.depth === 2 || heading.depth === 3) as Heading[],
-  prev: link(prev),
-  next: link(next),
-};
+const { entry, pages } = Astro.props;
+const { Content, headings } = await entry.render();
+const props = docsLayoutProps(pages, entry.page, headings);
 ---
 
 <DocsLayout {...props}>
