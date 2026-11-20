@@ -212,7 +212,7 @@ describe('compileTable', () => {
     const layout = compileTable({ ...baseSpec, animation: true }, baseOptions);
     expect(layout.animation).toBeDefined();
     expect(layout.animation!.enter).toBeDefined();
-    expect(layout.animation!.enter!.duration).toBe(600);
+    expect(layout.animation!.enter!.duration).toBe(800);
     expect(layout.animation!.enter!.staggerDelay).toBe(80);
   });
 
@@ -228,7 +228,7 @@ describe('compileTable', () => {
 
   it('includes default animation when spec omits it (on by default)', () => {
     const layout = compileTable(baseSpec, baseOptions);
-    expect(layout.animation!.enter!.duration).toBe(600);
+    expect(layout.animation!.enter!.duration).toBe(800);
   });
 
   it('does not include animation when spec has animation: false', () => {

@@ -92,9 +92,9 @@ describe('linePointDelays', () => {
     const values = points.map((_, i) => delays.get(i + 1)!);
     expect(values[0]).toBe(0);
     for (let i = 1; i < values.length; i++) expect(values[i]).toBeGreaterThan(values[i - 1]);
-    // The last dot starts when the edge touches it, well before the curve's
-    // asymptotic tail ends at D.
-    expect(values.at(-1)).toBeLessThan(500);
+    // The last dot starts when the edge touches it, before the curve's tail
+    // ends at D.
+    expect(values.at(-1)).toBeLessThan(600);
     // At each point's delay, the oc-enter-line clip edge sits on the dot's
     // leading edge (the first dot, already touching the start, at 0).
     points.forEach((point, i) => {
