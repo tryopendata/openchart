@@ -591,7 +591,7 @@ export function renderMarks(
   const pointDelays = enter
     ? linePointDelays(layout.marks, enter, ctx.marks.staggerMs ?? 0, opts?.markIndexOffset)
     : undefined;
-  const cellDelays = enter ? cellSweepDelays(layout.marks) : undefined;
+  const cellDelays = enter ? cellSweepDelays(layout.marks, opts?.markIndexOffset) : undefined;
   const stacks = enter ? stackExtents(layout.marks) : undefined;
 
   for (let i = 0; i < layout.marks.length; i++) {

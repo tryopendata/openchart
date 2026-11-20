@@ -122,6 +122,12 @@ describe('linePointDelays', () => {
     expect(delays.has(points.length + 1)).toBe(false);
   });
 
+  it("keys a faceted panel's dots on its offset line index", () => {
+    const phase: MotionPhase = { duration: 800, ease: 'smooth' };
+    const delays = linePointDelays(marks, phase, 75, 7);
+    expect(delays.get(1)).toBe(progressTimeMs('line-area', 7, phase, { staggerMs: 75 }, 0.97));
+  });
+
   it('starts every dot of a zero-width series at once', () => {
     const phase: MotionPhase = { duration: 800, ease: 'smooth' };
     const single = { ...line, points: [{ x: 50, y: 10 }] } as LineMark;
@@ -142,6 +148,14 @@ describe('cellSweepDelays', () => {
     expect(delays.has(0)).toBe(false);
     expect([...delays.keys()]).toEqual([1, 2, 3, 4, 5, 6]);
     expect([...delays.values()]).toEqual(shuffledSweepDelays(6, CELL_SWEEP_BUDGET_MS, 6));
+  });
+
+  it("gives equal-sized facet panels different orders via the panel's offset", () => {
+    const panel: Mark[] = Array.from({ length: 9 }, (_, i) => cell(i * 10));
+    const first = [...cellSweepDelays(panel, 0).values()];
+    const second = [...cellSweepDelays(panel, 9).values()];
+    expect(first).toEqual(shuffledSweepDelays(9, CELL_SWEEP_BUDGET_MS, 9));
+    expect(second).not.toEqual(first);
   });
 
   it('returns nothing for a chart with no cells', () => {

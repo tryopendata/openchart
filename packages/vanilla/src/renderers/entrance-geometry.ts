@@ -167,14 +167,20 @@ export function linePointDelays(
 /**
  * Scattered start times for grid cells (rects flagged `cell`: heatmap, waffle,
  * calendar) spread over CELL_SWEEP_BUDGET_MS, so the grid fills in no visible
- * order. Seeded by the cell count, so a chart always fills the same way.
+ * order. Seeded by the cell count plus the panel's mark index offset, so a
+ * chart always fills the same way and equal-sized facet panels don't fill in
+ * lockstep.
  * Keyed by index into `marks`, in mark order.
  */
-export function cellSweepDelays(marks: readonly Mark[]): Map<number, number> {
+export function cellSweepDelays(marks: readonly Mark[], markIndexOffset = 0): Map<number, number> {
   const cellIndexes: number[] = [];
   marks.forEach((mark, i) => {
     if (mark.type === 'rect' && mark.cell) cellIndexes.push(i);
   });
-  const sweep = shuffledSweepDelays(cellIndexes.length, CELL_SWEEP_BUDGET_MS, cellIndexes.length);
+  const sweep = shuffledSweepDelays(
+    cellIndexes.length,
+    CELL_SWEEP_BUDGET_MS,
+    cellIndexes.length + markIndexOffset,
+  );
   return new Map(cellIndexes.map((markIndex, n) => [markIndex, sweep[n]]));
 }

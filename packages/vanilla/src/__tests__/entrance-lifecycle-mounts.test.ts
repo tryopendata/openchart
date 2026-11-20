@@ -544,6 +544,44 @@ describe('chart', () => {
     chart.destroy();
   });
 
+  it('exports line points and grid cells with no entrance stamps', () => {
+    stubComputedTokens();
+    const specs = [
+      {
+        mark: { type: 'line', point: true },
+        data: chartRows,
+        encoding: {
+          x: { field: 'q', type: 'ordinal' },
+          y: { field: 'v', type: 'quantitative' },
+          color: { field: 's', type: 'nominal' },
+        },
+      },
+      {
+        mark: 'rect',
+        data: ['a', 'b'].flatMap((row) => ['x', 'y', 'z'].map((col, i) => ({ row, col, v: i }))),
+        encoding: {
+          x: { field: 'col', type: 'nominal' },
+          y: { field: 'row', type: 'nominal' },
+          color: { field: 'v', type: 'quantitative' },
+        },
+      },
+    ] as ChartSpec[];
+    for (const spec of specs) {
+      const container = createContainer();
+      const chart = createChart(container, { ...spec, animation: true } as ChartSpec, opts);
+      const live = container.querySelector('svg.oc-chart')!.outerHTML;
+      // The live root carries the stamps, so the export check below is not vacuous.
+      expect(live).toMatch(/--oc-line-point-delay|--oc-cell-delay/);
+      expect(live).toContain('transform-origin');
+      fake.fire(container, 1, 400);
+      const out = chart.export('svg') as string;
+      expect(out).not.toContain('transform-origin');
+      expect(out).not.toContain('--oc-line-point-delay');
+      expect(out).not.toContain('--oc-cell-delay');
+      chart.destroy();
+    }
+  });
+
   it('snaps a resize re-layout instead of tweening it', () => {
     let width = 600;
     const container = document.createElement('div');
