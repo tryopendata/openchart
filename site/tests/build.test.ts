@@ -16,6 +16,7 @@ import { join, resolve } from "node:path";
 import { Window } from "happy-dom";
 import { describe, expect, it } from "vitest";
 import { docsAreas, site } from "../src/config";
+import { catalogPageIds } from "./catalog-pages";
 
 const parser = new new Window().DOMParser();
 const read = (root: string, path: string) => readFileSync(join(root, path), "utf8");
@@ -282,5 +283,40 @@ describe("adding a docs page", () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+});
+
+describe("the visualization catalog", () => {
+  const WORD_LIMIT = 90;
+  const built = (id: string) => existsSync(join("dist", pagePath(id)));
+
+  it("builds every page in the catalog list", () => {
+    expect(catalogPageIds.filter((id) => !built(id))).toEqual([]);
+  });
+
+  it.each(catalogPageIds.filter(built))("%s shows at least three sourced demos", (id) => {
+    const figures = [...page("dist", pagePath(id)).querySelectorAll("figure[data-demo]")];
+    expect(figures.length).toBeGreaterThanOrEqual(3);
+    for (const figure of figures) {
+      const demo = figure.getAttribute("data-demo") ?? "";
+      expect(figure.querySelector("figcaption")?.textContent ?? "", demo).toMatch(/Source: \S/);
+    }
+  });
+
+  it.each(catalogPageIds.filter(built))("%s reads tightly and links onward", (id) => {
+    const article = page("dist", pagePath(id)).querySelector("article");
+    const section = id.split("/")[0];
+    const long = [...(article?.querySelectorAll(".docs-prose > p") ?? [])]
+      .map((paragraph) => (paragraph.textContent ?? "").trim())
+      .filter((text) => text.split(/\s+/).length > WORD_LIMIT);
+    expect(long).toEqual([]);
+    const headings = [...(article?.querySelectorAll("h2, h3") ?? [])].map((heading) =>
+      (heading.textContent ?? "").trim(),
+    );
+    expect(headings.filter((text, index) => headings.indexOf(text) !== index)).toEqual([]);
+    const elsewhere = [...(article?.querySelectorAll('.docs-prose a[href^="/docs/"]') ?? [])]
+      .map((link) => link.getAttribute("href") ?? "")
+      .filter((href) => !href.startsWith(`/docs/${section}/`));
+    expect(elsewhere.length, "links to a page in another section").toBeGreaterThanOrEqual(1);
   });
 });
