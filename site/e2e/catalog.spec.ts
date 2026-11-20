@@ -25,6 +25,8 @@ for (const path of pages) {
       const stage = page.locator("[data-demo-stage]").first();
       await stage.scrollIntoViewIfNeeded();
       await expect(stage).toHaveAttribute("data-demo-live", "");
+      // Check the settled demo: mid-entrance, fading text would fail contrast.
+      await expect(stage.locator(".oc-animate")).toHaveCount(0);
       expect(await pageViolations(page)).toEqual([]);
       expect(errors).toEqual([]);
     });

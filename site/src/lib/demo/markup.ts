@@ -26,14 +26,22 @@ export const DEMO_ATTR = {
   sharedRefs: "data-demo-shared-refs",
   /** On a page's `<script type="application/json">` holding one shared value, keyed by its hash. */
   shared: "data-demo-shared",
-  /** On the code block: the tab strip and the panels. */
+  /**
+   * On the code block: a `<details>`, closed as built, holding the tab strip and
+   * the panels. Its `<summary>` is the Show code control.
+   */
   code: "data-demo-code",
   /** On each tab link, holding its framework id. */
   tab: "data-demo-tab",
   /** On each code panel, holding its framework id. */
   panel: "data-demo-panel",
-  /** On each panel's Copy button. */
+  /**
+   * On the figure's one Copy button, in the toolbar beside Show code. It copies
+   * the chosen tab's panel, and ships `hidden` until the script wires it.
+   */
   copy: "data-demo-copy",
+  /** On the polite live region that announces the outcome of a copy. */
+  copyStatus: "data-demo-copy-status",
   /** On a panel's `<template>` holding the code its Copy button copies. */
   copySource: "data-demo-copy-source",
   /**

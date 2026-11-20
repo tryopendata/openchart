@@ -39,8 +39,14 @@ function mountFor(spec: VizSpec): Mount | undefined {
 }
 
 /**
- * Mounts a live visualization into the stage. The entrance animation is off unless
- * `entrance` is set, so a finished static chart is never replaced by one drawing itself in.
+ * Mounts a live visualization into the stage. This is the one way any page part
+ * (demo figures, landing tiles) mounts a chart and plays its entrance on first sight.
+ *
+ * With `entrance` set, the chart mounts at once with the library's entrance
+ * held, and the library plays it the first time at least a quarter of the stage
+ * is in view; under reduced motion nothing plays. Mount ahead of the reader
+ * (demos.ts does at LEAD_PX) and the entrance still waits. Without `entrance`
+ * the chart draws finished, so a remount never replays it.
  *
  * @throws {DemoMountError} When the spec type has no mount function, or mounting throws.
  */

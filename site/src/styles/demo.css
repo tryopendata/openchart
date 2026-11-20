@@ -1,18 +1,35 @@
 /*
- * Demo figure and code tab styles. The library's own stylesheet comes first:
- * live charts need it. The stage keeps a fixed height at every width so the swap
- * from static SVG to live chart moves nothing on the page.
+ * Demo figure styles. The figure reads as a published graphic: the chart, its
+ * caption and source, then a quiet toolbar on a hairline rule (Show code on the
+ * left, Copy on the right) over the code, which starts closed. The library's own
+ * stylesheet comes first: live charts need it. The stage keeps a fixed height at
+ * every width so the swap from static SVG to live chart moves nothing on the page.
  */
 @import "@opendata-ai/openchart-core/styles.css";
 
 @layer components {
+  /* The caption leads in the markup (see figure.ts); order shows it under the chart. */
   .demo {
-    @apply my-8 rounded-none border border-line;
+    @apply my-10 flex flex-col;
   }
 
   .demo-stage {
     position: relative;
+    order: 1;
     height: var(--demo-height, 400px);
+  }
+
+  /* Caption, toolbar and code share the chart's own 1rem inset, so their text lines up with its title. */
+  .demo .figure-caption {
+    @apply order-2 px-4 pt-3 pb-1 text-sm leading-snug text-muted;
+  }
+
+  .demo .figure-caption a {
+    @apply text-ink-2 underline decoration-line underline-offset-2 hover:decoration-current;
+  }
+
+  .demo-toolbar {
+    @apply relative order-3 mt-3 border-t border-line;
   }
 
   /* The renderer writes an inline pixel height; the stage decides the size instead. */
@@ -38,37 +55,94 @@
     @apply absolute inset-0 m-0 flex items-center justify-center px-4 text-center text-muted;
   }
 
-  .demo-code {
-    @apply border-t border-line bg-canvas;
+  /* Show code and Copy: small text buttons in the sans, one row high. */
+  .demo-toggle,
+  .demo-copy {
+    @apply flex h-10 cursor-pointer items-center gap-2 font-sans text-sm text-muted hover:text-ink;
+    transition: color 120ms ease-out;
+  }
+
+  .demo-toggle {
+    @apply w-fit pl-4 select-none;
+    list-style: none;
+  }
+
+  .demo-toggle::-webkit-details-marker {
+    display: none;
+  }
+
+  /* A thin chevron that turns down when the code is open. */
+  .demo-toggle::before {
+    @apply size-1.5 border-r border-b border-current;
+    content: "";
+    transform: rotate(-45deg);
+    transition: transform 120ms ease-out;
+  }
+
+  .demo-code[open] > .demo-toggle::before {
+    transform: translateY(-2px) rotate(45deg);
+  }
+
+  .demo-code[open] .demo-toggle-show,
+  .demo-code:not([open]) .demo-toggle-hide {
+    display: none;
+  }
+
+  /* Sits in the toggle's row; the button is after the code in the markup so focus meets Show code first. */
+  .demo-copy {
+    @apply absolute top-0 right-0 min-w-[5.5rem] justify-end pr-4;
   }
 
   .demo-tabs {
-    @apply flex gap-5 overflow-x-auto border-b border-line px-4 font-mono text-xs;
+    @apply flex gap-5 overflow-x-auto border-y border-line px-4 font-sans text-sm;
   }
 
   .demo-tab {
-    @apply -mb-px border-b-2 border-transparent py-2 text-muted no-underline transition-colors duration-150 hover:text-ink hover:no-underline;
+    @apply -mb-px border-b border-transparent py-2 text-muted hover:text-ink;
+    transition:
+      color 120ms ease-out,
+      border-color 120ms ease-out;
   }
 
   .demo-tab[aria-current="true"] {
     @apply border-ink text-ink;
   }
 
-  .demo-panel {
-    position: relative;
-  }
-
   .demo-panel pre {
-    /* The extra top padding keeps the Copy button clear of the first line on narrow screens. */
-    @apply m-0 max-h-96 overflow-auto p-4 pt-11 font-mono text-sm leading-relaxed;
+    @apply m-0 max-h-96 overflow-auto p-4 font-mono text-[13px] leading-relaxed;
   }
+}
 
-  .demo-copy {
-    @apply absolute top-2 right-3 rounded-xs border border-line bg-canvas px-2 py-1 font-mono text-xs text-muted transition-colors duration-150 hover:text-ink;
-  }
+/* Unlayered, to beat the prose link underline: a tab is marked by its rule, not an underline. */
+.demo .demo-tab {
+  text-decoration: none;
+}
 
-  .demo .figure-caption {
-    @apply border-t border-line px-4 py-3;
+/* Opening eases the code's height from zero where the browser can animate to
+ * `auto`; elsewhere it opens at once. */
+.demo-code {
+  interpolate-size: allow-keywords;
+}
+
+.demo-code::details-content {
+  block-size: 0;
+  overflow: clip;
+  transition:
+    block-size 200ms ease-out,
+    content-visibility 200ms allow-discrete;
+}
+
+.demo-code[open]::details-content {
+  block-size: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-code::details-content,
+  .demo-toggle,
+  .demo-toggle::before,
+  .demo-copy,
+  .demo-tab {
+    transition: none;
   }
 }
 
@@ -145,4 +219,29 @@
 /* Once the live chart is in, both static SVGs step aside. */
 .demo .demo-stage[data-demo-live] .demo-static[data-theme] {
   display: none;
+}
+
+/*
+ * A figure that plays the entrance keeps its static SVG out of sight while the
+ * live chart is on its way, so a finished chart is never seen and then replaced
+ * by one drawing itself in. The theme class on <html>, which BaseLayout's inline
+ * head script sets before first paint, is the sign that scripts run; without
+ * them the static SVG shows. A failed mount brings it back, and so does the
+ * fallback timer below if the live chart never arrives. Under reduced motion
+ * nothing plays, so the static SVG stays until the swap.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  :root:is(.dark, .light)
+    .demo[data-demo-entrance]
+    .demo-stage:not([data-demo-error])
+    .demo-static {
+    visibility: hidden;
+    animation: demo-static-fallback 0s 4s forwards;
+  }
+}
+
+@keyframes demo-static-fallback {
+  to {
+    visibility: visible;
+  }
 }

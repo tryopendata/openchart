@@ -1,10 +1,18 @@
 /**
  * Brings the demo figures on a page to life: mounts each stage's live chart as it
  * comes within LEAD_PX of the viewport, keeps at most MAX_LIVE of them live,
- * remounts them when the site theme changes, and wires the code tabs and Copy
- * buttons. BaseLayout loads it on every page; it does nothing without a demo.
+ * remounts them when the site theme changes, and wires the code tabs, the
+ * remembered Show code state and the Copy buttons. BaseLayout loads it on every
+ * page; it does nothing without a demo.
+ *
+ * A figure marked for the entrance mounts ahead of the reader with the
+ * library's entrance held: the library plays it once the chart is actually seen
+ * (play-when-seen), and not at all under reduced motion. demo.css keeps that
+ * figure's static SVG out of sight while the live chart is on its way, so the
+ * reader never sees a finished chart replaced by one drawing itself in.
  */
 import { DEMO_ATTR, DEMO_CLASS } from "../lib/demo/markup";
+import { setupDemoCodeToggle } from "./demo-code-toggle";
 import { setupDemoCopyButtons } from "./demo-copy";
 import { readFigureSpec } from "./demo-spec";
 import { setupFrameworkChoice } from "./framework-choice";
@@ -167,5 +175,6 @@ export function startDemos(doc: Document): void {
 }
 
 setupFrameworkChoice(document);
+setupDemoCodeToggle(document);
 setupDemoCopyButtons(document);
 startDemos(document);

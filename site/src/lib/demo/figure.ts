@@ -1,7 +1,8 @@
 /**
- * The demo figure markup contract, as one HTML string: the stage with a light and
- * a dark static SVG (or a placeholder line when there is none), the embedded spec
- * the live mount reads, any shared value blocks, the code tabs and the caption.
+ * The demo figure markup contract, as one HTML string: the caption, the stage
+ * with a light and a dark static SVG (or a placeholder line when there is none),
+ * the embedded spec the live mount reads, any shared value blocks and the code
+ * toolbar.
  * Demo.astro and the `json demo` fence plugin both render through this, so the
  * two ways of putting a chart on a page cannot drift apart.
  */
@@ -103,12 +104,14 @@ export async function demoFigureHtml(figure: DemoFigure): Promise<string> {
   // Claimed before the first await, so two figures rendering at once never both write a block.
   const spec = specHtml(embeddedSpec(figure));
   const code = figure.tabs ? await codeTabsHtml(domId, figure.spec) : "";
+  // The caption leads so a screen reader hears what the chart shows before it,
+  // and stays a first child as `<figure>` requires; demo.css shows it under the chart.
   return [
     `<figure class="demo not-prose" ${DEMO_ATTR.figure}="${escapeHtml(figure.id)}"${entrance}>`,
+    captionHtml(figure),
     stageHtml(figure, domId),
     spec,
     code,
-    captionHtml(figure),
     "</figure>",
   ].join("");
 }

@@ -58,7 +58,8 @@ describe("the json demo fence", () => {
         tab.getAttribute("data-demo-tab"),
       ),
     ).toEqual(["spec", "react", "vue", "svelte", "vanilla"]);
-    expect(figure?.querySelectorAll("[data-demo-panel] button")).toHaveLength(5);
+    expect(figure?.querySelectorAll("button[data-demo-copy]")).toHaveLength(1);
+    expect(figure?.hasAttribute("data-demo-entrance")).toBe(true);
     expect(figure?.querySelector("figcaption")?.textContent).toBe("Orders. Source: Sales ledger.");
     expect(doc.querySelector("pre[data-demo]")).toBeNull();
   });

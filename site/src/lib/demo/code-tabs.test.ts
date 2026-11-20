@@ -44,7 +44,26 @@ describe("codeTabsHtml", () => {
       tabs.map((tab) => `#d-fixtures-bar-code-${tab.getAttribute("data-demo-tab")}`),
     );
     expect(tabs[0]?.getAttribute("aria-current")).toBe("true");
-    expect(block.querySelectorAll("[data-demo-panel] button[data-demo-copy]")).toHaveLength(5);
+  });
+
+  it("closes the code behind a Show code control, with one hidden Copy beside it", async () => {
+    const { block } = await codeBlock();
+    expect(block.tagName).toBe("DETAILS");
+    expect(block.hasAttribute("open")).toBe(false);
+    const toggle = block.querySelector(":scope > summary");
+    // demo.css shows one label at a time: Show code while closed, Hide code while open.
+    expect([...(toggle?.children ?? [])].map((label) => label.textContent)).toEqual([
+      "Show code",
+      "Hide code",
+    ]);
+    const toolbar = block.parentElement;
+    const copies = [...(toolbar?.querySelectorAll("button[data-demo-copy]") ?? [])];
+    expect(copies.map((button) => [button.textContent, button.hasAttribute("hidden")])).toEqual([
+      ["Copy", true],
+    ]);
+    expect(block.contains(copies[0] ?? null)).toBe(false);
+    const status = toolbar?.querySelector("[data-demo-copy-status]");
+    expect(status?.getAttribute("aria-live")).toBe("polite");
   });
 
   it("shows the data rows in the Spec panel only and folds them in the framework panels", async () => {

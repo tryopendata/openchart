@@ -1,12 +1,15 @@
 /**
- * The code tabs under a demo: a strip of links (Spec, React, Vue, Svelte, Vanilla)
- * to panels highlighted at build time. The links point at panel ids so the tabs
- * work without JavaScript through `:target`; scripts/framework-choice.ts takes
+ * The code under a demo: a toolbar row with a Show code control and one Copy
+ * button, over a `<details>` that starts closed and holds a strip of links
+ * (Spec, React, Vue, Svelte, Vanilla) to panels highlighted at build time. The
+ * `<details>` opens without JavaScript, and the links point at panel ids so the
+ * tabs work without it through `:target`; scripts/framework-choice.ts takes
  * over when it runs. Only the Spec panel shows the data rows: the framework
  * panels show them folded, and so does the Spec panel for geography. A panel
  * with folds keeps a copy template in a `<template>`, with a marker for each
  * folded value, which scripts/demo-copy.ts fills from the figure's spec when
- * Copy is pressed. The block carries its own token color stylesheet.
+ * Copy is pressed. Copy ships hidden, so a page without JavaScript shows no dead
+ * control. The block carries its own token color stylesheet.
  */
 import type { VizSpec } from "@opendata-ai/openchart-core";
 import { escapeElementText, escapeHtml } from "./escape-html";
@@ -78,13 +81,19 @@ function copyTemplate({ copy }: CodeTab): string {
 }
 
 function panel(domId: string, tab: CodeTab, highlighted: string): string {
-  const copy = `<button type="button" class="demo-copy" ${DEMO_ATTR.copy} hidden>Copy</button>`;
-  return `<div class="demo-panel" id="${panelId(domId, tab)}" ${DEMO_ATTR.panel}="${tab.id}">${copy}${copyTemplate(tab)}${highlighted}</div>`;
+  return `<div class="demo-panel" id="${panelId(domId, tab)}" ${DEMO_ATTR.panel}="${tab.id}">${copyTemplate(tab)}${highlighted}</div>`;
 }
 
+/** The disclosure control. Only one label shows at a time, so it names what a press does. */
+const TOGGLE = `<summary class="demo-toggle"><span class="demo-toggle-show">Show code</span><span class="demo-toggle-hide">Hide code</span></summary>`;
+
+/** One Copy button for the figure, sitting in the toolbar row, and the region that announces its outcome. */
+const COPY = `<button type="button" class="demo-copy" ${DEMO_ATTR.copy} hidden>Copy</button><span class="sr-only" role="status" aria-live="polite" ${DEMO_ATTR.copyStatus}></span>`;
+
 /**
- * The `data-demo-code` block for a spec: five tab links, five highlighted panels
- * and the stylesheet for their token colors.
+ * The code toolbar for a spec: Show code and Copy over a closed `data-demo-code`
+ * `<details>` holding five tab links, five highlighted panels and the stylesheet
+ * for their token colors.
  *
  * @param domId The figure's XML-safe id from `demoDomId`, which keeps panel ids unique on a page.
  * @throws {TypeError} When the spec's type has no framework wrapper.
@@ -95,5 +104,7 @@ export async function codeTabsHtml(domId: string, spec: VizSpec): Promise<string
   const strip = tabs.map((tab, index) => tabLink(domId, tab, index)).join("");
   const { html, css } = await highlightCode(tabs.map(({ shown, lang }) => ({ code: shown, lang })));
   const panels = tabs.map((tab, index) => panel(domId, tab, html[index] ?? "")).join("");
-  return `<div class="demo-code" ${DEMO_ATTR.code} ${NO_INDEX}><style>${css}</style><div class="demo-tabs">${strip}</div>${panels}</div>`;
+  const body = `<div class="demo-code-body"><style>${css}</style><div class="demo-tabs">${strip}</div>${panels}</div>`;
+  const code = `<details class="demo-code" ${DEMO_ATTR.code} ${NO_INDEX}>${TOGGLE}${body}</details>`;
+  return `<div class="demo-toolbar">${code}${COPY}</div>`;
 }

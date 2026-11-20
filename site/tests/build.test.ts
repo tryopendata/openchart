@@ -88,7 +88,7 @@ describe("the page set", () => {
 });
 
 describe("demos", () => {
-  it("the bar page shows at least three demos, each with both static SVGs and five code tabs", () => {
+  it("the bar page shows at least three demos, each with both static SVGs and five code tabs behind Show code", () => {
     const figures = [...page("dist", pagePath(BAR)).querySelectorAll("figure[data-demo]")];
     expect(figures.length).toBeGreaterThanOrEqual(3);
     for (const figure of figures) {
@@ -107,6 +107,11 @@ describe("demos", () => {
       for (const tab of tabs) {
         expect(figure.querySelector(`[data-demo-panel="${tab}"]`), `${id} ${tab}`).not.toBeNull();
       }
+      const code = figure.querySelector("details[data-demo-code]");
+      expect(code?.hasAttribute("open"), `${id} code starts closed`).toBe(false);
+      expect(code?.querySelector(":scope > summary")?.textContent, id).toContain("Show code");
+      expect(figure.querySelectorAll("button[data-demo-copy][hidden]"), id).toHaveLength(1);
+      expect(figure.hasAttribute("data-demo-entrance"), `${id} plays its entrance`).toBe(true);
       expect(figure.querySelector("figcaption")?.textContent, id).toMatch(/Source: \S/);
     }
   });
