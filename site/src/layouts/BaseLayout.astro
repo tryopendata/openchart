@@ -2,10 +2,11 @@
 /**
  * The HTML shell every page shares: head metadata, the theme set before paint,
  * fonts, the site header and footer, and the client wiring for analytics, consent,
- * site behavior and demos.
+ * scroll entrances, site behavior and demos.
  */
 import SiteFooter from "./SiteFooter.astro";
 import SiteHeader from "./SiteHeader.astro";
+import { revealGateScript } from "@steamfield/ui/reveal";
 import { site } from "../config";
 import { preloadFonts } from "../lib/fonts";
 import "../styles/global.css";
@@ -25,7 +26,7 @@ const {
   title,
   description = site.description,
   path,
-  image = "/og/index.png",
+  image = "/og-image.png",
   markdown,
   noindex = false,
 } = Astro.props;
@@ -42,7 +43,10 @@ const pageTitle = path === "/" ? `${site.name}: ${title}` : `${title} | ${site.n
     <title>{pageTitle}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
     <link rel="sitemap" href="/sitemap-index.xml" />
     <link rel="alternate" type="text/plain" href="/llms.txt" title="llms.txt" />
     {markdown && <link rel="alternate" type="text/markdown" href={markdown} />}
@@ -78,11 +82,17 @@ const pageTitle = path === "/" ? `${site.name}: ${title}` : `${title} | ${site.n
         document.documentElement.classList.add(dark ? "dark" : "light");
       })();
     </script>
+    {/* Scroll entrances: sets the CSS gate before paint and removes it if the module never arrives. */}
+    <script is:inline set:html={revealGateScript} />
     <script>
+      import { initReveal } from "@steamfield/ui/reveal";
       import { initAnalytics } from "../lib/analytics";
       import { createSiteConsent, showConsentBanner } from "../lib/consent";
       import "../scripts/site";
       import "../scripts/demos";
+
+      // [data-reveal] containers animate in once, the first time they are seen.
+      initReveal();
 
       // A build without a key ships no analytics and asks for no consent: this
       // branch is dropped while PUBLIC_POSTHOG_KEY is empty (dev, tests and CI).

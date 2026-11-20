@@ -62,7 +62,7 @@ const sectionLabel = nav.find((section) => section.id === page.section)?.label ?
     <article class="border-line min-w-0 pt-8 pb-4 lg:border-l lg:pt-12 lg:pl-12">
       <header class="flex max-w-[44rem] flex-col gap-4">
         {area && <Breadcrumb area={area} section={sectionLabel} />}
-        <h1 class="text-ink text-[2.125rem] leading-[1.1] font-bold tracking-[-0.02em] sm:text-[2.75rem]">
+        <h1 class="text-ink text-[2.125rem] leading-[1.1] font-medium tracking-[-0.02em] sm:text-[2.75rem]">
           {page.title}
         </h1>
         <p class="text-ink-2 text-lg leading-relaxed">{page.description}</p>
