@@ -145,13 +145,41 @@ export function assertUniqueIds(sources: readonly PageSource[]): void {
   }
 }
 
-/** MDX source as plain Markdown: imports removed, each `<Demo id="x" />` replaced by its spec. */
-function mdxToMarkdown(body: string, demoSpec: DemoSpecLookup): string {
-  return body
-    .replace(/^import\s.+$\n?/gm, "")
-    .replace(/<Demo\s[^>]*?id="([^"]+)"[^>]*?\/>/g, (_tag, id: string) => {
+const IMPORT_LINE = /^import\s/;
+const FENCE_MARKER = /^\s*(`{3,}|~{3,})/;
+const DEMO_TAG = /<Demo\s[^>]*?id="([^"]+)"[^>]*?\/>/g;
+
+/** The body without the ESM import block MDX pages open with; later lines are kept as written. */
+function withoutLeadingImports(lines: readonly string[]): string[] {
+  const firstContent = lines.findIndex((line) => line.trim() !== "" && !IMPORT_LINE.test(line));
+  return firstContent === -1 ? [] : lines.slice(firstContent);
+}
+
+/** Replaces each `<Demo id="x" />` outside fenced code with its spec as a json fence. */
+function inlineDemos(lines: readonly string[], demoSpec: DemoSpecLookup): string[] {
+  let openFence: string | undefined;
+  return lines.map((line) => {
+    const marker = FENCE_MARKER.exec(line)?.[1];
+    if (openFence) {
+      // A fence closes on a marker of the same character at least as long as the opener.
+      if (marker && marker[0] === openFence[0] && marker.length >= openFence.length) {
+        openFence = undefined;
+      }
+      return line;
+    }
+    if (marker) {
+      openFence = marker;
+      return line;
+    }
+    return line.replace(DEMO_TAG, (_tag, id: string) => {
       return `\`\`\`json\n${JSON.stringify(demoSpec(id), null, 2)}\n\`\`\``;
     });
+  });
+}
+
+/** MDX source as plain Markdown: the import block removed, each `<Demo id="x" />` replaced by its spec. */
+function mdxToMarkdown(body: string, demoSpec: DemoSpecLookup): string {
+  return inlineDemos(withoutLeadingImports(body.split("\n")), demoSpec).join("\n");
 }
 
 /**

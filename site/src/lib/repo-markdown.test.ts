@@ -10,11 +10,11 @@ const pages = new Map([["tables.md", "tables/data-table"]]);
 const repoDoc = pathToFileURL(resolve("../docs/getting-started.md"));
 const siteDoc = pathToFileURL(join(process.cwd(), "src/content/docs/comparison/notes.md"));
 
-async function render(markdown: string, fileURL: URL) {
+async function render(markdown: string, fileURL: URL | undefined) {
   const processor = await createSatteriMarkdownProcessor({
     hastPlugins: [satteriHeadingIdsPlugin(), dropTitle(), repoLinks(pages)],
   });
-  return (await processor.render(markdown, { fileURL })).code;
+  return (await processor.render(markdown, fileURL ? { fileURL } : {})).code;
 }
 
 describe("repo Markdown", () => {
@@ -51,6 +51,12 @@ describe("repo Markdown", () => {
 
   it("leaves Markdown outside the repository's docs folder untouched", async () => {
     const html = await render("# Notes\n\n[Tables](./tables.md)\n", siteDoc);
+    expect(html).toContain("<h1");
+    expect(html).toContain('href="./tables.md"');
+  });
+
+  it("leaves Markdown rendered without a file URL untouched", async () => {
+    const html = await render("# Notes\n\n[Tables](./tables.md)\n", undefined);
     expect(html).toContain("<h1");
     expect(html).toContain('href="./tables.md"');
   });

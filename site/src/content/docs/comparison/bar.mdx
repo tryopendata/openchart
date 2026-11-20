@@ -13,7 +13,7 @@ Use a column chart instead when the categories are time periods or have a natura
 
 ## A basic bar chart
 
-Set `mark` to `"bar"`, put the number on `x` and the category on `y`. Value labels appear on each bar by default.
+Set `mark` to `"bar"`, put the number on `x` and the category on `y`. Value labels show by default on the bars where they fit.
 
 <Demo id="comparison/bar-basic" />
 
@@ -37,7 +37,7 @@ With `stack: "zero"` the segments stack end to end, so each bar shows its total 
 
 ## Value labels
 
-`labels` controls the numbers printed on the bars. `density: "all"` labels every bar, and `format` takes a d3-format string: `"+.1f"` prints a sign and one decimal. A negative value grows left from zero, and a `refline` at `x: 0` marks the baseline. The color channel maps a derived `direction` field to two colors so the loss stands out.
+`labels` controls the numbers printed on the bars. They show by default wherever they fit, and a label that would collide with another is left out. `format` takes a d3-format string: `"+.1f"` prints a sign and one decimal. `density: "none"` turns the labels off. A negative value grows left from zero, and a `refline` at `x: 0` marks the baseline. The color channel maps a derived `direction` field to two colors so the loss stands out.
 
 <Demo id="comparison/bar-labels" />
 

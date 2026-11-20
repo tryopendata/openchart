@@ -20,11 +20,10 @@ const DOCS_FOLDER = "docs";
 
 /**
  * True when the document is a repository docs/*.md file. A render without a
- * file URL (the Markdown unit tests) counts as one.
+ * file URL can't be placed, so it is left alone.
  */
 function isRepoMarkdown(ctx: VisitContext): boolean {
-  if (ctx.sourceFormat !== "markdown") return false;
-  if (!ctx.fileURL) return true;
+  if (ctx.sourceFormat !== "markdown" || !ctx.fileURL) return false;
   return fileURLToPath(ctx.fileURL).startsWith(join(repoRoot(), DOCS_FOLDER) + sep);
 }
 

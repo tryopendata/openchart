@@ -104,7 +104,6 @@ export const stackedBar = defineDemo({
       y: { field: "bracket", type: "nominal" },
       color: { field: "category", type: "nominal" },
     },
-    labels: { density: "all" },
     chrome: {
       title: "The poorer you are, the more housing eats your paycheck",
       subtitle: "Share of annual household expenditure by category and income bracket, 2022 (%)",
@@ -140,7 +139,7 @@ export const labelledBar = defineDemo({
       },
     },
     legend: { show: false },
-    labels: { density: "all", format: "+.1f" },
+    labels: { format: "+.1f" },
     annotations: [{ type: "refline", x: 0, style: "solid", strokeWidth: 1.5 }],
     chrome: {
       title: "Only materials ended 2024 in the red",

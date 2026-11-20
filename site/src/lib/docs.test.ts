@@ -152,6 +152,19 @@ describe("Markdown exports", () => {
     );
   });
 
+  it("keeps import lines and Demo tags inside fenced code and later prose", () => {
+    const fenced = [
+      "```astro",
+      'import Demo from "../components/demo/Demo.astro";',
+      '<Demo id="x" />',
+      "```",
+    ].join("\n");
+    const body = `import Demo from "../Demo.astro";\n\nUse it like this:\n\n${fenced}\n\nimport is a keyword.\n`;
+    expect(toMarkdownExport(page("comparison/bar", { title: "Bar" }), body, noDemos)).toBe(
+      `# Bar\n\n> About comparison/bar\n\nUse it like this:\n\n${fenced}\n\nimport is a keyword.\n`,
+    );
+  });
+
   it("drops a repo doc's own h1 so the title appears once", () => {
     const repoPage = pages[3] as DocPage;
     expect(toMarkdownExport(repoPage, "# Getting started\n\nFirst steps.\n", noDemos)).toBe(
