@@ -27,15 +27,15 @@ export const basicHistogram = defineDemo({
       x: { field: "amount", type: "quantitative", axis: amountAxis },
     },
     chrome: {
-      title: "Most small gifts are under $100",
-      subtitle: "Individual contributions by size, 24 bins",
+      title: "Small gifts pile up at the low end",
+      subtitle: "Individual contributions by size, $20 bins",
     },
   },
 });
 
 export const coarseHistogram = defineDemo({
   id: "distribution/histogram-bins",
-  title: "Contribution sizes in eight bins",
+  title: "Contribution sizes in wider bins",
   source: ILLUSTRATIVE,
   caption: `The same ${SMALL_GIFTS} invented small gifts as the first figure.`,
   spec: {
@@ -45,8 +45,8 @@ export const coarseHistogram = defineDemo({
       x: { field: "amount", type: "quantitative", axis: amountAxis },
     },
     chrome: {
-      title: "Fewer bins smooth the shape and hide detail",
-      subtitle: "Individual contributions by size, 8 bins",
+      title: "Wider bins smooth the shape and hide detail",
+      subtitle: "Individual contributions by size, $100 bins",
     },
   },
 });

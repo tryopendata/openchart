@@ -13,13 +13,13 @@ Use a [density curve](/docs/distribution/density/) when you want the shape witho
 
 ## A basic histogram
 
-Set `mark` to `{ type: "histogram", binCount: 24 }` and put the raw field on `x`. Each row of the data is one observation, and the y axis defaults to the count per bin. `binCount` defaults to 20.
+Set `mark` to `{ type: "histogram", binCount: 24 }`, which asks for up to 24 bins, and put the raw field on `x`. Each row of the data is one observation, and the y axis defaults to the count per bin. `binCount` defaults to 20.
 
 <Demo id="distribution/histogram-basic" />
 
 ## Fewer bins
 
-`binCount` sets how many bins the value range is split into. Fewer bins give a smoother outline and lose detail, so try a few counts before settling on one. The data is the same as the first figure.
+`binCount` sets the most bins you want. OpenChart rounds the bin width to a round step (1, 2 or 5 times a power of ten), so the count you get can differ. Wider bins give a smoother outline and lose detail. The data is the same as the first figure.
 
 <Demo id="distribution/histogram-bins" />
 
@@ -40,7 +40,7 @@ Add a `color` channel and each group gets its own histogram. Without `stack`, th
 | Field | What it does |
 | --- | --- |
 | `mark.type` | `"histogram"` bins the `x` values and counts each bin. |
-| `mark.binCount` | The number of bins. Defaults to 20. |
+| `mark.binCount` | The bin count to aim for; the bin width is rounded to a round number. Defaults to 20. |
 | `mark.normalize` | Plots each group's share of its own total. Formats the y axis as a percentage. |
 | `mark.fillOpacity` | Overrides the 55% opacity used for overlapping groups. |
 | `encoding.x` | The raw quantitative field to bin. Required. |

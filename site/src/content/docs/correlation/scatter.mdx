@@ -31,7 +31,7 @@ A categorical `color` channel splits the cloud into series. Setting `scale.domai
 
 ## A log axis
 
-`scale: { type: "log" }` spaces the axis by orders of magnitude. It suits a field like GDP per capita that spans a wide range. `scale: { zero: false }` lets the other axis start near the data.
+`scale: { type: "log" }` spaces the axis by orders of magnitude. It suits a field like GDP per capita that spans a wide range.
 
 <Demo id="correlation/scatter-log" />
 
@@ -45,7 +45,7 @@ A categorical `color` channel splits the cloud into series. Setting `scale.domai
 | `encoding.tooltip` | Optional. The fields listed when a dot is hovered. |
 | `scale.domain` | Fixes the axis range to `[min, max]`. |
 | `scale.type` | Sets the scale type. `"log"` gives a logarithmic axis. |
-| `scale.zero` | Whether the axis must include zero. Defaults to true for quantitative fields. |
+| `scale.zero` | Whether the axis must include zero. Point marks default to false, so the axis fits the data; set true to anchor at zero. |
 | `annotations` | Text labels and `refline` entries drawn in data units. |
 
 ## Related

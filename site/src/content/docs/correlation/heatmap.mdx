@@ -13,7 +13,7 @@ In OpenChart the heatmap is the `rect` mark. Use a [scatter chart](/docs/correla
 
 ## A basic heatmap
 
-Set `mark` to `"rect"`, put one category on `x` and the other on `y`, and a quantitative field on `color`. `scale.scheme` names the color ramp and `format` is a d3-format string for the value in tooltips.
+Set `mark` to `"rect"`, put one category on `x` and the other on `y`, and a quantitative field on `color`. `scale.scheme` names the color ramp and `format` is a d3-format string for the value in tooltips and on the color legend.
 
 <Demo id="correlation/heatmap-basic" />
 
@@ -45,7 +45,7 @@ An array on the `sort` field of a nominal channel sets the order by hand. The ar
 | `encoding.color` | The quantitative field that sets each cell's color. |
 | `encoding.color.scale.scheme` | The named color scheme, such as `"blues"` or `"orange"`. |
 | `encoding.color.scale.domain` | Pins the color range to `[min, max]`. |
-| `encoding.color.format` | A d3-format string for the value shown in tooltips. |
+| `encoding.color.format` | A d3-format string for the value shown in tooltips and on the color legend. |
 
 ## Related
 

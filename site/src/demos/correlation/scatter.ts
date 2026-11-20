@@ -130,7 +130,6 @@ export const logScatter = defineDemo({
       y: {
         field: "lifeExpectancy",
         type: "quantitative",
-        scale: { zero: false },
         axis: { title: "Life expectancy (years)" },
       },
       color: { field: "region", type: "nominal" },
