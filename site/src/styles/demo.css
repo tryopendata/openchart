@@ -1,1 +1,142 @@
-/* Demo figure and code tab styles. */
+/*
+ * Demo figure and code tab styles. The library's own stylesheet comes first:
+ * live charts need it. The stage keeps a fixed height at every width so the swap
+ * from static SVG to live chart moves nothing on the page.
+ */
+@import "@opendata-ai/openchart-core/styles.css";
+
+@layer components {
+  .demo {
+    @apply my-8 rounded-none border border-line;
+  }
+
+  .demo-stage {
+    position: relative;
+    height: var(--demo-height, 400px);
+  }
+
+  /* The renderer writes an inline pixel height; the stage decides the size instead. */
+  .demo-static {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    /* biome-ignore lint/complexity/noImportantStyles: only !important beats the renderer's inline height. */
+    height: 100% !important;
+  }
+
+  .demo-live {
+    height: 100%;
+    overflow: auto;
+  }
+
+  .demo-error {
+    @apply flex h-full items-center justify-center px-4 text-center text-muted;
+  }
+
+  .demo-code {
+    @apply border-t border-line bg-canvas;
+  }
+
+  .demo-tabs {
+    @apply flex gap-5 overflow-x-auto border-b border-line px-4 font-mono text-xs;
+  }
+
+  .demo-tab {
+    @apply -mb-px border-b-2 border-transparent py-2 text-muted no-underline transition-colors duration-150 hover:text-ink hover:no-underline;
+  }
+
+  .demo-tab[aria-current="true"] {
+    @apply border-ink text-ink;
+  }
+
+  .demo-panel {
+    position: relative;
+  }
+
+  .demo-panel pre {
+    /* The extra top padding keeps the Copy button clear of the first line on narrow screens. */
+    @apply m-0 max-h-96 overflow-auto p-4 pt-11 font-mono text-sm leading-relaxed;
+  }
+
+  .demo-copy {
+    @apply absolute top-2 right-3 rounded-xs border border-line bg-canvas px-2 py-1 font-mono text-xs text-muted transition-colors duration-150 hover:text-ink;
+  }
+
+  .demo .figure-caption {
+    @apply border-t border-line px-4 py-3;
+  }
+}
+
+/* Which code panel shows. Without JavaScript the tab links target a panel and
+ * :target shows it, Spec by default; once framework-choice.ts runs,
+ * data-demo-choice on the code block decides. */
+.demo-panel {
+  display: none;
+}
+
+.demo-panel[data-demo-panel="spec"],
+.demo-panel:target {
+  display: block;
+}
+
+.demo-code:has(.demo-panel:target) .demo-panel[data-demo-panel="spec"]:not(:target) {
+  display: none;
+}
+
+.demo-code[data-demo-choice] .demo-panel {
+  display: none;
+}
+
+.demo-code[data-demo-choice="spec"] [data-demo-panel="spec"],
+.demo-code[data-demo-choice="react"] [data-demo-panel="react"],
+.demo-code[data-demo-choice="vue"] [data-demo-panel="vue"],
+.demo-code[data-demo-choice="svelte"] [data-demo-panel="svelte"],
+.demo-code[data-demo-choice="vanilla"] [data-demo-panel="vanilla"] {
+  display: block;
+}
+
+/* Shiki emits both themes as variables; the page theme picks one. */
+.demo-panel pre,
+.demo-panel pre span {
+  color: var(--shiki-light);
+  background-color: transparent;
+}
+
+.dark .demo-panel pre,
+.dark .demo-panel pre span {
+  color: var(--shiki-dark);
+}
+
+/* The static SVG for the current theme. */
+.demo-static[data-theme="dark"] {
+  display: none;
+}
+
+.dark .demo-static[data-theme="dark"] {
+  display: block;
+}
+
+.dark .demo-static[data-theme="light"] {
+  display: none;
+}
+
+/* Without JavaScript neither theme class is set; follow the system preference. */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) .demo-panel pre,
+  :root:not(.light) .demo-panel pre span {
+    color: var(--shiki-dark);
+  }
+
+  :root:not(.light) .demo-static[data-theme="dark"] {
+    display: block;
+  }
+
+  :root:not(.light) .demo-static[data-theme="light"] {
+    display: none;
+  }
+}
+
+/* Once the live chart is in, both static SVGs step aside. */
+.demo .demo-stage[data-demo-live] .demo-static[data-theme] {
+  display: none;
+}

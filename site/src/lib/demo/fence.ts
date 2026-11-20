@@ -1,9 +1,16 @@
 /**
  * The `json demo` fence: a Shiki transformer that keeps the fence's info string,
- * and a hast plugin that turns the highlighted block into the demo figure.
+ * and a hast plugin that turns the highlighted block into the demo figure. The
+ * fence carries its own spec, so repo Markdown can show a live chart without a
+ * registered demo. Shiki highlights before hast plugins run and drops the info
+ * string, which is why the transformer copies it onto the `<pre>` first.
  */
 import type { SatteriProcessorOptions } from "@astrojs/markdown-satteri";
+import type { VizSpec } from "@opendata-ai/openchart-core";
 import type { ShikiConfig } from "astro";
+import { DEFAULT_DEMO_HEIGHT, demoFigureHtml } from "../../components/demo/figure-html";
+import { fenceDemoId } from "./dom-id";
+import { validateDemo } from "./validate";
 
 type HastPlugin = Extract<
   NonNullable<SatteriProcessorOptions["hastPlugins"]>[number],
@@ -11,10 +18,94 @@ type HastPlugin = Extract<
 >;
 type ShikiTransformer = NonNullable<ShikiConfig["transformers"]>[number];
 
+/** Thrown when a `json demo` fence cannot become a figure. The message quotes the fence's first line. */
+export class DemoFenceError extends Error {}
+
+/** The fence's info string, on the `<pre>`; its presence marks a demo fence. */
+const META = "data-demo";
+const TITLE = "data-demo-title";
+const SOURCE = "data-demo-source";
+const HEIGHT = "data-demo-height";
+
+const DEFAULT_SOURCE = "Illustrative data";
+
 /** Copies `demo`, `title`, `source` and `height` from a fence's info string onto its `<pre>`. */
-export const demoFenceMeta: ShikiTransformer = { name: "demo-fence-meta" };
+export const demoFenceMeta: ShikiTransformer = {
+  name: "demo-fence-meta",
+  pre(node) {
+    const raw = (this.options.meta as { __raw?: string } | undefined)?.__raw ?? "";
+    if (this.options.lang !== "json" || !/(^|\s)demo(\s|$)/.test(raw)) return;
+    node.properties[META] = raw;
+    const title = /title="([^"]*)"/.exec(raw)?.[1];
+    const source = /source="([^"]*)"/.exec(raw)?.[1];
+    const height = /height=(\d+)/.exec(raw)?.[1];
+    if (title !== undefined) node.properties[TITLE] = title;
+    if (source !== undefined) node.properties[SOURCE] = source;
+    if (height !== undefined) node.properties[HEIGHT] = height;
+  },
+};
+
+type FenceProperties = Record<string, unknown>;
+const stringProperty = (properties: FenceProperties, key: string) => {
+  const value = properties[key];
+  return typeof value === "string" ? value : undefined;
+};
+
+/** Where the fence is, for error messages: the page file and the fence's opening line. */
+function fenceLocation(meta: string, fileURL: URL | undefined): string {
+  const opening = `\`\`\`json ${meta}`;
+  return fileURL ? `${opening} in ${fileURL.pathname}` : opening;
+}
+
+/**
+ * The spec in the fence body, checked with the library's validator.
+ *
+ * @throws {DemoFenceError} When the body is not JSON or the spec is invalid; the cause is kept.
+ */
+function parseFenceSpec(body: string, id: string, location: string): VizSpec {
+  let spec: unknown;
+  try {
+    spec = JSON.parse(body);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new DemoFenceError(`Demo fence ${location} is not valid JSON: ${reason}`, {
+      cause: error,
+    });
+  }
+  try {
+    validateDemo(id, spec);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new DemoFenceError(`Demo fence ${location}: ${reason}`, { cause: error });
+  }
+  return spec as VizSpec;
+}
 
 /** Replaces each `json demo` code block with the demo figure. */
 export function demoFence(): HastPlugin {
-  return { name: "demo-fence" } as HastPlugin;
+  return {
+    name: "demo-fence",
+    element: {
+      filter: ["pre"],
+      async visit(node, ctx) {
+        const properties = node.properties as FenceProperties;
+        const meta = stringProperty(properties, META);
+        if (meta === undefined) return;
+        const body = ctx.textContent(node).trim();
+        const id = fenceDemoId(body);
+        const spec = parseFenceSpec(body, id, fenceLocation(meta, ctx.fileURL));
+        const height = stringProperty(properties, HEIGHT);
+        const html = await demoFigureHtml({
+          id,
+          spec,
+          title: stringProperty(properties, TITLE) ?? "Live example",
+          source: { label: stringProperty(properties, SOURCE) ?? DEFAULT_SOURCE },
+          height: height ? Number(height) : DEFAULT_DEMO_HEIGHT,
+          entrance: false,
+          tabs: true,
+        });
+        return { type: "raw", value: html };
+      },
+    },
+  } as HastPlugin;
 }

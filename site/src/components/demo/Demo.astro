@@ -1,15 +1,43 @@
 ---
-// Renders the demo figure for a demo id.
+/**
+ * Renders the demo figure for a registered demo id: static SVGs in both themes,
+ * the embedded spec src/scripts/demos.ts mounts live, and the code tabs. A demo
+ * that is unknown or whose spec fails validation fails the build, naming the page.
+ */
+import { getDemo } from "../../demos/registry";
+import type { DemoDef } from "../../demos/types";
+import { validateDemo } from "../../lib/demo/validate";
+import { DEFAULT_DEMO_HEIGHT, demoFigureHtml } from "./figure-html";
+
 interface Props {
   id: string;
+  /** Show the Spec, React, Vue, Svelte and Vanilla code tabs. Default true. */
   tabs?: boolean;
 }
-const { id } = Astro.props;
+
+const { id, tabs = true } = Astro.props;
+
+let demo: DemoDef;
+try {
+  demo = getDemo(id);
+  validateDemo(id, demo.spec);
+} catch (error) {
+  const reason = error instanceof Error ? error.message : String(error);
+  throw new Error(`${Astro.url.pathname} renders <Demo id="${id}" />: ${reason}`, {
+    cause: error,
+  });
+}
+
+const figure = await demoFigureHtml({
+  id: demo.id,
+  spec: demo.spec,
+  title: demo.title,
+  source: demo.source,
+  caption: demo.caption,
+  height: demo.height ?? DEFAULT_DEMO_HEIGHT,
+  entrance: demo.entrance ?? false,
+  tabs,
+});
 ---
 
-<figure class="demo" data-demo={id}>
-  <div class="demo-stage" data-demo-stage style="--demo-height: 400px"></div>
-  <script type="application/json" data-demo-spec set:html="{}" />
-  <div class="demo-code" data-demo-code></div>
-  <figcaption class="figure-caption">{id}</figcaption>
-</figure>
+<Fragment set:html={figure} />
