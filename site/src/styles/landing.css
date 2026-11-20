@@ -43,4 +43,34 @@
   .landing-heading {
     @apply text-ink font-display max-w-[24ch] text-3xl leading-[1.12] font-medium tracking-[-0.015em] text-balance sm:text-[2.625rem];
   }
+
+  /* A published figure (PublishedFigure.astro): rule, headline, deck, chart, source. */
+  .pub-figure {
+    @apply m-0 min-w-0;
+  }
+
+  .pub-figure-title {
+    @apply text-ink font-display mt-5 text-2xl leading-tight font-medium tracking-[-0.01em] text-balance sm:text-[1.75rem];
+  }
+
+  .pub-figure-deck {
+    @apply text-ink-2 mt-2 max-w-[60ch] text-[15px] leading-snug;
+  }
+
+  .pub-figure-body {
+    @apply mt-5;
+  }
+
+  .pub-figure-caption {
+    @apply border-line border-t pt-3;
+  }
+
+  .pub-figure-caption a {
+    @apply text-muted hover:text-ink underline decoration-1 underline-offset-2 transition-colors duration-150;
+  }
+
+  /* The small Copy button (CopyText.tsx and data-copy buttons). */
+  .copy-chip {
+    @apply text-muted hover:text-ink border-line-strong shrink-0 rounded-xs border px-2 py-1 font-mono text-xs transition-colors duration-150;
+  }
 }
