@@ -34,3 +34,7 @@ public/pagefind/
 # Per-checkout Astro and Vite caches
 .astro-cache/
 .vite-cache/
+
+# Brand rasters are committed; the repository root ignores *.png.
+!brand/**/*.png
+!public/*.png

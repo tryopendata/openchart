@@ -1,4 +1,4 @@
-/** Social cards: /og/index.png for the landing page and /og/docs/<id>.png for each docs page. */
+/** Social cards: /og/docs/<id>.png for each docs page. Other pages use the brand card, /og-image.png. */
 import type { APIRoute, GetStaticPaths } from "astro";
 import satori from "satori";
 import sharp from "sharp";
@@ -10,14 +10,10 @@ const CARD_SIZE = { width: 1200, height: 630 };
 
 export const getStaticPaths = (async () => {
   const entries = await allPages();
-  const landing = { title: site.tagline, description: site.description, siteName: site.name };
-  return [
-    { params: { slug: "index" }, props: landing },
-    ...entries.map(({ page }) => ({
-      params: { slug: `docs/${page.id}` },
-      props: { title: page.title, description: page.description, siteName: site.name },
-    })),
-  ];
+  return entries.map(({ page }) => ({
+    params: { slug: `docs/${page.id}` },
+    props: { title: page.title, description: page.description, siteName: site.name },
+  }));
 }) satisfies GetStaticPaths;
 
 export const GET: APIRoute<Card> = async ({ props }) => {
