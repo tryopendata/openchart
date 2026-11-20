@@ -78,8 +78,8 @@ clean: ## Remove build output, test output and Astro caches
 deploy-check: build ## Serve dist/ through wrangler pages dev and check headers, canonical URLs and the 404 page
 	node --test tests/deploy.test.mjs
 
-# The Site workflow deploys from GitHub Actions (AGENTS.md, Deploy). These upload
-# from this machine to the Cloudflare Pages project openchart. --no-install runs
+# Cloudflare's Git integration deploys (AGENTS.md, Deploy). These are for manual
+# uploads: they upload from this machine to the Cloudflare Pages project openchart. --no-install runs
 # only the lockfile's wrangler, so a missing install never fetches an unpinned
 # one while the Cloudflare token is in the environment.
 deploy-preview: build ## Upload dist/ as a preview for BRANCH (needs CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID)

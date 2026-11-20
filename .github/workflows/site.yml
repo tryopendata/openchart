@@ -1,11 +1,10 @@
 name: Site
 
 # The documentation site (site/) and the parts of the repository it renders:
-# the library packages, the repository docs and the example datasets. Production
-# and preview deploys upload site/dist to the Cloudflare Pages project
-# `openchart`. Both stay off until the repository variable SITE_DEPLOY_ENABLED is
-# 'true', so this workflow is green before the Pages project and its secrets
-# exist. Release commits run too: a release changes the version the site shows.
+# the library packages, the repository docs and the example datasets. Cloudflare's
+# Git integration builds and deploys the Pages project `openchart` on its own
+# (site/AGENTS.md, Deploy); this workflow only checks. Release commits run too:
+# a release changes the version the site shows.
 
 on:
   push:
@@ -27,8 +26,7 @@ on:
 permissions: {}
 
 # One run per ref. A pull request run cancels the one it replaces; main never
-# cancels, so production deploys finish in push order and an older commit can't
-# overwrite a newer one.
+# cancels, so every push to main gets its checks.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
@@ -104,90 +102,3 @@ jobs:
             site/test-results/
           retention-days: 7
           if-no-files-found: ignore
-
-  deploy-production:
-    name: Deploy to Cloudflare Pages (production)
-    needs: checks
-    if: >-
-      vars.SITE_DEPLOY_ENABLED == 'true' &&
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
-      github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-
-    permissions:
-      contents: read
-
-    environment:
-      name: production
-      url: https://openchart.steamfield.io
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Setup
-        uses: ./.github/actions/setup-bun
-
-      - name: Build library packages
-        run: bun run build
-
-      - name: Build site and acceptance tests
-        working-directory: site
-        env:
-          PUBLIC_POSTHOG_KEY: ${{ vars.PUBLIC_POSTHOG_KEY }}
-          PUBLIC_POSTHOG_HOST: ${{ vars.PUBLIC_POSTHOG_HOST }}
-        run: make build
-
-      - name: Deploy site/dist
-        working-directory: site
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: bunx --no-install wrangler pages deploy dist --project-name openchart --branch main
-
-  deploy-preview:
-    name: Deploy to Cloudflare Pages (preview)
-    needs: checks
-    # Pull requests from forks get no secrets, so only same-repository branches
-    # deploy. A head branch named like the default branch would upload to the
-    # Pages production branch, so it gets no preview.
-    if: >-
-      vars.SITE_DEPLOY_ENABLED == 'true' &&
-      github.event_name == 'pull_request' &&
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      github.head_ref != github.event.repository.default_branch
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-
-    permissions:
-      contents: read
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Setup
-        uses: ./.github/actions/setup-bun
-
-      - name: Build library packages
-        run: bun run build
-
-      # No PostHog key: previews send no analytics.
-      - name: Build site and acceptance tests
-        working-directory: site
-        run: make build
-
-      # The branch name is untrusted input, so it reaches the shell only as an
-      # environment variable, never through an expression in the script.
-      - name: Deploy site/dist
-        working-directory: site
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          PREVIEW_BRANCH: ${{ github.head_ref }}
-        run: bunx --no-install wrangler pages deploy dist --project-name openchart --branch "$PREVIEW_BRANCH"

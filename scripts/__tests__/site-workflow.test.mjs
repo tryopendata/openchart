@@ -1,7 +1,8 @@
 /**
- * Guards the Site workflow (.github/workflows/site.yml) and the site Makefile's
- * deploy targets against changes that would leak secrets, run untrusted input in
- * a shell, deploy from the wrong branch or skip the checks. Reads the workflow as
+ * Guards the Site workflow (.github/workflows/site.yml), the site Makefile's
+ * manual deploy targets and the build command documented in site/AGENTS.md.
+ * Cloudflare's Git integration deploys the site, so the workflow only checks:
+ * it must hold no secrets and no deploy step. Reads the workflow and the doc as
  * committed and dry-runs the Makefile with `make -n`, which prints recipes
  * without running them; nothing here contacts GitHub or Cloudflare.
  */
@@ -18,63 +19,33 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const workflowPath = ".github/workflows/site.yml";
 const workflow = parse(readFileSync(join(root, workflowPath), "utf8"));
 
-const DEPLOY_JOBS = ["deploy-production", "deploy-preview"];
 const WRANGLER_DEPLOY = "bunx --no-install wrangler pages deploy";
 const jobs = Object.entries(workflow.jobs ?? {});
 const steps = jobs.flatMap(([id, job]) => (job.steps ?? []).map((step) => ({ job: id, step })));
 
-/** The exact `if:` each deploy job must carry, with whitespace collapsed. */
-const EXPECTED_CONDITIONS = {
-  "deploy-production": [
-    "vars.SITE_DEPLOY_ENABLED == 'true' &&",
-    "(github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&",
-    "github.ref == format('refs/heads/{0}', github.event.repository.default_branch)",
-  ].join(" "),
-  "deploy-preview": [
-    "vars.SITE_DEPLOY_ENABLED == 'true' &&",
-    "github.event_name == 'pull_request' &&",
-    "github.event.pull_request.head.repo.full_name == github.repository &&",
-    "github.head_ref != github.event.repository.default_branch",
-  ].join(" "),
-};
-
-/** The job's `if:` condition with whitespace collapsed, so line breaks don't matter. */
-function condition(jobId) {
-  return String(workflow.jobs[jobId]?.if ?? "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-/** True for the one step allowed to hold the Cloudflare secrets: the wrangler upload. */
-function isWranglerDeploy(step) {
-  return typeof step.run === "string" && step.run.startsWith(WRANGLER_DEPLOY);
-}
-
 /**
- * The job with the wrangler deploy step's `env` removed, so whatever still
- * mentions `secrets.` sits somewhere secrets must not be.
+ * The build command the Deploy section of site/AGENTS.md documents for the
+ * Pages project: the first code span on the "Build command:" line.
  */
-function withoutDeployEnv(job) {
-  const deploySteps = (job.steps ?? []).map((step) => {
-    if (!isWranglerDeploy(step)) return step;
-    const { env: _env, ...rest } = step;
-    return rest;
-  });
-  return { ...job, steps: deploySteps };
+function documentedBuildCommand() {
+  const doc = readFileSync(join(root, "site", "AGENTS.md"), "utf8");
+  const deploy = doc.slice(doc.indexOf("\n## Deploy\n"));
+  const line = deploy.split("\n").find((l) => l.startsWith("- Build command:"));
+  assert.ok(line, "site/AGENTS.md Deploy section has no '- Build command:' line");
+  const command = /`([^`]+)`/.exec(line)?.[1];
+  assert.ok(command, `no code span on the build command line: ${line}`);
+  return command;
 }
 
 describe("site workflow", () => {
-  test("both deploy jobs wait for the checks job", () => {
-    for (const id of DEPLOY_JOBS) {
-      const needs = [workflow.jobs[id]?.needs].flat();
-      assert.ok(needs.includes("checks"), `${id} must have needs: checks, got ${needs}`);
-    }
-  });
-
-  test("each deploy job runs only under its exact condition", () => {
-    for (const id of DEPLOY_JOBS) {
-      assert.equal(condition(id), EXPECTED_CONDITIONS[id], `${id} has a changed if:`);
-    }
+  test("the workflow only checks: no secrets and no wrangler deploy", () => {
+    assert.ok(!readFileSync(join(root, workflowPath), "utf8").includes("secrets."), "secrets. must not appear");
+    const deploys = steps.filter(({ step }) => typeof step.run === "string" && step.run.includes("wrangler pages deploy"));
+    assert.deepEqual(
+      deploys.map(({ job, step }) => `${job}: ${step.name ?? step.run}`),
+      [],
+    );
+    assert.deepEqual(Object.keys(workflow.jobs), ["checks"]);
   });
 
   test("runs are serialized per ref and main never cancels", () => {
@@ -82,6 +53,22 @@ describe("site workflow", () => {
       group: "${{ github.workflow }}-${{ github.ref }}",
       "cancel-in-progress": "${{ github.ref != 'refs/heads/main' }}",
     });
+  });
+
+  test("runs on the paths the site is built from", () => {
+    const expected = [
+      "site/**",
+      "docs/**",
+      "packages/**",
+      "examples/src/data/**",
+      "bun.lock",
+      "package.json",
+      "bunfig.toml",
+      ".github/workflows/site.yml",
+      ".github/actions/setup-bun/**",
+    ];
+    assert.deepEqual(workflow.on.push.paths, expected);
+    assert.deepEqual(workflow.on.pull_request.paths, expected);
   });
 
   test("no run script contains an expression", () => {
@@ -121,35 +108,27 @@ describe("site workflow", () => {
     }
   });
 
-  test("secrets reach only the env of each deploy job's wrangler upload", () => {
-    const { jobs: _jobs, ...topLevel } = workflow;
-    const scrubbed = [
-      ["top level", topLevel],
-      ...jobs.map(([id, job]) => [id, DEPLOY_JOBS.includes(id) ? withoutDeployEnv(job) : job]),
-    ];
-    const leaks = scrubbed.filter(([, value]) => JSON.stringify(value).includes("secrets."));
-    assert.deepEqual(
-      leaks.map(([id]) => id),
-      [],
-    );
-
-    for (const id of DEPLOY_JOBS) {
-      const uploads = (workflow.jobs[id]?.steps ?? []).filter(isWranglerDeploy);
-      assert.equal(uploads.length, 1, `${id} must have one step running ${WRANGLER_DEPLOY}`);
-      assert.deepEqual(
-        Object.keys(uploads[0].env ?? {}).filter((name) => name.startsWith("CLOUDFLARE_")),
-        ["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID"],
-        id,
-      );
-    }
-  });
-
   test("release commits are not skipped", () => {
     const skipping = jobs.filter(([, job]) => String(job.if ?? "").includes("release:"));
     assert.deepEqual(
       skipping.map(([id]) => id),
       [],
     );
+  });
+});
+
+describe("documented Pages build command", () => {
+  test("runs the root install, the root library build and astro build in that order", () => {
+    const parts = documentedBuildCommand()
+      .split("&&")
+      .map((part) => part.trim());
+    assert.deepEqual(parts, [
+      "cd ..",
+      "bun install --frozen-lockfile",
+      "bun run build",
+      "cd site",
+      "bunx astro build",
+    ]);
   });
 });
 

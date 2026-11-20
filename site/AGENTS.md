@@ -120,13 +120,21 @@ Read [error handling](docs/guidance/engineering/errors.md) before changing failu
 
 ## Deploy
 
-- Cloudflare Pages project `openchart`, production branch `main`, served at https://openchart.steamfield.io. Uploads are direct (`wrangler pages deploy`), not Cloudflare's Git integration.
-- The Site workflow (`.github/workflows/site.yml`) runs lint, check, test, build, the browser tests and `make deploy-check` on pushes and pull requests that touch the site, `docs/`, `packages/`, `examples/src/data/`, `bun.lock`, the root `package.json` or `bunfig.toml`, the workflow itself or `.github/actions/setup-bun/`. On `main` it then deploys production; on a pull request from a branch of this repository it deploys a preview for that branch, except a branch named `main`, which would upload to production. Runs are serialized per ref, and runs on `main` never cancel one another, so production deploys land in push order.
-- Don't mark the checks job a required status check. The workflow is path-filtered, so a pull request that touches none of those paths never runs it and would wait forever.
-- Both deploy jobs stay off until the repository variable `SITE_DEPLOY_ENABLED` is `true`. They read `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` from repository secrets.
-- From a machine: `make deploy-check` needs no account. `make deploy` and `make deploy-preview BRANCH=<name>` need `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` exported, and stop before building when one is missing. `make deploy-preview BRANCH=main` stops too: `main` is production, so use `make deploy`. Both run the workspace's wrangler (`bunx --no-install`) and never download one.
-- Public build-time values (`PUBLIC_POSTHOG_KEY`, `PUBLIC_POSTHOG_HOST`) come from the environment of `astro build`. In CI they are repository variables, passed only to the production build.
-- Response headers (asset caching, security headers) are in `public/_headers`. `scripts/__tests__/site-workflow.test.mjs` at the repository root guards the workflow's invariants (run with `bun run test:scripts`).
+Cloudflare's Git integration builds and deploys the site; GitHub Actions never deploys. Production is https://openchart.steamfield.io, a proxied CNAME to `openchart-de2.pages.dev` in the steamfield.io zone. Pushes to `main` deploy production; every other branch gets a preview.
+
+Pages project `openchart`, settings (recreate them from this list):
+
+- Production branch: `main`. Root directory: `site`. Output directory: `dist`.
+- Build command: `cd .. && bun install --frozen-lockfile && bun run build && cd site && bunx astro build`. The site resolves the library packages through their `dist/`, so the root install and the root library build must run before `astro build`. `scripts/__tests__/site-workflow.test.mjs` reads this command and checks that order.
+- Build variables: `BUN_VERSION=1.4.2`, `NODE_VERSION=24.21.0`, `SKIP_DEPENDENCY_INSTALL=1`. The last stops Pages running its own install inside `site/`, which has `workspace:*` dependencies and no lockfile.
+- Build watch paths: `site/*`, `docs/*`, `packages/*`, `examples/src/data/*`, `package.json`, `bun.lock`, `bunfig.toml`.
+- Variables: `site/wrangler.jsonc` exists, so it is the source of truth and Pages ignores dashboard variables. `PUBLIC_POSTHOG_KEY` (and `PUBLIC_POSTHOG_HOST` if needed) belong in its `env.production.vars`, so previews send no analytics. Not added yet: no key exists.
+
+The Site workflow (`.github/workflows/site.yml`) only checks: lint, check, test, build, the browser tests and `make deploy-check`, on pushes and pull requests that touch the site, `docs/`, `packages/`, `examples/src/data/`, `bun.lock`, the root `package.json` or `bunfig.toml`, the workflow itself or `.github/actions/setup-bun/`. Don't mark its check required: it is path-filtered, so a pull request that touches none of those paths never runs it and would wait forever.
+
+Manual uploads: `make deploy-check` needs no account. `make deploy` and `make deploy-preview BRANCH=<name>` remain for uploading from a machine; they need `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` exported and stop before building when one is missing. `make deploy-preview BRANCH=main` stops too: `main` is production, so use `make deploy`. Both run the workspace's wrangler (`bunx --no-install`) and never download one. Agents never deploy: no `make deploy*`, no `wrangler pages deploy`.
+
+Public build-time values (`PUBLIC_POSTHOG_KEY`, `PUBLIC_POSTHOG_HOST`) come from the environment of `astro build`. Response headers (asset caching, security headers) are in `public/_headers`. `scripts/__tests__/site-workflow.test.mjs` at the repository root guards the workflow's invariants and this section's build command (run with `bun run test:scripts`).
 
 ## Analytics
 
@@ -149,11 +157,7 @@ Read [error handling](docs/guidance/engineering/errors.md) before changing failu
 
 Steps only a human can do. Check here before reporting one of these as a problem.
 
-- Create the Cloudflare Pages project `openchart` with production branch `main`. Done when `bunx wrangler pages project list` shows it.
-- Attach the custom domain openchart.steamfield.io to the project and add a proxied CNAME in the steamfield.io zone pointing to the project's `pages.dev` subdomain. Done when the domain shows Active in the project.
-- Add repository secrets `CLOUDFLARE_API_TOKEN` (scoped to Pages edit on the one account) and `CLOUDFLARE_ACCOUNT_ID`.
-- Set repository variable `SITE_DEPLOY_ENABLED` to `true`. Done when the Site workflow's deploy jobs run instead of skipping.
-- Optionally set repository variable `PUBLIC_POSTHOG_KEY` (and `PUBLIC_POSTHOG_HOST`) to turn on analytics in production.
+- Add the PostHog project key to `env.production.vars.PUBLIC_POSTHOG_KEY` in `wrangler.jsonc` (and `PUBLIC_POSTHOG_HOST` if needed) to turn on analytics in production. No key is available yet.
 - Add the site to the Steamfield product registry and privacy page, which live in another repository.
 
 ## Deeper context
