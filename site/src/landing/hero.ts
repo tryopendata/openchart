@@ -27,8 +27,11 @@ export type HeroStep = {
   changed: string[];
 };
 
-/** The dataset's citation, for the figure caption. */
-export const heroSource = { label: wealthHealth.source, url: wealthHealth.url };
+/** The dataset's citation for the figure caption, which writes "Source:" itself. */
+export const heroSource = {
+  label: wealthHealth.source.replace(/^Source:\s*/, ""),
+  url: wealthHealth.url,
+};
 
 const data = wealthHealth.data.map((row) => ({ ...row }));
 
@@ -74,6 +77,8 @@ const annotation = {
       y: 77.3,
       text: "**United States:** the richest here, yet shorter-lived than China",
       anchor: "bottom",
+      // Down into the empty lower right, clear of the size legend.
+      offset: { dx: -20, dy: 40 },
     },
   ],
 } satisfies ChartSpec;

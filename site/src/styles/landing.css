@@ -73,4 +73,50 @@
   .copy-chip {
     @apply text-muted hover:text-ink border-line-strong shrink-0 rounded-xs border px-2 py-1 font-mono text-xs transition-colors duration-150;
   }
+
+  /* An install command (InstallCommand.astro): manager choice above, a ruled line with Copy. */
+  .install-command {
+    @apply max-w-[34rem] min-w-0;
+  }
+
+  .install-command-managers {
+    @apply mb-2 flex gap-4 font-mono text-[12px];
+  }
+
+  .install-command-manager {
+    @apply text-muted hover:text-ink border-b border-transparent pb-0.5 transition-colors duration-150;
+  }
+
+  .install-command-manager[aria-pressed="true"] {
+    @apply text-ink border-ink;
+  }
+
+  .install-command-line {
+    @apply border-line-strong relative flex h-12 items-center rounded-xs border pl-4;
+  }
+
+  .install-command-prompt {
+    @apply text-muted mr-3 font-mono text-[14px] select-none;
+  }
+
+  .install-command-text {
+    @apply text-ink min-w-0 flex-1 overflow-x-auto pr-4 font-mono text-[14px] whitespace-nowrap;
+  }
+
+  .install-command-text[hidden] {
+    display: none;
+  }
+
+  .install-command-copy {
+    @apply border-line-strong text-ink-2 hover:bg-panel hover:text-ink h-full min-w-[6.5rem] border-l px-4 font-sans text-sm font-medium transition-colors duration-150;
+  }
+
+  /* Success is announced, not shown; a failure shows under the line. */
+  .install-command-result:not([data-state="failed"]) {
+    @apply sr-only;
+  }
+
+  .install-command-result[data-state="failed"] {
+    @apply text-ink-2 absolute top-full left-0 mt-1 text-xs;
+  }
 }

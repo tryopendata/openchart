@@ -1,0 +1,63 @@
+---
+/**
+ * An install command with a package-manager choice and a Copy button, used by
+ * the hero and the closing section. Every command is in the HTML; the first
+ * shows and the rest carry `hidden`. The choice buttons and Copy ship hidden and
+ * install-command.ts shows them, so without JavaScript there is no dead control
+ * and the first command stays selectable. Copy is `@steamfield/ui/copy`: the
+ * button's `aria-controls` names the command on show, and the script retargets
+ * it when the choice changes.
+ */
+type Props = {
+  commands: { label: string; command: string }[];
+  class?: string;
+};
+
+const { commands, class: className } = Astro.props;
+const id = `install-${Math.random().toString(36).slice(2, 8)}`;
+const commandId = (index: number) => `${id}-${index}`;
+---
+
+<div class:list={["install-command", className]} data-install-command>
+  {commands.length > 1 && (
+    <div class="install-command-managers" role="group" aria-label="Package manager" hidden>
+      {commands.map((option, index) => (
+        <button
+          type="button"
+          class="install-command-manager"
+          data-install-target={commandId(index)}
+          aria-pressed={index === 0 ? "true" : "false"}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  )}
+  <div class="install-command-line" data-copy-root>
+    <span class="install-command-prompt" aria-hidden="true">
+      $
+    </span>
+    {commands.map((option, index) => (
+      <code id={commandId(index)} class="install-command-text" hidden={index !== 0}>
+        {option.command}
+      </code>
+    ))}
+    <button
+      type="button"
+      class="install-command-copy"
+      hidden
+      data-copy-command
+      aria-controls={commandId(0)}
+      aria-label="Copy command"
+    >
+      <span data-copy-label>Copy</span>
+    </button>
+    <span class="install-command-result" data-copy-result role="status" aria-live="polite"></span>
+  </div>
+</div>
+
+<script>
+  import { wireInstallCommands } from "./install-command";
+
+  wireInstallCommands(document);
+</script>

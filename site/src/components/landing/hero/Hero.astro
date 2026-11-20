@@ -31,6 +31,8 @@ import { staticSvg } from "../../../lib/demo/static-svg";
 import "../../../styles/landing-hero.css";
 import { toDeskSteps } from "./desk-step";
 import HeroDesk from "./HeroDesk";
+import InstallCommand from "../../shared/InstallCommand.astro";
+import PublishedFigure from "../../shared/PublishedFigure.astro";
 
 /** The static SVG's drawing size: close to the live chart's at 1440, so the swap barely moves. */
 const STATIC_SIZE = { width: 520, height: 460 };
@@ -59,32 +61,8 @@ const staticCharts = [false, true]
       <p class="landing-lede hero-lede" data-motion="lift-md">
         {landingCopy.lede}
       </p>
-      <div class="hero-install" data-hero-install data-motion="lift-sm">
-        <div class="hero-install-managers" role="group" aria-label="Package manager" hidden>
-          {site.install.map((option, index) => (
-            <button
-              type="button"
-              class="hero-install-manager"
-              data-hero-manager={index}
-              aria-pressed={index === 0 ? "true" : "false"}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-        <div class="hero-install-line">
-          {site.install.map((option, index) => (
-            <code class="hero-install-command" data-hero-command={index} hidden={index !== 0}>
-              <span class="hero-install-prompt" aria-hidden="true">
-                $
-              </span>
-              {option.command}
-            </code>
-          ))}
-          <button type="button" class="hero-install-copy" data-hero-copy hidden>
-            Copy
-          </button>
-        </div>
+      <div class="hero-install" data-motion="lift-sm">
+        <InstallCommand commands={site.install} />
       </div>
       <p class="hero-links" data-motion="lift-sm">
         <a href="/docs/get-started/getting-started/" class="hero-link hero-link-primary">
@@ -96,31 +74,17 @@ const staticCharts = [false, true]
       </p>
     </div>
 
-    <figure class="hero-figure" data-reveal>
-      <div class="rule-axis" data-motion="wipe"></div>
-      <h2 id="desk-title" class="hero-figure-title" data-motion="lift-sm">
-        {landingCopy.headings.desk}
-      </h2>
-      <div data-motion="quiet">
-        <HeroDesk client:load steps={deskSteps}>
-          <Fragment set:html={staticCharts} />
-        </HeroDesk>
-      </div>
-      <figcaption class="figure-caption hero-caption" data-motion="quiet">
-        Five steps write the spec. Each adds the marked lines, and the chart redraws with the
-        library's own transition.{" "}
-        {heroSource.url ? (
-          <a href={heroSource.url} class="hero-source">
-            {heroSource.label}.
-          </a>
-        ) : (
-          <span>{heroSource.label}.</span>
-        )}
-      </figcaption>
-    </figure>
+    <PublishedFigure
+      class="hero-figure"
+      title={landingCopy.headings.desk}
+      titleId="desk-title"
+      level="h2"
+      source={heroSource}
+      note="Five steps write the spec. Each adds the marked lines, and the chart redraws with the library's own transition."
+    >
+      <HeroDesk client:load steps={deskSteps}>
+        <Fragment set:html={staticCharts} />
+      </HeroDesk>
+    </PublishedFigure>
   </div>
 </section>
-
-<script>
-  import "./install-line";
-</script>

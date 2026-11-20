@@ -13,8 +13,13 @@
     @apply pt-8 pb-16 sm:pt-10 lg:pt-12 lg:pb-24;
   }
 
+  /* minmax(0, 1fr) tracks: the spec lines and the chart never widen the page. */
   .hero-grid {
-    @apply grid gap-y-12;
+    @apply grid grid-cols-[minmax(0,1fr)] gap-y-12;
+  }
+
+  .hero-grid > * {
+    min-width: 0;
   }
 
   @media (min-width: 1100px) {
@@ -42,55 +47,8 @@
     @apply mt-7 text-[1.1875rem] leading-[1.55];
   }
 
-  /* The install command: a hairline frame, the copy action on its own ruled cell. */
   .hero-install {
-    @apply mt-9 max-w-[30rem];
-  }
-
-  .hero-install-managers {
-    @apply mb-2 flex gap-4 font-mono text-[12px];
-  }
-
-  .hero-install-manager {
-    @apply text-muted border-b border-transparent pb-0.5;
-    transition:
-      color 150ms ease-out,
-      border-color 150ms ease-out;
-  }
-
-  .hero-install-manager:hover {
-    @apply text-ink;
-  }
-
-  .hero-install-manager[aria-pressed="true"] {
-    @apply text-ink border-ink;
-  }
-
-  .hero-install-line {
-    @apply border-line-strong flex h-12 items-stretch rounded-xs border;
-  }
-
-  .hero-install-command {
-    @apply text-ink flex min-w-0 flex-1 items-center gap-3 overflow-x-auto px-4 font-mono text-[14px] whitespace-nowrap;
-  }
-
-  .hero-install-command[hidden] {
-    display: none;
-  }
-
-  .hero-install-prompt {
-    @apply text-muted select-none;
-  }
-
-  .hero-install-copy {
-    @apply border-line-strong text-ink-2 min-w-[6.5rem] border-l px-4 font-sans text-sm font-medium;
-    transition:
-      background-color 150ms ease-out,
-      color 150ms ease-out;
-  }
-
-  .hero-install-copy:hover {
-    @apply bg-panel text-ink;
+    @apply mt-9;
   }
 
   .hero-links {
@@ -119,25 +77,6 @@
 
   .hero-link-primary:hover span {
     transform: translateX(3px);
-  }
-
-  /* The figure: ticked rule, headline, desk, caption. */
-  .hero-figure-title {
-    font-family: var(--font-display, var(--font-sans));
-    @apply text-ink mt-5 text-[1.5rem] leading-tight font-semibold tracking-tight text-balance sm:text-[1.75rem];
-  }
-
-  .hero-desk {
-    @apply mt-5;
-  }
-
-  .hero-caption a {
-    @apply text-muted decoration-line underline decoration-1 underline-offset-2;
-    transition: color 150ms ease-out;
-  }
-
-  .hero-caption a:hover {
-    @apply text-ink;
   }
 
   /* Step bar: numbered steps on the left, transport on the right. */
@@ -196,7 +135,11 @@
 
   /* Spec pane and chart side by side from 700px, spec first. */
   .hero-panes {
-    @apply border-line grid border-b;
+    @apply border-line grid grid-cols-[minmax(0,1fr)] border-b;
+  }
+
+  .hero-panes > * {
+    min-width: 0;
   }
 
   @media (min-width: 700px) {
@@ -209,14 +152,9 @@
     }
   }
 
+  /* One height at every width: on a phone the title, legend and notes need it most. */
   .hero-chart {
-    @apply relative h-[380px] sm:h-[440px];
-  }
-
-  @media (min-width: 1100px) {
-    .hero-chart {
-      height: 460px;
-    }
+    @apply relative h-[460px];
   }
 
   .hero-chart-live {
@@ -230,23 +168,13 @@
     font-variant-numeric: normal;
   }
 
-  .hero-chart-static {
-    @apply absolute inset-0;
-  }
-
   .hero-spec {
     @apply bg-panel relative min-w-0;
   }
 
   .hero-spec-code {
-    @apply relative m-0 h-[380px] overflow-y-auto py-3 font-mono text-[12px] leading-[1.6] sm:h-[440px];
+    @apply relative m-0 h-[460px] overflow-y-auto py-3 font-mono text-[12px] leading-[1.6];
     scrollbar-width: thin;
-  }
-
-  @media (min-width: 1100px) {
-    .hero-spec-code {
-      height: 460px;
-    }
   }
 
   .hero-spec-code pre {
