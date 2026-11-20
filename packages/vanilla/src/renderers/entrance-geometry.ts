@@ -120,18 +120,26 @@ export function revealFrom(
  * line is 97% drawn, then cascade left to right over LINE_POINT_CASCADE_MS on
  * the glide curve, by x within the series' own point extent (a zero-width
  * series starts all its dots at once). Keyed by index into `marks`; points on
- * no series are left out.
+ * no series are left out. Each entry carries the owning line's `seriesKey`,
+ * which is what endpoint labels key on (a point's own identity attributes
+ * are named after the color field).
  */
+export interface LinePointDelay {
+  delayMs: number;
+  seriesKey?: string;
+}
+
 export function linePointDelays(
   marks: readonly Mark[],
   phase: MotionPhase,
   staggerMs: number,
   markIndexOffset = 0,
-): Map<number, number> {
+): Map<number, LinePointDelay> {
   interface Series {
     index: number;
     minX: number;
     maxX: number;
+    seriesKey?: string;
   }
   const byPoint = new Map<string, Series>();
   marks.forEach((mark, i) => {
@@ -144,13 +152,18 @@ export function linePointDelays(
       minX = Math.min(minX, p.x);
       maxX = Math.max(maxX, p.x);
     }
-    const series = { index: mark.animationIndex ?? i + markIndexOffset, minX, maxX };
+    const series: Series = {
+      index: mark.animationIndex ?? i + markIndexOffset,
+      minX,
+      maxX,
+      seriesKey: mark.seriesKey,
+    };
     for (const p of points) {
       const key = `${p.x},${p.y}`;
       if (!byPoint.has(key)) byPoint.set(key, series);
     }
   });
-  const delays = new Map<number, number>();
+  const delays = new Map<number, LinePointDelay>();
   if (byPoint.size === 0) return delays;
   marks.forEach((mark, i) => {
     if (mark.type !== 'point') return;
@@ -159,7 +172,10 @@ export function linePointDelays(
     const lineDrawnMs = progressTimeMs('line-area', series.index, phase, { staggerMs }, 0.97);
     const span = series.maxX - series.minX;
     const fraction = span > 0 ? (mark.cx - series.minX) / span : 0;
-    delays.set(i, lineDrawnMs + evalCurve('glide', fraction) * LINE_POINT_CASCADE_MS);
+    delays.set(i, {
+      delayMs: lineDrawnMs + evalCurve('glide', fraction) * LINE_POINT_CASCADE_MS,
+      seriesKey: series.seriesKey,
+    });
   });
   return delays;
 }

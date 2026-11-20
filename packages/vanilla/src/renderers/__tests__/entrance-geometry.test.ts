@@ -94,7 +94,7 @@ describe('linePointDelays', () => {
     ['snappy', { duration: 800, ease: 'snappy' }],
   ])('waits for the line to draw, then cascades left to right on glide (%s)', (_, phase) => {
     const delays = linePointDelays(marks, phase, 0);
-    const values = points.map((_, i) => delays.get(i + 1)!);
+    const values = points.map((_, i) => delays.get(i + 1)!.delayMs);
     const drawn = progressTimeMs('line-area', 0, phase, { staggerMs: 0 }, 0.97);
     // The first dot waits until the line's clip has revealed 97% of it.
     expect(values[0]).toBe(drawn);
@@ -118,14 +118,16 @@ describe('linePointDelays', () => {
     const stray = { ...points[0], cx: 999, cy: 999 } as PointMark;
     const delays = linePointDelays([{ ...line, animationIndex: 2 }, ...points, stray], phase, 75);
     const unstaggered = linePointDelays(marks, phase, 75);
-    expect(delays.get(1)! - unstaggered.get(1)!).toBeCloseTo(150, 9);
+    expect(delays.get(1)!.delayMs - unstaggered.get(1)!.delayMs).toBeCloseTo(150, 9);
     expect(delays.has(points.length + 1)).toBe(false);
   });
 
   it("keys a faceted panel's dots on its offset line index", () => {
     const phase: MotionPhase = { duration: 800, ease: 'smooth' };
     const delays = linePointDelays(marks, phase, 75, 7);
-    expect(delays.get(1)).toBe(progressTimeMs('line-area', 7, phase, { staggerMs: 75 }, 0.97));
+    expect(delays.get(1)?.delayMs).toBe(
+      progressTimeMs('line-area', 7, phase, { staggerMs: 75 }, 0.97),
+    );
   });
 
   it('starts every dot of a zero-width series at once', () => {
@@ -133,7 +135,9 @@ describe('linePointDelays', () => {
     const single = { ...line, points: [{ x: 50, y: 10 }] } as LineMark;
     const dot = { ...points[0], cx: 50, cy: 10 } as PointMark;
     const delays = linePointDelays([single, dot], phase, 0);
-    expect(delays.get(1)).toBe(progressTimeMs('line-area', 0, phase, { staggerMs: 0 }, 0.97));
+    expect(delays.get(1)?.delayMs).toBe(
+      progressTimeMs('line-area', 0, phase, { staggerMs: 0 }, 0.97),
+    );
   });
 });
 

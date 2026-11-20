@@ -623,10 +623,11 @@ export function renderMarks(
       const style = (el as SVGElement & ElementCSSInlineStyle).style;
       // 6 decimals, the precision progressTimeMs rounds to: coarser rounding
       // could start the first dot a hair before its line counts as drawn.
-      style.setProperty('--oc-line-point-delay', `${roundStamp(pointDelay, 6)}ms`);
-      // Selects the line-point role. A sibling combinator can't: a scatter's
-      // trendline also precedes its circles.
-      el.setAttribute('data-line-point', '');
+      style.setProperty('--oc-line-point-delay', `${roundStamp(pointDelay.delayMs, 6)}ms`);
+      // Selects the line-point role (a sibling combinator can't: a scatter's
+      // trendline also precedes its circles) and names the owning line's
+      // series, which its endpoint label waits on.
+      el.setAttribute('data-line-point', pointDelay.seriesKey ?? '');
       style.setProperty('transform-origin', scaleOrigin(mark.cx, mark.cy));
     }
     const cellDelay = cellDelays?.get(i);

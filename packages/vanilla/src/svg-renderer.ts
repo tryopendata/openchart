@@ -351,7 +351,7 @@ export function renderChartSVG(
       const lastPointBySeries = new Map<string, number>();
       for (const p of svg.querySelectorAll<SVGElement>('circle[data-line-point]')) {
         if (p.getAttribute('opacity') === '0') continue;
-        const series = p.getAttribute('data-field-series') ?? '';
+        const series = p.getAttribute('data-line-point') ?? '';
         const delay = Number.parseFloat(p.style.getPropertyValue('--oc-line-point-delay'));
         if (Number.isFinite(delay)) {
           lastPointBySeries.set(series, Math.max(lastPointBySeries.get(series) ?? 0, delay));
@@ -365,7 +365,7 @@ export function renderChartSVG(
           }
         };
         stampAfterPoints(
-          '.oc-endpoint-label-entry[data-endpoint-side="trailing"]',
+          '.oc-endpoint-label-entry[data-endpoint-side="trailing"], .oc-area-interior-label',
           'data-endpoint-key',
           roleVars('endpoint-label').delay,
         );

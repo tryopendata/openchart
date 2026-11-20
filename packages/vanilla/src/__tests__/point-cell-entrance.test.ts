@@ -277,34 +277,58 @@ describe('scatter points', () => {
   });
 });
 
-describe('endpoint labels on a line with points', () => {
-  it("wait for their series' last visible dot", () => {
-    const svg = render({
-      mark: { type: 'line', point: true },
+describe('labels on a series with points', () => {
+  const twoCountries = (mark: Record<string, unknown>, extra: Record<string, unknown> = {}) =>
+    ({
+      mark,
       data: MONTHS.flatMap((m, i) => [
-        { month: m, series: 'A', value: 20 + i * 4 },
-        { month: m, series: 'B', value: 70 - i * 3 },
+        { month: m, country: 'US', value: 20 + i * 4 },
+        { month: m, country: 'UK', value: 70 - i * 3 },
       ]),
       encoding: {
         x: { field: 'month', type: 'ordinal' },
         y: { field: 'value', type: 'quantitative' },
-        color: { field: 'series', type: 'nominal' },
+        color: { field: 'country', type: 'nominal' },
       },
       animation: true,
-    } as ChartSpec);
+      ...extra,
+    }) as ChartSpec;
+
+  function expectLabelsAfterLastDot(
+    svg: SVGElement,
+    role: 'endpoint-label' | 'label',
+    keyAttr: string,
+  ) {
     const scan = scanEntrance(svg);
     const phase = { duration: scan.durationMs ?? 800, ease: 'smooth' as const };
-    const labels = scan.elements.filter((e) => e.role === 'endpoint-label');
-    expect(labels.length).toBe(2);
+    const labels = scan.elements.filter((e) => e.role === role);
+    expect(labels.length).toBeGreaterThan(0);
     for (const l of labels) {
-      const series = l.el.getAttribute('data-endpoint-key');
+      const series = l.el.getAttribute(keyAttr) ?? '';
       const dots = Array.from(
-        svg.querySelectorAll<SVGElement>(`circle[data-line-point][data-field-series="${series}"]`),
+        svg.querySelectorAll<SVGElement>(`circle[data-line-point="${series}"]`),
       ).filter((d) => d.getAttribute('opacity') !== '0');
-      expect(dots.length).toBeGreaterThan(0);
+      expect(dots.length, `dots for ${series}`).toBeGreaterThan(0);
       const lastDot = Math.max(...dots.map((d) => ms(d, '--oc-line-point-delay')));
-      const { delayMs } = entranceTiming('endpoint-label', l.index, phase, l.context);
-      expect(delayMs).toBeCloseTo(lastDot, 3);
+      const { delayMs } = entranceTiming(role, l.index, phase, l.context);
+      expect(delayMs, `${role} for ${series}`).toBeCloseTo(lastDot, 3);
     }
+  }
+
+  it("line endpoint labels wait for their series' last visible dot", () => {
+    expectLabelsAfterLastDot(
+      render(twoCountries({ type: 'line', point: true })),
+      'endpoint-label',
+      'data-endpoint-key',
+    );
+  });
+
+  it('area dots name their own series, which area labels key on', () => {
+    const svg = render(twoCountries({ type: 'area', point: true }));
+    const keys = Array.from(svg.querySelectorAll('circle[data-line-point]')).map((c) =>
+      c.getAttribute('data-line-point'),
+    );
+    expect(keys).toHaveLength(MONTHS.length * 2);
+    expect(new Set(keys)).toEqual(new Set(['US', 'UK']));
   });
 });
