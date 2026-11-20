@@ -624,6 +624,9 @@ export function renderMarks(
       // 6 decimals, the precision progressTimeMs rounds to: coarser rounding
       // could start the first dot a hair before its line counts as drawn.
       style.setProperty('--oc-line-point-delay', `${roundStamp(pointDelay, 6)}ms`);
+      // Selects the line-point role. A sibling combinator can't: a scatter's
+      // trendline also precedes its circles.
+      el.setAttribute('data-line-point', '');
       style.setProperty('transform-origin', scaleOrigin(mark.cx, mark.cy));
     }
     const cellDelay = cellDelays?.get(i);

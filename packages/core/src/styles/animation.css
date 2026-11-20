@@ -103,10 +103,10 @@
     }
 
     /* Points on line/area charts pop in once their own line has drawn (0.97),
-       cascading left to right over LINE_POINT_CASCADE_MS; the renderer stamps
-       each point's delay. Points hidden under an endpoint marker stay hidden. */
-    & .oc-mark-line ~ circle.oc-mark-point,
-    & .oc-mark-area ~ circle.oc-mark-point {
+       cascading left to right over LINE_POINT_CASCADE_MS. The renderer stamps
+       each point's delay and marks it data-line-point (a scatter's trendline also
+       precedes its circles, so position can't select these). Points hidden under an endpoint marker stay hidden. */
+    & circle.oc-mark-point[data-line-point] {
       animation: oc-enter-pop var(--oc-line-point-dur, 320ms) var(--oc-ease-punch) both;
       animation-delay: var(
         --oc-line-point-delay,

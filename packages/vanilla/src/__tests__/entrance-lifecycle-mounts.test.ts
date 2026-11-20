@@ -578,6 +578,7 @@ describe('chart', () => {
       expect(out).not.toContain('transform-origin');
       expect(out).not.toContain('--oc-line-point-delay');
       expect(out).not.toContain('--oc-cell-delay');
+      expect(out).not.toContain('data-line-point');
       chart.destroy();
     }
   });

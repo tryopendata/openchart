@@ -1782,7 +1782,7 @@ Controls entrance animations and data-update transitions. Source: `core/src/type
 // Full control
 {
   animation: {
-    enter: { duration: 600, ease: 'smooth', stagger: true, trigger: 'visible' },
+    enter: { duration: 800, ease: 'smooth', stagger: true, trigger: 'visible' },
     update: { duration: 500, ease: 'smooth' },
     exit: { duration: 120, ease: 'gentle' },
     annotationDelay: 150,
@@ -1811,9 +1811,9 @@ Controls entrance animations and data-update transitions. Source: `core/src/type
 
 | Field      | Type                          | Default    | Description                                  |
 | ---------- | ----------------------------- | ---------- | -------------------------------------------- |
-| `duration` | `number`                      | `600` enter / `500` update / `120` exit | Duration in ms.                              |
-| `ease`     | `AnimationEase`               | `'smooth'` (`'gentle'` for exit) | Easing preset: `'smooth'` (fast attack, quick settle), `'snappy'` (faster, settles by about half the duration), `'gentle'` (the previous slower ease-out). |
-| `stagger`  | `AnimationStagger \| boolean` | `true`     | Stagger config for entrance. `false` = simultaneous. `delay` (default `80`) is a ceiling: the whole stagger spans at most 300ms, so n elements land `min(delay, 300 / (n - 1))` apart. |
+| `duration` | `number`                      | `800` enter / `500` update / `120` exit | Duration in ms.                              |
+| `ease`     | `AnimationEase`               | `'smooth'` (`'gentle'` for exit) | Easing preset: `'smooth'` (the `glide` curve: gentle start, long deceleration), `'snappy'` (faster, settles by about half the duration), `'gentle'` (the previous slower ease-out). |
+| `stagger`  | `AnimationStagger \| boolean` | `true`     | Stagger config for entrance. `false` = simultaneous. `delay` (default `80`) is a ceiling: the whole stagger spans at most 450ms, so n elements land `min(delay, 450 / (n - 1))` apart. |
 
 ### EnterPhaseConfig
 

@@ -55,14 +55,18 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
-function sample(spec: ChartSpec, selector: string, pin?: (el: SVGElement) => void) {
+/** The renderer's own stamped origin, checked against the centre it should sit on. */
+function expectOrigin(el: SVGElement, cx: number, cy: number) {
+  const [ox, oy] = el.style.getPropertyValue('transform-origin').split(' ').map(Number.parseFloat);
+  expect(ox).toBeCloseTo(cx, 2);
+  expect(oy).toBeCloseTo(cy, 2);
+}
+
+function sample(spec: ChartSpec, selector: string) {
   const layout = compileChart(spec, { width: 600, height: 400 });
   const svg = renderChartSVG(layout, createContainer(), { animate: true });
   const els = Array.from(svg.querySelectorAll<SVGElement>(selector));
   expect(els.length).toBeGreaterThan(0);
-  // Lane 2/a stamps the origin in the renderer; pin one here so this test
-  // holds the GIF path to keeping whatever origin the element carries.
-  if (pin) for (const el of els) pin(el);
   const origins = els.map((el) => el.style.getPropertyValue('transform-origin'));
   const sampler = createFrameSampler(svg, layout.animation);
   return { els, origins, sampler };
@@ -92,22 +96,20 @@ function expectMidFramePop(
 }
 
 describe('GIF pop entrances', () => {
-  it('line points fade and scale about their stamped origin', () => {
-    const { els, origins, sampler } = sample(lineWithPoints, 'circle.oc-mark-point', (el) =>
-      el.style.setProperty(
-        'transform-origin',
-        `${el.getAttribute('cx')}px ${el.getAttribute('cy')}px`,
-      ),
-    );
+  it('line points fade and scale about their stamped centre', () => {
+    const { els, origins, sampler } = sample(lineWithPoints, 'circle.oc-mark-point');
+    for (const el of els) {
+      expectOrigin(el, Number(el.getAttribute('cx')), Number(el.getAttribute('cy')));
+    }
     expectMidFramePop(els, origins, sampler);
   });
 
-  it('grid cells fade and scale about their stamped origin', () => {
-    const { els, origins, sampler } = sample(
-      heatmap,
-      '.oc-mark-rect[data-cell] :is(rect, path)',
-      (el) => el.style.setProperty('transform-origin', '10px 20px'),
-    );
+  it('grid cells fade and scale about their stamped centre', () => {
+    const { els, origins, sampler } = sample(heatmap, '.oc-mark-rect[data-cell] rect');
+    for (const el of els) {
+      const n = (a: string) => Number(el.getAttribute(a));
+      expectOrigin(el, n('x') + n('width') / 2, n('y') + n('height') / 2);
+    }
     expectMidFramePop(els, origins, sampler);
   });
 

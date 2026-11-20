@@ -241,11 +241,70 @@ describe('pie slices', () => {
     const scan = scanEntrance(svg);
     const phase = { duration: scan.durationMs ?? 800, ease: 'smooth' as const };
     const labels = scan.elements.filter((e) => e.role === 'arc-label');
+    expect(labels).toHaveLength(3);
     for (const l of labels) {
       const { delayMs } = entranceTiming('arc-label', l.index, phase, l.context);
-      expect(delayMs).toBeGreaterThanOrEqual(
-        progressTimeMs('arc', l.index, phase, scan.context, 0.97) - 1e-6,
-      );
+      // Anchored on the slice, not the (later) bar fallback of the label role.
+      expect(delayMs).toBeCloseTo(progressTimeMs('arc', l.index, phase, scan.context, 0.97), 3);
+    }
+  });
+});
+
+describe('scatter points', () => {
+  const scatter = (trendline?: boolean) =>
+    ({
+      mark: trendline === undefined ? 'point' : { type: 'point', trendline },
+      data: Array.from({ length: 8 }, (_, i) => ({ x: i, y: (i * 7) % 5 })),
+      encoding: {
+        x: { field: 'x', type: 'quantitative' },
+        y: { field: 'y', type: 'quantitative' },
+      },
+      animation: true,
+    }) as ChartSpec;
+
+  it.each([
+    ['default (trendline drawn first)', undefined],
+    ['trendline on', true],
+    ['trendline off', false],
+  ])('fade in place, never as line points: %s', (_, trendline) => {
+    const svg = render(scatter(trendline));
+    const circles = scanEntrance(svg).elements.filter((e) => e.el.tagName === 'circle');
+    expect(circles).toHaveLength(8);
+    for (const c of circles) {
+      expect(c.role).toBe('point');
+      expect(c.keyframe).toBe('oc-enter-fade-only');
+    }
+  });
+});
+
+describe('endpoint labels on a line with points', () => {
+  it("wait for their series' last visible dot", () => {
+    const svg = render({
+      mark: { type: 'line', point: true },
+      data: MONTHS.flatMap((m, i) => [
+        { month: m, series: 'A', value: 20 + i * 4 },
+        { month: m, series: 'B', value: 70 - i * 3 },
+      ]),
+      encoding: {
+        x: { field: 'month', type: 'ordinal' },
+        y: { field: 'value', type: 'quantitative' },
+        color: { field: 'series', type: 'nominal' },
+      },
+      animation: true,
+    } as ChartSpec);
+    const scan = scanEntrance(svg);
+    const phase = { duration: scan.durationMs ?? 800, ease: 'smooth' as const };
+    const labels = scan.elements.filter((e) => e.role === 'endpoint-label');
+    expect(labels.length).toBe(2);
+    for (const l of labels) {
+      const series = l.el.getAttribute('data-endpoint-key');
+      const dots = Array.from(
+        svg.querySelectorAll<SVGElement>(`circle[data-line-point][data-field-series="${series}"]`),
+      ).filter((d) => d.getAttribute('opacity') !== '0');
+      expect(dots.length).toBeGreaterThan(0);
+      const lastDot = Math.max(...dots.map((d) => ms(d, '--oc-line-point-delay')));
+      const { delayMs } = entranceTiming('endpoint-label', l.index, phase, l.context);
+      expect(delayMs).toBeCloseTo(lastDot, 3);
     }
   });
 });

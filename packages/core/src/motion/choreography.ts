@@ -626,8 +626,8 @@ const ROLE_DEFS: readonly EntranceRoleDef[] = [
     name: 'line-point',
     scope: 'chart',
     comment:
-      "Points on line/area charts pop in once their own line has drawn (0.97),\ncascading left to right over LINE_POINT_CASCADE_MS; the renderer stamps\neach point's delay. Points hidden under an endpoint marker stay hidden.",
-    selectors: ['.oc-mark-line ~ circle.oc-mark-point', '.oc-mark-area ~ circle.oc-mark-point'],
+      "Points on line/area charts pop in once their own line has drawn (0.97),\ncascading left to right over LINE_POINT_CASCADE_MS. The renderer stamps\neach point's delay and marks it data-line-point (a scatter's trendline also\nprecedes its circles, so position can't select these). Points hidden under an endpoint marker stay hidden.",
+    selectors: ['circle.oc-mark-point[data-line-point]'],
     emit: 'shorthand',
     keyframe: 'oc-enter-pop',
     timing: { kind: 'curve', curve: 'punch' },
