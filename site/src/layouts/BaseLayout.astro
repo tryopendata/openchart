@@ -1,5 +1,13 @@
 ---
+/**
+ * The HTML shell every page shares: head metadata, the theme set before paint,
+ * fonts, the site header and footer, and the client wiring for analytics, consent,
+ * site behavior and demos.
+ */
+import SiteFooter from "./SiteFooter.astro";
+import SiteHeader from "./SiteHeader.astro";
 import { site } from "../config";
+import { preloadFonts } from "../lib/fonts";
 import "../styles/global.css";
 
 interface Props {
@@ -36,7 +44,13 @@ const pageTitle = path === "/" ? `${site.name}: ${title}` : `${title} | ${site.n
     <link rel="canonical" href={canonical} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="sitemap" href="/sitemap-index.xml" />
+    <link rel="alternate" type="text/plain" href="/llms.txt" title="llms.txt" />
     {markdown && <link rel="alternate" type="text/markdown" href={markdown} />}
+    {preloadFonts.map((href) => (
+      <link rel="preload" href={href} as="font" type="font/woff2" crossorigin />
+    ))}
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0e0f10" media="(prefers-color-scheme: dark)" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content={site.name} />
     <meta property="og:title" content={title} />
@@ -63,59 +77,39 @@ const pageTitle = path === "/" ? `${site.name}: ${title}` : `${title} | ${site.n
     </script>
     <script>
       import { initAnalytics } from "../lib/analytics";
+      import { createSiteConsent, showConsentBanner } from "../lib/consent";
       import "../scripts/site";
       import "../scripts/demos";
 
-      // Off while PUBLIC_POSTHOG_KEY is empty, which is the state in dev, tests and CI.
-      initAnalytics({
-        key: import.meta.env.PUBLIC_POSTHOG_KEY,
-        host: import.meta.env.PUBLIC_POSTHOG_HOST,
-      });
+      // A build without a key ships no analytics and asks for no consent: this
+      // branch is dropped while PUBLIC_POSTHOG_KEY is empty (dev, tests and CI).
+      const key = import.meta.env.PUBLIC_POSTHOG_KEY;
+      if (key) {
+        const consent = createSiteConsent();
+        initAnalytics({
+          key,
+          host: import.meta.env.PUBLIC_POSTHOG_HOST,
+          site: "openchart",
+          consent,
+        });
+        showConsentBanner(consent);
+      }
     </script>
   </head>
   <body class="flex min-h-screen flex-col">
     <a
       href="#main"
-      class="bg-canvas sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:p-2"
+      class="bg-canvas text-ink sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:p-2"
     >
       Skip to content
     </a>
     <slot name="banner" />
-    <header class="border-line border-b">
-      <div class="mx-auto flex max-w-6xl items-center gap-6 px-6 py-4">
-        <a href="/" class="font-semibold">
-          {site.name}
-        </a>
-        {site.version && <span class="text-muted font-mono text-xs">v{site.version}</span>}
-        <nav aria-label="Main" class="ml-auto flex items-center gap-5 text-sm">
-          <a href="/docs/">Docs</a>
-          {site.social.map((link) => (
-            <a href={link.href}>{link.label}</a>
-          ))}
-        </nav>
-        <!-- Search goes here: a search fragment fills this slot. -->
-        <slot name="search" />
-        <button
-          type="button"
-          data-theme-toggle
-          hidden
-          class="border-line rounded border px-2 py-1 text-sm"
-        >
-          Dark theme
-        </button>
-      </div>
-    </header>
+    <SiteHeader path={path}>
+      <slot name="search" slot="search" />
+    </SiteHeader>
     <main id="main" class="flex-1">
       <slot />
     </main>
-    <footer class="border-line text-muted border-t text-sm">
-      <div class="mx-auto flex max-w-6xl flex-wrap gap-x-6 gap-y-2 px-6 py-6">
-        <span>Released under the {site.license} license.</span>
-        <a href={site.releasesUrl}>Releases</a>
-        {site.social.map((link) => (
-          <a href={link.href}>{link.label}</a>
-        ))}
-      </div>
-    </footer>
+    <SiteFooter />
   </body>
 </html>

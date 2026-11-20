@@ -1,144 +1,390 @@
+/*
+ * The Graphics desk design system: color, type and radius tokens for both themes,
+ * base element styles, docs prose, code blocks, and the shell's component classes.
+ * The page stays quiet so live charts carry the color: one accent marks actions and
+ * the current location, and structure comes from rules, never panels or shadows.
+ */
+
+/* sf sits after base, so preflight never strips @steamfield/ui styles, and before
+   components and utilities, so this site's classes win over them. */
+@layer theme, base, sf, components, utilities;
 @import "tailwindcss";
 @import "./demo.css";
+@import "@steamfield/ui/consent/styles.css";
 @plugin "@tailwindcss/typography";
 
 /*
- * Color tokens. Components use these utilities (bg-canvas, text-ink, text-muted,
- * border-line, bg-panel, text-accent) instead of dark: variants, so one set of
- * overrides below serves the theme toggle and visitors without JavaScript.
- * `static` emits every token, because the CSS below reads them with var().
+ * Light tokens. Components use these utilities (bg-canvas, text-ink, border-line,
+ * text-accent and the rest) instead of dark: variants, so the overrides below serve
+ * the theme toggle and visitors without JavaScript alike. `static` emits every
+ * token, because CSS further down reads them with var(). tokens.test.ts checks the
+ * contrast of every text color here against both surfaces, in both themes.
  */
 @theme static {
-  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-sans: "Schibsted Grotesk Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
   --color-canvas: #ffffff;
-  --color-ink: #0f172a;
-  --color-muted: #475569;
-  --color-line: #e2e8f0;
-  --color-panel: #f8fafc;
-  --color-accent: #1d4ed8;
+  --color-panel: #f6f6f4;
+  --color-ink: #101010;
+  --color-ink-2: #3d3d3a;
+  --color-muted: #6b6b66;
+  --color-line: #e3e3de;
+  --color-line-strong: #101010;
+  /* The library palette's first series color (#0a879e), darkened until it clears
+     4.5:1 on the panel as well as the page. */
+  --color-accent: #07798d;
+  --color-accent-ink: #ffffff;
+
+  --radius-xs: 2px;
 }
 
 @layer base {
-  /* The head script sets .dark or .light before paint. */
+  /* The head script sets .dark or .light on <html> before paint. */
   .dark {
-    --color-canvas: #0b1120;
-    --color-ink: #f1f5f9;
-    --color-muted: #a3b1c6;
-    --color-line: #1e293b;
-    --color-panel: #111a2e;
-    --color-accent: #93c5fd;
+    --color-canvas: #0e0f10;
+    --color-panel: #17181a;
+    --color-ink: #f2f2ee;
+    --color-ink-2: #cfcfc8;
+    --color-muted: #a3a39c;
+    --color-line: #2b2c2e;
+    --color-line-strong: #f2f2ee;
+    --color-accent: #22d3ee;
+    --color-accent-ink: #0e0f10;
     color-scheme: dark;
   }
 
   /* Without JavaScript neither class is set; follow the system preference. */
   @media (prefers-color-scheme: dark) {
     :root:not(.light) {
-      --color-canvas: #0b1120;
-      --color-ink: #f1f5f9;
-      --color-muted: #a3b1c6;
-      --color-line: #1e293b;
-      --color-panel: #111a2e;
-      --color-accent: #93c5fd;
+      --color-canvas: #0e0f10;
+      --color-panel: #17181a;
+      --color-ink: #f2f2ee;
+      --color-ink-2: #cfcfc8;
+      --color-muted: #a3a39c;
+      --color-line: #2b2c2e;
+      --color-line-strong: #f2f2ee;
+      --color-accent: #22d3ee;
+      --color-accent-ink: #0e0f10;
       color-scheme: dark;
     }
   }
 
+  /* @steamfield/ui components (the consent banner) read these. */
+  :root {
+    --sf-bg: var(--color-canvas);
+    --sf-surface: var(--color-canvas);
+    --sf-fg: var(--color-ink);
+    --sf-muted: var(--color-muted);
+    --sf-accent: var(--color-accent);
+    --sf-border: var(--color-line-strong);
+    --sf-radius: var(--radius-xs);
+    --sf-consent-accent-foreground: var(--color-accent-ink);
+    --sf-consent-radius: 0;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-padding-top: 1.5rem;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
   body {
-    @apply bg-canvas text-ink font-sans antialiased;
+    @apply bg-canvas text-ink font-sans text-base antialiased;
+    line-height: 1.6;
   }
 
   a {
-    @apply underline-offset-4 hover:underline;
+    @apply decoration-1 underline-offset-4;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  code,
+  kbd,
+  pre,
+  samp {
+    font-family: var(--font-mono);
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--color-accent) 22%, transparent);
+  }
+}
+
+@layer components {
+  /* The section rule: a 1px ink line with thirteen ticks hanging from it, one per
+     column edge of the 12-column grid. */
+  .rule-axis {
+    height: 6px;
+    border-top: 1px solid var(--color-line-strong);
+    background-image: linear-gradient(to right, var(--color-line-strong) 1px, transparent 1px);
+    background-size: calc((100% - 1px) / 12) 100%;
+    background-repeat: repeat-x;
+  }
+
+  /* A chart's caption and "Source:" line, set the way a newspaper sets them. */
+  .figure-caption {
+    @apply text-muted mt-3 text-[13px] leading-snug;
+  }
+
+  .btn {
+    @apply border-line-strong text-ink inline-flex h-9 items-center gap-2 rounded-xs border px-3.5 text-sm font-medium no-underline;
+    transition:
+      background-color 150ms ease-out,
+      color 150ms ease-out;
+  }
+
+  .btn:hover {
+    @apply bg-panel no-underline;
+  }
+
+  .btn-primary {
+    @apply bg-accent text-accent-ink border-accent;
+  }
+
+  .btn-primary:hover {
+    background-color: color-mix(in srgb, var(--color-accent) 86%, var(--color-ink));
   }
 }
 
 /* Docs prose follows the tokens in both themes. */
 .prose {
-  --tw-prose-body: var(--color-ink);
+  --tw-prose-body: var(--color-ink-2);
   --tw-prose-headings: var(--color-ink);
-  --tw-prose-lead: var(--color-muted);
+  --tw-prose-lead: var(--color-ink-2);
   --tw-prose-links: var(--color-accent);
   --tw-prose-bold: var(--color-ink);
   --tw-prose-counters: var(--color-muted);
   --tw-prose-bullets: var(--color-muted);
   --tw-prose-hr: var(--color-line);
   --tw-prose-quotes: var(--color-ink);
-  --tw-prose-quote-borders: var(--color-line);
+  --tw-prose-quote-borders: var(--color-line-strong);
   --tw-prose-code: var(--color-ink);
-  --tw-prose-th-borders: var(--color-line);
+  --tw-prose-th-borders: var(--color-line-strong);
   --tw-prose-td-borders: var(--color-line);
+  line-height: 1.6;
+}
+
+.prose :where(h2, h3, h4) {
+  @apply font-semibold tracking-tight;
+  scroll-margin-top: 1.5rem;
+}
+
+.prose :where(h2) {
+  @apply mt-14 text-[1.5rem] leading-tight;
+}
+
+.prose :where(h3) {
+  @apply mt-10 text-[1.1875rem];
+}
+
+.prose :where(a):not(:where(.heading-anchor)) {
+  @apply font-normal underline decoration-1 underline-offset-4;
+}
+
+.prose :where(a):not(:where(.heading-anchor)):hover {
+  text-decoration-thickness: 2px;
+}
+
+/* Running text keeps the 44rem measure; figures, tables and code use the full column. */
+.docs-prose > :where(p, ul, ol, dl, h2, h3, h4, blockquote, aside, hr) {
+  max-width: 44rem;
+}
+
+/* Inline code: mono on the panel, with a hairline edge. */
+.prose :where(code):not(:where(pre code)) {
+  @apply bg-panel border-line rounded-xs border px-[5px] py-px text-[0.875em] font-normal;
+  overflow-wrap: anywhere;
+}
+
+.prose :where(code):not(:where(pre code))::before,
+.prose :where(code):not(:where(pre code))::after {
+  content: none;
+}
+
+.prose :where(h2, h3, h4, a) :where(code) {
+  @apply border-0 bg-transparent p-0;
+  color: inherit;
+}
+
+/* Click to copy, once site.ts has marked the article. */
+[data-copy-inline] :where(code):not(:where(pre code, a code, h2 code, h3 code, h4 code)) {
+  position: relative;
+  cursor: copy;
+  transition: border-color 150ms ease-out;
+}
+
+[data-copy-inline] :where(code):not(:where(pre code, a code, h2 code, h3 code, h4 code)):hover {
+  border-color: var(--color-line-strong);
+}
+
+[data-copy-inline] code[data-copied]::after {
+  @apply bg-ink text-canvas absolute bottom-full left-1/2 mb-1.5 -translate-x-1/2 px-2 py-0.5 font-sans text-xs whitespace-nowrap;
+  content: "Copied";
+  pointer-events: none;
 }
 
 /* Shiki emits both themes as CSS variables (defaultColor: false); pick one per theme. */
 .astro-code,
 .astro-code span {
   color: var(--shiki-light);
-  background-color: var(--shiki-light-bg);
+  background-color: var(--color-canvas);
+}
+
+.astro-code span {
+  background-color: transparent;
 }
 
 .dark .astro-code,
 .dark .astro-code span {
   color: var(--shiki-dark);
-  background-color: var(--shiki-dark-bg);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not(.light) .astro-code,
   :root:not(.light) .astro-code span {
     color: var(--shiki-dark);
-    background-color: var(--shiki-dark-bg);
   }
 }
 
+/* A code block: a hairline frame, square corners, an optional title bar. */
 .code-frame {
-  @apply border-line relative overflow-hidden rounded-lg border;
+  @apply border-line relative my-7 rounded-none border;
 }
 
 .code-frame figcaption {
-  @apply border-line bg-panel text-muted border-b px-4 py-2 font-mono text-xs;
+  @apply border-line bg-panel text-ink-2 m-0 border-b px-4 py-2 font-mono text-xs;
 }
 
 .code-frame pre {
-  @apply m-0 rounded-none;
+  @apply m-0 rounded-none px-4 py-3.5 text-[13.5px] leading-relaxed;
 }
 
-/* Added to each code frame by src/scripts/site.ts. */
+/* Added to each code frame by src/scripts/site.ts, so there is no dead button without it. */
 .code-copy {
-  @apply border-line bg-canvas text-muted absolute top-2 right-2 rounded border px-2 py-0.5 text-xs;
+  @apply border-line bg-canvas text-ink-2 absolute top-2 right-2 rounded-xs border px-2 py-0.5 font-sans text-xs;
+  transition:
+    color 150ms ease-out,
+    border-color 150ms ease-out;
 }
 
+.code-frame:has(figcaption) .code-copy {
+  @apply top-[5px];
+}
+
+/* The first block under the title rule needs no space of its own above it. */
+.docs-prose > :first-child {
+  margin-top: 0;
+}
+
+.code-copy:hover {
+  @apply border-line-strong text-ink;
+}
+
+/* GitHub callouts: a ruled note in the margin of the text, not a colored box. */
 .callout {
-  @apply border-line bg-panel my-6 rounded-lg border border-l-4 px-4 py-1;
+  @apply border-line-strong my-7 border-l-2 py-0.5 pl-5;
 }
 
 .callout-title {
-  @apply font-semibold;
+  @apply text-ink mb-1 text-sm font-semibold;
 }
 
-.callout-note,
-.callout-tip,
-.callout-important {
-  border-left-color: var(--color-accent);
+.callout > :where(p) {
+  @apply my-2;
 }
 
 .callout-warning,
 .callout-caution {
-  border-left-color: #d97706;
+  @apply border-l-4;
 }
 
 .heading-anchor {
-  @apply text-muted ml-2 no-underline opacity-0 focus:opacity-100;
+  @apply text-muted ml-2 font-normal no-underline opacity-0;
+  transition: opacity 150ms ease-out;
+}
+
+.heading-anchor:focus-visible,
+.prose :where(h2, h3):hover .heading-anchor {
+  opacity: 1;
 }
 
 .heading-anchor::after {
   content: "#";
 }
 
-.prose :where(h2, h3):hover .heading-anchor {
-  opacity: 1;
+/* Tables read like a newspaper table: an ink rule under the header, hairlines between
+   rows, tabular figures. */
+.table-scroll {
+  @apply my-7 overflow-x-auto;
 }
 
-.table-scroll {
-  @apply overflow-x-auto;
+.prose .table-scroll table {
+  @apply my-0 text-sm;
+  font-variant-numeric: tabular-nums;
+}
+
+.prose :where(thead th) {
+  @apply text-ink font-semibold;
+}
+
+/* The docs sidebar and outline lists. The current page carries an accent rule on its
+   leading edge, laid over the section's hairline. */
+.docs-list {
+  @apply border-line border-l;
+}
+
+.docs-link {
+  @apply text-ink-2 -ml-px block border-l-2 border-transparent py-1 pl-3 text-[14px] leading-snug no-underline;
+  transition:
+    color 150ms ease-out,
+    border-color 150ms ease-out;
+}
+
+.docs-link:hover {
+  @apply text-ink border-line-strong;
+}
+
+.docs-link[aria-current="page"] {
+  @apply text-ink border-accent font-medium;
+}
+
+.outline-list a {
+  @apply text-muted block py-1 text-[13px] leading-snug no-underline;
+  transition: color 150ms ease-out;
+}
+
+.outline-list a:hover {
+  @apply text-ink;
+}
+
+.outline-list a[aria-current="location"] {
+  @apply text-accent;
+}
+
+/* The mobile docs menu: a disclosure that opens without JavaScript. */
+.docs-menu > summary {
+  @apply text-ink flex cursor-pointer list-none items-center justify-between py-3 text-sm font-medium;
+}
+
+.docs-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.docs-menu > summary::after {
+  @apply text-muted font-mono;
+  content: "+";
+}
+
+.docs-menu[open] > summary::after {
+  content: "\2212";
 }

@@ -1,0 +1,24 @@
+---
+/**
+ * Where the page sits: its area, linked to the area's first page, then its section.
+ */
+interface Props {
+  area: { label: string; href: string };
+  section: string;
+}
+const { area, section } = Astro.props;
+---
+
+<nav aria-label="Breadcrumb">
+  <ol class="text-muted flex flex-wrap items-center gap-2 text-[13px]">
+    <li>
+      <a href={area.href} class="hover:text-ink no-underline transition-colors duration-150">
+        {area.label}
+      </a>
+    </li>
+    <li aria-hidden="true" class="text-line-strong">
+      /
+    </li>
+    <li class="text-ink-2">{section}</li>
+  </ol>
+</nav>

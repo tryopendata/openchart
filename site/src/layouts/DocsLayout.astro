@@ -1,10 +1,23 @@
 ---
+/**
+ * The docs page shell, built from DocsLayoutProps alone. At 1280px and wider: the
+ * area switcher and sidebar, the article, and an "On this page" column. From 1024px
+ * the outline column folds into the sidebar under the current page. Below 1024px
+ * the sidebar becomes a "Docs menu" disclosure that opens without JavaScript.
+ */
+import AreaSwitcher from "../components/docs/AreaSwitcher.astro";
+import Breadcrumb from "../components/docs/Breadcrumb.astro";
+import PageActions from "../components/docs/PageActions.astro";
+import PageOutline from "../components/docs/PageOutline.astro";
+import Pager from "../components/docs/Pager.astro";
+import Sidebar from "../components/docs/Sidebar.astro";
 import type { DocsLayoutProps } from "../lib/docs-types";
 import BaseLayout from "./BaseLayout.astro";
 
 type Props = DocsLayoutProps;
-const { page, nav, outline: toc, prev, next } = Astro.props;
-const current = page.id;
+const { page, areas, nav, outline, prev, next } = Astro.props;
+const area = areas.find((candidate) => candidate.id === page.area);
+const sectionLabel = nav.find((section) => section.id === page.section)?.label ?? page.section;
 ---
 
 <BaseLayout
@@ -14,104 +27,59 @@ const current = page.id;
   image={`/og/docs/${page.id}.png`}
   markdown={page.markdown}
 >
-  <div class="mx-auto grid max-w-6xl gap-10 px-6 py-10 lg:grid-cols-[14rem_1fr] xl:grid-cols-[14rem_1fr_12rem]">
-    <!-- Mobile: a <details> menu that opens without JavaScript. -->
-    <details class="border-line rounded-lg border lg:hidden">
-      <summary class="cursor-pointer px-4 py-2 font-medium">Docs menu</summary>
-      <nav aria-label="Docs menu" class="px-4 pb-4">
-        {nav.map((group) => (
-          <div class="mt-4">
-            <p class="text-muted text-xs font-semibold uppercase">{group.label}</p>
-            <ul class="mt-2 space-y-1">
-              {group.items.map((item) => (
-                <li>
-                  <a
-                    href={item.href}
-                    aria-current={item.id === current ? "page" : undefined}
-                    class="aria-[current=page]:text-accent block"
-                  >
-                    {item.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </nav>
-    </details>
-    <nav aria-label="Docs" class="hidden text-sm lg:block">
-      {nav.map((group) => (
-        <div class="mb-6">
-          <p class="text-muted text-xs font-semibold uppercase">{group.label}</p>
-          <ul class="mt-2 space-y-1">
-            {group.items.map((item) => (
-              <li>
-                <a
-                  href={item.href}
-                  aria-current={item.id === current ? "page" : undefined}
-                  class="aria-[current=page]:text-accent aria-[current=page]:font-medium block"
-                >
-                  {item.label}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
-    </nav>
-    <article class="min-w-0">
-      <div class="prose max-w-none">
-        <h1>{page.title}</h1>
+  <div class="mx-auto grid max-w-[90rem] px-5 sm:px-6 lg:grid-cols-[15rem_minmax(0,1fr)] lg:px-8 xl:grid-cols-[15rem_minmax(0,1fr)_16rem]">
+    <aside
+      data-docs-rail
+      class="border-line border-b lg:sticky lg:top-0 lg:max-h-screen lg:self-start lg:overflow-y-auto lg:border-b-0 lg:py-10 lg:pr-8"
+    >
+      <AreaSwitcher
+        areas={areas}
+        current={page.area}
+        class="border-line pt-3 pb-2 lg:mb-7 lg:border-b lg:pt-0 lg:pb-5"
+      />
+      <details class="docs-menu border-line border-t lg:hidden">
+        <summary>Docs menu</summary>
+        <Sidebar
+          label="Docs menu"
+          nav={nav}
+          currentId={page.id}
+          outline={outline}
+          class="pt-2 pb-8"
+        />
+      </details>
+      <Sidebar
+        label="Docs"
+        nav={nav}
+        currentId={page.id}
+        outline={outline}
+        outlineClass="xl:hidden"
+        class="hidden lg:flex"
+      />
+    </aside>
+
+    <article class="border-line min-w-0 pt-8 pb-4 lg:border-l lg:pt-12 lg:pl-12">
+      <header class="flex max-w-[44rem] flex-col gap-4">
+        {area && <Breadcrumb area={area} section={sectionLabel} />}
+        <h1 class="text-ink text-[2.125rem] leading-[1.1] font-bold tracking-[-0.02em] sm:text-[2.75rem]">
+          {page.title}
+        </h1>
+        <p class="text-ink-2 text-lg leading-relaxed">{page.description}</p>
+        <PageActions markdown={page.markdown} />
+      </header>
+      <div class="rule-axis mt-8 mb-10"></div>
+      <div class="prose docs-prose max-w-none">
         <slot />
       </div>
-      {page.markdown && (
-        <p class="text-muted mt-10 flex gap-4 text-sm">
-          <a href={page.markdown}>View as Markdown</a>
-          <button
-            type="button"
-            data-copy-page={page.markdown}
-            hidden
-            class="underline-offset-4 hover:underline"
-          >
-            Copy page
-          </button>
-        </p>
-      )}
-      {(prev || next) && (
-        <nav
-          aria-label="Pagination"
-          class="border-line mt-10 flex justify-between gap-4 border-t pt-6"
-        >
-          {prev ? (
-            <a href={prev.href} rel="prev">
-              <span class="text-muted block text-xs">Previous</span>
-              {prev.label}
-            </a>
-          ) : (
-            <span />
-          )}
-          {next && (
-            <a href={next.href} rel="next" class="text-right">
-              <span class="text-muted block text-xs">Next</span>
-              {next.label}
-            </a>
-          )}
-        </nav>
-      )}
+      <Pager prev={prev} next={next} />
     </article>
-    {toc.length > 0 && (
-      <nav aria-label="On this page" data-toc class="hidden text-sm xl:block">
-        <p class="text-muted text-xs font-semibold uppercase">On this page</p>
-        <ul class="mt-2 space-y-1">
-          {toc.map((heading) => (
-            <li class={heading.depth === 3 ? "pl-3" : ""}>
-              <a href={`#${heading.slug}`} class="aria-[current=location]:text-accent">
-                {heading.text}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </nav>
+
+    {outline.length > 0 && (
+      <aside class="hidden xl:block xl:pl-12">
+        <nav aria-label="On this page" class="sticky top-0 max-h-screen overflow-y-auto py-12">
+          <p class="text-ink mb-2 text-[13px] font-semibold">On this page</p>
+          <PageOutline outline={outline} class="border-line border-l pl-3" />
+        </nav>
+      </aside>
     )}
   </div>
 </BaseLayout>

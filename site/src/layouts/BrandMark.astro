@@ -1,0 +1,26 @@
+---
+/**
+ * The OpenChart mark: three columns standing on a ticked baseline, drawn in the
+ * current text color. Decorative; the wordmark beside it carries the name.
+ */
+interface Props {
+  class?: string;
+}
+const { class: className } = Astro.props;
+---
+
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 20 20"
+  fill="currentColor"
+  aria-hidden="true"
+  class={className}
+>
+  <rect x="3" y="10" width="3.5" height="6" />
+  <rect x="8.25" y="3" width="3.5" height="13" />
+  <rect x="13.5" y="7" width="3.5" height="9" />
+  <rect x="1" y="16" width="18" height="1.25" />
+  <rect x="1" y="17.25" width="1.25" height="2" />
+  <rect x="9.375" y="17.25" width="1.25" height="2" />
+  <rect x="17.75" y="17.25" width="1.25" height="2" />
+</svg>
