@@ -29,9 +29,11 @@
     }
 
     /* Grid cells (heatmap, waffle, calendar) have no baseline to grow from:
-       a quick fade on the author curve, no clip. */
+       each pops in on its own scattered start. The renderer stamps
+       --oc-cell-delay from a seeded shuffle over CELL_SWEEP_BUDGET_MS, so the
+       grid fills in no particular pattern. */
     & .oc-mark-rect[data-cell] :is(rect, path) {
-      animation: oc-enter-fade-only var(--oc-cell-dur, 300ms)
+      animation: oc-enter-cell var(--oc-cell-dur, 400ms)
         var(--oc-animation-ease, var(--oc-ease-smooth)) both;
       animation-delay: var(
         --oc-cell-delay,
@@ -73,11 +75,11 @@
       animation-play-state: var(--oc-play-state, running);
     }
 
-    /* Arc marks (pie/donut slices): a quick fade on the author curve.
-       Scale transforms break arc positioning because arcs use translate()
-       on parent groups. */
-    & .oc-mark-arc {
-      animation: oc-enter-fade-only var(--oc-arc-dur, 300ms)
+    /* Arc marks (pie/donut slices): each slice path fades and grows from the pie
+       centre. The transform goes on the path, never the group, whose translate()
+       attribute positions the slice. */
+    & .oc-mark-arc > path {
+      animation: oc-enter-arc var(--oc-arc-dur, 450ms)
         var(--oc-animation-ease, var(--oc-ease-smooth)) both;
       animation-delay: var(
         --oc-arc-delay,
@@ -100,20 +102,24 @@
       animation-play-state: var(--oc-play-state, running);
     }
 
-    /* Points on line/area charts appear as the line's clip edge reaches them: the
-       renderer stamps each point's delay from its x along its own series. */
-    & .oc-mark-line ~ circle.oc-mark-point,
-    & .oc-mark-area ~ circle.oc-mark-point {
-      animation-duration: var(--oc-line-point-dur, 300ms);
+    /* Points on line/area charts pop in once their own line has drawn (0.97),
+       cascading left to right over LINE_POINT_CASCADE_MS. The renderer stamps
+       each point's delay and marks it data-line-point (a scatter's trendline also
+       precedes its circles, so position can't select these). Points hidden under an endpoint marker stay hidden. */
+    & circle.oc-mark-point[data-line-point] {
+      animation: oc-enter-pop var(--oc-line-point-dur, 320ms) var(--oc-ease-punch) both;
       animation-delay: var(
         --oc-line-point-delay,
         calc(
-          var(--oc-line-point-after, calc(var(--oc-animation-duration) * 0.064336)) +
+          var(--oc-line-point-after, calc(var(--oc-animation-duration) * 0.727459)) +
           var(--oc-animation-stagger) *
           var(--oc-mark-index, 0)
         )
       );
       animation-play-state: var(--oc-play-state, running);
+    }
+    & circle.oc-mark-point[opacity="0"] {
+      animation: none;
     }
 
     /* Text marks: rise 0.6em on the author curve, with a quick fade */
@@ -121,7 +127,7 @@
       animation:
         oc-enter-rise var(--oc-text-dur, var(--oc-animation-duration))
         var(--oc-animation-ease, var(--oc-ease-smooth)) both,
-        oc-enter-fade-only 140ms var(--oc-ease-smooth) both;
+        oc-enter-fade-only 140ms var(--oc-ease-snap) both;
       animation-delay: var(
         --oc-text-delay,
         calc(var(--oc-animation-stagger) * var(--oc-mark-index, 0))
@@ -151,17 +157,35 @@
       animation-play-state: var(--oc-play-state, running);
     }
 
-    /* Data labels ride their mark: a bar's label translates from --oc-label-from
-       on the bar's own delay, duration and curve, so it stays on the tip, and
-       fades in quickly. Other labels fade in place with their mark. */
+    /* Data labels (bar values, line end labels) fade in place once their mark has
+       landed: when the bar at the label's --oc-mark-index reaches 0.97. Lines
+       share the bar's duration and curve, so the bar anchor stands in for them.
+       Labels never move during the entrance. */
     & .oc-mark-label {
-      animation:
-        oc-enter-label var(--oc-label-dur, var(--oc-animation-duration))
-        var(--oc-animation-ease, var(--oc-ease-smooth)) both,
-        oc-enter-fade-only 140ms var(--oc-ease-smooth) both;
+      animation: oc-enter-fade-only var(--oc-label-dur, 260ms)
+        var(--oc-animation-ease, var(--oc-ease-smooth)) both;
       animation-delay: var(
         --oc-label-delay,
-        calc(var(--oc-animation-stagger) * var(--oc-mark-index, 0))
+        calc(
+          var(--oc-label-after, calc(var(--oc-animation-duration) * 0.727459)) +
+          var(--oc-animation-stagger) *
+          var(--oc-mark-index, 0)
+        )
+      );
+      animation-play-state: var(--oc-play-state, running);
+    }
+
+    /* Pie/donut slice labels fade in place once their own slice reaches 0.97. */
+    & .oc-mark-arc > .oc-mark-label {
+      animation: oc-enter-fade-only var(--oc-arc-label-dur, 260ms)
+        var(--oc-animation-ease, var(--oc-ease-smooth)) both;
+      animation-delay: var(
+        --oc-arc-label-delay,
+        calc(
+          var(--oc-arc-label-after, 327.356557ms) +
+          var(--oc-animation-stagger) *
+          var(--oc-mark-index, 0)
+        )
       );
       animation-play-state: var(--oc-play-state, running);
     }
@@ -176,7 +200,7 @@
       animation-delay: var(
         --oc-endpoint-label-delay,
         calc(
-          var(--oc-endpoint-label-after, calc(var(--oc-animation-duration) * 0.261034)) +
+          var(--oc-endpoint-label-after, calc(var(--oc-animation-duration) * 0.656536)) +
           var(--oc-animation-stagger) *
           var(--oc-mark-index, 0)
         )
@@ -186,11 +210,11 @@
 
     /* Annotations: fade in once the last mark is 90% of the way there */
     & .oc-annotation {
-      animation: oc-enter-fade-only var(--oc-annotation-dur, 300ms) var(--oc-ease-smooth) both;
+      animation: oc-enter-fade-only var(--oc-annotation-dur, 300ms) var(--oc-ease-glide) both;
       animation-delay: var(
         --oc-annotation-enter-delay,
         calc(
-          var(--oc-annotation-after, calc(var(--oc-animation-duration) * 0.206)) +
+          var(--oc-annotation-after, calc(var(--oc-animation-duration) * 0.539502)) +
           var(--oc-annotation-delay, 150ms)
         )
       );
@@ -274,7 +298,7 @@
       animation-delay: var(
         --oc-sankey-link-delay,
         calc(
-          var(--oc-sankey-link-after, calc(var(--oc-animation-duration) * 0.064336)) +
+          var(--oc-sankey-link-after, calc(var(--oc-animation-duration) * 0.2)) +
           var(--oc-animation-stagger) *
           var(--oc-mark-index, 0)
         )
@@ -287,7 +311,7 @@
       animation:
         oc-enter-slide var(--oc-barlist-row-dur, calc(var(--oc-animation-duration) * 0.6))
         var(--oc-animation-ease, var(--oc-ease-smooth)) both,
-        oc-enter-fade-only 140ms var(--oc-ease-smooth) both;
+        oc-enter-fade-only 140ms var(--oc-ease-snap) both;
       animation-delay: var(
         --oc-barlist-row-delay,
         calc(var(--oc-animation-stagger) * var(--oc-mark-index, 0))

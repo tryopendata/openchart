@@ -1,15 +1,10 @@
 /**
- * Motion / Compare: OpenChart entrance and update motion next to Decks.
+ * Motion / Compare: a review page for entrance and update motion.
  *
- * A dev page for eyeballing the phase 4 tuning in plans/rfc-motion-quality.md.
- * Not a gallery page: no Demo/Section anchors, no demos sidecar, and it is
- * deliberately absent from the explicit story list in e2e/visual/stories.spec.ts
- * so it never enters the visual baseline set.
- *
- * Decks cannot be embedded. Its charts (`bar-board`, `donut-build`, the Ink*
- * marks) call `useSlide()` and run on a gsap timeline advanced by deck clicks,
- * so they throw outside a deck runtime. The right-hand cells are placeholders
- * that point at the reference to run beside this page.
+ * A dev page for eyeballing entrance tuning (plans/motion-polish.md). Each
+ * section names what to look for. Not a gallery page: no Demo/Section anchors,
+ * no demos sidecar, and it is deliberately absent from the explicit story list
+ * in e2e/visual/stories.spec.ts so it never enters the visual baseline set.
  */
 
 import type { ChartSpec } from '@opendata-ai/openchart-core';
@@ -17,7 +12,6 @@ import { Chart } from '@opendata-ai/openchart-react';
 import { type CSSProperties, useEffect, useState } from 'react';
 
 const ACCENT = '#0e7490';
-const DECKS_REF = '~/Projects/decks/examples/motion (slides 72-mt-bar-board, 75-mt-donut-build)';
 
 type Trigger = 'visible' | 'mount';
 
@@ -27,19 +21,30 @@ function withMotion(spec: ChartSpec, trigger: Trigger): ChartSpec {
   return { ...spec, animation } as ChartSpec;
 }
 
+/** Deterministic pseudo-random so replays draw the same data. */
+function seeded(seed: number) {
+  let s = seed;
+  return () => {
+    s = (s * 16807) % 2147483647;
+    return s / 2147483647;
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Specs
 // ---------------------------------------------------------------------------
 
+const teams = [
+  { label: 'Engineering', value: 142 },
+  { label: 'Product', value: 118 },
+  { label: 'Sales', value: 96 },
+  { label: 'Design', value: 71 },
+  { label: 'Support', value: 44 },
+];
+
 const barSpec: ChartSpec = {
   mark: { type: 'bar', fill: ACCENT },
-  data: [
-    { label: 'Engineering', value: 142 },
-    { label: 'Product', value: 118 },
-    { label: 'Sales', value: 96 },
-    { label: 'Design', value: 71 },
-    { label: 'Support', value: 44 },
-  ],
+  data: teams,
   encoding: {
     x: { field: 'value', type: 'quantitative' },
     y: { field: 'label', type: 'nominal', sort: '-x' },
@@ -47,20 +52,14 @@ const barSpec: ChartSpec = {
   chrome: { title: 'Headcount by team' },
 };
 
-const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-const lineSpec: ChartSpec = {
-  mark: { type: 'line' },
-  data: months.flatMap((m, i) => [
-    { month: m, series: 'A', value: 20 + i * 4 + (i % 3) * 3 },
-    { month: m, series: 'B', value: 55 - i * 2 + (i % 4) * 4 },
-  ]),
+const columnSpec: ChartSpec = {
+  mark: { type: 'bar', fill: ACCENT },
+  data: teams,
   encoding: {
-    x: { field: 'month', type: 'ordinal' },
+    x: { field: 'label', type: 'nominal' },
     y: { field: 'value', type: 'quantitative' },
-    color: { field: 'series', type: 'nominal' },
   },
-  chrome: { title: 'Two series over a year' },
+  chrome: { title: 'Headcount by team (columns)' },
 };
 
 const stackedSpec: ChartSpec = {
@@ -75,7 +74,34 @@ const stackedSpec: ChartSpec = {
     y: { field: 'value', type: 'quantitative', stack: 'zero' },
     color: { field: 'region', type: 'nominal' },
   },
+  labels: true,
   chrome: { title: 'Revenue by region' },
+};
+
+const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+const pointLineSpec: ChartSpec = {
+  mark: { type: 'line', point: true, stroke: ACCENT, strokeWidth: 2 },
+  data: months.map((m, i) => ({ month: m, value: 30 + i * 3 + ((i * 7) % 5) * 4 })),
+  encoding: {
+    x: { field: 'month', type: 'ordinal' },
+    y: { field: 'value', type: 'quantitative' },
+  },
+  chrome: { title: 'Monthly signups' },
+};
+
+const lineSpec: ChartSpec = {
+  mark: { type: 'line' },
+  data: months.flatMap((m, i) => [
+    { month: m, series: 'A', value: 20 + i * 4 + (i % 3) * 3 },
+    { month: m, series: 'B', value: 55 - i * 2 + (i % 4) * 4 },
+  ]),
+  encoding: {
+    x: { field: 'month', type: 'ordinal' },
+    y: { field: 'value', type: 'quantitative' },
+    color: { field: 'series', type: 'nominal' },
+  },
+  chrome: { title: 'Two series over a year' },
 };
 
 const donutSpec: ChartSpec = {
@@ -94,21 +120,12 @@ const donutSpec: ChartSpec = {
   chrome: { title: 'Spending mix' },
 };
 
-/** Deterministic pseudo-random so replays draw the same points. */
-function seeded(seed: number) {
-  let s = seed;
-  return () => {
-    s = (s * 16807) % 2147483647;
-    return s / 2147483647;
-  };
-}
-
-const rand = seeded(42);
+const scatterRand = seeded(42);
 const scatterSpec: ChartSpec = {
   mark: { type: 'point' },
   data: Array.from({ length: 60 }, (_, i) => {
-    const x = rand() * 100;
-    return { id: i, x, y: x * 0.6 + rand() * 40 };
+    const x = scatterRand() * 100;
+    return { id: i, x, y: x * 0.6 + scatterRand() * 40 };
   }),
   encoding: {
     x: { field: 'x', type: 'quantitative' },
@@ -117,67 +134,122 @@ const scatterSpec: ChartSpec = {
   chrome: { title: 'Correlated points' },
 };
 
-const pairs: Array<{ id: string; label: string; spec: ChartSpec; decksNote: string }> = [
-  { id: 'bar', label: 'Horizontal bar, five rows', spec: barSpec, decksNote: 'bar-board' },
-  { id: 'line', label: 'Line', spec: lineSpec, decksNote: 'InkLine' },
-  { id: 'stacked', label: 'Stacked bar', spec: stackedSpec, decksNote: 'InkBars (stacked)' },
-  { id: 'donut', label: 'Donut', spec: donutSpec, decksNote: 'donut-build' },
-  { id: 'scatter', label: 'Scatter', spec: scatterSpec, decksNote: 'story stage scatter' },
+const calendarRand = seeded(7);
+const calendarSpec: ChartSpec = {
+  mark: 'calendar',
+  data: Array.from({ length: 365 * 2 }, (_, i) => {
+    const day = i % 365;
+    const season = 1 - Math.abs((day / 365) * 4 - 2);
+    return {
+      date: new Date(Date.UTC(2023, 0, 1) + i * 86400000).toISOString().slice(0, 10),
+      reports: Math.round(20 + i * 0.02 + season * 8 + calendarRand() * 10),
+    };
+  }),
+  encoding: {
+    x: { field: 'date', type: 'temporal' },
+    color: { field: 'reports', type: 'quantitative' },
+  },
+  chrome: { title: 'Daily reports, 2023-2024' },
+};
+
+const HOURS = ['9am', '11am', '1pm', '3pm', '5pm'];
+const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+const heatmapRand = seeded(11);
+const heatmapSpec: ChartSpec = {
+  mark: 'rect',
+  data: DAYS.flatMap((day) =>
+    HOURS.map((hour) => ({ day, hour, visits: Math.round(20 + heatmapRand() * 80) })),
+  ),
+  encoding: {
+    x: { field: 'hour', type: 'nominal' },
+    y: { field: 'day', type: 'nominal' },
+    color: { field: 'visits', type: 'quantitative' },
+  },
+  chrome: { title: 'Visits by weekday and hour' },
+};
+
+const sections: Array<{ id: string; label: string; look: string; spec: ChartSpec }> = [
+  {
+    id: 'bar',
+    label: 'Horizontal bar',
+    look: 'Bars grow from the axis; each value label fades in only once its bar has finished.',
+    spec: barSpec,
+  },
+  {
+    id: 'column',
+    label: 'Column',
+    look: 'Same as the bars, vertically.',
+    spec: columnSpec,
+  },
+  {
+    id: 'stacked',
+    label: 'Stacked column with segment labels',
+    look: 'Each stack grows as one shape; segment labels appear after their stack lands.',
+    spec: stackedSpec,
+  },
+  {
+    id: 'point-line',
+    label: 'Line with points',
+    look: 'The line draws first with no dots on it; then the dots pop in along it.',
+    spec: pointLineSpec,
+  },
+  {
+    id: 'line',
+    label: 'Two-series line',
+    look: 'Endpoint markers and labels wait until their own line reaches the end.',
+    spec: lineSpec,
+  },
+  {
+    id: 'donut',
+    label: 'Donut',
+    look: 'Slices fade and grow out from the centre, one after another.',
+    spec: donutSpec,
+  },
+  {
+    id: 'scatter',
+    label: 'Scatter',
+    look: 'Points fade in on a short stagger.',
+    spec: scatterSpec,
+  },
+  {
+    id: 'calendar',
+    label: 'Calendar',
+    look: 'Cells pop in scattered across the grid, not as a left-to-right wipe.',
+    spec: calendarSpec,
+  },
+  {
+    id: 'heatmap',
+    label: 'Heatmap',
+    look: 'Same scattered pop-in as the calendar.',
+    spec: heatmapSpec,
+  },
 ];
 
 // ---------------------------------------------------------------------------
 // Layout helpers
 // ---------------------------------------------------------------------------
 
-const cell: CSSProperties = { flex: '1 1 320px', minWidth: 0, height: 320 };
+const chartBox: CSSProperties = { width: '100%', height: 360 };
 
-function DecksPlaceholder({ note }: { note: string }) {
-  return (
-    <div
-      data-testid="decks-placeholder"
-      style={{
-        ...cell,
-        border: '1px dashed currentColor',
-        borderRadius: 8,
-        opacity: 0.7,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 6,
-        padding: 16,
-        textAlign: 'center',
-        fontSize: 13,
-      }}
-    >
-      <strong>Decks counterpart: {note}</strong>
-      <span>Not embeddable: it needs a deck runtime (useSlide, click timeline).</span>
-      <span>Run the reference at {DECKS_REF}.</span>
-    </div>
-  );
-}
-
-function PairRow({
+function SectionRow({
   label,
+  look,
   spec,
-  decksNote,
   trigger,
   nonce,
 }: {
   label: string;
+  look: string;
   spec: ChartSpec;
-  decksNote: string;
   trigger: Trigger;
   nonce: number;
 }) {
   return (
-    <section style={{ marginBottom: 32 }}>
-      <h3 style={{ margin: '0 0 8px' }}>{label}</h3>
-      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-        <div style={cell} data-testid="oc-cell">
-          <Chart key={`${nonce}-${trigger}`} spec={withMotion(spec, trigger)} />
-        </div>
-        <DecksPlaceholder note={decksNote} />
+    <section style={{ marginBottom: 40 }}>
+      <h3 style={{ margin: '0 0 4px' }}>{label}</h3>
+      <p style={{ margin: '0 0 12px', opacity: 0.7 }}>{look}</p>
+      <div style={chartBox} data-testid="oc-cell">
+        <Chart key={`${nonce}-${trigger}`} spec={withMotion(spec, trigger)} />
       </div>
     </section>
   );
@@ -187,7 +259,7 @@ function PairRow({
 // 12-chart dashboard
 // ---------------------------------------------------------------------------
 
-const dashboardBases = [barSpec, lineSpec, stackedSpec, donutSpec, scatterSpec];
+const dashboardBases = [barSpec, pointLineSpec, stackedSpec, donutSpec, scatterSpec, heatmapSpec];
 const dashboard: ChartSpec[] = Array.from({ length: 12 }, (_, i) => {
   const base = dashboardBases[i % dashboardBases.length];
   return { ...base, chrome: { title: `${base.chrome?.title ?? 'Chart'} (${i + 1})` } } as ChartSpec;
@@ -200,7 +272,7 @@ function Dashboard({ trigger, nonce }: { trigger: Trigger; nonce: number }) {
       style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 16 }}
     >
       {dashboard.map((spec, i) => (
-        <div key={`${i}-${nonce}-${trigger}`} style={{ height: 380 }}>
+        <div key={`${i}-${nonce}-${trigger}`} style={{ height: 320 }}>
           <Chart spec={withMotion(spec, trigger)} />
         </div>
       ))}
@@ -249,6 +321,25 @@ function LiveSparkline({ trigger, nonce }: { trigger: Trigger; nonce: number }) 
 }
 
 // ---------------------------------------------------------------------------
+// Playback speed (review aid): slows every running animation on the page.
+// ---------------------------------------------------------------------------
+
+function usePlaybackRate(rate: number, nonce: number) {
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a Replay (new nonce) restarts the animations, so the rate must be reapplied
+  useEffect(() => {
+    if (rate === 1) return;
+    const until = performance.now() + 4000 / rate;
+    let frame = 0;
+    const tick = () => {
+      for (const a of document.getAnimations()) a.playbackRate = rate;
+      if (performance.now() < until) frame = requestAnimationFrame(tick);
+    };
+    tick();
+    return () => cancelAnimationFrame(frame);
+  }, [rate, nonce]);
+}
+
+// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
@@ -257,52 +348,60 @@ export default { title: 'Motion' };
 export const Compare = () => {
   const [nonce, setNonce] = useState(0);
   const [trigger, setTrigger] = useState<Trigger>('visible');
+  const [rate, setRate] = useState(1);
+  usePlaybackRate(rate, nonce);
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', padding: 24 }}>
+    <div style={{ maxWidth: 760, margin: '0 auto', padding: 24, color: 'inherit' }}>
       <header
         style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 10,
           display: 'flex',
+          flexWrap: 'wrap',
           gap: 16,
           alignItems: 'center',
-          padding: '8px 0',
-          background: 'Canvas',
+          padding: '8px 0 16px',
         }}
       >
-        <h2 style={{ margin: 0, flex: 1 }}>Motion compare: OpenChart vs Decks</h2>
+        <h2 style={{ margin: 0, flex: 1 }}>Motion compare</h2>
         <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <input
             type="checkbox"
             checked={trigger === 'mount'}
             onChange={(e) => setTrigger(e.target.checked ? 'mount' : 'visible')}
           />
-          trigger: 'mount' (off = play when seen)
+          Play on mount
+        </label>
+        <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          Speed
+          <select value={rate} onChange={(e) => setRate(Number(e.target.value))}>
+            <option value={1}>1x</option>
+            <option value={0.5}>0.5x</option>
+            <option value={0.25}>0.25x</option>
+          </select>
         </label>
         <button type="button" onClick={() => setNonce((n) => n + 1)}>
           Replay
         </button>
       </header>
 
-      <h2>Matched pairs</h2>
-      {pairs.map((p) => (
-        <PairRow
-          key={p.id}
-          label={p.label}
-          spec={p.spec}
-          decksNote={p.decksNote}
+      {sections.map((s) => (
+        <SectionRow
+          key={s.id}
+          label={s.label}
+          look={s.look}
+          spec={s.spec}
           trigger={trigger}
           nonce={nonce}
         />
       ))}
 
-      <h2>Live sparkline (1 Hz)</h2>
+      <h3>Live sparkline (1 Hz)</h3>
       <LiveSparkline trigger={trigger} nonce={nonce} />
 
-      <h2>Dashboard (12 charts, default animation)</h2>
-      <p>Charts below the fold hold their from-state until scrolled into view.</p>
+      <h3 style={{ marginTop: 40 }}>Dashboard (12 charts, default animation)</h3>
+      <p style={{ opacity: 0.7 }}>
+        Charts below the fold hold their from-state until scrolled into view.
+      </p>
       <Dashboard trigger={trigger} nonce={nonce} />
     </div>
   );

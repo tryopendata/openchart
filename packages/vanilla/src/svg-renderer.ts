@@ -16,6 +16,7 @@ import type {
   FacetPanelLayout,
   ResolvedFillPattern,
 } from '@opendata-ai/openchart-core';
+import { roleVars } from '@opendata-ai/openchart-core';
 import { clampStaggerDelay } from '@opendata-ai/openchart-engine';
 import { stampAnimationVars } from './animation-vars';
 import { buildGradientDefs } from './gradient-utils';
@@ -339,6 +340,36 @@ export function renderChartSVG(
             pointEls[i].setAttribute('opacity', '0');
           }
         }
+      }
+    }
+
+    // After the suppression above, so a dot hidden under an endpoint marker
+    // doesn't hold its label back.
+    if (enterPhase) {
+      // A series with popping points: its endpoint label and line label wait
+      // for the last visible dot, so the cascade ends at the label.
+      const lastPointBySeries = new Map<string, number>();
+      for (const p of svg.querySelectorAll<SVGElement>('circle[data-line-point]')) {
+        if (p.getAttribute('opacity') === '0') continue;
+        const series = p.getAttribute('data-line-point') ?? '';
+        const delay = Number.parseFloat(p.style.getPropertyValue('--oc-line-point-delay'));
+        if (Number.isFinite(delay)) {
+          lastPointBySeries.set(series, Math.max(lastPointBySeries.get(series) ?? 0, delay));
+        }
+      }
+      if (lastPointBySeries.size > 0) {
+        const stampAfterPoints = (selector: string, keyAttr: string, delayVar: string) => {
+          for (const el of svg.querySelectorAll<SVGElement>(selector)) {
+            const last = lastPointBySeries.get(el.getAttribute(keyAttr) ?? '');
+            if (last !== undefined) el.style.setProperty(delayVar, `${last}ms`);
+          }
+        };
+        stampAfterPoints(
+          '.oc-endpoint-label-entry[data-endpoint-side="trailing"], .oc-area-interior-label',
+          'data-endpoint-key',
+          roleVars('endpoint-label').delay,
+        );
+        stampAfterPoints('.oc-mark-line > .oc-mark-label', 'data-series', roleVars('label').delay);
       }
     }
   }

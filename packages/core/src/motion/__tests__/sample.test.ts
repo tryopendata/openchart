@@ -105,9 +105,9 @@ describe('deterministic quantitative motion', () => {
     });
 
     it('reports velocity as the local curve slope per second', () => {
-      // smooth's first segment: 0 -> 0.1876 over t in [0, 0.02].
+      // smooth's first segment: 0 -> 0.006 over t in [0, 0.025].
       const duration = 1000;
-      const slope = 0.1876 / 0.02;
+      const slope = 0.006 / 0.025;
       expect(sampleMotion({ duration, ease: 'smooth' }, 10).velocity).toBeCloseTo(slope, 6);
     });
   });

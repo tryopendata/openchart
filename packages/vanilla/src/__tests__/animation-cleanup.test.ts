@@ -317,7 +317,7 @@ describe('setupAnimationCleanup fallback (no getAnimations)', () => {
 });
 
 describe('entrance scan', () => {
-  it('starts each bar label with its bar, on the bar duration, riding from the baseline', () => {
+  it('fades each bar label in place once its bar is nearly grown', () => {
     const svg = animatedSVG({ ...columnSpec, animation: true, labels: { density: 'all' } });
     const scan = scanEntrance(svg);
     const labels = scan.elements.filter((e) => e.role === 'label');
@@ -328,10 +328,10 @@ describe('entrance scan', () => {
       const bar = bars.find((b) => b.index === label.index)!;
       const lt = entranceTiming('label', label.index, phase, { ...scan.context, ...label.context });
       const bt = entranceTiming('bar', bar.index, phase, { ...scan.context, ...bar.context });
-      expect(lt.delayMs).toBe(bt.delayMs);
-      expect(lt.durationMs).toBe(bt.durationMs);
-      expect(lt.fadeMs).toBe(140);
-      expect(label.el.style.getPropertyValue('--oc-label-from')).toMatch(/^0px, [\d.]+px$/);
+      expect(lt.delayMs).toBeGreaterThan(bt.delayMs);
+      expect(lt.delayMs).toBeLessThan(bt.delayMs + bt.durationMs);
+      expect(label.keyframe).toBe('oc-enter-fade-only');
+      expect(label.el.style.getPropertyValue('--oc-label-from')).toBe('');
     }
   });
 });

@@ -8,7 +8,7 @@ import { compileChart } from '@opendata-ai/openchart-engine';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createContainer } from '../__test-fixtures__/dom';
 import { scanEntrance } from '../animation';
-import { labelFromOffset, stackExtents } from '../renderers/entrance-geometry';
+import { stackExtents } from '../renderers/entrance-geometry';
 import { renderChartSVG } from '../svg-renderer';
 
 const ROWS = ['A', 'B', 'C'].flatMap((category, i) =>
@@ -89,6 +89,39 @@ describe('stack reveal', () => {
     for (const panel of panels) {
       expect(panel.querySelectorAll('.oc-marks > .oc-stack-reveal')).toHaveLength(3);
     }
+  });
+
+  it("gives each stacked label its own stack's stagger index, in faceted panels too", () => {
+    const svg = render(
+      stackedColumns({
+        data: ROWS.flatMap((r) => [
+          { ...r, panel: 'P1' },
+          { ...r, panel: 'P2' },
+        ]),
+        encoding: {
+          ...stackedColumns().encoding,
+          facet: { field: 'panel', type: 'nominal' },
+        },
+        labels: { density: 'all' },
+      } as Partial<ChartSpec>),
+    );
+    let checked = 0;
+    for (const panel of svg.querySelectorAll('.oc-facet-panel')) {
+      const stackIndexByKey = new Map<string, string>();
+      for (const wrapper of panel.querySelectorAll<SVGElement>('.oc-stack-reveal')) {
+        const index = wrapper.style.getPropertyValue('--oc-mark-index');
+        for (const segment of wrapper.querySelectorAll('.oc-mark-rect[data-key]')) {
+          stackIndexByKey.set(segment.getAttribute('data-key')!, index);
+        }
+      }
+      for (const label of panel.querySelectorAll<SVGElement>('.oc-mark-label')) {
+        const key = label.getAttribute('data-label-key')!;
+        expect(stackIndexByKey.has(key)).toBe(true);
+        expect(label.style.getPropertyValue('--oc-mark-index')).toBe(stackIndexByKey.get(key));
+        checked++;
+      }
+    }
+    expect(checked).toBe(ROWS.length * 2);
   });
 
   it('grows a stack that crosses zero both ways from the baseline', () => {
@@ -172,9 +205,7 @@ describe('grid cells', () => {
     },
   };
 
-  it.each(
-    Object.entries(CELLS),
-  )('%s cells fade: no stack wrapper, baseline or label carry', (_, spec) => {
+  it.each(Object.entries(CELLS))('%s cells fade: no stack wrapper or baseline', (_, spec) => {
     const layout = compileChart({ ...spec, animation: true }, { width: 600, height: 400 });
     const cells = layout.marks.filter((m): m is RectMark => m.type === 'rect' && !!m.cell);
     expect(cells.length).toBeGreaterThan(0);
@@ -182,8 +213,6 @@ describe('grid cells', () => {
     for (const cell of cells) {
       expect(cell.baseline).toBeUndefined();
       expect(stacks.has(cell)).toBe(false);
-      expect(labelFromOffset(cell, undefined)).toBeUndefined();
-      expect(labelFromOffset(cell, undefined, cell.y)).toBeUndefined();
     }
 
     const svg = renderChartSVG(layout, createContainer(), { animate: true });
