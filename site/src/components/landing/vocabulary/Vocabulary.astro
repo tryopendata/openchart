@@ -1,8 +1,9 @@
 ---
 /**
- * The visual vocabulary wall: about 24 small live charts filed by intent, with a
- * filter that refiles them. Stub from the phase 2 scaffold; lane 2/b fills it
- * with the VocabularyWall island (client:visible).
+ * The visual vocabulary wall: 24 small charts filed by intent, set like a
+ * newsroom's chart style sheet, with a filter that refiles them. Each tile is an
+ * existing demo drawn without its chrome; its static SVGs are rendered here at
+ * build time and the VocabularyWall island (client:visible) brings them to life.
  *
  * Contract (e2e/landing.spec.ts relies on it):
  * - `<section id="vocabulary" aria-labelledby="vocabulary-title" data-landing-section>`
@@ -12,8 +13,48 @@
  * - Each tile carries `data-vocabulary-tile` and holds one link to its docs page
  *   under `/docs/<intent>/`. A filtered-out tile is hidden, not just dimmed.
  */
+import { getDemo } from "../../../demos/registry";
+import { demoDomId } from "../../../lib/demo/dom-id";
+import { staticSvg } from "../../../lib/demo/static-svg";
+import { validateDemo } from "../../../lib/demo/validate";
 import { landingCopy } from "../../../landing/copy";
+import { vocabularyTiles } from "../../../landing/vocabulary";
 import "../../../styles/landing-wall.css";
+import { TILE_SVG_SIZE, tileSpec } from "./tile-spec";
+import { VocabularyWall } from "./VocabularyWall";
+import { intentCounts, WALL_INTENTS } from "./wall-filter";
+
+const labelOf = new Map(WALL_INTENTS.map((intent) => [intent.id, intent.label]));
+const counts = intentCounts(vocabularyTiles.map((tile) => tile.intent));
+const intents = WALL_INTENTS.filter((intent) => counts.has(intent.id)).map((intent) => ({
+  ...intent,
+  count: counts.get(intent.id) ?? 0,
+}));
+
+/** JSON that cannot close its `<script>` element early. */
+const scriptSafe = (json: string) => json.replaceAll("<", "\\u003c");
+
+const tiles = vocabularyTiles.map((tile, index) => {
+  let spec;
+  try {
+    const demo = getDemo(tile.demo);
+    validateDemo(tile.demo, demo.spec);
+    spec = tileSpec(demo.spec);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(`src/landing/vocabulary.ts tile "${tile.demo}": ${reason}`, { cause: error });
+  }
+  const prefix = `w-${demoDomId(tile.demo)}`;
+  const light = staticSvg(spec, { ...TILE_SVG_SIZE, idPrefix: `${prefix}-l`, dark: false });
+  const dark = light && staticSvg(spec, { ...TILE_SVG_SIZE, idPrefix: `${prefix}-d`, dark: true });
+  return {
+    ...tile,
+    groupStart: index === 0 || vocabularyTiles[index - 1]?.intent !== tile.intent,
+    intentLabel: labelOf.get(tile.intent) ?? tile.intent,
+    svg: light === null ? null : `${light}${dark ?? ""}`,
+    specJson: scriptSafe(JSON.stringify(spec)),
+  };
+});
 ---
 
 <section
@@ -24,8 +65,55 @@ import "../../../styles/landing-wall.css";
 >
   <div class="landing-container">
     <div class="rule-axis landing-rule" aria-hidden="true"></div>
-    <h2 id="vocabulary-title" class="landing-heading">
-      {landingCopy.headings.vocabulary}
-    </h2>
+    <div class="wall-head" data-reveal>
+      <h2 id="vocabulary-title" class="landing-heading" data-motion="lift-md">
+        {landingCopy.headings.vocabulary}
+      </h2>
+      <p class="wall-lede" data-motion-part>
+        The {tiles.length} charts below are filed by the job they do, the way a desk style sheet files
+        them. Each is drawn by OpenChart from the spec on its docs page, without its title and source
+        lines. Choose a purpose to narrow the sheet.
+      </p>
+    </div>
+    <VocabularyWall client:visible intents={intents} total={tiles.length}>
+      <ul class="wall-grid" role="list">
+        {
+          tiles.map((tile) => (
+            <li
+              class="wall-tile"
+              data-vocabulary-tile={tile.demo}
+              data-intent={tile.intent}
+              data-group-start={tile.groupStart ? "" : undefined}
+            >
+              <span class="wall-rule" aria-hidden="true" />
+              <span class="wall-intent">{tile.groupStart ? tile.intentLabel : ""}</span>
+              <div
+                class="wall-stage"
+                data-wall-stage
+                data-wall-eager={tile.svg === null ? "" : undefined}
+                inert
+                aria-hidden="true"
+              >
+                {tile.svg === null ? (
+                  <p class="wall-placeholder">Drawn in the browser.</p>
+                ) : (
+                  <Fragment set:html={tile.svg} />
+                )}
+              </div>
+              <a class="wall-name" href={tile.href}>
+                {tile.label}
+              </a>
+              <script
+                type="application/json"
+                data-wall-spec
+                data-pagefind-ignore
+                is:inline
+                set:html={tile.specJson}
+              />
+            </li>
+          ))
+        }
+      </ul>
+    </VocabularyWall>
   </div>
 </section>

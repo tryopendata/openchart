@@ -1,9 +1,10 @@
 ---
 /**
  * One spec, four house styles: a pinned, scrubbed section where one chart moves
- * through the essay, wire, broadsheet and terminal presets and then dark mode.
- * Stub from the phase 2 scaffold; lane 2/b fills it with the PresetScrub island
- * (client:visible).
+ * through the essay, wire, broadsheet and terminal presets and then dark mode,
+ * with the theme lines each stop changes. The stops, their diffs and the first
+ * stop's static SVG are computed here at build time; the PresetScrub island
+ * (client:visible) runs the chart, the pin and the buttons.
  *
  * Contract (e2e/landing.spec.ts relies on it):
  * - `<section id="styles" aria-labelledby="styles-title" data-landing-section>`
@@ -15,15 +16,43 @@
  * - Under 900px or with reduced motion there is no pin; the presets are buttons
  *   named by preset ("Essay", "Wire", "Broadsheet", "Terminal").
  */
+import type { ChartSpec } from "@opendata-ai/openchart-core";
+import { renderStaticSVG } from "@opendata-ai/openchart-vanilla/static";
+import { houseStyle } from "../../../demos/landing/house-style";
+import { validateDemo } from "../../../lib/demo/validate";
 import { landingCopy } from "../../../landing/copy";
 import "../../../styles/landing-wall.css";
+import { HOUSE_STYLE_STOPS, houseStyleDiffs } from "./house-styles";
+import { PresetScrub } from "./PresetScrub";
+
+validateDemo(houseStyle.id, houseStyle.spec);
+const spec = houseStyle.spec as ChartSpec;
+const diffs = houseStyleDiffs();
+const stops = HOUSE_STYLE_STOPS.map((stop, index) => ({ ...stop, diff: diffs[index] ?? [] }));
+const first = HOUSE_STYLE_STOPS[0];
+
+// The preset is the spec's own theme and no site theme is passed: a mount theme
+// would override the preset's fonts and paper, which are the point of the section.
+const initialSvg = renderStaticSVG(
+  { ...spec, theme: first?.theme, watermark: false },
+  { idPrefix: "house-style", width: 720, height: 440, darkMode: "off", precision: 1 },
+);
 ---
 
 <section id="styles" aria-labelledby="styles-title" data-landing-section class="landing-section">
   <div class="landing-container">
     <div class="rule-axis landing-rule" aria-hidden="true"></div>
-    <h2 id="styles-title" class="landing-heading">
-      {landingCopy.headings.styles}
-    </h2>
+    <div class="wall-head" data-reveal>
+      <h2 id="styles-title" class="landing-heading" data-motion="lift-md">
+        {landingCopy.headings.styles}
+      </h2>
+      <p class="wall-lede" data-motion-part>
+        A house style is a theme, and the theme sits apart from the data and the encoding. The
+        library ships four presets: essay, wire, broadsheet and terminal. Below, the same spec takes
+        each in turn, then dark mode, and the lines beside the chart are the theme values that
+        changed.
+      </p>
+    </div>
+    <PresetScrub client:visible stops={stops} spec={spec} initialSvg={initialSvg} />
   </div>
 </section>
