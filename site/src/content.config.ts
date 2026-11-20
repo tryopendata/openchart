@@ -6,17 +6,13 @@
  */
 
 import { defineCollection } from "astro:content";
-import { join } from "node:path";
 import { glob } from "astro/loaders";
 import { docSchema, repoDocSchema } from "./content/schema";
-import { publishedRepoDocs, repoRoot } from "./lib/repo-docs";
+import { repoDocsDir, repoPages } from "./lib/repo-docs";
 
-const repoDocsDir = join(repoRoot(), "docs");
-const repoPages = publishedRepoDocs(repoDocsDir);
-
-/** The page id publishedRepoDocs assigned to a docs file. */
+/** The page id repoPages assigned to a docs file. */
 function repoPageId(file: string): string {
-  const id = repoPages.get(file);
+  const id = repoPages().get(file);
   if (!id) throw new Error(`docs/${file} was loaded but is not a published page.`);
   return id;
 }
@@ -24,8 +20,8 @@ function repoPageId(file: string): string {
 export const collections = {
   repoDocs: defineCollection({
     loader: glob({
-      pattern: [...repoPages.keys()],
-      base: repoDocsDir,
+      pattern: [...repoPages().keys()],
+      base: repoDocsDir(),
       generateId: ({ entry }) => repoPageId(entry),
     }),
     schema: repoDocSchema,

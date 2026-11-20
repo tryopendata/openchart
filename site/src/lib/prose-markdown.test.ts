@@ -1,11 +1,12 @@
 // @vitest-environment node
+/** The prose plugins rendered through the real Sätteri processor. */
 import { createSatteriMarkdownProcessor, satteriHeadingIdsPlugin } from "@astrojs/markdown-satteri";
 import { describe, expect, it } from "vitest";
-import { codeTitle, docsHastPlugins } from "./markdown";
+import { callouts, codeFrames, codeTitle, headingAnchors, tableScroll } from "./prose-markdown";
 
 async function render(markdown: string) {
   const processor = await createSatteriMarkdownProcessor({
-    hastPlugins: [satteriHeadingIdsPlugin(), ...docsHastPlugins],
+    hastPlugins: [satteriHeadingIdsPlugin(), callouts, headingAnchors, tableScroll, codeFrames],
     syntaxHighlight: "shiki",
     shikiConfig: {
       themes: { light: "github-light", dark: "github-dark" },
@@ -15,7 +16,7 @@ async function render(markdown: string) {
   return processor.render(markdown);
 }
 
-describe("docs Markdown", () => {
+describe("prose Markdown", () => {
   it("turns GitHub alerts into labelled callouts and leaves plain quotes alone", async () => {
     const { code } = await render("> [!WARNING]\n> Back up first.\n\n> Just a quote.\n");
     expect(code).toContain('<aside class="callout callout-warning">');

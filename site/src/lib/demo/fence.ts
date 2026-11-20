@@ -8,8 +8,9 @@
 import type { SatteriProcessorOptions } from "@astrojs/markdown-satteri";
 import type { VizSpec } from "@opendata-ai/openchart-core";
 import type { ShikiConfig } from "astro";
-import { DEFAULT_DEMO_HEIGHT, demoFigureHtml } from "../../components/demo/figure-html";
+import { DEFAULT_DEMO_HEIGHT } from "../../demos/types";
 import { fenceDemoId } from "./dom-id";
+import { demoFigureHtml } from "./figure";
 import { validateDemo } from "./validate";
 
 type HastPlugin = Extract<

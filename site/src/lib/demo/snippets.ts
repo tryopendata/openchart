@@ -1,10 +1,12 @@
 /**
  * Turns a spec into complete, runnable code for each framework the library
- * ships a wrapper for. The demo figure's code tabs show these strings.
+ * ships a wrapper for, and a display form of the same code with the data rows
+ * folded away. The demo code tabs show the folded form and copy the complete one.
  */
 import type { VizSpec } from "@opendata-ai/openchart-core";
 import { isChartSpec, isLayerSpec } from "@opendata-ai/openchart-core";
 
+/** Code for each framework wrapper, keyed by framework. */
 export type FrameworkSnippets = { react: string; vue: string; svelte: string; vanilla: string };
 
 /** The names one spec type goes by in the wrappers and the core types. */
@@ -39,13 +41,30 @@ function hoistedData(spec: VizSpec): unknown[] | null {
   return Array.isArray(data) && data.length > MAX_INLINE_ROWS ? data : null;
 }
 
-/** The `data` and `spec` constants every snippet starts from. */
+/** The `data` and `spec` constants every snippet starts from, with the rows written out. */
 function specDeclarations(spec: VizSpec, specType: string): string {
   const data = hoistedData(spec);
   if (!data) return `const spec: ${specType} = ${JSON.stringify(spec, null, 2)};`;
+  return hoistedDeclarations(spec, specType, JSON.stringify(data, null, 2));
+}
+
+/** The declarations with the spec's `data` moved into a constant whose value is `dataSource`. */
+function hoistedDeclarations(spec: VizSpec, specType: string, dataSource: string): string {
   const { data: _hoisted, ...rest } = spec as VizSpec & { data: unknown };
   const body = JSON.stringify(rest, null, 2).replace(/^\{\n?/, "{\n  data,\n");
-  return `const data = ${JSON.stringify(data, null, 2)};\n\nconst spec: ${specType} = ${body};`;
+  return `const data = ${dataSource};\n\nconst spec: ${specType} = ${body};`;
+}
+
+/** The declarations with any data rows folded into a one-line comment that counts them. */
+function foldedDeclarations(spec: VizSpec, specType: string): string {
+  const data = (spec as { data?: unknown }).data;
+  if (!Array.isArray(data)) return specDeclarations(spec, specType);
+  const rows = data.length === 1 ? "1 row" : `${data.length} rows`;
+  return hoistedDeclarations(
+    spec,
+    specType,
+    `[/* ${rows}, as in the Spec tab; Copy includes them */]`,
+  );
 }
 
 function imports(name: string, from: string, specType: string): string {
@@ -83,6 +102,15 @@ function vanillaSnippet(wrapper: Wrapper, declarations: string): string {
   return `${head}\n\n${declarations}\n\n${mount}\n`;
 }
 
+function snippetsFrom(wrapper: Wrapper, declarations: string): FrameworkSnippets {
+  return {
+    react: reactSnippet(wrapper, declarations),
+    vue: vueSnippet(wrapper, declarations),
+    svelte: svelteSnippet(wrapper, declarations),
+    vanilla: vanillaSnippet(wrapper, declarations),
+  };
+}
+
 /**
  * Complete, runnable code that renders this spec in each framework.
  *
@@ -90,11 +118,16 @@ function vanillaSnippet(wrapper: Wrapper, declarations: string): string {
  */
 export function frameworkSnippets(spec: VizSpec): FrameworkSnippets {
   const wrapper = wrapperFor(spec);
-  const declarations = specDeclarations(spec, wrapper.specType);
-  return {
-    react: reactSnippet(wrapper, declarations),
-    vue: vueSnippet(wrapper, declarations),
-    svelte: svelteSnippet(wrapper, declarations),
-    vanilla: vanillaSnippet(wrapper, declarations),
-  };
+  return snippetsFrom(wrapper, specDeclarations(spec, wrapper.specType));
+}
+
+/**
+ * The code `frameworkSnippets` returns, for display: the data rows are folded into
+ * a one-line comment that counts them, so a page carries each demo's data once.
+ *
+ * @throws {TypeError} When the spec's type has no framework wrapper.
+ */
+export function foldedFrameworkSnippets(spec: VizSpec): FrameworkSnippets {
+  const wrapper = wrapperFor(spec);
+  return snippetsFrom(wrapper, foldedDeclarations(spec, wrapper.specType));
 }

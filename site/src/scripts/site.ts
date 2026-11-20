@@ -6,6 +6,7 @@
  */
 
 import { spyToc } from "@steamfield/ui/docs";
+import { DEMO_ATTR } from "../lib/demo/markup";
 
 const THEME_KEY = "theme";
 /** How long a button says "Copied" or "Copy failed" before its label returns. */
@@ -62,7 +63,7 @@ function onCopyClick(button: HTMLButtonElement, copy: () => Promise<void>) {
 function setupCodeCopy() {
   for (const frame of document.querySelectorAll<HTMLElement>(".code-frame")) {
     const code = frame.querySelector("code");
-    if (!code || frame.closest("[data-demo]")) continue;
+    if (!code || frame.closest(`[${DEMO_ATTR.figure}]`)) continue;
     const button = document.createElement("button");
     button.type = "button";
     button.className = "code-copy";

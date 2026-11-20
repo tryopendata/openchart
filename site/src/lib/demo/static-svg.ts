@@ -7,12 +7,13 @@ import type { VizSpec } from "@opendata-ai/openchart-core";
 import { isGraphSpec, isSankeySpec, isTableSpec } from "@opendata-ai/openchart-core";
 import { renderStaticSVG } from "@opendata-ai/openchart-vanilla/static";
 import { chartTheme } from "./chart-theme";
+import { DEMO_CLASS } from "./markup";
 
 export type StaticSvgOptions = { idPrefix: string; width: number; height: number; dark: boolean };
 
 type StaticSpec = Parameters<typeof renderStaticSVG>[0];
 
-const STATIC_CLASS = "demo-static";
+const STATIC_CLASS = DEMO_CLASS.static;
 
 function hasStaticRenderer(spec: VizSpec): spec is StaticSpec {
   return !isTableSpec(spec) && !isGraphSpec(spec) && !isSankeySpec(spec);

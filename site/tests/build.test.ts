@@ -8,13 +8,14 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
+  statSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { join, resolve } from "node:path";
 import { Window } from "happy-dom";
 import { describe, expect, it } from "vitest";
-import { site } from "../src/config";
+import { docsAreas, site } from "../src/config";
 
 const parser = new new Window().DOMParser();
 const read = (root: string, path: string) => readFileSync(join(root, path), "utf8");
@@ -71,6 +72,8 @@ function islandNames(root: string, path: string) {
 const docs = sourceDocs();
 const BAR = "comparison/bar";
 const GETTING_STARTED = "get-started/getting-started";
+/** A catalog page carries several demos; past this its HTML is too slow on a phone connection. */
+const MAX_VISUALIZATION_PAGE_BYTES = 500_000;
 
 describe("the page set", () => {
   it("includes the first catalog page and the first guide", () => {
@@ -108,6 +111,17 @@ describe("demos", () => {
     );
     expect(figures.length).toBeGreaterThanOrEqual(1);
     expect(figures[0]?.querySelector("svg.demo-static")).not.toBeNull();
+  });
+
+  it("every Visualizations page is at most 500 KB of HTML", () => {
+    const sections: readonly string[] =
+      docsAreas.find((area) => area.id === "visualizations")?.sections.map(({ id }) => id) ?? [];
+    const pages = docs.filter(({ id }) => sections.includes(id.split("/")[0] ?? ""));
+    expect(pages.map(({ id }) => id)).toContain(BAR);
+    const oversized = pages
+      .map(({ id }) => ({ id, bytes: statSync(join("dist", pagePath(id))).size }))
+      .filter(({ bytes }) => bytes > MAX_VISUALIZATION_PAGE_BYTES);
+    expect(oversized).toEqual([]);
   });
 
   it.each([BAR, GETTING_STARTED])("%s repeats no element id", (id) => {
