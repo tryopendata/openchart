@@ -1,0 +1,21 @@
+---
+// A demo figure whose spec no mount function accepts, written by hand so it
+// skips build-time validation. The browser tests check the failure state on it.
+import BaseLayout from "../../layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="Broken demo fixture" path="/fixtures/broken-demo/" noindex>
+  <div class="mx-auto max-w-4xl px-6 py-10">
+    <h1>Broken demo fixture</h1>
+    <figure class="demo" data-demo="fixtures/broken">
+      <div class="demo-stage" data-demo-stage style="--demo-height: 400px"></div>
+      <script
+        type="application/json"
+        data-demo-spec
+        set:html={JSON.stringify({ type: "no-such-type" })}
+      />
+      <div class="demo-code" data-demo-code></div>
+      <figcaption class="figure-caption">A spec that cannot mount.</figcaption>
+    </figure>
+  </div>
+</BaseLayout>

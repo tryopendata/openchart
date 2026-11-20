@@ -1,0 +1,121 @@
+---
+import { site } from "../config";
+import "../styles/global.css";
+
+interface Props {
+  title: string;
+  description?: string;
+  /** Route path with its trailing slash, e.g. "/docs/" (never Astro.url, which a host can rewrite). */
+  path: string;
+  /** Social card path under /og/. */
+  image?: string;
+  /** This page's Markdown export, linked as rel="alternate". */
+  markdown?: string;
+  noindex?: boolean;
+}
+const {
+  title,
+  description = site.description,
+  path,
+  image = "/og/index.png",
+  markdown,
+  noindex = false,
+} = Astro.props;
+const canonical = new URL(path, site.url);
+const ogImage = new URL(image, site.url);
+const pageTitle = path === "/" ? `${site.name}: ${title}` : `${title} | ${site.name}`;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{pageTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+    {markdown && <link rel="alternate" type="text/markdown" href={markdown} />}
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={site.name} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
+    <script is:inline>
+      // Before paint: the stored choice, else the system preference.
+      (() => {
+        try {
+          const stored = localStorage.getItem("theme");
+          const dark = stored
+            ? stored === "dark"
+            : window.matchMedia("(prefers-color-scheme: dark)").matches;
+          document.documentElement.classList.add(dark ? "dark" : "light");
+        } catch {
+          // Storage blocked: the CSS media fallback applies.
+        }
+      })();
+    </script>
+    <script>
+      import { initAnalytics } from "../lib/analytics";
+      import "../scripts/site";
+      import "../scripts/demos";
+
+      // Off while PUBLIC_POSTHOG_KEY is empty, which is the state in dev, tests and CI.
+      initAnalytics({
+        key: import.meta.env.PUBLIC_POSTHOG_KEY,
+        host: import.meta.env.PUBLIC_POSTHOG_HOST,
+      });
+    </script>
+  </head>
+  <body class="flex min-h-screen flex-col">
+    <a
+      href="#main"
+      class="bg-canvas sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:p-2"
+    >
+      Skip to content
+    </a>
+    <slot name="banner" />
+    <header class="border-line border-b">
+      <div class="mx-auto flex max-w-6xl items-center gap-6 px-6 py-4">
+        <a href="/" class="font-semibold">
+          {site.name}
+        </a>
+        {site.version && <span class="text-muted font-mono text-xs">v{site.version}</span>}
+        <nav aria-label="Main" class="ml-auto flex items-center gap-5 text-sm">
+          <a href="/docs/">Docs</a>
+          {site.social.map((link) => (
+            <a href={link.href}>{link.label}</a>
+          ))}
+        </nav>
+        <!-- Search goes here: a search fragment fills this slot. -->
+        <slot name="search" />
+        <button
+          type="button"
+          data-theme-toggle
+          hidden
+          class="border-line rounded border px-2 py-1 text-sm"
+        >
+          Dark theme
+        </button>
+      </div>
+    </header>
+    <main id="main" class="flex-1">
+      <slot />
+    </main>
+    <footer class="border-line text-muted border-t text-sm">
+      <div class="mx-auto flex max-w-6xl flex-wrap gap-x-6 gap-y-2 px-6 py-6">
+        <span>Released under the {site.license} license.</span>
+        <a href={site.releasesUrl}>Releases</a>
+        {site.social.map((link) => (
+          <a href={link.href}>{link.label}</a>
+        ))}
+      </div>
+    </footer>
+  </body>
+</html>

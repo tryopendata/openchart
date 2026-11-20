@@ -356,7 +356,11 @@ const fullOutPath = join(repoRoot, 'llms-full.txt');
 const fullBody = [
   body.trimEnd(),
   ...FULL_DOCS.map((name) => {
-    const doc = readFileSync(join(repoRoot, 'docs', name), 'utf8');
+    // Frontmatter is site metadata (section, order), not documentation.
+    const doc = readFileSync(join(repoRoot, 'docs', name), 'utf8').replace(
+      /^---\n[\s\S]*?\n---\n+/,
+      '',
+    );
     return `\n\n---\n\n<!-- docs/${name} -->\n\n${doc.trimEnd()}`;
   }),
   '\n',

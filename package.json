@@ -14,7 +14,8 @@
   },
   "workspaces": [
     "packages/*",
-    "examples"
+    "examples",
+    "site"
   ],
   "scripts": {
     "build": "bun run --filter '@opendata-ai/openchart-core' build && bun run --filter '@opendata-ai/openchart-engine' build && bun run --filter '@opendata-ai/openchart-vanilla' build && bun run --filter '@opendata-ai/openchart-react' --filter '@opendata-ai/openchart-vue' --filter '@opendata-ai/openchart-svelte' build",

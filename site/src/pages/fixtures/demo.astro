@@ -1,0 +1,13 @@
+---
+// A page the browser tests and lane checks use to exercise the demo system.
+import Demo from "../../components/demo/Demo.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="Demo fixture" path="/fixtures/demo/" noindex>
+  <div class="mx-auto max-w-4xl px-6 py-10">
+    <h1>Demo fixture</h1>
+    <Demo id="fixtures/bar" />
+    <Demo id="fixtures/table" />
+  </div>
+</BaseLayout>

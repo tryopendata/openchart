@@ -1,0 +1,15 @@
+---
+// Renders the demo figure for a demo id.
+interface Props {
+  id: string;
+  tabs?: boolean;
+}
+const { id } = Astro.props;
+---
+
+<figure class="demo" data-demo={id}>
+  <div class="demo-stage" data-demo-stage style="--demo-height: 400px"></div>
+  <script type="application/json" data-demo-spec set:html="{}" />
+  <div class="demo-code" data-demo-code></div>
+  <figcaption class="figure-caption">{id}</figcaption>
+</figure>

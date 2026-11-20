@@ -1,0 +1,47 @@
+---
+import { InstallTabs } from "../components/landing/InstallTabs";
+import {
+  Demo,
+  Features,
+  Hero,
+  ReleaseBanner,
+  Sponsors,
+  UsedBy,
+} from "../components/landing/sections";
+import { site } from "../config";
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout title={site.tagline} path="/">
+  <ReleaseBanner slot="banner" announcement={site.announcement} />
+  <div class="mx-auto flex max-w-6xl flex-col gap-20 px-6 py-16">
+    <section class="grid items-center gap-10 lg:grid-cols-2">
+      <div class="flex flex-col gap-8">
+        <Hero tagline={site.tagline} description={site.description} />
+        <!-- The landing page's only island; site.islands lists it and the build test checks. -->
+        <InstallTabs client:visible options={site.install} />
+        <p class="flex gap-6">
+          <a href="/docs/" class="bg-accent text-canvas rounded px-4 py-2 font-medium">
+            Read the docs
+          </a>
+          <a href={site.repo} class="px-4 py-2 font-medium">
+            View on GitHub
+          </a>
+        </p>
+      </div>
+      <Demo title={site.demo.title} lines={site.demo.lines} />
+    </section>
+    <Features features={site.features} />
+    <UsedBy logos={site.usedBy} />
+    <section aria-labelledby="start-title" class="flex flex-col items-center gap-4 text-center">
+      <h2 id="start-title" class="text-2xl font-semibold">
+        Get started in a minute
+      </h2>
+      <p class="text-muted">Install {site.name}, then follow the first guide.</p>
+      <a href="/docs/getting-started/installation/" class="text-accent font-medium">
+        Installation guide
+      </a>
+    </section>
+    <Sponsors href={site.sponsors.href} logos={site.sponsors.logos} />
+  </div>
+</BaseLayout>

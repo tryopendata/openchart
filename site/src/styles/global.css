@@ -1,0 +1,144 @@
+@import "tailwindcss";
+@import "./demo.css";
+@plugin "@tailwindcss/typography";
+
+/*
+ * Color tokens. Components use these utilities (bg-canvas, text-ink, text-muted,
+ * border-line, bg-panel, text-accent) instead of dark: variants, so one set of
+ * overrides below serves the theme toggle and visitors without JavaScript.
+ * `static` emits every token, because the CSS below reads them with var().
+ */
+@theme static {
+  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --color-canvas: #ffffff;
+  --color-ink: #0f172a;
+  --color-muted: #475569;
+  --color-line: #e2e8f0;
+  --color-panel: #f8fafc;
+  --color-accent: #1d4ed8;
+}
+
+@layer base {
+  /* The head script sets .dark or .light before paint. */
+  .dark {
+    --color-canvas: #0b1120;
+    --color-ink: #f1f5f9;
+    --color-muted: #a3b1c6;
+    --color-line: #1e293b;
+    --color-panel: #111a2e;
+    --color-accent: #93c5fd;
+    color-scheme: dark;
+  }
+
+  /* Without JavaScript neither class is set; follow the system preference. */
+  @media (prefers-color-scheme: dark) {
+    :root:not(.light) {
+      --color-canvas: #0b1120;
+      --color-ink: #f1f5f9;
+      --color-muted: #a3b1c6;
+      --color-line: #1e293b;
+      --color-panel: #111a2e;
+      --color-accent: #93c5fd;
+      color-scheme: dark;
+    }
+  }
+
+  body {
+    @apply bg-canvas text-ink font-sans antialiased;
+  }
+
+  a {
+    @apply underline-offset-4 hover:underline;
+  }
+}
+
+/* Docs prose follows the tokens in both themes. */
+.prose {
+  --tw-prose-body: var(--color-ink);
+  --tw-prose-headings: var(--color-ink);
+  --tw-prose-lead: var(--color-muted);
+  --tw-prose-links: var(--color-accent);
+  --tw-prose-bold: var(--color-ink);
+  --tw-prose-counters: var(--color-muted);
+  --tw-prose-bullets: var(--color-muted);
+  --tw-prose-hr: var(--color-line);
+  --tw-prose-quotes: var(--color-ink);
+  --tw-prose-quote-borders: var(--color-line);
+  --tw-prose-code: var(--color-ink);
+  --tw-prose-th-borders: var(--color-line);
+  --tw-prose-td-borders: var(--color-line);
+}
+
+/* Shiki emits both themes as CSS variables (defaultColor: false); pick one per theme. */
+.astro-code,
+.astro-code span {
+  color: var(--shiki-light);
+  background-color: var(--shiki-light-bg);
+}
+
+.dark .astro-code,
+.dark .astro-code span {
+  color: var(--shiki-dark);
+  background-color: var(--shiki-dark-bg);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) .astro-code,
+  :root:not(.light) .astro-code span {
+    color: var(--shiki-dark);
+    background-color: var(--shiki-dark-bg);
+  }
+}
+
+.code-frame {
+  @apply border-line relative overflow-hidden rounded-lg border;
+}
+
+.code-frame figcaption {
+  @apply border-line bg-panel text-muted border-b px-4 py-2 font-mono text-xs;
+}
+
+.code-frame pre {
+  @apply m-0 rounded-none;
+}
+
+/* Added to each code frame by src/scripts/site.ts. */
+.code-copy {
+  @apply border-line bg-canvas text-muted absolute top-2 right-2 rounded border px-2 py-0.5 text-xs;
+}
+
+.callout {
+  @apply border-line bg-panel my-6 rounded-lg border border-l-4 px-4 py-1;
+}
+
+.callout-title {
+  @apply font-semibold;
+}
+
+.callout-note,
+.callout-tip,
+.callout-important {
+  border-left-color: var(--color-accent);
+}
+
+.callout-warning,
+.callout-caution {
+  border-left-color: #d97706;
+}
+
+.heading-anchor {
+  @apply text-muted ml-2 no-underline opacity-0 focus:opacity-100;
+}
+
+.heading-anchor::after {
+  content: "#";
+}
+
+.prose :where(h2, h3):hover .heading-anchor {
+  opacity: 1;
+}
+
+.table-scroll {
+  @apply overflow-x-auto;
+}
