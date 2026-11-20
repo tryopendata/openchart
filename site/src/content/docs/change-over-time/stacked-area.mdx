@@ -1,0 +1,47 @@
+---
+title: Stacked area
+description: Show how a total divides into parts over time with stacked areas, then normalize each period to 100% or center the stack as a streamgraph.
+section: change-over-time
+order: 3
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+A stacked area chart adds series into a running total, so the top edge is the total and each band is one part. It answers how a whole is made up over time, and the reader can compare the total across periods but only judge a band's size by its thickness.
+
+Use a [line chart](/docs/change-over-time/line/) when the reader needs to compare individual series, since only the bottom band sits on a flat baseline. Use [100% stacked bars](/docs/part-to-whole/stacked-100/) when the periods are few and shares matter more than totals.
+
+## A basic stacked area
+
+Put a nominal `color` channel on an `area` mark and set `stack: "zero"` on the y channel to stack the series from a zero baseline. Multi-series areas stack by default, so the setting makes the intent explicit. The x channel is ordinal here because the years are labels, not a time scale.
+
+<Demo id="change-over-time/stacked-area-basic" />
+
+## Normalized to 100%
+
+`stack: "normalize"` rescales each period to a fraction of its total, so every column of the chart is the same height and the bands show shares. The axis format `".0%"` prints the fractions as percentages. The total is no longer visible, so state it elsewhere if it matters. This demo uses capacity added each year, where the total grows from 168 to 477 gigawatts, so the shares are what the normalized view shows.
+
+<Demo id="change-over-time/stacked-area-normalize" />
+
+## Streamgraph
+
+`stack: "center"` centers the stack around zero instead of resting it on a baseline. Each band keeps its thickness, so the chart still reads as composition. Here the total grows each year, so the outline widens from left to right around the middle.
+
+<Demo id="change-over-time/stacked-area-center" />
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `mark` | `"area"`. Several series on one area mark stack by default. |
+| `encoding.y.stack` | `"zero"` stacks from zero, `"normalize"` scales each period to a fraction of its total, `"center"` centers the stack, and `null` overlaps the series. |
+| `encoding.color` | One band per value of this field. |
+| `encoding.x` | The period. `"ordinal"` for named years, `"temporal"` for dates. |
+| `legend.position` | Where the legend sits. `"top"` puts it above the plot. |
+
+## Related
+
+- [Area](/docs/change-over-time/area/) for a single series or overlapping series.
+- [Stacked 100%](/docs/part-to-whole/stacked-100/) for normalized bars and columns.
+- [Grouped and stacked bars](/docs/comparison/grouped-stacked/) for the same stacking on bars.
+- [Line](/docs/change-over-time/line/) for comparing individual series.

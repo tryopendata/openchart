@@ -1,0 +1,99 @@
+/**
+ * The code tabs under a demo: a strip of links (Spec, React, Vue, Svelte, Vanilla)
+ * to panels highlighted at build time. The links point at panel ids so the tabs
+ * work without JavaScript through `:target`; scripts/framework-choice.ts takes
+ * over when it runs. Only the Spec panel shows the data rows: the framework
+ * panels show them folded, and so does the Spec panel for geography. A panel
+ * with folds keeps a copy template in a `<template>`, with a marker for each
+ * folded value, which scripts/demo-copy.ts fills from the figure's spec when
+ * Copy is pressed. The block carries its own token color stylesheet.
+ */
+import type { VizSpec } from "@opendata-ai/openchart-core";
+import { escapeElementText, escapeHtml } from "./escape-html";
+import { foldTargets, jsonWithMarkers, showFolds } from "./fold-targets";
+import { FRAMEWORKS, type Framework } from "./framework-choice";
+import { highlightCode } from "./highlight";
+import { DEMO_ATTR, type SpecPath } from "./markup";
+import { foldedFrameworkSnippets } from "./snippets";
+
+/** The code a Copy button copies when it differs from what the panel shows. */
+type CopyTemplate = { code: string; folds: SpecPath[] };
+
+/** One tab: what it shows, and its copy template when the shown code is folded. */
+type CodeTab = { id: Framework; label: string; lang: string; shown: string; copy?: CopyTemplate };
+
+const LABELS: Record<Framework, string> = {
+  spec: "Spec",
+  react: "React",
+  vue: "Vue",
+  svelte: "Svelte",
+  vanilla: "Vanilla",
+};
+const LANGS: Record<Framework, string> = {
+  spec: "json",
+  react: "tsx",
+  vue: "vue",
+  svelte: "svelte",
+  vanilla: "ts",
+};
+/** Search indexes the page's prose, not its code. */
+const NO_INDEX = "data-pagefind-ignore";
+
+/**
+ * The Spec tab: the spec as JSON, with its geography folded so a map stays
+ * readable. Rows and graph elements stay written out; this is where they are read.
+ */
+function specTab(spec: VizSpec): CodeTab {
+  const tab = { id: "spec" as const, label: LABELS.spec, lang: LANGS.spec };
+  const geography = foldTargets(spec).filter((target) => target.geography);
+  if (geography.length === 0) return { ...tab, shown: JSON.stringify(spec, null, 2) };
+  const code = jsonWithMarkers(spec, geography);
+  const folds = geography.map(({ path }) => path);
+  // JSON with comments, so the fold comments highlight as comments.
+  return { ...tab, lang: "jsonc", shown: showFolds(code, geography), copy: { code, folds } };
+}
+
+function codeTabsFor(spec: VizSpec): CodeTab[] {
+  const { shown, template, folds } = foldedFrameworkSnippets(spec);
+  return FRAMEWORKS.map((id) => {
+    if (id === "spec") return specTab(spec);
+    const tab = { id, label: LABELS[id], lang: LANGS[id], shown: shown[id] };
+    return folds.length === 0 ? tab : { ...tab, copy: { code: template[id], folds } };
+  });
+}
+
+const panelId = (domId: string, tab: CodeTab) => `${domId}-code-${tab.id}`;
+
+function tabLink(domId: string, tab: CodeTab, index: number): string {
+  // Spec is the panel shown before any choice is made, so it starts as current.
+  const current = index === 0 ? ' aria-current="true"' : "";
+  return `<a class="demo-tab" href="#${panelId(domId, tab)}" ${DEMO_ATTR.tab}="${tab.id}"${current}>${tab.label}</a>`;
+}
+
+/** The `<template>` holding the code Copy fills in, with the paths of its folded values. */
+function copyTemplate({ copy }: CodeTab): string {
+  if (!copy) return "";
+  const fills = escapeHtml(JSON.stringify(copy.folds));
+  return `<template ${DEMO_ATTR.copySource} ${DEMO_ATTR.copyFills}="${fills}" ${NO_INDEX}>${escapeElementText(copy.code)}</template>`;
+}
+
+function panel(domId: string, tab: CodeTab, highlighted: string): string {
+  const copy = `<button type="button" class="demo-copy" ${DEMO_ATTR.copy} hidden>Copy</button>`;
+  return `<div class="demo-panel" id="${panelId(domId, tab)}" ${DEMO_ATTR.panel}="${tab.id}">${copy}${copyTemplate(tab)}${highlighted}</div>`;
+}
+
+/**
+ * The `data-demo-code` block for a spec: five tab links, five highlighted panels
+ * and the stylesheet for their token colors.
+ *
+ * @param domId The figure's XML-safe id from `demoDomId`, which keeps panel ids unique on a page.
+ * @throws {TypeError} When the spec's type has no framework wrapper.
+ * @throws {FoldMarkerError} When the spec contains the text fold markers use.
+ */
+export async function codeTabsHtml(domId: string, spec: VizSpec): Promise<string> {
+  const tabs = codeTabsFor(spec);
+  const strip = tabs.map((tab, index) => tabLink(domId, tab, index)).join("");
+  const { html, css } = await highlightCode(tabs.map(({ shown, lang }) => ({ code: shown, lang })));
+  const panels = tabs.map((tab, index) => panel(domId, tab, html[index] ?? "")).join("");
+  return `<div class="demo-code" ${DEMO_ATTR.code} ${NO_INDEX}><style>${css}</style><div class="demo-tabs">${strip}</div>${panels}</div>`;
+}

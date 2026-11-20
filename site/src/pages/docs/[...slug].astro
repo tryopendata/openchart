@@ -1,0 +1,24 @@
+---
+/**
+ * One docs page at /docs/<section>/<slug>/, rendered from either collection
+ * and handed to DocsLayout as exactly DocsLayoutProps.
+ */
+import type { GetStaticPaths } from "astro";
+import DocsLayout from "../../layouts/DocsLayout.astro";
+import { allPages } from "../../lib/collection";
+import { docsLayoutProps } from "../../lib/docs";
+
+export const getStaticPaths = (async () => {
+  const entries = await allPages();
+  const pages = entries.map((entry) => entry.page);
+  return entries.map((entry) => ({ params: { slug: entry.page.id }, props: { entry, pages } }));
+}) satisfies GetStaticPaths;
+
+const { entry, pages } = Astro.props;
+const { Content, headings } = await entry.render();
+const props = docsLayoutProps(pages, entry.page, headings);
+---
+
+<DocsLayout {...props}>
+  <Content />
+</DocsLayout>

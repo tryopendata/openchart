@@ -1,0 +1,36 @@
+# Build output and Astro caches
+dist/
+.astro/
+
+# Dependencies
+node_modules/
+
+# Test output
+coverage/
+playwright-report/
+test-results/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# Editors and OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Wrangler scratch files
+.wrangler/
+
+# Pagefind index, written after the build
+public/pagefind/
+
+# Per-checkout Astro and Vite caches
+.astro-cache/
+.vite-cache/

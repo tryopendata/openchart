@@ -1,0 +1,55 @@
+---
+title: Error bars
+description: Draw an interval between two supplied bounds, vertical or horizontal, with optional end caps, and layer a point to mark an estimate inside it.
+section: distribution
+order: 5
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+An error bar draws an interval from a lower bound to an upper bound for each row, so a reader sees how far a value could range. OpenChart never computes confidence intervals, standard errors or quartiles. You aggregate upstream and supply the two bounds as fields.
+
+Because the bounds are just fields, the mark also draws any low-to-high span, such as a monthly temperature range. To compare a start and an end value per category, a [range chart](/docs/comparison/range/) fits better. To show every observation, use a [tick strip](/docs/distribution/tick-strip/) or a [beeswarm](/docs/distribution/beeswarm/).
+
+## A basic interval
+
+Set `mark` to `"errorbar"`, put the category on `x`, the lower bound on `y` and the upper bound on `y2`. Supply exactly one second endpoint, either `y2` or `x2`. A row with a missing bound draws no interval.
+
+<Demo id="distribution/errorbars-basic" />
+
+## End caps
+
+`ticks: true` adds a 6px cap at each end of the interval. The caps are decorative and their length is not configurable.
+
+<Demo id="distribution/errorbars-caps" />
+
+## Horizontal intervals
+
+Put the category on `y` and the bounds on `x` and `x2` for a horizontal interval. The default stroke is 2px at 0.35 opacity in the series color, and `mark.stroke` overrides the color.
+
+<Demo id="distribution/errorbars-horizontal" />
+
+## An estimate inside its interval
+
+To show the estimate itself, use a layer spec with two children on the same data: an `errorbar` mark and a `point` mark. The point mark draws a fitted trend line by default, so set `trendline: false` on that layer.
+
+<Demo id="distribution/errorbars-estimate" />
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `mark` | `"errorbar"`, or `{ type: "errorbar", ticks: true }` for end caps. |
+| `mark.ticks` | Draws 6px end caps. Defaults to false. |
+| `mark.stroke`, `mark.strokeWidth`, `mark.opacity` | Override the series color, the 2px width and the 0.35 opacity. |
+| `encoding.y`, `encoding.y2` | The lower and upper bounds for a vertical interval. The category goes on `x`. |
+| `encoding.x`, `encoding.x2` | The lower and upper bounds for a horizontal interval. The category goes on `y`. |
+| `layer` | Combines an `errorbar` child with a `point` child to mark the estimate. |
+
+## Related
+
+- [Tick strip](/docs/distribution/tick-strip/): every observation as a tick.
+- [Beeswarm](/docs/distribution/beeswarm/): every observation as a dot.
+- [Density](/docs/distribution/density/): the smoothed shape of the observations.
+- [Range](/docs/comparison/range/): a start and an end per category.
+- [Trendlines](/docs/correlation/trendlines/): a fitted line over a scatter.

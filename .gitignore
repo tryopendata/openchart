@@ -38,3 +38,6 @@ examples/tmp/
 examples/build-workbench/
 workbench-test-results/
 design-baseline-artifacts/
+
+# Throwaway copy of site/ that its build test creates and removes
+.site-probe-*/

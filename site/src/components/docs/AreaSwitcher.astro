@@ -1,0 +1,31 @@
+---
+/**
+ * Links to every docs area that has pages, the current one marked
+ * aria-current="page" with the accent underline. One instance per page: it sits
+ * above the sidebar on wide screens and above the docs menu on narrow ones.
+ */
+import type { AreaId, NavArea } from "../../lib/docs-types";
+
+interface Props {
+  areas: NavArea[];
+  current: AreaId;
+  class?: string;
+}
+const { areas, current, class: className } = Astro.props;
+---
+
+<nav aria-label="Docs areas" class={className}>
+  <ul class="flex flex-wrap gap-x-4 gap-y-1 lg:flex-col lg:gap-0">
+    {areas.map((area) => (
+      <li>
+        <a
+          href={area.href}
+          aria-current={area.id === current ? "page" : undefined}
+          class="text-ink-2 hover:text-ink aria-[current=page]:text-ink aria-[current=page]:decoration-accent block py-1.5 text-[13px] font-medium no-underline transition-colors duration-150 aria-[current=page]:underline aria-[current=page]:decoration-2 lg:text-sm"
+        >
+          {area.label}
+        </a>
+      </li>
+    ))}
+  </ul>
+</nav>

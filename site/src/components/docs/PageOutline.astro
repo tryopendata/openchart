@@ -1,0 +1,21 @@
+---
+/**
+ * The page's h2 and h3 headings as in-page links. site.ts runs spyToc on every
+ * `[data-toc]` list, marking the section being read with aria-current="location".
+ */
+import type { Heading } from "../../lib/docs-types";
+
+interface Props {
+  outline: Heading[];
+  class?: string;
+}
+const { outline, class: className } = Astro.props;
+---
+
+<ul data-toc class:list={["outline-list", className]}>
+  {outline.map((heading) => (
+    <li class:list={{ "pl-3": heading.depth === 3 }}>
+      <a href={`#${heading.slug}`}>{heading.text}</a>
+    </li>
+  ))}
+</ul>

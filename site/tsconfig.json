@@ -1,0 +1,20 @@
+{
+  "extends": "astro/tsconfigs/strict",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    "types": ["vitest/globals", "@testing-library/jest-dom"],
+    "allowImportingTsExtensions": true,
+    "noUncheckedIndexedAccess": true,
+    "paths": { "@datasets/*": ["../examples/src/data/*"] }
+  },
+  "include": [".astro/types.d.ts", "**/*"],
+  "exclude": [
+    "dist",
+    ".astro-cache",
+    ".vite-cache",
+    "coverage",
+    "playwright-report",
+    "test-results"
+  ]
+}

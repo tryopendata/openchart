@@ -1,0 +1,54 @@
+---
+title: Range (dumbbell)
+description: Show the span between two values per category as a dumbbell, an arrow or a floating bar, for change between two periods or a low to high range.
+section: comparison
+order: 6
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+A range chart draws one row per category with a start and an end value. The reader sees where each category began, where it ended and how big the move was. It answers "who moved, and by how much?" for one pair of periods, or shows a low to high span such as a monthly temperature range.
+
+For a trajectory over many periods, use a [line chart](/docs/change-over-time/line/) or a [slope chart](/docs/change-over-time/slope-bump/). For one value per category, use a [bar chart](/docs/comparison/bar/).
+
+## A dumbbell
+
+Set `mark` to `"range"` with the start value on `x` and the end value on `x2`. Each row has a dot at both values. `title` on each channel names the endpoint, and the `sort` object on the category channel orders the rows by one of the fields.
+
+<Demo id="comparison/range-dumbbell" />
+
+## An arrow plot
+
+`style: "arrow"` puts an arrowhead at the end value, so direction reads at a glance. `colorByDirection: true` colors each arrow by whether its value grew or shrank. The data holds one row per source with a value in 2010 and a value in 2024.
+
+<Demo id="comparison/range-arrow" />
+
+## A floating bar
+
+`style: "bar"` draws a plain bar from the start to the end value. Swap the channels to run it vertically: the category on `x`, the low value on `y` and the high value on `y2` give a column for each month.
+
+<Demo id="comparison/range-bar" />
+
+## A horizontal floating bar
+
+The same style with `x` and `x2` gives horizontal bars. Use it when category names are long or when you want the bar form with the same data as the dumbbell. `fill` sets the bar color.
+
+<Demo id="comparison/range-bar-horizontal" />
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `mark` | `"range"`, or an object with `type: "range"` and a `style` of `"dumbbell"`, `"arrow"` or `"bar"`. |
+| `encoding.x`, `encoding.x2` | The start and end values of a horizontal range. |
+| `encoding.y`, `encoding.y2` | The start and end values of a vertical range, with the category on `x`. |
+| `encoding.*.title` | Names an endpoint, such as "2000" and "2023". |
+| `encoding.y.sort` | Orders the categories by another field, with `order` set to `"ascending"` or `"descending"`. |
+| `colorByDirection` | On the mark, colors each range by whether it rose or fell. |
+| `fill` | On the mark, sets the bar color. |
+
+## Related
+
+- [Slope and bump](/docs/change-over-time/slope-bump/) for the same before and after question across many series.
+- [Lollipop](/docs/comparison/lollipop/) for one value per category, and for dumbbells built from long-format data.
+- [Error bars](/docs/distribution/error-bars/) for an interval around an estimate.

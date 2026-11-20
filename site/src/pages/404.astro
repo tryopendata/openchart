@@ -1,0 +1,32 @@
+---
+/**
+ * The error page any unknown URL gets: the site shell, a plain statement and the
+ * two places most readers were looking for. Kept out of the index and the sitemap.
+ */
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="Page not found" path="/404/" noindex>
+  <div class="mx-auto max-w-[90rem] px-5 py-20 sm:px-6 lg:px-8 lg:py-28">
+    <div class="grid gap-y-8 lg:grid-cols-12 lg:gap-x-12">
+      <p class="text-muted font-mono text-sm tabular-nums lg:col-span-3">Error 404</p>
+      <div class="flex flex-col gap-5 lg:col-span-7">
+        <h1 class="text-ink text-[2.5rem] leading-[1.05] font-bold tracking-[-0.02em] sm:text-[3.5rem]">
+          Page not found
+        </h1>
+        <p class="text-ink-2 max-w-[36rem] text-lg leading-relaxed">
+          Nothing is published at this address. The page may have moved when the docs were
+          reorganized into guides, visualizations, building blocks and reference.
+        </p>
+        <p class="flex flex-wrap gap-3 pt-2">
+          <a href="/docs/" class="btn btn-primary">
+            Browse the docs
+          </a>
+          <a href="/" class="btn">
+            Home page
+          </a>
+        </p>
+      </div>
+    </div>
+  </div>
+</BaseLayout>

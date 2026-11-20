@@ -1,0 +1,49 @@
+---
+title: Tile map
+description: Give every US state one equal tile in a grid that keeps the country's rough shape, colored by a number or a category.
+section: maps
+order: 3
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+A tile map gives each US state the same square in a grid that keeps the country's rough shape. Small states such as Rhode Island and Delaware get as much room as Texas, so every value is readable and none dominates by area. It needs no geography file and no projection.
+
+Use a [choropleth](/docs/maps/choropleth/) when real borders and shapes matter, such as for neighboring counties, and a [bar chart](/docs/comparison/bar/) when the reader needs the states in rank order.
+
+## A basic tile map
+
+Set `type` to `"tilemap"` and pass `data` as a record of two-letter state codes to numbers. That is all the spec needs: the color scale and legend come from the values. `palette` picks one of five sequential palettes (`"blue"`, the default, `"green"`, `"orange"`, `"purple"` and `"teal"`), and `valueFormat` takes a d3-format string for the tile labels, legend and tooltips.
+
+<Demo id="maps/tile-basic" />
+
+Each tile shows the state code and its value. The label color is worked out against the tile's color as drawn, so pale tiles get dark text and deep tiles get light text.
+
+## Categories
+
+When the values are strings, the map colors by category, and `colors` assigns a color to each one. A `colors` record makes the map categorical whatever the values are. The legend lists the categories instead of a color ramp.
+
+<Demo id="maps/tile-categorical" />
+
+## Rows and missing states
+
+`data` can also be rows, like any other spec, with an `encoding` that names the `state` field (two-letter codes) and the `value` field. With an encoding, the number format goes on `encoding.value.format`; the library warns that `valueFormat` is deprecated there. States without a row keep their place in the grid as empty outlined tiles, so the shape of the map never changes, and the legend adds a "No data" swatch.
+
+<Demo id="maps/tile-rows" />
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `type` | `"tilemap"` selects this visualization. |
+| `data` | A record of state code to value, or rows with an `encoding`. |
+| `encoding.state`, `encoding.value` | With rows, the state code field and the value field; `value.format` formats the numbers. |
+| `palette` | `"blue"`, `"green"`, `"orange"`, `"purple"` or `"teal"` for numeric values. Default `"blue"`. |
+| `colors` | A record of category to color; makes the map categorical. |
+| `valueFormat` | With a record, a d3-format string for tile labels, the legend and tooltips. |
+
+## Related
+
+- [Choropleth](/docs/maps/choropleth/) for real state shapes.
+- [Bar](/docs/comparison/bar/) for the same values in rank order.
+- [Data table](/docs/tables/data-table/) for the values with their state names.

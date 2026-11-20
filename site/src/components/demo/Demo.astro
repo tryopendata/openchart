@@ -1,0 +1,48 @@
+---
+/**
+ * Renders the demo figure for a registered demo id: static SVGs in both themes,
+ * the embedded spec src/scripts/demos.ts mounts live, and the code tabs. A demo
+ * that is unknown or whose spec fails validation fails the build, naming the page.
+ * Large values the page's figures share are written once per page, recorded
+ * against `Astro.locals`, which is fresh for each page render.
+ */
+import { getDemo } from "../../demos/registry";
+import { DEFAULT_DEMO_HEIGHT, type DemoDef } from "../../demos/types";
+import { demoFigureHtml } from "../../lib/demo/figure";
+import { pageSharedHashes } from "../../lib/demo/shared-values";
+import { validateDemo } from "../../lib/demo/validate";
+
+interface Props {
+  id: string;
+  /** Show the Spec, React, Vue, Svelte and Vanilla code tabs. Default true. */
+  tabs?: boolean;
+}
+
+const { id, tabs = true } = Astro.props;
+
+let demo: DemoDef;
+try {
+  demo = getDemo(id);
+  validateDemo(id, demo.spec);
+} catch (error) {
+  const reason = error instanceof Error ? error.message : String(error);
+  throw new Error(`${Astro.url.pathname} renders <Demo id="${id}" />: ${reason}`, {
+    cause: error,
+  });
+}
+
+const figure = await demoFigureHtml({
+  id: demo.id,
+  spec: demo.spec,
+  title: demo.title,
+  source: demo.source,
+  caption: demo.caption,
+  height: demo.height ?? DEFAULT_DEMO_HEIGHT,
+  entrance: demo.entrance ?? false,
+  tabs,
+  static: demo.static ?? true,
+  pageShared: pageSharedHashes(Astro.locals),
+});
+---
+
+<Fragment set:html={figure} />

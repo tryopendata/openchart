@@ -1,0 +1,118 @@
+---
+/**
+ * The HTML shell every page shares: head metadata, the theme set before paint,
+ * fonts, the site header and footer, and the client wiring for analytics, consent,
+ * site behavior and demos.
+ */
+import SiteFooter from "./SiteFooter.astro";
+import SiteHeader from "./SiteHeader.astro";
+import { site } from "../config";
+import { preloadFonts } from "../lib/fonts";
+import "../styles/global.css";
+
+interface Props {
+  title: string;
+  description?: string;
+  /** Route path with its trailing slash, e.g. "/docs/" (never Astro.url, which a host can rewrite). */
+  path: string;
+  /** Social card path under /og/. */
+  image?: string;
+  /** This page's Markdown export, linked as rel="alternate". */
+  markdown?: string;
+  noindex?: boolean;
+}
+const {
+  title,
+  description = site.description,
+  path,
+  image = "/og/index.png",
+  markdown,
+  noindex = false,
+} = Astro.props;
+const canonical = new URL(path, site.url);
+const ogImage = new URL(image, site.url);
+const pageTitle = path === "/" ? `${site.name}: ${title}` : `${title} | ${site.name}`;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{pageTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+    <link rel="alternate" type="text/plain" href="/llms.txt" title="llms.txt" />
+    {markdown && <link rel="alternate" type="text/markdown" href={markdown} />}
+    {preloadFonts.map((href) => (
+      <link rel="preload" href={href} as="font" type="font/woff2" crossorigin />
+    ))}
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0e0f10" media="(prefers-color-scheme: dark)" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={site.name} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
+    <script is:inline>
+      // Before paint: the stored choice, else the system preference.
+      // A class is always set while JavaScript runs, so the toggle's state matches
+      // what is shown even when storage is blocked.
+      (() => {
+        let stored = null;
+        try {
+          stored = localStorage.getItem("theme");
+        } catch {
+          // Storage blocked: fall back to the system preference below.
+        }
+        const dark = stored
+          ? stored === "dark"
+          : window.matchMedia("(prefers-color-scheme: dark)").matches;
+        document.documentElement.classList.add(dark ? "dark" : "light");
+      })();
+    </script>
+    <script>
+      import { initAnalytics } from "../lib/analytics";
+      import { createSiteConsent, showConsentBanner } from "../lib/consent";
+      import "../scripts/site";
+      import "../scripts/demos";
+
+      // A build without a key ships no analytics and asks for no consent: this
+      // branch is dropped while PUBLIC_POSTHOG_KEY is empty (dev, tests and CI).
+      const key = import.meta.env.PUBLIC_POSTHOG_KEY;
+      if (key) {
+        const consent = createSiteConsent();
+        initAnalytics({
+          key,
+          host: import.meta.env.PUBLIC_POSTHOG_HOST,
+          site: "openchart",
+          consent,
+        });
+        showConsentBanner(consent);
+      }
+    </script>
+  </head>
+  <body class="flex min-h-screen flex-col">
+    <a
+      href="#main"
+      class="bg-canvas text-ink sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:p-2"
+    >
+      Skip to content
+    </a>
+    <slot name="banner" />
+    <SiteHeader path={path}>
+      <slot name="search" slot="search" />
+    </SiteHeader>
+    <main id="main" class="flex-1">
+      <slot />
+    </main>
+    <SiteFooter />
+  </body>
+</html>

@@ -1,0 +1,35 @@
+---
+/**
+ * Previous and next pages within the area, under an axis rule. Either may be absent
+ * at the ends of the area.
+ */
+import type { NavItem } from "../../lib/docs-types";
+
+interface Props {
+  prev?: NavItem | undefined;
+  next?: NavItem | undefined;
+}
+const { prev, next } = Astro.props;
+const linkClass =
+  "group flex flex-col gap-1 py-5 no-underline [&>span:last-child]:transition-colors [&>span:last-child]:duration-150";
+---
+
+{(prev || next) && (
+  <nav aria-label="Pagination" class="mt-20">
+    <div class="rule-axis" />
+    <div class="grid gap-x-8 sm:grid-cols-2">
+      {prev && (
+        <a href={prev.href} rel="prev" class={linkClass}>
+          <span class="text-muted text-[13px]">Previous</span>
+          <span class="text-ink group-hover:text-accent text-base font-semibold">{prev.label}</span>
+        </a>
+      )}
+      {next && (
+        <a href={next.href} rel="next" class:list={[linkClass, "sm:col-start-2 sm:text-right"]}>
+          <span class="text-muted text-[13px]">Next</span>
+          <span class="text-ink group-hover:text-accent text-base font-semibold">{next.label}</span>
+        </a>
+      )}
+    </div>
+  </nav>
+)}

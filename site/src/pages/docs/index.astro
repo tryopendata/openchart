@@ -1,0 +1,42 @@
+---
+/** The docs home: every area with its sections and pages. */
+import { site } from "../../config";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { allPages } from "../../lib/collection";
+import { docsAreasNav } from "../../lib/docs";
+
+const pages = (await allPages()).map((entry) => entry.page);
+const descriptions = new Map(pages.map((page) => [page.id, page.description]));
+const areas = docsAreasNav(pages);
+---
+
+<BaseLayout
+  title="Documentation"
+  description={`Guides, visualizations, building blocks and reference for ${site.name}.`}
+  path="/docs/"
+>
+  <div class="prose mx-auto max-w-4xl px-6 py-10">
+    <h1>Documentation</h1>
+    <p>
+      Every page here is also served as Markdown, and <a href="/llms.txt">llms.txt</a> lists them
+      all.
+    </p>
+    {areas.map((area) => (
+      <section aria-labelledby={`area-${area.id}`}>
+        <h2 id={`area-${area.id}`}>{area.label}</h2>
+        {area.sections.map((section) => (
+          <section aria-labelledby={`section-${section.id}`}>
+            <h3 id={`section-${section.id}`}>{section.label}</h3>
+            <ul>
+              {section.items.map((item) => (
+                <li>
+                  <a href={item.href}>{item.label}</a>: {descriptions.get(item.id)}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+      </section>
+    ))}
+  </div>
+</BaseLayout>

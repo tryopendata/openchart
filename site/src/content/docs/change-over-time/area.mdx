@@ -1,0 +1,48 @@
+---
+title: Area
+description: Fill the space under a line to show how a quantity builds over time, then add reference lines and compare overlapping series from a shared zero baseline.
+section: change-over-time
+order: 2
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+An area chart is a line with the space beneath it filled, so the reader sees the size of the quantity as well as its direction. It suits a running total or a magnitude that starts at zero, such as a fleet size or a cumulative count.
+
+Use a [line chart](/docs/change-over-time/line/) when you compare several series and the slopes are what matter. Use a [stacked area](/docs/change-over-time/stacked-area/) when the series add up to a total and the parts are the point.
+
+## A basic area chart
+
+Set `mark` to `"area"` with the same `x` and `y` channels a line uses. Passing the mark as an object lets you set `stroke` and `strokeWidth` for the outline. A `text` annotation with a connector marks the milestone.
+
+<Demo id="change-over-time/area-basic" />
+
+## Reference values
+
+A `refline` annotation draws a horizontal rule at a value in data units, and its `label` names it. Here a dashed rule at $100 shows when the price crossed that level. The y axis starts at zero, so the filled height is proportional to the value.
+
+<Demo id="change-over-time/area-reference" />
+
+## Overlapping series
+
+Multi-series areas stack by default. Setting `stack: null` on the y channel draws each series from the same zero baseline instead, with translucent fills, so you can compare the series with each other. The mode is for comparison rather than composition.
+
+<Demo id="change-over-time/area-overlap" />
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `mark` | `"area"`, or an object such as `{ type: "area", stroke: "#0e7490", strokeWidth: 2 }` to style the outline. |
+| `encoding.x` | The horizontal position, usually `type: "temporal"`. |
+| `encoding.y` | The value that sets the height of the fill. |
+| `encoding.y.stack` | `null` overlaps series on a shared baseline. Without it, multiple series stack. |
+| `encoding.color` | One area per value of this field. |
+| `annotations` | `text` and `refline` marks placed in data coordinates. |
+
+## Related
+
+- [Line](/docs/change-over-time/line/) for slopes and several series.
+- [Stacked area](/docs/change-over-time/stacked-area/) for parts of a total over time.
+- [Sparkline](/docs/change-over-time/sparkline/) for an area drawn small.
+- [Histogram](/docs/distribution/histogram/) for the shape of a distribution rather than change over time.

@@ -1,0 +1,65 @@
+---
+title: Sankey
+description: Show how a quantity moves from sources through stages to destinations, with ribbon widths in proportion to the flow.
+section: flow
+order: 1
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+A sankey diagram shows how a quantity moves between stages: energy from its sources to the sectors that use it, money from revenue streams to departments, visitors from a landing page to a paid plan. Each ribbon's width is in proportion to the amount it carries, so the reader sees where most of the flow goes and where it leaks away.
+
+Use a [stacked bar](/docs/comparison/grouped-stacked/) instead when there is one split and no stages in between, and a [graph](/docs/flow/graph/) when the connections matter more than the amounts.
+
+## A basic sankey
+
+Set `type` to `"sankey"` and give it one row per link, with a source, a target and a value. The three encoding channels name those fields. Nodes are placed in columns by their depth in the flow, except that by default every node with no outgoing links moves to the last column.
+
+Labels in the first column sit to the left of their nodes, labels in the last column to the right, and labels in the columns between to the right. Each label is the node name with its value beside it, formatted by the `format` on the value channel.
+
+<Demo id="flow/sankey-basic" />
+
+The diagram draws once the page's script runs, so the figure reserves its height until then. Hovering a node or a ribbon highlights every link and node upstream and downstream of it and dims the rest.
+
+## A funnel
+
+A funnel is a sankey whose drop-off branches end early. Each stage splits into the readers who go on and the ones who leave, so the losses read as clearly as the conversions. The default `nodeAlign: "justify"` would move Bounce, Drop Off and Churned to the last column; `nodeAlign: "left"` keeps each one beside the stage it leaves. `",.0f"` on the value channel prints whole numbers with thousands separators.
+
+<Demo id="flow/sankey-funnel" />
+
+## Link color
+
+Nodes take the palette's colors in turn. `linkStyle` sets how the ribbons between them are colored: `"gradient"` (the default) runs from the source node's color to the target node's color, `"source"` and `"target"` use one end's color all the way, and `"neutral"` uses the theme's gridline color. Coloring by source makes it easy to follow one source, such as petroleum, to every place it goes.
+
+<Demo id="flow/sankey-link-color" />
+
+## Merging small nodes
+
+`other` merges nodes that carry less than a share of their column's total into one node named "Other", drawn in a neutral color. Here solar and wind each carry under 7% of the sources column, so they merge. Links into and out of merged nodes move to the new node, so the total flow does not change. A column with only one node under the threshold is left alone, and `{ threshold, label }` renames the merged node. Without `other`, every node is drawn.
+
+<Demo id="flow/sankey-other" />
+
+## Formatting values
+
+The value channel's `format` takes a d3-format string and applies to every label. `"$,.1f"` prints a dollar sign, thousands separators and one decimal, which suits amounts in millions.
+
+<Demo id="flow/sankey-budget" />
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `type` | `"sankey"` selects this visualization. |
+| `data` | One row per link. |
+| `encoding.source`, `encoding.target` | The fields that name each link's two nodes. |
+| `encoding.value` | The field that sets each ribbon's width; its `format` sets the label numbers. |
+| `nodeAlign` | `"justify"` (the default) moves nodes with no outgoing links to the last column; `"left"` keeps each at its depth. `"right"` and `"center"` are also available. |
+| `linkStyle` | `"gradient"`, `"source"`, `"target"` or `"neutral"` ribbon color. Default `"gradient"`. |
+| `other` | A share of the column total below which nodes merge into "Other". Off unless set. |
+| `chrome` | The title and subtitle above the diagram. |
+
+## Related
+
+- [Graph](/docs/flow/graph/) for networks where the connections matter more than the amounts.
+- [Grouped and stacked bars](/docs/comparison/grouped-stacked/) for one split without stages.
+- [Stacked to 100%](/docs/part-to-whole/stacked-100/) for the shares of one whole.

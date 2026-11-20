@@ -14,7 +14,8 @@
   },
   "workspaces": [
     "packages/*",
-    "examples"
+    "examples",
+    "site"
   ],
   "scripts": {
     "build": "bun run --filter '@opendata-ai/openchart-core' build && bun run --filter '@opendata-ai/openchart-engine' build && bun run --filter '@opendata-ai/openchart-vanilla' build && bun run --filter '@opendata-ai/openchart-react' --filter '@opendata-ai/openchart-vue' --filter '@opendata-ai/openchart-svelte' build",
@@ -68,7 +69,8 @@
     "ts-json-schema-generator": "^2.9.0",
     "tsup": "^8.5.1",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
-    "vitest": "^5.0.0"
+    "vitest": "^5.0.0",
+    "yaml": "^2.9.1"
   },
   "patchedDependencies": {
     "@ladle/react@5.1.1": "patches/@ladle%2Freact@5.1.1.patch"
