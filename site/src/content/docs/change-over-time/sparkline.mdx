@@ -1,0 +1,52 @@
+---
+title: Sparkline
+description: Shrink a line or area to a word-sized trend with display "sparkline", which strips the title, axes, legend and watermark so it fits beside a number.
+section: change-over-time
+order: 5
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+A sparkline is a trend with everything else removed: no title, axes, legend or source line. It sits next to a number you render yourself, such as a KPI card or a table cell, and answers whether the number is going up or down.
+
+Use a full [line chart](/docs/change-over-time/line/) when the reader needs to read values or dates off the axes. A sparkline shows no axes, so pair it with the figures it summarizes. For sparkline cells inside tables, see [data table](/docs/tables/data-table/).
+
+## A line sparkline
+
+Set `display: "sparkline"` on a line or area spec. The engine strips chrome, axes, legend and watermark, so the chart fills whatever box you give it. The docs recommend a fixed height of 36 to 56 pixels. Give the mark an explicit `stroke` so it takes your accent color instead of a default series color.
+
+<Demo id="change-over-time/sparkline-line" />
+
+## An area sparkline
+
+Swap the mark to `"area"` for a filled version. The channels are the same: a position field on `x` and the value on `y`.
+<Demo id="change-over-time/sparkline-area" />
+
+## Marking the last point
+
+`point: "last"` on a line mark draws a filled dot on the final point only, which draws the eye to the latest reading. Use `"first"` for the first point.
+
+<Demo id="change-over-time/sparkline-last-point" />
+
+## A taller box
+
+A sparkline has no size of its own. It fills the box it is mounted in, so a taller box gives the same series more vertical room. Pick the height from the layout the sparkline sits in.
+
+<Demo id="change-over-time/sparkline-height" />
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `display` | `"sparkline"` strips chrome, axes, legend and watermark. The default is `"full"`. |
+| `mark` | `"line"` or `"area"`. An object sets `stroke` and `point`. |
+| `mark.point` | `"last"` marks only the final point, `"first"` only the first. |
+| `encoding.x` | The position of each reading. An ordinal field is enough when you only need the order. |
+| `encoding.y` | The value that sets the height of the line. |
+
+## Related
+
+- [Line](/docs/change-over-time/line/) for a trend with axes.
+- [Area](/docs/change-over-time/area/) for a filled trend with axes.
+- [Dashboard tiles](/docs/composition/dashboard-tiles/) for sparklines inside KPI cards.
+- [Data table](/docs/tables/data-table/) for sparkline columns in a table.

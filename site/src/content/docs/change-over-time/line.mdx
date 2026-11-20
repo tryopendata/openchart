@@ -1,0 +1,68 @@
+---
+title: Line
+description: Trace one or more series across a continuous axis, then annotate, label the line ends, focus a series, change the curve, format dates and switch to a log scale.
+section: change-over-time
+order: 1
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+A line chart shows how a value changes along a continuous axis, usually time. The reader follows the slope: a steep stretch is fast change, a flat one is stability. Several series can share one plot when each has its own color.
+
+Use [columns](/docs/comparison/column/) when you have a handful of separate periods and the reader should compare each value. Use an [area chart](/docs/change-over-time/area/) when the size of the total matters more than the slope, and a [slope chart](/docs/change-over-time/slope-bump/) when only two moments matter.
+
+## A basic line chart
+
+Set `mark` to `"line"`, put the date on `x` with `type: "temporal"` and the number on `y`. Two annotations tell the story here: a `text` annotation with a connector marks the peak, and a dashed `refline` marks a target.
+
+<Demo id="change-over-time/line-basic" />
+
+## Several series
+
+Add a `color` channel to draw one line per value of a field. With a handful of series, `endpointLabels` names each line at its right end, so the reader does not have to match colors to a legend. A `range` annotation shades a stretch of the x axis, and a `refline` at `y: 0` marks the baseline.
+
+<Demo id="change-over-time/line-series" />
+
+## Focusing one series
+
+When one series is the story, give it the color and let the rest recede. An explicit `scale` on the color channel maps one company to the accent and the others to grey. `seriesStyles` thickens the focus line, and `legend: { show: false }` drops the legend because `endpointLabels` with `content: "label"` already names every line.
+
+<Demo id="change-over-time/line-focus" />
+
+## Step lines
+
+`interpolate` on the mark sets the curve between points. The default connects them with straight segments. `"step"` holds each value until the next point, which suits a quantity that changes at discrete moments, and `"monotone"` and `"natural"` smooth the line. `point: true` draws a dot at every observation.
+
+<Demo id="change-over-time/line-step" />
+
+## Date ticks
+
+`axis.format` on a temporal channel takes a d3-time-format string, here `"%b '%y"` for ticks like "Jan '19", and `tickCount` suggests how many ticks to draw. The y axis uses a d3-format string: the data is stored as fractions, so `".0%"` prints 8% for 0.08.
+
+<Demo id="change-over-time/line-time-axis" />
+
+## Log scale
+
+`scale: { type: "log" }` on the y channel spaces values by ratio. A series that grows by a similar percentage each year plots as a near-straight line, so a change in the growth rate stands out where a linear axis would bury it.
+
+<Demo id="change-over-time/line-log" />
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `mark` | `"line"`, or an object such as `{ type: "line", interpolate: "step", point: true }` to set the curve, point markers and stroke. |
+| `encoding.x` | The horizontal position. Use `type: "temporal"` for dates and `"ordinal"` for named periods. |
+| `encoding.y` | The value. `scale.type: "log"` switches to a log axis. |
+| `encoding.color` | One line per value of this field. `scale.domain` and `scale.range` pin colors to series. |
+| `endpointLabels` | Names each line at its end. `content` picks the label text. |
+| `seriesStyles` | Per-series overrides, keyed by the series name, such as a thicker stroke. |
+| `annotations` | `text`, `refline` and `range` marks placed in data coordinates. |
+| `axis.format` | A d3-format or d3-time-format string for tick labels. |
+
+## Related
+
+- [Area](/docs/change-over-time/area/) fills under the line.
+- [Slope and bump](/docs/change-over-time/slope-bump/) compare two moments or rank over time.
+- [Sparkline](/docs/change-over-time/sparkline/) shrinks a line to fit beside a number.
+- [Column](/docs/comparison/column/) compares values across a few periods.

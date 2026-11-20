@@ -1,0 +1,67 @@
+---
+title: Pie and donut
+description: Show a handful of shares of one whole with a pie or donut, then add a center label, group small slices, label with leader lines or sweep a half circle.
+section: part-to-whole
+order: 1
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+A pie chart shows how one whole divides among a few categories, and the reader judges each share by the angle of its slice. It works when there are about five categories or fewer and one or two shares are the point.
+
+Use a [bar chart](/docs/comparison/bar/) once you have more than six or seven categories, or when the reader must compare close values, because length is easier to judge than angle. Use a [waffle chart](/docs/part-to-whole/waffle/) when the audience should be able to count units. A donut is a pie with a hole, and the same rules apply.
+
+## A basic pie
+
+Set `mark` to `"arc"`, put the number on `theta` and the category on `color`. No `x` or `y` channel is needed. OpenChart labels slices directly with leader lines instead of relying on a legend. Here the small browsers are folded into one "Others" slice in the data before it reaches the chart.
+
+<Demo id="part-to-whole/pie-basic" />
+
+## A donut
+
+Pass the mark as an object and set `innerRadius` above zero to cut a hole in the pie. The spec is otherwise the same, and the hole leaves room for a headline number.
+
+<Demo id="part-to-whole/donut" />
+
+## A center label
+
+`centerLabel` on the arc mark prints a headline in the hole: a string for one line, or an object with `text` and `subtitle`. The label is decoration, since the number is already in the slices, and it only applies when the mark has an inner radius.
+
+<Demo id="part-to-whole/donut-center-label" />
+
+## Small slices
+
+Slices under about 3% of the total are grouped into a single "Other" slice, so a long tail of tiny values does not crowd the chart. This data has twelve countries, and the smallest are folded together.
+
+<Demo id="part-to-whole/pie-small-slices" />
+
+## Leader-line labels
+
+Leader lines are the default, so the spec sets nothing for them. They let long vendor names sit clear of the arcs, which matters on a donut with several slices of different sizes.
+
+<Demo id="part-to-whole/donut-leader-lines" />
+
+## A half donut
+
+`startAngle` and `endAngle` restrict the arc to a partial sweep, in radians. Angles follow the d3 convention: 0 is straight up and they increase clockwise. `-Math.PI / 2` to `Math.PI / 2` gives a half circle, a common shape for showing control of a chamber.
+
+<Demo id="part-to-whole/donut-half" />
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `mark` | `"arc"` for a pie, or an object with `innerRadius` for a donut. |
+| `mark.innerRadius` | Greater than zero cuts a hole in the pie. |
+| `mark.centerLabel` | A string or `{ text, subtitle }` printed in the donut hole. |
+| `mark.startAngle`, `mark.endAngle` | Restrict the arc to a partial sweep, in radians. |
+| `encoding.theta` | The quantitative value that sets each slice's angle. |
+| `encoding.color` | The category of each slice. |
+| `encoding.color.scale` | `domain` and `range` pin categories to colors. |
+
+## Related
+
+- [Waffle](/docs/part-to-whole/waffle/) shows shares as countable squares.
+- [Parliament](/docs/part-to-whole/parliament/) shows seats in a hemicycle.
+- [Stacked 100%](/docs/part-to-whole/stacked-100/) compares shares across several wholes.
+- [Bar](/docs/comparison/bar/) ranks categories when there are too many for a pie.

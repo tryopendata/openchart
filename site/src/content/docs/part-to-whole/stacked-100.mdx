@@ -1,0 +1,47 @@
+---
+title: Stacked 100%
+description: Compare how several wholes divide into parts by scaling every bar or column to the same length with stack "normalize", for categories or periods.
+section: part-to-whole
+order: 2
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+A 100% stacked chart scales every bar or column to the same length, so each one shows only how its total divides. The reader compares shares across groups, such as income brackets or years, even when the totals differ widely.
+
+Use [grouped or stacked bars](/docs/comparison/grouped-stacked/) when the totals matter and the reader should still see them. Use a [pie or donut](/docs/part-to-whole/pie-donut/) for the shares of a single whole, and a [stacked area](/docs/change-over-time/stacked-area/) for the same normalized view drawn as a continuous shape over time.
+
+## Normalized bars
+
+Put `stack: "normalize"` on the quantitative channel of a bar chart. Each category's values scale to a fraction of its total, so every bar ends at the same place. The axis format `".0%"` prints the fractions as percentages. With `normalize`, value labels on the segments show each segment's share of the stack.
+
+<Demo id="part-to-whole/stacked-100-bars" />
+
+## Normalized columns
+
+Swap the channels, with the category on `x` and the number on `y`, and the bars become columns. Columns suit categories that are periods, such as years. The raw values here are gigawatts, and the chart shows only the share each source contributes in each year.
+
+<Demo id="part-to-whole/stacked-100-columns" />
+
+## Shares over time
+
+The same spec works with many periods. Here twelve quarters of revenue by segment are normalized, so you can see the mix shift while the totals grow or shrink beneath it. `labels: { density: "none" }` leaves the segment labels off to keep a crowded chart readable.
+
+<Demo id="part-to-whole/stacked-100-quarters" />
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `mark` | `"bar"`. Horizontal bars or vertical columns follow from which channel holds the number. |
+| `encoding.y.stack` | `"normalize"` scales each stack to a fraction of its total. Other values are `"zero"`, `"center"` and `null`. |
+| `encoding.color` | The part of the whole. One segment per value of this field. |
+| `axis.format` | `".0%"` prints the normalized fractions as percentages. |
+| `labels.density` | `"none"` hides segment labels. |
+
+## Related
+
+- [Grouped and stacked bars](/docs/comparison/grouped-stacked/) keep the totals visible.
+- [Stacked area](/docs/change-over-time/stacked-area/) for normalized shares drawn as areas.
+- [Pie and donut](/docs/part-to-whole/pie-donut/) for the shares of one whole.
+- [Waffle](/docs/part-to-whole/waffle/) for shares as countable squares.

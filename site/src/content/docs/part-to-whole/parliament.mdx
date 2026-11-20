@@ -1,0 +1,49 @@
+---
+title: Parliament
+description: Draw legislative seats as dots in a hemicycle grouped by party, then add a multi-party chamber, hide the majority line or move it to a custom threshold.
+section: part-to-whole
+order: 4
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+A parliament chart draws a legislature as a hemicycle: dots packed into concentric arcs and grouped by party from left to right. It is the standard form for legislative composition, where who holds a majority is the question.
+
+Use a [pie or donut](/docs/part-to-whole/pie-donut/) for shares of a whole that is not a set of seats, or a [waffle chart](/docs/part-to-whole/waffle/) when the units are not seats. A [bar chart](/docs/comparison/bar/) ranks groups by size more precisely than a hemicycle does.
+
+The demos on this page draw one dot per five seats, computed from the seat counts, to keep the page light. The mark draws one dot per unit of the `theta` value, so a spec with one dot per seat just uses the seat counts.
+
+## A basic parliament
+
+Set `mark` to `"parliament"`, put the count on `theta` and the party on `color`. Order the data left to right by political group, because the layout keeps that order across the arc. Party colors usually come from an explicit `scale.range`. A majority line and an "N to win" label are drawn by default, and `majorityLine` on the mark can replace the label text. Here it names the real threshold of 218 seats, because the dot count is a fifth of the seat count.
+
+<Demo id="part-to-whole/parliament-basic" />
+
+## Many groups
+
+The same spec works with more than two groups. Here eight groups share 705 seats, ordered along the political spectrum so neighboring blocks read as a gradient. The category field can have any name; this data calls it `group`. No group would pass a simple majority alone, so `majorityLine: false` hides the line and its label. Use it when a chamber has no single voting threshold to show.
+
+<Demo id="part-to-whole/parliament-groups" />
+
+## A custom threshold
+
+`majorityLine` takes an object to move the line. `seats` sets the threshold, here 470 seats scaled to dots, which is two thirds of 705, and `label` replaces the default "N to win" text. A `seats` value outside the range from 1 to the total warns and falls back to a simple majority.
+
+<Demo id="part-to-whole/parliament-threshold" />
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `mark` | `"parliament"`, or an object that sets `majorityLine`, `seatRadius` and `shape`. |
+| `mark.majorityLine` | `true` by default. `false` hides it; `{ seats, label }` sets a custom threshold and text. |
+| `mark.seatRadius` | Dot radius in pixels. `"auto"` sizes dots to fill the rings. |
+| `encoding.theta` | The count of each party, one dot per unit. |
+| `encoding.color` | The party. `scale.domain` and `scale.range` pin parties to colors. |
+
+## Related
+
+- [Pie and donut](/docs/part-to-whole/pie-donut/) includes a half donut for chamber control.
+- [Waffle](/docs/part-to-whole/waffle/) for shares as countable squares.
+- [Stacked 100%](/docs/part-to-whole/stacked-100/) for shares across several wholes.
+- [Choropleth](/docs/maps/choropleth/) for results by region.

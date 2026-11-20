@@ -1,0 +1,54 @@
+---
+title: Waffle
+description: Show shares of a whole as a grid of unit squares the reader can count, then highlight one category, resize the grid and bucket small categories into Other.
+section: part-to-whole
+order: 3
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+A waffle chart draws the whole as a grid of squares, one square per unit, and fills them by category. It reads directly: 16 of 100 squares is 16%. It suits a few shares when the audience should be able to count them.
+
+Use a [pie or donut](/docs/part-to-whole/pie-donut/) when exact counts do not matter and you want direct slice labels. Use a [bar chart](/docs/comparison/bar/) when there are many categories or the values are not shares of a total.
+
+## A basic waffle
+
+Set `mark` to `"waffle"`, put the share on `theta` and the category on `color`. The grid is 10 by 10 by default. Values normalize to the grid by largest-remainder rounding, so the squares always sum exactly even when the shares are fractional.
+
+<Demo id="part-to-whole/waffle-basic" />
+
+## Highlighting a category
+
+`highlight` on the `color` channel takes a category name, keeps that category in color and mutes the rest. Use it when one share is the point and the others are context.
+
+<Demo id="part-to-whole/waffle-highlight" />
+
+## Grid size
+
+`units` sets the total number of squares and `columns` sets how many sit in each row, with rows derived as `units / columns`. These are mark options, so the mark becomes an object. Here 50 units in 10 columns make a 5 by 10 grid where each square is two percent.
+
+<Demo id="part-to-whole/waffle-units" />
+
+## Bucketing small categories
+
+`other` on the mark folds categories below a share threshold into one trailing category. `other: 0.05` folds everything under 5%, and the object form `{ threshold, label }` renames the bucket. It is off by default, because bucketing is an editorial decision.
+
+<Demo id="part-to-whole/waffle-other" />
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `mark` | `"waffle"`, or an object that sets `units`, `columns` and `other`. |
+| `mark.units` | Total number of squares. Default 100. |
+| `mark.columns` | Squares per row. Default 10. |
+| `mark.other` | A threshold as a fraction, or `{ threshold, label }`, that folds small categories into one. |
+| `encoding.theta` | The quantitative share of each category. |
+| `encoding.color` | The category. `highlight` singles one out. |
+
+## Related
+
+- [Pie and donut](/docs/part-to-whole/pie-donut/) for shares with direct slice labels.
+- [Parliament](/docs/part-to-whole/parliament/) for countable seats in a hemicycle.
+- [Stacked 100%](/docs/part-to-whole/stacked-100/) for shares across several wholes.
+- [Bar](/docs/comparison/bar/) for categories that are not shares of a total.
