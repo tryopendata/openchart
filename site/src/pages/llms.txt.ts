@@ -1,9 +1,11 @@
+/** llms.txt: the index of every docs page's Markdown export, for agents. */
 import type { APIRoute } from "astro";
-import { docsGroups, site } from "../config";
-import { getDocs } from "../lib/collection";
-import { docsNav, llmsIndex } from "../lib/docs";
+import { allPages } from "../lib/collection";
+import { llmsIndex } from "../lib/docs";
 
-export const GET: APIRoute = async () =>
-  new Response(llmsIndex(site, docsNav(await getDocs(), docsGroups)), {
+export const GET: APIRoute = async () => {
+  const pages = (await allPages()).map((entry) => entry.page);
+  return new Response(llmsIndex(pages), {
     headers: { "Content-Type": "text/plain; charset=utf-8" },
   });
+};

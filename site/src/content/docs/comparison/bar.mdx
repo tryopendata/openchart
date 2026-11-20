@@ -1,0 +1,48 @@
+---
+title: Bar
+description: Compare one value across named categories with horizontal bars, then sort, group, stack, label and highlight them.
+section: comparison
+order: 1
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+A bar chart compares one number across a set of categories, and the reader judges each value by the length of its bar. Bars run horizontally, so category names sit on the left at full length, however long they are.
+
+Use a column chart instead when the categories are time periods or have a natural left-to-right order, such as months or years. The spec is the same; only the channels swap. OpenChart draws horizontal bars when `y` is the category and `x` is the number, and vertical columns when `x` is the category and `y` is the number.
+
+## A basic bar chart
+
+Set `mark` to `"bar"`, put the number on `x` and the category on `y`. Value labels appear on each bar by default.
+
+<Demo id="comparison/bar-basic" />
+
+## Sorted bars
+
+A ranking reads fastest when the longest bar is first. `sort: "x"` on the category channel orders the categories by their `x` value, largest at the top. `sort: null` keeps the order of the data, and an array of names sets the order by hand.
+
+<Demo id="comparison/bar-sorted" />
+
+## Grouped bars
+
+Add a `color` channel to split each category into series. Bars stack by default; `stack: null` on the value channel places the series side by side instead, which suits comparing series against each other rather than reading totals. This example uses columns because the categories are years.
+
+<Demo id="comparison/bar-grouped" />
+
+## Stacked bars
+
+With `stack: "zero"` the segments stack end to end, so each bar shows its total and the share of each part. Here every bracket sums to 100%, which makes the housing segment comparable across incomes.
+
+<Demo id="comparison/bar-stacked" />
+
+## Value labels
+
+`labels` controls the numbers printed on the bars. `density: "all"` labels every bar, and `format` takes a d3-format string: `"+.1f"` prints a sign and one decimal. A negative value grows left from zero, and a `refline` at `x: 0` marks the baseline. The color channel maps a derived `direction` field to two colors so the loss stands out.
+
+<Demo id="comparison/bar-labels" />
+
+## Highlighting a bar
+
+`highlight` on the `color` channel keeps the named categories in color and greys out the rest. A `refline` annotation draws a reference value in data units, here 1 billion people, and its label sits outside the plot.
+
+<Demo id="comparison/bar-highlight" />
