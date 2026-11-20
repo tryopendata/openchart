@@ -1,23 +1,44 @@
 ---
 /**
- * Beyond charts: an uneven grid of demo figures, one dominant live tile (a geo
- * map or a graph) and four smaller ones (table, sankey, tile map, bar list), each
- * linking to its docs page. Demo figures only, no island. Stub from the phase 2
- * scaffold; lane 2/c fills it.
+ * Beyond charts: an uneven grid of demo figures, laid out like a graphics desk's
+ * portfolio page. One dominant live map takes two columns and two rows at 900px
+ * and wider; a tile map, a bar list, a sankey and a table fill the cells around
+ * it, each linking to its docs page. Demo figures only, no island: the page's
+ * demo script mounts each live as it nears the viewport. The tiles enter in a
+ * stagger through the shared reveal helper.
  *
  * Contract: `<section id="kinds" aria-labelledby="kinds-title" data-landing-section>`
  * with one h2, id `kinds-title` (`landingCopy.headings.kinds`). Every figure has a
  * `<figcaption>` with a "Source: …" line (`<Demo>` writes one).
  */
+import Demo from "../../demo/Demo.astro";
 import { landingCopy } from "../../../landing/copy";
+import { kindsTiles } from "./kinds";
 import "../../../styles/landing-story.css";
 ---
 
 <section id="kinds" aria-labelledby="kinds-title" data-landing-section class="landing-section">
   <div class="landing-container">
     <div class="rule-axis landing-rule" aria-hidden="true"></div>
-    <h2 id="kinds-title" class="landing-heading">
-      {landingCopy.headings.kinds}
-    </h2>
+    <div class="kinds-head" data-reveal>
+      <h2 id="kinds-title" class="landing-heading" data-motion="lift-md">
+        {landingCopy.headings.kinds}
+      </h2>
+      <p class="kinds-lede" data-motion-part>
+        A table, a map and a sankey are specs with a <code>type</code>, the same data array and the
+        same title, subtitle and source fields as a chart.
+      </p>
+    </div>
+    <div class="kinds-grid" data-reveal>
+      {kindsTiles.map((tile) => (
+        <div class="kinds-tile" data-size={tile.size} data-motion-part>
+          <Demo id={tile.demo} tabs={false} />
+          <a class="kinds-link" href={tile.href}>
+            {tile.link}
+            <span aria-hidden="true"> →</span>
+          </a>
+        </div>
+      ))}
+    </div>
   </div>
 </section>

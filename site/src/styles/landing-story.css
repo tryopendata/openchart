@@ -1,6 +1,361 @@
 /*
  * Styles for the scroll story, motion, kinds and responsive sections (#story,
- * #motion, #kinds, #responsive). Lane 2/c fills this file; its components import
- * it. Start with `@reference "./global.css";` to use the tokens in `@apply`, and
- * put rules in `@layer components`.
+ * #motion, #kinds, #responsive). Each section has its own shape: a sticky chart
+ * with paragraphs scrolling past it, a chart beside a bench of controls, an
+ * uneven portfolio grid, and a frame with a draggable edge. Structure comes from
+ * hairline rules and the axis motif (ticks on a rule); color stays in the charts.
+ * Transitions use one soft, decisive curve (close to GSAP's expo.out) and never
+ * move a chart: the library animates charts itself.
  */
+@reference "./global.css";
+
+/* The landing page's section styles load before global.css, and a cascade layer
+   ranks by where it is first named: without this, `components` would rank below
+   `base` and preflight's resets would beat every rule here. Same order as global.css. */
+@layer theme, base, sf, components, utilities;
+
+@layer components {
+  /* Shared: a section head with the heading on the left and a short lede set
+     against the right columns of the grid. */
+  .story-head,
+  .responsive-head,
+  .kinds-head,
+  .motion-head {
+    @apply grid gap-6 lg:grid-cols-12 lg:gap-8;
+  }
+
+  .story-head > h2,
+  .responsive-head > h2,
+  .kinds-head > h2,
+  .motion-head > h2 {
+    @apply lg:col-span-7;
+  }
+
+  .story-lede,
+  .responsive-lede,
+  .kinds-lede {
+    @apply text-ink-2 max-w-[34rem] text-base leading-relaxed lg:col-span-4 lg:col-start-9 lg:self-end;
+  }
+
+  .kinds-lede code {
+    @apply font-mono text-[0.9em];
+  }
+
+  /* A live chart fills the fixed-height box LiveChart wraps it in. */
+  .live-chart {
+    @apply h-full;
+  }
+
+  /* ---- #story: paragraphs scroll past a sticky chart ---------------------- */
+
+  .story-layout {
+    @apply mt-10 grid lg:mt-16 lg:grid-cols-12 lg:gap-x-8;
+  }
+
+  /* Narrow screens: the chart sticks to the top and the steps scroll under it. */
+  .story-panel {
+    @apply bg-canvas border-line sticky top-0 z-10 border-b pt-2 pb-1;
+  }
+
+  .story-stage {
+    @apply relative h-[min(52vh,440px)];
+  }
+
+  /* The library sets `position: relative` inline on the host, so the host takes
+     its size from the stage by height, not by absolute insets. */
+  .story-host {
+    @apply h-full;
+  }
+
+  .story-static {
+    @apply absolute inset-0;
+  }
+
+  .story-caption {
+    @apply mt-1 mb-1;
+  }
+
+  .story-steps {
+    @apply m-0 list-none p-0;
+  }
+
+  /* Each step hangs from a vertical axis rule by a tick; the current one's
+     tick grows and takes the accent. */
+  .story-step {
+    @apply border-line-strong relative flex min-h-[78vh] flex-col justify-center border-l py-10 pl-6 sm:pl-8;
+  }
+
+  .story-step::before {
+    @apply bg-line-strong absolute top-1/2 left-0 h-px w-3 content-[''];
+    transition:
+      width 600ms var(--story-ease),
+      background-color 600ms var(--story-ease);
+  }
+
+  .story-step[data-current="true"]::before {
+    @apply bg-accent w-6;
+  }
+
+  /* A reporter's paragraph, in the display serif at article size. */
+  .story-prose {
+    @apply text-ink m-0 max-w-[30rem] text-[1.25rem] leading-[1.55] text-pretty sm:text-[1.375rem];
+    font-family: var(--font-display, var(--font-sans));
+    transition: color 600ms var(--story-ease);
+  }
+
+  .story-step[data-current="false"] .story-prose {
+    @apply text-muted;
+  }
+
+  /* The spec field this step patched, set as a margin note. */
+  .story-excerpt {
+    @apply text-muted border-line m-0 mt-5 max-w-[30rem] border-l-2 py-0.5 pl-3 font-mono text-xs leading-relaxed break-words whitespace-pre-wrap;
+    transition:
+      color 600ms var(--story-ease),
+      border-color 600ms var(--story-ease);
+  }
+
+  .story-step[data-current="true"] .story-excerpt {
+    @apply text-ink-2 border-accent;
+  }
+
+  @media (min-width: 1024px) {
+    .story-panel {
+      @apply col-span-7 col-start-6 row-start-1 self-start border-0 py-0;
+      top: max(1.5rem, calc(50vh - 290px));
+    }
+
+    .story-stage {
+      @apply h-[520px];
+    }
+
+    .story-steps {
+      @apply col-span-4 col-start-1 row-start-1;
+    }
+
+    .story-step {
+      @apply min-h-[88vh];
+    }
+  }
+
+  /* ---- #motion: a chart beside a bench of controls ------------------------ */
+
+  .motion-bench-layout {
+    @apply mt-10 grid gap-10 lg:mt-14 lg:grid-cols-12 lg:gap-8;
+  }
+
+  .motion-figure {
+    @apply border-line-strong m-0 border-t pt-4 lg:col-span-8;
+  }
+
+  .motion-chart {
+    @apply relative h-[360px] sm:h-[440px];
+  }
+
+  .motion-bench {
+    @apply border-line-strong border-t lg:col-span-4;
+  }
+
+  .motion-row {
+    @apply border-line m-0 flex flex-wrap items-center gap-3 border-b px-0 py-4;
+  }
+
+  .motion-row .btn {
+    @apply transition-colors duration-150;
+  }
+
+  .motion-note {
+    @apply text-muted m-0 w-full font-mono text-xs;
+  }
+
+  .motion-choice {
+    @apply min-w-0 border-x-0 border-t-0;
+  }
+
+  .motion-legend {
+    @apply text-muted float-left mr-3 font-mono text-xs;
+  }
+
+  .motion-option {
+    @apply text-ink-2 hover:text-ink inline-flex cursor-pointer items-center gap-1.5 font-mono text-sm transition-colors duration-150;
+  }
+
+  .motion-option input {
+    accent-color: var(--color-accent);
+  }
+
+  .motion-option:has(input:checked) {
+    @apply text-ink;
+  }
+
+  .motion-excerpt {
+    @apply text-ink-2 border-line m-0 border-b py-4 font-mono text-[13px] leading-relaxed;
+  }
+
+  .motion-line {
+    @apply block border-l-2 border-transparent pl-3;
+    transition:
+      border-color 500ms var(--story-ease),
+      background-color 500ms var(--story-ease),
+      color 500ms var(--story-ease);
+  }
+
+  .motion-line[data-changed] {
+    @apply border-accent bg-panel text-ink;
+  }
+
+  .motion-reduced {
+    @apply text-muted m-0 pt-4 text-sm leading-relaxed;
+  }
+
+  /* ---- #kinds: an uneven portfolio grid ---------------------------------- */
+
+  .kinds-grid {
+    @apply mt-10 grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 lg:mt-14;
+    --sf-reveal-step: 90ms;
+  }
+
+  .kinds-tile {
+    @apply flex min-w-0 flex-col;
+  }
+
+  .kinds-tile[data-size="dominant"],
+  .kinds-tile[data-size="wide"] {
+    @apply sm:col-span-2;
+  }
+
+  /* Published-graphic framing: a hairline above, nothing around. */
+  .kinds-tile .demo {
+    @apply border-line-strong my-0 border-x-0 border-t border-b-0 pt-3;
+  }
+
+  .kinds-tile .demo .figure-caption {
+    @apply px-0;
+  }
+
+  .kinds-tile .demo-stage {
+    height: 320px;
+  }
+
+  .kinds-tile:nth-child(n + 4) .demo-stage {
+    height: 480px;
+  }
+
+  .kinds-tile[data-size="dominant"] .demo-stage {
+    height: 460px;
+  }
+
+  /* Plain media rules after the sm: ones: an arbitrary min-[900px] variant sorts
+     before sm: and would lose to it. */
+  @media (min-width: 900px) {
+    .kinds-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .kinds-tile[data-size="dominant"] {
+      @apply row-span-2;
+    }
+
+    /* The dominant map grows to the height of the two cells beside it. */
+    .kinds-tile[data-size="dominant"] .demo {
+      @apply flex flex-1 flex-col;
+    }
+
+    .kinds-tile[data-size="dominant"] .demo-stage {
+      @apply min-h-[460px] flex-1;
+      height: auto;
+    }
+  }
+
+  .kinds-link {
+    @apply text-ink hover:text-accent mt-3 inline-flex items-center gap-1 self-start text-sm font-medium no-underline transition-colors duration-150 hover:underline;
+  }
+
+  .kinds-link span {
+    @apply inline-block transition-transform duration-150;
+  }
+
+  .kinds-link:hover span,
+  .kinds-link:focus-visible span {
+    @apply translate-x-0.5;
+  }
+
+  /* ---- #responsive: a frame with a draggable edge ------------------------- */
+
+  .resize-figure {
+    @apply mt-10 lg:mt-14;
+  }
+
+  .resize-readout {
+    @apply border-line-strong flex items-baseline gap-4 border-t pt-3 font-mono text-sm;
+  }
+
+  .resize-breakpoint {
+    @apply text-accent font-medium;
+  }
+
+  .resize-track {
+    @apply relative mt-2 pt-6;
+  }
+
+  /* Dashed guides at the breakpoints; the frame covers them until it is narrower. */
+  .resize-ruler {
+    @apply pointer-events-none absolute inset-0;
+  }
+
+  .resize-mark {
+    @apply text-muted border-line absolute top-0 bottom-0 border-l border-dashed pl-1.5 font-mono text-[11px] leading-none;
+  }
+
+  .resize-frame {
+    @apply border-line-strong bg-canvas relative max-w-full border;
+    transition: width 500ms var(--story-ease);
+  }
+
+  .resize-frame[data-dragging] {
+    transition: none;
+  }
+
+  .resize-chart {
+    @apply relative h-[420px] sm:h-[460px];
+  }
+
+  .resize-handle {
+    @apply absolute top-0 -right-[9px] bottom-0 flex w-[17px] cursor-ew-resize touch-none items-center justify-center outline-offset-0;
+  }
+
+  .resize-handle::before {
+    @apply bg-canvas border-line-strong h-14 w-[7px] rounded-xs border content-[''];
+    transition:
+      background-color 150ms ease-out,
+      border-color 150ms ease-out,
+      height 300ms var(--story-ease);
+  }
+
+  .resize-handle:hover::before,
+  .resize-handle:focus-visible::before,
+  .resize-frame[data-dragging] .resize-handle::before {
+    @apply bg-accent border-accent h-20;
+  }
+
+  .resize-caption {
+    @apply mt-4;
+  }
+}
+
+:root {
+  /* Soft and decisive: fast out of the gate, a long settle, no overshoot. */
+  --story-ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .story-step::before,
+  .story-prose,
+  .story-excerpt,
+  .motion-line,
+  .resize-frame,
+  .resize-handle::before,
+  .kinds-link span {
+    transition: none;
+  }
+}

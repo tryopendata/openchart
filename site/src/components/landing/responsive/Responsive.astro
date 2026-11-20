@@ -1,8 +1,8 @@
 ---
 /**
  * Responsive: a chart in a frame whose right edge is a drag handle crossing the
- * compact, medium and full breakpoints. Stub from the phase 2 scaffold; lane 2/c
- * fills it with the ResizeFrame island (client:visible).
+ * compact, medium and full breakpoints. The ResizeFrame island hydrates when
+ * visible; before that the chart shows as static SVG at full width.
  *
  * Contract (e2e/landing.spec.ts relies on it):
  * - `<section id="responsive" aria-labelledby="responsive-title" data-landing-section>`
@@ -16,7 +16,21 @@
  * - The chart's figure has a `<figcaption>` with a "Source: …" line.
  */
 import { landingCopy } from "../../../landing/copy";
+import { staticSvg } from "../../../lib/demo/static-svg";
+import { ResizeFrame } from "./ResizeFrame";
+import { responsiveSpec } from "./responsive-spec";
 import "../../../styles/landing-story.css";
+
+const statics = [false, true]
+  .map((dark) =>
+    staticSvg(responsiveSpec, {
+      width: 960,
+      height: 440,
+      dark,
+      idPrefix: `responsive-${dark ? "d" : "l"}`,
+    }),
+  )
+  .join("");
 ---
 
 <section
@@ -27,8 +41,17 @@ import "../../../styles/landing-story.css";
 >
   <div class="landing-container">
     <div class="rule-axis landing-rule" aria-hidden="true"></div>
-    <h2 id="responsive-title" class="landing-heading">
-      {landingCopy.headings.responsive}
-    </h2>
+    <div class="responsive-head" data-reveal>
+      <h2 id="responsive-title" class="landing-heading" data-motion="lift-md">
+        {landingCopy.headings.responsive}
+      </h2>
+      <p class="responsive-lede" data-motion-part>
+        Under 400 pixels the chart switches to its compact layout: annotations become numbered notes
+        below the plot and the axis drops ticks. Nothing in the spec changes.
+      </p>
+    </div>
+    <ResizeFrame client:visible>
+      <Fragment set:html={statics} />
+    </ResizeFrame>
   </div>
 </section>

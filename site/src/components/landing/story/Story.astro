@@ -1,23 +1,47 @@
 ---
 /**
- * Annotations and editorial framing: a scroll story built with the library's own
- * `createChartStory` (or `<ChartStory>`), four steps of prose beside a sticky
- * chart. Stub from the phase 2 scaffold; lane 2/c fills it with the
- * ChartStoryScroll island (client:visible).
+ * Annotations and editorial framing: a scroll story about four US stock indexes,
+ * built with the library's own `createChartStory`. Four paragraphs scroll past a
+ * sticky chart; each changes it (a range, a revealed series, a callout, a
+ * highlight), and prints the spec field that did it in the margin. The
+ * ChartStoryScroll island hydrates when visible; before that, and without
+ * JavaScript, the finished chart shows as static SVG beside every paragraph.
  *
  * Contract: `<section id="story" aria-labelledby="story-title" data-landing-section>`
  * with one h2, id `story-title` (`landingCopy.headings.story`). The chart's figure
  * has a `<figcaption>` with a "Source: …" line.
  */
+import { deepMergeSpec } from "@opendata-ai/openchart-core";
 import { landingCopy } from "../../../landing/copy";
+import { storyBaseSpec, storySource, storySteps } from "../../../landing/story";
+import { staticSvg } from "../../../lib/demo/static-svg";
+import { ChartStoryScroll } from "./ChartStoryScroll";
 import "../../../styles/landing-story.css";
+
+const finished = storySteps.reduce(
+  (spec, step) => deepMergeSpec(spec, step.change.spec ?? {}),
+  storyBaseSpec,
+);
+const size = { width: 720, height: 480 };
+const statics = [false, true]
+  .map((dark) => staticSvg(finished, { ...size, dark, idPrefix: `story-${dark ? "d" : "l"}` }))
+  .join("");
 ---
 
 <section id="story" aria-labelledby="story-title" data-landing-section class="landing-section">
   <div class="landing-container">
     <div class="rule-axis landing-rule" aria-hidden="true"></div>
-    <h2 id="story-title" class="landing-heading">
-      {landingCopy.headings.story}
-    </h2>
+    <div class="story-head" data-reveal>
+      <h2 id="story-title" class="landing-heading" data-motion="lift-md">
+        {landingCopy.headings.story}
+      </h2>
+      <p class="story-lede" data-motion-part>
+        The chart below is one spec. Each paragraph you scroll past merges a small patch into it,
+        and the library animates the difference.
+      </p>
+    </div>
+    <ChartStoryScroll client:visible spec={storyBaseSpec} steps={storySteps} source={storySource}>
+      <Fragment set:html={statics} />
+    </ChartStoryScroll>
   </div>
 </section>
