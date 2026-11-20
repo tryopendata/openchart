@@ -1,0 +1,44 @@
+---
+/**
+ * The current area's sections and pages. The current page is marked
+ * aria-current="page" and carries the page outline beneath it, shown where the
+ * layout has no outline column (`outlineClass` sets where that is).
+ */
+import type { Heading, NavSection } from "../../lib/docs-types";
+import PageOutline from "./PageOutline.astro";
+
+interface Props {
+  /** The landmark name: "Docs" for the desktop rail, "Docs menu" on mobile. */
+  label: string;
+  nav: NavSection[];
+  currentId: string;
+  outline: Heading[];
+  outlineClass?: string;
+  class?: string;
+}
+const { label, nav, currentId, outline, outlineClass, class: className } = Astro.props;
+---
+
+<nav aria-label={label} class:list={["flex flex-col gap-7", className]}>
+  {nav.map((section) => (
+    <div>
+      <p class="text-ink mb-2 text-[13px] font-semibold">{section.label}</p>
+      <ul class="docs-list">
+        {section.items.map((item) => (
+          <li>
+            <a
+              href={item.href}
+              class="docs-link"
+              aria-current={item.id === currentId ? "page" : undefined}
+            >
+              {item.label}
+            </a>
+            {item.id === currentId && outline.length > 0 && (
+              <PageOutline outline={outline} class:list={["mt-1 mb-2 ml-3 pl-3", outlineClass]} />
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  ))}
+</nav>

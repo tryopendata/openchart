@@ -1,0 +1,51 @@
+---
+/**
+ * The site footer: an axis rule, the wordmark and tagline, the link columns from
+ * `site.footer`, then the license, the Steamfield credit and the privacy link.
+ */
+import { site } from "../config";
+import BrandMark from "./BrandMark.astro";
+---
+
+<footer class="mt-24 text-sm">
+  <div class="mx-auto max-w-[90rem] px-5 sm:px-6 lg:px-8">
+    <div class="rule-axis"></div>
+    <div class="grid grid-cols-2 gap-10 pt-10 pb-12 sm:grid-cols-12">
+      <div class="col-span-2 flex flex-col gap-3 sm:col-span-6 lg:col-span-4">
+        <span class="text-ink flex items-center gap-2">
+          <BrandMark class="size-5" />
+          <span class="text-[17px] font-bold tracking-tight">{site.name}</span>
+        </span>
+        <p class="text-muted max-w-xs leading-relaxed">{site.tagline}</p>
+      </div>
+      {site.footer.map((column) => (
+        <nav
+          aria-label={`${column.title} links`}
+          class="flex flex-col gap-2 sm:col-span-3 lg:col-span-2"
+        >
+          <span class="text-ink font-semibold">{column.title}</span>
+          {column.links.map((link) => (
+            <a
+              href={link.href}
+              class="text-ink-2 hover:text-ink w-fit no-underline transition-colors duration-150 hover:underline"
+            >
+              {link.label}
+            </a>
+          ))}
+        </nav>
+      ))}
+    </div>
+    <p class="border-line text-muted flex flex-wrap items-center gap-x-5 gap-y-2 border-t py-5 text-xs">
+      <span>Released under the {site.license} license.</span>
+      <span>
+        Made by{" "}
+        <a href="https://steamfield.io" class="text-ink-2 hover:text-ink">
+          Steamfield
+        </a>
+      </span>
+      <a href="https://steamfield.io/privacy" class="text-ink-2 hover:text-ink">
+        Privacy
+      </a>
+    </p>
+  </div>
+</footer>

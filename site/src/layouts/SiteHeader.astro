@@ -1,0 +1,65 @@
+---
+/**
+ * The site header: wordmark and version, the main links, the search slot and the
+ * theme toggle, over one hairline rule. The toggle stays hidden until site.ts wires it.
+ */
+import { site } from "../config";
+import BrandMark from "./BrandMark.astro";
+
+interface Props {
+  /** The current route, to mark the section the reader is in. */
+  path: string;
+}
+const { path } = Astro.props;
+const links = [{ label: "Docs", href: "/docs/" }, ...site.nav, ...site.social];
+const isCurrent = (href: string) => href.startsWith("/") && path.startsWith(href);
+---
+
+<header class="border-line border-b">
+  <div class="mx-auto flex h-14 max-w-[90rem] items-center gap-4 px-5 sm:gap-6 sm:px-6 lg:px-8">
+    <a href="/" class="text-ink flex items-center gap-2 no-underline">
+      <BrandMark class="size-5" />
+      <span class="text-[17px] font-bold tracking-tight">{site.name}</span>
+    </a>
+    {site.version && (
+      <a
+        href={site.releasesUrl}
+        class="text-muted hover:text-ink hidden font-mono text-xs tabular-nums no-underline transition-colors duration-150 sm:block"
+      >
+        v{site.version}
+      </a>
+    )}
+    <nav aria-label="Main" class="ml-auto flex items-center gap-4 text-sm sm:gap-6">
+      {links.map((link) => (
+        <a
+          href={link.href}
+          aria-current={isCurrent(link.href) ? "page" : undefined}
+          class="text-ink-2 hover:text-ink aria-[current=page]:text-ink aria-[current=page]:decoration-accent no-underline transition-colors duration-150 aria-[current=page]:underline aria-[current=page]:decoration-2 aria-[current=page]:underline-offset-[6px]"
+        >
+          {link.label}
+        </a>
+      ))}
+    </nav>
+    <slot name="search" />
+    <button
+      type="button"
+      data-theme-toggle
+      aria-pressed="false"
+      hidden
+      class="border-line text-ink-2 hover:border-line-strong hover:text-ink grid size-8 place-items-center rounded-xs border transition-colors duration-150"
+    >
+      <svg viewBox="0 0 16 16" aria-hidden="true" class="size-4">
+        <circle
+          cx="8"
+          cy="8"
+          r="6.25"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+        ></circle>
+        <path d="M8 1.75a6.25 6.25 0 0 1 0 12.5Z" fill="currentColor"></path>
+      </svg>
+      <span class="sr-only">Dark theme</span>
+    </button>
+  </div>
+</header>
