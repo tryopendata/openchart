@@ -5,9 +5,10 @@
  * `linear()`. Stops are either evenly spaced values (`[0, 0.4, 1]`) or
  * positioned `{ t, value }` pairs, so a curve can be dense where it moves fast.
  *
- * The CSS tokens `--oc-ease-smooth` / `--oc-ease-snappy` / `--oc-ease-gentle` are generated from
- * this registry (see `styles/token-definitions.ts`), and the JS paths evaluate
- * the same stops through `evalCurve`, so the two never drift.
+ * The CSS `--oc-ease-*` tokens are generated from this registry (see
+ * `styles/token-definitions.ts`), and the JS paths evaluate the same stops
+ * through `evalCurve`, so the two never drift. `evalCubicBezier` lives here too,
+ * for roles timed by a fixed CSS `cubic-bezier()` rather than a sampled curve.
  */
 import type { AnimationEase } from '../types/spec';
 
@@ -71,18 +72,60 @@ const SNAP: readonly CurveStop[] = [
   { t: 1, value: 1 },
 ];
 
+/**
+ * Glide: CSS `cubic-bezier(0.2, 0, 0, 1)` sampled through `evalCubicBezier` and
+ * rounded to 4 decimals, every 0.025 up to t=0.5 and every 0.05 after. It starts
+ * gently (~0.16 at t=0.1), is 0.5 at t=0.2, and settles late (~0.96 at t=0.7)
+ * without overshoot.
+ */
+const GLIDE: readonly CurveStop[] = [
+  { t: 0, value: 0 },
+  { t: 0.025, value: 0.006 },
+  { t: 0.05, value: 0.0285 },
+  { t: 0.075, value: 0.0764 },
+  { t: 0.1, value: 0.1562 },
+  { t: 0.125, value: 0.2556 },
+  { t: 0.15, value: 0.3506 },
+  { t: 0.175, value: 0.4318 },
+  { t: 0.2, value: 0.5 },
+  { t: 0.225, value: 0.5577 },
+  { t: 0.25, value: 0.6072 },
+  { t: 0.275, value: 0.6503 },
+  { t: 0.3, value: 0.6881 },
+  { t: 0.325, value: 0.7216 },
+  { t: 0.35, value: 0.7514 },
+  { t: 0.375, value: 0.7782 },
+  { t: 0.4, value: 0.8023 },
+  { t: 0.425, value: 0.824 },
+  { t: 0.45, value: 0.8438 },
+  { t: 0.475, value: 0.8616 },
+  { t: 0.5, value: 0.8778 },
+  { t: 0.55, value: 0.9059 },
+  { t: 0.6, value: 0.9291 },
+  { t: 0.65, value: 0.948 },
+  { t: 0.7, value: 0.9633 },
+  { t: 0.75, value: 0.9755 },
+  { t: 0.8, value: 0.9849 },
+  { t: 0.85, value: 0.9918 },
+  { t: 0.9, value: 0.9965 },
+  { t: 0.95, value: 0.9991 },
+  { t: 1, value: 1 },
+];
+
 const CURVE_INPUTS = {
-  /** Decks snap. The sampled source of the default `smooth`. */
+  /** Decks snap: a fast attack for quick fades and short accents. */
   snap: SNAP,
-  /** The default ease: an alias of `snap`, so the default improves with no spec change. */
-  smooth: SNAP,
+  /** Soft ease-out with a gentle start. The sampled source of the default `smooth`. */
+  glide: GLIDE,
+  /** The default ease: an alias of `glide`, so the default improves with no spec change. */
+  smooth: GLIDE,
   /** Today's old `smooth` (a gentle ease-out), kept under its own name. */
   gentle: [0, 0.157, 0.438, 0.64, 0.766, 0.85, 0.906, 0.941, 0.964, 0.978, 0.988, 0.994, 0.998, 1],
   /**
-   * Monotone, non-overshooting ease-out, faster than `smooth`. Sampled from
+   * Monotone, non-overshooting ease-out, faster than `snap`. Sampled from
    * `M0,0 C0.04,0.75 0.12,0.97 0.3,0.995 C0.4,1 0.5,1 0.6,1` then held at 1: it is
-   * ~0.78 at t=0.1 (smooth: ~0.67), 0.951 at 0.2, reaches 0.999 by t~0.45 and
-   * is exactly 1 from t=0.55, so it settles sooner than `smooth`.
+   * ~0.78 at t=0.1 (snap: ~0.67), 0.951 at 0.2, reaches 0.999 by t~0.45 and
+   * is exactly 1 from t=0.55, so it settles sooner than `snap` or `smooth`.
    */
   snappy: [
     { t: 0, value: 0 },
@@ -157,7 +200,7 @@ export type CurveName = keyof typeof CURVE_INPUTS;
  * Curves `invertCurve` accepts. Kept as a type so a non-monotone curve is a
  * compile error; a test pins it to the runtime monotonicity check.
  */
-export type MonotoneCurveName = 'snap' | 'smooth' | 'snappy' | 'gentle';
+export type MonotoneCurveName = 'snap' | 'glide' | 'smooth' | 'snappy' | 'gentle';
 
 // Every authored ease must have a curve.
 const _easeIsCurve: AnimationEase extends CurveName ? true : never = true;
@@ -289,4 +332,42 @@ export function curveToCSSLinear(name: CurveName, options?: { indent?: string })
   if (indent === undefined) return `linear(${items.join(', ')})`;
   const inner = `${indent}  `;
   return `linear(\n${inner}${items.join(`,\n${inner}`)}\n${indent})`;
+}
+
+/** Evaluate a CSS cubic-bezier(x1, y1, x2, y2) at time progress t. */
+export function evalCubicBezier(
+  bezier: readonly [number, number, number, number],
+  t: number,
+): number {
+  const [x1, y1, x2, y2] = bezier;
+  const x = t < 0 ? 0 : t > 1 ? 1 : t;
+  if (x1 === y1 && x2 === y2) return x;
+  const cx = 3 * x1;
+  const bx = 3 * (x2 - x1) - cx;
+  const ax = 1 - cx - bx;
+  const cy = 3 * y1;
+  const by = 3 * (y2 - y1) - cy;
+  const ay = 1 - cy - by;
+  const sampleX = (s: number) => ((ax * s + bx) * s + cx) * s;
+  const slopeX = (s: number) => (3 * ax * s + 2 * bx) * s + cx;
+  // Newton first, bisection as the fallback (x(s) is monotone for x1, x2 in [0, 1]).
+  let s = x;
+  for (let i = 0; i < 8; i++) {
+    const err = sampleX(s) - x;
+    if (Math.abs(err) < 1e-7) return ((ay * s + by) * s + cy) * s;
+    const d = slopeX(s);
+    if (Math.abs(d) < 1e-6) break;
+    s -= err / d;
+  }
+  let lo = 0;
+  let hi = 1;
+  s = x;
+  for (let i = 0; i < 40; i++) {
+    const v = sampleX(s);
+    if (Math.abs(v - x) < 1e-7) break;
+    if (v < x) lo = s;
+    else hi = s;
+    s = (lo + hi) / 2;
+  }
+  return ((ay * s + by) * s + cy) * s;
 }

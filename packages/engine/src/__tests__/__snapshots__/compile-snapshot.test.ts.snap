@@ -64,7 +64,7 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
   "animation": {
     "annotationDelay": 150,
     "enter": {
-      "duration": 600,
+      "duration": 800,
       "ease": "smooth",
       "staggerDelay": 80,
       "staggerOrder": "index",
@@ -1467,7 +1467,7 @@ exports[`compileChart snapshot (Step 7 oracle) > clipped-domain bar chart (data 
   "animation": {
     "annotationDelay": 150,
     "enter": {
-      "duration": 600,
+      "duration": 800,
       "ease": "smooth",
       "staggerDelay": 80,
       "staggerOrder": "index",
@@ -2161,7 +2161,7 @@ exports[`compileChart snapshot (Step 7 oracle) > legend-heavy multi-series line 
   "animation": {
     "annotationDelay": 150,
     "enter": {
-      "duration": 600,
+      "duration": 800,
       "ease": "smooth",
       "staggerDelay": 80,
       "staggerOrder": "index",
@@ -3413,7 +3413,7 @@ exports[`compileChart snapshot (Step 7 oracle) > watermarked column chart with g
   "animation": {
     "annotationDelay": 150,
     "enter": {
-      "duration": 600,
+      "duration": 800,
       "ease": "smooth",
       "staggerDelay": 80,
       "staggerOrder": "index",

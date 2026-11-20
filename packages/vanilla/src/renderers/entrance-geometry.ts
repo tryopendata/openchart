@@ -1,20 +1,41 @@
 /**
  * Entrance geometry read from the layout, never from the DOM: where each bar
- * and stack grows from, how far a value label rides with its bar, and when a
- * line point is reached by its line's drawing edge.
+ * and stack grows from, when a line point pops in after its line, when each
+ * grid cell starts, and the px origin points and cells scale about.
  *
  * The renderer stamps these as custom properties the generated entrance CSS
- * reads (`--oc-bar-from`, `--oc-stack-from`, `--oc-label-from`,
- * `--oc-line-point-delay`), so GIF export and cleanup read the same numbers
- * back from the SVG.
+ * reads (`--oc-bar-from`, `--oc-stack-from`, `--oc-line-point-delay`,
+ * `--oc-cell-delay`) and as inline `transform-origin`, so GIF export and
+ * cleanup read the same numbers back from the SVG.
  */
 
 import {
+  CELL_SWEEP_BUDGET_MS,
+  evalCurve,
+  LINE_POINT_CASCADE_MS,
   type Mark,
   type MotionPhase,
   progressTimeMs,
   type RectMark,
+  shuffledSweepDelays,
 } from '@opendata-ai/openchart-core';
+
+/**
+ * Round a stamped number (3 decimals by default) so the SVG carries no long
+ * float tails.
+ */
+export function roundStamp(value: number, decimals = 3): number {
+  return Number(value.toFixed(decimals));
+}
+
+/**
+ * Inline `transform-origin` value for a scale about (x, y) in user-space px.
+ * Stamped in px rather than through `transform-box` so GIF frames, which
+ * carry no animation CSS, scale about the same point.
+ */
+export function scaleOrigin(x: number, y: number): string {
+  return `${roundStamp(x)}px ${roundStamp(y)}px`;
+}
 
 /** One stack of segments sharing a band, revealed as one clip. */
 export interface StackExtent {
@@ -95,79 +116,30 @@ export function revealFrom(
 }
 
 /**
- * Where a bar's value label sits along the value axis, in px: its visual
- * centre (SVG text `y` is the baseline, so step up ~0.35em) for columns, its
- * `x` anchor for horizontal bars. Undefined without a label.
+ * Delays for points that sit on a line or area: a series' dots wait until its
+ * line is 97% drawn, then cascade left to right over LINE_POINT_CASCADE_MS on
+ * the glide curve, by x within the series' own point extent (a zero-width
+ * series starts all its dots at once). Keyed by index into `marks`; points on
+ * no series are left out. Each entry carries the owning line's `seriesKey`,
+ * which is what endpoint labels key on (a point's own identity attributes
+ * are named after the color field).
  */
-export function labelAnchor(mark: RectMark): number | undefined {
-  if (!mark.label) return undefined;
-  // The layout's TextStyle, not a DOM style.
-  const { x, y, style: textStyle } = mark.label;
-  return mark.orient === 'horizontal' ? x : y - 0.35 * textStyle.fontSize;
+export interface LinePointDelay {
+  delayMs: number;
+  seriesKey?: string;
 }
 
-/**
- * How far a bar's value label is carried at the start of the entrance, in px
- * along the value axis; it translates from this offset to 0 on the bar's own
- * curve. A label never leaves the revealed part of its bar:
- *
- * - beyond the tip (an outside value label), it rides the tip, staying
- *   exactly as far from it as it rests;
- * - inside the bar or stack, it starts on the baseline and moves on the same
- *   curve, so it stays inside the growing clip and labels in one stack keep
- *   their order instead of crossing.
- *
- * `anchor` is the label's position along the value axis (`labelAnchor`);
- * without it the label rides the tip. A stacked segment's tip is its stack's
- * edge on the label's side of the baseline.
- */
-export function labelFromOffset(
-  mark: RectMark,
-  stack: StackExtent | undefined,
-  anchor?: number,
-): { x: number; y: number } | undefined {
-  const baseline = stack ? stack.baseline : mark.baseline;
-  if (baseline === undefined) return undefined;
-  const own = valueExtent(mark);
-  const { start, end } = stack ?? own;
-  let tip: number;
-  if (stack) {
-    const side = anchor ?? (own.start + own.end) / 2;
-    tip = side < baseline ? start : end;
-  } else {
-    tip = Math.abs(start - baseline) > Math.abs(end - baseline) ? start : end;
-  }
-  const inside =
-    anchor !== undefined &&
-    (anchor - baseline) * (tip - baseline) >= 0 &&
-    Math.abs(anchor - baseline) <= Math.abs(tip - baseline);
-  const offset = baseline - (inside ? anchor : tip);
-  if (offset === 0) return undefined;
-  return own.horizontal ? { x: offset, y: 0 } : { x: 0, y: offset };
-}
-
-/** `--oc-label-from` value for an offset. */
-export function formatLabelFrom(offset: { x: number; y: number }): string {
-  const px = (v: number) => `${Number(v.toFixed(3))}px`;
-  return `${px(offset.x)}, ${px(offset.y)}`;
-}
-
-/**
- * Delays for points that sit on a line or area: each starts when its series'
- * clip edge reaches the dot (cx - r). The clip runs over the line group's box, whose
- * x-extent is the series' own point extent, eased on the line's curve.
- * Keyed by index into `marks`; points on no series are left out.
- */
 export function linePointDelays(
   marks: readonly Mark[],
   phase: MotionPhase,
   staggerMs: number,
   markIndexOffset = 0,
-): Map<number, number> {
+): Map<number, LinePointDelay> {
   interface Series {
     index: number;
     minX: number;
     maxX: number;
+    seriesKey?: string;
   }
   const byPoint = new Map<string, Series>();
   marks.forEach((mark, i) => {
@@ -180,24 +152,51 @@ export function linePointDelays(
       minX = Math.min(minX, p.x);
       maxX = Math.max(maxX, p.x);
     }
-    const series = { index: mark.animationIndex ?? i + markIndexOffset, minX, maxX };
+    const series: Series = {
+      index: mark.animationIndex ?? i + markIndexOffset,
+      minX,
+      maxX,
+      seriesKey: mark.seriesKey,
+    };
     for (const p of points) {
       const key = `${p.x},${p.y}`;
       if (!byPoint.has(key)) byPoint.set(key, series);
     }
   });
-  const delays = new Map<number, number>();
+  const delays = new Map<number, LinePointDelay>();
   if (byPoint.size === 0) return delays;
   marks.forEach((mark, i) => {
     if (mark.type !== 'point') return;
     const series = byPoint.get(`${mark.cx},${mark.cy}`);
     if (!series) return;
-    // The dot starts when the edge touches it (its leading edge, cx - r), not
-    // its centre: an eased curve only reaches exactly 1 at the very end, so
-    // keying the last dot to its centre leaves it waiting after the line looks done.
+    const lineDrawnMs = progressTimeMs('line-area', series.index, phase, { staggerMs }, 0.97);
     const span = series.maxX - series.minX;
-    const fraction = span > 0 ? Math.max(0, (mark.cx - mark.r - series.minX) / span) : 0;
-    delays.set(i, progressTimeMs('line-area', series.index, phase, { staggerMs }, fraction));
+    const fraction = span > 0 ? (mark.cx - series.minX) / span : 0;
+    delays.set(i, {
+      delayMs: lineDrawnMs + evalCurve('glide', fraction) * LINE_POINT_CASCADE_MS,
+      seriesKey: series.seriesKey,
+    });
   });
   return delays;
+}
+
+/**
+ * Scattered start times for grid cells (rects flagged `cell`: heatmap, waffle,
+ * calendar) spread over CELL_SWEEP_BUDGET_MS, so the grid fills in no visible
+ * order. Seeded by the cell count plus the panel's mark index offset, so a
+ * chart always fills the same way and equal-sized facet panels don't fill in
+ * lockstep.
+ * Keyed by index into `marks`, in mark order.
+ */
+export function cellSweepDelays(marks: readonly Mark[], markIndexOffset = 0): Map<number, number> {
+  const cellIndexes: number[] = [];
+  marks.forEach((mark, i) => {
+    if (mark.type === 'rect' && mark.cell) cellIndexes.push(i);
+  });
+  const sweep = shuffledSweepDelays(
+    cellIndexes.length,
+    CELL_SWEEP_BUDGET_MS,
+    cellIndexes.length + markIndexOffset,
+  );
+  return new Map(cellIndexes.map((markIndex, n) => [markIndex, sweep[n]]));
 }

@@ -6,18 +6,44 @@
  */
 
 /** Maximum total stagger time in ms. Keeps the whole sweep inside one beat. */
-export const MAX_TOTAL_STAGGER_MS = 300;
+export const MAX_TOTAL_STAGGER_MS = 450;
 
 /**
  * Gap between consecutive entering elements: the authored delay is a ceiling,
  * and the whole spread never exceeds MAX_TOTAL_STAGGER_MS, so
- * `gap = min(delay, 300 / (n - 1))`. Five bars at the default 80ms land 75ms
- * apart; forty land 300/39 ms apart. A delay of 0 stays 0, and one element
+ * `gap = min(delay, 450 / (n - 1))`. Five bars at the default 80ms land 80ms
+ * apart (the cap allows 112.5); forty land 450/39 ms apart. A delay of 0 stays 0, and one element
  * has no gap.
  */
 export function clampStaggerDelay(delay: number, elementCount: number): number {
   if (elementCount <= 1 || !(delay > 0)) return 0;
   return Math.min(delay, MAX_TOTAL_STAGGER_MS / (elementCount - 1));
+}
+
+/** Spread of grid-cell (heatmap, waffle, calendar) start times, in ms. */
+export const CELL_SWEEP_BUDGET_MS = 600;
+
+/**
+ * Start times for `count` elements spread evenly over `budgetMs`, then
+ * shuffled with a seeded Fisher-Yates so they fill in no visible pattern.
+ * The same seed always gives the same order.
+ */
+export function shuffledSweepDelays(count: number, budgetMs: number, seed: number): number[] {
+  if (count <= 0) return [];
+  if (count === 1) return [0];
+  const last = count - 1;
+  const delays = Array.from({ length: count }, (_, i) => (i / last) * budgetMs);
+  // mulberry32-style step: cheap, and stable across engines (32-bit integer ops only).
+  let state = 0x9e3779b9 ^ (seed * 2654435761);
+  for (let i = last; i > 0; i--) {
+    state = (state + 0x6d2b79f5) | 0;
+    let t = state ^ (state >>> 15);
+    t = Math.imul(t, t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    const r = ((t ^ (t >>> 14)) >>> 0) % (i + 1);
+    [delays[i], delays[r]] = [delays[r], delays[i]];
+  }
+  return delays;
 }
 
 /** Map point stagger fallback used by the CSS when the renderer stamps none. */

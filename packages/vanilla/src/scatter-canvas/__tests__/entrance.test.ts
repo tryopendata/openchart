@@ -117,9 +117,9 @@ describe('entrance duration', () => {
 
 describe('per-point alpha', () => {
   it("is 0 before a point's window opens and 1 after it closes", () => {
-    // 80ms authored, clamped to 300 / 9 ms by the budget: point 5 starts at
-    // 166.7ms and fades over the point role's fixed 300ms.
-    const start = 5 * (300 / 9);
+    // 80ms authored, clamped to 450 / 9 ms by the budget: point 5 starts at
+    // 250ms and fades over the point role's fixed 300ms.
+    const start = 5 * (450 / 9);
     expect(entranceAlphaAt(start - 1, 5, ENTER, 10)).toBe(0);
     expect(entranceAlphaAt(start, 5, ENTER, 10)).toBe(0);
     expect(entranceAlphaAt(start + 100, 5, ENTER, 10)).toBeGreaterThan(0);

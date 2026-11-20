@@ -50,7 +50,7 @@ describe('animation in compiled layout', () => {
     const spec = { ...barSpec, animation: true } as ChartSpec;
     const layout = compileChart(spec, { width: 600, height: 400 });
     expect(layout.animation?.enter).toEqual({
-      duration: 600,
+      duration: 800,
       ease: 'smooth',
       staggerDelay: 80,
       staggerOrder: 'index',

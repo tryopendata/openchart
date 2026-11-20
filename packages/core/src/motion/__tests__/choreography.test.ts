@@ -45,6 +45,7 @@ const ROLE_NAMES: EntranceRole[] = [
   'rule',
   'tick',
   'label',
+  'arc-label',
   'endpoint-label',
   'annotation',
   'tilemap-tile',
@@ -150,16 +151,26 @@ describe('choreography table', () => {
     }
   });
 
-  it('text and labels fade over 140ms under their geometry', () => {
-    for (const role of ['text', 'label'] as const) {
-      expect(entranceRole(role).fade).toEqual({ ms: 140 });
-      expect(keyframeProperties(entranceRole(role).keyframe)).toEqual(['transform']);
-    }
+  it('text fades over 140ms under its geometry', () => {
+    expect(entranceRole('text').fade).toEqual({ ms: 140 });
+    expect(keyframeProperties(entranceRole('text').keyframe)).toEqual(['transform']);
     expect(KEYFRAMES['oc-enter-rise'].stops[0].values.transform).toEqual({
       type: 'translateY',
       value: 0.6,
       unit: 'em',
     });
+  });
+
+  it('labels fade in place once their bar reaches 0.97', () => {
+    const label = entranceRole('label');
+    expect(label.fade).toBeUndefined();
+    expect(label.keyframe).toBe('oc-enter-fade-only');
+    expect(label.duration).toEqual({ kind: 'fixed', ms: 260 });
+    expect(label.delay).toEqual({
+      after: { kind: 'progress', progress: 0.97, of: 'bar' },
+      stagger: 'mark',
+    });
+    expect(Object.keys(KEYFRAMES)).not.toContain('oc-enter-label');
   });
 });
 
@@ -194,18 +205,19 @@ function goldens(D: number, reach: (p: number) => number): Record<EntranceRole, 
     // delay, duration, geometry (non-opacity props), opacity settle
     bar: [S * I, D, D, 0],
     'bar-h': [S * I, D, D, 0],
-    cell: [S * I, 300, 0, 300],
+    cell: [S * I, 400, 400, 400],
     'stack-reveal': [S * I, D, D, 0],
     'stack-reveal-h': [S * I, D, D, 0],
     'line-area': [S * I, D, D, 0.15 * D],
-    arc: [S * I, 300, 0, 300],
+    arc: [S * I, 450, 450, 450],
     point: [S * I, 300, 0, 300],
     // Unstamped: once the line (index 0) reaches 0.5, plus its own stagger.
-    'line-point': [S * I + D * reach(0.5), 300, 0, 300],
+    'line-point': [S * I + D * reach(0.97), 320, 320, 320],
     text: [S * I, D, D, 140],
     rule: [S * I, 0.5 * D, 0, 0.5 * D],
     tick: [S * I, 0.5 * D, 0, 0.5 * D],
-    label: [S * I, D, D, 140],
+    label: [S * I + D * reach(0.97), 260, 0, 260],
+    'arc-label': [S * I + 450 * reach(0.97), 260, 0, 260],
     // Once its own series' line (same index) is 95% of the way across.
     'endpoint-label': [S * I + D * reach(0.95), 300, 0, 300],
     // When the last mark reaches 0.9, plus the authored gap.
@@ -269,16 +281,17 @@ describe.each([600, 800])('entranceTiming golden ms at D=%i', (D) => {
 });
 
 describe('progress points follow the phase curve', () => {
-  it('a snap entrance reaches 0.9 far sooner than gentle, so annotations come sooner', () => {
-    const smooth = anchorMs('annotation', { duration: 600, ease: 'smooth' });
-    const gentle = anchorMs('annotation', { duration: 600, ease: 'gentle' });
-    expect(smooth).toBeCloseTo(600 * invertCurve('smooth', 0.9), 6);
-    expect(smooth).toBeLessThan(gentle);
+  it('a snappy entrance reaches 0.9 far sooner than smooth, so annotations come sooner', () => {
+    const smooth = anchorMs('annotation', { duration: 800, ease: 'smooth' });
+    const snappy = anchorMs('annotation', { duration: 800, ease: 'snappy' });
+    expect(smooth).toBeCloseTo(800 * invertCurve('smooth', 0.9), 6);
+    expect(snappy).toBeCloseTo(800 * invertCurve('snappy', 0.9), 6);
+    expect(snappy).toBeLessThan(smooth / 2);
   });
 
   it('annotation delay is when the last mark reaches 0.9, plus the authored gap', () => {
     const phase: MotionPhase = { duration: 600, ease: 'smooth' };
-    const stagger = clampStaggerDelay(80, 5); // 75ms
+    const stagger = clampStaggerDelay(80, 5); // 80ms, under the cap
     const ctx = { staggerMs: stagger, lastMarkIndex: 4, annotationDelayMs: 0 };
     const lastBarStart = 4 * stagger;
     const reached = progressTimeMs('bar', 4, phase, ctx, 0.9);
@@ -357,13 +370,13 @@ describe('entranceEndMs', () => {
     expect(
       entranceEndMs({ phase, roles: { 'tilemap-tile': { count: 50, maxDelayMs: 900 } } }),
     ).toBeCloseTo(900 + 0.35 * 600, 6);
-    // Stamped line points: the latest stamped start plus the 300ms fade.
+    // Stamped line points: the latest stamped start plus the 320ms pop.
     expect(
       entranceEndMs({
         phase,
         roles: { 'line-point': { count: 20, maxStampedDelayMs: 480, stampedCount: 20 } },
       }),
-    ).toBe(780);
+    ).toBe(800);
     // 11 features, 800ms phase: budget 540 over 10 gaps, each feature 500ms.
     expect(
       entranceEndMs({
@@ -392,10 +405,10 @@ describe('role easing', () => {
   it('follows the author ease, a fixed curve, or a fixed CSS function', () => {
     const snappy: MotionPhase = { duration: 600, ease: 'snappy' };
     expect(evalRoleEase('bar', snappy, 0.4)).toBe(evalCurve('snappy', 0.4));
-    // Labels ride their bar, so they follow the author ease too.
+    // Labels fade on the author ease.
     expect(evalRoleEase('label', snappy, 0.4)).toBe(evalCurve('snappy', 0.4));
-    // Annotations hard-code --oc-ease-smooth regardless of the author's ease.
-    expect(evalRoleEase('annotation', snappy, 0.4)).toBe(evalCurve('smooth', 0.4));
+    // Annotations hard-code --oc-ease-glide regardless of the author's ease.
+    expect(evalRoleEase('annotation', snappy, 0.4)).toBe(evalCurve('glide', 0.4));
     // CSS ease-in at 0.5 (cubic-bezier(0.42, 0, 1, 1)).
     expect(evalRoleEase('tilemap-tile', snappy, 0.5)).toBeCloseTo(0.3153568, 5);
   });

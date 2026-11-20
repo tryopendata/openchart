@@ -1,22 +1,21 @@
 import {
+  CELL_SWEEP_BUDGET_MS,
   type ChartSpec,
+  evalCurve,
   evalKeyframes,
   evalRoleEase,
+  LINE_POINT_CASCADE_MS,
   type LineMark,
   type Mark,
   type MotionPhase,
   type PointMark,
+  progressTimeMs,
   type RectMark,
+  shuffledSweepDelays,
 } from '@opendata-ai/openchart-core';
 import { compileChart } from '@opendata-ai/openchart-engine';
 import { describe, expect, it } from 'vitest';
-import {
-  labelAnchor,
-  labelFromOffset,
-  linePointDelays,
-  revealFrom,
-  stackExtents,
-} from '../entrance-geometry';
+import { cellSweepDelays, linePointDelays, revealFrom, stackExtents } from '../entrance-geometry';
 
 function rects(spec: ChartSpec): RectMark[] {
   const layout = compileChart(spec, { width: 600, height: 400 });
@@ -32,63 +31,20 @@ const columns = (values: number[]): ChartSpec => ({
   },
 });
 
-describe('labelFromOffset', () => {
-  it('carries a positive column label from the baseline up to its tip', () => {
-    for (const bar of rects(columns([10, 40, 25]))) {
-      expect(bar.baseline).toBeCloseTo(bar.y + bar.height, 6);
-      const offset = labelFromOffset(bar, undefined)!;
-      expect(offset.x).toBe(0);
-      // The tip (top edge) plus the offset lands on the baseline.
-      expect(bar.y + offset.y).toBeCloseTo(bar.baseline!, 6);
-      expect(offset.y).toBeGreaterThan(0);
-    }
-  });
-
-  it('carries a negative column label from the baseline down to its tip', () => {
+describe('revealFrom', () => {
+  it('grows a negative column down from its baseline', () => {
     const bars = rects(columns([20, -30]));
     const negative = bars.find((b) => b.data.value === -30)!;
     expect(negative.baseline).toBeCloseTo(negative.y, 6);
-    const offset = labelFromOffset(negative, undefined)!;
-    expect(negative.y + negative.height + offset.y).toBeCloseTo(negative.baseline!, 6);
-    expect(offset.y).toBeLessThan(0);
     // Its clip collapses onto the top edge, so it grows down.
     expect(revealFrom(false, negative.y, negative.y + negative.height, negative.baseline)).toBe(
       '0 0 100% 0',
     );
   });
+});
 
-  it('an outside value label rides the tip, keeping its resting gap', () => {
-    const bars = rects({ ...columns([10, 40, -25]), labels: { density: 'all' } });
-    for (const bar of bars) {
-      const anchor = labelAnchor(bar)!;
-      const tip = bar.data.value < 0 ? bar.y + bar.height : bar.y;
-      // The label rests beyond the tip...
-      expect(Math.abs(anchor - bar.baseline!)).toBeGreaterThan(Math.abs(tip - bar.baseline!));
-      // ...so it starts the same distance beyond the baseline and rides with the tip.
-      expect(labelFromOffset(bar, undefined, anchor)!.y).toBeCloseTo(bar.baseline! - tip, 6);
-    }
-  });
-
-  it('carries a horizontal bar label along x', () => {
-    const bars = rects({
-      mark: 'bar',
-      data: [
-        { name: 'a', value: 10 },
-        { name: 'b', value: 30 },
-      ],
-      encoding: {
-        y: { field: 'name', type: 'nominal' },
-        x: { field: 'value', type: 'quantitative' },
-      },
-    });
-    for (const bar of bars) {
-      const offset = labelFromOffset(bar, undefined)!;
-      expect(offset.y).toBe(0);
-      expect(bar.x + bar.width + offset.x).toBeCloseTo(bar.baseline!, 6);
-    }
-  });
-
-  it('starts labels inside a stack on the baseline, so they never leave the clip or cross', () => {
+describe('stackExtents', () => {
+  it('spans a centred stack across its baseline as one extent', () => {
     const spec: ChartSpec = {
       mark: 'bar',
       data: [
@@ -102,7 +58,6 @@ describe('labelFromOffset', () => {
         y: { field: 'value', type: 'quantitative', stack: 'center' },
         color: { field: 'series', type: 'nominal' },
       },
-      labels: { density: 'all' },
       // Stack positions are only assigned to animated charts.
       animation: true,
     };
@@ -110,26 +65,9 @@ describe('labelFromOffset', () => {
     const stacks = stackExtents(bars);
     expect(stacks.size).toBe(3);
     const stack = stacks.get(bars[0])!;
-    const baseline = stack.baseline!;
-    expect(stack.start).toBeLessThan(baseline);
-    expect(stack.end).toBeGreaterThan(baseline);
-    for (const bar of bars) {
-      const anchor = labelAnchor(bar)!;
-      expect(anchor).toBeGreaterThan(stack.start);
-      expect(anchor).toBeLessThan(stack.end);
-      const offset = labelFromOffset(bar, stacks.get(bar), anchor)!;
-      // Starting on the baseline and moving on the stack's curve keeps the
-      // label at the same share of the growing clip: inside it, in order.
-      expect(anchor + offset.y).toBeCloseTo(baseline, 6);
-    }
-    // Without an anchor a segment's label rides its stack's tip on its side.
-    for (const bar of bars) {
-      const above = bar.y + bar.height / 2 < baseline;
-      expect(labelFromOffset(bar, stacks.get(bar))!.y).toBeCloseTo(
-        baseline - (above ? stack.start : stack.end),
-        6,
-      );
-    }
+    for (const bar of bars) expect(stacks.get(bar)).toBe(stack);
+    expect(stack.start).toBeLessThan(stack.baseline!);
+    expect(stack.end).toBeGreaterThan(stack.baseline!);
   });
 });
 
@@ -152,36 +90,79 @@ describe('linePointDelays', () => {
   const marks: Mark[] = [line, ...points];
 
   it.each<[string, MotionPhase]>([
-    ['smooth', { duration: 600, ease: 'smooth' }],
-    ['snappy', { duration: 600, ease: 'snappy' }],
-  ])('increases with x and matches the line clip edge (%s)', (_, phase) => {
+    ['smooth', { duration: 800, ease: 'smooth' }],
+    ['snappy', { duration: 800, ease: 'snappy' }],
+  ])('waits for the line to draw, then cascades left to right on glide (%s)', (_, phase) => {
     const delays = linePointDelays(marks, phase, 0);
-    const values = points.map((_, i) => delays.get(i + 1)!);
-    expect(values[0]).toBe(0);
-    for (let i = 1; i < values.length; i++) expect(values[i]).toBeGreaterThan(values[i - 1]);
-    // The last dot starts when the edge touches it, well before the curve's
-    // asymptotic tail ends at D.
-    expect(values.at(-1)).toBeLessThan(500);
-    // At each point's delay, the oc-enter-line clip edge sits on the dot's
-    // leading edge (the first dot, already touching the start, at 0).
+    const values = points.map((_, i) => delays.get(i + 1)!.delayMs);
+    const drawn = progressTimeMs('line-area', 0, phase, { staggerMs: 0 }, 0.97);
+    // The first dot waits until the line's clip has revealed 97% of it.
+    expect(values[0]).toBe(drawn);
+    const frame = evalKeyframes('oc-enter-line', values[0] / phase.duration, (t) =>
+      evalRoleEase('line-area', phase, t),
+    );
+    const clip = frame['clip-path'];
+    if (clip?.type !== 'inset') throw new Error('expected an inset clip');
+    expect(clip.right).toBeLessThanOrEqual(3 + 1e-6);
+    // Then the dots follow by x on the glide curve, the last one the full
+    // cascade after the first.
     points.forEach((point, i) => {
-      if (i === 0) return;
-      const local = values[i] / phase.duration;
-      const frame = evalKeyframes('oc-enter-line', local, (t) =>
-        evalRoleEase('line-area', phase, t),
-      );
-      const clip = frame['clip-path'];
-      if (clip?.type !== 'inset') throw new Error('expected an inset clip');
-      const edge = 400 * (1 - clip.right / 100);
-      expect(edge).toBeCloseTo(point.cx - point.r, 3);
+      expect(values[i]).toBeCloseTo(drawn + evalCurve('glide', point.cx / 400) * 240, 9);
     });
+    for (let i = 1; i < values.length; i++) expect(values[i]).toBeGreaterThan(values[i - 1]);
+    expect(values.at(-1)! - values[0]).toBeCloseTo(LINE_POINT_CASCADE_MS, 9);
   });
 
   it("adds the line's own stagger and skips points on no series", () => {
-    const phase: MotionPhase = { duration: 600, ease: 'smooth' };
+    const phase: MotionPhase = { duration: 800, ease: 'smooth' };
     const stray = { ...points[0], cx: 999, cy: 999 } as PointMark;
     const delays = linePointDelays([{ ...line, animationIndex: 2 }, ...points, stray], phase, 75);
-    expect(delays.get(1)).toBe(150);
+    const unstaggered = linePointDelays(marks, phase, 75);
+    expect(delays.get(1)!.delayMs - unstaggered.get(1)!.delayMs).toBeCloseTo(150, 9);
     expect(delays.has(points.length + 1)).toBe(false);
+  });
+
+  it("keys a faceted panel's dots on its offset line index", () => {
+    const phase: MotionPhase = { duration: 800, ease: 'smooth' };
+    const delays = linePointDelays(marks, phase, 75, 7);
+    expect(delays.get(1)?.delayMs).toBe(
+      progressTimeMs('line-area', 7, phase, { staggerMs: 75 }, 0.97),
+    );
+  });
+
+  it('starts every dot of a zero-width series at once', () => {
+    const phase: MotionPhase = { duration: 800, ease: 'smooth' };
+    const single = { ...line, points: [{ x: 50, y: 10 }] } as LineMark;
+    const dot = { ...points[0], cx: 50, cy: 10 } as PointMark;
+    const delays = linePointDelays([single, dot], phase, 0);
+    expect(delays.get(1)?.delayMs).toBe(
+      progressTimeMs('line-area', 0, phase, { staggerMs: 0 }, 0.97),
+    );
+  });
+});
+
+describe('cellSweepDelays', () => {
+  const cell = (x: number): RectMark =>
+    ({ type: 'rect', x, y: 0, width: 10, height: 10, cell: true, data: {} }) as RectMark;
+  const bar = { ...cell(0), cell: undefined } as RectMark;
+
+  it('gives each cell, and only cells, a shuffled slot over the sweep budget', () => {
+    const marks: Mark[] = [bar, ...Array.from({ length: 6 }, (_, i) => cell(i * 10))];
+    const delays = cellSweepDelays(marks);
+    expect(delays.has(0)).toBe(false);
+    expect([...delays.keys()]).toEqual([1, 2, 3, 4, 5, 6]);
+    expect([...delays.values()]).toEqual(shuffledSweepDelays(6, CELL_SWEEP_BUDGET_MS, 6));
+  });
+
+  it("gives equal-sized facet panels different orders via the panel's offset", () => {
+    const panel: Mark[] = Array.from({ length: 9 }, (_, i) => cell(i * 10));
+    const first = [...cellSweepDelays(panel, 0).values()];
+    const second = [...cellSweepDelays(panel, 9).values()];
+    expect(first).toEqual(shuffledSweepDelays(9, CELL_SWEEP_BUDGET_MS, 9));
+    expect(second).not.toEqual(first);
+  });
+
+  it('returns nothing for a chart with no cells', () => {
+    expect(cellSweepDelays([bar]).size).toBe(0);
   });
 });

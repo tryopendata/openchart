@@ -17,7 +17,7 @@ const url = (name: string) => `/?story=testing--motion-choreography--${name}&mod
 async function open(page: Page, name: string) {
   await page.goto(url(name));
   await page.waitForSelector('.oc-root svg.oc-chart .oc-marks');
-  // Freeze before anything advances. Entrances run 600ms+, and the story is
+  // Freeze before anything advances. Entrances run 800ms+, and the story is
   // already mounted, so pause synchronously in the same task as the lookup.
   await page.evaluate(() => {
     for (const a of document.getAnimations()) a.pause();
@@ -67,45 +67,58 @@ test.describe('bars', () => {
     for (const o of opacities) expect(o).toBe(1);
   });
 
-  test('value labels ride the bar tip', async ({ page }) => {
-    // Gap between a label's bottom edge and the visible tip (the clip edge of
-    // the bar path), per bar, at time t.
-    const gaps = (t: number) =>
-      page.evaluate((time) => {
-        (window as unknown as { __seek: (t: number) => void }).__seek(time);
-        const bars = Array.from(document.querySelectorAll('.oc-mark-rect'));
-        return bars.map((g) => {
+  test('value labels stay hidden until their bar has landed, then fade in place', async ({ page }) => {
+    // Global time: every animation at the same currentTime, so each label's
+    // own delay (its bar's 0.97 point) stays in play.
+    const samples = await page.evaluate(() => {
+      const seekAll = (t: number) => {
+        for (const a of document.getAnimations()) {
+          a.pause();
+          a.currentTime = t;
+        }
+      };
+      const bars = Array.from(document.querySelectorAll('.oc-mark-rect'));
+      const rows: Array<{ key: string; t: number; inset: number; opacity: number; y: number }> = [];
+      for (let t = 0; t <= 2000; t += 10) {
+        seekAll(t);
+        for (const g of bars) {
           const path = g.querySelector('path') as SVGPathElement;
-          const key = g.getAttribute('data-key');
+          const key = g.getAttribute('data-key') ?? '';
           const label = document.querySelector(`.oc-mark-label[data-label-key="${key}"]`);
           if (!label) throw new Error(`no label for ${key}`);
-          const box = path.getBoundingClientRect();
-          // clip-path: inset(top right bottom left); only top is non-zero for
-          // a column growing from the baseline.
-          const top = Number.parseFloat(getComputedStyle(path).clipPath.split('(')[1] ?? '0');
-          const tip = box.top + (box.height * (Number.isFinite(top) ? top : 0)) / 100;
-          return label.getBoundingClientRect().bottom - tip;
-        });
-      }, t);
+          const m = /inset\(([^)]*)\)/.exec(getComputedStyle(path).clipPath);
+          const inset = m ? Math.max(...m[1].split(/\s+/).map((v) => Number.parseFloat(v) || 0)) : 0;
+          rows.push({
+            key,
+            t,
+            inset,
+            opacity: Number(getComputedStyle(label).opacity),
+            y: label.getBoundingClientRect().top,
+          });
+        }
+      }
+      return rows;
+    });
 
-    const rest = await gaps(10_000);
-    for (const t of [50, 100, 200, 400]) {
-      const at = await gaps(t);
-      at.forEach((gap, i) => {
-        const drift = Math.abs(gap - rest[i]);
-        expect(drift, `bar ${i} at ${t}ms: gap ${gap.toFixed(1)} vs rest ${rest[i].toFixed(1)}`).toBeLessThanOrEqual(4);
-      });
+    const byKey = new Map<string, typeof samples>();
+    for (const r of samples) byKey.set(r.key, [...(byKey.get(r.key) ?? []), r]);
+    expect(byKey.size).toBe(5);
+    for (const [key, rows] of byKey) {
+      for (const r of rows) {
+        // Hidden while the bar is still visibly growing.
+        if (r.inset > 3) expect(r.opacity, `${key} at ${r.t}ms, bar inset ${r.inset}%`).toBe(0);
+        // Labels never move.
+        expect(Math.abs(r.y - rows[0].y), `${key} moved at ${r.t}ms`).toBeLessThanOrEqual(0.5);
+      }
+      expect(rows.at(-1)!.opacity, `${key} settles visible`).toBe(1);
     }
   });
 });
 
-test('line points appear as the clip edge reaches them', async ({ page }) => {
+test('line points stay hidden until the line has drawn, then pop in left to right', async ({ page }) => {
   await open(page, 'line');
-  await installSeek(page);
 
   const samples = await page.evaluate(() => {
-    // Global time: every animation at the same currentTime T, so the points'
-    // own delays (keyed to the line's progress) stay in play.
     const seekAll = (t: number) => {
       for (const a of document.getAnimations()) {
         a.pause();
@@ -113,64 +126,53 @@ test('line points appear as the clip edge reaches them', async ({ page }) => {
       }
     };
     const line = document.querySelector('.oc-mark-line') as SVGGElement;
-    const points = Array.from(document.querySelectorAll('circle.oc-mark-point')) as SVGCircleElement[];
-    const lineBox = line.getBBox();
-    const rootCTM = line.getScreenCTM();
-    if (!rootCTM) throw new Error('no CTM');
-    // Work in SVG user units; the svg has no viewBox scaling in this fixture
-    // but the CTM keeps it honest if it ever does.
-    const scale = rootCTM.a;
-    const firstSeen = points.map(() => -1);
-    const edgeAtFirstSeen = points.map(() => Number.NaN);
-    const reachedAt = points.map(() => -1);
-    const edgeAt = () => {
-      const inset = getComputedStyle(line).clipPath;
-      const m = /inset\(([^)]*)\)/.exec(inset);
-      if (!m) return lineBox.x + lineBox.width;
-      const parts = m[1].split(/\s+/);
-      const right = Number.parseFloat(parts[1] ?? '0');
-      // Percent insets on an SVG element resolve against its fill box.
-      return lineBox.x + lineBox.width * (1 - right / 100);
+    const points = (
+      Array.from(document.querySelectorAll('circle.oc-mark-point')) as SVGCircleElement[]
+    ).filter((p) => p.getAttribute('opacity') !== '0');
+    const rightInset = () => {
+      const m = /inset\(([^)]*)\)/.exec(getComputedStyle(line).clipPath);
+      return m ? Number.parseFloat(m[1].split(/\s+/)[1] ?? '0') : 0;
     };
-    // 0.1ms steps: the snap curve moves the edge ~9px/ms early on.
-    for (let t = 0; t <= 800; t += 0.1) {
+    const firstSeen = points.map(() => -1);
+    const insetAtFirstSeen = points.map(() => Number.NaN);
+    let sawScale = false;
+    for (let t = 0; t <= 2000; t += 2) {
       seekAll(t);
-      const edge = edgeAt();
+      const inset = rightInset();
       points.forEach((p, i) => {
-        const left = Number(p.getAttribute('cx')) - Number(p.getAttribute('r'));
-        if (reachedAt[i] < 0 && edge >= left) reachedAt[i] = t;
-        if (firstSeen[i] >= 0) return;
-        if (Number(getComputedStyle(p).opacity) > 0.05) {
+        const cs = getComputedStyle(p);
+        if (Number(cs.opacity) > 0 && Number(cs.opacity) < 1 && cs.transform.startsWith('matrix(')) {
+          sawScale = true;
+        }
+        if (firstSeen[i] < 0 && Number(cs.opacity) > 0.02) {
           firstSeen[i] = t;
-          edgeAtFirstSeen[i] = edge;
+          insetAtFirstSeen[i] = inset;
         }
       });
     }
-    return points.map((p, i) => ({
-      cx: Number(p.getAttribute('cx')),
-      r: Number(p.getAttribute('r')),
-      firstSeen: firstSeen[i],
-      edge: edgeAtFirstSeen[i],
-      reachedAt: reachedAt[i],
-      scale,
-    }));
+    return {
+      sawScale,
+      points: points.map((p, i) => ({
+        cx: Number(p.getAttribute('cx')),
+        firstSeen: firstSeen[i],
+        inset: insetAtFirstSeen[i],
+      })),
+    };
   });
 
-  expect(samples.length).toBeGreaterThanOrEqual(8);
-  for (const s of samples) {
-    const left = s.cx - s.r;
+  expect(samples.points.length).toBeGreaterThanOrEqual(8);
+  expect(samples.sawScale, 'points scale while they fade in').toBe(true);
+  const byX = [...samples.points].sort((a, b) => a.cx - b.cx);
+  for (const s of byX) {
     expect(s.firstSeen, `point at ${s.cx} never became visible`).toBeGreaterThanOrEqual(0);
-    const msg = `point cx=${s.cx}: clip edge ${s.edge.toFixed(1)} vs left ${left.toFixed(1)} at t=${s.firstSeen.toFixed(1)}ms`;
-    // Never visible before the edge gets there.
-    expect(s.edge - left, msg).toBeGreaterThanOrEqual(-4);
-    // Never visibly late: within a few px of the edge, or within one 60fps
-    // frame of the edge reaching it. Early on the snap curve moves the edge
-    // ~9px/ms, so a 2ms fade threshold reads as 17px but is never on screen.
-    const lagMs = s.firstSeen - s.reachedAt;
-    expect(s.edge - left <= 4 || lagMs <= 1000 / 60, `${msg}, ${lagMs.toFixed(1)}ms late`).toBe(
-      true,
-    );
+    // The line is all but drawn before any dot shows.
+    expect(s.inset, `point at ${s.cx}: line inset ${s.inset}% when it appeared`).toBeLessThanOrEqual(3);
   }
+  for (let i = 1; i < byX.length; i++) {
+    expect(byX[i].firstSeen, `point ${i} before point ${i - 1}`).toBeGreaterThanOrEqual(byX[i - 1].firstSeen);
+  }
+  // The cascade spans at most LINE_POINT_CASCADE_MS (240), plus one sample step.
+  expect(byX.at(-1)!.firstSeen - byX[0].firstSeen).toBeLessThanOrEqual(242);
 });
 
 test('stacks share one clip each, spaced by the D5 gap', async ({ page }) => {
@@ -201,22 +203,20 @@ test('stacks share one clip each, spaced by the D5 gap', async ({ page }) => {
     expect(s.name).toMatch(/^oc-enter-stack/);
   }
 
-  const gap = Math.min(80, 300 / (n - 1));
+  const gap = Math.min(80, 450 / (n - 1));
   for (let i = 1; i < n; i++) {
     const d = info.stacks[i].delay - info.stacks[i - 1].delay;
     expect(d, `gap between stack ${i - 1} and ${i}`).toBeCloseTo(gap, 0);
   }
 });
 
-test('heatmap cells fade in place: no clip, opaque 300ms after their delay', async ({ page }) => {
+test('heatmap cells pop in place on scattered starts: no clip, opaque 400ms after their delay', async ({ page }) => {
   await open(page, 'heatmap');
 
   const cells = await page.evaluate(() => {
     const shapes = Array.from(
       document.querySelectorAll('.oc-mark-rect[data-cell] :is(rect, path)'),
     ) as SVGElement[];
-    // Global time: every animation at the same currentTime, so each cell's
-    // own stagger delay stays in play.
     const seekAll = (t: number) => {
       for (const a of document.getAnimations()) {
         a.pause();
@@ -233,30 +233,30 @@ test('heatmap cells fade in place: no clip, opaque 300ms after their delay', asy
       });
     };
     const delays = shapes.map((shape) => Number(shape.getAnimations()[0]?.effect?.getTiming().delay));
-    const indices = shapes.map((shape) =>
-      Number(getComputedStyle(shape).getPropertyValue('--oc-mark-index') || 0),
-    );
     const names = shapes.map((shape) => (shape.getAnimations()[0] as CSSAnimation | undefined)?.animationName);
     const early = sample(0);
-    const atOwnEnd = shapes.map((_, i) => sample(delays[i] + 300)[i]);
-    const at300 = sample(300);
-    for (const t of [50, 150, 450, 600]) sample(t);
-    return { delays, indices, names, early, atOwnEnd, at300, clips: [...clips] };
+    const atOwnEnd = shapes.map((_, i) => sample(delays[i] + 400)[i]);
+    for (const t of [50, 150, 450, 600, 900]) sample(t);
+    return { delays, names, early, atOwnEnd, clips: [...clips] };
   });
 
   expect(cells.names.length).toBe(20);
-  for (const name of cells.names) expect(name).toBe('oc-enter-fade-only');
+  for (const name of cells.names) expect(name).toBe('oc-enter-cell');
   expect(cells.clips).toEqual(['none']);
-  // Cells start hidden, not at full paint.
   expect(Math.min(...cells.early)).toBeLessThan(1);
-  cells.indices.forEach((index, i) => {
-    if (index === 0) expect(cells.at300[i], 'cell index 0 at 300ms').toBe(1);
+  // Starts spread over the 600ms sweep, out of mark order.
+  let inversions = 0;
+  let pairs = 0;
+  cells.delays.forEach((d, i) => {
+    expect(d, `cell ${i} delay`).toBeGreaterThanOrEqual(0);
+    expect(d + 400, `cell ${i} settles by 1000ms`).toBeLessThanOrEqual(1000.5);
+    expect(cells.atOwnEnd[i], `cell ${i} at its delay + 400ms`).toBe(1);
+    for (let j = i + 1; j < cells.delays.length; j++) {
+      pairs++;
+      if (cells.delays[j] < d) inversions++;
+    }
   });
-  expect(cells.indices).toContain(0);
-  cells.delays.forEach((delay, i) => {
-    expect(delay + 300, `cell ${i} settles by 600ms`).toBeLessThanOrEqual(600);
-    expect(cells.atOwnEnd[i], `cell ${i} at its delay + 300ms`).toBe(1);
-  });
+  expect(inversions / pairs).toBeGreaterThan(0.25);
 });
 
 test('a chart below the fold waits until it is scrolled into view', async ({ page }) => {

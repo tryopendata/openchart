@@ -37,7 +37,7 @@ export { clampStaggerDelay, MAX_TOTAL_STAGGER_MS } from '@opendata-ai/openchart-
 
 /** Default values for entrance animation. */
 export const ENTER_DEFAULTS: ResolvedAnimationPhase = {
-  duration: 600,
+  duration: 800,
   ease: 'smooth',
   staggerDelay: 80,
   staggerOrder: 'index',

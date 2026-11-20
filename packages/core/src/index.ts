@@ -259,7 +259,6 @@ export {
   entranceEndMs,
   entranceRole,
   entranceTiming,
-  evalCubicBezier,
   evalKeyframes,
   evalRoleEase,
   FADE_CURVE,
@@ -267,6 +266,7 @@ export {
   KEYFRAMES,
   keyframeProperties,
   keyframeValueToCSS,
+  LINE_POINT_CASCADE_MS,
   progressTimeMs,
   roleBaseDuration,
   roleVars,
@@ -278,6 +278,7 @@ export {
   CURVE_NAMES,
   curveStops,
   curveToCSSLinear,
+  evalCubicBezier,
   evalCurve,
   evalValueCurve,
   invertCurve,
@@ -294,6 +295,7 @@ export {
 } from './motion/sample';
 export type { MapSweepTiming } from './motion/stagger';
 export {
+  CELL_SWEEP_BUDGET_MS,
   clampStaggerDelay,
   MAP_FEATURE_MAX_DURATION_MS,
   MAP_POINT_STAGGER_FALLBACK_MS,
@@ -301,6 +303,7 @@ export {
   MAX_TOTAL_STAGGER_MS,
   mapFeatureDuration,
   mapSweepTiming,
+  shuffledSweepDelays,
   tilemapTileDelays,
 } from './motion/stagger';
 export type { CssTokenDef } from './styles/token-definitions';

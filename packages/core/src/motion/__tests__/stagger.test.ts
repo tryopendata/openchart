@@ -4,19 +4,20 @@ import {
   MAP_SWEEP_BUDGET_MS,
   MAX_TOTAL_STAGGER_MS,
   mapSweepTiming,
+  shuffledSweepDelays,
   tilemapTileDelays,
 } from '../stagger';
 
 describe('stagger strategies', () => {
-  it('clampStaggerDelay spreads at most 300ms over n - 1 gaps, the authored delay a ceiling', () => {
-    expect(MAX_TOTAL_STAGGER_MS).toBe(300);
-    // 5 bars at the default 80ms: 300 / 4 = 75ms apart.
-    expect(clampStaggerDelay(80, 5)).toBe(75);
-    // 40 bars: 300 / 39.
-    expect(clampStaggerDelay(80, 40)).toBeCloseTo(300 / 39, 10);
-    // Few elements keep the authored gap.
-    expect(clampStaggerDelay(80, 3)).toBe(80);
-    expect(clampStaggerDelay(30, 200)).toBeCloseTo(300 / 199, 10);
+  it('clampStaggerDelay spreads at most 450ms over n - 1 gaps, the authored delay a ceiling', () => {
+    expect(MAX_TOTAL_STAGGER_MS).toBe(450);
+    // 7 bars at the default 80ms: 450 / 6 = 75ms apart.
+    expect(clampStaggerDelay(80, 7)).toBe(75);
+    // 40 bars: 450 / 39.
+    expect(clampStaggerDelay(80, 40)).toBeCloseTo(450 / 39, 10);
+    // Few elements keep the authored gap: 5 bars could spread 112.5ms apart.
+    expect(clampStaggerDelay(80, 5)).toBe(80);
+    expect(clampStaggerDelay(30, 200)).toBeCloseTo(450 / 199, 10);
     // One element, or no stagger, has no gap.
     expect(clampStaggerDelay(80, 1)).toBe(0);
     expect(clampStaggerDelay(80, 0)).toBe(0);
@@ -57,5 +58,23 @@ describe('stagger strategies', () => {
     }
     expect(tilemapTileDelays(indices)).toEqual(expected);
     expect(tilemapTileDelays([])).toEqual([]);
+  });
+
+  it('shuffled sweep reproduces the map renderer’s seeded shuffle', () => {
+    // Reference: the map renderer's inline shuffle before it moved to core,
+    // seeded by the feature count.
+    for (const n of [2, 11, 50]) {
+      const expected = Array.from({ length: n }, (_, i) => (i / (n - 1)) * 540);
+      let seed = 0x9e3779b9 ^ (n * 2654435761);
+      for (let i = n - 1; i > 0; i--) {
+        seed = (seed + 0x6d2b79f5) | 0;
+        let t = seed ^ (seed >>> 15);
+        t = Math.imul(t, t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        const r = ((t ^ (t >>> 14)) >>> 0) % (i + 1);
+        [expected[i], expected[r]] = [expected[r], expected[i]];
+      }
+      expect(shuffledSweepDelays(n, 540, n)).toEqual(expected);
+    }
   });
 });

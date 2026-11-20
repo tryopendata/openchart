@@ -56,7 +56,7 @@
       animation-delay: var(
         --oc-table-heatmap-cell-delay,
         calc(
-          var(--oc-table-heatmap-cell-after, calc(var(--oc-animation-duration) * 0.064336)) +
+          var(--oc-table-heatmap-cell-after, calc(var(--oc-animation-duration) * 0.2)) +
           var(--oc-animation-stagger) *
           var(--oc-row-index, 0)
         )
@@ -72,7 +72,7 @@
       animation-delay: var(
         --oc-table-bar-fill-delay,
         calc(
-          var(--oc-table-bar-fill-after, calc(var(--oc-animation-duration) * 0.064336)) +
+          var(--oc-table-bar-fill-after, calc(var(--oc-animation-duration) * 0.2)) +
           var(--oc-animation-stagger) *
           var(--oc-row-index, 0)
         )
@@ -90,7 +90,7 @@
       animation-delay: var(
         --oc-table-sparkline-delay,
         calc(
-          var(--oc-table-sparkline-after, calc(var(--oc-animation-duration) * 0.110284)) +
+          var(--oc-table-sparkline-after, calc(var(--oc-animation-duration) * 0.308881)) +
           var(--oc-animation-stagger) *
           var(--oc-row-index, 0)
         )
@@ -107,7 +107,7 @@
       animation-delay: var(
         --oc-table-sparkline-dot-delay,
         calc(
-          var(--oc-table-sparkline-dot-after, calc(var(--oc-animation-duration) * 0.319112)) +
+          var(--oc-table-sparkline-dot-after, calc(var(--oc-animation-duration) * 0.834109)) +
           var(--oc-animation-stagger) *
           var(--oc-row-index, 0)
         )

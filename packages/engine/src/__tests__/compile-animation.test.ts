@@ -51,7 +51,7 @@ describe('compileChart with animation', () => {
 
     expect(layout.animation).toBeDefined();
     expect(layout.animation!.enter).toBeDefined();
-    expect(layout.animation!.enter!.duration).toBe(600);
+    expect(layout.animation!.enter!.duration).toBe(800);
     expect(layout.animation!.enter!.ease).toBe('smooth');
     expect(layout.animation!.enter!.staggerDelay).toBe(80);
     expect(layout.animation!.enter!.staggerOrder).toBe('index');
@@ -60,7 +60,7 @@ describe('compileChart with animation', () => {
 
   it('resolves full defaults when animation is not specified (on by default)', () => {
     const layout = compileChart(barSpec, { width: 600, height: 400 });
-    expect(layout.animation!.enter!.duration).toBe(600);
+    expect(layout.animation!.enter!.duration).toBe(800);
     expect(layout.animation!.enter!.trigger).toBe('visible');
     expect(layout.animation!.update!.duration).toBe(500);
     expect(layout.animation!.exit).toBeDefined();
@@ -159,11 +159,11 @@ describe('compileChart with animation', () => {
     } as ChartSpec;
     const layoutCompact = compileChart(specNoAnim, { width: 350, height: 400 });
     // `animation: true` resolves the default entrance.
-    expect(layoutCompact.animation!.enter!.duration).toBe(600);
+    expect(layoutCompact.animation!.enter!.duration).toBe(800);
 
     // At full width (> 700), no override applies, so the default (on) holds
     const layoutFull = compileChart(specNoAnim, { width: 800, height: 400 });
-    expect(layoutFull.animation!.enter!.duration).toBe(600);
+    expect(layoutFull.animation!.enter!.duration).toBe(800);
 
     // An override can turn the default off at compact width
     const specOffCompact = {
