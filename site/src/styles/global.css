@@ -410,3 +410,15 @@ h1 {
 .docs-menu[open] > summary::after {
   content: "\2212";
 }
+
+/* The library sets tabular figures on the whole chart, and Schibsted Grotesk's
+   tabular set gives commas, periods and colons a full figure width ("2022 , then").
+   Keep tabular figures for axis ticks, which line up, and set everything else as text. */
+.oc-chart,
+.oc-chart text {
+  font-variant-numeric: normal;
+}
+
+.oc-chart :is(.oc-axis-tick, .oc-axis-tick text) {
+  font-variant-numeric: tabular-nums;
+}
