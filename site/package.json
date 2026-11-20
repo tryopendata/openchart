@@ -27,6 +27,7 @@
     "react-dom": "19.3.0",
     "satori": "^0.63.2",
     "sharp": "^0.35.5",
+    "shiki": "4.6.0",
     "tailwindcss": "^4.3.5",
     "us-atlas": "^3.0.1",
     "world-atlas": "^2.0.2"

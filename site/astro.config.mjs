@@ -32,7 +32,7 @@ export default defineConfig({
     // anchor plugin can read them.
     processor: satteri({ hastPlugins: [satteriHeadingIdsPlugin(), ...docsHastPlugins] }),
     shikiConfig: {
-      themes: { light: "github-light", dark: "github-dark" },
+      themes: { light: "github-light", dark: "github-dark-default" },
       // Both themes as CSS variables; global.css picks one per theme.
       defaultColor: false,
       transformers: docsShikiTransformers,
