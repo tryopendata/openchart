@@ -291,12 +291,6 @@ export const basicLollipop = defineDemo({
   },
 });
 
-// The data has no sign field, so the color scale needs one derived per row.
-const stateChange = statePopulationChange.data.map((row) => ({
-  ...row,
-  direction: row.change >= 0 ? "Growing" : "Shrinking",
-}));
-
 export const divergingLollipop = defineDemo({
   id: "comparison/lollipop-diverging",
   title: "Population change by state",
@@ -304,7 +298,7 @@ export const divergingLollipop = defineDemo({
   height: 460,
   spec: {
     mark: "lollipop",
-    data: stateChange,
+    data: [...statePopulationChange.data],
     encoding: {
       x: {
         field: "change",
@@ -312,50 +306,11 @@ export const divergingLollipop = defineDemo({
         axis: { title: "Population change (%)", format: "+.0f" },
       },
       y: { field: "state", type: "nominal" },
-      color: {
-        field: "direction",
-        type: "nominal",
-        scale: { domain: ["Growing", "Shrinking"], range: [ACCENT, LOSS] },
-      },
     },
-    legend: { show: false },
     annotations: [{ type: "refline", x: 0, style: "solid", stroke: "#334155", strokeWidth: 1.5 }],
     chrome: {
       title: "Americans keep moving south",
       subtitle: "Percent population change by state, April 2020 to July 2024",
-    },
-  },
-});
-
-export const dotPlot = defineDemo({
-  id: "comparison/lollipop-dot-plot",
-  title: "Commute time by metro area, dots only",
-  source: sourceOf(commuteTimes),
-  height: 460,
-  spec: {
-    mark: { type: "circle", fill: ACCENT },
-    data: [...commuteTimes.data],
-    encoding: {
-      x: {
-        field: "minutes",
-        type: "quantitative",
-        axis: { title: "Average one-way commute (minutes)" },
-      },
-      y: { field: "city", type: "nominal" },
-    },
-    annotations: [
-      {
-        type: "refline",
-        x: 30,
-        label: "US avg: 30 min",
-        style: "dashed",
-        stroke: "#64748b",
-        strokeWidth: 1,
-      },
-    ],
-    chrome: {
-      title: "Dots alone carry the same ranking",
-      subtitle: "Average one-way commute time by major US metro area, 2024 (minutes)",
     },
   },
 });

@@ -15,8 +15,7 @@ const averageJobs = Math.round(
   usPayrolls.data.reduce((sum, row) => sum + row.jobs, 0) / usPayrolls.data.length,
 );
 
-// Each layer resolves its own y-scale from its own data, so both layers pin the
-// same domain; otherwise the one-value rule layer would scale to [0, average].
+// Layers share scales; the explicit domain fixes the shared axis at 0 to 400.
 const JOBS_DOMAIN: [number, number] = [0, 400];
 
 export const barAndRuleLayers = defineDemo({

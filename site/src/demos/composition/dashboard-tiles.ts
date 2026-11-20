@@ -111,7 +111,7 @@ export const barListTile = defineDemo({
     },
     barHeight: 8,
     watermark: false,
-    chrome: { title: "Top movers", subtitle: "Language popularity index, % share" },
+    chrome: { title: "Top languages", subtitle: "Language popularity index, % share" },
   },
 });
 

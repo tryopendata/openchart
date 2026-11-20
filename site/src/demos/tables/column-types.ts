@@ -64,7 +64,7 @@ export const barColumn = defineDemo({
 
 export const sparklineColumns = defineDemo({
   id: "tables/sparkline-columns",
-  title: "Three sparkline types in one table",
+  title: "Line and column sparklines in one table",
   source: sourceOf(stockPerformance),
   height: 600,
   spec: {
@@ -75,11 +75,10 @@ export const sparklineColumns = defineDemo({
       { key: "price", label: "Price", format: "$,.2f", sortable: true, align: "right" },
       { key: "trend", label: "8-week trend", sparkline: { type: "line", domain: "row" } },
       { key: "flows", label: "Fund flows", sparkline: { type: "column" } },
-      { key: "flows", label: "Volume", sparkline: { type: "bar" } },
     ],
     chrome: {
-      title: "Three ways to draw a series in a cell",
-      subtitle: "The same sparkline column config with type line, column and bar",
+      title: "Two ways to draw a series in a cell",
+      subtitle: "The same sparkline column config with type line and column",
     },
   },
 });
