@@ -26,7 +26,10 @@ function page(root: string, path: string): Document {
   const file = join(root, path);
   let document = parsed.get(file);
   if (!document) {
-    document = parser.parseFromString(read(root, path), "text/html") as unknown as Document;
+    // happy-dom drops everything after a <style> inside an inline <svg>, and map
+    // charts carry one. No test here reads styles, so they are removed before parsing.
+    const html = read(root, path).replace(/<style\b[^>]*>[\s\S]*?<\/style>/g, "");
+    document = parser.parseFromString(html, "text/html") as unknown as Document;
     parsed.set(file, document);
   }
   return document;
