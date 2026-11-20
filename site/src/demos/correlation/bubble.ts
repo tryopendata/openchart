@@ -4,8 +4,8 @@
  */
 import { emissionsRenewables } from "@datasets/emissions-renewables";
 import { wealthHealth } from "@datasets/wealth-health";
+import { sourceOf } from "../source";
 import { defineDemo } from "../types";
-import { sourceOf } from "./shared";
 
 const emissionsAxis = { title: "CO2 emissions per capita (tonnes)" };
 const renewablesAxis = { title: "Renewable electricity share (%)" };

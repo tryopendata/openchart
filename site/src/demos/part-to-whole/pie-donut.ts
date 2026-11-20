@@ -8,8 +8,8 @@ import { co2Emissions } from "@datasets/co2-emissions";
 import { federalBudget } from "@datasets/federal-budget";
 import { usHouse } from "@datasets/parliament-seats";
 import { smartphoneShare } from "@datasets/smartphone-share";
+import { sourceOf } from "../source";
 import { defineDemo } from "../types";
-import { sourceOf } from "./source";
 
 // The lead pie is about labels, so every slice stays above the ~3% grouping
 // threshold: the small browsers fold into the one "Others" slice up front.

@@ -8,8 +8,8 @@ import { evFleet } from "@datasets/ev-fleet";
 import { gdpGrowthByCountry } from "@datasets/gdp-growth-by-country";
 import { monthlyTemperature } from "@datasets/monthly-temperature";
 import { usInflation } from "@datasets/us-inflation";
+import { sourceOf } from "../source";
 import { defineDemo } from "../types";
-import { sourceOf } from "./source";
 
 const ACCENT = "#0e7490";
 
@@ -96,6 +96,8 @@ export const focusedLine = defineDemo({
   title: "Big tech revenue with one company in focus",
   source: sourceOf(bigTechRevenue),
   height: 460,
+  // The heaviest figure on its page, so it draws in the browser and the page keeps size headroom.
+  static: false,
   spec: {
     mark: "line",
     data: [...bigTechRevenue.data],

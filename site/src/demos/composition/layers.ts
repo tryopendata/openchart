@@ -5,8 +5,8 @@
 import { collegeFinances } from "@datasets/college-finances";
 import { stateEconomies } from "@datasets/state-economies";
 import { usPayrolls } from "@datasets/us-payrolls";
+import { sourceOf } from "../source";
 import { defineDemo } from "../types";
-import { sourceOf } from "./source";
 
 const BLUE = "#0e7490";
 const ORANGE = "#e07b39";

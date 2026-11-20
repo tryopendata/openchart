@@ -5,8 +5,8 @@
  */
 import { energyMix } from "@datasets/energy-mix";
 import { renewableCapacityAdditions } from "@datasets/renewable-capacity";
+import { sourceOf } from "../source";
 import { defineDemo } from "../types";
-import { sourceOf } from "./source";
 
 export const stackedArea = defineDemo({
   id: "change-over-time/stacked-area-basic",

@@ -6,8 +6,8 @@
 import { stateEconomies } from "@datasets/state-economies";
 import { usStateUnemployment } from "@datasets/us-state-unemployment";
 import { vaccineExemptions } from "@datasets/vaccine-exemptions";
+import { sourceOf } from "../source";
 import { defineDemo } from "../types";
-import { sourceOf } from "./sources";
 
 export const basicTileMap = defineDemo({
   id: "maps/tile-basic",

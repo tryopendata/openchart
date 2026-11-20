@@ -4,9 +4,9 @@
  * remounts them when the site theme changes, and wires the code tabs and Copy
  * buttons. BaseLayout loads it on every page; it does nothing without a demo.
  */
-import type { VizSpec } from "@opendata-ai/openchart-core";
 import { DEMO_ATTR, DEMO_CLASS } from "../lib/demo/markup";
 import { setupDemoCopyButtons } from "./demo-copy";
+import { readFigureSpec } from "./demo-spec";
 import { setupFrameworkChoice } from "./framework-choice";
 
 /** Mount this far ahead of the viewport so the chart is live before the reader reaches it. */
@@ -20,7 +20,8 @@ type DemoMounter = typeof import("./demo-mount");
 type DemoStage = {
   id: string;
   stage: HTMLElement;
-  specJson: string;
+  /** The figure, or the stage itself when it sits in none; `readFigureSpec` reads the spec from it. */
+  figure: HTMLElement;
   entrance: boolean;
   /** Types without a static SVG never go back to an empty stage, so they are never evicted. */
   hasStatic: boolean;
@@ -35,7 +36,7 @@ function readDemoStage(stage: HTMLElement): DemoStage {
   return {
     id: figure?.getAttribute(DEMO_ATTR.figure) ?? "(unknown demo)",
     stage,
-    specJson: figure?.querySelector(`[${DEMO_ATTR.spec}]`)?.textContent ?? "",
+    figure: figure ?? stage,
     entrance: figure?.hasAttribute(DEMO_ATTR.entrance) ?? false,
     hasStatic: stage.querySelector(`svg.${DEMO_CLASS.static}`) !== null,
     near: false,
@@ -56,11 +57,17 @@ function distanceFromViewport(element: HTMLElement): number {
   return 0;
 }
 
+/** Takes away the line a stage without a static SVG shows until its chart mounts. */
+function removePlaceholder(demo: DemoStage): void {
+  demo.stage.querySelector(`[${DEMO_ATTR.placeholder}]`)?.remove();
+}
+
 function showFailure(demo: DemoStage, error: unknown): void {
   if (demo.failed) return;
   demo.failed = true;
   demo.stage.setAttribute(DEMO_ATTR.error, "");
   if (!demo.hasStatic) {
+    removePlaceholder(demo);
     const message = demo.stage.ownerDocument.createElement("p");
     message.className = "demo-error";
     message.textContent = FAILURE_TEXT;
@@ -92,12 +99,13 @@ function mountNow(demos: DemoStage[], demo: DemoStage, mounter: DemoMounter): vo
   if (demo.live || demo.failed) return;
   makeRoom(demos, demo);
   try {
-    const spec = JSON.parse(demo.specJson) as VizSpec;
+    const spec = readFigureSpec(demo.figure);
     // Only the first mount may play the entrance; evictions and theme changes remount quietly.
     const entrance = demo.entrance && !demo.played;
     const dark = isDarkPage(demo.stage.ownerDocument);
     demo.live = mounter.mountDemo(demo.stage, spec, { dark, entrance });
     demo.played = true;
+    removePlaceholder(demo);
     demo.stage.setAttribute(DEMO_ATTR.live, "");
   } catch (error) {
     showFailure(demo, error);

@@ -13,7 +13,9 @@ Use a [line chart](/docs/change-over-time/line/) when the reader needs to read v
 
 ## A basic calendar
 
-`x` is the daily date with `type: "temporal"`, one row per day, and `color` is the quantitative value. There is no `y` channel, because the calendar computes its own weeks-by-weekdays layout. A diverging scheme such as `redBlue` suits values that run above and below a normal, and `reverse: true` makes warm days red. The scale spans the data's minimum to maximum, so set a symmetric `domain` to put the neutral color at zero. `format` sets how the legend prints values. Days with no data row render as empty cells, so the grid always shows the whole year, and these demos fill a few weeks of it.
+`x` is the daily date with `type: "temporal"`, one row per day, and `color` is the quantitative value. There is no `y` channel, because the calendar computes its own weeks-by-weekdays layout. Days with no data row render as empty cells, so the grid always shows the whole year, and these demos fill a few weeks of it.
+
+A diverging scheme such as `redBlue` suits values that run above and below a normal, and `reverse: true` makes warm days red. The scale spans the data's minimum to maximum, so set a symmetric `domain` to put the neutral color at zero. `format` sets how the legend prints values.
 
 <Demo id="change-over-time/calendar-basic" />
 
@@ -23,7 +25,12 @@ Two mark options change the grid. `weekStart` sets which weekday sits in the top
 
 <Demo id="change-over-time/calendar-sequential" />
 
-Data that spans several years splits into one band per year. The bands stack and share a single color scale and a single legend, so colors compare across years.
+## Several years
+
+Data that spans several years splits into one band per year, each a full calendar year, stacked one above the other with the year as a label. The bands share a single color scale and a single legend, so colors compare across years. This demo puts the same four June weeks of 2023 and 2024 in two bands.
+
+<Demo id="change-over-time/calendar-two-years" />
+
 ## Fields that matter
 
 | Field | What it does |

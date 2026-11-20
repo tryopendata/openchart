@@ -9,8 +9,8 @@
  * computed from the dataset's seat counts.
  */
 import { euParliament, usHouse } from "@datasets/parliament-seats";
+import { sourceOf } from "../source";
 import { defineDemo } from "../types";
-import { sourceOf } from "./source";
 
 const SEATS_PER_DOT = 5;
 

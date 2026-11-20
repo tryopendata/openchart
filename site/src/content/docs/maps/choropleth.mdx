@@ -15,13 +15,13 @@ Use a [tile map](/docs/maps/tile-map/) when small states matter as much as large
 
 Set `type` to `"map"`, pass a TopoJSON topology as `geo.features`, and join rows to its shapes with the `key` channel: each row's key value is matched against a feature's id. The `color` channel names the value to color by, and its `title` becomes the legend heading. With a quantitative color field the values fall into evenly spaced classes with round-number breaks, and the legend swatches use the same classes as the map.
 
-<Demo id="maps/choropleth-basic" tabs={false} />
+<Demo id="maps/choropleth-basic" />
 
 Hovering a state outlines it and brings it to the front. Hovering a legend swatch dims the states outside that class.
 
 ## Passing the geography
 
-The maps on this page draw on a reduced copy of the atlas files, simplified so the page stays small, which is why they show no code tabs. In your own code, import the topology from `us-atlas` or `world-atlas` and pass it as it is:
+The maps on this page draw on a reduced copy of the atlas files, simplified so the page stays small. Their code tabs fold the topology to a comment, and Copy writes it out in full. In your own code, import the topology from `us-atlas` or `world-atlas` and pass it as it is:
 
 ```ts
 import states from "us-atlas/states-10m.json";
@@ -43,7 +43,7 @@ const spec = {
 
 The same spec draws the world with `world-atlas`, whose features are keyed by ISO 3166-1 numeric codes. `"equalEarth"` keeps each country's area true to its size; `"mercator"` is also available. Countries without a row get the no-data fill, and the legend adds a "No data" swatch beside the color classes. `legend.position: "right"` moves the legend beside the map.
 
-<Demo id="maps/choropleth-world" tabs={false} />
+<Demo id="maps/choropleth-world" />
 
 ## A region, a diverging scale and a join by name
 
@@ -51,7 +51,7 @@ A map draws only the features in its topology, so passing a subset of the states
 
 `geo.idField` joins on a feature property instead of the id. The us-atlas states carry a `name` property, so rows keyed by state name join with `idField: "name"`. A diverging `scheme` such as `"redBlue"` suits values on both sides of zero: the classes are spread evenly around zero, with an odd number of them so the middle class is labeled as near zero.
 
-<Demo id="maps/choropleth-diverging" tabs={false} />
+<Demo id="maps/choropleth-diverging" />
 
 Classes default to evenly spaced breaks. `scale: { type: "quantile" }` puts the same number of regions in each class instead, which suits skewed data but moves the breaks whenever the data changes.
 

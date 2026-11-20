@@ -33,6 +33,11 @@
     @apply flex h-full items-center justify-center px-4 text-center text-muted;
   }
 
+  /* Out of the flow, so the live chart's host lays out as if it were not there. */
+  .demo-placeholder {
+    @apply absolute inset-0 m-0 flex items-center justify-center px-4 text-center text-muted;
+  }
+
   .demo-code {
     @apply border-t border-line bg-canvas;
   }

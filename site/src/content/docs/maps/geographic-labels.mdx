@@ -15,7 +15,7 @@ Labels name a few places and leave the rest to the colors. When the reader needs
 
 Add a `text` channel to the map's `encoding`. The label comes from the field in the region's data row, or, when the row has no such field, from the topology property of the same name. The us-atlas states carry a `name` property, so `text: { field: "name" }` labels every state. When labels collide, the ones with a higher `textPriority` value place first; here that is the unemployment rate.
 
-<Demo id="maps/labels-features" tabs={false} />
+<Demo id="maps/labels-features" />
 
 Names that do not fit are left off the map but stay in a visually hidden list tied to the map's accessible description, so a screen reader can reach every name.
 
@@ -23,7 +23,7 @@ Names that do not fit are left off the map but stay in a visually hidden list ti
 
 The `points` layer takes its own `text` channel, read from the point rows. Point labels need a unique `points.key`, and without a `textPriority` they place in order of symbol size, so the largest symbols keep their names first.
 
-<Demo id="maps/labels-points" tabs={false} />
+<Demo id="maps/labels-points" />
 
 ## Callouts
 
@@ -31,7 +31,7 @@ The `points` layer takes its own `text` channel, read from the point rows. Point
 
 `minZoom` holds a callout back until the reader zooms in that far, and `geo.zoom: true` lets them: hold Ctrl or Command and scroll, pinch, or double-click.
 
-<Demo id="maps/labels-callouts" tabs={false} />
+<Demo id="maps/labels-callouts" />
 
 The labels keep their screen size while the map zooms and pans, and settle into place when the camera stops.
 

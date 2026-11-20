@@ -128,6 +128,7 @@ export function demoFence(): HastPlugin {
           height: height ? Number(height) : DEFAULT_DEMO_HEIGHT,
           entrance: false,
           tabs: true,
+          static: true,
         });
         return { type: "raw", value: html };
       },

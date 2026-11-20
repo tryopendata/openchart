@@ -7,12 +7,8 @@ import { householdSpending } from "@datasets/household-spending";
 import { populationByCountry } from "@datasets/population";
 import { renewableCapacityAdditions } from "@datasets/renewable-capacity";
 import { sp500SectorReturns } from "@datasets/sp500-sectors";
-import { type DemoSource, defineDemo } from "../types";
-
-/** A dataset's citation as a figure source; the figure caption adds the "Source:" prefix. */
-function sourceOf(dataset: { source: string; url: string }): DemoSource {
-  return { label: dataset.source.replace(/^Source:\s*/, ""), url: dataset.url };
-}
+import { sourceOf } from "../source";
+import { defineDemo } from "../types";
 
 const BILLION = 1_000_000_000;
 

@@ -117,6 +117,46 @@ describe("demos", () => {
     expect(figures[0]?.querySelector("svg.demo-static")).not.toBeNull();
   });
 
+  it("every stage without a static SVG shows the demo's title and a drawn-in-the-browser line", () => {
+    const missing: string[] = [];
+    let stages = 0;
+    // The broken-demo fixture writes its figure by hand to test the failure state.
+    for (const file of htmlFiles("dist").filter((file) => !file.includes("broken-demo"))) {
+      for (const stage of page("dist", file).querySelectorAll("[data-demo-stage]")) {
+        if (stage.querySelector("svg.demo-static")) continue;
+        stages += 1;
+        const text = stage.querySelector("p[data-demo-placeholder]")?.textContent ?? "";
+        if (!/^\S.*\. This chart is drawn in the browser\.$/.test(text)) {
+          missing.push(`${file}: ${stage.closest("figure")?.getAttribute("data-demo")}`);
+        }
+      }
+    }
+    expect(stages).toBeGreaterThan(0);
+    expect(missing).toEqual([]);
+  });
+
+  it("writes each shared value once per page, and every figure's references resolve on its page", () => {
+    const problems: string[] = [];
+    let references = 0;
+    for (const file of htmlFiles("dist")) {
+      const doc = page("dist", file);
+      const blocks = [...doc.querySelectorAll("script[data-demo-shared]")].map(
+        (block) => block.getAttribute("data-demo-shared") ?? "",
+      );
+      const repeated = blocks.filter((hash, index) => blocks.indexOf(hash) !== index);
+      if (repeated.length) problems.push(`${file}: blocks written twice: ${repeated.join(", ")}`);
+      for (const script of doc.querySelectorAll("script[data-demo-spec][data-demo-shared-refs]")) {
+        const refs = JSON.parse(script.getAttribute("data-demo-shared-refs") ?? "[]");
+        for (const { hash } of refs as { hash: string }[]) {
+          references += 1;
+          if (!blocks.includes(hash)) problems.push(`${file}: no block ${hash}`);
+        }
+      }
+    }
+    expect(references).toBeGreaterThan(0);
+    expect(problems).toEqual([]);
+  });
+
   it("every Visualizations page is at most 500 KB of HTML", () => {
     const sections: readonly string[] =
       docsAreas.find((area) => area.id === "visualizations")?.sections.map(({ id }) => id) ?? [];

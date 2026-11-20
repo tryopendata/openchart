@@ -6,8 +6,8 @@
 import { bigTechRevenue } from "@datasets/big-tech-revenue";
 import { evFleet } from "@datasets/ev-fleet";
 import { nvidiaStock } from "@datasets/nvidia-stock";
+import { sourceOf } from "../source";
 import { defineDemo } from "../types";
-import { sourceOf } from "./source";
 
 const ACCENT = "#0e7490";
 

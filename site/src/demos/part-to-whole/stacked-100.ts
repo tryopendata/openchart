@@ -6,8 +6,8 @@
 import { householdSpending } from "@datasets/household-spending";
 import { renewableCapacityAdditions } from "@datasets/renewable-capacity";
 import { segmentRevenue } from "@datasets/segment-revenue";
+import { sourceOf } from "../source";
 import { defineDemo } from "../types";
-import { sourceOf } from "./source";
 
 export const normalizedBars = defineDemo({
   id: "part-to-whole/stacked-100-bars",

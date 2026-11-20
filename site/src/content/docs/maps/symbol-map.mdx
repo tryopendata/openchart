@@ -15,7 +15,7 @@ Use a [choropleth](/docs/maps/choropleth/) for rates and shares that belong to a
 
 Symbols go in the `points` layer of a `"map"` spec: its own `data`, and `longitude` and `latitude` channels naming the coordinate fields. `size` maps a number to the circle's area, so the radius grows with its square root, and a size key of nested circles explains the scale. With a points layer the map needs no data of its own: `data: []` and no `color` channel draw the states as a plain basemap.
 
-<Demo id="maps/symbol-basic" tabs={false} />
+<Demo id="maps/symbol-basic" />
 
 These datasets name states and countries without coordinates, so each symbol sits at the center of its state's outline, worked out from the same atlas the map draws. The [choropleth page](/docs/maps/choropleth/#passing-the-geography) shows how to pass an atlas in your own code. Larger circles draw first, so a small one is never hidden behind a large one.
 
@@ -35,7 +35,7 @@ The same layer works on a world map. Here the basemap is the `land` object of `w
 
 A spec can carry both layers: `data` and the `color` channel color the regions, and the points layer draws on top. Each layer keeps its own legend, so a rate per state and a total per state read together.
 
-<Demo id="maps/symbol-over-choropleth" tabs={false} />
+<Demo id="maps/symbol-over-choropleth" />
 
 ## Fields that matter
 

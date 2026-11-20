@@ -5,11 +5,6 @@
  */
 import type { DemoSource } from "../types";
 
-/** A dataset's citation as a figure source; the figure caption adds the "Source:" prefix. */
-export function sourceOf(dataset: { source: string; url: string }): DemoSource {
-  return { label: dataset.source.replace(/^Source:\s*/, ""), url: dataset.url };
-}
-
 /** The source label for data the demos generate or invent. */
 export const ILLUSTRATIVE: DemoSource = { label: "Illustrative data" };
 

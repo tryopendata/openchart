@@ -1,10 +1,12 @@
 /**
  * Turns a spec into complete, runnable code for each framework the library
- * ships a wrapper for, and a display form of the same code with the data rows
- * folded away. The demo code tabs show the folded form and copy the complete one.
+ * ships a wrapper for, and a display form of the same code with its bulky
+ * values folded away. The demo code tabs show the folded form and copy the complete one.
  */
 import type { VizSpec } from "@opendata-ai/openchart-core";
 import { isChartSpec, isLayerSpec } from "@opendata-ai/openchart-core";
+import { foldTargets, jsonWithMarkers, showFolds } from "./fold-targets";
+import type { SpecPath } from "./markup";
 
 /** Code for each framework wrapper, keyed by framework. */
 export type FrameworkSnippets = { react: string; vue: string; svelte: string; vanilla: string };
@@ -36,35 +38,23 @@ function wrapperFor(spec: VizSpec): Wrapper {
   return wrapper;
 }
 
+/** Writes a value as the indented JSON a snippet shows. */
+type JsonWriter = (value: unknown) => string;
+
+const plainJson: JsonWriter = (value) => JSON.stringify(value, null, 2);
+
 function hoistedData(spec: VizSpec): unknown[] | null {
   const data = (spec as { data?: unknown }).data;
   return Array.isArray(data) && data.length > MAX_INLINE_ROWS ? data : null;
 }
 
-/** The `data` and `spec` constants every snippet starts from, with the rows written out. */
-function specDeclarations(spec: VizSpec, specType: string): string {
+/** The `data` and `spec` constants every snippet starts from, each value written by `json`. */
+function specDeclarations(spec: VizSpec, specType: string, json: JsonWriter): string {
   const data = hoistedData(spec);
-  if (!data) return `const spec: ${specType} = ${JSON.stringify(spec, null, 2)};`;
-  return hoistedDeclarations(spec, specType, JSON.stringify(data, null, 2));
-}
-
-/** The declarations with the spec's `data` moved into a constant whose value is `dataSource`. */
-function hoistedDeclarations(spec: VizSpec, specType: string, dataSource: string): string {
+  if (!data) return `const spec: ${specType} = ${json(spec)};`;
   const { data: _hoisted, ...rest } = spec as VizSpec & { data: unknown };
-  const body = JSON.stringify(rest, null, 2).replace(/^\{\n?/, "{\n  data,\n");
-  return `const data = ${dataSource};\n\nconst spec: ${specType} = ${body};`;
-}
-
-/** The declarations with any data rows folded into a one-line comment that counts them. */
-function foldedDeclarations(spec: VizSpec, specType: string): string {
-  const data = (spec as { data?: unknown }).data;
-  if (!Array.isArray(data)) return specDeclarations(spec, specType);
-  const rows = data.length === 1 ? "1 row" : `${data.length} rows`;
-  return hoistedDeclarations(
-    spec,
-    specType,
-    `[/* ${rows}, as in the Spec tab; Copy includes them */]`,
-  );
+  const body = json(rest).replace(/^\{\n?/, "{\n  data,\n");
+  return `const data = ${json(data)};\n\nconst spec: ${specType} = ${body};`;
 }
 
 function imports(name: string, from: string, specType: string): string {
@@ -118,16 +108,40 @@ function snippetsFrom(wrapper: Wrapper, declarations: string): FrameworkSnippets
  */
 export function frameworkSnippets(spec: VizSpec): FrameworkSnippets {
   const wrapper = wrapperFor(spec);
-  return snippetsFrom(wrapper, specDeclarations(spec, wrapper.specType));
+  return snippetsFrom(wrapper, specDeclarations(spec, wrapper.specType, plainJson));
 }
 
 /**
- * The code `frameworkSnippets` returns, for display: the data rows are folded into
- * a one-line comment that counts them, so a page carries each demo's data once.
+ * The code `frameworkSnippets` returns with its bulky values folded: `shown` has
+ * a one-line comment in place of each, and `template` a marker that `fillFolds`
+ * turns back into the complete code, using `folds`, the values' paths in marker order.
+ */
+export type FoldedSnippets = {
+  shown: FrameworkSnippets;
+  template: FrameworkSnippets;
+  folds: SpecPath[];
+};
+
+function mapSnippets(snippets: FrameworkSnippets, map: (code: string) => string) {
+  const { react, vue, svelte, vanilla } = snippets;
+  return { react: map(react), vue: map(vue), svelte: map(svelte), vanilla: map(vanilla) };
+}
+
+/**
+ * The framework code with data rows, graph elements and geography folded, so a
+ * page carries each demo's bulk once, in its embedded spec.
  *
  * @throws {TypeError} When the spec's type has no framework wrapper.
+ * @throws {FoldMarkerError} When the spec contains the text fold markers use.
  */
-export function foldedFrameworkSnippets(spec: VizSpec): FrameworkSnippets {
+export function foldedFrameworkSnippets(spec: VizSpec): FoldedSnippets {
   const wrapper = wrapperFor(spec);
-  return snippetsFrom(wrapper, foldedDeclarations(spec, wrapper.specType));
+  const targets = foldTargets(spec);
+  const json: JsonWriter = (value) => jsonWithMarkers(value, targets);
+  const template = snippetsFrom(wrapper, specDeclarations(spec, wrapper.specType, json));
+  return {
+    shown: mapSnippets(template, (code) => showFolds(code, targets)),
+    template,
+    folds: targets.map(({ path }) => path),
+  };
 }

@@ -43,6 +43,8 @@ export const worldChoropleth = defineDemo({
     "GDP per capita for 30 countries; the rest show the no-data fill. Antarctica is left out",
   source: sourceWithGeography(worldGdp, "world"),
   height: 440,
+  // The world's coastlines make the heaviest static SVG on the page; it draws in the browser instead.
+  static: false,
   spec: {
     type: "map",
     geo: { features: worldCountries, projection: "equalEarth" },

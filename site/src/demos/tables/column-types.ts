@@ -6,7 +6,7 @@
 import { companyBrands } from "@datasets/company-brands";
 import { electionMargins } from "@datasets/election-margins";
 import { stockPerformance } from "@datasets/stock-performance";
-import { sourceOf } from "../composition/source";
+import { sourceOf } from "../source";
 import { defineDemo } from "../types";
 
 export const heatmapColumn = defineDemo({

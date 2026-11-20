@@ -3,9 +3,10 @@
  * follows the Ladle calendar heatmap; the second uses the mark options listed in
  * docs/chart-types.md. The daily values come from a seeded generator, as in the
  * gallery, so they are labelled illustrative. Each demo covers a few weeks
- * rather than a year, and the page has two demos: the mark draws a full year of
- * cells per band however few days have data, so each demo is about 190 KB of
- * static SVG and a third would pass the 500 KB page limit.
+ * rather than a year, but the mark draws a full year of cells per band however
+ * few days have data, so one band is about 180 KB of static SVG. Under the
+ * 500 KB page limit only the sequential demo keeps its static SVG; the others
+ * draw in the browser.
  */
 import { defineDemo } from "../types";
 
@@ -53,6 +54,7 @@ export const basicCalendar = defineDemo({
   title: "Daily temperature anomaly over five weeks",
   source: ILLUSTRATIVE,
   height: 300,
+  static: false,
   spec: {
     mark: "calendar",
     data: dailyAnomalies("2024-06-03", 5, 20240603),
@@ -94,6 +96,35 @@ export const sequentialCalendar = defineDemo({
     chrome: {
       title: "Weeks start on Sunday and cells have rounder corners",
       subtitle: "Daily reading, one cell per day. weekStart: sunday, cellRadius: 6.",
+    },
+  },
+});
+
+export const twoYearCalendar = defineDemo({
+  id: "change-over-time/calendar-two-years",
+  title: "The same June weeks in two years",
+  source: ILLUSTRATIVE,
+  height: 440,
+  static: false,
+  spec: {
+    mark: "calendar",
+    data: [
+      ...dailyAnomalies("2023-06-05", 4, 20230605),
+      ...dailyAnomalies("2024-06-03", 4, 20240603),
+    ],
+    encoding: {
+      x: { field: "date", type: "temporal" },
+      color: {
+        field: "anomaly",
+        type: "quantitative",
+        scale: { scheme: "redBlue", reverse: true, domain: [-2.5, 2.5] },
+        format: "+.1f",
+      },
+    },
+    chrome: {
+      title: "June 2023 and June 2024, one band per year",
+      subtitle:
+        "Daily temperature anomaly against the seasonal normal, degrees C. Both bands share one color scale.",
     },
   },
 });
