@@ -2,8 +2,10 @@
 /**
  * The hero, "the desk": the page's h1 and lede, the install command with copy,
  * and a figure where a spec is written in steps and the chart beside it updates.
- * Stub from the phase 2 scaffold; lane 2/a fills it with the HeroDesk island
- * (client:load).
+ * The text block takes 5 of the 12 columns and the figure 7 from 1100px; below
+ * that the figure follows the text. The figure is published-graphic framing: a
+ * ticked rule, the section's h2 as its headline, the HeroDesk island, and a
+ * caption with the source line.
  *
  * Contract (e2e/landing.spec.ts and tests/build.test.ts rely on it):
  * - `<section id="desk" aria-labelledby="desk-title" data-landing-section>` holding
@@ -18,17 +20,107 @@
  *   which the server render already contains.
  * - The figure has a `<figcaption>` with a "Source: …" line.
  * - Before hydration and under reduced motion the last step is current.
+ *
+ * Entrances use `data-reveal` from @steamfield/ui (wired by the layout), which
+ * leaves everything visible without JavaScript and under reduced motion.
  */
+import { site } from "../../../config";
 import { landingCopy } from "../../../landing/copy";
+import { heroSource, heroSteps } from "../../../landing/hero";
+import { staticSvg } from "../../../lib/demo/static-svg";
 import "../../../styles/landing-hero.css";
+import { toDeskSteps } from "./desk-step";
+import HeroDesk from "./HeroDesk";
+
+/** The static SVG's drawing size: close to the live chart's at 1440, so the swap barely moves. */
+const STATIC_SIZE = { width: 520, height: 460 };
+
+const deskSteps = toDeskSteps(heroSteps);
+const finished = heroSteps.at(-1)?.spec;
+if (!finished) throw new Error("src/landing/hero.ts exports no steps: the hero needs five.");
+// Rendering writes defaults into the spec, so each render gets its own copy.
+const staticCharts = [false, true]
+  .map((dark) =>
+    staticSvg(structuredClone(finished), {
+      ...STATIC_SIZE,
+      idPrefix: dark ? "hero-d" : "hero-l",
+      dark,
+    }),
+  )
+  .join("");
 ---
 
-<section id="desk" aria-labelledby="desk-title" data-landing-section class="landing-section">
-  <div class="landing-container">
-    <h1 class="landing-display">{landingCopy.headline}</h1>
-    <p class="landing-lede">{landingCopy.lede}</p>
-    <h2 id="desk-title" class="landing-heading mt-12">
-      {landingCopy.headings.desk}
-    </h2>
+<section id="desk" aria-labelledby="desk-title" data-landing-section class="landing-section hero">
+  <div class="landing-container hero-grid">
+    <div class="hero-text" data-reveal>
+      <h1 class="landing-display hero-title" data-motion="blur-in-soft">
+        {landingCopy.headline}
+      </h1>
+      <p class="landing-lede hero-lede" data-motion="lift-md">
+        {landingCopy.lede}
+      </p>
+      <div class="hero-install" data-hero-install data-motion="lift-sm">
+        <div class="hero-install-managers" role="group" aria-label="Package manager" hidden>
+          {site.install.map((option, index) => (
+            <button
+              type="button"
+              class="hero-install-manager"
+              data-hero-manager={index}
+              aria-pressed={index === 0 ? "true" : "false"}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+        <div class="hero-install-line">
+          {site.install.map((option, index) => (
+            <code class="hero-install-command" data-hero-command={index} hidden={index !== 0}>
+              <span class="hero-install-prompt" aria-hidden="true">
+                $
+              </span>
+              {option.command}
+            </code>
+          ))}
+          <button type="button" class="hero-install-copy" data-hero-copy hidden>
+            Copy
+          </button>
+        </div>
+      </div>
+      <p class="hero-links" data-motion="lift-sm">
+        <a href="/docs/get-started/getting-started/" class="hero-link hero-link-primary">
+          Read the docs <span aria-hidden="true">→</span>
+        </a>
+        <a href={site.repo} class="hero-link">
+          Source on GitHub
+        </a>
+      </p>
+    </div>
+
+    <figure class="hero-figure" data-reveal>
+      <div class="rule-axis" data-motion="wipe"></div>
+      <h2 id="desk-title" class="hero-figure-title" data-motion="lift-sm">
+        {landingCopy.headings.desk}
+      </h2>
+      <div data-motion="quiet">
+        <HeroDesk client:load steps={deskSteps}>
+          <Fragment set:html={staticCharts} />
+        </HeroDesk>
+      </div>
+      <figcaption class="figure-caption hero-caption" data-motion="quiet">
+        Five steps write the spec. Each adds the marked lines, and the chart redraws with the
+        library's own transition.{" "}
+        {heroSource.url ? (
+          <a href={heroSource.url} class="hero-source">
+            {heroSource.label}.
+          </a>
+        ) : (
+          <span>{heroSource.label}.</span>
+        )}
+      </figcaption>
+    </figure>
   </div>
 </section>
+
+<script>
+  import "./install-line";
+</script>

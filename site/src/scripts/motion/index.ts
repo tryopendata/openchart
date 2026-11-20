@@ -4,12 +4,20 @@
  * nothing for readers who asked for reduced motion (they get the final state),
  * and returns a teardown that reverts everything `setup` created, ScrollTriggers
  * included. The library's own transitions animate charts; GSAP only sequences
- * the page. Lane 2/a implements it; the scaffold fixes the signature.
+ * the page.
+ *
+ * GSAP loads lazily, so `setup` runs a moment after the call, inside a
+ * `gsap.matchMedia()` context: if the reader turns on reduced motion later,
+ * everything `setup` made is reverted then too.
  */
 import type { gsap } from "gsap";
 import type { Draggable } from "gsap/Draggable";
 import type { Flip } from "gsap/Flip";
 import type { ScrollTrigger } from "gsap/ScrollTrigger";
+import { MOTION_OK_QUERY, prefersReducedMotion } from "./reduced";
+import { loadMotionTools } from "./register";
+
+export { prefersReducedMotion } from "./reduced";
 
 /** What `setup` receives: GSAP and its plugins, already registered. */
 export type MotionTools = {
@@ -22,7 +30,26 @@ export type MotionTools = {
 /** Runs `setup` only when the reader has not asked for reduced motion, with GSAP's plugins registered once. Returns a function that reverts everything `setup` created. */
 // biome-ignore lint/suspicious/noConfusingVoidType: the plan's contract lets setup return nothing or its own teardown, and a void arrow body must type-check.
 export function withMotion(setup: (tools: MotionTools) => void | (() => void)): () => void {
-  throw new Error(
-    `withMotion is not implemented yet (setup ${setup.name || "anonymous"}): lane 2/a implements site/src/scripts/motion/index.ts.`,
+  if (prefersReducedMotion()) return () => {};
+  let reverted = false;
+  let revert = () => {};
+  loadMotionTools().then(
+    (tools) => {
+      if (reverted) return;
+      const media = tools.gsap.matchMedia();
+      media.add(MOTION_OK_QUERY, () => setup(tools));
+      revert = () => media.revert();
+    },
+    (error: unknown) => {
+      // Motion is decoration: the page already shows its final state, so report and go on.
+      console.error(
+        `withMotion: GSAP failed to load, so ${setup.name || "a section"} shows its final state without motion.`,
+        error,
+      );
+    },
   );
+  return () => {
+    reverted = true;
+    revert();
+  };
 }

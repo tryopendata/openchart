@@ -1,5 +1,339 @@
 /*
- * Styles for the hero desk (#desk). Lane 2/a fills this file; its components
- * import it. Start with `@reference "./global.css";` to use the tokens in
- * `@apply`, and put rules in `@layer components`.
+ * Styles for the hero desk (#desk): the 5/7 text and figure grid from 1100px,
+ * the install line, the step bar, the spec pane and the chart stage. The page
+ * stays ink on paper; the accent marks only the current step and the lines a
+ * step added, and color otherwise comes from the chart. Under 700px the chart
+ * comes first and the spec pane collapses to the added lines.
  */
+@reference "./global.css";
+
+@layer components {
+  /* The hero opens closer to the header than other sections, so the desk is in view at 1440x900. */
+  .landing-section.hero {
+    @apply pt-8 pb-16 sm:pt-10 lg:pt-12 lg:pb-24;
+  }
+
+  .hero-grid {
+    @apply grid gap-y-12;
+  }
+
+  @media (min-width: 1100px) {
+    .hero-grid {
+      @apply grid-cols-12 gap-x-10;
+    }
+
+    .hero-text {
+      @apply col-span-5 pt-14;
+    }
+
+    .hero-figure {
+      @apply col-span-7;
+    }
+  }
+
+  .hero .hero-title {
+    font-family: var(--font-display, var(--font-sans));
+    font-size: clamp(2.5rem, 1.6rem + 2.6vw, 4.25rem);
+    line-height: 1.02;
+    letter-spacing: -0.025em;
+  }
+
+  .hero .hero-lede {
+    @apply mt-7 text-[1.1875rem] leading-[1.55];
+  }
+
+  /* The install command: a hairline frame, the copy action on its own ruled cell. */
+  .hero-install {
+    @apply mt-9 max-w-[30rem];
+  }
+
+  .hero-install-managers {
+    @apply mb-2 flex gap-4 font-mono text-[12px];
+  }
+
+  .hero-install-manager {
+    @apply text-muted border-b border-transparent pb-0.5;
+    transition:
+      color 150ms ease-out,
+      border-color 150ms ease-out;
+  }
+
+  .hero-install-manager:hover {
+    @apply text-ink;
+  }
+
+  .hero-install-manager[aria-pressed="true"] {
+    @apply text-ink border-ink;
+  }
+
+  .hero-install-line {
+    @apply border-line-strong flex h-12 items-stretch rounded-xs border;
+  }
+
+  .hero-install-command {
+    @apply text-ink flex min-w-0 flex-1 items-center gap-3 overflow-x-auto px-4 font-mono text-[14px] whitespace-nowrap;
+  }
+
+  .hero-install-command[hidden] {
+    display: none;
+  }
+
+  .hero-install-prompt {
+    @apply text-muted select-none;
+  }
+
+  .hero-install-copy {
+    @apply border-line-strong text-ink-2 min-w-[6.5rem] border-l px-4 font-sans text-sm font-medium;
+    transition:
+      background-color 150ms ease-out,
+      color 150ms ease-out;
+  }
+
+  .hero-install-copy:hover {
+    @apply bg-panel text-ink;
+  }
+
+  .hero-links {
+    @apply mt-6 flex flex-wrap items-baseline gap-x-7 gap-y-2 text-[15px];
+  }
+
+  .hero-link {
+    @apply text-ink-2 underline decoration-transparent underline-offset-4;
+    transition:
+      color 150ms ease-out,
+      text-decoration-color 150ms ease-out;
+  }
+
+  .hero-link:hover {
+    @apply text-ink decoration-current;
+  }
+
+  .hero-link-primary {
+    @apply text-ink font-medium decoration-current;
+  }
+
+  .hero-link-primary span {
+    @apply inline-block;
+    transition: transform 150ms ease-out;
+  }
+
+  .hero-link-primary:hover span {
+    transform: translateX(3px);
+  }
+
+  /* The figure: ticked rule, headline, desk, caption. */
+  .hero-figure-title {
+    font-family: var(--font-display, var(--font-sans));
+    @apply text-ink mt-5 text-[1.5rem] leading-tight font-semibold tracking-tight text-balance sm:text-[1.75rem];
+  }
+
+  .hero-desk {
+    @apply mt-5;
+  }
+
+  .hero-caption a {
+    @apply text-muted decoration-line underline decoration-1 underline-offset-2;
+    transition: color 150ms ease-out;
+  }
+
+  .hero-caption a:hover {
+    @apply text-ink;
+  }
+
+  /* Step bar: numbered steps on the left, transport on the right. */
+  .hero-bar {
+    @apply border-line-strong flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b;
+  }
+
+  .hero-steps {
+    @apply -mb-px flex flex-wrap gap-x-5 gap-y-1;
+  }
+
+  .hero-step {
+    @apply text-muted relative flex items-baseline gap-2 border-b-2 border-transparent pt-1 pb-2.5 text-[13.5px] whitespace-nowrap;
+    transition:
+      color 150ms ease-out,
+      border-color 150ms ease-out;
+  }
+
+  .hero-step:hover {
+    @apply text-ink;
+  }
+
+  .hero-step[aria-current="step"] {
+    @apply text-ink border-accent font-medium;
+  }
+
+  .hero-step-number {
+    @apply font-mono text-[11px] tabular-nums;
+  }
+
+  /* While the sequence plays, the time to the next step fills in under the current one. */
+  .hero-step-progress {
+    @apply bg-ink pointer-events-none absolute right-0 -bottom-0.5 left-0 h-0.5 origin-left;
+    animation: hero-step-progress var(--step-ms, 3200ms) linear both;
+  }
+
+  .hero-controls {
+    @apply flex items-center gap-1 pb-2;
+  }
+
+  .hero-control {
+    @apply border-line text-ink-2 inline-flex h-8 min-w-8 items-center justify-center rounded-xs border px-2 text-[13px];
+    transition:
+      background-color 150ms ease-out,
+      border-color 150ms ease-out,
+      color 150ms ease-out;
+  }
+
+  .hero-control:hover {
+    @apply border-line-strong bg-panel text-ink;
+  }
+
+  .hero-control-play {
+    @apply min-w-[4.25rem] font-medium;
+  }
+
+  /* Spec pane and chart side by side from 700px, spec first. */
+  .hero-panes {
+    @apply border-line grid border-b;
+  }
+
+  @media (min-width: 700px) {
+    .hero-panes {
+      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    }
+
+    .hero-spec {
+      @apply border-line border-r;
+    }
+  }
+
+  .hero-chart {
+    @apply relative h-[380px] sm:h-[440px];
+  }
+
+  @media (min-width: 1100px) {
+    .hero-chart {
+      height: 460px;
+    }
+  }
+
+  .hero-chart-live {
+    height: 100%;
+  }
+
+  /* The library sets tabular figures on the whole chart, and Schibsted Grotesk's
+     tabular set widens commas and periods ("longer . The"). Keep them for the
+     tick labels that line up, not for prose. */
+  .hero-chart svg text:not(.oc-axis-tick) {
+    font-variant-numeric: normal;
+  }
+
+  .hero-chart-static {
+    @apply absolute inset-0;
+  }
+
+  .hero-spec {
+    @apply bg-panel relative min-w-0;
+  }
+
+  .hero-spec-code {
+    @apply relative m-0 h-[380px] overflow-y-auto py-3 font-mono text-[12px] leading-[1.6] sm:h-[440px];
+    scrollbar-width: thin;
+  }
+
+  @media (min-width: 1100px) {
+    .hero-spec-code {
+      height: 460px;
+    }
+  }
+
+  .hero-spec-code pre {
+    @apply m-0 bg-transparent p-0 font-mono;
+  }
+
+  .hero-spec-line {
+    @apply relative block pr-3;
+    padding-left: calc(var(--depth, 0) * 2ch + 2ch + 0.75rem);
+    text-indent: -2ch;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .hero-spec-line[data-spec-added] {
+    background-color: color-mix(in srgb, var(--color-accent) 7%, transparent);
+  }
+
+  .hero-spec-line[data-spec-added]::before {
+    @apply bg-accent absolute top-0 bottom-0 left-0 w-0.5;
+    content: "";
+  }
+
+  .spec-key {
+    @apply text-ink;
+  }
+
+  .spec-string {
+    @apply text-ink-2;
+  }
+
+  .spec-number,
+  .spec-literal {
+    @apply text-accent;
+  }
+
+  .spec-punct,
+  .spec-fold {
+    @apply text-muted;
+  }
+
+  .hero-spec-toggle {
+    @apply border-line text-ink hidden w-full border-t px-4 py-2.5 text-left text-[13px] font-medium;
+    transition: background-color 150ms ease-out;
+  }
+
+  .hero-spec-toggle:hover {
+    @apply bg-canvas;
+  }
+
+  /* Under 700px: chart first, and the spec shows only what this step added until opened. */
+  @media (max-width: 699.98px) {
+    .hero-chart {
+      order: -1;
+    }
+
+    .hero-spec {
+      @apply border-line border-t;
+    }
+
+    .hero-spec-code {
+      height: auto;
+      max-height: 26rem;
+    }
+
+    .hero-spec:not([data-expanded]) .hero-spec-line:not([data-spec-added]) {
+      display: none;
+    }
+
+    .hero-spec-toggle {
+      display: block;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-step-progress {
+      animation: none;
+      display: none;
+    }
+  }
+}
+
+@keyframes hero-step-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
