@@ -1,0 +1,61 @@
+---
+title: Trendlines
+description: A scatter fits one least-squares line through its points by default. Turn it off, restyle it, lift it over a dense cloud and see how it treats color groups.
+section: correlation
+order: 4
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+A trend line summarizes a scatter chart with a straight line, a least-squares fit through the points. It shows the direction and steepness of the relationship in one stroke, which helps when the cloud is too loose to judge by eye.
+
+The line is a linear fit only, so it describes a curved relationship poorly. To draw a different line, combine marks with [layers](/docs/composition/layers/). The line works on any point chart, including a [bubble chart](/docs/correlation/bubble/).
+
+## The default trend line
+
+A `point` mark draws a dashed trend line without any option. The line spans from the smallest x to the largest x. No line is drawn when there are fewer than two points or every point has the same x.
+
+<Demo id="correlation/trendlines-default" />
+
+## Turning it off
+
+Set `trendline: false` on the mark to remove the line. Do this when the chart carries its own reference line, such as a manual diagonal, which would otherwise compete with the fitted one.
+
+<Demo id="correlation/trendlines-off" />
+
+## Styling the line
+
+Pass an object to `trendline` to restyle it. `stroke` sets the color, in any CSS color, and `strokeWidth` sets the width in pixels, which defaults to 1.5. A heavier, colored line stands out where the default blends into the axes.
+
+<Demo id="correlation/trendlines-styled" />
+
+## Over a dense cloud
+
+The line is drawn below the dots by default, and a thick cloud of dots can hide it. `layer: "above"` draws it on top. This chart also sets a small dot `size` and a partial `opacity` so the density shows through.
+
+<Demo id="correlation/trendlines-above" />
+
+## Color groups
+
+The fit uses every point on the chart, so a chart with a `color` channel still gets one line, not one per group. Read it as the overall trend, and look at the colors for groups that sit off it.
+
+<Demo id="correlation/trendlines-grouped" />
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `mark.trendline` | `true` by default on a point mark. `false` removes the line. |
+| `mark.trendline.layer` | `"below"` (default) draws the line behind the dots, `"above"` draws it over them. |
+| `mark.trendline.stroke` | The line color, any CSS color. The theme sets the default. |
+| `mark.trendline.strokeWidth` | The line width in pixels. Defaults to 1.5. |
+| `mark.size`, `mark.opacity` | The dot radius and opacity, used to keep a dense cloud readable. |
+| `encoding.x`, `encoding.y` | The two quantitative fields the line is fitted through. |
+
+## Related
+
+- [Scatter](/docs/correlation/scatter/): the chart the line belongs to.
+- [Bubble](/docs/correlation/bubble/): the same line over sized dots.
+- [Layers](/docs/composition/layers/): combine marks on shared scales.
+- [Line](/docs/change-over-time/line/): a line drawn from the data itself.
+- [Error bars](/docs/distribution/error-bars/): show an interval around an estimate.

@@ -1,0 +1,56 @@
+---
+title: Beeswarm
+description: Draw every observation as a dot, dodged so none overlap, then split into lanes by group, turn the swarm vertical and size dots by a second field.
+section: distribution
+order: 3
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+A beeswarm shows each observation as its own dot along one value axis, dodged apart so no two dots overlap. The pile-up along the axis becomes the shape of the distribution while every data point stays visible.
+
+It is better than a [histogram](/docs/distribution/histogram/) when you want every point visible, and better than a [tick strip](/docs/distribution/tick-strip/) when the data is dense enough that ticks would pile up. When you only need the outline of the distribution, a [density curve](/docs/distribution/density/) reads faster.
+
+## A basic beeswarm
+
+Set `mark` to `"beeswarm"` and put the value on `x`. One positional channel carries the quantitative value, and the other is optional. With only `x`, all the dots share one lane.
+
+<Demo id="distribution/beeswarm-single" />
+
+## Lanes by group
+
+Add a nominal `y` to split the swarm into one lane per category, and a `color` channel to tell the lanes apart. The legend is redundant here because the lanes are already labeled, so `legend: { show: false }` removes it.
+
+<Demo id="distribution/beeswarm-lanes" />
+
+## Vertical swarms
+
+Swap the channels to turn the swarm: `y` holds the quantitative value and `x` holds the category.
+
+<Demo id="distribution/beeswarm-vertical" />
+
+## Sized dots
+
+A `size` channel scales each dot's radius from a quantitative field. Pass `size.scale.range` to cap the radius, so tall stacks of dots stay inside the chart area.
+
+<Demo id="distribution/beeswarm-sized" />
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `mark` | `"beeswarm"` draws one dodged dot per row. |
+| `encoding.x` or `encoding.y` | The quantitative value axis. `x` gives a horizontal swarm and `y` a vertical one. |
+| `encoding.y` or `encoding.x` | Optional. A nominal or ordinal field that splits the swarm into one lane per category. |
+| `encoding.color` | Optional. A categorical grouping, or a quantitative field for a sequential gradient on the dots. |
+| `encoding.size` | Optional. A quantitative field that scales the dot radius. |
+| `encoding.size.scale.range` | Caps the radius range of the dots. |
+| `legend.show` | Set to false to hide a legend the lanes already make redundant. |
+
+## Related
+
+- [Tick strip](/docs/distribution/tick-strip/): one tick per observation, without dodging.
+- [Histogram](/docs/distribution/histogram/): bin and count the values.
+- [Density](/docs/distribution/density/): a smoothed outline of the values.
+- [Scatter](/docs/correlation/scatter/): place dots by two numbers instead of one.
+- [Lollipop](/docs/comparison/lollipop/): one dot per category rather than per observation.

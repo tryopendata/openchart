@@ -1,0 +1,57 @@
+---
+title: Histogram
+description: Bin one numeric field and count each bin to show where values cluster, then change the bin count, overlap groups and compare them as shares.
+section: distribution
+order: 1
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+A histogram shows the shape of one number across many observations. OpenChart bins the raw values, counts each bin and draws a bar per bin on a continuous x axis, so bar widths follow the value range instead of equal-width categories.
+
+Use a [density curve](/docs/distribution/density/) when you want the shape without bin edges, or a [beeswarm](/docs/distribution/beeswarm/) when every observation should stay visible. If you already have one total per category, a [bar chart](/docs/comparison/bar/) is the right chart.
+
+## A basic histogram
+
+Set `mark` to `{ type: "histogram", binCount: 24 }` and put the raw field on `x`. Each row of the data is one observation, and the y axis defaults to the count per bin. `binCount` defaults to 20.
+
+<Demo id="distribution/histogram-basic" />
+
+## Fewer bins
+
+`binCount` sets how many bins the value range is split into. Fewer bins give a smoother outline and lose detail, so try a few counts before settling on one. The data is the same as the first figure.
+
+<Demo id="distribution/histogram-bins" />
+
+## Overlapping groups
+
+Add a `color` channel and each group gets its own histogram. Without `stack`, the groups overlap at the same x and the fill drops to 55% opacity, so both shapes stay visible. Overlap suits comparing where two groups sit on the same scale.
+
+<Demo id="distribution/histogram-overlap" />
+
+## Groups as shares
+
+`normalize: true` plots each group's share of its own total instead of a raw count, and formats the y axis as a percentage. Use it when the groups have different sizes, since raw counts would let the larger group dominate.
+
+<Demo id="distribution/histogram-normalized" />
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `mark.type` | `"histogram"` bins the `x` values and counts each bin. |
+| `mark.binCount` | The number of bins. Defaults to 20. |
+| `mark.normalize` | Plots each group's share of its own total. Formats the y axis as a percentage. |
+| `mark.fillOpacity` | Overrides the 55% opacity used for overlapping groups. |
+| `encoding.x` | The raw quantitative field to bin. Required. |
+| `encoding.y` | Optional. Defaults to the count per bin. |
+| `encoding.color` | Optional. One overlapping histogram per group. |
+| `labels` | Has no effect on a histogram, and the compiler warns if you set it. |
+
+## Related
+
+- [Density](/docs/distribution/density/): the same comparison as smoothed curves.
+- [Beeswarm](/docs/distribution/beeswarm/): one dot per observation.
+- [Tick strip](/docs/distribution/tick-strip/): one tick per observation on a shared axis.
+- [Bar](/docs/comparison/bar/): compare one total per category.
+- [Scatter](/docs/correlation/scatter/): relate two numbers instead of counting one.

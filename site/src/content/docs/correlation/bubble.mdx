@@ -1,0 +1,51 @@
+---
+title: Bubble
+description: Add a third number to a scatter as dot size, then color the bubbles by group and annotate the ones that matter with callouts and a reference line.
+section: correlation
+order: 2
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+A bubble chart is a scatter chart where a third number sets each dot's size. Position carries two fields and area carries the third, such as population, so a reader sees how many people sit behind each point.
+
+If you only have two numbers, a [scatter chart](/docs/correlation/scatter/) is simpler to read. When the bubbles represent places, a [symbol map](/docs/maps/symbol-map/) puts them on a map instead. For one number per category, use a [bar chart](/docs/comparison/bar/).
+
+## A basic bubble chart
+
+A bubble chart is a `point` mark with a `size` channel. Put a quantitative field on `size` and the chart maps it to circle area. It also gets the default trend line a point mark draws.
+
+<Demo id="correlation/bubble-basic" />
+
+## Color and callouts
+
+A `color` channel adds a fourth field. Text annotations with `connector: true` draw a leader line from the label to its bubble, and `offset` moves the label clear of the cloud.
+
+<Demo id="correlation/bubble-color" />
+
+## A reference line
+
+A `refline` with `y` draws a horizontal benchmark in data units, with its label anchored by `labelAnchor`. Bubbles above the line sit above the benchmark, and their size still shows the population behind each one.
+
+<Demo id="correlation/bubble-reference" />
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `mark` | `"point"` draws one dot per row. |
+| `encoding.x`, `encoding.y` | The two quantitative fields the bubble is placed by. |
+| `encoding.size` | A quantitative field mapped to circle area. This is what makes it a bubble chart. |
+| `encoding.color` | Optional. A categorical field that colors the bubbles by group. |
+| `encoding.tooltip` | Optional. The fields listed when a bubble is hovered. |
+| `annotations[].connector` | Draws a leader line from a text annotation to its data point. |
+| `annotations[].offset` | Moves a text annotation by `dx` and `dy` pixels. |
+| `annotations[].labelAnchor` | Sets the anchor direction of a `refline` label. |
+
+## Related
+
+- [Scatter](/docs/correlation/scatter/): the two-number form.
+- [Trendlines](/docs/correlation/trendlines/): control the fitted line.
+- [Symbol map](/docs/maps/symbol-map/): bubbles placed on a map.
+- [Heatmap](/docs/correlation/heatmap/): intensity in a grid of categories.
+- [Bar](/docs/comparison/bar/): compare one number across categories.
