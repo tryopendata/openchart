@@ -23,6 +23,7 @@ import type { AnimatedTarget } from '../export-gif';
 import {
   applyFrameState,
   classifyTarget,
+  createFrameSampler,
   exportGIF,
   isModuleNotFound,
   resolveRepeat,
@@ -274,18 +275,31 @@ describe('applyFrameState', () => {
     expect(t.el.style.transform).toBe('translateY(0em)');
   });
 
-  it('a label fades in place: opacity ramps 0 to 1 and it never moves', () => {
-    const t: AnimatedTarget = { ...target('fade', 0, 260), role: 'label' };
-    applyFrameState(t, 0, 'smooth');
-    expect(Number(t.el.style.opacity)).toBe(0);
-    applyFrameState(t, 130, 'smooth');
-    const midway = Number(t.el.style.opacity);
-    expect(midway).toBeGreaterThan(0);
-    expect(midway).toBeLessThan(1);
-    applyFrameState(t, 260, 'smooth');
-    expect(Number(t.el.style.opacity)).toBe(1);
-    expect(t.el.style.transform).toBe('');
-    expect(t.el.style.clipPath).toBe('');
+  it('a rendered bar label fades in place across its whole window and never moves', () => {
+    const spec = { ...barSpec, labels: { density: 'all' }, animation: true } as ChartSpec;
+    const layout = compileChart(spec, COMPILE_OPTS);
+    const svg = renderChartSVG(layout, createContainer(), { animate: true });
+    const labels = Array.from(svg.querySelectorAll<SVGElement>('.oc-mark-label'));
+    expect(labels.length).toBeGreaterThan(1);
+    // The sampler finds and times targets exactly as exportGIF does, then
+    // writes each frame through applyFrameState.
+    const sampler = createFrameSampler(svg, layout.animation);
+    const opacities = labels.map(() => [] as number[]);
+    const FRAME_STEP_MS = 10;
+    for (let ms = 0; ms <= sampler.endMs + FRAME_STEP_MS; ms += FRAME_STEP_MS) {
+      sampler.apply(ms);
+      labels.forEach((label, i) => {
+        expect(label.style.transform).toBe('');
+        opacities[i].push(Number(label.style.opacity));
+      });
+    }
+    for (const series of opacities) {
+      expect(series[0]).toBe(0);
+      expect(series[series.length - 1]).toBe(1);
+      for (let i = 1; i < series.length; i++) {
+        expect(series[i]).toBeGreaterThanOrEqual(series[i - 1]);
+      }
+    }
   });
 
   it('a spring phase eases the segment by the spring, as the stamped linear() does', () => {
