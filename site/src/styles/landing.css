@@ -32,7 +32,7 @@
 
   /* The page's one h1, in the hero. */
   .landing-display {
-    @apply text-ink text-4xl leading-[1.05] font-bold tracking-tight text-balance sm:text-5xl lg:text-6xl;
+    @apply text-ink font-display text-[2.75rem] leading-[1.04] font-medium tracking-[-0.02em] text-balance sm:text-6xl lg:text-[4.5rem];
   }
 
   .landing-lede {
@@ -41,6 +41,6 @@
 
   /* A section's h2. */
   .landing-heading {
-    @apply text-ink max-w-[24ch] text-3xl leading-tight font-semibold tracking-tight text-balance sm:text-4xl;
+    @apply text-ink font-display max-w-[24ch] text-3xl leading-[1.12] font-medium tracking-[-0.015em] text-balance sm:text-[2.625rem];
   }
 }

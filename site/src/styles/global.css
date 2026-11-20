@@ -22,6 +22,8 @@
  */
 @theme static {
   --font-sans: "Schibsted Grotesk Variable", ui-sans-serif, system-ui, sans-serif;
+  /* Headlines only: page titles, section headings and story prose, as a news page sets them. */
+  --font-display: "Newsreader Variable", Georgia, "Times New Roman", serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
   --color-canvas: #ffffff;
@@ -180,7 +182,13 @@
 }
 
 .prose :where(h2) {
-  @apply mt-14 text-[1.5rem] leading-tight;
+  @apply font-display mt-14 text-[1.75rem] leading-tight font-medium tracking-[-0.01em];
+}
+
+/* Page titles are headlines: the serif, with its optical size following the type size. */
+h1 {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
 }
 
 .prose :where(h3) {
