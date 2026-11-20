@@ -35,7 +35,7 @@ function dailyAnomalies(startDate: string, weeks: number, seed: number) {
   return Array.from({ length: weeks * 7 }, (_, day) => {
     const time = start + day * DAY_MS;
     const seasonal = 1 - Math.abs((dayOfYear(time) / 366) * 4 - 2);
-    const value = 0.6 + seasonal * 1.2 + (random() - 0.5) * 2.4;
+    const value = (seasonal - 0.5) * 1.2 + (random() - 0.5) * 2.4;
     return {
       date: new Date(time).toISOString().slice(0, 10),
       anomaly: Math.round(value * 10) / 10,
@@ -62,7 +62,7 @@ export const basicCalendar = defineDemo({
         field: "anomaly",
         type: "quantitative",
         // redBlue runs red to blue from low to high; reversed, warm days are red.
-        scale: { scheme: "redBlue", reverse: true },
+        scale: { scheme: "redBlue", reverse: true, domain: [-2.5, 2.5] },
         format: "+.1f",
       },
     },
@@ -80,7 +80,7 @@ export const sequentialCalendar = defineDemo({
   source: ILLUSTRATIVE,
   height: 300,
   spec: {
-    mark: { type: "calendar", weekStart: "sunday", cellRadius: 3 },
+    mark: { type: "calendar", weekStart: "sunday", cellRadius: 6 },
     data: asReadings(dailyAnomalies("2024-06-02", 4, 20240602)),
     encoding: {
       x: { field: "date", type: "temporal" },
@@ -93,7 +93,7 @@ export const sequentialCalendar = defineDemo({
     },
     chrome: {
       title: "Weeks start on Sunday and cells have rounder corners",
-      subtitle: "Daily reading, one cell per day. weekStart: sunday, cellRadius: 3.",
+      subtitle: "Daily reading, one cell per day. weekStart: sunday, cellRadius: 6.",
     },
   },
 });

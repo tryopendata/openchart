@@ -52,7 +52,7 @@ export const donut = defineDemo({
   source: sourceOf(federalBudget),
   height: 480,
   spec: {
-    mark: { type: "arc", innerRadius: 70 },
+    mark: { type: "arc", innerRadius: 0.6 },
     data: [...federalBudget.data],
     encoding: {
       theta: { field: "spending", type: "quantitative" },
@@ -73,7 +73,7 @@ export const donutCenterLabel = defineDemo({
   spec: {
     mark: {
       type: "arc",
-      innerRadius: 70,
+      innerRadius: 0.6,
       centerLabel: { text: "$6.9T", subtitle: "total outlays" },
     },
     data: [...federalBudget.data],
@@ -114,7 +114,7 @@ export const leaderLineDonut = defineDemo({
   source: sourceOf(smartphoneShare),
   height: 520,
   spec: {
-    mark: { type: "arc", innerRadius: 55 },
+    mark: { type: "arc", innerRadius: 0.6 },
     data: [...smartphoneShare.data],
     encoding: {
       theta: { field: "share", type: "quantitative" },
@@ -135,7 +135,7 @@ export const halfDonut = defineDemo({
   spec: {
     mark: {
       type: "arc",
-      innerRadius: 0.55,
+      innerRadius: 0.6,
       startAngle: -Math.PI / 2,
       endAngle: Math.PI / 2,
     },

@@ -19,7 +19,7 @@ Set `mark` to `"arc"`, put the number on `theta` and the category on `color`. No
 
 ## A donut
 
-Pass the mark as an object and set `innerRadius` above zero to cut a hole in the pie. The spec is otherwise the same, and the hole leaves room for a headline number.
+Pass the mark as an object and set `innerRadius` above zero to make a donut. The hole is always 60% of the outer radius, so the value only turns it on. The spec is otherwise the same, and the hole leaves room for a headline number.
 
 <Demo id="part-to-whole/donut" />
 
@@ -52,7 +52,7 @@ Leader lines are the default, so the spec sets nothing for them. They let long v
 | Field | What it does |
 | --- | --- |
 | `mark` | `"arc"` for a pie, or an object with `innerRadius` for a donut. |
-| `mark.innerRadius` | Greater than zero cuts a hole in the pie. |
+| `mark.innerRadius` | Any value above zero makes a donut. The hole is always 60% of the outer radius, so the value only turns it on. |
 | `mark.centerLabel` | A string or `{ text, subtitle }` printed in the donut hole. |
 | `mark.startAngle`, `mark.endAngle` | Restrict the arc to a partial sweep, in radians. |
 | `encoding.theta` | The quantitative value that sets each slice's angle. |

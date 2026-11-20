@@ -13,13 +13,13 @@ Use a [line chart](/docs/change-over-time/line/) when the reader needs to read v
 
 ## A basic calendar
 
-`x` is the daily date with `type: "temporal"`, one row per day, and `color` is the quantitative value. There is no `y` channel, because the calendar computes its own weeks-by-weekdays layout. A diverging scheme such as `redBlue` suits values that run above and below a normal, and `reverse: true` makes warm days red. `format` sets how the legend prints values. Days with no data row render as empty cells, so the grid always shows the whole year, and these demos fill a few weeks of it.
+`x` is the daily date with `type: "temporal"`, one row per day, and `color` is the quantitative value. There is no `y` channel, because the calendar computes its own weeks-by-weekdays layout. A diverging scheme such as `redBlue` suits values that run above and below a normal, and `reverse: true` makes warm days red. The scale spans the data's minimum to maximum, so set a symmetric `domain` to put the neutral color at zero. `format` sets how the legend prints values. Days with no data row render as empty cells, so the grid always shows the whole year, and these demos fill a few weeks of it.
 
 <Demo id="change-over-time/calendar-basic" />
 
 ## Sunday weeks and rounder cells
 
-Two mark options change the grid. `weekStart` sets which weekday sits in the top row, `"monday"` by default or `"sunday"`. `cellRadius` sets the corner radius of each day cell in pixels. This demo also swaps in a sequential scheme, `"blues"`, because the values here run from low to high rather than around a midpoint.
+Two mark options change the grid. `weekStart` sets which weekday sits in the top row, `"monday"` by default or `"sunday"`. `cellRadius` sets the corner radius of each day cell in pixels. Default 2. This demo also swaps in a sequential scheme, `"blues"`, because the values here run from low to high rather than around a midpoint.
 
 <Demo id="change-over-time/calendar-sequential" />
 
@@ -35,7 +35,7 @@ Data that spans several years splits into one band per year. The bands stack and
 | `encoding.color.scale.reverse` | Flips the direction of the scheme. |
 | `encoding.color.format` | A d3-format string for the legend values. |
 | `mark.weekStart` | `"monday"` or `"sunday"`: the weekday in the top row. |
-| `mark.cellRadius` | Corner radius of day cells, in pixels. |
+| `mark.cellRadius` | Corner radius of day cells, in pixels. Default 2. |
 
 ## Related
 

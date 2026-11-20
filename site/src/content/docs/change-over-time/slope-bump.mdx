@@ -13,7 +13,7 @@ Neither is a separate mark. Both are `mark: "line"` with a few public spec field
 
 ## A slope chart
 
-Two ordinal x values, one line per brand. The values live on the labels, so `axis: false` removes the y axis and its gridlines. `scale: { zero: false }` lets the two rails span the data range, which is what makes the slopes readable. `endpointLabels` with `ends: "both"` puts a label column at each edge.
+Two ordinal x values, one line per brand. The values live on the labels, so `axis: false` removes the y axis and its gridlines. Line marks already fit the y axis to the data range (`zero: false`) and curve monotonically. The recipe sets both explicitly so the spec stays readable on its own. `endpointLabels` with `ends: "both"` puts a label column at each edge.
 
 <Demo id="change-over-time/slope" />
 
@@ -25,7 +25,7 @@ Two ordinal x values, one line per brand. The values live on the labels, so `axi
 
 ## A bump chart
 
-The y axis is the finishing position. `scale: { reverse: true }` puts first place at the top, and `axis.values` with `format: "ordinal"` prints one tick per rank as 1st, 2nd and so on. `interpolate: "monotone"` curves the lines through rank changes without overshooting, and `point: true` marks every step. Series that tie share a row.
+The y axis is the finishing position. `scale: { reverse: true }` puts first place at the top, and `axis.values` with `format: "ordinal"` prints one tick per rank as 1st, 2nd and so on. `point: true` marks every step. Line marks already curve monotonically; the recipe sets `interpolate: "monotone"` explicitly so the spec stays readable on its own. Series that tie share a row.
 
 <Demo id="change-over-time/bump" />
 
@@ -39,9 +39,9 @@ If your data holds scores rather than ranks, derive the rank with a `window` tra
 
 | Field | What it does |
 | --- | --- |
-| `mark` | `"line"`. For a bump chart, an object with `interpolate: "monotone"` and `point: true`. |
+| `mark` | `"line"`. For a bump chart, an object with `point: true`, plus `interpolate: "monotone"` if you want it explicit. |
 | `encoding.y.axis` | `false` removes the axis, as on a slope chart. `values` and `format: "ordinal"` print rank ticks. |
-| `encoding.y.scale` | `zero: false` lets the lines span the data range. `reverse: true` puts rank 1 at the top. |
+| `encoding.y.scale` | `zero: false` is already the line default and is set for clarity. `reverse: true` puts rank 1 at the top. |
 | `endpointLabels.ends` | `"both"` adds a label column on the left edge as well as the right. |
 | `endpointLabels.content` | `"label"`, `"value"` or `"label value"`, or an object with `leading` and `trailing`. |
 | `transform` | A `window` rank turns scores into positions grouped by period. |

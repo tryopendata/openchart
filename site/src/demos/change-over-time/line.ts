@@ -127,11 +127,11 @@ export const focusedLine = defineDemo({
 
 export const steppedLine = defineDemo({
   id: "change-over-time/line-step",
-  title: "Monthly temperature as a step line",
+  title: "Monthly temperature as a step-after line",
   source: sourceOf(monthlyTemperature),
   height: 360,
   spec: {
-    mark: { type: "line", interpolate: "step", point: true, stroke: ACCENT, strokeWidth: 2 },
+    mark: { type: "line", interpolate: "step-after", point: true, stroke: ACCENT, strokeWidth: 2 },
     data: [...monthlyTemperature.data],
     encoding: {
       x: { field: "month", type: "ordinal" },
@@ -142,8 +142,8 @@ export const steppedLine = defineDemo({
       },
     },
     chrome: {
-      title: "A step line holds each value until the next point",
-      subtitle: 'Monthly temperature with interpolate: "step"',
+      title: "A step-after line holds each value until the next point",
+      subtitle: 'Monthly temperature with interpolate: "step-after"',
     },
   },
 });

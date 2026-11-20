@@ -42,7 +42,7 @@ export const areaSparkline = defineDemo({
   height: 56,
   caption: "S&P 500, 40 intraday-style readings.",
   spec: {
-    mark: { type: "area", stroke: ACCENT },
+    mark: "area",
     data: seriesOf("SPX"),
     encoding,
     display: "sparkline",
@@ -51,12 +51,12 @@ export const areaSparkline = defineDemo({
 
 export const lastPointSparkline = defineDemo({
   id: "change-over-time/sparkline-last-point",
-  title: "A sparkline with its last point marked",
+  title: "A sparkline without its last-point dot",
   source: sourceOf(marketIndices),
   height: 56,
   caption: "Dow Jones, 40 intraday-style readings.",
   spec: {
-    mark: { type: "line", stroke: ACCENT, point: "last" },
+    mark: { type: "line", stroke: ACCENT, point: false },
     data: seriesOf("DJI"),
     encoding,
     display: "sparkline",
@@ -70,7 +70,7 @@ export const taller = defineDemo({
   height: 120,
   caption: "FTSE 100, 40 intraday-style readings.",
   spec: {
-    mark: { type: "area", stroke: ACCENT },
+    mark: "area",
     data: seriesOf("FTSE"),
     encoding,
     display: "sparkline",

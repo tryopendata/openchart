@@ -31,7 +31,7 @@ When one series is the story, give it the color and let the rest recede. An expl
 
 ## Step lines
 
-`interpolate` on the mark sets the curve between points. The default connects them with straight segments. `"step"` holds each value until the next point, which suits a quantity that changes at discrete moments, and `"monotone"` and `"natural"` smooth the line. `point: true` draws a dot at every observation.
+`interpolate` on the mark sets the curve between points. The default, `"monotone"`, draws a smooth curve through every point that never overshoots between them. `"linear"` draws straight segments. `"step-after"` holds each value until the next point, which suits a quantity that changes at discrete moments; `"step"` switches halfway between points. `"natural"` draws a cubic spline through every point, which can overshoot. `point: true` draws a dot at every observation.
 
 <Demo id="change-over-time/line-step" />
 
@@ -51,7 +51,7 @@ When one series is the story, give it the color and let the rest recede. An expl
 
 | Field | What it does |
 | --- | --- |
-| `mark` | `"line"`, or an object such as `{ type: "line", interpolate: "step", point: true }` to set the curve, point markers and stroke. |
+| `mark` | `"line"`, or an object such as `{ type: "line", interpolate: "step-after", point: true }` to set the curve, point markers and stroke. |
 | `encoding.x` | The horizontal position. Use `type: "temporal"` for dates and `"ordinal"` for named periods. |
 | `encoding.y` | The value. `scale.type: "log"` switches to a log axis. |
 | `encoding.color` | One line per value of this field. `scale.domain` and `scale.range` pin colors to series. |
