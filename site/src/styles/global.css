@@ -11,6 +11,7 @@
 @import "tailwindcss";
 @import "./demo.css";
 @import "@steamfield/ui/consent/styles.css";
+@import "@steamfield/ui/reveal/styles.css";
 @plugin "@tailwindcss/typography";
 
 /*
