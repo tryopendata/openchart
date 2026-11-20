@@ -191,7 +191,7 @@ function collectTargets(scan: EntranceScan, phase: MotionPhase): AnimatedTarget[
 // ---------------------------------------------------------------------------
 
 /** Fallback enter duration when neither the SVG nor the config carries one. */
-const DEFAULT_ENTER_MS = 600;
+const DEFAULT_ENTER_MS = 800;
 /** Frames held after the last element settles. */
 const CAPTURE_TAIL_MS = 300;
 
@@ -400,7 +400,7 @@ export function applyFrameState(
       if (fill) style.setProperty('fill', fill);
       continue;
     }
-    // A stop holding a custom property (`--oc-bar-from`, `--oc-label-from`) is
+    // A stop holding a custom property (`--oc-bar-from`, `--oc-stack-from`) is
     // resolved against the element, even past the midpoint where evalKeyframes
     // would hand back the literal end stop.
     const value = hasCssStop(keyframe, prop)

@@ -22,14 +22,7 @@ import type {
 } from '@opendata-ai/openchart-core';
 import { resolveMarkFill } from '../gradient-utils';
 import { resolvePatternFill } from '../pattern-utils';
-import {
-  formatLabelFrom,
-  labelAnchor,
-  labelFromOffset,
-  linePointDelays,
-  revealFrom,
-  stackExtents,
-} from './entrance-geometry';
+import { linePointDelays, revealFrom, stackExtents } from './entrance-geometry';
 import { applyKnockoutHalo, applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
 
 /**
@@ -585,7 +578,7 @@ export function renderMarks(
   g.setAttribute('class', 'oc-marks');
 
   // Entrance timing read from the layout: points on a line start as its
-  // drawing edge reaches them; stacked labels ride their stack.
+  // drawing edge reaches them; stacked labels take their stack's index.
   const enter = ctx.marks.animation?.enter;
   const pointDelays = enter
     ? linePointDelays(layout.marks, enter, ctx.marks.staggerMs ?? 0, opts?.markIndexOffset)
@@ -657,17 +650,19 @@ export function renderMarks(
     applyLabelHalo(label, rect.label, ctx);
     label.textContent = rect.label.text;
 
-    // Stamp the bar's (or its stack's) stagger index so the label starts with
-    // it (overlay labels aren't children of the .oc-mark-rect group that
-    // carries --oc-mark-index), and the offset it travels with the reveal.
+    // Stamp the bar's (or its stack's) stagger index so the label's fade waits
+    // for that bar: overlay labels aren't children of the .oc-mark-rect group
+    // that carries --oc-mark-index. The fallback adds the facet panel's offset
+    // exactly as the bar's own renderer call does, and the stack index is the
+    // one wrapStackReveals stamps on the stack's reveal group.
     if (enter) {
       const stack = stacks?.get(rect);
-      const idx = stack ? stack.index : (rect.animationIndex ?? i);
+      const idx = stack ? stack.index : (rect.animationIndex ?? i + (opts?.markIndexOffset ?? 0));
       label.setAttribute('data-animation-index', String(idx));
-      const style = (label as SVGElement & ElementCSSInlineStyle).style;
-      style.setProperty('--oc-mark-index', String(idx));
-      const from = labelFromOffset(rect, stack, labelAnchor(rect));
-      if (from) style.setProperty('--oc-label-from', formatLabelFrom(from));
+      (label as SVGElement & ElementCSSInlineStyle).style.setProperty(
+        '--oc-mark-index',
+        String(idx),
+      );
     }
 
     labelsGroup.appendChild(label);
