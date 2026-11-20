@@ -1,12 +1,11 @@
 /**
  * Entrance geometry read from the layout, never from the DOM: where each bar
- * and stack grows from, how far a value label rides with its bar, and when a
- * line point is reached by its line's drawing edge.
+ * and stack grows from, and when a line point is reached by its line's
+ * drawing edge.
  *
  * The renderer stamps these as custom properties the generated entrance CSS
- * reads (`--oc-bar-from`, `--oc-stack-from`, `--oc-label-from`,
- * `--oc-line-point-delay`), so GIF export and cleanup read the same numbers
- * back from the SVG.
+ * reads (`--oc-bar-from`, `--oc-stack-from`, `--oc-line-point-delay`), so GIF
+ * export and cleanup read the same numbers back from the SVG.
  */
 
 import {
@@ -92,64 +91,6 @@ export function revealFrom(
   const after = pct(end - baseline);
   const inset = horizontal ? `0 ${after} 0 ${before}` : `${before} 0 ${after} 0`;
   return inset === DEFAULT_FROM[horizontal ? 'horizontal' : 'vertical'] ? undefined : inset;
-}
-
-/**
- * Where a bar's value label sits along the value axis, in px: its visual
- * centre (SVG text `y` is the baseline, so step up ~0.35em) for columns, its
- * `x` anchor for horizontal bars. Undefined without a label.
- */
-export function labelAnchor(mark: RectMark): number | undefined {
-  if (!mark.label) return undefined;
-  // The layout's TextStyle, not a DOM style.
-  const { x, y, style: textStyle } = mark.label;
-  return mark.orient === 'horizontal' ? x : y - 0.35 * textStyle.fontSize;
-}
-
-/**
- * How far a bar's value label is carried at the start of the entrance, in px
- * along the value axis; it translates from this offset to 0 on the bar's own
- * curve. A label never leaves the revealed part of its bar:
- *
- * - beyond the tip (an outside value label), it rides the tip, staying
- *   exactly as far from it as it rests;
- * - inside the bar or stack, it starts on the baseline and moves on the same
- *   curve, so it stays inside the growing clip and labels in one stack keep
- *   their order instead of crossing.
- *
- * `anchor` is the label's position along the value axis (`labelAnchor`);
- * without it the label rides the tip. A stacked segment's tip is its stack's
- * edge on the label's side of the baseline.
- */
-export function labelFromOffset(
-  mark: RectMark,
-  stack: StackExtent | undefined,
-  anchor?: number,
-): { x: number; y: number } | undefined {
-  const baseline = stack ? stack.baseline : mark.baseline;
-  if (baseline === undefined) return undefined;
-  const own = valueExtent(mark);
-  const { start, end } = stack ?? own;
-  let tip: number;
-  if (stack) {
-    const side = anchor ?? (own.start + own.end) / 2;
-    tip = side < baseline ? start : end;
-  } else {
-    tip = Math.abs(start - baseline) > Math.abs(end - baseline) ? start : end;
-  }
-  const inside =
-    anchor !== undefined &&
-    (anchor - baseline) * (tip - baseline) >= 0 &&
-    Math.abs(anchor - baseline) <= Math.abs(tip - baseline);
-  const offset = baseline - (inside ? anchor : tip);
-  if (offset === 0) return undefined;
-  return own.horizontal ? { x: offset, y: 0 } : { x: 0, y: offset };
-}
-
-/** `--oc-label-from` value for an offset. */
-export function formatLabelFrom(offset: { x: number; y: number }): string {
-  const px = (v: number) => `${Number(v.toFixed(3))}px`;
-  return `${px(offset.x)}, ${px(offset.y)}`;
 }
 
 /**

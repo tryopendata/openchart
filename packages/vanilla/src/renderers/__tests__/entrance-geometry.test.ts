@@ -10,13 +10,7 @@ import {
 } from '@opendata-ai/openchart-core';
 import { compileChart } from '@opendata-ai/openchart-engine';
 import { describe, expect, it } from 'vitest';
-import {
-  labelAnchor,
-  labelFromOffset,
-  linePointDelays,
-  revealFrom,
-  stackExtents,
-} from '../entrance-geometry';
+import { linePointDelays, revealFrom, stackExtents } from '../entrance-geometry';
 
 function rects(spec: ChartSpec): RectMark[] {
   const layout = compileChart(spec, { width: 600, height: 400 });
@@ -32,63 +26,20 @@ const columns = (values: number[]): ChartSpec => ({
   },
 });
 
-describe('labelFromOffset', () => {
-  it('carries a positive column label from the baseline up to its tip', () => {
-    for (const bar of rects(columns([10, 40, 25]))) {
-      expect(bar.baseline).toBeCloseTo(bar.y + bar.height, 6);
-      const offset = labelFromOffset(bar, undefined)!;
-      expect(offset.x).toBe(0);
-      // The tip (top edge) plus the offset lands on the baseline.
-      expect(bar.y + offset.y).toBeCloseTo(bar.baseline!, 6);
-      expect(offset.y).toBeGreaterThan(0);
-    }
-  });
-
-  it('carries a negative column label from the baseline down to its tip', () => {
+describe('revealFrom', () => {
+  it('grows a negative column down from its baseline', () => {
     const bars = rects(columns([20, -30]));
     const negative = bars.find((b) => b.data.value === -30)!;
     expect(negative.baseline).toBeCloseTo(negative.y, 6);
-    const offset = labelFromOffset(negative, undefined)!;
-    expect(negative.y + negative.height + offset.y).toBeCloseTo(negative.baseline!, 6);
-    expect(offset.y).toBeLessThan(0);
     // Its clip collapses onto the top edge, so it grows down.
     expect(revealFrom(false, negative.y, negative.y + negative.height, negative.baseline)).toBe(
       '0 0 100% 0',
     );
   });
+});
 
-  it('an outside value label rides the tip, keeping its resting gap', () => {
-    const bars = rects({ ...columns([10, 40, -25]), labels: { density: 'all' } });
-    for (const bar of bars) {
-      const anchor = labelAnchor(bar)!;
-      const tip = bar.data.value < 0 ? bar.y + bar.height : bar.y;
-      // The label rests beyond the tip...
-      expect(Math.abs(anchor - bar.baseline!)).toBeGreaterThan(Math.abs(tip - bar.baseline!));
-      // ...so it starts the same distance beyond the baseline and rides with the tip.
-      expect(labelFromOffset(bar, undefined, anchor)!.y).toBeCloseTo(bar.baseline! - tip, 6);
-    }
-  });
-
-  it('carries a horizontal bar label along x', () => {
-    const bars = rects({
-      mark: 'bar',
-      data: [
-        { name: 'a', value: 10 },
-        { name: 'b', value: 30 },
-      ],
-      encoding: {
-        y: { field: 'name', type: 'nominal' },
-        x: { field: 'value', type: 'quantitative' },
-      },
-    });
-    for (const bar of bars) {
-      const offset = labelFromOffset(bar, undefined)!;
-      expect(offset.y).toBe(0);
-      expect(bar.x + bar.width + offset.x).toBeCloseTo(bar.baseline!, 6);
-    }
-  });
-
-  it('starts labels inside a stack on the baseline, so they never leave the clip or cross', () => {
+describe('stackExtents', () => {
+  it('spans a centred stack across its baseline as one extent', () => {
     const spec: ChartSpec = {
       mark: 'bar',
       data: [
@@ -102,7 +53,6 @@ describe('labelFromOffset', () => {
         y: { field: 'value', type: 'quantitative', stack: 'center' },
         color: { field: 'series', type: 'nominal' },
       },
-      labels: { density: 'all' },
       // Stack positions are only assigned to animated charts.
       animation: true,
     };
@@ -110,26 +60,9 @@ describe('labelFromOffset', () => {
     const stacks = stackExtents(bars);
     expect(stacks.size).toBe(3);
     const stack = stacks.get(bars[0])!;
-    const baseline = stack.baseline!;
-    expect(stack.start).toBeLessThan(baseline);
-    expect(stack.end).toBeGreaterThan(baseline);
-    for (const bar of bars) {
-      const anchor = labelAnchor(bar)!;
-      expect(anchor).toBeGreaterThan(stack.start);
-      expect(anchor).toBeLessThan(stack.end);
-      const offset = labelFromOffset(bar, stacks.get(bar), anchor)!;
-      // Starting on the baseline and moving on the stack's curve keeps the
-      // label at the same share of the growing clip: inside it, in order.
-      expect(anchor + offset.y).toBeCloseTo(baseline, 6);
-    }
-    // Without an anchor a segment's label rides its stack's tip on its side.
-    for (const bar of bars) {
-      const above = bar.y + bar.height / 2 < baseline;
-      expect(labelFromOffset(bar, stacks.get(bar))!.y).toBeCloseTo(
-        baseline - (above ? stack.start : stack.end),
-        6,
-      );
-    }
+    for (const bar of bars) expect(stacks.get(bar)).toBe(stack);
+    expect(stack.start).toBeLessThan(stack.baseline!);
+    expect(stack.end).toBeGreaterThan(stack.baseline!);
   });
 });
 

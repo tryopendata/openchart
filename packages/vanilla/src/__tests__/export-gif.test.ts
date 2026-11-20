@@ -274,16 +274,18 @@ describe('applyFrameState', () => {
     expect(t.el.style.transform).toBe('translateY(0em)');
   });
 
-  it('a label rides from its stamped --oc-label-from offset to rest', () => {
-    const t: AnimatedTarget = { ...target('fade', 0, 600), role: 'label', fadeMs: 140 };
-    t.el.style.setProperty('--oc-label-from', '0px, 120px');
+  it('a label fades in place: opacity ramps 0 to 1 and it never moves', () => {
+    const t: AnimatedTarget = { ...target('fade', 0, 260), role: 'label' };
     applyFrameState(t, 0, 'smooth');
-    expect(t.el.style.transform).toBe('translate(0px, 120px)');
-    applyFrameState(t, 300, 'smooth');
-    const y = Number(t.el.style.transform.match(/, ([\d.]+)px\)$/)?.[1]);
-    expect(y).toBeCloseTo(120 * (1 - evalCurve('smooth', 0.5)), 6);
-    applyFrameState(t, 600, 'smooth');
-    expect(t.el.style.transform).toBe('translate(0px, 0px)');
+    expect(Number(t.el.style.opacity)).toBe(0);
+    applyFrameState(t, 130, 'smooth');
+    const midway = Number(t.el.style.opacity);
+    expect(midway).toBeGreaterThan(0);
+    expect(midway).toBeLessThan(1);
+    applyFrameState(t, 260, 'smooth');
+    expect(Number(t.el.style.opacity)).toBe(1);
+    expect(t.el.style.transform).toBe('');
+    expect(t.el.style.clipPath).toBe('');
   });
 
   it('a spring phase eases the segment by the spring, as the stamped linear() does', () => {
