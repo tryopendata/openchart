@@ -5,7 +5,8 @@
  *
  * Consent: the visitor's Steamfield banner choice (the shared `sf-consent` cookie,
  * read through a consent store) decides, and PostHog's own consent state follows
- * it. Until the visitor accepts, PostHog runs cookieless and stores nothing.
+ * it. Until the visitor accepts, PostHog runs cookieless and stores nothing; a
+ * withdrawal returns it to that state and removes what it had stored.
  */
 
 import type { BeforeSendFn, PostHog } from "posthog-js";
@@ -56,14 +57,42 @@ function send(call: Call) {
 }
 
 // Granted opts PostHog in (cookies on). Undecided and declined both return it to
-// pending, which with opt_out_capturing_by_default means cookieless and no storage.
-function applyConsent(c: Client, consent: Consent) {
+// pending, which with opt_out_capturing_by_default means cookieless: PostHog removes
+// its cookie and storage entries, except the tab's window id, which forgetWindow takes.
+function applyConsent(c: Client, consent: Consent, key: string) {
   const status = c.get_explicit_consent_status();
   if (consent === "granted") {
     if (status !== "granted") c.opt_in_capturing();
     return;
   }
   if (status !== "pending") c.clear_opt_in_out_capturing();
+  // Even when PostHog is already pending: consent withdrawn in another tab leaves
+  // this tab's window id behind until a page here loads.
+  forgetWindow(key);
+}
+
+// posthog-js keeps the tab's window id in sessionStorage after consent is withdrawn
+// (its session manager is torn down without removing it). The names follow its
+// default persistence name, the project key; the withdrawal test fails if an
+// upgrade changes them.
+function forgetWindow(key: string) {
+  try {
+    sessionStorage.removeItem(`ph_${key}_window_id`);
+    sessionStorage.removeItem(`ph_${key}_primary_window_exists`);
+  } catch {
+    // Storage is blocked, so posthog-js couldn't have written these either.
+  }
+}
+
+// A page restored from the back-forward cache keeps its consent store's old state,
+// but PostHog's consent record is the shared .steamfield.io cookie, which a decline
+// on a sibling site has cleared. Re-read it and withdraw here too if it's gone.
+function withdrawOnRestore(c: Client, key: string) {
+  window.addEventListener("pageshow", (event) => {
+    if (!event.persisted || c.get_explicit_consent_status() === "granted") return;
+    c.clear_opt_in_out_capturing();
+    forgetWindow(key);
+  });
 }
 
 // A registered super property isn't enough: opt_in_capturing() resets super
@@ -72,11 +101,14 @@ function stampSite(site: string): BeforeSendFn {
   return (event) => (event ? { ...event, properties: { ...event.properties, site } } : null);
 }
 
-function onLoaded(instance: Client, store: ConsentStore | undefined) {
+function onLoaded(instance: Client, key: string, store: ConsentStore | undefined) {
+  // Runs before posthog-js captures the deferred first $pageview, so that pageview
+  // already reflects the stored choice.
   if (store) {
-    applyConsent(instance, store.getState());
-    store.subscribe(() => send((c) => applyConsent(c, store.getState())));
+    applyConsent(instance, store.getState(), key);
+    store.subscribe(() => send((c) => applyConsent(c, store.getState(), key)));
   }
+  withdrawOnRestore(instance, key);
   client = instance;
   for (const call of queue ?? []) call(instance);
   queue = undefined;
@@ -115,7 +147,7 @@ export async function initAnalytics(
     autocapture: false,
     disable_session_recording: true,
     before_send: stampSite(config.site),
-    loaded: (instance) => onLoaded(instance, config.consent),
+    loaded: (instance) => onLoaded(instance, key, config.consent),
   });
 }
 

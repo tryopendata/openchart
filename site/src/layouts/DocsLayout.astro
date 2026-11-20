@@ -28,7 +28,9 @@ const sectionLabel = nav.find((section) => section.id === page.section)?.label ?
   markdown={page.markdown}
 >
   <div class="mx-auto grid max-w-[90rem] px-5 sm:px-6 lg:grid-cols-[15rem_minmax(0,1fr)] lg:px-8 xl:grid-cols-[15rem_minmax(0,1fr)_16rem]">
-    <aside
+    <!-- Plain divs, not asides: each wraps a named nav, and two unnamed complementary
+         landmarks would fail axe's landmark-unique rule. -->
+    <div
       data-docs-rail
       class="border-line border-b lg:sticky lg:top-0 lg:max-h-screen lg:self-start lg:overflow-y-auto lg:border-b-0 lg:py-10 lg:pr-8"
     >
@@ -55,7 +57,7 @@ const sectionLabel = nav.find((section) => section.id === page.section)?.label ?
         outlineClass="xl:hidden"
         class="hidden lg:flex"
       />
-    </aside>
+    </div>
 
     <article class="border-line min-w-0 pt-8 pb-4 lg:border-l lg:pt-12 lg:pl-12">
       <header class="flex max-w-[44rem] flex-col gap-4">
@@ -74,12 +76,12 @@ const sectionLabel = nav.find((section) => section.id === page.section)?.label ?
     </article>
 
     {outline.length > 0 && (
-      <aside class="hidden xl:block xl:pl-12">
+      <div class="hidden xl:block xl:pl-12">
         <nav aria-label="On this page" class="sticky top-0 max-h-screen overflow-y-auto py-12">
           <p class="text-ink mb-2 text-[13px] font-semibold">On this page</p>
           <PageOutline outline={outline} class="border-line border-l pl-3" />
         </nav>
-      </aside>
+      </div>
     )}
   </div>
 </BaseLayout>

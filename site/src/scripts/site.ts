@@ -33,20 +33,29 @@ function setupThemeToggle() {
   });
 }
 
-/** Copies the text `read` returns and says how it went on the button for two seconds. */
-async function copyWithFeedback(button: HTMLButtonElement, read: () => Promise<string> | string) {
+/**
+ * Runs `copy` on each click of `button` and says how it went for two seconds before
+ * the button's original label returns. `copy` is called synchronously in the click,
+ * so it can reach the clipboard while the click still counts as user activation.
+ */
+function onCopyClick(button: HTMLButtonElement, copy: () => Promise<void>) {
   const label = button.textContent;
-  try {
-    await navigator.clipboard.writeText(await read());
-    button.textContent = "Copied";
-  } catch (error) {
-    // The code stays on the page to select by hand; the console keeps the cause.
-    console.warn("Copying failed", error);
-    button.textContent = "Copy failed";
-  }
-  setTimeout(() => {
-    button.textContent = label;
-  }, FEEDBACK_MS);
+  let restore: ReturnType<typeof setTimeout> | undefined;
+  button.addEventListener("click", async () => {
+    clearTimeout(restore);
+    try {
+      await copy();
+      button.textContent = "Copied";
+    } catch (error) {
+      // The text stays on the page to select by hand; the console keeps the cause.
+      console.warn("Copying failed", error);
+      button.textContent = "Copy failed";
+    }
+    clearTimeout(restore);
+    restore = setTimeout(() => {
+      button.textContent = label;
+    }, FEEDBACK_MS);
+  });
 }
 
 /** Adds a Copy button to every Markdown code block outside a demo figure. */
@@ -58,24 +67,39 @@ function setupCodeCopy() {
     button.type = "button";
     button.className = "code-copy";
     button.textContent = "Copy";
-    button.addEventListener("click", () => copyWithFeedback(button, () => code.textContent ?? ""));
+    onCopyClick(button, () => navigator.clipboard.writeText(code.textContent ?? ""));
     frame.append(button);
   }
 }
 
-/** Fetches the page's Markdown export and copies it. */
+/** The page's Markdown export as text; a non-ok response is a failure. */
+async function fetchMarkdown(href: string): Promise<string> {
+  const response = await fetch(href);
+  if (!response.ok) throw new Error(`GET ${href} returned ${response.status}`);
+  return response.text();
+}
+
+/**
+ * Copies the Markdown export. Safari drops the click's user activation across a
+ * network await, so where ClipboardItem exists the clipboard write starts at once
+ * with the fetch as a pending promise; elsewhere writeText runs after the fetch.
+ */
+function copyMarkdown(href: string): Promise<void> {
+  const text = fetchMarkdown(href);
+  if (typeof ClipboardItem === "undefined") {
+    return text.then((markdown) => navigator.clipboard.writeText(markdown));
+  }
+  const blob = text.then((markdown) => new Blob([markdown], { type: "text/plain" }));
+  return navigator.clipboard.write([new ClipboardItem({ "text/plain": blob })]);
+}
+
+/** Shows "Copy page" and wires it to copy the page's Markdown export. */
 function setupCopyPage() {
   const button = document.querySelector<HTMLButtonElement>("[data-copy-page]");
   const href = button?.dataset.copyPage;
   if (!button || !href) return;
   button.hidden = false;
-  button.addEventListener("click", () =>
-    copyWithFeedback(button, async () => {
-      const response = await fetch(href);
-      if (!response.ok) throw new Error(`GET ${href} returned ${response.status}`);
-      return response.text();
-    }),
-  );
+  onCopyClick(button, () => copyMarkdown(href));
 }
 
 /** The inline code a click landed on, unless it is a heading, link or code block's. */

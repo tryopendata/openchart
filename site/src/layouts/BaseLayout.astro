@@ -63,16 +63,19 @@ const pageTitle = path === "/" ? `${site.name}: ${title}` : `${title} | ${site.n
     {noindex && <meta name="robots" content="noindex, nofollow" />}
     <script is:inline>
       // Before paint: the stored choice, else the system preference.
+      // A class is always set while JavaScript runs, so the toggle's state matches
+      // what is shown even when storage is blocked.
       (() => {
+        let stored = null;
         try {
-          const stored = localStorage.getItem("theme");
-          const dark = stored
-            ? stored === "dark"
-            : window.matchMedia("(prefers-color-scheme: dark)").matches;
-          document.documentElement.classList.add(dark ? "dark" : "light");
+          stored = localStorage.getItem("theme");
         } catch {
-          // Storage blocked: the CSS media fallback applies.
+          // Storage blocked: fall back to the system preference below.
         }
+        const dark = stored
+          ? stored === "dark"
+          : window.matchMedia("(prefers-color-scheme: dark)").matches;
+        document.documentElement.classList.add(dark ? "dark" : "light");
       })();
     </script>
     <script>

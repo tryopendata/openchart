@@ -72,7 +72,19 @@ async function start(consent?: ConsentStore) {
     { key, host: "http://127.0.0.1:9", site: "openchart", consent },
     sdk.load,
   );
-  return sdk;
+  return { ...sdk, key };
+}
+
+/** The sessionStorage names posthog-js has written for this key. */
+function sessionNames(key: string) {
+  return Object.keys(sessionStorage).filter((name) => name.includes(key));
+}
+
+/** The event a browser fires when it restores a page from the back-forward cache. */
+function restoredFromCache() {
+  const event = new Event("pageshow");
+  Object.defineProperty(event, "persisted", { value: true });
+  return event;
 }
 
 afterEach(() => {
@@ -125,6 +137,32 @@ describe("consent", () => {
       site: "openchart",
       $cookieless_mode: true,
     });
+  });
+
+  it("leaves no PostHog session storage behind after a withdrawal", async () => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("offline"));
+    const store = consentStore("granted");
+    const sdk = await start(store);
+    analytics.track(Events.exampleViewed);
+    expect(sessionNames(sdk.key)).toContain(`ph_${sdk.key}_window_id`);
+    store.set(null);
+    expect(sessionNames(sdk.key)).toEqual([]);
+  });
+
+  it("withdraws on a page restored from the cache after a decline on a sibling site", async () => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("offline"));
+    const sdk = await start(consentStore("granted"));
+    analytics.track(Events.exampleViewed);
+    // The decline elsewhere cleared PostHog's shared consent cookie; this page's
+    // store still says granted, since it was frozen in the cache.
+    sdk.instance.clear_opt_in_out_capturing();
+    window.dispatchEvent(restoredFromCache());
+    analytics.track(Events.exampleViewed, { position: 2 });
+    expect(sdk.captured("example_viewed").at(-1)?.properties).toMatchObject({
+      position: 2,
+      $cookieless_mode: true,
+    });
+    expect(sessionNames(sdk.key)).toEqual([]);
   });
 });
 
