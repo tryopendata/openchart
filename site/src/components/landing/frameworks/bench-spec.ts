@@ -25,6 +25,6 @@ export const benchSpec: ChartSpec = {
   },
   chrome: {
     title: "Solar additions more than tripled from 2019 to 2023",
-    subtitle: "New solar generating capacity worldwide, gigawatts per year",
+    subtitle: "New solar generating capacity worldwide (gigawatts per year)",
   },
 };

@@ -22,7 +22,11 @@ function inline(value: unknown): string {
 
 function format(value: unknown, indent: number, prefix: string): string {
   const flat = inline(value);
-  if (indent + prefix.length + flat.length <= MAX_LINE || value === null || typeof value !== "object") {
+  if (
+    indent + prefix.length + flat.length <= MAX_LINE ||
+    value === null ||
+    typeof value !== "object"
+  ) {
     return flat;
   }
   const pad = " ".repeat(indent + 2);

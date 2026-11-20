@@ -41,15 +41,15 @@ function payrollsChart(valueField: string): ChartSpec {
         type: "text",
         x: "Oct",
         y: 12,
-        text: "Hurricanes and strikes\nheld October to 12,000",
+        text: "Hurricanes and strikes\nheld October to 12 thousand",
         anchor: "top",
-        offset: { dy: -150 },
+        offset: { dy: -235 },
         connector: true,
       },
     ],
     chrome: {
-      title: "Hiring slowed through 2024 and stalled once, in October",
-      subtitle: "Jobs added to US nonfarm payrolls each month, thousands",
+      title: "Hiring slowed through 2024 and stalled in October",
+      subtitle: "Jobs added to US nonfarm payrolls each month (thousands)",
     },
   };
 }

@@ -30,16 +30,26 @@ const llmsUrl = new URL("/llms.txt", site.url).href;
 const llms = llmsIndex((await allPages()).map((entry) => entry.page));
 const script = buildSessionScript(agentSession, { llms, llmsUrl, file: AGENT_SPEC_FILE });
 
-/** The SVG's drawing size; CSS scales it to the stage. */
-const CHART_SIZE = { width: 720, height: 420 };
-const chartSvgs = [false, true]
-  .map((dark) =>
-    staticSvg(agentSession.fixedSpec, {
-      idPrefix: `agent-chart-${dark ? "d" : "l"}`,
-      dark,
-      ...CHART_SIZE,
-    }),
-  )
+/**
+ * Two drawing sizes, so a phone gets the chart's own compact layout instead of the
+ * wide one scaled down; landing-close.css shows one per viewport and sizes the stage
+ * to match. Each comes in both themes.
+ */
+const CHART_SIZES = {
+  wide: { width: 720, height: 420 },
+  narrow: { width: 360, height: 340 },
+};
+const chartSvgs = Object.entries(CHART_SIZES)
+  .map(([size, box]) => {
+    const svgs = [false, true].map((dark) =>
+      staticSvg(agentSession.fixedSpec, {
+        idPrefix: `agent-chart-${size}-${dark ? "d" : "l"}`,
+        dark,
+        ...box,
+      }),
+    );
+    return `<div class="agent-chart-${size}">${svgs.join("")}</div>`;
+  })
   .join("");
 
 /** The Claude Code skill's install lines, as the repository README gives them. */

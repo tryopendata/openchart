@@ -9,7 +9,7 @@ import "@steamfield/ui/tabs/styles.css";
 import { Tab, TabList, TabPanel, Tabs } from "@steamfield/ui/react/tabs";
 import { useEffect, useState } from "react";
 import { readFrameworkChoice, writeFrameworkChoice } from "../../../lib/demo/framework-choice";
-import { CopyText } from "./CopyText";
+import { CopyText } from "../../shared/CopyText";
 import type { FrameworkPanel } from "./framework-panels";
 import {
   DEFAULT_LANDING_FRAMEWORK,

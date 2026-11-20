@@ -10,10 +10,10 @@
  *   with one h2, id `closing-title` (`landingCopy.headings.closing`).
  * - Every `site.install` command is in the server-rendered HTML of the page.
  */
-import { CopyCommand } from "@steamfield/ui/react/copy";
 import { site } from "../../../config";
 import { landingCopy } from "../../../landing/copy";
 import { closingFacts } from "./facts";
+import InstallLines from "./InstallLines.astro";
 import "../../../styles/landing-close.css";
 
 const DOCS_HOME = "/docs/get-started/getting-started/";
@@ -52,21 +52,7 @@ const DOCS_HOME = "/docs/get-started/getting-started/";
         </table>
       </div>
       <div class="closing-install" data-reveal>
-        <ul class="closing-commands" aria-label="Install commands">
-          {site.install.map(({ label, command }) => (
-            <li class="closing-command" data-motion-part>
-              <span class="closing-manager">{label}</span>
-              <CopyCommand
-                id={`closing-install-${label}`}
-                command={command}
-                prompt={null}
-                label={`Copy the ${label} install command`}
-                className="closing-command-text"
-                buttonClassName="copy-chip"
-              />
-            </li>
-          ))}
-        </ul>
+        <InstallLines commands={site.install} />
         <p class="closing-links" data-motion-part>
           <a class="btn btn-primary" href={DOCS_HOME}>
             Read the docs

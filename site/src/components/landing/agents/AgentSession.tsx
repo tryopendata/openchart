@@ -11,7 +11,7 @@ import { useAgentDemo } from "@steamfield/ui/react/agent-demo";
 import { type DemoView, presets, type Timing } from "@steamfield/ui/sequencer";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { agentChart, agentSource } from "../../../landing/agents";
-import { LiveChart, loadChartLibrary } from "./LiveChart";
+import { LiveChart, loadChartLibrary } from "../../shared/LiveChart";
 import type { SessionData, SessionScript } from "./session-script";
 import { TranscriptEntry } from "./TranscriptEntry";
 
@@ -77,13 +77,21 @@ export function AgentSession({ script, chart }: AgentSessionProps) {
     else demo.controls.toggle();
   };
 
-  const staticChart = <div className="agent-chart-static">{chart}</div>;
+  // PublishedFigure's markup and classes, written out here because an Astro component
+  // can't render inside a React island; the frame's styles stay the shared ones.
   const drawChart = () => (
-    <figure className="agent-chart" data-agent-chart>
-      <div className="agent-chart-stage">
-        {live ? <LiveChart spec={agentChart} fallback={staticChart} /> : staticChart}
+    <figure className="pub-figure agent-chart" data-agent-chart>
+      <div className="rule-axis" />
+      <div className="pub-figure-body agent-chart-stage">
+        {live ? (
+          <LiveChart spec={agentChart} className="agent-chart-live">
+            {chart}
+          </LiveChart>
+        ) : (
+          chart
+        )}
       </div>
-      <figcaption className="figure-caption">
+      <figcaption className="figure-caption pub-figure-caption">
         The chart the corrected spec renders. Source:{" "}
         <a href={agentSource.url}>{agentSource.label}</a>.
       </figcaption>

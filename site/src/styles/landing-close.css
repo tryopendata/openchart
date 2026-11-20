@@ -63,19 +63,6 @@
     @apply min-w-0 [overflow-wrap:anywhere];
   }
 
-  /* A small text button beside a command or a code block. */
-  .copy-chip {
-    @apply border-line bg-canvas text-ink-2 shrink-0 cursor-pointer rounded-xs border px-2 py-0.5 font-sans text-xs;
-    transition:
-      color 150ms ease-out,
-      border-color 150ms ease-out;
-  }
-
-  .copy-chip:hover,
-  .copy-chip:focus-visible {
-    @apply border-line-strong text-ink;
-  }
-
   /* The session: a control bar on the axis rule, then the transcript rows. */
   .agent-session {
     @apply border-line-strong border-t;
@@ -180,16 +167,40 @@
   }
 
   .agent-code {
-    @apply bg-panel text-ink-2 mt-3 mb-0 max-h-80 overflow-auto p-4 font-mono text-[12.5px] leading-relaxed;
+    @apply bg-panel text-ink-2 mt-2 mb-0 max-h-80 overflow-auto p-4 font-mono text-[12.5px] leading-relaxed;
   }
 
   .agent-chart {
-    @apply m-0 mt-4;
+    @apply mt-4;
   }
 
+  /* The stage keeps the shape of the static SVG on show: narrow on a phone, wide above. */
   .agent-chart-stage {
     @apply relative w-full;
-    aspect-ratio: 720 / 420;
+    aspect-ratio: 360 / 340;
+  }
+
+  .agent-chart-wide,
+  .agent-chart-narrow {
+    @apply absolute inset-0;
+  }
+
+  .agent-chart-wide {
+    @apply hidden;
+  }
+
+  @media (width >= 40rem) {
+    .agent-chart-stage {
+      aspect-ratio: 720 / 420;
+    }
+
+    .agent-chart-wide {
+      @apply block;
+    }
+
+    .agent-chart-narrow {
+      @apply hidden;
+    }
   }
 
   .agent-chart-live {
@@ -218,7 +229,7 @@
   }
 
   .frameworks-figure {
-    @apply border-line-strong m-0 border-t pt-4 lg:col-span-4 lg:self-start;
+    @apply lg:col-span-4 lg:self-start;
   }
 
   .frameworks-chart {

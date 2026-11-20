@@ -16,6 +16,7 @@
 import { landingCopy } from "../../../landing/copy";
 import { highlightCode } from "../../../lib/demo/highlight";
 import { staticSvg } from "../../../lib/demo/static-svg";
+import PublishedFigure from "../../shared/PublishedFigure.astro";
 import { benchSource, benchSpec } from "./bench-spec";
 import { frameworkPanels } from "./framework-panels";
 import { type InstallPanel, InstallTabs } from "./InstallTabs";
@@ -61,12 +62,9 @@ const chartSvgs = [false, true]
       <div class="frameworks-code">
         <InstallTabs client:visible panels={installPanels} />
       </div>
-      <figure class="frameworks-figure" data-reveal="quiet">
+      <PublishedFigure class="frameworks-figure" source={benchSource} note="What each tab renders.">
         <div class="frameworks-chart" set:html={chartSvgs} />
-        <figcaption class="figure-caption">
-          What each tab renders. Source: <a href={benchSource.url}>{benchSource.label}</a>.
-        </figcaption>
-      </figure>
+      </PublishedFigure>
     </div>
   </div>
   <style is:inline set:html={highlighted.css}></style>
