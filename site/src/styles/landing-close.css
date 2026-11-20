@@ -1,6 +1,417 @@
 /*
  * Styles for the agents, frameworks and closing sections (#agents, #frameworks,
- * #closing). Lane 2/d fills this file; its components import it. Start with
- * `@reference "./global.css";` to use the tokens in `@apply`, and put rules in
- * `@layer components`.
+ * #closing). Three shapes: a two-column transcript that ends in a chart, a tabbed
+ * code bench beside the chart it draws, and a ruled facts table. Rules, type and
+ * the one accent do the work; color comes only from the charts.
  */
+@reference "./global.css";
+
+/* Tailwind's own layer order, restated. The landing page's section stylesheets can
+   load before BaseLayout's global.css, and the first file to name a layer fixes its
+   place in the cascade; without this, preflight (`base`) outranks `components`. */
+@layer theme, base, components, utilities;
+
+@layer components {
+  /* Agents: the intro and facts in four columns, the session in eight. */
+  .agents-grid {
+    @apply grid gap-12 lg:grid-cols-12 lg:gap-x-8;
+  }
+
+  .agents-intro {
+    @apply lg:sticky lg:top-24 lg:col-span-4 lg:self-start;
+  }
+
+  .agents-stage {
+    @apply min-w-0 lg:col-span-8;
+  }
+
+  .agents-lede,
+  .frameworks-lede {
+    @apply text-ink-2 mt-6 max-w-[36rem] text-[17px] leading-relaxed;
+  }
+
+  .agents-lede code {
+    @apply text-ink text-[0.88em];
+  }
+
+  .agents-facts {
+    @apply border-line-strong mt-10 border-t;
+  }
+
+  .agents-fact {
+    @apply border-line border-b py-4;
+  }
+
+  .agents-fact dt {
+    @apply text-ink text-sm font-semibold;
+  }
+
+  .agents-fact dd p {
+    @apply text-ink-2 mt-1 text-sm leading-relaxed;
+  }
+
+  .agents-fact-link {
+    @apply text-accent mt-2 inline-block font-mono text-[13px] [overflow-wrap:anywhere];
+    transition: color 150ms ease-out;
+  }
+
+  .agents-command {
+    @apply bg-panel text-ink mt-2 flex items-center justify-between gap-3 px-3 py-2 font-mono text-[12.5px];
+  }
+
+  .agents-command code {
+    @apply min-w-0 [overflow-wrap:anywhere];
+  }
+
+  /* A small text button beside a command or a code block. */
+  .copy-chip {
+    @apply border-line bg-canvas text-ink-2 shrink-0 cursor-pointer rounded-xs border px-2 py-0.5 font-sans text-xs;
+    transition:
+      color 150ms ease-out,
+      border-color 150ms ease-out;
+  }
+
+  .copy-chip:hover,
+  .copy-chip:focus-visible {
+    @apply border-line-strong text-ink;
+  }
+
+  /* The session: a control bar on the axis rule, then the transcript rows. */
+  .agent-session {
+    @apply border-line-strong border-t;
+  }
+
+  .agent-controls {
+    @apply border-line flex items-center gap-4 border-b py-3;
+  }
+
+  .agent-play {
+    @apply h-8 min-w-[5.5rem] cursor-pointer justify-center;
+  }
+
+  .agent-progress {
+    @apply border-line-strong relative h-[6px] flex-1 border-t;
+  }
+
+  .agent-progress-tick {
+    @apply bg-line-strong absolute top-0 h-[5px] w-px;
+  }
+
+  .agent-progress-fill {
+    @apply bg-accent absolute inset-x-0 -top-[2px] h-[3px] origin-left;
+    transition: transform 120ms linear;
+  }
+
+  .agent-clock {
+    @apply text-muted font-mono text-xs tabular-nums;
+  }
+
+  .agent-transcript {
+    @apply m-0 list-none p-0;
+  }
+
+  .agent-row {
+    @apply border-line grid grid-cols-1 gap-y-1.5 border-b py-4 sm:grid-cols-[8rem_1fr] sm:gap-x-6;
+  }
+
+  .agent-role {
+    @apply text-muted flex gap-3 font-mono text-xs sm:flex-col sm:gap-1 sm:pt-[3px];
+  }
+
+  .agent-tool {
+    @apply text-ink-2;
+  }
+
+  .agent-status[data-status="error"] {
+    @apply text-ink font-semibold;
+  }
+
+  .agent-body {
+    @apply min-w-0;
+  }
+
+  .agent-message {
+    @apply text-ink-2 m-0 text-base leading-relaxed;
+  }
+
+  /* The reporter's request reads as a quotation, in the headline face. */
+  .agent-row[data-kind="user"] .agent-message {
+    @apply text-ink text-xl leading-snug;
+    font-family: var(--font-display, var(--font-sans));
+  }
+
+  .agent-args {
+    @apply text-ink m-0 flex flex-wrap justify-between gap-x-4 font-mono text-[13px] [overflow-wrap:anywhere];
+  }
+
+  .agent-meta {
+    @apply text-muted;
+  }
+
+  .agent-output {
+    @apply mt-2 font-mono text-[12.5px] leading-relaxed;
+  }
+
+  .agent-line {
+    @apply text-ink-2 m-0 whitespace-pre-wrap [overflow-wrap:anywhere];
+  }
+
+  .agent-line[data-tone="muted"],
+  .agent-more {
+    @apply text-muted;
+  }
+
+  /* A removed line in the edit. */
+  .agent-line[data-tone="fail"] {
+    @apply text-muted line-through;
+  }
+
+  .agent-line[data-tone="ok"] {
+    @apply text-ink;
+  }
+
+  /* The validator's rejection: ink, ruled on the leading edge like a correction in the margin. */
+  .agent-row[data-status="error"] .agent-output {
+    @apply border-line-strong border-l-2 pl-3;
+  }
+
+  .agent-row[data-status="error"] .agent-line[data-tone="fail"] {
+    @apply text-ink font-medium no-underline;
+  }
+
+  .agent-code {
+    @apply bg-panel text-ink-2 mt-3 mb-0 max-h-80 overflow-auto p-4 font-mono text-[12.5px] leading-relaxed;
+  }
+
+  .agent-chart {
+    @apply m-0 mt-4;
+  }
+
+  .agent-chart-stage {
+    @apply relative w-full;
+    aspect-ratio: 720 / 420;
+  }
+
+  .agent-chart-live {
+    @apply absolute inset-0;
+  }
+
+  /* Frameworks: the heading and lede across the top, the bench in eight columns, the chart in four. */
+  .frameworks-head {
+    @apply grid gap-y-2 lg:grid-cols-12 lg:gap-x-8;
+  }
+
+  .frameworks-head .landing-heading {
+    @apply lg:col-span-7;
+  }
+
+  .frameworks-head .frameworks-lede {
+    @apply lg:col-span-5 lg:mt-0 lg:self-end;
+  }
+
+  .frameworks-bench {
+    @apply mt-12 grid gap-y-10 lg:grid-cols-12 lg:gap-x-8;
+  }
+
+  .frameworks-code {
+    @apply min-w-0 lg:col-span-8;
+  }
+
+  .frameworks-figure {
+    @apply border-line-strong m-0 border-t pt-4 lg:col-span-4 lg:self-start;
+  }
+
+  .frameworks-chart {
+    @apply relative w-full;
+    aspect-ratio: 480 / 400;
+  }
+
+  .install-command {
+    @apply border-line-strong flex items-center justify-between gap-4 border px-4 py-3 font-mono text-sm;
+  }
+
+  .install-command code {
+    @apply text-ink min-w-0 [overflow-wrap:anywhere];
+  }
+
+  .install-command code::before {
+    @apply text-muted;
+    content: "$ ";
+  }
+
+  .install-code {
+    @apply border-line mt-4 border;
+  }
+
+  .install-code-head {
+    @apply border-line bg-panel text-ink-2 flex items-center justify-between border-b px-4 py-2 font-mono text-xs;
+  }
+
+  .install-code-body pre {
+    @apply m-0 max-h-[30rem] overflow-auto p-4 font-mono text-[13px] leading-relaxed;
+  }
+
+  /* Closing: the heading in four columns, the table and install lines in eight. */
+  .closing-grid {
+    @apply grid gap-y-10 lg:grid-cols-12 lg:gap-x-8;
+  }
+
+  .closing-head {
+    @apply lg:col-span-4;
+  }
+
+  .closing-table-wrap,
+  .closing-install {
+    @apply min-w-0 lg:col-span-8 lg:col-start-5;
+  }
+
+  .closing-table-wrap {
+    @apply lg:row-start-1;
+  }
+
+  .closing-table {
+    @apply border-line-strong w-full border-collapse border-t-2 border-b text-left;
+  }
+
+  .closing-table thead th {
+    @apply border-line-strong text-muted border-b py-2 pr-6 font-mono text-xs font-normal;
+  }
+
+  .closing-table tbody tr + tr {
+    @apply border-line border-t;
+  }
+
+  .closing-table tbody th {
+    @apply text-ink w-36 py-4 pr-6 align-top text-[15px] font-semibold;
+  }
+
+  .closing-table td {
+    @apply text-ink-2 py-4 pr-6 align-top text-[15px] leading-relaxed;
+  }
+
+  .closing-table td.closing-backed {
+    @apply pr-0 font-mono text-[12.5px] whitespace-nowrap;
+  }
+
+  .closing-backed a {
+    @apply text-accent;
+    transition: color 150ms ease-out;
+  }
+
+  .closing-commands {
+    @apply border-line-strong m-0 list-none border-t p-0;
+  }
+
+  .closing-command {
+    @apply border-line grid grid-cols-[3.5rem_1fr] items-center border-b py-3;
+  }
+
+  .closing-manager {
+    @apply text-muted font-mono text-xs;
+  }
+
+  .closing-command-text {
+    @apply text-ink flex min-w-0 items-center justify-between gap-3 font-mono text-sm;
+  }
+
+  .closing-command-text code {
+    @apply min-w-0 [overflow-wrap:anywhere];
+  }
+
+  .closing-links {
+    @apply mt-8 flex flex-wrap gap-3;
+  }
+}
+
+/* On a phone the facts table stacks: topic, fact, then the file behind it. */
+@media (width < 40rem) {
+  .closing-table thead {
+    @apply sr-only;
+  }
+
+  .closing-table tbody tr {
+    @apply grid gap-1 py-4;
+  }
+
+  .closing-table tbody th,
+  .closing-table td,
+  .closing-table td.closing-backed {
+    @apply w-auto p-0;
+  }
+}
+
+/*
+ * The tabs. Unlayered on purpose: @steamfield/ui/tabs/styles.css sits in a cascade
+ * layer declared after Tailwind's, so it outranks rules in `components`.
+ */
+.install-tablist {
+  @apply border-line-strong flex gap-6 border-b;
+}
+
+.install-tab {
+  @apply text-muted -mb-px cursor-pointer border-0 border-b-2 border-solid border-transparent bg-transparent px-0 py-3 text-[15px] font-medium no-underline;
+  transition:
+    color 150ms ease-out,
+    border-color 150ms ease-out;
+}
+
+.install-tab:hover {
+  @apply text-ink no-underline;
+}
+
+.install-tab[aria-selected="true"] {
+  @apply border-ink text-ink;
+}
+
+.install-panel {
+  @apply pt-6;
+}
+
+/* Shiki writes both themes as variables; the page theme picks one. */
+.install-code-body pre,
+.install-code-body pre span {
+  color: var(--shiki-light);
+  background-color: transparent;
+}
+
+.dark .install-code-body pre,
+.dark .install-code-body pre span {
+  color: var(--shiki-dark);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) .install-code-body pre,
+  :root:not(.light) .install-code-body pre span {
+    color: var(--shiki-dark);
+  }
+}
+
+/*
+ * Motion. Transcript rows arrive as the replay reaches them, and a newly chosen
+ * tab's panel settles in. Both run only while hydrated (`data-live` and
+ * `data-state` are set by the islands) and never under reduced motion; the
+ * server HTML has no start state, so nothing waits on a script to be seen.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .agent-session[data-live] .agent-row {
+    animation: agent-row-in 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .install-panel[data-state="active"] {
+    animation: install-panel-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
+@keyframes agent-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes install-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}

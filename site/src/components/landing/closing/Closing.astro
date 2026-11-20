@@ -1,24 +1,88 @@
 ---
 /**
- * Closing: a facts table (accessibility, export formats, bundle, license), each
- * fact linked to the docs page that backs it, then the install command with copy
- * and links to the docs and GitHub. Static, no island. Stub from the phase 2
- * scaffold; lane 2/d fills it.
+ * Closing: a ruled facts table (accessibility, export formats, bundle, license),
+ * each fact linked to the file that backs it, then the install commands with copy
+ * and links to the docs and GitHub. Static, no island: the copy buttons are wired
+ * by @steamfield/ui's `enhanceCopyButtons` and stay hidden without JavaScript.
  *
  * Contract (tests/build.test.ts relies on it):
  * - `<section id="closing" aria-labelledby="closing-title" data-landing-section>`
  *   with one h2, id `closing-title` (`landingCopy.headings.closing`).
  * - Every `site.install` command is in the server-rendered HTML of the page.
  */
+import { CopyCommand } from "@steamfield/ui/react/copy";
+import { site } from "../../../config";
 import { landingCopy } from "../../../landing/copy";
+import { closingFacts } from "./facts";
 import "../../../styles/landing-close.css";
+
+const DOCS_HOME = "/docs/get-started/getting-started/";
 ---
 
 <section id="closing" aria-labelledby="closing-title" data-landing-section class="landing-section">
   <div class="landing-container">
     <div class="rule-axis landing-rule" aria-hidden="true"></div>
-    <h2 id="closing-title" class="landing-heading">
-      {landingCopy.headings.closing}
-    </h2>
+    <div class="closing-grid">
+      <div class="closing-head" data-reveal>
+        <h2 id="closing-title" class="landing-heading" data-motion="lift-md">
+          {landingCopy.headings.closing}
+        </h2>
+      </div>
+      <div class="closing-table-wrap" data-reveal>
+        <table class="closing-table">
+          <caption class="sr-only">What OpenChart does, and the file that says so</caption>
+          <thead>
+            <tr>
+              <th scope="col">Topic</th>
+              <th scope="col">What you get</th>
+              <th scope="col">Backed by</th>
+            </tr>
+          </thead>
+          <tbody>
+            {closingFacts.map(({ topic, fact, backedBy }) => (
+              <tr data-motion-part>
+                <th scope="row">{topic}</th>
+                <td>{fact}</td>
+                <td class="closing-backed">
+                  <a href={backedBy.href}>{backedBy.label}</a>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div class="closing-install" data-reveal>
+        <ul class="closing-commands" aria-label="Install commands">
+          {site.install.map(({ label, command }) => (
+            <li class="closing-command" data-motion-part>
+              <span class="closing-manager">{label}</span>
+              <CopyCommand
+                id={`closing-install-${label}`}
+                command={command}
+                prompt={null}
+                label={`Copy the ${label} install command`}
+                className="closing-command-text"
+                buttonClassName="copy-chip"
+              />
+            </li>
+          ))}
+        </ul>
+        <p class="closing-links" data-motion-part>
+          <a class="btn btn-primary" href={DOCS_HOME}>
+            Read the docs
+          </a>
+          <a class="btn" href={site.repo}>
+            GitHub
+          </a>
+        </p>
+      </div>
+    </div>
   </div>
 </section>
+
+<script>
+  import { enhanceCopyButtons } from "@steamfield/ui/copy";
+
+  const section = document.getElementById("closing");
+  if (section) enhanceCopyButtons(section, { messages: { failed: () => "Copy failed" } });
+</script>
