@@ -8,10 +8,26 @@ PORT_E2E ?= 4322
 export PORT_WEB PORT_E2E
 
 .DEFAULT_GOAL := help
-.PHONY: help install dev lint format check test coverage build preview e2e clean
+.PHONY: help install dev lint format check test coverage build preview e2e clean deploy-check deploy-preview deploy
 
 help: ## List targets
-	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-10s %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-15s %s\n", $$1, $$2}'
+
+# The deploy targets check their variables when make reads this file, so a
+# missing one stops the run before the build starts.
+ifneq ($(filter deploy deploy-preview,$(MAKECMDGOALS)),)
+  ifeq ($(CLOUDFLARE_API_TOKEN),)
+    $(error CLOUDFLARE_API_TOKEN is not set: export a Cloudflare API token with Pages edit access)
+  endif
+  ifeq ($(CLOUDFLARE_ACCOUNT_ID),)
+    $(error CLOUDFLARE_ACCOUNT_ID is not set: export the Cloudflare account id that owns the openchart project)
+  endif
+endif
+ifneq ($(filter deploy-preview,$(MAKECMDGOALS)),)
+  ifeq ($(BRANCH),)
+    $(error BRANCH is not set: run make deploy-preview BRANCH=<branch-name>)
+  endif
+endif
 
 # Outside CI this also installs git hooks (when configured) and the Chromium
 # build the browser tests use; CI installs Chromium in its own step.
@@ -55,3 +71,14 @@ e2e: ## Browser and accessibility tests against the production build
 
 clean: ## Remove build output, test output and Astro caches
 	rm -rf dist .astro .astro-cache .vite-cache node_modules/.astro coverage playwright-report test-results
+
+deploy-check: build ## Serve dist/ through wrangler pages dev and check headers, canonical URLs and the 404 page
+	node --test tests/deploy.test.mjs
+
+# The Site workflow deploys from GitHub Actions (AGENTS.md, Deploy). These upload
+# from this machine to the Cloudflare Pages project openchart.
+deploy-preview: build ## Upload dist/ as a preview for BRANCH (needs CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID)
+	bunx wrangler pages deploy dist --project-name openchart --branch "$(BRANCH)"
+
+deploy: build ## Upload dist/ to production (needs CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID)
+	bunx wrangler pages deploy dist --project-name openchart --branch main

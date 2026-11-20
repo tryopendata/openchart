@@ -1,0 +1,191 @@
+name: Site
+
+# The documentation site (site/) and the parts of the repository it renders:
+# the library packages, the repository docs and the example datasets. Production
+# and preview deploys upload site/dist to the Cloudflare Pages project
+# `openchart`. Both stay off until the repository variable SITE_DEPLOY_ENABLED is
+# 'true', so this workflow is green before the Pages project and its secrets
+# exist. Release commits run too: a release changes the version the site shows.
+
+on:
+  push:
+    branches: [main]
+    paths: &site_paths
+      - "site/**"
+      - "docs/**"
+      - "packages/**"
+      - "examples/src/data/**"
+      - "bun.lock"
+      - ".github/workflows/site.yml"
+      - ".github/actions/setup-bun/**"
+  pull_request:
+    paths: *site_paths
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  checks:
+    name: Lint, check, test, build, browser and Pages checks
+    # Playwright 1.59 does not support Ubuntu 26.04 yet.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup
+        uses: ./.github/actions/setup-bun
+
+      # The site resolves the library packages through their dist/.
+      - name: Build library packages
+        run: bun run build
+
+      - name: Lint
+        working-directory: site
+        run: make lint
+
+      - name: Type-check
+        working-directory: site
+        run: make check
+
+      - name: Unit and component tests
+        working-directory: site
+        run: make test
+
+      # No PostHog key here, so checks and previews send no analytics.
+      - name: Build site and acceptance tests
+        working-directory: site
+        run: make build
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+
+      - name: Install Chromium
+        working-directory: site
+        run: bunx playwright install --with-deps chromium
+
+      - name: Browser and accessibility tests
+        working-directory: site
+        run: node scripts/e2e.mjs
+
+      # -o build reuses the dist/ built above instead of building it again.
+      - name: Pages headers, canonical URLs and 404
+        working-directory: site
+        run: make -o build deploy-check
+
+      - name: Upload browser test output on failure
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: site-playwright-report
+          path: |
+            site/playwright-report/
+            site/test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  deploy-production:
+    name: Deploy to Cloudflare Pages (production)
+    needs: checks
+    if: >-
+      vars.SITE_DEPLOY_ENABLED == 'true' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    permissions:
+      contents: read
+      deployments: write
+
+    environment:
+      name: production
+      url: https://openchart.steamfield.io
+
+    concurrency:
+      group: site-deploy-production
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup
+        uses: ./.github/actions/setup-bun
+
+      - name: Build library packages
+        run: bun run build
+
+      - name: Build site and acceptance tests
+        working-directory: site
+        env:
+          PUBLIC_POSTHOG_KEY: ${{ vars.PUBLIC_POSTHOG_KEY }}
+          PUBLIC_POSTHOG_HOST: ${{ vars.PUBLIC_POSTHOG_HOST }}
+        run: make build
+
+      - name: Deploy site/dist
+        working-directory: site
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: bunx wrangler pages deploy dist --project-name openchart --branch main
+
+  deploy-preview:
+    name: Deploy to Cloudflare Pages (preview)
+    needs: checks
+    # Pull requests from forks get no secrets, so only same-repository branches deploy.
+    if: >-
+      vars.SITE_DEPLOY_ENABLED == 'true' &&
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    permissions:
+      contents: read
+      deployments: write
+
+    concurrency:
+      group: site-deploy-preview-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup
+        uses: ./.github/actions/setup-bun
+
+      - name: Build library packages
+        run: bun run build
+
+      # No PostHog key: previews send no analytics.
+      - name: Build site and acceptance tests
+        working-directory: site
+        run: make build
+
+      # The branch name is untrusted input, so it reaches the shell only as an
+      # environment variable, never through an expression in the script.
+      - name: Deploy site/dist
+        working-directory: site
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PREVIEW_BRANCH: ${{ github.head_ref }}
+        run: bunx wrangler pages deploy dist --project-name openchart --branch "$PREVIEW_BRANCH"
