@@ -1,0 +1,34 @@
+---
+/**
+ * The hero, "the desk": the page's h1 and lede, the install command with copy,
+ * and a figure where a spec is written in steps and the chart beside it updates.
+ * Stub from the phase 2 scaffold; lane 2/a fills it with the HeroDesk island
+ * (client:load).
+ *
+ * Contract (e2e/landing.spec.ts and tests/build.test.ts rely on it):
+ * - `<section id="desk" aria-labelledby="desk-title" data-landing-section>` holding
+ *   the page's only h1 (`landingCopy.headline`) and one h2 with id `desk-title`
+ *   (`landingCopy.headings.desk`).
+ * - The step list is a list named "Spec steps" whose five items are buttons; the
+ *   current one carries `aria-current="step"`. Controls are buttons named
+ *   "Pause" (or "Play" while paused), "Previous step" and "Next step". Under 700px
+ *   the collapsed spec pane opens with a button named "Show full spec".
+ * - `data-hero-spec` on the spec pane; each line the current step added carries
+ *   `data-spec-added`. `data-hero-chart` on the element holding the chart's SVG,
+ *   which the server render already contains.
+ * - The figure has a `<figcaption>` with a "Source: …" line.
+ * - Before hydration and under reduced motion the last step is current.
+ */
+import { landingCopy } from "../../../landing/copy";
+import "../../../styles/landing-hero.css";
+---
+
+<section id="desk" aria-labelledby="desk-title" data-landing-section class="landing-section">
+  <div class="landing-container">
+    <h1 class="landing-display">{landingCopy.headline}</h1>
+    <p class="landing-lede">{landingCopy.lede}</p>
+    <h2 id="desk-title" class="landing-heading mt-12">
+      {landingCopy.headings.desk}
+    </h2>
+  </div>
+</section>

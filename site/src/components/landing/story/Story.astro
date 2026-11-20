@@ -1,0 +1,23 @@
+---
+/**
+ * Annotations and editorial framing: a scroll story built with the library's own
+ * `createChartStory` (or `<ChartStory>`), four steps of prose beside a sticky
+ * chart. Stub from the phase 2 scaffold; lane 2/c fills it with the
+ * ChartStoryScroll island (client:visible).
+ *
+ * Contract: `<section id="story" aria-labelledby="story-title" data-landing-section>`
+ * with one h2, id `story-title` (`landingCopy.headings.story`). The chart's figure
+ * has a `<figcaption>` with a "Source: …" line.
+ */
+import { landingCopy } from "../../../landing/copy";
+import "../../../styles/landing-story.css";
+---
+
+<section id="story" aria-labelledby="story-title" data-landing-section class="landing-section">
+  <div class="landing-container">
+    <div class="rule-axis landing-rule" aria-hidden="true"></div>
+    <h2 id="story-title" class="landing-heading">
+      {landingCopy.headings.story}
+    </h2>
+  </div>
+</section>

@@ -1,0 +1,31 @@
+---
+/**
+ * The visual vocabulary wall: about 24 small live charts filed by intent, with a
+ * filter that refiles them. Stub from the phase 2 scaffold; lane 2/b fills it
+ * with the VocabularyWall island (client:visible).
+ *
+ * Contract (e2e/landing.spec.ts relies on it):
+ * - `<section id="vocabulary" aria-labelledby="vocabulary-title" data-landing-section>`
+ *   with one h2, id `vocabulary-title` (`landingCopy.headings.vocabulary`).
+ * - The filter is a row of buttons with `aria-pressed`, named "All" and then each
+ *   Visualizations section label from `docsAreas` ("Distribution" and so on).
+ * - Each tile carries `data-vocabulary-tile` and holds one link to its docs page
+ *   under `/docs/<intent>/`. A filtered-out tile is hidden, not just dimmed.
+ */
+import { landingCopy } from "../../../landing/copy";
+import "../../../styles/landing-wall.css";
+---
+
+<section
+  id="vocabulary"
+  aria-labelledby="vocabulary-title"
+  data-landing-section
+  class="landing-section"
+>
+  <div class="landing-container">
+    <div class="rule-axis landing-rule" aria-hidden="true"></div>
+    <h2 id="vocabulary-title" class="landing-heading">
+      {landingCopy.headings.vocabulary}
+    </h2>
+  </div>
+</section>

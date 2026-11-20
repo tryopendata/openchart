@@ -1,0 +1,23 @@
+---
+/**
+ * Beyond charts: an uneven grid of demo figures, one dominant live tile (a geo
+ * map or a graph) and four smaller ones (table, sankey, tile map, bar list), each
+ * linking to its docs page. Demo figures only, no island. Stub from the phase 2
+ * scaffold; lane 2/c fills it.
+ *
+ * Contract: `<section id="kinds" aria-labelledby="kinds-title" data-landing-section>`
+ * with one h2, id `kinds-title` (`landingCopy.headings.kinds`). Every figure has a
+ * `<figcaption>` with a "Source: …" line (`<Demo>` writes one).
+ */
+import { landingCopy } from "../../../landing/copy";
+import "../../../styles/landing-story.css";
+---
+
+<section id="kinds" aria-labelledby="kinds-title" data-landing-section class="landing-section">
+  <div class="landing-container">
+    <div class="rule-axis landing-rule" aria-hidden="true"></div>
+    <h2 id="kinds-title" class="landing-heading">
+      {landingCopy.headings.kinds}
+    </h2>
+  </div>
+</section>

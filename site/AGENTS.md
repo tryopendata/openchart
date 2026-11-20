@@ -32,12 +32,13 @@ Run these from `site/`. They are the only supported way to build, test, and run 
 ## Architecture map
 
 ```
-src/config.ts          product name, URL, install commands, landing content, docs areas and sections
+src/config.ts          product name, URL, version, install commands, landing islands, docs areas and sections
+src/landing/           landing copy (headline and section headings) and each section's data
 src/content/docs/      catalog pages, one .mdx per chart type, grouped by section
 src/content.config.ts  collections: catalog pages plus the repository's docs/*.md that declare a `section`
 src/demos/             demo specs per section, found by registry.ts; fixtures/ for tests
 src/lib/               docs navigation and exports, Markdown plugins, demo rendering, analytics, consent
-src/components/        landing sections (static React), docs chrome, the Demo figure
+src/components/        landing sections and their islands, docs chrome, the Demo figure
 src/layouts/           BaseLayout (head, header, footer, analytics) and DocsLayout (sidebar, outline, pager)
 src/pages/             landing, docs and their .md exports, llms files, social cards, robots, 404, test fixtures
 src/scripts/           browser code: theme, copy buttons, demo mounting

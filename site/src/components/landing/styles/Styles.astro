@@ -1,0 +1,29 @@
+---
+/**
+ * One spec, four house styles: a pinned, scrubbed section where one chart moves
+ * through the essay, wire, broadsheet and terminal presets and then dark mode.
+ * Stub from the phase 2 scaffold; lane 2/b fills it with the PresetScrub island
+ * (client:visible).
+ *
+ * Contract (e2e/landing.spec.ts relies on it):
+ * - `<section id="styles" aria-labelledby="styles-title" data-landing-section>`
+ *   with one h2, id `styles-title` (`landingCopy.headings.styles`).
+ * - `data-preset-name` on the visible element naming the current preset; its text
+ *   is the preset name ("essay", "wire", "broadsheet", "terminal"), case aside.
+ * - At 900px and wider the pin happens inside this section: ScrollTrigger pins an
+ *   element within it, so the section itself stays a direct child of `<main>`.
+ * - Under 900px or with reduced motion there is no pin; the presets are buttons
+ *   named by preset ("Essay", "Wire", "Broadsheet", "Terminal").
+ */
+import { landingCopy } from "../../../landing/copy";
+import "../../../styles/landing-wall.css";
+---
+
+<section id="styles" aria-labelledby="styles-title" data-landing-section class="landing-section">
+  <div class="landing-container">
+    <div class="rule-axis landing-rule" aria-hidden="true"></div>
+    <h2 id="styles-title" class="landing-heading">
+      {landingCopy.headings.styles}
+    </h2>
+  </div>
+</section>

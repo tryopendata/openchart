@@ -1,0 +1,6 @@
+/*
+ * Styles for the agents, frameworks and closing sections (#agents, #frameworks,
+ * #closing). Lane 2/d fills this file; its components import it. Start with
+ * `@reference "./global.css";` to use the tokens in `@apply`, and put rules in
+ * `@layer components`.
+ */

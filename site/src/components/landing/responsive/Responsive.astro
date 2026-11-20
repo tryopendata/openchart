@@ -1,0 +1,34 @@
+---
+/**
+ * Responsive: a chart in a frame whose right edge is a drag handle crossing the
+ * compact, medium and full breakpoints. Stub from the phase 2 scaffold; lane 2/c
+ * fills it with the ResizeFrame island (client:visible).
+ *
+ * Contract (e2e/landing.spec.ts relies on it):
+ * - `<section id="responsive" aria-labelledby="responsive-title" data-landing-section>`
+ *   with one h2, id `responsive-title` (`landingCopy.headings.responsive`).
+ * - The handle is `role="slider"` named "Chart width", with `aria-valuemin`,
+ *   `aria-valuemax` and `aria-valuenow` in px; ArrowLeft and ArrowRight move it
+ *   20px.
+ * - `data-resize-frame` on the frame holding the chart's SVG.
+ * - `data-resize-breakpoint` on the mono label whose text is the breakpoint name:
+ *   "compact" under 400px, "medium" to 700px, "full" above.
+ * - The chart's figure has a `<figcaption>` with a "Source: …" line.
+ */
+import { landingCopy } from "../../../landing/copy";
+import "../../../styles/landing-story.css";
+---
+
+<section
+  id="responsive"
+  aria-labelledby="responsive-title"
+  data-landing-section
+  class="landing-section"
+>
+  <div class="landing-container">
+    <div class="rule-axis landing-rule" aria-hidden="true"></div>
+    <h2 id="responsive-title" class="landing-heading">
+      {landingCopy.headings.responsive}
+    </h2>
+  </div>
+</section>

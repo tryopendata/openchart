@@ -1,0 +1,46 @@
+/*
+ * The landing page's shared rhythm: how a section is spaced, how wide its
+ * container and text column run, and the heading scale. Each section opens on the
+ * ticked `.rule-axis` from global.css. Spacing is padding inside each section,
+ * never margin between them, so the page's height is the sum of its sections.
+ * Section-specific styles live in the lanes' own files (landing-hero.css,
+ * landing-wall.css, landing-story.css, landing-close.css).
+ */
+@reference "./global.css";
+
+@layer components {
+  /* One landing section: the same vertical rhythm everywhere, and room below the
+     header when a link jumps to it. */
+  .landing-section {
+    @apply scroll-mt-16 py-16 sm:py-20 lg:py-28;
+  }
+
+  /* The 12-column page container, aligned with the header's edges. */
+  .landing-container {
+    @apply mx-auto w-full max-w-[90rem] px-5 sm:px-6 lg:px-8;
+  }
+
+  /* The rule a section opens on, with space before its heading. */
+  .landing-rule {
+    @apply mb-10 lg:mb-14;
+  }
+
+  /* The narrow text column beside a wide figure. */
+  .landing-text {
+    @apply max-w-[36rem];
+  }
+
+  /* The page's one h1, in the hero. */
+  .landing-display {
+    @apply text-ink text-4xl leading-[1.05] font-bold tracking-tight text-balance sm:text-5xl lg:text-6xl;
+  }
+
+  .landing-lede {
+    @apply text-ink-2 mt-6 max-w-[36rem] text-lg leading-relaxed;
+  }
+
+  /* A section's h2. */
+  .landing-heading {
+    @apply text-ink max-w-[24ch] text-3xl leading-tight font-semibold tracking-tight text-balance sm:text-4xl;
+  }
+}

@@ -1,0 +1,29 @@
+---
+/**
+ * Built for agents: a scripted session in which an agent writes a spec, reads the
+ * real `validateSpec` error, fixes it and the chart renders, beside the three
+ * agent-facing facts (llms.txt, the JSON Schema, the skill install line). Stub
+ * from the phase 2 scaffold; lane 2/d fills it with the AgentSession island
+ * (client:visible).
+ *
+ * Contract (e2e/landing.spec.ts relies on it):
+ * - `<section id="agents" aria-labelledby="agents-title" data-landing-section>`
+ *   with one h2, id `agents-title` (`landingCopy.headings.agents`).
+ * - A button named "Play" starts the session. At the failing step the transcript
+ *   shows, as text, the `message` of the first error `validateSpec` returns for
+ *   `agentSession.firstSpec`.
+ * - `data-agent-chart` on the element holding the chart the session ends with.
+ * - Any figure has a `<figcaption>` with a "Source: …" line.
+ */
+import { landingCopy } from "../../../landing/copy";
+import "../../../styles/landing-close.css";
+---
+
+<section id="agents" aria-labelledby="agents-title" data-landing-section class="landing-section">
+  <div class="landing-container">
+    <div class="rule-axis landing-rule" aria-hidden="true"></div>
+    <h2 id="agents-title" class="landing-heading">
+      {landingCopy.headings.agents}
+    </h2>
+  </div>
+</section>

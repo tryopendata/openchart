@@ -1,0 +1,5 @@
+/*
+ * Styles for the hero desk (#desk). Lane 2/a fills this file; its components
+ * import it. Start with `@reference "./global.css";` to use the tokens in
+ * `@apply`, and put rules in `@layer components`.
+ */

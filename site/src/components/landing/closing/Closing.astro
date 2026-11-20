@@ -1,0 +1,24 @@
+---
+/**
+ * Closing: a facts table (accessibility, export formats, bundle, license), each
+ * fact linked to the docs page that backs it, then the install command with copy
+ * and links to the docs and GitHub. Static, no island. Stub from the phase 2
+ * scaffold; lane 2/d fills it.
+ *
+ * Contract (tests/build.test.ts relies on it):
+ * - `<section id="closing" aria-labelledby="closing-title" data-landing-section>`
+ *   with one h2, id `closing-title` (`landingCopy.headings.closing`).
+ * - Every `site.install` command is in the server-rendered HTML of the page.
+ */
+import { landingCopy } from "../../../landing/copy";
+import "../../../styles/landing-close.css";
+---
+
+<section id="closing" aria-labelledby="closing-title" data-landing-section class="landing-section">
+  <div class="landing-container">
+    <div class="rule-axis landing-rule" aria-hidden="true"></div>
+    <h2 id="closing-title" class="landing-heading">
+      {landingCopy.headings.closing}
+    </h2>
+  </div>
+</section>

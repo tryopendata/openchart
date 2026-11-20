@@ -1,13 +1,11 @@
+import corePackage from "../../packages/core/package.json" with { type: "json" };
 import type { DocsArea } from "./lib/docs-types";
 
-// Public product metadata. Every landing section reads from here; a section whose
-// value is empty (null or an empty list) doesn't render.
+// Public product metadata: identity, install commands, navigation and the docs
+// areas. The landing page's own copy lives in src/landing/copy.ts.
 
 export type Link = { label: string; href: string };
 export type InstallOption = { label: string; command: string };
-export type Feature = { title: string; body: string };
-export type Logo = { name: string; href: string; logo: string };
-export type DemoLine = { prompt?: boolean; text: string };
 
 const repo = "https://github.com/tryopendata/openchart";
 
@@ -19,24 +17,13 @@ export const site = {
   /** Absolute production URL: canonicals, the sitemap, OG images and llms.txt use it. */
   url: "https://openchart.steamfield.io",
   repo,
-  /** Current release, shown in the header. Empty hides it. */
-  version: "9.0.0",
-  announcement: null as Link | null,
+  /** Current release, shown in the header: the core package's version, which every package shares. */
+  version: corePackage.version,
   install: [
     { label: "npm", command: "npm install @opendata-ai/openchart-react" },
     { label: "bun", command: "bun add @opendata-ai/openchart-react" },
     { label: "pnpm", command: "pnpm add @opendata-ai/openchart-react" },
   ] as InstallOption[],
-  demo: {
-    title: "A bar chart from a spec",
-    lines: [
-      { prompt: true, text: "npm install @opendata-ai/openchart-react" },
-      { text: '<Chart spec={{ mark: "bar", data, encoding: { x: ..., y: ... } }} />' },
-    ] as DemoLine[],
-  },
-  features: [] as Feature[],
-  usedBy: [] as Logo[],
-  sponsors: { href: `${repo}/sponsors`, logos: [] as Logo[] },
   social: [{ label: "GitHub", href: repo }] as Link[],
   /** Header links after Docs. An entry renders only once its page exists. */
   nav: [] as Link[],
@@ -60,7 +47,16 @@ export const site = {
   releasesUrl: `${repo}/releases`,
   license: "MIT",
   /** Components that hydrate on the landing page. The build test fails on any other island. */
-  islands: ["InstallTabs"],
+  islands: [
+    "HeroDesk",
+    "VocabularyWall",
+    "PresetScrub",
+    "ChartStoryScroll",
+    "MotionReplay",
+    "ResizeFrame",
+    "AgentSession",
+    "InstallTabs",
+  ],
 };
 
 /** The docs areas and their sidebar sections, in display order. A page's `section` frontmatter must be one of these section ids. */

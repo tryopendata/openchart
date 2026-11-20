@@ -1,0 +1,32 @@
+---
+/**
+ * Frameworks: install and minimal usage for React, Vue, Svelte and vanilla in
+ * tabs, sharing the docs demo tabs' stored choice (`openchart:framework`). Stub
+ * from the phase 2 scaffold; lane 2/d fills it with the InstallTabs island
+ * (client:visible), which replaces the template's stock one.
+ *
+ * Contract (e2e/landing.spec.ts and tests/build.test.ts rely on it):
+ * - `<section id="frameworks" aria-labelledby="frameworks-title" data-landing-section>`
+ *   with one h2, id `frameworks-title` (`landingCopy.headings.frameworks`).
+ * - Tabs (`role="tab"`) named "React", "Vue", "Svelte" and "Vanilla", each
+ *   controlling a `role="tabpanel"`.
+ * - Each panel's install command reads `npm install @opendata-ai/openchart-<framework>`
+ *   (react, vue, svelte, vanilla), and every panel is in the server-rendered HTML.
+ */
+import { landingCopy } from "../../../landing/copy";
+import "../../../styles/landing-close.css";
+---
+
+<section
+  id="frameworks"
+  aria-labelledby="frameworks-title"
+  data-landing-section
+  class="landing-section"
+>
+  <div class="landing-container">
+    <div class="rule-axis landing-rule" aria-hidden="true"></div>
+    <h2 id="frameworks-title" class="landing-heading">
+      {landingCopy.headings.frameworks}
+    </h2>
+  </div>
+</section>

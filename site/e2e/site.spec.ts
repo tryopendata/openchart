@@ -1,10 +1,8 @@
 import { expect, type Page, test } from "@playwright/test";
 import { pageViolations } from "./axe";
-import { site } from "../src/config";
 
 const BAR = "/docs/comparison/bar/";
 const GUIDE = "/docs/get-started/getting-started/";
-const [firstInstall, secondInstall] = site.install;
 
 function collectErrors(page: Page) {
   const errors: string[] = [];
@@ -46,13 +44,6 @@ test("the theme choice persists from the landing page to the docs", async ({ pag
   await expect(toggle).toHaveAttribute("aria-pressed", "true");
   await page.goto(BAR);
   await expect(page.locator("html")).toHaveClass(/\bdark\b/);
-});
-
-test("install tabs switch commands once hydrated", async ({ page }) => {
-  test.skip(!secondInstall, "only one install option");
-  await page.goto("/");
-  await page.getByRole("tab", { name: secondInstall?.label }).click();
-  await expect(page.getByRole("tabpanel")).toContainText(secondInstall?.command ?? "");
 });
 
 test.describe("demos", () => {
@@ -133,7 +124,7 @@ test("the area switcher moves from Visualizations to Guides", async ({ page, isM
 test.describe("without JavaScript", () => {
   test.use({ javaScriptEnabled: false });
 
-  test("the docs menu opens, a demo shows its static chart and spec, and the first install command shows", async ({
+  test("the docs menu opens, and a demo shows its static chart and spec", async ({
     page,
     isMobile,
   }) => {
@@ -149,7 +140,5 @@ test.describe("without JavaScript", () => {
     await expect(stage.locator('svg.demo-static[data-theme="light"]')).toBeVisible();
     await expect(stage.locator('svg.demo-static[data-theme="dark"]')).toBeHidden();
     await expect(page.locator('[data-demo-panel="spec"]').first()).toBeVisible();
-    await page.goto("/");
-    await expect(page.getByRole("tabpanel")).toContainText(firstInstall?.command ?? "");
   });
 });

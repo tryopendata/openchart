@@ -1,0 +1,23 @@
+---
+/**
+ * Motion: one chart with "Replay entrance" and "Next month" controls and a
+ * fluid, subtle or off choice mapped to the spec's `animation` field. Stub from
+ * the phase 2 scaffold; lane 2/c fills it with the MotionReplay island
+ * (client:visible).
+ *
+ * Contract: `<section id="motion" aria-labelledby="motion-title" data-landing-section>`
+ * with one h2, id `motion-title` (`landingCopy.headings.motion`). The chart's
+ * figure has a `<figcaption>` with a "Source: …" line.
+ */
+import { landingCopy } from "../../../landing/copy";
+import "../../../styles/landing-story.css";
+---
+
+<section id="motion" aria-labelledby="motion-title" data-landing-section class="landing-section">
+  <div class="landing-container">
+    <div class="rule-axis landing-rule" aria-hidden="true"></div>
+    <h2 id="motion-title" class="landing-heading">
+      {landingCopy.headings.motion}
+    </h2>
+  </div>
+</section>
