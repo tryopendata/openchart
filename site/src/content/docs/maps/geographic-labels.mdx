@@ -1,0 +1,54 @@
+---
+title: Geographic labels
+description: Name the regions and points on a map from data, and anchor authored callouts to features that hold as readers zoom.
+section: maps
+order: 4
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+A map without names asks the reader to know the geography. Geographic labels put names on regions and points from the data, and callouts add a written finding anchored to a place. Labels are off until a spec asks for them, so a map without them draws exactly as before.
+
+Labels name a few places and leave the rest to the colors. When the reader needs every value by name, a [data table](/docs/tables/data-table/) lists them all.
+
+## Region names
+
+Add a `text` channel to the map's `encoding`. The label comes from the field in the region's data row, or, when the row has no such field, from the topology property of the same name. The us-atlas states carry a `name` property, so `text: { field: "name" }` labels every state. When labels collide, the ones with a higher `textPriority` value place first; here that is the unemployment rate.
+
+<Demo id="maps/labels-features" tabs={false} />
+
+Names that do not fit are left off the map but stay in a visually hidden list tied to the map's accessible description, so a screen reader can reach every name.
+
+## Point names
+
+The `points` layer takes its own `text` channel, read from the point rows. Point labels need a unique `points.key`, and without a `textPriority` they place in order of symbol size, so the largest symbols keep their names first.
+
+<Demo id="maps/labels-points" tabs={false} />
+
+## Callouts
+
+`callouts` adds written notes, each with a unique `id`, an `anchor` and `text`, plus an optional `subtitle`, `priority` and `maxWidth`. An anchor is a feature (`{ kind: "feature", id }`), a point by its key, or a longitude and latitude. Callouts place before region and point names. A callout that does not fit moves to a numbered note, with a marker on its anchor when there is room.
+
+`minZoom` holds a callout back until the reader zooms in that far, and `geo.zoom: true` lets them: hold Ctrl or Command and scroll, pinch, or double-click.
+
+<Demo id="maps/labels-callouts" tabs={false} />
+
+The labels keep their screen size while the map zooms and pans, and settle into place when the camera stops.
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `encoding.text` | The field that names each region, from its row or its topology properties. |
+| `encoding.textPriority` | A number; higher values win when region labels collide. |
+| `points.text` | The field that names each point. Needs a unique `points.key`. |
+| `callouts` | Authored notes with an `id`, an `anchor` and `text`. |
+| `callouts[].anchor` | A feature, a point, or a coordinate the note points at. |
+| `callouts[].minZoom` | The zoom level a note waits for; 1 is the full map. |
+| `geo.zoom` | Lets readers zoom and pan. Off by default. |
+
+## Related
+
+- [Choropleth](/docs/maps/choropleth/) for the colored regions under the names.
+- [Symbol map](/docs/maps/symbol-map/) for the sized points.
+- [Data table](/docs/tables/data-table/) for every value by name.

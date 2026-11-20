@@ -1,0 +1,73 @@
+---
+title: Choropleth
+description: Color regions on a map by a value, from US states to world countries, with classed scales, projections and no-data fills.
+section: maps
+order: 1
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+A choropleth colors each region of a map by a value, such as a rate per state or an income per country. It answers where: which regions run high, which run low, and whether neighbors cluster. Color suits rates and shares better than totals, because large regions draw the eye whatever their value.
+
+Use a [tile map](/docs/maps/tile-map/) when small states matter as much as large ones, and a [bar chart](/docs/comparison/bar/) when the reader needs to rank the regions or read exact values.
+
+## A basic choropleth
+
+Set `type` to `"map"`, pass a TopoJSON topology as `geo.features`, and join rows to its shapes with the `key` channel: each row's key value is matched against a feature's id. The `color` channel names the value to color by, and its `title` becomes the legend heading. With a quantitative color field the values fall into evenly spaced classes with round-number breaks, and the legend swatches use the same classes as the map.
+
+<Demo id="maps/choropleth-basic" tabs={false} />
+
+Hovering a state outlines it and brings it to the front. Hovering a legend swatch dims the states outside that class.
+
+## Passing the geography
+
+The maps on this page draw on a reduced copy of the atlas files, simplified so the page stays small, which is why they show no code tabs. In your own code, import the topology from `us-atlas` or `world-atlas` and pass it as it is:
+
+```ts
+import states from "us-atlas/states-10m.json";
+
+const spec = {
+  type: "map",
+  geo: { features: states, projection: "albersUsa" },
+  data: rows, // one row per state, with a two-digit FIPS code in `id`
+  encoding: {
+    key: { field: "id", type: "nominal" },
+    color: { field: "rate", type: "quantitative", title: "Unemployment rate (%)" },
+  },
+};
+```
+
+`geo.projection` picks the projection. Left out, it is inferred from the topology: coordinates already in pixels get `"identity"`, a span of more than 200 degrees of longitude gets `"equalEarth"`, and anything else gets `"albersUsa"`. The states file crosses 200 degrees because the Aleutian Islands reach past the 180th meridian, so set `"albersUsa"` for it. That projection leaves out Puerto Rico and the other territories.
+
+## A world map
+
+The same spec draws the world with `world-atlas`, whose features are keyed by ISO 3166-1 numeric codes. `"equalEarth"` keeps each country's area true to its size; `"mercator"` is also available. Countries without a row get the no-data fill, and the legend adds a "No data" swatch beside the color classes. `legend.position: "right"` moves the legend beside the map.
+
+<Demo id="maps/choropleth-world" tabs={false} />
+
+## A diverging scale, joined by name
+
+`geo.idField` joins on a feature property instead of the id. The us-atlas states carry a `name` property, so rows keyed by state name join with `idField: "name"`. A diverging `scheme` such as `"redBlue"` suits values on both sides of zero: the classes are spread evenly around zero, with an odd number of them so the middle class is labeled as near zero.
+
+<Demo id="maps/choropleth-diverging" tabs={false} />
+
+Classes default to evenly spaced breaks. `scale: { type: "quantile" }` puts the same number of regions in each class instead, which suits skewed data but moves the breaks whenever the data changes.
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `type` | `"map"` selects this visualization. |
+| `geo.features` | The TopoJSON topology to draw. |
+| `geo.projection` | `"albersUsa"`, `"equalEarth"`, `"mercator"` or `"identity"`. Inferred when left out. |
+| `geo.idField` | The feature property to join on. Default `"id"`. |
+| `encoding.key` | The data field matched against each feature's id. |
+| `encoding.color` | The value that colors each region; `title` heads the legend, `format` sets its numbers. |
+| `encoding.color.scale` | `scheme` for the colors, `type` for quantile or threshold classes. |
+| `legend.position` | Where the legend sits, such as `"right"`. |
+
+## Related
+
+- [Symbol map](/docs/maps/symbol-map/) for totals placed as sized circles.
+- [Tile map](/docs/maps/tile-map/) for US states at equal size.
+- [Bar](/docs/comparison/bar/) for ranking the same values.

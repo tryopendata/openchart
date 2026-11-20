@@ -1,0 +1,61 @@
+---
+title: Graph
+description: Draw a network of nodes and edges with a force layout, then encode size, color and labels and mark a seed node.
+section: flow
+order: 2
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+A graph draws a network: the things in it as nodes and the connections between them as edges. A force layout pulls connected nodes together and pushes the rest apart, so clusters, bridges and hubs show up without anyone placing them. Use it when the reader needs the shape of the connections.
+
+When the connections carry amounts that flow from stage to stage, a [sankey](/docs/flow/sankey/) shows them better. When the reader needs exact values for each node, put them in a [data table](/docs/tables/data-table/).
+
+## A basic graph
+
+Set `type` to `"graph"`, list the `nodes` (each with an `id`) and the `edges` (each with a `source` and a `target` id). `layout.type: "force"` is the default layout, `chargeStrength` sets how hard nodes repel each other and `linkDistance` sets the distance an edge pulls toward. `layout.seed` makes the layout repeatable: the same spec and seed settle into the same shape.
+
+<Demo id="flow/graph-basic" />
+
+Graphs draw on a canvas once the page's script runs, so the figure reserves its height until then. Drag a node to move and pin it, double-click it to release it, and scroll or pinch to zoom.
+
+## Clusters
+
+`layout.clustering` names a field, and the layout pulls nodes with the same value together. Here the field is each engineer's team, and `nodeColor` on the same field colors the teams. The legend is interactive by default: clicking a team isolates it, and each entry shows how many nodes it has.
+
+<Demo id="flow/graph-clusters" />
+
+## Encoding size, color and edge width
+
+The encoding channels map node and edge fields to marks. `nodeSize` sets the radius from a number (3 to 12 pixels by default), `nodeColor` the fill, and `edgeWidth` the stroke width from 0.5 to 4 pixels. `nodeLabel` names the field the labels show. Labels run on a budget: the graph draws the labels that fit at the current zoom, best-connected nodes first, so more appear as you zoom in.
+
+<Demo id="flow/graph-encoded" tabs={false} />
+
+This figure has no code tabs: with its nodes and edges written out five times, the code would outweigh the rest of the page. Its spec has the basic graph's shape, with its own nodes and edges and the four channels above.
+
+## Edge style and a seed node
+
+`edgeStyle` maps a field to solid, dashed or dotted lines; here it separates local service from express service on a subway line. `seedNode` names the node the graph is built around. The seed gets a ring and a label that always shows, and it stays lit when a hover, a selection or a legend filter dims the rest. Its size still comes from `nodeSize`.
+
+<Demo id="flow/graph-transit" />
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `type` | `"graph"` selects this visualization. |
+| `nodes` | The nodes, each with an `id` and any data fields. |
+| `edges` | The edges, each with a `source` and a `target` node id and any data fields. |
+| `layout.type` | The layout algorithm. `"force"` is the default. |
+| `layout.chargeStrength`, `layout.linkDistance` | How hard nodes repel and how long edges pull. |
+| `layout.clustering` | A node field whose groups the layout pulls together. |
+| `layout.seed` | A number that makes the force layout settle the same way each time. |
+| `encoding.nodeSize`, `nodeColor`, `nodeLabel` | Node radius, fill and label text from node fields. |
+| `encoding.edgeWidth`, `edgeStyle` | Edge width and line style from edge fields. |
+| `seedNode` | The id of the node the graph centers on. |
+
+## Related
+
+- [Sankey](/docs/flow/sankey/) for amounts that flow between stages.
+- [Data table](/docs/tables/data-table/) for exact values per node.
+- [Scatter](/docs/correlation/scatter/) when each item has two numbers to place it by, not connections.
