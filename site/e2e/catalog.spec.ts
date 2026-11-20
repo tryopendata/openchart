@@ -1,5 +1,5 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
+import { pageViolations } from "./axe";
 import { catalogPages } from "../tests/catalog-pages";
 
 // The first page of each section stands in for the section.
@@ -25,12 +25,7 @@ for (const path of pages) {
       const stage = page.locator("[data-demo-stage]").first();
       await stage.scrollIntoViewIfNeeded();
       await expect(stage).toHaveAttribute("data-demo-live", "");
-      const results = await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-        // See site.spec.ts: the library labels mark groups without giving them a role.
-        .exclude(".demo-live g[aria-label]:not([role])")
-        .analyze();
-      expect(results.violations).toEqual([]);
+      expect(await pageViolations(page)).toEqual([]);
       expect(errors).toEqual([]);
     });
   }

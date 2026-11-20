@@ -1,5 +1,5 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
+import { pageViolations } from "./axe";
 import { site } from "../src/config";
 
 const BAR = "/docs/comparison/bar/";
@@ -32,14 +32,7 @@ for (const path of ["/", BAR, GUIDE]) {
       await page.emulateMedia({ colorScheme: scheme });
       await page.goto(path);
       await expect(page.locator("html")).toHaveClass(new RegExp(`\\b${scheme}\\b`));
-      const results = await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-        // The library labels each mark group with aria-label but gives it no role
-        // (aria-prohibited-attr). That is a defect in packages/, outside this site;
-        // only those groups are excluded, so the rest of a live chart is still checked.
-        .exclude(".demo-live g[aria-label]:not([role])")
-        .analyze();
-      expect(results.violations).toEqual([]);
+      expect(await pageViolations(page)).toEqual([]);
       expect(errors).toEqual([]);
     });
   }
