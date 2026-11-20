@@ -22,7 +22,14 @@ import type {
 } from '@opendata-ai/openchart-core';
 import { resolveMarkFill } from '../gradient-utils';
 import { resolvePatternFill } from '../pattern-utils';
-import { linePointDelays, revealFrom, stackExtents } from './entrance-geometry';
+import {
+  cellSweepDelays,
+  linePointDelays,
+  revealFrom,
+  roundStamp,
+  scaleOrigin,
+  stackExtents,
+} from './entrance-geometry';
 import { applyKnockoutHalo, applyTextStyle, createSVGElement, setAttrs } from './svg-dom';
 
 /**
@@ -577,12 +584,14 @@ export function renderMarks(
   const g = createSVGElement('g', ctx.factory);
   g.setAttribute('class', 'oc-marks');
 
-  // Entrance timing read from the layout: points on a line start as its
-  // drawing edge reaches them; stacked labels take their stack's index.
+  // Entrance timing read from the layout: points on a line pop in after it
+  // has drawn, grid cells start on scattered slots; stacked labels take their
+  // stack's index.
   const enter = ctx.marks.animation?.enter;
   const pointDelays = enter
     ? linePointDelays(layout.marks, enter, ctx.marks.staggerMs ?? 0, opts?.markIndexOffset)
     : undefined;
+  const cellDelays = enter ? cellSweepDelays(layout.marks) : undefined;
   const stacks = enter ? stackExtents(layout.marks) : undefined;
 
   for (let i = 0; i < layout.marks.length; i++) {
@@ -610,10 +619,25 @@ export function renderMarks(
     }
 
     const pointDelay = pointDelays?.get(i);
-    if (pointDelay !== undefined) {
+    if (pointDelay !== undefined && mark.type === 'point') {
+      const style = (el as SVGElement & ElementCSSInlineStyle).style;
+      // 6 decimals, the precision progressTimeMs rounds to: coarser rounding
+      // could start the first dot a hair before its line counts as drawn.
+      style.setProperty('--oc-line-point-delay', `${roundStamp(pointDelay, 6)}ms`);
+      style.setProperty('transform-origin', scaleOrigin(mark.cx, mark.cy));
+    }
+    const cellDelay = cellDelays?.get(i);
+    if (cellDelay !== undefined && mark.type === 'rect') {
       (el as SVGElement & ElementCSSInlineStyle).style.setProperty(
-        '--oc-line-point-delay',
-        `${pointDelay}ms`,
+        '--oc-cell-delay',
+        `${roundStamp(cellDelay)}ms`,
+      );
+      // The shape scales, not the group: a path cell has no x/y attributes,
+      // so the centre comes from the mark either way.
+      const shape = el.querySelector<SVGElement>('rect, path');
+      shape?.style.setProperty(
+        'transform-origin',
+        scaleOrigin(mark.x + mark.width / 2, mark.y + mark.height / 2),
       );
     }
 
