@@ -6,8 +6,8 @@
 import { co2Emissions } from "@datasets/co2-emissions";
 import { electricityMix } from "@datasets/electricity-mix";
 import { federalBudget } from "@datasets/federal-budget";
+import { sourceOf } from "../source";
 import { defineDemo } from "../types";
-import { sourceOf } from "./source";
 
 export const basicWaffle = defineDemo({
   id: "part-to-whole/waffle-basic",

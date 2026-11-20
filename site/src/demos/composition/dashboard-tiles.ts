@@ -9,8 +9,8 @@ import { nvidiaStock } from "@datasets/nvidia-stock";
 import { programmingLanguages } from "@datasets/programming-languages";
 import { stockPerformance } from "@datasets/stock-performance";
 import { usPayrolls } from "@datasets/us-payrolls";
+import { sourceOf } from "../source";
 import { defineDemo } from "../types";
-import { sourceOf } from "./source";
 
 const ACCENT = "#0e7490";
 

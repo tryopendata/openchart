@@ -55,7 +55,8 @@ export function indexDemos(modules: DemoModules): ReadonlyMap<string, DemoDef> {
 
 const registered = indexDemos(
   import.meta.glob<Record<string, unknown>>(
-    ["./**/*.ts", "!./types.ts", "!./registry.ts", "!./**/*.test.ts"],
+    // types, registry and source are the demo plumbing, not demo modules.
+    ["./**/*.ts", "!./types.ts", "!./registry.ts", "!./source.ts", "!./**/*.test.ts"],
     { eager: true },
   ),
 );

@@ -4,8 +4,8 @@
  * column channel, with scales shared unless `resolve` says otherwise.
  */
 import { gdpGrowthByCountry } from "@datasets/gdp-growth-by-country";
+import { sourceOf } from "../source";
 import { defineDemo } from "../types";
-import { sourceOf } from "./source";
 
 const gdpEncoding = {
   x: { field: "date", type: "temporal", axis: { format: "%Y" } },

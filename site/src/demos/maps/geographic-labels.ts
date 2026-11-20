@@ -23,6 +23,8 @@ export const featureLabels = defineDemo({
   title: "State names on an unemployment map",
   source: sourceWithGeography(usUnemployment, "us"),
   height: 480,
+  // The heaviest static SVG on its page, so it draws in the browser and the page keeps size headroom.
+  static: false,
   spec: {
     type: "map",
     geo: { features: usStates, projection: "albersUsa" },

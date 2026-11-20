@@ -8,13 +8,8 @@
 import { budgetFlow } from "@datasets/budget-flow";
 import { energyFlow } from "@datasets/energy-flow";
 import { userJourney } from "@datasets/user-journey";
-import { type DemoSource, defineDemo } from "../types";
-
-/** A dataset's citation as a figure source; the figure caption adds the "Source:" prefix. */
-function sourceOf(dataset: { source: string; url?: string }): DemoSource {
-  const label = dataset.source.replace(/^Source:\s*/, "");
-  return dataset.url ? { label, url: dataset.url } : { label };
-}
+import { sourceOf } from "../source";
+import { defineDemo } from "../types";
 
 /** Every flow dataset names its columns source, target and value. */
 const flowEncoding = (format: string) =>

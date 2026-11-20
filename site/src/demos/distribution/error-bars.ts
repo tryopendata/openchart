@@ -6,8 +6,9 @@
 
 import { nycTemperatureRange } from "@datasets/nyc-temperature-range";
 import type { ChartSpec, LayerSpec } from "@opendata-ai/openchart-core";
+import { sourceOf } from "../source";
 import { defineDemo } from "../types";
-import { ILLUSTRATIVE, sourceOf } from "./shared";
+import { ILLUSTRATIVE } from "./shared";
 
 const temperatureCaption =
   "The bars span each month's average daily low to its average daily high, both supplied in the data.";

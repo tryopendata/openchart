@@ -5,8 +5,9 @@
  */
 import { costOfLiving } from "@datasets/cost-of-living";
 import { pisaScores } from "@datasets/pisa-scores";
+import { sourceOf } from "../source";
 import { defineDemo } from "../types";
-import { campusReading, ILLUSTRATIVE, sourceOf } from "./shared";
+import { campusReading, ILLUSTRATIVE } from "./shared";
 
 const spendingAxis = { title: "Spending per student ($K, PPP)" };
 const mathAxis = { title: "PISA math score" };

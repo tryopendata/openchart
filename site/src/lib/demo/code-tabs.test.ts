@@ -4,7 +4,9 @@ import { Window } from "happy-dom";
 import { describe, expect, it } from "vitest";
 import { fixtureBar } from "../../demos/fixtures/bar";
 import { fixtureTable } from "../../demos/fixtures/table";
+import { basicChoropleth } from "../../demos/maps/choropleth";
 import { codeTabsHtml } from "./code-tabs";
+import { fillFolds } from "./fold-fill";
 import { frameworkSnippets } from "./snippets";
 
 const FRAMEWORK_PANELS = ["react", "vue", "svelte", "vanilla"] as const;
@@ -22,6 +24,13 @@ const panel = (block: Element, id: string) => block.querySelector(`[data-demo-pa
 const shown = (block: Element, id: string) => panel(block, id)?.querySelector("pre")?.textContent;
 const copied = (block: Element, id: string) =>
   panel(block, id)?.querySelector("template")?.content.textContent;
+/** What the Copy button copies: the panel's template with its folded values filled in. */
+function filled(block: Element, id: string, spec: unknown): string {
+  const template = panel(block, id)?.querySelector("template");
+  if (!template) throw new Error(`The ${id} panel has no copy template`);
+  const folds = JSON.parse(template.getAttribute("data-demo-copy-fills") ?? "[]");
+  return fillFolds(template.content.textContent ?? "", folds, spec);
+}
 
 describe("codeTabsHtml", () => {
   it("links five tabs to five panels, Spec first and current", async () => {
@@ -48,10 +57,23 @@ describe("codeTabsHtml", () => {
     }
   });
 
-  it("keeps each framework panel's complete, runnable code for its Copy button", async () => {
+  it("keeps a copy template per framework panel that fills back to the complete code", async () => {
     const { block } = await codeBlock();
     const full = frameworkSnippets(fixtureBar.spec);
-    for (const id of FRAMEWORK_PANELS) expect(copied(block, id), id).toBe(full[id]);
+    for (const id of FRAMEWORK_PANELS) {
+      expect(filled(block, id, fixtureBar.spec), id).toBe(full[id]);
+      expect(copied(block, id), id).not.toContain('"North"');
+    }
+  });
+
+  it("folds a map's geography in the Spec panel too, keeping its rows written out", async () => {
+    const { block } = await codeBlock(basicChoropleth.spec);
+    const spec = shown(block, "spec") ?? "";
+    expect(spec).toMatch(/"features": \{\/\* TopoJSON, \d+ arcs; Copy includes it \*\/\}/);
+    expect(spec).not.toContain('"arcs"');
+    const firstRow = JSON.stringify((basicChoropleth.spec as { data: unknown[] }).data[0]);
+    expect(spec.replace(/\s+/g, "")).toContain(firstRow.replace(/\s+/g, ""));
+    expect(JSON.parse(filled(block, "spec", basicChoropleth.spec))).toEqual(basicChoropleth.spec);
   });
 
   it("colors tokens through classes its own stylesheet defines, with no inline token styles", async () => {
@@ -74,7 +96,9 @@ describe("codeTabsHtml", () => {
 
   it("folds a small inline dataset too, naming its row count", async () => {
     const { block } = await codeBlock(fixtureTable.spec);
-    expect(shown(block, "react")).toContain("const data = [/* 3 rows,");
-    expect(copied(block, "react")).toBe(frameworkSnippets(fixtureTable.spec).react);
+    expect(shown(block, "react")).toContain('"data": [/* 3 rows,');
+    expect(filled(block, "react", fixtureTable.spec)).toBe(
+      frameworkSnippets(fixtureTable.spec).react,
+    );
   });
 });

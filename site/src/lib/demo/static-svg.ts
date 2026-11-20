@@ -14,6 +14,11 @@ export type StaticSvgOptions = { idPrefix: string; width: number; height: number
 type StaticSpec = Parameters<typeof renderStaticSVG>[0];
 
 const STATIC_CLASS = DEMO_CLASS.static;
+/**
+ * Geometry decimal places. The SVG is 720 units wide and scales to the stage,
+ * so a tenth of a unit never shows, and the library's default of 3 adds weight.
+ */
+const STATIC_PRECISION = 1;
 
 function hasStaticRenderer(spec: VizSpec): spec is StaticSpec {
   return !isTableSpec(spec) && !isGraphSpec(spec) && !isSankeySpec(spec);
@@ -40,6 +45,7 @@ export function staticSvg(spec: VizSpec, options: StaticSvgOptions): string | nu
     height: options.height,
     theme: chartTheme(options.dark),
     darkMode: options.dark ? "force" : "off",
+    precision: STATIC_PRECISION,
     // The attribution is a link, and a link inside an image fails axe. The site's own footer credits the library.
     watermark: false,
   });

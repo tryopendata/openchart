@@ -19,6 +19,11 @@ export type DemoDef = {
   height?: number;
   /** Play the library's entrance animation on live mount. Default false. */
   entrance?: boolean;
+  /**
+   * Render static SVGs at build time. Default true. Set false for a heavy demo:
+   * its stage then shows a short placeholder line and mounts client side, as a table does.
+   */
+  static?: boolean;
 };
 
 /** The stage height in px for a demo or a `json demo` fence that sets none. */

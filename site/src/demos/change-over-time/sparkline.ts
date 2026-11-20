@@ -4,8 +4,8 @@
  * the series come from the market-indices dataset module.
  */
 import { marketIndices } from "@datasets/market-indices";
+import { sourceOf } from "../source";
 import { defineDemo } from "../types";
-import { sourceOf } from "./source";
 
 const ACCENT = "#0891b2";
 

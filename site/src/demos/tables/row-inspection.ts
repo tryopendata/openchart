@@ -7,7 +7,7 @@
 import { companyBrands } from "@datasets/company-brands";
 import { countryIndicators } from "@datasets/country-indicators";
 import { stockPerformance } from "@datasets/stock-performance";
-import { sourceOf } from "../composition/source";
+import { sourceOf } from "../source";
 import { defineDemo } from "../types";
 
 export const rowBars = defineDemo({

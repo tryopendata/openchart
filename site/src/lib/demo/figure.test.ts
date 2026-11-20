@@ -5,7 +5,9 @@ import { Window } from "happy-dom";
 import { describe, expect, it } from "vitest";
 import { fixtureBar } from "../../demos/fixtures/bar";
 import { fixtureTable } from "../../demos/fixtures/table";
+import { basicChoropleth } from "../../demos/maps/choropleth";
 import { type DemoFigure, demoFigureHtml } from "./figure";
+import { valueAt } from "./spec-path";
 
 function figureFor(overrides: Partial<DemoFigure> = {}): DemoFigure {
   return {
@@ -17,6 +19,7 @@ function figureFor(overrides: Partial<DemoFigure> = {}): DemoFigure {
     height: 320,
     entrance: false,
     tabs: true,
+    static: true,
     ...overrides,
   };
 }
@@ -71,8 +74,47 @@ describe("demoFigureHtml", () => {
     expect(link?.textContent).toBe("Census & survey");
   });
 
-  it("leaves the stage empty for a spec type with no static renderer", async () => {
-    const figure = await render(figureFor({ id: fixtureTable.id, spec: fixtureTable.spec }));
-    expect(figure.querySelector("[data-demo-stage]")?.children).toHaveLength(0);
+  it.each([
+    { name: "a spec type with no static renderer", overrides: { spec: fixtureTable.spec } },
+    { name: "a demo that turns static rendering off", overrides: { static: false } },
+  ])("shows a placeholder line and no static SVG for $name", async ({ overrides }) => {
+    const figure = await render(figureFor({ title: "Orders & returns", ...overrides }));
+    const stage = figure.querySelector("[data-demo-stage]");
+    expect(stage?.querySelector("svg")).toBeNull();
+    expect([...(stage?.children ?? [])].map((child) => child.outerHTML)).toEqual([
+      '<p class="demo-placeholder" data-demo-placeholder="">Orders &amp; returns. This chart is drawn in the browser.</p>',
+    ]);
+  });
+
+  it("writes a large shared value once per page and references it from every figure that uses it", async () => {
+    const pageShared = new Set<string>();
+    const shared = { spec: basicChoropleth.spec, static: false, tabs: false, pageShared };
+    const first = await render(figureFor({ ...shared, id: "maps/first" }));
+    const second = await render(figureFor({ ...shared, id: "maps/second" }));
+    const blocks = [first, second].map((figure) => figure.querySelectorAll("[data-demo-shared]"));
+    expect(blocks[0]?.length).toBeGreaterThan(0);
+    expect(blocks[1]).toHaveLength(0);
+    for (const figure of [first, second]) {
+      const script = figure.querySelector("script[data-demo-spec]");
+      const embedded = JSON.parse(script?.textContent ?? "") as { geo: { features: unknown } };
+      expect(embedded.geo.features).toBeNull();
+      const refs = JSON.parse(script?.getAttribute("data-demo-shared-refs") ?? "[]");
+      expect(refs).toContainEqual({ path: ["geo", "features"], hash: expect.any(String) });
+      for (const { path, hash } of refs) {
+        const block = first.querySelector(`[data-demo-shared="${hash}"]`);
+        expect(JSON.parse(block?.textContent ?? ""), path.join(".")).toEqual(
+          valueAt(basicChoropleth.spec, path),
+        );
+      }
+    }
+  });
+
+  it("embeds the whole spec when the page keeps no record of shared values", async () => {
+    const figure = await render(
+      figureFor({ spec: basicChoropleth.spec, static: false, tabs: false }),
+    );
+    const script = figure.querySelector("script[data-demo-spec]");
+    expect(script?.hasAttribute("data-demo-shared-refs")).toBe(false);
+    expect(JSON.parse(script?.textContent ?? "")).toEqual(basicChoropleth.spec);
   });
 });

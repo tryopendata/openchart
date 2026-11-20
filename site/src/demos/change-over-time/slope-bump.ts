@@ -5,8 +5,8 @@
  * page's window transform to a dataset module.
  */
 import { indexTotalReturns } from "@datasets/index-total-returns";
+import { sourceOf } from "../source";
 import { defineDemo } from "../types";
-import { sourceOf } from "./source";
 
 const SMARTPHONE_SOURCE = {
   label: "IDC Worldwide Quarterly Mobile Phone Tracker",

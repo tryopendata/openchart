@@ -16,7 +16,7 @@ import { renewableCapacityAdditions } from "@datasets/renewable-capacity";
 import { statePopulationChange } from "@datasets/state-population-change";
 import { temperatureAnomaly } from "@datasets/temperature-anomaly";
 import { usPayrolls } from "@datasets/us-payrolls";
-import { sourceOf } from "../composition/source";
+import { sourceOf } from "../source";
 import { defineDemo } from "../types";
 
 const ACCENT = "#0e7490";

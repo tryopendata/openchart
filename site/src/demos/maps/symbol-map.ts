@@ -7,10 +7,11 @@
 import { populationByCountry } from "@datasets/population";
 import { stateEconomies } from "@datasets/state-economies";
 import { usUnemployment } from "@datasets/us-unemployment";
+import { sourceOf } from "../source";
 import { defineDemo } from "../types";
 import { centerOf } from "./centers";
 import { usStates, usStatesBasemap, worldCountries, worldLand } from "./geography";
-import { sourceOf, sourceWithGeography } from "./sources";
+import { sourceWithGeography } from "./sources";
 
 /** The ten largest state economies, each placed at the center of its state. */
 const statePoints = stateEconomies.data.map((row) => ({
@@ -124,6 +125,8 @@ export const symbolsOverChoropleth = defineDemo({
     label: `${sourceOf(usUnemployment).label}; ${sourceWithGeography(stateEconomies, "us").label}`,
   },
   height: 460,
+  // The heaviest static SVG on its page, so it draws in the browser and the page keeps size headroom.
+  static: false,
   spec: {
     type: "map",
     geo: { features: usStates, projection: "albersUsa" },

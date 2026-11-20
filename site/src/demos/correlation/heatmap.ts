@@ -4,8 +4,8 @@
  * distribution gallery.
  */
 import { electricityMixMatrix } from "@datasets/electricity-mix-matrix";
+import { sourceOf } from "../source";
 import { defineDemo } from "../types";
-import { sourceOf } from "./shared";
 
 const subtitle = "Share of US electricity generation by source (%), 2016-2023";
 
