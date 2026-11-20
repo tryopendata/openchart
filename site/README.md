@@ -36,7 +36,7 @@ Run from `site/`.
 | `make e2e`                          | Browser and accessibility tests                                      |
 | `make preview`                      | Serve the production build                                           |
 | `make deploy-check`                 | Build, then check headers and URLs under `wrangler pages dev`        |
-| `make deploy-preview BRANCH=<name>` | Upload a Cloudflare Pages preview (needs `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`) |
+| `make deploy-preview BRANCH=<name>` | Upload a Cloudflare Pages preview (needs `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`; `main` is refused, use `make deploy`) |
 | `make deploy`                       | Upload to production (needs the same two variables)                  |
 
 The Site workflow (`.github/workflows/site.yml`) runs the checks on every change to the site and deploys `main` to Cloudflare Pages; see Deploy in [AGENTS.md](AGENTS.md).

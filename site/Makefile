@@ -27,6 +27,9 @@ ifneq ($(filter deploy-preview,$(MAKECMDGOALS)),)
   ifeq ($(BRANCH),)
     $(error BRANCH is not set: run make deploy-preview BRANCH=<branch-name>)
   endif
+  ifeq ($(BRANCH),main)
+    $(error BRANCH=main is the Pages production branch: use make deploy to upload production)
+  endif
 endif
 
 # Outside CI this also installs git hooks (when configured) and the Chromium
@@ -76,9 +79,11 @@ deploy-check: build ## Serve dist/ through wrangler pages dev and check headers,
 	node --test tests/deploy.test.mjs
 
 # The Site workflow deploys from GitHub Actions (AGENTS.md, Deploy). These upload
-# from this machine to the Cloudflare Pages project openchart.
+# from this machine to the Cloudflare Pages project openchart. --no-install runs
+# only the lockfile's wrangler, so a missing install never fetches an unpinned
+# one while the Cloudflare token is in the environment.
 deploy-preview: build ## Upload dist/ as a preview for BRANCH (needs CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID)
-	bunx wrangler pages deploy dist --project-name openchart --branch "$(BRANCH)"
+	bunx --no-install wrangler pages deploy dist --project-name openchart --branch "$(BRANCH)"
 
 deploy: build ## Upload dist/ to production (needs CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID)
-	bunx wrangler pages deploy dist --project-name openchart --branch main
+	bunx --no-install wrangler pages deploy dist --project-name openchart --branch main

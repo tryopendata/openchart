@@ -6,7 +6,7 @@ settings.local.json  your machine-only overrides (gitignored, create as needed)
 hooks/               hooks, described below
 ```
 
-Project instructions live in `AGENTS.md` at the repo root, which every coding agent reads. The root `CLAUDE.md` imports it and adds only Claude-specific notes, so edit `AGENTS.md` for anything that isn't Claude-specific.
+Project instructions live in `site/AGENTS.md`, beside this `.claude/` directory, which every coding agent reads. `site/CLAUDE.md` imports it and adds only Claude-specific notes, so edit `AGENTS.md` for anything that isn't Claude-specific.
 
 ## Hooks
 
