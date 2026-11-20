@@ -43,9 +43,12 @@ function drawIn(gsap: MotionTools["gsap"], tiles: Element[], step: number) {
  * as it scrolls into view, once. Tiles the filter hides wait until shown.
  */
 export function waveIn({ gsap, ScrollTrigger }: MotionTools, tiles: HTMLElement[]): void {
-  gsap.set(partsOf(tiles, RULE), { scaleX: 0, transformOrigin: "0 50%" });
-  gsap.set(partsOf(tiles, NAME), { opacity: 0, y: 8 });
-  ScrollTrigger.batch(tiles, {
+  // Tiles the reader has already scrolled past stay as they are: no trigger would bring them back.
+  const ahead = tiles.filter((tile) => tile.getBoundingClientRect().bottom > 0);
+  if (ahead.length === 0) return;
+  gsap.set(partsOf(ahead, RULE), { scaleX: 0, transformOrigin: "0 50%" });
+  gsap.set(partsOf(ahead, NAME), { opacity: 0, y: 8 });
+  ScrollTrigger.batch(ahead, {
     start: "top 92%",
     once: true,
     onEnter: (batch) => drawIn(gsap, batch, WAVE_STEP),

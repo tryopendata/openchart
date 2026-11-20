@@ -8,7 +8,7 @@
  */
 import { type ReactNode, useEffect, useReducer, useRef, useState } from "react";
 import type { SectionId } from "../../../config";
-import { type MotionTools, withMotion } from "../../../scripts/motion";
+import { useMotionTools } from "../../shared/use-motion-tools";
 import { observeTileScale } from "./tile-scale";
 import { isTileShown, type WallFilter, wallFilterReducer, wallHash } from "./wall-filter";
 import { startWallLive, WALL_ATTR } from "./wall-live";
@@ -39,28 +39,29 @@ export function VocabularyWall({ intents, total, children }: VocabularyWallProps
   const [filter, dispatch] = useReducer(wallFilterReducer, "all");
   const [announced, setAnnounced] = useState("");
   const gridRef = useRef<HTMLDivElement>(null);
-  const motion = useRef<MotionTools | null>(null);
+  const tools = useMotionTools();
   const flip = useRef<{ kill(): unknown } | null>(null);
   const applied = useRef<WallFilter>("all");
 
   useEffect(() => {
     const root = gridRef.current;
     if (!root) return;
-    const stopMotion = withMotion((tools) => {
-      motion.current = tools;
-      waveIn(tools, tilesIn(root));
-      return () => {
-        motion.current = null;
-      };
-    });
-    const stopScale = observeTileScale(root);
-    const stopLive = startWallLive(root, { motion: () => motion.current !== null });
-    return () => {
-      stopLive();
-      stopScale();
-      stopMotion();
-    };
+    return observeTileScale(root);
   }, []);
+
+  // Restarts when motion arrives or leaves, so tiles already in view mount with the right choice.
+  useEffect(() => {
+    const root = gridRef.current;
+    if (!root) return;
+    return startWallLive(root, { motion: () => tools !== null });
+  }, [tools]);
+
+  useEffect(() => {
+    const root = gridRef.current;
+    if (!root || !tools) return;
+    const context = tools.gsap.context(() => waveIn(tools, tilesIn(root)));
+    return () => context.revert();
+  }, [tools]);
 
   useEffect(() => {
     const read = () => dispatch({ type: "hash", hash: window.location.hash });
@@ -81,9 +82,9 @@ export function VocabularyWall({ intents, total, children }: VocabularyWallProps
     };
     flip.current?.kill();
     flip.current = null;
-    if (motion.current) flip.current = refile(motion.current, tiles, apply);
+    if (tools) flip.current = refile(tools, tiles, apply);
     else apply();
-  }, [filter]);
+  }, [filter, tools]);
 
   const choose = (next: WallFilter) => {
     dispatch({ type: "choose", filter: next });

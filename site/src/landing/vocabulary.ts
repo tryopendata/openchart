@@ -27,6 +27,12 @@ export const vocabularyTiles: VocabularyTile[] = [
     href: "/docs/comparison/column/",
   },
   {
+    demo: "comparison/grouped-columns",
+    intent: "comparison",
+    label: "Grouped columns",
+    href: "/docs/comparison/grouped-stacked/",
+  },
+  {
     demo: "comparison/lollipop-basic",
     intent: "comparison",
     label: "Lollipop",
@@ -124,7 +130,6 @@ export const vocabularyTiles: VocabularyTile[] = [
     label: "Symbol map",
     href: "/docs/maps/symbol-map/",
   },
-  { demo: "maps/tile-basic", intent: "maps", label: "Tile map", href: "/docs/maps/tile-map/" },
   { demo: "tables/basic", intent: "tables", label: "Data table", href: "/docs/tables/data-table/" },
   {
     demo: "tables/sparkline-columns",

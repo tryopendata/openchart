@@ -6,8 +6,11 @@
  * whose spec type has no static renderer (tables, networks, sankeys): those
  * mount as soon as they near the viewport, without animation, since otherwise
  * they would show nothing. A theme change remounts live tiles in the new theme.
+ * Mounting goes through the demo system's `mountDemo`, so a tile is drawn the
+ * way the same demo is drawn on its docs page.
  */
 import type { VizSpec } from "@opendata-ai/openchart-core";
+import { isPageDark, subscribePageTheme } from "../../shared/page-theme";
 
 /** The data attributes the wall's tile markup carries (Vocabulary.astro writes them). */
 export const WALL_ATTR = {
@@ -37,7 +40,7 @@ type WallTile = {
 };
 
 export type WallLiveOptions = {
-  /** Whether motion is allowed right now: the island answers from `withMotion`. */
+  /** Whether motion is allowed right now: the island answers from `useMotionTools`. */
   motion: () => boolean;
 };
 
@@ -54,8 +57,6 @@ function readTile(tile: HTMLElement): WallTile | null {
     failed: false,
   };
 }
-
-const isDarkPage = (doc: Document) => doc.documentElement.classList.contains("dark");
 
 function readSpec(tile: WallTile): VizSpec {
   const text = tile.tile.querySelector(`script[${WALL_ATTR.spec}]`)?.textContent;
@@ -85,8 +86,7 @@ function unmount(tile: WallTile): void {
 function mountTile(tile: WallTile, mounter: Mounter, entrance: boolean): void {
   if (tile.live || tile.failed) return;
   try {
-    const dark = isDarkPage(tile.stage.ownerDocument);
-    tile.live = mounter.mountDemo(tile.stage, readSpec(tile), { dark, entrance });
+    tile.live = mounter.mountDemo(tile.stage, readSpec(tile), { dark: isPageDark(), entrance });
     tile.played = true;
     tile.stage.querySelector(".wall-placeholder")?.remove();
     tile.stage.setAttribute(WALL_ATTR.live, "");
@@ -100,22 +100,25 @@ function mountTile(tile: WallTile, mounter: Mounter, entrance: boolean): void {
  * Returns a teardown that stops watching and destroys every live chart.
  */
 export function startWallLive(root: HTMLElement, options: WallLiveOptions): () => void {
-  const doc = root.ownerDocument;
   const tiles = [...root.querySelectorAll<HTMLElement>(`[${WALL_ATTR.tile}]`)]
     .map(readTile)
     .filter((tile): tile is WallTile => tile !== null);
   let mounter: Promise<Mounter> | null = null;
   let stopped = false;
 
-  const request = (tile: WallTile) => {
-    const motion = options.motion();
-    if (tile.live || tile.failed || (!motion && !tile.eager)) return;
+  const withMounter = (tile: WallTile, use: (module: Mounter) => void) => {
     mounter ??= import("../../../scripts/demo-mount");
     mounter
       .then((module) => {
-        if (!stopped) mountTile(tile, module, motion && !tile.played);
+        if (!stopped) use(module);
       })
       .catch((error: unknown) => showFailure(tile, error));
+  };
+
+  const request = (tile: WallTile) => {
+    const motion = options.motion();
+    if (tile.live || tile.failed || (!motion && !tile.eager)) return;
+    withMounter(tile, (module) => mountTile(tile, module, motion && !tile.played));
   };
 
   const observer = new IntersectionObserver(
@@ -139,23 +142,20 @@ export function startWallLive(root: HTMLElement, options: WallLiveOptions): () =
   });
 
   // A mounted chart has no theme setter, so a theme change rebuilds each live one quietly.
-  let dark = isDarkPage(doc);
-  const themeObserver = new MutationObserver(() => {
-    if (isDarkPage(doc) === dark) return;
-    dark = isDarkPage(doc);
+  let dark = isPageDark();
+  const stopTheme = subscribePageTheme(() => {
+    if (isPageDark() === dark) return;
+    dark = isPageDark();
     for (const tile of tiles.filter((candidate) => candidate.live)) {
       unmount(tile);
-      mounter
-        ?.then((module) => !stopped && mountTile(tile, module, false))
-        .catch((error: unknown) => showFailure(tile, error));
+      withMounter(tile, (module) => mountTile(tile, module, false));
     }
   });
-  themeObserver.observe(doc.documentElement, { attributes: true, attributeFilter: ["class"] });
 
   return () => {
     stopped = true;
     observer.disconnect();
-    themeObserver.disconnect();
+    stopTheme();
     for (const remove of listeners) remove();
     for (const tile of tiles) unmount(tile);
   };

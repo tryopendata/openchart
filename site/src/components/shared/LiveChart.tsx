@@ -6,7 +6,7 @@
  * page's up-front JavaScript never carries it, and readers without JavaScript
  * keep the static chart. Islands use this instead of importing `<Chart>`.
  */
-import type { ChartSpec, LayerSpec } from "@opendata-ai/openchart-core";
+import type { ChartSpec, DarkMode, LayerSpec, ThemeConfig } from "@opendata-ai/openchart-core";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { usePageChartTheme } from "./page-theme";
 
@@ -60,12 +60,26 @@ export type LiveChartProps = {
   onMounted?: () => void;
   /** The static SVGs shown until the live chart is ready. */
   children?: ReactNode;
+  /**
+   * Replaces the page theme for a chart that carries its own house style in
+   * `spec.theme`: a mount theme would override the spec's, so pass
+   * `{ theme: undefined, darkMode }` to let the spec's theme stand.
+   */
+  themeOverride?: { theme: ThemeConfig | undefined; darkMode: DarkMode };
 };
 
 /** The live chart, or its static stand-in while the library loads. */
-export function LiveChart({ spec, mountKey = 0, className, onMounted, children }: LiveChartProps) {
+export function LiveChart({
+  spec,
+  mountKey = 0,
+  className,
+  onMounted,
+  children,
+  themeOverride,
+}: LiveChartProps) {
   const module = useChartModule();
-  const { theme, darkMode } = usePageChartTheme();
+  const page = usePageChartTheme();
+  const { theme, darkMode } = themeOverride ?? page;
   // The engine writes defaults into the spec it compiles, so the chart gets its own copy.
   // No attribution link inside the chart: this is the library's own site.
   const liveSpec = useMemo(() => ({ ...structuredClone(spec), watermark: false }), [spec]);

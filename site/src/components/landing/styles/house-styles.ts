@@ -2,7 +2,7 @@
  * The house-style section's stops and the theme lines each one changes. The
  * chart moves through the library's four presets and then into dark mode; at
  * each stop the section shows the handful of theme values a reader would notice
- * changing, as a diff against the stop before. Pure data, computed at build time.
+ * changing, as a diff (see `houseStyleDiffs`). Pure data, computed at build time.
  */
 import { broadsheet, essay, type ThemeConfig, terminal, wire } from "@opendata-ai/openchart-core";
 
@@ -108,7 +108,15 @@ export function themeDiff(before: Mode | undefined, after: Mode): ThemeDiffLine[
   });
 }
 
-/** Every stop with its diff against the one before it. */
+/**
+ * Every stop's diff. A preset stop compares with the stop before it; the dark
+ * stop compares with the same preset in light, so it shows only what dark mode changes.
+ */
 export function houseStyleDiffs(stops: readonly HouseStyleStop[] = HOUSE_STYLE_STOPS) {
-  return stops.map((stop, index) => themeDiff(stops[index - 1], stop));
+  return stops.map((stop, index) => {
+    const sameInLight = stop.dark
+      ? stops.find((other) => other.preset === stop.preset && !other.dark)
+      : undefined;
+    return themeDiff(sameInLight ?? stops[index - 1], stop);
+  });
 }

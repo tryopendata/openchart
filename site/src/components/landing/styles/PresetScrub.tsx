@@ -2,15 +2,24 @@
  * The PresetScrub island: one chart restyled through the library's house-style
  * presets and then dark mode, with the theme lines that changed beside it. At
  * 900px and wider, with motion allowed, the scrub pins and the scroll picks the
- * stop; otherwise the stops are buttons. The chart is one `<Chart>` whose spec
- * changes, so each change is the library's own transition. Before the chart
- * module loads, and without JavaScript, the build's static SVG of the first
- * stop stands in.
+ * stop; otherwise the stops are buttons. The chart is the shared LiveChart whose
+ * spec changes, so each change is the library's own transition. Until the chart
+ * library loads, and without JavaScript, the build's static SVG of the first
+ * stop (the children) stands in.
  */
 import type { ChartSpec, ThemeConfig } from "@opendata-ai/openchart-core";
-import type { Chart as ChartComponent } from "@opendata-ai/openchart-react";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { type MotionTools, withMotion } from "../../../scripts/motion";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { DEMO_CLASS } from "../../../lib/demo/markup";
+import { LiveChart } from "../../shared/LiveChart";
+import { useMotionTools } from "../../shared/use-motion-tools";
 import { crossfadeLines } from "./diff-motion";
 import type { ThemeDiffLine } from "./house-styles";
 import { pinScrub } from "./preset-pin";
@@ -29,11 +38,15 @@ export type ScrubStop = {
 export type PresetScrubProps = {
   stops: ScrubStop[];
   spec: ChartSpec;
-  /** The first stop drawn at build time, shown until the live chart loads. */
-  initialSvg: string;
+  /** The first stop's static SVG, shown until the live chart loads. */
+  children?: ReactNode;
 };
 
 type Pin = { start: number; end: number };
+
+/** The house style is the chart's own theme, so the page theme is not laid over it. */
+const HOUSE_LIGHT = { theme: undefined, darkMode: "off" } as const;
+const HOUSE_DARK = { theme: undefined, darkMode: "force" } as const;
 
 function DiffLines({ stop }: { stop: ScrubStop }) {
   return stop.diff.flatMap((line) => [
@@ -62,56 +75,44 @@ function DiffLines({ stop }: { stop: ScrubStop }) {
   ]);
 }
 
-export function PresetScrub({ stops, spec, initialSvg }: PresetScrubProps) {
+export function PresetScrub({ stops, spec, children }: PresetScrubProps) {
   const [index, setIndex] = useState(0);
   const [previous, setPrevious] = useState<number | null>(null);
   const [pin, setPin] = useState<Pin | null>(null);
-  const [Chart, setChart] = useState<typeof ChartComponent | null>(null);
+  const tools = useMotionTools();
+  const animated = useRef(false);
   const pinRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef<HTMLSpanElement>(null);
   const nameRef = useRef<HTMLParagraphElement>(null);
   const linesRef = useRef<HTMLOListElement>(null);
   const outgoingRef = useRef<HTMLOListElement>(null);
-  const motion = useRef<MotionTools | null>(null);
   const fade = useRef<{ kill(): unknown } | null>(null);
   const shown = useRef(0);
 
+  useEffect(() => {
+    animated.current = tools !== null;
+  }, [tools]);
+
   const show = useCallback((next: number) => {
     if (next === shown.current) return;
-    setPrevious(motion.current ? shown.current : null);
+    setPrevious(animated.current ? shown.current : null);
     shown.current = next;
     setIndex(next);
   }, []);
 
   useEffect(() => {
-    import("@opendata-ai/openchart-react")
-      .then((module) => setChart(() => module.Chart))
-      .catch((error: unknown) => {
-        console.error("The house-style chart could not load; the static chart stays.", error);
-      });
-  }, []);
-
-  useEffect(() => {
     const root = pinRef.current;
     const progress = progressRef.current;
-    if (!root || !progress) return;
-    return withMotion((tools) => {
-      motion.current = tools;
-      const unpin = pinScrub(
-        tools,
-        { root, progress, count: stops.length },
-        { onPin: setPin, onStop: show },
-      );
-      return () => {
-        unpin();
-        motion.current = null;
-      };
-    });
-  }, [stops.length, show]);
+    if (!tools || !root || !progress) return;
+    return pinScrub(
+      tools,
+      { root, progress, count: stops.length },
+      { onPin: setPin, onStop: show },
+    );
+  }, [tools, stops.length, show]);
 
   // Runs before paint, so the new lines never flash at full strength first.
   useLayoutEffect(() => {
-    const tools = motion.current;
     if (!tools || previous === null) return;
     fade.current?.kill();
     fade.current = crossfadeLines(
@@ -123,20 +124,19 @@ export function PresetScrub({ stops, spec, initialSvg }: PresetScrubProps) {
       },
       () => setPrevious(null),
     );
-  }, [previous]);
+  }, [tools, previous]);
 
   const stop = stops[index] ?? stops[0];
-  const liveSpec = useMemo<ChartSpec>(
-    () => ({ ...spec, theme: stop?.theme, watermark: false }),
-    [spec, stop],
-  );
+  const liveSpec = useMemo<ChartSpec>(() => ({ ...spec, theme: stop?.theme }), [spec, stop]);
   if (!stop) return null;
 
   const choose = (next: number) => {
     // While pinned, the scroll owns the stop: scroll to the middle of that stop's stretch.
-    if (pin)
+    if (pin) {
       window.scrollTo({ top: pin.start + progressOf(next, stops.length) * (pin.end - pin.start) });
-    else show(next);
+    } else {
+      show(next);
+    }
   };
   const outgoing = previous === null ? undefined : stops[previous];
 
@@ -183,16 +183,14 @@ export function PresetScrub({ stops, spec, initialSvg }: PresetScrubProps) {
             </div>
           </div>
           <div className="scrub-chart">
-            {Chart ? (
-              <Chart
-                spec={liveSpec}
-                darkMode={stop.dark ? "force" : "off"}
-                className="scrub-host"
-              />
-            ) : (
-              // Build-time SVG of the first stop, from the library's own static renderer.
-              <div className="scrub-static" dangerouslySetInnerHTML={{ __html: initialSvg }} />
-            )}
+            <LiveChart
+              spec={liveSpec}
+              // demo-live marks a live library chart, as on docs pages (e2e/axe.ts keys on it).
+              className={`scrub-host ${DEMO_CLASS.live}`}
+              themeOverride={stop.dark ? HOUSE_DARK : HOUSE_LIGHT}
+            >
+              {children}
+            </LiveChart>
           </div>
         </div>
         <p className="sr-only" aria-live="polite">

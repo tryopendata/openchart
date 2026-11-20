@@ -32,7 +32,7 @@
 
   /* The filter reads like the header row of a table: text buttons on an ink rule. */
   .wall-filter {
-    @apply border-line-strong flex flex-wrap gap-x-6 gap-y-1 border-b pb-px;
+    @apply border-line-strong m-0 flex min-w-0 flex-wrap gap-x-6 gap-y-1 border-0 border-b p-0 pb-px;
   }
 
   .wall-filter-button {
@@ -134,7 +134,8 @@
   }
 
   /* ---- House styles (preset scrub) ---- */
-  .scrub {
+  /* Compound selector: .pub-figure (landing.css) resets margins at the same specificity. */
+  .pub-figure.scrub-figure {
     @apply mt-12 lg:mt-16;
   }
 
@@ -147,7 +148,7 @@
   }
 
   .scrub-stops {
-    @apply flex flex-wrap gap-x-6 gap-y-1;
+    @apply m-0 flex min-w-0 flex-wrap gap-x-6 gap-y-1 border-0 p-0;
   }
 
   /* While pinned, the stops sit evenly over the stretch of scroll each one owns. */
@@ -174,12 +175,9 @@
     border-color: transparent;
   }
 
-  /* The scroll axis: an ink rule with a tick at each stop, and an accent fill the scroll draws. */
+  /* The scroll's progress: a hairline under the stops that the scroll fills with the accent. */
   .scrub-axis {
-    @apply relative h-[7px];
-    border-top: 1px solid var(--color-line-strong);
-    background-image: linear-gradient(to right, var(--color-line-strong) 1px, transparent 1px);
-    background-size: 20% 100%;
+    @apply border-line relative border-t;
   }
 
   .scrub-axis-fill {
@@ -237,9 +235,9 @@
     @apply text-accent;
   }
 
-  /* The published graphic: an ink rule over it and a fixed height, so a stop change moves nothing around it. */
+  /* A fixed height, so a stop change moves nothing around the chart. */
   .scrub-chart {
-    @apply border-line-strong h-[400px] min-w-0 border-t sm:h-[440px] lg:col-span-8;
+    @apply h-[400px] min-w-0 sm:h-[440px] lg:col-span-8;
   }
 
   .scrub-host,

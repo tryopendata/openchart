@@ -22,6 +22,7 @@ import { houseStyle } from "../../../demos/landing/house-style";
 import { validateDemo } from "../../../lib/demo/validate";
 import { landingCopy } from "../../../landing/copy";
 import "../../../styles/landing-wall.css";
+import PublishedFigure from "../../shared/PublishedFigure.astro";
 import { HOUSE_STYLE_STOPS, houseStyleDiffs } from "./house-styles";
 import { PresetScrub } from "./PresetScrub";
 
@@ -53,6 +54,14 @@ const initialSvg = renderStaticSVG(
         changed.
       </p>
     </div>
-    <PresetScrub client:visible stops={stops} spec={spec} initialSvg={initialSvg} />
+    <PublishedFigure
+      class="scrub-figure"
+      source={houseStyle.source}
+      note="The eyebrow, headline and deck are fields in the spec, so each preset sets them in its own type."
+    >
+      <PresetScrub client:visible stops={stops} spec={spec}>
+        <div class="scrub-static" set:html={initialSvg} />
+      </PresetScrub>
+    </PublishedFigure>
   </div>
 </section>
