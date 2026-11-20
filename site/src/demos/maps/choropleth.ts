@@ -8,7 +8,7 @@ import { statePopulationChange } from "@datasets/state-population-change";
 import { usUnemployment } from "@datasets/us-unemployment";
 import { worldGdp } from "@datasets/world-gdp";
 import { defineDemo } from "../types";
-import { usStates, worldCountries } from "./geography";
+import { SOUTHEAST, southeastStates, usStates, worldCountries } from "./geography";
 import { sourceWithGeography } from "./sources";
 
 export const basicChoropleth = defineDemo({
@@ -59,15 +59,20 @@ export const worldChoropleth = defineDemo({
   },
 });
 
+/** The dataset's rows for the Southeast states the regional map draws. */
+const southeastChange = statePopulationChange.data.filter((row) => SOUTHEAST.includes(row.state));
+
 export const divergingChoropleth = defineDemo({
   id: "maps/choropleth-diverging",
-  title: "Population change by state, joined by name",
+  title: "Population change in the Southeast, joined by name",
+  caption:
+    "Population change in ten Southeast states, joined by state name. The dataset covers 5 of them",
   source: sourceWithGeography(statePopulationChange, "us"),
-  height: 460,
+  height: 440,
   spec: {
     type: "map",
-    geo: { features: usStates, projection: "albersUsa", idField: "name" },
-    data: [...statePopulationChange.data],
+    geo: { features: southeastStates, projection: "albersUsa", idField: "name" },
+    data: southeastChange,
     encoding: {
       key: { field: "state", type: "nominal" },
       color: {
@@ -78,9 +83,10 @@ export const divergingChoropleth = defineDemo({
         scale: { scheme: "redBlue" },
       },
     },
+    legend: { position: "right" },
     chrome: {
-      title: "Idaho, Florida, Texas and Montana grew by 7.5% or more",
-      subtitle: "Population change, April 2020 to July 2024 (%), for 13 states",
+      title: "Florida grew fastest of these five states; West Virginia shrank",
+      subtitle: "Population change, April 2020 to July 2024 (%)",
     },
   },
 });

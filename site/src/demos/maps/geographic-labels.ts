@@ -8,7 +8,7 @@ import { stateEconomies } from "@datasets/state-economies";
 import { usUnemployment } from "@datasets/us-unemployment";
 import { defineDemo } from "../types";
 import { centerOf } from "./centers";
-import { usStates } from "./geography";
+import { usStates, usStatesBasemap } from "./geography";
 import { sourceWithGeography } from "./sources";
 
 const unemploymentColor = {
@@ -52,7 +52,7 @@ export const pointLabels = defineDemo({
   height: 460,
   spec: {
     type: "map",
-    geo: { features: usStates, projection: "albersUsa" },
+    geo: { features: usStatesBasemap, projection: "albersUsa" },
     data: [],
     encoding: { key: { field: "id", type: "nominal" } },
     points: {

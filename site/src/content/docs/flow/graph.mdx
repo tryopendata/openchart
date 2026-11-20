@@ -17,7 +17,7 @@ Set `type` to `"graph"`, list the `nodes` (each with an `id`) and the `edges` (e
 
 <Demo id="flow/graph-basic" />
 
-Graphs draw on a canvas once the page's script runs, so the figure reserves its height until then. Drag a node to move and pin it, double-click it to release it, and scroll or pinch to zoom.
+Graphs draw on a canvas once the page's script runs, so the figure reserves its height until then. Drag a node to move it; it rejoins the layout when you let go. Scroll or pinch to zoom, and drag the background to pan.
 
 ## Clusters
 
@@ -35,7 +35,7 @@ This figure has no code tabs: with its nodes and edges written out five times, t
 
 ## Edge style and a seed node
 
-`edgeStyle` maps a field to solid, dashed or dotted lines; here it separates local service from express service on a subway line. `seedNode` names the node the graph is built around. The seed gets a ring and a label that always shows, and it stays lit when a hover, a selection or a legend filter dims the rest. Its size still comes from `nodeSize`.
+`edgeStyle` maps a field to solid, dashed or dotted lines; here it separates local service from express service on a subway line. `seedNode` marks one node. The seed gets a ring and a label that always shows, and it stays lit when a hover, a selection or a legend filter dims the rest. Its size still comes from `nodeSize`.
 
 <Demo id="flow/graph-transit" />
 
@@ -52,7 +52,7 @@ This figure has no code tabs: with its nodes and edges written out five times, t
 | `layout.seed` | A number that makes the force layout settle the same way each time. |
 | `encoding.nodeSize`, `nodeColor`, `nodeLabel` | Node radius, fill and label text from node fields. |
 | `encoding.edgeWidth`, `edgeStyle` | Edge width and line style from edge fields. |
-| `seedNode` | The id of the node the graph centers on. |
+| `seedNode` | The id of a node to mark with a ring and an always-on label; it stays lit when the rest dims. |
 
 ## Related
 

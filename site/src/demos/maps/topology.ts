@@ -7,6 +7,7 @@
  * arc, and drops the arcs nothing uses any more. Arcs are simplified whole, with
  * their end points kept, so neighboring shapes still share their borders.
  */
+import { geoArea } from "d3-geo";
 import { quantize } from "topojson-client";
 import type {
   GeometryCollection,
@@ -15,7 +16,7 @@ import type {
   Polygon,
   Topology,
 } from "topojson-specification";
-import { type Point, ringArea, simplifyLine } from "./plane-geometry";
+import { type Point, simplifyLine } from "./plane-geometry";
 
 /** An atlas topology as us-atlas and world-atlas ship it: quantized, delta-encoded arcs. */
 export type AtlasTopology = {
@@ -37,9 +38,14 @@ export type CoarsenOptions = {
   object: string;
   /** Which geometries to keep. Default: all of them. */
   keep?: (geometry: AtlasGeometry) => boolean;
-  /** Largest distance, in degrees, a dropped point may lie from the simplified line. */
+  /** Largest distance, in degrees, a dropped point may lie from the simplified line; small shapes get less. */
   tolerance: number;
-  /** Polygons smaller than this, in square degrees, are dropped, except each geometry's largest. */
+  /**
+   * The largest tolerance as a share of a polygon's linear size (the square
+   * root of its area), so small shapes keep detail in proportion; see toleranceByArc.
+   */
+  relativeTolerance: number;
+  /** Polygons smaller than this, in square degrees of the sphere, are dropped, except each geometry's largest. */
   minArea: number;
 };
 
@@ -79,10 +85,23 @@ function polygonsOf(geometry: AtlasGeometry): number[][][] {
   return geometry.type === "Polygon" ? [geometry.arcs] : geometry.arcs;
 }
 
+/** Square degrees in one steradian, the unit d3-geo measures area in. */
+const SQUARE_DEGREES_PER_STERADIAN = (180 / Math.PI) ** 2;
+
+/**
+ * A polygon's area on the sphere, in square degrees. Measured on the sphere,
+ * not on flat longitude and latitude, so a polygon that crosses the 180th
+ * meridian (Russia's east, Fiji) gets its true size.
+ */
+function polygonArea(rings: number[][], arcs: Point[][]): number {
+  const coordinates = rings.map((ring) => ringPoints(ring, arcs));
+  return geoArea({ type: "Polygon", coordinates }) * SQUARE_DEGREES_PER_STERADIAN;
+}
+
 /** The geometry without polygons under `minArea`, always keeping its largest polygon. */
 function dropSmallPolygons(geometry: AtlasGeometry, arcs: Point[][], minArea: number) {
   const polygons = polygonsOf(geometry);
-  const areas = polygons.map(([outer = []]) => ringArea(ringPoints(outer, arcs)));
+  const areas = polygons.map((rings) => polygonArea(rings, arcs));
   const largest = Math.max(...areas);
   const kept = polygons.filter((_, index) => {
     const area = areas[index] ?? 0;
@@ -113,6 +132,28 @@ function minPointsByArc(geometries: AtlasGeometry[]): Map<number, number> {
 }
 
 /**
+ * The tolerance each arc is simplified to: the requested tolerance, capped at
+ * a share of the linear size (square root of the area) of the smallest polygon
+ * the arc borders. A fixed tolerance in degrees would shave a small country
+ * such as Luxembourg or Qatar down to a fraction of its area while barely
+ * touching Russia, so small shapes keep detail in proportion to their size.
+ */
+function toleranceByArc(
+  geometries: AtlasGeometry[],
+  arcs: Point[][],
+  { tolerance, relativeTolerance }: CoarsenOptions,
+): Map<number, number> {
+  const tolerances = new Map<number, number>();
+  for (const polygon of geometries.flatMap(polygonsOf)) {
+    const cap = relativeTolerance * Math.sqrt(polygonArea(polygon, arcs));
+    for (const arc of polygon.flat().map(arcOf)) {
+      tolerances.set(arc, Math.min(tolerances.get(arc) ?? tolerance, cap));
+    }
+  }
+  return tolerances;
+}
+
+/**
  * The arc simplified, with the tolerance halved until at least `minPoints`
  * points remain. An arc with too few points to begin with stays as it is.
  */
@@ -139,8 +180,8 @@ function renumberArcs(geometry: AtlasGeometry, renumber: Map<number, number>): A
 
 /**
  * A copy of one object of `atlas`, reduced for a demo: only the kept
- * geometries, no polygons under `minArea`, arcs simplified to `tolerance`, and
- * only the arcs still in use.
+ * geometries, no polygons under `minArea`, arcs simplified to at most
+ * `tolerance` (less for small shapes), and only the arcs still in use.
  *
  * @throws {Error} When the atlas has no object named `options.object`.
  */
@@ -159,6 +200,7 @@ export function coarsenTopology(atlas: AtlasTopology, options: CoarsenOptions): 
   ];
   const renumber = new Map(used.map((oldIndex, newIndex) => [oldIndex, newIndex]));
   const minPoints = minPointsByArc(geometries);
+  const tolerances = toleranceByArc(geometries, decoded, options);
   const collection: GeometryCollection = {
     type: "GeometryCollection",
     geometries: geometries.map((geometry) => renumberArcs(geometry, renumber)),
@@ -166,7 +208,11 @@ export function coarsenTopology(atlas: AtlasTopology, options: CoarsenOptions): 
   const simplified: Topology<Objects> = {
     type: "Topology",
     arcs: used.map((index) =>
-      simplifyArc(decoded[index] ?? [], options.tolerance, minPoints.get(index) ?? 2),
+      simplifyArc(
+        decoded[index] ?? [],
+        tolerances.get(index) ?? options.tolerance,
+        minPoints.get(index) ?? 2,
+      ),
     ),
     objects: { [options.object]: collection },
   };

@@ -45,7 +45,9 @@ The same spec draws the world with `world-atlas`, whose features are keyed by IS
 
 <Demo id="maps/choropleth-world" tabs={false} />
 
-## A diverging scale, joined by name
+## A region, a diverging scale and a join by name
+
+A map draws only the features in its topology, so passing a subset of the states maps one region and fits it to the frame. This one keeps ten Southeast states.
 
 `geo.idField` joins on a feature property instead of the id. The us-atlas states carry a `name` property, so rows keyed by state name join with `idField: "name"`. A diverging `scheme` such as `"redBlue"` suits values on both sides of zero: the classes are spread evenly around zero, with an odd number of them so the middle class is labeled as near zero.
 

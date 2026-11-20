@@ -9,7 +9,7 @@ import { stateEconomies } from "@datasets/state-economies";
 import { usUnemployment } from "@datasets/us-unemployment";
 import { defineDemo } from "../types";
 import { centerOf } from "./centers";
-import { usStates, worldCountries, worldLand } from "./geography";
+import { usStates, usStatesBasemap, worldCountries, worldLand } from "./geography";
 import { sourceOf, sourceWithGeography } from "./sources";
 
 /** The ten largest state economies, each placed at the center of its state. */
@@ -44,7 +44,7 @@ export const basicSymbolMap = defineDemo({
   height: 440,
   spec: {
     type: "map",
-    geo: { features: usStates, projection: "albersUsa" },
+    geo: { features: usStatesBasemap, projection: "albersUsa" },
     data: [],
     encoding: { key: { field: "id", type: "nominal" } },
     points: {
@@ -69,7 +69,7 @@ export const coloredSymbolMap = defineDemo({
   height: 440,
   spec: {
     type: "map",
-    geo: { features: usStates, projection: "albersUsa" },
+    geo: { features: usStatesBasemap, projection: "albersUsa" },
     data: [],
     encoding: { key: { field: "id", type: "nominal" } },
     points: {

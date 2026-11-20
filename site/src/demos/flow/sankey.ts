@@ -49,6 +49,7 @@ export const funnelSankey = defineDemo({
     type: "sankey",
     data: [...userJourney.data],
     encoding: flowEncoding(",.0f"),
+    nodeAlign: "left",
     chrome: {
       title: "10,000 visitors in, 720 paying users out",
       subtitle: "One month's visitors from landing page to plan",
