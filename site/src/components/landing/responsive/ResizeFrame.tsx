@@ -16,7 +16,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { LiveChart } from "../story/live-chart";
+import { LiveChart } from "../../shared/LiveChart";
 import {
   breakpointFor,
   COMPACT_BELOW,
@@ -25,7 +25,7 @@ import {
   type WidthRange,
   widthAfterKey,
 } from "./frame-width";
-import { responsiveSource, responsiveSpec } from "./responsive-spec";
+import { responsiveSpec } from "./responsive-spec";
 
 /** The narrowest the frame goes: a small phone's chart column. */
 const MIN_WIDTH = 280;
@@ -93,7 +93,7 @@ export function ResizeFrame({ children }: ResizeFrameProps) {
   };
 
   return (
-    <figure className="resize-figure">
+    <div className="resize-figure">
       <div className="resize-readout">
         <span className="tabular-nums" data-resize-width>
           {width} px
@@ -139,10 +139,6 @@ export function ResizeFrame({ children }: ResizeFrameProps) {
           />
         </div>
       </div>
-      <figcaption className="figure-caption resize-caption">
-        Drag the frame's right edge, or focus it and use the arrow keys. Source:{" "}
-        <a href={responsiveSource.url}>{responsiveSource.label}</a>.
-      </figcaption>
-    </figure>
+    </div>
   );
 }

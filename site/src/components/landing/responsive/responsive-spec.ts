@@ -1,8 +1,8 @@
 /**
  * The chart inside the resize frame: US inflation 2019 to 2024 with a range,
  * a peak callout and the Fed's target as a reference line, so the compact
- * layout has something visible to do (annotations become numbered notes, the
- * axis thins its ticks). One spec serves every width.
+ * layout has something visible to do: the axis drops to every other year and
+ * the title wraps. One spec serves every width.
  */
 import { usInflation } from "@datasets/us-inflation";
 import type { ChartSpec } from "@opendata-ai/openchart-core";
@@ -30,7 +30,7 @@ export const responsiveSpec: ChartSpec = {
       x1: "2021-04-01",
       x2: "2023-04-01",
       label: "Above 4%",
-      labelAnchor: "top",
+      labelAnchor: "bottom",
     },
     {
       id: "peak",
@@ -38,8 +38,9 @@ export const responsiveSpec: ChartSpec = {
       x: "2022-07-01",
       y: 8.5,
       text: "Peak: **8.5%** in mid-2022",
-      anchor: "right",
-      offset: { dx: 16, dy: -4 },
+      // Left of the peak, so the callout stays inside a 280px frame.
+      anchor: "left",
+      offset: { dx: -16, dy: 0 },
       connector: true,
     },
     { id: "target", type: "refline", y: 2, label: "Fed 2% target", style: "dashed" },

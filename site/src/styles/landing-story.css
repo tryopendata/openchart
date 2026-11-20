@@ -21,7 +21,8 @@
   .responsive-head,
   .kinds-head,
   .motion-head {
-    @apply grid gap-6 lg:grid-cols-12 lg:gap-8;
+    /* The space before the figure lives here: PublishedFigure resets its own margin. */
+    @apply mb-10 grid gap-6 lg:mb-14 lg:grid-cols-12 lg:gap-8;
   }
 
   .story-head > h2,
@@ -48,8 +49,10 @@
 
   /* ---- #story: paragraphs scroll past a sticky chart ---------------------- */
 
+  /* Story.astro sets the whole story in a PublishedFigure: its rule, then the
+     story, then the source line once the last paragraph has passed. */
   .story-layout {
-    @apply mt-10 grid lg:mt-16 lg:grid-cols-12 lg:gap-x-8;
+    @apply grid lg:grid-cols-12 lg:gap-x-8;
   }
 
   /* Narrow screens: the chart sticks to the top and the steps scroll under it. */
@@ -69,10 +72,6 @@
 
   .story-static {
     @apply absolute inset-0;
-  }
-
-  .story-caption {
-    @apply mt-1 mb-1;
   }
 
   .story-steps {
@@ -141,11 +140,11 @@
   /* ---- #motion: a chart beside a bench of controls ------------------------ */
 
   .motion-bench-layout {
-    @apply mt-10 grid gap-10 lg:mt-14 lg:grid-cols-12 lg:gap-8;
+    @apply grid gap-10 lg:grid-cols-12 lg:gap-8;
   }
 
-  .motion-figure {
-    @apply border-line-strong m-0 border-t pt-4 lg:col-span-8;
+  .motion-stage {
+    @apply min-w-0 lg:col-span-8;
   }
 
   .motion-chart {
@@ -153,11 +152,11 @@
   }
 
   .motion-bench {
-    @apply border-line-strong border-t lg:col-span-4;
+    @apply lg:col-span-4;
   }
 
   .motion-row {
-    @apply border-line m-0 flex flex-wrap items-center gap-3 border-b px-0 py-4;
+    @apply border-line m-0 flex flex-wrap items-center gap-3 border-b px-0 py-4 first:pt-0;
   }
 
   .motion-row .btn {
@@ -211,7 +210,7 @@
   /* ---- #kinds: an uneven portfolio grid ---------------------------------- */
 
   .kinds-grid {
-    @apply mt-10 grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 lg:mt-14;
+    @apply grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2;
     --sf-reveal-step: 90ms;
   }
 
@@ -282,12 +281,8 @@
 
   /* ---- #responsive: a frame with a draggable edge ------------------------- */
 
-  .resize-figure {
-    @apply mt-10 lg:mt-14;
-  }
-
   .resize-readout {
-    @apply border-line-strong flex items-baseline gap-4 border-t pt-3 font-mono text-sm;
+    @apply flex items-baseline gap-4 font-mono text-sm;
   }
 
   .resize-breakpoint {
@@ -336,10 +331,6 @@
   .resize-handle:focus-visible::before,
   .resize-frame[data-dragging] .resize-handle::before {
     @apply bg-accent border-accent h-20;
-  }
-
-  .resize-caption {
-    @apply mt-4;
   }
 }
 

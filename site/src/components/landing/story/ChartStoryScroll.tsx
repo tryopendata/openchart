@@ -7,12 +7,13 @@
  *
  * Server and pre-hydration render: every paragraph in full ink and the static
  * SVG of the finished chart (children), so the story reads without JavaScript.
+ * Story.astro sets the whole story in a PublishedFigure, which carries the source.
  */
 import type { ChartSpec } from "@opendata-ai/openchart-core";
 import type { ChartStoryInstance, ScrollDriver } from "@opendata-ai/openchart-vanilla/story";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import type { LandingStoryStep } from "../../../landing/story";
-import { usePageChartTheme } from "./page-theme";
+import { usePageChartTheme } from "../../shared/page-theme";
 import { changeExcerpt } from "./story-change";
 
 /** Where the step trigger line sits, as a fraction of the viewport: below the sticky chart on narrow screens. */
@@ -22,8 +23,6 @@ const WIDE_QUERY = "(min-width: 1024px)";
 export type ChartStoryScrollProps = {
   spec: ChartSpec;
   steps: LandingStoryStep[];
-  /** The figure's source line, without the "Source:" prefix. */
-  source: { label: string; url?: string };
   /** The static SVGs of the finished chart. */
   children?: ReactNode;
 };
@@ -64,7 +63,7 @@ async function mountStory(
 }
 
 /** The scroll story: sticky chart, scrolling paragraphs, each with the spec field it sets. */
-export function ChartStoryScroll({ spec, steps, source, children }: ChartStoryScrollProps) {
+export function ChartStoryScroll({ spec, steps, children }: ChartStoryScrollProps) {
   const host = useRef<HTMLDivElement>(null);
   const stepElements = useRef<HTMLElement[]>([]);
   const [current, setCurrent] = useState(-1);
@@ -107,16 +106,10 @@ export function ChartStoryScroll({ spec, steps, source, children }: ChartStorySc
   return (
     <div className="story-layout">
       <div className="story-panel">
-        <figure className="story-figure">
-          <div className="story-stage">
-            <div ref={host} className="story-host" />
-            {live ? null : <div className="story-static">{children}</div>}
-          </div>
-          <figcaption className="figure-caption story-caption">
-            Source: {source.url ? <a href={source.url}>{source.label}</a> : source.label}. Returns
-            are rebased to 1 January 2022 and include reinvested dividends.
-          </figcaption>
-        </figure>
+        <div className="story-stage">
+          <div ref={host} className="story-host" />
+          {live ? null : <div className="story-static">{children}</div>}
+        </div>
       </div>
       <ol className="story-steps">
         {steps.map((step, index) => (

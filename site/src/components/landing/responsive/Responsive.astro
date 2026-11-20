@@ -17,8 +17,9 @@
  */
 import { landingCopy } from "../../../landing/copy";
 import { staticSvg } from "../../../lib/demo/static-svg";
+import PublishedFigure from "../../shared/PublishedFigure.astro";
 import { ResizeFrame } from "./ResizeFrame";
-import { responsiveSpec } from "./responsive-spec";
+import { responsiveSource, responsiveSpec } from "./responsive-spec";
 import "../../../styles/landing-story.css";
 
 const statics = [false, true]
@@ -46,12 +47,17 @@ const statics = [false, true]
         {landingCopy.headings.responsive}
       </h2>
       <p class="responsive-lede" data-motion-part>
-        Under 400 pixels the chart switches to its compact layout: annotations become numbered notes
-        below the plot and the axis drops ticks. Nothing in the spec changes.
+        Under 400 pixels the chart switches to its compact layout: the axis labels every other year
+        and the title wraps to fit. The spec is the same at every width.
       </p>
     </div>
-    <ResizeFrame client:visible>
-      <Fragment set:html={statics} />
-    </ResizeFrame>
+    <PublishedFigure
+      source={responsiveSource}
+      note="Drag the frame's right edge, or focus it and use the arrow keys."
+    >
+      <ResizeFrame client:visible>
+        <Fragment set:html={statics} />
+      </ResizeFrame>
+    </PublishedFigure>
   </div>
 </section>

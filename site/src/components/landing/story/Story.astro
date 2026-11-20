@@ -15,6 +15,7 @@ import { deepMergeSpec } from "@opendata-ai/openchart-core";
 import { landingCopy } from "../../../landing/copy";
 import { storyBaseSpec, storySource, storySteps } from "../../../landing/story";
 import { staticSvg } from "../../../lib/demo/static-svg";
+import PublishedFigure from "../../shared/PublishedFigure.astro";
 import { ChartStoryScroll } from "./ChartStoryScroll";
 import "../../../styles/landing-story.css";
 
@@ -40,8 +41,13 @@ const statics = [false, true]
         and the library animates the difference.
       </p>
     </div>
-    <ChartStoryScroll client:visible spec={storyBaseSpec} steps={storySteps} source={storySource}>
-      <Fragment set:html={statics} />
-    </ChartStoryScroll>
+    <PublishedFigure
+      source={storySource}
+      note="Returns are rebased to 1 January 2022 and include reinvested dividends."
+    >
+      <ChartStoryScroll client:visible spec={storyBaseSpec} steps={storySteps}>
+        <Fragment set:html={statics} />
+      </ChartStoryScroll>
+    </PublishedFigure>
   </div>
 </section>

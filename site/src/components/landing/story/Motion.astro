@@ -12,8 +12,9 @@
  */
 import { landingCopy } from "../../../landing/copy";
 import { staticSvg } from "../../../lib/demo/static-svg";
+import PublishedFigure from "../../shared/PublishedFigure.astro";
 import { MotionReplay } from "./MotionReplay";
-import { FIRST_MONTHS, payrollSpec } from "./motion-spec";
+import { FIRST_MONTHS, motionSource, payrollSpec } from "./motion-spec";
 import "../../../styles/landing-story.css";
 
 const opening = payrollSpec(FIRST_MONTHS, "fluid");
@@ -32,8 +33,10 @@ const statics = [false, true]
         {landingCopy.headings.motion}
       </h2>
     </div>
-    <MotionReplay client:visible>
-      <Fragment set:html={statics} />
-    </MotionReplay>
+    <PublishedFigure source={motionSource}>
+      <MotionReplay client:visible>
+        <Fragment set:html={statics} />
+      </MotionReplay>
+    </PublishedFigure>
   </div>
 </section>

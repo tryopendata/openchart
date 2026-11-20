@@ -6,15 +6,14 @@
  * changed. The chart animates through the library's own transitions; under
  * reduced motion the library skips them and the controls still change the chart.
  */
-import { type ReactNode, useState } from "react";
-import { LiveChart } from "./live-chart";
+import { type ReactNode, useMemo, useState } from "react";
+import { LiveChart } from "../../shared/LiveChart";
 import {
   FIRST_MONTHS,
   lastMonthName,
   MOTION_CHOICES,
   type MotionChoice,
   motionExcerpt,
-  motionSource,
   nextMonthCount,
   payrollSpec,
 } from "./motion-spec";
@@ -31,17 +30,15 @@ export function MotionReplay({ children }: MotionReplayProps) {
   const [mountKey, setMountKey] = useState(0);
   const [lastChange, setLastChange] = useState<"data" | "animation" | null>(null);
   const following = nextMonthCount(months);
+  const spec = useMemo(() => payrollSpec(months, choice), [months, choice]);
 
   return (
     <div className="motion-bench-layout">
-      <figure className="motion-figure">
-        <LiveChart spec={payrollSpec(months, choice)} mountKey={mountKey} className="motion-chart">
+      <div className="motion-stage">
+        <LiveChart spec={spec} mountKey={mountKey} className="motion-chart">
           {children}
         </LiveChart>
-        <figcaption className="figure-caption motion-caption">
-          Source: <a href={motionSource.url}>{motionSource.label}</a>.
-        </figcaption>
-      </figure>
+      </div>
 
       <div className="motion-bench">
         <div className="motion-row">
