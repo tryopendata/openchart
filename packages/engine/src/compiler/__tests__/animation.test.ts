@@ -258,23 +258,23 @@ describe('clampStaggerDelay', () => {
   });
 
   it('returns delay unchanged for small counts', () => {
-    // 9 gaps of 30 = 270, under the 300ms cap
+    // 9 gaps of 30 = 270, under the 450ms cap
     expect(clampStaggerDelay(30, 10)).toBe(30);
   });
 
   it('clamps delay for large counts', () => {
-    // 199 gaps of 30 = 5970 > 300, so clamp to 300/199
-    expect(clampStaggerDelay(30, 200)).toBeCloseTo(300 / 199, 10);
+    // 199 gaps of 30 = 5970 > 450, so clamp to 450/199
+    expect(clampStaggerDelay(30, 200)).toBeCloseTo(450 / 199, 10);
   });
 
-  it('clamps to cap total at 300ms', () => {
-    // 5 bars at the default 80ms land 75ms apart (4 gaps); 40 bars 300/39 apart
-    expect(clampStaggerDelay(80, 5)).toBe(75);
-    expect(clampStaggerDelay(80, 40)).toBeCloseTo(300 / 39, 10);
+  it('clamps to cap total at 450ms', () => {
+    // 7 bars at the default 80ms land 75ms apart (6 gaps); 40 bars 450/39 apart
+    expect(clampStaggerDelay(80, 7)).toBe(75);
+    expect(clampStaggerDelay(80, 40)).toBeCloseTo(450 / 39, 10);
   });
 
   it('does not increase delay when already under the cap', () => {
-    // 5 * 50 = 250 < 300, keeps at 5
+    // 49 gaps of 5 = 245 < 450, keeps at 5
     expect(clampStaggerDelay(5, 50)).toBe(5);
   });
 });

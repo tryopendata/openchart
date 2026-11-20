@@ -108,7 +108,7 @@
       animation-delay: var(
         --oc-line-point-delay,
         calc(
-          var(--oc-line-point-after, calc(var(--oc-animation-duration) * 0.064336)) +
+          var(--oc-line-point-after, calc(var(--oc-animation-duration) * 0.2)) +
           var(--oc-animation-stagger) *
           var(--oc-mark-index, 0)
         )
@@ -121,7 +121,7 @@
       animation:
         oc-enter-rise var(--oc-text-dur, var(--oc-animation-duration))
         var(--oc-animation-ease, var(--oc-ease-smooth)) both,
-        oc-enter-fade-only 140ms var(--oc-ease-smooth) both;
+        oc-enter-fade-only 140ms var(--oc-ease-snap) both;
       animation-delay: var(
         --oc-text-delay,
         calc(var(--oc-animation-stagger) * var(--oc-mark-index, 0))
@@ -161,7 +161,7 @@
       animation-delay: var(
         --oc-label-delay,
         calc(
-          var(--oc-label-after, calc(var(--oc-animation-duration) * 0.3)) +
+          var(--oc-label-after, calc(var(--oc-animation-duration) * 0.727459)) +
           var(--oc-animation-stagger) *
           var(--oc-mark-index, 0)
         )
@@ -179,7 +179,7 @@
       animation-delay: var(
         --oc-endpoint-label-delay,
         calc(
-          var(--oc-endpoint-label-after, calc(var(--oc-animation-duration) * 0.261034)) +
+          var(--oc-endpoint-label-after, calc(var(--oc-animation-duration) * 0.656536)) +
           var(--oc-animation-stagger) *
           var(--oc-mark-index, 0)
         )
@@ -193,7 +193,7 @@
       animation-delay: var(
         --oc-annotation-enter-delay,
         calc(
-          var(--oc-annotation-after, calc(var(--oc-animation-duration) * 0.206)) +
+          var(--oc-annotation-after, calc(var(--oc-animation-duration) * 0.539502)) +
           var(--oc-annotation-delay, 150ms)
         )
       );
@@ -277,7 +277,7 @@
       animation-delay: var(
         --oc-sankey-link-delay,
         calc(
-          var(--oc-sankey-link-after, calc(var(--oc-animation-duration) * 0.064336)) +
+          var(--oc-sankey-link-after, calc(var(--oc-animation-duration) * 0.2)) +
           var(--oc-animation-stagger) *
           var(--oc-mark-index, 0)
         )
@@ -290,7 +290,7 @@
       animation:
         oc-enter-slide var(--oc-barlist-row-dur, calc(var(--oc-animation-duration) * 0.6))
         var(--oc-animation-ease, var(--oc-ease-smooth)) both,
-        oc-enter-fade-only 140ms var(--oc-ease-smooth) both;
+        oc-enter-fade-only 140ms var(--oc-ease-snap) both;
       animation-delay: var(
         --oc-barlist-row-delay,
         calc(var(--oc-animation-stagger) * var(--oc-mark-index, 0))

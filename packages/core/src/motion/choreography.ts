@@ -17,6 +17,7 @@
 
 import {
   type CurveName,
+  evalCubicBezier,
   evalCurve,
   invertCurve,
   isMonotoneCurve,
@@ -25,6 +26,8 @@ import {
 import type { MotionPhase } from './sample';
 import { sampleMotion } from './sample';
 import { MAP_POINT_STAGGER_FALLBACK_MS, MAP_SWEEP_BUDGET_MS, mapFeatureDuration } from './stagger';
+
+export { evalCubicBezier } from './curves';
 
 // ---------------------------------------------------------------------------
 // Keyframes
@@ -460,7 +463,7 @@ export interface EntranceRoleRow extends EntranceRoleDef {
 }
 
 /** Curve of the quick opacity track on roles with `fade`. */
-export const FADE_CURVE: CurveName = 'smooth';
+export const FADE_CURVE: CurveName = 'snap';
 
 /** The quick fade text and labels share: opaque well before their geometry settles. */
 const TEXT_FADE_MS = 140;
@@ -1179,44 +1182,6 @@ export function entranceEndMs(context: EntranceEndContext): number {
 // ---------------------------------------------------------------------------
 // Easing per role
 // ---------------------------------------------------------------------------
-
-/** Evaluate a CSS cubic-bezier(x1, y1, x2, y2) at time progress t. */
-export function evalCubicBezier(
-  bezier: readonly [number, number, number, number],
-  t: number,
-): number {
-  const [x1, y1, x2, y2] = bezier;
-  const x = t < 0 ? 0 : t > 1 ? 1 : t;
-  if (x1 === y1 && x2 === y2) return x;
-  const cx = 3 * x1;
-  const bx = 3 * (x2 - x1) - cx;
-  const ax = 1 - cx - bx;
-  const cy = 3 * y1;
-  const by = 3 * (y2 - y1) - cy;
-  const ay = 1 - cy - by;
-  const sampleX = (s: number) => ((ax * s + bx) * s + cx) * s;
-  const slopeX = (s: number) => (3 * ax * s + 2 * bx) * s + cx;
-  // Newton first, bisection as the fallback (x(s) is monotone for x1, x2 in [0, 1]).
-  let s = x;
-  for (let i = 0; i < 8; i++) {
-    const err = sampleX(s) - x;
-    if (Math.abs(err) < 1e-7) return ((ay * s + by) * s + cy) * s;
-    const d = slopeX(s);
-    if (Math.abs(d) < 1e-6) break;
-    s -= err / d;
-  }
-  let lo = 0;
-  let hi = 1;
-  s = x;
-  for (let i = 0; i < 40; i++) {
-    const v = sampleX(s);
-    if (Math.abs(v - x) < 1e-7) break;
-    if (v < x) lo = s;
-    else hi = s;
-    s = (lo + hi) / 2;
-  }
-  return ((ay * s + by) * s + cy) * s;
-}
 
 /**
  * The eased progress a role's CSS timing function gives at time progress t of

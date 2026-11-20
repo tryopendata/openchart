@@ -6,13 +6,13 @@
  */
 
 /** Maximum total stagger time in ms. Keeps the whole sweep inside one beat. */
-export const MAX_TOTAL_STAGGER_MS = 300;
+export const MAX_TOTAL_STAGGER_MS = 450;
 
 /**
  * Gap between consecutive entering elements: the authored delay is a ceiling,
  * and the whole spread never exceeds MAX_TOTAL_STAGGER_MS, so
- * `gap = min(delay, 300 / (n - 1))`. Five bars at the default 80ms land 75ms
- * apart; forty land 300/39 ms apart. A delay of 0 stays 0, and one element
+ * `gap = min(delay, 450 / (n - 1))`. Five bars at the default 80ms land 80ms
+ * apart (the cap allows 112.5); forty land 450/39 ms apart. A delay of 0 stays 0, and one element
  * has no gap.
  */
 export function clampStaggerDelay(delay: number, elementCount: number): number {

@@ -40,6 +40,9 @@ describe('curve registry', () => {
     'smooth',
     'snappy',
     'gentle',
+    'snap',
+    'punch',
+    'glide',
   ] as const)('evalCurve(%s) matches the tokens.css linear() at every stop', (name) => {
     const emitted = emittedStops(`--oc-ease-${name}`);
     const stops = curveStops(name);
@@ -76,7 +79,7 @@ describe('curve registry', () => {
   });
 
   it('MonotoneCurveName lists exactly the monotone curves', () => {
-    const monotone: MonotoneCurveName[] = ['snap', 'smooth', 'gentle', 'snappy'];
+    const monotone: MonotoneCurveName[] = ['snap', 'glide', 'smooth', 'gentle', 'snappy'];
     expect([...CURVE_NAMES.filter(isMonotoneCurve)].sort()).toEqual([...monotone].sort());
   });
 
@@ -115,15 +118,21 @@ describe('curve registry', () => {
     }
   });
 
-  it('snap and smooth share one set of samples', () => {
-    expect(curveStops('smooth')).toEqual(curveStops('snap'));
-    expect(curveStops('snap').some((s) => s.t === 0.2)).toBe(true);
+  it('glide and smooth share one set of samples', () => {
+    expect(curveStops('smooth')).toEqual(curveStops('glide'));
+    expect(curveStops('glide').some((s) => s.t === 0.2)).toBe(true);
   });
 
-  it('smooth has Decks snap attack and never exceeds 1', () => {
-    expect(evalCurve('smooth', 0.2)).toBeGreaterThanOrEqual(0.89);
-    expect(evalCurve('smooth', 0.1)).toBeGreaterThanOrEqual(0.66);
+  it('smooth starts gently, settles late and never exceeds 1', () => {
+    expect(evalCurve('smooth', 0.1)).toBeCloseTo(0.1562, 4);
+    expect(evalCurve('smooth', 0.2)).toBe(0.5);
+    expect(evalCurve('smooth', 0.7)).toBeCloseTo(0.9633, 4);
     expect(Math.max(...grid.map((t) => evalCurve('smooth', t)))).toBeLessThanOrEqual(1);
+  });
+
+  it('snap keeps the Decks attack for quick fades', () => {
+    expect(evalCurve('snap', 0.2)).toBeGreaterThanOrEqual(0.89);
+    expect(evalCurve('snap', 0.1)).toBeGreaterThanOrEqual(0.66);
   });
 
   it.each(['smooth', 'snappy', 'gentle'] as const)('%s is monotone and never exceeds 1', (name) => {
