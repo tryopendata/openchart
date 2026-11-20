@@ -151,17 +151,20 @@
       animation-play-state: var(--oc-play-state, running);
     }
 
-    /* Data labels ride their mark: a bar's label translates from --oc-label-from
-       on the bar's own delay, duration and curve, so it stays on the tip, and
-       fades in quickly. Other labels fade in place with their mark. */
+    /* Data labels (bar values, line end labels, pie slice labels) fade in place
+       once their mark has landed: when the bar at the label's --oc-mark-index
+       reaches 0.97. Lines and arcs share the bar's duration and curve, so the bar
+       anchor stands in for them. Labels never move during the entrance. */
     & .oc-mark-label {
-      animation:
-        oc-enter-label var(--oc-label-dur, var(--oc-animation-duration))
-        var(--oc-animation-ease, var(--oc-ease-smooth)) both,
-        oc-enter-fade-only 140ms var(--oc-ease-smooth) both;
+      animation: oc-enter-fade-only var(--oc-label-dur, 260ms)
+        var(--oc-animation-ease, var(--oc-ease-smooth)) both;
       animation-delay: var(
         --oc-label-delay,
-        calc(var(--oc-animation-stagger) * var(--oc-mark-index, 0))
+        calc(
+          var(--oc-label-after, calc(var(--oc-animation-duration) * 0.3)) +
+          var(--oc-animation-stagger) *
+          var(--oc-mark-index, 0)
+        )
       );
       animation-play-state: var(--oc-play-state, running);
     }

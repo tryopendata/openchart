@@ -156,18 +156,6 @@
     }
   }
 
-  /* Value label ride: translate from --oc-label-from (the bar's baseline-to-tip
-     extent, stamped from layout) to rest on the bar's own delay, duration and
-     curve, so the label stays on the tip. Unstamped labels do not move. */
-  @keyframes oc-enter-label {
-    from {
-      transform: translate(var(--oc-label-from, 0px, 0px));
-    }
-    to {
-      transform: translate(0px, 0px);
-    }
-  }
-
   /* Table row entrance: slide up only, no opacity (cells fade independently
      to avoid opacity compounding between row and cell animations) */
   @keyframes oc-table-enter-row {

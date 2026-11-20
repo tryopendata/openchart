@@ -177,14 +177,6 @@ export const KEYFRAMES = {
       { offset: 1, values: { transform: translateY(0) } },
     ],
   },
-  'oc-enter-label': {
-    comment:
-      "Value label ride: translate from --oc-label-from (the bar's baseline-to-tip\nextent, stamped from layout) to rest on the bar's own delay, duration and\ncurve, so the label stays on the tip. Unstamped labels do not move.",
-    stops: [
-      { offset: 0, values: { transform: css('translate(var(--oc-label-from, 0px, 0px))') } },
-      { offset: 1, values: { transform: translate(0, 0) } },
-    ],
-  },
   'oc-table-enter-row': {
     comment:
       'Table row entrance: slide up only, no opacity (cells fade independently\nto avoid opacity compounding between row and cell animations)',
@@ -472,6 +464,8 @@ export const FADE_CURVE: CurveName = 'smooth';
 
 /** The quick fade text and labels share: opaque well before their geometry settles. */
 const TEXT_FADE_MS = 140;
+/** Data labels fade in place after their mark lands. */
+const LABEL_FADE_MS = 260;
 /** Points and arcs: their only entrance is opacity. */
 const POINT_FADE_MS = 300;
 
@@ -646,15 +640,14 @@ const ROLE_DEFS: readonly EntranceRoleDef[] = [
     name: 'label',
     scope: 'chart',
     comment:
-      "Data labels ride their mark: a bar's label translates from --oc-label-from\non the bar's own delay, duration and curve, so it stays on the tip, and\nfades in quickly. Other labels fade in place with their mark.",
+      "Data labels (bar values, line end labels, pie slice labels) fade in place\nonce their mark has landed: when the bar at the label's --oc-mark-index\nreaches 0.97. Lines and arcs share the bar's duration and curve, so the bar\nanchor stands in for them. Labels never move during the entrance.",
     selectors: ['.oc-mark-label'],
     emit: 'shorthand',
-    keyframe: 'oc-enter-label',
+    keyframe: 'oc-enter-fade-only',
     timing: AUTHOR,
     durationBasis: 'phase',
-    duration: base(1),
-    fade: { ms: TEXT_FADE_MS },
-    delay: { stagger: 'mark' },
+    duration: fixed(LABEL_FADE_MS),
+    delay: { after: when('bar', 0.97), stagger: 'mark' },
   },
   {
     name: 'endpoint-label',

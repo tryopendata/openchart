@@ -150,16 +150,26 @@ describe('choreography table', () => {
     }
   });
 
-  it('text and labels fade over 140ms under their geometry', () => {
-    for (const role of ['text', 'label'] as const) {
-      expect(entranceRole(role).fade).toEqual({ ms: 140 });
-      expect(keyframeProperties(entranceRole(role).keyframe)).toEqual(['transform']);
-    }
+  it('text fades over 140ms under its geometry', () => {
+    expect(entranceRole('text').fade).toEqual({ ms: 140 });
+    expect(keyframeProperties(entranceRole('text').keyframe)).toEqual(['transform']);
     expect(KEYFRAMES['oc-enter-rise'].stops[0].values.transform).toEqual({
       type: 'translateY',
       value: 0.6,
       unit: 'em',
     });
+  });
+
+  it('labels fade in place once their bar reaches 0.97', () => {
+    const label = entranceRole('label');
+    expect(label.fade).toBeUndefined();
+    expect(label.keyframe).toBe('oc-enter-fade-only');
+    expect(label.duration).toEqual({ kind: 'fixed', ms: 260 });
+    expect(label.delay).toEqual({
+      after: { kind: 'progress', progress: 0.97, of: 'bar' },
+      stagger: 'mark',
+    });
+    expect(Object.keys(KEYFRAMES)).not.toContain('oc-enter-label');
   });
 });
 
@@ -205,7 +215,7 @@ function goldens(D: number, reach: (p: number) => number): Record<EntranceRole, 
     text: [S * I, D, D, 140],
     rule: [S * I, 0.5 * D, 0, 0.5 * D],
     tick: [S * I, 0.5 * D, 0, 0.5 * D],
-    label: [S * I, D, D, 140],
+    label: [S * I + D * reach(0.97), 260, 0, 260],
     // Once its own series' line (same index) is 95% of the way across.
     'endpoint-label': [S * I + D * reach(0.95), 300, 0, 300],
     // When the last mark reaches 0.9, plus the authored gap.
@@ -392,7 +402,7 @@ describe('role easing', () => {
   it('follows the author ease, a fixed curve, or a fixed CSS function', () => {
     const snappy: MotionPhase = { duration: 600, ease: 'snappy' };
     expect(evalRoleEase('bar', snappy, 0.4)).toBe(evalCurve('snappy', 0.4));
-    // Labels ride their bar, so they follow the author ease too.
+    // Labels fade on the author ease.
     expect(evalRoleEase('label', snappy, 0.4)).toBe(evalCurve('snappy', 0.4));
     // Annotations hard-code --oc-ease-smooth regardless of the author's ease.
     expect(evalRoleEase('annotation', snappy, 0.4)).toBe(evalCurve('smooth', 0.4));
