@@ -1,0 +1,48 @@
+---
+title: Layers
+description: Draw several marks on one plot with a layer array, such as bars with a reference rule, labelled points, or two series on independent axes.
+section: composition
+order: 1
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+A layered chart draws more than one mark in the same plot. Replace the single `mark`, `data` and `encoding` with a `layer` array, where each entry is a chart spec of its own. Put `data` or `encoding` at the top level to share them across layers, and keep the chrome there too. Use it for a reference line over bars, labels over points, or a second series that needs its own axis.
+
+When the series should not share a plot at all, split them into panels with [facets](/docs/composition/facets/). For a reference line or note that needs no data of its own, the annotations on a single chart, shown on the [column page](/docs/comparison/column/), are simpler.
+
+## Bars with a rule
+
+The first layer is a bar chart and the second is a `rule` mark drawn from a one-row dataset, here the yearly average. Layers share their x and y scales by default, so the one-row rule lands at its value on the bars' axis. A `scale.domain` on either layer pins the shared axis. The rule takes its color from the color scale, so a single-entry `range` sets it.
+
+<Demo id="composition/layer-bars-rule" />
+
+## Direct labels on points
+
+A `point` layer draws every state and a `text` layer labels only the five that carry the story. The text layer reads its words from a field with the `text` channel, and `dy` on the mark offsets each label in pixels, so it stays on the point layer's scales. Both layers share a pinned domain with headroom, so the top label does not overhang the plot.
+
+<Demo id="composition/layer-direct-labels" />
+
+## Two series on independent axes
+
+`resolve: { scale: { y: "independent" } }` gives each layer its own y axis, so series in different units can share one x axis. Color each axis to match its series with `axis.labelColor`. Here net revenue is in dollars and enrollment is a headcount, and a `condition` on the bar color turns the deficit years red.
+
+<Demo id="composition/layer-dual-axis" />
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `layer` | An array of chart specs drawn on one plot, each with its own `mark`, and its own `data` and `encoding` unless shared at the top level. |
+| `resolve.scale.y` | `"independent"` gives each layer its own y scale and axis. |
+| `encoding.y.scale.domain` | Pins the shared axis domain, for example to add headroom for labels. |
+| `mark: { type: "rule" }` | A reference line drawn from data, colored by the color scale. |
+| `mark: { type: "text", dy }` | Labels from the `text` channel, offset in pixels by `dy`. |
+| `encoding.y.axis.labelColor` | Colors an axis to match its layer. |
+| `chrome` | Title and subtitle, set once at the top level. |
+
+## Related
+
+- [Facets and small multiples](/docs/composition/facets/) for one chart per category.
+- [Column](/docs/comparison/column/) for annotations on a single chart.
+- [Line](/docs/change-over-time/line/) for series that share one axis.

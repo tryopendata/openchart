@@ -1,0 +1,54 @@
+---
+title: Facets and small multiples
+description: Repeat one chart as a grid of panels, one per category, with shared or independent scales and wrapped, row or column layouts.
+section: composition
+order: 2
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+Faceting repeats one chart as a grid of panels, one panel per value of a field. It is the better choice when several series overlap too much to read in one plot, or when the point is to compare shapes across groups.
+
+When the series are few and do not overlap, one [line chart](/docs/change-over-time/line/) with a line per series keeps them in one view. When two marks belong in the same plot, use [layers](/docs/composition/layers/).
+
+## A wrapped grid
+
+`encoding.facet` wraps panels left to right. `columns` sets the grid width, and it is computed when omitted. Scales are shared by default, so panels are directly comparable, and redundant tick labels are stripped: y-axis labels show only on the leftmost column.
+
+<Demo id="composition/facet-shared" />
+
+## Independent scales
+
+`resolve: { scale: { y: "independent" } }` gives each panel its own y domain. Each economy then fills its frame, so the shape reads and the level does not. Use it to compare the shape of each series, and keep shared scales to compare levels.
+
+<Demo id="composition/facet-independent" />
+
+## Panels in a single row
+
+`encoding.column` places the panels side by side in one row. The y axis is shared by default and each panel gets its own x axis. Each panel has a 200px minimum width, and the columns degrade responsively below that.
+
+<Demo id="composition/facet-column" />
+
+## Panels in a single column
+
+`encoding.row` stacks the panels vertically. It shares the x axis by default, so bar lengths line up between panels, and each panel gets its own y axis because the categories differ. `sort: null` keeps the panel order as it appears in the data.
+
+<Demo id="composition/facet-row" />
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `encoding.facet` | A wrapped grid of panels. Takes `field`, `type`, `sort` and `columns`. |
+| `encoding.row` | Panels stacked vertically, one per value. |
+| `encoding.column` | Panels side by side in one row. |
+| `resolve.scale` | `"shared"` or `"independent"` per channel, such as `y`. The default is shared. |
+| `sort` | On a facet channel, orders the panels. `null` keeps the data order. |
+
+The three facet channels are mutually exclusive: `row` and `column` cannot be combined, and neither can be combined with `facet`.
+
+## Related
+
+- [Layers](/docs/composition/layers/) for several marks in one plot.
+- [Line](/docs/change-over-time/line/) for a few series in one plot.
+- [Bar](/docs/comparison/bar/) for the chart used in the row layout.

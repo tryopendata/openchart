@@ -1,0 +1,52 @@
+---
+title: Grouped and stacked bars
+description: Split each bar or column into series, placed side by side to compare series or stacked end to end to read totals and parts.
+section: comparison
+order: 3
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+Grouped and stacked bars answer different questions about the same data. Grouping places the series side by side, so the reader compares one series against another. Stacking puts the series end to end, so the reader sees each total and how it divides.
+
+Both add a `color` channel to a [bar](/docs/comparison/bar/) or [column](/docs/comparison/column/) chart. When only the split matters and not the totals, a [100% stacked chart](/docs/part-to-whole/stacked-100/) is the better form.
+
+## Grouped columns
+
+Bars stack by default. `stack: null` on the value channel places the series side by side instead. Solar's lead over wind and hydro is easy to read here because every series starts at the same baseline.
+
+<Demo id="comparison/grouped-columns" />
+
+## Stacked columns
+
+`stack: "zero"` stacks the series from zero, so each column's height is the total for that year. The cost is that only the bottom series shares a baseline, so the upper series are harder to compare across years.
+
+<Demo id="comparison/stacked-columns" />
+
+## Stacked bars with labels
+
+On a horizontal stack, `labels.density: "all"` prints a value on every segment. Here the five parts of each income bracket sum to 100, so the housing segment is comparable across brackets.
+
+<Demo id="comparison/stacked-bars-labelled" />
+
+## Normalized stacks
+
+`stack: "normalize"` scales every bar to the same full length, so the chart shows each part's share instead of its size. Set the axis `format` to `".0%"` to print the ticks as percentages. Use this when the totals differ or do not matter.
+
+<Demo id="comparison/stacked-bars-normalized" />
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `encoding.color` | Splits each category into series by the field's values. |
+| `encoding.y.stack` | On a column chart, `null` groups the series side by side, `"zero"` stacks them from zero and `"normalize"` stacks them to full length. |
+| `encoding.x.stack` | The same setting on a horizontal bar chart, where the value is on `x`. |
+| `encoding.*.axis` | `title` names the axis and `format` sets how its ticks print. |
+| `labels.density` | `"all"` labels every segment and `"none"` turns the labels off. |
+
+## Related
+
+- [Bar](/docs/comparison/bar/) and [Column](/docs/comparison/column/) for a single series.
+- [Stacked to 100%](/docs/part-to-whole/stacked-100/) for part-to-whole comparisons.
+- [Stacked area](/docs/change-over-time/stacked-area/) for stacked series over continuous time.
