@@ -1,6 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
-import { pageViolations } from "./axe";
 import { site } from "../src/config";
+import { pageViolations } from "./axe";
 
 const BAR = "/docs/comparison/bar/";
 const GUIDE = "/docs/get-started/getting-started/";
