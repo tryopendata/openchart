@@ -405,8 +405,8 @@ describe('role easing', () => {
     expect(evalRoleEase('bar', snappy, 0.4)).toBe(evalCurve('snappy', 0.4));
     // Labels fade on the author ease.
     expect(evalRoleEase('label', snappy, 0.4)).toBe(evalCurve('snappy', 0.4));
-    // Annotations hard-code --oc-ease-smooth regardless of the author's ease.
-    expect(evalRoleEase('annotation', snappy, 0.4)).toBe(evalCurve('smooth', 0.4));
+    // Annotations hard-code --oc-ease-glide regardless of the author's ease.
+    expect(evalRoleEase('annotation', snappy, 0.4)).toBe(evalCurve('glide', 0.4));
     // CSS ease-in at 0.5 (cubic-bezier(0.42, 0, 1, 1)).
     expect(evalRoleEase('tilemap-tile', snappy, 0.5)).toBeCloseTo(0.3153568, 5);
   });

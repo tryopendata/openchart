@@ -189,7 +189,7 @@
 
     /* Annotations: fade in once the last mark is 90% of the way there */
     & .oc-annotation {
-      animation: oc-enter-fade-only var(--oc-annotation-dur, 300ms) var(--oc-ease-smooth) both;
+      animation: oc-enter-fade-only var(--oc-annotation-dur, 300ms) var(--oc-ease-glide) both;
       animation-delay: var(
         --oc-annotation-enter-delay,
         calc(

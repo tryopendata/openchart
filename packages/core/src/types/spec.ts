@@ -1736,7 +1736,7 @@ export interface SpringConfig {
 export interface AnimationStagger {
   /**
    * Gap between consecutive elements in ms. Default: 80. A ceiling: the whole
-   * stagger spans at most 300ms, so n elements land min(delay, 300 / (n - 1)) apart.
+   * stagger spans at most 450ms, so n elements land min(delay, 450 / (n - 1)) apart.
    */
   delay?: number;
   /** Ordering strategy. Default: 'index' (DOM order) */

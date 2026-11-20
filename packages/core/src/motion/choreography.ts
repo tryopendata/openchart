@@ -675,7 +675,7 @@ const ROLE_DEFS: readonly EntranceRoleDef[] = [
     selectors: ['.oc-annotation'],
     emit: 'shorthand',
     keyframe: 'oc-enter-fade-only',
-    timing: { kind: 'curve', curve: 'smooth' },
+    timing: { kind: 'curve', curve: 'glide' },
     durationBasis: 'phase',
     duration: fixed(300),
     delay: {
