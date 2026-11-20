@@ -1,6 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
-import { pageViolations } from "./axe";
 import { catalogPages } from "../tests/catalog-pages";
+import { pageViolations } from "./axe";
 
 // The first page of each section stands in for the section.
 const pages = Object.entries(catalogPages).map(
