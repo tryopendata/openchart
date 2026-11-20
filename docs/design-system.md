@@ -374,20 +374,28 @@ the watermark interaction.
 
 ## Motion
 
-Entrance animation is on by default (`animation: false` opts out); the defaults are 600ms
-duration, a per-mark gap of `min(80ms, 300ms / (n − 1))` so the whole sweep
-stays inside 300ms (`MAX_TOTAL_STAGGER_MS`), annotations starting once the
+Entrance animation is on by default (`animation: false` opts out); the defaults are 800ms
+duration, a per-mark gap of `min(80ms, 450ms / (n − 1))` so the whole sweep
+stays inside 450ms (`MAX_TOTAL_STAGGER_MS`), annotations starting once the
 last mark is 90% of the way plus a 150ms delay, and no overshoot on anything
 that encodes a value. Entrances start when a quarter of the chart is in view
-(`animation.enter.trigger`, default `'visible'`). Easing defaults to `smooth` (the Decks `snap` curve: about 67% of
-the way at 10% of the duration, 89% at 20%). `snappy` settles sooner and
+(`animation.enter.trigger`, default `'visible'`). Easing defaults to `smooth`, an alias of `glide`
+(`cubic-bezier(0.2, 0, 0, 1)`: a gentle start and a long deceleration, about
+16% of the way at 10% of the duration and 97% at about 73%). `snappy` settles sooner and
 `gentle` is the previous slower ease-out. A `punch` curve that overshoots
 to about 1.06 exists in the registry for accent roles only. Update transitions default to 500ms, exit
 to 120ms on `gentle` (survivors wait for removed marks to clear).
 
+Secondary elements wait for their mark. Value labels fade in place over 260ms
+once their bar reaches 97%. Line points pop in (scale 0.4 to 1 on `punch`, a
+dot's size encodes nothing) once their line reaches 97%, cascading left to
+right over 240ms. Heatmap, waffle and calendar cells pop in over 400ms on
+scattered start times spread across 600ms. Pie and donut slices fade and grow
+from the centre over 450ms.
+
 | Phase | Duration | Stagger / delay |
 |---|---|---|
-| Enter | 600ms | min(80ms, 300ms / (n − 1)) per mark |
+| Enter | 800ms | min(80ms, 450ms / (n − 1)) per mark |
 | Update | 500ms | — |
 | Exit | 120ms | survivors hold until exits finish |
 | Annotation delay | — | 150ms after the last mark reaches 90% |
@@ -400,13 +408,6 @@ and in `packages/vanilla/src/scatter-canvas/entrance.ts` for the canvas point
 layer (which cannot import the engine at runtime, so its `MAX_TOTAL_STAGGER_MS`
 is a mirrored literal, not an import). `prefers-reduced-motion` already
 suppresses all of this.
-
-These motion values were being finalized concurrently with this documentation
-pass (a second agent's working tree changes, uncommitted at the time this
-page was written) — the numbers above match the design-refresh plan's target
-and the on-disk state at write time, but re-verify against
-`packages/engine/src/compiler/animation.ts` after that work lands, in case
-the committed values diverge from the in-progress edit.
 
 ## Presets
 
