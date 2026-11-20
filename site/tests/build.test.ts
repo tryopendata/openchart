@@ -265,13 +265,25 @@ describe("the whole site", () => {
     const home = page("dist", "index.html");
     expect(home.querySelector("h1")?.textContent?.trim()).toBe(landingCopy.headline);
     expect(home.querySelector('meta[property="og:image"]')?.getAttribute("content")).toBe(
-      absolute("/og/index.png"),
+      absolute("/og-image.png"),
     );
     const text = home.body.textContent ?? "";
     const release = JSON.parse(read("..", "packages/core/package.json")).version as string;
     expect(text).toContain(`v${release}`);
     expect(text).toContain(`${site.license} license`);
-    expect(readFileSync("dist/og/index.png").subarray(1, 4).toString()).toBe("PNG");
+    expect(readFileSync("dist/og-image.png").subarray(1, 4).toString()).toBe("PNG");
+    const icons: [string, string][] = [
+      ['link[rel="icon"][sizes]', "favicon.ico"],
+      ['link[rel="icon"][type="image/svg+xml"]', "favicon.svg"],
+      ['link[rel="apple-touch-icon"]', "apple-touch-icon.png"],
+      ['link[rel="manifest"]', "site.webmanifest"],
+    ];
+    for (const [selector, file] of icons) {
+      expect(home.querySelector(selector)?.getAttribute("href"), selector).toBe(`/${file}`);
+      expect(existsSync(`dist/${file}`), file).toBe(true);
+    }
+    const manifest = JSON.parse(read("dist", "site.webmanifest"));
+    for (const icon of manifest.icons) expect(existsSync(`dist${icon.src}`), icon.src).toBe(true);
   });
 
   it("serves robots.txt, the sitemap index and an unindexed 404 page", () => {
