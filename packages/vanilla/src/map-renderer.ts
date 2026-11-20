@@ -24,6 +24,7 @@ import {
   type GeoMapPointMark,
   mapSweepTiming,
   type ResolvedAnimation,
+  shuffledSweepDelays,
 } from '@opendata-ai/openchart-core';
 import { stampAnimationVars } from './animation-vars';
 import { FOCUS_DIM_OPACITY } from './map-camera';
@@ -208,24 +209,13 @@ function renderFeatures(
 
   const maxIdx = features.length - 1;
 
-  // Build evenly spaced delays then shuffle for organic pop-in
-  // (skipped in bulk mode where the whole group fades as one)
-  const shuffledDelays: number[] = [];
-  if (!bulk && staggerBudget > 0 && maxIdx > 0) {
-    for (let i = 0; i <= maxIdx; i++) {
-      shuffledDelays.push((i / maxIdx) * staggerBudget);
-    }
-    // Seeded Fisher-Yates shuffle (deterministic per-map via first feature id)
-    let seed = 0x9e3779b9 ^ (features.length * 2654435761);
-    for (let i = maxIdx; i > 0; i--) {
-      seed = (seed + 0x6d2b79f5) | 0;
-      let t = seed ^ (seed >>> 15);
-      t = Math.imul(t, t | 1);
-      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-      const r = ((t ^ (t >>> 14)) >>> 0) % (i + 1);
-      [shuffledDelays[i], shuffledDelays[r]] = [shuffledDelays[r], shuffledDelays[i]];
-    }
-  }
+  // Evenly spaced delays, shuffled for an organic pop-in (skipped in bulk
+  // mode, where the whole group fades as one). Seeded by the feature count so
+  // a map always pops in the same order.
+  const shuffledDelays =
+    !bulk && staggerBudget > 0 && maxIdx > 0
+      ? shuffledSweepDelays(features.length, staggerBudget, features.length)
+      : [];
 
   for (let i = 0; i < features.length; i++) {
     const feature = features[i];

@@ -29,7 +29,21 @@ export const CELL_SWEEP_BUDGET_MS = 600;
  * The same seed always gives the same order.
  */
 export function shuffledSweepDelays(count: number, budgetMs: number, seed: number): number[] {
-  throw new Error(`not implemented: shuffledSweepDelays(${count}, ${budgetMs}, ${seed})`);
+  if (count <= 0) return [];
+  if (count === 1) return [0];
+  const last = count - 1;
+  const delays = Array.from({ length: count }, (_, i) => (i / last) * budgetMs);
+  // mulberry32-style step: cheap, and stable across engines (32-bit integer ops only).
+  let state = 0x9e3779b9 ^ (seed * 2654435761);
+  for (let i = last; i > 0; i--) {
+    state = (state + 0x6d2b79f5) | 0;
+    let t = state ^ (state >>> 15);
+    t = Math.imul(t, t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    const r = ((t ^ (t >>> 14)) >>> 0) % (i + 1);
+    [delays[i], delays[r]] = [delays[r], delays[i]];
+  }
+  return delays;
 }
 
 /** Map point stagger fallback used by the CSS when the renderer stamps none. */

@@ -1,16 +1,21 @@
 import {
+  CELL_SWEEP_BUDGET_MS,
   type ChartSpec,
+  evalCurve,
   evalKeyframes,
   evalRoleEase,
+  LINE_POINT_CASCADE_MS,
   type LineMark,
   type Mark,
   type MotionPhase,
   type PointMark,
+  progressTimeMs,
   type RectMark,
+  shuffledSweepDelays,
 } from '@opendata-ai/openchart-core';
 import { compileChart } from '@opendata-ai/openchart-engine';
 import { describe, expect, it } from 'vitest';
-import { linePointDelays, revealFrom, stackExtents } from '../entrance-geometry';
+import { cellSweepDelays, linePointDelays, revealFrom, stackExtents } from '../entrance-geometry';
 
 function rects(spec: ChartSpec): RectMark[] {
   const layout = compileChart(spec, { width: 600, height: 400 });
@@ -85,36 +90,61 @@ describe('linePointDelays', () => {
   const marks: Mark[] = [line, ...points];
 
   it.each<[string, MotionPhase]>([
-    ['smooth', { duration: 600, ease: 'smooth' }],
-    ['snappy', { duration: 600, ease: 'snappy' }],
-  ])('increases with x and matches the line clip edge (%s)', (_, phase) => {
+    ['smooth', { duration: 800, ease: 'smooth' }],
+    ['snappy', { duration: 800, ease: 'snappy' }],
+  ])('waits for the line to draw, then cascades left to right on glide (%s)', (_, phase) => {
     const delays = linePointDelays(marks, phase, 0);
     const values = points.map((_, i) => delays.get(i + 1)!);
-    expect(values[0]).toBe(0);
-    for (let i = 1; i < values.length; i++) expect(values[i]).toBeGreaterThan(values[i - 1]);
-    // The last dot starts when the edge touches it, before the curve's tail
-    // ends at D.
-    expect(values.at(-1)).toBeLessThan(600);
-    // At each point's delay, the oc-enter-line clip edge sits on the dot's
-    // leading edge (the first dot, already touching the start, at 0).
+    const drawn = progressTimeMs('line-area', 0, phase, { staggerMs: 0 }, 0.97);
+    // The first dot waits until the line's clip has revealed 97% of it.
+    expect(values[0]).toBe(drawn);
+    const frame = evalKeyframes('oc-enter-line', values[0] / phase.duration, (t) =>
+      evalRoleEase('line-area', phase, t),
+    );
+    const clip = frame['clip-path'];
+    if (clip?.type !== 'inset') throw new Error('expected an inset clip');
+    expect(clip.right).toBeLessThanOrEqual(3 + 1e-6);
+    // Then the dots follow by x on the glide curve, the last one the full
+    // cascade after the first.
     points.forEach((point, i) => {
-      if (i === 0) return;
-      const local = values[i] / phase.duration;
-      const frame = evalKeyframes('oc-enter-line', local, (t) =>
-        evalRoleEase('line-area', phase, t),
-      );
-      const clip = frame['clip-path'];
-      if (clip?.type !== 'inset') throw new Error('expected an inset clip');
-      const edge = 400 * (1 - clip.right / 100);
-      expect(edge).toBeCloseTo(point.cx - point.r, 3);
+      expect(values[i]).toBeCloseTo(drawn + evalCurve('glide', point.cx / 400) * 240, 9);
     });
+    for (let i = 1; i < values.length; i++) expect(values[i]).toBeGreaterThan(values[i - 1]);
+    expect(values.at(-1)! - values[0]).toBeCloseTo(LINE_POINT_CASCADE_MS, 9);
   });
 
   it("adds the line's own stagger and skips points on no series", () => {
-    const phase: MotionPhase = { duration: 600, ease: 'smooth' };
+    const phase: MotionPhase = { duration: 800, ease: 'smooth' };
     const stray = { ...points[0], cx: 999, cy: 999 } as PointMark;
     const delays = linePointDelays([{ ...line, animationIndex: 2 }, ...points, stray], phase, 75);
-    expect(delays.get(1)).toBe(150);
+    const unstaggered = linePointDelays(marks, phase, 75);
+    expect(delays.get(1)! - unstaggered.get(1)!).toBeCloseTo(150, 9);
     expect(delays.has(points.length + 1)).toBe(false);
+  });
+
+  it('starts every dot of a zero-width series at once', () => {
+    const phase: MotionPhase = { duration: 800, ease: 'smooth' };
+    const single = { ...line, points: [{ x: 50, y: 10 }] } as LineMark;
+    const dot = { ...points[0], cx: 50, cy: 10 } as PointMark;
+    const delays = linePointDelays([single, dot], phase, 0);
+    expect(delays.get(1)).toBe(progressTimeMs('line-area', 0, phase, { staggerMs: 0 }, 0.97));
+  });
+});
+
+describe('cellSweepDelays', () => {
+  const cell = (x: number): RectMark =>
+    ({ type: 'rect', x, y: 0, width: 10, height: 10, cell: true, data: {} }) as RectMark;
+  const bar = { ...cell(0), cell: undefined } as RectMark;
+
+  it('gives each cell, and only cells, a shuffled slot over the sweep budget', () => {
+    const marks: Mark[] = [bar, ...Array.from({ length: 6 }, (_, i) => cell(i * 10))];
+    const delays = cellSweepDelays(marks);
+    expect(delays.has(0)).toBe(false);
+    expect([...delays.keys()]).toEqual([1, 2, 3, 4, 5, 6]);
+    expect([...delays.values()]).toEqual(shuffledSweepDelays(6, CELL_SWEEP_BUDGET_MS, 6));
+  });
+
+  it('returns nothing for a chart with no cells', () => {
+    expect(cellSweepDelays([bar]).size).toBe(0);
   });
 });

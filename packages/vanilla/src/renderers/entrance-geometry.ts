@@ -1,19 +1,41 @@
 /**
  * Entrance geometry read from the layout, never from the DOM: where each bar
- * and stack grows from, and when a line point is reached by its line's
- * drawing edge.
+ * and stack grows from, when a line point pops in after its line, when each
+ * grid cell starts, and the px origin points and cells scale about.
  *
  * The renderer stamps these as custom properties the generated entrance CSS
- * reads (`--oc-bar-from`, `--oc-stack-from`, `--oc-line-point-delay`), so GIF
- * export and cleanup read the same numbers back from the SVG.
+ * reads (`--oc-bar-from`, `--oc-stack-from`, `--oc-line-point-delay`,
+ * `--oc-cell-delay`) and as inline `transform-origin`, so GIF export and
+ * cleanup read the same numbers back from the SVG.
  */
 
 import {
+  CELL_SWEEP_BUDGET_MS,
+  evalCurve,
+  LINE_POINT_CASCADE_MS,
   type Mark,
   type MotionPhase,
   progressTimeMs,
   type RectMark,
+  shuffledSweepDelays,
 } from '@opendata-ai/openchart-core';
+
+/**
+ * Round a stamped number (3 decimals by default) so the SVG carries no long
+ * float tails.
+ */
+export function roundStamp(value: number, decimals = 3): number {
+  return Number(value.toFixed(decimals));
+}
+
+/**
+ * Inline `transform-origin` value for a scale about (x, y) in user-space px.
+ * Stamped in px rather than through `transform-box` so GIF frames, which
+ * carry no animation CSS, scale about the same point.
+ */
+export function scaleOrigin(x: number, y: number): string {
+  return `${roundStamp(x)}px ${roundStamp(y)}px`;
+}
 
 /** One stack of segments sharing a band, revealed as one clip. */
 export interface StackExtent {
@@ -94,10 +116,11 @@ export function revealFrom(
 }
 
 /**
- * Delays for points that sit on a line or area: each starts when its series'
- * clip edge reaches the dot (cx - r). The clip runs over the line group's box, whose
- * x-extent is the series' own point extent, eased on the line's curve.
- * Keyed by index into `marks`; points on no series are left out.
+ * Delays for points that sit on a line or area: a series' dots wait until its
+ * line is 97% drawn, then cascade left to right over LINE_POINT_CASCADE_MS on
+ * the glide curve, by x within the series' own point extent (a zero-width
+ * series starts all its dots at once). Keyed by index into `marks`; points on
+ * no series are left out.
  */
 export function linePointDelays(
   marks: readonly Mark[],
@@ -133,12 +156,25 @@ export function linePointDelays(
     if (mark.type !== 'point') return;
     const series = byPoint.get(`${mark.cx},${mark.cy}`);
     if (!series) return;
-    // The dot starts when the edge touches it (its leading edge, cx - r), not
-    // its centre: an eased curve only reaches exactly 1 at the very end, so
-    // keying the last dot to its centre leaves it waiting after the line looks done.
+    const lineDrawnMs = progressTimeMs('line-area', series.index, phase, { staggerMs }, 0.97);
     const span = series.maxX - series.minX;
-    const fraction = span > 0 ? Math.max(0, (mark.cx - mark.r - series.minX) / span) : 0;
-    delays.set(i, progressTimeMs('line-area', series.index, phase, { staggerMs }, fraction));
+    const fraction = span > 0 ? (mark.cx - series.minX) / span : 0;
+    delays.set(i, lineDrawnMs + evalCurve('glide', fraction) * LINE_POINT_CASCADE_MS);
   });
   return delays;
+}
+
+/**
+ * Scattered start times for grid cells (rects flagged `cell`: heatmap, waffle,
+ * calendar) spread over CELL_SWEEP_BUDGET_MS, so the grid fills in no visible
+ * order. Seeded by the cell count, so a chart always fills the same way.
+ * Keyed by index into `marks`, in mark order.
+ */
+export function cellSweepDelays(marks: readonly Mark[]): Map<number, number> {
+  const cellIndexes: number[] = [];
+  marks.forEach((mark, i) => {
+    if (mark.type === 'rect' && mark.cell) cellIndexes.push(i);
+  });
+  const sweep = shuffledSweepDelays(cellIndexes.length, CELL_SWEEP_BUDGET_MS, cellIndexes.length);
+  return new Map(cellIndexes.map((markIndex, n) => [markIndex, sweep[n]]));
 }

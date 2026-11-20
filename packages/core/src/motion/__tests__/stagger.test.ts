@@ -4,6 +4,7 @@ import {
   MAP_SWEEP_BUDGET_MS,
   MAX_TOTAL_STAGGER_MS,
   mapSweepTiming,
+  shuffledSweepDelays,
   tilemapTileDelays,
 } from '../stagger';
 
@@ -57,5 +58,23 @@ describe('stagger strategies', () => {
     }
     expect(tilemapTileDelays(indices)).toEqual(expected);
     expect(tilemapTileDelays([])).toEqual([]);
+  });
+
+  it('shuffled sweep reproduces the map renderer’s seeded shuffle', () => {
+    // Reference: the map renderer's inline shuffle before it moved to core,
+    // seeded by the feature count.
+    for (const n of [2, 11, 50]) {
+      const expected = Array.from({ length: n }, (_, i) => (i / (n - 1)) * 540);
+      let seed = 0x9e3779b9 ^ (n * 2654435761);
+      for (let i = n - 1; i > 0; i--) {
+        seed = (seed + 0x6d2b79f5) | 0;
+        let t = seed ^ (seed >>> 15);
+        t = Math.imul(t, t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        const r = ((t ^ (t >>> 14)) >>> 0) % (i + 1);
+        [expected[i], expected[r]] = [expected[r], expected[i]];
+      }
+      expect(shuffledSweepDelays(n, 540, n)).toEqual(expected);
+    }
   });
 });
