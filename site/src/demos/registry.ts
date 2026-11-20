@@ -37,6 +37,8 @@ export function indexDemos(modules: DemoModules): ReadonlyMap<string, DemoDef> {
   const definedIn = new Map<string, string>();
   for (const [path, exports] of Object.entries(modules)) {
     for (const demo of Object.values(exports).filter(isDemoDef)) {
+      // A module may export one demo under two names (a named and a default export).
+      if (demos.get(demo.id) === demo) continue;
       const earlier = definedIn.get(demo.id);
       if (earlier) {
         throw new DuplicateDemoError(

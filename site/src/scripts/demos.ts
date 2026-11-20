@@ -56,6 +56,7 @@ function distanceFromViewport(element: HTMLElement): number {
 }
 
 function showFailure(demo: DemoStage, error: unknown): void {
+  if (demo.failed) return;
   demo.failed = true;
   demo.stage.setAttribute("data-demo-error", "");
   if (!demo.hasStatic) {
@@ -110,7 +111,7 @@ function observeApproach(demos: DemoStage[], onApproach: (demo: DemoStage) => vo
         const demo = demos.find((candidate) => candidate.stage === entry.target);
         if (!demo) continue;
         demo.near = entry.isIntersecting;
-        if (demo.near && !demo.live) onApproach(demo);
+        if (demo.near && !demo.live && !demo.failed) onApproach(demo);
       }
     },
     { rootMargin: `${LEAD_PX}px 0px` },

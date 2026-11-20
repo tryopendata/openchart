@@ -34,11 +34,13 @@ export const demoFenceMeta: ShikiTransformer = {
   name: "demo-fence-meta",
   pre(node) {
     const raw = (this.options.meta as { __raw?: string } | undefined)?.__raw ?? "";
-    if (this.options.lang !== "json" || !/(^|\s)demo(\s|$)/.test(raw)) return;
+    // Quoted values are free text ("A demo config"), so tokens are read only outside them.
+    const bare = raw.replace(/\w+="[^"]*"/g, " ");
+    if (this.options.lang !== "json" || !/(^|\s)demo(\s|$)/.test(bare)) return;
     node.properties[META] = raw;
-    const title = /title="([^"]*)"/.exec(raw)?.[1];
-    const source = /source="([^"]*)"/.exec(raw)?.[1];
-    const height = /height=(\d+)/.exec(raw)?.[1];
+    const title = /(?:^|\s)title="([^"]*)"/.exec(raw)?.[1];
+    const source = /(?:^|\s)source="([^"]*)"/.exec(raw)?.[1];
+    const height = /(?:^|\s)height=(\d+)(?:\s|$)/.exec(bare)?.[1];
     if (title !== undefined) node.properties[TITLE] = title;
     if (source !== undefined) node.properties[SOURCE] = source;
     if (height !== undefined) node.properties[HEIGHT] = height;
@@ -81,6 +83,26 @@ function parseFenceSpec(body: string, id: string, location: string): VizSpec {
   return spec as VizSpec;
 }
 
+/** Where this document's fence ids are kept: the compile's own data bag, so no state outlives one render. */
+const FENCE_IDS = "demoFenceIds";
+
+/**
+ * Records a fence id for the document being rendered.
+ *
+ * @throws {DemoFenceError} When an identical fence already appeared in this document,
+ * since both figures would share one id and their SVG and panel ids would collide.
+ */
+function claimFenceId(data: Record<string, unknown>, id: string, location: string): void {
+  data[FENCE_IDS] ??= new Set<string>();
+  const seen = data[FENCE_IDS] as Set<string>;
+  if (seen.has(id)) {
+    throw new DemoFenceError(
+      `Demo fence ${location} repeats an earlier fence with the same spec on this page. Remove one, or change one spec.`,
+    );
+  }
+  seen.add(id);
+}
+
 /** Replaces each `json demo` code block with the demo figure. */
 export function demoFence(): HastPlugin {
   return {
@@ -93,7 +115,9 @@ export function demoFence(): HastPlugin {
         if (meta === undefined) return;
         const body = ctx.textContent(node).trim();
         const id = fenceDemoId(body);
-        const spec = parseFenceSpec(body, id, fenceLocation(meta, ctx.fileURL));
+        const location = fenceLocation(meta, ctx.fileURL);
+        claimFenceId(ctx.data, id, location);
+        const spec = parseFenceSpec(body, id, location);
         const height = stringProperty(properties, HEIGHT);
         const html = await demoFigureHtml({
           id,

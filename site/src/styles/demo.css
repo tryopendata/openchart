@@ -75,11 +75,12 @@
 }
 
 .demo-panel[data-demo-panel="spec"],
-.demo-panel:target {
+.demo-code:not([data-demo-choice]) .demo-panel:target {
   display: block;
 }
 
-.demo-code:has(.demo-panel:target) .demo-panel[data-demo-panel="spec"]:not(:target) {
+.demo-code:not([data-demo-choice]):has(.demo-panel:target)
+  .demo-panel[data-demo-panel="spec"]:not(:target) {
   display: none;
 }
 

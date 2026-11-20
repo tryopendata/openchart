@@ -81,6 +81,33 @@ describe("the json demo fence", () => {
     expect(doc.querySelector("figure.code-frame pre")?.textContent).toContain('"mark"');
   });
 
+  it("ignores the word demo and height= inside quoted values of a plain json fence", async () => {
+    const { doc } = await render(fence('json title="A demo config height=9"', '{"not":"a spec"}'));
+    expect(doc.querySelector("figure.demo")).toBeNull();
+    expect(doc.querySelector("figure.code-frame figcaption")?.textContent).toBe(
+      "A demo config height=9",
+    );
+  });
+
+  it("throws naming the fence when an identical fence repeats on the same page", async () => {
+    const twice = fence("json demo", JSON.stringify(BAR_SPEC)).repeat(2);
+    await expect(render(twice)).rejects.toThrow(
+      /```json demo repeats an earlier fence with the same spec/,
+    );
+  });
+
+  it("renders the same fence again in a later render of the page", async () => {
+    const once = fence("json demo", JSON.stringify(BAR_SPEC));
+    const processor = await createSatteriMarkdownProcessor({
+      hastPlugins: docsHastPlugins,
+      syntaxHighlight: "shiki",
+      shikiConfig: { transformers: docsShikiTransformers },
+    });
+    await processor.render(once);
+    const { code } = await processor.render(once);
+    expect(code).toContain('<figure class="demo"');
+  });
+
   it("escapes </script> inside a spec string so the embedded JSON stays in its element", async () => {
     const spec = { ...BAR_SPEC, chrome: { title: "Ends </script><b>here</b>" } };
     const { html, doc } = await render(fence("json demo", JSON.stringify(spec)));

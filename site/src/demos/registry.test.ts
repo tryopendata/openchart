@@ -25,6 +25,11 @@ describe("the demo registry", () => {
     expect(() => indexDemos(modules)).toThrow(/"fixtures\/bar".*\.\/a\/one\.ts.*\.\/b\/two\.ts/);
   });
 
+  it("accepts one demo object exported under two names", () => {
+    const demos = indexDemos({ "./a/one.ts": { fixtureBar, default: fixtureBar } });
+    expect([...demos.values()]).toEqual([fixtureBar]);
+  });
+
   it("ignores exports that are not demos", () => {
     const demos = indexDemos({ "./c.ts": { fixtureBar, helper: () => 1, label: "bar" } });
     expect([...demos.keys()]).toEqual(["fixtures/bar"]);
