@@ -1,0 +1,60 @@
+---
+title: Column
+description: Compare one value across ordered categories such as months or years with vertical columns, then annotate, color by sign and label them.
+section: comparison
+order: 2
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+A column chart compares one number across a short, ordered set of categories, with each category on the x axis and the value as the height of its column. It suits time periods such as months or years.
+
+Use a [bar chart](/docs/comparison/bar/) instead when the category names are long, since horizontal bars keep them at full length. Use a [line chart](/docs/change-over-time/line/) when the periods are many and the trend matters more than each value. The spec is the same as a bar chart; only the channels swap.
+
+## A basic column chart
+
+Set `mark` to `"bar"`, put the category on `x` and the number on `y`. Here `labels` prints every value above its column, formatted with a d3-format string.
+
+<Demo id="comparison/column-basic" />
+
+## Annotating a column chart
+
+A `refline` annotation draws a reference value in data units, here the yearly average on `y`. A `text` annotation attaches a note to one category by naming it on `x`, and `connector: true` connects the note to the column.
+
+<Demo id="comparison/column-annotated" />
+
+## Positive and negative values
+
+Columns grow up from zero for positive values and down for negative ones. A color channel on a field in the data splits the two cases, and a `scale` with a `domain` and a `range` pairs each value with a color. A solid `refline` at `y: 0` marks the baseline.
+
+<Demo id="comparison/column-diverging" />
+
+## Long category names
+
+When category names do not fit horizontally, the axis angles them, then truncates them, before it drops any ticks. If the names still crowd the axis, switch to a [bar chart](/docs/comparison/bar/).
+
+<Demo id="comparison/column-long-labels" />
+
+## Labels at the column ends
+
+`labels.placement: "outside"` puts each value label at the end of its column, so labels follow the positive or negative end without changing the order of the data. `sort: null` keeps the order as authored, and `mark.size` sets an explicit column size.
+
+<Demo id="comparison/column-outside-labels" />
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `mark: "bar"` | Draws bars. With the category on `x` and the number on `y` they run vertically. |
+| `encoding.x` | The category channel. Use `type: "nominal"` for names and `"ordinal"` for ordered values such as years. `sort: null` keeps the data order. |
+| `encoding.y` | The value channel, with `axis.title` and `axis.format` for the axis. |
+| `encoding.color` | Colors columns by a field. A `scale` with `domain` and `range` sets the colors. |
+| `labels` | `density`, `format`, `placement` and `suffix` control the value labels. |
+| `annotations` | A `refline` marks a value; a `text` note points at one category. |
+
+## Related
+
+- [Bar](/docs/comparison/bar/) for the horizontal form of the same chart.
+- [Grouped and stacked bars](/docs/comparison/grouped-stacked/) for splitting each column into series.
+- [Line](/docs/change-over-time/line/) for a trend across many periods.
+- [Histogram](/docs/distribution/histogram/) for counting how often values fall in each range.

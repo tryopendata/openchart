@@ -1,0 +1,53 @@
+---
+title: Lollipop
+description: Compare values across categories with a dot on a thin stem, then split by sign, drop the stems or show two values per category.
+section: comparison
+order: 4
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+A lollipop chart is a bar chart with the bar thinned to a stem and a dot at the end. The reader still judges each value by its distance from the baseline, with less ink. It is cleaner than bars when the values sit far from zero.
+
+Use a [bar chart](/docs/comparison/bar/) when the filled length should dominate, and a [range chart](/docs/comparison/range/) when each category has a start and an end value. Dots without stems form a dot plot.
+
+## A basic lollipop chart
+
+Set `mark` to `"lollipop"`, put the number on `x` and the category on `y`. Each stem runs from the zero baseline to its dot.
+
+<Demo id="comparison/lollipop-basic" />
+
+## Positive and negative values
+
+Stems run left of zero for negative values, so a lollipop chart shows decline as clearly as growth. Derive a field from the sign in your data, color by it with a `scale`, and draw a solid `refline` at `x: 0`.
+
+<Demo id="comparison/lollipop-diverging" />
+
+## Dots without stems
+
+`mark: "circle"` draws the same dots with no stems. This is a dot plot: it compares positions along the axis and does not suggest a length from zero. A dashed `refline` adds a reference value.
+
+<Demo id="comparison/lollipop-dot-plot" />
+
+## Two values per category
+
+On the dot mark, a categorical `color` with two or more series switches the chart to dumbbell mode, which connects each category's dots with a bar. Set `scale: { zero: false }` on `x` so the axis spans the data instead of starting at zero. When your data already has a start and an end column per row, use the [range mark](/docs/comparison/range/) instead.
+
+<Demo id="comparison/lollipop-dumbbell" />
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `mark` | `"lollipop"` draws dots on stems. `"circle"` draws dots only. |
+| `encoding.x` | The value channel. Required, `type: "quantitative"`. |
+| `encoding.y` | The category channel. Required, `type: "nominal"` or `"ordinal"`. |
+| `encoding.color` | A categorical field colors the dots, and two or more series switch to dumbbell mode. |
+| `encoding.x.scale.zero` | `false` stops the axis from including zero. |
+| `annotations` | A `refline` draws a reference value in data units. |
+
+## Related
+
+- [Bar](/docs/comparison/bar/) for the filled form.
+- [Range](/docs/comparison/range/) for a start and an end value per category.
+- [Scatter](/docs/correlation/scatter/) for two quantitative axes instead of a category axis.

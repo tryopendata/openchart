@@ -1,0 +1,56 @@
+---
+title: Bar list
+description: Show a ranked list of labelled values as compact rows with inline bars, grouped, limited and sized to fit a card or a dense layout.
+section: comparison
+order: 5
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+A bar list is a ranked list where each row is a label, a thin proportional bar and its value. It has no axes, so it takes less room than a [bar chart](/docs/comparison/bar/) and fits cards and dashboards. It is its own spec type, `type: "barlist"`, with `label` and `value` channels instead of `x` and `y`.
+
+Use a bar chart instead when the reader needs an axis to read values against.
+
+## A basic bar list
+
+Set `type` to `"barlist"` and map `label` and `value`. The list sorts descending by default. `format` on the value channel is a d3-format string, and `color` colors each row by a category.
+
+<Demo id="comparison/barlist-basic" />
+
+## Grouped rows
+
+`encoding.group` adds a header for each group, in the order the groups first appear in the data. The rows inside each group are sorted, so the order across the whole list follows the group order, not the values.
+
+<Demo id="comparison/barlist-groups" />
+
+## A compact list
+
+`maxItems` limits how many rows show, `barHeight` sets the bar thickness in pixels and `cornerRadius` rounds its ends. This one shows six rows with 8px bars and a one-line title, a form that suits a dashboard tile.
+
+<Demo id="comparison/barlist-compact" />
+
+## Reference line and label format
+
+`annotations` takes vertical `refline` entries in value units. `labels` formats the printed value with `format`, `prefix` and `suffix`; here it adds a percent sign. The reference line marks the rows that pass a threshold.
+
+<Demo id="comparison/barlist-reference" />
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `type: "barlist"` | Selects the bar list spec. |
+| `encoding.label` | The row name. Required, `type: "nominal"`. |
+| `encoding.value` | The number that sets bar length. Required, `type: "quantitative"`, with `format` for the printed value. |
+| `encoding.color` | Colors rows by a category field. |
+| `encoding.group` | Starts a new header for each distinct value. |
+| `sort` | `"descending"` by default, `"ascending"`, or `null` to keep the input order. |
+| `maxItems` | The most rows to show. The default is 20. |
+| `barHeight`, `cornerRadius` | Bar thickness in pixels, and corner rounding in pixels or `"pill"`. |
+| `annotations`, `labels` | Value reference lines, and `format`, `prefix` and `suffix` for the printed value. |
+
+## Related
+
+- [Bar](/docs/comparison/bar/) for a chart with axes.
+- [Dashboard tiles](/docs/composition/dashboard-tiles/) for the compact forms around a bar list.
+- [Data table](/docs/tables/data-table/) when each row needs more than one value.

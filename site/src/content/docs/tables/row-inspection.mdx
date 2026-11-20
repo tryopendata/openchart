@@ -1,0 +1,74 @@
+---
+title: Row inspection
+description: Read across one row at a time, with the rowHover option on horizontal bar charts and search, sort, totals and row clicks on tables.
+section: tables
+order: 3
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+Row inspection is reading one record across all of its values: the bar and its label and number, or a table row and its cells. Charts support it with an opt-in mount option, and tables with built-in search, sort and a total row. Use it when readers compare a few rows closely.
+
+When the reader only needs the overall shape, a plain [bar chart](/docs/comparison/bar/) is enough and adds nothing to hover. For lists that need several values per row, use a [data table](/docs/tables/data-table/).
+
+## Row inspection on a bar chart
+
+`rowHover` is a mount option, not a spec field, so the figure below shows the spec without it. Pass `{ rowHover: true }` to `createChart`, or the `rowHover` prop on a chart wrapper. The spec is a simple horizontal bar chart with `labels.placement: "column"`, which prints the values in an aligned column.
+
+<Demo id="tables/row-bars" />
+
+```ts
+createChart(container, spec, { rowHover: true });
+```
+
+```tsx
+<Chart spec={spec} rowHover />
+```
+
+## Where row hover applies
+
+Pointer inspection spans the category, the plot and the value column. Keyboard navigation highlights the same row. It applies to simple horizontal bars. Grouped, stacked, layered and faceted charts keep their existing behavior, and the option yields to edit mode. Without the option, no hover styling is added. The highlight is transient and does not appear in settled chart exports.
+
+## Finding a row with search
+
+On a table, `search: true` adds a filter box above the rows. `pagination` splits what remains into pages, so a long list still opens on a short first page.
+
+<Demo id="tables/row-search" />
+
+## Sorting to compare extremes
+
+Rows with `sortable` columns reorder when the reader clicks a header. `sort` sets the starting order, here the lowest life expectancy first. A heatmap column keeps the size of the gap visible while the order changes.
+
+<Demo id="tables/row-sort-heatmap" />
+
+## Totals over the filtered rows
+
+`totalRow: true` adds a sticky total. Type in the search box and the total covers only the rows that match. It follows search and sort, not the current page.
+
+<Demo id="tables/row-filtered-totals" />
+
+## Reacting to a row click
+
+A table calls `onRowClick` with the clicked row's data, which is the hook for drill-down views. The same handler list includes `onSortChange`, `onSearchChange` and `onPageChange` for controlled tables.
+
+```tsx
+<DataTable spec={spec} onRowClick={(row) => openDetail(row)} />
+```
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `rowHover` | A mount option on `createChart` and the chart wrappers. Turns on row inspection for simple horizontal bars. |
+| `labels.placement` | `"column"` prints values in an aligned column on a bar chart. |
+| `search` | `true` adds a filter box to a table. |
+| `pagination` | `{ pageSize }` splits table rows into pages. |
+| `sort` | `{ column, direction }` sets the starting order of a table. |
+| `totalRow` | `true` adds a sticky total over the filtered rows. |
+| `onRowClick` | A table handler that receives the clicked row. |
+
+## Related
+
+- [Data table](/docs/tables/data-table/) for the full table spec.
+- [Column types](/docs/tables/column-types/) for cells that make rows easier to compare.
+- [Bar](/docs/comparison/bar/) for the chart that row hover applies to.

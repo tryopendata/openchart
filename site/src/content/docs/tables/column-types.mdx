@@ -1,0 +1,66 @@
+---
+title: Column types
+description: Turn table columns into heatmaps, inline bars, sparklines, delta chips, images and category chips with one config field per column.
+section: tables
+order: 2
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+A plain table column shows a number as text. A column type adds a visual encoding to the cell, so the reader can see which values are high, which rose and how a series moved without reading every digit. Each column takes at most one visual feature.
+
+If several are set on one column, the order of precedence is sparkline, bar, delta, heatmap, image, flag, then category colors. Start from the [data table](/docs/tables/data-table/) page for the base spec, and use a [chart](/docs/comparison/bar/) when the comparison is the whole point.
+
+## Heatmap cells
+
+`heatmap` colors the cell background by value from a sequential palette, so the tight margins in this column stand out. `palette` picks the colors, and `domain` sets the extent explicitly.
+
+<Demo id="tables/heatmap-column" />
+
+## Inline bars
+
+`bar` draws a proportional bar inside the cell, scaled to the column's largest value unless `maxValue` sets it. `color` sets the fill. It reads like a [bar list](/docs/comparison/bar-list/) embedded in a table.
+
+<Demo id="tables/bar-column" />
+
+## Sparklines
+
+A sparkline column draws an array stored in the row as a mini chart. `type` is `"line"`, `"column"` or `"bar"`. `valuesField` names a different field for the values. `domain: "row"` scales each row to its own extent, which keeps the cheap tickers from flattening when prices differ widely.
+
+<Demo id="tables/sparkline-columns" />
+
+## Delta chips
+
+`delta: true` renders a change value as a signed chip. The arrow carries the direction, so a sign in the formatted value is dropped. Positive is green and negative is red. `delta: { invert: true }` flips the colors for metrics where down is good, such as churn or cost.
+
+<Demo id="tables/delta-column" />
+
+## Images
+
+`image` renders the column value as an image source, with `width`, `height` and `rounded` for the size and a circular crop. These logos are inline SVG data URIs, so nothing is fetched.
+
+<Demo id="tables/image-column" />
+
+## Category chips
+
+`categoryColors` maps each value of a categorical column to a color. Each value shows as a chip with a dot in that color, so the column works as its own legend.
+
+<Demo id="tables/category-column" />
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `heatmap` | `{ palette, domain, colorByField }` colors the cell background by value. |
+| `bar` | `{ maxValue, color }` draws a proportional bar in the cell. |
+| `sparkline` | `{ type, valuesField, color, domain }` draws an array value as a mini chart. |
+| `delta` | `true` shows a signed chip, `{ invert: true }` flips the colors. |
+| `image` | `{ width, height, rounded }` shows the value as an image. |
+| `categoryColors` | Maps category values to chip colors. |
+| `striped` | A top-level field. `true` adds zebra rows. |
+
+## Related
+
+- [Data table](/docs/tables/data-table/) for sorting, search, paging and density.
+- [Sparkline](/docs/change-over-time/sparkline/) for the same mini chart outside a table.
+- [Heatmap](/docs/correlation/heatmap/) for a color grid drawn as a chart.

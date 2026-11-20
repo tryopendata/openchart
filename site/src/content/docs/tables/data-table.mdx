@@ -1,0 +1,58 @@
+---
+title: Data table
+description: Show rows and columns as an interactive table with formats, sorting, search, paging, row density and a total row, from a declarative spec.
+section: tables
+order: 1
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+A data table lists exact values, one row per record. Use it when readers need to look up a number, compare several fields on one record, or scan a list longer than a chart can label. Tables render to the DOM, not SVG, from a declarative spec.
+
+When the question is how values compare, a [bar chart](/docs/comparison/bar/) answers it faster. Add [column types](/docs/tables/column-types/) such as inline bars and heatmaps to get some of that into a table.
+
+## A basic table
+
+A table spec has `type: "table"`, the `data` rows and a `columns` list. Each column names a `key` in the rows and a `label`, and takes a d3-format string in `format`. `search: true` adds a filter box and `pagination` splits the rows into pages. Click a header to sort.
+
+<Demo id="tables/basic" />
+
+## Starting with a sort
+
+`sort` sets the order before the reader touches a header, here by year-to-date change, highest first. `sortable` on a column turns the header click on or off. `density: "condensed"` shrinks the rows so twelve fit without paging.
+
+<Demo id="tables/initial-sort" />
+
+## A total row
+
+`totalRow: true` adds a sticky footer that sums every quantitative column. The sum follows search and sort, not the current page. Set `total: false` on a column to leave its total cell blank.
+
+<Demo id="tables/totals" />
+
+## Relaxed rows and compact numbers
+
+`density` sets the row height: `"condensed"` is 40px, the default is 48px and `"relaxed"` is 56px. A column `format` can also be the keyword `compact`, which abbreviates large numbers. Tables format at full precision by default, so use `compact` where readers will not compare digits.
+
+<Demo id="tables/relaxed" />
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `type: "table"` | Selects the table spec. |
+| `columns[].key`, `columns[].label` | The row field to show and the header text. |
+| `columns[].format` | A d3-format string, or `percent`, `currency`, `ordinal` or `compact`. |
+| `columns[].sortable` | Turns the header click on or off. Default `true`. |
+| `columns[].align` | Overrides alignment. Quantitative columns align right by default. |
+| `search` | `true` shows a filter box above the table. |
+| `pagination` | `{ pageSize }` splits the rows into pages. |
+| `sort` | `{ column, direction }`, applied before the reader sorts. |
+| `density` | `"condensed"`, `"regular"` or `"relaxed"`. |
+| `totalRow` | `true` adds a sticky total footer. |
+
+## Related
+
+- [Column types](/docs/tables/column-types/) for heatmap, bar, sparkline, delta and image cells.
+- [Row inspection](/docs/tables/row-inspection/) for finding and comparing rows.
+- [Bar list](/docs/comparison/bar-list/) for a ranked list with inline bars and no table chrome.
+- [Dashboard tiles](/docs/composition/dashboard-tiles/) for a table sized to a card.

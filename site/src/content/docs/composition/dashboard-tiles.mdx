@@ -1,0 +1,67 @@
+---
+title: Dashboard tiles
+description: Compact chart forms for dense layouts, from sparklines and short charts to metric rows, bar lists and condensed tables, as single specs.
+section: composition
+order: 3
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+A dashboard tile is the same spec as a standalone chart, sized and stripped down for a card. This page covers the forms a spec can take in a small box. It does not build the layout around them; the grid, the headline numbers and the card surface are yours.
+
+For a full-size chart with editorial chrome, use the [bar](/docs/comparison/bar/) or [line](/docs/change-over-time/line/) pages instead. A tile spends nothing on chrome that the card already supplies.
+
+## Area sparkline
+
+`display: "sparkline"` strips chrome, axes, legend and watermark, so a tiny trend fits next to a number you render yourself. This figure is a 56px box; sparklines are usually mounted in 36 to 56px.
+
+<Demo id="composition/tile-sparkline-area" />
+
+## Line sparkline
+
+The same display setting works on a line mark. Give the mark an explicit `stroke` so the line uses the accent you choose instead of an implicit series color.
+
+<Demo id="composition/tile-sparkline-line" />
+
+## A short chart
+
+A chart's container height decides what it keeps. Below 150px the engine drops gridlines by default, below 200px it drops the axes, and a title still renders from 100px. This tile is 180px, so it shows the title and the columns with no axes. An explicit `axis` on a channel keeps its axis at any size. `watermark: false` leaves the brand band for the one hero chart on a dashboard.
+
+<Demo id="composition/tile-compact-chart" />
+
+## A metrics row
+
+`metrics` renders a row of label and value cells between the subtitle and the plot, tied to the chart below it. Use it when the numbers summarize that chart. For headline numbers that belong to no single chart, render plain HTML cards beside it.
+
+<Demo id="composition/tile-metrics" />
+
+## A bar list in a card
+
+A `barlist` spec is the densest way to show a ranked list in a tile: inline bars and no axes. `barHeight` thins the bars and `watermark: false` keeps the card clean.
+
+<Demo id="composition/tile-bar-list" />
+
+## A condensed table
+
+`density: "condensed"` takes a table to 40px rows, and a short row count keeps it from growing a second scrollbar inside a card. Tables resolve the watermark on their own, so set `watermark: false` explicitly. Delta and sparkline columns fit more into each row.
+
+<Demo id="composition/tile-table" />
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `display: "sparkline"` | Strips chrome, axes, legend and watermark for a tiny trend. |
+| `mark.stroke` | Sets the line or area color explicitly. |
+| `watermark` | `false` hides the brand band on tiles that would otherwise show it. |
+| `chrome.title` | A one-line label is often enough for a supporting tile. |
+| `metrics` | A row of `label`, `value` and optional `delta` cells above the plot. |
+| `barHeight`, `maxItems` | Bar thickness in pixels and row limit on a bar list. |
+| `density` | `"condensed"` gives a table 40px rows. |
+| `encoding.*.axis` | An explicit `axis` keeps an axis that a small container would drop. |
+
+## Related
+
+- [Sparkline](/docs/change-over-time/sparkline/) for the line form outside a tile.
+- [Bar list](/docs/comparison/bar-list/) for the ranked list on its own.
+- [Data table](/docs/tables/data-table/) for the full table spec.
