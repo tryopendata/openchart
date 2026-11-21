@@ -9,11 +9,6 @@
  */
 @reference "./global.css";
 
-/* The landing page's section styles load before global.css, and a cascade layer
-   ranks by where it is first named: without this, `components` would rank below
-   `base` and preflight's resets would beat every rule here. Same order as global.css. */
-@layer theme, base, sf, components, utilities;
-
 @layer components {
   /* Shared: a section head with the heading on the left and a short lede set
      against the right columns of the grid. */
@@ -42,9 +37,10 @@
     @apply font-mono text-[0.9em];
   }
 
-  /* A live chart fills the fixed-height box LiveChart wraps it in. */
-  .live-chart {
-    @apply h-full;
+  /* One ticked rule per section, above its head: a PublishedFigure under the head
+     draws its own rule as a plain hairline instead. */
+  .figure-hairline > .rule-axis {
+    @apply border-line h-0 bg-none;
   }
 
   /* ---- #story: paragraphs scroll past a sticky chart ---------------------- */
@@ -159,8 +155,8 @@
     @apply border-line m-0 flex flex-wrap items-center gap-3 border-b px-0 py-4 first:pt-0;
   }
 
-  .motion-row .btn {
-    @apply transition-colors duration-150;
+  .motion-bench .btn:disabled {
+    @apply text-muted border-line cursor-not-allowed;
   }
 
   .motion-note {
@@ -218,8 +214,10 @@
     @apply flex min-w-0 flex-col;
   }
 
-  .kinds-tile[data-size="dominant"],
-  .kinds-tile[data-size="wide"] {
+  /* Two columns (640-899px): the dominant tile and the bottom row take full rows. */
+  .kinds-tile[data-place="dominant"],
+  .kinds-tile[data-place="bottom"],
+  .kinds-tile[data-place="bottom-wide"] {
     @apply sm:col-span-2;
   }
 
@@ -232,16 +230,19 @@
     @apply px-0;
   }
 
+  /* Each tile's stage height comes from kinds.ts, through --kinds-height on the tile. */
   .kinds-tile .demo-stage {
-    height: 320px;
+    height: var(--kinds-height);
   }
 
-  .kinds-tile:nth-child(n + 4) .demo-stage {
-    height: 480px;
+  /* A table grows to its rows rather than scrolling inside the tile. */
+  .kinds-tile[data-fit-content] .demo-stage {
+    height: auto;
+    min-height: var(--kinds-height);
   }
 
-  .kinds-tile[data-size="dominant"] .demo-stage {
-    height: 460px;
+  .kinds-tile[data-fit-content] .demo-live {
+    @apply h-auto overflow-visible;
   }
 
   /* Plain media rules after the sm: ones: an arbitrary min-[900px] variant sorts
@@ -251,17 +252,22 @@
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
-    .kinds-tile[data-size="dominant"] {
+    .kinds-tile[data-place="dominant"] {
       @apply row-span-2;
     }
 
+    .kinds-tile[data-place="bottom"] {
+      @apply col-span-1;
+    }
+
     /* The dominant map grows to the height of the two cells beside it. */
-    .kinds-tile[data-size="dominant"] .demo {
+    .kinds-tile[data-place="dominant"] .demo {
       @apply flex flex-1 flex-col;
     }
 
-    .kinds-tile[data-size="dominant"] .demo-stage {
-      @apply min-h-[460px] flex-1;
+    .kinds-tile[data-place="dominant"] .demo-stage {
+      @apply flex-1;
+      min-height: var(--kinds-height);
       height: auto;
     }
   }
@@ -282,11 +288,19 @@
   /* ---- #responsive: a frame with a draggable edge ------------------------- */
 
   .resize-readout {
-    @apply flex items-baseline gap-4 font-mono text-sm;
+    @apply m-0 flex flex-wrap items-baseline gap-x-4 gap-y-1 font-mono text-sm;
+  }
+
+  .resize-width {
+    @apply text-ink;
   }
 
   .resize-breakpoint {
     @apply text-accent font-medium;
+  }
+
+  .resize-hint {
+    @apply text-muted font-sans text-[13px] sm:ml-auto;
   }
 
   .resize-track {
@@ -302,9 +316,10 @@
     @apply text-muted border-line absolute top-0 bottom-0 border-l border-dashed pl-1.5 font-mono text-[11px] leading-none;
   }
 
+  /* content-box: the width the island sets is the chart's own box, inside the border. */
   .resize-frame {
-    @apply border-line-strong bg-canvas relative max-w-full border;
-    transition: width 500ms var(--story-ease);
+    @apply border-line-strong bg-canvas relative box-content max-w-[calc(100%-2px)] border;
+    transition: width 520ms var(--story-ease);
   }
 
   .resize-frame[data-dragging] {
@@ -316,7 +331,7 @@
   }
 
   .resize-handle {
-    @apply absolute top-0 -right-[9px] bottom-0 flex w-[17px] cursor-ew-resize touch-none items-center justify-center outline-offset-0;
+    @apply absolute top-0 -right-[9px] bottom-0 flex w-[17px] cursor-ew-resize touch-none items-center justify-center outline-none;
   }
 
   .resize-handle::before {
@@ -331,6 +346,12 @@
   .resize-handle:focus-visible::before,
   .resize-frame[data-dragging] .resize-handle::before {
     @apply bg-accent border-accent h-20;
+  }
+
+  /* The focus ring goes on the grip, not the full-height hit area. */
+  .resize-handle:focus-visible::before {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
   }
 }
 

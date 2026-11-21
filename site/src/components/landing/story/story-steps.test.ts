@@ -1,7 +1,8 @@
 /**
  * The scroll story's steps: each cumulative spec the story can reach passes the
- * engine's validator, the steps are the four the brief names, and each step's
- * margin note shows the field it patches.
+ * engine's validator, the opening step changes nothing and the four after it
+ * make the changes the section promises, and each step's margin note shows the
+ * field it patches.
  */
 import { deepMergeSpec } from "@opendata-ai/openchart-core";
 import { validateSpec } from "@opendata-ai/openchart-engine";
@@ -18,9 +19,9 @@ const specAt = (index: number) =>
     .reduce((spec, change) => deepMergeSpec(spec, change.spec ?? {}), storyBaseSpec);
 
 describe("the story steps", () => {
-  it("are four, with unique ids and prose", () => {
-    expect(storySteps).toHaveLength(4);
-    expect(new Set(storySteps.map((step) => step.id)).size).toBe(4);
+  it("are an opening and four changes, with unique ids and prose", () => {
+    expect(storySteps).toHaveLength(5);
+    expect(new Set(storySteps.map((step) => step.id)).size).toBe(5);
     for (const step of storySteps) expect(step.prose.length).toBeGreaterThan(40);
   });
 
@@ -33,26 +34,31 @@ describe("the story steps", () => {
     },
   );
 
-  it("each change the chart: a range, a revealed series, a callout, a highlight", () => {
+  it("open on the base chart, then add a range, the other series, a callout and a highlight", () => {
     const annotationTypes = (index: number) =>
       (specAt(index).annotations ?? []).map((annotation) => annotation.type);
     const series = (index: number) => new Set(specAt(index).data.map((row) => row.index)).size;
-    expect(annotationTypes(0)).toEqual(["range"]);
-    expect([series(0), series(1)]).toEqual([1, 4]);
-    expect(annotationTypes(2)).toEqual(["range", "text"]);
-    expect(specAt(3).encoding.color).toMatchObject({ highlight: ["NASDAQ"] });
+    expect(specAt(0)).toEqual(storyBaseSpec);
+    expect(annotationTypes(1)).toEqual(["range"]);
+    expect([series(1), series(2)]).toEqual([1, 4]);
+    expect(annotationTypes(3)).toEqual(["range", "text"]);
+    expect(specAt(4).encoding.color).toMatchObject({ highlight: ["NASDAQ"] });
   });
 });
 
 describe("the margin note for a step", () => {
-  it("folds data rows to a count", () => {
-    expect(changeExcerpt(changes, 1)).toEqual(['"data": [ … 64 rows ]']);
+  it("is empty for the opening, which changes nothing", () => {
+    expect(changeExcerpt(changes, 0)).toEqual([]);
   });
 
-  it("elides annotations an earlier step already showed", () => {
-    const [line] = changeExcerpt(changes, 2);
+  it("folds data rows to a count", () => {
+    expect(changeExcerpt(changes, 2)).toEqual(['"data": [ … 64 rows ]']);
+  });
+
+  it("elides annotations an earlier step already showed, and their ids", () => {
+    const [line] = changeExcerpt(changes, 3);
     expect(line).toMatch(/^"annotations": \[…, \{ "type": "text", "x": "2023-01-01"/);
-    expect(line).not.toContain("selloff-2022");
+    expect(line).not.toContain('"id"');
   });
 
   it("writes highlight sugar as the field it sets", () => {
@@ -62,7 +68,7 @@ describe("the margin note for a step", () => {
   });
 
   it("rejects a step index the story does not have", () => {
-    expect(() => changeExcerpt(changes, 9)).toThrow("No story step 9: the story has 4 steps.");
+    expect(() => changeExcerpt(changes, 9)).toThrow("No story step 9: the story has 5 steps.");
   });
 
   it("spaces inline JSON the way a person types it", () => {

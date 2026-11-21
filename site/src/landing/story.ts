@@ -1,9 +1,13 @@
 /**
  * The scroll story's chart and steps: four US stock indexes from January 2022,
- * told in four paragraphs. `storyBaseSpec` is the chart the story starts from;
+ * told in five paragraphs. The first frames the story and changes nothing (the
+ * chart mounts at it); each of the other four makes one change on scroll. `storyBaseSpec` is the chart the story starts from;
  * each step's `change` is a deep-partial patch that `createChartStory` merges
  * onto it cumulatively. Arrays replace rather than merge, so a step that adds an
  * annotation restates the ones before it.
+ *
+ * The dataset's quarterly points are derived from annual total returns, so the
+ * prose cites year-end figures and the last point, never an intra-year low.
  */
 import { indexTotalReturns } from "@datasets/index-total-returns";
 import type { ChartSpec } from "@opendata-ai/openchart-core";
@@ -21,7 +25,8 @@ export type LandingStoryStep = {
 
 /** Where the story's numbers come from, as the figure caption cites it. */
 export const storySource = {
-  label: indexTotalReturns.source.replace(/^Source:\s*/, ""),
+  // The dataset's citation leaves out FTSE Russell, which publishes the Russell 2000.
+  label: `${indexTotalReturns.source.replace(/^Source:\s*/, "")}, FTSE Russell`,
   url: indexTotalReturns.url,
 };
 
@@ -46,7 +51,7 @@ export const storyBaseSpec: ChartSpec = {
     color: { field: "index", type: "nominal" },
   },
   chrome: {
-    title: "A bear market in 2022, then four very different recoveries",
+    title: "A 2022 sell-off, then four very different recoveries",
     subtitle: "Cumulative total return since January 2022, quarterly, %",
   },
   // createChartStory skips the entrance when `animation` is omitted; the landing
@@ -68,36 +73,42 @@ const nasdaqTrough = {
   type: "text",
   x: "2023-01-01",
   y: -33.1,
-  text: "Nasdaq, January 2023: **−33%**",
+  text: "Nasdaq, end of 2022: **−33%**",
   anchor: "right",
   offset: { dx: 14, dy: 6 },
   connector: true,
 } as const;
 
-/** The story's four steps, in scroll order. */
+/** The story's steps, in scroll order: an opening that changes nothing, then four changes. */
 export const storySteps: LandingStoryStep[] = [
+  {
+    id: "opening",
+    prose:
+      "Four indexes follow different parts of the US stock market: the 500 largest companies, the technology-heavy Nasdaq, the 30 stocks of the Dow Jones and the 2,000 smaller companies of the Russell 2000. The chart starts with the S&P 500, measured from January 2022 with dividends reinvested.",
+    change: {},
+  },
   {
     id: "selloff",
     prose:
-      "Over 2022 the S&P 500 lost 18% of its value, dividends included. By July 2023 it was back above where it started.",
+      "Over 2022 the S&P 500 lost 18% of its value. In 2023 it gained 26%, enough to finish the year above where it started.",
     change: { spec: { annotations: [selloff] } },
   },
   {
     id: "other-indexes",
     prose:
-      "The other three big indexes fell in the same year, by different amounts. The Dow Jones lost 13% at its low, the small companies in the Russell 2000 lost 22%.",
+      "The other three fell in 2022 too, by different amounts. The Dow Jones lost 7% over the year, the Russell 2000 lost 21%.",
     change: { spec: { data: allRows } },
   },
   {
     id: "nasdaq-trough",
     prose:
-      "The Nasdaq fell furthest: by January 2023 a third of its value was gone, and it was still below its 2022 level a year later.",
+      "The Nasdaq fell furthest, losing a third of its value in 2022. Even after a strong 2023 it finished that year below where it started.",
     change: { spec: { annotations: [selloff, nasdaqTrough] } },
   },
   {
     id: "nasdaq-recovery",
     prose:
-      "It also climbed furthest. By October 2025 the Nasdaq was up 65% on January 2022, against 46% for the S&P 500 and 22% for the Russell 2000.",
+      "It also climbed furthest. By October 2025 the Nasdaq was up 65% on January 2022, against 46% for the S&P 500, 43% for the Dow and 22% for the Russell 2000.",
     change: { spec: { encoding: { color: { highlight: ["NASDAQ"] } } } },
   },
 ];

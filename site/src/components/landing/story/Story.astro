@@ -1,11 +1,12 @@
 ---
 /**
  * Annotations and editorial framing: a scroll story about four US stock indexes,
- * built with the library's own `createChartStory`. Four paragraphs scroll past a
- * sticky chart; each changes it (a range, a revealed series, a callout, a
- * highlight), and prints the spec field that did it in the margin. The
- * ChartStoryScroll island hydrates when visible; before that, and without
- * JavaScript, the finished chart shows as static SVG beside every paragraph.
+ * built with the library's own `createChartStory`. Five paragraphs scroll past a
+ * sticky chart: an opening paragraph, then four that each change it (a range, a
+ * revealed series, a callout, a highlight) and print the spec field that did it
+ * in the margin. The ChartStoryScroll island hydrates when visible; before that,
+ * and without JavaScript, the finished chart shows as static SVG beside every
+ * paragraph.
  *
  * Contract: `<section id="story" aria-labelledby="story-title" data-landing-section>`
  * with one h2, id `story-title` (`landingCopy.headings.story`). The chart's figure
@@ -37,11 +38,12 @@ const statics = [false, true]
         {landingCopy.headings.story}
       </h2>
       <p class="story-lede" data-motion-part>
-        The chart below is one spec. Each paragraph you scroll past merges a small patch into it,
+        The chart below is one spec. Each paragraph after the first merges a small patch into it,
         and the library animates the difference.
       </p>
     </div>
     <PublishedFigure
+      class="figure-hairline"
       source={storySource}
       note="Returns are rebased to 1 January 2022 and include reinvested dividends."
     >

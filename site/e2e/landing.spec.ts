@@ -274,22 +274,131 @@ test("the preset scrub moves through essay, wire, broadsheet and terminal, then 
   );
 });
 
+test.describe("scroll story", () => {
+  const section = (page: Page) => page.locator("#story");
+  const steps = (page: Page) => section(page).locator("[data-story-step]");
+  /** The live story chart's markup: it changes whenever the story moves the chart. */
+  const chartMarkup = (page: Page) =>
+    section(page)
+      .locator("[data-story-chart] .story-host svg")
+      .first()
+      .evaluate((svg) => svg.outerHTML);
+
+  /** Scrolls so the step's top sits just past the story's trigger line, as a reader's scroll would. */
+  async function scrollStepToTrigger(page: Page, index: number) {
+    await steps(page)
+      .nth(index)
+      .evaluate((step) => {
+        const trigger = innerHeight * (innerWidth >= 1024 ? 0.5 : 0.78);
+        scrollBy(0, step.getBoundingClientRect().top - trigger + 24);
+      });
+    await settle(page);
+  }
+
+  test("scrolling makes each paragraph current in turn and each change moves the chart", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await hydrated(section(page));
+    const count = await steps(page).count();
+    expect(count).toBe(5);
+
+    await scrollStepToTrigger(page, 0);
+    await expect(steps(page).nth(0)).toHaveAttribute("aria-current", "step");
+    let previous = await chartMarkup(page);
+    for (let index = 1; index < count; index += 1) {
+      await scrollStepToTrigger(page, index);
+      await expect(steps(page).nth(index)).toHaveAttribute("aria-current", "step");
+      await expect(section(page).locator('[aria-current="step"]')).toHaveCount(1);
+      await expect
+        .poll(() => chartMarkup(page), `step ${index + 1} changes the chart`)
+        .not.toBe(previous);
+      previous = await chartMarkup(page);
+    }
+  });
+});
+
+test.describe("motion bench", () => {
+  const section = (page: Page) => page.locator("#motion");
+  const nextButton = (page: Page) =>
+    section(page).getByRole("button", { name: /^(Next month|Back to June)$/ });
+  const months = (page: Page) => section(page).locator("[data-motion-months]");
+  const excerpt = (page: Page) => section(page).locator("[data-motion-excerpt]");
+  /** The live chart's marks: the count follows the number of months shown. */
+  const markCount = (page: Page) =>
+    section(page).locator('.motion-chart svg:not(.demo-static) [class*="oc-mark"]').count();
+
+  async function stepThroughTheYear(page: Page) {
+    await hydrated(section(page));
+    await expect(
+      section(page).locator(".motion-chart svg:not(.demo-static)").first(),
+    ).toBeVisible();
+    const opening = await markCount(page);
+    await nextButton(page).click();
+    await expect(months(page)).toHaveText("Showing January to July");
+    await expect(excerpt(page)).toContainText('"data": [ … 7 rows ]');
+    await expect.poll(() => markCount(page)).toBeGreaterThan(opening);
+    for (let press = 0; press < 5; press += 1) await nextButton(page).click();
+    await expect(months(page)).toHaveText("Showing January to December");
+    await expect(nextButton(page)).toHaveText("Back to June");
+    await nextButton(page).click();
+    await expect(months(page)).toHaveText("Showing January to June");
+    await expect(excerpt(page)).toContainText('"data": [ … 6 rows ]');
+    await expect.poll(() => markCount(page)).toBe(opening);
+  }
+
+  test("Next month runs to December and back, and choosing off rewrites the animation field", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await stepThroughTheYear(page);
+
+    const replay = section(page).getByRole("button", { name: "Replay entrance" });
+    await expect(replay).toBeEnabled();
+    await section(page).getByRole("radio", { name: "off" }).check();
+    await expect(excerpt(page)).toContainText('"animation": false');
+    await expect(excerpt(page).locator("[data-changed]")).toHaveText(/"animation": false/);
+    await expect(replay).toBeDisabled();
+    await expect(section(page).getByText("Replay is off while animation is false.")).toBeVisible();
+  });
+
+  test("with reduced motion the controls still change the chart, and replay says why it is off", async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto("/");
+    await stepThroughTheYear(page);
+    await expect(section(page).getByRole("button", { name: "Replay entrance" })).toBeDisabled();
+    await expect(
+      section(page).getByText("Replay is off: your system asks for reduced motion."),
+    ).toBeVisible();
+  });
+});
+
 test.describe("resize frame", () => {
   const section = (page: Page) => page.locator("#responsive");
   const slider = (page: Page) => section(page).getByRole("slider", { name: "Chart width" });
   const valueNow = async (page: Page) => Number(await slider(page).getAttribute("aria-valuenow"));
+  /** The library's live chart, not the build-time static SVG it replaces. */
+  const liveChart = (page: Page) =>
+    section(page).locator("[data-resize-frame] svg:not(.demo-static)").first();
+  /**
+   * Only the compact layout writes this: it keeps one callout on the line and
+   * moves the other (the 2020 low) to a numbered note under the plot.
+   */
+  const compactNote = (page: Page) => liveChart(page).locator("text.oc-footnotes");
+
+  /** At a starting width of 400px or more the live chart shows both callouts inline. */
+  async function expectNotCompactYet(page: Page, start: number) {
+    await expect(liveChart(page)).toBeVisible();
+    if (start >= COMPACT_BELOW_PX) await expect(compactNote(page)).toHaveCount(0);
+  }
 
   async function expectCompact(page: Page) {
     await expect.poll(() => valueNow(page)).toBeLessThan(COMPACT_BELOW_PX);
     await expect(section(page).locator("[data-resize-breakpoint]")).toHaveText(/^\s*compact\s*$/i);
-    await expect
-      .poll(() =>
-        section(page)
-          .locator("[data-resize-frame] svg")
-          .first()
-          .evaluate((svg) => svg.getBoundingClientRect().width),
-      )
-      .toBeLessThan(COMPACT_BELOW_PX);
+    await expect(compactNote(page)).toContainText("Low: 0.3% in spring 2020");
+    await expect(liveChart(page).locator(".oc-annotation-footnote-number")).toHaveCount(1);
   }
 
   test("dragging the handle below 400px switches the chart to its compact layout", async ({
@@ -298,6 +407,7 @@ test.describe("resize frame", () => {
     await page.goto("/");
     await hydrated(section(page));
     const start = await valueNow(page);
+    await expectNotCompactYet(page, start);
     const target = Math.min(360, start - 40);
     const box = await slider(page).boundingBox();
     if (!box) throw new Error("The resize handle has no box: it is not rendered visibly.");
@@ -317,6 +427,7 @@ test.describe("resize frame", () => {
     await hydrated(section(page));
     const min = Number(await slider(page).getAttribute("aria-valuemin"));
     const start = await valueNow(page);
+    await expectNotCompactYet(page, start);
     await slider(page).focus();
     await page.keyboard.press("ArrowLeft");
     await expect.poll(() => valueNow(page)).toBe(Math.max(min, start - 20));

@@ -1,25 +1,15 @@
 /**
- * The resize frame's rules, kept apart from the DOM: which breakpoint a width
- * falls in (the library's own compact, medium and full thresholds), how a key
- * on the handle moves the width, and how a width is kept inside the range.
+ * The resize frame's rules, kept apart from the DOM: how a key on the handle
+ * moves the width and how a width is held inside the range. Breakpoint names
+ * and thresholds come from the library (`getBreakpoint`), so the frame's label
+ * always agrees with the layout the chart picks.
  */
 
-/** The library lays a chart out as compact under 400px and medium up to 700px. */
-export const COMPACT_BELOW = 400;
-export const MEDIUM_BELOW = 700;
 /** Arrow keys move the handle this many px; Page Up and Page Down five times as far. */
 export const KEY_STEP = 20;
 const PAGE_STEP = KEY_STEP * 5;
 
-export type Breakpoint = "compact" | "medium" | "full";
 export type WidthRange = { min: number; max: number };
-
-/** The breakpoint name for a chart width in px. */
-export function breakpointFor(width: number): Breakpoint {
-  if (width < COMPACT_BELOW) return "compact";
-  if (width < MEDIUM_BELOW) return "medium";
-  return "full";
-}
 
 /** A width rounded to whole px and held inside the range. */
 export function clampWidth(width: number, range: WidthRange): number {

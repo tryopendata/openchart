@@ -4,7 +4,7 @@
  * entrance", "Next month" (a data update) and a fluid, subtle or off choice
  * mapped to the spec's `animation` field, with the spec lines they change. The
  * MotionReplay island hydrates when visible; before that the opening chart shows
- * as static SVG.
+ * as static SVG and the controls are disabled.
  *
  * Contract: `<section id="motion" aria-labelledby="motion-title" data-landing-section>`
  * with one h2, id `motion-title` (`landingCopy.headings.motion`). The chart's
@@ -33,7 +33,7 @@ const statics = [false, true]
         {landingCopy.headings.motion}
       </h2>
     </div>
-    <PublishedFigure source={motionSource}>
+    <PublishedFigure class="figure-hairline" source={motionSource}>
       <MotionReplay client:visible>
         <Fragment set:html={statics} />
       </MotionReplay>
