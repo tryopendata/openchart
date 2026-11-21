@@ -1,45 +1,57 @@
 ---
 /**
- * One tag's page: the posts that carry the tag, newest first. A page exists
- * for each tag at least one post uses. Kept out of the search index and the
- * sitemap, and `noindex, follow` so its links still count. Stub until lane d
- * builds it.
+ * One tag's page: the posts that carry the tag, newest first, listed as the
+ * index lists them. A page exists for each tag at least one post uses. Kept
+ * out of the search index and the sitemap, and `noindex, follow` so its links
+ * still count.
  */
 import type { GetStaticPaths } from "astro";
-import { type BlogTag, blogTags } from "../../../config";
+import BlogBreadcrumb from "../../../components/blog/BlogBreadcrumb.astro";
+import PostList from "../../../components/blog/PostList.astro";
+import type { BlogTag } from "../../../config";
 import BaseLayout from "../../../layouts/BaseLayout.astro";
-import { allPosts } from "../../../lib/collection";
+import { postsByTag, readingTime, tagPath, tagsInUse } from "../../../lib/blog";
 import type { BlogPost } from "../../../lib/blog-types";
+import { allPosts } from "../../../lib/collection";
+import "../../../styles/blog.css";
 
 export const getStaticPaths = (async () => {
-  const posts = (await allPosts()).map((entry) => entry.post);
-  return blogTags
-    .map((tag) => ({ tag, posts: posts.filter((post) => post.tags.includes(tag.id)) }))
-    .filter(({ posts: tagged }) => tagged.length > 0)
-    .map(({ tag, posts: tagged }) => ({ params: { tag: tag.id }, props: { tag, posts: tagged } }));
+  const entries = await allPosts();
+  const posts = entries.map(({ post }) => post);
+  const minutes = new Map(entries.map(({ post, body }) => [post, readingTime(body)]));
+  return tagsInUse(posts).map((tag) => ({
+    params: { tag: tag.id },
+    props: {
+      tag,
+      // Every post postsByTag returns came from `posts`, so the map has its minutes.
+      items: postsByTag(posts, tag.id).map((post) => ({ post, minutes: minutes.get(post) ?? 1 })),
+    },
+  }));
 }) satisfies GetStaticPaths;
 
 interface Props {
   tag: BlogTag;
-  posts: BlogPost[];
+  items: { post: BlogPost; minutes: number }[];
 }
-const { tag, posts } = Astro.props;
+const { tag, items } = Astro.props;
+const count = items.length === 1 ? "One post" : `${items.length} posts`;
 ---
 
 <BaseLayout
-  title={`Posts tagged ${tag.label}`}
-  description={`Blog posts about ${tag.label.toLowerCase()}.`}
-  path={`/blog/tags/${tag.id}/`}
+  title={`${tag.label} posts`}
+  description={`Blog posts tagged ${tag.label}, newest first.`}
+  path={tagPath(tag.id)}
   robots="noindex, follow"
 >
-  <div class="prose mx-auto max-w-4xl px-6 py-10">
-    <h1>{tag.label}</h1>
-    <ul>
-      {posts.map((post) => (
-        <li>
-          <a href={`/blog/${post.slug}/`}>{post.title}</a>
-        </li>
-      ))}
-    </ul>
+  <div class="blog-index">
+    <header class="blog-index-header">
+      <BlogBreadcrumb />
+      <h1 class="blog-headline">{tag.label}</h1>
+      <p class="blog-standfirst">
+        {count} tagged {tag.label}, newest first.
+      </p>
+    </header>
+    <div class="rule-axis mt-8"></div>
+    <PostList items={items} />
   </div>
 </BaseLayout>
