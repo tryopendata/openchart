@@ -102,6 +102,53 @@
     @apply border-ink text-ink;
   }
 
+  /*
+   * Reader controls (lib/demo/controls.ts): a single row of quiet mono text
+   * buttons under the chart, at its 1rem inset, then the event log. The row and
+   * the log frame hold their size while their controls are still hidden, so
+   * nothing on the page moves when scripts reveal them (see the gate rules below).
+   */
+  .demo-controls {
+    display: none;
+  }
+
+  .demo-controls-row {
+    @apply flex h-10 items-center gap-4 overflow-x-auto px-4;
+  }
+
+  .demo-states,
+  .demo-actions {
+    @apply flex shrink-0 items-center gap-1;
+  }
+
+  .demo-actions {
+    @apply ml-auto;
+  }
+
+  .demo-control {
+    @apply cursor-pointer rounded-[2px] px-1.5 py-1 font-mono text-xs whitespace-nowrap text-muted underline decoration-transparent decoration-1 underline-offset-4 hover:text-ink;
+    transition:
+      color 120ms ease-out,
+      text-decoration-color 120ms ease-out;
+  }
+
+  .demo-control[aria-pressed="true"] {
+    @apply text-ink decoration-ink;
+  }
+
+  .demo-events-frame {
+    @apply mx-4 h-[6.5rem] border-t border-line;
+  }
+
+  .demo-events {
+    @apply m-0 h-full list-none overflow-y-auto p-0 py-1 font-mono text-xs leading-6 text-ink-2;
+  }
+
+  .demo-events:empty::before {
+    @apply text-muted;
+    content: "Events the chart emits appear here, newest first.";
+  }
+
   /* A long data array scrolls inside the panel; Shiki's tabindex="0" makes it keyboard scrollable. */
   .demo-panel pre {
     @apply m-0 max-h-[28rem] overflow-auto p-4 font-mono text-[13px] leading-relaxed;
@@ -140,7 +187,21 @@
     visibility 200ms;
 }
 
+/*
+ * The controls bar takes its space wherever scripts are expected, so the row
+ * and the log frame are there before their controls show. Without scripts it
+ * stays out, and so it does when the live chart failed and its controls never will show.
+ */
+:root[data-demo-gate] .demo-controls {
+  display: block;
+}
+
+.demo:has(.demo-stage[data-demo-error]) .demo-controls {
+  display: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .demo-control,
   .demo-code[data-demo-open],
   .demo-toggle,
   .demo-toggle::before,
@@ -222,7 +283,8 @@
 
 /* Paper gets the finished static chart in the page's theme, never a live one mid-entrance. */
 @media print {
-  .demo-live {
+  .demo-live,
+  :root[data-demo-gate] .demo-controls {
     display: none;
   }
 

@@ -47,6 +47,33 @@ describe("frameworkSnippets", () => {
     expect(react).toContain("const spec: ChartSpec = {\n  data,\n");
   });
 
+  it("passes the demo's interaction and renderer as props and as mount options", () => {
+    const { react, vue, svelte, vanilla } = frameworkSnippets(fixtureBar.spec, {
+      renderer: "canvas",
+      interaction: "edit",
+    });
+    expect(react).toContain('<Chart spec={spec} renderer="canvas" interaction="edit" />');
+    expect(vue).toContain('<Chart :spec="spec" renderer="canvas" interaction="edit" />');
+    expect(svelte).toContain('<Chart {spec} renderer="canvas" interaction="edit" />');
+    expect(vanilla).toContain(
+      'createChart(container, spec, { renderer: "canvas", interaction: "edit" });',
+    );
+  });
+
+  it("passes only the host option the demo sets, and none without them", () => {
+    expect(frameworkSnippets(fixtureBar.spec, { interaction: "select" }).react).toContain(
+      '<Chart spec={spec} interaction="select" />',
+    );
+    expect(frameworkSnippets(fixtureBar.spec, {}).vanilla).toContain(
+      "createChart(container, spec);",
+    );
+  });
+
+  it("keeps the host options in the folded code", () => {
+    const { shown } = foldedFrameworkSnippets(fixtureBar.spec, { interaction: "edit" });
+    expect(shown.svelte).toContain('<Chart {spec} interaction="edit" />');
+  });
+
   it("keeps data with five rows or fewer inline", () => {
     const rows = (fixtureBar.spec as { data: unknown[] }).data.slice(0, 5);
     const spec = { ...fixtureBar.spec, data: rows } as VizSpec;

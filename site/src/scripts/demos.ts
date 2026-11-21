@@ -2,8 +2,10 @@
  * Brings the demos on a page to life: mounts each stage's live chart as it
  * comes within LEAD_PX of the viewport, keeps at most MAX_LIVE of them live,
  * remounts them when the site theme changes, and wires the code tabs, the Code
- * disclosure and the Copy buttons. BaseLayout loads it on every page; it does
- * nothing without a demo.
+ * disclosure and the Copy buttons. A demo with reader controls also loads
+ * demo-controls.ts, which may change the spec the demo shows; every later mount
+ * (theme change, eviction, Replay) draws that current spec. BaseLayout loads
+ * this on every page; it does nothing without a demo.
  *
  * A demo marked for the entrance mounts ahead of the reader with the library's
  * entrance held: the library plays it once the chart is actually seen
@@ -13,8 +15,10 @@
  * static SVG is showing anyway (the gate lifted, or reduced motion), the live
  * chart replaces it finished.
  */
+import type { ChartSpec, LayerSpec, VizSpec } from "@opendata-ai/openchart-core";
 import { DEMO_ATTR, DEMO_CLASS, DEMO_PAGE_ATTR } from "../lib/demo/markup";
 import { setupDemoCodeToggle } from "./demo-code-toggle";
+import type { LiveHandle, WiredControls } from "./demo-controls";
 import { setupDemoCopyButtons } from "./demo-copy";
 import type { DemoMount } from "./demo-mount";
 import { readFigureSpec, readMountOptions } from "./demo-spec";
@@ -27,6 +31,7 @@ const MAX_LIVE = 6;
 const FAILURE_TEXT = "This chart could not be rendered.";
 
 type DemoMounter = typeof import("./demo-mount");
+type DemoControlsModule = typeof import("./demo-controls");
 
 type DemoStage = {
   id: string;
@@ -41,11 +46,19 @@ type DemoStage = {
   played: boolean;
   failed: boolean;
   live: DemoMount | null;
+  /** The spec the demo shows now: its own until a control changes it, and kept through remounts and eviction. */
+  spec: VizSpec | null;
+  /** The figure has a controls bar, so the controls script is wired before its first mount. */
+  hasControls: boolean;
+  controls: WiredControls | null;
 };
 
 function readDemoStage(stage: HTMLElement): DemoStage {
   const figure = stage.closest<HTMLElement>(`[${DEMO_ATTR.figure}]`);
   return {
+    spec: null,
+    hasControls: figure?.querySelector(`[${DEMO_ATTR.controls}]`) != null,
+    controls: null,
     id: figure?.getAttribute(DEMO_ATTR.figure) ?? "(unknown demo)",
     stage,
     figure: figure ?? stage,
@@ -116,21 +129,59 @@ function makeRoom(demos: DemoStage[], incoming: DemoStage): void {
   if (furthest) unmount(furthest);
 }
 
-function mountNow(demos: DemoStage[], demo: DemoStage, mounter: DemoMounter): void {
+/**
+ * Mounts the demo's current spec. The entrance plays on the first mount of a
+ * demo marked for it while its static SVG is out of sight, and on a Replay.
+ */
+function mountNow(
+  demos: DemoStage[],
+  demo: DemoStage,
+  mounter: DemoMounter,
+  { replay = false } = {},
+): void {
   if (demo.live || demo.failed) return;
   makeRoom(demos, demo);
   try {
-    const spec = readFigureSpec(demo.figure);
-    const { renderer } = readMountOptions(demo.figure);
-    const entrance = demo.entrance && !demo.played && !staticShowing(demo);
+    demo.spec ??= readFigureSpec(demo.figure);
+    const { renderer, interaction } = readMountOptions(demo.figure);
+    const entrance = replay || (demo.entrance && !demo.played && !staticShowing(demo));
     const dark = isDarkPage(demo.stage.ownerDocument);
     const ownTheme = demo.figure.hasAttribute(DEMO_ATTR.ownTheme);
-    demo.live = mounter.mountDemo(demo.stage, spec, { dark, entrance, ownTheme, renderer });
+    demo.live = mounter.mountDemo(demo.stage, demo.spec, {
+      dark,
+      entrance,
+      ownTheme,
+      renderer,
+      interaction: demo.controls?.interaction ?? interaction,
+      handlers: demo.controls?.handlers,
+    });
     removePlaceholder(demo);
     demo.stage.setAttribute(DEMO_ATTR.live, "");
+    demo.controls?.reveal();
   } catch (error) {
     showFailure(demo, error);
   }
+}
+
+/** The controls' way into one demo's mount (see demo-controls.ts). */
+function liveHandle(demos: DemoStage[], demo: DemoStage, mounter: DemoMounter): LiveHandle {
+  return {
+    instance: () => demo.live?.instance ?? null,
+    spec: () => {
+      demo.spec ??= readFigureSpec(demo.figure);
+      return demo.spec;
+    },
+    update(spec) {
+      demo.spec = spec;
+      // Controls exist only on chart and layer specs (lib/demo/controls.ts checks at build).
+      demo.live?.instance?.update(mounter.withoutWatermark(spec) as ChartSpec | LayerSpec);
+    },
+    remount(spec, { entrance }) {
+      demo.spec = spec;
+      unmount(demo);
+      mountNow(demos, demo, mounter, { replay: entrance });
+    },
+  };
 }
 
 /** Calls `onApproach` each time a stage comes within LEAD_PX of the viewport. */
@@ -166,9 +217,14 @@ export function startDemos(doc: Document): void {
   const demos = stages.map(readDemoStage);
   let mounter: Promise<DemoMounter> | null = null;
   let loaded: DemoMounter | null = null;
+  let controlsModule: Promise<DemoControlsModule> | null = null;
   const loadMounter = () => {
     mounter ??= import("./demo-mount");
     return mounter;
+  };
+  const loadControls = () => {
+    controlsModule ??= import("./demo-controls");
+    return controlsModule;
   };
 
   // A demo on screen at load waits on an empty stage for its entrance, so fetch the library now.
@@ -180,15 +236,19 @@ export function startDemos(doc: Document): void {
   }
 
   observeApproach(demos, (demo) => {
-    loadMounter()
-      .then((module) => {
+    Promise.all([loadMounter(), demo.hasControls ? loadControls() : null])
+      .then(([module, controls]) => {
         loaded = module;
+        // Wired once, before the first mount, which needs the controls' handlers.
+        if (controls && !demo.controls) {
+          demo.controls = controls.wireDemoControls(demo.figure, liveHandle(demos, demo, module));
+        }
         if (demo.near) mountNow(demos, demo, module);
       })
       .catch((error: unknown) => showFailure(demo, error));
   });
 
-  // A mounted chart has no theme setter, so a theme change rebuilds each live one.
+  // A mounted chart has no theme setter, so a theme change rebuilds each live one, in its current state.
   observeTheme(doc, () => {
     if (!loaded) return;
     for (const demo of demos.filter((candidate) => candidate.live)) {

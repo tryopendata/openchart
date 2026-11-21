@@ -5,6 +5,58 @@ section: behavior
 order: 3
 ---
 
-{/* phase-4-stub */}
+import Demo from "../../../components/demo/Demo.astro";
 
-This page is being written.
+Tooltips, keyboard navigation and legend toggles work with no code. Event handlers tell your page what the reader did, and the `interaction` mount option decides whether chart elements can be selected or edited.
+
+<Demo id="behavior/interaction-crosshair" />
+
+`crosshair: true` draws a vertical rule at the nearest quarter as the pointer moves along a line or area chart, and the tooltip gives that quarter's values. Keyboard readers can tab to the chart and step from quarter to quarter with the left and right arrow keys. `encoding.tooltip` picks which fields the tooltip lists, and `mark.tooltip: null` turns tooltips off.
+
+## Legend toggles
+
+<Demo id="behavior/interaction-legend" />
+
+Clicking a legend entry hides that series and redraws the chart. The y axis rescales to the series still showing, every series keeps its color, and the last visible series can't be hidden. `onLegendToggle` receives the series name and whether it is now visible, and the event log under the chart lists each call. A toggle changes what the reader sees, not the spec, so it never produces an edit.
+
+## Selection
+
+<Demo id="behavior/interaction-select" />
+
+With `interaction: "select"`, a click or the Tab key selects the title, the subtitle, an annotation or the legend. `onSelect` receives a reference to the element whose `path` is a JSON Pointer into the spec, such as `/annotations/1` for the note on the last column. `onDeselect` fires when Escape, a click on empty space or another selection clears it. Select mode keeps the arrow keys for reading the data; [edit mode](/docs/behavior/edit-mode/) adds dragging and text editing.
+
+## Handlers and the interaction mode
+
+Pass handlers as mount options in plain JavaScript, or as props on the React, Vue and Svelte components:
+
+```ts title="chart.ts"
+import { createChart } from "@opendata-ai/openchart-vanilla";
+
+createChart(container, spec, {
+  interaction: "select",
+  onMarkClick: ({ datum }) => console.log(datum),
+  onLegendToggle: (series, visible) => console.log(series, visible),
+  onSelect: (element) => console.log(element.path),
+});
+```
+
+Leave `interaction` out and the library infers it once, at mount: an `onEdit` handler means edit mode, `onSelect` or `onDeselect` means select mode, and anything else means read mode. Set it explicitly when the handlers you attach should not decide it. The event log in the legend demo attaches `onSelect`, so that demo sets `interaction: "read"` to keep selection off.
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `crosshair` | Draws a vertical rule at the nearest point on line and area charts. Off by default. |
+| `encoding.tooltip` | One field or a list of fields for the tooltip, independent of the other channels. |
+| `mark.tooltip` | `null` turns tooltips off. |
+| `legend` | `show: false` hides the legend; `position` moves it. |
+| `interaction` | Mount option: `"read"`, `"select"` or `"edit"`. |
+| `onMarkClick`, `onMarkHover`, `onMarkFocus` | A data mark was clicked, hovered or reached with the keyboard, with its data row. |
+| `onLegendToggle` | A series was hidden or shown. |
+| `onSelect`, `onDeselect` | An element was selected or cleared, with its `path` in the spec. |
+
+## Related
+
+- [Events reference](/docs/api/events/) lists every handler, its payload and its name in each framework.
+- [Line](/docs/change-over-time/line/) covers line charts and their annotations.
+- [Edit mode](/docs/behavior/edit-mode/) turns selection into editing.

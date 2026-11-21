@@ -5,6 +5,7 @@
  */
 import type { VizSpec } from "@opendata-ai/openchart-core";
 import { isChartSpec, isLayerSpec } from "@opendata-ai/openchart-core";
+import type { DemoMountOptions } from "../../demos/types";
 import { foldTargets, jsonWithMarkers, showFolds } from "./fold-targets";
 import type { SpecPath } from "./markup";
 
@@ -65,50 +66,74 @@ function imports(name: string, from: string, specType: string): string {
   ].join("\n");
 }
 
-function reactSnippet(wrapper: Wrapper, declarations: string): string {
+/** The demo's host options as name and value pairs, in a fixed order; empty when it sets none. */
+type HostOptions = readonly (readonly [name: string, value: string])[];
+
+function hostOptions(mount: DemoMountOptions | undefined): HostOptions {
+  const pairs: [string, string][] = [];
+  if (mount?.renderer) pairs.push(["renderer", mount.renderer]);
+  if (mount?.interaction) pairs.push(["interaction", mount.interaction]);
+  return pairs;
+}
+
+/** The options as string props on a component, each after a space: ` interaction="edit"`. */
+const asProps = (options: HostOptions) =>
+  options.map(([name, value]) => ` ${name}="${value}"`).join("");
+
+function reactSnippet(wrapper: Wrapper, declarations: string, options: HostOptions): string {
   const head = imports(wrapper.component, "@opendata-ai/openchart-react", wrapper.specType);
-  const body = `export function Example() {\n  return <${wrapper.component} spec={spec} />;\n}`;
+  const element = `<${wrapper.component} spec={spec}${asProps(options)} />`;
+  const body = `export function Example() {\n  return ${element};\n}`;
   return `${head}\n\n${declarations}\n\n${body}\n`;
 }
 
-function vueSnippet(wrapper: Wrapper, declarations: string): string {
+function vueSnippet(wrapper: Wrapper, declarations: string, options: HostOptions): string {
   const head = imports(wrapper.component, "@opendata-ai/openchart-vue", wrapper.specType);
-  const template = `<template>\n  <${wrapper.component} :spec="spec" />\n</template>`;
+  const template = `<template>\n  <${wrapper.component} :spec="spec"${asProps(options)} />\n</template>`;
   return `<script setup lang="ts">\n${head}\n\n${declarations}\n</script>\n\n${template}\n`;
 }
 
-function svelteSnippet(wrapper: Wrapper, declarations: string): string {
+function svelteSnippet(wrapper: Wrapper, declarations: string, options: HostOptions): string {
   const head = imports(wrapper.component, "@opendata-ai/openchart-svelte", wrapper.specType);
-  return `<script lang="ts">\n${head}\n\n${declarations}\n</script>\n\n<${wrapper.component} {spec} />\n`;
+  const element = `<${wrapper.component} {spec}${asProps(options)} />`;
+  return `<script lang="ts">\n${head}\n\n${declarations}\n</script>\n\n${element}\n`;
 }
 
-function vanillaSnippet(wrapper: Wrapper, declarations: string): string {
+function vanillaSnippet(wrapper: Wrapper, declarations: string, options: HostOptions): string {
   const head = imports(wrapper.mount, "@opendata-ai/openchart-vanilla", wrapper.specType);
+  const fields = options.map(([name, value]) => `${name}: "${value}"`).join(", ");
+  const args = fields ? `container, spec, { ${fields} }` : "container, spec";
   const mount = [
     'const container = document.getElementById("chart");',
     "if (!container) throw new Error('Add <div id=\"chart\"></div> to the page first.');",
-    `${wrapper.mount}(container, spec);`,
+    `${wrapper.mount}(${args});`,
   ].join("\n");
   return `${head}\n\n${declarations}\n\n${mount}\n`;
 }
 
-function snippetsFrom(wrapper: Wrapper, declarations: string): FrameworkSnippets {
+function snippetsFrom(
+  wrapper: Wrapper,
+  declarations: string,
+  mount: DemoMountOptions | undefined,
+): FrameworkSnippets {
+  const options = hostOptions(mount);
   return {
-    react: reactSnippet(wrapper, declarations),
-    vue: vueSnippet(wrapper, declarations),
-    svelte: svelteSnippet(wrapper, declarations),
-    vanilla: vanillaSnippet(wrapper, declarations),
+    react: reactSnippet(wrapper, declarations, options),
+    vue: vueSnippet(wrapper, declarations, options),
+    svelte: svelteSnippet(wrapper, declarations, options),
+    vanilla: vanillaSnippet(wrapper, declarations, options),
   };
 }
 
 /**
- * Complete, runnable code that renders this spec in each framework.
+ * Complete, runnable code that renders this spec in each framework, passing the
+ * demo's host options (`renderer`, `interaction`) as props or mount options.
  *
  * @throws {TypeError} When the spec's type has no framework wrapper.
  */
-export function frameworkSnippets(spec: VizSpec): FrameworkSnippets {
+export function frameworkSnippets(spec: VizSpec, mount?: DemoMountOptions): FrameworkSnippets {
   const wrapper = wrapperFor(spec);
-  return snippetsFrom(wrapper, specDeclarations(spec, wrapper.specType, plainJson));
+  return snippetsFrom(wrapper, specDeclarations(spec, wrapper.specType, plainJson), mount);
 }
 
 /**
@@ -134,11 +159,11 @@ function mapSnippets(snippets: FrameworkSnippets, map: (code: string) => string)
  * @throws {TypeError} When the spec's type has no framework wrapper.
  * @throws {FoldMarkerError} When the spec contains the text fold markers use.
  */
-export function foldedFrameworkSnippets(spec: VizSpec): FoldedSnippets {
+export function foldedFrameworkSnippets(spec: VizSpec, mount?: DemoMountOptions): FoldedSnippets {
   const wrapper = wrapperFor(spec);
   const targets = foldTargets(spec);
   const json: JsonWriter = (value) => jsonWithMarkers(value, targets);
-  const template = snippetsFrom(wrapper, specDeclarations(spec, wrapper.specType, json));
+  const template = snippetsFrom(wrapper, specDeclarations(spec, wrapper.specType, json), mount);
   return {
     shown: mapSnippets(template, (code) => showFolds(code, targets)),
     template,

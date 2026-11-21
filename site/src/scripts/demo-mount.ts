@@ -4,8 +4,14 @@
  * and destroying the mount leaves the stage as the build wrote it. demos.ts
  * loads this module with `import()`, so pages without demos never fetch the library.
  */
-import type { DarkMode, ThemeConfig, VizSpec } from "@opendata-ai/openchart-core";
+import type {
+  ChartEventHandlers,
+  DarkMode,
+  ThemeConfig,
+  VizSpec,
+} from "@opendata-ai/openchart-core";
 import {
+  type ChartInstance,
   createBarList,
   createChart,
   createGeoMap,
@@ -13,6 +19,7 @@ import {
   createSankey,
   createTable,
   createTileMap,
+  type InteractionMode,
 } from "@opendata-ai/openchart-vanilla";
 import { chartTheme } from "../lib/demo/chart-theme";
 import { DEMO_CLASS } from "../lib/demo/markup";
@@ -20,7 +27,13 @@ import { DEMO_CLASS } from "../lib/demo/markup";
 /** Thrown when a spec cannot be mounted. `cause` is the original error. */
 export class DemoMountError extends Error {}
 
-type MountOptions = { theme?: ThemeConfig; darkMode: DarkMode; renderer?: "svg" | "canvas" };
+/** The options every mount function takes; chart event handlers ride along for charts only. */
+type MountOptions = {
+  theme?: ThemeConfig;
+  darkMode: DarkMode;
+  renderer?: "svg" | "canvas";
+  interaction?: InteractionMode;
+};
 
 /** How one demo mounts: the page theme, whether the entrance plays, and the demo's host options. */
 export type DemoMountRequest = {
@@ -30,10 +43,16 @@ export type DemoMountRequest = {
   ownTheme?: boolean;
   /** The renderer for point marks, from the demo's `mount.renderer`. */
   renderer?: "svg" | "canvas";
+  /** What the reader may do with the chart's elements. Pass it whenever `handlers` are given, so they never decide it. */
+  interaction?: InteractionMode;
+  /** Event handlers for a chart or layer spec, such as the controls' event log. */
+  handlers?: ChartEventHandlers;
 };
 
 /** A mounted demo. */
 export type DemoMount = {
+  /** The live chart for a chart or layer spec, for updates and exports; null for other types. */
+  instance: ChartInstance | null;
   /** Destroys the chart and removes its host, leaving the stage as the build wrote it. */
   destroy(): void;
   /** True while the entrance is still held because the chart has not been seen yet. */
@@ -43,6 +62,17 @@ export type DemoMount = {
 /** The library holds an entrance by pausing it through this property on the chart's root. */
 const HELD_ENTRANCE = '[style*="--oc-play-state"]';
 type Mount = (host: HTMLElement, spec: never, options: MountOptions) => { destroy(): void };
+
+/**
+ * The spec as the site draws it: without the attribution link the library adds
+ * inside a chart, since this is the library's own site. Use it for every mount
+ * and every `update`.
+ */
+export function withoutWatermark<T extends VizSpec>(spec: T): T {
+  return { ...spec, watermark: false };
+}
+
+const isChart = (spec: VizSpec) => "mark" in spec || "layer" in spec;
 
 const MOUNTS_BY_TYPE: Record<string, Mount> = {
   table: createTable,
@@ -55,7 +85,7 @@ const MOUNTS_BY_TYPE: Record<string, Mount> = {
 
 /** The mount function for a spec: charts and layers carry `mark` or `layer`, the rest a `type`. */
 function mountFor(spec: VizSpec): Mount | undefined {
-  if ("mark" in spec || "layer" in spec) return createChart as Mount;
+  if (isChart(spec)) return createChart as Mount;
   return MOUNTS_BY_TYPE[String((spec as { type?: unknown }).type)];
 }
 
@@ -82,16 +112,20 @@ export function mountDemo(stage: HTMLElement, spec: VizSpec, options: DemoMountR
   const host = stage.ownerDocument.createElement("div");
   host.className = DEMO_CLASS.live;
   stage.append(host);
-  // No attribution link inside the chart: this is the library's own site.
-  const unbranded = { ...spec, watermark: false };
+  const unbranded = withoutWatermark(spec);
   const playable = options.entrance ? unbranded : { ...unbranded, animation: false };
+  // Other types name some handlers alike with other signatures, so only a chart gets them.
+  const handlers = isChart(spec) ? options.handlers : undefined;
   try {
     const instance = mount(host, playable as never, {
       theme: options.ownTheme ? undefined : chartTheme(options.dark),
       darkMode: options.dark ? "force" : "off",
       ...(options.renderer ? { renderer: options.renderer } : {}),
+      ...(options.interaction ? { interaction: options.interaction } : {}),
+      ...handlers,
     });
     return {
+      instance: isChart(spec) ? (instance as ChartInstance) : null,
       destroy() {
         instance.destroy();
         host.remove();
