@@ -27,15 +27,15 @@ The library sorts every chart into one of three breakpoints by the width of its 
 
 At 360px the phone figure keeps one callout in place and turns the other into a numbered marker, with its text in a note under the plot. Height counts too: a chart 350px tall or less keeps its title and drops the subtitle, and one under 100px hides both.
 
-`overrides` replaces parts of the spec at one breakpoint: the title and subtitle, labels, legend, annotations, or an axis or scale setting. `overrides: { compact: { annotations: [] } }` removes the callouts on phones only. Set `responsive: false` to stop the chart from adapting at all.
+`overrides` replaces parts of the spec at one breakpoint: the title and subtitle, labels, legend, annotations, or an axis or scale setting. `overrides: { compact: { annotations: [] } }` removes the callouts on phones only.
 
-## Keeping the last date and naming every line
+## Keeping the last date
 
 <Demo id="behavior/responsive-summary" />
 
 At compact width the x axis thins its ticks and can drop the last year, which on a time series is often the one the reader wants. `responsive: { preserveEnd: true }` keeps the final tick and thins the ones before it instead.
 
-`labelSummary: true` is a fallback for the names at the right edge. Here all six still fit; when they cannot, the library moves the names and last values into a keyed list under the plot, so every series stays named.
+This chart also sets `labelSummary: true`, a fallback for the names at the right edge. Here all six still fit; when they cannot, the library moves the names and last values into a keyed list under the plot, so every series stays named.
 
 ## More callouts on a phone
 
@@ -47,7 +47,7 @@ At compact width the x axis thins its ticks and can drop the last year, which on
 
 | Field | What it does |
 | --- | --- |
-| `responsive` | `false` turns adaptation off; an object sets the options below. |
+| `responsive` | An object of the options below. |
 | `responsive.preserveEnd` | Keeps the final tick on a time axis when ticks are thinned. |
 | `responsive.labelSummary` | Moves end labels into a list under the plot when they cannot fit. |
 | `responsive.compactAnnotationLimit` | Inline callouts allowed below 400px. Default 1; `null` for no limit. |

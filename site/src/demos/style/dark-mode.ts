@@ -10,6 +10,7 @@ import type { ChartSpec } from "@opendata-ai/openchart-core";
 import { broadsheet } from "@opendata-ai/openchart-core";
 import { sourceOf } from "../source";
 import { defineDemo } from "../types";
+import { TEMPERATURE_ANOMALY_SUBTITLE } from "./temperature";
 
 // In millions, so labels read "1,463" rather than the SI "1.46G".
 const populationMillions = populationByCountry.data.map((row) => ({
@@ -86,7 +87,7 @@ export const pairedDarkMode = defineDemo({
     chrome: {
       title:
         "Global temperature has been above the 20th-century average in every reading since 1960",
-      subtitle: "Global surface temperature anomaly, °C, each decade from 1900 and 2025",
+      subtitle: TEMPERATURE_ANOMALY_SUBTITLE,
     },
   },
 });

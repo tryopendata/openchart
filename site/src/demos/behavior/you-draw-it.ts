@@ -8,6 +8,7 @@
 import { temperatureAnomaly } from "@datasets/temperature-anomaly";
 import { usInflation } from "@datasets/us-inflation";
 import { sourceOf } from "../source";
+import { TEMPERATURE_ANOMALY_SUBTITLE } from "../style/temperature";
 import { defineDemo } from "../types";
 
 export const inflationGuess = defineDemo({
@@ -68,7 +69,7 @@ export const temperatureGuess = defineDemo({
     chrome: {
       title:
         "Global temperature stayed within half a degree of the 20th-century average from 1900 to 1970",
-      subtitle: "Global surface temperature anomaly, °C, each decade from 1900 and 2025",
+      subtitle: TEMPERATURE_ANOMALY_SUBTITLE,
     },
   },
 });

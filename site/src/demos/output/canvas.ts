@@ -7,28 +7,30 @@
  *
  * Neither figure uses all 3,108 counties of the lower 48 states: a demo's Spec
  * code tab writes every data row out, highlighted, at about 400 bytes a row,
- * which would take the page past its 500 KB budget. Both are `static: false`,
- * so the circles are drawn in the browser rather than shipped as static SVG.
+ * which would take the page past its 500 KB budget. Both are `static: false`
+ * for the same budget, so the circles are drawn in the browser.
  */
 import { geoCentroid } from "d3-geo";
 import { feature } from "topojson-client";
 import type { Topology } from "topojson-specification";
 import usCounties from "us-atlas/counties-10m.json";
+import type { LonLat } from "../maps/centers";
 import { defineDemo } from "../types";
 
-/** us-atlas redistributes the Census Bureau's 2017 cartographic boundary files. */
-const SOURCE = {
-  label: "US Census Bureau, cartographic boundary files 2017 (via us-atlas)",
-  url: "https://www.census.gov/geographies/mapping-files/time-series/geo/carto-boundary-file.html",
-};
+/**
+ * The geography credit in the form maps/sources.ts writes it, which does not
+ * export it; these charts have no dataset of their own to put before it.
+ */
+const SOURCE = { label: "US Census Bureau via us-atlas" };
 
 /** State FIPS codes outside the lower 48 and DC: Alaska, Hawaii and the territories. */
 const OUTSIDE_LOWER_48 = new Set(["02", "15", "60", "66", "69", "72", "78"]);
 const TEXAS_FIPS = "48";
 const MERIDIAN = -100;
 
-type CountyCenter = { state: string; lon: number; lat: number };
+type CountyCenter = LonLat & { state: string };
 
+// The same two-decimal rounding as maps/centers.ts, which keeps its own private.
 const round = (value: number) => Math.round(value * 100) / 100;
 
 /**
@@ -97,6 +99,7 @@ export const autoTexas = defineDemo({
   title: "Counties of Texas",
   source: SOURCE,
   height: 460,
+  // Static SVGs of these 254 circles took the page to 607,893 bytes, past its 500 KB budget.
   static: false,
   spec: {
     mark: { type: "point", size: 3, opacity: 0.8, trendline: false },

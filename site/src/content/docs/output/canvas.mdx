@@ -11,6 +11,8 @@ Canvas mode paints a scatter's dots onto one `<canvas>` element instead of one S
 
 <Demo id="output/canvas-west" />
 
+This chart has 599 points, so it uses the canvas only because it sets `renderer: "canvas"`; left to the library it would draw SVG.
+
 ## Turning it on
 
 Canvas is a choice of the page that mounts the chart, so it is a mount option rather than a spec field:
@@ -27,7 +29,7 @@ The canvas also paints the gridlines. The axes, tick labels and title stay SVG, 
 
 <Demo id="output/canvas-auto-texas" />
 
-Leave `renderer` out and the library decides: above 1,000 points it uses the canvas, at 1,000 or fewer it draws SVG. This chart sets no renderer and has 254 points, so each dot is an SVG circle. A scatter of all 3,108 counties in the lower 48 states would move to the canvas by itself. Set `renderer: "svg"` to keep SVG at any size.
+Leave `renderer` out and the library decides: above 1,000 points it uses the canvas, at 1,000 or fewer it draws SVG. This chart sets no renderer and has 254 points, so each dot is an SVG circle. A scatter of all 3,108 counties and county equivalents in the lower 48 states and DC would move to the canvas by itself. Set `renderer: "svg"` to keep SVG at any size.
 
 ## What changes on a canvas
 

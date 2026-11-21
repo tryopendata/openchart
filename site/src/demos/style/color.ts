@@ -8,6 +8,7 @@ import { electricityMixMatrix } from "@datasets/electricity-mix-matrix";
 import { temperatureAnomaly } from "@datasets/temperature-anomaly";
 import { sourceOf } from "../source";
 import { defineDemo } from "../types";
+import { TEMPERATURE_ANOMALY_SUBTITLE } from "./temperature";
 
 const MIX_SUBTITLE = "Share of US electricity from the six main sources, %, 2016–2023";
 
@@ -24,7 +25,7 @@ export const categoricalColor = defineDemo({
       y: {
         field: "share",
         type: "quantitative",
-        // Explicit: with the default stack the y domain stops at the largest single share.
+        // Workaround: default stacking on an ordinal-x bar leaves the y domain at the largest segment.
         stack: "zero",
         axis: { title: "Share of generation (%)", format: ".0f", grid: true },
       },
@@ -48,6 +49,7 @@ export const sequentialColor = defineDemo({
   id: "style/color-sequential",
   title: "US electricity mix as a heatmap",
   source: sourceOf(electricityMixMatrix),
+  caption: "Darker cells are larger shares.",
   height: 400,
   spec: {
     mark: "rect",
@@ -69,7 +71,7 @@ export const sequentialColor = defineDemo({
     },
     chrome: {
       title: "Gas has been the largest source of US electricity every year since 2016",
-      subtitle: `${MIX_SUBTITLE}. Darker cells are larger shares.`,
+      subtitle: MIX_SUBTITLE,
     },
   },
 });
@@ -104,7 +106,7 @@ export const divergingColor = defineDemo({
     chrome: {
       title:
         "Five of six readings before 1960 were below the 20th-century average; all eight since were above",
-      subtitle: "Global surface temperature anomaly, °C, each decade from 1900 and 2025",
+      subtitle: TEMPERATURE_ANOMALY_SUBTITLE,
     },
   },
 });

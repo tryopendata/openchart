@@ -26,7 +26,7 @@ const inflationSpec: ChartSpec = {
     { type: "refline", y: 2, label: "Fed target, 2%", style: "dashed" },
   ],
   chrome: {
-    title: "US inflation peaked at 8.5% in 2022 and was back to 2.6% by the end of 2024",
+    title: "US inflation peaked at 8.5% in 2022 and eased to 2.6% by the end of 2024",
     subtitle: "Consumer price index, year-over-year change, %, quarterly 2021–2024",
   },
 };

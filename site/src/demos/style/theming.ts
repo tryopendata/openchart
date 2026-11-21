@@ -1,8 +1,9 @@
 /**
  * Demos for the theming page (docs/style/theming): one chart of the US
  * electricity mix drawn with the library's default theme, with a custom
- * ThemeConfig, and with the accent-neutral series strategy. The first two set
- * `pageTheme: false` so the spec's own theme shows instead of the site's.
+ * ThemeConfig, and with the accent-neutral series strategy. All three set
+ * `pageTheme: false` so the spec's own theme shows instead of the site's, and
+ * each figure differs from the default only by its `theme`.
  */
 import { electricityMixMatrix } from "@datasets/electricity-mix-matrix";
 import type { ChartSpec, ThemeConfig } from "@opendata-ai/openchart-core";
@@ -32,7 +33,8 @@ const mixSpec: ChartSpec = {
   chrome: {
     title:
       "Coal's share of US electricity fell by almost half from 2016 to 2023 as gas rose to 44%",
-    subtitle: "Share of generation from the six main sources, %, 2016–2023",
+    subtitle:
+      "Share of generation from the six main sources, coal, gas and nuclear shown, %, 2016–2023",
   },
 };
 
@@ -45,7 +47,7 @@ export const defaultTheme = defineDemo({
   spec: mixSpec,
 });
 
-/** A house style: serif type, a paper background with a dark pair, three brand hues. */
+/** A house style: a serif family, a paper background, three series colors and wider padding. */
 const houseTheme: ThemeConfig = {
   colors: {
     categorical: [
@@ -54,17 +56,9 @@ const houseTheme: ThemeConfig = {
       { light: "#7a7267", dark: "#a8a095" },
     ],
     background: { light: "#f7f3ea", dark: "#1c1a17" },
-    text: { light: "#24201a", dark: "#efe9dd" },
-    gridline: { light: "rgba(36,32,26,0.1)", dark: "rgba(239,233,221,0.1)" },
-    axis: { light: "#6e675c", dark: "#a69f92" },
   },
-  fonts: {
-    family: '"Source Serif 4", Georgia, serif',
-    sizes: { title: 24, subtitle: 15 },
-  },
-  spacing: { padding: 28, chromeToChart: 20 },
-  chrome: { title: { fontWeight: 600, lineHeight: 1.2 } },
-  borderRadius: 0,
+  fonts: { family: '"Source Serif 4", Georgia, serif' },
+  spacing: { padding: 28 },
 };
 
 export const customTheme = defineDemo({
@@ -81,12 +75,13 @@ export const accentTheme = defineDemo({
   title: "US electricity mix with one accent series",
   source: sourceOf(electricityMixMatrix),
   height: 420,
+  pageTheme: false,
   spec: {
     ...mixSpec,
     theme: { seriesStrategy: "accent-neutral" },
     chrome: {
       title: "Coal fell from 31% to 16% of US electricity between 2016 and 2023",
-      subtitle: "Share of generation from the six main sources, %, 2016–2023",
+      subtitle: mixSpec.chrome?.subtitle,
     },
   },
 });
