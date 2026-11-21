@@ -40,6 +40,12 @@ const pageTitle = path === "/" ? `${site.name}: ${title}` : `${title} | ${site.n
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    {/* Fixes the cascade layer order before any stylesheet loads. A page's own CSS
+         bundle can come ahead of the layout's, and whichever file names a layer
+         first would otherwise decide the order (components below the base reset). */}
+    <style is:inline>
+      @layer theme, base, sf, components, utilities;
+    </style>
     <title>{pageTitle}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
