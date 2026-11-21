@@ -1,10 +1,11 @@
 /**
- * The AgentSession island (client:visible): the scripted agent session as a
- * two-column transcript that ends in the chart the agent's spec renders. Built on
+ * The AgentSession island (client:visible): the chart the agent's spec renders,
+ * large, beside a condensed two-column transcript of the session that made it. Built on
  * `useAgentDemo` from @steamfield/ui for the clock, visibility and motion gating,
  * drawn in the site's own markup. The server, and the page before Play, show the
- * finished transcript with the static chart; Play replays it from the start and
- * the chart arrives live, with the library's own entrance.
+ * finished transcript with the static chart; Play replays it from the start, the
+ * stage waits for the render step and the chart arrives live, with the library's
+ * own entrance.
  */
 
 import { useAgentDemo } from "@steamfield/ui/react/agent-demo";
@@ -85,57 +86,66 @@ export function AgentSession({ script, chart }: AgentSessionProps) {
     else demo.controls.toggle();
   };
 
-  // PublishedFigure's markup and classes, written out here because an Astro component
-  // can't render inside a React island. The reveal attributes are left off: the island
-  // re-creates this figure on every replay, after the reveal script has run.
-  const drawChart = () => (
-    <figure className="pub-figure agent-chart" data-agent-chart>
-      <div className="rule-axis" />
-      <div className="pub-figure-body agent-chart-stage">
-        {liveChart ? (
-          <LiveChart spec={agentChart} className="agent-chart-live">
-            {chart}
-          </LiveChart>
-        ) : (
-          chart
-        )}
-      </div>
-      <figcaption className="figure-caption pub-figure-caption">
-        <span>The chart the corrected spec renders. </span>
-        Source:{" "}
-        {agentSource.url ? <a href={agentSource.url}>{agentSource.label}</a> : agentSource.label}.
-      </figcaption>
-    </figure>
-  );
-
   const { view } = demo;
+  // While a replay runs, the chart waits for the render step, then mounts and plays the
+  // library's entrance. Otherwise (server, before Play, reduced motion) it is already there.
+  const rendered = view.entries.some(
+    (entry) =>
+      entry.step.kind === "tool-call" && entry.step.body?.kind === "custom" && entry.bodyVisible,
+  );
+  const chartShown = !live || rendered;
   const showControls = demo.ready && !demo.reduced;
+
   return (
     <div ref={demo.ref} className="agent-session" data-live={live ? "" : undefined}>
-      {showControls ? (
-        <div className="agent-controls">
-          <button type="button" className="btn agent-play" onClick={onPlay}>
-            {playLabel(demo)}
-          </button>
-          <ProgressAxis view={view} steps={demo.timeline.steps.map((step) => step.start)} />
-          <span className="agent-clock">
-            {clock(live ? view.elapsed : view.duration)} / {clock(view.duration)}
-          </span>
+      {/* PublishedFigure's markup and classes, written out here because an Astro component
+          can't render inside a React island. The reveal attributes are left off: the island
+          re-creates the chart on every replay, after the reveal script has run. */}
+      <figure className="pub-figure agent-chart" data-agent-chart>
+        <div className="rule-axis" />
+        <div className="pub-figure-body agent-chart-stage">
+          {chartShown && liveChart ? (
+            <LiveChart spec={agentChart} className="agent-chart-live">
+              {chart}
+            </LiveChart>
+          ) : null}
+          {chartShown && !liveChart ? chart : null}
+          {chartShown ? null : (
+            <p className="agent-chart-waiting">The chart draws here once the spec validates.</p>
+          )}
         </div>
-      ) : null}
-      <ol
-        ref={list}
-        className="agent-transcript"
-        aria-label="Agent session transcript"
-        style={live && minHeight ? { minHeight } : undefined}
-      >
-        {view.entries.map((entry) => (
-          <TranscriptEntry key={entry.key} entry={entry} chart={drawChart} />
-        ))}
-      </ol>
-      <p className="sr-only" role="status">
-        {demo.complete ? "The session has finished and the chart is rendered." : ""}
-      </p>
+        <figcaption className="figure-caption pub-figure-caption">
+          <span>The chart the corrected spec renders. </span>
+          Source:{" "}
+          {agentSource.url ? <a href={agentSource.url}>{agentSource.label}</a> : agentSource.label}.
+        </figcaption>
+      </figure>
+      <div className="agent-log">
+        {showControls ? (
+          <div className="agent-controls">
+            <button type="button" className="btn agent-play" onClick={onPlay}>
+              {playLabel(demo)}
+            </button>
+            <ProgressAxis view={view} steps={demo.timeline.steps.map((step) => step.start)} />
+            <span className="agent-clock">
+              {clock(live ? view.elapsed : view.duration)} / {clock(view.duration)}
+            </span>
+          </div>
+        ) : null}
+        <ol
+          ref={list}
+          className="agent-transcript"
+          aria-label="Agent session transcript"
+          style={live && minHeight ? { minHeight } : undefined}
+        >
+          {view.entries.map((entry) => (
+            <TranscriptEntry key={entry.key} entry={entry} />
+          ))}
+        </ol>
+        <p className="sr-only" role="status">
+          {demo.complete ? "The session has finished and the chart is rendered." : ""}
+        </p>
+      </div>
     </div>
   );
 }

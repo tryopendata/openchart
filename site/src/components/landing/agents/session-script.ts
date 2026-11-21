@@ -94,8 +94,9 @@ function llmsRead(llms: string, url: string): Step<SessionData> {
 }
 
 /**
- * The session as a script: the request, the agent reading llms.txt, writing the
- * first spec, reading the validator's error, editing the one line and rendering.
+ * The session as a script: the request, then one tool step each for reading
+ * llms.txt, writing the first spec, the validator's error, the one-line edit, the
+ * validator's verdict and the render.
  *
  * @throws {AgentSessionError} When the first spec validates, the fixed spec does
  * not, or the fix changes more than values on existing lines.
@@ -126,10 +127,6 @@ export function buildSessionScript(session: AgentSession, inputs: SessionInputs)
         status: "error",
         meta: `${errors.length} ${errors.length === 1 ? "error" : "errors"}`,
         output: errorLines,
-      },
-      {
-        kind: "agent-text",
-        text: "The error names the field and lists the columns the data has. One line to change.",
       },
       { kind: "tool-call", name: "edit", args: inputs.file, output: edit },
       { kind: "tool-call", name: "validateSpec", args: inputs.file, output: verdict },

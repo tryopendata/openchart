@@ -7,64 +7,77 @@
 @reference "./global.css";
 
 @layer components {
-  /* Agents: the intro and facts in four columns, the session in eight. */
-  .agents-grid {
-    @apply grid gap-12 lg:grid-cols-12 lg:gap-x-8;
+  /* Agents: heading and lede across the top; at 1100px and up the chart takes seven
+     columns and the condensed transcript five; the facts close the section as one row. */
+  .agents-head,
+  .frameworks-head {
+    @apply grid gap-y-2 lg:grid-cols-12 lg:gap-x-8;
   }
 
-  .agents-intro {
-    @apply lg:sticky lg:top-24 lg:col-span-4 lg:self-start;
-  }
-
-  .agents-stage {
-    @apply min-w-0 lg:col-span-8;
+  .agents-head .landing-heading,
+  .frameworks-head .landing-heading {
+    @apply lg:col-span-7;
   }
 
   .agents-lede,
   .frameworks-lede {
-    @apply text-ink-2 mt-6 max-w-[36rem] text-[17px] leading-relaxed;
+    @apply text-ink-2 mt-6 max-w-[36rem] text-[17px] leading-relaxed lg:col-span-5 lg:mt-0 lg:self-end;
   }
 
-  .agents-lede code {
-    @apply text-ink text-[0.88em];
+  .agents-stage {
+    @apply mt-12 min-w-0;
   }
 
-  .agents-facts {
-    @apply border-line-strong mt-10 border-t;
-  }
-
-  .agents-fact {
-    @apply border-line border-b py-4;
-  }
-
-  .agents-fact dt {
-    @apply text-ink text-sm font-semibold;
-  }
-
-  .agents-fact dd p {
-    @apply text-ink-2 mt-1 text-sm leading-relaxed;
-  }
-
-  .agents-fact-link {
-    @apply text-accent mt-2 inline-block font-mono text-[13px] [overflow-wrap:anywhere];
-    transition: color 150ms ease-out;
-  }
-
-  .agents-command {
-    @apply bg-panel text-ink mt-2 flex items-center justify-between gap-3 px-3 py-2 font-mono text-[12.5px];
-  }
-
-  .agents-command code {
-    @apply min-w-0 [overflow-wrap:anywhere];
-  }
-
-  /* The session: a control bar on the axis rule, then the transcript rows. */
   .agent-session {
-    @apply border-line-strong border-t;
+    @apply grid gap-y-10 min-[1100px]:grid-cols-12 min-[1100px]:gap-x-8;
   }
 
+  .agent-chart {
+    @apply min-w-0 min-[1100px]:col-span-7 min-[1100px]:self-start;
+  }
+
+  .agent-log {
+    @apply min-w-0 min-[1100px]:col-span-5;
+  }
+
+  /* The stage keeps the shape of the static SVG on show: narrow on a phone, wide above. */
+  .agent-chart-stage {
+    @apply relative w-full;
+    aspect-ratio: 360 / 340;
+  }
+
+  .agent-chart-wide,
+  .agent-chart-narrow,
+  .agent-chart-live {
+    @apply absolute inset-0;
+  }
+
+  .agent-chart-wide {
+    @apply hidden;
+  }
+
+  @media (width >= 40rem) {
+    .agent-chart-stage {
+      aspect-ratio: 720 / 420;
+    }
+
+    .agent-chart-wide {
+      @apply block;
+    }
+
+    .agent-chart-narrow {
+      @apply hidden;
+    }
+  }
+
+  /* While a replay runs and the spec has not validated yet. */
+  .agent-chart-waiting {
+    @apply text-muted border-line absolute inset-0 m-0 flex items-center justify-center border border-dashed px-6 text-center text-sm;
+  }
+
+  /* The log: Play on the axis rule, then one ruled line per step. */
   .agent-controls {
-    @apply border-line flex items-center gap-4 border-b py-3;
+    @apply border-line border-t-line-strong flex items-center gap-4 border-t border-b py-3;
   }
 
   .agent-play {
@@ -92,12 +105,17 @@
     @apply m-0 list-none p-0;
   }
 
+  /* Without controls (server, reduced motion) the list opens on the rule itself. */
+  .agent-log > .agent-transcript:first-child {
+    @apply border-line-strong border-t;
+  }
+
   .agent-row {
-    @apply border-line grid grid-cols-1 gap-y-1.5 border-b py-4 sm:grid-cols-[8rem_1fr] sm:gap-x-6;
+    @apply border-line grid grid-cols-[6.5rem_1fr] gap-x-4 border-b py-3;
   }
 
   .agent-role {
-    @apply text-muted flex gap-3 font-mono text-xs sm:flex-col sm:gap-1 sm:pt-[3px];
+    @apply text-muted flex flex-col gap-0.5 pt-[2px] font-mono text-xs;
   }
 
   .agent-tool {
@@ -118,112 +136,106 @@
 
   /* The reporter's request reads as a quotation, in the headline face. */
   .agent-row[data-kind="user"] .agent-message {
-    @apply text-ink font-display text-xl leading-snug;
+    @apply text-ink font-display text-lg leading-snug;
   }
 
   .agent-args {
-    @apply text-ink m-0 flex flex-wrap justify-between gap-x-4 font-mono text-[13px] [overflow-wrap:anywhere];
+    @apply text-ink m-0 flex items-baseline justify-between gap-x-3 font-mono text-[13px];
+  }
+
+  .agent-target {
+    @apply min-w-0 truncate;
   }
 
   .agent-meta {
-    @apply text-muted;
+    @apply text-muted shrink-0;
   }
 
-  .agent-output {
-    @apply mt-2 font-mono text-[12.5px] leading-relaxed;
+  .agent-result,
+  .agent-diff,
+  .agent-error {
+    @apply m-0 mt-1 font-mono text-[12.5px] leading-relaxed [overflow-wrap:anywhere];
   }
 
-  .agent-line {
-    @apply text-ink-2 m-0 whitespace-pre-wrap [overflow-wrap:anywhere];
+  .agent-result {
+    @apply text-ink-2;
   }
 
-  .agent-line[data-tone="muted"],
-  .agent-more {
-    @apply text-muted;
+  .agent-diff del {
+    @apply text-muted mr-2 line-through;
   }
 
-  /* A removed line in the edit. */
-  .agent-line[data-tone="fail"] {
-    @apply text-muted line-through;
-  }
-
-  .agent-line[data-tone="ok"] {
-    @apply text-ink;
+  .agent-diff ins {
+    @apply text-ink no-underline;
   }
 
   /* The validator's rejection: ink, ruled on the leading edge like a correction in the margin. */
-  .agent-row[data-status="error"] .agent-output {
-    @apply border-line-strong border-l-2 pl-3;
+  .agent-error {
+    @apply text-ink border-line-strong border-l-2 pl-3 font-medium;
   }
 
-  .agent-row[data-status="error"] .agent-line[data-tone="fail"] {
-    @apply text-ink font-medium no-underline;
+  .agent-disclosure {
+    @apply mt-1;
+  }
+
+  .agent-disclosure summary {
+    @apply text-muted hover:text-ink w-fit cursor-pointer font-sans text-xs transition-colors duration-150;
+  }
+
+  .agent-excerpt {
+    @apply text-muted mt-2 font-mono text-[12.5px] leading-relaxed [overflow-wrap:anywhere];
+  }
+
+  .agent-excerpt p {
+    @apply m-0;
   }
 
   .agent-code {
-    @apply bg-panel text-ink-2 mt-2 mb-0 max-h-80 overflow-auto p-4 font-mono text-[12.5px] leading-relaxed;
+    @apply bg-panel text-ink-2 mt-2 max-h-72 overflow-auto p-4 font-mono text-[12.5px] leading-relaxed;
   }
 
-  .agent-chart {
-    @apply mt-4;
+  /* The facts: three ruled columns under the session, secondary to it. */
+  .agents-facts {
+    @apply border-line mt-14 grid gap-y-6 border-t pt-6 md:grid-cols-3 md:gap-x-8;
   }
 
-  /* The stage keeps the shape of the static SVG on show: narrow on a phone, wide above. */
-  .agent-chart-stage {
-    @apply relative w-full;
-    aspect-ratio: 360 / 340;
+  .agents-fact dt {
+    @apply text-ink text-sm font-semibold;
   }
 
-  .agent-chart-wide,
-  .agent-chart-narrow {
-    @apply absolute inset-0;
+  .agents-fact dd {
+    @apply m-0;
   }
 
-  .agent-chart-wide {
-    @apply hidden;
+  .agents-fact dd p {
+    @apply text-ink-2 mt-1 text-sm leading-relaxed;
   }
 
-  @media (width >= 40rem) {
-    .agent-chart-stage {
-      aspect-ratio: 720 / 420;
-    }
-
-    .agent-chart-wide {
-      @apply block;
-    }
-
-    .agent-chart-narrow {
-      @apply hidden;
-    }
+  .agents-fact-link {
+    @apply text-accent mt-2 inline-block font-mono text-[13px] [overflow-wrap:anywhere];
+    transition: color 150ms ease-out;
   }
 
-  .agent-chart-live {
-    @apply absolute inset-0;
+  .agents-command {
+    @apply bg-panel text-ink mt-2 flex items-center justify-between gap-3 px-3 py-2 font-mono text-[12px];
   }
 
-  /* Frameworks: the heading and lede across the top, the bench in eight columns, the chart in four. */
-  .frameworks-head {
-    @apply grid gap-y-2 lg:grid-cols-12 lg:gap-x-8;
+  .agents-command code {
+    @apply min-w-0 [overflow-wrap:anywhere];
   }
 
-  .frameworks-head .landing-heading {
-    @apply lg:col-span-7;
-  }
-
-  .frameworks-head .frameworks-lede {
-    @apply lg:col-span-5 lg:mt-0 lg:self-end;
-  }
+  /* Frameworks: the bench in seven columns, the chart beside it in five. */
 
   .frameworks-bench {
     @apply mt-12 grid gap-y-10 lg:grid-cols-12 lg:gap-x-8;
   }
 
   .frameworks-code {
-    @apply min-w-0 lg:col-span-8;
+    @apply min-w-0 lg:col-span-7;
   }
 
   .frameworks-figure {
-    @apply lg:col-span-4 lg:self-start;
+    @apply lg:col-span-5 lg:self-start;
   }
 
   .frameworks-chart {
@@ -251,8 +263,9 @@
     @apply border-line bg-panel text-ink-2 flex items-center justify-between border-b px-4 py-2 font-mono text-xs;
   }
 
+  /* Capped at about 16rem so the chart beside it leads; Shiki's <pre> is focusable, so it scrolls by keyboard. */
   .install-tab-code-body pre {
-    @apply m-0 max-h-[30rem] overflow-auto p-4 font-mono text-[13px] leading-relaxed;
+    @apply m-0 max-h-64 overflow-auto p-4 font-mono text-[13px] leading-relaxed;
   }
 
   /* The tabs. @steamfield/ui/tabs/styles.css sits in the `sf` layer, below this one. */

@@ -342,6 +342,9 @@ test("the agent session plays to a chart and shows the validator's error at the 
   await agents.getByRole("button", { name: "Play" }).click();
   await page.clock.runFor(60_000);
   await expect(agents.getByText(firstError?.message ?? "", { exact: false })).toBeVisible();
+  // The transcript is condensed: the spec as written waits behind a collapsed disclosure.
+  await expect(agents.getByText("Show the spec")).toBeVisible();
+  await expect(agents.getByRole("region", { name: /as written$/ })).toBeHidden();
   await expect(agents.locator("[data-agent-chart] svg").first()).toBeVisible();
   // The session ends on the live chart, not the static stand-in, and says so.
   await expect(
@@ -366,6 +369,12 @@ test("framework tabs switch the install and usage code and share the choice with
     "npm install @opendata-ai/openchart-react",
   );
   const reactUsage = await panelText();
+  // The code is the second story: its panel is capped near 16rem and scrolls inside.
+  const codeHeight = await frameworks
+    .getByRole("tabpanel")
+    .locator("pre")
+    .evaluate((pre) => pre.getBoundingClientRect().height);
+  expect(codeHeight).toBeLessThanOrEqual(16 * 16 + 1);
   const vue = frameworks.getByRole("tab", { name: "Vue", exact: true });
   await vue.click();
   await expect(vue).toHaveAttribute("aria-selected", "true");
