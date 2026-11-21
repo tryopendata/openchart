@@ -34,6 +34,8 @@ export type SearchSource = AreaId | "examples" | "blog";
 export type SearchBodyAttrs = {
   "data-pagefind-body": "";
   "data-pagefind-meta": `area:${SearchArea}`;
+  /** The same area as a Pagefind filter, so the dialog can count and search one area at a time. */
+  "data-pagefind-filter": `area:${SearchArea}`;
 };
 
 const OTHER_AREAS: Record<"examples" | "blog", SearchArea> = {
@@ -61,12 +63,21 @@ export function searchAreaOf(source: SearchSource): SearchArea {
 
 /** Attributes for the element whose text Pagefind indexes. Only pages with these are indexed. */
 export function searchBodyAttrs(source: SearchSource): SearchBodyAttrs {
+  const area = searchAreaOf(source);
   return {
     "data-pagefind-body": "",
-    "data-pagefind-meta": `area:${searchAreaOf(source)}`,
+    "data-pagefind-meta": `area:${area}`,
+    "data-pagefind-filter": `area:${area}`,
   };
 }
 
-/** Shown in the dialog when /pagefind/pagefind.js cannot load (dev server). From the Spec's error model. */
-export const SEARCH_UNAVAILABLE =
-  "Search runs on the built site. Run make build, then make preview.";
+/**
+ * Shown in the dialog when /pagefind/pagefind.js cannot load. Readers of the live
+ * site see it after a network failure, so it says nothing about build commands;
+ * SEARCH_UNAVAILABLE_HINT goes to the console for someone on the dev server.
+ */
+export const SEARCH_UNAVAILABLE = "Search could not load. Try again in a moment.";
+
+/** Logged with the load failure: the dev server has no index. */
+export const SEARCH_UNAVAILABLE_HINT =
+  "The search index exists only on the built site: run make build, then make preview.";

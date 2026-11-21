@@ -1,9 +1,10 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   // Cloudflare Pages project; production is openchart.steamfield.io (see AGENTS.md, Deploy).
-  // With this file present it is the source of truth for the project's variables:
-  // Pages ignores dashboard ones. PUBLIC_POSTHOG_KEY (a public client key) will go
-  // in env.production.vars, so branch previews send no analytics.
+  // With this file present it is the source of truth for the fields it sets, and
+  // Cloudflare documents `vars` here as Pages Functions runtime values. Whether they
+  // reach `astro build` is not documented, so no analytics key is defined here
+  // (see AGENTS.md, Pending user actions).
   "name": "openchart",
   "compatibility_date": "2026-11-20",
   "pages_build_output_dir": "./dist",

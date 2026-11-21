@@ -112,7 +112,7 @@ function setupCopyPage() {
   const button = document.querySelector<HTMLButtonElement>("[data-copy-page]");
   const href = button?.dataset.copyPage;
   if (!button || !href) return;
-  button.hidden = false;
+  button.dataset.copyReady = "";
   onCopyClick(button, () => copyMarkdown(href));
 }
 

@@ -110,11 +110,21 @@
     overflow: hidden;
   }
 
-  /* The header's controls keep their boxes before their scripts wire them, so
-     revealing one never moves the links beside it. Hidden this way they take no
+  /* Controls that need a script keep their boxes before it wires them, so
+     revealing one never moves what sits beside it. Hidden this way they take no
      focus and show nothing without JavaScript. */
   [data-search-trigger]:not([data-search-ready]),
-  [data-theme-toggle]:not([data-theme-ready]) {
+  [data-theme-toggle]:not([data-theme-ready]),
+  [data-copy-page]:not([data-copy-ready]) {
+    visibility: hidden;
+  }
+
+  /* @steamfield/ui/copy reveals the install command's Copy button by removing
+     `hidden`. Keeping its box reserved stops the command re-wrapping, which
+     pushed the hero figure down on a phone. In the base layer so it outranks
+     preflight's `[hidden]` rule on specificity. */
+  .install-command-copy[hidden] {
+    display: inline-block !important;
     visibility: hidden;
   }
 

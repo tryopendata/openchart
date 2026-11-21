@@ -10,6 +10,7 @@ describe("searchBodyAttrs", () => {
       expect(searchBodyAttrs(id)).toEqual({
         "data-pagefind-body": "",
         "data-pagefind-meta": `area:${label}`,
+        "data-pagefind-filter": `area:${label}`,
       });
     },
   );
