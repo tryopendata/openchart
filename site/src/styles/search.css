@@ -1,0 +1,132 @@
+/*
+ * The search dialog (components/search/Search.astro): a top-anchored panel of
+ * at most 40rem over a dimmed page. It is the one place the design allows a
+ * shadow; structure inside it still comes from hairline rules. Results scroll
+ * inside the panel, so the page behind never moves. The entrance is played by
+ * scripts/search-dialog.ts with motionTokens timings, and not at all under
+ * reduced motion.
+ */
+@reference "./global.css";
+
+@layer components {
+  .search-dialog {
+    @apply bg-canvas text-ink border-line-strong rounded-xs border p-0;
+    margin: min(12vh, 7rem) auto 0;
+    width: min(40rem, calc(100vw - 1rem));
+    max-width: none;
+    max-height: calc(100dvh - min(12vh, 7rem) - 1rem);
+    box-shadow: 0 12px 32px -12px rgb(0 0 0 / 0.28);
+  }
+
+  .search-dialog[open] {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .search-dialog::backdrop {
+    background: color-mix(in srgb, var(--color-canvas, #fff) 55%, rgb(0 0 0 / 0.35));
+  }
+
+  @media (max-width: 639px) {
+    .search-dialog {
+      margin-top: 0.5rem;
+      max-height: calc(100dvh - 1rem);
+    }
+  }
+
+  .search-bar {
+    @apply flex shrink-0 items-center gap-3 p-3;
+  }
+
+  .search-field {
+    @apply relative min-w-0 flex-1;
+  }
+
+  .search-field-icon {
+    @apply text-muted pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2;
+  }
+
+  .search-input {
+    @apply border-line bg-canvas text-ink h-11 w-full rounded-xs border pr-3 pl-9 text-base;
+    transition: border-color 150ms ease-out;
+  }
+
+  .search-input::placeholder {
+    @apply text-muted;
+  }
+
+  /* The input holds focus the whole time the dialog is open, so its border marks
+     focus instead of the page's accent ring. */
+  .search-input:focus-visible {
+    @apply border-line-strong;
+    outline: none;
+  }
+
+  .search-close {
+    @apply text-muted hover:text-ink h-11 shrink-0 cursor-pointer px-1 text-sm;
+    transition: color 150ms ease-out;
+  }
+
+  /* The body takes room only once it has results or a message to show. */
+  .search-body {
+    @apply border-line min-h-0 overflow-y-auto overscroll-contain;
+  }
+
+  .search-body:has(> [role="listbox"]:not([hidden]), > .search-message:not(.sr-only)) {
+    @apply border-t;
+  }
+
+  .search-message {
+    @apply text-ink-2 px-4 py-6 text-sm;
+  }
+
+  .search-group {
+    @apply border-line pb-2;
+  }
+
+  .search-group + .search-group {
+    @apply border-t;
+  }
+
+  .search-group-name {
+    @apply text-muted px-4 pt-3 pb-1 text-xs font-semibold;
+  }
+
+  /* An option: the title, the excerpt and the mono location line. The active one
+     carries the accent rule on its leading edge, as the current docs link does. It
+     changes at once, with no transition, so the highlight keeps up with the arrow keys. */
+  .search-option {
+    @apply text-ink-2 block cursor-pointer border-l-2 border-transparent py-2 pr-4 pl-[14px] no-underline;
+  }
+
+  .search-option[aria-selected="true"] {
+    @apply bg-panel border-accent;
+  }
+
+  .search-option-title {
+    @apply text-ink block text-[15px] leading-snug font-medium;
+  }
+
+  .search-option-excerpt {
+    @apply mt-0.5 line-clamp-2 text-[13px] leading-snug;
+  }
+
+  .search-option-excerpt mark {
+    @apply text-ink bg-transparent font-semibold;
+  }
+
+  .search-option-location {
+    @apply text-muted mt-1 block truncate font-mono text-xs;
+  }
+
+  .search-option-more {
+    @apply text-accent text-[13px] font-medium;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .search-input,
+    .search-close {
+      transition: none;
+    }
+  }
+}

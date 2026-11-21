@@ -1,18 +1,23 @@
 ---
 /**
- * The header's search control: a trigger button and the empty dialog it opens.
- * phase-5-stub: lane b wires the trigger and fills the dialog.
+ * The header's search control: the trigger button and the dialog it opens.
+ * src/scripts/search.ts (eager) wires the trigger and the shortcuts and shows
+ * the trigger; src/scripts/search-dialog.ts (loaded on first hover, focus or
+ * open) runs the combobox and fills the listbox. The dialog never opens without
+ * JavaScript, and its contents sit outside every indexed element.
  *
  * Contract (src/scripts/search.ts and tests/build.test.ts rely on it):
  * - `button[data-search-trigger]` with `aria-haspopup="dialog"` and
  *   `aria-controls="site-search"`, named "Search". Its box is fixed at every
  *   width, and global.css keeps it `visibility: hidden` (space reserved, not
- *   focusable) until the script sets `data-search-ready`, so no dead control
- *   shows without JavaScript.
+ *   focusable) until the script sets `data-search-ready`.
  * - `[data-search-hint]` inside it: a fixed-width slot for the shortcut hint,
  *   shown from 640px.
- * - `dialog#site-search[data-search]`, labelled "Search the site", empty.
+ * - `dialog#site-search[data-search]`, labelled "Search the site", holding the
+ *   combobox input, the listbox and the status line (visually hidden unless it
+ *   holds a message such as "No results").
  */
+import "../../styles/search.css";
 ---
 
 <button
@@ -33,4 +38,48 @@
     class="text-muted ml-auto hidden w-12 text-right font-mono text-xs sm:block"
   ></span>
 </button>
-<dialog id="site-search" data-search aria-label="Search the site"></dialog>
+<dialog id="site-search" data-search aria-label="Search the site" class="search-dialog">
+  <div class="search-bar">
+    <span class="search-field">
+      <svg viewBox="0 0 16 16" aria-hidden="true" class="search-field-icon">
+        <circle
+          cx="7"
+          cy="7"
+          r="4.75"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+        ></circle>
+        <path d="m10.5 10.5 3.75 3.75" stroke="currentColor" stroke-width="1.5" fill="none"></path>
+      </svg>
+      <input
+        type="text"
+        data-search-input
+        role="combobox"
+        aria-label="Search the site"
+        aria-expanded="false"
+        aria-controls="site-search-results"
+        aria-autocomplete="list"
+        autocomplete="off"
+        autocapitalize="off"
+        spellcheck="false"
+        enterkeyhint="go"
+        placeholder="Search the site"
+        class="search-input"
+      />
+    </span>
+    <button type="button" data-search-close class="search-close">
+      Close
+    </button>
+  </div>
+  <div class="search-body">
+    <div
+      id="site-search-results"
+      role="listbox"
+      aria-label="Search results"
+      data-search-results
+      hidden
+    ></div>
+    <p role="status" data-search-status class="search-message sr-only"></p>
+  </div>
+</dialog>
