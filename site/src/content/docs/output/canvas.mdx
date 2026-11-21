@@ -7,11 +7,11 @@ order: 3
 
 import Demo from "../../../components/demo/Demo.astro";
 
-Canvas mode paints a scatter's dots onto one `<canvas>` element instead of one SVG circle each, which keeps a chart of many thousands of points quick to draw and hover. This chart draws the center of every county west of the 100th meridian that way.
+Canvas mode paints a scatter's dots onto one `<canvas>` element instead of one SVG circle each, which keeps a chart of many thousands of points quick to draw and hover. This chart draws the center of each of the 3,108 counties and county equivalents in the lower 48 states and DC that way.
 
-<Demo id="output/canvas-west" />
+<Demo id="output/canvas-all-counties" />
 
-This chart has 599 points, so it uses the canvas only because it sets `renderer: "canvas"`; left to the library it would draw SVG.
+The chart sets no renderer. It has more than 1,000 points, so the library draws it on the canvas by itself.
 
 ## Turning it on
 
@@ -23,13 +23,15 @@ createChart(container, spec, { renderer: "canvas" });
 
 React, Vue and Svelte take the same value as the `renderer` prop on `<Chart>`. Only point marks move to the canvas. A line, bar or area chart, and any faceted, layered or sparkline chart, stays SVG, and an explicit `"canvas"` there logs a warning.
 
+<Demo id="output/canvas-west" />
+
+This chart passes `renderer: "canvas"` as a mount option, and its Code tabs show it as a prop or option in each framework. The option applies at any size, including the 599 points here.
+
 The canvas also paints the gridlines. The axes, tick labels and title stay SVG, so text stays sharp at any zoom, and the SVG keeps the chart's accessible name. Tooltips and hover work as before: the pointer passes through to the canvas, which finds the nearest dot.
 
 ## The automatic switch
 
-<Demo id="output/canvas-auto-texas" />
-
-Leave `renderer` out and the library decides: above 1,000 points it uses the canvas, at 1,000 or fewer it draws SVG. This chart sets no renderer and has 254 points, so each dot is an SVG circle. A scatter of all 3,108 counties and county equivalents in the lower 48 states and DC would move to the canvas by itself. Set `renderer: "svg"` to keep SVG at any size.
+Leave `renderer` out and the library decides: above 1,000 points it uses the canvas, at 1,000 or fewer it draws SVG. The first chart on this page sets no renderer and has 3,108 points, so it draws on the canvas. Set `renderer: "svg"` to keep SVG at any size.
 
 ## What changes on a canvas
 

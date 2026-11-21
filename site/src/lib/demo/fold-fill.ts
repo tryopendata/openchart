@@ -28,7 +28,7 @@ export function foldMarker(index: number): string {
 export const FOLD_MARKER_TEXT = JSON.stringify(SENTINEL_PREFIX).slice(1, -1);
 
 /** The leading spaces of the line `position` is on. */
-function lineIndent(code: string, position: number): string {
+export function lineIndent(code: string, position: number): string {
   const lineStart = code.lastIndexOf("\n", position - 1) + 1;
   return /^ */.exec(code.slice(lineStart))?.[0] ?? "";
 }

@@ -1,14 +1,14 @@
 /**
  * Demos for the canvas page (docs/output/canvas): county centers computed from
- * us-atlas with d3-geo, drawn as longitude and latitude scatters. The counties
- * west of the 100th meridian ask for the canvas renderer; the counties of
- * Texas leave the renderer to the library and stay SVG, being under the
- * 1,000-point auto threshold.
+ * us-atlas with d3-geo, drawn as longitude and latitude scatters. Every county
+ * of the lower 48 states and DC leaves the renderer to the library, which
+ * picks the canvas because the chart is over the 1,000-point auto threshold;
+ * the counties west of the 100th meridian, under it, ask for the canvas with
+ * `mount.renderer`.
  *
- * Neither figure uses all 3,108 counties of the lower 48 states: a demo's Spec
- * code tab writes every data row out, highlighted, at about 400 bytes a row,
- * which would take the page past its 500 KB budget. Both are `static: false`
- * for the same budget, so the circles are drawn in the browser.
+ * Both are `static: false`: a static SVG would draw every circle as an element,
+ * twice (light and dark), past the page's 500 KB budget. The Spec code tab
+ * shows only the first rows of each, and Copy fills the rest in.
  */
 import { geoCentroid } from "d3-geo";
 import { feature } from "topojson-client";
@@ -25,7 +25,6 @@ const SOURCE = { label: "US Census Bureau via us-atlas" };
 
 /** State FIPS codes outside the lower 48 and DC: Alaska, Hawaii and the territories. */
 const OUTSIDE_LOWER_48 = new Set(["02", "15", "60", "66", "69", "72", "78"]);
-const TEXAS_FIPS = "48";
 const MERIDIAN = -100;
 
 type CountyCenter = LonLat & { state: string };
@@ -58,7 +57,6 @@ const lonLat = (centers: CountyCenter[]) => centers.map(({ lon, lat }) => ({ lon
 
 const centers = countyCenters(usCounties as unknown as Topology);
 const west = centers.filter((center) => center.lon < MERIDIAN);
-const texas = centers.filter((center) => center.state === TEXAS_FIPS);
 
 /** A longitude and latitude scatter with both scales fitted to the points. */
 const lonLatEncoding = {
@@ -76,6 +74,25 @@ const lonLatEncoding = {
   },
 };
 
+const count = (n: number) => n.toLocaleString("en-US");
+
+export const canvasAllCounties = defineDemo({
+  id: "output/canvas-all-counties",
+  title: "Every county in the lower 48 states and DC",
+  source: SOURCE,
+  height: 480,
+  static: false,
+  spec: {
+    mark: { type: "point", size: 1.5, opacity: 0.6, trendline: false },
+    data: lonLat(centers),
+    encoding: lonLatEncoding,
+    chrome: {
+      title: `The lower 48 states and DC have ${count(centers.length)} counties and county equivalents`,
+      subtitle: "Geographic center of each county or county equivalent, by longitude and latitude",
+    },
+  },
+});
+
 export const canvasWest = defineDemo({
   id: "output/canvas-west",
   title: "Counties west of the 100th meridian",
@@ -88,26 +105,8 @@ export const canvasWest = defineDemo({
     data: lonLat(west),
     encoding: lonLatEncoding,
     chrome: {
-      title: `${west.length} counties in the lower 48 states lie west of the 100th meridian`,
+      title: `${count(west.length)} counties in the lower 48 states lie west of the 100th meridian`,
       subtitle: "Geographic center of each county west of 100°W, by longitude and latitude",
-    },
-  },
-});
-
-export const autoTexas = defineDemo({
-  id: "output/canvas-auto-texas",
-  title: "Counties of Texas",
-  source: SOURCE,
-  height: 460,
-  // Static SVGs of these 254 circles took the page to 607,893 bytes, past its 500 KB budget.
-  static: false,
-  spec: {
-    mark: { type: "point", size: 3, opacity: 0.8, trendline: false },
-    data: lonLat(texas),
-    encoding: lonLatEncoding,
-    chrome: {
-      title: `Texas is divided into ${texas.length} counties`,
-      subtitle: "Geographic center of each county, by longitude and latitude",
     },
   },
 });

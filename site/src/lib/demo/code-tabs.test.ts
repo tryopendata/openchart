@@ -1,5 +1,6 @@
 // @vitest-environment node
 /** The demo code tabs: what each panel shows, what it copies, and how its tokens get their colors. */
+import type { VizSpec } from "@opendata-ai/openchart-core";
 import { Window } from "happy-dom";
 import { describe, expect, it } from "vitest";
 import { fixtureBar } from "../../demos/fixtures/bar";
@@ -19,6 +20,12 @@ async function codeBlock(spec = fixtureBar.spec) {
   if (!block) throw new Error("codeTabsHtml returned no [data-demo-code] block");
   return { html, block };
 }
+
+/** The bar fixture with `count` rows, region and orders numbered from 0. */
+const barWithRows = (count: number): VizSpec => ({
+  ...fixtureBar.spec,
+  data: Array.from({ length: count }, (_, i) => ({ region: `Region ${i}`, orders: i })),
+});
 
 const panel = (block: Element, id: string) => block.querySelector(`[data-demo-panel="${id}"]`);
 const shown = (block: Element, id: string) => panel(block, id)?.querySelector("pre")?.textContent;
@@ -115,6 +122,43 @@ describe("codeTabsHtml", () => {
   it("keeps the code block out of the search index", async () => {
     const { block } = await codeBlock();
     expect(block.hasAttribute("data-pagefind-ignore")).toBe(true);
+  });
+
+  it("writes out all 12 rows of a list at the cap, as plain JSON with nothing to fill", async () => {
+    const spec = barWithRows(12);
+    const { block } = await codeBlock(spec);
+    expect(JSON.parse(shown(block, "spec") ?? "")).toEqual(spec);
+    expect(panel(block, "spec")?.querySelector("template")).toBeNull();
+    expect(shown(block, "react")).toContain(
+      "/* 12 rows, as in the Spec tab; Copy includes them */",
+    );
+  });
+
+  it("shows the first 6 rows of a longer list and a comment counting the rest", async () => {
+    const spec = barWithRows(3108);
+    const { block } = await codeBlock(spec);
+    const lines = (shown(block, "spec") ?? "").split("\n");
+    const start = lines.indexOf('  "data": [');
+    expect(lines.slice(start, start + 27).join("\n")).toBe(
+      [
+        '  "data": [',
+        ...[0, 1, 2, 3, 4, 5].map(
+          (i) => `    {\n      "region": "Region ${i}",\n      "orders": ${i}\n    },`,
+        ),
+        "    // … 3,102 more rows; Copy includes them",
+        "  ],",
+      ].join("\n"),
+    );
+    expect(shown(block, "spec")).not.toContain('"Region 6"');
+    expect(shown(block, "react")).toContain("const data = [/* 3,108 rows; Copy includes them */];");
+  });
+
+  it("copies a long list's complete spec from the figure's spec, keeping no second copy of the rows", async () => {
+    const spec = barWithRows(13);
+    const { block } = await codeBlock(spec);
+    expect(JSON.parse(filled(block, "spec", spec))).toEqual(spec);
+    expect(copied(block, "spec")).not.toContain('"Region 0"');
+    expect(filled(block, "vanilla", spec)).toBe(frameworkSnippets(spec).vanilla);
   });
 
   it("folds a small inline dataset too, naming its row count", async () => {

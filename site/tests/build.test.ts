@@ -15,28 +15,56 @@ import {
 import { basename, join, resolve } from "node:path";
 import { gzipSync } from "node:zlib";
 import { Window } from "happy-dom";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { docsAreas, site } from "../src/config";
 import { LANDING_SECTION_IDS, type LandingSectionId, landingCopy } from "../src/landing/copy";
 import { heroSteps } from "../src/landing/hero";
 import { catalogPageIds } from "./catalog-pages";
 import { type DocsPage, docsPageList } from "./docs-pages";
 
-const parser = new new Window().DOMParser();
 const read = (root: string, path: string) => readFileSync(join(root, path), "utf8");
-// Parsed once per file: the link check asks for the same large pages many times.
-const parsed = new Map<string, Document>();
+/**
+ * The most recently parsed pages, each in its own happy-dom window. A parsed
+ * page with inline chart SVGs takes tens of megabytes, and a window keeps every
+ * document parsed in it, so one shared window passed Node's 4 GB heap. Only the
+ * last few pages stay, and a dropped page's window is closed to free it; the
+ * link check keeps the ids it reads in `idsCache` instead.
+ */
+const MAX_PARSED_PAGES = 8;
+const parsed = new Map<string, { window: Window; document: Document }>();
 function page(root: string, path: string): Document {
   const file = join(root, path);
-  let document = parsed.get(file);
-  if (!document) {
+  let entry = parsed.get(file);
+  if (entry) {
+    // Move it to the end, so the least recently used page is the one dropped.
+    parsed.delete(file);
+  } else {
     // happy-dom drops everything after a <style> inside an inline <svg>, and map
     // charts carry one. No test here reads styles, so they are removed before parsing.
     const html = read(root, path).replace(/<style\b[^>]*>[\s\S]*?<\/style>/g, "");
-    document = parser.parseFromString(html, "text/html") as unknown as Document;
-    parsed.set(file, document);
+    const window = new Window();
+    const document = new window.DOMParser().parseFromString(html, "text/html");
+    entry = { window, document: document as unknown as Document };
   }
-  return document;
+  parsed.set(file, entry);
+  const [oldest] = parsed;
+  if (parsed.size > MAX_PARSED_PAGES && oldest) {
+    parsed.delete(oldest[0]);
+    void oldest[1].window.happyDOM.close();
+  }
+  return entry.document;
+}
+
+/** Every element id on a page, kept once read: the link check asks for the same pages many times. */
+const idsCache = new Map<string, Set<string>>();
+function idsOn(root: string, path: string): Set<string> {
+  const file = join(root, path);
+  let ids = idsCache.get(file);
+  if (!ids) {
+    ids = new Set([...page(root, path).querySelectorAll("[id]")].map((node) => node.id));
+    idsCache.set(file, ids);
+  }
+  return ids;
 }
 const absolute = (path: string) => new URL(path, site.url).href;
 const pagePath = (id: string) => `docs/${id}/index.html`;
@@ -92,6 +120,23 @@ function htmlFiles(root: string) {
   return readdirSync(root, { recursive: true, encoding: "utf8" }).filter((file) =>
     file.endsWith(".html"),
   );
+}
+
+/** Waits one turn of the event loop, which is when happy-dom finishes closing the windows `page` dropped. */
+const freeClosedPages = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+// A test that reads a page or two runs synchronously, so the closes it queued finish here.
+afterEach(freeClosedPages);
+
+/**
+ * Every built HTML page under root that `include` accepts, parsed one at a
+ * time, waiting a turn after each so the memory of dropped pages is freed.
+ */
+async function* builtPages(root: string, include: (file: string) => boolean = () => true) {
+  for (const file of htmlFiles(root).filter(include)) {
+    yield { file, doc: page(root, file) };
+    await freeClosedPages();
+  }
 }
 
 function islandNames(root: string, path: string) {
@@ -231,12 +276,12 @@ describe("demos", () => {
     expect(figures[0]?.querySelector("svg.demo-static")).not.toBeNull();
   });
 
-  it("every stage without a static SVG shows the demo's title and a drawn-in-the-browser line", () => {
+  it("every stage without a static SVG shows the demo's title and a drawn-in-the-browser line", async () => {
     const missing: string[] = [];
     let stages = 0;
     // The broken-demo fixture writes its figure by hand to test the failure state.
-    for (const file of htmlFiles("dist").filter((file) => !file.includes("broken-demo"))) {
-      for (const stage of page("dist", file).querySelectorAll("[data-demo-stage]")) {
+    for await (const { file, doc } of builtPages("dist", (file) => !file.includes("broken-demo"))) {
+      for (const stage of doc.querySelectorAll("[data-demo-stage]")) {
         if (stage.querySelector("svg.demo-static")) continue;
         stages += 1;
         const text = stage.querySelector("p[data-demo-placeholder]")?.textContent ?? "";
@@ -249,11 +294,10 @@ describe("demos", () => {
     expect(missing).toEqual([]);
   });
 
-  it("writes each shared value once per page, and every figure's references resolve on its page", () => {
+  it("writes each shared value once per page, and every figure's references resolve on its page", async () => {
     const problems: string[] = [];
     let references = 0;
-    for (const file of htmlFiles("dist")) {
-      const doc = page("dist", file);
+    for await (const { file, doc } of builtPages("dist")) {
       const blocks = [...doc.querySelectorAll("script[data-demo-shared]")].map(
         (block) => block.getAttribute("data-demo-shared") ?? "",
       );
@@ -280,6 +324,25 @@ describe("demos", () => {
       .map(({ id }) => ({ id, bytes: statSync(join("dist", pagePath(id))).size }))
       .filter(({ bytes }) => bytes > MAX_VISUALIZATION_PAGE_BYTES);
     expect(oversized).toEqual([]);
+  });
+
+  it("a dense demo's Spec panel shows its first rows and counts the rest, writing the rows out once", () => {
+    const doc = page("dist", pagePath("output/canvas"));
+    const figure = doc.querySelector('.demo[data-demo="output/canvas-all-counties"]');
+    // The rows live in the page's shared-value block, which the figure's spec references.
+    const refs = JSON.parse(
+      figure?.querySelector("[data-demo-spec]")?.getAttribute("data-demo-shared-refs") ?? "[]",
+    ) as { path: string[]; hash: string }[];
+    const dataRef = refs.find(({ path }) => path.join("/") === "data");
+    const rows = doc.querySelector(`script[data-demo-shared="${dataRef?.hash}"]`)?.textContent;
+    expect(JSON.parse(rows ?? "null")).toHaveLength(3108);
+    const panel = figure?.querySelector('[data-demo-panel="spec"]');
+    const shown = panel?.querySelector("pre")?.textContent ?? "";
+    expect(shown).toContain("// … 3,102 more rows; Copy includes them");
+    expect(shown.match(/"lon":/g)).toHaveLength(6);
+    const template = panel?.querySelector("template[data-demo-copy-source]");
+    expect(template?.getAttribute("data-demo-copy-fills")).toBe('[["data"]]');
+    expect(template?.innerHTML ?? "").not.toContain('"lon":');
   });
 
   it.each([BAR, GETTING_STARTED])("%s repeats no element id", (id) => {
@@ -356,12 +419,13 @@ describe("docs pages", () => {
 });
 
 describe("the whole site", () => {
-  it("has no broken internal links or anchors", () => {
+  it("has no broken internal links or anchors", async () => {
     const broken: string[] = [];
-    for (const file of htmlFiles("dist")) {
+    for await (const { file, doc } of builtPages("dist")) {
       const self = `/${file.replace(/index\.html$/, "")}`;
-      for (const link of page("dist", file).querySelectorAll("a[href]")) {
-        const href = link.getAttribute("href") ?? "";
+      // Read the hrefs first: looking up a target's ids may drop this page from the cache.
+      const hrefs = [...doc.querySelectorAll("a[href]")].map((link) => link.getAttribute("href"));
+      for (const href of hrefs.map((value) => value ?? "")) {
         if (!href.startsWith("/") && !href.startsWith("#")) continue;
         if (href.startsWith("//")) continue;
         const [path = "", hash] = (href.startsWith("#") ? `${self}${href}` : href).split("#");
@@ -369,7 +433,7 @@ describe("the whole site", () => {
         if (!existsSync(join("dist", target))) {
           broken.push(`${file}: ${href}`);
         } else if (hash && target.endsWith(".html")) {
-          if (!page("dist", target).getElementById(decodeURIComponent(hash))) {
+          if (!idsOn("dist", target).has(decodeURIComponent(hash))) {
             broken.push(`${file}: ${href} (no #${hash})`);
           }
         }
@@ -378,11 +442,11 @@ describe("the whole site", () => {
     expect(broken).toEqual([]);
   });
 
-  it("hydrates only the islands site.islands lists, and none on docs pages", () => {
+  it("hydrates only the islands site.islands lists, and none on docs pages", async () => {
     expect([...new Set(islandNames("dist", "index.html"))].sort()).toEqual(
       [...site.islands].sort(),
     );
-    for (const file of htmlFiles("dist").filter((file) => file.startsWith("docs"))) {
+    for await (const { file } of builtPages("dist", (file) => file.startsWith("docs"))) {
       expect(islandNames("dist", file), file).toEqual([]);
     }
   });
@@ -581,18 +645,17 @@ describe("the phase 4 pages", () => {
 });
 
 describe("links out of the docs", () => {
-  it("no docs page links to the Ladle gallery", () => {
-    const ladle = htmlFiles("dist")
-      .filter((file) => file.startsWith("docs"))
-      .flatMap((file) =>
-        [...page("dist", file).querySelectorAll('a[href*="tryopendata.github.io/openchart"]')].map(
-          (link) => `${file}: ${link.getAttribute("href")}`,
-        ),
-      );
+  it("no docs page links to the Ladle gallery", async () => {
+    const ladle: string[] = [];
+    for await (const { file, doc } of builtPages("dist", (file) => file.startsWith("docs"))) {
+      for (const link of doc.querySelectorAll('a[href*="tryopendata.github.io/openchart"]')) {
+        ladle.push(`${file}: ${link.getAttribute("href")}`);
+      }
+    }
     expect(ladle).toEqual([]);
   });
 
-  it("no page links to a published docs file on GitHub instead of its page", () => {
+  it("no page links to a published docs file on GitHub instead of its page", async () => {
     const published = new Set(
       docs
         .filter(({ file }) => file.startsWith("../docs/"))
@@ -600,12 +663,13 @@ describe("links out of the docs", () => {
     );
     expect(published.size).toBeGreaterThan(20);
     const blob = `${site.repo}/blob/main/docs/`;
-    const onGitHub = htmlFiles("dist").flatMap((file) =>
-      [...page("dist", file).querySelectorAll(`a[href^="${blob}"]`)]
+    const onGitHub: string[] = [];
+    for await (const { file, doc } of builtPages("dist")) {
+      const hrefs = [...doc.querySelectorAll(`a[href^="${blob}"]`)]
         .map((link) => link.getAttribute("href") ?? "")
-        .filter((href) => published.has(href.slice(blob.length).split("#")[0] ?? ""))
-        .map((href) => `${file}: ${href}`),
-    );
+        .filter((href) => published.has(href.slice(blob.length).split("#")[0] ?? ""));
+      onGitHub.push(...hrefs.map((href) => `${file}: ${href}`));
+    }
     expect(onGitHub).toEqual([]);
   });
 });

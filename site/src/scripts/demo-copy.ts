@@ -116,9 +116,11 @@ function offerManualCopy(figure: Element): string {
   const selection = figure.ownerDocument.defaultView?.getSelection();
   if (pre && selection) selection.selectAllChildren(pre);
   if (!copyTemplateOf(panel)) return FAILED_MESSAGE;
-  return chosenTab(figure) === "spec"
-    ? "Copy failed. The code shown is abbreviated, so it can't be copied in full by hand."
-    : "Copy failed. The code shown is abbreviated; the Spec tab shows the complete spec.";
+  // A long dataset is abbreviated in the Spec tab too, so it can't be pointed to then.
+  const specComplete = !copyTemplateOf(figure.querySelector(`[${DEMO_ATTR.panel}="spec"]`));
+  return chosenTab(figure) !== "spec" && specComplete
+    ? "Copy failed. The code shown is abbreviated; the Spec tab shows the complete spec."
+    : "Copy failed. The code shown is abbreviated, so it can't be copied in full by hand.";
 }
 
 /** Reveals and wires every demo's Copy button to copy the chosen tab's complete code. */

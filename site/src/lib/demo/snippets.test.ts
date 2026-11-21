@@ -128,7 +128,7 @@ describe("foldedFrameworkSnippets", () => {
     {
       name: "a geo map's TopoJSON and rows",
       spec: basicChoropleth.spec,
-      folded: [/\{\/\* TopoJSON, \d+ arcs; Copy includes it \*\/\}/, /\/\* \d+ rows,/],
+      folded: [/\{\/\* TopoJSON, \d+ arcs; Copy includes it \*\/\}/, /\/\* [\d,]+ rows[,;]/],
     },
     {
       name: "a points layer's rows",
@@ -138,9 +138,13 @@ describe("foldedFrameworkSnippets", () => {
     {
       name: "a graph's nodes and edges",
       spec: basicGraph.spec,
-      folded: [/"nodes": \[\/\* \d+ nodes,/, /"edges": \[\/\* \d+ edges,/],
+      folded: [/"nodes": \[\/\* [\d,]+ nodes[,;]/, /"edges": \[\/\* [\d,]+ edges[,;]/],
     },
-    { name: "a sankey's rows", spec: basicSankey.spec, folded: [/const data = \[\/\* \d+ rows,/] },
+    {
+      name: "a sankey's rows",
+      spec: basicSankey.spec,
+      folded: [/const data = \[\/\* [\d,]+ rows[,;]/],
+    },
     {
       name: "a tile map's record of values",
       spec: basicTileMap.spec,
