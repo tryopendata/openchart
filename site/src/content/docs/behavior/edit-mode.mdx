@@ -5,6 +5,79 @@ section: behavior
 order: 4
 ---
 
-{/* phase-4-stub */}
+import Demo from "../../../components/demo/Demo.astro";
 
-This page is being written.
+In edit mode a reader can drag annotations, nudge them with the keyboard and rewrite chart text in place. Each change reaches `onEdit` as one transaction, and your code decides whether to apply it to the spec.
+
+<Demo id="behavior/edit-line" />
+
+Mount with `interaction: "edit"` to turn it on. Drag the note and the event log shows the transaction the gesture produced: a list of operations, each a `set`, `add` or `remove` at a JSON Pointer path into the spec, such as `/annotations/0/offset`. This page applies each transaction and redraws the chart with `update`, so the note stays where you leave it. The Code panel shows the spec as the page loaded it, not the state or edits on screen.
+
+## Applying an edit and undoing it
+
+`applyEditTransaction` from the core package applies a transaction to a copy of the spec. Keep its `inverse` and an undo is the same call with the inverse:
+
+```ts title="edit.ts"
+import { applyEditTransaction, type EditTransaction } from "@opendata-ai/openchart-core";
+import { createChart } from "@opendata-ai/openchart-vanilla";
+
+let spec = initialSpec;
+const undoStack: EditTransaction[] = [];
+
+const chart = createChart(container, spec, {
+  interaction: "edit",
+  onEdit(transaction) {
+    const result = applyEditTransaction(spec, transaction);
+    if (!result.ok) return; // a stale or invalid edit: keep the current spec
+    spec = result.spec;
+    undoStack.push(result.inverse);
+    chart.update(spec);
+  },
+});
+
+function undo() {
+  const inverse = undoStack.pop();
+  if (!inverse) return;
+  const result = applyEditTransaction(spec, inverse);
+  if (!result.ok) return;
+  spec = result.spec;
+  chart.update(spec);
+}
+```
+
+The helper checks every operation before it returns anything and never changes the spec you pass in. When one operation fails, for example because the annotation it targets has been removed or reordered since the gesture began, `result.ok` is false and `result.error` names the operation's path and the reason. Save `result.spec` wherever your page keeps the document; React, Vue and Svelte take the same handler as `onEdit`, `@edit` and `onedit`.
+
+## Editing text
+
+<Demo id="behavior/edit-text" />
+
+Select the title, the subtitle or a text annotation and press Enter, or double-click it, to edit its text in place. Enter commits the new text as one transaction and Escape cancels. Double-clicking an empty spot in the plot area opens the same editor and adds a new text annotation there.
+
+## Keyboard
+
+| Key | In edit mode |
+| --- | --- |
+| Tab, Shift+Tab | Select the next or previous element: each chrome text the chart shows (title, subtitle, source, byline, footer), each annotation, then the legend. Past the last one, focus leaves the chart. |
+| Arrow keys | Nudge the selected text annotation 1px. |
+| Shift+arrow keys | Nudge it 10px. |
+| Enter | Edit the selected element's text. |
+| Delete, Backspace | Remove the selected element. |
+| Escape | Close the text editor, or clear the selection. |
+
+A run of nudges becomes one transaction 500 milliseconds after the last arrow key is released, or sooner if the reader selects something else or focus leaves the chart. Because the arrow keys nudge, edit mode turns off the arrow-key navigation readers use to step through data points; [select mode](/docs/behavior/interaction/) keeps it.
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `interaction` | Mount option. `"edit"` allows selection plus every edit gesture. An `onEdit` handler alone also turns it on. |
+| `onEdit` | Receives one `EditTransaction` per finished gesture. |
+| `applyEditTransaction` | Applies a transaction to a copy of the spec and returns the new spec and its `inverse`, or an error. |
+| `revision` | Mount option for your own bookkeeping, stamped on each transaction emitted after it is set. |
+| `annotations[].id` | A stable id that goes into each transaction's `expect`, so an edit made before the list changed is rejected as stale instead of applied to the wrong annotation. |
+
+## Related
+
+- [Events reference](/docs/api/events/#persisting-edits) covers persisting edits and the other handlers.
+- [Annotations](/docs/framing/annotations/) shows the callouts, reference lines and ranges a reader can move.
+- [Line](/docs/change-over-time/line/) covers annotated line charts.

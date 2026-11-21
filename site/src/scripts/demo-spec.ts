@@ -43,7 +43,21 @@ export function readFigureSpec(figure: Element): VizSpec {
   if (!script) throw new DemoSpecError("The figure has no embedded spec.");
   const spec: unknown = JSON.parse(script.textContent ?? "");
   const refs = JSON.parse(script.getAttribute(DEMO_ATTR.sharedRefs) ?? "[]") as DemoSharedRef[];
-  for (const { path, hash } of refs)
-    setValueAt(spec, path, sharedValue(figure.ownerDocument, hash));
+  fillSharedValues(spec, refs, figure.ownerDocument);
   return spec as VizSpec;
+}
+
+/**
+ * Fills each place `refs` names in a parsed spec from the page's shared value
+ * blocks, in place. The figure's spec and its other states both go through this.
+ *
+ * @throws {DemoSpecError} When the page has no block for a referenced hash.
+ * @throws {SyntaxError} When a shared block is not valid JSON.
+ */
+export function fillSharedValues(
+  spec: unknown,
+  refs: readonly DemoSharedRef[],
+  doc: Document,
+): void {
+  for (const { path, hash } of refs) setValueAt(spec, path, sharedValue(doc, hash));
 }

@@ -5,6 +5,65 @@ section: behavior
 order: 1
 ---
 
-{/* phase-4-stub */}
+import Demo from "../../../components/demo/Demo.astro";
 
-This page is being written.
+Charts move by default. The entrance plays once a chart scrolls into view, and `update` moves the marks from the old layout to the new one instead of redrawing them.
+
+<Demo id="behavior/motion-update" />
+
+Press "2019 to 2024" to call `update` with a spec that has three more years of rows. The points already on the chart slide to their new positions as both axes rescale, the new quarters draw in, and the title changes with the spec. The library matches marks across the two layouts by their data values, so each quarter keeps its place in the line while it moves. The Code panel shows the spec as the page loaded it, not the state on screen.
+
+## Presets
+
+<Demo id="behavior/motion-presets" />
+
+`animation` takes a preset name. `"fluid"` moves the entrance and later updates on a spring, and `"subtle"` shortens both to 250 milliseconds. Both start every bar at once, where the default lands them up to 80 milliseconds apart over an 800-millisecond entrance. `false` turns off all motion: the chart draws finished and updates swap at once.
+
+```json title="fluid.json"
+{
+  "mark": "bar",
+  "data": [{ "country": "India", "population": 1463000000 }],
+  "encoding": {
+    "y": { "field": "country", "type": "nominal" },
+    "x": { "field": "population", "type": "quantitative" }
+  },
+  "animation": "fluid"
+}
+```
+
+The object form sets each phase on its own, for example `animation: { enter: { duration: 600, ease: "snappy" }, update: false }`. A preset combines with it as `preset: "fluid"`, and any phase you set explicitly wins.
+
+## Replay and when the entrance plays
+
+<Demo id="behavior/motion-replay" />
+
+Replay mounts the chart again, so each line draws in from the left as it did when the chart first appeared. Without Replay the entrance plays once, when at least a quarter of the chart is in view, so a chart far down a page still animates when the reader reaches it. `animation: { enter: { trigger: "mount" } }` plays it at mount instead, which suits screenshot tests.
+
+## Reduced motion
+
+When a reader's system asks for reduced motion (`prefers-reduced-motion: reduce`), the chart draws finished and every update swaps instantly. That setting overrides the spec, so no `animation` value turns motion back on for that reader. Static SVGs and exports never animate.
+
+## When an update swaps instead of moving
+
+An update skips the transition and swaps to the new layout when:
+
+- the mark type changes, or an encoding channel points at a different field;
+- the container has just been resized;
+- either layout has more marks than `animation.update.maxMarks` (500 for SVG marks);
+- the entrance is still playing.
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `animation` | `true` or left out for the defaults, `false` for no motion, `"fluid"` or `"subtle"` for a preset, or an object per phase. |
+| `animation.enter` | The entrance: `duration`, `ease`, `stagger` and `trigger` (`"visible"` or `"mount"`). |
+| `animation.update` | Transitions on `update`: `duration`, `ease` and `maxMarks`. |
+| `animation.exit` | How removed marks fade out during an update. |
+| `animation.annotationDelay` | Milliseconds between the marks finishing and the annotations starting. |
+
+## Related
+
+- [Animation reference](/docs/spec/animation/) lists every phase setting and its default.
+- [Line](/docs/change-over-time/line/) and [Bar](/docs/comparison/bar/) show the entrances these demos play.
+- [Scrollytelling](/docs/behavior/scrollytelling/) moves a chart through states with the same update transitions.

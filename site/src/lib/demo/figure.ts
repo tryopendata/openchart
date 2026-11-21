@@ -1,14 +1,15 @@
 /**
  * The demo markup contract, as one HTML string: a figure holding the stage
- * (a light and a dark static SVG, or a placeholder line when there is none) and
- * its caption, then the embedded spec the live mount reads, any shared value
- * blocks and the code toolbar.
+ * (a light and a dark static SVG, or a placeholder line when there is none), any
+ * reader controls and its caption, then the embedded spec the live mount reads,
+ * the other states' specs, any shared value blocks and the code toolbar.
  * Demo.astro and the `json demo` fence plugin both render through this, so the
  * two ways of putting a chart on a page cannot drift apart.
  */
 import type { ThemeConfig, VizSpec } from "@opendata-ai/openchart-core";
-import type { DemoMountOptions, DemoSource } from "../../demos/types";
+import type { DemoControls, DemoMountOptions, DemoSource } from "../../demos/types";
 import { codeTabsHtml } from "./code-tabs";
+import { demoControlsHtml, embeddedStates } from "./controls";
 import { demoDomId } from "./dom-id";
 import { escapeHtml } from "./escape-html";
 import { DEMO_ATTR, DEMO_CLASS } from "./markup";
@@ -38,6 +39,8 @@ export type DemoFigure = {
   width?: number;
   /** Host options the live mount passes on, written on the spec script. */
   mount?: DemoMountOptions;
+  /** Reader controls, drawn as a bar between the stage and the caption (see controls.ts). */
+  controls?: DemoControls;
 };
 
 /** Static SVGs are laid out at this width; CSS scales them to the stage. */
@@ -146,11 +149,23 @@ function specHtml({ specJson, refs, values }: SharedSplit, mount?: DemoMountOpti
     ? ` ${DEMO_ATTR.sharedRefs}="${escapeHtml(JSON.stringify(refs))}"`
     : "";
   const spec = `<script type="application/json" ${DEMO_ATTR.spec}${refsAttr}${mountAttr(mount)} data-pagefind-ignore>${scriptSafe(specJson)}</script>`;
+  return spec + sharedBlocksHtml(values);
+}
+
+function sharedBlocksHtml(values: SharedSplit["values"]): string {
   const blocks = values.map(
     ({ hash, json }) =>
       `<script type="application/json" ${DEMO_ATTR.shared}="${hash}" data-pagefind-ignore>${scriptSafe(json)}</script>`,
   );
-  return spec + blocks.join("");
+  return blocks.join("");
+}
+
+/** The other states' specs and any shared value blocks they add, or nothing without states. */
+function statesHtml(figure: DemoFigure): string {
+  const states = embeddedStates(figure.controls, figure.spec, figure.pageShared);
+  if (!states) return "";
+  const script = `<script type="application/json" ${DEMO_ATTR.states} data-pagefind-ignore>${scriptSafe(states.json)}</script>`;
+  return script + sharedBlocksHtml(states.values);
 }
 
 function captionHtml(figure: DemoFigure): string {
@@ -162,8 +177,8 @@ function captionHtml(figure: DemoFigure): string {
 
 /**
  * The complete demo for one spec: a `<div class="demo">` holding the published
- * figure (the stage, then its caption) and, after it, the embedded spec and the
- * code toolbar. The markup runs in reading order, so focus and screen readers
+ * figure (the stage, any reader controls, then its caption) and, after it, the
+ * embedded spec, any other states' specs and the code toolbar. The markup runs in reading order, so focus and screen readers
  * meet the chart, its caption, then the code.
  *
  * @throws {TypeError} When the spec's type has no framework wrapper for the code tabs.
@@ -174,11 +189,12 @@ export async function demoFigureHtml(figure: DemoFigure): Promise<string> {
   const entrance = figure.entrance ? ` ${DEMO_ATTR.entrance}` : "";
   const ownTheme = figure.pageTheme === false ? ` ${DEMO_ATTR.ownTheme}` : "";
   // Claimed before the first await, so two figures rendering at once never both write a block.
-  const spec = specHtml(embeddedSpec(figure), figure.mount);
-  const code = figure.tabs ? await codeTabsHtml(domId, figure.spec) : "";
+  const spec = specHtml(embeddedSpec(figure), figure.mount) + statesHtml(figure);
+  const code = figure.tabs ? await codeTabsHtml(domId, figure.spec, figure.mount) : "";
+  const controls = demoControlsHtml(figure);
   return [
     `<div class="demo not-prose" ${DEMO_ATTR.figure}="${escapeHtml(figure.id)}"${entrance}${ownTheme}>`,
-    `<figure class="demo-figure">${stageHtml(figure, domId)}${captionHtml(figure)}</figure>`,
+    `<figure class="demo-figure">${stageHtml(figure, domId)}${controls}${captionHtml(figure)}</figure>`,
     spec,
     code,
     "</div>",

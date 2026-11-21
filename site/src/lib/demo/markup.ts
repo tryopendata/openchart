@@ -80,7 +80,22 @@ export const DEMO_ATTR = {
   exportFormat: "data-demo-export",
   /** On the event log `<ol>`. */
   events: "data-demo-events",
+  /** On the polite live region in the controls bar that announces a state switch or an edit's outcome. */
+  controlsStatus: "data-demo-controls-status",
 } as const;
+
+/**
+ * One other state of a demo as the `data-demo-states` script holds it (see controls.ts).
+ * `spec` is the state's spec with `null` in each place filled before use: from the
+ * demo's own spec for each path in `fromSpec`, where the state repeats it, and
+ * from a shared value block for each of `shared`.
+ */
+export type EmbeddedDemoState = {
+  label: string;
+  spec: unknown;
+  fromSpec: SpecPath[];
+  shared: DemoSharedRef[];
+};
 
 /**
  * Attributes on `<html>`. The demo gate script (demo-gate.ts) sets the first two

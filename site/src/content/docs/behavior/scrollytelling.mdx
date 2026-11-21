@@ -5,6 +5,87 @@ section: behavior
 order: 5
 ---
 
-{/* phase-4-stub */}
+import Demo from "../../../components/demo/Demo.astro";
 
-This page is being written.
+A scroll story is one chart and a list of steps. As the reader scrolls past each paragraph, `createChartStory` merges that step's change into the spec and moves the chart with the same transition `update` plays.
+
+<Demo id="behavior/story-temperature" />
+
+The buttons stand in for scrolling: each shows the chart as it would be at one step. The first step is the base spec. The second adds a shaded range from 1980, the third a note on the 2025 reading, and the fourth highlights the warmer readings and fades the rest. The title changes at every step, so each one states what the reader is looking at. The Code panel shows the spec as the page loaded it, not the state on screen.
+
+## Building the story
+
+The same four steps, written for `createChartStory` from `@opendata-ai/openchart-vanilla/story`:
+
+```ts title="story.ts"
+import { createChartStory } from "@opendata-ai/openchart-vanilla/story";
+
+const zeroLine = { type: "refline", y: 0, style: "solid", strokeWidth: 1 };
+const since1980 = { type: "range", x1: "1980", x2: "2025", label: "Since 1980", labelAnchor: "top" };
+const latest = {
+  type: "text",
+  x: "2025",
+  y: 1.17,
+  text: "+1.17°C",
+  anchor: "top",
+  offset: { dx: 0, dy: -8 },
+};
+
+const container = document.getElementById("chart");
+if (!container) throw new Error('Add <div id="chart"></div> to the page first.');
+
+// baseSpec is the spec in the demo's Code panel.
+const story = createChartStory(container, {
+  spec: baseSpec,
+  steps: [
+    {},
+    {
+      spec: {
+        annotations: [zeroLine, since1980],
+        chrome: { title: "Global temperature rose 0.91°C from 1980 to 2025" },
+      },
+    },
+    {
+      spec: {
+        annotations: [zeroLine, since1980, latest],
+        chrome: { title: "The 2025 reading was 1.17°C above the 20th-century average" },
+      },
+    },
+    {
+      highlight: ["Warmer"],
+      spec: { chrome: { title: "Nine of the 14 readings are above the 20th-century average" } },
+    },
+  ],
+});
+
+document.querySelectorAll<HTMLElement>("[data-step]").forEach((element, index) => {
+  story.registerStep(index, element);
+});
+```
+
+Each step is a partial spec. Steps add up, so step three is the base with the changes from steps one to three merged in. Objects merge key by key, but arrays replace, which is why each step lists every annotation it shows. `highlight` is shorthand for `encoding.color.highlight`. `registerStep` ties a step to a paragraph, and the step applies when that paragraph crosses the trigger line, 40% of the way down the viewport by default. `story.goTo(index)` jumps to a step from your own code.
+
+## Highlighting one series at a time
+
+<Demo id="behavior/story-electricity" />
+
+A step that only changes the highlight leaves every line where it is. When a step changes the data, marks move as they do on `update`, and when no transition applies, for example because the mark type changes, the story crossfades between the two charts so nothing jumps.
+
+A story skips the entrance unless the base spec sets `animation`, because the reader's scroll position decides what the chart shows. The scroll story on the [OpenChart home page](/#story) runs this way on four stock indexes. React, Vue and Svelte wrap the same API in a `ChartStory` component.
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `spec` | The chart before the first step. |
+| `steps[].spec` | A partial spec merged into the running spec at that step. |
+| `steps[].highlight` | Series to highlight, the same as `encoding.color.highlight`; `null` clears it. |
+| `steps[].camera` | Zooms to a region of the chart, in data coordinates. |
+| `triggerPosition` | Where the trigger line sits, as a fraction of the viewport height. Default 0.4. |
+| `registerStep`, `goTo` | Tie a step to an element on the page, or jump to a step. |
+
+## Related
+
+- [Motion](/docs/behavior/motion/) covers the update transitions each step plays.
+- [Bar](/docs/comparison/bar/) and [Line](/docs/change-over-time/line/) show the two chart types these stories use.
+- [Animation reference](/docs/spec/animation/#data-update-transitions) lists which changes move and which crossfade.

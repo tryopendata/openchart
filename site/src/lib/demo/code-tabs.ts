@@ -13,6 +13,7 @@
  * Copy is pressed. The block carries its own token color stylesheet.
  */
 import type { VizSpec } from "@opendata-ai/openchart-core";
+import type { DemoMountOptions } from "../../demos/types";
 import { escapeElementText, escapeHtml } from "./escape-html";
 import { foldTargets, jsonWithMarkers, showFolds } from "./fold-targets";
 import { FRAMEWORKS, type Framework } from "./framework-choice";
@@ -57,8 +58,8 @@ function specTab(spec: VizSpec): CodeTab {
   return { ...tab, lang: "jsonc", shown: showFolds(code, geography), copy: { code, folds } };
 }
 
-function codeTabsFor(spec: VizSpec): CodeTab[] {
-  const { shown, template, folds } = foldedFrameworkSnippets(spec);
+function codeTabsFor(spec: VizSpec, mount?: DemoMountOptions): CodeTab[] {
+  const { shown, template, folds } = foldedFrameworkSnippets(spec, mount);
   return FRAMEWORKS.map((id) => {
     if (id === "spec") return specTab(spec);
     const tab = { id, label: LABELS[id], lang: LANGS[id], shown: shown[id] };
@@ -104,11 +105,16 @@ function toolbarRow(codeId: string): string {
  * their token colors.
  *
  * @param domId The figure's XML-safe id from `demoDomId`, which keeps panel ids unique on a page.
+ * @param mount The demo's host options, which the framework tabs pass as props or mount options.
  * @throws {TypeError} When the spec's type has no framework wrapper.
  * @throws {FoldMarkerError} When the spec contains the text fold markers use.
  */
-export async function codeTabsHtml(domId: string, spec: VizSpec): Promise<string> {
-  const tabs = codeTabsFor(spec);
+export async function codeTabsHtml(
+  domId: string,
+  spec: VizSpec,
+  mount?: DemoMountOptions,
+): Promise<string> {
+  const tabs = codeTabsFor(spec, mount);
   const strip = tabs.map((tab, index) => tabLink(domId, tab, index)).join("");
   const { html, css } = await highlightCode(tabs.map(({ shown, lang }) => ({ code: shown, lang })));
   const panels = tabs.map((tab, index) => panel(domId, tab, html[index] ?? "")).join("");
