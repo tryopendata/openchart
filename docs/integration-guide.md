@@ -5,15 +5,30 @@ section: get-started
 slug: frameworks
 order: 2
 ---
-<!-- phase-4-stub -->
 
-# Integration guide
+# Frameworks
 
-How to build apps on top of the viz library. Covers the interface contract: spec mutation, event handling, controlled components, responsive behavior, and export.
-
-This guide shows React, Vue, and Svelte examples for key integration patterns. The vanilla JS API is covered in its own sections since the interface is different (imperative rather than declarative).
+OpenChart has a package for React, Vue, Svelte and plain JavaScript. All four draw the same spec, so a chart moves between frameworks without changing the spec. After installation, the page covers switching chart types, dark mode, themes, spec updates and responsive sizing, with React, Vue and Svelte side by side where they differ. The imperative vanilla API is in the [Vanilla API reference](reference/vanilla.md).
 
 For field-by-field type details, see the [spec reference](spec-reference.md). For a tutorial, see [getting started](getting-started.md).
+
+## Install
+
+```bash
+# React 18 or later
+npm install @opendata-ai/openchart-react
+
+# Vue 3.3 or later
+npm install @opendata-ai/openchart-vue
+
+# Svelte 5
+npm install @opendata-ai/openchart-svelte
+
+# Plain JavaScript
+npm install @opendata-ai/openchart-vanilla
+```
+
+Each package depends on `@opendata-ai/openchart-core` and `@opendata-ai/openchart-engine`, so you don't install those separately.
 
 ## Core concept: specs are plain objects
 
@@ -25,6 +40,56 @@ const spec = { mark: 'line', data: [...], encoding: {...} };
 ```
 
 The library uses an immutable update pattern: every spec change triggers a full recompile. The engine is fast enough that this is the intended workflow. Don't try to mutate the layout directly.
+
+The spec below is that object filled in with 24 quarterly readings of US inflation.
+
+```json demo title="US inflation" source="US Bureau of Labor Statistics, CPI-U (via FRED CPIAUCSL)" height=400
+{
+  "mark": "line",
+  "data": [
+    { "date": "2019-01-01", "rate": 1.6 },
+    { "date": "2019-04-01", "rate": 2 },
+    { "date": "2019-07-01", "rate": 1.8 },
+    { "date": "2019-10-01", "rate": 1.8 },
+    { "date": "2020-01-01", "rate": 2.5 },
+    { "date": "2020-04-01", "rate": 0.3 },
+    { "date": "2020-07-01", "rate": 1 },
+    { "date": "2020-10-01", "rate": 1.2 },
+    { "date": "2021-01-01", "rate": 1.4 },
+    { "date": "2021-04-01", "rate": 4.2 },
+    { "date": "2021-07-01", "rate": 5.4 },
+    { "date": "2021-10-01", "rate": 6.2 },
+    { "date": "2022-01-01", "rate": 7.5 },
+    { "date": "2022-04-01", "rate": 8.3 },
+    { "date": "2022-07-01", "rate": 8.5 },
+    { "date": "2022-10-01", "rate": 7.7 },
+    { "date": "2023-01-01", "rate": 6.4 },
+    { "date": "2023-04-01", "rate": 4.9 },
+    { "date": "2023-07-01", "rate": 3.2 },
+    { "date": "2023-10-01", "rate": 3.2 },
+    { "date": "2024-01-01", "rate": 3.1 },
+    { "date": "2024-04-01", "rate": 3.4 },
+    { "date": "2024-07-01", "rate": 2.9 },
+    { "date": "2024-10-01", "rate": 2.6 }
+  ],
+  "encoding": {
+    "x": {
+      "field": "date",
+      "type": "temporal",
+      "axis": { "tickCount": 6 }
+    },
+    "y": {
+      "field": "rate",
+      "type": "quantitative",
+      "axis": { "title": "CPI (year-over-year %)", "format": ".1f", "grid": true }
+    }
+  },
+  "chrome": {
+    "title": "US inflation peaked at 8.5% in mid-2022 and fell to 2.6% by late 2024",
+    "subtitle": "US consumer price index, year-over-year % change, quarterly 2019–2024"
+  }
+}
+```
 
 ---
 
@@ -405,7 +470,7 @@ createSankey(container, sankeySpec, { watermark: false });
 
 The mount `watermark` option takes precedence over the spec and active breakpoint values when both are set.
 
-Chart-family specs also auto-hide the watermark when the compiled container is under 200px tall — chrome is already hidden at that height, so the brand band would paint over the plot. Set `watermark` explicitly (top level or in an active breakpoint override) to opt back in; an explicit `watermark: true` in that cramped state reserves a compact brand band instead of overlapping the chart. This auto-hide is scoped to charts — sankey, tilemap, graph, geo-map, and table watermarks are unaffected and still need an explicit `watermark: false`.
+Chart-family specs also auto-hide the watermark when the compiled container is under 200px tall. Chrome is already hidden at that height, so the brand band would paint over the plot. Set `watermark` explicitly (top level or in an active breakpoint override) to opt back in; an explicit `watermark: true` in that cramped state reserves a compact brand band instead of overlapping the chart. This auto-hide is scoped to charts. Sankey, tilemap, graph, geo-map, and table watermarks are unaffected and still need an explicit `watermark: false`.
 
 ---
 
@@ -467,22 +532,22 @@ Scrollytelling steps are just spec patches: hold a base spec, patch `data` / `en
 
 - Data-only changes (same keys, new values)
 - Y-domain changes (values that force a rescale)
-- Series or category add/remove — entering marks fade in, exiting marks fade out as ghosts
-- Highlight changes (`encoding.color.highlight`) — strokes fade to the muted color
+- Series or category add/remove: entering marks fade in, exiting marks fade out as ghosts
+- Highlight changes (`encoding.color.highlight`): strokes fade to the muted color
 - Annotation add (fades in) and move (slides to the new position)
-- Beeswarm steps — set `encoding.key` to a stable entity field (state, country) so each dot tracks its entity as values change. Without a key, the fallback `lane|value` identity changes whenever a value does and dots shuffle within the swarm instead of tracking.
+- Beeswarm steps: set `encoding.key` to a stable entity field (state, country) so each dot tracks its entity as values change. Without a key, the fallback `lane|value` identity changes whenever a value does and dots shuffle within the swarm instead of tracking.
 
 **Snaps instead** (instant swap, no transition):
 
-- Mark type or encoding field/type changes — structurally different specs tear down and rebuild; there is no spec-to-spec crossfade
-- Removed annotations — they disappear immediately (no exit fade)
-- Container dimension changes or more than 500 marks — a >500-dot beeswarm or scatter needs `animation: { update: { maxMarks } }` to tween on `update()`; `createChartStory` steps over the cap fall back to a whole-chart crossfade instead of snapping
-- `prefers-reduced-motion` — every step snaps to its final state; no configuration needed
+- Mark type or encoding field/type changes: structurally different specs tear down and rebuild; there is no spec-to-spec crossfade
+- Removed annotations: they disappear immediately (no exit fade)
+- Container dimension changes or more than 500 marks: a >500-dot beeswarm or scatter needs `animation: { update: { maxMarks } }` to tween on `update()`; `createChartStory` steps over the cap fall back to a whole-chart crossfade instead of snapping
+- `prefers-reduced-motion`: every step snaps to its final state; no configuration needed
 - Updates during the entrance animation window (see below)
 
 **Scroll jitter is safe.** Calling `update()` while a transition is mid-flight retargets from the current interpolated position (mid-morph line/area paths freeze and crossfade). However fast the steps arrive, the chart settles on the last spec with no orphaned ghost elements.
 
-**Disable the entrance phase for scroll-driven charts.** (`createChartStory` does this for you when the spec omits `animation`.) By default, an `update()` that lands while the entrance animation is still playing snaps instead of tweening. The window is the full entrance sequence — duration plus per-mark stagger plus buffer, roughly the first 1–3 seconds after mount depending on mark count. Use:
+**Disable the entrance phase for scroll-driven charts.** (`createChartStory` does this for you when the spec omits `animation`.) By default, an `update()` that lands while the entrance animation is still playing snaps instead of tweening. The window is the full entrance sequence. Duration plus per-mark stagger plus buffer, roughly the first 1–3 seconds after mount depending on mark count. Use:
 
 ```ts
 const baseSpec = {
@@ -634,5 +699,8 @@ For tables, the HTML structure uses semantic elements (`<table>`, `<thead>`, `<t
 - [Tables](tables.md) for data table features (heatmaps, sparklines, flags, and more)
 - [Graphs](graphs.md) for network/relationship visualizations
 - [Spec reference](spec-reference.md) for field-by-field type details
+- [Events](reference/events.md) for the handlers each component accepts
+- [Table state](reference/table-state.md) for controlled and uncontrolled tables
+- [Export](reference/export.md) for SVG, PNG, CSV and GIF output
 - [Getting started](getting-started.md) for a hands-on tutorial
 - [Architecture](architecture.md) for how the compilation pipeline works

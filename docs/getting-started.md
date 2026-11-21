@@ -4,7 +4,6 @@ description: Build a line chart, then add chrome, annotations, a theme and a dat
 section: get-started
 order: 1
 ---
-<!-- phase-4-stub -->
 
 # Getting started
 
@@ -583,7 +582,7 @@ import { Graph } from "@opendata-ai/openchart-svelte";
 </div>
 ```
 
-Graphs render on canvas (not SVG) and use a force simulation to position nodes. They support click, drag, double-click interaction, text search across nodes, zoom/pan, and keyboard navigation. See the [integration guide](integration-guide.md) for imperative control via the `useGraph()` hook (React), composable (Vue), or action (Svelte).
+Graphs render on canvas (not SVG) and use a force simulation to position nodes. They support click, drag, double-click interaction, text search across nodes, zoom/pan, and keyboard navigation. See the [GraphSpec reference](reference/graph-spec.md#usegraph-hookcomposable) for imperative control via the `useGraph()` hook (React), composable (Vue), or action (Svelte).
 
 ## Vanilla JS
 
@@ -685,7 +684,9 @@ table.destroy();
 - [Tables](tables.md) for data tables with heatmaps, sparklines, flags, and more
 - [Graphs](graphs.md) for network/relationship visualizations
 - [Spec reference](spec-reference.md) for field-by-field type details on every spec property
-- [Integration guide](integration-guide.md) for building apps: events, controlled tables, export, responsive, graphs
+- [Frameworks](integration-guide.md) for building apps: spec updates, dark mode, themes, responsive behavior
+- [Events](reference/events.md) for click, hover and selection handlers
+- [Export](reference/export.md) for SVG, PNG, CSV and GIF downloads
 - [Agent patterns](agent-patterns.md) for a cookbook of visualization patterns with realistic data
 - [Architecture overview](architecture.md) for how the packages fit together
 - [Conventions](../CONVENTIONS.md) for code patterns and decisions

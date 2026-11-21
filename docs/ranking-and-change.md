@@ -4,13 +4,12 @@ description: "Slope, bump and range charts for who moved and by how much, as cop
 section: recipes
 order: 2
 ---
-<!-- phase-4-stub -->
 
 # Ranking and change
 
 Recipes for the FT Visual Vocabulary "ranking" family: slope charts, bump charts, and range (dumbbell/arrow) charts. All three answer the same editorial question, "who moved, and by how much?", with different emphasis.
 
-Slope and bump are not separate chart types. They are `mark: "line"` plus a handful of public spec fields, documented here as copy-paste recipes. Range is its own mark (`mark: "range"`). Every spec on this page is pinned pixel-for-pixel by the visual regression suite, so they render exactly as shipped.
+Slope and bump are not separate chart types. They are `mark: "line"` plus a handful of public spec fields, documented here as copy-paste recipes. Range is its own mark (`mark: "range"`).
 
 All specs work with any framework. Swap the import to match yours:
 
@@ -38,56 +37,53 @@ createChart(container, spec);
 
 Two points in time, one line per series. The strongest form for "before vs after": every crossing line is a rank change, every steep line is a big move. Values live on the labels, so the y axis and gridlines go away entirely.
 
-```ts
-const spec = {
-  mark: 'line',
-  data: [
-    { year: '2019', brand: 'Samsung', share: 0.216 },
-    { year: '2024', brand: 'Samsung', share: 0.19 },
-    { year: '2019', brand: 'Huawei', share: 0.176 },
-    { year: '2024', brand: 'Huawei', share: 0.043 },
-    { year: '2019', brand: 'Apple', share: 0.139 },
-    { year: '2024', brand: 'Apple', share: 0.187 },
-    { year: '2019', brand: 'Xiaomi', share: 0.092 },
-    { year: '2024', brand: 'Xiaomi', share: 0.136 },
-    { year: '2019', brand: 'Oppo', share: 0.083 },
-    { year: '2024', brand: 'Oppo', share: 0.087 },
+```json demo title="US electricity generation by source" source="US Energy Information Administration, Electric Power Monthly" height=460
+{
+  "mark": "line",
+  "data": [
+    { "year": "2010", "source": "Coal", "share": 44.8 },
+    { "year": "2024", "source": "Coal", "share": 15 },
+    { "year": "2010", "source": "Natural gas", "share": 23.9 },
+    { "year": "2024", "source": "Natural gas", "share": 43.2 },
+    { "year": "2010", "source": "Nuclear", "share": 19.6 },
+    { "year": "2024", "source": "Nuclear", "share": 18.2 },
+    { "year": "2010", "source": "Wind", "share": 2.3 },
+    { "year": "2024", "source": "Wind", "share": 10.3 },
+    { "year": "2010", "source": "Hydro", "share": 6.3 },
+    { "year": "2024", "source": "Hydro", "share": 5.6 },
+    { "year": "2010", "source": "Solar", "share": 0.1 },
+    { "year": "2024", "source": "Solar", "share": 6.9 }
   ],
-  encoding: {
-    x: { field: 'year', type: 'ordinal' },
-    y: {
-      field: 'share',
-      type: 'quantitative',
-      axis: false,
-      scale: { zero: false },
+  "encoding": {
+    "x": { "field": "year", "type": "ordinal" },
+    "y": {
+      "field": "share",
+      "type": "quantitative",
+      "axis": false,
+      "scale": { "zero": false }
     },
-    color: { field: 'brand', type: 'nominal' },
+    "color": { "field": "source", "type": "nominal" }
   },
-  endpointLabels: {
-    ends: 'both',
-    content: 'label value',
-    format: '.0%',
-  },
-  legend: { show: false },
-  chrome: {
-    title: 'Apple and Xiaomi Split What Huawei Lost',
-    subtitle: 'Share of global smartphone shipments, 2019 vs 2024',
-    source: 'Source: IDC Worldwide Quarterly Mobile Phone Tracker',
-  },
-};
+  "endpointLabels": { "ends": "both", "content": "label value", "format": ".1f" },
+  "legend": { "show": false },
+  "chrome": {
+    "title": "Natural gas passed coal as the largest US electricity source between 2010 and 2024",
+    "subtitle": "Share of US electricity generation by source, %, 2010 vs 2024"
+  }
+}
 ```
+
+The rows are the source table's 2010 and 2024 columns, reshaped to one row per source and year.
 
 What each field does:
 
 - `endpointLabels.ends: 'both'` puts a label column at both edges (plain endpoint labels are trailing-edge only).
-- `endpointLabels.content: 'label value'` joins the series name and its formatted value on one line ("Samsung 22%"). The classic FT look, name plus value on the left and value alone on the right, is `content: { leading: 'label value', trailing: 'value' }`.
+- `endpointLabels.content: 'label value'` joins the series name and its formatted value on one line ("Coal 44.8"). The classic FT look, name plus value on the left and value alone on the right, is `content: { leading: 'label value', trailing: 'value' }`.
 - `axis: false` on y removes the axis and its gridlines. The labels carry the values, so an axis would be redundant ink.
 - `scale: { zero: false }` lets the two rails span the data range instead of anchoring at zero, which is what makes the slopes readable.
 - `legend: { show: false }` because the labels already identify every series.
 
 Because the spec sets `endpointLabels` explicitly, the label columns survive the compact (under 400px) breakpoint, where auto endpoint labels would normally hand off to a legend. A slope without its labels is unreadable, so explicit opt-in wins.
-
-**Live examples**: [Slope](https://tryopendata.github.io/openchart/?story=testing--fixtures--slope-market-share) | [Slope at 320px](https://tryopendata.github.io/openchart/?story=testing--fixtures--slope-market-share-compact)
 
 ---
 
@@ -181,39 +177,38 @@ transform: [
 
 When the story is the size of the change per category rather than trajectories over time, use `mark: "range"`: one row per category, a dot at the start and end values. Set `mark: { type: 'range', style: 'arrow' }` for an arrowhead at the end value, or `style: 'bar'` for a plain floating bar.
 
-```ts
-const spec = {
-  mark: 'range',
-  data: [
-    { country: 'Japan', y2000: 81.1, y2023: 84.7 },
-    { country: 'South Korea', y2000: 76.0, y2023: 84.3 },
-    { country: 'USA', y2000: 76.7, y2023: 79.3 },
-    { country: 'China', y2000: 71.6, y2023: 78.6 },
-    { country: 'Brazil', y2000: 70.1, y2023: 75.8 },
-    { country: 'Russia', y2000: 65.5, y2023: 73.0 },
-    { country: 'India', y2000: 62.7, y2023: 72.0 },
-    { country: 'Nigeria', y2000: 46.5, y2023: 54.6 },
+```json demo title="Life expectancy, 2000 and 2023" source="UN World Population Prospects 2024" height=440
+{
+  "mark": "range",
+  "data": [
+    { "country": "Japan", "y2000": 81.1, "y2023": 84.7 },
+    { "country": "South Korea", "y2000": 76, "y2023": 84.3 },
+    { "country": "USA", "y2000": 76.7, "y2023": 79.3 },
+    { "country": "China", "y2000": 71.6, "y2023": 78.6 },
+    { "country": "Brazil", "y2000": 70.1, "y2023": 75.8 },
+    { "country": "Russia", "y2000": 65.5, "y2023": 73 },
+    { "country": "India", "y2000": 62.7, "y2023": 72 },
+    { "country": "Nigeria", "y2000": 46.5, "y2023": 54.6 }
   ],
-  encoding: {
-    y: {
-      field: 'country',
-      type: 'nominal',
-      sort: { field: 'y2023', order: 'ascending' },
+  "encoding": {
+    "y": {
+      "field": "country",
+      "type": "nominal",
+      "sort": { "field": "y2023", "order": "ascending" }
     },
-    x: {
-      field: 'y2000',
-      type: 'quantitative',
-      title: '2000',
-      axis: { title: 'Life expectancy at birth (years)' },
+    "x": {
+      "field": "y2000",
+      "type": "quantitative",
+      "title": "2000",
+      "axis": { "title": "Life expectancy at birth (years)" }
     },
-    x2: { field: 'y2023', title: '2023' },
+    "x2": { "field": "y2023", "type": "quantitative", "title": "2023" }
   },
-  chrome: {
-    title: 'Everyone Is Living Longer, but the Gaps Persist',
-    subtitle: 'Life expectancy at birth, 2000 (gray) vs. 2023 (accent), selected countries',
-    source: 'Source: UN World Population Prospects 2024',
-  },
-};
+  "chrome": {
+    "title": "India gained 9.3 years of life expectancy between 2000 and 2023, the US 2.6",
+    "subtitle": "Life expectancy at birth, 2000 (gray) vs. 2023 (accent), selected countries"
+  }
+}
 ```
 
 **Live examples**: [Dumbbell](https://tryopendata.github.io/openchart/?story=testing--fixtures--range-dumbbell) | [Arrow](https://tryopendata.github.io/openchart/?story=testing--fixtures--range-arrow) | [Range bar](https://tryopendata.github.io/openchart/?story=testing--fixtures--range-bar)
