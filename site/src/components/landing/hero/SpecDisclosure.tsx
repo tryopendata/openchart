@@ -48,11 +48,7 @@ export const SpecDisclosure = forwardRef<HTMLElement, SpecDisclosureProps>(funct
       <div className="hero-spec-body">
         <div className="hero-spec-head">
           <span className="hero-spec-head-label">Spec as of: {step.label.toLowerCase()}</span>
-          <CopyText
-            text={JSON.stringify(step.spec, null, 2)}
-            label="Copy this step's spec"
-            className="copy-chip"
-          />
+          <CopyText text={JSON.stringify(step.spec, null, 2)} label="Copy this step's spec" />
         </div>
         <SpecPane
           ref={ref}
