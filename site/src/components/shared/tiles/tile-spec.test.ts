@@ -7,17 +7,29 @@ import type { VizSpec } from "@opendata-ai/openchart-core";
 import { validateSpec } from "@opendata-ai/openchart-engine";
 import { describe, expect, it } from "vitest";
 import { getDemo } from "../../../demos/registry";
-import { vocabularyTiles } from "../../../landing/vocabulary";
 import { tileScale } from "./tile-scale";
-import { TILE_SVG_SIZE, TILE_TABLE, tileSpec } from "./tile-spec";
+import { TILE_TABLE, tileSpec } from "./tile-spec";
 
 type Json = Record<string, unknown>;
 const json = (spec: VizSpec) => spec as unknown as Json;
 const channel = (spec: VizSpec, name: string) =>
   (json(spec).encoding as Record<string, Json | undefined>)[name];
 
+/** One demo of each kind of spec a tile handles: chart, layer, table, network, sankey, map and bar list. */
+const SPECIMENS = [
+  "comparison/column-basic",
+  "change-over-time/line-basic",
+  "composition/layer-dual-axis",
+  "correlation/scatter-color",
+  "tables/sparkline-columns",
+  "flow/graph-clusters",
+  "flow/sankey-budget",
+  "maps/choropleth-basic",
+  "comparison/barlist-basic",
+];
+
 describe("a tile's spec", () => {
-  it.each(vocabularyTiles.map((tile) => [tile.demo] as const))("for %s still validates", (id) => {
+  it.each(SPECIMENS)("for %s still validates", (id) => {
     expect(validateSpec(tileSpec(getDemo(id).spec)).errors).toEqual([]);
   });
 
@@ -77,8 +89,8 @@ describe("a tile's spec", () => {
   });
 
   it("gives every tile the same tight padding and a clear background, over any theme the demo sets", () => {
-    for (const tile of vocabularyTiles) {
-      expect(json(tileSpec(getDemo(tile.demo).spec)).theme, tile.demo).toMatchObject({
+    for (const id of SPECIMENS) {
+      expect(json(tileSpec(getDemo(id).spec)).theme, id).toMatchObject({
         spacing: { padding: 4, chromeToChart: 0 },
         colors: { background: "transparent" },
       });
@@ -88,8 +100,9 @@ describe("a tile's spec", () => {
 
 describe("a live tile's scale", () => {
   it("fits the tile layout width to the cell, down and up", () => {
-    expect(tileScale(TILE_SVG_SIZE.width)).toBe(1);
-    expect(tileScale(180)).toBeCloseTo(0.75);
-    expect(tileScale(300)).toBeCloseTo(1.25);
+    expect(tileScale(240, 240)).toBe(1);
+    expect(tileScale(180, 240)).toBeCloseTo(0.75);
+    expect(tileScale(300, 240)).toBeCloseTo(1.25);
+    expect(tileScale(270, 360)).toBeCloseTo(0.75);
   });
 });

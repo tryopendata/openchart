@@ -1,13 +1,14 @@
 /**
- * A wall tile's build-time markup, read back the way the page's demo script
- * reads it: the stage it mounts into and the spec `readFigureSpec` returns,
- * with shared values written once per page. Also the slimming of the static
- * SVGs and the table fallback a reader without JavaScript sees.
+ * A tile's build-time markup, read back the way the page's demo script reads
+ * it: the stage it mounts into and the spec `readFigureSpec` returns, with
+ * shared values written once per page, at the size the page asks for. Also the
+ * slimming of the static SVGs and the table fallback a reader without
+ * JavaScript sees.
  */
 import { describe, expect, it } from "vitest";
 import { getDemo } from "../../../demos/registry";
 import { readFigureSpec } from "../../../scripts/demo-spec";
-import { slimSvg, tableFallbackHtml, tileChartHtml } from "./tile-markup";
+import { slimSvg, type TileOptions, tableFallbackHtml, tileChartHtml } from "./tile-markup";
 import { tileSpec } from "./tile-spec";
 
 /**
@@ -16,20 +17,16 @@ import { tileSpec } from "./tile-spec";
  */
 const withoutStyles = (html: string) => html.replace(/<style\b[^>]*>[\s\S]*?<\/style>/g, "");
 
-const tile = (demo: string, intent = demo.split("/")[0] ?? "") => ({
-  demo,
-  intent: intent as never,
-  label: demo,
-  href: `/docs/${demo}/`,
-});
+/** The landing wall's layout: 240 by 180, ids prefixed "w". */
+const WALL: TileOptions = { size: { width: 240, height: 180 }, domPrefix: "w" };
 
 /** Puts tiles on a page as Vocabulary.astro does, sharing one record of written values. */
-function page(demos: string[]) {
+function page(demos: string[], options = WALL) {
   const shared = new Set<string>();
   document.body.innerHTML = demos
     .map(
       (demo) =>
-        `<li data-demo="wall-${demo}">${withoutStyles(tileChartHtml(tile(demo), shared))}</li>`,
+        `<li data-demo="wall-${demo}">${withoutStyles(tileChartHtml(demo, shared, options))}</li>`,
     )
     .join("");
   const element = (demo: string) => document.querySelector(`[data-demo="wall-${demo}"]`) as Element;
@@ -40,18 +37,30 @@ describe("a tile's markup", () => {
   it("holds a demo stage and the tile spec the demo script reads back whole", () => {
     const { element } = page(["comparison/column-basic"]);
     const stage = element("comparison/column-basic").querySelector("[data-demo-stage]");
-    expect(stage?.classList.contains("wall-stage")).toBe(true);
+    expect(stage?.classList.contains("tile-stage")).toBe(true);
     expect(stage?.querySelectorAll("svg.demo-static")).toHaveLength(2);
     expect(readFigureSpec(element("comparison/column-basic"))).toEqual(
       tileSpec(getDemo("comparison/column-basic").spec),
     );
   });
 
+  it("lays the static SVGs out at the size the page asks for, with its id prefix", () => {
+    const { element } = page(["comparison/column-basic"], {
+      size: { width: 360, height: 240 },
+      domPrefix: "g",
+    });
+    const svgs = [...element("comparison/column-basic").querySelectorAll("svg.demo-static")];
+    expect(svgs.map((svg) => svg.getAttribute("viewBox"))).toEqual(["0 0 360 240", "0 0 360 240"]);
+    const ids = svgs.flatMap((svg) => [...svg.querySelectorAll("[id]")].map((node) => node.id));
+    expect(ids.length).toBeGreaterThan(0);
+    expect(ids.filter((id) => !id.startsWith("g-"))).toEqual([]);
+  });
+
   it("moves a map's atlas into a shared block, written once however many charts on the page use it", () => {
     const maps = ["maps/choropleth-basic", "maps/symbol-basic"];
     const shared = new Set<string>();
     const html = (demo: string, id: string) =>
-      `<li data-demo="${id}">${withoutStyles(tileChartHtml(tile(demo), shared))}</li>`;
+      `<li data-demo="${id}">${withoutStyles(tileChartHtml(demo, shared, WALL))}</li>`;
     // The second choropleth stands for another chart on the page drawing the same atlas.
     document.body.innerHTML = [
       html("maps/choropleth-basic", "a"),
@@ -76,7 +85,7 @@ describe("a tile's markup", () => {
     expect(placeholder?.textContent).toBe(
       `${getDemo("flow/sankey-basic").title}. This chart is drawn in the browser.`,
     );
-    const table = element("tables/basic").querySelector("table.wall-table");
+    const table = element("tables/basic").querySelector("table.tile-table");
     expect([...(table?.querySelectorAll("th") ?? [])].map((cell) => cell.textContent)).toEqual([
       "Country",
       "Population",
@@ -93,8 +102,8 @@ describe("a tile's markup", () => {
   });
 
   it("names the tile in the error when its demo does not exist", () => {
-    expect(() => tileChartHtml(tile("comparison/no-such-demo"), new Set())).toThrow(
-      /tile "comparison\/no-such-demo".*No demo has the id/,
+    expect(() => tileChartHtml("comparison/no-such-demo", new Set(), WALL)).toThrow(
+      /Tile "comparison\/no-such-demo".*No demo has the id/,
     );
   });
 });
@@ -124,7 +133,7 @@ describe("a table tile's fallback", () => {
       ],
     } as never;
     document.body.innerHTML = tableFallbackHtml(spec);
-    expect(document.querySelector("tbody td.wall-table-number")?.textContent).toBe("$1,189.84");
+    expect(document.querySelector("tbody td.tile-table-number")?.textContent).toBe("$1,189.84");
   });
 
   it("leaves out a column that holds series, which a sparkline draws", () => {
