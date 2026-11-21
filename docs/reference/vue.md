@@ -9,7 +9,7 @@ order: 3
 
 `@opendata-ai/openchart-vue` wraps the [vanilla mount functions](./vanilla.md) in Vue 3 components. A component mounts its visualization in `onMounted`, calls `update()` when the spec changes, and destroys the instance on unmount. The package re-exports all of `@opendata-ai/openchart-core`, the engine's `compile*` and `validateSpec` functions, and the vanilla export functions, so an app needs only this import.
 
-See it: [Frameworks](/docs/get-started/frameworks/) shows the same chart in React, Vue, Svelte and vanilla JavaScript.
+See it: [Frameworks](../integration-guide.md) shows the same chart in React, Vue, Svelte and vanilla JavaScript.
 
 ## Install
 
@@ -49,7 +49,7 @@ defineProps<{ spec: ChartSpec }>();
 | `ChartStory` | a chart or map driven through scroll steps | `goTo(index)`, `instance` |
 | `VizThemeProvider` | nothing; provides `theme` and `darkMode` to every component inside it | nothing |
 
-Every component that renders a spec takes `spec`, `theme`, `darkMode`, `class` and `style`, except `ChartStory`, which passes `mountOptions` through instead. A component `theme` merges over the provider's theme, which merges over the spec's. A component `darkMode` replaces the provider's. `Visualization` emits no events; use the specific component when you need them.
+Every component that renders a spec takes `spec`, `theme`, `darkMode`, `class` and `style`, except `ChartStory`, which takes `spec` but no `theme`, `darkMode`, `class` or `style` props. It ignores `VizThemeProvider`; pass its theme and dark mode through `mountOptions`. A component `theme` merges over the provider's theme, which merges over the spec's. A component `darkMode` replaces the provider's. `Visualization` emits no events; use the specific component when you need them.
 
 ### Chart props and events
 
@@ -82,7 +82,7 @@ The other props map onto [`MountOptions`](./vanilla.md#mountoptions) and the [`C
 | `TileMap` | `@tile-click`, `@tile-hover` | none |
 | `GeoMap` | `@mark-click`, `@mark-hover`, `@camera-change`, `@reader-change` | `reader`, `readerSelection`, `labelInventory` |
 | `BarList` | `@row-click`, `@row-hover` | none |
-| `ChartStory` | none | `steps`, `narrative` (or the default slot, one root node per step), `step`, `triggerPosition`, `cameraMode`, `mountOptions` |
+| `ChartStory` | none | `spec` (required; a chart, layer or map spec), `steps`, `narrative` (or the default slot, one root node per step), `step`, `triggerPosition`, `cameraMode`, `mountOptions` (theme and dark mode go here; the provider is ignored) |
 
 ## Composables
 
@@ -109,4 +109,3 @@ The 3D graph subpath, `@opendata-ai/openchart-vue/graph-3d`, touches `window` wh
 ## Related
 
 - [Events](./events.md): every handler, its payload and its spelling in each framework.
-- [Frameworks](../integration-guide.md): theming, dark mode, responsive sizing and spec updates across the framework packages.

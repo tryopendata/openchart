@@ -9,7 +9,7 @@ order: 2
 
 This page records the defaults every chart, table, map, graph and Sankey diagram ships with: the palette, type scale, spacing and radius ladders, per-mark defaults, hover, legend, tooltip and keyboard behavior, motion timings, the named presets and the dark-mode rules. Every value was read from `packages/core` and `packages/engine`. Change any of them with a [theme](reference/theme.md) or the [CSS tokens](theming-tokens.md).
 
-See it: [Color palettes](/docs/style/color/), [Presets](/docs/style/presets/) and [Dark mode](/docs/style/dark-mode/).
+See it: [Color palettes](https://openchart.steamfield.io/docs/style/color/), [Presets](https://openchart.steamfield.io/docs/style/presets/) and [Dark mode](https://openchart.steamfield.io/docs/style/dark-mode/).
 
 For chart-type selection, editorial writing and annotation guidance, see the [OpenChart skill references](https://github.com/tryopendata/skills/tree/main/plugins/openchart/skills/openchart/references/).
 
@@ -22,7 +22,7 @@ twice the subtitle's size), while tables and dashboard tiles run dense.
 
 Pure neutrals on light backgrounds (`#09090b` ink on white). Every secondary
 gray is derived by mixing the theme's text color toward its background,
-rather than a fixed zinc ladder — a custom warm or cool theme gets matching
+rather than a fixed zinc ladder, so a custom warm or cool theme gets matching
 grays for free. One accent color (cyan, slot 1 of the categorical palette)
 means "the series the headline is about." Data hues are built in OKLCH at
 alternating lightness; dark mode raises lightness and trims chroma rather
@@ -36,13 +36,13 @@ except the tooltip.
 
 Six hues, cyan in slot 1. The hue order is cyan (215°) → ochre (70°) → blue
 (262°) → rose (350°) → green (155°) → violet (300°), chosen so every
-adjacent pair — including the wrap from violet back to cyan — is at least
+adjacent pair (including the wrap from violet back to cyan) is at least
 80° apart. Lightness alternates (high/low/high/low/high/high) rather than
 matching across slots: color-vision deficiency collapses hue and only
 lightness survives, and a matched-lightness draft of this ramp failed the
 repo's own Brettel CVD simulator on the ochre/rose and blue/violet pairs.
-Strokes carry more chroma than fills — a fill is the same hue, roughly 0.03
-lighter and 0.03 lower chroma — so a bar or slice never shouts as loud as a
+Strokes carry more chroma than fills (a fill is the same hue, roughly 0.03
+lighter and 0.03 lower chroma), so a bar or slice never shouts as loud as a
 line drawn beside it. Dark-mode variants raise lightness by roughly 0.08–0.10
 and trim chroma instead of reusing the light hexes.
 
@@ -55,7 +55,7 @@ and trim chroma instead of reusing the light hexes.
 | 5 | green | `#3ca368` | 0.640 / 0.130 / 155 | `#62ab7d` | 0.681 / 0.101 / 155 | `#6ebf8c` | `#82ba95` |
 | 6 | violet | `#a584dc` | 0.679 / 0.130 / 300 | `#ae96da` | 0.719 / 0.100 / 300 | `#bca1ed` | `#c2afe7` |
 
-Source: `packages/core/src/colors/palettes.ts` — `CATEGORICAL_PALETTE`,
+Source: `packages/core/src/colors/palettes.ts`: `CATEGORICAL_PALETTE`,
 `CATEGORICAL_FILL_PALETTE`, `CATEGORICAL_PALETTE_DARK`,
 `CATEGORICAL_FILL_PALETTE_DARK`. Hexes are precomputed sRGB (an Ottosson
 OKLab → linear sRGB → sRGB pipeline run once and committed); raw `oklch()`
@@ -66,7 +66,7 @@ resolved at runtime.
 
 Cyan as a line stroke is drawn through `adaptForLightLineStroke`
 (`packages/core/src/theme/dark-mode.ts`), which drops HSL lightness by
-roughly 12% absolute on light backgrounds — the accent as a bar fill stays
+roughly 12% absolute on light backgrounds. The accent as a bar fill stays
 the light hue above; the same accent as a line stroke on white needs more
 contrast than the fill does, so `computeLineMarks` calls the adapter
 explicitly rather than drawing the palette literal.
@@ -74,7 +74,7 @@ explicitly rather than drawing the palette literal.
 ### Extended palette (series 7+)
 
 A domain with more than six categorical series extends from a second
-six-slot ramp and emits a warning — six is already the point past which a
+six-slot ramp and emits a warning. Six is already the point past which a
 chart should bucket the tail (see `other` under Sankey and Waffle below),
 facet, or direct-label instead of adding a seventh hue.
 
@@ -87,11 +87,11 @@ facet, or direct-label instead of adding a seventh hue.
 '#65b1f6' sky        — oklch(0.740 0.126 248)
 ```
 
-Source: `packages/core/src/colors/palettes.ts` — `CATEGORICAL_EXTENDED_PALETTE`.
+Source: `packages/core/src/colors/palettes.ts`: `CATEGORICAL_EXTENDED_PALETTE`.
 Built by interleaving hue (+40° from each base slot) with lightness
 alternating ±0.12, then rotated so slot 7 sits 105° from cyan and never
-neighbors it on a seven-slice pie wrap. Every array — the four base arrays
-plus this extended ramp — clears `checkPaletteDistinguishability` at
+neighbors it on a seven-slice pie wrap. Every array (the four base arrays
+plus this extended ramp) clears `checkPaletteDistinguishability` at
 `minDistance` 30 for deuteranopia and protanopia; this is guarded by
 `packages/core/src/colors/__tests__/palette-a11y.test.ts`, which also asserts
 stroke contrast ≥ 2.2:1 on white and ≥ 3:1 on `#09090b`, fill contrast ≥
@@ -99,8 +99,8 @@ stroke contrast ≥ 2.2:1 on white and ≥ 3:1 on `#09090b`, fill contrast ≥
 
 ### Neutral ramp
 
-Every secondary gray — `--oc-gray-100` through `-800`, `--oc-text-secondary`,
-`--oc-text-faint`, `--oc-border` — is computed by mixing the theme's `text`
+Every secondary gray (`--oc-gray-100` through `-800`, `--oc-text-secondary`,
+`--oc-text-faint`, `--oc-border`) is computed by mixing the theme's `text`
 color toward its `background` in sRGB, not read from a fixed zinc ladder. The
 mix weight (share of text in the result) per step: 100 → 0.06, 200 → 0.12,
 300 → 0.22, 400 → 0.40, 600 → 0.55, 800 → 0.75. `secondary` equals `800`,
@@ -116,7 +116,7 @@ graph node rings (`resolveGraphSurface`), annotation marker/plate fills, and
 tilemap label contrast. Authored backgrounds also feed the `--oc-bg` token
 stamped by the shared renderer helper (`resolvedSurface`).
 
-Source: `packages/core/src/colors/neutral.ts` — `deriveNeutralRamp(text, bg,
+Source: `packages/core/src/colors/neutral.ts`: `deriveNeutralRamp(text, bg,
 isDark)`. Computed once in `resolveTheme`/`adaptTheme` and carried on
 `ResolvedTheme.colors.neutral`. Mounts stamp authored theme overrides and
 their derived tokens; omitted tokens keep the CSS cascade available to hosts. The
@@ -124,7 +124,7 @@ direction is one-way (theme → CSS): engine code reads `theme.colors.neutral.*`
 directly and never calls `cssTokenDefault`. When the background is
 transparent (the default theme's is) the ramp falls back to the static CSS
 token defaults, which is why the default theme and the generated
-`tokens.css` never disagree — this fallback is the common path, not an edge
+`tokens.css` never disagree. This fallback is the common path, not an edge
 case.
 
 ### Semantic colors
@@ -141,7 +141,7 @@ case.
 | `colors.annotationMarkerFill` / `annotationPlate` | Resolved neutral surface | Resolved neutral surface |
 
 `axis` is both the axis-line color and the tick-label ink, and must clear
-WCAG AA (4.5:1) on its background — zinc-500 hits roughly 5.7:1 on white,
+WCAG AA (4.5:1) on its background: zinc-500 hits roughly 5.7:1 on white,
 zinc-400 roughly 6:1 on `#09090b`. `--oc-positive`/`--oc-negative` are kept
 equal to these theme values by the token-theme-parity test, and each has a
 10%-color-mix `-tint` variant (`--oc-positive-tint` / `--oc-negative-tint`)
@@ -192,7 +192,7 @@ widths, and responsive opt-outs remain authoritative.
 | `spacing.axisMargin` | 6px |
 
 Hairline vs. gridline is a deliberate two-tier system: the hairline (14%
-alpha ink) is structural — axis lines, separators, container borders — and
+alpha ink) is structural (axis lines, separators, container borders) and
 is heavier than the gridline (8% alpha), which is decoration. A gridline
 lighter than the line it's drawn relative to reads as texture, not as a
 second line competing with the axis.
@@ -215,8 +215,8 @@ square or nearly square.
 ## Per-mark defaults
 
 **Bars and columns.** `BAR_CORNER_RADIUS` is 2px, applied only to the value
-end (`valueEndCorners(orient, negative)` in `packages/engine/src/charts/utils.ts`)
-— the baseline end stays square so bars sit flush on the zero line, and a
+end (`valueEndCorners(orient, negative)` in `packages/engine/src/charts/utils.ts`).
+The baseline end stays square so bars sit flush on the zero line, and a
 negative value rounds the opposite pair of corners. Stacked segments stay
 square (unrounded) and draw a 1px seam stroke in the resolved background
 color so adjacent fills meet WCAG 1.4.11 by separator rather than by hue
@@ -232,7 +232,7 @@ A slot-1 (cyan) line stroke on a light canvas is darkened through
 **Areas.** Solo-series gradient stops fade 20% → 0% opacity top to bottom;
 overlapping multi-series areas use a lighter 14% → 0% (a heavier wash
 competes with the lines drawn over it). Stacked areas render flat at 92%
-fill opacity with no gradient — a vertical gradient inside a stacked band
+fill opacity with no gradient, because a vertical gradient inside a stacked band
 reads as a value change within the band, so every editorial reference
 stacks flat. (Stacked areas do not get the 1px background seam bars use:
 `AreaMark` has only one stroke slot, already spoken for by the top edge.)
@@ -250,13 +250,13 @@ when the background isn't opaque) at 1.5px. Labels read `"<name> <percent>"`
 by default, or the `labels.format` value when set. An opt-in donut center
 stat (`markDef.centerLabel: string | { text; subtitle? }`, arc marks only)
 renders two stacked decorative text marks on the hole's midpoint: the value
-at `metricValue`/600, an optional caption under it at `small`/400 — the
+at `metricValue`/600, an optional caption under it at `small`/400. The
 number is already represented by the slices, so these marks are decorative
 and excluded from the a11y label.
 
 **Calendar.** Cell corner radius 2px, `shape-rendering: crispEdges`. A
 recorded zero takes the lightest step of the (default five-class, quantize)
-color ramp; a genuinely missing day keeps `annotationFill` — zero and
+color ramp; a genuinely missing day keeps `annotationFill`, so zero and
 missing are visually distinct, the way GitHub's contribution graph
 distinguishes them. Gap ladder floors at 2px (not 1px, which antialiases
 into the cells). Legend has a compact `Less ▢▢▢▢▢ More` variant, placed
@@ -264,17 +264,17 @@ bottom-right.
 
 **Waffle.** Cell corner radius 2px, `crispEdges`. Opt-in `mark.other:
 number | { threshold; label? }` merges sub-threshold categories into one
-trailing bucket — off by default; every category renders individually
+trailing bucket. It is off by default; every category renders individually
 unless you opt in.
 
 **Dumbbell / range.** Dot radius (`DOT_RADIUS`) 5.5px, knockout-stroked in
 the background. Default (undirected) coloring: a neutral start dot
 (`theme.colors.neutral[400]`) and an accent end dot, connector drawn in
-`neutral[400]` at 0.6 opacity — direction reads from which end carries the
+`neutral[400]` at 0.6 opacity. Direction reads from which end carries the
 accent, without assigning a valence. `markDef.colorByDirection` (opt-in)
 colors the connector and end dot by sign instead; it stays opt-in because
 red/green is the worst CVD pair and many ranges carry no positive/negative
-meaning at all. There's no auto-sort by gap — data order is authorial
+meaning at all. There's no auto-sort by gap: data order is authorial
 intent everywhere in the library; sort explicitly if you want a gap ranking.
 
 **Parliament.** Seat knockout stroke 0.75px in the background. Majority
@@ -282,8 +282,8 @@ line label uses `colors.axis`.
 
 **Histogram and density.** Overlapping distributions are the default, not
 grouped or stacked ones: a binned axis exists to compare shapes, and dodging
-separates the very thing you're reading. Overlap costs opacity — histogram
-bars drop to 0.55 fill, density curves to 0.4 — which is enough for two
+separates the very thing you're reading. Overlap costs opacity (histogram
+bars drop to 0.55 fill, density curves to 0.4), which is enough for two
 groups and muddy past three. Density curves also drop the auto gradient for a
 flat fill; two stacked gradients read as mud rather than as two curves.
 
@@ -295,7 +295,7 @@ waffle/compute,range/compute,parliament/compute,binned-bar/compute}.ts`.
 
 One hover language, applied everywhere as a CSS class (never inline style,
 so it beats the renderer's `opacity` attributes and loses to the transition
-driver's per-frame inline `style.opacity` — the precedence a mid-transition
+driver's per-frame inline `style.opacity`, the precedence a mid-transition
 hover needs). Two registers, picked from the layout's distinct `seriesKey`
 count (`createHoverEmphasis`, `packages/vanilla/src/interactions/hover-emphasis.ts`):
 
@@ -308,7 +308,7 @@ count (`createHoverEmphasis`, `packages/vanilla/src/interactions/hover-emphasis.
   (`oc-mark--hover`, full ink plus a 1px stroke) instead, and nothing else
   dims.
 - Legend hover always uses the full dim-the-rest register regardless of
-  series count — picking a name off the legend is a deliberate gesture, not
+  series count: picking a name off the legend is a deliberate gesture, not
   the incidental sweep mark hover is. Hidden legend entries (carrying
   `opacity="0.3"` as an attribute) are skipped by both the hover and dim
   classes so a toggled-off series stays visibly off rather than brightening.
@@ -320,8 +320,8 @@ legend-bin hover.
 
 **Crosshair** (`packages/vanilla/src/interactions/crosshair.ts`, line/area
 charts). The nearest series at a snapped x position is raised only when the
-pointer is within 18px (`EMPHASIS_PROXIMITY_PX`) of that series' point —
-beyond it the crosshair and tooltip still track, but nothing dims, so
+pointer is within 18px (`EMPHASIS_PROXIMITY_PX`) of that series' point.
+Beyond it the crosshair and tooltip still track, but nothing dims, so
 crossing the chart doesn't re-dim it on every pass. Snap dot radius is
 4.5px. Stacked bar and (non-normalized) stacked area tooltips get a `Total`
 row equal to the formatted stack sum.
@@ -345,7 +345,7 @@ skipped from the field list so it isn't repeated as a row; explicit
 `encoding.tooltip` channels always render verbatim regardless.
 
 **Keyboard.** Gated on `tooltipDescriptors.size === 0 && crosshairController`
-(`packages/vanilla/src/interactions/keyboard-nav.ts`) — not on the absence of
+(`packages/vanilla/src/interactions/keyboard-nav.ts`), not on the absence of
 `[data-mark-id]`, since line/area groups do carry mark ids. Bar/column/pie/
 scatter charts (which have per-mark tooltip descriptors) tab between mark
 elements. Line/area charts (whose values live on the snap overlay, not
@@ -362,7 +362,7 @@ Small containers drop chrome automatically
 height under 150px (`HEIGHT_NO_GRID_MAX`) drops gridlines; height under the
 existing cramped threshold (200px, `HEIGHT_CRAMPED_MAX`) drops axes entirely;
 width at the compact breakpoint caps x-axis tick labels at 3
-(`COMPACT_MAX_X_TICKS`). Every drop is a default — an explicit `axis` config
+(`COMPACT_MAX_X_TICKS`). Every drop is a default: an explicit `axis` config
 or `axis.grid` on the encoding channel always wins, at any size.
 
 Chrome mode itself (title/subtitle/source visibility, distinct from the
@@ -429,25 +429,25 @@ deliberate deviation from the palette's usual chroma ceiling: it's the one
 loud hue in an otherwise quiet ramp (the other five broadsheet slots run
 0.011–0.137 chroma), kept because it still clears both CVD checks at a
 48.7-unit distance against a 30-unit threshold. `terminal` sets no explicit
-dark colors of its own beyond its single background/text pair — it resolves
+dark colors of its own beyond its single background/text pair. It resolves
 `isDark: true` even when applied in light mode, because its background is
 already dark.
 
-`ThemeConfig.rule` — the short colored bar above the chrome block, the
-Economist/FT masthead device — is `null` on every preset except
+`ThemeConfig.rule` (the short colored bar above the chrome block, the
+Economist/FT masthead device) is `null` on every preset except
 `broadsheet`. See `docs/theming-tokens.md` for the full field shape and how
 it composes with dark mode.
 
 Source: `packages/core/src/theme/presets.ts`. Six full gallery house styles
 (`Default`, `Ink`, `Midnight`, `Terminal`, `Field`, `Signal`) built on top of
 these presets live in `examples/.ladle/themes.ts` and are a separate,
-example-only concept from the five presets above — see the `features--theming`
+example-only concept from the five presets above; see the `features--theming`
 gallery page.
 
 ## Dark mode
 
 `adaptTheme` (`packages/core/src/theme/dark-mode.ts`) swaps in dark
-defaults only for colors a spec left at their light default — an explicit
+defaults only for colors a spec left at their light default. An explicit
 override survives dark-mode adaptation untouched. The categorical and fill
 palettes swap to their purpose-built dark variants (see the Color section
 above) rather than running the light hexes through contrast-equivalence,

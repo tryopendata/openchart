@@ -9,7 +9,7 @@ order: 14
 
 A `TileMapSpec` (`type: 'tilemap'`) draws each US state and the District of Columbia as an equal square in a fixed grid, colored by value or by category. Use it when a choropleth would let large, sparsely populated states dominate.
 
-See it: [Tile map](/docs/maps/tile-map/).
+See it: [Tile map](https://openchart.steamfield.io/docs/maps/tile-map/).
 
 ## TileMapSpec
 

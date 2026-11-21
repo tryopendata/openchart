@@ -9,7 +9,7 @@ order: 12
 
 A `GraphSpec` (`type: 'graph'`) draws a network of nodes and edges on canvas, positioned by a force simulation. It takes `nodes` and `edges` arrays instead of `data`, and renders through `<Graph>` or `createGraph`, not `<Chart>`.
 
-See it: [Graph](/docs/flow/graph/).
+See it: [Graph](https://openchart.steamfield.io/docs/flow/graph/).
 
 ## GraphSpec
 

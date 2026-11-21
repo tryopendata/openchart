@@ -9,7 +9,7 @@ order: 15
 
 A `GeoMapSpec` (`type: 'map'`) draws TopoJSON geography and fills each feature from a joined data row (a choropleth). A points layer adds circles at latitude and longitude, sized or colored by value (a symbol map).
 
-See it: [Choropleth](/docs/maps/choropleth/), [Symbol map](/docs/maps/symbol-map/) and [Geographic labels](/docs/maps/geographic-labels/).
+See it: [Choropleth](https://openchart.steamfield.io/docs/maps/choropleth/), [Symbol map](https://openchart.steamfield.io/docs/maps/symbol-map/) and [Geographic labels](https://openchart.steamfield.io/docs/maps/geographic-labels/).
 
 ## GeoMapSpec
 

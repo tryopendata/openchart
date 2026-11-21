@@ -9,7 +9,7 @@ order: 2
 
 `@opendata-ai/openchart-react` wraps the [vanilla mount functions](./vanilla.md) in React components. A component mounts its visualization in an effect after the first render, calls `update()` when the spec changes, and destroys the instance on unmount. The package re-exports all of `@opendata-ai/openchart-core`, the engine's `compile*` and `validateSpec` functions, and the vanilla export functions, so an app needs only this import.
 
-See it: [Frameworks](/docs/get-started/frameworks/) shows the same chart in React, Vue, Svelte and vanilla JavaScript.
+See it: [Frameworks](../integration-guide.md) shows the same chart in React, Vue, Svelte and vanilla JavaScript.
 
 ## Install
 
@@ -24,9 +24,9 @@ import "@opendata-ai/openchart-react/styles.css";
 ```
 
 ```tsx
-import { Chart } from "@opendata-ai/openchart-react";
+import { Chart, type ChartSpec } from "@opendata-ai/openchart-react";
 
-export function Inflation({ spec }) {
+export function Inflation({ spec }: { spec: ChartSpec }) {
   return <Chart spec={spec} style={{ height: 400 }} />;
 }
 ```
@@ -46,7 +46,7 @@ export function Inflation({ spec }) {
 | `ChartStory` | a chart or map driven through scroll steps | `ChartStoryHandle` |
 | `VizThemeProvider` | nothing; supplies `theme` and `darkMode` to every component inside it | none |
 
-Every component that renders a spec takes `spec`, `theme`, `darkMode`, `className` and `style`, except `ChartStory`, which passes `mountOptions` through instead. A component `theme` merges over the provider's theme, which merges over the spec's. A component `darkMode` replaces the provider's. `Visualization` takes no event handlers; use the specific component when you need them.
+Every component that renders a spec takes `spec`, `theme`, `darkMode`, `className` and `style`, except `ChartStory`, which takes `spec`, `className` and `style` but not `theme` or `darkMode`. It ignores `VizThemeProvider`; pass its theme and dark mode through `mountOptions`. A component `theme` merges over the provider's theme, which merges over the spec's. A component `darkMode` replaces the provider's. `Visualization` takes no event handlers; use the specific component when you need them.
 
 ### Chart props
 
@@ -67,6 +67,8 @@ Every component that renders a spec takes `spec`, `theme`, `darkMode`, `classNam
 | `reader`, `readerSelection`, `onReaderChange` | see `ChartReaderProps` | Reader pinning through `createReader`; `reader: { mode: 'slices' }` pins slices. |
 | `className`, `style` | `string`, `CSSProperties` | The wrapper `<div>`. |
 
+A change to `theme` (its own or the provider's), `darkMode`, `renderer`, `interaction`, `rowHover` or `autoResize` destroys and recreates the chart, and so does adding or removing an `onEdit`, `onSelect` or `onDeselect` handler. Other handler changes don't. With `interaction` omitted, the mode is inferred from those three handlers: `onEdit` gives `'edit'`, `onSelect` or `onDeselect` gives `'select'`, and none gives `'read'`.
+
 `ChartHandle`, from a `ref` on `<Chart>`, has `getSelectedElement()`, `select(ref)`, `deselect()` and `instance`, the underlying `ChartInstance` (`null` until mounted).
 
 ### Other component props
@@ -79,7 +81,7 @@ Every component that renders a spec takes `spec`, `theme`, `darkMode`, `classNam
 | `TileMap` | `onTileClick`, `onTileHover` | none |
 | `GeoMap` | `onMarkClick`, `onMarkHover`, `onCameraChange` | `reader`, `readerSelection`, `onReaderChange`, `labelInventory` |
 | `BarList` | `onRowClick`, `onRowHover` | none |
-| `ChartStory` | none | `steps`, `narrative` (one React node per step), `step` (drives it from outside), `triggerPosition` (default `0.4`), `cameraMode` (`'step'` or `'scrub'`), `mountOptions` |
+| `ChartStory` | none | `spec` (required; a chart, layer or map spec), `steps`, `narrative` (one React node per step), `step` (drives it from outside), `triggerPosition` (default `0.4`), `cameraMode` (`'step'` or `'scrub'`), `mountOptions` (theme, dark mode and the other mount options), `className`, `style` |
 
 The `Sankey`, `TileMap`, `GeoMap` and `BarList` handles expose `instance`. `GraphHandle` has the graph's search, selection, highlight and camera methods, plus `update(spec)` and `instance`. `ChartStoryHandle` has `goTo(index)` and `instance`.
 
@@ -108,4 +110,3 @@ The 3D graph subpath, `@opendata-ai/openchart-react/graph-3d`, touches `window` 
 ## Related
 
 - [Events](./events.md): every handler, its payload and its spelling in each framework.
-- [Frameworks](../integration-guide.md): theming, dark mode, responsive sizing and spec updates across the framework packages.

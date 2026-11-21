@@ -7,9 +7,9 @@ order: 1
 
 # JSON Schema and llms.txt
 
-OpenChart publishes its spec grammar in forms a program or a language model can read: a JSON Schema generated from the TypeScript types, a validator that returns repairable errors, and plain-text copies of these docs. Use them when an LLM writes specs, when specs arrive from outside your code, or when an agent needs the docs in its context.
+OpenChart publishes its spec grammar as a JSON Schema generated from the TypeScript types. This page also covers runtime validation, the Markdown exports of these docs and the agent skill.
 
-See it: [Generating specs](/docs/agents/generating-specs/) uses the schema as a tool definition and validates the result.
+See it: [Generating specs](../generating-specs.md) uses the schema as a tool definition, covers which schema to give a model and strict-mode tool use, and validates the result.
 
 ## JSON Schema
 
@@ -25,7 +25,7 @@ See it: [Generating specs](/docs/agents/generating-specs/) uses the schema as a 
 import vizSchema from "@opendata-ai/openchart-core/schema" with { type: "json" };
 ```
 
-Without a local install, fetch the file from `https://unpkg.com/@opendata-ai/openchart-core/schema/vizspec.schema.json`. The schema checks shape only; it can't know which fields your data has, so validate with `validateSpec` before rendering. [Generating specs](../generating-specs.md) covers which schema to give a model and strict-mode tool use.
+Without a local install, fetch the file from `https://unpkg.com/@opendata-ai/openchart-core/schema/vizspec.schema.json`. The schema checks shape only; it can't know which fields your data has, so validate with `validateSpec` before rendering.
 
 ## Validation
 
@@ -62,15 +62,15 @@ const result = validateSpec(spec);
 
 ## llms.txt and Markdown exports
 
-This site serves its docs as plain Markdown for agents and other tools:
+The OpenChart docs site, https://openchart.steamfield.io, serves its pages as plain Markdown for agents and other tools:
 
 | URL | Contents |
 | --- | --- |
-| `/llms.txt` | Every docs page by area and section, each with its description and the URL of its Markdown copy. |
-| `/llms-full.txt` | Every page's Markdown copy, concatenated in sidebar order. |
-| `/docs/<page>.md` | One page as Markdown: the title, the description, then the body. A live demo on the page becomes its spec in a `json` fence. This page is `/docs/machine-readable/json-schema.md`. |
+| `https://openchart.steamfield.io/llms.txt` | Every docs page by area and section, each with its description and the URL of its Markdown copy. |
+| `https://openchart.steamfield.io/llms-full.txt` | Every page's Markdown copy, concatenated in sidebar order. |
+| `https://openchart.steamfield.io/docs/<page>.md` | One page as Markdown: the title, the description, then the body. A live demo on the page becomes its spec in a `json` fence. This page is `https://openchart.steamfield.io/docs/machine-readable/json-schema.md`. |
 
-The repository has its own [`llms.txt`](../../llms.txt) and [`llms-full.txt`](../../llms-full.txt) at its root, generated from the library types by `scripts/generate-llms.mjs`. They cover the spec grammar, install lines and the reference pages, for an agent working from a clone or the npm package instead of this site.
+The repository has its own [`llms.txt`](../../llms.txt) and [`llms-full.txt`](../../llms-full.txt) at its root, generated from the library types by `scripts/generate-llms.mjs`. They cover the spec grammar, install lines and the reference pages, for an agent working from a clone of the repository instead of the site.
 
 ## OpenChart skill
 

@@ -9,7 +9,7 @@ order: 6
 
 Chrome is the text around the plot: eyebrow, title, subtitle, source, byline and footer. This page also covers the text inside and beside it: value labels on marks, endpoint labels at the end of each series, and the legend.
 
-See it: [Title, subtitle and source](/docs/framing/chrome/), [Labels and legends](/docs/framing/labels-legends/) and [Endpoint labels](/docs/framing/endpoint-labels/).
+See it: [Title, subtitle and source](https://openchart.steamfield.io/docs/framing/chrome/), [Labels and legends](https://openchart.steamfield.io/docs/framing/labels-legends/) and [Endpoint labels](https://openchart.steamfield.io/docs/framing/endpoint-labels/).
 
 ## Chrome
 

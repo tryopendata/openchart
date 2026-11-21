@@ -9,7 +9,7 @@ order: 7
 
 A table's sort, search and page can live inside the table (uncontrolled, the default) or in your app's state (controlled). This page shows both modes in each framework, the table state hooks, and the order in which sorting cycles.
 
-See it: [Data table](/docs/tables/data-table/).
+See it: [Data table](https://openchart.steamfield.io/docs/tables/data-table/).
 
 ## Table: controlled vs uncontrolled
 
@@ -63,7 +63,7 @@ Pass `sort`, `search`, and/or `page` props to take over state management. When a
 ```tsx
 import { useState } from "react";
 import { DataTable } from "@opendata-ai/openchart-react";
-import type { SortState } from "@opendata-ai/openchart-core";
+import type { SortState, TableSpec } from "@opendata-ai/openchart-core";
 
 function ControlledTable({ spec }: { spec: TableSpec }) {
   const [sort, setSort] = useState<SortState | null>(null);
@@ -173,7 +173,7 @@ For a quick way to get controlled state without wiring it all manually. Availabl
 **React:**
 
 ```tsx
-import { DataTable, useTableState } from "@opendata-ai/openchart-react";
+import { DataTable, useTableState, type TableSpec } from "@opendata-ai/openchart-react";
 
 function TableWithManagedState({ spec }: { spec: TableSpec }) {
   const { sort, search, page, setSort, setSearch, setPage, resetState } =
@@ -226,19 +226,19 @@ const { sort, search, page, setSort, setSearch, setPage, resetState } =
 <script lang="ts">
 import { DataTable, useTableState } from "@opendata-ai/openchart-svelte";
 
-const { sort, search, page, setSort, setSearch, setPage, resetState } =
-  useTableState();
+// Keep the object: sort, search and page are getters, and destructuring would freeze them.
+const ts = useTableState();
 </script>
 
-<button onclick={resetState}>Reset</button>
+<button onclick={ts.resetState}>Reset</button>
 <DataTable
   {spec}
-  sort={sort}
-  search={search}
-  page={page}
-  onsortchange={setSort}
-  onsearchchange={setSearch}
-  onpagechange={setPage}
+  sort={ts.sort}
+  search={ts.search}
+  page={ts.page}
+  onsortchange={ts.setSort}
+  onsearchchange={ts.setSearch}
+  onpagechange={ts.setPage}
 />
 ```
 
@@ -259,7 +259,7 @@ For cases where you need direct access to the vanilla `TableInstance`:
 **React:**
 
 ```tsx
-import { useTable } from "@opendata-ai/openchart-react";
+import { useTable, type TableSpec } from "@opendata-ai/openchart-react";
 
 function AdvancedTable({ spec }: { spec: TableSpec }) {
   const { ref, table, state } = useTable(spec, {
@@ -302,14 +302,14 @@ const { containerRef, table, state } = useTable(spec, {
 <script lang="ts">
 import { useTable } from "@opendata-ai/openchart-svelte";
 
-const { action, table, state } = useTable(() => spec, () => ({
+const t = useTable(() => spec, () => ({
   onRowClick: (row) => console.log("Clicked:", row),
   autoResize: true,
 }));
 </script>
 
-<button onclick={() => table?.export("csv")}>Export CSV</button>
-<div use:action style="width: 100%; height: 500px"></div>
+<button onclick={() => t.table?.export("csv")}>Export CSV</button>
+<div use:t.action style="width: 100%; height: 500px"></div>
 ```
 
 ### Table sort cycling

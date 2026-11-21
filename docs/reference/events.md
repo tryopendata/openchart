@@ -9,7 +9,7 @@ order: 5
 
 Event handlers report what a reader does to a mounted chart or table: clicking or hovering a mark, toggling a legend entry, selecting or editing an element. Pass them as mount options to `createChart` and `createTable`, or as props and listeners on the framework components. Every handler is optional. Static SVG has no events.
 
-See it: [Interaction and events](/docs/behavior/interaction/) and [Edit mode](/docs/behavior/edit-mode/).
+See it: [Interaction and events](https://openchart.steamfield.io/docs/behavior/interaction/) and [Edit mode](https://openchart.steamfield.io/docs/behavior/edit-mode/).
 
 ## Event handlers
 
@@ -31,6 +31,8 @@ Source: `core/src/types/events.ts`. Vanilla mount options and React props use th
 | `onEdit` | `@edit` | `onedit` | `EditTransaction` | One committed edit gesture. Apply it atomically with `applyEditTransaction` and keep its inverse for undo. |
 | `onReveal` | `@reveal` | `onreveal` | `Array<{ x: string \| number; y: number }>` | A `youDrawIt` chart reveals its data, by button or `revealDrawing()`. The payload is the reader's guess in data coordinates, ordered by x. |
 | `onReaderChange` | `@reader-change` | `onreaderchange` | `(selection, meta: ReaderChangeMeta)` | The reader's pinned observations or slices change. Framework components with a `reader` prop only; vanilla passes the callback to `createReader`. |
+
+`ChartEventHandlers` also carries `revision` (`string | number`), not a handler: a source revision the chart stamps on each `EditTransaction` it emits, so a host can tell which version of the spec an edit was made against.
 
 The `interaction` mount option (`'read' | 'select' | 'edit'`) gates selection and editing; when omitted, `onEdit` implies `'edit'` and `onSelect`/`onDeselect` imply `'select'`. Every `ElementRef` carries a JSON Pointer `path`. See [Interaction mode](#interaction-mode) for the full table.
 

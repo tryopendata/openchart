@@ -9,7 +9,7 @@ order: 5
 
 The mark sets the chart type. This page lists the encoding channels each mark requires or accepts, gives a complete spec for each common chart, and describes canvas mark mode for dense point charts. Mark properties such as `interpolate` and `innerRadius` are on the [ChartSpec](./chart-spec.md#mark-properties) page.
 
-See it: [Bar](/docs/comparison/bar/), [Line](/docs/change-over-time/line/), [Scatter](/docs/correlation/scatter/) and [Canvas mode](/docs/output/canvas/).
+See it: [Bar](https://openchart.steamfield.io/docs/comparison/bar/), [Line](https://openchart.steamfield.io/docs/change-over-time/line/), [Scatter](https://openchart.steamfield.io/docs/correlation/scatter/) and [Canvas mode](https://openchart.steamfield.io/docs/output/canvas/).
 
 ## Encoding by chart type
 
@@ -267,7 +267,7 @@ createChart(el, {
   encoding: {
     x: { field: 'lowIncomePct', type: 'quantitative' },
     y: { field: 'readingProficiency', type: 'quantitative' },
-    key: { field: 'campusId' },
+    key: { field: 'campusId', type: 'nominal' },
   },
 }, { renderer: 'canvas' });
 ```
@@ -335,7 +335,7 @@ Explicit keys are useful for scatter plots where multiple points can share the s
   encoding: {
     x: { field: 'longitude', type: 'quantitative' },
     y: { field: 'latitude', type: 'quantitative' },
-    key: { field: 'stationId' },
+    key: { field: 'stationId', type: 'nominal' },
   },
   animation: true,
 }

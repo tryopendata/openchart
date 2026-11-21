@@ -10,7 +10,7 @@ order: 1
 
 Every OpenChart visualization is one JSON object, a `VizSpec`. The reference pages list each spec type field by field, with types and defaults checked against the TypeScript source in `packages/core/src/types/`. Use them to look up an exact name or default; the Building blocks pages teach the same fields with charts.
 
-See it: [Anatomy of a spec](/docs/the-spec/anatomy/) builds a spec one block at a time.
+See it: [Anatomy of a spec](https://openchart.steamfield.io/docs/the-spec/anatomy/) builds a spec one block at a time.
 
 All types are importable from `@opendata-ai/openchart-core` or from the convenience re-exports in `@opendata-ai/openchart-react`, `@opendata-ai/openchart-vue`, `@opendata-ai/openchart-svelte`, and `@opendata-ai/openchart-engine`.
 

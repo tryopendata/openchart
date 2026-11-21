@@ -9,7 +9,7 @@ order: 9
 
 Charts animate by default: marks enter when the chart first scrolls into view, and data updates tween from the old layout to the new one. The `animation` field picks a preset, sets each phase's timing, or turns motion off with `false`. Static renders and exports never animate, and a reader's reduced-motion setting always wins.
 
-See it: [Motion](/docs/behavior/motion/).
+See it: [Motion](https://openchart.steamfield.io/docs/behavior/motion/).
 
 ## Animation
 

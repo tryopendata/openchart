@@ -9,7 +9,7 @@ order: 13
 
 A `SankeySpec` (`type: 'sankey'`) draws flows between stages as bands whose width is the flow's value. Each data row is one link from a source node to a target node.
 
-See it: [Sankey](/docs/flow/sankey/).
+See it: [Sankey](https://openchart.steamfield.io/docs/flow/sankey/).
 
 ## SankeySpec
 

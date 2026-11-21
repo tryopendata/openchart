@@ -9,7 +9,7 @@ order: 4
 
 `@opendata-ai/openchart-svelte` wraps the [vanilla mount functions](./vanilla.md) in Svelte 5 components. A component mounts its visualization in an effect, calls `update()` when the spec changes, and destroys the instance when it is removed. The package re-exports all of `@opendata-ai/openchart-core`, the engine's `compile*` and `validateSpec` functions, and the vanilla export functions, so an app needs only this import.
 
-See it: [Frameworks](/docs/get-started/frameworks/) shows the same chart in React, Vue, Svelte and vanilla JavaScript.
+See it: [Frameworks](../integration-guide.md) shows the same chart in React, Vue, Svelte and vanilla JavaScript.
 
 ## Install
 
@@ -47,7 +47,7 @@ let { spec }: { spec: ChartSpec } = $props();
 | `ChartStory` | a chart or map driven through scroll steps | `goTo(index)`, `getInstance()` |
 | `VizThemeProvider` | its `children` snippet, with `theme` and `darkMode` set for every component inside | none |
 
-Every component that renders a spec takes `spec`, `theme`, `darkMode`, `class` and `style`, except `ChartStory`, which takes `class` and passes `mountOptions` through instead. A component `theme` merges over the provider's theme, which merges over the spec's. A component `darkMode` replaces the provider's. `Visualization` takes no callbacks; use the specific component when you need them.
+Every component that renders a spec takes `spec`, `theme`, `darkMode`, `class` and `style`, except `ChartStory`, which takes `spec` and `class` but no `theme`, `darkMode` or `style`. It ignores `VizThemeProvider`; pass its theme and dark mode through `mountOptions`. A component `theme` merges over the provider's theme, which merges over the spec's. A component `darkMode` replaces the provider's. `Visualization` takes no callbacks; use the specific component when you need them.
 
 ### Chart props
 
@@ -80,15 +80,28 @@ The other props map onto [`MountOptions`](./vanilla.md#mountoptions) and the [`C
 | `TileMap` | `ontileclick`, `ontilehover` | none |
 | `GeoMap` | `onmarkclick`, `onmarkhover`, `oncamerachange`, `onreaderchange` | `reader`, `readerSelection`, `labelInventory` |
 | `BarList` | `onrowclick`, `onrowhover` | none |
-| `ChartStory` | none | `steps`, `narrative` (an array of snippets, one per step), `step`, `triggerPosition`, `cameraMode`, `mountOptions` |
+| `ChartStory` | none | `spec` (required; a chart, layer or map spec), `steps`, `narrative` (an array of snippets, one per step), `step`, `triggerPosition`, `cameraMode`, `mountOptions` (theme and dark mode go here; the provider is ignored), `class` |
 
 ## Composables
 
 The composables take getter functions, so they re-run when the state they read changes. The mount composables return an action for `use:action` on your own element.
 
+`chart`, `layout`, `table` and `state` on the returned object, like `sort`, `search` and `page` from `useTableState`, are getters. Destructuring copies their value at that moment and loses reactivity, so keep the object:
+
+```svelte
+<script lang="ts">
+import { useChart } from "@opendata-ai/openchart-svelte";
+let { spec } = $props();
+const c = useChart(() => spec);
+</script>
+
+<div use:c.action style="height: 400px"></div>
+<button onclick={() => c.chart?.export("svg")}>Export SVG</button>
+```
+
 | Composable | Returns | Use |
 | --- | --- | --- |
-| `useChart(() => spec, () => options)` | `{ action, chart, layout }` | Mount a chart with `<div use:action>`. Options take `theme`, `darkMode`, `autoResize` and `renderer`. |
+| `useChart(() => spec, () => options)` | `{ action, chart, layout }` | Mount a chart with `<div use:c.action>`. Options take `theme`, `darkMode`, `autoResize` and `renderer`. |
 | `useTable(() => spec, () => options)` | `{ action, table, state }` | Mount a table. Options are `TableMountOptions`; `state` tracks sort, search and page. |
 | `useTableState(initial?)` | `{ sort, setSort, search, setSearch, page, setPage, resetState }` | State for a controlled `DataTable`. |
 | `useGraph(() => spec, () => options)` | `{ action, search, clearSearch, zoomToFit, zoomToNode, selectNode, ... }` | Mount a graph with `use:action` and control it. Options take the `Graph` props and callbacks in camelCase (`onNodeClick`), plus `autoResize`. See [useGraph](./graph-spec.md#usegraph-hookcomposable). |
@@ -107,4 +120,3 @@ The 3D graph subpath, `@opendata-ai/openchart-svelte/graph-3d`, touches `window`
 ## Related
 
 - [Events](./events.md): every handler, its payload and its spelling in each framework.
-- [Frameworks](../integration-guide.md): theming, dark mode, responsive sizing and spec updates across the framework packages.

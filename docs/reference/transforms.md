@@ -9,7 +9,7 @@ order: 7
 
 `transform` reshapes rows inside the spec before they are drawn: filter them, bin values, aggregate groups, fold a wide table into a long one or compute running totals. Use it when the rows you have aren't the rows the chart needs.
 
-See it: [Transforms](/docs/the-spec/transforms/), [Histogram](/docs/distribution/histogram/) and [Density](/docs/distribution/density/).
+See it: [Transforms](https://openchart.steamfield.io/docs/the-spec/transforms/), [Histogram](https://openchart.steamfield.io/docs/distribution/histogram/) and [Density](https://openchart.steamfield.io/docs/distribution/density/).
 
 ## Transforms
 

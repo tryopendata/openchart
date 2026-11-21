@@ -9,7 +9,7 @@ order: 1
 
 `@opendata-ai/openchart-vanilla` mounts a spec into a DOM element without a framework. The React, Vue and Svelte components wrap these functions, so their props map onto the mount options below. Source: `vanilla/src/index.ts` and `vanilla/src/mount-types.ts`.
 
-See it: [Frameworks](/docs/get-started/frameworks/) shows the same chart mounted from each package.
+See it: [Frameworks](../integration-guide.md) shows the same chart mounted from each package.
 
 ```bash
 npm install @opendata-ai/openchart-vanilla
@@ -37,6 +37,7 @@ Other entry points:
 - `createChartStory` from `@opendata-ai/openchart-vanilla/story` drives a chart through scroll steps.
 - `exportGIF` from `@opendata-ai/openchart-vanilla/gif` encodes an entrance animation. See [Export API](./export.md#animated-gif-export).
 - `createReader(container, chart, spec, onChange, options?)` adds reader pinning to a mounted chart. See [Authoring and reader APIs](./authoring.md).
+- `createGeoReader(container, map, spec, onChange, options?)` does the same for a mounted `GeoMapInstance`.
 
 ## MountOptions
 
@@ -75,7 +76,7 @@ What `createChart` returns.
 | `resetDrawing` | `() => void` | Clear a `youDrawIt` guess and return to drawing. |
 | `revealDrawing` | `() => void` | Reveal a `youDrawIt` chart, as the reveal button does. |
 
-Every other instance has `update`, `resize` and `destroy`, and all but `GraphInstance` have `export`. `TableInstance` adds `getState()` and `setState()`, shown below. `GraphInstance` adds search, selection, highlight and camera methods (see [GraphSpec](./graph-spec.md#vanilla)). `GeoMapInstance` adds `zoomTo`, `panTo`, `fitBounds`, `resetView`, `getCamera` and `setCamera`.
+Every other instance has `update`, `resize` and `destroy`, and all but `GraphInstance` have `export`. `TableInstance` adds `getState()` and `setState()`, shown below. `GraphInstance` adds search, selection, highlight and camera methods (see [GraphSpec](./graph-spec.md#vanilla)). `GeoMapInstance` adds `zoomTo`, `panTo`, `fitBounds`, `resetView`, `getCamera`, `getCameras` (every current view camera) and `setCamera`, plus `setLabelInventory(options?)`, which replaces the label disclosure host without resetting the camera. The Sankey, bar list, tile map and map instances also carry a read-only `layout`.
 
 ## Vanilla lifecycle
 

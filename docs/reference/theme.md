@@ -9,7 +9,7 @@ order: 10
 
 `theme` overrides the default colors, fonts, spacing and chrome styles. The same `ThemeConfig` shape is accepted by the spec, the framework theme providers and the mount options, which merge in that order. `DarkMode` chooses between the light and dark palettes.
 
-See it: [Theming and tokens](/docs/style/theming/), [Presets](/docs/style/presets/) and [Dark mode](/docs/style/dark-mode/).
+See it: [Theming and tokens](https://openchart.steamfield.io/docs/style/theming/), [Presets](https://openchart.steamfield.io/docs/style/presets/) and [Dark mode](https://openchart.steamfield.io/docs/style/dark-mode/).
 
 ## ThemeConfig
 

@@ -9,7 +9,7 @@ order: 11
 
 A `TableSpec` (`type: 'table'`) renders a data table as HTML, not SVG. Columns can format values or draw inline heatmaps, bars, sparklines, change chips, images and flags, and the table can add search, sorting and pagination. It renders through `<DataTable>` or `createTable`.
 
-See it: [Data table](/docs/tables/data-table/), [Column types](/docs/tables/column-types/) and [Row inspection](/docs/tables/row-inspection/).
+See it: [Data table](https://openchart.steamfield.io/docs/tables/data-table/), [Column types](https://openchart.steamfield.io/docs/tables/column-types/) and [Row inspection](https://openchart.steamfield.io/docs/tables/row-inspection/).
 
 ## TableSpec
 
