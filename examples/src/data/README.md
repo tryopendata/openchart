@@ -55,6 +55,7 @@ export const gdpGrowth = {
 |---|---|---|
 | `population.ts` | `populationByCountry` | UN Population Division, WPP 2024 (MCP-verified) |
 | `temperature-anomaly.ts` | `temperatureAnomaly` | NASA GISS GISTEMP (MCP-verified) |
+| `gistemp-global-annual.ts` | `gistempGlobalAnnual` | NASA GISS GISTEMP v4, copied from the published J-D table |
 | `energy-mix.ts` | `energyMix` | Our World in Data / BP Statistical Review |
 | `household-spending.ts` | `householdSpending` | BLS Consumer Expenditure Survey |
 | `gdp-growth.ts` | `usGdpGrowth` | Bureau of Economic Analysis |

@@ -23,6 +23,7 @@ export { evFleet } from './ev-fleet';
 export { federalBudget } from './federal-budget';
 export { usGdpGrowth } from './gdp-growth';
 export { gdpGrowthByCountry } from './gdp-growth-by-country';
+export { gistempGlobalAnnual } from './gistemp-global-annual';
 export { householdSpending } from './household-spending';
 export { incidentIntelligence } from './incident-intelligence';
 export { incomeDistribution } from './income-distribution';
