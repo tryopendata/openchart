@@ -1,11 +1,11 @@
 /**
  * The resize frame's rules: how keys move the width inside its range, and that
- * the frame's chart is a valid spec. Breakpoint names come from the library's
- * own `getBreakpoint`, so they are not re-tested here.
+ * the frame's chart is a valid spec, and that its breakpoints are the library's.
  */
+import { getBreakpoint } from "@opendata-ai/openchart-core";
 import { validateSpec } from "@opendata-ai/openchart-engine";
 import { describe, expect, it } from "vitest";
-import { clampWidth, widthAfterKey } from "./frame-width";
+import { breakpointFor, clampWidth, widthAfterKey } from "./frame-width";
 import { responsiveSpec } from "./responsive-spec";
 
 const range = { min: 280, max: 900 };
@@ -46,5 +46,11 @@ describe("clampWidth", () => {
 describe("the frame's chart", () => {
   it("is a valid spec", () => {
     expect(validateSpec(responsiveSpec).errors).toEqual([]);
+  });
+});
+
+describe("breakpointFor", () => {
+  it.each([280, 399, 400, 401, 699, 700, 701, 1376])("agrees with the library at %ipx", (width) => {
+    expect(breakpointFor(width)).toBe(getBreakpoint(width));
   });
 });

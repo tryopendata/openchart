@@ -1,9 +1,23 @@
 /**
  * The resize frame's rules, kept apart from the DOM: how a key on the handle
- * moves the width and how a width is held inside the range. Breakpoint names
- * and thresholds come from the library (`getBreakpoint`), so the frame's label
- * always agrees with the layout the chart picks.
+ * moves the width, how a width is held inside the range, and which layout the
+ * chart picks at a width. The thresholds repeat the library's, because
+ * importing them would put the whole chart core in this island's up-front
+ * JavaScript; frame-width.test.ts checks them against `getBreakpoint`.
  */
+
+/** Below this width the chart lays out compact. The library's BREAKPOINT_COMPACT_MAX. */
+export const COMPACT_BELOW = 400;
+/** Up to and including this width the chart lays out medium. The library's BREAKPOINT_MEDIUM_MAX. */
+export const MEDIUM_UP_TO = 700;
+
+export type FrameBreakpoint = "compact" | "medium" | "full";
+
+/** The layout the chart picks at a width, as the library's `getBreakpoint` decides it. */
+export function breakpointFor(width: number): FrameBreakpoint {
+  if (width < COMPACT_BELOW) return "compact";
+  return width <= MEDIUM_UP_TO ? "medium" : "full";
+}
 
 /** Arrow keys move the handle this many px; Page Up and Page Down five times as far. */
 export const KEY_STEP = 20;

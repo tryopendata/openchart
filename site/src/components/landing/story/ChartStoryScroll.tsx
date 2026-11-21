@@ -19,7 +19,6 @@ import type { ChartStoryInstance, ScrollDriver } from "@opendata-ai/openchart-va
 import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { LandingStoryStep } from "../../../landing/story";
 import { usePageChartTheme } from "../../shared/page-theme";
-import { describeChange } from "./story-change";
 
 /** Where the step trigger line sits, as a fraction of the viewport: below the sticky chart on narrow screens. */
 const TRIGGER = { wide: 0.5, narrow: 0.78 };
@@ -28,6 +27,12 @@ const WIDE_QUERY = "(min-width: 1024px)";
 export type ChartStoryScrollProps = {
   spec: ChartSpec;
   steps: LandingStoryStep[];
+  /**
+   * The muted line under each step's paragraph, or null for none. Story.astro
+   * reads them off the steps at build time (`describeChange`), which keeps the
+   * chart library out of this island's up-front JavaScript.
+   */
+  notes: (string | null)[];
   /** The static SVGs of the finished chart. */
   children?: ReactNode;
 };
@@ -96,7 +101,7 @@ function useWideLayout(): boolean {
 }
 
 /** The scroll story: sticky chart, scrolling paragraphs, each with a plain line on what it changed. */
-export function ChartStoryScroll({ spec, steps, children }: ChartStoryScrollProps) {
+export function ChartStoryScroll({ spec, steps, notes, children }: ChartStoryScrollProps) {
   const host = useRef<HTMLDivElement>(null);
   const stepElements = useRef<HTMLElement[]>([]);
   const [current, setCurrent] = useState(-1);
@@ -146,7 +151,6 @@ export function ChartStoryScroll({ spec, steps, children }: ChartStoryScrollProp
     };
   }, [spec, steps, theme, wide]);
 
-  const changes = steps.map((step) => step.change);
   return (
     <div className="story-layout">
       <div className="story-panel" data-story-chart>
@@ -157,7 +161,7 @@ export function ChartStoryScroll({ spec, steps, children }: ChartStoryScrollProp
       </div>
       <ol className="story-steps">
         {steps.map((step, index) => {
-          const change = describeChange(spec, changes, index);
+          const change = notes[index] ?? null;
           return (
             <li
               key={step.id}

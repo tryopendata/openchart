@@ -13,11 +13,6 @@
  * slider, readout or ruler, so no reader meets a control that cannot work.
  */
 import {
-  BREAKPOINT_COMPACT_MAX,
-  BREAKPOINT_MEDIUM_MAX,
-  getBreakpoint,
-} from "@opendata-ai/openchart-core";
-import {
   type KeyboardEvent,
   type PointerEvent,
   type ReactNode,
@@ -27,7 +22,14 @@ import {
   useState,
 } from "react";
 import { LiveChart } from "../../shared/LiveChart";
-import { clampWidth, type WidthRange, widthAfterKey } from "./frame-width";
+import {
+  breakpointFor,
+  COMPACT_BELOW,
+  clampWidth,
+  MEDIUM_UP_TO,
+  type WidthRange,
+  widthAfterKey,
+} from "./frame-width";
 import { responsiveSpec } from "./responsive-spec";
 
 /** The narrowest the chart goes: a small phone's chart column. */
@@ -103,7 +105,7 @@ export function ResizeFrame({ children }: ResizeFrameProps) {
     setDragging(false);
   };
 
-  const breakpoint = width === null ? null : getBreakpoint(width);
+  const breakpoint = width === null ? null : breakpointFor(width);
   return (
     <div className="resize-figure">
       {width !== null && breakpoint !== null ? (
@@ -122,7 +124,7 @@ export function ResizeFrame({ children }: ResizeFrameProps) {
       <div ref={track} className="resize-track" data-measured={range === null ? undefined : ""}>
         {range === null ? null : (
           <div className="resize-ruler" aria-hidden="true">
-            {[BREAKPOINT_COMPACT_MAX, BREAKPOINT_MEDIUM_MAX]
+            {[COMPACT_BELOW, MEDIUM_UP_TO]
               .filter((mark) => mark + GUIDE_LABEL_PX <= range.max)
               .map((mark) => (
                 // The chart's box starts one border-width in from the track's edge.
