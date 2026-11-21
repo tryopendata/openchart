@@ -6,7 +6,7 @@
  * every applied filter is announced. GSAP is the one boundary replaced:
  * `withMotion` runs nothing, as it does for a reader who prefers reduced motion.
  */
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -119,7 +119,8 @@ describe("the vocabulary wall", () => {
     // What following an in-page link does: change the hash, which fires one hashchange.
     window.location.hash = "#vocabulary=comparison";
     expect(await screen.findByRole("button", { name: "Comparison", pressed: true })).toBeVisible();
-    expect(shownLinks()).toEqual(["Column", "Bar list"]);
+    // The list can filter a render after the button presses; wait for it under a loaded suite.
+    await waitFor(() => expect(shownLinks()).toEqual(["Column", "Bar list"]));
     expect(await screen.findByText("Showing 2 comparison charts.")).toBeInTheDocument();
     expect(section.scrollIntoView).toHaveBeenCalledOnce();
   });
