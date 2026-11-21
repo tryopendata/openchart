@@ -94,7 +94,7 @@ export const divergingColor = defineDemo({
     mark: "bar",
     data: [...gistempGlobalAnnual.data],
     encoding: {
-      x: { field: "year", type: "ordinal", axis: { title: "Year" } },
+      x: { field: "year", type: "temporal", axis: { title: "Year", format: "%Y" } },
       y: {
         field: "anomaly",
         type: "quantitative",
