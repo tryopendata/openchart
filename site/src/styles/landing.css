@@ -25,11 +25,6 @@
     @apply mb-10 lg:mb-14;
   }
 
-  /* The narrow text column beside a wide figure. */
-  .landing-text {
-    @apply max-w-[36rem];
-  }
-
   /* The page's one h1, in the hero. */
   .landing-display {
     @apply text-ink font-display text-[2.75rem] leading-[1.04] font-medium tracking-[-0.02em] text-balance sm:text-6xl lg:text-[4.5rem];

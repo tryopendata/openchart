@@ -15,7 +15,7 @@
  */
 import { FRAMEWORK_STORAGE_KEY } from "../../../lib/demo/framework-choice";
 import { highlightCode } from "../../../lib/demo/highlight";
-import { staticSvg } from "../../../lib/demo/static-svg";
+import { staticSvgPair } from "../../../lib/demo/static-svg";
 import PublishedFigure from "../../shared/PublishedFigure.astro";
 import SectionHead from "../../shared/SectionHead.astro";
 import { benchSource, benchSpec } from "./bench-spec";
@@ -35,11 +35,7 @@ const installPanels: InstallPanel[] = panels.map(
 
 /** The SVG's drawing size; CSS scales it to the figure's width. */
 const CHART_SIZE = { width: 480, height: 400 };
-const chartSvgs = [false, true]
-  .map((dark) =>
-    staticSvg(benchSpec, { idPrefix: `bench-chart-${dark ? "d" : "l"}`, dark, ...CHART_SIZE }),
-  )
-  .join("");
+const chartSvgs = staticSvgPair(benchSpec, { idPrefix: "bench-chart", ...CHART_SIZE });
 ---
 
 <section

@@ -20,7 +20,7 @@ import { CopyCommand } from "@steamfield/ui/react/copy";
 import { site } from "../../../config";
 import { AGENT_SPEC_FILE, agentSession, agentSkillLines } from "../../../landing/agents";
 import { allPages } from "../../../lib/collection";
-import { staticSvg } from "../../../lib/demo/static-svg";
+import { staticSvgPair } from "../../../lib/demo/static-svg";
 import { llmsIndex } from "../../../lib/docs";
 import SectionHead from "../../shared/SectionHead.astro";
 import { AgentSession } from "./AgentSession";
@@ -42,14 +42,8 @@ const CHART_SIZES = {
 };
 const chartSvgs = Object.entries(CHART_SIZES)
   .map(([size, box]) => {
-    const svgs = [false, true].map((dark) =>
-      staticSvg(agentSession.fixedSpec, {
-        idPrefix: `agent-chart-${size}-${dark ? "d" : "l"}`,
-        dark,
-        ...box,
-      }),
-    );
-    return `<div class="agent-chart-${size}">${svgs.join("")}</div>`;
+    const svgs = staticSvgPair(agentSession.fixedSpec, { idPrefix: `agent-chart-${size}`, ...box });
+    return `<div class="agent-chart-${size}">${svgs ?? ""}</div>`;
   })
   .join("");
 

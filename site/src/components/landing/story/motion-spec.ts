@@ -6,6 +6,7 @@
  */
 import { usPayrolls } from "@datasets/us-payrolls";
 import type { AnimationSpec, ChartSpec } from "@opendata-ai/openchart-core";
+import { sourceOf } from "../../../demos/source";
 
 /** The animation choices the section offers, as the reader sees them. */
 export const MOTION_CHOICES = ["fluid", "subtle", "off"] as const;
@@ -15,10 +16,7 @@ export type MotionChoice = (typeof MOTION_CHOICES)[number];
 export const FIRST_MONTHS = 6;
 export const ALL_MONTHS = usPayrolls.data.length;
 
-export const motionSource = {
-  label: usPayrolls.source.replace(/^Source:\s*/, ""),
-  url: usPayrolls.url,
-};
+export const motionSource = sourceOf(usPayrolls);
 
 /** Full month names for the dataset's abbreviations, for every place a month is written out. */
 const MONTH_NAMES: Record<string, string> = {

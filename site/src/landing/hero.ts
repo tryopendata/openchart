@@ -11,6 +11,7 @@
 import { lifeExpectancyGender } from "@datasets/life-expectancy-gender";
 import type { ChartSpec } from "@opendata-ai/openchart-core";
 import { broadsheet } from "@opendata-ai/openchart-core";
+import { sourceOf } from "../demos/source";
 import { formatSpec, markAddedLines, type SpecFolds } from "./spec-lines";
 
 /** One step of the hero desk. */
@@ -33,10 +34,7 @@ export type HeroStep = {
 };
 
 /** The dataset's citation for the figure caption, which writes "Source:" itself. */
-export const heroSource = {
-  label: lifeExpectancyGender.source.replace(/^Source:\s*/, ""),
-  url: lifeExpectancyGender.url,
-};
+export const heroSource = sourceOf(lifeExpectancyGender);
 
 /** The pane folds the preset to one line, as it folds the data rows. */
 export const heroFolds: SpecFolds = { theme: "broadsheet preset" };

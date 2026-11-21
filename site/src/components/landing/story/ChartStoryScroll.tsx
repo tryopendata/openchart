@@ -16,9 +16,10 @@
  */
 import type { ChartSpec } from "@opendata-ai/openchart-core";
 import type { ChartStoryInstance, ScrollDriver } from "@opendata-ai/openchart-vanilla/story";
-import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import type { LandingStoryStep } from "../../../landing/story";
 import { usePageChartTheme } from "../../shared/page-theme";
+import { useMediaQuery } from "../../shared/use-media-query";
 
 /** Where the step trigger line sits, as a fraction of the viewport: below the sticky chart on narrow screens. */
 const TRIGGER = { wide: 0.5, narrow: 0.78 };
@@ -85,21 +86,6 @@ async function mountStory(request: MountRequest): Promise<StoryParts | null> {
   return { story, driver };
 }
 
-function subscribeWide(onChange: () => void): () => void {
-  const query = window.matchMedia(WIDE_QUERY);
-  query.addEventListener("change", onChange);
-  return () => query.removeEventListener("change", onChange);
-}
-
-/** True at 1024px and wider, where the chart sits beside the paragraphs. */
-function useWideLayout(): boolean {
-  return useSyncExternalStore(
-    subscribeWide,
-    () => window.matchMedia(WIDE_QUERY).matches,
-    () => true,
-  );
-}
-
 /** The scroll story: sticky chart, scrolling paragraphs, each with a plain line on what it changed. */
 export function ChartStoryScroll({ spec, steps, notes, children }: ChartStoryScrollProps) {
   const host = useRef<HTMLDivElement>(null);
@@ -107,7 +93,7 @@ export function ChartStoryScroll({ spec, steps, notes, children }: ChartStoryScr
   const [current, setCurrent] = useState(-1);
   const [live, setLive] = useState(false);
   const theme = usePageChartTheme();
-  const wide = useWideLayout();
+  const wide = useMediaQuery(WIDE_QUERY, true);
   const currentRef = useRef(current);
   currentRef.current = current;
   const mountedOnce = useRef(false);

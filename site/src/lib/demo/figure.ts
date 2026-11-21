@@ -13,7 +13,7 @@ import { demoDomId } from "./dom-id";
 import { escapeHtml } from "./escape-html";
 import { DEMO_ATTR, DEMO_CLASS } from "./markup";
 import { type SharedSplit, splitSharedValues } from "./shared-values";
-import { staticSvg } from "./static-svg";
+import { staticSvgPair } from "./static-svg";
 
 /** Everything the figure shows, whether it came from the registry or a fence. */
 export type DemoFigure = {
@@ -76,18 +76,15 @@ export type StageContent = {
  * stage; the landing wall wraps it in a tile.
  */
 export function stageContentHtml(content: StageContent): string {
-  const size = { width: content.width ?? STATIC_WIDTH, height: content.height };
-  const render = (dark: boolean, suffix: string) =>
-    content.static
-      ? staticSvg(content.spec, {
-          ...size,
-          idPrefix: `${content.domId}-${suffix}`,
-          dark,
-          precision: content.precision,
-        })
-      : null;
-  const light = render(false, "l");
-  return light === null ? placeholderHtml(content.title) : `${light}${render(true, "d") ?? ""}`;
+  const svgs = content.static
+    ? staticSvgPair(content.spec, {
+        width: content.width ?? STATIC_WIDTH,
+        height: content.height,
+        idPrefix: content.domId,
+        precision: content.precision,
+      })
+    : null;
+  return svgs ?? placeholderHtml(content.title);
 }
 
 function stageHtml(figure: DemoFigure, domId: string): string {

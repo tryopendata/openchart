@@ -5,7 +5,7 @@
  * Astro-only markup uses `data-copy` from `@steamfield/ui/copy` instead.
  */
 import { useCopy } from "@steamfield/ui/react/copy";
-import { useEffect, useState } from "react";
+import { useHydrated } from "./use-hydrated";
 
 type CopyTextProps = {
   text: string;
@@ -20,9 +20,8 @@ function buttonText(copied: boolean, failed: boolean): string {
 }
 
 export function CopyText({ text, label, className = "copy-button" }: CopyTextProps) {
-  const [hydrated, setHydrated] = useState(false);
+  const hydrated = useHydrated();
   const { copy, copied, failed } = useCopy();
-  useEffect(() => setHydrated(true), []);
   if (!hydrated) return null;
   return (
     <button type="button" className={className} aria-label={label} onClick={() => void copy(text)}>

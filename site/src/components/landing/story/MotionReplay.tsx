@@ -11,8 +11,10 @@
  * Every control is disabled until the island hydrates, so the server's HTML
  * never offers a control that cannot work yet.
  */
-import { type ReactNode, useEffect, useId, useMemo, useState, useSyncExternalStore } from "react";
+import { type ReactNode, useId, useMemo, useState } from "react";
 import { LiveChart } from "../../shared/LiveChart";
+import { useHydrated } from "../../shared/use-hydrated";
+import { useMediaQuery } from "../../shared/use-media-query";
 import {
   type ChangedField,
   FIRST_MONTHS,
@@ -31,28 +33,6 @@ export type MotionReplayProps = {
   children?: ReactNode;
 };
 
-function subscribeReducedMotion(onChange: () => void): () => void {
-  const query = window.matchMedia(REDUCED_MOTION_QUERY);
-  query.addEventListener("change", onChange);
-  return () => query.removeEventListener("change", onChange);
-}
-
-/** True while the reader's system asks for reduced motion. */
-function usePrefersReducedMotion(): boolean {
-  return useSyncExternalStore(
-    subscribeReducedMotion,
-    () => window.matchMedia(REDUCED_MOTION_QUERY).matches,
-    () => false,
-  );
-}
-
-/** True once the island has hydrated in the browser. */
-function useHydrated(): boolean {
-  const [hydrated, setHydrated] = useState(false);
-  useEffect(() => setHydrated(true), []);
-  return hydrated;
-}
-
 /** Why "Replay entrance" can do nothing, or null when it can play. */
 function replayBlockedReason(choice: MotionChoice, reducedMotion: boolean): string | null {
   if (reducedMotion) return "Replay is off: your system asks for reduced motion.";
@@ -67,7 +47,7 @@ export function MotionReplay({ children }: MotionReplayProps) {
   const [mountKey, setMountKey] = useState(0);
   const [lastChange, setLastChange] = useState<ChangedField | null>(null);
   const hydrated = useHydrated();
-  const reducedMotion = usePrefersReducedMotion();
+  const reducedMotion = useMediaQuery(REDUCED_MOTION_QUERY, false);
   const reasonId = useId();
   const spec = useMemo(() => payrollSpec(months, choice), [months, choice]);
   const following = nextMonthCount(months);

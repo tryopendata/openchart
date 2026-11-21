@@ -10,6 +10,7 @@
  */
 import { type ReactNode, useEffect, useReducer, useRef, useState } from "react";
 import type { SectionId } from "../../../config";
+import { useHydrated } from "../../shared/use-hydrated";
 import { useMotionTools } from "../../shared/use-motion-tools";
 import { observeTileScale } from "./tile-scale";
 import {
@@ -47,14 +48,13 @@ function announcement(filter: WallFilter, intents: WallIntentOption[], total: nu
 
 export function VocabularyWall({ intents, total, sectionId, children }: VocabularyWallProps) {
   const [filter, dispatch] = useReducer(wallFilterReducer, "all");
-  const [ready, setReady] = useState(false);
+  const ready = useHydrated();
   const [announced, setAnnounced] = useState("");
   const gridRef = useRef<HTMLDivElement>(null);
   const tools = useMotionTools();
   const applied = useRef<WallFilter>("all");
 
   useEffect(() => {
-    setReady(true);
     // A link such as /#vocabulary=maps, on arrival or within the page: filter, then
     // bring the wall into view, since no element carries that id for the browser to find.
     const follow = () => {

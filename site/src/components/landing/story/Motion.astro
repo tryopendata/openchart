@@ -10,7 +10,7 @@
  * with one h2, id `motion-title` (`landingCopy.headings.motion`). The chart's
  * figure has a `<figcaption>` with a "Source: …" line.
  */
-import { staticSvg } from "../../../lib/demo/static-svg";
+import { staticSvgPair } from "../../../lib/demo/static-svg";
 import PublishedFigure from "../../shared/PublishedFigure.astro";
 import SectionHead from "../../shared/SectionHead.astro";
 import { MotionReplay } from "./MotionReplay";
@@ -18,11 +18,7 @@ import { FIRST_MONTHS, motionSource, payrollSpec } from "./motion-spec";
 import "../../../styles/landing-story.css";
 
 const opening = payrollSpec(FIRST_MONTHS, "fluid");
-const statics = [false, true]
-  .map((dark) =>
-    staticSvg(opening, { width: 720, height: 420, dark, idPrefix: `motion-${dark ? "d" : "l"}` }),
-  )
-  .join("");
+const statics = staticSvgPair(opening, { width: 720, height: 420, idPrefix: "motion" });
 ---
 
 <section id="motion" aria-labelledby="motion-title" data-landing-section class="landing-section">

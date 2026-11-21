@@ -21,6 +21,7 @@ import {
   useState,
 } from "react";
 import { LiveChart } from "../../shared/LiveChart";
+import { useHydrated } from "../../shared/use-hydrated";
 import { useMotionTools } from "../../shared/use-motion-tools";
 import { type Crossfade, crossfade } from "./diff-motion";
 import type { ThemeDiffLine } from "./house-styles";
@@ -108,7 +109,7 @@ export function PresetScrub({ stops, spec, children }: PresetScrubProps) {
   const [index, setIndex] = useState(0);
   const [previous, setPrevious] = useState<number | null>(null);
   const [pin, setPin] = useState<Pin | null>(null);
-  const [ready, setReady] = useState(false);
+  const ready = useHydrated();
   const tools = useMotionTools();
   const animated = useRef(false);
   const blockRef = useRef<HTMLDivElement>(null);
@@ -119,8 +120,6 @@ export function PresetScrub({ stops, spec, children }: PresetScrubProps) {
   const outListRef = useRef<HTMLOListElement>(null);
   const fade = useRef<Crossfade | null>(null);
   const shown = useRef(0);
-
-  useEffect(() => setReady(true), []);
 
   useEffect(() => {
     animated.current = tools !== null;

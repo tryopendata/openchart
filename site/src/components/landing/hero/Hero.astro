@@ -32,7 +32,7 @@ import { site } from "../../../config";
 import { landingCopy } from "../../../landing/copy";
 import { heroFolds, heroSource, heroSteps } from "../../../landing/hero";
 import { heroChartTheme } from "../../../landing/hero-theme";
-import { staticSvg } from "../../../lib/demo/static-svg";
+import { staticSvgPair } from "../../../lib/demo/static-svg";
 import "../../../styles/landing-hero.css";
 import { toDeskSteps } from "./desk-step";
 import HeroDesk from "./HeroDesk";
@@ -45,17 +45,11 @@ const STATIC_SIZE = { width: 904, height: 480 };
 const deskSteps = toDeskSteps(heroSteps, heroFolds);
 const finished = heroSteps.at(-1)?.spec;
 if (!finished) throw new Error("src/landing/hero.ts exports no steps: the hero needs five.");
-// Rendering writes defaults into the spec, so each render gets its own copy.
-const staticCharts = [false, true]
-  .map((dark) =>
-    staticSvg(structuredClone(finished), {
-      ...STATIC_SIZE,
-      idPrefix: dark ? "hero-d" : "hero-l",
-      dark,
-      theme: heroChartTheme,
-    }),
-  )
-  .join("");
+const staticCharts = staticSvgPair(finished, {
+  ...STATIC_SIZE,
+  idPrefix: "hero",
+  theme: heroChartTheme,
+});
 ---
 
 <section id="desk" aria-labelledby="desk-title" data-landing-section class="landing-section hero">
