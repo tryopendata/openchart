@@ -72,12 +72,20 @@ describe("hero specs", () => {
 
   it("line uses label-only endpointLabels + callout when spotlighted, and top legend when all", () => {
     const coal = buildHeroSpec("line", "Coal") as ChartSpec;
-    expect(coal.highlight).toEqual(["Coal"]);
+    expect(
+      coal.encoding.color && "highlight" in coal.encoding.color
+        ? coal.encoding.color.highlight
+        : undefined,
+    ).toEqual(["Coal"]);
     expect(coal.endpointLabels).toEqual({ content: "label" });
     expect(coal.annotations?.length).toBeGreaterThan(0);
 
     const all = buildHeroSpec("line", "all") as ChartSpec;
-    expect(all.highlight).toBeUndefined();
+    expect(
+      all.encoding.color && "highlight" in all.encoding.color
+        ? all.encoding.color.highlight
+        : undefined,
+    ).toBeUndefined();
     expect(all.endpointLabels).toBe(false);
     expect(all.legend).toMatchObject({ position: "top" });
   });
@@ -103,14 +111,14 @@ describe("hero specs", () => {
     expect(muted).toHaveLength(5);
     for (const band of muted) {
       expect(band.fillOpacity).toBe(0.42);
-      expect(band.stroke).toBe(lightTheme.colors?.background);
+      expect(band.stroke).toBe("#ffffff");
       expect(band.strokeWidth).toBe(1.5);
     }
   });
 
   it("table compiles cleanly with shared-domain sparklines, neutral signed change, and spotlight tint", () => {
     const coalSpec = buildHeroSpec("table", "Coal") as TableSpec;
-    const compiled = compileTable(structuredClone(coalSpec), { theme: chartTheme(false) });
+    const compiled = compileTable(structuredClone(coalSpec), { ...SIZE, theme: chartTheme(false) });
     expect(compiled.rows).toHaveLength(6);
 
     const sourceCol = coalSpec.columns.find((col) => col.key === "source");
@@ -123,9 +131,9 @@ describe("hero specs", () => {
 
     const allSpec = buildHeroSpec("table", "all") as TableSpec;
     expect(allSpec.columns.find((col) => col.key === "source")?.categoryColors).toBeUndefined();
-    expect(compileTable(structuredClone(allSpec), { theme: chartTheme(false) }).rows).toHaveLength(
-      6,
-    );
+    expect(
+      compileTable(structuredClone(allSpec), { ...SIZE, theme: chartTheme(false) }).rows,
+    ).toHaveLength(6);
   });
 
   it("heroSpecDiff folds data, marks no lines on line+all, and marks added lines on every other state", () => {

@@ -161,12 +161,7 @@ test.describe("hero desk", () => {
     await expectLiveStage(page, "table");
     await expect(spotlightButton(page, "Gas")).toHaveAttribute("aria-pressed", "true");
 
-    await stage(page)
-      .locator("tbody tr", { hasText: "Gas" })
-      .first()
-      .locator("td")
-      .first()
-      .click();
+    await stage(page).locator("tbody tr", { hasText: "Gas" }).first().locator("td").first().click();
     await expect(spotlightButton(page, "All")).toHaveAttribute("aria-pressed", "true");
 
     await stage(page)
@@ -187,7 +182,7 @@ test.describe("hero desk", () => {
     await expect(
       pane(page).locator(".hero-spec-line", { hasText: '"mark"' }).first(),
     ).toBeVisible();
-    const visibleSpec = (await pane(page).innerText()).trim();
+    const visibleSpec = ((await pane(page).textContent()) ?? "").trim();
     expect(visibleSpec.length).toBeGreaterThan(0);
     expect(visibleSpec).toContain("mark");
   });
@@ -208,6 +203,17 @@ test.describe("hero desk", () => {
         await expect(formTab(page, label)).toHaveAttribute("aria-selected", "true");
         await expectLiveStage(page, kind);
         await settle(page);
+        // Wait for running chart or table entrance animations to finish so axe measures settled colors.
+        await desk(page)
+          .locator("[data-hero-chart]")
+          .evaluate((host) =>
+            Promise.all(
+              host
+                .getAnimations({ subtree: true })
+                .filter((animation) => animation.playState === "running")
+                .map((animation) => animation.finished.catch(() => undefined)),
+            ),
+          );
         expect(await pageViolations(page), `${scheme} / ${label}`).toEqual([]);
         const { scroll, past } = await sidewaysOverflow(page);
         expect(scroll, `${scheme} / ${label} scroll`).toBeLessThanOrEqual(0);

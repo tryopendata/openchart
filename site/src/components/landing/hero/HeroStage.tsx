@@ -88,41 +88,43 @@ export function HeroStage({
     [spec],
   );
 
+  if (!module) {
+    return (
+      <div id={panelId} className="hero-chart" data-hero-chart data-hero-kind={form}>
+        <div className="hero-chart-live">{children}</div>
+      </div>
+    );
+  }
+
   return (
     <div
       id={panelId}
       className="hero-chart"
       data-hero-chart
       data-hero-kind={form}
-      role={module ? "tabpanel" : undefined}
-      aria-labelledby={module ? activeTabId : undefined}
+      role="tabpanel"
+      aria-labelledby={activeTabId}
     >
-      {!module ? (
-        <div className="hero-chart-live">{children}</div>
+      {isTableHeroSpec(liveSpec) ? (
+        <module.DataTable
+          spec={liveSpec}
+          theme={theme}
+          darkMode={darkMode}
+          className="hero-chart-live"
+          onRowClick={(row) => {
+            if (isHeroFuel(row.source)) onRowSelectFuel(row.source);
+          }}
+        />
       ) : (
-        <>
-          {isTableHeroSpec(liveSpec) ? (
-            <module.DataTable
-              spec={liveSpec}
-              theme={theme}
-              darkMode={darkMode}
-              className="hero-chart-live"
-              onRowClick={(row) => {
-                if (isHeroFuel(row.source)) onRowSelectFuel(row.source);
-              }}
-            />
-          ) : (
-            <module.Chart
-              key={form}
-              spec={liveSpec}
-              theme={theme}
-              darkMode={darkMode}
-              className="hero-chart-live"
-            />
-          )}
-          <Mounted onMounted={onMounted} />
-        </>
+        <module.Chart
+          key={form}
+          spec={liveSpec}
+          theme={theme}
+          darkMode={darkMode}
+          className="hero-chart-live"
+        />
       )}
+      <Mounted onMounted={onMounted} />
     </div>
   );
 }

@@ -332,6 +332,7 @@
     justify-content: space-between;
     font-size: 11px;
     line-height: 1;
+    color: var(--oc-text-secondary);
   }
 
   /* ---------------------------------------------------------------------------

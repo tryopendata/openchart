@@ -26,7 +26,7 @@ export function SpotlightPicker({ interactive, current, onSelect }: SpotlightPic
         Focus
       </span>
       {interactive ? (
-        <div className="hero-spotlight" role="group" aria-label="Spotlight a fuel">
+        <fieldset className="hero-spotlight" aria-label="Spotlight a fuel">
           {HERO_SPOTLIGHTS.map((item) => (
             <button
               key={item}
@@ -38,15 +38,12 @@ export function SpotlightPicker({ interactive, current, onSelect }: SpotlightPic
               {item === "all" ? "All" : item}
             </button>
           ))}
-        </div>
+        </fieldset>
       ) : (
         <ul className="hero-spotlight" aria-labelledby={labelId}>
           {HERO_SPOTLIGHTS.map((item) => (
             <li key={item}>
-              <span
-                className="hero-spotlight-item"
-                data-active={item === current ? "" : undefined}
-              >
+              <span className="hero-spotlight-item" data-active={item === current ? "" : undefined}>
                 {item === "all" ? "All" : item}
               </span>
             </li>

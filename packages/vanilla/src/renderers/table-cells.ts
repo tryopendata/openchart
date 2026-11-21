@@ -228,9 +228,12 @@ export function renderSparklineCell(cell: SparklineTableCell): HTMLTableCellElem
     return td;
   }
 
-  // Add aria-label describing the trend for screen readers
+  // Add aria-label describing the trend for screen readers. Line sparklines
+  // render visible start/end value labels alongside the SVG, so placing the
+  // trend label on the SVG preserves WCAG 2.5.3 label-content-name parity on
+  // the cell instead of overriding the visible text.
   const trendDescription = describeSparklineTrend(sparklineData);
-  if (!td.getAttribute('aria-label')) {
+  if (sparklineData.type !== 'line' && !td.getAttribute('aria-label')) {
     td.setAttribute('aria-label', trendDescription);
   }
 
@@ -248,7 +251,8 @@ export function renderSparklineCell(cell: SparklineTableCell): HTMLTableCellElem
     const lineH = svgH - padY * 2;
 
     const svg = document.createElementNS(svgNS, 'svg');
-    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', trendDescription);
     svg.setAttribute('xmlns', svgNS);
     svg.style.height = `${svgH}px`;
 
@@ -300,10 +304,11 @@ export function renderSparklineCell(cell: SparklineTableCell): HTMLTableCellElem
     endDot.style.background = sparklineData.color;
     wrapper.appendChild(endDot);
 
-    // HTML labels below the SVG, positioned at left and right edges
+    // HTML labels below the SVG, positioned at left and right edges.
+    // Styled with --oc-text-secondary in CSS rather than the stroke hue so
+    // small 11px numbers clear WCAG AA 4.5:1 contrast on light and dark pages.
     const labelsRow = document.createElement('span');
     labelsRow.className = 'oc-table-sparkline-labels';
-    labelsRow.style.color = sparklineData.color;
 
     const startLabel = document.createElement('span');
     startLabel.textContent = formatSparklineValue(sparklineData.startValue);

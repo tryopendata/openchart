@@ -278,9 +278,13 @@ describe('createTable', () => {
     const svg = sparklineCells[0]?.querySelector('svg');
     expect(svg).not.toBeNull();
 
-    // Line sparkline should have a polyline
+    // Line sparkline should have a polyline and put its trend aria-label on the SVG
+    // so the cell's visible start/end labels remain part of its accessible name.
     const polyline = svg?.querySelector('polyline');
     expect(polyline).not.toBeNull();
+    expect(svg?.getAttribute('role')).toBe('img');
+    expect(svg?.getAttribute('aria-label')).toContain('Sparkline');
+    expect(sparklineCells[0]?.closest('td')?.getAttribute('aria-label')).toBeNull();
 
     table.destroy();
   });
