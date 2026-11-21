@@ -132,6 +132,9 @@ export interface LineTween {
   toOpacity?: number;
   /** Cached `el.querySelector('path')`, resolved once at construction. */
   pathEl?: SVGElement | null;
+  /** Stroke width endpoints when a highlight/mute transition changes line weight. */
+  fromStrokeWidth?: number;
+  toStrokeWidth?: number;
   /** Reused per-frame interpolation buffer, sized to `fromPts`/`toPts` length. */
   ptsBuffer?: Point[];
 }
@@ -161,6 +164,12 @@ export interface AreaTween {
   crossfade?: boolean;
   fromOpacity?: number;
   toOpacity?: number;
+  /** Fill opacity endpoints when a highlight/mute transition changes band opacity. */
+  fromFillOpacity?: number;
+  toFillOpacity?: number;
+  /** Top-edge stroke width endpoints when highlight seams appear or clear. */
+  fromStrokeWidth?: number;
+  toStrokeWidth?: number;
   /** Cached `el.querySelectorAll('path')` results, resolved once at construction. */
   fillPathEl?: SVGElement | null;
   topPathEl?: SVGElement | null;

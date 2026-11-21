@@ -1,6 +1,6 @@
 import type { AxisLayout, AxisTick, ChartLayout, Gridline } from '@opendata-ai/openchart-core';
 import { serializeKeyValue } from '@opendata-ai/openchart-engine';
-import { interpolateRgb } from 'd3-interpolate';
+import { interpolateLab } from 'd3-interpolate';
 
 import type { MarkDomIndex } from './dom-index';
 import { keyAnnotations } from './keys';
@@ -76,7 +76,7 @@ export function buildColorTweens(
         attr,
         from,
         to,
-        interpolator: interpolateRgb(from, to),
+        interpolator: interpolateLab(from, to),
       });
     }
   }

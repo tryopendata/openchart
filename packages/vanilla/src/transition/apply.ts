@@ -119,6 +119,12 @@ export function applyTweenState(tw: Tween, elapsed: number, clock: TransitionClo
       if (tw.kind !== 'update') break;
       tw.ptsBuffer = interpolatePoints(tw.fromPts, tw.toPts, eased, tw.ptsBuffer);
       applyLinePath(tw.el, tw.ptsBuffer, tw.interpolate, tw.pathEl);
+      if (tw.fromStrokeWidth !== undefined && tw.toStrokeWidth !== undefined && tw.pathEl) {
+        tw.pathEl.setAttribute(
+          'stroke-width',
+          String(tw.fromStrokeWidth + (tw.toStrokeWidth - tw.fromStrokeWidth) * eased),
+        );
+      }
       break;
     }
     case 'area': {
@@ -134,6 +140,18 @@ export function applyTweenState(tw: Tween, elapsed: number, clock: TransitionClo
         tw.fillPathEl,
         tw.topPathEl,
       );
+      if (tw.fromFillOpacity !== undefined && tw.toFillOpacity !== undefined && tw.fillPathEl) {
+        applyFillOpacityToElement(
+          tw.fillPathEl,
+          tw.fromFillOpacity + (tw.toFillOpacity - tw.fromFillOpacity) * eased,
+        );
+      }
+      if (tw.fromStrokeWidth !== undefined && tw.toStrokeWidth !== undefined && tw.topPathEl) {
+        tw.topPathEl.setAttribute(
+          'stroke-width',
+          String(tw.fromStrokeWidth + (tw.toStrokeWidth - tw.fromStrokeWidth) * eased),
+        );
+      }
       break;
     }
     case 'arc': {
@@ -198,12 +216,22 @@ export function applyTweenState(tw: Tween, elapsed: number, clock: TransitionClo
       break;
     }
     case 'annotation': {
-      if (tw.before && tw.after)
+      if (tw.before && tw.after) {
         updateAnnotationGeometry(
           tw.el,
           interpolateAnnotationGeometry(tw.before, tw.after, eased),
           tw.background,
         );
+      } else if (tw.kind === 'enter') {
+        // Subtle 6px upward settle paired with opacity fade so entering callouts
+        // glide into place organically instead of popping flatly.
+        const dy = (1 - eased) * 6;
+        if (dy > 0.05) {
+          tw.el.setAttribute('transform', `translate(0,${dy.toFixed(2)})`);
+        } else {
+          tw.el.removeAttribute('transform');
+        }
+      }
       break;
     }
     default:
@@ -243,6 +271,9 @@ export function snapTweenToFinal(tw: Tween): void {
     case 'line':
       if (tw.kind !== 'update') break;
       applyLinePath(tw.el, tw.toPts, tw.interpolate, tw.pathEl);
+      if (tw.toStrokeWidth !== undefined && tw.pathEl) {
+        tw.pathEl.setAttribute('stroke-width', String(tw.toStrokeWidth));
+      }
       break;
     case 'area':
       if (tw.kind !== 'update') break;
@@ -255,6 +286,12 @@ export function snapTweenToFinal(tw: Tween): void {
         tw.fillPathEl,
         tw.topPathEl,
       );
+      if (tw.toFillOpacity !== undefined && tw.fillPathEl) {
+        applyFillOpacityToElement(tw.fillPathEl, tw.toFillOpacity);
+      }
+      if (tw.toStrokeWidth !== undefined && tw.topPathEl) {
+        tw.topPathEl.setAttribute('stroke-width', String(tw.toStrokeWidth));
+      }
       break;
     case 'arc': {
       // Snap to the engine's exact rendered path (not a rebuilt one) so the

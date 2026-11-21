@@ -333,6 +333,8 @@ export function buildLineTweens(
         nextPKs,
       );
 
+      const strokeWidthChanged = prev.strokeWidth !== next.strokeWidth;
+
       tweens.push({
         tweenType: 'line',
         kind: 'update',
@@ -343,6 +345,9 @@ export function buildLineTweens(
         finalPoints: next.points,
         interpolate: next.interpolate,
         pathEl: resolveLinePathEl(el),
+        ...(strokeWidthChanged
+          ? { fromStrokeWidth: prev.strokeWidth, toStrokeWidth: next.strokeWidth }
+          : {}),
       });
     }
   }
@@ -556,6 +561,11 @@ export function buildAreaTweens(
         nextPKs,
       );
 
+      const fillOpacityChanged = prev.fillOpacity !== next.fillOpacity;
+      const prevStrokeW = prev.strokeWidth ?? 1;
+      const nextStrokeW = next.strokeWidth ?? 1;
+      const strokeWidthChanged = prevStrokeW !== nextStrokeW;
+
       tweens.push({
         tweenType: 'area',
         pointKeys: mergeKeyOrder(prevPKs, nextPKs),
@@ -569,6 +579,10 @@ export function buildAreaTweens(
         finalBottomPoints: next.bottomPoints,
         interpolate: next.interpolate,
         hasStroke: !!next.stroke && !!next.topPath,
+        ...(fillOpacityChanged
+          ? { fromFillOpacity: prev.fillOpacity, toFillOpacity: next.fillOpacity }
+          : {}),
+        ...(strokeWidthChanged ? { fromStrokeWidth: prevStrokeW, toStrokeWidth: nextStrokeW } : {}),
         ...resolveAreaPathEls(el),
       });
     }

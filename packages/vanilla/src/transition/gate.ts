@@ -213,16 +213,33 @@ export function hasVisibleChange(prevLayout: ChartLayout, nextLayout: ChartLayou
   );
 }
 
-/** Check if any mark's fill or stroke differs (e.g. a highlight mute). */
+/** Check if any mark's fill, stroke, fillOpacity, or strokeWidth differs (e.g. a highlight mute). */
 export function hasColorChanged(prevLayout: ChartLayout, nextLayout: ChartLayout): boolean {
   const prevMarks = prevLayout.marks;
   const nextMarks = nextLayout.marks;
   if (prevMarks.length !== nextMarks.length) return true;
 
   for (let i = 0; i < prevMarks.length; i++) {
-    const p = prevMarks[i] as { fill?: string; stroke?: string };
-    const n = nextMarks[i] as { fill?: string; stroke?: string };
-    if (p.fill !== n.fill || p.stroke !== n.stroke) return true;
+    const p = prevMarks[i] as {
+      fill?: string;
+      stroke?: string;
+      fillOpacity?: number;
+      strokeWidth?: number;
+    };
+    const n = nextMarks[i] as {
+      fill?: string;
+      stroke?: string;
+      fillOpacity?: number;
+      strokeWidth?: number;
+    };
+    if (
+      p.fill !== n.fill ||
+      p.stroke !== n.stroke ||
+      p.fillOpacity !== n.fillOpacity ||
+      p.strokeWidth !== n.strokeWidth
+    ) {
+      return true;
+    }
   }
   return false;
 }

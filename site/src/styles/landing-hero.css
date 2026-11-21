@@ -109,14 +109,14 @@
 
   /* Editorial form tabs: four ways to frame the same dataset, underlined by a strong rule. */
   .hero-forms {
-    @apply border-line-strong m-0 flex list-none flex-wrap gap-x-6 gap-y-1 border-b p-0;
+    @apply border-line-strong relative m-0 flex list-none flex-wrap gap-x-6 gap-y-1 border-b p-0;
   }
 
   .hero-form-tab {
     @apply text-muted -mb-px inline-flex items-baseline border-b-2 border-transparent pt-1 pb-2.5 text-[14px] whitespace-nowrap;
     transition:
-      color 150ms ease-out,
-      border-color 150ms ease-out;
+      color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 180ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   button.hero-form-tab {
@@ -129,6 +129,22 @@
 
   .hero-form-tab:is([aria-selected="true"], [aria-current="true"]) {
     @apply text-ink border-accent font-medium;
+  }
+
+  /* Once the sliding indicator is measured, it owns the active rule so the
+     underline glides smoothly across tabs instead of blinking off and on. */
+  .hero-forms[data-sliding] .hero-form-tab[aria-selected="true"] {
+    border-color: transparent;
+  }
+
+  .hero-forms-indicator {
+    @apply bg-accent pointer-events-none absolute top-0 left-0 h-0.5 w-px origin-left;
+    transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+  }
+
+  .hero-forms-indicator[data-instant] {
+    transition: none;
   }
 
   /* Fuel spotlight focus strip: sharp editorial geometry with inverted ink for the active fuel. */
@@ -147,13 +163,18 @@
   .hero-spotlight-item {
     @apply border-line text-ink-2 inline-flex h-7 items-center rounded-xs border px-2 text-[12.5px] leading-none tabular-nums;
     transition:
-      background-color 150ms ease-out,
-      border-color 150ms ease-out,
-      color 150ms ease-out;
+      background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+      color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 120ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   button.hero-spotlight-item {
     cursor: pointer;
+  }
+
+  button.hero-spotlight-item:active {
+    transform: scale(0.97);
   }
 
   button.hero-spotlight-item:not([aria-pressed="true"]):hover {
@@ -337,6 +358,21 @@
     .hero-rise {
       animation: hero-rise 700ms cubic-bezier(0.16, 1, 0.3, 1) var(--rise-delay, 0ms) both;
     }
+
+    .hero-stage-enter {
+      animation: hero-stage-enter 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-forms-indicator,
+    .hero-spotlight-item {
+      transition: none;
+    }
+
+    button.hero-spotlight-item:active {
+      transform: none;
+    }
   }
 }
 
@@ -345,6 +381,17 @@
     transform: translateY(14px);
   }
   to {
+    transform: none;
+  }
+}
+
+@keyframes hero-stage-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
     transform: none;
   }
 }

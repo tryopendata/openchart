@@ -42,6 +42,7 @@ export type HeroDeskProps = {
 export default function HeroDesk({ children }: HeroDeskProps) {
   const [state, dispatch] = useReducer(deskReducer, INITIAL_DESK_STATE);
   const [mounted, setMounted] = useState(false);
+  const [animateEnter, setAnimateEnter] = useState(false);
   const [specOpen, setSpecOpen] = useState(false);
   const hydrated = useHydrated();
   const baseId = useId();
@@ -74,7 +75,10 @@ export default function HeroDesk({ children }: HeroDeskProps) {
   }, []);
 
   const onMounted = useCallback(() => setMounted(true), []);
-  const onSelectForm = useCallback((form: HeroFormId) => dispatch({ type: "set-form", form }), []);
+  const onSelectForm = useCallback((form: HeroFormId) => {
+    setAnimateEnter(true);
+    dispatch({ type: "set-form", form });
+  }, []);
   const onSelectSpotlight = useCallback(
     (spotlight: HeroSpotlight) => dispatch({ type: "set-spotlight", spotlight }),
     [],
@@ -102,6 +106,7 @@ export default function HeroDesk({ children }: HeroDeskProps) {
         form={state.form}
         spec={diff.spec}
         interactive={mounted}
+        animateEnter={animateEnter}
         panelId={panelId}
         activeTabId={tabId(state.form)}
         onMounted={onMounted}

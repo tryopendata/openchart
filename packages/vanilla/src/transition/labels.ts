@@ -29,6 +29,7 @@ export function buildLabelMotion(
       key,
     });
   };
+  const enteringGroups: SVGElement[] = [];
   for (const group of svg.querySelectorAll('[data-endpoint-key]')) {
     const key = group.getAttribute('data-endpoint-key');
     const leading = group.getAttribute('data-endpoint-side') === 'leading';
@@ -38,6 +39,10 @@ export function buildLabelMotion(
     const after = (leading ? next.endpointLabels?.leading : next.endpointLabels?.entries)?.find(
       (entry) => entry.seriesKey === key,
     );
+    if (!before && after) {
+      enteringGroups.push(group as SVGElement);
+      continue;
+    }
     if (!before || !after) continue;
     const beforeBounds = leading
       ? previous.endpointLabels?.leadingBounds
@@ -96,6 +101,16 @@ export function buildLabelMotion(
       progress = value;
       for (const item of attributes)
         item.element.setAttribute(item.name, String(item.from + (item.to - item.from) * value));
+      for (const group of enteringGroups) {
+        if (value >= 1) {
+          group.style.removeProperty('opacity');
+          group.removeAttribute('transform');
+        } else {
+          group.style.opacity = String(value);
+          const dx = (1 - value) * 4;
+          group.setAttribute('transform', `translate(${dx.toFixed(2)},0)`);
+        }
+      }
     },
     snapshot(target: GeometrySnapshot) {
       for (const item of attributes)

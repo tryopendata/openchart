@@ -5,7 +5,7 @@
  * WAI-ARIA `tablist` with roving focus and ArrowLeft/ArrowRight/Home/End
  * keyboard navigation.
  */
-import { type KeyboardEvent, useRef } from "react";
+import { type CSSProperties, type KeyboardEvent, useLayoutEffect, useRef, useState } from "react";
 import { HERO_FORMS, type HeroFormId, heroFormLabels } from "../../../landing/hero";
 
 /** Props for `FormTabs`. */
@@ -40,9 +40,36 @@ function formForKey(key: string, from: HeroFormId): HeroFormId | null {
   }
 }
 
+type TabIndicator = { left: number; width: number; top: number; animate: boolean };
+
 /** Four editorial form tabs, or a plain list until the live stage has mounted. */
 export function FormTabs({ interactive, current, panelId, tabId, onSelect }: FormTabsProps) {
+  const listRef = useRef<HTMLDivElement | null>(null);
   const buttons = useRef<Partial<Record<HeroFormId, HTMLButtonElement | null>>>({});
+  const hasMeasured = useRef(false);
+  const [indicator, setIndicator] = useState<TabIndicator | null>(null);
+
+  useLayoutEffect(() => {
+    if (!interactive) return;
+    const measure = () => {
+      const active = buttons.current[current];
+      if (!active) return;
+      const next = {
+        left: active.offsetLeft,
+        width: active.offsetWidth,
+        top: active.offsetTop + active.offsetHeight - 2,
+        animate: hasMeasured.current,
+      };
+      hasMeasured.current = true;
+      setIndicator(next);
+    };
+    measure();
+    const list = listRef.current;
+    if (!list || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(list);
+    return () => observer.disconnect();
+  }, [interactive, current]);
 
   function handleKeyDown(event: KeyboardEvent<HTMLButtonElement>, form: HeroFormId) {
     const next = formForKey(event.key, form);
@@ -68,8 +95,20 @@ export function FormTabs({ interactive, current, panelId, tabId, onSelect }: For
     );
   }
 
+  const indicatorStyle: CSSProperties | undefined = indicator
+    ? {
+        transform: `translate3d(${indicator.left}px, ${indicator.top}px, 0) scaleX(${indicator.width})`,
+      }
+    : undefined;
+
   return (
-    <div className="hero-forms" role="tablist" aria-label="Editorial forms">
+    <div
+      ref={listRef}
+      className="hero-forms"
+      role="tablist"
+      aria-label="Editorial forms"
+      data-sliding={indicator ? "" : undefined}
+    >
       {HERO_FORMS.map((form) => (
         <button
           key={form}
@@ -89,6 +128,14 @@ export function FormTabs({ interactive, current, panelId, tabId, onSelect }: For
           {heroFormLabels[form]}
         </button>
       ))}
+      {indicator ? (
+        <span
+          className="hero-forms-indicator"
+          aria-hidden="true"
+          data-instant={indicator.animate ? undefined : ""}
+          style={indicatorStyle}
+        />
+      ) : null}
     </div>
   );
 }

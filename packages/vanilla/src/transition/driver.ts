@@ -127,7 +127,9 @@ export function runTransition(args: {
 
   // One DOM pass for every keyed mark element; valid for the whole transition
   // (the transition owns the DOM until onComplete, and ghosts carry no data-key).
-  const dom = buildMarkDomIndex(marksContainer);
+  // Faceted charts render one `.oc-marks` group per panel, so scan the SVG root
+  // when faceting is active so every panel transitions together.
+  const dom = buildMarkDomIndex(nextLayout.facet ? svg : marksContainer);
 
   // Build all tweens
   const tweens: Tween[] = [];
