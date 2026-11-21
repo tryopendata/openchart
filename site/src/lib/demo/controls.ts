@@ -72,7 +72,8 @@ export function demoControlsHtml(demo: ControlsDemo): string {
   if (!needsControls(demo)) return "";
   const controls = demo.controls ?? {};
   const status = `<span class="sr-only" role="status" aria-live="polite" ${DEMO_ATTR.controlsStatus}></span>`;
-  return `<div class="demo-controls" ${DEMO_ATTR.controls}>${buttonRow(controls)}${eventLog(controls)}${status}</div>`;
+  // Button labels and the event log are interface, not content to search.
+  return `<div class="demo-controls" ${DEMO_ATTR.controls} data-pagefind-ignore>${buttonRow(controls)}${eventLog(controls)}${status}</div>`;
 }
 
 /** The other states as the `data-demo-states` script's JSON, and the shared value blocks they add to the page. */

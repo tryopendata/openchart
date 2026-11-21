@@ -1,0 +1,27 @@
+---
+/**
+ * The blog index: every post, newest first, linked to its page. Stub until
+ * lane d builds the index; not indexed by search.
+ */
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { allPosts } from "../../lib/collection";
+
+const posts = await allPosts();
+---
+
+<BaseLayout
+  title="Blog"
+  description="Articles on choosing, building and reading charts, with OpenChart specs."
+  path="/blog/"
+>
+  <div class="prose mx-auto max-w-4xl px-6 py-10">
+    <h1>Blog</h1>
+    <ul>
+      {posts.map(({ post }) => (
+        <li>
+          <a href={`/blog/${post.slug}/`}>{post.title}</a>
+        </li>
+      ))}
+    </ul>
+  </div>
+</BaseLayout>

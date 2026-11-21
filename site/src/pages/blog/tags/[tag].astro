@@ -1,0 +1,45 @@
+---
+/**
+ * One tag's page: the posts that carry the tag, newest first. A page exists
+ * for each tag at least one post uses. Kept out of the search index and the
+ * sitemap, and `noindex, follow` so its links still count. Stub until lane d
+ * builds it.
+ */
+import type { GetStaticPaths } from "astro";
+import { type BlogTag, blogTags } from "../../../config";
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import { allPosts } from "../../../lib/collection";
+import type { BlogPost } from "../../../lib/blog-types";
+
+export const getStaticPaths = (async () => {
+  const posts = (await allPosts()).map((entry) => entry.post);
+  return blogTags
+    .map((tag) => ({ tag, posts: posts.filter((post) => post.tags.includes(tag.id)) }))
+    .filter(({ posts: tagged }) => tagged.length > 0)
+    .map(({ tag, posts: tagged }) => ({ params: { tag: tag.id }, props: { tag, posts: tagged } }));
+}) satisfies GetStaticPaths;
+
+interface Props {
+  tag: BlogTag;
+  posts: BlogPost[];
+}
+const { tag, posts } = Astro.props;
+---
+
+<BaseLayout
+  title={`Posts tagged ${tag.label}`}
+  description={`Blog posts about ${tag.label.toLowerCase()}.`}
+  path={`/blog/tags/${tag.id}/`}
+  robots="noindex, follow"
+>
+  <div class="prose mx-auto max-w-4xl px-6 py-10">
+    <h1>{tag.label}</h1>
+    <ul>
+      {posts.map((post) => (
+        <li>
+          <a href={`/blog/${post.slug}/`}>{post.title}</a>
+        </li>
+      ))}
+    </ul>
+  </div>
+</BaseLayout>

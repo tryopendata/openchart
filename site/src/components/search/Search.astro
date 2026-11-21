@@ -1,0 +1,36 @@
+---
+/**
+ * The header's search control: a trigger button and the empty dialog it opens.
+ * phase-5-stub: lane b wires the trigger and fills the dialog.
+ *
+ * Contract (src/scripts/search.ts and tests/build.test.ts rely on it):
+ * - `button[data-search-trigger]` with `aria-haspopup="dialog"` and
+ *   `aria-controls="site-search"`, named "Search". Its box is fixed at every
+ *   width, and global.css keeps it `visibility: hidden` (space reserved, not
+ *   focusable) until the script sets `data-search-ready`, so no dead control
+ *   shows without JavaScript.
+ * - `[data-search-hint]` inside it: a fixed-width slot for the shortcut hint,
+ *   shown from 640px.
+ * - `dialog#site-search[data-search]`, labelled "Search the site", empty.
+ */
+---
+
+<button
+  type="button"
+  data-search-trigger
+  aria-haspopup="dialog"
+  aria-controls="site-search"
+  class="border-line text-ink-2 hover:border-line-strong hover:text-ink flex h-8 w-8 shrink-0 items-center justify-center gap-2 rounded-xs border text-[13px] transition-colors duration-150 sm:w-36 sm:justify-start sm:px-2.5"
+>
+  <svg viewBox="0 0 16 16" aria-hidden="true" class="size-4 shrink-0">
+    <circle cx="7" cy="7" r="4.75" fill="none" stroke="currentColor" stroke-width="1.5"></circle>
+    <path d="m10.5 10.5 3.75 3.75" stroke="currentColor" stroke-width="1.5" fill="none"></path>
+  </svg>
+  <span class="max-sm:sr-only">Search</span>
+  <span
+    data-search-hint
+    aria-hidden="true"
+    class="text-muted ml-auto hidden w-12 text-right font-mono text-xs sm:block"
+  ></span>
+</button>
+<dialog id="site-search" data-search aria-label="Search the site"></dialog>

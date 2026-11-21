@@ -71,6 +71,17 @@ describe("demoFigureHtml", () => {
     expect(JSON.parse(script?.textContent ?? "")).toEqual(spec);
   });
 
+  it("keeps the stage and the controls out of search, and the caption in", async () => {
+    const figure = await render(figureFor({ controls: { replay: true } }));
+    expect(figure.querySelector("[data-demo-stage]")?.hasAttribute("data-pagefind-ignore")).toBe(
+      true,
+    );
+    expect(figure.querySelector("[data-demo-controls]")?.hasAttribute("data-pagefind-ignore")).toBe(
+      true,
+    );
+    expect(figure.querySelector("figcaption")?.closest("[data-pagefind-ignore]")).toBeNull();
+  });
+
   it("marks the entrance, links the source and leaves out tabs when asked", async () => {
     const figure = await render(
       figureFor({

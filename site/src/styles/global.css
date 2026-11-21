@@ -102,6 +102,20 @@
   html {
     -webkit-text-size-adjust: 100%;
     scroll-padding-top: 1.5rem;
+    /* The scrollbar's space stays reserved, so locking scroll under a modal moves nothing. */
+    scrollbar-gutter: stable;
+  }
+
+  html:has(dialog[open][data-search]) {
+    overflow: hidden;
+  }
+
+  /* The header's controls keep their boxes before their scripts wire them, so
+     revealing one never moves the links beside it. Hidden this way they take no
+     focus and show nothing without JavaScript. */
+  [data-search-trigger]:not([data-search-ready]),
+  [data-theme-toggle]:not([data-theme-ready]) {
+    visibility: hidden;
   }
 
   @media (prefers-reduced-motion: no-preference) {

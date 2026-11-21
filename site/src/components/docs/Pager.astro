@@ -1,7 +1,7 @@
 ---
 /**
  * Previous and next pages within the area, under an axis rule. Either may be absent
- * at the ends of the area.
+ * at the ends of the area. Search leaves it out of the index: its labels are other pages' titles.
  */
 import type { NavItem } from "../../lib/docs-types";
 
@@ -15,7 +15,7 @@ const linkClass =
 ---
 
 {(prev || next) && (
-  <nav aria-label="Pagination" class="mt-20">
+  <nav aria-label="Pagination" class="mt-20" data-pagefind-ignore>
     <div class="rule-axis" />
     <div class="grid gap-x-8 sm:grid-cols-2">
       {prev && (

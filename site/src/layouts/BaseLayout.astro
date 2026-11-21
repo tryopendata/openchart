@@ -2,7 +2,9 @@
 /**
  * The HTML shell every page shares: head metadata, the theme set before paint,
  * fonts, the site header and footer, and the client wiring for analytics, consent,
- * scroll entrances, site behavior and demos.
+ * scroll entrances, site behavior, demos and the eager part of search. Every
+ * page links the blog's RSS feed; a page adds its own head content (JSON-LD,
+ * article meta) through the `head` slot.
  */
 import SiteFooter from "./SiteFooter.astro";
 import SiteHeader from "./SiteHeader.astro";
@@ -21,7 +23,12 @@ interface Props {
   image?: string;
   /** This page's Markdown export, linked as rel="alternate". */
   markdown?: string;
+  /** Shorthand for `robots="noindex, nofollow"`. */
   noindex?: boolean;
+  /** The robots meta. `noindex, follow` keeps a thin page out of the index while its links still count. */
+  robots?: "noindex, nofollow" | "noindex, follow";
+  /** `article` for a blog post; every other page is a `website`. */
+  ogType?: "website" | "article";
 }
 const {
   title,
@@ -30,7 +37,9 @@ const {
   image = "/og-image.png",
   markdown,
   noindex = false,
+  ogType = "website",
 } = Astro.props;
+const robots = Astro.props.robots ?? (noindex ? "noindex, nofollow" : undefined);
 const canonical = new URL(path, site.url);
 const ogImage = new URL(image, site.url);
 const pageTitle = path === "/" ? `${site.name}: ${title}` : `${title} | ${site.name}`;
@@ -57,12 +66,13 @@ const pageTitle = path === "/" ? `${site.name}: ${title}` : `${title} | ${site.n
     <link rel="sitemap" href="/sitemap-index.xml" />
     <link rel="alternate" type="text/plain" href="/llms.txt" title="llms.txt" />
     {markdown && <link rel="alternate" type="text/markdown" href={markdown} />}
+    <link rel="alternate" type="application/rss+xml" title="OpenChart blog" href="/blog/rss.xml" />
     {preloadFonts.map((href) => (
       <link rel="preload" href={href} as="font" type="font/woff2" crossorigin />
     ))}
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0e0f10" media="(prefers-color-scheme: dark)" />
-    <meta property="og:type" content="website" />
+    <meta property="og:type" content={ogType} />
     <meta property="og:site_name" content={site.name} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
@@ -71,7 +81,9 @@ const pageTitle = path === "/" ? `${site.name}: ${title}` : `${title} | ${site.n
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
-    {noindex && <meta name="robots" content="noindex, nofollow" />}
+    {robots && <meta name="robots" content={robots} />}
+    {/* Page-specific head content: a blog post's JSON-LD and article meta. */}
+    <slot name="head" />
     <script is:inline>
       // Before paint: the stored choice, else the system preference.
       // A class is always set while JavaScript runs, so the toggle's state matches
@@ -99,6 +111,7 @@ const pageTitle = path === "/" ? `${site.name}: ${title}` : `${title} | ${site.n
       import { createSiteConsent, showConsentBanner } from "../lib/consent";
       import "../scripts/site";
       import "../scripts/demos";
+      import "../scripts/search";
 
       // [data-reveal] containers animate in once, the first time they are seen.
       initReveal();
@@ -126,9 +139,7 @@ const pageTitle = path === "/" ? `${site.name}: ${title}` : `${title} | ${site.n
       Skip to content
     </a>
     <slot name="banner" />
-    <SiteHeader path={path}>
-      <slot name="search" slot="search" />
-    </SiteHeader>
+    <SiteHeader path={path} />
     <main id="main" class="flex-1">
       <slot />
     </main>

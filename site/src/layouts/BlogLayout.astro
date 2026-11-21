@@ -1,0 +1,36 @@
+---
+/**
+ * A blog post's page: the title, the description as its lede, then the post
+ * in the docs prose styles. The article is indexed by search under Blog.
+ * Stub until lane d adds the byline, JSON-LD, related docs and tags.
+ */
+import type { BlogPost } from "../lib/blog-types";
+import { searchBodyAttrs } from "../lib/search-index";
+import BaseLayout from "./BaseLayout.astro";
+
+interface Props {
+  post: BlogPost;
+}
+const { post } = Astro.props;
+---
+
+<BaseLayout
+  title={post.title}
+  description={post.description}
+  path={`/blog/${post.slug}/`}
+  image={`/og/blog/${post.slug}.png`}
+  ogType="article"
+>
+  <article class="mx-auto max-w-[44rem] px-5 pt-10 pb-4 sm:px-6" {...searchBodyAttrs("blog")}>
+    <header class="flex flex-col gap-4">
+      <h1 class="text-ink text-[2.125rem] leading-[1.1] font-medium tracking-[-0.02em] sm:text-[2.75rem]">
+        {post.title}
+      </h1>
+      <p class="text-ink-2 text-lg leading-relaxed">{post.description}</p>
+    </header>
+    <div class="rule-axis mt-8 mb-10"></div>
+    <div class="prose docs-prose max-w-none">
+      <slot />
+    </div>
+  </article>
+</BaseLayout>

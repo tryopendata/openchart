@@ -1,0 +1,44 @@
+---
+/**
+ * One gallery entry's page: its title, the live demo with its code, and a link
+ * to the docs page for the chart. The article is indexed by search under
+ * Examples. Stub until lane a builds the page.
+ */
+import type { GetStaticPaths } from "astro";
+import Demo from "../../components/demo/Demo.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { galleryEntries } from "../../lib/gallery";
+import type { GalleryEntry } from "../../lib/gallery-types";
+import { searchBodyAttrs } from "../../lib/search-index";
+
+export const getStaticPaths = (() =>
+  galleryEntries.map((entry) => ({
+    params: { slug: entry.slug },
+    props: { entry },
+  }))) satisfies GetStaticPaths;
+
+interface Props {
+  entry: GalleryEntry;
+}
+const { entry } = Astro.props;
+---
+
+<BaseLayout
+  title={entry.title}
+  description={entry.description}
+  path={`/examples/${entry.slug}/`}
+  image={`/og/examples/${entry.slug}.png`}
+>
+  <article class="mx-auto max-w-4xl px-6 py-10" {...searchBodyAttrs("examples")}>
+    <h1 class="text-ink text-[2.125rem] leading-[1.1] font-medium tracking-[-0.02em]">
+      {entry.title}
+    </h1>
+    <p class="text-ink-2 mt-4 text-lg leading-relaxed">{entry.description}</p>
+    <div class="mt-8">
+      <Demo id={entry.demo} />
+    </div>
+    <p class="mt-6">
+      <a href={entry.docs}>Read the docs</a>
+    </p>
+  </article>
+</BaseLayout>

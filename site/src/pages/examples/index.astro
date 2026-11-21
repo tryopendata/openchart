@@ -1,0 +1,25 @@
+---
+/**
+ * The examples gallery: every entry in `galleryEntries`, linked to its page.
+ * Stub until lane a builds the wall; not indexed by search.
+ */
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { galleryEntries } from "../../lib/gallery";
+---
+
+<BaseLayout
+  title="Examples"
+  description="Finished charts and maps made with OpenChart, each with its spec to copy."
+  path="/examples/"
+>
+  <div class="prose mx-auto max-w-4xl px-6 py-10">
+    <h1>Examples</h1>
+    <ul>
+      {galleryEntries.map((entry) => (
+        <li>
+          <a href={`/examples/${entry.slug}/`}>{entry.title}</a>
+        </li>
+      ))}
+    </ul>
+  </div>
+</BaseLayout>

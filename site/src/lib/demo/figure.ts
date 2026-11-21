@@ -110,7 +110,8 @@ function stageHtml(figure: DemoFigure, domId: string): string {
   });
   const width = figure.width === undefined ? "" : `; --demo-width: ${figure.width}px`;
   const style = `--demo-height: ${figure.height}px${width}`;
-  return `<div class="demo-stage" ${DEMO_ATTR.stage} style="${style}">${content}</div>`;
+  // Axis ticks and labels in the SVGs are noise in search results; the caption stays indexed.
+  return `<div class="demo-stage" ${DEMO_ATTR.stage} style="${style}" data-pagefind-ignore>${content}</div>`;
 }
 
 function embeddedSpec(figure: Pick<DemoFigure, "spec" | "pageShared">): SharedSplit {

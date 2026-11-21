@@ -21,7 +21,8 @@ function setupThemeToggle() {
   if (!toggle) return;
   const root = document.documentElement;
   const sync = () => toggle.setAttribute("aria-pressed", String(root.classList.contains("dark")));
-  toggle.hidden = false;
+  // Shown by global.css once ready; its box was reserved, so the header doesn't move.
+  toggle.dataset.themeReady = "";
   sync();
   toggle.addEventListener("click", () => {
     const dark = !root.classList.contains("dark");
