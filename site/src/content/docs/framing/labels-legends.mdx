@@ -5,6 +5,44 @@ section: framing
 order: 3
 ---
 
-{/* phase-4-stub */}
+import Demo from "../../../components/demo/Demo.astro";
 
-This page is being written.
+`labels` prints each mark's value on the chart. With 24 columns, `density: "auto"` drops the labels that would overlap and keeps the rest.
+
+<Demo id="framing/labels-values" />
+
+## Value labels
+
+`format: ".1f"` prints one decimal place, matching the source data. `"auto"` checks each label against its neighbours and hides any that would collide; here all 24 fit, even on a phone. `"all"` prints every label even when they collide, `"endpoints"` only the first and last, and `"none"` none. Since the labels carry the numbers, `axis: false` drops the y axis. `prefix` and `suffix` add text around each value.
+
+## Legend position
+
+<Demo id="framing/legend-top" />
+
+A `nominal` field on `color` gets a legend. Without a setting, the engine picks the position from the chart's width; `legend: { position: "top" }` fixes it above the plot. The other positions are `"right"`, `"bottom"`, `"top-left"`, `"bottom-right"` and `"inline"`. `scale.domain` on the color channel sets the order of both the stack and the legend.
+
+## Labels in place of a legend
+
+<Demo id="framing/labels-direct" />
+
+A legend makes the reader match colors back to the plot. Here each band is named at its right end instead: stacked areas need `endpointLabels` set to show the names, and `content: "label"` prints the name without the value. `legend: { show: false }` removes the legend the names replace.
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `labels` | `true`, `false` or a config object for value labels. |
+| `labels.density` | `"auto"`, `"all"`, `"endpoints"` or `"none"`. |
+| `labels.format` | d3-format string for the value. |
+| `labels.prefix`, `labels.suffix` | Text before and after each value. |
+| `labels.placement` | `"inside"`, `"outside"` or `"adaptive"` for bar labels. |
+| `legend.position` | Where the legend goes. Omit it to let the width decide. |
+| `legend.show` | `false` hides the legend. |
+| `endpointLabels` | Names each line or band at its right end. Stacked areas need it set explicitly. |
+
+## Related
+
+- [Stacked area](/docs/change-over-time/stacked-area/) uses interior labels on more bands.
+- [Bar](/docs/comparison/bar/) shows value label placement on bars.
+- [Endpoint labels](/docs/framing/endpoint-labels/) names lines at their ends.
+- [Chrome, labels and legends reference](/docs/spec/chrome/) lists every label and legend field.

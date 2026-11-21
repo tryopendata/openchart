@@ -5,6 +5,51 @@ section: the-spec
 order: 3
 ---
 
-{/* phase-4-stub */}
+import Demo from "../../../components/demo/Demo.astro";
 
-This page is being written.
+A channel's `type` picks its scale. These two charts plot the same 14 rows, one with `type: "ordinal"` on `x` and one with `type: "temporal"`.
+
+<Demo id="the-spec/scales-ordinal" />
+
+<Demo id="the-spec/scales-temporal" />
+
+## Ordinal or temporal
+
+An `ordinal` axis treats each year as a category and gives every one the same width, so the five years from 2020 to 2025 look as long as each decade before them. A `temporal` axis places each reading by its date, and the last segment shrinks to half a step. Use `temporal` whenever the values are dates and the gaps between them are uneven, and `ordinal` for named periods such as months.
+
+## Zero and domain
+
+<Demo id="the-spec/scales-domain" />
+
+Quantitative scales include zero by default. That is right for bars, whose length is the value, and wrong for a dot plot of life expectancy, where every country would sit in the right fifth of the axis. `scale: { zero: false, domain: [65, 85] }` fixes the range to the span that matters. Keep zero on any bar or area chart.
+
+## Log scale
+
+<Demo id="the-spec/scales-log" />
+
+`scale: { type: "log" }` spaces values by ratio, so the gap from 30 to 300 million equals the gap from 100 million to 1 billion. On a linear axis, India and China would sit far to the right and the other ten countries would crowd into the left quarter. `axis.values` picks round ticks, and the axis title says "log scale" so no reader takes the spacing as linear.
+
+## Sequential color
+
+<Demo id="correlation/heatmap-basic" />
+
+A `quantitative` field on `color` gets a sequential scale. `scheme` names the ramp: `blue`, `green`, `orange`, `purple` or `teal`, with Vega-Lite names such as `blues` accepted. Add `domain` to fix the ends, for example `[0, 100]` for a share, so two heatmaps of the same measure use the same colors.
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `type` | `quantitative`, `temporal`, `nominal` or `ordinal`. Picks the default scale. |
+| `scale.type` | Overrides the scale, for example `"log"`, `"sqrt"` or `"symlog"`. |
+| `scale.zero` | Whether a quantitative domain includes zero. Default true. |
+| `scale.domain` | Fixed `[min, max]` for continuous scales, or the category list for categorical ones. |
+| `scale.nice` | Rounds the domain out to clean tick values. Default true. |
+| `scale.scheme` | A named color ramp for the color channel. |
+| `scale.range` | Explicit output values, such as exact colors. Wins over `scheme`. |
+
+## Related
+
+- [Heatmap](/docs/correlation/heatmap/) uses sequential color on a grid.
+- [Line](/docs/change-over-time/line/) shows a log scale on a growth series.
+- [Axes](/docs/the-spec/axes/) covers tick formats and gridlines.
+- [Encoding reference](/docs/spec/encoding/) lists every scale option.

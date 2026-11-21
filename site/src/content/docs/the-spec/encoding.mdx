@@ -5,6 +5,44 @@ section: the-spec
 order: 2
 ---
 
-{/* phase-4-stub */}
+import Demo from "../../../components/demo/Demo.astro";
 
-This page is being written.
+`encoding` decides which field drives which visual property. A bar chart puts the category on `y` and the number on `x`.
+
+<Demo id="the-spec/encoding-bar" />
+
+## Swapping x and y
+
+<Demo id="the-spec/encoding-column" />
+
+The data and mark are unchanged; only the two channels trade places. With the category on `x` and the number on `y`, the same `mark: "bar"` draws columns. `sort: "x"` becomes `sort: "-y"`, so the largest value still comes first. Long names like "United States" fit better down the side of a bar chart than under a column, which is why bars suit ranked countries.
+
+## Color
+
+<Demo id="the-spec/encoding-color" />
+
+`color` brings in a third field. Here a `condition` tests each row's `gdpPerCapita`: rows at $40,000 or more get the accent color and the rest get grey, so the chart shows income and life expectancy together. A `nominal` field on `color` gives one hue per category instead, which is how a line chart gets one color per series.
+
+## Size
+
+<Demo id="the-spec/encoding-size" />
+
+`size` scales each point's area by a field, which turns a scatter into a bubble chart. The default range runs from a 3 px to a 30 px radius, and area grows with the value, so a country twice as populous gets a circle twice the area. `trendline: false` on the mark turns off the regression line scatter charts draw by default.
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `x`, `y` | Position. The channel holding the category sets the orientation of bars. |
+| `color` | A field (one hue per category for `nominal` fields), a `condition` on a field, or a fixed `value`. `highlight` greys out every series but the named ones. |
+| `size` | Point area from a quantitative field. `scale.range` is in pixels of radius. |
+| `theta` | The slice value on pie and donut charts. |
+| `sort` | Category order. `"x"` on a bar chart's `y` and `"-y"` on a column chart's `x` put the largest value first. |
+| `tooltip` | Extra fields shown on hover, independent of the other channels. |
+
+## Related
+
+- [Bar](/docs/comparison/bar/) and [Column](/docs/comparison/column/) cover ranked categories in each orientation.
+- [Bubble](/docs/correlation/bubble/) adds color to a sized scatter.
+- [Field types and scales](/docs/the-spec/scales/) explains what `type` does to each channel.
+- [Encoding reference](/docs/spec/encoding/) lists every channel and option.

@@ -5,6 +5,49 @@ section: the-spec
 order: 5
 ---
 
-{/* phase-4-stub */}
+import Demo from "../../../components/demo/Demo.astro";
 
-This page is being written.
+`transform` is an ordered list of steps run on `data` before anything is drawn, so a spec can carry its source rows unchanged and derive what it plots.
+
+<Demo id="the-spec/transforms-fold" />
+
+## Fold wide columns into rows
+
+The source has 12 rows, one per month, each with a `low` and a `high` column. A line chart with one color per series needs one row per value instead. `{ fold: ["high", "low"], as: ["measure", "temperature"] }` turns the 12 rows into 24, each with a `measure` of "high" or "low" and its `temperature`. The chart then puts `measure` on `color`.
+
+## Calculate a new field
+
+<Demo id="the-spec/transforms-calculate" />
+
+`calculate` adds a field to every row. `{ op: "-", field: "high", field2: "low" }` subtracts the two columns, and `as: "swing"` names the result. The same 12 rows now give the gap between each month's average high and low, which peaks at 10.1°C in May. The ops are arithmetic only: `+`, `-`, `*`, `/`, plus `abs`, `round`, `floor`, `ceil`, `log` and `sqrt` on one field.
+
+## Filter and aggregate
+
+<Demo id="the-spec/transforms-aggregate" />
+
+Transforms run in order, each on the output of the one before. The source has 48 rows, six sources for each of eight years. `filter` with `oneOf: ["Wind", "Solar"]` keeps 16 of them. `aggregate` with `op: "sum"` and `groupby: ["year"]` collapses those to eight rows, one per year, holding the two shares added together: 5.7% plus 1.4% gives the 7.1% for 2016.
+
+## Bin values into ranges
+
+<Demo id="the-spec/transforms-bin" />
+
+A histogram counts how many rows fall in each range. `bin` with `step: 0.5` writes each state's range start and end into `rateFrom` and `rateTo`, and `aggregate` with `op: "count"` grouped by both fields turns 51 rows into one count per range. Putting `rateTo` on `x2` makes each bar span its range on a continuous axis. `mark: "histogram"` does the same two steps for you.
+
+## Fields that matter
+
+| Transform | What it does |
+| --- | --- |
+| `fold` | Wide to long: one output row per listed column, with key and value fields. |
+| `calculate` | Adds a field from arithmetic on one or two fields, or a field and a constant. |
+| `filter` | Keeps rows matching a predicate: `equal`, `oneOf`, `lt`, `gte`, `range` and more, combined with `and`, `or` and `not`. |
+| `aggregate` | Collapses each group to one row: `sum`, `mean`, `median`, `count`, `min`, `max` and others. |
+| `joinaggregate` | Same ops, but keeps every row and writes the group summary onto each. |
+| `bin` | Writes the range a value falls in, by `step` or `maxbins`. |
+| `window` | Running values in sort order: `cumsum`, `rank`, `lag`, `diff`, `pct_change`. |
+| `timeUnit` | Truncates a date to a unit such as year or month. |
+
+## Related
+
+- [Histogram](/docs/distribution/histogram/) uses binning through `mark: "histogram"`.
+- [Stacked area](/docs/change-over-time/stacked-area/) plots long rows like the folded ones here.
+- [Transforms reference](/docs/spec/transforms/) lists every transform and its fields.

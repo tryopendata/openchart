@@ -5,6 +5,49 @@ section: framing
 order: 2
 ---
 
-{/* phase-4-stub */}
+import Demo from "../../../components/demo/Demo.astro";
 
-This page is being written.
+An annotation is a note placed in data coordinates, so it stays on its point at every width. A `text` annotation with a connector points at one mark.
+
+<Demo id="framing/annotations-callout" />
+
+## Text callout
+
+The callout sits at the US point, `x: 75489` and `y: 79.2`. `offset` moves the label 40 pixels left and down from it, `anchor: "bottom"` sets which side of the label faces the point, and `connector: "curve"` draws a curved leader with a ring on the point. `\n` breaks the text into two lines and `**United States**` sets the name in bold.
+
+## Reference line
+
+<Demo id="framing/annotations-refline" />
+
+A `refline` draws a line across the plot at one value. Set `y` for a horizontal line or `x` for a vertical one. This one marks the mean of the twelve monthly highs, 18.2°C, which the demo module computes from the rows, so the line and its label always match the data. `style: "dashed"` keeps it visually separate from the bars.
+
+## Shaded range
+
+<Demo id="framing/annotations-range" />
+
+A `range` shades a stretch of the axis between `x1` and `x2`, or `y1` and `y2`, with an optional `label`. Here it covers the seven quarters when inflation ran above 5%, from the third quarter of 2021 to the first quarter of 2023. `opacity` keeps the fill light enough that the line stays on top, and a y `domain` of 0 to 10 leaves room for the label above the peak.
+
+## Highlighted series
+
+<Demo id="framing/annotations-highlight" />
+
+`highlight: "Coal"` on the color channel keeps coal in its color and greys out the other five series. `seriesStyles` makes the coal line thicker, and one text annotation names the year it first fell below 20%. Keep a chart to three annotations or fewer; one that needs more usually holds two findings and reads better as two charts.
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `type` | `"text"`, `"refline"` or `"range"`. |
+| `x`, `y` | Data coordinates of a text note or reference line. |
+| `x1`, `x2`, `y1`, `y2` | The ends of a range. |
+| `text`, `label` | The note text. `**bold**` spans and `\n` line breaks work in `text`. |
+| `connector` | `true`, `"curve"`, `"drop-line"` or `{ type, arrow }`. |
+| `anchor`, `offset` | Which side of the label faces the point, and the label's pixel offset. |
+| `style` | `"solid"`, `"dashed"` or `"dotted"` for a reference line. |
+| `encoding.color.highlight` | One or more series to keep in color while the rest turn grey. |
+
+## Related
+
+- [Line](/docs/change-over-time/line/) combines callouts, reference lines and ranges on time series.
+- [Scatter](/docs/correlation/scatter/) labels outliers with callouts.
+- [Annotations reference](/docs/spec/annotations/) lists every annotation field.

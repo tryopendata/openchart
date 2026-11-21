@@ -5,6 +5,81 @@ section: the-spec
 order: 1
 ---
 
-{/* phase-4-stub */}
+import Demo from "../../../components/demo/Demo.astro";
 
-This page is being written.
+A spec is a plain object, and the four charts on this page are the same one built up a block at a time.
+
+<Demo id="the-spec/anatomy-bare" />
+
+## Data, mark and encoding
+
+These three blocks are enough to draw a chart. `data` is an array of rows, here 24 quarters of US inflation. `mark: "line"` picks the shape. `encoding` maps fields to channels: `date` to `x` and `rate` to `y`.
+
+Every channel needs a `type`. `"temporal"` tells the engine the `date` strings are dates, so it builds a time axis and spaces the quarters by the time between them. `"quantitative"` makes `rate` a number on a continuous scale.
+
+## Axis titles and formats
+
+<Demo id="the-spec/anatomy-axes" />
+
+`axis` sits on the channel it labels. On `x`, `format: "%Y"` prints four-digit years and `tickCount: 6` asks for about six ticks. On `y`, `format: ".0f"` rounds to whole numbers and `labelSuffix: "%"` adds the unit to every tick, so the reader never has to look up what 8 means. The mark object also sets the line color and width.
+
+## Title and subtitle
+
+<Demo id="the-spec/anatomy-chrome" />
+
+`chrome` holds the text around the plot. The title states what the data shows, with the two numbers a reader can check against the line. The subtitle says what is measured, in what unit and over what period. The source line under the figure comes from the page here; in your own spec it goes in `chrome.source`.
+
+## One annotation
+
+<Demo id="the-spec/anatomy-annotated" />
+
+`annotations` is a list of notes placed in data coordinates. This `text` annotation sits at the peak quarter, `x: "2022-07-01"` and `y: 8.5`, so it stays on the peak at any width. `connector: true` draws the line from the label to the point, and `**8.5%**` sets that span in bold.
+
+## The five blocks
+
+```json title="The finished spec, abbreviated"
+{
+  // 1. The rows: 24 quarters, two fields each
+  "data": [{ "date": "2019-01-01", "rate": 1.6 }],
+
+  // 2. The shape that represents each row
+  "mark": { "type": "line", "stroke": "#0e7490", "strokeWidth": 2 },
+
+  // 3. Fields to channels, with a type and an axis for each
+  "encoding": {
+    "x": { "field": "date", "type": "temporal", "axis": { "format": "%Y" } },
+    "y": { "field": "rate", "type": "quantitative", "axis": { "labelSuffix": "%" } }
+  },
+
+  // 4. The text around the plot
+  "chrome": {
+    "title": "US inflation peaked at 8.5% in 2022 and was down to 2.6% by late 2024",
+    "subtitle": "Consumer price index, % change from a year earlier, quarterly, 2019–2024"
+  },
+
+  // 5. Notes placed in data coordinates
+  "annotations": [
+    { "type": "text", "x": "2022-07-01", "y": 8.5, "text": "**8.5%** in the third quarter of 2022" }
+  ]
+}
+```
+
+The comments are for reading only; JSON does not allow them, so leave them out of a real spec. Open "Code" under any figure for the complete spec.
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `data` | An array of row objects. Every field a channel names must exist in the rows. |
+| `mark` | The shape: a string such as `"line"`, or an object that also sets stroke, fill and curve. |
+| `encoding` | Maps fields to channels (`x`, `y`, `color`, `size` and others). Each channel takes `field` and `type`. |
+| `encoding.*.axis` | Axis title, tick format, tick count and gridlines for that channel. |
+| `chrome` | Title, subtitle, source, byline and footer. |
+| `annotations` | `text`, `refline` and `range` notes placed in data coordinates. |
+
+## Related
+
+- [Line](/docs/change-over-time/line/) shows the same inflation series with more annotations and a log scale.
+- [Encoding channels](/docs/the-spec/encoding/) covers every channel beyond `x` and `y`.
+- [ChartSpec](/docs/spec/chart-spec/) lists every top-level field.
+- [Encoding reference](/docs/spec/encoding/) lists the channel and axis options.
