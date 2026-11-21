@@ -277,25 +277,6 @@
     @apply pt-6;
   }
 
-  /* Shiki writes both themes as variables; the page theme picks one. */
-  .install-tab-code-body pre,
-  .install-tab-code-body pre span {
-    color: var(--shiki-light);
-    background-color: transparent;
-  }
-
-  .dark .install-tab-code-body pre,
-  .dark .install-tab-code-body pre span {
-    color: var(--shiki-dark);
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :root:not(.light) .install-tab-code-body pre,
-    :root:not(.light) .install-tab-code-body pre span {
-      color: var(--shiki-dark);
-    }
-  }
-
   /* Closing: the heading in four columns, the table and install lines in eight. */
   .closing-grid {
     @apply grid gap-y-10 lg:grid-cols-12 lg:gap-x-8;

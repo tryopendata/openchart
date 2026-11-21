@@ -255,27 +255,37 @@ h1 {
   pointer-events: none;
 }
 
-/* Shiki emits both themes as CSS variables (defaultColor: false); pick one per theme. */
-.astro-code,
-.astro-code span {
+/*
+ * Every highlighted block on the site: Markdown fences (.astro-code) and the demo
+ * and landing code panels (.shiki, from lib/demo/highlight.ts). Shiki emits both
+ * themes as CSS variables (defaultColor: false); the page theme picks one, and
+ * without a theme class (no JavaScript) the system preference does.
+ */
+:is(.astro-code, .shiki),
+:is(.astro-code, .shiki) span {
   color: var(--shiki-light);
-  background-color: var(--color-canvas);
 }
 
-.astro-code span {
-  background-color: transparent;
-}
-
-.dark .astro-code,
-.dark .astro-code span {
+.dark :is(.astro-code, .shiki),
+.dark :is(.astro-code, .shiki) span {
   color: var(--shiki-dark);
 }
 
 @media (prefers-color-scheme: dark) {
-  :root:not(.light) .astro-code,
-  :root:not(.light) .astro-code span {
+  :root:not(.light) :is(.astro-code, .shiki),
+  :root:not(.light) :is(.astro-code, .shiki) span {
     color: var(--shiki-dark);
   }
+}
+
+/* A fence sits on the page's background; a panel's code shows its panel through. */
+.astro-code {
+  background-color: var(--color-canvas);
+}
+
+.shiki,
+:is(.astro-code, .shiki) span {
+  background-color: transparent;
 }
 
 /* A code block: a hairline frame, square corners, an optional title bar. */

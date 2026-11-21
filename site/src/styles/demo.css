@@ -176,18 +176,6 @@
   display: block;
 }
 
-/* Shiki emits both themes as variables; the page theme picks one. */
-.demo-panel pre,
-.demo-panel pre span {
-  color: var(--shiki-light);
-  background-color: transparent;
-}
-
-.dark .demo-panel pre,
-.dark .demo-panel pre span {
-  color: var(--shiki-dark);
-}
-
 /* The static SVG for the current theme. */
 .demo-static[data-theme="dark"] {
   display: none;
@@ -203,11 +191,6 @@
 
 /* Without JavaScript neither theme class is set; follow the system preference. */
 @media (prefers-color-scheme: dark) {
-  :root:not(.light) .demo-panel pre,
-  :root:not(.light) .demo-panel pre span {
-    color: var(--shiki-dark);
-  }
-
   :root:not(.light) .demo-static[data-theme="dark"] {
     display: block;
   }
