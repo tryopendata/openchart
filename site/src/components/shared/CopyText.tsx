@@ -19,7 +19,7 @@ function buttonText(copied: boolean, failed: boolean): string {
   return failed ? "Copy failed" : "Copy";
 }
 
-export function CopyText({ text, label, className = "copy-chip" }: CopyTextProps) {
+export function CopyText({ text, label, className = "copy-button" }: CopyTextProps) {
   const [hydrated, setHydrated] = useState(false);
   const { copy, copied, failed } = useCopy();
   useEffect(() => setHydrated(true), []);

@@ -46,11 +46,11 @@ const missingFrom = (changed: string[], spec: ChartSpec) => {
 };
 
 describe("the hero steps", () => {
-  it("are five, with unique ids, in the brief's order", () => {
+  it("are five, with unique ids, in build order", () => {
     expect(heroSteps.map((step) => step.id)).toEqual([
-      "mark",
-      "encoding",
-      "chrome",
+      "plot",
+      "headline",
+      "axis",
       "annotation",
       "preset",
     ]);
@@ -63,13 +63,22 @@ describe("the hero steps", () => {
     },
   );
 
-  it("keeps the value scale's domain from the encoding step on", () => {
-    const [encoding, ...later] = heroSteps.slice(1).map((step) => xDomain(step.spec));
-    expect(encoding?.[0]).toBeCloseTo(65, 6);
-    expect(encoding?.[1]).toBeCloseTo(90, 6);
-    for (const domain of later) {
-      expect(domain[0]).toBeCloseTo(65, 6);
-      expect(domain[1]).toBeCloseTo(90, 6);
+  it("draws every step on the finished chart's value scale, 65 to 90 years", () => {
+    for (const step of heroSteps) {
+      const [low, high] = xDomain(step.spec);
+      expect(low, step.id).toBeCloseTo(65, 6);
+      expect(high, step.id).toBeCloseTo(90, 6);
+    }
+  });
+
+  it("orders the rows by the gap between the sexes, Russia's at the top, in every step", () => {
+    for (const step of heroSteps) {
+      const rows = compile(step.spec)
+        .axes.y?.ticks.slice()
+        .sort((a, b) => a.position - b.position)
+        .map((tick) => String(tick.value));
+      expect(rows?.[0], step.id).toBe("Russia");
+      expect(rows?.at(-1), step.id).toBe("India");
     }
   });
 
@@ -77,7 +86,13 @@ describe("the hero steps", () => {
     const layouts = heroSteps.map((step) => compile(step.spec));
     expect(layouts[1]?.a11y.altText).not.toBe(layouts[0]?.a11y.altText);
     const signatures = layouts.map((layout) =>
-      JSON.stringify([layout.a11y.altText, layout.annotations.length, layout.chrome, layout.theme]),
+      JSON.stringify([
+        layout.a11y.altText,
+        layout.axes.x?.label,
+        layout.annotations.length,
+        layout.chrome,
+        layout.theme,
+      ]),
     );
     expect(new Set(signatures).size).toBe(heroSteps.length);
   });
@@ -121,7 +136,8 @@ describe("the hero steps", () => {
   it("folds the data rows", () => {
     const text = paneLines(stepAt(0).spec).join("\n");
     expect(text).toContain('1:"data": [ … 24 rows ],');
-    expect(text).not.toContain("Japan");
+    // A data value (Japan's figure for men) is folded away, not printed.
+    expect(text).not.toContain("81.9");
   });
 
   it("shows the broadsheet paper under the hero's mount theme, which the site's usual theme would hide", () => {

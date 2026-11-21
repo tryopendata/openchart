@@ -69,11 +69,6 @@
     @apply text-muted hover:text-ink underline decoration-1 underline-offset-2 transition-colors duration-150;
   }
 
-  /* The small Copy button (CopyText.tsx and data-copy buttons). */
-  .copy-chip {
-    @apply text-muted hover:text-ink border-line-strong shrink-0 rounded-xs border px-2 py-1 font-mono text-xs transition-colors duration-150;
-  }
-
   /* An install command (InstallCommand.astro): manager tabs above, a ruled line with Copy.
      The command wraps, so a phone shows all of it without a scroller. */
   .install-command {

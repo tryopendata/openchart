@@ -235,6 +235,11 @@
     @apply text-muted;
   }
 
+  /* The site's copy button, sized to the spec's header row. */
+  .hero-spec-head .copy-button {
+    @apply h-6 min-w-0;
+  }
+
   .hero-spec {
     @apply relative min-w-0;
   }

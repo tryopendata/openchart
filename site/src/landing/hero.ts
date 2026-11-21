@@ -1,9 +1,9 @@
 /**
  * The hero desk's script: five cumulative specs that build one chart step by
- * step (mark and data, encoding, title with subtitle and source, one annotation,
- * the `broadsheet` preset). The chart is life expectancy by sex in twelve
- * countries (UN World Population Prospects 2024): plain dots at first, then a
- * dumbbell once color splits the sexes, with Russia's ten-year gap called out.
+ * step: the plotted data, the headline and source, the axis label, one
+ * annotation, the `broadsheet` preset. The chart is life expectancy by sex in
+ * twelve countries (UN World Population Prospects 2024) as a dumbbell, rows
+ * ordered by the gap between the sexes, with Russia's ten-year gap called out.
  * Each step only adds to the one before, so the lines it adds stay put in every
  * later step; `changed` comes from the same formatting the spec pane shows.
  */
@@ -43,30 +43,36 @@ export const heroFolds: SpecFolds = { theme: "broadsheet preset" };
 
 const data = lifeExpectancyGender.data.map((row) => ({ ...row }));
 
-const markAndData = {
+/** The gap in years between the two sexes in one country. */
+function gapIn(country: string): number {
+  const years = data.filter((row) => row.country === country).map((row) => row.years);
+  return Math.max(...years) - Math.min(...years);
+}
+
+/**
+ * Countries by gap, smallest first: the engine draws a nominal y in sort order
+ * from the bottom up, so this puts the widest gap (Russia) at the top.
+ */
+const byGap = [...new Set(data.map((row) => row.country))].sort((a, b) => gapIn(a) - gapIn(b));
+
+/**
+ * Step 1 is already the finished picture's skeleton: the same x domain and row
+ * order as the last step, and colour by sex, which is what makes the library
+ * draw a dumbbell (without it, the dot mark draws stems from the axis). Each
+ * later step adds one thing to that picture.
+ */
+const plotted = {
   mark: "circle",
   data,
   encoding: {
-    x: { field: "years", type: "quantitative" },
-    y: { field: "country", type: "nominal" },
-  },
-} satisfies ChartSpec;
-
-const encoding = {
-  ...markAndData,
-  encoding: {
-    x: {
-      ...markAndData.encoding.x,
-      scale: { domain: [65, 90] },
-      axis: { title: "Life expectancy at birth, years" },
-    },
-    y: { ...markAndData.encoding.y, sort: "-x" },
+    x: { field: "years", type: "quantitative", scale: { domain: [65, 90] } },
+    y: { field: "country", type: "nominal", sort: byGap },
     color: { field: "gender", type: "nominal" },
   },
 } satisfies ChartSpec;
 
-const chrome = {
-  ...encoding,
+const headline = {
+  ...plotted,
   chrome: {
     title: "Women outlive men in every country here, and by ten years in Russia",
     subtitle: "Life expectancy at birth by sex, 2023, years",
@@ -74,16 +80,25 @@ const chrome = {
   },
 } satisfies ChartSpec;
 
+const axisLabel = {
+  ...headline,
+  encoding: {
+    ...headline.encoding,
+    x: { ...headline.encoding.x, axis: { title: "Life expectancy at birth, years" } },
+  },
+} satisfies ChartSpec;
+
 const annotation = {
-  ...chrome,
+  ...axisLabel,
   annotations: [
     {
       type: "text",
-      // Russia's female value: the label sits beside the end of its bar.
+      // Russia's female value: the label sits on Russia's row, just past its dot.
       x: 78.2,
       y: "Russia",
       text: "Russia: 10 years",
       anchor: "right",
+      offset: { dx: 6, dy: 0 },
       connector: false,
       dot: false,
       fontWeight: 600,
@@ -97,30 +112,30 @@ type StepScript = { id: string; label: string; caption: string; teaser: string; 
 
 const STEP_SPECS: StepScript[] = [
   {
-    id: "mark",
+    id: "plot",
     label: "Plot the data",
-    caption: "Each country's life expectancy for men and for women, as plain dots.",
+    caption: "Men and women in each country, joined by a line, the widest gap at the top.",
     teaser: '"mark": "circle",',
-    spec: markAndData,
+    spec: plotted,
   },
   {
-    id: "encoding",
-    label: "Colour men and women",
-    caption: "Colour splits the sexes, a line joins each pair, and the axis starts at 65.",
-    teaser: '"field": "gender",',
-    spec: encoding,
-  },
-  {
-    id: "chrome",
+    id: "headline",
     label: "Add the headline and source",
     caption: "A headline states the finding; the deck and source line say what and from where.",
     teaser: '"title": "Women outlive men in every country here, and by ten years in Russia",',
-    spec: chrome,
+    spec: headline,
+  },
+  {
+    id: "axis",
+    label: "Label the axis",
+    caption: "The axis says what its numbers are: years of life expected at birth.",
+    teaser: '"axis": { "title": "Life expectancy at birth, years" }',
+    spec: axisLabel,
   },
   {
     id: "annotation",
     label: "Call out the outlier",
-    caption: "A label marks Russia, where the gap between the sexes is widest.",
+    caption: "A label on Russia's row marks the widest gap between the sexes.",
     teaser: '"text": "Russia: 10 years",',
     spec: annotation,
   },
