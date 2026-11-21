@@ -284,15 +284,33 @@ test.describe("scroll story", () => {
       .first()
       .evaluate((svg) => svg.outerHTML);
 
-  /** Scrolls so the step's top sits just past the story's trigger line, as a reader's scroll would. */
+  /**
+   * Scrolls so the step's top sits just past the story's trigger line, as a
+   * reader's scroll would. Instant, not the page's smooth scrolling, which is
+   * still moving when the frames settle on a loaded machine.
+   */
   async function scrollStepToTrigger(page: Page, index: number) {
     await steps(page)
       .nth(index)
       .evaluate((step) => {
         const trigger = innerHeight * (innerWidth >= 1024 ? 0.5 : 0.78);
-        scrollBy(0, step.getBoundingClientRect().top - trigger + 24);
+        scrollBy({ top: step.getBoundingClientRect().top - trigger + 24, behavior: "instant" });
       });
     await settle(page);
+  }
+
+  /**
+   * Scrolls the step past the trigger until it is current, measuring again on
+   * each try, so content above the story that settles late (fonts, islands
+   * hydrating) cannot leave the step short of the line.
+   */
+  async function makeCurrent(page: Page, index: number) {
+    await expect(async () => {
+      await scrollStepToTrigger(page, index);
+      await expect(steps(page).nth(index)).toHaveAttribute("aria-current", "step", {
+        timeout: 1000,
+      });
+    }).toPass();
   }
 
   test("scrolling makes each paragraph current in turn and each change moves the chart", async ({
@@ -303,12 +321,10 @@ test.describe("scroll story", () => {
     const count = await steps(page).count();
     expect(count).toBe(5);
 
-    await scrollStepToTrigger(page, 0);
-    await expect(steps(page).nth(0)).toHaveAttribute("aria-current", "step");
+    await makeCurrent(page, 0);
     let previous = await chartMarkup(page);
     for (let index = 1; index < count; index += 1) {
-      await scrollStepToTrigger(page, index);
-      await expect(steps(page).nth(index)).toHaveAttribute("aria-current", "step");
+      await makeCurrent(page, index);
       await expect(section(page).locator('[aria-current="step"]')).toHaveCount(1);
       await expect
         .poll(() => chartMarkup(page), `step ${index + 1} changes the chart`)
