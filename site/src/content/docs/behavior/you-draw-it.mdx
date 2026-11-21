@@ -5,6 +5,55 @@ section: behavior
 order: 6
 ---
 
-{/* phase-4-stub */}
+import Demo from "../../../components/demo/Demo.astro";
 
-This page is being written.
+A you-draw-it chart hides the end of a line and asks the reader to sketch where it went before showing the data. Drag across the hatched area to draw your guess, then press the button.
+
+<Demo id="behavior/you-draw-it-inflation" />
+
+## Setting it up
+
+`youDrawIt.from` is the x value where the visible line stops; it uses the same format as the data, here `"2021-01-01"`. Everything after it stays hidden behind a hatched region until the reader presses the reveal button, drawn or not. After the reveal, the reader's line and the real one sit on the same axes.
+
+The title can only state what the visible line shows. A title about the peak would give away the answer the reader is about to draw, so this one stops at 2020 and the prompt asks for the rest.
+
+The figure has no static image. A chart rendered at build time draws the whole line, hidden part included, so a demo like this sets `static: false` and appears only once the script runs.
+
+## Prompt and button text
+
+<Demo id="behavior/you-draw-it-temperature" />
+
+`prompt` replaces "Draw your guess" in the hatched region, and `revealLabel` replaces "Show me" on the button. Write the prompt as an instruction that names the end point, so the reader knows how far to draw. Once the reader has drawn, a Clear button appears beside the reveal button; `resetLabel` renames it.
+
+## Collecting guesses
+
+Pass `onReveal` where the chart mounts to receive the reader's guess when the line is revealed, as `{ x, y }` points in data units:
+
+```ts title="chart.ts"
+createChart(container, spec, {
+  onReveal: (guess) => sendGuess(guess),
+});
+```
+
+A newsroom that stores guesses can show them back to later readers with `youDrawIt.comparisonLine`, a list of `{ x, y }` points drawn in a third style after the reveal. Only use it with guesses you collected; the charts on this page have none, so they draw no comparison line.
+
+## Limits
+
+You draw it works on a line chart with a single series. It cannot be combined with edit mode; if both are on, the library warns and turns you-draw-it off. The chart instance also has `revealDrawing()` and `resetDrawing()` for your own controls.
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `youDrawIt.from` | The x value where drawing starts. Data after it is hidden until the reveal. |
+| `youDrawIt.prompt` | Text in the hatched region. Default "Draw your guess". |
+| `youDrawIt.revealLabel` | Text on the reveal button. Default "Show me". |
+| `youDrawIt.resetLabel` | Text on the Clear button. Default "Clear". |
+| `youDrawIt.comparisonLine` | Points for a third line, such as the average reader guess. |
+| `onReveal` (mount option) | Receives the reader's guess at reveal. |
+
+## Related
+
+- [Line](/docs/change-over-time/line/) covers the line chart this builds on.
+- [Edit mode](/docs/behavior/edit-mode/) lets readers drag annotations, and cannot share a chart with you draw it.
+- [Vanilla API](/docs/api/vanilla/) covers `createChart` and the chart instance methods.

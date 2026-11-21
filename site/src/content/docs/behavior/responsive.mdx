@@ -5,6 +5,57 @@ section: behavior
 order: 2
 ---
 
-{/* phase-4-stub */}
+import Demo from "../../../components/demo/Demo.astro";
 
-This page is being written.
+A chart lays itself out again for the width it gets. These three figures are the same spec at full article width, at 560px and at 360px, the width of a phone.
+
+<Demo id="behavior/responsive-full" />
+
+<Demo id="behavior/responsive-medium" />
+
+<Demo id="behavior/responsive-compact" />
+
+## Breakpoints
+
+The library sorts every chart into one of three breakpoints by the width of its container, and each breakpoint has its own layout rules:
+
+| Breakpoint | Width | What changes |
+| --- | --- | --- |
+| Full | over 700px | Every value label, full axis ticks, callouts inline. |
+| Medium | 400 to 700px | The most important labels, fewer ticks. |
+| Compact | under 400px | No value labels, the fewest ticks, at most one inline callout. |
+
+At 360px the phone figure keeps one callout in place and turns the other into a numbered marker, with its text in a note under the plot. Height counts too: a chart 350px tall or less keeps its title and drops the subtitle, and one under 100px hides both.
+
+`overrides` replaces parts of the spec at one breakpoint: the title and subtitle, labels, legend, annotations, or an axis or scale setting. `overrides: { compact: { annotations: [] } }` removes the callouts on phones only. Set `responsive: false` to stop the chart from adapting at all.
+
+## Keeping the last date and naming every line
+
+<Demo id="behavior/responsive-summary" />
+
+At compact width the x axis thins its ticks and can drop the last year, which on a time series is often the one the reader wants. `responsive: { preserveEnd: true }` keeps the final tick and thins the ones before it instead.
+
+`labelSummary: true` is a fallback for the names at the right edge. Here all six still fit; when they cannot, the library moves the names and last values into a keyed list under the plot, so every series stays named.
+
+## More callouts on a phone
+
+<Demo id="behavior/responsive-annotation-limit" />
+
+`responsive: { compactAnnotationLimit: 2 }` lets both callouts stay inline below 400px. The default is one. Set `null` for no limit, which suits callouts short enough to fit side by side. A callout that would overlap another still becomes a numbered note.
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `responsive` | `false` turns adaptation off; an object sets the options below. |
+| `responsive.preserveEnd` | Keeps the final tick on a time axis when ticks are thinned. |
+| `responsive.labelSummary` | Moves end labels into a list under the plot when they cannot fit. |
+| `responsive.compactAnnotationLimit` | Inline callouts allowed below 400px. Default 1; `null` for no limit. |
+| `responsive.autoThin` | `true` by default: overlapping callouts become numbered notes. `false` hides them at compact width. |
+| `overrides` | Chrome, labels, legend, annotations and axis settings for one breakpoint: `compact`, `medium` or `full`. |
+
+## Related
+
+- [Line](/docs/change-over-time/line/) covers the chart type on this page.
+- [Annotations](/docs/framing/annotations/) explains the callouts that thin at compact width.
+- [ChartSpec reference](/docs/spec/chart-spec/) lists `responsive` and `overrides`.
