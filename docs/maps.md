@@ -32,7 +32,7 @@ const spec = {
 For Vue, import from `@opendata-ai/openchart-vue`. For Svelte, import from
 `@opendata-ai/openchart-svelte`. For vanilla JS, use `createGeoMap(container,
 spec)` from `@opendata-ai/openchart-vanilla`. See the
-[spec reference](spec-reference.md#geomapspec) for every `GeoMapSpec` field.
+[spec reference](reference/geomap-spec.md#geomapspec-1) for every `GeoMapSpec` field.
 
 ## Projection
 

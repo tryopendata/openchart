@@ -1,3 +1,10 @@
+---
+title: "Design system"
+description: "The default palette, type scale, spacing, mark defaults, interaction language, motion timings and presets."
+section: tokens
+order: 2
+---
+
 # Design System
 
 This page documents the visual and interaction language that ships as the

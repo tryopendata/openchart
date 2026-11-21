@@ -1,3 +1,11 @@
+---
+title: "Agent patterns"
+description: "Spec patterns by storytelling intent, each with its data shape, a complete spec and annotations."
+section: agents
+order: 2
+---
+<!-- phase-4-stub -->
+
 # Visualization patterns cookbook
 
 Visualization patterns organized by data storytelling intent. Each pattern includes when to use it, the data shape it expects, a complete working spec, and annotation examples.
@@ -633,7 +641,7 @@ Available operations: `sum`, `mean`, `median`, `min`, `max`, `count`. Use `sum` 
 
 ## Network graphs
 
-For network and relationship data, use `type: 'graph'` with `nodes` and `edges` instead of `data` and `encoding`. Graphs use force-directed layout on canvas. See it live: [basic graph](https://tryopendata.github.io/openchart/?story=graphs--graphs#basic), [community clusters](https://tryopendata.github.io/openchart/?story=graphs--graphs#communities), [encoded graph](https://tryopendata.github.io/openchart/?story=graphs--graphs#encoded). See the [spec reference](spec-reference.md#graphspec) for the full GraphSpec definition, the [graphs guide](graphs.md) for layout and encoding details, and the [integration guide](integration-guide.md#graph-visualization) for interaction patterns.
+For network and relationship data, use `type: 'graph'` with `nodes` and `edges` instead of `data` and `encoding`. Graphs use force-directed layout on canvas. See it live: [basic graph](https://tryopendata.github.io/openchart/?story=graphs--graphs#basic), [community clusters](https://tryopendata.github.io/openchart/?story=graphs--graphs#communities), [encoded graph](https://tryopendata.github.io/openchart/?story=graphs--graphs#encoded). See the [spec reference](reference/graph-spec.md#graphspec-1) for the full GraphSpec definition, the [graphs guide](graphs.md) for layout and encoding details, and the [integration guide](reference/graph-spec.md#graph-visualization) for interaction patterns.
 
 ---
 

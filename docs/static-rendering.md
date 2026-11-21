@@ -1,3 +1,11 @@
+---
+title: "Static rendering"
+description: "Render charts to SVG at build time or on the server with renderStaticSVG, for CMS pages, reports and readers without JavaScript."
+section: get-started
+order: 3
+---
+<!-- phase-4-stub -->
+
 # Static rendering
 
 Import `renderStaticSVG` from `@opendata-ai/openchart-vanilla/static` for server builds, reports and framework server components. It returns a standalone SVG string without `window`, `document`, `happy-dom`, animation, or a shared render lock. Supported specs are chart, layer, barlist, tilemap and geomap; table, Sankey and graph are not supported.

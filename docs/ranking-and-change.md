@@ -1,3 +1,11 @@
+---
+title: "Ranking and change"
+description: "Slope, bump and range charts for who moved and by how much, as copyable recipes."
+section: recipes
+order: 2
+---
+<!-- phase-4-stub -->
+
 # Ranking and change
 
 Recipes for the FT Visual Vocabulary "ranking" family: slope charts, bump charts, and range (dumbbell/arrow) charts. All three answer the same editorial question, "who moved, and by how much?", with different emphasis.

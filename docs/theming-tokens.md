@@ -1,3 +1,10 @@
+---
+title: "Theming tokens"
+description: "The CSS custom properties a page can set to restyle charts and tables without changing a spec."
+section: tokens
+order: 1
+---
+
 # Theming Design Tokens
 
 `ThemeConfig` controls colors, typography, spacing, rules, and component surfaces.

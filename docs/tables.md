@@ -281,8 +281,8 @@ For controlled component patterns and detailed event handling, see the [integrat
 
 ## Related docs
 
-- [Spec reference: TableSpec](spec-reference.md#tablespec) for field-by-field type details
-- [Spec reference: ColumnConfig](spec-reference.md#columnconfig) for all column configuration options
+- [Spec reference: TableSpec](reference/table-spec.md#tablespec-1) for field-by-field type details
+- [Spec reference: ColumnConfig](reference/table-spec.md#columnconfig) for all column configuration options
 - [Chart types](chart-types.md) for standard chart visualizations
 - [Graphs](graphs.md) for network visualizations
 - [Integration guide](integration-guide.md) for advanced table patterns

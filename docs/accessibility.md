@@ -1,3 +1,11 @@
+---
+title: "Accessibility"
+description: "What every chart does for screen readers and keyboards, the options you add, and the WCAG 2.1 mapping."
+section: output
+order: 1
+---
+<!-- phase-4-stub -->
+
 # Accessibility
 
 What openchart does for accessibility automatically, what you can opt into, and how it maps to WCAG 2.1. If you're filling out a procurement checklist, this page is the answer key.

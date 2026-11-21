@@ -4,6 +4,7 @@ description: Build a line chart, then add chrome, annotations, a theme and a dat
 section: get-started
 order: 1
 ---
+<!-- phase-4-stub -->
 
 # Getting started
 

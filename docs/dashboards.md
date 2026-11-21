@@ -1,8 +1,16 @@
+---
+title: "Dashboards"
+description: "Small charts in product UI: tile sizing, sparkline KPI cards, trimmed chrome, bar lists and tables in a grid."
+section: recipes
+order: 1
+---
+<!-- phase-4-stub -->
+
 # Dashboards
 
 Patterns for using OpenChart inside product UI: dense grids of small tiles rather than one full-bleed editorial chart. The spec grammar doesn't change — a dashboard tile is the same `ChartSpec` you'd use for a standalone chart, just sized and stripped down for a card.
 
-For field-by-field type details, see the [spec reference](spec-reference.md). For chrome fields specifically, see [Chrome](spec-reference.md#chrome).
+For field-by-field type details, see the [spec reference](spec-reference.md). For chrome fields specifically, see [Chrome](reference/chrome.md#chrome).
 
 ---
 
