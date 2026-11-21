@@ -58,13 +58,10 @@ function buttonRow(controls: DemoControls): string {
   return `<div class="demo-controls-row">${states}${actions}</div>`;
 }
 
-/**
- * The event log in a frame that keeps its height while the log is hidden, so
- * revealing it moves nothing. The log scrolls inside the frame, so it takes focus.
- */
+/** The event log. It scrolls inside its own box, so it takes focus. */
 const eventLog = (controls: DemoControls) =>
   controls.eventLog
-    ? `<div class="demo-events-frame"><ol class="demo-events" ${DEMO_ATTR.events} aria-label="Chart events, newest first" tabindex="0" hidden></ol></div>`
+    ? `<ol class="demo-events" ${DEMO_ATTR.events} aria-label="Chart events, newest first" tabindex="0" hidden></ol>`
     : "";
 
 /**
@@ -135,26 +132,29 @@ export function embeddedStates(
 }
 
 /**
- * Checks a demo's controls when its page builds: they need a chart or layer
- * spec, and every state's spec must pass the library's validation.
+ * Checks a demo's controls when its page builds: controls and edit mode need a
+ * chart or layer spec, and every state's spec must pass the library's validation.
  *
  * @throws {InvalidDemoError} Naming the demo id, and the state label for a state that fails.
  */
-export function validateDemoControls(demo: Pick<DemoDef, "id" | "spec" | "controls">): void {
+export function validateDemoControls(
+  demo: Pick<DemoDef, "id" | "spec" | "controls" | "mount">,
+): void {
   const { id, spec, controls } = demo;
-  if (!controls) return;
+  if (!needsControls(demo)) return;
   if (!isChartSpec(spec) && !isLayerSpec(spec)) {
     const type = String((spec as { type?: unknown }).type);
     throw new InvalidDemoError(id, [
       {
         path: "",
         code: "INVALID_TYPE",
-        message: `Reader controls work on chart and layer specs only, and this spec has type "${type}".`,
-        suggestion: "Remove `controls` from the demo, or show the chart as a chart or layer spec.",
+        message: `Reader controls and edit mode work on chart and layer specs only, and this spec has type "${type}".`,
+        suggestion:
+          "Remove `controls` and `mount.interaction` from the demo, or show the chart as a chart or layer spec.",
       },
     ]);
   }
-  for (const state of controls.states?.others ?? []) {
+  for (const state of controls?.states?.others ?? []) {
     validateDemo(`${id} (state "${state.label}")`, state.spec);
   }
 }

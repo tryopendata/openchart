@@ -5,6 +5,7 @@
  */
 import type { VizSpec } from "@opendata-ai/openchart-core";
 import { isChartSpec, isLayerSpec } from "@opendata-ai/openchart-core";
+import { site } from "../../config";
 import type { DemoMountOptions } from "../../demos/types";
 import { foldTargets, jsonWithMarkers, showFolds } from "./fold-targets";
 import type { SpecPath } from "./markup";
@@ -58,57 +59,82 @@ function specDeclarations(spec: VizSpec, specType: string, json: JsonWriter): st
   return `const data = ${json(data)};\n\nconst spec: ${specType} = ${body};`;
 }
 
-function imports(name: string, from: string, specType: string): string {
+/** What the demo's host options add to each snippet. */
+type HostCode = {
+  /** String options as name and value pairs, in a fixed order; empty when the demo sets none. */
+  options: readonly (readonly [name: string, value: string])[];
+  /** Edit mode: each snippet declares an `onEdit` handler and passes it in its framework's spelling. */
+  edit: boolean;
+};
+
+function hostCode(mount: DemoMountOptions | undefined): HostCode {
+  const options: [string, string][] = [];
+  if (mount?.renderer) options.push(["renderer", mount.renderer]);
+  if (mount?.interaction) options.push(["interaction", mount.interaction]);
+  return { options, edit: mount?.interaction === "edit" };
+}
+
+/** The handler an edit-mode snippet declares after its spec. */
+const EDIT_HANDLER = [
+  "// Each finished edit arrives as one transaction. Apply it to your spec with",
+  `// applyEditTransaction and redraw: ${site.url}/docs/behavior/edit-mode/`,
+  "function onEdit(transaction: EditTransaction) {",
+  "  console.log(transaction.ops);",
+  "}",
+].join("\n");
+
+function imports(name: string, from: string, specType: string, host: HostCode): string {
+  const types = host.edit ? `EditTransaction, ${specType}` : specType;
   return [
     `import { ${name} } from "${from}";`,
-    `import type { ${specType} } from "@opendata-ai/openchart-core";`,
+    `import type { ${types} } from "@opendata-ai/openchart-core";`,
     STYLES_IMPORT,
   ].join("\n");
 }
 
-/** The demo's host options as name and value pairs, in a fixed order; empty when it sets none. */
-type HostOptions = readonly (readonly [name: string, value: string])[];
+/** The spec declarations, followed by the edit handler in edit mode. */
+const withHandler = (declarations: string, host: HostCode) =>
+  host.edit ? `${declarations}\n\n${EDIT_HANDLER}` : declarations;
 
-function hostOptions(mount: DemoMountOptions | undefined): HostOptions {
-  const pairs: [string, string][] = [];
-  if (mount?.renderer) pairs.push(["renderer", mount.renderer]);
-  if (mount?.interaction) pairs.push(["interaction", mount.interaction]);
-  return pairs;
-}
-
-/** The options as string props on a component, each after a space: ` interaction="edit"`. */
-const asProps = (options: HostOptions) =>
+/** The string options as props on a component, each after a space: ` interaction="edit"`. */
+const asProps = ({ options }: HostCode) =>
   options.map(([name, value]) => ` ${name}="${value}"`).join("");
 
-function reactSnippet(wrapper: Wrapper, declarations: string, options: HostOptions): string {
-  const head = imports(wrapper.component, "@opendata-ai/openchart-react", wrapper.specType);
-  const element = `<${wrapper.component} spec={spec}${asProps(options)} />`;
+function reactSnippet(wrapper: Wrapper, declarations: string, host: HostCode): string {
+  const head = imports(wrapper.component, "@opendata-ai/openchart-react", wrapper.specType, host);
+  const handler = host.edit ? " onEdit={onEdit}" : "";
+  const element = `<${wrapper.component} spec={spec}${asProps(host)}${handler} />`;
   const body = `export function Example() {\n  return ${element};\n}`;
-  return `${head}\n\n${declarations}\n\n${body}\n`;
+  return `${head}\n\n${withHandler(declarations, host)}\n\n${body}\n`;
 }
 
-function vueSnippet(wrapper: Wrapper, declarations: string, options: HostOptions): string {
-  const head = imports(wrapper.component, "@opendata-ai/openchart-vue", wrapper.specType);
-  const template = `<template>\n  <${wrapper.component} :spec="spec"${asProps(options)} />\n</template>`;
-  return `<script setup lang="ts">\n${head}\n\n${declarations}\n</script>\n\n${template}\n`;
+function vueSnippet(wrapper: Wrapper, declarations: string, host: HostCode): string {
+  const head = imports(wrapper.component, "@opendata-ai/openchart-vue", wrapper.specType, host);
+  const handler = host.edit ? ' @edit="onEdit"' : "";
+  const template = `<template>\n  <${wrapper.component} :spec="spec"${asProps(host)}${handler} />\n</template>`;
+  return `<script setup lang="ts">\n${head}\n\n${withHandler(declarations, host)}\n</script>\n\n${template}\n`;
 }
 
-function svelteSnippet(wrapper: Wrapper, declarations: string, options: HostOptions): string {
-  const head = imports(wrapper.component, "@opendata-ai/openchart-svelte", wrapper.specType);
-  const element = `<${wrapper.component} {spec}${asProps(options)} />`;
-  return `<script lang="ts">\n${head}\n\n${declarations}\n</script>\n\n${element}\n`;
+function svelteSnippet(wrapper: Wrapper, declarations: string, host: HostCode): string {
+  const head = imports(wrapper.component, "@opendata-ai/openchart-svelte", wrapper.specType, host);
+  const handler = host.edit ? " onedit={onEdit}" : "";
+  const element = `<${wrapper.component} {spec}${asProps(host)}${handler} />`;
+  return `<script lang="ts">\n${head}\n\n${withHandler(declarations, host)}\n</script>\n\n${element}\n`;
 }
 
-function vanillaSnippet(wrapper: Wrapper, declarations: string, options: HostOptions): string {
-  const head = imports(wrapper.mount, "@opendata-ai/openchart-vanilla", wrapper.specType);
-  const fields = options.map(([name, value]) => `${name}: "${value}"`).join(", ");
+function vanillaSnippet(wrapper: Wrapper, declarations: string, host: HostCode): string {
+  const head = imports(wrapper.mount, "@opendata-ai/openchart-vanilla", wrapper.specType, host);
+  const fields = [
+    ...host.options.map(([name, value]) => `${name}: "${value}"`),
+    ...(host.edit ? ["onEdit"] : []),
+  ].join(", ");
   const args = fields ? `container, spec, { ${fields} }` : "container, spec";
   const mount = [
     'const container = document.getElementById("chart");',
     "if (!container) throw new Error('Add <div id=\"chart\"></div> to the page first.');",
     `${wrapper.mount}(${args});`,
   ].join("\n");
-  return `${head}\n\n${declarations}\n\n${mount}\n`;
+  return `${head}\n\n${withHandler(declarations, host)}\n\n${mount}\n`;
 }
 
 function snippetsFrom(
@@ -116,18 +142,20 @@ function snippetsFrom(
   declarations: string,
   mount: DemoMountOptions | undefined,
 ): FrameworkSnippets {
-  const options = hostOptions(mount);
+  const host = hostCode(mount);
   return {
-    react: reactSnippet(wrapper, declarations, options),
-    vue: vueSnippet(wrapper, declarations, options),
-    svelte: svelteSnippet(wrapper, declarations, options),
-    vanilla: vanillaSnippet(wrapper, declarations, options),
+    react: reactSnippet(wrapper, declarations, host),
+    vue: vueSnippet(wrapper, declarations, host),
+    svelte: svelteSnippet(wrapper, declarations, host),
+    vanilla: vanillaSnippet(wrapper, declarations, host),
   };
 }
 
 /**
  * Complete, runnable code that renders this spec in each framework, passing the
- * demo's host options (`renderer`, `interaction`) as props or mount options.
+ * demo's host options (`renderer`, `interaction`) as props or mount options. In
+ * edit mode each snippet also declares an `onEdit` handler and passes it in its
+ * framework's spelling: `onEdit`, `@edit` or `onedit`.
  *
  * @throws {TypeError} When the spec's type has no framework wrapper.
  */

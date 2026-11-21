@@ -125,8 +125,9 @@ export const electricityLines = defineDemo({
     },
     endpointLabels: true,
     chrome: {
-      title: "Coal's share of US electricity fell from 31% to 16% between 2016 and 2023",
-      subtitle: "Share of US generation from six sources, 2016 to 2023 (%)",
+      title: "Coal's share fell from 31% to 16% between 2016 and 2023",
+      subtitle:
+        "Share of US generation from coal, gas, nuclear, hydro, wind and solar, 2016 to 2023 (%)",
     },
   },
   controls: { replay: true },

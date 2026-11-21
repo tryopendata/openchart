@@ -103,22 +103,22 @@
   }
 
   /*
-   * Reader controls (lib/demo/controls.ts): a single row of quiet mono text
-   * buttons under the chart, at its 1rem inset, then the event log. The row and
-   * the log frame hold their size while their controls are still hidden, so
-   * nothing on the page moves when scripts reveal them (see the gate rules below).
+   * Reader controls (lib/demo/controls.ts): rows of quiet mono text buttons
+   * under the chart, at its 1rem inset, wrapping on a narrow screen, then the
+   * event log. Controls still waiting for their script keep their layout box
+   * (see the base-layer rules below), so nothing moves when scripts reveal them.
    */
   .demo-controls {
     display: none;
   }
 
   .demo-controls-row {
-    @apply flex h-10 items-center gap-4 overflow-x-auto px-4;
+    @apply flex min-h-10 flex-wrap items-center gap-x-4 gap-y-1 px-4 py-1;
   }
 
   .demo-states,
   .demo-actions {
-    @apply flex shrink-0 items-center gap-1;
+    @apply flex flex-wrap items-center gap-1;
   }
 
   .demo-actions {
@@ -136,12 +136,9 @@
     @apply text-ink decoration-ink;
   }
 
-  .demo-events-frame {
-    @apply mx-4 h-[6.5rem] border-t border-line;
-  }
-
+  /* A fixed height, so each new entry scrolls inside the log instead of pushing the page down. */
   .demo-events {
-    @apply m-0 h-full list-none overflow-y-auto p-0 py-1 font-mono text-xs leading-6 text-ink-2;
+    @apply mx-4 my-0 h-[6.5rem] list-none overflow-y-auto border-t border-line px-0 py-1 font-mono text-xs leading-6 text-ink-2;
   }
 
   .demo-events:empty::before {
@@ -194,6 +191,33 @@
  */
 :root[data-demo-gate] .demo-controls {
   display: block;
+}
+
+/*
+ * Where scripts are expected, a control still waiting for its script keeps
+ * its layout box but stays invisible; visibility: hidden also keeps it out of
+ * the tab order and the accessibility tree. Preflight hides [hidden] with
+ * !important in the base layer, and an !important rule in a later layer loses
+ * to it, so these live in base with a more specific selector.
+ */
+@layer base {
+  :root[data-demo-gate] .demo-controls .demo-states[hidden] {
+    /* biome-ignore lint/complexity/noImportantStyles: only !important beats preflight's [hidden] rule. */
+    display: flex !important;
+    visibility: hidden;
+  }
+
+  :root[data-demo-gate] .demo-controls .demo-control[hidden] {
+    /* biome-ignore lint/complexity/noImportantStyles: only !important beats preflight's [hidden] rule. */
+    display: inline-block !important;
+    visibility: hidden;
+  }
+
+  :root[data-demo-gate] .demo-controls .demo-events[hidden] {
+    /* biome-ignore lint/complexity/noImportantStyles: only !important beats preflight's [hidden] rule. */
+    display: block !important;
+    visibility: hidden;
+  }
 }
 
 .demo:has(.demo-stage[data-demo-error]) .demo-controls {

@@ -50,14 +50,32 @@ describe("frameworkSnippets", () => {
   it("passes the demo's interaction and renderer as props and as mount options", () => {
     const { react, vue, svelte, vanilla } = frameworkSnippets(fixtureBar.spec, {
       renderer: "canvas",
+      interaction: "select",
+    });
+    expect(react).toContain('<Chart spec={spec} renderer="canvas" interaction="select" />');
+    expect(vue).toContain('<Chart :spec="spec" renderer="canvas" interaction="select" />');
+    expect(svelte).toContain('<Chart {spec} renderer="canvas" interaction="select" />');
+    expect(vanilla).toContain(
+      'createChart(container, spec, { renderer: "canvas", interaction: "select" });',
+    );
+    for (const code of [react, vue, svelte, vanilla]) expect(code).not.toContain("onEdit");
+  });
+
+  it("declares an onEdit handler in edit mode and passes it in each framework's spelling", () => {
+    const { react, vue, svelte, vanilla } = frameworkSnippets(fixtureBar.spec, {
       interaction: "edit",
     });
-    expect(react).toContain('<Chart spec={spec} renderer="canvas" interaction="edit" />');
-    expect(vue).toContain('<Chart :spec="spec" renderer="canvas" interaction="edit" />');
-    expect(svelte).toContain('<Chart {spec} renderer="canvas" interaction="edit" />');
-    expect(vanilla).toContain(
-      'createChart(container, spec, { renderer: "canvas", interaction: "edit" });',
-    );
+    expect(react).toContain('<Chart spec={spec} interaction="edit" onEdit={onEdit} />');
+    expect(vue).toContain('<Chart :spec="spec" interaction="edit" @edit="onEdit" />');
+    expect(svelte).toContain('<Chart {spec} interaction="edit" onedit={onEdit} />');
+    expect(vanilla).toContain('createChart(container, spec, { interaction: "edit", onEdit });');
+    for (const code of [react, vue, svelte, vanilla]) {
+      expect(code).toContain("function onEdit(transaction: EditTransaction) {");
+      expect(code).toContain(
+        'import type { EditTransaction, ChartSpec } from "@opendata-ai/openchart-core";',
+      );
+      expect(code).toContain("/docs/behavior/edit-mode/");
+    }
   });
 
   it("passes only the host option the demo sets, and none without them", () => {
@@ -71,7 +89,8 @@ describe("frameworkSnippets", () => {
 
   it("keeps the host options in the folded code", () => {
     const { shown } = foldedFrameworkSnippets(fixtureBar.spec, { interaction: "edit" });
-    expect(shown.svelte).toContain('<Chart {spec} interaction="edit" />');
+    expect(shown.svelte).toContain('<Chart {spec} interaction="edit" onedit={onEdit} />');
+    expect(shown.svelte).toContain("function onEdit(transaction: EditTransaction) {");
   });
 
   it("keeps data with five rows or fewer inline", () => {

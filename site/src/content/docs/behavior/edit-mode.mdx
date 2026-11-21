@@ -7,11 +7,11 @@ order: 4
 
 import Demo from "../../../components/demo/Demo.astro";
 
-In edit mode a reader can drag annotations, nudge them with the keyboard and rewrite chart text in place. Each change reaches `onEdit` as one transaction, and your code decides whether the spec takes it.
+In edit mode a reader can drag annotations, nudge them with the keyboard and rewrite chart text in place. Each change reaches `onEdit` as one transaction, and your code decides whether to apply it to the spec.
 
 <Demo id="behavior/edit-line" />
 
-Mount with `interaction: "edit"` to turn it on. Drag the note and the event log shows the transaction the gesture produced: a list of operations, each a `set`, `add` or `remove` at a JSON Pointer path into the spec, such as `/annotations/0/offset`. This page applies each transaction and redraws the chart with `update`, so the note stays where you leave it.
+Mount with `interaction: "edit"` to turn it on. Drag the note and the event log shows the transaction the gesture produced: a list of operations, each a `set`, `add` or `remove` at a JSON Pointer path into the spec, such as `/annotations/0/offset`. This page applies each transaction and redraws the chart with `update`, so the note stays where you leave it. The Code panel shows the spec as the page loaded it, not the state or edits on screen.
 
 ## Applying an edit and undoing it
 
@@ -57,7 +57,7 @@ Select the title, the subtitle or a text annotation and press Enter, or double-c
 
 | Key | In edit mode |
 | --- | --- |
-| Tab, Shift+Tab | Select the next or previous element: the title, the subtitle, each annotation and the legend. Past the last one, focus leaves the chart. |
+| Tab, Shift+Tab | Select the next or previous element: each chrome text the chart shows (title, subtitle, source, byline, footer), each annotation, then the legend. Past the last one, focus leaves the chart. |
 | Arrow keys | Nudge the selected text annotation 1px. |
 | Shift+arrow keys | Nudge it 10px. |
 | Enter | Edit the selected element's text. |
@@ -73,8 +73,8 @@ A run of nudges becomes one transaction 500 milliseconds after the last arrow ke
 | `interaction` | Mount option. `"edit"` allows selection plus every edit gesture. An `onEdit` handler alone also turns it on. |
 | `onEdit` | Receives one `EditTransaction` per finished gesture. |
 | `applyEditTransaction` | Applies a transaction to a copy of the spec and returns the new spec and its `inverse`, or an error. |
-| `revision` | Mount option stamped on each transaction; changing it cancels a gesture in progress. |
-| `annotations[].id` | A stable id that lets a transaction find its annotation after the list is reordered. |
+| `revision` | Mount option for your own bookkeeping, stamped on each transaction emitted after it is set. |
+| `annotations[].id` | A stable id that goes into each transaction's `expect`, so an edit made before the list changed is rejected as stale instead of applied to the wrong annotation. |
 
 ## Related
 

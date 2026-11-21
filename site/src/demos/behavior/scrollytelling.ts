@@ -117,8 +117,9 @@ const electricityBase: ChartSpec = {
   },
   endpointLabels: true,
   chrome: {
-    title: "Gas and coal made more than half of US electricity in every year from 2016 to 2023",
-    subtitle: "Share of US generation from six sources, 2016 to 2023 (%)",
+    title: "Gas and coal made more than half of generation from the six main sources every year",
+    subtitle:
+      "Share of US generation from coal, gas, nuclear, hydro, wind and solar, 2016 to 2023 (%)",
   },
 };
 
@@ -144,14 +145,16 @@ export const electricityStory = defineDemo({
           label: "Gas",
           patch: {
             encoding: { color: { highlight: ["Gas"] } },
-            chrome: { title: "Gas rose from 34.8% to 43.5% of US generation" },
+            chrome: { title: "Gas's share rose from 34.8% in 2016 to 43.5% in 2023" },
           },
         },
         {
           label: "Wind and solar",
           patch: {
             encoding: { color: { highlight: ["Wind", "Solar"] } },
-            chrome: { title: "Wind and solar together rose from 7.1% to 15.9% of US generation" },
+            chrome: {
+              title: "Wind and solar's combined share rose from 7.1% in 2016 to 15.9% in 2023",
+            },
           },
         },
       ]),

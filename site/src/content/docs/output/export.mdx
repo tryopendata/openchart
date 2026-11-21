@@ -7,11 +7,13 @@ order: 2
 
 import Demo from "../../../components/demo/Demo.astro";
 
-A live chart exports itself: `chart.export("svg")` returns the chart as SVG markup, `"png"` as an image and `"csv"` as its data rows. Each download button under these charts makes that one call and saves the result.
+A live chart exports itself: `chart.export("svg")` returns the chart as SVG markup, `"png"` as an image and `"csv"` as its data rows. Each download button under these charts makes one of those calls and saves the result.
 
 <Demo id="output/export-heatmap" />
 
-The SVG is the chart as drawn, with its title, subtitle, axes and legend, and with no animation, so it opens finished in a vector editor or a CMS. The PNG is the same image rendered at twice its on-screen size by default, sharp enough for retina screens. The CSV holds the chart's rows with a header line: one row per year and source here.
+The SVG is the chart with its title, subtitle, axes and legend, and with no animation, so it opens finished in a vector editor or a CMS. The PNG is the same image at twice its on-screen size by default. The CSV holds the chart's rows with a header line: one row per year and source here.
+
+`export` returns the chart as it is drawn, so a chart in dark mode exports in dark mode; with this site's chart theme that is light text on a transparent background. These buttons render a separate light copy on white paper and export that, so a file saved from this site in dark mode still reads on a white page.
 
 ## The calls behind the buttons
 

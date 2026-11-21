@@ -190,7 +190,7 @@ export async function demoFigureHtml(figure: DemoFigure): Promise<string> {
   const ownTheme = figure.pageTheme === false ? ` ${DEMO_ATTR.ownTheme}` : "";
   // Claimed before the first await, so two figures rendering at once never both write a block.
   const spec = specHtml(embeddedSpec(figure), figure.mount) + statesHtml(figure);
-  const code = figure.tabs ? await codeTabsHtml(domId, figure.spec) : "";
+  const code = figure.tabs ? await codeTabsHtml(domId, figure.spec, figure.mount) : "";
   const controls = demoControlsHtml(figure);
   return [
     `<div class="demo not-prose" ${DEMO_ATTR.figure}="${escapeHtml(figure.id)}"${entrance}${ownTheme}>`,

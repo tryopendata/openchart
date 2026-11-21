@@ -11,7 +11,7 @@ A scroll story is one chart and a list of steps. As the reader scrolls past each
 
 <Demo id="behavior/story-temperature" />
 
-The buttons stand in for scrolling: each shows the chart as it would be at one step. The first step is the base spec. The second adds a shaded range from 1980, the third a note on the 2025 reading, and the fourth highlights the warmer readings and fades the rest. The title changes at every step, so each one states what the reader is looking at.
+The buttons stand in for scrolling: each shows the chart as it would be at one step. The first step is the base spec. The second adds a shaded range from 1980, the third a note on the 2025 reading, and the fourth highlights the warmer readings and fades the rest. The title changes at every step, so each one states what the reader is looking at. The Code panel shows the spec as the page loaded it, not the state on screen.
 
 ## Building the story
 
@@ -58,7 +58,7 @@ const story = createChartStory(container, {
   ],
 });
 
-document.querySelectorAll("[data-step]").forEach((element, index) => {
+document.querySelectorAll<HTMLElement>("[data-step]").forEach((element, index) => {
   story.registerStep(index, element);
 });
 ```
@@ -69,7 +69,7 @@ Each step is a partial spec. Steps add up, so step three is the base with the ch
 
 <Demo id="behavior/story-electricity" />
 
-A story whose steps only change the highlight leaves the data alone, so the lines stay put and only the highlight changes. When a step changes the data, marks move as they do on `update`, and when no transition applies, for example because the mark type changes, the story crossfades between the two charts so nothing jumps.
+A step that only changes the highlight leaves every line where it is. When a step changes the data, marks move as they do on `update`, and when no transition applies, for example because the mark type changes, the story crossfades between the two charts so nothing jumps.
 
 A story skips the entrance unless the base spec sets `animation`, because the reader's scroll position decides what the chart shows. The scroll story on the [OpenChart home page](/#story) runs this way on four stock indexes. React, Vue and Svelte wrap the same API in a `ChartStory` component.
 

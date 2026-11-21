@@ -17,7 +17,7 @@ Tooltips, keyboard navigation and legend toggles work with no code. Event handle
 
 <Demo id="behavior/interaction-legend" />
 
-Clicking a legend entry hides that series and redraws the chart. The y axis rescales to the series still showing, every series keeps its color, and the last visible series can't be hidden. `onLegendToggle` receives the series name and whether it is now visible, and the event log under the chart lists each call. A toggle changes what the reader sees, not the spec, so it never produces an edit.
+Clicking a legend entry hides that series and redraws the chart. The y axis rescales to the series still showing, every series keeps its color, and the last visible series can't be hidden. `onLegendToggle` receives the series name and whether it is now visible, and the event log under the chart lists each call. A toggle never produces an edit transaction; the spec stays as it was.
 
 ## Selection
 
@@ -40,7 +40,7 @@ createChart(container, spec, {
 });
 ```
 
-Leave `interaction` out and the library infers it once, at mount: an `onEdit` handler means edit mode, `onSelect` or `onDeselect` means select mode, and anything else means read mode. Set it explicitly when the handlers you attach should not decide it. The event log in the legend demo attaches `onSelect`, so that demo sets `interaction: "read"` to keep selection off.
+Leave `interaction` out and the library infers it once, at mount: an `onEdit` handler means edit mode, `onSelect` or `onDeselect` means select mode, and anything else means read mode. Set it explicitly when the handlers you attach should not decide it. This page's event log attaches `onSelect` to every chart it logs, so the page mounts the legend demo with `interaction: "read"` to keep selection off.
 
 ## Fields that matter
 

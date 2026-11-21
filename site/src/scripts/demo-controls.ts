@@ -2,7 +2,7 @@
  * Wires a demo's reader controls (lib/demo/controls.ts writes them): the state
  * buttons move the live chart between states with the library's `update`, so
  * its update transition plays; Replay mounts the chart afresh so its entrance
- * plays again; the download buttons export the live chart; and the event log
+ * plays again; the download buttons save a light copy of the chart; and the event log
  * lists what the chart emits, newest first. In edit mode each edit is applied
  * to the current spec with `applyEditTransaction` and drawn with `update`.
  *
@@ -18,15 +18,16 @@ import {
   type ElementRef,
   type VizSpec,
 } from "@opendata-ai/openchart-core";
-import type { ChartInstance, InteractionMode } from "@opendata-ai/openchart-vanilla";
+import type { InteractionMode } from "@opendata-ai/openchart-vanilla";
 import { DEMO_ATTR, type EmbeddedDemoState } from "../lib/demo/markup";
 import { setValueAt, valueAt } from "../lib/demo/spec-path";
-import { DemoSpecError, readFigureSpec, readMountOptions } from "./demo-spec";
+import type { ExportFormat } from "./demo-mount";
+import { DemoSpecError, fillSharedValues, readFigureSpec, readMountOptions } from "./demo-spec";
 
-/** What demos.ts gives the controls: the live chart, the demo's current spec, and two ways to redraw it. */
+/** What demos.ts gives the controls: the demo's current spec, two ways to redraw it, and its export. */
 export type LiveHandle = {
-  /** The live chart, or null while the demo is not mounted (not reached yet, or evicted). */
-  instance(): ChartInstance | null;
+  /** The current spec as a file: a light copy on opaque paper, whatever theme the page is in. */
+  exportFile(format: ExportFormat): Promise<Blob>;
   /** The spec the demo shows now. Later mounts (theme change, eviction, Replay) draw this one. */
   spec(): VizSpec;
   /** Makes `spec` the demo's current spec and moves the live chart to it with `update`. */
@@ -49,21 +50,33 @@ const LOG_LIMIT = 8;
 const FEEDBACK_MS = 2000;
 /** The download has started well before this; the blob URL can go. */
 const REVOKE_URL_MS = 10_000;
-const MIME_TYPES = { svg: "image/svg+xml", png: "image/png", csv: "text/csv" } as const;
-type ExportFormat = keyof typeof MIME_TYPES;
+const EXPORT_FORMATS: readonly string[] = ["svg", "png", "csv"] satisfies ExportFormat[];
 
 const isExportFormat = (value: string | null): value is ExportFormat =>
-  value !== null && value in MIME_TYPES;
+  value !== null && EXPORT_FORMATS.includes(value);
 
 /** Says something once in the controls' polite region. */
 type Announce = (text: string) => void;
 /** Adds one line to the event log. */
 type LogEvent = (text: string) => void;
 
+/**
+ * Writes each message to the polite region on the next frame after clearing
+ * it, so a message identical to the last one still changes the region and is
+ * announced again.
+ */
 function announcer(bar: Element): Announce {
   const region = bar.querySelector(`[${DEMO_ATTR.controlsStatus}]`);
+  const view = bar.ownerDocument.defaultView;
+  let pending: number | undefined;
   return (text) => {
-    if (region) region.textContent = text;
+    if (!region || !view) return;
+    region.textContent = "";
+    if (pending !== undefined) view.cancelAnimationFrame(pending);
+    pending = view.requestAnimationFrame(() => {
+      pending = undefined;
+      region.textContent = text;
+    });
   };
 }
 
@@ -80,20 +93,11 @@ function eventLogger(log: HTMLOListElement | null): LogEvent {
 
 // --- States -------------------------------------------------------------
 
-function sharedValue(doc: Document, hash: string): unknown {
-  const block = doc.querySelector(`script[${DEMO_ATTR.shared}="${hash}"]`);
-  if (!block)
-    throw new DemoSpecError(`The page has no shared value block ${hash} for a demo state.`);
-  return JSON.parse(block.textContent ?? "");
-}
-
 /** A state's complete spec: the embedded one with its repeated and shared values filled in. */
 function resolveState(demo: HTMLElement, state: EmbeddedDemoState, own: VizSpec): VizSpec {
   const spec = structuredClone(state.spec);
   for (const path of state.fromSpec) setValueAt(spec, path, structuredClone(valueAt(own, path)));
-  for (const { path, hash } of state.shared) {
-    setValueAt(spec, path, sharedValue(demo.ownerDocument, hash));
-  }
+  fillSharedValues(spec, state.shared, demo.ownerDocument);
   return spec as VizSpec;
 }
 
@@ -134,13 +138,6 @@ function wireStates(demo: HTMLElement, bar: Element, handle: LiveHandle, announc
 const downloadName = (demoId: string, format: ExportFormat) =>
   `${demoId.replaceAll("/", "-")}.${format}`;
 
-async function exportedFile(instance: ChartInstance | null, format: ExportFormat): Promise<Blob> {
-  if (!instance) throw new Error("The chart is not live, so there is nothing to export.");
-  if (format === "png") return instance.export("png");
-  const text = format === "svg" ? instance.export("svg") : instance.export("csv");
-  return new Blob([text], { type: MIME_TYPES[format] });
-}
-
 function saveFile(doc: Document, file: Blob, name: string): void {
   const url = URL.createObjectURL(file);
   const link = doc.createElement("a");
@@ -150,7 +147,11 @@ function saveFile(doc: Document, file: Blob, name: string): void {
   setTimeout(() => URL.revokeObjectURL(url), REVOKE_URL_MS);
 }
 
-/** Each download button exports the live chart; a failure shows on the button for two seconds. */
+/**
+ * Each download button saves the demo's current spec as a file. The button is
+ * disabled while its export runs, so a double click saves once, and a failure
+ * shows on the button for two seconds.
+ */
 function wireDownloads(demo: HTMLElement, bar: Element, handle: LiveHandle, announce: Announce) {
   const id = demo.getAttribute(DEMO_ATTR.figure) ?? "(unknown demo)";
   for (const button of bar.querySelectorAll<HTMLButtonElement>(`[${DEMO_ATTR.exportFormat}]`)) {
@@ -159,8 +160,10 @@ function wireDownloads(demo: HTMLElement, bar: Element, handle: LiveHandle, anno
     const label = button.textContent;
     let restore: ReturnType<typeof setTimeout> | undefined;
     button.addEventListener("click", async () => {
+      if (button.disabled) return;
+      button.disabled = true;
       try {
-        const file = await exportedFile(handle.instance(), format);
+        const file = await handle.exportFile(format);
         saveFile(demo.ownerDocument, file, downloadName(id, format));
       } catch (error) {
         console.error(`Demo "${id}" could not export ${format.toUpperCase()}.`, error);
@@ -170,6 +173,8 @@ function wireDownloads(demo: HTMLElement, bar: Element, handle: LiveHandle, anno
         restore = setTimeout(() => {
           button.textContent = label;
         }, FEEDBACK_MS);
+      } finally {
+        button.disabled = false;
       }
     });
   }

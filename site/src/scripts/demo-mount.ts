@@ -4,11 +4,13 @@
  * and destroying the mount leaves the stage as the build wrote it. demos.ts
  * loads this module with `import()`, so pages without demos never fetch the library.
  */
-import type {
-  ChartEventHandlers,
-  DarkMode,
-  ThemeConfig,
-  VizSpec,
+import {
+  type ChartEventHandlers,
+  type DarkMode,
+  isChartSpec,
+  isLayerSpec,
+  type ThemeConfig,
+  type VizSpec,
 } from "@opendata-ai/openchart-core";
 import {
   type ChartInstance,
@@ -72,7 +74,8 @@ export function withoutWatermark<T extends VizSpec>(spec: T): T {
   return { ...spec, watermark: false };
 }
 
-const isChart = (spec: VizSpec) => "mark" in spec || "layer" in spec;
+// This module is loaded with import(), so core's predicates add nothing to the up-front bundle.
+const isChart = (spec: VizSpec) => isChartSpec(spec) || isLayerSpec(spec);
 
 const MOUNTS_BY_TYPE: Record<string, Mount> = {
   table: createTable,
@@ -137,5 +140,66 @@ export function mountDemo(stage: HTMLElement, spec: VizSpec, options: DemoMountR
     host.remove();
     const reason = error instanceof Error ? error.message : String(error);
     throw new DemoMountError(`Mounting the spec failed: ${reason}`, { cause: error });
+  }
+}
+
+/** The formats a demo's download buttons offer. */
+export type ExportFormat = "svg" | "png" | "csv";
+
+/** The light page's paper, `--color-canvas` in global.css: downloads get it as an opaque background. */
+const LIGHT_PAPER = "#ffffff";
+const MIME_TYPES: Record<ExportFormat, string> = {
+  svg: "image/svg+xml",
+  png: "image/png",
+  csv: "text/csv",
+};
+
+/** The theme a download renders with: the site's light chart theme on opaque paper, or the spec's own. */
+function exportTheme(ownTheme: boolean): ThemeConfig | undefined {
+  if (ownTheme) return undefined;
+  const light = chartTheme(false);
+  return { ...light, colors: { ...light.colors, background: LIGHT_PAPER } };
+}
+
+/**
+ * The demo's chart as a file to download. It renders a separate copy, out of
+ * sight at the stage's size, in the light theme on opaque paper, whatever theme
+ * the page is in, so the file reads the same wherever it is opened; the live
+ * chart is left as it is. The copy is destroyed once the export finishes or fails.
+ *
+ * @throws {DemoMountError} When the spec is not a chart or layer spec.
+ */
+export async function exportDemo(
+  stage: HTMLElement,
+  spec: VizSpec,
+  format: ExportFormat,
+  { ownTheme = false }: { ownTheme?: boolean } = {},
+): Promise<Blob> {
+  if (!isChart(spec)) {
+    throw new DemoMountError("Only chart and layer specs export from a demo's download buttons.");
+  }
+  const host = stage.ownerDocument.createElement("div");
+  const { width, height } = stage.getBoundingClientRect();
+  host.setAttribute("aria-hidden", "true");
+  host.style.cssText = "position: fixed; left: -10000px; top: 0; visibility: hidden";
+  // Without a layout box (no layout engine), the library falls back to its default size.
+  if (width > 0) host.style.width = `${width}px`;
+  if (height > 0) host.style.height = `${height}px`;
+  stage.ownerDocument.body.append(host);
+  try {
+    const chart = createChart(host, { ...withoutWatermark(spec), animation: false } as never, {
+      theme: exportTheme(ownTheme),
+      darkMode: "off",
+      autoResize: false,
+    });
+    try {
+      if (format === "png") return await chart.export("png");
+      const text = format === "svg" ? chart.export("svg") : chart.export("csv");
+      return new Blob([text], { type: MIME_TYPES[format] });
+    } finally {
+      chart.destroy();
+    }
+  } finally {
+    host.remove();
   }
 }

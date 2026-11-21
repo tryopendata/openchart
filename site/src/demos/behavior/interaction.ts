@@ -56,8 +56,9 @@ export const legendToggle = defineDemo({
     endpointLabels: false,
     legend: { position: "top" },
     chrome: {
-      title: "Gas made 43.5% of US electricity in 2023, more than any other source",
-      subtitle: "Share of US generation from six sources, 2016 to 2023 (%)",
+      title: "Gas made 43.5% of generation from the six main sources in 2023, more than any other",
+      subtitle:
+        "Share of US generation from coal, gas, nuclear, hydro, wind and solar, 2016 to 2023 (%)",
     },
   },
   controls: { eventLog: true },

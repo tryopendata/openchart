@@ -158,6 +158,14 @@ describe("demoFigureHtml", () => {
     expect((await script({ mount: {} }))?.hasAttribute("data-demo-mount")).toBe(false);
   });
 
+  it("passes an edit demo's interaction mode and edit handler in its framework code", async () => {
+    const figure = await render(figureFor({ mount: { interaction: "edit" } }));
+    const react = figure.querySelector('[data-demo-panel="react"]')?.textContent ?? "";
+    expect(react).toContain('interaction="edit" onEdit={onEdit}');
+    const vanilla = figure.querySelector('[data-demo-panel="vanilla"]')?.textContent ?? "";
+    expect(vanilla).toContain('{ interaction: "edit", onEdit }');
+  });
+
   it("embeds the whole spec when the page keeps no record of shared values", async () => {
     const figure = await render(
       figureFor({ spec: basicChoropleth.spec, static: false, tabs: false }),

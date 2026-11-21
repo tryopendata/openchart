@@ -3,6 +3,7 @@
  * A demo's reader controls as the build writes them: the bar inside the
  * figure, the embedded states, and the checks that fail a page build.
  */
+import { indexTotalReturns } from "@datasets/index-total-returns";
 import { usInflation } from "@datasets/us-inflation";
 import type { ChartSpec, VizSpec } from "@opendata-ai/openchart-core";
 import { Window } from "happy-dom";
@@ -131,6 +132,36 @@ describe("the embedded states", () => {
     expect(script).not.toContain(firstDate);
   });
 
+  it("moves a state's large distinct data into a shared block the state references", async () => {
+    // The landing story's rows with a quarter label each: past the size worth sharing.
+    const rows = indexTotalReturns.data.map((row) => ({
+      ...row,
+      quarter: `${row.date.slice(0, 4)} Q${Math.ceil(Number(row.date.slice(5, 7)) / 3)}`,
+    }));
+    const state = { ...ownSpec, data: rows } as ChartSpec;
+    const html = await demoFigureHtml({
+      id: statesFixture.id,
+      spec: ownSpec,
+      title: statesFixture.title,
+      source: statesFixture.source,
+      height: 320,
+      entrance: false,
+      tabs: false,
+      static: false,
+      pageShared: new Set(),
+      controls: { states: { initialLabel: "Line", others: [{ label: "Indexes", spec: state }] } },
+    });
+    const doc = new new Window().DOMParser().parseFromString(`<body>${html}</body>`, "text/html");
+    const blocks = [...doc.querySelectorAll("script[data-demo-shared]")];
+    expect(blocks).toHaveLength(1);
+    expect(JSON.parse(blocks[0]?.textContent ?? "null")).toEqual(rows);
+    const [embedded] = JSON.parse(textOf(doc.querySelector("script[data-demo-states]")));
+    expect(embedded.spec.data).toBeNull();
+    expect(embedded.shared).toEqual([
+      { path: ["data"], hash: blocks[0]?.getAttribute("data-demo-shared") },
+    ]);
+  });
+
   it("carries the rows of a state whose data differs", async () => {
     const fewer = { ...ownSpec, data: ownSpec.data.slice(0, 4) } as ChartSpec;
     expect(await statesScript(withState(fewer))).toContain(firstDate);
@@ -166,6 +197,12 @@ describe("validateDemoControls", () => {
     const barList = { type: "barlist", data: [{ label: "A", value: 1 }] } as unknown as VizSpec;
     const demo: DemoDef = { ...eventsFixture, spec: barList };
     expect(() => validateDemoControls(demo)).toThrow(/chart and layer specs only/);
+  });
+
+  it("throws for edit mode without other controls on a spec that is not a chart", () => {
+    const demo: DemoDef = { ...fixtureTable, mount: { interaction: "edit" } };
+    expect(() => validateDemoControls(demo)).toThrow(InvalidDemoError);
+    expect(() => validateDemoControls({ ...demo, mount: undefined })).not.toThrow();
   });
 
   it("accepts controls on a chart whose states are valid", () => {

@@ -51,6 +51,8 @@ type DemoStage = {
   /** The figure has a controls bar, so the controls script is wired before its first mount. */
   hasControls: boolean;
   controls: WiredControls | null;
+  /** The controls could not be set up; the chart mounts without them. */
+  controlsFailed: boolean;
 };
 
 function readDemoStage(stage: HTMLElement): DemoStage {
@@ -59,6 +61,7 @@ function readDemoStage(stage: HTMLElement): DemoStage {
     spec: null,
     hasControls: figure?.querySelector(`[${DEMO_ATTR.controls}]`) != null,
     controls: null,
+    controlsFailed: false,
     id: figure?.getAttribute(DEMO_ATTR.figure) ?? "(unknown demo)",
     stage,
     figure: figure ?? stage,
@@ -165,12 +168,16 @@ function mountNow(
 
 /** The controls' way into one demo's mount (see demo-controls.ts). */
 function liveHandle(demos: DemoStage[], demo: DemoStage, mounter: DemoMounter): LiveHandle {
+  const current = () => {
+    demo.spec ??= readFigureSpec(demo.figure);
+    return demo.spec;
+  };
   return {
-    instance: () => demo.live?.instance ?? null,
-    spec: () => {
-      demo.spec ??= readFigureSpec(demo.figure);
-      return demo.spec;
-    },
+    exportFile: (format) =>
+      mounter.exportDemo(demo.stage, current(), format, {
+        ownTheme: demo.figure.hasAttribute(DEMO_ATTR.ownTheme),
+      }),
+    spec: current,
     update(spec) {
       demo.spec = spec;
       // Controls exist only on chart and layer specs (lib/demo/controls.ts checks at build).
@@ -182,6 +189,30 @@ function liveHandle(demos: DemoStage[], demo: DemoStage, mounter: DemoMounter): 
       mountNow(demos, demo, mounter, { replay: entrance });
     },
   };
+}
+
+/**
+ * Wires the demo's controls once, before its first mount, which needs their
+ * handlers. Controls are optional: when their script fails to load or wire,
+ * the failure is logged with the demo id, the bar stays hidden, and the chart
+ * still mounts without them.
+ */
+async function wireControls(
+  demos: DemoStage[],
+  demo: DemoStage,
+  mounter: DemoMounter,
+  loadControls: () => Promise<DemoControlsModule>,
+): Promise<void> {
+  if (!demo.hasControls || demo.controls || demo.controlsFailed) return;
+  try {
+    const module = await loadControls();
+    demo.controls = module.wireDemoControls(demo.figure, liveHandle(demos, demo, mounter));
+  } catch (error) {
+    demo.controlsFailed = true;
+    const bar = demo.figure.querySelector<HTMLElement>(`[${DEMO_ATTR.controls}]`);
+    if (bar) bar.hidden = true;
+    console.error(`Demo "${demo.id}" shows without its controls: they could not be set up.`, error);
+  }
 }
 
 /** Calls `onApproach` each time a stage comes within LEAD_PX of the viewport. */
@@ -235,14 +266,17 @@ export function startDemos(doc: Document): void {
     });
   }
 
+  if (demos.some((demo) => demo.hasControls)) {
+    loadControls().catch(() => {
+      // Each demo with controls awaits this again in wireControls, which reports the failure.
+    });
+  }
+
   observeApproach(demos, (demo) => {
-    Promise.all([loadMounter(), demo.hasControls ? loadControls() : null])
-      .then(([module, controls]) => {
+    loadMounter()
+      .then(async (module) => {
         loaded = module;
-        // Wired once, before the first mount, which needs the controls' handlers.
-        if (controls && !demo.controls) {
-          demo.controls = controls.wireDemoControls(demo.figure, liveHandle(demos, demo, module));
-        }
+        await wireControls(demos, demo, module, loadControls);
         if (demo.near) mountNow(demos, demo, module);
       })
       .catch((error: unknown) => showFailure(demo, error));

@@ -11,13 +11,25 @@ Charts move by default. The entrance plays once a chart scrolls into view, and `
 
 <Demo id="behavior/motion-update" />
 
-Press "2019 to 2024" to call `update` with a spec that has three more years of rows. The points already on the chart slide to their new positions as both axes rescale, the new quarters draw in, and the title changes with the spec. The library matches marks across the two layouts by their data values, so each quarter keeps its place in the line while it moves.
+Press "2019 to 2024" to call `update` with a spec that has three more years of rows. The points already on the chart slide to their new positions as both axes rescale, the new quarters draw in, and the title changes with the spec. The library matches marks across the two layouts by their data values, so each quarter keeps its place in the line while it moves. The Code panel shows the spec as the page loaded it, not the state on screen.
 
 ## Presets
 
 <Demo id="behavior/motion-presets" />
 
 `animation` takes a preset name. `"fluid"` moves the entrance and later updates on a spring, and `"subtle"` shortens both to 250 milliseconds. Both start every bar at once, where the default lands them up to 80 milliseconds apart over an 800-millisecond entrance. `false` turns off all motion: the chart draws finished and updates swap at once.
+
+```json title="fluid.json"
+{
+  "mark": "bar",
+  "data": [{ "country": "India", "population": 1463000000 }],
+  "encoding": {
+    "y": { "field": "country", "type": "nominal" },
+    "x": { "field": "population", "type": "quantitative" }
+  },
+  "animation": "fluid"
+}
+```
 
 The object form sets each phase on its own, for example `animation: { enter: { duration: 600, ease: "snappy" }, update: false }`. A preset combines with it as `preset: "fluid"`, and any phase you set explicitly wins.
 
