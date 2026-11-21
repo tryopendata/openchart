@@ -91,7 +91,7 @@ describe("the vocabulary wall", () => {
     );
     expect(shownLinks()).toEqual(["Column", "Bar list"]);
     expect(window.location.hash).toBe("#vocabulary=comparison");
-    expect(screen.getByText("Showing 2 comparison charts.")).toBeInTheDocument();
+    expect(await screen.findByText("Showing 2 comparison charts.")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "All" }));
     expect(shownLinks()).toEqual(["Column", "Bar list", "Histogram"]);
@@ -120,7 +120,7 @@ describe("the vocabulary wall", () => {
     window.location.hash = "#vocabulary=comparison";
     expect(await screen.findByRole("button", { name: "Comparison", pressed: true })).toBeVisible();
     expect(shownLinks()).toEqual(["Column", "Bar list"]);
-    expect(screen.getByText("Showing 2 comparison charts.")).toBeInTheDocument();
+    expect(await screen.findByText("Showing 2 comparison charts.")).toBeInTheDocument();
     expect(section.scrollIntoView).toHaveBeenCalledOnce();
   });
 });
