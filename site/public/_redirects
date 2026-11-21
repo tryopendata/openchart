@@ -1,0 +1,10 @@
+# Cloudflare Pages redirects. The build copies this file to dist/_redirects;
+# tests/deploy.test.mjs serves dist/ through `wrangler pages dev` and checks every
+# rule, and that no rule's source is also a built file (a rule would hide the page).
+# /examples/index.html needs no rule: Pages already answers it with a redirect to /examples/.
+# The Ladle host (tryopendata.github.io/openchart) cannot be redirected from here;
+# it is a separate GitHub Pages site.
+
+/rss.xml /blog/rss.xml 301
+/feed.xml /blog/rss.xml 301
+/gallery/* /examples/:splat 301
