@@ -1,7 +1,7 @@
 /**
  * The phase 4 docs pages: Guides, Building blocks and Reference, by section in
- * sidebar order, with the lane that writes each one and the demo figures it
- * must carry once it is finished. The build and browser tests read this list,
+ * sidebar order, with the lane that wrote each one and the demo figures it
+ * must carry. The build and browser tests read this list,
  * so a page missing from the build fails by name. `catalogReference` names the
  * reference page every Visualizations page must link to.
  */

@@ -20,7 +20,7 @@ import { docsAreas, site } from "../src/config";
 import { LANDING_SECTION_IDS, type LandingSectionId, landingCopy } from "../src/landing/copy";
 import { heroSteps } from "../src/landing/hero";
 import { catalogPageIds } from "./catalog-pages";
-import { type DocsPage, docsPageList } from "./docs-pages";
+import { catalogReference, docsPageList } from "./docs-pages";
 
 const read = (root: string, path: string) => readFileSync(join(root, path), "utf8");
 /**
@@ -151,7 +151,7 @@ const BAR = "comparison/bar";
 const GETTING_STARTED = "get-started/getting-started";
 /** A catalog page carries several demos; past this its HTML is too slow on a phone connection. */
 const MAX_VISUALIZATION_PAGE_BYTES = 500_000;
-/** A page whose source holds this is unfinished, so its content rules don't apply yet. */
+/** The marker phase 4 left in a page's source until the page was written; none may remain. */
 const STUB_MARKER = "phase-4-stub";
 const PARAGRAPH_WORD_LIMIT = 90;
 const sectionsOf = (areaId: string): readonly string[] =>
@@ -573,18 +573,8 @@ describe("the phase 4 pages", () => {
     expect(docsPageList.filter(({ id }) => !sourceById.has(id)).map(({ id }) => id)).toEqual([]);
   });
 
-  // Each kind's content rules apply once a page's source drops the stub marker.
-  const finished = (pages: readonly DocsPage[]) =>
-    pages.filter(({ id }) => !sourceById.get(id)?.source.includes(STUB_MARKER));
-  const eachFinished = (name: string, pages: readonly DocsPage[], check: (p: DocsPage) => void) => {
-    const ready = finished(pages);
-    if (ready.length === 0) it.skip(`${name}: no finished page yet`, () => {});
-    else it.each(ready)(`$id ${name}`, check);
-  };
-
-  eachFinished(
-    "meets the building-block rules",
-    docsPageList.filter(({ section }) => BUILDING_BLOCK_SECTIONS.includes(section)),
+  it.each(docsPageList.filter(({ section }) => BUILDING_BLOCK_SECTIONS.includes(section)))(
+    "$id meets the building-block rules",
     ({ id, minDemos }) => {
       const doc = page("dist", pagePath(id));
       const figures = [...doc.querySelectorAll(".demo[data-demo]")];
@@ -604,37 +594,30 @@ describe("the phase 4 pages", () => {
     },
   );
 
-  eachFinished(
-    "shows its minimum of sourced demos",
+  it.each(
     docsPageList.filter(
       ({ section, minDemos }) => GUIDE_SECTIONS.includes(section) && minDemos > 0,
     ),
-    ({ id, minDemos }) => {
-      const figures = [...page("dist", pagePath(id)).querySelectorAll(".demo[data-demo]")];
-      expect(figures.length, "demo figures").toBeGreaterThanOrEqual(minDemos);
-      // The tutorial's toy data must match the four framework examples beside it.
-      const allowIllustrative = id === GETTING_STARTED;
-      expect(unsourcedFigures(figures, { allowIllustrative })).toEqual([]);
-    },
-  );
+  )("$id shows its minimum of sourced demos", ({ id, minDemos }) => {
+    const figures = [...page("dist", pagePath(id)).querySelectorAll(".demo[data-demo]")];
+    expect(figures.length, "demo figures").toBeGreaterThanOrEqual(minDemos);
+    // The tutorial's toy data must match the four framework examples beside it.
+    const allowIllustrative = id === GETTING_STARTED;
+    expect(unsourcedFigures(figures, { allowIllustrative })).toEqual([]);
+  });
 
-  eachFinished(
-    "reads tightly",
-    docsPageList.filter(({ id }) => id === "get-started/introduction"),
-    ({ id }) => {
-      const doc = page("dist", pagePath(id));
-      expect(longParagraphs(doc)).toEqual([]);
-      expect(
-        unsourcedFigures([...doc.querySelectorAll(".demo[data-demo]")], {
-          allowIllustrative: false,
-        }),
-      ).toEqual([]);
-    },
-  );
+  it("get-started/introduction reads tightly", () => {
+    const doc = page("dist", pagePath("get-started/introduction"));
+    expect(longParagraphs(doc)).toEqual([]);
+    expect(
+      unsourcedFigures([...doc.querySelectorAll(".demo[data-demo]")], {
+        allowIllustrative: false,
+      }),
+    ).toEqual([]);
+  });
 
-  eachFinished(
-    "links to a Building-blocks or Visualizations page",
-    docsPageList.filter(({ section }) => section === "spec"),
+  it.each(docsPageList.filter(({ section }) => section === "spec"))(
+    "$id links to a Building-blocks or Visualizations page",
     ({ id }) => {
       const areas = linkedAreas(page("dist", pagePath(id)));
       expect(areas.some((area) => area === "building-blocks" || area === "visualizations")).toBe(
@@ -642,6 +625,22 @@ describe("the phase 4 pages", () => {
       );
     },
   );
+
+  it.each(Object.entries(catalogReference))("%s links to its reference page, %s", (id, ref) => {
+    const prose = page("dist", pagePath(id)).querySelectorAll('.docs-prose a[href^="/docs/"]');
+    const hrefs = [...prose].map((link) => link.getAttribute("href") ?? "");
+    expect(hrefs.filter((href) => href.startsWith(`/docs/${ref}/`))).not.toEqual([]);
+  });
+
+  it("no source file under docs/ or src/content still carries the stub marker", () => {
+    const sources = [resolve("../docs"), resolve("src/content")].flatMap((dir) =>
+      readdirSync(dir, { recursive: true, encoding: "utf8" })
+        .map((file) => join(dir, file))
+        .filter((file) => statSync(file).isFile()),
+    );
+    expect(sources.length).toBeGreaterThan(50);
+    expect(sources.filter((file) => readFileSync(file, "utf8").includes(STUB_MARKER))).toEqual([]);
+  });
 });
 
 describe("links out of the docs", () => {

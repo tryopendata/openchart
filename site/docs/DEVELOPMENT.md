@@ -33,6 +33,8 @@ Markdown conventions, all plain Markdown so pages read the same on GitHub and to
 
 Link between pages with the full route and its trailing slash (`/docs/the-spec/anatomy/`). The build test fails on a link or `#anchor` that doesn't resolve. Link to another lane's page without an anchor unless that heading already exists there: a heading added later may be renamed before it lands.
 
+`tests/docs-pages.ts` lists the Guides, Building blocks and Reference pages with their demo minimums, and `catalogReference` names the reference page each Visualizations page must link to. The build test applies every content rule to every page in that list. The `phase-4-stub` marker that exempted unfinished pages is gone, and the build test fails if any file under `../docs/` or `src/content/` contains it.
+
 ## Repository docs
 
 A Markdown file in `../docs/` or one folder down (`../docs/reference/`) becomes a page when its frontmatter declares `section`; `slug` replaces the file's base name in the URL. Two files that resolve to the same page id fail the build, naming both. The reference pages live in `../docs/reference/`, and `spec-reference.md` is their index.
