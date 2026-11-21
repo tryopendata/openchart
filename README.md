@@ -97,7 +97,7 @@ Release candidates publish under the `next` dist-tag, so a plain install always 
 
 ## Documentation
 
-Read the full documentation at [openchart.steamfield.io/docs](https://openchart.steamfield.io/docs/). The guides below are the Markdown sources of those pages.
+Read the full documentation at [openchart.steamfield.io/docs](https://openchart.steamfield.io/docs/). Most guides below are also published there.
 
 | Doc | What's in it |
 | --- | ------------ |

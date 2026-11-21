@@ -29,7 +29,7 @@ Catalog pages are `.mdx` files under `src/content/docs/<section>/` with `title`,
 
 ## Adding a gallery entry
 
-A gallery entry is one item in the list in `src/lib/gallery.ts`: a slug, a registered demo id, the docs section it is filed under, a title and a description. The wall, the entry page, its social card, the sitemap and the search index pick it up on the next build. Its demo draws tier-1 data only. See Gallery in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+A gallery entry is one item in the list in `src/lib/gallery.ts`: a slug, a registered demo id, the Visualizations section it is filed under (`kind`), a title, a description of at most 160 characters and the docs page it links to (`docs`). The wall, the entry page, its social card, the sitemap and the search index pick it up on the next build. Its demo draws tier-1 data only. See Gallery in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
 ## Adding a blog post
 

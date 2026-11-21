@@ -7,4 +7,5 @@
 
 /rss.xml /blog/rss.xml 301
 /feed.xml /blog/rss.xml 301
+/gallery /examples/ 301
 /gallery/* /examples/:splat 301
