@@ -38,7 +38,7 @@ export const basicColumn = defineDemo({
     },
     labels: { density: "all", format: ",.0f" },
     chrome: {
-      title: "The job market cooled but never cracked",
+      title: "US employers added jobs in every month of 2024",
       subtitle: "Monthly US nonfarm payroll additions, 2024 (thousands of jobs)",
     },
   },
@@ -78,7 +78,7 @@ export const annotatedColumn = defineDemo({
       },
     ],
     chrome: {
-      title: "October stood out in a steady year",
+      title: "October's job gain was the smallest of 2024",
       subtitle: "Monthly US nonfarm payroll additions, 2024 (thousands of jobs)",
     },
   },
@@ -86,7 +86,7 @@ export const annotatedColumn = defineDemo({
 
 export const divergingColumn = defineDemo({
   id: "comparison/column-diverging",
-  title: "Temperature anomaly by half-decade",
+  title: "Global temperature anomaly, 1900 to 2025",
   source: sourceOf(temperatureAnomaly),
   height: 460,
   spec: {
@@ -108,7 +108,7 @@ export const divergingColumn = defineDemo({
     labels: { density: "none" },
     annotations: [{ type: "refline", y: 0, style: "solid", strokeWidth: 1 }],
     chrome: {
-      title: "Since 1980, every half-decade has been warmer than average",
+      title: "Every reading since 1980 is above the 20th-century average",
       subtitle: "Global surface temperature anomaly vs. 20th-century average, °C",
     },
   },
@@ -127,7 +127,7 @@ export const longLabelColumn = defineDemo({
       y: { field: "budget", type: "quantitative", axis: { title: "Budget ($M)" } },
     },
     chrome: {
-      title: "R&D claims the biggest slice",
+      title: "R&D has the largest budget",
       subtitle: "Annual departmental budget allocations, FY 2025 ($M)",
     },
   },
@@ -182,7 +182,7 @@ export const groupedColumns = defineDemo({
     },
     labels: { density: "all" },
     chrome: {
-      title: "Solar is running away with the energy transition",
+      title: "Solar additions more than tripled from 2019 to 2023",
       subtitle: "Global renewable capacity additions by source, 2019-2023 (gigawatts)",
     },
   },
@@ -234,7 +234,7 @@ export const labelledStackedBars = defineDemo({
     },
     labels: { density: "all" },
     chrome: {
-      title: "The poorer you are, the more housing eats your paycheck",
+      title: "Lower-income households spend a larger share on housing",
       subtitle: "Share of annual household expenditure by category and income bracket, 2022 (%)",
     },
   },
@@ -260,7 +260,7 @@ export const normalizedBars = defineDemo({
     },
     labels: { density: "none" },
     chrome: {
-      title: "Every bracket splits its budget differently",
+      title: "Housing and food shrink as a share of spending as income rises",
       subtitle: "Household expenditure normalized to 100% per income bracket, 2022",
     },
   },
@@ -309,7 +309,7 @@ export const divergingLollipop = defineDemo({
     },
     annotations: [{ type: "refline", x: 0, style: "solid", stroke: "#334155", strokeWidth: 1.5 }],
     chrome: {
-      title: "Americans keep moving south",
+      title: "Idaho grew fastest, and five of these 13 states lost people",
       subtitle: "Percent population change by state, April 2020 to July 2024",
     },
   },
@@ -334,7 +334,7 @@ export const dumbbellDots = defineDemo({
       color: { field: "gender", type: "nominal" },
     },
     chrome: {
-      title: "Women live longer nearly everywhere, but the gap varies",
+      title: "Women outlive men in all 12 countries, by 3 to 10 years",
       subtitle: "Life expectancy at birth by gender, selected countries, 2023",
     },
   },
@@ -356,7 +356,7 @@ export const basicBarList = defineDemo({
       color: { field: "category", type: "nominal" },
     },
     chrome: {
-      title: "Python leads the pack",
+      title: "Python has the largest share of the index",
       subtitle: "Programming-language popularity index, % share, 2025",
     },
   },
@@ -376,7 +376,7 @@ export const groupedBarList = defineDemo({
       value: { field: "pct", type: "quantitative", format: ".1f" },
     },
     chrome: {
-      title: "Each category has its own leader",
+      title: "Python, JavaScript, C/C++ and Swift lead their categories",
       subtitle: "Programming-language popularity index by category, % share, 2025",
     },
   },
@@ -443,7 +443,7 @@ export const rangeDumbbell = defineDemo({
       x2: { field: "y2023", type: "quantitative", title: "2023" },
     },
     chrome: {
-      title: "Everyone is living longer, but the gaps persist",
+      title: "Life expectancy rose in all eight countries from 2000 to 2023",
       subtitle: "Life expectancy at birth, 2000 (gray) vs. 2023 (accent), selected countries",
     },
   },
@@ -468,7 +468,7 @@ export const rangeArrow = defineDemo({
       x2: { field: "y2024", type: "quantitative", title: "2024" },
     },
     chrome: {
-      title: "Gas and renewables ate coal's lunch",
+      title: "Coal's share fell from 45% to 15% as gas, wind and solar grew",
       subtitle:
         "Share of US electricity generation by source, 2010 to 2024. Green arrows grew, red shrank.",
     },
@@ -494,7 +494,7 @@ export const rangeBar = defineDemo({
       y2: { field: "high", type: "quantitative", title: "Avg high" },
     },
     chrome: {
-      title: "New York swings 30 degrees across the year",
+      title: "New York's monthly averages run from about 1°C to 30°C",
       subtitle: "Average daily low to high temperature by month, Central Park, 2023",
     },
   },

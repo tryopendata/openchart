@@ -13,7 +13,7 @@ Use [columns](/docs/comparison/column/) when you have a handful of separate peri
 
 ## A basic line chart
 
-Set `mark` to `"line"`, put the date on `x` with `type: "temporal"` and the number on `y`. Two annotations tell the story here: a `text` annotation with a connector marks the peak, and a dashed `refline` marks a target.
+Set `mark` to `"line"`, put the date on `x` with `type: "temporal"` and the number on `y`. Here a `text` annotation with a connector marks the peak, and a dashed `refline` marks a target.
 
 <Demo id="change-over-time/line-basic" />
 
@@ -25,7 +25,7 @@ Add a `color` channel to draw one line per value of a field. With a handful of s
 
 ## Focusing one series
 
-When one series is the story, give it the color and let the rest recede. An explicit `scale` on the color channel maps one company to the accent and the others to grey. `seriesStyles` thickens the focus line, and `legend: { show: false }` drops the legend because `endpointLabels` with `content: "label"` already names every line.
+To focus one series, put an explicit `scale` on the color channel that maps that company to the accent and the others to grey. `seriesStyles` thickens the focus line, and `legend: { show: false }` drops the legend because `endpointLabels` with `content: "label"` already names every line.
 
 <Demo id="change-over-time/line-focus" />
 

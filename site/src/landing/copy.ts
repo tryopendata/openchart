@@ -38,7 +38,7 @@ export const landingCopy: LandingCopy = {
     desk: "From plotted points to a finished graphic in five steps",
     vocabulary: "Find the chart by what it has to show",
     styles: "One chart, set in four house styles",
-    kinds: "Tables, networks and maps, drawn to the same standard",
+    kinds: "Tables, networks and maps in the same house style",
     story: "Annotate the story as the reader scrolls",
     motion: "When the numbers change, the chart moves with them",
     responsive: "The same graphic, from a phone to a full-width spread",

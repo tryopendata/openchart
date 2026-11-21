@@ -7,7 +7,7 @@ order: 3
 
 import Demo from "../../../components/demo/Demo.astro";
 
-A heatmap puts one cell on a grid of two categorical fields and colors it by a number. A reader scans for the diagonal, the dark rows and the empty corners, which is the standard way to read a source-by-year or feature-by-feature matrix.
+A heatmap puts one cell on a grid of two categorical fields and colors it by a number. It suits a source-by-year or feature-by-feature matrix, where the reader looks for the darkest rows and columns.
 
 In OpenChart the heatmap is the `rect` mark. Use a [scatter chart](/docs/correlation/scatter/) when both fields are numbers. For a daily series laid out as a year grid, use the [calendar](/docs/change-over-time/calendar/), and for color inside table rows, see [column types](/docs/tables/column-types/).
 

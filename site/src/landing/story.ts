@@ -53,7 +53,7 @@ export const storyBaseSpec: ChartSpec = {
     color: { field: "index", type: "nominal" },
   },
   chrome: {
-    title: "A 2022 sell-off, then four very different recoveries",
+    title: "Four US stock indexes fell in 2022 and were all higher by late 2025",
     subtitle: "Cumulative total return since January 2022, quarterly, %",
   },
   // createChartStory skips the entrance when `animation` is omitted; the landing

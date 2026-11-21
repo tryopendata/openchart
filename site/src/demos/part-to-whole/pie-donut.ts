@@ -40,7 +40,7 @@ export const basicPie = defineDemo({
       color: { field: "browser", type: "nominal" },
     },
     chrome: {
-      title: "Chrome owns nearly two-thirds of the browser market",
+      title: "Chrome has nearly two-thirds of the browser market",
       subtitle: "Global desktop and mobile browser share, January 2024 (%)",
     },
   },
@@ -101,7 +101,7 @@ export const groupedSlices = defineDemo({
       color: { field: "country", type: "nominal" },
     },
     chrome: {
-      title: "China and the US drive nearly half of top-emitter CO₂",
+      title: "China and the US emit 64% of the CO₂ among these 12 countries",
       subtitle:
         'Annual CO₂ emissions, million tonnes, 2024. Slices under about 3% are grouped into "Other".',
     },
@@ -121,7 +121,7 @@ export const leaderLineDonut = defineDemo({
       color: { field: "brand", type: "nominal" },
     },
     chrome: {
-      title: "Apple reclaimed the top spot from Samsung in Q4",
+      title: "Apple had the largest smartphone share in Q4 2024",
       subtitle: "Global smartphone market share by vendor, Q4 2024 (%)",
     },
   },

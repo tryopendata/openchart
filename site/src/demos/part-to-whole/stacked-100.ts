@@ -28,7 +28,7 @@ export const normalizedBars = defineDemo({
       color: { field: "category", type: "nominal" },
     },
     chrome: {
-      title: "The poorer you are, the more housing eats your paycheck",
+      title: "Lower-income households spend a larger share on housing",
       subtitle: "Share of annual household expenditure by category and income bracket, 2022",
     },
   },

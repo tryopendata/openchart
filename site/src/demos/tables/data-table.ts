@@ -30,7 +30,7 @@ export const basicTable = defineDemo({
       { key: "lifeExpectancy", label: "Life exp.", format: ".1f", sortable: true, align: "right" },
     ],
     chrome: {
-      title: "The world through twelve economies",
+      title: "Twelve of the world's largest economies",
       subtitle: "Population, income and longevity for the largest economies",
     },
     search: true,
@@ -99,7 +99,7 @@ export const relaxedTable = defineDemo({
     ],
     density: "relaxed",
     chrome: {
-      title: "Room to read",
+      title: "Six of the world's most populous countries",
       subtitle: "Relaxed density at 56px rows, with the population column formatted compact",
     },
   },

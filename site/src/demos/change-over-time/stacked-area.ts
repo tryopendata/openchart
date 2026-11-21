@@ -28,7 +28,7 @@ export const stackedArea = defineDemo({
     },
     legend: { position: "top" },
     chrome: {
-      title: "Renewables are rising, but fossil fuels still dominate",
+      title: "Fossil fuels still supplied over 80% of primary energy in 2022",
       subtitle: "Global primary energy mix by source, 2015-2022 (% of total)",
     },
   },

@@ -38,8 +38,7 @@ export const HOUSE_STYLE_STOPS: readonly HouseStyleStop[] = [
     id: "essay",
     label: "Essay",
     preset: "essay",
-    description:
-      "Serif type on warm paper, with room around the chart: the look of a long-form essay.",
+    description: "Serif type on warm paper with room around the chart, as in a long-form essay.",
     theme: essay,
     dark: false,
   },
@@ -48,7 +47,7 @@ export const HOUSE_STYLE_STOPS: readonly HouseStyleStop[] = [
     label: "Wire",
     preset: "wire",
     description:
-      "Monospaced type, tight spacing and plain white: the dense chart a wire service files.",
+      "Monospaced type, tight spacing and plain white, for the dense charts a wire service files.",
     theme: wire,
     dark: false,
   },
@@ -57,7 +56,7 @@ export const HOUSE_STYLE_STOPS: readonly HouseStyleStop[] = [
     label: "Broadsheet",
     preset: "broadsheet",
     description:
-      "A bold headline under a short red rule, on newsprint white: a broadsheet's graphics page.",
+      "A bold headline under a short red rule on newsprint white, as on a broadsheet's graphics page.",
     theme: broadsheet,
     dark: false,
   },
@@ -66,7 +65,7 @@ export const HOUSE_STYLE_STOPS: readonly HouseStyleStop[] = [
     label: "Terminal",
     preset: "terminal",
     description:
-      "A dark screen with one cyan series against grey ones: the chart on a monitoring dashboard.",
+      "One cyan series against grey ones on a dark screen, as on a monitoring dashboard.",
     theme: terminal,
     dark: false,
   },
