@@ -72,8 +72,9 @@ export function requestSpec(request: TileRequest): VizSpec {
 }
 
 /**
- * The SVG file for one tile in one theme, with its rects merged, or null when
- * the chart type has no static renderer (tables, sankeys, networks).
+ * The SVG file for one tile in one theme (already slimmed by staticSvg), with
+ * its rects merged, or null when the chart type has no static renderer
+ * (tables, sankeys, networks).
  */
 export function tileFileSvg(request: TileRequest, theme: TileTheme): string | null {
   // A copy: the renderer writes defaults into the spec, and the tile shares objects with the demo's.
