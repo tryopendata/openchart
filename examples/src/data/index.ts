@@ -52,6 +52,7 @@ export { stateEconomies } from './state-economies';
 export { statePopulationChange } from './state-population-change';
 export { stockPerformance } from './stock-performance';
 export { temperatureAnomaly } from './temperature-anomaly';
+export { usEnergyFlow2024 } from './us-energy-flow-2024';
 export { usInflation } from './us-inflation';
 export { usPayrolls } from './us-payrolls';
 export { usStateUnemployment } from './us-state-unemployment';

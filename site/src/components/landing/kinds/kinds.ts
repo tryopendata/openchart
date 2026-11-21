@@ -44,6 +44,12 @@ export type KindsTile = {
    * minimum.
    */
   fitContent?: boolean;
+  /**
+   * Under 640px, lay the figure out at this minimum width (px) and scroll it
+   * sideways inside the tile, for a chart whose labelled columns cannot fit a
+   * phone. The tile is unchanged from 640px up.
+   */
+  scrollBelow?: number;
 };
 
 /** In grid order: the dominant map, the two cells beside it, then the two full-width rows. */
@@ -78,9 +84,10 @@ export const kindsTiles: KindsTile[] = [
     href: "/docs/flow/sankey/",
     link: "Sankey diagrams",
     place: "full",
-    // Three labelled columns of nodes need the whole measure to keep their labels apart.
-    height: 520,
-    narrowHeight: 460,
+    // Four labelled columns of nodes need the whole measure to keep their labels apart.
+    height: 620,
+    narrowHeight: 560,
+    scrollBelow: 680,
   },
   {
     demo: "tables/basic",

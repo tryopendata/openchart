@@ -69,6 +69,14 @@ describe("repo Markdown", () => {
     expect(html).toContain('href="#top"');
   });
 
+  it("turns a link to this site's absolute URL into a root-relative one", async () => {
+    const html = await render(
+      "[Motion](https://openchart.steamfield.io/docs/behavior/motion/#presets)\n",
+      repoDoc,
+    );
+    expect(html).toContain('href="/docs/behavior/motion/#presets"');
+  });
+
   it("leaves Markdown outside the repository's docs folder untouched", async () => {
     const html = await render("# Notes\n\n[Tables](./tables.md)\n", siteDoc);
     expect(html).toContain("<h1");
