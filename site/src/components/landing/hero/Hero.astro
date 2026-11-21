@@ -1,9 +1,12 @@
 ---
 /**
- * The hero, "the desk": the page's h1 and lede, the install command with copy,
- * and a figure where a spec is written in steps and the chart beside it updates.
- * Stub from the phase 2 scaffold; lane 2/a fills it with the HeroDesk island
- * (client:load).
+ * The hero, "the desk": the page's h1 and lede, the two links and the install
+ * command, and a figure where one chart is built in five steps. The chart is
+ * the hero; the spec that builds it waits in a disclosure under the chart.
+ * The text block takes 4 of the 12 columns and the figure 8 from 1100px; below
+ * that the figure follows the text. The figure is published-graphic framing: a
+ * ticked rule, the section's h2 as its headline, the HeroDesk island, and a
+ * caption with the source line.
  *
  * Contract (e2e/landing.spec.ts and tests/build.test.ts rely on it):
  * - `<section id="desk" aria-labelledby="desk-title" data-landing-section>` holding
@@ -13,22 +16,80 @@
  *   current one carries `aria-current="step"`. Controls are buttons named
  *   "Pause" (or "Play" while paused), "Previous step" and "Next step". Under 700px
  *   the collapsed spec pane opens with a button named "Show full spec".
+ * - The spec pane sits in a `<details>` under the chart, closed by default; its
+ *   text is in the HTML either way.
  * - `data-hero-spec` on the spec pane; each line the current step added carries
  *   `data-spec-added`. `data-hero-chart` on the element holding the chart's SVG,
  *   which the server render already contains.
  * - The figure has a `<figcaption>` with a "Source: …" line.
  * - Before hydration and under reduced motion the last step is current.
+ *
+ * Nothing above the fold waits on a script to show: the text block's entrance
+ * is a CSS rise that moves it (never hides it), and the figure opts out of
+ * `data-reveal`. The chart's own entrance is the library's, when it goes live.
  */
+import { site } from "../../../config";
 import { landingCopy } from "../../../landing/copy";
+import { heroFolds, heroSource, heroSteps } from "../../../landing/hero";
+import { heroChartTheme } from "../../../landing/hero-theme";
+import { staticSvg } from "../../../lib/demo/static-svg";
 import "../../../styles/landing-hero.css";
+import { toDeskSteps } from "./desk-step";
+import HeroDesk from "./HeroDesk";
+import InstallCommand from "../../shared/InstallCommand.astro";
+import PublishedFigure from "../../shared/PublishedFigure.astro";
+
+/** The static SVG's drawing size: the live chart's at 1440, so the swap does not move. */
+const STATIC_SIZE = { width: 904, height: 480 };
+
+const deskSteps = toDeskSteps(heroSteps, heroFolds);
+const finished = heroSteps.at(-1)?.spec;
+if (!finished) throw new Error("src/landing/hero.ts exports no steps: the hero needs five.");
+// Rendering writes defaults into the spec, so each render gets its own copy.
+const staticCharts = [false, true]
+  .map((dark) =>
+    staticSvg(structuredClone(finished), {
+      ...STATIC_SIZE,
+      idPrefix: dark ? "hero-d" : "hero-l",
+      dark,
+      theme: heroChartTheme,
+    }),
+  )
+  .join("");
 ---
 
-<section id="desk" aria-labelledby="desk-title" data-landing-section class="landing-section">
-  <div class="landing-container">
-    <h1 class="landing-display">{landingCopy.headline}</h1>
-    <p class="landing-lede">{landingCopy.lede}</p>
-    <h2 id="desk-title" class="landing-heading mt-12">
-      {landingCopy.headings.desk}
-    </h2>
+<section id="desk" aria-labelledby="desk-title" data-landing-section class="landing-section hero">
+  <div class="landing-container hero-grid">
+    <div class="hero-text">
+      <h1 class="landing-display hero-title hero-rise">{landingCopy.headline}</h1>
+      <p class="landing-lede hero-lede hero-rise" style="--rise-delay: 80ms">
+        {landingCopy.lede}
+      </p>
+      <p class="hero-links hero-rise" style="--rise-delay: 160ms">
+        <a href="/docs/get-started/getting-started/" class="hero-action">
+          Read the docs
+        </a>
+        <a href="#vocabulary" class="hero-link">
+          See every chart type <span aria-hidden="true">→</span>
+        </a>
+      </p>
+      <div class="hero-install hero-rise" style="--rise-delay: 220ms">
+        <InstallCommand id="hero-install" commands={site.install} />
+      </div>
+    </div>
+
+    <PublishedFigure
+      class="hero-figure"
+      title={landingCopy.headings.desk}
+      titleId="desk-title"
+      level="h2"
+      source={heroSource}
+      reveal={false}
+      note="The same chart at five stages, each one a few lines added to a JSON spec. Open the spec under the chart to read them."
+    >
+      <HeroDesk client:load steps={deskSteps}>
+        <Fragment set:html={staticCharts} />
+      </HeroDesk>
+    </PublishedFigure>
   </div>
 </section>

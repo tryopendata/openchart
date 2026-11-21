@@ -11,14 +11,16 @@ import { chartTheme } from "../../lib/demo/chart-theme";
 
 const DARK_QUERY = "(prefers-color-scheme: dark)";
 
-function isPageDark(): boolean {
+/** True while the page shows its dark theme. For DOM code outside React; islands use `usePageDark`. */
+export function isPageDark(): boolean {
   const { classList } = document.documentElement;
   if (classList.contains("dark")) return true;
   if (classList.contains("light")) return false;
   return matchMedia(DARK_QUERY).matches;
 }
 
-function subscribe(change: () => void): () => void {
+/** Calls `change` whenever the page theme may have changed (toggle or system preference). Returns an unsubscribe. */
+export function subscribePageTheme(change: () => void): () => void {
   const observer = new MutationObserver(change);
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
   const query = matchMedia(DARK_QUERY);
@@ -31,7 +33,7 @@ function subscribe(change: () => void): () => void {
 
 /** True while the page shows its dark theme. False on the server. */
 export function usePageDark(): boolean {
-  return useSyncExternalStore(subscribe, isPageDark, () => false);
+  return useSyncExternalStore(subscribePageTheme, isPageDark, () => false);
 }
 
 /** The site's chart theme and dark mode for the page's current theme, stable between renders. */
