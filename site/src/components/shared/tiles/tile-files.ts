@@ -3,12 +3,22 @@
  * themes each, which inline would make the landing wall and the gallery several
  * hundred kilobytes of HTML. So each tile's static SVG is written once to
  * /tiles/<name>.svg by the src/pages/tiles/ route, and the tile shows it as a
- * lazy <img>. The SVGs carry their own colors and need no page CSS; their text
- * asks for the site fonts, which an image cannot load, so tick labels draw in
- * the reader's system sans until the live chart replaces them.
+ * lazy <img>. The SVGs carry their own colors and need no page CSS.
+ *
+ * An image cannot load the page's fonts, so a tile file sets its text in
+ * TILE_IMAGE_FONT instead of the site sans, which would fall back to the
+ * reader's system sans. The build lays text out with the library's width
+ * table, which has Helvetica and Arial metrics, so text drawn in those faces
+ * fits the space the layout gave it on every platform; a system sans can run
+ * wider (DejaVu Sans, a common Linux default, is about 14% wider in its
+ * figures). Embedding a subset of the site sans in each file would match the
+ * page's typeface, but roughly triples the tiles' bytes for a picture most
+ * readers never see: with motion allowed it stays hidden until the live chart
+ * has played its entrance.
  */
-import type { VizSpec } from "@opendata-ai/openchart-core";
+import type { ThemeConfig, VizSpec } from "@opendata-ai/openchart-core";
 import { getDemo } from "../../../demos/registry";
+import { chartTheme } from "../../../lib/demo/chart-theme";
 import { staticSvg } from "../../../lib/demo/static-svg";
 import { type TileSize, type TileSpecOptions, tileSpec } from "./tile-spec";
 import { mergeRects } from "./tile-svg";
@@ -17,6 +27,18 @@ import { mergeRects } from "./tile-svg";
 export type TileRequest = { demo: string; size: TileSize; spec?: TileSpecOptions };
 
 export type TileTheme = "light" | "dark";
+
+/**
+ * The faces a tile file's text draws in: Helvetica or Arial, or a face with
+ * their metrics (Liberation Sans, Arimo), which the build's text layout assumes.
+ */
+export const TILE_IMAGE_FONT = 'Helvetica, Arial, "Liberation Sans", Arimo, sans-serif';
+
+/** The site's chart theme with its text set in TILE_IMAGE_FONT. */
+function tileFileTheme(theme: TileTheme): ThemeConfig {
+  const site = chartTheme(theme === "dark");
+  return { ...site, fonts: { ...site.fonts, family: TILE_IMAGE_FONT } };
+}
 
 /** The served path of a tile file. */
 export const TILE_FILE_DIR = "/tiles/";
@@ -60,6 +82,7 @@ export function tileFileSvg(request: TileRequest, theme: TileTheme): string | nu
     width: request.size.width,
     height: request.size.height,
     dark: theme === "dark",
+    theme: tileFileTheme(theme),
     precision: 0,
   });
   return svg === null ? null : mergeRects(svg);

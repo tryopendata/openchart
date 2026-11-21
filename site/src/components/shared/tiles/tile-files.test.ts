@@ -5,7 +5,13 @@
  */
 import { describe, expect, it } from "vitest";
 import { getDemo } from "../../../demos/registry";
-import { tileFileName, tileFileSvg, tileFileUrl, uniqueRequests } from "./tile-files";
+import {
+  TILE_IMAGE_FONT,
+  tileFileName,
+  tileFileSvg,
+  tileFileUrl,
+  uniqueRequests,
+} from "./tile-files";
 
 const waffle = { demo: "gallery/electricity-waffle", size: { width: 438, height: 438 } };
 
@@ -27,6 +33,18 @@ describe("a tile file", () => {
     expect(svg).not.toMatch(/\sdata-(?!theme)[\w-]+=/);
     // 100 cells in six colors draw as a handful of paths, not 100 rects.
     expect((svg.match(/<rect\b/g) ?? []).length).toBeLessThan(10);
+  });
+
+  it.each([
+    ["a chart's ticks", "comparison/range-dumbbell"],
+    ["a map's legend", "maps/choropleth-basic"],
+  ])("sets %s in the faces an image can draw with the layout's metrics", (_part, demo) => {
+    const svg = (tileFileSvg({ demo, size: { width: 208, height: 156 } }, "light") ?? "")
+      .replaceAll("&quot;", '"')
+      .replaceAll("&#39;", "'");
+    expect(svg).toContain(TILE_IMAGE_FONT);
+    // An image cannot load the site sans; it would fall back to a system sans that may run wider.
+    expect(svg).not.toContain("Schibsted");
   });
 
   it("leaves the demo's own spec as authored, which the entry page's Copy gives the reader", () => {
