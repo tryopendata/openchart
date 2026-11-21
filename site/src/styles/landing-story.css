@@ -235,17 +235,21 @@
     @apply px-0;
   }
 
-  /* Each tile's stage height comes from kinds.ts, through --kinds-height on the tile. */
+  /* Each figure fills its grid cell: the stage takes --kinds-height (from
+     kinds.ts) as a minimum and grows to the tallest tile in its row, so the
+     captions and links line up along every row. */
+  .kinds-tile .demo,
+  .kinds-tile .demo-figure {
+    @apply flex flex-1 flex-col;
+  }
+
   .kinds-tile .demo-stage {
-    height: var(--kinds-height);
+    @apply flex-1;
+    min-height: var(--kinds-height);
+    height: auto;
   }
 
   /* A table grows to its rows rather than scrolling inside the tile. */
-  .kinds-tile[data-fit-content] .demo-stage {
-    height: auto;
-    min-height: var(--kinds-height);
-  }
-
   .kinds-tile[data-fit-content] .demo-live {
     @apply h-auto overflow-visible;
   }
@@ -263,18 +267,6 @@
 
     .kinds-tile[data-place="bottom"] {
       @apply col-span-1;
-    }
-
-    /* The dominant map grows to the height of the two cells beside it. */
-    .kinds-tile[data-place="dominant"] .demo,
-    .kinds-tile[data-place="dominant"] .demo-figure {
-      @apply flex flex-1 flex-col;
-    }
-
-    .kinds-tile[data-place="dominant"] .demo-stage {
-      @apply flex-1;
-      min-height: var(--kinds-height);
-      height: auto;
     }
   }
 

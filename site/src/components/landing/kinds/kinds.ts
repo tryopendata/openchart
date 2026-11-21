@@ -26,9 +26,10 @@ export type KindsTile = {
   link: string;
   place: KindsTilePlace;
   /**
-   * The chart stage's height in px. The dominant tile treats it as a minimum and
-   * grows to the two cells beside it; the bottom row's tiles share a height so
-   * neither cell is left with empty space.
+   * The chart stage's minimum height in px. Each stage grows to the tallest tile
+   * in its row (the dominant one to the two cells beside it), so captions and
+   * links line up along the row; the minimum is what the chart needs to draw at
+   * full size in its cell.
    */
   height: number;
   /**
