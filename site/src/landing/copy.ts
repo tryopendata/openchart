@@ -35,7 +35,7 @@ export const landingCopy: LandingCopy = {
   headline: "Charts, maps and tables that arrive ready to publish.",
   lede: "OpenChart draws the headline, source line, annotations, legend and responsive layout for you, in your house style, with motion built in. You describe the graphic in a short JSON spec, and it runs in React, Vue, Svelte or plain JavaScript.",
   headings: {
-    desk: "From plotted points to a finished graphic in five steps",
+    desk: "One dataset, four ways to tell the story",
     vocabulary: "Find the chart by what it has to show",
     styles: "One chart, set in four house styles",
     kinds: "Tables, networks and maps in the same house style",
