@@ -14,11 +14,23 @@ import {
 } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { gzipSync } from "node:zlib";
+import { countryIndicators } from "@datasets/country-indicators";
+import { electricityMixMatrix } from "@datasets/electricity-mix-matrix";
+import { gistempGlobalAnnual } from "@datasets/gistemp-global-annual";
+import { nycTemperatureRange } from "@datasets/nyc-temperature-range";
+import { populationByCountry } from "@datasets/population";
+import { usEnergyFlow2024 } from "@datasets/us-energy-flow-2024";
+import { usInflation } from "@datasets/us-inflation";
+import { usStateUnemployment } from "@datasets/us-state-unemployment";
+import { build as esbuild } from "esbuild";
 import { Window } from "happy-dom";
 import { afterEach, describe, expect, it } from "vitest";
+import { parse as parseYaml } from "yaml";
 import { docsAreas, site } from "../src/config";
+import { sourceOf } from "../src/demos/source";
 import { LANDING_SECTION_IDS, type LandingSectionId, landingCopy } from "../src/landing/copy";
 import { heroSteps } from "../src/landing/hero";
+import { GALLERY_GAPS, galleryEntries } from "../src/lib/gallery";
 import { catalogPageIds } from "./catalog-pages";
 import { catalogReference, docsPageList } from "./docs-pages";
 
@@ -454,13 +466,14 @@ describe("the whole site", () => {
     expect(broken).toEqual([]);
   });
 
-  it("hydrates only the islands site.islands lists, and none on docs pages", async () => {
+  it("hydrates only the islands site.islands lists, and no island on any page but the landing page", () => {
     expect([...new Set(islandNames("dist", "index.html"))].sort()).toEqual(
       [...site.islands].sort(),
     );
-    for await (const { file } of builtPages("dist", (file) => file.startsWith("docs"))) {
-      expect(islandNames("dist", file), file).toEqual([]);
-    }
+    const withIslands = htmlFiles("dist").filter(
+      (file) => file !== "index.html" && read("dist", file).includes("<astro-island"),
+    );
+    expect(withIslands).toEqual([]);
   });
 
   it("renders the landing page's headline, version, license and social card", () => {
@@ -719,13 +732,6 @@ describe("the controls fixture page", () => {
 
 describe("the landing page", () => {
   const HOME = "index.html";
-  /**
-   * The page's own JavaScript and CSS before lazily imported chunks, each file
-   * gzipped: what a reader downloads before the page works. React's client is
-   * about 66 KB of it, so the cap leaves room for the islands and catches a
-   * chart or GSAP chunk imported statically by mistake (115 KB when it happened).
-   */
-  const MAX_OWN_ASSET_GZIP_BYTES = 160_000;
   const home = () => page("dist", HOME);
   const sections = () => [...home().querySelectorAll("main > section[data-landing-section]")];
   const textOf = (node: Element | null | undefined) => (node?.textContent ?? "").trim();
@@ -790,14 +796,28 @@ describe("the landing page", () => {
   });
 
   it("keeps the page's own JavaScript and CSS under 160 KB gzipped before lazy chunks", () => {
-    const assets = [...ownAssets(HOME)];
-    const sizes = assets.map((path) => gzipSync(readFileSync(join("dist", path))).byteLength);
-    const files = sizes.reduce((sum, size) => sum + size, 0);
-    const inline = gzipSync(inlineCode(read("dist", HOME))).byteLength;
-    const report = assets.map((path, index) => `${sizes[index]} ${path}`).join("\n");
-    expect(files + inline, report).toBeLessThan(MAX_OWN_ASSET_GZIP_BYTES);
+    const { total, report } = upFrontWeight(HOME);
+    expect(total, report).toBeLessThan(MAX_OWN_ASSET_GZIP_BYTES);
   });
 });
+
+/**
+ * A page's own JavaScript and CSS before lazily imported chunks, each file
+ * gzipped: what a reader downloads before the page works. React's client is
+ * about 66 KB of the landing page's, so the cap leaves room for the islands and
+ * catches a chart or GSAP chunk imported statically by mistake (115 KB when it happened).
+ */
+const MAX_OWN_ASSET_GZIP_BYTES = 160_000;
+
+/** The gzipped size of a page's up-front assets plus its inline code, with a per-file report. */
+function upFrontWeight(file: string): { total: number; report: string } {
+  const assets = [...ownAssets(file)];
+  const sizes = assets.map((path) => gzipSync(readFileSync(join("dist", path))).byteLength);
+  const inline = gzipSync(inlineCode(read("dist", file))).byteLength;
+  const total = sizes.reduce((sum, size) => sum + size, inline);
+  const report = assets.map((path, index) => `${sizes[index]} ${path}`).join("\n");
+  return { total, report: `${file}: ${total} bytes\n${report}\n${inline} inline` };
+}
 
 const INLINE_OPACITY_ZERO =
   /(?:^|;)\s*opacity\s*:\s*(?:0+(?:\.0*)?|\.0+)%?\s*(?:!important\s*)?(?:;|$)/i;
@@ -861,3 +881,497 @@ function inlineCode(html: string): string {
   const styles = head.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/g);
   return [...scripts, ...styles].map(([, body]) => body ?? "").join("\n");
 }
+
+// ---------------------------------------------------------------------------
+// Phase 5: the header and footer, the examples gallery, search and the blog.
+// Cases that need a lane's finished content skip while its stub marker is present.
+
+/** The marker a phase 5 lane leaves in its stub until its work is done. */
+const PHASE_5_STUB = "phase-5-stub";
+/** The file that carries each lane's marker while it is a stub. */
+const LANE_STUBS = {
+  gallery: "src/lib/gallery.ts",
+  search: "src/components/search/Search.astro",
+  blog: "src/content/blog/how-to-chart-a-temperature-anomaly.mdx",
+} as const;
+type Lane = keyof typeof LANE_STUBS;
+const stubbed = (lane: Lane) => read(".", LANE_STUBS[lane]).includes(PHASE_5_STUB);
+const anyLaneStubbed = (Object.keys(LANE_STUBS) as Lane[]).some(stubbed);
+
+/** The sample post lane d writes. */
+const SAMPLE_POST = "how-to-chart-a-temperature-anomaly";
+const EM_DASH = "—";
+
+/** A blog post as its source file declares it. */
+type SourcePost = {
+  slug: string;
+  title: string;
+  published: Date;
+  updated?: Date;
+  author: string;
+  tags: string[];
+  related: string[];
+  draft: boolean;
+};
+
+/** Every post in src/content/blog, read from its frontmatter. */
+function sourcePosts(): SourcePost[] {
+  const dir = "src/content/blog";
+  return readdirSync(dir)
+    .filter((file) => /\.mdx?$/.test(file))
+    .map((file) => {
+      const [, yaml = ""] = /^---\n([\s\S]*?)\n---/.exec(read(dir, file)) ?? [];
+      const data = (parseYaml(yaml) ?? {}) as Record<string, unknown>;
+      return {
+        slug: file.replace(/\.mdx?$/, ""),
+        title: String(data.title ?? ""),
+        published: new Date(String(data.published)),
+        ...(data.updated ? { updated: new Date(String(data.updated)) } : {}),
+        author: String(data.author ?? ""),
+        tags: (data.tags ?? []) as string[],
+        related: (data.related ?? []) as string[],
+        draft: data.draft === true,
+      };
+    });
+}
+
+const posts = sourcePosts().filter((post) => !post.draft);
+const postTags = [...new Set(posts.flatMap((post) => post.tags))];
+const isoDay = (date: Date) => date.toISOString().slice(0, 10);
+const entryPath = (slug: string) => `examples/${slug}/index.html`;
+const postPath = (slug: string) => `blog/${slug}/index.html`;
+const tagPath = (tag: string) => `blog/tags/${tag}/index.html`;
+
+/** The source label of each tier-1 dataset: the only data the gallery and the blog may draw. */
+const TIER_1_LABELS = [
+  countryIndicators,
+  electricityMixMatrix,
+  nycTemperatureRange,
+  populationByCountry,
+  usInflation,
+  usStateUnemployment,
+  gistempGlobalAnnual,
+  usEnergyFlow2024,
+].map((dataset) => sourceOf(dataset).label);
+
+/** Whether a figure's caption cites a tier-1 dataset. */
+function citesTier1(figure: Element): boolean {
+  const caption = figure.querySelector("figcaption")?.textContent ?? "";
+  return TIER_1_LABELS.some((label) => caption.includes(`Source: ${label}`));
+}
+
+/** The search area a docs page is filed under: its area's label. */
+const docsAreaLabel = (id: string) =>
+  docsAreas.find((area) => sectionsOf(area.id).includes(id.split("/")[0] ?? ""))?.label ?? "";
+
+/** Every page search should index, by built file, with the area its meta must name. */
+const indexedPages = new Map<string, string>([
+  ...docs.map((doc): [string, string] => [pagePath(doc.id), docsAreaLabel(doc.id)]),
+  ...galleryEntries.map((entry): [string, string] => [entryPath(entry.slug), "Examples"]),
+  ...posts.map((post): [string, string] => [postPath(post.slug), "Blog"]),
+]);
+
+/** The opening tags in raw HTML that carry `data-pagefind-body`; escaped code never matches. */
+const searchBodies = (html: string) =>
+  html.match(/<[a-z]+\s[^>]*\bdata-pagefind-body\b[^>]*>/g) ?? [];
+
+/** An element's text outside demo figures and code blocks: the prose a reader reads. */
+function proseText(element: Element | null | undefined): string {
+  if (!element) return "";
+  const copy = element.cloneNode(true) as Element;
+  for (const node of copy.querySelectorAll(".demo, pre")) node.remove();
+  return copy.textContent ?? "";
+}
+
+/** Parses only a page's header, so a pass over every page never holds a parsed chart. */
+function headerOf(window: Window, file: string): Document {
+  const header = /<header\b[\s\S]*?<\/header>/.exec(read("dist", file))?.[0] ?? "";
+  const parser = new window.DOMParser();
+  return parser.parseFromString(`<body>${header}</body>`, "text/html") as unknown as Document;
+}
+
+/** Parses the RSS feed as XML. */
+function rssFeed(window: Window): Document {
+  const parser = new window.DOMParser();
+  return parser.parseFromString(
+    read("dist", "blog/rss.xml"),
+    "application/xml",
+  ) as unknown as Document;
+}
+
+describe("the header and footer", () => {
+  it("every page's main nav lists Docs, Examples, Blog and GitHub, marks the current one, and the header has one search trigger", async () => {
+    const window = new Window();
+    const problems: string[] = [];
+    try {
+      for (const file of htmlFiles("dist")) {
+        const header = headerOf(window, file);
+        const links = [...header.querySelectorAll('nav[aria-label="Main"] a')];
+        const labels = links.map((link) => link.textContent?.trim()).join(", ");
+        if (labels !== "Docs, Examples, Blog, GitHub") problems.push(`${file}: ${labels}`);
+        const path = `/${file.replace(/index\.html$/, "")}`;
+        const expected = ["/docs/", "/examples/", "/blog/"].find((href) => path.startsWith(href));
+        const current = links
+          .filter((link) => link.getAttribute("aria-current") === "page")
+          .map((link) => link.getAttribute("href"))
+          .join();
+        if (current !== (expected ?? "")) problems.push(`${file}: current is "${current}"`);
+        const triggers = header.querySelectorAll('[data-search-trigger][aria-haspopup="dialog"]');
+        if (triggers.length !== 1) problems.push(`${file}: ${triggers.length} search triggers`);
+      }
+    } finally {
+      await window.happyDOM.close();
+    }
+    expect(problems).toEqual([]);
+  });
+
+  it("the footer links the examples, the blog and the RSS feed", () => {
+    const footer = page("dist", "index.html").querySelector("footer");
+    for (const href of ["/examples/", "/blog/", "/blog/rss.xml"]) {
+      expect(footer?.querySelector(`a[href="${href}"]`), href).not.toBeNull();
+    }
+  });
+
+  it("every page links the blog's RSS feed as an alternate", () => {
+    const feedLink =
+      '<link rel="alternate" type="application/rss+xml" title="OpenChart blog" href="/blog/rss.xml">';
+    expect(htmlFiles("dist").filter((file) => !read("dist", file).includes(feedLink))).toEqual([]);
+  });
+});
+
+describe("the gallery and blog pages", () => {
+  const files = [
+    "examples/index.html",
+    ...galleryEntries.map((entry) => entryPath(entry.slug)),
+    "blog/index.html",
+    ...posts.map((post) => postPath(post.slug)),
+    ...postTags.map(tagPath),
+  ];
+
+  it("include at least one entry, one post and one tag page", () => {
+    expect(galleryEntries.length).toBeGreaterThan(0);
+    expect(posts.length).toBeGreaterThan(0);
+    expect(postTags.length).toBeGreaterThan(0);
+  });
+
+  it.each(files)("%s has one h1, its canonical and a description", (file) => {
+    const doc = page("dist", file);
+    expect(doc.querySelectorAll("h1")).toHaveLength(1);
+    const path = `/${file.replace(/index\.html$/, "")}`;
+    expect(doc.querySelector('link[rel="canonical"]')?.getAttribute("href")).toBe(absolute(path));
+    expect(doc.querySelector('meta[name="description"]')?.getAttribute("content")).toBeTruthy();
+  });
+
+  it.each([
+    ...galleryEntries.map((entry) => [entryPath(entry.slug), `og/examples/${entry.slug}.png`]),
+    ...posts.map((post) => [postPath(post.slug), `og/blog/${post.slug}.png`]),
+  ])("%s has its own social card, %s", (file, card) => {
+    const image = page("dist", file).querySelector('meta[property="og:image"]');
+    expect(image?.getAttribute("content")).toBe(absolute(`/${card}`));
+    expect(readFileSync(join("dist", card)).subarray(1, 4).toString()).toBe("PNG");
+  });
+
+  it("the sitemap lists the gallery, every entry, the blog and every post, and no tag page", () => {
+    const sitemap = read("dist", "sitemap-0.xml");
+    const paths = [
+      "/examples/",
+      ...galleryEntries.map((entry) => `/examples/${entry.slug}/`),
+      "/blog/",
+      ...posts.map((post) => `/blog/${post.slug}/`),
+    ];
+    for (const path of paths) expect(sitemap, path).toContain(`<loc>${absolute(path)}</loc>`);
+    expect(sitemap).not.toContain("/blog/tags/");
+  });
+
+  it.each(postTags)("the %s tag page is noindex, follow", (tag) => {
+    const robots = page("dist", tagPath(tag)).querySelector('meta[name="robots"]');
+    expect(robots?.getAttribute("content")).toBe("noindex, follow");
+  });
+
+  it("every docs page, the gallery and each entry page is at most 500 KB of HTML", () => {
+    // Over the cap before phase 5: four json demo fences, each writing its data in full.
+    const knownOversized = ["agents/agent-patterns"];
+    const checked = [
+      ...docs.filter(({ id }) => !knownOversized.includes(id)).map(({ id }) => pagePath(id)),
+      "examples/index.html",
+      ...galleryEntries.map((entry) => entryPath(entry.slug)),
+    ];
+    const oversized = checked
+      .map((file) => ({ file, bytes: statSync(join("dist", file)).size }))
+      .filter(({ bytes }) => bytes > MAX_VISUALIZATION_PAGE_BYTES);
+    expect(oversized).toEqual([]);
+  });
+
+  it("a json demo fence in an MDX post becomes a demo figure with both static SVGs", () => {
+    const figure = page("dist", postPath(SAMPLE_POST)).querySelector('.demo[data-demo^="fence-"]');
+    expect(figure?.querySelectorAll("svg.demo-static")).toHaveLength(2);
+    expect(figure?.querySelector("figcaption")?.textContent).toMatch(/Source: \S/);
+  });
+
+  it("the RSS feed parses as XML and has one item per published post", async () => {
+    const window = new Window();
+    try {
+      const feed = rssFeed(window);
+      expect(feed.querySelector("parsererror")).toBeNull();
+      expect(feed.querySelector("rss > channel > title")?.textContent).toBeTruthy();
+      const links = [...feed.querySelectorAll("channel > item > link")].map(
+        (link) => link.textContent,
+      );
+      expect(links.sort()).toEqual(posts.map((post) => absolute(`/blog/${post.slug}/`)).sort());
+    } finally {
+      await window.happyDOM.close();
+    }
+  });
+});
+
+describe("the search index", () => {
+  it("is written to dist/pagefind and counts every docs page, gallery entry and published post", () => {
+    expect(existsSync("dist/pagefind/pagefind.js")).toBe(true);
+    const entry = JSON.parse(read("dist", "pagefind/pagefind-entry.json")) as {
+      languages: Record<string, { page_count: number }>;
+    };
+    const pageCount = Object.values(entry.languages).reduce(
+      (sum, language) => sum + language.page_count,
+      0,
+    );
+    expect(pageCount).toBe(docs.length + galleryEntries.length + posts.length);
+  });
+
+  it("each indexed page has one search body naming its area, and no other page has one", () => {
+    const problems: string[] = [];
+    for (const file of htmlFiles("dist")) {
+      const bodies = searchBodies(read("dist", file));
+      const area = indexedPages.get(file);
+      if (area === undefined) {
+        if (bodies.length > 0) problems.push(`${file}: has a search body but is not indexed`);
+      } else if (bodies.length !== 1) {
+        problems.push(`${file}: ${bodies.length} search bodies`);
+      } else if (!bodies[0]?.includes(`data-pagefind-meta="area:${area}"`)) {
+        problems.push(`${file}: ${bodies[0]} does not name area ${area}`);
+      }
+    }
+    expect(indexedPages.size).toBe(docs.length + galleryEntries.length + posts.length);
+    expect(problems).toEqual([]);
+    for (const file of ["index.html", "examples/index.html", "blog/index.html"]) {
+      expect(searchBodies(read("dist", file)), file).toEqual([]);
+    }
+  });
+
+  it("loads no search code up front, and the gallery and a post stay under the landing page's budget", () => {
+    const samplePages = [
+      "index.html",
+      pagePath(BAR),
+      "examples/index.html",
+      postPath(posts[0]?.slug ?? SAMPLE_POST),
+    ];
+    for (const file of samplePages) {
+      const searchAssets = [...ownAssets(file)].filter((path) =>
+        /pagefind|search-dialog/.test(path),
+      );
+      expect(searchAssets, file).toEqual([]);
+    }
+    for (const file of ["examples/index.html", postPath(posts[0]?.slug ?? SAMPLE_POST)]) {
+      const { total, report } = upFrontWeight(file);
+      expect(total, report).toBeLessThan(MAX_OWN_ASSET_GZIP_BYTES);
+    }
+  });
+
+  it("keeps search's eager script, with what it imports statically, to 2 KB gzipped", async () => {
+    const { metafile, outputFiles } = await esbuild({
+      entryPoints: ["src/scripts/search.ts"],
+      bundle: true,
+      format: "esm",
+      splitting: true,
+      minify: true,
+      metafile: true,
+      write: false,
+      outdir: "search-size",
+      logLevel: "silent",
+    });
+    const { outputs } = metafile;
+    const entry = Object.keys(outputs).find((path) => outputs[path]?.entryPoint);
+    const eager = new Set<string>();
+    const queue = entry ? [entry] : [];
+    while (queue.length > 0) {
+      const path = queue.pop() ?? "";
+      if (eager.has(path)) continue;
+      eager.add(path);
+      for (const imported of outputs[path]?.imports ?? []) {
+        if (imported.kind === "import-statement") queue.push(imported.path);
+      }
+    }
+    const bytes = outputFiles
+      .filter((file) => [...eager].some((path) => file.path.endsWith(path)))
+      .reduce((sum, file) => sum + gzipSync(file.contents).byteLength, 0);
+    expect(eager.size).toBeGreaterThan(0);
+    expect(bytes).toBeLessThanOrEqual(2048);
+  });
+});
+
+describe.skipIf(stubbed("gallery"))("the gallery's content (lane a)", () => {
+  const sections: readonly { id: string; label: string }[] = docsAreas.flatMap(
+    (area): readonly { id: string; label: string }[] => area.sections,
+  );
+  const kindLabel = (kind: string) => sections.find((section) => section.id === kind)?.label;
+
+  it("has at least 24 entries, with unique slugs and demos", () => {
+    expect(galleryEntries.length).toBeGreaterThanOrEqual(24);
+    for (const key of ["slug", "demo"] as const) {
+      const values = galleryEntries.map((entry) => entry[key]);
+      expect(
+        values.filter((value, index) => values.indexOf(value) !== index),
+        key,
+      ).toEqual([]);
+    }
+  });
+
+  it("titles each entry's chart with a finding, and draws it from tier-1 data", async () => {
+    const { getDemo } = await import("../src/demos/registry");
+    const problems = galleryEntries.flatMap((entry) => {
+      const demo = getDemo(entry.demo);
+      const chrome = (demo.spec as { chrome?: { title?: string | { text: string } } }).chrome;
+      const title = typeof chrome?.title === "string" ? chrome.title : (chrome?.title?.text ?? "");
+      const found: string[] = [];
+      if (title === "" || title.length > 90) found.push(`title "${title}" is empty or over 90`);
+      if (title.includes("!")) found.push(`title "${title}" has "!"`);
+      if (title === kindLabel(entry.kind)) found.push(`title "${title}" is the kind's label`);
+      // Map demos add their geography after the dataset's label.
+      if (!TIER_1_LABELS.some((label) => demo.source.label.startsWith(label))) {
+        found.push(`source "${demo.source.label}"`);
+      }
+      return found.map((problem) => `${entry.slug}: ${problem}`);
+    });
+    expect(problems).toEqual([]);
+  });
+
+  it("covers every Visualizations section except those GALLERY_GAPS lists", () => {
+    const covered = new Set<string>([
+      ...galleryEntries.map((entry) => entry.kind),
+      ...GALLERY_GAPS.map((gap) => gap.kind),
+    ]);
+    expect(sectionsOf("visualizations").filter((id) => !covered.has(id))).toEqual([]);
+  });
+
+  it("links each tile to its entry page", () => {
+    const wall = page("dist", "examples/index.html");
+    const missing = galleryEntries.filter(
+      (entry) => !wall.querySelector(`main a[href="/examples/${entry.slug}/"]`),
+    );
+    expect(missing.map((entry) => entry.slug)).toEqual([]);
+  });
+
+  it.each(galleryEntries)(
+    "$slug shows its demo with Code and Copy, a tier-1 source and its docs link",
+    (entry) => {
+      const doc = page("dist", entryPath(entry.slug));
+      const figures = [...doc.querySelectorAll(`.demo[data-demo="${entry.demo}"]`)];
+      expect(figures).toHaveLength(1);
+      const [figure] = figures as [Element];
+      expect(figure.querySelector("button[data-demo-toggle]")?.textContent).toBe("Code");
+      expect(figure.querySelectorAll("button[data-demo-copy]")).toHaveLength(1);
+      expect(citesTier1(figure), "the figure cites tier-1 data").toBe(true);
+      expect(doc.querySelector(`main a[href="${entry.docs}"]`)).not.toBeNull();
+      expect(proseText(doc.querySelector("main"))).not.toContain(EM_DASH);
+    },
+  );
+});
+
+describe.skipIf(stubbed("blog"))("the blog's content (lane d)", () => {
+  const sample = () => page("dist", postPath(SAMPLE_POST));
+  const prose = () => sample().querySelector("article .docs-prose");
+
+  it("the sample post has at least two tier-1 figures, one of them from a json demo fence", () => {
+    const figures = [...(prose()?.querySelectorAll(".demo[data-demo]") ?? [])];
+    expect(figures.length).toBeGreaterThanOrEqual(2);
+    const untraced = figures.filter((figure) => !citesTier1(figure));
+    expect(untraced.map((figure) => figure.getAttribute("data-demo"))).toEqual([]);
+    const fenced = figures.filter((figure) =>
+      figure.getAttribute("data-demo")?.startsWith("fence-"),
+    );
+    expect(fenced.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it.each(posts)("$slug has a byline: the author, the date, then the reading time", (post) => {
+    const byline = page("dist", postPath(post.slug)).querySelector("[data-byline]");
+    const [author, time, reading] = [...(byline?.children ?? [])];
+    expect(author?.textContent?.trim()).toBe(post.author);
+    expect(time?.tagName).toBe("TIME");
+    expect(time?.getAttribute("datetime")).toBe(isoDay(post.published));
+    expect(reading?.textContent?.trim()).toMatch(/^\d+ min read$/);
+  });
+
+  it.each(posts)("$slug is an article whose BlogPosting JSON-LD matches it", (post) => {
+    const doc = page("dist", postPath(post.slug));
+    expect(doc.querySelector('meta[property="og:type"]')?.getAttribute("content")).toBe("article");
+    const json = doc.querySelector('script[type="application/ld+json"]')?.textContent ?? "{}";
+    const ld = JSON.parse(json);
+    const canonical = absolute(`/blog/${post.slug}/`);
+    const mainEntity =
+      typeof ld.mainEntityOfPage === "string" ? ld.mainEntityOfPage : ld.mainEntityOfPage?.["@id"];
+    expect(ld["@type"]).toBe("BlogPosting");
+    expect(ld.headline).toBe(post.title);
+    expect(isoDay(new Date(ld.datePublished))).toBe(isoDay(post.published));
+    expect(isoDay(new Date(ld.dateModified))).toBe(isoDay(post.updated ?? post.published));
+    expect(ld.author?.name).toBe(post.author);
+    expect(ld.image).toBe(absolute(`/og/blog/${post.slug}.png`));
+    expect(mainEntity).toBe(canonical);
+  });
+
+  it("the sample post ends on one paragraph of at most 30 words with one link", () => {
+    const last = prose()?.lastElementChild;
+    expect(last?.tagName).toBe("P");
+    expect((last?.textContent ?? "").trim().split(/\s+/).length).toBeLessThanOrEqual(30);
+    expect(last?.querySelectorAll("a")).toHaveLength(1);
+  });
+
+  it("the sample post links each related docs page", () => {
+    const related = posts.find((post) => post.slug === SAMPLE_POST)?.related ?? [];
+    expect(related.length).toBeGreaterThan(0);
+    const missing = related.filter(
+      (id) => !sample().querySelector(`article a[href="/docs/${id}/"]`),
+    );
+    expect(missing).toEqual([]);
+  });
+
+  it("the sample post reads tightly: short paragraphs, no em dash, no repeated heading", () => {
+    expect(longParagraphs(sample())).toEqual([]);
+    expect(proseText(prose())).not.toContain(EM_DASH);
+    expect(repeatedHeadings(sample())).toEqual([]);
+  });
+
+  it.each(posts)(
+    "$slug has an RSS item with its canonical, its date and one category per tag",
+    async (post) => {
+      const window = new Window();
+      try {
+        const canonical = absolute(`/blog/${post.slug}/`);
+        const item = [...rssFeed(window).querySelectorAll("item")].find(
+          (candidate) => candidate.querySelector("link")?.textContent === canonical,
+        );
+        expect(item?.querySelector("guid")?.textContent).toBe(canonical);
+        const published = new Date(item?.querySelector("pubDate")?.textContent ?? "");
+        expect(isoDay(published)).toBe(isoDay(post.published));
+        expect(item?.querySelectorAll("category")).toHaveLength(post.tags.length);
+      } finally {
+        await window.happyDOM.close();
+      }
+    },
+  );
+
+  it.each(postTags)("the %s tag page lists exactly the posts with that tag", (tag) => {
+    const listed = [...page("dist", tagPath(tag)).querySelectorAll("main a[href]")]
+      .map((link) => link.getAttribute("href") ?? "")
+      .filter((href) => /^\/blog\/(?!tags\/)[a-z0-9-]+\/$/.test(href));
+    const tagged = posts.filter((post) => post.tags.includes(tag));
+    expect([...new Set(listed)].sort()).toEqual(tagged.map((post) => `/blog/${post.slug}/`).sort());
+  });
+});
+
+describe.skipIf(anyLaneStubbed)("phase 5 close", () => {
+  it("no source file still carries the phase 5 stub marker", () => {
+    const sources = readdirSync("src", { recursive: true, encoding: "utf8" })
+      .map((file) => join("src", file))
+      .filter((file) => statSync(file).isFile());
+    expect(sources.filter((file) => read(".", file).includes(PHASE_5_STUB))).toEqual([]);
+  });
+});
