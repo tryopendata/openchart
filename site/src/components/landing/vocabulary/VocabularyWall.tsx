@@ -55,14 +55,17 @@ export function VocabularyWall({ intents, total, sectionId, children }: Vocabula
 
   useEffect(() => {
     setReady(true);
-    // Arriving on a link such as /#vocabulary=maps: filter, then bring the wall into view.
-    if (parseWallHash(window.location.hash) !== null) {
+    // A link such as /#vocabulary=maps, on arrival or within the page: filter, then
+    // bring the wall into view, since no element carries that id for the browser to find.
+    const follow = () => {
+      if (parseWallHash(window.location.hash) === null) return;
       dispatch({ type: "hash", hash: window.location.hash });
-      document.getElementById(sectionId)?.scrollIntoView();
-    }
-    const read = () => dispatch({ type: "hash", hash: window.location.hash });
-    window.addEventListener("hashchange", read);
-    return () => window.removeEventListener("hashchange", read);
+      // Instant: a smooth scroll in flight when GSAP refreshes its triggers is put back.
+      document.getElementById(sectionId)?.scrollIntoView({ behavior: "instant", block: "start" });
+    };
+    follow();
+    window.addEventListener("hashchange", follow);
+    return () => window.removeEventListener("hashchange", follow);
   }, [sectionId]);
 
   useEffect(() => {

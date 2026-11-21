@@ -116,7 +116,7 @@ export const vocabularyTiles: VocabularyTile[] = [
     label: "Heatmap",
     href: "/docs/correlation/heatmap/",
   },
-  { demo: "flow/sankey-basic", intent: "flow", label: "Sankey", href: "/docs/flow/sankey/" },
+  { demo: "flow/sankey-budget", intent: "flow", label: "Sankey", href: "/docs/flow/sankey/" },
   { demo: "flow/graph-clusters", intent: "flow", label: "Network", href: "/docs/flow/graph/" },
   {
     demo: "maps/choropleth-basic",

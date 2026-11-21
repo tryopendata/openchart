@@ -80,9 +80,16 @@ describe("a tile's markup", () => {
     expect([...(table?.querySelectorAll("th") ?? [])].map((cell) => cell.textContent)).toEqual([
       "Country",
       "Population",
-      "GDP/capita (PPP)",
     ]);
-    expect(table?.querySelectorAll("tbody tr")).toHaveLength(5);
+    expect([...(table?.querySelectorAll("tbody tr") ?? [])].map((row) => row.textContent)).toEqual([
+      "India1,438,069,596",
+      "China1,410,710,000",
+    ]);
+    // The table keeps the placeholder line every stage without a static SVG carries, as its caption.
+    expect(table?.nextElementSibling?.matches("p[data-demo-placeholder]")).toBe(true);
+    expect(table?.nextElementSibling?.textContent).toBe(
+      `${getDemo("tables/basic").title}. This chart is drawn in the browser.`,
+    );
   });
 
   it("names the tile in the error when its demo does not exist", () => {
@@ -107,16 +114,24 @@ describe("slimming a tile's SVG", () => {
 });
 
 describe("a table tile's fallback", () => {
-  it("formats numbers by the column format and leaves out series columns", () => {
-    const html = tableFallbackHtml(tileSpec(getDemo("tables/sparkline-columns").spec));
-    document.body.innerHTML = html;
+  it("formats numbers by the column format and right-aligns them", () => {
+    const spec = {
+      type: "table",
+      data: [{ ticker: "AAPL", price: 1189.844 }],
+      columns: [
+        { key: "ticker", label: "Ticker" },
+        { key: "price", label: "Price", format: "$,.2f", align: "right" },
+      ],
+    } as never;
+    document.body.innerHTML = tableFallbackHtml(spec);
+    expect(document.querySelector("tbody td.wall-table-number")?.textContent).toBe("$1,189.84");
+  });
+
+  it("leaves out a column that holds series, which a sparkline draws", () => {
+    document.body.innerHTML = tableFallbackHtml(tileSpec(getDemo("tables/sparkline-columns").spec));
     expect([...document.querySelectorAll("th")].map((cell) => cell.textContent)).toEqual([
       "Ticker",
-      "Price",
     ]);
-    expect(document.querySelector("tbody td.wall-table-number")?.textContent).toMatch(
-      /^\$[\d,]+\.\d\d$/,
-    );
   });
 
   it("escapes cell text", () => {

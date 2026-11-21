@@ -48,6 +48,15 @@ function renderWall() {
   return section;
 }
 
+/**
+ * Puts the page at a URL before the island mounts, as an arrival does. happy-dom
+ * fires a hashchange after `replaceState` (browsers do not), so let it pass first.
+ */
+async function arriveAt(url: string) {
+  window.history.replaceState(null, "", url);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+}
+
 const shownLinks = () => screen.queryAllByRole("link").map((link) => link.textContent);
 
 afterEach(() => {
@@ -91,7 +100,7 @@ describe("the vocabulary wall", () => {
   });
 
   it("on arriving at a filter's hash, filters, announces it and brings the wall into view", async () => {
-    window.history.replaceState(null, "", "/#vocabulary=distribution");
+    await arriveAt("/#vocabulary=distribution");
     const section = renderWall();
     expect(
       await screen.findByRole("button", { name: "Distribution", pressed: true }),
@@ -101,16 +110,17 @@ describe("the vocabulary wall", () => {
     expect(section.scrollIntoView).toHaveBeenCalledOnce();
   });
 
-  it("stays put on a hash that is not the wall's, and follows the hash when it changes", async () => {
-    window.history.replaceState(null, "", "/#frameworks");
+  it("stays put on a hash that is not the wall's, and follows a link to a filter within the page", async () => {
+    await arriveAt("/#frameworks");
     const section = renderWall();
     expect(shownLinks()).toEqual(["Column", "Bar list", "Histogram"]);
     expect(section.scrollIntoView).not.toHaveBeenCalled();
 
-    window.history.replaceState(null, "", "/#vocabulary=comparison");
-    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    // What following an in-page link does: change the hash, which fires one hashchange.
+    window.location.hash = "#vocabulary=comparison";
     expect(await screen.findByRole("button", { name: "Comparison", pressed: true })).toBeVisible();
     expect(shownLinks()).toEqual(["Column", "Bar list"]);
     expect(screen.getByText("Showing 2 comparison charts.")).toBeInTheDocument();
+    expect(section.scrollIntoView).toHaveBeenCalledOnce();
   });
 });

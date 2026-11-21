@@ -16,7 +16,7 @@ import type { ThemeConfig, VizSpec } from "@opendata-ai/openchart-core";
 export const TILE_SVG_SIZE = { width: 240, height: 180 } as const;
 
 /** How much of a table a tile shows: enough rows and columns to read as a table at tile size. */
-export const TILE_TABLE = { rows: 5, columns: 3 } as const;
+export const TILE_TABLE = { rows: 2, columns: 2 } as const;
 
 /** Most ticks an axis keeps on a tile: enough to read the scale, few enough to stay clear. */
 const TILE_TICKS = 3;
@@ -53,7 +53,13 @@ function tileEncoding(encoding: unknown): unknown {
 
 function withTileTheme(theme: unknown): ThemeConfig {
   const own = isObject(theme) ? (theme as ThemeConfig) : {};
-  return { ...own, spacing: { ...own.spacing, ...TILE_THEME.spacing } };
+  const colors = Array.isArray(own.colors) ? { categorical: own.colors } : (own.colors ?? {});
+  return {
+    ...own,
+    // Transparent so every tile shows the page behind it, networks included.
+    colors: { ...colors, background: "transparent" },
+    spacing: { ...own.spacing, ...TILE_THEME.spacing },
+  };
 }
 
 /** A chart or one layer of a layered chart, stripped to its marks and a light scale. */
@@ -75,30 +81,63 @@ function tileChart(chart: Json): Json {
   return stripped;
 }
 
+/** Column settings that draw something in the cell rather than print a value. */
+const DRAWN_COLUMN_KEYS = ["sparkline", "bar", "heatmap", "delta", "image"];
+
+const isDrawnColumn = (column: unknown) =>
+  isObject(column) && DRAWN_COLUMN_KEYS.some((key) => key in column);
+
+/**
+ * The columns a table tile keeps: the first (what each row is), then the
+ * columns that draw something, then the rest, up to TILE_TABLE.columns.
+ */
+function tileColumns(columns: unknown[]): unknown[] {
+  const [first, ...rest] = columns;
+  const ordered = [...rest.filter(isDrawnColumn), ...rest.filter((c) => !isDrawnColumn(c))];
+  return [first, ...ordered].filter((column) => column !== undefined).slice(0, TILE_TABLE.columns);
+}
+
+/** A network without its legend or node labels, which are unreadable at tile size. */
+function tileGraph({ chrome: _chrome, ...rest }: Json): Json {
+  const encoding = isObject(rest.encoding) ? rest.encoding : {};
+  const { nodeLabel: _nodeLabel, ...marks } = encoding;
+  return { ...rest, encoding: marks, legend: false };
+}
+
+/** A table's first rows and its most telling columns, kept a table rather than cards. */
+function tileTable({
+  chrome: _chrome,
+  search: _search,
+  pagination: _pagination,
+  ...rest
+}: Json): Json {
+  return {
+    ...rest,
+    data: Array.isArray(rest.data) ? rest.data.slice(0, TILE_TABLE.rows) : rest.data,
+    columns: Array.isArray(rest.columns) ? tileColumns(rest.columns) : rest.columns,
+    // Under 400px a table turns into cards; a tile keeps it a table, as its name says.
+    mobileLayout: "scroll",
+    density: "condensed",
+  };
+}
+
+/** A sankey, map, tile map or bar list: these take a top-level legend switch. */
+function tileOther({ chrome: _chrome, annotations: _annotations, ...rest }: Json): Json {
+  const tile: Json = { ...rest, encoding: tileEncoding(rest.encoding), legend: { show: false } };
+  // Labels outside the first column's nodes run off a tile's left edge; inside, they stay on it.
+  if (rest.type === "sankey") tile.nodeLabelAlign = "right";
+  return tile;
+}
+
 /** The tile's version of a demo spec: the same data and encodings, set as a specimen. */
 export function tileSpec(spec: VizSpec): VizSpec {
   const source = spec as unknown as Json;
-  const type = source.type;
   let tile: Json;
-  if ("mark" in source || "layer" in source) {
+  if ("mark" in source || "layer" in source)
     tile = { ...tileChart(source), legend: { show: false } };
-  } else if (type === "graph") {
-    const { chrome: _chrome, ...rest } = source;
-    tile = { ...rest, legend: false };
-  } else if (type === "table") {
-    const { chrome: _chrome, search: _search, pagination: _pagination, ...rest } = source;
-    tile = {
-      ...rest,
-      data: Array.isArray(rest.data) ? rest.data.slice(0, TILE_TABLE.rows) : rest.data,
-      columns: Array.isArray(rest.columns)
-        ? rest.columns.slice(0, TILE_TABLE.columns)
-        : rest.columns,
-    };
-  } else {
-    // Sankey, geo map, tile map and bar list take a top-level legend switch.
-    const { chrome: _chrome, annotations: _annotations, ...rest } = source;
-    tile = { ...rest, encoding: tileEncoding(rest.encoding), legend: { show: false } };
-  }
+  else if (source.type === "graph") tile = tileGraph(source);
+  else if (source.type === "table") tile = tileTable(source);
+  else tile = tileOther(source);
   tile.theme = withTileTheme(source.theme);
   return tile as unknown as VizSpec;
 }

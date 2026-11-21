@@ -61,10 +61,26 @@ describe("a tile's spec", () => {
     expect(tile).not.toHaveProperty("pagination");
   });
 
-  it("gives every tile the same tight padding, over any theme the demo sets", () => {
+  it("keeps a table's first column and the columns that draw, before plain values", () => {
+    const tile = json(tileSpec(getDemo("tables/sparkline-columns").spec));
+    expect((tile.columns as Json[]).map((column) => column.key)).toEqual(["ticker", "trend"]);
+    expect(tile).toMatchObject({ mobileLayout: "scroll", density: "condensed" });
+  });
+
+  it("drops a network's legend and node labels, and keeps a sankey's labels on the tile", () => {
+    const graph = json(tileSpec(getDemo("flow/graph-clusters").spec));
+    expect(graph.legend).toBe(false);
+    expect(graph.encoding).not.toHaveProperty("nodeLabel");
+    expect(graph.encoding).toHaveProperty("nodeColor");
+    const sankey = json(tileSpec(getDemo("flow/sankey-budget").spec));
+    expect(sankey).toMatchObject({ nodeLabelAlign: "right", legend: { show: false } });
+  });
+
+  it("gives every tile the same tight padding and a clear background, over any theme the demo sets", () => {
     for (const tile of vocabularyTiles) {
       expect(json(tileSpec(getDemo(tile.demo).spec)).theme, tile.demo).toMatchObject({
         spacing: { padding: 4, chromeToChart: 0 },
+        colors: { background: "transparent" },
       });
     }
   });

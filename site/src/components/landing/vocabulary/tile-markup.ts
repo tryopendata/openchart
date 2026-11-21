@@ -81,9 +81,12 @@ export function tableFallbackHtml(spec: VizSpec): string {
   return `<table class="wall-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
 }
 
-/** The stage's content for one tile spec: slimmed static SVGs, a table fallback, or the placeholder line. */
+/**
+ * The stage's content for one tile spec: slimmed static SVGs, or the demo
+ * system's placeholder line naming the chart, which a table tile sets as a
+ * caption under its first rows.
+ */
 function tileStageContent(demo: string, title: string, spec: VizSpec): string {
-  if (isTableSpec(spec)) return tableFallbackHtml(spec);
   const content = stageContentHtml({
     spec,
     title,
@@ -92,7 +95,8 @@ function tileStageContent(demo: string, title: string, spec: VizSpec): string {
     static: true,
     precision: 0,
   });
-  return slimSvg(content);
+  const slim = slimSvg(content);
+  return isTableSpec(spec) ? tableFallbackHtml(spec) + slim : slim;
 }
 
 /**
