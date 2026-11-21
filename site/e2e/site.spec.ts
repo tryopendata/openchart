@@ -23,7 +23,8 @@ async function liveStage(page: Page) {
   return stage;
 }
 
-for (const path of ["/", BAR, GUIDE]) {
+// The landing page has its own axe pass after a full scroll, in landing.spec.ts.
+for (const path of [BAR, GUIDE]) {
   for (const scheme of ["light", "dark"] as const) {
     test(`${path} in ${scheme} passes axe with no console errors`, async ({ page }) => {
       const errors = collectErrors(page);
