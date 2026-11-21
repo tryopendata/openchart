@@ -89,7 +89,8 @@ describe("the page set", () => {
 
 describe("demos", () => {
   it("the bar page shows at least three demos, each with both static SVGs and five code tabs behind Show code", () => {
-    const figures = [...page("dist", pagePath(BAR)).querySelectorAll("figure[data-demo]")];
+    const doc = page("dist", pagePath(BAR));
+    const figures = [...doc.querySelectorAll(".demo[data-demo]")];
     expect(figures.length).toBeGreaterThanOrEqual(3);
     for (const figure of figures) {
       const id = figure.getAttribute("data-demo") ?? "";
@@ -107,18 +108,25 @@ describe("demos", () => {
       for (const tab of tabs) {
         expect(figure.querySelector(`[data-demo-panel="${tab}"]`), `${id} ${tab}`).not.toBeNull();
       }
-      const code = figure.querySelector("details[data-demo-code]");
-      expect(code?.hasAttribute("open"), `${id} code starts closed`).toBe(false);
-      expect(code?.querySelector(":scope > summary")?.textContent, id).toContain("Show code");
+      const code = figure.querySelector("[data-demo-code]");
+      const toggle = figure.querySelector("button[data-demo-toggle]");
+      expect(toggle?.textContent, id).toBe("Code");
+      expect(toggle?.getAttribute("aria-controls"), id).toBe(code?.id);
+      expect(toggle?.getAttribute("aria-expanded"), `${id} code starts closed`).toBe("false");
       expect(figure.querySelectorAll("button[data-demo-copy][hidden]"), id).toHaveLength(1);
       expect(figure.hasAttribute("data-demo-entrance"), `${id} plays its entrance`).toBe(true);
       expect(figure.querySelector("figcaption")?.textContent, id).toMatch(/Source: \S/);
     }
+    // The gate runs in the head, before anything paints, so a restored open block never moves the page.
+    const gate = [...doc.querySelectorAll("head script:not([src])")].find((script) =>
+      script.textContent?.includes("data-demo-gate"),
+    );
+    expect(gate, "the demo gate script in the head").toBeDefined();
   });
 
   it("a json demo fence in repo Markdown becomes a demo figure", () => {
     const figures = page("dist", pagePath(GETTING_STARTED)).querySelectorAll(
-      'figure[data-demo^="fence-"]',
+      '.demo[data-demo^="fence-"]',
     );
     expect(figures.length).toBeGreaterThanOrEqual(1);
     expect(figures[0]?.querySelector("svg.demo-static")).not.toBeNull();
@@ -134,7 +142,7 @@ describe("demos", () => {
         stages += 1;
         const text = stage.querySelector("p[data-demo-placeholder]")?.textContent ?? "";
         if (!/^\S.*\. This chart is drawn in the browser\.$/.test(text)) {
-          missing.push(`${file}: ${stage.closest("figure")?.getAttribute("data-demo")}`);
+          missing.push(`${file}: ${stage.closest("[data-demo]")?.getAttribute("data-demo")}`);
         }
       }
     }
@@ -352,7 +360,7 @@ describe("the visualization catalog", () => {
   });
 
   it.each(catalogPageIds.filter(built))("%s shows at least three sourced demos", (id) => {
-    const figures = [...page("dist", pagePath(id)).querySelectorAll("figure[data-demo]")];
+    const figures = [...page("dist", pagePath(id)).querySelectorAll(".demo[data-demo]")];
     expect(figures.length).toBeGreaterThanOrEqual(3);
     for (const figure of figures) {
       const demo = figure.getAttribute("data-demo") ?? "";

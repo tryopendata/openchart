@@ -14,7 +14,7 @@
 
 /** The data attributes on a demo figure and its parts. */
 export const DEMO_ATTR = {
-  /** On the `<figure>`, holding the demo id. */
+  /** On the demo's outer `<div class="demo">`, which holds the figure, the spec and the code toolbar; holds the demo id. */
   figure: "data-demo",
   /** On the stage that holds the static SVGs and later the live chart. */
   stage: "data-demo-stage",
@@ -27,16 +27,23 @@ export const DEMO_ATTR = {
   /** On a page's `<script type="application/json">` holding one shared value, keyed by its hash. */
   shared: "data-demo-shared",
   /**
-   * On the code block: a `<details>`, closed as built, holding the tab strip and
-   * the panels. Its `<summary>` is the Show code control.
+   * On the code block holding the tab strip and the panels. Without JavaScript it
+   * shows; with it, demo.css closes it until the reader opens it (see `open`).
    */
   code: "data-demo-code",
+  /** On the Code disclosure button, which carries `aria-expanded` and `aria-controls`. */
+  toggle: "data-demo-toggle",
+  /**
+   * On a code block the reader opened or closed on this page, "true" or "false".
+   * Without it the block follows the page default (`DEMO_PAGE_ATTR.codeDefault`).
+   */
+  open: "data-demo-open",
   /** On each tab link, holding its framework id. */
   tab: "data-demo-tab",
   /** On each code panel, holding its framework id. */
   panel: "data-demo-panel",
   /**
-   * On the figure's one Copy button, in the toolbar beside Show code. It copies
+   * On the demo's one Copy button, in the toolbar beside Code. It copies
    * the chosen tab's panel, and ships `hidden` until the script wires it.
    */
   copy: "data-demo-copy",
@@ -57,6 +64,21 @@ export const DEMO_ATTR = {
   live: "data-demo-live",
   /** On the stage once a live mount has failed. */
   error: "data-demo-error",
+} as const;
+
+/**
+ * Attributes on `<html>`. The demo gate script (demo-gate.ts) sets the first two
+ * in the head, before first paint; demos.ts sets `ready` when it starts. Without
+ * `ready` in time, the gate takes the first two away again, so a page whose
+ * scripts never arrive looks like a page without JavaScript.
+ */
+export const DEMO_PAGE_ATTR = {
+  /** Scripts are expected: demo.css hides held static charts and closes code blocks. */
+  gate: "data-demo-gate",
+  /** "open" or "closed": the reader's remembered choice for code blocks on this page. */
+  codeDefault: "data-demo-code-default",
+  /** demos.ts is running. */
+  ready: "data-demo-ready",
 } as const;
 
 /** The classes on the static SVGs and on the live chart's host element. */

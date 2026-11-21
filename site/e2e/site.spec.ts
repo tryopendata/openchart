@@ -55,6 +55,10 @@ function animationStates(stage: Locator) {
 
 const staticChart = (stage: Locator) => stage.locator('svg.demo-static[data-theme="light"]');
 
+/** The light static chart's visibility, read once. */
+const staticVisibility = (stage: Locator) =>
+  staticChart(stage).evaluate((svg) => getComputedStyle(svg).visibility);
+
 /** Scrolls so the stage sits just below the viewport: close enough to mount, not yet seen. */
 async function bringJustBelowViewport(stage: Locator) {
   await stage.evaluate((element) => {
@@ -62,6 +66,8 @@ async function bringJustBelowViewport(stage: Locator) {
     window.scrollBy({ top: below, behavior: "instant" });
   });
 }
+
+const firstDemo = (page: Page) => page.locator(".demo[data-demo]").first();
 
 test.describe("demos", () => {
   test("a demo mounts live in place of its static SVG without moving the page", async ({
@@ -81,14 +87,11 @@ test.describe("demos", () => {
   test("the entrance waits until the demo scrolls into view, then plays", async ({ page }) => {
     await page.goto(BAR);
     // A demo still far below shows nothing yet, so its finished chart is never seen before the entrance.
-    await expect(staticChart(page.locator("[data-demo-stage]").last())).toHaveCSS(
-      "visibility",
-      "hidden",
-    );
+    expect(await staticVisibility(page.locator("[data-demo-stage]").last())).toBe("hidden");
     const stage = page.locator("[data-demo-stage]").nth(1);
     await bringJustBelowViewport(stage);
     await expect(stage).toHaveAttribute("data-demo-live", "");
-    // Mounted ahead of the reader with the entrance held, and the static chart out of sight.
+    // Mounted ahead of the reader with the entrance held.
     await expect(stage.locator(".oc-animate")).toHaveCount(1);
     const held = await animationStates(stage);
     expect(held.length).toBeGreaterThan(0);
@@ -106,15 +109,26 @@ test.describe("demos", () => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto(BAR);
     // Nothing will play, so a demo still far below keeps its static chart showing.
-    await expect(staticChart(page.locator("[data-demo-stage]").last())).toHaveCSS(
-      "visibility",
-      "visible",
-    );
+    expect(await staticVisibility(page.locator("[data-demo-stage]").last())).toBe("visible");
     const stage = page.locator("[data-demo-stage]").nth(1);
     await stage.scrollIntoViewIfNeeded();
     await expect(stage).toHaveAttribute("data-demo-live", "");
     expect(await stage.locator("svg:not(.demo-static) rect").count()).toBeGreaterThan(0);
     expect(await animationStates(stage)).toEqual([]);
+  });
+
+  test("when the chart library can't load, the static charts come back at once", async ({
+    page,
+  }) => {
+    await page.route(/demo-mount[^/]*\.js$/, (route) => route.abort());
+    const errors = collectErrors(page);
+    await page.goto(BAR);
+    const stage = page.locator("[data-demo-stage]").first();
+    // Well inside the head gate's own fallback, which waits four seconds.
+    await expect(stage).toHaveAttribute("data-demo-error", "", { timeout: 2000 });
+    await expect(staticChart(stage)).toBeVisible({ timeout: 2000 });
+    expect(await staticVisibility(stage)).toBe("visible");
+    expect(errors.some((error) => error.includes("could not be rendered"))).toBe(true);
   });
 
   test("live demos follow the site theme", async ({ page }) => {
@@ -129,29 +143,56 @@ test.describe("demos", () => {
 
   test("the code starts closed and opens and closes from the keyboard", async ({ page }) => {
     await page.goto(BAR);
-    const figure = page.locator("figure[data-demo]").first();
-    const toggle = figure.locator("summary");
-    const spec = figure.locator('[data-demo-panel="spec"]');
-    await expect(toggle).toHaveText("Show code", { useInnerText: true });
+    const demo = firstDemo(page);
+    const toggle = demo.getByRole("button", { name: "Code", exact: true });
+    const spec = demo.locator('[data-demo-panel="spec"]');
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
     await expect(spec).toBeHidden();
     await toggle.focus();
     await page.keyboard.press("Enter");
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
     await expect(spec).toBeVisible();
-    await expect(toggle).toHaveText("Hide code", { useInnerText: true });
+    // Focus moves from Code to Copy, then into the code: the order the row reads.
+    await page.keyboard.press("Tab");
+    await expect(demo.locator("button[data-demo-copy]")).toBeFocused();
+    // A long data array scrolls inside its own region instead of pushing the page down.
+    const pre = spec.locator("pre");
+    expect((await pre.boundingBox())?.height).toBeLessThanOrEqual(28 * 16 + 1);
+    await expect(pre).toHaveAttribute("tabindex", "0");
+    await toggle.focus();
     await page.keyboard.press("Space");
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
     await expect(spec).toBeHidden();
-    await expect(toggle).toHaveText("Show code", { useInnerText: true });
   });
 
-  test("the chosen code tab and open code apply to every demo and survive navigation", async ({
-    page,
-  }) => {
+  test("open code is restored on the next page, in place before it paints", async ({ page }) => {
     await page.goto(BAR);
-    const figure = page.locator("figure[data-demo]").first();
-    await figure.locator("summary").click();
-    await figure.locator('[data-demo-tab="vue"]').click();
-    await expect(figure.locator('[data-demo-panel="vue"]')).toBeVisible();
-    await expect(figure.locator('[data-demo-panel="spec"]')).toBeHidden();
+    await firstDemo(page).getByRole("button", { name: "Code", exact: true }).click();
+    await page.goto(GUIDE);
+    const demo = firstDemo(page);
+    await expect(demo.locator('[data-demo-panel="spec"]')).toBeVisible();
+    await expect(demo.getByRole("button", { name: "Code", exact: true })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    const opening = await page.evaluate(
+      () =>
+        document
+          .getAnimations()
+          .filter((animation) =>
+            (animation.effect as KeyframeEffect | null)?.target?.closest("[data-demo-code]"),
+          ).length,
+    );
+    expect(opening).toBe(0);
+  });
+
+  test("the chosen code tab applies to every demo and survives navigation", async ({ page }) => {
+    await page.goto(BAR);
+    const demo = firstDemo(page);
+    await demo.getByRole("button", { name: "Code", exact: true }).click();
+    await demo.locator('[data-demo-tab="vue"]').click();
+    await expect(demo.locator('[data-demo-panel="vue"]')).toBeVisible();
+    await expect(demo.locator('[data-demo-panel="spec"]')).toBeHidden();
     const codes = page.locator("[data-demo-code]");
     expect(await codes.count()).toBeGreaterThanOrEqual(3);
     for (const code of await codes.all())
@@ -166,15 +207,30 @@ test.describe("demos", () => {
   }) => {
     await context.grantPermissions(["clipboard-read", "clipboard-write"]);
     await page.goto(BAR);
-    const figure = page.locator("figure[data-demo]").first();
-    const copy = figure.locator("button[data-demo-copy]");
+    const demo = firstDemo(page);
+    const copy = demo.locator("button[data-demo-copy]");
     await expect(copy).toHaveAccessibleName("Copy");
     await copy.click();
     await expect(copy).toHaveText("Copied");
-    await expect(figure.getByRole("status")).toHaveText("Copied the Spec code.");
-    await expect(figure.locator("details[data-demo-code]")).not.toHaveAttribute("open");
+    await expect(demo.getByRole("status")).toHaveText("Copied the Spec code.");
+    await expect(demo.getByRole("button", { name: "Code", exact: true })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
     const copied = await page.evaluate(() => navigator.clipboard.readText());
     expect(JSON.parse(copied)).toHaveProperty("encoding");
+  });
+
+  test("a prose code block copies through the same button", async ({ page, context }) => {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await page.goto(GUIDE);
+    const frame = page.locator(".code-frame:not(.demo .code-frame)").first();
+    const copy = frame.locator("button.copy-button");
+    await copy.click();
+    await expect(copy).toHaveText("Copied");
+    await expect(frame.getByRole("status")).toHaveText(/^Copied /);
+    const copied = await page.evaluate(() => navigator.clipboard.readText());
+    expect(copied).toBe(await frame.locator("code").textContent());
   });
 
   test("a spec that cannot mount shows the failure message", async ({ page }) => {
@@ -186,7 +242,7 @@ test.describe("demos", () => {
 
   test("a table demo, which has no static SVG, mounts live", async ({ page }) => {
     await page.goto("/fixtures/demo/");
-    const stage = page.locator('figure[data-demo="fixtures/table"] [data-demo-stage]');
+    const stage = page.locator('[data-demo="fixtures/table"] [data-demo-stage]');
     await expect(stage.locator("svg.demo-static")).toHaveCount(0);
     await stage.scrollIntoViewIfNeeded();
     await expect(stage).toHaveAttribute("data-demo-live", "");
@@ -211,7 +267,7 @@ test("the area switcher moves from Visualizations to Guides", async ({ page, isM
 test.describe("without JavaScript", () => {
   test.use({ javaScriptEnabled: false });
 
-  test("the docs menu opens, and a demo shows its static chart and opens its spec", async ({
+  test("the docs menu opens, and a demo shows its static chart and its spec", async ({
     page,
     isMobile,
   }) => {
@@ -226,9 +282,9 @@ test.describe("without JavaScript", () => {
     const stage = firstStage(page);
     await expect(stage.locator('svg.demo-static[data-theme="light"]')).toBeVisible();
     await expect(stage.locator('svg.demo-static[data-theme="dark"]')).toBeHidden();
-    const figure = page.locator("figure[data-demo]").first();
-    await expect(figure.getByRole("button", { name: "Copy" })).toHaveCount(0);
-    await figure.locator("summary").click();
-    await expect(figure.locator('[data-demo-panel="spec"]')).toBeVisible();
+    // No dead controls, and the code is simply there to read.
+    const demo = page.locator(".demo[data-demo]").first();
+    await expect(demo.getByRole("button")).toHaveCount(0);
+    await expect(demo.locator('[data-demo-panel="spec"]')).toBeVisible();
   });
 });

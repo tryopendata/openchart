@@ -20,13 +20,13 @@ for (const path of pages) {
   for (const scheme of ["light", "dark"] as const) {
     test(`${path} in ${scheme} passes axe and mounts its first demo`, async ({ page }) => {
       const errors = collectErrors(page);
-      await page.emulateMedia({ colorScheme: scheme });
+      // Under reduced motion nothing animates and every static chart shows, so axe
+      // checks each demo finished, not mid-entrance or hidden until it is seen.
+      await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
       await page.goto(path);
       const stage = page.locator("[data-demo-stage]").first();
       await stage.scrollIntoViewIfNeeded();
       await expect(stage).toHaveAttribute("data-demo-live", "");
-      // Check the settled demo: mid-entrance, fading text would fail contrast.
-      await expect(stage.locator(".oc-animate")).toHaveCount(0);
       expect(await pageViolations(page)).toEqual([]);
       expect(errors).toEqual([]);
     });

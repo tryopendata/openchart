@@ -11,6 +11,7 @@ import { fixtureBar } from "../demos/fixtures/bar";
 import { basicChoropleth, divergingChoropleth } from "../demos/maps/choropleth";
 import type { DemoDef } from "../demos/types";
 import { demoFigureHtml } from "../lib/demo/figure";
+import { FRAMEWORK_STORAGE_KEY } from "../lib/demo/framework-choice";
 import { frameworkSnippets } from "../lib/demo/snippets";
 import { setupDemoCopyButtons } from "./demo-copy";
 import { setupFrameworkChoice } from "./framework-choice";
@@ -41,9 +42,11 @@ const mapPage = Promise.all(
   ),
 ).then((figures) => figures.join(""));
 
-async function pageWithFigure(html: Promise<string> = barPage) {
-  const window = new Window();
+async function pageWithFigure(html: Promise<string> = barPage, storedChoice?: string) {
+  const window = new Window({ url: "https://openchart.example/docs/" });
   window.document.body.innerHTML = await html;
+  if (storedChoice) window.localStorage.setItem(FRAMEWORK_STORAGE_KEY, storedChoice);
+  vi.stubGlobal("localStorage", window.localStorage);
   vi.stubGlobal("navigator", window.navigator);
   // framework-choice.ts checks click targets against the global Element, which Node lacks.
   vi.stubGlobal("Element", window.Element);
@@ -63,25 +66,23 @@ const statusOf = (window: Window, figure: string) =>
   window.document.querySelector(`${figure} [data-demo-copy-status]`)?.textContent;
 
 /** Picks a code tab the way a reader does, which applies to every figure on the page. */
-function chooseTab(window: Window, tab: string, figure = "figure") {
+function chooseTab(window: Window, tab: string, figure = "[data-demo]") {
   const link = window.document.querySelector(`${figure} [data-demo-tab="${tab}"]`);
   if (!link) throw new Error(`No ${tab} tab in ${figure}`);
   (link as unknown as HTMLElement).click();
 }
 
 /** Presses Copy with the given tab chosen (Spec when none is given). */
-async function clickCopy(window: Window, tab?: string, figure = "figure") {
+async function clickCopy(window: Window, tab?: string, figure = "[data-demo]") {
   if (tab) chooseTab(window, tab, figure);
   const button = copyButton(window, figure);
   const status = window.document.querySelector(`${figure} [data-demo-copy-status]`);
-  // A press inside the last one's feedback window shows the same text, so wait on a cleared region.
-  if (status) status.textContent = "";
   button.click();
   await vi.waitFor(() => expect(status?.textContent).not.toBe(""));
   return button;
 }
 
-const figureOf = (demo: DemoDef) => `figure[data-demo="${demo.id}"]`;
+const figureOf = (demo: DemoDef) => `[data-demo="${demo.id}"]`;
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -95,7 +96,7 @@ describe("demo Copy buttons", () => {
     expect(buttons.map((button) => (button as unknown as HTMLButtonElement).hidden)).toEqual([
       false,
     ]);
-    expect(window.document.querySelector("details[data-demo-code]")?.hasAttribute("open")).toBe(
+    expect(window.document.querySelector("[data-demo-code]")?.hasAttribute("data-demo-open")).toBe(
       false,
     );
   });
@@ -104,7 +105,7 @@ describe("demo Copy buttons", () => {
     const window = await pageWithFigure();
     expect((await clickCopy(window)).textContent).toBe("Copied");
     expect(JSON.parse(await window.navigator.clipboard.readText())).toEqual(fixtureBar.spec);
-    expect(statusOf(window, "figure")).toBe("Copied the Spec code.");
+    expect(statusOf(window, "[data-demo]")).toBe("Copied the Spec code.");
   });
 
   it("copies the chosen framework's complete code, data rows included", async () => {
@@ -113,7 +114,7 @@ describe("demo Copy buttons", () => {
     expect(await window.navigator.clipboard.readText()).toBe(
       frameworkSnippets(fixtureBar.spec).vue,
     );
-    expect(statusOf(window, "figure")).toBe("Copied the Vue code.");
+    expect(statusOf(window, "[data-demo]")).toBe("Copied the Vue code.");
   });
 
   it("returns to Copy and clears the announcement after a moment", async () => {
@@ -123,17 +124,52 @@ describe("demo Copy buttons", () => {
       const button = await clickCopy(window);
       vi.advanceTimersByTime(2000);
       expect(button.textContent).toBe("Copy");
-      expect(statusOf(window, "figure")).toBe("");
+      expect(statusOf(window, "[data-demo]")).toBe("");
     } finally {
       vi.useRealTimers();
     }
   });
 
-  it("says Copy failed when the clipboard refuses", async () => {
+  it("copies the framework the reader chose on an earlier page, without a tab being pressed", async () => {
+    const window = await pageWithFigure(barPage, "react");
+    await clickCopy(window);
+    expect(await window.navigator.clipboard.readText()).toBe(
+      frameworkSnippets(fixtureBar.spec).react,
+    );
+    expect(statusOf(window, "[data-demo]")).toBe("Copied the React code.");
+  });
+
+  it("announces a repeated copy again", async () => {
+    const window = await pageWithFigure();
+    await clickCopy(window);
+    expect(statusOf(window, "[data-demo]")).toBe("Copied the Spec code.");
+    // The region empties at the press and fills again, so a screen reader hears the same words twice.
+    copyButton(window, "[data-demo]").click();
+    expect(statusOf(window, "[data-demo]")).toBe("");
+    await vi.waitFor(() => expect(statusOf(window, "[data-demo]")).toBe("Copied the Spec code."));
+  });
+
+  it("opens the code and selects it when the clipboard refuses", async () => {
     const window = await pageWithFigure();
     vi.spyOn(window.navigator.clipboard, "writeText").mockRejectedValue(new Error("Not allowed"));
-    expect((await clickCopy(window, "react")).textContent).toBe("Copy failed");
-    expect(statusOf(window, "figure")).toBe("Copy failed. Select the code to copy it.");
+    expect((await clickCopy(window)).textContent).toBe("Copy failed");
+    expect(statusOf(window, "[data-demo]")).toBe(
+      "Copy failed. The code is selected; copy it with your keyboard.",
+    );
+    expect(window.document.querySelector("[data-demo-code]")?.getAttribute("data-demo-open")).toBe(
+      "true",
+    );
+    const shown = window.document.querySelector('[data-demo-panel="spec"] pre')?.textContent;
+    expect(window.getSelection()?.toString()).toBe(shown);
+  });
+
+  it("points to the Spec tab when a refused framework panel shows abbreviated code", async () => {
+    const window = await pageWithFigure();
+    vi.spyOn(window.navigator.clipboard, "writeText").mockRejectedValue(new Error("Not allowed"));
+    await clickCopy(window, "react");
+    expect(statusOf(window, "[data-demo]")).toBe(
+      "Copy failed. The code shown is abbreviated; the Spec tab shows the complete spec.",
+    );
   });
 
   it("copies a map's complete spec and code, filling the folded atlas from the shared block", async () => {

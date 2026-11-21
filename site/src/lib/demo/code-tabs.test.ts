@@ -46,24 +46,28 @@ describe("codeTabsHtml", () => {
     expect(tabs[0]?.getAttribute("aria-current")).toBe("true");
   });
 
-  it("closes the code behind a Show code control, with one hidden Copy beside it", async () => {
+  it("leads with a Code disclosure and one Copy, in reading order, before the code they act on", async () => {
     const { block } = await codeBlock();
-    expect(block.tagName).toBe("DETAILS");
-    expect(block.hasAttribute("open")).toBe(false);
-    const toggle = block.querySelector(":scope > summary");
-    // demo.css shows one label at a time: Show code while closed, Hide code while open.
-    expect([...(toggle?.children ?? [])].map((label) => label.textContent)).toEqual([
-      "Show code",
-      "Hide code",
-    ]);
     const toolbar = block.parentElement;
-    const copies = [...(toolbar?.querySelectorAll("button[data-demo-copy]") ?? [])];
-    expect(copies.map((button) => [button.textContent, button.hasAttribute("hidden")])).toEqual([
-      ["Copy", true],
+    const row = toolbar?.firstElementChild;
+    expect([...(toolbar?.children ?? [])]).toEqual([row, block]);
+    const controls = [...(row?.querySelectorAll("button") ?? [])].map((button) => ({
+      name: button.textContent,
+      hidden: button.hasAttribute("hidden"),
+      expanded: button.getAttribute("aria-expanded"),
+      controls: button.getAttribute("aria-controls"),
+    }));
+    expect(controls).toEqual([
+      { name: "Code", hidden: true, expanded: "false", controls: block.id },
+      { name: "Copy", hidden: true, expanded: null, controls: null },
     ]);
-    expect(block.contains(copies[0] ?? null)).toBe(false);
-    const status = toolbar?.querySelector("[data-demo-copy-status]");
-    expect(status?.getAttribute("aria-live")).toBe("polite");
+    expect(row?.querySelector("[data-demo-copy-status]")?.getAttribute("aria-live")).toBe("polite");
+  });
+
+  it("makes each panel's code a keyboard-scrollable region", async () => {
+    const { block } = await codeBlock();
+    const pres = [...block.querySelectorAll("[data-demo-panel] pre")];
+    expect(pres.map((pre) => pre.getAttribute("tabindex"))).toEqual(["0", "0", "0", "0", "0"]);
   });
 
   it("shows the data rows in the Spec panel only and folds them in the framework panels", async () => {

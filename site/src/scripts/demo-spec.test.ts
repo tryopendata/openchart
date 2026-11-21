@@ -30,7 +30,7 @@ async function mapPage() {
 }
 
 const figure = (doc: Document, demo: DemoDef) => {
-  const element = doc.querySelector(`figure[data-demo="${demo.id}"]`);
+  const element = doc.querySelector(`[data-demo="${demo.id}"]`);
   if (!element) throw new Error(`No figure for ${demo.id}`);
   return element;
 };

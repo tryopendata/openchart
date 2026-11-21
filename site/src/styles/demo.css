@@ -1,27 +1,31 @@
 /*
- * Demo figure styles. The figure reads as a published graphic: the chart, its
- * caption and source, then a quiet toolbar on a hairline rule (Show code on the
- * left, Copy on the right) over the code, which starts closed. The library's own
- * stylesheet comes first: live charts need it. The stage keeps a fixed height at
- * every width so the swap from static SVG to live chart moves nothing on the page.
+ * Demo styles. A demo reads as a published graphic: the figure (the chart, then
+ * its caption and source), then a quiet toolbar on a hairline rule (Code on the
+ * left, Copy on the right) over the code, all in reading order. The library's
+ * own stylesheet comes first: live charts need it. The stage keeps a fixed
+ * height at every width so the swap from static SVG to live chart moves nothing
+ * on the page. The head gate (lib/demo/page-gate.ts) sets the attributes on
+ * <html> that the rules below key on, before first paint.
  */
 @import "@opendata-ai/openchart-core/styles.css";
 
 @layer components {
-  /* The caption leads in the markup (see figure.ts); order shows it under the chart. */
   .demo {
-    @apply my-10 flex flex-col;
+    @apply my-10;
+  }
+
+  .demo-figure {
+    @apply m-0;
   }
 
   .demo-stage {
     position: relative;
-    order: 1;
     height: var(--demo-height, 400px);
   }
 
   /* Caption, toolbar and code share the chart's own 1rem inset, so their text lines up with its title. */
   .demo .figure-caption {
-    @apply order-2 px-4 pt-3 pb-1 text-sm leading-snug text-muted;
+    @apply px-4 pt-3 pb-1 text-sm leading-snug text-muted;
   }
 
   .demo .figure-caption a {
@@ -29,7 +33,7 @@
   }
 
   .demo-toolbar {
-    @apply relative order-3 mt-3 border-t border-line;
+    @apply mt-3 border-t border-line;
   }
 
   /* The renderer writes an inline pixel height; the stage decides the size instead. */
@@ -55,20 +59,18 @@
     @apply absolute inset-0 m-0 flex items-center justify-center px-4 text-center text-muted;
   }
 
-  /* Show code and Copy: small text buttons in the sans, one row high. */
-  .demo-toggle,
-  .demo-copy {
-    @apply flex h-10 cursor-pointer items-center gap-2 font-sans text-sm text-muted hover:text-ink;
-    transition: color 120ms ease-out;
+  /* Code on the left, Copy pushed right; the row only shows where scripts run (see below). */
+  .demo-toolbar-row {
+    @apply hidden h-10 items-center justify-between px-4;
   }
 
   .demo-toggle {
-    @apply w-fit pl-4 select-none;
-    list-style: none;
+    @apply flex h-full cursor-pointer items-center gap-2 font-sans text-sm text-muted select-none hover:text-ink;
+    transition: color 120ms ease-out;
   }
 
-  .demo-toggle::-webkit-details-marker {
-    display: none;
+  .demo-toolbar-row .copy-button {
+    @apply ml-auto h-full;
   }
 
   /* A thin chevron that turns down when the code is open. */
@@ -79,18 +81,8 @@
     transition: transform 120ms ease-out;
   }
 
-  .demo-code[open] > .demo-toggle::before {
+  .demo-toggle[aria-expanded="true"]::before {
     transform: translateY(-2px) rotate(45deg);
-  }
-
-  .demo-code[open] .demo-toggle-show,
-  .demo-code:not([open]) .demo-toggle-hide {
-    display: none;
-  }
-
-  /* Sits in the toggle's row; the button is after the code in the markup so focus meets Show code first. */
-  .demo-copy {
-    @apply absolute top-0 right-0 min-w-[5.5rem] justify-end pr-4;
   }
 
   .demo-tabs {
@@ -108,8 +100,9 @@
     @apply border-ink text-ink;
   }
 
+  /* A long data array scrolls inside the panel; Shiki's tabindex="0" makes it keyboard scrollable. */
   .demo-panel pre {
-    @apply m-0 max-h-96 overflow-auto p-4 font-mono text-[13px] leading-relaxed;
+    @apply m-0 max-h-[28rem] overflow-auto p-4 font-mono text-[13px] leading-relaxed;
   }
 }
 
@@ -118,29 +111,37 @@
   text-decoration: none;
 }
 
-/* Opening eases the code's height from zero where the browser can animate to
- * `auto`; elsewhere it opens at once. */
-.demo-code {
-  interpolate-size: allow-keywords;
+/*
+ * Code open and closed. Without scripts the code shows and the toolbar row
+ * doesn't. With them, each block follows the page default the gate restored
+ * from the reader's last choice, until the reader presses Code on it
+ * (data-demo-open). A closed block is out of the layout, the focus order and
+ * the accessibility tree. Only a press animates: the restored state is in
+ * place before first paint, and the transition lives on pressed blocks alone.
+ */
+:root[data-demo-gate] .demo-toolbar-row {
+  display: flex;
 }
 
-.demo-code::details-content {
-  block-size: 0;
+:root[data-demo-gate][data-demo-code-default="closed"] .demo-code:not([data-demo-open="true"]),
+:root[data-demo-gate] .demo-code[data-demo-open="false"] {
+  height: 0;
+  overflow: clip;
+  visibility: hidden;
+}
+
+.demo-code[data-demo-open] {
+  interpolate-size: allow-keywords;
   overflow: clip;
   transition:
-    block-size 200ms ease-out,
-    content-visibility 200ms allow-discrete;
-}
-
-.demo-code[open]::details-content {
-  block-size: auto;
+    height 200ms ease-out,
+    visibility 200ms;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .demo-code::details-content,
+  .demo-code[data-demo-open],
   .demo-toggle,
   .demo-toggle::before,
-  .demo-copy,
   .demo-tab {
     transition: none;
   }
@@ -222,26 +223,31 @@
 }
 
 /*
- * A figure that plays the entrance keeps its static SVG out of sight while the
+ * A demo that plays the entrance keeps its static SVG out of sight while the
  * live chart is on its way, so a finished chart is never seen and then replaced
- * by one drawing itself in. The theme class on <html>, which BaseLayout's inline
- * head script sets before first paint, is the sign that scripts run; without
- * them the static SVG shows. A failed mount brings it back, and so does the
- * fallback timer below if the live chart never arrives. Under reduced motion
- * nothing plays, so the static SVG stays until the swap.
+ * by one drawing itself in. The gate lifts if scripts never arrive, and a failed
+ * mount brings the static SVG back. Under reduced motion nothing plays, so the
+ * static SVG stays until the swap. Print is left out, so paper always gets it.
  */
-@media (prefers-reduced-motion: no-preference) {
-  :root:is(.dark, .light)
-    .demo[data-demo-entrance]
-    .demo-stage:not([data-demo-error])
-    .demo-static {
+@media screen and (prefers-reduced-motion: no-preference) {
+  :root[data-demo-gate] .demo[data-demo-entrance] .demo-stage:not([data-demo-error]) .demo-static {
     visibility: hidden;
-    animation: demo-static-fallback 0s 4s forwards;
   }
 }
 
-@keyframes demo-static-fallback {
-  to {
-    visibility: visible;
+/* Paper gets the finished static chart in the page's theme, never a live one mid-entrance. */
+@media print {
+  .demo-live {
+    display: none;
+  }
+
+  :root:not(.dark) .demo .demo-stage .demo-static[data-theme="light"],
+  :root.dark .demo .demo-stage .demo-static[data-theme="dark"] {
+    display: block;
+  }
+
+  :root:not(.dark) .demo .demo-stage .demo-static[data-theme="dark"],
+  :root.dark .demo .demo-stage .demo-static[data-theme="light"] {
+    display: none;
   }
 }

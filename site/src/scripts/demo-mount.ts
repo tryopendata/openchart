@@ -21,6 +21,17 @@ import { DEMO_CLASS } from "../lib/demo/markup";
 export class DemoMountError extends Error {}
 
 type MountOptions = { theme: ThemeConfig; darkMode: DarkMode };
+
+/** A mounted demo. */
+export type DemoMount = {
+  /** Destroys the chart and removes its host, leaving the stage as the build wrote it. */
+  destroy(): void;
+  /** True while the entrance is still held because the chart has not been seen yet. */
+  entranceWaiting(): boolean;
+};
+
+/** The library holds an entrance by pausing it through this property on the chart's root. */
+const HELD_ENTRANCE = '[style*="--oc-play-state"]';
 type Mount = (host: HTMLElement, spec: never, options: MountOptions) => { destroy(): void };
 
 const MOUNTS_BY_TYPE: Record<string, Mount> = {
@@ -54,7 +65,7 @@ export function mountDemo(
   stage: HTMLElement,
   spec: VizSpec,
   options: { dark: boolean; entrance: boolean },
-): { destroy(): void } {
+): DemoMount {
   const mount = mountFor(spec);
   if (!mount) {
     const type = String((spec as { type?: unknown }).type);
@@ -78,6 +89,8 @@ export function mountDemo(
         instance.destroy();
         host.remove();
       },
+      entranceWaiting: () =>
+        host.matches(HELD_ENTRANCE) || host.querySelector(HELD_ENTRANCE) !== null,
     };
   } catch (error) {
     host.remove();

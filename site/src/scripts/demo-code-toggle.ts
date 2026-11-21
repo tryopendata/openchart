@@ -1,24 +1,15 @@
 /**
- * Remembers whether the reader keeps demo code open. Each figure's code is a
- * `<details>` that the build writes closed, so it opens and closes without this
- * script. When the reader opens or closes one, the choice goes to sessionStorage,
- * and every page they load afterwards in this tab starts its demos that way.
- * The figures already on the page stay as they are, so nothing above or below
- * the reader jumps.
+ * The Code disclosure on each demo. The head gate (lib/demo/page-gate.ts) has
+ * already closed or opened every block before first paint from the reader's
+ * remembered choice; this reveals each Code button, keeps its `aria-expanded`
+ * in step, and records the reader's own presses in sessionStorage so the next
+ * page starts the same way. Only a press is recorded, and the blocks already on
+ * the page stay as they are, so nothing above or below the reader jumps. When
+ * the gate has lifted (scripts arrived late), the code is already showing and
+ * the buttons stay hidden.
  */
-import { DEMO_ATTR } from "../lib/demo/markup";
-
-/** The sessionStorage key holding "open" or "closed". */
-export const CODE_OPEN_STORAGE_KEY = "openchart:demo-code";
-
-function readCodeOpen(): boolean {
-  try {
-    return globalThis.sessionStorage.getItem(CODE_OPEN_STORAGE_KEY) === "open";
-  } catch {
-    // Storage can be blocked (privacy settings, sandboxed frames); closed is the built state.
-    return false;
-  }
-}
+import { DEMO_ATTR, DEMO_PAGE_ATTR } from "../lib/demo/markup";
+import { CODE_OPEN_STORAGE_KEY } from "../lib/demo/page-gate";
 
 function writeCodeOpen(open: boolean): void {
   try {
@@ -28,11 +19,30 @@ function writeCodeOpen(open: boolean): void {
   }
 }
 
-/** Opens every demo's code when the reader left it open, and records each later toggle. */
+function toggleFor(block: Element): HTMLButtonElement | null {
+  return block.ownerDocument.querySelector(`[${DEMO_ATTR.toggle}][aria-controls="${block.id}"]`);
+}
+
+/** Opens or closes one code block and keeps its Code button's state in step. Records nothing. */
+export function setCodeOpen(block: Element, open: boolean): void {
+  block.setAttribute(DEMO_ATTR.open, String(open));
+  toggleFor(block)?.setAttribute("aria-expanded", String(open));
+}
+
+/** Reveals every Code button with its block's current state and wires it to open and close the block. */
 export function setupDemoCodeToggle(doc: Document): void {
-  const blocks = [...doc.querySelectorAll<HTMLDetailsElement>(`details[${DEMO_ATTR.code}]`)];
-  if (blocks.length === 0) return;
-  if (readCodeOpen()) for (const block of blocks) block.open = true;
-  // The restore above fires `toggle` too; it writes back the stored state, which is harmless.
-  for (const block of blocks) block.addEventListener("toggle", () => writeCodeOpen(block.open));
+  const root = doc.documentElement;
+  if (!root.hasAttribute(DEMO_PAGE_ATTR.gate)) return;
+  const openByDefault = root.getAttribute(DEMO_PAGE_ATTR.codeDefault) === "open";
+  for (const toggle of doc.querySelectorAll<HTMLButtonElement>(`[${DEMO_ATTR.toggle}]`)) {
+    const block = doc.getElementById(toggle.getAttribute("aria-controls") ?? "");
+    if (!block) continue;
+    toggle.setAttribute("aria-expanded", String(openByDefault));
+    toggle.hidden = false;
+    toggle.addEventListener("click", () => {
+      const open = toggle.getAttribute("aria-expanded") !== "true";
+      setCodeOpen(block, open);
+      writeCodeOpen(open);
+    });
+  }
 }
