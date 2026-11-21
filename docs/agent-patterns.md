@@ -9,7 +9,7 @@ order: 2
 
 Visualization patterns organized by data storytelling intent. Each pattern includes when to use it, the data shape it expects, a complete working spec, and annotation examples.
 
-Four patterns run live on cited data. The others use plausible numbers, so replace them with your own. Pattern names such as column, donut and dot are chart forms, not values for `mark`: a column is `"bar"` with the category on x, a donut is `{ "type": "arc", "innerRadius": 0.6 }` and a dot plot is `"circle"`.
+Four patterns run live on cited data. The others use invented numbers, and their `chrome.source` reads "Source: <your source>" as a placeholder: replace both with your own data and citation. Pattern names such as column, scatter, donut and dot are chart forms, not values for `mark`: a column is `"bar"` with the category on x, a scatter is `"point"`, a donut is `{ "type": "arc", "innerRadius": 0.6 }` and a dot plot is `"circle"`.
 
 ## Contents
 
@@ -95,7 +95,7 @@ Four patterns run live on cited data. The others use plausible numbers, so repla
       "offset": { "dx": 0, "dy": -20 },
       "connector": true
     },
-    { "type": "refline", "y": 2, "label": "Fed 2% target", "style": "dashed", "stroke": "#999" },
+    { "type": "refline", "y": 2, "label": "2%", "style": "dashed", "stroke": "#999" },
     {
       "type": "range",
       "x1": "2021-04-01",
@@ -135,7 +135,7 @@ Four patterns run live on cited data. The others use plausible numbers, so repla
   "chrome": {
     "title": "Solar and wind are closing the gap on coal",
     "subtitle": "Global electricity generation by source, terawatt-hours",
-    "source": "Source: Energy Institute Statistical Review"
+    "source": "Source: <your source>"
   }
 }
 ```
@@ -210,7 +210,7 @@ Four patterns run live on cited data. The others use plausible numbers, so repla
   "chrome": {
     "title": "China has nearly matched fossil fuel capacity with renewables",
     "subtitle": "Installed power generation capacity by source, 2023",
-    "source": "Source: IRENA Renewable Capacity Statistics"
+    "source": "Source: <your source>"
   }
 }
 ```
@@ -242,7 +242,7 @@ Four patterns run live on cited data. The others use plausible numbers, so repla
   "chrome": {
     "title": "Chrome commands nearly two-thirds of global browser usage",
     "subtitle": "Desktop browser market share, January 2024",
-    "source": "Source: StatCounter Global Stats"
+    "source": "Source: <your source>"
   }
 }
 ```
@@ -271,7 +271,7 @@ Four patterns run live on cited data. The others use plausible numbers, so repla
   "chrome": {
     "title": "Hybrid work settled at 29% after the post-pandemic spike in remote",
     "subtitle": "US workforce distribution by work arrangement",
-    "source": "Source: Pew Research Center"
+    "source": "Source: <your source>"
   }
 }
 ```
@@ -332,7 +332,7 @@ Four patterns run live on cited data. The others use plausible numbers, so repla
     ]
   },
   "chrome": {
-    "title": "Every economy above $45,000 GDP per person has a life expectancy over 79 years",
+    "title": "All seven of these economies above $45,000 GDP per person have a life expectancy over 79 years",
     "subtitle": "GDP per capita vs. life expectancy at birth, twelve large economies. Circle size = population."
   },
   "annotations": [
@@ -389,7 +389,7 @@ Four patterns run live on cited data. The others use plausible numbers, so repla
     }
   },
   "chrome": {
-    "title": "New York's average daily high is 30.2°C in July and 9.2°C in February",
+    "title": "New York's average daily high in 2023 was 30.2°C in July and 9.2°C in February",
     "subtitle": "Average daily high temperature by month, Central Park, 2023, °C"
   },
   "labels": { "density": "all", "format": ".1f" },
@@ -422,7 +422,7 @@ Four patterns run live on cited data. The others use plausible numbers, so repla
   "chrome": {
     "title": "2024 outperformed 2023 in every quarter",
     "subtitle": "Quarterly revenue comparison in billions",
-    "source": "Source: Finance team"
+    "source": "Source: <your source>"
   }
 }
 ```
@@ -467,7 +467,7 @@ Four patterns run live on cited data. The others use plausible numbers, so repla
   "chrome": {
     "title": "Sales has the widest salary range; Engineering clusters higher",
     "subtitle": "Individual salaries by department, 2024 compensation data",
-    "source": "Source: HR analytics"
+    "source": "Source: <your source>"
   },
   "annotations": [
     { "type": "refline", "x": 130000, "label": "Company median: $130K", "style": "dashed" }
@@ -529,7 +529,7 @@ Four patterns run live on cited data. The others use plausible numbers, so repla
 
 ## 8. Annotated Infographic
 
-**When to use:** You want to tell a rich data story with multiple annotations. The chart is the visual anchor, and annotations layer in context, thresholds, time periods, and callouts to create an editorial-quality graphic.
+**When to use:** You want to tell a rich data story with multiple annotations. The chart is the visual anchor, and annotations layer in context, thresholds, time periods, and callouts.
 
 **Data shape:** Same as a trend chart, but the annotations carry the narrative weight.
 
@@ -569,7 +569,7 @@ Four patterns run live on cited data. The others use plausible numbers, so repla
   "chrome": {
     "title": "Bitcoin's volatile path to $72K",
     "subtitle": "Monthly closing price, January 2019 through October 2024",
-    "source": "Source: CoinGecko",
+    "source": "Source: <your source>",
     "byline": "OpenData Research"
   },
   "annotations": [
@@ -646,7 +646,7 @@ Four patterns run live on cited data. The others use plausible numbers, so repla
 
 **Responsive annotation defaults:** Omit offsets and anchors when automatic placement is sufficient. Lower `priority` values stay inline first; compact charts keep one eligible text callout and put the rest in wrapped notes, including subtitles. `responsive: false` pins a callout inline and can cause overlap at narrow widths. Use `maxWidth: null` or `responsive.compactAnnotationLimit: null` only when an unlimited layout is intentional. Source-order note numbers may have gaps. Curves do not imply arrows; use `{ "type": "curve", "arrow": true }` explicitly.
 
-**Combining annotations:** Layer them. Ranges go behind the data (low opacity). Reference lines mark horizontal/vertical thresholds. Text callouts highlight specific inflection points or notable data values. This layering creates visual depth.
+**Combining annotations:** Layer them. Ranges go behind the data (low opacity). Reference lines mark horizontal/vertical thresholds. Text callouts highlight specific inflection points or notable data values.
 
 ---
 
@@ -683,7 +683,7 @@ Four patterns run live on cited data. The others use plausible numbers, so repla
   "chrome": {
     "title": "All three stocks trended upward through 2024",
     "subtitle": "Quarterly closing prices, Jan-Oct 2024",
-    "source": "Source: Market data"
+    "source": "Source: <your source>"
   }
 }
 ```
@@ -713,7 +713,7 @@ The `aggregate` property on an encoding channel lets the engine summarize data b
   },
   "chrome": {
     "title": "East region leads in total revenue",
-    "source": "Source: Finance team"
+    "source": "Source: <your source>"
   }
 }
 ```

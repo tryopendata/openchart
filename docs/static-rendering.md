@@ -21,7 +21,7 @@ const svg = renderStaticSVG(spec, {
 });
 ```
 
-The light and dark SVGs behind the chart below were produced by `renderStaticSVG` when this site was built. Without JavaScript, readers see those two and nothing else.
+The light and dark SVGs behind the chart below were produced by `renderStaticSVG` when this site was built. Without JavaScript, readers see the one that matches their color scheme.
 
 ```json demo title="Global temperature anomaly" source="NASA GISS Surface Temperature Analysis (GISTEMP)" height=380
 {
@@ -55,7 +55,7 @@ The light and dark SVGs behind the chart below were produced by `renderStaticSVG
     }
   },
   "chrome": {
-    "title": "Global temperature anomaly rose from +0.26°C in 1980 to +1.17°C in 2025",
+    "title": "Global temperature anomaly rose from +0.26°C in 1980 to +1.02°C in 2020",
     "subtitle": "Surface temperature against the 20th-century average, °C, selected years 1900–2025"
   }
 }

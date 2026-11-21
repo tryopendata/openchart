@@ -73,6 +73,8 @@ Two points in time, one line per series. The strongest form for "before vs after
 }
 ```
 
+The rows are the source table's 2010 and 2024 columns, reshaped to one row per source and year.
+
 What each field does:
 
 - `endpointLabels.ends: 'both'` puts a label column at both edges (plain endpoint labels are trailing-edge only).
@@ -82,8 +84,6 @@ What each field does:
 - `legend: { show: false }` because the labels already identify every series.
 
 Because the spec sets `endpointLabels` explicitly, the label columns survive the compact (under 400px) breakpoint, where auto endpoint labels would normally hand off to a legend. A slope without its labels is unreadable, so explicit opt-in wins.
-
-**Live examples**: [Slope](https://tryopendata.github.io/openchart/?story=testing--fixtures--slope-market-share) | [Slope at 320px](https://tryopendata.github.io/openchart/?story=testing--fixtures--slope-market-share-compact)
 
 ---
 
@@ -202,7 +202,7 @@ When the story is the size of the change per category rather than trajectories o
       "title": "2000",
       "axis": { "title": "Life expectancy at birth (years)" }
     },
-    "x2": { "field": "y2023", "title": "2023" }
+    "x2": { "field": "y2023", "type": "quantitative", "title": "2023" }
   },
   "chrome": {
     "title": "India gained 9.3 years of life expectancy between 2000 and 2023, the US 2.6",
