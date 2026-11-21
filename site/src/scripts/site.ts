@@ -2,11 +2,13 @@
  * The one module script every page loads. It isn't an island: docs pages ship no
  * hydrated component, so the theme toggle, copy buttons, the outline highlight and
  * the sidebar position are plain DOM code. Each part does nothing on a page
- * without its markup. Demo figures wire their own copy buttons (scripts/demos.ts).
+ * without its markup. Code block copy buttons share the demos' copy behaviour
+ * and look (`wireCopyButton` in scripts/demo-copy.ts, the `copy-button` class).
  */
 
 import { spyToc } from "@steamfield/ui/docs";
 import { DEMO_ATTR } from "../lib/demo/markup";
+import { wireCopyButton } from "./demo-copy";
 
 const THEME_KEY = "theme";
 /** How long a button says "Copied" or "Copy failed" before its label returns. */
@@ -59,17 +61,27 @@ function onCopyClick(button: HTMLButtonElement, copy: () => Promise<void>) {
   });
 }
 
-/** Adds a Copy button to every Markdown code block outside a demo figure. */
+/** Adds a Copy button, and the region that announces it, to every Markdown code block outside a demo. */
 function setupCodeCopy() {
   for (const frame of document.querySelectorAll<HTMLElement>(".code-frame")) {
     const code = frame.querySelector("code");
     if (!code || frame.closest(`[${DEMO_ATTR.figure}]`)) continue;
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "code-copy";
+    button.className = "copy-button";
     button.textContent = "Copy";
-    onCopyClick(button, () => navigator.clipboard.writeText(code.textContent ?? ""));
-    frame.append(button);
+    const status = document.createElement("span");
+    status.className = "sr-only";
+    status.setAttribute("role", "status");
+    status.setAttribute("aria-live", "polite");
+    frame.append(button, status);
+    const title = frame.querySelector("figcaption")?.textContent;
+    wireCopyButton(button, {
+      read: () => code.textContent ?? "",
+      status,
+      copiedMessage: () => (title ? `Copied ${title}.` : "Copied the code."),
+      context: title ? `The code block "${title}"` : "A code block",
+    });
   }
 }
 

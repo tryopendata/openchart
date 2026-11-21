@@ -1,0 +1,83 @@
+---
+/**
+ * An install command with a package-manager choice and a Copy button, used by
+ * the hero and the closing section. The choice is `@steamfield/ui/tabs`: anchor
+ * tabs over one panel per manager, so without JavaScript the first command
+ * shows and the others are reachable by their links (the tabs stylesheet's
+ * `:target` fallback); with it they are single-select ARIA tabs with arrow
+ * keys. Each panel's Copy is `@steamfield/ui/copy`, hidden until the script
+ * wires it, so there is never a dead button. Commands wrap rather than scroll,
+ * so a phone shows all of one.
+ */
+import "@steamfield/ui/tabs/styles.css";
+
+type Props = {
+  /** Prefix for the tab, panel and command ids; unique on the page and stable across builds. */
+  id: string;
+  commands: { label: string; command: string }[];
+  class?: string;
+};
+
+const { id, commands, class: className } = Astro.props;
+const value = (label: string) => label.toLowerCase().replace(/[^a-z0-9-]+/g, "-");
+const panelId = (label: string) => `${id}-${value(label)}`;
+---
+
+<div class:list={["install-command", className]} data-install-command data-part="tabs">
+  {commands.length > 1 && (
+    <div
+      role="tablist"
+      data-part="tab-list"
+      class="install-command-managers"
+      aria-label="Package manager"
+    >
+      {commands.map((option) => (
+        <a
+          role="tab"
+          data-part="tab"
+          class="install-command-manager"
+          href={`#${panelId(option.label)}`}
+          data-value={value(option.label)}
+        >
+          {option.label}
+        </a>
+      ))}
+    </div>
+  )}
+  {commands.map((option, index) => (
+    <div
+      id={panelId(option.label)}
+      role="tabpanel"
+      data-part="tab-panel"
+      data-default={index === 0 ? "" : undefined}
+      class="install-command-panel"
+      data-copy-root
+    >
+      <div class="install-command-line">
+        <span class="install-command-prompt" aria-hidden="true">
+          $
+        </span>
+        <code id={`${panelId(option.label)}-command`} class="install-command-text">
+          {option.command}
+        </code>
+        <button
+          type="button"
+          class="install-command-copy"
+          hidden
+          data-copy-command
+          aria-controls={`${panelId(option.label)}-command`}
+          aria-label="Copy command"
+        >
+          <span data-copy-label>Copy</span>
+        </button>
+      </div>
+      <p class="install-command-result" data-copy-result role="status" aria-live="polite" />
+    </div>
+  ))}
+</div>
+
+<script>
+  import { wireInstallCommands } from "./install-command";
+
+  wireInstallCommands(document);
+</script>

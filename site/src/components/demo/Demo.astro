@@ -1,7 +1,9 @@
 ---
 /**
  * Renders the demo figure for a registered demo id: static SVGs in both themes,
- * the embedded spec src/scripts/demos.ts mounts live, and the code tabs. A demo
+ * the embedded spec src/scripts/demos.ts mounts live (playing the library's
+ * entrance when it is first seen, unless the demo turns `entrance` off), and the
+ * collapsed code under a Show code and Copy toolbar. A demo
  * that is unknown or whose spec fails validation fails the build, naming the page.
  * Large values the page's figures share are written once per page, recorded
  * against `Astro.locals`, which is fresh for each page render.
@@ -14,7 +16,7 @@ import { validateDemo } from "../../lib/demo/validate";
 
 interface Props {
   id: string;
-  /** Show the Spec, React, Vue, Svelte and Vanilla code tabs. Default true. */
+  /** Show the code toolbar and its Spec, React, Vue, Svelte and Vanilla tabs. Default true; false is a chart-only figure. */
   tabs?: boolean;
 }
 
@@ -38,7 +40,7 @@ const figure = await demoFigureHtml({
   source: demo.source,
   caption: demo.caption,
   height: demo.height ?? DEFAULT_DEMO_HEIGHT,
-  entrance: demo.entrance ?? false,
+  entrance: demo.entrance ?? true,
   tabs,
   static: demo.static ?? true,
   pageShared: pageSharedHashes(Astro.locals),

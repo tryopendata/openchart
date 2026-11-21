@@ -6,16 +6,21 @@
 import { useEffect, useState } from "react";
 import { type MotionTools, withMotion } from "../../scripts/motion";
 
-/** GSAP and its plugins once loaded, or null while motion is off or loading. */
-export function useMotionTools(): MotionTools | null {
+/**
+ * GSAP and its plugins once loaded, or null while motion is off or loading.
+ *
+ * @param label Names the island in the error logged when GSAP fails to load, such as "the hero desk".
+ */
+export function useMotionTools(label = "an island"): MotionTools | null {
   const [tools, setTools] = useState<MotionTools | null>(null);
-  useEffect(
-    () =>
-      withMotion(function island(loaded) {
-        setTools(loaded);
-        return () => setTools(null);
-      }),
-    [],
-  );
+  useEffect(() => {
+    const setup = (loaded: MotionTools) => {
+      setTools(loaded);
+      return () => setTools(null);
+    };
+    // withMotion names the section in its load error by the setup's name.
+    Object.defineProperty(setup, "name", { value: label });
+    return withMotion(setup);
+  }, [label]);
   return tools;
 }

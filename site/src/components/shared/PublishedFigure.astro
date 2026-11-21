@@ -21,12 +21,26 @@ type Props = {
   /** A sentence before the Source line, such as how to read the chart. */
   note?: string;
   class?: string;
+  /**
+   * Whether the figure enters with `@steamfield/ui/reveal`. Default true. Pass
+   * false above the fold, where nothing may wait on a module script to show.
+   */
+  reveal?: boolean;
 };
 
-const { title, titleId, level: Heading = "h3", deck, source, note, class: className } = Astro.props;
+const {
+  title,
+  titleId,
+  level: Heading = "h3",
+  deck,
+  source,
+  note,
+  class: className,
+  reveal = true,
+} = Astro.props;
 ---
 
-<figure class:list={["pub-figure", className]} data-reveal>
+<figure class:list={["pub-figure", className]} data-reveal={reveal ? "" : undefined}>
   <div class="rule-axis" data-motion="wipe"></div>
   {title && (
     <Heading id={titleId} class="pub-figure-title" data-motion="lift-sm">

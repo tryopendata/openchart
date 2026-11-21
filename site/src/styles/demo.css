@@ -1,18 +1,39 @@
 /*
- * Demo figure and code tab styles. The library's own stylesheet comes first:
- * live charts need it. The stage keeps a fixed height at every width so the swap
- * from static SVG to live chart moves nothing on the page.
+ * Demo styles. A demo reads as a published graphic: the figure (the chart, then
+ * its caption and source), then a quiet toolbar on a hairline rule (Code on the
+ * left, Copy on the right) over the code, all in reading order. The library's
+ * own stylesheet comes first: live charts need it. The stage keeps a fixed
+ * height at every width so the swap from static SVG to live chart moves nothing
+ * on the page. The head gate (lib/demo/page-gate.ts) sets the attributes on
+ * <html> that the rules below key on, before first paint.
  */
 @import "@opendata-ai/openchart-core/styles.css";
 
 @layer components {
   .demo {
-    @apply my-8 rounded-none border border-line;
+    @apply my-10;
+  }
+
+  .demo-figure {
+    @apply m-0;
   }
 
   .demo-stage {
     position: relative;
     height: var(--demo-height, 400px);
+  }
+
+  /* Caption, toolbar and code share the chart's own 1rem inset, so their text lines up with its title. */
+  .demo .figure-caption {
+    @apply px-4 pt-3 pb-1 text-sm leading-snug text-muted;
+  }
+
+  .demo .figure-caption a {
+    @apply text-ink-2 underline decoration-line underline-offset-2 hover:decoration-current;
+  }
+
+  .demo-toolbar {
+    @apply mt-3 border-t border-line;
   }
 
   /* The renderer writes an inline pixel height; the stage decides the size instead. */
@@ -38,37 +59,91 @@
     @apply absolute inset-0 m-0 flex items-center justify-center px-4 text-center text-muted;
   }
 
-  .demo-code {
-    @apply border-t border-line bg-canvas;
+  /* Code on the left, Copy pushed right; the row only shows where scripts run (see below). */
+  .demo-toolbar-row {
+    @apply hidden h-10 items-center justify-between px-4;
+  }
+
+  .demo-toggle {
+    @apply flex h-full cursor-pointer items-center gap-2 font-sans text-sm text-muted select-none hover:text-ink;
+    transition: color 120ms ease-out;
+  }
+
+  .demo-toolbar-row .copy-button {
+    @apply ml-auto h-full;
+  }
+
+  /* A thin chevron that turns down when the code is open. */
+  .demo-toggle::before {
+    @apply size-1.5 border-r border-b border-current;
+    content: "";
+    transform: rotate(-45deg);
+    transition: transform 120ms ease-out;
+  }
+
+  .demo-toggle[aria-expanded="true"]::before {
+    transform: translateY(-2px) rotate(45deg);
   }
 
   .demo-tabs {
-    @apply flex gap-5 overflow-x-auto border-b border-line px-4 font-mono text-xs;
+    @apply flex gap-5 overflow-x-auto border-y border-line px-4 font-sans text-sm;
   }
 
   .demo-tab {
-    @apply -mb-px border-b-2 border-transparent py-2 text-muted no-underline transition-colors duration-150 hover:text-ink hover:no-underline;
+    @apply -mb-px border-b border-transparent py-2 text-muted hover:text-ink;
+    transition:
+      color 120ms ease-out,
+      border-color 120ms ease-out;
   }
 
   .demo-tab[aria-current="true"] {
     @apply border-ink text-ink;
   }
 
-  .demo-panel {
-    position: relative;
-  }
-
+  /* A long data array scrolls inside the panel; Shiki's tabindex="0" makes it keyboard scrollable. */
   .demo-panel pre {
-    /* The extra top padding keeps the Copy button clear of the first line on narrow screens. */
-    @apply m-0 max-h-96 overflow-auto p-4 pt-11 font-mono text-sm leading-relaxed;
+    @apply m-0 max-h-[28rem] overflow-auto p-4 font-mono text-[13px] leading-relaxed;
   }
+}
 
-  .demo-copy {
-    @apply absolute top-2 right-3 rounded-xs border border-line bg-canvas px-2 py-1 font-mono text-xs text-muted transition-colors duration-150 hover:text-ink;
-  }
+/* Unlayered, to beat the prose link underline: a tab is marked by its rule, not an underline. */
+.demo .demo-tab {
+  text-decoration: none;
+}
 
-  .demo .figure-caption {
-    @apply border-t border-line px-4 py-3;
+/*
+ * Code open and closed. Without scripts the code shows and the toolbar row
+ * doesn't. With them, each block follows the page default the gate restored
+ * from the reader's last choice, until the reader presses Code on it
+ * (data-demo-open). A closed block is out of the layout, the focus order and
+ * the accessibility tree. Only a press animates: the restored state is in
+ * place before first paint, and the transition lives on pressed blocks alone.
+ */
+:root[data-demo-gate] .demo-toolbar-row {
+  display: flex;
+}
+
+:root[data-demo-gate][data-demo-code-default="closed"] .demo-code:not([data-demo-open="true"]),
+:root[data-demo-gate] .demo-code[data-demo-open="false"] {
+  height: 0;
+  overflow: clip;
+  visibility: hidden;
+}
+
+.demo-code[data-demo-open] {
+  interpolate-size: allow-keywords;
+  overflow: clip;
+  transition:
+    height 200ms ease-out,
+    visibility 200ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-code[data-demo-open],
+  .demo-toggle,
+  .demo-toggle::before,
+  .demo-tab {
+    transition: none;
   }
 }
 
@@ -145,4 +220,34 @@
 /* Once the live chart is in, both static SVGs step aside. */
 .demo .demo-stage[data-demo-live] .demo-static[data-theme] {
   display: none;
+}
+
+/*
+ * A demo that plays the entrance keeps its static SVG out of sight while the
+ * live chart is on its way, so a finished chart is never seen and then replaced
+ * by one drawing itself in. The gate lifts if scripts never arrive, and a failed
+ * mount brings the static SVG back. Under reduced motion nothing plays, so the
+ * static SVG stays until the swap. Print is left out, so paper always gets it.
+ */
+@media screen and (prefers-reduced-motion: no-preference) {
+  :root[data-demo-gate] .demo[data-demo-entrance] .demo-stage:not([data-demo-error]) .demo-static {
+    visibility: hidden;
+  }
+}
+
+/* Paper gets the finished static chart in the page's theme, never a live one mid-entrance. */
+@media print {
+  .demo-live {
+    display: none;
+  }
+
+  :root:not(.dark) .demo .demo-stage .demo-static[data-theme="light"],
+  :root.dark .demo .demo-stage .demo-static[data-theme="dark"] {
+    display: block;
+  }
+
+  :root:not(.dark) .demo .demo-stage .demo-static[data-theme="dark"],
+  :root.dark .demo .demo-stage .demo-static[data-theme="light"] {
+    display: none;
+  }
 }
