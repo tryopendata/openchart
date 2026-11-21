@@ -12,8 +12,12 @@
 | `src/lib/collection.ts` | The only `astro:content` import outside routes: `allPages()` and `allPosts()` |
 | `src/lib/gallery.ts`, `src/lib/gallery-types.ts` | The examples gallery's entries and their contract |
 | `src/content/blog/`, `src/content/blog-schema.ts`, `src/lib/blog-types.ts` | Blog posts, their frontmatter schema and the `BlogPost` contract |
+| `src/components/gallery/` | The gallery's tiles, wall shapes and packing (`wall.ts`), entry checks and entry-page parts |
 | `src/lib/search-index.ts`, `src/integrations/pagefind.ts` | What search indexes and under which area, and the build step that writes the index |
-| `src/components/shared/tiles/` | Tile specimens shared by the landing wall, the gallery and the blog index |
+| `src/lib/search/`, `src/scripts/search.ts`, `src/scripts/search-dialog.ts` | Search's pure rules (shortcuts, area search, groups, states), its eager script and its lazy dialog |
+| `src/components/shared/tiles/`, `src/styles/tiles.css` | Tile specimens and their shared styles for the landing wall, the gallery and the blog index |
+| `src/pages/tiles/` | The route that writes each tile's static chart to `/tiles/<name>.svg` |
+| `src/lib/demo/static-svg.ts` | Build-time static SVGs, without the attributes only a live chart reads |
 | `src/lib/markdown.ts` | Docs Markdown conventions as Sätteri hast plugins plus one Shiki transformer |
 | `src/lib/og.ts` | The social card layout and its fonts |
 | `src/components/landing/` | The ten landing sections, one directory per section with its islands |
@@ -76,9 +80,19 @@ The header lists Docs, then `site.nav` (Examples, Blog), then `site.social` (Git
 
 ## Gallery
 
-`/examples/` is a wall of tiles, one per entry in `galleryEntries` (`src/lib/gallery.ts`), and each entry has a page at `/examples/<slug>/` with its live demo, its code and a link to its docs page. An entry is a `GalleryEntry` (`src/lib/gallery-types.ts`): a unique `slug`, a registered `demo` id, the Visualizations section it is filed under (`kind`), a `title`, a `description` of at most 160 characters, the docs page it links to, and optionally `size: "wide"` and the Ladle story it ports. The tile shows the demo spec's `chrome.title`, so that title states a finding. A Visualizations section with no entry goes in `GALLERY_GAPS` with the reason. Adding an entry is one item in the list: the wall, the entry page, its social card, the sitemap and the search index pick it up.
+`/examples/` is a wall of tiles, one per entry in `galleryEntries` (`src/lib/gallery.ts`), in wall order, and each entry has a page at `/examples/<slug>/` with its live demo, its code and a link to its docs page. The list is plain data, so the build test and the browser tests read it directly. An entry is a `WallEntry` (`src/components/gallery/tile-size.ts`): a `GalleryEntry` (`src/lib/gallery-types.ts`) with a unique `slug`, a registered `demo` id, the Visualizations section it is filed under (`kind`), a `title`, a `description` of at most 160 characters, the docs page it links to (`docs`) and optionally the Ladle story it ports, plus its `shape` on the wall (`lead`, `feature`, `wide`, `square` or the default `standard`) and `keepKey` to keep the legend or endpoint labels where color carries the finding. A Visualizations section with no entry goes in `GALLERY_GAPS` with the reason. Adding an entry is one item in the list: the wall, the entry page, its social card, the sitemap and the search index pick it up.
 
-Gallery demos draw tier-1 data only (the build test reads each figure's Source against the tier-1 datasets). Tiles come from `src/components/shared/tiles/`: `tileChartHtml(demoId, pageShared, { size: GALLERY_TILE_SIZE, domPrefix })` writes the stage, `observeTileScale(root, GALLERY_TILE_SIZE)` keeps live tiles the same picture as the static ones, `tile-filter.ts` reads and writes the filter under `#kind=` (`GALLERY_HASH_KEY`), and `tile-motion.ts` refiles the tiles. The gallery's script is plain DOM code loaded only by the two gallery pages; the gallery takes no island.
+`src/components/gallery/wall.ts` checks the list when the gallery pages build, against the demo registry, the docs pages and the sections, and packs the shapes onto the six-column wall with `arrangeWall`. A broken entry fails the build with `GalleryEntryError` naming it, and an order that leaves a hole fails with `WallLayoutError`; reorder the entries or change a shape. Below 1100px, and on a filtered wall, every tile takes the standard shape.
+
+Gallery demos draw tier-1 data only (the build test reads each figure's Source against the tier-1 datasets).
+
+### Tiles
+
+The landing wall, the gallery and the blog index draw their charts as tiles from `src/components/shared/tiles/`. `tileChartHtml(demoId, pageShared, options)` writes a bare demo stage and the embedded spec; `options.size` is the size the static chart lays out at, and a page that draws a tile in two shapes passes `narrow` too. `src/styles/tiles.css` styles every tile the same way on all three pages: the stage that keeps the static chart's shape, the live chart filling it, the fallback table, the one link that covers the tile and the filter row.
+
+A tile's static chart is not inline. `src/pages/tiles/[name].svg.ts` writes each tile, size, specimen and theme once to `/tiles/<name>.svg`, and the tile shows the light and dark files as lazy `<img>`s, which keeps the walls' HTML small. An image cannot load page fonts, so tile files set their text in `TILE_IMAGE_FONT` (Helvetica, Arial or a face with their metrics), whose metrics are the ones the build's text layout assumes. The site sans would fall back to a system sans that may run wider. Embedding a subset of the site sans would match the page's typeface but roughly triple the tiles' bytes, for a picture most readers never see: with motion allowed it stays hidden until the live chart has played its entrance. Tables and sankeys have no static renderer, so their tiles show a short fallback table (`tile-fallback.ts`); a network shows the placeholder line.
+
+`src/scripts/demos.ts` mounts a tile's live chart once the tile is within 80px of the viewport (`TILE_LEAD_PX`, against 400px for a docs figure), since a wall shows a dozen charts at once. The live chart lays out at the cell's own size and fills the stage; it is not scaled from the static layout, so the old `observeTileScale` is gone. Past about six live mounts the one furthest off screen is evicted, and a tile whose entrance has played falls back to its static image or fallback table. `tile-filter.ts` reads and writes a wall's filter under its own hash key (`#kind=` in the gallery, `GALLERY_HASH_KEY`), and `tile-motion.ts` refiles the tiles. The gallery's script is plain DOM code loaded only by the two gallery pages; the gallery takes no island.
 
 ## Search
 
@@ -86,7 +100,15 @@ Search is static. `src/integrations/pagefind.ts` runs Pagefind at the end of eve
 
 Pagefind indexes only elements that carry `searchBodyAttrs(area)` from `src/lib/search-index.ts`, and the `area` meta files each result under one of `SEARCH_AREAS`: Guides, Visualizations, Building blocks and Reference (from `docsAreas`), then Examples and Blog. Docs articles, gallery entry pages and blog posts carry it; the landing page, `/examples/`, `/blog/`, tag pages, the 404 page and fixtures do not. Inside an indexed page, `data-pagefind-ignore` keeps out what isn't content: demo stages, controls, spec and shared-value scripts and code panels (all written by `src/lib/demo/`), and the docs breadcrumb, page actions and pager.
 
-The header's `<Search />` (`src/components/search/Search.astro`) holds the trigger, `button[data-search-trigger]` with `aria-controls="site-search"`, and an empty `dialog#site-search[data-search]`. `src/scripts/search.ts` is the eager part every page loads: it wires the trigger and the shortcuts and imports the dialog code on first use, and the build test holds it, with its static imports, to 2 KB gzipped. No page loads Pagefind or the dialog code up front. The dev server has no index, so the dialog shows `SEARCH_UNAVAILABLE` there; run `make build`, then `make preview`.
+The header's `<Search />` (`src/components/search/Search.astro`) holds the trigger, `button[data-search-trigger]` with `aria-controls="site-search"`, and a native `dialog#site-search[data-search]` with the combobox input, the listbox and the status lines already in the markup.
+
+`src/scripts/search.ts` is the eager part every page loads, and the build test holds it, with its static imports, under 2 KB gzipped. It fills the shortcut hint, wires the trigger and the shortcuts, and opens the dialog synchronously: `showModal()` and focus on the input happen in the same event, so keys typed while the rest loads land in the input (and iOS shows its keyboard). The shortcuts are pure rules in `src/lib/search/shortcuts.ts`: Cmd+K on macOS and Ctrl+K elsewhere toggle the dialog, and `/` opens it unless focus is in a text field. Nothing fires with Alt or Shift added (except Shift for a `/` that needs it), during IME composition or on key repeat.
+
+`src/scripts/search-dialog.ts` is the lazy part, a dynamic import on the first hover, focus or open of the trigger; hover and focus also start loading Pagefind, so the index is usually ready by the first keystroke. It searches whatever was typed before it arrived. No page loads Pagefind or the dialog code up front.
+
+Each query runs area by area (`src/lib/search/area-search.ts`), so a busy area can't crowd a quiet one out of a shared top-N. One debounced search supplies the overall rank and the match count per area; then each area with matches is searched with the `area` filter and its first five results load. Groups show in `SEARCH_AREAS` order, then "Other" for any page without an area, which is warned about once per URL since every indexed page should carry one. A group with more matches ends in "Show all n", which loads the rest. The highlighted result is the best hit (`bestHit` in `groups.ts`): a page whose title is the query itself, else Pagefind's top rank, so "sankey" lands on the Sankey page ahead of the reference page that says the word more often. Enter pressed while a search runs waits for that search's results and follows the best hit.
+
+The dialog's states are a reducer (`src/lib/search/search-state.ts`). Failed means a search threw after the index loaded: the panel shows `SEARCH_FAILED` and the next keystroke tries again. Unavailable means Pagefind itself did not load: the panel shows `SEARCH_UNAVAILABLE`, and the next open or keystroke retries the load. If the dialog code fails to import, `search.ts` shows the same `SEARCH_UNAVAILABLE` line from the status element's `data-load-error`, and the next open retries. The dev server has no index, so the dialog shows `SEARCH_UNAVAILABLE` there; run `make build`, then `make preview`.
 
 ## Blog
 
@@ -96,9 +118,13 @@ A post is one `.md` or `.mdx` file in `src/content/blog/`; the file name is the 
 
 A post may contain Markdown, `<Demo id="…" />` (after importing `Demo.astro`) and `json demo` fences, nothing else, so a Markdown export stays possible. In MDX a fence's figure goes through Astro's `<Fragment set:html>`, since JSX has no raw HTML node. Every chart cites tier-1 data. The post's last paragraph is its call to action: one sentence and one link, written in the post. The layout gives each post a byline, `[data-byline]` holding the author, a `<time datetime="YYYY-MM-DD">` and "n min read" in that order, plus BlogPosting JSON-LD in the `head` slot; the build test checks both.
 
+A post's body is set in the display serif at reading size; h2s share it, while h3s, inline code and everything inside a figure stay in the sans and mono so a graphic reads as a graphic.
+
+The index and tag pages show a post's `lead` as a tile (`src/components/blog/lead-tile.ts`), laid out at 360 by 240 and styled by the shared `tiles.css`. Any demo may lead: a chart shows its static tile image, a table or sankey its fallback table and a network its placeholder line until the live chart mounts. The guard that refused table, sankey and graph leads while their tile styles lived only in the landing wall's stylesheet is gone. A `lead` that names no demo, or one whose spec fails validation, fails the build naming the post.
+
 ## Phase 5 stubs
 
-While a phase 5 lane is unfinished its stub carries the `phase-5-stub` marker: `src/lib/gallery.ts` (gallery), `src/components/search/Search.astro` (search) and `src/content/blog/how-to-chart-a-temperature-anomaly.mdx` (blog). The build test skips a lane's content cases while its marker is present, and once every marker is gone it fails on any source file that still contains one.
+The `phase-5-stub` marker that held back the gallery, search and blog content cases while those lanes were unfinished is gone. Those cases always run, and the build test fails if any file under `src/` contains the marker.
 
 ## Running servers
 

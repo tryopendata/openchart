@@ -41,10 +41,10 @@ src/content/blog/      blog posts, one .md or .mdx each; the file name is the sl
 src/lib/               docs navigation and exports, Markdown plugins, demo rendering, gallery entries, blog posts, search index attributes, analytics, consent
 src/components/        landing sections and their islands, docs chrome, the Demo figure, gallery tiles, blog parts, the search dialog
 src/layouts/           BaseLayout (head, header, footer, analytics), DocsLayout (sidebar, outline, pager) and BlogLayout (byline, JSON-LD)
-src/pages/             landing, docs and their .md exports, examples (wall and entry pages), blog (index, posts, tags, rss.xml), llms files, social cards, robots, 404, test fixtures
+src/pages/             landing, docs and their .md exports, examples (wall and entry pages), blog (index, posts, tags, rss.xml), tile images (/tiles/*.svg), llms files, social cards, robots, 404, test fixtures
 src/scripts/           browser code: theme, copy buttons, demo mounting, gallery filter, search
 src/integrations/      pagefind.ts, the Astro integration that writes dist/pagefind/ at the end of every build
-src/styles/            global tokens and demo, gallery, search and blog styles
+src/styles/            global tokens and the demo, landing, tile, gallery, search and blog styles
 tests/                 build acceptance tests (build.test.ts) and the Pages check (deploy.test.mjs)
 e2e/                   Playwright browser and axe tests
 public/                static files, including _headers and _redirects for Pages
@@ -106,7 +106,7 @@ Read [testing](docs/guidance/engineering/testing.md) before writing or changing 
 
 ## Error handling
 
-Content and demo mistakes fail the build with a typed error that names the file or demo id: `InvalidDemoError` (every validation problem listed), `UnknownDemoError`, `DuplicateDemoError`, `DemoFenceError`, `DemoExportError`, `DuplicatePageError`, `UnknownSectionError`, `InvalidRepoDocError`, `PageLocationError`. In the browser a demo that cannot mount throws `DemoMountError` with the original as `cause`, and `src/scripts/demos.ts` shows the failure state on that figure. Analytics is optional: a blocked SDK leaves it off without rejecting.
+Content and demo mistakes fail the build with a typed error that names the file or demo id: `InvalidDemoError` (every validation problem listed), `UnknownDemoError`, `DuplicateDemoError`, `DemoFenceError`, `DemoExportError`, `DuplicatePageError`, `UnknownSectionError`, `InvalidRepoDocError`, `PageLocationError`, and for the gallery `GalleryEntryError` (an entry that breaks a rule) and `WallLayoutError` (an entry order that leaves a hole in the wall). In the browser a demo that cannot mount throws `DemoMountError` with the original as `cause`, and `src/scripts/demos.ts` shows the failure state on that figure. Analytics is optional: a blocked SDK leaves it off without rejecting.
 
 - Never swallow an error or turn failure into apparent success. Handle it where recovery is possible, or pass it on.
 - Add operation context when wrapping a failure, and preserve the original cause.
@@ -170,6 +170,6 @@ Read the engineering guidance before writing code; read the other docs when the 
 | Need | Read |
 | --- | --- |
 | Engineering rules for every agent | [docs/guidance/engineering/](docs/guidance/engineering/index.md) |
-| Where things live, docs pages, Markdown, islands, theme, social cards | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) |
+| Where things live, docs pages, Markdown, islands, theme, social cards, gallery and tiles, search, blog | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) |
 | Hooks and settings | [.claude/README.md](.claude/README.md) |
 | Quickstart | [README.md](README.md) |
