@@ -73,10 +73,20 @@ export function compileFaceted(
 
   // Strip facet from encoding before passing to per-panel pipeline (panels
   // don't know they're faceted -- they compile as regular single charts).
+  // Faceted charts never render figure-level endpoint labels, so disable them
+  // here to avoid reserving an unused right column in figure layout.
   const panelEncoding = { ...renderSpec.encoding };
   delete (panelEncoding as Record<string, unknown>).facet;
-  const panelSpec = { ...renderSpec, encoding: panelEncoding };
-  const panelChartSpec = { ...chartSpec, encoding: panelEncoding };
+  const panelSpec: NormalizedChartSpec = {
+    ...renderSpec,
+    encoding: panelEncoding,
+    endpointLabels: false,
+  };
+  const panelChartSpec: NormalizedChartSpec = {
+    ...chartSpec,
+    encoding: panelEncoding,
+    endpointLabels: false,
+  };
   // Value lanes belong to each panel, never also to the outer figure frame.
   let figureSpec = renderSpec.labels.placement
     ? { ...panelSpec, labels: { ...panelSpec.labels, placement: undefined } }
