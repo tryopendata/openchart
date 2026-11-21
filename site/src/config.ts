@@ -45,7 +45,7 @@ export const site = {
     },
   ] as { title: string; links: Link[] }[],
   releasesUrl: `${repo}/releases`,
-  license: "MIT",
+  license: "Apache-2.0",
   /** Components that hydrate on the landing page. The build test fails on any other island. */
   islands: [
     "HeroDesk",
