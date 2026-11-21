@@ -1,81 +1,93 @@
 /**
- * One row of the agent session transcript, in the site's own markup: who or
- * what acted in the narrow left column, what they said or got back in the wide
- * right one. Renders whatever part of the step the playback has revealed, so the
- * same component draws the finished transcript on the server and each frame of
- * the replay.
+ * One row of the condensed agent transcript, in the site's own markup: the tool
+ * (or who spoke) in the narrow left column, one line of what happened in the
+ * wide right one. Bulk stays behind a collapsed disclosure (the llms.txt excerpt,
+ * the spec as written); the validator's error and the edit are shown in full,
+ * since they are the point. Renders whatever part of the step the playback has
+ * revealed, so the same component draws the finished transcript on the server
+ * and each frame of the replay.
  */
 import type { Line, Step } from "@steamfield/ui/script";
 import type { DemoEntry } from "@steamfield/ui/sequencer";
-import type { ReactNode } from "react";
 import type { SessionData } from "./session-script";
 
 type ToolCall = Extract<Step<SessionData>, { kind: "tool-call" }>;
-
-type TranscriptEntryProps = {
-  entry: DemoEntry<SessionData>;
-  /** Draws the chart a `custom` body stands for. */
-  chart: () => ReactNode;
-};
+type Entry = DemoEntry<SessionData>;
 
 const lineText = (line: Line) => (typeof line === "string" ? line : line.text);
 const lineTone = (line: Line) => (typeof line === "string" ? "default" : (line.tone ?? "default"));
+/** A diff line without its leading "- " or "+ ". */
+const diffText = (line: Line) => lineText(line).replace(/^[-+] /, "");
 
 /** The word under a tool's name: what state the call is in. */
-function statusWord(entry: DemoEntry<SessionData>): string | null {
+function statusWord(entry: Entry): string | null {
   if (entry.status === "running") return "running";
   if (entry.status === "error") return "rejected";
   return null;
 }
 
-function OutputLines({ lines, more }: { lines: readonly Line[]; more: number | undefined }) {
+/** An edit's output: removed and added lines, every one toned fail or ok. */
+function isDiff(lines: readonly Line[]): boolean {
+  return lines.length > 0 && lines.every((line) => ["fail", "ok"].includes(lineTone(line)));
+}
+
+/** The removed and added text on one line, as an editor marks a correction. */
+function DiffLine({ lines }: { lines: readonly Line[] }) {
   return (
-    <div className="agent-output">
-      {lines.map((line, index) => (
-        // Lines only ever append, so the index is a stable key.
-        // biome-ignore lint/suspicious/noArrayIndexKey: output lines have no identity besides their order
-        <p key={index} className="agent-line" data-tone={lineTone(line)}>
-          {lineText(line)}
-        </p>
-      ))}
-      {more ? <p className="agent-line agent-more">… {more} more lines</p> : null}
-    </div>
+    <p className="agent-diff">
+      {lines.map((line) =>
+        lineTone(line) === "fail" ? (
+          <del key={`del-${lineText(line)}`}>{diffText(line)}</del>
+        ) : (
+          <ins key={`ins-${lineText(line)}`}>{diffText(line)}</ins>
+        ),
+      )}
+    </p>
   );
 }
 
-function ToolBody({
-  entry,
-  step,
-  chart,
-}: {
-  entry: DemoEntry<SessionData>;
-  step: ToolCall;
-  chart: () => ReactNode;
-}) {
-  const { body } = step;
-  if (!body || !entry.bodyVisible) return null;
-  if (body.kind === "custom") return <>{chart()}</>;
-  if (body.kind === "code") {
-    // The block scrolls on narrow screens, so it is a named region keyboard users can focus.
+/** The step's extra detail, if any, under its one line. */
+function ToolDetail({ entry, step }: { entry: Entry; step: ToolCall }) {
+  const lines = entry.visibleLines ?? [];
+  if (step.body?.kind === "code" && entry.bodyVisible) {
     return (
-      // biome-ignore lint/a11y/noNoninteractiveTabindex: a scrollable region must be focusable to scroll by keyboard
-      <section className="agent-code" aria-label={`${step.args ?? "Spec"} as written`} tabIndex={0}>
-        <pre>{body.code}</pre>
-      </section>
+      <details className="agent-disclosure">
+        <summary>Show the spec</summary>
+        <section
+          className="agent-code"
+          aria-label={`${step.args ?? "Spec"} as written`}
+          // biome-ignore lint/a11y/noNoninteractiveTabindex: a scrollable region must be focusable to scroll by keyboard
+          tabIndex={0}
+        >
+          <pre>{step.body.code}</pre>
+        </section>
+      </details>
     );
   }
-  return null;
+  if (lines.length === 0) return null;
+  // The validator's error is the point of the session: its first line always shows.
+  if (entry.status === "error") {
+    const [message] = lines;
+    return message ? <p className="agent-error">{lineText(message)}</p> : null;
+  }
+  if (isDiff(lines)) return <DiffLine lines={lines} />;
+  if (step.more !== undefined) {
+    return (
+      <details className="agent-disclosure">
+        <summary>Show the first lines</summary>
+        <div className="agent-excerpt">
+          {lines.map((line) => (
+            <p key={lineText(line)}>{lineText(line)}</p>
+          ))}
+          {entry.more ? <p>… {entry.more} more lines</p> : null}
+        </div>
+      </details>
+    );
+  }
+  return <p className="agent-result">{lines.map(lineText).join(" ")}</p>;
 }
 
-function ToolCallRow({
-  entry,
-  step,
-  chart,
-}: {
-  entry: DemoEntry<SessionData>;
-  step: ToolCall;
-  chart: () => ReactNode;
-}) {
+function ToolCallRow({ entry, step }: { entry: Entry; step: ToolCall }) {
   const status = statusWord(entry);
   return (
     <>
@@ -89,22 +101,21 @@ function ToolCallRow({
       </div>
       <div className="agent-body">
         <p className="agent-args">
-          <span>{step.args}</span>
+          <span className="agent-target" title={step.args}>
+            {step.args}
+          </span>
           {step.meta && entry.status !== "running" ? (
             <span className="agent-meta">{step.meta}</span>
           ) : null}
         </p>
-        {entry.visibleLines?.length ? (
-          <OutputLines lines={entry.visibleLines} more={entry.more} />
-        ) : null}
-        <ToolBody entry={entry} step={step} chart={chart} />
+        <ToolDetail entry={entry} step={step} />
       </div>
     </>
   );
 }
 
 /** One transcript row, as `<li>` in the session's list. Thinking and pauses take time but show nothing. */
-export function TranscriptEntry({ entry, chart }: TranscriptEntryProps) {
+export function TranscriptEntry({ entry }: { entry: Entry }) {
   const { step } = entry;
   if (step.kind === "user" || step.kind === "agent-text") {
     const who = step.kind === "user" ? "Reporter" : "Agent";
@@ -118,7 +129,7 @@ export function TranscriptEntry({ entry, chart }: TranscriptEntryProps) {
   if (step.kind === "tool-call") {
     return (
       <li className="agent-row" data-kind="tool-call" data-status={entry.status}>
-        <ToolCallRow entry={entry} step={step} chart={chart} />
+        <ToolCallRow entry={entry} step={step} />
       </li>
     );
   }

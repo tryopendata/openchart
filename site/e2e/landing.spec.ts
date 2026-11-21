@@ -457,6 +457,9 @@ test("the agent session plays to a chart and shows the validator's error at the 
   await agents.getByRole("button", { name: "Play" }).click();
   await page.clock.runFor(60_000);
   await expect(agents.getByText(firstError?.message ?? "", { exact: false })).toBeVisible();
+  // The transcript is condensed: the spec as written waits behind a collapsed disclosure.
+  await expect(agents.getByText("Show the spec")).toBeVisible();
+  await expect(agents.getByRole("region", { name: /as written$/ })).toBeHidden();
   await expect(agents.locator("[data-agent-chart] svg").first()).toBeVisible();
   // The session ends on the live chart, not the static stand-in, and says so.
   await expect(
@@ -466,6 +469,29 @@ test("the agent session plays to a chart and shows the validator's error at the 
   await expect(
     agents.getByRole("status").filter({ hasText: "The session has finished" }),
   ).toHaveCount(1);
+});
+
+test("the hero and closing install commands switch package managers independently", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const hero = page.locator("#desk");
+  const closing = page.locator("#closing");
+  const managers = (section: Locator) => section.getByRole("tablist", { name: "Package manager" });
+
+  await closing.scrollIntoViewIfNeeded();
+  await managers(closing).getByRole("tab", { name: "bun" }).click();
+  await expect(closing.getByRole("tabpanel")).toContainText("bun add @opendata-ai/openchart-react");
+  await expect(
+    hero.getByRole("tabpanel").filter({ hasText: "@opendata-ai/openchart-react" }),
+  ).toContainText("npm install @opendata-ai/openchart-react");
+
+  await hero.scrollIntoViewIfNeeded();
+  await managers(hero).getByRole("tab", { name: "pnpm" }).click();
+  await expect(
+    hero.getByRole("tabpanel").filter({ hasText: "@opendata-ai/openchart-react" }),
+  ).toContainText("pnpm add @opendata-ai/openchart-react");
+  await expect(closing.getByRole("tabpanel")).toContainText("bun add @opendata-ai/openchart-react");
 });
 
 test("framework tabs switch the install and usage code and share the choice with docs demos", async ({
@@ -481,6 +507,12 @@ test("framework tabs switch the install and usage code and share the choice with
     "npm install @opendata-ai/openchart-react",
   );
   const reactUsage = await panelText();
+  // The code is the second story: its panel is capped near 16rem and scrolls inside.
+  const codeHeight = await frameworks
+    .getByRole("tabpanel")
+    .locator("pre")
+    .evaluate((pre) => pre.getBoundingClientRect().height);
+  expect(codeHeight).toBeLessThanOrEqual(16 * 16 + 1);
   const vue = frameworks.getByRole("tab", { name: "Vue", exact: true });
   await vue.click();
   await expect(vue).toHaveAttribute("aria-selected", "true");
@@ -490,10 +522,11 @@ test("framework tabs switch the install and usage code and share the choice with
   expect(await panelText()).not.toBe(reactUsage);
 
   await page.goto(BAR);
-  // Docs demos keep their code closed until the reader opens it.
-  await page.locator("[data-demo-toggle]").first().click();
-  await expect(page.locator('[data-demo-panel="vue"]').first()).toBeVisible();
-  await page.locator('[data-demo-tab="svelte"]').first().click();
+  // Docs demos keep their code closed until asked; open the first figure's code.
+  const demo = page.locator("[data-demo]").first();
+  await demo.locator("[data-demo-toggle]").click();
+  await expect(demo.locator('[data-demo-panel="vue"]')).toBeVisible();
+  await demo.locator('[data-demo-tab="svelte"]').click();
   await page.goto("/");
   frameworks = await hydrated(page.locator("#frameworks"));
   await expect(frameworks.getByRole("tab", { name: "Svelte", exact: true })).toHaveAttribute(

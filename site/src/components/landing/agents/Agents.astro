@@ -1,8 +1,9 @@
 ---
 /**
- * Built for agents: a scripted session in which an agent writes a spec, reads the
- * real `validateSpec` error, fixes it and the chart renders, beside the three
- * agent-facing facts (llms.txt, the JSON Schema, the skill install line). The
+ * Built for agents: the chart a scripted agent session ends on, large, beside a
+ * condensed transcript in which the agent writes a spec, reads the real
+ * `validateSpec` error and fixes it; then the three agent-facing facts (llms.txt,
+ * the JSON Schema, the skill install lines) as a compact row. The
  * script is built here at build time, so every line the validator says in it is
  * the engine's own output; the AgentSession island (client:visible) plays it.
  *
@@ -58,62 +59,57 @@ const schemaUrl = `${site.repo}/blob/main/packages/core/schema/vizspec.schema.js
 <section id="agents" aria-labelledby="agents-title" data-landing-section class="landing-section">
   <div class="landing-container">
     <div class="rule-axis landing-rule" aria-hidden="true"></div>
-    <div class="agents-grid">
-      <div class="agents-intro" data-reveal>
-        <h2 id="agents-title" class="landing-heading" data-motion="lift-md">
-          {landingCopy.headings.agents}
-        </h2>
-        <p class="agents-lede" data-motion="lift-sm">
-          Every docs page is also served as Markdown and indexed in <code>llms.txt</code>. When a
-          spec is wrong, <code>validateSpec</code> returns the path of the field, what it expected
-          and a fix. The session is scripted; every line the validator says in it is the engine's
-          own output, produced when this page was built.
-        </p>
-        <dl class="agents-facts">
-          <div class="agents-fact" data-motion-part>
-            <dt>llms.txt</dt>
-            <dd>
-              <p>Every docs page as Markdown, listed by section with its URL.</p>
-              <a class="agents-fact-link" href="/llms.txt">
-                /llms.txt
-              </a>
-            </dd>
-          </div>
-          <div class="agents-fact" data-motion-part>
-            <dt>JSON Schema</dt>
-            <dd>
-              <p>The whole spec grammar, for editor completion and structured output.</p>
-              <a class="agents-fact-link" href={schemaUrl}>
-                @opendata-ai/openchart-core/schema
-              </a>
-            </dd>
-          </div>
-          <div class="agents-fact" data-motion-part>
-            <dt>Claude Code skill</dt>
-            <dd>
-              <p>
-                Teaches Claude the spec grammar, the encoding rules and chart design conventions.
-              </p>
-              {agentSkillLines.map(({ command, label }, index) => (
-                <CopyCommand
-                  id={`agents-skill-${index}`}
-                  command={command}
-                  label={label}
-                  prompt={null}
-                  className="agents-command"
-                  buttonClassName="copy-chip"
-                />
-              ))}
-            </dd>
-          </div>
-        </dl>
-      </div>
-      <div class="agents-stage">
-        <AgentSession client:visible script={script}>
-          <Fragment slot="chart" set:html={chartSvgs} />
-        </AgentSession>
-      </div>
+    <div class="agents-head" data-reveal>
+      <h2 id="agents-title" class="landing-heading" data-motion="lift-md">
+        {landingCopy.headings.agents}
+      </h2>
+      <p class="agents-lede" data-motion="lift-sm">
+        A reporter asks for a chart. The agent writes the spec, the validator rejects one field and
+        names the columns the data has, and the agent fixes it. The session is scripted, but every
+        line the validator says is its real output.
+      </p>
     </div>
+    <div class="agents-stage">
+      <AgentSession client:visible script={script}>
+        <Fragment slot="chart" set:html={chartSvgs} />
+      </AgentSession>
+    </div>
+    <dl class="agents-facts" data-reveal="quiet">
+      <div class="agents-fact" data-motion-part>
+        <dt>llms.txt</dt>
+        <dd>
+          <p>Every docs page as Markdown, listed by section with its URL.</p>
+          <a class="agents-fact-link" href="/llms.txt">
+            /llms.txt
+          </a>
+        </dd>
+      </div>
+      <div class="agents-fact" data-motion-part>
+        <dt>JSON Schema</dt>
+        <dd>
+          <p>The whole spec grammar, for editor completion and structured output.</p>
+          <a class="agents-fact-link" href={schemaUrl}>
+            @opendata-ai/openchart-core/schema
+          </a>
+        </dd>
+      </div>
+      <div class="agents-fact" data-motion-part>
+        <dt>Claude Code skill</dt>
+        <dd>
+          <p>Teaches Claude the spec grammar, the encoding rules and chart design conventions.</p>
+          {agentSkillLines.map(({ command, label }, index) => (
+            <CopyCommand
+              id={`agents-skill-${index}`}
+              command={command}
+              label={label}
+              prompt={null}
+              className="agents-command"
+              buttonClassName="copy-button"
+            />
+          ))}
+        </dd>
+      </div>
+    </dl>
   </div>
 </section>
 

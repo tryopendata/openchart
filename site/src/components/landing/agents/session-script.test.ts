@@ -66,10 +66,10 @@ describe("the Claude Code skill lines", () => {
 });
 
 describe("buildSessionScript", () => {
-  it("plays request, llms.txt, first spec, the validator's real error, the edit, the verdict and the chart", () => {
+  it("plays request, llms.txt, first spec, the validator's real error, the edit, the verdict and the render", () => {
     const script = buildSessionScript(agentSession, INPUTS);
     expect(script.steps.map((step) => (step.kind === "tool-call" ? step.name : step.kind))).toEqual(
-      ["user", "fetch", "write", "validateSpec", "agent-text", "edit", "validateSpec", "render"],
+      ["user", "fetch", "write", "validateSpec", "edit", "validateSpec", "render"],
     );
     const [, , rejected, , verdict, render] = toolCalls(agentSession);
     const [error] = validateSpec(agentSession.firstSpec).errors;
