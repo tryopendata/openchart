@@ -65,6 +65,44 @@ describe('faceted layout right margin and a11y warnings', () => {
     expect(warnings.filter((w) => w.includes('Both legend and endpointLabels'))).toEqual([]);
   });
 
+  it('emits no seriesIdentificationWarnings when row or column facets split by the series field', () => {
+    const rowSpec: ChartSpec = {
+      mark: 'line',
+      data: DATA,
+      encoding: {
+        x: { field: 'year', type: 'temporal' },
+        y: { field: 'share', type: 'quantitative' },
+        color: { field: 'source', type: 'nominal' },
+        row: { field: 'source', type: 'nominal' },
+      },
+      legend: { show: false },
+      endpointLabels: false,
+    };
+    const warnings: string[] = [];
+    compileChart(rowSpec, {
+      width: 800,
+      height: 480,
+      onWarn: (message) => warnings.push(message),
+    });
+    expect(warnings.filter((w) => w.includes('Both legend and endpointLabels'))).toEqual([]);
+  });
+
+  it('still warns when facet splits by a different field than color', () => {
+    const multiSeriesPerPanel: ChartSpec = {
+      mark: 'line',
+      data: DATA.map((row, index) => ({ ...row, region: index % 2 === 0 ? 'East' : 'West' })),
+      encoding: {
+        x: { field: 'year', type: 'temporal' },
+        y: { field: 'share', type: 'quantitative' },
+        color: { field: 'source', type: 'nominal' },
+        facet: { field: 'region', type: 'nominal', columns: 2 },
+      },
+      legend: { show: false },
+      endpointLabels: false,
+    };
+    expect(seriesIdentificationWarnings(normalizeSpec(multiSeriesPerPanel))).toHaveLength(1);
+  });
+
   it('still warns on non-faceted multi-series line charts with both legend and endpointLabels disabled', () => {
     const spec: ChartSpec = {
       mark: 'line',

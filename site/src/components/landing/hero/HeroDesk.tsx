@@ -18,7 +18,6 @@ import {
   useState,
 } from "react";
 import {
-  buildHeroSpec,
   type HeroFormId,
   type HeroFuel,
   type HeroSpotlight,
@@ -49,10 +48,6 @@ export default function HeroDesk({ children }: HeroDeskProps) {
   const panelId = `${baseId}-panel`;
   const tabId = (form: HeroFormId) => `${baseId}-tab-${form}`;
 
-  const spec = useMemo(
-    () => buildHeroSpec(state.form, state.spotlight),
-    [state.form, state.spotlight],
-  );
   const diff = useMemo(
     () => heroSpecDiff(state.form, state.spotlight),
     [state.form, state.spotlight],
@@ -105,7 +100,8 @@ export default function HeroDesk({ children }: HeroDeskProps) {
       />
       <HeroStage
         form={state.form}
-        spec={spec}
+        spec={diff.spec}
+        interactive={mounted}
         panelId={panelId}
         activeTabId={tabId(state.form)}
         onMounted={onMounted}

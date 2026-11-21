@@ -115,8 +115,6 @@ export function collectContrastWarnings(
 export function seriesIdentificationWarnings(
   spec: import('./types').NormalizedChartSpec,
 ): string[] {
-  // Each facet panel renders its own series header.
-  if (spec.encoding.facet) return [];
   if ((spec.markType !== 'line' && spec.markType !== 'area') || spec.legend?.show !== false)
     return [];
   const hidden =
@@ -124,6 +122,11 @@ export function seriesIdentificationWarnings(
     (typeof spec.endpointLabels === 'object' && spec.endpointLabels.show === false);
   const field = seriesField(spec);
   if (!hidden || !field) return [];
+  // Each panel header identifies the series only when faceting splits by that same field.
+  // Check row/column as well because compileChart runs this check before desugarRowColumn.
+  const facetField =
+    spec.encoding.facet?.field ?? spec.encoding.row?.field ?? spec.encoding.column?.field;
+  if (facetField === field) return [];
   return new Set(spec.data.map((row) => row[field])).size > 1
     ? [
         '[openchart a11y] Both legend and endpointLabels are disabled on a multi-series chart. Enable either to identify the series.',

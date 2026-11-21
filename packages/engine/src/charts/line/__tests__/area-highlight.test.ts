@@ -81,7 +81,7 @@ describe('stacked area highlight seams and muted opacity', () => {
     const darkMuted = marksBySeries(stackedAreaSpec({ highlight: ['Coal'] }), transparentDark).get(
       'Gas',
     );
-    expect(darkMuted?.stroke).not.toBe('transparent');
+    expect(darkMuted?.stroke).toBe('#111827');
     expect(darkMuted?.strokeWidth).toBe(1.5);
   });
 

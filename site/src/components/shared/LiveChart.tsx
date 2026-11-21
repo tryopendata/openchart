@@ -10,7 +10,8 @@ import type { ChartSpec, DarkMode, LayerSpec, ThemeConfig } from "@opendata-ai/o
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { usePageChartTheme } from "./page-theme";
 
-type ChartModule = typeof import("@opendata-ai/openchart-react");
+/** Loaded `@opendata-ai/openchart-react` module shape. */
+export type ChartModule = typeof import("@opendata-ai/openchart-react");
 
 let loading: Promise<ChartModule> | undefined;
 
@@ -24,7 +25,8 @@ export function loadChartLibrary(): Promise<ChartModule> {
   return loading;
 }
 
-function useChartModule(): ChartModule | null {
+/** Lazily loads `@opendata-ai/openchart-react`, returning null until ready or if loading fails. */
+export function useChartModule(): ChartModule | null {
   const [module, setModule] = useState<ChartModule | null>(null);
   useEffect(() => {
     let active = true;
@@ -44,8 +46,8 @@ function useChartModule(): ChartModule | null {
   return module;
 }
 
-/** Tells the parent the live chart is in the page. Child effects run first, so the chart has drawn. */
-function Mounted({ onMounted }: { onMounted: () => void }) {
+/** Tells the parent the live visualization is in the page. Child effects run first, so it has drawn. */
+export function Mounted({ onMounted }: { onMounted: () => void }) {
   useEffect(() => onMounted(), [onMounted]);
   return null;
 }

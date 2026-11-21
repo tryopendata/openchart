@@ -143,6 +143,22 @@ test.describe("hero desk", () => {
       await expect(pane(page).locator("[data-spec-added]").first()).toBeVisible();
       await expect(spotlightButton(page, "Coal")).toHaveAttribute("aria-pressed", "true");
     }
+    // Keyboard navigation on the WAI-ARIA tablist moves both selection and focus.
+    const lineTab = formTab(page, "Line");
+    await lineTab.focus();
+    await page.keyboard.press("ArrowRight");
+    await expect(formTab(page, "Small multiples")).toBeFocused();
+    await expect(formTab(page, "Small multiples")).toHaveAttribute("aria-selected", "true");
+    await page.keyboard.press("ArrowLeft");
+    await page.keyboard.press("ArrowLeft");
+    await expect(formTab(page, "Data table")).toBeFocused();
+    await expect(formTab(page, "Data table")).toHaveAttribute("aria-selected", "true");
+    await page.keyboard.press("Home");
+    await expect(lineTab).toBeFocused();
+    await expect(lineTab).toHaveAttribute("aria-selected", "true");
+    await page.keyboard.press("End");
+    await expect(formTab(page, "Data table")).toBeFocused();
+    await expect(formTab(page, "Data table")).toHaveAttribute("aria-selected", "true");
   });
 
   test("spotlights fuels across forms, toggles from table rows, and keeps Line + All spec visible on mobile", async ({
@@ -189,8 +205,10 @@ test.describe("hero desk", () => {
 
   test("all four hero forms pass axe with zero horizontal overflow in light and dark mode", async ({
     page,
+    isMobile,
   }) => {
     test.slow();
+    if (isMobile) await page.setViewportSize({ width: 390, height: 844 });
     for (const scheme of ["light", "dark"] as const) {
       await page.emulateMedia({ colorScheme: scheme });
       await page.goto("/");
