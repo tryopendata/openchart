@@ -2,9 +2,9 @@
 /**
  * Built for agents: a scripted session in which an agent writes a spec, reads the
  * real `validateSpec` error, fixes it and the chart renders, beside the three
- * agent-facing facts (llms.txt, the JSON Schema, the skill install line). Stub
- * from the phase 2 scaffold; lane 2/d fills it with the AgentSession island
- * (client:visible).
+ * agent-facing facts (llms.txt, the JSON Schema, the skill install line). The
+ * script is built here at build time, so every line the validator says in it is
+ * the engine's own output; the AgentSession island (client:visible) plays it.
  *
  * Contract (e2e/landing.spec.ts relies on it):
  * - `<section id="agents" aria-labelledby="agents-title" data-landing-section>`
@@ -15,15 +15,110 @@
  * - `data-agent-chart` on the element holding the chart the session ends with.
  * - Any figure has a `<figcaption>` with a "Source: …" line.
  */
+import { CopyCommand } from "@steamfield/ui/react/copy";
+import { site } from "../../../config";
+import { AGENT_SPEC_FILE, agentSession, agentSkillLines } from "../../../landing/agents";
 import { landingCopy } from "../../../landing/copy";
+import { allPages } from "../../../lib/collection";
+import { staticSvg } from "../../../lib/demo/static-svg";
+import { llmsIndex } from "../../../lib/docs";
+import { AgentSession } from "./AgentSession";
+import { buildSessionScript } from "./session-script";
 import "../../../styles/landing-close.css";
+
+const llmsUrl = new URL("/llms.txt", site.url).href;
+const llms = llmsIndex((await allPages()).map((entry) => entry.page));
+const script = buildSessionScript(agentSession, { llms, llmsUrl, file: AGENT_SPEC_FILE });
+
+/**
+ * Two drawing sizes, so a phone gets the chart's own compact layout instead of the
+ * wide one scaled down; landing-close.css shows one per viewport and sizes the stage
+ * to match. Each comes in both themes.
+ */
+const CHART_SIZES = {
+  wide: { width: 720, height: 420 },
+  narrow: { width: 360, height: 340 },
+};
+const chartSvgs = Object.entries(CHART_SIZES)
+  .map(([size, box]) => {
+    const svgs = [false, true].map((dark) =>
+      staticSvg(agentSession.fixedSpec, {
+        idPrefix: `agent-chart-${size}-${dark ? "d" : "l"}`,
+        dark,
+        ...box,
+      }),
+    );
+    return `<div class="agent-chart-${size}">${svgs.join("")}</div>`;
+  })
+  .join("");
+
+const schemaUrl = `${site.repo}/blob/main/packages/core/schema/vizspec.schema.json`;
 ---
 
 <section id="agents" aria-labelledby="agents-title" data-landing-section class="landing-section">
   <div class="landing-container">
     <div class="rule-axis landing-rule" aria-hidden="true"></div>
-    <h2 id="agents-title" class="landing-heading">
-      {landingCopy.headings.agents}
-    </h2>
+    <div class="agents-grid">
+      <div class="agents-intro" data-reveal>
+        <h2 id="agents-title" class="landing-heading" data-motion="lift-md">
+          {landingCopy.headings.agents}
+        </h2>
+        <p class="agents-lede" data-motion="lift-sm">
+          Every docs page is also served as Markdown and indexed in <code>llms.txt</code>. When a
+          spec is wrong, <code>validateSpec</code> returns the path of the field, what it expected
+          and a fix. The session is scripted; every line the validator says in it is the engine's
+          own output, produced when this page was built.
+        </p>
+        <dl class="agents-facts">
+          <div class="agents-fact" data-motion-part>
+            <dt>llms.txt</dt>
+            <dd>
+              <p>Every docs page as Markdown, listed by section with its URL.</p>
+              <a class="agents-fact-link" href="/llms.txt">
+                /llms.txt
+              </a>
+            </dd>
+          </div>
+          <div class="agents-fact" data-motion-part>
+            <dt>JSON Schema</dt>
+            <dd>
+              <p>The whole spec grammar, for editor completion and structured output.</p>
+              <a class="agents-fact-link" href={schemaUrl}>
+                @opendata-ai/openchart-core/schema
+              </a>
+            </dd>
+          </div>
+          <div class="agents-fact" data-motion-part>
+            <dt>Claude Code skill</dt>
+            <dd>
+              <p>
+                Teaches Claude the spec grammar, the encoding rules and chart design conventions.
+              </p>
+              {agentSkillLines.map(({ command, label }, index) => (
+                <CopyCommand
+                  id={`agents-skill-${index}`}
+                  command={command}
+                  label={label}
+                  prompt={null}
+                  className="agents-command"
+                  buttonClassName="copy-chip"
+                />
+              ))}
+            </dd>
+          </div>
+        </dl>
+      </div>
+      <div class="agents-stage">
+        <AgentSession client:visible script={script}>
+          <Fragment slot="chart" set:html={chartSvgs} />
+        </AgentSession>
+      </div>
+    </div>
   </div>
 </section>
+
+<script>
+  import { enhanceSectionCopy } from "../../shared/copy-commands";
+
+  enhanceSectionCopy("agents");
+</script>

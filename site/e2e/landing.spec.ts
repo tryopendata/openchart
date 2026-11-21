@@ -343,6 +343,14 @@ test("the agent session plays to a chart and shows the validator's error at the 
   await page.clock.runFor(60_000);
   await expect(agents.getByText(firstError?.message ?? "", { exact: false })).toBeVisible();
   await expect(agents.locator("[data-agent-chart] svg").first()).toBeVisible();
+  // The session ends on the live chart, not the static stand-in, and says so.
+  await expect(
+    agents.locator(".agent-chart-live svg:not(.demo-static)").first(),
+    "the live chart mounted",
+  ).toBeAttached();
+  await expect(
+    agents.getByRole("status").filter({ hasText: "The session has finished" }),
+  ).toHaveCount(1);
 });
 
 test("framework tabs switch the install and usage code and share the choice with docs demos", async ({

@@ -9,6 +9,9 @@ export type InstallOption = { label: string; command: string };
 
 const repo = "https://github.com/tryopendata/openchart";
 
+/** Where "Read the docs" links go: the first page a new reader needs. */
+export const DOCS_HOME = "/docs/get-started/getting-started/";
+
 export const site = {
   name: "OpenChart",
   tagline: "Charts, tables and maps from a JSON spec.",
@@ -32,7 +35,7 @@ export const site = {
     {
       title: "Docs",
       links: [
-        { label: "Getting started", href: "/docs/get-started/getting-started/" },
+        { label: "Getting started", href: DOCS_HOME },
         { label: "llms.txt", href: "/llms.txt" },
       ],
     },
