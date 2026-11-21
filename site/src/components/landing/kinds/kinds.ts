@@ -78,9 +78,9 @@ export const kindsTiles: KindsTile[] = [
     href: "/docs/flow/sankey/",
     link: "Sankey diagrams",
     place: "full",
-    // Three labelled columns of nodes need the whole measure to keep their labels apart.
-    height: 520,
-    narrowHeight: 460,
+    // Four labelled columns of nodes need the whole measure to keep their labels apart.
+    height: 620,
+    narrowHeight: 560,
   },
   {
     demo: "tables/basic",
