@@ -126,9 +126,8 @@ test("Back and Forward step through the choices, All is the bare URL, and an edi
 
 test("a filter that keeps a feature lays it out like any other tile, in order from the first column", async ({
   page,
-  isMobile,
 }) => {
-  test.skip(isMobile, "The arranged wall starts at 1100px");
+  // The arranged wall starts at 1100px, so both projects run this at a desktop width.
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto(WALL);
   await filterButton(page, "Composition").click();
