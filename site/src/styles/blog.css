@@ -51,13 +51,14 @@
     @apply text-ink font-display m-0 text-[1.625rem] leading-[1.15] font-medium tracking-[-0.01em] text-balance sm:text-[1.875rem];
   }
 
+  /* A hairline underline in the rule color that darkens to the text's on hover. */
   .blog-entry-title a {
-    @apply decoration-line no-underline underline-offset-[5px];
+    @apply decoration-line underline decoration-1 underline-offset-[5px];
     transition: text-decoration-color 150ms ease-out;
   }
 
   .blog-entry-title a:hover {
-    @apply decoration-current underline;
+    @apply decoration-current;
   }
 
   .blog-entry-description {
@@ -73,12 +74,17 @@
     @apply text-line-strong mr-2;
   }
 
+  /* Tag links carry the endnote links' underline, so they read as links in a line of metadata. */
   .blog-entry-meta a {
-    @apply text-muted hover:text-ink no-underline hover:underline;
+    @apply text-muted hover:text-ink decoration-line underline underline-offset-4 hover:decoration-current;
   }
 
-  /* The lead chart: a 3:2 specimen at most 360px wide, the size it lays out at. */
-  /* The tile is a demo figure (demo.css spaces those apart in prose); here the grid spaces it. */
+  .blog-empty {
+    @apply text-ink-2 font-display m-0 py-10 text-[1.25rem];
+  }
+
+  /* The lead chart: a 3:2 specimen at most 360px wide, the size it lays out at.
+     The tile is a demo figure (demo.css spaces those apart in prose); here the grid spaces it. */
   .blog-lead.demo {
     @apply m-0 w-full max-w-[360px] min-w-0 md:col-span-4 md:col-start-9 md:self-center md:justify-self-end;
   }
@@ -111,6 +117,10 @@
     @apply text-ink font-medium;
   }
 
+  .blog-updated {
+    @apply text-muted m-0 -mt-2 text-sm leading-6;
+  }
+
   .blog-endnotes {
     @apply border-line-strong mt-16 grid gap-8 border-t pt-6 sm:grid-cols-2;
   }
@@ -141,7 +151,13 @@
 }
 
 /* The article body overrides the docs prose rules in global.css, which are unlayered,
-   so these are unlayered too, one class more specific. */
+   so these are unlayered too, one class more specific.
+
+   The type plan: reading text is the display serif, as the landing story sets a
+   reporter's paragraph; h2s stay in the same serif at a larger size, so a section
+   break reads as part of the text; h3s, inline code and everything in a figure
+   (the chart's own title, axes, caption, source and code toolbar) stay in the sans
+   and mono, so a graphic and its labels read as the graphic, not as prose. */
 
 /* The body in the display serif at reading size; lists and quotes follow it. */
 .prose.blog-prose > :where(p, ul, ol, blockquote) {
@@ -157,4 +173,15 @@
 /* A figure is a break in the reading: more air above and below than a paragraph. */
 .prose.blog-prose > .demo {
   @apply my-12;
+}
+
+/* A subhead under an h2: the sans, so it reads as a label rather than a second headline. */
+.prose.blog-prose > :where(h3) {
+  @apply mt-10 mb-3 font-sans text-[1.0625rem] font-semibold;
+}
+
+/* Inline code set smaller than in the sans docs: Plex Mono at the serif's size looks heavy
+   beside Newsreader's lighter strokes and x-height. */
+.prose.blog-prose > :where(p, ul, ol, blockquote) :where(code):not(:where(pre code, a code)) {
+  @apply text-[0.8em];
 }

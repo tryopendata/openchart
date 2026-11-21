@@ -5,5 +5,5 @@
  */
 import type { TileSize } from "../shared/tiles/tile-spec";
 
-/** 3:2, the shape of the article's own figures. */
+/** 3:2, a size picked for the index cell. */
 export const LEAD_TILE_SIZE: TileSize = { width: 360, height: 240 };

@@ -5,7 +5,7 @@
  * an h2 link, its description, date, reading time and tags, and its `lead`
  * chart, when it has one, as a tile specimen beside the text. The chart plays
  * the library's own entrance when it goes live; the script below keeps the
- * live tile at the static one's scale.
+ * live tile at the static one's scale. With no posts it says so.
  */
 import { displayDate, isoDay, postPath, tagPath, tagsOf } from "../../lib/blog";
 import type { BlogPost } from "../../lib/blog-types";
@@ -20,41 +20,45 @@ const { items } = Astro.props;
 const pageShared = pageSharedHashes(Astro.locals);
 ---
 
-<ol class="blog-list" data-blog-list>
-  {items.map(({ post, minutes }) => (
-    <li class="blog-entry" data-reveal>
-      <span class="blog-entry-rule" data-motion="wipe" />
-      <div class="blog-entry-text" data-motion="lift-sm">
-        <h2 class="blog-entry-title">
-          <a href={postPath(post.slug)}>{post.title}</a>
-        </h2>
-        <p class="blog-entry-description">{post.description}</p>
-        <p class="blog-entry-meta">
-          <time datetime={isoDay(post.published)}>{displayDate(post.published)}</time>
-          <span>{minutes} min read</span>
-          <span>
-            {tagsOf(post).map((tag, index) => (
-              <>
-                {index > 0 && ", "}
-                <a href={tagPath(tag.id)}>{tag.label}</a>
-              </>
-            ))}
-          </span>
-        </p>
-      </div>
-      {post.lead && (
-        <div
-          class="blog-lead demo"
-          data-demo={`lead-${post.lead}`}
-          data-demo-entrance
-          inert
-          aria-hidden="true"
-          set:html={leadTileHtml(post.slug, post.lead, pageShared)}
-        />
-      )}
-    </li>
-  ))}
-</ol>
+{items.length === 0 ? (
+  <p class="blog-empty">No posts yet.</p>
+) : (
+  <ol class="blog-list" data-blog-list>
+    {items.map(({ post, minutes }) => (
+      <li class="blog-entry" data-reveal>
+        <span class="blog-entry-rule" data-motion="wipe" />
+        <div class="blog-entry-text" data-motion="lift-sm">
+          <h2 class="blog-entry-title">
+            <a href={postPath(post.slug)}>{post.title}</a>
+          </h2>
+          <p class="blog-entry-description">{post.description}</p>
+          <p class="blog-entry-meta">
+            <time datetime={isoDay(post.published)}>{displayDate(post.published)}</time>
+            <span>{minutes} min read</span>
+            <span>
+              {tagsOf(post).map((tag, index) => (
+                <>
+                  {index > 0 && ", "}
+                  <a href={tagPath(tag.id)}>{tag.label}</a>
+                </>
+              ))}
+            </span>
+          </p>
+        </div>
+        {post.lead && (
+          <div
+            class="blog-lead demo"
+            data-demo={`lead-${post.lead}`}
+            data-demo-entrance
+            inert
+            aria-hidden="true"
+            set:html={leadTileHtml(post.slug, post.lead, pageShared)}
+          />
+        )}
+      </li>
+    ))}
+  </ol>
+)}
 
 <script>
   import { observeTileScale } from "../shared/tiles/tile-scale";

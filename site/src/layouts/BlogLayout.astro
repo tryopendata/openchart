@@ -11,7 +11,14 @@ import Byline from "../components/blog/Byline.astro";
 import BlogBreadcrumb from "../components/blog/BlogBreadcrumb.astro";
 import PostEndnotes from "../components/blog/PostEndnotes.astro";
 import { site } from "../config";
-import { articleJsonLd, postPath, type RelatedLink, tagsOf } from "../lib/blog";
+import {
+  articleJsonLd,
+  isoDay,
+  lastModified,
+  postPath,
+  type RelatedLink,
+  tagsOf,
+} from "../lib/blog";
 import type { BlogPost } from "../lib/blog-types";
 import { searchBodyAttrs } from "../lib/search-index";
 import "../styles/blog.css";
@@ -42,11 +49,8 @@ const jsonLd = articleJsonLd(post, {
   ogType="article"
 >
   <Fragment slot="head">
-    <meta property="article:published_time" content={post.published.toISOString()} />
-    <meta
-      property="article:modified_time"
-      content={(post.updated ?? post.published).toISOString()}
-    />
+    <meta property="article:published_time" content={isoDay(post.published)} />
+    <meta property="article:modified_time" content={isoDay(lastModified(post))} />
     <script type="application/ld+json" set:html={jsonLd} />
   </Fragment>
 
@@ -55,7 +59,12 @@ const jsonLd = articleJsonLd(post, {
       <BlogBreadcrumb />
       <h1 class="blog-headline">{post.title}</h1>
       <p class="blog-standfirst">{post.description}</p>
-      <Byline author={post.author} published={post.published} minutes={minutes} />
+      <Byline
+        author={post.author}
+        published={post.published}
+        updated={post.updated}
+        minutes={minutes}
+      />
     </header>
     <div class="rule-axis mt-8 mb-10"></div>
     <div class="prose docs-prose blog-prose max-w-none">

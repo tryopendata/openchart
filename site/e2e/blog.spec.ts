@@ -51,8 +51,12 @@ test("the sample post's charts go live as they are reached, each in the article 
 }) => {
   await page.goto(POST);
   const figures = page.locator("article .docs-prose .demo[data-demo]");
-  await expect(figures).toHaveCount(3);
-  expect(await mountEveryDemo(page)).toBe(3);
+  await expect(figures).toHaveCount(2);
+  // The first chart, in view on load, goes live; the last waits until it is reached.
+  const stages = page.locator("article .docs-prose [data-demo-stage]");
+  await expect(stages.first()).toHaveAttribute("data-demo-live", "");
+  await expect(stages.last()).not.toHaveAttribute("data-demo-live", "");
+  expect(await mountEveryDemo(page)).toBe(2);
   const column = await page.locator("article .docs-prose").boundingBox();
   for (const box of await Promise.all(
     (await figures.all()).map((figure) => figure.boundingBox()),
@@ -90,7 +94,7 @@ test.describe("without JavaScript", () => {
     const statics = page.locator(
       'article .demo [data-demo-stage] svg.demo-static[data-theme="light"]',
     );
-    await expect(statics).toHaveCount(3);
+    await expect(statics).toHaveCount(2);
     for (const svg of await statics.all()) await expect(svg).toBeVisible();
     const article = page.locator("article");
     await expect(article.locator("h1")).toBeVisible();

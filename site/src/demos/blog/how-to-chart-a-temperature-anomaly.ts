@@ -1,7 +1,7 @@
 /**
  * The figures in the blog post "How to chart a temperature anomaly": NASA's
  * global temperature anomaly as columns on a time scale, then the same chart
- * with its zero line named and the coolest reading called out. Titles state
+ * with its zero line named and the coolest year shown called out. Titles state
  * findings computed from the rows, so a title can't drift from its data. The
  * post's `json demo` fence repeats `gistempColumns.spec` verbatim, and a test
  * holds the two together.
@@ -16,10 +16,12 @@ import { defineDemo } from "../types";
 const rows = gistempGlobalAnnual.data;
 const source = sourceOf(gistempGlobalAnnual);
 const span = `selected years ${rows[0]?.year}–${rows.at(-1)?.year}`;
+/** Both figures name the reference period in the subtitle. */
+const subtitle = `Global land and ocean temperature, difference from the ${TEMPERATURE_BASELINE} (°C), ${span}`;
 
 /** The latest reading, which the first title states. */
 const latest = rows.reduce((last, row) => (row.year > last.year ? row : last));
-/** The coolest reading, which the second chart calls out. */
+/** The coolest of the years plotted (not of NASA's whole record), which the second chart calls out. */
 const coolest = rows.reduce((low, row) => (row.anomaly < low.anomaly ? row : low));
 
 /** Columns on a time scale (so 2025 sits half a step past 2020), colored by the rows' own Cooler/Warmer field. */
@@ -31,7 +33,8 @@ const anomalyColumns: ChartSpec = {
     y: {
       field: "anomaly",
       type: "quantitative",
-      axis: { format: "+.1f", labelSuffix: "°C" },
+      // Five ticks in both figures, so they read on the same scale marks.
+      axis: { format: ".1f", labelSuffix: "°C", tickCount: 5 },
     },
     color: {
       field: "trend",
@@ -52,7 +55,7 @@ export const gistempColumns = defineDemo({
     ...anomalyColumns,
     chrome: {
       title: `${latest.year} was ${latest.anomaly}°C warmer than NASA's ${TEMPERATURE_BASELINE}`,
-      subtitle: `Global land and ocean temperature anomaly, °C, ${span}`,
+      subtitle,
     },
   },
 });
@@ -83,15 +86,15 @@ export const gistempBaseline = defineDemo({
         type: "text",
         x: coolest.year,
         y: coolest.anomaly,
-        text: `**${coolest.year}**\n${signedDegrees(coolest.anomaly)}, the coolest reading`,
+        text: `**${coolest.year}**\n${signedDegrees(coolest.anomaly)}, coolest year shown`,
         anchor: "right",
         offset: { dx: 28, dy: 8 },
         connector: "curve",
       },
     ],
     chrome: {
-      title: `The coolest reading, ${coolest.year}, was ${Math.abs(coolest.anomaly)}°C below NASA's ${TEMPERATURE_BASELINE}`,
-      subtitle: `Global land and ocean temperature, difference from the ${TEMPERATURE_BASELINE} (°C), ${span}`,
+      title: `${coolest.year} was the coolest year shown, ${Math.abs(coolest.anomaly)}°C below average`,
+      subtitle,
     },
   },
 });

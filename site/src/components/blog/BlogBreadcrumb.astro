@@ -1,15 +1,32 @@
 ---
 /**
- * The way back to the blog index from a post or a tag page: one link, "Blog".
- * Search leaves it out of a post's index entry, since every post repeats it.
+ * Where a blog page sits, set like the docs breadcrumb: "Blog", linked to the
+ * index, then the current tag on a tag page ("Blog / Climate"). Search leaves
+ * it out of a post's index entry, since every post repeats it.
  */
+interface Props {
+  /** The current page's label after "Blog"; a post leaves it out. */
+  current?: string;
+}
+const { current } = Astro.props;
 ---
 
 <nav aria-label="Breadcrumb" data-pagefind-ignore>
-  <a
-    href="/blog/"
-    class="text-muted hover:text-ink text-[13px] no-underline transition-colors duration-150"
-  >
-    Blog
-  </a>
+  <ol class="text-muted flex flex-wrap items-center gap-2 text-[13px]">
+    <li>
+      <a href="/blog/" class="hover:text-ink no-underline transition-colors duration-150">
+        Blog
+      </a>
+    </li>
+    {current && (
+      <>
+        <li aria-hidden="true" class="text-line-strong">
+          /
+        </li>
+        <li class="text-ink-2" aria-current="page">
+          {current}
+        </li>
+      </>
+    )}
+  </ol>
 </nav>

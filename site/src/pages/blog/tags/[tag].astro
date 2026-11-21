@@ -10,22 +10,16 @@ import BlogBreadcrumb from "../../../components/blog/BlogBreadcrumb.astro";
 import PostList from "../../../components/blog/PostList.astro";
 import type { BlogTag } from "../../../config";
 import BaseLayout from "../../../layouts/BaseLayout.astro";
-import { postsByTag, readingTime, tagPath, tagsInUse } from "../../../lib/blog";
+import { carriesTag, readingTime, tagPath, tagsInUse } from "../../../lib/blog";
 import type { BlogPost } from "../../../lib/blog-types";
 import { allPosts } from "../../../lib/collection";
 import "../../../styles/blog.css";
 
 export const getStaticPaths = (async () => {
-  const entries = await allPosts();
-  const posts = entries.map(({ post }) => post);
-  const minutes = new Map(entries.map(({ post, body }) => [post, readingTime(body)]));
-  return tagsInUse(posts).map((tag) => ({
+  const items = (await allPosts()).map(({ post, body }) => ({ post, minutes: readingTime(body) }));
+  return tagsInUse(items.map(({ post }) => post)).map((tag) => ({
     params: { tag: tag.id },
-    props: {
-      tag,
-      // Every post postsByTag returns came from `posts`, so the map has its minutes.
-      items: postsByTag(posts, tag.id).map((post) => ({ post, minutes: minutes.get(post) ?? 1 })),
-    },
+    props: { tag, items: items.filter(({ post }) => carriesTag(post, tag.id)) },
   }));
 }) satisfies GetStaticPaths;
 
@@ -34,22 +28,27 @@ interface Props {
   items: { post: BlogPost; minutes: number }[];
 }
 const { tag, items } = Astro.props;
-const count = items.length === 1 ? "One post" : `${items.length} posts`;
+const standfirst =
+  items.length === 1
+    ? `One post tagged ${tag.label}.`
+    : `${items.length} posts tagged ${tag.label}, newest first.`;
+const description =
+  items.length === 1
+    ? `Blog posts tagged ${tag.label}.`
+    : `Blog posts tagged ${tag.label}, newest first.`;
 ---
 
 <BaseLayout
   title={`${tag.label} posts`}
-  description={`Blog posts tagged ${tag.label}, newest first.`}
+  description={description}
   path={tagPath(tag.id)}
   robots="noindex, follow"
 >
   <div class="blog-index">
     <header class="blog-index-header">
-      <BlogBreadcrumb />
+      <BlogBreadcrumb current={tag.label} />
       <h1 class="blog-headline">{tag.label}</h1>
-      <p class="blog-standfirst">
-        {count} tagged {tag.label}, newest first.
-      </p>
+      <p class="blog-standfirst">{standfirst}</p>
     </header>
     <div class="rule-axis mt-8"></div>
     <PostList items={items} />

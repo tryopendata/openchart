@@ -1,14 +1,6 @@
 /** The blog's derived values: reading time, JSON-LD, the RSS feed, tags and related docs links. */
-import { describe, expect, it } from "vitest";
-import {
-  articleJsonLd,
-  displayDate,
-  postsByTag,
-  readingTime,
-  relatedLinks,
-  rssXml,
-  tagsInUse,
-} from "./blog";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { articleJsonLd, postsByTag, readingTime, relatedLinks, rssXml, tagsInUse } from "./blog";
 import type { BlogPost } from "./blog-types";
 
 const words = (count: number) => Array.from({ length: count }, (_, i) => `word${i}`).join(" ");
@@ -76,9 +68,9 @@ describe("articleJsonLd", () => {
       "@type": "BlogPosting",
       headline: "How to chart a temperature anomaly",
       description: "An anomaly chart plots each year's distance from a reference period.",
-      datePublished: "2026-11-20T00:00:00.000Z",
-      dateModified: "2026-12-01T00:00:00.000Z",
-      author: { "@type": "Organization", name: "OpenChart" },
+      datePublished: "2026-11-20",
+      dateModified: "2026-12-01",
+      author: { "@type": "Organization", name: "OpenChart", url: "https://openchart.example" },
       publisher: { "@type": "Organization", name: "OpenChart", url: "https://openchart.example" },
       image: links.image,
       mainEntityOfPage: { "@type": "WebPage", "@id": links.canonical },
@@ -136,11 +128,23 @@ describe("rssXml", () => {
 
   it("writes RFC 822 dates and one category per tag", () => {
     const item = feed.querySelector("item");
-    expect(item?.querySelector("pubDate")?.textContent).toBe("Fri, 20 Nov 2026 00:00:00 GMT");
+    expect(item?.querySelector("pubDate")?.textContent).toBe("Fri, 20 Nov 2026 12:00:00 GMT");
     expect([...(item?.querySelectorAll("category") ?? [])].map((c) => c.textContent)).toEqual([
       "Chart choice",
       "Climate",
     ]);
+  });
+
+  it("dates the feed by the latest day any post was published or updated, at noon GMT", () => {
+    const revised = post({
+      slug: "revised",
+      published: new Date("2026-01-05"),
+      updated: new Date("2026-12-02"),
+    });
+    const lastBuild = (posts: BlogPost[]) =>
+      parseXml(rssXml(posts, channel)).querySelector("lastBuildDate")?.textContent;
+    expect(lastBuild([older, newer, revised])).toBe("Wed, 02 Dec 2026 12:00:00 GMT");
+    expect(lastBuild([older, newer])).toBe("Fri, 20 Nov 2026 12:00:00 GMT");
   });
 
   it("is a valid empty channel with no posts", () => {
@@ -189,7 +193,17 @@ describe("relatedLinks", () => {
 });
 
 describe("displayDate", () => {
-  it("prints the UTC day a post's date names, whatever the local time zone", () => {
-    expect(displayDate(new Date("2026-11-20"))).toBe("November 20, 2026");
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("prints the day a post's date names in a time zone west of UTC", async () => {
+    // Post dates are UTC midnights, which are the evening before in Los Angeles.
+    vi.stubEnv("TZ", "America/Los_Angeles");
+    vi.resetModules();
+    const { displayDate: inLosAngeles } = await import("./blog");
+    expect(new Date("2026-11-20").getDate()).toBe(19);
+    expect(inLosAngeles(new Date("2026-11-20"))).toBe("November 20, 2026");
   });
 });

@@ -61,7 +61,8 @@ export function tagsOf(post: Pick<BlogPost, "tags">): BlogTag[] {
   });
 }
 
-const carries = (post: Pick<BlogPost, "tags">, tag: string) =>
+/** Whether `post` carries the tag `tag`. */
+export const carriesTag = (post: Pick<BlogPost, "tags">, tag: string) =>
   (post.tags as readonly string[]).includes(tag);
 
 /** The posts that carry `tag`, in the order given. */
@@ -69,12 +70,12 @@ export function postsByTag<T extends Pick<BlogPost, "tags">>(
   posts: readonly T[],
   tag: string,
 ): T[] {
-  return posts.filter((post) => carries(post, tag));
+  return posts.filter((post) => carriesTag(post, tag));
 }
 
 /** The tags at least one post carries, in `blogTags` order: one tag page each. */
 export function tagsInUse(posts: readonly Pick<BlogPost, "tags">[]): BlogTag[] {
-  return blogTags.filter((tag) => posts.some((post) => carries(post, tag.id)));
+  return blogTags.filter((tag) => posts.some((post) => carriesTag(post, tag.id)));
 }
 
 /** A docs page as the related list needs it. */
@@ -109,25 +110,45 @@ export type ArticleLinks = {
 
 /**
  * The post's BlogPosting JSON-LD, ready to sit inside a `<script>`: every `<`
- * is written as `<`, so a title holding `</script>` can't close the tag.
- * An author who is the publisher is an Organization, anyone else a Person.
+ * is written as `\u003c`, so a title holding `</script>` can't close the tag.
+ * Dates are calendar days (`YYYY-MM-DD`), as the frontmatter gives them. An
+ * author who is the publisher is an Organization with the publisher's URL,
+ * anyone else a Person.
  */
 export function articleJsonLd(post: BlogPost, links: ArticleLinks): string {
-  const authorType = post.author === links.publisher.name ? "Organization" : "Person";
+  const author =
+    post.author === links.publisher.name
+      ? { "@type": "Organization", name: post.author, url: links.publisher.url }
+      : { "@type": "Person", name: post.author };
   const data = {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
     headline: post.title,
     description: post.description,
-    datePublished: post.published.toISOString(),
-    dateModified: (post.updated ?? post.published).toISOString(),
-    author: { "@type": authorType, name: post.author },
+    datePublished: isoDay(post.published),
+    dateModified: isoDay(lastModified(post)),
+    author,
     publisher: { "@type": "Organization", name: links.publisher.name, url: links.publisher.url },
     image: links.image,
     mainEntityOfPage: { "@type": "WebPage", "@id": links.canonical },
     keywords: tagsOf(post).map((tag) => tag.label),
   };
   return JSON.stringify(data).replace(/</g, "\\u003c");
+}
+
+/** When a post last changed: its `updated` date, else its `published` one. */
+export const lastModified = (post: Pick<BlogPost, "published" | "updated">) =>
+  post.updated ?? post.published;
+
+/**
+ * A post date as RSS 2.0's RFC 822 form, at noon GMT: "Fri, 20 Nov 2026 12:00:00 GMT".
+ * Post dates are calendar days, and noon keeps the day the same for readers in
+ * any time zone from UTC-12 to UTC+11, where midnight would show the day before
+ * west of Greenwich.
+ */
+export function rssDate(date: Date): string {
+  const noon = new Date(`${isoDay(date)}T12:00:00Z`);
+  return noon.toUTCString();
 }
 
 /** The feed's own fields. */
@@ -149,18 +170,26 @@ function rssItem(post: BlogPost, channel: FeedChannel): string {
     `<title>${escapeHtml(post.title)}</title>`,
     `<link>${link}</link>`,
     `<guid isPermaLink="true">${link}</guid>`,
-    // toUTCString writes "Fri, 20 Nov 2026 00:00:00 GMT", the RFC 822 form RSS 2.0 asks for.
-    `<pubDate>${post.published.toUTCString()}</pubDate>`,
+    `<pubDate>${rssDate(post.published)}</pubDate>`,
     `<description>${escapeHtml(post.description)}</description>`,
     ...categories,
     "</item>",
   ].join("");
 }
 
-/** The RSS 2.0 feed for `posts`, newest first, with an `atom:link rel="self"` to `channel.feedUrl`. */
+/**
+ * The RSS 2.0 feed for `posts`, newest first, with an `atom:link rel="self"`
+ * to `channel.feedUrl`. Its lastBuildDate is the latest day any post was
+ * published or updated.
+ */
 export function rssXml(posts: readonly BlogPost[], channel: FeedChannel): string {
   const newestFirst = [...posts].sort((a, b) => b.published.getTime() - a.published.getTime());
-  const [newest] = newestFirst;
+  const lastChange = newestFirst
+    .map(lastModified)
+    .reduce<Date | undefined>(
+      (latest, date) => (latest && latest >= date ? latest : date),
+      undefined,
+    );
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel>',
@@ -169,7 +198,7 @@ export function rssXml(posts: readonly BlogPost[], channel: FeedChannel): string
     `<description>${escapeHtml(channel.description)}</description>`,
     "<language>en-us</language>",
     `<atom:link href="${escapeHtml(channel.feedUrl)}" rel="self" type="application/rss+xml"/>`,
-    newest ? `<lastBuildDate>${newest.published.toUTCString()}</lastBuildDate>` : "",
+    lastChange ? `<lastBuildDate>${rssDate(lastChange)}</lastBuildDate>` : "",
     ...newestFirst.map((post) => rssItem(post, channel)),
     "</channel></rss>",
   ].join("");

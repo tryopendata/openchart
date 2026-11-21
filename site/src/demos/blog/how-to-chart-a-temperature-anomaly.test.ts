@@ -30,8 +30,6 @@ describe("the temperature post's figures", () => {
     const title = (demo: typeof gistempColumns) =>
       (demo.spec as { chrome?: { title?: string } }).chrome?.title;
     expect(title(gistempColumns)).toBe("2025 was 1.19°C warmer than NASA's 1951–1980 average");
-    expect(title(gistempBaseline)).toBe(
-      "The coolest reading, 1910, was 0.43°C below NASA's 1951–1980 average",
-    );
+    expect(title(gistempBaseline)).toBe("1910 was the coolest year shown, 0.43°C below average");
   });
 });
