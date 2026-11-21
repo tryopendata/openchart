@@ -3,7 +3,7 @@
  * library's own static renderer. The demo figure shows it until the live chart
  * mounts, and it is all a reader without JavaScript sees.
  */
-import type { VizSpec } from "@opendata-ai/openchart-core";
+import type { ThemeConfig, VizSpec } from "@opendata-ai/openchart-core";
 import { isGraphSpec, isSankeySpec, isTableSpec } from "@opendata-ai/openchart-core";
 import { renderStaticSVG } from "@opendata-ai/openchart-vanilla/static";
 import { chartTheme } from "./chart-theme";
@@ -16,6 +16,11 @@ export type StaticSvgOptions = {
   dark: boolean;
   /** Geometry decimal places. Default 1; 0 suits small figures such as the landing wall's tiles. */
   precision?: number;
+  /**
+   * The mount theme, laid over the spec's own. Defaults to the site's
+   * `chartTheme`; pass a narrower one when the spec's theme must show through.
+   */
+  theme?: ThemeConfig;
 };
 
 type StaticSpec = Parameters<typeof renderStaticSVG>[0];
@@ -50,7 +55,7 @@ export function staticSvg(spec: VizSpec, options: StaticSvgOptions): string | nu
     idPrefix: options.idPrefix,
     width: options.width,
     height: options.height,
-    theme: chartTheme(options.dark),
+    theme: options.theme ?? chartTheme(options.dark),
     darkMode: options.dark ? "force" : "off",
     precision: options.precision ?? STATIC_PRECISION,
     // The attribution is a link, and a link inside an image fails axe. The site's own footer credits the library.

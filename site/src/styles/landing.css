@@ -73,4 +73,50 @@
   .copy-chip {
     @apply text-muted hover:text-ink border-line-strong shrink-0 rounded-xs border px-2 py-1 font-mono text-xs transition-colors duration-150;
   }
+
+  /* An install command (InstallCommand.astro): manager tabs above, a ruled line with Copy.
+     The command wraps, so a phone shows all of it without a scroller. */
+  .install-command {
+    @apply max-w-[34rem] min-w-0;
+  }
+
+  .install-command-managers {
+    @apply mb-2 flex gap-4 font-mono text-[12px];
+  }
+
+  .install-command-manager {
+    @apply text-muted hover:text-ink border-b border-transparent pb-0.5 no-underline transition-colors duration-150;
+  }
+
+  .install-command-manager[aria-selected="true"],
+  .install-command:not([data-live]) .install-command-manager:first-child {
+    @apply text-ink border-ink;
+  }
+
+  .install-command-line {
+    @apply border-line-strong flex min-h-12 items-stretch rounded-xs border;
+  }
+
+  .install-command-prompt {
+    @apply text-muted py-3 pl-4 font-mono text-[13.5px] leading-6 select-none;
+  }
+
+  .install-command-text {
+    @apply text-ink min-w-0 flex-1 py-3 pr-3 pl-2.5 font-mono text-[13.5px] leading-6;
+    /* Break at the space before the package name, never inside it unless it cannot fit. */
+    overflow-wrap: break-word;
+  }
+
+  .install-command-copy {
+    @apply border-line-strong text-ink-2 hover:bg-panel hover:text-ink shrink-0 border-l px-3.5 font-sans text-sm font-medium transition-colors duration-150;
+  }
+
+  /* Success is announced, not shown; a failure shows in flow under the line. */
+  .install-command-result:not([data-state="failed"]) {
+    @apply sr-only;
+  }
+
+  .install-command-result[data-state="failed"] {
+    @apply text-ink-2 mt-2 text-xs;
+  }
 }

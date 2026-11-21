@@ -27,7 +27,10 @@ export type MotionTools = {
   Draggable: typeof Draggable;
 };
 
-/** Runs `setup` only when the reader has not asked for reduced motion, with GSAP's plugins registered once. Returns a function that reverts everything `setup` created. */
+/**
+ * Runs `setup` only when the reader has not asked for reduced motion, with GSAP's plugins registered once. Returns a function that reverts everything `setup` created.
+ * If GSAP fails to load, one console error names the section by `setup.name`.
+ */
 // biome-ignore lint/suspicious/noConfusingVoidType: the plan's contract lets setup return nothing or its own teardown, and a void arrow body must type-check.
 export function withMotion(setup: (tools: MotionTools) => void | (() => void)): () => void {
   if (prefersReducedMotion()) return () => {};
