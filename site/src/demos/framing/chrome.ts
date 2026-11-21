@@ -6,14 +6,10 @@
 import { temperatureAnomaly } from "@datasets/temperature-anomaly";
 import type { ChartSpec } from "@opendata-ai/openchart-core";
 import { sourceOf } from "../source";
+import { ANOMALY_SUBTITLE, COOL, WARM } from "../the-spec/shared";
 import { defineDemo } from "../types";
 
-const COOLER = "#2b6cb0";
-const WARMER = "#c2410c";
 const source = sourceOf(temperatureAnomaly);
-
-const SUBTITLE =
-  "Global surface temperature against the 20th-century average (°C), one reading per decade from 1900, then 2025";
 
 /** Anomaly columns colored by the dataset's own warmer/cooler field. */
 const anomalyColumns: ChartSpec = {
@@ -29,7 +25,7 @@ const anomalyColumns: ChartSpec = {
     color: {
       field: "trend",
       type: "nominal",
-      scale: { domain: ["Cooler", "Warmer"], range: [COOLER, WARMER] },
+      scale: { domain: ["Cooler", "Warmer"], range: [COOL, WARM] },
     },
   },
   legend: { show: false },
@@ -43,13 +39,13 @@ export const chromeTopic = defineDemo({
   height: 420,
   spec: {
     ...anomalyColumns,
-    chrome: { title: "Global temperature anomaly, 1900–2025", subtitle: SUBTITLE },
+    chrome: { title: "Global temperature anomaly, 1900–2025", subtitle: ANOMALY_SUBTITLE },
   },
 });
 
 const findingChrome = {
   title: "Every reading since 1960 has been warmer than the 20th-century average",
-  subtitle: SUBTITLE,
+  subtitle: ANOMALY_SUBTITLE,
 };
 
 export const chromeFinding = defineDemo({

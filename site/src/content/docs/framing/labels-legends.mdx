@@ -7,25 +7,25 @@ order: 3
 
 import Demo from "../../../components/demo/Demo.astro";
 
-`labels` prints each mark's value on the chart. With 24 columns, `density: "auto"` drops the labels that would overlap and keeps the rest.
+`labels` prints each mark's value on the chart. Here they print one decimal place and stand in for the y axis, which the spec turns off.
 
 <Demo id="framing/labels-values" />
 
 ## Value labels
 
-`format: ".1f"` prints one decimal place, matching the source data. `"auto"` checks each label against its neighbours and hides any that would collide; here all 24 fit, even on a phone. `"all"` prints every label even when they collide, `"endpoints"` only the first and last, and `"none"` none. Since the labels carry the numbers, `axis: false` drops the y axis. `prefix` and `suffix` add text around each value.
+`format: ".1f"` matches the one decimal place in the source data, and `axis: false` drops the y axis because the labels already carry the numbers. `density` decides how many labels show. The default, `"auto"`, hides any label that would collide with a neighbour; all 24 fit here, so none is dropped. `"all"` prints every label even when they collide, `"endpoints"` only the first and last, and `"none"` none. `prefix` and `suffix` add text around each value.
 
 ## Legend position
 
 <Demo id="framing/legend-top" />
 
-A `nominal` field on `color` gets a legend. Without a setting, the engine picks the position from the chart's width; `legend: { position: "top" }` fixes it above the plot. The other positions are `"right"`, `"bottom"`, `"top-left"`, `"bottom-right"` and `"inline"`. `scale.domain` on the color channel sets the order of both the stack and the legend.
+A `nominal` field on `color` gets a legend. Without a setting, the engine picks the position from the chart's width; `legend: { position: "top" }` fixes it above the plot. The other positions are `"right"`, `"bottom"`, `"top-left"`, `"bottom-right"` and `"inline"`. `scale.domain` on the color channel sets the order of the legend and which color each source gets. The stack follows the order of the rows, so this spec lists the sources in the domain in the same order the data does.
 
 ## Labels in place of a legend
 
 <Demo id="framing/labels-direct" />
 
-A legend makes the reader match colors back to the plot. Here each band is named at its right end instead: stacked areas need `endpointLabels` set to show the names, and `content: "label"` prints the name without the value. `legend: { show: false }` removes the legend the names replace.
+A legend makes the reader match colors back to the plot. Here each band is named at its right end instead. Stacked areas show these names only when `endpointLabels` is set, and `content: "label"` prints the name without the value. `legend: { show: false }` removes the legend the names replace.
 
 ## Fields that matter
 
@@ -42,7 +42,7 @@ A legend makes the reader match colors back to the plot. Here each band is named
 
 ## Related
 
-- [Stacked area](/docs/change-over-time/stacked-area/) uses interior labels on more bands.
+- [Stacked area](/docs/change-over-time/stacked-area/) shows more stacked bands over time.
 - [Bar](/docs/comparison/bar/) shows value label placement on bars.
 - [Endpoint labels](/docs/framing/endpoint-labels/) names lines at their ends.
 - [Chrome, labels and legends reference](/docs/spec/chrome/) lists every label and legend field.

@@ -25,13 +25,13 @@ Twelve country names under twelve columns do not fit side by side. The engine ch
 
 <Demo id="the-spec/axes-hidden" />
 
-`axis: false` removes an axis and the space it reserves. Do it only when something else carries the numbers: here each bar has a value label from `labels: { format: ".1f", suffix: "%" }`, so a scale under the bars would repeat them. An empty `title` keeps the state axis but drops its title, since the names explain themselves.
+`axis: false` removes an axis and the space it reserves. Do it only when something else carries the numbers: here each bar has a value label from `labels: { format: ".1f", suffix: "%" }`, so a scale under the bars would repeat them.
 
 ## Fields that matter
 
 | Field | What it does |
 | --- | --- |
-| `axis.title` | The axis title. Defaults to the field name; `""` hides it. |
+| `axis.title` | The axis title. None is drawn unless you set one. |
 | `axis.format` | d3-format for numbers, d3-time-format for dates. |
 | `axis.labelSuffix` | Text appended to every tick label, such as a unit. |
 | `axis.tickCount` | About how many ticks to draw. |

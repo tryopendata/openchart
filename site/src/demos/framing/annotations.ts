@@ -8,9 +8,13 @@ import { electricityMixMatrix } from "@datasets/electricity-mix-matrix";
 import { nycTemperatureRange } from "@datasets/nyc-temperature-range";
 import { usInflation } from "@datasets/us-inflation";
 import { sourceOf } from "../source";
+import {
+  ACCENT,
+  CENTRAL_PARK_2023,
+  ELECTRICITY_SUBTITLE,
+  INFLATION_SUBTITLE,
+} from "../the-spec/shared";
 import { defineDemo } from "../types";
-
-const ACCENT = "#0e7490";
 
 export const annotationsCallout = defineDemo({
   id: "framing/annotations-callout",
@@ -33,7 +37,6 @@ export const annotationsCallout = defineDemo({
       y: {
         field: "lifeExpectancy",
         type: "quantitative",
-        scale: { zero: false },
         axis: { title: "Life expectancy at birth (years)" },
       },
       tooltip: { field: "country", type: "nominal", title: "Country" },
@@ -56,14 +59,14 @@ export const annotationsCallout = defineDemo({
   },
 });
 
-/** Mean of the twelve monthly highs: 218.8 / 12. */
+/** Unweighted mean of the 12 monthly average highs: 218.8 / 12. */
 const meanHigh =
   nycTemperatureRange.data.reduce((sum, row) => sum + row.high, 0) /
   nycTemperatureRange.data.length;
 
 export const annotationsRefline = defineDemo({
   id: "framing/annotations-refline",
-  title: "Central Park's monthly highs against the yearly mean",
+  title: "Central Park's monthly highs against their average",
   source: sourceOf(nycTemperatureRange),
   height: 400,
   spec: {
@@ -82,14 +85,15 @@ export const annotationsRefline = defineDemo({
       {
         type: "refline",
         y: meanHigh,
-        label: `Yearly mean ${meanHigh.toFixed(1)}°C`,
+        label: `Average of the monthly highs, ${meanHigh.toFixed(1)}°C`,
         style: "dashed",
         strokeWidth: 1.5,
       },
     ],
     chrome: {
-      title: "Seven months of 2023 had average highs above Central Park's yearly mean",
-      subtitle: "Average daily high by month, Central Park, New York, 2023 (°C)",
+      title:
+        "Seven months of 2023 averaged highs above 18.2°C, the average of Central Park's 12 monthly highs",
+      subtitle: `Average daily high by month, ${CENTRAL_PARK_2023}`,
     },
   },
 });
@@ -124,14 +128,14 @@ export const annotationsRange = defineDemo({
     chrome: {
       title:
         "US inflation stayed above 5% for seven straight quarters, from mid-2021 to early 2023",
-      subtitle: "Consumer price index, % change from a year earlier, quarterly, 2019–2024",
+      subtitle: INFLATION_SUBTITLE,
     },
   },
 });
 
 export const annotationsHighlight = defineDemo({
   id: "framing/annotations-highlight",
-  title: "US electricity sources with coal highlighted",
+  title: "Six electricity sources with coal highlighted",
   source: sourceOf(electricityMixMatrix),
   height: 440,
   spec: {
@@ -160,8 +164,9 @@ export const annotationsHighlight = defineDemo({
       },
     ],
     chrome: {
-      title: "Coal's share of US electricity nearly halved between 2016 and 2023",
-      subtitle: "Share of US generation by source (%), 2016–2023. Coal went from 31.2% to 16.2%.",
+      title:
+        "Coal's share of generation from the six main sources nearly halved between 2016 and 2023",
+      subtitle: `${ELECTRICITY_SUBTITLE}. Coal went from 31.2% in 2016 to 16.2% in 2023.`,
     },
   },
 });

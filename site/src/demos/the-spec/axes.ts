@@ -7,8 +7,7 @@ import { nycTemperatureRange } from "@datasets/nyc-temperature-range";
 import { usStateUnemployment } from "@datasets/us-state-unemployment";
 import { sourceOf } from "../source";
 import { defineDemo } from "../types";
-
-const ACCENT = "#0e7490";
+import { ACCENT, CENTRAL_PARK_2023 } from "./shared";
 
 export const axesFormat = defineDemo({
   id: "the-spec/axes-format",
@@ -34,8 +33,7 @@ export const axesFormat = defineDemo({
     },
     chrome: {
       title: "Central Park's average daily high peaked at 30.2°C in July 2023",
-      subtitle:
-        "Average of each day's high temperature by month, Central Park, New York, 2023 (°C)",
+      subtitle: `Average of each day's high temperature by month, ${CENTRAL_PARK_2023}`,
     },
   },
 });
@@ -90,7 +88,7 @@ export const axesHidden = defineDemo({
     mark: { type: "bar", fill: ACCENT },
     data: highestRates,
     encoding: {
-      y: { field: "state", type: "nominal", sort: "x", axis: { title: "" } },
+      y: { field: "state", type: "nominal", sort: "x" },
       x: { field: "rate", type: "quantitative", axis: false },
     },
     labels: { format: ".1f", suffix: "%" },

@@ -6,8 +6,8 @@ import { usInflation } from "@datasets/us-inflation";
 import type { ChartSpec } from "@opendata-ai/openchart-core";
 import { sourceOf } from "../source";
 import { defineDemo } from "../types";
+import { ACCENT, INFLATION_SUBTITLE } from "./shared";
 
-const ACCENT = "#0e7490";
 const source = sourceOf(usInflation);
 
 /** Step 1: data, mark and encoding, the smallest spec that draws. */
@@ -39,7 +39,7 @@ const chromeSpec: ChartSpec = {
   ...axisSpec,
   chrome: {
     title: "US inflation peaked at 8.5% in 2022 and was down to 2.6% by late 2024",
-    subtitle: "Consumer price index, % change from a year earlier, quarterly, 2019–2024",
+    subtitle: INFLATION_SUBTITLE,
   },
 };
 

@@ -8,8 +8,7 @@ import { temperatureAnomaly } from "@datasets/temperature-anomaly";
 import type { ChartSpec } from "@opendata-ai/openchart-core";
 import { sourceOf } from "../source";
 import { defineDemo } from "../types";
-
-const ACCENT = "#0e7490";
+import { ACCENT, ANOMALY_SUBTITLE } from "./shared";
 
 const anomalyRows = temperatureAnomaly.data.map(({ year, anomaly }) => ({ year, anomaly }));
 const anomalyY = {
@@ -17,8 +16,6 @@ const anomalyY = {
   type: "quantitative",
   axis: { title: "Difference from the 20th-century average", format: "+.1f", labelSuffix: "°C" },
 } as const;
-const anomalySubtitle =
-  "Global surface temperature against the 20th-century average (°C), one reading per decade from 1900, then 2025";
 
 /** The same rows on an ordinal and a temporal x; only the field type differs. */
 const anomalyLine = (type: "ordinal" | "temporal"): ChartSpec => ({
@@ -39,7 +36,7 @@ export const scalesOrdinal = defineDemo({
     ...anomalyLine("ordinal"),
     chrome: {
       title: "On an ordinal axis, the five years from 2020 to 2025 get as much width as a decade",
-      subtitle: anomalySubtitle,
+      subtitle: ANOMALY_SUBTITLE,
     },
   },
 });
@@ -53,7 +50,7 @@ export const scalesTemporal = defineDemo({
     ...anomalyLine("temporal"),
     chrome: {
       title: "Global temperature has risen at every reading since 1970",
-      subtitle: anomalySubtitle,
+      subtitle: ANOMALY_SUBTITLE,
     },
   },
 });

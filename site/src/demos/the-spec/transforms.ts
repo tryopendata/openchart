@@ -7,9 +7,7 @@ import { nycTemperatureRange } from "@datasets/nyc-temperature-range";
 import { usStateUnemployment } from "@datasets/us-state-unemployment";
 import { sourceOf } from "../source";
 import { defineDemo } from "../types";
-
-const ACCENT = "#0e7490";
-const WARM = "#c2410c";
+import { ACCENT, CENTRAL_PARK_2023, ELECTRICITY_SUBTITLE, WARM } from "./shared";
 
 const temperatureRows = nycTemperatureRange.data.map((row) => ({ ...row }));
 const temperatureAxis = { format: ".0f", labelSuffix: "°C", grid: true };
@@ -39,8 +37,7 @@ export const transformsFold = defineDemo({
     endpointLabels: { content: "label" },
     chrome: {
       title: "Central Park's daily highs and lows both peaked in July 2023",
-      subtitle:
-        "Monthly average of each day's high and low temperature, Central Park, New York, 2023 (°C)",
+      subtitle: `Monthly average of each day's high and low temperature, ${CENTRAL_PARK_2023}`,
     },
   },
 });
@@ -65,15 +62,14 @@ export const transformsCalculate = defineDemo({
     labels: { format: ".1f" },
     chrome: {
       title: "Central Park's gap between daily high and low was widest in May 2023, at 10.1°C",
-      subtitle:
-        "Average daily high minus average daily low by month, Central Park, New York, 2023 (°C)",
+      subtitle: `Average daily high minus average daily low by month, ${CENTRAL_PARK_2023}`,
     },
   },
 });
 
 export const transformsAggregate = defineDemo({
   id: "the-spec/transforms-aggregate",
-  title: "Wind and solar's combined share of US electricity",
+  title: "Wind and solar's combined share of generation",
   source: sourceOf(electricityMixMatrix),
   height: 400,
   spec: {
@@ -93,8 +89,9 @@ export const transformsAggregate = defineDemo({
     },
     labels: { format: ".1f" },
     chrome: {
-      title: "Wind and solar went from 7.1% of US electricity in 2016 to 15.9% in 2023",
-      subtitle: "Combined share of US generation from wind and solar (%), 2016–2023",
+      title:
+        "Wind and solar went from 7.1% of generation from the six main sources in 2016 to 15.9% in 2023",
+      subtitle: `${ELECTRICITY_SUBTITLE}, wind and solar combined`,
     },
   },
 });

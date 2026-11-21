@@ -6,9 +6,7 @@ import { countryIndicators } from "@datasets/country-indicators";
 import { populationByCountry } from "@datasets/population";
 import { sourceOf } from "../source";
 import { defineDemo } from "../types";
-
-const ACCENT = "#0e7490";
-const GREY = "#7a858f";
+import { ACCENT, GREY } from "./shared";
 
 /** Population in millions, so ticks read "1,400" instead of "1.4G". */
 const populationMillions = populationByCountry.data.map((row) => ({
@@ -116,15 +114,15 @@ export const encodingSize = defineDemo({
       y: {
         field: "lifeExpectancy",
         type: "quantitative",
-        scale: { zero: false },
         axis: { title: "Life expectancy at birth (years)" },
       },
+      // A domain and range that both start at zero keep circle area proportional to population.
       size: {
         field: "population",
         type: "quantitative",
         title: "Population (millions)",
         format: ",.0f",
-        scale: { range: [3, 22] },
+        scale: { domain: [0, 1500], range: [0, 22] },
       },
       tooltip: [
         { field: "country", type: "nominal", title: "Country" },
@@ -160,7 +158,7 @@ export const encodingSize = defineDemo({
     ],
     chrome: {
       title:
-        "India and China hold two-thirds of these 12 countries' people and have the lowest incomes",
+        "India and China hold two-thirds of these 12 countries' people, and India has the lowest income",
       subtitle: "GDP per person against life expectancy at birth. Circle area is population.",
     },
   },

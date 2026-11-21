@@ -1,6 +1,6 @@
 ---
 title: "Encoding channels"
-description: "Map fields to x, y, color, size, theta and detail, and see the same data read differently as the channels change."
+description: "Map fields to x, y, color and size, and see the same data read differently as the channels change."
 section: the-spec
 order: 2
 ---
@@ -27,7 +27,7 @@ The data and mark are unchanged; only the two channels trade places. With the ca
 
 <Demo id="the-spec/encoding-size" />
 
-`size` scales each point's area by a field, which turns a scatter into a bubble chart. The default range runs from a 3 px to a 30 px radius, and area grows with the value, so a country twice as populous gets a circle twice the area. `trendline: false` on the mark turns off the regression line scatter charts draw by default.
+`size` scales each point by a field, which turns a scatter into a bubble chart. By default radii run from 3 px for the smallest value to 30 px for the largest, which keeps small countries visible but makes area only roughly track the value. This demo overrides that with `scale: { domain: [0, 1500], range: [0, 22] }`: with both ends at zero, a country twice as populous gets a circle twice the area. `trendline: false` on the mark turns off the regression line scatter charts draw by default.
 
 ## Fields that matter
 

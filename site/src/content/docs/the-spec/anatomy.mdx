@@ -7,11 +7,13 @@ order: 1
 
 import Demo from "../../../components/demo/Demo.astro";
 
-A spec is a plain object, and the four charts on this page are the same one built up a block at a time.
+A spec is a plain object. This chart is one, and the rest of the page builds it again a block at a time.
 
-<Demo id="the-spec/anatomy-bare" />
+<Demo id="the-spec/anatomy-annotated" />
 
 ## Data, mark and encoding
+
+<Demo id="the-spec/anatomy-bare" />
 
 These three blocks are enough to draw a chart. `data` is an array of rows, here 24 quarters of US inflation. `mark: "line"` picks the shape. `encoding` maps fields to channels: `date` to `x` and `rate` to `y`.
 
@@ -31,9 +33,7 @@ Every channel needs a `type`. `"temporal"` tells the engine the `date` strings a
 
 ## One annotation
 
-<Demo id="the-spec/anatomy-annotated" />
-
-`annotations` is a list of notes placed in data coordinates. This `text` annotation sits at the peak quarter, `x: "2022-07-01"` and `y: 8.5`, so it stays on the peak at any width. `connector: true` draws the line from the label to the point, and `**8.5%**` sets that span in bold.
+The chart at the top of the page adds the last block. `annotations` is a list of notes placed in data coordinates. Its `text` annotation sits at the peak quarter, `x: "2022-07-01"` and `y: 8.5`, so it stays on the peak at any width. `connector: true` draws the line from the label to the point, and `**8.5%**` sets that span in bold.
 
 ## The five blocks
 
@@ -79,7 +79,7 @@ The comments are for reading only; JSON does not allow them, so leave them out o
 
 ## Related
 
-- [Line](/docs/change-over-time/line/) shows the same inflation series with more annotations and a log scale.
+- [Line](/docs/change-over-time/line/) shows this inflation series with more annotations, and a log scale on another series.
 - [Encoding channels](/docs/the-spec/encoding/) covers every channel beyond `x` and `y`.
 - [ChartSpec](/docs/spec/chart-spec/) lists every top-level field.
 - [Encoding reference](/docs/spec/encoding/) lists the channel and axis options.
