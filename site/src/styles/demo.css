@@ -21,6 +21,8 @@
   .demo-stage {
     position: relative;
     height: var(--demo-height, 400px);
+    /* A demo with `width` shows a compact or medium layout: the stage stops at that width. */
+    max-inline-size: var(--demo-width, none);
   }
 
   /* Caption, toolbar and code share the chart's own 1rem inset, so their text lines up with its title. */
@@ -100,6 +102,50 @@
     @apply border-ink text-ink;
   }
 
+  /*
+   * Reader controls (lib/demo/controls.ts): rows of quiet mono text buttons
+   * under the chart, at its 1rem inset, wrapping on a narrow screen, then the
+   * event log. Controls still waiting for their script keep their layout box
+   * (see the base-layer rules below), so nothing moves when scripts reveal them.
+   */
+  .demo-controls {
+    display: none;
+  }
+
+  .demo-controls-row {
+    @apply flex min-h-10 flex-wrap items-center gap-x-4 gap-y-1 px-4 py-1;
+  }
+
+  .demo-states,
+  .demo-actions {
+    @apply flex flex-wrap items-center gap-1;
+  }
+
+  .demo-actions {
+    @apply ml-auto;
+  }
+
+  .demo-control {
+    @apply cursor-pointer rounded-[2px] px-1.5 py-1 font-mono text-xs whitespace-nowrap text-muted underline decoration-transparent decoration-1 underline-offset-4 hover:text-ink;
+    transition:
+      color 120ms ease-out,
+      text-decoration-color 120ms ease-out;
+  }
+
+  .demo-control[aria-pressed="true"] {
+    @apply text-ink decoration-ink;
+  }
+
+  /* A fixed height, so each new entry scrolls inside the log instead of pushing the page down. */
+  .demo-events {
+    @apply mx-4 my-0 h-[6.5rem] list-none overflow-y-auto border-t border-line px-0 py-1 font-mono text-xs leading-6 text-ink-2;
+  }
+
+  .demo-events:empty::before {
+    @apply text-muted;
+    content: "Events the chart emits appear here, newest first.";
+  }
+
   /* A long data array scrolls inside the panel; Shiki's tabindex="0" makes it keyboard scrollable. */
   .demo-panel pre {
     @apply m-0 max-h-[28rem] overflow-auto p-4 font-mono text-[13px] leading-relaxed;
@@ -138,7 +184,48 @@
     visibility 200ms;
 }
 
+/*
+ * The controls bar takes its space wherever scripts are expected, so the row
+ * and the log frame are there before their controls show. Without scripts it
+ * stays out, and so it does when the live chart failed and its controls never will show.
+ */
+:root[data-demo-gate] .demo-controls {
+  display: block;
+}
+
+/*
+ * Where scripts are expected, a control still waiting for its script keeps
+ * its layout box but stays invisible; visibility: hidden also keeps it out of
+ * the tab order and the accessibility tree. Preflight hides [hidden] with
+ * !important in the base layer, and an !important rule in a later layer loses
+ * to it, so these live in base with a more specific selector.
+ */
+@layer base {
+  :root[data-demo-gate] .demo-controls .demo-states[hidden] {
+    /* biome-ignore lint/complexity/noImportantStyles: only !important beats preflight's [hidden] rule. */
+    display: flex !important;
+    visibility: hidden;
+  }
+
+  :root[data-demo-gate] .demo-controls .demo-control[hidden] {
+    /* biome-ignore lint/complexity/noImportantStyles: only !important beats preflight's [hidden] rule. */
+    display: inline-block !important;
+    visibility: hidden;
+  }
+
+  :root[data-demo-gate] .demo-controls .demo-events[hidden] {
+    /* biome-ignore lint/complexity/noImportantStyles: only !important beats preflight's [hidden] rule. */
+    display: block !important;
+    visibility: hidden;
+  }
+}
+
+.demo:has(.demo-stage[data-demo-error]) .demo-controls {
+  display: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .demo-control,
   .demo-code[data-demo-open],
   .demo-toggle,
   .demo-toggle::before,
@@ -220,7 +307,8 @@
 
 /* Paper gets the finished static chart in the page's theme, never a live one mid-entrance. */
 @media print {
-  .demo-live {
+  .demo-live,
+  :root[data-demo-gate] .demo-controls {
     display: none;
   }
 

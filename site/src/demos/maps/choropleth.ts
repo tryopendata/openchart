@@ -5,21 +5,22 @@
  * atlas from geography.ts, and its data one dataset module from examples/src/data.
  */
 import { statePopulationChange } from "@datasets/state-population-change";
-import { usUnemployment } from "@datasets/us-unemployment";
+import { usStateUnemployment } from "@datasets/us-state-unemployment";
 import { worldGdp } from "@datasets/world-gdp";
 import { defineDemo } from "../types";
 import { SOUTHEAST, southeastStates, usStates, worldCountries } from "./geography";
 import { sourceWithGeography } from "./sources";
+import { rowsByFips } from "./state-fips";
 
 export const basicChoropleth = defineDemo({
   id: "maps/choropleth-basic",
   title: "Unemployment rate by state",
-  source: sourceWithGeography(usUnemployment, "us"),
+  source: sourceWithGeography(usStateUnemployment, "us"),
   height: 460,
   spec: {
     type: "map",
     geo: { features: usStates, projection: "albersUsa" },
-    data: [...usUnemployment.data],
+    data: rowsByFips(usStateUnemployment.data, "rate"),
     encoding: {
       key: { field: "id", type: "nominal" },
       color: {
@@ -41,7 +42,8 @@ export const worldChoropleth = defineDemo({
   title: "GDP per capita for 30 countries",
   caption:
     "GDP per capita for 30 countries; the rest show the no-data fill. Antarctica is left out",
-  source: sourceWithGeography(worldGdp, "world"),
+  // The dataset's own header calls its values approximate, so the caption says so.
+  source: sourceWithGeography({ source: `${worldGdp.source}, approximate values` }, "world"),
   height: 440,
   // The world's coastlines make the heaviest static SVG on the page; it draws in the browser instead.
   static: false,

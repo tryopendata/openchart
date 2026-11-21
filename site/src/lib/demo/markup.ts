@@ -64,7 +64,38 @@ export const DEMO_ATTR = {
   live: "data-demo-live",
   /** On the stage once a live mount has failed. */
   error: "data-demo-error",
+  /** On `.demo` when the spec's own theme shows: the site chart theme is not laid over it. */
+  ownTheme: "data-demo-own-theme",
+  /** On the spec script, holding the JSON `DemoMountOptions` (renderer, interaction) the live mount passes on. */
+  mountOptions: "data-demo-mount",
+  /** On the controls bar inside `figure.demo-figure`, between the stage and the figcaption. */
+  controls: "data-demo-controls",
+  /** On a `<script type="application/json">` holding the other states' specs. */
+  states: "data-demo-states",
+  /** On each state button, holding its index; 0 is the demo's own `spec`. */
+  state: "data-demo-state",
+  /** On the Replay button. */
+  replay: "data-demo-replay",
+  /** On each download button, holding its format ("svg", "png" or "csv"). */
+  exportFormat: "data-demo-export",
+  /** On the event log `<ol>`. */
+  events: "data-demo-events",
+  /** On the polite live region in the controls bar that announces a state switch or an edit's outcome. */
+  controlsStatus: "data-demo-controls-status",
 } as const;
+
+/**
+ * One other state of a demo as the `data-demo-states` script holds it (see controls.ts).
+ * `spec` is the state's spec with `null` in each place filled before use: from the
+ * demo's own spec for each path in `fromSpec`, where the state repeats it, and
+ * from a shared value block for each of `shared`.
+ */
+export type EmbeddedDemoState = {
+  label: string;
+  spec: unknown;
+  fromSpec: SpecPath[];
+  shared: DemoSharedRef[];
+};
 
 /**
  * Attributes on `<html>`. The demo gate script (demo-gate.ts) sets the first two

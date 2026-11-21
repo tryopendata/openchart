@@ -1,15 +1,33 @@
 /**
  * Finds the bulky values in a spec (data rows, a points layer's rows, graph
  * nodes and edges, TopoJSON under `geo`) and writes JSON with each one folded:
- * as a marker for a copy template, or as a one-line comment naming what was
- * folded and its size for the code a panel shows. Build time only.
+ * as a marker for a copy template, or for the code a panel shows, as a
+ * one-line comment naming what was folded and its size. A long list folded as
+ * an excerpt shows its first rows and a comment counting the rest instead.
+ * Build time only.
  */
 import type { VizSpec } from "@opendata-ai/openchart-core";
-import { FOLD_MARKER_TEXT, foldMarker, foldSentinel } from "./fold-fill";
+import { FOLD_MARKER_TEXT, foldMarker, foldSentinel, lineIndent } from "./fold-fill";
 import type { SpecPath } from "./markup";
 
-/** One bulky value in a spec, where it is, and how its folded comment describes it. */
-export type FoldTarget = { path: SpecPath; value: object; label: string; geography: boolean };
+/**
+ * One bulky value in a spec, where it is, and how its folded comment describes
+ * it. `unit` names one row or element ("row", "node"), empty for geography.
+ * `excerpt` shows the value's first rows before the comment instead of none.
+ */
+export type FoldTarget = {
+  path: SpecPath;
+  value: object;
+  label: string;
+  unit: string;
+  geography: boolean;
+  excerpt?: boolean;
+};
+
+/** A list of rows or elements longer than this is shown as an excerpt in the Spec panel. */
+export const MAX_SHOWN_ROWS = 12;
+/** How many rows an excerpt shows before the comment counting the rest. */
+export const EXCERPT_ROWS = 6;
 
 /** Thrown when a spec already contains the text fold markers are made of. */
 export class FoldMarkerError extends Error {}
@@ -23,7 +41,7 @@ const BULK_KEYS: readonly { path: SpecPath; unit: string }[] = [
 ];
 
 const counted = (count: number, one: string, many = `${one}s`) =>
-  `${count} ${count === 1 ? one : many}`;
+  `${count.toLocaleString("en-US")} ${count === 1 ? one : many}`;
 
 function lookup(root: unknown, path: SpecPath): unknown {
   return path.reduce<unknown>(
@@ -99,7 +117,7 @@ export function foldTargets(spec: VizSpec): FoldTarget[] {
     if (!isFoldable(value, records) || seen.has(value)) continue;
     seen.add(value);
     const label = geography ? geographyLabel(value) : sizeLabel(value, unit);
-    targets.push({ path, value, label, geography });
+    targets.push({ path, value, label, unit, geography });
   }
   return targets;
 }
@@ -117,17 +135,43 @@ export function jsonWithMarkers(value: unknown, targets: readonly FoldTarget[]):
   );
 }
 
+/** Whether the Spec panel shows only an excerpt of this value: a list of rows or elements over the cap. */
+export function isLongList(target: FoldTarget): boolean {
+  return !target.geography && Array.isArray(target.value) && target.value.length > MAX_SHOWN_ROWS;
+}
+
 function foldComment(target: FoldTarget): string {
-  const comment = target.geography
-    ? `/* ${target.label}; Copy includes it */`
-    : `/* ${target.label}, as in the Spec tab; Copy includes them */`;
+  let comment = `/* ${target.label}, as in the Spec tab; Copy includes them */`;
+  if (target.geography) comment = `/* ${target.label}; Copy includes it */`;
+  // The Spec tab shows only an excerpt of a long list, so the comment can't point there.
+  else if (isLongList(target)) comment = `/* ${target.label}; Copy includes them */`;
   return Array.isArray(target.value) ? `[${comment}]` : `{${comment}}`;
 }
 
-/** Code from `jsonWithMarkers` as a reader sees it: each marker replaced by a comment. */
+/** A list's first rows as indented JSON, then a line comment counting the rows left out. */
+function excerpt(target: FoldTarget, indent: string): string {
+  const rows = target.value as unknown[];
+  const inner = `${indent}  `;
+  const shown = rows
+    .slice(0, EXCERPT_ROWS)
+    .map((row) => `${inner}${JSON.stringify(row, null, 2).replaceAll("\n", `\n${inner}`)},`);
+  const rest = counted(rows.length - EXCERPT_ROWS, `more ${target.unit}`);
+  return `[\n${shown.join("\n")}\n${inner}// … ${rest}; Copy includes them\n${indent}]`;
+}
+
+/** Each occurrence of the marker replaced by `render`, given the indent of the line it is on. */
+function replaceMarker(code: string, marker: string, render: (indent: string) => string): string {
+  const [first = "", ...rest] = code.split(marker);
+  return rest.reduce((out, part) => out + render(lineIndent(out, out.length)) + part, first);
+}
+
+/** Code from `jsonWithMarkers` as a reader sees it: each marker replaced by a comment or an excerpt. */
 export function showFolds(code: string, targets: readonly FoldTarget[]): string {
   return targets.reduce(
-    (shown, target, index) => shown.replaceAll(foldMarker(index), foldComment(target)),
+    (shown, target, index) =>
+      replaceMarker(shown, foldMarker(index), (indent) =>
+        target.excerpt ? excerpt(target, indent) : foldComment(target),
+      ),
     code,
   );
 }

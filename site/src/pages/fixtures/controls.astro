@@ -1,0 +1,19 @@
+---
+// A page the build and browser tests use to exercise the demo contract's
+// controls, the spec-theme opt-out, the layout width and host options.
+import Demo from "../../components/demo/Demo.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import "../../styles/preset-fonts.css";
+---
+
+<BaseLayout title="Controls fixture" path="/fixtures/controls/" noindex>
+  <div class="mx-auto max-w-4xl px-6 py-10">
+    <h1>Controls fixture</h1>
+    <Demo id="fixtures/states" />
+    <Demo id="fixtures/events" />
+    <Demo id="fixtures/edit" />
+    <Demo id="fixtures/export" />
+    <Demo id="fixtures/own-theme" />
+    <Demo id="fixtures/compact" />
+  </div>
+</BaseLayout>

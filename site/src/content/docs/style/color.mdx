@@ -1,0 +1,59 @@
+---
+title: "Color palettes"
+description: "Categorical, sequential and diverging color, highlighting one series, and colors that survive print and color blindness."
+section: style
+order: 4
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+The palette depends on what the colored field holds. A nominal field, such as the six power sources here, gets the categorical palette: one distinct hue per value, assigned in the order of the color domain.
+
+<Demo id="style/color-categorical" />
+
+The default palette has six hues. A chart with more series than that borrows from a second ramp and logs a warning. Past six series, group the smallest into one, split the chart into small multiples, or label the series directly. `sort` on the color channel fixes the order, and with it which source gets which hue.
+
+## Sequential
+
+<Demo id="style/color-sequential" />
+
+A quantitative field on the color channel gets a sequential scale, light for small values and dark for large ones. `scale.scheme` picks the ramp: `"blue"`, `"green"`, `"orange"`, `"purple"` or `"teal"`, and the Vega-Lite names such as `"blues"` also work. A heatmap like this one is where sequential color does the most work, since color is the only channel left for the value.
+
+## Diverging
+
+<Demo id="style/color-diverging" />
+
+A diverging scale runs two hues out from a neutral middle, for values that sit above or below a reference point. The schemes are `"redBlue"` and `"brownTeal"`. Put the reference at the middle of the domain: here `domain: [-1.2, 1.2]` centers the neutral color on zero, the 1951–1980 average. `reverse: true` flips `redBlue` so warm years are red.
+
+## Highlighting one series
+
+<Demo id="style/color-highlight" />
+
+`highlight` on the color channel names the series to keep in color and turns the rest grey. It takes one name or a list. With `endpointLabels: { content: "label" }` each line is named at its end, so the chart needs no legend.
+
+## Color blindness and print
+
+The default palette was checked so that every pair of hues stays distinguishable under deuteranopia and protanopia. Grayscale print loses hue entirely, so give each series a second cue:
+
+- `fillPattern: "auto"` on a bar, area or pie mark lays a different pattern over each series.
+- `strokeDash` on the encoding gives each line its own dash.
+
+[Accessibility](/docs/output/accessibility/) covers both, and the contrast checks the library runs.
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `encoding.color.type` | `"nominal"` for a categorical palette, `"quantitative"` for a sequential or diverging scale. |
+| `encoding.color.scale.scheme` | A named ramp, such as `"blues"` or `"redBlue"`. |
+| `encoding.color.scale.domain` | The value range the ramp spans. Make it symmetric to center a diverging scale. |
+| `encoding.color.scale.range` | Your own colors, which win over `scheme`. |
+| `encoding.color.highlight` | Series to keep in color; the rest turn grey. |
+| `theme.colors.categorical` | Replaces the categorical palette for every chart that uses the theme. |
+
+## Related
+
+- [Heatmap](/docs/correlation/heatmap/) builds on the sequential example.
+- [Grouped and stacked](/docs/comparison/grouped-stacked/) uses the categorical palette on bars.
+- [Theming and tokens](/docs/style/theming/) sets the palette in a theme.
+- [Encoding reference](/docs/spec/encoding/) lists the color channel's fields.

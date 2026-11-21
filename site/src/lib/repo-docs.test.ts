@@ -59,6 +59,34 @@ describe("publishedRepoDocs", () => {
     );
   });
 
+  it("publishes a file one folder down under its frontmatter section, keyed by its docs-relative path", () => {
+    mkdirSync(join(docsDir, "reference"));
+    write("reference/chart-spec.md", "---\ntitle: ChartSpec\nsection: spec\n---\n\n# ChartSpec\n");
+    write("spec-reference.md", "---\nsection: spec\nslug: overview\n---\n");
+    expect(publishedRepoDocs(docsDir)).toEqual(
+      new Map([
+        ["reference/chart-spec.md", "spec/chart-spec"],
+        ["spec-reference.md", "spec/overview"],
+      ]),
+    );
+  });
+
+  it("reads no deeper than one folder down", () => {
+    mkdirSync(join(docsDir, "reference/old"), { recursive: true });
+    write("reference/old/chart-spec.md", "---\nsection: spec\n---\n");
+    expect(publishedRepoDocs(docsDir)).toEqual(new Map());
+  });
+
+  it("throws naming both files when a file in a folder and one at the top share a page id", () => {
+    mkdirSync(join(docsDir, "reference"));
+    write("reference/events.md", "---\nsection: api\n---\n");
+    write("events.md", "---\nsection: api\n---\n");
+    expect(() => publishedRepoDocs(docsDir)).toThrow(DuplicatePageError);
+    expect(() => publishedRepoDocs(docsDir)).toThrow(
+      /docs\/events\.md and docs\/reference\/events\.md .*"api\/events"/,
+    );
+  });
+
   it("leaves out files without frontmatter or without a section in it", () => {
     write("architecture.md", "# Architecture\n\nsection: not frontmatter\n");
     write("codebase-map.md", "---\ntitle: Codebase map\n---\n\n# Map\n");

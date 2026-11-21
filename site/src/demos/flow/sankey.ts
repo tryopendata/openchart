@@ -1,15 +1,44 @@
 /**
  * Demos for the sankey page (docs/flow/sankey). Specs follow the sankey section
  * of the Ladle sankey and tile map gallery and docs/sankey.md; each takes its
- * rows and citation from one dataset module in examples/src/data. Sankeys have
- * no static SVG, so each figure reserves its height and draws once the page's
- * script mounts it.
+ * rows and citation from one dataset module in examples/src/data, except the
+ * three-column energy flow, which is illustrative and labelled so. The basic
+ * sankey, which the landing page also shows, is the LLNL 2024 US energy flow.
+ * Sankeys have no static SVG, so each figure reserves its height and draws once
+ * the page's script mounts it.
  */
 import { budgetFlow } from "@datasets/budget-flow";
-import { energyFlow } from "@datasets/energy-flow";
+import { usEnergyFlow2024 } from "@datasets/us-energy-flow-2024";
 import { userJourney } from "@datasets/user-journey";
 import { sourceOf } from "../source";
 import { defineDemo } from "../types";
+
+/**
+ * A three-column energy flow (source, carrier, sector, quadrillion BTU) shaped
+ * like the EIA's annual flow diagram. The magnitudes are illustrative, not a
+ * transcription of EIA figures, so the caption says so. The rows are kept here
+ * rather than imported because the dataset module cites EIA as if they were.
+ */
+const illustrativeEnergyFlow = {
+  source: "Illustrative data, after the EIA annual energy flow",
+  data: [
+    { source: "Coal", target: "Electricity", value: 46.5 },
+    { source: "Natural Gas", target: "Electricity", value: 38.2 },
+    { source: "Natural Gas", target: "Heating", value: 25.8 },
+    { source: "Nuclear", target: "Electricity", value: 19.7 },
+    { source: "Solar", target: "Electricity", value: 10.3 },
+    { source: "Wind", target: "Electricity", value: 14.1 },
+    { source: "Petroleum", target: "Transport", value: 55.4 },
+    { source: "Petroleum", target: "Industry", value: 12.3 },
+    { source: "Electricity", target: "Residential", value: 38.5 },
+    { source: "Electricity", target: "Commercial", value: 35.8 },
+    { source: "Electricity", target: "Industry", value: 34.5 },
+    { source: "Heating", target: "Residential", value: 15.2 },
+    { source: "Heating", target: "Commercial", value: 10.6 },
+    { source: "Transport", target: "Passenger", value: 32.1 },
+    { source: "Transport", target: "Freight", value: 23.3 },
+  ],
+};
 
 /** Every flow dataset names its columns source, target and value. */
 const flowEncoding = (format: string) =>
@@ -21,16 +50,18 @@ const flowEncoding = (format: string) =>
 
 export const basicSankey = defineDemo({
   id: "flow/sankey-basic",
-  title: "US energy flow from source to sector",
-  source: sourceOf(energyFlow),
-  height: 460,
+  title: "US energy from source to end use in 2024",
+  source: sourceOf(usEnergyFlow2024),
+  height: 620,
   spec: {
     type: "sankey",
-    data: [...energyFlow.data],
-    encoding: flowEncoding(".1f"),
+    data: [...usEnergyFlow2024.data],
+    encoding: flowEncoding(".2f"),
     chrome: {
-      title: "Most primary energy passes through electricity",
-      subtitle: "Primary sources through carriers to end-use sectors (quadrillion BTU)",
+      // 62.27 of the 94.61 quads reaching the two end nodes (62.27 + 32.34) is 65.8%.
+      title: "Rejected energy was 66% of US energy consumption in 2024",
+      subtitle:
+        "Energy from each fuel through electricity generation and end-use sectors, 2024 (quadrillion BTU)",
     },
   },
 });
@@ -55,11 +86,11 @@ export const funnelSankey = defineDemo({
 export const sourceColoredSankey = defineDemo({
   id: "flow/sankey-link-color",
   title: "Energy flow with links colored by source",
-  source: sourceOf(energyFlow),
+  source: sourceOf(illustrativeEnergyFlow),
   height: 460,
   spec: {
     type: "sankey",
-    data: [...energyFlow.data],
+    data: [...illustrativeEnergyFlow.data],
     encoding: flowEncoding(".1f"),
     linkStyle: "source",
     chrome: {
@@ -72,11 +103,11 @@ export const sourceColoredSankey = defineDemo({
 export const otherBucketSankey = defineDemo({
   id: "flow/sankey-other",
   title: "Energy flow with small sources merged",
-  source: sourceOf(energyFlow),
+  source: sourceOf(illustrativeEnergyFlow),
   height: 460,
   spec: {
     type: "sankey",
-    data: [...energyFlow.data],
+    data: [...illustrativeEnergyFlow.data],
     encoding: flowEncoding(".1f"),
     other: 0.07,
     chrome: {

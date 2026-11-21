@@ -49,7 +49,7 @@ export const basicLine = defineDemo({
       },
     ],
     chrome: {
-      title: "US inflation peaked at 8.5% in 2022 and fell below 3% by 2024",
+      title: "US inflation peaked at 8.5% in 2022 and fell below 3% in mid-2024",
       subtitle: "US consumer price index, year-over-year % change, quarterly 2019-2024",
     },
   },

@@ -31,6 +31,16 @@ function figureFor(demo: DemoDef, options: { static: boolean; pageShared?: Set<s
 }
 
 const barPage = figureFor(fixtureBar, { static: true });
+/** The bar fixture with 2,000 rows, past the Spec panel's cap, drawn in the browser only. */
+const longBar: DemoDef = {
+  ...fixtureBar,
+  id: "fixtures/long-bar",
+  spec: {
+    ...fixtureBar.spec,
+    data: Array.from({ length: 2000 }, (_, i) => ({ region: `Region ${i}`, orders: i })),
+  },
+};
+const longPage = figureFor(longBar, { static: false });
 /**
  * Two maps on one page, so their atlas is written once, in a shared block. They
  * skip their static SVGs: nothing here reads them, and they are slow to draw.
@@ -169,6 +179,27 @@ describe("demo Copy buttons", () => {
     await clickCopy(window, "react");
     expect(statusOf(window, "[data-demo]")).toBe(
       "Copy failed. The code shown is abbreviated; the Spec tab shows the complete spec.",
+    );
+  });
+
+  it("copies every row of a long dataset that the Spec panel shows only the start of", async () => {
+    const window = await pageWithFigure(longPage);
+    const shownSpec = window.document.querySelector('[data-demo-panel="spec"] pre')?.textContent;
+    expect(shownSpec).toContain("// … 1,994 more rows; Copy includes them");
+    await clickCopy(window);
+    expect(JSON.parse(await window.navigator.clipboard.readText())).toEqual(longBar.spec);
+    await clickCopy(window, "svelte");
+    expect(await window.navigator.clipboard.readText()).toBe(
+      frameworkSnippets(longBar.spec).svelte,
+    );
+  });
+
+  it("doesn't point to the Spec tab for a refused copy when the Spec tab is abbreviated too", async () => {
+    const window = await pageWithFigure(longPage);
+    vi.spyOn(window.navigator.clipboard, "writeText").mockRejectedValue(new Error("Not allowed"));
+    await clickCopy(window, "react");
+    expect(statusOf(window, "[data-demo]")).toBe(
+      "Copy failed. The code shown is abbreviated, so it can't be copied in full by hand.",
     );
   });
 

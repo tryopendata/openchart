@@ -7,12 +7,14 @@
 import { demoFence, demoFenceMeta } from "./demo/fence";
 import { callouts, codeFrames, codeTitle, headingAnchors, tableScroll } from "./prose-markdown";
 import { repoPages } from "./repo-docs";
-import { dropTitle, repoLinks } from "./repo-markdown";
+import { ladleStoryPages } from "./repo-link-targets";
+import { dropTitle, ladleLinks, repoLinks } from "./repo-markdown";
 
 /** Every hast plugin the docs Markdown runs through, in order. */
 export const docsHastPlugins = [
   dropTitle(),
   repoLinks(repoPages),
+  ladleLinks(ladleStoryPages),
   callouts,
   headingAnchors,
   tableScroll,

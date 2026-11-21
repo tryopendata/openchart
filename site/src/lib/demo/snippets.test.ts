@@ -47,6 +47,52 @@ describe("frameworkSnippets", () => {
     expect(react).toContain("const spec: ChartSpec = {\n  data,\n");
   });
 
+  it("passes the demo's interaction and renderer as props and as mount options", () => {
+    const { react, vue, svelte, vanilla } = frameworkSnippets(fixtureBar.spec, {
+      renderer: "canvas",
+      interaction: "select",
+    });
+    expect(react).toContain('<Chart spec={spec} renderer="canvas" interaction="select" />');
+    expect(vue).toContain('<Chart :spec="spec" renderer="canvas" interaction="select" />');
+    expect(svelte).toContain('<Chart {spec} renderer="canvas" interaction="select" />');
+    expect(vanilla).toContain(
+      'createChart(container, spec, { renderer: "canvas", interaction: "select" });',
+    );
+    for (const code of [react, vue, svelte, vanilla]) expect(code).not.toContain("onEdit");
+  });
+
+  it("declares an onEdit handler in edit mode and passes it in each framework's spelling", () => {
+    const { react, vue, svelte, vanilla } = frameworkSnippets(fixtureBar.spec, {
+      interaction: "edit",
+    });
+    expect(react).toContain('<Chart spec={spec} interaction="edit" onEdit={onEdit} />');
+    expect(vue).toContain('<Chart :spec="spec" interaction="edit" @edit="onEdit" />');
+    expect(svelte).toContain('<Chart {spec} interaction="edit" onedit={onEdit} />');
+    expect(vanilla).toContain('createChart(container, spec, { interaction: "edit", onEdit });');
+    for (const code of [react, vue, svelte, vanilla]) {
+      expect(code).toContain("function onEdit(transaction: EditTransaction) {");
+      expect(code).toContain(
+        'import type { EditTransaction, ChartSpec } from "@opendata-ai/openchart-core";',
+      );
+      expect(code).toContain("/docs/behavior/edit-mode/");
+    }
+  });
+
+  it("passes only the host option the demo sets, and none without them", () => {
+    expect(frameworkSnippets(fixtureBar.spec, { interaction: "select" }).react).toContain(
+      '<Chart spec={spec} interaction="select" />',
+    );
+    expect(frameworkSnippets(fixtureBar.spec, {}).vanilla).toContain(
+      "createChart(container, spec);",
+    );
+  });
+
+  it("keeps the host options in the folded code", () => {
+    const { shown } = foldedFrameworkSnippets(fixtureBar.spec, { interaction: "edit" });
+    expect(shown.svelte).toContain('<Chart {spec} interaction="edit" onedit={onEdit} />');
+    expect(shown.svelte).toContain("function onEdit(transaction: EditTransaction) {");
+  });
+
   it("keeps data with five rows or fewer inline", () => {
     const rows = (fixtureBar.spec as { data: unknown[] }).data.slice(0, 5);
     const spec = { ...fixtureBar.spec, data: rows } as VizSpec;
@@ -82,7 +128,7 @@ describe("foldedFrameworkSnippets", () => {
     {
       name: "a geo map's TopoJSON and rows",
       spec: basicChoropleth.spec,
-      folded: [/\{\/\* TopoJSON, \d+ arcs; Copy includes it \*\/\}/, /\/\* \d+ rows,/],
+      folded: [/\{\/\* TopoJSON, \d+ arcs; Copy includes it \*\/\}/, /\/\* [\d,]+ rows[,;]/],
     },
     {
       name: "a points layer's rows",
@@ -92,9 +138,13 @@ describe("foldedFrameworkSnippets", () => {
     {
       name: "a graph's nodes and edges",
       spec: basicGraph.spec,
-      folded: [/"nodes": \[\/\* \d+ nodes,/, /"edges": \[\/\* \d+ edges,/],
+      folded: [/"nodes": \[\/\* [\d,]+ nodes[,;]/, /"edges": \[\/\* [\d,]+ edges[,;]/],
     },
-    { name: "a sankey's rows", spec: basicSankey.spec, folded: [/const data = \[\/\* \d+ rows,/] },
+    {
+      name: "a sankey's rows",
+      spec: basicSankey.spec,
+      folded: [/const data = \[\/\* [\d,]+ rows[,;]/],
+    },
     {
       name: "a tile map's record of values",
       spec: basicTileMap.spec,

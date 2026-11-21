@@ -4,8 +4,16 @@
  * and destroying the mount leaves the stage as the build wrote it. demos.ts
  * loads this module with `import()`, so pages without demos never fetch the library.
  */
-import type { DarkMode, ThemeConfig, VizSpec } from "@opendata-ai/openchart-core";
 import {
+  type ChartEventHandlers,
+  type DarkMode,
+  isChartSpec,
+  isLayerSpec,
+  type ThemeConfig,
+  type VizSpec,
+} from "@opendata-ai/openchart-core";
+import {
+  type ChartInstance,
   createBarList,
   createChart,
   createGeoMap,
@@ -13,6 +21,7 @@ import {
   createSankey,
   createTable,
   createTileMap,
+  type InteractionMode,
 } from "@opendata-ai/openchart-vanilla";
 import { chartTheme } from "../lib/demo/chart-theme";
 import { DEMO_CLASS } from "../lib/demo/markup";
@@ -20,10 +29,32 @@ import { DEMO_CLASS } from "../lib/demo/markup";
 /** Thrown when a spec cannot be mounted. `cause` is the original error. */
 export class DemoMountError extends Error {}
 
-type MountOptions = { theme: ThemeConfig; darkMode: DarkMode };
+/** The options every mount function takes; chart event handlers ride along for charts only. */
+type MountOptions = {
+  theme?: ThemeConfig;
+  darkMode: DarkMode;
+  renderer?: "svg" | "canvas";
+  interaction?: InteractionMode;
+};
+
+/** How one demo mounts: the page theme, whether the entrance plays, and the demo's host options. */
+export type DemoMountRequest = {
+  dark: boolean;
+  entrance: boolean;
+  /** Leave the site chart theme off, so the spec's own theme shows. */
+  ownTheme?: boolean;
+  /** The renderer for point marks, from the demo's `mount.renderer`. */
+  renderer?: "svg" | "canvas";
+  /** What the reader may do with the chart's elements. Pass it whenever `handlers` are given, so they never decide it. */
+  interaction?: InteractionMode;
+  /** Event handlers for a chart or layer spec, such as the controls' event log. */
+  handlers?: ChartEventHandlers;
+};
 
 /** A mounted demo. */
 export type DemoMount = {
+  /** The live chart for a chart or layer spec, for updates and exports; null for other types. */
+  instance: ChartInstance | null;
   /** Destroys the chart and removes its host, leaving the stage as the build wrote it. */
   destroy(): void;
   /** True while the entrance is still held because the chart has not been seen yet. */
@@ -33,6 +64,18 @@ export type DemoMount = {
 /** The library holds an entrance by pausing it through this property on the chart's root. */
 const HELD_ENTRANCE = '[style*="--oc-play-state"]';
 type Mount = (host: HTMLElement, spec: never, options: MountOptions) => { destroy(): void };
+
+/**
+ * The spec as the site draws it: without the attribution link the library adds
+ * inside a chart, since this is the library's own site. Use it for every mount
+ * and every `update`.
+ */
+export function withoutWatermark<T extends VizSpec>(spec: T): T {
+  return { ...spec, watermark: false };
+}
+
+// This module is loaded with import(), so core's predicates add nothing to the up-front bundle.
+const isChart = (spec: VizSpec) => isChartSpec(spec) || isLayerSpec(spec);
 
 const MOUNTS_BY_TYPE: Record<string, Mount> = {
   table: createTable,
@@ -45,7 +88,7 @@ const MOUNTS_BY_TYPE: Record<string, Mount> = {
 
 /** The mount function for a spec: charts and layers carry `mark` or `layer`, the rest a `type`. */
 function mountFor(spec: VizSpec): Mount | undefined {
-  if ("mark" in spec || "layer" in spec) return createChart as Mount;
+  if (isChart(spec)) return createChart as Mount;
   return MOUNTS_BY_TYPE[String((spec as { type?: unknown }).type)];
 }
 
@@ -61,11 +104,7 @@ function mountFor(spec: VizSpec): Mount | undefined {
  *
  * @throws {DemoMountError} When the spec type has no mount function, or mounting throws.
  */
-export function mountDemo(
-  stage: HTMLElement,
-  spec: VizSpec,
-  options: { dark: boolean; entrance: boolean },
-): DemoMount {
+export function mountDemo(stage: HTMLElement, spec: VizSpec, options: DemoMountRequest): DemoMount {
   const mount = mountFor(spec);
   if (!mount) {
     const type = String((spec as { type?: unknown }).type);
@@ -76,15 +115,20 @@ export function mountDemo(
   const host = stage.ownerDocument.createElement("div");
   host.className = DEMO_CLASS.live;
   stage.append(host);
-  // No attribution link inside the chart: this is the library's own site.
-  const unbranded = { ...spec, watermark: false };
+  const unbranded = withoutWatermark(spec);
   const playable = options.entrance ? unbranded : { ...unbranded, animation: false };
+  // Other types name some handlers alike with other signatures, so only a chart gets them.
+  const handlers = isChart(spec) ? options.handlers : undefined;
   try {
     const instance = mount(host, playable as never, {
-      theme: chartTheme(options.dark),
+      theme: options.ownTheme ? undefined : chartTheme(options.dark),
       darkMode: options.dark ? "force" : "off",
+      ...(options.renderer ? { renderer: options.renderer } : {}),
+      ...(options.interaction ? { interaction: options.interaction } : {}),
+      ...handlers,
     });
     return {
+      instance: isChart(spec) ? (instance as ChartInstance) : null,
       destroy() {
         instance.destroy();
         host.remove();
@@ -96,5 +140,66 @@ export function mountDemo(
     host.remove();
     const reason = error instanceof Error ? error.message : String(error);
     throw new DemoMountError(`Mounting the spec failed: ${reason}`, { cause: error });
+  }
+}
+
+/** The formats a demo's download buttons offer. */
+export type ExportFormat = "svg" | "png" | "csv";
+
+/** The light page's paper, `--color-canvas` in global.css: downloads get it as an opaque background. */
+const LIGHT_PAPER = "#ffffff";
+const MIME_TYPES: Record<ExportFormat, string> = {
+  svg: "image/svg+xml",
+  png: "image/png",
+  csv: "text/csv",
+};
+
+/** The theme a download renders with: the site's light chart theme on opaque paper, or the spec's own. */
+function exportTheme(ownTheme: boolean): ThemeConfig | undefined {
+  if (ownTheme) return undefined;
+  const light = chartTheme(false);
+  return { ...light, colors: { ...light.colors, background: LIGHT_PAPER } };
+}
+
+/**
+ * The demo's chart as a file to download. It renders a separate copy, out of
+ * sight at the stage's size, in the light theme on opaque paper, whatever theme
+ * the page is in, so the file reads the same wherever it is opened; the live
+ * chart is left as it is. The copy is destroyed once the export finishes or fails.
+ *
+ * @throws {DemoMountError} When the spec is not a chart or layer spec.
+ */
+export async function exportDemo(
+  stage: HTMLElement,
+  spec: VizSpec,
+  format: ExportFormat,
+  { ownTheme = false }: { ownTheme?: boolean } = {},
+): Promise<Blob> {
+  if (!isChart(spec)) {
+    throw new DemoMountError("Only chart and layer specs export from a demo's download buttons.");
+  }
+  const host = stage.ownerDocument.createElement("div");
+  const { width, height } = stage.getBoundingClientRect();
+  host.setAttribute("aria-hidden", "true");
+  host.style.cssText = "position: fixed; left: -10000px; top: 0; visibility: hidden";
+  // Without a layout box (no layout engine), the library falls back to its default size.
+  if (width > 0) host.style.width = `${width}px`;
+  if (height > 0) host.style.height = `${height}px`;
+  stage.ownerDocument.body.append(host);
+  try {
+    const chart = createChart(host, { ...withoutWatermark(spec), animation: false } as never, {
+      theme: exportTheme(ownTheme),
+      darkMode: "off",
+      autoResize: false,
+    });
+    try {
+      if (format === "png") return await chart.export("png");
+      const text = format === "svg" ? chart.export("svg") : chart.export("csv");
+      return new Blob([text], { type: MIME_TYPES[format] });
+    } finally {
+      chart.destroy();
+    }
+  } finally {
+    host.remove();
   }
 }

@@ -1,7 +1,8 @@
 /**
- * The two docs collections. `repoDocs` loads exactly the repository's
- * docs/*.md files that declare a section, so contributor docs never meet the
- * schema; `siteDocs` loads the MDX and Markdown pages written for the site.
+ * The two docs collections. `repoDocs` loads exactly the repository's docs
+ * Markdown files (docs/ and docs/reference/) that declare a section, so
+ * contributor docs never meet the schema; `siteDocs` loads the MDX and
+ * Markdown pages written for the site.
  * Both use the page id ("<section>/<slug>") as the entry id.
  */
 

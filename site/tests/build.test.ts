@@ -12,30 +12,59 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { join, resolve } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { gzipSync } from "node:zlib";
 import { Window } from "happy-dom";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { docsAreas, site } from "../src/config";
 import { LANDING_SECTION_IDS, type LandingSectionId, landingCopy } from "../src/landing/copy";
 import { heroSteps } from "../src/landing/hero";
 import { catalogPageIds } from "./catalog-pages";
+import { catalogReference, docsPageList } from "./docs-pages";
 
-const parser = new new Window().DOMParser();
 const read = (root: string, path: string) => readFileSync(join(root, path), "utf8");
-// Parsed once per file: the link check asks for the same large pages many times.
-const parsed = new Map<string, Document>();
+/**
+ * The most recently parsed pages, each in its own happy-dom window. A parsed
+ * page with inline chart SVGs takes tens of megabytes, and a window keeps every
+ * document parsed in it, so one shared window passed Node's 4 GB heap. Only the
+ * last few pages stay, and a dropped page's window is closed to free it; the
+ * link check keeps the ids it reads in `idsCache` instead.
+ */
+const MAX_PARSED_PAGES = 8;
+const parsed = new Map<string, { window: Window; document: Document }>();
 function page(root: string, path: string): Document {
   const file = join(root, path);
-  let document = parsed.get(file);
-  if (!document) {
+  let entry = parsed.get(file);
+  if (entry) {
+    // Move it to the end, so the least recently used page is the one dropped.
+    parsed.delete(file);
+  } else {
     // happy-dom drops everything after a <style> inside an inline <svg>, and map
     // charts carry one. No test here reads styles, so they are removed before parsing.
     const html = read(root, path).replace(/<style\b[^>]*>[\s\S]*?<\/style>/g, "");
-    document = parser.parseFromString(html, "text/html") as unknown as Document;
-    parsed.set(file, document);
+    const window = new Window();
+    const document = new window.DOMParser().parseFromString(html, "text/html");
+    entry = { window, document: document as unknown as Document };
   }
-  return document;
+  parsed.set(file, entry);
+  const [oldest] = parsed;
+  if (parsed.size > MAX_PARSED_PAGES && oldest) {
+    parsed.delete(oldest[0]);
+    void oldest[1].window.happyDOM.close();
+  }
+  return entry.document;
+}
+
+/** Every element id on a page, kept once read: the link check asks for the same pages many times. */
+const idsCache = new Map<string, Set<string>>();
+function idsOn(root: string, path: string): Set<string> {
+  const file = join(root, path);
+  let ids = idsCache.get(file);
+  if (!ids) {
+    ids = new Set([...page(root, path).querySelectorAll("[id]")].map((node) => node.id));
+    idsCache.set(file, ids);
+  }
+  return ids;
 }
 const absolute = (path: string) => new URL(path, site.url).href;
 const pagePath = (id: string) => `docs/${id}/index.html`;
@@ -43,31 +72,71 @@ const pagePath = (id: string) => `docs/${id}/index.html`;
 const frontmatter = (source: string, key: string) =>
   new RegExp(`^${key}:\\s*["']?(.+?)["']?\\s*$`, "m").exec(source.split("\n---")[0] ?? "")?.[1];
 
-/** Every published page: site pages under src/content/docs, and repo docs/*.md that declare a section. */
-function sourceDocs(root = ".") {
+/** A published page as its source file declares it, with the file's text for source checks. */
+type SourceDoc = { id: string; title: string; file: string; source: string };
+
+/**
+ * Every published page: site pages under src/content/docs, and the repository's
+ * docs Markdown, in docs/ and one folder down, that declares a section.
+ */
+function sourceDocs(root = "."): SourceDoc[] {
   const base = join(root, "src/content/docs");
   const sitePages = readdirSync(base, { recursive: true, encoding: "utf8" })
     .filter((file) => /\.mdx?$/.test(file))
-    .map((file) => ({
-      id: file.replace(/\.mdx?$/, "").replaceAll("\\", "/"),
-      title: frontmatter(readFileSync(join(base, file), "utf8"), "title") ?? "",
-    }));
+    .map((file) => {
+      const source = readFileSync(join(base, file), "utf8");
+      return {
+        id: file.replace(/\.mdx?$/, "").replaceAll("\\", "/"),
+        title: frontmatter(source, "title") ?? "",
+        file: `src/content/docs/${file}`,
+        source,
+      };
+    });
   const repoDocs = resolve("../docs");
-  const repoPages = readdirSync(repoDocs)
-    .filter((file) => file.endsWith(".md"))
+  const repoPages = repoDocFiles(repoDocs)
     .map((file) => ({ file, source: readFileSync(join(repoDocs, file), "utf8") }))
     .filter(({ source }) => source.startsWith("---\n") && frontmatter(source, "section"))
     .map(({ file, source }) => ({
-      id: `${frontmatter(source, "section")}/${frontmatter(source, "slug") ?? file.replace(/\.md$/, "")}`,
+      id: `${frontmatter(source, "section")}/${frontmatter(source, "slug") ?? basename(file, ".md")}`,
       title: frontmatter(source, "title") ?? "",
+      file: `../docs/${file}`,
+      source,
     }));
   return [...sitePages, ...repoPages];
+}
+
+/** Markdown files in the repository's docs folder and its direct subfolders, relative to it. */
+function repoDocFiles(docsDir: string): string[] {
+  return readdirSync(docsDir, { withFileTypes: true }).flatMap((entry) => {
+    if (entry.isFile()) return entry.name.endsWith(".md") ? [entry.name] : [];
+    if (!entry.isDirectory()) return [];
+    return readdirSync(join(docsDir, entry.name))
+      .filter((name) => name.endsWith(".md"))
+      .map((name) => `${entry.name}/${name}`);
+  });
 }
 
 function htmlFiles(root: string) {
   return readdirSync(root, { recursive: true, encoding: "utf8" }).filter((file) =>
     file.endsWith(".html"),
   );
+}
+
+/** Waits one turn of the event loop, which is when happy-dom finishes closing the windows `page` dropped. */
+const freeClosedPages = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+// A test that reads a page or two runs synchronously, so the closes it queued finish here.
+afterEach(freeClosedPages);
+
+/**
+ * Every built HTML page under root that `include` accepts, parsed one at a
+ * time, waiting a turn after each so the memory of dropped pages is freed.
+ */
+async function* builtPages(root: string, include: (file: string) => boolean = () => true) {
+  for (const file of htmlFiles(root).filter(include)) {
+    yield { file, doc: page(root, file) };
+    await freeClosedPages();
+  }
 }
 
 function islandNames(root: string, path: string) {
@@ -77,10 +146,93 @@ function islandNames(root: string, path: string) {
 }
 
 const docs = sourceDocs();
+const sourceById = new Map(docs.map((doc) => [doc.id, doc]));
 const BAR = "comparison/bar";
 const GETTING_STARTED = "get-started/getting-started";
 /** A catalog page carries several demos; past this its HTML is too slow on a phone connection. */
 const MAX_VISUALIZATION_PAGE_BYTES = 500_000;
+/** The marker phase 4 left in a page's source until the page was written; none may remain. */
+const STUB_MARKER = "phase-4-stub";
+const PARAGRAPH_WORD_LIMIT = 90;
+const sectionsOf = (areaId: string): readonly string[] =>
+  docsAreas.find((area) => area.id === areaId)?.sections.map(({ id }) => id) ?? [];
+const BUILDING_BLOCK_SECTIONS = sectionsOf("building-blocks");
+const GUIDE_SECTIONS = sectionsOf("guides");
+
+/** The h1 lines of a Markdown text, skipping fenced code, where `# ` starts a shell comment. */
+function markdownH1s(markdown: string): string[] {
+  let fenced = false;
+  return markdown.split("\n").filter((line) => {
+    if (/^\s*(```|~~~)/.test(line)) fenced = !fenced;
+    return !fenced && line.startsWith("# ");
+  });
+}
+
+/** The docs prose of a page: the article body the content rules read. */
+const proseOf = (doc: Document) => doc.querySelector("article .docs-prose");
+
+/** Paragraphs and h2s among the prose's top-level elements before the first demo. */
+function leadBeforeFirstDemo(doc: Document): { paragraphs: number; headings: number } {
+  const prose = proseOf(doc);
+  const firstDemo = prose?.querySelector(".demo[data-demo]");
+  const lead = { paragraphs: 0, headings: 0 };
+  if (!prose || !firstDemo) return { paragraphs: Number.POSITIVE_INFINITY, headings: 0 };
+  for (const child of prose.children) {
+    if (child === firstDemo || child.contains(firstDemo)) break;
+    if (child.tagName === "P") lead.paragraphs += 1;
+    if (child.tagName === "H2") lead.headings += 1;
+  }
+  return lead;
+}
+
+/** Figures whose caption lacks a source, or cites illustrative data when that is not allowed. */
+function unsourcedFigures(
+  figures: Element[],
+  { allowIllustrative }: { allowIllustrative: boolean },
+) {
+  return figures
+    .map((figure) => ({
+      id: figure.getAttribute("data-demo") ?? "",
+      caption: figure.querySelector("figcaption")?.textContent ?? "",
+    }))
+    .filter(
+      ({ caption }) =>
+        !/Source: \S/.test(caption) ||
+        (!allowIllustrative && caption.includes("Illustrative data")),
+    )
+    .map(({ id, caption }) => `${id}: "${caption}"`);
+}
+
+/** Prose paragraphs over the word limit. */
+function longParagraphs(doc: Document): string[] {
+  return [...doc.querySelectorAll("article .docs-prose > p")]
+    .map((paragraph) => (paragraph.textContent ?? "").trim())
+    .filter((text) => text.split(/\s+/).length > PARAGRAPH_WORD_LIMIT);
+}
+
+/** h2 and h3 texts that appear more than once in the article. */
+function repeatedHeadings(doc: Document): string[] {
+  const headings = [...(doc.querySelector("article")?.querySelectorAll("h2, h3") ?? [])].map(
+    (heading) => (heading.textContent ?? "").trim(),
+  );
+  return headings.filter((text, index) => headings.indexOf(text) !== index);
+}
+
+/** The docs areas the page's prose links into, one entry per link. */
+function linkedAreas(doc: Document): string[] {
+  return [...(proseOf(doc)?.querySelectorAll('a[href^="/docs/"]') ?? [])].map((link) => {
+    const section = (link.getAttribute("href") ?? "").split("/")[2] ?? "";
+    return docsAreas.find((area) => sectionsOf(area.id).includes(section))?.id ?? "";
+  });
+}
+
+/** Every distinct font-family a static SVG names on its text. */
+function fontFamilies(svg: Element): string[] {
+  const families = [...svg.querySelectorAll("[font-family]")].map(
+    (node) => node.getAttribute("font-family") ?? "",
+  );
+  return [...new Set(families)];
+}
 
 describe("the page set", () => {
   it("includes the first catalog page and the first guide", () => {
@@ -133,12 +285,12 @@ describe("demos", () => {
     expect(figures[0]?.querySelector("svg.demo-static")).not.toBeNull();
   });
 
-  it("every stage without a static SVG shows the demo's title and a drawn-in-the-browser line", () => {
+  it("every stage without a static SVG shows the demo's title and a drawn-in-the-browser line", async () => {
     const missing: string[] = [];
     let stages = 0;
     // The broken-demo fixture writes its figure by hand to test the failure state.
-    for (const file of htmlFiles("dist").filter((file) => !file.includes("broken-demo"))) {
-      for (const stage of page("dist", file).querySelectorAll("[data-demo-stage]")) {
+    for await (const { file, doc } of builtPages("dist", (file) => !file.includes("broken-demo"))) {
+      for (const stage of doc.querySelectorAll("[data-demo-stage]")) {
         if (stage.querySelector("svg.demo-static")) continue;
         stages += 1;
         const text = stage.querySelector("p[data-demo-placeholder]")?.textContent ?? "";
@@ -151,11 +303,10 @@ describe("demos", () => {
     expect(missing).toEqual([]);
   });
 
-  it("writes each shared value once per page, and every figure's references resolve on its page", () => {
+  it("writes each shared value once per page, and every figure's references resolve on its page", async () => {
     const problems: string[] = [];
     let references = 0;
-    for (const file of htmlFiles("dist")) {
-      const doc = page("dist", file);
+    for await (const { file, doc } of builtPages("dist")) {
       const blocks = [...doc.querySelectorAll("script[data-demo-shared]")].map(
         (block) => block.getAttribute("data-demo-shared") ?? "",
       );
@@ -184,6 +335,25 @@ describe("demos", () => {
     expect(oversized).toEqual([]);
   });
 
+  it("a dense demo's Spec panel shows its first rows and counts the rest, writing the rows out once", () => {
+    const doc = page("dist", pagePath("output/canvas"));
+    const figure = doc.querySelector('.demo[data-demo="output/canvas-all-counties"]');
+    // The rows live in the page's shared-value block, which the figure's spec references.
+    const refs = JSON.parse(
+      figure?.querySelector("[data-demo-spec]")?.getAttribute("data-demo-shared-refs") ?? "[]",
+    ) as { path: string[]; hash: string }[];
+    const dataRef = refs.find(({ path }) => path.join("/") === "data");
+    const rows = doc.querySelector(`script[data-demo-shared="${dataRef?.hash}"]`)?.textContent;
+    expect(JSON.parse(rows ?? "null")).toHaveLength(3108);
+    const panel = figure?.querySelector('[data-demo-panel="spec"]');
+    const shown = panel?.querySelector("pre")?.textContent ?? "";
+    expect(shown).toContain("// … 3,102 more rows; Copy includes them");
+    expect(shown.match(/"lon":/g)).toHaveLength(6);
+    const template = panel?.querySelector("template[data-demo-copy-source]");
+    expect(template?.getAttribute("data-demo-copy-fills")).toBe('[["data"]]');
+    expect(template?.innerHTML ?? "").not.toContain('"lon":');
+  });
+
   it.each([BAR, GETTING_STARTED])("%s repeats no element id", (id) => {
     const ids = [...page("dist", pagePath(id)).querySelectorAll("[id]")].map((node) => node.id);
     const repeated = ids.filter((value, index) => ids.indexOf(value) !== index);
@@ -192,16 +362,30 @@ describe("demos", () => {
 });
 
 describe("docs navigation", () => {
-  it("the sidebar lists the current area only, and the area switcher lists every area with pages", () => {
-    const bar = page("dist", pagePath(BAR));
-    const sidebar = bar.querySelector('nav[aria-label="Docs"]');
+  it("the sidebar lists the current area only", () => {
+    const sidebar = page("dist", pagePath(BAR)).querySelector('nav[aria-label="Docs"]');
     expect(sidebar?.querySelector(`a[href="/docs/${BAR}/"]`)).not.toBeNull();
     expect(sidebar?.querySelector(`a[href="/docs/${GETTING_STARTED}/"]`)).toBeNull();
-    const areas = [...bar.querySelectorAll('nav[aria-label="Docs areas"] a')];
-    expect(areas.map((area) => area.textContent?.trim())).toEqual(["Guides", "Visualizations"]);
+  });
+
+  it.each([
+    [BAR, "Visualizations"],
+    ["get-started/introduction", "Guides"],
+    ["the-spec/anatomy", "Building blocks"],
+    ["spec/overview", "Reference"],
+  ])("the area switcher on %s lists the four areas in order and marks %s", (id, current) => {
+    const areas = [
+      ...page("dist", pagePath(id)).querySelectorAll('nav[aria-label="Docs areas"] a'),
+    ];
+    expect(areas.map((area) => area.textContent?.trim())).toEqual([
+      "Guides",
+      "Visualizations",
+      "Building blocks",
+      "Reference",
+    ]);
     expect(
       areas.find((area) => area.getAttribute("aria-current") === "page")?.textContent?.trim(),
-    ).toBe("Visualizations");
+    ).toBe(current);
   });
 
   it("repo Markdown renders one h1, its title, and highlighted code", () => {
@@ -227,7 +411,10 @@ describe("docs pages", () => {
     expect(
       doc.querySelector('nav[aria-label="Docs"] a[aria-current="page"]')?.getAttribute("href"),
     ).toBe(href);
-    expect(read("dist", `docs/${id}.md`).startsWith(`# ${title}\n`)).toBe(true);
+    const markdown = read("dist", `docs/${id}.md`);
+    expect(markdown.startsWith(`# ${title}\n`)).toBe(true);
+    expect(markdownH1s(markdown), "h1s in the Markdown export").toEqual([`# ${title}`]);
+    expect(markdown).not.toContain(STUB_MARKER);
     expect(read("dist", "llms.txt")).toContain(absolute(`/docs/${id}.md`));
     expect(read("dist", "llms-full.txt")).toContain(`# ${title}\n`);
     expect(read("dist", "sitemap-0.xml")).toContain(`<loc>${absolute(href)}</loc>`);
@@ -244,12 +431,13 @@ describe("docs pages", () => {
 });
 
 describe("the whole site", () => {
-  it("has no broken internal links or anchors", () => {
+  it("has no broken internal links or anchors", async () => {
     const broken: string[] = [];
-    for (const file of htmlFiles("dist")) {
+    for await (const { file, doc } of builtPages("dist")) {
       const self = `/${file.replace(/index\.html$/, "")}`;
-      for (const link of page("dist", file).querySelectorAll("a[href]")) {
-        const href = link.getAttribute("href") ?? "";
+      // Read the hrefs first: looking up a target's ids may drop this page from the cache.
+      const hrefs = [...doc.querySelectorAll("a[href]")].map((link) => link.getAttribute("href"));
+      for (const href of hrefs.map((value) => value ?? "")) {
         if (!href.startsWith("/") && !href.startsWith("#")) continue;
         if (href.startsWith("//")) continue;
         const [path = "", hash] = (href.startsWith("#") ? `${self}${href}` : href).split("#");
@@ -257,7 +445,7 @@ describe("the whole site", () => {
         if (!existsSync(join("dist", target))) {
           broken.push(`${file}: ${href}`);
         } else if (hash && target.endsWith(".html")) {
-          if (!page("dist", target).getElementById(decodeURIComponent(hash))) {
+          if (!idsOn("dist", target).has(decodeURIComponent(hash))) {
             broken.push(`${file}: ${href} (no #${hash})`);
           }
         }
@@ -266,11 +454,11 @@ describe("the whole site", () => {
     expect(broken).toEqual([]);
   });
 
-  it("hydrates only the islands site.islands lists, and none on docs pages", () => {
+  it("hydrates only the islands site.islands lists, and none on docs pages", async () => {
     expect([...new Set(islandNames("dist", "index.html"))].sort()).toEqual(
       [...site.islands].sort(),
     );
-    for (const file of htmlFiles("dist").filter((file) => file.startsWith("docs"))) {
+    for await (const { file } of builtPages("dist", (file) => file.startsWith("docs"))) {
       expect(islandNames("dist", file), file).toEqual([]);
     }
   });
@@ -384,6 +572,148 @@ describe("the visualization catalog", () => {
       .map((link) => link.getAttribute("href") ?? "")
       .filter((href) => !href.startsWith(`/docs/${section}/`));
     expect(elsewhere.length, "links to a page in another section").toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("the phase 4 pages", () => {
+  it.each(docsPageList)("$id is built with its manifest title as the h1", ({ id, title }) => {
+    expect(existsSync(join("dist", pagePath(id))), id).toBe(true);
+    expect(page("dist", pagePath(id)).querySelector("h1")?.textContent).toBe(title);
+  });
+
+  it("finds a source file for every manifest page", () => {
+    expect(docsPageList.filter(({ id }) => !sourceById.has(id)).map(({ id }) => id)).toEqual([]);
+  });
+
+  it.each(docsPageList.filter(({ section }) => BUILDING_BLOCK_SECTIONS.includes(section)))(
+    "$id meets the building-block rules",
+    ({ id, minDemos }) => {
+      const doc = page("dist", pagePath(id));
+      const figures = [...doc.querySelectorAll(".demo[data-demo]")];
+      expect(figures.length, "demo figures").toBeGreaterThanOrEqual(minDemos);
+      const lead = leadBeforeFirstDemo(doc);
+      expect(lead.headings, "h2s before the first demo").toBe(0);
+      expect(lead.paragraphs, "paragraphs before the first demo").toBeLessThanOrEqual(1);
+      expect(unsourcedFigures(figures, { allowIllustrative: false })).toEqual([]);
+      expect(longParagraphs(doc)).toEqual([]);
+      expect(repeatedHeadings(doc)).toEqual([]);
+      const areas = linkedAreas(doc);
+      expect(areas, "links to a Visualizations page").toContain("visualizations");
+      expect(areas, "links to a Reference page").toContain("reference");
+      expect(statSync(join("dist", pagePath(id))).size).toBeLessThanOrEqual(
+        MAX_VISUALIZATION_PAGE_BYTES,
+      );
+    },
+  );
+
+  it.each(
+    docsPageList.filter(
+      ({ section, minDemos }) => GUIDE_SECTIONS.includes(section) && minDemos > 0,
+    ),
+  )("$id shows its minimum of sourced demos", ({ id, minDemos }) => {
+    const figures = [...page("dist", pagePath(id)).querySelectorAll(".demo[data-demo]")];
+    expect(figures.length, "demo figures").toBeGreaterThanOrEqual(minDemos);
+    // The tutorial's toy data must match the four framework examples beside it.
+    const allowIllustrative = id === GETTING_STARTED;
+    expect(unsourcedFigures(figures, { allowIllustrative })).toEqual([]);
+  });
+
+  it("get-started/introduction reads tightly", () => {
+    const doc = page("dist", pagePath("get-started/introduction"));
+    expect(longParagraphs(doc)).toEqual([]);
+    expect(
+      unsourcedFigures([...doc.querySelectorAll(".demo[data-demo]")], {
+        allowIllustrative: false,
+      }),
+    ).toEqual([]);
+  });
+
+  it.each(docsPageList.filter(({ section }) => section === "spec"))(
+    "$id links to a Building-blocks or Visualizations page",
+    ({ id }) => {
+      const areas = linkedAreas(page("dist", pagePath(id)));
+      expect(areas.some((area) => area === "building-blocks" || area === "visualizations")).toBe(
+        true,
+      );
+    },
+  );
+
+  it.each(Object.entries(catalogReference))("%s links to its reference page, %s", (id, ref) => {
+    const prose = page("dist", pagePath(id)).querySelectorAll('.docs-prose a[href^="/docs/"]');
+    const hrefs = [...prose].map((link) => link.getAttribute("href") ?? "");
+    expect(hrefs.filter((href) => href.startsWith(`/docs/${ref}/`))).not.toEqual([]);
+  });
+
+  it("no source file under docs/ or src/content still carries the stub marker", () => {
+    const sources = [resolve("../docs"), resolve("src/content")].flatMap((dir) =>
+      readdirSync(dir, { recursive: true, encoding: "utf8" })
+        .map((file) => join(dir, file))
+        .filter((file) => statSync(file).isFile()),
+    );
+    expect(sources.length).toBeGreaterThan(50);
+    expect(sources.filter((file) => readFileSync(file, "utf8").includes(STUB_MARKER))).toEqual([]);
+  });
+});
+
+describe("links out of the docs", () => {
+  it("no docs page links to the Ladle gallery", async () => {
+    const ladle: string[] = [];
+    for await (const { file, doc } of builtPages("dist", (file) => file.startsWith("docs"))) {
+      for (const link of doc.querySelectorAll('a[href*="tryopendata.github.io/openchart"]')) {
+        ladle.push(`${file}: ${link.getAttribute("href")}`);
+      }
+    }
+    expect(ladle).toEqual([]);
+  });
+
+  it("no page links to a published docs file on GitHub instead of its page", async () => {
+    const published = new Set(
+      docs
+        .filter(({ file }) => file.startsWith("../docs/"))
+        .map(({ file }) => file.slice("../docs/".length)),
+    );
+    expect(published.size).toBeGreaterThan(20);
+    const blob = `${site.repo}/blob/main/docs/`;
+    const onGitHub: string[] = [];
+    for await (const { file, doc } of builtPages("dist")) {
+      const hrefs = [...doc.querySelectorAll(`a[href^="${blob}"]`)]
+        .map((link) => link.getAttribute("href") ?? "")
+        .filter((href) => published.has(href.slice(blob.length).split("#")[0] ?? ""));
+      onGitHub.push(...hrefs.map((href) => `${file}: ${href}`));
+    }
+    expect(onGitHub).toEqual([]);
+  });
+});
+
+describe("the controls fixture page", () => {
+  const FIXTURE = "fixtures/controls/index.html";
+  const demo = (id: string) => page("dist", FIXTURE).querySelector(`.demo[data-demo="${id}"]`);
+  const staticSvgs = (id: string) => [...(demo(id)?.querySelectorAll("svg.demo-static") ?? [])];
+
+  it("renders the own-theme demo's static SVGs in the broadsheet preset's family, not the site sans", () => {
+    const svgs = staticSvgs("fixtures/own-theme");
+    expect(svgs).toHaveLength(2);
+    expect(demo("fixtures/own-theme")?.hasAttribute("data-demo-own-theme")).toBe(true);
+    for (const svg of svgs) {
+      const families = fontFamilies(svg);
+      expect(families.length, svg.getAttribute("data-theme") ?? "").toBeGreaterThan(0);
+      expect(families.every((family) => family.startsWith('"Inter Variable"'))).toBe(true);
+    }
+  });
+
+  it("lays the compact demo out 360 wide and caps its stage there", () => {
+    const svgs = staticSvgs("fixtures/compact");
+    expect(svgs.map((svg) => svg.getAttribute("viewBox")?.split(" ")[2])).toEqual(["360", "360"]);
+    expect(
+      demo("fixtures/compact")?.querySelector("[data-demo-stage]")?.getAttribute("style"),
+    ).toContain("--demo-width: 360px");
+  });
+
+  it("writes the host options on the spec script of a demo that sets a renderer", () => {
+    const script = demo("fixtures/compact")?.querySelector("script[data-demo-spec]");
+    expect(JSON.parse(script?.getAttribute("data-demo-mount") ?? "null")).toEqual({
+      renderer: "svg",
+    });
   });
 });
 

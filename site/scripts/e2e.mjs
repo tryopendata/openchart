@@ -1,4 +1,6 @@
-// Runs the Playwright tests against the production build. Exits 127 when
+// Runs the Playwright tests against the production build. Arguments after the
+// script name go to `playwright test` (a leading `--` is dropped), so
+// `node scripts/e2e.mjs -- --grep-invert @controls` filters tests. Exits 127 when
 // Playwright or its Chromium is missing, so `stacks verify` records the browser
 // step as blocked by the environment rather than as a failing test. `make e2e`
 // calls this too, but make turns every failure into status 2, so verify runs it
@@ -30,4 +32,6 @@ const run = (command, args) => {
 };
 
 if (!existsSync("dist/index.html")) run("bunx", ["--no-install", "astro", "build"]);
-run("bunx", ["--no-install", "playwright", "test"]);
+const extra = process.argv.slice(2);
+if (extra[0] === "--") extra.shift();
+run("bunx", ["--no-install", "playwright", "test", ...extra]);

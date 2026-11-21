@@ -1,0 +1,32 @@
+---
+title: "Introduction"
+description: "What OpenChart makes, shown as published graphics, and how these docs are organized."
+section: get-started
+order: 0
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+OpenChart draws charts, tables, graphs and maps from a JSON spec. A spec holds the data, the mark and encoding, and the text around the chart, and the library handles scales, label placement, accessibility and layout at any width. One spec renders in React, Vue, Svelte or plain JavaScript, and to static SVG for pages that run no script.
+
+<Demo id="change-over-time/line-basic" />
+
+Under each figure, Code opens the spec and the React, Vue, Svelte and vanilla JavaScript that draws it.
+
+<Demo id="tables/basic" />
+
+A table spec lists columns instead of encodings. This one sorts, searches and pages.
+
+<Demo id="maps/choropleth-basic" />
+
+A map spec joins each region's shape to a value by key, here a state's FIPS code.
+
+## How the docs are organized
+
+[Guides](/docs/get-started/getting-started/) take you from install to a working chart. They cover the four framework packages, rendering static SVG at build time, having a language model write specs, recipes for dashboards and for ranking and change, and the upgrade notes for versions 8 and 9.
+
+[Visualizations](/docs/comparison/bar/) has one page per chart type, table, graph and map, filed by what the reader should see: comparison, change over time, part to whole, distribution, correlation, flow, maps, tables and composition. Each page shows live examples.
+
+[Building blocks](/docs/the-spec/anatomy/) explain the parts of a spec one at a time: encoding, scales and axes, the title and annotations around a chart, themes, motion, interaction and export.
+
+[Reference](/docs/spec/overview/) lists every spec field, the API of each framework package, the theming tokens, and the JSON Schema and llms.txt files for tools and agents.

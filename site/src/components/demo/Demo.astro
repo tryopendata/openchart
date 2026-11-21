@@ -3,13 +3,16 @@
  * Renders the demo figure for a registered demo id: static SVGs in both themes,
  * the embedded spec src/scripts/demos.ts mounts live (playing the library's
  * entrance when it is first seen, unless the demo turns `entrance` off), and the
- * collapsed code under a Show code and Copy toolbar. A demo
- * that is unknown or whose spec fails validation fails the build, naming the page.
+ * collapsed code under a Show code and Copy toolbar, with any reader controls
+ * between the stage and the caption. A demo that is unknown, whose spec or any
+ * state's spec fails validation, or that puts controls on a spec other than a
+ * chart or layer fails the build, naming the page.
  * Large values the page's figures share are written once per page, recorded
  * against `Astro.locals`, which is fresh for each page render.
  */
 import { getDemo } from "../../demos/registry";
 import { DEFAULT_DEMO_HEIGHT, type DemoDef } from "../../demos/types";
+import { validateDemoControls } from "../../lib/demo/controls";
 import { demoFigureHtml } from "../../lib/demo/figure";
 import { pageSharedHashes } from "../../lib/demo/shared-values";
 import { validateDemo } from "../../lib/demo/validate";
@@ -26,6 +29,7 @@ let demo: DemoDef;
 try {
   demo = getDemo(id);
   validateDemo(id, demo.spec);
+  validateDemoControls(demo);
 } catch (error) {
   const reason = error instanceof Error ? error.message : String(error);
   throw new Error(`${Astro.url.pathname} renders <Demo id="${id}" />: ${reason}`, {
@@ -44,6 +48,10 @@ const figure = await demoFigureHtml({
   tabs,
   static: demo.static ?? true,
   pageShared: pageSharedHashes(Astro.locals),
+  pageTheme: demo.pageTheme ?? true,
+  width: demo.width,
+  mount: demo.mount,
+  controls: demo.controls,
 });
 ---
 

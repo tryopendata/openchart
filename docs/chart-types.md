@@ -357,7 +357,7 @@ const spec = {
 
 Options: `nodeWidth`, `nodePadding`, `nodeAlign` (`'justify'` | `'left'` | `'right'` | `'center'`), `linkStyle` (`'gradient'` | `'source'` | `'target'` | `'neutral'`), `encoding.value.format` for number formatting (top-level `valueFormat` is removed in v9).
 
-For the full field reference, see [SankeySpec in spec-reference.md](spec-reference.md#sankeyspec).
+For the full field reference, see [SankeySpec in spec-reference.md](reference/sankey-spec.md#sankeyspec-1).
 
 **Live examples**: [Energy flow](https://tryopendata.github.io/openchart/?story=sankey---tile-maps--sankey-and-tile-maps#energy-flow) | [Budget allocation](https://tryopendata.github.io/openchart/?story=sankey---tile-maps--sankey-and-tile-maps#budget-allocation) | [User journey](https://tryopendata.github.io/openchart/?story=sankey---tile-maps--sankey-and-tile-maps#user-journey)
 
@@ -396,7 +396,7 @@ const spec = {
 
 Add a `points` layer for symbol overlays (`longitude`/`latitude` channels, optional `size` and `color`), and `geo.focus` to zoom the camera to a feature, a set of features, or the point cluster. `geo.zoom: true` lets readers zoom and pan (ctrl/cmd + wheel, pinch, drag, double-click, keyboard, and on-screen buttons). Vanilla uses `createGeoMap(container, spec)`.
 
-For the full field reference, see [GeoMapSpec in spec-reference.md](spec-reference.md#geomapspec).
+For the full field reference, see [GeoMapSpec in spec-reference.md](reference/geomap-spec.md#geomapspec-1).
 
 **Live examples**: [US choropleth](https://tryopendata.github.io/openchart/?story=maps--maps#us-state-unemployment) | [World projections](https://tryopendata.github.io/openchart/?story=maps--maps#world-equal-earth) | [Zoom to feature](https://tryopendata.github.io/openchart/?story=maps--maps#zoom-to-feature) | [Point layer](https://tryopendata.github.io/openchart/?story=maps--maps#point-layer)
 
@@ -426,7 +426,7 @@ const spec = {
 
 `palette` picks the sequential scale: `'blue'` (default), `'green'`, `'orange'`, `'purple'`, or `'teal'`. Note that `scale.scheme` on tilemap encoding channels fails validation; the top-level `palette` property is the mechanism tilemaps use. Format numbers with `encoding.value.format` (a d3-format string). Vanilla uses `createTileMap(container, spec)`.
 
-For the full field reference, see [TileMapSpec in spec-reference.md](spec-reference.md#tilemapspec).
+For the full field reference, see [TileMapSpec in spec-reference.md](reference/tilemap-spec.md#tilemapspec-1).
 
 **Live examples**: [Quantitative](https://tryopendata.github.io/openchart/?story=sankey---tile-maps--sankey-and-tile-maps#quantitative) | [Categorical](https://tryopendata.github.io/openchart/?story=sankey---tile-maps--sankey-and-tile-maps#categorical) | [Palette variants](https://tryopendata.github.io/openchart/?story=sankey---tile-maps--sankey-and-tile-maps#palettes) | [Partial data](https://tryopendata.github.io/openchart/?story=sankey---tile-maps--sankey-and-tile-maps#partial-data)
 
@@ -747,7 +747,7 @@ const spec = {
 
 **When to use layers vs. multi-series:** If your data has multiple series of the same mark type (e.g., US vs UK lines), use a single chart with a `color` encoding. Use layers when you need different mark types or independent datasets on the same axes.
 
-See [LayerSpec](spec-reference.md#layerspec) for the full field reference.
+See [LayerSpec](reference/layer-spec.md#layerspec-1) for the full field reference.
 
 ---
 
@@ -795,7 +795,7 @@ Shared scales keep panels directly comparable; independent scales let each panel
 
 Each panel compiles as a regular chart with a header showing the facet value. Panels have a 200px minimum width (columns degrade responsively below that) and the figure grows taller when panels would fall under 100px.
 
-See [Faceting in spec-reference.md](spec-reference.md#faceting) for the full field reference.
+See [Faceting in spec-reference.md](reference/encoding.md#faceting) for the full field reference.
 
 **Live examples**: [Shared scales](https://tryopendata.github.io/openchart/?story=features--data-and-encoding#facet-shared) | [Independent scales](https://tryopendata.github.io/openchart/?story=features--data-and-encoding#facet-independent) | [Row faceting](https://tryopendata.github.io/openchart/?story=features--data-and-encoding#row-facet)
 
@@ -857,4 +857,4 @@ const spec = {
 };
 ```
 
-OpenChart never computes confidence intervals, standard errors or quartiles: aggregate observations and supply bounds upstream. `extent` estimators are not supported. Error bars also work in layered sparkline cells. See [static rendering](static-rendering.md) and the [mark reference](spec-reference.md#errorbar).
+OpenChart never computes confidence intervals, standard errors or quartiles: aggregate observations and supply bounds upstream. `extent` estimators are not supported. Error bars also work in layered sparkline cells. See [static rendering](static-rendering.md) and the [mark reference](reference/chart-spec.md#errorbar).

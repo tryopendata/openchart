@@ -1,8 +1,15 @@
+---
+title: "Agent patterns"
+description: "Spec patterns by storytelling intent, each with its data shape, a complete spec and annotations."
+section: agents
+order: 2
+---
+
 # Visualization patterns cookbook
 
 Visualization patterns organized by data storytelling intent. Each pattern includes when to use it, the data shape it expects, a complete working spec, and annotation examples.
 
-All specs use realistic data with plausible numbers. Copy and adapt.
+Four patterns run live on cited data. The others use invented numbers, and their `chrome.source` reads "Source: <your source>" as a placeholder: replace both with your own data and citation. Pattern names such as column, scatter, donut and dot are chart forms, not values for `mark`: a column is `"bar"` with the category on x, a scatter is `"point"`, a donut is `{ "type": "arc", "innerRadius": 0.6 }` and a dot plot is `"circle"`.
 
 ## Contents
 
@@ -29,37 +36,74 @@ All specs use realistic data with plausible numbers. Copy and adapt.
 
 **Chart type:** `line` (single or multi-series). Use `area` if you want to emphasize volume. See it live: [single line](https://tryopendata.github.io/openchart/?story=charts--line-and-area#single-line), [multi-series](https://tryopendata.github.io/openchart/?story=charts--line-and-area#multi-series-labels), [area](https://tryopendata.github.io/openchart/?story=charts--line-and-area#area)
 
-```json
+```json demo title="US inflation" source="US Bureau of Labor Statistics, CPI-U (via FRED CPIAUCSL)" height=440
 {
-  "type": "line",
+  "mark": "line",
   "data": [
-    { "date": "2019-01", "rate": 3.6 },
-    { "date": "2019-07", "rate": 3.7 },
-    { "date": "2020-01", "rate": 3.5 },
-    { "date": "2020-04", "rate": 14.7 },
-    { "date": "2020-07", "rate": 10.2 },
-    { "date": "2020-10", "rate": 6.9 },
-    { "date": "2021-01", "rate": 6.7 },
-    { "date": "2021-07", "rate": 5.4 },
-    { "date": "2022-01", "rate": 4.0 },
-    { "date": "2022-07", "rate": 3.5 },
-    { "date": "2023-01", "rate": 3.4 },
-    { "date": "2023-07", "rate": 3.5 }
+    { "date": "2019-01-01", "rate": 1.6 },
+    { "date": "2019-04-01", "rate": 2 },
+    { "date": "2019-07-01", "rate": 1.8 },
+    { "date": "2019-10-01", "rate": 1.8 },
+    { "date": "2020-01-01", "rate": 2.5 },
+    { "date": "2020-04-01", "rate": 0.3 },
+    { "date": "2020-07-01", "rate": 1 },
+    { "date": "2020-10-01", "rate": 1.2 },
+    { "date": "2021-01-01", "rate": 1.4 },
+    { "date": "2021-04-01", "rate": 4.2 },
+    { "date": "2021-07-01", "rate": 5.4 },
+    { "date": "2021-10-01", "rate": 6.2 },
+    { "date": "2022-01-01", "rate": 7.5 },
+    { "date": "2022-04-01", "rate": 8.3 },
+    { "date": "2022-07-01", "rate": 8.5 },
+    { "date": "2022-10-01", "rate": 7.7 },
+    { "date": "2023-01-01", "rate": 6.4 },
+    { "date": "2023-04-01", "rate": 4.9 },
+    { "date": "2023-07-01", "rate": 3.2 },
+    { "date": "2023-10-01", "rate": 3.2 },
+    { "date": "2024-01-01", "rate": 3.1 },
+    { "date": "2024-04-01", "rate": 3.4 },
+    { "date": "2024-07-01", "rate": 2.9 },
+    { "date": "2024-10-01", "rate": 2.6 }
   ],
   "encoding": {
-    "x": { "field": "date", "type": "temporal" },
-    "y": { "field": "rate", "type": "quantitative", "axis": { "label": "Unemployment rate (%)", "format": ".1f" } }
+    "x": {
+      "field": "date",
+      "type": "temporal",
+      "axis": { "tickCount": 6 }
+    },
+    "y": {
+      "field": "rate",
+      "type": "quantitative",
+      "axis": { "title": "CPI (year-over-year %)", "format": ".1f", "grid": true },
+      "scale": {
+        "domain": [ 0, 10 ]
+      }
+    }
   },
   "chrome": {
-    "title": "Unemployment spiked to 14.7% in April 2020 then recovered within two years",
-    "subtitle": "US seasonally adjusted unemployment rate, Jan 2019 - Jul 2023",
-    "source": "Source: Bureau of Labor Statistics"
+    "title": "US inflation held above 4% in nine straight quarters, April 2021 to April 2023",
+    "subtitle": "US consumer price index, year-over-year % change, quarterly 2019–2024"
   },
   "labels": { "density": "endpoints" },
   "annotations": [
-    { "type": "text", "x": "2020-04", "y": 14.7, "text": "COVID peak: 14.7%", "anchor": "right", "offset": { "dx": 8 } },
-    { "type": "refline", "y": 5.0, "label": "Pre-pandemic average", "style": "dashed", "stroke": "#999" },
-    { "type": "range", "x1": "2020-03", "x2": "2020-06", "label": "Initial lockdowns", "fill": "#c44e52", "opacity": 0.08 }
+    {
+      "type": "text",
+      "x": "2022-07-01",
+      "y": 8.5,
+      "text": "Peak: 8.5%",
+      "anchor": "top",
+      "offset": { "dx": 0, "dy": -20 },
+      "connector": true
+    },
+    { "type": "refline", "y": 2, "label": "2%", "style": "dashed", "stroke": "#999" },
+    {
+      "type": "range",
+      "x1": "2021-04-01",
+      "x2": "2023-04-01",
+      "label": "Above 4%",
+      "fill": "#c44e52",
+      "opacity": 0.08
+    }
   ]
 }
 ```
@@ -68,7 +112,7 @@ All specs use realistic data with plausible numbers. Copy and adapt.
 
 ```json
 {
-  "type": "line",
+  "mark": "line",
   "data": [
     { "year": "2020", "fuel": "Coal", "twh": 9421 },
     { "year": "2021", "fuel": "Coal", "twh": 10244 },
@@ -85,13 +129,13 @@ All specs use realistic data with plausible numbers. Copy and adapt.
   ],
   "encoding": {
     "x": { "field": "year", "type": "temporal" },
-    "y": { "field": "twh", "type": "quantitative", "axis": { "label": "Generation (TWh)", "format": ",.0f" } },
+    "y": { "field": "twh", "type": "quantitative", "axis": { "title": "Generation (TWh)", "format": ",.0f" } },
     "color": { "field": "fuel", "type": "nominal" }
   },
   "chrome": {
     "title": "Solar and wind are closing the gap on coal",
     "subtitle": "Global electricity generation by source, terawatt-hours",
-    "source": "Source: Energy Institute Statistical Review"
+    "source": "Source: <your source>"
   }
 }
 ```
@@ -106,29 +150,39 @@ All specs use realistic data with plausible numbers. Copy and adapt.
 
 **Chart type:** `bar` (horizontal). Horizontal bars make long category labels easy to read. See it live: [simple bars](https://tryopendata.github.io/openchart/?story=charts--bar-and-column#simple-bars), [grouped bars](https://tryopendata.github.io/openchart/?story=charts--bar-and-column#grouped-columns)
 
-```json
+```json demo title="State population change" source="U.S. Census Bureau Population Estimates" height=460
 {
-  "type": "bar",
+  "mark": "bar",
   "data": [
-    { "company": "Apple", "revenue": 383.3 },
-    { "company": "Microsoft", "revenue": 227.6 },
-    { "company": "Alphabet", "revenue": 307.4 },
-    { "company": "Amazon", "revenue": 574.8 },
-    { "company": "Meta", "revenue": 134.9 },
-    { "company": "Nvidia", "revenue": 60.9 },
-    { "company": "Tesla", "revenue": 96.8 }
+    { "state": "Idaho", "change": 10.4 },
+    { "state": "Florida", "change": 8.9 },
+    { "state": "Texas", "change": 8.8 },
+    { "state": "Montana", "change": 7.5 },
+    { "state": "South Carolina", "change": 6.8 },
+    { "state": "North Carolina", "change": 5.9 },
+    { "state": "Georgia", "change": 4.1 },
+    { "state": "Colorado", "change": 3.2 },
+    { "state": "California", "change": -0.5 },
+    { "state": "Illinois", "change": -0.8 },
+    { "state": "New York", "change": -1 },
+    { "state": "Hawaii", "change": -1.5 },
+    { "state": "West Virginia", "change": -1.5 }
   ],
   "encoding": {
-    "x": { "field": "revenue", "type": "quantitative", "axis": { "format": "$,.0f", "label": "Revenue ($B)" } },
-    "y": { "field": "company", "type": "nominal" }
+    "x": {
+      "field": "change",
+      "type": "quantitative",
+      "axis": { "title": "Population change (%)", "format": "+.1f" }
+    },
+    "y": { "field": "state", "type": "nominal", "sort": null }
   },
   "chrome": {
-    "title": "Amazon leads Big Tech in revenue, nearly double Apple",
-    "subtitle": "Annual revenue in billions, fiscal year 2023",
-    "source": "Source: Company filings"
+    "title": "Idaho's population grew 10.4% from April 2020 to July 2024, the most of the 13 states shown",
+    "subtitle": "Population change by US state, April 2020 to July 2024, %"
   },
+  "labels": { "density": "all", "format": "+.1f" },
   "annotations": [
-    { "type": "refline", "x": 200, "label": "$200B threshold", "style": "dashed" }
+    { "type": "refline", "x": 0, "style": "solid", "stroke": "#999" }
   ]
 }
 ```
@@ -137,7 +191,7 @@ All specs use realistic data with plausible numbers. Copy and adapt.
 
 ```json
 {
-  "type": "bar",
+  "mark": "bar",
   "data": [
     { "country": "China", "source": "Renewable", "gw": 1340 },
     { "country": "China", "source": "Fossil", "gw": 1390 },
@@ -149,14 +203,14 @@ All specs use realistic data with plausible numbers. Copy and adapt.
     { "country": "Germany", "source": "Fossil", "gw": 90 }
   ],
   "encoding": {
-    "x": { "field": "gw", "type": "quantitative", "axis": { "format": ",.0f", "label": "Installed capacity (GW)" } },
+    "x": { "field": "gw", "type": "quantitative", "axis": { "format": ",.0f", "title": "Installed capacity (GW)" } },
     "y": { "field": "country", "type": "nominal" },
     "color": { "field": "source", "type": "nominal" }
   },
   "chrome": {
     "title": "China has nearly matched fossil fuel capacity with renewables",
     "subtitle": "Installed power generation capacity by source, 2023",
-    "source": "Source: IRENA Renewable Capacity Statistics"
+    "source": "Source: <your source>"
   }
 }
 ```
@@ -173,7 +227,7 @@ All specs use realistic data with plausible numbers. Copy and adapt.
 
 ```json
 {
-  "type": "donut",
+  "mark": { "type": "arc", "innerRadius": 0.6 },
   "data": [
     { "browser": "Chrome", "share": 64.7 },
     { "browser": "Safari", "share": 18.6 },
@@ -188,7 +242,7 @@ All specs use realistic data with plausible numbers. Copy and adapt.
   "chrome": {
     "title": "Chrome commands nearly two-thirds of global browser usage",
     "subtitle": "Desktop browser market share, January 2024",
-    "source": "Source: StatCounter Global Stats"
+    "source": "Source: <your source>"
   }
 }
 ```
@@ -197,7 +251,7 @@ All specs use realistic data with plausible numbers. Copy and adapt.
 
 ```json
 {
-  "type": "column",
+  "mark": "bar",
   "data": [
     { "year": "2019", "type": "Remote", "pct": 5.7 },
     { "year": "2019", "type": "Hybrid", "pct": 8.3 },
@@ -211,13 +265,13 @@ All specs use realistic data with plausible numbers. Copy and adapt.
   ],
   "encoding": {
     "x": { "field": "year", "type": "ordinal" },
-    "y": { "field": "pct", "type": "quantitative", "axis": { "format": ".0f", "label": "Share (%)" } },
+    "y": { "field": "pct", "type": "quantitative", "axis": { "format": ".0f", "title": "Share (%)" } },
     "color": { "field": "type", "type": "nominal" }
   },
   "chrome": {
     "title": "Hybrid work settled at 29% after the post-pandemic spike in remote",
     "subtitle": "US workforce distribution by work arrangement",
-    "source": "Source: Pew Research Center"
+    "source": "Source: <your source>"
   }
 }
 ```
@@ -232,36 +286,66 @@ All specs use realistic data with plausible numbers. Copy and adapt.
 
 **Chart type:** `scatter`. Add `size` encoding for a bubble chart. Add `color` for group differentiation. See it live: [scatter](https://tryopendata.github.io/openchart/?story=charts--scatter-and-distribution#basic-scatter), [bubble](https://tryopendata.github.io/openchart/?story=charts--scatter-and-distribution#bubble)
 
-```json
+```json demo title="GDP per person and life expectancy" source="World Bank WDI, OWID (PPP GDP), WHO Global Health Observatory" height=500
 {
-  "type": "scatter",
+  "mark": { "type": "point", "trendline": false },
   "data": [
-    { "country": "US", "gdpPerCapita": 76330, "co2PerCapita": 14.4, "pop": 331 },
-    { "country": "China", "gdpPerCapita": 12556, "co2PerCapita": 8.0, "pop": 1412 },
-    { "country": "Germany", "gdpPerCapita": 51204, "co2PerCapita": 8.1, "pop": 83 },
-    { "country": "India", "gdpPerCapita": 2389, "co2PerCapita": 1.9, "pop": 1408 },
-    { "country": "Brazil", "gdpPerCapita": 8918, "co2PerCapita": 2.3, "pop": 214 },
-    { "country": "Japan", "gdpPerCapita": 33815, "co2PerCapita": 8.5, "pop": 125 },
-    { "country": "UK", "gdpPerCapita": 46125, "co2PerCapita": 5.2, "pop": 67 },
-    { "country": "Nigeria", "gdpPerCapita": 2184, "co2PerCapita": 0.6, "pop": 218 },
-    { "country": "France", "gdpPerCapita": 43659, "co2PerCapita": 4.6, "pop": 68 },
-    { "country": "Australia", "gdpPerCapita": 64964, "co2PerCapita": 15.1, "pop": 26 }
+    { "country": "India", "gdpPerCapita": 9818, "lifeExpectancy": 68.3, "population": 1438069596 },
+    { "country": "China", "gdpPerCapita": 23846, "lifeExpectancy": 76.1, "population": 1410710000 },
+    { "country": "United States", "gdpPerCapita": 75489, "lifeExpectancy": 79.2, "population": 336806231 },
+    { "country": "Indonesia", "gdpPerCapita": 14470, "lifeExpectancy": 69, "population": 281190067 },
+    { "country": "Brazil", "gdpPerCapita": 19652, "lifeExpectancy": 75.3, "population": 211140729 },
+    { "country": "Mexico", "gdpPerCapita": 22040, "lifeExpectancy": 76.9, "population": 129739759 },
+    { "country": "Japan", "gdpPerCapita": 46107, "lifeExpectancy": 83.6, "population": 124516650 },
+    { "country": "Germany", "gdpPerCapita": 63676, "lifeExpectancy": 80.8, "population": 83287273 },
+    { "country": "United Kingdom", "gdpPerCapita": 53139, "lifeExpectancy": 81.4, "population": 68492000 },
+    { "country": "France", "gdpPerCapita": 54799, "lifeExpectancy": 82.4, "population": 68372286 },
+    { "country": "South Korea", "gdpPerCapita": 55071, "lifeExpectancy": 81.9, "population": 51712619 },
+    { "country": "Canada", "gdpPerCapita": 58321, "lifeExpectancy": 82.2, "population": 40083484 }
   ],
   "encoding": {
-    "x": { "field": "gdpPerCapita", "type": "quantitative", "axis": { "label": "GDP per capita ($)", "format": "$,.0f" } },
-    "y": { "field": "co2PerCapita", "type": "quantitative", "axis": { "label": "CO2 emissions per capita (tons)" } },
-    "size": { "field": "pop", "type": "quantitative" },
-    "color": { "field": "country", "type": "nominal" }
+    "x": {
+      "field": "gdpPerCapita",
+      "type": "quantitative",
+      "axis": { "title": "GDP per capita (PPP, international $)", "format": "$,.0f" }
+    },
+    "y": {
+      "field": "lifeExpectancy",
+      "type": "quantitative",
+      "axis": { "title": "Life expectancy (years)" },
+      "scale": {
+        "zero": false,
+        "domain": [ 66, 86 ]
+      }
+    },
+    "size": {
+      "field": "population",
+      "type": "quantitative",
+      "scale": {
+        "range": [ 4, 20 ]
+      }
+    },
+    "tooltip": [
+      { "field": "country", "type": "nominal", "title": "Country" },
+      { "field": "gdpPerCapita", "type": "quantitative", "title": "GDP per capita", "format": "$,.0f" },
+      { "field": "lifeExpectancy", "type": "quantitative", "title": "Life expectancy" }
+    ]
   },
   "chrome": {
-    "title": "Wealthier nations tend to emit more CO2 per person",
-    "subtitle": "GDP per capita vs CO2 emissions per capita, bubble size = population, 2022",
-    "source": "Source: World Bank, Global Carbon Project"
+    "title": "All seven of these economies above $45,000 GDP per person have a life expectancy over 79 years",
+    "subtitle": "GDP per capita vs. life expectancy at birth, twelve large economies. Circle size = population."
   },
   "annotations": [
-    { "type": "text", "x": 76330, "y": 14.4, "text": "US: high income, high emissions", "anchor": "left", "offset": { "dx": -10, "dy": -8 } },
-    { "type": "text", "x": 2389, "y": 1.9, "text": "India: low income, low emissions", "anchor": "right", "offset": { "dx": 10, "dy": 5 } },
-    { "type": "refline", "y": 6.0, "label": "World average", "style": "dashed", "stroke": "#999" }
+    { "type": "refline", "x": 45000, "label": "$45,000", "style": "dashed", "stroke": "#999" },
+    {
+      "type": "text",
+      "x": 75489,
+      "y": 79.2,
+      "text": "US: 79.2 years, the lowest of the seven",
+      "connector": true,
+      "anchor": "left",
+      "offset": { "dx": -24, "dy": 24 }
+    }
   ]
 }
 ```
@@ -276,34 +360,41 @@ All specs use realistic data with plausible numbers. Copy and adapt.
 
 **Chart type:** `column` (vertical). Use ordinal for the x-axis since periods are discrete buckets. See it live: [columns](https://tryopendata.github.io/openchart/?story=charts--bar-and-column#columns), [grouped](https://tryopendata.github.io/openchart/?story=charts--bar-and-column#grouped-columns)
 
-```json
+```json demo title="New York monthly high temperature" source="NOAA GHCN Daily, Central Park (USW00094728)" height=440
 {
-  "type": "column",
+  "mark": "bar",
   "data": [
-    { "month": "Jan", "rainfall": 78 },
-    { "month": "Feb", "rainfall": 62 },
-    { "month": "Mar", "rainfall": 55 },
-    { "month": "Apr", "rainfall": 41 },
-    { "month": "May", "rainfall": 33 },
-    { "month": "Jun", "rainfall": 15 },
-    { "month": "Jul", "rainfall": 3 },
-    { "month": "Aug", "rainfall": 5 },
-    { "month": "Sep", "rainfall": 18 },
-    { "month": "Oct", "rainfall": 42 },
-    { "month": "Nov", "rainfall": 65 },
-    { "month": "Dec", "rainfall": 82 }
+    { "month": "Jan", "high": 9.3 },
+    { "month": "Feb", "high": 9.2 },
+    { "month": "Mar", "high": 10.8 },
+    { "month": "Apr", "high": 19 },
+    { "month": "May", "high": 22.1 },
+    { "month": "Jun", "high": 25.4 },
+    { "month": "Jul", "high": 30.2 },
+    { "month": "Aug", "high": 27.6 },
+    { "month": "Sep", "high": 24.3 },
+    { "month": "Oct", "high": 19.3 },
+    { "month": "Nov", "high": 11.8 },
+    { "month": "Dec", "high": 9.8 }
   ],
   "encoding": {
     "x": { "field": "month", "type": "ordinal" },
-    "y": { "field": "rainfall", "type": "quantitative", "axis": { "label": "Rainfall (mm)", "format": ".0f" } }
+    "y": {
+      "field": "high",
+      "type": "quantitative",
+      "scale": {
+        "domain": [ 0, 40 ]
+      },
+      "axis": { "title": "Average daily high (°C)", "format": ".0f" }
+    }
   },
   "chrome": {
-    "title": "San Diego gets almost no rain from June through August",
-    "subtitle": "Average monthly rainfall in millimeters, 1991-2020 normals",
-    "source": "Source: NOAA Climate Data"
+    "title": "New York's average daily high in 2023 was 30.2°C in July and 9.2°C in February",
+    "subtitle": "Average daily high temperature by month, Central Park, 2023, °C"
   },
+  "labels": { "density": "all", "format": ".1f" },
   "annotations": [
-    { "type": "range", "x1": "Jun", "x2": "Aug", "label": "Dry season", "fill": "#d47215", "opacity": 0.08 }
+    { "type": "range", "x1": "Jun", "x2": "Aug", "label": "Summer", "fill": "#d47215", "opacity": 0.08 }
   ]
 }
 ```
@@ -312,7 +403,7 @@ All specs use realistic data with plausible numbers. Copy and adapt.
 
 ```json
 {
-  "type": "column",
+  "mark": "bar",
   "data": [
     { "quarter": "Q1", "year": "2023", "sales": 4.2 },
     { "quarter": "Q2", "year": "2023", "sales": 5.1 },
@@ -325,13 +416,13 @@ All specs use realistic data with plausible numbers. Copy and adapt.
   ],
   "encoding": {
     "x": { "field": "quarter", "type": "ordinal" },
-    "y": { "field": "sales", "type": "quantitative", "axis": { "format": "$,.1f", "label": "Revenue ($B)" } },
+    "y": { "field": "sales", "type": "quantitative", "axis": { "format": "$,.1f", "title": "Revenue ($B)" } },
     "color": { "field": "year", "type": "nominal" }
   },
   "chrome": {
     "title": "2024 outperformed 2023 in every quarter",
     "subtitle": "Quarterly revenue comparison in billions",
-    "source": "Source: Finance team"
+    "source": "Source: <your source>"
   }
 }
 ```
@@ -348,7 +439,7 @@ All specs use realistic data with plausible numbers. Copy and adapt.
 
 ```json
 {
-  "type": "dot",
+  "mark": "circle",
   "data": [
     { "dept": "Engineering", "salary": 185000 },
     { "dept": "Engineering", "salary": 162000 },
@@ -370,13 +461,13 @@ All specs use realistic data with plausible numbers. Copy and adapt.
     { "dept": "Sales", "salary": 82000 }
   ],
   "encoding": {
-    "x": { "field": "salary", "type": "quantitative", "axis": { "format": "$,.0f", "label": "Annual salary" } },
+    "x": { "field": "salary", "type": "quantitative", "axis": { "format": "$,.0f", "title": "Annual salary" } },
     "y": { "field": "dept", "type": "nominal" }
   },
   "chrome": {
     "title": "Sales has the widest salary range; Engineering clusters higher",
     "subtitle": "Individual salaries by department, 2024 compensation data",
-    "source": "Source: HR analytics"
+    "source": "Source: <your source>"
   },
   "annotations": [
     { "type": "refline", "x": 130000, "label": "Company median: $130K", "style": "dashed" }
@@ -438,13 +529,13 @@ All specs use realistic data with plausible numbers. Copy and adapt.
 
 ## 8. Annotated Infographic
 
-**When to use:** You want to tell a rich data story with multiple annotations. The chart is the visual anchor, and annotations layer in context, thresholds, time periods, and callouts to create an editorial-quality graphic.
+**When to use:** You want to tell a rich data story with multiple annotations. The chart is the visual anchor, and annotations layer in context, thresholds, time periods, and callouts.
 
 **Data shape:** Same as a trend chart, but the annotations carry the narrative weight.
 
 ```json
 {
-  "type": "line",
+  "mark": "line",
   "data": [
     { "date": "2019-01", "price": 3714 },
     { "date": "2019-04", "price": 5267 },
@@ -473,12 +564,12 @@ All specs use realistic data with plausible numbers. Copy and adapt.
   ],
   "encoding": {
     "x": { "field": "date", "type": "temporal" },
-    "y": { "field": "price", "type": "quantitative", "axis": { "format": "$,.0f", "label": "Price (USD)" }, "scale": { "zero": false } }
+    "y": { "field": "price", "type": "quantitative", "axis": { "format": "$,.0f", "title": "Price (USD)" }, "scale": { "zero": false } }
   },
   "chrome": {
     "title": "Bitcoin's volatile path to $72K",
     "subtitle": "Monthly closing price, January 2019 through October 2024",
-    "source": "Source: CoinGecko",
+    "source": "Source: <your source>",
     "byline": "OpenData Research"
   },
   "annotations": [
@@ -555,7 +646,7 @@ All specs use realistic data with plausible numbers. Copy and adapt.
 
 **Responsive annotation defaults:** Omit offsets and anchors when automatic placement is sufficient. Lower `priority` values stay inline first; compact charts keep one eligible text callout and put the rest in wrapped notes, including subtitles. `responsive: false` pins a callout inline and can cause overlap at narrow widths. Use `maxWidth: null` or `responsive.compactAnnotationLimit: null` only when an unlimited layout is intentional. Source-order note numbers may have gaps. Curves do not imply arrows; use `{ "type": "curve", "arrow": true }` explicitly.
 
-**Combining annotations:** Layer them. Ranges go behind the data (low opacity). Reference lines mark horizontal/vertical thresholds. Text callouts highlight specific inflection points or notable data values. This layering creates visual depth.
+**Combining annotations:** Layer them. Ranges go behind the data (low opacity). Reference lines mark horizontal/vertical thresholds. Text callouts highlight specific inflection points or notable data values.
 
 ---
 
@@ -569,7 +660,7 @@ All specs use realistic data with plausible numbers. Copy and adapt.
 
 ```json
 {
-  "type": "line",
+  "mark": "line",
   "data": [
     { "date": "2024-01", "price": 185, "ticker": "AAPL" },
     { "date": "2024-04", "price": 170, "ticker": "AAPL" },
@@ -586,13 +677,13 @@ All specs use realistic data with plausible numbers. Copy and adapt.
   ],
   "encoding": {
     "x": { "field": "date", "type": "temporal" },
-    "y": { "field": "price", "type": "quantitative", "axis": { "format": "$,.0f", "label": "Stock price" } },
+    "y": { "field": "price", "type": "quantitative", "axis": { "format": "$,.0f", "title": "Stock price" } },
     "detail": { "field": "ticker", "type": "nominal" }
   },
   "chrome": {
     "title": "All three stocks trended upward through 2024",
     "subtitle": "Quarterly closing prices, Jan-Oct 2024",
-    "source": "Source: Market data"
+    "source": "Source: <your source>"
   }
 }
 ```
@@ -607,7 +698,7 @@ The `aggregate` property on an encoding channel lets the engine summarize data b
 
 ```json
 {
-  "type": "bar",
+  "mark": "bar",
   "data": [
     { "region": "West", "revenue": 42000 },
     { "region": "West", "revenue": 38000 },
@@ -622,7 +713,7 @@ The `aggregate` property on an encoding channel lets the engine summarize data b
   },
   "chrome": {
     "title": "East region leads in total revenue",
-    "source": "Source: Finance team"
+    "source": "Source: <your source>"
   }
 }
 ```
@@ -633,7 +724,7 @@ Available operations: `sum`, `mean`, `median`, `min`, `max`, `count`. Use `sum` 
 
 ## Network graphs
 
-For network and relationship data, use `type: 'graph'` with `nodes` and `edges` instead of `data` and `encoding`. Graphs use force-directed layout on canvas. See it live: [basic graph](https://tryopendata.github.io/openchart/?story=graphs--graphs#basic), [community clusters](https://tryopendata.github.io/openchart/?story=graphs--graphs#communities), [encoded graph](https://tryopendata.github.io/openchart/?story=graphs--graphs#encoded). See the [spec reference](spec-reference.md#graphspec) for the full GraphSpec definition, the [graphs guide](graphs.md) for layout and encoding details, and the [integration guide](integration-guide.md#graph-visualization) for interaction patterns.
+For network and relationship data, use `type: 'graph'` with `nodes` and `edges` instead of `data` and `encoding`. Graphs use force-directed layout on canvas. See it live: [basic graph](https://tryopendata.github.io/openchart/?story=graphs--graphs#basic), [community clusters](https://tryopendata.github.io/openchart/?story=graphs--graphs#communities), [encoded graph](https://tryopendata.github.io/openchart/?story=graphs--graphs#encoded). See the [spec reference](reference/graph-spec.md#graphspec-1) for the full GraphSpec definition, the [graphs guide](graphs.md) for layout and encoding details, and the [Graph visualization](reference/graph-spec.md#graph-visualization) section for interaction patterns.
 
 ---
 

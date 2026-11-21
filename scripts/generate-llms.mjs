@@ -326,7 +326,7 @@ function App() {
 
 ## Scrollytelling
 
-Vanilla ships a scrollytelling story API on a subpath: \`@opendata-ai/openchart-vanilla/story\`. It drives a pinned chart through steps as the reader scrolls, tweening between spec states. See \`docs/spec-reference.md\` for the story builder API.
+Vanilla ships a scrollytelling story API on a subpath: \`@opendata-ai/openchart-vanilla/story\`. It drives a pinned chart through steps as the reader scrolls, tweening between spec states. See [Scrollytelling](https://openchart.steamfield.io/docs/behavior/scrollytelling/) for the story builder API.
 
 ## Full documentation
 
@@ -345,6 +345,30 @@ Vanilla ships a scrollytelling story API on a subpath: \`@opendata-ai/openchart-
 const FULL_DOCS = [
   'getting-started.md',
   'spec-reference.md',
+  'reference/chart-spec.md',
+  'reference/layer-spec.md',
+  'reference/encoding.md',
+  'reference/marks.md',
+  'reference/chrome.md',
+  'reference/transforms.md',
+  'reference/annotations.md',
+  'reference/animation.md',
+  'reference/theme.md',
+  'reference/table-spec.md',
+  'reference/graph-spec.md',
+  'reference/sankey-spec.md',
+  'reference/tilemap-spec.md',
+  'reference/geomap-spec.md',
+  'reference/barlist-spec.md',
+  'reference/authoring.md',
+  'reference/vanilla.md',
+  'reference/react.md',
+  'reference/vue.md',
+  'reference/svelte.md',
+  'reference/events.md',
+  'reference/export.md',
+  'reference/table-state.md',
+  'reference/json-schema.md',
   'chart-types.md',
   'static-rendering.md',
   'graphs.md',

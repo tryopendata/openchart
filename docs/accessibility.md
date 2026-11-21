@@ -1,6 +1,60 @@
+---
+title: "Accessibility"
+description: "What every chart does for screen readers and keyboards, the options you add, and the WCAG 2.1 mapping."
+section: output
+order: 1
+---
+
 # Accessibility
 
 What openchart does for accessibility automatically, what you can opt into, and how it maps to WCAG 2.1. If you're filling out a procurement checklist, this page is the answer key.
+
+```json demo title="US inflation with authored alt text" source="US Bureau of Labor Statistics, CPI-U (via FRED CPIAUCSL)" height=420
+{
+  "mark": { "type": "line", "strokeWidth": 2.5 },
+  "description": "US inflation fell to 0.3% in the second quarter of 2020, rose to a peak of 8.5% in the third quarter of 2022, then eased to 2.6% by the end of 2024.",
+  "data": [
+    { "date": "2019-01-01", "rate": 1.6 },
+    { "date": "2019-04-01", "rate": 2.0 },
+    { "date": "2019-07-01", "rate": 1.8 },
+    { "date": "2019-10-01", "rate": 1.8 },
+    { "date": "2020-01-01", "rate": 2.5 },
+    { "date": "2020-04-01", "rate": 0.3 },
+    { "date": "2020-07-01", "rate": 1.0 },
+    { "date": "2020-10-01", "rate": 1.2 },
+    { "date": "2021-01-01", "rate": 1.4 },
+    { "date": "2021-04-01", "rate": 4.2 },
+    { "date": "2021-07-01", "rate": 5.4 },
+    { "date": "2021-10-01", "rate": 6.2 },
+    { "date": "2022-01-01", "rate": 7.5 },
+    { "date": "2022-04-01", "rate": 8.3 },
+    { "date": "2022-07-01", "rate": 8.5 },
+    { "date": "2022-10-01", "rate": 7.7 },
+    { "date": "2023-01-01", "rate": 6.4 },
+    { "date": "2023-04-01", "rate": 4.9 },
+    { "date": "2023-07-01", "rate": 3.2 },
+    { "date": "2023-10-01", "rate": 3.2 },
+    { "date": "2024-01-01", "rate": 3.1 },
+    { "date": "2024-04-01", "rate": 3.4 },
+    { "date": "2024-07-01", "rate": 2.9 },
+    { "date": "2024-10-01", "rate": 2.6 }
+  ],
+  "encoding": {
+    "x": { "field": "date", "type": "temporal", "axis": { "tickCount": 6 } },
+    "y": {
+      "field": "rate",
+      "type": "quantitative",
+      "axis": { "title": "Year-over-year change (%)", "format": ".0f", "grid": true }
+    }
+  },
+  "chrome": {
+    "title": "US inflation peaked at 8.5% in 2022 and eased to 2.6% by the end of 2024",
+    "subtitle": "Consumer price index, year-over-year change, %, quarterly 2019–2024"
+  }
+}
+```
+
+A screen reader announces this chart by the `description` sentence in its spec, and can read all 24 quarterly values from the hidden data table the chart builds beside it. Tab to the chart, and the arrow keys step through its data.
 
 ## Contents
 
@@ -23,7 +77,7 @@ Live chart mounts get these without configuration, in the vanilla adapter and al
 - **Per-mark ARIA labels**: each bar, slice, and point carries a descriptive label for assistive technology.
 - **Keyboard navigation**: the chart container is focusable; arrow keys move between marks, Enter/Space shows the tooltip, Escape dismisses it. In edit mode (`interaction: 'edit'`, or an `onEdit` handler) arrows nudge the selected annotation instead, so reader navigation is off; `'read'` and `'select'` keep it. Focus indicators use the `--oc-focus` token, which has distinct light and dark values so the ring is visible in both modes.
 - **Dismissible tooltips**: Escape hides a visible tooltip even while hovering, without moving the pointer (WCAG 1.4.13).
-- **Data tables**: semantic HTML (`<table>`, `<th scope="col">`), ARIA grid roles, sort state attributes, and a live region announcing sort/search changes.
+- **[Data tables](tables.md)**: semantic HTML (`<table>`, `<th scope="col">`), ARIA grid roles, sort state attributes, and a live region announcing sort/search changes.
 
 ## Custom alt text
 
@@ -50,6 +104,46 @@ const spec = {
 ```
 
 When neither is present, auto-generation remains the fallback. Write alt text that states the takeaway, not the chart type; the data table already covers the values.
+
+This chart sets its alt text with `a11y.description` and keeps the generated data table with `a11y.table: true`, the default for live charts. The [A11yConfig reference](reference/chart-spec.md#a11yconfig) lists all three options.
+
+```json demo title="Population with a11y options" source="UN Population Division, World Population Prospects 2024" height=440
+{
+  "mark": "bar",
+  "a11y": {
+    "description": "India and China each have more than 1.4 billion people, over four times the population of the United States, which ranks third.",
+    "table": true
+  },
+  "data": [
+    { "country": "India", "population": 1463000000 },
+    { "country": "China", "population": 1410000000 },
+    { "country": "United States", "population": 347000000 },
+    { "country": "Indonesia", "population": 285000000 },
+    { "country": "Pakistan", "population": 255000000 },
+    { "country": "Nigeria", "population": 240000000 },
+    { "country": "Brazil", "population": 217000000 },
+    { "country": "Bangladesh", "population": 175000000 },
+    { "country": "Russia", "population": 144000000 },
+    { "country": "Ethiopia", "population": 135000000 }
+  ],
+  "transform": [
+    { "calculate": { "op": "/", "field": "population", "value": 1000000 }, "as": "millions" }
+  ],
+  "encoding": {
+    "x": {
+      "field": "millions",
+      "type": "quantitative",
+      "axis": { "title": "Population (millions)", "format": ",.0f" }
+    },
+    "y": { "field": "country", "type": "nominal", "sort": "x" }
+  },
+  "labels": { "format": ",.0f" },
+  "chrome": {
+    "title": "India and China each have more than four times as many people as the United States",
+    "subtitle": "Population of the ten most populous countries, 2025 projection, millions"
+  }
+}
+```
 
 ## Hiding a decorative chart
 
@@ -90,6 +184,43 @@ How `'auto'` behaves:
 - Assignment is deterministic: the same spec always produces the same patterns, so visual baselines stay stable.
 
 Two limitations to know about: gradient fills are replaced by a solid tile of the gradient's representative color when patterned, and legend swatches stay solid color.
+
+In this chart each power source carries its own pattern over its color. The 2016 solar segment is under 12px tall, so it keeps a solid fill.
+
+```json demo title="US electricity mix with pattern fills" source="Our World in Data (owid/electricity-mix)" height=460
+{
+  "mark": { "type": "bar", "fillPattern": "auto" },
+  "data": [
+    { "year": "2016", "source": "Coal", "share": 31.2 },
+    { "year": "2016", "source": "Gas", "share": 34.8 },
+    { "year": "2016", "source": "Nuclear", "share": 20.3 },
+    { "year": "2016", "source": "Hydro", "share": 6.6 },
+    { "year": "2016", "source": "Wind", "share": 5.7 },
+    { "year": "2016", "source": "Solar", "share": 1.4 },
+    { "year": "2023", "source": "Coal", "share": 16.2 },
+    { "year": "2023", "source": "Gas", "share": 43.5 },
+    { "year": "2023", "source": "Nuclear", "share": 18.6 },
+    { "year": "2023", "source": "Hydro", "share": 5.8 },
+    { "year": "2023", "source": "Wind", "share": 10.1 },
+    { "year": "2023", "source": "Solar", "share": 5.8 }
+  ],
+  "encoding": {
+    "x": { "field": "year", "type": "ordinal" },
+    "y": {
+      "field": "share",
+      "type": "quantitative",
+      "stack": "zero",
+      "axis": { "title": "Share of generation (%)", "format": ".0f", "grid": true }
+    },
+    "color": { "field": "source", "type": "nominal" }
+  },
+  "labels": { "density": "none" },
+  "chrome": {
+    "title": "Coal's share of US electricity fell from 31% to 16% between 2016 and 2023",
+    "subtitle": "Share of generation from the six main sources, %"
+  }
+}
+```
 
 The default is `'none'`. Line strokes don't participate; use `encoding.strokeDash` to differentiate line series without color.
 
@@ -152,7 +283,9 @@ Use `a11y: { hidden: true }` for a decorative static cell whose host table alrea
 
 ## Keyboard inspection and host announcements
 
-Live charts prefer authored `encoding.description` text for focusable mark labels. Pass `onMarkFocus` to `createChart` (or the Chart wrapper) to announce the focused observation in a host-owned region. The callback fires when keyboard navigation reaches a different mark. Its `MarkFocusEvent` includes `datum`, optional `series`, stable `key`, optional `description`, the navigated `SVGElement` and the triggering `FocusEvent | KeyboardEvent`. `description` reads that element's current `aria-label`, so it contains authored text when supplied and otherwise the generated mark label. `element` is selected by `data-mark-id` and can be a wrapper `<g>` for bars, lines or areas rather than the inner data shape. It is separate from mouse `MarkEvent` callbacks.
+Live charts prefer authored `encoding.description` text for focusable mark labels. Pass `onMarkFocus` to `createChart` (or the Chart wrapper) to announce the focused observation in a host-owned region. The callback fires when keyboard navigation reaches a different mark.
+
+Its `MarkFocusEvent` includes `datum`, optional `series`, stable `key`, optional `description`, the navigated `SVGElement` and the triggering `FocusEvent | KeyboardEvent`. `description` reads that element's current `aria-label`, so it contains authored text when supplied and otherwise the generated mark label. `element` is selected by `data-mark-id` and can be a wrapper `<g>` for bars, lines or areas rather than the inner data shape. It is separate from mouse `MarkEvent` callbacks.
 
 ```html
 <div id="chart"></div>

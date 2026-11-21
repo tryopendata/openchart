@@ -16,19 +16,13 @@
  * - Without the pin (narrow or short screens, reduced motion) the presets are
  *   buttons named by preset ("Essay", "Wire", "Broadsheet", "Terminal").
  */
-import "@fontsource/inter/latin-400.css";
-import "@fontsource/inter/latin-500.css";
-import "@fontsource/inter/latin-600.css";
-import "@fontsource/source-serif-4/latin-400.css";
-import "@fontsource/source-serif-4/latin-600.css";
-import "@fontsource/jetbrains-mono/latin-400.css";
-import "@fontsource/jetbrains-mono/latin-600.css";
 import type { ChartSpec } from "@opendata-ai/openchart-core";
 import { renderStaticSVG } from "@opendata-ai/openchart-vanilla/static";
 import { houseStyle } from "../../../demos/landing/house-style";
 import { DEFAULT_DEMO_HEIGHT } from "../../../demos/types";
 import { validateDemo } from "../../../lib/demo/validate";
 import "../../../styles/landing-wall.css";
+import "../../../styles/preset-fonts.css";
 import PublishedFigure from "../../shared/PublishedFigure.astro";
 import SectionHead from "../../shared/SectionHead.astro";
 import { HOUSE_STYLE_STOPS, houseStyleDiffs } from "./house-styles";

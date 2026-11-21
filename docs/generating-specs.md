@@ -1,3 +1,10 @@
+---
+title: "Generating specs"
+description: "Have a language model write specs: the published JSON Schema, tool use, strict modes and the validate-and-repair loop."
+section: agents
+order: 1
+---
+
 # Generating openchart specs with an LLM
 
 openchart specs are plain JSON, and the library publishes a JSON Schema for them.

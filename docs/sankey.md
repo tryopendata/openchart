@@ -31,7 +31,7 @@ const spec = {
 For Vue, import from `@opendata-ai/openchart-vue`. For Svelte, import from
 `@opendata-ai/openchart-svelte`. For vanilla JS, use `createSankey(container,
 spec)` from `@opendata-ai/openchart-vanilla`. See the
-[spec reference](spec-reference.md#sankeyspec) for every `SankeySpec` field.
+[spec reference](reference/sankey-spec.md#sankeyspec-1) for every `SankeySpec` field.
 
 ## Labels
 

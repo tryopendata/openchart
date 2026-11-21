@@ -4,8 +4,10 @@
 
 | Path | Owns |
 | --- | --- |
-| `src/config.ts` | Product name, tagline, URL, install commands, demo lines, features, logos, links, license, the docs groups and the `islands` list |
-| `src/content/docs/` | Docs pages, one Markdown file each, validated by `src/content/schema.ts` |
+| `src/config.ts` | Product name, tagline, URL, install commands, demo lines, features, logos, links, license, the docs areas and sections (`docsAreas`) and the `islands` list |
+| `src/content/docs/` | Site docs pages, one MDX or Markdown file each, validated by `src/content/schema.ts` |
+| `../docs/` | The repository's docs; a file with a `section` in its frontmatter is a page (see "Repository docs") |
+| `src/lib/repo-link-targets.ts` | Where links in repository docs go when the target is not a published page: aliases and the Ladle story map |
 | `src/lib/docs.ts` | Pure docs rules: sidebar order, pager, URLs, the Markdown export and both llms files |
 | `src/lib/collection.ts` | The only `astro:content` import outside routes |
 | `src/lib/markdown.ts` | Docs Markdown conventions as Sätteri hast plugins plus one Shiki transformer |
@@ -18,7 +20,9 @@
 
 ## Docs pages
 
-Frontmatter: `title`, `description` (at most 160 characters), `group` (an id from `docsGroups`), optional `order` (default 100, ties sort by title) and `sidebarLabel`. A file at `src/content/docs/guides/deploy.md` is served at `/docs/guides/deploy/`, exported at `/docs/guides/deploy.md` and drawn at `/og/docs/guides/deploy.png`. Nothing else lists pages by hand.
+Frontmatter: `title`, `description` (at most 160 characters), `section` (a section id from `docsAreas`, which also decides the area), optional `order` (default 100, ties sort by title) and `sidebarLabel`. A file at `src/content/docs/recipes/deploy.mdx` is served at `/docs/recipes/deploy/`, exported at `/docs/recipes/deploy.md` and drawn at `/og/docs/recipes/deploy.png`. Nothing else lists pages by hand.
+
+An MDX page may contain Markdown plus `<Demo id="…" />` (after a leading import of `Demo.astro`) and nothing else: the Markdown export understands only `<Demo>`, so any other component would leak into `/docs/<id>.md`.
 
 Markdown conventions, all plain Markdown so pages read the same on GitHub and to agents:
 
@@ -27,7 +31,22 @@ Markdown conventions, all plain Markdown so pages read the same on GitHub and to
 - `##` and `###` headings feed the table of contents and get anchor links.
 - Tables scroll sideways inside their own region.
 
-Link between pages with the full route and its trailing slash (`/docs/concepts/how-it-works/`). The build test fails on a link or `#anchor` that doesn't resolve.
+Link between pages with the full route and its trailing slash (`/docs/the-spec/anatomy/`). The build test fails on a link or `#anchor` that doesn't resolve. Link to another lane's page without an anchor unless that heading already exists there: a heading added later may be renamed before it lands.
+
+`tests/docs-pages.ts` lists the Guides, Building blocks and Reference pages with their demo minimums, and `catalogReference` names the reference page each Visualizations page must link to. The build test applies every content rule to every page in that list. The `phase-4-stub` marker that exempted unfinished pages is gone, and the build test fails if any file under `../docs/` or `src/content/` contains it.
+
+## Repository docs
+
+A Markdown file in `../docs/` or one folder down (`../docs/reference/`) becomes a page when its frontmatter declares `section`; `slug` replaces the file's base name in the URL. Two files that resolve to the same page id fail the build, naming both. The reference pages live in `../docs/reference/`, and `spec-reference.md` is their index.
+
+Links in these files stay relative `.md` links, so they work on GitHub. At build time `src/lib/repo-markdown.ts` resolves each one against the linking file's own folder and rewrites it:
+
+- a link to a published file goes to its page, keeping the anchor;
+- a link to a file the site replaces with its own page (an alias in `repoDocAliases`, such as `tables.md`) goes to that page, with the anchor dropped;
+- a link to any other repository file goes to the file on GitHub;
+- a Ladle gallery link (`https://tryopendata.github.io/openchart/?story=<id>#<anchor>`) goes to the catalog page `ladleStoryPages` maps it to, looked up as `id#anchor` first, then `id`. An unmapped story fails the build with `UnmappedLadleLinkError`, naming the file and the URL; add the story to the map.
+
+Both maps are in `src/lib/repo-link-targets.ts`.
 
 ## Markdown processing
 

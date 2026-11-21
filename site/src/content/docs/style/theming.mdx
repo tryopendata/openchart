@@ -1,0 +1,75 @@
+---
+title: "Theming and tokens"
+description: "ThemeConfig colors, fonts, spacing and rules for every chart, and the CSS tokens a page can set instead."
+section: style
+order: 1
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+import "../../../styles/preset-fonts.css";
+
+A theme sets a chart's colors, type and spacing, and leaves its data and encoding alone. This chart has no `theme` field, so it draws in the library default: Inter, a transparent background and the six-hue palette.
+
+<Demo id="style/theming-default" />
+
+## A custom theme
+
+<Demo id="style/theming-custom" />
+
+The `theme` field takes a `ThemeConfig`. This one sets a serif family, a paper background, three series colors and wider padding. Each color is a `{ light, dark }` pair, so the chart has its own dark version; switch the site theme in the header to see it. Fields you leave out keep their default values, because the library deep-merges a theme onto its defaults.
+
+`colors.categorical` replaces the palette as a whole. Series take its colors in order, so coal gets the first color here.
+
+## One theme for every chart
+
+To style every chart on a site, pass the theme once where the charts mount instead of writing it into each spec:
+
+```ts title="charts.ts"
+import { createChart } from "@opendata-ai/openchart-vanilla";
+import { houseTheme } from "./house-theme";
+
+createChart(container, spec, { theme: houseTheme });
+```
+
+In React, Vue and Svelte, wrap the page in `<VizThemeProvider theme={houseTheme}>`. Layers merge in a fixed order: the spec's own `theme`, then the provider, then the component prop or mount option, with the later layer winning for any field both set. Arrays and `{ light, dark }` pairs replace whole; objects merge field by field.
+
+## Series strategy
+
+<Demo id="style/theming-accent" />
+
+`seriesStrategy: "accent-neutral"` gives the first series the accent color and the others greys, for up to four series. Five or more get the full palette again. It suits a chart about one series, here coal, without hand-picking colors for the rest. The default, `"palette"`, always uses the full palette.
+
+## CSS tokens
+
+A page stylesheet can restyle charts without a theme. Every chart's root element reads CSS custom properties, and the library defines their defaults in a cascade layer, so ordinary page CSS overrides them:
+
+```css title="charts.css"
+.oc-root {
+  /* Series not under the pointer fade to 15% instead of 30%. */
+  --oc-hover-dim: 0.15;
+  /* Square tooltips. */
+  --oc-border-radius: 0;
+}
+```
+
+A token only applies where the chart's theme leaves that value unset. If a spec or mount option sets `borderRadius`, the theme wins, because the library writes authored values inline on the chart. [Theming tokens](/docs/tokens/theming-tokens/) lists every token and its dark-mode value.
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `theme.colors.categorical` | The series palette, in order. Takes colors or `{ light, dark }` pairs. |
+| `theme.colors.background`, `text`, `axis`, `gridline` | Surface and ink colors. The default background is transparent. |
+| `theme.fonts.family`, `mono` | The text family and the family for tabular numbers. |
+| `theme.fonts.sizes` | Pixel sizes for `title`, `subtitle`, `body`, `small` and `axisTick`. |
+| `theme.spacing` | `padding` around the chart, `chromeGap` between title and subtitle, `chromeToChart` above the plot. |
+| `theme.chrome` | Per-element `color`, `fontSize`, `fontWeight` and `lineHeight` for title, subtitle, source and the rest. |
+| `theme.rule` | A short colored bar above the title. `null` removes one a preset draws. |
+| `theme.seriesStrategy` | `"palette"` or `"accent-neutral"`. |
+
+## Related
+
+- [Presets](/docs/style/presets/) are four finished themes you can start from.
+- [Dark mode](/docs/style/dark-mode/) covers light and dark color pairs.
+- [Line](/docs/change-over-time/line/) shows the chart type on this page in more detail.
+- [Theme reference](/docs/spec/theme/) lists every `ThemeConfig` field and default.

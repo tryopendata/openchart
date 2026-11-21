@@ -1,3 +1,10 @@
+---
+title: "Migrating to v8"
+description: "Upgrade from v7 to v8: spec and import changes, and the renderer move."
+section: upgrading
+order: 2
+---
+
 # Migrating to OpenChart v8
 
 Instructions for migrating a consumer app from openchart v7 to v8. Almost all

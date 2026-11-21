@@ -5,11 +5,15 @@
  * authored callouts anchored to features, including one that waits for zoom.
  */
 import { stateEconomies } from "@datasets/state-economies";
-import { usUnemployment } from "@datasets/us-unemployment";
+import { usStateUnemployment } from "@datasets/us-state-unemployment";
 import { defineDemo } from "../types";
 import { centerOf } from "./centers";
 import { usStates, usStatesBasemap } from "./geography";
 import { sourceWithGeography } from "./sources";
+import { rowsByFips } from "./state-fips";
+
+/** The verified state unemployment rates, keyed by FIPS code to match the atlas. */
+const unemploymentRows = rowsByFips(usStateUnemployment.data, "rate");
 
 const unemploymentColor = {
   field: "rate",
@@ -21,14 +25,14 @@ const unemploymentColor = {
 export const featureLabels = defineDemo({
   id: "maps/labels-features",
   title: "State names on an unemployment map",
-  source: sourceWithGeography(usUnemployment, "us"),
+  source: sourceWithGeography(usStateUnemployment, "us"),
   height: 480,
   // The heaviest static SVG on its page, so it draws in the browser and the page keeps size headroom.
   static: false,
   spec: {
     type: "map",
     geo: { features: usStates, projection: "albersUsa" },
-    data: [...usUnemployment.data],
+    data: unemploymentRows,
     encoding: {
       key: { field: "id", type: "nominal" },
       color: unemploymentColor,
@@ -75,12 +79,12 @@ export const pointLabels = defineDemo({
 export const callouts = defineDemo({
   id: "maps/labels-callouts",
   title: "Callouts on the highest and lowest rates",
-  source: sourceWithGeography(usUnemployment, "us"),
+  source: sourceWithGeography(usStateUnemployment, "us"),
   height: 480,
   spec: {
     type: "map",
     geo: { features: usStates, projection: "albersUsa", zoom: true },
-    data: [...usUnemployment.data],
+    data: unemploymentRows,
     encoding: { key: { field: "id", type: "nominal" }, color: unemploymentColor },
     callouts: [
       {

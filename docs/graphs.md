@@ -273,7 +273,7 @@ The graph renderer has been tested with large networks. See the scale stories fo
 
 ## Related docs
 
-- [Spec reference: GraphSpec](spec-reference.md#graphspec) for field-by-field type details
+- [Spec reference: GraphSpec](reference/graph-spec.md#graphspec-1) for field-by-field type details
 - [Chart types](chart-types.md) for standard chart visualizations
 - [Tables](tables.md) for data table visualizations
 - [Integration guide](integration-guide.md) for graph event handling and advanced patterns

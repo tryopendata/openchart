@@ -1,0 +1,60 @@
+---
+title: "Export"
+description: "Download a chart as SVG, PNG or CSV in the browser, and where static rendering takes over."
+section: output
+order: 2
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+A live chart exports itself: `chart.export("svg")` returns the chart as SVG markup, `"png"` as an image and `"csv"` as its data rows. Each download button under these charts makes one of those calls and saves the result.
+
+<Demo id="output/export-heatmap" />
+
+The SVG is the chart with its title, subtitle, axes and legend, and with no animation, so it opens finished in a vector editor or a CMS. The PNG is the same image at twice its on-screen size by default. The CSV holds the chart's rows with a header line: one row per year and source here.
+
+`export` returns the chart as it is drawn, so a chart in dark mode exports in dark mode; with this site's chart theme that is light text on a transparent background. These buttons render a separate light copy on white paper and export that, so a file saved from this site in dark mode still reads on a white page.
+
+## The calls behind the buttons
+
+<Demo id="output/export-range" />
+
+SVG and CSV come back as strings straight away; PNG takes a moment to render, so it returns a promise of a `Blob`. The library has no download helper, so a page saves each file itself:
+
+```ts title="download.ts"
+function save(file: Blob, name: string) {
+  const url = URL.createObjectURL(file);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+save(new Blob([chart.export("svg")], { type: "image/svg+xml" }), "chart.svg");
+save(await chart.export("png", { dpi: 3 }), "chart.png");
+save(new Blob([chart.export("csv")], { type: "text/csv" }), "chart.csv");
+```
+
+The demos name each file after the demo, such as `output-export-range.svg`. In React, Vue and Svelte the `useChart` hook or composable returns the chart instance, and its `export` method is the same.
+
+## Other formats
+
+`chart.export("svg-with-fonts")` embeds the fonts, so the file renders the same on a machine without them. `chart.export("gif")` turns the entrance into an animated GIF for newsletters and other pages that block video and embedded charts; it needs the optional `gifenc` package. The [Export API reference](/docs/api/export/) covers both, with their options. To make SVGs on a server or at build time, with no browser, use `renderStaticSVG` from [static rendering](/docs/get-started/static-rendering/).
+
+## Fields that matter
+
+| Call | What it returns |
+| --- | --- |
+| `chart.export("svg")` | The chart as an SVG string, finished and without animation. |
+| `chart.export("png", { dpi })` | A promise of a PNG `Blob`. `dpi` scales the image; the default is 2. |
+| `chart.export("csv")` | The chart's data as comma-separated text with a header row. |
+| `chart.export("svg-with-fonts")` | A promise of an SVG string with its fonts embedded. |
+| `chart.export("gif", { loop })` | A promise of an animated GIF `Blob` of the entrance. |
+| `table.export("csv")` | A table's rows in its current sort and search, ignoring pagination. |
+
+## Related
+
+- [Export API reference](/docs/api/export/) documents every format and its options.
+- [Heatmap](/docs/correlation/heatmap/) and [Error bars](/docs/distribution/error-bars/) cover the two chart types on this page.
+- [Static rendering](/docs/get-started/static-rendering/) draws SVGs at build time.

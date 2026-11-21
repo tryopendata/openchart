@@ -1,3 +1,10 @@
+---
+title: "Migrating to v9"
+description: "Upgrade from 8.9 to 9: annotation defaults, theme composition, removed APIs and spec migration."
+section: upgrading
+order: 1
+---
+
 # Migrating to OpenChart v9
 
 v9 makes the annotation layout options introduced in 8.9.1 the default, consolidates theme precedence, and removes the deprecated authoring and editing APIs. Upgrade all six OpenChart packages together. This guide covers the library; OpenStudio's document envelope, migration dialog, and adoption are separate work.

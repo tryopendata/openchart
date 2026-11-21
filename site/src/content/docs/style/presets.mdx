@@ -1,0 +1,63 @@
+---
+title: "Presets"
+description: "Four house styles, essay, wire, broadsheet and terminal, applied to the same chart with one theme field."
+section: style
+order: 2
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+import "../../../styles/preset-fonts.css";
+
+A preset is a finished `ThemeConfig` that ships with the library. The four charts on this page share one spec and differ only in the preset passed to `theme`. This one is `essay`.
+
+<Demo id="style/presets-essay" />
+
+Essay sets Source Serif 4 for all text, a warm off-white background, a 28px title and 24px of padding.
+
+## Using a preset
+
+Import the preset from the core package and pass it as the theme:
+
+```ts title="chart.ts"
+import { essay } from "@opendata-ai/openchart-core";
+
+const spec = { ...inflationSpec, theme: essay };
+```
+
+The code tab under each chart shows the preset written out as the object it is, because the demo prints the spec with every value in place. In your own code, the import is all you need. To change part of a preset, merge your fields over it with `mergeThemeConfig(essay, { fonts: { sizes: { title: 24 } } })`.
+
+Presets name fonts but do not load them. A page that uses `essay` needs Source Serif 4, and `wire` needs JetBrains Mono; this page loads both.
+
+## Wire
+
+<Demo id="style/presets-wire" />
+
+Wire sets JetBrains Mono for all text, a 16px title, 10px tick labels and tight gaps between the title, subtitle and plot. It fits dashboards and agency-style graphics where many charts share a screen.
+
+## Broadsheet
+
+<Demo id="style/presets-broadsheet" />
+
+Broadsheet draws a short red bar above the title, the masthead device of a newspaper graphic, and sets a bold 24px title on warm paper. Its six-color palette, led by an ink blue and a house red, was checked against simulated deuteranopia and protanopia. The text family stays the default, Inter.
+
+## Terminal
+
+<Demo id="style/presets-terminal" />
+
+Terminal is dark in both site themes: a near-black background, light text and the library's dark palette. It sets `seriesStrategy: "accent-neutral"`, so a chart with two to four series shows one cyan accent and greys for the rest. Use it for product and monitoring screens that are dark already.
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `theme` | Takes a preset: `essay`, `wire`, `broadsheet` or `terminal`. Omit it, or pass `{}`, for the default. |
+| `mergeThemeConfig(preset, overrides)` | Returns the preset with your fields merged over it. |
+| `theme.rule` | The bar above the title. Set `rule: null` to drop broadsheet's. |
+| `theme.fonts.family` | Each preset's text family. Load the font on your page, or the browser falls back down the list. |
+
+## Related
+
+- [Theming and tokens](/docs/style/theming/) explains each `ThemeConfig` field the presets set.
+- [Dark mode](/docs/style/dark-mode/) shows a preset's dark palette.
+- [Line](/docs/change-over-time/line/) covers the chart type used here.
+- [Theme reference](/docs/spec/theme/) lists the presets and every field default.

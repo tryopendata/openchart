@@ -7,14 +7,23 @@
  * ids so the tabs work through `:target`; with it, demo.css closes the block
  * until the reader opens it (scripts/demo-code-toggle.ts) and
  * scripts/framework-choice.ts takes over the tabs. Only the Spec panel shows the data rows: the framework
- * panels show them folded, and so does the Spec panel for geography. A panel
+ * panels show them folded, and so does the Spec panel for geography. The Spec
+ * panel writes out at most 12 rows of a list; a longer one shows its first 6
+ * and a comment counting the rest. A panel
  * with folds keeps a copy template in a `<template>`, with a marker for each
  * folded value, which scripts/demo-copy.ts fills from the figure's spec when
  * Copy is pressed. The block carries its own token color stylesheet.
  */
 import type { VizSpec } from "@opendata-ai/openchart-core";
+import type { DemoMountOptions } from "../../demos/types";
 import { escapeElementText, escapeHtml } from "./escape-html";
-import { foldTargets, jsonWithMarkers, showFolds } from "./fold-targets";
+import {
+  type FoldTarget,
+  foldTargets,
+  isLongList,
+  jsonWithMarkers,
+  showFolds,
+} from "./fold-targets";
 import { FRAMEWORKS, type Framework } from "./framework-choice";
 import { highlightCode } from "./highlight";
 import { DEMO_ATTR, type SpecPath } from "./markup";
@@ -43,22 +52,32 @@ const LANGS: Record<Framework, string> = {
 /** Search indexes the page's prose, not its code. */
 const NO_INDEX = "data-pagefind-ignore";
 
+/** The Spec tab's folds: geography, and an excerpt of each list too long to write out. */
+function specFolds(spec: VizSpec): FoldTarget[] {
+  return foldTargets(spec).flatMap((target) => {
+    if (target.geography) return [target];
+    return isLongList(target) ? [{ ...target, excerpt: true }] : [];
+  });
+}
+
 /**
  * The Spec tab: the spec as JSON, with its geography folded so a map stays
- * readable. Rows and graph elements stay written out; this is where they are read.
+ * readable. Rows and graph elements stay written out, this is where they are
+ * read, up to a cap: a longer list shows its first rows and a comment counting
+ * the rest, so a dense demo keeps the page small. Copy fills every fold back in.
  */
 function specTab(spec: VizSpec): CodeTab {
   const tab = { id: "spec" as const, label: LABELS.spec, lang: LANGS.spec };
-  const geography = foldTargets(spec).filter((target) => target.geography);
-  if (geography.length === 0) return { ...tab, shown: JSON.stringify(spec, null, 2) };
-  const code = jsonWithMarkers(spec, geography);
-  const folds = geography.map(({ path }) => path);
+  const folds = specFolds(spec);
+  if (folds.length === 0) return { ...tab, shown: JSON.stringify(spec, null, 2) };
+  const code = jsonWithMarkers(spec, folds);
+  const paths = folds.map(({ path }) => path);
   // JSON with comments, so the fold comments highlight as comments.
-  return { ...tab, lang: "jsonc", shown: showFolds(code, geography), copy: { code, folds } };
+  return { ...tab, lang: "jsonc", shown: showFolds(code, folds), copy: { code, folds: paths } };
 }
 
-function codeTabsFor(spec: VizSpec): CodeTab[] {
-  const { shown, template, folds } = foldedFrameworkSnippets(spec);
+function codeTabsFor(spec: VizSpec, mount?: DemoMountOptions): CodeTab[] {
+  const { shown, template, folds } = foldedFrameworkSnippets(spec, mount);
   return FRAMEWORKS.map((id) => {
     if (id === "spec") return specTab(spec);
     const tab = { id, label: LABELS[id], lang: LANGS[id], shown: shown[id] };
@@ -104,11 +123,16 @@ function toolbarRow(codeId: string): string {
  * their token colors.
  *
  * @param domId The figure's XML-safe id from `demoDomId`, which keeps panel ids unique on a page.
+ * @param mount The demo's host options, which the framework tabs pass as props or mount options.
  * @throws {TypeError} When the spec's type has no framework wrapper.
  * @throws {FoldMarkerError} When the spec contains the text fold markers use.
  */
-export async function codeTabsHtml(domId: string, spec: VizSpec): Promise<string> {
-  const tabs = codeTabsFor(spec);
+export async function codeTabsHtml(
+  domId: string,
+  spec: VizSpec,
+  mount?: DemoMountOptions,
+): Promise<string> {
+  const tabs = codeTabsFor(spec, mount);
   const strip = tabs.map((tab, index) => tabLink(domId, tab, index)).join("");
   const { html, css } = await highlightCode(tabs.map(({ shown, lang }) => ({ code: shown, lang })));
   const panels = tabs.map((tab, index) => panel(domId, tab, html[index] ?? "")).join("");
