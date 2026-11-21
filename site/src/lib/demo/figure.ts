@@ -96,12 +96,31 @@ function stageHtml(figure: DemoFigure, domId: string): string {
   return `<div class="demo-stage" ${DEMO_ATTR.stage} style="${style}">${content}</div>`;
 }
 
-function embeddedSpec(figure: DemoFigure): SharedSplit {
+function embeddedSpec(figure: Pick<DemoFigure, "spec" | "pageShared">): SharedSplit {
   if (!figure.pageShared) return { specJson: JSON.stringify(figure.spec), refs: [], values: [] };
   return splitSharedValues(figure.spec, figure.pageShared);
 }
 
 // The spec and shared values are data for the live mount, not text for search.
+/**
+ * The spec a demo's live mount reads, as the `<script>` the demo element holds,
+ * plus any shared value block this page has not written yet (see shared-values.ts).
+ * For a chart drawn without the figure, such as a landing wall tile; the figure
+ * writes the same markup through `demoFigureHtml`.
+ */
+export function embeddedSpecHtml(spec: VizSpec, pageShared?: Set<string>): string {
+  return specHtml(embeddedSpec({ spec, pageShared }));
+}
+
+/**
+ * A bare demo stage holding `content` (from `stageContentHtml`): the stage the
+ * live mount finds, without the figure's height, caption or code. The caller's
+ * class sizes it.
+ */
+export function bareStageHtml(content: string, className: string): string {
+  return `<div class="demo-stage ${escapeHtml(className)}" ${DEMO_ATTR.stage}>${content}</div>`;
+}
+
 function specHtml({ specJson, refs, values }: SharedSplit): string {
   const refsAttr = refs.length
     ? ` ${DEMO_ATTR.sharedRefs}="${escapeHtml(JSON.stringify(refs))}"`

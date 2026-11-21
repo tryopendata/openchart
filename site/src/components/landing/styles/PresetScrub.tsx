@@ -96,7 +96,7 @@ function DiffList({
         <li key={line.path} className="scrub-line">
           <span className="scrub-path">{line.path}</span> {line.before ?? "(unset)"}
           <span aria-hidden="true"> → </span>
-          <span className="sr-only"> becomes </span>
+          <span className="sr-only">becomes </span>
           {line.after ?? "(unset)"}
         </li>
       ))}
@@ -137,7 +137,11 @@ export function PresetScrub({ stops, spec, children }: PresetScrubProps) {
     const block = blockRef.current;
     const progress = progressRef.current;
     if (!tools || !ready || !block || !progress) return;
-    return pinScrub(tools, { block, progress, count: stops.length }, { onPin: setPin, onStop: show });
+    return pinScrub(
+      tools,
+      { block, progress, count: stops.length },
+      { onPin: setPin, onStop: show },
+    );
   }, [tools, ready, stops.length, show]);
 
   // Runs before paint, so the new copy never flashes at full strength first.
@@ -208,9 +212,7 @@ export function PresetScrub({ stops, spec, children }: PresetScrubProps) {
               <summary>What changed in the theme</summary>
               <div className="scrub-layers">
                 <DiffList stop={stop} named listRef={listRef} />
-                {outgoing ? (
-                  <DiffList stop={outgoing} named={false} listRef={outListRef} />
-                ) : null}
+                {outgoing ? <DiffList stop={outgoing} named={false} listRef={outListRef} /> : null}
               </div>
             </details>
           </div>

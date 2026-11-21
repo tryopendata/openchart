@@ -12,6 +12,9 @@ export type WallFilter = "all" | SectionId;
 /** One filter button: a section id and its label from `docsAreas`. */
 export type WallIntent = { id: SectionId; label: string };
 
+/** The attribute on each tile, holding its demo id; the filter shows and hides these. */
+export const TILE_ATTR = "data-vocabulary-tile";
+
 /** The section the wall's state lives under in the URL hash. */
 export const WALL_HASH_KEY = "vocabulary";
 

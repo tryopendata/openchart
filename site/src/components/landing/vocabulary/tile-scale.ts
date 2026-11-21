@@ -4,8 +4,8 @@
  * viewBox, and this writes `--wall-scale` on the grid so the live chart's
  * fixed-size host scales by the same factor at every cell width.
  */
+import { DEMO_ATTR } from "../../../lib/demo/markup";
 import { TILE_SVG_SIZE } from "./tile-spec";
-import { WALL_ATTR } from "./wall-live";
 
 /** The CSS variable the live hosts read (landing-wall.css). */
 export const WALL_SCALE_VAR = "--wall-scale";
@@ -18,7 +18,7 @@ export function tileScale(cellWidth: number): number {
 /** Watches the first visible stage's width and writes the scale on `root`. Returns a teardown. */
 export function observeTileScale(root: HTMLElement): () => void {
   const update = () => {
-    const stage = [...root.querySelectorAll<HTMLElement>(`[${WALL_ATTR.stage}]`)].find(
+    const stage = [...root.querySelectorAll<HTMLElement>(`[${DEMO_ATTR.stage}]`)].find(
       (candidate) => candidate.offsetWidth > 0,
     );
     if (stage) root.style.setProperty(WALL_SCALE_VAR, String(tileScale(stage.offsetWidth)));

@@ -62,9 +62,10 @@
     @apply m-0 mt-8 grid list-none grid-cols-2 gap-x-5 gap-y-8 p-0 min-[900px]:grid-cols-4 min-[900px]:gap-x-6 xl:grid-cols-6;
   }
 
-  /* Every tile is the same four rows, so labels, charts and names line up across a row. */
-  .wall-tile {
-    @apply relative grid min-w-0;
+  /* Every tile is the same four rows, so labels, charts and names line up across a row.
+     A tile is a demo element (demo.css), without a figure's margin. */
+  .wall-tile.demo {
+    @apply relative m-0 grid min-w-0;
     grid-template-rows: 1px 1.75rem auto auto;
   }
 
@@ -86,9 +87,9 @@
     @apply text-ink block pt-2 text-xs leading-none font-semibold;
   }
 
-  /* The specimen fills the cell's width at the tile's 4:3 shape. */
-  .wall-stage {
-    @apply relative w-full overflow-hidden;
+  /* The specimen fills the cell's width at the tile's 4:3 shape, not a demo stage's fixed height. */
+  .wall-stage.demo-stage {
+    @apply relative h-auto w-full overflow-hidden;
     aspect-ratio: 4 / 3;
   }
 
@@ -281,9 +282,10 @@
   }
 }
 
-/* Once a tile's live chart is in, its static content steps aside. Unlayered and more
-   specific than demo.css's theme rules, which are unlayered too. */
-.wall-tile .wall-stage[data-wall-live] > :is(.demo-static[data-theme], .wall-table, .demo-placeholder) {
+/* A table tile's first rows step aside once its live table is in (demo.css does the same
+   for static SVGs), and stay in place of the failure line if the mount fails. */
+.wall-stage[data-demo-live] > .wall-table,
+.wall-stage:has(> .wall-table) > .demo-error {
   display: none;
 }
 

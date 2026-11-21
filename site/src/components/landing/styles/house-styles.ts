@@ -8,6 +8,7 @@ import {
   broadsheet,
   DEFAULT_THEME,
   essay,
+  mergeThemeConfig,
   type ThemeConfig,
   terminal,
   wire,
@@ -124,7 +125,9 @@ const TRACKED: readonly { path: string; read: (mode: Mode) => string | undefined
   {
     path: "rule",
     read: ({ theme, dark }) =>
-      theme.rule ? `{ width: ${theme.rule.width}, color: "${pick(theme.rule.color, dark)}" }` : undefined,
+      theme.rule
+        ? `{ width: ${theme.rule.width}, color: "${pick(theme.rule.color, dark)}" }`
+        : undefined,
   },
   {
     path: "colors.categorical",
@@ -143,15 +146,26 @@ const TRACKED: readonly { path: string; read: (mode: Mode) => string | undefined
   { path: "spacing.padding", read: ({ theme }) => number(theme.spacing?.padding) },
 ];
 
-/** The library's own defaults, which the first stop's preset replaces. */
-const LIBRARY_DEFAULT: Mode = { theme: DEFAULT_THEME as unknown as ThemeConfig, dark: false };
+/** The library's own defaults: what a preset is laid over, and what the first stop replaces. */
+const LIBRARY_DEFAULT = DEFAULT_THEME as unknown as ThemeConfig;
 
-/** The tracked values that differ from `before` (the library default when absent), at most MAX_DIFF_LINES. */
+/** The theme the chart is drawn with: the preset over the library defaults. */
+const effective = ({ theme, dark }: Mode): Mode => ({
+  theme: mergeThemeConfig(LIBRARY_DEFAULT, theme) ?? LIBRARY_DEFAULT,
+  dark,
+});
+
+/**
+ * The tracked values that differ from `before` (the library defaults when
+ * absent), at most MAX_DIFF_LINES. Both sides are read with the library
+ * defaults filled in, so each value is the one the chart is drawn with.
+ */
 export function themeDiff(before: Mode | undefined, after: Mode): ThemeDiffLine[] {
-  const from = before ?? LIBRARY_DEFAULT;
+  const from = effective(before ?? { theme: {}, dark: false });
+  const to = effective(after);
   return TRACKED.flatMap(({ path, read }) => {
     const was = read(from);
-    const now = read(after);
+    const now = read(to);
     if (was === now) return [];
     return [
       {

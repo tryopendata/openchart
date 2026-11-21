@@ -1,25 +1,25 @@
 /**
  * The VocabularyWall island: the purpose filter above the wall of tiles. The
  * tiles are server-rendered by Vocabulary.astro and passed in as children, so
- * their static content reaches the page once and never travels as island props.
- * The island owns the filter state and keeps it in the URL hash, shows and hides
- * tiles (refiling them with Flip when motion is allowed) and starts the tiles'
- * live charts. The filter buttons render only once the island runs: without
- * JavaScript they would do nothing, and the wall shows every tile.
+ * their static content reaches the page once and never travels as island props;
+ * the page's demo script mounts their live charts. The island owns the filter
+ * state and keeps it in the URL hash, shows and hides tiles (refiling them with
+ * Flip when motion is allowed), draws the rules and names in, and scales the
+ * live charts to their cells. The filter buttons render only once the island
+ * runs: without JavaScript they would do nothing, and the wall shows every tile.
  */
 import { type ReactNode, useEffect, useReducer, useRef, useState } from "react";
 import type { SectionId } from "../../../config";
-import { prefersReducedMotion } from "../../../scripts/motion";
 import { useMotionTools } from "../../shared/use-motion-tools";
 import { observeTileScale } from "./tile-scale";
 import {
   isTileShown,
   parseWallHash,
+  TILE_ATTR,
   type WallFilter,
   wallFilterReducer,
   wallHash,
 } from "./wall-filter";
-import { startWallLive, WALL_ATTR } from "./wall-live";
 import { finishRefile, refile, waveIn } from "./wall-motion";
 
 /** One filter button: an intent, its label and how many tiles it has. */
@@ -35,14 +35,14 @@ export type VocabularyWallProps = {
   children?: ReactNode;
 };
 
-const tilesIn = (root: HTMLElement) => [
-  ...root.querySelectorAll<HTMLElement>(`[${WALL_ATTR.tile}]`),
-];
+const tilesIn = (root: HTMLElement) => [...root.querySelectorAll<HTMLElement>(`[${TILE_ATTR}]`)];
 
 function announcement(filter: WallFilter, intents: WallIntentOption[], total: number): string {
   if (filter === "all") return `Showing all ${total} charts.`;
   const intent = intents.find((candidate) => candidate.id === filter);
-  return `Showing ${intent?.count ?? 0} ${intent?.label.toLowerCase() ?? filter} charts.`;
+  const count = intent?.count ?? 0;
+  const noun = count === 1 ? "chart" : "charts";
+  return `Showing ${count} ${intent?.label.toLowerCase() ?? filter} ${noun}.`;
 }
 
 export function VocabularyWall({ intents, total, sectionId, children }: VocabularyWallProps) {
@@ -67,13 +67,7 @@ export function VocabularyWall({ intents, total, sectionId, children }: Vocabula
 
   useEffect(() => {
     const root = gridRef.current;
-    if (!root) return;
-    const stopScale = observeTileScale(root);
-    const stopLive = startWallLive(root, { motion: () => !prefersReducedMotion() });
-    return () => {
-      stopLive();
-      stopScale();
-    };
+    if (root) return observeTileScale(root);
   }, []);
 
   useEffect(() => {
