@@ -1,7 +1,8 @@
 ---
 /**
  * The page's Markdown export, to copy or open. "Copy page" stays hidden until
- * site.ts wires it, so there is no dead button without JavaScript.
+ * site.ts wires it, so there is no dead button without JavaScript. Search leaves
+ * the buttons out of the index.
  */
 interface Props {
   /** The page's .md export URL. */
@@ -10,8 +11,8 @@ interface Props {
 const { markdown } = Astro.props;
 ---
 
-<div class="flex flex-wrap items-center gap-2">
-  <button type="button" data-copy-page={markdown} hidden class="btn h-8 px-3 text-[13px]">
+<div class="flex flex-wrap items-center gap-2" data-pagefind-ignore>
+  <button type="button" data-copy-page={markdown} class="btn h-8 px-3 text-[13px]">
     Copy page
   </button>
   <a href={markdown} class="btn h-8 px-3 text-[13px]">

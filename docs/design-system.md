@@ -419,7 +419,7 @@ Four named presets, exported from `@opendata-ai/openchart-core`, alongside the d
 | Default (omit theme) | default six-hue | transparent | 26/600 | 8px | Empty `ThemeConfig`; follows the host surface |
 | `essay` | default | warm paper `#faf8f5` / `#1a1816` | 28/600 | 0px | Serif feel via larger sizes, generous spacing |
 | `wire` | default | `#ffffff` / `#0a0a0a` | 16/600 | 2px | Dense, tight chrome, dashboard feel |
-| `broadsheet` | `#1d5f8a #e3120b #7fb0d3 #e0a63b #3a8a6e #8c8680` | warm paper `#fffdf9` / `#171513` | 24/700 | 0px | Red masthead `rule` (40×3px) and eyebrow; hairline 0.28 alpha |
+| `broadsheet` | `#1d5f8a #e3120b #7fb0d3 #e0a63b #3a8a6e #8c8680` (dark: the same hues lifted) | warm paper `#fffdf9` / ink-blue night `#12181f` | 24/700 | 0px | Red masthead `rule` (40×3px) and eyebrow; hairline 0.28 alpha |
 | `terminal` | dark-mode categorical variants | `#0b0f14` (both modes) | 15/600 | 4px | `seriesStrategy: 'accent-neutral'`, JetBrains Mono available, dense spacing |
 
 `editorial` has been removed; omit `theme` or use `{}` for the default.

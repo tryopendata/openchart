@@ -9,6 +9,8 @@
 
 @layer components {
   /* ---- Vocabulary wall ---- */
+  /* The tile, its stage, the fallback table, the whole-tile link and the filter row are
+     shared with the gallery and the blog (tiles.css); these are the wall's own. */
   .wall {
     @apply mt-12 lg:mt-16;
   }
@@ -19,42 +21,13 @@
     @apply min-h-[10.5rem] sm:min-h-[5.5rem] xl:min-h-[2.875rem];
   }
 
-  /* The filter reads like the header row of a table: text buttons on an ink rule. */
-  .wall-filter {
-    @apply border-line-strong m-0 flex min-w-0 flex-wrap gap-x-6 gap-y-1 border-0 border-b p-0 pb-px;
-  }
-
-  .wall-filter-button {
-    @apply text-muted -mb-px inline-flex items-baseline gap-1.5 border-b-2 border-transparent py-2.5 text-sm font-medium;
-    transition:
-      color 150ms ease-out,
-      border-color 150ms ease-out;
-  }
-
-  .wall-filter-button:hover {
-    @apply text-ink border-line;
-  }
-
-  .wall-filter-button[aria-pressed="true"] {
-    @apply text-ink border-accent;
-  }
-
-  .wall-count {
-    @apply font-mono text-[11px] font-normal;
-    font-variant-numeric: tabular-nums;
-  }
-
   /* 2 across on phones, 4 from 900px, 6 from 1280px. */
   .wall-grid {
     @apply m-0 mt-8 grid list-none grid-cols-2 gap-x-5 gap-y-8 p-0 min-[900px]:grid-cols-4 min-[900px]:gap-x-6 xl:grid-cols-6;
   }
 
-  /* Every tile is the same four rows, so labels, charts and names line up across a row.
-     A tile is a demo element (demo.css), without a figure's margin. */
-  .wall-tile.demo {
-    @apply relative m-0 grid min-w-0;
-    /* minmax(0, …): the static SVG's intrinsic 240px must not widen the tile past its cell. */
-    grid-template-columns: minmax(0, 1fr);
+  /* Every tile is the same four rows, so labels, charts and names line up across a row. */
+  .wall-tile.tile.demo {
     grid-template-rows: 1px 1.75rem auto auto;
   }
 
@@ -76,58 +49,13 @@
     @apply text-ink block pt-2 text-xs leading-none font-semibold;
   }
 
-  /* The specimen fills the cell's width at the tile's 4:3 shape, not a demo stage's fixed height. */
-  .wall-stage.demo-stage {
-    @apply relative h-auto w-full overflow-hidden;
-    aspect-ratio: 4 / 3;
-  }
-
-  /* A table tile before its live table mounts: the first rows, set small. */
-  .wall-table {
-    @apply text-ink-2 w-full border-collapse text-[11px] leading-tight;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .wall-table th {
-    @apply border-line-strong text-ink border-b py-1 pr-2 text-left font-semibold;
-  }
-
-  .wall-table td {
-    @apply border-line border-b py-1 pr-2;
-  }
-
-  .wall-table .wall-table-number {
-    @apply text-right;
-  }
-
-  /* Under a table tile's first rows, the placeholder line is a caption, not a centred notice. */
-  .wall-stage .wall-table + .demo-placeholder {
-    @apply static mt-2 block px-0 text-left text-[11px] leading-snug;
-  }
-
-  /* The name is the tile's one link; its box covers the tile, so the whole chart is the target. */
   .wall-name {
     @apply text-ink-2 mt-2 font-mono text-xs leading-snug no-underline;
     transition: color 150ms ease-out;
   }
 
-  .wall-name::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-  }
-
   .wall-tile:hover .wall-name {
     @apply text-ink underline;
-  }
-
-  .wall-name:focus-visible {
-    outline: none;
-  }
-
-  .wall-tile:has(.wall-name:focus-visible) {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 6px;
   }
 
   /* ---- House styles ---- */
@@ -267,25 +195,6 @@
     /* biome-ignore lint/complexity/noImportantStyles: only !important beats the renderer's inline height. */
     height: 100% !important;
   }
-}
-
-/* The live chart lays out at the tile size in tile-spec.ts and scales to the cell
-   (--wall-scale, from tile-scale.ts), as the static SVG scales through its viewBox.
-   Unlayered and specific: the library's own root classes (oc-sankey-root and the
-   rest) are unlayered and set the host's width to its container's. */
-.wall-tile .wall-stage > .demo-live {
-  width: 240px;
-  height: 180px;
-  overflow: hidden;
-  transform: scale(var(--wall-scale, 1));
-  transform-origin: 0 0;
-}
-
-/* A table tile's first rows step aside once its live table is in (demo.css does the same
-   for static SVGs), and stay in place of the failure line if the mount fails. */
-.wall-stage[data-demo-live] > .wall-table,
-.wall-stage:has(> .wall-table) > .demo-error {
-  display: none;
 }
 
 /* The pin's scroll distance (preset-pin.ts, PIN_VIEWPORTS), reserved where the pin

@@ -86,8 +86,12 @@ describe("the theme lines a stop changes", () => {
     expect(dark).toContainEqual({
       path: "colors.background",
       before: '"#0b0f14"',
-      after: '"#171513"',
+      after: '"#12181f"',
     });
+    // The palette lines read the values the chart is drawn with, the dark half of each pair.
+    expect(dark).toContainEqual(
+      expect.objectContaining({ path: "colors.categorical", after: '["#5e9fd6", "#f4655a", …]' }),
+    );
     const [terminalStop, darkStop] = HOUSE_STYLE_STOPS.slice(3);
     if (!terminalStop || !darkStop) throw new Error("expected terminal and dark stops");
     expect(themeDiff(terminalStop, darkStop)).toEqual(dark);

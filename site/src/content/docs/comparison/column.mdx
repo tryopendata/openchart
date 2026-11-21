@@ -27,6 +27,8 @@ A `refline` annotation draws a reference value in data units, here the yearly av
 
 Columns grow up from zero for positive values and down for negative ones. A color channel on a field in the data splits the two cases, and a `scale` with a `domain` and a `range` pairs each value with a color. A solid `refline` at `y: 0` marks the baseline.
 
+These years are a decade apart until the last, five years after 2020, so `x` is `type: "temporal"` with `axis.format: "%Y"`: a time scale spaces the columns by date, where an ordinal axis would draw those five years as wide as a decade.
+
 <Demo id="comparison/column-diverging" />
 
 ## Long category names
@@ -46,7 +48,7 @@ When category names do not fit horizontally, the axis angles them, then truncate
 | Field | What it does |
 | --- | --- |
 | `mark: "bar"` | Draws bars. With the category on `x` and the number on `y` they run vertically. |
-| `encoding.x` | The category channel. Use `type: "nominal"` for names and `"ordinal"` for ordered values such as years. `sort: null` keeps the data order. |
+| `encoding.x` | The category channel. Use `type: "nominal"` for names, `"ordinal"` for evenly spaced ordered values such as months, and `"temporal"` for dates or years with uneven gaps. `sort: null` keeps the data order. |
 | `encoding.y` | The value channel, with `axis.title` and `axis.format` for the axis. |
 | `encoding.color` | Colors columns by a field. A `scale` with `domain` and `range` sets the colors. |
 | `labels` | `density`, `format`, `placement` and `suffix` control the value labels. |

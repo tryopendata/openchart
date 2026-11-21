@@ -19,6 +19,7 @@
 import { pageSharedHashes } from "../../../lib/demo/shared-values";
 import type { LandingSectionId } from "../../../landing/copy";
 import { vocabularyTiles } from "../../../landing/vocabulary";
+import "../../../styles/tiles.css";
 import "../../../styles/landing-wall.css";
 import SectionHead from "../../shared/SectionHead.astro";
 import { tileChartHtml } from "./tile-markup";
@@ -61,7 +62,7 @@ const tiles = vocabularyTiles.map((tile, index) => ({
       <ul class="wall-grid" role="list">
         {tiles.map((tile) => (
           <li
-            class="wall-tile demo"
+            class="wall-tile tile demo"
             data-demo={tile.demoId}
             data-demo-entrance
             data-vocabulary-tile={tile.demo}
@@ -71,7 +72,7 @@ const tiles = vocabularyTiles.map((tile, index) => ({
             <span class="wall-rule" aria-hidden="true" />
             <span class="wall-intent">{tile.groupStart ? tile.intentLabel : ""}</span>
             <div class="wall-chart" inert aria-hidden="true" set:html={tile.chart} />
-            <a class="wall-name" href={tile.href}>
+            <a class="wall-name tile-link" href={tile.href}>
               {tile.label}
             </a>
           </li>

@@ -39,9 +39,20 @@ describe('broadsheet preset', () => {
     expect(meetsAA(light.colors.text, light.colors.background)).toBe(true);
     expect(meetsAA(light.colors.axis, light.colors.background)).toBe(true);
     const dark = adaptTheme(light);
-    expect(dark.colors.background).toBe('#171513');
+    expect(dark.colors.background).toBe('#12181f');
     expect(meetsAA(dark.colors.text, dark.colors.background)).toBe(true);
     expect(meetsAA(dark.colors.axis, dark.colors.background)).toBe(true);
+  });
+
+  it('lifts both palettes onto the dark ground, clearing 3:1', () => {
+    const dark = adaptTheme(resolveTheme(broadsheet));
+    for (const palette of [dark.colors.categorical, dark.colors.categoricalFill]) {
+      for (const color of palette) {
+        expect(contrastRatio(color, dark.colors.background), color).toBeGreaterThanOrEqual(3);
+      }
+    }
+    // The two lead hues are the ones a reader meets first: blue ink and the red.
+    expect(dark.colors.categorical.slice(0, 2)).toEqual(['#5e9fd6', '#f4655a']);
   });
 
   it('clears 3:1 on paper for the two lead hues', () => {

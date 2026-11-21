@@ -104,6 +104,22 @@ function claimFenceId(data: Record<string, unknown>, id: string, location: strin
   seen.add(id);
 }
 
+/**
+ * The node that puts the figure's HTML on the page. Markdown writes a raw node
+ * out verbatim; MDX compiles to JSX, which has no raw node, so there the HTML
+ * goes through Astro's `<Fragment set:html>` (the MDX integration supplies
+ * `Fragment` to every MDX page).
+ */
+function figureNode(html: string, sourceFormat: "markdown" | "mdx") {
+  if (sourceFormat === "markdown") return { type: "raw", value: html };
+  return {
+    type: "mdxJsxFlowElement",
+    name: "Fragment",
+    attributes: [{ type: "mdxJsxAttribute", name: "set:html", value: html }],
+    children: [],
+  };
+}
+
 /** Replaces each `json demo` code block with the demo figure. */
 export function demoFence(): HastPlugin {
   return {
@@ -130,7 +146,7 @@ export function demoFence(): HastPlugin {
           tabs: true,
           static: true,
         });
-        return { type: "raw", value: html };
+        return figureNode(html, ctx.sourceFormat);
       },
     },
   } as HastPlugin;

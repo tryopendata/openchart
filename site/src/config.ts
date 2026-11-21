@@ -28,8 +28,11 @@ export const site = {
     { label: "pnpm", command: "pnpm add @opendata-ai/openchart-react" },
   ] as InstallOption[],
   social: [{ label: "GitHub", href: repo }] as Link[],
-  /** Header links after Docs. An entry renders only once its page exists. */
-  nav: [] as Link[],
+  /** Header links between Docs and the social links, in order. Every entry renders, so list built pages only. */
+  nav: [
+    { label: "Examples", href: "/examples/" },
+    { label: "Blog", href: "/blog/" },
+  ] as Link[],
   /** Footer link columns. */
   footer: [
     {
@@ -37,6 +40,14 @@ export const site = {
       links: [
         { label: "Getting started", href: DOCS_HOME },
         { label: "llms.txt", href: "/llms.txt" },
+      ],
+    },
+    {
+      title: "Read",
+      links: [
+        { label: "Examples", href: "/examples/" },
+        { label: "Blog", href: "/blog/" },
+        { label: "RSS", href: "/blog/rss.xml" },
       ],
     },
     {
@@ -61,6 +72,26 @@ export const site = {
     "InstallTabs",
   ],
 };
+
+/** One blog tag: the id a post lists in its `tags` frontmatter and the label its tag page shows. */
+export type BlogTag = { readonly id: string; readonly label: string };
+
+/**
+ * The blog's tags, in display order. A post may use only these ids: the blog
+ * schema rejects any other and lists the valid ones. Add a tag here first.
+ */
+export const blogTags = [
+  { id: "chart-choice", label: "Chart choice" },
+  { id: "annotation", label: "Annotation" },
+  { id: "color", label: "Color" },
+  { id: "maps", label: "Maps" },
+  { id: "tables", label: "Tables" },
+  { id: "accessibility", label: "Accessibility" },
+  { id: "climate", label: "Climate" },
+] as const satisfies readonly BlogTag[];
+
+/** A tag id from `blogTags`. */
+export type BlogTagId = (typeof blogTags)[number]["id"];
 
 /** The docs areas and their sidebar sections, in display order. A page's `section` frontmatter must be one of these section ids. */
 export const docsAreas = [

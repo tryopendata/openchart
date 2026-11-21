@@ -4,15 +4,14 @@
  * their static content reaches the page once and never travels as island props;
  * the page's demo script mounts their live charts. The island owns the filter
  * state and keeps it in the URL hash, shows and hides tiles (refiling them with
- * Flip when motion is allowed), draws the rules and names in, and scales the
- * live charts to their cells. The filter buttons render only once the island
+ * Flip when motion is allowed) and draws the rules and names in; live charts
+ * fill their cells on their own (tiles.css). The filter buttons render only once the island
  * runs: without JavaScript they would do nothing, and the wall shows every tile.
  */
 import { type ReactNode, useEffect, useReducer, useRef, useState } from "react";
 import type { SectionId } from "../../../config";
 import { useHydrated } from "../../shared/use-hydrated";
 import { useMotionTools } from "../../shared/use-motion-tools";
-import { observeTileScale } from "./tile-scale";
 import {
   isTileShown,
   parseWallHash,
@@ -70,11 +69,6 @@ export function VocabularyWall({ intents, total, sectionId, children }: Vocabula
 
   useEffect(() => {
     const root = gridRef.current;
-    if (root) return observeTileScale(root);
-  }, []);
-
-  useEffect(() => {
-    const root = gridRef.current;
     if (!root || !tools) return;
     const context = tools.gsap.context(() => waveIn(tools, tilesIn(root)));
     return () => {
@@ -112,18 +106,18 @@ export function VocabularyWall({ intents, total, sectionId, children }: Vocabula
     <div className="wall">
       <div className="wall-filter-slot">
         {ready ? (
-          <fieldset className="wall-filter">
+          <fieldset className="tile-filter">
             <legend className="sr-only">Show charts for one purpose</legend>
             {options.map((option) => (
               <button
                 key={option.id}
                 type="button"
-                className="wall-filter-button"
+                className="tile-filter-button"
                 aria-pressed={filter === option.id}
                 onClick={() => choose(option.id)}
               >
                 {option.label}
-                <span className="wall-count" aria-hidden="true">
+                <span className="tile-count" aria-hidden="true">
                   {option.count}
                 </span>
               </button>

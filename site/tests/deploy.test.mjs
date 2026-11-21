@@ -7,7 +7,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
@@ -63,31 +63,52 @@ before(async () => {
   child.stdout.on("data", keep);
   child.stderr.on("data", keep);
   base = `http://127.0.0.1:${port}`;
-  const deadline = Date.now() + 60_000;
-  for (;;) {
-    if (child.exitCode !== null) {
-      assert.fail(`wrangler pages dev exited:\n${output}`);
+  try {
+    const deadline = Date.now() + 60_000;
+    for (;;) {
+      if (child.exitCode !== null) {
+        assert.fail(`wrangler pages dev exited:\n${output}`);
+      }
+      try {
+        if ((await fetch(base, { signal: AbortSignal.timeout(1_000) })).ok) break;
+      } catch {}
+      if (Date.now() > deadline) {
+        assert.fail(`wrangler pages dev never answered:\n${output}`);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 200));
     }
-    try {
-      if ((await fetch(base, { signal: AbortSignal.timeout(1_000) })).ok) break;
-    } catch {}
-    if (Date.now() > deadline) {
-      assert.fail(`wrangler pages dev never answered:\n${output}`);
-    }
-    await new Promise((resolve) => setTimeout(resolve, 200));
+  } catch (error) {
+    await stopServer();
+    throw error;
   }
 });
 
-after(async () => {
-  if (child?.exitCode === null && child.pid !== undefined) {
-    const closed = once(child, "close");
-    process.kill(-child.pid, "SIGTERM");
-    const force = setTimeout(() => process.kill(-child.pid, "SIGKILL"), 5_000);
-    await closed;
-    clearTimeout(force);
+/** Sends `signal` to wrangler's whole process group, so workerd goes with it. A group already gone is fine. */
+function signalGroup(signal) {
+  try {
+    process.kill(-child.pid, signal);
+  } catch (error) {
+    if (error.code !== "ESRCH") throw error;
+  }
+}
+
+/** Stops wrangler and everything it spawned, then removes its state. Safe to call twice. */
+async function stopServer() {
+  if (child?.pid !== undefined) {
+    if (child.exitCode === null) {
+      const closed = once(child, "close");
+      signalGroup("SIGTERM");
+      const force = setTimeout(() => signalGroup("SIGKILL"), 5_000);
+      await closed;
+      clearTimeout(force);
+    }
+    // wrangler can exit before workerd does; the group kill reaps any straggler.
+    signalGroup("SIGKILL");
   }
   if (state) rmSync(state, { recursive: true, force: true });
-});
+}
+
+after(stopServer);
 
 const get = (path) => fetch(new URL(path, base), { redirect: "manual" });
 
@@ -123,6 +144,92 @@ test("Markdown exports and llms.txt are served as files", async () => {
   );
   assert.ok(exported, "astro build emitted no Markdown export under dist/docs");
   assert.equal((await get(`/docs/${exported}`)).status, 200);
+});
+
+/** The rules in dist/_redirects: `[source, destination, status]` per non-comment line. */
+function redirectRules() {
+  return readFileSync("dist/_redirects", "utf8")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("#"))
+    .map((line) => line.split(/\s+/));
+}
+
+/** The first gallery entry directory in dist/examples, a real slug for the splat rule. */
+function galleryEntrySlug() {
+  const slug = readdirSync("dist/examples", { withFileTypes: true }).find((entry) =>
+    entry.isDirectory(),
+  )?.name;
+  assert.ok(slug, "astro build emitted no gallery entry under dist/examples");
+  return slug;
+}
+
+test("the redirect rules are exactly the documented set", () => {
+  assert.deepEqual(redirectRules(), [
+    ["/rss.xml", "/blog/rss.xml", "301"],
+    ["/feed.xml", "/blog/rss.xml", "301"],
+    ["/gallery", "/examples/", "301"],
+    ["/gallery/*", "/examples/:splat", "301"],
+  ]);
+});
+
+test("each redirect answers 301 to a page that exists", async () => {
+  const slug = galleryEntrySlug();
+  const expected = [
+    ["/rss.xml", "/blog/rss.xml"],
+    ["/feed.xml", "/blog/rss.xml"],
+    ["/gallery", "/examples/"],
+    ["/gallery/", "/examples/"],
+    [`/gallery/${slug}/`, `/examples/${slug}/`],
+  ];
+  for (const [from, location] of expected) {
+    const redirect = await get(from);
+    assert.equal(redirect.status, 301, from);
+    assert.equal(redirect.headers.get("location"), location, from);
+    assert.equal((await get(location)).status, 200, `${from} leads to ${location}`);
+  }
+});
+
+test("/examples/index.html redirects to /examples/ without a rule", async () => {
+  const response = await get("/examples/index.html");
+  assert.equal(response.status, 308);
+  assert.equal(response.headers.get("location"), "/examples/");
+});
+
+test("no redirect source is a built file, so no rule hides a page", () => {
+  for (const [source] of redirectRules()) {
+    const path = join("dist", source.replace(/\*$/, ""));
+    assert.ok(!existsSync(path), `${source} is also built as ${path}; a rule would hide that page`);
+  }
+});
+
+test("the RSS feed is served as XML", async () => {
+  const response = await get("/blog/rss.xml");
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("content-type"), "application/rss+xml; charset=utf-8");
+  assert.match(await response.text(), /^<\?xml/);
+});
+
+test("the search index is served as JavaScript, and revalidates", async () => {
+  const response = await get("/pagefind/pagefind.js");
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("content-type") ?? "", /javascript/);
+  assert.match(response.headers.get("cache-control") ?? "", /max-age=0/);
+
+  const entry = await get("/pagefind/pagefind-entry.json");
+  assert.equal(entry.status, 200);
+  assert.match(entry.headers.get("content-type") ?? "", /json/);
+  assert.match(entry.headers.get("cache-control") ?? "", /max-age=0/);
+});
+
+test("the examples and blog pages carry the security headers", async () => {
+  for (const path of ["/examples/", "/blog/"]) {
+    const response = await get(path);
+    assert.equal(response.status, 200, path);
+    assert.equal(response.headers.get("x-content-type-options"), "nosniff", path);
+    assert.equal(response.headers.get("referrer-policy"), "strict-origin-when-cross-origin", path);
+    assert.equal(response.headers.get("x-frame-options"), "DENY", path);
+  }
 });
 
 test("unknown paths get the built 404 page", async () => {

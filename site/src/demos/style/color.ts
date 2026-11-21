@@ -94,7 +94,7 @@ export const divergingColor = defineDemo({
     mark: "bar",
     data: [...gistempGlobalAnnual.data],
     encoding: {
-      x: { field: "year", type: "ordinal", axis: { title: "Year" } },
+      x: { field: "year", type: "temporal", axis: { title: "Year", format: "%Y" } },
       y: {
         field: "anomaly",
         type: "quantitative",
@@ -151,7 +151,7 @@ export const highlightColor = defineDemo({
     },
     endpointLabels: { content: "label" },
     chrome: {
-      title: `Solar's share of US electricity rose from ${solarShare("2016")}% in 2016 to ${solarShare("2023")}% in 2023`,
+      title: `Solar's share of generation from six sources rose from ${solarShare("2016")}% in 2016 to ${solarShare("2023")}% in 2023`,
       subtitle: MIX_SUBTITLE,
     },
   },

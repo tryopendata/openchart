@@ -75,7 +75,7 @@ e2e: ## Browser and accessibility tests against the production build
 clean: ## Remove build output, test output and Astro caches
 	rm -rf dist .astro .astro-cache .vite-cache node_modules/.astro coverage playwright-report test-results
 
-deploy-check: build ## Serve dist/ through wrangler pages dev and check headers, canonical URLs and the 404 page
+deploy-check: build ## Serve dist/ through wrangler pages dev and check headers, redirects, the RSS feed, the search index files, trailing-slash URLs and the 404 page
 	node --test tests/deploy.test.mjs
 
 # Cloudflare's Git integration deploys (AGENTS.md, Deploy). These are for manual

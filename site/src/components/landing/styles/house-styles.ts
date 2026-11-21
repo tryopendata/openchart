@@ -75,7 +75,7 @@ export const HOUSE_STYLE_STOPS: readonly HouseStyleStop[] = [
     preset: "broadsheet",
     variant: "Broadsheet, in dark mode",
     description:
-      "The broadsheet look on a dark page. The dark colors are derived from the light ones.",
+      "The broadsheet look after dark: the same type and red rule on an ink-blue page, its palette lifted to hold the contrast.",
     theme: broadsheet,
     dark: true,
   },
@@ -130,12 +130,12 @@ const TRACKED: readonly { path: string; read: (mode: Mode) => string | undefined
   },
   {
     path: "colors.categorical",
-    read: ({ theme }) => {
+    read: ({ theme, dark }) => {
       const palette = colorsOf(theme).categorical;
       if (!palette) return undefined;
       return `[${palette
         .slice(0, 2)
-        .map((color) => JSON.stringify(color))
+        .map((color) => JSON.stringify(pick(color, dark)))
         .join(", ")}, …]`;
     },
   },

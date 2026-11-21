@@ -265,6 +265,30 @@ test("the area switcher moves from Visualizations to Guides", async ({ page, isM
   await expect(page).toHaveURL(/\/docs\/get-started\//);
 });
 
+// The header holds four links, search and the theme toggle; on a phone it drops
+// GitHub (under 640px) and the wordmark text (under 480px) to fit.
+for (const width of [360, 390]) {
+  test(`at ${width}px the header fits and no page scrolls sideways`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 800 });
+    for (const path of ["/", "/docs/", "/examples/", "/blog/"]) {
+      await page.goto(path);
+      const header = page.locator("body > header");
+      const nav = header.getByRole("navigation", { name: "Main" });
+      await expect(nav.getByRole("link", { name: "Blog" })).toBeVisible();
+      await expect(nav.getByRole("link", { name: "GitHub" })).toBeHidden();
+      await expect(header.getByRole("link", { name: "OpenChart home" })).toBeVisible();
+      const overflow = await page.evaluate(() => ({
+        page: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        header: (() => {
+          const row = document.querySelector("body > header > div");
+          return row ? row.scrollWidth - row.clientWidth : 0;
+        })(),
+      }));
+      expect(overflow, path).toEqual({ page: 0, header: 0 });
+    }
+  });
+}
+
 test.describe("without JavaScript", () => {
   test.use({ javaScriptEnabled: false });
 

@@ -1,6 +1,7 @@
 ---
 /**
  * Where the page sits: its area, linked to the area's first page, then its section.
+ * Search leaves it out of the index, since every page in a section repeats it.
  */
 interface Props {
   area: { label: string; href: string };
@@ -9,7 +10,7 @@ interface Props {
 const { area, section } = Astro.props;
 ---
 
-<nav aria-label="Breadcrumb">
+<nav aria-label="Breadcrumb" data-pagefind-ignore>
   <ol class="text-muted flex flex-wrap items-center gap-2 text-[13px]">
     <li>
       <a href={area.href} class="hover:text-ink no-underline transition-colors duration-150">

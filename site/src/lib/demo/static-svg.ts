@@ -7,7 +7,9 @@ import type { ThemeConfig, VizSpec } from "@opendata-ai/openchart-core";
 import { isGraphSpec, isSankeySpec, isTableSpec } from "@opendata-ai/openchart-core";
 import { renderStaticSVG } from "@opendata-ai/openchart-vanilla/static";
 import { chartTheme } from "./chart-theme";
+import { dropInheritedType } from "./inherited-type";
 import { DEMO_CLASS } from "./markup";
+import { slimSvg } from "./slim-svg";
 
 export type StaticSvgOptions = {
   idPrefix: string;
@@ -47,7 +49,9 @@ function markStatic(svg: string): string {
 
 /**
  * The SVG markup with class `demo-static` and a `data-theme` of light or dark,
- * or null when the spec type has no static renderer (table, graph, sankey).
+ * its text no longer repeating the root's font settings (inherited-type.ts) and
+ * without the data attributes and ids only a live chart reads (slim-svg.ts), or
+ * null when the spec type has no static renderer (table, graph, sankey).
  */
 export function staticSvg(spec: VizSpec, options: StaticSvgOptions): string | null {
   if (!hasStaticRenderer(spec)) return null;
@@ -61,7 +65,7 @@ export function staticSvg(spec: VizSpec, options: StaticSvgOptions): string | nu
     // The attribution is a link, and a link inside an image fails axe. The site's own footer credits the library.
     watermark: false,
   });
-  return markStatic(svg);
+  return slimSvg(dropInheritedType(markStatic(svg)));
 }
 
 /**

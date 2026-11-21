@@ -1,0 +1,30 @@
+---
+/**
+ * The blog index: an h1, one sentence on what the blog covers, then every
+ * post newest first (PostList). Not indexed by search; each post is.
+ */
+import PostList from "../../components/blog/PostList.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { readingTime } from "../../lib/blog";
+import { allPosts } from "../../lib/collection";
+import "../../styles/blog.css";
+
+const items = (await allPosts()).map(({ post, body }) => ({ post, minutes: readingTime(body) }));
+---
+
+<BaseLayout
+  title="Blog"
+  description="Articles on choosing, labelling and building charts for news, each with the OpenChart spec behind its figures."
+  path="/blog/"
+>
+  <div class="blog-index">
+    <header class="blog-index-header">
+      <h1 class="blog-headline">Blog</h1>
+      <p class="blog-standfirst">
+        How to choose, label and build charts for news, with the spec behind every figure.
+      </p>
+    </header>
+    <div class="rule-axis mt-8"></div>
+    <PostList items={items} />
+  </div>
+</BaseLayout>

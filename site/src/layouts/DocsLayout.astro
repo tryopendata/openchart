@@ -4,6 +4,8 @@
  * area switcher and sidebar, the article, and an "On this page" column. From 1024px
  * the outline column folds into the sidebar under the current page. Below 1024px
  * the sidebar becomes a "Docs menu" disclosure that opens without JavaScript.
+ * The article is what Pagefind indexes, filed under the page's area; its
+ * breadcrumb, page actions and pager are left out of the index.
  */
 import AreaSwitcher from "../components/docs/AreaSwitcher.astro";
 import Breadcrumb from "../components/docs/Breadcrumb.astro";
@@ -12,6 +14,7 @@ import PageOutline from "../components/docs/PageOutline.astro";
 import Pager from "../components/docs/Pager.astro";
 import Sidebar from "../components/docs/Sidebar.astro";
 import type { DocsLayoutProps } from "../lib/docs-types";
+import { searchBodyAttrs } from "../lib/search-index";
 import BaseLayout from "./BaseLayout.astro";
 
 type Props = DocsLayoutProps;
@@ -59,7 +62,10 @@ const sectionLabel = nav.find((section) => section.id === page.section)?.label ?
       />
     </div>
 
-    <article class="border-line min-w-0 pt-8 pb-4 lg:border-l lg:pt-12 lg:pl-12">
+    <article
+      class="border-line min-w-0 pt-8 pb-4 lg:border-l lg:pt-12 lg:pl-12"
+      {...searchBodyAttrs(page.area)}
+    >
       <header class="flex max-w-[44rem] flex-col gap-4">
         {area && <Breadcrumb area={area} section={sectionLabel} />}
         <h1 class="text-ink text-[2.125rem] leading-[1.1] font-medium tracking-[-0.02em] sm:text-[2.75rem]">

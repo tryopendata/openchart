@@ -1,0 +1,56 @@
+---
+/**
+ * One tag's page: the posts that carry the tag, newest first, listed as the
+ * index lists them. A page exists for each tag at least one post uses. Kept
+ * out of the search index and the sitemap, and `noindex, follow` so its links
+ * still count.
+ */
+import type { GetStaticPaths } from "astro";
+import BlogBreadcrumb from "../../../components/blog/BlogBreadcrumb.astro";
+import PostList from "../../../components/blog/PostList.astro";
+import type { BlogTag } from "../../../config";
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import { carriesTag, readingTime, tagPath, tagsInUse } from "../../../lib/blog";
+import type { BlogPost } from "../../../lib/blog-types";
+import { allPosts } from "../../../lib/collection";
+import "../../../styles/blog.css";
+
+export const getStaticPaths = (async () => {
+  const items = (await allPosts()).map(({ post, body }) => ({ post, minutes: readingTime(body) }));
+  return tagsInUse(items.map(({ post }) => post)).map((tag) => ({
+    params: { tag: tag.id },
+    props: { tag, items: items.filter(({ post }) => carriesTag(post, tag.id)) },
+  }));
+}) satisfies GetStaticPaths;
+
+interface Props {
+  tag: BlogTag;
+  items: { post: BlogPost; minutes: number }[];
+}
+const { tag, items } = Astro.props;
+const standfirst =
+  items.length === 1
+    ? `One post tagged ${tag.label}.`
+    : `${items.length} posts tagged ${tag.label}, newest first.`;
+const description =
+  items.length === 1
+    ? `Blog posts tagged ${tag.label}.`
+    : `Blog posts tagged ${tag.label}, newest first.`;
+---
+
+<BaseLayout
+  title={`${tag.label} posts`}
+  description={description}
+  path={tagPath(tag.id)}
+  robots="noindex, follow"
+>
+  <div class="blog-index">
+    <header class="blog-index-header">
+      <BlogBreadcrumb current={tag.label} />
+      <h1 class="blog-headline">{tag.label}</h1>
+      <p class="blog-standfirst">{standfirst}</p>
+    </header>
+    <div class="rule-axis mt-8"></div>
+    <PostList items={items} />
+  </div>
+</BaseLayout>

@@ -1,0 +1,30 @@
+---
+/**
+ * A post's byline: the author, the publication date and the reading time, as
+ * three elements in that order inside `[data-byline]` (the build test reads
+ * them by position). The dots between them are CSS (blog.css), so the
+ * elements stay the byline's only children. A post with an `updated` date
+ * gets an "Updated" line after the byline, outside it.
+ */
+import { displayDate, isoDay } from "../../lib/blog";
+
+interface Props {
+  author: string;
+  published: Date;
+  updated?: Date;
+  /** Minutes to read, from `readingTime()`. */
+  minutes: number;
+}
+const { author, published, updated, minutes } = Astro.props;
+---
+
+<p class="blog-byline" data-byline>
+  <span class="blog-byline-author">{author}</span>
+  <time datetime={isoDay(published)}>{displayDate(published)}</time>
+  <span>{minutes} min read</span>
+</p>
+{updated && (
+  <p class="blog-updated">
+    Updated <time datetime={isoDay(updated)}>{displayDate(updated)}</time>
+  </p>
+)}

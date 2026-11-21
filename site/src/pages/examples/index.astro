@@ -1,0 +1,45 @@
+---
+/**
+ * The examples gallery: every entry in `galleryEntries` as a finished graphic
+ * on one wall, in wall order, with a filter by kind. The lead takes the full
+ * width, features take four columns and two rows, and each tile sits where
+ * wall-layout.ts placed it, so the wall reads in entry order with no holes.
+ * Each tile links to its entry page. src/scripts/gallery.ts runs the filter;
+ * the page takes no island. Not indexed by search.
+ */
+import GalleryFilter from "../../components/gallery/GalleryFilter.astro";
+import GalleryTile from "../../components/gallery/GalleryTile.astro";
+import { wallPlacements } from "../../components/gallery/wall";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { galleryEntries } from "../../lib/gallery";
+import "../../styles/tiles.css";
+import "../../styles/gallery.css";
+---
+
+<BaseLayout
+  title="Examples"
+  description="Charts, maps and tables drawn with OpenChart from published data. Open one to copy the spec that draws it."
+  path="/examples/"
+>
+  <div class="gallery-page">
+    <header class="gallery-head">
+      <h1 class="gallery-title">Examples</h1>
+      <p class="gallery-lede">
+        Every graphic here is drawn by OpenChart from published data. Open one to copy the spec that
+        draws it.
+      </p>
+    </header>
+    <div class="gallery-wall" data-gallery>
+      <GalleryFilter entries={galleryEntries} />
+      <ul class="gallery-grid" role="list">
+        {galleryEntries.map((entry) => (
+          <GalleryTile entry={entry} placement={wallPlacements.get(entry.slug)} />
+        ))}
+      </ul>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  import "../../scripts/gallery";
+</script>

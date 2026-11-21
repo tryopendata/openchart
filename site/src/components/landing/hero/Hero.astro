@@ -34,7 +34,7 @@ import { heroFolds, heroSource, heroSteps } from "../../../landing/hero";
 import { heroChartTheme } from "../../../landing/hero-theme";
 import { staticSvgPair } from "../../../lib/demo/static-svg";
 import "../../../styles/landing-hero.css";
-import { toDeskSteps } from "./desk-step";
+import { deskSources } from "./desk-step";
 import HeroDesk from "./HeroDesk";
 import InstallCommand from "../../shared/InstallCommand.astro";
 import PublishedFigure from "../../shared/PublishedFigure.astro";
@@ -42,7 +42,7 @@ import PublishedFigure from "../../shared/PublishedFigure.astro";
 /** The static SVG's drawing size: the live chart's at 1440, so the swap does not move. */
 const STATIC_SIZE = { width: 904, height: 480 };
 
-const deskSteps = toDeskSteps(heroSteps, heroFolds);
+const deskSteps = deskSources(heroSteps);
 const finished = heroSteps.at(-1)?.spec;
 if (!finished) throw new Error("src/landing/hero.ts exports no steps: the hero needs five.");
 const staticCharts = staticSvgPair(finished, {
@@ -81,7 +81,7 @@ const staticCharts = staticSvgPair(finished, {
       reveal={false}
       note="The same chart at five stages, each one a few lines added to a JSON spec. Open the spec under the chart to read them."
     >
-      <HeroDesk client:load steps={deskSteps}>
+      <HeroDesk client:load steps={deskSteps} folds={heroFolds}>
         <Fragment set:html={staticCharts} />
       </HeroDesk>
     </PublishedFigure>

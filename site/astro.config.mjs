@@ -6,6 +6,7 @@ import sitemap from "@astrojs/sitemap";
 import tailwind from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
 import { site } from "./src/config.ts";
+import { pagefindIntegration } from "./src/integrations/pagefind.ts";
 import { shikiThemes } from "./src/lib/code-themes.ts";
 import { docsHastPlugins, docsShikiTransformers } from "./src/lib/markdown.ts";
 
@@ -22,11 +23,17 @@ export default defineConfig({
   integrations: [
     react(),
     mdx(),
-    // Pages only: the error page and endpoints (.md, .txt, .png) stay out.
+    // Pages only: the error page and endpoints (.md, .txt, .png, .xml) stay out,
+    // and so do blog tag pages, which are `noindex, follow`.
     sitemap({
       filter: (page) =>
-        page.endsWith("/") && !page.includes("/404") && !page.includes("/fixtures/"),
+        page.endsWith("/") &&
+        !page.includes("/404") &&
+        !page.includes("/fixtures/") &&
+        !page.includes("/blog/tags/"),
     }),
+    // Last, so it indexes the finished output.
+    pagefindIntegration(),
   ],
   markdown: {
     // Sätteri is Astro's default processor; heading ids come first so the

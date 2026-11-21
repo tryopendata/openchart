@@ -1,0 +1,28 @@
+---
+/**
+ * The links to the entries before and after this one in wall order, under the
+ * chart, each with that entry's title.
+ */
+import { galleryEntries } from "../../lib/gallery";
+import type { GalleryEntry } from "../../lib/gallery-types";
+import { pagerFor } from "./neighbours";
+
+type Props = { entry: GalleryEntry };
+
+const { previous, next } = pagerFor(galleryEntries, Astro.props.entry);
+---
+
+<nav class="gallery-pager" aria-label="Previous and next examples">
+  {previous && (
+    <a class="gallery-pager-link" href={`/examples/${previous.slug}/`} rel="prev">
+      <span class="gallery-pager-label">Previous</span>
+      <span class="gallery-pager-title">{previous.title}</span>
+    </a>
+  )}
+  {next && (
+    <a class="gallery-pager-link gallery-pager-next" href={`/examples/${next.slug}/`} rel="next">
+      <span class="gallery-pager-label">Next</span>
+      <span class="gallery-pager-title">{next.title}</span>
+    </a>
+  )}
+</nav>

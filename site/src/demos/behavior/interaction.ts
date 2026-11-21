@@ -75,7 +75,7 @@ export const selectColumns = defineDemo({
     mark: "bar",
     data: gistempGlobalAnnual.data.map((row) => ({ ...row })),
     encoding: {
-      x: { field: "year", type: "ordinal" },
+      x: { field: "year", type: "temporal", axis: { format: "%Y" } },
       y: {
         field: "anomaly",
         type: "quantitative",

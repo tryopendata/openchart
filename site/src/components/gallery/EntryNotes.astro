@@ -1,0 +1,49 @@
+---
+/**
+ * The column beside an entry's chart: a link to the docs page for its kind of
+ * chart, the dataset it draws, and the spec fields that shape it (spec-notes.ts),
+ * so a reader sees where to look in the code before opening it.
+ */
+import { getDemo } from "../../demos/registry";
+import type { GalleryEntry } from "../../lib/gallery-types";
+import { specNotes } from "./spec-notes";
+
+type Props = {
+  entry: GalleryEntry;
+  /** The title of the docs page `entry.docs` points at. */
+  docsTitle: string;
+};
+
+const { entry, docsTitle } = Astro.props;
+const demo = getDemo(entry.demo);
+const notes = specNotes(demo.spec);
+---
+
+<aside class="gallery-notes" aria-labelledby="gallery-notes-title">
+  <h2 id="gallery-notes-title" class="sr-only">
+    About this graphic
+  </h2>
+  <a class="gallery-docs-link" href={entry.docs}>
+    Read the docs: {docsTitle}
+  </a>
+  <dl class="gallery-facts">
+    <div class="gallery-fact">
+      <dt>Data</dt>
+      <dd>
+        {demo.source.url ? <a href={demo.source.url}>{demo.source.label}</a> : demo.source.label}
+      </dd>
+    </div>
+    {notes.map((note) => (
+      <div class="gallery-fact">
+        <dt>
+          <code>{note.field}</code>
+        </dt>
+        <dd class="gallery-fact-values">
+          {note.values.map((value) => (
+            <code>{value}</code>
+          ))}
+        </dd>
+      </div>
+    ))}
+  </dl>
+</aside>
