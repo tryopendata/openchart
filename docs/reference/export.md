@@ -1,18 +1,21 @@
 ---
 title: "Export API"
-description: "Export charts as SVG, PNG, CSV or an animated GIF, from the vanilla API or a framework component."
+description: "Export charts as SVG, PNG, JPG, CSV or an animated GIF, from a chart instance, a standalone function or a framework component."
 section: api
 order: 6
 ---
-<!-- phase-4-stub -->
 
 # Export API
+
+Every mounted chart can export itself as SVG, PNG, JPG, CSV or an animated GIF through `chart.export()`. Tables export CSV. The standalone `exportSVG`, `exportSVGWithFonts`, `exportPNG`, `exportJPG` and `exportCSV` functions take an SVG element (or rows, for CSV) instead of an instance. `exportSpecSequence(specs, options)` mounts an offscreen chart, tweens it through a list of specs and returns a GIF `Blob`; `options` needs `width` and `height`, and like GIF export it needs the optional `gifenc` package. The React, Vue and Svelte packages re-export all six.
+
+See it: [Export](https://openchart.steamfield.io/docs/output/export/).
 
 ## Export
 
 ### Vanilla API
 
-The `ChartInstance` returned by `createChart` supports three export formats:
+`chart.export()` on the `ChartInstance` returned by `createChart` takes `'svg'`, `'svg-with-fonts'`, `'png'`, `'jpg'`, `'gif'` or `'csv'`. The common ones:
 
 ```ts
 const chart = createChart(container, spec);
@@ -128,12 +131,12 @@ downloadBlob(gifBlob, "chart.gif");
 
 ### Framework export
 
-The `<Chart>` component doesn't expose the instance directly. For export access, use the `useChart` hook/composable:
+Each `<Chart>` component exposes its instance: in React through a ref (`ref.current.instance`), in Vue through a template ref (`chartRef.value.instance`) and in Svelte through `bind:this` (`chart.getInstance()`). The `useChart` hook or composable also returns it:
 
 **React:**
 
 ```tsx
-import { useChart } from "@opendata-ai/openchart-react";
+import { useChart, type ChartSpec } from "@opendata-ai/openchart-react";
 
 function ExportableChart({ spec }: { spec: ChartSpec }) {
   const { ref, chart } = useChart(spec, { darkMode: "off" });
@@ -192,20 +195,22 @@ async function handleExport(format: "svg" | "png" | "csv") {
 <script lang="ts">
 import { useChart } from "@opendata-ai/openchart-svelte";
 
-const { action, chart } = useChart(spec, { darkMode: "off" });
+// Keep the object: `chart` is a getter, and destructuring would copy its first value, null.
+const c = useChart(() => spec, () => ({ darkMode: "off" }));
 
 async function handleExport(format: "svg" | "png" | "csv") {
-  if (!chart) return;
+  if (!c.chart) return;
   if (format === "png") {
-    const blob = await chart.export("png");
+    const blob = await c.chart.export("png");
     downloadBlob(blob, "chart.png");
   } else {
-    const str = chart.export(format);
+    const str = c.chart.export(format);
     downloadString(str, `chart.${format}`, format === "svg" ? "image/svg+xml" : "text/csv");
   }
+}
 </script>
 
 <button onclick={() => handleExport("svg")}>Export SVG</button>
 <button onclick={() => handleExport("png")}>Export PNG</button>
-<div use:action style="width: 100%; height: 400px"></div>
+<div use:c.action style="width: 100%; height: 400px"></div>
 ```

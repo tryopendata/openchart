@@ -4,9 +4,12 @@ description: "BarListSpec fields for ranked bar lists: encoding, groups, value d
 section: spec
 order: 16
 ---
-<!-- phase-4-stub -->
 
 # BarListSpec
+
+A `BarListSpec` (`type: 'barlist'`) is a ranked list: one row per item, each with a label, a proportional bar and a value, and no axes. It renders through `<BarList>` or `createBarList`.
+
+See it: [Bar list](https://openchart.steamfield.io/docs/comparison/bar-list/).
 
 ## BarListSpec
 
@@ -46,7 +49,9 @@ Ranked rows with proportional tracks and value labels. `type: 'barlist'` selects
 
 Barlist annotations have type `Array<Omit<RefLineAnnotation, 'x' | 'y'> & { x: number; y?: never }>`: supply `type: 'refline'` and numeric `x`; `y` is not accepted. The renderer uses `stroke` (theme axis by default), `strokeWidth` (1px), `strokeDash` or `style` (solid by default; dashed/dotted supported), plus optional `label`, `fill`, `fontSize` and `fontWeight` for the label. A labeled refline reserves a top lane. References outside the value domain are omitted. This subset does not implement the Cartesian outside-placement or connector layout options.
 
-**Height behavior:** the compiler uses a numeric spec height or the compile height budget when `height` is omitted. It drops rows that cannot fit, but retains the first row whenever there is positive plot area, even if the row is taller than that area. Dropped rows warn only when the spec authors a numeric `height`; an omitted, container-driven height cap stays silent. The live mount derives that budget from its container and can shrink a short list to content. It does not turn omission into unbounded auto height. `renderStaticSVG` instead defaults an omitted barlist height to `'auto'`; its numeric `options.height` overrides the spec. Set `height: 'auto'` explicitly when a live list must fit every admitted row. `maxItems` still limits the row count in every mode.
+**Height behavior:** the compiler uses a numeric spec height or the compile height budget when `height` is omitted. It drops rows that cannot fit, but retains the first row whenever there is positive plot area, even if the row is taller than that area. Dropped rows warn only when the spec authors a numeric `height`; an omitted, container-driven height cap stays silent. The live mount derives that budget from its container and can shrink a short list to content. It does not turn omission into unbounded auto height.
+
+`renderStaticSVG` instead defaults an omitted barlist height to `'auto'`; its numeric `options.height` overrides the spec. Set `height: 'auto'` explicitly when a live list must fit every admitted row. `maxItems` still limits the row count in every mode.
 
 ```ts
 const spec: BarListSpec = {

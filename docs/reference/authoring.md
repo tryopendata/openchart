@@ -4,9 +4,12 @@ description: "Library interfaces for authoring and reader apps: numeric observat
 section: spec
 order: 17
 ---
-<!-- phase-4-stub -->
 
 # Authoring and reader APIs
+
+These interfaces serve apps that edit charts or let readers pin and inspect values: field metadata, reader identity, design diagnostics with patch fixes, the rules for missing measurements, and compact callout limits. A page that only displays charts doesn't need them.
+
+See it: [Edit mode](https://openchart.steamfield.io/docs/behavior/edit-mode/) and [Responsive](https://openchart.steamfield.io/docs/behavior/responsive/).
 
 ## Authoring foundation additions
 
@@ -23,7 +26,9 @@ Host-neutral identity, comparison and explicit dataset-binding helpers are also 
 
 ### Numeric observations and interaction contracts
 
-Measured channels accept finite numbers and nonblank numeric strings, including zero. Null, blank text, booleans, `NaN` and infinities are absent measurements, not zeroes. This applies to chart quantities, map coordinates/colors, size/domain extraction, aggregates, bins, density and window differences/percentage changes. Supplied missing line/area observations remain gaps during rendering, updates and exports. Sankey requires positive finite flow values; omitted flows produce a warning and an all-invalid dataset produces an empty finite layout. Cumulative sums skip absent/non-numeric contributions; window and density groups distinguish numeric and string keys. Layer domains and continuous legends use the same finite-measurement policy. Text-size fallback and absent-series stack conventions are unchanged.
+Measured channels accept finite numbers and nonblank numeric strings, including zero. Null, blank text, booleans, `NaN` and infinities are absent measurements, not zeroes. This applies to chart quantities, map coordinates/colors, size/domain extraction, aggregates, bins, density and window differences/percentage changes.
+
+Supplied missing line/area observations remain gaps during rendering, updates and exports. Sankey requires positive finite flow values; omitted flows produce a warning and an all-invalid dataset produces an empty finite layout. Cumulative sums skip absent/non-numeric contributions; window and density groups distinguish numeric and string keys. Layer domains and continuous legends use the same finite-measurement policy. Text-size fallback and absent-series stack conventions are unchanged.
 
 Maps, tile maps, bar lists and Sankey support arrows for inspection and Enter/Space for their existing click callbacks, including when `tooltip: false`. Escape dismisses inspection; Tab exits naturally. A keyboard-focused map mark uses arrows for mark navigation; the map root retains its separate zoom/pan shortcuts. Tables restore keyed cell/header focus across updates and keep native mobile detail disclosures operable.
 

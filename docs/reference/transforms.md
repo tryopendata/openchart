@@ -4,9 +4,12 @@ description: "The filter, bin, calculate, timeUnit, aggregate, joinaggregate, fo
 section: spec
 order: 7
 ---
-<!-- phase-4-stub -->
 
 # Transforms
+
+`transform` reshapes rows inside the spec before they are drawn: filter them, bin values, aggregate groups, fold a wide table into a long one or compute running totals. Use it when the rows you have aren't the rows the chart needs.
+
+See it: [Transforms](https://openchart.steamfield.io/docs/the-spec/transforms/), [Histogram](https://openchart.steamfield.io/docs/distribution/histogram/) and [Density](https://openchart.steamfield.io/docs/distribution/density/).
 
 ## Transforms
 

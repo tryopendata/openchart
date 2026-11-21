@@ -326,7 +326,7 @@ function App() {
 
 ## Scrollytelling
 
-Vanilla ships a scrollytelling story API on a subpath: \`@opendata-ai/openchart-vanilla/story\`. It drives a pinned chart through steps as the reader scrolls, tweening between spec states. See \`docs/spec-reference.md\` for the story builder API.
+Vanilla ships a scrollytelling story API on a subpath: \`@opendata-ai/openchart-vanilla/story\`. It drives a pinned chart through steps as the reader scrolls, tweening between spec states. See [Scrollytelling](https://openchart.steamfield.io/docs/behavior/scrollytelling/) for the story builder API.
 
 ## Full documentation
 

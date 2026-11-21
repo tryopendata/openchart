@@ -4,9 +4,12 @@ description: "LayerSpec fields for overlaying several marks on shared scales, an
 section: spec
 order: 3
 ---
-<!-- phase-4-stub -->
 
 # LayerSpec
+
+A `LayerSpec` draws several chart specs on one set of axes: a line over an area, points over a line, a rule at a target value. Children inherit the parent's data, encoding and transforms unless they set their own. A spec with a `layer` array is a `LayerSpec`.
+
+See it: [Layers](https://openchart.steamfield.io/docs/composition/layers/) and [Trendlines](https://openchart.steamfield.io/docs/correlation/trendlines/).
 
 ## LayerSpec
 
@@ -33,7 +36,9 @@ Overlay multiple chart types on shared scales. Source: `core/src/types/spec.ts`.
 | `hiddenSeries` | `string[]`                   | `undefined` | Series names to hide from rendering.                                                          |
 | `animation`    | `AnimationSpec`              | on | Animation configuration. On by default; `false` disables it. See [Animation](./animation.md#animation-1). |
 
-**Figure inheritance:** `display`, `a11y` and `frame` flow through nested layers to leaves that omit them. A child can replace each inherited value; these objects are not merged property by property. The composed figure uses its root value, falling back to the first flattened leaf. Root `labels` likewise controls the composed figure. A parent labels object with explicit `content` is inherited only by bar and range leaves without their own `labels`; interval peers such as ticks do not inherit inapplicable composed-label options. Other parent labels configurations are not copied to every leaf. Child `labels` wins as a whole.
+**Figure inheritance:** `display`, `a11y` and `frame` flow through nested layers to leaves that omit them. A child can replace each inherited value; these objects are not merged property by property. The composed figure uses its root value, falling back to the first flattened leaf.
+
+Root `labels` likewise controls the composed figure. A parent labels object with explicit `content` is inherited only by bar and range leaves without their own `labels`; interval peers such as ticks do not inherit inapplicable composed-label options. Other parent labels configurations are not copied to every leaf. Child `labels` wins as a whole.
 
 **Scale behavior:** All layers share scales by default. The engine unions data from all layers to compute a single scale domain, so marks from different layers are positioned on the same coordinate system.
 

@@ -4,9 +4,12 @@ description: "Encoding channels, field types, aggregates, axis and scale setting
 section: spec
 order: 4
 ---
-<!-- phase-4-stub -->
 
 # Encoding
+
+`encoding` maps data fields to visual channels: which field goes on x, which on y, which sets color or size. Each channel also carries the field's type and its axis, scale and format settings. The facet channels split one chart into small multiples.
+
+See it: [Encoding channels](https://openchart.steamfield.io/docs/the-spec/encoding/), [Field types and scales](https://openchart.steamfield.io/docs/the-spec/scales/), [Axes](https://openchart.steamfield.io/docs/the-spec/axes/) and [Facets](https://openchart.steamfield.io/docs/composition/facets/).
 
 ## Encoding
 
@@ -41,7 +44,9 @@ Which channels are required depends on the chart type. See [Encoding by chart ty
 | `scale`     | `ScaleConfig` | `undefined` | Scale configuration (domain, type, nice, zero).                                                |
 | `stack`     | `boolean \| 'zero' \| 'normalize' \| 'center' \| null` | `'zero'` for bar/column/area (Vega-Lite aligned) | Stacking behavior for quantitative channels. `null`/`false` disables stacking (grouped/dodged bars, or overlap gradients for area). `'normalize'` for 100% stacked. `'center'` for streamgraph. |
 
-`interval` is accepted only on temporal position channels (`x`, `y`, `x2` or `y2`) of `bar` marks; rect, errorbar and other channel/mark combinations are rejected. A numeric interval must be finite, positive milliseconds. Temporal bars use the interval to size bands around timestamps on a continuous time scale. Omission first looks for a calendar cadence (year, quarter, month, week, then day) whose smallest observed gap is one unit and whose other gaps are whole units. This preserves weekly cadence across daylight-saving changes and month-end runs. Otherwise it uses the smallest positive millisecond difference. With fewer than two distinct dates, it falls back to one day and warns. Dates whose spacing is not aligned with the chosen interval produce a warning. Calendar intervals follow the scale's local-time or UTC interpretation; month-based offsets clamp to the target month's last day. Numeric intervals are fixed durations.
+`interval` is accepted only on temporal position channels (`x`, `y`, `x2` or `y2`) of `bar` marks; rect, errorbar and other channel/mark combinations are rejected. A numeric interval must be finite, positive milliseconds. Temporal bars use the interval to size bands around timestamps on a continuous time scale.
+
+Omission first looks for a calendar cadence (year, quarter, month, week, then day) whose smallest observed gap is one unit and whose other gaps are whole units. This preserves weekly cadence across daylight-saving changes and month-end runs. Otherwise it uses the smallest positive millisecond difference. With fewer than two distinct dates, it falls back to one day and warns. Dates whose spacing is not aligned with the chosen interval produce a warning. Calendar intervals follow the scale's local-time or UTC interpretation; month-based offsets clamp to the target month's last day. Numeric intervals are fixed durations.
 
 ### DescriptionEncoding
 
@@ -53,7 +58,9 @@ type DescriptionEncoding =
   | { value: string };
 ```
 
-Field `type` and `format` default to omission. String fields are retained verbatim, numeric fields use the field formatter (with optional `format`), and temporal fields/Dates use date formatting. A null or missing field value emits no authored description. `{ value }` supplies constant text. Individual data shapes receive their row text; a line/area path requires the same field value throughout its series. Mixed series values warn and omit that path's description. Add a point layer to expose per-observation text. Static output writes a direct `<title>` on the data shape; live keyboard marks use the authored description. This channel is distinct from the figure's top-level `description` / `a11y.description` and from generated series metadata; it does not rename the series or replace its computed summary.
+Field `type` and `format` default to omission. String fields are retained verbatim, numeric fields use the field formatter (with optional `format`), and temporal fields/Dates use date formatting. A null or missing field value emits no authored description. `{ value }` supplies constant text. Individual data shapes receive their row text; a line/area path requires the same field value throughout its series. Mixed series values warn and omit that path's description. Add a point layer to expose per-observation text.
+
+Static output writes a direct `<title>` on the data shape; live keyboard marks use the authored description. This channel is distinct from the figure's top-level `description` / `a11y.description` and from generated series metadata; it does not rename the series or replace its computed summary.
 
 ### FieldType
 

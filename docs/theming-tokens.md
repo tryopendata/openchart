@@ -1,16 +1,17 @@
 ---
 title: "Theming tokens"
-description: "The CSS custom properties a page can set to restyle charts and tables without changing a spec."
+description: "ThemeConfig fields, named presets and the CSS custom properties a page can set to restyle charts and tables without changing a spec."
 section: tokens
 order: 1
 ---
 
-# Theming Design Tokens
+# Theming tokens
 
-`ThemeConfig` controls colors, typography, spacing, rules, and component surfaces.
-Defaults are shared by the JavaScript theme and generated CSS tokens. v9
-consolidates authored deep merging and leaves omitted CSS tokens available to
-host styles. For removed forms and legacy styling, see [Migrating to v9](migrating-v9.md).
+`ThemeConfig` fields (set in a spec, a theme provider or a mount option) and `--oc-*` CSS custom properties (set by the host page) control a chart's colors, type, spacing and surfaces, and they share one set of defaults. This page lists both, with the named presets and the derived color ramps. Only the fields you author are written inline, so a token you leave out can still be set from your own stylesheet.
+
+[Theme](reference/theme.md) has the field-by-field reference and the merge order. For removed forms and legacy styling, see [Migrating to v9](migrating-v9.md).
+
+See it: [Theming and tokens](https://openchart.steamfield.io/docs/style/theming/) and [Presets](https://openchart.steamfield.io/docs/style/presets/).
 
 ### ThemeConfig fields
 
@@ -118,7 +119,7 @@ createChart(container, spec, { theme: wire });
 ### categoricalFill and hairline
 
 `ThemeColors` carries two fields beyond `categorical`: `categoricalFill` (the
-quieter variant used for area-filling marks — bar, area, arc, waffle,
+quieter variant used for area-filling marks: bar, area, arc, waffle,
 calendar, rect) and `hairline` (the structural line color for axis lines and
 separators, distinct from `gridline`, which is lighter). If you set only
 `colors.categorical`, `categoricalFill` is copied from it so a custom palette
@@ -136,22 +137,22 @@ theme: {
 ```
 
 A domain with more series than the palette carries (six by default) extends
-from a secondary six-slot ramp and emits a warning — six categorical series is
+from a secondary six-slot ramp and emits a warning. Six categorical series is
 already the point where a chart should bucket the tail, facet, or
 direct-label instead of adding a seventh hue.
 
 ### The derived neutral ramp
 
-Every secondary gray in the system — `--oc-gray-100` through `-800`,
-`--oc-text-secondary`, `--oc-text-faint`, `--oc-border` — is computed by
+Every secondary gray in the system (`--oc-gray-100` through `-800`,
+`--oc-text-secondary`, `--oc-text-faint`, `--oc-border`) is computed by
 mixing the theme's `text` color toward its `background`, not read from a
 fixed zinc ladder. A warm or cool custom theme gets warm or cool grays for
 free instead of zinc showing up uninvited beside the palette. The ramp lives
 on `ResolvedTheme.colors.neutral` (`100`/`200`/`300`/`400`/`600`/`800`, plus
 `secondary` = `800`, `faint` = `300`, `border` = `100`, plus `surface`) and is
 computed once in `resolveTheme`/`adaptTheme`. Mounts stamp derived tokens when
-the relevant theme colors are authored; omitted tokens use the CSS cascade. `surface` is the opaque color the theme paints on — the background itself
-when it is opaque, otherwise the mode's `--oc-bg` token — and is the single
+the relevant theme colors are authored; omitted tokens use the CSS cascade. `surface` is the opaque color the theme paints on (the background itself
+when it is opaque, otherwise the mode's `--oc-bg` token) and is the single
 source for knockout rings, stacked-segment seams, table cell fills, graph node
 rings, annotation marker/plate fills, and authored background tokens. When the
 background is transparent (the default) the ramp falls back to the static
@@ -178,7 +179,7 @@ regardless, so a theme with `borderRadius: 0` still draws a 2px bar-end
 radius.
 
 `--oc-positive`/`--oc-negative` are generated to match
-`DEFAULT_THEME.colors.positive`/`.negative` exactly in both modes — a
+`DEFAULT_THEME.colors.positive`/`.negative` exactly in both modes. A
 `token-theme-parity` test asserts this, along with the four weight tokens,
 `--oc-gridline`, `--oc-axis`, `--oc-border-radius`, `colors.neutral`, and
 `--oc-animation-stagger`, so the JS theme and the generated CSS tokens can't
@@ -186,7 +187,7 @@ drift apart.
 
 ### The editorial rule
 
-`ThemeConfig.rule` draws a short colored bar above the chrome block — the
+`ThemeConfig.rule` draws a short colored bar above the chrome block: the
 Economist/FT masthead device. It is `null` on every theme but `broadsheet`.
 
 ```ts

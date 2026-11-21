@@ -4,9 +4,12 @@ description: "SankeySpec fields for flow diagrams: encoding, node and link setti
 section: spec
 order: 13
 ---
-<!-- phase-4-stub -->
 
 # SankeySpec
+
+A `SankeySpec` (`type: 'sankey'`) draws flows between stages as bands whose width is the flow's value. Each data row is one link from a source node to a target node.
+
+See it: [Sankey](https://openchart.steamfield.io/docs/flow/sankey/).
 
 ## SankeySpec
 

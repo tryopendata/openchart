@@ -4,9 +4,12 @@ description: "Text, range and reference line annotations, with their position, c
 section: spec
 order: 8
 ---
-<!-- phase-4-stub -->
 
 # Annotations
+
+Annotations are editorial marks placed at data coordinates: a text callout, a shaded range, a reference line. They live in the spec's `annotations` array and are positioned through the chart's scales, so they stay on their data point when the chart resizes or updates.
+
+See it: [Annotations](https://openchart.steamfield.io/docs/framing/annotations/).
 
 ## Annotations
 
