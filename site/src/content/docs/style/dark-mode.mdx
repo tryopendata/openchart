@@ -5,6 +5,72 @@ section: style
 order: 3
 ---
 
-{/* phase-4-stub */}
+import Demo from "../../../components/demo/Demo.astro";
+import "../../../styles/preset-fonts.css";
 
-This page is being written.
+Use the theme switch in the site header: every chart on this site redraws in its dark palette, including this one, which sets no dark colors of its own.
+
+<Demo id="style/dark-mode-site" />
+
+## The darkMode setting
+
+Dark mode is a host setting, not a spec field, because the page decides whether it is dark. Pass `darkMode` where the chart mounts:
+
+```ts title="chart.ts"
+createChart(container, spec, { darkMode: "force" });
+```
+
+React, Vue and Svelte take the same value as a `darkMode` prop on `<Chart>`, or once for every chart on `<VizThemeProvider>`.
+
+| Value | Behavior |
+| --- | --- |
+| `"off"` | Always light. The default. |
+| `"force"` | Always dark. |
+| `"auto"` | Follows the reader's system setting through the `prefers-color-scheme` media query. |
+
+`"auto"` does not see a site's own theme switch, such as a `dark` class on the page. If your site has a switch, pass `"force"` or `"off"` from its state. This site does that, and remounts each chart when the reader changes theme.
+
+Without dark colors in the theme, the library derives them: it swaps the background and text colors, adjusts the brightness of the palette and lightens the gridlines.
+
+## A preset's dark palette
+
+<Demo id="style/dark-mode-preset" />
+
+Presets carry their own dark colors. Broadsheet's warm paper turns to a near-black brown, its text to off-white, and its red rule to a lighter red. Terminal is the exception: it is dark in both modes.
+
+## Light and dark color pairs
+
+<Demo id="style/dark-mode-pairs" />
+
+Any single color in a theme can be a `{ light, dark }` pair. The library then uses your dark value instead of deriving one, which is how you keep brand colors exact in both modes. This chart sets pairs for the background, the text, the axis and both series colors:
+
+```ts title="theme.ts"
+const theme = {
+  colors: {
+    categorical: [
+      { light: "#1d5f8a", dark: "#7fb0d3" },
+      { light: "#c2410c", dark: "#fb923c" },
+    ],
+    background: { light: "#fff8ef", dark: "#17130f" },
+    text: { light: "#2b2118", dark: "#f3e9dc" },
+    axis: { light: "#76695b", dark: "#b3a493" },
+  },
+};
+```
+
+Pairs replace whole when themes merge, so a later theme layer that sets `background` replaces both of its values.
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `darkMode` (mount option or prop) | `"off"`, `"force"` or `"auto"`. |
+| `theme.colors.*` as `{ light, dark }` | Sets the dark value of one color yourself. |
+| `theme.colors.categorical` | A list of colors or pairs, one per series. |
+
+## Related
+
+- [Theming and tokens](/docs/style/theming/) covers every theme field.
+- [Presets](/docs/style/presets/) shows all four presets in light mode.
+- [Bar](/docs/comparison/bar/) covers the bar charts on this page.
+- [Theme reference](/docs/spec/theme/#darkmode) documents `DarkMode` and how the dark theme is derived.

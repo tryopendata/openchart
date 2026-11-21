@@ -5,6 +5,51 @@ section: output
 order: 3
 ---
 
-{/* phase-4-stub */}
+import Demo from "../../../components/demo/Demo.astro";
 
-This page is being written.
+Canvas mode paints a scatter's dots onto one `<canvas>` element instead of one SVG circle each, which keeps a chart of many thousands of points quick to draw and hover. This chart draws the center of every county west of the 100th meridian that way.
+
+<Demo id="output/canvas-west" />
+
+This chart has 599 points, so it uses the canvas only because it sets `renderer: "canvas"`; left to the library it would draw SVG.
+
+## Turning it on
+
+Canvas is a choice of the page that mounts the chart, so it is a mount option rather than a spec field:
+
+```ts title="chart.ts"
+createChart(container, spec, { renderer: "canvas" });
+```
+
+React, Vue and Svelte take the same value as the `renderer` prop on `<Chart>`. Only point marks move to the canvas. A line, bar or area chart, and any faceted, layered or sparkline chart, stays SVG, and an explicit `"canvas"` there logs a warning.
+
+The canvas also paints the gridlines. The axes, tick labels and title stay SVG, so text stays sharp at any zoom, and the SVG keeps the chart's accessible name. Tooltips and hover work as before: the pointer passes through to the canvas, which finds the nearest dot.
+
+## The automatic switch
+
+<Demo id="output/canvas-auto-texas" />
+
+Leave `renderer` out and the library decides: above 1,000 points it uses the canvas, at 1,000 or fewer it draws SVG. This chart sets no renderer and has 254 points, so each dot is an SVG circle. A scatter of all 3,108 counties and county equivalents in the lower 48 states and DC would move to the canvas by itself. Set `renderer: "svg"` to keep SVG at any size.
+
+## What changes on a canvas
+
+- Dots have no elements of their own, so a keyboard cannot step from dot to dot and edit mode cannot select one. The screen-reader data table stays, capped at 1,000 rows with a caption giving the full count.
+- A trendline draws above the dots even when set to draw below, because the canvas sits under the whole SVG.
+- Gradient fills show their first color on screen.
+
+Exports re-render the chart in full. A PNG matches the SVG version of the chart pixel for pixel, and an SVG file is all vector up to 5,000 points; above that the dots go in as one embedded image while text and gridlines stay vector.
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `renderer` (mount option or prop) | `"auto"` (the default), `"canvas"` or `"svg"`. |
+| `mark: "point"` | The only mark that can draw on a canvas. |
+| `mark.opacity` | Lower it on dense scatters so overlapping dots stay readable. |
+| `encoding.key` | A field that names each point, so an update can move dots instead of redrawing them. |
+
+## Related
+
+- [Scatter](/docs/correlation/scatter/) covers the point chart this page draws.
+- [Symbol map](/docs/maps/symbol-map/) puts points on a projected map instead of plain axes.
+- [Marks reference](/docs/spec/marks/#canvas-mark-mode) documents canvas mode and its export behavior.
