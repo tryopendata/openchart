@@ -8,11 +8,11 @@ Publication-quality data graphics from a JSON spec. You describe what the chart 
 
 The spec is a plain JSON object that both humans and LLMs can author. The headless engine means the same spec renders in React, Vue, Svelte, or vanilla JS without code changes.
 
-Because a chart is a JSON document, OpenChart works well as a render target for AI agents: the model writes the spec, `validateSpec` returns field-level errors it can fix, and updates animate in place. See [Built for agents](https://tryopendata.github.io/openchart/?story=agents--built-for-agents) for a walkthrough, and [Generating specs](docs/generating-specs.md) for the tool setup.
+Because a chart is a JSON document, OpenChart works well as a render target for AI agents: the model writes the spec, `validateSpec` returns field-level errors it can fix, and updates animate in place. See [Built for agents](https://openchart.steamfield.io/#agents) for a walkthrough, and [Generating specs](docs/generating-specs.md) for the tool setup.
 
 <img alt="OpenChart example charts" src="https://github.com/user-attachments/assets/a08a9237-8fe0-45ff-8203-898848a142ab" />
 
-### [Interactive Examples](https://tryopendata.github.io/openchart/) · [Built for agents](https://tryopendata.github.io/openchart/?story=agents--built-for-agents)
+### [Interactive Examples](https://openchart.steamfield.io/examples/) · [Built for agents](https://openchart.steamfield.io/#agents)
 
 ## Quick start
 
@@ -97,6 +97,8 @@ Release candidates publish under the `next` dist-tag, so a plain install always 
 
 ## Documentation
 
+Read the full documentation at [openchart.steamfield.io/docs](https://openchart.steamfield.io/docs/). Most guides below are also published there.
+
 | Doc | What's in it |
 | --- | ------------ |
 | [OpenStudio](https://github.com/tryopendata/openstudio) | Separate browser authoring app and GitHub Pages demo |
@@ -119,6 +121,8 @@ Release candidates publish under the `next` dist-tag, so a plain install always 
 | [Migrating to v8](docs/migrating-v8.md) | Breaking changes, before/after specs, and jq codemod recipes for the v8 upgrade |
 | [Theming tokens](docs/theming-tokens.md) | Design token system, `TokenValue` light/dark pairs, `seriesStrategy`, named presets |
 | [Contributing](CONTRIBUTING.md) | Setup, running tests, adding chart types, PR guidelines |
+
+To work on the library, run `bun run dev` at the repository root. It starts [Ladle](https://ladle.dev), the local development harness, with the stories in `examples/`.
 
 ## Packages
 

@@ -4,7 +4,7 @@ Instructions for coding agents working in this repository. Keep this file under 
 
 ## Overview
 
-The OpenChart documentation site at https://openchart.steamfield.io: a landing page at `/`, the chart, table and map catalog with live demos, and the guides from the repository's `docs/` under `/docs/`. Developers and coding agents read it; every page is also served as Markdown and listed in `/llms.txt`. Built with Astro and static React, rendered by the OpenChart packages in this monorepo, and deployed to Cloudflare Pages.
+The OpenChart documentation site at https://openchart.steamfield.io: a landing page at `/`, the chart, table and map catalog with live demos and the guides from the repository's `docs/` under `/docs/`, an examples gallery at `/examples/`, a blog at `/blog/` with an RSS feed, and search over docs, examples and posts. Developers and coding agents read it; every page is also served as Markdown and listed in `/llms.txt`. Built with Astro and static React, rendered by the OpenChart packages in this monorepo, and deployed to Cloudflare Pages.
 
 ## Commands
 
@@ -24,7 +24,7 @@ Run these from `site/`. They are the only supported way to build, test, and run 
 | `make preview` | Serve the production build on PORT_WEB |
 | `make e2e` | Browser and accessibility tests against the production build |
 | `bunx playwright test <file>` | One browser test file, after a build |
-| `make deploy-check` | Build, then serve dist/ through `wrangler pages dev` and check headers, canonical URLs and the 404 page |
+| `make deploy-check` | Build, then serve dist/ through `wrangler pages dev` and check headers, redirects, the RSS feed, the search index files, trailing-slash URLs and the 404 page |
 | `make deploy-preview BRANCH=<name>` | Build and upload a preview (needs Cloudflare variables, see Deploy) |
 | `make deploy` | Build and upload to production (needs Cloudflare variables, see Deploy) |
 | `make clean` | Remove build output, test output and Astro caches |
@@ -37,15 +37,17 @@ src/landing/           landing copy (headline and section headings) and each sec
 src/content/docs/      catalog pages, one .mdx per chart type, grouped by section
 src/content.config.ts  collections: catalog pages plus the repository's docs Markdown (docs/ and docs/reference/) that declares a `section`
 src/demos/             demo specs per section, found by registry.ts; fixtures/ for tests
-src/lib/               docs navigation and exports, Markdown plugins, demo rendering, analytics, consent
-src/components/        landing sections and their islands, docs chrome, the Demo figure
-src/layouts/           BaseLayout (head, header, footer, analytics) and DocsLayout (sidebar, outline, pager)
-src/pages/             landing, docs and their .md exports, llms files, social cards, robots, 404, test fixtures
-src/scripts/           browser code: theme, copy buttons, demo mounting
-src/styles/            global tokens and demo styles
+src/content/blog/      blog posts, one .md or .mdx each; the file name is the slug
+src/lib/               docs navigation and exports, Markdown plugins, demo rendering, gallery entries, blog posts, search index attributes, analytics, consent
+src/components/        landing sections and their islands, docs chrome, the Demo figure, gallery tiles, blog parts, the search dialog
+src/layouts/           BaseLayout (head, header, footer, analytics), DocsLayout (sidebar, outline, pager) and BlogLayout (byline, JSON-LD)
+src/pages/             landing, docs and their .md exports, examples (wall and entry pages), blog (index, posts, tags, rss.xml), llms files, social cards, robots, 404, test fixtures
+src/scripts/           browser code: theme, copy buttons, demo mounting, gallery filter, search
+src/integrations/      pagefind.ts, the Astro integration that writes dist/pagefind/ at the end of every build
+src/styles/            global tokens and demo, gallery, search and blog styles
 tests/                 build acceptance tests (build.test.ts) and the Pages check (deploy.test.mjs)
 e2e/                   Playwright browser and axe tests
-public/                static files, including _headers for Pages
+public/                static files, including _headers and _redirects for Pages
 ```
 
 At build time each demo spec is validated with the engine and rendered to static SVG; in the browser `src/scripts/demos.ts` mounts the live chart as it nears the viewport.
@@ -128,13 +130,13 @@ Pages project `openchart`, settings (recreate them from this list):
 - Build command: `cd .. && bun install --frozen-lockfile && bun run build && cd site && bunx astro build`. The site resolves the library packages through their `dist/`, so the root install and the root library build must run before `astro build`. `scripts/__tests__/site-workflow.test.mjs` reads this command and checks that order.
 - Build variables: `BUN_VERSION=1.4.2`, `NODE_VERSION=24.21.0`, `SKIP_DEPENDENCY_INSTALL=1`. The last stops Pages running its own install inside `site/`, which has `workspace:*` dependencies and no lockfile.
 - Build watch paths: `site/*`, `docs/*`, `packages/*`, `examples/src/data/*`, `package.json`, `bun.lock`, `bunfig.toml`.
-- Variables: `site/wrangler.jsonc` exists, so it is the source of truth and Pages ignores dashboard variables. `PUBLIC_POSTHOG_KEY` (and `PUBLIC_POSTHOG_HOST` if needed) belong in its `env.production.vars`, so previews send no analytics. Not added yet: no key exists.
+- Variables: `astro build` reads `PUBLIC_POSTHOG_KEY` (and `PUBLIC_POSTHOG_HOST` if needed) from its environment (`import.meta.env` in `BaseLayout.astro`). Cloudflare documents build variables under Workers & Pages > the project > Settings > Environment variables (https://developers.cloudflare.com/pages/configuration/build-configuration/). Set them for the Production environment only, so previews send no analytics. `vars` in `wrangler.jsonc` are documented as Functions runtime values (https://developers.cloudflare.com/pages/functions/wrangler-configuration/) and the page does not say they reach the build, so the file defines none. Not added yet: no key exists.
 
 The Site workflow (`.github/workflows/site.yml`) only checks: lint, check, test, build, the browser tests and `make deploy-check`, on pushes and pull requests that touch the site, `docs/`, `packages/`, `examples/src/data/`, `bun.lock`, the root `package.json` or `bunfig.toml`, the workflow itself or `.github/actions/setup-bun/`. Don't mark its check required: it is path-filtered, so a pull request that touches none of those paths never runs it and would wait forever.
 
 Manual uploads: `make deploy-check` needs no account. `make deploy` and `make deploy-preview BRANCH=<name>` remain for uploading from a machine; they need `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` exported and stop before building when one is missing. `make deploy-preview BRANCH=main` stops too: `main` is production, so use `make deploy`. Both run the workspace's wrangler (`bunx --no-install`) and never download one. Agents never deploy: no `make deploy*`, no `wrangler pages deploy`.
 
-Public build-time values (`PUBLIC_POSTHOG_KEY`, `PUBLIC_POSTHOG_HOST`) come from the environment of `astro build`. Response headers (asset caching, security headers) are in `public/_headers`. `scripts/__tests__/site-workflow.test.mjs` at the repository root guards the workflow's invariants and this section's build command (run with `bun run test:scripts`).
+Public build-time values (`PUBLIC_POSTHOG_KEY`, `PUBLIC_POSTHOG_HOST`) come from the environment of `astro build`. Response headers (asset caching, security headers, the RSS content type) are in `public/_headers`; redirects are in `public/_redirects`, and `tests/deploy.test.mjs` checks every rule and that none hides a built page. `/pagefind/*` keeps the default revalidating cache because `pagefind.js` and `pagefind-entry.json` are not content-hashed. `scripts/__tests__/site-workflow.test.mjs` at the repository root guards the workflow's invariants and this section's build command (run with `bun run test:scripts`).
 
 ## Analytics
 
@@ -150,15 +152,16 @@ Public build-time values (`PUBLIC_POSTHOG_KEY`, `PUBLIC_POSTHOG_HOST`) come from
 
 ## Deferred
 
-- Search: `BaseLayout` has an empty `search` slot; no indexer yet.
 - A pull request comment with the preview URL.
 
 ## Pending user actions
 
-Steps only a human can do. Check here before reporting one of these as a problem.
+Steps only a human can do, in order. Check here before reporting one of these as a problem. The Pages project `openchart`, its Git integration and the `openchart.steamfield.io` domain exist and the site is live.
 
-- Add the PostHog project key to `env.production.vars.PUBLIC_POSTHOG_KEY` in `wrangler.jsonc` (and `PUBLIC_POSTHOG_HOST` if needed) to turn on analytics in production. No key is available yet.
-- Add the site to the Steamfield product registry and privacy page, which live in another repository.
+1. Supply the PostHog project key. `astro build` reads `PUBLIC_POSTHOG_KEY` (and `PUBLIC_POSTHOG_HOST` if needed) from its environment. Cloudflare documents build variables under Workers & Pages > `openchart` > Settings > Environment variables, but does not say whether that panel stays editable while `wrangler.jsonc` is the project's source of truth, or whether `vars` in that file reach the build. Try the dashboard first (Production only, then redeploy) and check the built page for the key. If the panel is locked, the documented fallback is to commit the key, which is a public client key, and have the build use it only when `CF_PAGES_BRANCH` is `main`. No key is available yet.
+2. Add the site to the Steamfield product registry and privacy page, which live in another repository. The entry: name `OpenChart`, URL `https://openchart.steamfield.io`, `site: "openchart"`, consent cookie domain `.steamfield.io` (the `sf-consent` cookie).
+3. Verify `openchart.steamfield.io` in Google Search Console and submit `/sitemap-index.xml`.
+4. Repoint the Ladle links in `docs/*.md` (the build rewrites them today), and decide whether to retire the Ladle GitHub Pages deploy (`.github/workflows/deploy-examples.yml`). Ladle itself stays as the local development harness. The root `README.md` already links to the site.
 
 ## Deeper context
 

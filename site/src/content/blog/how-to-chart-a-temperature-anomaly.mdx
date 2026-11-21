@@ -1,19 +1,18 @@
 ---
 title: How to chart a temperature anomaly
-description: An anomaly chart plots how far each year sits from a reference period. Here is how to set its zero line and choose between bars and a line.
+description: An anomaly chart plots each year's distance from a reference period. Name that period, and use bars for spaced samples and a line when you have every year.
 published: 2026-11-20
 author: OpenChart
 tags: [chart-choice, climate]
 related: [comparison/column, framing/annotations, style/color, framing/chrome]
+lead: blog/gistemp-columns
 ---
 
 import Demo from "../../components/demo/Demo.astro";
 
-{/* phase-5-stub */}
+NASA's surface temperature analysis puts 2025 at 1.19°C above the 1951–1980 average. That number is an anomaly, the distance between one year's global mean temperature over land and ocean and the mean of a fixed reference period. A chart of anomalies plots those distances, so its zero line is that average.
 
-An anomaly chart plots how far each year sits from a reference period, and NASA's GISTEMP v4 measures from the 1951–1980 average.
-
-<Demo id="style/color-diverging" />
+[NASA builds its global figure from local anomalies](https://data.giss.nasa.gov/gistemp/faq/) rather than absolute temperatures, because an absolute mean for a region or the whole globe is hard to find and carries large uncertainties.
 
 ```json demo source="NASA GISS Surface Temperature Analysis (GISTEMP v4)" height=400
 {
@@ -35,13 +34,53 @@ An anomaly chart plots how far each year sits from a reference period, and NASA'
     { "year": "2025", "anomaly": 1.19, "trend": "Warmer" }
   ],
   "encoding": {
-    "x": { "field": "year", "type": "ordinal" },
-    "y": { "field": "anomaly", "type": "quantitative" },
-    "color": { "field": "trend", "type": "nominal" }
+    "x": { "field": "year", "type": "temporal", "axis": { "format": "%Y" } },
+    "y": {
+      "field": "anomaly",
+      "type": "quantitative",
+      "axis": { "format": ".1f", "labelSuffix": "°C", "tickCount": 5 }
+    },
+    "color": {
+      "field": "trend",
+      "type": "nominal",
+      "scale": { "domain": ["Cooler", "Warmer"], "range": ["#2b6cb0", "#c2410c"] }
+    }
   },
+  "legend": { "show": false },
+  "labels": false,
   "chrome": {
     "title": "2025 was 1.19°C warmer than NASA's 1951–1980 average",
-    "subtitle": "Global land and ocean temperature anomaly, °C, selected years 1900–2025"
+    "subtitle": "Global land and ocean temperature, difference from the 1951–1980 average (°C), selected years 1900–2025"
   }
 }
 ```
+
+The columns are [NASA's GISTEMP v4](https://data.giss.nasa.gov/gistemp/) annual means for one year per decade from 1900 to 2020, plus 2025.
+
+The horizontal axis is a time scale, so the five years between 2020 and 2025 take half the room of each decade before them. A category axis would space all 14 columns evenly and make the last gap look like ten years.
+
+Coloring the columns by sign, blue below zero and orange above, lets a reader find the warm years without reading the axis. Where the colors split depends on the reference period. NASA estimates that measuring from 1850–1900 instead adds about 0.19°C to each of its anomalies, and on that base 1900, 1930, 1950 and 1960 cross above zero, leaving only 1910 and 1920 below it.
+
+## What the zero line means
+
+An anomaly can't be read without its reference period, so print the period on the chart, in the title, the subtitle or a label on the zero line. NASA measures from 1951–1980, and [HadCRUT5](https://www.metoffice.gov.uk/hadobs/hadcrut5/), from the Met Office and the University of East Anglia, measures from 1961–1990. NASA keeps its period fixed because, its FAQ says, a fixed base gives anomalies that are consistent over time.
+
+Adding NASA's 0.19°C puts 2025 near 1.38°C above 1850–1900, which is why figures measured from pre-industrial times run higher than the ones on NASA's own charts. The FAQ adds that anomalies against that early base are more uncertain than against a modern one.
+
+Changing the reference period moves the zero line and leaves the trend alone. Every year shifts by the same amount, so in NASA's series 2025 is 0.18°C warmer than 2020 whichever period you measure from.
+
+Each note on a chart should answer a question a reader would otherwise ask. The second chart names the zero line and labels 1910, the coolest of the 14 years shown, 1.62°C below 2025.
+
+<Demo id="blog/gistemp-baseline" />
+
+## Bars or a line
+
+Use bars when the readings are samples spaced apart, as these are. A line joins its points with straight segments, and a reader takes each segment as the path between them. Here the segment from 0.12°C in 1940 to −0.17°C in 1950 would look like a decade of measurements, though only 1940 and 1950 are plotted.
+
+Switch to a line when you have every year: each segment then joins readings a year apart, so it implies nothing that wasn't measured, and the line shows the long rise more plainly than 146 columns, one for each year of NASA's record from 1880 to 2025.
+
+## The spec
+
+Code under the first chart opens its spec, with NASA's 14 rows. In the x channel (the property the year field drives), `"type": "temporal"` spaces the years by time. The color channel maps each row's `trend` value, Cooler or Warmer, to blue and orange through its `scale`. The title and subtitle sit in `chrome`.
+
+To build charts like these from your own data, start with the [getting started guide](/docs/get-started/getting-started/).

@@ -1,8 +1,9 @@
 ---
-/** One blog post, rendered in BlogLayout. Every post in `allPosts()` gets a page. */
+/** One blog post, rendered in BlogLayout with its reading time and related docs links. Every post in `allPosts()` gets a page. */
 import type { GetStaticPaths } from "astro";
 import BlogLayout from "../../layouts/BlogLayout.astro";
-import { allPosts, type PostEntry } from "../../lib/collection";
+import { readingTime, relatedLinks } from "../../lib/blog";
+import { allPages, allPosts, type PostEntry } from "../../lib/collection";
 
 export const getStaticPaths = (async () =>
   (await allPosts()).map((entry) => ({
@@ -15,8 +16,13 @@ interface Props {
 }
 const { entry } = Astro.props;
 const { Content } = await entry.render();
+const pages = (await allPages()).map(({ page }) => page);
 ---
 
-<BlogLayout post={entry.post}>
+<BlogLayout
+  post={entry.post}
+  minutes={readingTime(entry.body)}
+  related={relatedLinks(entry.post.related, pages)}
+>
   <Content />
 </BlogLayout>

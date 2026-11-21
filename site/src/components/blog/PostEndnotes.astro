@@ -1,0 +1,43 @@
+---
+/**
+ * What follows a post's text: its related docs pages, then its tags, each
+ * linked. Both lists come from the post's frontmatter; search leaves them out
+ * of the post's index entry, since they are navigation, not the article.
+ */
+import type { RelatedLink } from "../../lib/blog";
+import { tagPath } from "../../lib/blog";
+import type { BlogTag } from "../../config";
+
+interface Props {
+  related: readonly RelatedLink[];
+  tags: readonly BlogTag[];
+}
+const { related, tags } = Astro.props;
+---
+
+<footer class="blog-endnotes" data-pagefind-ignore>
+  <section aria-labelledby="related-docs">
+    <h2 id="related-docs" class="blog-endnotes-heading">
+      Related docs
+    </h2>
+    <ul class="blog-endnotes-list">
+      {related.map((link) => (
+        <li>
+          <a href={link.href}>{link.title}</a>
+        </li>
+      ))}
+    </ul>
+  </section>
+  <section aria-labelledby="post-tags">
+    <h2 id="post-tags" class="blog-endnotes-heading">
+      Tags
+    </h2>
+    <ul class="blog-endnotes-list">
+      {tags.map((tag) => (
+        <li>
+          <a href={tagPath(tag.id)}>{tag.label}</a>
+        </li>
+      ))}
+    </ul>
+  </section>
+</footer>

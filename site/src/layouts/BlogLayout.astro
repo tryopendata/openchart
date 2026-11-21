@@ -1,36 +1,75 @@
 ---
 /**
- * A blog post's page: the title, the description as its lede, then the post
- * in the docs prose styles. The article is indexed by search under Blog.
- * Stub until lane d adds the byline, JSON-LD, related docs and tags.
+ * A blog post's page, set as a long read: the breadcrumb back to the blog, the
+ * headline, the description as its standfirst, the byline, then the post in
+ * the docs prose styles with the body in the display serif, one 44rem column
+ * that figures fill. The post's own last paragraph is its call to action; the
+ * related docs and tags follow it. The head carries the BlogPosting JSON-LD
+ * and the article times. The article is indexed by search under Blog.
  */
+import Byline from "../components/blog/Byline.astro";
+import BlogBreadcrumb from "../components/blog/BlogBreadcrumb.astro";
+import PostEndnotes from "../components/blog/PostEndnotes.astro";
+import { site } from "../config";
+import {
+  articleJsonLd,
+  isoDay,
+  lastModified,
+  postPath,
+  type RelatedLink,
+  tagsOf,
+} from "../lib/blog";
 import type { BlogPost } from "../lib/blog-types";
 import { searchBodyAttrs } from "../lib/search-index";
+import "../styles/blog.css";
 import BaseLayout from "./BaseLayout.astro";
 
 interface Props {
   post: BlogPost;
+  /** Minutes to read, from `readingTime()`. */
+  minutes: number;
+  /** The post's related docs pages, from `relatedLinks()`. */
+  related: readonly RelatedLink[];
 }
-const { post } = Astro.props;
+const { post, minutes, related } = Astro.props;
+const path = postPath(post.slug);
+const image = `/og/blog/${post.slug}.png`;
+const jsonLd = articleJsonLd(post, {
+  canonical: new URL(path, site.url).href,
+  image: new URL(image, site.url).href,
+  publisher: { name: site.name, url: site.url },
+});
 ---
 
 <BaseLayout
   title={post.title}
   description={post.description}
-  path={`/blog/${post.slug}/`}
-  image={`/og/blog/${post.slug}.png`}
+  path={path}
+  image={image}
   ogType="article"
 >
-  <article class="mx-auto max-w-[44rem] px-5 pt-10 pb-4 sm:px-6" {...searchBodyAttrs("blog")}>
-    <header class="flex flex-col gap-4">
-      <h1 class="text-ink text-[2.125rem] leading-[1.1] font-medium tracking-[-0.02em] sm:text-[2.75rem]">
-        {post.title}
-      </h1>
-      <p class="text-ink-2 text-lg leading-relaxed">{post.description}</p>
+  <Fragment slot="head">
+    <meta property="article:published_time" content={isoDay(post.published)} />
+    <meta property="article:modified_time" content={isoDay(lastModified(post))} />
+    <script type="application/ld+json" set:html={jsonLd} />
+  </Fragment>
+
+  <article class="blog-article" {...searchBodyAttrs("blog")}>
+    <header class="blog-article-header">
+      <BlogBreadcrumb />
+      <h1 class="blog-headline">{post.title}</h1>
+      <p class="blog-standfirst">{post.description}</p>
+      <Byline
+        author={post.author}
+        published={post.published}
+        updated={post.updated}
+        minutes={minutes}
+      />
     </header>
     <div class="rule-axis mt-8 mb-10"></div>
-    <div class="prose docs-prose max-w-none">
+    <div class="prose docs-prose blog-prose max-w-none">
       <slot />
     </div>
+    <PostEndnotes related={related} tags={tagsOf(post)} />
   </article>
 </BaseLayout>
