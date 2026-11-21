@@ -18,7 +18,7 @@ import type {
   Rect,
   ResolvedTheme,
 } from '@opendata-ai/openchart-core';
-import { getRepresentativeColor, isGradientDef } from '@opendata-ai/openchart-core';
+import { getRepresentativeColor, isGradientDef, isOpaqueColor } from '@opendata-ai/openchart-core';
 import type { ScaleLinear } from 'd3-scale';
 import { area, line } from 'd3-shape';
 import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
@@ -64,6 +64,20 @@ const OVERLAP_GRADIENT_STOPS = [
 // a value change within the band, which is exactly the thing a stacked area is
 // meant to encode with height; every editorial reference stacks flat.
 const STACKED_FILL_OPACITY = 0.92;
+
+// Muted stacked bands use lower fill opacity and a canvas-colored seam stroke
+// so neighboring muted layers remain distinguishable instead of merging together.
+const MUTED_STACKED_FILL_OPACITY = 0.42;
+const MUTED_STACKED_SEAM_WIDTH = 1.5;
+const LIGHT_SEAM_FALLBACK = '#ffffff';
+const DARK_SEAM_FALLBACK = '#111827';
+
+function resolveMutedSeamColor(theme?: ResolvedTheme): string {
+  if (theme?.colors.background && isOpaqueColor(theme.colors.background)) {
+    return theme.colors.background;
+  }
+  return theme?.isDark ? DARK_SEAM_FALLBACK : LIGHT_SEAM_FALLBACK;
+}
 
 function buildGradientFill(
   colorStr: string,
@@ -294,10 +308,12 @@ function computeStackedArea(
     spec.areaStackCache,
   );
   const yScale = scales.y.scale as ScaleLinear<number, number>;
+  const highlightSet = spec.highlight && spec.highlight.length > 0 ? new Set(spec.highlight) : null;
   const marks: AreaMark[] = [];
 
   for (const layer of stackedData) {
     const seriesKey = layer.key;
+    const isMuted = highlightSet !== null && !highlightSet.has(seriesKey);
     const color = getColor(scales, seriesKey);
 
     const validPoints: {
@@ -381,8 +397,12 @@ function computeStackedArea(
       fillValue = getRepresentativeColor(color);
       // Same precedence as the non-stacked path: an explicit fillOpacity is
       // the author's, and stacking shouldn't quietly overwrite it.
-      fillOpacity = spec.markDef.fillOpacity ?? STACKED_FILL_OPACITY;
+      const defaultFillOpacity = isMuted ? MUTED_STACKED_FILL_OPACITY : STACKED_FILL_OPACITY;
+      fillOpacity = spec.markDef.fillOpacity ?? defaultFillOpacity;
     }
+
+    const stroke = isMuted ? resolveMutedSeamColor(theme) : resolveSeriesStroke(spec, color, theme);
+    const strokeWidth = isMuted ? MUTED_STACKED_SEAM_WIDTH : 1;
 
     const rawPointKeys = validPoints.map((point) => serializeKeyValue(point.xKey));
 
@@ -397,8 +417,8 @@ function computeStackedArea(
       topPath: topPathStr,
       fill: fillValue,
       fillOpacity,
-      stroke: resolveSeriesStroke(spec, color, theme),
-      strokeWidth: 1,
+      stroke,
+      strokeWidth,
       seriesKey,
       stacked: true,
       stackNormalized: stackProp === 'normalize',
