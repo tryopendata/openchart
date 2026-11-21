@@ -1,45 +1,56 @@
 ---
 title: "Spec reference"
-description: "The VizSpec union, the spec builder functions, and an index of the reference pages for every spec field."
+description: "The VizSpec union, the spec builder functions, and a one-line index of every reference page."
 section: spec
 slug: overview
 order: 1
 ---
-<!-- phase-4-stub -->
 
 # Spec reference
 
-The definitive field-by-field reference for every type in `VizSpec`. Cross-referenced against the TypeScript source in `@opendata-ai/openchart-core/src/types/`.
+Every OpenChart visualization is one JSON object, a `VizSpec`. The reference pages list each spec type field by field, with types and defaults checked against the TypeScript source in `packages/core/src/types/`. Use them to look up an exact name or default; the Building blocks pages teach the same fields with charts.
+
+See it: [Anatomy of a spec](/docs/the-spec/anatomy/) builds a spec one block at a time.
 
 All types are importable from `@opendata-ai/openchart-core` or from the convenience re-exports in `@opendata-ai/openchart-react`, `@opendata-ai/openchart-vue`, `@opendata-ai/openchart-svelte`, and `@opendata-ai/openchart-engine`.
 
 ## Contents
 
-- [VizSpec](#vizspec) (top-level union type)
-- [ChartSpec](reference/chart-spec.md#chartspec-1) (line, area, bar, column, pie, donut, dot, scatter)
-  - [Mark properties](reference/chart-spec.md#mark-properties) (fill, gradient, point, interpolate, opacity)
-- [LayerSpec](reference/layer-spec.md#layerspec-1) (overlay multiple chart types)
-- [Encoding](reference/encoding.md#encoding-1) (x, y, color, size, detail channels)
-- [Faceting](reference/encoding.md#faceting) (facet, row, column channels; resolve)
-- [Transforms](reference/transforms.md#transforms-1) (filter, bin, aggregate, joinaggregate, calculate, timeUnit, fold, window, density)
-- [Annotations](reference/annotations.md#annotations-1) (refline, text, range)
-- [Labels](reference/chrome.md#labels) (density, format, position)
-- [Endpoint labels](reference/chrome.md#endpoint-labels) (series names and last values)
-- [Chrome](reference/chrome.md#chrome) (title, subtitle, source, byline, footer)
-- [ThemeConfig](reference/theme.md#themeconfig) (colors, fonts, spacing, editorial rule)
-- [A11yConfig](reference/chart-spec.md#a11yconfig) (figure name, hidden table, decorative charts)
-- [FrameConfig](reference/chart-spec.md#frameconfig) (fixed left/right plot margins)
-- [BarListSpec](reference/barlist-spec.md#barlistspec-1) (grouped ranked lists and value references)
-- [DarkMode](reference/theme.md#darkmode) (auto, force, off)
-- [TableSpec](reference/table-spec.md#tablespec-1) (data tables: density, striping, sort, totals)
-- [ColumnConfig](reference/table-spec.md#columnconfig) (column definitions and visual types)
-- [Event handlers](reference/events.md#event-handlers) (chart and table interaction callbacks)
-- [GraphSpec](reference/graph-spec.md#graphspec-1) (network/relationship visualizations)
-- [SankeySpec](reference/sankey-spec.md#sankeyspec-1) (flow diagrams)
-- [GeoMapSpec](reference/geomap-spec.md#geomapspec-1) (choropleth and symbol maps)
-- [TileMapSpec](reference/tilemap-spec.md#tilemapspec-1) (US state tile grid maps)
-- [Spec builder functions](#spec-builder-functions) (lineChart, barChart, etc.)
-- [Validation](reference/json-schema.md#validation) (validateSpec, error codes)
+### Spec
+
+- [ChartSpec](reference/chart-spec.md): a chart with one mark, its top-level fields and mark properties, plus `a11y` and `frame`.
+- [LayerSpec](reference/layer-spec.md): several chart specs on shared axes, and what each layer inherits.
+- [Encoding](reference/encoding.md): the channels, field types, aggregates, axes and scales, and faceting into small multiples.
+- [Marks](reference/marks.md): the channels each mark takes, a complete spec for each common chart, and canvas mark mode.
+- [Chrome, labels and legends](reference/chrome.md): title, subtitle, source, byline and footer, value labels, endpoint labels and the legend.
+- [Transforms](reference/transforms.md): filter, bin, calculate, timeUnit, aggregate, joinaggregate, fold, window and density.
+- [Annotations](reference/annotations.md): text callouts, ranges and reference lines.
+- [Animation](reference/animation.md): presets, entrance and update phases, and data-update transitions.
+- [Theme](reference/theme.md): `ThemeConfig` overrides and the `DarkMode` setting.
+- [TableSpec](reference/table-spec.md): data tables, `ColumnConfig` and the column visual types.
+- [GraphSpec](reference/graph-spec.md): network charts and the `Graph` component.
+- [SankeySpec](reference/sankey-spec.md): flow diagrams.
+- [TileMapSpec](reference/tilemap-spec.md): US state tile grids.
+- [GeoMapSpec](reference/geomap-spec.md): choropleth and symbol maps.
+- [BarListSpec](reference/barlist-spec.md): ranked bar lists.
+- [Authoring and reader APIs](reference/authoring.md): field metadata, reader identity, diagnostics and callout limits for editing and reading apps.
+
+### API
+
+- [Vanilla API](reference/vanilla.md): the `create*` mount functions, `MountOptions`, `ChartInstance` and the lifecycle.
+- [React](reference/react.md), [Vue](reference/vue.md) and [Svelte](reference/svelte.md): components, props, hooks or composables, and server rendering.
+- [Events](reference/events.md): every handler and payload, interaction modes and edit persistence.
+- [Export API](reference/export.md): SVG, PNG, JPG, CSV and animated GIF export.
+- [Table state](reference/table-state.md): controlled and uncontrolled sort, search and pagination.
+
+### Tokens
+
+- [Theming tokens](theming-tokens.md): `ThemeConfig` fields and the CSS custom properties behind them.
+- [Design system](design-system.md): the default palette, type scale, spacing, mark defaults, motion and presets.
+
+### Machine-readable
+
+- [JSON Schema and llms.txt](reference/json-schema.md): the published schema, `validateSpec` and its error codes, the llms.txt exports and the agent skill.
 
 ## VizSpec
 
@@ -114,14 +125,3 @@ const spec = lineChart(data, "date", "revenue", {
   annotations: [{ type: "refline", y: 50000, label: "Target" }],
 });
 ```
-
----
-
-## Related docs
-
-- [Chart types](chart-types.md) for a visual gallery with boilerplate specs and live examples
-- [Tables](tables.md) for data table features (heatmaps, sparklines, flags, and more)
-- [Graphs](graphs.md) for network/relationship visualizations
-- [Getting started](getting-started.md) for a hands-on tutorial
-- [Architecture](architecture.md) for how the packages and compilation pipeline work
-- [Integration guide](integration-guide.md) for building apps on top of the library

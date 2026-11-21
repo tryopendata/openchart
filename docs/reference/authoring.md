@@ -4,9 +4,12 @@ description: "Library interfaces for authoring and reader apps: numeric observat
 section: spec
 order: 17
 ---
-<!-- phase-4-stub -->
 
 # Authoring and reader APIs
+
+These interfaces serve apps that edit charts or let readers pin and inspect values: field metadata, reader identity, design diagnostics with patch fixes, the rules for missing measurements, and compact callout limits. A page that only displays charts doesn't need them.
+
+See it: [Edit mode](/docs/behavior/edit-mode/) and [Responsive](/docs/behavior/responsive/).
 
 ## Authoring foundation additions
 

@@ -4,9 +4,12 @@ description: "GraphSpec fields for network charts, plus the Graph component, its
 section: spec
 order: 12
 ---
-<!-- phase-4-stub -->
 
 # GraphSpec
+
+A `GraphSpec` (`type: 'graph'`) draws a network of nodes and edges on canvas, positioned by a force simulation. It takes `nodes` and `edges` arrays instead of `data`, and renders through `<Graph>` or `createGraph`, not `<Chart>`.
+
+See it: [Graph](/docs/flow/graph/).
 
 ## GraphSpec
 
@@ -30,7 +33,7 @@ Graphs render force-directed network visualizations on canvas. They support node
 
 ### GraphEncoding
 
-Each channel is a `GraphEncodingChannel` with `field`, optional `type`, and optional `scale` (same `ScaleConfig` as chart encodings). When `scale.domain` and `scale.range` are provided, the engine uses them directly instead of auto-deriving from the data. This is useful for controlling deterministic color assignment. `scale.scheme` is not read by the graph compile path and fails validation — use `scale.range` for explicit colors.
+Each channel is a `GraphEncodingChannel` with `field`, optional `type`, and optional `scale` (same `ScaleConfig` as chart encodings). When `scale.domain` and `scale.range` are provided, the engine uses them directly instead of auto-deriving from the data. This is useful for controlling deterministic color assignment. `scale.scheme` is not read by the graph compile path and fails validation; use `scale.range` for explicit colors.
 
 | Channel     | Field type constraint          | Purpose                                  |
 | ----------- | ------------------------------ | ---------------------------------------- |
@@ -122,9 +125,9 @@ import { Graph } from "@opendata-ai/openchart-svelte";
   spec={graphSpec}
   theme={theme}
   darkMode="auto"
-  onNodeClick={(node) => console.log("Clicked:", node)}
-  onNodeDoubleClick={(node) => console.log("Double-clicked:", node)}
-  onSelectionChange={(nodeIds) => console.log("Selected:", nodeIds)}
+  onnodeclick={(node) => console.log("Clicked:", node)}
+  onnodedoubleclick={(node) => console.log("Double-clicked:", node)}
+  onselectionchange={(nodeIds) => console.log("Selected:", nodeIds)}
   style="width: 100%; height: 500px"
 />
 ```
@@ -175,14 +178,14 @@ function SearchableGraph({ spec }: { spec: GraphSpec }) {
 <script setup lang="ts">
 import { Graph, useGraph } from "@opendata-ai/openchart-vue";
 
-const { componentRef, search, clearSearch, zoomToFit } = useGraph();
+const { graphRef, search, clearSearch, zoomToFit } = useGraph();
 </script>
 
 <template>
   <input @input="(e) => search(e.target.value)" placeholder="Search nodes..." />
   <button @click="zoomToFit">Fit all</button>
   <div style="width: 100%; height: 500px">
-    <Graph ref="componentRef" :spec="spec" />
+    <Graph ref="graphRef" :spec="spec" />
   </div>
 </template>
 ```
@@ -193,7 +196,7 @@ const { componentRef, search, clearSearch, zoomToFit } = useGraph();
 <script lang="ts">
 import { Graph, useGraph } from "@opendata-ai/openchart-svelte";
 
-const { action, search, clearSearch, zoomToFit } = useGraph(spec, {});
+const { action, search, clearSearch, zoomToFit } = useGraph(() => spec);
 </script>
 
 <input oninput={(e) => search(e.target.value)} placeholder="Search nodes..." />

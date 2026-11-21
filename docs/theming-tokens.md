@@ -1,16 +1,17 @@
 ---
 title: "Theming tokens"
-description: "The CSS custom properties a page can set to restyle charts and tables without changing a spec."
+description: "ThemeConfig fields, named presets and the CSS custom properties a page can set to restyle charts and tables without changing a spec."
 section: tokens
 order: 1
 ---
 
-# Theming Design Tokens
+# Theming tokens
 
-`ThemeConfig` controls colors, typography, spacing, rules, and component surfaces.
-Defaults are shared by the JavaScript theme and generated CSS tokens. v9
-consolidates authored deep merging and leaves omitted CSS tokens available to
-host styles. For removed forms and legacy styling, see [Migrating to v9](migrating-v9.md).
+A chart's colors, type, spacing and surfaces come from two places that share one set of defaults: `ThemeConfig` fields, set in a spec, a theme provider or a mount option, and `--oc-*` CSS custom properties, set by the host page. This page lists both, with the named presets and the derived color ramps. Only the fields you author are written inline, so a token you leave out can still be set from your own stylesheet.
+
+[Theme](reference/theme.md) has the field-by-field reference and the merge order. For removed forms and legacy styling, see [Migrating to v9](migrating-v9.md).
+
+See it: [Theming and tokens](/docs/style/theming/) and [Presets](/docs/style/presets/).
 
 ### ThemeConfig fields
 

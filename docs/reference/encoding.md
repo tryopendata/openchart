@@ -4,9 +4,12 @@ description: "Encoding channels, field types, aggregates, axis and scale setting
 section: spec
 order: 4
 ---
-<!-- phase-4-stub -->
 
 # Encoding
+
+`encoding` maps data fields to visual channels: which field goes on x, which on y, which sets color or size. Each channel also carries the field's type and its axis, scale and format settings. The facet channels split one chart into small multiples.
+
+See it: [Encoding channels](/docs/the-spec/encoding/), [Field types and scales](/docs/the-spec/scales/), [Axes](/docs/the-spec/axes/) and [Facets](/docs/composition/facets/).
 
 ## Encoding
 

@@ -1,12 +1,15 @@
 ---
 title: "Chrome, labels and legends"
-description: "Title, subtitle, source, byline and footer fields, plus value labels and endpoint labels."
+description: "Title, subtitle, source, byline and footer fields, plus value labels, endpoint labels and the legend."
 section: spec
 order: 6
 ---
-<!-- phase-4-stub -->
 
 # Chrome, labels and legends
+
+Chrome is the text around the plot: eyebrow, title, subtitle, source, byline and footer. This page also covers the text inside and beside it: value labels on marks, endpoint labels at the end of each series, and the legend.
+
+See it: [Title, subtitle and source](/docs/framing/chrome/), [Labels and legends](/docs/framing/labels-legends/) and [Endpoint labels](/docs/framing/endpoint-labels/).
 
 ## Chrome
 
@@ -28,7 +31,7 @@ Each field accepts either a plain string or a `ChromeText` object for style over
 
 | Field      | Position                        | Default style                                                |
 | ---------- | ------------------------------- | ------------------------------------------------------------ |
-| `eyebrow`  | Above title                     | 11px, medium (500), uppercase, theme accent — leading accent dot |
+| `eyebrow`  | Above title                     | 11px, medium (500), uppercase, theme accent, leading accent dot |
 | `title`    | Top, above chart                | 26px, semibold (600), `#09090b`                                  |
 | `subtitle` | Below title                     | 14px, normal (400), `#71717a`                                |
 | `source`   | Below chart area                | 12px, normal (400), `#71717a`                                |
@@ -145,7 +148,7 @@ interface LabelConfig {
 
 On `stack: 'normalize'`, value labels always show each segment's share of its stack, including when `content` is omitted or `'value'`. Share formatting prefers explicit `labels.format`, then the value channel's `format`, then the inferred `.0%` fallback. There is no raw-value label mode on normalized stacks.
 
-For stacked bars, `label` is the series name; for simple bars it is the category. Range endpoint names come from the corresponding channel title, falling back to its field. For example, `labels: { content: 'label value', suffix: 'm' }` can produce `median 14m` and `p75 26m`. Range marks reserve measured endpoint space when `content` is explicit; fixed `frame` margins remain authoritative. Barlist labels accept only `format`, `prefix` and `suffix`, as documented below.
+For stacked bars, `label` is the series name; for simple bars it is the category. Range endpoint names come from the corresponding channel title, falling back to its field. For example, `labels: { content: 'label value', suffix: 'm' }` can produce `median 14m` and `p75 26m`. Range marks reserve measured endpoint space when `content` is explicit; fixed `frame` margins remain authoritative. Barlist labels accept only `format`, `prefix` and `suffix`; see [BarListSpec](./barlist-spec.md).
 
 ### LabelDensity
 
@@ -190,3 +193,19 @@ endpointLabels: {
 ```
 
 For a weekly stacked-column/history pair, author the same temporal domain and `frame` on both figures, leaving a right gutter large enough for the measured endpoint labels. See [static rendering](../static-rendering.md#aligned-figures).
+
+---
+
+## Legend
+
+`legend` takes a `LegendConfig` on chart, layer, Sankey, tilemap and map specs. On line charts with two to eight series, endpoint labels normally replace it (see [Endpoint labels](#endpoint-labels)). Source: `core/src/types/spec.ts`.
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `show` | `boolean` | `true` | `false` hides the legend. |
+| `position` | `'top' \| 'top-left' \| 'right' \| 'bottom' \| 'bottom-right' \| 'inline'` | responsive | Fixed position. Omitted, the layout picks one for the container width. |
+| `offset` | `{ dx?, dy? }` | `undefined` | Pixel nudge from the computed position. |
+| `columns` | `number` | `undefined` | Column count for a horizontal legend. Overrides the row limit. |
+| `maxRows` | `number` | `2` | Rows a top legend may use before it truncates. |
+| `symbolLimit` | `number` | `undefined` | Entries shown before the rest collapse into "+N more". |
+| `exclude` | `string[]` | `undefined` | Series left out of the legend. They still render. |

@@ -4,9 +4,12 @@ description: "Controlled and uncontrolled tables: sort, search and page state, a
 section: api
 order: 7
 ---
-<!-- phase-4-stub -->
 
 # Table state
+
+A table's sort, search and page can live inside the table (uncontrolled, the default) or in your app's state (controlled). This page shows both modes in each framework, the table state hooks, and the order in which sorting cycles.
+
+See it: [Data table](/docs/tables/data-table/).
 
 ## Table: controlled vs uncontrolled
 
@@ -33,9 +36,9 @@ import { DataTable } from "@opendata-ai/openchart-react";
 <template>
   <DataTable
     :spec="tableSpec"
-    @sort-change="(sort) => console.log('Sort changed:', sort)"
-    @search-change="(query) => console.log('Search:', query)"
-    @page-change="(page) => console.log('Page:', page)"
+    @update:sort="(sort) => console.log('Sort changed:', sort)"
+    @update:search="(query) => console.log('Search:', query)"
+    @update:page="(page) => console.log('Page:', page)"
   />
 </template>
 ```
@@ -45,9 +48,9 @@ import { DataTable } from "@opendata-ai/openchart-react";
 ```svelte
 <DataTable
   spec={tableSpec}
-  onSortChange={(sort) => console.log("Sort changed:", sort)}
-  onSearchChange={(query) => console.log("Search:", query)}
-  onPageChange={(page) => console.log("Page:", page)}
+  onsortchange={(sort) => console.log("Sort changed:", sort)}
+  onsearchchange={(query) => console.log("Search:", query)}
+  onpagechange={(page) => console.log("Page:", page)}
 />
 ```
 
@@ -124,9 +127,9 @@ function onSearch(value: string) {
     :sort="sort"
     :search="search"
     :page="page"
-    @sort-change="(s) => sort = s"
-    @search-change="(q) => search = q"
-    @page-change="(p) => page = p"
+    @update:sort="(s) => sort = s"
+    @update:search="(q) => search = q"
+    @update:page="(p) => page = p"
   />
 </template>
 ```
@@ -157,9 +160,9 @@ function onSearch(value: string) {
   {sort}
   {search}
   {page}
-  onSortChange={(s) => sort = s}
-  onSearchChange={(q) => search = q}
-  onPageChange={(p) => page = p}
+  onsortchange={(s) => sort = s}
+  onsearchchange={(q) => search = q}
+  onpagechange={(p) => page = p}
 />
 ```
 
@@ -210,9 +213,9 @@ const { sort, search, page, setSort, setSearch, setPage, resetState } =
     :sort="sort"
     :search="search"
     :page="page"
-    @sort-change="setSort"
-    @search-change="setSearch"
-    @page-change="setPage"
+    @update:sort="setSort"
+    @update:search="setSearch"
+    @update:page="setPage"
   />
 </template>
 ```
@@ -233,9 +236,9 @@ const { sort, search, page, setSort, setSearch, setPage, resetState } =
   sort={sort}
   search={search}
   page={page}
-  onSortChange={setSort}
-  onSearchChange={setSearch}
-  onPageChange={setPage}
+  onsortchange={setSort}
+  onsearchchange={setSearch}
+  onpagechange={setPage}
 />
 ```
 
@@ -281,7 +284,7 @@ function AdvancedTable({ spec }: { spec: TableSpec }) {
 <script setup lang="ts">
 import { useTable } from "@opendata-ai/openchart-vue";
 
-const { containerRef, table, layout } = useTable(spec, {
+const { containerRef, table, state } = useTable(spec, {
   onRowClick: (row) => console.log("Clicked:", row),
   autoResize: true,
 });
@@ -299,10 +302,10 @@ const { containerRef, table, layout } = useTable(spec, {
 <script lang="ts">
 import { useTable } from "@opendata-ai/openchart-svelte";
 
-const { action, table, layout } = useTable(spec, {
+const { action, table, state } = useTable(() => spec, () => ({
   onRowClick: (row) => console.log("Clicked:", row),
   autoResize: true,
-});
+}));
 </script>
 
 <button onclick={() => table?.export("csv")}>Export CSV</button>

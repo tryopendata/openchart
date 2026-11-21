@@ -4,9 +4,12 @@ description: "Every top-level ChartSpec field and the mark properties, plus the 
 section: spec
 order: 2
 ---
-<!-- phase-4-stub -->
 
 # ChartSpec
+
+A `ChartSpec` draws one chart with one mark: a line, bar, area, scatter, pie or any other mark type in the table below. A spec with a `mark` field and no `type` field is a `ChartSpec`. Only `mark`, `data` and `encoding` are required.
+
+See it: [Anatomy of a spec](/docs/the-spec/anatomy/) builds a chart spec one block at a time.
 
 ## ChartSpec
 
@@ -30,6 +33,20 @@ The primary input for standard chart types. Source: `core/src/types/spec.ts`.
 | `display` | `'full' \| 'sparkline'` | `'full'` | Compact sparkline defaults omit chrome, axes, legend and watermark. |
 | `frame` | `FrameConfig` | automatic gutters | Fixed horizontal plot margins. See [FrameConfig](#frameconfig). |
 | `endpointLabels` | `boolean \| EndpointLabelsConfig` | automatic | Series names and last values; see [Endpoint labels](./chrome.md#endpoint-labels). |
+| `transform` | `Transform[]` | `undefined` | Data transforms run in order before encoding. See [Transforms](./transforms.md). |
+| `fields` | `Record<string, FieldMetadata>` | `undefined` | Per-field type, label, unit, provenance and interval metadata. See [Authoring and reader APIs](./authoring.md#authoring-foundation-additions). |
+| `title`, `subtitle` | `string` (`title` also takes `{ text, subtitle? }`) | `undefined` | Shorthand for `chrome.title` and `chrome.subtitle`. The `chrome` value wins when both are set. |
+| `width`, `height` | `number` | container size | Fixed render size in pixels. Setting both implies `responsive: false` unless `responsive` is set. |
+| `metrics` | `Metric[]` | `undefined` | KPI cells (`label`, `value`, optional `delta`, `deltaTone`, `secondary`) in a row between the subtitle and the plot. Hidden in sparkline mode and when they don't fit. |
+| `legend` | `LegendConfig` | automatic | Legend position, visibility and truncation. See [Legend](./chrome.md#legend). |
+| `hiddenSeries` | `string[]` | `undefined` | Series hidden by default. Reader legend toggles layer on top and never change it. |
+| `seriesStyles` | `Record<string, SeriesStyle>` | `undefined` | Per-series `lineStyle`, `showPoints`, `strokeWidth` and `opacity`, keyed by the color field value. |
+| `overrides` | `Partial<Record<'compact' \| 'medium' \| 'full', ChartSpecOverride>>` | `undefined` | Fields shallow-merged into the spec when the container matches that breakpoint. |
+| `crosshair` | `boolean` | `false` | Vertical line that follows the nearest point on line and area charts. |
+| `seriesSearch` | `boolean \| { placeholder? }` | `undefined` | A search input over the color field's values; picking one adds it to the highlight set. Needs a categorical color encoding. |
+| `youDrawIt` | `YouDrawItConfig` | `undefined` | The reader draws the line from `from` onward before the data is revealed. Line marks with one series only. Also takes `prompt`, `revealLabel`, `resetLabel` and `comparisonLine`. |
+| `resolve` | `ResolveConfig` | shared | Shared or independent scales and axes across facet panels. See [resolve](./encoding.md#resolve). |
+| `zIndex` | `number` | array order | Paint order inside a `LayerSpec`; higher draws on top. Axis assignment still follows array order. |
 
 ### DataRow
 
@@ -129,7 +146,7 @@ fill: {
 | `x1`, `y1` | `number`      | `0`, `0` | Start point in [0,1] normalized space.        |
 | `x2`, `y2` | `number`      | `0`, `1` | End point. Default is top-to-bottom.           |
 
-**Area chart fill behavior:** Multi-series area charts default to **stacked** mode (`stack: 'zero'`), Vega-Lite aligned — a higher-opacity per-layer gradient (top stop ~0.65 opacity) since each layer sits on solid ground. Single-series area charts apply a default `fillOpacity` of 0.15. Opting out with `stack: null` (or `false`) switches to overlap mode: a translucent per-series gradient fill (top stop ~0.04 opacity, fading to 0) layered on a shared baseline, comparison-first rather than composition-first. The gradient stop `opacity` values multiply with the per-series default, so a stop at `opacity: 1` with the overlap mode produces an effective opacity of ~0.04. Design gradient stops accordingly, or use a LayerSpec with separate line and area marks for full control.
+**Area chart fill behavior:** Multi-series area charts default to **stacked** mode (`stack: 'zero'`), Vega-Lite aligned, with a higher-opacity per-layer gradient (top stop ~0.65 opacity) since each layer sits on solid ground. Single-series area charts apply a default `fillOpacity` of 0.15. Opting out with `stack: null` (or `false`) switches to overlap mode: a translucent per-series gradient fill (top stop ~0.04 opacity, fading to 0) layered on a shared baseline, comparison-first rather than composition-first. The gradient stop `opacity` values multiply with the per-series default, so a stop at `opacity: 1` with the overlap mode produces an effective opacity of ~0.04. Design gradient stops accordingly, or use a LayerSpec with separate line and area marks for full control.
 
 ---
 

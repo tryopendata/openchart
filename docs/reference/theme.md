@@ -4,9 +4,12 @@ description: "ThemeConfig fields for colors, fonts, spacing and chrome, and the 
 section: spec
 order: 10
 ---
-<!-- phase-4-stub -->
 
 # Theme
+
+`theme` overrides the default colors, fonts, spacing and chrome styles. The same `ThemeConfig` shape is accepted by the spec, the framework theme providers and the mount options, which merge in that order. `DarkMode` chooses between the light and dark palettes.
+
+See it: [Theming and tokens](/docs/style/theming/), [Presets](/docs/style/presets/) and [Dark mode](/docs/style/dark-mode/).
 
 ## ThemeConfig
 

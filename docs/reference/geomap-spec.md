@@ -4,9 +4,12 @@ description: "GeoMapSpec fields for choropleth and symbol maps: geography, encod
 section: spec
 order: 15
 ---
-<!-- phase-4-stub -->
 
 # GeoMapSpec
+
+A `GeoMapSpec` (`type: 'map'`) draws TopoJSON geography and fills each feature from a joined data row (a choropleth). A points layer adds circles at latitude and longitude, sized or colored by value (a symbol map).
+
+See it: [Choropleth](/docs/maps/choropleth/), [Symbol map](/docs/maps/symbol-map/) and [Geographic labels](/docs/maps/geographic-labels/).
 
 ## GeoMapSpec
 

@@ -4,9 +4,12 @@ description: "BarListSpec fields for ranked bar lists: encoding, groups, value d
 section: spec
 order: 16
 ---
-<!-- phase-4-stub -->
 
 # BarListSpec
+
+A `BarListSpec` (`type: 'barlist'`) is a ranked list: one row per item, each with a label, a proportional bar and a value, and no axes. It renders through `<BarList>` or `createBarList`.
+
+See it: [Bar list](/docs/comparison/bar-list/).
 
 ## BarListSpec
 

@@ -4,9 +4,12 @@ description: "LayerSpec fields for overlaying several marks on shared scales, an
 section: spec
 order: 3
 ---
-<!-- phase-4-stub -->
 
 # LayerSpec
+
+A `LayerSpec` draws several chart specs on one set of axes: a line over an area, points over a line, a rule at a target value. Children inherit the parent's data, encoding and transforms unless they set their own. A spec with a `layer` array is a `LayerSpec`.
+
+See it: [Layers](/docs/composition/layers/) and [Trendlines](/docs/correlation/trendlines/).
 
 ## LayerSpec
 

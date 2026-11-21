@@ -5,19 +5,13 @@ section: tokens
 order: 2
 ---
 
-# Design System
+# Design system
 
-This page documents the visual and interaction language that ships as the
-default for every chart, table, map, graph, and sankey diagram: the palette,
-type scale, spacing and radius ladders, per-mark defaults, the hover/legend/
-tooltip/keyboard language, motion timings, the five named presets, and
-dark-mode adaptation rules. It describes what the "design refresh" release
-(8.x) actually ships, not the plan that proposed it — every value below was
-read from source in `packages/core` and `packages/engine`.
+This page records the defaults every chart, table, map, graph and Sankey diagram ships with: the palette, type scale, spacing and radius ladders, per-mark defaults, hover, legend, tooltip and keyboard behavior, motion timings, the named presets and the dark-mode rules. Every value was read from `packages/core` and `packages/engine`. Change any of them with a [theme](reference/theme.md) or the [CSS tokens](theming-tokens.md).
 
-For chart-type selection, editorial writing, and annotation guidance, see
-`docs/design-philosophy.md` (via the `openchart` skill). This page is the
-reference for the numbers.
+See it: [Color palettes](/docs/style/color/), [Presets](/docs/style/presets/) and [Dark mode](/docs/style/dark-mode/).
+
+For chart-type selection, editorial writing and annotation guidance, see the [OpenChart skill references](https://github.com/tryopendata/skills/tree/main/plugins/openchart/skills/openchart/references/).
 
 ## Principles
 

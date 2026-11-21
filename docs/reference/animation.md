@@ -4,9 +4,12 @@ description: "Animation presets, entrance and update phase settings, and data-up
 section: spec
 order: 9
 ---
-<!-- phase-4-stub -->
 
 # Animation
+
+Charts animate by default: marks enter when the chart first scrolls into view, and data updates tween from the old layout to the new one. The `animation` field picks a preset, sets each phase's timing, or turns motion off with `false`. Static renders and exports never animate, and a reader's reduced-motion setting always wins.
+
+See it: [Motion](/docs/behavior/motion/).
 
 ## Animation
 
@@ -112,7 +115,7 @@ When `animation.update` is enabled and `.update(newSpec)` is called, the chart a
 - Beeswarm dots: same cx/cy/r tween as scatter. Set `encoding.key` to a stable
   entity field (state, country) so each dot tracks its entity across updates.
   Without it the fallback identity is `lane|value`, which changes whenever the
-  value does — duplicate values re-pair by row order and dots shuffle within the
+  value does: duplicate values re-pair by row order and dots shuffle within the
   swarm instead of tracking. Keyed transitions are not supported on faceted
   beeswarms (panel marks share un-namespaced keys, matching scatter).
 - Heatmap, waffle and calendar cells fade in on entrance (a 300ms fade, no bar wipe); on update they tween fill and geometry.
