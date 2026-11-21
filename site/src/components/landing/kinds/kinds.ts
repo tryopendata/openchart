@@ -42,9 +42,6 @@ export type KindsTile = {
 /** Fits the data table's eight rows, search box and pager at three columns, with no inner scroll. */
 const BOTTOM_ROW_HEIGHT = 640;
 
-/** The two side tiles share a height, so they line up when they sit side by side at two columns. */
-const SIDE_HEIGHT = 330;
-
 /** In grid order: the dominant map, the two cells beside it, then the bottom row. */
 export const kindsTiles: KindsTile[] = [
   {
@@ -59,14 +56,16 @@ export const kindsTiles: KindsTile[] = [
     href: "/docs/maps/tile-map/",
     link: "Tile maps",
     place: "side",
-    height: SIDE_HEIGHT,
+    // Tall enough that the tiles are drawn large in a one-third-width cell.
+    height: 420,
   },
   {
     demo: "comparison/barlist-basic",
     href: "/docs/comparison/bar-list/",
     link: "Bar lists",
     place: "side",
-    height: SIDE_HEIGHT,
+    // All eight bars: below about 300px the bar list drops the rows that do not fit.
+    height: 320,
   },
   {
     demo: "flow/sankey-basic",

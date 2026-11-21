@@ -29,12 +29,9 @@
 
   .story-lede,
   .responsive-lede,
-  .kinds-lede {
+  .kinds-lede,
+  .motion-lede {
     @apply text-ink-2 max-w-[34rem] text-base leading-relaxed lg:col-span-4 lg:col-start-9 lg:self-end;
-  }
-
-  .kinds-lede code {
-    @apply font-mono text-[0.9em];
   }
 
   /* One ticked rule per section, above its head: a PublishedFigure under the head
@@ -102,16 +99,14 @@
     @apply text-muted;
   }
 
-  /* The spec field this step patched, set as a margin note. */
-  .story-excerpt {
-    @apply text-muted border-line m-0 mt-5 max-w-[30rem] border-l-2 py-0.5 pl-3 font-mono text-xs leading-relaxed break-words whitespace-pre-wrap;
-    transition:
-      color 600ms var(--story-ease),
-      border-color 600ms var(--story-ease);
+  /* One muted line, in plain words, on what the step changed in the spec. */
+  .story-change {
+    @apply text-muted m-0 mt-4 max-w-[30rem] text-[13px] leading-snug;
+    transition: color 600ms var(--story-ease);
   }
 
-  .story-step[data-current="true"] .story-excerpt {
-    @apply text-ink-2 border-accent;
+  .story-step[data-current="true"] .story-change {
+    @apply text-ink-2;
   }
 
   @media (min-width: 1024px) {
@@ -133,46 +128,31 @@
     }
   }
 
-  /* ---- #motion: a chart beside a bench of controls ------------------------ */
+  /* ---- #motion: a full-width chart under one row of controls ------------- */
 
-  .motion-bench-layout {
-    @apply grid gap-10 lg:grid-cols-12 lg:gap-8;
+  /* The controls read as a toolbar above the graphic: plain words, no code. */
+  .motion-controls {
+    @apply border-line flex flex-wrap items-center gap-x-8 gap-y-3 border-b pb-4;
   }
 
-  .motion-stage {
-    @apply min-w-0 lg:col-span-8;
+  .motion-buttons {
+    @apply flex flex-wrap gap-3;
   }
 
-  .motion-chart {
-    @apply relative h-[360px] sm:h-[440px];
-  }
-
-  .motion-bench {
-    @apply lg:col-span-4;
-  }
-
-  .motion-row {
-    @apply border-line m-0 flex flex-wrap items-center gap-3 border-b px-0 py-4 first:pt-0;
-  }
-
-  .motion-bench .btn:disabled {
+  .motion-bench-layout .btn:disabled {
     @apply text-muted border-line cursor-not-allowed;
   }
 
-  .motion-note {
-    @apply text-muted m-0 w-full font-mono text-xs;
-  }
-
   .motion-choice {
-    @apply min-w-0 border-x-0 border-t-0;
+    @apply m-0 flex min-w-0 items-center gap-4 border-0 p-0;
   }
 
   .motion-legend {
-    @apply text-muted float-left mr-3 font-mono text-xs;
+    @apply text-ink-2 float-left mr-1 p-0 text-sm font-medium;
   }
 
   .motion-option {
-    @apply text-ink-2 hover:text-ink inline-flex cursor-pointer items-center gap-1.5 font-mono text-sm transition-colors duration-150;
+    @apply text-ink-2 hover:text-ink inline-flex cursor-pointer items-center gap-1.5 text-sm transition-colors duration-150;
   }
 
   .motion-option input {
@@ -180,11 +160,40 @@
   }
 
   .motion-option:has(input:checked) {
-    @apply text-ink;
+    @apply text-ink font-medium;
+  }
+
+  .motion-choice:disabled .motion-option {
+    @apply text-muted cursor-not-allowed;
+  }
+
+  .motion-note {
+    @apply text-muted m-0 text-sm tabular-nums sm:ml-auto;
+  }
+
+  .motion-reason {
+    @apply text-muted m-0 mt-3 text-sm;
+  }
+
+  .motion-chart {
+    @apply relative mt-6 h-[380px] sm:h-[460px];
+  }
+
+  .motion-reduced {
+    @apply text-muted m-0 mt-4 max-w-[60ch] text-sm leading-relaxed;
+  }
+
+  /* The spec is the second story: collapsed until the reader asks for it. */
+  .motion-spec {
+    @apply border-line mt-4 border-t pt-3;
+  }
+
+  .motion-spec summary {
+    @apply text-ink-2 hover:text-ink cursor-pointer text-sm font-medium transition-colors duration-150;
   }
 
   .motion-excerpt {
-    @apply text-ink-2 border-line m-0 border-b py-4 font-mono text-[13px] leading-relaxed;
+    @apply text-ink-2 m-0 mt-3 font-mono text-[13px] leading-relaxed;
   }
 
   .motion-line {
@@ -197,10 +206,6 @@
 
   .motion-line[data-changed] {
     @apply border-accent bg-panel text-ink;
-  }
-
-  .motion-reduced {
-    @apply text-muted m-0 pt-4 text-sm leading-relaxed;
   }
 
   /* ---- #kinds: an uneven portfolio grid ---------------------------------- */
@@ -261,7 +266,8 @@
     }
 
     /* The dominant map grows to the height of the two cells beside it. */
-    .kinds-tile[data-place="dominant"] .demo {
+    .kinds-tile[data-place="dominant"] .demo,
+    .kinds-tile[data-place="dominant"] .demo-figure {
       @apply flex flex-1 flex-col;
     }
 
@@ -288,11 +294,11 @@
   /* ---- #responsive: a frame with a draggable edge ------------------------- */
 
   .resize-readout {
-    @apply m-0 flex flex-wrap items-baseline gap-x-4 gap-y-1 font-mono text-sm;
+    @apply m-0 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm;
   }
 
   .resize-width {
-    @apply text-ink;
+    @apply text-ink font-medium;
   }
 
   .resize-breakpoint {
@@ -300,7 +306,7 @@
   }
 
   .resize-hint {
-    @apply text-muted font-sans text-[13px] sm:ml-auto;
+    @apply text-muted text-[13px] sm:ml-auto;
   }
 
   .resize-track {
@@ -313,7 +319,7 @@
   }
 
   .resize-mark {
-    @apply text-muted border-line absolute top-0 bottom-0 border-l border-dashed pl-1.5 font-mono text-[11px] leading-none;
+    @apply text-muted border-line absolute top-0 bottom-0 border-l border-dashed pl-1.5 text-[11px] leading-none tabular-nums;
   }
 
   /* content-box: the width the island sets is the chart's own box, inside the border. */
@@ -363,7 +369,7 @@
 @media (prefers-reduced-motion: reduce) {
   .story-step::before,
   .story-prose,
-  .story-excerpt,
+  .story-change,
   .motion-line,
   .resize-frame,
   .resize-handle::before,

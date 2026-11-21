@@ -1,14 +1,14 @@
 /**
  * The scroll story's steps: each cumulative spec the story can reach passes the
  * engine's validator, the opening step changes nothing and the four after it
- * make the changes the section promises, and each step's margin note shows the
- * field it patches.
+ * make the changes the section promises, and each step's plain-words line says
+ * what its change does.
  */
 import { deepMergeSpec } from "@opendata-ai/openchart-core";
 import { validateSpec } from "@opendata-ai/openchart-engine";
 import { describe, expect, it } from "vitest";
 import { storyBaseSpec, storySteps } from "../../../landing/story";
-import { changeExcerpt, inlineJson } from "./story-change";
+import { describeChange } from "./story-change";
 
 const changes = storySteps.map((step) => step.change);
 
@@ -46,34 +46,30 @@ describe("the story steps", () => {
   });
 });
 
-describe("the margin note for a step", () => {
-  it("is empty for the opening, which changes nothing", () => {
-    expect(changeExcerpt(changes, 0)).toEqual([]);
-  });
+describe("the plain-words line under each paragraph", () => {
+  const line = (index: number) => describeChange(storyBaseSpec, changes, index);
 
-  it("folds data rows to a count", () => {
-    expect(changeExcerpt(changes, 2)).toEqual(['"data": [ … 64 rows ]']);
-  });
-
-  it("elides annotations an earlier step already showed, and their ids", () => {
-    const [line] = changeExcerpt(changes, 3);
-    expect(line).toMatch(/^"annotations": \[…, \{ "type": "text", "x": "2023-01-01"/);
-    expect(line).not.toContain('"id"');
-  });
-
-  it("writes highlight sugar as the field it sets", () => {
-    expect(changeExcerpt([{ highlight: ["A"] }], 0)).toEqual([
-      '"encoding": { "color": { "highlight": ["A"] } }',
+  it("says what each change does to the chart, and nothing for the opening", () => {
+    expect(storySteps.map((_, index) => line(index))).toEqual([
+      null,
+      "In the spec, this step adds a shaded range for 2022.",
+      "In the spec, this step adds the NASDAQ, Dow Jones and Russell 2000 lines.",
+      "In the spec, this step adds a callout, “Nasdaq, end of 2022: −33%”.",
+      "In the spec, this step highlights NASDAQ and dims the rest.",
     ]);
   });
 
-  it("rejects a step index the story does not have", () => {
-    expect(() => changeExcerpt(changes, 9)).toThrow("No story step 9: the story has 5 steps.");
+  it("describes only the annotation a step adds, not the ones it restates", () => {
+    expect(line(3)).not.toContain("shaded range");
   });
 
-  it("spaces inline JSON the way a person types it", () => {
-    expect(inlineJson({ a: [1, "x"], b: { c: null } })).toBe(
-      '{ "a": [1, "x"], "b": { "c": null } }',
+  it("writes highlight sugar as the highlight it sets", () => {
+    expect(describeChange(storyBaseSpec, [{ highlight: ["NASDAQ"] }], 0)).toBe(
+      "In the spec, this step highlights NASDAQ and dims the rest.",
     );
+  });
+
+  it("rejects a step index the story does not have", () => {
+    expect(() => line(9)).toThrow("No story step 9: the story has 5 steps.");
   });
 });

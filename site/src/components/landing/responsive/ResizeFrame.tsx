@@ -107,7 +107,7 @@ export function ResizeFrame({ children }: ResizeFrameProps) {
       {width !== null && breakpoint !== null ? (
         <p className="resize-readout">
           <span className="resize-width tabular-nums" data-resize-width>
-            {width} px
+            {width} pixels wide
           </span>
           <span className="resize-breakpoint" data-resize-breakpoint aria-live="polite">
             {breakpoint}

@@ -334,6 +334,10 @@ test.describe("motion bench", () => {
       section(page).locator(".motion-chart svg:not(.demo-static)").first(),
     ).toBeVisible();
     const opening = await markCount(page);
+    // The spec is the second story: collapsed until the reader opens it.
+    await expect(excerpt(page)).toBeHidden();
+    await section(page).getByText("View the spec").click();
+    await expect(excerpt(page)).toBeVisible();
     await nextButton(page).click();
     await expect(months(page)).toHaveText("Showing January to July");
     await expect(excerpt(page)).toContainText('"data": [ … 7 rows ]');

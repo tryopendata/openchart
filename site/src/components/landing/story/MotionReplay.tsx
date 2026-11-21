@@ -2,8 +2,9 @@
  * The motion island: one payrolls chart and a bench of controls beside it.
  * "Replay entrance" re-creates the chart, "Next month" adds a month of data (a
  * data update the library animates), and the animation choice rewrites the
- * spec's `animation` field. The spec excerpt, read off the live spec, marks the
- * field the last control changed. The chart animates through the library's own
+ * spec's `animation` field. The chart takes the width, with the controls in one
+ * row above it; the spec excerpt, read off the live spec with the field the last
+ * control changed marked, waits behind a collapsed "View the spec" disclosure. The chart animates through the library's own
  * transitions; under reduced motion the library skips them and the controls
  * still change the chart.
  *
@@ -74,14 +75,8 @@ export function MotionReplay({ children }: MotionReplayProps) {
 
   return (
     <div className="motion-bench-layout">
-      <div className="motion-stage">
-        <LiveChart spec={spec} mountKey={mountKey} className="motion-chart">
-          {children}
-        </LiveChart>
-      </div>
-
-      <div className="motion-bench">
-        <div className="motion-row">
+      <div className="motion-controls">
+        <div className="motion-buttons">
           <button
             type="button"
             className="btn"
@@ -102,18 +97,10 @@ export function MotionReplay({ children }: MotionReplayProps) {
           >
             {following > months ? "Next month" : `Back to ${monthName(FIRST_MONTHS)}`}
           </button>
-          <p className="motion-note" data-motion-months>
-            Showing January to {monthName(months)}
-          </p>
-          {hydrated && blocked !== null ? (
-            <p id={reasonId} className="motion-note">
-              {blocked}
-            </p>
-          ) : null}
         </div>
 
-        <fieldset className="motion-row motion-choice" disabled={!hydrated}>
-          <legend className="motion-legend">animation</legend>
+        <fieldset className="motion-choice" disabled={!hydrated}>
+          <legend className="motion-legend">Animation</legend>
           {MOTION_CHOICES.map((option) => (
             <label key={option} className="motion-option">
               <input
@@ -131,6 +118,27 @@ export function MotionReplay({ children }: MotionReplayProps) {
           ))}
         </fieldset>
 
+        <p className="motion-note" data-motion-months>
+          Showing January to {monthName(months)}
+        </p>
+      </div>
+      {hydrated && blocked !== null ? (
+        <p id={reasonId} className="motion-reason">
+          {blocked}
+        </p>
+      ) : null}
+
+      <LiveChart spec={spec} mountKey={mountKey} className="motion-chart">
+        {children}
+      </LiveChart>
+
+      <p className="motion-reduced">
+        The library follows the reader's reduced-motion setting. With it on, these controls still
+        change the chart, and nothing animates.
+      </p>
+
+      <details className="motion-spec">
+        <summary>View the spec</summary>
         <pre className="motion-excerpt" data-motion-excerpt>
           {motionExcerpt(spec, lastChange).map((line) => (
             <span key={line.key} className="motion-line" data-changed={line.changed || undefined}>
@@ -139,12 +147,7 @@ export function MotionReplay({ children }: MotionReplayProps) {
             </span>
           ))}
         </pre>
-
-        <p className="motion-reduced">
-          The library reads the reader's reduced-motion setting itself. With it on, these controls
-          still change the chart, and nothing animates.
-        </p>
-      </div>
+      </details>
     </div>
   );
 }

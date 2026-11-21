@@ -3,8 +3,8 @@
  * Annotations and editorial framing: a scroll story about four US stock indexes,
  * built with the library's own `createChartStory`. Five paragraphs scroll past a
  * sticky chart: an opening paragraph, then four that each change it (a range, a
- * revealed series, a callout, a highlight) and print the spec field that did it
- * in the margin. The ChartStoryScroll island hydrates when visible; before that,
+ * revealed series, a callout, a highlight) with one muted line saying, in plain
+ * words, what changed in the spec. The ChartStoryScroll island hydrates when visible; before that,
  * and without JavaScript, the finished chart shows as static SVG beside every
  * paragraph.
  *
@@ -38,8 +38,9 @@ const statics = [false, true]
         {landingCopy.headings.story}
       </h2>
       <p class="story-lede" data-motion-part>
-        The chart below is one spec. Each paragraph after the first merges a small patch into it,
-        and the library animates the difference.
+        As the reader scrolls, each paragraph moves the chart on: it shades the year of the
+        sell-off, brings in the other indexes, marks the low and picks out the one that recovered
+        furthest. The library animates every change.
       </p>
     </div>
     <PublishedFigure

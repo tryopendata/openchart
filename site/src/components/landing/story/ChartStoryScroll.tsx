@@ -19,7 +19,7 @@ import type { ChartStoryInstance, ScrollDriver } from "@opendata-ai/openchart-va
 import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { LandingStoryStep } from "../../../landing/story";
 import { usePageChartTheme } from "../../shared/page-theme";
-import { changeExcerpt } from "./story-change";
+import { describeChange } from "./story-change";
 
 /** Where the step trigger line sits, as a fraction of the viewport: below the sticky chart on narrow screens. */
 const TRIGGER = { wide: 0.5, narrow: 0.78 };
@@ -95,7 +95,7 @@ function useWideLayout(): boolean {
   );
 }
 
-/** The scroll story: sticky chart, scrolling paragraphs, each with the spec field it sets. */
+/** The scroll story: sticky chart, scrolling paragraphs, each with a plain line on what it changed. */
 export function ChartStoryScroll({ spec, steps, children }: ChartStoryScrollProps) {
   const host = useRef<HTMLDivElement>(null);
   const stepElements = useRef<HTMLElement[]>([]);
@@ -157,7 +157,7 @@ export function ChartStoryScroll({ spec, steps, children }: ChartStoryScrollProp
       </div>
       <ol className="story-steps">
         {steps.map((step, index) => {
-          const excerpt = changeExcerpt(changes, index);
+          const change = describeChange(spec, changes, index);
           return (
             <li
               key={step.id}
@@ -170,11 +170,7 @@ export function ChartStoryScroll({ spec, steps, children }: ChartStoryScrollProp
               aria-current={current === index ? "step" : undefined}
             >
               <p className="story-prose">{step.prose}</p>
-              {excerpt.length > 0 ? (
-                <pre className="story-excerpt">
-                  <code>{excerpt.join("\n")}</code>
-                </pre>
-              ) : null}
+              {change === null ? null : <p className="story-change">{change}</p>}
             </li>
           );
         })}

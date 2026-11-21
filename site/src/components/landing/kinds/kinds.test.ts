@@ -34,7 +34,12 @@ describe("the kinds tiles", () => {
   it("fill every row at two and three columns, so no row ends on an empty cell", () => {
     // Cells each place takes: [at two columns, at three columns]. The dominant
     // tile's 2x2 at three columns is four cells.
-    const cells = { dominant: [2, 4], side: [1, 1], bottom: [2, 1], "bottom-wide": [2, 2] } as const;
+    const cells = {
+      dominant: [2, 4],
+      side: [1, 1],
+      bottom: [2, 1],
+      "bottom-wide": [2, 2],
+    } as const;
     const total = (columns: 0 | 1) =>
       kindsTiles.reduce((sum, tile) => sum + cells[tile.place][columns], 0);
     expect(total(0) % 2).toBe(0);

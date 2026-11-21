@@ -1,69 +1,108 @@
 /**
- * Turns a story step's change into the short spec excerpt printed in the margin
- * beside its paragraph, so a reader sees which field produced what the chart
- * just did. Pure: the island renders the string, the tests read it.
+ * Describes a story step's change to the chart in plain words, for the one
+ * muted line under its paragraph ("adds a shaded range for 2022"). The words
+ * are read off the step's patch, not written beside it, so they cannot drift
+ * from what the chart does. Pure: the island renders the sentence, the tests
+ * read it.
  *
- * Patches restate earlier annotations (arrays replace when merged), so an
- * annotation already shown by an earlier step is elided as `…`, and data rows
- * are folded to a count, the way the hero's spec pane folds them.
+ * Patches restate earlier annotations (arrays replace when merged), so only
+ * annotations that no earlier step showed are described.
  */
+import type { ChartSpec } from "@opendata-ai/openchart-core";
+import { deepMergeSpec } from "@opendata-ai/openchart-core";
 import type { StoryStep } from "@opendata-ai/openchart-vanilla/story";
 
-type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
+type AnnotationLike = { id?: string; type?: string; label?: string; text?: string };
 
-/** Compact single-line JSON with a space after colons and commas, as a person would type it. */
-export function inlineJson(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(inlineJson).join(", ")}]`;
-  if (value !== null && typeof value === "object") {
-    const entries = Object.entries(value).map(([key, item]) => `"${key}": ${inlineJson(item)}`);
-    return `{ ${entries.join(", ")} }`;
-  }
-  return JSON.stringify(value);
+/**
+ * A step's patch with the `highlight` shorthand folded in, as `createChartStory`
+ * folds it: `null` clears a highlight, so it becomes an empty list.
+ */
+function stepPatch(step: StoryStep): Record<string, unknown> {
+  const patch = step.spec ?? {};
+  if (step.highlight === undefined) return patch;
+  return deepMergeSpec(patch, { encoding: { color: { highlight: step.highlight ?? [] } } });
 }
 
-const annotationId = (annotation: unknown) =>
-  annotation !== null && typeof annotation === "object" && "id" in annotation
-    ? String(annotation.id)
-    : undefined;
-
-/** The ids of annotations that steps before `index` already put on the chart. */
-function earlierAnnotationIds(steps: readonly StoryStep[], index: number): Set<string> {
-  const ids = steps
-    .slice(0, index)
-    .flatMap((step) => (step.spec?.annotations as unknown[] | undefined) ?? [])
-    .map(annotationId);
-  return new Set(ids.filter((id): id is string => id !== undefined));
+/** The spec after steps 0..index, merged the way the story merges them. */
+function specAfter(base: ChartSpec, steps: readonly StoryStep[], index: number): ChartSpec {
+  return steps
+    .slice(0, index + 1)
+    .reduce<ChartSpec>((spec, step) => deepMergeSpec(spec, stepPatch(step)), base);
 }
 
-/** One top-level field of a patch, written for display. */
-function fieldLine(key: string, value: unknown, earlier: Set<string>): string {
-  if (key === "data" && Array.isArray(value)) return `"data": [ … ${value.length} rows ]`;
-  if (key === "annotations" && Array.isArray(value)) {
-    const fresh = value.filter((annotation) => !earlier.has(annotationId(annotation) ?? ""));
-    // The id only tells steps apart; the reader's note shows what draws.
-    const shown = fresh.map((annotation) => {
-      const { id: _id, ...drawn } = annotation as Record<string, unknown>;
-      return inlineJson(drawn);
-    });
-    if (fresh.length < value.length) shown.unshift("…");
-    return `"annotations": [${shown.join(", ")}]`;
+/** Annotation text without the library's `**bold**` markers. */
+const plainText = (text: string) => text.replaceAll("**", "");
+
+function describeAnnotation(annotation: AnnotationLike): string {
+  if (annotation.type === "range") {
+    return annotation.label ? `adds a shaded range for ${annotation.label}` : "adds a shaded range";
   }
-  return `"${key}": ${inlineJson(value as Json)}`;
+  if (annotation.type === "text") return `adds a callout, “${plainText(annotation.text ?? "")}”`;
+  if (annotation.type === "refline") return "adds a reference line";
+  return "adds an annotation";
+}
+
+/** The values of the color field that `after` draws and `before` did not: the series a step reveals. */
+function revealedSeries(before: ChartSpec, after: ChartSpec): string[] {
+  const field = (after.encoding.color as { field?: string } | undefined)?.field;
+  if (!field) return [];
+  const values = (spec: ChartSpec) =>
+    new Set(spec.data.map((row) => String((row as Record<string, unknown>)[field])));
+  const shown = values(before);
+  return [...values(after)].filter((value) => !shown.has(value));
+}
+
+/** "A", "A and B", "A, B and C". */
+function listOf(items: string[]): string {
+  if (items.length <= 1) return items.join("");
+  return `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
+}
+
+/** The phrases for one step's change, in the order its patch lists them. */
+function changePhrases(base: ChartSpec, steps: readonly StoryStep[], index: number): string[] {
+  const step = steps[index];
+  if (!step) throw new RangeError(`No story step ${index}: the story has ${steps.length} steps.`);
+  const before = index === 0 ? base : specAfter(base, steps, index - 1);
+  const after = specAfter(base, steps, index);
+  const shownBefore = new Set(
+    (before.annotations ?? []).map((note) => (note as AnnotationLike).id),
+  );
+  const phrases: string[] = [];
+  for (const key of Object.keys(stepPatch(step))) {
+    if (key === "annotations") {
+      const fresh = (after.annotations ?? []).filter(
+        (note) => !shownBefore.has((note as AnnotationLike).id),
+      );
+      phrases.push(...fresh.map((note) => describeAnnotation(note as AnnotationLike)));
+    } else if (key === "data") {
+      const series = revealedSeries(before, after);
+      phrases.push(series.length > 0 ? `adds the ${listOf(series)} lines` : "changes the data");
+    } else if (key === "encoding") {
+      const highlight = (after.encoding.color as { highlight?: string[] } | undefined)?.highlight;
+      phrases.push(
+        highlight && highlight.length > 0
+          ? `highlights ${listOf(highlight)} and dims the rest`
+          : "changes the encoding",
+      );
+    } else {
+      phrases.push(`changes the ${key}`);
+    }
+  }
+  return phrases;
 }
 
 /**
- * The spec excerpt for step `index`: one line per top-level field the step
- * patches, plus `highlight` sugar written as the field it sets.
+ * The muted line under step `index`'s paragraph, or null for a step that changes
+ * nothing (the story's opening).
+ *
+ * @throws {RangeError} When the story has no step `index`.
  */
-export function changeExcerpt(steps: readonly StoryStep[], index: number): string[] {
-  const step = steps[index];
-  if (!step) throw new RangeError(`No story step ${index}: the story has ${steps.length} steps.`);
-  const earlier = earlierAnnotationIds(steps, index);
-  const lines = Object.entries(step.spec ?? {}).map(([key, value]) =>
-    fieldLine(key, value, earlier),
-  );
-  if (step.highlight !== undefined) {
-    lines.push(`"encoding": ${inlineJson({ color: { highlight: step.highlight } })}`);
-  }
-  return lines;
+export function describeChange(
+  base: ChartSpec,
+  steps: readonly StoryStep[],
+  index: number,
+): string | null {
+  const phrases = changePhrases(base, steps, index);
+  return phrases.length === 0 ? null : `In the spec, this step ${listOf(phrases)}.`;
 }
