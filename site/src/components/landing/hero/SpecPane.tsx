@@ -1,22 +1,24 @@
 /**
- * The spec pane: the current step's spec as formatted lines, tokens tinted by
- * kind, and the lines this step added marked with `data-spec-added` (CSS draws
- * the accent rule on their leading edge). A folded line (the theme preset)
- * keeps its full lines in the page, hidden; once hydrated, its fold opens them
- * in place. Under 700px, and only once hydrated, the pane collapses to the
- * added lines with a toggle to show the rest; without JavaScript the whole spec
- * shows. Indentation is padding, so a wrapped line hangs under its own start.
+ * The spec pane: the active hero view's spec as formatted lines, tokens tinted
+ * by kind, and the lines differing from the baseline marked with
+ * `data-spec-added` (CSS draws the accent rule on their leading edge). Any
+ * folded line keeps its full lines in the page, hidden; once hydrated, its fold
+ * opens them in place. Under 700px, once hydrated and only when the view has
+ * added lines, the pane collapses to the added lines with a toggle to show the
+ * rest; without JavaScript or on a baseline view, the whole spec shows.
+ * Indentation is padding, so a wrapped line hangs under its own start.
  */
 import { type CSSProperties, forwardRef, useId, useState } from "react";
 import type { MarkedSpecLine, SpecLine, SpecToken } from "../../../landing/spec-lines";
 
+/** Props for `SpecPane`. */
 export type SpecPaneProps = {
+  /** Formatted spec lines with diff markers for the active view. */
   lines: MarkedSpecLine[];
-  stepLabel: string;
-  /** True once the island has hydrated: the fold and the phone collapse need a working button. */
+  /** Human-readable name of the active view, used for the pane's accessible label. */
+  label: string;
+  /** True once the island has hydrated: folds and the mobile collapse need a working button. */
   hydrated: boolean;
-  /** Called when the reader scrolls, touches or focuses the pane, which stops the sequence. */
-  onInteract: () => void;
 };
 
 function Token({ token }: { token: SpecToken }) {
@@ -85,15 +87,17 @@ function FoldedLine({ line, hydrated }: { line: MarkedSpecLine; hydrated: boolea
 
 /** The pane; the ref is the scrolling region, which the reveal scrolls to the added lines. */
 export const SpecPane = forwardRef<HTMLElement, SpecPaneProps>(function SpecPane(
-  { lines, stepLabel, hydrated, onInteract },
+  { lines, label, hydrated },
   ref,
 ) {
   const [expanded, setExpanded] = useState(false);
   const paneId = useId();
+  const hasAddedLines = lines.some((line) => line.added);
+  const collapsible = hydrated && hasAddedLines;
   return (
     <div
       className="hero-spec"
-      data-collapsible={hydrated ? "" : undefined}
+      data-collapsible={collapsible ? "" : undefined}
       data-expanded={expanded ? "" : undefined}
     >
       <section
@@ -101,13 +105,9 @@ export const SpecPane = forwardRef<HTMLElement, SpecPaneProps>(function SpecPane
         id={paneId}
         className="hero-spec-code"
         data-hero-spec
-        aria-label={`Spec as of step: ${stepLabel}`}
+        aria-label={`Spec for ${label}`}
         // biome-ignore lint/a11y/noNoninteractiveTabindex: the pane scrolls, and a scrolling region must take keyboard focus (axe scrollable-region-focusable).
         tabIndex={0}
-        onWheel={onInteract}
-        onPointerDown={onInteract}
-        onTouchStart={onInteract}
-        onFocus={onInteract}
       >
         <pre>
           <code>
@@ -123,7 +123,7 @@ export const SpecPane = forwardRef<HTMLElement, SpecPaneProps>(function SpecPane
           </code>
         </pre>
       </section>
-      {hydrated ? (
+      {collapsible ? (
         <button
           type="button"
           className="hero-spec-toggle"
