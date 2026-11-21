@@ -37,8 +37,7 @@ describe("the kinds tiles", () => {
     const cells = {
       dominant: [2, 4],
       side: [1, 1],
-      bottom: [2, 1],
-      "bottom-wide": [2, 2],
+      full: [2, 3],
     } as const;
     const total = (columns: 0 | 1) =>
       kindsTiles.reduce((sum, tile) => sum + cells[tile.place][columns], 0);

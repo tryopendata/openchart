@@ -11,11 +11,11 @@
  * and three from 900px:
  * - `dominant`: the full row at two columns; two columns and two rows at three.
  * - `side`: one cell, beside the dominant tile at three columns.
- * - `bottom`: the full row at two columns, one cell at three.
- * - `bottom-wide`: the full row at two columns, two cells at three.
+ * - `full`: the full row at every width, for a graphic that needs the room
+ *   (a sankey's labelled columns, a table's columns).
  * At every width the cells fill their rows, so no row is left with an empty cell.
  */
-export type KindsTilePlace = "dominant" | "side" | "bottom" | "bottom-wide";
+export type KindsTilePlace = "dominant" | "side" | "full";
 
 export type KindsTile = {
   /** A demo id from src/demos/. */
@@ -46,10 +46,7 @@ export type KindsTile = {
   fitContent?: boolean;
 };
 
-/** Fits the data table's eight rows, search box and pager at three columns, with no inner scroll. */
-const BOTTOM_ROW_HEIGHT = 640;
-
-/** In grid order: the dominant map, the two cells beside it, then the bottom row. */
+/** In grid order: the dominant map, the two cells beside it, then the two full-width rows. */
 export const kindsTiles: KindsTile[] = [
   {
     demo: "maps/symbol-color",
@@ -80,15 +77,17 @@ export const kindsTiles: KindsTile[] = [
     demo: "flow/sankey-basic",
     href: "/docs/flow/sankey/",
     link: "Sankey diagrams",
-    place: "bottom",
-    height: BOTTOM_ROW_HEIGHT,
+    place: "full",
+    // Three labelled columns of nodes need the whole measure to keep their labels apart.
+    height: 520,
+    narrowHeight: 460,
   },
   {
     demo: "tables/basic",
     href: "/docs/tables/data-table/",
     link: "Data tables",
-    place: "bottom-wide",
-    height: BOTTOM_ROW_HEIGHT,
+    place: "full",
+    height: 480,
     fitContent: true,
   },
 ];

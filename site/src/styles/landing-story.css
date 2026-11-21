@@ -200,11 +200,14 @@
     @apply flex min-w-0 flex-col;
   }
 
-  /* Two columns (640-899px): the dominant tile and the bottom row take full rows. */
-  .kinds-tile[data-place="dominant"],
-  .kinds-tile[data-place="bottom"],
-  .kinds-tile[data-place="bottom-wide"] {
+  /* Two columns (640-899px): the dominant tile takes the full row. */
+  .kinds-tile[data-place="dominant"] {
     @apply sm:col-span-2;
+  }
+
+  /* A full tile takes the whole row at every width. */
+  .kinds-tile[data-place="full"] {
+    grid-column: 1 / -1;
   }
 
   /* Published-graphic framing: a hairline above, nothing around. */
@@ -250,10 +253,6 @@
 
     .kinds-tile[data-place="dominant"] {
       @apply row-span-2;
-    }
-
-    .kinds-tile[data-place="bottom"] {
-      @apply col-span-1;
     }
   }
 
