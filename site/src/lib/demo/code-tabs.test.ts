@@ -44,7 +44,30 @@ describe("codeTabsHtml", () => {
       tabs.map((tab) => `#d-fixtures-bar-code-${tab.getAttribute("data-demo-tab")}`),
     );
     expect(tabs[0]?.getAttribute("aria-current")).toBe("true");
-    expect(block.querySelectorAll("[data-demo-panel] button[data-demo-copy]")).toHaveLength(5);
+  });
+
+  it("leads with a Code disclosure and one Copy, in reading order, before the code they act on", async () => {
+    const { block } = await codeBlock();
+    const toolbar = block.parentElement;
+    const row = toolbar?.firstElementChild;
+    expect([...(toolbar?.children ?? [])]).toEqual([row, block]);
+    const controls = [...(row?.querySelectorAll("button") ?? [])].map((button) => ({
+      name: button.textContent,
+      hidden: button.hasAttribute("hidden"),
+      expanded: button.getAttribute("aria-expanded"),
+      controls: button.getAttribute("aria-controls"),
+    }));
+    expect(controls).toEqual([
+      { name: "Code", hidden: true, expanded: "false", controls: block.id },
+      { name: "Copy", hidden: true, expanded: null, controls: null },
+    ]);
+    expect(row?.querySelector("[data-demo-copy-status]")?.getAttribute("aria-live")).toBe("polite");
+  });
+
+  it("makes each panel's code a keyboard-scrollable region", async () => {
+    const { block } = await codeBlock();
+    const pres = [...block.querySelectorAll("[data-demo-panel] pre")];
+    expect(pres.map((pre) => pre.getAttribute("tabindex"))).toEqual(["0", "0", "0", "0", "0"]);
   });
 
   it("shows the data rows in the Spec panel only and folds them in the framework panels", async () => {

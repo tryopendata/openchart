@@ -41,7 +41,7 @@ describe("the json demo fence", () => {
     const { doc } = await render(
       fence('json demo title="Orders" source="Sales ledger" height=320', JSON.stringify(BAR_SPEC)),
     );
-    const figure = doc.querySelector("figure.demo");
+    const figure = doc.querySelector(".demo[data-demo]");
     expect(figure?.getAttribute("data-demo")).toMatch(/^fence-[0-9a-f]{8}$/);
     const stage = figure?.querySelector("[data-demo-stage]");
     expect(stage?.getAttribute("style")).toBe("--demo-height: 320px");
@@ -58,7 +58,8 @@ describe("the json demo fence", () => {
         tab.getAttribute("data-demo-tab"),
       ),
     ).toEqual(["spec", "react", "vue", "svelte", "vanilla"]);
-    expect(figure?.querySelectorAll("[data-demo-panel] button")).toHaveLength(5);
+    expect(figure?.querySelectorAll("button[data-demo-copy]")).toHaveLength(1);
+    expect(figure?.hasAttribute("data-demo-entrance")).toBe(true);
     expect(figure?.querySelector("figcaption")?.textContent).toBe("Orders. Source: Sales ledger.");
     expect(doc.querySelector("pre[data-demo]")).toBeNull();
   });
@@ -77,13 +78,13 @@ describe("the json demo fence", () => {
 
   it("leaves a plain json fence as a highlighted code block", async () => {
     const { doc } = await render(fence("json", JSON.stringify(BAR_SPEC)));
-    expect(doc.querySelector("figure.demo")).toBeNull();
+    expect(doc.querySelector(".demo[data-demo]")).toBeNull();
     expect(doc.querySelector("figure.code-frame pre")?.textContent).toContain('"mark"');
   });
 
   it("ignores the word demo and height= inside quoted values of a plain json fence", async () => {
     const { doc } = await render(fence('json title="A demo config height=9"', '{"not":"a spec"}'));
-    expect(doc.querySelector("figure.demo")).toBeNull();
+    expect(doc.querySelector(".demo[data-demo]")).toBeNull();
     expect(doc.querySelector("figure.code-frame figcaption")?.textContent).toBe(
       "A demo config height=9",
     );
@@ -105,7 +106,7 @@ describe("the json demo fence", () => {
     });
     await processor.render(once);
     const { code } = await processor.render(once);
-    expect(code).toContain('<figure class="demo not-prose"');
+    expect(code).toContain('<div class="demo not-prose"');
   });
 
   it("escapes </script> inside a spec string so the embedded JSON stays in its element", async () => {

@@ -17,7 +17,7 @@ export type DemoDef = {
   caption?: string;
   /** Fixed height of the stage in px. Default `DEFAULT_DEMO_HEIGHT`. */
   height?: number;
-  /** Play the library's entrance animation on live mount. Default false. */
+  /** Play the library's entrance animation when the live chart is first seen. Default true. */
   entrance?: boolean;
   /**
    * Render static SVGs at build time. Default true. Set false for a heavy demo:
