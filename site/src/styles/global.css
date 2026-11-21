@@ -266,6 +266,16 @@ h1 {
   color: var(--shiki-light);
 }
 
+/* A fence sits on the page's background; a panel's code shows its panel through. */
+.astro-code {
+  background-color: var(--color-canvas);
+}
+
+.shiki,
+:is(.astro-code, .shiki) span {
+  background-color: transparent;
+}
+
 .dark :is(.astro-code, .shiki),
 .dark :is(.astro-code, .shiki) span {
   color: var(--shiki-dark);
@@ -276,16 +286,6 @@ h1 {
   :root:not(.light) :is(.astro-code, .shiki) span {
     color: var(--shiki-dark);
   }
-}
-
-/* A fence sits on the page's background; a panel's code shows its panel through. */
-.astro-code {
-  background-color: var(--color-canvas);
-}
-
-.shiki,
-:is(.astro-code, .shiki) span {
-  background-color: transparent;
 }
 
 /* A code block: a hairline frame, square corners, an optional title bar. */
