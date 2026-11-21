@@ -12,6 +12,7 @@ import { useAgentDemo } from "@steamfield/ui/react/agent-demo";
 import type { DemoView, Timing } from "@steamfield/ui/sequencer";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { agentChart, agentSource } from "../../../landing/agents";
+import { FigureFrame } from "../../shared/FigureFrame";
 import { LiveChart, loadChartLibrary } from "../../shared/LiveChart";
 import type { SessionData, SessionScript } from "./session-script";
 import { TranscriptEntry } from "./TranscriptEntry";
@@ -98,28 +99,26 @@ export function AgentSession({ script, chart }: AgentSessionProps) {
 
   return (
     <div ref={demo.ref} className="agent-session" data-live={live ? "" : undefined}>
-      {/* PublishedFigure's markup and classes, written out here because an Astro component
-          can't render inside a React island. The reveal attributes are left off: the island
-          re-creates the chart on every replay, after the reveal script has run. */}
-      <figure className="pub-figure agent-chart" data-agent-chart>
-        <div className="rule-axis" />
-        <div className="pub-figure-body agent-chart-stage">
-          {chartShown && liveChart ? (
-            <LiveChart spec={agentChart} className="agent-chart-live">
-              {chart}
-            </LiveChart>
-          ) : null}
-          {chartShown && !liveChart ? chart : null}
-          {chartShown ? null : (
-            <p className="agent-chart-waiting">The chart draws here once the spec validates.</p>
-          )}
-        </div>
-        <figcaption className="figure-caption pub-figure-caption">
-          <span>The chart the corrected spec renders. </span>
-          Source:{" "}
-          {agentSource.url ? <a href={agentSource.url}>{agentSource.label}</a> : agentSource.label}.
-        </figcaption>
-      </figure>
+      {/* The reveal attributes are left off: the island re-creates the chart on every
+          replay, after the reveal script has run. */}
+      <FigureFrame
+        className="agent-chart"
+        bodyClassName="agent-chart-stage"
+        source={agentSource}
+        note="The chart the corrected spec renders."
+        reveal={false}
+        data-agent-chart
+      >
+        {chartShown && liveChart ? (
+          <LiveChart spec={agentChart} className="agent-chart-live">
+            {chart}
+          </LiveChart>
+        ) : null}
+        {chartShown && !liveChart ? chart : null}
+        {chartShown ? null : (
+          <p className="agent-chart-waiting">The chart draws here once the spec validates.</p>
+        )}
+      </FigureFrame>
       <div className="agent-log">
         {showControls ? (
           <div className="agent-controls">
