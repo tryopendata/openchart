@@ -6,7 +6,13 @@ import { describe, expect, it } from "vitest";
 import { fixtureBar } from "../../demos/fixtures/bar";
 import { fixtureTable } from "../../demos/fixtures/table";
 import { basicChoropleth } from "../../demos/maps/choropleth";
-import { type DemoFigure, demoFigureHtml } from "./figure";
+import {
+  bareStageHtml,
+  type DemoFigure,
+  demoFigureHtml,
+  embeddedSpecHtml,
+  stageContentHtml,
+} from "./figure";
 import { valueAt } from "./spec-path";
 
 function figureFor(overrides: Partial<DemoFigure> = {}): DemoFigure {
@@ -27,8 +33,8 @@ function figureFor(overrides: Partial<DemoFigure> = {}): DemoFigure {
 async function render(figure: DemoFigure) {
   const html = await demoFigureHtml(figure);
   const doc = new new Window().DOMParser().parseFromString(`<body>${html}</body>`, "text/html");
-  const element = doc.querySelector("figure");
-  if (!element) throw new Error("demoFigureHtml returned no <figure>");
+  const element = doc.querySelector("div.demo");
+  if (!element) throw new Error("demoFigureHtml returned no demo element");
   return element;
 }
 
@@ -46,6 +52,11 @@ describe("demoFigureHtml", () => {
       ),
     ).toEqual(["light", "dark"]);
     expect(figure.querySelector("[data-demo-code]")).not.toBeNull();
+    // Reading order: a figure holding the stage then its caption, then the spec, then the code.
+    expect([...figure.children].map((child) => child.tagName)).toEqual(["FIGURE", "SCRIPT", "DIV"]);
+    expect(
+      [...(figure.querySelector("figure")?.children ?? [])].map((child) => child.tagName),
+    ).toEqual(["DIV", "FIGCAPTION"]);
     expect(figure.querySelector("figcaption")?.textContent).toBe(
       "Weekly orders by region. Source: Illustrative data.",
     );
@@ -116,5 +127,53 @@ describe("demoFigureHtml", () => {
     const script = figure.querySelector("script[data-demo-spec]");
     expect(script?.hasAttribute("data-demo-shared-refs")).toBe(false);
     expect(JSON.parse(script?.textContent ?? "")).toEqual(basicChoropleth.spec);
+  });
+});
+
+describe("a chart drawn without the figure", () => {
+  const parse = (html: string) =>
+    new new Window().DOMParser().parseFromString(`<body>${html}</body>`, "text/html").body;
+
+  it("is a bare stage with the static SVGs or the placeholder, sized by the caller's class", () => {
+    const content = stageContentHtml({
+      spec: fixtureBar.spec,
+      title: fixtureBar.title,
+      domId: "d-tile",
+      height: 180,
+      width: 240,
+      static: true,
+      precision: 0,
+    });
+    const stage = parse(bareStageHtml(content, "tile-stage")).querySelector("[data-demo-stage]");
+    expect(stage?.className).toBe("demo-stage tile-stage");
+    expect(stage?.getAttribute("style")).toBeNull();
+    const statics = [...(stage?.querySelectorAll("svg.demo-static") ?? [])];
+    expect(statics.map((svg) => svg.getAttribute("data-theme"))).toEqual(["light", "dark"]);
+    expect(statics.map((svg) => svg.getAttribute("viewBox"))).toEqual([
+      "0 0 240 180",
+      "0 0 240 180",
+    ]);
+    const table = stageContentHtml({
+      spec: fixtureTable.spec,
+      title: "Rows",
+      domId: "t",
+      height: 1,
+      static: true,
+    });
+    expect(parse(table).querySelector("[data-demo-placeholder]")?.textContent).toBe(
+      "Rows. This chart is drawn in the browser.",
+    );
+  });
+
+  it("embeds its spec with shared values written once per page record", () => {
+    const pageShared = new Set<string>();
+    const first = parse(embeddedSpecHtml(basicChoropleth.spec, pageShared));
+    const second = parse(embeddedSpecHtml(basicChoropleth.spec, pageShared));
+    expect(first.querySelectorAll("[data-demo-shared]").length).toBeGreaterThan(0);
+    expect(second.querySelectorAll("[data-demo-shared]")).toHaveLength(0);
+    const whole = parse(embeddedSpecHtml(basicChoropleth.spec));
+    expect(JSON.parse(whole.querySelector("script[data-demo-spec]")?.textContent ?? "")).toEqual(
+      basicChoropleth.spec,
+    );
   });
 });

@@ -1,0 +1,82 @@
+---
+/**
+ * The visual vocabulary wall: 24 small charts filed by what each is for, set
+ * like a newsroom's chart style sheet, with a filter that refiles them. Each
+ * tile is an existing demo drawn as a specimen (tile-spec.ts) in the demo
+ * markup contract, so the page's demo script mounts it and plays its entrance
+ * the first time it is seen. The VocabularyWall island (client:idle, so a link
+ * to a filter applies before the wall is reached) runs the filter and scales
+ * the live charts to their cells.
+ *
+ * Contract (e2e/landing.spec.ts relies on it):
+ * - `<section id="vocabulary" aria-labelledby="vocabulary-title" data-landing-section>`
+ *   with one h2, id `vocabulary-title` (`landingCopy.headings.vocabulary`).
+ * - The filter is a row of buttons with `aria-pressed`, named "All" and then each
+ *   Visualizations section label from `docsAreas` ("Distribution" and so on).
+ * - Each tile carries `data-vocabulary-tile` and holds one link to its docs page
+ *   under `/docs/<intent>/`. A filtered-out tile is hidden, not just dimmed.
+ */
+import { pageSharedHashes } from "../../../lib/demo/shared-values";
+import type { LandingSectionId } from "../../../landing/copy";
+import { vocabularyTiles } from "../../../landing/vocabulary";
+import "../../../styles/landing-wall.css";
+import SectionHead from "../../shared/SectionHead.astro";
+import { tileChartHtml } from "./tile-markup";
+import { VocabularyWall } from "./VocabularyWall";
+import { intentCounts, WALL_INTENTS } from "./wall-filter";
+
+const SECTION_ID: LandingSectionId = "vocabulary";
+const pageShared = pageSharedHashes(Astro.locals);
+const labelOf = new Map(WALL_INTENTS.map((intent) => [intent.id, intent.label]));
+const counts = intentCounts(vocabularyTiles.map((tile) => tile.intent));
+const intents = WALL_INTENTS.filter((intent) => counts.has(intent.id)).map((intent) => ({
+  ...intent,
+  count: counts.get(intent.id) ?? 0,
+}));
+
+const tiles = vocabularyTiles.map((tile, index) => ({
+  ...tile,
+  // A tile's demo element id; prefixed so it never collides with a demo figure elsewhere on the page.
+  demoId: `wall-${tile.demo}`,
+  groupStart: index === 0 || vocabularyTiles[index - 1]?.intent !== tile.intent,
+  intentLabel: labelOf.get(tile.intent) ?? tile.intent,
+  chart: tileChartHtml(tile, pageShared),
+}));
+---
+
+<section
+  id={SECTION_ID}
+  aria-labelledby="vocabulary-title"
+  data-landing-section
+  class="landing-section"
+>
+  <div class="landing-container">
+    <SectionHead id={SECTION_ID} layout="beside">
+      Each chart is filed under the job it does on the page: comparing values, showing change over
+      time, splitting a whole, showing how values spread, relating two measures, tracing a flow,
+      placing values on a map, setting out exact figures, or combining views in one frame. Choose a
+      purpose to narrow the sheet, or open a chart to see it at full size.
+    </SectionHead>
+    <VocabularyWall client:idle intents={intents} total={tiles.length} sectionId={SECTION_ID}>
+      <ul class="wall-grid" role="list">
+        {tiles.map((tile) => (
+          <li
+            class="wall-tile demo"
+            data-demo={tile.demoId}
+            data-demo-entrance
+            data-vocabulary-tile={tile.demo}
+            data-intent={tile.intent}
+            data-group-start={tile.groupStart ? "" : undefined}
+          >
+            <span class="wall-rule" aria-hidden="true" />
+            <span class="wall-intent">{tile.groupStart ? tile.intentLabel : ""}</span>
+            <div class="wall-chart" inert aria-hidden="true" set:html={tile.chart} />
+            <a class="wall-name" href={tile.href}>
+              {tile.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </VocabularyWall>
+  </div>
+</section>

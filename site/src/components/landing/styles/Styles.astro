@@ -1,0 +1,80 @@
+---
+/**
+ * One chart, set in four house styles: a pinned, scrubbed section where one
+ * chart moves through the essay, wire, broadsheet and terminal presets and then
+ * dark mode. The stops, their descriptions and diffs, and the first stop's static
+ * chart are computed here at build time; the PresetScrub island (client:visible)
+ * runs the chart, the pin and the buttons.
+ *
+ * Contract (e2e/landing.spec.ts relies on it):
+ * - `<section id="styles" aria-labelledby="styles-title" data-landing-section>`
+ *   with one h2, id `styles-title` (`landingCopy.headings.styles`).
+ * - `data-preset-name` on the visible element naming the current preset; its text
+ *   is the preset name ("essay", "wire", "broadsheet", "terminal"), case aside.
+ * - Where the pin applies it happens inside this section: ScrollTrigger pins an
+ *   element within it, so the section itself stays a direct child of `<main>`.
+ * - Without the pin (narrow or short screens, reduced motion) the presets are
+ *   buttons named by preset ("Essay", "Wire", "Broadsheet", "Terminal").
+ */
+import "@fontsource/inter/latin-400.css";
+import "@fontsource/inter/latin-500.css";
+import "@fontsource/inter/latin-600.css";
+import "@fontsource/source-serif-4/latin-400.css";
+import "@fontsource/source-serif-4/latin-600.css";
+import "@fontsource/jetbrains-mono/latin-400.css";
+import "@fontsource/jetbrains-mono/latin-600.css";
+import type { ChartSpec } from "@opendata-ai/openchart-core";
+import { renderStaticSVG } from "@opendata-ai/openchart-vanilla/static";
+import { houseStyle } from "../../../demos/landing/house-style";
+import { DEFAULT_DEMO_HEIGHT } from "../../../demos/types";
+import { validateDemo } from "../../../lib/demo/validate";
+import "../../../styles/landing-wall.css";
+import PublishedFigure from "../../shared/PublishedFigure.astro";
+import SectionHead from "../../shared/SectionHead.astro";
+import { HOUSE_STYLE_STOPS, houseStyleDiffs } from "./house-styles";
+import { PresetScrub } from "./PresetScrub";
+
+/**
+ * The static stand-in's layout width: narrow enough that its type stays readable
+ * when a phone scales it down, before the live chart lays itself out at the real width.
+ */
+const STAND_IN_WIDTH = 560;
+
+validateDemo(houseStyle.id, houseStyle.spec);
+const spec = houseStyle.spec as ChartSpec;
+const diffs = houseStyleDiffs();
+const stops = HOUSE_STYLE_STOPS.map((stop, index) => ({ ...stop, diff: diffs[index] ?? [] }));
+const first = HOUSE_STYLE_STOPS[0];
+
+// The preset is the spec's own theme and no site theme is passed: a mount theme
+// would override the preset's fonts and paper, which are the point of the section.
+const initialSvg = renderStaticSVG(
+  { ...spec, theme: first?.theme, watermark: false },
+  {
+    idPrefix: "house-style",
+    width: STAND_IN_WIDTH,
+    height: houseStyle.height ?? DEFAULT_DEMO_HEIGHT,
+    darkMode: "off",
+    precision: 1,
+  },
+);
+---
+
+<section id="styles" aria-labelledby="styles-title" data-landing-section class="landing-section">
+  <div class="landing-container">
+    <SectionHead id="styles" layout="beside">
+      A paper sets every chart in its house style: its typeface, its paper, its rules and its
+      colors. The chart below takes four of them in turn, then a dark page, and nothing about its
+      data changes.
+    </SectionHead>
+    <PublishedFigure
+      class="scrub-figure"
+      source={houseStyle.source}
+      note="The kicker, headline and deck belong to the chart, so each style sets them in its own type."
+    >
+      <PresetScrub client:visible stops={stops} spec={spec}>
+        <div class="scrub-static" set:html={initialSvg} />
+      </PresetScrub>
+    </PublishedFigure>
+  </div>
+</section>

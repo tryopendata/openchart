@@ -13,9 +13,12 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join, resolve } from "node:path";
+import { gzipSync } from "node:zlib";
 import { Window } from "happy-dom";
 import { describe, expect, it } from "vitest";
 import { docsAreas, site } from "../src/config";
+import { LANDING_SECTION_IDS, type LandingSectionId, landingCopy } from "../src/landing/copy";
+import { heroSteps } from "../src/landing/hero";
 import { catalogPageIds } from "./catalog-pages";
 
 const parser = new new Window().DOMParser();
@@ -86,8 +89,9 @@ describe("the page set", () => {
 });
 
 describe("demos", () => {
-  it("the bar page shows at least three demos, each with both static SVGs and five code tabs", () => {
-    const figures = [...page("dist", pagePath(BAR)).querySelectorAll("figure[data-demo]")];
+  it("the bar page shows at least three demos, each with both static SVGs and five code tabs behind Show code", () => {
+    const doc = page("dist", pagePath(BAR));
+    const figures = [...doc.querySelectorAll(".demo[data-demo]")];
     expect(figures.length).toBeGreaterThanOrEqual(3);
     for (const figure of figures) {
       const id = figure.getAttribute("data-demo") ?? "";
@@ -105,13 +109,25 @@ describe("demos", () => {
       for (const tab of tabs) {
         expect(figure.querySelector(`[data-demo-panel="${tab}"]`), `${id} ${tab}`).not.toBeNull();
       }
+      const code = figure.querySelector("[data-demo-code]");
+      const toggle = figure.querySelector("button[data-demo-toggle]");
+      expect(toggle?.textContent, id).toBe("Code");
+      expect(toggle?.getAttribute("aria-controls"), id).toBe(code?.id);
+      expect(toggle?.getAttribute("aria-expanded"), `${id} code starts closed`).toBe("false");
+      expect(figure.querySelectorAll("button[data-demo-copy][hidden]"), id).toHaveLength(1);
+      expect(figure.hasAttribute("data-demo-entrance"), `${id} plays its entrance`).toBe(true);
       expect(figure.querySelector("figcaption")?.textContent, id).toMatch(/Source: \S/);
     }
+    // The gate runs in the head, before anything paints, so a restored open block never moves the page.
+    const gate = [...doc.querySelectorAll("head script:not([src])")].find((script) =>
+      script.textContent?.includes("data-demo-gate"),
+    );
+    expect(gate, "the demo gate script in the head").toBeDefined();
   });
 
   it("a json demo fence in repo Markdown becomes a demo figure", () => {
     const figures = page("dist", pagePath(GETTING_STARTED)).querySelectorAll(
-      'figure[data-demo^="fence-"]',
+      '.demo[data-demo^="fence-"]',
     );
     expect(figures.length).toBeGreaterThanOrEqual(1);
     expect(figures[0]?.querySelector("svg.demo-static")).not.toBeNull();
@@ -127,7 +143,7 @@ describe("demos", () => {
         stages += 1;
         const text = stage.querySelector("p[data-demo-placeholder]")?.textContent ?? "";
         if (!/^\S.*\. This chart is drawn in the browser\.$/.test(text)) {
-          missing.push(`${file}: ${stage.closest("figure")?.getAttribute("data-demo")}`);
+          missing.push(`${file}: ${stage.closest("[data-demo]")?.getAttribute("data-demo")}`);
         }
       }
     }
@@ -259,21 +275,16 @@ describe("the whole site", () => {
     }
   });
 
-  it("renders the landing page from config, hiding empty sections", () => {
+  it("renders the landing page's headline, version, license and social card", () => {
     const home = page("dist", "index.html");
-    expect(home.querySelector("h1")?.textContent).toBe(site.tagline);
+    expect(home.querySelector("h1")?.textContent?.trim()).toBe(landingCopy.headline);
     expect(home.querySelector('meta[property="og:image"]')?.getAttribute("content")).toBe(
       absolute("/og-image.png"),
     );
     const text = home.body.textContent ?? "";
-    expect(text).toContain(site.install[0]?.command ?? "");
-    for (const line of site.demo.lines) expect(text).toContain(line.text);
-    if (site.announcement) expect(text).toContain(site.announcement.label);
-    if (site.version) expect(text).toContain(`v${site.version}`);
+    const release = JSON.parse(read("..", "packages/core/package.json")).version as string;
+    expect(text).toContain(`v${release}`);
     expect(text).toContain(`${site.license} license`);
-    const headings = [...home.querySelectorAll("h2")].map((heading) => heading.textContent);
-    expect(headings.includes("Used by")).toBe(site.usedBy.length > 0);
-    expect(headings.includes("Sponsors")).toBe(site.sponsors.logos.length > 0);
     expect(readFileSync("dist/og-image.png").subarray(1, 4).toString()).toBe("PNG");
     const icons: [string, string][] = [
       ['link[rel="icon"][sizes]', "favicon.ico"],
@@ -350,7 +361,7 @@ describe("the visualization catalog", () => {
   });
 
   it.each(catalogPageIds.filter(built))("%s shows at least three sourced demos", (id) => {
-    const figures = [...page("dist", pagePath(id)).querySelectorAll("figure[data-demo]")];
+    const figures = [...page("dist", pagePath(id)).querySelectorAll(".demo[data-demo]")];
     expect(figures.length).toBeGreaterThanOrEqual(3);
     for (const figure of figures) {
       const demo = figure.getAttribute("data-demo") ?? "";
@@ -375,3 +386,148 @@ describe("the visualization catalog", () => {
     expect(elsewhere.length, "links to a page in another section").toBeGreaterThanOrEqual(1);
   });
 });
+
+describe("the landing page", () => {
+  const HOME = "index.html";
+  /**
+   * The page's own JavaScript and CSS before lazily imported chunks, each file
+   * gzipped: what a reader downloads before the page works. React's client is
+   * about 66 KB of it, so the cap leaves room for the islands and catches a
+   * chart or GSAP chunk imported statically by mistake (115 KB when it happened).
+   */
+  const MAX_OWN_ASSET_GZIP_BYTES = 160_000;
+  const home = () => page("dist", HOME);
+  const sections = () => [...home().querySelectorAll("main > section[data-landing-section]")];
+  const textOf = (node: Element | null | undefined) => (node?.textContent ?? "").trim();
+
+  it("has one h1 and the ten sections in order, each labelled by its one h2 from copy.ts", () => {
+    expect(home().querySelectorAll("h1").length).toBe(1);
+    expect(textOf(home().querySelector("h1"))).toBe(landingCopy.headline);
+    expect(sections().map((section) => section.id)).toEqual([...LANDING_SECTION_IDS]);
+    for (const section of sections()) {
+      const headings = section.querySelectorAll("h2");
+      expect(headings.length, section.id).toBe(1);
+      expect(headings[0]?.id, section.id).toBe(`${section.id}-title`);
+      expect(section.getAttribute("aria-labelledby"), section.id).toBe(`${section.id}-title`);
+      expect(textOf(headings[0]), section.id).toBe(
+        landingCopy.headings[section.id as LandingSectionId],
+      );
+    }
+    const headings = [...home().querySelectorAll("main :is(h1, h2, h3, h4, h5, h6)")].map(textOf);
+    expect(headings.filter((text, index) => headings.indexOf(text) !== index)).toEqual([]);
+  });
+
+  it("declares the cascade layer order before its first stylesheet", () => {
+    const html = read("dist", HOME);
+    const order = html.indexOf("@layer theme, base, sf, components, utilities;");
+    expect(order).toBeGreaterThan(-1);
+    expect(order).toBeLessThan(html.indexOf('rel="stylesheet"'));
+  });
+
+  it("gives every figure a caption with a Source: line", () => {
+    const figures = [...home().querySelectorAll("main figure")];
+    expect(figures.length).toBeGreaterThan(0);
+    const unsourced = figures
+      .map((figure, index) => ({ index, caption: textOf(figure.querySelector("figcaption")) }))
+      .filter(({ caption }) => !/Source: \S/.test(caption))
+      .map(({ index, caption }) => `figure ${index}: "${caption}"`);
+    expect(unsourced).toEqual([]);
+  });
+
+  it("without JavaScript already shows the hero chart, the finished spec and every install command", () => {
+    const hero = home().querySelector("#desk");
+    expect(hero?.querySelector("[data-hero-chart] svg"), "a chart SVG in the hero").not.toBeNull();
+    const last = heroSteps.at(-1);
+    expect(last, "src/landing/hero.ts exports the hero steps").toBeDefined();
+    const pane = textOf(hero?.querySelector("[data-hero-spec]"));
+    const missing = [
+      ...specTokens(last?.spec),
+      ...heroSteps.flatMap((step) => step.changed.map((line) => line.trim())),
+    ].filter((token) => !pane.includes(token));
+    expect(missing).toEqual([]);
+    const text = home().body.textContent ?? "";
+    for (const { command } of site.install) expect(text).toContain(command);
+    for (const framework of ["react", "vue", "svelte", "vanilla"]) {
+      expect(text).toContain(`npm install @opendata-ai/openchart-${framework}`);
+    }
+  });
+
+  it("never hides content behind a reveal script with an inline opacity: 0 or visibility: hidden", () => {
+    const hidden = [...home().querySelectorAll("[style]")]
+      .map((element) => element.getAttribute("style") ?? "")
+      .filter((style) => INLINE_OPACITY_ZERO.test(style) || INLINE_VISIBILITY_HIDDEN.test(style));
+    expect(hidden).toEqual([]);
+  });
+
+  it("keeps the page's own JavaScript and CSS under 160 KB gzipped before lazy chunks", () => {
+    const assets = [...ownAssets(HOME)];
+    const sizes = assets.map((path) => gzipSync(readFileSync(join("dist", path))).byteLength);
+    const files = sizes.reduce((sum, size) => sum + size, 0);
+    const inline = gzipSync(inlineCode(read("dist", HOME))).byteLength;
+    const report = assets.map((path, index) => `${sizes[index]} ${path}`).join("\n");
+    expect(files + inline, report).toBeLessThan(MAX_OWN_ASSET_GZIP_BYTES);
+  });
+});
+
+const INLINE_OPACITY_ZERO =
+  /(?:^|;)\s*opacity\s*:\s*(?:0+(?:\.0*)?|\.0+)%?\s*(?:!important\s*)?(?:;|$)/i;
+const INLINE_VISIBILITY_HIDDEN = /(?:^|;)\s*visibility\s*:\s*hidden/i;
+
+/**
+ * The text a spec pane must show for a spec, however it is formatted: every key
+ * as a JSON string and every scalar value outside `data`, which the pane folds.
+ */
+function specTokens(spec: unknown): string[] {
+  if (Array.isArray(spec)) return spec.flatMap(specTokens);
+  if (spec === undefined) return [];
+  if (spec === null || typeof spec !== "object") return [JSON.stringify(spec)];
+  return Object.entries(spec).flatMap(([key, value]) =>
+    key === "data" ? [JSON.stringify(key)] : [JSON.stringify(key), ...specTokens(value)],
+  );
+}
+
+/**
+ * The scripts and stylesheets a page loads up front, as paths under dist/: its
+ * script, stylesheet and modulepreload links, each island's component and
+ * renderer, and everything those import statically. A dynamic `import()` is a
+ * lazy chunk and is not followed.
+ */
+function ownAssets(file: string): Set<string> {
+  const doc = page("dist", file);
+  const entries = [
+    ...[...doc.querySelectorAll("script[src]")].map((node) => node.getAttribute("src")),
+    ...[...doc.querySelectorAll('link[rel="stylesheet"], link[rel="modulepreload"]')].map((node) =>
+      node.getAttribute("href"),
+    ),
+    ...[...doc.querySelectorAll("astro-island")].flatMap((island) => [
+      island.getAttribute("component-url"),
+      island.getAttribute("renderer-url"),
+      island.getAttribute("before-hydration-url"),
+    ]),
+  ].filter((path): path is string => Boolean(path?.startsWith("/")));
+  const seen = new Set<string>();
+  const queue = [...entries];
+  while (queue.length > 0) {
+    const path = queue.pop() ?? "";
+    if (seen.has(path)) continue;
+    seen.add(path);
+    if (!path.endsWith(".js")) continue;
+    for (const [, specifier] of read("dist", path).matchAll(STATIC_RELATIVE_IMPORT)) {
+      queue.push(new URL(specifier ?? "", `https://dist.invalid${path}`).pathname);
+    }
+  }
+  return seen;
+}
+
+/** A minified static import of a sibling chunk; `import(` (a lazy chunk) never matches. */
+const STATIC_RELATIVE_IMPORT = /\b(?:from|import)\s*"(\.{1,2}\/[^"]+\.js)"/g;
+
+/** Inline scripts (not JSON data) anywhere and styles in the head, joined: the code the HTML carries. */
+function inlineCode(html: string): string {
+  const head = html.slice(0, html.indexOf("</head>"));
+  const scripts = html.matchAll(
+    /<script\b(?![^>]*\bsrc=)(?![^>]*application\/json)[^>]*>([\s\S]*?)<\/script>/g,
+  );
+  const styles = head.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/g);
+  return [...scripts, ...styles].map(([, body]) => body ?? "").join("\n");
+}

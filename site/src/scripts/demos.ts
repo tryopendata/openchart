@@ -1,11 +1,22 @@
 /**
- * Brings the demo figures on a page to life: mounts each stage's live chart as it
+ * Brings the demos on a page to life: mounts each stage's live chart as it
  * comes within LEAD_PX of the viewport, keeps at most MAX_LIVE of them live,
- * remounts them when the site theme changes, and wires the code tabs and Copy
- * buttons. BaseLayout loads it on every page; it does nothing without a demo.
+ * remounts them when the site theme changes, and wires the code tabs, the Code
+ * disclosure and the Copy buttons. BaseLayout loads it on every page; it does
+ * nothing without a demo.
+ *
+ * A demo marked for the entrance mounts ahead of the reader with the library's
+ * entrance held: the library plays it once the chart is actually seen
+ * (play-when-seen), and not at all under reduced motion. Until then the head
+ * gate and demo.css keep that demo's static SVG out of sight, so the reader
+ * never sees a finished chart replaced by one drawing itself in. Where the
+ * static SVG is showing anyway (the gate lifted, or reduced motion), the live
+ * chart replaces it finished.
  */
-import { DEMO_ATTR, DEMO_CLASS } from "../lib/demo/markup";
+import { DEMO_ATTR, DEMO_CLASS, DEMO_PAGE_ATTR } from "../lib/demo/markup";
+import { setupDemoCodeToggle } from "./demo-code-toggle";
 import { setupDemoCopyButtons } from "./demo-copy";
+import type { DemoMount } from "./demo-mount";
 import { readFigureSpec } from "./demo-spec";
 import { setupFrameworkChoice } from "./framework-choice";
 
@@ -20,19 +31,20 @@ type DemoMounter = typeof import("./demo-mount");
 type DemoStage = {
   id: string;
   stage: HTMLElement;
-  /** The figure, or the stage itself when it sits in none; `readFigureSpec` reads the spec from it. */
+  /** The demo element, or the stage itself when it sits in none; `readFigureSpec` reads the spec from it. */
   figure: HTMLElement;
   entrance: boolean;
   /** Types without a static SVG never go back to an empty stage, so they are never evicted. */
   hasStatic: boolean;
   near: boolean;
+  /** The entrance has started (or was skipped), so a remount draws the chart finished. */
   played: boolean;
   failed: boolean;
-  live: { destroy(): void } | null;
+  live: DemoMount | null;
 };
 
 function readDemoStage(stage: HTMLElement): DemoStage {
-  const figure = stage.closest<HTMLElement>(`figure[${DEMO_ATTR.figure}]`);
+  const figure = stage.closest<HTMLElement>(`[${DEMO_ATTR.figure}]`);
   return {
     id: figure?.getAttribute(DEMO_ATTR.figure) ?? "(unknown demo)",
     stage,
@@ -57,6 +69,12 @@ function distanceFromViewport(element: HTMLElement): number {
   return 0;
 }
 
+/** Whether the reader may already be looking at the finished static chart. */
+function staticShowing(demo: DemoStage): boolean {
+  const statics = demo.stage.querySelectorAll<SVGElement>(`svg.${DEMO_CLASS.static}`);
+  return [...statics].some((svg) => svg.checkVisibility({ visibilityProperty: true }));
+}
+
 /** Takes away the line a stage without a static SVG shows until its chart mounts. */
 function removePlaceholder(demo: DemoStage): void {
   demo.stage.querySelector(`[${DEMO_ATTR.placeholder}]`)?.remove();
@@ -77,7 +95,10 @@ function showFailure(demo: DemoStage, error: unknown): void {
 }
 
 function unmount(demo: DemoStage): void {
-  demo.live?.destroy();
+  if (!demo.live) return;
+  // A held entrance that never ran is still owed to the next mount.
+  if (!demo.live.entranceWaiting()) demo.played = true;
+  demo.live.destroy();
   demo.live = null;
   demo.stage.removeAttribute(DEMO_ATTR.live);
 }
@@ -100,11 +121,9 @@ function mountNow(demos: DemoStage[], demo: DemoStage, mounter: DemoMounter): vo
   makeRoom(demos, demo);
   try {
     const spec = readFigureSpec(demo.figure);
-    // Only the first mount may play the entrance; evictions and theme changes remount quietly.
-    const entrance = demo.entrance && !demo.played;
+    const entrance = demo.entrance && !demo.played && !staticShowing(demo);
     const dark = isDarkPage(demo.stage.ownerDocument);
     demo.live = mounter.mountDemo(demo.stage, spec, { dark, entrance });
-    demo.played = true;
     removePlaceholder(demo);
     demo.stage.setAttribute(DEMO_ATTR.live, "");
   } catch (error) {
@@ -145,10 +164,21 @@ export function startDemos(doc: Document): void {
   const demos = stages.map(readDemoStage);
   let mounter: Promise<DemoMounter> | null = null;
   let loaded: DemoMounter | null = null;
+  const loadMounter = () => {
+    mounter ??= import("./demo-mount");
+    return mounter;
+  };
+
+  // A demo on screen at load waits on an empty stage for its entrance, so fetch the library now.
+  if (demos.some((demo) => demo.entrance)) {
+    // Without the library no demo can mount: bring every static chart back at once.
+    loadMounter().catch((error: unknown) => {
+      for (const demo of demos) showFailure(demo, error);
+    });
+  }
 
   observeApproach(demos, (demo) => {
-    mounter ??= import("./demo-mount");
-    mounter
+    loadMounter()
       .then((module) => {
         loaded = module;
         if (demo.near) mountNow(demos, demo, module);
@@ -166,6 +196,8 @@ export function startDemos(doc: Document): void {
   });
 }
 
+document.documentElement.setAttribute(DEMO_PAGE_ATTR.ready, "");
 setupFrameworkChoice(document);
+setupDemoCodeToggle(document);
 setupDemoCopyButtons(document);
 startDemos(document);

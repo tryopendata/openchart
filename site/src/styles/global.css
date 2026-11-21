@@ -11,6 +11,7 @@
 @import "tailwindcss";
 @import "./demo.css";
 @import "@steamfield/ui/consent/styles.css";
+@import "@steamfield/ui/reveal/styles.css";
 @plugin "@tailwindcss/typography";
 
 /*
@@ -22,6 +23,8 @@
  */
 @theme static {
   --font-sans: "Schibsted Grotesk Variable", ui-sans-serif, system-ui, sans-serif;
+  /* Headlines only: page titles, section headings and story prose, as a news page sets them. */
+  --font-display: "Newsreader Variable", Georgia, "Times New Roman", serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
   --color-canvas: #ffffff;
@@ -193,7 +196,13 @@
 }
 
 .prose :where(h2) {
-  @apply mt-14 text-[1.5rem] leading-tight;
+  @apply font-display mt-14 text-[1.75rem] leading-tight font-medium tracking-[-0.01em];
+}
+
+/* Page titles are headlines: the serif, with its optical size following the type size. */
+h1 {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
 }
 
 .prose :where(h3) {
@@ -246,25 +255,35 @@
   pointer-events: none;
 }
 
-/* Shiki emits both themes as CSS variables (defaultColor: false); pick one per theme. */
-.astro-code,
-.astro-code span {
+/*
+ * Every highlighted block on the site: Markdown fences (.astro-code) and the demo
+ * and landing code panels (.shiki, from lib/demo/highlight.ts). Shiki emits both
+ * themes as CSS variables (defaultColor: false); the page theme picks one, and
+ * without a theme class (no JavaScript) the system preference does.
+ */
+:is(.astro-code, .shiki),
+:is(.astro-code, .shiki) span {
   color: var(--shiki-light);
+}
+
+/* A fence sits on the page's background; a panel's code shows its panel through. */
+.astro-code {
   background-color: var(--color-canvas);
 }
 
-.astro-code span {
+.shiki,
+:is(.astro-code, .shiki) span {
   background-color: transparent;
 }
 
-.dark .astro-code,
-.dark .astro-code span {
+.dark :is(.astro-code, .shiki),
+.dark :is(.astro-code, .shiki) span {
   color: var(--shiki-dark);
 }
 
 @media (prefers-color-scheme: dark) {
-  :root:not(.light) .astro-code,
-  :root:not(.light) .astro-code span {
+  :root:not(.light) :is(.astro-code, .shiki),
+  :root:not(.light) :is(.astro-code, .shiki) span {
     color: var(--shiki-dark);
   }
 }
@@ -282,25 +301,32 @@
   @apply m-0 rounded-none px-4 py-3.5 text-[13.5px] leading-relaxed;
 }
 
-/* Added to each code frame by src/scripts/site.ts, so there is no dead button without it. */
-.code-copy {
-  @apply border-line bg-canvas text-ink-2 absolute top-2 right-2 rounded-xs border px-2 py-0.5 font-sans text-xs;
-  transition:
-    color 150ms ease-out,
-    border-color 150ms ease-out;
+/* The one copy button on docs pages, on prose code blocks and in demo toolbars:
+   a small text button in the sans. Scripts add or reveal it, so there is no dead
+   button without them; scripts/demo-copy.ts wires it. */
+.copy-button {
+  @apply text-muted hover:text-ink inline-flex h-9 min-w-[4.5rem] cursor-pointer items-center justify-end font-sans text-sm;
+  transition: color 120ms ease-out;
 }
 
-.code-frame:has(figcaption) .code-copy {
-  @apply top-[5px];
+/* On a prose code block it sits in the top right corner, in the title bar when there is one. */
+.code-frame > .copy-button {
+  @apply bg-canvas absolute top-0 right-0 px-4;
+}
+
+.code-frame:has(figcaption) > .copy-button {
+  @apply bg-panel h-[33px];
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .copy-button {
+    transition: none;
+  }
 }
 
 /* The first block under the title rule needs no space of its own above it. */
 .docs-prose > :first-child {
   margin-top: 0;
-}
-
-.code-copy:hover {
-  @apply border-line-strong text-ink;
 }
 
 /* GitHub callouts: a ruled note in the margin of the text, not a colored box. */
@@ -400,4 +426,22 @@
 
 .docs-menu[open] > summary::after {
   content: "\2212";
+}
+
+/* The library sets tabular figures on the whole chart, and Schibsted Grotesk's
+   tabular set gives commas, periods and colons a full figure width ("2022 , then").
+   Keep tabular figures for axis ticks, which line up, and set everything else as text. */
+.oc-chart,
+.oc-chart text {
+  font-variant-numeric: normal;
+}
+
+.oc-chart :is(.oc-axis-tick, .oc-axis-tick text) {
+  font-variant-numeric: tabular-nums;
+}
+
+/* The library's muted table header (4.41:1 on the page background) falls just
+   short of AA at its small size, so headers take the secondary ink. */
+.oc-table-wrapper th {
+  color: var(--color-ink-2);
 }

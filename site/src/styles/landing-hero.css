@@ -1,0 +1,361 @@
+/*
+ * Styles for the hero desk (#desk). From 1100px the text takes 4 of the 12
+ * columns and the figure 8; below that the figure follows the text. Inside the
+ * figure the chart takes the full width, with the steps and a caption above it
+ * and the spec closed in a disclosure under it. The page stays ink on paper:
+ * the accent marks only the current step and the lines a step added, and color
+ * otherwise comes from the chart. Under 700px, once hydrated, the open spec
+ * collapses to the added lines.
+ */
+@reference "./global.css";
+
+@layer components {
+  /* The hero opens close to the header and ends near the fold at 1440x900. */
+  .landing-section.hero {
+    @apply pt-8 pb-12 sm:pt-10 lg:pb-14;
+  }
+
+  /* minmax(0, 1fr) tracks: the spec lines and the chart never widen the page. */
+  .hero-grid {
+    @apply grid grid-cols-[minmax(0,1fr)] gap-y-12;
+  }
+
+  .hero-grid > * {
+    min-width: 0;
+  }
+
+  @media (min-width: 1100px) {
+    .hero-grid {
+      @apply grid-cols-12 items-start gap-x-10;
+    }
+
+    .hero-text {
+      @apply col-span-4;
+    }
+
+    .hero-figure {
+      @apply col-span-8;
+    }
+  }
+
+  /* The headline's top sits on the figure's rule. */
+  .hero .hero-title {
+    font-size: clamp(2.5rem, 1.4rem + 2.6vw, 3.75rem);
+    line-height: 1.03;
+    letter-spacing: -0.022em;
+  }
+
+  @media (min-width: 1100px) {
+    .hero .hero-title {
+      @apply -mt-1.5;
+    }
+  }
+
+  .hero .hero-lede {
+    @apply mt-6 text-[1.0625rem] leading-[1.6];
+  }
+
+  /* One primary action, one quiet link, then the install line in a lower register. */
+  .hero-links {
+    @apply mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 text-[15px];
+  }
+
+  .hero-action {
+    @apply bg-ink text-canvas inline-flex h-11 items-center rounded-xs px-5 font-medium no-underline;
+    transition: background-color 150ms ease-out;
+  }
+
+  .hero-action:hover {
+    background-color: color-mix(in srgb, var(--color-ink) 82%, var(--color-canvas));
+  }
+
+  .hero-link {
+    @apply text-ink-2 underline decoration-transparent underline-offset-4;
+    transition:
+      color 150ms ease-out,
+      text-decoration-color 150ms ease-out;
+  }
+
+  .hero-link:hover {
+    @apply text-ink decoration-current;
+  }
+
+  .hero-link span {
+    @apply inline-block;
+    transition: transform 150ms ease-out;
+  }
+
+  .hero-link:hover span {
+    transform: translateX(3px);
+  }
+
+  .hero-install {
+    @apply mt-9;
+  }
+
+  .hero-install .install-command-line {
+    @apply border-line min-h-10;
+  }
+
+  .hero-install .install-command-copy {
+    @apply border-line;
+  }
+
+  .hero-install :is(.install-command-text, .install-command-prompt) {
+    @apply py-2 text-[13px];
+  }
+
+  /* Step bar: numbered steps on the left, transport on the right. */
+  .hero-bar {
+    @apply border-line-strong flex min-h-11 flex-wrap items-end justify-between gap-x-6 gap-y-2 border-b;
+  }
+
+  .hero-steps {
+    @apply -mb-px flex flex-wrap gap-x-5 gap-y-1;
+  }
+
+  .hero-step {
+    @apply text-muted relative flex items-baseline gap-2 border-b-2 border-transparent pt-1 pb-2.5 text-[13.5px] whitespace-nowrap;
+    transition:
+      color 200ms ease-out,
+      border-color 200ms ease-out;
+  }
+
+  button.hero-step:hover {
+    @apply text-ink;
+  }
+
+  .hero-step[aria-current="step"] {
+    @apply text-ink border-accent font-medium;
+  }
+
+  .hero-step-number {
+    @apply font-mono text-[11px] tabular-nums;
+  }
+
+  /* While the sequence plays, the time to the next step fills in under the current one. */
+  .hero-step-progress {
+    @apply bg-ink pointer-events-none absolute right-0 -bottom-0.5 left-0 h-0.5 origin-left;
+    animation: hero-step-progress var(--step-ms, 3200ms) linear both;
+  }
+
+  .hero-controls {
+    @apply flex shrink-0 items-center gap-1;
+  }
+
+  .hero-control {
+    @apply border-line text-ink-2 inline-flex h-8 min-w-8 items-center justify-center rounded-xs border px-2 text-[13px];
+    transition:
+      background-color 150ms ease-out,
+      border-color 150ms ease-out,
+      color 150ms ease-out;
+  }
+
+  .hero-control:hover {
+    @apply border-line-strong bg-panel text-ink;
+  }
+
+  .hero-control-play {
+    @apply min-w-[4.25rem] font-medium;
+  }
+
+  /* What the current step changed, in a sentence under the steps. */
+  .hero-step-row {
+    @apply mt-3 flex min-h-8 items-start justify-between gap-6;
+  }
+
+  .hero-step-caption {
+    @apply text-ink-2 pt-1 text-[15px] leading-snug;
+  }
+
+  /* The chart is the hero: the figure's full width. */
+  .hero-chart {
+    @apply relative mt-4 h-[540px];
+  }
+
+  @media (min-width: 1100px) {
+    .hero-chart {
+      height: 480px;
+    }
+  }
+
+  .hero-chart-live {
+    height: 100%;
+  }
+
+  /* The spec, closed under the chart: a quiet summary line with a one-line teaser. */
+  .hero-spec-details {
+    @apply border-line mt-4 border-t;
+  }
+
+  .hero-spec-summary {
+    @apply flex cursor-pointer list-none items-baseline gap-4 py-3 text-[14px];
+  }
+
+  .hero-spec-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .hero-spec-summary-label {
+    @apply text-ink shrink-0 font-medium underline decoration-transparent underline-offset-4;
+    transition: text-decoration-color 150ms ease-out;
+  }
+
+  .hero-spec-summary-label::before {
+    @apply text-muted mr-2 inline-block font-mono;
+    content: "+";
+    transition: transform 200ms ease-out;
+  }
+
+  .hero-spec-details[open] .hero-spec-summary-label::before {
+    content: "\2212";
+  }
+
+  .hero-spec-summary:hover .hero-spec-summary-label {
+    @apply decoration-current;
+  }
+
+  .hero-spec-teaser {
+    @apply text-muted min-w-0 truncate font-mono text-[12px];
+  }
+
+  .hero-spec-teaser-mark {
+    @apply text-accent;
+  }
+
+  .hero-spec-body {
+    @apply border-line bg-panel border;
+  }
+
+  .hero-spec-head {
+    @apply border-line flex items-center justify-between gap-4 border-b px-3 py-2 font-mono text-[12px];
+  }
+
+  .hero-spec-head-label {
+    @apply text-muted;
+  }
+
+  /* The site's copy button, sized to the spec's header row. */
+  .hero-spec-head .copy-button {
+    @apply h-6 min-w-0;
+  }
+
+  .hero-spec {
+    @apply relative min-w-0;
+  }
+
+  .hero-spec-code {
+    @apply relative m-0 h-[340px] overflow-y-auto py-3 font-mono text-[12px] leading-[1.6];
+    scrollbar-width: thin;
+  }
+
+  .hero-spec-code pre {
+    @apply m-0 bg-transparent p-0 font-mono;
+  }
+
+  .hero-spec-line {
+    @apply relative block pr-3;
+    padding-left: calc(var(--depth, 0) * 2ch + 2ch + 0.75rem);
+    text-indent: -2ch;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .hero-spec-line[hidden] {
+    display: none;
+  }
+
+  .hero-spec-line[data-spec-added] {
+    background-color: color-mix(in srgb, var(--color-accent) 7%, transparent);
+  }
+
+  .hero-spec-line[data-spec-added]::before {
+    @apply bg-accent absolute top-0 bottom-0 left-0 w-0.5;
+    content: "";
+  }
+
+  .spec-key {
+    @apply text-ink;
+  }
+
+  .spec-string {
+    @apply text-ink-2;
+  }
+
+  .spec-number,
+  .spec-literal {
+    @apply text-accent;
+  }
+
+  .spec-punct,
+  .spec-fold {
+    @apply text-muted;
+  }
+
+  .spec-fold-button {
+    @apply decoration-line rounded-xs font-mono underline decoration-dotted underline-offset-2;
+    transition: color 150ms ease-out;
+  }
+
+  .spec-fold-button:hover {
+    @apply text-ink;
+  }
+
+  .hero-spec-toggle {
+    @apply border-line text-ink hidden w-full border-t px-4 py-2.5 text-left text-[13px] font-medium;
+    transition: background-color 150ms ease-out;
+  }
+
+  .hero-spec-toggle:hover {
+    @apply bg-canvas;
+  }
+
+  /* Under 700px, once hydrated: only what this step added, until the reader opens the rest. */
+  @media (max-width: 699.98px) {
+    .hero-spec[data-collapsible] .hero-spec-code {
+      height: auto;
+      max-height: 22rem;
+    }
+
+    .hero-spec[data-collapsible]:not([data-expanded]) .hero-spec-line:not([data-spec-added]) {
+      display: none;
+    }
+
+    .hero-spec[data-collapsible] .hero-spec-toggle {
+      display: block;
+    }
+  }
+
+  /* The text block rises into place on load. It moves but never hides, so the
+     headline paints at once and nothing waits on a script. */
+  @media (prefers-reduced-motion: no-preference) {
+    .hero-rise {
+      animation: hero-rise 700ms cubic-bezier(0.16, 1, 0.3, 1) var(--rise-delay, 0ms) both;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-step-progress {
+      animation: none;
+      display: none;
+    }
+  }
+}
+
+@keyframes hero-step-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes hero-rise {
+  from {
+    transform: translateY(14px);
+  }
+  to {
+    transform: none;
+  }
+}

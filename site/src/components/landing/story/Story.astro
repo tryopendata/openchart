@@ -1,0 +1,50 @@
+---
+/**
+ * Annotations and editorial framing: a scroll story about four US stock indexes,
+ * built with the library's own `createChartStory`. Five paragraphs scroll past a
+ * sticky chart: an opening paragraph, then four that each change it (a range, a
+ * revealed series, a callout, a highlight) with one muted line saying, in plain
+ * words, what changed in the spec. The ChartStoryScroll island hydrates when visible; before that,
+ * and without JavaScript, the finished chart shows as static SVG beside every
+ * paragraph.
+ *
+ * Contract: `<section id="story" aria-labelledby="story-title" data-landing-section>`
+ * with one h2, id `story-title` (`landingCopy.headings.story`). The chart's figure
+ * has a `<figcaption>` with a "Source: …" line.
+ */
+import { deepMergeSpec } from "@opendata-ai/openchart-core";
+import { storyBaseSpec, storySource, storySteps } from "../../../landing/story";
+import { staticSvgPair } from "../../../lib/demo/static-svg";
+import PublishedFigure from "../../shared/PublishedFigure.astro";
+import SectionHead from "../../shared/SectionHead.astro";
+import { ChartStoryScroll } from "./ChartStoryScroll";
+import { describeChange } from "./story-change";
+import "../../../styles/landing-story.css";
+
+const finished = storySteps.reduce(
+  (spec, step) => deepMergeSpec(spec, step.change.spec ?? {}),
+  storyBaseSpec,
+);
+const changes = storySteps.map((step) => step.change);
+const notes = storySteps.map((_, index) => describeChange(storyBaseSpec, changes, index));
+const statics = staticSvgPair(finished, { width: 720, height: 480, idPrefix: "story" });
+---
+
+<section id="story" aria-labelledby="story-title" data-landing-section class="landing-section">
+  <div class="landing-container">
+    <SectionHead id="story">
+      As the reader scrolls, each paragraph moves the chart on: it shades the year of the sell-off,
+      brings in the other indexes, marks the low and picks out the one that recovered furthest. The
+      library animates every change.
+    </SectionHead>
+    <PublishedFigure
+      class="figure-hairline"
+      source={storySource}
+      note="Returns are rebased to 1 January 2022 and include reinvested dividends."
+    >
+      <ChartStoryScroll client:visible spec={storyBaseSpec} steps={storySteps} notes={notes}>
+        <Fragment set:html={statics} />
+      </ChartStoryScroll>
+    </PublishedFigure>
+  </div>
+</section>

@@ -1,47 +1,34 @@
 ---
-import { InstallTabs } from "../components/landing/InstallTabs";
-import {
-  Demo,
-  Features,
-  Hero,
-  ReleaseBanner,
-  Sponsors,
-  UsedBy,
-} from "../components/landing/sections";
+/**
+ * The landing page: ten sections in the order of the plan's Design section, each
+ * a component owned by one lane. Sections sit directly in `<main>` with no wrapper
+ * or spacer, so the page is exactly as tall as its sections. The shared rhythm is
+ * in landing.css; each section imports its own styles.
+ */
+import Agents from "../components/landing/agents/Agents.astro";
+import Closing from "../components/landing/closing/Closing.astro";
+import Frameworks from "../components/landing/frameworks/Frameworks.astro";
+import Hero from "../components/landing/hero/Hero.astro";
+import Kinds from "../components/landing/kinds/Kinds.astro";
+import Responsive from "../components/landing/responsive/Responsive.astro";
+import Motion from "../components/landing/story/Motion.astro";
+import Story from "../components/landing/story/Story.astro";
+import Styles from "../components/landing/styles/Styles.astro";
+import Vocabulary from "../components/landing/vocabulary/Vocabulary.astro";
 import { site } from "../config";
 import BaseLayout from "../layouts/BaseLayout.astro";
+import "../styles/landing.css";
 ---
 
 <BaseLayout title={site.tagline} path="/">
-  <ReleaseBanner slot="banner" announcement={site.announcement} />
-  <div class="mx-auto flex max-w-6xl flex-col gap-20 px-6 py-16">
-    <section class="grid items-center gap-10 lg:grid-cols-2">
-      <div class="flex flex-col gap-8">
-        <Hero tagline={site.tagline} description={site.description} />
-        <!-- The landing page's only island; site.islands lists it and the build test checks. -->
-        <InstallTabs client:visible options={site.install} />
-        <p class="flex gap-6">
-          <a href="/docs/" class="bg-accent text-canvas rounded px-4 py-2 font-medium">
-            Read the docs
-          </a>
-          <a href={site.repo} class="px-4 py-2 font-medium">
-            View on GitHub
-          </a>
-        </p>
-      </div>
-      <Demo title={site.demo.title} lines={site.demo.lines} />
-    </section>
-    <Features features={site.features} />
-    <UsedBy logos={site.usedBy} />
-    <section aria-labelledby="start-title" class="flex flex-col items-center gap-4 text-center">
-      <h2 id="start-title" class="text-2xl font-semibold">
-        Get started in a minute
-      </h2>
-      <p class="text-muted">Install {site.name}, then follow the first guide.</p>
-      <a href="/docs/get-started/getting-started/" class="text-accent font-medium">
-        Installation guide
-      </a>
-    </section>
-    <Sponsors href={site.sponsors.href} logos={site.sponsors.logos} />
-  </div>
+  <Hero />
+  <Vocabulary />
+  <Styles />
+  <Kinds />
+  <Story />
+  <Motion />
+  <Responsive />
+  <Agents />
+  <Frameworks />
+  <Closing />
 </BaseLayout>

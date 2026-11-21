@@ -1,0 +1,36 @@
+---
+/**
+ * Motion: one chart of 2024 US payrolls with a bench of controls, "Replay
+ * entrance", "Next month" (a data update) and a fluid, subtle or off choice
+ * mapped to the spec's `animation` field, with the spec lines they change. The
+ * MotionReplay island hydrates when visible; before that the opening chart shows
+ * as static SVG and the controls are disabled.
+ *
+ * Contract: `<section id="motion" aria-labelledby="motion-title" data-landing-section>`
+ * with one h2, id `motion-title` (`landingCopy.headings.motion`). The chart's
+ * figure has a `<figcaption>` with a "Source: …" line.
+ */
+import { staticSvgPair } from "../../../lib/demo/static-svg";
+import PublishedFigure from "../../shared/PublishedFigure.astro";
+import SectionHead from "../../shared/SectionHead.astro";
+import { MotionReplay } from "./MotionReplay";
+import { FIRST_MONTHS, motionSource, payrollSpec } from "./motion-spec";
+import "../../../styles/landing-story.css";
+
+const opening = payrollSpec(FIRST_MONTHS, "fluid");
+const statics = staticSvgPair(opening, { width: 720, height: 420, idPrefix: "motion" });
+---
+
+<section id="motion" aria-labelledby="motion-title" data-landing-section class="landing-section">
+  <div class="landing-container">
+    <SectionHead id="motion">
+      Add a month of hiring figures and the bars make room for it. Switch the animation style to see
+      the same change made three ways, or turn it off.
+    </SectionHead>
+    <PublishedFigure class="figure-hairline" source={motionSource}>
+      <MotionReplay client:visible>
+        <Fragment set:html={statics} />
+      </MotionReplay>
+    </PublishedFigure>
+  </div>
+</section>

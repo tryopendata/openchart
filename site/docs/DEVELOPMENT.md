@@ -10,7 +10,9 @@
 | `src/lib/collection.ts` | The only `astro:content` import outside routes |
 | `src/lib/markdown.ts` | Docs Markdown conventions as Sätteri hast plugins plus one Shiki transformer |
 | `src/lib/og.ts` | The social card layout and its fonts |
-| `src/components/landing/` | Landing sections (static React) and `InstallTabs`, the one island |
+| `src/components/landing/` | The ten landing sections, one directory per section with its islands |
+| `src/landing/` | Landing copy (`copy.ts`, the headline and every section heading) and each section's data |
+| `src/scripts/motion/` | `withMotion`, the landing page's only way into GSAP |
 | `src/scripts/site.ts` | Theme toggle, code copy buttons, copy page and the TOC highlight |
 | `src/layouts/` | `BaseLayout` (head, header, footer) and `DocsLayout` (sidebar, TOC, pager) |
 
@@ -33,7 +35,7 @@ Astro's default processor is Sätteri, which doesn't run remark or rehype plugin
 
 ## Islands and scripts
 
-Landing sections are React components rendered to HTML at build time. Only components named in `site.islands` may take a `client:` directive, and only on the landing page; the build test compares the hydrated islands with that list and fails on any island in `/docs/`. Prefer `client:visible`. Interactive behaviour shared by every page (theme, copy buttons, TOC) goes in `src/scripts/site.ts` as plain DOM code that does nothing when its markup is absent.
+Landing sections are Astro components, each `<section id aria-labelledby data-landing-section>` with one h2 from `src/landing/copy.ts`; a section hydrates a React island only for interaction a demo figure can't do. Only components named in `site.islands` may take a `client:` directive, and only on the landing page; the build test compares the hydrated islands with that list and fails on any island in `/docs/`. Prefer `client:visible`. Interactive behaviour shared by every page (theme, copy buttons, TOC) goes in `src/scripts/site.ts` as plain DOM code that does nothing when its markup is absent.
 
 ## Theme
 

@@ -1,0 +1,48 @@
+---
+/**
+ * Responsive: a chart in a frame whose right edge is a drag handle crossing the
+ * compact, medium and full breakpoints. The ResizeFrame island hydrates when
+ * visible; before that, and without JavaScript, the chart shows as static SVG
+ * at full width with no slider, readout or drag instructions.
+ *
+ * Contract (e2e/landing.spec.ts relies on it):
+ * - `<section id="responsive" aria-labelledby="responsive-title" data-landing-section>`
+ *   with one h2, id `responsive-title` (`landingCopy.headings.responsive`).
+ * - The handle is `role="slider"` named "Chart width", with `aria-valuemin`,
+ *   `aria-valuemax` and `aria-valuenow` in px; ArrowLeft and ArrowRight move it
+ *   20px.
+ * - `data-resize-frame` on the frame holding the chart's SVG.
+ * - `data-resize-breakpoint` on the mono label whose text is the breakpoint name:
+ *   the library's `getBreakpoint`: "compact" under 400px, "medium" to 700px
+ *   inclusive, "full" above.
+ * - The chart's figure has a `<figcaption>` with a "Source: …" line.
+ */
+import { staticSvgPair } from "../../../lib/demo/static-svg";
+import PublishedFigure from "../../shared/PublishedFigure.astro";
+import SectionHead from "../../shared/SectionHead.astro";
+import { ResizeFrame } from "./ResizeFrame";
+import { responsiveSource, responsiveSpec } from "./responsive-spec";
+import "../../../styles/landing-story.css";
+
+const statics = staticSvgPair(responsiveSpec, { width: 960, height: 440, idPrefix: "responsive" });
+---
+
+<section
+  id="responsive"
+  aria-labelledby="responsive-title"
+  data-landing-section
+  class="landing-section"
+>
+  <div class="landing-container">
+    <SectionHead id="responsive">
+      Drag the right edge of the frame to see this chart on a phone, a tablet and a full page. As it
+      narrows the axis labels fewer years, and on a phone one callout stays on the line while the
+      other moves to a numbered note below.
+    </SectionHead>
+    <PublishedFigure class="figure-hairline" source={responsiveSource}>
+      <ResizeFrame client:visible>
+        <Fragment set:html={statics} />
+      </ResizeFrame>
+    </PublishedFigure>
+  </div>
+</section>

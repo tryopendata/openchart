@@ -1,0 +1,44 @@
+---
+/**
+ * Beyond charts: an uneven grid of demo figures, laid out like a graphics desk's
+ * portfolio page. One dominant live symbol map takes two columns and two rows
+ * at 900px and wider; a tile map, a bar list, a sankey and a table fill the
+ * cells around it, each linking to its docs page. Demo figures only, no island:
+ * the page's demo script mounts each live as it nears the viewport. Each tile's
+ * stage height comes from kinds.ts. Only the links take a reveal stagger: a
+ * chart is never faded or moved by the page, the library draws it in.
+ *
+ * Contract: `<section id="kinds" aria-labelledby="kinds-title" data-landing-section>`
+ * with one h2, id `kinds-title` (`landingCopy.headings.kinds`). Every figure has a
+ * `<figcaption>` with a "Source: …" line (`<Demo>` writes one).
+ */
+import Demo from "../../demo/Demo.astro";
+import SectionHead from "../../shared/SectionHead.astro";
+import { kindsTiles } from "./kinds";
+import "../../../styles/landing-story.css";
+---
+
+<section id="kinds" aria-labelledby="kinds-title" data-landing-section class="landing-section">
+  <div class="landing-container">
+    <SectionHead id="kinds">
+      A table, a map, a flow diagram and a ranked list get the same headline, deck and source line
+      as every chart, set in the same type, and each draws live in the page.
+    </SectionHead>
+    <div class="kinds-grid" data-reveal>
+      {kindsTiles.map((tile) => (
+        <div
+          class="kinds-tile"
+          data-place={tile.place}
+          data-fit-content={tile.fitContent ? "" : undefined}
+          style={`--kinds-height: ${tile.height}px; --kinds-height-narrow: ${tile.narrowHeight ?? tile.height}px`}
+        >
+          <Demo id={tile.demo} tabs={false} />
+          <a class="kinds-link" href={tile.href} data-motion-part>
+            {tile.link}
+            <span aria-hidden="true"> →</span>
+          </a>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>

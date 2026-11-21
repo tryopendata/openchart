@@ -1,0 +1,146 @@
+/*
+ * The landing page's shared rhythm: how a section is spaced, how wide its
+ * container and text column run, the heading scale and the section head. Each section opens on the
+ * ticked `.rule-axis` from global.css. Spacing is padding inside each section,
+ * never margin between them, so the page's height is the sum of its sections.
+ * Section-specific styles live in the lanes' own files (landing-hero.css,
+ * landing-wall.css, landing-story.css, landing-close.css).
+ */
+@reference "./global.css";
+
+@layer components {
+  /* One landing section: the same vertical rhythm everywhere, and room below the
+     header when a link jumps to it. */
+  .landing-section {
+    @apply scroll-mt-16 py-16 sm:py-20 lg:py-28;
+  }
+
+  /* The 12-column page container, aligned with the header's edges. */
+  .landing-container {
+    @apply mx-auto w-full max-w-[90rem] px-5 sm:px-6 lg:px-8;
+  }
+
+  /* The rule a section opens on, with space before its heading. */
+  .landing-rule {
+    @apply mb-10 lg:mb-14;
+  }
+
+  /* The page's one h1, in the hero. */
+  .landing-display {
+    @apply text-ink font-display text-[2.75rem] leading-[1.04] font-medium tracking-[-0.02em] text-balance sm:text-6xl lg:text-[4.5rem];
+  }
+
+  .landing-lede {
+    @apply text-ink-2 mt-6 max-w-[36rem] text-lg leading-relaxed;
+  }
+
+  /* A section's h2. */
+  .landing-heading {
+    @apply text-ink font-display max-w-[24ch] text-3xl leading-[1.12] font-medium tracking-[-0.015em] text-balance sm:text-[2.625rem];
+  }
+
+  /* A section's head (SectionHead.astro): the h2 in seven of the twelve columns,
+     the lede beside it on the same row from 1024px. */
+  .section-head {
+    @apply grid gap-6 lg:grid-cols-12 lg:gap-8;
+  }
+
+  .section-head > .landing-heading {
+    @apply lg:col-span-7;
+  }
+
+  .section-head-lede {
+    @apply text-ink-2 max-w-[36rem] text-base leading-relaxed lg:col-span-5;
+  }
+
+  .section-head[data-layout="aside"] > .section-head-lede {
+    @apply max-w-[34rem] lg:col-span-4 lg:col-start-9 lg:self-end;
+  }
+
+  .section-head[data-layout="beside"] {
+    @apply lg:items-end;
+  }
+
+  .section-head[data-layout="beside"] > .section-head-lede {
+    @apply lg:pb-1;
+  }
+
+  .section-head[data-layout="feature"] {
+    @apply gap-y-8;
+  }
+
+  .section-head[data-layout="feature"] > .section-head-lede {
+    @apply text-[17px] lg:self-end;
+  }
+
+  /* A published figure (PublishedFigure.astro): rule, headline, deck, chart, source. */
+  .pub-figure {
+    @apply m-0 min-w-0;
+  }
+
+  .pub-figure-title {
+    @apply text-ink font-display mt-5 text-2xl leading-tight font-medium tracking-[-0.01em] text-balance sm:text-[1.75rem];
+  }
+
+  .pub-figure-deck {
+    @apply text-ink-2 mt-2 max-w-[60ch] text-[15px] leading-snug;
+  }
+
+  .pub-figure-body {
+    @apply mt-5;
+  }
+
+  .pub-figure-caption {
+    @apply border-line border-t pt-3;
+  }
+
+  .pub-figure-caption a {
+    @apply text-muted hover:text-ink underline decoration-1 underline-offset-2 transition-colors duration-150;
+  }
+
+  /* An install command (InstallCommand.astro): manager tabs above, a ruled line with Copy.
+     The command wraps, so a phone shows all of it without a scroller. */
+  .install-command {
+    @apply max-w-[34rem] min-w-0;
+  }
+
+  .install-command-managers {
+    @apply mb-2 flex gap-4 font-mono text-[12px];
+  }
+
+  .install-command-manager {
+    @apply text-muted hover:text-ink border-b border-transparent pb-0.5 no-underline transition-colors duration-150;
+  }
+
+  .install-command-manager[aria-selected="true"],
+  .install-command:not([data-live]) .install-command-manager:first-child {
+    @apply text-ink border-ink;
+  }
+
+  .install-command-line {
+    @apply border-line-strong flex min-h-12 items-stretch rounded-xs border;
+  }
+
+  .install-command-prompt {
+    @apply text-muted py-3 pl-4 font-mono text-[13.5px] leading-6 select-none;
+  }
+
+  .install-command-text {
+    @apply text-ink min-w-0 flex-1 py-3 pr-3 pl-2.5 font-mono text-[13.5px] leading-6;
+    /* Break at the space before the package name, never inside it unless it cannot fit. */
+    overflow-wrap: break-word;
+  }
+
+  .install-command-copy {
+    @apply border-line-strong text-ink-2 hover:bg-panel hover:text-ink shrink-0 border-l px-3.5 font-sans text-sm font-medium transition-colors duration-150;
+  }
+
+  /* Success is announced, not shown; a failure shows in flow under the line. */
+  .install-command-result:not([data-state="failed"]) {
+    @apply sr-only;
+  }
+
+  .install-command-result[data-state="failed"] {
+    @apply text-ink-2 mt-2 text-xs;
+  }
+}

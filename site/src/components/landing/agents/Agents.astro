@@ -1,0 +1,108 @@
+---
+/**
+ * Built for agents: the chart a scripted agent session ends on, large, beside a
+ * condensed transcript in which the agent writes a spec, reads the real
+ * `validateSpec` error and fixes it; then the three agent-facing facts (llms.txt,
+ * the JSON Schema, the skill install lines) as a compact row. The
+ * script is built here at build time, so every line the validator says in it is
+ * the engine's own output; the AgentSession island (client:visible) plays it.
+ *
+ * Contract (e2e/landing.spec.ts relies on it):
+ * - `<section id="agents" aria-labelledby="agents-title" data-landing-section>`
+ *   with one h2, id `agents-title` (`landingCopy.headings.agents`).
+ * - A button named "Play" starts the session. At the failing step the transcript
+ *   shows, as text, the `message` of the first error `validateSpec` returns for
+ *   `agentSession.firstSpec`.
+ * - `data-agent-chart` on the element holding the chart the session ends with.
+ * - Any figure has a `<figcaption>` with a "Source: …" line.
+ */
+import { CopyCommand } from "@steamfield/ui/react/copy";
+import { site } from "../../../config";
+import { AGENT_SPEC_FILE, agentSession, agentSkillLines } from "../../../landing/agents";
+import { allPages } from "../../../lib/collection";
+import { staticSvgPair } from "../../../lib/demo/static-svg";
+import { llmsIndex } from "../../../lib/docs";
+import SectionHead from "../../shared/SectionHead.astro";
+import { AgentSession } from "./AgentSession";
+import { buildSessionScript } from "./session-script";
+import "../../../styles/landing-close.css";
+
+const llmsUrl = new URL("/llms.txt", site.url).href;
+const llms = llmsIndex((await allPages()).map((entry) => entry.page));
+const script = buildSessionScript(agentSession, { llms, llmsUrl, file: AGENT_SPEC_FILE });
+
+/**
+ * Two drawing sizes, so a phone gets the chart's own compact layout instead of the
+ * wide one scaled down; landing-close.css shows one per viewport and sizes the stage
+ * to match. Each comes in both themes.
+ */
+const CHART_SIZES = {
+  wide: { width: 720, height: 420 },
+  narrow: { width: 360, height: 340 },
+};
+const chartSvgs = Object.entries(CHART_SIZES)
+  .map(([size, box]) => {
+    const svgs = staticSvgPair(agentSession.fixedSpec, { idPrefix: `agent-chart-${size}`, ...box });
+    return `<div class="agent-chart-${size}">${svgs ?? ""}</div>`;
+  })
+  .join("");
+
+const schemaUrl = `${site.repo}/blob/main/packages/core/schema/vizspec.schema.json`;
+---
+
+<section id="agents" aria-labelledby="agents-title" data-landing-section class="landing-section">
+  <div class="landing-container">
+    <SectionHead id="agents" layout="feature">
+      A reporter asks for a chart. The agent writes the spec, the validator rejects one field and
+      names the columns the data has, and the agent fixes it. The session is scripted, but every
+      line the validator says is its real output.
+    </SectionHead>
+    <div class="agents-stage">
+      <AgentSession client:visible script={script}>
+        <Fragment slot="chart" set:html={chartSvgs} />
+      </AgentSession>
+    </div>
+    <dl class="agents-facts" data-reveal="quiet">
+      <div class="agents-fact" data-motion-part>
+        <dt>llms.txt</dt>
+        <dd>
+          <p>Every docs page as Markdown, listed by section with its URL.</p>
+          <a class="agents-fact-link" href="/llms.txt">
+            /llms.txt
+          </a>
+        </dd>
+      </div>
+      <div class="agents-fact" data-motion-part>
+        <dt>JSON Schema</dt>
+        <dd>
+          <p>The whole spec grammar, for editor completion and structured output.</p>
+          <a class="agents-fact-link" href={schemaUrl}>
+            @opendata-ai/openchart-core/schema
+          </a>
+        </dd>
+      </div>
+      <div class="agents-fact" data-motion-part>
+        <dt>Claude Code skill</dt>
+        <dd>
+          <p>Teaches Claude the spec grammar, the encoding rules and chart design conventions.</p>
+          {agentSkillLines.map(({ command, label }, index) => (
+            <CopyCommand
+              id={`agents-skill-${index}`}
+              command={command}
+              label={label}
+              prompt={null}
+              className="agents-command"
+              buttonClassName="copy-button"
+            />
+          ))}
+        </dd>
+      </div>
+    </dl>
+  </div>
+</section>
+
+<script>
+  import { enhanceSectionCopy } from "../../shared/copy-commands";
+
+  enhanceSectionCopy("agents");
+</script>

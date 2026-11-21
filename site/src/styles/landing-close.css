@@ -1,0 +1,384 @@
+/*
+ * Styles for the agents, frameworks and closing sections (#agents, #frameworks,
+ * #closing). Three shapes: a two-column transcript that ends in a chart, a tabbed
+ * code bench beside the chart it draws, and a ruled facts table. Rules, type and
+ * the one accent do the work; color comes only from the charts.
+ */
+@reference "./global.css";
+
+@layer components {
+  /* Agents: at 1100px and up the chart takes seven columns and the condensed
+     transcript five; the facts close the section as one row. */
+  .agents-stage {
+    @apply mt-12 min-w-0;
+  }
+
+  .agent-session {
+    @apply grid gap-y-10 min-[1100px]:grid-cols-12 min-[1100px]:gap-x-8;
+  }
+
+  .agent-chart {
+    @apply min-w-0 min-[1100px]:col-span-7 min-[1100px]:self-start;
+  }
+
+  .agent-log {
+    @apply min-w-0 min-[1100px]:col-span-5;
+  }
+
+  /* The stage keeps the shape of the static SVG on show: narrow on a phone, wide above. */
+  .agent-chart-stage {
+    @apply relative w-full;
+    aspect-ratio: 360 / 340;
+  }
+
+  .agent-chart-wide,
+  .agent-chart-narrow,
+  .agent-chart-live {
+    @apply absolute inset-0;
+  }
+
+  .agent-chart-wide {
+    @apply hidden;
+  }
+
+  @media (width >= 40rem) {
+    .agent-chart-stage {
+      aspect-ratio: 720 / 420;
+    }
+
+    .agent-chart-wide {
+      @apply block;
+    }
+
+    .agent-chart-narrow {
+      @apply hidden;
+    }
+  }
+
+  /* While a replay runs and the spec has not validated yet. */
+  .agent-chart-waiting {
+    @apply text-muted border-line absolute inset-0 m-0 flex items-center justify-center border border-dashed px-6 text-center text-sm;
+  }
+
+  /* The log: Play on the axis rule, then one ruled line per step. */
+  .agent-controls {
+    @apply border-line border-t-line-strong flex items-center gap-4 border-t border-b py-3;
+  }
+
+  .agent-play {
+    @apply h-8 min-w-[5.5rem] cursor-pointer justify-center;
+  }
+
+  .agent-progress {
+    @apply border-line-strong relative h-[6px] flex-1 border-t;
+  }
+
+  .agent-progress-tick {
+    @apply bg-line-strong absolute top-0 h-[5px] w-px;
+  }
+
+  .agent-progress-fill {
+    @apply bg-accent absolute inset-x-0 -top-[2px] h-[3px] origin-left;
+    transition: transform 120ms linear;
+  }
+
+  .agent-clock {
+    @apply text-muted font-mono text-xs tabular-nums;
+  }
+
+  .agent-transcript {
+    @apply m-0 list-none p-0;
+  }
+
+  /* Without controls (server, reduced motion) the list opens on the rule itself. */
+  .agent-log > .agent-transcript:first-child {
+    @apply border-line-strong border-t;
+  }
+
+  .agent-row {
+    @apply border-line grid grid-cols-[6.5rem_1fr] gap-x-4 border-b py-3;
+  }
+
+  .agent-role {
+    @apply text-muted flex flex-col gap-0.5 pt-[2px] font-mono text-xs;
+  }
+
+  .agent-tool {
+    @apply text-ink-2;
+  }
+
+  .agent-status[data-status="error"] {
+    @apply text-ink font-semibold;
+  }
+
+  .agent-body {
+    @apply min-w-0;
+  }
+
+  .agent-message {
+    @apply text-ink-2 m-0 text-base leading-relaxed;
+  }
+
+  /* The reporter's request reads as a quotation, in the headline face. */
+  .agent-row[data-kind="user"] .agent-message {
+    @apply text-ink font-display text-lg leading-snug;
+  }
+
+  .agent-args {
+    @apply text-ink m-0 flex items-baseline justify-between gap-x-3 font-mono text-[13px];
+  }
+
+  .agent-target {
+    @apply min-w-0 truncate;
+  }
+
+  .agent-meta {
+    @apply text-muted shrink-0;
+  }
+
+  .agent-result,
+  .agent-diff,
+  .agent-error {
+    @apply m-0 mt-1 font-mono text-[12.5px] leading-relaxed [overflow-wrap:anywhere];
+  }
+
+  .agent-result {
+    @apply text-ink-2;
+  }
+
+  .agent-diff del {
+    @apply text-muted mr-2 line-through;
+  }
+
+  .agent-diff ins {
+    @apply text-ink no-underline;
+  }
+
+  /* The validator's rejection: ink, ruled on the leading edge like a correction in the margin. */
+  .agent-error {
+    @apply text-ink border-line-strong border-l-2 pl-3 font-medium;
+  }
+
+  .agent-disclosure {
+    @apply mt-1;
+  }
+
+  .agent-disclosure summary {
+    @apply text-muted hover:text-ink w-fit cursor-pointer font-sans text-xs transition-colors duration-150;
+  }
+
+  .agent-excerpt {
+    @apply text-muted mt-2 font-mono text-[12.5px] leading-relaxed [overflow-wrap:anywhere];
+  }
+
+  .agent-excerpt p {
+    @apply m-0;
+  }
+
+  .agent-code {
+    @apply bg-panel text-ink-2 mt-2 max-h-72 overflow-auto p-4 font-mono text-[12.5px] leading-relaxed;
+  }
+
+  /* The facts: three ruled columns under the session, secondary to it. */
+  .agents-facts {
+    @apply border-line mt-14 grid gap-y-6 border-t pt-6 md:grid-cols-3 md:gap-x-8;
+  }
+
+  .agents-fact dt {
+    @apply text-ink text-sm font-semibold;
+  }
+
+  .agents-fact dd {
+    @apply m-0;
+  }
+
+  .agents-fact dd p {
+    @apply text-ink-2 mt-1 text-sm leading-relaxed;
+  }
+
+  .agents-fact-link {
+    @apply text-accent mt-2 inline-block font-mono text-[13px] [overflow-wrap:anywhere];
+    transition: color 150ms ease-out;
+  }
+
+  .agents-command {
+    @apply bg-panel text-ink mt-2 flex items-center justify-between gap-3 px-3 py-2 font-mono text-[12px];
+  }
+
+  .agents-command code {
+    @apply min-w-0 [overflow-wrap:anywhere];
+  }
+
+  /* Frameworks: the bench in seven columns, the chart beside it in five. */
+
+  .frameworks-bench {
+    @apply mt-12 grid gap-y-10 lg:grid-cols-12 lg:gap-x-8;
+  }
+
+  .frameworks-code {
+    @apply min-w-0 lg:col-span-7;
+  }
+
+  .frameworks-figure {
+    @apply lg:col-span-5 lg:self-start;
+  }
+
+  .frameworks-chart {
+    @apply relative w-full;
+    aspect-ratio: 480 / 400;
+  }
+
+  .install-tab-command {
+    @apply border-line-strong flex items-center justify-between gap-4 border px-4 py-3 font-mono text-sm;
+  }
+
+  .install-tab-command code {
+    @apply text-ink min-w-0 [overflow-wrap:anywhere];
+  }
+
+  .install-tab-prompt {
+    @apply text-muted select-none;
+  }
+
+  .install-tab-code {
+    @apply border-line mt-4 border;
+  }
+
+  .install-tab-code-head {
+    @apply border-line bg-panel text-ink-2 flex items-center justify-between border-b px-4 py-2 font-mono text-xs;
+  }
+
+  /* Capped at about 16rem so the chart beside it leads; Shiki's <pre> is focusable, so it scrolls by keyboard. */
+  .install-tab-code-body pre {
+    @apply m-0 max-h-64 overflow-auto p-4 font-mono text-[13px] leading-relaxed;
+  }
+
+  /* The tabs. @steamfield/ui/tabs/styles.css sits in the `sf` layer, below this one. */
+  .install-tablist {
+    @apply border-line-strong flex gap-6 border-b;
+  }
+
+  .install-tab {
+    @apply text-muted -mb-px cursor-pointer border-0 border-b-2 border-solid border-transparent bg-transparent px-0 py-3 text-[15px] font-medium no-underline;
+    transition:
+      color 150ms ease-out,
+      border-color 150ms ease-out;
+  }
+
+  .install-tab:hover {
+    @apply text-ink no-underline;
+  }
+
+  .install-tab[aria-selected="true"] {
+    @apply border-ink text-ink;
+  }
+
+  .install-tab-panel {
+    @apply pt-6;
+  }
+
+  /* Closing: the heading in four columns, the table and install lines in eight. */
+  .closing-grid {
+    @apply grid gap-y-10 lg:grid-cols-12 lg:gap-x-8;
+  }
+
+  .closing-head {
+    @apply lg:col-span-4;
+  }
+
+  .closing-table-wrap,
+  .closing-install {
+    @apply min-w-0 lg:col-span-8 lg:col-start-5;
+  }
+
+  .closing-table-wrap {
+    @apply lg:row-start-1;
+  }
+
+  .closing-table {
+    @apply border-line-strong w-full border-collapse border-t-2 border-b text-left;
+  }
+
+  .closing-table thead th {
+    @apply border-line-strong text-muted border-b py-2 pr-6 font-mono text-xs font-normal;
+  }
+
+  .closing-table tbody tr + tr {
+    @apply border-line border-t;
+  }
+
+  .closing-table tbody th {
+    @apply text-ink w-36 py-4 pr-6 align-top text-[15px] font-semibold;
+  }
+
+  .closing-table td {
+    @apply text-ink-2 py-4 pr-6 align-top text-[15px] leading-relaxed;
+  }
+
+  .closing-table td.closing-backed {
+    @apply pr-0 font-mono text-[12.5px] whitespace-nowrap;
+  }
+
+  .closing-backed a {
+    @apply text-accent block;
+    transition: color 150ms ease-out;
+  }
+
+  /* On a phone the facts table stacks: topic, fact, then the files behind it. */
+  @media (width < 40rem) {
+    .closing-table thead {
+      @apply sr-only;
+    }
+
+    .closing-table tbody tr {
+      @apply grid gap-1 py-4;
+    }
+
+    .closing-table tbody th,
+    .closing-table td,
+    .closing-table td.closing-backed {
+      @apply w-auto p-0;
+    }
+  }
+
+  .closing-links {
+    @apply mt-8 flex flex-wrap gap-3;
+  }
+
+  /* The shared Copy button, sized down where it sits in a one-line row. */
+  .agents-command .copy-button,
+  .install-tab-command .copy-button,
+  .install-tab-code-head .copy-button {
+    @apply h-auto min-w-0;
+  }
+
+  /*
+   * Motion. Transcript rows arrive as the replay reaches them, and a tab's panel
+   * settles in once the reader picks it (never on hydration). Both run only while
+   * hydrated (`data-live` and `data-picked` are set by the islands) and never under
+   * reduced motion; the server HTML has no start state, so nothing waits on a script.
+   */
+  @media (prefers-reduced-motion: no-preference) {
+    .agent-session[data-live] .agent-row {
+      animation: agent-row-in 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    [data-picked] .install-tab-panel[data-state="active"] {
+      animation: install-panel-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+  }
+}
+
+@keyframes agent-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes install-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
