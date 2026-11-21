@@ -13,23 +13,17 @@
  * `<figcaption>` with a "Source: …" line (`<Demo>` writes one).
  */
 import Demo from "../../demo/Demo.astro";
-import { landingCopy } from "../../../landing/copy";
+import SectionHead from "../../shared/SectionHead.astro";
 import { kindsTiles } from "./kinds";
 import "../../../styles/landing-story.css";
 ---
 
 <section id="kinds" aria-labelledby="kinds-title" data-landing-section class="landing-section">
   <div class="landing-container">
-    <div class="rule-axis landing-rule" aria-hidden="true"></div>
-    <div class="kinds-head" data-reveal>
-      <h2 id="kinds-title" class="landing-heading" data-motion="lift-md">
-        {landingCopy.headings.kinds}
-      </h2>
-      <p class="kinds-lede" data-motion-part>
-        A table, a map, a flow diagram and a ranked list get the same headline, deck and source line
-        as every chart, set in the same type, and each draws live in the page.
-      </p>
-    </div>
+    <SectionHead id="kinds">
+      A table, a map, a flow diagram and a ranked list get the same headline, deck and source line
+      as every chart, set in the same type, and each draws live in the page.
+    </SectionHead>
     <div class="kinds-grid" data-reveal>
       {kindsTiles.map((tile) => (
         <div

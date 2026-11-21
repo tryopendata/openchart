@@ -10,32 +10,13 @@
 @reference "./global.css";
 
 @layer components {
-  /* Shared: a section head with the heading on the left and a short lede set
-     against the right columns of the grid. */
-  .story-head,
-  .responsive-head,
-  .kinds-head,
-  .motion-head {
-    /* The space before the figure lives here: PublishedFigure resets its own margin. */
-    @apply mb-10 grid gap-6 lg:mb-14 lg:grid-cols-12 lg:gap-8;
-  }
-
-  .story-head > h2,
-  .responsive-head > h2,
-  .kinds-head > h2,
-  .motion-head > h2 {
-    @apply lg:col-span-7;
-  }
-
-  .story-lede,
-  .responsive-lede,
-  .kinds-lede,
-  .motion-lede {
-    @apply text-ink-2 max-w-[34rem] text-base leading-relaxed lg:col-span-4 lg:col-start-9 lg:self-end;
-  }
-
   /* One ticked rule per section, above its head: a PublishedFigure under the head
-     draws its own rule as a plain hairline instead. */
+     draws its own rule as a plain hairline instead. Compound selector: .pub-figure
+     (landing.css) resets margins at the same specificity. */
+  .pub-figure.figure-hairline {
+    @apply mt-10 lg:mt-14;
+  }
+
   .figure-hairline > .rule-axis {
     @apply border-line h-0 bg-none;
   }
@@ -211,7 +192,7 @@
   /* ---- #kinds: an uneven portfolio grid ---------------------------------- */
 
   .kinds-grid {
-    @apply grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2;
+    @apply mt-10 grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 lg:mt-14;
     --sf-reveal-step: 90ms;
   }
 

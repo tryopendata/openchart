@@ -28,9 +28,9 @@ import { renderStaticSVG } from "@opendata-ai/openchart-vanilla/static";
 import { houseStyle } from "../../../demos/landing/house-style";
 import { DEFAULT_DEMO_HEIGHT } from "../../../demos/types";
 import { validateDemo } from "../../../lib/demo/validate";
-import { landingCopy } from "../../../landing/copy";
 import "../../../styles/landing-wall.css";
 import PublishedFigure from "../../shared/PublishedFigure.astro";
+import SectionHead from "../../shared/SectionHead.astro";
 import { HOUSE_STYLE_STOPS, houseStyleDiffs } from "./house-styles";
 import { PresetScrub } from "./PresetScrub";
 
@@ -62,17 +62,11 @@ const initialSvg = renderStaticSVG(
 
 <section id="styles" aria-labelledby="styles-title" data-landing-section class="landing-section">
   <div class="landing-container">
-    <div class="rule-axis landing-rule" aria-hidden="true"></div>
-    <div class="wall-head" data-reveal>
-      <h2 id="styles-title" class="landing-heading" data-motion="lift-md">
-        {landingCopy.headings.styles}
-      </h2>
-      <p class="wall-lede" data-motion-part>
-        A paper sets every chart in its house style: its typeface, its paper, its rules and its
-        colors. The chart below takes four of them in turn, then a dark page, and nothing about its
-        data changes.
-      </p>
-    </div>
+    <SectionHead id="styles" layout="beside">
+      A paper sets every chart in its house style: its typeface, its paper, its rules and its
+      colors. The chart below takes four of them in turn, then a dark page, and nothing about its
+      data changes.
+    </SectionHead>
     <PublishedFigure
       class="scrub-figure"
       source={houseStyle.source}

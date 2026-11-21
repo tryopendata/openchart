@@ -19,10 +19,10 @@
 import { CopyCommand } from "@steamfield/ui/react/copy";
 import { site } from "../../../config";
 import { AGENT_SPEC_FILE, agentSession, agentSkillLines } from "../../../landing/agents";
-import { landingCopy } from "../../../landing/copy";
 import { allPages } from "../../../lib/collection";
 import { staticSvg } from "../../../lib/demo/static-svg";
 import { llmsIndex } from "../../../lib/docs";
+import SectionHead from "../../shared/SectionHead.astro";
 import { AgentSession } from "./AgentSession";
 import { buildSessionScript } from "./session-script";
 import "../../../styles/landing-close.css";
@@ -58,17 +58,11 @@ const schemaUrl = `${site.repo}/blob/main/packages/core/schema/vizspec.schema.js
 
 <section id="agents" aria-labelledby="agents-title" data-landing-section class="landing-section">
   <div class="landing-container">
-    <div class="rule-axis landing-rule" aria-hidden="true"></div>
-    <div class="agents-head" data-reveal>
-      <h2 id="agents-title" class="landing-heading" data-motion="lift-md">
-        {landingCopy.headings.agents}
-      </h2>
-      <p class="agents-lede" data-motion="lift-sm">
-        A reporter asks for a chart. The agent writes the spec, the validator rejects one field and
-        names the columns the data has, and the agent fixes it. The session is scripted, but every
-        line the validator says is its real output.
-      </p>
-    </div>
+    <SectionHead id="agents" layout="feature">
+      A reporter asks for a chart. The agent writes the spec, the validator rejects one field and
+      names the columns the data has, and the agent fixes it. The session is scripted, but every
+      line the validator says is its real output.
+    </SectionHead>
     <div class="agents-stage">
       <AgentSession client:visible script={script}>
         <Fragment slot="chart" set:html={chartSvgs} />

@@ -1,6 +1,6 @@
 /*
  * The landing page's shared rhythm: how a section is spaced, how wide its
- * container and text column run, and the heading scale. Each section opens on the
+ * container and text column run, the heading scale and the section head. Each section opens on the
  * ticked `.rule-axis` from global.css. Spacing is padding inside each section,
  * never margin between them, so the page's height is the sum of its sections.
  * Section-specific styles live in the lanes' own files (landing-hero.css,
@@ -42,6 +42,40 @@
   /* A section's h2. */
   .landing-heading {
     @apply text-ink font-display max-w-[24ch] text-3xl leading-[1.12] font-medium tracking-[-0.015em] text-balance sm:text-[2.625rem];
+  }
+
+  /* A section's head (SectionHead.astro): the h2 in seven of the twelve columns,
+     the lede beside it on the same row from 1024px. */
+  .section-head {
+    @apply grid gap-6 lg:grid-cols-12 lg:gap-8;
+  }
+
+  .section-head > .landing-heading {
+    @apply lg:col-span-7;
+  }
+
+  .section-head-lede {
+    @apply text-ink-2 max-w-[36rem] text-base leading-relaxed lg:col-span-5;
+  }
+
+  .section-head[data-layout="aside"] > .section-head-lede {
+    @apply max-w-[34rem] lg:col-span-4 lg:col-start-9 lg:self-end;
+  }
+
+  .section-head[data-layout="beside"] {
+    @apply lg:items-end;
+  }
+
+  .section-head[data-layout="beside"] > .section-head-lede {
+    @apply lg:pb-1;
+  }
+
+  .section-head[data-layout="feature"] {
+    @apply gap-y-8;
+  }
+
+  .section-head[data-layout="feature"] > .section-head-lede {
+    @apply text-[17px] lg:self-end;
   }
 
   /* A published figure (PublishedFigure.astro): rule, headline, deck, chart, source. */

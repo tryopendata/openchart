@@ -10,9 +10,9 @@
  * with one h2, id `motion-title` (`landingCopy.headings.motion`). The chart's
  * figure has a `<figcaption>` with a "Source: …" line.
  */
-import { landingCopy } from "../../../landing/copy";
 import { staticSvg } from "../../../lib/demo/static-svg";
 import PublishedFigure from "../../shared/PublishedFigure.astro";
+import SectionHead from "../../shared/SectionHead.astro";
 import { MotionReplay } from "./MotionReplay";
 import { FIRST_MONTHS, motionSource, payrollSpec } from "./motion-spec";
 import "../../../styles/landing-story.css";
@@ -27,16 +27,10 @@ const statics = [false, true]
 
 <section id="motion" aria-labelledby="motion-title" data-landing-section class="landing-section">
   <div class="landing-container">
-    <div class="rule-axis landing-rule" aria-hidden="true"></div>
-    <div class="motion-head" data-reveal>
-      <h2 id="motion-title" class="landing-heading" data-motion="lift-md">
-        {landingCopy.headings.motion}
-      </h2>
-      <p class="motion-lede" data-motion-part>
-        Add a month of hiring figures and the bars make room for it. Switch the animation style to
-        see the same change made three ways, or turn it off.
-      </p>
-    </div>
+    <SectionHead id="motion">
+      Add a month of hiring figures and the bars make room for it. Switch the animation style to see
+      the same change made three ways, or turn it off.
+    </SectionHead>
     <PublishedFigure class="figure-hairline" source={motionSource}>
       <MotionReplay client:visible>
         <Fragment set:html={statics} />
