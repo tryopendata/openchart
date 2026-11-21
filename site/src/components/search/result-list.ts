@@ -1,20 +1,24 @@
 /**
  * Draws grouped search results into the dialog's listbox: one `role="group"`
  * per area, labelled by its visible heading, holding `role="option"` links. A
- * group with more than it shows ends in a "Show all n" option that expands it.
+ * group with matches it has not loaded ends in a "Show all n" option, n being
+ * the area's true match count.
  * Options are not focusable; the combobox input keeps focus and points at the
  * active one with aria-activedescendant (scripts/search-dialog.ts).
  */
-import { canExpand, type GroupName, type ResultGroup, shownHits } from "../../lib/search/groups";
+import { canExpand, type ResultGroup } from "../../lib/search/groups";
 import type { SearchHit } from "../../lib/search/result-shape";
 
-/** Replaces the listbox's contents with `groups` and returns its options in order. */
+/** The listbox's options in order, and the option drawn for each result. */
+export type RenderedResults = { options: HTMLElement[]; optionFor: Map<SearchHit, HTMLElement> };
+
+/** Replaces the listbox's contents with `groups`. */
 export function renderResultList(
   listbox: HTMLElement,
   groups: readonly ResultGroup[],
-  expanded: ReadonlySet<GroupName>,
-): HTMLElement[] {
+): RenderedResults {
   const options: HTMLElement[] = [];
+  const optionFor = new Map<SearchHit, HTMLElement>();
   const nextId = () => `${listbox.id}-${options.length}`;
   const groupElements = groups.map((group, groupIndex) => {
     const element = el("div", "search-group", { role: "group" });
@@ -25,13 +29,13 @@ export function renderResultList(
     name.textContent = group.name;
     element.setAttribute("aria-labelledby", name.id);
     element.append(name);
-    const isExpanded = expanded.has(group.name);
-    for (const hit of shownHits(group, isExpanded)) {
+    for (const hit of group.hits) {
       const option = hitOption(hit, nextId());
       options.push(option);
+      optionFor.set(hit, option);
       element.append(option);
     }
-    if (canExpand(group) && !isExpanded) {
+    if (canExpand(group)) {
       const more = expandOption(group, nextId());
       options.push(more);
       element.append(more);
@@ -39,7 +43,7 @@ export function renderResultList(
     return element;
   });
   listbox.replaceChildren(...groupElements);
-  return options;
+  return { options, optionFor };
 }
 
 /**
@@ -86,7 +90,7 @@ function expandOption(group: ResultGroup, id: string): HTMLElement {
     "aria-selected": "false",
     "data-expand": group.name,
   });
-  option.textContent = `Show all ${group.hits.length}`;
+  option.textContent = `Show all ${group.total}`;
   return option;
 }
 

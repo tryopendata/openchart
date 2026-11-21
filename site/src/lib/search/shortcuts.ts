@@ -11,7 +11,7 @@ export type ShortcutAction = "toggle" | "open" | null;
 /** The parts of a KeyboardEvent the rules read. */
 export type ShortcutKey = Pick<
   KeyboardEvent,
-  "key" | "metaKey" | "ctrlKey" | "altKey" | "shiftKey" | "isComposing"
+  "key" | "code" | "metaKey" | "ctrlKey" | "altKey" | "shiftKey" | "isComposing" | "repeat"
 >;
 
 /** Where focus is when the key goes down: in a field that takes text, or not. */
@@ -20,13 +20,15 @@ export type ShortcutContext = { mac: boolean; typing: boolean };
 /**
  * The action a key press maps to. Only the exact chords count: on macOS Meta+K and
  * not Ctrl+K (a text field's "delete to end of line" there), elsewhere Ctrl+K and
- * not Meta+K, and nothing with Alt or Shift added. "/" may carry Shift, because
+ * not Meta+K, and nothing with Alt or Shift added. K is matched by its character
+ * or, for non-Latin layouts, by its physical key. "/" may carry Shift, because
  * some keyboard layouts need it to type a slash, but no other modifier. Nothing
- * fires during IME composition, where the keys belong to the composition.
+ * fires during IME composition, where the keys belong to the composition, or on
+ * auto-repeat, so holding the chord does not flicker the dialog open and shut.
  */
 export function shortcutAction(key: ShortcutKey, context: ShortcutContext): ShortcutAction {
-  if (key.isComposing || key.altKey) return null;
-  if (key.key.toLowerCase() === "k") {
+  if (key.isComposing || key.altKey || key.repeat) return null;
+  if (key.key.toLowerCase() === "k" || key.code === "KeyK") {
     const command = context.mac ? key.metaKey && !key.ctrlKey : key.ctrlKey && !key.metaKey;
     return command && !key.shiftKey ? "toggle" : null;
   }
@@ -40,9 +42,19 @@ export function isTypingTarget(target: EventTarget | null): boolean {
   return target.isContentEditable || target.matches("input, textarea, select");
 }
 
-/** True on Apple platforms, where the command key is Meta. */
+/**
+ * True on Apple platforms, where the command key is Meta. Takes
+ * `navigator.userAgentData?.platform` ("macOS") where the browser has it, else
+ * the older `navigator.platform` ("MacIntel", "iPhone").
+ */
 export function isApplePlatform(platform: string): boolean {
   return /mac|iphone|ipad|ipod/i.test(platform);
+}
+
+/** The platform string `isApplePlatform` reads, from the newer API when present. */
+export function currentPlatform(nav: Navigator): string {
+  const data = (nav as Navigator & { userAgentData?: { platform?: string } }).userAgentData;
+  return data?.platform || nav.platform;
 }
 
 /** The hint the trigger shows for the toggle shortcut. */

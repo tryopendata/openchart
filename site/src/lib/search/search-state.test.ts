@@ -5,6 +5,9 @@ import type { SearchHit } from "./result-shape";
 import {
   IDLE,
   panelMessage,
+  progressMessage,
+  SEARCH_FAILED,
+  SEARCHING,
   type SearchAction,
   type SearchState,
   searchReducer,
@@ -18,91 +21,120 @@ const hit = (pageUrl: string): SearchHit => ({
   area: "Reference",
   location: null,
   pageUrl,
+  rank: 0,
 });
 
-const reference = (count: number): ResultGroup => ({
+const reference = (loaded: number, total = loaded): ResultGroup => ({
   name: "Reference",
-  hits: Array.from({ length: count }, (_, index) => hit(`/docs/page-${index}/`)),
+  total,
+  hits: Array.from({ length: loaded }, (_, index) => hit(`/docs/page-${index}/`)),
 });
 
 const run = (actions: readonly SearchAction[], from: SearchState = IDLE) =>
   actions.reduce(searchReducer, from);
 
-/** The state, what the panel shows and what the status region announces. */
+/** The state, what the panel shows, what it shows while loading and what it announces. */
 const view = (state: SearchState) => ({
   status: state.status,
   message: panelMessage(state),
+  progress: progressMessage(state),
   announced: statusAnnouncement(state),
+});
+
+const found = (query: string, groups: ResultGroup[], total = 0): SearchAction => ({
+  type: "found",
+  query,
+  total,
+  groups,
 });
 
 describe("searchReducer", () => {
   it("starts idle, showing and announcing nothing", () => {
-    expect(view(IDLE)).toEqual({ status: "idle", message: null, announced: "" });
+    expect(view(IDLE)).toEqual({ status: "idle", message: null, progress: null, announced: "" });
   });
 
-  it("loads while a search runs, without announcing anything", () => {
+  it("shows Searching… without announcing it while the first results load", () => {
     const state = run([{ type: "typed", query: "sankey" }]);
-    expect(view(state)).toEqual({ status: "loading", message: null, announced: null });
+    expect(view(state)).toEqual({
+      status: "loading",
+      message: null,
+      progress: SEARCHING,
+      announced: null,
+    });
   });
 
-  it("shows results and announces how many", () => {
+  it("announces the true match count with the query, not just what loaded", () => {
     const state = run([
       { type: "typed", query: "sankey" },
-      { type: "found", query: "sankey", groups: [reference(3)] },
+      found("sankey", [reference(5, 13)], 20),
     ]);
-    expect(view(state)).toEqual({ status: "results", message: null, announced: "3 results" });
-    expect(
-      statusAnnouncement(
-        run([{ type: "found", query: "sankey", groups: [reference(1)] }], {
-          status: "loading",
-          query: "sankey",
-          groups: [],
-        }),
-      ),
-    ).toBe("1 result");
+    expect(view(state)).toEqual({
+      status: "results",
+      message: null,
+      progress: null,
+      announced: "20 results for “sankey”",
+    });
+    const one = run([{ type: "typed", query: "waffle" }, found("waffle", [reference(1)], 1)]);
+    expect(statusAnnouncement(one)).toBe("1 result for “waffle”");
   });
 
   it("says no results for the query, in curly quotes", () => {
-    const state = run([
-      { type: "typed", query: "  zebra " },
-      { type: "found", query: "zebra", groups: [] },
-    ]);
+    const state = run([{ type: "typed", query: "  wombat " }, found("wombat", [])]);
     expect(view(state)).toEqual({
       status: "empty",
-      message: "No results for “zebra”",
-      announced: "No results for “zebra”",
+      message: "No results for “wombat”",
+      progress: null,
+      announced: "No results for “wombat”",
     });
   });
 
-  it("stays unavailable once the index fails, whatever the reader types", () => {
-    const state = run([
+  it("counts a search whose groups all came back empty as no results", () => {
+    const state = run([{ type: "typed", query: "sankey" }, found("sankey", [reference(0, 3)], 3)]);
+    expect(state.status).toBe("empty");
+  });
+
+  it("shows the failure message when a search fails, and leaves it on the next keystroke", () => {
+    const failed = run([
       { type: "typed", query: "sankey" },
-      { type: "unavailable" },
-      { type: "typed", query: "bar" },
-      { type: "found", query: "bar", groups: [reference(2)] },
+      { type: "failed", query: "sankey" },
     ]);
-    expect(view(state)).toEqual({
+    expect(view(failed)).toEqual({
+      status: "failed",
+      message: SEARCH_FAILED,
+      progress: null,
+      announced: SEARCH_FAILED,
+    });
+    expect(run([{ type: "typed", query: "sankeys" }], failed).status).toBe("loading");
+  });
+
+  it("shows the unavailable message when the index fails, and typing tries again", () => {
+    const unavailable = run([{ type: "typed", query: "sankey" }, { type: "unavailable" }]);
+    expect(view(unavailable)).toEqual({
       status: "unavailable",
       message: SEARCH_UNAVAILABLE,
+      progress: null,
       announced: SEARCH_UNAVAILABLE,
     });
+    expect(run([{ type: "typed", query: "bar" }], unavailable).status).toBe("loading");
   });
 
-  it("keeps the last results on screen while the next search loads", () => {
+  it("keeps the last results on screen while the next search loads, with no Searching… line", () => {
     const groups = [reference(2)];
     const state = run([
       { type: "typed", query: "san" },
-      { type: "found", query: "san", groups },
+      found("san", groups, 2),
       { type: "typed", query: "sankey" },
     ]);
     expect(state).toEqual({ status: "loading", query: "sankey", groups });
+    expect(progressMessage(state)).toBeNull();
   });
 
-  it("drops results for a query the reader has since changed", () => {
+  it("drops results and failures for a query the reader has since changed", () => {
     const state = run([
       { type: "typed", query: "san" },
       { type: "typed", query: "sankey" },
-      { type: "found", query: "san", groups: [reference(9)] },
+      found("san", [reference(9)], 9),
+      { type: "failed", query: "san" },
     ]);
     expect(state).toEqual({ status: "loading", query: "sankey", groups: [] });
   });
@@ -111,25 +143,20 @@ describe("searchReducer", () => {
     const state = run([
       { type: "typed", query: "sankey" },
       { type: "typed", query: "   " },
-      { type: "found", query: "sankey", groups: [reference(2)] },
+      found("sankey", [reference(2)], 2),
     ]);
     expect(state).toEqual(IDLE);
   });
 
-  it("expands a group until the next results arrive", () => {
-    const expanded = run([
-      { type: "typed", query: "spec" },
-      { type: "found", query: "spec", groups: [reference(8)] },
-      { type: "expand", group: "Reference" },
-    ]);
-    expect(expanded.status === "results" && [...expanded.expanded]).toEqual(["Reference"]);
-    const next = run(
-      [
-        { type: "typed", query: "specs" },
-        { type: "found", query: "specs", groups: [reference(8)] },
-      ],
-      expanded,
+  it("adds a group's remaining results when they load, for the current query only", () => {
+    const shown = run([{ type: "typed", query: "spec" }, found("spec", [reference(5, 7)], 7)]);
+    const rest = [hit("/docs/page-5/"), hit("/docs/page-6/")];
+    const stale = run([{ type: "expanded", query: "spe", group: "Reference", hits: rest }], shown);
+    expect(stale).toBe(shown);
+    const expanded = run(
+      [{ type: "expanded", query: "spec", group: "Reference", hits: rest }],
+      shown,
     );
-    expect(next.status === "results" && [...next.expanded]).toEqual([]);
+    expect(expanded.status === "results" && expanded.groups[0]?.hits.length).toBe(7);
   });
 });

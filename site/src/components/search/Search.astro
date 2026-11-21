@@ -14,9 +14,12 @@
  * - `[data-search-hint]` inside it: a fixed-width slot for the shortcut hint,
  *   shown from 640px.
  * - `dialog#site-search[data-search]`, labelled "Search the site", holding the
- *   combobox input, the listbox and the status line (visually hidden unless it
- *   holds a message such as "No results").
+ *   combobox input, the listbox, the "Searching…" line (shown, never announced)
+ *   and the status line (visually hidden unless it holds a message such as "No
+ *   results"). The status line carries SEARCH_UNAVAILABLE in
+ *   `data-load-error`, for search.ts to show when the dialog code fails to load.
  */
+import { SEARCH_UNAVAILABLE } from "../../lib/search-index";
 import "../../styles/search.css";
 ---
 
@@ -80,6 +83,12 @@ import "../../styles/search.css";
       data-search-results
       hidden
     ></div>
-    <p role="status" data-search-status class="search-message sr-only"></p>
+    <p data-search-progress class="search-message" hidden></p>
+    <p
+      role="status"
+      data-search-status
+      data-load-error={SEARCH_UNAVAILABLE}
+      class="search-message sr-only"
+    ></p>
   </div>
 </dialog>

@@ -1,12 +1,17 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { PagefindResultData, PagefindSubResult } from "./pagefind-types";
-import { safeExcerpt, shapeResult } from "./result-shape";
+import { type SearchHit, safeExcerpt, shapeResult } from "./result-shape";
 
-const sub = (url: string, title: string, hits: number, anchored = true): PagefindSubResult => ({
+/** A section of a page whose matches sum to `score` (Pagefind's balanced score). */
+const sub = (url: string, title: string, score: number, anchored = true): PagefindSubResult => ({
   url,
   title,
   excerpt: `${title} <mark>sankey</mark> text`,
-  locations: Array.from({ length: hits }, (_, index) => index),
+  locations: [0, 1, 2],
+  weighted_locations: [
+    { weight: 1, balanced_score: score / 2, location: 0 },
+    { weight: 1, balanced_score: score / 2, location: 1 },
+  ],
   ...(anchored ? { anchor: { id: url.split("#")[1] ?? "", text: title, element: "h2" } } : {}),
 });
 
@@ -14,20 +19,29 @@ const result = (overrides: Partial<PagefindResultData> = {}): PagefindResultData
   url: "/docs/flow/sankey/",
   excerpt: "page <mark>sankey</mark> excerpt",
   meta: { title: "Sankey", area: "Visualizations" },
-  sub_results: [sub("/docs/flow/sankey/", "Sankey", 2, false)],
+  sub_results: [sub("/docs/flow/sankey/", "Sankey", 200, false)],
   ...overrides,
 });
 
+/** Shapes a result that must come out; a dropped one fails the test here. */
+const shaped = (data: PagefindResultData, rank = 0): SearchHit => {
+  const hit = shapeResult(data, rank, vi.fn());
+  if (!hit) throw new Error(`shapeResult dropped ${data.url}`);
+  return hit;
+};
+
 describe("shapeResult", () => {
-  it("links the heading with the most matches and names it with the docs section", () => {
-    const hit = shapeResult(
+  it("links the section with the highest balanced score, not the most matches, and keeps the rank", () => {
+    const hit = shaped(
       result({
         sub_results: [
-          sub("/docs/flow/sankey/", "Sankey", 1, false),
-          sub("/docs/flow/sankey/#a-funnel", "A funnel", 4),
-          sub("/docs/flow/sankey/#related", "Related", 2),
+          sub("/docs/flow/sankey/", "Sankey", 100, false),
+          // More matches, but body text: a lower score.
+          { ...sub("/docs/flow/sankey/#related", "Related", 300), locations: [0, 1, 2, 3, 4, 5] },
+          sub("/docs/flow/sankey/#a-funnel", "A funnel", 900),
         ],
       }),
+      3,
     );
     expect(hit).toEqual({
       href: "/docs/flow/sankey/#a-funnel",
@@ -36,15 +50,16 @@ describe("shapeResult", () => {
       area: "Visualizations",
       location: "Flow and networks / A funnel",
       pageUrl: "/docs/flow/sankey/",
+      rank: 3,
     });
   });
 
-  it("keeps the page link when a heading matches no more often than the page", () => {
-    const hit = shapeResult(
+  it("keeps the page link when a heading scores no higher than the page", () => {
+    const hit = shaped(
       result({
         sub_results: [
-          sub("/docs/flow/sankey/", "Sankey", 2, false),
-          sub("/docs/flow/sankey/#a-basic-sankey", "A basic sankey", 2),
+          sub("/docs/flow/sankey/", "Sankey", 500, false),
+          sub("/docs/flow/sankey/#a-basic-sankey", "A basic sankey", 500),
         ],
       }),
     );
@@ -53,48 +68,62 @@ describe("shapeResult", () => {
   });
 
   it("leaves the heading out of the location when it repeats the page title", () => {
-    const hit = shapeResult(
+    const hit = shaped(
       result({
         url: "/docs/spec/sankey-spec/",
         meta: { title: "SankeySpec", area: "Reference" },
-        sub_results: [sub("/docs/spec/sankey-spec/#sankeyspec-1", "SankeySpec", 3)],
+        sub_results: [sub("/docs/spec/sankey-spec/#sankeyspec-1", "SankeySpec", 300)],
       }),
     );
     expect(hit.href).toBe("/docs/spec/sankey-spec/#sankeyspec-1");
     expect(hit.location).toBe("Spec");
   });
 
-  it("gives an example or post no section, only the heading it lands on", () => {
-    const example = shapeResult(
+  it("gives an example or post the heading it lands on, else its area", () => {
+    const example = shaped(
       result({
         url: "/examples/energy-flow/",
         meta: { title: "Energy flow", area: "Examples" },
-        sub_results: [sub("/examples/energy-flow/", "Energy flow", 1, false)],
+        sub_results: [sub("/examples/energy-flow/", "Energy flow", 100, false)],
       }),
     );
-    expect(example).toMatchObject({ area: "Examples", location: null });
-    const post = shapeResult(
+    expect(example).toMatchObject({ area: "Examples", location: "Examples" });
+    const post = shaped(
       result({
         url: "/blog/anomaly/",
         meta: { title: "Anomaly", area: "Blog" },
-        sub_results: [sub("/blog/anomaly/#the-zero-line", "The zero line", 2)],
+        sub_results: [sub("/blog/anomaly/#the-zero-line", "The zero line", 200)],
       }),
     );
     expect(post).toMatchObject({ href: "/blog/anomaly/#the-zero-line", location: "The zero line" });
   });
 
   it("files a page with missing or unknown area meta under no area", () => {
-    expect(shapeResult(result({ meta: { title: "Sankey" } })).area).toBeNull();
-    expect(shapeResult(result({ meta: { title: "Sankey", area: "Docs" } })).area).toBeNull();
+    expect(shaped(result({ meta: { title: "Sankey" } })).area).toBeNull();
+    expect(shaped(result({ meta: { title: "Sankey", area: "Docs" } })).area).toBeNull();
   });
 
   it("falls back to the page excerpt and URL when there are no sub-results or title", () => {
-    const hit = shapeResult(result({ meta: { area: "Guides" }, sub_results: [] }));
+    const hit = shaped(result({ meta: { area: "Guides" }, sub_results: [] }));
     expect(hit).toMatchObject({
       href: "/docs/flow/sankey/",
       title: "/docs/flow/sankey/",
       excerptHtml: "page <mark>sankey</mark> excerpt",
     });
+  });
+
+  it.each([
+    ["a javascript: URL", "javascript:alert(1)"],
+    ["a protocol-relative URL", "//x.test/"],
+    ["an absolute URL", "https://x.test/"],
+    ["a relative path", "docs/flow/"],
+  ])("drops a result whose link is %s, warning with the link", (_, url) => {
+    const warn = vi.fn();
+    const data = result({ url, sub_results: [sub(url, "Sankey", 100, false)] });
+    expect(shapeResult(data, 0, warn)).toBeNull();
+    expect(warn.mock.calls).toEqual([
+      [`Search dropped a result whose link "${url}" is not a path on this site.`],
+    ]);
   });
 });
 

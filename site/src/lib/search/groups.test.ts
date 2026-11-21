@@ -1,85 +1,116 @@
 import { describe, expect, it, vi } from "vitest";
 import type { SearchArea } from "../search-index";
-import { canExpand, GROUP_LIMIT, groupHits, shownHits } from "./groups";
+import {
+  areaCounts,
+  bestHit,
+  canExpand,
+  createUnfiledReporter,
+  GROUP_LIMIT,
+  orderGroups,
+  type ResultGroup,
+} from "./groups";
 import type { SearchHit } from "./result-shape";
 
-const hit = (pageUrl: string, area: SearchArea | null): SearchHit => ({
+const hit = (pageUrl: string, area: SearchArea | null = null): SearchHit => ({
   href: pageUrl,
   title: pageUrl,
   excerptHtml: "",
   area,
   location: null,
   pageUrl,
+  rank: 0,
 });
 
-const urls = (hits: readonly SearchHit[]) => hits.map((each) => each.pageUrl);
+const group = (name: ResultGroup["name"], loaded: number, total = loaded): ResultGroup => ({
+  name,
+  total,
+  hits: Array.from({ length: loaded }, (_, index) => hit(`/${name}/${index}/`)),
+});
 
-describe("groupHits", () => {
-  it("files hits in SEARCH_AREAS order, keeps rank order within a group and leaves out empty groups", () => {
-    const warn = vi.fn();
-    const groups = groupHits(
-      [
-        hit("/docs/spec/sankey-spec/", "Reference"),
-        hit("/blog/flows/", "Blog"),
-        hit("/docs/flow/sankey/", "Visualizations"),
-        hit("/docs/api/react/", "Reference"),
-        hit("/examples/energy-flow/", "Examples"),
-        hit("/docs/upgrading/migrating-v8/", "Guides"),
-      ],
-      warn,
-    );
-    expect(groups.map((group) => [group.name, urls(group.hits)])).toEqual([
-      ["Guides", ["/docs/upgrading/migrating-v8/"]],
-      ["Visualizations", ["/docs/flow/sankey/"]],
-      ["Reference", ["/docs/spec/sankey-spec/", "/docs/api/react/"]],
-      ["Examples", ["/examples/energy-flow/"]],
-      ["Blog", ["/blog/flows/"]],
+describe("areaCounts", () => {
+  it("lists the areas with matches in SEARCH_AREAS order and leaves out the empty ones", () => {
+    const counts = areaCounts({
+      area: { Blog: 1, "Building blocks": 0, Examples: 2, Guides: 5, Reference: 13 },
+    });
+    expect(counts).toEqual([
+      ["Guides", 5],
+      ["Reference", 13],
+      ["Examples", 2],
+      ["Blog", 1],
     ]);
-    expect(warn).not.toHaveBeenCalled();
   });
 
-  it("puts pages with no area last under Other and warns once for each, naming its URL", () => {
-    const warn = vi.fn();
-    const groups = groupHits(
-      [
-        hit("/docs/stray/", null),
-        hit("/docs/flow/sankey/", "Visualizations"),
-        hit("/fixtures/demo/", null),
-      ],
-      warn,
-    );
-    expect(groups.map((group) => [group.name, urls(group.hits)])).toEqual([
-      ["Visualizations", ["/docs/flow/sankey/"]],
-      ["Other", ["/docs/stray/", "/fixtures/demo/"]],
+  it("finds no areas when the search carries no area counts", () => {
+    expect(areaCounts(undefined)).toEqual([]);
+    expect(areaCounts({ tag: { climate: 3 } })).toEqual([]);
+  });
+});
+
+describe("orderGroups", () => {
+  it("puts groups in SEARCH_AREAS order with Other last, leaving out groups with nothing loaded", () => {
+    const ordered = orderGroups([
+      group("Other", 1),
+      group("Blog", 2),
+      group("Guides", 0, 3),
+      group("Visualizations", 1),
+      group("Reference", 4),
     ]);
+    expect(ordered.map((each) => each.name)).toEqual([
+      "Visualizations",
+      "Reference",
+      "Blog",
+      "Other",
+    ]);
+  });
+});
+
+describe("canExpand", () => {
+  it(`offers the rest of a group whose matches outnumber the ${GROUP_LIMIT} it loaded`, () => {
+    expect(canExpand(group("Reference", GROUP_LIMIT, 13))).toBe(true);
+  });
+
+  it("offers nothing once every match has loaded", () => {
+    expect(canExpand(group("Reference", 13, 13))).toBe(false);
+    expect(canExpand(group("Guides", GROUP_LIMIT, GROUP_LIMIT))).toBe(false);
+  });
+});
+
+describe("createUnfiledReporter", () => {
+  it("warns once per URL, naming it, however many searches find the page", () => {
+    const warn = vi.fn();
+    const report = createUnfiledReporter(warn);
+    report("/docs/stray/");
+    report("/fixtures/demo/");
+    report("/docs/stray/");
     expect(warn.mock.calls).toEqual([
       ["Search result /docs/stray/ has no search area, so it is listed under Other."],
       ["Search result /fixtures/demo/ has no search area, so it is listed under Other."],
     ]);
   });
-
-  it("returns no groups for no hits", () => {
-    expect(groupHits([], vi.fn())).toEqual([]);
-  });
 });
 
-describe("shownHits", () => {
-  const groupOf = (count: number) =>
-    groupHits(
-      Array.from({ length: count }, (_, index) => hit(`/docs/page-${index}/`, "Reference")),
-      vi.fn(),
-    )[0] ?? { name: "Reference" as const, hits: [] };
+describe("bestHit", () => {
+  const ranked = (title: string, rank: number): SearchHit => ({ ...hit(`/${rank}/`), title, rank });
+  const groups = (...hits: SearchHit[]): ResultGroup[] => [
+    { name: "Reference", total: hits.length, hits },
+  ];
 
-  it(`shows ${GROUP_LIMIT} of a larger group until it is expanded`, () => {
-    const group = groupOf(GROUP_LIMIT + 3);
-    expect(canExpand(group)).toBe(true);
-    expect(urls(shownHits(group, false))).toEqual(urls(group.hits.slice(0, GROUP_LIMIT)));
-    expect(shownHits(group, true)).toHaveLength(GROUP_LIMIT + 3);
+  it("picks the page titled with the query over a better-ranked page", () => {
+    const best = bestHit(groups(ranked("SankeySpec", 0), ranked("Sankey", 1)), " sankey ");
+    expect(best?.title).toBe("Sankey");
   });
 
-  it(`shows a group of exactly ${GROUP_LIMIT} whole, with nothing to expand`, () => {
-    const group = groupOf(GROUP_LIMIT);
-    expect(canExpand(group)).toBe(false);
-    expect(shownHits(group, false)).toHaveLength(GROUP_LIMIT);
+  it("picks the best rank when no title is the query, wherever its group sits", () => {
+    const later: ResultGroup = { name: "Examples", total: 1, hits: [ranked("Energy flow", 0)] };
+    const best = bestHit([...groups(ranked("Migrating to v8", 4)), later], "flow");
+    expect(best?.title).toBe("Energy flow");
+  });
+
+  it("picks the better rank between two exact title matches", () => {
+    expect(bestHit(groups(ranked("Bar", 3), ranked("bar", 1)), "Bar")?.rank).toBe(1);
+  });
+
+  it("finds nothing in no results", () => {
+    expect(bestHit([], "sankey")).toBeUndefined();
   });
 });

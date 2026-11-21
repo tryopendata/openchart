@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  currentPlatform,
   isApplePlatform,
   isTypingTarget,
   type ShortcutKey,
@@ -9,11 +10,13 @@ import {
 
 const press = (key: string, modifiers: Partial<ShortcutKey> = {}): ShortcutKey => ({
   key,
+  code: key === "/" ? "Slash" : `Key${key.toUpperCase()}`,
   metaKey: false,
   ctrlKey: false,
   altKey: false,
   shiftKey: false,
   isComposing: false,
+  repeat: false,
   ...modifiers,
 });
 
@@ -26,6 +29,11 @@ describe("shortcutAction", () => {
     ["Ctrl+K elsewhere", press("k", { ctrlKey: true }), other],
     ["Meta+K with Caps Lock on macOS", press("K", { metaKey: true }), mac],
     ["Ctrl+K while typing in a field", press("k", { ctrlKey: true }), { ...other, typing: true }],
+    [
+      "Ctrl+K on a Cyrillic layout, by its physical key",
+      press("л", { ctrlKey: true, code: "KeyK" }),
+      other,
+    ],
   ])("toggles on %s", (_, key, context) => {
     expect(shortcutAction(key, context)).toBe("toggle");
   });
@@ -50,6 +58,9 @@ describe("shortcutAction", () => {
     ["/ while typing in a field", press("/"), { ...other, typing: true }],
     ["/ during IME composition", press("/", { isComposing: true }), other],
     ["Ctrl+K during IME composition", press("k", { ctrlKey: true, isComposing: true }), other],
+    ["a held Ctrl+K repeating", press("k", { ctrlKey: true, repeat: true }), other],
+    ["a held Meta+K repeating on macOS", press("k", { metaKey: true, repeat: true }), mac],
+    ["Ctrl+L on a Cyrillic layout", press("д", { ctrlKey: true, code: "KeyL" }), other],
   ])("ignores %s", (_, key, context) => {
     expect(shortcutAction(key, context)).toBeNull();
   });
@@ -82,6 +93,7 @@ describe("isTypingTarget", () => {
 
 describe("platform and hint", () => {
   it.each([
+    ["macOS", true],
     ["MacIntel", true],
     ["iPhone", true],
     ["iPad", true],
@@ -90,6 +102,14 @@ describe("platform and hint", () => {
     ["", false],
   ])("reads %s as Apple: %s", (platform, apple) => {
     expect(isApplePlatform(platform)).toBe(apple);
+  });
+
+  it("reads the platform from userAgentData where the browser has it, else navigator.platform", () => {
+    const withData = { platform: "MacIntel", userAgentData: { platform: "Windows" } };
+    expect(currentPlatform(withData as unknown as Navigator)).toBe("Windows");
+    const emptyData = { platform: "MacIntel", userAgentData: { platform: "" } };
+    expect(currentPlatform(emptyData as unknown as Navigator)).toBe("MacIntel");
+    expect(currentPlatform({ platform: "Linux x86_64" } as Navigator)).toBe("Linux x86_64");
   });
 
   it("shows the command key on macOS and Ctrl elsewhere", () => {

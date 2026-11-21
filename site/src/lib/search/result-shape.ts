@@ -1,7 +1,8 @@
 /**
  * Turns one Pagefind result into what the search dialog shows: the link to the
- * section that matched best, the page title, a safe excerpt and the group it is
- * filed under. Pure, so the dialog only renders what this returns.
+ * section that matched best, the page title, a safe excerpt, the group it is
+ * filed under and its overall rank. Pure, so the dialog only renders what this
+ * returns.
  */
 import { docsAreas } from "../../config";
 import { SEARCH_AREAS, type SearchArea } from "../search-index";
@@ -17,43 +18,68 @@ export type SearchHit = {
   excerptHtml: string;
   /** The group it is filed under, or null when the page has no known area meta. */
   area: SearchArea | null;
-  /** Where on the site it lands, for the mono line: docs section and heading, or null. */
+  /** Where on the site it lands, for the mono line: docs section and heading, else the heading or area. */
   location: string | null;
   /** The page URL without an anchor, named when the page is not filed. */
   pageUrl: string;
+  /** Its place in Pagefind's ranking of the whole query, 0 for the best match. */
+  rank: number;
 };
 
-/** Shapes a loaded result for display. */
-export function shapeResult(data: PagefindResultData): SearchHit {
+/**
+ * Shapes a loaded result for display, or returns null (and warns, naming the
+ * URL) when its link is not a path on this site, so the dialog can never be
+ * made to follow a `javascript:` or off-site URL from the index.
+ */
+export function shapeResult(
+  data: PagefindResultData,
+  rank: number,
+  warn: (message: string) => void = console.warn,
+): SearchHit | null {
   const best = bestSubResult(data.sub_results);
+  const href = best?.url ?? data.url;
+  if (!isSitePath(href)) {
+    warn(`Search dropped a result whose link "${href}" is not a path on this site.`);
+    return null;
+  }
   const title = data.meta.title?.trim() || best?.title || data.url;
   const heading = best?.anchor && best.title !== title ? best.title : null;
+  const area = searchAreaNamed(data.meta.area);
+  const section = docsSectionLabel(data.url);
   return {
-    href: best?.url ?? data.url,
+    href,
     title,
     excerptHtml: safeExcerpt(best?.excerpt ?? data.excerpt),
-    area: searchAreaNamed(data.meta.area),
-    location: joinLocation(docsSectionLabel(data.url), heading),
+    area,
+    location: section ? joinLocation(section, heading) : (heading ?? area),
     pageUrl: data.url,
+    rank,
   };
 }
 
+/** True for a same-site path: one leading slash, not a protocol-relative `//host`. */
+export function isSitePath(href: string): boolean {
+  return /^\/(?!\/)/.test(href);
+}
+
 /**
- * The section with the most matches; on a tie the earlier one, so the page
- * itself wins over a heading that matches no more often. Pagefind ranks its own
- * sub-results the same way.
+ * The section whose matches score highest, summing Pagefind's balanced score
+ * over them (headings and rare words weigh more than repeated body text). On a
+ * tie the earlier section wins, so the page itself beats a heading that scores
+ * no higher. Pagefind returns sub-results in page order, not ranked.
  */
 export function bestSubResult(
   subResults: readonly PagefindSubResult[],
 ): PagefindSubResult | undefined {
   let best: PagefindSubResult | undefined;
   for (const candidate of subResults) {
-    if (!best || hits(candidate) > hits(best)) best = candidate;
+    if (!best || score(candidate) > score(best)) best = candidate;
   }
   return best;
 }
 
-const hits = (subResult: PagefindSubResult) => subResult.locations?.length ?? 0;
+const score = (subResult: PagefindSubResult) =>
+  (subResult.weighted_locations ?? []).reduce((sum, match) => sum + match.balanced_score, 0);
 
 /** The search area a meta value names, or null when it names none. */
 function searchAreaNamed(value: string | undefined): SearchArea | null {
@@ -71,9 +97,8 @@ function docsSectionLabel(url: string): string | null {
   return null;
 }
 
-function joinLocation(section: string | null, heading: string | null): string | null {
-  const parts = [section, heading].filter((part): part is string => Boolean(part));
-  return parts.length > 0 ? parts.join(" / ") : null;
+function joinLocation(section: string, heading: string | null): string {
+  return heading ? `${section} / ${heading}` : section;
 }
 
 const MARK_TAG = /<(\/?)mark>/g;

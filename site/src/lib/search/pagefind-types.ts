@@ -15,6 +15,8 @@ export type PagefindSubResult = {
   excerpt: string;
   /** Word positions of the matches in this section. */
   locations?: readonly number[];
+  /** Each match with its score; `balanced_score` weighs headings and rare words above body text. */
+  weighted_locations?: readonly { weight: number; balanced_score: number; location: number }[];
   /** Present on heading entries only. */
   anchor?: { id: string; text: string; element: string };
 };
@@ -32,13 +34,29 @@ export type PagefindResultData = {
 /** One ranked match before its data loads. */
 export type PagefindResult = { id: string; data: () => Promise<PagefindResultData> };
 
+/** Match counts per filter value, as `{ area: { Guides: 5, ... } }`. */
+export type PagefindFilterCounts = Record<string, Record<string, number>>;
+
+/** What a search resolves to: results in rank order, and match counts per filter value. */
+export type PagefindSearch = {
+  results: readonly PagefindResult[];
+  /** Counts with each filter value applied on top of this search's filters. */
+  filters?: PagefindFilterCounts;
+};
+
+/** Search options: filter names to the value or values a result must carry. */
+export type PagefindSearchOptions = { filters?: Record<string, string | readonly string[]> };
+
 /** The module `/pagefind/pagefind.js` exports. */
 export type PagefindApi = {
   init: () => Promise<void>;
+  /** Loads the filter index; search responses carry filter counts only after it. */
+  filters: () => Promise<PagefindFilterCounts>;
+  search: (term: string, options?: PagefindSearchOptions) => Promise<PagefindSearch>;
   /** Resolves to null when a newer call replaced this one before it ran. */
   debouncedSearch: (
     term: string,
-    options?: Record<string, unknown>,
+    options?: PagefindSearchOptions,
     debounceMs?: number,
-  ) => Promise<{ results: readonly PagefindResult[] } | null>;
+  ) => Promise<PagefindSearch | null>;
 };

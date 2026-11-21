@@ -2,8 +2,10 @@
  * The search dialog (components/search/Search.astro): a top-anchored panel of
  * at most 40rem over a dimmed page. It is the one place the design allows a
  * shadow; structure inside it still comes from hairline rules. Results scroll
- * inside the panel, so the page behind never moves. The entrance is played by
- * scripts/search-dialog.ts with motionTokens timings, and not at all under
+ * inside the panel, so the page behind never moves. The entrance reads its
+ * timing and starting transform from custom properties that
+ * scripts/search-dialog.ts sets from motionTokens; until that code has loaded
+ * they are unset and the panel appears at once, as it always does under
  * reduced motion.
  */
 @reference "./global.css";
@@ -72,7 +74,11 @@
     @apply border-line min-h-0 overflow-y-auto overscroll-contain;
   }
 
-  .search-body:has(> [role="listbox"]:not([hidden]), > .search-message:not(.sr-only)) {
+  .search-body:has(
+    > [role="listbox"]:not([hidden]),
+    > [data-search-progress]:not([hidden]),
+    > .search-message:not(.sr-only, [hidden])
+  ) {
     @apply border-t;
   }
 
@@ -123,10 +129,41 @@
     @apply text-accent text-[13px] font-medium;
   }
 
+  /* Forced colours drop the panel background, so the active option needs an outline. */
+  @media (forced-colors: active) {
+    .search-option[aria-selected="true"] {
+      outline: 2px solid Highlight;
+      outline-offset: -2px;
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .search-dialog[open] {
+      animation: search-enter var(--search-enter-duration, 0s) var(--search-enter-easing, ease-out);
+    }
+
+    .search-dialog[open]::backdrop {
+      animation: search-fade var(--search-enter-duration, 0s) var(--search-enter-easing, ease-out);
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .search-input,
     .search-close {
       transition: none;
     }
+  }
+}
+
+@keyframes search-enter {
+  from {
+    opacity: 0;
+    transform: var(--search-enter-from, none);
+  }
+}
+
+@keyframes search-fade {
+  from {
+    opacity: 0;
   }
 }
