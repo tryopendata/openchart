@@ -403,6 +403,13 @@ describe("the landing page", () => {
     expect(headings.filter((text, index) => headings.indexOf(text) !== index)).toEqual([]);
   });
 
+  it("declares the cascade layer order before its first stylesheet", () => {
+    const html = read("dist", HOME);
+    const order = html.indexOf("@layer theme, base, sf, components, utilities;");
+    expect(order).toBeGreaterThan(-1);
+    expect(order).toBeLessThan(html.indexOf('rel="stylesheet"'));
+  });
+
   it("gives every figure a caption with a Source: line", () => {
     const figures = [...home().querySelectorAll("main figure")];
     expect(figures.length).toBeGreaterThan(0);

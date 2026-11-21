@@ -44,6 +44,6 @@ export const landingCopy: LandingCopy = {
     responsive: "One spec lays itself out from phone width to full width",
     agents: "Agents write the spec, and the validator tells them what to fix",
     frameworks: "React, Vue, Svelte or no framework, from the same spec",
-    closing: "Accessible, exportable and MIT licensed",
+    closing: "Accessible, exportable and Apache-2.0 licensed",
   },
 };

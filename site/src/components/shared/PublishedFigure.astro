@@ -1,0 +1,49 @@
+---
+/**
+ * A chart set the way a newsroom publishes one: a ticked rule, an optional
+ * headline and deck, the chart (the default slot), then a caption that ends in
+ * the Source line. Every figure on the landing page uses this frame, so the
+ * rule, type and source line are the same everywhere and the "every figure has
+ * a Source: line" test holds by construction. Entrances come from
+ * `@steamfield/ui/reveal`: the rule wipes, the text lifts, the chart is left to
+ * the library's own entrance.
+ */
+type Props = {
+  /** The finding, as a headline. Omit when the section heading already says it. */
+  title?: string;
+  /** Lets a section point `aria-labelledby` at the headline. */
+  titleId?: string;
+  /** The heading level the headline takes in the page outline. */
+  level?: "h2" | "h3";
+  /** One sentence under the headline: what is measured, in what unit. */
+  deck?: string;
+  source: { label: string; url?: string };
+  /** A sentence before the Source line, such as how to read the chart. */
+  note?: string;
+  class?: string;
+};
+
+const { title, titleId, level: Heading = "h3", deck, source, note, class: className } = Astro.props;
+---
+
+<figure class:list={["pub-figure", className]} data-reveal>
+  <div class="rule-axis" data-motion="wipe"></div>
+  {title && (
+    <Heading id={titleId} class="pub-figure-title" data-motion="lift-sm">
+      {title}
+    </Heading>
+  )}
+  {deck && (
+    <p class="pub-figure-deck" data-motion="lift-sm">
+      {deck}
+    </p>
+  )}
+  <div class="pub-figure-body">
+    <slot />
+  </div>
+  <figcaption class="figure-caption pub-figure-caption" data-motion="quiet">
+    {note && <span>{note} </span>}
+    <slot name="caption" />
+    Source: {source.url ? <a href={source.url}>{source.label}</a> : source.label}.
+  </figcaption>
+</figure>
