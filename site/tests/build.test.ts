@@ -13,6 +13,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join, resolve } from "node:path";
+import { gzipSync } from "node:zlib";
 import { Window } from "happy-dom";
 import { describe, expect, it } from "vitest";
 import { docsAreas, site } from "../src/config";
@@ -388,8 +389,13 @@ describe("the visualization catalog", () => {
 
 describe("the landing page", () => {
   const HOME = "index.html";
-  /** The page's own JavaScript and CSS, uncompressed, before lazily imported chunks. */
-  const MAX_OWN_ASSET_BYTES = 350_000;
+  /**
+   * The page's own JavaScript and CSS before lazily imported chunks, each file
+   * gzipped: what a reader downloads before the page works. React's client is
+   * about 66 KB of it, so the cap leaves room for the islands and catches a
+   * chart or GSAP chunk imported statically by mistake (115 KB when it happened).
+   */
+  const MAX_OWN_ASSET_GZIP_BYTES = 160_000;
   const home = () => page("dist", HOME);
   const sections = () => [...home().querySelectorAll("main > section[data-landing-section]")];
   const textOf = (node: Element | null | undefined) => (node?.textContent ?? "").trim();
@@ -453,11 +459,13 @@ describe("the landing page", () => {
     expect(hidden).toEqual([]);
   });
 
-  it("keeps the page's own JavaScript and CSS under 350 KB before lazy chunks", () => {
+  it("keeps the page's own JavaScript and CSS under 160 KB gzipped before lazy chunks", () => {
     const assets = [...ownAssets(HOME)];
-    const files = assets.reduce((sum, path) => sum + statSync(join("dist", path)).size, 0);
-    const inline = inlineCodeBytes(read("dist", HOME));
-    expect(files + inline, assets.join("\n")).toBeLessThan(MAX_OWN_ASSET_BYTES);
+    const sizes = assets.map((path) => gzipSync(readFileSync(join("dist", path))).byteLength);
+    const files = sizes.reduce((sum, size) => sum + size, 0);
+    const inline = gzipSync(inlineCode(read("dist", HOME))).byteLength;
+    const report = assets.map((path, index) => `${sizes[index]} ${path}`).join("\n");
+    expect(files + inline, report).toBeLessThan(MAX_OWN_ASSET_GZIP_BYTES);
   });
 });
 
@@ -514,15 +522,12 @@ function ownAssets(file: string): Set<string> {
 /** A minified static import of a sibling chunk; `import(` (a lazy chunk) never matches. */
 const STATIC_RELATIVE_IMPORT = /\b(?:from|import)\s*"(\.{1,2}\/[^"]+\.js)"/g;
 
-/** Bytes of inline scripts (not JSON data) anywhere and of styles in the head: code the HTML carries. */
-function inlineCodeBytes(html: string): number {
+/** Inline scripts (not JSON data) anywhere and styles in the head, joined: the code the HTML carries. */
+function inlineCode(html: string): string {
   const head = html.slice(0, html.indexOf("</head>"));
   const scripts = html.matchAll(
     /<script\b(?![^>]*\bsrc=)(?![^>]*application\/json)[^>]*>([\s\S]*?)<\/script>/g,
   );
   const styles = head.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/g);
-  return [...scripts, ...styles].reduce(
-    (sum, [, body]) => sum + Buffer.byteLength(body ?? "", "utf8"),
-    0,
-  );
+  return [...scripts, ...styles].map(([, body]) => body ?? "").join("\n");
 }
