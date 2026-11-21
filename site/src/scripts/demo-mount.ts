@@ -21,6 +21,17 @@ import { DEMO_CLASS } from "../lib/demo/markup";
 export class DemoMountError extends Error {}
 
 type MountOptions = { theme: ThemeConfig; darkMode: DarkMode };
+
+/** A mounted demo. */
+export type DemoMount = {
+  /** Destroys the chart and removes its host, leaving the stage as the build wrote it. */
+  destroy(): void;
+  /** True while the entrance is still held because the chart has not been seen yet. */
+  entranceWaiting(): boolean;
+};
+
+/** The library holds an entrance by pausing it through this property on the chart's root. */
+const HELD_ENTRANCE = '[style*="--oc-play-state"]';
 type Mount = (host: HTMLElement, spec: never, options: MountOptions) => { destroy(): void };
 
 const MOUNTS_BY_TYPE: Record<string, Mount> = {
@@ -39,8 +50,14 @@ function mountFor(spec: VizSpec): Mount | undefined {
 }
 
 /**
- * Mounts a live visualization into the stage. The entrance animation is off unless
- * `entrance` is set, so a finished static chart is never replaced by one drawing itself in.
+ * Mounts a live visualization into the stage. This is the one way any page part
+ * (demo figures, landing tiles) mounts a chart and plays its entrance on first sight.
+ *
+ * With `entrance` set, the chart mounts at once with the library's entrance
+ * held, and the library plays it the first time at least a quarter of the stage
+ * is in view; under reduced motion nothing plays. Mount ahead of the reader
+ * (demos.ts does at LEAD_PX) and the entrance still waits. Without `entrance`
+ * the chart draws finished, so a remount never replays it.
  *
  * @throws {DemoMountError} When the spec type has no mount function, or mounting throws.
  */
@@ -48,7 +65,7 @@ export function mountDemo(
   stage: HTMLElement,
   spec: VizSpec,
   options: { dark: boolean; entrance: boolean },
-): { destroy(): void } {
+): DemoMount {
   const mount = mountFor(spec);
   if (!mount) {
     const type = String((spec as { type?: unknown }).type);
@@ -72,6 +89,8 @@ export function mountDemo(
         instance.destroy();
         host.remove();
       },
+      entranceWaiting: () =>
+        host.matches(HELD_ENTRANCE) || host.querySelector(HELD_ENTRANCE) !== null,
     };
   } catch (error) {
     host.remove();

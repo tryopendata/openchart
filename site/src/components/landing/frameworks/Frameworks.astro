@@ -1,9 +1,9 @@
 ---
 /**
- * Frameworks: install and minimal usage for React, Vue, Svelte and vanilla in
- * tabs, sharing the docs demo tabs' stored choice (`openchart:framework`). Stub
- * from the phase 2 scaffold; lane 2/d fills it with the InstallTabs island
- * (client:visible), which replaces the template's stock one.
+ * Frameworks: a code bench with React, Vue, Svelte and Vanilla tabs (the
+ * InstallTabs island, client:visible), each holding the install command and the
+ * usage sample the docs generate for one small spec, beside the chart that spec
+ * draws. The tabs share the docs demo tabs' stored choice (`openchart:framework`).
  *
  * Contract (e2e/landing.spec.ts and tests/build.test.ts rely on it):
  * - `<section id="frameworks" aria-labelledby="frameworks-title" data-landing-section>`
@@ -14,7 +14,32 @@
  *   (react, vue, svelte, vanilla), and every panel is in the server-rendered HTML.
  */
 import { landingCopy } from "../../../landing/copy";
+import { FRAMEWORK_STORAGE_KEY } from "../../../lib/demo/framework-choice";
+import { highlightCode } from "../../../lib/demo/highlight";
+import { staticSvg } from "../../../lib/demo/static-svg";
+import PublishedFigure from "../../shared/PublishedFigure.astro";
+import { benchSource, benchSpec } from "./bench-spec";
+import { frameworkPanels } from "./framework-panels";
+import { LANDING_FRAMEWORKS } from "./framework-tabs";
+import { INSTALL_TABS_ID, type InstallPanel, InstallTabs } from "./InstallTabs";
 import "../../../styles/landing-close.css";
+
+const panels = frameworkPanels(benchSpec);
+const highlighted = await highlightCode(panels.map(({ shown, lang }) => ({ code: shown, lang })));
+const installPanels: InstallPanel[] = panels.map(
+  ({ shown: _shown, lang: _lang, ...panel }, index) => ({
+    ...panel,
+    html: highlighted.html[index] ?? "",
+  }),
+);
+
+/** The SVG's drawing size; CSS scales it to the figure's width. */
+const CHART_SIZE = { width: 480, height: 400 };
+const chartSvgs = [false, true]
+  .map((dark) =>
+    staticSvg(benchSpec, { idPrefix: `bench-chart-${dark ? "d" : "l"}`, dark, ...CHART_SIZE }),
+  )
+  .join("");
 ---
 
 <section
@@ -25,8 +50,46 @@ import "../../../styles/landing-close.css";
 >
   <div class="landing-container">
     <div class="rule-axis landing-rule" aria-hidden="true"></div>
-    <h2 id="frameworks-title" class="landing-heading">
-      {landingCopy.headings.frameworks}
-    </h2>
+    <div class="frameworks-head" data-reveal>
+      <h2 id="frameworks-title" class="landing-heading" data-motion="lift-md">
+        {landingCopy.headings.frameworks}
+      </h2>
+      <p class="frameworks-lede" data-motion="lift-sm">
+        Each wrapper takes the same spec object. The tabs hold the code the docs generate for the
+        chart beside them. Docs pages show every chart's spec and these four wrappers in tabs, and
+        they open on the wrapper you choose here.
+      </p>
+    </div>
+    <div class="frameworks-bench">
+      <div class="frameworks-code">
+        <InstallTabs client:visible panels={installPanels} />
+        {/* Shows the stored tab before paint; InstallTabs reads the same choice when it hydrates. */}
+        <script
+          is:inline
+          define:vars={{
+            key: FRAMEWORK_STORAGE_KEY,
+            ids: LANDING_FRAMEWORKS,
+            base: INSTALL_TABS_ID,
+          }}
+        >
+          try {
+            const choice = localStorage.getItem(key);
+            if (ids.includes(choice)) {
+              for (const id of ids) {
+                const panel = document.getElementById(`${base}-${id}`);
+                if (id === choice) panel?.setAttribute("data-default", "");
+                else panel?.removeAttribute("data-default");
+              }
+            }
+          } catch {
+            // Storage blocked: the default tab shows, as it would after hydration.
+          }
+        </script>
+      </div>
+      <PublishedFigure class="frameworks-figure" source={benchSource} note="What each tab renders.">
+        <div class="frameworks-chart" set:html={chartSvgs} />
+      </PublishedFigure>
+    </div>
   </div>
+  <style is:inline set:html={highlighted.css}></style>
 </section>

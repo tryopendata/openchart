@@ -126,7 +126,7 @@ export function demoFence(): HastPlugin {
           title: stringProperty(properties, TITLE) ?? "Live example",
           source: { label: stringProperty(properties, SOURCE) ?? DEFAULT_SOURCE },
           height: height ? Number(height) : DEFAULT_DEMO_HEIGHT,
-          entrance: false,
+          entrance: true,
           tabs: true,
           static: true,
         });

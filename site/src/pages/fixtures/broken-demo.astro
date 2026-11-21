@@ -7,15 +7,16 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 <BaseLayout title="Broken demo fixture" path="/fixtures/broken-demo/" noindex>
   <div class="mx-auto max-w-4xl px-6 py-10">
     <h1>Broken demo fixture</h1>
-    <figure class="demo" data-demo="fixtures/broken">
-      <div class="demo-stage" data-demo-stage style="--demo-height: 400px"></div>
+    <div class="demo" data-demo="fixtures/broken">
+      <figure class="demo-figure">
+        <div class="demo-stage" data-demo-stage style="--demo-height: 400px"></div>
+        <figcaption class="figure-caption">A spec that cannot mount.</figcaption>
+      </figure>
       <script
         type="application/json"
         data-demo-spec
         set:html={JSON.stringify({ type: "no-such-type" })}
       />
-      <div class="demo-code" data-demo-code></div>
-      <figcaption class="figure-caption">A spec that cannot mount.</figcaption>
-    </figure>
+    </div>
   </div>
 </BaseLayout>

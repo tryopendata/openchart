@@ -291,25 +291,32 @@ h1 {
   @apply m-0 rounded-none px-4 py-3.5 text-[13.5px] leading-relaxed;
 }
 
-/* Added to each code frame by src/scripts/site.ts, so there is no dead button without it. */
-.code-copy {
-  @apply border-line bg-canvas text-ink-2 absolute top-2 right-2 rounded-xs border px-2 py-0.5 font-sans text-xs;
-  transition:
-    color 150ms ease-out,
-    border-color 150ms ease-out;
+/* The one copy button on docs pages, on prose code blocks and in demo toolbars:
+   a small text button in the sans. Scripts add or reveal it, so there is no dead
+   button without them; scripts/demo-copy.ts wires it. */
+.copy-button {
+  @apply text-muted hover:text-ink inline-flex h-9 min-w-[4.5rem] cursor-pointer items-center justify-end font-sans text-sm;
+  transition: color 120ms ease-out;
 }
 
-.code-frame:has(figcaption) .code-copy {
-  @apply top-[5px];
+/* On a prose code block it sits in the top right corner, in the title bar when there is one. */
+.code-frame > .copy-button {
+  @apply bg-canvas absolute top-0 right-0 px-4;
+}
+
+.code-frame:has(figcaption) > .copy-button {
+  @apply bg-panel h-[33px];
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .copy-button {
+    transition: none;
+  }
 }
 
 /* The first block under the title rule needs no space of its own above it. */
 .docs-prose > :first-child {
   margin-top: 0;
-}
-
-.code-copy:hover {
-  @apply border-line-strong text-ink;
 }
 
 /* GitHub callouts: a ruled note in the margin of the text, not a colored box. */

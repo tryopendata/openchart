@@ -27,8 +27,8 @@ function figureFor(overrides: Partial<DemoFigure> = {}): DemoFigure {
 async function render(figure: DemoFigure) {
   const html = await demoFigureHtml(figure);
   const doc = new new Window().DOMParser().parseFromString(`<body>${html}</body>`, "text/html");
-  const element = doc.querySelector("figure");
-  if (!element) throw new Error("demoFigureHtml returned no <figure>");
+  const element = doc.querySelector("div.demo");
+  if (!element) throw new Error("demoFigureHtml returned no demo element");
   return element;
 }
 
@@ -46,6 +46,11 @@ describe("demoFigureHtml", () => {
       ),
     ).toEqual(["light", "dark"]);
     expect(figure.querySelector("[data-demo-code]")).not.toBeNull();
+    // Reading order: a figure holding the stage then its caption, then the spec, then the code.
+    expect([...figure.children].map((child) => child.tagName)).toEqual(["FIGURE", "SCRIPT", "DIV"]);
+    expect(
+      [...(figure.querySelector("figure")?.children ?? [])].map((child) => child.tagName),
+    ).toEqual(["DIV", "FIGCAPTION"]);
     expect(figure.querySelector("figcaption")?.textContent).toBe(
       "Weekly orders by region. Source: Illustrative data.",
     );
