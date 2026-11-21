@@ -1,8 +1,8 @@
 // @vitest-environment node
 // A post's lead chart: any demo becomes a tile at the blog's size, with its
-// static chart as image files, or a table or sankey's fallback table; an
-// unknown demo fails the build naming the post.
-import { isSankeySpec, isTableSpec } from "@opendata-ai/openchart-core";
+// static chart as image files, a table or sankey's fallback table, or a
+// network's placeholder line; an unknown demo fails the build naming the post.
+import { isGraphSpec, isSankeySpec, isTableSpec } from "@opendata-ai/openchart-core";
 import { describe, expect, it } from "vitest";
 import { allDemos } from "../../demos/registry";
 import { leadTileHtml, leadTileRequests } from "./lead-tile";
@@ -27,6 +27,14 @@ describe("leadTileHtml", () => {
   ])("gives %s lead (%s) its fallback table", (_kind, id) => {
     expect(id).not.toBe("");
     expect(leadTileHtml("a-post", id, new Set())).toContain('<table class="tile-table">');
+  });
+
+  it("gives a graph lead the placeholder line until the network draws", () => {
+    const id = firstOf(isGraphSpec);
+    expect(id).not.toBe("");
+    const html = leadTileHtml("a-post", id, new Set());
+    expect(html).toContain("data-demo-placeholder");
+    expect(html).not.toContain("<img");
   });
 
   it("throws naming the post when the lead names no demo", () => {

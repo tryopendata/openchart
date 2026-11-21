@@ -238,12 +238,16 @@ function linkedAreas(doc: Document): string[] {
   });
 }
 
-/** Every distinct font-family a static SVG names on its text. */
+/**
+ * Every distinct font-family a static SVG's text draws with. The build lifts a
+ * family every node shares onto the root, so the root's own value counts when
+ * the text inherits it.
+ */
 function fontFamilies(svg: Element): string[] {
-  const families = [...svg.querySelectorAll("[font-family]")].map(
-    (node) => node.getAttribute("font-family") ?? "",
-  );
-  return [...new Set(families)];
+  const declared = [...svg.querySelectorAll("[font-family]"), svg]
+    .map((node) => node.getAttribute("font-family") ?? "")
+    .filter((family) => family !== "");
+  return [...new Set(declared)];
 }
 
 describe("the page set", () => {
@@ -800,7 +804,19 @@ describe("the landing page", () => {
     const { total, report } = upFrontWeight(HOME);
     expect(total, report).toBeLessThan(MAX_OWN_ASSET_GZIP_BYTES);
   });
+
+  it("is at most 620 KB of HTML", () => {
+    expect(statSync(join("dist", HOME)).size).toBeLessThanOrEqual(MAX_LANDING_PAGE_BYTES);
+  });
 });
+
+/**
+ * The landing page's HTML cap. It was 587 KB once the hero's spec lines were
+ * formatted in the island and every static SVG lost the attributes only a live
+ * chart reads, down from 806 KB. The cap leaves about one more inline light and
+ * dark static pair (30 KB), so a new section that inlines more has to cut elsewhere.
+ */
+const MAX_LANDING_PAGE_BYTES = 620_000;
 
 /**
  * A page's own JavaScript and CSS before lazily imported chunks, each file
@@ -885,19 +901,9 @@ function inlineCode(html: string): string {
 
 // ---------------------------------------------------------------------------
 // Phase 5: the header and footer, the examples gallery, search and the blog.
-// Cases that need a lane's finished content skip while its stub marker is present.
 
-/** The marker a phase 5 lane leaves in its stub until its work is done. */
+/** The marker phase 5 left in a lane's stub until its work was done; none may remain. */
 const PHASE_5_STUB = "phase-5-stub";
-/** The file that carries each lane's marker while it is a stub. */
-const LANE_STUBS = {
-  gallery: "src/lib/gallery.ts",
-  search: "src/components/search/Search.astro",
-  blog: "src/content/blog/how-to-chart-a-temperature-anomaly.mdx",
-} as const;
-type Lane = keyof typeof LANE_STUBS;
-const stubbed = (lane: Lane) => read(".", LANE_STUBS[lane]).includes(PHASE_5_STUB);
-const anyLaneStubbed = (Object.keys(LANE_STUBS) as Lane[]).some(stubbed);
 
 /** The sample post lane d writes. */
 const SAMPLE_POST = "how-to-chart-a-temperature-anomaly";
@@ -1090,7 +1096,7 @@ describe("the gallery and blog pages", () => {
   });
 
   it("every docs page, the gallery and each entry page is at most 500 KB of HTML", () => {
-    // Over the cap before phase 5: four json demo fences, each writing its data in full.
+    // Over the cap before phase 5: 30 highlighted code blocks, about 350 KB of the page.
     const knownOversized = ["agents/agent-patterns"];
     const checked = [
       ...docs.filter(({ id }) => !knownOversized.includes(id)).map(({ id }) => pagePath(id)),
@@ -1209,7 +1215,7 @@ describe("the search index", () => {
   });
 });
 
-describe.skipIf(stubbed("gallery"))("the gallery's content (lane a)", () => {
+describe("the gallery's content (lane a)", () => {
   const sections: readonly { id: string; label: string }[] = docsAreas.flatMap(
     (area): readonly { id: string; label: string }[] => area.sections,
   );
@@ -1277,7 +1283,7 @@ describe.skipIf(stubbed("gallery"))("the gallery's content (lane a)", () => {
   );
 });
 
-describe.skipIf(stubbed("blog"))("the blog's content (lane d)", () => {
+describe("the blog's content (lane d)", () => {
   const sample = () => page("dist", postPath(SAMPLE_POST));
   const prose = () => sample().querySelector("article .docs-prose");
 
@@ -1368,7 +1374,7 @@ describe.skipIf(stubbed("blog"))("the blog's content (lane d)", () => {
   });
 });
 
-describe.skipIf(anyLaneStubbed)("phase 5 close", () => {
+describe("phase 5 close", () => {
   it("no source file still carries the phase 5 stub marker", () => {
     const sources = readdirSync("src", { recursive: true, encoding: "utf8" })
       .map((file) => join("src", file))

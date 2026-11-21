@@ -1,7 +1,6 @@
 /**
- * The size a post's lead chart lays out at on the blog index and tag pages,
- * static and live. Its own module so the page script that scales live tiles
- * imports this alone, not the build-time markup and the demo registry.
+ * The size a post's lead chart's static image lays out at on the blog index and
+ * tag pages; the stage keeps its shape and the live chart fills the stage.
  */
 import type { TileSize } from "../shared/tiles/tile-spec";
 

@@ -227,7 +227,7 @@ test.describe("results", () => {
 
   test('"sankey" lists the sankey gallery entry under Examples', async ({ page }) => {
     const example = sankeyExamplePath();
-    test.skip(!example, "No gallery entry in dist/examples/ has a sankey demo spec yet.");
+    expect(example, "a gallery entry in dist/examples/ has a sankey demo spec").toBeTruthy();
     await gotoReady(page, BAR);
     await searchFor(page, "sankey");
     const hrefs = await group(page, "Examples")

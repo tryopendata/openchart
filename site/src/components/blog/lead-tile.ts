@@ -2,7 +2,8 @@
  * A post's lead chart on the blog index and tag pages: the shared tile
  * specimen (components/shared/tiles/) of the post's `lead` demo, laid out at
  * the blog's tile size (lead-tile-size.ts), styled by the shared tiles.css.
- * Any demo may lead: a table or sankey shows its fallback table until it mounts.
+ * Any demo may lead: a table or sankey shows its fallback table and a network
+ * its placeholder line until the live chart mounts.
  */
 import type { TileRequest } from "../shared/tiles/tile-files";
 import { tileChartHtml, tileRequests } from "../shared/tiles/tile-markup";
