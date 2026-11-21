@@ -303,7 +303,8 @@ describe("demos", () => {
     // The broken-demo fixture writes its figure by hand to test the failure state.
     for await (const { file, doc } of builtPages("dist", (file) => !file.includes("broken-demo"))) {
       for (const stage of doc.querySelectorAll("[data-demo-stage]")) {
-        if (stage.querySelector("svg.demo-static")) continue;
+        // A static chart is an inline SVG, a tile image, or a tile's fallback table.
+        if (stage.querySelector(".demo-static, .tile-table")) continue;
         stages += 1;
         const text = stage.querySelector("p[data-demo-placeholder]")?.textContent ?? "";
         if (!/^\S.*\. This chart is drawn in the browser\.$/.test(text)) {
