@@ -129,7 +129,7 @@ describe("the hero steps", () => {
     const fold = formatSpec(stepAt(4).spec, heroFolds).find((line) => line.folded);
     const hidden = (fold?.folded ?? []).map((line) => line.text).join("\n");
     expect(hidden).toContain('"theme": {');
-    expect(hidden).toContain('"background": { "light": "#fffdf9", "dark": "#171513" },');
+    expect(hidden).toContain('"background": { "light": "#fffdf9", "dark": "#12181f" },');
     expect(hidden).toContain(`"borderRadius": ${broadsheet.borderRadius}`);
   });
 

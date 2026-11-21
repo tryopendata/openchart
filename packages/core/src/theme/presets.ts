@@ -75,19 +75,43 @@ export const wire: ThemeConfig = {
  *   5 #3a8a6e oklch(0.576 0.090 167)  green
  *   6 #8c8680 oklch(0.623 0.011  68)  warm gray
  * Fills are the same hues one step lighter (L +0.06, chroma -12%).
+ *
+ * Dark mode is the same page after nightfall: the newsprint gives way to an
+ * ink-blue ground, with the same hues lifted to hold their contrast on it.
+ * Palette (dark; checked with the Brettel simulator, nearest simulated pair
+ * 31.6 under deuteranopia against a threshold of 30, every stroke at 5.8:1
+ * or better and every fill at 5.3:1 or better on #12181f):
+ *   1 #5e9fd6 ink blue, lifted      2 #f4655a house red, lifted
+ *   3 #93c2e2 pale blue             4 #e0b267 ochre
+ *   5 #4fb093 green                 6 #9aa1a8 gray, cooled
+ * Fills sit a step lighter and quieter than their strokes, as in light mode.
  */
 export const broadsheet: ThemeConfig = {
   colors: {
-    categorical: ['#1d5f8a', '#e3120b', '#7fb0d3', '#e0a63b', '#3a8a6e', '#8c8680'],
-    categoricalFill: ['#3b7097', '#ee493a', '#97c2e2', '#efbb64', '#579a81', '#9e9893'],
-    background: { light: '#fffdf9', dark: '#171513' },
-    text: { light: '#1a1714', dark: '#f4f1ea' },
-    gridline: { light: 'rgba(26,23,20,0.08)', dark: 'rgba(244,241,234,0.07)' },
+    categorical: [
+      { light: '#1d5f8a', dark: '#5e9fd6' },
+      { light: '#e3120b', dark: '#f4655a' },
+      { light: '#7fb0d3', dark: '#93c2e2' },
+      { light: '#e0a63b', dark: '#e0b267' },
+      { light: '#3a8a6e', dark: '#4fb093' },
+      { light: '#8c8680', dark: '#9aa1a8' },
+    ],
+    categoricalFill: [
+      { light: '#3b7097', dark: '#80b5e3' },
+      { light: '#ee493a', dark: '#ec5b50' },
+      { light: '#97c2e2', dark: '#acd3eb' },
+      { light: '#efbb64', dark: '#c6ad55' },
+      { light: '#579a81', dark: '#5bd2ac' },
+      { light: '#9e9893', dark: '#b4b9bf' },
+    ],
+    background: { light: '#fffdf9', dark: '#12181f' },
+    text: { light: '#1a1714', dark: '#e9ebe6' },
+    gridline: { light: 'rgba(26,23,20,0.08)', dark: 'rgba(233,235,230,0.07)' },
     // Heavier than the default 0.14: newsprint rules are drawn to be seen.
-    hairline: { light: 'rgba(26,23,20,0.28)', dark: 'rgba(244,241,234,0.28)' },
-    axis: { light: '#6b645c', dark: '#a8a099' },
-    annotationFill: { light: 'rgba(26,23,20,0.05)', dark: 'rgba(244,241,234,0.07)' },
-    annotationText: { light: '#6b645c', dark: '#a8a099' },
+    hairline: { light: 'rgba(26,23,20,0.28)', dark: 'rgba(233,235,230,0.28)' },
+    axis: { light: '#6b645c', dark: '#9aa4ad' },
+    annotationFill: { light: 'rgba(26,23,20,0.05)', dark: 'rgba(233,235,230,0.07)' },
+    annotationText: { light: '#6b645c', dark: '#9aa4ad' },
   },
   fonts: {
     sizes: { title: 24, subtitle: 14, body: 13, small: 11 },
