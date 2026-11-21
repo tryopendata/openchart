@@ -73,85 +73,147 @@ for (const scheme of ["light", "dark"] as const) {
 
 test.describe("hero desk", () => {
   const desk = (page: Page) => page.locator("#desk");
-  const steps = (page: Page) =>
-    desk(page).getByRole("list", { name: "Spec steps" }).getByRole("button");
+  const formTabs = (page: Page) => desk(page).getByRole("tablist", { name: "Editorial forms" });
+  const formTab = (page: Page, name: string) =>
+    formTabs(page).getByRole("tab", { name, exact: true });
+  const spotlightGroup = (page: Page) =>
+    desk(page).getByRole("group", { name: "Spotlight a fuel" });
+  const spotlightButton = (page: Page, name: string) =>
+    spotlightGroup(page).getByRole("button", { name, exact: true });
+  const stage = (page: Page) => desk(page).locator("[data-hero-chart]");
   const pane = (page: Page) => desk(page).locator("[data-hero-spec]");
-  const currentStep = (page: Page) =>
-    steps(page).evaluateAll((buttons) =>
-      buttons.findIndex((button) => button.getAttribute("aria-current") === "step"),
-    );
 
-  /** The chart's accessible description and mark count: either changes when the chart does. */
-  const chartSignature = (page: Page) =>
-    desk(page)
-      .locator("[data-hero-chart]")
-      .evaluate((host) => {
-        const svg = host.querySelector("svg");
-        const description = [
-          svg?.getAttribute("aria-label"),
-          svg?.getAttribute("aria-description"),
-          svg?.querySelector("title")?.textContent,
-          svg?.querySelector("desc")?.textContent,
-        ].join("|");
-        return `${description}|${host.querySelectorAll('[class*="oc-mark"]').length}`;
-      });
+  const FORMS = [
+    { label: "Line", kind: "line" },
+    { label: "Small multiples", kind: "facets" },
+    { label: "Stacked area", kind: "area" },
+    { label: "Data table", kind: "table" },
+  ] as const;
 
-  /** Narrow screens collapse the pane to the changed lines; open it to read the whole spec. */
-  async function openFullSpec(page: Page) {
-    const toggle = desk(page).getByRole("button", { name: "Show full spec" });
-    if (await toggle.isVisible()) await toggle.click();
+  async function openSpec(page: Page) {
+    const details = desk(page).locator("details.hero-spec-details");
+    const isOpen = await details.evaluate((element) => (element as HTMLDetailsElement).open);
+    if (!isOpen) await details.locator("> summary").click();
+    await expect(pane(page)).toBeVisible();
   }
 
-  async function selectStep(page: Page, index: number) {
-    await steps(page).nth(index).click();
-    await expect(steps(page).nth(index)).toHaveAttribute("aria-current", "step");
-    await openFullSpec(page);
+  async function expectLiveStage(page: Page, kind: (typeof FORMS)[number]["kind"]) {
+    await expect(stage(page)).toHaveAttribute("data-hero-kind", kind);
+    if (kind === "table") {
+      await expect(
+        stage(page).locator('table, [role="grid"], .oc-table-root').first(),
+      ).toBeVisible();
+    } else {
+      await expect(
+        stage(page).locator(".hero-chart-live svg:not(.demo-static)").first(),
+      ).toBeVisible();
+    }
   }
 
-  const addedLines = async (page: Page) =>
-    (await pane(page).locator("[data-spec-added]").allTextContents()).map((line) => line.trim());
+  test("opens immediately on Line + Coal and never auto-advances", async ({ page }) => {
+    await page.clock.install();
+    await page.goto("/");
+    await hydrated(desk(page));
+    await expect(formTabs(page)).toBeVisible();
+    await expect(formTab(page, "Line")).toHaveAttribute("aria-selected", "true");
+    await expect(spotlightButton(page, "Coal")).toHaveAttribute("aria-pressed", "true");
 
-  test("clicking a step shows the spec through that step and updates the chart; the last shows it all", async ({
+    await page.clock.runFor(10_000);
+    await expect(formTab(page, "Line")).toHaveAttribute("aria-selected", "true");
+    await expect(spotlightButton(page, "Coal")).toHaveAttribute("aria-pressed", "true");
+  });
+
+  test("switches all four editorial forms and updates the visualization and spec", async ({
     page,
   }) => {
     await page.goto("/");
     await hydrated(desk(page));
-    await expect(steps(page)).toHaveCount(5);
+    await expect(formTabs(page)).toBeVisible();
+    await openSpec(page);
 
-    const added: string[][] = [];
-    for (let index = 0; index < 5; index += 1) {
-      await selectStep(page, index);
-      const lines = await addedLines(page);
-      expect(lines.length, `step ${index + 1} marks the lines it adds`).toBeGreaterThan(0);
-      added.push(lines);
+    for (const { label, kind } of [
+      { label: "Small multiples", kind: "facets" },
+      { label: "Stacked area", kind: "area" },
+      { label: "Data table", kind: "table" },
+      { label: "Line", kind: "line" },
+    ] as const) {
+      await formTab(page, label).click();
+      await expect(formTab(page, label)).toHaveAttribute("aria-selected", "true");
+      await expectLiveStage(page, kind);
+      await expect(pane(page).locator("[data-spec-added]").first()).toBeVisible();
+      await expect(spotlightButton(page, "Coal")).toHaveAttribute("aria-pressed", "true");
     }
-    const full = (await pane(page).textContent()) ?? "";
-    expect(added.flat().filter((line) => !full.includes(line))).toEqual([]);
-
-    await selectStep(page, 0);
-    const first = await chartSignature(page);
-    await selectStep(page, 1);
-    await expect.poll(() => chartSignature(page)).not.toBe(first);
-    const throughTwo = (await pane(page).textContent()) ?? "";
-    expect(
-      [...(added[0] ?? []), ...(added[1] ?? [])].filter((l) => !throughTwo.includes(l)),
-    ).toEqual([]);
-    expect((added[4] ?? []).filter((line) => throughTwo.includes(line))).toEqual([]);
   });
 
-  test("the sequence advances on its own until Pause stops it", async ({ page }) => {
-    await page.clock.install();
+  test("spotlights fuels across forms, toggles from table rows, and keeps Line + All spec visible on mobile", async ({
+    page,
+  }) => {
     await page.goto("/");
     await hydrated(desk(page));
-    const start = await currentStep(page);
-    await page.clock.runFor(3_500);
-    await expect.poll(() => currentStep(page)).not.toBe(start);
+    await expect(formTabs(page)).toBeVisible();
 
-    await desk(page).getByRole("button", { name: "Pause" }).click();
-    await expect(desk(page).getByRole("button", { name: "Play" })).toBeVisible();
-    const paused = await currentStep(page);
-    await page.clock.runFor(10_000);
-    expect(await currentStep(page)).toBe(paused);
+    await spotlightButton(page, "Gas").click();
+    await expect(spotlightButton(page, "Gas")).toHaveAttribute("aria-pressed", "true");
+    await openSpec(page);
+    await expect(pane(page)).toContainText('"Gas"');
+
+    await formTab(page, "Data table").click();
+    await expectLiveStage(page, "table");
+    await expect(spotlightButton(page, "Gas")).toHaveAttribute("aria-pressed", "true");
+
+    await stage(page)
+      .locator("tbody tr", { hasText: "Gas" })
+      .first()
+      .locator("td")
+      .first()
+      .click();
+    await expect(spotlightButton(page, "All")).toHaveAttribute("aria-pressed", "true");
+
+    await stage(page)
+      .locator("tbody tr", { hasText: "Solar" })
+      .first()
+      .locator("td")
+      .first()
+      .click();
+    await expect(spotlightButton(page, "Solar")).toHaveAttribute("aria-pressed", "true");
+
+    await formTab(page, "Line").click();
+    await expectLiveStage(page, "line");
+    await spotlightButton(page, "All").click();
+    await expect(spotlightButton(page, "All")).toHaveAttribute("aria-pressed", "true");
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openSpec(page);
+    await expect(
+      pane(page).locator(".hero-spec-line", { hasText: '"mark"' }).first(),
+    ).toBeVisible();
+    const visibleSpec = (await pane(page).innerText()).trim();
+    expect(visibleSpec.length).toBeGreaterThan(0);
+    expect(visibleSpec).toContain("mark");
+  });
+
+  test("all four hero forms pass axe with zero horizontal overflow in light and dark mode", async ({
+    page,
+  }) => {
+    test.slow();
+    for (const scheme of ["light", "dark"] as const) {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.goto("/");
+      await expect(page.locator("html")).toHaveClass(new RegExp(`\\b${scheme}\\b`));
+      await hydrated(desk(page));
+      await expect(formTabs(page)).toBeVisible();
+
+      for (const { label, kind } of FORMS) {
+        await formTab(page, label).click();
+        await expect(formTab(page, label)).toHaveAttribute("aria-selected", "true");
+        await expectLiveStage(page, kind);
+        await settle(page);
+        expect(await pageViolations(page), `${scheme} / ${label}`).toEqual([]);
+        const { scroll, past } = await sidewaysOverflow(page);
+        expect(scroll, `${scheme} / ${label} scroll`).toBeLessThanOrEqual(0);
+        expect(past, `${scheme} / ${label} past`).toBeLessThanOrEqual(0);
+      }
+    }
   });
 });
 
@@ -160,18 +222,21 @@ test.describe("with reduced motion", () => {
     await page.emulateMedia({ reducedMotion: "reduce" });
   });
 
-  test("the hero rests on the final step and never advances", async ({ page }) => {
+  test("the hero stays on Line + Coal and never advances", async ({ page }) => {
     await page.clock.install();
     await page.goto("/");
-    const steps = page
-      .locator("#desk")
-      .getByRole("list", { name: "Spec steps" })
-      .getByRole("button");
-    await expect(steps).toHaveCount(5);
-    await expect(steps.last()).toHaveAttribute("aria-current", "step");
-    await hydrated(page.locator("#desk"));
+    const desk = await hydrated(page.locator("#desk"));
+    const lineTab = desk
+      .getByRole("tablist", { name: "Editorial forms" })
+      .getByRole("tab", { name: "Line", exact: true });
+    const coalButton = desk
+      .getByRole("group", { name: "Spotlight a fuel" })
+      .getByRole("button", { name: "Coal", exact: true });
+    await expect(lineTab).toHaveAttribute("aria-selected", "true");
+    await expect(coalButton).toHaveAttribute("aria-pressed", "true");
     await page.clock.runFor(10_000);
-    await expect(steps.last()).toHaveAttribute("aria-current", "step");
+    await expect(lineTab).toHaveAttribute("aria-selected", "true");
+    await expect(coalButton).toHaveAttribute("aria-pressed", "true");
   });
 
   test("no section is pinned and the page is as tall as its sections", async ({ page }) => {

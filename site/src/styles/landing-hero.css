@@ -1,11 +1,13 @@
 /*
  * Styles for the hero desk (#desk). From 1100px the text takes 4 of the 12
  * columns and the figure 8; below that the figure follows the text. Inside the
- * figure the chart takes the full width, with the steps and a caption above it
- * and the spec closed in a disclosure under it. The page stays ink on paper:
- * the accent marks only the current step and the lines a step added, and color
- * otherwise comes from the chart. Under 700px, once hydrated, the open spec
- * collapses to the added lines.
+ * figure the chart takes the full width, with four editorial form tabs and a
+ * sharp fuel spotlight strip above it and the spec closed in a disclosure under
+ * it. The page stays ink on paper: the accent marks only the active editorial
+ * form underline and the lines a form or spotlight added; the active fuel uses
+ * inverted ink, and color otherwise comes from the chart. Under 700px, once
+ * hydrated and when diff lines exist, the open spec collapses to the added
+ * lines.
  */
 @reference "./global.css";
 
@@ -105,78 +107,81 @@
     @apply py-2 text-[13px];
   }
 
-  /* Step bar: numbered steps on the left, transport on the right. */
-  .hero-bar {
-    @apply border-line-strong flex min-h-11 flex-wrap items-end justify-between gap-x-6 gap-y-2 border-b;
+  /* Editorial form tabs: four ways to frame the same dataset, underlined by a strong rule. */
+  .hero-forms {
+    @apply border-line-strong m-0 flex list-none flex-wrap gap-x-6 gap-y-1 border-b p-0;
   }
 
-  .hero-steps {
-    @apply -mb-px flex flex-wrap gap-x-5 gap-y-1;
-  }
-
-  .hero-step {
-    @apply text-muted relative flex items-baseline gap-2 border-b-2 border-transparent pt-1 pb-2.5 text-[13.5px] whitespace-nowrap;
+  .hero-form-tab {
+    @apply text-muted -mb-px inline-flex items-baseline border-b-2 border-transparent pt-1 pb-2.5 text-[14px] whitespace-nowrap;
     transition:
-      color 200ms ease-out,
-      border-color 200ms ease-out;
+      color 150ms ease-out,
+      border-color 150ms ease-out;
   }
 
-  button.hero-step:hover {
+  button.hero-form-tab {
+    cursor: pointer;
+  }
+
+  button.hero-form-tab:hover {
     @apply text-ink;
   }
 
-  .hero-step[aria-current="step"] {
+  .hero-form-tab:is([aria-selected="true"], [aria-current="true"]) {
     @apply text-ink border-accent font-medium;
   }
 
-  .hero-step-number {
-    @apply font-mono text-[11px] tabular-nums;
+  /* Fuel spotlight focus strip: sharp editorial geometry with inverted ink for the active fuel. */
+  .hero-spotlight-bar {
+    @apply mt-3 flex flex-wrap items-center gap-x-2.5 gap-y-1.5;
   }
 
-  /* While the sequence plays, the time to the next step fills in under the current one. */
-  .hero-step-progress {
-    @apply bg-ink pointer-events-none absolute right-0 -bottom-0.5 left-0 h-0.5 origin-left;
-    animation: hero-step-progress var(--step-ms, 3200ms) linear both;
+  .hero-spotlight-label {
+    @apply text-muted font-mono text-[11px] tracking-[0.06em] uppercase;
   }
 
-  .hero-controls {
-    @apply flex shrink-0 items-center gap-1;
+  .hero-spotlight {
+    @apply m-0 flex list-none flex-wrap items-center gap-1 p-0;
   }
 
-  .hero-control {
-    @apply border-line text-ink-2 inline-flex h-8 min-w-8 items-center justify-center rounded-xs border px-2 text-[13px];
+  .hero-spotlight-item {
+    @apply border-line text-ink-2 inline-flex h-7 items-center rounded-xs border px-2 text-[12.5px] leading-none tabular-nums;
     transition:
       background-color 150ms ease-out,
       border-color 150ms ease-out,
       color 150ms ease-out;
   }
 
-  .hero-control:hover {
-    @apply border-line-strong bg-panel text-ink;
+  button.hero-spotlight-item {
+    cursor: pointer;
   }
 
-  .hero-control-play {
-    @apply min-w-[4.25rem] font-medium;
+  button.hero-spotlight-item:not([aria-pressed="true"]):hover {
+    @apply border-line-strong text-ink;
   }
 
-  /* What the current step changed, in a sentence under the steps. */
-  .hero-step-row {
-    @apply mt-3 flex min-h-8 items-start justify-between gap-6;
-  }
-
-  .hero-step-caption {
-    @apply text-ink-2 pt-1 text-[15px] leading-snug;
+  .hero-spotlight-item:is([aria-pressed="true"], [data-active]) {
+    @apply border-ink bg-ink text-canvas font-medium;
   }
 
   /* The chart is the hero: the figure's full width. */
   .hero-chart {
-    @apply relative mt-4 h-[540px];
+    @apply relative mt-3 h-[540px];
   }
 
   @media (min-width: 1100px) {
     .hero-chart {
       height: 480px;
     }
+  }
+
+  .hero-chart:is([data-hero-kind="facets"], [data-hero-kind="table"]) {
+    height: auto;
+    min-height: 480px;
+  }
+
+  .hero-chart[data-hero-kind="table"] tbody tr {
+    cursor: pointer;
   }
 
   .hero-chart-live {
@@ -332,22 +337,6 @@
     .hero-rise {
       animation: hero-rise 700ms cubic-bezier(0.16, 1, 0.3, 1) var(--rise-delay, 0ms) both;
     }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .hero-step-progress {
-      animation: none;
-      display: none;
-    }
-  }
-}
-
-@keyframes hero-step-progress {
-  from {
-    transform: scaleX(0);
-  }
-  to {
-    transform: scaleX(1);
   }
 }
 

@@ -29,7 +29,12 @@ import { parse as parseYaml } from "yaml";
 import { docsAreas, site } from "../src/config";
 import { sourceOf } from "../src/demos/source";
 import { LANDING_SECTION_IDS, type LandingSectionId, landingCopy } from "../src/landing/copy";
-import { heroSteps } from "../src/landing/hero";
+import {
+  buildHeroSpec,
+  DEFAULT_HERO_FORM,
+  DEFAULT_HERO_SPOTLIGHT,
+  heroSpecDiff,
+} from "../src/landing/hero";
 import { GALLERY_GAPS, galleryEntries } from "../src/lib/gallery";
 import { catalogPageIds } from "./catalog-pages";
 import { catalogReference, docsPageList } from "./docs-pages";
@@ -778,12 +783,12 @@ describe("the landing page", () => {
   it("without JavaScript already shows the hero chart, the finished spec and every install command", () => {
     const hero = home().querySelector("#desk");
     expect(hero?.querySelector("[data-hero-chart] svg"), "a chart SVG in the hero").not.toBeNull();
-    const last = heroSteps.at(-1);
-    expect(last, "src/landing/hero.ts exports the hero steps").toBeDefined();
+    const defaultSpec = buildHeroSpec(DEFAULT_HERO_FORM, DEFAULT_HERO_SPOTLIGHT);
+    const defaultDiff = heroSpecDiff(DEFAULT_HERO_FORM, DEFAULT_HERO_SPOTLIGHT);
     const pane = textOf(hero?.querySelector("[data-hero-spec]"));
     const missing = [
-      ...specTokens(last?.spec),
-      ...heroSteps.flatMap((step) => step.changed.map((line) => line.trim())),
+      ...specTokens(defaultSpec),
+      ...defaultDiff.lines.filter((line) => line.added).map((line) => line.text.trim()),
     ].filter((token) => !pane.includes(token));
     expect(missing).toEqual([]);
     const text = home().body.textContent ?? "";
