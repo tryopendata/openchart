@@ -375,6 +375,8 @@ test("framework tabs switch the install and usage code and share the choice with
   expect(await panelText()).not.toBe(reactUsage);
 
   await page.goto(BAR);
+  // Docs demos keep their code closed until the reader opens it.
+  await page.locator("[data-demo-toggle]").first().click();
   await expect(page.locator('[data-demo-panel="vue"]').first()).toBeVisible();
   await page.locator('[data-demo-tab="svelte"]').first().click();
   await page.goto("/");
