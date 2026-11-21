@@ -1,35 +1,49 @@
 /**
  * The hero's five steps as a reader meets them: every spec is valid, the chart
- * changes at every step without its y scale moving, and the spec pane's marked
- * lines are what each step really adds and stay put in every later step.
+ * changes at every step without its value scale moving once the encoding step
+ * has set it, the spec pane's marked lines are what each step really adds and
+ * stay put in every later step, and the preset the last step adds is what the
+ * chart shows under the site's mount theme.
  */
-import type { ChartSpec } from "@opendata-ai/openchart-core";
+import { broadsheet, type ChartSpec } from "@opendata-ai/openchart-core";
 import { compileChart, validateSpec } from "@opendata-ai/openchart-engine";
 import { describe, expect, it } from "vitest";
-import { heroSteps } from "../../../landing/hero";
-import { toDeskSteps } from "./desk-step";
-import { formatSpec } from "./spec-lines";
+import { heroFolds, heroSteps } from "../../../landing/hero";
+import { heroChartTheme } from "../../../landing/hero-theme";
+import { formatSpec, lineKey } from "../../../landing/spec-lines";
+import { chartTheme } from "../../../lib/demo/chart-theme";
 
-const SIZE = { width: 520, height: 460 };
+const SIZE = { width: 620, height: 540 };
 
 /** The engine writes defaults into what it compiles, so compile a copy. */
-const compile = (spec: ChartSpec) => compileChart(structuredClone(spec), SIZE);
+const compile = (spec: ChartSpec, theme = heroChartTheme) =>
+  compileChart(structuredClone(spec), { ...SIZE, theme });
 
-/** The y values at the top and bottom of the plot, read off two ticks: the scale's domain. */
-function yDomain(spec: ChartSpec): [number, number] {
+/** The x values at the plot's left and right edges, read off two ticks: the value scale's domain. */
+function xDomain(spec: ChartSpec): [number, number] {
   const layout = compile(spec);
-  const [a, b] = layout.axes.y?.ticks ?? [];
-  if (!a || !b) throw new Error("The hero chart has fewer than two y ticks.");
+  const [a, b] = layout.axes.x?.ticks ?? [];
+  if (!a || !b) throw new Error("The hero chart has fewer than two x ticks.");
   const valueAt = (position: number) =>
     Number(a.value) +
     ((position - a.position) * (Number(b.value) - Number(a.value))) / (b.position - a.position);
-  return [valueAt(layout.area.y + layout.area.height), valueAt(layout.area.y)];
+  return [valueAt(layout.area.x), valueAt(layout.area.x + layout.area.width)];
 }
 
-const paneText = (spec: ChartSpec) =>
-  formatSpec(spec)
-    .map((line) => line.text)
-    .join("\n");
+const stepAt = (index: number) => {
+  const step = heroSteps[index];
+  if (!step) throw new Error(`The hero has no step ${index + 1}.`);
+  return step;
+};
+
+/** Each line the pane shows for a spec, as depth and text. */
+const paneLines = (spec: ChartSpec) => formatSpec(spec, heroFolds).map(lineKey);
+
+/** A step's changed lines matched against a pane: present at some depth, ignoring a gained comma. */
+const missingFrom = (changed: string[], spec: ChartSpec) => {
+  const lines = formatSpec(spec, heroFolds).map((line) => line.text.replace(/,$/, ""));
+  return changed.filter((line) => !lines.includes(line.replace(/,$/, "")));
+};
 
 describe("the hero steps", () => {
   it("are five, with unique ids, in the brief's order", () => {
@@ -49,55 +63,66 @@ describe("the hero steps", () => {
     },
   );
 
-  it("keeps the y scale's domain at every step", () => {
-    const [first, ...rest] = heroSteps.map((step) => yDomain(step.spec));
-    for (const domain of rest) {
-      expect(domain[0]).toBeCloseTo(first?.[0] ?? Number.NaN, 6);
-      expect(domain[1]).toBeCloseTo(first?.[1] ?? Number.NaN, 6);
+  it("keeps the value scale's domain from the encoding step on", () => {
+    const [encoding, ...later] = heroSteps.slice(1).map((step) => xDomain(step.spec));
+    expect(encoding?.[0]).toBeCloseTo(65, 6);
+    expect(encoding?.[1]).toBeCloseTo(90, 6);
+    for (const domain of later) {
+      expect(domain[0]).toBeCloseTo(65, 6);
+      expect(domain[1]).toBeCloseTo(90, 6);
     }
   });
 
-  it("changes the chart's description or marks at every step", () => {
-    const signatures = heroSteps.map((step) => {
-      const layout = compile(step.spec);
-      return JSON.stringify([
-        layout.a11y.altText,
-        layout.marks.length,
-        layout.annotations.length,
-        layout.chrome,
-        layout.theme,
-      ]);
-    });
+  it("changes the chart's description from step 1 to step 2, and the chart at every step", () => {
+    const layouts = heroSteps.map((step) => compile(step.spec));
+    expect(layouts[1]?.a11y.altText).not.toBe(layouts[0]?.a11y.altText);
+    const signatures = layouts.map((layout) =>
+      JSON.stringify([layout.a11y.altText, layout.annotations.length, layout.chrome, layout.theme]),
+    );
     expect(new Set(signatures).size).toBe(heroSteps.length);
   });
 
-  it("marks lines every step adds, and they all still show in the finished spec", () => {
-    const finished = paneText(heroSteps.at(-1)?.spec ?? ({} as ChartSpec));
-    for (const step of heroSteps) {
+  it("marks lines at every step, and each still shows in the finished spec at its depth", () => {
+    const finished = new Set(paneLines(stepAt(4).spec).map((key) => key.replace(/,$/, "")));
+    for (const [index, step] of heroSteps.entries()) {
       expect(step.changed.length, step.id).toBeGreaterThan(0);
+      const marked = formatSpec(step.spec, heroFolds)
+        .filter((line) => step.changed.includes(line.text))
+        .map((line) => lineKey(line).replace(/,$/, ""));
+      expect(marked.length, `step ${index + 1} finds its changed lines`).toBeGreaterThanOrEqual(
+        step.changed.length,
+      );
       expect(
-        step.changed.filter((line) => !finished.includes(line)),
+        marked.filter((key) => !finished.has(key)),
         step.id,
       ).toEqual([]);
     }
   });
 
-  it("adds nothing in the preset step that the spec showed by step 2", () => {
-    const throughTwo = paneText(heroSteps[1]?.spec ?? ({} as ChartSpec));
-    expect((heroSteps[4]?.changed ?? []).filter((line) => throughTwo.includes(line))).toEqual([]);
+  it("folds the preset to one added line, which no earlier step shows", () => {
+    expect(stepAt(4).changed).toEqual(['"theme": { … broadsheet preset }']);
+    expect(missingFrom(stepAt(4).changed, stepAt(1).spec)).toEqual(stepAt(4).changed);
   });
 
-  it("gives the island the same marked lines as each step's changed list", () => {
-    toDeskSteps(heroSteps).forEach((step, index) => {
-      expect(step.lines.filter((line) => line.added).map((line) => line.text)).toEqual(
-        heroSteps[index]?.changed,
-      );
-    });
+  it("keeps the preset's full lines behind the fold", () => {
+    const fold = formatSpec(stepAt(4).spec, heroFolds).find((line) => line.folded);
+    const hidden = (fold?.folded ?? []).map((line) => line.text).join("\n");
+    expect(hidden).toContain('"theme": {');
+    expect(hidden).toContain('"background": { "light": "#fffdf9", "dark": "#171513" },');
+    expect(hidden).toContain(`"borderRadius": ${broadsheet.borderRadius}`);
   });
 
-  it("folds the data rows and keeps every other value in the pane", () => {
-    const text = paneText(heroSteps[0]?.spec ?? ({} as ChartSpec));
-    expect(text).toContain('"data": [ … 20 rows ],');
-    expect(text).not.toContain("United States");
+  it("folds the data rows", () => {
+    const text = paneLines(stepAt(0).spec).join("\n");
+    expect(text).toContain('1:"data": [ … 24 rows ],');
+    expect(text).not.toContain("Japan");
+  });
+
+  it("shows the broadsheet paper under the hero's mount theme, which the site's usual theme would hide", () => {
+    const paper = { light: "#fffdf9" };
+    expect(compile(stepAt(4).spec).theme.colors.background).toBe(paper.light);
+    expect(compile(stepAt(4).spec, chartTheme(false)).theme.colors.background).not.toBe(
+      paper.light,
+    );
   });
 });

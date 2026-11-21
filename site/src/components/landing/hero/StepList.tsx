@@ -1,5 +1,6 @@
 /**
- * The desk's controls: the five steps as a list of buttons (the current one
+ * The desk's controls. Until the live chart is mounted, and without JavaScript,
+ * the steps are a plain list with the current one marked. Then they are buttons (the current one
  * carries `aria-current="step"`, and arrow keys move between them with a roving
  * tab stop), then Previous, Pause or Play, and Next. While the sequence plays, a
  * hairline under the current step fills over the time to the next one.
@@ -7,6 +8,8 @@
 import { type CSSProperties, type KeyboardEvent, useRef } from "react";
 
 export type StepListProps = {
+  /** False until the live chart is mounted: the steps render as a plain list with no controls. */
+  interactive: boolean;
   labels: string[];
   current: number;
   playing: boolean;
@@ -37,6 +40,7 @@ function stepForKey(key: string, current: number, count: number): number | null 
 }
 
 export function StepList({
+  interactive,
   labels,
   current,
   playing,
@@ -54,6 +58,27 @@ export function StepList({
     event.preventDefault();
     onSelect(step);
     buttons.current[step]?.focus();
+  }
+
+  if (!interactive) {
+    // Before the live chart is up (and without JavaScript) the steps are a plain
+    // list with the current one marked: nothing here can be pressed yet.
+    return (
+      <div className="hero-bar">
+        <ol aria-label="Spec steps" className="hero-steps">
+          {labels.map((label, index) => (
+            <li key={label}>
+              <span className="hero-step" aria-current={index === current ? "step" : undefined}>
+                <span className="hero-step-number" aria-hidden="true">
+                  {index + 1}
+                </span>
+                <span className="hero-step-label">{label}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
+      </div>
+    );
   }
 
   return (

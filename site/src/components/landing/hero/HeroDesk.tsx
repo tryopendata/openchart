@@ -1,15 +1,21 @@
 /**
- * The HeroDesk island: the step list, the spec pane and the chart, wired to the
+ * The HeroDesk island: the chart, the step list and the spec pane, wired to the
  * desk reducer. The server renders the last step with the static SVG of the
- * finished chart (passed in as children). After hydration the chart library
- * loads; if the reader has not asked for reduced motion and the desk is on
- * screen, the sequence rewinds to the first step, which the live chart draws
- * with its own entrance, and plays one step every 3.2s.
+ * finished chart (passed in as children) and the steps as a plain list.
+ *
+ * `usePlayback` gates the sequence: it plays only while the desk is in view,
+ * the tab is visible and motion is allowed. The live chart mounts the first
+ * time the gate plays, in the same render as autoplay rewinds to step 1, so the
+ * chart's own entrance draws step 1. Under reduced motion it mounts at once on
+ * the last step and nothing advances. Until it has mounted the steps stay a
+ * plain list; if the library never loads they stay that way, on the last step.
  */
+import { usePlayback } from "@steamfield/ui/react/playback";
 import type { ReactNode } from "react";
-import { useEffect, useReducer, useRef, useState } from "react";
-import { prefersReducedMotion } from "../../../scripts/motion/reduced";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { heroChartTheme } from "../../../landing/hero-theme";
 import { LiveChart, loadChartLibrary } from "../../shared/LiveChart";
+import { usePageDark } from "../../shared/page-theme";
 import { useMotionTools } from "../../shared/use-motion-tools";
 import { deskReducer, initialDeskState } from "./desk-state";
 import type { DeskStep } from "./desk-step";
@@ -19,6 +25,13 @@ import { revealAddedLines } from "./spec-reveal";
 
 /** How long each step shows while the sequence plays. */
 export const STEP_MS = 3200;
+
+/**
+ * Any part of the desk on screen counts as seen. On a phone the desk starts at
+ * the bottom of the first screen, and the chart's own entrance already waits
+ * until a quarter of the chart is visible.
+ */
+const IN_VIEW_THRESHOLD = 0;
 
 export type HeroDeskProps = {
   steps: DeskStep[];
@@ -36,7 +49,7 @@ function useLibraryReady(): boolean {
         if (active) setReady(true);
       },
       (error: unknown) => {
-        // The static chart stays and the steps still change the spec pane.
+        // The static chart and the plain step list stay; nothing pretends to work.
         console.error(
           "HeroDesk: the chart library failed to load; showing the static chart.",
           error,
@@ -50,47 +63,39 @@ function useLibraryReady(): boolean {
   return ready;
 }
 
-/** True once `element` has been at least partly on screen. */
-function useSeen(element: HTMLElement | null): boolean {
-  const [seen, setSeen] = useState(false);
-  useEffect(() => {
-    if (!element || seen) return;
-    const observer = new IntersectionObserver((entries) => {
-      if (entries.some((entry) => entry.isIntersecting)) setSeen(true);
-    });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [element, seen]);
-  return seen;
-}
-
 export default function HeroDesk({ steps, children }: HeroDeskProps) {
   const [state, dispatch] = useReducer(deskReducer, steps.length, initialDeskState);
-  const [root, setRoot] = useState<HTMLDivElement | null>(null);
-  const pane = useRef<HTMLElement>(null);
+  const gate = usePlayback<HTMLDivElement>({ reducedPolicy: "hold", threshold: IN_VIEW_THRESHOLD });
   const libraryReady = useLibraryReady();
-  const seen = useSeen(root);
-  const tools = useMotionTools();
+  const dark = usePageDark();
+  const tools = useMotionTools("the hero desk");
+  const pane = useRef<HTMLElement>(null);
+  const [mounted, setMounted] = useState(false);
   const step = steps[state.step] ?? steps[steps.length - 1];
 
-  // Autoplay starts as the live chart mounts, and both updates land in one render,
-  // so the chart's entrance draws the first step rather than the finished chart.
+  // The first time the gate plays (or at once under reduced motion), mount the
+  // chart and start the sequence in one render.
   const [mountLive, setMountLive] = useState(false);
   useEffect(() => {
-    if (!libraryReady) return;
-    if (seen && !prefersReducedMotion()) dispatch({ type: "autoplay" });
-    setMountLive(true);
-  }, [libraryReady, seen]);
+    if (mountLive || !libraryReady || !gate.ready) return;
+    if (gate.playing) dispatch({ type: "autoplay" });
+    if (gate.playing || gate.reduced) setMountLive(true);
+  }, [mountLive, libraryReady, gate.ready, gate.playing, gate.reduced]);
 
-  // One timer per shown step while playing; a new step or a pause replaces or clears it.
-  const timerKey = state.playing ? `${state.step}:${state.remaining}` : null;
+  // Reduced motion switched on mid-sequence: stop, and stay stopped.
+  useEffect(() => {
+    if (gate.reduced && state.playing) dispatch({ type: "pause" });
+  }, [gate.reduced, state.playing]);
+
+  // One timer per shown step while the sequence and the gate both play.
+  const timerKey = state.playing && gate.playing ? `${state.step}:${state.remaining}` : null;
   useEffect(() => {
     if (timerKey === null) return;
     const timer = setTimeout(() => dispatch({ type: "tick" }), STEP_MS);
     return () => clearTimeout(timer);
   }, [timerKey]);
 
-  // Reveal the added lines on every step change after the first render.
+  // Write in the added lines on every step change after the first render.
   const shownStep = useRef(state.step);
   useEffect(() => {
     if (!pane.current || shownStep.current === state.step) return;
@@ -98,13 +103,21 @@ export default function HeroDesk({ steps, children }: HeroDeskProps) {
     return revealAddedLines(pane.current, tools);
   }, [state.step, tools]);
 
+  const stopForGood = useCallback(() => dispatch({ type: "pause" }), []);
+  const onMounted = useCallback(() => setMounted(true), []);
+  const themeOverride = {
+    theme: heroChartTheme,
+    darkMode: dark ? ("force" as const) : ("off" as const),
+  };
+
   if (!step) return null;
   return (
-    <div ref={setRoot} className="hero-desk" data-playing={state.playing ? "" : undefined}>
+    <div ref={gate.ref} className="hero-desk">
       <StepList
+        interactive={mounted}
         labels={steps.map((item) => item.label)}
         current={state.step}
-        playing={state.playing}
+        playing={state.playing && gate.playing}
         stepMs={STEP_MS}
         onSelect={(index) => dispatch({ type: "select", step: index })}
         onPrevious={() => dispatch({ type: "previous" })}
@@ -112,16 +125,27 @@ export default function HeroDesk({ steps, children }: HeroDeskProps) {
         onTogglePlay={() => dispatch({ type: state.playing ? "pause" : "play" })}
       />
       <div className="hero-panes">
-        <SpecPane ref={pane} lines={step.lines} stepLabel={step.label} />
         <div className="hero-chart" data-hero-chart>
           {mountLive ? (
-            <LiveChart spec={step.spec} className="hero-chart-live">
+            <LiveChart
+              spec={step.spec}
+              className="hero-chart-live"
+              onMounted={onMounted}
+              themeOverride={themeOverride}
+            >
               {children}
             </LiveChart>
           ) : (
             <div className="hero-chart-live">{children}</div>
           )}
         </div>
+        <SpecPane
+          ref={pane}
+          lines={step.lines}
+          stepLabel={step.label}
+          hydrated={gate.ready}
+          onInteract={stopForGood}
+        />
       </div>
     </div>
   );

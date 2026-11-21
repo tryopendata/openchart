@@ -3,8 +3,9 @@
  * lines one step adds to the step before it. The formatting is fixed so a line
  * written by an early step reads the same in every later step: containers nested
  * fewer than three levels deep always break onto their own lines, deeper
- * containers of plain values sit on one line, and `data` folds to a row count.
- * The pane, the step list's `changed` lines and the tests all read these lines.
+ * containers of plain values sit on one line, the root's `data` folds to a row
+ * count, and a root key named in `folds` (the theme preset) folds to one line
+ * that keeps its full lines behind it for a reader who opens it.
  */
 
 /** What a token is, which decides how the pane colors it. */
@@ -13,11 +14,17 @@ export type SpecTokenKind = "key" | "string" | "number" | "literal" | "punct" | 
 /** One run of text on a line. */
 export type SpecToken = { kind: SpecTokenKind; text: string };
 
-/** One line of the formatted spec. `text` is the tokens joined, with no indentation. */
-export type SpecLine = { depth: number; tokens: SpecToken[]; text: string };
+/**
+ * One line of the formatted spec. `text` is the tokens joined, with no
+ * indentation. A folded line carries the lines it stands for in `folded`.
+ */
+export type SpecLine = { depth: number; tokens: SpecToken[]; text: string; folded?: SpecLine[] };
 
 /** A line of the formatted spec, and whether the step being shown added it. */
 export type MarkedSpecLine = SpecLine & { added: boolean };
+
+/** Root keys to fold, each with the words its folded line shows: `{ theme: "broadsheet preset" }`. */
+export type SpecFolds = Readonly<Record<string, string>>;
 
 /** Containers at this depth or deeper are written on one line when they hold only plain values. */
 const INLINE_FROM_DEPTH = 3;
@@ -34,6 +41,7 @@ function scalarToken(value: unknown): SpecToken {
 }
 
 const punct = (text: string): SpecToken => ({ kind: "punct", text });
+const keyToken = (key: string): SpecToken => ({ kind: "key", text: JSON.stringify(key) });
 
 /** A container of plain values as tokens on one line: `{ "a": 1 }` or `["x", "y"]`. */
 function inlineTokens(value: Json[] | { [key: string]: Json }): SpecToken[] {
@@ -49,7 +57,7 @@ function inlineTokens(value: Json[] | { [key: string]: Json }): SpecToken[] {
   if (entries.length === 0) return [punct("{}")];
   const fields = entries.flatMap(([key, item], index) => [
     punct(index > 0 ? ", " : " "),
-    { kind: "key" as const, text: JSON.stringify(key) },
+    keyToken(key),
     punct(": "),
     scalarToken(item),
   ]);
@@ -59,14 +67,15 @@ function inlineTokens(value: Json[] | { [key: string]: Json }): SpecToken[] {
 const holdsOnlyScalars = (value: Json[] | { [key: string]: Json }) =>
   Object.values(value).every((item) => !isContainer(item));
 
-function makeLine(depth: number, tokens: SpecToken[]): SpecLine {
-  return { depth, tokens, text: tokens.map((token) => token.text).join("") };
+function makeLine(depth: number, tokens: SpecToken[], folded?: SpecLine[]): SpecLine {
+  const text = tokens.map((token) => token.text).join("");
+  return folded ? { depth, tokens, text, folded } : { depth, tokens, text };
 }
 
 /** The rows a folded `data` value shows instead of its contents. */
-function foldTokens(value: unknown): SpecToken[] {
+function rowCount(value: unknown): string {
   const count = Array.isArray(value) ? value.length : 0;
-  return [{ kind: "fold", text: `[ … ${count} ${count === 1 ? "row" : "rows"} ]` }];
+  return `[ … ${count} ${count === 1 ? "row" : "rows"} ]`;
 }
 
 /**
@@ -79,6 +88,7 @@ function writeValue(
   lead: SpecToken[],
   trailingComma: boolean,
   lines: SpecLine[],
+  folds: SpecFolds,
 ): void {
   const comma = trailingComma ? [punct(",")] : [];
   if (!isContainer(value)) {
@@ -95,29 +105,38 @@ function writeValue(
     ? value.map((item) => [null, item])
     : Object.entries(value);
   entries.forEach(([key, item], index) => {
-    const isLast = index === entries.length - 1;
-    const keyLead =
-      key === null ? [] : [{ kind: "key" as const, text: JSON.stringify(key) }, punct(": ")];
-    if (key === "data" && depth === 0) {
-      lines.push(
-        makeLine(depth + 1, [...keyLead, ...foldTokens(item), ...(isLast ? [] : [punct(",")])]),
-      );
+    const childComma = index === entries.length - 1 ? [] : [punct(",")];
+    const keyLead = key === null ? [] : [keyToken(key), punct(": ")];
+    const atRoot = depth === 0 && key !== null;
+    if (atRoot && key === "data") {
+      lines.push(makeLine(1, [...keyLead, { kind: "fold", text: rowCount(item) }, ...childComma]));
       return;
     }
-    writeValue(item, depth + 1, keyLead, !isLast, lines);
+    const foldLabel = atRoot ? folds[key] : undefined;
+    if (foldLabel !== undefined) {
+      const hidden: SpecLine[] = [];
+      writeValue(item, 1, keyLead, childComma.length > 0, hidden, folds);
+      const fold = { kind: "fold" as const, text: `{ … ${foldLabel} }` };
+      lines.push(makeLine(1, [...keyLead, fold, ...childComma], hidden));
+      return;
+    }
+    writeValue(item, depth + 1, keyLead, childComma.length > 0, lines, folds);
   });
   lines.push(makeLine(depth, [punct(close), ...comma]));
 }
 
-/** The spec as the pane shows it, one entry per line, with the root's `data` folded. */
-export function formatSpec(spec: object): SpecLine[] {
+/** The spec as the pane shows it, one entry per line, with `data` and any `folds` keys folded. */
+export function formatSpec(spec: object, folds: SpecFolds = {}): SpecLine[] {
   const lines: SpecLine[] = [];
-  writeValue(JSON.parse(JSON.stringify(spec)) as Json, 0, [], false, lines);
+  writeValue(JSON.parse(JSON.stringify(spec)) as Json, 0, [], false, lines, folds);
   return lines;
 }
 
-/** A line compared across steps: a comma that appears once a sibling follows does not make it new. */
-const comparable = (line: SpecLine) => line.text.replace(/,$/, "");
+/**
+ * A line as compared across steps: its depth and text, where a comma that
+ * appears once a sibling follows does not make the line new.
+ */
+const comparable = (line: SpecLine) => `${line.depth}:${line.text.replace(/,$/, "")}`;
 
 /** Lines of only brackets carry nothing a reader would call added. */
 const isBracketOnly = (line: SpecLine) => /^[[\]{}]+,?$/.test(line.text);
@@ -161,3 +180,6 @@ export function markAddedLines(previous: SpecLine[], current: SpecLine[]): Marke
     added: !kept.has(index) && !isBracketOnly(line),
   }));
 }
+
+/** A line's identity in the pane: its depth and text. Tests and the pane compare lines by it. */
+export const lineKey = (line: Pick<SpecLine, "depth" | "text">) => `${line.depth}:${line.text}`;

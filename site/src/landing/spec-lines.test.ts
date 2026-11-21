@@ -60,6 +60,32 @@ describe("markAddedLines", () => {
     expect(added).toEqual(['"axis": { "title": "X" }', '"size": {', '"type": "quantitative"']);
   });
 
+  it("counts a line that moves to another depth as added", () => {
+    const shallow = formatSpec({ title: "A" });
+    const deeper = formatSpec({ chrome: { title: "A" } });
+    expect(
+      markAddedLines(shallow, deeper)
+        .filter((line) => line.added)
+        .map((line) => `${line.depth}:${line.text}`),
+    ).toEqual(['1:"chrome": {', '2:"title": "A"']);
+  });
+
+  it("folds a named root key to one line that keeps its full lines", () => {
+    const [, fold, last] = formatSpec(
+      { theme: { rule: { width: 40 } }, mark: "bar" },
+      { theme: "house style" },
+    );
+    expect(fold?.text).toBe('"theme": { … house style },');
+    expect(fold?.folded?.map((line) => `${line.depth}:${line.text}`)).toEqual([
+      '1:"theme": {',
+      '2:"rule": {',
+      '3:"width": 40',
+      "2:}",
+      "1:},",
+    ]);
+    expect(last?.text).toBe('"mark": "bar"');
+  });
+
   it("never marks bracket-only lines, and marks every line with content for a first step", () => {
     const marked = markAddedLines([], before);
     expect(marked.filter((line) => line.added).map((line) => line.text)).toEqual([

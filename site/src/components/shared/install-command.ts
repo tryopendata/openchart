@@ -1,35 +1,31 @@
 /**
- * Wires every InstallCommand on the page: shows the package-manager choice,
- * switches the command on show (and the Copy button's `aria-controls`, which is
- * what `@steamfield/ui/copy` copies), and activates Copy.
+ * Wires every InstallCommand under a root: the package-manager choice becomes
+ * ARIA tabs (`@steamfield/ui/tabs`), each panel's Copy is activated
+ * (`@steamfield/ui/copy`), and switching managers clears any copy result left
+ * on screen, so a "Copy failed" never sits under a command it was not about.
  */
 import { enhanceCopyButtons } from "@steamfield/ui/copy";
+import { createTabs } from "@steamfield/ui/tabs";
 
-/** Shows the command with id `target` in `root` and points Copy at it. */
-function choose(root: HTMLElement, target: string) {
-  for (const command of root.querySelectorAll<HTMLElement>(".install-command-text")) {
-    command.hidden = command.id !== target;
+/** Clears the copy result text and state in every panel of one install command. */
+function clearCopyResults(root: HTMLElement) {
+  for (const node of root.querySelectorAll<HTMLElement>(
+    "[data-copy-result], [data-copy-command]",
+  )) {
+    delete node.dataset.state;
+    if (node.hasAttribute("data-copy-result")) node.textContent = "";
   }
-  for (const button of root.querySelectorAll<HTMLElement>("[data-install-target]")) {
-    button.setAttribute("aria-pressed", String(button.dataset.installTarget === target));
-  }
-  root.querySelector("[data-copy-command]")?.setAttribute("aria-controls", target);
 }
 
-function wireChoice(root: HTMLElement) {
-  const managers = root.querySelector<HTMLElement>(".install-command-managers");
-  if (!managers) return;
-  managers.addEventListener("click", (event) => {
-    const button = (event.target as Element).closest<HTMLElement>("[data-install-target]");
-    if (button?.dataset.installTarget) choose(root, button.dataset.installTarget);
-  });
-  managers.hidden = false;
-}
-
-/** Activates the install commands under `scope`. */
-export function wireInstallCommands(scope: ParentNode) {
-  for (const root of scope.querySelectorAll<HTMLElement>("[data-install-command]")) {
-    wireChoice(root);
-    enhanceCopyButtons(root);
-  }
+/** Activates the install commands under `scope`. Returns a function that removes what it set up. */
+export function wireInstallCommands(scope: ParentNode): () => void {
+  const teardowns = [...scope.querySelectorAll<HTMLElement>("[data-install-command]")].flatMap(
+    (root) => [
+      createTabs(root, { onValueChange: () => clearCopyResults(root) }),
+      enhanceCopyButtons(root),
+    ],
+  );
+  return () => {
+    for (const teardown of teardowns) teardown();
+  };
 }

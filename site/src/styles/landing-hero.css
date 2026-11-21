@@ -1,16 +1,17 @@
 /*
- * Styles for the hero desk (#desk): the 5/7 text and figure grid from 1100px,
- * the install line, the step bar, the spec pane and the chart stage. The page
- * stays ink on paper; the accent marks only the current step and the lines a
- * step added, and color otherwise comes from the chart. Under 700px the chart
- * comes first and the spec pane collapses to the added lines.
+ * Styles for the hero desk (#desk). From 1100px the text takes 4 of the 12
+ * columns and the figure 8, and inside the figure the chart takes about two
+ * thirds with the spec pane beside it; below that the chart comes first and the
+ * spec sits under it. The page stays ink on paper: the accent marks only the
+ * current step and the lines a step added, and color otherwise comes from the
+ * chart. Under 700px, once hydrated, the spec collapses to the added lines.
  */
 @reference "./global.css";
 
 @layer components {
-  /* The hero opens closer to the header than other sections, so the desk is in view at 1440x900. */
+  /* The hero opens close to the header and ends near the fold at 1440x900. */
   .landing-section.hero {
-    @apply pt-8 pb-16 sm:pt-10 lg:pt-12 lg:pb-24;
+    @apply pt-8 pb-12 sm:pt-10 lg:pb-14;
   }
 
   /* minmax(0, 1fr) tracks: the spec lines and the chart never widen the page. */
@@ -24,31 +25,37 @@
 
   @media (min-width: 1100px) {
     .hero-grid {
-      @apply grid-cols-12 gap-x-10;
+      @apply grid-cols-12 items-start gap-x-10;
     }
 
     .hero-text {
-      @apply col-span-5 pt-14;
+      @apply col-span-4;
     }
 
     .hero-figure {
-      @apply col-span-7;
+      @apply col-span-8;
     }
   }
 
+  /* The headline's top sits on the figure's rule. */
   .hero .hero-title {
-    font-family: var(--font-display, var(--font-sans));
-    font-size: clamp(2.5rem, 1.6rem + 2.6vw, 4.25rem);
-    line-height: 1.02;
-    letter-spacing: -0.025em;
+    font-size: clamp(2.5rem, 1.4rem + 2.6vw, 3.75rem);
+    line-height: 1.03;
+    letter-spacing: -0.022em;
+  }
+
+  @media (min-width: 1100px) {
+    .hero .hero-title {
+      @apply -mt-1.5;
+    }
   }
 
   .hero .hero-lede {
-    @apply mt-7 text-[1.1875rem] leading-[1.55];
+    @apply mt-6 text-[1.0625rem] leading-[1.6];
   }
 
   .hero-install {
-    @apply mt-9;
+    @apply mt-8;
   }
 
   .hero-links {
@@ -81,7 +88,7 @@
 
   /* Step bar: numbered steps on the left, transport on the right. */
   .hero-bar {
-    @apply border-line-strong flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b;
+    @apply border-line-strong flex min-h-11 flex-wrap items-end justify-between gap-x-6 gap-y-2 border-b;
   }
 
   .hero-steps {
@@ -91,11 +98,11 @@
   .hero-step {
     @apply text-muted relative flex items-baseline gap-2 border-b-2 border-transparent pt-1 pb-2.5 text-[13.5px] whitespace-nowrap;
     transition:
-      color 150ms ease-out,
-      border-color 150ms ease-out;
+      color 200ms ease-out,
+      border-color 200ms ease-out;
   }
 
-  .hero-step:hover {
+  button.hero-step:hover {
     @apply text-ink;
   }
 
@@ -133,7 +140,7 @@
     @apply min-w-[4.25rem] font-medium;
   }
 
-  /* Spec pane and chart side by side from 700px, spec first. */
+  /* Chart first. From 1100px the spec pane sits beside it with a third of the width. */
   .hero-panes {
     @apply border-line grid grid-cols-[minmax(0,1fr)] border-b;
   }
@@ -142,39 +149,50 @@
     min-width: 0;
   }
 
-  @media (min-width: 700px) {
+  @media (min-width: 1100px) {
     .hero-panes {
-      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+      grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr);
     }
 
     .hero-spec {
-      @apply border-line border-r;
+      @apply border-line border-l;
     }
   }
 
-  /* One height at every width: on a phone the title, legend and notes need it most. */
+  /* Tall enough below 1100px for twelve readable rows under the title and key. */
   .hero-chart {
-    @apply relative h-[460px];
+    @apply relative h-[560px];
+  }
+
+  @media (min-width: 1100px) {
+    .hero-chart {
+      height: 540px;
+    }
   }
 
   .hero-chart-live {
     height: 100%;
   }
 
-  /* The library sets tabular figures on the whole chart, and Schibsted Grotesk's
-     tabular set widens commas and periods ("longer . The"). Keep them for the
-     tick labels that line up, not for prose. */
-  .hero-chart svg text:not(.oc-axis-tick) {
-    font-variant-numeric: normal;
-  }
-
   .hero-spec {
     @apply bg-panel relative min-w-0;
   }
 
+  @media (max-width: 1099.98px) {
+    .hero-spec {
+      @apply border-line border-t;
+    }
+  }
+
   .hero-spec-code {
-    @apply relative m-0 h-[460px] overflow-y-auto py-3 font-mono text-[12px] leading-[1.6];
+    @apply relative m-0 h-[300px] overflow-y-auto py-3 font-mono text-[12px] leading-[1.6];
     scrollbar-width: thin;
+  }
+
+  @media (min-width: 1100px) {
+    .hero-spec-code {
+      height: 540px;
+    }
   }
 
   .hero-spec-code pre {
@@ -187,6 +205,10 @@
     text-indent: -2ch;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
+  }
+
+  .hero-spec-line[hidden] {
+    display: none;
   }
 
   .hero-spec-line[data-spec-added] {
@@ -216,6 +238,15 @@
     @apply text-muted;
   }
 
+  .spec-fold-button {
+    @apply decoration-line rounded-xs font-mono underline decoration-dotted underline-offset-2;
+    transition: color 150ms ease-out;
+  }
+
+  .spec-fold-button:hover {
+    @apply text-ink;
+  }
+
   .hero-spec-toggle {
     @apply border-line text-ink hidden w-full border-t px-4 py-2.5 text-left text-[13px] font-medium;
     transition: background-color 150ms ease-out;
@@ -225,27 +256,27 @@
     @apply bg-canvas;
   }
 
-  /* Under 700px: chart first, and the spec shows only what this step added until opened. */
+  /* Under 700px, once hydrated: only what this step added, until the reader opens the rest. */
   @media (max-width: 699.98px) {
-    .hero-chart {
-      order: -1;
-    }
-
-    .hero-spec {
-      @apply border-line border-t;
-    }
-
-    .hero-spec-code {
+    .hero-spec[data-collapsible] .hero-spec-code {
       height: auto;
-      max-height: 26rem;
+      max-height: 22rem;
     }
 
-    .hero-spec:not([data-expanded]) .hero-spec-line:not([data-spec-added]) {
+    .hero-spec[data-collapsible]:not([data-expanded]) .hero-spec-line:not([data-spec-added]) {
       display: none;
     }
 
-    .hero-spec-toggle {
+    .hero-spec[data-collapsible] .hero-spec-toggle {
       display: block;
+    }
+  }
+
+  /* The text block rises into place on load. It moves but never hides, so the
+     headline paints at once and nothing waits on a script. */
+  @media (prefers-reduced-motion: no-preference) {
+    .hero-rise {
+      animation: hero-rise 700ms cubic-bezier(0.16, 1, 0.3, 1) var(--rise-delay, 0ms) both;
     }
   }
 
@@ -263,5 +294,14 @@
   }
   to {
     transform: scaleX(1);
+  }
+}
+
+@keyframes hero-rise {
+  from {
+    transform: translateY(14px);
+  }
+  to {
+    transform: none;
   }
 }
