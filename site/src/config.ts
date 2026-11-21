@@ -16,7 +16,7 @@ export const site = {
   name: "OpenChart",
   tagline: "Charts, tables and maps from a JSON spec.",
   description:
-    "OpenChart renders editorial-quality charts, tables, graphs and maps from a declarative spec, with wrappers for React, Vue and Svelte.",
+    "OpenChart renders charts, tables, graphs and maps from a declarative JSON spec, with wrappers for React, Vue and Svelte.",
   /** Absolute production URL: canonicals, the sitemap, OG images and llms.txt use it. */
   url: "https://openchart.steamfield.io",
   repo,

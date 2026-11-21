@@ -61,7 +61,7 @@ export const styledTrendline = defineDemo({
     data: [...pisaScores.data],
     encoding: pisaEncoding,
     chrome: {
-      title: "Stroke and width change how loud the line is",
+      title: "Stroke color and width set how much the line stands out",
       subtitle: pisaSubtitle,
     },
   },

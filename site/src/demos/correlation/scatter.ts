@@ -29,7 +29,7 @@ export const basicScatter = defineDemo({
       ],
     },
     chrome: {
-      title: "Spending more on schools doesn't guarantee better scores",
+      title: "Switzerland spends the most per student; Singapore scores highest",
       subtitle: "Cumulative per-student spending vs. PISA 2022 math performance, OECD countries",
     },
   },
@@ -70,7 +70,7 @@ export const labelledScatter = defineDemo({
       { type: "refline", y: 472, label: "OECD avg", style: "dashed", stroke: "#64748b" },
     ],
     chrome: {
-      title: "Singapore leads, the US spends as much and scores lower",
+      title: "The US spends about as much as Singapore and scores 110 points lower",
       subtitle: "Cumulative per-student spending vs. PISA 2022 math performance, OECD countries",
     },
   },
@@ -106,7 +106,7 @@ export const coloredScatter = defineDemo({
       ],
     },
     chrome: {
-      title: "You don't have to pay a fortune to live well",
+      title: "Vienna and Montreal rate higher than New York and cost less",
       subtitle: "Cost of living vs. quality of living in global cities, 2024",
     },
   },

@@ -29,7 +29,7 @@ export const basicErrorBars = defineDemo({
       y2: { field: "high", type: "quantitative" },
     },
     chrome: {
-      title: "New York swings 30 degrees across the year",
+      title: "New York's monthly averages run from about 1°C to 30°C",
       subtitle: "Average daily low to high temperature by month, Central Park, 2023",
     },
   },

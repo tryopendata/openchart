@@ -30,7 +30,7 @@ export const heatmapColumn = defineDemo({
       { key: "electoralVotes", label: "Electoral votes", sortable: true, align: "right" },
     ],
     chrome: {
-      title: "The race was won on the margins",
+      title: "Republicans won the four closest battleground states",
       subtitle: "Battleground states by margin of victory",
     },
   },
@@ -100,7 +100,7 @@ export const deltaColumn = defineDemo({
     ],
     striped: true,
     chrome: {
-      title: "A year of gains, one chip at a time",
+      title: "All eight stocks are up for the year",
       subtitle:
         "A delta column renders as a signed chip: direction in the arrow, valence in the color",
     },

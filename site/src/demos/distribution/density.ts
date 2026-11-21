@@ -27,7 +27,7 @@ export const basicDensity = defineDemo({
       x: { field: "amount", type: "quantitative", axis: amountAxis },
     },
     chrome: {
-      title: "Small gifts bunch near the bottom",
+      title: "Small gifts cluster under $100",
       subtitle: "Kernel density estimate of contribution size",
     },
   },

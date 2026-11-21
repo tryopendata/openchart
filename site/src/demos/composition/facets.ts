@@ -46,7 +46,7 @@ export const independentFacets = defineDemo({
     },
     resolve: { scale: { y: "independent" } },
     chrome: {
-      title: "Independent scales read the shape, not the level",
+      title: "Independent y-scales show each economy's swings at full height",
       subtitle: "Each panel gets its own y-domain, so each economy fills its frame",
     },
   },
@@ -95,8 +95,8 @@ export const rowFacets = defineDemo({
       row: { field: "period", type: "ordinal", sort: null },
     },
     chrome: {
-      title: "Top exemption states flipped parties",
-      subtitle: "Row faceting stacks panels vertically with a shared x-axis",
+      title: "The highest exemption rates moved from blue states to red states",
+      subtitle: "Exemption rate in the four highest states, 2011-12 and 2024-25 (%)",
     },
   },
 });

@@ -58,7 +58,7 @@ function payrollsChart(valueField: string): ChartSpec {
       },
     ],
     chrome: {
-      title: "Hiring slowed through 2024 and stalled once, in October",
+      title: "Hiring slowed after June 2024 and stalled in October",
       subtitle: "Jobs added to US nonfarm payrolls each month, thousands",
     },
   };

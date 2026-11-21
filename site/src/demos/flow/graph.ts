@@ -54,7 +54,7 @@ export const clusteredGraph = defineDemo({
       seed: 7,
     },
     chrome: {
-      title: "Three teams of four, tied together by five cross-team reviews",
+      title: "Three teams of four, linked by five cross-team reviews",
       subtitle: "Colored and clustered by team",
     },
   },

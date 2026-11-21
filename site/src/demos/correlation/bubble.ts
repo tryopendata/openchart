@@ -24,7 +24,7 @@ export const basicBubble = defineDemo({
       size: { field: "pop", type: "quantitative" },
     },
     chrome: {
-      title: "Clean grids and low emissions rarely go together",
+      title: "Per-person emissions vary widely at every renewable share",
       subtitle:
         "CO2 emissions per capita vs. share of electricity from renewables, 2023. Circle size = population (millions).",
     },
@@ -72,7 +72,7 @@ export const coloredBubble = defineDemo({
       },
     ],
     chrome: {
-      title: "Clean grids and low emissions rarely go together",
+      title: "Per-person emissions vary widely at every renewable share",
       subtitle:
         "CO2 emissions per capita vs. share of electricity from renewables, 2023. Circle size = population (millions).",
     },

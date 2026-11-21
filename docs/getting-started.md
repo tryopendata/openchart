@@ -1,13 +1,13 @@
 ---
 title: Getting started
-description: A hands-on walkthrough building from a bare chart to themed, annotated visualizations and data tables.
+description: Build a line chart, then add chrome, annotations, a theme and a data table.
 section: get-started
 order: 1
 ---
 
 # Getting started
 
-A hands-on walkthrough building from a bare chart to themed, annotated visualizations and data tables. Each section builds on the previous one. All examples are complete and runnable.
+This guide starts with a bare line chart, then adds chrome, annotations, a theme and a data table. Each section builds on the previous one, and every example runs as written.
 
 ## Your first chart
 
@@ -141,7 +141,7 @@ See this running: [live example](https://tryopendata.github.io/openchart/?story=
 
 ## Add chrome
 
-Chrome is the editorial text around the chart: title, subtitle, source attribution, byline, footer. These are first-class structural elements, not string afterthoughts.
+Chrome is the editorial text around the chart: title, subtitle, source attribution, byline, footer.
 
 ```tsx
 const spec = {
@@ -164,7 +164,7 @@ const spec = {
 };
 ```
 
-The engine reserves space for chrome elements and positions them with proper typography hierarchy. You can also pass an object with style overrides instead of a plain string:
+The engine reserves space for chrome elements and gives each one its own type style. You can also pass an object with style overrides instead of a plain string:
 
 ```tsx
 chrome: {
@@ -386,7 +386,7 @@ Theme config options:
 
 ## Your first table
 
-Tables are a visualization type, not a plain HTML grid. Define columns, add visual features, enable sorting and search.
+A table is a spec, like a chart: define columns, add visual features, and turn on sorting and search.
 
 ```tsx
 import { DataTable } from "@opendata-ai/openchart-react";

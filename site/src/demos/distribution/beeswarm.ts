@@ -45,7 +45,7 @@ export const laneBeeswarm = defineDemo({
     },
     legend: { show: false },
     chrome: {
-      title: "The Northeast earns more, the South sits lower",
+      title: "Northeast and West counties have the highest median incomes",
       subtitle: "Median household income by county, grouped by region",
     },
   },
