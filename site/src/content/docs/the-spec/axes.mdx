@@ -5,6 +5,44 @@ section: the-spec
 order: 4
 ---
 
-{/* phase-4-stub */}
+import Demo from "../../../components/demo/Demo.astro";
 
-This page is being written.
+Each position channel has an `axis` object for its title, tick format, tick count and gridlines.
+
+<Demo id="the-spec/axes-format" />
+
+## Format, tick count and gridlines
+
+`format` takes a d3-format string for numbers: `".0f"` rounds to whole numbers, `",.0f"` adds thousands separators and `"$,.0f"` adds a dollar sign. Temporal axes take a d3-time-format string instead, such as `"%Y"` or `"%b '%y"`. `labelSuffix: "°C"` puts the unit on every tick. `tickCount: 4` asks for about four ticks, and the engine rounds to clean values near that count. `grid: true` draws a gridline at each tick.
+
+## Long category labels
+
+<Demo id="the-spec/axes-long-labels" />
+
+Twelve country names under twelve columns do not fit side by side. The engine checks the labels for overlap and, when they collide, sets them at an angle. `labelAngle` sets the angle yourself. When names are long, the better fix is usually the [bar chart](/docs/comparison/bar/), which gives each name its own row.
+
+## Hiding an axis
+
+<Demo id="the-spec/axes-hidden" />
+
+`axis: false` removes an axis and the space it reserves. Do it only when something else carries the numbers: here each bar has a value label from `labels: { format: ".1f", suffix: "%" }`, so a scale under the bars would repeat them.
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `axis.title` | The axis title. None is drawn unless you set one. |
+| `axis.format` | d3-format for numbers, d3-time-format for dates. |
+| `axis.labelSuffix` | Text appended to every tick label, such as a unit. |
+| `axis.tickCount` | About how many ticks to draw. |
+| `axis.values` | Exact tick values. |
+| `axis.grid` | Gridlines at each tick. |
+| `axis.labelAngle` | Rotation for tick labels, such as `-45`. |
+| `axis: false` | No axis and no space reserved for it. |
+
+## Related
+
+- [Column](/docs/comparison/column/) uses formatted value axes on categories.
+- [Line](/docs/change-over-time/line/) covers date tick formats.
+- [Field types and scales](/docs/the-spec/scales/) covers what the axis is drawn from.
+- [Encoding reference](/docs/spec/encoding/) lists every axis option.

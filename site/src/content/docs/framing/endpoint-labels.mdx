@@ -5,6 +5,48 @@ section: framing
 order: 4
 ---
 
-{/* phase-4-stub */}
+import Demo from "../../../components/demo/Demo.astro";
 
-This page is being written.
+Endpoint labels name each line where it ends, so the reader does not have to match colors to a legend. `content: "label"` prints the series name alone.
+
+<Demo id="framing/endpoint-names" />
+
+## Names only
+
+A line chart with two to eight series gets endpoint labels without any setting, and they replace the legend. Set `endpointLabels` to choose what each entry says. Names alone suit a chart whose title is about rank or order, where the exact last values would add nothing.
+
+## Values only
+
+<Demo id="framing/endpoint-values" />
+
+`content: "value"` prints each line's last value, formatted by `format: ".1f"`. Values alone do not say which line is which, so this chart turns the legend back on with `legend: { show: true, position: "top" }`. Use it when the title turns on the final numbers.
+
+## Name and value
+
+<Demo id="framing/endpoint-both" />
+
+Leaving `content` out prints the name with the value on a second line. `"label value"` puts both on one line, which takes less height. When two lines end close together, the engine moves their entries apart; `showLeader: true` draws a line back from a moved entry to its endpoint.
+
+## One series in focus
+
+<Demo id="framing/endpoint-focus" />
+
+An explicit color scale maps gas to the accent color and the other three sources to grey, and `seriesStyles` thickens the gas line. The endpoint labels still name every line, so the grey ones stay readable as context. `content: "label value"` keeps each entry on one line.
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `endpointLabels` | `true`, `false` or a config object. Omitted, it turns on for two to eight line series. |
+| `endpointLabels.content` | `"label"`, `"value"` or `"label value"`. Omitted, the name sits over the value. |
+| `endpointLabels.format` | d3-format string for the value. Defaults to the y axis format. |
+| `endpointLabels.ends` | `"end"`, or `"both"` to label the left end too. |
+| `endpointLabels.showMarker` | The ring on each line's last point. Default true. |
+| `endpointLabels.showLeader` | A line from a displaced entry back to its endpoint. |
+| `endpointLabels.maxSeries` | Above this many series, endpoint labels give way to a legend. Default 8. |
+
+## Related
+
+- [Line](/docs/change-over-time/line/) uses endpoint labels on several series and a focused one.
+- [Slope and bump](/docs/change-over-time/slope-bump/) labels both ends of each line.
+- [Chrome, labels and legends reference](/docs/spec/chrome/) lists every endpoint label field.
