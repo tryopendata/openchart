@@ -13,6 +13,7 @@
  * `<figcaption>` with a "Source: …" line (`<Demo>` writes one).
  */
 import Demo from "../../demo/Demo.astro";
+import { getDemo } from "../../../demos/registry";
 import SectionHead from "../../shared/SectionHead.astro";
 import { kindsTiles } from "./kinds";
 import "../../../styles/landing-story.css";
@@ -32,7 +33,18 @@ import "../../../styles/landing-story.css";
           data-fit-content={tile.fitContent ? "" : undefined}
           style={`--kinds-height: ${tile.height}px; --kinds-height-narrow: ${tile.narrowHeight ?? tile.height}px`}
         >
-          <Demo id={tile.demo} tabs={false} />
+          {tile.scrollBelow ? (
+            <div
+              class="kinds-scroll"
+              data-kinds-scroll
+              data-scroll-label={`${getDemo(tile.demo).title}. Chart, scrolls sideways.`}
+              style={`--kinds-scroll-min: ${tile.scrollBelow}px`}
+            >
+              <Demo id={tile.demo} tabs={false} />
+            </div>
+          ) : (
+            <Demo id={tile.demo} tabs={false} />
+          )}
           <a class="kinds-link" href={tile.href} data-motion-part>
             {tile.link}
             <span aria-hidden="true"> →</span>
@@ -42,3 +54,27 @@ import "../../../styles/landing-story.css";
     </div>
   </div>
 </section>
+
+<script>
+  // Under 640px a wide tile scrolls sideways, so its scroller becomes a labelled,
+  // keyboard-reachable group; from 640px up nothing scrolls and it is plain markup.
+  const narrow = window.matchMedia("(max-width: 639.98px)");
+  const scrollers = document.querySelectorAll<HTMLElement>("[data-kinds-scroll]");
+
+  function syncScrollers() {
+    for (const scroller of scrollers) {
+      if (narrow.matches) {
+        scroller.tabIndex = 0;
+        scroller.setAttribute("role", "group");
+        scroller.setAttribute("aria-label", scroller.dataset.scrollLabel ?? "");
+      } else {
+        scroller.removeAttribute("tabindex");
+        scroller.removeAttribute("role");
+        scroller.removeAttribute("aria-label");
+      }
+    }
+  }
+
+  syncScrollers();
+  narrow.addEventListener("change", syncScrollers);
+</script>

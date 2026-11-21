@@ -239,6 +239,31 @@
     }
   }
 
+  /* A tile with `scrollBelow` wraps its figure in a scroller that fills the cell
+     like the figure it holds. */
+  .kinds-scroll {
+    @apply flex min-w-0 flex-1 flex-col;
+  }
+
+  /* Under 640px the figure keeps its minimum width and scrolls sideways; the
+     caption sticks to the start of the scroller at the scroller's own width, so it
+     stays readable at page width. */
+  @media (max-width: 639.98px) {
+    .kinds-scroll {
+      container-type: inline-size;
+      overflow-x: auto;
+    }
+
+    .kinds-scroll > .demo {
+      min-width: var(--kinds-scroll-min);
+    }
+
+    .kinds-scroll .figure-caption {
+      @apply sticky left-0 box-border;
+      width: 100cqw;
+    }
+  }
+
   /* A table grows to its rows rather than scrolling inside the tile. */
   .kinds-tile[data-fit-content] .demo-live {
     @apply h-auto overflow-visible;

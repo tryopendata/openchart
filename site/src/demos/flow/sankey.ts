@@ -3,12 +3,12 @@
  * of the Ladle sankey and tile map gallery and docs/sankey.md; each takes its
  * rows and citation from one dataset module in examples/src/data, except the
  * three-column energy flow, which is illustrative and labelled so. The basic
- * sankey, which the landing page also shows, uses verified generation shares.
+ * sankey, which the landing page also shows, is the LLNL 2024 US energy flow.
  * Sankeys have no static SVG, so each figure reserves its height and draws once
  * the page's script mounts it.
  */
 import { budgetFlow } from "@datasets/budget-flow";
-import { electricityMixMatrix } from "@datasets/electricity-mix-matrix";
+import { usEnergyFlow2024 } from "@datasets/us-energy-flow-2024";
 import { userJourney } from "@datasets/user-journey";
 import { sourceOf } from "../source";
 import { defineDemo } from "../types";
@@ -48,37 +48,20 @@ const flowEncoding = (format: string) =>
     value: { field: "value", type: "quantitative", format },
   }) as const;
 
-/** The group each generation source falls in. */
-const SOURCE_GROUP: Record<string, string> = {
-  Coal: "Fossil fuels",
-  Gas: "Fossil fuels",
-  Nuclear: "Low carbon",
-  Hydro: "Low carbon",
-  Wind: "Low carbon",
-  Solar: "Low carbon",
-};
-
-/** US 2023 generation shares, one link from each source to its group. */
-const generation2023 = electricityMixMatrix.data
-  .filter((row) => row.year === "2023")
-  .map((row) => ({
-    source: row.source,
-    target: SOURCE_GROUP[row.source] ?? "Other",
-    value: row.share,
-  }));
-
 export const basicSankey = defineDemo({
   id: "flow/sankey-basic",
-  title: "US electricity in 2023 from source to group",
-  source: sourceOf(electricityMixMatrix),
-  height: 460,
+  title: "US energy from source to end use in 2024",
+  source: sourceOf(usEnergyFlow2024),
+  height: 620,
   spec: {
     type: "sankey",
-    data: generation2023,
-    encoding: flowEncoding(".1f"),
+    data: [...usEnergyFlow2024.data],
+    encoding: flowEncoding(".2f"),
     chrome: {
-      title: "Fossil fuels made about 60% of US electricity in 2023",
-      subtitle: "Share of generation from coal, gas, nuclear, hydro, wind and solar, 2023 (%)",
+      // 62.27 of the 94.61 quads reaching the two end nodes (62.27 + 32.34) is 65.8%.
+      title: "Rejected energy was 66% of US energy consumption in 2024",
+      subtitle:
+        "Energy from each fuel through electricity generation and end-use sectors, 2024 (quadrillion BTU)",
     },
   },
 });
