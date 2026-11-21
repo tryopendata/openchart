@@ -356,6 +356,29 @@ test("the agent session plays to a chart and shows the validator's error at the 
   ).toHaveCount(1);
 });
 
+test("the hero and closing install commands switch package managers independently", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const hero = page.locator("#desk");
+  const closing = page.locator("#closing");
+  const managers = (section: Locator) => section.getByRole("tablist", { name: "Package manager" });
+
+  await closing.scrollIntoViewIfNeeded();
+  await managers(closing).getByRole("tab", { name: "bun" }).click();
+  await expect(closing.getByRole("tabpanel")).toContainText("bun add @opendata-ai/openchart-react");
+  await expect(
+    hero.getByRole("tabpanel").filter({ hasText: "@opendata-ai/openchart-react" }),
+  ).toContainText("npm install @opendata-ai/openchart-react");
+
+  await hero.scrollIntoViewIfNeeded();
+  await managers(hero).getByRole("tab", { name: "pnpm" }).click();
+  await expect(
+    hero.getByRole("tabpanel").filter({ hasText: "@opendata-ai/openchart-react" }),
+  ).toContainText("pnpm add @opendata-ai/openchart-react");
+  await expect(closing.getByRole("tabpanel")).toContainText("bun add @opendata-ai/openchart-react");
+});
+
 test("framework tabs switch the install and usage code and share the choice with docs demos", async ({
   page,
 }) => {
@@ -384,8 +407,11 @@ test("framework tabs switch the install and usage code and share the choice with
   expect(await panelText()).not.toBe(reactUsage);
 
   await page.goto(BAR);
-  await expect(page.locator('[data-demo-panel="vue"]').first()).toBeVisible();
-  await page.locator('[data-demo-tab="svelte"]').first().click();
+  // Docs demos keep their code closed until asked; open the first figure's code.
+  const demo = page.locator("[data-demo]").first();
+  await demo.locator("[data-demo-toggle]").click();
+  await expect(demo.locator('[data-demo-panel="vue"]')).toBeVisible();
+  await demo.locator('[data-demo-tab="svelte"]').click();
   await page.goto("/");
   frameworks = await hydrated(page.locator("#frameworks"));
   await expect(frameworks.getByRole("tab", { name: "Svelte", exact: true })).toHaveAttribute(

@@ -68,12 +68,20 @@ export function InstallTabs({ panels }: InstallTabsProps) {
                 </span>
                 {panel.install}
               </code>
-              <CopyText text={panel.install} label={`Copy the ${panel.label} install command`} />
+              <CopyText
+                text={panel.install}
+                label={`Copy the ${panel.label} install command`}
+                className="copy-button"
+              />
             </div>
             <div className="install-tab-code">
               <div className="install-tab-code-head">
                 <span>{panel.file}</span>
-                <CopyText text={panel.code} label={`Copy the ${panel.label} sample`} />
+                <CopyText
+                  text={panel.code}
+                  label={`Copy the ${panel.label} sample`}
+                  className="copy-button"
+                />
               </div>
               {/* Highlighted by Shiki at build time from the generated sample. */}
               <div

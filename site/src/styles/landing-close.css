@@ -375,28 +375,15 @@
     }
   }
 
-  .closing-commands {
-    @apply border-line-strong m-0 list-none border-t p-0;
-  }
-
-  .closing-command {
-    @apply border-line grid grid-cols-[3.5rem_1fr] items-center border-b py-3;
-  }
-
-  .closing-manager {
-    @apply text-muted font-mono text-xs;
-  }
-
-  .closing-command-text {
-    @apply text-ink flex min-w-0 items-center justify-between gap-3 font-mono text-sm;
-  }
-
-  .closing-command-text code {
-    @apply min-w-0 [overflow-wrap:anywhere];
-  }
-
   .closing-links {
     @apply mt-8 flex flex-wrap gap-3;
+  }
+
+  /* The shared Copy button, sized down where it sits in a one-line row. */
+  .agents-command .copy-button,
+  .install-tab-command .copy-button,
+  .install-tab-code-head .copy-button {
+    @apply h-auto min-w-0;
   }
 
   /*
