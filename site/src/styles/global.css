@@ -429,3 +429,9 @@ h1 {
 .oc-chart :is(.oc-axis-tick, .oc-axis-tick text) {
   font-variant-numeric: tabular-nums;
 }
+
+/* The library's muted table header (4.41:1 on the page background) falls just
+   short of AA at its small size, so headers take the secondary ink. */
+.oc-table-wrapper th {
+  color: var(--color-ink-2);
+}
