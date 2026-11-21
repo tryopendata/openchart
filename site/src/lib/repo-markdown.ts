@@ -110,8 +110,10 @@ export function dropTitle(): HastPlugin {
 /**
  * Rewrites relative links between repo docs: to site URLs for published pages
  * (docs-relative path to page id in the map `pages` returns), to the alias page
- * for files the site replaces, and to GitHub for every other repo file. `pages`
- * is called on the first link to rewrite, so building the plugin reads nothing.
+ * for files the site replaces, and to GitHub for every other repo file. A link
+ * to this site's own absolute URL (how a repo doc reaches a page with no repo
+ * file, so the link also works on GitHub) loses its origin. `pages` is called
+ * on the first relative link to rewrite, so building the plugin reads nothing.
  *
  * @throws Whatever `pages` throws, from the first repo link the plugin visits.
  */
@@ -122,9 +124,15 @@ export function repoLinks(pages: () => ReadonlyMap<string, string>): HastPlugin 
       filter: ["a"],
       visit(node, ctx) {
         const href = node.properties.href;
-        if (typeof href !== "string" || !isRelativeLink(href)) return;
+        if (typeof href !== "string") return;
+        const ownSite = href.startsWith(`${site.url}/`);
+        if (!ownSite && !isRelativeLink(href)) return;
         const fromFile = repoDocPath(ctx);
         if (fromFile === undefined) return;
+        if (ownSite) {
+          ctx.setProperty(node, "href", href.slice(site.url.length));
+          return;
+        }
         ctx.setProperty(node, "href", rewriteRepoLink(href, pages(), fromFile));
       },
     },
