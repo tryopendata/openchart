@@ -49,7 +49,7 @@ export const basicLine = defineDemo({
       },
     ],
     chrome: {
-      title: "Inflation rose from 1% to 8.5% and came back down",
+      title: "US inflation peaked at 8.5% in 2022 and fell below 3% by 2024",
       subtitle: "US consumer price index, year-over-year % change, quarterly 2019-2024",
     },
   },
@@ -85,7 +85,7 @@ export const multiSeriesLine = defineDemo({
     ],
     endpointLabels: { format: "+.1f" },
     chrome: {
-      title: "Three economies, three recoveries",
+      title: "All three economies slowed or shrank in 2020 and rebounded in 2021",
       subtitle: "Annual real GDP growth rate, 2018-2024",
     },
   },
@@ -121,7 +121,7 @@ export const focusedLine = defineDemo({
     endpointLabels: { content: "label", showMarker: true },
     seriesStyles: { Amazon: { strokeWidth: 3 } },
     chrome: {
-      title: "Amazon pulls away at the top of big tech",
+      title: "Amazon's revenue lead over the rest of big tech widened every year",
       subtitle: "Annual revenue by company, 2019-2024 (billions USD)",
     },
   },

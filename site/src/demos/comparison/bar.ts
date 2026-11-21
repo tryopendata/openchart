@@ -50,7 +50,7 @@ export const sortedBar = defineDemo({
       y: { field: "country", type: "nominal", sort: "x" },
     },
     chrome: {
-      title: "India and China are each four times the size of the US",
+      title: "India and China each have about four times the US population",
       subtitle: "Population by country, 2025 estimates",
     },
   },
@@ -76,7 +76,7 @@ export const groupedBar = defineDemo({
     },
     labels: { density: "none" },
     chrome: {
-      title: "Solar is running away with the energy transition",
+      title: "Solar added more capacity than wind and hydro combined in every year",
       subtitle: "Global renewable capacity additions by source, 2019-2023 (gigawatts)",
     },
   },
@@ -101,7 +101,7 @@ export const stackedBar = defineDemo({
       color: { field: "category", type: "nominal" },
     },
     chrome: {
-      title: "The poorer you are, the more housing eats your paycheck",
+      title: "Lower-income households spend a larger share on housing",
       subtitle: "Share of annual household expenditure by category and income bracket, 2022 (%)",
     },
   },
@@ -172,7 +172,7 @@ export const highlightedBar = defineDemo({
       },
     ],
     chrome: {
-      title: "India has overtaken China as the most populous country",
+      title: "India and China are the only countries above 1 billion people",
       subtitle: "Population by country, 2025 estimates",
     },
   },

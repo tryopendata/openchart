@@ -39,7 +39,7 @@ export const basicArea = defineDemo({
       },
     ],
     chrome: {
-      title: "The electric car fleet grew from niche to 58 million",
+      title: "The world's electric car fleet reached 58 million in 2024",
       subtitle: "Cumulative global electric car fleet, 2015-2024 (BEV + PHEV)",
     },
   },

@@ -25,7 +25,7 @@ export const barAndRuleLayers = defineDemo({
   height: 440,
   spec: {
     chrome: {
-      title: "The job market cooled but never cracked",
+      title: `Employers added an average of ${averageJobs},000 jobs a month in 2024`,
       subtitle:
         "Monthly US nonfarm payroll additions, 2024, with the yearly average drawn as a second layer",
     },
@@ -67,7 +67,7 @@ export const pointAndTextLayers = defineDemo({
   height: 460,
   spec: {
     chrome: {
-      title: "California towers over every other state economy",
+      title: "California has the largest economy and population of any state",
       subtitle: "The ten largest US state economies by GDP and population, 2023",
     },
     layer: [
@@ -110,7 +110,7 @@ export const dualAxisLayers = defineDemo({
   height: 460,
   spec: {
     chrome: {
-      title: "Deficit grows as enrollment slides",
+      title: "Net revenue fell into deficit as enrollment declined",
       subtitle:
         "Net revenue (bars) and undergraduate enrollment (line) on independent y-axes, 2014-2024",
     },

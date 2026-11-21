@@ -27,7 +27,7 @@ export const basicHistogram = defineDemo({
       x: { field: "amount", type: "quantitative", axis: amountAxis },
     },
     chrome: {
-      title: "Small gifts pile up at the low end",
+      title: "More than a third of small gifts are under $100",
       subtitle: "Individual contributions by size, $20 bins",
     },
   },
@@ -64,7 +64,7 @@ export const overlappingHistogram = defineDemo({
       color: { field: "candidate", type: "nominal" },
     },
     chrome: {
-      title: "Two campaigns, two donor bases",
+      title: "Large gifts center near $680, small gifts near $280",
       subtitle: "Individual contributions by size",
     },
   },

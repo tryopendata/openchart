@@ -30,7 +30,7 @@ export const houseStyle = defineDemo({
     endpointLabels: { format: "+.1f" },
     chrome: {
       eyebrow: "World economy",
-      title: "The euro area stalled while the US kept growing",
+      title: "The euro area grew under 1% in 2023 and 2024, the US near 3%",
       subtitle: "Annual real GDP growth, 2018-2024",
     },
   },

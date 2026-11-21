@@ -41,7 +41,7 @@ export const slopeChart = defineDemo({
     endpointLabels: { ends: "both", content: "label value", format: ".0%" },
     legend: { show: false },
     chrome: {
-      title: "Apple and Xiaomi split what Huawei lost",
+      title: "Huawei's share fell from 18% to 4% as Apple and Xiaomi gained",
       subtitle: "Share of global smartphone shipments, 2019 vs 2024",
     },
   },
