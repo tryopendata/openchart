@@ -14,6 +14,8 @@ export type StaticSvgOptions = {
   width: number;
   height: number;
   dark: boolean;
+  /** Geometry decimal places. Default 1; 0 suits small figures such as the landing wall's tiles. */
+  precision?: number;
   /**
    * The mount theme, laid over the spec's own. Defaults to the site's
    * `chartTheme`; pass a narrower one when the spec's theme must show through.
@@ -55,7 +57,7 @@ export function staticSvg(spec: VizSpec, options: StaticSvgOptions): string | nu
     height: options.height,
     theme: options.theme ?? chartTheme(options.dark),
     darkMode: options.dark ? "force" : "off",
-    precision: STATIC_PRECISION,
+    precision: options.precision ?? STATIC_PRECISION,
     // The attribution is a link, and a link inside an image fails axe. The site's own footer credits the library.
     watermark: false,
   });

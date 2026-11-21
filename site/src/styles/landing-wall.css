@@ -1,6 +1,311 @@
 /*
- * Styles for the vocabulary wall and the preset scrub (#vocabulary, #styles).
- * Lane 2/b fills this file; its components import it. Start with
- * `@reference "./global.css";` to use the tokens in `@apply`, and put rules in
- * `@layer components`.
+ * Styles for the vocabulary wall and the house-style section (#vocabulary, #styles).
+ * The wall is set like a desk style sheet: a ruled grid of specimens, each under
+ * a hairline (an ink rule where a new purpose starts) with its name in mono below.
+ * The house-style section is one large published chart with the style's name and
+ * a sentence on its look beside it.
  */
+@reference "./global.css";
+
+@layer components {
+  /* ---- Shared section head: the heading left, a short note right ---- */
+  .wall-head {
+    @apply grid gap-6 lg:grid-cols-12 lg:items-end lg:gap-8;
+  }
+
+  .wall-head > .landing-heading {
+    @apply lg:col-span-7;
+  }
+
+  .wall-lede {
+    @apply text-ink-2 max-w-[36rem] text-base leading-relaxed lg:col-span-5 lg:pb-1;
+  }
+
+  /* ---- Vocabulary wall ---- */
+  .wall {
+    @apply mt-12 lg:mt-16;
+  }
+
+  /* Holds the filter's height before the island draws it, so the grid does not jump.
+     The filter wraps to four rows on a phone, two on a tablet and one on a desktop. */
+  .wall-filter-slot {
+    @apply min-h-[10.5rem] sm:min-h-[5.5rem] xl:min-h-[2.875rem];
+  }
+
+  /* The filter reads like the header row of a table: text buttons on an ink rule. */
+  .wall-filter {
+    @apply border-line-strong m-0 flex min-w-0 flex-wrap gap-x-6 gap-y-1 border-0 border-b p-0 pb-px;
+  }
+
+  .wall-filter-button {
+    @apply text-muted -mb-px inline-flex items-baseline gap-1.5 border-b-2 border-transparent py-2.5 text-sm font-medium;
+    transition:
+      color 150ms ease-out,
+      border-color 150ms ease-out;
+  }
+
+  .wall-filter-button:hover {
+    @apply text-ink border-line;
+  }
+
+  .wall-filter-button[aria-pressed="true"] {
+    @apply text-ink border-accent;
+  }
+
+  .wall-count {
+    @apply font-mono text-[11px] font-normal;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* 2 across on phones, 4 from 900px, 6 from 1280px. */
+  .wall-grid {
+    @apply m-0 mt-8 grid list-none grid-cols-2 gap-x-5 gap-y-8 p-0 min-[900px]:grid-cols-4 min-[900px]:gap-x-6 xl:grid-cols-6;
+  }
+
+  /* Every tile is the same four rows, so labels, charts and names line up across a row.
+     A tile is a demo element (demo.css), without a figure's margin. */
+  .wall-tile.demo {
+    @apply relative m-0 grid min-w-0;
+    /* minmax(0, …): the static SVG's intrinsic 240px must not widen the tile past its cell. */
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 1px 1.75rem auto auto;
+  }
+
+  /* A hairline over every tile; ink where a new purpose starts. */
+  .wall-rule {
+    @apply bg-line block h-px w-full;
+    transition: background-color 150ms ease-out;
+  }
+
+  .wall-tile[data-group-start] .wall-rule {
+    @apply bg-line-strong;
+  }
+
+  .wall-tile:hover .wall-rule {
+    @apply bg-accent;
+  }
+
+  .wall-intent {
+    @apply text-ink block pt-2 text-xs leading-none font-semibold;
+  }
+
+  /* The specimen fills the cell's width at the tile's 4:3 shape, not a demo stage's fixed height. */
+  .wall-stage.demo-stage {
+    @apply relative h-auto w-full overflow-hidden;
+    aspect-ratio: 4 / 3;
+  }
+
+  /* A table tile before its live table mounts: the first rows, set small. */
+  .wall-table {
+    @apply text-ink-2 w-full border-collapse text-[11px] leading-tight;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .wall-table th {
+    @apply border-line-strong text-ink border-b py-1 pr-2 text-left font-semibold;
+  }
+
+  .wall-table td {
+    @apply border-line border-b py-1 pr-2;
+  }
+
+  .wall-table .wall-table-number {
+    @apply text-right;
+  }
+
+  /* Under a table tile's first rows, the placeholder line is a caption, not a centred notice. */
+  .wall-stage .wall-table + .demo-placeholder {
+    @apply static mt-2 block px-0 text-left text-[11px] leading-snug;
+  }
+
+  /* The name is the tile's one link; its box covers the tile, so the whole chart is the target. */
+  .wall-name {
+    @apply text-ink-2 mt-2 font-mono text-xs leading-snug no-underline;
+    transition: color 150ms ease-out;
+  }
+
+  .wall-name::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+
+  .wall-tile:hover .wall-name {
+    @apply text-ink underline;
+  }
+
+  .wall-name:focus-visible {
+    outline: none;
+  }
+
+  .wall-tile:has(.wall-name:focus-visible) {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 6px;
+  }
+
+  /* ---- House styles ---- */
+  /* Compound selector: .pub-figure (landing.css) resets margins at the same specificity. */
+  .pub-figure.scrub-figure {
+    @apply mt-12 lg:mt-16;
+  }
+
+  .scrub-block {
+    @apply bg-canvas;
+  }
+
+  .scrub-stops {
+    @apply m-0 flex min-w-0 flex-wrap gap-x-6 gap-y-1 border-0 p-0;
+  }
+
+  /* While pinned, the stops sit evenly over the stretch of scroll each one owns. */
+  .scrub-block[data-pinned] .scrub-stops {
+    @apply grid gap-0;
+    grid-template-columns: repeat(var(--stops, 5), minmax(0, 1fr));
+  }
+
+  .scrub-stop {
+    @apply text-muted -mb-px border-b-2 border-transparent py-2.5 text-left text-sm font-medium;
+    transition:
+      color 150ms ease-out,
+      border-color 150ms ease-out;
+  }
+
+  .scrub-stop:hover {
+    @apply text-ink;
+  }
+
+  .scrub-stop[aria-pressed="true"] {
+    @apply text-ink border-accent;
+  }
+
+  .scrub-block[data-pinned] .scrub-stop[aria-pressed="true"] {
+    border-color: transparent;
+  }
+
+  /* The scroll's progress: a hairline under the stops that the scroll fills with the accent. */
+  .scrub-axis {
+    @apply border-line relative border-t;
+  }
+
+  .scrub-axis-fill {
+    @apply bg-accent absolute -top-[2px] left-0 hidden h-[3px] w-full;
+  }
+
+  .scrub-block[data-pinned] .scrub-axis-fill {
+    @apply block;
+  }
+
+  /* The chart takes most of the width; the notes sit in a narrow column beside it. */
+  .scrub-body {
+    @apply mt-6 grid gap-6 lg:grid-cols-12 lg:gap-8;
+  }
+
+  .scrub-notes {
+    @apply min-w-0 lg:col-span-3;
+  }
+
+  /* The current copy and the outgoing one share one cell, so the crossfade moves nothing. */
+  .scrub-layers {
+    @apply grid;
+  }
+
+  .scrub-layers > * {
+    grid-area: 1 / 1;
+  }
+
+  /* Room for the longest stop's name, variant line and description, so the cell does
+     not shrink when the outgoing copy goes and move the chart under it. */
+  .scrub-notes > .scrub-layers {
+    @apply min-h-[11rem] lg:min-h-[13rem];
+  }
+
+  .scrub-out {
+    pointer-events: none;
+  }
+
+  .scrub-name {
+    @apply text-ink m-0 text-4xl leading-none font-medium tracking-[-0.02em] lg:text-5xl;
+    font-family: var(--font-display, var(--font-sans));
+  }
+
+  .scrub-variant {
+    @apply text-muted mt-2 mb-0 text-sm;
+  }
+
+  .scrub-description {
+    @apply text-ink-2 mt-3 mb-0 max-w-[36ch] text-base leading-relaxed;
+  }
+
+  /* The theme values are a second story: a quiet disclosure under the description. */
+  .scrub-details {
+    @apply border-line mt-6 border-t pt-3;
+  }
+
+  .scrub-details > summary {
+    @apply text-muted hover:text-ink cursor-pointer text-sm;
+    transition: color 150ms ease-out;
+  }
+
+  .scrub-lines {
+    @apply text-muted m-0 mt-3 list-none p-0 font-mono text-xs leading-relaxed;
+  }
+
+  .scrub-line {
+    @apply break-words;
+  }
+
+  .scrub-path {
+    @apply text-ink-2;
+  }
+
+  /* The chart is the story: tall on a phone, and nearly the viewport's height where it pins. */
+  .scrub-chart {
+    @apply h-[420px] min-w-0 sm:h-[480px] lg:col-span-9;
+  }
+
+  @media (min-width: 1024px) and (min-height: 700px) {
+    .scrub-chart {
+      height: clamp(480px, calc(100vh - 10rem), 760px);
+    }
+  }
+
+  .scrub-host,
+  .scrub-static {
+    height: 100%;
+  }
+
+  .scrub-static > svg {
+    display: block;
+    width: 100%;
+    /* biome-ignore lint/complexity/noImportantStyles: only !important beats the renderer's inline height. */
+    height: 100% !important;
+  }
+}
+
+/* The live chart lays out at the tile size in tile-spec.ts and scales to the cell
+   (--wall-scale, from tile-scale.ts), as the static SVG scales through its viewBox.
+   Unlayered and specific: the library's own root classes (oc-sankey-root and the
+   rest) are unlayered and set the host's width to its container's. */
+.wall-tile .wall-stage > .demo-live {
+  width: 240px;
+  height: 180px;
+  overflow: hidden;
+  transform: scale(var(--wall-scale, 1));
+  transform-origin: 0 0;
+}
+
+/* A table tile's first rows step aside once its live table is in (demo.css does the same
+   for static SVGs), and stay in place of the failure line if the mount fails. */
+.wall-stage[data-demo-live] > .wall-table,
+.wall-stage:has(> .wall-table) > .demo-error {
+  display: none;
+}
+
+/* The pin's scroll distance (preset-pin.ts, PIN_VIEWPORTS), reserved where the pin
+   runs: the pin adds no spacer, so nothing below moves when it starts. The reveal
+   gate on <html> means scripts and motion are on. */
+@media (min-width: 1024px) and (min-height: 700px) and (prefers-reduced-motion: no-preference) {
+  :root[data-motion-ready] .scrub {
+    padding-bottom: 250vh;
+  }
+}

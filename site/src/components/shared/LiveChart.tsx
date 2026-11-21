@@ -62,8 +62,10 @@ export type LiveChartProps = {
   children?: ReactNode;
   /**
    * Replaces the page theme for a chart that carries its own house style in
-   * `spec.theme`: a mount theme would override the spec's, so pass
-   * `{ theme: undefined, darkMode }` to let the spec's theme stand.
+   * `spec.theme`. A mount theme overrides the spec's theme, so to keep a spec's
+   * own theme pass `theme: undefined` with the dark mode you want, for example
+   * `{ theme: undefined, darkMode: "off" }`. Keep the object's identity stable
+   * between renders: a new theme object re-creates the chart.
    */
   themeOverride?: { theme: ThemeConfig | undefined; darkMode: DarkMode };
 };
