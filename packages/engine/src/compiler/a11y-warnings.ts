@@ -115,6 +115,8 @@ export function collectContrastWarnings(
 export function seriesIdentificationWarnings(
   spec: import('./types').NormalizedChartSpec,
 ): string[] {
+  // Each facet panel renders its own series header.
+  if (spec.encoding.facet) return [];
   if ((spec.markType !== 'line' && spec.markType !== 'area') || spec.legend?.show !== false)
     return [];
   const hidden =
