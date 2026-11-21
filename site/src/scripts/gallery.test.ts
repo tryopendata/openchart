@@ -1,7 +1,14 @@
 import { filterAnnouncement } from "../components/gallery/kind-words";
 import type { TileFilter } from "../components/shared/tiles/tile-filter";
 import type { VisualizationSectionId } from "../config";
-import { applyFilter, galleryFilterReducer, setupGalleryFilter } from "./gallery";
+import {
+  applyFilter,
+  filterUrl,
+  galleryFilterReducer,
+  type MotionSource,
+  setupGalleryFilter,
+} from "./gallery";
+import type { MotionTools } from "./motion";
 
 const KINDS = ["comparison", "maps", "tables"] as const;
 const TILES: VisualizationSectionId[] = [
@@ -22,7 +29,7 @@ function renderWall(): HTMLElement {
     `<button type="button" data-filter="${id}" data-announce="${filterAnnouncement(id, count(id))}" aria-pressed="${id === "all"}">${id}</button>`;
   document.body.innerHTML = `
     <div data-gallery>
-      <fieldset data-gallery-filter hidden>${["all", ...KINDS].map((id) => button(id as TileFilter<VisualizationSectionId>)).join("")}</fieldset>
+      <fieldset data-gallery-filter>${["all", ...KINDS].map((id) => button(id as TileFilter<VisualizationSectionId>)).join("")}</fieldset>
       <p aria-live="polite" data-gallery-status></p>
       <ul>${TILES.map((kind) => `<li data-gallery-tile data-kind="${kind}"></li>`).join("")}</ul>
     </div>`;
@@ -39,6 +46,15 @@ const status = (root: HTMLElement) =>
   root.querySelector("[data-gallery-status]")?.textContent ?? "";
 const choose = (root: HTMLElement, id: string) =>
   root.querySelector<HTMLButtonElement>(`[data-filter="${id}"]`)?.click();
+const goTo = (url: string, event: "popstate" | "hashchange") => {
+  window.history.replaceState(null, "", url);
+  window.dispatchEvent(
+    event === "popstate" ? new PopStateEvent("popstate") : new HashChangeEvent("hashchange"),
+  );
+};
+
+/** Motion that never loads: every change applies at once, as under reduced motion. */
+const still: MotionSource = { tools: () => null, warm: () => {} };
 
 describe("the gallery filter reducer", () => {
   const reduce = galleryFilterReducer(KINDS);
@@ -55,6 +71,14 @@ describe("the gallery filter reducer", () => {
   });
 });
 
+describe("the URL a filter is recorded at", () => {
+  it("is the bare page for All and #kind=<kind> for a kind", () => {
+    const at = { pathname: "/examples/", search: "?q=1" };
+    expect(filterUrl("all", at)).toBe("/examples/?q=1");
+    expect(filterUrl("maps", at)).toBe("/examples/?q=1#kind=maps");
+  });
+});
+
 describe("the gallery filter", () => {
   let teardown = () => {};
   afterEach(() => {
@@ -62,51 +86,105 @@ describe("the gallery filter", () => {
     window.history.replaceState(null, "", "/examples/");
   });
 
-  it("shows the buttons once wired, with All pressed and every tile shown", () => {
+  it("marks the row ready once wired, with All pressed, every tile shown and the wall arranged", () => {
     const root = renderWall();
-    teardown = setupGalleryFilter(root, () => null);
-    expect(root.querySelector<HTMLFieldSetElement>("[data-gallery-filter]")?.hidden).toBe(false);
+    teardown = setupGalleryFilter(root, still);
+    expect(root.querySelector<HTMLElement>("[data-gallery-filter]")?.dataset.ready).toBe("");
     expect(pressed(root)).toEqual(["all"]);
     expect(shownKinds(root)).toEqual(TILES);
+    expect(root.dataset.filter).toBe("all");
     expect(status(root)).toBe("");
   });
 
-  it("shows only the chosen kind, presses its button, records it in the hash and reads it out", () => {
+  it("shows only the chosen kind, presses it, records it in history and reads it out; All writes the bare URL", () => {
     const root = renderWall();
-    teardown = setupGalleryFilter(root, () => null);
+    teardown = setupGalleryFilter(root, still);
+    const entries = window.history.length;
     choose(root, "maps");
     expect(shownKinds(root)).toEqual(["maps", "maps", "maps", "maps"]);
     expect(pressed(root)).toEqual(["maps"]);
+    expect(root.dataset.filter).toBe("maps");
     expect(window.location.hash).toBe("#kind=maps");
+    expect(window.history.length).toBe(entries + 1);
     expect(status(root)).toBe("Showing 4 maps.");
 
     choose(root, "all");
     expect(shownKinds(root)).toEqual(TILES);
-    expect(window.location.hash).toBe("#kind");
+    expect(`${window.location.pathname}${window.location.hash}`).toBe("/examples/");
     expect(status(root)).toBe("Showing all 7 graphics.");
   });
 
-  it("applies a filter the URL names on arrival, before any press", () => {
+  it("applies the filter the URL names on arrival, and puts right a hash that names no kind", () => {
     window.history.replaceState(null, "", "/examples/#kind=tables");
     const root = renderWall();
-    teardown = setupGalleryFilter(root, () => null);
+    teardown = setupGalleryFilter(root, still);
     expect(shownKinds(root)).toEqual(["tables"]);
-    expect(pressed(root)).toEqual(["tables"]);
+    teardown();
+
+    window.history.replaceState(null, "", "/examples/#kind=charts");
+    const again = renderWall();
+    teardown = setupGalleryFilter(again, still);
+    expect(shownKinds(again)).toEqual(TILES);
+    expect(`${window.location.pathname}${window.location.hash}`).toBe("/examples/");
   });
 
-  it("follows the hash when it changes under the page", () => {
+  it.each(["popstate", "hashchange"] as const)(
+    "follows the URL on %s, and rewrites an unknown kind to the current one",
+    (event) => {
+      const root = renderWall();
+      teardown = setupGalleryFilter(root, still);
+      goTo("/examples/#kind=comparison", event);
+      expect(shownKinds(root)).toEqual(["comparison", "comparison"]);
+      expect(status(root)).toBe("Showing 2 comparison charts.");
+      goTo("/examples/", event);
+      expect(shownKinds(root)).toEqual(TILES);
+      goTo("/examples/#kind=tables", event);
+      goTo("/examples/#kind=charts", event);
+      expect(shownKinds(root)).toEqual(["tables"]);
+      expect(window.location.hash).toBe("#kind=tables");
+    },
+  );
+
+  it("asks for the motion tools only when the reader reaches for the filter", () => {
     const root = renderWall();
-    teardown = setupGalleryFilter(root, () => null);
-    window.history.replaceState(null, "", "/examples/#kind=comparison");
-    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    let warmed = 0;
+    teardown = setupGalleryFilter(root, { tools: () => null, warm: () => (warmed += 1) });
+    expect(warmed).toBe(0);
+    root.querySelector("[data-gallery-filter]")?.dispatchEvent(new Event("pointerenter"));
+    root.querySelector("[data-gallery-filter]")?.dispatchEvent(new FocusEvent("focusin"));
+    expect(warmed).toBe(2);
+  });
+
+  it("refiles through Flip once the tools are in, and ends in the right state after two quick choices", () => {
+    const root = renderWall();
+    const flips: number[] = [];
+    const tools = {
+      gsap: {},
+      ScrollTrigger: { refresh: () => {} },
+      Draggable: {},
+      Flip: {
+        killFlipsOf: () => {},
+        getState: () => ({}),
+        from: (_state: unknown, options: { onComplete?: () => void }) => {
+          flips.push(flips.length);
+          options.onComplete?.();
+        },
+      },
+    } as unknown as MotionTools;
+    teardown = setupGalleryFilter(root, { tools: () => tools, warm: () => {} });
+    choose(root, "tables");
+    choose(root, "comparison");
+    expect(flips).toHaveLength(2);
     expect(shownKinds(root)).toEqual(["comparison", "comparison"]);
+    expect(pressed(root)).toEqual(["comparison"]);
+    expect(root.dataset.filter).toBe("comparison");
     expect(status(root)).toBe("Showing 2 comparison charts.");
   });
 
   it("does nothing on a page without the filter", () => {
     document.body.innerHTML = "<div data-gallery></div>";
     const root = document.querySelector<HTMLElement>("[data-gallery]") ?? document.body;
-    expect(() => setupGalleryFilter(root, () => null)()).not.toThrow();
+    expect(() => setupGalleryFilter(root, still)()).not.toThrow();
   });
 });
 

@@ -1,10 +1,12 @@
 /**
  * Rows and wording the gallery's own demos share. They chart the tier-1
- * datasets as published: `electricity-mix-matrix` for the US generation mix and
- * `us-state-unemployment` for the state rates. Nothing here changes a value;
- * the helpers only reshape rows and look values up for titles.
+ * datasets as published: `electricity-mix-matrix` for the US generation mix,
+ * `us-state-unemployment` for the state rates and `us-energy-flow-2024` for
+ * US energy from source to end use. Nothing here changes a value; the helpers
+ * reshape rows, sum flows and look values up for titles.
  */
 import { electricityMixMatrix } from "@datasets/electricity-mix-matrix";
+import { usEnergyFlow2024 } from "@datasets/us-energy-flow-2024";
 import { usStateUnemployment } from "@datasets/us-state-unemployment";
 
 /** The six sources in the dataset's own order, which fixes their colors on every chart. */
@@ -43,19 +45,24 @@ export function combinedShare(sources: readonly string[], year: string): number 
   return Math.round(sources.reduce((sum, source) => sum + shareOf(source, year), 0) * 10) / 10;
 }
 
-/** The measure behind every electricity chart: a share of six sources, not of all US generation. */
-export const MIX_MEASURE = "Share of US generation from coal, gas, nuclear, hydro, wind and solar";
+/** What every electricity chart measures: a share of six sources, not of all US generation. */
+export const MIX_MEASURE =
+  "Share of US generation from six sources: coal, gas, nuclear, hydro, wind and solar";
 
 /** One state's (or DC's) unemployment rate, in percent. */
 export type StateRate = { state: string; rate: number };
 
-/** The latest seasonally adjusted rate for the 50 states and DC. */
+/** The rate for the 50 states and DC. */
 export const stateRates: StateRate[] = Object.entries(usStateUnemployment.data).map(
   ([state, rate]) => ({ state, rate }),
 );
 
-/** The unit line every unemployment chart carries. */
-export const UNEMPLOYMENT_MEASURE = "Unemployment rate, seasonally adjusted, latest month (%)";
+/**
+ * The unit line every unemployment chart carries. The dataset's header names
+ * no month, only the latest observation per state, so the line says that.
+ */
+export const UNEMPLOYMENT_MEASURE =
+  "Unemployment rate, seasonally adjusted, most recent month in the BLS release (%)";
 
 /** How many states (DC not counted) have a rate that passes `test`. */
 export function statesWhere(test: (rate: number) => boolean): number {
@@ -68,3 +75,18 @@ const WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "e
 export function countWord(count: number): string {
   return WORDS[count] ?? String(count);
 }
+
+/** The quadrillion BTU (quads) flowing out of a node of the US energy flow, or into it with `into`. */
+export function energyThrough(node: string, { into = false } = {}): number {
+  return usEnergyFlow2024.data
+    .filter((link) => (into ? link.target : link.source) === node)
+    .reduce((sum, link) => sum + link.value, 0);
+}
+
+/** The four end-use sectors, each splitting its energy into services and rejected energy. */
+export const SECTORS = ["Residential", "Commercial", "Industrial", "Transportation"] as const;
+
+/** The fuels at the start of the energy flow: every node that is only ever a source. */
+export const FUELS: readonly string[] = [
+  ...new Set(usEnergyFlow2024.data.map((link) => link.source)),
+].filter((node) => !usEnergyFlow2024.data.some((link) => link.target === node));

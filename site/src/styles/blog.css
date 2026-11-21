@@ -6,6 +6,7 @@
  * serif at reading size, with figures filling the column. Structure comes from
  * rules and type, never panels; color stays in the charts.
  */
+@import "./tiles.css";
 @reference "./global.css";
 
 @layer components {
@@ -83,15 +84,11 @@
     @apply text-ink-2 font-display m-0 py-10 text-[1.25rem];
   }
 
-  /* The lead chart: a 3:2 specimen at most 360px wide, the size it lays out at.
+  /* The lead chart: a 3:2 specimen at most 360px wide, the size its static chart lays out
+     at; the stage, the live chart filling it and any fallback table are tiles.css's.
      The tile is a demo figure (demo.css spaces those apart in prose); here the grid spaces it. */
   .blog-lead.demo {
     @apply m-0 w-full max-w-[360px] min-w-0 md:col-span-4 md:col-start-9 md:self-center md:justify-self-end;
-  }
-
-  .blog-lead .tile-stage.demo-stage {
-    @apply relative h-auto w-full overflow-hidden;
-    aspect-ratio: 3 / 2;
   }
 
   /* ---- Article ----------------------------------------------------------- */
@@ -136,18 +133,6 @@
   .blog-endnotes-list a {
     @apply text-ink-2 hover:text-ink decoration-line underline underline-offset-4 hover:decoration-current;
   }
-}
-
-/* The live lead chart lays out at LEAD_TILE_SIZE (components/blog/lead-tile-size.ts)
-   and scales to the cell (--tile-scale, from shared/tiles/tile-scale.ts), as the static
-   SVG scales through its viewBox. Unlayered and specific, as on the landing wall: the
-   library's own root classes are unlayered and set the host's width to its container's. */
-.blog-lead .tile-stage > .demo-live {
-  width: 360px;
-  height: 240px;
-  overflow: hidden;
-  transform: scale(var(--tile-scale, 1));
-  transform-origin: 0 0;
 }
 
 /* The article body overrides the docs prose rules in global.css, which are unlayered,

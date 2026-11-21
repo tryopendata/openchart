@@ -5,7 +5,7 @@
  * with the docs link, the dataset and the spec fields that shape the chart.
  * Under the article: the entries before and after it, then three tiles to go
  * on to, same kind first. Only the article is indexed by search, under
- * Examples. src/scripts/gallery.ts scales the tiles and records the view.
+ * Examples. src/scripts/gallery.ts records the view.
  */
 import type { GetStaticPaths } from "astro";
 import Demo from "../../components/demo/Demo.astro";
@@ -14,11 +14,14 @@ import EntryPager from "../../components/gallery/EntryPager.astro";
 import GalleryTile from "../../components/gallery/GalleryTile.astro";
 import { kindLabel, relatedHeading } from "../../components/gallery/kind-words";
 import { relatedTo } from "../../components/gallery/neighbours";
+import type { WallEntry } from "../../components/gallery/tile-size";
+// Checks the entries and places the wall, so a broken entry fails this page's build too.
+import "../../components/gallery/wall";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { allPages } from "../../lib/collection";
 import { galleryEntries } from "../../lib/gallery";
-import type { GalleryEntry } from "../../lib/gallery-types";
 import { searchBodyAttrs } from "../../lib/search-index";
+import "../../styles/tiles.css";
 import "../../styles/gallery.css";
 
 export const getStaticPaths = (() =>
@@ -28,7 +31,7 @@ export const getStaticPaths = (() =>
   }))) satisfies GetStaticPaths;
 
 interface Props {
-  entry: GalleryEntry;
+  entry: WallEntry;
 }
 
 /** How many tiles the page offers under the pager. */
@@ -58,7 +61,7 @@ const heading = relatedHeading(
     <nav class="gallery-crumbs" aria-label="Breadcrumb">
       <a href="/examples/">Examples</a>
       <span aria-hidden="true">/</span>
-      <span>{kindLabel(entry.kind)}</span>
+      <a href={`/examples/#kind=${entry.kind}`}>{kindLabel(entry.kind)}</a>
     </nav>
     <article class="gallery-entry" data-gallery-entry={entry.slug} {...searchBodyAttrs("examples")}>
       <header class="gallery-entry-head">
@@ -66,7 +69,7 @@ const heading = relatedHeading(
         <p class="gallery-entry-lede">{entry.description}</p>
       </header>
       <div class="gallery-entry-body">
-        <div class="gallery-entry-figure" style={`--vt-name: tile-${entry.slug}`}>
+        <div class="gallery-entry-figure" data-kind={entry.kind}>
           <Demo id={entry.demo} />
         </div>
         <EntryNotes entry={entry} docsTitle={docsPage.page.title} />

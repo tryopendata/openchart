@@ -296,11 +296,16 @@
  * A demo that plays the entrance keeps its static SVG out of sight while the
  * live chart is on its way, so a finished chart is never seen and then replaced
  * by one drawing itself in. The gate lifts if scripts never arrive, and a failed
- * mount brings the static SVG back. Under reduced motion nothing plays, so the
- * static SVG stays until the swap. Print is left out, so paper always gets it.
+ * mount brings the static SVG back. Once the entrance has played (demos.ts marks
+ * the stage `data-demo-played`), an evicted chart falls back to its static one.
+ * Under reduced motion nothing plays, so the static SVG stays until the swap.
+ * Print is left out, so paper always gets it.
  */
 @media screen and (prefers-reduced-motion: no-preference) {
-  :root[data-demo-gate] .demo[data-demo-entrance] .demo-stage:not([data-demo-error]) .demo-static {
+  :root[data-demo-gate]
+    .demo[data-demo-entrance]
+    .demo-stage:not([data-demo-error], [data-demo-played])
+    .demo-static {
     visibility: hidden;
   }
 }

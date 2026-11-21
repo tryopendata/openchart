@@ -20,7 +20,7 @@ const [longest] = byLifeExpectancy;
 
 export const countryTable = defineDemo({
   id: "gallery/country-table",
-  title: "Life expectancy, income and population in twelve large economies",
+  title: "Life expectancy, GDP per person and population in 12 large economies",
   source: sourceOf(countryIndicators),
   height: 620,
   spec: {
@@ -55,7 +55,7 @@ export const countryTable = defineDemo({
     chrome: {
       title: `${longest?.country} has the longest life expectancy of these ${countryIndicators.data.length} countries, at ${longest?.lifeExpectancy} years`,
       subtitle:
-        "Life expectancy (WHO), GDP per person at purchasing power parity (OWID, World Bank) and population (World Bank), latest year available",
+        "Life expectancy about 2021 (WHO), GDP per person at purchasing power parity about 2022 (OWID, World Bank) and population in 2023 (World Bank)",
     },
   },
 });
@@ -70,7 +70,7 @@ const [largestGain] = shareChanges;
 
 export const electricityChangeTable = defineDemo({
   id: "gallery/electricity-change-table",
-  title: "Change in each source's share of US generation, 2016 to 2023",
+  title: "Change in each source's share of generation from six sources, 2016 to 2023",
   source: sourceOf(electricityMixMatrix),
   height: 420,
   spec: {
@@ -83,7 +83,7 @@ export const electricityChangeTable = defineDemo({
       { key: "change", label: "Change (points)", format: "+.1f", align: "right" },
     ],
     chrome: {
-      title: `${largestGain?.source} gained ${largestGain?.change} points of share from 2016 to 2023, more than any other source`,
+      title: `${largestGain?.source} gained the most share of generation from six sources, ${largestGain?.change} points from 2016 to 2023`,
       subtitle: `${MIX_MEASURE}, 2016 and 2023 (%)`,
     },
   },

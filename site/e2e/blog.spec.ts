@@ -108,7 +108,7 @@ test.describe("without JavaScript", () => {
   test("the index shows each post's lead chart as a static specimen", async ({ page }) => {
     await page.emulateMedia({ colorScheme: "light" });
     await page.goto("/blog/");
-    const lead = page.locator('.blog-lead svg.demo-static[data-theme="light"]').first();
+    const lead = page.locator('.blog-lead img.demo-static[data-theme="light"]').first();
     await expect(lead).toBeVisible();
     await expect(
       page.getByRole("heading", { name: "How to chart a temperature anomaly" }),

@@ -2,55 +2,105 @@
  * The examples gallery's entries, in wall order, and the Visualizations
  * sections it leaves out. /examples/, each /examples/<slug>/ page, the social
  * cards and the search index all derive from this list. Every entry draws a
- * tier-1 dataset, and the list is checked against the demo registry and the
- * docs pages when this module loads, so a broken entry fails the build naming it.
+ * tier-1 dataset and has a shape on the wall (components/gallery/tile-size.ts).
+ * Plain data, so the build test and the browser tests can read it:
+ * components/gallery/wall.ts checks it against the demos and docs, and packs it
+ * onto the wall with no holes, when the gallery pages build.
  */
-import { readdirSync } from "node:fs";
-import { join } from "node:path";
-import { assertGalleryEntries } from "../components/gallery/entry-rules";
-import { KINDS } from "../components/gallery/kind-words";
-import { allDemos } from "../demos/registry";
-import type { GalleryEntry, GalleryGap } from "./gallery-types";
+import type { WallEntry } from "../components/gallery/tile-size";
+import type { GalleryGap } from "./gallery-types";
 
 /** Every gallery entry, in the order the wall shows them. */
-export const galleryEntries: readonly GalleryEntry[] = [
+export const galleryEntries: readonly WallEntry[] = [
   {
-    slug: "unemployment-by-state",
-    demo: "maps/choropleth-basic",
-    kind: "maps",
-    title: "Unemployment rate by state",
+    slug: "us-energy-flow",
+    demo: "flow/sankey-basic",
+    kind: "flow",
+    shape: "lead",
+    size: "wide",
+    title: "US energy flow, 2024",
     description:
-      "A choropleth of the latest seasonally adjusted unemployment rate in each state and DC, shaded on one sequential color scale over the state outlines.",
+      "Two-thirds of the energy the US used in 2024 ended as rejected energy. Each link's width is its flow in quadrillion BTU, set by encoding.value.",
+    docs: "/docs/flow/sankey/",
+  },
+  {
+    slug: "unemployment-above-5-percent",
+    demo: "gallery/unemployment-choropleth",
+    kind: "maps",
+    shape: "feature",
+    keepKey: true,
+    title: "States with unemployment above 5%",
+    description:
+      "Four of the seven states above 5% are in the West. Each state takes one of two colors, joined to the US atlas through encoding.key.",
     docs: "/docs/maps/choropleth/",
     size: "wide",
+    ladle: "maps--maps#us-state-unemployment",
   },
   {
-    slug: "us-inflation",
-    demo: "change-over-time/line-basic",
-    kind: "change-over-time",
-    title: "US inflation, 2019 to 2024",
+    slug: "inflation-against-2-percent",
+    demo: "gallery/inflation-reference",
+    kind: "composition",
+    title: "US inflation against a 2% line, 2019 to 2024",
     description:
-      "A line of the year-over-year change in US consumer prices, quarterly from 2019 to 2024, with the 2022 peak labeled and a dashed line at 2%.",
-    docs: "/docs/change-over-time/line/",
-  },
-  {
-    slug: "electricity-mix-donut",
-    demo: "gallery/electricity-donut",
-    kind: "part-to-whole",
-    title: "US electricity generation by source, 2023",
-    description:
-      "A donut of each source's share of US generation from coal, gas, nuclear, hydro, wind and solar in 2023, with gas's share printed in the center.",
-    docs: "/docs/part-to-whole/pie-donut/",
-    ladle: "charts--pie-and-donut#donut-center-metric",
+      "Inflation stayed above 2% from mid-2021 through 2024. The 2% line is a second entry in the spec's layer array, drawn on the same scale.",
+    docs: "/docs/composition/layers/",
+    ladle: "charts--building-blocks#layered",
   },
   {
     slug: "most-populous-countries",
     demo: "comparison/bar-sorted",
     kind: "comparison",
-    title: "The ten most populous countries",
+    title: "The 10 most populous countries, 2025",
     description:
-      "A bar chart of the ten most populous countries in 2025, sorted from largest to smallest.",
+      "India and China each have about four times the US population. One setting, sort on the y channel, orders the bars by value.",
     docs: "/docs/comparison/bar/",
+  },
+  {
+    slug: "us-energy-by-source",
+    demo: "gallery/energy-sources-donut",
+    kind: "part-to-whole",
+    shape: "square",
+    keepKey: true,
+    title: "US energy use by source, 2024",
+    description:
+      "Petroleum and natural gas supplied nearly three-quarters of US energy in 2024. The donut is an arc mark with innerRadius and a centerLabel.",
+    docs: "/docs/part-to-whole/pie-donut/",
+    ladle: "charts--pie-and-donut#donut-center-metric",
+  },
+  {
+    slug: "electricity-mix-waffle",
+    demo: "gallery/electricity-waffle",
+    kind: "part-to-whole",
+    shape: "square",
+    keepKey: true,
+    title: "US generation from six sources in 100 squares, 2023",
+    description:
+      "Nuclear generated more than wind and solar together. Each square is one percent, and color.highlight picks out the three sources compared.",
+    docs: "/docs/part-to-whole/waffle/",
+    ladle: "charts--pie-and-donut#waffle",
+  },
+  {
+    slug: "life-expectancy-table",
+    demo: "gallery/country-table",
+    kind: "tables",
+    shape: "square",
+    title: "Life expectancy, GDP per person and population in 12 large economies",
+    description:
+      "Japan has the longest life expectancy of the 12. Heatmap cells shade life expectancy and bar cells draw GDP per person in one table.",
+    docs: "/docs/tables/column-types/",
+    ladle: "tables--tables#heatmap-cells",
+  },
+  {
+    slug: "unemployment-beeswarm",
+    demo: "gallery/unemployment-beeswarm",
+    kind: "distribution",
+    shape: "wide",
+    keepKey: true,
+    title: "State unemployment rates, one dot per state",
+    description:
+      "Seven states and DC had unemployment of 5% or more. The beeswarm mark gives each state its own dot, colored by a two-value band.",
+    docs: "/docs/distribution/beeswarm/",
+    ladle: "charts--scatter-and-distribution#beeswarm",
   },
   {
     slug: "unemployment-histogram",
@@ -58,7 +108,7 @@ export const galleryEntries: readonly GalleryEntry[] = [
     kind: "distribution",
     title: "State unemployment rates in half-point bins",
     description:
-      "A histogram counting the states and DC in each half-point band of the latest unemployment rate, with a dashed line at 4%.",
+      "Unemployment was under 4% in 22 states. The histogram mark counts the rates itself, and x.bin sets the half-point bins.",
     docs: "/docs/distribution/histogram/",
     ladle: "charts--scatter-and-distribution#histogram",
   },
@@ -66,9 +116,9 @@ export const galleryEntries: readonly GalleryEntry[] = [
     slug: "electricity-mix-heatmap",
     demo: "correlation/heatmap-basic",
     kind: "correlation",
-    title: "US electricity generation by source and year",
+    title: "Share of generation from six sources by year, 2016 to 2023",
     description:
-      "A heatmap of each source's share of US generation from 2016 to 2023, one row per source and one column per year, on a sequential color scale.",
+      "Gas rose as coal's share of generation from six sources halved. A rect mark puts year on x, source on y and share on a sequential color scale.",
     docs: "/docs/correlation/heatmap/",
   },
   {
@@ -77,160 +127,38 @@ export const galleryEntries: readonly GalleryEntry[] = [
     kind: "change-over-time",
     title: "Global temperature anomaly, 1900 to 2025",
     description:
-      "A line of global surface temperature against the 1951 to 1980 average, one reading per decade from 1900 and then 2025, on a time axis.",
+      "Global temperature rose 1.16°C from 1970 to 2025. A temporal x axis spaces the readings by date, so the last five-year step is half as wide.",
     docs: "/docs/change-over-time/line/",
   },
   {
-    slug: "life-expectancy-table",
-    demo: "gallery/country-table",
-    kind: "tables",
-    title: "Life expectancy, income and population in twelve large economies",
-    description:
-      "A sortable table of twelve large economies, longest life expectancy first, with heatmap cells for life expectancy and bars for GDP per person.",
-    docs: "/docs/tables/column-types/",
-    ladle: "tables--tables#heatmap-cells",
-  },
-  {
-    slug: "us-energy-flow",
-    demo: "flow/sankey-basic",
-    kind: "flow",
-    title: "US energy flow, 2024",
-    description:
-      "A sankey of US energy in 2024, from primary sources through electricity generation and end-use sectors to energy services and rejected energy.",
-    docs: "/docs/flow/sankey/",
-    size: "wide",
-  },
-  {
-    slug: "electricity-mix-waffle",
-    demo: "gallery/electricity-waffle",
-    kind: "part-to-whole",
-    title: "US electricity generation by source in 100 squares, 2023",
-    description:
-      "A waffle of the 2023 US generation mix, one square per percent, with nuclear, wind and solar in color and the other sources dimmed.",
-    docs: "/docs/part-to-whole/waffle/",
-    ladle: "charts--pie-and-donut#waffle",
-  },
-  {
-    slug: "income-and-life-expectancy",
+    slug: "gdp-and-life-expectancy",
     demo: "framing/annotations-callout",
     kind: "correlation",
-    title: "Income and life expectancy in twelve large economies",
+    title: "GDP per person and life expectancy in 12 large economies",
     description:
-      "A scatter plot of GDP per person against life expectancy in twelve large economies, with a callout on the United States.",
+      "The US has the highest GDP per person of the 12, but six of them live longer. A text annotation with a curved connector calls out one point.",
     docs: "/docs/correlation/scatter/",
-  },
-  {
-    slug: "unemployment-beeswarm",
-    demo: "gallery/unemployment-beeswarm",
-    kind: "distribution",
-    title: "State unemployment rates, one dot per state",
-    description:
-      "A beeswarm of the latest unemployment rate in each state and DC, with the rates of 5% or more in orange.",
-    docs: "/docs/distribution/beeswarm/",
-    ladle: "charts--scatter-and-distribution#beeswarm",
-  },
-  {
-    slug: "inflation-against-2-percent",
-    demo: "gallery/inflation-reference",
-    kind: "composition",
-    title: "US inflation against a 2% line, 2019 to 2024",
-    description:
-      "A line of quarterly US inflation with a rule at 2% drawn as a second layer on the same scale.",
-    docs: "/docs/composition/layers/",
-    ladle: "charts--building-blocks#layered",
-  },
-  {
-    slug: "electricity-mix-lines",
-    demo: "behavior/motion-replay",
-    kind: "change-over-time",
-    title: "US electricity generation by source, 2016 to 2023",
-    description:
-      "A line for each source's share of US generation from 2016 to 2023, each named at its end, with a Replay button that draws the chart in again.",
-    docs: "/docs/change-over-time/line/",
-  },
-  {
-    slug: "population-world-map",
-    demo: "maps/symbol-world",
-    kind: "maps",
-    title: "The ten most populous countries on a world map",
-    description:
-      "A symbol map of the ten most populous countries in 2025, each a circle sized by population, on an Equal Earth projection.",
-    docs: "/docs/maps/symbol-map/",
   },
   {
     slug: "electricity-mix-small-multiples",
     demo: "gallery/electricity-facets",
     kind: "composition",
-    title: "US electricity generation by source, one panel each",
+    shape: "feature",
+    title: "Share of generation from six sources, one panel each, 2016 to 2023",
     description:
-      "Small multiples of each source's share of US generation from 2016 to 2023: six panels on one shared scale.",
+      "Of six sources, only gas, wind and solar gained share. One encoding.facet channel splits the line into six panels on a shared y scale.",
     docs: "/docs/composition/facets/",
     size: "wide",
     ladle: "features--data-and-encoding#facet-shared",
   },
   {
-    slug: "global-temperature-columns",
-    demo: "comparison/column-diverging",
-    kind: "comparison",
-    title: "Global temperature above and below the 1951 to 1980 average",
-    description:
-      "A diverging column chart of the global temperature anomaly from 1900 to 2025, with cooler readings in blue and warmer ones in red.",
-    docs: "/docs/comparison/column/",
-  },
-  {
-    slug: "central-park-temperature-range",
-    demo: "output/export-range",
-    kind: "distribution",
-    title: "Monthly temperature range in Central Park, 2023",
-    description:
-      "Error bars from each month's average daily low to its average daily high in Central Park in 2023, with SVG, PNG and CSV downloads.",
-    docs: "/docs/distribution/error-bars/",
-  },
-  {
-    slug: "electricity-mix-by-year",
-    demo: "gallery/electricity-share-columns",
-    kind: "part-to-whole",
-    title: "US electricity generation by source and year, stacked to 100%",
-    description:
-      "One column per year from 2016 to 2023, stacked to 100%, with wind and solar on the baseline in color and the other sources dimmed.",
-    docs: "/docs/part-to-whole/stacked-100/",
-    ladle: "charts--bar-and-column#normalized-stacked",
-  },
-  {
     slug: "central-park-highs-and-lows",
     demo: "the-spec/transforms-fold",
     kind: "change-over-time",
+    keepKey: true,
     title: "Average daily highs and lows in Central Park, 2023",
     description:
-      "Two lines for the monthly average daily high and low in Central Park in 2023, folded in the spec from two columns into one series.",
-    docs: "/docs/change-over-time/line/",
-  },
-  {
-    slug: "electricity-share-change",
-    demo: "gallery/electricity-change-table",
-    kind: "tables",
-    title: "Change in each source's share of US generation, 2016 to 2023",
-    description:
-      "A table of each source's share of US generation in 2016 and 2023 and the change in points, largest gain first, with bars for the 2023 shares.",
-    docs: "/docs/tables/column-types/",
-    ladle: "tables--tables#inline-bar-cells",
-  },
-  {
-    slug: "gdp-per-person",
-    demo: "the-spec/axes-long-labels",
-    kind: "comparison",
-    title: "GDP per person in twelve large economies",
-    description:
-      "A column chart of GDP per person at purchasing power parity in twelve large economies, sorted from highest to lowest.",
-    docs: "/docs/comparison/column/",
-  },
-  {
-    slug: "solar-share",
-    demo: "style/color-highlight",
-    kind: "change-over-time",
-    title: "Solar's share of US electricity generation, 2016 to 2023",
-    description:
-      "A line chart of the US generation mix with solar highlighted and the other five sources dimmed, each line named at its end.",
+      "Central Park's daily highs and lows both peaked in July 2023. A fold transform turns the high and low columns into one series for the color channel.",
     docs: "/docs/change-over-time/line/",
   },
   {
@@ -239,8 +167,102 @@ export const galleryEntries: readonly GalleryEntry[] = [
     kind: "comparison",
     title: "Daily temperature swing in Central Park, 2023",
     description:
-      "A column chart of each month's average daily high minus its average daily low in Central Park in 2023, calculated in the spec from two fields.",
+      "The gap between Central Park's daily high and low was widest in May 2023. A calculate transform derives the gap from the high and low fields.",
     docs: "/docs/comparison/column/",
+  },
+  {
+    slug: "gdp-per-person",
+    demo: "the-spec/axes-long-labels",
+    kind: "comparison",
+    title: "GDP per person in 12 large economies",
+    description:
+      "GDP per person in the US is almost eight times India's. Sorting the x channel by -y orders the columns from highest to lowest.",
+    docs: "/docs/comparison/column/",
+  },
+  {
+    slug: "global-temperature-columns",
+    demo: "comparison/column-diverging",
+    kind: "comparison",
+    shape: "wide",
+    keepKey: true,
+    title: "Global temperature above and below the 1951 to 1980 average",
+    description:
+      "Every reading since 1970 is above the 1951 to 1980 average. A two-value color scale sets the cooler readings in blue and the warmer ones in red.",
+    docs: "/docs/comparison/column/",
+  },
+  {
+    slug: "electricity-share-change",
+    demo: "gallery/electricity-change-table",
+    kind: "tables",
+    shape: "square",
+    title: "Change in each source's share of generation from six sources, 2016 to 2023",
+    description:
+      "Gas gained the most share, 8.7 points, while coal lost 15. A bar column draws the 2023 shares beside the signed change.",
+    docs: "/docs/tables/column-types/",
+    ladle: "tables--tables#inline-bar-cells",
+  },
+  {
+    slug: "electricity-mix-by-year",
+    demo: "gallery/electricity-share-columns",
+    kind: "part-to-whole",
+    shape: "square",
+    keepKey: true,
+    title: "Share of generation from six sources by year, stacked to 100%",
+    description:
+      "Wind and solar's share more than doubled from 2016 to 2023. stack: normalize turns the shares into 100% columns, and highlight dims the other four.",
+    docs: "/docs/part-to-whole/stacked-100/",
+    ladle: "charts--bar-and-column#normalized-stacked",
+  },
+  {
+    slug: "energy-services-by-sector",
+    demo: "gallery/energy-services-by-sector",
+    kind: "part-to-whole",
+    shape: "square",
+    keepKey: true,
+    title: "Energy services and rejected energy by sector, 2024",
+    description:
+      "Transportation turned a fifth of its energy into energy services, the least of four sectors. Bars stacked with stack: normalize show each split.",
+    docs: "/docs/part-to-whole/stacked-100/",
+  },
+  {
+    slug: "inflation-by-quarter",
+    demo: "gallery/inflation-columns",
+    kind: "change-over-time",
+    shape: "wide",
+    keepKey: true,
+    title: "US inflation by quarter, 2019 to 2024",
+    description:
+      "Inflation fell in seven of the nine quarters after its 2022 peak. A two-value color scale marks each quarter that came in below the one before.",
+    docs: "/docs/comparison/column/",
+  },
+  {
+    slug: "unemployment-tile-map",
+    demo: "gallery/unemployment-tiles",
+    kind: "maps",
+    title: "State unemployment rates on a tile grid",
+    description:
+      "Five states had unemployment below 3%. Every state and DC is one equal tile with its rate printed, so small states read as clearly as large ones.",
+    docs: "/docs/maps/tile-map/",
+    ladle: "sankey---tile-maps--sankey-and-tile-maps#quantitative",
+  },
+  {
+    slug: "population-world-map",
+    demo: "maps/symbol-world",
+    kind: "maps",
+    title: "The 10 most populous countries on a world map, 2025",
+    description:
+      "India and China each have more than 1.4 billion people. Circles sized by population sit on the Equal Earth projection set in geo.projection.",
+    docs: "/docs/maps/symbol-map/",
+  },
+  {
+    slug: "central-park-temperature-range",
+    demo: "output/export-range",
+    kind: "distribution",
+    shape: "wide",
+    title: "Monthly temperature range in Central Park, 2023",
+    description:
+      "New York's average daily high peaked at 30.2°C in July 2023. Error bars span y to y2 for each month, and the figure offers SVG, PNG and CSV downloads.",
+    docs: "/docs/distribution/error-bars/",
   },
 ];
 
@@ -251,34 +273,3 @@ export const galleryEntries: readonly GalleryEntry[] = [
  * a network or a daily series.
  */
 export const GALLERY_GAPS: readonly GalleryGap[] = [];
-
-/**
- * The served path of every site docs page: src/content/docs/<section>/<slug>.mdx
- * is /docs/<section>/<slug>/. Read from disk, since astro:content is only for
- * src/lib/collection.ts; builds and tests both run from site/.
- */
-function siteDocsPaths(): Set<string> {
-  const root = join("src", "content", "docs");
-  return new Set(
-    readdirSync(root, { recursive: true, encoding: "utf8" })
-      .filter((file) => file.endsWith(".mdx"))
-      .map((file) => `/docs/${file.replaceAll("\\", "/").replace(/\.mdx$/, "")}/`),
-  );
-}
-
-/**
- * Checks entries against the real demo registry, docs pages and sections.
- *
- * @throws {GalleryEntryError} Naming the first entry that breaks a rule.
- */
-export function checkGalleryEntries(entries: readonly GalleryEntry[]): void {
-  const demoIds = new Set(allDemos().map((demo) => demo.id));
-  const docsPaths = siteDocsPaths();
-  assertGalleryEntries(entries, {
-    hasDemo: (id) => demoIds.has(id),
-    hasDocsPage: (path) => docsPaths.has(path),
-    kinds: KINDS,
-  });
-}
-
-checkGalleryEntries(galleryEntries);

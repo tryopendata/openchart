@@ -1,12 +1,19 @@
 import type { VizSpec } from "@opendata-ai/openchart-core";
 import { GalleryEntryError } from "../components/gallery/entry-rules";
 import { KINDS } from "../components/gallery/kind-words";
-import { GALLERY_FEATURE_TILE_SIZE } from "../components/gallery/tile-size";
+import {
+  galleryTileRequests,
+  relatedTileOptions,
+  wallTileOptions,
+} from "../components/gallery/tile-options";
+import { NARROW_SIZE, SHAPE_SIZES, shapeOf, type WallEntry } from "../components/gallery/tile-size";
+import { checkGalleryEntries, wallPlacements } from "../components/gallery/wall";
+import { tileFileUrl } from "../components/shared/tiles/tile-files";
 import { parseFilterHash } from "../components/shared/tiles/tile-filter";
 import { tileChartHtml } from "../components/shared/tiles/tile-markup";
 import { getDemo } from "../demos/registry";
-import { checkGalleryEntries, galleryEntries } from "./gallery";
-import { GALLERY_HASH_KEY, GALLERY_TILE_SIZE, type GalleryEntry } from "./gallery-types";
+import { galleryEntries } from "./gallery";
+import { GALLERY_HASH_KEY, type GalleryEntry } from "./gallery-types";
 
 const [first, second] = galleryEntries as [GalleryEntry, GalleryEntry];
 
@@ -69,21 +76,62 @@ function embeddedSpec(html: string): Record<string, unknown> {
   return JSON.parse(doc.querySelector("script[data-demo-spec]")?.textContent ?? "{}");
 }
 
+const entry = (slug: string) =>
+  galleryEntries.find((candidate) => candidate.slug === slug) as WallEntry;
+
 describe("a gallery tile's chart", () => {
-  it("lays out at the tile size and keeps the demo's data without its chrome", () => {
-    const demo = getDemo("gallery/electricity-donut");
-    const html = tileChartHtml(demo.id, new Set(), { size: GALLERY_TILE_SIZE, domPrefix: "t" });
-    expect(html).toContain('viewBox="0 0 360 240"');
+  it("keeps the demo's data without its chrome, and its legend where the entry keeps the key", () => {
+    const waffle = entry("electricity-mix-waffle");
+    const html = tileChartHtml(waffle.demo, new Set(), wallTileOptions(waffle));
     const spec = embeddedSpec(html);
-    expect(spec.data).toEqual((demo.spec as VizSpec & { data: unknown }).data);
+    expect(spec.data).toEqual((getDemo(waffle.demo).spec as VizSpec & { data: unknown }).data);
     expect(spec).not.toHaveProperty("chrome");
+    expect(spec).not.toHaveProperty("legend");
   });
 
-  it("lays a feature out at the feature size", () => {
-    const html = tileChartHtml("maps/choropleth-basic", new Set(), {
-      size: GALLERY_FEATURE_TILE_SIZE,
-      domPrefix: "t",
-    });
-    expect(html).toContain('viewBox="0 0 720 576"');
+  it("draws a shaped entry in its shape and in the standard shape it narrows to", () => {
+    const feature = entry("unemployment-above-5-percent");
+    const html = tileChartHtml(feature.demo, new Set(), wallTileOptions(feature));
+    expect(html).toContain(
+      `-${SHAPE_SIZES.feature.width}x${SHAPE_SIZES.feature.height}-key-light.svg`,
+    );
+    expect(html).toContain(`-${NARROW_SIZE.width}x${NARROW_SIZE.height}-key-light.svg`);
+  });
+
+  it("asks for a file for every image a tile on the wall or under an entry page shows", () => {
+    const requested = new Set(
+      galleryTileRequests(galleryEntries).map((request) => tileFileUrl(request, "light")),
+    );
+    for (const candidate of galleryEntries) {
+      for (const options of [wallTileOptions(candidate), relatedTileOptions(candidate)]) {
+        const html = tileChartHtml(candidate.demo, new Set(), options);
+        for (const [, src] of html.matchAll(/src="([^"]+-light\.svg)"/g)) {
+          expect(requested, `${candidate.slug}: ${src}`).toContain(src);
+        }
+      }
+    }
+  });
+});
+
+describe("the arranged wall", () => {
+  it("leads with one graphic and places every entry, in order, with no row left short", () => {
+    expect(shapeOf(galleryEntries[0] as WallEntry)).toBe("lead");
+    expect([...wallPlacements.keys()]).toEqual(galleryEntries.map((candidate) => candidate.slug));
+    // Six columns a row: count every cell each tile covers.
+    const cells = new Map<number, number>();
+    for (const { span, row, rowSpan } of wallPlacements.values()) {
+      for (let r = row; r < row + rowSpan; r += 1) cells.set(r, (cells.get(r) ?? 0) + span);
+    }
+    expect([...cells.values()].every((count) => count === 6)).toBe(true);
+  });
+
+  it("draws no more than five entries from one dataset, and no two from one demo", () => {
+    const byDataset = new Map<string, number>();
+    for (const candidate of galleryEntries) {
+      const label = getDemo(candidate.demo).source.label.split(";")[0] ?? "";
+      byDataset.set(label, (byDataset.get(label) ?? 0) + 1);
+    }
+    expect(Math.max(...byDataset.values())).toBeLessThanOrEqual(5);
+    expect(byDataset.size).toBeGreaterThanOrEqual(8);
   });
 });

@@ -1,5 +1,5 @@
 /**
- * The gallery's distribution graphics, on the latest state unemployment rates
+ * The gallery's distribution graphics, on the state unemployment rates
  * (`us-state-unemployment`): a histogram in half-point bins and a beeswarm with
  * one dot per state. Ported from the Ladle scatter and distribution gallery,
  * rebuilt on this tier-1 dataset.
@@ -26,16 +26,15 @@ export const unemploymentHistogram = defineDemo({
       x: {
         field: "rate",
         type: "quantitative",
-        bin: { step: 0.5, extent: [2, 6] },
+        // Half a point of room either side of the data, so the first tick clears the y-axis.
+        bin: { step: 0.5, extent: [1.5, 6.5] },
         axis: rateAxis,
       },
     },
-    annotations: [
-      { type: "refline", x: UNDER, label: `${UNDER}%`, style: "dashed", stroke: "#64748b" },
-    ],
+    annotations: [{ type: "refline", x: UNDER, label: `${UNDER}%`, style: "dashed", stroke: GREY }],
     chrome: {
       title: `Unemployment was under ${UNDER}% in ${countWord(statesWhere((rate) => rate < UNDER))} of the 50 states`,
-      subtitle: `Number of states and DC by ${UNEMPLOYMENT_MEASURE.toLowerCase()}`,
+      subtitle: `Number of states and DC in each half-point band. ${UNEMPLOYMENT_MEASURE}`,
     },
   },
 });
@@ -65,7 +64,7 @@ export const unemploymentBeeswarm = defineDemo({
     },
     chrome: {
       title: `Unemployment was ${HIGH}% or more in ${countWord(statesWhere((rate) => rate >= HIGH))} states and DC`,
-      subtitle: `${UNEMPLOYMENT_MEASURE}. Each dot is one state or DC.`,
+      subtitle: `Each dot is one state or DC. ${UNEMPLOYMENT_MEASURE}`,
     },
   },
 });

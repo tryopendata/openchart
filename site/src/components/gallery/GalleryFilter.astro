@@ -1,15 +1,20 @@
 ---
 /**
  * The gallery's filter: "All", then each kind that has entries, as text
- * buttons on an ink rule with their counts, and the polite live region a change
- * is read out in. It renders `hidden`, and src/scripts/gallery.ts shows it once
- * it has wired the buttons, so a reader without JavaScript never meets a dead
- * control and sees every tile. Each button carries the sentence its choice
- * announces, so the script never needs the kinds' wording.
+ * buttons on an ink rule (tiles.css), each named with its count ("Maps 3
+ * graphics"), and the polite live region a change is read out in. With scripts
+ * expected the row is laid out but invisible until src/scripts/gallery.ts wires
+ * it, so it holds exactly its own height at every width and nothing moves when
+ * it appears; without JavaScript it is not shown at all, and the wall shows
+ * every tile. Each button carries the sentence its choice announces.
  *
- * Contract (src/scripts/gallery.ts relies on it): `fieldset[data-gallery-filter]`
- * holding `button[data-filter=<all|kind>][data-announce][aria-pressed]`, and
- * `[data-gallery-status]`, the live region.
+ * Each kind's button has the id `kind=<kind>`, so an entry page's breadcrumb link
+ * to /examples/#kind=<kind> names an element that exists (the build's link check
+ * reads it that way) and, without JavaScript, lands on the filter row.
+ *
+ * Contract (src/scripts/gallery.ts relies on it): `fieldset[data-gallery-filter]`,
+ * given `data-ready` once wired, holding `button[data-filter=<all|kind>][data-announce][aria-pressed]`,
+ * and `[data-gallery-status]`, the live region.
  */
 import type { VisualizationSectionId } from "../../config";
 import type { GalleryEntry } from "../../lib/gallery-types";
@@ -30,23 +35,21 @@ const options: { id: TileFilter<VisualizationSectionId>; label: string; count: n
 ];
 ---
 
-<div class="gallery-filter-slot">
-  <fieldset class="gallery-filter" data-gallery-filter hidden>
-    <legend class="sr-only">Show one kind of graphic</legend>
-    {options.map((option) => (
-      <button
-        type="button"
-        class="gallery-filter-button"
-        data-filter={option.id}
-        data-announce={filterAnnouncement(option.id, option.count)}
-        aria-pressed={option.id === "all" ? "true" : "false"}
-      >
-        {option.label}
-        <span class="gallery-count" aria-hidden="true">
-          {option.count}
-        </span>
-      </button>
-    ))}
-  </fieldset>
-</div>
+<fieldset class="tile-filter gallery-filter" data-gallery-filter>
+  <legend class="sr-only">Show one kind of graphic</legend>
+  {options.map((option) => (
+    <button
+      type="button"
+      class="tile-filter-button"
+      id={option.id === "all" ? undefined : `kind=${option.id}`}
+      data-filter={option.id}
+      data-announce={filterAnnouncement(option.id, option.count)}
+      aria-pressed={option.id === "all" ? "true" : "false"}
+    >
+      {option.label}
+      <span class="tile-count">{option.count}</span>
+      <span class="sr-only">{option.count === 1 ? " graphic" : " graphics"}</span>
+    </button>
+  ))}
+</fieldset>
 <p class="sr-only" aria-live="polite" data-gallery-status></p>

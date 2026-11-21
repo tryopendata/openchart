@@ -1,10 +1,12 @@
 /*
  * Styles for the examples gallery (/examples/ and each /examples/<slug>/).
- * The wall is set like a graphics desk's portfolio page: every tile a finished
- * graphic under a ticked rule, its finding as a serif headline, the kind in mono
- * and the source beneath. Wide entries are features, two columns across and,
- * on the three-column wall, two rows down. No card chrome: rules and space do
- * the grouping. Every transition sits under prefers-reduced-motion:
+ * The wall is set like a graphics desk's portfolio page: one lead graphic
+ * across the page with its finding near headline size, then a six-column grid
+ * where each tile takes the shape its chart needs (components/gallery/tile-size.ts)
+ * and sits where wall-layout.ts placed it. A filtered wall, and any screen under
+ * 1100px, drops the arrangement: every tile takes the standard shape in entry
+ * order. What every tile shares (stage, fallback table, whole-tile link, filter
+ * row) is in tiles.css. Every transition sits under prefers-reduced-motion:
  * no-preference, so a reader who asked for less motion gets none.
  */
 @reference "./global.css";
@@ -29,63 +31,32 @@
   }
 
   /* ---- Filter ---- */
-  /* Holds the filter's height while scripts are expected, so the wall does not drop when it
-     appears: four rows on a phone, two on a tablet, one on a desktop. */
-  .gallery-filter-slot {
+  .gallery-filter {
     @apply mt-10 lg:mt-14;
   }
 
-  :root[data-demo-gate] .gallery-filter-slot {
-    @apply min-h-[10.5rem] sm:min-h-[5.5rem] xl:min-h-[2.875rem];
-  }
-
-  /* Text buttons on an ink rule, like the header row of a table. */
-  .gallery-filter {
-    @apply border-line-strong m-0 flex min-w-0 flex-wrap gap-x-6 gap-y-1 border-0 border-b p-0 pb-px;
-  }
-
-  .gallery-filter-button {
-    @apply text-muted hover:text-ink -mb-px inline-flex items-baseline gap-1.5 border-b-2 border-transparent py-2.5 text-sm font-medium;
-  }
-
-  .gallery-filter-button[aria-pressed="true"] {
-    @apply text-ink border-accent;
-  }
-
-  .gallery-count {
-    @apply font-mono text-[11px] font-normal;
-    font-variant-numeric: tabular-nums;
-  }
-
   /* ---- Wall ---- */
-  /* One column on a phone, two from 700px, three from 1100px. */
+  /* One column on a phone, two from 700px, three from 1100px; six when arranged (below). */
   .gallery-grid {
     @apply m-0 mt-10 grid list-none grid-cols-1 gap-x-6 gap-y-14 p-0 min-[700px]:grid-cols-2 min-[1100px]:grid-cols-3 lg:gap-x-8;
-    /* Dense: the tiles after a feature fill the column beside it. */
-    grid-auto-flow: row dense;
   }
 
-  /* A tile is a demo element (demo.css) without a figure's margin: rule, chart, caption. */
-  .gallery-tile.demo {
-    @apply relative m-0 grid min-w-0 content-start;
-    /* minmax(0, …): the static SVG's intrinsic width must not widen the tile past its cell. */
-    grid-template-columns: minmax(0, 1fr);
+  /* Unarranged, each tile shows its standard-shaped chart. */
+  .gallery-grid .tile-variant[data-tile-variant="main"] {
+    display: none;
   }
 
-  @media (min-width: 900px) {
-    .gallery-tile[data-feature] {
-      grid-column: span 2;
-    }
+  .gallery-grid .tile-variant[data-tile-variant="narrow"] {
+    display: contents;
   }
 
-  @media (min-width: 1100px) {
-    .gallery-tile[data-feature] {
-      grid-row: span 2;
-    }
+  .gallery-grid .tile-stage.demo-stage {
+    aspect-ratio: var(--tile-ratio-narrow, var(--tile-ratio));
+  }
 
-    .gallery-tile[data-feature="end"] {
-      grid-column: 2 / span 2;
-    }
+  /* The lead always spans the wall. */
+  .gallery-tile[data-shape="lead"] {
+    grid-column: 1 / -1;
   }
 
   /* The ticked rule: the site's axis motif over every graphic, the accent while hovered. */
@@ -94,18 +65,12 @@
   }
 
   .gallery-tile:hover .gallery-rule,
-  .gallery-tile:has(.gallery-headline a:focus-visible) .gallery-rule {
+  .gallery-tile:has(.tile-link:focus-visible) .gallery-rule {
     --color-line-strong: var(--color-accent);
   }
 
   .gallery-chart {
     @apply mt-4 min-w-0;
-  }
-
-  /* The stage keeps its tile's shape at every width, so the live chart never moves the page. */
-  .gallery-tile .tile-stage.demo-stage {
-    @apply relative h-auto w-full overflow-hidden;
-    aspect-ratio: var(--tile-ratio, 3 / 2);
   }
 
   .gallery-caption {
@@ -116,62 +81,17 @@
     @apply text-ink font-display m-0 text-[1.3125rem] leading-[1.2] font-medium tracking-[-0.01em] text-balance;
   }
 
-  .gallery-tile[data-feature] .gallery-headline {
-    @apply min-[900px]:text-[1.875rem] min-[900px]:leading-[1.15];
-  }
-
-  /* The headline is the tile's one link; its box covers the tile, so the whole graphic is the target. */
   .gallery-headline a {
     @apply text-ink no-underline decoration-1 underline-offset-4;
-  }
-
-  .gallery-headline a::after {
-    content: "";
-    position: absolute;
-    inset: 0;
   }
 
   .gallery-tile:hover .gallery-headline a {
     @apply underline;
   }
 
-  .gallery-headline a:focus-visible {
-    outline: none;
-  }
-
-  .gallery-tile:has(.gallery-headline a:focus-visible) {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 6px;
-  }
-
-  .gallery-kind {
-    @apply text-ink-2 m-0 mt-3 font-mono text-xs leading-none;
-  }
-
+  /* A citation is never cut: the source line wraps. */
   .gallery-source {
-    @apply text-muted m-0 mt-1.5 truncate text-[13px] leading-snug;
-  }
-
-  /* A table tile before its live table mounts: the first rows, set small. */
-  .gallery-tile .tile-table {
-    @apply text-ink-2 w-full border-collapse text-[11px] leading-tight;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .gallery-tile .tile-table th {
-    @apply border-line-strong text-ink border-b py-1 pr-2 text-left font-semibold;
-  }
-
-  .gallery-tile .tile-table td {
-    @apply border-line border-b py-1 pr-2;
-  }
-
-  .gallery-tile .tile-table .tile-table-number {
-    @apply text-right;
-  }
-
-  .gallery-tile .tile-stage .tile-table + .demo-placeholder {
-    @apply static mt-2 block px-0 text-left text-[11px] leading-snug;
+    @apply text-muted m-0 mt-2 text-[13px] leading-snug;
   }
 
   /* ---- Entry page ---- */
@@ -206,6 +126,16 @@
 
   .gallery-entry-figure .demo {
     @apply mt-0 mb-0;
+  }
+
+  /* A map is as wide as its column: its stage grows with the column instead of
+     holding the demo's fixed height, which left the map narrower than the column. */
+  .gallery-entry-figure[data-kind="maps"] {
+    container-type: inline-size;
+  }
+
+  .gallery-entry-figure[data-kind="maps"] .demo-stage {
+    height: max(var(--demo-height, 400px), 64cqi);
   }
 
   .gallery-notes {
@@ -281,6 +211,74 @@
   }
 }
 
+/* The lead's finding at near-headline size, and its chart in its own shape from 900px. */
+.gallery-tile[data-shape="lead"] .gallery-headline {
+  font-size: clamp(1.75rem, 1.1rem + 2.4vw, 2.75rem);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  max-width: 30ch;
+}
+
+@media (min-width: 900px) {
+  .gallery-grid .gallery-tile[data-shape="lead"] .tile-variant[data-tile-variant="main"] {
+    display: contents;
+  }
+
+  .gallery-grid .gallery-tile[data-shape="lead"] .tile-variant[data-tile-variant="narrow"] {
+    display: none;
+  }
+
+  .gallery-grid .gallery-tile[data-shape="lead"] .tile-stage.demo-stage {
+    aspect-ratio: var(--tile-ratio);
+  }
+}
+
+/* The arranged wall: six columns, each tile where wall-layout.ts placed it, in its own
+   shape. Only from 1100px, and only while no filter is chosen (the script writes the
+   choice as data-filter on the wall), so a filtered wall never leaves a lone feature
+   beside an empty column. */
+@media (min-width: 1100px) {
+  :is(.gallery-wall:not([data-filter]), .gallery-wall[data-filter="all"]) .gallery-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  :is(.gallery-wall:not([data-filter]), .gallery-wall[data-filter="all"]) .gallery-tile[style] {
+    grid-column: var(--col) / span var(--span);
+    grid-row: var(--row) / span var(--row-span);
+  }
+
+  :is(.gallery-wall:not([data-filter]), .gallery-wall[data-filter="all"])
+    .tile-variant[data-tile-variant="main"] {
+    display: contents;
+  }
+
+  :is(.gallery-wall:not([data-filter]), .gallery-wall[data-filter="all"])
+    .tile-variant[data-tile-variant="narrow"] {
+    display: none;
+  }
+
+  :is(.gallery-wall:not([data-filter]), .gallery-wall[data-filter="all"]) .tile-stage.demo-stage {
+    aspect-ratio: var(--tile-ratio);
+  }
+
+  :is(.gallery-wall:not([data-filter]), .gallery-wall[data-filter="all"])
+    .gallery-tile[data-shape="feature"]
+    .gallery-headline {
+    font-size: 1.875rem;
+    line-height: 1.15;
+  }
+}
+
+/* With scripts expected, the filter row holds its own height but stays invisible until
+   the script wires it, so nothing moves when it appears; without them it is not shown. */
+:root[data-demo-gate] .gallery-filter:not([data-ready]) {
+  visibility: hidden;
+}
+
+:root:not([data-demo-gate]) .gallery-filter:not([data-ready]) {
+  display: none;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   /* The headline fades in with its tile's reveal, by opacity alone (see GalleryTile.astro). */
   :root[data-motion-ready] .gallery-tile[data-reveal] .gallery-headline {
@@ -291,7 +289,6 @@
     opacity: 0;
   }
 
-  .gallery-filter-button,
   .gallery-headline a,
   .gallery-crumbs a,
   .gallery-pager-title {
@@ -299,40 +296,4 @@
       color 150ms ease-out,
       border-color 150ms ease-out;
   }
-
-  /* Going from a tile to its page, its chart grows into the page's chart. Only the tile
-     being opened (hovered, tapped or focused) carries the name, so the browser snapshots
-     one chart, not the whole wall. */
-  @view-transition {
-    navigation: auto;
-  }
-
-  .gallery-tile:is(:hover, :focus-within) .gallery-chart,
-  .gallery-entry-figure .demo-stage {
-    view-transition-name: var(--vt-name);
-  }
-}
-
-/* The live chart fills the stage and lays out at the cell's own size. It is not scaled from
-   the layout size with a transform (shared/tiles/tile-scale.ts): the library measures its
-   container with getBoundingClientRect, which includes the transform, so a scaled host lays
-   the chart out at the scaled width and crops it. Unlayered and specific: the library's root
-   classes are unlayered. */
-.gallery-tile .tile-stage > .demo-live {
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-}
-
-/* A tile is a picture, not a control: a live map's zoom buttons and hint stay off it. */
-.gallery-tile .oc-map-zoom-controls,
-.gallery-tile .oc-map-zoom-hint {
-  display: none;
-}
-
-/* A table tile's first rows step aside once its live table is in, and stay in place of
-   the failure line if the mount fails. */
-.gallery-tile .tile-stage[data-demo-live] > .tile-table,
-.gallery-tile .tile-stage:has(> .tile-table) > .demo-error {
-  display: none;
 }
