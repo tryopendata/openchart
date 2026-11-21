@@ -1,0 +1,52 @@
+---
+/**
+ * The gallery's filter: "All", then each kind that has entries, as text
+ * buttons on an ink rule with their counts, and the polite live region a change
+ * is read out in. It renders `hidden`, and src/scripts/gallery.ts shows it once
+ * it has wired the buttons, so a reader without JavaScript never meets a dead
+ * control and sees every tile. Each button carries the sentence its choice
+ * announces, so the script never needs the kinds' wording.
+ *
+ * Contract (src/scripts/gallery.ts relies on it): `fieldset[data-gallery-filter]`
+ * holding `button[data-filter=<all|kind>][data-announce][aria-pressed]`, and
+ * `[data-gallery-status]`, the live region.
+ */
+import type { VisualizationSectionId } from "../../config";
+import type { GalleryEntry } from "../../lib/gallery-types";
+import { kindCounts, type TileFilter } from "../shared/tiles/tile-filter";
+import { filterAnnouncement, KINDS, kindLabel } from "./kind-words";
+
+type Props = { entries: readonly GalleryEntry[] };
+
+const { entries } = Astro.props;
+const counts = kindCounts(entries.map((entry) => entry.kind));
+const options: { id: TileFilter<VisualizationSectionId>; label: string; count: number }[] = [
+  { id: "all", label: "All", count: entries.length },
+  ...KINDS.filter((kind) => counts.has(kind)).map((kind) => ({
+    id: kind,
+    label: kindLabel(kind),
+    count: counts.get(kind) ?? 0,
+  })),
+];
+---
+
+<div class="gallery-filter-slot">
+  <fieldset class="gallery-filter" data-gallery-filter hidden>
+    <legend class="sr-only">Show one kind of graphic</legend>
+    {options.map((option) => (
+      <button
+        type="button"
+        class="gallery-filter-button"
+        data-filter={option.id}
+        data-announce={filterAnnouncement(option.id, option.count)}
+        aria-pressed={option.id === "all" ? "true" : "false"}
+      >
+        {option.label}
+        <span class="gallery-count" aria-hidden="true">
+          {option.count}
+        </span>
+      </button>
+    ))}
+  </fieldset>
+</div>
+<p class="sr-only" aria-live="polite" data-gallery-status></p>

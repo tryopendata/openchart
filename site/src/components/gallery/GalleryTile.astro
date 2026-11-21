@@ -1,0 +1,82 @@
+---
+/**
+ * One gallery tile, set like a graphic on a desk's portfolio page: a ticked
+ * rule, the chart as a specimen, its finding as the headline (the tile's one
+ * link, whose box covers the tile), the kind in mono and a one-line source.
+ * The tile is a demo element, so the page's demo script mounts its live chart
+ * and plays the library's entrance the first time it is seen; the rule wipes
+ * and the caption lifts in with `@steamfield/ui/reveal`.
+ *
+ * Contract (src/scripts/gallery.ts and e2e/gallery.spec.ts rely on it):
+ * - `li[data-gallery-tile][data-kind=<kind>]`, a `.demo` with a prefixed `data-demo`
+ *   id, so it never counts as the entry page's own figure.
+ * - `--tile-ratio` keeps the stage at the static chart's shape; the live chart fills it.
+ * - `.gallery-rule` and `.gallery-headline a` are the parts a refile draws in.
+ */
+import type { VizSpec } from "@opendata-ai/openchart-core";
+import { getDemo } from "../../demos/registry";
+import { pageSharedHashes } from "../../lib/demo/shared-values";
+import type { GalleryEntry } from "../../lib/gallery-types";
+import { tileChartHtml } from "../shared/tiles/tile-markup";
+import { kindLabel } from "./kind-words";
+import { isFeature, tileSizeFor } from "./tile-size";
+
+type Props = {
+  entry: GalleryEntry;
+  /** Draw a wide entry as the wall's feature. Default false: related tiles are all standard. */
+  feature?: boolean;
+  /** Put a second feature on the right of the three-column wall. */
+  featureEnd?: boolean;
+  /** The headline's level in the page outline. */
+  level?: "h2" | "h3";
+};
+
+const { entry, feature = false, featureEnd = false, level: Heading = "h2" } = Astro.props;
+
+/** Prefix for the tiles' static SVG ids and demo ids, apart from any figure on the page. */
+const TILE_PREFIX = "gallery";
+
+const demo = getDemo(entry.demo);
+const chrome = (demo.spec as VizSpec & { chrome?: { title?: string | { text: string } } }).chrome;
+const headline = typeof chrome?.title === "string" ? chrome.title : (chrome?.title?.text ?? "");
+if (headline === "") {
+  throw new Error(
+    `Gallery entry "${entry.slug}": demo "${entry.demo}" has no chrome.title, which the tile prints as its headline.`,
+  );
+}
+
+const drawnAsFeature = feature && isFeature(entry);
+const size = tileSizeFor(entry, { feature });
+const chart = tileChartHtml(entry.demo, pageSharedHashes(Astro.locals), {
+  size,
+  domPrefix: TILE_PREFIX,
+});
+const style = `--tile-ratio: ${size.width} / ${size.height}; --vt-name: tile-${entry.slug}`;
+---
+
+<li
+  class="gallery-tile demo"
+  data-gallery-tile
+  data-demo={`${TILE_PREFIX}-${entry.demo}`}
+  data-demo-entrance
+  data-kind={entry.kind}
+  data-feature={drawnAsFeature ? (featureEnd ? "end" : "start") : undefined}
+  data-reveal
+  style={style}
+>
+  <div class="gallery-rule rule-axis" data-motion="wipe" aria-hidden="true"></div>
+  <div class="gallery-chart" inert aria-hidden="true" set:html={chart} />
+  {/* No reveal transform on the caption or the heading: a transformed ancestor would
+      shrink the link's tile-wide box to itself. The heading fades (gallery.css). */}
+  <div class="gallery-caption">
+    <Heading class="gallery-headline">
+      <a href={`/examples/${entry.slug}/`}>{headline}</a>
+    </Heading>
+    <p class="gallery-kind" data-motion="quiet">
+      {kindLabel(entry.kind)}
+    </p>
+    <p class="gallery-source" data-motion="quiet">
+      Source: {demo.source.label}
+    </p>
+  </div>
+</li>
