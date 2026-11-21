@@ -245,8 +245,14 @@
 
   .kinds-tile .demo-stage {
     @apply flex-1;
-    min-height: var(--kinds-height);
+    min-height: var(--kinds-height-narrow);
     height: auto;
+  }
+
+  @media (min-width: 640px) {
+    .kinds-tile .demo-stage {
+      min-height: var(--kinds-height);
+    }
   }
 
   /* A table grows to its rows rather than scrolling inside the tile. */

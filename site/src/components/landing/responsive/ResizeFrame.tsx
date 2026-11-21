@@ -32,6 +32,8 @@ import { responsiveSpec } from "./responsive-spec";
 
 /** The narrowest the chart goes: a small phone's chart column. */
 const MIN_WIDTH = 280;
+/** Room a breakpoint guide's label needs to the right of its line; nearer the track's end, the guide is left out. */
+const GUIDE_LABEL_PX = 40;
 /** The frame's left and right border, outside the chart's box. */
 const FRAME_BORDER_PX = 2;
 
@@ -121,7 +123,7 @@ export function ResizeFrame({ children }: ResizeFrameProps) {
         {range === null ? null : (
           <div className="resize-ruler" aria-hidden="true">
             {[BREAKPOINT_COMPACT_MAX, BREAKPOINT_MEDIUM_MAX]
-              .filter((mark) => mark < range.max)
+              .filter((mark) => mark + GUIDE_LABEL_PX <= range.max)
               .map((mark) => (
                 // The chart's box starts one border-width in from the track's edge.
                 <span key={mark} className="resize-mark" style={{ left: `${mark + 1}px` }}>

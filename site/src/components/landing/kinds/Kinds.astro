@@ -36,7 +36,7 @@ import "../../../styles/landing-story.css";
           class="kinds-tile"
           data-place={tile.place}
           data-fit-content={tile.fitContent ? "" : undefined}
-          style={`--kinds-height: ${tile.height}px`}
+          style={`--kinds-height: ${tile.height}px; --kinds-height-narrow: ${tile.narrowHeight ?? tile.height}px`}
         >
           <Demo id={tile.demo} tabs={false} />
           <a class="kinds-link" href={tile.href} data-motion-part>

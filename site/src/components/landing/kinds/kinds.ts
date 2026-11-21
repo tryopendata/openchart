@@ -33,6 +33,12 @@ export type KindsTile = {
    */
   height: number;
   /**
+   * The minimum height in the one-column layout under 640px, for a chart that
+   * draws much shorter at phone width (a map scales with its width). Defaults to
+   * `height`.
+   */
+  narrowHeight?: number;
+  /**
    * Let the stage grow to its content instead of scrolling inside it, for a
    * table whose rows stack into cards on a narrow screen. The height is then a
    * minimum.
@@ -51,6 +57,7 @@ export const kindsTiles: KindsTile[] = [
     link: "Symbol maps",
     place: "dominant",
     height: 520,
+    narrowHeight: 380,
   },
   {
     demo: "maps/tile-basic",
@@ -59,6 +66,7 @@ export const kindsTiles: KindsTile[] = [
     place: "side",
     // Tall enough that the tiles are drawn large in a one-third-width cell.
     height: 420,
+    narrowHeight: 340,
   },
   {
     demo: "comparison/barlist-basic",
