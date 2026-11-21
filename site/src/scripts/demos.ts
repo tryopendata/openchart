@@ -1,6 +1,7 @@
 /**
  * Brings the demos on a page to life: mounts each stage's live chart as it
- * comes within LEAD_PX of the viewport, keeps at most MAX_LIVE of them live,
+ * comes within LEAD_PX of the viewport (TILE_LEAD_PX for a wall's tiles), keeps
+ * about MAX_LIVE of them live, evicting the furthest off screen to its static chart,
  * remounts them when the site theme changes, and wires the code tabs, the Code
  * disclosure and the Copy buttons. A demo with reader controls also loads
  * demo-controls.ts, which may change the spec the demo shows; every later mount
@@ -26,6 +27,17 @@ import { setupFrameworkChoice } from "./framework-choice";
 
 /** Mount this far ahead of the viewport so the chart is live before the reader reaches it. */
 const LEAD_PX = 400;
+/**
+ * A tile's lead. A wall shows a dozen small charts at once, so a 400px lead
+ * makes most of them near and runs past MAX_LIVE; tiles mount just ahead of view.
+ */
+const TILE_LEAD_PX = 80;
+/** The class tile stages carry (components/shared/tiles/tile-markup.ts). */
+const TILE_STAGE = "tile-stage";
+/** On a stage once its entrance has played, so demo.css lets an evicted chart's static one show. */
+const PLAYED_ATTR = "data-demo-played";
+/** What a tile shows in a chart's place when it has no static SVG: a short table (tile-fallback.ts). */
+const TILE_FALLBACK = ".tile-table";
 /** Live mounts with a static SVG to fall back to; beyond this the furthest off-screen one goes. */
 const MAX_LIVE = 6;
 const FAILURE_TEXT = "This chart could not be rendered.";
@@ -66,7 +78,8 @@ function readDemoStage(stage: HTMLElement): DemoStage {
     stage,
     figure: figure ?? stage,
     entrance: figure?.hasAttribute(DEMO_ATTR.entrance) ?? false,
-    hasStatic: stage.querySelector(`svg.${DEMO_CLASS.static}`) !== null,
+    // A static SVG, inline or a tile's image, or a tile's fallback table to go back to.
+    hasStatic: stage.querySelector(`.${DEMO_CLASS.static}, ${TILE_FALLBACK}`) !== null,
     near: false,
     played: false,
     failed: false,
@@ -87,7 +100,7 @@ function distanceFromViewport(element: HTMLElement): number {
 
 /** Whether the reader may already be looking at the finished static chart. */
 function staticShowing(demo: DemoStage): boolean {
-  const statics = demo.stage.querySelectorAll<SVGElement>(`svg.${DEMO_CLASS.static}`);
+  const statics = demo.stage.querySelectorAll<Element>(`.${DEMO_CLASS.static}`);
   return [...statics].some((svg) => svg.checkVisibility({ visibilityProperty: true }));
 }
 
@@ -113,7 +126,10 @@ function showFailure(demo: DemoStage, error: unknown): void {
 function unmount(demo: DemoStage): void {
   if (!demo.live) return;
   // A held entrance that never ran is still owed to the next mount.
-  if (!demo.live.entranceWaiting()) demo.played = true;
+  if (!demo.live.entranceWaiting()) {
+    demo.played = true;
+    demo.stage.setAttribute(PLAYED_ATTR, "");
+  }
   demo.live.destroy();
   demo.live = null;
   demo.stage.removeAttribute(DEMO_ATTR.live);
@@ -215,20 +231,25 @@ async function wireControls(
   }
 }
 
-/** Calls `onApproach` each time a stage comes within LEAD_PX of the viewport. */
+/** Calls `onApproach` each time a stage comes within its lead (LEAD_PX, or TILE_LEAD_PX for a tile) of the viewport. */
 function observeApproach(demos: DemoStage[], onApproach: (demo: DemoStage) => void): void {
-  const observer = new IntersectionObserver(
-    (entries) => {
-      for (const entry of entries) {
-        const demo = demos.find((candidate) => candidate.stage === entry.target);
-        if (!demo) continue;
-        demo.near = entry.isIntersecting;
-        if (demo.near && !demo.live && !demo.failed) onApproach(demo);
-      }
-    },
-    { rootMargin: `${LEAD_PX}px 0px` },
-  );
-  for (const demo of demos) observer.observe(demo.stage);
+  const watch = (lead: number) =>
+    new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const demo = demos.find((candidate) => candidate.stage === entry.target);
+          if (!demo) continue;
+          demo.near = entry.isIntersecting;
+          if (demo.near && !demo.live && !demo.failed) onApproach(demo);
+        }
+      },
+      { rootMargin: `${lead}px 0px` },
+    );
+  const figures = watch(LEAD_PX);
+  const tiles = watch(TILE_LEAD_PX);
+  for (const demo of demos) {
+    (demo.stage.classList.contains(TILE_STAGE) ? tiles : figures).observe(demo.stage);
+  }
 }
 
 /** Calls `onChange` when the `dark` class on `<html>` flips. */

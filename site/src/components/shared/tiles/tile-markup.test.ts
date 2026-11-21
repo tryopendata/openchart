@@ -1,14 +1,15 @@
 /**
  * A tile's build-time markup, read back the way the page's demo script reads
  * it: the stage it mounts into and the spec `readFigureSpec` returns, with
- * shared values written once per page, at the size the page asks for. Also the
- * slimming of the static SVGs and the table fallback a reader without
- * JavaScript sees.
+ * shared values written once per page, at the size the page asks for. Charts
+ * show their static files as images; a table or sankey shows a fallback table,
+ * a network the placeholder line. Also the fallback tables themselves.
  */
 import { describe, expect, it } from "vitest";
 import { getDemo } from "../../../demos/registry";
 import { readFigureSpec } from "../../../scripts/demo-spec";
-import { slimSvg, type TileOptions, tableFallbackHtml, tileChartHtml } from "./tile-markup";
+import { SANKEY_FLOWS, sankeyFallbackHtml } from "./tile-fallback";
+import { type TileOptions, tableFallbackHtml, tileChartHtml } from "./tile-markup";
 import { tileSpec } from "./tile-spec";
 
 /**
@@ -17,8 +18,8 @@ import { tileSpec } from "./tile-spec";
  */
 const withoutStyles = (html: string) => html.replace(/<style\b[^>]*>[\s\S]*?<\/style>/g, "");
 
-/** The landing wall's layout: 240 by 180, ids prefixed "w". */
-const WALL: TileOptions = { size: { width: 240, height: 180 }, domPrefix: "w" };
+/** A wall's layout: 240 by 180. */
+const WALL: TileOptions = { size: { width: 240, height: 180 } };
 
 /** Puts tiles on a page as Vocabulary.astro does, sharing one record of written values. */
 function page(demos: string[], options = WALL) {
@@ -33,27 +34,69 @@ function page(demos: string[], options = WALL) {
   return { element };
 }
 
+const sources = (element: Element) =>
+  [...element.querySelectorAll("img.demo-static")].map((img) => [
+    img.getAttribute("data-theme"),
+    img.getAttribute("src"),
+  ]);
+
 describe("a tile's markup", () => {
-  it("holds a demo stage and the tile spec the demo script reads back whole", () => {
+  it("holds a demo stage, its static chart as lazy images in both themes, and the spec the demo script reads back whole", () => {
     const { element } = page(["comparison/column-basic"]);
     const stage = element("comparison/column-basic").querySelector("[data-demo-stage]");
     expect(stage?.classList.contains("tile-stage")).toBe(true);
-    expect(stage?.querySelectorAll("svg.demo-static")).toHaveLength(2);
+    expect(stage?.getAttribute("style")).toBe("--tile-ratio: 240 / 180");
+    expect(sources(element("comparison/column-basic"))).toEqual([
+      ["light", "/tiles/comparison--column-basic-240x180-light.svg"],
+      ["dark", "/tiles/comparison--column-basic-240x180-dark.svg"],
+    ]);
+    const img = stage?.querySelector("img");
+    expect([
+      img?.getAttribute("loading"),
+      img?.getAttribute("alt"),
+      img?.getAttribute("width"),
+    ]).toEqual(["lazy", "", "240"]);
     expect(readFigureSpec(element("comparison/column-basic"))).toEqual(
       tileSpec(getDemo("comparison/column-basic").spec),
     );
   });
 
-  it("lays the static SVGs out at the size the page asks for, with its id prefix", () => {
+  it("draws a second, narrow layout in its own wrapper when the page asks for one", () => {
     const { element } = page(["comparison/column-basic"], {
-      size: { width: 360, height: 240 },
-      domPrefix: "g",
+      size: { width: 900, height: 300 },
+      narrow: { width: 440, height: 292 },
     });
-    const svgs = [...element("comparison/column-basic").querySelectorAll("svg.demo-static")];
-    expect(svgs.map((svg) => svg.getAttribute("viewBox"))).toEqual(["0 0 360 240", "0 0 360 240"]);
-    const ids = svgs.flatMap((svg) => [...svg.querySelectorAll("[id]")].map((node) => node.id));
-    expect(ids.length).toBeGreaterThan(0);
-    expect(ids.filter((id) => !id.startsWith("g-"))).toEqual([]);
+    const tile = element("comparison/column-basic");
+    expect(tile.querySelector("[data-demo-stage]")?.getAttribute("style")).toBe(
+      "--tile-ratio: 900 / 300; --tile-ratio-narrow: 440 / 292",
+    );
+    const variants = [...tile.querySelectorAll("[data-tile-variant]")].map((variant) => [
+      variant.getAttribute("data-tile-variant"),
+      [...variant.querySelectorAll("img")].map((img) => img.getAttribute("src")),
+    ]);
+    expect(variants).toEqual([
+      [
+        "main",
+        [
+          "/tiles/comparison--column-basic-900x300-light.svg",
+          "/tiles/comparison--column-basic-900x300-dark.svg",
+        ],
+      ],
+      [
+        "narrow",
+        [
+          "/tiles/comparison--column-basic-440x292-light.svg",
+          "/tiles/comparison--column-basic-440x292-dark.svg",
+        ],
+      ],
+    ]);
+  });
+
+  it("names a specimen that keeps its key in its file, apart from the plain one", () => {
+    const { element } = page(["the-spec/transforms-fold"], { ...WALL, spec: { keepKey: true } });
+    expect(sources(element("the-spec/transforms-fold"))[0]?.[1]).toBe(
+      "/tiles/the-spec--transforms-fold-240x180-key-light.svg",
+    );
   });
 
   it("moves a map's atlas into a shared block, written once however many charts on the page use it", () => {
@@ -79,10 +122,12 @@ describe("a tile's markup", () => {
     }
   });
 
-  it("gives a sankey the placeholder line naming the chart, and a table its first rows", () => {
+  it("gives a sankey its largest flows and a table its first rows, each captioned by the placeholder line", () => {
     const { element } = page(["flow/sankey-basic", "tables/basic"]);
-    const placeholder = element("flow/sankey-basic").querySelector("[data-demo-placeholder]");
-    expect(placeholder?.textContent).toBe(
+    const sankey = element("flow/sankey-basic").querySelector("table.tile-table");
+    expect(sankey?.querySelectorAll("tbody tr")).toHaveLength(SANKEY_FLOWS);
+    expect(sankey?.querySelector("tbody tr")?.textContent).toBe("PetroleumTransportation24.97");
+    expect(sankey?.nextElementSibling?.textContent).toBe(
       `${getDemo("flow/sankey-basic").title}. This chart is drawn in the browser.`,
     );
     const table = element("tables/basic").querySelector("table.tile-table");
@@ -90,14 +135,17 @@ describe("a tile's markup", () => {
       "Country",
       "Population",
     ]);
-    expect([...(table?.querySelectorAll("tbody tr") ?? [])].map((row) => row.textContent)).toEqual([
-      "India1,438,069,596",
-      "China1,410,710,000",
-    ]);
-    // The table keeps the placeholder line every stage without a static SVG carries, as its caption.
-    expect(table?.nextElementSibling?.matches("p[data-demo-placeholder]")).toBe(true);
-    expect(table?.nextElementSibling?.textContent).toBe(
-      `${getDemo("tables/basic").title}. This chart is drawn in the browser.`,
+    expect(table?.querySelectorAll("tbody tr")).toHaveLength(5);
+    expect(table?.querySelector("tbody tr")?.textContent).toBe("India1,438,069,596");
+    expect(element("tables/basic").querySelector("img")).toBeNull();
+  });
+
+  it("gives a network only the placeholder line, since it has neither a static chart nor rows", () => {
+    const { element } = page(["flow/graph-clusters"]);
+    const stage = element("flow/graph-clusters").querySelector("[data-demo-stage]");
+    expect(stage?.querySelector("img, table")).toBeNull();
+    expect(stage?.querySelector("[data-demo-placeholder]")?.textContent).toBe(
+      `${getDemo("flow/graph-clusters").title}. This chart is drawn in the browser.`,
     );
   });
 
@@ -108,17 +156,26 @@ describe("a tile's markup", () => {
   });
 });
 
-describe("slimming a tile's SVG", () => {
-  it("keeps data-theme, the placeholder hook and referenced ids, and drops the rest", () => {
-    const svg =
-      '<svg class="demo-static" data-theme="dark" data-mark-count="3" aria-labelledby="t"><title id="t">x</title>' +
-      '<clipPath id="clip"></clipPath><g id="loose" data-key="a" clip-path="url(#clip)" data-flag></g></svg>' +
-      '<p data-demo-placeholder class="demo-placeholder">x</p>';
-    expect(slimSvg(svg)).toBe(
-      '<svg class="demo-static" data-theme="dark" aria-labelledby="t"><title id="t">x</title>' +
-        '<clipPath id="clip"></clipPath><g clip-path="url(#clip)"></g></svg>' +
-        '<p data-demo-placeholder class="demo-placeholder">x</p>',
-    );
+describe("a sankey tile's fallback", () => {
+  it("lists flows largest first in the value channel's format, and nothing for another spec", () => {
+    const spec = {
+      type: "sankey",
+      data: [
+        { from: "A", to: "B", qty: 1.234 },
+        { from: "A", to: "C", qty: 9.5 },
+      ],
+      encoding: {
+        source: { field: "from" },
+        target: { field: "to" },
+        value: { field: "qty", format: ".1f" },
+      },
+    } as never;
+    document.body.innerHTML = sankeyFallbackHtml(spec);
+    expect([...document.querySelectorAll("tbody tr")].map((row) => row.textContent)).toEqual([
+      "AC9.5",
+      "AB1.2",
+    ]);
+    expect(sankeyFallbackHtml(getDemo("comparison/column-basic").spec)).toBe("");
   });
 });
 

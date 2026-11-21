@@ -1,0 +1,299 @@
+/*
+ * Styles for the examples gallery (/examples/ and each /examples/<slug>/).
+ * The wall is set like a graphics desk's portfolio page: one lead graphic
+ * across the page with its finding near headline size, then a six-column grid
+ * where each tile takes the shape its chart needs (components/gallery/tile-size.ts)
+ * and sits where wall-layout.ts placed it. A filtered wall, and any screen under
+ * 1100px, drops the arrangement: every tile takes the standard shape in entry
+ * order. What every tile shares (stage, fallback table, whole-tile link, filter
+ * row) is in tiles.css. Every transition sits under prefers-reduced-motion:
+ * no-preference, so a reader who asked for less motion gets none.
+ */
+@reference "./global.css";
+
+@layer components {
+  /* ---- Page ---- */
+  .gallery-page {
+    @apply mx-auto w-full max-w-[90rem] px-5 pt-10 pb-24 sm:px-6 lg:px-8 lg:pt-16;
+  }
+
+  /* The title takes the left of the 12 columns and the lede sits low on the right. */
+  .gallery-head {
+    @apply grid gap-4 lg:grid-cols-12 lg:items-end lg:gap-8;
+  }
+
+  .gallery-title {
+    @apply text-ink font-display m-0 text-5xl leading-none font-medium tracking-[-0.02em] sm:text-6xl lg:col-span-6;
+  }
+
+  .gallery-lede {
+    @apply text-ink-2 m-0 max-w-[46ch] text-lg leading-snug lg:col-span-5 lg:col-start-8;
+  }
+
+  /* ---- Filter ---- */
+  .gallery-filter {
+    @apply mt-10 lg:mt-14;
+  }
+
+  /* ---- Wall ---- */
+  /* One column on a phone, two from 700px, three from 1100px; six when arranged (below). */
+  .gallery-grid {
+    @apply m-0 mt-10 grid list-none grid-cols-1 gap-x-6 gap-y-14 p-0 min-[700px]:grid-cols-2 min-[1100px]:grid-cols-3 lg:gap-x-8;
+  }
+
+  /* Unarranged, each tile shows its standard-shaped chart. */
+  .gallery-grid .tile-variant[data-tile-variant="main"] {
+    display: none;
+  }
+
+  .gallery-grid .tile-variant[data-tile-variant="narrow"] {
+    display: contents;
+  }
+
+  .gallery-grid .tile-stage.demo-stage {
+    aspect-ratio: var(--tile-ratio-narrow, var(--tile-ratio));
+  }
+
+  /* The lead always spans the wall. */
+  .gallery-tile[data-shape="lead"] {
+    grid-column: 1 / -1;
+  }
+
+  /* The ticked rule: the site's axis motif over every graphic, the accent while hovered. */
+  .gallery-rule {
+    background-size: calc((100% - 1px) / 6) 100%;
+  }
+
+  .gallery-tile:hover .gallery-rule,
+  .gallery-tile:has(.tile-link:focus-visible) .gallery-rule {
+    --color-line-strong: var(--color-accent);
+  }
+
+  .gallery-chart {
+    @apply mt-4 min-w-0;
+  }
+
+  .gallery-caption {
+    @apply mt-4;
+  }
+
+  .gallery-headline {
+    @apply text-ink font-display m-0 text-[1.3125rem] leading-[1.2] font-medium tracking-[-0.01em] text-balance;
+  }
+
+  .gallery-headline a {
+    @apply text-ink no-underline decoration-1 underline-offset-4;
+  }
+
+  .gallery-tile:hover .gallery-headline a {
+    @apply underline;
+  }
+
+  /* A citation is never cut: the source line wraps. */
+  .gallery-source {
+    @apply text-muted m-0 mt-2 text-[13px] leading-snug;
+  }
+
+  /* ---- Entry page ---- */
+  .gallery-crumbs {
+    @apply text-muted flex flex-wrap items-baseline gap-2 text-sm;
+  }
+
+  .gallery-crumbs a {
+    @apply text-ink-2 hover:text-ink no-underline hover:underline;
+  }
+
+  .gallery-entry-head {
+    @apply mt-6;
+  }
+
+  .gallery-entry-title {
+    @apply text-ink font-display m-0 max-w-[24ch] text-4xl leading-[1.08] font-medium tracking-[-0.02em] text-balance sm:text-5xl;
+  }
+
+  .gallery-entry-lede {
+    @apply text-ink-2 m-0 mt-4 max-w-[60ch] text-lg leading-snug;
+  }
+
+  /* The chart in 8 of the 12 columns; the notes in the last 3, a column apart. */
+  .gallery-entry-body {
+    @apply mt-10 grid gap-10 min-[1100px]:grid-cols-12 min-[1100px]:gap-x-8;
+  }
+
+  .gallery-entry-figure {
+    @apply min-w-0 min-[1100px]:col-span-8;
+  }
+
+  .gallery-entry-figure .demo {
+    @apply mt-0 mb-0;
+  }
+
+  /* A map is as wide as its column: its stage grows with the column instead of
+     holding the demo's fixed height, which left the map narrower than the column. */
+  .gallery-entry-figure[data-kind="maps"] {
+    container-type: inline-size;
+  }
+
+  .gallery-entry-figure[data-kind="maps"] .demo-stage {
+    height: max(var(--demo-height, 400px), 64cqi);
+  }
+
+  .gallery-notes {
+    @apply border-line-strong min-w-0 self-start border-t pt-4 min-[1100px]:sticky min-[1100px]:top-8 min-[1100px]:col-span-3 min-[1100px]:col-start-10;
+  }
+
+  .gallery-docs-link {
+    @apply text-accent text-base font-medium underline decoration-1 underline-offset-4;
+  }
+
+  .gallery-facts {
+    @apply m-0 mt-6 grid gap-4;
+  }
+
+  .gallery-fact {
+    @apply border-line grid gap-1 border-t pt-3;
+  }
+
+  .gallery-fact dt {
+    @apply text-muted text-xs;
+  }
+
+  .gallery-fact dd {
+    @apply text-ink-2 m-0 text-sm leading-snug;
+  }
+
+  .gallery-fact dd a {
+    @apply text-ink-2 hover:decoration-current underline decoration-line underline-offset-2;
+  }
+
+  .gallery-fact-values {
+    @apply flex flex-wrap gap-x-3 gap-y-1;
+  }
+
+  .gallery-fact code {
+    @apply font-mono text-[12.5px];
+  }
+
+  .gallery-pager {
+    @apply border-line mt-16 grid gap-6 border-t pt-5 sm:grid-cols-2;
+  }
+
+  .gallery-pager-link {
+    @apply grid gap-1 no-underline;
+  }
+
+  .gallery-pager-next {
+    @apply sm:col-start-2 sm:text-right;
+  }
+
+  .gallery-pager-label {
+    @apply text-muted text-sm;
+  }
+
+  .gallery-pager-title {
+    @apply text-ink font-display text-xl leading-tight text-balance;
+  }
+
+  .gallery-pager-link:hover .gallery-pager-title {
+    @apply underline decoration-1 underline-offset-4;
+  }
+
+  .gallery-related {
+    @apply mt-20;
+  }
+
+  .gallery-related-title {
+    @apply text-ink font-display m-0 text-3xl leading-tight font-medium tracking-[-0.015em];
+  }
+
+  .gallery-related .gallery-grid {
+    @apply mt-8;
+  }
+}
+
+/* The lead's finding at near-headline size, and its chart in its own shape from 900px. */
+.gallery-tile[data-shape="lead"] .gallery-headline {
+  font-size: clamp(1.75rem, 1.1rem + 2.4vw, 2.75rem);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  max-width: 30ch;
+}
+
+@media (min-width: 900px) {
+  .gallery-grid .gallery-tile[data-shape="lead"] .tile-variant[data-tile-variant="main"] {
+    display: contents;
+  }
+
+  .gallery-grid .gallery-tile[data-shape="lead"] .tile-variant[data-tile-variant="narrow"] {
+    display: none;
+  }
+
+  .gallery-grid .gallery-tile[data-shape="lead"] .tile-stage.demo-stage {
+    aspect-ratio: var(--tile-ratio);
+  }
+}
+
+/* The arranged wall: six columns, each tile where wall-layout.ts placed it, in its own
+   shape. Only from 1100px, and only while no filter is chosen (the script writes the
+   choice as data-filter on the wall), so a filtered wall never leaves a lone feature
+   beside an empty column. */
+@media (min-width: 1100px) {
+  :is(.gallery-wall:not([data-filter]), .gallery-wall[data-filter="all"]) .gallery-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  :is(.gallery-wall:not([data-filter]), .gallery-wall[data-filter="all"]) .gallery-tile[style] {
+    grid-column: var(--col) / span var(--span);
+    grid-row: var(--row) / span var(--row-span);
+  }
+
+  :is(.gallery-wall:not([data-filter]), .gallery-wall[data-filter="all"])
+    .tile-variant[data-tile-variant="main"] {
+    display: contents;
+  }
+
+  :is(.gallery-wall:not([data-filter]), .gallery-wall[data-filter="all"])
+    .tile-variant[data-tile-variant="narrow"] {
+    display: none;
+  }
+
+  :is(.gallery-wall:not([data-filter]), .gallery-wall[data-filter="all"]) .tile-stage.demo-stage {
+    aspect-ratio: var(--tile-ratio);
+  }
+
+  :is(.gallery-wall:not([data-filter]), .gallery-wall[data-filter="all"])
+    .gallery-tile[data-shape="feature"]
+    .gallery-headline {
+    font-size: 1.875rem;
+    line-height: 1.15;
+  }
+}
+
+/* With scripts expected, the filter row holds its own height but stays invisible until
+   the script wires it, so nothing moves when it appears; without them it is not shown. */
+:root[data-demo-gate] .gallery-filter:not([data-ready]) {
+  visibility: hidden;
+}
+
+:root:not([data-demo-gate]) .gallery-filter:not([data-ready]) {
+  display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* The headline fades in with its tile's reveal, by opacity alone (see GalleryTile.astro). */
+  :root[data-motion-ready] .gallery-tile[data-reveal] .gallery-headline {
+    transition: opacity 320ms cubic-bezier(0.45, 0.05, 0.25, 1);
+  }
+
+  :root[data-motion-ready] .gallery-tile[data-reveal]:not([data-revealed]) .gallery-headline {
+    opacity: 0;
+  }
+
+  .gallery-headline a,
+  .gallery-crumbs a,
+  .gallery-pager-title {
+    transition:
+      color 150ms ease-out,
+      border-color 150ms ease-out;
+  }
+}

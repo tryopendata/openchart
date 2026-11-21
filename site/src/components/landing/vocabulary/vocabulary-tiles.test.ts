@@ -2,7 +2,7 @@
  * The wall's tile list against the real demos and the docs page list: every
  * tile draws a registered, valid demo and links to a page the catalog builds,
  * and the wall covers every Visualizations section. Also the wall's wrappers
- * over the shared tile modules: its size, its hash key and its error context.
+ * over the shared tile modules: its size, its files, its hash key and its error context.
  */
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
@@ -12,8 +12,7 @@ import { catalogPageIds } from "../../../../tests/catalog-pages";
 import { getDemo } from "../../../demos/registry";
 import { type VocabularyTile, vocabularyTiles } from "../../../landing/vocabulary";
 import { validateDemo } from "../../../lib/demo/validate";
-import { tileChartHtml } from "./tile-markup";
-import { tileScale } from "./tile-scale";
+import { tileChartHtml, vocabularyTileRequests } from "./tile-markup";
 import { tileSpec } from "./tile-spec";
 import { parseWallHash, WALL_INTENTS, wallHash } from "./wall-filter";
 
@@ -57,12 +56,13 @@ describe("the vocabulary wall's tiles", () => {
   });
 
   it.each(vocabularyTiles.map((tile) => [tile.demo] as const))(
-    "%s still validates as a tile, with the tiles' tight padding and clear background",
+    "%s still validates as a tile, with the tiles' tight padding (wider for a sankey's labels) and clear background",
     (id) => {
       const tile = tileSpec(getDemo(id).spec);
       expect(validateSpec(tile).errors).toEqual([]);
+      const padding = id.startsWith("flow/sankey") ? 28 : 4;
       expect((tile as unknown as Record<string, unknown>).theme).toMatchObject({
-        spacing: { padding: 4, chromeToChart: 0 },
+        spacing: { padding, chromeToChart: 0 },
         colors: { background: "transparent" },
       });
     },
@@ -70,10 +70,19 @@ describe("the vocabulary wall's tiles", () => {
 });
 
 describe("the wall's tile wrappers", () => {
-  it("lay each chart out at 240 by 180", () => {
-    const html = tileChartHtml(vocabularyTiles[0] as VocabularyTile, new Set());
-    expect(html).toContain('viewBox="0 0 240 180"');
-    expect(tileScale(180)).toBeCloseTo(0.75);
+  it("lay each chart out at the six-column wall's cell, 208 by 156", () => {
+    const tile = vocabularyTiles[0] as VocabularyTile;
+    const html = tileChartHtml(tile, new Set());
+    expect(html).toContain(`/tiles/${tile.demo.replace("/", "--")}-208x156-light.svg`);
+    expect(html).toContain("--tile-ratio: 208 / 156");
+  });
+
+  it("ask for a static file for every tile, at the wall's size", () => {
+    const requests = vocabularyTileRequests();
+    expect(requests.map((request) => request.demo)).toEqual(vocabularyTiles.map((t) => t.demo));
+    expect(
+      new Set(requests.map((request) => `${request.size.width}x${request.size.height}`)),
+    ).toEqual(new Set(["208x156"]));
   });
 
   it("name the wall's tile list in the error when a tile's demo does not exist", () => {

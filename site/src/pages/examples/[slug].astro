@@ -1,15 +1,28 @@
 ---
 /**
- * One gallery entry's page: its title, the live demo with its code, and a link
- * to the docs page for the chart. The article is indexed by search under
- * Examples. Stub until lane a builds the page.
+ * One gallery entry's page: a breadcrumb back to the wall, the entry's title
+ * and description, its live demo with the code under it, and a notes column
+ * with the docs link, the dataset and the spec fields that shape the chart.
+ * Under the article: the entries before and after it, then three tiles to go
+ * on to, same kind first. Only the article is indexed by search, under
+ * Examples. src/scripts/gallery.ts records the view.
  */
 import type { GetStaticPaths } from "astro";
 import Demo from "../../components/demo/Demo.astro";
+import EntryNotes from "../../components/gallery/EntryNotes.astro";
+import EntryPager from "../../components/gallery/EntryPager.astro";
+import GalleryTile from "../../components/gallery/GalleryTile.astro";
+import { kindLabel, relatedHeading } from "../../components/gallery/kind-words";
+import { relatedTo } from "../../components/gallery/neighbours";
+import type { WallEntry } from "../../components/gallery/tile-size";
+// Checks the entries and places the wall, so a broken entry fails this page's build too.
+import "../../components/gallery/wall";
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import { allPages } from "../../lib/collection";
 import { galleryEntries } from "../../lib/gallery";
-import type { GalleryEntry } from "../../lib/gallery-types";
 import { searchBodyAttrs } from "../../lib/search-index";
+import "../../styles/tiles.css";
+import "../../styles/gallery.css";
 
 export const getStaticPaths = (() =>
   galleryEntries.map((entry) => ({
@@ -18,9 +31,24 @@ export const getStaticPaths = (() =>
   }))) satisfies GetStaticPaths;
 
 interface Props {
-  entry: GalleryEntry;
+  entry: WallEntry;
 }
+
+/** How many tiles the page offers under the pager. */
+const RELATED_COUNT = 3;
+
 const { entry } = Astro.props;
+const docsPage = (await allPages()).find(({ page }) => `/docs/${page.id}/` === entry.docs);
+if (!docsPage) {
+  throw new Error(
+    `Gallery entry "${entry.slug}" links ${entry.docs}, which is not a published docs page.`,
+  );
+}
+const related = relatedTo(galleryEntries, entry, RELATED_COUNT);
+const heading = relatedHeading(
+  entry.kind,
+  related.every((other) => other.kind === entry.kind),
+);
 ---
 
 <BaseLayout
@@ -29,16 +57,38 @@ const { entry } = Astro.props;
   path={`/examples/${entry.slug}/`}
   image={`/og/examples/${entry.slug}.png`}
 >
-  <article class="mx-auto max-w-4xl px-6 py-10" {...searchBodyAttrs("examples")}>
-    <h1 class="text-ink text-[2.125rem] leading-[1.1] font-medium tracking-[-0.02em]">
-      {entry.title}
-    </h1>
-    <p class="text-ink-2 mt-4 text-lg leading-relaxed">{entry.description}</p>
-    <div class="mt-8">
-      <Demo id={entry.demo} />
-    </div>
-    <p class="mt-6">
-      <a href={entry.docs}>Read the docs</a>
-    </p>
-  </article>
+  <div class="gallery-page">
+    <nav class="gallery-crumbs" aria-label="Breadcrumb">
+      <a href="/examples/">Examples</a>
+      <span aria-hidden="true">/</span>
+      <a href={`/examples/#kind=${entry.kind}`}>{kindLabel(entry.kind)}</a>
+    </nav>
+    <article class="gallery-entry" data-gallery-entry={entry.slug} {...searchBodyAttrs("examples")}>
+      <header class="gallery-entry-head">
+        <h1 class="gallery-entry-title">{entry.title}</h1>
+        <p class="gallery-entry-lede">{entry.description}</p>
+      </header>
+      <div class="gallery-entry-body">
+        <div class="gallery-entry-figure" data-kind={entry.kind}>
+          <Demo id={entry.demo} />
+        </div>
+        <EntryNotes entry={entry} docsTitle={docsPage.page.title} />
+      </div>
+    </article>
+    <EntryPager entry={entry} />
+    <section class="gallery-related" aria-labelledby="gallery-related-title">
+      <h2 id="gallery-related-title" class="gallery-related-title">
+        {heading}
+      </h2>
+      <ul class="gallery-grid" role="list">
+        {related.map((other) => (
+          <GalleryTile entry={other} level="h3" />
+        ))}
+      </ul>
+    </section>
+  </div>
 </BaseLayout>
+
+<script>
+  import "../../scripts/gallery";
+</script>

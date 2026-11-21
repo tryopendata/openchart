@@ -1,0 +1,129 @@
+/*
+ * Tiles: small finished charts set in a grid, on the landing wall, the examples
+ * gallery and the blog index (components/shared/tiles/). Everything here keys on
+ * the tile classes, so it is safe on any page. A page's own sheet sets the grid,
+ * the type and the tile's shape; this sheet sets what every tile shares: the
+ * stage that keeps the static chart's shape, the live chart filling it, the
+ * fallback table a table or sankey shows, the one link that covers the tile, and
+ * the filter row above a wall.
+ */
+@reference "./global.css";
+
+@layer components {
+  /* ---- The tile ---- */
+  /* A tile is a demo element (demo.css) without a figure's margin. */
+  .tile.demo {
+    @apply relative m-0 grid min-w-0 content-start;
+    /* minmax(0, …): a static chart's intrinsic width must not widen the tile past its cell. */
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* The stage keeps the static chart's shape at every width, so the live chart never moves the page. */
+  .tile-stage.demo-stage {
+    @apply relative h-auto w-full overflow-hidden;
+    aspect-ratio: var(--tile-ratio, 3 / 2);
+  }
+
+  .tile-stage img.demo-static {
+    object-fit: contain;
+  }
+
+  /* A tile drawn in two shapes shows its main images unless the page switches it to narrow. */
+  .tile-variant {
+    display: contents;
+  }
+
+  .tile-variant[data-tile-variant="narrow"] {
+    display: none;
+  }
+
+  /* ---- The fallback table: a table's first rows, or a sankey's largest flows ---- */
+  .tile-table {
+    @apply text-ink-2 w-full border-collapse text-[11px] leading-tight;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tile-table th {
+    @apply border-line-strong text-ink border-b py-1 pr-2 text-left font-semibold;
+  }
+
+  .tile-table td {
+    @apply border-line border-b py-1 pr-2;
+  }
+
+  .tile-table .tile-table-number {
+    @apply text-right;
+  }
+
+  /* Under the fallback table, the placeholder line is a caption, not a centred notice. */
+  .tile-stage .tile-table + .demo-placeholder {
+    @apply static mt-2 block px-0 text-left text-[11px] leading-snug;
+  }
+
+  /* ---- The tile's one link: its box covers the tile, so the whole chart is the target ---- */
+  .tile-link::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+
+  .tile-link:focus-visible {
+    outline: none;
+  }
+
+  .tile:has(.tile-link:focus-visible) {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 6px;
+  }
+
+  /* ---- The filter row over a wall: text buttons on an ink rule, like a table's header row ---- */
+  .tile-filter {
+    @apply border-line-strong m-0 flex min-w-0 flex-wrap gap-x-6 gap-y-1 border-0 border-b p-0 pb-px;
+  }
+
+  .tile-filter-button {
+    @apply text-muted hover:text-ink -mb-px inline-flex items-baseline gap-1.5 border-b-2 border-transparent py-2.5 text-sm font-medium;
+  }
+
+  .tile-filter-button[aria-pressed="true"] {
+    @apply text-ink border-accent;
+  }
+
+  .tile-count {
+    @apply font-mono text-[11px] font-normal;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .tile-filter-button {
+    transition:
+      color 150ms ease-out,
+      border-color 150ms ease-out;
+  }
+}
+
+/* The live chart fills the stage and lays out at the cell's own size. It is not scaled
+   from a fixed layout with a transform: the library sizes a chart from its container's
+   getBoundingClientRect, which includes the transform, so a scaled host lays the chart
+   out at the scaled size and crops or shrinks it. Unlayered and specific: the library's
+   root classes are unlayered. */
+.tile .tile-stage > .demo-live {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* A tile is a picture, not a control: a live map's zoom buttons and hint stay off it. */
+.tile .oc-map-zoom-controls,
+.tile .oc-map-zoom-hint {
+  display: none;
+}
+
+/* The fallback table steps aside once the live chart is in, and stays in place of the
+   failure line if the mount fails. */
+.tile-stage[data-demo-live] > .tile-table,
+.tile-stage[data-demo-live] > .tile-table + .demo-placeholder,
+.tile-stage:has(> .tile-table) > .demo-error {
+  display: none;
+}

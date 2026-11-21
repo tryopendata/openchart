@@ -1,11 +1,13 @@
 /**
  * A tile wall's page-level choreography, run only when motion is allowed. GSAP
- * never touches a chart: a tile's rule draws across and its name lifts in while
+ * never touches a chart: a tile's rule draws across and its name fades in while
  * the chart inside plays the library's own entrance. A refile is one beat: the
  * tiles that stay glide to their new cells while the ones that arrive draw in,
  * all on the same duration and curve. Each tile draws in once per arrival: the
  * scroll wave skips a tile a refile already drew. The page names the rule and
- * name elements inside its tiles (`TileParts`).
+ * name elements inside its tiles (`TileParts`). The name only fades: it is
+ * usually an inline link, which a transform would not move, and a transform on
+ * a block around the tile's link would shrink the link's tile-wide box to it.
  */
 import type { MotionTools } from "../../../scripts/motion";
 
@@ -51,8 +53,8 @@ function drawIn(
     )
     .fromTo(
       partsOf(tiles, parts.name),
-      { opacity: 0, y: 6 },
-      { opacity: 1, y: 0, duration: timing.seconds, ease: EASE, stagger: timing.step },
+      { opacity: 0 },
+      { opacity: 1, duration: timing.seconds, ease: EASE, stagger: timing.step },
       0,
     );
 }
@@ -73,7 +75,7 @@ export function waveIn(
   );
   if (below.length === 0) return;
   gsap.set(partsOf(below, parts.rule), { scaleX: 0, transformOrigin: "0 50%" });
-  gsap.set(partsOf(below, parts.name), { opacity: 0, y: 6 });
+  gsap.set(partsOf(below, parts.name), { opacity: 0 });
   ScrollTrigger.batch(below, {
     start: WAVE_START,
     once: true,

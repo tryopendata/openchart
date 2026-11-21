@@ -1,0 +1,78 @@
+---
+/**
+ * One gallery tile, set like a graphic on a desk's portfolio page: a ticked
+ * rule, the chart, its finding as the headline (the tile's one link, whose box
+ * covers the tile) and its source. The chart takes the shape the entry needs
+ * (tile-size.ts); on the arranged wall the tile sits where wall-layout.ts put
+ * it. The tile is a demo element, so the page's demo script mounts its live
+ * chart and plays the library's entrance the first time it is seen; the rule
+ * wipes and the headline and source come in with `@steamfield/ui/reveal`.
+ *
+ * Contract (src/scripts/gallery.ts and e2e/gallery.spec.ts rely on it):
+ * - `li[data-gallery-tile][data-kind=<kind>][data-shape=<shape>]`, a `.tile.demo`
+ *   with a prefixed `data-demo` id, so it never counts as an entry page's own figure.
+ * - `--col`, `--span`, `--row` and `--row-span` place it on the arranged wall.
+ * - `.gallery-rule` and `.gallery-headline a` are the parts a refile draws in.
+ */
+import type { VizSpec } from "@opendata-ai/openchart-core";
+import { getDemo } from "../../demos/registry";
+import { pageSharedHashes } from "../../lib/demo/shared-values";
+import { tileChartHtml } from "../shared/tiles/tile-markup";
+import { relatedTileOptions, wallTileOptions } from "./tile-options";
+import { shapeOf, type WallEntry } from "./tile-size";
+import type { Placement } from "./wall-layout";
+
+type Props = {
+  entry: WallEntry;
+  /** Where the tile sits on the arranged wall. Omitted under an entry page, where every tile is standard. */
+  placement?: Placement;
+  /** The headline's level in the page outline. */
+  level?: "h2" | "h3";
+};
+
+const { entry, placement, level: Heading = "h2" } = Astro.props;
+
+/** Prefix for the tiles' demo ids, apart from any figure on the page. */
+const TILE_PREFIX = "gallery";
+
+const demo = getDemo(entry.demo);
+const chrome = (demo.spec as VizSpec & { chrome?: { title?: string | { text: string } } }).chrome;
+const headline = typeof chrome?.title === "string" ? chrome.title : (chrome?.title?.text ?? "");
+if (headline === "") {
+  throw new Error(
+    `Gallery entry "${entry.slug}": demo "${entry.demo}" has no chrome.title, which the tile prints as its headline.`,
+  );
+}
+
+const options = placement ? wallTileOptions(entry) : relatedTileOptions(entry);
+const chart = tileChartHtml(entry.demo, pageSharedHashes(Astro.locals), options);
+const style = placement
+  ? `--col: ${placement.column}; --span: ${placement.span}; --row: ${placement.row}; --row-span: ${placement.rowSpan}`
+  : undefined;
+---
+
+<li
+  class="gallery-tile tile demo"
+  data-gallery-tile
+  data-demo={`${TILE_PREFIX}-${entry.demo}`}
+  data-demo-entrance
+  data-kind={entry.kind}
+  data-shape={placement ? shapeOf(entry) : "standard"}
+  data-reveal
+  style={style}
+>
+  <div class="gallery-rule rule-axis" data-motion="wipe" aria-hidden="true"></div>
+  <div class="gallery-chart" inert aria-hidden="true" set:html={chart} />
+  {/* No reveal transform on the caption or the heading: a transformed ancestor would
+      shrink the link's tile-wide box to itself. The heading fades (gallery.css). */}
+  <div class="gallery-caption">
+    <Heading class="gallery-headline">
+      <a class="tile-link" href={`/examples/${entry.slug}/`}>
+        {headline}
+      </a>
+    </Heading>
+    <p class="gallery-source" data-motion="quiet">
+      Source: {demo.source.label}
+    </p>
+  </div>
+</li>

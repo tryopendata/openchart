@@ -1,13 +1,12 @@
 /**
  * How a tile's chart is drawn: the demo's spec set as a specimen (marks kept,
- * everything that cannot survive at tile size dropped), laid out at the tile
- * size and scaled to the cell.
+ * everything that cannot survive at tile size dropped, the key kept when a
+ * page asks for it).
  */
 import type { VizSpec } from "@opendata-ai/openchart-core";
 import { validateSpec } from "@opendata-ai/openchart-engine";
 import { describe, expect, it } from "vitest";
 import { getDemo } from "../../../demos/registry";
-import { tileScale } from "./tile-scale";
 import { TILE_TABLE, tileSpec } from "./tile-spec";
 
 type Json = Record<string, unknown>;
@@ -86,10 +85,12 @@ describe("a tile's spec", () => {
     expect(graph.encoding).toHaveProperty("nodeColor");
     const sankey = json(tileSpec(getDemo("flow/sankey-budget").spec));
     expect(sankey).toMatchObject({ nodeLabelAlign: "right", legend: { show: false } });
+    // Room on every side for the last column's names and values.
+    expect(sankey.theme).toMatchObject({ spacing: { padding: 28 } });
   });
 
-  it("gives every tile the same tight padding and a clear background, over any theme the demo sets", () => {
-    for (const id of SPECIMENS) {
+  it("gives every tile but a sankey the same tight padding and a clear background, over any theme the demo sets", () => {
+    for (const id of SPECIMENS.filter((specimen) => !specimen.startsWith("flow/sankey"))) {
       expect(json(tileSpec(getDemo(id).spec)).theme, id).toMatchObject({
         spacing: { padding: 4, chromeToChart: 0 },
         colors: { background: "transparent" },
@@ -98,11 +99,24 @@ describe("a tile's spec", () => {
   });
 });
 
-describe("a live tile's scale", () => {
-  it("fits the tile layout width to the cell, down and up", () => {
-    expect(tileScale(240, 240)).toBe(1);
-    expect(tileScale(180, 240)).toBeCloseTo(0.75);
-    expect(tileScale(300, 240)).toBeCloseTo(1.25);
-    expect(tileScale(270, 360)).toBeCloseTo(0.75);
+describe("a tile that keeps its key", () => {
+  it("keeps a chart's legend and endpoint labels and a map's legend, where color carries the finding", () => {
+    const lines = json(tileSpec(getDemo("the-spec/transforms-fold").spec, { keepKey: true }));
+    expect(lines.endpointLabels).toEqual(
+      json(getDemo("the-spec/transforms-fold").spec).endpointLabels,
+    );
+    expect(lines).not.toHaveProperty("legend");
+    expect((lines.encoding as Record<string, Json>).color).not.toHaveProperty("legend");
+    const map = json(tileSpec(getDemo("maps/choropleth-basic").spec, { keepKey: true }));
+    expect(map).not.toHaveProperty("legend");
+    // Everything else a tile drops still goes.
+    expect(lines).not.toHaveProperty("chrome");
+    expect(lines.labels).toBe(false);
+  });
+
+  it("cuts a table to the rows and columns the page asks for", () => {
+    const tile = json(tileSpec(getDemo("tables/basic").spec, { table: { rows: 6, columns: 3 } }));
+    expect(tile.data).toHaveLength(6);
+    expect(tile.columns).toHaveLength(3);
   });
 });

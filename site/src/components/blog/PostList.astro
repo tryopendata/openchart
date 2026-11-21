@@ -4,8 +4,8 @@
  * each under a hairline that draws across as it is reached, with its title as
  * an h2 link, its description, date, reading time and tags, and its `lead`
  * chart, when it has one, as a tile specimen beside the text. The chart plays
- * the library's own entrance when it goes live; the script below keeps the
- * live tile at the static one's scale. With no posts it says so.
+ * the library's own entrance when it goes live, filling its stage (tiles.css).
+ * With no posts it says so.
  */
 import { displayDate, isoDay, postPath, tagPath, tagsOf } from "../../lib/blog";
 import type { BlogPost } from "../../lib/blog-types";
@@ -47,7 +47,7 @@ const pageShared = pageSharedHashes(Astro.locals);
         </div>
         {post.lead && (
           <div
-            class="blog-lead demo"
+            class="blog-lead tile demo"
             data-demo={`lead-${post.lead}`}
             data-demo-entrance
             inert
@@ -59,12 +59,3 @@ const pageShared = pageSharedHashes(Astro.locals);
     ))}
   </ol>
 )}
-
-<script>
-  import { observeTileScale } from "../shared/tiles/tile-scale";
-  import { LEAD_TILE_SIZE } from "./lead-tile-size";
-
-  // Lead tiles share one size, so the first visible stage's width scales them all.
-  const list = document.querySelector<HTMLElement>("[data-blog-list]");
-  if (list?.querySelector(".blog-lead")) observeTileScale(list, LEAD_TILE_SIZE);
-</script>

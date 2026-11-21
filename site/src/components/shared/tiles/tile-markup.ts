@@ -2,114 +2,78 @@
  * The build-time HTML of a tile's chart: a bare demo stage and the embedded
  * spec, in the demo markup contract, so the page's demo script (scripts/demos.ts)
  * mounts each tile and plays its entrance the first time it is seen, like any
- * demo. Charts with a static renderer get the demo system's light and dark SVGs,
- * laid out at the caller's tile size and slimmed: whole-pixel geometry, and none
- * of the data attributes and ids only a live chart reads, since the stage sits
- * behind `aria-hidden`. Tables get a small HTML table of their first rows;
- * sankeys and networks get the demo system's placeholder line naming the chart.
+ * demo. Charts with a static renderer show their light and dark static SVGs as
+ * lazy images (tile-files.ts writes the files); a page that lays a tile out in
+ * two shapes passes a `narrow` size too, and its CSS picks one by the
+ * `data-tile-variant` wrapper. Tables and sankeys show a small table instead
+ * (tile-fallback.ts), with the demo system's placeholder line as its caption.
+ * The stage keeps the layout's shape (`--tile-ratio`, and `--tile-ratio-narrow`).
  */
-import { buildD3Formatter, isTableSpec, type VizSpec } from "@opendata-ai/openchart-core";
+import { isGraphSpec, isSankeySpec, isTableSpec, type VizSpec } from "@opendata-ai/openchart-core";
 import { getDemo } from "../../../demos/registry";
-import { demoDomId } from "../../../lib/demo/dom-id";
 import { escapeHtml } from "../../../lib/demo/escape-html";
-import { bareStageHtml, embeddedSpecHtml, stageContentHtml } from "../../../lib/demo/figure";
-import { DEMO_ATTR } from "../../../lib/demo/markup";
+import { embeddedSpecHtml, stageContentHtml } from "../../../lib/demo/figure";
+import { DEMO_ATTR, DEMO_CLASS } from "../../../lib/demo/markup";
 import { validateDemo } from "../../../lib/demo/validate";
-import { TILE_TABLE, type TileSize, tileSpec } from "./tile-spec";
+import { sankeyFallbackHtml, tableFallbackHtml } from "./tile-fallback";
+import { type TileRequest, type TileTheme, tileFileUrl } from "./tile-files";
+import { type TileSize, type TileSpecOptions, tileSpec } from "./tile-spec";
 
-/** Data attributes the slimmed SVGs keep: CSS picks a theme by one, demos.ts removes the placeholder by the other. */
-const KEPT_DATA_ATTRIBUTES = new Set(["data-theme", DEMO_ATTR.placeholder]);
+export { tableFallbackHtml } from "./tile-fallback";
+export { slimSvg } from "./tile-svg";
 
-/** The class on a tile's stage, which the page's own CSS sizes (landing-wall.css on the landing page). */
+/** The class on a tile's stage, which tiles.css sizes. */
 export const TILE_STAGE_CLASS = "tile-stage";
 
 /** How a page lays its tiles out. */
 export type TileOptions = {
-  /** The size the chart lays out at, static and live. */
+  /** The size the static chart lays out at; the stage keeps its shape. */
   size: TileSize;
-  /** Prefix for the static SVGs' ids, so tiles never share an id with a demo figure on the same page. */
-  domPrefix: string;
+  /** A second layout the page switches to on narrow screens (`data-tile-variant="narrow"`). */
+  narrow?: TileSize;
+  /** How the specimen is cut (tile-spec.ts). */
+  spec?: TileSpecOptions;
 };
 
-/**
- * The markup without `data-*` attributes (except those in KEPT_DATA_ATTRIBUTES)
- * and without ids nothing in it references. Ids that a `url(#…)`, `href="#…"`
- * or an ARIA reference points at, such as clip paths, gradients and titles, stay.
- */
-export function slimSvg(svg: string): string {
-  const referenced = new Set([
-    ...[...svg.matchAll(/(?:url\(#|href="#)([^)"]+)/g)].map(([, id]) => id ?? ""),
-    ...[...svg.matchAll(/aria-(?:labelledby|describedby)="([^"]+)"/g)].flatMap(([, ids]) =>
-      (ids ?? "").split(/\s+/),
-    ),
-  ]);
-  return svg
-    .replace(/\s(data-[\w-]+)(?:="[^"]*")?(?=[\s>/])/g, (attribute, name: string) =>
-      KEPT_DATA_ATTRIBUTES.has(name) ? attribute : "",
-    )
-    .replace(/\sid="([^"]*)"/g, (attribute, id: string) => (referenced.has(id) ? attribute : ""));
+/** Every static file a tile with these options shows, for the route that writes them. */
+export function tileRequests(demo: string, options: TileOptions): TileRequest[] {
+  const sizes = options.narrow ? [options.size, options.narrow] : [options.size];
+  return sizes.map((size) => ({ demo, size, spec: options.spec }));
 }
 
-type TableColumn = { key: string; label?: string; format?: string; align?: string };
+const ratio = (size: TileSize) => `${size.width} / ${size.height}`;
 
-function cellText(value: unknown, format: string | undefined): string {
-  if (typeof value === "number") return (buildD3Formatter(format) ?? String)(value);
-  if (value === null || value === undefined) return "";
-  return String(value);
-}
-
-/**
- * A table spec's first rows as a plain HTML table: what a table tile shows until
- * its live table mounts, and all a reader without JavaScript sees. Columns that
- * hold series (sparklines) are left out.
- */
-export function tableFallbackHtml(spec: VizSpec): string {
-  if (!isTableSpec(spec)) return "";
-  const rows = (spec.data as Record<string, unknown>[]).slice(0, TILE_TABLE.rows);
-  const columns = (spec.columns as TableColumn[])
-    .filter((column) => rows.every((row) => !Array.isArray(row[column.key])))
-    .slice(0, TILE_TABLE.columns);
-  const align = (column: TableColumn) =>
-    column.align === "right" ? ' class="tile-table-number"' : "";
-  const head = columns
-    .map((column) => `<th${align(column)}>${escapeHtml(column.label ?? column.key)}</th>`)
-    .join("");
-  const body = rows
+/** The light and dark images of one layout, each shown by demo.css in its theme. */
+function imagesHtml(request: TileRequest): string {
+  const { width, height } = request.size;
+  return (["light", "dark"] as TileTheme[])
     .map(
-      (row) =>
-        `<tr>${columns
-          .map(
-            (column) =>
-              `<td${align(column)}>${escapeHtml(cellText(row[column.key], column.format))}</td>`,
-          )
-          .join("")}</tr>`,
+      (theme) =>
+        `<img class="${DEMO_CLASS.static}" data-theme="${theme}" src="${tileFileUrl(request, theme)}" width="${width}" height="${height}" alt="" loading="lazy" decoding="async">`,
     )
     .join("");
-  return `<table class="tile-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
 }
 
-/**
- * The stage's content for one tile spec: slimmed static SVGs, or the demo
- * system's placeholder line naming the chart, which a table tile sets as a
- * caption under its first rows.
- */
-function tileStageContent(
-  demo: string,
-  title: string,
-  spec: VizSpec,
-  { size, domPrefix }: TileOptions,
-): string {
-  const content = stageContentHtml({
-    spec,
-    title,
-    domId: `${domPrefix}-${demoDomId(demo)}`,
-    width: size.width,
-    height: size.height,
-    static: true,
-    precision: 0,
-  });
-  const slim = slimSvg(content);
-  return isTableSpec(spec) ? tableFallbackHtml(spec) + slim : slim;
+/** The demo system's line naming a chart drawn only in the browser. */
+function placeholderHtml(demo: string, title: string, spec: VizSpec): string {
+  return stageContentHtml({ spec, title, domId: demo, width: 1, height: 1, static: false });
+}
+
+/** A table or sankey's fallback table, captioned by the placeholder line naming the chart. */
+function fallbackHtml(demo: string, title: string, spec: VizSpec): string {
+  const table = isTableSpec(spec) ? tableFallbackHtml(spec) : sankeyFallbackHtml(spec);
+  return table + placeholderHtml(demo, title, spec);
+}
+
+function stageContent(demo: string, title: string, spec: VizSpec, options: TileOptions): string {
+  if (isTableSpec(spec) || isSankeySpec(spec)) return fallbackHtml(demo, title, spec);
+  if (isGraphSpec(spec)) return placeholderHtml(demo, title, spec);
+  const [main, narrow] = tileRequests(demo, options);
+  if (!main) return "";
+  if (!narrow) return imagesHtml(main);
+  const variant = (name: string, request: TileRequest) =>
+    `<span class="tile-variant" data-tile-variant="${name}">${imagesHtml(request)}</span>`;
+  return variant("main", main) + variant("narrow", narrow);
 }
 
 /**
@@ -130,11 +94,14 @@ export function tileChartHtml(
     const demo = getDemo(demoId);
     validateDemo(demoId, demo.spec);
     title = demo.title;
-    spec = tileSpec(demo.spec);
+    spec = tileSpec(demo.spec, options.spec);
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     throw new Error(`Tile "${demoId}": ${reason}`, { cause: error });
   }
-  const stage = bareStageHtml(tileStageContent(demoId, title, spec, options), TILE_STAGE_CLASS);
+  const shape = options.narrow
+    ? `--tile-ratio: ${ratio(options.size)}; --tile-ratio-narrow: ${ratio(options.narrow)}`
+    : `--tile-ratio: ${ratio(options.size)}`;
+  const stage = `<div class="demo-stage ${TILE_STAGE_CLASS}" ${DEMO_ATTR.stage} style="${escapeHtml(shape)}">${stageContent(demoId, title, spec, options)}</div>`;
   return stage + embeddedSpecHtml(spec, pageShared);
 }

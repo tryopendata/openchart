@@ -53,13 +53,21 @@ function collectConsole(page: Page) {
   return { errors, warnings };
 }
 
-/** The built gallery entry page whose demo spec is a sankey, if the gallery has one. */
+/**
+ * The built gallery entry page whose own demo spec is a sankey, if the gallery
+ * has one. Only the entry's article is read: the tiles under it embed other
+ * entries' specs, the lead sankey among them.
+ */
 function sankeyExamplePath(): string | undefined {
   const examples = new URL("../dist/examples/", import.meta.url);
   if (!existsSync(examples)) return undefined;
   const slug = readdirSync(examples).find((entry) => {
     const file = new URL(`${entry}/index.html`, examples);
-    return existsSync(file) && /"type":\s*"sankey"/.test(readFileSync(file, "utf8"));
+    if (!existsSync(file)) return false;
+    const article = /<article\b[^>]*data-gallery-entry[\s\S]*?<\/article>/.exec(
+      readFileSync(file, "utf8"),
+    )?.[0];
+    return /"type":\s*"sankey"/.test(article ?? "");
   });
   return slug ? `/examples/${slug}/` : undefined;
 }
