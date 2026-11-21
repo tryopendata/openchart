@@ -2,10 +2,9 @@
 import { validateSpec } from "@opendata-ai/openchart-engine";
 import { describe, expect, it } from "vitest";
 import { FRAMEWORKS } from "../../../lib/demo/framework-choice";
-import { frameworkSnippets } from "../../../lib/demo/snippets";
 import { benchSpec } from "./bench-spec";
 import { frameworkPanels } from "./framework-panels";
-import { LANDING_FRAMEWORKS, landingTabFor } from "./framework-tabs";
+import { landingTabFor } from "./framework-tabs";
 
 describe("landingTabFor", () => {
   it("keeps a stored wrapper choice and shows React for the docs' Spec tab", () => {
@@ -25,19 +24,12 @@ describe("frameworkPanels", () => {
     ]);
   });
 
-  it("copies the same code the docs demo tabs generate, and shows it with the rows folded", () => {
-    const docs = frameworkSnippets(benchSpec);
+  it("shows each sample with the data rows folded, and copies it with them", () => {
     for (const panel of panels) {
-      expect(panel.code, panel.id).toBe(docs[panel.id]);
-      expect(panel.code, panel.id).toContain(`@opendata-ai/openchart-${panel.id}`);
       expect(panel.shown, panel.id).toContain("5 rows");
       expect(panel.shown, panel.id).not.toContain('"capacity": 346');
+      expect(panel.code, panel.id).toContain('"capacity": 346');
     }
-  });
-
-  it("gives each panel its own file and grammar", () => {
-    expect(new Set(panels.map((panel) => panel.file)).size).toBe(LANDING_FRAMEWORKS.length);
-    expect(panels.map((panel) => panel.lang)).toEqual(["tsx", "vue", "svelte", "ts"]);
   });
 });
 

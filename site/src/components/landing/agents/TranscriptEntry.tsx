@@ -56,12 +56,12 @@ function ToolBody({
   if (!body || !entry.bodyVisible) return null;
   if (body.kind === "custom") return <>{chart()}</>;
   if (body.kind === "code") {
-    // The block scrolls on narrow screens, so keyboard users need to be able to focus it.
+    // The block scrolls on narrow screens, so it is a named region keyboard users can focus.
     return (
       // biome-ignore lint/a11y/noNoninteractiveTabindex: a scrollable region must be focusable to scroll by keyboard
-      <pre className="agent-code" tabIndex={0}>
-        {body.code}
-      </pre>
+      <section className="agent-code" aria-label={`${step.args ?? "Spec"} as written`} tabIndex={0}>
+        <pre>{body.code}</pre>
+      </section>
     );
   }
   return null;

@@ -17,7 +17,7 @@
  */
 import { CopyCommand } from "@steamfield/ui/react/copy";
 import { site } from "../../../config";
-import { AGENT_SPEC_FILE, agentSession } from "../../../landing/agents";
+import { AGENT_SPEC_FILE, agentSession, agentSkillLines } from "../../../landing/agents";
 import { landingCopy } from "../../../landing/copy";
 import { allPages } from "../../../lib/collection";
 import { staticSvg } from "../../../lib/demo/static-svg";
@@ -52,11 +52,6 @@ const chartSvgs = Object.entries(CHART_SIZES)
   })
   .join("");
 
-/** The Claude Code skill's install lines, as the repository README gives them. */
-const SKILL_LINES = [
-  "/plugin marketplace add tryopendata/skills",
-  "/plugin install openchart@openchart",
-];
 const schemaUrl = `${site.repo}/blob/main/packages/core/schema/vizspec.schema.json`;
 ---
 
@@ -99,10 +94,11 @@ const schemaUrl = `${site.repo}/blob/main/packages/core/schema/vizspec.schema.js
               <p>
                 Teaches Claude the spec grammar, the encoding rules and chart design conventions.
               </p>
-              {SKILL_LINES.map((command, index) => (
+              {agentSkillLines.map(({ command, label }, index) => (
                 <CopyCommand
                   id={`agents-skill-${index}`}
                   command={command}
+                  label={label}
                   prompt={null}
                   className="agents-command"
                   buttonClassName="copy-chip"
@@ -122,8 +118,7 @@ const schemaUrl = `${site.repo}/blob/main/packages/core/schema/vizspec.schema.js
 </section>
 
 <script>
-  import { enhanceCopyButtons } from "@steamfield/ui/copy";
+  import { enhanceSectionCopy } from "../../shared/copy-commands";
 
-  const section = document.getElementById("agents");
-  if (section) enhanceCopyButtons(section, { messages: { failed: () => "Copy failed" } });
+  enhanceSectionCopy("agents");
 </script>

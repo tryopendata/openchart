@@ -14,12 +14,14 @@
  *   (react, vue, svelte, vanilla), and every panel is in the server-rendered HTML.
  */
 import { landingCopy } from "../../../landing/copy";
+import { FRAMEWORK_STORAGE_KEY } from "../../../lib/demo/framework-choice";
 import { highlightCode } from "../../../lib/demo/highlight";
 import { staticSvg } from "../../../lib/demo/static-svg";
 import PublishedFigure from "../../shared/PublishedFigure.astro";
 import { benchSource, benchSpec } from "./bench-spec";
 import { frameworkPanels } from "./framework-panels";
-import { type InstallPanel, InstallTabs } from "./InstallTabs";
+import { LANDING_FRAMEWORKS } from "./framework-tabs";
+import { INSTALL_TABS_ID, type InstallPanel, InstallTabs } from "./InstallTabs";
 import "../../../styles/landing-close.css";
 
 const panels = frameworkPanels(benchSpec);
@@ -54,13 +56,35 @@ const chartSvgs = [false, true]
       </h2>
       <p class="frameworks-lede" data-motion="lift-sm">
         Each wrapper takes the same spec object. The tabs hold the code the docs generate for the
-        chart beside them. Every chart in the docs carries the same four forms, and the tab you pick
-        here stays picked there.
+        chart beside them. Docs pages show every chart's spec and these four wrappers in tabs, and
+        they open on the wrapper you choose here.
       </p>
     </div>
     <div class="frameworks-bench">
       <div class="frameworks-code">
         <InstallTabs client:visible panels={installPanels} />
+        {/* Shows the stored tab before paint; InstallTabs reads the same choice when it hydrates. */}
+        <script
+          is:inline
+          define:vars={{
+            key: FRAMEWORK_STORAGE_KEY,
+            ids: LANDING_FRAMEWORKS,
+            base: INSTALL_TABS_ID,
+          }}
+        >
+          try {
+            const choice = localStorage.getItem(key);
+            if (ids.includes(choice)) {
+              for (const id of ids) {
+                const panel = document.getElementById(`${base}-${id}`);
+                if (id === choice) panel?.setAttribute("data-default", "");
+                else panel?.removeAttribute("data-default");
+              }
+            }
+          } catch {
+            // Storage blocked: the default tab shows, as it would after hydration.
+          }
+        </script>
       </div>
       <PublishedFigure class="frameworks-figure" source={benchSource} note="What each tab renders.">
         <div class="frameworks-chart" set:html={chartSvgs} />

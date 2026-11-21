@@ -8,7 +8,7 @@
  */
 
 import { useAgentDemo } from "@steamfield/ui/react/agent-demo";
-import { type DemoView, presets, type Timing } from "@steamfield/ui/sequencer";
+import type { DemoView, Timing } from "@steamfield/ui/sequencer";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { agentChart, agentSource } from "../../../landing/agents";
 import { LiveChart, loadChartLibrary } from "../../shared/LiveChart";
@@ -22,10 +22,8 @@ type AgentSessionProps = {
   chart?: ReactNode;
 };
 
-/** The chat preset with quicker tool calls: the reader waits on the validator, not on a spinner. */
-const TIMING: Partial<Timing<SessionData>> = { ...presets.chat, toolMs: () => 650 } as Partial<
-  Timing<SessionData>
->;
+/** Quicker tool calls than the chat preset (which `compile` starts from): the reader waits on the validator, not on a spinner. */
+const TIMING: Partial<Timing<SessionData>> = { toolMs: () => 650 };
 
 /** Playback time as m:ss, the way the progress readout shows it. */
 function clock(ms: number): string {
@@ -63,27 +61,38 @@ export function AgentSession({ script, chart }: AgentSessionProps) {
     beforeStart: "final",
   });
   const list = useRef<HTMLOListElement>(null);
-  // Held at the finished transcript's height while it replays, so the page below never jumps.
+  // Held at the finished transcript's height while it replays, so the page below never
+  // jumps. Measured at each start and cleared at the end, so a resize never leaves it stale.
   const [minHeight, setMinHeight] = useState<number | undefined>(undefined);
   const live = demo.animating;
+  // Reduced motion shows the finished transcript without playing it; the chart is
+  // still the live one, for its data table and keyboard navigation.
+  const liveChart = live || (demo.ready && demo.reduced);
 
   useEffect(() => {
-    if (demo.started) void loadChartLibrary();
+    // LiveChart reports a failed load itself; this call only warms the chunk.
+    if (demo.started) loadChartLibrary().catch(() => {});
   }, [demo.started]);
 
+  useEffect(() => {
+    if (demo.complete) setMinHeight(undefined);
+  }, [demo.complete]);
+
   const onPlay = () => {
-    if (!demo.started && list.current) setMinHeight(list.current.offsetHeight);
+    const starting = !demo.started || demo.complete;
+    if (starting && list.current) setMinHeight(list.current.offsetHeight);
     if (demo.complete) demo.controls.replay();
     else demo.controls.toggle();
   };
 
   // PublishedFigure's markup and classes, written out here because an Astro component
-  // can't render inside a React island; the frame's styles stay the shared ones.
+  // can't render inside a React island. The reveal attributes are left off: the island
+  // re-creates this figure on every replay, after the reveal script has run.
   const drawChart = () => (
     <figure className="pub-figure agent-chart" data-agent-chart>
       <div className="rule-axis" />
       <div className="pub-figure-body agent-chart-stage">
-        {live ? (
+        {liveChart ? (
           <LiveChart spec={agentChart} className="agent-chart-live">
             {chart}
           </LiveChart>
@@ -92,8 +101,9 @@ export function AgentSession({ script, chart }: AgentSessionProps) {
         )}
       </div>
       <figcaption className="figure-caption pub-figure-caption">
-        The chart the corrected spec renders. Source:{" "}
-        <a href={agentSource.url}>{agentSource.label}</a>.
+        <span>The chart the corrected spec renders. </span>
+        Source:{" "}
+        {agentSource.url ? <a href={agentSource.url}>{agentSource.label}</a> : agentSource.label}.
       </figcaption>
     </figure>
   );

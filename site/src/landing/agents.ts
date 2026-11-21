@@ -6,6 +6,7 @@
  */
 import { usPayrolls } from "@datasets/us-payrolls";
 import type { ChartSpec, VizSpec } from "@opendata-ai/openchart-core";
+import { sourceOf } from "../demos/source";
 
 /** The data the session is built from. */
 export type AgentSession = {
@@ -20,8 +21,17 @@ export type AgentSession = {
 /** The file the agent writes the spec to; the transcript names it in every tool call. */
 export const AGENT_SPEC_FILE = "payrolls-2024.chart.json";
 
+/**
+ * The Claude Code skill's install lines as the repository README gives them, each
+ * with its Copy button's accessible name. A unit test checks them against README.md.
+ */
+export const agentSkillLines = [
+  { command: "/plugin marketplace add tryopendata/skills", label: "Copy the marketplace command" },
+  { command: "/plugin install openchart@openchart", label: "Copy the skill install command" },
+];
+
 /** The dataset's citation, for the figure caption's source line under the chart. */
-export const agentSource = { label: "Bureau of Labor Statistics", url: usPayrolls.url };
+export const agentSource = sourceOf(usPayrolls);
 
 /**
  * The column chart the reporter asked for, measuring `valueField` on the y axis.
@@ -41,15 +51,15 @@ function payrollsChart(valueField: string): ChartSpec {
         type: "text",
         x: "Oct",
         y: 12,
-        text: "Hurricanes and strikes\nheld October to 12 thousand",
+        text: "Hurricanes and strikes\nheld October to 12,000",
         anchor: "top",
         offset: { dy: -235 },
         connector: true,
       },
     ],
     chrome: {
-      title: "Hiring slowed through 2024 and stalled in October",
-      subtitle: "Jobs added to US nonfarm payrolls each month (thousands)",
+      title: "Hiring slowed through 2024 and stalled once, in October",
+      subtitle: "Jobs added to US nonfarm payrolls each month, thousands",
     },
   };
 }
@@ -60,6 +70,8 @@ export const agentChart: ChartSpec = payrollsChart("jobs");
 export const agentSession: AgentSession = {
   request:
     "Filing the jobs story at 4. I need a column chart of 2024 monthly payroll gains from the BLS numbers in payrolls-2024.json, with October flagged.",
+  // The spread is a type conversion: ChartSpec has no index signature, so it can't be
+  // assigned to Record<string, unknown> directly, but a fresh object literal can.
   firstSpec: { ...payrollsChart("payrolls") },
   fixedSpec: agentChart,
 };

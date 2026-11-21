@@ -1,8 +1,16 @@
 /** The landing page's agent session: its specs, and the script built from what the validator says. */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { usPayrolls } from "@datasets/us-payrolls";
 import { validateSpec } from "@opendata-ai/openchart-engine";
 import type { Step } from "@steamfield/ui/script";
 import { describe, expect, it } from "vitest";
-import { AGENT_SPEC_FILE, type AgentSession, agentSession } from "../../../landing/agents";
+import {
+  AGENT_SPEC_FILE,
+  type AgentSession,
+  agentSession,
+  agentSkillLines,
+} from "../../../landing/agents";
 import {
   AgentSessionError,
   buildSessionScript,
@@ -23,8 +31,8 @@ const toolCalls = (session: AgentSession) =>
 const lineText = (line: string | { text: string }) => (typeof line === "string" ? line : line.text);
 
 describe("the agent session's specs", () => {
-  it("has a request, a first spec the validator rejects and a fixed spec it accepts", () => {
-    expect(agentSession.request.length).toBeGreaterThan(0);
+  it("has a request naming the dataset, a first spec the validator rejects and a fixed spec it accepts", () => {
+    expect(agentSession.request).toContain("payrolls-2024");
     expect(validateSpec(agentSession.firstSpec).errors).toHaveLength(1);
     expect(validateSpec(agentSession.fixedSpec)).toMatchObject({ valid: true, errors: [] });
   });
@@ -37,6 +45,23 @@ describe("the agent session's specs", () => {
     );
     expect(edit.map(lineText)).toEqual(['- "field": "payrolls",', '+ "field": "jobs",']);
     expect(error?.path).toBe("/encoding/y/field");
+  });
+
+  it("gets an error naming the bad field and every data column, as the agent's reply says", () => {
+    const [error] = validateSpec(agentSession.firstSpec).errors;
+    const columns = Object.keys(usPayrolls.data[0]);
+    expect(columns.length).toBeGreaterThan(0);
+    for (const word of ['"payrolls"', ...columns]) expect(error?.message).toContain(word);
+  });
+});
+
+describe("the Claude Code skill lines", () => {
+  // Tests run from site/; the README is at the repository root above it.
+  const readme = readFileSync(join(process.cwd(), "..", "README.md"), "utf8");
+
+  it("match the install lines in the repository README, each with its own Copy name", () => {
+    for (const { command } of agentSkillLines) expect(readme).toContain(command);
+    expect(new Set(agentSkillLines.map((line) => line.label)).size).toBe(agentSkillLines.length);
   });
 });
 

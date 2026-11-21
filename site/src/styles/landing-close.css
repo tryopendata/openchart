@@ -6,11 +6,6 @@
  */
 @reference "./global.css";
 
-/* Tailwind's own layer order, restated. The landing page's section stylesheets can
-   load before BaseLayout's global.css, and the first file to name a layer fixes its
-   place in the cascade; without this, preflight (`base`) outranks `components`. */
-@layer theme, base, components, utilities;
-
 @layer components {
   /* Agents: the intro and facts in four columns, the session in eight. */
   .agents-grid {
@@ -123,8 +118,7 @@
 
   /* The reporter's request reads as a quotation, in the headline face. */
   .agent-row[data-kind="user"] .agent-message {
-    @apply text-ink text-xl leading-snug;
-    font-family: var(--font-display, var(--font-sans));
+    @apply text-ink font-display text-xl leading-snug;
   }
 
   .agent-args {
@@ -237,29 +231,71 @@
     aspect-ratio: 480 / 400;
   }
 
-  .install-command {
+  .install-tab-command {
     @apply border-line-strong flex items-center justify-between gap-4 border px-4 py-3 font-mono text-sm;
   }
 
-  .install-command code {
+  .install-tab-command code {
     @apply text-ink min-w-0 [overflow-wrap:anywhere];
   }
 
-  .install-command code::before {
-    @apply text-muted;
-    content: "$ ";
+  .install-tab-prompt {
+    @apply text-muted select-none;
   }
 
-  .install-code {
+  .install-tab-code {
     @apply border-line mt-4 border;
   }
 
-  .install-code-head {
+  .install-tab-code-head {
     @apply border-line bg-panel text-ink-2 flex items-center justify-between border-b px-4 py-2 font-mono text-xs;
   }
 
-  .install-code-body pre {
+  .install-tab-code-body pre {
     @apply m-0 max-h-[30rem] overflow-auto p-4 font-mono text-[13px] leading-relaxed;
+  }
+
+  /* The tabs. @steamfield/ui/tabs/styles.css sits in the `sf` layer, below this one. */
+  .install-tablist {
+    @apply border-line-strong flex gap-6 border-b;
+  }
+
+  .install-tab {
+    @apply text-muted -mb-px cursor-pointer border-0 border-b-2 border-solid border-transparent bg-transparent px-0 py-3 text-[15px] font-medium no-underline;
+    transition:
+      color 150ms ease-out,
+      border-color 150ms ease-out;
+  }
+
+  .install-tab:hover {
+    @apply text-ink no-underline;
+  }
+
+  .install-tab[aria-selected="true"] {
+    @apply border-ink text-ink;
+  }
+
+  .install-tab-panel {
+    @apply pt-6;
+  }
+
+  /* Shiki writes both themes as variables; the page theme picks one. */
+  .install-tab-code-body pre,
+  .install-tab-code-body pre span {
+    color: var(--shiki-light);
+    background-color: transparent;
+  }
+
+  .dark .install-tab-code-body pre,
+  .dark .install-tab-code-body pre span {
+    color: var(--shiki-dark);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not(.light) .install-tab-code-body pre,
+    :root:not(.light) .install-tab-code-body pre span {
+      color: var(--shiki-dark);
+    }
   }
 
   /* Closing: the heading in four columns, the table and install lines in eight. */
@@ -305,8 +341,25 @@
   }
 
   .closing-backed a {
-    @apply text-accent;
+    @apply text-accent block;
     transition: color 150ms ease-out;
+  }
+
+  /* On a phone the facts table stacks: topic, fact, then the files behind it. */
+  @media (width < 40rem) {
+    .closing-table thead {
+      @apply sr-only;
+    }
+
+    .closing-table tbody tr {
+      @apply grid gap-1 py-4;
+    }
+
+    .closing-table tbody th,
+    .closing-table td,
+    .closing-table td.closing-backed {
+      @apply w-auto p-0;
+    }
   }
 
   .closing-commands {
@@ -332,84 +385,21 @@
   .closing-links {
     @apply mt-8 flex flex-wrap gap-3;
   }
-}
 
-/* On a phone the facts table stacks: topic, fact, then the file behind it. */
-@media (width < 40rem) {
-  .closing-table thead {
-    @apply sr-only;
-  }
+  /*
+   * Motion. Transcript rows arrive as the replay reaches them, and a tab's panel
+   * settles in once the reader picks it (never on hydration). Both run only while
+   * hydrated (`data-live` and `data-picked` are set by the islands) and never under
+   * reduced motion; the server HTML has no start state, so nothing waits on a script.
+   */
+  @media (prefers-reduced-motion: no-preference) {
+    .agent-session[data-live] .agent-row {
+      animation: agent-row-in 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
 
-  .closing-table tbody tr {
-    @apply grid gap-1 py-4;
-  }
-
-  .closing-table tbody th,
-  .closing-table td,
-  .closing-table td.closing-backed {
-    @apply w-auto p-0;
-  }
-}
-
-/*
- * The tabs. Unlayered on purpose: @steamfield/ui/tabs/styles.css sits in a cascade
- * layer declared after Tailwind's, so it outranks rules in `components`.
- */
-.install-tablist {
-  @apply border-line-strong flex gap-6 border-b;
-}
-
-.install-tab {
-  @apply text-muted -mb-px cursor-pointer border-0 border-b-2 border-solid border-transparent bg-transparent px-0 py-3 text-[15px] font-medium no-underline;
-  transition:
-    color 150ms ease-out,
-    border-color 150ms ease-out;
-}
-
-.install-tab:hover {
-  @apply text-ink no-underline;
-}
-
-.install-tab[aria-selected="true"] {
-  @apply border-ink text-ink;
-}
-
-.install-panel {
-  @apply pt-6;
-}
-
-/* Shiki writes both themes as variables; the page theme picks one. */
-.install-code-body pre,
-.install-code-body pre span {
-  color: var(--shiki-light);
-  background-color: transparent;
-}
-
-.dark .install-code-body pre,
-.dark .install-code-body pre span {
-  color: var(--shiki-dark);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not(.light) .install-code-body pre,
-  :root:not(.light) .install-code-body pre span {
-    color: var(--shiki-dark);
-  }
-}
-
-/*
- * Motion. Transcript rows arrive as the replay reaches them, and a newly chosen
- * tab's panel settles in. Both run only while hydrated (`data-live` and
- * `data-state` are set by the islands) and never under reduced motion; the
- * server HTML has no start state, so nothing waits on a script to be seen.
- */
-@media (prefers-reduced-motion: no-preference) {
-  .agent-session[data-live] .agent-row {
-    animation: agent-row-in 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  }
-
-  .install-panel[data-state="active"] {
-    animation: install-panel-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    [data-picked] .install-tab-panel[data-state="active"] {
+      animation: install-panel-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
   }
 }
 

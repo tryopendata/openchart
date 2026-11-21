@@ -10,13 +10,11 @@
  *   with one h2, id `closing-title` (`landingCopy.headings.closing`).
  * - Every `site.install` command is in the server-rendered HTML of the page.
  */
-import { site } from "../../../config";
+import { DOCS_HOME, site } from "../../../config";
 import { landingCopy } from "../../../landing/copy";
 import { closingFacts } from "./facts";
 import InstallLines from "./InstallLines.astro";
 import "../../../styles/landing-close.css";
-
-const DOCS_HOME = "/docs/get-started/getting-started/";
 ---
 
 <section id="closing" aria-labelledby="closing-title" data-landing-section class="landing-section">
@@ -39,12 +37,14 @@ const DOCS_HOME = "/docs/get-started/getting-started/";
             </tr>
           </thead>
           <tbody>
-            {closingFacts.map(({ topic, fact, backedBy }) => (
+            {closingFacts.map(({ topic, fact, sources }) => (
               <tr data-motion-part>
                 <th scope="row">{topic}</th>
                 <td>{fact}</td>
                 <td class="closing-backed">
-                  <a href={backedBy.href}>{backedBy.label}</a>
+                  {sources.map(({ label, href }) => (
+                    <a href={href}>{label}</a>
+                  ))}
                 </td>
               </tr>
             ))}
@@ -67,8 +67,7 @@ const DOCS_HOME = "/docs/get-started/getting-started/";
 </section>
 
 <script>
-  import { enhanceCopyButtons } from "@steamfield/ui/copy";
+  import { enhanceSectionCopy } from "../../shared/copy-commands";
 
-  const section = document.getElementById("closing");
-  if (section) enhanceCopyButtons(section, { messages: { failed: () => "Copy failed" } });
+  enhanceSectionCopy("closing");
 </script>
