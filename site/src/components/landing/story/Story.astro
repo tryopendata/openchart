@@ -13,10 +13,10 @@
  * has a `<figcaption>` with a "Source: …" line.
  */
 import { deepMergeSpec } from "@opendata-ai/openchart-core";
-import { landingCopy } from "../../../landing/copy";
 import { storyBaseSpec, storySource, storySteps } from "../../../landing/story";
-import { staticSvg } from "../../../lib/demo/static-svg";
+import { staticSvgPair } from "../../../lib/demo/static-svg";
 import PublishedFigure from "../../shared/PublishedFigure.astro";
+import SectionHead from "../../shared/SectionHead.astro";
 import { ChartStoryScroll } from "./ChartStoryScroll";
 import { describeChange } from "./story-change";
 import "../../../styles/landing-story.css";
@@ -27,25 +27,16 @@ const finished = storySteps.reduce(
 );
 const changes = storySteps.map((step) => step.change);
 const notes = storySteps.map((_, index) => describeChange(storyBaseSpec, changes, index));
-const size = { width: 720, height: 480 };
-const statics = [false, true]
-  .map((dark) => staticSvg(finished, { ...size, dark, idPrefix: `story-${dark ? "d" : "l"}` }))
-  .join("");
+const statics = staticSvgPair(finished, { width: 720, height: 480, idPrefix: "story" });
 ---
 
 <section id="story" aria-labelledby="story-title" data-landing-section class="landing-section">
   <div class="landing-container">
-    <div class="rule-axis landing-rule" aria-hidden="true"></div>
-    <div class="story-head" data-reveal>
-      <h2 id="story-title" class="landing-heading" data-motion="lift-md">
-        {landingCopy.headings.story}
-      </h2>
-      <p class="story-lede" data-motion-part>
-        As the reader scrolls, each paragraph moves the chart on: it shades the year of the
-        sell-off, brings in the other indexes, marks the low and picks out the one that recovered
-        furthest. The library animates every change.
-      </p>
-    </div>
+    <SectionHead id="story">
+      As the reader scrolls, each paragraph moves the chart on: it shades the year of the sell-off,
+      brings in the other indexes, marks the low and picks out the one that recovered furthest. The
+      library animates every change.
+    </SectionHead>
     <PublishedFigure
       class="figure-hairline"
       source={storySource}

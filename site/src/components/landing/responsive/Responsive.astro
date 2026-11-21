@@ -17,23 +17,14 @@
  *   inclusive, "full" above.
  * - The chart's figure has a `<figcaption>` with a "Source: …" line.
  */
-import { landingCopy } from "../../../landing/copy";
-import { staticSvg } from "../../../lib/demo/static-svg";
+import { staticSvgPair } from "../../../lib/demo/static-svg";
 import PublishedFigure from "../../shared/PublishedFigure.astro";
+import SectionHead from "../../shared/SectionHead.astro";
 import { ResizeFrame } from "./ResizeFrame";
 import { responsiveSource, responsiveSpec } from "./responsive-spec";
 import "../../../styles/landing-story.css";
 
-const statics = [false, true]
-  .map((dark) =>
-    staticSvg(responsiveSpec, {
-      width: 960,
-      height: 440,
-      dark,
-      idPrefix: `responsive-${dark ? "d" : "l"}`,
-    }),
-  )
-  .join("");
+const statics = staticSvgPair(responsiveSpec, { width: 960, height: 440, idPrefix: "responsive" });
 ---
 
 <section
@@ -43,17 +34,11 @@ const statics = [false, true]
   class="landing-section"
 >
   <div class="landing-container">
-    <div class="rule-axis landing-rule" aria-hidden="true"></div>
-    <div class="responsive-head" data-reveal>
-      <h2 id="responsive-title" class="landing-heading" data-motion="lift-md">
-        {landingCopy.headings.responsive}
-      </h2>
-      <p class="responsive-lede" data-motion-part>
-        Drag the right edge of the frame to see this chart on a phone, a tablet and a full page. As
-        it narrows the axis labels fewer years, and on a phone one callout stays on the line while
-        the other moves to a numbered note below.
-      </p>
-    </div>
+    <SectionHead id="responsive">
+      Drag the right edge of the frame to see this chart on a phone, a tablet and a full page. As it
+      narrows the axis labels fewer years, and on a phone one callout stays on the line while the
+      other moves to a numbered note below.
+    </SectionHead>
     <PublishedFigure class="figure-hairline" source={responsiveSource}>
       <ResizeFrame client:visible>
         <Fragment set:html={statics} />

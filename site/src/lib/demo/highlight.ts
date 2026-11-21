@@ -4,7 +4,7 @@
  * rules for those classes come back as one stylesheet for the figure, so a token
  * costs a short class name rather than both theme colors written out, and
  * neighbouring tokens of one color share a span. Each rule sets the
- * `--shiki-light` and `--shiki-dark` variables, and demo.css picks one per page theme.
+ * `--shiki-light` and `--shiki-dark` variables, and global.css picks one per page theme.
  */
 import { transformerStyleToClass } from "@shikijs/transformers";
 import { codeToHtml } from "shiki";

@@ -13,11 +13,11 @@
  * - Each panel's install command reads `npm install @opendata-ai/openchart-<framework>`
  *   (react, vue, svelte, vanilla), and every panel is in the server-rendered HTML.
  */
-import { landingCopy } from "../../../landing/copy";
 import { FRAMEWORK_STORAGE_KEY } from "../../../lib/demo/framework-choice";
 import { highlightCode } from "../../../lib/demo/highlight";
-import { staticSvg } from "../../../lib/demo/static-svg";
+import { staticSvgPair } from "../../../lib/demo/static-svg";
 import PublishedFigure from "../../shared/PublishedFigure.astro";
+import SectionHead from "../../shared/SectionHead.astro";
 import { benchSource, benchSpec } from "./bench-spec";
 import { frameworkPanels } from "./framework-panels";
 import { LANDING_FRAMEWORKS } from "./framework-tabs";
@@ -35,11 +35,7 @@ const installPanels: InstallPanel[] = panels.map(
 
 /** The SVG's drawing size; CSS scales it to the figure's width. */
 const CHART_SIZE = { width: 480, height: 400 };
-const chartSvgs = [false, true]
-  .map((dark) =>
-    staticSvg(benchSpec, { idPrefix: `bench-chart-${dark ? "d" : "l"}`, dark, ...CHART_SIZE }),
-  )
-  .join("");
+const chartSvgs = staticSvgPair(benchSpec, { idPrefix: "bench-chart", ...CHART_SIZE });
 ---
 
 <section
@@ -49,16 +45,10 @@ const chartSvgs = [false, true]
   class="landing-section"
 >
   <div class="landing-container">
-    <div class="rule-axis landing-rule" aria-hidden="true"></div>
-    <div class="frameworks-head" data-reveal>
-      <h2 id="frameworks-title" class="landing-heading" data-motion="lift-md">
-        {landingCopy.headings.frameworks}
-      </h2>
-      <p class="frameworks-lede" data-motion="lift-sm">
-        Install the package for your framework and hand it the spec. The code below draws the chart
-        beside it, and the docs show the same four versions under every example.
-      </p>
-    </div>
+    <SectionHead id="frameworks" layout="feature">
+      Install the package for your framework and hand it the spec. The code below draws the chart
+      beside it, and the docs show the same four versions under every example.
+    </SectionHead>
     <div class="frameworks-bench">
       <div class="frameworks-code">
         <InstallTabs client:visible panels={installPanels} />

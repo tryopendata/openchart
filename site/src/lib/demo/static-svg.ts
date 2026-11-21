@@ -63,3 +63,23 @@ export function staticSvg(spec: VizSpec, options: StaticSvgOptions): string | nu
   });
   return markStatic(svg);
 }
+
+/**
+ * The light and then the dark static SVG as one string, with element ids under
+ * `${idPrefix}-l` and `${idPrefix}-d`; demo.css shows the one for the page's
+ * theme. Null when the spec type has no static renderer. Each render gets its
+ * own copy of the spec, since rendering writes defaults into it.
+ */
+export function staticSvgPair(
+  spec: VizSpec,
+  options: Omit<StaticSvgOptions, "dark">,
+): string | null {
+  const render = (dark: boolean) =>
+    staticSvg(structuredClone(spec), {
+      ...options,
+      idPrefix: `${options.idPrefix}-${dark ? "d" : "l"}`,
+      dark,
+    });
+  const light = render(false);
+  return light === null ? null : `${light}${render(true) ?? ""}`;
+}

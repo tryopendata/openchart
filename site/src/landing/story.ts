@@ -12,6 +12,7 @@
 import { indexTotalReturns } from "@datasets/index-total-returns";
 import type { ChartSpec } from "@opendata-ai/openchart-core";
 import type { StoryStep } from "@opendata-ai/openchart-vanilla/story";
+import { sourceOf } from "../demos/source";
 
 /** One step of the landing story. */
 export type LandingStoryStep = {
@@ -24,10 +25,11 @@ export type LandingStoryStep = {
 };
 
 /** Where the story's numbers come from, as the figure caption cites it. */
+const indexSource = sourceOf(indexTotalReturns);
 export const storySource = {
+  ...indexSource,
   // The dataset's citation leaves out FTSE Russell, which publishes the Russell 2000.
-  label: `${indexTotalReturns.source.replace(/^Source:\s*/, "")}, FTSE Russell`,
-  url: indexTotalReturns.url,
+  label: `${indexSource.label}, FTSE Russell`,
 };
 
 const allRows = indexTotalReturns.data.map((row) => ({ ...row }));

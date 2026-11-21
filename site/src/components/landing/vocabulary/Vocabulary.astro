@@ -17,14 +17,15 @@
  *   under `/docs/<intent>/`. A filtered-out tile is hidden, not just dimmed.
  */
 import { pageSharedHashes } from "../../../lib/demo/shared-values";
-import { landingCopy } from "../../../landing/copy";
+import type { LandingSectionId } from "../../../landing/copy";
 import { vocabularyTiles } from "../../../landing/vocabulary";
 import "../../../styles/landing-wall.css";
+import SectionHead from "../../shared/SectionHead.astro";
 import { tileChartHtml } from "./tile-markup";
 import { VocabularyWall } from "./VocabularyWall";
 import { intentCounts, WALL_INTENTS } from "./wall-filter";
 
-const SECTION_ID = "vocabulary";
+const SECTION_ID: LandingSectionId = "vocabulary";
 const pageShared = pageSharedHashes(Astro.locals);
 const labelOf = new Map(WALL_INTENTS.map((intent) => [intent.id, intent.label]));
 const counts = intentCounts(vocabularyTiles.map((tile) => tile.intent));
@@ -50,18 +51,12 @@ const tiles = vocabularyTiles.map((tile, index) => ({
   class="landing-section"
 >
   <div class="landing-container">
-    <div class="rule-axis landing-rule" aria-hidden="true"></div>
-    <div class="wall-head" data-reveal>
-      <h2 id="vocabulary-title" class="landing-heading" data-motion="lift-md">
-        {landingCopy.headings.vocabulary}
-      </h2>
-      <p class="wall-lede" data-motion-part>
-        Each chart is filed under the job it does on the page: comparing values, showing change over
-        time, splitting a whole, showing how values spread, relating two measures, tracing a flow,
-        placing values on a map, setting out exact figures, or combining views in one frame. Choose
-        a purpose to narrow the sheet, or open a chart to see it at full size.
-      </p>
-    </div>
+    <SectionHead id={SECTION_ID} layout="beside">
+      Each chart is filed under the job it does on the page: comparing values, showing change over
+      time, splitting a whole, showing how values spread, relating two measures, tracing a flow,
+      placing values on a map, setting out exact figures, or combining views in one frame. Choose a
+      purpose to narrow the sheet, or open a chart to see it at full size.
+    </SectionHead>
     <VocabularyWall client:idle intents={intents} total={tiles.length} sectionId={SECTION_ID}>
       <ul class="wall-grid" role="list">
         {tiles.map((tile) => (

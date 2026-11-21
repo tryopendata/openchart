@@ -7,11 +7,9 @@
  */
 import { usInflation } from "@datasets/us-inflation";
 import type { ChartSpec } from "@opendata-ai/openchart-core";
+import { sourceOf } from "../../../demos/source";
 
-export const responsiveSource = {
-  label: usInflation.source.replace(/^Source:\s*/, ""),
-  url: usInflation.url,
-};
+export const responsiveSource = sourceOf(usInflation);
 
 export const responsiveSpec: ChartSpec = {
   mark: { type: "line", strokeWidth: 2 },
