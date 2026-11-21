@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { pageViolations } from "./axe";
+import { sidewaysOverflow } from "./layout";
 
 const BAR = "/docs/comparison/bar/";
 const GUIDE = "/docs/get-started/getting-started/";
@@ -277,14 +278,17 @@ for (const width of [360, 390]) {
       await expect(nav.getByRole("link", { name: "Blog" })).toBeVisible();
       await expect(nav.getByRole("link", { name: "GitHub" })).toBeHidden();
       await expect(header.getByRole("link", { name: "OpenChart home" })).toBeVisible();
-      const overflow = await page.evaluate(() => ({
-        page: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-        header: (() => {
-          const row = document.querySelector("body > header > div");
-          return row ? row.scrollWidth - row.clientWidth : 0;
-        })(),
-      }));
-      expect(overflow, path).toEqual({ page: 0, header: 0 });
+      // `scrollbar-gutter: stable` reserves the bar's space, so the document's
+      // scrollWidth can be smaller than its clientWidth (negative here, on Linux).
+      // Anything at or below zero means nothing sticks out sideways.
+      const { scroll, past } = await sidewaysOverflow(page);
+      const headerRow = await page.evaluate(() => {
+        const row = document.querySelector("body > header > div");
+        return row ? row.scrollWidth - row.clientWidth : 0;
+      });
+      expect(scroll, path).toBeLessThanOrEqual(0);
+      expect(past, path).toBeLessThanOrEqual(0);
+      expect(headerRow, path).toBeLessThanOrEqual(0);
     }
   });
 }

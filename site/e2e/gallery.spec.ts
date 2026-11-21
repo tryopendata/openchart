@@ -9,6 +9,7 @@
 import { expect, type Page, test } from "@playwright/test";
 import { inflationReference } from "../src/demos/gallery/composition";
 import { pageViolations } from "./axe";
+import { sidewaysOverflow } from "./layout";
 
 const WALL = "/examples/";
 const tiles = (page: Page) => page.locator("[data-gallery-tile]");
@@ -273,10 +274,9 @@ for (const width of [360, 390]) {
     for (const path of [WALL, entry]) {
       await page.goto(path);
       await scrollThrough(page);
-      const overflow = await page.evaluate(
-        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-      );
-      expect(overflow, path).toBe(0);
+      const { scroll, past } = await sidewaysOverflow(page);
+      expect(scroll, path).toBeLessThanOrEqual(0);
+      expect(past, path).toBeLessThanOrEqual(0);
     }
   });
 }

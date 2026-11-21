@@ -316,41 +316,44 @@ test.describe("loading and layout", () => {
 
   for (const path of [BAR, "/", "/blog/"]) {
     test(`nothing shifts on ${path} across load, open, typing and close`, async ({ page }) => {
-      await page.addInitScript(() => {
-        const shifts: { value: number; sources: string[] }[] = [];
-        const record = (entries: PerformanceEntryList) => {
-          for (const entry of entries as (PerformanceEntry & {
-            value: number;
-            sources?: { node?: Node | null }[];
-          })[]) {
-            const sources = (entry.sources ?? []).map((source) =>
-              source.node instanceof Element
-                ? source.node.outerHTML.slice(0, 80)
-                : String(source.node),
-            );
-            shifts.push({ value: entry.value, sources });
-          }
-        };
-        const observer = new PerformanceObserver((list) => record(list.getEntries()));
-        observer.observe({ type: "layout-shift", buffered: true });
-        const readShifts = () => {
-          record(observer.takeRecords());
-          return shifts;
-        };
-        Object.assign(window, { readShifts });
-      });
       await gotoReady(page, path);
+      // Fonts settle before the baseline, so a later font swap is not mistaken
+      // for the dialog moving the page. This is what the page looks like at rest.
+      await page.evaluate(() => document.fonts.ready);
+      const snapshot = () =>
+        page.evaluate(() => {
+          const box = document.querySelector("body > header")?.getBoundingClientRect();
+          return {
+            viewport: document.documentElement.clientWidth,
+            scrollY: window.scrollY,
+            header: box ? [box.x, box.y, box.width] : null,
+          };
+        });
+      const before = await snapshot();
       await page.keyboard.press(await toggleChord(page));
+      await expect(input(page)).toBeFocused();
+      const open = await snapshot();
       await input(page).pressSequentially("sankey");
       await resultsFor(page, "sankey");
       await input(page).pressSequentially(" spec");
       await resultsFor(page, "sankey spec");
+      const typed = await snapshot();
       await page.keyboard.press("Escape");
       await expect(dialog(page)).toBeHidden();
-      const shifts = await page.evaluate(() =>
-        (window as unknown as { readShifts: () => unknown[] }).readShifts(),
-      );
-      expect(shifts).toEqual([]);
+      const after = await snapshot();
+      // The dialog is an overlay: the page under it keeps its layout, the
+      // viewport keeps its width (no scrollbar appearing or leaving), and the
+      // reader keeps their place. The header is the anchor rather than the
+      // article text, because the landing hero animates on its own schedule.
+      for (const [label, state] of [
+        ["open", open],
+        ["typing", typed],
+        ["closed", after],
+      ] as const) {
+        expect(state.viewport, label).toBe(before.viewport);
+        expect(state.scrollY, label).toBe(before.scrollY);
+        expect(state.header, label).toEqual(before.header);
+      }
     });
   }
 

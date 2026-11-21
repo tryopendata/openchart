@@ -8,6 +8,7 @@ import { validateSpec } from "@opendata-ai/openchart-engine";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { agentSession } from "../src/landing/agents";
 import { pageViolations } from "./axe";
+import { sidewaysOverflow } from "./layout";
 
 const BAR = "/docs/comparison/bar/";
 const PRESETS = ["essay", "wire", "broadsheet", "terminal"] as const;
@@ -558,8 +559,7 @@ test("at 390px wide nothing scrolls horizontally", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await scrollThrough(page);
-  const overflow = await page.evaluate(
-    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-  );
-  expect(overflow).toBeLessThanOrEqual(0);
+  const { scroll, past } = await sidewaysOverflow(page);
+  expect(scroll).toBeLessThanOrEqual(0);
+  expect(past).toBeLessThanOrEqual(0);
 });
