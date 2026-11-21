@@ -99,6 +99,12 @@ describe("the hero steps", () => {
     }
   });
 
+  it("teases each step with one of the lines it adds", () => {
+    expect(
+      heroSteps.filter((step) => !step.changed.includes(step.teaser)).map((s) => s.id),
+    ).toEqual([]);
+  });
+
   it("folds the preset to one added line, which no earlier step shows", () => {
     expect(stepAt(4).changed).toEqual(['"theme": { … broadsheet preset }']);
     expect(missingFrom(stepAt(4).changed, stepAt(1).spec)).toEqual(stepAt(4).changed);

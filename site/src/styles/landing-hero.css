@@ -1,10 +1,11 @@
 /*
  * Styles for the hero desk (#desk). From 1100px the text takes 4 of the 12
- * columns and the figure 8, and inside the figure the chart takes about two
- * thirds with the spec pane beside it; below that the chart comes first and the
- * spec sits under it. The page stays ink on paper: the accent marks only the
- * current step and the lines a step added, and color otherwise comes from the
- * chart. Under 700px, once hydrated, the spec collapses to the added lines.
+ * columns and the figure 8; below that the figure follows the text. Inside the
+ * figure the chart takes the full width, with the steps and a caption above it
+ * and the spec closed in a disclosure under it. The page stays ink on paper:
+ * the accent marks only the current step and the lines a step added, and color
+ * otherwise comes from the chart. Under 700px, once hydrated, the open spec
+ * collapses to the added lines.
  */
 @reference "./global.css";
 
@@ -54,12 +55,18 @@
     @apply mt-6 text-[1.0625rem] leading-[1.6];
   }
 
-  .hero-install {
-    @apply mt-8;
+  /* One primary action, one quiet link, then the install line in a lower register. */
+  .hero-links {
+    @apply mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 text-[15px];
   }
 
-  .hero-links {
-    @apply mt-6 flex flex-wrap items-baseline gap-x-7 gap-y-2 text-[15px];
+  .hero-action {
+    @apply bg-ink text-canvas inline-flex h-11 items-center rounded-xs px-5 font-medium no-underline;
+    transition: background-color 150ms ease-out;
+  }
+
+  .hero-action:hover {
+    background-color: color-mix(in srgb, var(--color-ink) 82%, var(--color-canvas));
   }
 
   .hero-link {
@@ -73,17 +80,29 @@
     @apply text-ink decoration-current;
   }
 
-  .hero-link-primary {
-    @apply text-ink font-medium decoration-current;
-  }
-
-  .hero-link-primary span {
+  .hero-link span {
     @apply inline-block;
     transition: transform 150ms ease-out;
   }
 
-  .hero-link-primary:hover span {
+  .hero-link:hover span {
     transform: translateX(3px);
+  }
+
+  .hero-install {
+    @apply mt-9;
+  }
+
+  .hero-install .install-command-line {
+    @apply border-line min-h-10;
+  }
+
+  .hero-install .install-command-copy {
+    @apply border-line;
+  }
+
+  .hero-install :is(.install-command-text, .install-command-prompt) {
+    @apply py-2 text-[13px];
   }
 
   /* Step bar: numbered steps on the left, transport on the right. */
@@ -121,7 +140,7 @@
   }
 
   .hero-controls {
-    @apply flex items-center gap-1 pb-2;
+    @apply flex shrink-0 items-center gap-1;
   }
 
   .hero-control {
@@ -140,33 +159,23 @@
     @apply min-w-[4.25rem] font-medium;
   }
 
-  /* Chart first. From 1100px the spec pane sits beside it with a third of the width. */
-  .hero-panes {
-    @apply border-line grid grid-cols-[minmax(0,1fr)] border-b;
+  /* What the current step changed, in a sentence under the steps. */
+  .hero-step-row {
+    @apply mt-3 flex min-h-8 items-start justify-between gap-6;
   }
 
-  .hero-panes > * {
-    min-width: 0;
+  .hero-step-caption {
+    @apply text-ink-2 pt-1 text-[15px] leading-snug;
   }
 
-  @media (min-width: 1100px) {
-    .hero-panes {
-      grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr);
-    }
-
-    .hero-spec {
-      @apply border-line border-l;
-    }
-  }
-
-  /* Tall enough below 1100px for twelve readable rows under the title and key. */
+  /* The chart is the hero: the figure's full width. */
   .hero-chart {
-    @apply relative h-[560px];
+    @apply relative mt-4 h-[540px];
   }
 
   @media (min-width: 1100px) {
     .hero-chart {
-      height: 540px;
+      height: 480px;
     }
   }
 
@@ -174,25 +183,65 @@
     height: 100%;
   }
 
-  .hero-spec {
-    @apply bg-panel relative min-w-0;
+  /* The spec, closed under the chart: a quiet summary line with a one-line teaser. */
+  .hero-spec-details {
+    @apply border-line mt-4 border-t;
   }
 
-  @media (max-width: 1099.98px) {
-    .hero-spec {
-      @apply border-line border-t;
-    }
+  .hero-spec-summary {
+    @apply flex cursor-pointer list-none items-baseline gap-4 py-3 text-[14px];
+  }
+
+  .hero-spec-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .hero-spec-summary-label {
+    @apply text-ink shrink-0 font-medium underline decoration-transparent underline-offset-4;
+    transition: text-decoration-color 150ms ease-out;
+  }
+
+  .hero-spec-summary-label::before {
+    @apply text-muted mr-2 inline-block font-mono;
+    content: "+";
+    transition: transform 200ms ease-out;
+  }
+
+  .hero-spec-details[open] .hero-spec-summary-label::before {
+    content: "\2212";
+  }
+
+  .hero-spec-summary:hover .hero-spec-summary-label {
+    @apply decoration-current;
+  }
+
+  .hero-spec-teaser {
+    @apply text-muted min-w-0 truncate font-mono text-[12px];
+  }
+
+  .hero-spec-teaser-mark {
+    @apply text-accent;
+  }
+
+  .hero-spec-body {
+    @apply border-line bg-panel border;
+  }
+
+  .hero-spec-head {
+    @apply border-line flex items-center justify-between gap-4 border-b px-3 py-2 font-mono text-[12px];
+  }
+
+  .hero-spec-head-label {
+    @apply text-muted;
+  }
+
+  .hero-spec {
+    @apply relative min-w-0;
   }
 
   .hero-spec-code {
-    @apply relative m-0 h-[300px] overflow-y-auto py-3 font-mono text-[12px] leading-[1.6];
+    @apply relative m-0 h-[340px] overflow-y-auto py-3 font-mono text-[12px] leading-[1.6];
     scrollbar-width: thin;
-  }
-
-  @media (min-width: 1100px) {
-    .hero-spec-code {
-      height: 540px;
-    }
   }
 
   .hero-spec-code pre {

@@ -17,8 +17,12 @@ import { formatSpec, markAddedLines, type SpecFolds } from "./spec-lines";
 export type HeroStep = {
   /** Stable id, unique across the steps. */
   id: string;
-  /** The step's name in the step list. */
+  /** The step's name in the step list: what the reader sees happen to the graphic. */
   label: string;
+  /** One plain sentence under the steps saying what this step changed in the graphic. */
+  caption: string;
+  /** The single most telling line this step adds, shown as a teaser while the spec is closed. One of `changed`. */
+  teaser: string;
   /** The whole spec as of this step, data inline. Every step's spec passes `validateSpec`. */
   spec: ChartSpec;
   /**
@@ -89,12 +93,44 @@ const annotation = {
 
 const preset = { ...annotation, theme: broadsheet } satisfies ChartSpec;
 
-const STEP_SPECS: { id: string; label: string; spec: ChartSpec }[] = [
-  { id: "mark", label: "Mark and data", spec: markAndData },
-  { id: "encoding", label: "Encoding", spec: encoding },
-  { id: "chrome", label: "Title and source", spec: chrome },
-  { id: "annotation", label: "Annotation", spec: annotation },
-  { id: "preset", label: "Broadsheet preset", spec: preset },
+type StepScript = { id: string; label: string; caption: string; teaser: string; spec: ChartSpec };
+
+const STEP_SPECS: StepScript[] = [
+  {
+    id: "mark",
+    label: "Plot the data",
+    caption: "Each country's life expectancy for men and for women, as plain dots.",
+    teaser: '"mark": "circle",',
+    spec: markAndData,
+  },
+  {
+    id: "encoding",
+    label: "Colour men and women",
+    caption: "Colour splits the sexes, a line joins each pair, and the axis starts at 65.",
+    teaser: '"field": "gender",',
+    spec: encoding,
+  },
+  {
+    id: "chrome",
+    label: "Add the headline and source",
+    caption: "A headline states the finding; the deck and source line say what and from where.",
+    teaser: '"title": "Women outlive men in every country here, and by ten years in Russia",',
+    spec: chrome,
+  },
+  {
+    id: "annotation",
+    label: "Call out the outlier",
+    caption: "A label marks Russia, where the gap between the sexes is widest.",
+    teaser: '"text": "Russia: 10 years",',
+    spec: annotation,
+  },
+  {
+    id: "preset",
+    label: "Set it in the house style",
+    caption: "The broadsheet preset sets the type, the paper and the red rule over the headline.",
+    teaser: '"theme": { … broadsheet preset }',
+    spec: preset,
+  },
 ];
 
 /** The five steps, in order. The last is the finished chart, shown before hydration and under reduced motion. */

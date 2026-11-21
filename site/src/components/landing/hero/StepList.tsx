@@ -1,9 +1,9 @@
 /**
  * The desk's controls. Until the live chart is mounted, and without JavaScript,
- * the steps are a plain list with the current one marked. Then they are buttons (the current one
- * carries `aria-current="step"`, and arrow keys move between them with a roving
- * tab stop), then Previous, Pause or Play, and Next. While the sequence plays, a
- * hairline under the current step fills over the time to the next one.
+ * the steps are a plain list with the current one marked. Then they are buttons
+ * (the current one carries `aria-current="step"`, and arrow keys move between
+ * them with a roving tab stop). While the sequence plays, a hairline under the
+ * current step fills over the time to the next one. Transport is its own file.
  */
 import { type CSSProperties, type KeyboardEvent, useRef } from "react";
 
@@ -16,9 +16,6 @@ export type StepListProps = {
   /** How long each step shows while playing, for the progress hairline. */
   stepMs: number;
   onSelect: (step: number) => void;
-  onPrevious: () => void;
-  onNext: () => void;
-  onTogglePlay: () => void;
 };
 
 /** The step a key press moves to, or null when the key is not a step key. */
@@ -46,9 +43,6 @@ export function StepList({
   playing,
   stepMs,
   onSelect,
-  onPrevious,
-  onNext,
-  onTogglePlay,
 }: StepListProps) {
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
 
@@ -112,22 +106,6 @@ export function StepList({
           </li>
         ))}
       </ol>
-      <div className="hero-controls">
-        <button
-          type="button"
-          className="hero-control"
-          aria-label="Previous step"
-          onClick={onPrevious}
-        >
-          <span aria-hidden="true">←</span>
-        </button>
-        <button type="button" className="hero-control hero-control-play" onClick={onTogglePlay}>
-          {playing ? "Pause" : "Play"}
-        </button>
-        <button type="button" className="hero-control" aria-label="Next step" onClick={onNext}>
-          <span aria-hidden="true">→</span>
-        </button>
-      </div>
     </div>
   );
 }

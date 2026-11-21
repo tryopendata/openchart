@@ -1,7 +1,9 @@
 /**
- * The HeroDesk island: the chart, the step list and the spec pane, wired to the
- * desk reducer. The server renders the last step with the static SVG of the
- * finished chart (passed in as children) and the steps as a plain list.
+ * The HeroDesk island: the step list and a caption for the current step, the
+ * chart at full width, and the spec closed in a disclosure under it, wired to
+ * the desk reducer. The graphic is the story; the spec is the second one. The
+ * server renders the last step with the static SVG of the finished chart
+ * (passed in as children), the steps as a plain list and the spec closed.
  *
  * `usePlayback` gates the sequence: it plays only while the desk is in view,
  * the tab is visible and motion is allowed. The live chart mounts the first
@@ -19,9 +21,10 @@ import { usePageDark } from "../../shared/page-theme";
 import { useMotionTools } from "../../shared/use-motion-tools";
 import { deskReducer, initialDeskState } from "./desk-state";
 import type { DeskStep } from "./desk-step";
-import { SpecPane } from "./SpecPane";
+import { SpecDisclosure } from "./SpecDisclosure";
 import { StepList } from "./StepList";
 import { revealAddedLines } from "./spec-reveal";
+import { Transport } from "./Transport";
 
 /** How long each step shows while the sequence plays. */
 export const STEP_MS = 3200;
@@ -95,13 +98,22 @@ export default function HeroDesk({ steps, children }: HeroDeskProps) {
     return () => clearTimeout(timer);
   }, [timerKey]);
 
-  // Write in the added lines on every step change after the first render.
+  // While the spec is open, write in the added lines on every step change.
+  // Closed, nothing runs: the lines are written when the reader looks.
+  const [specOpen, setSpecOpen] = useState(false);
   const shownStep = useRef(state.step);
   useEffect(() => {
     if (!pane.current || shownStep.current === state.step) return;
     shownStep.current = state.step;
+    if (!specOpen) return;
     return revealAddedLines(pane.current, tools);
-  }, [state.step, tools]);
+  }, [state.step, tools, specOpen]);
+
+  const onSpecToggle = useCallback((open: boolean) => {
+    setSpecOpen(open);
+    // Opening lands on the current step's added lines, without motion.
+    if (open && pane.current) revealAddedLines(pane.current, null);
+  }, []);
 
   const stopForGood = useCallback(() => dispatch({ type: "pause" }), []);
   const onMounted = useCallback(() => setMounted(true), []);
@@ -120,33 +132,39 @@ export default function HeroDesk({ steps, children }: HeroDeskProps) {
         playing={state.playing && gate.playing}
         stepMs={STEP_MS}
         onSelect={(index) => dispatch({ type: "select", step: index })}
-        onPrevious={() => dispatch({ type: "previous" })}
-        onNext={() => dispatch({ type: "next" })}
-        onTogglePlay={() => dispatch({ type: state.playing ? "pause" : "play" })}
       />
-      <div className="hero-panes">
-        <div className="hero-chart" data-hero-chart>
-          {mountLive ? (
-            <LiveChart
-              spec={step.spec}
-              className="hero-chart-live"
-              onMounted={onMounted}
-              themeOverride={themeOverride}
-            >
-              {children}
-            </LiveChart>
-          ) : (
-            <div className="hero-chart-live">{children}</div>
-          )}
-        </div>
-        <SpecPane
-          ref={pane}
-          lines={step.lines}
-          stepLabel={step.label}
-          hydrated={gate.ready}
-          onInteract={stopForGood}
-        />
+      <div className="hero-step-row">
+        <p className="hero-step-caption">{step.caption}</p>
+        {mounted ? (
+          <Transport
+            playing={state.playing && gate.playing}
+            onPrevious={() => dispatch({ type: "previous" })}
+            onNext={() => dispatch({ type: "next" })}
+            onTogglePlay={() => dispatch({ type: state.playing ? "pause" : "play" })}
+          />
+        ) : null}
       </div>
+      <div className="hero-chart" data-hero-chart>
+        {mountLive ? (
+          <LiveChart
+            spec={step.spec}
+            className="hero-chart-live"
+            onMounted={onMounted}
+            themeOverride={themeOverride}
+          >
+            {children}
+          </LiveChart>
+        ) : (
+          <div className="hero-chart-live">{children}</div>
+        )}
+      </div>
+      <SpecDisclosure
+        ref={pane}
+        step={step}
+        hydrated={gate.ready}
+        onInteract={stopForGood}
+        onToggle={onSpecToggle}
+      />
     </div>
   );
 }

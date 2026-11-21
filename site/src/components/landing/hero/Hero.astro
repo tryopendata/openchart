@@ -1,8 +1,9 @@
 ---
 /**
- * The hero, "the desk": the page's h1 and lede, the install command with copy,
- * and a figure where a spec is written in steps and the chart beside it updates.
- * The text block takes 5 of the 12 columns and the figure 7 from 1100px; below
+ * The hero, "the desk": the page's h1 and lede, the two links and the install
+ * command, and a figure where one chart is built in five steps. The chart is
+ * the hero; the spec that builds it waits in a disclosure under the chart.
+ * The text block takes 4 of the 12 columns and the figure 8 from 1100px; below
  * that the figure follows the text. The figure is published-graphic framing: a
  * ticked rule, the section's h2 as its headline, the HeroDesk island, and a
  * caption with the source line.
@@ -15,6 +16,8 @@
  *   current one carries `aria-current="step"`. Controls are buttons named
  *   "Pause" (or "Play" while paused), "Previous step" and "Next step". Under 700px
  *   the collapsed spec pane opens with a button named "Show full spec".
+ * - The spec pane sits in a `<details>` under the chart, closed by default; its
+ *   text is in the HTML either way.
  * - `data-hero-spec` on the spec pane; each line the current step added carries
  *   `data-spec-added`. `data-hero-chart` on the element holding the chart's SVG,
  *   which the server render already contains.
@@ -37,7 +40,7 @@ import InstallCommand from "../../shared/InstallCommand.astro";
 import PublishedFigure from "../../shared/PublishedFigure.astro";
 
 /** The static SVG's drawing size: the live chart's at 1440, so the swap does not move. */
-const STATIC_SIZE = { width: 620, height: 540 };
+const STATIC_SIZE = { width: 904, height: 480 };
 
 const deskSteps = toDeskSteps(heroSteps, heroFolds);
 const finished = heroSteps.at(-1)?.spec;
@@ -62,17 +65,17 @@ const staticCharts = [false, true]
       <p class="landing-lede hero-lede hero-rise" style="--rise-delay: 80ms">
         {landingCopy.lede}
       </p>
-      <div class="hero-install hero-rise" style="--rise-delay: 160ms">
-        <InstallCommand id="hero-install" commands={site.install} />
-      </div>
-      <p class="hero-links hero-rise" style="--rise-delay: 220ms">
-        <a href="/docs/get-started/getting-started/" class="hero-link hero-link-primary">
-          Read the docs <span aria-hidden="true">→</span>
+      <p class="hero-links hero-rise" style="--rise-delay: 160ms">
+        <a href="/docs/get-started/getting-started/" class="hero-action">
+          Read the docs
         </a>
-        <a href={site.repo} class="hero-link">
-          Source on GitHub
+        <a href="#vocabulary" class="hero-link">
+          See every chart type <span aria-hidden="true">→</span>
         </a>
       </p>
+      <div class="hero-install hero-rise" style="--rise-delay: 220ms">
+        <InstallCommand id="hero-install" commands={site.install} />
+      </div>
     </div>
 
     <PublishedFigure
@@ -82,7 +85,7 @@ const staticCharts = [false, true]
       level="h2"
       source={heroSource}
       reveal={false}
-      note="Five steps write the spec. Each adds the marked lines, and the chart redraws with the library's own transition."
+      note="The same chart at five stages, each one a few lines added to a JSON spec. Open the spec under the chart to read them."
     >
       <HeroDesk client:load steps={deskSteps}>
         <Fragment set:html={staticCharts} />
