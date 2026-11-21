@@ -4,17 +4,18 @@
  * sequential color example reuses the catalog heatmap.
  */
 import { countryIndicators } from "@datasets/country-indicators";
-import { temperatureAnomaly } from "@datasets/temperature-anomaly";
+import { gistempGlobalAnnual } from "@datasets/gistemp-global-annual";
 import type { ChartSpec } from "@opendata-ai/openchart-core";
 import { sourceOf } from "../source";
+import { degreesBetween, TEMPERATURE_BASELINE } from "../style/temperature";
 import { defineDemo } from "../types";
 import { ACCENT, ANOMALY_SUBTITLE } from "./shared";
 
-const anomalyRows = temperatureAnomaly.data.map(({ year, anomaly }) => ({ year, anomaly }));
+const anomalyRows = gistempGlobalAnnual.data.map(({ year, anomaly }) => ({ year, anomaly }));
 const anomalyY = {
   field: "anomaly",
   type: "quantitative",
-  axis: { title: "Difference from the 20th-century average", format: "+.1f", labelSuffix: "°C" },
+  axis: { title: `Difference from the ${TEMPERATURE_BASELINE}`, format: "+.1f", labelSuffix: "°C" },
 } as const;
 
 /** The same rows on an ordinal and a temporal x; only the field type differs. */
@@ -30,7 +31,7 @@ const anomalyLine = (type: "ordinal" | "temporal"): ChartSpec => ({
 export const scalesOrdinal = defineDemo({
   id: "the-spec/scales-ordinal",
   title: "Temperature anomaly on an ordinal x axis",
-  source: sourceOf(temperatureAnomaly),
+  source: sourceOf(gistempGlobalAnnual),
   height: 400,
   spec: {
     ...anomalyLine("ordinal"),
@@ -44,12 +45,12 @@ export const scalesOrdinal = defineDemo({
 export const scalesTemporal = defineDemo({
   id: "the-spec/scales-temporal",
   title: "Temperature anomaly on a temporal x axis",
-  source: sourceOf(temperatureAnomaly),
+  source: sourceOf(gistempGlobalAnnual),
   height: 400,
   spec: {
     ...anomalyLine("temporal"),
     chrome: {
-      title: "Global temperature has risen at every reading since 1970",
+      title: `Global temperature rose ${degreesBetween("1970", "2025")}°C from 1970 to 2025`,
       subtitle: ANOMALY_SUBTITLE,
     },
   },

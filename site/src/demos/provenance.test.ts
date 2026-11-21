@@ -1,13 +1,14 @@
 // @vitest-environment node
-// Demo modules may not cite data the dataset module itself calls illustrative
-// under a real publication's name. Two such modules were in use until phase 4;
-// this keeps them from coming back.
+// Demo modules may not cite a publication for data that doesn't match it: two
+// dataset modules are illustrative under a real publication's name, and
+// temperature-anomaly cites NASA GISTEMP with values that differ from NASA's
+// table (use gistemp-global-annual). This keeps them from coming back.
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-/** Dataset modules whose rows are illustrative while their `source` names a publication. */
-const MISLABELLED_DATASETS = ["us-unemployment", "energy-flow"];
+/** Dataset modules whose rows don't match the publication their `source` names. */
+const MISLABELLED_DATASETS = ["us-unemployment", "energy-flow", "temperature-anomaly"];
 
 const demosDir = join(process.cwd(), "src/demos");
 const demoModules = readdirSync(demosDir, { recursive: true, encoding: "utf8" }).filter(

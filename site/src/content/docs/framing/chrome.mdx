@@ -15,17 +15,17 @@ import Demo from "../../../components/demo/Demo.astro";
 
 ## A title that states the finding
 
-The first title names the topic, and the reader has to work out the point from the columns. The second states what the columns show in a sentence anyone can check: every reading from 1960 on is above zero. Write the title as that sentence, with a number when one carries the point, and keep it to what the data on screen supports.
+The first title names the topic, and the reader has to work out the point from the columns. The second states what the columns show in a sentence anyone can check: every reading from 1970 on is above zero. Write the title as that sentence, with a number when one carries the point, and keep it to what the data on screen supports.
 
 ## A subtitle with the unit
 
-The subtitle says what is measured, in what unit and over what span: degrees Celsius against the 20th-century average, one reading per decade. Here it also flags the uneven last step, 2020 to 2025, which a reader would otherwise miss. Put methodology that takes more than a clause in the footer.
+The subtitle says what is measured, in what unit and over what span: degrees Celsius against the 1951–1980 average, one reading per decade. Here it also flags the uneven last step, 2020 to 2025, which a reader would otherwise miss. Put methodology that takes more than a clause in the footer.
 
 ## Byline, footer and source
 
 <Demo id="framing/chrome-byline" />
 
-`byline` credits the person or desk that made the chart. `footer` sits at the very bottom and suits notes on method, such as the baseline change here. `source` names where the data came from; on this site the caption under each figure prints it, so the specs leave `chrome.source` out. In your own charts, set it on every one.
+`byline` credits the person or desk that made the chart. `footer` sits at the very bottom and suits notes on method, such as how each column was measured here. `source` names where the data came from; on this site the caption under each figure prints it, so the specs leave `chrome.source` out. In your own charts, set it on every one.
 
 `eyebrow` adds a short label above the title, the kicker some publications use for a section or series name. This site uses none. Each field takes a string, or `{ text, style }` to change its size, weight, color or `maxLines`.
 

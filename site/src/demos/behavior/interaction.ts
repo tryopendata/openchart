@@ -4,9 +4,10 @@
  * an event log. Each takes its rows and citation from one verified dataset module.
  */
 import { electricityMixMatrix } from "@datasets/electricity-mix-matrix";
-import { temperatureAnomaly } from "@datasets/temperature-anomaly";
+import { gistempGlobalAnnual } from "@datasets/gistemp-global-annual";
 import { usInflation } from "@datasets/us-inflation";
 import { sourceOf } from "../source";
+import { anomalyIn, signedDegrees, TEMPERATURE_BASELINE, warmSince } from "../style/temperature";
 import { defineDemo } from "../types";
 
 export const crosshairLine = defineDemo({
@@ -67,18 +68,18 @@ export const legendToggle = defineDemo({
 export const selectColumns = defineDemo({
   id: "behavior/interaction-select",
   title: "Global temperature anomaly",
-  source: sourceOf(temperatureAnomaly),
+  source: sourceOf(gistempGlobalAnnual),
   caption: "Click the title, the subtitle, the note or the average line to select it.",
   height: 440,
   spec: {
     mark: "bar",
-    data: temperatureAnomaly.data.map((row) => ({ ...row })),
+    data: gistempGlobalAnnual.data.map((row) => ({ ...row })),
     encoding: {
       x: { field: "year", type: "ordinal" },
       y: {
         field: "anomaly",
         type: "quantitative",
-        axis: { title: "Difference from 20th-century average (°C)", format: "+.1f" },
+        axis: { title: `Difference from ${TEMPERATURE_BASELINE} (°C)`, format: "+.1f" },
       },
       color: {
         field: "trend",
@@ -88,20 +89,19 @@ export const selectColumns = defineDemo({
     },
     labels: { density: "none" },
     annotations: [
-      { type: "refline", y: 0, label: "20th-century average", style: "solid", strokeWidth: 1 },
+      { type: "refline", y: 0, label: TEMPERATURE_BASELINE, style: "solid", strokeWidth: 1 },
       {
         type: "text",
         x: "2025",
-        y: 1.17,
-        text: "+1.17°C",
+        y: anomalyIn("2025"),
+        text: signedDegrees(anomalyIn("2025")),
         anchor: "top",
         offset: { dx: 0, dy: -8 },
       },
     ],
     chrome: {
-      title: "Every reading since 1960 is above the 20th-century average",
-      subtitle:
-        "Global surface temperature, difference from the 20th-century average, 1900 to 2025 (°C)",
+      title: `Every reading since ${warmSince} is above the ${TEMPERATURE_BASELINE}`,
+      subtitle: `Global surface temperature, difference from the ${TEMPERATURE_BASELINE}, 1900 to 2025 (°C)`,
     },
   },
   mount: { interaction: "select" },

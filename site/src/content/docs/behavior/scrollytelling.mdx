@@ -25,8 +25,8 @@ const since1980 = { type: "range", x1: "1980", x2: "2025", label: "Since 1980", 
 const latest = {
   type: "text",
   x: "2025",
-  y: 1.17,
-  text: "+1.17°C",
+  y: 1.19,
+  text: "+1.19°C",
   anchor: "top",
   offset: { dx: 0, dy: -8 },
 };
@@ -42,18 +42,18 @@ const story = createChartStory(container, {
     {
       spec: {
         annotations: [zeroLine, since1980],
-        chrome: { title: "Global temperature rose 0.91°C from 1980 to 2025" },
+        chrome: { title: "Global temperature rose 0.93°C from 1980 to 2025" },
       },
     },
     {
       spec: {
         annotations: [zeroLine, since1980, latest],
-        chrome: { title: "The 2025 reading was 1.17°C above the 20th-century average" },
+        chrome: { title: "The 2025 reading was 1.19°C above the 1951–1980 average" },
       },
     },
     {
       highlight: ["Warmer"],
-      spec: { chrome: { title: "Nine of the 14 readings are above the 20th-century average" } },
+      spec: { chrome: { title: "Of the 14 readings, 8 are above the 1951–1980 average" } },
     },
   ],
 });

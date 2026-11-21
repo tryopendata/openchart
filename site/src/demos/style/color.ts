@@ -5,10 +5,16 @@
  * highlighted with the rest in grey.
  */
 import { electricityMixMatrix } from "@datasets/electricity-mix-matrix";
-import { temperatureAnomaly } from "@datasets/temperature-anomaly";
+import { gistempGlobalAnnual } from "@datasets/gistemp-global-annual";
 import { sourceOf } from "../source";
 import { defineDemo } from "../types";
-import { TEMPERATURE_ANOMALY_SUBTITLE } from "./temperature";
+import {
+  readingsAroundYear,
+  TEMPERATURE_ANOMALY_SUBTITLE,
+  TEMPERATURE_AXIS_TITLE,
+  TEMPERATURE_BASELINE,
+  warmSince,
+} from "./temperature";
 
 const MIX_SUBTITLE = "Share of US electricity from the six main sources, %, 2016–2023";
 
@@ -76,27 +82,30 @@ export const sequentialColor = defineDemo({
   },
 });
 
+/** The readings either side of the year the run of above-average readings starts. */
+const aroundWarmRun = readingsAroundYear(warmSince);
+
 export const divergingColor = defineDemo({
   id: "style/color-diverging",
   title: "Global temperature anomaly on a diverging scale",
-  source: sourceOf(temperatureAnomaly),
+  source: sourceOf(gistempGlobalAnnual),
   height: 440,
   spec: {
     mark: "bar",
-    data: [...temperatureAnomaly.data],
+    data: [...gistempGlobalAnnual.data],
     encoding: {
-      x: { field: "year", type: "ordinal", axis: { title: "Decade" } },
+      x: { field: "year", type: "ordinal", axis: { title: "Year" } },
       y: {
         field: "anomaly",
         type: "quantitative",
-        axis: { title: "Difference from the 20th-century average (°C)", format: "+.1f" },
+        axis: { title: TEMPERATURE_AXIS_TITLE, format: "+.1f" },
       },
       color: {
         field: "anomaly",
         type: "quantitative",
         title: "Anomaly (°C)",
         // redBlue runs red to blue from low to high; reversed, warm is red. The
-        // symmetric domain puts zero, the neutral midpoint, at the 20th-century average.
+        // symmetric domain puts zero, the neutral midpoint, at the 1951–1980 average.
         scale: { scheme: "redBlue", reverse: true, domain: [-1.2, 1.2] },
         format: "+.2f",
       },
@@ -104,8 +113,7 @@ export const divergingColor = defineDemo({
     labels: { density: "none" },
     annotations: [{ type: "refline", y: 0, style: "solid", strokeWidth: 1 }],
     chrome: {
-      title:
-        "Five of six readings before 1960 were below the 20th-century average; all eight since were above",
+      title: `${aroundWarmRun.belowBefore} of ${aroundWarmRun.before} readings before ${warmSince} were below the ${TEMPERATURE_BASELINE}; all ${aroundWarmRun.from} from ${warmSince} on were above`,
       subtitle: TEMPERATURE_ANOMALY_SUBTITLE,
     },
   },

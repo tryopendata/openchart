@@ -6,9 +6,18 @@
  * verified dataset module.
  */
 import { electricityMixMatrix } from "@datasets/electricity-mix-matrix";
-import { temperatureAnomaly } from "@datasets/temperature-anomaly";
+import { gistempGlobalAnnual } from "@datasets/gistemp-global-annual";
 import { type ChartSpec, deepMergeSpec } from "@opendata-ai/openchart-core";
 import { sourceOf } from "../source";
+import {
+  anomalyIn,
+  degreesBetween,
+  readingCount,
+  readingsAboveBaseline,
+  signedDegrees,
+  TEMPERATURE_BASELINE,
+  warmSince,
+} from "../style/temperature";
 import { type DemoState, defineDemo } from "../types";
 
 /** One story step: its button label and the patch it adds, as `createChartStory` takes it. */
@@ -25,13 +34,13 @@ function storyStates(base: ChartSpec, steps: readonly StoryStep[]): DemoState[] 
 
 const temperatureBase: ChartSpec = {
   mark: "bar",
-  data: temperatureAnomaly.data.map((row) => ({ ...row })),
+  data: gistempGlobalAnnual.data.map((row) => ({ ...row })),
   encoding: {
     x: { field: "year", type: "ordinal" },
     y: {
       field: "anomaly",
       type: "quantitative",
-      axis: { title: "Difference from 20th-century average (°C)", format: "+.1f" },
+      axis: { title: `Difference from ${TEMPERATURE_BASELINE} (°C)`, format: "+.1f" },
     },
     color: {
       field: "trend",
@@ -42,9 +51,8 @@ const temperatureBase: ChartSpec = {
   labels: { density: "none" },
   annotations: [{ type: "refline", y: 0, style: "solid", strokeWidth: 1 }],
   chrome: {
-    title: "Every reading since 1960 is above the 20th-century average",
-    subtitle:
-      "Global surface temperature, difference from the 20th-century average, 1900 to 2025 (°C)",
+    title: `Every reading since ${warmSince} is above the ${TEMPERATURE_BASELINE}`,
+    subtitle: `Global surface temperature, difference from the ${TEMPERATURE_BASELINE}, 1900 to 2025 (°C)`,
   },
 };
 
@@ -60,8 +68,8 @@ const since1980 = {
 const latestReading = {
   type: "text",
   x: "2025",
-  y: 1.17,
-  text: "+1.17°C",
+  y: anomalyIn("2025"),
+  text: signedDegrees(anomalyIn("2025")),
   anchor: "top",
   offset: { dx: 0, dy: -8 },
 } as const;
@@ -69,7 +77,7 @@ const latestReading = {
 export const temperatureStory = defineDemo({
   id: "behavior/story-temperature",
   title: "Global temperature anomaly, told in four steps",
-  source: sourceOf(temperatureAnomaly),
+  source: sourceOf(gistempGlobalAnnual),
   caption: "Each button shows the chart at one step of the story.",
   height: 460,
   spec: temperatureBase,
@@ -81,21 +89,27 @@ export const temperatureStory = defineDemo({
           label: "Since 1980",
           patch: {
             annotations: [zeroLine, since1980],
-            chrome: { title: "Global temperature rose 0.91°C from 1980 to 2025" },
+            chrome: {
+              title: `Global temperature rose ${degreesBetween("1980", "2025")}°C from 1980 to 2025`,
+            },
           },
         },
         {
           label: "Latest reading",
           patch: {
             annotations: [zeroLine, since1980, latestReading],
-            chrome: { title: "The 2025 reading was 1.17°C above the 20th-century average" },
+            chrome: {
+              title: `The 2025 reading was ${anomalyIn("2025")}°C above the ${TEMPERATURE_BASELINE}`,
+            },
           },
         },
         {
           label: "Warmer readings",
           patch: {
             encoding: { color: { highlight: ["Warmer"] } },
-            chrome: { title: "Nine of the 14 readings are above the 20th-century average" },
+            chrome: {
+              title: `Of the ${readingCount} readings, ${readingsAboveBaseline} are above the ${TEMPERATURE_BASELINE}`,
+            },
           },
         },
       ]),

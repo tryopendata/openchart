@@ -4,13 +4,19 @@
  * site. The other two set `pageTheme: false`: one shows the broadsheet preset's
  * dark palette, one a custom theme written as light and dark color pairs.
  */
+
+import { gistempGlobalAnnual } from "@datasets/gistemp-global-annual";
 import { populationByCountry } from "@datasets/population";
-import { temperatureAnomaly } from "@datasets/temperature-anomaly";
 import type { ChartSpec } from "@opendata-ai/openchart-core";
 import { broadsheet } from "@opendata-ai/openchart-core";
 import { sourceOf } from "../source";
 import { defineDemo } from "../types";
-import { TEMPERATURE_ANOMALY_SUBTITLE } from "./temperature";
+import {
+  TEMPERATURE_ANOMALY_SUBTITLE,
+  TEMPERATURE_AXIS_TITLE,
+  TEMPERATURE_BASELINE,
+  warmSince,
+} from "./temperature";
 
 // In millions, so labels read "1,463" rather than the SI "1.46G".
 const populationMillions = populationByCountry.data.map((row) => ({
@@ -56,18 +62,18 @@ export const presetDarkMode = defineDemo({
 export const pairedDarkMode = defineDemo({
   id: "style/dark-mode-pairs",
   title: "Global temperature anomaly in a theme of color pairs",
-  source: sourceOf(temperatureAnomaly),
+  source: sourceOf(gistempGlobalAnnual),
   height: 440,
   pageTheme: false,
   spec: {
     mark: "bar",
-    data: [...temperatureAnomaly.data],
+    data: [...gistempGlobalAnnual.data],
     encoding: {
-      x: { field: "year", type: "ordinal", axis: { title: "Decade" } },
+      x: { field: "year", type: "ordinal", axis: { title: "Year" } },
       y: {
         field: "anomaly",
         type: "quantitative",
-        axis: { title: "Difference from the 20th-century average (°C)", format: "+.1f" },
+        axis: { title: TEMPERATURE_AXIS_TITLE, format: "+.1f" },
       },
       color: { field: "trend", type: "nominal", scale: { domain: ["Cooler", "Warmer"] } },
     },
@@ -85,8 +91,7 @@ export const pairedDarkMode = defineDemo({
       },
     },
     chrome: {
-      title:
-        "Global temperature has been above the 20th-century average in every reading since 1960",
+      title: `Global temperature has been above the ${TEMPERATURE_BASELINE} in every reading since ${warmSince}`,
       subtitle: TEMPERATURE_ANOMALY_SUBTITLE,
     },
   },

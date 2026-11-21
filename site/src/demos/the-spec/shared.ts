@@ -2,6 +2,7 @@
  * Colors and subtitles shared by the spec and framing demos, so a dataset is
  * described the same way on every page that charts it.
  */
+import { TEMPERATURE_BASELINE } from "../style/temperature";
 
 /** The site accent, for the series a figure is about. */
 export const ACCENT = "#0e7490";
@@ -20,9 +21,8 @@ export const INFLATION_SUBTITLE =
 export const ELECTRICITY_SUBTITLE =
   "Share of US generation from coal, gas, nuclear, hydro, wind and solar (%)";
 
-/** temperature-anomaly: the baseline and the uneven last step. */
-export const ANOMALY_SUBTITLE =
-  "Global surface temperature against the 20th-century average (°C), one reading per decade from 1900, then 2025";
+/** gistemp-global-annual: the baseline and the uneven last step. */
+export const ANOMALY_SUBTITLE = `Global surface temperature against the ${TEMPERATURE_BASELINE} (°C), one reading per decade from 1900, then 2025`;
 
 /** nyc-temperature-range: where and when. */
 export const CENTRAL_PARK_2023 = "Central Park, New York, 2023 (°C)";

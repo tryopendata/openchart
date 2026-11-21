@@ -23,24 +23,24 @@ const svg = renderStaticSVG(spec, {
 
 The light and dark SVGs behind the chart below were produced by `renderStaticSVG` when this site was built. Without JavaScript, readers see the one that matches their color scheme.
 
-```json demo title="Global temperature anomaly" source="NASA GISS Surface Temperature Analysis (GISTEMP)" height=380
+```json demo title="Global temperature anomaly" source="NASA GISS Surface Temperature Analysis (GISTEMP v4)" height=380
 {
   "mark": { "type": "line", "point": true },
   "data": [
     { "year": "1900", "anomaly": -0.08 },
-    { "year": "1910", "anomaly": -0.42 },
+    { "year": "1910", "anomaly": -0.43 },
     { "year": "1920", "anomaly": -0.27 },
-    { "year": "1930", "anomaly": -0.14 },
-    { "year": "1940", "anomaly": 0.1 },
-    { "year": "1950", "anomaly": -0.16 },
-    { "year": "1960", "anomaly": 0.03 },
-    { "year": "1970", "anomaly": 0.01 },
+    { "year": "1930", "anomaly": -0.16 },
+    { "year": "1940", "anomaly": 0.12 },
+    { "year": "1950", "anomaly": -0.17 },
+    { "year": "1960", "anomaly": -0.03 },
+    { "year": "1970", "anomaly": 0.03 },
     { "year": "1980", "anomaly": 0.26 },
     { "year": "1990", "anomaly": 0.45 },
-    { "year": "2000", "anomaly": 0.61 },
+    { "year": "2000", "anomaly": 0.39 },
     { "year": "2010", "anomaly": 0.72 },
-    { "year": "2020", "anomaly": 1.02 },
-    { "year": "2025", "anomaly": 1.17 }
+    { "year": "2020", "anomaly": 1.01 },
+    { "year": "2025", "anomaly": 1.19 }
   ],
   "encoding": {
     "x": {
@@ -55,8 +55,8 @@ The light and dark SVGs behind the chart below were produced by `renderStaticSVG
     }
   },
   "chrome": {
-    "title": "Global temperature anomaly rose from +0.26°C in 1980 to +1.02°C in 2020",
-    "subtitle": "Surface temperature against the 20th-century average, °C, selected years 1900–2025"
+    "title": "Global temperature anomaly rose from +0.26°C in 1980 to +1.19°C in 2025",
+    "subtitle": "Surface temperature against the 1951–1980 average, °C, selected years 1900–2025"
   }
 }
 ```

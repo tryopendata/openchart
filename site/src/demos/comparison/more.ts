@@ -7,6 +7,7 @@
 import { commuteTimes } from "@datasets/commute-times";
 import { departmentBudgets } from "@datasets/department-budgets";
 import { electricityShareChange } from "@datasets/electricity-share-change";
+import { gistempGlobalAnnual } from "@datasets/gistemp-global-annual";
 import { householdSpending } from "@datasets/household-spending";
 import { lifeExpectancyChange } from "@datasets/life-expectancy-change";
 import { lifeExpectancyGender } from "@datasets/life-expectancy-gender";
@@ -14,9 +15,9 @@ import { nycTemperatureRange } from "@datasets/nyc-temperature-range";
 import { programmingLanguages } from "@datasets/programming-languages";
 import { renewableCapacityAdditions } from "@datasets/renewable-capacity";
 import { statePopulationChange } from "@datasets/state-population-change";
-import { temperatureAnomaly } from "@datasets/temperature-anomaly";
 import { usPayrolls } from "@datasets/us-payrolls";
 import { sourceOf } from "../source";
+import { TEMPERATURE_BASELINE, warmSince } from "../style/temperature";
 import { defineDemo } from "../types";
 
 const ACCENT = "#0e7490";
@@ -87,11 +88,11 @@ export const annotatedColumn = defineDemo({
 export const divergingColumn = defineDemo({
   id: "comparison/column-diverging",
   title: "Global temperature anomaly, 1900 to 2025",
-  source: sourceOf(temperatureAnomaly),
+  source: sourceOf(gistempGlobalAnnual),
   height: 460,
   spec: {
     mark: "bar",
-    data: [...temperatureAnomaly.data],
+    data: [...gistempGlobalAnnual.data],
     encoding: {
       x: { field: "year", type: "ordinal" },
       y: {
@@ -108,8 +109,8 @@ export const divergingColumn = defineDemo({
     labels: { density: "none" },
     annotations: [{ type: "refline", y: 0, style: "solid", strokeWidth: 1 }],
     chrome: {
-      title: "Every reading since 1980 is above the 20th-century average",
-      subtitle: "Global surface temperature anomaly vs. 20th-century average, °C",
+      title: `Every reading since ${warmSince} is above the ${TEMPERATURE_BASELINE}`,
+      subtitle: `Global surface temperature, difference from the ${TEMPERATURE_BASELINE}, 1900 to 2025 (°C)`,
     },
   },
 });

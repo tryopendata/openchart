@@ -3,18 +3,19 @@
  * temperature chart under a topic headline, a finding headline, and with a
  * byline and footer added.
  */
-import { temperatureAnomaly } from "@datasets/temperature-anomaly";
+import { gistempGlobalAnnual } from "@datasets/gistemp-global-annual";
 import type { ChartSpec } from "@opendata-ai/openchart-core";
 import { sourceOf } from "../source";
+import { TEMPERATURE_BASELINE, warmSince } from "../style/temperature";
 import { ANOMALY_SUBTITLE, COOL, WARM } from "../the-spec/shared";
 import { defineDemo } from "../types";
 
-const source = sourceOf(temperatureAnomaly);
+const source = sourceOf(gistempGlobalAnnual);
 
 /** Anomaly columns colored by the dataset's own warmer/cooler field. */
 const anomalyColumns: ChartSpec = {
   mark: "bar",
-  data: temperatureAnomaly.data.map((row) => ({ ...row })),
+  data: gistempGlobalAnnual.data.map((row) => ({ ...row })),
   encoding: {
     x: { field: "year", type: "ordinal" },
     y: {
@@ -44,7 +45,7 @@ export const chromeTopic = defineDemo({
 });
 
 const findingChrome = {
-  title: "Every reading since 1960 has been warmer than the 20th-century average",
+  title: `Every reading since ${warmSince} has been warmer than the ${TEMPERATURE_BASELINE}`,
   subtitle: ANOMALY_SUBTITLE,
 };
 
@@ -67,7 +68,7 @@ export const chromeByline = defineDemo({
       ...findingChrome,
       byline: "Chart: OpenChart",
       footer:
-        "Note: The baseline is the 20th-century average, not GISTEMP's usual 1951–1980 average, so mid-century values differ slightly from NASA's published series.",
+        "Note: Each column is the January–December mean for that year, not an average over the decade.",
     },
   },
 });

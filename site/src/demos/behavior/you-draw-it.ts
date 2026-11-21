@@ -5,10 +5,15 @@
  * hidden part of the line and give the answer away before any script runs.
  * Titles state only what the visible part of the line shows.
  */
-import { temperatureAnomaly } from "@datasets/temperature-anomaly";
+import { gistempGlobalAnnual } from "@datasets/gistemp-global-annual";
 import { usInflation } from "@datasets/us-inflation";
 import { sourceOf } from "../source";
-import { TEMPERATURE_ANOMALY_SUBTITLE } from "../style/temperature";
+import {
+  largestGap,
+  TEMPERATURE_ANOMALY_SUBTITLE,
+  TEMPERATURE_AXIS_TITLE,
+  TEMPERATURE_BASELINE,
+} from "../style/temperature";
 import { defineDemo } from "../types";
 
 export const inflationGuess = defineDemo({
@@ -43,19 +48,19 @@ export const inflationGuess = defineDemo({
 export const temperatureGuess = defineDemo({
   id: "behavior/you-draw-it-temperature",
   title: "Draw global temperature from 1970",
-  source: sourceOf(temperatureAnomaly),
+  source: sourceOf(gistempGlobalAnnual),
   height: 440,
   static: false,
   spec: {
     mark: { type: "line", strokeWidth: 2.5 },
-    data: [...temperatureAnomaly.data],
+    data: [...gistempGlobalAnnual.data],
     encoding: {
       x: { field: "year", type: "temporal", axis: { format: "%Y" } },
       y: {
         field: "anomaly",
         type: "quantitative",
         axis: {
-          title: "Difference from the 20th-century average (°C)",
+          title: TEMPERATURE_AXIS_TITLE,
           format: "+.1f",
           grid: true,
         },
@@ -67,8 +72,7 @@ export const temperatureGuess = defineDemo({
       revealLabel: "Show the measurements",
     },
     chrome: {
-      title:
-        "Global temperature stayed within half a degree of the 20th-century average from 1900 to 1970",
+      title: `From 1900 to 1970, no reading was more than ${largestGap("1900", "1970")}°C from the ${TEMPERATURE_BASELINE}`,
       subtitle: TEMPERATURE_ANOMALY_SUBTITLE,
     },
   },
