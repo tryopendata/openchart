@@ -4,7 +4,6 @@ description: "Render charts to SVG at build time or on the server with renderSta
 section: get-started
 order: 3
 ---
-<!-- phase-4-stub -->
 
 # Static rendering
 
@@ -20,6 +19,46 @@ const svg = renderStaticSVG(spec, {
   darkMode: 'off',
   precision: 3,
 });
+```
+
+The light and dark SVGs behind the chart below were produced by `renderStaticSVG` when this site was built. Without JavaScript, readers see those two and nothing else.
+
+```json demo title="Global temperature anomaly" source="NASA GISS Surface Temperature Analysis (GISTEMP)" height=380
+{
+  "mark": { "type": "line", "point": true },
+  "data": [
+    { "year": "1900", "anomaly": -0.08 },
+    { "year": "1910", "anomaly": -0.42 },
+    { "year": "1920", "anomaly": -0.27 },
+    { "year": "1930", "anomaly": -0.14 },
+    { "year": "1940", "anomaly": 0.1 },
+    { "year": "1950", "anomaly": -0.16 },
+    { "year": "1960", "anomaly": 0.03 },
+    { "year": "1970", "anomaly": 0.01 },
+    { "year": "1980", "anomaly": 0.26 },
+    { "year": "1990", "anomaly": 0.45 },
+    { "year": "2000", "anomaly": 0.61 },
+    { "year": "2010", "anomaly": 0.72 },
+    { "year": "2020", "anomaly": 1.02 },
+    { "year": "2025", "anomaly": 1.17 }
+  ],
+  "encoding": {
+    "x": {
+      "field": "year",
+      "type": "temporal",
+      "axis": { "format": "%Y", "tickCount": 6 }
+    },
+    "y": {
+      "field": "anomaly",
+      "type": "quantitative",
+      "axis": { "title": "Anomaly (°C)", "format": "+.1f", "grid": true }
+    }
+  },
+  "chrome": {
+    "title": "Global temperature anomaly rose from +0.26°C in 1980 to +1.17°C in 2025",
+    "subtitle": "Surface temperature against the 20th-century average, °C, selected years 1900–2025"
+  }
+}
 ```
 
 Options include `width`, `height`, `theme`, `darkMode`, `renderer`, `watermark`, `measureText`, `idPrefix` and `precision`. `precision` is an integer from 0 through 15, or `null` for raw doubles; it defaults to 3. Text, labels, identity values and authored descriptions are not rounded. `measureText` is a per-call compiler text measurer; provide the same font metrics in each build for stable layout. `renderer` does not turn the returned SVG into a canvas.

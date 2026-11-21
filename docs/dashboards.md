@@ -4,7 +4,6 @@ description: "Small charts in product UI: tile sizing, sparkline KPI cards, trim
 section: recipes
 order: 1
 ---
-<!-- phase-4-stub -->
 
 # Dashboards
 
@@ -52,6 +51,45 @@ Mount it in a small fixed-height box (36–56px is typical; the gallery tiles ru
 <div style={{ height: 36 }}>
   <Chart spec={spec} />
 </div>
+```
+
+The sparkline below plots 24 quarterly readings of US inflation with no axes, title or source line. In a tile, the card around it supplies the label (CPI, year over year) and the latest value, 2.6% in the fourth quarter of 2024.
+
+```json demo title="US inflation sparkline" source="US Bureau of Labor Statistics, CPI-U (via FRED CPIAUCSL)" height=56
+{
+  "mark": { "type": "line", "stroke": "#0891b2" },
+  "data": [
+    { "date": "2019-01-01", "rate": 1.6 },
+    { "date": "2019-04-01", "rate": 2 },
+    { "date": "2019-07-01", "rate": 1.8 },
+    { "date": "2019-10-01", "rate": 1.8 },
+    { "date": "2020-01-01", "rate": 2.5 },
+    { "date": "2020-04-01", "rate": 0.3 },
+    { "date": "2020-07-01", "rate": 1 },
+    { "date": "2020-10-01", "rate": 1.2 },
+    { "date": "2021-01-01", "rate": 1.4 },
+    { "date": "2021-04-01", "rate": 4.2 },
+    { "date": "2021-07-01", "rate": 5.4 },
+    { "date": "2021-10-01", "rate": 6.2 },
+    { "date": "2022-01-01", "rate": 7.5 },
+    { "date": "2022-04-01", "rate": 8.3 },
+    { "date": "2022-07-01", "rate": 8.5 },
+    { "date": "2022-10-01", "rate": 7.7 },
+    { "date": "2023-01-01", "rate": 6.4 },
+    { "date": "2023-04-01", "rate": 4.9 },
+    { "date": "2023-07-01", "rate": 3.2 },
+    { "date": "2023-10-01", "rate": 3.2 },
+    { "date": "2024-01-01", "rate": 3.1 },
+    { "date": "2024-04-01", "rate": 3.4 },
+    { "date": "2024-07-01", "rate": 2.9 },
+    { "date": "2024-10-01", "rate": 2.6 }
+  ],
+  "encoding": {
+    "x": { "field": "date", "type": "temporal" },
+    "y": { "field": "rate", "type": "quantitative" }
+  },
+  "display": "sparkline"
+}
 ```
 
 Sparklines animate by default. When the tile is live and the spec doesn't set `animation: false`, a finished data update flashes the sparkline's terminator dot (`mark: { type: 'line', point: 'last' }`) for 600ms via the `oc-pulse` class. On a wall of tiles that is what tells the reader which number just moved. It is off under `prefers-reduced-motion`.

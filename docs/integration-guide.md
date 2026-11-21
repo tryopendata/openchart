@@ -5,15 +5,30 @@ section: get-started
 slug: frameworks
 order: 2
 ---
-<!-- phase-4-stub -->
 
-# Integration guide
+# Frameworks
 
-How to build apps on top of the viz library. Covers the interface contract: spec mutation, event handling, controlled components, responsive behavior, and export.
-
-This guide shows React, Vue, and Svelte examples for key integration patterns. The vanilla JS API is covered in its own sections since the interface is different (imperative rather than declarative).
+OpenChart has a package for React, Vue, Svelte and plain JavaScript. All four draw the same spec, so a chart moves between frameworks without changing the spec. After installation, the page covers switching chart types, dark mode, themes, spec updates and responsive sizing, with React, Vue and Svelte side by side where they differ. The imperative vanilla API is in the [Vanilla API reference](reference/vanilla.md).
 
 For field-by-field type details, see the [spec reference](spec-reference.md). For a tutorial, see [getting started](getting-started.md).
+
+## Install
+
+```bash
+# React 18 or later
+npm install @opendata-ai/openchart-react
+
+# Vue 3.3 or later
+npm install @opendata-ai/openchart-vue
+
+# Svelte 5
+npm install @opendata-ai/openchart-svelte
+
+# Plain JavaScript
+npm install @opendata-ai/openchart-vanilla
+```
+
+Each package depends on `@opendata-ai/openchart-core` and `@opendata-ai/openchart-engine`, so you don't install those separately.
 
 ## Core concept: specs are plain objects
 
@@ -25,6 +40,56 @@ const spec = { mark: 'line', data: [...], encoding: {...} };
 ```
 
 The library uses an immutable update pattern: every spec change triggers a full recompile. The engine is fast enough that this is the intended workflow. Don't try to mutate the layout directly.
+
+The spec below is that object filled in: a line mark, 24 quarterly readings of US inflation and two encoded fields.
+
+```json demo title="US inflation" source="US Bureau of Labor Statistics, CPI-U (via FRED CPIAUCSL)" height=400
+{
+  "mark": "line",
+  "data": [
+    { "date": "2019-01-01", "rate": 1.6 },
+    { "date": "2019-04-01", "rate": 2 },
+    { "date": "2019-07-01", "rate": 1.8 },
+    { "date": "2019-10-01", "rate": 1.8 },
+    { "date": "2020-01-01", "rate": 2.5 },
+    { "date": "2020-04-01", "rate": 0.3 },
+    { "date": "2020-07-01", "rate": 1 },
+    { "date": "2020-10-01", "rate": 1.2 },
+    { "date": "2021-01-01", "rate": 1.4 },
+    { "date": "2021-04-01", "rate": 4.2 },
+    { "date": "2021-07-01", "rate": 5.4 },
+    { "date": "2021-10-01", "rate": 6.2 },
+    { "date": "2022-01-01", "rate": 7.5 },
+    { "date": "2022-04-01", "rate": 8.3 },
+    { "date": "2022-07-01", "rate": 8.5 },
+    { "date": "2022-10-01", "rate": 7.7 },
+    { "date": "2023-01-01", "rate": 6.4 },
+    { "date": "2023-04-01", "rate": 4.9 },
+    { "date": "2023-07-01", "rate": 3.2 },
+    { "date": "2023-10-01", "rate": 3.2 },
+    { "date": "2024-01-01", "rate": 3.1 },
+    { "date": "2024-04-01", "rate": 3.4 },
+    { "date": "2024-07-01", "rate": 2.9 },
+    { "date": "2024-10-01", "rate": 2.6 }
+  ],
+  "encoding": {
+    "x": {
+      "field": "date",
+      "type": "temporal",
+      "axis": { "tickCount": 6 }
+    },
+    "y": {
+      "field": "rate",
+      "type": "quantitative",
+      "axis": { "title": "CPI (year-over-year %)", "format": ".1f", "grid": true }
+    }
+  },
+  "chrome": {
+    "title": "US inflation peaked at 8.5% in mid-2022 and fell to 2.6% by late 2024",
+    "subtitle": "US consumer price index, year-over-year % change, quarterly 2019–2024"
+  }
+}
+```
 
 ---
 
