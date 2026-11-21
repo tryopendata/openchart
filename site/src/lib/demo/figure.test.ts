@@ -4,6 +4,7 @@ import type { VizSpec } from "@opendata-ai/openchart-core";
 import { Window } from "happy-dom";
 import { describe, expect, it } from "vitest";
 import { fixtureBar } from "../../demos/fixtures/bar";
+import { ownThemeFixture } from "../../demos/fixtures/controls";
 import { fixtureTable } from "../../demos/fixtures/table";
 import { basicChoropleth } from "../../demos/maps/choropleth";
 import {
@@ -118,6 +119,43 @@ describe("demoFigureHtml", () => {
         );
       }
     }
+  });
+
+  it("lets the spec's own theme show in the static SVGs and marks the demo when pageTheme is false", async () => {
+    const statics = (figure: Awaited<ReturnType<typeof render>>) =>
+      [...figure.querySelectorAll("svg.demo-static")].map((svg) => svg.outerHTML).join("");
+    const spec = ownThemeFixture.spec;
+    const sitePainted = await render(figureFor({ spec }));
+    const ownPainted = await render(figureFor({ spec, pageTheme: false }));
+    expect(sitePainted.hasAttribute("data-demo-own-theme")).toBe(false);
+    expect(statics(sitePainted)).toContain("Schibsted Grotesk");
+    expect(ownPainted.hasAttribute("data-demo-own-theme")).toBe(true);
+    expect(statics(ownPainted)).not.toContain("Schibsted Grotesk");
+    // Broadsheet names no family of its own, so the library default (Inter) shows, on its newsprint paper.
+    expect(statics(ownPainted)).toContain("Inter");
+    expect(statics(ownPainted).toLowerCase()).toContain("#fffdf9");
+  });
+
+  it("lays the static SVGs out at the demo's width and caps the stage at it", async () => {
+    const figure = await render(figureFor({ width: 360 }));
+    const stage = figure.querySelector("[data-demo-stage]");
+    expect(stage?.getAttribute("style")).toBe("--demo-height: 320px; --demo-width: 360px");
+    expect(
+      [...(stage?.querySelectorAll("svg.demo-static") ?? [])].map((svg) =>
+        svg.getAttribute("viewBox"),
+      ),
+    ).toEqual(["0 0 360 320", "0 0 360 320"]);
+  });
+
+  it("writes the host options on the spec script only when the demo sets some", async () => {
+    const script = async (overrides: Partial<DemoFigure>) =>
+      (await render(figureFor(overrides))).querySelector("script[data-demo-spec]");
+    const canvas = await script({ mount: { renderer: "canvas" } });
+    expect(JSON.parse(canvas?.getAttribute("data-demo-mount") ?? "null")).toEqual({
+      renderer: "canvas",
+    });
+    expect((await script({}))?.hasAttribute("data-demo-mount")).toBe(false);
+    expect((await script({ mount: {} }))?.hasAttribute("data-demo-mount")).toBe(false);
   });
 
   it("embeds the whole spec when the page keeps no record of shared values", async () => {

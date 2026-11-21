@@ -21,6 +21,8 @@
   .demo-stage {
     position: relative;
     height: var(--demo-height, 400px);
+    /* A demo with `width` shows a compact or medium layout: the stage stops at that width. */
+    max-inline-size: var(--demo-width, none);
   }
 
   /* Caption, toolbar and code share the chart's own 1rem inset, so their text lines up with its title. */

@@ -64,6 +64,22 @@ export const DEMO_ATTR = {
   live: "data-demo-live",
   /** On the stage once a live mount has failed. */
   error: "data-demo-error",
+  /** On `.demo` when the spec's own theme shows: the site chart theme is not laid over it. */
+  ownTheme: "data-demo-own-theme",
+  /** On the spec script, holding the JSON `DemoMountOptions` (renderer, interaction) the live mount passes on. */
+  mountOptions: "data-demo-mount",
+  /** On the controls bar inside `figure.demo-figure`, between the stage and the figcaption. */
+  controls: "data-demo-controls",
+  /** On a `<script type="application/json">` holding the other states' specs. */
+  states: "data-demo-states",
+  /** On each state button, holding its index; 0 is the demo's own `spec`. */
+  state: "data-demo-state",
+  /** On the Replay button. */
+  replay: "data-demo-replay",
+  /** On each download button, holding its format ("svg", "png" or "csv"). */
+  exportFormat: "data-demo-export",
+  /** On the event log `<ol>`. */
+  events: "data-demo-events",
 } as const;
 
 /**

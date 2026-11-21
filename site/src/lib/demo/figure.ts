@@ -6,8 +6,8 @@
  * Demo.astro and the `json demo` fence plugin both render through this, so the
  * two ways of putting a chart on a page cannot drift apart.
  */
-import type { VizSpec } from "@opendata-ai/openchart-core";
-import type { DemoSource } from "../../demos/types";
+import type { ThemeConfig, VizSpec } from "@opendata-ai/openchart-core";
+import type { DemoMountOptions, DemoSource } from "../../demos/types";
 import { codeTabsHtml } from "./code-tabs";
 import { demoDomId } from "./dom-id";
 import { escapeHtml } from "./escape-html";
@@ -32,6 +32,12 @@ export type DemoFigure = {
    * When given, large values move into shared blocks; without it the spec embeds whole.
    */
   pageShared?: Set<string>;
+  /** Lay the site's chart theme over the spec's own. Default true; false lets the spec's `theme` show. */
+  pageTheme?: boolean;
+  /** Layout width of the static SVGs and the stage's maximum width, in px. Default: statics at 720, stage at full width. */
+  width?: number;
+  /** Host options the live mount passes on, written on the spec script. */
+  mount?: DemoMountOptions;
 };
 
 /** Static SVGs are laid out at this width; CSS scales them to the stage. */
@@ -68,7 +74,12 @@ export type StageContent = {
   static: boolean;
   /** Geometry decimal places for the static SVGs (see `staticSvg`). */
   precision?: number;
+  /** The theme laid over the spec's own for the static SVGs. Default: the site's chart theme. */
+  theme?: ThemeConfig;
 };
+
+/** The empty mount theme, so a spec's own theme is all the static SVG uses. */
+const NO_PAGE_THEME: ThemeConfig = {};
 
 /**
  * The stage's content without the stage element: the light and dark static
@@ -82,14 +93,20 @@ export function stageContentHtml(content: StageContent): string {
         height: content.height,
         idPrefix: content.domId,
         precision: content.precision,
+        theme: content.theme,
       })
     : null;
   return svgs ?? placeholderHtml(content.title);
 }
 
 function stageHtml(figure: DemoFigure, domId: string): string {
-  const content = stageContentHtml({ ...figure, domId });
-  const style = `--demo-height: ${figure.height}px`;
+  const content = stageContentHtml({
+    ...figure,
+    domId,
+    theme: figure.pageTheme === false ? NO_PAGE_THEME : undefined,
+  });
+  const width = figure.width === undefined ? "" : `; --demo-width: ${figure.width}px`;
+  const style = `--demo-height: ${figure.height}px${width}`;
   return `<div class="demo-stage" ${DEMO_ATTR.stage} style="${style}">${content}</div>`;
 }
 
@@ -118,11 +135,17 @@ export function bareStageHtml(content: string, className: string): string {
   return `<div class="demo-stage ${escapeHtml(className)}" ${DEMO_ATTR.stage}>${content}</div>`;
 }
 
-function specHtml({ specJson, refs, values }: SharedSplit): string {
+/** The `data-demo-mount` attribute for host options that set anything, else nothing. */
+function mountAttr(mount: DemoMountOptions | undefined): string {
+  if (!mount || Object.keys(mount).length === 0) return "";
+  return ` ${DEMO_ATTR.mountOptions}="${escapeHtml(JSON.stringify(mount))}"`;
+}
+
+function specHtml({ specJson, refs, values }: SharedSplit, mount?: DemoMountOptions): string {
   const refsAttr = refs.length
     ? ` ${DEMO_ATTR.sharedRefs}="${escapeHtml(JSON.stringify(refs))}"`
     : "";
-  const spec = `<script type="application/json" ${DEMO_ATTR.spec}${refsAttr} data-pagefind-ignore>${scriptSafe(specJson)}</script>`;
+  const spec = `<script type="application/json" ${DEMO_ATTR.spec}${refsAttr}${mountAttr(mount)} data-pagefind-ignore>${scriptSafe(specJson)}</script>`;
   const blocks = values.map(
     ({ hash, json }) =>
       `<script type="application/json" ${DEMO_ATTR.shared}="${hash}" data-pagefind-ignore>${scriptSafe(json)}</script>`,
@@ -149,11 +172,12 @@ function captionHtml(figure: DemoFigure): string {
 export async function demoFigureHtml(figure: DemoFigure): Promise<string> {
   const domId = demoDomId(figure.id);
   const entrance = figure.entrance ? ` ${DEMO_ATTR.entrance}` : "";
+  const ownTheme = figure.pageTheme === false ? ` ${DEMO_ATTR.ownTheme}` : "";
   // Claimed before the first await, so two figures rendering at once never both write a block.
-  const spec = specHtml(embeddedSpec(figure));
+  const spec = specHtml(embeddedSpec(figure), figure.mount);
   const code = figure.tabs ? await codeTabsHtml(domId, figure.spec) : "";
   return [
-    `<div class="demo not-prose" ${DEMO_ATTR.figure}="${escapeHtml(figure.id)}"${entrance}>`,
+    `<div class="demo not-prose" ${DEMO_ATTR.figure}="${escapeHtml(figure.id)}"${entrance}${ownTheme}>`,
     `<figure class="demo-figure">${stageHtml(figure, domId)}${captionHtml(figure)}</figure>`,
     spec,
     code,

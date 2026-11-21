@@ -44,6 +44,9 @@ const figure = await demoFigureHtml({
   tabs,
   static: demo.static ?? true,
   pageShared: pageSharedHashes(Astro.locals),
+  pageTheme: demo.pageTheme ?? true,
+  width: demo.width,
+  mount: demo.mount,
 });
 ---
 

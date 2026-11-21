@@ -35,7 +35,7 @@ Run these from `site/`. They are the only supported way to build, test, and run 
 src/config.ts          product name, URL, version, install commands, landing islands, docs areas and sections
 src/landing/           landing copy (headline and section headings) and each section's data
 src/content/docs/      catalog pages, one .mdx per chart type, grouped by section
-src/content.config.ts  collections: catalog pages plus the repository's docs/*.md that declare a `section`
+src/content.config.ts  collections: catalog pages plus the repository's docs Markdown (docs/ and docs/reference/) that declares a `section`
 src/demos/             demo specs per section, found by registry.ts; fixtures/ for tests
 src/lib/               docs navigation and exports, Markdown plugins, demo rendering, analytics, consent
 src/components/        landing sections and their islands, docs chrome, the Demo figure

@@ -6,12 +6,13 @@
  */
 import { populationByCountry } from "@datasets/population";
 import { stateEconomies } from "@datasets/state-economies";
-import { usUnemployment } from "@datasets/us-unemployment";
+import { usStateUnemployment } from "@datasets/us-state-unemployment";
 import { sourceOf } from "../source";
 import { defineDemo } from "../types";
 import { centerOf } from "./centers";
 import { usStates, usStatesBasemap, worldCountries, worldLand } from "./geography";
 import { sourceWithGeography } from "./sources";
+import { rowsByFips } from "./state-fips";
 
 /** The ten largest state economies, each placed at the center of its state. */
 const statePoints = stateEconomies.data.map((row) => ({
@@ -122,7 +123,7 @@ export const symbolsOverChoropleth = defineDemo({
   id: "maps/symbol-over-choropleth",
   title: "State GDP over the unemployment rate",
   source: {
-    label: `${sourceOf(usUnemployment).label}; ${sourceWithGeography(stateEconomies, "us").label}`,
+    label: `${sourceOf(usStateUnemployment).label}; ${sourceWithGeography(stateEconomies, "us").label}`,
   },
   height: 460,
   // The heaviest static SVG on its page, so it draws in the browser and the page keeps size headroom.
@@ -130,7 +131,7 @@ export const symbolsOverChoropleth = defineDemo({
   spec: {
     type: "map",
     geo: { features: usStates, projection: "albersUsa" },
-    data: [...usUnemployment.data],
+    data: rowsByFips(usStateUnemployment.data, "rate"),
     encoding: {
       key: { field: "id", type: "nominal" },
       color: {

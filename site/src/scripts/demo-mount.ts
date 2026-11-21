@@ -20,7 +20,17 @@ import { DEMO_CLASS } from "../lib/demo/markup";
 /** Thrown when a spec cannot be mounted. `cause` is the original error. */
 export class DemoMountError extends Error {}
 
-type MountOptions = { theme: ThemeConfig; darkMode: DarkMode };
+type MountOptions = { theme?: ThemeConfig; darkMode: DarkMode; renderer?: "svg" | "canvas" };
+
+/** How one demo mounts: the page theme, whether the entrance plays, and the demo's host options. */
+export type DemoMountRequest = {
+  dark: boolean;
+  entrance: boolean;
+  /** Leave the site chart theme off, so the spec's own theme shows. */
+  ownTheme?: boolean;
+  /** The renderer for point marks, from the demo's `mount.renderer`. */
+  renderer?: "svg" | "canvas";
+};
 
 /** A mounted demo. */
 export type DemoMount = {
@@ -61,11 +71,7 @@ function mountFor(spec: VizSpec): Mount | undefined {
  *
  * @throws {DemoMountError} When the spec type has no mount function, or mounting throws.
  */
-export function mountDemo(
-  stage: HTMLElement,
-  spec: VizSpec,
-  options: { dark: boolean; entrance: boolean },
-): DemoMount {
+export function mountDemo(stage: HTMLElement, spec: VizSpec, options: DemoMountRequest): DemoMount {
   const mount = mountFor(spec);
   if (!mount) {
     const type = String((spec as { type?: unknown }).type);
@@ -81,8 +87,9 @@ export function mountDemo(
   const playable = options.entrance ? unbranded : { ...unbranded, animation: false };
   try {
     const instance = mount(host, playable as never, {
-      theme: chartTheme(options.dark),
+      theme: options.ownTheme ? undefined : chartTheme(options.dark),
       darkMode: options.dark ? "force" : "off",
+      ...(options.renderer ? { renderer: options.renderer } : {}),
     });
     return {
       destroy() {

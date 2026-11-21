@@ -1,9 +1,11 @@
 /**
  * Reads a demo figure's spec back from the page: the embedded spec JSON, with
  * each shared value it references (see markup.ts) filled in from the page's
- * shared value block. The live mount and the Copy buttons both read specs here.
+ * shared value block, and the host options written beside it. The live mount
+ * and the Copy buttons both read specs here.
  */
 import type { VizSpec } from "@opendata-ai/openchart-core";
+import type { DemoMountOptions } from "../demos/types";
 import { DEMO_ATTR, type DemoSharedRef } from "../lib/demo/markup";
 import { setValueAt } from "../lib/demo/spec-path";
 
@@ -17,6 +19,17 @@ function sharedValue(doc: Document, hash: string): unknown {
     throw new DemoSpecError(`The page has no shared value block ${hash} for this demo's spec.`);
   }
   return JSON.parse(block.textContent ?? "");
+}
+
+/**
+ * The demo's host options from its spec script's `data-demo-mount` attribute;
+ * an empty object when it sets none.
+ *
+ * @throws {SyntaxError} When the attribute is not valid JSON.
+ */
+export function readMountOptions(figure: Element): DemoMountOptions {
+  const script = figure.querySelector(`script[${DEMO_ATTR.spec}]`);
+  return JSON.parse(script?.getAttribute(DEMO_ATTR.mountOptions) ?? "{}") as DemoMountOptions;
 }
 
 /**

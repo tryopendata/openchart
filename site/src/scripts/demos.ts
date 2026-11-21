@@ -17,7 +17,7 @@ import { DEMO_ATTR, DEMO_CLASS, DEMO_PAGE_ATTR } from "../lib/demo/markup";
 import { setupDemoCodeToggle } from "./demo-code-toggle";
 import { setupDemoCopyButtons } from "./demo-copy";
 import type { DemoMount } from "./demo-mount";
-import { readFigureSpec } from "./demo-spec";
+import { readFigureSpec, readMountOptions } from "./demo-spec";
 import { setupFrameworkChoice } from "./framework-choice";
 
 /** Mount this far ahead of the viewport so the chart is live before the reader reaches it. */
@@ -121,9 +121,11 @@ function mountNow(demos: DemoStage[], demo: DemoStage, mounter: DemoMounter): vo
   makeRoom(demos, demo);
   try {
     const spec = readFigureSpec(demo.figure);
+    const { renderer } = readMountOptions(demo.figure);
     const entrance = demo.entrance && !demo.played && !staticShowing(demo);
     const dark = isDarkPage(demo.stage.ownerDocument);
-    demo.live = mounter.mountDemo(demo.stage, spec, { dark, entrance });
+    const ownTheme = demo.figure.hasAttribute(DEMO_ATTR.ownTheme);
+    demo.live = mounter.mountDemo(demo.stage, spec, { dark, entrance, ownTheme, renderer });
     removePlaceholder(demo);
     demo.stage.setAttribute(DEMO_ATTR.live, "");
   } catch (error) {

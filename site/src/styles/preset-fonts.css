@@ -1,0 +1,14 @@
+/*
+ * The faces the library's theme presets name, for pages that show a preset:
+ * Inter (the default family, used by broadsheet and terminal), Source Serif 4
+ * (essay) and JetBrains Mono (wire, and the mono numerals of every preset).
+ * The site's own fonts load from lib/fonts.ts; these load only where a page or
+ * section imports this file, so docs pages without presets never fetch them.
+ */
+@import "@fontsource/inter/latin-400.css";
+@import "@fontsource/inter/latin-500.css";
+@import "@fontsource/inter/latin-600.css";
+@import "@fontsource/source-serif-4/latin-400.css";
+@import "@fontsource/source-serif-4/latin-600.css";
+@import "@fontsource/jetbrains-mono/latin-400.css";
+@import "@fontsource/jetbrains-mono/latin-600.css";
