@@ -159,6 +159,15 @@ const sectionsOf = (areaId: string): readonly string[] =>
 const BUILDING_BLOCK_SECTIONS = sectionsOf("building-blocks");
 const GUIDE_SECTIONS = sectionsOf("guides");
 
+/** The h1 lines of a Markdown text, skipping fenced code, where `# ` starts a shell comment. */
+function markdownH1s(markdown: string): string[] {
+  let fenced = false;
+  return markdown.split("\n").filter((line) => {
+    if (/^\s*(```|~~~)/.test(line)) fenced = !fenced;
+    return !fenced && line.startsWith("# ");
+  });
+}
+
 /** The docs prose of a page: the article body the content rules read. */
 const proseOf = (doc: Document) => doc.querySelector("article .docs-prose");
 
@@ -402,7 +411,10 @@ describe("docs pages", () => {
     expect(
       doc.querySelector('nav[aria-label="Docs"] a[aria-current="page"]')?.getAttribute("href"),
     ).toBe(href);
-    expect(read("dist", `docs/${id}.md`).startsWith(`# ${title}\n`)).toBe(true);
+    const markdown = read("dist", `docs/${id}.md`);
+    expect(markdown.startsWith(`# ${title}\n`)).toBe(true);
+    expect(markdownH1s(markdown), "h1s in the Markdown export").toEqual([`# ${title}`]);
+    expect(markdown).not.toContain(STUB_MARKER);
     expect(read("dist", "llms.txt")).toContain(absolute(`/docs/${id}.md`));
     expect(read("dist", "llms-full.txt")).toContain(`# ${title}\n`);
     expect(read("dist", "sitemap-0.xml")).toContain(`<loc>${absolute(href)}</loc>`);
