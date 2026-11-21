@@ -1,24 +1,10 @@
 /**
- * The clean-up a tile's static SVG gets before it is written to a file: the
- * attributes only a live chart reads go, and runs of same-colored rects, such
- * as a waffle's cells, become one path each without moving a pixel.
+ * The clean-up a tile file gets on top of every static SVG's: runs of
+ * same-colored rects, such as a waffle's cells, become one path each without
+ * moving a pixel.
  */
 import { describe, expect, it } from "vitest";
-import { mergeRects, slimSvg } from "./tile-svg";
-
-describe("slimming a tile's SVG", () => {
-  it("keeps data-theme, the placeholder hook and referenced ids, and drops the rest", () => {
-    const svg =
-      '<svg class="demo-static" data-theme="dark" data-mark-count="3" aria-labelledby="t"><title id="t">x</title>' +
-      '<clipPath id="clip"></clipPath><g id="loose" data-key="a" clip-path="url(#clip)" data-flag></g></svg>' +
-      '<p data-demo-placeholder class="demo-placeholder">x</p>';
-    expect(slimSvg(svg)).toBe(
-      '<svg class="demo-static" data-theme="dark" aria-labelledby="t"><title id="t">x</title>' +
-        '<clipPath id="clip"></clipPath><g clip-path="url(#clip)"></g></svg>' +
-        '<p data-demo-placeholder class="demo-placeholder">x</p>',
-    );
-  });
-});
+import { mergeRects } from "./tile-svg";
 
 describe("merging a tile's rects", () => {
   it("draws a run of rects that share their paint as one path, corners included", () => {

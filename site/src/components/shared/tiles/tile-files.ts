@@ -11,7 +11,7 @@ import type { VizSpec } from "@opendata-ai/openchart-core";
 import { getDemo } from "../../../demos/registry";
 import { staticSvg } from "../../../lib/demo/static-svg";
 import { type TileSize, type TileSpecOptions, tileSpec } from "./tile-spec";
-import { mergeRects, slimSvg } from "./tile-svg";
+import { mergeRects } from "./tile-svg";
 
 /** One static tile chart a page shows: which demo, at what size, with which specimen options. */
 export type TileRequest = { demo: string; size: TileSize; spec?: TileSpecOptions };
@@ -50,8 +50,8 @@ export function requestSpec(request: TileRequest): VizSpec {
 }
 
 /**
- * The SVG file for one tile in one theme, slimmed, or null when the chart type
- * has no static renderer (tables, sankeys, networks).
+ * The SVG file for one tile in one theme, with its rects merged, or null when
+ * the chart type has no static renderer (tables, sankeys, networks).
  */
 export function tileFileSvg(request: TileRequest, theme: TileTheme): string | null {
   // A copy: the renderer writes defaults into the spec, and the tile shares objects with the demo's.
@@ -62,7 +62,7 @@ export function tileFileSvg(request: TileRequest, theme: TileTheme): string | nu
     dark: theme === "dark",
     precision: 0,
   });
-  return svg === null ? null : mergeRects(slimSvg(svg));
+  return svg === null ? null : mergeRects(svg);
 }
 
 /** Every distinct request in `requests`, once, keyed by its light file name. */

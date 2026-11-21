@@ -20,7 +20,6 @@ import { type TileRequest, type TileTheme, tileFileUrl } from "./tile-files";
 import { type TileSize, type TileSpecOptions, tileSpec } from "./tile-spec";
 
 export { tableFallbackHtml } from "./tile-fallback";
-export { slimSvg } from "./tile-svg";
 
 /** The class on a tile's stage, which tiles.css sizes. */
 export const TILE_STAGE_CLASS = "tile-stage";

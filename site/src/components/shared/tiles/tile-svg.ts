@@ -1,31 +1,10 @@
 /**
- * Slims a static tile SVG: whole-pixel geometry is the renderer's job; this
- * drops the data attributes and ids only a live chart reads, since a tile's
- * chart is a picture behind `aria-hidden`.
+ * Merges a tile file's rects. A tile's static SVG arrives slimmed of the data
+ * attributes and ids only a live chart reads (lib/demo/slim-svg.ts); in a file
+ * shown as an image, the wrapper groups the renderer puts around each mark do
+ * nothing either, so runs of same-colored rects, such as a waffle's cells,
+ * become one path each without moving a pixel.
  */
-import { DEMO_ATTR } from "../../../lib/demo/markup";
-
-/** Data attributes the slimmed SVGs keep: CSS picks a theme by one, demos.ts removes the placeholder by the other. */
-const KEPT_DATA_ATTRIBUTES = new Set(["data-theme", DEMO_ATTR.placeholder]);
-
-/**
- * The markup without `data-*` attributes (except those in KEPT_DATA_ATTRIBUTES)
- * and without ids nothing in it references. Ids that a `url(#…)`, `href="#…"`
- * or an ARIA reference points at, such as clip paths, gradients and titles, stay.
- */
-export function slimSvg(svg: string): string {
-  const referenced = new Set([
-    ...[...svg.matchAll(/(?:url\(#|href="#)([^)"]+)/g)].map(([, id]) => id ?? ""),
-    ...[...svg.matchAll(/aria-(?:labelledby|describedby)="([^"]+)"/g)].flatMap(([, ids]) =>
-      (ids ?? "").split(/\s+/),
-    ),
-  ]);
-  return svg
-    .replace(/\s(data-[\w-]+)(?:="[^"]*")?(?=[\s>/])/g, (attribute, name: string) =>
-      KEPT_DATA_ATTRIBUTES.has(name) ? attribute : "",
-    )
-    .replace(/\sid="([^"]*)"/g, (attribute, id: string) => (referenced.has(id) ? attribute : ""));
-}
 
 const GEOMETRY = new Set(["x", "y", "width", "height", "rx", "ry"]);
 const RECT = /<rect\b([^>]*?)\/>/y;

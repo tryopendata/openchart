@@ -14,13 +14,14 @@
  */
 import { usePlayback } from "@steamfield/ui/react/playback";
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { heroChartTheme } from "../../../landing/hero-theme";
+import type { SpecFolds } from "../../../landing/spec-lines";
 import { LiveChart, loadChartLibrary } from "../../shared/LiveChart";
 import { usePageDark } from "../../shared/page-theme";
 import { useMotionTools } from "../../shared/use-motion-tools";
 import { deskReducer, initialDeskState } from "./desk-state";
-import type { DeskStep } from "./desk-step";
+import { type DeskStepSource, toDeskSteps } from "./desk-step";
 import { SpecDisclosure } from "./SpecDisclosure";
 import { StepList } from "./StepList";
 import { revealAddedLines } from "./spec-reveal";
@@ -37,7 +38,9 @@ export const STEP_MS = 3200;
 const IN_VIEW_THRESHOLD = 0;
 
 export type HeroDeskProps = {
-  steps: DeskStep[];
+  steps: DeskStepSource[];
+  /** Root spec keys the spec pane folds to one line (`heroFolds`). */
+  folds: SpecFolds;
   /** The static SVGs of the finished chart, shown until the live chart has drawn. */
   children?: ReactNode;
 };
@@ -66,7 +69,8 @@ function useLibraryReady(): boolean {
   return ready;
 }
 
-export default function HeroDesk({ steps, children }: HeroDeskProps) {
+export default function HeroDesk({ steps: sources, folds, children }: HeroDeskProps) {
+  const steps = useMemo(() => toDeskSteps(sources, folds), [sources, folds]);
   const [state, dispatch] = useReducer(deskReducer, steps.length, initialDeskState);
   const gate = usePlayback<HTMLDivElement>({ reducedPolicy: "hold", threshold: IN_VIEW_THRESHOLD });
   const libraryReady = useLibraryReady();
