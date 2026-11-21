@@ -9,7 +9,14 @@ import { renderStaticSVG } from "@opendata-ai/openchart-vanilla/static";
 import { chartTheme } from "./chart-theme";
 import { DEMO_CLASS } from "./markup";
 
-export type StaticSvgOptions = { idPrefix: string; width: number; height: number; dark: boolean };
+export type StaticSvgOptions = {
+  idPrefix: string;
+  width: number;
+  height: number;
+  dark: boolean;
+  /** Geometry decimal places. Default 1; 0 suits small figures such as the landing wall's tiles. */
+  precision?: number;
+};
 
 type StaticSpec = Parameters<typeof renderStaticSVG>[0];
 
@@ -45,7 +52,7 @@ export function staticSvg(spec: VizSpec, options: StaticSvgOptions): string | nu
     height: options.height,
     theme: chartTheme(options.dark),
     darkMode: options.dark ? "force" : "off",
-    precision: STATIC_PRECISION,
+    precision: options.precision ?? STATIC_PRECISION,
     // The attribution is a link, and a link inside an image fails axe. The site's own footer credits the library.
     watermark: false,
   });

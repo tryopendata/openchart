@@ -1,15 +1,18 @@
 /**
- * The PresetScrub island: one chart restyled through the library's house-style
- * presets and then dark mode, with the theme lines that changed beside it. At
- * 900px and wider, with motion allowed, the scrub pins and the scroll picks the
- * stop; otherwise the stops are buttons. The chart is the shared LiveChart whose
- * spec changes, so each change is the library's own transition. Until the chart
- * library loads, and without JavaScript, the build's static SVG of the first
- * stop (the children) stands in.
+ * The PresetScrub island: one chart set in each of the library's house styles
+ * and then in dark mode. The chart is the story and takes most of the width;
+ * beside it are the style's name, one sentence on the look, and, behind a
+ * disclosure, the theme values that changed. Where the pinned block fits and
+ * motion is allowed, the section pins and the scroll picks the stop; otherwise
+ * the stops are buttons. The chart is the shared LiveChart whose spec changes,
+ * so each change is the library's own transition. Before the island runs, the
+ * page shows the first stop with its static chart (the children) and no buttons.
  */
 import type { ChartSpec, ThemeConfig } from "@opendata-ai/openchart-core";
 import {
+  type CSSProperties,
   type ReactNode,
+  type RefObject,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -17,10 +20,9 @@ import {
   useRef,
   useState,
 } from "react";
-import { DEMO_CLASS } from "../../../lib/demo/markup";
 import { LiveChart } from "../../shared/LiveChart";
 import { useMotionTools } from "../../shared/use-motion-tools";
-import { crossfadeLines } from "./diff-motion";
+import { type Crossfade, crossfade } from "./diff-motion";
 import type { ThemeDiffLine } from "./house-styles";
 import { pinScrub } from "./preset-pin";
 import { progressOf } from "./scrub-progress";
@@ -30,6 +32,8 @@ export type ScrubStop = {
   id: string;
   label: string;
   preset: string;
+  variant?: string;
+  description: string;
   theme: ThemeConfig;
   dark: boolean;
   diff: ThemeDiffLine[];
@@ -48,46 +52,75 @@ type Pin = { start: number; end: number };
 const HOUSE_LIGHT = { theme: undefined, darkMode: "off" } as const;
 const HOUSE_DARK = { theme: undefined, darkMode: "force" } as const;
 
-function DiffLines({ stop }: { stop: ScrubStop }) {
-  return stop.diff.flatMap((line) => [
-    ...(line.before === undefined
-      ? []
-      : [
-          <li key={`${line.path}-`} className="scrub-line" data-sign="-">
-            <span className="scrub-sign" aria-hidden="true">
-              −
-            </span>
-            <span className="sr-only">removed: </span>
-            {line.path}: {line.before}
-          </li>,
-        ]),
-    ...(line.after === undefined
-      ? []
-      : [
-          <li key={`${line.path}+`} className="scrub-line" data-sign="+">
-            <span className="scrub-sign" aria-hidden="true">
-              +
-            </span>
-            <span className="sr-only">added: </span>
-            {line.path}: {line.after}
-          </li>,
-        ]),
-  ]);
+function Notes({
+  stop,
+  named,
+  panelRef,
+}: {
+  stop: ScrubStop;
+  /** Only the current stop's copy carries the name hook; the outgoing copy is decoration. */
+  named: boolean;
+  panelRef: RefObject<HTMLDivElement | null>;
+}) {
+  return (
+    <div
+      ref={panelRef}
+      className={named ? "scrub-panel" : "scrub-panel scrub-out"}
+      aria-hidden={named ? undefined : true}
+    >
+      <p className="scrub-name" data-preset-name={named ? "" : undefined}>
+        {stop.label}
+      </p>
+      {stop.variant ? <p className="scrub-variant">{stop.variant}</p> : null}
+      <p className="scrub-description">{stop.description}</p>
+    </div>
+  );
+}
+
+function DiffList({
+  stop,
+  named,
+  listRef,
+}: {
+  stop: ScrubStop;
+  named: boolean;
+  listRef: RefObject<HTMLOListElement | null>;
+}) {
+  return (
+    <ol
+      ref={listRef}
+      className={named ? "scrub-lines" : "scrub-lines scrub-out"}
+      aria-hidden={named ? undefined : true}
+    >
+      {stop.diff.map((line) => (
+        <li key={line.path} className="scrub-line">
+          <span className="scrub-path">{line.path}</span> {line.before ?? "(unset)"}
+          <span aria-hidden="true"> → </span>
+          <span className="sr-only"> becomes </span>
+          {line.after ?? "(unset)"}
+        </li>
+      ))}
+    </ol>
+  );
 }
 
 export function PresetScrub({ stops, spec, children }: PresetScrubProps) {
   const [index, setIndex] = useState(0);
   const [previous, setPrevious] = useState<number | null>(null);
   const [pin, setPin] = useState<Pin | null>(null);
+  const [ready, setReady] = useState(false);
   const tools = useMotionTools();
   const animated = useRef(false);
-  const pinRef = useRef<HTMLDivElement>(null);
+  const blockRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef<HTMLSpanElement>(null);
-  const nameRef = useRef<HTMLParagraphElement>(null);
-  const linesRef = useRef<HTMLOListElement>(null);
-  const outgoingRef = useRef<HTMLOListElement>(null);
-  const fade = useRef<{ kill(): unknown } | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const outPanelRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLOListElement>(null);
+  const outListRef = useRef<HTMLOListElement>(null);
+  const fade = useRef<Crossfade | null>(null);
   const shown = useRef(0);
+
+  useEffect(() => setReady(true), []);
 
   useEffect(() => {
     animated.current = tools !== null;
@@ -101,39 +134,40 @@ export function PresetScrub({ stops, spec, children }: PresetScrubProps) {
   }, []);
 
   useEffect(() => {
-    const root = pinRef.current;
+    const block = blockRef.current;
     const progress = progressRef.current;
-    if (!tools || !root || !progress) return;
-    return pinScrub(
-      tools,
-      { root, progress, count: stops.length },
-      { onPin: setPin, onStop: show },
-    );
-  }, [tools, stops.length, show]);
+    if (!tools || !ready || !block || !progress) return;
+    return pinScrub(tools, { block, progress, count: stops.length }, { onPin: setPin, onStop: show });
+  }, [tools, ready, stops.length, show]);
 
-  // Runs before paint, so the new lines never flash at full strength first.
+  // Runs before paint, so the new copy never flashes at full strength first.
   useLayoutEffect(() => {
     if (!tools || previous === null) return;
-    fade.current?.kill();
-    fade.current = crossfadeLines(
+    fade.current?.finish();
+    fade.current = crossfade(
       tools,
-      {
-        name: nameRef.current,
-        incoming: [...(linesRef.current?.children ?? [])],
-        outgoing: outgoingRef.current,
-      },
+      [
+        { incoming: panelRef.current, outgoing: outPanelRef.current },
+        { incoming: listRef.current, outgoing: outListRef.current },
+      ],
       () => setPrevious(null),
     );
   }, [tools, previous]);
 
   const stop = stops[index] ?? stops[0];
-  const liveSpec = useMemo<ChartSpec>(() => ({ ...spec, theme: stop?.theme }), [spec, stop]);
+  // The static chart stands in until the library loads, so the live chart skips its
+  // entrance; every later change still runs the library's update transition.
+  const liveSpec = useMemo<ChartSpec>(
+    () => ({ ...spec, theme: stop?.theme, animation: { enter: false } }),
+    [spec, stop],
+  );
   if (!stop) return null;
 
   const choose = (next: number) => {
-    // While pinned, the scroll owns the stop: scroll to the middle of that stop's stretch.
+    // While pinned, the scroll owns the stop: jump to the middle of that stop's stretch.
     if (pin) {
-      window.scrollTo({ top: pin.start + progressOf(next, stops.length) * (pin.end - pin.start) });
+      const top = pin.start + progressOf(next, stops.length) * (pin.end - pin.start);
+      window.scrollTo({ top, behavior: "instant" });
     } else {
       show(next);
     }
@@ -141,52 +175,49 @@ export function PresetScrub({ stops, spec, children }: PresetScrubProps) {
   const outgoing = previous === null ? undefined : stops[previous];
 
   return (
-    <div className="scrub">
-      <div ref={pinRef} className="scrub-pinned" data-pinned={pin ? "" : undefined}>
-        <div className="scrub-index">
-          <fieldset className="scrub-stops">
-            <legend className="sr-only">House style</legend>
-            {stops.map((candidate, position) => (
-              <button
-                key={candidate.id}
-                type="button"
-                className="scrub-stop"
-                aria-pressed={position === index}
-                onClick={() => choose(position)}
-              >
-                {candidate.label}
-              </button>
-            ))}
-          </fieldset>
-          <div className="scrub-axis" aria-hidden="true">
-            <span ref={progressRef} className="scrub-axis-fill" />
+    <div className="scrub" style={{ "--stops": stops.length } as CSSProperties}>
+      <div ref={blockRef} className="scrub-block" data-pinned={pin ? "" : undefined}>
+        {ready ? (
+          <div className="scrub-index">
+            <fieldset className="scrub-stops">
+              <legend className="sr-only">House style</legend>
+              {stops.map((candidate, position) => (
+                <button
+                  key={candidate.id}
+                  type="button"
+                  className="scrub-stop"
+                  aria-pressed={position === index}
+                  onClick={() => choose(position)}
+                >
+                  {candidate.label}
+                </button>
+              ))}
+            </fieldset>
+            <div className="scrub-axis" aria-hidden="true">
+              <span ref={progressRef} className="scrub-axis-fill" />
+            </div>
           </div>
-        </div>
+        ) : null}
         <div className="scrub-body">
           <div className="scrub-notes">
-            <p ref={nameRef} className="scrub-name" data-preset-name>
-              {stop.label}
-            </p>
-            <p className="scrub-context">
-              theme: <span className="text-ink">{stop.preset}</span>
-              {stop.dark ? ", darkMode: force" : ""}
-            </p>
-            <div className="scrub-diff">
-              <ol ref={linesRef} className="scrub-lines" aria-label="Theme values changed here">
-                <DiffLines stop={stop} />
-              </ol>
-              {outgoing ? (
-                <ol ref={outgoingRef} className="scrub-lines scrub-lines-out" aria-hidden="true">
-                  <DiffLines stop={outgoing} />
-                </ol>
-              ) : null}
+            <div className="scrub-layers">
+              <Notes stop={stop} named panelRef={panelRef} />
+              {outgoing ? <Notes stop={outgoing} named={false} panelRef={outPanelRef} /> : null}
             </div>
+            <details className="scrub-details">
+              <summary>What changed in the theme</summary>
+              <div className="scrub-layers">
+                <DiffList stop={stop} named listRef={listRef} />
+                {outgoing ? (
+                  <DiffList stop={outgoing} named={false} listRef={outListRef} />
+                ) : null}
+              </div>
+            </details>
           </div>
           <div className="scrub-chart">
             <LiveChart
               spec={liveSpec}
-              // demo-live marks a live library chart, as on docs pages (e2e/axe.ts keys on it).
-              className={`scrub-host ${DEMO_CLASS.live}`}
+              className="scrub-host"
               themeOverride={stop.dark ? HOUSE_DARK : HOUSE_LIGHT}
             >
               {children}
@@ -194,7 +225,7 @@ export function PresetScrub({ stops, spec, children }: PresetScrubProps) {
           </div>
         </div>
         <p className="sr-only" aria-live="polite">
-          House style: {stop.label}
+          House style: {stop.variant ?? stop.label}
         </p>
       </div>
     </div>

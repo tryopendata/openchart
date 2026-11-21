@@ -41,7 +41,7 @@ const PLACEHOLDER_TEXT = "This chart is drawn in the browser.";
  * JSON that is safe inside a `<script>` element: escaping `<` keeps a string such
  * as `</script>` from closing the element early, and JSON.parse reads it back.
  */
-const scriptSafe = (json: string) => json.replaceAll("<", "\\u003c");
+export const scriptSafe = (json: string) => json.replaceAll("<", "\\u003c");
 
 function asSentence(text: string): string {
   const trimmed = text.trim();
@@ -49,19 +49,48 @@ function asSentence(text: string): string {
 }
 
 /** What a stage with no static SVG shows until its chart mounts, and all a reader without JavaScript sees. */
-function placeholderHtml(figure: DemoFigure): string {
-  const text = `${asSentence(figure.title)} ${PLACEHOLDER_TEXT}`;
+function placeholderHtml(title: string): string {
+  const text = `${asSentence(title)} ${PLACEHOLDER_TEXT}`;
   return `<p class="${DEMO_CLASS.placeholder}" ${DEMO_ATTR.placeholder}>${escapeHtml(text)}</p>`;
 }
 
-function stageHtml(figure: DemoFigure, domId: string): string {
-  const size = { width: STATIC_WIDTH, height: figure.height };
+/** What a stage holds before its live chart, for a figure drawn without tabs or caption. */
+export type StageContent = {
+  spec: VizSpec;
+  title: string;
+  /** The static SVGs' id prefix base; the light one adds "-l" and the dark one "-d". */
+  domId: string;
+  height: number;
+  /** Layout width of the static SVGs. Default 720. */
+  width?: number;
+  /** Render static SVGs; when false, or the type has none, the placeholder line stands in. */
+  static: boolean;
+  /** Geometry decimal places for the static SVGs (see `staticSvg`). */
+  precision?: number;
+};
+
+/**
+ * The stage's content without the stage element: the light and dark static
+ * SVGs, or the placeholder line naming the chart. Demo figures wrap it in their
+ * stage; the landing wall wraps it in a tile.
+ */
+export function stageContentHtml(content: StageContent): string {
+  const size = { width: content.width ?? STATIC_WIDTH, height: content.height };
   const render = (dark: boolean, suffix: string) =>
-    figure.static
-      ? staticSvg(figure.spec, { ...size, idPrefix: `${domId}-${suffix}`, dark })
+    content.static
+      ? staticSvg(content.spec, {
+          ...size,
+          idPrefix: `${content.domId}-${suffix}`,
+          dark,
+          precision: content.precision,
+        })
       : null;
   const light = render(false, "l");
-  const content = light === null ? placeholderHtml(figure) : `${light}${render(true, "d") ?? ""}`;
+  return light === null ? placeholderHtml(content.title) : `${light}${render(true, "d") ?? ""}`;
+}
+
+function stageHtml(figure: DemoFigure, domId: string): string {
+  const content = stageContentHtml({ ...figure, domId });
   const style = `--demo-height: ${figure.height}px`;
   return `<div class="demo-stage" ${DEMO_ATTR.stage} style="${style}">${content}</div>`;
 }

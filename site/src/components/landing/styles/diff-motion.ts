@@ -1,42 +1,50 @@
 /**
- * The crossfade between one stop's theme lines and the next, run only when
- * `withMotion` allows it. The outgoing lines fade where they stand while the new
- * ones lift in a line at a time. The chart is never part of it: the library's own
- * transition moves the chart.
+ * The crossfade between one stop's notes (name, description, theme lines) and
+ * the next, run only when motion is allowed. It is one beat: the outgoing copy,
+ * laid over the new one, fades out while the new copy fades in and settles, on
+ * the same duration and curve. The chart is never part of it: the library's own
+ * transition moves the chart over the same moment.
  */
 import type { MotionTools } from "../../../scripts/motion";
 
-const IN_SECONDS = 0.5;
-const OUT_SECONDS = 0.3;
-const LINE_STEP = 0.035;
+/** One beat, about as long as the library's update transition. */
+const BEAT_SECONDS = 0.4;
+const EASE = "power3.out";
+
+/** A layer coming in and the copy of the previous layer laid over it, if there is one. */
+export type CrossfadePair = { incoming: Element | null; outgoing: Element | null };
+
+/** The running crossfade, so the next stop can finish it first. */
+export type Crossfade = { finish(): void };
 
 /**
- * Fades `outgoing` (the previous lines, laid over the new ones) and brings in
- * `incoming` and the stop's name. Calls `done` once the old lines are gone.
- * Returns the timeline so the next stop can cut it short.
+ * Crossfades every pair at once and calls `done` when the outgoing copies can go.
+ * `finish()` jumps to the end without calling `done`: the caller is about to
+ * start the next crossfade, which brings its own outgoing copies.
  */
-export function crossfadeLines(
+export function crossfade(
   { gsap }: MotionTools,
-  parts: { name: Element | null; incoming: Element[]; outgoing: Element | null },
+  pairs: CrossfadePair[],
   done: () => void,
-) {
+): Crossfade {
   const timeline = gsap.timeline({ onComplete: done });
-  if (parts.outgoing) {
-    timeline.to(parts.outgoing, { opacity: 0, duration: OUT_SECONDS, ease: "power3.out" }, 0);
+  for (const { incoming, outgoing } of pairs) {
+    if (outgoing) {
+      timeline.to(outgoing, { opacity: 0, duration: BEAT_SECONDS, ease: EASE }, 0);
+    }
+    if (incoming) {
+      timeline.fromTo(
+        incoming,
+        { opacity: 0, y: 6 },
+        { opacity: 1, y: 0, duration: BEAT_SECONDS, ease: EASE },
+        0,
+      );
+    }
   }
-  if (parts.name) {
-    timeline.fromTo(
-      parts.name,
-      { opacity: 0, y: 12 },
-      { opacity: 1, y: 0, duration: IN_SECONDS, ease: "expo.out" },
-      0,
-    );
-  }
-  timeline.fromTo(
-    parts.incoming,
-    { opacity: 0, y: 6 },
-    { opacity: 1, y: 0, duration: IN_SECONDS, ease: "power3.out", stagger: LINE_STEP },
-    0.08,
-  );
-  return timeline;
+  return {
+    finish() {
+      timeline.eventCallback("onComplete", null);
+      timeline.progress(1).kill();
+    },
+  };
 }

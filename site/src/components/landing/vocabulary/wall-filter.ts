@@ -35,7 +35,13 @@ export function parseWallHash(hash: string): WallFilter | null {
   const [key, value, ...extra] = hash.replace(/^#/, "").split("=");
   if (key !== WALL_HASH_KEY || extra.length > 0) return null;
   if (value === undefined || value === "" || value === "all") return "all";
-  const intent = decodeURIComponent(value);
+  let intent: string;
+  try {
+    intent = decodeURIComponent(value);
+  } catch {
+    // A malformed escape such as "%E0%A4" names no section; keep the current filter.
+    return null;
+  }
   return intentIds.has(intent) ? (intent as SectionId) : null;
 }
 

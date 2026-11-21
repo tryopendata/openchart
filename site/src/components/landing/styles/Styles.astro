@@ -1,30 +1,40 @@
 ---
 /**
- * One spec, four house styles: a pinned, scrubbed section where one chart moves
- * through the essay, wire, broadsheet and terminal presets and then dark mode,
- * with the theme lines each stop changes. The stops, their diffs and the first
- * stop's static SVG are computed here at build time; the PresetScrub island
- * (client:visible) runs the chart, the pin and the buttons.
+ * One chart, set in four house styles: a pinned, scrubbed section where one
+ * chart moves through the essay, wire, broadsheet and terminal presets and then
+ * dark mode. The stops, their descriptions and diffs, and the first stop's static
+ * chart are computed here at build time; the PresetScrub island (client:visible)
+ * runs the chart, the pin and the buttons.
  *
  * Contract (e2e/landing.spec.ts relies on it):
  * - `<section id="styles" aria-labelledby="styles-title" data-landing-section>`
  *   with one h2, id `styles-title` (`landingCopy.headings.styles`).
  * - `data-preset-name` on the visible element naming the current preset; its text
  *   is the preset name ("essay", "wire", "broadsheet", "terminal"), case aside.
- * - At 900px and wider the pin happens inside this section: ScrollTrigger pins an
+ * - Where the pin applies it happens inside this section: ScrollTrigger pins an
  *   element within it, so the section itself stays a direct child of `<main>`.
- * - Under 900px or with reduced motion there is no pin; the presets are buttons
- *   named by preset ("Essay", "Wire", "Broadsheet", "Terminal").
+ * - Without the pin (narrow or short screens, reduced motion) the presets are
+ *   buttons named by preset ("Essay", "Wire", "Broadsheet", "Terminal").
  */
+import "@fontsource/inter/latin-400.css";
+import "@fontsource/inter/latin-500.css";
+import "@fontsource/inter/latin-600.css";
 import type { ChartSpec } from "@opendata-ai/openchart-core";
 import { renderStaticSVG } from "@opendata-ai/openchart-vanilla/static";
 import { houseStyle } from "../../../demos/landing/house-style";
+import { DEFAULT_DEMO_HEIGHT } from "../../../demos/types";
 import { validateDemo } from "../../../lib/demo/validate";
 import { landingCopy } from "../../../landing/copy";
 import "../../../styles/landing-wall.css";
 import PublishedFigure from "../../shared/PublishedFigure.astro";
 import { HOUSE_STYLE_STOPS, houseStyleDiffs } from "./house-styles";
 import { PresetScrub } from "./PresetScrub";
+
+/**
+ * The static stand-in's layout width: narrow enough that its type stays readable
+ * when a phone scales it down, before the live chart lays itself out at the real width.
+ */
+const STAND_IN_WIDTH = 560;
 
 validateDemo(houseStyle.id, houseStyle.spec);
 const spec = houseStyle.spec as ChartSpec;
@@ -36,7 +46,13 @@ const first = HOUSE_STYLE_STOPS[0];
 // would override the preset's fonts and paper, which are the point of the section.
 const initialSvg = renderStaticSVG(
   { ...spec, theme: first?.theme, watermark: false },
-  { idPrefix: "house-style", width: 720, height: 440, darkMode: "off", precision: 1 },
+  {
+    idPrefix: "house-style",
+    width: STAND_IN_WIDTH,
+    height: houseStyle.height ?? DEFAULT_DEMO_HEIGHT,
+    darkMode: "off",
+    precision: 1,
+  },
 );
 ---
 
@@ -48,16 +64,15 @@ const initialSvg = renderStaticSVG(
         {landingCopy.headings.styles}
       </h2>
       <p class="wall-lede" data-motion-part>
-        A house style is a theme, and the theme sits apart from the data and the encoding. The
-        library ships four presets: essay, wire, broadsheet and terminal. Below, the same spec takes
-        each in turn, then dark mode, and the lines beside the chart are the theme values that
-        changed.
+        A paper sets every chart in its house style: its typeface, its paper, its rules and its
+        colors. The chart below takes four of them in turn, then a dark page, and nothing about its
+        data changes.
       </p>
     </div>
     <PublishedFigure
       class="scrub-figure"
       source={houseStyle.source}
-      note="The eyebrow, headline and deck are fields in the spec, so each preset sets them in its own type."
+      note="The kicker, headline and deck belong to the chart, so each style sets them in its own type."
     >
       <PresetScrub client:visible stops={stops} spec={spec}>
         <div class="scrub-static" set:html={initialSvg} />

@@ -33,10 +33,10 @@ export const vocabularyTiles: VocabularyTile[] = [
     href: "/docs/comparison/grouped-stacked/",
   },
   {
-    demo: "comparison/lollipop-basic",
+    demo: "comparison/barlist-basic",
     intent: "comparison",
-    label: "Lollipop",
-    href: "/docs/comparison/lollipop/",
+    label: "Bar list",
+    href: "/docs/comparison/bar-list/",
   },
   {
     demo: "comparison/range-dumbbell",
@@ -81,7 +81,7 @@ export const vocabularyTiles: VocabularyTile[] = [
     href: "/docs/part-to-whole/parliament/",
   },
   {
-    demo: "distribution/histogram-basic",
+    demo: "distribution/histogram-bins",
     intent: "distribution",
     label: "Histogram",
     href: "/docs/distribution/histogram/",
@@ -105,10 +105,10 @@ export const vocabularyTiles: VocabularyTile[] = [
     href: "/docs/correlation/scatter/",
   },
   {
-    demo: "correlation/bubble-reference",
+    demo: "correlation/trendlines-grouped",
     intent: "correlation",
-    label: "Bubble",
-    href: "/docs/correlation/bubble/",
+    label: "Trend line",
+    href: "/docs/correlation/trendlines/",
   },
   {
     demo: "correlation/heatmap-basic",
@@ -138,10 +138,10 @@ export const vocabularyTiles: VocabularyTile[] = [
     href: "/docs/tables/column-types/",
   },
   {
-    demo: "composition/facet-shared",
+    demo: "composition/layer-bars-rule",
     intent: "composition",
-    label: "Small multiples",
-    href: "/docs/composition/facets/",
+    label: "Bars and a rule",
+    href: "/docs/composition/layers/",
   },
   {
     demo: "composition/layer-dual-axis",

@@ -17,6 +17,7 @@ describe("the wall's URL hash", () => {
     ["#vocabulary", "all"],
     ["#vocabulary=", "all"],
     ["#vocabulary=all", "all"],
+    ["#vocabulary=%6Daps", "maps"],
   ])("reads %s as %s", (hash, filter) => {
     expect(parseWallHash(hash)).toBe(filter);
   });
@@ -28,6 +29,7 @@ describe("the wall's URL hash", () => {
     ["#vocabulary=distribution=extra", "a second ="],
     ["#vocabularies=maps", "a key that only starts the same"],
     ["#vocabulary=Distribution", "a label instead of an id"],
+    ["#vocabulary=%E0%A4", "a malformed escape"],
   ])("ignores %j (%s)", (hash) => {
     expect(parseWallHash(hash)).toBeNull();
   });
