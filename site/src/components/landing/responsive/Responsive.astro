@@ -1,8 +1,9 @@
 ---
 /**
  * Responsive: a chart in a frame whose right edge is a drag handle crossing the
- * compact, medium and full breakpoints. Stub from the phase 2 scaffold; lane 2/c
- * fills it with the ResizeFrame island (client:visible).
+ * compact, medium and full breakpoints. The ResizeFrame island hydrates when
+ * visible; before that, and without JavaScript, the chart shows as static SVG
+ * at full width with no slider, readout or drag instructions.
  *
  * Contract (e2e/landing.spec.ts relies on it):
  * - `<section id="responsive" aria-labelledby="responsive-title" data-landing-section>`
@@ -12,11 +13,27 @@
  *   20px.
  * - `data-resize-frame` on the frame holding the chart's SVG.
  * - `data-resize-breakpoint` on the mono label whose text is the breakpoint name:
- *   "compact" under 400px, "medium" to 700px, "full" above.
+ *   the library's `getBreakpoint`: "compact" under 400px, "medium" to 700px
+ *   inclusive, "full" above.
  * - The chart's figure has a `<figcaption>` with a "Source: …" line.
  */
 import { landingCopy } from "../../../landing/copy";
+import { staticSvg } from "../../../lib/demo/static-svg";
+import PublishedFigure from "../../shared/PublishedFigure.astro";
+import { ResizeFrame } from "./ResizeFrame";
+import { responsiveSource, responsiveSpec } from "./responsive-spec";
 import "../../../styles/landing-story.css";
+
+const statics = [false, true]
+  .map((dark) =>
+    staticSvg(responsiveSpec, {
+      width: 960,
+      height: 440,
+      dark,
+      idPrefix: `responsive-${dark ? "d" : "l"}`,
+    }),
+  )
+  .join("");
 ---
 
 <section
@@ -27,8 +44,20 @@ import "../../../styles/landing-story.css";
 >
   <div class="landing-container">
     <div class="rule-axis landing-rule" aria-hidden="true"></div>
-    <h2 id="responsive-title" class="landing-heading">
-      {landingCopy.headings.responsive}
-    </h2>
+    <div class="responsive-head" data-reveal>
+      <h2 id="responsive-title" class="landing-heading" data-motion="lift-md">
+        {landingCopy.headings.responsive}
+      </h2>
+      <p class="responsive-lede" data-motion-part>
+        Drag the right edge of the frame to see this chart on a phone, a tablet and a full page. As
+        it narrows the axis labels fewer years, and on a phone one callout stays on the line while
+        the other moves to a numbered note below.
+      </p>
+    </div>
+    <PublishedFigure class="figure-hairline" source={responsiveSource}>
+      <ResizeFrame client:visible>
+        <Fragment set:html={statics} />
+      </ResizeFrame>
+    </PublishedFigure>
   </div>
 </section>
