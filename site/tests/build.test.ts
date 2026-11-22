@@ -1290,17 +1290,20 @@ describe("the gallery's content (lane a)", () => {
 });
 
 describe("the blog's content (lane d)", () => {
-  it.each(posts)("$slug has at least two tier-1 figures, one of them from a json demo fence", (post) => {
-    const prose = page("dist", postPath(post.slug)).querySelector("article .docs-prose");
-    const figures = [...(prose?.querySelectorAll(".demo[data-demo]") ?? [])];
-    expect(figures.length).toBeGreaterThanOrEqual(2);
-    const untraced = figures.filter((figure) => !citesTier1(figure));
-    expect(untraced.map((figure) => figure.getAttribute("data-demo"))).toEqual([]);
-    const fenced = figures.filter((figure) =>
-      figure.getAttribute("data-demo")?.startsWith("fence-"),
-    );
-    expect(fenced.length).toBeGreaterThanOrEqual(1);
-  });
+  it.each(posts)(
+    "$slug has at least two tier-1 figures, one of them from a json demo fence",
+    (post) => {
+      const prose = page("dist", postPath(post.slug)).querySelector("article .docs-prose");
+      const figures = [...(prose?.querySelectorAll(".demo[data-demo]") ?? [])];
+      expect(figures.length).toBeGreaterThanOrEqual(2);
+      const untraced = figures.filter((figure) => !citesTier1(figure));
+      expect(untraced.map((figure) => figure.getAttribute("data-demo"))).toEqual([]);
+      const fenced = figures.filter((figure) =>
+        figure.getAttribute("data-demo")?.startsWith("fence-"),
+      );
+      expect(fenced.length).toBeGreaterThanOrEqual(1);
+    },
+  );
 
   it.each(posts)("$slug has a byline: the author, the date, then the reading time", (post) => {
     const byline = page("dist", postPath(post.slug)).querySelector("[data-byline]");
@@ -1345,12 +1348,15 @@ describe("the blog's content (lane d)", () => {
     expect(missing).toEqual([]);
   });
 
-  it.each(posts)("$slug reads tightly: short paragraphs, no em dash, no repeated heading", (post) => {
-    const doc = page("dist", postPath(post.slug));
-    expect(longParagraphs(doc)).toEqual([]);
-    expect(proseText(doc.querySelector("article"))).not.toContain(EM_DASH);
-    expect(repeatedHeadings(doc)).toEqual([]);
-  });
+  it.each(posts)(
+    "$slug reads tightly: short paragraphs, no em dash, no repeated heading",
+    (post) => {
+      const doc = page("dist", postPath(post.slug));
+      expect(longParagraphs(doc)).toEqual([]);
+      expect(proseText(doc.querySelector("article"))).not.toContain(EM_DASH);
+      expect(repeatedHeadings(doc)).toEqual([]);
+    },
+  );
 
   it.each(posts)(
     "$slug has an RSS item with its canonical, its date and one category per tag",

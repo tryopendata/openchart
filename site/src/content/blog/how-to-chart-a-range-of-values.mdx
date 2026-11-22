@@ -12,7 +12,7 @@ import Demo from "../../components/demo/Demo.astro";
 
 Collapsing a daily low and high into one average drops how wide temperatures swing over a day. In Central Park's 2023 [NOAA GHCN Daily](https://www.ncei.noaa.gov/products/land-based-station/global-historical-climatology-network-daily) observations, May averaged a midpoint of 17.1°C and October averaged 15.9°C, just over a degree apart.
 
-Those midpoints hide a wide shift in daily volatility across the seasons. May carried the largest average daily swing of the year at 10.1°C, followed by April at 9.6°C, while December held within 5.6°C between its average low and high.
+Those midpoints hide a wide shift in daily temperature swings across the seasons. May carried the largest average daily swing of the year at 10.1°C, followed by April at 9.6°C, while December held within 5.6°C between its average low and high.
 
 <Demo id="blog/nyc-temp-midpoint" />
 
@@ -68,7 +68,7 @@ A range plot encodes observed endpoints, while [error bars](/docs/distribution/e
 
 Both range plots and error bars hide the shape of the observations between their two endpoints. A month with steady daily swings can share the same average low and high as a month with mild weather interrupted by three sharp cold snaps. When skew or extreme outliers change the conclusion, plot the full distribution with a histogram or a beeswarm so the underlying observations stay visible.
 
-A single average still works when the spread barely changes across categories or when a total is the whole question. For monthly temperatures, where May swings nearly twice as wide as December, dropping the spread hides how differently two months with similar averages behave.
+A single average still works when the spread barely changes across categories or when a total is the whole question. Monthly web traffic totals or quarterly revenue figures need one bar per period, because the sum itself is the finding.
 
 ## The spec
 
