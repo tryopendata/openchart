@@ -2883,6 +2883,30 @@ export interface SankeySpec {
    * animate, and prefers-reduced-motion always wins.
    */
   animation?: AnimationSpec;
+  /**
+   * Breakpoint-specific settings: `compact` applies under 400px, `medium` from
+   * 400 to 700px. The active block merges over the top-level spec; `chrome`
+   * merges one level deep, every other field replaces its top-level value.
+   * Typical use: fold small flows into "Other" only on phones.
+   */
+  overrides?: Partial<Record<'compact' | 'medium', SankeySpecOverride>>;
+}
+
+/**
+ * Settings a sankey can change per breakpoint through `SankeySpec.overrides`.
+ * Each field means what it means on `SankeySpec`.
+ */
+export interface SankeySpecOverride {
+  /** Editorial chrome at this breakpoint, merged over the top-level chrome. */
+  chrome?: Chrome;
+  /** "Other" bucketing at this breakpoint (see `SankeySpec.other`). */
+  other?: number | { threshold: number; label?: string };
+  /** Node order at this breakpoint (see `SankeySpec.nodeSort`). */
+  nodeSort?: string[];
+  /** Label side at this breakpoint (see `SankeySpec.nodeLabelAlign`). */
+  nodeLabelAlign?: 'auto' | 'left' | 'right';
+  /** Vertical gap between nodes at this breakpoint, in pixels. */
+  nodePadding?: number;
 }
 
 // ---------------------------------------------------------------------------

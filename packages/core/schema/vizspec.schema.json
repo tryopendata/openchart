@@ -15352,6 +15352,19 @@
         "animation": {
           "$ref": "#/definitions/AnimationSpec",
           "description": "Motion. On by default: the entrance plays once the visualization scrolls into view, and data updates animate. Set false to turn all motion off, or pass an object to configure each phase. Static rendering and exports never animate, and prefers-reduced-motion always wins."
+        },
+        "overrides": {
+          "type": "object",
+          "properties": {
+            "compact": {
+              "$ref": "#/definitions/SankeySpecOverride"
+            },
+            "medium": {
+              "$ref": "#/definitions/SankeySpecOverride"
+            }
+          },
+          "additionalProperties": false,
+          "description": "Breakpoint-specific settings: `compact` applies under 400px, `medium` from 400 to 700px. The active block merges over the top-level spec; `chrome` merges one level deep, every other field replaces its top-level value. Typical use: fold small flows into \"Other\" only on phones."
         }
       },
       "required": [
@@ -15604,6 +15617,60 @@
         "neutral"
       ],
       "description": "Link coloring strategy for sankey diagrams."
+    },
+    "SankeySpecOverride": {
+      "type": "object",
+      "properties": {
+        "chrome": {
+          "$ref": "#/definitions/Chrome",
+          "description": "Editorial chrome at this breakpoint, merged over the top-level chrome."
+        },
+        "other": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "threshold": {
+                  "type": "number"
+                },
+                "label": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "threshold"
+              ],
+              "additionalProperties": false
+            }
+          ],
+          "description": "\"Other\" bucketing at this breakpoint (see `SankeySpec.other`)."
+        },
+        "nodeSort": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Node order at this breakpoint (see `SankeySpec.nodeSort`)."
+        },
+        "nodeLabelAlign": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "left",
+            "right"
+          ],
+          "description": "Label side at this breakpoint (see `SankeySpec.nodeLabelAlign`)."
+        },
+        "nodePadding": {
+          "type": "number",
+          "description": "Vertical gap between nodes at this breakpoint, in pixels."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Settings a sankey can change per breakpoint through `SankeySpec.overrides`. Each field means what it means on `SankeySpec`."
     },
     "TileMapSpec": {
       "type": "object",

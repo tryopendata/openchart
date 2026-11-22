@@ -43,14 +43,16 @@ import { finiteNumber } from '../data/finite-number';
 import { resolveFieldFormatter } from '../format/field-format';
 import { resolveChromeLayout } from '../layout/shared';
 import { ENTRY_GAP, measureLegendWrap, SWATCH_GAP, SWATCH_SIZE } from '../legend/wrap';
+import { LABEL_GAP, shouldPlaceLabelsInside } from './label-placement';
 import { type ComputedNode, computeSankeyLayout, generateLinkPath } from './layout';
+import { labelsLeftForDepth, resolveNodeLabels, VALUE_GAP } from './node-labels';
+import { applySankeyOverride } from './overrides';
 import type { NormalizedSankeySpec } from './types';
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const LABEL_GAP = 6;
 const LINK_OPACITY_LIGHT = 0.5;
 /**
  * Dark-mode link opacity. Light ribbons on a dark ground gain apparent weight,
@@ -58,8 +60,6 @@ const LINK_OPACITY_LIGHT = 0.5;
  */
 const LINK_OPACITY_DARK = 0.6;
 const NODE_CORNER_RADIUS = 2;
-/** Gap between a node's name and its value tspan. */
-const VALUE_GAP = 5;
 /** Share of the drawing width either label gutter may claim. */
 const MAX_LABEL_GUTTER = 0.35;
 /** Id prefix for a synthetic "Other" bucket node (one per column). */
@@ -221,85 +221,6 @@ function rewriteRowsForOther(
   return out;
 }
 
-/**
- * Determine label position for a node based on its column depth.
- * Default ('auto'): leftmost/middle columns label right, rightmost column labels left.
- * 'right': all labels to the right.  'left': all labels to the left.
- */
-function labelsLeftForDepth(
-  depth: number,
-  maxDepth: number,
-  nodeLabelAlign: 'auto' | 'left' | 'right',
-): boolean {
-  if (nodeLabelAlign === 'left') return true;
-  if (nodeLabelAlign === 'right') return false;
-  // 'auto': the first column labels outside-left and the last outside-right, so
-  // the flow itself is never crossed by type. Interior columns label right.
-  if (depth === 0 && maxDepth > 0) return true;
-  return false;
-}
-
-function computeNodeLabel(
-  node: ComputedNode,
-  maxDepth: number,
-  theme: ResolvedTheme,
-  nodeWidth: number,
-  nodeLabelAlign: 'auto' | 'left' | 'right' = 'auto',
-  containerWidth?: number,
-  padding?: number,
-): SankeyNodeMark['label'] {
-  const depth = node.depth ?? 0;
-  const placeLeft = labelsLeftForDepth(depth, maxDepth, nodeLabelAlign);
-
-  const style: TextStyle = {
-    fontFamily: theme.fonts.family,
-    fontSize: theme.fonts.sizes.small,
-    fontWeight: theme.fonts.weights.medium,
-    fill: theme.colors.text,
-    lineHeight: 1.3,
-  };
-
-  const x0 = node.x0 ?? 0;
-  const x1 = node.x1 ?? nodeWidth;
-  const y0 = node.y0 ?? 0;
-  const y1 = node.y1 ?? 0;
-  const midY = (y0 + y1) / 2;
-
-  // Compute maxWidth: space from label position to the container edge
-  const pad = padding ?? 0;
-  let maxWidth: number | undefined;
-  if (containerWidth !== undefined) {
-    if (placeLeft) {
-      // Label goes left from x0: available space is from left padding to x0
-      maxWidth = x0 - LABEL_GAP - pad;
-    } else {
-      // Label goes right from x1: available space is from x1 to right edge
-      maxWidth = containerWidth - pad - (x1 + LABEL_GAP);
-    }
-    if (maxWidth !== undefined && maxWidth < 0) maxWidth = 0;
-  }
-
-  if (placeLeft) {
-    return {
-      text: node.label ?? node.id,
-      x: x0 - LABEL_GAP,
-      y: midY,
-      style: { ...style, textAnchor: 'end', dominantBaseline: 'central' },
-      visible: true,
-      maxWidth,
-    };
-  }
-
-  return {
-    text: node.label ?? node.id,
-    x: x1 + LABEL_GAP,
-    y: midY,
-    style: { ...style, textAnchor: 'start', dominantBaseline: 'central' },
-    visible: true,
-    maxWidth,
-  };
-}
-
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -316,9 +237,14 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
   // 1. Expand deprecated top-level sugar (valueFormat -> encoding.value.format)
   // before validation, then validate + normalize via the shared compiler pipeline.
   const sugarWarnings: string[] = [];
+  // The active breakpoint's override block merges in first, so everything
+  // after (validation included) sees the spec as it applies at this width.
   const expandedSpec =
     spec && typeof spec === 'object' && !Array.isArray(spec)
-      ? expandSpecSugar(spec as Record<string, unknown>, sugarWarnings)
+      ? expandSpecSugar(
+          applySankeyOverride(spec as Record<string, unknown>, options.width),
+          sugarWarnings,
+        )
       : spec;
   const { spec: normalized, warnings } = compileSpec(expandedSpec);
   emitSpecWarnings([...sugarWarnings, ...warnings], options.onWarn);
@@ -573,8 +499,11 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
     };
   };
 
+  // At narrow widths the gutters would squeeze the flow, so labels move onto
+  // it instead and the nodes keep the full width.
   const gutters = measureGutters(nodes);
-  if (gutters.left > 0 || gutters.right > 0) {
+  const labelsInside = shouldPlaceLabelsInside(nodeLabelAlign, area.width, gutters);
+  if (!labelsInside && (gutters.left > 0 || gutters.right > 0)) {
     const left = Math.ceil(gutters.left);
     const right = Math.ceil(gutters.right);
     layoutArea = {
@@ -602,57 +531,23 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
     nodeColorMap.set(otherId, theme.colors.neutral[300]);
   }
 
-  // 8. Compute max depth for label positioning
-  const maxDepth = nodes.reduce((max, n) => Math.max(max, n.depth ?? 0), 0);
+  // 8. Resolve each node's label and whether its value is drawn.
+  const nodeLabels = resolveNodeLabels(nodes, {
+    theme,
+    align: nodeLabelAlign,
+    inside: labelsInside,
+    frame: { left: area.x, right: area.x + area.width, top: area.y, bottom: area.y + area.height },
+    measureText: options.measureText,
+    formatValue: (value) => formatFlowValue(value, nodeFmt),
+  });
 
   // 9. Build SankeyNodeMark[]
-  const valueStyle: TextStyle = {
-    fontFamily: theme.fonts.family,
-    fontSize: theme.fonts.sizes.small,
-    fontWeight: theme.fonts.weights.normal,
-    fill: theme.colors.axis,
-    fontVariant: 'tabular-nums',
-    lineHeight: 1.3,
-  };
-
-  // Left edge of each column, so an interior label knows how much room it has
-  // before it runs into the next column.
-  const columnX0 = new Map<number, number>();
-  for (const node of nodes) {
-    const d = node.depth ?? 0;
-    const x0 = node.x0 ?? 0;
-    const current = columnX0.get(d);
-    if (current === undefined || x0 < current) columnX0.set(d, x0);
-  }
-
-  /**
-   * Interior labels are drawn inside the flow, between their own node and the
-   * next column, so they get the value tspan only when it actually fits there.
-   * Outside-placed labels (first and last column) always keep theirs -- their
-   * gutter was reserved for exactly this width.
-   */
-  const valueLabelFor = (
-    node: ComputedNode,
-    depth: number,
-    text: string,
-  ): SankeyNodeMark['valueLabel'] => {
-    const placedLeft = labelsLeftForDepth(depth, maxDepth, nodeLabelAlign);
-    if (placedLeft || depth === maxDepth) return { text, style: valueStyle };
-    const nextColumn = columnX0.get(depth + 1);
-    if (nextColumn === undefined) return { text, style: valueStyle };
-    const available = nextColumn - LABEL_GAP - ((node.x1 ?? 0) + LABEL_GAP);
-    const needed =
-      textWidth(node.label ?? node.id, labelFontWeight) +
-      VALUE_GAP +
-      textWidth(text, valueFontWeight);
-    return needed <= available ? { text, style: valueStyle } : undefined;
-  };
-
   const nodeMarks: SankeyNodeMark[] = nodes.map((node) => {
     const fill = nodeColorMap.get(node.id) ?? theme.colors.categorical[0];
     const depth = node.depth ?? 0;
     const merged = otherMembers.get(node.id);
     const valueText = formatFlowValue(node.value ?? 0, nodeFmt);
+    const { label, valueLabel } = nodeLabels.get(node.id)!;
 
     return {
       type: 'sankeyNode' as const,
@@ -665,16 +560,8 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
       // this the renderer inherits whatever stroke the SVG context carries.
       stroke: 'none',
       cornerRadius: NODE_CORNER_RADIUS,
-      label: computeNodeLabel(
-        node,
-        maxDepth,
-        theme,
-        sankeySpec.nodeWidth,
-        nodeLabelAlign,
-        options.width,
-        padding,
-      ),
-      valueLabel: valueLabelFor(node, depth, valueText),
+      label,
+      valueLabel,
       nodeId: node.id,
       value: node.value ?? 0,
       depth,

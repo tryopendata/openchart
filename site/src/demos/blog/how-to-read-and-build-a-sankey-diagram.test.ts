@@ -22,7 +22,8 @@ describe("the Sankey post's figures", () => {
     const [, info = "", body = ""] = /^```json (demo[^\n]*)\n([\s\S]*?)^```$/m.exec(post) ?? [];
     expect(info).toContain(`title="${energySankeyElectricity.title}"`);
     expect(info).toContain(`source="${energySankeyElectricity.source.label}"`);
-    expect(info).toContain(`height=${energySankeyElectricity.height}`);
+    expect(info).toContain(` height=${energySankeyElectricity.height}`);
+    expect(info).toContain(`phone-height=${energySankeyElectricity.phoneHeight}`);
     expect(JSON.parse(body)).toEqual(energySankeyElectricity.spec);
   });
 

@@ -14,7 +14,7 @@ A Sankey diagram reads from left to right. Vertical bars mark stages in a system
 
 In 2024, US power plants took in 32.79 quadrillion British thermal units (quads) of fuel and delivered less than half to homes, businesses, and factories. The rest left as rejected energy, mostly waste heat and grid losses, according to Lawrence Livermore National Laboratory.
 
-```json demo title="US electricity generation flow, 2024" source="Lawrence Livermore National Laboratory, Estimated U.S. Energy Consumption in 2024 (data: DOE/EIA)" height=460
+```json demo title="US electricity generation flow, 2024" source="Lawrence Livermore National Laboratory, Estimated U.S. Energy Consumption in 2024 (data: DOE/EIA)" height=460 phone-height=720
 {
   "type": "sankey",
   "data": [
@@ -56,6 +56,10 @@ In 2024, US power plants took in 32.79 quadrillion British thermal units (quads)
     "Rejected energy",
     "Transportation"
   ],
+  "overrides": {
+    "compact": { "other": 0.02 },
+    "medium": { "other": 0.02 }
+  },
   "chrome": {
     "title": "Electricity generation lost 59% of its 32.77 quads as rejected energy",
     "subtitle": "Primary fuels entering US electricity generation and their outputs, 2024 (quadrillion BTU)"
@@ -89,6 +93,6 @@ The Code toggle under the first chart shows its full JSON spec. Setting `"type":
 
 Two top-level options manage color and clutter as a diagram grows. `linkStyle` controls ribbon color, defaulting to `"gradient"` between source and target, with `"source"` (used in the four-stage diagram above), `"target"`, and `"neutral"` also available. Setting `other` to a fraction like `0.05` merges nodes under 5% of their column's total into one "Other" node while keeping total flow unchanged. Titles and subtitles sit in `chrome`.
 
-The first chart also sets `nodeSort`, a list of node ids from top to bottom, to choose where each node sits in its column so neighboring labels stay apart on a phone screen.
+The first chart also sets `nodeSort`, a list of node ids from top to bottom, to choose where each node sits in its column. Its `overrides` block applies only on narrow screens: at 700 pixels wide or less, `other` folds the four fuels under 2% of the column into one "Other" node, so every label on a phone has room for its name and value.
 
 For node alignment and custom "Other" buckets, read the [Sankey documentation](/docs/flow/sankey/).

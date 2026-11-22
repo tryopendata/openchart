@@ -32,38 +32,39 @@ interface Props {
 
 const { id, tabs = true, hero = false } = Astro.props;
 
-let demo: DemoDef;
-let blog: BlogFigure | undefined;
+let figure: string;
 try {
-  demo = getDemo(id);
+  const demo: DemoDef = getDemo(id);
   validateDemo(id, demo.spec);
   validateDemoControls(demo);
-  blog = isBlogPostPath(Astro.url.pathname) ? blogFigure(demo.id, demo.spec) : undefined;
+  const blog: BlogFigure | undefined = isBlogPostPath(Astro.url.pathname)
+    ? blogFigure(demo.id, demo.spec)
+    : undefined;
+  figure = await demoFigureHtml({
+    id: demo.id,
+    spec: demo.spec,
+    title: demo.title,
+    source: demo.source,
+    caption: demo.caption,
+    height: demo.height ?? DEFAULT_DEMO_HEIGHT,
+    phoneHeight: demo.phoneHeight,
+    entrance: demo.entrance ?? true,
+    tabs,
+    static: demo.static ?? true,
+    pageShared: pageSharedHashes(Astro.locals),
+    pageTheme: demo.pageTheme ?? true,
+    width: demo.width,
+    mount: demo.mount,
+    controls: demo.controls,
+    blog,
+    hero,
+  });
 } catch (error) {
   const reason = error instanceof Error ? error.message : String(error);
   throw new DemoRenderError(`${Astro.url.pathname} renders <Demo id="${id}" />: ${reason}`, {
     cause: error,
   });
 }
-
-const figure = await demoFigureHtml({
-  id: demo.id,
-  spec: demo.spec,
-  title: demo.title,
-  source: demo.source,
-  caption: demo.caption,
-  height: demo.height ?? DEFAULT_DEMO_HEIGHT,
-  entrance: demo.entrance ?? true,
-  tabs,
-  static: demo.static ?? true,
-  pageShared: pageSharedHashes(Astro.locals),
-  pageTheme: demo.pageTheme ?? true,
-  width: demo.width,
-  mount: demo.mount,
-  controls: demo.controls,
-  blog,
-  hero,
-});
 ---
 
 <Fragment set:html={figure} />

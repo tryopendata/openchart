@@ -234,6 +234,28 @@ const RETIRED_LABELS =
   'rewrites them to a label-only endpoint column, which has no per-label font settings ' +
   'and reserves its own column beside the plot';
 
+const SANKEY_ON_FLOW =
+  'v9 sankey phone layout (CHANGELOG Unreleased): when outside label gutters would leave ' +
+  'the flow under half the width, labels move onto the flow with a halo, the nodes take ' +
+  'the full width, and each value sits on its own line (so interior values v8 dropped ' +
+  'for want of room now show, and a column too crowded for value lines drops them)';
+
+/**
+ * The allowlist entry for a sankey whose labels move onto the flow at 390px:
+ * every node label gains a halo, the listed marks gain or lose their value, and labels and
+ * marks move. 1280px is unaffected and still has to match v8 exactly.
+ */
+function sankeyOnFlow(markCount: number, marksChangingValue: number[]) {
+  return {
+    reason: SANKEY_ON_FLOW,
+    style: [
+      ...Array.from({ length: markCount }, (_, i) => `marks.${i}.label.halo`),
+      ...marksChangingValue.map((i) => `marks.${i}.valueLabel`),
+    ],
+    geometry: ['labels', 'marks'] as Category[],
+  };
+}
+
 /**
  * Specs whose STYLE differs from v8 because a documented migration rewrite has
  * no style-preserving v9 equivalent. Keyed by fixture name; applies to both
@@ -247,6 +269,18 @@ const STYLE_ALLOWLIST: Record<string, { reason: string; style: string[]; geometr
     style: ['endpointLabels', 'marks.0.label', 'marks.1.label', 'marks.2.label'],
     geometry: ['area', 'axes', 'marks', 'labels', 'endpointLabels'],
   },
+  '../gallery/dashboards.layouts.tsx.funnelSankeySpec': sankeyOnFlow(9, [1, 2, 3, 4, 5, 6]),
+  '../gallery/sankey-tilemaps.stories.tsx.userJourneySpec': sankeyOnFlow(9, [1, 2, 3, 4, 5, 6]),
+  '../gallery/sankey-tilemaps.stories.tsx.budgetSpec': sankeyOnFlow(10, []),
+  '../gallery/sankey-tilemaps.stories.tsx.energyFlowSpec': sankeyOnFlow(14, [6, 7, 8]),
+  // Too crowded for value lines at 390px: every edge value drops (v8 already dropped 6 to 8).
+  '../gallery/sankey-tilemaps.stories.tsx.linkStyleSpec': sankeyOnFlow(
+    14,
+    [0, 1, 2, 3, 4, 5, 9, 10, 11, 12, 13],
+  ),
+  '../gallery/showcase.stories.tsx.sankeySpec': sankeyOnFlow(14, [6, 7, 8]),
+  '../testing/fixtures-misc.stories.tsx.energyFlowSpec': sankeyOnFlow(14, [6, 7, 8]),
+  '../testing/fixtures-misc.stories.tsx.compactSpec': sankeyOnFlow(14, [6, 7, 8]),
 };
 /**
  * Style paths allowed to differ in every fixture, each with its reason. Endpoint

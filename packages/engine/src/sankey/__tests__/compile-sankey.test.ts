@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { compileSankey } from '../../compile';
+import { validateSpec } from '../../compiler/validate';
+import { LABEL_GAP } from '../label-placement';
 
 // ---------------------------------------------------------------------------
 // Shared fixtures
@@ -21,6 +23,9 @@ const basicSpec = {
 };
 
 const defaultOptions = { width: 600, height: 400 };
+
+/** The default theme's frame padding, in px. */
+const THEME_PADDING = 20;
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -611,8 +616,24 @@ describe('sankey label anatomy', () => {
       'Residential buildings',
     );
     expect(measured.x).toBeGreaterThan(estimated.x);
-    // "Residential buildings 10" is 21 + 2 characters at 8px plus the 5px gap: 189px of room.
-    expect(measured.x).toBeGreaterThan(189);
+    // The room left of the node, past the 6px label gap and the 20px theme
+    // padding, holds "Residential buildings" (21 characters at 8px), the 5px
+    // value gap and "10" (2 characters at 8px): 189px.
+    expect(measured.x - LABEL_GAP - THEME_PADDING).toBeGreaterThanOrEqual(21 * 8 + 5 + 2 * 8);
+  });
+
+  it("caps the measured gutter at 35% of the plot when the host's measure is given", () => {
+    const hugeLabel = 'x'.repeat(400);
+    const wideFont = (text: string, fontSize: number) => ({
+      width: text.length * 8,
+      height: fontSize,
+    });
+    const result = compileSankey(
+      { ...basicSpec, data: [{ from: hugeLabel, to: 'C', amount: 10 }] },
+      { ...defaultOptions, measureText: wideFont },
+    );
+    const plotWidth = defaultOptions.width - THEME_PADDING * 2;
+    expect(byId(result, hugeLabel).x).toBe(THEME_PADDING + Math.ceil(plotWidth * 0.35));
   });
 
   it('the left gutter never claims more than 35% of the width', () => {
@@ -803,5 +824,224 @@ describe('Sankey finite flow geometry', () => {
     }
     expect(JSON.stringify(layout.legend)).not.toContain('Missing');
     expect(validRows[0].amount).toBe(' 10 ');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Labels on the flow at narrow widths
+// ---------------------------------------------------------------------------
+
+/** US electricity generation in 2024 (LLNL, quads): fuels in, sectors out. */
+const electricity = {
+  type: 'sankey' as const,
+  data: [
+    { source: 'Solar', target: 'Electricity generation', value: 0.75 },
+    { source: 'Nuclear', target: 'Electricity generation', value: 8.17 },
+    { source: 'Hydro', target: 'Electricity generation', value: 0.83 },
+    { source: 'Wind', target: 'Electricity generation', value: 1.54 },
+    { source: 'Natural gas', target: 'Electricity generation', value: 13.94 },
+    { source: 'Coal', target: 'Electricity generation', value: 7.01 },
+    { source: 'Biomass', target: 'Electricity generation', value: 0.32 },
+    { source: 'Geothermal', target: 'Electricity generation', value: 0.05 },
+    { source: 'Petroleum', target: 'Electricity generation', value: 0.17 },
+    { source: 'Net electricity imports', target: 'Electricity generation', value: 0.01 },
+    { source: 'Electricity generation', target: 'Residential', value: 5.06 },
+    { source: 'Electricity generation', target: 'Commercial', value: 4.95 },
+    { source: 'Electricity generation', target: 'Industrial', value: 3.53 },
+    { source: 'Electricity generation', target: 'Transportation', value: 0.02 },
+    { source: 'Electricity generation', target: 'Rejected energy', value: 19.21 },
+  ],
+  encoding: {
+    source: { field: 'source', type: 'nominal' as const },
+    target: { field: 'target', type: 'nominal' as const },
+    value: { field: 'value', type: 'quantitative' as const },
+  },
+};
+
+describe('sankey labels at phone widths', () => {
+  const phone = { width: 360, height: 640 };
+  const byId = (result: ReturnType<typeof compileSankey>, id: string) =>
+    result.nodes.find((n) => n.nodeId === id)!;
+
+  it('moves labels onto the flow and gives the nodes the full width', () => {
+    const result = compileSankey(electricity, phone);
+    const coal = byId(result, 'Coal');
+    const rejected = byId(result, 'Rejected energy');
+
+    expect(coal.x).toBe(THEME_PADDING);
+    expect(rejected.x + rejected.width).toBe(phone.width - THEME_PADDING);
+    // First column: just right of the node. Last column: just left of it.
+    expect(coal.label).toMatchObject({ x: coal.x + coal.width + LABEL_GAP, halo: true });
+    expect(coal.label.style.textAnchor).toBe('start');
+    expect(rejected.label).toMatchObject({ x: rejected.x - LABEL_GAP, halo: true });
+    expect(rejected.label.style.textAnchor).toBe('end');
+    // The value rides along on its own line.
+    expect(coal.label.lines).toEqual(['Coal']);
+    expect(coal.valueLabel?.text).toBe('7.01');
+  });
+
+  it('wraps an interior label before the next column', () => {
+    const result = compileSankey(electricity, phone);
+    const hub = byId(result, 'Electricity generation');
+    const nextColumn = Math.min(...result.nodes.filter((n) => n.depth === 2).map((n) => n.x));
+
+    expect(hub.label.lines).toEqual(['Electricity', 'generation']);
+    expect(hub.label.x + hub.label.maxWidth!).toBeLessThanOrEqual(nextColumn - LABEL_GAP);
+  });
+
+  it.each([
+    [360, 12],
+    [360, 14],
+    [430, 12],
+  ])('keeps every label block in a column clear of the next at %ipx, %ipx type', (width, size) => {
+    const result = compileSankey(
+      { ...electricity, theme: { fonts: { sizes: { small: size } } } },
+      { width, height: 640 },
+    );
+    const lineHeight = size * 1.3;
+    const blocks = result.nodes.map((n) => {
+      const height = ((n.label.lines?.length ?? 1) + 1) * lineHeight;
+      return { depth: n.depth, top: n.label.y - height / 2, bottom: n.label.y + height / 2 };
+    });
+    for (const a of blocks) {
+      for (const b of blocks) {
+        if (a === b || a.depth !== b.depth) continue;
+        expect(a.bottom <= b.top || b.bottom <= a.top).toBe(true);
+      }
+    }
+  });
+
+  it('keeps outside labels at desktop widths', () => {
+    const result = compileSankey(electricity, { width: 1280, height: 640 });
+    const coal = byId(result, 'Coal');
+    expect(coal.label.style.textAnchor).toBe('end');
+    expect(coal.label.x).toBeLessThan(coal.x);
+    expect(coal.label.lines).toBeUndefined();
+    expect(coal.label.halo).toBeUndefined();
+  });
+
+  it("keeps the author's label side at any width", () => {
+    const result = compileSankey({ ...electricity, nodeLabelAlign: 'right' as const }, phone);
+    for (const node of result.nodes) {
+      expect(node.label.lines).toBeUndefined();
+      expect(node.label.style.textAnchor).toBe('start');
+    }
+  });
+});
+
+describe('sankey edge values', () => {
+  const byId = (result: ReturnType<typeof compileSankey>, id: string) =>
+    result.nodes.find((n) => n.nodeId === id)!;
+  // One word too long for a gutter at its 35% cap.
+  const capped = {
+    ...basicSpec,
+    data: [
+      { from: 'Coal', to: 'Rejectedenergyfromthermalpowerstations', amount: 62.27 },
+      { from: 'Coal', to: 'Homes', amount: 3.5 },
+    ],
+  };
+
+  it('leaves off an outside value that would run past the frame', () => {
+    const result = compileSankey(capped, { width: 800, height: 300 });
+    expect(byId(result, 'Rejectedenergyfromthermalpowerstations').valueLabel).toBeUndefined();
+  });
+
+  it('keeps an outside value that fits beside the name', () => {
+    const result = compileSankey(capped, { width: 800, height: 300 });
+    expect(byId(result, 'Homes').valueLabel?.text).toBe('3.50');
+  });
+});
+
+describe('sankey interior labels at wider widths', () => {
+  it('keep the room to the frame edge, as outside labels always have', () => {
+    const spec = {
+      ...basicSpec,
+      data: basicSpec.data.map((r) => ({
+        ...r,
+        from: r.from === 'C' ? 'Electricity generation' : r.from,
+        to: r.to === 'C' ? 'Electricity generation' : r.to,
+      })),
+    };
+    const result = compileSankey(spec, { width: 300, height: 400 });
+    const hub = result.nodes.find((n) => n.nodeId === 'Electricity generation')!;
+    expect(hub.label.lines).toBeUndefined();
+    expect(hub.label.x + hub.label.maxWidth!).toBe(300 - THEME_PADDING);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Breakpoint overrides
+// ---------------------------------------------------------------------------
+
+describe('sankey overrides', () => {
+  const withOverrides = {
+    ...electricity,
+    chrome: { title: 'Desktop title', source: 'LLNL' },
+    overrides: {
+      compact: { other: 0.03, chrome: { title: 'Phone title' } },
+      medium: { nodePadding: 4 },
+    },
+  };
+  const labels = (result: ReturnType<typeof compileSankey>) =>
+    result.nodes.map((n) => n.label.text);
+
+  it('folds small nodes into "Other" only on phones', () => {
+    const phone = compileSankey(withOverrides, { width: 360, height: 640 });
+    const desktop = compileSankey(withOverrides, { width: 1280, height: 640 });
+    const tablet = compileSankey(withOverrides, { width: 500, height: 640 });
+
+    expect(labels(phone)).toContain('Other');
+    expect(labels(phone)).not.toContain('Geothermal');
+    expect(labels(desktop)).toContain('Geothermal');
+    expect(labels(desktop)).not.toContain('Other');
+    expect(labels(tablet)).toContain('Geothermal');
+  });
+
+  it('merges chrome one level deep at its breakpoint', () => {
+    const phone = compileSankey(withOverrides, { width: 360, height: 640 });
+    const desktop = compileSankey(withOverrides, { width: 1280, height: 640 });
+
+    expect(phone.chrome.title?.text).toBe('Phone title');
+    expect(phone.chrome.source?.text).toBe('LLNL');
+    expect(desktop.chrome.title?.text).toBe('Desktop title');
+  });
+
+  it('applies a medium block only between 400 and 700px', () => {
+    const gap = (result: ReturnType<typeof compileSankey>) => {
+      const column = result.nodes.filter((n) => n.depth === 2).sort((a, b) => a.y - b.y);
+      return column[1].y - (column[0].y + column[0].height);
+    };
+    const tablet = compileSankey(withOverrides, { width: 500, height: 640 });
+    const plainTablet = compileSankey(electricity, { width: 500, height: 640 });
+    const desktop = compileSankey(withOverrides, { width: 1280, height: 640 });
+    const plainDesktop = compileSankey(electricity, { width: 1280, height: 640 });
+    expect(gap(tablet)).toBeLessThan(gap(plainTablet));
+    expect(gap(desktop)).toBeCloseTo(gap(plainDesktop));
+  });
+
+  it('rejects an unknown breakpoint', () => {
+    expect(() =>
+      compileSankey(
+        { ...electricity, overrides: { phone: { other: 0.03 } } },
+        { width: 360, height: 640 },
+      ),
+    ).toThrow(/unknown breakpoint "phone"/);
+  });
+
+  it.each([
+    ['a field overrides cannot set', { data: [] }, '/overrides/compact/data'],
+    ['a type swap', { type: 'line' }, '/overrides/compact/type'],
+    ['a typo', { nodePaddng: 4 }, '/overrides/compact/nodePaddng'],
+    ['a non-numeric padding', { nodePadding: 'x' }, '/overrides/compact/nodePadding'],
+    ['a negative padding', { nodePadding: -2 }, '/overrides/compact/nodePadding'],
+    ['an out-of-range other', { other: 5 }, '/overrides/compact/other'],
+    ['an unknown label side', { nodeLabelAlign: 'top' }, '/overrides/compact/nodeLabelAlign'],
+    ['a nodeSort of numbers', { nodeSort: [1, 2] }, '/overrides/compact/nodeSort'],
+  ])('rejects %s at every width, naming its path', (_name, block, path) => {
+    const spec = { ...electricity, overrides: { compact: block } };
+    const result = validateSpec(spec);
+    expect(result.errors.map((e) => e.path)).toEqual([path]);
+    // A desktop compile, where the block is not active, fails too.
+    expect(() => compileSankey(spec, { width: 1280, height: 640 })).toThrow(/overrides\.compact/);
   });
 });
