@@ -15,12 +15,43 @@ import {
 import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import { gzipSync } from "node:zlib";
+import { airlineSafety } from "@datasets/airline-safety";
+import { arcticSeaIce } from "@datasets/arctic-sea-ice";
+import { blsEducationPays } from "@datasets/bls-education-pays";
+import { blsOccupationWages } from "@datasets/bls-occupation-wages";
+import { cdcFertilityByState } from "@datasets/cdc-fertility-by-state";
+import { cdcOverdoseByDrug } from "@datasets/cdc-overdose-by-drug";
+import { co2MaunaLoa } from "@datasets/co2-mauna-loa";
+import { collegeMajors } from "@datasets/college-majors";
 import { countryIndicators } from "@datasets/country-indicators";
+import { earthquakeMagnitudes } from "@datasets/earthquake-magnitudes";
+import { eggPricesMonthly } from "@datasets/egg-prices-monthly";
+import { eiaCapacityOnlineByYear } from "@datasets/eia-capacity-online-by-year";
 import { electricityMixMatrix } from "@datasets/electricity-mix-matrix";
+import { fbiViolentCrimeRates } from "@datasets/fbi-violent-crime-rates";
+import { fhfaStateHpi } from "@datasets/fhfa-state-hpi";
 import { gistempGlobalAnnual } from "@datasets/gistemp-global-annual";
+import { githubLanguageDevelopers } from "@datasets/github-language-developers";
+import { greenCardsByCountry } from "@datasets/green-cards-by-country";
+import { hudPitHomelessnessNational } from "@datasets/hud-pit-homelessness-national";
+import { irsStateMigration } from "@datasets/irs-state-migration";
+import { mlbHitsVsStrikeouts } from "@datasets/mlb-hits-vs-strikeouts";
+import { mortgageRateWeekly } from "@datasets/mortgage-rate-weekly";
+import { nflHomeAdvantage } from "@datasets/nfl-home-advantage";
+import { nhtsaTrafficFatalities } from "@datasets/nhtsa-traffic-fatalities";
+import { nifcWildfires } from "@datasets/nifc-wildfires";
+import { nyFedHouseholdDebt } from "@datasets/ny-fed-household-debt";
 import { nycTemperatureRange } from "@datasets/nyc-temperature-range";
+import { ombCompositionOfOutlays } from "@datasets/omb-composition-of-outlays";
 import { populationByCountry } from "@datasets/population";
+import { remoteJobShare } from "@datasets/remote-job-share";
+import { spaceLaunchesByCountry } from "@datasets/space-launches-by-country";
+import { stateMedianHouseholdIncome } from "@datasets/state-median-household-income";
+import { teacherSalaryByState } from "@datasets/teacher-salary-by-state";
+import { tidyTuesdayFoodCo2 } from "@datasets/tidytuesday-food-co2";
+import { uflVepTurnout } from "@datasets/ufl-vep-turnout";
 import { usEnergyFlow2024 } from "@datasets/us-energy-flow-2024";
+import { usImportShares } from "@datasets/us-import-shares";
 import { usInflation } from "@datasets/us-inflation";
 import { usStateUnemployment } from "@datasets/us-state-unemployment";
 import { build as esbuild } from "esbuild";
@@ -965,6 +996,37 @@ const TIER_1_LABELS = [
   usStateUnemployment,
   gistempGlobalAnnual,
   usEnergyFlow2024,
+  airlineSafety,
+  arcticSeaIce,
+  blsEducationPays,
+  blsOccupationWages,
+  cdcFertilityByState,
+  cdcOverdoseByDrug,
+  co2MaunaLoa,
+  collegeMajors,
+  earthquakeMagnitudes,
+  eggPricesMonthly,
+  eiaCapacityOnlineByYear,
+  fbiViolentCrimeRates,
+  fhfaStateHpi,
+  githubLanguageDevelopers,
+  greenCardsByCountry,
+  hudPitHomelessnessNational,
+  irsStateMigration,
+  mlbHitsVsStrikeouts,
+  mortgageRateWeekly,
+  nflHomeAdvantage,
+  nhtsaTrafficFatalities,
+  nifcWildfires,
+  nyFedHouseholdDebt,
+  ombCompositionOfOutlays,
+  remoteJobShare,
+  spaceLaunchesByCountry,
+  stateMedianHouseholdIncome,
+  teacherSalaryByState,
+  tidyTuesdayFoodCo2,
+  uflVepTurnout,
+  usImportShares,
 ].map((dataset) => sourceOf(dataset).label);
 
 /** Whether a figure's caption cites a tier-1 dataset. */

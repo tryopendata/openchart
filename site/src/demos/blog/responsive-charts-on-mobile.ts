@@ -140,7 +140,7 @@ export const importSharesResponsive = defineDemo({
       },
     },
     legend: { show: false },
-    endpointLabels: { format: ".1f", suffix: "%" },
+    endpointLabels: { format: ".1f" },
     responsive: { preserveEnd: true },
     annotations: [
       {

@@ -59,12 +59,12 @@ export const greenCardHeatmap = defineDemo({
   source: sourceOf(greenCardsByCountry),
   height: 420,
   spec: {
-    data: greenCardCells,
-    encoding: greenCardAxes,
     layer: [
       {
         mark: "rect",
+        data: greenCardCells,
         encoding: {
+          ...greenCardAxes,
           color: {
             field: "cards",
             type: "quantitative",
@@ -76,12 +76,14 @@ export const greenCardHeatmap = defineDemo({
       {
         mark: { type: "text", fill: "#ffffff", fontSize: 12 },
         transform: [{ filter: { field: "cards", gte: DARK_CELL } }],
-        encoding: { text: { field: "cards", type: "quantitative" } },
+        data: greenCardCells,
+        encoding: { ...greenCardAxes, text: { field: "cards", type: "quantitative" } },
       },
       {
         mark: { type: "text", fill: "#0f172a", fontSize: 12 },
         transform: [{ filter: { field: "cards", lt: DARK_CELL } }],
-        encoding: { text: { field: "cards", type: "quantitative" } },
+        data: greenCardCells,
+        encoding: { ...greenCardAxes, text: { field: "cards", type: "quantitative" } },
       },
     ],
     chrome: {

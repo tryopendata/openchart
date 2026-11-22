@@ -42,7 +42,8 @@ describe("the heatmap post's figures", () => {
   it("draws the green card grid from the dataset's rows in thousands", () => {
     expect(greenCardsByCountry.data).toHaveLength(10);
     expect(greenCardCells).toHaveLength(60);
-    expect(specOf(greenCardHeatmap).data).toEqual(greenCardCells);
+    const layers = (greenCardHeatmap.spec as { layer: { data?: unknown }[] }).layer;
+    for (const layer of layers) expect(layer.data).toEqual(greenCardCells);
     const mexico2023 = greenCardCells.find(
       (cell) => cell.country === "Mexico" && cell.year === "2023",
     );
