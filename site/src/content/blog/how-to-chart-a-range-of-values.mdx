@@ -1,0 +1,81 @@
+---
+title: How to chart a range of values instead of averages
+description: Averages hide how wide a gap runs. A range plot encodes both endpoints directly so spread and level stay visible in the same view.
+published: 2026-11-13
+author: OpenChart
+tags: [chart-choice, climate]
+related: [comparison/range, distribution/error-bars, change-over-time/line, framing/chrome]
+lead: blog/nyc-temp-range
+---
+
+import Demo from "../../components/demo/Demo.astro";
+
+Collapsing a daily low and high into one average drops how wide temperatures swing over a day. In Central Park's 2023 [NOAA GHCN Daily](https://www.ncei.noaa.gov/products/land-based-station/global-historical-climatology-network-daily) observations, May averaged a midpoint of 17.1°C and October averaged 15.9°C, just over a degree apart.
+
+Those midpoints hide a wide shift in daily volatility across the seasons. May carried the largest average daily swing of the year at 10.1°C, followed by April at 9.6°C, while December held within 5.6°C between its average low and high.
+
+<Demo id="blog/nyc-temp-midpoint" />
+
+A column chart of monthly midpoints traces the seasonal curve from February to July while hiding every day's spread. March and December share the exact same 7.0°C midpoint, so their bars stand at identical heights even though March swings two degrees wider between morning and afternoon than December does.
+
+Plotting average lows and average highs as two separate [lines](/docs/change-over-time/line/) or paired columns puts both endpoints on the page, at the cost of extra visual work. To gauge how wide a month's swing runs, a reader has to measure the empty gap between two marks and compare that white space from one month to the next.
+
+## Drawing both endpoints
+
+A vertical range plot draws one floating bar per month from the average daily low to the average daily high. Vertical position still tracks the seasonal climb into summer and drop into winter, while bar height encodes the daily spread directly as a solid span.
+
+```json demo source="NOAA GHCN Daily, Central Park (USW00094728)" height=440
+{
+  "mark": { "type": "range", "style": "bar", "fill": "#0e7490" },
+  "data": [
+    { "month": "Jan", "low": 3.5, "high": 9.3 },
+    { "month": "Feb", "low": 0.9, "high": 9.2 },
+    { "month": "Mar", "low": 3.2, "high": 10.8 },
+    { "month": "Apr", "low": 9.4, "high": 19.0 },
+    { "month": "May", "low": 12.0, "high": 22.1 },
+    { "month": "Jun", "low": 16.8, "high": 25.4 },
+    { "month": "Jul", "low": 22.1, "high": 30.2 },
+    { "month": "Aug", "low": 20.2, "high": 27.6 },
+    { "month": "Sep", "low": 17.3, "high": 24.3 },
+    { "month": "Oct", "low": 12.4, "high": 19.3 },
+    { "month": "Nov", "low": 4.5, "high": 11.8 },
+    { "month": "Dec", "low": 4.2, "high": 9.8 }
+  ],
+  "encoding": {
+    "x": { "field": "month", "type": "nominal" },
+    "y": {
+      "field": "low",
+      "type": "quantitative",
+      "title": "Avg low",
+      "axis": { "title": "Temperature (°C)" }
+    },
+    "y2": { "field": "high", "type": "quantitative", "title": "Avg high" }
+  },
+  "chrome": {
+    "title": "May swung 10.1°C a day, against 5.6°C in December",
+    "subtitle": "Average daily low to average daily high temperature by month, Central Park, 2023 (°C)"
+  }
+}
+```
+
+May's bar stretches from 12.0°C to 22.1°C, while December's sits compressed between 4.2°C and 9.8°C. February matches December's afternoon warmth near 9°C yet drops almost to freezing overnight, giving it a much taller bar than its winter neighbors.
+
+Floating bars fit ordered time buckets like months because a vertical layout preserves left-to-right calendar order while bar length encodes the daily span directly. When categories are unordered names such as countries or departments, orient the range horizontally so labels read without rotation on the left. When change between two specific periods matters, use a dumbbell or an arrow instead of a plain bar so start and end values remain distinguishable.
+
+## Range plots, error bars, and distributions
+
+A range plot encodes observed endpoints, while [error bars](/docs/distribution/error-bars/) encode statistical uncertainty around an estimate. Use a range plot for measured pairs such as a month's average low and high or a country's before-and-after score. Use error bars for a confidence interval or standard error from a sample, where a center point marks the estimate and the whiskers show how far sampling noise could move it.
+
+Both range plots and error bars hide the shape of the observations between their two endpoints. A month with steady daily swings can share the same average low and high as a month with mild weather interrupted by three sharp cold snaps. When skew or extreme outliers change the conclusion, plot the full distribution with a histogram or a beeswarm so the underlying observations stay visible.
+
+A single average still works when the spread barely changes across categories or when a total is the whole question. For monthly temperatures, where May swings nearly twice as wide as December, dropping the spread hides how differently two months with similar averages behave.
+
+## The spec
+
+The Code button under the range chart opens its complete JSON spec with all 12 Central Park rows. Setting `mark` to `{ "type": "range", "style": "bar" }` draws floating bars instead of the default dumbbell dots, and `fill` sets the bar color.
+
+In `encoding`, `x` places each nominal `month` across the horizontal axis, while `y` binds `low` and `y2` binds `high` on the same quantitative scale. Each endpoint channel takes its own `title` (`"Avg low"` and `"Avg high"`) for tooltips and accessibility, while `axis.title` on `y` labels the shared temperature scale and [chrome](/docs/framing/chrome/) holds the chart's headline and subtitle.
+
+To orient the chart horizontally, move the category field to `y`, put the two quantitative bounds on `x` and `x2`, and add a `sort` object on `y` to order rows by either endpoint. Switching `style` to `"dumbbell"` or `"arrow"` uses the same data shape and encoding.
+
+Dumbbell, arrow, and horizontal bar variants of the range mark are covered in the [range chart documentation](/docs/comparison/range/).
