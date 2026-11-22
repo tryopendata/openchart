@@ -46,6 +46,21 @@ describe("figureCredit", () => {
     expect(figureCredit("blog/layered", layered).href).toBe("/docs/change-over-time/line/");
   });
 
+  it("credits a layered bar by the encoding its layers inherit", () => {
+    const layeredBars = {
+      data: [{ k: "a", v: 1 }],
+      encoding: {
+        x: { field: "v", type: "quantitative" },
+        y: { field: "k", type: "nominal" },
+      },
+      layer: [{ mark: "bar" }, { mark: "text" }],
+    } as unknown as VizSpec;
+    expect(figureCredit("blog/layered-bars", layeredBars)).toEqual({
+      href: "/docs/comparison/bar/",
+      chartName: "bar chart",
+    });
+  });
+
   it("throws UnknownFigureCreditError naming the demo when a spec has no target", () => {
     const waffle = { mark: "waffle", data: [], encoding: {} } as unknown as VizSpec;
     expect(() => figureCredit("blog/odd-one", waffle)).toThrow(UnknownFigureCreditError);
