@@ -242,7 +242,7 @@ const spec = {
 
 ## Dot plot
 
-Comparing values across categories with emphasis on individual data points rather than bar length. Cleaner than bars when values are close together.
+Comparing values across categories with emphasis on individual data points rather than bar length. `mark: "circle"` draws a thin stem from zero to each dot, so keep the axis at zero. For dots alone on an axis that starts above zero, use `mark: { type: "point", trendline: false }` with a nominal `y`.
 
 ```ts
 const spec = {
@@ -269,7 +269,7 @@ Add a `color` encoding to group dots by category. Use diverging data (positive a
 
 ## Lollipop
 
-Dots connected to a zero baseline by thin stems. Cleaner than bars for datasets where values are far from zero. Uses `mark: "lollipop"`, a semantic alias for the dot renderer.
+Dots connected to a zero baseline by thin stems. It uses less ink than bars, which helps on a long list; the stems are lengths, so keep the axis at zero. Uses `mark: "lollipop"`, a semantic alias for the dot renderer.
 
 ```ts
 const spec = {

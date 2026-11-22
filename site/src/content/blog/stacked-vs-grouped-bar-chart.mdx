@@ -10,17 +10,17 @@ lead: blog/capacity-stacked
 
 import Demo from "../../components/demo/Demo.astro";
 
-A stacked bar chart puts each category's parts end to end, and a grouped bar chart puts them side by side. The same data answers different questions in each form. A stack tells you how big the total is and how the bottom segment moves. A grouped chart tells you how the parts compare with each other.
+US solar generators that came online in 2024 add up to 31.2 gigawatts, 13 times the new natural gas capacity. Whether a chart makes that comparison easy depends on one choice: put each year's fuels end to end in a stack, or side by side in a group. A stack shows the total and how the bottom segment moves. A group shows how the parts compare with each other.
 
 ## What a stack answers
 
-New power plants show the difference. The chart below stacks the capacity of US generators that came online each year, in gigawatts (GW, the maximum output a generator is rated for). The column height is the year's total, which reached 49.8 GW in 2024, and solar sits at the bottom, so its growth from 5.0 GW in 2018 to 31.2 GW in 2024 is easy to follow.
+The chart below stacks four fuels for each year, in gigawatts (GW) of nameplate capacity, the maximum output a generator is rated for. The column height is the four fuels' total, which reached 49.8 GW in 2024. Solar sits at the bottom, so its growth from 5.0 GW in 2018 to 31.2 GW in 2024 is easy to follow.
 
 <Demo id="blog/capacity-stacked" />
 
-The data counts only generators that still operate in one snapshot of the EIA's inventory. A plant that opened in 2018 and has since retired is missing, so older years are understated, especially for natural gas and coal.
+The data counts only generators that still operate in one snapshot of the EIA's inventory. A plant that opened in 2018 and has since retired is missing, so older years are understated.
 
-## What grouping answers
+## Comparing the parts side by side
 
 Wind is hard to read in that stack. It sits in the middle, so both its bottom edge and its top edge move from year to year, and the reader has to subtract to see its size. Grouping gives every fuel the same zero baseline.
 
@@ -172,7 +172,10 @@ Wind is hard to read in that stack. It sits in the middle, so both its bottom ed
   "encoding": {
     "x": {
       "field": "year",
-      "type": "ordinal"
+      "type": "ordinal",
+      "axis": {
+        "labelAngle": 0
+      }
     },
     "y": {
       "field": "gigawatts",
@@ -211,19 +214,38 @@ Wind is hard to read in that stack. It sits in the middle, so both its bottom ed
   "chrome": {
     "title": "Solar added 31.2 GW in 2024, 13 times natural gas",
     "subtitle": "US generators still operating, by the year they came online and by fuel, 2018-2024 (gigawatts)"
+  },
+  "overrides": {
+    "compact": {
+      "encoding": {
+        "x": {
+          "axis": {
+            "labelAngle": 0,
+            "values": [
+              "2018",
+              "2020",
+              "2022",
+              "2024"
+            ]
+          }
+        }
+      }
+    }
   }
 }
 ```
 
-Now the comparisons are direct. Solar's 31.2 GW in 2024 is 13 times natural gas's 2.4 GW, and batteries (11.1 GW) added more than twice as much as wind (5.2 GW). The total is gone, though, and a reader who wants it has to add four bars. Four fuels across seven years is 28 bars, which is about as many as a grouped chart can hold before the bars get too thin to read.
+Now the comparisons are direct: in 2024 batteries (11.1 GW) added more than twice as much as wind (5.2 GW). The total is gone, though, and a reader who wants it has to add four bars. Four fuels across seven years is 28 bars, about as many as a grouped chart can hold before the bars get too thin to read.
 
 ## Ordering a stack
 
-Only the bottom segment of a stack starts at zero. Every other segment starts where the one below it ends, so comparing it across columns means comparing lengths that start at different heights. Put the series the reader cares about at the bottom, keep the same order in every column, and keep the same color for a series everywhere it appears. Past four or five segments the middle ones get hard to read, and a grouped chart or one panel per series works better.
+Put the series the reader cares about at the bottom, where it starts at zero, and keep its order and color the same in every column. Past four or five segments the middle ones get hard to read, and a grouped chart or one panel per series works better.
+
+Choose that order on purpose. Data often arrives sorted by name, and a stack drawn in that order puts whichever series sorts first at the bottom, whether or not the reader cares about it.
 
 ## When the total is the point
 
-Stacking is the right choice when the total is the story. Counted homelessness in the United States fell to 544,084 people in 2016 and then rose 41% to 767,856 in 2024, and the stack shows that total directly while still splitting it into sheltered and unsheltered people. The top segment is the weak spot: unsheltered people rose from 172,035 in 2016 to 271,350 in 2024, a change that is harder to see on top of the stack than the total is.
+Stacking is the right choice when the total is the story. Counted homelessness in the 50 states and DC fell to 544,084 people in 2016 and then rose 41% to 767,856 in 2024, and the stack shows that total while still splitting it into sheltered and unsheltered people. Unsheltered people, the top segment, rose from 172,035 to 271,350 over the same years, and that change is harder to see than the total.
 
 ```json demo source="US Department of Housing and Urban Development, Annual Homeless Assessment Report (point-in-time counts)" height=460
 {
@@ -413,7 +435,21 @@ Stacking is the right choice when the total is the story. Counted homelessness i
   "encoding": {
     "x": {
       "field": "year",
-      "type": "ordinal"
+      "type": "ordinal",
+      "axis": {
+        "labelAngle": 0,
+        "values": [
+          "2008",
+          "2010",
+          "2012",
+          "2014",
+          "2016",
+          "2018",
+          "2020",
+          "2022",
+          "2024"
+        ]
+      }
     },
     "y": {
       "field": "people",
@@ -462,18 +498,36 @@ Stacking is the right choice when the total is the story. Counted homelessness i
   "chrome": {
     "title": "Counted homelessness fell to 544,084 in 2016, then reached 767,856 in 2024",
     "subtitle": "People counted as homeless on one night in January, 50 states and DC, 2007-2024"
+  },
+  "overrides": {
+    "compact": {
+      "encoding": {
+        "x": {
+          "axis": {
+            "labelAngle": 0,
+            "values": [
+              "2008",
+              "2012",
+              "2016",
+              "2020",
+              "2024"
+            ]
+          }
+        }
+      }
+    }
   }
 }
 ```
 
-The 2021 column is the exception. Many communities skipped the unsheltered count that year, so the unsheltered segment drops from 222,061 to 54,391 and the total drops with it. That is a gap in the count, and the annotation says so. The 2016 low above is the lowest of the other years.
+The 2021 column is the exception. Many communities skipped the unsheltered count that year, so the unsheltered segment drops from 222,061 to 54,391 and the total drops with it, as the annotation says. The 2016 low leaves 2021 out.
 
 If shares matter more than totals, normalize each column with a [100% stacked bar](/docs/part-to-whole/stacked-100/). For many periods, a [stacked area](/docs/change-over-time/stacked-area/) draws the same stack as a continuous shape.
 
 ## The spec
 
-Both capacity charts use `mark: "bar"` with the series in `color`. The only difference is the value channel: `stack: "zero"` on `y` stacks the series from a zero baseline and `stack: null` places them side by side. A `scale` on `color` with a `domain` and a `range` pins each fuel to a color, and the domain order sets the stack order, so solar is the bottom segment.
+Both capacity charts use `mark: "bar"` with the series in `color`. The only difference is the value channel: `stack: "zero"` on `y` stacks the series from a zero baseline and `stack: null` places them side by side. Segments stack in the order of the data rows, and the rows list solar first, so solar is the bottom segment. The `domain` and `range` on the `color` scale pin each fuel to a color.
 
-The homelessness chart adds one `text` annotation on the 2021 column, with `x: "2021"` placing it on that category.
+`labelAngle: 0` keeps the year labels level, and `values` on the x axis picks which years get a label, with an `overrides.compact` block labeling fewer of them on a phone. The homelessness chart adds one `text` annotation on the 2021 column, with `x: "2021"` placing it on that category.
 
-The [grouped and stacked bars page](/docs/comparison/grouped-stacked/) shows both layouts, labeled segments and normalized stacks with live examples.
+The [grouped and stacked bars page](/docs/comparison/grouped-stacked/) shows how to print a value inside each segment.

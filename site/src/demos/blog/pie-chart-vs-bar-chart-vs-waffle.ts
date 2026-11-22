@@ -1,6 +1,6 @@
 /**
  * The figures in the blog post "Pie chart vs bar chart vs waffle": household
- * debt by type as a pie and then a sorted bar chart, the 2024 split of federal
+ * debt as a two-slice donut (mortgages and the rest) and by type as sorted bars, the 2024 split of federal
  * outlays as a waffle, and that split over 1962-2024 as a 100% stacked area.
  * Titles state findings computed from the dataset rows so they cannot drift
  * from the data. The post's `json demo` fences repeat `debtBars.spec` and
@@ -17,54 +17,75 @@ function must<T>(row: T | undefined, what: string): T {
   return row;
 }
 
-const BLUE = "#0e7490";
+// Light and dark values for each color, so labels drawn in a series color keep
+// 4.5:1 on the page in both site themes. A plain hex renders verbatim in dark.
+const TEAL = { light: "#0e7490", dark: "#22a3c4" };
+const ORANGE = { light: "#c2410c", dark: "#fb923c" };
+const PURPLE = { light: "#7c3aed", dark: "#a78bfa" };
+const GRAY = { light: "#9ca3af", dark: "#6b7280" };
 
 const debt = nyFedHouseholdDebt.data;
 const latestDebt = must(debt[debt.length - 1], "household debt");
 
 const trillions = (value: number) => Number(value.toFixed(2));
 
-// Home equity lines and "other" are each under 3% of the total, so they are merged
-// into one slice here rather than left to the pie's automatic small-slice grouping.
-const debtRows = [
-  { type: "Mortgage", balance: trillions(latestDebt.mortgage) },
-  { type: "Auto", balance: trillions(latestDebt.auto) },
-  { type: "Student", balance: trillions(latestDebt.student_loan) },
-  { type: "Cards", balance: trillions(latestDebt.credit_card) },
-  { type: "Other", balance: trillions(latestDebt.home_equity + latestDebt.other) },
-];
-
 export const mortgageShare = Math.round((latestDebt.mortgage / latestDebt.total) * 100);
+/** The New York Fed's own "other" category as a share of all household debt, one decimal. */
+export const otherSharePct = Number(((latestDebt.other / latestDebt.total) * 100).toFixed(1));
 
 export const debtPie = defineDemo({
   id: "blog/debt-pie",
-  title: "US household debt by type as a pie",
+  title: "US household debt, mortgages against the rest, as a pie",
   source: sourceOf(nyFedHouseholdDebt),
-  height: 420,
+  height: 380,
   spec: {
-    mark: "arc",
-    data: debtRows,
+    // The share is printed in the hole. Slice labels are off: the engine currently
+    // draws a left-hand leader label a full text width away from its slice, and a
+    // two-slice pie always has one slice on the left.
+    mark: {
+      type: "arc",
+      innerRadius: 0.6,
+      centerLabel: { text: `${mortgageShare}%`, subtitle: "mortgages" },
+    },
+    data: [
+      { type: "Mortgages", balance: trillions(latestDebt.mortgage) },
+      { type: "All other debt", balance: trillions(latestDebt.total - latestDebt.mortgage) },
+    ],
     encoding: {
       theta: { field: "balance", type: "quantitative" },
-      color: { field: "type", type: "nominal" },
+      color: { field: "type", type: "nominal", scale: { domain: ["Mortgages", "All other debt"] } },
     },
     labels: { density: "none" },
     legend: { position: "bottom" },
+    theme: { colors: { categorical: [TEAL, GRAY] } },
     chrome: {
-      title: `Mortgages are ${mortgageShare}% of household debt, and the four smaller slices are hard to rank`,
+      title: `Mortgages are ${mortgageShare}% of US household debt`,
       subtitle: `Share of $${latestDebt.total.toFixed(1)} trillion in US household debt, fourth quarter of ${latestDebt.year}`,
     },
   },
 });
 
-const byBalance = [...debtRows].sort((a, b) => b.balance - a.balance);
-const balanceOf = (type: string) => byBalance.find((row) => row.type === type)?.balance;
-// The title names auto, student and card debt in this order, so fail if the rows stop agreeing.
+// Home equity lines and the New York Fed's "other" are each about 3% or less of the
+// total, so they are merged into one row rather than drawn as two slivers.
+const byBalance = [
+  { type: "Mortgage", balance: trillions(latestDebt.mortgage) },
+  { type: "Auto", balance: trillions(latestDebt.auto) },
+  { type: "Student", balance: trillions(latestDebt.student_loan) },
+  { type: "Cards", balance: trillions(latestDebt.credit_card) },
+  { type: "Other", balance: trillions(latestDebt.home_equity + latestDebt.other) },
+].sort((a, b) => b.balance - a.balance);
+const balanceOf = (type: string) =>
+  must(
+    byBalance.find((row) => row.type === type),
+    type,
+  ).balance;
+// The title and prose name auto, student and card debt in this order, so fail if the rows stop agreeing.
 if (byBalance.map((row) => row.type).join() !== "Mortgage,Auto,Student,Cards,Other") {
   throw new Error(
     "The debt bar title assumes the balances rank Mortgage, Auto, Student, Cards, Other.",
   );
 }
+export const studentOverCards = trillions(balanceOf("Student") - balanceOf("Cards"));
 
 export const debtBars = defineDemo({
   id: "blog/debt-bars",
@@ -72,15 +93,16 @@ export const debtBars = defineDemo({
   source: sourceOf(nyFedHouseholdDebt),
   height: 380,
   spec: {
-    mark: { type: "bar", fill: BLUE },
+    mark: "bar",
     data: byBalance,
     encoding: {
       x: { field: "balance", type: "quantitative", axis: { title: "$ trillions", format: ".0f" } },
       y: { field: "type", type: "nominal", sort: "x" },
     },
     labels: { format: ".2f" },
+    theme: { colors: { categorical: [TEAL] } },
     chrome: {
-      title: `Auto loans ($${balanceOf("Auto")}T) edge student loans ($${balanceOf("Student")}T), then credit cards`,
+      title: `Student loans ($${balanceOf("Student")}T) top credit cards ($${balanceOf("Cards")}T) by $${studentOverCards.toFixed(2)}T`,
       subtitle: `US household debt by type, fourth quarter of ${latestDebt.year}, $ trillions`,
     },
   },
@@ -99,7 +121,7 @@ export const outlaysWaffle = defineDemo({
     data: [
       { category: "Payments for individuals", share: lastOutlays.payments_to_individuals_pct },
       {
-        category: "Everything else",
+        category: "All other outlays",
         share: Number((100 - lastOutlays.payments_to_individuals_pct).toFixed(1)),
       },
     ],
@@ -107,6 +129,7 @@ export const outlaysWaffle = defineDemo({
       theta: { field: "share", type: "quantitative" },
       color: { field: "category", type: "nominal", highlight: "Payments for individuals" },
     },
+    theme: { colors: { categorical: [TEAL] } },
     chrome: {
       title: `Payments for individuals took ${Math.round(lastOutlays.payments_to_individuals_pct)} of every 100 federal dollars in ${lastOutlays.year}`,
       subtitle: `Share of US federal outlays by category, fiscal year ${lastOutlays.year}. Each square is one percent.`,
@@ -115,10 +138,10 @@ export const outlaysWaffle = defineDemo({
 });
 
 const CATEGORIES = [
-  { key: "payments_to_individuals_pct", label: "Payments for individuals", color: BLUE },
-  { key: "defense_pct", label: "National defense", color: "#e07b39" },
-  { key: "net_interest_pct", label: "Net interest", color: "#7c3aed" },
-  { key: "everything_else_pct", label: "Everything else", color: "#9ca3af" },
+  { key: "payments_to_individuals_pct", label: "Payments for individuals", color: TEAL },
+  { key: "defense_pct", label: "National defense", color: ORANGE },
+  { key: "net_interest_pct", label: "Net interest", color: PURPLE },
+  { key: "everything_else_pct", label: "Everything else", color: GRAY },
 ] as const;
 
 const outlayRows = outlays.flatMap((row) =>
@@ -138,7 +161,7 @@ export const outlaysOverTime = defineDemo({
   source: sourceOf(ombCompositionOfOutlays),
   height: 460,
   spec: {
-    mark: "area",
+    mark: { type: "area", interpolate: "linear" },
     data: outlayRows,
     encoding: {
       x: { field: "date", type: "temporal", axis: { format: "%Y", tickCount: 6 } },
@@ -151,12 +174,10 @@ export const outlaysOverTime = defineDemo({
       color: {
         field: "category",
         type: "nominal",
-        scale: {
-          domain: CATEGORIES.map((category) => category.label),
-          range: CATEGORIES.map((category) => category.color),
-        },
+        scale: { domain: CATEGORIES.map((category) => category.label) },
       },
     },
+    theme: { colors: { categorical: CATEGORIES.map((category) => category.color) } },
     legend: { position: "top" },
     chrome: {
       title: `Payments for individuals passed defense in ${firstFlip?.year} and reached ${lastOutlays.payments_to_individuals_pct}% by ${lastOutlays.year}`,

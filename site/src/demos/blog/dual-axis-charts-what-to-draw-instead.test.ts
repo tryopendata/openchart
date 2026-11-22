@@ -44,27 +44,43 @@ describe("the dual-axis post's figures", () => {
 
   it("draws both dual-axis charts from the road-death rows unchanged", () => {
     for (const demo of [dualAxisZeroBased, dualAxisTrimmed]) {
-      const layers = (
-        demo.spec as unknown as { layer: { data: { deaths: number; rate: number }[] }[] }
+      const [deaths, rate] = (
+        demo.spec as unknown as { layer: { data: { deaths?: number; rate?: number }[] }[] }
       ).layer;
-      for (const layer of layers) {
-        expect(layer.data.map((row) => [row.deaths, row.rate])).toEqual(
-          nhtsaTrafficFatalities.data.map((row) => [row.total_fatalities, row.rate_per_100m_vmt]),
-        );
-      }
+      expect(deaths?.data.map((row) => row.deaths)).toEqual(
+        nhtsaTrafficFatalities.data.map((row) => row.total_fatalities),
+      );
+      expect(rate?.data.map((row) => row.rate)).toEqual(
+        nhtsaTrafficFatalities.data.map((row) => row.rate_per_100m_vmt),
+      );
     }
   });
 
-  it("splits the wildfire rows into one panel per measure and indexes road deaths to 1966", () => {
+  it("starts the wildfire panels in 1985 and marks each decade's average acres per fire", () => {
     const panels = (
-      wildfirePanels.spec as unknown as { data: { measure: string; value: number }[] }
+      wildfirePanels.spec as unknown as {
+        data: { date: string; measure: string; series: string; value: number }[];
+      }
     ).data;
+    const from1985 = nifcWildfires.data.filter((row) => row.year >= 1985);
+    const yearly = panels.filter((row) => row.series === "Yearly");
     expect(
-      panels.filter((row) => row.measure === "Fires per year").map((row) => row.value),
-    ).toEqual(nifcWildfires.data.map((row) => row.fires));
+      yearly.filter((row) => row.measure === "Fires per year").map((row) => row.value),
+    ).toEqual(from1985.map((row) => row.fires));
     expect(
-      panels.filter((row) => row.measure === "Acres burned per fire").map((row) => row.value),
-    ).toEqual(nifcWildfires.data.map((row) => row.acres_per_fire));
+      yearly.filter((row) => row.measure === "Acres burned per fire").map((row) => row.value),
+    ).toEqual(from1985.map((row) => row.acres_per_fire));
+    const averages = panels.filter((row) => row.series !== "Yearly");
+    expect(averages.map((row) => [row.series, row.date, row.value])).toEqual([
+      ["1985-94 average: 42", "1985-01-01", 42],
+      ["1985-94 average: 42", "1994-01-01", 42],
+      ["2015-24 average: 121", "2015-01-01", 121],
+      ["2015-24 average: 121", "2024-01-01", 121],
+    ]);
+    expect(new Set(averages.map((row) => row.measure))).toEqual(new Set(["Acres burned per fire"]));
+  });
+
+  it("indexes road deaths and the rate to 1966", () => {
     const indexed = (
       fatalitiesIndexed.spec as unknown as { data: { series: string; index: number }[] }
     ).data;
@@ -74,10 +90,10 @@ describe("the dual-axis post's figures", () => {
 
   it("titles each chart with a finding read off the rows", () => {
     expect(titleOf(dualAxisZeroBased)).toBe(
-      "With the left axis from zero, deaths slide slowly while the rate plunges",
+      "With both axes from zero, deaths fall 23% and the rate falls 78%, in proportion",
     );
     expect(titleOf(dualAxisTrimmed)).toBe(
-      "With both axes trimmed, deaths and the rate slide down as a pair",
+      "With both axes trimmed, a 23% fall and a 78% fall look alike",
     );
     expect(titleOf(wildfirePanels)).toBe(
       "Fires per year did not climb, but the average fire grew from 42 to 121 acres",

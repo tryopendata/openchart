@@ -67,10 +67,18 @@ export const scalesDomain = defineDemo({
   source: sourceOf(countryIndicators),
   height: 480,
   spec: {
-    mark: { type: "circle", fill: ACCENT, size: 6 },
+    // A point draws no stem from zero, so an axis that starts at 65 stays honest.
+    // `trendline: false` stops a point mark fitting a line through the dots.
+    mark: { type: "point", trendline: false, fill: ACCENT, size: 6 },
     data: lifeRows,
     encoding: {
-      y: { field: "country", type: "nominal", sort: "x" },
+      // A point mark thins category labels like numeric ticks; listing them keeps every country.
+      y: {
+        field: "country",
+        type: "nominal",
+        sort: "x",
+        axis: { values: lifeRows.map((row) => row.country) },
+      },
       x: {
         field: "lifeExpectancy",
         type: "quantitative",

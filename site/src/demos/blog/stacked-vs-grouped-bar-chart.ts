@@ -47,6 +47,20 @@ const totalMw = (row: (typeof capacityYears)[number]) =>
 const biggestYear = capacityYears.reduce((max, row) => (totalMw(row) > totalMw(max) ? row : max));
 const lastYear = must(capacityYears[capacityYears.length - 1], "generator capacity");
 
+/** Every `step`th year label from `from` to `to`, as the ordinal axis's category strings. */
+const everyNthYear = (from: number, to: number, step: number) =>
+  Array.from({ length: Math.floor((to - from) / step) + 1 }, (_, i) => String(from + i * step));
+
+// Seven year labels fit flat on a desktop; on a phone every other year keeps them horizontal.
+const capacityX = {
+  field: "year",
+  type: "ordinal",
+  axis: { labelAngle: 0 },
+} as const;
+const capacityCompact = {
+  encoding: { x: { axis: { labelAngle: 0, values: everyNthYear(FIRST_YEAR, LAST_YEAR, 2) } } },
+};
+
 const fuelScale = {
   domain: FUELS.map((fuel) => fuel.label),
   range: FUELS.map((fuel) => fuel.color),
@@ -62,7 +76,7 @@ export const capacityStacked = defineDemo({
     mark: "bar",
     data: capacityRows,
     encoding: {
-      x: { field: "year", type: "ordinal" },
+      x: capacityX,
       y: {
         field: "gigawatts",
         type: "quantitative",
@@ -74,9 +88,10 @@ export const capacityStacked = defineDemo({
     labels: { density: "none" },
     legend: { position: "top" },
     chrome: {
-      title: `Capacity coming online reached ${gigawatts(totalMw(biggestYear))} GW in ${biggestYear.year}, the most of any year shown`,
+      title: `The four fuels added ${gigawatts(totalMw(biggestYear))} GW in ${biggestYear.year}, the most of any year shown`,
       subtitle: capacitySubtitle,
     },
+    overrides: { compact: capacityCompact },
   },
 });
 
@@ -92,7 +107,7 @@ export const capacityGrouped = defineDemo({
     mark: "bar",
     data: capacityRows,
     encoding: {
-      x: { field: "year", type: "ordinal" },
+      x: capacityX,
       y: {
         field: "gigawatts",
         type: "quantitative",
@@ -107,6 +122,7 @@ export const capacityGrouped = defineDemo({
       title: `Solar added ${gigawatts(solarOf(lastYear))} GW in ${lastYear.year}, ${solarToGasRatio} times natural gas`,
       subtitle: capacitySubtitle,
     },
+    overrides: { compact: capacityCompact },
   },
 });
 
@@ -133,7 +149,12 @@ export const homelessStacked = defineDemo({
     mark: "bar",
     data: homelessRows,
     encoding: {
-      x: { field: "year", type: "ordinal" },
+      // Eighteen years: label every other one so the labels stay flat, every fourth on a phone.
+      x: {
+        field: "year",
+        type: "ordinal",
+        axis: { labelAngle: 0, values: everyNthYear(2008, latest.year, 2) },
+      },
       y: {
         field: "people",
         type: "quantitative",
@@ -162,6 +183,11 @@ export const homelessStacked = defineDemo({
     chrome: {
       title: `Counted homelessness fell to ${lowestExcludingOddYear.total_homeless.toLocaleString("en-US")} in ${lowestExcludingOddYear.year}, then reached ${latest.total_homeless.toLocaleString("en-US")} in ${latest.year}`,
       subtitle: "People counted as homeless on one night in January, 50 states and DC, 2007-2024",
+    },
+    overrides: {
+      compact: {
+        encoding: { x: { axis: { labelAngle: 0, values: everyNthYear(2008, latest.year, 4) } } },
+      },
     },
   },
 });

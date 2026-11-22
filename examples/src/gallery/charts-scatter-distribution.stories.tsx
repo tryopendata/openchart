@@ -1172,7 +1172,7 @@ export const ScatterAndDistribution = () => (
     <Section
       id="distribution"
       title="Distribution"
-      lede="One measure across a ranked category axis. Dots and lollipops beat bars when values sit far from zero; dumbbells show a gap; strips show the full spread."
+      lede="One measure across a ranked category axis. Lollipops use less ink than bars on a long list; dumbbells show a gap; strips show the full spread."
     >
       <Demo
         id="dot-plot"

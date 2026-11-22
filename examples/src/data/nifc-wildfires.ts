@@ -4,7 +4,7 @@
  * Rows come from the OpenData dataset `nifc/wildfire-statistics` (national scope,
  * view `default`), verified 2026-11-22. `acres_per_fire` is acres divided by fires,
  * rounded to one decimal. The 1983 and 1984 counts (about 18,000 and 20,000 fires)
- * are far below every later year and likely reflect how fires were reported then.
+ * are far below every later year; the source gives no reason, so charts start in 1985.
  */
 export const nifcWildfires = {
   source: 'Source: National Interagency Fire Center, wildland fire statistics',

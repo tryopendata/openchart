@@ -14,6 +14,7 @@ import {
   crimeShared,
   launchesOneChart,
   launchPanels,
+  robberyPointsPerHomicidePoint,
 } from "./small-multiples-without-the-mess";
 
 const post = readFileSync(
@@ -64,10 +65,25 @@ describe("the small-multiples post's figures", () => {
       .filter((row) => row.crime === "Homicide")
       .map((row) => row.rate);
     expect(homicide).toEqual(fbiViolentCrimeRates.data.map((r) => r.homicide_rate_per_100k));
-    expect((crimeShared.spec as { resolve?: unknown }).resolve).toBeUndefined();
-    expect((crimeIndependent.spec as { resolve?: unknown }).resolve).toEqual({
-      scale: { y: "independent" },
-    });
+    const {
+      chrome: _a,
+      resolve: sharedResolve,
+      ...sharedRest
+    } = crimeShared.spec as {
+      chrome: unknown;
+      resolve: unknown;
+    };
+    const {
+      chrome: _b,
+      resolve: freeResolve,
+      ...freeRest
+    } = crimeIndependent.spec as {
+      chrome: unknown;
+      resolve: unknown;
+    };
+    expect(sharedRest).toEqual(freeRest);
+    expect(sharedResolve).toEqual({ scale: { y: "shared" } });
+    expect(freeResolve).toEqual({ scale: { y: "independent" } });
   });
 
   it("titles each chart with a finding read off the rows", () => {
@@ -79,8 +95,25 @@ describe("the small-multiples post's figures", () => {
       "On a shared scale, homicide's fall from 9.8 to 4.1 is a flat line",
     );
     expect(titleOf(crimeIndependent)).toBe(
-      "On free scales, the 2021 homicide rise to 6.8 is visible",
+      "On free scales, homicide's rise from 5.0 in 2018 to 6.8 in 2021 shows",
     );
+  });
+
+  it("gives the post's robbery-to-homicide height ratio from the rows' ranges", () => {
+    expect(robberyPointsPerHomicidePoint).toBe(37);
+  });
+
+  it("stacks every panel chart in one column and states its y-scale choice", () => {
+    const resolveOf = (demo: { spec: unknown }) =>
+      (demo.spec as { resolve?: { scale?: { y?: string } } }).resolve?.scale?.y;
+    for (const demo of [launchPanels, crimeShared, crimeIndependent]) {
+      const encoding = (demo.spec as unknown as { encoding: Record<string, unknown> }).encoding;
+      expect(encoding.row, demo.id).toBeDefined();
+      expect(encoding.facet, demo.id).toBeUndefined();
+    }
+    expect(resolveOf(launchPanels)).toBe("shared");
+    expect(resolveOf(crimeShared)).toBe("shared");
+    expect(resolveOf(crimeIndependent)).toBe("independent");
   });
 
   it("validates every demo and renders light and dark static SVGs", () => {

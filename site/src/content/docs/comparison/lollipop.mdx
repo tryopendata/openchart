@@ -7,7 +7,7 @@ order: 4
 
 import Demo from "../../../components/demo/Demo.astro";
 
-A lollipop chart is a bar chart with the bar thinned to a stem and a dot at the end. The reader still judges each value by its distance from the baseline, with less ink. It is cleaner than bars when the values sit far from zero.
+A lollipop chart is a bar chart with the bar thinned to a stem and a dot at the end. The reader still judges each value by its distance from the baseline, with less ink. It uses less ink than bars, which helps on a long list. The stems are still lengths, so keep the axis at zero; for dots on an axis that starts elsewhere, use a dot plot with `mark: { type: "point", trendline: false }` and no stems, as on the [scales page](/docs/the-spec/scales/).
 
 Use a [bar chart](/docs/comparison/bar/) when the filled length should dominate, and a [range chart](/docs/comparison/range/) when each category has a start and an end value.
 
