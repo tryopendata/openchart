@@ -16,7 +16,7 @@ The Soviet Union launched 108 times in 1982, six times as often as the United St
 
 ## One panel per series
 
-Small multiples repeat one chart once per series, with the same axes in every panel. Each line gets a frame to itself, so you read its shape without untangling it from three others.
+Small multiples repeat one chart once per series, with the same x axis in every panel. Each line gets a frame to itself, so you read its shape without untangling it from three others.
 
 ```json demo source="TidyTuesday (R for Data Science Online Learning Community), space launches" height=780
 {
@@ -2354,6 +2354,6 @@ Two or three lines that stay apart do not need panels. A single [line chart](/do
 
 Panels need long data: one row per panel per year, with the date, the series name and the value. `encoding.row` names the series field and stacks one panel per value in a single column, with the years printed under the bottom panel only. `sort: null` keeps the panels in the order of the data rather than alphabetical, and `tickPosition: "gutter"` on the y axis puts each panel's tick labels beside it, where no line can run through them.
 
-A row layout gives each panel its own y range unless told otherwise, so the shared charts set `resolve: { scale: { y: "shared" } }` and the free chart sets `"independent"`. Apart from the titles, that is the only difference between the two crime specs. Panel axes follow the usual [scale rules](/docs/the-spec/scales/), so a `scale.domain` or `zero: true` on `y` pins every panel if you want them all to start at zero.
+A row layout gives each panel its own y range unless told otherwise, so the shared charts set `resolve: { scale: { y: "shared" } }` and the free chart sets `"independent"`. Apart from the title and subtitle, that is the only difference between the two crime specs. Panel axes follow the usual [scale rules](/docs/the-spec/scales/), so a `scale.domain` or `zero: true` on `y` pins every panel if you want them all to start at zero.
 
 Wrapped grids and side-by-side panels, which suit wider screens, are on the [facets page](/docs/composition/facets/).
