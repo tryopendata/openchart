@@ -1,6 +1,6 @@
 ---
 title: "Responsive charts on mobile: what changes and what you decide"
-description: A chart redraws itself for a 360px phone, with fewer ticks and one callout. Here is what that covers and what you still write yourself.
+description: A chart redraws itself for a 360px phone, with fewer ticks and one inline callout. Which callout stays and how short the title gets are still yours to set.
 published: 2026-11-21
 author: OpenChart
 tags: [developers, annotation]
@@ -10,9 +10,7 @@ lead: blog/mlb-strikeouts-full
 
 import Demo from "../../components/demo/Demo.astro";
 
-A phone gives a chart about 360px of width, half of what a desktop article column gives it. Scaling a 720px drawing down to fit halves its text too, so tick labels shrink below readable size. OpenChart avoids that by laying the chart out again for whatever width its container has.
-
-Take league-wide batting. Strikeouts passed hits in 2018 and have stayed ahead since, and the chart below marks that year and the shortened 2020 season.
+Major league batters have piled up more strikeouts than hits in every season since 2018. That chart is easy to read in a 720px article column. On a 360px phone, the same drawing scaled down to fit has tick labels too small to read, so OpenChart lays the chart out again for the width its container has.
 
 <Demo id="blog/mlb-strikeouts-full" />
 
@@ -22,9 +20,9 @@ Here is the same spec in a 360px container.
 
 ## What the layout changes on its own
 
-The library sorts a chart into one of three layouts by container width: full above 700px, medium from 400 to 700px, and compact below 400px. Compact drops value labels, uses the fewest [axis ticks](/docs/the-spec/axes/) and keeps at most one callout inline. A second callout becomes a numbered marker, with its text in a note under the plot.
+The library sorts a chart into one of three layouts by container width: full above 700px, medium from 400 to 700px, and compact below 400px. Compact drops value labels, uses the fewest [axis ticks](/docs/the-spec/axes/) and keeps at most one callout inline. Any other callout becomes a numbered marker, with its text in a note under the plot.
 
-In the two batting charts above, the year ticks go from four (1960, 1980, 2000, 2020) to three (1960, 2000, 2020), and the 2020 callout turns into the marker 2 with its note under the plot.
+In the two batting charts above, the year ticks go from four (1960, 1980, 2000, 2020) to three (1960, 2000, 2020), and the 2020 callout turns into marker 1 with its note under the plot. Notes are numbered by their place in the spec's `annotations` list, which is why the 2020 callout is listed first.
 
 Height counts too. A chart 350px tall or shorter keeps its title and drops the subtitle.
 
@@ -32,15 +30,15 @@ The breakpoints follow the width of the container, not the screen. A chart in a 
 
 ## What you still decide
 
-The layout cannot shorten your headline. The title of the last chart here takes two lines at 720px and four at 360px, which pushes the plot down. Write a second, shorter [title and subtitle](/docs/framing/chrome/) for compact width and put it in `overrides`.
+Write a second, shorter [title and subtitle](/docs/framing/chrome/) for compact width and put it in `overrides`. The title of the last chart here takes two lines at 720px and four at 360px, which pushes the plot down, and the layout won't shorten a headline for you.
 
-Callouts need a decision as well. The compact layout keeps one inline and demotes the rest to numbered notes, so choose which one carries the point. You can also write shorter callouts just for phones in `overrides`. Callouts written there are not held to the one-callout limit.
+Pick the callout that carries the point and give it `priority: 1`. Compact keeps the lowest priority inline and numbers the rest, falling back to spec order when no callout has a priority. Callouts you write for phones in `overrides` are not held to the one-callout limit, so keep that list short.
 
-Line-end names need room too, and with many series they run out. `responsive: { labelSummary: true }` moves the names and last values into a keyed list under the plot when they cannot fit, so every series stays named.
+Check that every line still has its name at its end. Three series fit at 360px. With more, `responsive: { labelSummary: true }` moves names and last values into a keyed list under the plot when they cannot fit, and a top legend, as the [direct labels post](/blog/direct-labels-vs-legends/) suggests for phones, also gives the lines the full width.
 
-Shape is the last one. Height comes from the container, not the spec, and 360px wide by 440px tall is a different shape from 720 by 440. A time series usually reads better wider than tall, so check how steep the lines look before you keep the same height.
+Set the height for the narrow shape. Height comes from the container, not the spec, and 360px wide by 440px tall is a different shape from 720 by 440. A time series usually reads better wider than tall, so check how steep the lines look before you keep the same height.
 
-The chart below does both. Narrow your browser window below 400px, or open this page on a phone, and it swaps to a short title and a callout that says only the number.
+The chart below sets a short compact title, a number-only callout and four fixed year ticks in `overrides`. Narrow your browser window below 400px, or open this page on a phone, to see the swap.
 
 ```json demo source="Harvard Growth Lab, Atlas of Economic Complexity (bilateral trade, HS92)" height=460
 {
@@ -167,13 +165,26 @@ The chart below does both. Narrow your browser window below 400px, or open this 
           "China",
           "Mexico",
           "Canada"
-        ],
-        "range": [
-          "#0e7490",
-          "#d55e00",
-          "#7a858f"
         ]
       }
+    }
+  },
+  "theme": {
+    "colors": {
+      "categorical": [
+        {
+          "light": "#0e7490",
+          "dark": "#22a3c4"
+        },
+        {
+          "light": "#b54d00",
+          "dark": "#f07a2b"
+        },
+        {
+          "light": "#66707a",
+          "dark": "#9aa0a6"
+        }
+      ]
     }
   },
   "legend": {
@@ -193,14 +204,26 @@ The chart below does both. Narrow your browser window below 400px, or open this 
       "text": "China peaked at 20.4% in 2020",
       "anchor": "top",
       "offset": {
-        "dx": 0,
-        "dy": -22
+        "dx": -40,
+        "dy": -30
       },
       "connector": true
     }
   ],
   "overrides": {
     "compact": {
+      "encoding": {
+        "x": {
+          "axis": {
+            "values": [
+              "1995",
+              "2005",
+              "2015",
+              "2024"
+            ]
+          }
+        }
+      },
       "chrome": {
         "title": "China's share of US imports peaked in 2020",
         "subtitle": "Share of US goods imports, 1995-2024"
@@ -213,8 +236,8 @@ The chart below does both. Narrow your browser window below 400px, or open this 
           "text": "20.4%",
           "anchor": "top",
           "offset": {
-            "dx": -4,
-            "dy": -18
+            "dx": -36,
+            "dy": -30
           },
           "connector": true
         }
@@ -231,8 +254,10 @@ The chart below does both. Narrow your browser window below 400px, or open this 
 
 ## The spec
 
-`overrides.compact` is a patch laid over the spec when the container is under 400px. Here it changes the title and subtitle in `chrome`, which merge field by field into the base, and swaps `annotations` for a single short callout. It can also change labels, legend, and axis settings. `medium` and `full` work the same way.
+`overrides.compact` is a patch laid over the spec when the container is under 400px. Here it changes the title and subtitle in `chrome`, which merge field by field into the base, swaps `annotations` for a single short callout, and sets the x axis `values` so the phone shows 1995, 2005, 2015 and 2024. It can also change labels and the legend. `medium` and `full` work the same way.
 
-`responsive: { preserveEnd: true }` keeps the last tick on the time axis when ticks are thinned, so the final year stays on the axis. `endpointLabels` names each line at its right end, which is why the chart needs no legend. `chromeLayout: "subtract"` holds the figure at its fixed height, so a long title or a note for a demoted callout takes room from the plot instead of making the figure taller.
+`responsive: { preserveEnd: true }` keeps the last tick on the time axis when ticks are thinned, so the final year stays on the axis at medium width. `endpointLabels` names each line at its right end, which is why the chart needs no legend.
+
+`theme.colors.categorical` gives each series a light and a dark color, both readable as end-label text on their page. `chromeLayout: "subtract"` holds the figure at its fixed height, so a long title or a note for a demoted callout takes room from the plot instead of making the figure taller.
 
 Every breakpoint and `responsive` option is listed in [the responsive docs](/docs/behavior/responsive/).

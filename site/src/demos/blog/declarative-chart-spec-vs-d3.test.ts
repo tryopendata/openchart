@@ -32,11 +32,11 @@ describe("the declarative-vs-D3 post's figures", () => {
     const [, spec = ""] = /^```json demo[^\n]*\n([\s\S]*?)^```$/m.exec(post) ?? [];
     const specLines = spec.split("\n").filter((line) => line.trim() && !/^\s*\{ "date"/.test(line));
     // The data rows go on their own lines; everything else is the spec proper.
-    expect(specLines).toHaveLength(25);
-    expect(post).toContain("The spec is 25 lines, not counting the 50 data rows");
+    expect(specLines).toHaveLength(45);
+    expect(post).toContain("The spec is 45 lines, not counting the 50 data rows");
     const [, d3 = ""] = /^```ts title="chart.ts"\n([\s\S]*?)^```$/m.exec(post) ?? [];
-    expect(d3.trimEnd().split("\n")).toHaveLength(72);
-    expect(post).toContain("It takes 72 lines of TypeScript");
+    expect(d3.trimEnd().split("\n")).toHaveLength(97);
+    expect(post).toContain("It takes 97 lines of TypeScript");
   });
 
   it("derives the language rows from the dataset, one row per quarter and language", () => {
@@ -49,12 +49,14 @@ describe("the declarative-vs-D3 post's figures", () => {
   it("derives the pay ranges from the dataset, highest median first", () => {
     const rows = specOf(occupationPayRanges).data ?? [];
     expect(rows).toHaveLength(blsOccupationWages.data.length);
-    expect(rows.at(-1)).toEqual({ group: "Management", p10: 60130, p90: 257310 });
+    expect(rows.at(-1)).toEqual({ group: "Management", p10: 60130, p90: 257310, role: "Compared" });
     expect(rows.find((row) => row.group === "Food service")).toEqual({
       group: "Food service",
       p10: 23120,
       p90: 51340,
+      role: "Compared",
     });
+    expect(rows.filter((row) => row.role === "Compared")).toHaveLength(2);
   });
 
   it("titles each chart with a finding read off the rows", () => {

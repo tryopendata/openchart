@@ -5,6 +5,7 @@
 // `renderStaticSVG` does without a DOM, so the test runs it with none.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { gzipSync } from "node:zlib";
 import { fhfaStateHpi } from "@datasets/fhfa-state-hpi";
 import { irsStateMigration } from "@datasets/irs-state-migration";
 import { renderStaticSVG } from "@opendata-ai/openchart-vanilla/static";
@@ -49,7 +50,7 @@ describe("the server-side rendering post's figures", () => {
 
   it("titles each chart with a finding read off the rows", () => {
     expect(specOf(housePriceRange).chrome?.title).toBe(
-      "House prices rose 85.9% in Maine from 2019 to 2026 and 14.6% in District of Columbia",
+      "House prices rose 85.9% in Maine from 2019 to 2026 and 14.6% in DC",
     );
     expect(specOf(migrationExtremes).chrome?.title).toBe(
       "California lost a net 200,547 people to other states in 2022-23, while Texas gained 112,481",
@@ -63,10 +64,17 @@ describe("the server-side rendering post's figures", () => {
     const spec = housePriceRange.spec as Parameters<typeof renderStaticSVG>[0];
     const svg = renderStaticSVG(spec, options);
     expect(renderStaticSVG(spec, options)).toBe(svg);
+    // The post says "about 15 KB, 2 KB gzipped".
+    const bytes = Buffer.byteLength(svg);
+    expect(bytes).toBeGreaterThan(14_000);
+    expect(bytes).toBeLessThan(16_500);
+    const gzipped = gzipSync(svg).length;
+    expect(gzipped).toBeGreaterThan(1_500);
+    expect(gzipped).toBeLessThan(2_500);
     expect(svg).not.toContain("<script");
     expect(svg).toContain('role="img"');
     expect(svg).toContain(
-      'aria-label="Bar chart showing House prices rose 85.9% in Maine from 2019 to 2026 and 14.6% in District of Columbia (10 data points)"',
+      'aria-label="Bar chart showing House prices rose 85.9% in Maine from 2019 to 2026 and 14.6% in DC (10 data points)"',
     );
     expect(renderStaticSVG(spec, { ...options, idPrefix: "hpi-dark", darkMode: "force" })).not.toBe(
       svg,

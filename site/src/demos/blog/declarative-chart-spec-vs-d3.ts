@@ -10,8 +10,15 @@
 import { blsOccupationWages } from "@datasets/bls-occupation-wages";
 import { githubLanguageDevelopers } from "@datasets/github-language-developers";
 import { sourceOf } from "../source";
-import { ACCENT, GREY } from "../the-spec/shared";
+import { ACCENT } from "../the-spec/shared";
 import { defineDemo } from "../types";
+
+/** The highlight teal as a light/dark pair, so its end labels stay readable on the dark page. */
+const TEAL = { light: ACCENT, dark: "#22a3c4" };
+/** The context line's grey: the site grey on white, a lighter one on the dark page. */
+const GREY_PAIR = { light: "#66707a", dark: "#9aa0a6" };
+/** Context bars: light enough to recede behind the two compared groups on either page. */
+const CONTEXT = { light: "#d4d4d8", dark: "#3f3f46" };
 
 const quarters = githubLanguageDevelopers.data;
 
@@ -52,11 +59,24 @@ export const typescriptPassesJava = defineDemo({
       color: {
         field: "language",
         type: "nominal",
-        scale: { domain: ["TypeScript", "Java"], range: [ACCENT, GREY] },
+        scale: { domain: ["TypeScript", "Java"] },
       },
     },
+    theme: { colors: { categorical: [TEAL, GREY_PAIR] } },
     legend: { show: false },
     endpointLabels: { format: ".3~s" },
+    annotations: [
+      {
+        type: "text",
+        x: quarterStart(passed.quarter),
+        y: passed.typescript,
+        text: `${quarterLabel(passed.quarter)}: TypeScript passes Java`,
+        anchor: "top",
+        offset: { dx: -110, dy: -56 },
+        connector: true,
+      },
+    ],
+    chromeLayout: "subtract",
     chrome: {
       title: `TypeScript overtook Java in ${quarterLabel(passed.quarter)} and has grown ${growth}x since ${quarterLabel(first.quarter)}`,
       subtitle: "Developers pushing code to GitHub each quarter, summed across economies",
@@ -70,12 +90,12 @@ const money = (n: number) => `$${n.toLocaleString("en-US")}`;
 const SHORT_NAMES: Record<string, string> = {
   "Arts, Design, Entertainment, Sports, and Media": "Arts and media",
   "Life, Physical, and Social Science": "Science",
-  "Building and Grounds Cleaning and Maintenance": "Cleaning and maintenance",
+  "Building and Grounds Cleaning and Maintenance": "Building cleaning",
   "Installation, Maintenance, and Repair": "Installation and repair",
   "Educational Instruction and Library": "Education and library",
   "Healthcare Practitioners and Technical": "Healthcare practitioners",
   "Transportation and Material Moving": "Transportation",
-  "Office and Administrative Support": "Office and admin support",
+  "Office and Administrative Support": "Office and admin",
   "Food Preparation and Serving Related": "Food service",
   "Farming, Fishing, and Forestry": "Farming and fishing",
   "Business and Financial Operations": "Business and finance",
@@ -86,18 +106,15 @@ const SHORT_NAMES: Record<string, string> = {
   "Personal Care and Service": "Personal care",
   "Sales and Related": "Sales",
 };
+/** The axis label for a group, in sentence case like the shortened names. */
 const groupName = (title: string) => {
   const name = title.replace(/ Occupations$/, "");
-  return SHORT_NAMES[name] ?? name;
+  const short = SHORT_NAMES[name] ?? name;
+  return short.charAt(0) + short.slice(1).toLowerCase();
 };
 
 // The rows arrive ordered by median pay, highest first. A horizontal bar chart draws the first
 // row at the bottom, so the order is reversed to put the highest median on top.
-const wages = [...blsOccupationWages.data].reverse().map((row) => ({
-  group: groupName(row.occ_title),
-  p10: row.a_pct10,
-  p90: row.a_pct90,
-}));
 const groupStartingWith = (title: string) => {
   const match = blsOccupationWages.data.find((row) => row.occ_title.startsWith(title));
   if (!match) throw new Error(`No occupation group starts with "${title}"`);
@@ -108,6 +125,15 @@ const food = groupStartingWith("Food Preparation");
 if (!(food.a_pct90 < manager.a_pct10)) {
   throw new Error("The food service 90th percentile is not below the manager 10th percentile");
 }
+/** The two groups the title compares are colored; the rest are context. */
+const compared = new Set([manager.occ_title, food.occ_title]);
+const wages = [...blsOccupationWages.data].reverse().map((row) => ({
+  group: groupName(row.occ_title),
+  p10: row.a_pct10,
+  p90: row.a_pct90,
+  role: compared.has(row.occ_title) ? "Compared" : "Other",
+}));
+const PAY_TICKS = [0, 50_000, 100_000, 150_000, 200_000, 250_000];
 
 export const occupationPayRanges = defineDemo({
   id: "blog/occupation-pay-ranges",
@@ -115,7 +141,7 @@ export const occupationPayRanges = defineDemo({
   source: sourceOf(blsOccupationWages),
   height: 640,
   spec: {
-    mark: { type: "range", style: "bar", fill: ACCENT },
+    mark: { type: "range", style: "bar" },
     data: wages,
     encoding: {
       y: { field: "group", type: "nominal", sort: null },
@@ -123,9 +149,31 @@ export const occupationPayRanges = defineDemo({
         field: "p10",
         type: "quantitative",
         title: "10th percentile",
-        axis: { title: "Annual pay", format: "$~s" },
+        scale: { domain: [0, 300_000] },
+        axis: { title: "Annual pay", format: "$~s", values: PAY_TICKS, grid: true },
       },
       x2: { field: "p90", type: "quantitative", title: "90th percentile" },
+      color: { field: "role", type: "nominal", scale: { domain: ["Compared", "Other"] } },
+    },
+    // The rule's color is also its label's; the default grey is 3.5:1 on white.
+    theme: {
+      colors: {
+        categorical: [TEAL, CONTEXT],
+        annotationRule: { light: "#6b6b66", dark: "#a3a39c" },
+      },
+    },
+    legend: { show: false },
+    annotations: [
+      {
+        type: "refline",
+        x: manager.a_pct10,
+        label: money(manager.a_pct10),
+        style: "dashed",
+        labelPlacement: "outside",
+      },
+    ],
+    overrides: {
+      compact: { encoding: { x: { axis: { values: [0, 100_000, 200_000] } } } },
     },
     chrome: {
       title: `A food service worker at the 90th percentile earns ${money(food.a_pct90)}, less than a manager at the 10th, ${money(manager.a_pct10)}`,

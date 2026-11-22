@@ -18,7 +18,7 @@ const post = readFileSync(
   "utf8",
 );
 
-type Spec = { data?: Record<string, unknown>[]; chrome?: { title?: string } };
+type Spec = { data?: Record<string, unknown>[]; chrome?: { title?: string; source?: string } };
 const specOf = (demo: { spec: unknown }) => demo.spec as Spec;
 
 describe("the export post's figures", () => {
@@ -48,10 +48,20 @@ describe("the export post's figures", () => {
   it("derives the fertility drops from the dataset rows", () => {
     const rows = specOf(fertilityDrops).data ?? [];
     expect(rows).toHaveLength(10);
-    expect(rows[0]).toEqual({ state: "Utah", rate_2005: 92.8, rate_2024: 59.9 });
+    expect(rows[0]).toEqual({ state: "Utah", rate_2005: 92.8, rate_2024: 59.9, drop: 32.9 });
+    const drops = rows.map((row) => row.drop as number);
+    expect(drops).toEqual([...drops].sort((a, b) => b - a));
+    for (const row of rows) {
+      expect(row.drop).toBeCloseTo((row.rate_2005 as number) - (row.rate_2024 as number), 5);
+    }
     expect(cdcFertilityByState.data.every((row) => row.fertility_2024 < row.fertility_2005)).toBe(
       true,
     );
+  });
+
+  it("carries each dataset's source inside the chart, so an export keeps it", () => {
+    expect(specOf(turnoutGains).chrome?.source).toBe(uflVepTurnout.source);
+    expect(specOf(fertilityDrops).chrome?.source).toBe(cdcFertilityByState.source);
   });
 
   it("titles each chart with a finding read off the rows", () => {
