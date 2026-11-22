@@ -1,10 +1,13 @@
 /*
  * Styles for the blog: the index and tag pages (a ruled list of posts, each
  * with its lead chart as a specimen beside it) and the article (BlogLayout),
- * set as a long read. The article is one 44rem column: serif headline and
- * standfirst, a sans byline, the ticked rule, then the body in the display
- * serif at reading size, with figures filling the column. Structure comes from
- * rules and type, never panels; color stays in the charts.
+ * set as a long read. The article is a breakout layout on three named column
+ * lines: `content`, a 45rem reading measure for the headline, standfirst,
+ * byline, ticked rule, body text, CTA and endnotes; `wide`, at most 64rem, where
+ * figures sit; and `full`, the whole viewport, where figures run edge to edge
+ * on phones (under 640px) with their caption, credit and toolbar kept at the
+ * page's text inset. The body is in the display serif at reading size.
+ * Structure comes from rules and type, never panels; color stays in the charts.
  */
 @import "./tiles.css";
 @reference "./global.css";
@@ -93,8 +96,34 @@
 
   /* ---- Article ----------------------------------------------------------- */
 
+  /* The gutters are the outer tracks, so the article itself runs the full viewport
+     width and `full` can reach both edges. Between the gutters, `wide` grows to 64rem
+     before the outer tracks take any space, so a figure fills the page inside its
+     gutters up to that width and stops there on a wide screen. */
   .blog-article {
-    @apply mx-auto w-full max-w-[44rem] px-5 pt-10 pb-20 sm:px-6 lg:pt-14;
+    --blog-gutter: 1.25rem;
+    --blog-content: 45rem;
+    --blog-wide: 64rem;
+    --blog-wide-margin: calc((var(--blog-wide) - var(--blog-content)) / 2);
+    @apply grid w-full pt-10 pb-20 sm:[--blog-gutter:1.5rem] lg:pt-14;
+    grid-template-columns:
+      [full-start] minmax(var(--blog-gutter), 1fr)
+      [wide-start] minmax(0, var(--blog-wide-margin))
+      [content-start] min(var(--blog-content), 100% - 2 * var(--blog-gutter))
+      [content-end] minmax(0, var(--blog-wide-margin))
+      [wide-end] minmax(var(--blog-gutter), 1fr)
+      [full-end];
+  }
+
+  .blog-article > * {
+    grid-column: content;
+  }
+
+  /* The body spans every line and sizes its own children to them (see the unlayered
+     rules below): it stays in block flow so its paragraphs' margins still collapse,
+     which they would not as grid items. */
+  .blog-article > .blog-prose {
+    grid-column: full;
   }
 
   .blog-article-header {
@@ -155,9 +184,31 @@
   @apply mt-16 mb-4;
 }
 
-/* A figure is a break in the reading: more air above and below than a paragraph. */
+/* Everything in the body sits on the `content` line: the same width the article's grid
+   gives that line, centred. This also lifts the docs prose's 44rem cap on running text. */
+.prose.blog-prose > * {
+  @apply mx-auto max-w-none;
+  width: min(var(--blog-content), 100% - 2 * var(--blog-gutter));
+}
+
+/* A figure is a break in the reading: more air above and below than a paragraph. It
+   sits on the `wide` line from 640px up and on `full` below, edge to edge. */
 .prose.blog-prose > .demo {
   @apply my-12;
+  width: min(var(--blog-wide), 100% - 2 * var(--blog-gutter));
+
+  @variant max-sm {
+    width: 100%;
+  }
+}
+
+/* Edge to edge, the figure's text keeps the page's inset so it lines up with the prose. */
+.prose.blog-prose
+  > .demo
+  :where(.figure-caption, .figure-credit, .demo-toolbar-row, .demo-controls-row) {
+  @variant max-sm {
+    padding-inline: var(--blog-gutter);
+  }
 }
 
 /* A subhead under an h2: the sans, so it reads as a label rather than a second headline. */

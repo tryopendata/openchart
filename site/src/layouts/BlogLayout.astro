@@ -1,11 +1,19 @@
 ---
 /**
  * A blog post's page, set as a long read: the breadcrumb back to the blog, the
- * headline, the description as its standfirst, the byline, then the post in
- * the docs prose styles with the body in the display serif, one 44rem column
- * that figures fill. The post's own last paragraph is its call to action; the
- * related docs and tags follow it. The head carries the BlogPosting JSON-LD
- * and the article times. The article is indexed by search under Blog.
+ * headline, the description as its standfirst, the byline and the ticked rule,
+ * then the post in the docs prose styles with the body in the display serif,
+ * the end-of-post CTA and the related docs and tags. Text keeps a 45rem
+ * reading measure; figures break out to a 64rem column on wide screens and run
+ * edge to edge on phones (the column lines are in blog.css).
+ *
+ * Entrances come from `@steamfield/ui/reveal`. The header is above the fold, so
+ * it is marked revealed in the HTML and paints in place before any module
+ * script runs, like a PublishedFigure with `reveal={false}`; its roles (the
+ * rule wipes, the text lifts) match that frame. The endnotes enter as they are
+ * reached, the CTA carries its own reveal, and paragraphs and headings never
+ * animate. The head carries the BlogPosting JSON-LD and the article times. The
+ * article is indexed by search under Blog.
  */
 import BlogCta from "../components/blog/BlogCta.astro";
 import Byline from "../components/blog/Byline.astro";
@@ -56,22 +64,26 @@ const jsonLd = articleJsonLd(post, {
   </Fragment>
 
   <article class="blog-article" {...searchBodyAttrs("blog")}>
-    <header class="blog-article-header">
-      <BlogBreadcrumb />
-      <h1 class="blog-headline">{post.title}</h1>
-      <p class="blog-standfirst">{post.description}</p>
-      <Byline
-        author={post.author}
-        published={post.published}
-        updated={post.updated}
-        minutes={minutes}
-      />
-    </header>
-    <div class="rule-axis mt-8 mb-10"></div>
+    <div data-reveal data-revealed>
+      <header class="blog-article-header" data-motion="lift-sm">
+        <BlogBreadcrumb />
+        <h1 class="blog-headline">{post.title}</h1>
+        <p class="blog-standfirst">{post.description}</p>
+        <Byline
+          author={post.author}
+          published={post.published}
+          updated={post.updated}
+          minutes={minutes}
+        />
+      </header>
+      <div class="rule-axis mt-8 mb-10" data-motion="wipe"></div>
+    </div>
     <div class="prose docs-prose blog-prose max-w-none">
       <slot />
     </div>
     <BlogCta />
-    <PostEndnotes related={related} tags={tagsOf(post)} />
+    <div data-reveal data-motion="quiet">
+      <PostEndnotes related={related} tags={tagsOf(post)} />
+    </div>
   </article>
 </BaseLayout>
