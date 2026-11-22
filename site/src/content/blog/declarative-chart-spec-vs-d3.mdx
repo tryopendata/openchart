@@ -129,7 +129,7 @@ export function drawChart(
 ) {
   const width = 720;
   const height = 420;
-  const margin = { top: 104, right: 90, bottom: 36, left: 56 };
+  const margin = { top: 104, right: 140, bottom: 36, left: 56 };
   const colors: Record<string, string> = { TypeScript: "#0e7490", Java: "#66707a" };
 
   const rows: Row[] = data.map((d) => ({ ...d, date: d3.timeParse("%Y-%m-%d")(d.date) as Date }));
@@ -199,7 +199,7 @@ export function drawChart(
       .attr("y", y(last.pushers))
       .attr("dy", "0.35em")
       .attr("fill", colors[language])
-      .text(language);
+      .text(`${language} ${d3.format(".3~s")(last.pushers)}`);
   }
 
   // Mark the first quarter TypeScript is ahead. Both series list the same quarters in order.
@@ -216,17 +216,19 @@ export function drawChart(
 }
 ```
 
-Most of those lines are decisions the spec made for you: the margins, the pixel range of each scale, how the axes are built, where the labels go. D3 leaves each of those decisions to you.
+Most of those lines are decisions the spec made for you: the margins, the pixel range of each scale, how the axes are built, where the labels go.
 
 ## What the spec gives you
 
-The spec version also handles these without extra code. On a phone-width container the chart switches to a compact layout with fewer ticks, and the callout becomes a numbered note under the plot. It can be tabbed to and stepped through with the arrow keys, with a tooltip at each step. It has a hidden data table and a label for screen readers, and its entrance animates. It exports to SVG and PNG. [Annotations](/docs/framing/annotations/) sit in data coordinates, so a callout stays on its point when the chart resizes.
+The spec version adapts to a phone, works with a keyboard and a screen reader, animates and exports, all without extra code. On a phone-width container the chart switches to a compact layout with fewer ticks, and the callout becomes a numbered note under the plot. [Annotations](/docs/framing/annotations/) sit in data coordinates, so a callout stays on its point when the chart resizes.
+
+The chart can be tabbed to and stepped through with the arrow keys, with a tooltip at each step. It has a hidden data table and a label for screen readers, its entrance animates, and it exports to SVG and PNG.
 
 The D3 chart scales as a picture, so its text shrinks with its width. It has the `aria-label` the code sets by hand and none of the rest. D3 can do all of it, and you write each piece.
 
 ## What it costs
 
-A spec can only describe charts the library knows how to draw. If the chart you want is not among its chart types, no spec will produce it. You also take the library's defaults for spacing, type and color, and you override them through spec fields where a field exists, which is a narrower set of choices than raw SVG.
+A spec can only describe charts the library knows how to draw. You also take the library's defaults for spacing, type and color, and you override them through spec fields where a field exists, which is a narrower set of choices than raw SVG.
 
 Changing a spec is cheap inside that range. The chart below swaps `mark` for a range and adds a second position channel, `x2`, so each bar runs from the 10th to the 90th percentile of pay. A `color` field picks out the two groups the title compares, and a reference rule marks the managers' $60,130. In D3 the move from lines to ranges touches the line generator, the labels and the scales.
 
