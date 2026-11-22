@@ -53,11 +53,14 @@ test("the sample post's charts go live as they are reached", async ({ page }) =>
   await page.goto(POST);
   const figures = page.locator("article .docs-prose .demo[data-demo]");
   await expect(figures).toHaveCount(2);
-  // The first chart, in view on load, goes live; the last waits until it is reached.
+  // The hero, in view on load, goes live; the last body chart waits until it is reached.
+  await expect(page.locator("[data-blog-hero] [data-demo-stage]")).toHaveAttribute(
+    "data-demo-live",
+    "",
+  );
   const stages = page.locator("article .docs-prose [data-demo-stage]");
-  await expect(stages.first()).toHaveAttribute("data-demo-live", "");
   await expect(stages.last()).not.toHaveAttribute("data-demo-live", "");
-  expect(await mountEveryDemo(page)).toBe(2);
+  expect(await mountEveryDemo(page)).toBe(3);
 });
 
 /** Every published post's path, from the content folder (drafts never build). */
@@ -174,7 +177,7 @@ test.describe("without JavaScript", () => {
     await page.emulateMedia({ colorScheme: "light" });
     await page.goto(POST);
     const statics = page.locator(
-      'article .demo [data-demo-stage] svg.demo-static[data-theme="light"]',
+      'article .docs-prose .demo [data-demo-stage] svg.demo-static[data-theme="light"]',
     );
     await expect(statics).toHaveCount(2);
     for (const svg of await statics.all()) await expect(svg).toBeVisible();
