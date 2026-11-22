@@ -112,14 +112,41 @@ export function stageContentHtml(content: StageContent): string {
   return svgs ?? placeholderHtml(content.title);
 }
 
+/** Layout width of the phone static SVGs: a common phone, under 400px so compact overrides apply. */
+const PHONE_STATIC_WIDTH = 390;
+/** The wrapper demo.css shows or hides as one static pair, by `data-static-size`. */
+const STATIC_SET_CLASS = "demo-static-set";
+
+/**
+ * A second static pair laid out at phone size, so a phone without the live
+ * chart (no JavaScript, reduced motion, an evicted chart, print) sees the
+ * phone layout, its breakpoint overrides applied, instead of the desktop one
+ * letterboxed in the taller stage. Null without a phone height or a static renderer.
+ */
+function phoneStaticHtml(figure: DemoFigure, domId: string): string | null {
+  if (figure.phoneHeight === undefined || !figure.static) return null;
+  return staticSvgPair(figure.spec, {
+    width: PHONE_STATIC_WIDTH,
+    height: figure.phoneHeight,
+    idPrefix: `${domId}-p`,
+    theme: figure.pageTheme === false ? NO_PAGE_THEME : undefined,
+  });
+}
+
 function stageHtml(figure: DemoFigure, domId: string): string {
-  const content = stageContentHtml({
+  const wide = stageContentHtml({
     ...figure,
     // A demo's own width wins; the blog's wide width changes only the statics' layout, never the stage's cap.
     width: figure.width ?? figure.blog?.staticWidth,
     domId,
     theme: figure.pageTheme === false ? NO_PAGE_THEME : undefined,
   });
+  const phoneStatics = phoneStaticHtml(figure, domId);
+  const content =
+    phoneStatics === null
+      ? wide
+      : `<div class="${STATIC_SET_CLASS}" data-static-size="wide">${wide}</div>` +
+        `<div class="${STATIC_SET_CLASS}" data-static-size="phone">${phoneStatics}</div>`;
   const width = figure.width === undefined ? "" : `; --demo-width: ${figure.width}px`;
   // Written inline with the desktop height, so the phone height is reserved before any script runs.
   const phone =

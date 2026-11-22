@@ -164,8 +164,33 @@ describe("demoFigureHtml", () => {
     expect(stage?.getAttribute("style")).toBe(
       "--demo-height: 320px; --demo-phone-height: 520px; --demo-width: 360px",
     );
-    // The static SVGs keep the desktop aspect; the stage scales them.
-    expect(stage?.querySelector("svg.demo-static")?.getAttribute("viewBox")).toBe("0 0 360 320");
+  });
+
+  it("adds a static pair laid out at phone size, shown in its own set, with its own ids", async () => {
+    const figure = await render(figureFor({ phoneHeight: 520 }));
+    const sets = [...figure.querySelectorAll("[data-demo-stage] > .demo-static-set")];
+    expect(sets.map((set) => set.getAttribute("data-static-size"))).toEqual(["wide", "phone"]);
+    const viewBoxes = (set: Element) =>
+      [...set.querySelectorAll("svg.demo-static")].map((svg) => [
+        svg.getAttribute("data-theme"),
+        svg.getAttribute("viewBox"),
+      ]);
+    expect(viewBoxes(sets[0])).toEqual([
+      ["light", "0 0 720 320"],
+      ["dark", "0 0 720 320"],
+    ]);
+    expect(viewBoxes(sets[1])).toEqual([
+      ["light", "0 0 390 520"],
+      ["dark", "0 0 390 520"],
+    ]);
+    const ids = [...figure.querySelectorAll("[id]")].map((el) => el.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("writes one static pair, with no sets, without a phone height", async () => {
+    const figure = await render(figureFor());
+    expect(figure.querySelector(".demo-static-set")).toBeNull();
+    expect(figure.querySelectorAll("svg.demo-static")).toHaveLength(2);
   });
 
   it("writes the host options on the spec script only when the demo sets some", async () => {
