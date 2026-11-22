@@ -7,20 +7,18 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 
-const POSTS = readdirSync("src/content/blog")
-  .filter((file) => /\.mdx?$/.test(file))
-  .map((file) => readFileSync(join("src/content/blog", file), "utf8"))
-  .filter((source) => !/^draft:\s*true\s*$/m.test(source) && /^lead:\s*\S+/m.test(source))
-  .map((source) => source.match(/^title:\s*(.+)$/m)?.[1]?.trim() ?? "");
+/** Every published post that names a lead chart, from the content folder (drafts never build). */
 const SLUGS = readdirSync("src/content/blog")
   .filter((file) => /\.mdx?$/.test(file))
-  .filter((file) => /^lead:\s*\S+/m.test(readFileSync(join("src/content/blog", file), "utf8")))
+  .filter((file) => {
+    const source = readFileSync(join("src/content/blog", file), "utf8");
+    return !/^draft:\s*true\s*$/m.test(source) && /^lead:\s*\S+/m.test(source);
+  })
   .map((file) => `/blog/${file.replace(/\.mdx?$/, "")}/`);
 const POST = "/blog/when-to-use-a-log-scale/";
 const MAX_CLS = 0.1;
 
-test("every post with a lead has one", () => {
-  expect(SLUGS.length).toBe(POSTS.length);
+test("the posts with a lead are found", () => {
   expect(SLUGS.length).toBeGreaterThan(0);
 });
 

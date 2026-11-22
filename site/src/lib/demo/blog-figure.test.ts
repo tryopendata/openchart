@@ -25,17 +25,21 @@ import {
 } from "./blog-figure";
 
 describe("figureCredit", () => {
-  it.each([
-    [directLabelsEndpoints, "/docs/change-over-time/line/", "line chart"],
-    [gistempColumns, "/docs/comparison/column/", "column chart"],
-    [economiesRankedBar, "/docs/comparison/bar/", "bar chart"],
-    [prestonLogScale, "/docs/correlation/scatter/", "scatter plot"],
-    [nycTempRange, "/docs/comparison/range/", "range chart"],
-    [energySankeyFull, "/docs/flow/sankey/", "sankey diagram"],
-    [unemploymentTilemap, "/docs/maps/tile-map/", "tile map"],
-    [unemploymentChoropleth, "/docs/maps/choropleth/", "choropleth map"],
-    [economiesTable, "/docs/tables/data-table/", "data table"],
-  ])("credits $id with its chart type's docs page", (demo, href, chartName) => {
+  it.each(
+    (
+      [
+        [directLabelsEndpoints, "/docs/change-over-time/line/", "line chart"],
+        [gistempColumns, "/docs/comparison/column/", "column chart"],
+        [economiesRankedBar, "/docs/comparison/bar/", "bar chart"],
+        [prestonLogScale, "/docs/correlation/scatter/", "scatter plot"],
+        [nycTempRange, "/docs/comparison/range/", "range chart"],
+        [energySankeyFull, "/docs/flow/sankey/", "sankey diagram"],
+        [unemploymentTilemap, "/docs/maps/tile-map/", "tile map"],
+        [unemploymentChoropleth, "/docs/maps/choropleth/", "choropleth map"],
+        [economiesTable, "/docs/tables/data-table/", "data table"],
+      ] as const
+    ).map(([demo, href, chartName]) => ({ id: demo.id, demo, href, chartName })),
+  )("credits $id with its chart type's docs page", ({ demo, href, chartName }) => {
     expect(figureCredit(demo.id, demo.spec)).toEqual({ href, chartName });
   });
 
