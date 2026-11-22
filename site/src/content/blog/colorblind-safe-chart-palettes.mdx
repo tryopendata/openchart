@@ -1,0 +1,120 @@
+---
+title: Colorblind-safe chart palettes for light and dark mode
+description: Colorblind-safe palettes rely on lightness contrast, focus plus gray, and direct labels rather than red-green hue pairs, in both light and dark themes.
+published: 2026-11-11
+author: OpenChart
+tags: [color, accessibility]
+related: [style/color, style/dark-mode, style/theming, framing/labels-legends]
+lead: blog/accessible-palette-lines
+---
+
+import Demo from "../../components/demo/Demo.astro";
+
+Roughly 1 in 12 men of Northern European descent (about 8%) has red-green color vision deficiency, which collapses red and green hues into similar yellow-brown tones. Any chart that relies on a red-green pair for positive and negative bars or two competing lines erases that distinction for those readers. Converting a draft chart to grayscale catches most palette failures immediately, because two colors that differ only in hue flatten into the same shade of gray.
+
+Luminance, the perceived brightness of a color, is the channel that survives both color vision deficiency and monochrome printing. Deuteranopia (reduced green sensitivity) and protanopia (reduced red sensitivity) distort how hues look while leaving brightness differences intact. Building a palette around lightness contrast first, then picking hues that stay apart under both conditions, gives every reader the same visual order.
+
+## Highlight two series and mute the rest
+
+Assigning six bright hues to six lines forces readers to jump back and forth between the plot and a legend while trying to tell medium green apart from orange or teal. Even with full color vision, most people hold only three or four distinct hues in working memory at once. When a chart centers on one comparison, giving every line equal visual weight hides the main change behind four competing colors.
+
+Focusing two lines in high-contrast hues and muting the rest to neutral gray makes the comparison legible in color and in grayscale. Gas and coal drove the main shift in US electricity generation from 2016 to 2023, so gas takes deep blue and coal takes vermilion from the Okabe-Ito colorblind-safe palette. That blue-orange pair stays distinct across red-green and blue-yellow deficiencies, and thicker strokes separate both lines from the four muted gray sources.
+
+Direct endpoint labels place each source name right beside its line and remove the legend altogether. Readers can identify every series without matching a colored swatch to a stroke, even where hydro and solar finish tied at 5.8% in 2023.
+
+```json demo source="Our World in Data (owid/electricity-mix)" height=440
+{
+  "mark": { "type": "line", "strokeWidth": 2 },
+  "data": [
+    { "year": "2016", "source": "Coal", "share": 31.2 },
+    { "year": "2016", "source": "Gas", "share": 34.8 },
+    { "year": "2016", "source": "Nuclear", "share": 20.3 },
+    { "year": "2016", "source": "Hydro", "share": 6.6 },
+    { "year": "2016", "source": "Wind", "share": 5.7 },
+    { "year": "2016", "source": "Solar", "share": 1.4 },
+    { "year": "2017", "source": "Coal", "share": 30.7 },
+    { "year": "2017", "source": "Gas", "share": 33.0 },
+    { "year": "2017", "source": "Nuclear", "share": 20.5 },
+    { "year": "2017", "source": "Hydro", "share": 7.5 },
+    { "year": "2017", "source": "Wind", "share": 6.5 },
+    { "year": "2017", "source": "Solar", "share": 2.0 },
+    { "year": "2018", "source": "Coal", "share": 28.2 },
+    { "year": "2018", "source": "Gas", "share": 36.0 },
+    { "year": "2018", "source": "Nuclear", "share": 19.8 },
+    { "year": "2018", "source": "Hydro", "share": 7.0 },
+    { "year": "2018", "source": "Wind", "share": 6.7 },
+    { "year": "2018", "source": "Solar", "share": 2.3 },
+    { "year": "2019", "source": "Coal", "share": 23.9 },
+    { "year": "2019", "source": "Gas", "share": 39.2 },
+    { "year": "2019", "source": "Nuclear", "share": 20.0 },
+    { "year": "2019", "source": "Hydro", "share": 7.0 },
+    { "year": "2019", "source": "Wind", "share": 7.3 },
+    { "year": "2019", "source": "Solar", "share": 2.6 },
+    { "year": "2020", "source": "Coal", "share": 19.6 },
+    { "year": "2020", "source": "Gas", "share": 41.3 },
+    { "year": "2020", "source": "Nuclear", "share": 20.1 },
+    { "year": "2020", "source": "Hydro", "share": 7.1 },
+    { "year": "2020", "source": "Wind", "share": 8.6 },
+    { "year": "2020", "source": "Solar", "share": 3.3 },
+    { "year": "2021", "source": "Coal", "share": 22.2 },
+    { "year": "2021", "source": "Gas", "share": 39.0 },
+    { "year": "2021", "source": "Nuclear", "share": 19.3 },
+    { "year": "2021", "source": "Hydro", "share": 6.1 },
+    { "year": "2021", "source": "Wind", "share": 9.3 },
+    { "year": "2021", "source": "Solar", "share": 4.1 },
+    { "year": "2022", "source": "Coal", "share": 19.9 },
+    { "year": "2022", "source": "Gas", "share": 40.4 },
+    { "year": "2022", "source": "Nuclear", "share": 18.5 },
+    { "year": "2022", "source": "Hydro", "share": 6.0 },
+    { "year": "2022", "source": "Wind", "share": 10.4 },
+    { "year": "2022", "source": "Solar", "share": 4.9 },
+    { "year": "2023", "source": "Coal", "share": 16.2 },
+    { "year": "2023", "source": "Gas", "share": 43.5 },
+    { "year": "2023", "source": "Nuclear", "share": 18.6 },
+    { "year": "2023", "source": "Hydro", "share": 5.8 },
+    { "year": "2023", "source": "Wind", "share": 10.1 },
+    { "year": "2023", "source": "Solar", "share": 5.8 }
+  ],
+  "encoding": {
+    "x": { "field": "year", "type": "temporal", "axis": { "format": "%Y", "tickCount": 8 } },
+    "y": {
+      "field": "share",
+      "type": "quantitative",
+      "axis": { "title": "Share of generation (%)", "format": ".0f", "grid": true }
+    },
+    "color": {
+      "field": "source",
+      "type": "nominal",
+      "scale": {
+        "domain": ["Gas", "Coal", "Nuclear", "Wind", "Hydro", "Solar"],
+        "range": ["#0072b2", "#d55e00", "#7a858f", "#7a858f", "#7a858f", "#7a858f"]
+      }
+    }
+  },
+  "legend": { "show": false },
+  "endpointLabels": { "content": "label" },
+  "seriesStyles": { "Gas": { "strokeWidth": 3 }, "Coal": { "strokeWidth": 3 } },
+  "chrome": {
+    "title": "Gas rose to 43.5% of US six-source power in 2023 while coal fell to 16.2%",
+    "subtitle": "Share of US electricity from the six main sources, %, 2016-2023"
+  }
+}
+```
+
+## Sequential scales and dark mode
+
+Ordered numeric data, such as state unemployment rates, needs a sequential scale that steps steadily from light to dark within one hue. Rainbow scales break that order because yellow looks brighter than neighboring green and blue and creates false bands across smooth data. A single-hue blue ramp maps low values to pale tints and high values to deep shades, so every reader sees the same ranking in color or grayscale.
+
+Dark mode changes how every palette reads because dark surfaces make saturated colors glare and swallow dark strokes. Blindly inverting raw hex codes turns muted shades into harsh neons and breaks text contrast on filled tiles. Well-tuned dark themes lift categorical colors to higher lightness against dark backgrounds and reverse sequential ramps so high values glow brightest while tile labels switch ink for contrast.
+
+Across US states and DC in the Bureau of Labor Statistics snapshot, unemployment runs from 2.3% in South Dakota to 5.7% in DC. Switching between light and dark mode preserves that single-hue order while adapting both the ramp direction and the label contrast inside every tile.
+
+<Demo id="blog/accessible-sequential-map" />
+
+## The spec
+
+Code under the electricity chart opens its spec. In `encoding.color`, `scale.domain` lists all six sources in a fixed order so `scale.range` assigns deep blue (`#0072b2`) to Gas, vermilion (`#d55e00`) to Coal, and neutral gray (`#7a858f`) to the remaining four. `seriesStyles` raises the focus stroke width to three pixels, while `legend: { show: false }` and `endpointLabels: { content: "label" }` place each series name at the end of its line.
+
+On the tile map, `palette: "blue"` picks OpenChart's sequential ramp, which adjusts automatically when the host passes `darkMode: "force"` or `darkMode: "auto"`. When a chart must hit exact brand colors in both themes, any slot in `theme.colors` (including each entry in `theme.colors.categorical`) accepts a `{ light, dark }` object instead of one string. Supplying a darker shade for `light` and a lifted shade for `dark` locks contrast on both backgrounds while bypassing automatic derivation.
+
+For built-in color schemes and grayscale print patterns, see the [color palettes guide](/docs/style/color/).
