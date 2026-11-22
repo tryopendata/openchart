@@ -1,0 +1,75 @@
+---
+title: How to read and build a Sankey diagram
+description: A Sankey diagram traces how a fixed total splits and merges across stages. Band width encodes volume, so conservation of flow makes the chart readable.
+published: 2026-11-15
+author: OpenChart
+tags: [chart-choice, color]
+related: [flow/sankey, part-to-whole/stacked-100, style/color, framing/chrome]
+lead: blog/energy-sankey-full
+---
+
+import Demo from "../../components/demo/Demo.astro";
+
+A Sankey diagram reads from left to right. Vertical bars mark stages in a system, and curved bands show how much volume moves between them. Both node height and band width scale to the same unit, so a band twice as wide carries twice the quantity. Every unit that enters an intermediate stage leaves it on the right, so the chart tracks how a fixed total splits and merges.
+
+In 2024, US power plants took in 32.79 quadrillion British thermal units (quads) of fuel and delivered less than half to homes, businesses, and factories. The rest left as rejected energy, mostly waste heat and grid losses, according to Lawrence Livermore National Laboratory.
+
+```json demo title="US electricity generation flow, 2024" source="Lawrence Livermore National Laboratory, Estimated U.S. Energy Consumption in 2024 (data: DOE/EIA)" height=460
+{
+  "type": "sankey",
+  "data": [
+    { "source": "Solar", "target": "Electricity generation", "value": 0.75 },
+    { "source": "Nuclear", "target": "Electricity generation", "value": 8.17 },
+    { "source": "Hydro", "target": "Electricity generation", "value": 0.83 },
+    { "source": "Wind", "target": "Electricity generation", "value": 1.54 },
+    { "source": "Natural gas", "target": "Electricity generation", "value": 13.94 },
+    { "source": "Coal", "target": "Electricity generation", "value": 7.01 },
+    { "source": "Biomass", "target": "Electricity generation", "value": 0.32 },
+    { "source": "Geothermal", "target": "Electricity generation", "value": 0.05 },
+    { "source": "Petroleum", "target": "Electricity generation", "value": 0.17 },
+    { "source": "Net electricity imports", "target": "Electricity generation", "value": 0.01 },
+    { "source": "Electricity generation", "target": "Residential", "value": 5.06 },
+    { "source": "Electricity generation", "target": "Commercial", "value": 4.95 },
+    { "source": "Electricity generation", "target": "Industrial", "value": 3.53 },
+    { "source": "Electricity generation", "target": "Transportation", "value": 0.02 },
+    { "source": "Electricity generation", "target": "Rejected energy", "value": 19.21 }
+  ],
+  "encoding": {
+    "source": { "field": "source", "type": "nominal" },
+    "target": { "field": "target", "type": "nominal" },
+    "value": { "field": "value", "type": "quantitative", "format": ".2f" }
+  },
+  "chrome": {
+    "title": "Electricity generation lost 59% of its 32.77 quads as rejected energy",
+    "subtitle": "Primary fuels entering US electricity generation and their outputs, 2024 (quadrillion BTU)"
+  }
+}
+```
+
+Conservation of flow is what makes the middle node readable. Inputs from natural gas, nuclear, coal, and seven smaller sources add up to 32.79 quads, while the five outgoing bands sum to 32.77 quads because LLNL rounds each printed link label to two decimals. About 59% of the output exits directly into rejected energy, leaving residential, commercial, and industrial electricity to split the remaining share.
+
+## Following conservation across four stages
+
+Expanding from the power grid to the whole US economy adds a fourth column and brings the count to 42 links. Primary fuels enter on the left, pass through electricity generation or straight into four end-use sectors, and finish as energy services or rejected energy.
+
+Most energy never passes through an electrical wire, and that bypass separates how the two largest fuels behave. Petroleum accounts for 35.59 quads, with about 70% going straight to transportation, where internal combustion engines lose most of it as rejected energy. Natural gas divides its 34.27 quads across power plants, factories, and buildings, with only a small share reaching transport. Coloring each ribbon by its source fuel keeps those overlapping paths legible across all four columns.
+
+Across all 94.61 quads of 2024 US energy use, nearly two-thirds end as rejected energy and one-third become energy services (useful work like heating, lighting, and moving vehicles). Hovering a node or ribbon isolates its connected upstream and downstream paths.
+
+<Demo id="blog/energy-sankey-full" />
+
+## When a Sankey is the wrong chart
+
+Sankey diagrams break down when values loop backward. Conservation from left to right assumes a directed acyclic graph, meaning flow moves forward through stages without returning to an earlier node. Cash circulating between accounts or recycled materials re-entering a factory create backward bands that cross the layout and obscure totals. A network graph or a transition matrix handles cyclic data cleanly.
+
+Comparing two time periods with side-by-side Sankeys forces readers to judge band widths across separate panels. Aligned lengths along one axis are far easier to compare than curved ribbons separated by whitespace. To show how US fuel shares shifted between 2015 and 2024, draw a slope chart or a multi-line chart.
+
+Dense graphs with dozens of minor categories collapse into unreadable hairlines and colliding labels. When the long tail carries little volume, group nodes below a share threshold into a single "Other" bucket so the main flows stay wide enough to label. If the data has only one split and no intermediate stages, skip the Sankey altogether and draw a horizontal bar chart or a 100% stacked bar.
+
+## The spec
+
+The Code toggle under the first chart shows its full JSON spec. Setting `"type": "sankey"` selects the flow layout, and each row in `data` gives one directed link with `source`, `target`, and `value` fields. The `encoding` block maps those three fields and attaches a d3-format string (`".2f"`) to `value` so every node label prints two decimal places.
+
+Two top-level options manage color and clutter as a diagram grows. `linkStyle` controls ribbon color, defaulting to `"gradient"` between source and target, with `"source"` (used in the four-stage diagram above), `"target"`, and `"neutral"` also available. Setting `other` to a fraction like `0.05` merges nodes under 5% of their column's total into one "Other" node while keeping total flow unchanged. Titles and subtitles sit in `chrome`.
+
+For node alignment and custom "Other" buckets, read the [Sankey documentation](/docs/flow/sankey/).
