@@ -85,7 +85,8 @@ if (byBalance.map((row) => row.type).join() !== "Mortgage,Auto,Student,Cards,Oth
     "The debt bar title assumes the balances rank Mortgage, Auto, Student, Cards, Other.",
   );
 }
-export const studentOverCards = trillions(balanceOf("Student") - balanceOf("Cards"));
+// From the unrounded balances: subtracting the two-decimal bar values would drop a cent of the gap.
+export const studentOverCards = trillions(latestDebt.student_loan - latestDebt.credit_card);
 
 export const debtBars = defineDemo({
   id: "blog/debt-bars",

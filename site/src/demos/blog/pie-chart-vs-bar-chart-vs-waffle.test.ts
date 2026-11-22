@@ -67,7 +67,7 @@ describe("the pie, bar and waffle post's figures", () => {
   });
 
   it("gives the prose's student-over-cards gap and the New York Fed's other share from the rows", () => {
-    expect(studentOverCards).toBe(0.38);
+    expect(studentOverCards).toBe(0.39);
     expect(otherSharePct).toBe(3);
   });
 
@@ -87,7 +87,7 @@ describe("the pie, bar and waffle post's figures", () => {
 
   it("titles each chart with a finding read off the rows", () => {
     expect(titleOf(debtPie)).toBe("Mortgages are 70% of US household debt");
-    expect(titleOf(debtBars)).toBe("Student loans ($1.66T) top credit cards ($1.28T) by $0.38T");
+    expect(titleOf(debtBars)).toBe("Student loans ($1.66T) top credit cards ($1.28T) by $0.39T");
     expect(titleOf(outlaysWaffle)).toBe(
       "Payments for individuals took 66 of every 100 federal dollars in 2024",
     );
