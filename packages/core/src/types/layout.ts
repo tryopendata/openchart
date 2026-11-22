@@ -1883,8 +1883,11 @@ export interface SankeyNodeMark {
   /** Node label positioned outside the node. */
   label: ResolvedLabel;
   /**
-   * The node's total flow, rendered as a tspan after the name in lighter,
-   * tabular ink. Renderers append it to the label's last line.
+   * The node's total flow, in lighter, tabular ink. Present only when the
+   * engine decided it is drawn; renderers draw it whenever it is set. A label
+   * with engine-wrapped `lines` (placed on the flow at narrow widths) takes it
+   * on its own line below the name; any other label takes it after the name on
+   * the last line.
    */
   valueLabel?: { text: string; style: TextStyle };
   /** Node identifier (unique across the diagram). */

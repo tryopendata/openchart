@@ -136,12 +136,14 @@ export function boundedLabelWidth(
 export interface InsideLabel {
   /** Anchor x: just right of the node (start) or just left of it (end). */
   x: number;
-  /** Vertical centre of the whole block (name lines plus value line). */
+  /** Vertical centre of the whole block (name lines, plus the value line when shown). */
   y: number;
   anchor: 'start' | 'end';
   maxWidth: number;
   /** The name, wrapped to `maxWidth`. The value line follows these. */
   lines: string[];
+  /** Whether the value line is drawn; false when the labels needed its room. */
+  showValue: boolean;
 }
 
 /** The plot's bounds the labels must stay within. */
@@ -154,7 +156,10 @@ export interface LabelFrame {
 
 /**
  * Place every node's label on the flow and spread the labels so no two blocks
- * overlap. Each block is the wrapped name plus the value line.
+ * overlap and every block stays inside the frame. When the labels cannot all
+ * fit with their value lines, the value lines go first (the tooltip still
+ * carries each value); if they still cannot fit, the blocks are compressed
+ * evenly into the frame.
  */
 export function placeInsideLabels(
   nodes: readonly LabelNode[],
@@ -164,17 +169,27 @@ export function placeInsideLabels(
   const maxDepth = nodes.reduce((max, n) => Math.max(max, n.depth), 0);
   const edges = columnEdges(nodes);
   const placed = new Map<string, InsideLabel>();
-  const blocks: LabelBlock[] = [];
-
   for (const node of nodes) {
-    const label = insideLabelFor(node, maxDepth, edges, frame, metrics);
-    placed.set(node.id, label);
-    blocks.push(blockOf(node, label, metrics));
+    placed.set(node.id, insideLabelFor(node, maxDepth, edges, frame, metrics));
   }
 
-  for (const [id, centre] of spreadLabelBlocks(blocks, frame.top, frame.bottom)) {
-    const label = placed.get(id);
-    if (label) label.y = centre;
+  const spreadWith = (showValue: boolean) =>
+    spreadLabelBlocks(
+      nodes.map((node) => blockOf(node, placed.get(node.id)!, showValue, metrics)),
+      frame.top,
+      frame.bottom,
+    );
+  let spread = spreadWith(true);
+  let showValue = true;
+  if (!spread.fits) {
+    showValue = false;
+    spread = spreadWith(false);
+  }
+
+  for (const [id, centre] of spread.centres) {
+    const label = placed.get(id)!;
+    label.y = centre;
+    label.showValue = showValue && label.showValue;
   }
   return placed;
 }
@@ -189,32 +204,41 @@ function insideLabelFor(
 ): InsideLabel {
   const centre = (node.y0 + node.y1) / 2;
   const isLast = node.depth === maxDepth && maxDepth > 0;
+  const showValue = !!node.value;
 
   if (isLast) {
     const x = node.x0 - LABEL_GAP;
     const previous = edges.get(node.depth - 1);
     const columnRoom = previous ? x - (previous.right + LABEL_GAP) : x - frame.left;
     const maxWidth = boundedLabelWidth(node.name, columnRoom, x - frame.left, metrics);
-    return { x, y: centre, anchor: 'end', maxWidth, lines: wrapName(node.name, maxWidth, metrics) };
+    const lines = wrapName(node.name, maxWidth, metrics);
+    return { x, y: centre, anchor: 'end', maxWidth, lines, showValue };
   }
 
   const x = node.x1 + LABEL_GAP;
   const next = edges.get(node.depth + 1);
   const columnRoom = next ? next.left - LABEL_GAP - x : frame.right - x;
   const maxWidth = boundedLabelWidth(node.name, columnRoom, frame.right - x, metrics);
-  return { x, y: centre, anchor: 'start', maxWidth, lines: wrapName(node.name, maxWidth, metrics) };
+  const lines = wrapName(node.name, maxWidth, metrics);
+  return { x, y: centre, anchor: 'start', maxWidth, lines, showValue };
 }
 
 function wrapName(name: string, maxWidth: number, metrics: LabelTextMetrics): string[] {
   return wrapText(name, metrics.fontSize, metrics.fontWeight, maxWidth, metrics.measureText);
 }
 
-/** The space one placed label takes: its lines and value, out from its anchor. */
-function blockOf(node: LabelNode, label: InsideLabel, metrics: LabelTextMetrics): LabelBlock {
+/** The space one placed label takes: its lines and value line, out from its anchor. */
+function blockOf(
+  node: LabelNode,
+  label: InsideLabel,
+  showValue: boolean,
+  metrics: LabelTextMetrics,
+): LabelBlock {
+  const withValue = showValue && !!node.value;
   const widths = label.lines.map((line) => textWidth(line, metrics.fontWeight, metrics));
-  if (node.value) widths.push(textWidth(node.value, metrics.valueFontWeight, metrics));
+  if (withValue) widths.push(textWidth(node.value ?? '', metrics.valueFontWeight, metrics));
   const width = Math.max(0, ...widths);
-  const lineCount = label.lines.length + (node.value ? 1 : 0);
+  const lineCount = label.lines.length + (withValue ? 1 : 0);
   return {
     id: node.id,
     centre: label.y,
@@ -233,24 +257,34 @@ export interface LabelBlock {
   right: number;
 }
 
+/** Where the spread put each block, and whether they fit without overlapping. */
+export interface SpreadResult {
+  /** Each block's new vertical centre, by id. */
+  centres: Map<string, number>;
+  /** False when the blocks had to be compressed and some now overlap. */
+  fits: boolean;
+}
+
 /** Whether two blocks share any horizontal span, and so cannot share a row. */
 function shareSpan(a: LabelBlock, b: LabelBlock): boolean {
   return a.left < b.right && b.left < a.right;
 }
 
 /**
- * Nudge label blocks apart so no two that share horizontal space overlap.
- * Blocks in one column always share it; a label right of one column and a
- * label left of the next meet in the same gap and share it only when their
- * text reaches across. A top-to-bottom sweep pushes each block below the
- * sharing blocks above it, then a bottom-to-top sweep pulls any run that
- * spilled past the bottom back inside. Returns each block's new centre by id.
+ * Nudge label blocks apart so no two that share horizontal space overlap, and
+ * keep every block inside [top, bottom]. Blocks in one column always share
+ * space; a label right of one column and a label left of the next meet in the
+ * same gap and share it only when their text reaches across. A top-to-bottom
+ * sweep pushes each block below the sharing blocks above it, then a
+ * bottom-to-top sweep pulls any run that spilled past the bottom back inside.
+ * When the blocks cannot all fit, the run is compressed evenly into the frame
+ * (keeping its order) and `fits` is false.
  */
 export function spreadLabelBlocks(
   blocks: readonly LabelBlock[],
   top: number,
   bottom: number,
-): Map<string, number> {
+): SpreadResult {
   const sorted = [...blocks].sort((a, b) => a.centre - b.centre);
   const tops = sorted.map((b) => b.centre - b.height / 2);
 
@@ -271,5 +305,28 @@ export function spreadLabelBlocks(
     tops[i] = Math.min(tops[i], ceiling - sorted[i].height);
   }
 
-  return new Map(sorted.map((b, i) => [b.id, tops[i] + b.height / 2]));
+  const fits = tops.every((t) => t >= top);
+  if (!fits) compressInto(sorted, tops, top, bottom);
+  return { centres: new Map(sorted.map((b, i) => [b.id, tops[i] + b.height / 2])), fits };
+}
+
+/**
+ * Map an overfull run's tops evenly onto the frame, then clamp each block so it
+ * lies wholly inside. Mutates `tops`.
+ */
+function compressInto(
+  sorted: readonly LabelBlock[],
+  tops: number[],
+  top: number,
+  bottom: number,
+): void {
+  const first = Math.min(...tops);
+  const lastIndex = tops.indexOf(Math.max(...tops));
+  const span = tops[lastIndex] - first;
+  const room = bottom - sorted[lastIndex].height - top;
+  const scale = span > 0 ? Math.max(room, 0) / span : 0;
+  for (let i = 0; i < tops.length; i++) {
+    const mapped = top + (tops[i] - first) * scale;
+    tops[i] = Math.max(top, Math.min(mapped, bottom - sorted[i].height));
+  }
 }

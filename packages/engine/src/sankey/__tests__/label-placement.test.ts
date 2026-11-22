@@ -45,7 +45,7 @@ describe('shouldPlaceLabelsInside', () => {
 
 describe('spreadLabelBlocks', () => {
   it('leaves blocks that do not touch where they are', () => {
-    const centres = spreadLabelBlocks(
+    const { centres } = spreadLabelBlocks(
       [
         { id: 'a', centre: 50, height: 20, left: 0, right: 50 },
         { id: 'b', centre: 200, height: 20, left: 0, right: 50 },
@@ -58,7 +58,7 @@ describe('spreadLabelBlocks', () => {
   });
 
   it('pushes an overlapping block down below its neighbour, in order', () => {
-    const centres = spreadLabelBlocks(
+    const { centres } = spreadLabelBlocks(
       [
         { id: 'b', centre: 105, height: 32, left: 0, right: 50 },
         { id: 'a', centre: 100, height: 32, left: 0, right: 50 },
@@ -72,7 +72,7 @@ describe('spreadLabelBlocks', () => {
   });
 
   it('pulls a run that spilled past the bottom back inside the frame', () => {
-    const centres = spreadLabelBlocks(
+    const { centres } = spreadLabelBlocks(
       [
         { id: 'a', centre: 390, height: 32, left: 0, right: 50 },
         { id: 'b', centre: 395, height: 32, left: 0, right: 50 },
@@ -95,8 +95,24 @@ describe('spreadLabelBlocks', () => {
         0,
         400,
       );
-    expect(meeting(260, 280).get('last')).toBe(100);
-    expect(meeting(300, 280).get('last')).toBe(100 + 32 + 2);
+    expect(meeting(260, 280).centres.get('last')).toBe(100);
+    expect(meeting(300, 280).centres.get('last')).toBe(100 + 32 + 2);
+  });
+
+  it('keeps every block of an overfull column inside the frame', () => {
+    const blocks = [
+      { id: 'a', centre: 10, height: 40, left: 0, right: 50 },
+      { id: 'b', centre: 10, height: 40, left: 0, right: 50 },
+    ];
+    const { centres, fits } = spreadLabelBlocks(blocks, 0, 50);
+    expect(fits).toBe(false);
+    for (const block of blocks) {
+      const centre = centres.get(block.id)!;
+      expect(centre - block.height / 2).toBeGreaterThanOrEqual(0);
+      expect(centre + block.height / 2).toBeLessThanOrEqual(50);
+    }
+    // Order is kept: a stays above (or level with) b.
+    expect(centres.get('a')!).toBeLessThanOrEqual(centres.get('b')!);
   });
 });
 
@@ -144,5 +160,24 @@ describe('placeInsideLabels', () => {
     // Each block is two lines (name and value) of 16px.
     const ys = ['Coal', 'Biomass', 'Geothermal'].map((id) => placed.get(id)!.y);
     for (let i = 1; i < ys.length; i++) expect(ys[i] - ys[i - 1]).toBeGreaterThanOrEqual(32);
+    expect(placed.get('Coal')?.showValue).toBe(true);
+  });
+
+  it('drops value lines first when a column cannot hold every block', () => {
+    // Five 2-line blocks (32px each plus gaps) need 168px; 1-line blocks need 88px.
+    const ids = ['A', 'B', 'C', 'D', 'E'];
+    const column = [
+      ...ids.map((id, i) => node(id, 0, 0, i * 20, i * 20 + 10)),
+      node('Z', 1, 300, 0, 100),
+    ];
+    const placed = placeInsideLabels(column, { ...frame, bottom: 100 }, metrics);
+    for (const id of ids) {
+      const label = placed.get(id)!;
+      expect(label.showValue).toBe(false);
+      expect(label.y - 8).toBeGreaterThanOrEqual(0);
+      expect(label.y + 8).toBeLessThanOrEqual(100);
+    }
+    const ys = ids.map((id) => placed.get(id)!.y);
+    for (let i = 1; i < ys.length; i++) expect(ys[i] - ys[i - 1]).toBeGreaterThanOrEqual(16);
   });
 });

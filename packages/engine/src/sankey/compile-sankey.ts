@@ -35,7 +35,6 @@ import {
   defaultNumberFormatter,
   estimateTextWidth,
   resolveTheme,
-  wrapText,
 } from '@opendata-ai/openchart-core';
 import { emitSpecWarnings, expandSpecSugar } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
@@ -44,17 +43,9 @@ import { finiteNumber } from '../data/finite-number';
 import { resolveFieldFormatter } from '../format/field-format';
 import { resolveChromeLayout } from '../layout/shared';
 import { ENTRY_GAP, measureLegendWrap, SWATCH_GAP, SWATCH_SIZE } from '../legend/wrap';
-import {
-  boundedLabelWidth,
-  columnEdges,
-  type InsideLabel,
-  LABEL_GAP,
-  type LabelNode,
-  type LabelTextMetrics,
-  placeInsideLabels,
-  shouldPlaceLabelsInside,
-} from './label-placement';
+import { LABEL_GAP, shouldPlaceLabelsInside } from './label-placement';
 import { type ComputedNode, computeSankeyLayout, generateLinkPath } from './layout';
+import { labelsLeftForDepth, resolveNodeLabels, VALUE_GAP } from './node-labels';
 import { applySankeyOverride } from './overrides';
 import type { NormalizedSankeySpec } from './types';
 
@@ -62,8 +53,6 @@ import type { NormalizedSankeySpec } from './types';
 // Constants
 // ---------------------------------------------------------------------------
 
-/** Line pitch of node labels, as a multiple of the font size. */
-const LABEL_LINE_HEIGHT = 1.3;
 const LINK_OPACITY_LIGHT = 0.5;
 /**
  * Dark-mode link opacity. Light ribbons on a dark ground gain apparent weight,
@@ -71,8 +60,6 @@ const LINK_OPACITY_LIGHT = 0.5;
  */
 const LINK_OPACITY_DARK = 0.6;
 const NODE_CORNER_RADIUS = 2;
-/** Gap between a node's name and its value tspan. */
-const VALUE_GAP = 5;
 /** Share of the drawing width either label gutter may claim. */
 const MAX_LABEL_GUTTER = 0.35;
 /** Id prefix for a synthetic "Other" bucket node (one per column). */
@@ -232,115 +219,6 @@ function rewriteRowsForOther(
     out.push(next);
   }
   return out;
-}
-
-/**
- * Determine label position for a node based on its column depth.
- * Default ('auto'): leftmost/middle columns label right, rightmost column labels left.
- * 'right': all labels to the right.  'left': all labels to the left.
- */
-function labelsLeftForDepth(
-  depth: number,
-  maxDepth: number,
-  nodeLabelAlign: 'auto' | 'left' | 'right',
-): boolean {
-  if (nodeLabelAlign === 'left') return true;
-  if (nodeLabelAlign === 'right') return false;
-  // 'auto': the first column labels outside-left and the last outside-right, so
-  // the flow itself is never crossed by type. Interior columns label right.
-  if (depth === 0 && maxDepth > 0) return true;
-  return false;
-}
-
-function computeNodeLabel(
-  node: ComputedNode,
-  maxDepth: number,
-  theme: ResolvedTheme,
-  nodeWidth: number,
-  nodeLabelAlign: 'auto' | 'left' | 'right' = 'auto',
-  containerWidth?: number,
-  padding?: number,
-): SankeyNodeMark['label'] {
-  const depth = node.depth ?? 0;
-  const placeLeft = labelsLeftForDepth(depth, maxDepth, nodeLabelAlign);
-
-  const style: TextStyle = {
-    fontFamily: theme.fonts.family,
-    fontSize: theme.fonts.sizes.small,
-    fontWeight: theme.fonts.weights.medium,
-    fill: theme.colors.text,
-    lineHeight: LABEL_LINE_HEIGHT,
-  };
-
-  const x0 = node.x0 ?? 0;
-  const x1 = node.x1 ?? nodeWidth;
-  const y0 = node.y0 ?? 0;
-  const y1 = node.y1 ?? 0;
-  const midY = (y0 + y1) / 2;
-
-  // Compute maxWidth: space from label position to the container edge
-  const pad = padding ?? 0;
-  let maxWidth: number | undefined;
-  if (containerWidth !== undefined) {
-    if (placeLeft) {
-      // Label goes left from x0: available space is from left padding to x0
-      maxWidth = x0 - LABEL_GAP - pad;
-    } else {
-      // Label goes right from x1: available space is from x1 to right edge
-      maxWidth = containerWidth - pad - (x1 + LABEL_GAP);
-    }
-    if (maxWidth !== undefined && maxWidth < 0) maxWidth = 0;
-  }
-
-  if (placeLeft) {
-    return {
-      text: node.label ?? node.id,
-      x: x0 - LABEL_GAP,
-      y: midY,
-      style: { ...style, textAnchor: 'end', dominantBaseline: 'central' },
-      visible: true,
-      maxWidth,
-    };
-  }
-
-  return {
-    text: node.label ?? node.id,
-    x: x1 + LABEL_GAP,
-    y: midY,
-    style: { ...style, textAnchor: 'start', dominantBaseline: 'central' },
-    visible: true,
-    maxWidth,
-  };
-}
-
-/**
- * A label placed on the flow. It carries its wrapped name lines (the renderer
- * stacks the value on its own line below them, the block centred on `y`) and
- * a halo in the background colour so it reads over any band.
- */
-function insideLabelMark(
-  text: string,
-  placed: InsideLabel,
-  theme: ResolvedTheme,
-): SankeyNodeMark['label'] {
-  return {
-    text,
-    lines: placed.lines,
-    x: placed.x,
-    y: placed.y,
-    style: {
-      fontFamily: theme.fonts.family,
-      fontSize: theme.fonts.sizes.small,
-      fontWeight: theme.fonts.weights.medium,
-      fill: theme.colors.text,
-      lineHeight: LABEL_LINE_HEIGHT,
-      textAnchor: placed.anchor,
-      dominantBaseline: 'central',
-    },
-    visible: true,
-    maxWidth: placed.maxWidth,
-    halo: true,
-  };
 }
 
 // ---------------------------------------------------------------------------
@@ -653,114 +531,23 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
     nodeColorMap.set(otherId, theme.colors.neutral[300]);
   }
 
-  // 8. Compute max depth for label positioning
-  const maxDepth = nodes.reduce((max, n) => Math.max(max, n.depth ?? 0), 0);
+  // 8. Resolve each node's label and whether its value is drawn.
+  const nodeLabels = resolveNodeLabels(nodes, {
+    theme,
+    align: nodeLabelAlign,
+    inside: labelsInside,
+    frame: { left: area.x, right: area.x + area.width, top: area.y, bottom: area.y + area.height },
+    measureText: options.measureText,
+    formatValue: (value) => formatFlowValue(value, nodeFmt),
+  });
 
   // 9. Build SankeyNodeMark[]
-  const valueStyle: TextStyle = {
-    fontFamily: theme.fonts.family,
-    fontSize: theme.fonts.sizes.small,
-    fontWeight: theme.fonts.weights.normal,
-    fill: theme.colors.axis,
-    fontVariant: 'tabular-nums',
-    lineHeight: LABEL_LINE_HEIGHT,
-  };
-
-  const labelMetrics: LabelTextMetrics = {
-    fontSize: labelFontSize,
-    fontWeight: labelFontWeight,
-    valueFontWeight,
-    lineHeight: labelFontSize * LABEL_LINE_HEIGHT,
-    measureText: options.measureText,
-  };
-  const labelNodes: LabelNode[] = nodes.map((node) => ({
-    id: node.id,
-    depth: node.depth ?? 0,
-    x0: node.x0 ?? 0,
-    x1: node.x1 ?? 0,
-    y0: node.y0 ?? 0,
-    y1: node.y1 ?? 0,
-    name: node.label ?? node.id,
-    value: formatFlowValue(node.value ?? 0, nodeFmt),
-  }));
-  // Column extents, so an interior label knows how much room it has before it
-  // runs into the next column.
-  const columns = columnEdges(labelNodes);
-  const insideLabels = labelsInside
-    ? placeInsideLabels(
-        labelNodes,
-        { left: area.x, right: area.x + area.width, top: area.y, bottom: area.y + area.height },
-        labelMetrics,
-      )
-    : undefined;
-
-  /**
-   * An outside-mode label. An interior one wraps before the next column when
-   * its longest word fits there, instead of running across that column.
-   */
-  const outsideLabelFor = (node: ComputedNode): SankeyNodeMark['label'] => {
-    const label = computeNodeLabel(
-      node,
-      maxDepth,
-      theme,
-      sankeySpec.nodeWidth,
-      nodeLabelAlign,
-      options.width,
-      padding,
-    );
-    const next = columns.get((node.depth ?? 0) + 1);
-    if (label.style.textAnchor !== 'start' || !next || label.maxWidth === undefined) return label;
-    const columnRoom = Math.min(label.maxWidth, next.left - LABEL_GAP - label.x);
-    return {
-      ...label,
-      maxWidth: boundedLabelWidth(label.text, columnRoom, label.maxWidth, labelMetrics),
-    };
-  };
-
-  /**
-   * Whether the node's value is drawn. The engine owns this call; the renderer
-   * draws whatever value the layout carries. A label on the flow (narrow
-   * widths) always keeps it, on its own line. An outside interior label keeps
-   * it only when name and value fit on one line before the next column. An
-   * outside edge label keeps it unless it would push the last wrapped line past
-   * the label's room, which happens once a gutter reaches its 35% cap; the
-   * tooltip still carries the value.
-   */
-  const valueLabelFor = (
-    node: ComputedNode,
-    depth: number,
-    label: SankeyNodeMark['label'],
-    text: string,
-  ): SankeyNodeMark['valueLabel'] => {
-    const value = { text, style: valueStyle };
-    if (insideLabels) return value;
-    const valueWidth = VALUE_GAP + textWidth(text, valueFontWeight);
-    const placedLeft = labelsLeftForDepth(depth, maxDepth, nodeLabelAlign);
-    const nextColumn = columns.get(depth + 1)?.left;
-    if (!placedLeft && depth !== maxDepth && nextColumn !== undefined) {
-      const available = nextColumn - LABEL_GAP - ((node.x1 ?? 0) + LABEL_GAP);
-      return textWidth(label.text, labelFontWeight) + valueWidth <= available ? value : undefined;
-    }
-    if (label.maxWidth === undefined || label.maxWidth <= 0) return value;
-    const lines = wrapText(
-      label.text,
-      labelFontSize,
-      labelFontWeight,
-      label.maxWidth,
-      options.measureText,
-    );
-    const lastLine = lines[lines.length - 1] ?? '';
-    return textWidth(lastLine, labelFontWeight) + valueWidth <= label.maxWidth ? value : undefined;
-  };
-
   const nodeMarks: SankeyNodeMark[] = nodes.map((node) => {
     const fill = nodeColorMap.get(node.id) ?? theme.colors.categorical[0];
     const depth = node.depth ?? 0;
     const merged = otherMembers.get(node.id);
     const valueText = formatFlowValue(node.value ?? 0, nodeFmt);
-    const label = insideLabels
-      ? insideLabelMark(node.label ?? node.id, insideLabels.get(node.id)!, theme)
-      : outsideLabelFor(node);
+    const { label, valueLabel } = nodeLabels.get(node.id)!;
 
     return {
       type: 'sankeyNode' as const,
@@ -774,7 +561,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
       stroke: 'none',
       cornerRadius: NODE_CORNER_RADIUS,
       label,
-      valueLabel: valueLabelFor(node, depth, label, valueText),
+      valueLabel,
       nodeId: node.id,
       value: node.value ?? 0,
       depth,
