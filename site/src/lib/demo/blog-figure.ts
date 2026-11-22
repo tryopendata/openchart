@@ -10,6 +10,7 @@ import {
   isChartSpec,
   isGeoMapSpec,
   isLayerSpec,
+  type LayerSpec,
   type VizSpec,
 } from "@opendata-ai/openchart-core";
 
@@ -67,10 +68,22 @@ function barKind(spec: ChartSpec): string {
   return x?.type === "quantitative" ? "bar" : "column";
 }
 
+/**
+ * A layer spec's first child with the parent's encoding under its own, channel
+ * by channel (the child's channel wins), the way the engine hands encoding down.
+ */
+function firstLayer(spec: LayerSpec): LayerSpec["layer"][number] | undefined {
+  const [first] = spec.layer;
+  if (!first || !spec.encoding) return first;
+  // The spec types pair each mark with its own encoding shape, which a spread
+  // can't prove it keeps; only the chart kind is read from the merged spec.
+  return { ...first, encoding: { ...spec.encoding, ...first.encoding } } as typeof first;
+}
+
 /** The `CREDIT_TARGETS` key for a spec, or a description of it when it has none. */
 function chartKind(spec: VizSpec): string {
   if (isLayerSpec(spec)) {
-    const [first] = spec.layer;
+    const first = firstLayer(spec);
     return first ? chartKind(first) : "empty layer";
   }
   if (isGeoMapSpec(spec)) {
@@ -107,8 +120,11 @@ export function blogFigure(id: string, spec: VizSpec): BlogFigure {
   return { credit: figureCredit(id, spec), staticWidth: BLOG_FIGURE_WIDTH };
 }
 
-/** One slug segment under /blog/, with or without the trailing slash; "tags" is the tag pages' parent, not a post. */
-const BLOG_POST_ROUTE = /^\/blog\/(?!tags\/?$)[a-z0-9-]+\/?$/;
+/**
+ * One segment under /blog/, with or without the trailing slash. "tags" is the
+ * tag pages' parent, and a segment with a dot is a file such as rss.xml, not a post.
+ */
+const BLOG_POST_ROUTE = /^\/blog\/(?!tags\/?$)[^/.]+\/?$/;
 
 /** Whether a route is a blog post ("/blog/<slug>/"), not the index or a tag page. */
 export function isBlogPostPath(pathname: string): boolean {

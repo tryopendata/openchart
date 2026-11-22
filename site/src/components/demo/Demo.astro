@@ -16,7 +16,7 @@ import { getDemo } from "../../demos/registry";
 import { DEFAULT_DEMO_HEIGHT, type DemoDef } from "../../demos/types";
 import { type BlogFigure, blogFigure, isBlogPostPath } from "../../lib/demo/blog-figure";
 import { validateDemoControls } from "../../lib/demo/controls";
-import { demoFigureHtml } from "../../lib/demo/figure";
+import { DemoRenderError, demoFigureHtml } from "../../lib/demo/figure";
 import { pageSharedHashes } from "../../lib/demo/shared-values";
 import { validateDemo } from "../../lib/demo/validate";
 
@@ -37,7 +37,7 @@ try {
   blog = isBlogPostPath(Astro.url.pathname) ? blogFigure(demo.id, demo.spec) : undefined;
 } catch (error) {
   const reason = error instanceof Error ? error.message : String(error);
-  throw new Error(`${Astro.url.pathname} renders <Demo id="${id}" />: ${reason}`, {
+  throw new DemoRenderError(`${Astro.url.pathname} renders <Demo id="${id}" />: ${reason}`, {
     cause: error,
   });
 }
