@@ -100,8 +100,10 @@ const nflSpec: ChartSpec = {
       y: 50,
       label: "Even odds",
       style: "dashed",
+      // Above the line at the left, shifted right past the inline "50%" tick it would cover.
       labelPlacement: "start",
       labelAnchor: "top",
+      labelOffset: { dx: 40 },
     },
     {
       type: "text",
