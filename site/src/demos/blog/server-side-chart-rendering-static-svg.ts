@@ -71,6 +71,13 @@ const topGain = migration[0];
 const topLoss = migration.at(-1);
 if (!topGain || !topLoss) throw new Error("The IRS rows are empty");
 
+/** Phones span compact (under 400px) and medium (400 to 700px), so both take the short title. */
+const phoneOverride = {
+  chrome: {
+    title: `${topLoss.state} lost ${Math.abs(topLoss.net).toLocaleString("en-US")} people to other states, ${topGain.state} gained ${topGain.net.toLocaleString("en-US")}`,
+  },
+};
+
 export const migrationExtremes = defineDemo({
   id: "blog/migration-extremes",
   title: "Net domestic migration by state, 2022-23: the five largest gains and losses",
@@ -95,13 +102,7 @@ export const migrationExtremes = defineDemo({
     theme: { colors: { categorical: [TEAL, ORANGE] } },
     legend: { show: false },
     labels: { format: ",.0f" },
-    overrides: {
-      compact: {
-        chrome: {
-          title: `${topLoss.state} lost ${Math.abs(topLoss.net).toLocaleString("en-US")} people to other states, ${topGain.state} gained ${topGain.net.toLocaleString("en-US")}`,
-        },
-      },
-    },
+    overrides: { compact: phoneOverride, medium: phoneOverride },
     chrome: {
       title: `${topLoss.state} lost a net ${Math.abs(topLoss.net).toLocaleString("en-US")} people to other states in 2022-23, while ${topGain.state} gained ${topGain.net.toLocaleString("en-US")}`,
       subtitle: `Net domestic migration in 2022-23, IRS tax-filer exemptions: the ${EDGE} largest gains and losses`,
