@@ -4,8 +4,8 @@
  * least since 2019Q4, then the states with the largest net domestic migration
  * gains and losses in 2022-23. Rows are computed from the dataset modules and
  * titles are computed from the rows, so neither can drift from the data. The
- * post's `json demo` fence repeats `housePriceRange.spec` verbatim, and a test
- * keeps the two in sync.
+ * post's `json demo` fence repeats `migrationExtremes.spec` verbatim, and a
+ * test keeps the two in sync.
  */
 import { fhfaStateHpi } from "@datasets/fhfa-state-hpi";
 import { irsStateMigration } from "@datasets/irs-state-migration";
@@ -14,8 +14,17 @@ import { sourceOf } from "../source";
 import { ACCENT } from "../the-spec/shared";
 import { defineDemo } from "../types";
 
+/**
+ * Gain and loss colors as light/dark pairs. A value label outside its bar takes
+ * the bar's color, so each value clears 4.5:1 as text on its own page.
+ */
+const TEAL = { light: ACCENT, dark: "#22a3c4" };
+const ORANGE = { light: "#b54d00", dark: "#f07a2b" };
+
 const names = new Map(uflVepTurnout.data.map((row) => [row.state_abbr, row.state]));
 const nameOf = (code: string) => names.get(code) ?? code;
+/** The name a title uses: "DC" reads better in a sentence than "District of Columbia". */
+const titleName = (name: string) => (name === "District of Columbia" ? "DC" : name);
 
 const EDGE = 5;
 
@@ -32,7 +41,8 @@ export const housePriceRange = defineDemo({
   source: sourceOf(fhfaStateHpi),
   height: 420,
   spec: {
-    mark: { type: "bar", fill: ACCENT },
+    mark: { type: "bar" },
+    theme: { colors: { categorical: [TEAL] } },
     data: [...byGrowth.slice(0, EDGE), ...byGrowth.slice(-EDGE)],
     encoding: {
       x: {
@@ -44,7 +54,7 @@ export const housePriceRange = defineDemo({
     },
     labels: { format: ".1f", suffix: "%" },
     chrome: {
-      title: `House prices rose ${highest.change.toFixed(1)}% in ${highest.state} from 2019 to 2026 and ${lowest.change.toFixed(1)}% in ${lowest.state}`,
+      title: `House prices rose ${highest.change.toFixed(1)}% in ${highest.state} from 2019 to 2026 and ${lowest.change.toFixed(1)}% in ${titleName(lowest.state)}`,
       subtitle: `Change in the all-transactions house price index, 2019 Q4 to 2026 Q2: the ${EDGE} jurisdictions with the largest and smallest increases`,
     },
   },
@@ -79,9 +89,10 @@ export const migrationExtremes = defineDemo({
       color: {
         field: "direction",
         type: "nominal",
-        scale: { domain: ["Net gain", "Net loss"], range: [ACCENT, "#d55e00"] },
+        scale: { domain: ["Net gain", "Net loss"] },
       },
     },
+    theme: { colors: { categorical: [TEAL, ORANGE] } },
     legend: { show: false },
     labels: { format: ",.0f" },
     chrome: {

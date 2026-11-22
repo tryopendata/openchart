@@ -10,7 +10,9 @@ lead: blog/house-price-range
 
 import Demo from "../../components/demo/Demo.astro";
 
-Some places cannot run a chart library: an RSS reader, a page for readers with JavaScript off, a static site build, a report generator. `renderStaticSVG` takes a chart spec and returns an SVG string on the server, with no browser or DOM. The charts on this page are made that way. Each one is rendered to SVG at build time, and a reader without JavaScript sees only that.
+From late 2019 to mid-2026, house prices rose 85.9% in Maine and 14.6% in DC. A chart of that gap might need to reach an RSS reader, an email or a browser with JavaScript off, and none of those can run chart code, so the chart has to arrive as a finished image.
+
+A static site build or a report generator can run the library, and drawing the chart there saves the reader's browser the work. `renderStaticSVG` takes a chart spec and returns an SVG string on the server, with no browser or DOM. Every chart on this page is rendered that way at build time, and a reader without JavaScript sees only that.
 
 <Demo id="blog/house-price-range" />
 
@@ -32,11 +34,13 @@ const svg = renderStaticSVG(spec, {
 await writeFile("house-prices.svg", svg);
 ```
 
-Running this chart's spec through it in plain Node, where `window` and `document` do not exist, worked without any setup. The first call took 14 ms, and the next 50 averaged about 1 ms each on one laptop. The SVG was 15.8 KB, or 2.3 KB gzipped, and the same spec and options produced the same bytes every time.
+It runs in plain Node, where `window` and `document` don't exist, with no setup. The house price chart comes out at about 15 KB, 2 KB gzipped, and the same spec and options give the same bytes every time.
 
 `idPrefix` namespaces the ids inside the SVG, so give each figure in a document its own.
 
-Temporal axes can depend on the server's timezone, so build with `TZ=UTC` if dates have to match between machines. The other options, including `theme` and `precision`, are listed in the [static rendering docs](/docs/get-started/static-rendering/).
+Temporal axes can depend on the server's timezone, so build with `TZ=UTC` if dates have to match between machines.
+
+The server has no fonts to measure, so it estimates how wide each piece of text is, and a long title can break at a different word than it does in the live chart. Pass `measureText`, a function that returns the width of a string at a font size and weight, if line breaks must match.
 
 ## Light and dark
 
@@ -44,7 +48,7 @@ The server has no color scheme to detect, and `darkMode: "auto"` gives the light
 
 ## What a static SVG leaves out
 
-A static SVG is a picture. It has no animation, no scripts, no tooltips, no keyboard navigation and no hidden data table. It does keep `role="img"` and a label built from the chart's title, which for the chart above reads "Bar chart showing House prices rose 85.9% in Maine from 2019 to 2026 and 14.6% in District of Columbia (10 data points)". Write the finding in a caption and put the values in an HTML table, as the [accessibility post](/blog/accessible-charts-for-the-web/) describes.
+A static SVG is a picture. It has no animation, no scripts, no tooltips, no keyboard navigation and no hidden data table. It does keep `role="img"` and a label built from the chart's title, which for the chart above reads "Bar chart showing House prices rose 85.9% in Maine from 2019 to 2026 and 14.6% in DC (10 data points)". Write the finding in a caption and put the values in an HTML table, as the [accessibility post](/blog/accessible-charts-for-the-web/) describes.
 
 It also supports fewer specs than the live library. Charts, layered charts, bar lists, tile maps and geographic maps work. Tables, Sankey diagrams and network graphs do not.
 
@@ -54,9 +58,7 @@ A reader who needs to hover for exact values or step through points from the key
 
 ## Getting a PNG on the server
 
-The output is always SVG. Where a link preview or an email needs a raster image, you have to convert the SVG yourself with a rasterizer such as `sharp`. This site's social cards use `sharp` that way, though it draws those cards with a different tool and not with charts. Rasterizing a chart SVG was not tested for this post.
-
-The SVG names its font and does not embed one, so the machine that draws it needs the font installed. To export from a live chart in the browser instead, see [export](/docs/output/export/).
+The output is always SVG. Where a link preview or an email needs a raster image, convert it with a rasterizer such as `sharp`; the machine needs the chart's font installed, because the SVG names its font without embedding it. To export from a live chart in the browser instead, see [export](/docs/output/export/).
 
 ## The spec
 
@@ -100,12 +102,22 @@ The spec is plain JSON, so the same file can feed the server render and a live `
         "domain": [
           "Net gain",
           "Net loss"
-        ],
-        "range": [
-          "#0e7490",
-          "#d55e00"
         ]
       }
+    }
+  },
+  "theme": {
+    "colors": {
+      "categorical": [
+        {
+          "light": "#0e7490",
+          "dark": "#22a3c4"
+        },
+        {
+          "light": "#b54d00",
+          "dark": "#f07a2b"
+        }
+      ]
     }
   },
   "legend": {
@@ -121,6 +133,6 @@ The spec is plain JSON, so the same file can feed the server render and a live `
 }
 ```
 
-The `direction` field is added when the rows are prepared, as "Net gain" or "Net loss". The spec's `color` scale pins that order to two colors, so losses stay orange on every render. `sort: "-x"` puts the largest loss first, and `labels` prints each value on its bar. The [anatomy of a spec](/docs/the-spec/anatomy/) explains the other blocks.
+The `direction` field is added when the rows are prepared, as "Net gain" or "Net loss". The `color` scale's `domain` fixes that order, and `theme.colors.categorical` gives each a light and a dark color, so losses stay orange on every render and their outside labels stay readable on both pages. `sort: "-x"` puts the largest loss first, and `labels` prints each value on its bar. The [anatomy of a spec](/docs/the-spec/anatomy/) explains the other blocks.
 
-Static output, the two-theme pattern and every option are covered in [the static rendering docs](/docs/get-started/static-rendering/).
+[The static rendering docs](/docs/get-started/static-rendering/) give the default for every option, including `precision`, which sets how many decimals the SVG coordinates keep.
