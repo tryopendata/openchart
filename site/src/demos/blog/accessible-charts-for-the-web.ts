@@ -10,8 +10,15 @@ import { cdcOverdoseByDrug } from "@datasets/cdc-overdose-by-drug";
 import { nflHomeAdvantage } from "@datasets/nfl-home-advantage";
 import type { ChartSpec } from "@opendata-ai/openchart-core";
 import { sourceOf } from "../source";
-import { ACCENT } from "../the-spec/shared";
 import { defineDemo } from "../types";
+
+/**
+ * The two overdose series as light/dark pairs. Each is also its end label's
+ * text color, so each value clears 4.5:1 on its own page: the light values on
+ * white, the dark ones on the dark page (#0e0f10) and its panel (#17181a).
+ */
+const TEAL = { light: "#0e7490", dark: "#22a3c4" };
+const ORANGE = { light: "#b54d00", dark: "#f07a2b" };
 
 const overdoseRows = cdcOverdoseByDrug.data;
 const nflRows = nflHomeAdvantage.data;
@@ -53,10 +60,11 @@ export const overdoseAccessible = defineDemo({
       color: {
         field: "drug",
         type: "nominal",
-        scale: { domain: ["Synthetic opioids", "Heroin"], range: [ACCENT, "#d55e00"] },
+        scale: { domain: ["Synthetic opioids", "Heroin"] },
       },
       strokeDash: { field: "drug", type: "nominal" },
     },
+    theme: { colors: { categorical: [TEAL, ORANGE] } },
     legend: { show: false },
     endpointLabels: { format: ",.0f" },
     chromeLayout: "subtract",
@@ -84,8 +92,17 @@ const nflSpec: ChartSpec = {
       axis: { title: "Home team wins", format: ".0f", labelSuffix: "%", grid: true },
     },
   },
+  // The rule color is also its label's text color; the default grey is 3.5:1 on white.
+  theme: { colors: { annotationRule: { light: "#6b6b66", dark: "#a3a39c" } } },
   annotations: [
-    { type: "refline", y: 50, label: "Even odds", style: "dashed" },
+    {
+      type: "refline",
+      y: 50,
+      label: "Even odds",
+      style: "dashed",
+      labelPlacement: "start",
+      labelAnchor: "top",
+    },
     {
       type: "text",
       x: String(below.season),

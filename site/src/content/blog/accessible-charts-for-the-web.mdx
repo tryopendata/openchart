@@ -10,17 +10,17 @@ lead: blog/overdose-accessible
 
 import Demo from "../../components/demo/Demo.astro";
 
-A chart that is only an unlabeled picture tells a screen reader user nothing. An accessible chart needs four things: a text alternative, access to the values, a way to explore from the keyboard, and meaning that does not depend on color. This is what a live OpenChart chart provides for each, and what you still write.
+In 2020, a season played mostly without fans, NFL home teams won 49.8% of their games, the only season from 1999 to 2025 below half. A sighted reader sees that dip in the chart below at a glance. A screen reader user gets it only if the chart says it in text, and needs three more things to use the chart at all: access to the values, a way to explore from the keyboard, and meaning that does not depend on color.
 
-The chart below sets no accessibility options.
+This chart sets no accessibility options.
 
 <Demo id="blog/nfl-home-generated" />
 
-Reading its DOM shows what a screen reader gets. The chart is a single `role="img"` with the label "Line chart showing NFL home teams won 59.7% of games in 1999 and 49.8% in 2020 from 1999 to 2025 (27 data points)". The library builds that label from the chart type, your title, the date range and the point count, so a title that states the finding already does most of the work.
+A screen reader meets it as a single `role="img"` with the label "Line chart showing NFL home teams won 59.7% of games in 1999 and 49.8% in 2020 from 1999 to 2025 (27 data points)". The library builds that label from the chart type, your title, the date range and the point count. Treat it as a fallback: it reads awkwardly, and it carries the finding only as far as your title does.
 
-## Write the text alternative
+## Text alternatives
 
-A generated label cannot know what you want the reader to take away. Set `a11y.description` and it replaces the label. State the finding, not the chart type, because the values are available separately.
+Set `a11y.description` and it replaces the generated label. Write the finding there in a sentence or two, and leave out the chart type, because the values are available separately.
 
 The chart below does this. Its description gives the year synthetic opioids passed heroin, the peak and the drop since.
 
@@ -82,16 +82,26 @@ The chart below does this. Its description gives the year synthetic opioids pass
         "domain": [
           "Synthetic opioids",
           "Heroin"
-        ],
-        "range": [
-          "#0e7490",
-          "#d55e00"
         ]
       }
     },
     "strokeDash": {
       "field": "drug",
       "type": "nominal"
+    }
+  },
+  "theme": {
+    "colors": {
+      "categorical": [
+        {
+          "light": "#0e7490",
+          "dark": "#22a3c4"
+        },
+        {
+          "light": "#b54d00",
+          "dark": "#f07a2b"
+        }
+      ]
     }
   },
   "legend": {
@@ -114,7 +124,7 @@ Next to every live chart the library builds a hidden HTML table of its data, and
 
 The chart container takes keyboard focus. On line charts the left and right arrow keys step from one x position to the next, the tooltip lists every series at that position, and Escape closes it. In the overdose chart, focus starts at 2015, and two presses of the right arrow reach 2017, where the tooltip reads 28,659 for synthetic opioids and 15,593 for heroin. To announce each step in your own live region, pass `onMarkFocus` when you mount the chart. The [interaction page](/docs/behavior/interaction/) lists the other handlers.
 
-## Do not rely on color alone
+## Color and other cues
 
 The overdose chart gives each line a color, a dash pattern and a name at its right end, so a reader who cannot tell orange from teal can still tell the lines apart. Bars and areas can take `fillPattern: "auto"` to add hatching. The [colorblind palettes post](/blog/colorblind-safe-chart-palettes/) covers choosing the colors themselves.
 
@@ -126,10 +136,10 @@ Low contrast between neighbors is worth checking while you build. Pass `dev: tru
 
 ## Check it in the page
 
-Select the chart's `role="img"` element in your browser's inspector and read its `aria-label`. Look for the hidden table beside it, named by its `oc-sr-only` wrapper. Tab to the chart, put the mouse aside and press the arrow keys. The checks in this post read the DOM and drove the keyboard. They did not run a screen reader, so listen to your own charts in VoiceOver or NVDA before you ship.
+Select the chart's `role="img"` element in your browser's inspector and read its `aria-label`. Look for the hidden table beside it, named by its `oc-sr-only` wrapper. Tab to the chart, put the mouse aside and press the arrow keys. Reading the DOM doesn't tell you how a chart sounds, so listen to it in VoiceOver or NVDA before you ship.
 
 ## The spec
 
-`a11y.description` holds the alternative text. In `encoding`, `color` and `strokeDash` both map the `drug` field, so each line differs in hue and in dash. `endpointLabels` writes the series names at the line ends, and `legend: { show: false }` drops the legend they replace.
+`a11y.description` holds the alternative text. `theme.colors.categorical` gives each line a light and a dark color, and each one passes 4.5:1 as end-label text on its page. In `encoding`, `color` and `strokeDash` both map the `drug` field, so each line differs in hue and in dash. `endpointLabels` writes the series names at the line ends, and `legend: { show: false }` drops the legend they replace.
 
-Each option, with a mapping to the WCAG success criteria, is in [the accessibility docs](/docs/output/accessibility/).
+[The accessibility docs](/docs/output/accessibility/) map each option to the WCAG success criteria it helps meet.
