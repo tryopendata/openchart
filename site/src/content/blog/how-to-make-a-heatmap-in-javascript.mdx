@@ -10,31 +10,31 @@ lead: blog/co2-seasonal-heatmap
 
 import Demo from "../../components/demo/Demo.astro";
 
-A heatmap is a grid with one category along each side and a colored cell at every crossing. The color stands for a number, so a table of numbers becomes a picture where dark rows, dark columns and gaps stand out.
+New green cards fell for all six of the largest countries of birth in fiscal 2020, and the total dropped by 31%. In a table of 60 numbers that takes a while to find. In a heatmap, a grid with one category along each side and a cell colored by its number, it is the pale row in the middle.
 
 ## Two categories and one number
 
-Lawful permanent residents, who receive what are called green cards, are counted by country of birth and fiscal year in the [DHS Yearbook of Immigration Statistics](https://ohss.dhs.gov/topics/immigration/yearbook/2023). Here are six countries over ten fiscal years.
+DHS counts new green-card holders (lawful permanent residents) by country of birth and fiscal year in the [Yearbook of Immigration Statistics](https://ohss.dhs.gov/topics/immigration/yearbook/2023). Here are six countries over ten fiscal years, with the years down the side.
 
 <Demo id="blog/green-cards-heatmap" />
 
-Mexico is the darkest row in every year. Fiscal 2020, the first fiscal year of the pandemic, is a pale column through every row, and the total across all countries fell by 31%.
+Mexico is the darkest column in every year. Fiscal 2020 (October 2019 to September 2020) is a pale row across every country, and fiscal 2021 stays pale for every country but India.
 
-With 60 cells, each cell carries its number, so the reader can check a color against a value. At several hundred cells the labels would crowd each other, and the color and the hover tooltip would have to carry the numbers.
+With 60 cells, each cell carries its number, so the reader can check a color against a value. At several hundred cells the labels would crowd each other, and the color and the hover tooltip would have to carry the numbers. Six columns also leave a phone room for a three-digit number in each cell, which ten year columns did not.
 
 ## Choose the color scale
 
 A sequential scale runs from light to dark in one hue, and fits values that only go one way, like counts. A diverging scale runs two hues out from a neutral middle, and fits values that sit above or below a reference point.
 
-A color scale spent on the long-term trend hides the seasonal one. Mauna Loa Observatory in Hawaii has measured carbon dioxide (CO2) in the air every month since 1958, and NOAA publishes the readings through its [Global Monitoring Laboratory](https://gml.noaa.gov/ccgg/trends/data.html). Each row below is one year and each column one month, on a single sequential scale.
+A color scale spent on the long-term trend hides the seasonal one. Mauna Loa Observatory in Hawaii has measured carbon dioxide (CO2) in the air every month since 1958, and NOAA publishes the readings through its [Global Monitoring Laboratory](https://gml.noaa.gov/ccgg/trends/data.html). Each row below is every fifth year from 1960 and each column one month, on a single sequential scale.
 
 <Demo id="blog/co2-heatmap" />
 
 The rows get darker from 1960 to 2025 and nothing else shows. CO2 climbed by more than 100 parts per million (ppm) between those years, so the trend uses up the whole color range.
 
-Within each year CO2 also rises and falls with the seasons. It builds up over the winter, peaks in spring, and drops to its low in autumn as growing plants in the northern hemisphere draw it down. That swing is about 6 ppm, too small to see against 100. Subtracting each year's own average removes the trend and centers the scale on zero, which makes a diverging scale the right one.
+Within each year CO2 also rises and falls with the seasons. It builds up over the winter, peaks in spring, and falls to its low in early autumn as northern-hemisphere plants take it up through the summer growing season. That swing is about 5 to 6 ppm, too small to see against 100. Subtracting each year's own average removes the trend and centers the scale on zero, which makes a diverging scale the right one.
 
-```json demo source="NOAA Global Monitoring Laboratory, Mauna Loa CO2 monthly mean" height=380
+```json demo source="NOAA Global Monitoring Laboratory, Mauna Loa CO2 monthly mean" height=460
 {
   "mark": "rect",
   "data": [
@@ -99,6 +99,186 @@ Within each year CO2 also rises and falls with the seasons. It builds up over th
       "departure": -0.7
     },
     {
+      "year": "1965",
+      "month": "Jan",
+      "departure": -0.6
+    },
+    {
+      "year": "1965",
+      "month": "Feb",
+      "departure": 0.4
+    },
+    {
+      "year": "1965",
+      "month": "Mar",
+      "departure": 0.9
+    },
+    {
+      "year": "1965",
+      "month": "Apr",
+      "departure": 2.1
+    },
+    {
+      "year": "1965",
+      "month": "May",
+      "departure": 2.1
+    },
+    {
+      "year": "1965",
+      "month": "Jun",
+      "departure": 1.8
+    },
+    {
+      "year": "1965",
+      "month": "Jul",
+      "departure": 1.2
+    },
+    {
+      "year": "1965",
+      "month": "Aug",
+      "departure": -1.2
+    },
+    {
+      "year": "1965",
+      "month": "Sep",
+      "departure": -2.2
+    },
+    {
+      "year": "1965",
+      "month": "Oct",
+      "departure": -2.7
+    },
+    {
+      "year": "1965",
+      "month": "Nov",
+      "departure": -1.2
+    },
+    {
+      "year": "1965",
+      "month": "Dec",
+      "departure": -0.6
+    },
+    {
+      "year": "1970",
+      "month": "Jan",
+      "departure": -0.6
+    },
+    {
+      "year": "1970",
+      "month": "Feb",
+      "departure": 0.3
+    },
+    {
+      "year": "1970",
+      "month": "Mar",
+      "departure": 1.2
+    },
+    {
+      "year": "1970",
+      "month": "Apr",
+      "departure": 2.4
+    },
+    {
+      "year": "1970",
+      "month": "May",
+      "departure": 2.4
+    },
+    {
+      "year": "1970",
+      "month": "Jun",
+      "departure": 2
+    },
+    {
+      "year": "1970",
+      "month": "Jul",
+      "departure": 0.7
+    },
+    {
+      "year": "1970",
+      "month": "Aug",
+      "departure": -1
+    },
+    {
+      "year": "1970",
+      "month": "Sep",
+      "departure": -2.6
+    },
+    {
+      "year": "1970",
+      "month": "Oct",
+      "departure": -2.6
+    },
+    {
+      "year": "1970",
+      "month": "Nov",
+      "departure": -1.7
+    },
+    {
+      "year": "1970",
+      "month": "Dec",
+      "departure": -0.6
+    },
+    {
+      "year": "1975",
+      "month": "Jan",
+      "departure": -0.4
+    },
+    {
+      "year": "1975",
+      "month": "Feb",
+      "departure": 0.3
+    },
+    {
+      "year": "1975",
+      "month": "Mar",
+      "departure": 0.8
+    },
+    {
+      "year": "1975",
+      "month": "Apr",
+      "departure": 2
+    },
+    {
+      "year": "1975",
+      "month": "May",
+      "departure": 2.8
+    },
+    {
+      "year": "1975",
+      "month": "Jun",
+      "departure": 2.3
+    },
+    {
+      "year": "1975",
+      "month": "Jul",
+      "departure": 0.8
+    },
+    {
+      "year": "1975",
+      "month": "Aug",
+      "departure": -1.2
+    },
+    {
+      "year": "1975",
+      "month": "Sep",
+      "departure": -2.6
+    },
+    {
+      "year": "1975",
+      "month": "Oct",
+      "departure": -2.8
+    },
+    {
+      "year": "1975",
+      "month": "Nov",
+      "departure": -1.7
+    },
+    {
+      "year": "1975",
+      "month": "Dec",
+      "departure": -0.4
+    },
+    {
       "year": "1980",
       "month": "Jan",
       "departure": -0.9
@@ -159,6 +339,186 @@ Within each year CO2 also rises and falls with the seasons. It builds up over th
       "departure": -0.5
     },
     {
+      "year": "1985",
+      "month": "Jan",
+      "departure": -0.9
+    },
+    {
+      "year": "1985",
+      "month": "Feb",
+      "departure": 0.1
+    },
+    {
+      "year": "1985",
+      "month": "Mar",
+      "departure": 1.6
+    },
+    {
+      "year": "1985",
+      "month": "Apr",
+      "departure": 2.3
+    },
+    {
+      "year": "1985",
+      "month": "May",
+      "departure": 2.9
+    },
+    {
+      "year": "1985",
+      "month": "Jun",
+      "departure": 2.3
+    },
+    {
+      "year": "1985",
+      "month": "Jul",
+      "departure": 0.5
+    },
+    {
+      "year": "1985",
+      "month": "Aug",
+      "departure": -1.1
+    },
+    {
+      "year": "1985",
+      "month": "Sep",
+      "departure": -2.9
+    },
+    {
+      "year": "1985",
+      "month": "Oct",
+      "departure": -3
+    },
+    {
+      "year": "1985",
+      "month": "Nov",
+      "departure": -1.6
+    },
+    {
+      "year": "1985",
+      "month": "Dec",
+      "departure": -0.2
+    },
+    {
+      "year": "1990",
+      "month": "Jan",
+      "departure": -0.6
+    },
+    {
+      "year": "1990",
+      "month": "Feb",
+      "departure": 0.6
+    },
+    {
+      "year": "1990",
+      "month": "Mar",
+      "departure": 1.3
+    },
+    {
+      "year": "1990",
+      "month": "Apr",
+      "departure": 1.9
+    },
+    {
+      "year": "1990",
+      "month": "May",
+      "departure": 2.9
+    },
+    {
+      "year": "1990",
+      "month": "Jun",
+      "departure": 1.9
+    },
+    {
+      "year": "1990",
+      "month": "Jul",
+      "departure": 0.4
+    },
+    {
+      "year": "1990",
+      "month": "Aug",
+      "departure": -1.4
+    },
+    {
+      "year": "1990",
+      "month": "Sep",
+      "departure": -3.1
+    },
+    {
+      "year": "1990",
+      "month": "Oct",
+      "departure": -2.8
+    },
+    {
+      "year": "1990",
+      "month": "Nov",
+      "departure": -1.3
+    },
+    {
+      "year": "1990",
+      "month": "Dec",
+      "departure": 0
+    },
+    {
+      "year": "1995",
+      "month": "Jan",
+      "departure": -0.9
+    },
+    {
+      "year": "1995",
+      "month": "Feb",
+      "departure": 0
+    },
+    {
+      "year": "1995",
+      "month": "Mar",
+      "departure": 1
+    },
+    {
+      "year": "1995",
+      "month": "Apr",
+      "departure": 2.5
+    },
+    {
+      "year": "1995",
+      "month": "May",
+      "departure": 2.9
+    },
+    {
+      "year": "1995",
+      "month": "Jun",
+      "departure": 2.4
+    },
+    {
+      "year": "1995",
+      "month": "Jul",
+      "departure": 0.8
+    },
+    {
+      "year": "1995",
+      "month": "Aug",
+      "departure": -1.6
+    },
+    {
+      "year": "1995",
+      "month": "Sep",
+      "departure": -2.6
+    },
+    {
+      "year": "1995",
+      "month": "Oct",
+      "departure": -2.8
+    },
+    {
+      "year": "1995",
+      "month": "Nov",
+      "departure": -1.4
+    },
+    {
+      "year": "1995",
+      "month": "Dec",
+      "departure": -0.1
+    },
+    {
       "year": "2000",
       "month": "Jan",
       "departure": -0.3
@@ -217,6 +577,186 @@ Within each year CO2 also rises and falls with the seasons. It builds up over th
       "year": "2000",
       "month": "Dec",
       "departure": 0.1
+    },
+    {
+      "year": "2005",
+      "month": "Jan",
+      "departure": -1.4
+    },
+    {
+      "year": "2005",
+      "month": "Feb",
+      "departure": -0.1
+    },
+    {
+      "year": "2005",
+      "month": "Mar",
+      "departure": 1
+    },
+    {
+      "year": "2005",
+      "month": "Apr",
+      "departure": 2.5
+    },
+    {
+      "year": "2005",
+      "month": "May",
+      "departure": 2.7
+    },
+    {
+      "year": "2005",
+      "month": "Jun",
+      "departure": 2.4
+    },
+    {
+      "year": "2005",
+      "month": "Jul",
+      "departure": 0.9
+    },
+    {
+      "year": "2005",
+      "month": "Aug",
+      "departure": -1.1
+    },
+    {
+      "year": "2005",
+      "month": "Sep",
+      "departure": -3.1
+    },
+    {
+      "year": "2005",
+      "month": "Oct",
+      "departure": -2.8
+    },
+    {
+      "year": "2005",
+      "month": "Nov",
+      "departure": -1.4
+    },
+    {
+      "year": "2005",
+      "month": "Dec",
+      "departure": 0.3
+    },
+    {
+      "year": "2010",
+      "month": "Jan",
+      "departure": -1.2
+    },
+    {
+      "year": "2010",
+      "month": "Feb",
+      "departure": 0.3
+    },
+    {
+      "year": "2010",
+      "month": "Mar",
+      "departure": 1.3
+    },
+    {
+      "year": "2010",
+      "month": "Apr",
+      "departure": 2.6
+    },
+    {
+      "year": "2010",
+      "month": "May",
+      "departure": 3.1
+    },
+    {
+      "year": "2010",
+      "month": "Jun",
+      "departure": 2.3
+    },
+    {
+      "year": "2010",
+      "month": "Jul",
+      "departure": 0.3
+    },
+    {
+      "year": "2010",
+      "month": "Aug",
+      "departure": -1.6
+    },
+    {
+      "year": "2010",
+      "month": "Sep",
+      "departure": -3.1
+    },
+    {
+      "year": "2010",
+      "month": "Oct",
+      "departure": -2.7
+    },
+    {
+      "year": "2010",
+      "month": "Nov",
+      "departure": -1.2
+    },
+    {
+      "year": "2010",
+      "month": "Dec",
+      "departure": -0.1
+    },
+    {
+      "year": "2015",
+      "month": "Jan",
+      "departure": -0.8
+    },
+    {
+      "year": "2015",
+      "month": "Feb",
+      "departure": -0.5
+    },
+    {
+      "year": "2015",
+      "month": "Mar",
+      "departure": 0.7
+    },
+    {
+      "year": "2015",
+      "month": "Apr",
+      "departure": 2.3
+    },
+    {
+      "year": "2015",
+      "month": "May",
+      "departure": 3.1
+    },
+    {
+      "year": "2015",
+      "month": "Jun",
+      "departure": 2
+    },
+    {
+      "year": "2015",
+      "month": "Jul",
+      "departure": 0.4
+    },
+    {
+      "year": "2015",
+      "month": "Aug",
+      "departure": -1.9
+    },
+    {
+      "year": "2015",
+      "month": "Sep",
+      "departure": -3.2
+    },
+    {
+      "year": "2015",
+      "month": "Oct",
+      "departure": -2.5
+    },
+    {
+      "year": "2015",
+      "month": "Nov",
+      "departure": -0.7
+    },
+    {
+      "year": "2015",
+      "month": "Dec",
+      "departure": 1
     },
     {
       "year": "2020",
@@ -364,8 +904,17 @@ Within each year CO2 also rises and falls with the seasons. It builds up over th
       "sort": [
         "2025",
         "2020",
+        "2015",
+        "2010",
+        "2005",
         "2000",
+        "1995",
+        "1990",
+        "1985",
         "1980",
+        "1975",
+        "1970",
+        "1965",
         "1960"
       ]
     },
@@ -380,7 +929,26 @@ Within each year CO2 also rises and falls with the seasons. It builds up over th
         ],
         "reverse": true
       },
-      "format": "+.1f"
+      "format": ".1f"
+    }
+  },
+  "overrides": {
+    "compact": {
+      "encoding": {
+        "x": {
+          "axis": {
+            "values": [
+              "Jan",
+              "Mar",
+              "May",
+              "Jul",
+              "Sep",
+              "Nov"
+            ],
+            "labelAngle": 0
+          }
+        }
+      }
     }
   },
   "chrome": {
@@ -394,20 +962,22 @@ Now the same months are red or blue in every year: spring is red and autumn is b
 
 ## Order the rows and columns
 
-A heatmap reads by adjacency, so the order of the categories is part of the chart. OpenChart keeps categories in the order they appear in the data, so data sorted alphabetically puts April next to August. Both CO2 charts list the months in calendar order and the years in time order with a `sort` array. The green card chart orders countries by size, so the darkest row is at the top.
+A heatmap reads by adjacency, so the order of the categories is part of the chart. OpenChart keeps categories in the order they appear in the data, so data sorted alphabetically puts April next to August. Both CO2 charts list the months in calendar order and the years in time order with a `sort` array. The green card chart orders countries by size, so the darkest column is on the left.
 
 When no natural order exists, sort the rows by their average value. Rows with similar levels then sit together and the blocks of color are easier to see.
 
-## When another chart is better
+## Lines or a grid
 
-Five rows of twelve months is small enough that five lines on a shared month axis would show the seasonal cycle just as well. A heatmap pays off when there are dozens of rows, as in a year-by-state or a person-by-day grid, where lines would pile up. For two numbers per observation, use a [scatter plot](/docs/correlation/scatter/).
+Fourteen years of twelve months would be fourteen tangled lines on a shared month axis, while the grid gives each year its own row. Below about five rows, lines show a seasonal cycle as well as a grid does, and they show the size of each swing, which color only hints at. For two numbers per observation, use a [scatter plot](/docs/correlation/scatter/).
 
 ## The spec
 
 A heatmap is the `rect` mark. Put one category on `encoding.x` and the other on `encoding.y`, both `nominal`, and a quantitative field on `encoding.color`. A `sort` array on a nominal channel lists the categories in order, from the bottom of the axis up for `y`.
 
-On `color`, `scale.scheme` picks the ramp: `"blue"` is sequential and `"redBlue"` is diverging. `scale.domain: [-4, 4]` centers the neutral color on zero, and `reverse: true` flips `redBlue` so positive values are red. `format` sets how values print in the tooltip. See the [color guide](/docs/style/color/) and the [scales guide](/docs/the-spec/scales/) for the other options.
+On `color`, `scale.scheme` picks the ramp: `"blue"` is sequential and `"redBlue"` is diverging. `scale.domain: [-4, 4]` centers the neutral color on zero, and `reverse: true` flips `redBlue` so positive values are red. `format` sets how values print in the tooltip and the legend. See the [color guide](/docs/style/color/) and the [scales guide](/docs/the-spec/scales/) for the other options.
 
-The cell numbers in the green card chart are two extra [layers](/docs/composition/layers/) of `text` marks drawn over the `rect` layer with the same data and the same `x` and `y`. One layer filters to cells of 100 thousand or more and draws white text, and the other draws dark text on the rest, so every label stays readable.
+On a phone, twelve month names would rotate to fit. `overrides.compact` sets the x axis `values` to every other month and `labelAngle: 0`, so the labels stay level.
 
-The [heatmap page](/docs/correlation/heatmap/) shows fixed color domains and hand-ordered rows.
+The cell numbers in the green card chart are two extra [layers](/docs/composition/layers/) of `text` marks drawn over the `rect` layer with the same data and the same `x` and `y`. One layer filters to cells of 150 thousand or more and draws white text, and the other draws dark text on the rest, so every label keeps at least 4.5:1 contrast with its cell.
+
+To try another color ramp or a fixed domain on a grid like these, start from the [heatmap page](/docs/correlation/heatmap/).
