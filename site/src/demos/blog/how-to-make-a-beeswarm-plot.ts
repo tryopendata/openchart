@@ -1,7 +1,8 @@
 /**
  * The figures in the blog post "How to make a beeswarm plot": the change in
  * average teacher pay for 51 states as a histogram and then as a beeswarm, and
- * the early-career pay of 60 college majors in one swarm lane per field. Titles
+ * the early-career pay of the 125 college majors with at least 5,000 graduates,
+ * in one swarm lane per field. Titles
  * state findings computed from the dataset rows so they cannot drift from the
  * data. The post's `json demo` fence repeats `teacherSwarm.spec` verbatim, and a
  * test holds the two together.
@@ -11,8 +12,10 @@ import { teacherSalaryByState } from "@datasets/teacher-salary-by-state";
 import { sourceOf } from "../source";
 import { defineDemo } from "../types";
 
-const ACCENT = "#0e7490";
-const LOSS = "#d1495b";
+/** Colors as light and dark pairs, so dots and labels keep their contrast on the dark page. */
+const ACCENT = { light: "#0e7490", dark: "#22a3c4" };
+const LOSS = { light: "#c2364a", dark: "#f07686" };
+const MUTED = { light: "#94a3b8", dark: "#7c8aa0" };
 
 const FELL = "Fell";
 const ROSE = "Rose";
@@ -27,7 +30,9 @@ export const teacherChanges = teacherSalaryByState.data
     return { state: row.state, change, direction: change < 0 ? FELL : ROSE };
   });
 
-const fell = teacherChanges.filter((row) => row.direction === FELL).length;
+/** The 50 states without DC. Titles count states, so DC (where pay rose) is left out of both numbers. */
+const stateChanges = teacherChanges.filter((row) => row.state !== "District of Columbia");
+const fell = stateChanges.filter((row) => row.direction === FELL).length;
 const biggestFall = teacherChanges.reduce((min, row) => (row.change < min.change ? row : min));
 
 const teacherSource = sourceOf(teacherSalaryByState);
@@ -40,7 +45,7 @@ export const teacherHistogram = defineDemo({
   source: teacherSource,
   height: 380,
   spec: {
-    mark: { type: "histogram", binCount: 10, fill: ACCENT },
+    mark: { type: "histogram", binCount: 10 },
     data: teacherChanges.map(({ change }) => ({ change })),
     encoding: {
       x: {
@@ -49,49 +54,99 @@ export const teacherHistogram = defineDemo({
         axis: { title: "Change in pay", format: ".0f", labelSuffix: "%" },
       },
     },
+    theme: { colors: { categorical: [ACCENT] } },
     chrome: {
-      title: `Teacher pay fell in ${fell} of ${teacherChanges.length} states, but the bars cannot say which`,
+      title: `Teacher pay fell in ${fell} of ${stateChanges.length} states, but the bars cannot say which`,
       subtitle: `${teacherSubtitle}. Each bar counts states.`,
     },
   },
+});
+
+/**
+ * The one lane every state sits in. A named lane on `y` gives the annotations
+ * a y position to point at; the axis is hidden, so the name never shows.
+ */
+const LANE = "States";
+const biggestRise = teacherChanges.reduce((max, row) => (row.change > max.change ? row : max));
+const signed = (change: number) => `${change > 0 ? "+" : ""}${change}%`;
+/** A label above each extreme dot, so the chart names the states the prose names. */
+const extremeLabel = (row: (typeof teacherChanges)[number]) => ({
+  type: "text" as const,
+  x: row.change,
+  y: LANE,
+  text: `**${row.state}**\n${signed(row.change)}`,
+  anchor: "top" as const,
+  offset: { dx: 0, dy: -12 },
+  connector: false,
+  dot: false,
 });
 
 export const teacherSwarm = defineDemo({
   id: "blog/teacher-pay-beeswarm",
   title: "Change in teacher pay by state, as a beeswarm",
   source: teacherSource,
-  height: 340,
+  height: 360,
   spec: {
     mark: "beeswarm",
-    data: teacherChanges,
+    data: teacherChanges.map((row) => ({ ...row, lane: LANE })),
     encoding: {
       x: {
         field: "change",
         type: "quantitative",
         axis: { title: "Change in pay", format: ".0f", labelSuffix: "%" },
       },
+      y: { field: "lane", type: "nominal", axis: false },
       color: {
         field: "direction",
         type: "nominal",
-        scale: { domain: [FELL, ROSE], range: [LOSS, ACCENT] },
+        scale: { domain: [FELL, ROSE] },
       },
+      // The state names each tooltip; the change is its one row.
+      detail: { field: "state", type: "nominal" },
       tooltip: [
-        { field: "state", type: "nominal", title: "State" },
-        { field: "change", type: "quantitative", title: "Change in pay (%)" },
+        { field: "change", type: "quantitative", title: "Change in pay (%)", format: "+.1f" },
       ],
     },
+    annotations: [extremeLabel(biggestFall), extremeLabel(biggestRise)],
+    // Phones keep both labels; by default a compact chart moves annotations into tooltips.
+    responsive: { compactAnnotationLimit: 2 },
     legend: { show: false },
+    theme: { colors: { categorical: [LOSS, ACCENT] } },
     chrome: {
-      title: `Teacher pay fell in ${fell} of ${teacherChanges.length} states, by as much as ${Math.abs(biggestFall.change)}%`,
-      subtitle: `${teacherSubtitle}. One dot per state: red fell, blue rose.`,
+      title: `Teacher pay fell in ${fell} of ${stateChanges.length} states, by as much as ${Math.abs(biggestFall.change)}%`,
+      subtitle: `${teacherSubtitle}. One dot per state: red fell, teal rose.`,
     },
   },
 });
 
 /** Median early-career pay by major, with the field each major belongs to. */
+/** Short words that stay lower case inside a title-cased major name. */
+const MINOR_WORDS = new Set(["and", "of", "or", "in", "the", "for", "to"]);
+/** "CHEMICAL ENGINEERING" as "Chemical Engineering": the source writes majors in capitals. */
+export const titleCase = (name: string) =>
+  name
+    .toLowerCase()
+    .split(" ")
+    .map((word, index) =>
+      index > 0 && MINOR_WORDS.has(word) ? word : word.replace(/^./, (c) => c.toUpperCase()),
+    )
+    .join(" ")
+    .replace(/\/(.)/g, (_, c: string) => `/${c.toUpperCase()}`);
+
+/** Field names short enough for a lane label on a phone. */
+const SHORT_FIELD: Record<string, string> = {
+  "Industrial Arts & Consumer Services": "Industrial Arts",
+  "Communications & Journalism": "Communications",
+  "Humanities & Liberal Arts": "Humanities",
+  "Agriculture & Natural Resources": "Agriculture",
+  "Biology & Life Science": "Biology",
+  "Psychology & Social Work": "Psychology",
+  "Computers & Mathematics": "Computers & Math",
+};
+
 const baseMajors = collegeMajors.data.map((row) => ({
-  major: row.major,
-  field: row.major_category,
+  major: titleCase(row.major),
+  field: SHORT_FIELD[row.major_category] ?? row.major_category,
   pay: row.median_salary,
 }));
 
@@ -117,9 +172,9 @@ const money = (value: number) => `$${value.toLocaleString("en-US")}`;
 
 export const majorsSwarm = defineDemo({
   id: "blog/majors-pay-beeswarm",
-  title: "Median early-career pay of 60 college majors, by field",
+  title: `Median early-career pay of ${majors.length} college majors, by field`,
   source: sourceOf(collegeMajors),
-  height: 640,
+  height: 680,
   spec: {
     mark: "beeswarm",
     data: majors,
@@ -131,7 +186,7 @@ export const majorsSwarm = defineDemo({
         axis: {
           title: "Median early-career pay",
           format: "$~s",
-          values: [35000, 45000, 55000, 65000],
+          values: [30000, 40000, 50000, 60000],
         },
       },
       y: {
@@ -142,18 +197,20 @@ export const majorsSwarm = defineDemo({
       color: {
         field: "group",
         type: "nominal",
-        scale: { domain: [widestField, OTHER], range: [ACCENT, "#94a3b8"] },
+        scale: { domain: [widestField, OTHER] },
       },
+      // The major names each tooltip; its field and pay are the rows.
+      detail: { field: "major", type: "nominal" },
       tooltip: [
-        { field: "major", type: "nominal", title: "Major" },
-        { field: "pay", type: "quantitative", title: "Median pay ($)" },
+        { field: "field", type: "nominal", title: "Field" },
+        { field: "pay", type: "quantitative", title: "Median pay", format: "$,.0f" },
       ],
     },
     legend: { show: false },
+    theme: { colors: { categorical: [ACCENT, MUTED] } },
     chrome: {
       title: `${widestField} majors range from ${money(widest.low)} to ${money(widest.high)}, the widest spread of any field`,
-      subtitle:
-        "Median pay of recent graduates, one dot per major, for the 60 majors with at least 5,000 graduates",
+      subtitle: `Median pay of recent graduates, one dot per major, for all ${majors.length} majors with at least 5,000 graduates`,
     },
   },
 });
