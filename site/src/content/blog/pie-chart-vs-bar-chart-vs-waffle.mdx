@@ -1,0 +1,1415 @@
+---
+title: Pie chart vs bar chart vs waffle chart
+description: A pie shows one dominant share, a bar chart compares close values, a waffle makes one percentage countable. Here is when each fits.
+published: 2026-11-14
+author: OpenChart
+tags: [chart-choice]
+related: [part-to-whole/pie-donut, part-to-whole/waffle, comparison/bar, part-to-whole/stacked-100]
+lead: blog/debt-pie
+---
+
+import Demo from "../../components/demo/Demo.astro";
+
+A pie chart divides a whole into parts and asks the reader to compare angles. That works for two or three parts, and best when one of them dominates. It stops working when the parts are close in size, and then a bar chart or a waffle does the job better.
+
+## When a pie works
+
+Mortgages make up 70% of US household debt. A pie shows that at a glance, because one slice takes most of the circle and the reader needs no arithmetic to see it. The same pie also shows where the form breaks down: the other four slices look alike, and without printed numbers no reader could rank them.
+
+<Demo id="blog/debt-pie" />
+
+## When a bar chart wins
+
+Auto loans ($1.667 trillion) and student loans ($1.664 trillion) differ by about $3 billion, which no one can see from two slice angles. Sorted bars put every value on one baseline, so the order is plain and the lengths can be compared directly.
+
+Home equity loans and the Bank's own "other" category are each under 3% of the total, so both charts merge them into one "Other" row.
+
+```json demo source="Federal Reserve Bank of New York, Household Debt and Credit Report" height=380
+{
+  "mark": {
+    "type": "bar",
+    "fill": "#0e7490"
+  },
+  "data": [
+    {
+      "type": "Mortgage",
+      "balance": 13.17
+    },
+    {
+      "type": "Auto",
+      "balance": 1.67
+    },
+    {
+      "type": "Student",
+      "balance": 1.66
+    },
+    {
+      "type": "Cards",
+      "balance": 1.28
+    },
+    {
+      "type": "Other",
+      "balance": 1
+    }
+  ],
+  "encoding": {
+    "x": {
+      "field": "balance",
+      "type": "quantitative",
+      "axis": {
+        "title": "$ trillions",
+        "format": ".0f"
+      }
+    },
+    "y": {
+      "field": "type",
+      "type": "nominal",
+      "sort": null
+    }
+  },
+  "labels": {
+    "format": ".2f"
+  },
+  "chrome": {
+    "title": "Auto loans ($1.67T) edge student loans ($1.66T), then credit cards",
+    "subtitle": "US household debt by type, fourth quarter of 2025, $ trillions"
+  }
+}
+```
+
+Sort the bars by value unless the categories have a natural order, such as age bands or months. Use bars whenever the reader has to compare parts with each other, or when there are more than five or six parts. A [bar chart](/docs/comparison/bar/) also takes more categories than a pie can label.
+
+## When a waffle works
+
+A waffle draws 100 squares, one for each percent. It suits a single share you want the reader to feel as a count rather than read as an angle: counting 66 squares is easier than estimating a slice that spans 238 degrees of a circle. In fiscal 2024, payments for individuals (OMB's category for benefit programs such as Social Security and Medicare) took 66 of every 100 federal outlay dollars.
+
+<Demo id="blog/outlays-waffle" />
+
+A waffle rounds to whole squares and carries few categories, so it is a poor tool for comparing close values. Keep it to the one or two shares that are the point, highlight the one that matters, and let the rest be context.
+
+## Shares over time
+
+A pie per year does not work, because the reader would have to compare angles across a dozen circles. A 100% stacked area chart scales every year to the same height and shows only how the mix shifts. Defense took 49.0% of federal outlays in 1962 and 13.0% in 2024, while payments for individuals went from 27.5% to 66.0%.
+
+```json demo source="US Office of Management and Budget, Historical Tables (Table 6.1, composition of outlays)" height=460
+{
+  "mark": "area",
+  "data": [
+    {
+      "date": "1962-01-01",
+      "category": "Payments for individuals",
+      "share": 27.5
+    },
+    {
+      "date": "1962-01-01",
+      "category": "National defense",
+      "share": 49
+    },
+    {
+      "date": "1962-01-01",
+      "category": "Net interest",
+      "share": 6.4
+    },
+    {
+      "date": "1962-01-01",
+      "category": "Everything else",
+      "share": 17
+    },
+    {
+      "date": "1963-01-01",
+      "category": "Payments for individuals",
+      "share": 28.4
+    },
+    {
+      "date": "1963-01-01",
+      "category": "National defense",
+      "share": 48
+    },
+    {
+      "date": "1963-01-01",
+      "category": "Net interest",
+      "share": 7
+    },
+    {
+      "date": "1963-01-01",
+      "category": "Everything else",
+      "share": 16.7
+    },
+    {
+      "date": "1964-01-01",
+      "category": "Payments for individuals",
+      "share": 27.7
+    },
+    {
+      "date": "1964-01-01",
+      "category": "National defense",
+      "share": 46.2
+    },
+    {
+      "date": "1964-01-01",
+      "category": "Net interest",
+      "share": 6.9
+    },
+    {
+      "date": "1964-01-01",
+      "category": "Everything else",
+      "share": 19.2
+    },
+    {
+      "date": "1965-01-01",
+      "category": "Payments for individuals",
+      "share": 28.3
+    },
+    {
+      "date": "1965-01-01",
+      "category": "National defense",
+      "share": 42.8
+    },
+    {
+      "date": "1965-01-01",
+      "category": "Net interest",
+      "share": 7.3
+    },
+    {
+      "date": "1965-01-01",
+      "category": "Everything else",
+      "share": 21.6
+    },
+    {
+      "date": "1966-01-01",
+      "category": "Payments for individuals",
+      "share": 28
+    },
+    {
+      "date": "1966-01-01",
+      "category": "National defense",
+      "share": 43.2
+    },
+    {
+      "date": "1966-01-01",
+      "category": "Net interest",
+      "share": 7
+    },
+    {
+      "date": "1966-01-01",
+      "category": "Everything else",
+      "share": 21.9
+    },
+    {
+      "date": "1967-01-01",
+      "category": "Payments for individuals",
+      "share": 27.8
+    },
+    {
+      "date": "1967-01-01",
+      "category": "National defense",
+      "share": 45.4
+    },
+    {
+      "date": "1967-01-01",
+      "category": "Net interest",
+      "share": 6.5
+    },
+    {
+      "date": "1967-01-01",
+      "category": "Everything else",
+      "share": 20.3
+    },
+    {
+      "date": "1968-01-01",
+      "category": "Payments for individuals",
+      "share": 28.3
+    },
+    {
+      "date": "1968-01-01",
+      "category": "National defense",
+      "share": 46
+    },
+    {
+      "date": "1968-01-01",
+      "category": "Net interest",
+      "share": 6.2
+    },
+    {
+      "date": "1968-01-01",
+      "category": "Everything else",
+      "share": 19.4
+    },
+    {
+      "date": "1969-01-01",
+      "category": "Payments for individuals",
+      "share": 31.5
+    },
+    {
+      "date": "1969-01-01",
+      "category": "National defense",
+      "share": 44.9
+    },
+    {
+      "date": "1969-01-01",
+      "category": "Net interest",
+      "share": 6.9
+    },
+    {
+      "date": "1969-01-01",
+      "category": "Everything else",
+      "share": 16.7
+    },
+    {
+      "date": "1970-01-01",
+      "category": "Payments for individuals",
+      "share": 33.4
+    },
+    {
+      "date": "1970-01-01",
+      "category": "National defense",
+      "share": 41.8
+    },
+    {
+      "date": "1970-01-01",
+      "category": "Net interest",
+      "share": 7.3
+    },
+    {
+      "date": "1970-01-01",
+      "category": "Everything else",
+      "share": 17.5
+    },
+    {
+      "date": "1971-01-01",
+      "category": "Payments for individuals",
+      "share": 38.5
+    },
+    {
+      "date": "1971-01-01",
+      "category": "National defense",
+      "share": 37.5
+    },
+    {
+      "date": "1971-01-01",
+      "category": "Net interest",
+      "share": 7.1
+    },
+    {
+      "date": "1971-01-01",
+      "category": "Everything else",
+      "share": 16.9
+    },
+    {
+      "date": "1972-01-01",
+      "category": "Payments for individuals",
+      "share": 40.4
+    },
+    {
+      "date": "1972-01-01",
+      "category": "National defense",
+      "share": 34.3
+    },
+    {
+      "date": "1972-01-01",
+      "category": "Net interest",
+      "share": 6.7
+    },
+    {
+      "date": "1972-01-01",
+      "category": "Everything else",
+      "share": 18.5
+    },
+    {
+      "date": "1973-01-01",
+      "category": "Payments for individuals",
+      "share": 42.7
+    },
+    {
+      "date": "1973-01-01",
+      "category": "National defense",
+      "share": 31.2
+    },
+    {
+      "date": "1973-01-01",
+      "category": "Net interest",
+      "share": 7.1
+    },
+    {
+      "date": "1973-01-01",
+      "category": "Everything else",
+      "share": 19
+    },
+    {
+      "date": "1974-01-01",
+      "category": "Payments for individuals",
+      "share": 44.9
+    },
+    {
+      "date": "1974-01-01",
+      "category": "National defense",
+      "share": 29.5
+    },
+    {
+      "date": "1974-01-01",
+      "category": "Net interest",
+      "share": 8
+    },
+    {
+      "date": "1974-01-01",
+      "category": "Everything else",
+      "share": 17.7
+    },
+    {
+      "date": "1975-01-01",
+      "category": "Payments for individuals",
+      "share": 46.6
+    },
+    {
+      "date": "1975-01-01",
+      "category": "National defense",
+      "share": 26
+    },
+    {
+      "date": "1975-01-01",
+      "category": "Net interest",
+      "share": 7
+    },
+    {
+      "date": "1975-01-01",
+      "category": "Everything else",
+      "share": 20.4
+    },
+    {
+      "date": "1976-01-01",
+      "category": "Payments for individuals",
+      "share": 48.9
+    },
+    {
+      "date": "1976-01-01",
+      "category": "National defense",
+      "share": 24.1
+    },
+    {
+      "date": "1976-01-01",
+      "category": "Net interest",
+      "share": 7.2
+    },
+    {
+      "date": "1976-01-01",
+      "category": "Everything else",
+      "share": 19.8
+    },
+    {
+      "date": "1977-01-01",
+      "category": "Payments for individuals",
+      "share": 48.4
+    },
+    {
+      "date": "1977-01-01",
+      "category": "National defense",
+      "share": 23.8
+    },
+    {
+      "date": "1977-01-01",
+      "category": "Net interest",
+      "share": 7.3
+    },
+    {
+      "date": "1977-01-01",
+      "category": "Everything else",
+      "share": 20.5
+    },
+    {
+      "date": "1978-01-01",
+      "category": "Payments for individuals",
+      "share": 46.4
+    },
+    {
+      "date": "1978-01-01",
+      "category": "National defense",
+      "share": 22.8
+    },
+    {
+      "date": "1978-01-01",
+      "category": "Net interest",
+      "share": 7.7
+    },
+    {
+      "date": "1978-01-01",
+      "category": "Everything else",
+      "share": 23.1
+    },
+    {
+      "date": "1979-01-01",
+      "category": "Payments for individuals",
+      "share": 46.8
+    },
+    {
+      "date": "1979-01-01",
+      "category": "National defense",
+      "share": 23.1
+    },
+    {
+      "date": "1979-01-01",
+      "category": "Net interest",
+      "share": 8.5
+    },
+    {
+      "date": "1979-01-01",
+      "category": "Everything else",
+      "share": 21.6
+    },
+    {
+      "date": "1980-01-01",
+      "category": "Payments for individuals",
+      "share": 47.5
+    },
+    {
+      "date": "1980-01-01",
+      "category": "National defense",
+      "share": 22.7
+    },
+    {
+      "date": "1980-01-01",
+      "category": "Net interest",
+      "share": 8.9
+    },
+    {
+      "date": "1980-01-01",
+      "category": "Everything else",
+      "share": 21
+    },
+    {
+      "date": "1981-01-01",
+      "category": "Payments for individuals",
+      "share": 48.4
+    },
+    {
+      "date": "1981-01-01",
+      "category": "National defense",
+      "share": 23.2
+    },
+    {
+      "date": "1981-01-01",
+      "category": "Net interest",
+      "share": 10.1
+    },
+    {
+      "date": "1981-01-01",
+      "category": "Everything else",
+      "share": 18.2
+    },
+    {
+      "date": "1982-01-01",
+      "category": "Payments for individuals",
+      "share": 48.5
+    },
+    {
+      "date": "1982-01-01",
+      "category": "National defense",
+      "share": 24.8
+    },
+    {
+      "date": "1982-01-01",
+      "category": "Net interest",
+      "share": 11.4
+    },
+    {
+      "date": "1982-01-01",
+      "category": "Everything else",
+      "share": 15.3
+    },
+    {
+      "date": "1983-01-01",
+      "category": "Payments for individuals",
+      "share": 49.7
+    },
+    {
+      "date": "1983-01-01",
+      "category": "National defense",
+      "share": 26
+    },
+    {
+      "date": "1983-01-01",
+      "category": "Net interest",
+      "share": 11.1
+    },
+    {
+      "date": "1983-01-01",
+      "category": "Everything else",
+      "share": 13.2
+    },
+    {
+      "date": "1984-01-01",
+      "category": "Payments for individuals",
+      "share": 48.5
+    },
+    {
+      "date": "1984-01-01",
+      "category": "National defense",
+      "share": 26.7
+    },
+    {
+      "date": "1984-01-01",
+      "category": "Net interest",
+      "share": 13
+    },
+    {
+      "date": "1984-01-01",
+      "category": "Everything else",
+      "share": 11.7
+    },
+    {
+      "date": "1985-01-01",
+      "category": "Payments for individuals",
+      "share": 47.8
+    },
+    {
+      "date": "1985-01-01",
+      "category": "National defense",
+      "share": 26.7
+    },
+    {
+      "date": "1985-01-01",
+      "category": "Net interest",
+      "share": 13.7
+    },
+    {
+      "date": "1985-01-01",
+      "category": "Everything else",
+      "share": 11.8
+    },
+    {
+      "date": "1986-01-01",
+      "category": "Payments for individuals",
+      "share": 46.3
+    },
+    {
+      "date": "1986-01-01",
+      "category": "National defense",
+      "share": 27.6
+    },
+    {
+      "date": "1986-01-01",
+      "category": "Net interest",
+      "share": 13.7
+    },
+    {
+      "date": "1986-01-01",
+      "category": "Everything else",
+      "share": 12.4
+    },
+    {
+      "date": "1987-01-01",
+      "category": "Payments for individuals",
+      "share": 47.7
+    },
+    {
+      "date": "1987-01-01",
+      "category": "National defense",
+      "share": 28.1
+    },
+    {
+      "date": "1987-01-01",
+      "category": "Net interest",
+      "share": 13.8
+    },
+    {
+      "date": "1987-01-01",
+      "category": "Everything else",
+      "share": 10.4
+    },
+    {
+      "date": "1988-01-01",
+      "category": "Payments for individuals",
+      "share": 47.9
+    },
+    {
+      "date": "1988-01-01",
+      "category": "National defense",
+      "share": 27.3
+    },
+    {
+      "date": "1988-01-01",
+      "category": "Net interest",
+      "share": 14.3
+    },
+    {
+      "date": "1988-01-01",
+      "category": "Everything else",
+      "share": 10.5
+    },
+    {
+      "date": "1989-01-01",
+      "category": "Payments for individuals",
+      "share": 47.7
+    },
+    {
+      "date": "1989-01-01",
+      "category": "National defense",
+      "share": 26.5
+    },
+    {
+      "date": "1989-01-01",
+      "category": "Net interest",
+      "share": 14.8
+    },
+    {
+      "date": "1989-01-01",
+      "category": "Everything else",
+      "share": 11
+    },
+    {
+      "date": "1990-01-01",
+      "category": "Payments for individuals",
+      "share": 47.3
+    },
+    {
+      "date": "1990-01-01",
+      "category": "National defense",
+      "share": 23.9
+    },
+    {
+      "date": "1990-01-01",
+      "category": "Net interest",
+      "share": 14.7
+    },
+    {
+      "date": "1990-01-01",
+      "category": "Everything else",
+      "share": 14.1
+    },
+    {
+      "date": "1991-01-01",
+      "category": "Payments for individuals",
+      "share": 49.8
+    },
+    {
+      "date": "1991-01-01",
+      "category": "National defense",
+      "share": 20.6
+    },
+    {
+      "date": "1991-01-01",
+      "category": "Net interest",
+      "share": 14.7
+    },
+    {
+      "date": "1991-01-01",
+      "category": "Everything else",
+      "share": 14.9
+    },
+    {
+      "date": "1992-01-01",
+      "category": "Payments for individuals",
+      "share": 53.5
+    },
+    {
+      "date": "1992-01-01",
+      "category": "National defense",
+      "share": 21.6
+    },
+    {
+      "date": "1992-01-01",
+      "category": "Net interest",
+      "share": 14.4
+    },
+    {
+      "date": "1992-01-01",
+      "category": "Everything else",
+      "share": 10.5
+    },
+    {
+      "date": "1993-01-01",
+      "category": "Payments for individuals",
+      "share": 56.4
+    },
+    {
+      "date": "1993-01-01",
+      "category": "National defense",
+      "share": 20.7
+    },
+    {
+      "date": "1993-01-01",
+      "category": "Net interest",
+      "share": 14.1
+    },
+    {
+      "date": "1993-01-01",
+      "category": "Everything else",
+      "share": 8.8
+    },
+    {
+      "date": "1994-01-01",
+      "category": "Payments for individuals",
+      "share": 57.1
+    },
+    {
+      "date": "1994-01-01",
+      "category": "National defense",
+      "share": 19.3
+    },
+    {
+      "date": "1994-01-01",
+      "category": "Net interest",
+      "share": 13.9
+    },
+    {
+      "date": "1994-01-01",
+      "category": "Everything else",
+      "share": 9.7
+    },
+    {
+      "date": "1995-01-01",
+      "category": "Payments for individuals",
+      "share": 58.6
+    },
+    {
+      "date": "1995-01-01",
+      "category": "National defense",
+      "share": 17.9
+    },
+    {
+      "date": "1995-01-01",
+      "category": "Net interest",
+      "share": 15.3
+    },
+    {
+      "date": "1995-01-01",
+      "category": "Everything else",
+      "share": 8.1
+    },
+    {
+      "date": "1996-01-01",
+      "category": "Payments for individuals",
+      "share": 59
+    },
+    {
+      "date": "1996-01-01",
+      "category": "National defense",
+      "share": 17
+    },
+    {
+      "date": "1996-01-01",
+      "category": "Net interest",
+      "share": 15.4
+    },
+    {
+      "date": "1996-01-01",
+      "category": "Everything else",
+      "share": 8.5
+    },
+    {
+      "date": "1997-01-01",
+      "category": "Payments for individuals",
+      "share": 60.2
+    },
+    {
+      "date": "1997-01-01",
+      "category": "National defense",
+      "share": 16.9
+    },
+    {
+      "date": "1997-01-01",
+      "category": "Net interest",
+      "share": 15.2
+    },
+    {
+      "date": "1997-01-01",
+      "category": "Everything else",
+      "share": 7.7
+    },
+    {
+      "date": "1998-01-01",
+      "category": "Payments for individuals",
+      "share": 60.1
+    },
+    {
+      "date": "1998-01-01",
+      "category": "National defense",
+      "share": 16.2
+    },
+    {
+      "date": "1998-01-01",
+      "category": "Net interest",
+      "share": 14.6
+    },
+    {
+      "date": "1998-01-01",
+      "category": "Everything else",
+      "share": 9.1
+    },
+    {
+      "date": "1999-01-01",
+      "category": "Payments for individuals",
+      "share": 59.5
+    },
+    {
+      "date": "1999-01-01",
+      "category": "National defense",
+      "share": 16.1
+    },
+    {
+      "date": "1999-01-01",
+      "category": "Net interest",
+      "share": 13.5
+    },
+    {
+      "date": "1999-01-01",
+      "category": "Everything else",
+      "share": 10.8
+    },
+    {
+      "date": "2000-01-01",
+      "category": "Payments for individuals",
+      "share": 59.7
+    },
+    {
+      "date": "2000-01-01",
+      "category": "National defense",
+      "share": 16.5
+    },
+    {
+      "date": "2000-01-01",
+      "category": "Net interest",
+      "share": 12.5
+    },
+    {
+      "date": "2000-01-01",
+      "category": "Everything else",
+      "share": 11.4
+    },
+    {
+      "date": "2001-01-01",
+      "category": "Payments for individuals",
+      "share": 61.3
+    },
+    {
+      "date": "2001-01-01",
+      "category": "National defense",
+      "share": 16.4
+    },
+    {
+      "date": "2001-01-01",
+      "category": "Net interest",
+      "share": 11.1
+    },
+    {
+      "date": "2001-01-01",
+      "category": "Everything else",
+      "share": 11.3
+    },
+    {
+      "date": "2002-01-01",
+      "category": "Payments for individuals",
+      "share": 62.6
+    },
+    {
+      "date": "2002-01-01",
+      "category": "National defense",
+      "share": 17.3
+    },
+    {
+      "date": "2002-01-01",
+      "category": "Net interest",
+      "share": 8.5
+    },
+    {
+      "date": "2002-01-01",
+      "category": "Everything else",
+      "share": 11.6
+    },
+    {
+      "date": "2003-01-01",
+      "category": "Payments for individuals",
+      "share": 63.2
+    },
+    {
+      "date": "2003-01-01",
+      "category": "National defense",
+      "share": 18.7
+    },
+    {
+      "date": "2003-01-01",
+      "category": "Net interest",
+      "share": 7.1
+    },
+    {
+      "date": "2003-01-01",
+      "category": "Everything else",
+      "share": 10.9
+    },
+    {
+      "date": "2004-01-01",
+      "category": "Payments for individuals",
+      "share": 61.9
+    },
+    {
+      "date": "2004-01-01",
+      "category": "National defense",
+      "share": 19.9
+    },
+    {
+      "date": "2004-01-01",
+      "category": "Net interest",
+      "share": 7
+    },
+    {
+      "date": "2004-01-01",
+      "category": "Everything else",
+      "share": 11.2
+    },
+    {
+      "date": "2005-01-01",
+      "category": "Payments for individuals",
+      "share": 61.2
+    },
+    {
+      "date": "2005-01-01",
+      "category": "National defense",
+      "share": 20
+    },
+    {
+      "date": "2005-01-01",
+      "category": "Net interest",
+      "share": 7.4
+    },
+    {
+      "date": "2005-01-01",
+      "category": "Everything else",
+      "share": 11.4
+    },
+    {
+      "date": "2006-01-01",
+      "category": "Payments for individuals",
+      "share": 60.7
+    },
+    {
+      "date": "2006-01-01",
+      "category": "National defense",
+      "share": 19.7
+    },
+    {
+      "date": "2006-01-01",
+      "category": "Net interest",
+      "share": 8.5
+    },
+    {
+      "date": "2006-01-01",
+      "category": "Everything else",
+      "share": 11.1
+    },
+    {
+      "date": "2007-01-01",
+      "category": "Payments for individuals",
+      "share": 62.3
+    },
+    {
+      "date": "2007-01-01",
+      "category": "National defense",
+      "share": 20.2
+    },
+    {
+      "date": "2007-01-01",
+      "category": "Net interest",
+      "share": 8.7
+    },
+    {
+      "date": "2007-01-01",
+      "category": "Everything else",
+      "share": 8.8
+    },
+    {
+      "date": "2008-01-01",
+      "category": "Payments for individuals",
+      "share": 61.7
+    },
+    {
+      "date": "2008-01-01",
+      "category": "National defense",
+      "share": 20.7
+    },
+    {
+      "date": "2008-01-01",
+      "category": "Net interest",
+      "share": 8.5
+    },
+    {
+      "date": "2008-01-01",
+      "category": "Everything else",
+      "share": 9.1
+    },
+    {
+      "date": "2009-01-01",
+      "category": "Payments for individuals",
+      "share": 60
+    },
+    {
+      "date": "2009-01-01",
+      "category": "National defense",
+      "share": 18.8
+    },
+    {
+      "date": "2009-01-01",
+      "category": "Net interest",
+      "share": 5.3
+    },
+    {
+      "date": "2009-01-01",
+      "category": "Everything else",
+      "share": 15.9
+    },
+    {
+      "date": "2010-01-01",
+      "category": "Payments for individuals",
+      "share": 66.7
+    },
+    {
+      "date": "2010-01-01",
+      "category": "National defense",
+      "share": 20.1
+    },
+    {
+      "date": "2010-01-01",
+      "category": "Net interest",
+      "share": 5.7
+    },
+    {
+      "date": "2010-01-01",
+      "category": "Everything else",
+      "share": 7.6
+    },
+    {
+      "date": "2011-01-01",
+      "category": "Payments for individuals",
+      "share": 65.7
+    },
+    {
+      "date": "2011-01-01",
+      "category": "National defense",
+      "share": 19.6
+    },
+    {
+      "date": "2011-01-01",
+      "category": "Net interest",
+      "share": 6.4
+    },
+    {
+      "date": "2011-01-01",
+      "category": "Everything else",
+      "share": 8.3
+    },
+    {
+      "date": "2012-01-01",
+      "category": "Payments for individuals",
+      "share": 65.7
+    },
+    {
+      "date": "2012-01-01",
+      "category": "National defense",
+      "share": 19.2
+    },
+    {
+      "date": "2012-01-01",
+      "category": "Net interest",
+      "share": 6.2
+    },
+    {
+      "date": "2012-01-01",
+      "category": "Everything else",
+      "share": 8.9
+    },
+    {
+      "date": "2013-01-01",
+      "category": "Payments for individuals",
+      "share": 69.6
+    },
+    {
+      "date": "2013-01-01",
+      "category": "National defense",
+      "share": 18.3
+    },
+    {
+      "date": "2013-01-01",
+      "category": "Net interest",
+      "share": 6.4
+    },
+    {
+      "date": "2013-01-01",
+      "category": "Everything else",
+      "share": 5.7
+    },
+    {
+      "date": "2014-01-01",
+      "category": "Payments for individuals",
+      "share": 71.5
+    },
+    {
+      "date": "2014-01-01",
+      "category": "National defense",
+      "share": 17.2
+    },
+    {
+      "date": "2014-01-01",
+      "category": "Net interest",
+      "share": 6.5
+    },
+    {
+      "date": "2014-01-01",
+      "category": "Everything else",
+      "share": 4.7
+    },
+    {
+      "date": "2015-01-01",
+      "category": "Payments for individuals",
+      "share": 71.9
+    },
+    {
+      "date": "2015-01-01",
+      "category": "National defense",
+      "share": 16
+    },
+    {
+      "date": "2015-01-01",
+      "category": "Net interest",
+      "share": 6
+    },
+    {
+      "date": "2015-01-01",
+      "category": "Everything else",
+      "share": 6.1
+    },
+    {
+      "date": "2016-01-01",
+      "category": "Payments for individuals",
+      "share": 72.1
+    },
+    {
+      "date": "2016-01-01",
+      "category": "National defense",
+      "share": 15.4
+    },
+    {
+      "date": "2016-01-01",
+      "category": "Net interest",
+      "share": 6.2
+    },
+    {
+      "date": "2016-01-01",
+      "category": "Everything else",
+      "share": 6.3
+    },
+    {
+      "date": "2017-01-01",
+      "category": "Payments for individuals",
+      "share": 72.1
+    },
+    {
+      "date": "2017-01-01",
+      "category": "National defense",
+      "share": 15
+    },
+    {
+      "date": "2017-01-01",
+      "category": "Net interest",
+      "share": 6.6
+    },
+    {
+      "date": "2017-01-01",
+      "category": "Everything else",
+      "share": 6.2
+    },
+    {
+      "date": "2018-01-01",
+      "category": "Payments for individuals",
+      "share": 70.4
+    },
+    {
+      "date": "2018-01-01",
+      "category": "National defense",
+      "share": 15.4
+    },
+    {
+      "date": "2018-01-01",
+      "category": "Net interest",
+      "share": 7.9
+    },
+    {
+      "date": "2018-01-01",
+      "category": "Everything else",
+      "share": 6.3
+    },
+    {
+      "date": "2019-01-01",
+      "category": "Payments for individuals",
+      "share": 70
+    },
+    {
+      "date": "2019-01-01",
+      "category": "National defense",
+      "share": 15.4
+    },
+    {
+      "date": "2019-01-01",
+      "category": "Net interest",
+      "share": 8.4
+    },
+    {
+      "date": "2019-01-01",
+      "category": "Everything else",
+      "share": 6.1
+    },
+    {
+      "date": "2020-01-01",
+      "category": "Payments for individuals",
+      "share": 64.7
+    },
+    {
+      "date": "2020-01-01",
+      "category": "National defense",
+      "share": 11.1
+    },
+    {
+      "date": "2020-01-01",
+      "category": "Net interest",
+      "share": 5.3
+    },
+    {
+      "date": "2020-01-01",
+      "category": "Everything else",
+      "share": 18.9
+    },
+    {
+      "date": "2021-01-01",
+      "category": "Payments for individuals",
+      "share": 67.9
+    },
+    {
+      "date": "2021-01-01",
+      "category": "National defense",
+      "share": 11.1
+    },
+    {
+      "date": "2021-01-01",
+      "category": "Net interest",
+      "share": 5.2
+    },
+    {
+      "date": "2021-01-01",
+      "category": "Everything else",
+      "share": 15.9
+    },
+    {
+      "date": "2022-01-01",
+      "category": "Payments for individuals",
+      "share": 72.2
+    },
+    {
+      "date": "2022-01-01",
+      "category": "National defense",
+      "share": 12.2
+    },
+    {
+      "date": "2022-01-01",
+      "category": "Net interest",
+      "share": 7.6
+    },
+    {
+      "date": "2022-01-01",
+      "category": "Everything else",
+      "share": 8.1
+    },
+    {
+      "date": "2023-01-01",
+      "category": "Payments for individuals",
+      "share": 70.8
+    },
+    {
+      "date": "2023-01-01",
+      "category": "National defense",
+      "share": 13.4
+    },
+    {
+      "date": "2023-01-01",
+      "category": "Net interest",
+      "share": 10.7
+    },
+    {
+      "date": "2023-01-01",
+      "category": "Everything else",
+      "share": 5.1
+    },
+    {
+      "date": "2024-01-01",
+      "category": "Payments for individuals",
+      "share": 66
+    },
+    {
+      "date": "2024-01-01",
+      "category": "National defense",
+      "share": 13
+    },
+    {
+      "date": "2024-01-01",
+      "category": "Net interest",
+      "share": 13.1
+    },
+    {
+      "date": "2024-01-01",
+      "category": "Everything else",
+      "share": 8
+    }
+  ],
+  "encoding": {
+    "x": {
+      "field": "date",
+      "type": "temporal",
+      "axis": {
+        "format": "%Y",
+        "tickCount": 6
+      }
+    },
+    "y": {
+      "field": "share",
+      "type": "quantitative",
+      "stack": "normalize",
+      "axis": {
+        "title": "Share of outlays",
+        "format": ".0%",
+        "grid": true
+      }
+    },
+    "color": {
+      "field": "category",
+      "type": "nominal",
+      "scale": {
+        "domain": [
+          "Payments for individuals",
+          "National defense",
+          "Net interest",
+          "Everything else"
+        ],
+        "range": [
+          "#0e7490",
+          "#e07b39",
+          "#7c3aed",
+          "#9ca3af"
+        ]
+      }
+    }
+  },
+  "legend": {
+    "position": "top"
+  },
+  "chrome": {
+    "title": "Payments for individuals passed defense in 1971 and reached 66% by 2024",
+    "subtitle": "Share of US federal outlays by category, fiscal years 1962 to 2024"
+  }
+}
+```
+
+Normalizing hides the total, so state the dollars elsewhere if they matter. "Everything else" is a residual (the total minus the three named categories), and it includes grants, other nondefense spending and negative offsetting receipts. Only the bottom band sits on a flat baseline, so label the values you want read.
+
+## The spec
+
+A pie is `mark: "arc"` with the number on `theta` and the category on `color`. A waffle is `mark: "waffle"` with the same two channels, and `highlight` on `color` keeps one category in color and mutes the rest. The bar chart puts the number on `x` and the category on `y`, with `sort: null` to keep the order of the data. The area chart sets `stack: "normalize"` on `y` and prints the axis as a percentage with `format: ".0%"`.
+
+Each chart's Code button shows its full spec. The [100% stacked page](/docs/part-to-whole/stacked-100/) and the [waffle page](/docs/part-to-whole/waffle/) cover the stacking and highlight options.
+
+The [pie and donut page](/docs/part-to-whole/pie-donut/) covers slice labels, small-slice grouping and half donuts with live examples.
