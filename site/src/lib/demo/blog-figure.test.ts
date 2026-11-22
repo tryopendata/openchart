@@ -66,9 +66,9 @@ describe("figureCredit", () => {
   });
 
   it("throws UnknownFigureCreditError naming the demo when a spec has no target", () => {
-    const waffle = { mark: "waffle", data: [], encoding: {} } as unknown as VizSpec;
-    expect(() => figureCredit("blog/odd-one", waffle)).toThrow(UnknownFigureCreditError);
-    expect(() => figureCredit("blog/odd-one", waffle)).toThrow(/blog\/odd-one/);
+    const untargeted = { mark: "radar", data: [], encoding: {} } as unknown as VizSpec;
+    expect(() => figureCredit("blog/odd-one", untargeted)).toThrow(UnknownFigureCreditError);
+    expect(() => figureCredit("blog/odd-one", untargeted)).toThrow(/blog\/odd-one/);
   });
 });
 

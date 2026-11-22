@@ -52,6 +52,13 @@ const CREDIT_TARGETS: Record<string, FigureCredit> = {
   choropleth: docsCredit("maps/choropleth", "choropleth map"),
   "symbol-map": docsCredit("maps/symbol-map", "symbol map"),
   table: docsCredit("tables/data-table", "data table"),
+  area: docsCredit("change-over-time/area", "area chart"),
+  rect: docsCredit("correlation/heatmap", "heatmap"),
+  lollipop: docsCredit("comparison/lollipop", "lollipop chart"),
+  arc: docsCredit("part-to-whole/pie-donut", "pie chart"),
+  waffle: docsCredit("part-to-whole/waffle", "waffle chart"),
+  beeswarm: docsCredit("distribution/beeswarm", "beeswarm plot"),
+  histogram: docsCredit("distribution/histogram", "histogram"),
 };
 
 /** A chart's mark name, whether the spec writes it as a string or as `{ type }`. */
