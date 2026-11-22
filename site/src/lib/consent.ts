@@ -16,7 +16,7 @@ export function consentOptions(): {
     domain: "steamfield.io",
     privacyHref: "https://steamfield.io/privacy",
     message:
-      "The OpenChart site counts visits with PostHog. Accept lets it set a cookie so a repeat visit counts once; one answer covers every steamfield.io site.",
+      "The OpenChart site counts visits and clicks with PostHog. Accept lets it set cookies so repeat visits count once, and turns on session recordings and heatmaps; one answer covers every steamfield.io site.",
   };
 }
 

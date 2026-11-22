@@ -188,7 +188,8 @@ function createSearchDialog(dialog: HTMLDialogElement): SearchDialog {
       dispatch({ type: "found", query, total: found.total, groups: found.groups });
       if (state.status === "results" && state.query === query) shown = { ...found, query };
     } catch (error) {
-      console.error(`Pagefind failed while searching for "${query}".`, error);
+      // Never log the query: session recordings capture console errors after Accept.
+      console.error("Pagefind search failed.", error);
       dispatch({ type: "failed", query });
     }
   }

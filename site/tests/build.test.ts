@@ -12,6 +12,7 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
+import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import { gzipSync } from "node:zlib";
 import { countryIndicators } from "@datasets/country-indicators";
@@ -1385,5 +1386,119 @@ describe("phase 5 close", () => {
       .map((file) => join("src", file))
       .filter((file) => statSync(file).isFile());
     expect(sources.filter((file) => read(".", file).includes(PHASE_5_STUB))).toEqual([]);
+  });
+});
+
+// The layout only calls initAnalytics, and only creates the consent store and
+// banner, when the build has a key, so a keyless build (dev, CI, previews) bundles
+// none of it. The banner's stylesheet ships either way, with the other library CSS.
+describe("analytics in the build", () => {
+  // Every JavaScript file a page loads or may load: its inline scripts, script tags
+  // and island components, renderers and before-hydration scripts, then the imports
+  // (static, and dynamic with any quote style) of each file they reach.
+  function scriptsReachedFrom(root: string, file: string): Map<string, string> {
+    const html = read(root, file);
+    const reached = new Map<string, string>();
+    const pending: string[] = [];
+    const follow = (source: string, folder: string) => {
+      // Match static imports, re-exports and dynamic import()s, never JSON strings like
+      // `{ import: "./dist/index.js" }` from an inlined package.json.
+      const imports =
+        /(?:\bfrom|\bimport(?!\s*:))\s*(?:\(\s*)?["'`](\.{1,2}\/|\/(?!\/))([^"'`]+\.js)["'`]/g;
+      for (const m of source.matchAll(imports)) {
+        const prefix = m[1] ?? "";
+        const target = m[2] ?? "";
+        // A template such as posthog-js's `/static/${version}/${name}.js` is a URL
+        // built at run time for its CDN scripts, not a file in the build.
+        if (target.includes("${")) continue;
+        const resolved = new URL(`${prefix}${target}`, `https://dist.invalid/${folder}`).pathname;
+        pending.push(resolved.slice(1));
+      }
+    };
+    const pageFolder = file.slice(0, file.lastIndexOf("/") + 1);
+    const inline = html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g);
+    for (const [index, m] of Array.from(inline).entries()) {
+      const source = m[1] ?? "";
+      reached.set(`${file}#inline-${index}`, source);
+      follow(source, pageFolder);
+    }
+    const entries =
+      /(?:<script[^>]*\ssrc|\scomponent-url|\srenderer-url|\sbefore-hydration-url)="\/(?!\/)([^"]+\.js)"/g;
+    pending.push(...Array.from(html.matchAll(entries), (m) => m[1] ?? ""));
+    for (let path = pending.pop(); path !== undefined; path = pending.pop()) {
+      if (reached.has(path)) continue;
+      const source = read(root, path);
+      reached.set(path, source);
+      follow(source, path.slice(0, path.lastIndexOf("/") + 1));
+    }
+    return reached;
+  }
+
+  function stylesheetsOf(root: string, file: string): Map<string, string> {
+    const html = read(root, file);
+    const links = html.matchAll(/<link[^>]*\srel="stylesheet"[^>]*\shref="\/([^"]+)"/g);
+    return new Map(Array.from(links, (m) => m[1] ?? "").map((path) => [path, read(root, path)]));
+  }
+
+  const filesContaining = (reached: Map<string, string>, text: string) =>
+    [...reached].filter(([, source]) => source.includes(text)).map(([path]) => path);
+
+  const analyticsMarker = "us.i.posthog.com";
+  const sdkMarker = "__ph_opt_in_out_";
+  const consentMarker = "sf-consent";
+  const bannerStyleMarker = "--sf-consent-background";
+  const isConsentStyle = (source: string) => /\[data-part=["']?consent["']?\]/.test(source);
+  const siteValue = /site:\s*["'`]openchart["'`]/;
+
+  function buildWithKey(key: string) {
+    const out = mkdtempSync(join(tmpdir(), "openchart-analytics-"));
+    const built = spawnSync("bunx", ["--no-install", "astro", "build", "--outDir", out], {
+      encoding: "utf8",
+      timeout: 150_000,
+      env: { ...process.env, PUBLIC_POSTHOG_KEY: key },
+    });
+    expect(built.status, `${built.stdout}\n${built.stderr}`).toBe(0);
+    return out;
+  }
+
+  it("loads no analytics or consent code without a PostHog key", () => {
+    const out = buildWithKey("");
+    try {
+      const reached = scriptsReachedFrom(out, "index.html");
+      expect(reached.size).toBeGreaterThan(0);
+      expect(filesContaining(reached, analyticsMarker)).toEqual([]);
+      expect(filesContaining(reached, consentMarker)).toEqual([]);
+    } finally {
+      rmSync(out, { recursive: true, force: true });
+    }
+  }, 180_000);
+
+  it("loads the key once, posthog-js, the banner and its styles when the build has a key", () => {
+    const key = "openchart-build-test-key";
+    const out = buildWithKey(key);
+    try {
+      const reached = scriptsReachedFrom(out, "index.html");
+      expect(filesContaining(reached, key)).toHaveLength(1);
+      expect(filesContaining(reached, sdkMarker)).toHaveLength(1);
+      expect(filesContaining(reached, consentMarker)).not.toEqual([]);
+      const sources = [...reached.values()];
+      expect(sources.some((source) => siteValue.test(source))).toBe(true);
+      expect(sources.some((source) => /domain:\s*["'`]steamfield\.io["'`]/.test(source))).toBe(
+        true,
+      );
+      const styles = [...stylesheetsOf(out, "index.html").values()];
+      expect(styles.some((source) => source.includes(bannerStyleMarker))).toBe(true);
+      expect(styles.some(isConsentStyle)).toBe(true);
+    } finally {
+      rmSync(out, { recursive: true, force: true });
+    }
+  }, 180_000);
+
+  it("links the shared privacy page from the footer and masks search fields for recordings", () => {
+    const home = page("dist", "index.html");
+    expect(home.querySelector('footer a[href="https://steamfield.io/privacy"]')).not.toBeNull();
+    expect(home.querySelector("[data-search-input]")?.hasAttribute("data-ph-mask")).toBe(true);
+    expect(home.querySelector("[data-search-results]")?.hasAttribute("data-ph-mask")).toBe(true);
+    expect(home.querySelector("[data-search-status]")?.hasAttribute("data-ph-mask")).toBe(true);
   });
 });

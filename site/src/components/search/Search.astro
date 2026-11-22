@@ -58,6 +58,7 @@ import "../../styles/search.css";
       <input
         type="text"
         data-search-input
+        data-ph-mask
         role="combobox"
         aria-label="Search the site"
         aria-expanded="false"
@@ -81,12 +82,14 @@ import "../../styles/search.css";
       role="listbox"
       aria-label="Search results"
       data-search-results
+      data-ph-mask
       hidden
     ></div>
     <p data-search-progress class="search-message" hidden></p>
     <p
       role="status"
       data-search-status
+      data-ph-mask
       data-load-error={SEARCH_UNAVAILABLE}
       class="search-message sr-only"
     ></p>
