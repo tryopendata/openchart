@@ -1,5 +1,7 @@
 /**
- * Earthquakes of magnitude 2.5 and above, counted per 0.1 magnitude bin (1,603 quakes).
+ * Earthquakes from the USGS magnitude 2.5+ feed, counted per 0.1 magnitude bin (1,603 quakes).
+ * The feed also carries 19 quakes whose magnitude floors to the 2.4 bin; the blog's charts
+ * start at 2.5 and leave that row out.
  *
  * Rows are the OpenData dataset `usgs/earthquakes` (view `default`), queried on
  * 2026-11-22 with:

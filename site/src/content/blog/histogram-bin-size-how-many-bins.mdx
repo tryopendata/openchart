@@ -1,6 +1,6 @@
 ---
 title: "Histogram bin size: how many bins should you use?"
-description: Bin width decides what a histogram shows. Three widths on the same 51 values, two rules of thumb, and a test for telling a real feature from a bin artifact.
+description: Bin width decides what a histogram shows. Three widths on the same 51 incomes, two rules of thumb, and a test for telling a real feature from a bin artifact.
 published: 2026-11-19
 author: OpenChart
 tags: [chart-choice]
@@ -10,13 +10,13 @@ lead: blog/income-bins-10000
 
 import Demo from "../../components/demo/Demo.astro";
 
-A histogram sorts values into bins and draws a bar for each bin's count. You choose the width of the bins, and the same values can look like a lump, a smooth curve or random spikes depending on that choice.
+Do most states have about the same median household income, or are they spread out? A histogram of the 2024 values from the [Census Bureau's American Community Survey](https://www.census.gov/programs-surveys/acs) can say either, depending on one setting: the width of its bins. A histogram sorts values into bins and draws a bar for each bin's count, so the same values can look like a lump, a smooth curve or random spikes.
 
-The 51 values here are the 2024 median household income of each state and DC, from the [Census Bureau's American Community Survey](https://www.census.gov/programs-surveys/acs). The lowest is Mississippi at $59,127 and the highest is DC at $109,707.
+The data covers the 50 states and DC. The lowest is Mississippi at $59,127 and the highest is DC at $109,707.
 
 ## Too few bins
 
-With wide bins everything lands in two or three bars, and the shape of the data is gone.
+With wide bins everything lands in two or three bars, and the chart shows only a hump with no detail inside it.
 
 <Demo id="blog/income-bins-25000" />
 
@@ -36,10 +36,7 @@ A $10,000 bin gives six bars. The values pile up between $70,000 and $90,000, an
 
 ```json demo source="US Census Bureau, American Community Survey 1-year estimates" height=380
 {
-  "mark": {
-    "type": "bar",
-    "fill": "#0e7490"
-  },
+  "mark": "bar",
   "data": [
     {
       "state": "Alabama",
@@ -290,10 +287,10 @@ A $10,000 bin gives six bars. The values pile up between $70,000 and $90,000, an
         "title": "Median household income, 2024",
         "format": "$~s",
         "values": [
-          60000,
-          80000,
-          100000,
-          120000
+          50000,
+          70000,
+          90000,
+          110000
         ]
       }
     },
@@ -310,20 +307,32 @@ A $10,000 bin gives six bars. The values pile up between $70,000 and $90,000, an
       }
     }
   },
+  "theme": {
+    "colors": {
+      "categorical": [
+        {
+          "light": "#0e7490",
+          "dark": "#22a3c4"
+        }
+      ]
+    }
+  },
   "chrome": {
-    "title": "30 of 51 states sit between $70,000 and $90,000, with a tail to the right",
+    "title": "30 of 50 states sit between $70,000 and $90,000, with a tail to the right",
     "subtitle": "Number of states by median household income in $10,000 bins, 50 states and DC"
   }
 }
 ```
 
-Two rules of thumb compute a starting width from the data. Sturges' rule uses the count of values: take the base-2 logarithm of 51 and add one, and round up to 7 bins, or about $7,200 each across this range. The Freedman-Diaconis rule also uses the spread of the middle half of the values, which makes it less sensitive to outliers like DC. It gives a width of about $9,400.
+## Rules of thumb
+
+Two rules compute a starting width from the data. Sturges' rule uses only the count of values: take the base-2 logarithm of 51, add one and round up, which gives 7 bins, or about $7,200 each across this range. The Freedman-Diaconis rule sets the width to twice the spread of the middle half of the values (the interquartile range) divided by the cube root of the count. Because it ignores the extremes, an outlier like DC barely moves it. It gives about $9,400.
 
 Both rules land near the $10,000 width. Keep every bin the same width: the eye reads a bar's area while the count sets only its height, so bars of unequal width stop meaning the same thing. Try a width on either side of the suggestion and see whether the picture changes.
 
-## A feature that survives a change of width
+## Testing a feature against the bin width
 
-To tell a real feature from an artifact of the bin edges, redraw the chart at another width. Here is the USGS earthquake catalog for January 2026, counted in 0.1-magnitude bins, with only the quakes of magnitude 2.5 and above.
+Redraw the chart at another width to tell a real feature from an artifact of the bin edges. Here is the USGS earthquake catalog for January 2026, counted in 0.1-magnitude bins, with only the quakes of magnitude 2.5 and above.
 
 <Demo id="blog/quakes-bins-0-1" />
 
@@ -331,7 +340,9 @@ Small quakes are far more common than big ones, so counts should fall steadily w
 
 <Demo id="blog/quakes-bins-0-5" />
 
-At half-magnitude bins the small spikes at higher magnitudes smooth out, and the dip stays. A feature that survives a wider bin is in the data, and one that vanishes was probably the bins. This dip comes from how the catalog was collected. Most likely, quakes smaller than about magnitude 4.5 are only reported where seismometers are dense, so outside those regions the catalog mostly lists quakes of 4.5 and up and the counts jump back at 4.5.
+At half-magnitude bins the small spikes at higher magnitudes smooth out, and the dip stays, so the bins did not make it. The way the catalog was collected probably did. Outside regions with dense seismometers, such as the United States, the catalog reliably includes only quakes of about magnitude 4.5 and up. Counts climb from 4.0 and peak at 4.5, where worldwide coverage begins.
+
+A width test tells you a feature isn't a bin artifact; it can't tell you whether the data collection made it. For that, read how the data was gathered.
 
 ## The spec
 
@@ -339,10 +350,10 @@ OpenChart has a `histogram` mark that bins raw rows for you: `mark: { type: "his
 
 In the income spec, `bin: { step: 10000, extent: [50000, 125000] }` writes each state's bin start and end into two new fields. `aggregate` with `op: "count"`, grouped by both fields, turns 51 rows into one count per bin.
 
-The bin start goes on `x` and the bin end on `x2`, so each bar spans its whole range. A `scale.domain` fixes the x range so every width is drawn on the same axis.
+The bin start goes on `x` and the bin end on `x2`, so each bar spans its whole range. A `scale.domain` fixes the x range so every width is drawn on the same axis, and `axis.values` puts the ticks on bin edges ($50k, $70k and so on) so a reader can see where each bar starts. The bar color is a `{ light, dark }` pair in `theme.colors.categorical`, which picks a lighter teal on a dark page.
 
 The earthquake rows are already counts per 0.1 magnitude, so the first earthquake chart draws them directly, each bar ending 0.1 above its start. The 0.5 chart merges them with a `bin` transform and `op: "sum"` on the count field.
 
 A [density curve](/docs/distribution/density/) avoids bin edges entirely, in exchange for choosing a bandwidth, which sets how far each value is smeared across its neighbors.
 
-The [histogram page](/docs/distribution/histogram/) lists every field the mark takes.
+Every field the mark takes, including `binCount`, is on the [histogram page](/docs/distribution/histogram/).

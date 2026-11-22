@@ -95,19 +95,27 @@ describe("the bin-size post's figures", () => {
     }
   });
 
-  it("draws the earthquake charts from the dataset's rows and merges 0.5 bins by summing", () => {
+  it("draws the earthquake charts from the dataset's rows from magnitude 2.5 up, merging 0.5 bins by summing", () => {
+    const fromStart = earthquakeMagnitudes.data.filter((row) => row.magnitude_bin >= 2.5);
+    expect(fromStart.reduce((sum, row) => sum + row.quakes, 0)).toBe(1584);
     for (const demo of [quakesTenth, quakesHalf]) {
       const stripped = (specOf(demo).data ?? []).map(({ magnitude_to: _to, ...row }) => row);
-      expect(stripped, demo.id).toEqual(earthquakeMagnitudes.data);
+      expect(stripped, demo.id).toEqual(fromStart);
+      expect(specOf(demo).chrome?.subtitle, demo.id).toContain("1,584 quakes");
     }
     const halves = new Map<number, number>();
-    for (const row of earthquakeMagnitudes.data) {
-      const key = Math.floor((row.magnitude_bin - 2) / 0.5);
+    for (const row of fromStart) {
+      const key = Math.floor((row.magnitude_bin - 2.5) / 0.5);
       halves.set(key, (halves.get(key) ?? 0) + row.quakes);
     }
     expect([...halves.entries()].sort(([a], [b]) => a - b).map(([, n]) => n)).toEqual([
-      19, 474, 260, 91, 275, 312, 139, 24, 8, 1,
+      474, 260, 91, 275, 312, 139, 24, 8, 1,
     ]);
+    // Counts climb from 4.0 to a peak at 4.5, as the prose says.
+    const count = (bin: number) => fromStart.find((row) => row.magnitude_bin === bin)?.quakes ?? 0;
+    for (const bin of [4.0, 4.1, 4.2, 4.3, 4.4]) {
+      expect(count(Math.round((bin + 0.1) * 10) / 10)).toBeGreaterThan(count(bin));
+    }
     for (const row of specOf(quakesTenth).data ?? []) {
       expect(Number(row.magnitude_to) - Number(row.magnitude_bin)).toBeCloseTo(0.1, 10);
     }
@@ -115,10 +123,10 @@ describe("the bin-size post's figures", () => {
 
   it("titles each chart with a finding read off the rows", () => {
     expect(specOf(incomeTwentyFiveThousand).chrome?.title).toBe(
-      "With $25,000 bins the 51 states make 3 bars and no shape",
+      "With $25,000 bins the 50 states and DC make 3 bars and hide the detail",
     );
     expect(specOf(incomeTenThousand).chrome?.title).toBe(
-      "30 of 51 states sit between $70,000 and $90,000, with a tail to the right",
+      "30 of 50 states sit between $70,000 and $90,000, with a tail to the right",
     );
     expect(specOf(incomeThousand).chrome?.title).toBe(
       "With $1,000 bins there are 27 bars and none holds more than 4 states",
