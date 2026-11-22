@@ -1,0 +1,129 @@
+---
+title: How to annotate a line chart without cluttering it
+description: Good chart annotations answer a question a reader would otherwise ask. Use a three-annotation budget of reference lines, shaded ranges, and callouts.
+published: 2026-11-16
+author: OpenChart
+tags: [annotation, chart-choice]
+related: [framing/annotations, framing/chrome, change-over-time/line, the-spec/axes]
+lead: blog/inflation-annotated
+---
+
+import Demo from "../../components/demo/Demo.astro";
+
+A bare line chart traces the rise and fall of US inflation, then leaves readers to hunt for the context that explains those moves. Without notes on the plot, a reader has to eyeball the Federal Reserve's 2% target, estimate how long inflation stayed above 5%, and trace the grid to see when the 8.5% peak landed.
+
+The series plots quarterly year-over-year change in the Consumer Price Index (CPI, the Bureau of Labor Statistics measure of household prices) from 2019 through 2024. Each point compares prices in that quarter against the same quarter a year earlier, so the vertical axis reads as an annual inflation rate.
+
+<Demo id="blog/inflation-bare" />
+
+The title names the peak and the final reading, yet the plot itself makes the reader work for every benchmark. Tracing 2% across six years takes a ruler, and finding where the line crosses 5% on the way up and back down requires reading both axes at once.
+
+## Three annotation types and what each does
+
+A reference line marks a fixed threshold across the entire plot. Placing a dashed horizontal line at 2% anchors the Federal Reserve's long-run target, showing that inflation sat above that benchmark for the final 15 quarters of the series. A dashed stroke separates the benchmark from the solid data line, and setting the label at the right end keeps it in open space below the curve.
+
+A shaded range marks an interval across the horizontal axis. Covering the band from mid-2021 through early 2023 isolates the seven straight quarters when inflation stayed above 5%, turning a span readers would otherwise count by hand into one shape. Low fill opacity keeps the curve and gridlines legible through the tint.
+
+A text callout pins a single turning point to its exact value. Attaching a curved connector to the Q3 2022 peak names the 8.5% high in the open space to its right, clear of the range label above the band.
+
+The Q2 2020 pandemic trough of 0.3% stays unannotated on purpose. Every added label competes for attention, so skipping that dip keeps the chart within three annotations and holds focus on the inflation surge.
+
+```json demo source="US Bureau of Labor Statistics, CPI-U (via FRED CPIAUCSL)" height=420
+{
+  "mark": {
+    "type": "line",
+    "stroke": "#0e7490",
+    "strokeWidth": 2
+  },
+  "data": [
+    { "date": "2019-01-01", "rate": 1.6 },
+    { "date": "2019-04-01", "rate": 2.0 },
+    { "date": "2019-07-01", "rate": 1.8 },
+    { "date": "2019-10-01", "rate": 1.8 },
+    { "date": "2020-01-01", "rate": 2.5 },
+    { "date": "2020-04-01", "rate": 0.3 },
+    { "date": "2020-07-01", "rate": 1.0 },
+    { "date": "2020-10-01", "rate": 1.2 },
+    { "date": "2021-01-01", "rate": 1.4 },
+    { "date": "2021-04-01", "rate": 4.2 },
+    { "date": "2021-07-01", "rate": 5.4 },
+    { "date": "2021-10-01", "rate": 6.2 },
+    { "date": "2022-01-01", "rate": 7.5 },
+    { "date": "2022-04-01", "rate": 8.3 },
+    { "date": "2022-07-01", "rate": 8.5 },
+    { "date": "2022-10-01", "rate": 7.7 },
+    { "date": "2023-01-01", "rate": 6.4 },
+    { "date": "2023-04-01", "rate": 4.9 },
+    { "date": "2023-07-01", "rate": 3.2 },
+    { "date": "2023-10-01", "rate": 3.2 },
+    { "date": "2024-01-01", "rate": 3.1 },
+    { "date": "2024-04-01", "rate": 3.4 },
+    { "date": "2024-07-01", "rate": 2.9 },
+    { "date": "2024-10-01", "rate": 2.6 }
+  ],
+  "encoding": {
+    "x": {
+      "field": "date",
+      "type": "temporal",
+      "axis": { "format": "%Y", "tickCount": 6 }
+    },
+    "y": {
+      "field": "rate",
+      "type": "quantitative",
+      "axis": {
+        "title": "Change from a year earlier",
+        "format": ".0f",
+        "labelSuffix": "%"
+      },
+      "scale": { "domain": [0, 10] }
+    }
+  },
+  "annotations": [
+    {
+      "type": "refline",
+      "y": 2,
+      "label": "Fed 2% target",
+      "style": "dashed",
+      "strokeWidth": 1.5,
+      "labelPlacement": "end",
+      "labelAnchor": "bottom"
+    },
+    {
+      "type": "range",
+      "x1": "2021-07-01",
+      "x2": "2023-01-01",
+      "label": "Above 5%",
+      "opacity": 0.12
+    },
+    {
+      "type": "text",
+      "x": "2022-07-01",
+      "y": 8.5,
+      "text": "**8.5% peak**\nQ3 2022",
+      "anchor": "right",
+      "offset": { "dx": 24, "dy": 4 },
+      "connector": "curve"
+    }
+  ],
+  "chrome": {
+    "title": "US inflation stayed above 5% for seven quarters and peaked at 8.5% in Q3 2022",
+    "subtitle": "Consumer price index, % change from a year earlier, quarterly, 2019–2024"
+  }
+}
+```
+
+## Keeping a three-annotation budget
+
+Three annotations is a working ceiling for a single chart, because a fourth or fifth note starts turning the plot into a wall of labels. Once callouts crowd the curve, connectors cross each other, text collides on phone screens, and readers stop reading the line itself. Each mark has to answer a specific question a reader would otherwise ask from the geometry alone.
+
+When a fourth detail still matters, move it into prose or split the story across two charts. Context for a single dip, like the spring 2020 drop to 0.3% during pandemic lockdowns, fits cleanly in the surrounding paragraph where a sentence can explain why it happened. When the data holds two separate findings, give each one its own chart with a dedicated title and its own small set of notes.
+
+Even three annotations can collide if they share the same corner of the plot. On narrow screens, the chart area shrinks while label text stays readable, so anchoring each note in an open region of the chart prevents overlaps better than nudging pixels at desktop width.
+
+## The spec
+
+Code under the second chart opens its JSON spec, where all three notes sit in the `annotations` array using data coordinates so they stay pinned to the series at every width. The `"refline"` entry sets `y: 2` and `style: "dashed"`, with `labelPlacement: "end"` and `labelAnchor: "bottom"` placing its label under the right edge. The `"range"` entry pairs `x1` and `x2` dates with `opacity: 0.12` to tint the seven-quarter band.
+
+The `"text"` entry anchors at the peak's `x` and `y` values, shifts its label right with `anchor: "right"` and `offset`, and links the two with `connector: "curve"`. Inside `text`, `**bold**` spans and `\n` line breaks format the callout without custom markup. On the y channel, `scale: { domain: [0, 10] }` overrides the default top tick so the `"Above 5%"` range label has clean headroom above the 8.5% peak.
+
+For every option on reference lines, ranges, and callouts, read the [annotations guide](/docs/framing/annotations/).

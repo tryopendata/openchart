@@ -1,0 +1,122 @@
+---
+title: "Direct labels vs legends: when to put text on the chart"
+description: Legends force readers to look back and forth between colors and lines. Direct endpoint labels remove that hop, and here is when to keep a legend.
+published: 2026-11-19
+author: OpenChart
+tags: [annotation, accessibility]
+related: [framing/endpoint-labels, framing/labels-legends, change-over-time/line, behavior/interaction]
+lead: blog/direct-labels-endpoints
+---
+
+import Demo from "../../components/demo/Demo.astro";
+
+A separate legend splits a line chart into two places your eyes have to visit. Each time you check which series a line represents, you leave the plot, match its color to a swatch in the key, and hunt back for the same stroke. In US electricity data from [Our World in Data](https://ourworldindata.org/electricity-mix), coal fell from 31.2% in 2016 to 16.2% in 2023.
+
+Natural gas moved the other way over those years, climbing from 34.8% to 43.5%. Putting all six sources in a top key turns even those two lines into a lookup exercise, and telling wind, hydro, and solar apart near the bottom takes longer.
+
+<Demo id="blog/direct-labels-legend" />
+
+## Putting labels on the lines
+
+Placing each series name at the right end of its line removes the lookup hop. Readers see the label and the final value right where the line stops, so path and identity stay joined. Printing the final share beside the name also answers the most common question on a time series without a trip back to the y axis.
+
+Direct labels still work when two lines end on the same value, as long as the layout resolves collisions. In 2023, hydro and solar both finished at 5.8% of the six-source total, where naive text placement would print one name over the other. A vertical sweep pushes colliding entries apart until each has room, and a short leader line ties any shifted label back to its actual endpoint.
+
+Moving text onto the lines also solves an accessibility problem that color palettes alone rarely fix. Roughly 1 in 12 men has some form of red-green color vision deficiency, which makes distinguishing six distinct line colors unreliable. Once every line carries its own name at the right edge, color stops being the sole channel identifying a series. You can mute five lines to grey, keep coal in teal with a thicker stroke, and leave every context series readable.
+
+```json demo source="Our World in Data (owid/electricity-mix)" height=440
+{
+  "mark": { "type": "line", "strokeWidth": 2 },
+  "data": [
+    { "year": "2016", "source": "Coal", "share": 31.2 },
+    { "year": "2016", "source": "Gas", "share": 34.8 },
+    { "year": "2016", "source": "Nuclear", "share": 20.3 },
+    { "year": "2016", "source": "Hydro", "share": 6.6 },
+    { "year": "2016", "source": "Wind", "share": 5.7 },
+    { "year": "2016", "source": "Solar", "share": 1.4 },
+    { "year": "2017", "source": "Coal", "share": 30.7 },
+    { "year": "2017", "source": "Gas", "share": 33 },
+    { "year": "2017", "source": "Nuclear", "share": 20.5 },
+    { "year": "2017", "source": "Hydro", "share": 7.5 },
+    { "year": "2017", "source": "Wind", "share": 6.5 },
+    { "year": "2017", "source": "Solar", "share": 2 },
+    { "year": "2018", "source": "Coal", "share": 28.2 },
+    { "year": "2018", "source": "Gas", "share": 36 },
+    { "year": "2018", "source": "Nuclear", "share": 19.8 },
+    { "year": "2018", "source": "Hydro", "share": 7 },
+    { "year": "2018", "source": "Wind", "share": 6.7 },
+    { "year": "2018", "source": "Solar", "share": 2.3 },
+    { "year": "2019", "source": "Coal", "share": 23.9 },
+    { "year": "2019", "source": "Gas", "share": 39.2 },
+    { "year": "2019", "source": "Nuclear", "share": 20 },
+    { "year": "2019", "source": "Hydro", "share": 7 },
+    { "year": "2019", "source": "Wind", "share": 7.3 },
+    { "year": "2019", "source": "Solar", "share": 2.6 },
+    { "year": "2020", "source": "Coal", "share": 19.6 },
+    { "year": "2020", "source": "Gas", "share": 41.3 },
+    { "year": "2020", "source": "Nuclear", "share": 20.1 },
+    { "year": "2020", "source": "Hydro", "share": 7.1 },
+    { "year": "2020", "source": "Wind", "share": 8.6 },
+    { "year": "2020", "source": "Solar", "share": 3.3 },
+    { "year": "2021", "source": "Coal", "share": 22.2 },
+    { "year": "2021", "source": "Gas", "share": 39 },
+    { "year": "2021", "source": "Nuclear", "share": 19.3 },
+    { "year": "2021", "source": "Hydro", "share": 6.1 },
+    { "year": "2021", "source": "Wind", "share": 9.3 },
+    { "year": "2021", "source": "Solar", "share": 4.1 },
+    { "year": "2022", "source": "Coal", "share": 19.9 },
+    { "year": "2022", "source": "Gas", "share": 40.4 },
+    { "year": "2022", "source": "Nuclear", "share": 18.5 },
+    { "year": "2022", "source": "Hydro", "share": 6 },
+    { "year": "2022", "source": "Wind", "share": 10.4 },
+    { "year": "2022", "source": "Solar", "share": 4.9 },
+    { "year": "2023", "source": "Coal", "share": 16.2 },
+    { "year": "2023", "source": "Gas", "share": 43.5 },
+    { "year": "2023", "source": "Nuclear", "share": 18.6 },
+    { "year": "2023", "source": "Hydro", "share": 5.8 },
+    { "year": "2023", "source": "Wind", "share": 10.1 },
+    { "year": "2023", "source": "Solar", "share": 5.8 }
+  ],
+  "encoding": {
+    "x": { "field": "year", "type": "temporal", "axis": { "format": "%Y" } },
+    "y": {
+      "field": "share",
+      "type": "quantitative",
+      "axis": { "title": "Share of generation", "format": ".0f", "labelSuffix": "%" }
+    },
+    "color": {
+      "field": "source",
+      "type": "nominal",
+      "scale": {
+        "domain": ["Coal", "Gas", "Nuclear", "Hydro", "Wind", "Solar"],
+        "range": ["#0e7490", "#7a858f", "#7a858f", "#7a858f", "#7a858f", "#7a858f"]
+      }
+    }
+  },
+  "legend": { "show": false },
+  "endpointLabels": { "content": "label value", "format": ".1f", "showLeader": true },
+  "seriesStyles": { "Coal": { "strokeWidth": 3 } },
+  "chrome": {
+    "title": "US coal fell from 31.2% to 16.2% of main-source generation between 2016 and 2023",
+    "subtitle": "Share of US generation from coal, gas, nuclear, hydro, wind and solar (%), 2016 to 2023"
+  }
+}
+```
+
+## When a legend still wins
+
+Direct labels depend on each series having a single edge where text can sit, so they break down when marks spread across space. A scatter plot with colored groups places points across both axes and leaves no right-hand margin for labels. Choropleth maps, which shade geographic regions by numeric value, require a color scale bar because regions have no shared edge to label.
+
+Thin segments and crowded line charts hit a hard space ceiling. On stacked bars or stacked areas, small categories produce bands narrower than a line of text, so direct labels either spill outside the mark or disappear. Past roughly six to eight lines, the right-hand label stack also outgrows the plot height.
+
+Narrow phone viewports shrink the horizontal space that right-hand endpoint labels need. A label column carrying series names and values takes roughly 90 to 120 pixels off the right side of the chart. On a 360-pixel mobile screen, that takes up a third of the width and squeezes the time axis until slopes turn steep and cramped. Moving the key to a top legend gives mobile readers the full width for the lines.
+
+Legends also stay useful when they double as controls. In an interactive dashboard where readers click a series name to isolate or toggle it, a fixed horizontal bar at the top gives every button a predictable home that never jumps when lines change height.
+
+## The spec
+
+The Code tab under the second chart opens the full spec with all 48 source rows. `legend: { show: false }` removes the top key, while `endpointLabels` prints each name and final share on one line using `content: "label value"` and `format: ".1f"`. Adding `showLeader: true` draws connectors where hydro and solar separate at 5.8%. For two to eight line series, omitting `endpointLabels` turns direct labels on automatically.
+
+To emphasize coal while keeping every context line labeled, the color channel pairs an explicit `scale` (teal for coal, grey for the other five sources) with a thicker stroke in `seriesStyles`. When only the focal series should carry text, set `highlight: "Coal"` on `encoding.color`. That single field mutes the remaining lines to grey and limits endpoint labels to the highlighted series.
+
+For all formatting and placement options, see the [endpoint labels guide](/docs/framing/endpoint-labels/).

@@ -1290,19 +1290,20 @@ describe("the gallery's content (lane a)", () => {
 });
 
 describe("the blog's content (lane d)", () => {
-  const sample = () => page("dist", postPath(SAMPLE_POST));
-  const prose = () => sample().querySelector("article .docs-prose");
-
-  it("the sample post has at least two tier-1 figures, one of them from a json demo fence", () => {
-    const figures = [...(prose()?.querySelectorAll(".demo[data-demo]") ?? [])];
-    expect(figures.length).toBeGreaterThanOrEqual(2);
-    const untraced = figures.filter((figure) => !citesTier1(figure));
-    expect(untraced.map((figure) => figure.getAttribute("data-demo"))).toEqual([]);
-    const fenced = figures.filter((figure) =>
-      figure.getAttribute("data-demo")?.startsWith("fence-"),
-    );
-    expect(fenced.length).toBeGreaterThanOrEqual(1);
-  });
+  it.each(posts)(
+    "$slug has at least two tier-1 figures, one of them from a json demo fence",
+    (post) => {
+      const prose = page("dist", postPath(post.slug)).querySelector("article .docs-prose");
+      const figures = [...(prose?.querySelectorAll(".demo[data-demo]") ?? [])];
+      expect(figures.length).toBeGreaterThanOrEqual(2);
+      const untraced = figures.filter((figure) => !citesTier1(figure));
+      expect(untraced.map((figure) => figure.getAttribute("data-demo"))).toEqual([]);
+      const fenced = figures.filter((figure) =>
+        figure.getAttribute("data-demo")?.startsWith("fence-"),
+      );
+      expect(fenced.length).toBeGreaterThanOrEqual(1);
+    },
+  );
 
   it.each(posts)("$slug has a byline: the author, the date, then the reading time", (post) => {
     const byline = page("dist", postPath(post.slug)).querySelector("[data-byline]");
@@ -1330,27 +1331,32 @@ describe("the blog's content (lane d)", () => {
     expect(mainEntity).toBe(canonical);
   });
 
-  it("the sample post ends on one paragraph of at most 30 words with one link", () => {
-    const last = prose()?.lastElementChild;
+  it.each(posts)("$slug ends on one paragraph of at most 30 words with one link", (post) => {
+    const prose = page("dist", postPath(post.slug)).querySelector("article .docs-prose");
+    const last = prose?.lastElementChild;
     expect(last?.tagName).toBe("P");
     expect((last?.textContent ?? "").trim().split(/\s+/).length).toBeLessThanOrEqual(30);
     expect(last?.querySelectorAll("a")).toHaveLength(1);
   });
 
-  it("the sample post links each related docs page", () => {
-    const related = posts.find((post) => post.slug === SAMPLE_POST)?.related ?? [];
-    expect(related.length).toBeGreaterThan(0);
-    const missing = related.filter(
-      (id) => !sample().querySelector(`article a[href="/docs/${id}/"]`),
+  it.each(posts)("$slug links each related docs page", (post) => {
+    const doc = page("dist", postPath(post.slug));
+    expect(post.related.length).toBeGreaterThan(0);
+    const missing = post.related.filter(
+      (id) => !doc.querySelector(`article a[href="/docs/${id}/"]`),
     );
     expect(missing).toEqual([]);
   });
 
-  it("the sample post reads tightly: short paragraphs, no em dash, no repeated heading", () => {
-    expect(longParagraphs(sample())).toEqual([]);
-    expect(proseText(prose())).not.toContain(EM_DASH);
-    expect(repeatedHeadings(sample())).toEqual([]);
-  });
+  it.each(posts)(
+    "$slug reads tightly: short paragraphs, no em dash, no repeated heading",
+    (post) => {
+      const doc = page("dist", postPath(post.slug));
+      expect(longParagraphs(doc)).toEqual([]);
+      expect(proseText(doc.querySelector("article"))).not.toContain(EM_DASH);
+      expect(repeatedHeadings(doc)).toEqual([]);
+    },
+  );
 
   it.each(posts)(
     "$slug has an RSS item with its canonical, its date and one category per tag",
