@@ -95,6 +95,13 @@ export const migrationExtremes = defineDemo({
     theme: { colors: { categorical: [TEAL, ORANGE] } },
     legend: { show: false },
     labels: { format: ",.0f" },
+    overrides: {
+      compact: {
+        chrome: {
+          title: `${topLoss.state} lost ${Math.abs(topLoss.net).toLocaleString("en-US")} people to other states, ${topGain.state} gained ${topGain.net.toLocaleString("en-US")}`,
+        },
+      },
+    },
     chrome: {
       title: `${topLoss.state} lost a net ${Math.abs(topLoss.net).toLocaleString("en-US")} people to other states in 2022-23, while ${topGain.state} gained ${topGain.net.toLocaleString("en-US")}`,
       subtitle: `Net domestic migration in 2022-23, IRS tax-filer exemptions: the ${EDGE} largest gains and losses`,

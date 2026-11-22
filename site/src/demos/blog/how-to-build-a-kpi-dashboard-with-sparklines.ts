@@ -282,7 +282,6 @@ export const mortgageSparkline = defineDemo({
   title: "A sparkline of the 30-year mortgage rate",
   source: sourceOf(mortgageRateWeekly),
   height: 120,
-  width: 320,
   spec: {
     // A sparkline takes a rising or falling trend color unless the stroke is set.
     mark: { type: "line", interpolate: "linear", stroke: ACCENT.light },

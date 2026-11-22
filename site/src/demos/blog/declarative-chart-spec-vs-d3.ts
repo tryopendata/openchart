@@ -173,7 +173,12 @@ export const occupationPayRanges = defineDemo({
       },
     ],
     overrides: {
-      compact: { encoding: { x: { axis: { values: [0, 100_000, 200_000] } } } },
+      compact: {
+        encoding: { x: { axis: { values: [0, 100_000, 200_000] } } },
+        chrome: {
+          title: `Food service 90th percentile pay, ${money(food.a_pct90)}, is below a manager's 10th, ${money(manager.a_pct10)}`,
+        },
+      },
     },
     chrome: {
       title: `A food service worker at the 90th percentile earns ${money(food.a_pct90)}, less than a manager at the 10th, ${money(manager.a_pct10)}`,
