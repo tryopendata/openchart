@@ -44,7 +44,9 @@ describe("the dual-axis post's figures", () => {
 
   it("draws both dual-axis charts from the road-death rows unchanged", () => {
     for (const demo of [dualAxisZeroBased, dualAxisTrimmed]) {
-      const layers = (demo.spec as { layer: { data: { deaths: number; rate: number }[] }[] }).layer;
+      const layers = (
+        demo.spec as unknown as { layer: { data: { deaths: number; rate: number }[] }[] }
+      ).layer;
       for (const layer of layers) {
         expect(layer.data.map((row) => [row.deaths, row.rate])).toEqual(
           nhtsaTrafficFatalities.data.map((row) => [row.total_fatalities, row.rate_per_100m_vmt]),
@@ -54,14 +56,18 @@ describe("the dual-axis post's figures", () => {
   });
 
   it("splits the wildfire rows into one panel per measure and indexes road deaths to 1966", () => {
-    const panels = (wildfirePanels.spec as { data: { measure: string; value: number }[] }).data;
+    const panels = (
+      wildfirePanels.spec as unknown as { data: { measure: string; value: number }[] }
+    ).data;
     expect(
       panels.filter((row) => row.measure === "Fires per year").map((row) => row.value),
     ).toEqual(nifcWildfires.data.map((row) => row.fires));
     expect(
       panels.filter((row) => row.measure === "Acres burned per fire").map((row) => row.value),
     ).toEqual(nifcWildfires.data.map((row) => row.acres_per_fire));
-    const indexed = (fatalitiesIndexed.spec as { data: { series: string; index: number }[] }).data;
+    const indexed = (
+      fatalitiesIndexed.spec as unknown as { data: { series: string; index: number }[] }
+    ).data;
     expect(indexed.filter((row) => row.series === "Deaths")[0]?.index).toBe(100);
     expect(indexed.filter((row) => row.series === "Deaths per 100M miles")[0]?.index).toBe(100);
   });

@@ -11,6 +11,12 @@ import { hudPitHomelessnessNational } from "@datasets/hud-pit-homelessness-natio
 import { sourceOf } from "../source";
 import { defineDemo } from "../types";
 
+/** The row at the given index of a dataset the demo cannot be built without. */
+function must<T>(row: T | undefined, what: string): T {
+  if (row === undefined) throw new Error(`The ${what} dataset has no such row.`);
+  return row;
+}
+
 const FUELS = [
   { key: "solar_mw", label: "Solar", color: "#e07b39" },
   { key: "battery_mw", label: "Batteries", color: "#7c3aed" },
@@ -39,7 +45,7 @@ const capacityRows = capacityYears.flatMap((row) =>
 const totalMw = (row: (typeof capacityYears)[number]) =>
   FUELS.reduce((sum, fuel) => sum + (row[fuel.key] ?? 0), 0);
 const biggestYear = capacityYears.reduce((max, row) => (totalMw(row) > totalMw(max) ? row : max));
-const lastYear = capacityYears[capacityYears.length - 1];
+const lastYear = must(capacityYears[capacityYears.length - 1], "generator capacity");
 
 const fuelScale = {
   domain: FUELS.map((fuel) => fuel.label),
@@ -105,7 +111,7 @@ export const capacityGrouped = defineDemo({
 });
 
 const homeless = hudPitHomelessnessNational.data;
-const latest = homeless[homeless.length - 1];
+const latest = must(homeless[homeless.length - 1], "homelessness");
 
 const homelessRows = homeless.flatMap((row) => [
   { year: String(row.year), status: "Sheltered", people: row.sheltered },

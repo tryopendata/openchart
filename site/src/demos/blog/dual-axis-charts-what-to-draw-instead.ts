@@ -9,16 +9,23 @@
  */
 import { nhtsaTrafficFatalities } from "@datasets/nhtsa-traffic-fatalities";
 import { nifcWildfires } from "@datasets/nifc-wildfires";
+import type { VizSpec } from "@opendata-ai/openchart-core";
 import { sourceOf } from "../source";
 import { defineDemo } from "../types";
+
+/** The row at the given index of a dataset the demo cannot be built without. */
+function must<T>(row: T | undefined, what: string): T {
+  if (row === undefined) throw new Error(`The ${what} dataset has no such row.`);
+  return row;
+}
 
 const BLUE = "#0e7490";
 const ORANGE = "#e07b39";
 
 const traffic = nhtsaTrafficFatalities.data;
 const fires = nifcWildfires.data;
-const first = traffic[0];
-const last = traffic[traffic.length - 1];
+const first = must(traffic[0], "road-death");
+const last = must(traffic[traffic.length - 1], "road-death");
 
 /** Percent change from the first to the last row, rounded to a whole percent. */
 const pctChange = (from: number, to: number) => Math.round(((to - from) / from) * 100);
@@ -39,7 +46,7 @@ function dualAxis(
   deathsValues: number[],
   rateValues: number[],
   title: string,
-) {
+): VizSpec {
   const x = { field: "date", type: "temporal", axis: { format: "%Y", tickCount: 6 } } as const;
   return {
     chrome: {
@@ -87,7 +94,7 @@ function dualAxis(
         labels: { density: "none" },
       },
     ],
-  } as const;
+  };
 }
 
 export const dualAxisZeroBased = defineDemo({

@@ -8,8 +8,15 @@
  */
 import { fbiViolentCrimeRates } from "@datasets/fbi-violent-crime-rates";
 import { spaceLaunchesByCountry } from "@datasets/space-launches-by-country";
+import type { VizSpec } from "@opendata-ai/openchart-core";
 import { sourceOf } from "../source";
 import { defineDemo } from "../types";
+
+/** The row at the given index of a dataset the demo cannot be built without. */
+function must<T>(row: T | undefined, what: string): T {
+  if (row === undefined) throw new Error(`The ${what} dataset has no such row.`);
+  return row;
+}
 
 const BLUE = "#0e7490";
 const ORANGE = "#e07b39";
@@ -38,7 +45,7 @@ const peakOf = (key: "ussr_russia" | "usa") =>
   launches.reduce((max, row) => (row[key] > max[key] ? row : max));
 const sovietPeak = peakOf("ussr_russia");
 const usPeak = peakOf("usa");
-const last = launches[launches.length - 1];
+const last = must(launches[launches.length - 1], "space launches");
 
 const xAxis = { format: "%Y", tickCount: 5 } as const;
 // Panels are narrow, so they take fewer x ticks to keep neighbouring labels apart.
@@ -103,13 +110,13 @@ const crimeRows = crime.flatMap((row) =>
 );
 
 const row1991 = crime.find((row) => row.year === 1991);
-const lastCrime = crime[crime.length - 1];
+const lastCrime = must(crime[crime.length - 1], "violent crime");
 // The highest homicide rate since 2000, which is the 2021 bump.
 const recentHomicidePeak = crime
   .filter((row) => row.year >= 2000)
   .reduce((max, row) => (row.homicide_rate_per_100k > max.homicide_rate_per_100k ? row : max));
 
-const crimeSpec = (shared: boolean) => ({
+const crimeSpec = (shared: boolean): VizSpec => ({
   mark: { type: "line", stroke: BLUE, strokeWidth: 2 },
   data: crimeRows,
   encoding: {

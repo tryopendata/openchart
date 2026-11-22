@@ -11,6 +11,12 @@ import { tidyTuesdayFoodCo2 } from "@datasets/tidytuesday-food-co2";
 import { sourceOf } from "../source";
 import { defineDemo } from "../types";
 
+/** The row at the given index of a dataset the demo cannot be built without. */
+function must<T>(row: T | undefined, what: string): T {
+  if (row === undefined) throw new Error(`The ${what} dataset has no such row.`);
+  return row;
+}
+
 const BLUE = "#0e7490";
 
 // Short axis labels for categories whose source names are long. The values are untouched.
@@ -32,7 +38,9 @@ const foodRows = tidyTuesdayFoodCo2.data
   }))
   .sort((a, b) => b.kgCo2PerKg - a.kgCo2PerKg);
 
-const [highest, second, ...rest] = foodRows;
+const [firstFood, secondFood, ...rest] = foodRows;
+const highest = must(firstFood, "food CO2");
+const second = must(secondFood, "food CO2");
 const restMax = Math.max(...rest.map((row) => row.kgCo2PerKg));
 // The title names lamb, goat and beef as the two highest rows, so fail if the rows stop agreeing.
 if (highest.food !== "Lamb and goat" || second.food !== "Beef") {

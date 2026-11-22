@@ -11,10 +11,16 @@ import { ombCompositionOfOutlays } from "@datasets/omb-composition-of-outlays";
 import { sourceOf } from "../source";
 import { defineDemo } from "../types";
 
+/** The row at the given index of a dataset the demo cannot be built without. */
+function must<T>(row: T | undefined, what: string): T {
+  if (row === undefined) throw new Error(`The ${what} dataset has no such row.`);
+  return row;
+}
+
 const BLUE = "#0e7490";
 
 const debt = nyFedHouseholdDebt.data;
-const latestDebt = debt[debt.length - 1];
+const latestDebt = must(debt[debt.length - 1], "household debt");
 
 const trillions = (value: number) => Number(value.toFixed(2));
 
@@ -81,7 +87,7 @@ export const debtBars = defineDemo({
 });
 
 const outlays = ombCompositionOfOutlays.data;
-const lastOutlays = outlays[outlays.length - 1];
+const lastOutlays = must(outlays[outlays.length - 1], "federal outlays");
 
 export const outlaysWaffle = defineDemo({
   id: "blog/outlays-waffle",
@@ -124,7 +130,7 @@ const outlayRows = outlays.flatMap((row) =>
 );
 
 const firstFlip = outlays.find((row) => row.payments_to_individuals_pct > row.defense_pct);
-const first = outlays[0];
+const first = must(outlays[0], "federal outlays");
 
 export const outlaysOverTime = defineDemo({
   id: "blog/outlays-over-time",

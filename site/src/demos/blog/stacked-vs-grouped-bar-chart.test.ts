@@ -48,7 +48,9 @@ describe("the stacked-vs-grouped post's figures", () => {
     const years = eiaCapacityOnlineByYear.data.filter(
       (row) => row.year >= 2018 && row.year <= 2024,
     );
-    expect(byFuel("Solar")).toEqual(years.map((row) => Number((row.solar_mw / 1000).toFixed(1))));
+    expect(byFuel("Solar")).toEqual(
+      years.map((row) => Number(((row.solar_mw ?? 0) / 1000).toFixed(1))),
+    );
     expect(byFuel("Natural gas")).toEqual(
       years.map((row) => Number((row.natural_gas_mw / 1000).toFixed(1))),
     );
