@@ -1,0 +1,200 @@
+---
+title: "Declarative chart spec vs D3: what you write and what you give up"
+description: The same line chart as a 25-line JSON spec and as 72 lines of D3, what the spec decides for you, what it cannot draw, and when to reach for D3.
+published: 2026-11-14
+author: OpenChart
+tags: [developers]
+related: [the-spec/anatomy, the-spec/encoding, framing/annotations]
+lead: blog/typescript-passes-java
+---
+
+import Demo from "../../components/demo/Demo.astro";
+
+D3 gives you scales, shapes and axes, and you assemble the chart from them. A declarative spec describes the chart, and a library draws it. This post builds one chart both ways, so the difference is visible in code. The chart shows developers pushing TypeScript and Java code to GitHub each quarter. TypeScript passed Java in 2023 Q3.
+
+```json demo source="GitHub Innovation Graph, programming languages by economy" height=420
+{
+  "mark": { "type": "line", "strokeWidth": 2.5, "interpolate": "linear" },
+  "data": [
+    { "date": "2020-01-01", "language": "TypeScript", "pushers": 306095 },
+    { "date": "2020-01-01", "language": "Java", "pushers": 720340 },
+    { "date": "2020-04-01", "language": "TypeScript", "pushers": 367805 },
+    { "date": "2020-04-01", "language": "Java", "pushers": 778731 },
+    { "date": "2020-07-01", "language": "TypeScript", "pushers": 372279 },
+    { "date": "2020-07-01", "language": "Java", "pushers": 687704 },
+    { "date": "2020-10-01", "language": "TypeScript", "pushers": 395619 },
+    { "date": "2020-10-01", "language": "Java", "pushers": 754043 },
+    { "date": "2021-01-01", "language": "TypeScript", "pushers": 431766 },
+    { "date": "2021-01-01", "language": "Java", "pushers": 742662 },
+    { "date": "2021-04-01", "language": "TypeScript", "pushers": 481669 },
+    { "date": "2021-04-01", "language": "Java", "pushers": 780894 },
+    { "date": "2021-07-01", "language": "TypeScript", "pushers": 472224 },
+    { "date": "2021-07-01", "language": "Java", "pushers": 675296 },
+    { "date": "2021-10-01", "language": "TypeScript", "pushers": 530695 },
+    { "date": "2021-10-01", "language": "Java", "pushers": 765669 },
+    { "date": "2022-01-01", "language": "TypeScript", "pushers": 597496 },
+    { "date": "2022-01-01", "language": "Java", "pushers": 797951 },
+    { "date": "2022-04-01", "language": "TypeScript", "pushers": 652366 },
+    { "date": "2022-04-01", "language": "Java", "pushers": 841455 },
+    { "date": "2022-07-01", "language": "TypeScript", "pushers": 674344 },
+    { "date": "2022-07-01", "language": "Java", "pushers": 774649 },
+    { "date": "2022-10-01", "language": "TypeScript", "pushers": 744070 },
+    { "date": "2022-10-01", "language": "Java", "pushers": 883955 },
+    { "date": "2023-01-01", "language": "TypeScript", "pushers": 827912 },
+    { "date": "2023-01-01", "language": "Java", "pushers": 889716 },
+    { "date": "2023-04-01", "language": "TypeScript", "pushers": 899101 },
+    { "date": "2023-04-01", "language": "Java", "pushers": 920931 },
+    { "date": "2023-07-01", "language": "TypeScript", "pushers": 891746 },
+    { "date": "2023-07-01", "language": "Java", "pushers": 814264 },
+    { "date": "2023-10-01", "language": "TypeScript", "pushers": 967388 },
+    { "date": "2023-10-01", "language": "Java", "pushers": 908666 },
+    { "date": "2024-01-01", "language": "TypeScript", "pushers": 1062491 },
+    { "date": "2024-01-01", "language": "Java", "pushers": 899309 },
+    { "date": "2024-04-01", "language": "TypeScript", "pushers": 1109117 },
+    { "date": "2024-04-01", "language": "Java", "pushers": 926787 },
+    { "date": "2024-07-01", "language": "TypeScript", "pushers": 1110826 },
+    { "date": "2024-07-01", "language": "Java", "pushers": 818013 },
+    { "date": "2024-10-01", "language": "TypeScript", "pushers": 1232206 },
+    { "date": "2024-10-01", "language": "Java", "pushers": 917654 },
+    { "date": "2025-01-01", "language": "TypeScript", "pushers": 1407181 },
+    { "date": "2025-01-01", "language": "Java", "pushers": 928222 },
+    { "date": "2025-04-01", "language": "TypeScript", "pushers": 1684851 },
+    { "date": "2025-04-01", "language": "Java", "pushers": 1019640 },
+    { "date": "2025-07-01", "language": "TypeScript", "pushers": 1844894 },
+    { "date": "2025-07-01", "language": "Java", "pushers": 923847 },
+    { "date": "2025-10-01", "language": "TypeScript", "pushers": 2175422 },
+    { "date": "2025-10-01", "language": "Java", "pushers": 1037822 },
+    { "date": "2026-01-01", "language": "TypeScript", "pushers": 2787317 },
+    { "date": "2026-01-01", "language": "Java", "pushers": 1074838 }
+  ],
+  "encoding": {
+    "x": { "field": "date", "type": "temporal", "axis": { "format": "%Y" } },
+    "y": {
+      "field": "pushers",
+      "type": "quantitative",
+      "scale": { "zero": true },
+      "axis": { "format": "~s", "grid": true }
+    },
+    "color": {
+      "field": "language",
+      "type": "nominal",
+      "scale": { "domain": ["TypeScript", "Java"], "range": ["#0e7490", "#7a858f"] }
+    }
+  },
+  "legend": { "show": false },
+  "endpointLabels": { "format": ".3~s" },
+  "chrome": {
+    "title": "TypeScript overtook Java in 2023 Q3 and has grown 9.1x since 2020 Q1",
+    "subtitle": "Developers pushing code to GitHub each quarter, summed across economies"
+  }
+}
+```
+
+The spec is 25 lines, not counting the 50 data rows. It says which fields go on which axes, which colors to use, and what the title is. It does not say where anything goes on the page.
+
+## The same chart in D3
+
+The D3 version runs on the same rows. It takes 72 lines of TypeScript. Run against those rows in a DOM, it drew two lines, the axes and the end labels.
+
+```ts title="chart.ts"
+import * as d3 from "d3";
+
+type Row = { date: Date; language: string; pushers: number };
+
+export function drawChart(
+  container: HTMLElement,
+  data: { date: string; language: string; pushers: number }[],
+  title: string,
+  subtitle: string,
+) {
+  const width = 720;
+  const height = 420;
+  const margin = { top: 84, right: 90, bottom: 36, left: 56 };
+  const colors: Record<string, string> = { TypeScript: "#0e7490", Java: "#7a858f" };
+
+  const rows: Row[] = data.map((d) => ({ ...d, date: d3.timeParse("%Y-%m-%d")(d.date) as Date }));
+  const series = d3.group(rows, (d) => d.language);
+
+  const x = d3
+    .scaleTime()
+    .domain(d3.extent(rows, (d) => d.date) as [Date, Date])
+    .range([margin.left, width - margin.right]);
+  const y = d3
+    .scaleLinear()
+    .domain([0, d3.max(rows, (d) => d.pushers) as number])
+    .nice()
+    .range([height - margin.bottom, margin.top]);
+
+  const svg = d3
+    .select(container)
+    .append("svg")
+    .attr("viewBox", `0 0 ${width} ${height}`)
+    .attr("role", "img")
+    .attr("aria-label", title);
+
+  svg.append("text").attr("x", margin.left).attr("y", 30).attr("font-size", 22).text(title);
+  svg.append("text").attr("x", margin.left).attr("y", 52).attr("fill", "#555").text(subtitle);
+
+  svg
+    .append("g")
+    .attr("transform", `translate(0,${height - margin.bottom})`)
+    .call(d3.axisBottom(x).ticks(6).tickFormat(d3.timeFormat("%Y") as never));
+  svg
+    .append("g")
+    .attr("transform", `translate(${margin.left},0)`)
+    .call(d3.axisLeft(y).ticks(5, "~s").tickSize(-(width - margin.left - margin.right)))
+    .call((g) => g.select(".domain").remove())
+    .call((g) => g.selectAll(".tick line").attr("stroke", "#ddd"));
+
+  const line = d3
+    .line<Row>()
+    .x((d) => x(d.date))
+    .y((d) => y(d.pushers));
+
+  for (const [language, points] of series) {
+    svg
+      .append("path")
+      .datum(points)
+      .attr("fill", "none")
+      .attr("stroke", colors[language])
+      .attr("stroke-width", 2.5)
+      .attr("d", line);
+    const last = points[points.length - 1];
+    svg
+      .append("text")
+      .attr("x", x(last.date) + 8)
+      .attr("y", y(last.pushers))
+      .attr("dy", "0.35em")
+      .attr("fill", colors[language])
+      .text(language);
+  }
+}
+```
+
+Most of those lines are decisions the spec made for you: the margins, the pixel range of each scale, how the axes are built, where the labels go. D3 does not hide them. That is its strength, and each one is yours to get right.
+
+## What the spec gives you
+
+The D3 version draws a chart. The spec version also does several things you did not ask for. On a phone-width container the chart switches to a compact layout with fewer ticks. It can be tabbed to and stepped through with the arrow keys, with a tooltip at each step. It has a hidden data table and a label for screen readers, and its entrance animates. It exports to SVG and PNG. [Annotations](/docs/framing/annotations/) sit in data coordinates, so a callout stays on its point when the chart resizes.
+
+The D3 chart scales as a picture, so its text shrinks with its width. It has the `aria-label` the code sets by hand and none of the rest. D3 can do all of it, and you write each piece.
+
+## What it costs
+
+A spec can only describe charts the library knows how to draw. If the chart you want is not among its chart types, no spec will produce it. You also take the library's defaults for spacing, type and color, and you override them through spec fields where a field exists, which is a narrower set of choices than raw SVG.
+
+Changing a spec is cheap inside that range. The chart below is the same kind of spec with `mark` changed to a range and a second position channel added. In D3 that change touches the line generator, the labels and the scales.
+
+<Demo id="blog/occupation-pay-ranges" />
+
+## When to reach for D3
+
+Use D3 when the chart is the product: a custom layout, a mark that no chart type draws, or an interaction the spec cannot describe. Use a spec when the chart is a standard one and the work is in the data and the writing. The two also combine, because a spec is plain JSON and a D3 chart can sit on the same page.
+
+## The spec
+
+`data` holds one row per quarter and language, with the quarter turned into a date so the x axis can be a time axis. In `encoding`, each channel names a `field` and a `type`. `x` is temporal, `y` is quantitative with `scale.zero` set so the axis starts at zero as the D3 version does, and `color` splits the rows into one line per language. The color scale fixes the order and the two colors.
+
+`endpointLabels` names each line at its right end in place of a legend, and `chrome` holds the title and subtitle. The [encoding page](/docs/the-spec/encoding/) lists every channel.
+
+Each block of a spec, from data to chrome to annotations, is walked through in [the anatomy of a spec](/docs/the-spec/anatomy/).
