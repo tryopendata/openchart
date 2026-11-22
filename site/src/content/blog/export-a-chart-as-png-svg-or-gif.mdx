@@ -1,0 +1,106 @@
+---
+title: Export a chart as PNG, SVG or GIF from JavaScript
+description: Which format to use where, the chart.export calls that produce each one, and the file sizes of a real chart in each format, measured in Chromium.
+published: 2026-11-19
+author: OpenChart
+tags: [developers]
+related: [output/export, output/canvas, behavior/motion]
+lead: blog/turnout-gains
+---
+
+import Demo from "../../components/demo/Demo.astro";
+
+Use SVG for web pages and vector editors, PNG for slides and social posts, and GIF where video and embedded charts are blocked, such as a newsletter. All three come from `chart.export(format)` on the chart that `createChart` returns. The buttons under this chart call it.
+
+<Demo id="blog/turnout-gains" />
+
+## SVG for the web
+
+`chart.export("svg")` returns the chart as a string, immediately. The SVG is finished, with title, subtitle, axes and legend, and has no animation, so it opens in an editor or a CMS as it looks on screen. The chart above exports to 21 KB. `chart.export("svg-with-fonts")` embeds the fonts so the file looks the same on a machine that lacks them.
+
+In React, Vue and Svelte the `useChart` hook or composable returns the same chart instance, so `export` works the same way. To make SVGs on a server with no browser, use `renderStaticSVG` from [static rendering](/docs/get-started/static-rendering/). The [export docs](/docs/output/export/) list the other formats, including CSV.
+
+The library has no download helper. Wrap the result in a `Blob` and click a temporary link:
+
+```ts
+function save(file: Blob, name: string) {
+  const url = URL.createObjectURL(file);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+save(new Blob([chart.export("svg")], { type: "image/svg+xml" }), "turnout.svg");
+```
+
+## PNG for slides and social
+
+`await chart.export("png", { dpi })` returns a `Blob`. The default `dpi` of 2 doubles the pixel size, so the 720 by 420 chart above comes out at 1440 by 840 and 135 KB. At `dpi: 3` it is 2160 by 1260 and 219 KB. The setting changes the pixel count, not the layout: the chart is laid out at its current width and drawn at two or three times the resolution. Raise it for print or a large display, and leave it at 2 for slides and posts.
+
+A PNG leaves the page's text behind, so the image has to carry its own context. The export includes `chrome.title`, `subtitle`, `source` and `byline`, so set the last two on every chart you plan to export. It is also transparent by default, which makes dark text unreadable on a dark slide. Set `theme.colors.background` in the spec to get an opaque image.
+
+This arrow chart is built for an image: the title states the finding and nothing else is needed to read it.
+
+```json demo source="CDC NCHS, Stats of the States: General Fertility Rate" height=420
+{
+  "mark": {
+    "type": "range",
+    "style": "arrow",
+    "fill": "#0e7490"
+  },
+  "data": [
+    { "state": "Utah", "rate_2005": 92.8, "rate_2024": 59.9 },
+    { "state": "Arizona", "rate_2005": 80.6, "rate_2024": 53.2 },
+    { "state": "Nevada", "rate_2005": 73.9, "rate_2024": 50.1 },
+    { "state": "New Mexico", "rate_2005": 73, "rate_2024": 51.9 },
+    { "state": "California", "rate_2005": 70.5, "rate_2024": 49.8 },
+    { "state": "Idaho", "rate_2005": 78.9, "rate_2024": 58.6 },
+    { "state": "District of Columbia", "rate_2005": 59.8, "rate_2024": 39.8 },
+    { "state": "Texas", "rate_2005": 77.4, "rate_2024": 59.3 },
+    { "state": "Colorado", "rate_2005": 69.6, "rate_2024": 51.6 },
+    { "state": "Illinois", "rate_2005": 67, "rate_2024": 49.7 }
+  ],
+  "encoding": {
+    "y": {
+      "field": "state",
+      "type": "nominal",
+      "sort": "x"
+    },
+    "x": {
+      "field": "rate_2005",
+      "type": "quantitative",
+      "title": "2005",
+      "axis": {
+        "title": "Births per 1,000 women ages 15-44"
+      }
+    },
+    "x2": {
+      "field": "rate_2024",
+      "type": "quantitative",
+      "title": "2024"
+    }
+  },
+  "chrome": {
+    "title": "The fertility rate fell in all 51 jurisdictions, from 92.8 to 59.9 in Utah",
+    "subtitle": "The 10 largest drops in the general fertility rate, 2005 to 2024. Each arrow runs from the 2005 rate to the 2024 rate."
+  }
+}
+```
+
+## GIF for chat and newsletters
+
+`await chart.export("gif")` records the chart's entrance as an animated GIF. It needs the optional `gifenc` package, which you install yourself with `npm install gifenc`. Without it the call throws an error that says so. Nothing needs to be mid-animation when you call it: the library rebuilds the [entrance](/docs/behavior/motion/) frame by frame from the finished chart.
+
+GIFs are the heavy format. The turnout chart at the default settings is 1440 by 840 and 1.56 MB. `dpi: 1` cuts it to 649 KB, and adding `fps: 12` (the default is 25) brings it to 316 KB. A GIF plays once and holds its last frame unless you pass `loop: true`, and it is limited to 256 colors. A chart with no entrance animation exports as a single frame.
+
+## Charts with many points
+
+A scatter of thousands of points draws its dots on a [canvas](/docs/output/canvas/) layer, and exports still re-render the whole chart. A PNG matches the SVG version of the chart. An SVG stays all vector up to 5,000 points, and above that the dots go in as one embedded image while the text and gridlines remain vector.
+
+## What to check before you ship
+
+Export at the container width you want the image to have, because the image takes the chart's current size, and dark mode exports as drawn. Neither SVG nor PNG exports animate, so only the GIF carries the entrance. The sizes above come from one Chromium run on one chart, so measure yours.
+
+Every call, option and framework hook is in [the export API reference](/docs/api/export/).
