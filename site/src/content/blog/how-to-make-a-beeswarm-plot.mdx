@@ -1,6 +1,6 @@
 ---
 title: How to make a beeswarm plot
-description: Teacher pay fell in 36 states, and a beeswarm shows which. When it beats a histogram, how to split it into lanes, and when to stop.
+description: How to make a beeswarm plot, including one split into groups, and when a histogram works better.
 published: 2026-11-16
 author: OpenChart
 tags: [chart-choice]
@@ -16,7 +16,7 @@ Which states cut teacher pay the most? Between 1999-00 and 2021-22 the average p
 
 The tallest bar is the group of states whose pay fell by about 10%. Which states those are, the chart cannot say, and an unusual state is just a short bar at the edge.
 
-## One dot per state
+## How a beeswarm plot works
 
 A beeswarm plot draws each observation as its own dot along one axis, and nudges dots apart, off the axis, when they would overlap. The clusters that form are the shape of the distribution, and every state is still there to point at.
 
@@ -418,8 +418,8 @@ A beeswarm plot draws each observation as its own dot along one axis, and nudges
     }
   },
   "chrome": {
-    "title": "Teacher pay fell in 36 of 50 states, by as much as 22.4%",
-    "subtitle": "Change in average public-school teacher salary, constant dollars, 1999-00 to 2021-22. One dot per state: red fell, teal rose."
+    "title": "Teacher pay fell in 36 of 50 states, most in Indiana (22.4%)",
+    "subtitle": "Change in average public-school teacher salary, constant dollars, 1999-00 to 2021-22. One dot per state, red for a fall and teal for a rise."
   }
 }
 ```
@@ -430,7 +430,7 @@ Read the swarm the way you would read a histogram: where dots crowd together, ma
 
 Only the position along the axis means anything. The nudge off the axis exists to keep dots from covering each other, so a dot sitting higher than its neighbor is not larger or later. Add a caption saying so for readers new to the chart.
 
-## Split a swarm by group
+## Splitting a swarm into groups
 
 A second field turns one swarm into one lane per group. Here, each dot is one of the 125 college majors with at least 5,000 recent graduates, placed by its graduates' median pay, and each lane is a field of study.
 
@@ -442,7 +442,7 @@ Seventeen majors share a median of exactly $35,000, spread across 13 fields, and
 
 A beeswarm shows one number at a time. To ask whether two numbers move together, such as pay and the share of women in a major, use a [scatter plot](/docs/correlation/scatter/) instead.
 
-## When the dots run out of room
+## How many points to plot
 
 Every row gets a dot, so the plot runs out of room as the rows multiply. With thousands of points the dots either shrink until they are specks or stack so far off the axis that neighboring lanes overlap. A few hundred points is a practical ceiling. Past that, use a [histogram](/docs/distribution/histogram/) or a density curve and give up the individual dots.
 

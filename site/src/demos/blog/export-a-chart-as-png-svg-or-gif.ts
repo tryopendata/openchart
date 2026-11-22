@@ -95,7 +95,7 @@ export const fertilityDrops = defineDemo({
     },
     chrome: {
       title: `The fertility rate fell in all ${cdcFertilityByState.data.length} jurisdictions, from ${steepest.rate_2005.toFixed(1)} to ${steepest.rate_2024.toFixed(1)} in ${steepest.state}`,
-      subtitle: `The ${TOP} largest drops in the general fertility rate (births per 1,000 women ages 15-44), 2005 to 2024. Each arrow runs from the 2005 rate to the 2024 rate.`,
+      subtitle: `The ${TOP} largest drops in the general fertility rate (births per 1,000 women ages 15-44), 2005 to 2024`,
       source: cdcFertilityByState.source,
     },
   },

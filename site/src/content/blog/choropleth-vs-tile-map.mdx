@@ -1,6 +1,6 @@
 ---
-title: "Choropleth vs tile map: how to map US state data"
-description: A geographic US choropleth lets large, sparsely populated states dominate the page. A tile grid map gives every state equal weight, at a geographic cost.
+title: Choropleth vs tile map for US state data
+description: Why large, empty states dominate a US choropleth, and when a tile map that gives every state the same square is the better choice.
 published: 2026-11-18
 author: OpenChart
 tags: [maps, chart-choice]
@@ -18,7 +18,7 @@ A geographic choropleth colors each political boundary by a data value. That des
 
 Area bias hides dense clusters of small states along the East Coast. Rhode Island, Connecticut, New Jersey, and Delaware all record unemployment at or above 4.8%, yet their shapes are narrow slivers beside Texas and Montana. Under the Albers USA projection (the standard layout that tucks Alaska and Hawaii below the lower 48), DC's polygon is too small to spot by eye even though it leads the dataset.
 
-## Giving every state equal area
+## Tile grid maps
 
 A tile grid map breaks the link between land area and visual weight by giving every state one identical square. Each square sits in a fixed row-and-column grid that keeps rough regional neighborhoods intact, with Maine in the top right and California along the left edge. Because every cell has the same footprint, DC and Delaware claim the same space as Texas and Alaska.
 
@@ -83,7 +83,7 @@ Putting the two-letter postal code and numeric rate inside each tile removes a s
   "palette": "blue",
   "valueFormat": ".1f",
   "chrome": {
-    "title": "DC (5.7%) and Delaware (5.4%) lead US state unemployment",
+    "title": "DC (5.7%) and Delaware (5.4%) have the highest unemployment rates",
     "subtitle": "State unemployment rate, seasonally adjusted (%)"
   }
 }
@@ -93,7 +93,7 @@ Equal cells bring the high-unemployment cluster in the Mid-Atlantic and along th
 
 A tile grid distorts real borders and distances to fit 51 equal squares into neat rows. Some neighboring states separate across rows or columns, and coastal outlines disappear. Readers familiar with US regions still orient themselves quickly, yet anyone checking whether two states share a border needs a geographic map.
 
-## Choosing between geography and fairness
+## Which map to use
 
 Keep a geographic choropleth when physical space and contiguous borders are part of the story. Weather patterns, drought belts, watershed boundaries, and regional commuting zones depend on real land area and exact adjacency. Even then, color a choropleth by rates or per-person averages. Plotting raw counts like total unemployed workers makes California, Texas, and Florida dark simply because more people live there.
 

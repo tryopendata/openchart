@@ -1,6 +1,6 @@
 ---
 title: Colorblind-safe chart palettes for light and dark mode
-description: Colorblind-safe palettes rely on lightness contrast, focus plus gray, and direct labels rather than red-green hue pairs, in both light and dark themes.
+description: How to pick chart colors that readers with color vision deficiency can tell apart, in both light and dark mode.
 published: 2026-11-11
 author: OpenChart
 tags: [color, accessibility]
@@ -14,7 +14,7 @@ Roughly 1 in 12 men of Northern European descent has red-green color vision defi
 
 Luminance, the perceived brightness of a color, is the channel that survives both color vision deficiency and monochrome printing. Deuteranopia (reduced green sensitivity) and protanopia (reduced red sensitivity) distort how hues look while leaving brightness differences intact. Building a palette around lightness contrast first, then picking hues that stay apart under both conditions, gives every reader the same visual order.
 
-## Highlight two series and mute the rest
+## Highlighting two series
 
 Assigning six bright hues to six lines forces readers to jump back and forth between the plot and a legend while trying to tell medium green apart from orange or teal. Even with full color vision, most people hold only three or four distinct hues in working memory at once. When a chart centers on one comparison, giving every line equal visual weight hides the main change behind four competing colors.
 
@@ -95,8 +95,8 @@ Direct endpoint labels place each source name right beside its line and remove t
   "endpointLabels": { "content": "label" },
   "seriesStyles": { "Gas": { "strokeWidth": 3 }, "Coal": { "strokeWidth": 3 } },
   "chrome": {
-    "title": "Gas rose to 43.5% of US six-source power in 2023 while coal fell to 16.2%",
-    "subtitle": "Share of US electricity from the six main sources, %, 2016-2023"
+    "title": "Gas rose to 43.5% in 2023 and coal fell to 16.2%",
+    "subtitle": "Share of US electricity from the six main sources (%), 2016-2023"
   },
   "overrides": {
     "compact": { "encoding": { "x": { "axis": { "values": ["2016", "2020", "2023"] } } } },

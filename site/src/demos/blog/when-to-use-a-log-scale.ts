@@ -144,7 +144,7 @@ export const prestonLogScale = defineDemo({
     chrome: {
       title: `Life expectancy rises ${doublingLifeGain} years from ${lowestIncome.country} to ${doubledFromLowest.country}, then flattens past ${longestLived.country}`,
       subtitle:
-        "GDP per capita (PPP, log scale) vs. life expectancy at birth in 12 large economies. Each tick doubles the last.",
+        "GDP per capita (PPP, log scale) vs. life expectancy at birth in 12 large economies",
     },
   },
 });

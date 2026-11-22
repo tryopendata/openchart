@@ -1,6 +1,6 @@
 ---
-title: "Responsive charts on mobile: what changes and what you decide"
-description: A chart redraws itself for a 360px phone, with fewer ticks and one inline callout. Which callout stays and how short the title gets are still yours to set.
+title: Responsive charts on mobile
+description: How OpenChart lays out a chart on a phone screen, and which settings you still need to change yourself.
 published: 2026-11-21
 author: OpenChart
 tags: [developers, annotation]
@@ -18,7 +18,7 @@ Here is the same spec in a 360px container.
 
 <Demo id="blog/mlb-strikeouts-phone" />
 
-## What the layout changes on its own
+## Breakpoints and the compact layout
 
 The library sorts a chart into one of three layouts by container width: full above 700px, medium from 400 to 700px, and compact below 400px. Compact drops value labels, uses the fewest [axis ticks](/docs/the-spec/axes/) and keeps at most one callout inline. Any other callout becomes a numbered marker, with its text in a note under the plot.
 
@@ -28,7 +28,7 @@ Height counts too. A chart 350px tall or shorter drops the subtitle and keeps it
 
 The breakpoints follow the width of the container, not the screen. A chart in a 300px sidebar on a desktop monitor gets the compact layout, so test one width inside each band (360, 560 and your full column) instead of one phone.
 
-## What you still decide
+## Setting up a chart for phones
 
 Write a second, shorter [title and subtitle](/docs/framing/chrome/) for compact width and put it in `overrides`. The title of the last chart here takes two lines at 720px and four at 360px, which pushes the plot down, and the layout won't shorten a headline for you.
 

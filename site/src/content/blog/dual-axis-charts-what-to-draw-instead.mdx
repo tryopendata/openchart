@@ -1,6 +1,6 @@
 ---
-title: Dual-axis charts, and what to draw instead
-description: A second y axis lets the author decide how far apart two trends look. Two panels or an indexed chart show the same data without that choice.
+title: What to use instead of a dual-axis chart
+description: Why a second y axis can mislead, and how stacked panels or an indexed chart show the same data.
 published: 2026-11-21
 author: OpenChart
 tags: [chart-choice]
@@ -16,7 +16,7 @@ The rate is deaths per 100 million vehicle miles traveled. Counts before 1975 co
 
 <Demo id="blog/dual-axis-zero-based" />
 
-## Two ranges for the same rows
+## Zero-based and trimmed axes
 
 With both axes starting at zero, each line falls in proportion to its own change. Deaths lose about a quarter of their height and the rate loses more than three quarters, so this version already shows the rate falling faster.
 
@@ -26,7 +26,7 @@ Trim each axis to the range of its own data and the two drops look closer than t
 
 Both charts draw the same 59 rows. Only the tick labels show that the second one was trimmed, and a second axis invites that choice every time it is drawn.
 
-## Two panels that share the year axis
+## Separate panels
 
 The first fix is to give each series its own panel, stacked so the years line up. The number of US wildland fires has not climbed since the mid-1980s, averaging about 72,900 a year in 1985-94 and 62,400 in 2015-24, while the average fire grew from 42 acres to 121. The gray segments mark those two decade averages.
 
@@ -603,15 +603,15 @@ The panels start in 1985 because the 1983 and 1984 counts, about 18,000 and 20,0
     }
   },
   "chrome": {
-    "title": "Fires per year did not climb, but the average fire grew from 42 to 121 acres",
+    "title": "The average wildfire grew from 42 to 121 acres, but fires per year did not rise",
     "subtitle": "US wildland fires per year and acres burned per fire, 1985-2025, each panel on its own scale"
   }
 }
 ```
 
-With independent scales, panel heights can't be compared; each panel shows only whether its series rose, fell or held. [Small multiples without the mess](/blog/small-multiples-without-the-mess/) covers when panels should share one scale and when each should fit its own data.
+With independent scales, panel heights can't be compared; each panel shows only whether its series rose, fell or held. [How to use small multiples](/blog/small-multiples-without-the-mess/) covers when panels should share one scale and when each should fit its own data.
 
-## One axis, both series indexed
+## Indexing to a base year
 
 The second fix keeps one plot and one axis. Divide each year's value by the 1966 value and multiply by 100, so both series start at 100 and share a unit, percent of the starting level. The gap between the lines is then a real ratio.
 
@@ -1279,7 +1279,7 @@ Deaths ended at 77 and the rate at 22. The rate is deaths divided by miles trave
 
 Indexing has a cost. A base year with an unusual value skews the whole picture, and the real units drop out, so put the raw values in a tooltip or a table when readers need them.
 
-## When a second axis can stay
+## When a second axis is acceptable
 
 A second axis is defensible when the left series is bars drawn from zero, the right series is a line, and each axis is colored to match its series. If you can't say why each axis has the range it has, use panels.
 

@@ -1,6 +1,6 @@
 ---
 title: Pie chart vs bar chart vs waffle chart
-description: A pie shows one dominant share, bars rank close values, and a waffle makes one percentage countable. When each fits, shown with US debt and budget data.
+description: How to choose between a pie chart, a bar chart and a waffle chart, with examples from US household debt and federal spending.
 published: 2026-11-14
 author: OpenChart
 tags: [chart-choice]
@@ -12,13 +12,13 @@ import Demo from "../../components/demo/Demo.astro";
 
 Mortgages make up 70% of what US households owe, and a pie shows that faster than a table, because one slice takes most of the circle. The rest of the debt is harder to show. Car loans, student loans and credit cards sit within $0.4 trillion of each other, and slice angles can't rank them.
 
-## When a pie works
+## Pie and donut charts
 
 A pie works for two or three parts of a true whole, best when one part dominates. Its slices must add up to 100%, so it is the wrong chart for survey answers where people could pick several options. This one has two slices, mortgages and everything else, and it is drawn as a donut, a pie with a hole that holds the share.
 
 <Demo id="blog/debt-pie" />
 
-## Ranking the smaller debts
+## Bar charts for close values
 
 Split the same debt five ways and a pie stops helping. Sorted bars put every value on one baseline, so the order is plain. Student loans lead credit cards by $0.39 trillion, a few degrees of difference on a pie and a clear step between two bars.
 
@@ -78,7 +78,7 @@ Some gaps are too small even for bars. Auto loans ($1.667 trillion) and student 
     }
   },
   "chrome": {
-    "title": "Student loans ($1.66T) top credit cards ($1.28T) by $0.39T",
+    "title": "Student loan debt exceeds credit card debt by $0.39 trillion",
     "subtitle": "US household debt by type, fourth quarter of 2025, $ trillions"
   }
 }
@@ -86,7 +86,7 @@ Some gaps are too small even for bars. Auto loans ($1.667 trillion) and student 
 
 Sort the bars by value unless the categories have a natural order, such as age bands or months. Bars don't need the parts to add up to a whole, so they also work for values that are not shares. Use them whenever the reader has to compare parts with each other, or when there are more than five or six parts. The [bar chart page](/docs/comparison/bar/) covers the options.
 
-## When a waffle works
+## Waffle charts
 
 A waffle draws 100 squares, one for each percent. It suits a single share you want the reader to feel as a count rather than read as an angle, since counting 66 squares is easier than judging a slice that spans 238 degrees.
 

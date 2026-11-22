@@ -86,14 +86,12 @@ describe("the beeswarm post's figures", () => {
   });
 
   it("titles each chart with a finding read off the rows", () => {
-    expect(specOf(teacherHistogram).chrome?.title).toBe(
-      "Teacher pay fell in 36 of 50 states, but the bars cannot say which",
-    );
+    expect(specOf(teacherHistogram).chrome?.title).toBe("Teacher pay fell in 36 of 50 states");
     expect(specOf(teacherSwarm).chrome?.title).toBe(
-      "Teacher pay fell in 36 of 50 states, by as much as 22.4%",
+      "Teacher pay fell in 36 of 50 states, most in Indiana (22.4%)",
     );
     expect(specOf(majorsSwarm).chrome?.title).toBe(
-      "Engineering majors range from $40,000 to $65,000, the widest spread of any field",
+      "Engineering majors have the widest pay range, $40,000 to $65,000",
     );
   });
 

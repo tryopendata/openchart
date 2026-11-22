@@ -1,6 +1,6 @@
 ---
 title: How to build a KPI dashboard with sparklines
-description: A KPI tile is a number, a comparison and a small line. How to build a row of tiles with sparklines, why the axes go, and what each tile still has to say.
+description: How to build a row of KPI tiles with sparklines, and what each tile needs to say once the axes are gone.
 published: 2026-11-18
 author: OpenChart
 tags: [chart-choice]
@@ -14,7 +14,7 @@ In the latest readings, the 30-year mortgage rate is 0.87 points above a year ea
 
 <Demo id="blog/kpi-dashboard" />
 
-## The parts of a tile
+## What goes in a KPI tile
 
 A number alone does not say whether it is high, so every tile needs a comparison. Pick the one the reader acts on: the previous period for numbers that move week to week, the same period a year earlier for anything with a season, or a target when there is one. These tiles use a year earlier, which also cancels any seasonal swing.
 
@@ -1309,7 +1309,7 @@ A number alone does not say whether it is high, so every tile needs a comparison
 
 The first cell gives the latest rate with its change from a year earlier as a delta, colored by direction. The other cells give the rate a year earlier and the October 2023 peak, so the reader can see that 7.11% is high for the past five years without being the top.
 
-## A sparkline drops its axes
+## Sparklines
 
 A sparkline is a line chart stripped of its axes, gridlines, legend and source line, small enough to sit beside a number. In a box this small, axis labels would take more room than the line, and the reader wants direction, not exact values.
 
@@ -1317,7 +1317,7 @@ A sparkline is a line chart stripped of its axes, gridlines, legend and source l
 
 The line carries no scale, so it cannot say that the climb was from 2.65% to above 7%. The number has to sit beside it, here as its title.
 
-## What every tile must still say
+## Labeling a tile without axes
 
 Dropping the axes and chrome removes the unit, the period and the source, so the tile has to supply them another way. The unit and the period go in the title, as in "weekly" and the % sign on the number. The source goes under the tile, as the line under each chart here does.
 

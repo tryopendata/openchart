@@ -40,7 +40,7 @@ describe("the Sankey post's figures", () => {
     const title = (demo: typeof energySankeyElectricity) =>
       (demo.spec as { chrome?: { title?: string } }).chrome?.title;
     expect(title(energySankeyElectricity)).toBe(
-      "Electricity generation lost 59% of its 32.77 quads as rejected energy",
+      "US power plants lost 59% of their 32.77 quads as rejected energy",
     );
     expect(title(energySankeyFull)).toBe("Rejected energy was 66% of the 94.61 quads used in 2024");
   });

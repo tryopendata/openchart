@@ -1,5 +1,5 @@
 /**
- * The figures in the blog post "Small multiples without the mess": space
+ * The figures in the blog post "How to use small multiples": space
  * launches by country as one four-line chart and then as four panels, and US
  * violent crime rates in panels on a shared and on independent y scales. Titles
  * state findings computed from the dataset rows so they cannot drift from the
@@ -83,7 +83,7 @@ export const launchesOneChart = defineDemo({
     theme: { colors: { categorical: COUNTRIES.map((country) => country.color) } },
     chrome: {
       title: `USSR and Russian launches peaked at ${sovietPeak.ussr_russia} in ${sovietPeak.year}, US launches at ${usPeak.usa} in ${usPeak.year}`,
-      subtitle: "Launches per year by country, 1957-2018, all four on one axis",
+      subtitle: "Launches per year by country, 1957-2018",
     },
   },
 });
@@ -105,7 +105,7 @@ export const launchPanels = defineDemo({
     theme: { colors: { categorical: [TEAL] } },
     chrome: {
       title: `China launched ${last.china} times in ${last.year}, one more than the US`,
-      subtitle: "Launches per year by country, 1957-2018, on the same y scale in every panel",
+      subtitle: "Launches per year by country, 1957-2018, same y scale in each panel",
     },
   },
 });
@@ -158,7 +158,7 @@ const crimeSpec = (shared: boolean): VizSpec => ({
   chrome: {
     title: shared
       ? `On a shared scale, homicide's fall from ${row1991?.homicide_rate_per_100k} to ${lastCrime.homicide_rate_per_100k} is a flat line`
-      : `On free scales, homicide's rise from ${homicideClimbStart.homicide_rate_per_100k.toFixed(1)} in ${homicideClimbStart.year} to ${recentHomicidePeak.homicide_rate_per_100k} in ${recentHomicidePeak.year} shows`,
+      : `Homicide rose from ${homicideClimbStart.homicide_rate_per_100k.toFixed(1)} per 100,000 in ${homicideClimbStart.year} to ${recentHomicidePeak.homicide_rate_per_100k} in ${recentHomicidePeak.year}`,
     subtitle: `US violent crime rates per 100,000 residents, 1979-2025, ${shared ? "same" : "separate"} y scale in each panel`,
   },
 });

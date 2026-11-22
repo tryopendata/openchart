@@ -1,6 +1,6 @@
 ---
 title: How to make a slope chart in JavaScript
-description: Fatal accidents at 11 airlines fell from 74 to 17. How to show which fell furthest with a slope chart, label both ends and choose the endpoints.
+description: How to make a slope chart that compares two periods, and how to pick endpoints that don't exaggerate the change.
 published: 2026-11-22
 author: OpenChart
 tags: [chart-choice, annotation]
@@ -12,7 +12,7 @@ import Demo from "../../components/demo/Demo.astro";
 
 Fatal accidents at 56 airlines fell from 122 in 1985-99 to 37 in 2000-14, according to [FiveThirtyEight's airline safety data](https://github.com/fivethirtyeight/data/tree/master/airline-safety). Did every airline improve, or did a few carry the drop? A slope chart answers that in one look: each period gets a vertical edge, each airline gets a line between its two counts, and the steeper the line, the bigger the change.
 
-## One line per airline
+## A slope chart of airline accidents
 
 The chart keeps the 11 airlines with four or more fatal accidents in the first period.
 
@@ -221,7 +221,7 @@ The chart keeps the 11 airlines with four or more fatal accidents in the first p
     }
   },
   "chrome": {
-    "title": "The 11 airlines with the most fatal accidents went from 74 to 17",
+    "title": "Fatal accidents at 11 airlines fell from 74 to 17",
     "subtitle": "Fatal accidents per 15-year period, airlines with 4 or more in 1985-99. All 56 airlines: 122 to 37."
   }
 }
@@ -231,7 +231,7 @@ Every line falls, and Aeroflot's falls furthest. The y axis is gone because the 
 
 On a phone the left labels go. Both label columns are as wide as the wider one, and two columns of names leave a 390-pixel phone about 40 pixels for the lines. The phone layout puts a y axis on the left for the first-period counts and keeps the names on the right, next to the counts the reader compares.
 
-## The same data as grouped bars
+## Slope chart vs grouped bars
 
 Grouped bars hold the same 22 numbers and rank the airlines within one period better than a slope chart can. To see which airlines improved, though, the reader has to find and compare the bars in pairs.
 

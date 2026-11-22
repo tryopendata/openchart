@@ -38,7 +38,7 @@ describe("the colorblind-safe palettes post's figures", () => {
     const titleOf = (demo: typeof accessiblePaletteLines) =>
       (demo.spec as { chrome?: { title?: string } }).chrome?.title;
     expect(titleOf(accessiblePaletteLines)).toBe(
-      "Gas rose to 43.5% of US six-source power in 2023 while coal fell to 16.2%",
+      "Gas rose to 43.5% in 2023 and coal fell to 16.2%",
     );
     expect(titleOf(accessibleSequentialMap)).toBe(
       "State unemployment runs from 2.3% in South Dakota to 5.7% in DC",

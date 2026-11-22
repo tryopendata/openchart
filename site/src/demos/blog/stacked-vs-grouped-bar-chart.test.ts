@@ -78,9 +78,11 @@ describe("the stacked-vs-grouped post's figures", () => {
     expect(titleOf(capacityStacked)).toBe(
       "The four fuels added 49.8 GW in 2024, the most of any year shown",
     );
-    expect(titleOf(capacityGrouped)).toBe("Solar added 31.2 GW in 2024, 13 times natural gas");
+    expect(titleOf(capacityGrouped)).toBe(
+      "Solar added 31.2 GW in 2024, 13 times as much as natural gas",
+    );
     expect(titleOf(homelessStacked)).toBe(
-      "Counted homelessness fell to 544,084 in 2016, then reached 767,856 in 2024",
+      "The homeless count fell to 544,084 in 2016 and rose to 767,856 in 2024",
     );
   });
 

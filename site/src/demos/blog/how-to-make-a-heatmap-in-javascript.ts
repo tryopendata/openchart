@@ -97,10 +97,9 @@ export const greenCardHeatmap = defineDemo({
     ],
     chrome: {
       title: allFell
-        ? `All six countries fell in fiscal 2020, and the total dropped ${fallPercent}%`
+        ? `Green cards fell ${fallPercent}% in fiscal 2020, with drops for all six countries`
         : "Green cards by country of birth",
-      subtitle:
-        "New green-card holders by fiscal year and country of birth, thousands. Darker cells are larger.",
+      subtitle: "New green-card holders by country of birth and fiscal year, in thousands",
     },
   },
 });
@@ -169,7 +168,7 @@ export const co2Trend = defineDemo({
     overrides: monthAxisOverrides,
     chrome: {
       title: `The lowest month of ${YEARS.at(-1)} was ${gapPpm} ppm above the highest month of ${YEARS[0]}`,
-      subtitle: "Monthly mean CO2 at Mauna Loa, parts per million. Darker cells are higher.",
+      subtitle: "Monthly mean CO2 at Mauna Loa, every fifth year from 1960, parts per million",
     },
   },
 });
@@ -194,9 +193,8 @@ export const co2Seasonal = defineDemo({
     },
     overrides: monthAxisOverrides,
     chrome: {
-      title: "In every year, CO2 peaks in spring and bottoms out in autumn",
-      subtitle:
-        "Monthly mean CO2 at Mauna Loa minus that year's average, ppm. Red is above the year's average, blue below.",
+      title: "CO2 peaks in spring and is lowest in autumn every year",
+      subtitle: "Monthly mean CO2 at Mauna Loa, difference from that year's average, ppm",
     },
   },
 });

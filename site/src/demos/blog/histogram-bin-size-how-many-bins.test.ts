@@ -123,16 +123,16 @@ describe("the bin-size post's figures", () => {
 
   it("titles each chart with a finding read off the rows", () => {
     expect(specOf(incomeTwentyFiveThousand).chrome?.title).toBe(
-      "With $25,000 bins the 50 states and DC make 3 bars and hide the detail",
+      "With $25,000 bins, the 50 states and DC fall into 3 bars",
     );
     expect(specOf(incomeTenThousand).chrome?.title).toBe(
-      "30 of 50 states sit between $70,000 and $90,000, with a tail to the right",
+      "30 of 50 states have a median income between $70,000 and $90,000",
     );
     expect(specOf(incomeThousand).chrome?.title).toBe(
-      "With $1,000 bins there are 27 bars and none holds more than 4 states",
+      "With $1,000 bins there are 27 bars, and none holds more than 4 states",
     );
     expect(specOf(quakesTenth).chrome?.title).toBe(
-      "Counts fall to 8 at magnitude 3.9, then climb back to 94 at 4.5",
+      "Quake counts drop to 8 at magnitude 3.9 and rise to 94 at 4.5",
     );
   });
 

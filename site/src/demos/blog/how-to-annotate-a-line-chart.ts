@@ -1,6 +1,5 @@
 /**
- * The figures in the blog post "How to annotate a line chart without cluttering
- * it": a bare quarterly US inflation line, then the same line with a dashed 2%
+ * The figures in the blog post "How to annotate a line chart": a bare quarterly US inflation line, then the same line with a dashed 2%
  * reference line, a shaded range for the stretch above 5%, and a callout on the
  * Q3 2022 peak. Titles are computed from the rows so they cannot drift from the
  * dataset. The post's `json demo` fence repeats `inflationAnnotated.spec`

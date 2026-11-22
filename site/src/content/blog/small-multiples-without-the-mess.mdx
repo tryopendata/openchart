@@ -1,6 +1,6 @@
 ---
-title: Small multiples without the mess
-description: One panel per series beats a tangle of lines. How to order the panels, and when they should share a y scale or each get their own.
+title: How to use small multiples
+description: How to split a crowded line chart into one panel per series, and when the panels should share a y scale.
 published: 2026-11-17
 author: OpenChart
 tags: [chart-choice]
@@ -1306,7 +1306,7 @@ Small multiples repeat one chart once per series, with the same x axis in every 
   },
   "chrome": {
     "title": "China launched 28 times in 2018, one more than the US",
-    "subtitle": "Launches per year by country, 1957-2018, on the same y scale in every panel"
+    "subtitle": "Launches per year by country, 1957-2018, same y scale in each panel"
   }
 }
 ```
@@ -2330,7 +2330,7 @@ Giving each panel its own range brings homicide's shape back.
     }
   },
   "chrome": {
-    "title": "On free scales, homicide's rise from 5.0 in 2018 to 6.8 in 2021 shows",
+    "title": "Homicide rose from 5.0 per 100,000 in 2018 to 6.8 in 2021",
     "subtitle": "US violent crime rates per 100,000 residents, 1979-2025, separate y scale in each panel"
   }
 }
@@ -2340,13 +2340,13 @@ Free scales show whether each series rose or fell and when, and stop showing whi
 
 Use shared scales when the question is which series is larger, and free scales when the question is each series' shape. Neither compares percent change: robbery fell 82% between 1991 and 2025 and aggravated assault 45%, and only an indexed chart or a [log scale](/blog/when-to-use-a-log-scale/) puts those on one axis.
 
-## Ordering and labeling the panels
+## Panel order and labels
 
 Panel order is an editorial choice, and alphabetical order is rarely the right one. Sort by the size of each series, by when it peaked, or by the change you want the reader to notice. The launch panels run by total launches from 1957 to 2018, so the biggest program comes first. The crime panels run from the broadest category to the narrowest.
 
 Put the series name above each frame. Use one color in every panel, because position already says which series is which, and leave out the legend.
 
-## When one chart is enough
+## When to split a chart into panels
 
 Two or three lines that stay apart do not need panels. A single [line chart](/docs/change-over-time/line/) lets the reader compare them directly, and splitting them forces an extra look back and forth. Panels start to pay off when lines overlap or cross, and I would split at about four lines.
 

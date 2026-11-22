@@ -1,6 +1,6 @@
 ---
 title: Lollipop chart vs bar chart
-description: A lollipop is a bar chart with less ink. Where it reads better than bars, why its stems must still start at zero, and when plain bars are the better choice.
+description: When a lollipop chart reads better than a bar chart, and why its stems still need to start at zero.
 published: 2026-11-15
 author: OpenChart
 tags: [chart-choice]
@@ -14,7 +14,7 @@ Argentina's diet comes to about 2,172 kg of CO2 per person a year, the most of t
 
 A lollipop thins each bar to a stem and puts a dot at the end. It encodes the same thing as a bar, a value as a distance from zero, with less ink.
 
-## Twenty long bars against twenty stems
+## Long ranked lists
 
 As bars, the 20 values run from 1,420 to 2,172 kg and fill most of the plot. The chart becomes a dark block, and the eye has to find each bar's end inside it.
 
@@ -133,7 +133,7 @@ As lollipops, each value is a dot at the end of a thin line, and the dots are wh
     }
   },
   "chrome": {
-    "title": "Argentina's diet comes to 2,172 kg of CO2 per person a year, the most of 130 countries",
+    "title": "Argentina's diet produces 2,172 kg of CO2 per person a year, the most of 130 countries",
     "subtitle": "Kilograms of CO2 per person per year from 11 food types, the 20 highest of 130 countries (no year stated)"
   }
 }
@@ -141,7 +141,7 @@ As lollipops, each value is a dot at the end of a thin line, and the dots are wh
 
 The dataset gives no year and no original source. Each value adds up the CO2 from a country's average consumption of 11 food types, so it describes diets in general rather than any one market.
 
-## Lollipops and the zero baseline
+## Starting the axis at zero
 
 A reader judges a lollipop by the length of its stem, the same way they judge a bar. Cut the axis above zero and the lengths stop matching the values. Median weekly earnings run from $738 for adults without a high school diploma to $2,363 for those with a professional degree, a gap of 3.2 times. Start the axis at $600 and the stems measure $138 and $1,763, so the top one is 12.8 times the bottom one.
 
@@ -220,7 +220,7 @@ A reader judges a lollipop by the length of its stem, the same way they judge a 
     }
   },
   "chrome": {
-    "title": "Starting the axis at $600 stretches a 3.2-times gap into 12.8 times",
+    "title": "An axis from $600 makes a 3.2-times gap look like 12.8 times",
     "subtitle": "Median usual weekly earnings by educational attainment, 2024 ($)"
   }
 }
@@ -228,7 +228,7 @@ A reader judges a lollipop by the length of its stem, the same way they judge a 
 
 This is the same mistake as a truncated bar, covered in [when bar charts must start at zero](/blog/when-bar-charts-must-start-at-zero/). Thin stems make it easier to miss, because a lollipop doesn't look like a filled shape that has been cut off.
 
-## Dots without stems
+## Dot plots
 
 If the point is where values sit rather than how long they are, drop the stems. A dot plot encodes position only, so the same axis from $600 is fair here, because the reader compares where the dots fall and no length stands for a value.
 
@@ -322,7 +322,7 @@ If the point is where values sit rather than how long they are, drop the stems. 
     }
   },
   "chrome": {
-    "title": "Without stems, an axis from $600 shows where each level sits, from $738 to $2,363",
+    "title": "Median weekly earnings range from $738 to $2,363 by education",
     "subtitle": "Median usual weekly earnings by educational attainment, 2024 ($)"
   }
 }

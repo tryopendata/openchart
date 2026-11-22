@@ -1,6 +1,5 @@
 /**
- * The figures in the blog post "How to chart a range of values instead of
- * averages": Central Park monthly midpoints as columns, then the monthly
+ * The figures in the blog post "How to chart a range of values": Central Park monthly midpoints as columns, then the monthly
  * average daily low-to-high temperature range as floating bars. Titles state
  * findings computed from the dataset rows so they cannot drift from the data.
  * The post's `json demo` fence repeats `nycTempRange.spec` verbatim, and a
@@ -98,9 +97,8 @@ export const nycTempRange = defineDemo({
       y2: { field: "high", type: "quantitative", title: "Avg high" },
     },
     chrome: {
-      title: `${MONTH_NAMES[widest.month]} swung ${spanOf(widest).toFixed(1)}°C a day, against ${spanOf(narrowest).toFixed(1)}°C in ${MONTH_NAMES[narrowest.month]}`,
-      subtitle:
-        "Average daily low to average daily high temperature by month, Central Park, 2023 (°C)",
+      title: `Daily swings ranged from ${spanOf(narrowest).toFixed(1)}°C in ${MONTH_NAMES[narrowest.month]} to ${spanOf(widest).toFixed(1)}°C in ${MONTH_NAMES[widest.month]}`,
+      subtitle: "Average daily low and high temperature by month, Central Park, 2023 (°C)",
     },
     overrides: { compact: PHONE_MONTH_AXIS, medium: PHONE_MONTH_AXIS },
   },

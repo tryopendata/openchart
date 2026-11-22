@@ -1,6 +1,6 @@
 ---
 title: When to use a table instead of a chart
-description: Charts show shape; tables handle exact lookup and mixed units. Adding inline bars and cell shading gives a table visual scan without losing numbers.
+description: When a table works better than a chart, and how inline bars and cell shading make a table easier to scan.
 published: 2026-11-17
 author: OpenChart
 tags: [tables, chart-choice]
@@ -16,7 +16,7 @@ Comparing twelve major economies across population, income per person and life e
 
 A horizontal bar chart handles one metric cleanly. Ranking these economies by income puts the United States at $75,489, nearly eight times India's $9,818, and makes the gap between wealthy and middle-income nations clear at a glance. Population and longevity disappear completely unless you draw two more charts.
 
-## Three signs the data wants a table
+## When to use a table
 
 Use a table when readers arrive to look up exact values for specific rows. Reading a bar chart means tracing a bar end down to an axis tick and estimating between gridlines. Data labels fix that on a single metric, yet they crowd the plot as soon as each row carries three or four measurements. Printed digits let a reader pull Canada's $58,321 income or 82.2-year life expectancy straight off the row.
 
@@ -24,7 +24,7 @@ Mixed units across variables also favor a table. Population, purchasing-power in
 
 A table lets each reader pick the ranking that answers their question. A bar chart locks every visitor into income order, forcing anyone curious about population size to scan up and down the labels. Clickable headers reorder the rows on demand, moving India and China to the top by population or placing Japan first by life expectancy.
 
-## Borrowing chart cues inside a table
+## Bars and shading inside a table
 
 Right-aligning numeric columns with equal-width tabular numerals is the first visual cue a table borrows from charts. Lining up digits flush right puts commas and decimal points in one vertical track, so wider numbers stand out as larger values while country names stay left-aligned. Shortening billion-scale populations into compact labels like 1.4B keeps the column scannable when nobody needs nine trailing digits.
 
@@ -153,7 +153,7 @@ Subtle cell shading adds a second visual channel without competing with bar leng
   "mobileLayout": "scroll",
   "chrome": {
     "title": "India leads on population, United States on income and Japan on longevity",
-    "subtitle": "Population, PPP GDP per capita (international $) and life expectancy (years); click a header to sort"
+    "subtitle": "Population, PPP GDP per capita (international $) and life expectancy (years), 12 large economies"
   }
 }
 ```

@@ -73,7 +73,7 @@ export const airlineBars = defineDemo({
     },
     theme: { colors: { categorical: [MUTED, ACCENT] } },
     chrome: {
-      title: `The same ${shown.length} airlines as grouped bars`,
+      title: `Fatal accidents at ${shown.length} airlines fell from ${earlyTotal} to ${lateTotal}`,
       subtitle: `Fatal accidents per 15-year period, airlines with ${MIN_EARLY_ACCIDENTS} or more in ${EARLY}`,
     },
   },
@@ -110,7 +110,7 @@ export const airlineSlope = defineDemo({
     // One palette slot per airline, all the same color: the finding is about the group.
     theme: { colors: { categorical: shown.map(() => ACCENT) } },
     chrome: {
-      title: `The ${shown.length} airlines with the most fatal accidents went from ${earlyTotal} to ${lateTotal}`,
+      title: `Fatal accidents at ${shown.length} airlines fell from ${earlyTotal} to ${lateTotal}`,
       subtitle: `Fatal accidents per 15-year period, airlines with ${MIN_EARLY_ACCIDENTS} or more in ${EARLY}. All 56 airlines: ${allEarly} to ${allLate}.`,
     },
   },
@@ -175,8 +175,8 @@ export const seaIceSlope = defineDemo({
     legend: { show: false },
     theme: { colors: { categorical: [ACCENT, MUTED] } },
     chrome: {
-      title: `September ice fell ${dropPercent}% between ${FIRST_YEAR} and ${LOW_YEAR}; March ice barely moved`,
-      subtitle: "Average Arctic sea ice extent in the month, million km²",
+      title: `September ice fell ${dropPercent}% from ${FIRST_YEAR} to ${LOW_YEAR}, and March ice changed little`,
+      subtitle: "Average Arctic sea ice extent in March and September, million km²",
     },
   },
 });
@@ -223,8 +223,8 @@ export const seaIceLine = defineDemo({
     theme: { colors: { categorical: [ACCENT] } },
     chrome: {
       title: lowHeld
-        ? `September ice hit its record low in ${LOW_YEAR} and has not gone that low since`
-        : `September ice hit a record low in ${LOW_YEAR}`,
+        ? `September ice reached its record low in ${LOW_YEAR} and has stayed above it since`
+        : `September ice reached a record low in ${LOW_YEAR}`,
       subtitle: "Average Arctic sea ice extent in September, million km², 1979-2025",
     },
   },

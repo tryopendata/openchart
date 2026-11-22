@@ -1,6 +1,6 @@
 ---
-title: "Server-side chart rendering: static SVG with no browser"
-description: Render a chart spec to an SVG string in Node with renderStaticSVG, with no DOM and no client JavaScript. What the output contains, leaves out and weighs.
+title: Server-side chart rendering with static SVG
+description: How to render a chart to SVG on the server with renderStaticSVG, and what the static chart can't do.
 published: 2026-11-16
 author: OpenChart
 tags: [developers]
@@ -16,7 +16,7 @@ A static site build or a report generator can run the library, and drawing the c
 
 <Demo id="blog/house-price-range" />
 
-## The call
+## Calling renderStaticSVG
 
 Import it from the `static` entry of the vanilla package and give it a spec and a size:
 
@@ -42,21 +42,21 @@ Temporal axes can depend on the server's timezone, so build with `TZ=UTC` if dat
 
 The server has no fonts to measure, so it estimates how wide each piece of text is, and a long title can break at a different word than it does in the live chart. Pass `measureText`, a function that returns the width of a string at a font size and weight, if line breaks must match.
 
-## Light and dark
+## Dark mode
 
 The server has no color scheme to detect, and `darkMode: "auto"` gives the light version. Render the chart twice, once with `"off"` and once with `"force"`, using different prefixes, and let your page's CSS show the one that matches the reader. That is what this site does for every figure.
 
-## What a static SVG leaves out
+## Limits of static output
 
 A static SVG has no animation, no scripts, no tooltips, no keyboard navigation and no hidden data table. It does keep `role="img"` and a label built from the chart's title, which for the chart above reads "Bar chart showing House prices rose 85.9% in Maine from 2019 to 2026 and 14.6% in DC (10 data points)". Write the finding in a caption and put the values in an HTML table, as the [accessibility post](/blog/accessible-charts-for-the-web/) describes.
 
 It also supports fewer specs than the live library. Charts, layered charts, bar lists, tile maps and geographic maps work. Tables, Sankey diagrams and network graphs do not.
 
-## When to keep the live chart
+## Adding the live chart
 
 A reader who needs to hover for exact values or step through points from the keyboard needs the live chart. Most pages want both. Ship the static SVG so the page has a chart immediately and without JavaScript, then mount the live chart over it from the same spec.
 
-## Getting a PNG on the server
+## PNG output
 
 The output is always SVG. Where a link preview or an email needs a raster image, convert it with a rasterizer such as `sharp`; the machine needs the chart's font installed, because the SVG names its font without embedding it. To export from a live chart in the browser instead, see [export](/docs/output/export/).
 

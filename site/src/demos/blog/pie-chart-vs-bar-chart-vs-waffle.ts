@@ -35,7 +35,7 @@ export const otherSharePct = Number(((latestDebt.other / latestDebt.total) * 100
 
 export const debtPie = defineDemo({
   id: "blog/debt-pie",
-  title: "US household debt, mortgages against the rest, as a pie",
+  title: "US household debt, mortgages and all other debt, as a donut",
   source: sourceOf(nyFedHouseholdDebt),
   height: 380,
   spec: {
@@ -74,11 +74,6 @@ const byBalance = [
   { type: "Cards", balance: trillions(latestDebt.credit_card) },
   { type: "Other", balance: trillions(latestDebt.home_equity + latestDebt.other) },
 ].sort((a, b) => b.balance - a.balance);
-const balanceOf = (type: string) =>
-  must(
-    byBalance.find((row) => row.type === type),
-    type,
-  ).balance;
 // The title and prose name auto, student and card debt in this order, so fail if the rows stop agreeing.
 if (byBalance.map((row) => row.type).join() !== "Mortgage,Auto,Student,Cards,Other") {
   throw new Error(
@@ -103,7 +98,7 @@ export const debtBars = defineDemo({
     labels: { format: ".2f" },
     theme: { colors: { categorical: [TEAL] } },
     chrome: {
-      title: `Student loans ($${balanceOf("Student")}T) top credit cards ($${balanceOf("Cards")}T) by $${studentOverCards.toFixed(2)}T`,
+      title: `Student loan debt exceeds credit card debt by $${studentOverCards.toFixed(2)} trillion`,
       subtitle: `US household debt by type, fourth quarter of ${latestDebt.year}, $ trillions`,
     },
   },
@@ -132,7 +127,7 @@ export const outlaysWaffle = defineDemo({
     },
     theme: { colors: { categorical: [TEAL] } },
     chrome: {
-      title: `Payments for individuals took ${Math.round(lastOutlays.payments_to_individuals_pct)} of every 100 federal dollars in ${lastOutlays.year}`,
+      title: `Payments for individuals were ${Math.round(lastOutlays.payments_to_individuals_pct)}% of federal spending in ${lastOutlays.year}`,
       subtitle: `Share of US federal outlays by category, fiscal year ${lastOutlays.year}. Each square is one percent.`,
     },
   },

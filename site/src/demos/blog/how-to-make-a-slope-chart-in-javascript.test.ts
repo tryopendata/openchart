@@ -73,14 +73,14 @@ describe("the slope-chart post's figures", () => {
 
   it("titles each chart with a finding read off the rows", () => {
     expect(specOf(airlineSlope).chrome?.title).toBe(
-      "The 11 airlines with the most fatal accidents went from 74 to 17",
+      "Fatal accidents at 11 airlines fell from 74 to 17",
     );
     expect(specOf(airlineSlope).chrome?.subtitle).toContain("All 56 airlines: 122 to 37.");
     expect(specOf(seaIceSlope).chrome?.title).toBe(
-      "September ice fell 53% between 1980 and 2012; March ice barely moved",
+      "September ice fell 53% from 1980 to 2012, and March ice changed little",
     );
     expect(specOf(seaIceLine).chrome?.title).toBe(
-      "September ice hit its record low in 2012 and has not gone that low since",
+      "September ice reached its record low in 2012 and has stayed above it since",
     );
   });
 

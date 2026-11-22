@@ -1,6 +1,5 @@
 /**
- * The figures in the blog post "When bar charts must start at zero (and when
- * lines don't)": a truncated horizontal bar chart of the eight countries under
+ * The figures in the blog post "When bar charts must start at zero": a truncated horizontal bar chart of the eight countries under
  * 1 billion people, the same bars anchored at zero, and a zoomed line chart of
  * US CPI inflation. Titles are computed from the dataset rows so they cannot
  * drift, and a test pins the post's `json demo` fence to `baselineBarsZero`.
@@ -69,7 +68,7 @@ export const baselineBarsTruncated = defineDemo({
 const zeroBarsOnPhones: ChartSpecOverride = {
   encoding: { x: { axis: { values: [0, 100_000_000, 200_000_000, 300_000_000] } } },
   chrome: {
-    title: `At a zero baseline, ${indonesia.country}'s bar is ${trueRatio}x ${ethiopia.country}'s`,
+    title: `${indonesia.country}'s population is ${trueRatio}x ${ethiopia.country}'s`,
   },
 };
 
@@ -81,7 +80,7 @@ export const baselineBarsZero = defineDemo({
   spec: {
     ...populationBarsBase([0, BAR_MAX]),
     chrome: {
-      title: `At a zero baseline, ${indonesia.country}'s bar is ${trueRatio}x ${ethiopia.country}'s (${formatMillions(indonesia.population)} vs ${formatMillions(ethiopia.population)})`,
+      title: `${indonesia.country}'s population is ${trueRatio}x ${ethiopia.country}'s (${formatMillions(indonesia.population)} vs ${formatMillions(ethiopia.population)})`,
       subtitle: "Population of the eight countries under 1 billion, 2025 estimates",
     },
     overrides: { compact: zeroBarsOnPhones, medium: zeroBarsOnPhones },

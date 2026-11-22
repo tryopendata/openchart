@@ -38,7 +38,7 @@ describe("the choropleth vs tile map post's figures", () => {
       "Unemployment ranges from 2.3% in South Dakota to 5.7% in DC",
     );
     expect(title(unemploymentTilemap)).toBe(
-      "DC (5.7%) and Delaware (5.4%) lead US state unemployment",
+      "DC (5.7%) and Delaware (5.4%) have the highest unemployment rates",
     );
   });
 

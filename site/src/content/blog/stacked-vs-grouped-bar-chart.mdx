@@ -1,6 +1,6 @@
 ---
 title: Stacked bar chart vs grouped bar chart
-description: A stacked bar shows the total and the bottom segment. A grouped bar compares the parts. Which to use, how to order a stack, and what a stack hides.
+description: How to choose between a stacked and a grouped bar chart, and what order to put a stack's segments in.
 published: 2026-11-20
 author: OpenChart
 tags: [chart-choice]
@@ -12,7 +12,7 @@ import Demo from "../../components/demo/Demo.astro";
 
 US solar generators that came online in 2024 add up to 31.2 gigawatts, 13 times the new natural gas capacity. Whether a chart makes that comparison easy depends on whether it puts each year's fuels end to end in a stack or side by side in a group. A stack shows the total and how the bottom segment moves. A group shows how the parts compare with each other.
 
-## What a stack answers
+## Stacked bars
 
 The chart below stacks four fuels for each year, in gigawatts (GW) of nameplate capacity, the maximum output a generator is rated for. The column height is the four fuels' total, which reached 49.8 GW in 2024. Solar sits at the bottom, so its growth from 5.0 GW in 2018 to 31.2 GW in 2024 is easy to follow.
 
@@ -20,7 +20,7 @@ The chart below stacks four fuels for each year, in gigawatts (GW) of nameplate 
 
 The data counts only generators that still operate in one snapshot of the EIA's inventory. A plant that opened in 2018 and has since retired is missing, so older years are understated.
 
-## Comparing the parts side by side
+## Grouped bars
 
 Wind is hard to read in that stack. It sits in the middle, so both its bottom edge and its top edge move from year to year, and the reader has to subtract to see its size. Grouping gives every fuel the same zero baseline.
 
@@ -212,7 +212,7 @@ Wind is hard to read in that stack. It sits in the middle, so both its bottom ed
     "position": "top"
   },
   "chrome": {
-    "title": "Solar added 31.2 GW in 2024, 13 times natural gas",
+    "title": "Solar added 31.2 GW in 2024, 13 times as much as natural gas",
     "subtitle": "US generators still operating, by the year they came online and by fuel, 2018-2024 (gigawatts)"
   },
   "overrides": {
@@ -237,13 +237,13 @@ Wind is hard to read in that stack. It sits in the middle, so both its bottom ed
 
 Now the comparisons are direct: in 2024 batteries (11.1 GW) added more than twice as much as wind (5.2 GW). The total is gone, though, and a reader who wants it has to add four bars. Four fuels across seven years is 28 bars, about as many as a grouped chart can hold before the bars get too thin to read.
 
-## Ordering a stack
+## Order of the segments
 
 Put the series the reader cares about at the bottom, where it starts at zero, and keep its order and color the same in every column. Past four or five segments the middle ones get hard to read, and a grouped chart or one panel per series works better.
 
 Choose that order on purpose. Data often arrives sorted by name, and a stack drawn in that order puts whichever series sorts first at the bottom, whether or not the reader cares about it.
 
-## When the total is the point
+## Totals over time
 
 Stacking is the right choice when the total is the story. Counted homelessness in the 50 states and DC fell to 544,084 people in 2016 and then rose 41% to 767,856 in 2024, and the stack shows that total while still splitting it into sheltered and unsheltered people. Unsheltered people, the top segment, rose from 172,035 to 271,350 over the same years, and that change is harder to see than the total.
 
@@ -496,7 +496,7 @@ Stacking is the right choice when the total is the story. Counted homelessness i
     }
   ],
   "chrome": {
-    "title": "Counted homelessness fell to 544,084 in 2016, then reached 767,856 in 2024",
+    "title": "The homeless count fell to 544,084 in 2016 and rose to 767,856 in 2024",
     "subtitle": "People counted as homeless on one night in January, 50 states and DC, 2007-2024"
   },
   "overrides": {

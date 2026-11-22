@@ -1,5 +1,5 @@
 /**
- * The figures in the blog post "Dual-axis charts: what to draw instead": the
+ * The figures in the blog post "What to use instead of a dual-axis chart": the
  * same NHTSA road-death series on two dual-axis charts, one with both axes from
  * zero and one trimmed so both lines reach the floor in 2011, then the two fixes (separate panels, an indexed chart) with NIFC
  * wildfire counts and NHTSA again. Titles state findings computed from the
@@ -126,7 +126,7 @@ export const dualAxisZeroBased = defineDemo({
     ZERO_RATE,
     [0, 20000, 40000, 60000],
     [0, 2, 4, 6],
-    `With both axes from zero, deaths fall ${deathsFallPct}% and the rate falls ${ratePct}%, in proportion`,
+    `With both axes from zero, deaths fall ${deathsFallPct}% and the death rate ${ratePct}%`,
   ),
 });
 
@@ -196,7 +196,7 @@ export const wildfirePanels = defineDemo({
     },
     theme: seriesColors(TEAL, MUTED, MUTED),
     chrome: {
-      title: `Fires per year did not climb, but the average fire grew from ${acresPerFireEarly} to ${acresPerFireLate} acres`,
+      title: `The average wildfire grew from ${acresPerFireEarly} to ${acresPerFireLate} acres, but fires per year did not rise`,
       subtitle: `US wildland fires per year and acres burned per fire, ${FIRST_PANEL_YEAR}-${lastFireYear}, each panel on its own scale`,
     },
   },

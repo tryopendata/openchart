@@ -46,7 +46,7 @@ const kg = (value: number) => Math.round(value).toLocaleString("en-US");
 /** The beef part of the top country's food CO2, as a whole percent. */
 export const topBeefPct = Math.round((topCountry.kg_co2_beef / topCountry.kg_co2_per_person) * 100);
 
-const foodTitle = `${topCountry.country}'s diet comes to ${kg(topCountry.kg_co2_per_person)} kg of CO2 per person a year, the most of 130 countries`;
+const foodTitle = `${topCountry.country}'s diet produces ${kg(topCountry.kg_co2_per_person)} kg of CO2 per person a year, the most of 130 countries`;
 const foodSubtitle = `Kilograms of CO2 per person per year from 11 food types, the ${countryRows.length} highest of 130 countries (no year stated)`;
 const foodX = {
   field: "kgCo2",
@@ -116,7 +116,7 @@ export const educationBars = defineDemo({
     labels: { density: "all", format: "$,.0f" },
     theme: teal,
     chrome: {
-      title: `Median weekly earnings run from ${money(bottomEarnings)} to ${money(topEarnings)} across eight education levels`,
+      title: `Median weekly earnings range from ${money(bottomEarnings)} to ${money(topEarnings)} by education`,
       subtitle: educationSubtitle,
     },
   },
@@ -153,7 +153,7 @@ export const educationLollipopTrimmed = defineDemo({
     },
     theme: teal,
     chrome: {
-      title: `Starting the axis at ${money(TRIMMED_FROM)} stretches a ${realRatio}-times gap into ${stemRatio} times`,
+      title: `An axis from ${money(TRIMMED_FROM)} makes a ${realRatio}-times gap look like ${stemRatio} times`,
       subtitle: educationSubtitle,
     },
   },
@@ -181,7 +181,7 @@ export const educationDotPlot = defineDemo({
     },
     theme: teal,
     chrome: {
-      title: `Without stems, an axis from ${money(TRIMMED_FROM)} shows where each level sits, from ${money(bottomEarnings)} to ${money(topEarnings)}`,
+      title: `Median weekly earnings range from ${money(bottomEarnings)} to ${money(topEarnings)} by education`,
       subtitle: educationSubtitle,
     },
   },

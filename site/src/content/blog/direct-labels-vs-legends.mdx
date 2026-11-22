@@ -1,6 +1,6 @@
 ---
-title: "Direct labels vs legends: when to put text on the chart"
-description: Legends force readers to look back and forth between colors and lines. Direct endpoint labels remove that hop, and here is when to keep a legend.
+title: Direct labels vs legends on line charts
+description: When to label each line directly instead of using a legend, and when a legend is still the better choice.
 published: 2026-11-19
 author: OpenChart
 tags: [annotation, accessibility]
@@ -16,7 +16,7 @@ Natural gas moved the other way over those years, climbing from 34.8% to 43.5%. 
 
 <Demo id="blog/direct-labels-legend" />
 
-## Putting labels on the lines
+## Direct labels
 
 Placing each series name at the right end of its line removes the lookup hop. Readers see the label and the final value right where the line stops, so path and identity stay joined. Printing the final share beside the name also answers the most common question on a time series without a trip back to the y axis.
 
@@ -97,23 +97,23 @@ Moving text onto the lines also solves an accessibility problem that color palet
   "endpointLabels": { "content": "label value", "format": ".1f", "showLeader": true },
   "seriesStyles": { "Coal": { "strokeWidth": 3 } },
   "chrome": {
-    "title": "US coal fell from 31.2% to 16.2% of main-source generation between 2016 and 2023",
+    "title": "Coal fell from 31.2% to 16.2% between 2016 and 2023",
     "subtitle": "Share of US generation from coal, gas, nuclear, hydro, wind and solar (%), 2016 to 2023"
   },
   "overrides": {
     "compact": {
       "encoding": { "x": { "axis": { "values": ["2016", "2020", "2023"] } } },
-      "chrome": { "title": "US coal fell from 31.2% to 16.2% of main-source generation" }
+      "chrome": { "title": "Coal fell from 31.2% to 16.2%" }
     },
     "medium": {
       "encoding": { "x": { "axis": { "values": ["2016", "2020", "2023"] } } },
-      "chrome": { "title": "US coal fell from 31.2% to 16.2% of main-source generation" }
+      "chrome": { "title": "Coal fell from 31.2% to 16.2%" }
     }
   }
 }
 ```
 
-## When a legend still wins
+## When to keep a legend
 
 Direct labels depend on each series having a single edge where text can sit, so they break down when marks spread across space. A scatter plot with colored groups places points across both axes and leaves no right-hand margin for labels. Choropleth maps, which shade geographic regions by numeric value, require a color scale bar because regions have no shared edge to label.
 

@@ -70,8 +70,8 @@ export const accessiblePaletteLines = defineDemo({
     endpointLabels: { content: "label" },
     seriesStyles: { Gas: { strokeWidth: 3 }, Coal: { strokeWidth: 3 } },
     chrome: {
-      title: `Gas rose to ${gasLast}% of US six-source power in ${lastYear} while coal fell to ${coalLast}%`,
-      subtitle: `Share of US electricity from the six main sources, %, ${firstYear}-${lastYear}`,
+      title: `Gas rose to ${gasLast}% in ${lastYear} and coal fell to ${coalLast}%`,
+      subtitle: `Share of US electricity from the six main sources (%), ${firstYear}-${lastYear}`,
     },
     // Phones span compact (under 400px) and medium (400 to 700px, where 412
     // and 430px phones land); desktop figures render at full.

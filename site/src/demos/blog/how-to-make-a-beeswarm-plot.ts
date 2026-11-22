@@ -56,7 +56,7 @@ export const teacherHistogram = defineDemo({
     },
     theme: { colors: { categorical: [ACCENT] } },
     chrome: {
-      title: `Teacher pay fell in ${fell} of ${stateChanges.length} states, but the bars cannot say which`,
+      title: `Teacher pay fell in ${fell} of ${stateChanges.length} states`,
       subtitle: `${teacherSubtitle}. Each bar counts states.`,
     },
   },
@@ -113,8 +113,8 @@ export const teacherSwarm = defineDemo({
     legend: { show: false },
     theme: { colors: { categorical: [LOSS, ACCENT] } },
     chrome: {
-      title: `Teacher pay fell in ${fell} of ${stateChanges.length} states, by as much as ${Math.abs(biggestFall.change)}%`,
-      subtitle: `${teacherSubtitle}. One dot per state: red fell, teal rose.`,
+      title: `Teacher pay fell in ${fell} of ${stateChanges.length} states, most in ${biggestFall.state} (${Math.abs(biggestFall.change)}%)`,
+      subtitle: `${teacherSubtitle}. One dot per state, red for a fall and teal for a rise.`,
     },
   },
 });
@@ -209,7 +209,7 @@ export const majorsSwarm = defineDemo({
     legend: { show: false },
     theme: { colors: { categorical: [ACCENT, MUTED] } },
     chrome: {
-      title: `${widestField} majors range from ${money(widest.low)} to ${money(widest.high)}, the widest spread of any field`,
+      title: `${widestField} majors have the widest pay range, ${money(widest.low)} to ${money(widest.high)}`,
       subtitle: `Median pay of recent graduates, one dot per major, for all ${majors.length} majors with at least 5,000 graduates`,
     },
   },

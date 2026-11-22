@@ -1,6 +1,6 @@
 ---
-title: "Histogram bin size: how many bins should you use?"
-description: Bin width decides what a histogram shows. Three widths on the same 51 incomes, two rules of thumb, and a test for telling a real feature from a bin artifact.
+title: How to choose a histogram bin size
+description: How bin width changes what a histogram shows, and two rules for picking a starting width.
 published: 2026-11-19
 author: OpenChart
 tags: [chart-choice]
@@ -30,7 +30,7 @@ With narrow bins most bars hold one or two states, and the outline jumps around 
 
 A reader will see peaks and gaps here, but each is one or two states, and moving a state by $1,000 would reshuffle them.
 
-## A width in between
+## $10,000 bins
 
 A $10,000 bin gives six bars. The values pile up between $70,000 and $90,000, and a thinner tail runs to the right.
 
@@ -318,19 +318,19 @@ A $10,000 bin gives six bars. The values pile up between $70,000 and $90,000, an
     }
   },
   "chrome": {
-    "title": "30 of 50 states sit between $70,000 and $90,000, with a tail to the right",
+    "title": "30 of 50 states have a median income between $70,000 and $90,000",
     "subtitle": "Number of states by median household income in $10,000 bins, 50 states and DC"
   }
 }
 ```
 
-## Rules of thumb
+## Sturges and Freedman-Diaconis rules
 
 Two rules compute a starting width from the data. Sturges' rule uses only the count of values: take the base-2 logarithm of 51, add one and round up, which gives 7 bins, or about $7,200 each across this range. The Freedman-Diaconis rule sets the width to twice the spread of the middle half of the values (the interquartile range) divided by the cube root of the count. Because it ignores the extremes, an outlier like DC barely moves it. It gives about $9,400.
 
 Both rules land near the $10,000 width. Keep every bin the same width: the eye reads a bar's area while the count sets only its height, so bars of unequal width stop meaning the same thing. Try a width on either side of the suggestion and see whether the picture changes.
 
-## Testing a feature against the bin width
+## Checking a feature at a second bin width
 
 Redraw the chart at another width to tell a real feature from an artifact of the bin edges. Here is the USGS earthquake catalog for January 2026, counted in 0.1-magnitude bins, with only the quakes of magnitude 2.5 and above.
 

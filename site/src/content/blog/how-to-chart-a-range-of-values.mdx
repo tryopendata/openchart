@@ -1,6 +1,6 @@
 ---
-title: How to chart a range of values instead of averages
-description: Averages hide how wide a gap runs. A range plot encodes both endpoints directly so spread and level stay visible in the same view.
+title: How to chart a range of values
+description: How to show each month's low and high with a range plot instead of one average, and when error bars or a histogram fit better.
 published: 2026-11-13
 author: OpenChart
 tags: [chart-choice, climate]
@@ -20,7 +20,7 @@ A column chart of monthly midpoints traces the seasonal curve from February to J
 
 Plotting average lows and average highs as two separate [lines](/docs/change-over-time/line/) or paired columns puts both endpoints on the page, at the cost of extra visual work. To gauge how wide a month's swing runs, a reader has to measure the empty gap between two marks and compare that white space from one month to the next.
 
-## Drawing both endpoints
+## Range plots
 
 A vertical range plot draws one floating bar per month from the average daily low to the average daily high. Vertical position still tracks the seasonal climb into summer and drop into winter, while bar height encodes the daily spread directly as a solid span.
 
@@ -52,8 +52,8 @@ A vertical range plot draws one floating bar per month from the average daily lo
     "y2": { "field": "high", "type": "quantitative", "title": "Avg high" }
   },
   "chrome": {
-    "title": "May swung 10.1°C a day, against 5.6°C in December",
-    "subtitle": "Average daily low to average daily high temperature by month, Central Park, 2023 (°C)"
+    "title": "Daily swings ranged from 5.6°C in December to 10.1°C in May",
+    "subtitle": "Average daily low and high temperature by month, Central Park, 2023 (°C)"
   },
   "overrides": {
     "compact": {
@@ -74,7 +74,7 @@ May's bar stretches from 12.0°C to 22.1°C, while December's sits compressed be
 
 Floating bars fit ordered time buckets like months because a vertical layout preserves left-to-right calendar order while bar length encodes the daily span directly. When categories are unordered names such as countries or departments, orient the range horizontally so labels read without rotation on the left. When change between two specific periods matters, use a dumbbell or an arrow instead of a plain bar so start and end values remain distinguishable.
 
-## Range plots, error bars, and distributions
+## Error bars, distributions and averages
 
 A range plot encodes observed endpoints, while [error bars](/docs/distribution/error-bars/) encode statistical uncertainty around an estimate. Use a range plot for measured pairs such as a month's average low and high or a country's before-and-after score. Use error bars for a confidence interval or standard error from a sample, where a center point marks the estimate and the whiskers show how far sampling noise could move it.
 

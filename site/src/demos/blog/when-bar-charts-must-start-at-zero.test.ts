@@ -57,7 +57,7 @@ describe("the zero-baseline post's figures", () => {
       "Starting at 100M makes Indonesia's bar 5.3x Ethiopia's instead of 2.1x",
     );
     expect(title(baselineBarsZero)).toBe(
-      "At a zero baseline, Indonesia's bar is 2.1x Ethiopia's (285M vs 135M)",
+      "Indonesia's population is 2.1x Ethiopia's (285M vs 135M)",
     );
     expect(title(baselineLineZoomed)).toBe(
       "US inflation peaked at 8.5% in 2022 and eased to 2.6% by late 2024",

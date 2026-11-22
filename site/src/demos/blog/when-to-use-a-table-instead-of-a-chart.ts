@@ -61,7 +61,7 @@ const rankedBarSpec: ChartSpec = {
     y: { field: "country", type: "nominal", sort: "x" },
   },
   chrome: {
-    title: `${richest.country} leads at ${dollars(richest.gdpPerCapita)}, ${incomeRatio} times ${poorest.country}'s ${dollars(poorest.gdpPerCapita)}`,
+    title: `${richest.country} GDP per person is ${dollars(richest.gdpPerCapita)}, ${incomeRatio} times ${poorest.country}'s ${dollars(poorest.gdpPerCapita)}`,
     subtitle:
       "GDP per capita at purchasing power parity (constant international dollars), 12 large economies",
   },
@@ -115,7 +115,7 @@ const tableSpec: TableSpec = {
   chrome: {
     title: `${mostPopulous.country} leads on population, ${richest.country} on income and ${longestLived.country} on longevity`,
     subtitle:
-      "Population, PPP GDP per capita (international $) and life expectancy (years); click a header to sort",
+      "Population, PPP GDP per capita (international $) and life expectancy (years), 12 large economies",
   },
 };
 

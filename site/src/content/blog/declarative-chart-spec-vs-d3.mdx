@@ -1,6 +1,6 @@
 ---
-title: "Declarative chart spec vs D3: what you write and what you give up"
-description: The same line chart as a 45-line JSON spec and as 97 lines of D3, what the spec decides for you, what it cannot draw, and when to reach for D3.
+title: Declarative chart spec vs D3
+description: The same line chart built as a JSON spec and in D3, and when each one is the better choice.
 published: 2026-11-14
 author: OpenChart
 tags: [developers]
@@ -218,7 +218,7 @@ export function drawChart(
 
 Most of those lines are decisions the spec made for you: the margins, the pixel range of each scale, how the axes are built, where the labels go.
 
-## What the spec gives you
+## Responsive layout and accessibility
 
 The spec version adapts to a phone, works with a keyboard and a screen reader, animates and exports, all without extra code. On a phone-width container the chart switches to a compact layout with fewer ticks, and the callout becomes a numbered note under the plot. [Annotations](/docs/framing/annotations/) sit in data coordinates, so a callout stays on its point when the chart resizes.
 
@@ -226,7 +226,7 @@ The chart can be tabbed to and stepped through with the arrow keys, with a toolt
 
 The D3 chart scales as a picture, so its text shrinks with its width. It has the `aria-label` the code sets by hand and none of the rest. D3 can do all of it, and you write each piece.
 
-## What it costs
+## Limits of a spec
 
 A spec can only describe charts the library knows how to draw. You also take the library's defaults for spacing, type and color, and you override them through spec fields where a field exists, which is a narrower set of choices than raw SVG.
 
@@ -234,7 +234,7 @@ Changing a spec is cheap inside that range. The chart below swaps `mark` for a r
 
 <Demo id="blog/occupation-pay-ranges" />
 
-## When to reach for D3
+## When to use D3
 
 Use D3 when the chart is the product: a custom layout, a mark that no chart type draws, or an interaction the spec cannot describe. Use a spec when the chart is a standard one and the work is in the data and the writing.
 

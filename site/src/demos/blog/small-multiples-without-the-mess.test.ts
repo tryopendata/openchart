@@ -95,7 +95,7 @@ describe("the small-multiples post's figures", () => {
       "On a shared scale, homicide's fall from 9.8 to 4.1 is a flat line",
     );
     expect(titleOf(crimeIndependent)).toBe(
-      "On free scales, homicide's rise from 5.0 in 2018 to 6.8 in 2021 shows",
+      "Homicide rose from 5.0 per 100,000 in 2018 to 6.8 in 2021",
     );
   });
 

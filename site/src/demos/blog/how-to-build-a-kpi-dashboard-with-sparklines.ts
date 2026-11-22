@@ -181,7 +181,7 @@ const dashboardSource = {
  */
 export const kpiDashboard = defineDemo({
   id: "blog/kpi-dashboard",
-  title: "A dashboard of three KPI tiles: mortgage rate, egg prices and remote job ads",
+  title: "Three KPI tiles for the mortgage rate, egg prices and remote job ads",
   source: dashboardSource,
   height: 620,
   spec: {

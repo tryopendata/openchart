@@ -1,6 +1,6 @@
 ---
-title: When bar charts must start at zero (and when lines don't)
-description: Bar charts encode values as length, so cropping the baseline distorts every ratio. Line charts encode position, so zooming in can clarify change.
+title: When bar charts must start at zero
+description: Why a bar chart's axis should start at zero, and why a line chart's axis can start closer to the data.
 published: 2026-11-14
 author: OpenChart
 tags: [chart-choice, accessibility]
@@ -18,7 +18,7 @@ In the [UN World Population Prospects](https://population.un.org/wpp/) estimates
 
 Printing exact numbers on the bars or labeling the axis at 100 million does not undo the distortion. Readers compare bar lengths before they read tick marks or subtract the baseline in their heads, so a cropped bar chart misleads even when every printed label is accurate.
 
-## Restoring the zero baseline
+## Bars with a zero baseline
 
 Moving the axis back to zero puts every pair of bars back in true proportion. The United States, at 347 million, spans just over two and a half times Ethiopia's width, and the steady step down from Indonesia through Brazil reflects the actual population gaps between them.
 
@@ -45,17 +45,17 @@ Moving the axis back to zero puts every pair of bars back in true proportion. Th
     "y": { "field": "country", "type": "nominal", "sort": "x" }
   },
   "chrome": {
-    "title": "At a zero baseline, Indonesia's bar is 2.1x Ethiopia's (285M vs 135M)",
+    "title": "Indonesia's population is 2.1x Ethiopia's (285M vs 135M)",
     "subtitle": "Population of the eight countries under 1 billion, 2025 estimates"
   },
   "overrides": {
     "compact": {
       "encoding": { "x": { "axis": { "values": [0, 100000000, 200000000, 300000000] } } },
-      "chrome": { "title": "At a zero baseline, Indonesia's bar is 2.1x Ethiopia's" }
+      "chrome": { "title": "Indonesia's population is 2.1x Ethiopia's" }
     },
     "medium": {
       "encoding": { "x": { "axis": { "values": [0, 100000000, 200000000, 300000000] } } },
-      "chrome": { "title": "At a zero baseline, Indonesia's bar is 2.1x Ethiopia's" }
+      "chrome": { "title": "Indonesia's population is 2.1x Ethiopia's" }
     }
   }
 }
@@ -65,7 +65,7 @@ India and China sit above 1.4 billion people each and are omitted here so the re
 
 When real differences do look cramped on a zero-anchored bar chart, switching the mark works better than cropping the axis. A dot plot places a single point at each value, so readers judge position along the scale and the axis can start near the data minimum. Plotting differences from a benchmark, such as each value's gap from the group average, also keeps a zero baseline while widening the spread.
 
-## Why line charts follow a different rule
+## Line charts
 
 Line charts encode values by vertical position along the y-axis, with the slope between points showing the rate of change. Because no filled rectangle stretches down to the axis, readers compare where points sit relative to one another and to the tick labels. Anchoring every line chart at zero can compress a narrow series into a nearly flat band at the top of the frame.
 

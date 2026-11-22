@@ -85,9 +85,8 @@ export const energySankeyElectricity = defineDemo({
     nodeSort: [...ELECTRICITY_NODE_ORDER],
     overrides: PHONE_OVERRIDES,
     chrome: {
-      title: `Electricity generation lost ${electricityRejectedPct}% of its ${electricityOut.toFixed(2)} quads as rejected energy`,
-      subtitle:
-        "Primary fuels entering US electricity generation and their outputs, 2024 (quadrillion BTU)",
+      title: `US power plants lost ${electricityRejectedPct}% of their ${electricityOut.toFixed(2)} quads as rejected energy`,
+      subtitle: "Energy into and out of US electricity generation, 2024 (quadrillion BTU)",
     },
   },
 });
@@ -107,8 +106,7 @@ export const energySankeyFull = defineDemo({
     overrides: PHONE_OVERRIDES,
     chrome: {
       title: `Rejected energy was ${fullRejectedPct}% of the ${fullTotal.toFixed(2)} quads used in 2024`,
-      subtitle:
-        "US energy from primary fuels through electricity generation and end-use sectors, 2024 (quadrillion BTU)",
+      subtitle: "US energy use by fuel and end-use sector, 2024 (quadrillion BTU)",
     },
   },
 });

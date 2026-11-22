@@ -39,7 +39,7 @@ describe("the range-of-values post's figures", () => {
     expect(title(nycTempMidpoint)).toBe(
       "Monthly midpoints ran from 5.0°C in February to 26.1°C in July",
     );
-    expect(title(nycTempRange)).toBe("May swung 10.1°C a day, against 5.6°C in December");
+    expect(title(nycTempRange)).toBe("Daily swings ranged from 5.6°C in December to 10.1°C in May");
   });
 
   it("validates both demos and renders light and dark static SVGs", () => {

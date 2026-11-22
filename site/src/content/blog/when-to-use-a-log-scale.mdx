@@ -1,6 +1,6 @@
 ---
 title: When to use a log scale on a scatter plot
-description: Linear axes crush lower values into one corner when a metric spans orders of magnitude. A log scale turns multiplicative jumps into equal steps.
+description: When to put a scatter plot's axis on a log scale, and when a linear axis is the better choice.
 published: 2026-11-12
 author: OpenChart
 tags: [chart-choice, annotation]
@@ -20,7 +20,7 @@ Each point plots one of 12 large economies by gross domestic product per person,
 
 Because the linear axis counts in equal $20k steps, five of the 12 countries pile into the left third of the plot. India, Indonesia, Brazil, Mexico, and China all sit below $24k, where the steepest gains in longevity occur, yet they share less horizontal room than the single gap between Japan and the United States.
 
-## Turning ratios into equal distance
+## How a log axis works
 
 A logarithmic axis replaces equal additions with equal multiplications. Moving from $10k to $20k covers the same horizontal width as moving from $40k to $80k, because both steps double the starting income. Any constant ratio takes one fixed distance across the chart.
 
@@ -168,7 +168,7 @@ Plotting the same 12 economies on a log horizontal axis spreads out the lower-in
   },
   "chrome": {
     "title": "Life expectancy rises 7 years from India to Brazil, then flattens past Japan",
-    "subtitle": "GDP per capita (PPP, log scale) vs. life expectancy at birth in 12 large economies. Each tick doubles the last."
+    "subtitle": "GDP per capita (PPP, log scale) vs. life expectancy at birth in 12 large economies"
   }
 }
 ```
@@ -177,7 +177,7 @@ On a scatter plot with a logarithmic x-axis and a linear y-axis, a straight diag
 
 Income, city populations, company revenue, and outbreak counts all grow by percentages, so a log axis aligns horizontal distance with how those quantities change.
 
-## When a log scale misleads
+## When not to use a log scale
 
 Pure log scales break on zero and negative values because no power of ten equals zero or drops below it. Datasets with zero-revenue months, net losses, or temperature anomalies below a baseline cannot sit on a standard log axis. Switch back to a linear scale for those series, or use a symmetric log scale (`symlog`), which stays linear near zero and turns logarithmic farther out.
 

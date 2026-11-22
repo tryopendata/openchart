@@ -84,17 +84,17 @@ describe("the lollipop post's figures", () => {
 
   it("titles each chart with a finding read off the rows", () => {
     expect(titleOf(co2Bars)).toBe(
-      "Argentina's diet comes to 2,172 kg of CO2 per person a year, the most of 130 countries",
+      "Argentina's diet produces 2,172 kg of CO2 per person a year, the most of 130 countries",
     );
     expect(titleOf(co2Lollipop)).toBe(titleOf(co2Bars));
     expect(titleOf(educationBars)).toBe(
-      "Median weekly earnings run from $738 to $2,363 across eight education levels",
+      "Median weekly earnings range from $738 to $2,363 by education",
     );
     expect(titleOf(educationLollipopTrimmed)).toBe(
-      "Starting the axis at $600 stretches a 3.2-times gap into 12.8 times",
+      "An axis from $600 makes a 3.2-times gap look like 12.8 times",
     );
     expect(titleOf(educationDotPlot)).toBe(
-      "Without stems, an axis from $600 shows where each level sits, from $738 to $2,363",
+      "Median weekly earnings range from $738 to $2,363 by education",
     );
   });
 

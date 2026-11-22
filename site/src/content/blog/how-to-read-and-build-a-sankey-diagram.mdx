@@ -1,6 +1,6 @@
 ---
 title: How to read and build a Sankey diagram
-description: A Sankey diagram traces how a fixed total splits and merges across stages. Band width encodes volume, so conservation of flow makes the chart readable.
+description: How to read a Sankey diagram, how to build one from a list of flows, and when a different chart works better.
 published: 2026-11-15
 author: OpenChart
 tags: [chart-choice, color]
@@ -61,15 +61,15 @@ In 2024, US power plants took in 32.79 quadrillion British thermal units (quads)
     "medium": { "other": 0.02 }
   },
   "chrome": {
-    "title": "Electricity generation lost 59% of its 32.77 quads as rejected energy",
-    "subtitle": "Primary fuels entering US electricity generation and their outputs, 2024 (quadrillion BTU)"
+    "title": "US power plants lost 59% of their 32.77 quads as rejected energy",
+    "subtitle": "Energy into and out of US electricity generation, 2024 (quadrillion BTU)"
   }
 }
 ```
 
 Conservation of flow is what makes the middle node readable. Inputs from natural gas, nuclear, coal, and seven smaller sources add up to 32.79 quads, while the five outgoing bands sum to 32.77 quads because LLNL rounds each printed link label to two decimals. About 59% of the output exits directly into rejected energy, leaving residential, commercial, and industrial electricity to split the remaining share.
 
-## Following conservation across four stages
+## US energy flow from fuel to end use
 
 Expanding from the power grid to the whole US economy adds a fourth column and brings the count to 42 links. Primary fuels enter on the left, pass through electricity generation or straight into four end-use sectors, and finish as energy services or rejected energy.
 

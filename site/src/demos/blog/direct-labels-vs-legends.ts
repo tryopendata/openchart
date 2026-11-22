@@ -1,6 +1,5 @@
 /**
- * The figures in the blog post "Direct labels vs legends: when to put text on
- * the chart": six US electricity generation sources with a top legend, then
+ * The figures in the blog post "Direct labels vs legends on line charts": six US electricity generation sources with a top legend, then
  * the same six series with direct endpoint labels and coal in focus. Titles
  * are computed from the dataset rows so they cannot drift from the data. The
  * post's `json demo` fence repeats `directLabelsEndpoints.spec` verbatim, and
@@ -81,7 +80,7 @@ export const directLabelsLegend = defineDemo({
     legend: { show: true, position: "top" },
     endpointLabels: false,
     chrome: {
-      title: `Gas reached ${gasEnd.toFixed(1)}% of US main-source electricity in ${lastYear}, ahead of coal at ${coalEnd.toFixed(1)}%`,
+      title: `Gas reached ${gasEnd.toFixed(1)}% in ${lastYear}, ahead of coal at ${coalEnd.toFixed(1)}%`,
       subtitle,
     },
     overrides: onPhones({ encoding: phoneYearAxis }),
@@ -114,14 +113,14 @@ export const directLabelsEndpoints = defineDemo({
     endpointLabels: { content: "label value", format: ".1f", showLeader: true },
     seriesStyles: { Coal: { strokeWidth: 3 } },
     chrome: {
-      title: `US coal fell from ${coalStart.toFixed(1)}% to ${coalEnd.toFixed(1)}% of main-source generation between ${firstYear} and ${lastYear}`,
+      title: `Coal fell from ${coalStart.toFixed(1)}% to ${coalEnd.toFixed(1)}% between ${firstYear} and ${lastYear}`,
       subtitle,
     },
     overrides: onPhones({
       encoding: phoneYearAxis,
       // The subtitle already names the years, so the phone title drops them.
       chrome: {
-        title: `US coal fell from ${coalStart.toFixed(1)}% to ${coalEnd.toFixed(1)}% of main-source generation`,
+        title: `Coal fell from ${coalStart.toFixed(1)}% to ${coalEnd.toFixed(1)}%`,
       },
     }),
   },

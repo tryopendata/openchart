@@ -97,13 +97,13 @@ describe("the dual-axis post's figures", () => {
 
   it("titles each chart with a finding read off the rows", () => {
     expect(titleOf(dualAxisZeroBased)).toBe(
-      "With both axes from zero, deaths fall 23% and the rate falls 78%, in proportion",
+      "With both axes from zero, deaths fall 23% and the death rate 78%",
     );
     expect(titleOf(dualAxisTrimmed)).toBe(
       "With both axes trimmed, deaths seem to fall as far as the rate until 2011",
     );
     expect(titleOf(wildfirePanels)).toBe(
-      "Fires per year did not climb, but the average fire grew from 42 to 121 acres",
+      "The average wildfire grew from 42 to 121 acres, but fires per year did not rise",
     );
     expect(titleOf(fatalitiesIndexed)).toBe(
       "Since 1966, deaths fell 23% and the death rate fell 78%",

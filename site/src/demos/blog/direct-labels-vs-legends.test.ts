@@ -32,11 +32,9 @@ describe("the direct labels vs legends post's figures", () => {
   it("titles each chart with a finding read off the rows", () => {
     const title = (demo: typeof directLabelsLegend) =>
       (demo.spec as { chrome?: { title?: string } }).chrome?.title;
-    expect(title(directLabelsLegend)).toBe(
-      "Gas reached 43.5% of US main-source electricity in 2023, ahead of coal at 16.2%",
-    );
+    expect(title(directLabelsLegend)).toBe("Gas reached 43.5% in 2023, ahead of coal at 16.2%");
     expect(title(directLabelsEndpoints)).toBe(
-      "US coal fell from 31.2% to 16.2% of main-source generation between 2016 and 2023",
+      "Coal fell from 31.2% to 16.2% between 2016 and 2023",
     );
   });
 

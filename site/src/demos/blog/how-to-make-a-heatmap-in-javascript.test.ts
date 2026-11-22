@@ -118,7 +118,7 @@ describe("the heatmap post's figures", () => {
 
   it("titles each chart with a finding read off the rows", () => {
     expect(specOf(greenCardHeatmap).chrome?.title).toBe(
-      "All six countries fell in fiscal 2020, and the total dropped 31%",
+      "Green cards fell 31% in fiscal 2020, with drops for all six countries",
     );
     expect(specOf(co2Trend).chrome?.title).toBe(
       "The lowest month of 2025 was 104 ppm above the highest month of 1960",

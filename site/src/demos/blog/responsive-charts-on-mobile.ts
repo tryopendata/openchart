@@ -92,7 +92,7 @@ const mlbSpec: ChartSpec = {
   ],
   chromeLayout: "subtract",
   chrome: {
-    title: `Strikeouts passed hits in ${firstOvertake.year} and have stayed ahead`,
+    title: `Strikeouts have outnumbered hits every season since ${firstOvertake.year}`,
     subtitle: `Hits and strikeouts by all MLB batters, per season, ${mlbRows[0]?.year}-${lastSeason.year}`,
   },
 };

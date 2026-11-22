@@ -54,7 +54,7 @@ describe("the responsive-charts post's figures", () => {
 
   it("titles each chart with a finding read off the rows", () => {
     expect(specOf(mlbStrikeoutsFull).chrome?.title).toBe(
-      "Strikeouts passed hits in 2018 and have stayed ahead",
+      "Strikeouts have outnumbered hits every season since 2018",
     );
     expect(specOf(importSharesResponsive).chrome?.title).toBe(
       "China's share of US goods imports peaked at 20.4% in 2020; Mexico passed it in 2023",

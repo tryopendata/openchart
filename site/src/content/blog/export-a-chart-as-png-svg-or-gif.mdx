@@ -1,6 +1,6 @@
 ---
 title: Export a chart as PNG, SVG or GIF from JavaScript
-description: Which file format to use where, the chart.export calls that make each one, and how big one real chart gets as SVG, PNG and GIF.
+description: How to save a chart as an SVG, PNG or animated GIF, and how big each file gets.
 published: 2026-11-19
 author: OpenChart
 tags: [developers]
@@ -14,7 +14,7 @@ Turnout rose in every state and DC from 2016 to 2020, and most in Hawaii. To put
 
 <Demo id="blog/turnout-gains" />
 
-## SVG for the web
+## SVG
 
 `chart.export("svg")` returns the chart as a string, immediately. The SVG is finished, with title, subtitle, axes and legend, and has no animation, so it opens in an editor or a CMS as it looks on screen. It names its fonts without including them. `await chart.export("svg-with-fonts")` embeds the web fonts the page loaded, as base64, so the file renders the same on a machine without them; a font the browser can't fetch is skipped.
 
@@ -35,7 +35,7 @@ function save(file: Blob, name: string) {
 save(new Blob([chart.export("svg")], { type: "image/svg+xml" }), "turnout.svg");
 ```
 
-## PNG for slides and social
+## PNG
 
 `await chart.export("png", { dpi })` returns a `Blob`. The chart is laid out at its current width and drawn at `dpi` times the resolution, so the setting changes the pixel count and leaves the layout alone. The default of 2 suits slides and posts; raise it for print or a large display.
 
@@ -98,13 +98,13 @@ This arrow chart works as an image because its title states the finding, so a re
   },
   "chrome": {
     "title": "The fertility rate fell in all 51 jurisdictions, from 92.8 to 59.9 in Utah",
-    "subtitle": "The 10 largest drops in the general fertility rate (births per 1,000 women ages 15-44), 2005 to 2024. Each arrow runs from the 2005 rate to the 2024 rate.",
+    "subtitle": "The 10 largest drops in the general fertility rate (births per 1,000 women ages 15-44), 2005 to 2024",
     "source": "Source: CDC NCHS, Stats of the States: General Fertility Rate"
   }
 }
 ```
 
-## GIF for chat and newsletters
+## Animated GIF
 
 `await chart.export("gif")` records the chart's entrance as an animated GIF. It needs the optional `gifenc` package, which you install yourself with `npm install gifenc`. Without it the call throws an error that says so. You can call it on a finished chart, because the library rebuilds the [entrance](/docs/behavior/motion/) frame by frame.
 
@@ -134,7 +134,7 @@ A scatter of thousands of points draws its dots on a [canvas](/docs/output/canva
 
 The `title` on `x` and `x2` names each end of the arrow in the tooltip, `chrome.source` puts the source line inside the exported image, and `theme.colors.categorical` gives the arrows a lighter teal on a dark page.
 
-## Before you export
+## Image size and dark mode
 
 Export at the container width you want the image to have, because the image takes the chart's current size. A chart shown in dark mode exports with its dark colors.
 

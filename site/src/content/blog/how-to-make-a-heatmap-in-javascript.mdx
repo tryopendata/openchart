@@ -1,6 +1,6 @@
 ---
 title: How to make a heatmap in JavaScript
-description: A heatmap colors a grid of two categories by a number. How to choose sequential or diverging color, order the rows, and label cells so the pattern shows.
+description: How to make a heatmap in JavaScript, and when to use a sequential or a diverging color scale.
 published: 2026-11-13
 author: OpenChart
 tags: [chart-choice, color]
@@ -12,7 +12,7 @@ import Demo from "../../components/demo/Demo.astro";
 
 New green cards fell for all six of the largest countries of birth in fiscal 2020, and the total dropped by 31%. In a table of 60 numbers that takes a while to find. In a heatmap, a grid with one category along each side and a cell colored by its number, it is the pale row near the bottom.
 
-## Two categories and one number
+## A basic heatmap with cell labels
 
 DHS counts new green-card holders (lawful permanent residents) by country of birth and fiscal year in the [Yearbook of Immigration Statistics](https://ohss.dhs.gov/topics/immigration/yearbook/2023). Here are six countries over ten fiscal years, with the years down the side.
 
@@ -22,7 +22,7 @@ Mexico is the darkest column in every year. Fiscal 2020 (October 2019 to Septemb
 
 With 60 cells, each cell carries its number, so the reader can check a color against a value. At several hundred cells the labels would crowd each other, and the color and the hover tooltip would have to carry the numbers. Six columns also leave a phone room for a three-digit number in each cell.
 
-## Choose the color scale
+## Sequential or diverging color
 
 A sequential scale runs from light to dark in one hue, and fits values that only go one way, like counts. A diverging scale runs two hues out from a neutral middle, and fits values that sit above or below a reference point.
 
@@ -952,21 +952,21 @@ Within each year CO2 also rises and falls with the seasons. It builds up over th
     }
   },
   "chrome": {
-    "title": "In every year, CO2 peaks in spring and bottoms out in autumn",
-    "subtitle": "Monthly mean CO2 at Mauna Loa minus that year's average, ppm. Red is above the year's average, blue below."
+    "title": "CO2 peaks in spring and is lowest in autumn every year",
+    "subtitle": "Monthly mean CO2 at Mauna Loa, difference from that year's average, ppm"
   }
 }
 ```
 
 Now the same months are red or blue in every year: spring is red and autumn is blue, so the stripes run down the columns.
 
-## Order the rows and columns
+## Row and column order
 
 A heatmap reads by adjacency, so the order of the categories is part of the chart. OpenChart keeps categories in the order they appear in the data, so data sorted alphabetically puts April next to August. Both CO2 charts list the months in calendar order and the years in time order with a `sort` array. The green card chart orders countries by size, so the darkest column is on the left.
 
 When no natural order exists, sort the rows by their average value. Rows with similar levels then sit together and the blocks of color are easier to see.
 
-## Lines or a grid
+## When to use a line chart instead
 
 Fourteen years of twelve months would be fourteen tangled lines on a shared month axis, while the grid gives each year its own row. Below about five rows, lines show a seasonal cycle as well as a grid does, and they show the size of each swing, which color only hints at. For two numbers per observation, use a [scatter plot](/docs/correlation/scatter/).
 

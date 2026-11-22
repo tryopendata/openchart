@@ -1,5 +1,5 @@
 /**
- * The figures in the blog post "Histogram bin size: how many bins": the 2024
+ * The figures in the blog post "How to choose a histogram bin size": the 2024
  * median household income of 50 states and DC drawn with $25,000, $10,000 and
  * $1,000 bins, then a month of earthquake counts drawn with 0.1 and 0.5
  * magnitude bins. Every chart bins in the spec with a `bin` transform, so the
@@ -106,7 +106,7 @@ export const incomeTwentyFiveThousand = defineDemo({
   height: 380,
   spec: incomeHistogram(
     25_000,
-    `With $25,000 bins the ${states.length} states and DC make ${coarse.length} bars and hide the detail`,
+    `With $25,000 bins, the ${states.length} states and DC fall into ${coarse.length} bars`,
   ),
 });
 
@@ -117,7 +117,7 @@ export const incomeTenThousand = defineDemo({
   height: 380,
   spec: incomeHistogram(
     10_000,
-    `${middleStates} of ${states.length} states sit between $70,000 and $90,000, with a tail to the right`,
+    `${middleStates} of ${states.length} states have a median income between $70,000 and $90,000`,
   ),
 });
 
@@ -128,7 +128,7 @@ export const incomeThousand = defineDemo({
   height: 380,
   spec: incomeHistogram(
     1_000,
-    `With $1,000 bins there are ${fine.length} bars and none holds more than ${Math.max(...fine)} states`,
+    `With $1,000 bins there are ${fine.length} bars, and none holds more than ${Math.max(...fine)} states`,
   ),
 });
 
@@ -218,7 +218,7 @@ export const quakesTenth = defineDemo({
   height: 420,
   spec: quakeHistogram(
     0.1,
-    `Counts fall to ${dip?.quakes} at magnitude 3.9, then climb back to ${rebound?.quakes} at 4.5`,
+    `Quake counts drop to ${dip?.quakes} at magnitude 3.9 and rise to ${rebound?.quakes} at 4.5`,
     true,
   ),
 });
@@ -228,5 +228,5 @@ export const quakesHalf = defineDemo({
   title: "Earthquake counts in 0.5 magnitude bins",
   source: quakeSource,
   height: 380,
-  spec: quakeHistogram(0.5, "Half-magnitude bins keep the dip and smooth the spikes", false),
+  spec: quakeHistogram(0.5, "The dip is still there in half-magnitude bins", false),
 });

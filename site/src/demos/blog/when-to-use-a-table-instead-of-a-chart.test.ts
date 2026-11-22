@@ -34,7 +34,7 @@ describe("the table-instead-of-a-chart post's figures", () => {
     const title = (demo: typeof economiesRankedBar) =>
       (demo.spec as { chrome?: { title?: string } }).chrome?.title;
     expect(title(economiesRankedBar)).toBe(
-      "United States leads at $75,489, 7.7 times India's $9,818",
+      "United States GDP per person is $75,489, 7.7 times India's $9,818",
     );
     expect(title(economiesTable)).toBe(
       "India leads on population, United States on income and Japan on longevity",

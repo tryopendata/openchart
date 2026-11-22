@@ -87,9 +87,9 @@ describe("the pie, bar and waffle post's figures", () => {
 
   it("titles each chart with a finding read off the rows", () => {
     expect(titleOf(debtPie)).toBe("Mortgages are 70% of US household debt");
-    expect(titleOf(debtBars)).toBe("Student loans ($1.66T) top credit cards ($1.28T) by $0.39T");
+    expect(titleOf(debtBars)).toBe("Student loan debt exceeds credit card debt by $0.39 trillion");
     expect(titleOf(outlaysWaffle)).toBe(
-      "Payments for individuals took 66 of every 100 federal dollars in 2024",
+      "Payments for individuals were 66% of federal spending in 2024",
     );
     expect(titleOf(outlaysOverTime)).toBe(
       "Payments for individuals passed defense in 1971 and reached 66% by 2024",

@@ -119,7 +119,7 @@ export const capacityGrouped = defineDemo({
     labels: { density: "none" },
     legend: { position: "top" },
     chrome: {
-      title: `Solar added ${gigawatts(solarOf(lastYear))} GW in ${lastYear.year}, ${solarToGasRatio} times natural gas`,
+      title: `Solar added ${gigawatts(solarOf(lastYear))} GW in ${lastYear.year}, ${solarToGasRatio} times as much as natural gas`,
       subtitle: capacitySubtitle,
     },
     overrides: { compact: capacityCompact },
@@ -181,7 +181,7 @@ export const homelessStacked = defineDemo({
       },
     ],
     chrome: {
-      title: `Counted homelessness fell to ${lowestExcludingOddYear.total_homeless.toLocaleString("en-US")} in ${lowestExcludingOddYear.year}, then reached ${latest.total_homeless.toLocaleString("en-US")} in ${latest.year}`,
+      title: `The homeless count fell to ${lowestExcludingOddYear.total_homeless.toLocaleString("en-US")} in ${lowestExcludingOddYear.year} and rose to ${latest.total_homeless.toLocaleString("en-US")} in ${latest.year}`,
       subtitle: "People counted as homeless on one night in January, 50 states and DC, 2007-2024",
     },
     overrides: {

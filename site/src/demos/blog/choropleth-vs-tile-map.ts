@@ -1,5 +1,5 @@
 /**
- * The figures in the blog post "Choropleth vs tile map: how to map US state data":
+ * The figures in the blog post "Choropleth vs tile map for US state data":
  * a geographic US choropleth over the BLS state unemployment snapshot, followed
  * by an equal-area tile grid map of the same figures. Titles state findings
  * computed from the dataset so they cannot drift from the data. The post's
@@ -117,7 +117,7 @@ export const unemploymentTilemap = defineDemo({
     palette: "blue",
     valueFormat: ".1f",
     chrome: {
-      title: `${stateName(highest[0])} (${highest[1].toFixed(1)}%) and ${stateName(secondHighest[0])} (${secondHighest[1].toFixed(1)}%) lead US state unemployment`,
+      title: `${stateName(highest[0])} (${highest[1].toFixed(1)}%) and ${stateName(secondHighest[0])} (${secondHighest[1].toFixed(1)}%) have the highest unemployment rates`,
       subtitle,
     },
   },
