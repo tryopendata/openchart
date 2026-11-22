@@ -46,6 +46,9 @@ describe("the slope-chart post's figures", () => {
       arcticSeaIce.data.find((row) => row.year === year)?.september_avg_mkm2;
     expect(september(1980)).toBe(7.67);
     expect(september(2012)).toBe(3.57);
+    const septembers = arcticSeaIce.data.map((row) => row.september_avg_mkm2);
+    expect(Math.max(...septembers)).toBe(7.67);
+    expect(Math.min(...septembers)).toBe(3.57);
     const later = arcticSeaIce.data.filter((row) => row.year > 2012);
     expect(Math.min(...later.map((row) => row.september_avg_mkm2))).toBeGreaterThan(3.57);
   });
@@ -77,7 +80,7 @@ describe("the slope-chart post's figures", () => {
       "September ice fell 53% between 1980 and 2012; March ice barely moved",
     );
     expect(specOf(seaIceLine).chrome?.title).toBe(
-      "September ice reached its record low in 2012, then partly recovered",
+      "September ice hit its record low in 2012 and has not gone that low since",
     );
   });
 

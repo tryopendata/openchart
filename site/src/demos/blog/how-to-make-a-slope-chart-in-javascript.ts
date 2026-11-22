@@ -1,9 +1,10 @@
 /**
  * The figures in the blog post "How to make a slope chart in JavaScript":
  * fatal accidents at the airlines that had four or more in 1985-99, compared
- * with 2000-14; then Arctic sea ice extent in March and September, 1980 versus
- * 2012; then the same September series as a line, to show what two chosen
- * endpoints leave out. Titles state findings computed from the dataset rows so
+ * with 2000-14, as a slope chart and then as grouped bars; then Arctic sea ice
+ * extent in March and September for the Septembers with the most and the least
+ * ice (1980 and 2012); then the September series as a line, to show what two
+ * chosen endpoints leave out. Titles state findings computed from the dataset rows so
  * they cannot drift from the data. The post's `json demo` fence repeats
  * `airlineSlope.spec` verbatim, and a test holds the two together.
  */
@@ -12,8 +13,13 @@ import { arcticSeaIce } from "@datasets/arctic-sea-ice";
 import { sourceOf } from "../source";
 import { defineDemo } from "../types";
 
-const ACCENT = "#0e7490";
-const MUTED = "#94a3b8";
+/**
+ * Text-bearing colors as light and dark pairs: the light teal is 3.6:1 on the
+ * dark page, so the dark page gets a lighter teal and a lighter grey. The grey
+ * pair keeps 4.5:1 for value labels on both pages.
+ */
+const ACCENT = { light: "#0e7490", dark: "#22a3c4" };
+const MUTED = { light: "#64748b", dark: "#94a3b8" };
 
 const EARLY = "1985-99";
 const LATE = "2000-14";
@@ -62,9 +68,10 @@ export const airlineBars = defineDemo({
       color: {
         field: "period",
         type: "nominal",
-        scale: { domain: [EARLY, LATE], range: [MUTED, ACCENT] },
+        scale: { domain: [EARLY, LATE] },
       },
     },
+    theme: { colors: { categorical: [MUTED, ACCENT] } },
     chrome: {
       title: `The same ${shown.length} airlines as grouped bars`,
       subtitle: `Fatal accidents per 15-year period, airlines with ${MIN_EARLY_ACCIDENTS} or more in ${EARLY}`,
@@ -82,16 +89,26 @@ export const airlineSlope = defineDemo({
     data: periodRows,
     encoding: {
       x: { field: "period", type: "ordinal" },
-      y: { field: "accidents", type: "quantitative", axis: false, scale: { zero: false } },
-      color: {
-        field: "airline",
-        type: "nominal",
-        scale: { range: [ACCENT] },
+      y: { field: "accidents", type: "quantitative", axis: false },
+      color: { field: "airline", type: "nominal" },
+    },
+    endpointLabels: {
+      ends: "both",
+      content: "label value",
+      maxSeries: shown.length,
+    },
+    // Both label columns take the width of the wider one, which leaves a phone
+    // too little room for the lines. On a phone the left column goes: a y axis
+    // gives the first-period counts and the right edge keeps each name.
+    overrides: {
+      compact: {
+        encoding: { y: { axis: { tickCount: 4 } } },
+        endpointLabels: { ends: "end", content: "label value", maxSeries: shown.length },
       },
     },
-    endpointLabels: { ends: "both", content: { leading: "label value", trailing: "value" } },
     legend: { show: false },
-    responsive: { labelSummary: true },
+    // One palette slot per airline, all the same color: the finding is about the group.
+    theme: { colors: { categorical: shown.map(() => ACCENT) } },
     chrome: {
       title: `The ${shown.length} airlines with the most fatal accidents went from ${earlyTotal} to ${lateTotal}`,
       subtitle: `Fatal accidents per 15-year period, airlines with ${MIN_EARLY_ACCIDENTS} or more in ${EARLY}. All 56 airlines: ${allEarly} to ${allLate}.`,
@@ -105,15 +122,26 @@ const iceIn = (year: number) => {
   if (!row) throw new Error(`no sea ice row for ${year}`);
   return row;
 };
-const FIRST_YEAR = 1980;
-const LOW_YEAR = 2012;
+/** The Septembers with the most and the least ice in the record: the steepest pair the data allows. */
+const most = ice.reduce((best, row) =>
+  row.september_avg_mkm2 > best.september_avg_mkm2 ? row : best,
+);
+const least = ice.reduce((best, row) =>
+  row.september_avg_mkm2 < best.september_avg_mkm2 ? row : best,
+);
+const FIRST_YEAR = most.year;
+const LOW_YEAR = least.year;
 const first = iceIn(FIRST_YEAR);
 const low = iceIn(LOW_YEAR);
+/** True when no September after the record low came back down to it. */
+const lowHeld = ice
+  .filter((row) => row.year > LOW_YEAR)
+  .every((row) => row.september_avg_mkm2 > low.september_avg_mkm2);
 const dropPercent = Math.round((1 - low.september_avg_mkm2 / first.september_avg_mkm2) * 100);
 
 export const seaIceSlope = defineDemo({
   id: "blog/sea-ice-slope",
-  title: "Arctic sea ice extent in March and September, 1980 and 2012",
+  title: `Arctic sea ice extent in March and September, ${FIRST_YEAR} and ${LOW_YEAR}`,
   source: sourceOf(arcticSeaIce),
   height: 460,
   spec: {
@@ -130,11 +158,22 @@ export const seaIceSlope = defineDemo({
       color: {
         field: "month",
         type: "nominal",
-        scale: { domain: ["September", "March"], range: [ACCENT, MUTED] },
+        scale: { domain: ["September", "March"] },
       },
     },
-    endpointLabels: { ends: "both", content: "label value", format: ".2f" },
+    endpointLabels: {
+      ends: "both",
+      content: "label value",
+      format: ".2f",
+    },
+    overrides: {
+      compact: {
+        encoding: { y: { axis: { tickCount: 4 } } },
+        endpointLabels: { ends: "end", content: "label value", format: ".2f" },
+      },
+    },
     legend: { show: false },
+    theme: { colors: { categorical: [ACCENT, MUTED] } },
     chrome: {
       title: `September ice fell ${dropPercent}% between ${FIRST_YEAR} and ${LOW_YEAR}; March ice barely moved`,
       subtitle: "Average Arctic sea ice extent in the month, million km²",
@@ -148,7 +187,7 @@ export const seaIceLine = defineDemo({
   source: sourceOf(arcticSeaIce),
   height: 420,
   spec: {
-    mark: { type: "line", stroke: ACCENT, interpolate: "linear" },
+    mark: { type: "line", interpolate: "linear" },
     data: ice.map((row) => ({ year: String(row.year), extent: row.september_avg_mkm2 })),
     encoding: {
       x: { field: "year", type: "temporal", axis: { format: "%Y" } },
@@ -181,8 +220,11 @@ export const seaIceLine = defineDemo({
     ],
     labels: false,
     responsive: { compactAnnotationLimit: 2 },
+    theme: { colors: { categorical: [ACCENT] } },
     chrome: {
-      title: `September ice reached its record low in ${LOW_YEAR}, then partly recovered`,
+      title: lowHeld
+        ? `September ice hit its record low in ${LOW_YEAR} and has not gone that low since`
+        : `September ice hit a record low in ${LOW_YEAR}`,
       subtitle: "Average Arctic sea ice extent in September, million km², 1979-2025",
     },
   },
