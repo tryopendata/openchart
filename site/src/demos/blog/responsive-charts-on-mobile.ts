@@ -38,7 +38,7 @@ const lastSeason = mlbRows.at(-1);
 if (!lastSeason) throw new Error("The Lahman rows are empty");
 
 const mlbSpec: ChartSpec = {
-  mark: { type: "line", strokeWidth: 2.5 },
+  mark: { type: "line", strokeWidth: 2.5, interpolate: "linear" },
   data: mlbLong,
   encoding: {
     x: { field: "year", type: "temporal", axis: { format: "%Y" } },
@@ -124,7 +124,7 @@ export const importSharesResponsive = defineDemo({
   source: importSource,
   height: 460,
   spec: {
-    mark: { type: "line", strokeWidth: 2.5 },
+    mark: { type: "line", strokeWidth: 2.5, interpolate: "linear" },
     data: importLong,
     encoding: {
       x: { field: "year", type: "temporal", axis: { format: "%Y" } },
