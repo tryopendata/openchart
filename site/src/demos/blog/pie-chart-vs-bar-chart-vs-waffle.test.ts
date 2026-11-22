@@ -12,8 +12,10 @@ import { validateDemo } from "../../lib/demo/validate";
 import {
   debtBars,
   debtPie,
+  otherSharePct,
   outlaysOverTime,
   outlaysWaffle,
+  studentOverCards,
 } from "./pie-chart-vs-bar-chart-vs-waffle";
 
 const post = readFileSync(
@@ -43,18 +45,30 @@ describe("the pie, bar and waffle post's figures", () => {
     }
   });
 
-  it("draws the pie and the bars from the same latest-year debt balances", () => {
+  it("draws the pie as mortgages against the rest, and the bars from every debt type", () => {
     const latest = nyFedHouseholdDebt.data[nyFedHouseholdDebt.data.length - 1];
     const balances = (demo: { spec: unknown }) =>
       Object.fromEntries(dataOf(demo).map((row) => [row.type, row.balance]));
-    expect(balances(debtPie)).toEqual(balances(debtBars));
     expect(balances(debtPie)).toEqual({
+      Mortgages: Number(latest?.mortgage.toFixed(2)),
+      "All other debt": Number(((latest?.total ?? 0) - (latest?.mortgage ?? 0)).toFixed(2)),
+    });
+    expect(balances(debtBars)).toEqual({
       Mortgage: Number(latest?.mortgage.toFixed(2)),
       Auto: Number(latest?.auto.toFixed(2)),
       Student: Number(latest?.student_loan.toFixed(2)),
       Cards: Number(latest?.credit_card.toFixed(2)),
       Other: Number(((latest?.home_equity ?? 0) + (latest?.other ?? 0)).toFixed(2)),
     });
+    expect(
+      (debtPie.spec as unknown as { mark: { centerLabel: { text: string } } }).mark.centerLabel
+        .text,
+    ).toBe("70%");
+  });
+
+  it("gives the prose's student-over-cards gap and the New York Fed's other share from the rows", () => {
+    expect(studentOverCards).toBe(0.38);
+    expect(otherSharePct).toBe(3);
   });
 
   it("draws the waffle and the area chart from the outlay shares unchanged", () => {
@@ -72,12 +86,8 @@ describe("the pie, bar and waffle post's figures", () => {
   });
 
   it("titles each chart with a finding read off the rows", () => {
-    expect(titleOf(debtPie)).toBe(
-      "Mortgages are 70% of household debt, and the four smaller slices are hard to rank",
-    );
-    expect(titleOf(debtBars)).toBe(
-      "Auto loans ($1.67T) edge student loans ($1.66T), then credit cards",
-    );
+    expect(titleOf(debtPie)).toBe("Mortgages are 70% of US household debt");
+    expect(titleOf(debtBars)).toBe("Student loans ($1.66T) top credit cards ($1.28T) by $0.38T");
     expect(titleOf(outlaysWaffle)).toBe(
       "Payments for individuals took 66 of every 100 federal dollars in 2024",
     );

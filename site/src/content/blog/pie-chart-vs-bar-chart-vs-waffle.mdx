@@ -1,6 +1,6 @@
 ---
 title: Pie chart vs bar chart vs waffle chart
-description: A pie shows one dominant share, a bar chart compares close values, a waffle makes one percentage countable. Here is when each fits.
+description: A pie shows one dominant share, bars rank close values, and a waffle makes one percentage countable. When each fits, shown with US debt and budget data.
 published: 2026-11-14
 author: OpenChart
 tags: [chart-choice]
@@ -10,26 +10,23 @@ lead: blog/debt-pie
 
 import Demo from "../../components/demo/Demo.astro";
 
-A pie chart divides a whole into parts and asks the reader to compare angles. That works for two or three parts, and best when one of them dominates. It stops working when the parts are close in size, and then a bar chart or a waffle does the job better.
+Mortgages make up 70% of what US households owe, and a pie shows that faster than a table, because one slice takes most of the circle. The rest of the debt is harder to show. Car loans, student loans and credit cards sit within $0.4 trillion of each other, and slice angles can't rank them.
 
 ## When a pie works
 
-Mortgages make up 70% of US household debt. A pie shows that at a glance, because one slice takes most of the circle and the reader needs no arithmetic to see it. A pie also needs a true whole. Its slices must add up to 100%, so it is the wrong chart for survey answers where people could pick several options. The same pie also shows where the form breaks down: the other four slices look alike, and without printed numbers no reader could rank them.
+A pie works for two or three parts of a true whole, best when one part dominates. Its slices must add up to 100%, so it is the wrong chart for survey answers where people could pick several options. This one has two slices, mortgages and everything else, and it is drawn as a donut, a pie with a hole that holds the share.
 
 <Demo id="blog/debt-pie" />
 
-## When a bar chart wins
+## Ranking the smaller debts
 
-Auto loans ($1.667 trillion) and student loans ($1.664 trillion) differ by about $3 billion, which no one can see from two slice angles. Sorted bars put every value on one baseline, so the order is plain and the lengths can be compared directly.
+Split the same debt five ways and a pie stops helping. Sorted bars put every value on one baseline, so the order is plain. Student loans lead credit cards by $0.38 trillion, a few degrees of difference on a pie and a clear step between two bars.
 
-Home equity loans and the Bank's own "other" category are each under 3% of the total, so both charts merge them into one "Other" row.
+Some gaps are too small even for bars. Auto loans ($1.667 trillion) and student loans ($1.664 trillion) differ by about $3 billion, so their bars look the same length, and the printed values carry that comparison. Home equity loans (2.3% of the total) and the New York Fed's own "other" category (3.0%) are merged into one "Other" row.
 
 ```json demo source="Federal Reserve Bank of New York, Household Debt and Credit Report" height=380
 {
-  "mark": {
-    "type": "bar",
-    "fill": "#0e7490"
-  },
+  "mark": "bar",
   "data": [
     {
       "type": "Mortgage",
@@ -70,30 +67,45 @@ Home equity loans and the Bank's own "other" category are each under 3% of the t
   "labels": {
     "format": ".2f"
   },
+  "theme": {
+    "colors": {
+      "categorical": [
+        {
+          "light": "#0e7490",
+          "dark": "#22a3c4"
+        }
+      ]
+    }
+  },
   "chrome": {
-    "title": "Auto loans ($1.67T) edge student loans ($1.66T), then credit cards",
+    "title": "Student loans ($1.66T) top credit cards ($1.28T) by $0.38T",
     "subtitle": "US household debt by type, fourth quarter of 2025, $ trillions"
   }
 }
 ```
 
-Sort the bars by value unless the categories have a natural order, such as age bands or months. Bars have no such requirement, so they also work for values that are not shares of a total. Use bars whenever the reader has to compare parts with each other, or when there are more than five or six parts. A [bar chart](/docs/comparison/bar/) also takes more categories than a pie can label.
+Sort the bars by value unless the categories have a natural order, such as age bands or months. Bars don't need the parts to add up to a whole, so they also work for values that are not shares. Use them whenever the reader has to compare parts with each other, or when there are more than five or six parts. The [bar chart page](/docs/comparison/bar/) covers the options.
 
 ## When a waffle works
 
-A waffle draws 100 squares, one for each percent. It suits a single share you want the reader to feel as a count rather than read as an angle: counting 66 squares is easier than estimating a slice that spans 238 degrees of a circle. In fiscal 2024, payments for individuals (OMB's category for benefit programs such as Social Security and Medicare) took 66 of every 100 federal outlay dollars.
+A waffle draws 100 squares, one for each percent. It suits a single share you want the reader to feel as a count rather than read as an angle, since counting 66 squares is easier than judging a slice that spans 238 degrees.
+
+In fiscal 2024, payments for individuals took 66 of every 100 federal dollars. That is the Office of Management and Budget's category for money paid to people or spent on their behalf, such as Social Security, Medicare and Medicaid.
 
 <Demo id="blog/outlays-waffle" />
 
-A waffle rounds to whole squares and carries few categories, so it is a poor tool for comparing close values. Keep it to the one or two shares that are the point, highlight the one that matters, and let the rest be context.
+A waffle rounds to whole squares and carries few categories, so it is a poor tool for comparing close values. Keep it to one share and highlight it.
 
 ## Shares over time
 
-A pie per year does not work, because the reader would have to compare angles across a dozen circles. A 100% stacked area chart scales every year to the same height and shows only how the mix shifts. Defense took 49.0% of federal outlays in 1962 and 13.0% in 2024, while payments for individuals went from 27.5% to 66.0%.
+A pie per year would ask the reader to compare angles across dozens of circles. A 100% stacked area chart scales every year to the same height and shows how the mix shifts. Defense took 49.0% of federal outlays in 1962 and 13.0% in 2024, while payments for individuals went from 27.5% to 66.0%.
 
 ```json demo source="US Office of Management and Budget, Historical Tables (Table 6.1, composition of outlays)" height=460
 {
-  "mark": "area",
+  "mark": {
+    "type": "area",
+    "interpolate": "linear"
+  },
   "data": [
     {
       "date": "1962-01-01",
@@ -1384,14 +1396,30 @@ A pie per year does not work, because the reader would have to compare angles ac
           "National defense",
           "Net interest",
           "Everything else"
-        ],
-        "range": [
-          "#0e7490",
-          "#e07b39",
-          "#7c3aed",
-          "#9ca3af"
         ]
       }
+    }
+  },
+  "theme": {
+    "colors": {
+      "categorical": [
+        {
+          "light": "#0e7490",
+          "dark": "#22a3c4"
+        },
+        {
+          "light": "#c2410c",
+          "dark": "#fb923c"
+        },
+        {
+          "light": "#7c3aed",
+          "dark": "#a78bfa"
+        },
+        {
+          "light": "#9ca3af",
+          "dark": "#6b7280"
+        }
+      ]
     }
   },
   "legend": {
@@ -1404,12 +1432,12 @@ A pie per year does not work, because the reader would have to compare angles ac
 }
 ```
 
-Normalizing hides the total, so state the dollars elsewhere if they matter. "Everything else" is a residual (the total minus the three named categories), and it includes grants, other nondefense spending and negative offsetting receipts. Only the bottom band sits on a flat baseline, so label the values you want read.
+Normalizing hides the total, so state the dollars elsewhere if they matter. "Everything else" here is the total minus the three named categories. It holds grants, other nondefense spending and offsetting receipts, which are fees and other money agencies collect and net against their spending, so they count as negative outlays. Only the bottom band sits on a flat baseline, so label the values you want read.
 
 ## The spec
 
-A pie is `mark: "arc"` with the number on `theta` and the category on `color`. A waffle is `mark: "waffle"` with the same two channels, and `highlight` on `color` keeps one category in color and mutes the rest. The bar chart puts the number on `x` and the category on `y`, with `sort: "x"` to put the longest bar first. The area chart sets `stack: "normalize"` on `y` and prints the axis as a percentage with `format: ".0%"`.
+The donut is `mark: { type: "arc", innerRadius: 0.6 }` with the number on `theta` and the category on `color`, and `centerLabel` prints the share in the hole. A waffle is `mark: "waffle"` with the same two channels, and `highlight` on `color` keeps one category in color and mutes the rest.
 
-Each chart's Code button shows its full spec. The [100% stacked page](/docs/part-to-whole/stacked-100/) and the [waffle page](/docs/part-to-whole/waffle/) cover the stacking and highlight options.
+The bar chart puts the number on `x` and the category on `y`, with `sort: "x"` to put the longest bar first and `labels.format` to print each value. The area chart sets `stack: "normalize"` on `y` and prints the axis as a percentage with `format: ".0%"`. Each chart lists its colors as `{ light, dark }` pairs in `theme.colors.categorical`, so a value printed in the bar color stays readable on a dark page. The [100% stacked page](/docs/part-to-whole/stacked-100/) and the [waffle page](/docs/part-to-whole/waffle/) cover the stacking and highlight options.
 
-The [pie and donut page](/docs/part-to-whole/pie-donut/) covers slice labels, small-slice grouping and half donuts with live examples.
+The [pie and donut page](/docs/part-to-whole/pie-donut/) shows how slices under about 3% of a total fold into one "Other" slice.
