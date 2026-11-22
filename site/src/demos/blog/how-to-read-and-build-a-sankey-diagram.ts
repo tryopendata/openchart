@@ -38,6 +38,31 @@ const flowEncoding = {
   value: { field: "value", type: "quantitative", format: ".2f" },
 } as const;
 
+/**
+ * Top-to-bottom node order for the electricity chart. On a phone the two-line
+ * "Net electricity imports" label needs wide neighbors, and Transportation sits
+ * last so its label clears the "Electricity generation" label that runs across
+ * the right column.
+ */
+const ELECTRICITY_NODE_ORDER = [
+  "Solar",
+  "Nuclear",
+  "Hydro",
+  "Wind",
+  "Natural gas",
+  "Net electricity imports",
+  "Coal",
+  "Biomass",
+  "Geothermal",
+  "Petroleum",
+  "Residential",
+  "Commercial",
+  "Industrial",
+  REJECTED,
+  "Transportation",
+] as const;
+
+/** Three-stage sankey of the fuels entering US electricity generation and where that energy goes. */
 export const energySankeyElectricity = defineDemo({
   id: "blog/energy-sankey-electricity",
   title: "US electricity generation flow, 2024",
@@ -47,6 +72,7 @@ export const energySankeyElectricity = defineDemo({
     type: "sankey",
     data: electricityRows,
     encoding: flowEncoding,
+    nodeSort: [...ELECTRICITY_NODE_ORDER],
     chrome: {
       title: `Electricity generation lost ${electricityRejectedPct}% of its ${electricityOut.toFixed(2)} quads as rejected energy`,
       subtitle:
@@ -55,6 +81,7 @@ export const energySankeyElectricity = defineDemo({
   },
 });
 
+/** Four-stage sankey of all 2024 US energy flow, from primary fuels to energy services and rejected energy. */
 export const energySankeyFull = defineDemo({
   id: "blog/energy-sankey-full",
   title: "US energy flow from fuel source to end use, 2024",
