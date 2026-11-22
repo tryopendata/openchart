@@ -135,6 +135,14 @@ const wages = [...blsOccupationWages.data].reverse().map((row) => ({
 }));
 const PAY_TICKS = [0, 50_000, 100_000, 150_000, 200_000, 250_000];
 
+/** Phones span compact (under 400px) and medium (400 to 700px), so both take the short title. */
+const phoneOverride = {
+  encoding: { x: { axis: { values: [0, 100_000, 200_000] } } },
+  chrome: {
+    title: `Food service 90th percentile pay, ${money(food.a_pct90)}, is below a manager's 10th, ${money(manager.a_pct10)}`,
+  },
+};
+
 export const occupationPayRanges = defineDemo({
   id: "blog/occupation-pay-ranges",
   title: "Annual pay from the 10th to the 90th percentile, by occupation group",
@@ -173,12 +181,8 @@ export const occupationPayRanges = defineDemo({
       },
     ],
     overrides: {
-      compact: {
-        encoding: { x: { axis: { values: [0, 100_000, 200_000] } } },
-        chrome: {
-          title: `Food service 90th percentile pay, ${money(food.a_pct90)}, is below a manager's 10th, ${money(manager.a_pct10)}`,
-        },
-      },
+      compact: phoneOverride,
+      medium: phoneOverride,
     },
     chrome: {
       title: `A food service worker at the 90th percentile earns ${money(food.a_pct90)}, less than a manager at the 10th, ${money(manager.a_pct10)}`,

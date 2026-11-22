@@ -91,7 +91,10 @@ async function columnBoxes(page: Page) {
               ?.includes("--demo-width"),
         )
         .map(box),
-      stages: [...(prose?.querySelectorAll(":scope > .demo [data-demo-stage]") ?? [])].map(box),
+      // A stage with its own width is exempt, as its figure is from the breakout.
+      stages: [...(prose?.querySelectorAll(":scope > .demo [data-demo-stage]") ?? [])]
+        .filter((stage) => !stage.getAttribute("style")?.includes("--demo-width"))
+        .map(box),
       // The page's content width: the root reserves a scrollbar gutter (scrollbar-gutter:
       // stable), which classic scrollbars on Linux fill and clientWidth does not subtract.
       viewport: document.body.getBoundingClientRect().width,
