@@ -35,6 +35,8 @@ export type DemoDef = {
   caption?: string;
   /** Fixed height of the stage in px. Default `DEFAULT_DEMO_HEIGHT`. */
   height?: number;
+  /** Stage height in px on phones (under 640px), for a chart that needs more room when narrow. Default: `height`. */
+  phoneHeight?: number;
   /** Play the library's entrance animation when the live chart is first seen. Default true. */
   entrance?: boolean;
   /**

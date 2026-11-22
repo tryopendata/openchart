@@ -158,6 +158,16 @@ describe("demoFigureHtml", () => {
     ).toEqual(["0 0 360 320", "0 0 360 320"]);
   });
 
+  it("writes the phone height beside the desktop height, so CSS reserves it before scripts run", async () => {
+    const figure = await render(figureFor({ phoneHeight: 520, width: 360 }));
+    const stage = figure.querySelector("[data-demo-stage]");
+    expect(stage?.getAttribute("style")).toBe(
+      "--demo-height: 320px; --demo-phone-height: 520px; --demo-width: 360px",
+    );
+    // The static SVGs keep the desktop aspect; the stage scales them.
+    expect(stage?.querySelector("svg.demo-static")?.getAttribute("viewBox")).toBe("0 0 360 320");
+  });
+
   it("writes the host options on the spec script only when the demo sets some", async () => {
     const script = async (overrides: Partial<DemoFigure>) =>
       (await render(figureFor(overrides))).querySelector("script[data-demo-spec]");

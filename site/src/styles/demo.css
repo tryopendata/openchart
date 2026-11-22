@@ -23,6 +23,12 @@
     height: var(--demo-height, 400px);
     /* A demo with `width` shows a compact or medium layout: the stage stops at that width. */
     max-inline-size: var(--demo-width, none);
+
+    /* A demo with `phoneHeight` takes it below 640px, where blog figures go edge to edge;
+       the inline property reserves it before any script runs. */
+    @variant max-sm {
+      height: var(--demo-phone-height, var(--demo-height, 400px));
+    }
   }
 
   /* Caption, toolbar and code share the chart's own 1rem inset, so their text lines up with its title. */

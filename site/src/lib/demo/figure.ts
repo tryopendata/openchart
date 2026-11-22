@@ -25,6 +25,8 @@ export type DemoFigure = {
   source: DemoSource;
   caption?: string;
   height: number;
+  /** Stage height on phones (the `max-sm` breakpoint), in px. Default: `height`. */
+  phoneHeight?: number;
   entrance: boolean;
   tabs: boolean;
   /** Render the static SVGs at build time. When false the stage waits for the live mount. */
@@ -119,7 +121,10 @@ function stageHtml(figure: DemoFigure, domId: string): string {
     theme: figure.pageTheme === false ? NO_PAGE_THEME : undefined,
   });
   const width = figure.width === undefined ? "" : `; --demo-width: ${figure.width}px`;
-  const style = `--demo-height: ${figure.height}px${width}`;
+  // Written inline with the desktop height, so the phone height is reserved before any script runs.
+  const phone =
+    figure.phoneHeight === undefined ? "" : `; --demo-phone-height: ${figure.phoneHeight}px`;
+  const style = `--demo-height: ${figure.height}px${phone}${width}`;
   // Axis ticks and labels in the SVGs are noise in search results; the caption stays indexed.
   return `<div class="demo-stage" ${DEMO_ATTR.stage} style="${style}" data-pagefind-ignore>${content}</div>`;
 }
@@ -179,8 +184,15 @@ function statesHtml(figure: DemoFigure): string {
   return script + sharedBlocksHtml(states.values);
 }
 
-/** Thrown when a page cannot render a demo figure; the message names the page and the demo, and the cause is kept. */
+/**
+ * Demo.astro's error: thrown there when a page cannot render a registered demo.
+ * The message names the page and the demo, and the cause is kept. It lives here
+ * because an Astro component's frontmatter cannot export a class.
+ */
 export class DemoRenderError extends Error {}
+
+/** Thrown when a blog figure's controls or toolbar markup cannot carry its reveal role. */
+export class RevealRoleError extends Error {}
 
 /** The reveal role on a blog figure's caption, controls, credit and toolbar: a short lift, as on the landing figures. */
 const CHROME_MOTION = ` data-motion="quiet"`;
@@ -204,14 +216,14 @@ const LEADING_TAG = /^<[a-z]+/;
  * Another module's fragment (the controls bar, the code toolbar) with the reveal
  * role on its root element, on blog figures only. The stage never goes through here.
  *
- * @throws {Error} When a non-empty fragment does not open with an element, so a
- * markup change fails the build instead of silently dropping the role.
+ * @throws {RevealRoleError} When a non-empty fragment does not open with an
+ * element, so a markup change fails the build instead of silently dropping the role.
  */
 function revealedFragment(fragment: string, figure: DemoFigure): string {
   if (!reveals(figure) || fragment === "") return fragment;
   const tag = LEADING_TAG.exec(fragment)?.[0];
   if (!tag) {
-    throw new Error(
+    throw new RevealRoleError(
       `Demo "${figure.id}": a blog figure's controls or toolbar markup must open with an element to carry its reveal role, but starts with "${fragment.slice(0, 40)}".`,
     );
   }
@@ -235,7 +247,7 @@ function creditHtml(figure: DemoFigure): string {
  *
  * @throws {TypeError} When the spec's type has no framework wrapper for the code tabs.
  * @throws {FoldMarkerError} When the spec contains the text fold markers use.
- * @throws {Error} On a revealed blog figure, when the controls or toolbar markup cannot take a reveal role.
+ * @throws {RevealRoleError} On a revealed blog figure, when the controls or toolbar markup cannot take a reveal role.
  */
 export async function demoFigureHtml(figure: DemoFigure): Promise<string> {
   const domId = demoDomId(figure.id, { hero: figure.hero });
