@@ -447,8 +447,9 @@ export function compileFaceted(
     });
   }
 
-  // Facets share the source-capacity preflight. Reconcile an unexpected
-  // measurement overflow once at figure level, never once per panel.
+  // Facets share one note band. Outside the budget it holds the drawn notes,
+  // added here; under a reserve this reconciles a measurement overflow. Either
+  // way it happens once at figure level, never once per panel.
   const wrappedFootnotes = wrapAnnotationNotes(
     allFootnotes,
     dims.total.width,

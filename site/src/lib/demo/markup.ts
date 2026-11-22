@@ -21,7 +21,7 @@ export const DEMO_ATTR = {
   /**
    * On a stage whose live chart sets its own height: the stage starts at the
    * demo's height and grows with the chart (facets on a phone, folded notes)
-   * instead of scrolling it. Graphs fill a fixed box, so their stages lack it.
+   * instead of scrolling it. Only charts, layers and tables (see figure.ts).
    */
   fit: "data-demo-fit",
   /** On the paragraph a stage without a static SVG shows until its live chart mounts. */

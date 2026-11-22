@@ -97,9 +97,26 @@ const warned = {
 } as unknown as ChartSpec;
 
 describe('single-pass compile', () => {
-  it('enters compile once for an annotated chart', () => {
+  it('enters compile once for an annotated chart with an edit reserve', () => {
     const layout = compileChart(annotated, { width: 600, height: 400, stableNoteBand: true });
     expect(layout.chrome.noteBandHeight).toBeGreaterThan(0);
+    expect(entries.count).toBe(1);
+  });
+
+  it('enters compile once when notes fold and grow the figure late', () => {
+    const crowded = {
+      ...annotated,
+      responsive: { autoThin: true },
+      annotations: [2, 3, 4, 5, 6, 7].map((x) => ({
+        type: 'text' as const,
+        x: 1 + x / 10,
+        y: 2 + x / 10,
+        text: `A long explanatory callout ${x}`,
+      })),
+    } as ChartSpec;
+    const layout = compileChart(crowded, { width: 390, height: 400 });
+    expect(layout.chrome.footnotes?.length).toBeGreaterThan(0);
+    expect(layout.chrome.grownHeight).toBeCloseTo(layout.chrome.noteBandHeight!, 8);
     expect(entries.count).toBe(1);
   });
 

@@ -3,8 +3,10 @@
  * its caption and source), then a quiet toolbar on a hairline rule (Code on the
  * left, Copy on the right) over the code, all in reading order. The library's
  * own stylesheet comes first: live charts need it. The stage starts at the
- * demo's height at every width so the swap from static SVG to live chart moves
- * nothing on the page; it grows only when the chart itself draws taller. The head gate (lib/demo/page-gate.ts) sets the attributes on
+ * demo's height at every width, so the swap from static SVG to live chart moves
+ * nothing on the page unless the live chart draws taller than that (facet rows
+ * on a phone, folded notes): a fit stage then grows to hold it, below the fold
+ * in most cases since charts mount ahead of the reader. The head gate (lib/demo/page-gate.ts) sets the attributes on
  * <html> that the rules below key on, before first paint.
  */
 @import "@opendata-ai/openchart-core/styles.css";
@@ -94,7 +96,8 @@
    * A chart can draw taller than the height it was given (facet rows on a phone,
    * notes folded from callouts), so a fit stage grows with it instead of
    * scrolling it. The host keeps the demo's height as its minimum, which the
-   * library compiles against; the library ignores its own SVG growing the host.
+   * chart compiles against; the chart's sizer ignores its own SVG growing the
+   * host. Only charts, layers and tables get a fit stage (figure.ts).
    */
   .demo-stage[data-demo-fit] {
     height: auto;
