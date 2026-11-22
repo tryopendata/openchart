@@ -377,6 +377,35 @@ function renderNodes(
 // Labels rendering
 // ---------------------------------------------------------------------------
 
+/** The gap between a node's name and its value on the same line, in px. */
+const VALUE_DX = 5;
+
+/**
+ * Whether the node's value would push the label's last line past its maxWidth,
+ * the room between the node and the frame's edge. Without a maxWidth nothing
+ * bounds the line, so the value always fits.
+ */
+function valueOverflowsLastLine(
+  lines: string[],
+  valueLabel: NonNullable<SankeyNodeMark['valueLabel']>,
+  label: SankeyNodeMark['label'],
+  measureText?: MeasureTextFn,
+): boolean {
+  if (label.maxWidth === undefined || label.maxWidth <= 0) return false;
+  const width = (text: string, style: SankeyNodeMark['label']['style']) => {
+    const size = style.fontSize ?? 12;
+    const weight = style.fontWeight ?? 400;
+    return measureText
+      ? measureText(text, size, weight).width
+      : estimateTextWidth(text, size, weight);
+  };
+  const lastLine = lines[lines.length - 1] ?? '';
+  return (
+    width(lastLine, label.style) + VALUE_DX + width(valueLabel.text, valueLabel.style) >
+    label.maxWidth
+  );
+}
+
 function renderLabels(
   parent: SVGElement,
   nodes: SankeyNodeMark[],
@@ -423,8 +452,11 @@ function renderLabels(
 
     // The node's value rides the last line as a lighter tabular tspan. It
     // carries no x/y, so it stays in the same text chunk and the anchor
-    // (start or end) still applies to name + value as one block.
-    if (node.valueLabel) {
+    // (start or end) still applies to name + value as one block. A value that
+    // would push that line past the frame is left off, as the engine does for
+    // interior labels; the tooltip still carries it.
+    const { valueLabel } = node;
+    if (valueLabel && !valueOverflowsLastLine(lines, valueLabel, label, measureText)) {
       // A bare textContent has to become a tspan first, or the value tspan
       // would render before it.
       if (text.childNodes.length === 0) {
@@ -435,9 +467,9 @@ function renderLabels(
       }
       const valueSpan = createSVGElement('tspan');
       valueSpan.setAttribute('class', 'oc-sankey-label-value');
-      valueSpan.setAttribute('dx', '5');
-      applyTextStyle(valueSpan, node.valueLabel.style);
-      valueSpan.textContent = node.valueLabel.text;
+      valueSpan.setAttribute('dx', String(VALUE_DX));
+      applyTextStyle(valueSpan, valueLabel.style);
+      valueSpan.textContent = valueLabel.text;
       text.appendChild(valueSpan);
     }
 

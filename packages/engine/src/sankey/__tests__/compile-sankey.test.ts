@@ -591,6 +591,30 @@ describe('sankey label anatomy', () => {
     expect(node.label.maxWidth).toBeGreaterThan(0);
   });
 
+  it("sizes the gutters with the host's text measure when it gives one", () => {
+    const longSpec = {
+      ...basicSpec,
+      data: [
+        { from: 'Residential buildings', to: 'C', amount: 10 },
+        { from: 'B', to: 'C', amount: 20 },
+        { from: 'C', to: 'D', amount: 30 },
+      ],
+    };
+    const estimated = byId(compileSankey(longSpec, defaultOptions), 'Residential buildings');
+    // A font that draws every character 8px wide, wider than the estimate assumes.
+    const wideFont = (text: string, fontSize: number) => ({
+      width: text.length * 8,
+      height: fontSize,
+    });
+    const measured = byId(
+      compileSankey(longSpec, { ...defaultOptions, measureText: wideFont }),
+      'Residential buildings',
+    );
+    expect(measured.x).toBeGreaterThan(estimated.x);
+    // "Residential buildings 10" is 21 + 2 characters at 8px plus the 5px gap: 189px of room.
+    expect(measured.x).toBeGreaterThan(189);
+  });
+
   it('the left gutter never claims more than 35% of the width', () => {
     const hugeLabel = 'x'.repeat(400);
     const result = compileSankey(

@@ -238,3 +238,47 @@ describe('sankey path highlighting', () => {
     instance.destroy();
   });
 });
+
+describe('sankey value labels at the frame edge', () => {
+  const edgeSpec = {
+    type: 'sankey' as const,
+    data: [
+      { from: 'Coal', to: 'Rejected energy', amount: 62.27 },
+      { from: 'Coal', to: 'Homes', amount: 3.5 },
+    ],
+    encoding: {
+      source: { field: 'from', type: 'nominal' as const },
+      target: { field: 'to', type: 'nominal' as const },
+      value: { field: 'amount', type: 'quantitative' as const },
+    },
+  };
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  const labelOf = (container: HTMLElement, id: string) =>
+    container.querySelector(`.oc-sankey-label[data-node-id="${id}"]`);
+
+  it('leaves off a value that would run past the frame, keeping the name', () => {
+    const container = createContainer(360, 300);
+    const instance = createSankey(container, edgeSpec, { autoResize: false });
+
+    const label = labelOf(container, 'Rejected energy');
+    expect(label?.textContent).toBe('Rejected energy');
+    expect(label?.querySelector('.oc-sankey-label-value')).toBeNull();
+
+    instance.destroy();
+  });
+
+  it('keeps a value that fits on the name line beside the name', () => {
+    const container = createContainer(360, 300);
+    const instance = createSankey(container, edgeSpec, { autoResize: false });
+
+    const value = labelOf(container, 'Homes')?.querySelector('.oc-sankey-label-value');
+    expect(value?.getAttribute('dx')).toBe('5');
+    expect(value?.hasAttribute('x')).toBe(false);
+
+    instance.destroy();
+  });
+});

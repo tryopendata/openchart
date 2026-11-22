@@ -477,6 +477,13 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
   const labelFontSize = theme.fonts.sizes.small;
   const labelFontWeight = theme.fonts.weights.medium;
   const valueFontWeight = theme.fonts.weights.normal;
+  // Label room is reserved from the host's real text measure when it gives one:
+  // the estimate runs narrower than most web fonts draw, and a gutter sized from
+  // it lets the outermost labels run past the frame.
+  const textWidth = (text: string, fontWeight: number): number =>
+    options.measureText
+      ? options.measureText(text, labelFontSize, fontWeight).width
+      : estimateTextWidth(text, labelFontSize, fontWeight);
   const nodeLabelAlign = sankeySpec.nodeLabelAlign ?? 'auto';
 
   let workingData = measuredData;
@@ -538,12 +545,8 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
   //     never squeeze the flow itself out of the frame.
   const labelBlockWidth = (node: ComputedNode): number => {
     const name = node.label ?? node.id;
-    const nameWidth = estimateTextWidth(name, labelFontSize, labelFontWeight);
-    const valueWidth = estimateTextWidth(
-      formatFlowValue(node.value ?? 0, nodeFmt),
-      labelFontSize,
-      valueFontWeight,
-    );
+    const nameWidth = textWidth(name, labelFontWeight);
+    const valueWidth = textWidth(formatFlowValue(node.value ?? 0, nodeFmt), valueFontWeight);
     return nameWidth + VALUE_GAP + valueWidth;
   };
 
@@ -639,9 +642,9 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
     if (nextColumn === undefined) return { text, style: valueStyle };
     const available = nextColumn - LABEL_GAP - ((node.x1 ?? 0) + LABEL_GAP);
     const needed =
-      estimateTextWidth(node.label ?? node.id, labelFontSize, labelFontWeight) +
+      textWidth(node.label ?? node.id, labelFontWeight) +
       VALUE_GAP +
-      estimateTextWidth(text, labelFontSize, valueFontWeight);
+      textWidth(text, valueFontWeight);
     return needed <= available ? { text, style: valueStyle } : undefined;
   };
 
