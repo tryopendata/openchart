@@ -56,6 +56,14 @@ describe("the stacked-vs-grouped post's figures", () => {
     );
   });
 
+  it("lists solar first in every year, since segments stack in row order", () => {
+    const rows = dataOf(capacityStacked) as { year: string; fuel: string }[];
+    const firstFuelByYear = new Map<string, string>();
+    for (const row of rows)
+      if (!firstFuelByYear.has(row.year)) firstFuelByYear.set(row.year, row.fuel);
+    expect(new Set(firstFuelByYear.values())).toEqual(new Set(["Solar"]));
+  });
+
   it("splits every homelessness row into its sheltered and unsheltered counts", () => {
     const rows = dataOf(homelessStacked);
     expect(rows.filter((row) => row.status === "Sheltered").map((row) => row.people)).toEqual(
@@ -68,7 +76,7 @@ describe("the stacked-vs-grouped post's figures", () => {
 
   it("titles each chart with a finding read off the rows", () => {
     expect(titleOf(capacityStacked)).toBe(
-      "Capacity coming online reached 49.8 GW in 2024, the most of any year shown",
+      "The four fuels added 49.8 GW in 2024, the most of any year shown",
     );
     expect(titleOf(capacityGrouped)).toBe("Solar added 31.2 GW in 2024, 13 times natural gas");
     expect(titleOf(homelessStacked)).toBe(
