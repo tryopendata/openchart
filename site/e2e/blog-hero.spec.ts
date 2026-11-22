@@ -44,8 +44,10 @@ test("on a phone the hero runs edge to edge", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(POST);
   const stage = await page.locator("[data-blog-hero] [data-demo-stage]").boundingBox();
+  // The page's content width, less any scrollbar gutter the root reserves (classic scrollbars on Linux).
+  const pageWidth = await page.evaluate(() => document.body.getBoundingClientRect().width);
   expect(stage?.x ?? -1).toBeCloseTo(0, 0);
-  expect(stage?.width ?? 0).toBeCloseTo(390, 0);
+  expect(stage?.width ?? 0).toBeCloseTo(pageWidth, 0);
 });
 
 test("loading a post shifts nothing and never blanks the hero", async ({ page }) => {

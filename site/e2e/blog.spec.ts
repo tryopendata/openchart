@@ -92,7 +92,9 @@ async function columnBoxes(page: Page) {
         )
         .map(box),
       stages: [...(prose?.querySelectorAll(":scope > .demo [data-demo-stage]") ?? [])].map(box),
-      viewport: document.documentElement.clientWidth,
+      // The page's content width: the root reserves a scrollbar gutter (scrollbar-gutter:
+      // stable), which classic scrollbars on Linux fill and clientWidth does not subtract.
+      viewport: document.body.getBoundingClientRect().width,
     };
   });
 }
