@@ -2,10 +2,11 @@
  * The figures in the blog post "How to build a KPI dashboard with sparklines":
  * a dashboard of three KPI tiles in one faceted spec (the 30-year mortgage
  * rate, the price of a dozen eggs, the remote share of US job postings), each
- * panel titled with its latest reading and compared with a year earlier in a
- * `metrics` row; then one tile on its own, a line chart with its axes removed
- * and a metrics row whose first cell carries the change from a year earlier as
- * a delta; then the mortgage rate as a sparkline titled with its number. Every
+ * panel titled with what it measures, how often and in what unit, and compared
+ * with a year earlier in a `metrics` row (on a phone the row drops out and the
+ * compact subtitle carries each latest reading and its change); then one tile
+ * on its own, a line chart with its axes removed and a metrics row whose first
+ * cell carries the change from a year earlier as a delta; then the mortgage rate as a sparkline titled with its number. Every
  * number in a title, metrics cell or subtitle is computed from the dataset rows,
  * so none can drift from the data. The post's `json demo` fence repeats
  * `mortgageTile.spec` verbatim, and a test holds the two together.
@@ -176,7 +177,7 @@ const dashboardSource = {
  * The dashboard: one faceted line chart, a panel per KPI with its own y scale.
  * Panels wrap three across on a desktop and stack on a phone (each needs 200px).
  * The metrics row lines up a year-earlier comparison over each panel; it needs
- * 480px, so on a phone the compact subtitle carries the same changes.
+ * 480px, so on a phone the compact subtitle carries each latest reading and its change.
  */
 export const kpiDashboard = defineDemo({
   id: "blog/kpi-dashboard",
