@@ -7,7 +7,7 @@
  * holds the two together.
  */
 import { gistempGlobalAnnual } from "@datasets/gistemp-global-annual";
-import type { ChartSpec } from "@opendata-ai/openchart-core";
+import type { Annotation, ChartSpec, RefLineAnnotation } from "@opendata-ai/openchart-core";
 import { sourceOf } from "../source";
 import { signedDegrees, TEMPERATURE_BASELINE } from "../style/temperature";
 import { COOL, WARM } from "../the-spec/shared";
@@ -60,6 +60,24 @@ export const gistempColumns = defineDemo({
   },
 });
 
+/** The zero line, labeled with the reference period, its label placed where the columns leave room. */
+function namedZeroLine(
+  placement: Pick<RefLineAnnotation, "labelPlacement" | "labelAnchor">,
+): Annotation {
+  return { type: "refline", y: 0, label: TEMPERATURE_BASELINE, strokeWidth: 1.5, ...placement };
+}
+
+/** The note on the coolest column, set off to its right. */
+const coolestCallout: Annotation = {
+  type: "text",
+  x: coolest.year,
+  y: coolest.anomaly,
+  text: `**${coolest.year}**\n${signedDegrees(coolest.anomaly)}, coolest year shown`,
+  anchor: "right",
+  offset: { dx: 28, dy: 8 },
+  connector: "curve",
+};
+
 export const gistempBaseline = defineDemo({
   id: "blog/gistemp-baseline",
   title: "Global temperature anomaly with its zero line named and 1910 called out",
@@ -74,27 +92,22 @@ export const gistempBaseline = defineDemo({
     },
     annotations: [
       // Over the zero line at the left, where the early columns all hang below it.
-      {
-        type: "refline",
-        y: 0,
-        label: TEMPERATURE_BASELINE,
-        strokeWidth: 1.5,
-        labelPlacement: "start",
-        labelAnchor: "top",
-      },
-      {
-        type: "text",
-        x: coolest.year,
-        y: coolest.anomaly,
-        text: `**${coolest.year}**\n${signedDegrees(coolest.anomaly)}, coolest year shown`,
-        anchor: "right",
-        offset: { dx: 28, dy: 8 },
-        connector: "curve",
-      },
+      namedZeroLine({ labelPlacement: "start", labelAnchor: "top" }),
+      coolestCallout,
     ],
     chrome: {
       title: `${coolest.year} was the coolest year shown, ${Math.abs(coolest.anomaly)}°C below average`,
       subtitle,
+    },
+    overrides: {
+      compact: {
+        annotations: [
+          // On a phone the left label covers the short 1940 column, so it moves
+          // under the line at the right, where every recent column rises above it.
+          namedZeroLine({ labelPlacement: "end", labelAnchor: "bottom" }),
+          coolestCallout,
+        ],
+      },
     },
   },
 });

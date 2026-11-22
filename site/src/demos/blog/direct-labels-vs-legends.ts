@@ -53,6 +53,14 @@ const baseLines: ChartSpec = {
   encoding: baseEncoding,
 };
 
+/**
+ * Phone-width x axis: the first, middle and last years. Left to itself the
+ * narrow axis thins to 2016, 2020, 2022, which skips the final year.
+ */
+const compactYearAxis = {
+  x: { axis: { values: [firstYear, years[Math.floor(years.length / 2)] ?? "", lastYear] } },
+};
+
 /** Multi-line chart of all six US electricity sources identified only by a top legend. */
 export const directLabelsLegend = defineDemo({
   id: "blog/direct-labels-legend",
@@ -67,6 +75,7 @@ export const directLabelsLegend = defineDemo({
       title: `Gas reached ${gasEnd.toFixed(1)}% of US main-source electricity in ${lastYear}, ahead of coal at ${coalEnd.toFixed(1)}%`,
       subtitle,
     },
+    overrides: { compact: { encoding: compactYearAxis } },
   },
 });
 
@@ -98,6 +107,15 @@ export const directLabelsEndpoints = defineDemo({
     chrome: {
       title: `US coal fell from ${coalStart.toFixed(1)}% to ${coalEnd.toFixed(1)}% of main-source generation between ${firstYear} and ${lastYear}`,
       subtitle,
+    },
+    overrides: {
+      compact: {
+        encoding: compactYearAxis,
+        // The subtitle already names the years, so the phone title drops them.
+        chrome: {
+          title: `US coal fell from ${coalStart.toFixed(1)}% to ${coalEnd.toFixed(1)}% of generation`,
+        },
+      },
     },
   },
 });

@@ -30,6 +30,13 @@ function shareOf(sourceName: string, year: string): number {
 const gasLast = shareOf("Gas", lastYear);
 const coalLast = shareOf("Coal", lastYear);
 
+const mixYears = [...new Set(mixRows.map((row) => row.year))].sort();
+/**
+ * Phone-width x ticks: the first, middle and last years. Beside the endpoint
+ * label column the narrow axis otherwise thins to a single 2020 tick.
+ */
+const compactYearTicks = [firstYear, mixYears[Math.floor(mixYears.length / 2)] ?? "", lastYear];
+
 export const accessiblePaletteLines = defineDemo({
   id: "blog/accessible-palette-lines",
   title: "US electricity mix with gas and coal highlighted in Okabe-Ito colors",
@@ -61,6 +68,7 @@ export const accessiblePaletteLines = defineDemo({
       title: `Gas rose to ${gasLast}% of US six-source power in ${lastYear} while coal fell to ${coalLast}%`,
       subtitle: `Share of US electricity from the six main sources, %, ${firstYear}-${lastYear}`,
     },
+    overrides: { compact: { encoding: { x: { axis: { values: compactYearTicks } } } } },
   },
 });
 

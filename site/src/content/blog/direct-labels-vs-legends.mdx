@@ -99,6 +99,12 @@ Moving text onto the lines also solves an accessibility problem that color palet
   "chrome": {
     "title": "US coal fell from 31.2% to 16.2% of main-source generation between 2016 and 2023",
     "subtitle": "Share of US generation from coal, gas, nuclear, hydro, wind and solar (%), 2016 to 2023"
+  },
+  "overrides": {
+    "compact": {
+      "encoding": { "x": { "axis": { "values": ["2016", "2020", "2023"] } } },
+      "chrome": { "title": "US coal fell from 31.2% to 16.2% of generation" }
+    }
   }
 }
 ```
@@ -118,5 +124,7 @@ Legends also stay useful when they double as controls. In an interactive dashboa
 The Code tab under the second chart opens the full spec with all 48 source rows. `legend: { show: false }` removes the top key, while `endpointLabels` prints each name and final share on one line using `content: "label value"` and `format: ".1f"`. Adding `showLeader: true` draws connectors where hydro and solar separate at 5.8%. For two to eight line series, omitting `endpointLabels` turns direct labels on automatically.
 
 To emphasize coal while keeping every context line labeled, the color channel pairs an explicit `scale` (teal for coal, grey for the other five sources) with a thicker stroke in `seriesStyles`. When only the focal series should carry text, set `highlight: "Coal"` on `encoding.color`. That single field mutes the remaining lines to grey and limits endpoint labels to the highlighted series.
+
+On a chart narrower than 400 pixels, the `overrides.compact` block swaps in a shorter title and marks the x axis at 2016, 2020 and 2023 only.
 
 For all formatting and placement options, see the [endpoint labels guide](/docs/framing/endpoint-labels/).
