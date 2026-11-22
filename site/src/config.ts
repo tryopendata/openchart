@@ -88,6 +88,7 @@ export const blogTags = [
   { id: "tables", label: "Tables" },
   { id: "accessibility", label: "Accessibility" },
   { id: "climate", label: "Climate" },
+  { id: "developers", label: "Developers" },
 ] as const satisfies readonly BlogTag[];
 
 /** A tag id from `blogTags`. */
