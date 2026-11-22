@@ -1,5 +1,6 @@
 /**
- * Every blog chart read on a phone: drawn live at 360 and 390px, each chart's
+ * Every blog chart read on a phone: drawn live at 360, 390, 412 and 430px
+ * (phones reach both the compact and the medium breakpoint), each chart's
  * title fits in three lines, no text sticks out of its stage, and no two labels
  * (annotations, endpoint labels, sankey labels) sit on top of each other. Charts
  * are drawn under reduced motion, so the check reads finished charts.
@@ -78,7 +79,7 @@ async function legibilityProblems(page: Page): Promise<string[]> {
   );
 }
 
-for (const width of [360, 390]) {
+for (const width of [360, 390, 412, 430]) {
   test.describe(`blog charts at ${width}px`, () => {
     test.use({ viewport: { width, height: 800 } });
     for (const path of POSTS) {
