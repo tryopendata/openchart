@@ -43,7 +43,7 @@ A PNG leaves the page's text behind, so the image has to carry its own context. 
 
 A PNG is also transparent unless the theme sets a background, which makes dark text unreadable on a dark slide. Set `theme.colors.background` in the spec to get an opaque image.
 
-This arrow chart is built for an image: the title states the finding and nothing else is needed to read it.
+This arrow chart works as an image because its title states the finding, so a reader needs nothing outside the picture.
 
 ```json demo source="CDC NCHS, Stats of the States: General Fertility Rate" height=420
 {
@@ -106,7 +106,7 @@ This arrow chart is built for an image: the title states the finding and nothing
 
 ## GIF for chat and newsletters
 
-`await chart.export("gif")` records the chart's entrance as an animated GIF. It needs the optional `gifenc` package, which you install yourself with `npm install gifenc`. Without it the call throws an error that says so. Nothing needs to be mid-animation when you call it: the library rebuilds the [entrance](/docs/behavior/motion/) frame by frame from the finished chart.
+`await chart.export("gif")` records the chart's entrance as an animated GIF. It needs the optional `gifenc` package, which you install yourself with `npm install gifenc`. Without it the call throws an error that says so. You can call it on a finished chart, because the library rebuilds the [entrance](/docs/behavior/motion/) frame by frame.
 
 A GIF plays once and holds its last frame unless you pass `loop: true`, and it is limited to 256 colors. A chart with no entrance animation exports as a single frame. Lowering `dpi` and `fps` (frames per second, 25 by default) is how you bring the file size down.
 
@@ -126,7 +126,7 @@ These are the turnout chart's exports from Chromium, with the chart 656px wide a
 
 ## Charts with many points
 
-A scatter of thousands of points draws its dots on a [canvas](/docs/output/canvas/) layer, and exports still re-render the whole chart. A PNG matches the SVG version of the chart. An SVG stays all vector up to 5,000 points, and above that the dots go in as one embedded image while the text and gridlines remain vector.
+A scatter of thousands of points draws its dots on a [canvas](/docs/output/canvas/) layer, and exports still re-render the whole chart. A PNG is drawn from an all-vector copy of the chart at any point count. An SVG stays all vector up to 5,000 points, and above that the dots go in as one embedded image while the text and gridlines remain vector.
 
 ## The spec
 
@@ -136,6 +136,6 @@ The `title` on `x` and `x2` names each end of the arrow in the tooltip, `chrome.
 
 ## Before you export
 
-Export at the container width you want the image to have, because the image takes the chart's current size, and dark mode exports as drawn.
+Export at the container width you want the image to have, because the image takes the chart's current size. A chart shown in dark mode exports with its dark colors.
 
 To make a GIF that steps through several specs instead of one entrance, see `exportSpecSequence` in [the export API reference](/docs/api/export/).
