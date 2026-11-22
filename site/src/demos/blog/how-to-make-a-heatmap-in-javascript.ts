@@ -17,8 +17,9 @@ const COUNTRIES = [
   { field: "india", name: "India" },
   { field: "china", name: "China" },
   { field: "cuba", name: "Cuba" },
-  // Short enough for a column label on a phone.
-  { field: "dominican_republic", name: "Dom. Rep." },
+  // Short enough to sit level on a desktop. No period: the tick font's tabular
+  // figures give a period a digit's width, so "Dom. Rep." read as "Dom . Rep .".
+  { field: "dominican_republic", name: "Dominican Rep" },
   { field: "philippines", name: "Philippines" },
 ] as const;
 
