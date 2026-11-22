@@ -1,9 +1,15 @@
 ---
 /**
  * The post's lead chart as a wide hero above the fold, between the byline's
- * ticked rule and the prose. Phase 2 lane d fills this in; until then it renders
- * an empty marker so the layout and tests have a fixed place for it.
+ * ticked rule and the prose. It is the chart alone (the body's copy carries the
+ * code), with its caption and credit line, painted from the inline static SVGs
+ * and never waiting on a reveal or an entrance. An unknown demo id fails the
+ * build through Demo.astro, naming the post and the demo. Layout is in
+ * blog-hero.css.
  */
+import "../../styles/blog-hero.css";
+import Demo from "../demo/Demo.astro";
+
 interface Props {
   /** The registered demo id of the post's lead chart. */
   demoId: string;
@@ -11,4 +17,6 @@ interface Props {
 const { demoId } = Astro.props;
 ---
 
-<div data-blog-hero data-hero-demo={demoId}></div>
+<div data-blog-hero>
+  <Demo id={demoId} tabs={false} hero />
+</div>

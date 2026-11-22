@@ -279,6 +279,23 @@ describe("demoFigureHtml on a blog post", () => {
     expect(viewBox?.split(/\s+/)[2]).toBe("360");
   });
 
+  it("as the hero, keeps the credit but paints in place with no reveal roles", async () => {
+    const figure = await render(figureFor({ blog, hero: true, tabs: false }));
+    expect(figure.querySelector("a.figure-credit-link")).not.toBeNull();
+    expect(figure.hasAttribute("data-reveal")).toBe(false);
+    expect(figure.querySelector("[data-motion]")).toBeNull();
+    expect(figure.querySelector("[data-demo-code]")).toBeNull();
+  });
+
+  it("as the hero, takes ids apart from the body's copy of the same demo", async () => {
+    const idsOf = (element: Awaited<ReturnType<typeof render>>) =>
+      [...element.querySelectorAll("[id]")].map((node) => node.id);
+    const hero = idsOf(await render(figureFor({ blog, hero: true, tabs: false })));
+    const body = idsOf(await render(figureFor({ blog })));
+    expect(hero.length).toBeGreaterThan(0);
+    expect(hero.filter((id) => body.includes(id))).toEqual([]);
+  });
+
   it("writes none of the blog markup without the blog option", async () => {
     const figure = await render(figureFor());
     expect(figure.querySelector(".figure-credit")).toBeNull();

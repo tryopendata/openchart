@@ -1,0 +1,37 @@
+/*
+ * The post's hero (BlogHero): its lead chart set as a newsroom lead graphic,
+ * on the article's `wide` line from 640px up and edge to edge below, with the
+ * caption and credit kept at the page's text inset. It sits close under the
+ * byline's ticked rule and leaves clear space before the prose. Rules and type
+ * only, no panel. The column lines and gutters are blog.css's.
+ */
+@reference "./global.css";
+
+@layer components {
+  .blog-article > [data-blog-hero] {
+    grid-column: wide;
+    @apply mb-14;
+
+    @variant max-sm {
+      grid-column: full;
+    }
+  }
+
+  /* The wrapper spaces the hero; the demo's own prose margins would double it. */
+  .blog-article > [data-blog-hero] > .demo {
+    @apply m-0;
+  }
+}
+
+/* The rule's `mb-10` is a utility, which a layered rule cannot override, so this is
+   unlayered: the hero hangs closer under the byline than a figure sits to its text. */
+.blog-article > :has(+ [data-blog-hero]) > .rule-axis {
+  @apply mb-6;
+}
+
+/* Edge to edge, the caption and credit line up with the prose, as body figures' do. */
+.blog-article > [data-blog-hero] :where(.figure-caption, .figure-credit) {
+  @variant max-sm {
+    padding-inline: var(--blog-gutter);
+  }
+}
