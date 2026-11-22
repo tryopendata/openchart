@@ -15,6 +15,7 @@ import {
   teacherChanges,
   teacherHistogram,
   teacherSwarm,
+  titleCase,
   widestField,
 } from "./how-to-make-a-beeswarm-plot";
 
@@ -48,7 +49,9 @@ describe("the beeswarm post's figures", () => {
         (source?.salary_1999_00 ?? 1);
       expect(row.change, row.state).toBeCloseTo(expected, 1);
     }
-    expect(specOf(teacherSwarm).data).toEqual(teacherChanges);
+    expect(specOf(teacherSwarm).data).toEqual(
+      teacherChanges.map((row) => ({ ...row, lane: "States" })),
+    );
     expect(specOf(teacherHistogram).data).toEqual(teacherChanges.map(({ change }) => ({ change })));
   });
 
@@ -60,35 +63,34 @@ describe("the beeswarm post's figures", () => {
     const fell = teacherChanges.filter((row) => row.change < 0);
     expect(fell.filter((row) => row.change >= -12 && row.change <= -5)).toHaveLength(23);
     expect(teacherChanges.filter((row) => row.change > 0)).toHaveLength(15);
+    // DC is one of the 15 that rose, so all 36 declines are states.
+    expect(
+      teacherChanges.find((row) => row.state === "District of Columbia")?.change,
+    ).toBeGreaterThan(0);
   });
 
   it("pins the college majors the prose quotes", () => {
     const rows = collegeMajors.data;
-    expect(rows).toHaveLength(60);
+    expect(rows).toHaveLength(125);
     expect(widestField).toBe("Engineering");
     const engineering = rows.filter((row) => row.major_category === "Engineering");
     expect(Math.min(...engineering.map((row) => row.median_salary))).toBe(40000);
     expect(Math.max(...engineering.map((row) => row.median_salary))).toBe(65000);
-    const at45k = rows.filter((row) => row.median_salary === 45000);
-    expect(at45k).toHaveLength(7);
-    expect(at45k.filter((row) => row.major_category === "Computers & Mathematics")).toHaveLength(4);
-    expect(
-      (specOf(majorsSwarm).data ?? []).map(({ major, field, pay }) => ({ major, field, pay })),
-    ).toEqual(
-      rows.map((row) => ({
-        major: row.major,
-        field: row.major_category,
-        pay: row.median_salary,
-      })),
-    );
+    const at35k = rows.filter((row) => row.median_salary === 35000);
+    expect(at35k).toHaveLength(17);
+    expect(new Set(at35k.map((row) => row.major_category)).size).toBe(13);
+    const drawn = specOf(majorsSwarm).data ?? [];
+    expect(drawn.map(({ pay }) => pay)).toEqual(rows.map((row) => row.median_salary));
+    expect(drawn.map(({ major }) => major)).toEqual(rows.map((row) => titleCase(row.major)));
+    expect(drawn[0]).toMatchObject({ major: "Chemical Engineering", field: "Engineering" });
   });
 
   it("titles each chart with a finding read off the rows", () => {
     expect(specOf(teacherHistogram).chrome?.title).toBe(
-      "Teacher pay fell in 36 of 51 states, but the bars cannot say which",
+      "Teacher pay fell in 36 of 50 states, but the bars cannot say which",
     );
     expect(specOf(teacherSwarm).chrome?.title).toBe(
-      "Teacher pay fell in 36 of 51 states, by as much as 22.4%",
+      "Teacher pay fell in 36 of 50 states, by as much as 22.4%",
     );
     expect(specOf(majorsSwarm).chrome?.title).toBe(
       "Engineering majors range from $40,000 to $65,000, the widest spread of any field",

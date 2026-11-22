@@ -1,9 +1,9 @@
 /**
  * The figures in the blog post "How to make a heatmap in JavaScript": green
- * cards by country of birth and fiscal year with every cell labeled, then
- * Mauna Loa CO2 by year and month on one sequential scale, then the same grid
- * colored by each month's distance from its own year's average on a diverging
- * scale. Titles state findings computed from the dataset rows so they cannot
+ * cards by fiscal year (rows) and country of birth (columns) with every cell
+ * labeled, then Mauna Loa CO2 by year and month for every fifth year from 1960
+ * on one sequential scale, then the same grid colored by each month's distance
+ * from its own year's average on a diverging scale. Titles state findings computed from the dataset rows so they cannot
  * drift from the data. The post's `json demo` fence repeats `co2Seasonal.spec`
  * verbatim, and a test holds the two together.
  */
@@ -17,7 +17,8 @@ const COUNTRIES = [
   { field: "india", name: "India" },
   { field: "china", name: "China" },
   { field: "cuba", name: "Cuba" },
-  { field: "dominican_republic", name: "Dominican Republic" },
+  // Short enough for a column label on a phone.
+  { field: "dominican_republic", name: "Dom. Rep." },
   { field: "philippines", name: "Philippines" },
 ] as const;
 
@@ -41,16 +42,23 @@ const fallPercent = Math.round(
 );
 
 /** Cells at or above this many thousand are dark enough to need white text. */
-const DARK_CELL = 100;
+const DARK_CELL = 150;
 
+/** Fiscal years listed from the bottom of the axis up, so the earliest sits on top. */
+const fiscalYears = greenCardsByCountry.data.map((row) => String(row.year)).reverse();
+
+/**
+ * Years run down the rows and countries across the columns: six columns leave
+ * a phone room for three-digit cell labels, where ten year columns did not.
+ */
 const greenCardAxes = {
-  x: { field: "year", type: "nominal" as const },
-  y: {
+  x: {
     field: "country",
     type: "nominal" as const,
-    // Listed from the bottom of the axis up, so Mexico, the largest, sits on top.
-    sort: [...COUNTRIES].reverse().map(({ name }) => name),
+    // Largest first, so Mexico, the darkest column, sits on the left.
+    sort: COUNTRIES.map(({ name }) => name),
   },
+  y: { field: "year", type: "nominal" as const, sort: fiscalYears },
 };
 
 export const greenCardHeatmap = defineDemo({
@@ -91,12 +99,20 @@ export const greenCardHeatmap = defineDemo({
         ? `All six countries fell in fiscal 2020, and the total dropped ${fallPercent}%`
         : "Green cards by country of birth",
       subtitle:
-        "Lawful permanent residents by country of birth and fiscal year, thousands. Darker cells are larger.",
+        "New green-card holders by fiscal year and country of birth, thousands. Darker cells are larger.",
     },
   },
 });
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+/** On a phone twelve month names rotate; every other month stays level. */
+const monthAxisOverrides = {
+  compact: {
+    encoding: {
+      x: { axis: { values: MONTHS.filter((_, index) => index % 2 === 0), labelAngle: 0 } },
+    },
+  },
+};
 const YEARS = [...new Set(co2MaunaLoa.data.map((row) => row.year))].sort((a, b) => a - b);
 
 /** Rows listed from the bottom of the axis up, so the earliest year is drawn on top. */
@@ -118,7 +134,8 @@ export const co2Cells = co2MaunaLoa.data.map((row) => ({
 export const co2Departures = co2MaunaLoa.data.map((row) => ({
   year: String(row.year),
   month: MONTHS[row.month - 1] ?? String(row.month),
-  departure: Number((row.co2_ppm - yearMean(row.year)).toFixed(1)),
+  // `|| 0` turns a rounded -0 into 0, which JSON writes the same way.
+  departure: Number((row.co2_ppm - yearMean(row.year)).toFixed(1)) || 0,
 }));
 
 const first = co2MaunaLoa.data.filter((row) => row.year === YEARS[0]);
@@ -132,9 +149,9 @@ const co2Source = sourceOf(co2MaunaLoa);
 
 export const co2Trend = defineDemo({
   id: "blog/co2-heatmap",
-  title: "Mauna Loa CO2 by month for five years, one color scale",
+  title: "Mauna Loa CO2 by month, every fifth year from 1960, one color scale",
   source: co2Source,
-  height: 380,
+  height: 460,
   spec: {
     mark: "rect",
     data: co2Cells,
@@ -148,6 +165,7 @@ export const co2Trend = defineDemo({
         format: ".1f",
       },
     },
+    overrides: monthAxisOverrides,
     chrome: {
       title: `The lowest month of ${YEARS.at(-1)} was ${gapPpm} ppm above the highest month of ${YEARS[0]}`,
       subtitle: "Monthly mean CO2 at Mauna Loa, parts per million. Darker cells are higher.",
@@ -159,7 +177,7 @@ export const co2Seasonal = defineDemo({
   id: "blog/co2-seasonal-heatmap",
   title: "Mauna Loa CO2 by month, relative to each year's average",
   source: co2Source,
-  height: 380,
+  height: 460,
   spec: {
     mark: "rect",
     data: co2Departures,
@@ -170,9 +188,10 @@ export const co2Seasonal = defineDemo({
         field: "departure",
         type: "quantitative",
         scale: { scheme: "redBlue", domain: [-4, 4], reverse: true },
-        format: "+.1f",
+        format: ".1f",
       },
     },
+    overrides: monthAxisOverrides,
     chrome: {
       title: "In every year, CO2 peaks in spring and bottoms out in autumn",
       subtitle:

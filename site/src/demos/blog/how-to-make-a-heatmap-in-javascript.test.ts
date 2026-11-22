@@ -66,6 +66,11 @@ describe("the heatmap post's figures", () => {
     expect(total(2019)).toBe(1_031_770);
     expect(total(2020)).toBe(707_360);
     expect(Math.round((1 - total(2020) / total(2019)) * 100)).toBe(31);
+    // Fiscal 2021 stays below 2019 for every country but India.
+    const below2019 = (
+      ["mexico", "india", "china", "cuba", "dominican_republic", "philippines"] as const
+    ).filter((field) => (byYear(2021)?.[field] ?? 0) < (byYear(2019)?.[field] ?? 0));
+    expect(below2019).toEqual(["mexico", "china", "cuba", "dominican_republic", "philippines"]);
     for (const row of greenCardsByCountry.data) {
       expect(row.mexico, String(row.year)).toBeGreaterThan(
         Math.max(row.india, row.china, row.cuba, row.dominican_republic, row.philippines),
@@ -74,7 +79,10 @@ describe("the heatmap post's figures", () => {
   });
 
   it("draws the CO2 grids from the dataset's rows and pins the claims in the prose", () => {
-    expect(co2MaunaLoa.data).toHaveLength(60);
+    expect(co2MaunaLoa.data).toHaveLength(168);
+    expect([...new Set(co2MaunaLoa.data.map((row) => row.year))]).toEqual([
+      1960, 1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020, 2025,
+    ]);
     expect(co2Cells.map((cell) => cell.ppm)).toEqual(co2MaunaLoa.data.map((row) => row.co2_ppm));
     expect(specOf(co2Trend).data).toEqual(co2Cells);
     expect(specOf(co2Seasonal).data).toEqual(co2Departures);
@@ -86,7 +94,8 @@ describe("the heatmap post's figures", () => {
   });
 
   it("peaks every year in April or May and bottoms out in September or October", () => {
-    for (const year of [1960, 1980, 2000, 2020, 2025]) {
+    const swings: number[] = [];
+    for (const year of new Set(co2MaunaLoa.data.map((row) => row.year))) {
       const rows = co2MaunaLoa.data.filter((row) => row.year === year);
       expect(rows, String(year)).toHaveLength(12);
       const high = rows.reduce((a, b) => (b.co2_ppm > a.co2_ppm ? b : a));
@@ -97,7 +106,14 @@ describe("the heatmap post's figures", () => {
         .filter((cell) => cell.year === String(year))
         .reduce((total, cell) => total + cell.departure, 0);
       expect(Math.abs(sum), `${year} departures net out`).toBeLessThan(0.5);
+      swings.push(high.co2_ppm - low.co2_ppm);
     }
+    // "About 5 to 6 ppm": every year's swing runs 4.8 to 6.3.
+    expect(Math.min(...swings)).toBeGreaterThan(4.8);
+    expect(Math.max(...swings)).toBeLessThan(6.4);
+    // The diverging legend's midpoint is zero: the departures run symmetric about it.
+    const departures = co2Departures.map((cell) => cell.departure);
+    expect(Math.min(...departures) + Math.max(...departures)).toBeCloseTo(0, 5);
   });
 
   it("titles each chart with a finding read off the rows", () => {

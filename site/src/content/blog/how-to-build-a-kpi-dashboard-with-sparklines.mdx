@@ -1,146 +1,1255 @@
 ---
 title: How to build a KPI dashboard with sparklines
-description: A KPI tile is a number, a comparison and a small line. How to build tiles with sparklines, why the axes go, and what each tile still has to say.
+description: A KPI tile is a number, a comparison and a small line. How to build a row of tiles with sparklines, why the axes go, and what each tile still has to say.
 published: 2026-11-18
 author: OpenChart
 tags: [chart-choice]
 related: [change-over-time/sparkline, composition/dashboard-tiles, behavior/responsive]
-lead: blog/kpi-tile-mortgage
+lead: blog/kpi-sparkline-bare
 ---
 
 import Demo from "../../components/demo/Demo.astro";
 
-A KPI tile has three parts: the current number, a comparison that says whether the number is high or low, and a small line that shows the shape. 
+In the latest readings, the 30-year mortgage rate is 0.87 points above a year earlier, a dozen eggs cost $1.17 less than about a year before, and the share of US job postings that mention remote or hybrid work is up 0.40 points. A KPI dashboard should make answers like those readable in a few seconds. Each number gets a tile with three parts: the latest reading, a comparison and a small line for the shape.
 
-## A sparkline is a line with no axes
+<Demo id="blog/kpi-dashboard" />
 
-A sparkline is a line chart stripped of its title, axes, legend and source line, small enough to sit beside a number. In a box 56 pixels tall, axis labels would take more room than the line, and the reader is not looking for exact values, so the axes go. This one plots the average 30-year fixed mortgage rate each week since January 2021.
+## The parts of a tile
 
-<Demo id="blog/kpi-sparkline-bare" />
+A number alone does not say whether it is high, so every tile needs a comparison. Pick the one the reader acts on: the previous period for numbers that move week to week, the same period a year earlier for anything with a season, or a target when there is one. These tiles use a year earlier, which also cancels any seasonal swing.
 
-The shape is a low start, a steep climb and a long plateau. The line carries no scale, so it cannot say that the climb was from 2.65% to above 7%, or that the last point is 7.11%. A reader gets those from the number, which is why a sparkline belongs next to one.
-
-## A number, a comparison and a shape
-
-A number alone does not say whether it is high. The tile below puts the latest rate beside the first rate in the series and the peak, and draws the line under them.
-
-<Demo id="blog/kpi-tile-mortgage" />
-
-The rate of 7.11% is more than two and a half times the January 2021 rate and still below the October 2023 peak.
-
-The peak cell matters most when a series spiked and came back down, as egg prices did.
-
-<Demo id="blog/kpi-tile-eggs" />
-
-The price of a dozen eggs was $2.32 in October 2026, which looks unremarkable until the peak of $6.23 in March 2025 sits beside it. The source has no price for October 2025, and the line bridges that month with a straight segment.
-
-## What every tile must still say
-
-Removing the axes removes the unit, the period and the source, so the tile has to supply them another way.
-
-The unit and the period go in the title, as in "monthly, $". The three tiles here report weekly, monthly and quarterly readings.
-
-```json demo source="Indeed Hiring Lab, Remote and Hybrid Job Postings Tracker" height=380
+```json demo source="Freddie Mac, 30-Year Fixed Rate Mortgage Average (via FRED MORTGAGE30US)" height=380
 {
   "mark": {
     "type": "line",
-    "stroke": "#0e7490",
     "strokeWidth": 2,
     "point": "last",
     "interpolate": "linear"
   },
   "data": [
     {
-      "date": "2021-01-01",
-      "value": 7.14
+      "date": "2021-01-07",
+      "value": 2.65
+    },
+    {
+      "date": "2021-01-14",
+      "value": 2.79
+    },
+    {
+      "date": "2021-01-21",
+      "value": 2.77
+    },
+    {
+      "date": "2021-01-28",
+      "value": 2.73
+    },
+    {
+      "date": "2021-02-04",
+      "value": 2.73
+    },
+    {
+      "date": "2021-02-11",
+      "value": 2.73
+    },
+    {
+      "date": "2021-02-18",
+      "value": 2.81
+    },
+    {
+      "date": "2021-02-25",
+      "value": 2.97
+    },
+    {
+      "date": "2021-03-04",
+      "value": 3.02
+    },
+    {
+      "date": "2021-03-11",
+      "value": 3.05
+    },
+    {
+      "date": "2021-03-18",
+      "value": 3.09
+    },
+    {
+      "date": "2021-03-25",
+      "value": 3.17
     },
     {
       "date": "2021-04-01",
-      "value": 7.44
+      "value": 3.18
+    },
+    {
+      "date": "2021-04-08",
+      "value": 3.13
+    },
+    {
+      "date": "2021-04-15",
+      "value": 3.04
+    },
+    {
+      "date": "2021-04-22",
+      "value": 2.97
+    },
+    {
+      "date": "2021-04-29",
+      "value": 2.98
+    },
+    {
+      "date": "2021-05-06",
+      "value": 2.96
+    },
+    {
+      "date": "2021-05-13",
+      "value": 2.94
+    },
+    {
+      "date": "2021-05-20",
+      "value": 3
+    },
+    {
+      "date": "2021-05-27",
+      "value": 2.95
+    },
+    {
+      "date": "2021-06-03",
+      "value": 2.99
+    },
+    {
+      "date": "2021-06-10",
+      "value": 2.96
+    },
+    {
+      "date": "2021-06-17",
+      "value": 2.93
+    },
+    {
+      "date": "2021-06-24",
+      "value": 3.02
     },
     {
       "date": "2021-07-01",
-      "value": 7.66
+      "value": 2.98
     },
     {
-      "date": "2021-10-01",
-      "value": 9.03
+      "date": "2021-07-08",
+      "value": 2.9
     },
     {
-      "date": "2022-01-01",
-      "value": 10.18
+      "date": "2021-07-15",
+      "value": 2.88
     },
     {
-      "date": "2022-04-01",
-      "value": 10.23
+      "date": "2021-07-22",
+      "value": 2.78
     },
     {
-      "date": "2022-07-01",
-      "value": 9.73
+      "date": "2021-07-29",
+      "value": 2.8
     },
     {
-      "date": "2022-10-01",
-      "value": 9.41
+      "date": "2021-08-05",
+      "value": 2.77
     },
     {
-      "date": "2023-01-01",
-      "value": 9.18
+      "date": "2021-08-12",
+      "value": 2.87
     },
     {
-      "date": "2023-04-01",
-      "value": 8.68
+      "date": "2021-08-19",
+      "value": 2.86
     },
     {
-      "date": "2023-07-01",
-      "value": 8.39
+      "date": "2021-08-26",
+      "value": 2.87
     },
     {
-      "date": "2023-10-01",
-      "value": 8.48
+      "date": "2021-09-02",
+      "value": 2.87
     },
     {
-      "date": "2024-01-01",
-      "value": 8.76
+      "date": "2021-09-09",
+      "value": 2.88
     },
     {
-      "date": "2024-04-01",
-      "value": 8.13
+      "date": "2021-09-16",
+      "value": 2.86
     },
     {
-      "date": "2024-07-01",
-      "value": 7.9
+      "date": "2021-09-23",
+      "value": 2.88
     },
     {
-      "date": "2024-10-01",
-      "value": 8.02
+      "date": "2021-09-30",
+      "value": 3.01
     },
     {
-      "date": "2025-01-01",
-      "value": 8.27
+      "date": "2021-10-07",
+      "value": 2.99
     },
     {
-      "date": "2025-04-01",
-      "value": 7.92
+      "date": "2021-10-14",
+      "value": 3.05
     },
     {
-      "date": "2025-07-01",
-      "value": 8.18
+      "date": "2021-10-21",
+      "value": 3.09
     },
     {
-      "date": "2025-10-01",
-      "value": 8.41
+      "date": "2021-10-28",
+      "value": 3.14
     },
     {
-      "date": "2026-01-01",
-      "value": 8.85
+      "date": "2021-11-04",
+      "value": 3.09
     },
     {
-      "date": "2026-04-01",
-      "value": 8.64
+      "date": "2021-11-10",
+      "value": 2.98
     },
     {
-      "date": "2026-07-01",
-      "value": 8.58
+      "date": "2021-11-18",
+      "value": 3.1
+    },
+    {
+      "date": "2021-11-24",
+      "value": 3.1
+    },
+    {
+      "date": "2021-12-02",
+      "value": 3.11
+    },
+    {
+      "date": "2021-12-09",
+      "value": 3.1
+    },
+    {
+      "date": "2021-12-16",
+      "value": 3.12
+    },
+    {
+      "date": "2021-12-23",
+      "value": 3.05
+    },
+    {
+      "date": "2021-12-30",
+      "value": 3.11
+    },
+    {
+      "date": "2022-01-06",
+      "value": 3.22
+    },
+    {
+      "date": "2022-01-13",
+      "value": 3.45
+    },
+    {
+      "date": "2022-01-20",
+      "value": 3.56
+    },
+    {
+      "date": "2022-01-27",
+      "value": 3.55
+    },
+    {
+      "date": "2022-02-03",
+      "value": 3.55
+    },
+    {
+      "date": "2022-02-10",
+      "value": 3.69
+    },
+    {
+      "date": "2022-02-17",
+      "value": 3.92
+    },
+    {
+      "date": "2022-02-24",
+      "value": 3.89
+    },
+    {
+      "date": "2022-03-03",
+      "value": 3.76
+    },
+    {
+      "date": "2022-03-10",
+      "value": 3.85
+    },
+    {
+      "date": "2022-03-17",
+      "value": 4.16
+    },
+    {
+      "date": "2022-03-24",
+      "value": 4.42
+    },
+    {
+      "date": "2022-03-31",
+      "value": 4.67
+    },
+    {
+      "date": "2022-04-07",
+      "value": 4.72
+    },
+    {
+      "date": "2022-04-14",
+      "value": 5
+    },
+    {
+      "date": "2022-04-21",
+      "value": 5.11
+    },
+    {
+      "date": "2022-04-28",
+      "value": 5.1
+    },
+    {
+      "date": "2022-05-05",
+      "value": 5.27
+    },
+    {
+      "date": "2022-05-12",
+      "value": 5.3
+    },
+    {
+      "date": "2022-05-19",
+      "value": 5.25
+    },
+    {
+      "date": "2022-05-26",
+      "value": 5.1
+    },
+    {
+      "date": "2022-06-02",
+      "value": 5.09
+    },
+    {
+      "date": "2022-06-09",
+      "value": 5.23
+    },
+    {
+      "date": "2022-06-16",
+      "value": 5.78
+    },
+    {
+      "date": "2022-06-23",
+      "value": 5.81
+    },
+    {
+      "date": "2022-06-30",
+      "value": 5.7
+    },
+    {
+      "date": "2022-07-07",
+      "value": 5.3
+    },
+    {
+      "date": "2022-07-14",
+      "value": 5.51
+    },
+    {
+      "date": "2022-07-21",
+      "value": 5.54
+    },
+    {
+      "date": "2022-07-28",
+      "value": 5.3
+    },
+    {
+      "date": "2022-08-04",
+      "value": 4.99
+    },
+    {
+      "date": "2022-08-11",
+      "value": 5.22
+    },
+    {
+      "date": "2022-08-18",
+      "value": 5.13
+    },
+    {
+      "date": "2022-08-25",
+      "value": 5.55
+    },
+    {
+      "date": "2022-09-01",
+      "value": 5.66
+    },
+    {
+      "date": "2022-09-08",
+      "value": 5.89
+    },
+    {
+      "date": "2022-09-15",
+      "value": 6.02
+    },
+    {
+      "date": "2022-09-22",
+      "value": 6.29
+    },
+    {
+      "date": "2022-09-29",
+      "value": 6.7
+    },
+    {
+      "date": "2022-10-06",
+      "value": 6.66
+    },
+    {
+      "date": "2022-10-13",
+      "value": 6.92
+    },
+    {
+      "date": "2022-10-20",
+      "value": 6.94
+    },
+    {
+      "date": "2022-10-27",
+      "value": 7.08
+    },
+    {
+      "date": "2022-11-03",
+      "value": 6.95
+    },
+    {
+      "date": "2022-11-10",
+      "value": 7.08
+    },
+    {
+      "date": "2022-11-17",
+      "value": 6.61
+    },
+    {
+      "date": "2022-11-23",
+      "value": 6.58
+    },
+    {
+      "date": "2022-12-01",
+      "value": 6.49
+    },
+    {
+      "date": "2022-12-08",
+      "value": 6.33
+    },
+    {
+      "date": "2022-12-15",
+      "value": 6.31
+    },
+    {
+      "date": "2022-12-22",
+      "value": 6.27
+    },
+    {
+      "date": "2022-12-29",
+      "value": 6.42
+    },
+    {
+      "date": "2023-01-05",
+      "value": 6.48
+    },
+    {
+      "date": "2023-01-12",
+      "value": 6.33
+    },
+    {
+      "date": "2023-01-19",
+      "value": 6.15
+    },
+    {
+      "date": "2023-01-26",
+      "value": 6.13
+    },
+    {
+      "date": "2023-02-02",
+      "value": 6.09
+    },
+    {
+      "date": "2023-02-09",
+      "value": 6.12
+    },
+    {
+      "date": "2023-02-16",
+      "value": 6.32
+    },
+    {
+      "date": "2023-02-23",
+      "value": 6.5
+    },
+    {
+      "date": "2023-03-02",
+      "value": 6.65
+    },
+    {
+      "date": "2023-03-09",
+      "value": 6.73
+    },
+    {
+      "date": "2023-03-16",
+      "value": 6.6
+    },
+    {
+      "date": "2023-03-23",
+      "value": 6.42
+    },
+    {
+      "date": "2023-03-30",
+      "value": 6.32
+    },
+    {
+      "date": "2023-04-06",
+      "value": 6.28
+    },
+    {
+      "date": "2023-04-13",
+      "value": 6.27
+    },
+    {
+      "date": "2023-04-20",
+      "value": 6.39
+    },
+    {
+      "date": "2023-04-27",
+      "value": 6.43
+    },
+    {
+      "date": "2023-05-04",
+      "value": 6.39
+    },
+    {
+      "date": "2023-05-11",
+      "value": 6.35
+    },
+    {
+      "date": "2023-05-18",
+      "value": 6.39
+    },
+    {
+      "date": "2023-05-25",
+      "value": 6.57
+    },
+    {
+      "date": "2023-06-01",
+      "value": 6.79
+    },
+    {
+      "date": "2023-06-08",
+      "value": 6.71
+    },
+    {
+      "date": "2023-06-15",
+      "value": 6.69
+    },
+    {
+      "date": "2023-06-22",
+      "value": 6.67
+    },
+    {
+      "date": "2023-06-29",
+      "value": 6.71
+    },
+    {
+      "date": "2023-07-06",
+      "value": 6.81
+    },
+    {
+      "date": "2023-07-13",
+      "value": 6.96
+    },
+    {
+      "date": "2023-07-20",
+      "value": 6.78
+    },
+    {
+      "date": "2023-07-27",
+      "value": 6.81
+    },
+    {
+      "date": "2023-08-03",
+      "value": 6.9
+    },
+    {
+      "date": "2023-08-10",
+      "value": 6.96
+    },
+    {
+      "date": "2023-08-17",
+      "value": 7.09
+    },
+    {
+      "date": "2023-08-24",
+      "value": 7.23
+    },
+    {
+      "date": "2023-08-31",
+      "value": 7.18
+    },
+    {
+      "date": "2023-09-07",
+      "value": 7.12
+    },
+    {
+      "date": "2023-09-14",
+      "value": 7.18
+    },
+    {
+      "date": "2023-09-21",
+      "value": 7.19
+    },
+    {
+      "date": "2023-09-28",
+      "value": 7.31
+    },
+    {
+      "date": "2023-10-05",
+      "value": 7.49
+    },
+    {
+      "date": "2023-10-12",
+      "value": 7.57
+    },
+    {
+      "date": "2023-10-19",
+      "value": 7.63
+    },
+    {
+      "date": "2023-10-26",
+      "value": 7.79
+    },
+    {
+      "date": "2023-11-02",
+      "value": 7.76
+    },
+    {
+      "date": "2023-11-09",
+      "value": 7.5
+    },
+    {
+      "date": "2023-11-16",
+      "value": 7.44
+    },
+    {
+      "date": "2023-11-22",
+      "value": 7.29
+    },
+    {
+      "date": "2023-11-30",
+      "value": 7.22
+    },
+    {
+      "date": "2023-12-07",
+      "value": 7.03
+    },
+    {
+      "date": "2023-12-14",
+      "value": 6.95
+    },
+    {
+      "date": "2023-12-21",
+      "value": 6.67
+    },
+    {
+      "date": "2023-12-28",
+      "value": 6.61
+    },
+    {
+      "date": "2024-01-04",
+      "value": 6.62
+    },
+    {
+      "date": "2024-01-11",
+      "value": 6.66
+    },
+    {
+      "date": "2024-01-18",
+      "value": 6.6
+    },
+    {
+      "date": "2024-01-25",
+      "value": 6.69
+    },
+    {
+      "date": "2024-02-01",
+      "value": 6.63
+    },
+    {
+      "date": "2024-02-08",
+      "value": 6.64
+    },
+    {
+      "date": "2024-02-15",
+      "value": 6.77
+    },
+    {
+      "date": "2024-02-22",
+      "value": 6.9
+    },
+    {
+      "date": "2024-02-29",
+      "value": 6.94
+    },
+    {
+      "date": "2024-03-07",
+      "value": 6.88
+    },
+    {
+      "date": "2024-03-14",
+      "value": 6.74
+    },
+    {
+      "date": "2024-03-21",
+      "value": 6.87
+    },
+    {
+      "date": "2024-03-28",
+      "value": 6.79
+    },
+    {
+      "date": "2024-04-04",
+      "value": 6.82
+    },
+    {
+      "date": "2024-04-11",
+      "value": 6.88
+    },
+    {
+      "date": "2024-04-18",
+      "value": 7.1
+    },
+    {
+      "date": "2024-04-25",
+      "value": 7.17
+    },
+    {
+      "date": "2024-05-02",
+      "value": 7.22
+    },
+    {
+      "date": "2024-05-09",
+      "value": 7.09
+    },
+    {
+      "date": "2024-05-16",
+      "value": 7.02
+    },
+    {
+      "date": "2024-05-23",
+      "value": 6.94
+    },
+    {
+      "date": "2024-05-30",
+      "value": 7.03
+    },
+    {
+      "date": "2024-06-06",
+      "value": 6.99
+    },
+    {
+      "date": "2024-06-13",
+      "value": 6.95
+    },
+    {
+      "date": "2024-06-20",
+      "value": 6.87
+    },
+    {
+      "date": "2024-06-27",
+      "value": 6.86
+    },
+    {
+      "date": "2024-07-03",
+      "value": 6.95
+    },
+    {
+      "date": "2024-07-11",
+      "value": 6.89
+    },
+    {
+      "date": "2024-07-18",
+      "value": 6.77
+    },
+    {
+      "date": "2024-07-25",
+      "value": 6.78
+    },
+    {
+      "date": "2024-08-01",
+      "value": 6.73
+    },
+    {
+      "date": "2024-08-08",
+      "value": 6.47
+    },
+    {
+      "date": "2024-08-15",
+      "value": 6.49
+    },
+    {
+      "date": "2024-08-22",
+      "value": 6.46
+    },
+    {
+      "date": "2024-08-29",
+      "value": 6.35
+    },
+    {
+      "date": "2024-09-05",
+      "value": 6.35
+    },
+    {
+      "date": "2024-09-12",
+      "value": 6.2
+    },
+    {
+      "date": "2024-09-19",
+      "value": 6.09
+    },
+    {
+      "date": "2024-09-26",
+      "value": 6.08
+    },
+    {
+      "date": "2024-10-03",
+      "value": 6.12
+    },
+    {
+      "date": "2024-10-10",
+      "value": 6.32
+    },
+    {
+      "date": "2024-10-17",
+      "value": 6.44
+    },
+    {
+      "date": "2024-10-24",
+      "value": 6.54
+    },
+    {
+      "date": "2024-10-31",
+      "value": 6.72
+    },
+    {
+      "date": "2024-11-07",
+      "value": 6.79
+    },
+    {
+      "date": "2024-11-14",
+      "value": 6.78
+    },
+    {
+      "date": "2024-11-21",
+      "value": 6.84
+    },
+    {
+      "date": "2024-11-27",
+      "value": 6.81
+    },
+    {
+      "date": "2024-12-05",
+      "value": 6.69
+    },
+    {
+      "date": "2024-12-12",
+      "value": 6.6
+    },
+    {
+      "date": "2024-12-19",
+      "value": 6.72
+    },
+    {
+      "date": "2024-12-26",
+      "value": 6.85
+    },
+    {
+      "date": "2025-01-02",
+      "value": 6.91
+    },
+    {
+      "date": "2025-01-09",
+      "value": 6.93
+    },
+    {
+      "date": "2025-01-16",
+      "value": 7.04
+    },
+    {
+      "date": "2025-01-23",
+      "value": 6.96
+    },
+    {
+      "date": "2025-01-30",
+      "value": 6.95
+    },
+    {
+      "date": "2025-02-06",
+      "value": 6.89
+    },
+    {
+      "date": "2025-02-13",
+      "value": 6.87
+    },
+    {
+      "date": "2025-02-20",
+      "value": 6.85
+    },
+    {
+      "date": "2025-02-27",
+      "value": 6.76
+    },
+    {
+      "date": "2025-03-06",
+      "value": 6.63
+    },
+    {
+      "date": "2025-03-13",
+      "value": 6.65
+    },
+    {
+      "date": "2025-03-20",
+      "value": 6.67
+    },
+    {
+      "date": "2025-03-27",
+      "value": 6.65
+    },
+    {
+      "date": "2025-04-03",
+      "value": 6.64
+    },
+    {
+      "date": "2025-04-10",
+      "value": 6.62
+    },
+    {
+      "date": "2025-04-17",
+      "value": 6.83
+    },
+    {
+      "date": "2025-04-24",
+      "value": 6.81
+    },
+    {
+      "date": "2025-05-01",
+      "value": 6.76
+    },
+    {
+      "date": "2025-05-08",
+      "value": 6.76
+    },
+    {
+      "date": "2025-05-15",
+      "value": 6.81
+    },
+    {
+      "date": "2025-05-22",
+      "value": 6.86
+    },
+    {
+      "date": "2025-05-29",
+      "value": 6.89
+    },
+    {
+      "date": "2025-06-05",
+      "value": 6.85
+    },
+    {
+      "date": "2025-06-12",
+      "value": 6.84
+    },
+    {
+      "date": "2025-06-18",
+      "value": 6.81
+    },
+    {
+      "date": "2025-06-26",
+      "value": 6.77
+    },
+    {
+      "date": "2025-07-03",
+      "value": 6.67
+    },
+    {
+      "date": "2025-07-10",
+      "value": 6.72
+    },
+    {
+      "date": "2025-07-17",
+      "value": 6.75
+    },
+    {
+      "date": "2025-07-24",
+      "value": 6.74
+    },
+    {
+      "date": "2025-07-31",
+      "value": 6.72
+    },
+    {
+      "date": "2025-08-07",
+      "value": 6.63
+    },
+    {
+      "date": "2025-08-14",
+      "value": 6.58
+    },
+    {
+      "date": "2025-08-21",
+      "value": 6.58
+    },
+    {
+      "date": "2025-08-28",
+      "value": 6.56
+    },
+    {
+      "date": "2025-09-04",
+      "value": 6.5
+    },
+    {
+      "date": "2025-09-11",
+      "value": 6.35
+    },
+    {
+      "date": "2025-09-18",
+      "value": 6.26
+    },
+    {
+      "date": "2025-09-25",
+      "value": 6.3
+    },
+    {
+      "date": "2025-10-02",
+      "value": 6.34
+    },
+    {
+      "date": "2025-10-09",
+      "value": 6.3
+    },
+    {
+      "date": "2025-10-16",
+      "value": 6.27
+    },
+    {
+      "date": "2025-10-23",
+      "value": 6.19
+    },
+    {
+      "date": "2025-10-30",
+      "value": 6.17
+    },
+    {
+      "date": "2025-11-06",
+      "value": 6.22
+    },
+    {
+      "date": "2025-11-13",
+      "value": 6.24
+    },
+    {
+      "date": "2025-11-20",
+      "value": 6.26
+    },
+    {
+      "date": "2025-11-26",
+      "value": 6.23
+    },
+    {
+      "date": "2025-12-04",
+      "value": 6.19
+    },
+    {
+      "date": "2025-12-11",
+      "value": 6.22
+    },
+    {
+      "date": "2025-12-18",
+      "value": 6.21
+    },
+    {
+      "date": "2025-12-24",
+      "value": 6.18
+    },
+    {
+      "date": "2025-12-31",
+      "value": 6.15
+    },
+    {
+      "date": "2026-01-08",
+      "value": 6.16
+    },
+    {
+      "date": "2026-01-15",
+      "value": 6.06
+    },
+    {
+      "date": "2026-01-22",
+      "value": 6.09
+    },
+    {
+      "date": "2026-01-29",
+      "value": 6.1
+    },
+    {
+      "date": "2026-02-05",
+      "value": 6.11
+    },
+    {
+      "date": "2026-02-12",
+      "value": 6.09
+    },
+    {
+      "date": "2026-02-19",
+      "value": 6.01
+    },
+    {
+      "date": "2026-02-26",
+      "value": 5.98
+    },
+    {
+      "date": "2026-03-05",
+      "value": 6
+    },
+    {
+      "date": "2026-03-12",
+      "value": 6.11
+    },
+    {
+      "date": "2026-03-19",
+      "value": 6.22
+    },
+    {
+      "date": "2026-03-26",
+      "value": 6.38
+    },
+    {
+      "date": "2026-04-02",
+      "value": 6.46
+    },
+    {
+      "date": "2026-04-09",
+      "value": 6.37
+    },
+    {
+      "date": "2026-04-16",
+      "value": 6.3
+    },
+    {
+      "date": "2026-04-23",
+      "value": 6.23
+    },
+    {
+      "date": "2026-04-30",
+      "value": 6.3
+    },
+    {
+      "date": "2026-05-07",
+      "value": 6.37
+    },
+    {
+      "date": "2026-05-14",
+      "value": 6.36
+    },
+    {
+      "date": "2026-05-21",
+      "value": 6.51
+    },
+    {
+      "date": "2026-05-28",
+      "value": 6.53
+    },
+    {
+      "date": "2026-06-04",
+      "value": 6.48
+    },
+    {
+      "date": "2026-06-11",
+      "value": 6.52
+    },
+    {
+      "date": "2026-06-18",
+      "value": 6.47
+    },
+    {
+      "date": "2026-06-25",
+      "value": 6.49
+    },
+    {
+      "date": "2026-07-02",
+      "value": 6.43
+    },
+    {
+      "date": "2026-07-09",
+      "value": 6.49
+    },
+    {
+      "date": "2026-07-16",
+      "value": 6.55
+    },
+    {
+      "date": "2026-07-23",
+      "value": 6.58
+    },
+    {
+      "date": "2026-07-30",
+      "value": 6.66
+    },
+    {
+      "date": "2026-08-06",
+      "value": 6.69
+    },
+    {
+      "date": "2026-08-13",
+      "value": 6.67
+    },
+    {
+      "date": "2026-08-20",
+      "value": 6.65
+    },
+    {
+      "date": "2026-08-27",
+      "value": 6.66
+    },
+    {
+      "date": "2026-09-03",
+      "value": 6.71
+    },
+    {
+      "date": "2026-09-10",
+      "value": 6.76
+    },
+    {
+      "date": "2026-09-17",
+      "value": 6.95
+    },
+    {
+      "date": "2026-09-24",
+      "value": 7.03
+    },
+    {
+      "date": "2026-10-01",
+      "value": 7.28
+    },
+    {
+      "date": "2026-10-08",
+      "value": 7.4
+    },
+    {
+      "date": "2026-10-15",
+      "value": 7.4
+    },
+    {
+      "date": "2026-10-22",
+      "value": 7.32
+    },
+    {
+      "date": "2026-10-29",
+      "value": 7.24
+    },
+    {
+      "date": "2026-11-05",
+      "value": 7.18
+    },
+    {
+      "date": "2026-11-12",
+      "value": 7.11
     }
   ],
   "encoding": {
@@ -160,57 +1269,80 @@ The unit and the period go in the title, as in "monthly, $". The three tiles her
   },
   "metrics": [
     {
-      "label": "Latest, 2026-Q3",
-      "value": "8.58%"
+      "label": "Latest, Nov 12, 2026",
+      "value": "7.11%",
+      "delta": "+0.87 pts",
+      "deltaTone": "up"
     },
     {
-      "label": "Start, 2021-Q1",
-      "value": "7.14%"
+      "label": "A year earlier, Nov 13, 2025",
+      "value": "6.24%"
     },
     {
-      "label": "Peak, 2022-Q2",
-      "value": "10.23%"
+      "label": "Peak, Oct 26, 2023",
+      "value": "7.79%"
     }
   ],
   "overrides": {
     "compact": {
       "chrome": {
-        "title": "US job postings that mention remote work: 8.58%",
-        "subtitle": "2021-Q1: 7.14%. Peak, 2022-Q2: 10.23%."
+        "title": "30-year mortgage rate, weekly: 7.11%",
+        "subtitle": "+0.87 pts from a year earlier (6.24% on Nov 13, 2025). Peak, Oct 26, 2023: 7.79%."
       }
     }
   },
-  "labels": {
-    "density": "none"
+  "theme": {
+    "colors": {
+      "categorical": [
+        {
+          "light": "#0e7490",
+          "dark": "#22a3c4"
+        }
+      ]
+    }
   },
   "chrome": {
-    "title": "US job postings that mention remote work, quarterly, %"
+    "title": "30-year fixed mortgage rate, weekly, %"
   }
 }
 ```
 
-The remote-work tile counts the share of Indeed job postings that mention remote or hybrid work, not the number of people who work remotely. A title that said only "remote work" would claim far more than the data shows.
+The first cell gives the latest rate with its change from a year earlier as a delta, colored by direction. The other cells give the rate a year earlier and the October 2023 peak, so the reader can see that 7.11% is high for the past five years without being the top.
 
-The source goes under the tile, as the line under each chart here does.
+## A sparkline drops its axes
 
-Each tile also scales its line to its own range, so two lines of the same height can stand for very different changes.
+A sparkline is a line chart stripped of its axes, gridlines, legend and source line, small enough to sit beside a number. In a box this small, axis labels would take more room than the line, and the reader wants direction, not exact values.
 
-Keep the tiles in one row the same height, and put first the one the reader acts on first. Equal heights make the lines easier to compare for direction.
+<Demo id="blog/kpi-sparkline-bare" />
 
-## Fitting tiles in a grid
+The line carries no scale, so it cannot say that the climb was from 2.65% to above 7%. The number has to sit beside it, here as its title.
 
-The metrics row needs a chart at least 480 pixels wide and, in a test at 300 pixels tall, did not appear, so these tiles are 380 pixels tall. A phone is narrower than 480, so each tile carries a compact-width override that moves the same numbers into its title and subtitle, as the phone view of the mortgage tile does.
+## What every tile must still say
 
-For a smaller box, render the label and the number as plain HTML and put a bare sparkline of 36 to 56 pixels beside them.
+Removing the axes removes the unit, the period and the source, so the tile has to supply them another way. The unit and the period go in the title, as in "weekly" and the % sign on the number. The source goes under the tile, as the line under each chart here does.
+
+Name what was measured. The remote-work tile counts the share of Indeed job postings that mention remote or hybrid work, not the share of people who work remotely, and a title that said "remote work" would claim far more than the data shows.
+
+Each tile scales its line to its own range, so two lines of the same height can stand for very different changes. Say so in the subtitle, as the dashboard does, or share a y domain when the sizes should compare.
+
+Show gaps as gaps. The egg source has no price for October 2025, so the egg line breaks there instead of drawing a straight segment across the missing month. For the same reason the egg tile compares October 2026 with September 2025, the closest earlier month, and its label names that month.
+
+## Laying out the grid
+
+The dashboard is one chart split into panels, one per KPI, each with its own y scale. A panel needs at least 200 pixels, so three fit side by side on a desktop and they stack into one column on a phone.
+
+The metrics row shows only when the chart is at least 480 pixels wide and leaves at least 150 pixels for the plot. On a phone it drops out, so the panel titles keep each latest reading and a compact-width subtitle carries the three changes.
+
+Keep the tiles in a row the same height, and put first the one the reader acts on first. Equal heights make the lines easier to compare for direction.
 
 ## The spec
 
-The bare sparkline sets `display: "sparkline"`, which strips everything except the line. Its `mark` is a `line` with a `stroke`, its `x` is a `temporal` field and its `y` is a `quantitative` one.
+The dashboard is a line chart with `encoding.facet` on the tile name and `columns: 3`, and `resolve: { scale: { y: "independent" } }` gives each panel its own range. `axis: false` on `x` and `y` removes both axes, and `scale: { zero: false }` lets each line use the full panel height. A row with a `null` value breaks the line, which is how the missing egg month shows.
 
-The tiles use a normal line chart instead, because `display: "sparkline"` would also strip the title and the metrics row. `axis: false` on `x` and `y` removes both axes, and `scale: { zero: false }` lets the line use the full height. `mark.point: "last"` puts a dot on the latest reading.
+`metrics` is an array of cells shown above the plot, each a `label` and a `value`, with an optional `delta` and a `deltaTone` of `"up"` or `"down"` for its color. `overrides.compact.chrome` swaps in a phone title and subtitle. The code that builds the spec writes every label, value and delta from the same rows that draw the lines.
 
-`metrics` is an array of `label` and `value` cells shown above the plot, and `chrome.title` names the KPI. `overrides.compact.chrome` swaps in the phone title and subtitle. The code that builds the spec writes the label and value strings from the same rows that draw the line.
+The sparkline sets `display: "sparkline"`, which strips the axes, gridlines, legend and source. A `chrome.title` set explicitly stays, which is how the number sits above the line. A sparkline colors itself by trend unless `mark.stroke` is set, and a y `scale.domain` with room above the peak keeps the line clear of the title. In the single tile, `mark.point: "last"` puts a dot on the latest reading.
 
-The [responsive page](/docs/behavior/responsive/) shows how a chart changes at narrow widths, and the [dashboard tiles page](/docs/composition/dashboard-tiles/) shows the other tile forms.
+The [dashboard tiles page](/docs/composition/dashboard-tiles/) shows the other tile forms, and the [sparkline page](/docs/change-over-time/sparkline/) covers `display: "sparkline"` in full.
 
-The [sparkline page](/docs/change-over-time/sparkline/) covers `display: "sparkline"` in full.
+The three width breakpoints, and what `overrides` can replace at each one, are on the [responsive page](/docs/behavior/responsive/).

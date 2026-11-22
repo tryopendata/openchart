@@ -13,7 +13,8 @@ import type { ChartSpec } from "@opendata-ai/openchart-core";
 import { sourceOf } from "../source";
 import { defineDemo } from "../types";
 
-const ACCENT = "#0e7490";
+/** The bar fill as a light and dark pair, so the bars keep their contrast on the dark page. */
+const ACCENT = { light: "#0e7490", dark: "#22a3c4" };
 
 const incomes = stateMedianHouseholdIncome.data.map((row) => ({
   state: row.state_name,
@@ -37,9 +38,21 @@ export function binCounts(values: number[], start: number, step: number): number
 const incomeValues = incomes.map((row) => row.income);
 const dollars = (value: number) => `$${value.toLocaleString("en-US")}`;
 
+/**
+ * Tick values on bin edges, so a reader can see where each bar starts and ends.
+ * Narrow bins get every second edge from $50,000 (a phone fits four or five
+ * labels); the $25,000 chart gets every edge.
+ */
+const edgeTicks = (step: number) => {
+  const every = step >= 25_000 ? step : 20_000;
+  const ticks: number[] = [];
+  for (let edge = INCOME_START; edge <= INCOME_END; edge += every) ticks.push(edge);
+  return ticks;
+};
+
 function incomeHistogram(step: number, title: string): ChartSpec {
   return {
-    mark: { type: "bar", fill: ACCENT },
+    mark: "bar",
     data: incomes,
     transform: [
       { bin: { step, extent: [INCOME_START, INCOME_END] }, field: "income", as: ["from", "to"] },
@@ -56,7 +69,7 @@ function incomeHistogram(step: number, title: string): ChartSpec {
         axis: {
           title: "Median household income, 2024",
           format: "$~s",
-          values: [60000, 80000, 100000, 120000],
+          values: edgeTicks(step),
         },
       },
       x2: { field: "to", type: "quantitative" },
@@ -66,6 +79,7 @@ function incomeHistogram(step: number, title: string): ChartSpec {
         axis: { title: "States per bin", tickCount: 4 },
       },
     },
+    theme: { colors: { categorical: [ACCENT] } },
     chrome: {
       title,
       subtitle: `Number of states by median household income in ${dollars(step)} bins, 50 states and DC`,
@@ -76,8 +90,10 @@ function incomeHistogram(step: number, title: string): ChartSpec {
 const coarse = binCounts(incomeValues, INCOME_START, 25_000);
 const medium = binCounts(incomeValues, INCOME_START, 10_000);
 const fine = binCounts(incomeValues, INCOME_START, 1_000);
+/** The 50 states without DC, whose income sits outside $70,000 to $90,000. */
+const states = incomes.filter((row) => row.state !== "District of Columbia");
 /** States in the two $10,000 bins from $70,000 to $90,000. */
-const middleStates = incomeValues.filter((value) => value >= 70_000 && value < 90_000).length;
+const middleStates = states.filter((row) => row.income >= 70_000 && row.income < 90_000).length;
 
 const source = sourceOf(stateMedianHouseholdIncome);
 
@@ -88,7 +104,7 @@ export const incomeTwentyFiveThousand = defineDemo({
   height: 380,
   spec: incomeHistogram(
     25_000,
-    `With $25,000 bins the ${incomes.length} states make ${coarse.length} bars and no shape`,
+    `With $25,000 bins the ${states.length} states and DC make ${coarse.length} bars and hide the detail`,
   ),
 });
 
@@ -99,7 +115,7 @@ export const incomeTenThousand = defineDemo({
   height: 380,
   spec: incomeHistogram(
     10_000,
-    `${middleStates} of ${incomes.length} states sit between $70,000 and $90,000, with a tail to the right`,
+    `${middleStates} of ${states.length} states sit between $70,000 and $90,000, with a tail to the right`,
   ),
 });
 
@@ -117,7 +133,10 @@ export const incomeThousand = defineDemo({
 /** The counts the post quotes, exported so the test pins them. */
 export const incomeBinFacts = { coarse, medium, fine, middleStates };
 
-const quakes = earthquakeMagnitudes.data;
+/** The first magnitude the feed is meant to cover. Its 2.4 row (quakes rounded down into it) is left out. */
+const QUAKE_START = 2.5;
+const QUAKE_END = 7;
+const quakes = earthquakeMagnitudes.data.filter((row) => row.magnitude_bin >= QUAKE_START);
 const total = quakes.reduce((sum, row) => sum + row.quakes, 0);
 const dip = quakes.find((row) => row.magnitude_bin === 3.9);
 const rebound = quakes.find((row) => row.magnitude_bin === 4.5);
@@ -131,7 +150,7 @@ const rebound = quakes.find((row) => row.magnitude_bin === 4.5);
 function quakeHistogram(step: number, title: string, annotate: boolean): ChartSpec {
   const merged = step !== 0.1;
   return {
-    mark: { type: "bar", fill: ACCENT },
+    mark: "bar",
     data: quakes.map((row) => ({
       ...row,
       magnitude_to: Math.round(row.magnitude_bin * 10 + 1) / 10,
@@ -139,7 +158,11 @@ function quakeHistogram(step: number, title: string, annotate: boolean): ChartSp
     ...(merged
       ? {
           transform: [
-            { bin: { step, extent: [2, 7] }, field: "magnitude_bin", as: ["from", "to"] },
+            {
+              bin: { step, extent: [QUAKE_START, QUAKE_END] },
+              field: "magnitude_bin",
+              as: ["from", "to"],
+            },
             {
               aggregate: [{ op: "sum" as const, field: "quakes", as: "count" }],
               groupby: ["from", "to"],
@@ -151,8 +174,8 @@ function quakeHistogram(step: number, title: string, annotate: boolean): ChartSp
       x: {
         field: merged ? "from" : "magnitude_bin",
         type: "quantitative",
-        scale: { domain: [2, 7], nice: false },
-        axis: { title: "Magnitude", tickCount: 6 },
+        scale: { domain: [QUAKE_START, QUAKE_END], nice: false },
+        axis: { title: "Magnitude", values: [3, 4, 5, 6, 7] },
       },
       x2: { field: merged ? "to" : "magnitude_to", type: "quantitative" },
       y: {
@@ -176,6 +199,7 @@ function quakeHistogram(step: number, title: string, annotate: boolean): ChartSp
           ],
         }
       : {}),
+    theme: { colors: { categorical: [ACCENT] } },
     chrome: {
       title,
       subtitle: `Magnitude 2.5+ earthquakes in ${step} magnitude bins, ${total.toLocaleString("en-US")} quakes, January 2026`,
