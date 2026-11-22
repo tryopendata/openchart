@@ -1,6 +1,6 @@
 ---
 title: How to make a beeswarm plot
-description: A beeswarm draws every observation as a dot, nudged sideways so none overlap. When it beats a histogram, how to split it by group, and when to stop using it.
+description: A beeswarm draws every observation as a dot, nudged off the axis so none overlap. When it beats a histogram, how to split it by group, and when to stop.
 published: 2026-11-16
 author: OpenChart
 tags: [chart-choice]
@@ -10,9 +10,9 @@ lead: blog/teacher-pay-beeswarm
 
 import Demo from "../../components/demo/Demo.astro";
 
-A beeswarm plot draws each observation as its own dot along one axis, and nudges dots apart sideways when they would overlap. The clusters that form are the shape of the distribution, and every value is still there to point at.
+A beeswarm plot draws each observation as its own dot along one axis, and nudges dots apart, off the axis, when they would overlap. The clusters that form are the shape of the distribution, and every value is still there to point at.
 
-The data here is the average public-school teacher salary in each state, adjusted for inflation, from the [National Center for Education Statistics](https://nces.ed.gov/programs/digest/d22/tables/dt22_211.60.asp). Between 1999-00 and 2021-22 it fell in 36 of the 51 states and DC.
+The data here is the average public-school teacher salary in each state, adjusted for inflation, from the [National Center for Education Statistics](https://nces.ed.gov/programs/digest/d22/tables/dt22_211.60.asp). Between 1999-00 and 2021-22 it fell in 36 of 51 jurisdictions, the 50 states and DC.
 
 ## What a histogram leaves out
 
@@ -333,11 +333,11 @@ A beeswarm keeps each state as a dot, so the same chart can name its outliers.
 }
 ```
 
-Dots that would overlap are nudged up and down. Red dots lost ground and blue dots gained. The leftmost dot is Indiana, down 22.4%, and the rightmost is Washington, up 19.3%. Hovering over any dot names its state.
+The leftmost dot is Indiana, down 22.4%, and the rightmost is Washington, up 19.3%. Hovering over any dot names its state.
 
-Only the position along the axis means anything. The sideways nudge exists to keep dots from covering each other, so a dot sitting higher than its neighbor is not larger or later, and that is worth saying in a caption when readers are new to the chart.
+Read the swarm the way you would read a histogram: where dots crowd together, many states share a value. Of the 36 states that fell, 23 lost between 5% and 12%, and the 15 that gained are spread thinly along the right.
 
-A box plot, which draws only the middle half of the values as a box and a few outliers as dots, would also hide the clusters this view shows.
+Only the position along the axis means anything. The nudge off the axis exists to keep dots from covering each other, so a dot sitting higher than its neighbor is not larger or later. Add a caption saying so for readers new to the chart.
 
 ## Split a swarm by group
 
@@ -345,15 +345,15 @@ A second field turns one swarm into one lane per group. Here, each dot is a coll
 
 <Demo id="blog/majors-pay-beeswarm" />
 
-The lanes compare the groups on one shared axis. Engineering, in blue, has the widest spread, with majors across a $25,000 range. Many majors share the same pay, because the source rounds it, and identical values stack into columns of dots instead of covering each other.
+Engineering, in blue, has the widest spread, with majors across a $25,000 range. Many majors share the same pay, because the source rounds it, and identical values stack into columns of dots instead of covering each other.
 
-The tight clusters are readable too. Seven majors share a median of exactly $45,000, four of them in Computers & Mathematics. A column of dots shows that stack, where a box plot would show a single line.
+Seven majors share a median of exactly $45,000, four of them in Computers & Mathematics. A column of dots shows that stack. A box plot, which draws the middle half of the values as one box, would show a single line, and it would also have hidden which state was which in the teacher chart.
 
-To ask whether two numbers move together, such as pay and the share of women in a major, plot both on a [scatter plot](/docs/correlation/scatter/). Among these 60 majors, pay tends to be lower where the share of women is higher, a correlation of -0.56 on a scale where -1 means a perfect inverse.
+A beeswarm shows one number at a time. To ask whether two numbers move together, such as pay and the share of women in a major, use a [scatter plot](/docs/correlation/scatter/) instead.
 
 ## Where a beeswarm stops working
 
-Every row gets a dot, so the plot runs out of room as the rows multiply. With thousands of points the dots either shrink until they are specks or stack so far from the axis that the swarm is wider than the data. A few hundred points is a practical ceiling. Past that, use a [histogram](/docs/distribution/histogram/) or a density curve and give up the individual dots.
+Every row gets a dot, so the plot runs out of room as the rows multiply. With thousands of points the dots either shrink until they are specks or stack so far off the axis that neighboring lanes overlap. A few hundred points is a practical ceiling. Past that, use a [histogram](/docs/distribution/histogram/) or a density curve and give up the individual dots.
 
 At the other end, a handful of points that never overlap do not need dodging. A [tick strip](/docs/distribution/tick-strip/) draws one tick per value on a shared axis and is simpler.
 
@@ -361,6 +361,6 @@ At the other end, a handful of points that never overlap do not need dodging. A 
 
 Set `mark` to `"beeswarm"` and put the value field on `encoding.x`. With no `y`, all the dots share one lane. The teacher chart's `color` field is `direction`, which each row carries as `Fell` or `Rose`, worked out from the change before charting. A `scale` with a `domain` and a `range` pairs each value with its color, and `legend: { show: false }` drops the legend because the subtitle names the colors. The `tooltip` list names the fields shown on hover.
 
-For lanes, add a nominal field on `encoding.y`, as the majors chart does with `field`. Its `sort` object, `{ field: "pay", op: "median", order: "ascending" }`, orders the lanes by median pay, highest at the top. Swap `x` and `y` to turn the swarm vertical.
+For lanes, add a nominal field on `encoding.y`, as the majors chart does with its field of study. Its `sort` object, `{ field: "pay", op: "median", order: "ascending" }`, orders the lanes by median pay, highest at the top because `y` lists categories from the bottom up. Swap `x` and `y` to turn the swarm vertical.
 
 The [beeswarm page](/docs/distribution/beeswarm/) also covers sizing each dot by a second field.

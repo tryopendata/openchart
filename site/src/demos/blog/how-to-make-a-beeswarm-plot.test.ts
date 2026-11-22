@@ -57,6 +57,9 @@ describe("the beeswarm post's figures", () => {
     const byChange = [...teacherChanges].sort((a, b) => a.change - b.change);
     expect(byChange[0]).toMatchObject({ state: "Indiana", change: -22.4 });
     expect(byChange.at(-1)).toMatchObject({ state: "Washington", change: 19.3 });
+    const fell = teacherChanges.filter((row) => row.change < 0);
+    expect(fell.filter((row) => row.change >= -12 && row.change <= -5)).toHaveLength(23);
+    expect(teacherChanges.filter((row) => row.change > 0)).toHaveLength(15);
   });
 
   it("pins the college majors the prose quotes", () => {
@@ -78,19 +81,6 @@ describe("the beeswarm post's figures", () => {
         pay: row.median_salary,
       })),
     );
-  });
-
-  it("matches the correlation the prose gives between share of women and pay", () => {
-    const rows = collegeMajors.data;
-    const mean = (values: number[]) => values.reduce((a, b) => a + b, 0) / values.length;
-    const xs = rows.map((row) => row.share_women);
-    const ys = rows.map((row) => row.median_salary);
-    const [mx, my] = [mean(xs), mean(ys)];
-    const cross = xs.reduce((sum, x, i) => sum + (x - mx) * ((ys[i] ?? 0) - my), 0);
-    const spread = Math.sqrt(
-      xs.reduce((sum, x) => sum + (x - mx) ** 2, 0) * ys.reduce((sum, y) => sum + (y - my) ** 2, 0),
-    );
-    expect(Math.round((cross / spread) * 100) / 100).toBe(-0.56);
   });
 
   it("titles each chart with a finding read off the rows", () => {

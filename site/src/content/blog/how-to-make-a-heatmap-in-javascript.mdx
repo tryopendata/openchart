@@ -10,7 +10,7 @@ lead: blog/co2-seasonal-heatmap
 
 import Demo from "../../components/demo/Demo.astro";
 
-A heatmap is a grid with one category along each side and a colored cell at every crossing. The color is a number, so a table of numbers becomes a picture where dark rows, dark columns and gaps stand out.
+A heatmap is a grid with one category along each side and a colored cell at every crossing. The color stands for a number, so a table of numbers becomes a picture where dark rows, dark columns and gaps stand out.
 
 ## Two categories and one number
 
@@ -18,7 +18,7 @@ Lawful permanent residents, who receive what are called green cards, are counted
 
 <Demo id="blog/green-cards-heatmap" />
 
-Mexico is the darkest row in every year. The pale column in fiscal 2020 runs through every row, so whatever caused the drop hit all six countries at once. That was the first fiscal year of the pandemic, and the total across all countries fell by 31%.
+Mexico is the darkest row in every year. Fiscal 2020, the first fiscal year of the pandemic, is a pale column through every row, and the total across all countries fell by 31%.
 
 With 60 cells, each cell carries its number, so the reader can check a color against a value. At several hundred cells the labels would crowd each other, and the color and the hover tooltip would have to carry the numbers.
 
@@ -26,13 +26,13 @@ With 60 cells, each cell carries its number, so the reader can check a color aga
 
 A sequential scale runs from light to dark in one hue, and fits values that only go one way, like counts. A diverging scale runs two hues out from a neutral middle, and fits values that sit above or below a reference point.
 
-The wrong choice hides the pattern. Mauna Loa Observatory in Hawaii has measured carbon dioxide (CO2) in the air every month since 1958, and NOAA publishes the readings through its [Global Monitoring Laboratory](https://gml.noaa.gov/ccgg/trends/data.html). Each row below is one year and each column one month, on a single sequential scale.
+A color scale spent on the long-term trend hides the seasonal one. Mauna Loa Observatory in Hawaii has measured carbon dioxide (CO2) in the air every month since 1958, and NOAA publishes the readings through its [Global Monitoring Laboratory](https://gml.noaa.gov/ccgg/trends/data.html). Each row below is one year and each column one month, on a single sequential scale.
 
 <Demo id="blog/co2-heatmap" />
 
 The rows get darker from 1960 to 2025 and nothing else shows. CO2 climbed by more than 100 parts per million (ppm) between those years, so the trend uses up the whole color range.
 
-Within each year CO2 also rises and falls with the seasons, because plants take up CO2 as they grow in the northern spring and summer and release it in autumn and winter. That swing is about 6 ppm, too small to see against 100. Subtracting each year's own average removes the trend and centers the scale on zero, which makes a diverging scale the right one.
+Within each year CO2 also rises and falls with the seasons. It builds up over the winter, peaks in spring, and drops to its low in autumn as growing plants in the northern hemisphere draw it down. That swing is about 6 ppm, too small to see against 100. Subtracting each year's own average removes the trend and centers the scale on zero, which makes a diverging scale the right one.
 
 ```json demo source="NOAA Global Monitoring Laboratory, Mauna Loa CO2 monthly mean" height=380
 {
@@ -390,13 +390,13 @@ Within each year CO2 also rises and falls with the seasons, because plants take 
 }
 ```
 
-Now the same stripes run down every row. Spring months are red in every year, and autumn months are blue. The pattern is in the data the whole time, and it only appears once the color range is spent on it.
+Now the same months are red or blue in every year: spring is red and autumn is blue, so the stripes run down the columns.
 
 ## Order the rows and columns
 
-A heatmap reads by adjacency, so the order of the categories is part of the chart. OpenChart keeps categories in the order they appear in the data, which for months would be wrong if the rows were sorted alphabetically, putting April next to August. Both CO2 charts set the months in calendar order and the years in time order. The green card chart orders countries by size, so the darkest row is at the top.
+A heatmap reads by adjacency, so the order of the categories is part of the chart. OpenChart keeps categories in the order they appear in the data, so data sorted alphabetically puts April next to August. Both CO2 charts list the months in calendar order and the years in time order with a `sort` array. The green card chart orders countries by size, so the darkest row is at the top.
 
-When no natural order exists, sort the rows by their average value. Similar rows then sit together and the blocks of color are easier to see.
+When no natural order exists, sort the rows by their average value. Rows with similar levels then sit together and the blocks of color are easier to see.
 
 ## When another chart is better
 
@@ -408,6 +408,6 @@ A heatmap is the `rect` mark. Put one category on `encoding.x` and the other on 
 
 On `color`, `scale.scheme` picks the ramp: `"blue"` is sequential and `"redBlue"` is diverging. `scale.domain: [-4, 4]` centers the neutral color on zero, and `reverse: true` flips `redBlue` so positive values are red. `format` sets how values print in the tooltip. See the [color guide](/docs/style/color/) and the [scales guide](/docs/the-spec/scales/) for the other options.
 
-The cell numbers in the green card chart are two extra [layers](/docs/composition/layers/) of `text` marks drawn over the `rect` layer, which shares its data and its `x` and `y`. One layer filters to cells of 100 thousand or more and draws white text, and the other draws dark text on the rest, so every label stays readable.
+The cell numbers in the green card chart are two extra [layers](/docs/composition/layers/) of `text` marks drawn over the `rect` layer with the same data and the same `x` and `y`. One layer filters to cells of 100 thousand or more and draws white text, and the other draws dark text on the rest, so every label stays readable.
 
 The [heatmap page](/docs/correlation/heatmap/) shows fixed color domains and hand-ordered rows.

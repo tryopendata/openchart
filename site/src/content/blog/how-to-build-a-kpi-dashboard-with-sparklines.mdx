@@ -10,17 +10,15 @@ lead: blog/kpi-tile-mortgage
 
 import Demo from "../../components/demo/Demo.astro";
 
-A KPI tile has three parts: the current number, a comparison that says whether the number is high or low, and a small line that shows the shape. The number says where things stand, and the line says how they got there.
+A KPI tile has three parts: the current number, a comparison that says whether the number is high or low, and a small line that shows the shape. 
 
 ## A sparkline is a line with no axes
 
-A sparkline is a line chart stripped of its title, axes, legend and source line, small enough to sit beside a number. This one plots the average 30-year fixed mortgage rate each week since January 2021.
+A sparkline is a line chart stripped of its title, axes, legend and source line, small enough to sit beside a number. In a box 56 pixels tall, axis labels would take more room than the line, and the reader is not looking for exact values, so the axes go. This one plots the average 30-year fixed mortgage rate each week since January 2021.
 
 <Demo id="blog/kpi-sparkline-bare" />
 
-The shape is a low start, a steep climb and a long plateau. The line carries no scale, so it cannot say that the climb was from 2.65% to above 7%, or that the last point is 7.11%. A reader gets those from the number, which is why a sparkline is always drawn next to one.
-
-The axes go on purpose. In a box 56 pixels tall, axis labels would take more room than the line does, and the reader is not looking for exact values.
+The shape is a low start, a steep climb and a long plateau. The line carries no scale, so it cannot say that the climb was from 2.65% to above 7%, or that the last point is 7.11%. A reader gets those from the number, which is why a sparkline belongs next to one.
 
 ## A number, a comparison and a shape
 
@@ -28,19 +26,19 @@ A number alone does not say whether it is high. The tile below puts the latest r
 
 <Demo id="blog/kpi-tile-mortgage" />
 
-The rate of 7.11% is more than two and a half times the January 2021 rate and still below the October 2023 peak. Without those two neighbors, 7.11% would read as a number with no meaning.
+The rate of 7.11% is more than two and a half times the January 2021 rate and still below the October 2023 peak.
 
-Different series need different comparisons. Eggs show why the peak is worth a cell of its own.
+The peak cell matters most when a series spiked and came back down, as egg prices did.
 
 <Demo id="blog/kpi-tile-eggs" />
 
-The price of a dozen eggs was $2.32 in October 2026, which looks unremarkable until the peak of $6.23 in March 2025 sits beside it. The line also has a gap: the source has no price for October 2025, and the line draws straight across it.
+The price of a dozen eggs was $2.32 in October 2026, which looks unremarkable until the peak of $6.23 in March 2025 sits beside it. The source has no price for October 2025, and the line bridges that month with a straight segment.
 
 ## What every tile must still say
 
 Removing the axes removes the unit, the period and the source, so the tile has to supply them another way.
 
-The unit and the period go in the title, as in "monthly, $". The three tiles here report weekly, monthly and quarterly readings, and a reader should know which one they are looking at.
+The unit and the period go in the title, as in "monthly, $". The three tiles here report weekly, monthly and quarterly readings.
 
 ```json demo source="Indeed Hiring Lab, Remote and Hybrid Job Postings Tracker" height=380
 {
@@ -191,21 +189,25 @@ The unit and the period go in the title, as in "monthly, $". The three tiles her
 }
 ```
 
-What the number measures matters as much. This tile counts the share of Indeed job postings that mention remote or hybrid work, not the number of people who work remotely. The share peaked at 10.23% in 2022-Q2 and was 8.58% in 2026-Q3. A title that said only "remote work" would claim far more than the data shows.
+The remote-work tile counts the share of Indeed job postings that mention remote or hybrid work, not the number of people who work remotely. A title that said only "remote work" would claim far more than the data shows.
 
-The source goes under the tile, as the line under each chart here does. Each tile also scales its line to its own range, so two lines of the same height can stand for very different changes.
+The source goes under the tile, as the line under each chart here does.
+
+Each tile also scales its line to its own range, so two lines of the same height can stand for very different changes.
+
+Keep the tiles in one row the same height, and put first the one the reader acts on first. Equal heights make the lines easier to compare for direction.
 
 ## Fitting tiles in a grid
 
-Tiles run out of room before articles do. The metrics row needs a chart at least 480 pixels wide, and it did not appear when these tiles were 300 pixels tall, so they are 380. A phone is narrower than 480, so each tile carries a compact-width override that moves the same numbers into its title and subtitle, as the phone view of the mortgage tile does.
+The metrics row needs a chart at least 480 pixels wide and, in a test at 300 pixels tall, did not appear, so these tiles are 380 pixels tall. A phone is narrower than 480, so each tile carries a compact-width override that moves the same numbers into its title and subtitle, as the phone view of the mortgage tile does.
 
-For a smaller box, render the label and the number as plain HTML and put a bare sparkline of 36 to 56 pixels beside them. That is the layout the sparkline is built for.
+For a smaller box, render the label and the number as plain HTML and put a bare sparkline of 36 to 56 pixels beside them.
 
 ## The spec
 
 The bare sparkline sets `display: "sparkline"`, which strips everything except the line. Its `mark` is a `line` with a `stroke`, its `x` is a `temporal` field and its `y` is a `quantitative` one.
 
-The tiles use a normal line chart instead, because the numbers come from the chart itself. `axis: false` on `x` and `y` removes both axes, and `scale: { zero: false }` lets the line use the full height. `mark.point: "last"` puts a dot on the latest reading.
+The tiles use a normal line chart instead, because `display: "sparkline"` would also strip the title and the metrics row. `axis: false` on `x` and `y` removes both axes, and `scale: { zero: false }` lets the line use the full height. `mark.point: "last"` puts a dot on the latest reading.
 
 `metrics` is an array of `label` and `value` cells shown above the plot, and `chrome.title` names the KPI. `overrides.compact.chrome` swaps in the phone title and subtitle. The code that builds the spec writes the label and value strings from the same rows that draw the line.
 

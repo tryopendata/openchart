@@ -10,7 +10,7 @@ lead: blog/income-bins-10000
 
 import Demo from "../../components/demo/Demo.astro";
 
-A histogram sorts values into bins and draws a bar for each bin's count. You choose the width of the bins, and the same values can look like a lump, a smooth curve or static depending on that choice.
+A histogram sorts values into bins and draws a bar for each bin's count. You choose the width of the bins, and the same values can look like a lump, a smooth curve or random spikes depending on that choice.
 
 The 51 values here are the 2024 median household income of each state and DC, from the [Census Bureau's American Community Survey](https://www.census.gov/programs-surveys/acs). The lowest is Mississippi at $59,127 and the highest is DC at $109,707.
 
@@ -20,7 +20,7 @@ With wide bins everything lands in two or three bars, and the shape of the data 
 
 <Demo id="blog/income-bins-25000" />
 
-This chart says most states earn between $75,000 and $100,000. That is true, but it cannot show whether the values bunch up in the middle, spread out evenly or split into groups.
+The chart puts most states between $75,000 and $100,000 but cannot show whether those values bunch together or spread out.
 
 ## Too many bins
 
@@ -28,7 +28,7 @@ With narrow bins most bars hold one or two states, and the outline jumps around 
 
 <Demo id="blog/income-bins-1000" />
 
-A reader will see peaks and gaps here, but a state moving by $1,000 would reshuffle them. Fifty-one values spread over this many bins show the spacing of individual states, not a pattern.
+A reader will see peaks and gaps here, but each is one or two states, and moving a state by $1,000 would reshuffle them.
 
 ## A width in between
 
@@ -317,30 +317,32 @@ A $10,000 bin gives six bars. The values pile up between $70,000 and $90,000, an
 }
 ```
 
-Two rules of thumb give a starting point, and both ask for a number of bins from the size of the data. Sturges' rule uses the count of values: take the base-2 logarithm of 51 and add one, and round up to 7 bins, or about $7,200 each across this range. The Freedman-Diaconis rule also uses the spread of the middle half of the values, which makes it less sensitive to outliers like DC. It gives a width of about $9,400.
+Two rules of thumb compute a starting width from the data. Sturges' rule uses the count of values: take the base-2 logarithm of 51 and add one, and round up to 7 bins, or about $7,200 each across this range. The Freedman-Diaconis rule also uses the spread of the middle half of the values, which makes it less sensitive to outliers like DC. It gives a width of about $9,400.
 
-Both rules agree with the $10,000 chart. They are starting points, not answers: try a width on either side of the suggestion and see whether the picture changes.
+Both rules land near the $10,000 width. Keep every bin the same width: the eye reads a bar's area while the count sets only its height, so bars of unequal width stop meaning the same thing. Try a width on either side of the suggestion and see whether the picture changes.
 
 ## A feature that survives a change of width
 
-A bin can also make a feature look real. The test is to redraw the chart at another width. Here is the USGS earthquake catalog for January 2026, counted in 0.1-magnitude bins, with only the quakes of magnitude 2.5 and above.
+To tell a real feature from an artifact of the bin edges, redraw the chart at another width. Here is the USGS earthquake catalog for January 2026, counted in 0.1-magnitude bins, with only the quakes of magnitude 2.5 and above.
 
 <Demo id="blog/quakes-bins-0-1" />
 
-The counts fall as magnitude rises, as expected, but they dip to 8 at magnitude 3.9 and then rebound. Small quakes are far more common than big ones, so the counts should keep falling.
+Small quakes are far more common than big ones, so counts should fall steadily with magnitude. Instead they dip to 8 at magnitude 3.9 and climb back by 4.5.
 
 <Demo id="blog/quakes-bins-0-5" />
 
-At half-magnitude bins the small spikes at higher magnitudes smooth out, and the dip stays. A feature that survives a wider bin is in the data, and one that vanishes was probably the bins. This dip is in the data, but it comes from how the catalog was collected and not from the Earth. Most likely, quakes smaller than about magnitude 4.5 are only reported where seismometers are dense, so the catalog is incomplete there. The dataset's own description does not say this, so treat it as a likely explanation.
+At half-magnitude bins the small spikes at higher magnitudes smooth out, and the dip stays. A feature that survives a wider bin is in the data, and one that vanishes was probably the bins. This dip comes from how the catalog was collected. Most likely, quakes smaller than about magnitude 4.5 are only reported where seismometers are dense, so outside those regions the catalog mostly lists quakes of 4.5 and up and the counts jump back at 4.5.
 
 ## The spec
 
-OpenChart has a `histogram` mark that bins raw rows for you: `mark: { type: "histogram", binCount: 24 }` asks for up to 24 bins and rounds the width to a round number. The charts here use the `bin` [transform](/docs/the-spec/transforms/) instead, because it lets the spec state the exact width.
+OpenChart has a `histogram` mark that bins raw rows for you: `mark: { type: "histogram", binCount: 24 }` asks for up to 24 bins and picks a round width. The charts here use the `bin` [transform](/docs/the-spec/transforms/) instead, because it lets the spec state the exact width.
 
 In the income spec, `bin: { step: 10000, extent: [50000, 125000] }` writes each state's bin start and end into two new fields. `aggregate` with `op: "count"`, grouped by both fields, turns 51 rows into one count per bin.
 
 The bin start goes on `x` and the bin end on `x2`, so each bar spans its whole range. A `scale.domain` fixes the x range so every width is drawn on the same axis.
 
-The earthquake rows are already counts per 0.1 magnitude, so the first earthquake chart draws them directly, each bar ending 0.1 above its start. The 0.5 chart merges them with a `bin` transform and `op: "sum"` on the count field. A [density curve](/docs/distribution/density/) is the option that avoids bin edges entirely, in exchange for choosing a smoothing bandwidth.
+The earthquake rows are already counts per 0.1 magnitude, so the first earthquake chart draws them directly, each bar ending 0.1 above its start. The 0.5 chart merges them with a `bin` transform and `op: "sum"` on the count field.
+
+A [density curve](/docs/distribution/density/) avoids bin edges entirely, in exchange for choosing a bandwidth, which sets how far each value is smeared across its neighbors.
 
 The [histogram page](/docs/distribution/histogram/) lists every field the mark takes.

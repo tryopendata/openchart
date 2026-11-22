@@ -12,15 +12,13 @@ import Demo from "../../components/demo/Demo.astro";
 
 A slope chart compares many things at two points in time. Each thing gets one line from its first value to its last, so a falling line is a decrease and a steeper line is a bigger one.
 
-[FiveThirtyEight's airline safety data](https://github.com/fivethirtyeight/data/tree/master/airline-safety) counts fatal accidents at 56 airlines in two 15-year periods. Across all of them the count fell from 122 in 1985-99 to 37 in 2000-14. Grouped bars for the 11 airlines with the most accidents in the first period show the drop, but slowly.
+[FiveThirtyEight's airline safety data](https://github.com/fivethirtyeight/data/tree/master/airline-safety) counts fatal accidents at 56 airlines in two 15-year periods. Across all of them the count fell from 122 in 1985-99 to 37 in 2000-14. Grouped bars for the 11 airlines with the most accidents in the first period show the drop, but the reader has to find and compare 22 bars in pairs to see which airlines improved.
 
 <Demo id="blog/airline-bars" />
 
-To see which airlines improved, a reader finds each airline's pair of bars and compares their lengths. With 22 bars that means a lot of looking back and forth.
-
 ## One line per airline
 
-A slope chart puts the two periods on two vertical edges and joins each airline's values with a line. The comparison the reader wants, before against after, is the line itself.
+A slope chart puts the two periods on two vertical edges and joins each airline's values with a line. Each line's slope is its before-and-after change.
 
 ```json demo source="FiveThirtyEight, Airline Safety" height=520
 {
@@ -181,36 +179,36 @@ A slope chart puts the two periods on two vertical edges and joins each airline'
 ```
 
 
-Every line falls, and Aeroflot's falls furthest. The y axis is gone, so the labels carry the numbers: each line is named at both ends with its value, and nobody has to match a color to a legend. All lines share one color because the finding is about the group. A merged airline goes by the first name in the source, so "Delta" is the source's Delta / Northwest.
+Every line falls, and Aeroflot's falls furthest. The y axis is gone, so the labels carry the numbers: each line carries its name and value at the left edge and its value at the right, and nobody has to match a color to a legend. All lines share one color because the finding is about the group. A merged airline goes by the first name in the source, so "Delta" is the source's Delta / Northwest.
 
-Grouped bars are the better choice when readers need to compare the airlines with each other within one period. Bars share a baseline, and the end points of slopes do not.
+Grouped bars are the better choice when readers need to compare the airlines with each other within one period. Within one period, bars are easier to rank than dots stacked on one edge with no axis.
 
 ## Choosing the endpoints
 
-Two points hide everything between them, so the choice of endpoints is part of the argument. The airline data comes in two fixed periods and leaves no choice. Arctic sea ice, measured daily since 1979, leaves plenty. Comparing September 1980 with September 2012 gives a steep line, and a flat one for March.
+Two points hide everything between them, so the choice of endpoints is part of the argument. The airline data comes in two fixed periods, but Arctic sea ice has been measured daily since 1979, so any two dates can be the endpoints. Comparing September 1980 (the yearly low) with September 2012 gives a steep line, and March (the yearly high) a nearly flat one.
 
 <Demo id="blog/sea-ice-slope" />
 
-That comparison is accurate, and 2012 was the lowest September on record. It also skips what came after: every September since has had more ice than 2012. The full series shows where the two endpoints sit.
+2012 was the lowest September on record, and every September since has had more ice, which the slope hides. The full series shows where the two endpoints sit.
 
 <Demo id="blog/sea-ice-line" />
 
-When the path between the points matters, or you have three or more time points, use a [line chart](/docs/change-over-time/line/). A slope chart suits a question about the start and the end only.
+When the path between the points matters, or you have three or more time points, use a [line chart](/docs/change-over-time/line/).
 
 ## Where slope charts stop working
 
-Too many lines turn into spaghetti, and a dozen is about the limit. The airline chart has 11 because it keeps only the airlines with four or more fatal accidents in 1985-99, and the subtitle says so. State your selection rule in the subtitle whenever you pick a subset.
+Past about a dozen lines, the crossings and labels collide. The airline chart has 11 because it keeps only the airlines with four or more fatal accidents in 1985-99, and the subtitle says so. State your selection rule in the subtitle whenever you pick a subset.
 
-That rule has a cost. Airlines picked for a bad first period are likely to look better in the second, because bad stretches tend to be followed by better ones. The subtitle also gives the total for all 56 airlines, which fell too.
+Airlines picked for a bad first period are likely to look better in the second, because bad stretches tend to be followed by better ones. The subtitle also gives the total for all 56 airlines, which fell too.
 
-Lines that end at the same value stack their labels. In the airline chart the engine spaces them apart, and `showLeader` draws a short line from a moved label back to its point if the pairing gets unclear. Small counts tie often, so check the chart with your own data.
+Lines that end at the same value stack their labels. In the airline chart the engine spaces them apart. Setting `showLeader` adds a short line from a moved label back to its point when the pairing gets unclear. Small counts tie often, so check the chart with your own data.
 
 ## The spec
 
 A slope chart is a line chart with two values on the x axis. In the airline spec, `mark` is `"line"` and `encoding.x` is the period field as `ordinal`, which puts one tick at each edge. On `encoding.y`, `axis: false` removes the axis and its gridlines, and `scale: { zero: false }` lets the lines use the full height instead of measuring from zero.
 
-`color` gives each airline its own line, and a `scale.range` holding one color makes them all match. `endpointLabels` with `ends: "both"` labels each edge, and `content: "label value"` prints the name and the number. `legend: { show: false }` drops the legend because the labels already name every line. The [endpoint labels page](/docs/framing/endpoint-labels/) lists the other label options.
+`color` gives each airline its own line, and a `scale.range` holding one color makes them all match. `endpointLabels` with `ends: "both"` labels each edge, and `content` sets `leading: "label value"` and `trailing: "value"`, so the left edge prints name and number and the right edge only the number. `legend: { show: false }` drops the legend because the labels already name every line. The [endpoint labels page](/docs/framing/endpoint-labels/) lists the other label options.
 
 To show the size of each gap rather than its direction, a [range chart](/docs/comparison/range/) draws the two values as a floating bar.
 
-Both slope charts here are specs you can paste into OpenChart, and the [slope and bump page](/docs/change-over-time/slope-bump/) covers the bump-chart variant.
+The [slope and bump page](/docs/change-over-time/slope-bump/) covers the bump-chart variant.
