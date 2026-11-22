@@ -25,13 +25,17 @@ function readableText(body: string): string {
     .replace(/<\/?[A-Za-z][^>]*>/g, " ");
 }
 
-/** Minutes to read a post's Markdown or MDX body at WORDS_PER_MINUTE, rounded up, at least 1. */
-export function readingTime(body: string): number {
+/** The words a reader reads in a post's Markdown or MDX body: prose only, without code, imports, comments or tags. */
+export function wordCount(body: string): number {
   // A word holds a letter or a digit, so Markdown markers ("##", "-", "|") don't count.
-  const words = readableText(body)
+  return readableText(body)
     .split(/\s+/)
     .filter((token) => /[\p{L}\p{N}]/u.test(token)).length;
-  return Math.max(1, Math.ceil(words / WORDS_PER_MINUTE));
+}
+
+/** Minutes to read a post's Markdown or MDX body at WORDS_PER_MINUTE, rounded up, at least 1. */
+export function readingTime(body: string): number {
+  return Math.max(1, Math.ceil(wordCount(body) / WORDS_PER_MINUTE));
 }
 
 /** A post's route, with its trailing slash. */
@@ -108,18 +112,26 @@ export type ArticleLinks = {
   publisher: { name: string; url: string };
 };
 
+/** The size of every social card, as the card route (`src/pages/og/[...slug].png.ts`) draws it. */
+const SOCIAL_CARD_SIZE = { width: 1200, height: 630 };
+
+/** The language every post is written in, as a BCP 47 tag. */
+const POST_LANGUAGE = "en";
+
 /**
  * The post's BlogPosting JSON-LD, ready to sit inside a `<script>`: every `<`
  * is written as `\u003c`, so a title holding `</script>` can't close the tag.
  * Dates are calendar days (`YYYY-MM-DD`), as the frontmatter gives them. An
  * author who is the publisher is an Organization with the publisher's URL,
- * anyone else a Person.
+ * anyone else a Person. The first tag names the section, and `words` is the
+ * body's `wordCount`.
  */
-export function articleJsonLd(post: BlogPost, links: ArticleLinks): string {
+export function articleJsonLd(post: BlogPost, links: ArticleLinks, words: number): string {
   const author =
     post.author === links.publisher.name
       ? { "@type": "Organization", name: post.author, url: links.publisher.url }
       : { "@type": "Person", name: post.author };
+  const tags = tagsOf(post);
   const data = {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
@@ -129,12 +141,46 @@ export function articleJsonLd(post: BlogPost, links: ArticleLinks): string {
     dateModified: isoDay(lastModified(post)),
     author,
     publisher: { "@type": "Organization", name: links.publisher.name, url: links.publisher.url },
-    image: links.image,
+    image: { "@type": "ImageObject", url: links.image, ...SOCIAL_CARD_SIZE },
     mainEntityOfPage: { "@type": "WebPage", "@id": links.canonical },
-    keywords: tagsOf(post).map((tag) => tag.label),
+    keywords: tags.map((tag) => tag.label),
+    articleSection: tags[0]?.label,
+    wordCount: words,
+    inLanguage: POST_LANGUAGE,
   };
-  return JSON.stringify(data).replace(/</g, "\\u003c");
+  return scriptSafeJson(data);
 }
+
+/**
+ * The post's BreadcrumbList JSON-LD (Blog, then the post), escaped for a
+ * `<script>` like `articleJsonLd`.
+ */
+export function breadcrumbJsonLd(post: Pick<BlogPost, "title">, links: BreadcrumbLinks): string {
+  const crumbs = [
+    { name: "Blog", item: links.blog },
+    { name: post.title, item: links.canonical },
+  ];
+  return scriptSafeJson({
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: crumbs.map((crumb, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      ...crumb,
+    })),
+  });
+}
+
+/** The absolute URLs a post's breadcrumb trail runs through. */
+export type BreadcrumbLinks = {
+  /** The blog index's absolute URL. */
+  blog: string;
+  /** The post's absolute canonical URL. */
+  canonical: string;
+};
+
+/** JSON for inside a `<script>`: every `<` as `\\u003c`, so a value holding `</script>` can't close the tag. */
+const scriptSafeJson = (data: unknown) => JSON.stringify(data).replace(/</g, "\\u003c");
 
 /** When a post last changed: its `updated` date, else its `published` one. */
 export const lastModified = (post: Pick<BlogPost, "published" | "updated">) =>
