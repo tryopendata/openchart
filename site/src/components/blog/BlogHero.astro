@@ -2,8 +2,10 @@
 /**
  * The post's lead chart as a wide hero above the fold, between the byline's
  * ticked rule and the prose. It is the chart alone (the body's copy carries the
- * code), with its caption and credit line, painted from the inline static SVGs
- * and never waiting on a reveal or an entrance. An unknown demo id fails the
+ * code), with its caption and credit line, never waiting on a reveal or an
+ * entrance. Most leads paint from inline static SVGs; a type with no static
+ * renderer, such as the sankey, shows its placeholder line at the reserved
+ * stage height until the live chart mounts. An unknown demo id fails the
  * build through Demo.astro, naming the post and the demo. Layout is in
  * blog-hero.css.
  */

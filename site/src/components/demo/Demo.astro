@@ -53,8 +53,7 @@ const figure = await demoFigureHtml({
   source: demo.source,
   caption: demo.caption,
   height: demo.height ?? DEFAULT_DEMO_HEIGHT,
-  // The hero is in view at load: an entrance would blank its painted static and redraw from zero.
-  entrance: hero ? false : (demo.entrance ?? true),
+  entrance: demo.entrance ?? true,
   tabs,
   static: demo.static ?? true,
   pageShared: pageSharedHashes(Astro.locals),

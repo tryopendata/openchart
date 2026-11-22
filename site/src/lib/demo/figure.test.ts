@@ -279,8 +279,9 @@ describe("demoFigureHtml on a blog post", () => {
     expect(viewBox?.split(/\s+/)[2]).toBe("360");
   });
 
-  it("as the hero, keeps the credit but paints in place with no reveal roles", async () => {
-    const figure = await render(figureFor({ blog, hero: true, tabs: false }));
+  it("as the hero, keeps the credit but paints in place with no entrance or reveal roles", async () => {
+    const figure = await render(figureFor({ blog, hero: true, tabs: false, entrance: true }));
+    expect(figure.hasAttribute("data-demo-entrance")).toBe(false);
     expect(figure.querySelector("a.figure-credit-link")).not.toBeNull();
     expect(figure.hasAttribute("data-reveal")).toBe(false);
     expect(figure.querySelector("[data-motion]")).toBeNull();

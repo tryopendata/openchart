@@ -45,8 +45,8 @@ export type DemoFigure = {
   /** Set on blog posts only: the credit line, reveal entrances and the wide static width (see blog-figure.ts). */
   blog?: BlogFigure;
   /**
-   * A post's hero, above the fold: it paints in place with no reveal roles, and
-   * its DOM ids end in "-hero" so the body may show the same demo.
+   * A post's hero, above the fold: it paints in place with no entrance and no
+   * reveal roles, and takes its own DOM ids so the body may show the same demo.
    */
   hero?: boolean;
 };
@@ -238,8 +238,9 @@ function creditHtml(figure: DemoFigure): string {
  * @throws {Error} On a revealed blog figure, when the controls or toolbar markup cannot take a reveal role.
  */
 export async function demoFigureHtml(figure: DemoFigure): Promise<string> {
-  const domId = figure.hero ? `${demoDomId(figure.id)}-hero` : demoDomId(figure.id);
-  const entrance = figure.entrance ? ` ${DEMO_ATTR.entrance}` : "";
+  const domId = demoDomId(figure.id, { hero: figure.hero });
+  // The hero is in view at load: an entrance would blank its painted static and redraw from zero.
+  const entrance = figure.entrance && !figure.hero ? ` ${DEMO_ATTR.entrance}` : "";
   const ownTheme = figure.pageTheme === false ? ` ${DEMO_ATTR.ownTheme}` : "";
   // Claimed before the first await, so two figures rendering at once never both write a block.
   const spec = specHtml(embeddedSpec(figure), figure.mount) + statesHtml(figure);
