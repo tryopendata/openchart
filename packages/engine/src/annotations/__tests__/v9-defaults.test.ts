@@ -118,7 +118,8 @@ describe('v9 annotation defaults', () => {
     const subtract = compileChart({ ...spec, chromeLayout: 'subtract' }, options);
     expect(current.chrome.grownHeight).toBeCloseTo(current.chrome.noteBandHeight!);
     expect(current.dimensions.height).toBe(options.height + current.chrome.noteBandHeight!);
-    expect(current.area.height - subtract.area.height).toBeCloseTo(current.chrome.noteBandHeight!);
+    // Subtract reserves every source's note lines inside the budget; the default draws only folded ones.
+    expect(current.area.height - subtract.area.height).toBeCloseTo(subtract.chrome.noteBandHeight!);
   });
 });
 

@@ -7,6 +7,7 @@
  * two ways of putting a chart on a page cannot drift apart.
  */
 import type { ThemeConfig, VizSpec } from "@opendata-ai/openchart-core";
+import { isGraphSpec } from "@opendata-ai/openchart-core";
 import type { DemoControls, DemoMountOptions, DemoSource } from "../../demos/types";
 import type { BlogFigure } from "./blog-figure";
 import { codeTabsHtml } from "./code-tabs";
@@ -152,8 +153,9 @@ function stageHtml(figure: DemoFigure, domId: string): string {
   const phone =
     figure.phoneHeight === undefined ? "" : `; --demo-phone-height: ${figure.phoneHeight}px`;
   const style = `--demo-height: ${figure.height}px${phone}${width}`;
+  const fit = isGraphSpec(figure.spec) ? "" : ` ${DEMO_ATTR.fit}`;
   // Axis ticks and labels in the SVGs are noise in search results; the caption stays indexed.
-  return `<div class="demo-stage" ${DEMO_ATTR.stage} style="${style}" data-pagefind-ignore>${content}</div>`;
+  return `<div class="demo-stage" ${DEMO_ATTR.stage}${fit} style="${style}" data-pagefind-ignore>${content}</div>`;
 }
 
 function embeddedSpec(figure: Pick<DemoFigure, "spec" | "pageShared">): SharedSplit {

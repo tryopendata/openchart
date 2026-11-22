@@ -450,7 +450,7 @@ describe('compileLayer', () => {
           { type: 'text', id: 'b', text: 'B', x: 7, y: 5, responsive: false },
         ],
       },
-      { width: 600, height: 400 },
+      { width: 600, height: 400, stableNoteBand: true },
     );
     expect(layout.chrome.noteBandHeight).toBeGreaterThan(0);
     expect(layout.endpointLabels).toBeUndefined();

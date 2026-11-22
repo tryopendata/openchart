@@ -74,7 +74,7 @@ describe('resolved annotation editing', () => {
     ['grow', 999],
   ] as const)('keeps a crowded note-bearing %s plot fixed on drag %s', (chromeLayout, dy) => {
     const spec = structuredClone(annotationCrowdedSpec);
-    const size = { width: 390, height: 600, chromeLayout };
+    const size = { width: 390, height: 600, chromeLayout, stableNoteBand: true };
     const layout = compileChart(spec, size);
     const ctx = createAnnotationEditContext(layout, spec);
     const ref = elementRef.annotation(0, 'crowded-0');

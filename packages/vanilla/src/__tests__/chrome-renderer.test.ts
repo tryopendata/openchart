@@ -138,9 +138,10 @@ it('uses the engine note lines for rendering, footer spacing, and static export'
   ).toEqual([...parent.querySelectorAll('.oc-footnotes tspan')].map((span) => span.textContent));
 });
 
+// Notes inside the budget keep their reserve, so nothing below the plot moves.
+// Outside it the export grows by the notes it draws (see the grow test below).
 it.each([
   'subtract',
-  'grow',
 ] as const)('keeps exported source and watermark fixed when notes disappear in %s', (chromeLayout) => {
   const spec: ChartSpec = {
     mark: 'point',
@@ -181,4 +182,45 @@ it.each([
   expect(after.documentElement.getAttribute('viewBox')).toEqual(
     before.documentElement.getAttribute('viewBox'),
   );
+});
+
+it('grows an exported figure in grow mode only by the notes it draws', () => {
+  const spec: ChartSpec = {
+    mark: 'point',
+    chromeLayout: 'grow',
+    data: [
+      { x: 0, y: 0 },
+      { x: 1, y: 1 },
+    ],
+    encoding: { x: { field: 'x', type: 'quantitative' }, y: { field: 'y', type: 'quantitative' } },
+    chrome: { source: 'Source' },
+    annotations: Array.from({ length: 4 }, (_, i) => ({
+      type: 'text',
+      id: `note-${i}`,
+      x: 0.5,
+      y: 0.5,
+      text: `A long explanatory callout ${i}`,
+      subtitle: 'Additional context',
+    })),
+  };
+  const parse = (spec: ChartSpec) =>
+    new DOMParser().parseFromString(
+      renderStaticSVG(spec, { width: 390, height: 600 }),
+      'image/svg+xml',
+    );
+  const height = (doc: Document) =>
+    Number(doc.documentElement.getAttribute('viewBox')!.split(' ')[3]);
+  const y = (doc: Document, selector: string) =>
+    Math.max(...[...doc.querySelectorAll(selector)].map((el) => Number(el.getAttribute('y'))));
+  const withNotes = parse(spec);
+  const withoutNotes = parse({
+    ...spec,
+    annotations: spec.annotations!.map((annotation) => ({ ...annotation, responsive: false })),
+  });
+  expect(withNotes.querySelectorAll('.oc-footnotes').length).toBeGreaterThan(0);
+  expect(withoutNotes.querySelectorAll('.oc-footnotes')).toHaveLength(0);
+  expect(height(withNotes)).toBeGreaterThan(height(withoutNotes));
+  // The source still sits below the last note once the band is added late.
+  expect(y(withNotes, '.oc-source')).toBeGreaterThan(y(withNotes, '.oc-footnotes'));
+  expect(y(withNotes, '.oc-source')).toBeLessThanOrEqual(height(withNotes));
 });

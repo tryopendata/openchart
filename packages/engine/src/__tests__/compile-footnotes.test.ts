@@ -117,7 +117,8 @@ describe('auto-thinning footnote reserve', () => {
         subtitle: 'A longer explanatory subtitle that wraps at narrow widths',
       })),
     };
-    const options = { width: 390, height: 600, chromeLayout };
+    // Edit hosts pass stableNoteBand: a pin must not move the plot or resize the figure.
+    const options = { width: 390, height: 600, chromeLayout, stableNoteBand: true };
     const automatic = compileChart(spec, options);
     const pinned = compileChart(
       {
@@ -135,6 +136,43 @@ describe('auto-thinning footnote reserve', () => {
     expect(pinned.chrome.bottomAnchorY).toEqual(automatic.chrome.bottomAnchorY);
   });
 
+  it('keeps the authored height when no annotation folds into a note', () => {
+    const options = { width: 390, height: 600 };
+    const pinned = compileChart(
+      {
+        ...crowdedSpec,
+        annotations: crowdedSpec.annotations!.map((annotation) => ({
+          ...annotation,
+          responsive: false,
+        })),
+      },
+      options,
+    );
+    expect(pinned.chrome.footnotes).toBeUndefined();
+    expect(pinned.chrome.noteBandHeight).toBeUndefined();
+    expect(pinned.dimensions.height).toBe(options.height);
+  });
+
+  it('grows by exactly the notes it draws, below an unchanged plot', () => {
+    const options = { width: 390, height: 600 };
+    const automatic = compileChart(crowdedSpec, options);
+    const pinned = compileChart(
+      {
+        ...crowdedSpec,
+        annotations: crowdedSpec.annotations!.map((annotation) => ({
+          ...annotation,
+          responsive: false,
+        })),
+      },
+      options,
+    );
+    const band = automatic.chrome.noteBandHeight!;
+    expect(automatic.chrome.footnotes?.length).toBeGreaterThan(0);
+    expect(band).toBeGreaterThan(0);
+    expect(automatic.dimensions.height).toBeCloseTo(options.height + band, 8);
+    expect(automatic.area).toEqual(pinned.area);
+  });
+
   it.each([
     false,
     true,
@@ -148,7 +186,7 @@ describe('auto-thinning footnote reserve', () => {
         responsive: false,
       })),
     };
-    const options = { width: 600, height: authoredHeight ? 200 : 400 };
+    const options = { width: 600, height: authoredHeight ? 200 : 400, stableNoteBand: true };
     const baseline = compileChart({ ...spec, annotations: [] }, options);
     const reserved = compileChart(spec, options);
     expect(reserved.chrome.noteBandHeight).toBeGreaterThan(0);
@@ -178,7 +216,7 @@ describe('auto-thinning footnote reserve', () => {
         ...(pinned ? { responsive: false } : {}),
       })),
     };
-    const options = { width: 600, height: 400 };
+    const options = { width: 600, height: 400, stableNoteBand: true };
     const baseline = compileChart({ ...spec, annotations: [] }, options);
     const reserved = compileChart(spec, options);
     const band = reserved.chrome.noteBandHeight!;
@@ -319,7 +357,7 @@ describe('auto-thinning in faceted charts', () => {
   });
 
   it.each([false, true])('grows facet chrome once with spec-level grow=%s', (onSpec) => {
-    const options = { width: 640, height: 600 };
+    const options = { width: 640, height: 600, stableNoteBand: true };
     const baseline = compileChart({ ...facetedSpec, chromeLayout: 'subtract' }, options);
     const grown = compileChart(
       onSpec ? { ...facetedSpec, chromeLayout: 'grow' } : facetedSpec,
@@ -334,7 +372,7 @@ describe('auto-thinning in faceted charts', () => {
   });
 
   it('reserves each facet source once and keeps the grid fixed when notes disappear', () => {
-    const size = { width: 640, height: 600 };
+    const size = { width: 640, height: 600, stableNoteBand: true };
     const before = compileChart(facetedSpec, size);
     const after = compileChart(
       {

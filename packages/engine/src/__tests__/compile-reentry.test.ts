@@ -98,7 +98,7 @@ const warned = {
 
 describe('single-pass compile', () => {
   it('enters compile once for an annotated chart', () => {
-    const layout = compileChart(annotated, { width: 600, height: 400 });
+    const layout = compileChart(annotated, { width: 600, height: 400, stableNoteBand: true });
     expect(layout.chrome.noteBandHeight).toBeGreaterThan(0);
     expect(entries.count).toBe(1);
   });

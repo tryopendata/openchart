@@ -228,6 +228,8 @@ export function createChart<TData extends DataRow = DataRow>(
       renderer: options?.renderer,
       watermark: options?.watermark,
       measureText: measure,
+      // An edit that pins a label or changes which labels fold into notes must not resize the figure.
+      stableNoteBand: editing,
     });
   }
 

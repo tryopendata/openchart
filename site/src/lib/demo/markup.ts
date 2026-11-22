@@ -18,6 +18,12 @@ export const DEMO_ATTR = {
   figure: "data-demo",
   /** On the stage that holds the static SVGs and later the live chart. */
   stage: "data-demo-stage",
+  /**
+   * On a stage whose live chart sets its own height: the stage starts at the
+   * demo's height and grows with the chart (facets on a phone, folded notes)
+   * instead of scrolling it. Graphs fill a fixed box, so their stages lack it.
+   */
+  fit: "data-demo-fit",
   /** On the paragraph a stage without a static SVG shows until its live chart mounts. */
   placeholder: "data-demo-placeholder",
   /** On the `<script type="application/json">` holding the spec. */

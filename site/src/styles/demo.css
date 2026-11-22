@@ -2,9 +2,9 @@
  * Demo styles. A demo reads as a published graphic: the figure (the chart, then
  * its caption and source), then a quiet toolbar on a hairline rule (Code on the
  * left, Copy on the right) over the code, all in reading order. The library's
- * own stylesheet comes first: live charts need it. The stage keeps a fixed
- * height at every width so the swap from static SVG to live chart moves nothing
- * on the page. The head gate (lib/demo/page-gate.ts) sets the attributes on
+ * own stylesheet comes first: live charts need it. The stage starts at the
+ * demo's height at every width so the swap from static SVG to live chart moves
+ * nothing on the page; it grows only when the chart itself draws taller. The head gate (lib/demo/page-gate.ts) sets the attributes on
  * <html> that the rules below key on, before first paint.
  */
 @import "@opendata-ai/openchart-core/styles.css";
@@ -88,6 +88,37 @@
 
   .demo-error {
     @apply flex h-full items-center justify-center px-4 text-center text-muted;
+  }
+
+  /*
+   * A chart can draw taller than the height it was given (facet rows on a phone,
+   * notes folded from callouts), so a fit stage grows with it instead of
+   * scrolling it. The host keeps the demo's height as its minimum, which the
+   * library compiles against; the library ignores its own SVG growing the host.
+   */
+  .demo-stage[data-demo-fit] {
+    height: auto;
+    min-height: var(--demo-height, 400px);
+
+    @variant max-sm {
+      height: auto;
+      min-height: var(--demo-phone-height, var(--demo-height, 400px));
+    }
+  }
+
+  /* The failure line centres in the stage's starting height, as it does in a fixed stage. */
+  .demo-stage[data-demo-fit] > .demo-error {
+    min-height: inherit;
+  }
+
+  .demo-stage[data-demo-fit] > .demo-live {
+    height: auto;
+    min-height: var(--demo-height, 400px);
+    overflow: visible;
+
+    @variant max-sm {
+      min-height: var(--demo-phone-height, var(--demo-height, 400px));
+    }
   }
 
   /* Out of the flow, so the live chart's host lays out as if it were not there. */

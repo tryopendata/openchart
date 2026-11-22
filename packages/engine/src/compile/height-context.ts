@@ -18,6 +18,8 @@ import {
 } from '@opendata-ai/openchart-core';
 import type { NormalizedChartSpec } from '../compiler/types';
 import { type AuthoredReserves, measureAuthoredReserves } from '../layout/budget';
+import { resolveChromeLayout } from '../layout/shared';
+import { outsideBudget } from '../layout/stack';
 import type { InternalCompileOptions } from './internal-options';
 
 /** Responsive state resolved for one container height. */
@@ -40,11 +42,17 @@ export function isCompactContainer(options: CompileOptions): boolean {
 
 /**
  * Everything that depends on the container height, resolved once per height.
- * Reserves come from source text before placement. A drag can pin a label and
- * change the demoted set; neither the plot nor the SVG clamp may move at
- * commit. Include pinned sources because fresh compiles cannot distinguish
- * authored pins from labels pinned by editing. Facets share this source-level
- * budget. A frozen leaf uses the reserve its layer assembly resolved instead.
+ * Note reserves come from source text before placement. In edit mode
+ * (`stableNoteBand`) a drag can pin a label and change the demoted set, and
+ * neither the plot nor the SVG clamp may move at commit, so every text
+ * annotation reserves its note lines; pinned sources count because fresh
+ * compiles cannot tell authored pins from labels pinned by editing. Notes
+ * inside the budget (`subtract`) shrink the plot, so they reserve too.
+ * Otherwise notes sit outside the budget and the figure grows late by the
+ * notes it draws (resolveNoteOverflow), so a chart that folds nothing keeps
+ * its authored height instead of carrying an empty band. Facets share this
+ * source-level budget. A frozen leaf uses the reserve its layer assembly
+ * resolved instead.
  */
 export function heightContextResolver(params: {
   options: InternalCompileOptions;
@@ -55,11 +63,15 @@ export function heightContextResolver(params: {
   watermarkAt: (height: number) => boolean;
 }): (height: number) => HeightContext {
   const { options, breakpoint, chartSpec, theme, annotationsInline, watermarkAt } = params;
+  const reserveNotes =
+    options.stableNoteBand === true ||
+    !outsideBudget(resolveChromeLayout(chartSpec, options), 'notes');
   return (height) => {
     const sized = height === options.height ? options : { ...options, height };
     const base = getLayoutStrategy(breakpoint, getHeightClass(height));
     const reserves = measureAuthoredReserves(chartSpec, sized.width, theme, sized.measureText, {
       compactNotes: isCompactContainer(sized) && chartSpec.compactAnnotationLimit != null,
+      reserveNotes,
     });
     return {
       options: sized,

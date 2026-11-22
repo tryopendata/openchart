@@ -102,8 +102,9 @@ it('auto-height notes do not consume the top legend allowance', async () => {
   });
   const after = chart.layout;
   expect(after.area.height).toBeCloseTo(before.area.height, 5);
+  // Pinned labels fold into no notes, so the figure grows by no band at all.
   expect(after.dimensions.height - before.dimensions.height).toBeCloseTo(
-    after.chrome.noteBandHeight!,
+    after.chrome.noteBandHeight ?? 0,
     5,
   );
   chart.destroy();
@@ -134,4 +135,36 @@ it('auto-height facets consume engine growth once across updates', async () => {
   chart.update(spec);
   expect(chart.layout.dimensions.height).toBe(initial);
   chart.destroy();
+});
+
+it('reserves the note band in edit mode so an edit never resizes the figure', async () => {
+  const { createChart } = await import('../mount');
+  const spec: ChartSpec = {
+    mark: 'point',
+    animation: false,
+    data: [
+      { x: 0, y: 0 },
+      { x: 10, y: 10 },
+    ],
+    encoding: {
+      x: { field: 'x', type: 'quantitative' },
+      y: { field: 'y', type: 'quantitative' },
+    },
+    annotations: [
+      { type: 'text', id: 'a', x: 1, y: 1, text: 'One', responsive: false },
+      { type: 'text', id: 'b', x: 8, y: 8, text: 'Two', responsive: false },
+    ],
+  };
+  const reading = createChart(createContainer(600, 400), spec);
+  const editing = createChart(createContainer(600, 400), spec, { onEdit: () => {} });
+  expect(reading.layout.chrome.noteBandHeight).toBeUndefined();
+  expect(reading.layout.dimensions.height).toBe(400);
+  expect(editing.layout.chrome.noteBandHeight).toBeGreaterThan(0);
+  expect(editing.layout.dimensions.height).toBeCloseTo(
+    400 + editing.layout.chrome.noteBandHeight!,
+    5,
+  );
+  expect(editing.layout.area).toEqual(reading.layout.area);
+  reading.destroy();
+  editing.destroy();
 });

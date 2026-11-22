@@ -82,6 +82,8 @@ export interface AuthoredReserves {
 export interface AuthoredReserveOptions {
   /** Compact container with a compact annotation limit: a single note can demote. */
   compactNotes: boolean;
+  /** Reserve note lines for every text annotation before placement (see heightContextResolver). */
+  reserveNotes: boolean;
   /** Reserve outside reference lanes at the figure level (facets reserve per panel). */
   figureReferences?: boolean;
   /** Series-summary lines, measured by the caller from the summary text. */
@@ -100,9 +102,10 @@ export function measureAuthoredReserves(
   measureText: MeasureTextFn | undefined,
   opts: AuthoredReserveOptions,
 ): AuthoredReserves {
-  const noteLines = spec.autoThin
-    ? annotationNoteCapacity(spec.annotations, width, theme, measureText, opts.compactNotes)
-    : 0;
+  const noteLines =
+    spec.autoThin && opts.reserveNotes
+      ? annotationNoteCapacity(spec.annotations, width, theme, measureText, opts.compactNotes)
+      : 0;
   const summaryLines = opts.summaryLines ?? 0;
   const measure = annotationMeasureFn(measureText);
   const referenceAt = (containerWidth: number) =>

@@ -2335,6 +2335,14 @@ export interface CompileOptions {
    * - `'grow'`: `height` is the plot budget; the SVG grows by the chrome height.
    */
   chromeLayout?: 'subtract' | 'grow';
+  /**
+   * Reserve the annotation-note band for every text annotation up front, even
+   * when none is folded into a numbered note, so an edit that pins a label or
+   * changes which labels fold never changes the figure's height. Edit mode
+   * sets it. Otherwise, while notes grow the SVG (the default), the figure
+   * grows only by the notes it draws. Defaults to false.
+   */
+  stableNoteBand?: boolean;
   /** Theme overrides. */
   theme?: import('./spec').ThemeConfig;
   /**
