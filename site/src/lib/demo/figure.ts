@@ -44,6 +44,11 @@ export type DemoFigure = {
   controls?: DemoControls;
   /** Set on blog posts only: the credit line, reveal entrances and the wide static width (see blog-figure.ts). */
   blog?: BlogFigure;
+  /**
+   * A post's hero, above the fold: it paints in place with no entrance and no
+   * reveal roles, and takes its own DOM ids so the body may show the same demo.
+   */
+  hero?: boolean;
 };
 
 /** Static SVGs are laid out at this width; CSS scales them to the stage. */
@@ -180,14 +185,17 @@ export class DemoRenderError extends Error {}
 /** The reveal role on a blog figure's caption, controls, credit and toolbar: a short lift, as on the landing figures. */
 const CHROME_MOTION = ` data-motion="quiet"`;
 
-/** The reveal role attribute on blog figures, nothing elsewhere. */
-const motionAttr = (blog: BlogFigure | undefined) => (blog ? CHROME_MOTION : "");
+/** Whether the figure enters with the reveal: blog body figures do, the hero and docs figures don't. */
+const reveals = (figure: DemoFigure) => figure.blog !== undefined && !figure.hero;
+
+/** The reveal role attribute on revealed figures, nothing elsewhere. */
+const motionAttr = (figure: DemoFigure) => (reveals(figure) ? CHROME_MOTION : "");
 
 function captionHtml(figure: DemoFigure): string {
   const { label, url } = figure.source;
   const source = url ? `<a href="${escapeHtml(url)}">${escapeHtml(label)}</a>` : escapeHtml(label);
   const lead = escapeHtml(asSentence(figure.caption ?? figure.title));
-  return `<figcaption class="figure-caption"${motionAttr(figure.blog)}>${lead} Source: ${source}.</figcaption>`;
+  return `<figcaption class="figure-caption"${motionAttr(figure)}>${lead} Source: ${source}.</figcaption>`;
 }
 
 const LEADING_TAG = /^<[a-z]+/;
@@ -200,7 +208,7 @@ const LEADING_TAG = /^<[a-z]+/;
  * markup change fails the build instead of silently dropping the role.
  */
 function revealedFragment(fragment: string, figure: DemoFigure): string {
-  if (!figure.blog || fragment === "") return fragment;
+  if (!reveals(figure) || fragment === "") return fragment;
   const tag = LEADING_TAG.exec(fragment)?.[0];
   if (!tag) {
     throw new Error(
@@ -211,11 +219,11 @@ function revealedFragment(fragment: string, figure: DemoFigure): string {
 }
 
 /** The blog figure's "Made with OpenChart" line, linking to how to build its chart type; nothing elsewhere. */
-function creditHtml(blog: BlogFigure | undefined): string {
-  if (!blog) return "";
-  const { href, chartName } = blog.credit;
+function creditHtml(figure: DemoFigure): string {
+  if (!figure.blog) return "";
+  const { href, chartName } = figure.blog.credit;
   const link = `<a class="figure-credit-link" href="${escapeHtml(href)}">How to build this ${escapeHtml(chartName)}</a>`;
-  return `<p class="figure-credit" data-pagefind-ignore${CHROME_MOTION}>Made with OpenChart. ${link}</p>`;
+  return `<p class="figure-credit" data-pagefind-ignore${motionAttr(figure)}>Made with OpenChart. ${link}</p>`;
 }
 
 /**
@@ -227,21 +235,21 @@ function creditHtml(blog: BlogFigure | undefined): string {
  *
  * @throws {TypeError} When the spec's type has no framework wrapper for the code tabs.
  * @throws {FoldMarkerError} When the spec contains the text fold markers use.
- * @throws {Error} On a blog figure, when the controls or toolbar markup cannot take a reveal role.
+ * @throws {Error} On a revealed blog figure, when the controls or toolbar markup cannot take a reveal role.
  */
 export async function demoFigureHtml(figure: DemoFigure): Promise<string> {
-  const domId = demoDomId(figure.id);
-  const entrance = figure.entrance ? ` ${DEMO_ATTR.entrance}` : "";
+  const domId = demoDomId(figure.id, { hero: figure.hero });
+  // The hero is in view at load: an entrance would blank its painted static and redraw from zero.
+  const entrance = figure.entrance && !figure.hero ? ` ${DEMO_ATTR.entrance}` : "";
   const ownTheme = figure.pageTheme === false ? ` ${DEMO_ATTR.ownTheme}` : "";
   // Claimed before the first await, so two figures rendering at once never both write a block.
   const spec = specHtml(embeddedSpec(figure), figure.mount) + statesHtml(figure);
-  const { blog } = figure;
-  const reveal = blog ? " data-reveal" : "";
+  const reveal = reveals(figure) ? " data-reveal" : "";
   const code = figure.tabs ? await codeTabsHtml(domId, figure.spec, figure.mount) : "";
   const controls = revealedFragment(demoControlsHtml(figure), figure);
   return [
     `<div class="demo not-prose" ${DEMO_ATTR.figure}="${escapeHtml(figure.id)}"${entrance}${ownTheme}${reveal}>`,
-    `<figure class="demo-figure">${stageHtml(figure, domId)}${controls}${captionHtml(figure)}${creditHtml(blog)}</figure>`,
+    `<figure class="demo-figure">${stageHtml(figure, domId)}${controls}${captionHtml(figure)}${creditHtml(figure)}</figure>`,
     spec,
     revealedFragment(code, figure),
     "</div>",

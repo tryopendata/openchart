@@ -8,7 +8,9 @@
  * state's spec fails validation, or that puts controls on a spec other than a
  * chart or layer fails the build, naming the page. On a blog post the figure
  * also carries its credit line and reveal entrances (see blog-figure.ts), and a
- * spec with no chart type to credit fails the build the same way.
+ * spec with no chart type to credit fails the build the same way. A post's hero
+ * (`hero`) skips the entrance and the reveal, so the static it paints first stays
+ * put when the live chart takes over, and takes its own DOM ids.
  * Large values the page's figures share are written once per page, recorded
  * against `Astro.locals`, which is fresh for each page render.
  */
@@ -24,9 +26,11 @@ interface Props {
   id: string;
   /** Show the code toolbar and its Spec, React, Vue, Svelte and Vanilla tabs. Default true; false is a chart-only figure. */
   tabs?: boolean;
+  /** Render as a blog post's hero: no entrance, no reveal, and DOM ids apart from the body's copy. Default false. */
+  hero?: boolean;
 }
 
-const { id, tabs = true } = Astro.props;
+const { id, tabs = true, hero = false } = Astro.props;
 
 let demo: DemoDef;
 let blog: BlogFigure | undefined;
@@ -58,6 +62,7 @@ const figure = await demoFigureHtml({
   mount: demo.mount,
   controls: demo.controls,
   blog,
+  hero,
 });
 ---
 
