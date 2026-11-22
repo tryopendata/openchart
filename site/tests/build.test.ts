@@ -924,6 +924,8 @@ type SourcePost = {
   author: string;
   tags: string[];
   related: string[];
+  /** The demo id the post leads with, if any. */
+  lead?: string;
   draft: boolean;
 };
 
@@ -943,6 +945,7 @@ function sourcePosts(): SourcePost[] {
         author: String(data.author ?? ""),
         tags: (data.tags ?? []) as string[],
         related: (data.related ?? []) as string[],
+        ...(data.lead ? { lead: String(data.lead) } : {}),
         draft: data.draft === true,
       };
     });
@@ -1327,7 +1330,7 @@ describe("the blog's content (lane d)", () => {
     expect(isoDay(new Date(ld.datePublished))).toBe(isoDay(post.published));
     expect(isoDay(new Date(ld.dateModified))).toBe(isoDay(post.updated ?? post.published));
     expect(ld.author?.name).toBe(post.author);
-    expect(ld.image).toBe(absolute(`/og/blog/${post.slug}.png`));
+    expect(ld.image.url).toBe(absolute(`/og/blog/${post.slug}.png`));
     expect(mainEntity).toBe(canonical);
   });
 
@@ -1451,6 +1454,80 @@ describe("the blog as an OpenChart showcase", () => {
     const cta = doc.querySelector("article [data-blog-cta]");
     expect(cta?.hasAttribute("data-reveal")).toBe(true);
     expect(cta?.parentElement?.closest("[data-reveal]") ?? null).toBeNull();
+  });
+
+  it.each(posts.filter((post) => post.lead))(
+    "$slug leads with its lead chart as a hero, painted from static SVGs before any script",
+    (post) => {
+      const doc = page("dist", postPath(post.slug));
+      const heroes = doc.querySelectorAll("article [data-blog-hero]");
+      expect(heroes).toHaveLength(1);
+      const hero = heroes[0];
+      const header = doc.querySelector("article .blog-article-header");
+      const prose = doc.querySelector("article .docs-prose");
+      const follows = (a: Element | null | undefined, b: Element | null | undefined) =>
+        !!a && !!b && (a.compareDocumentPosition(b) & 4) !== 0;
+      expect(follows(header, hero)).toBe(true);
+      expect(follows(hero, prose)).toBe(true);
+      const figure = hero?.querySelector(".demo[data-demo]");
+      expect(figure?.getAttribute("data-demo")).toBe(post.lead);
+      const themes = [...(figure?.querySelectorAll("[data-demo-stage] svg.demo-static") ?? [])].map(
+        (svg) => svg.getAttribute("data-theme"),
+      );
+      // A table or sankey lead has no static SVG; its fallback stands in.
+      if (themes.length > 0) expect(themes).toEqual(["light", "dark"]);
+      expect(figure?.querySelector("[data-demo-code]")).toBeNull();
+      expect(figure?.querySelector("a.figure-credit-link")).not.toBeNull();
+      // Above the fold: no entrance replay over the painted static, no reveal gate.
+      expect(figure?.hasAttribute("data-demo-entrance")).toBe(false);
+      expect(hero?.querySelector("[data-reveal], [data-motion]")).toBeNull();
+      expect(hero?.closest("[data-reveal]:not([data-revealed])") ?? null).toBeNull();
+      expect(hero?.closest("[data-motion]") ?? null).toBeNull();
+      expect(hero?.querySelector('[loading="lazy"]')).toBeNull();
+    },
+  );
+
+  it.each(posts)("$slug repeats no element id", (post) => {
+    const ids = [...page("dist", postPath(post.slug)).querySelectorAll("[id]")].map((element) =>
+      element.getAttribute("id"),
+    );
+    const repeated = ids.filter((id, index) => ids.indexOf(id) !== index);
+    expect([...new Set(repeated)]).toEqual([]);
+  });
+
+  it.each(posts)("$slug carries breadcrumb, image and article metadata for search", (post) => {
+    const doc = page("dist", postPath(post.slug));
+    const canonical = absolute(`/blog/${post.slug}/`);
+    const blocks = [...doc.querySelectorAll('script[type="application/ld+json"]')].map((script) =>
+      JSON.parse(script.textContent ?? "{}"),
+    );
+    const posting = blocks.find((block) => block["@type"] === "BlogPosting");
+    const breadcrumb = blocks.find((block) => block["@type"] === "BreadcrumbList");
+    expect(
+      breadcrumb?.itemListElement?.map((item: { position: number; item: string }) => [
+        item.position,
+        item.item,
+      ]),
+    ).toEqual([
+      [1, absolute("/blog/")],
+      [2, canonical],
+    ]);
+    expect(posting?.image).toMatchObject({
+      "@type": "ImageObject",
+      url: absolute(`/og/blog/${post.slug}.png`),
+      width: 1200,
+      height: 630,
+    });
+    expect(typeof posting?.articleSection).toBe("string");
+    expect(Number.isInteger(posting?.wordCount) && posting.wordCount > 0).toBe(true);
+    expect(posting?.inLanguage).toBe("en");
+    expect(doc.querySelectorAll('meta[property="article:tag"]')).toHaveLength(post.tags.length);
+    expect(doc.querySelector('meta[property="og:image:alt"]')?.getAttribute("content")).toBe(
+      post.title,
+    );
+    expect(doc.querySelector('meta[name="robots"]')?.getAttribute("content")).toContain(
+      "max-image-preview:large",
+    );
   });
 });
 

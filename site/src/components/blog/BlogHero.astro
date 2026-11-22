@@ -1,0 +1,14 @@
+---
+/**
+ * The post's lead chart as a wide hero above the fold, between the byline's
+ * ticked rule and the prose. Phase 2 lane d fills this in; until then it renders
+ * an empty marker so the layout and tests have a fixed place for it.
+ */
+interface Props {
+  /** The registered demo id of the post's lead chart. */
+  demoId: string;
+}
+const { demoId } = Astro.props;
+---
+
+<div data-blog-hero data-hero-demo={demoId}></div>

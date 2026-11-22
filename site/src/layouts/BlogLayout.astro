@@ -16,6 +16,7 @@
  * article is indexed by search under Blog.
  */
 import BlogCta from "../components/blog/BlogCta.astro";
+import BlogHero from "../components/blog/BlogHero.astro";
 import Byline from "../components/blog/Byline.astro";
 import BlogBreadcrumb from "../components/blog/BlogBreadcrumb.astro";
 import PostEndnotes from "../components/blog/PostEndnotes.astro";
@@ -78,6 +79,7 @@ const jsonLd = articleJsonLd(post, {
       </header>
       <div class="rule-axis mt-8 mb-10" data-motion="wipe"></div>
     </div>
+    {post.lead && <BlogHero demoId={post.lead} />}
     <div class="prose docs-prose blog-prose max-w-none">
       <slot />
     </div>
