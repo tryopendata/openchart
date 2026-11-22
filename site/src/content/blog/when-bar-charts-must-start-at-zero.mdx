@@ -1,0 +1,76 @@
+---
+title: When bar charts must start at zero (and when lines don't)
+description: Bar charts encode values as length, so cropping the baseline distorts every ratio. Line charts encode position, so zooming in can clarify change.
+published: 2026-11-14
+author: OpenChart
+tags: [chart-choice, accessibility]
+related: [comparison/bar, change-over-time/line, the-spec/scales, the-spec/axes]
+lead: blog/baseline-bars-zero
+---
+
+import Demo from "../../components/demo/Demo.astro";
+
+A bar chart encodes each value as the length of a bar measured from the axis. When the axis starts at zero, a bar twice as long means a value twice as large. Starting the axis above zero cuts the same fixed chunk off every bar, which shrinks short bars far more than long ones and warps every comparison on the page.
+
+In the [UN World Population Prospects](https://population.un.org/wpp/) estimates for the eight countries under one billion, Indonesia has 285 million people, just over twice Ethiopia's 135 million. Starting the horizontal axis at 100 million cuts the same amount off every bar, so Ethiopia shrinks to a short stub and Indonesia stretches more than five times as far.
+
+<Demo id="blog/baseline-bars-truncated" />
+
+Printing exact numbers on the bars or labeling the axis at 100 million does not undo the distortion. Readers compare bar lengths before they read tick marks or subtract the baseline in their heads, so a cropped bar chart misleads even when every printed label is accurate.
+
+## Restoring the zero baseline
+
+Moving the axis back to zero puts every pair of bars back in true proportion. The United States, at 347 million, spans just over two and a half times Ethiopia's width, and the steady step down from Indonesia through Brazil reflects the actual population gaps between them.
+
+```json demo source="UN Population Division, World Population Prospects 2024" height=400
+{
+  "mark": "bar",
+  "data": [
+    { "country": "United States", "population": 347000000 },
+    { "country": "Indonesia", "population": 285000000 },
+    { "country": "Pakistan", "population": 255000000 },
+    { "country": "Nigeria", "population": 240000000 },
+    { "country": "Brazil", "population": 217000000 },
+    { "country": "Bangladesh", "population": 175000000 },
+    { "country": "Russia", "population": 144000000 },
+    { "country": "Ethiopia", "population": 135000000 }
+  ],
+  "encoding": {
+    "x": {
+      "field": "population",
+      "type": "quantitative",
+      "scale": { "domain": [0, 360000000] },
+      "axis": { "title": "Population", "format": ".2~s" }
+    },
+    "y": { "field": "country", "type": "nominal", "sort": "x" }
+  },
+  "chrome": {
+    "title": "At a zero baseline, Indonesia's bar is 2.1x Ethiopia's (285M vs 135M)",
+    "subtitle": "Population of the eight countries under 1 billion, 2025 estimates"
+  }
+}
+```
+
+India and China sit above 1.4 billion people each and are omitted here so the remaining eight countries can share one readable axis. Keeping zero on those eight bars still leaves every rank and gap clear, from the United States down to Ethiopia.
+
+When real differences do look cramped on a zero-anchored bar chart, switching the mark works better than cropping the axis. A dot plot places a single point at each value, so readers judge position along the scale and the axis can start near the data minimum. Plotting differences from a benchmark, such as each value's gap from the group average, also keeps a zero baseline while widening the spread.
+
+## Why line charts follow a different rule
+
+Line charts encode values by vertical position along the y-axis, with the slope between points showing the rate of change. Because no filled rectangle stretches down to the axis, readers compare where points sit relative to one another and to the tick labels. Anchoring every line chart at zero can compress a narrow series into a nearly flat band at the top of the frame.
+
+Quarterly US consumer price inflation from the [Bureau of Labor Statistics](https://fred.stlouisfed.org/series/CPIAUCSL) peaked at 8.5 percent in July 2022 and eased to 2.6 percent by October 2024. Tightening the y-axis to the data range removes the empty space beneath the curve, so the brief spring rebound before the final drop stays visible.
+
+<Demo id="blog/baseline-line-zoomed" />
+
+Zooming a line chart still requires judgment about what counts as a meaningful swing. A stock price moving half a percent across a single morning looks like a crash if the y-axis spans one dollar. Keep the axis wide enough that routine noise looks small, and label the axis ticks clearly so the starting value is obvious at a glance.
+
+Area charts follow the bar rule, even though their top edge traces a line. Shaded fill turns vertical height into area, so cropping the baseline cuts away the bottom of every region and distorts proportions the same way a cropped bar does.
+
+## The spec
+
+OpenChart sets `scale.zero` based on the mark. Bar and area marks include zero on quantitative axes by default, while line, point, and range marks default to `zero: false` to fit the observed spread. Setting `scale: { zero: false }` on a line makes that behavior explicit in the spec, and `scale: { zero: true }` brings a line back to zero whenever the origin is a useful benchmark.
+
+Setting `scale.domain` overrides `scale.zero` and pins both ends of the axis to fixed `[min, max]` bounds. In the code panel under the second chart, `domain: [0, 360000000]` locks the zero-baseline bars to the same upper bound as the cropped chart above it, so the only difference between the two views is where the axis starts.
+
+For every quantitative scale option, including log scales and custom tick bounds, see the [field types and scales guide](/docs/the-spec/scales/).
