@@ -7,7 +7,7 @@
  * a test keeps the two in sync.
  */
 import { electricityMixMatrix } from "@datasets/electricity-mix-matrix";
-import type { ChartSpec } from "@opendata-ai/openchart-core";
+import type { ChartSpec, ChartSpecOverride } from "@opendata-ai/openchart-core";
 import { sourceOf } from "../source";
 import { ACCENT, ELECTRICITY_SUBTITLE, GREY } from "../the-spec/shared";
 import { defineDemo } from "../types";
@@ -55,11 +55,20 @@ const baseLines: ChartSpec = {
 
 /**
  * Phone-width x axis: the first, middle and last years. Left to itself the
- * narrow axis thins to 2016, 2020, 2022, which skips the final year.
+ * narrow axis thins to 2016, 2020, 2022 (or 2016 to 2022 by twos on a wider
+ * phone), which skips the final year.
  */
-const compactYearAxis = {
+const phoneYearAxis = {
   x: { axis: { values: [firstYear, years[Math.floor(years.length / 2)] ?? "", lastYear] } },
 };
+
+/**
+ * Phones span both narrow breakpoints: compact under 400px and medium from 400
+ * to 700px, where a 412 or 430px phone lands. Desktop figures render at full.
+ */
+function onPhones(override: ChartSpecOverride): ChartSpec["overrides"] {
+  return { compact: override, medium: override };
+}
 
 /** Multi-line chart of all six US electricity sources identified only by a top legend. */
 export const directLabelsLegend = defineDemo({
@@ -75,7 +84,7 @@ export const directLabelsLegend = defineDemo({
       title: `Gas reached ${gasEnd.toFixed(1)}% of US main-source electricity in ${lastYear}, ahead of coal at ${coalEnd.toFixed(1)}%`,
       subtitle,
     },
-    overrides: { compact: { encoding: compactYearAxis } },
+    overrides: onPhones({ encoding: phoneYearAxis }),
   },
 });
 
@@ -108,14 +117,12 @@ export const directLabelsEndpoints = defineDemo({
       title: `US coal fell from ${coalStart.toFixed(1)}% to ${coalEnd.toFixed(1)}% of main-source generation between ${firstYear} and ${lastYear}`,
       subtitle,
     },
-    overrides: {
-      compact: {
-        encoding: compactYearAxis,
-        // The subtitle already names the years, so the phone title drops them.
-        chrome: {
-          title: `US coal fell from ${coalStart.toFixed(1)}% to ${coalEnd.toFixed(1)}% of generation`,
-        },
+    overrides: onPhones({
+      encoding: phoneYearAxis,
+      // The subtitle already names the years, so the phone title drops them.
+      chrome: {
+        title: `US coal fell from ${coalStart.toFixed(1)}% to ${coalEnd.toFixed(1)}% of main-source generation`,
       },
-    },
+    }),
   },
 });

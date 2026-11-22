@@ -103,7 +103,11 @@ Moving text onto the lines also solves an accessibility problem that color palet
   "overrides": {
     "compact": {
       "encoding": { "x": { "axis": { "values": ["2016", "2020", "2023"] } } },
-      "chrome": { "title": "US coal fell from 31.2% to 16.2% of generation" }
+      "chrome": { "title": "US coal fell from 31.2% to 16.2% of main-source generation" }
+    },
+    "medium": {
+      "encoding": { "x": { "axis": { "values": ["2016", "2020", "2023"] } } },
+      "chrome": { "title": "US coal fell from 31.2% to 16.2% of main-source generation" }
     }
   }
 }
@@ -125,6 +129,6 @@ The Code tab under the second chart opens the full spec with all 48 source rows.
 
 To emphasize coal while keeping every context line labeled, the color channel pairs an explicit `scale` (teal for coal, grey for the other five sources) with a thicker stroke in `seriesStyles`. When only the focal series should carry text, set `highlight: "Coal"` on `encoding.color`. That single field mutes the remaining lines to grey and limits endpoint labels to the highlighted series.
 
-On a chart narrower than 400 pixels, the `overrides.compact` block swaps in a shorter title and marks the x axis at 2016, 2020 and 2023 only.
+On a phone, the `compact` and `medium` blocks in `overrides` (charts under 700 pixels wide) swap in a shorter title and mark the x axis at 2016, 2020 and 2023 only.
 
 For all formatting and placement options, see the [endpoint labels guide](/docs/framing/endpoint-labels/).

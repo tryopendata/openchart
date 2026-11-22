@@ -7,7 +7,12 @@
  * holds the two together.
  */
 import { gistempGlobalAnnual } from "@datasets/gistemp-global-annual";
-import type { Annotation, ChartSpec, RefLineAnnotation } from "@opendata-ai/openchart-core";
+import type {
+  Annotation,
+  ChartSpec,
+  ChartSpecOverride,
+  RefLineAnnotation,
+} from "@opendata-ai/openchart-core";
 import { sourceOf } from "../source";
 import { signedDegrees, TEMPERATURE_BASELINE } from "../style/temperature";
 import { COOL, WARM } from "../the-spec/shared";
@@ -78,6 +83,15 @@ const coolestCallout: Annotation = {
   connector: "curve",
 };
 
+/**
+ * Phone-width notes. On a phone the left label covers the short 1940 column,
+ * so it moves under the line at the right, where every recent column rises
+ * above it.
+ */
+const phoneAnnotations: ChartSpecOverride = {
+  annotations: [namedZeroLine({ labelPlacement: "end", labelAnchor: "bottom" }), coolestCallout],
+};
+
 export const gistempBaseline = defineDemo({
   id: "blog/gistemp-baseline",
   title: "Global temperature anomaly with its zero line named and 1910 called out",
@@ -99,15 +113,8 @@ export const gistempBaseline = defineDemo({
       title: `${coolest.year} was the coolest year shown, ${Math.abs(coolest.anomaly)}°C below average`,
       subtitle,
     },
-    overrides: {
-      compact: {
-        annotations: [
-          // On a phone the left label covers the short 1940 column, so it moves
-          // under the line at the right, where every recent column rises above it.
-          namedZeroLine({ labelPlacement: "end", labelAnchor: "bottom" }),
-          coolestCallout,
-        ],
-      },
-    },
+    // Phones span compact (under 400px) and medium (400 to 700px, where 412
+    // and 430px phones land); desktop figures render at full.
+    overrides: { compact: phoneAnnotations, medium: phoneAnnotations },
   },
 });

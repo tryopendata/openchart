@@ -99,7 +99,8 @@ Direct endpoint labels place each source name right beside its line and remove t
     "subtitle": "Share of US electricity from the six main sources, %, 2016-2023"
   },
   "overrides": {
-    "compact": { "encoding": { "x": { "axis": { "values": ["2016", "2020", "2023"] } } } }
+    "compact": { "encoding": { "x": { "axis": { "values": ["2016", "2020", "2023"] } } } },
+    "medium": { "encoding": { "x": { "axis": { "values": ["2016", "2020", "2023"] } } } }
   }
 }
 ```
@@ -118,7 +119,7 @@ Across US states and DC in the Bureau of Labor Statistics snapshot, unemployment
 
 Code under the electricity chart opens its spec. In `encoding.color`, `scale.domain` lists all six sources in a fixed order so `scale.range` assigns deep blue (`#0072b2`) to Gas, vermilion (`#d55e00`) to Coal, and neutral gray (`#7a858f`) to the remaining four. `seriesStyles` raises the focus stroke width to three pixels, while `legend: { show: false }` and `endpointLabels: { content: "label" }` place each series name at the end of its line.
 
-On a chart narrower than 400 pixels, `overrides.compact` sets the x axis ticks to 2016, 2020 and 2023, so a phone still shows the first and last years beside the labels.
+On a phone, the `compact` and `medium` blocks in `overrides` (charts under 700 pixels wide) set the x axis ticks to 2016, 2020 and 2023, so the first and last years still show beside the labels.
 
 On the tile map, `palette: "blue"` picks OpenChart's sequential ramp, which adjusts automatically when the host passes `darkMode: "force"` or `darkMode: "auto"`. When a chart must hit exact brand colors in both themes, any slot in `theme.colors` (including each entry in `theme.colors.categorical`) accepts a `{ light, dark }` object instead of one string. Supplying a darker shade for `light` and a lifted shade for `dark` locks contrast on both backgrounds while bypassing automatic derivation.
 
