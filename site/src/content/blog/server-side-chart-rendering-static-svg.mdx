@@ -48,13 +48,13 @@ The server has no color scheme to detect, and `darkMode: "auto"` gives the light
 
 ## What a static SVG leaves out
 
-A static SVG is a picture. It has no animation, no scripts, no tooltips, no keyboard navigation and no hidden data table. It does keep `role="img"` and a label built from the chart's title, which for the chart above reads "Bar chart showing House prices rose 85.9% in Maine from 2019 to 2026 and 14.6% in DC (10 data points)". Write the finding in a caption and put the values in an HTML table, as the [accessibility post](/blog/accessible-charts-for-the-web/) describes.
+A static SVG has no animation, no scripts, no tooltips, no keyboard navigation and no hidden data table. It does keep `role="img"` and a label built from the chart's title, which for the chart above reads "Bar chart showing House prices rose 85.9% in Maine from 2019 to 2026 and 14.6% in DC (10 data points)". Write the finding in a caption and put the values in an HTML table, as the [accessibility post](/blog/accessible-charts-for-the-web/) describes.
 
 It also supports fewer specs than the live library. Charts, layered charts, bar lists, tile maps and geographic maps work. Tables, Sankey diagrams and network graphs do not.
 
 ## When to keep the live chart
 
-A reader who needs to hover for exact values or step through points from the keyboard needs the live chart. The usual pattern is both: ship the static SVG so the page has a chart immediately and without JavaScript, then mount the live chart over it. This site's figures work that way, and the same spec drives both.
+A reader who needs to hover for exact values or step through points from the keyboard needs the live chart. Most pages want both. Ship the static SVG so the page has a chart immediately and without JavaScript, then mount the live chart over it from the same spec.
 
 ## Getting a PNG on the server
 
@@ -62,7 +62,7 @@ The output is always SVG. Where a link preview or an email needs a raster image,
 
 ## The spec
 
-The spec is plain JSON, so the same file can feed the server render and a live `createChart` call in the browser. The chart below is the second example. It maps `net` to the horizontal axis, `state` to the vertical axis, and a `direction` field to color.
+The spec is plain JSON, so the same file can feed the server render and a live `createChart` call in the browser. The chart below maps `net` to the horizontal axis, `state` to the vertical axis, and a `direction` field to color.
 
 ```json demo source="IRS Statistics of Income, State-to-State Migration Data" height=420
 {
