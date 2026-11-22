@@ -7,7 +7,7 @@
  * that happens the labels move onto the flow instead. First and interior
  * columns label just right of their node, the last column just left of its
  * node, every label wraps within the gap to the neighbouring column, and the
- * node's value sits on its own line below the name. Labels in one column are
+ * node's value sits on its own line below the name. Labels that share space are
  * then nudged apart so small neighbouring nodes never stack text on text.
  *
  * Everything here is pure geometry over measured text; the caller supplies the
@@ -27,7 +27,7 @@ export const MIN_OUTSIDE_FLOW_SHARE = 0.5;
 /** Horizontal gap between a node (or a neighbouring column) and its label. */
 export const LABEL_GAP = 6;
 
-/** Vertical gap kept between two label blocks in one column. */
+/** Vertical gap kept between two label blocks that share horizontal space. */
 const LABEL_STACK_GAP = 2;
 
 /** Label gutter widths, in px, as measured for outside placement. */
@@ -64,6 +64,8 @@ export interface LabelNode {
   y1: number;
   /** Display name (the label's text). */
   name: string;
+  /** Formatted value drawn on its own line under the name, when there is one. */
+  value?: string;
 }
 
 /** Horizontal extent of one column of nodes. */
@@ -86,24 +88,31 @@ export function columnEdges(nodes: readonly LabelNode[]): Map<number, ColumnEdge
   return edges;
 }
 
-/** Text measurement for label names, in the label's own font. */
+/** Text measurement for node labels. */
 export interface LabelTextMetrics {
   fontSize: number;
+  /** Weight of the name lines. */
   fontWeight: number;
+  /** Weight of the value line. */
+  valueFontWeight: number;
   /** Line pitch in px (font size times line height). */
   lineHeight: number;
   /** Host text measure; the core estimate is used when absent. */
   measureText?: MeasureTextFn;
 }
 
+/** Width of a string at the label size, with the host measure when there is one. */
+function textWidth(text: string, fontWeight: number, metrics: LabelTextMetrics): number {
+  return metrics.measureText
+    ? metrics.measureText(text, metrics.fontSize, fontWeight).width
+    : estimateTextWidth(text, metrics.fontSize, fontWeight);
+}
+
 /** Width of the widest single word of a name. */
 function longestWordWidth(name: string, metrics: LabelTextMetrics): number {
   let widest = 0;
   for (const word of name.split(/\s+/)) {
-    const width = metrics.measureText
-      ? metrics.measureText(word, metrics.fontSize, metrics.fontWeight).width
-      : estimateTextWidth(word, metrics.fontSize, metrics.fontWeight);
-    if (width > widest) widest = width;
+    widest = Math.max(widest, textWidth(word, metrics.fontWeight, metrics));
   }
   return widest;
 }
@@ -144,8 +153,8 @@ export interface LabelFrame {
 }
 
 /**
- * Place every node's label on the flow and spread each column's labels so no
- * two blocks overlap. Each block is the wrapped name plus one value line.
+ * Place every node's label on the flow and spread the labels so no two blocks
+ * overlap. Each block is the wrapped name plus the value line.
  */
 export function placeInsideLabels(
   nodes: readonly LabelNode[],
@@ -155,26 +164,17 @@ export function placeInsideLabels(
   const maxDepth = nodes.reduce((max, n) => Math.max(max, n.depth), 0);
   const edges = columnEdges(nodes);
   const placed = new Map<string, InsideLabel>();
-  const byColumn = new Map<number, Array<{ id: string; centre: number; height: number }>>();
+  const blocks: LabelBlock[] = [];
 
   for (const node of nodes) {
     const label = insideLabelFor(node, maxDepth, edges, frame, metrics);
     placed.set(node.id, label);
-    const blocks = byColumn.get(node.depth) ?? [];
-    blocks.push({
-      id: node.id,
-      centre: label.y,
-      height: (label.lines.length + 1) * metrics.lineHeight,
-    });
-    byColumn.set(node.depth, blocks);
+    blocks.push(blockOf(node, label, metrics));
   }
 
-  for (const blocks of byColumn.values()) {
-    const centres = spreadColumn(blocks, frame.top, frame.bottom);
-    for (const [id, centre] of centres) {
-      const label = placed.get(id);
-      if (label) label.y = centre;
-    }
+  for (const [id, centre] of spreadLabelBlocks(blocks, frame.top, frame.bottom)) {
+    const label = placed.get(id);
+    if (label) label.y = centre;
   }
   return placed;
 }
@@ -209,19 +209,44 @@ function wrapName(name: string, maxWidth: number, metrics: LabelTextMetrics): st
   return wrapText(name, metrics.fontSize, metrics.fontWeight, maxWidth, metrics.measureText);
 }
 
-/** A label block in one column: its wanted centre and its height. */
+/** The space one placed label takes: its lines and value, out from its anchor. */
+function blockOf(node: LabelNode, label: InsideLabel, metrics: LabelTextMetrics): LabelBlock {
+  const widths = label.lines.map((line) => textWidth(line, metrics.fontWeight, metrics));
+  if (node.value) widths.push(textWidth(node.value, metrics.valueFontWeight, metrics));
+  const width = Math.max(0, ...widths);
+  const lineCount = label.lines.length + (node.value ? 1 : 0);
+  return {
+    id: node.id,
+    centre: label.y,
+    height: lineCount * metrics.lineHeight,
+    left: label.anchor === 'start' ? label.x : label.x - width,
+    right: label.anchor === 'start' ? label.x + width : label.x,
+  };
+}
+
+/** A placed label block: its wanted vertical centre, height and horizontal extent. */
 export interface LabelBlock {
   id: string;
   centre: number;
   height: number;
+  left: number;
+  right: number;
+}
+
+/** Whether two blocks share any horizontal span, and so cannot share a row. */
+function shareSpan(a: LabelBlock, b: LabelBlock): boolean {
+  return a.left < b.right && b.left < a.right;
 }
 
 /**
- * Nudge one column's label blocks apart, top to bottom, so none overlap, then
- * push the run back up if it spilled past the bottom. Blocks keep their order.
- * Returns each block's new centre by id.
+ * Nudge label blocks apart so no two that share horizontal space overlap.
+ * Blocks in one column always share it; a label right of one column and a
+ * label left of the next meet in the same gap and share it only when their
+ * text reaches across. A top-to-bottom sweep pushes each block below the
+ * sharing blocks above it, then a bottom-to-top sweep pulls any run that
+ * spilled past the bottom back inside. Returns each block's new centre by id.
  */
-export function spreadColumn(
+export function spreadLabelBlocks(
   blocks: readonly LabelBlock[],
   top: number,
   bottom: number,
@@ -230,12 +255,20 @@ export function spreadColumn(
   const tops = sorted.map((b) => b.centre - b.height / 2);
 
   for (let i = 0; i < sorted.length; i++) {
-    const floor = i === 0 ? top : tops[i - 1] + sorted[i - 1].height + LABEL_STACK_GAP;
-    if (tops[i] < floor) tops[i] = floor;
+    let floor = top;
+    for (let j = 0; j < i; j++) {
+      if (shareSpan(sorted[i], sorted[j])) {
+        floor = Math.max(floor, tops[j] + sorted[j].height + LABEL_STACK_GAP);
+      }
+    }
+    tops[i] = Math.max(tops[i], floor);
   }
   for (let i = sorted.length - 1; i >= 0; i--) {
-    const ceiling = i === sorted.length - 1 ? bottom : tops[i + 1] - LABEL_STACK_GAP;
-    if (tops[i] + sorted[i].height > ceiling) tops[i] = ceiling - sorted[i].height;
+    let ceiling = bottom;
+    for (let j = i + 1; j < sorted.length; j++) {
+      if (shareSpan(sorted[i], sorted[j])) ceiling = Math.min(ceiling, tops[j] - LABEL_STACK_GAP);
+    }
+    tops[i] = Math.min(tops[i], ceiling - sorted[i].height);
   }
 
   return new Map(sorted.map((b, i) => [b.id, tops[i] + b.height / 2]));

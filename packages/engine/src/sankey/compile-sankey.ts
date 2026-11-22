@@ -669,6 +669,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
   const labelMetrics: LabelTextMetrics = {
     fontSize: labelFontSize,
     fontWeight: labelFontWeight,
+    valueFontWeight,
     lineHeight: labelFontSize * LABEL_LINE_HEIGHT,
     measureText: options.measureText,
   };
@@ -680,6 +681,7 @@ export function compileSankey(spec: unknown, options: CompileOptions): SankeyLay
     y0: node.y0 ?? 0,
     y1: node.y1 ?? 0,
     name: node.label ?? node.id,
+    value: formatFlowValue(node.value ?? 0, nodeFmt),
   }));
   // Column extents, so an interior label knows how much room it has before it
   // runs into the next column.

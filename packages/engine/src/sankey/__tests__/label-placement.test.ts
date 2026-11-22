@@ -3,13 +3,14 @@ import {
   type LabelNode,
   placeInsideLabels,
   shouldPlaceLabelsInside,
-  spreadColumn,
+  spreadLabelBlocks,
 } from '../label-placement';
 
 // A font that draws every character 7px wide keeps the arithmetic readable.
 const metrics = {
   fontSize: 12,
   fontWeight: 500,
+  valueFontWeight: 400,
   lineHeight: 16,
   measureText: (text: string, fontSize: number) => ({ width: text.length * 7, height: fontSize }),
 };
@@ -24,6 +25,7 @@ const node = (id: string, depth: number, x0: number, y0: number, y1: number): La
   y0,
   y1,
   name: id,
+  value: '1.00',
 });
 
 describe('shouldPlaceLabelsInside', () => {
@@ -41,12 +43,12 @@ describe('shouldPlaceLabelsInside', () => {
   });
 });
 
-describe('spreadColumn', () => {
+describe('spreadLabelBlocks', () => {
   it('leaves blocks that do not touch where they are', () => {
-    const centres = spreadColumn(
+    const centres = spreadLabelBlocks(
       [
-        { id: 'a', centre: 50, height: 20 },
-        { id: 'b', centre: 200, height: 20 },
+        { id: 'a', centre: 50, height: 20, left: 0, right: 50 },
+        { id: 'b', centre: 200, height: 20, left: 0, right: 50 },
       ],
       0,
       400,
@@ -56,10 +58,10 @@ describe('spreadColumn', () => {
   });
 
   it('pushes an overlapping block down below its neighbour, in order', () => {
-    const centres = spreadColumn(
+    const centres = spreadLabelBlocks(
       [
-        { id: 'b', centre: 105, height: 32 },
-        { id: 'a', centre: 100, height: 32 },
+        { id: 'b', centre: 105, height: 32, left: 0, right: 50 },
+        { id: 'a', centre: 100, height: 32, left: 0, right: 50 },
       ],
       0,
       400,
@@ -70,16 +72,31 @@ describe('spreadColumn', () => {
   });
 
   it('pulls a run that spilled past the bottom back inside the frame', () => {
-    const centres = spreadColumn(
+    const centres = spreadLabelBlocks(
       [
-        { id: 'a', centre: 390, height: 32 },
-        { id: 'b', centre: 395, height: 32 },
+        { id: 'a', centre: 390, height: 32, left: 0, right: 50 },
+        { id: 'b', centre: 395, height: 32, left: 0, right: 50 },
       ],
       0,
       400,
     );
     expect(centres.get('b')).toBe(400 - 16);
     expect(centres.get('a')).toBe(400 - 32 - 2 - 16);
+  });
+
+  it('separates labels from two columns only when their text reaches across the gap', () => {
+    // A label right of one column (from 192) and one left of the next (to 342).
+    const meeting = (rightEdge: number, leftEdge: number) =>
+      spreadLabelBlocks(
+        [
+          { id: 'interior', centre: 100, height: 32, left: 192, right: rightEdge },
+          { id: 'last', centre: 100, height: 32, left: leftEdge, right: 342 },
+        ],
+        0,
+        400,
+      );
+    expect(meeting(260, 280).get('last')).toBe(100);
+    expect(meeting(300, 280).get('last')).toBe(100 + 32 + 2);
   });
 });
 
