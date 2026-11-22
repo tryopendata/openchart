@@ -10,7 +10,7 @@ lead: blog/income-bins-10000
 
 import Demo from "../../components/demo/Demo.astro";
 
-Do most states have about the same median household income, or are they spread out? A histogram of the 2024 values from the [Census Bureau's American Community Survey](https://www.census.gov/programs-surveys/acs) can say either, depending on one setting: the width of its bins. A histogram sorts values into bins and draws a bar for each bin's count, so the same values can look like a lump, a smooth curve or random spikes.
+Do most states have about the same median household income, or are they spread out? A histogram of the 2024 values from the [Census Bureau's American Community Survey](https://www.census.gov/programs-surveys/acs) can say either, and the width of its bins decides which. A histogram sorts values into bins and draws a bar for each bin's count, so the same values can look like a lump, a smooth curve or random spikes.
 
 The data covers the 50 states and DC. The lowest is Mississippi at $59,127 and the highest is DC at $109,707.
 
@@ -278,7 +278,7 @@ A $10,000 bin gives six bars. The values pile up between $70,000 and $90,000, an
       "type": "quantitative",
       "scale": {
         "domain": [
-          50000,
+          40000,
           125000
         ],
         "nice": false
@@ -342,11 +342,11 @@ Small quakes are far more common than big ones, so counts should fall steadily w
 
 At half-magnitude bins the small spikes at higher magnitudes smooth out, and the dip stays, so the bins did not make it. The way the catalog was collected probably did. Outside regions with dense seismometers, such as the United States, the catalog reliably includes only quakes of about magnitude 4.5 and up. Counts climb from 4.0 and peak at 4.5, where worldwide coverage begins.
 
-A width test tells you a feature isn't a bin artifact; it can't tell you whether the data collection made it. For that, read how the data was gathered.
+To check whether the data collection made a feature, read how the data was gathered.
 
 ## The spec
 
-OpenChart has a `histogram` mark that bins raw rows for you: `mark: { type: "histogram", binCount: 24 }` asks for up to 24 bins and picks a round width. The charts here use the `bin` [transform](/docs/the-spec/transforms/) instead, because it lets the spec state the exact width.
+OpenChart's `histogram` mark bins and counts raw rows for you. `mark: { type: "histogram", binCount: 24 }` asks for up to 24 bins and picks a round width, and `encoding.x.bin: { step, extent }` sets an exact width. The charts here use the `bin` [transform](/docs/the-spec/transforms/) instead, because the earthquake rows are already counted and have to be summed, which the mark's count can't do. The income charts use the same transform so the two specs match.
 
 In the income spec, `bin: { step: 10000, extent: [50000, 125000] }` writes each state's bin start and end into two new fields. `aggregate` with `op: "count"`, grouped by both fields, turns 51 rows into one count per bin.
 

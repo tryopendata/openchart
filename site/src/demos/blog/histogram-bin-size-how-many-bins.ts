@@ -24,6 +24,8 @@ const incomes = stateMedianHouseholdIncome.data.map((row) => ({
 /** Every income chart starts its bins here and ends at the same edge, so the widths compare. */
 const INCOME_START = 50_000;
 const INCOME_END = 125_000;
+/** The x axis starts a bin width below the first bin, so the $50k tick clears the y axis's 0. */
+const AXIS_START = 40_000;
 
 /** How many values fall in each non-empty bin of this width, counted straight from the rows. */
 export function binCounts(values: number[], start: number, step: number): number[] {
@@ -65,7 +67,7 @@ function incomeHistogram(step: number, title: string): ChartSpec {
       x: {
         field: "from",
         type: "quantitative",
-        scale: { domain: [INCOME_START, INCOME_END], nice: false },
+        scale: { domain: [AXIS_START, INCOME_END], nice: false },
         axis: {
           title: "Median household income, 2024",
           format: "$~s",
