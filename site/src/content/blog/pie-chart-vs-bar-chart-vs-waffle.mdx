@@ -14,7 +14,7 @@ A pie chart divides a whole into parts and asks the reader to compare angles. Th
 
 ## When a pie works
 
-Mortgages make up 70% of US household debt. A pie shows that at a glance, because one slice takes most of the circle and the reader needs no arithmetic to see it. The same pie also shows where the form breaks down: the other four slices look alike, and without printed numbers no reader could rank them.
+Mortgages make up 70% of US household debt. A pie shows that at a glance, because one slice takes most of the circle and the reader needs no arithmetic to see it. A pie also needs a true whole. Its slices must add up to 100%, so it is the wrong chart for survey answers where people could pick several options. The same pie also shows where the form breaks down: the other four slices look alike, and without printed numbers no reader could rank them.
 
 <Demo id="blog/debt-pie" />
 
@@ -64,7 +64,7 @@ Home equity loans and the Bank's own "other" category are each under 3% of the t
     "y": {
       "field": "type",
       "type": "nominal",
-      "sort": null
+      "sort": "x"
     }
   },
   "labels": {
@@ -77,7 +77,7 @@ Home equity loans and the Bank's own "other" category are each under 3% of the t
 }
 ```
 
-Sort the bars by value unless the categories have a natural order, such as age bands or months. Use bars whenever the reader has to compare parts with each other, or when there are more than five or six parts. A [bar chart](/docs/comparison/bar/) also takes more categories than a pie can label.
+Sort the bars by value unless the categories have a natural order, such as age bands or months. Bars have no such requirement, so they also work for values that are not shares of a total. Use bars whenever the reader has to compare parts with each other, or when there are more than five or six parts. A [bar chart](/docs/comparison/bar/) also takes more categories than a pie can label.
 
 ## When a waffle works
 
@@ -1408,7 +1408,7 @@ Normalizing hides the total, so state the dollars elsewhere if they matter. "Eve
 
 ## The spec
 
-A pie is `mark: "arc"` with the number on `theta` and the category on `color`. A waffle is `mark: "waffle"` with the same two channels, and `highlight` on `color` keeps one category in color and mutes the rest. The bar chart puts the number on `x` and the category on `y`, with `sort: null` to keep the order of the data. The area chart sets `stack: "normalize"` on `y` and prints the axis as a percentage with `format: ".0%"`.
+A pie is `mark: "arc"` with the number on `theta` and the category on `color`. A waffle is `mark: "waffle"` with the same two channels, and `highlight` on `color` keeps one category in color and mutes the rest. The bar chart puts the number on `x` and the category on `y`, with `sort: "x"` to put the longest bar first. The area chart sets `stack: "normalize"` on `y` and prints the axis as a percentage with `format: ".0%"`.
 
 Each chart's Code button shows its full spec. The [100% stacked page](/docs/part-to-whole/stacked-100/) and the [waffle page](/docs/part-to-whole/waffle/) cover the stacking and highlight options.
 

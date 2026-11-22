@@ -70,7 +70,7 @@ export const debtBars = defineDemo({
     data: byBalance,
     encoding: {
       x: { field: "balance", type: "quantitative", axis: { title: "$ trillions", format: ".0f" } },
-      y: { field: "type", type: "nominal", sort: null },
+      y: { field: "type", type: "nominal", sort: "x" },
     },
     labels: { format: ".2f" },
     chrome: {
