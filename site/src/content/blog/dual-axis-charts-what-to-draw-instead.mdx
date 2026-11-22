@@ -20,7 +20,7 @@ The rate is deaths per 100 million vehicle miles traveled. Counts before 1975 co
 
 With both axes starting at zero, each line falls in proportion to its own change. Deaths lose about a quarter of their height and the rate loses more than three quarters, so this version already shows the rate falling faster.
 
-Trim each axis to the range of its own data and the two lines start near the top and end near the bottom together. A 23% fall and a 78% fall now look alike, and the gap between them disappears.
+Trim each axis to the range of its own data and the two drops look closer than they are. Deaths start about 80% of the way up the plot and the rate about 90%, and both reach the floor in 2011, though by then deaths had fallen 36% and the rate 80%. After 2011 deaths climb back to about a third of the plot height while the rate stays near the floor.
 
 <Demo id="blog/dual-axis-trimmed" />
 
@@ -1275,7 +1275,7 @@ The second fix keeps one plot and one axis. Divide each year's value by the 1966
 }
 ```
 
-Deaths ended at 77 and the rate at 22. The rate is deaths divided by miles traveled, so that gap means vehicles now travel about 3.6 times as many miles as in 1966. The zero-based dual-axis chart showed the difference in the two drops only because its author chose zero for both ranges, and the indexed chart leaves no range to choose.
+Deaths ended at 77 and the rate at 22. The rate is deaths divided by miles traveled, so that gap means total vehicle miles traveled are now about 3.6 times the 1966 figure. The zero-based dual-axis chart showed the difference in the two drops only because its author chose zero for both ranges, and the indexed chart leaves no range to choose.
 
 Indexing has a cost. A base year with an unusual value skews the whole picture, and the real units drop out, so put the raw values in a tooltip or a table when readers need them.
 

@@ -10,9 +10,12 @@ import { describe, expect, it } from "vitest";
 import { staticSvgPair } from "../../lib/demo/static-svg";
 import { validateDemo } from "../../lib/demo/validate";
 import {
+  deathsToLowPct,
   dualAxisTrimmed,
   dualAxisZeroBased,
   fatalitiesIndexed,
+  lowYear,
+  rateToLowPct,
   wildfirePanels,
 } from "./dual-axis-charts-what-to-draw-instead";
 
@@ -88,12 +91,16 @@ describe("the dual-axis post's figures", () => {
     expect(indexed.filter((row) => row.series === "Deaths per 100M miles")[0]?.index).toBe(100);
   });
 
+  it("finds the year deaths bottom out and each series' fall to it", () => {
+    expect([lowYear, deathsToLowPct, rateToLowPct]).toEqual([2011, 36, 80]);
+  });
+
   it("titles each chart with a finding read off the rows", () => {
     expect(titleOf(dualAxisZeroBased)).toBe(
       "With both axes from zero, deaths fall 23% and the rate falls 78%, in proportion",
     );
     expect(titleOf(dualAxisTrimmed)).toBe(
-      "With both axes trimmed, a 23% fall and a 78% fall look alike",
+      "With both axes trimmed, deaths seem to fall as far as the rate until 2011",
     );
     expect(titleOf(wildfirePanels)).toBe(
       "Fires per year did not climb, but the average fire grew from 42 to 121 acres",

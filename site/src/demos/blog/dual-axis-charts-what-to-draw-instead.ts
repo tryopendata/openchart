@@ -1,7 +1,7 @@
 /**
  * The figures in the blog post "Dual-axis charts: what to draw instead": the
  * same NHTSA road-death series on two dual-axis charts, one with both axes from
- * zero and one trimmed so a 23% and a 78% fall look alike, then the two fixes (separate panels, an indexed chart) with NIFC
+ * zero and one trimmed so both lines reach the floor in 2011, then the two fixes (separate panels, an indexed chart) with NIFC
  * wildfire counts and NHTSA again. Titles state findings computed from the
  * dataset rows so they cannot drift from the data. The post's `json demo`
  * fences repeat `wildfirePanels.spec` and `fatalitiesIndexed.spec` verbatim,
@@ -39,6 +39,13 @@ const pctChange = (from: number, to: number) => Math.round(((to - from) / from) 
 
 export const deathsFallPct = Math.abs(pctChange(first.total_fatalities, last.total_fatalities));
 export const ratePct = Math.abs(pctChange(first.rate_per_100m_vmt, last.rate_per_100m_vmt));
+
+// The year deaths bottom out. On the trimmed chart both lines reach the floor there,
+// though the two had fallen by very different amounts.
+const low = traffic.reduce((min, row) => (row.total_fatalities < min.total_fatalities ? row : min));
+export const lowYear = low.year;
+export const deathsToLowPct = Math.abs(pctChange(first.total_fatalities, low.total_fatalities));
+export const rateToLowPct = Math.abs(pctChange(first.rate_per_100m_vmt, low.rate_per_100m_vmt));
 
 const deathRows = traffic.map((row) => ({
   date: `${row.year}-01-01`,
@@ -133,7 +140,7 @@ export const dualAxisTrimmed = defineDemo({
     TRIM_RATE,
     [30000, 40000, 50000],
     [1, 2, 3, 4, 5, 6],
-    `With both axes trimmed, a ${deathsFallPct}% fall and a ${ratePct}% fall look alike`,
+    `With both axes trimmed, deaths seem to fall as far as the rate until ${lowYear}`,
   ),
 });
 
