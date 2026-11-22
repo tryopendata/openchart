@@ -10,8 +10,17 @@ import { mlbHitsVsStrikeouts } from "@datasets/mlb-hits-vs-strikeouts";
 import { usImportShares } from "@datasets/us-import-shares";
 import type { ChartSpec } from "@opendata-ai/openchart-core";
 import { sourceOf } from "../source";
-import { ACCENT, GREY } from "../the-spec/shared";
 import { defineDemo } from "../types";
+
+/**
+ * Series colors as light/dark pairs. Each one is also the color of its line's
+ * end label, so each value clears 4.5:1 against its own page: the light teal
+ * is the site accent, and the dark values are lightened until they pass on
+ * the dark page (#0e0f10) and its panel (#17181a).
+ */
+const TEAL = { light: "#0e7490", dark: "#22a3c4" };
+const ORANGE = { light: "#b54d00", dark: "#f07a2b" };
+const GREY = { light: "#66707a", dark: "#9aa0a6" };
 
 /** A phone-width layout, under the 400px compact breakpoint. */
 const PHONE = 360;
@@ -50,21 +59,16 @@ const mlbSpec: ChartSpec = {
     color: {
       field: "measure",
       type: "nominal",
-      scale: { domain: ["Strikeouts", "Hits"], range: [ACCENT, GREY] },
+      scale: { domain: ["Strikeouts", "Hits"] },
     },
   },
+  theme: { colors: { categorical: [TEAL, GREY] } },
   legend: { show: false },
   endpointLabels: true,
+  // A demoted callout is numbered by its place in this list, so the side note
+  // comes first and becomes note 1 at phone width, while `priority` keeps the
+  // finding inline.
   annotations: [
-    {
-      type: "text",
-      x: String(firstOvertake.year),
-      y: firstOvertake.strikeouts,
-      text: `${firstOvertake.year}: strikeouts pass hits`,
-      anchor: "top",
-      offset: { dx: -40, dy: -28 },
-      connector: true,
-    },
     {
       type: "text",
       x: String(shortened.year),
@@ -73,6 +77,17 @@ const mlbSpec: ChartSpec = {
       anchor: "right",
       offset: { dx: -14, dy: 18 },
       connector: true,
+    },
+    {
+      type: "text",
+      x: String(firstOvertake.year),
+      y: firstOvertake.strikeouts,
+      text: `${firstOvertake.year}: strikeouts pass hits`,
+      anchor: "top",
+      offset: { dx: -40, dy: -28 },
+      connector: true,
+      background: true,
+      priority: 1,
     },
   ],
   chromeLayout: "subtract",
@@ -136,9 +151,10 @@ export const importSharesResponsive = defineDemo({
       color: {
         field: "partner",
         type: "nominal",
-        scale: { domain: ["China", "Mexico", "Canada"], range: [ACCENT, "#d55e00", GREY] },
+        scale: { domain: ["China", "Mexico", "Canada"] },
       },
     },
+    theme: { colors: { categorical: [TEAL, ORANGE, GREY] } },
     legend: { show: false },
     endpointLabels: { format: ".1f" },
     responsive: { preserveEnd: true },
@@ -149,12 +165,13 @@ export const importSharesResponsive = defineDemo({
         y: chinaPeak.china_pct,
         text: `China peaked at ${chinaPeak.china_pct.toFixed(1)}% in ${chinaPeak.year}`,
         anchor: "top",
-        offset: { dx: 0, dy: -22 },
+        offset: { dx: -40, dy: -30 },
         connector: true,
       },
     ],
     overrides: {
       compact: {
+        encoding: { x: { axis: { values: ["1995", "2005", "2015", "2024"] } } },
         chrome: {
           title: `China's share of US imports peaked in ${chinaPeak.year}`,
           subtitle: `Share of US goods imports, ${importRows[0]?.year}-${chinaLast.year}`,
@@ -166,7 +183,7 @@ export const importSharesResponsive = defineDemo({
             y: chinaPeak.china_pct,
             text: `${chinaPeak.china_pct.toFixed(1)}%`,
             anchor: "top",
-            offset: { dx: -4, dy: -18 },
+            offset: { dx: -36, dy: -30 },
             connector: true,
           },
         ],
