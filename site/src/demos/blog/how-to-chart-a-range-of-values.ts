@@ -7,6 +7,7 @@
  * test holds the two together.
  */
 import { nycTemperatureRange } from "@datasets/nyc-temperature-range";
+import type { ChartSpecOverride } from "@opendata-ai/openchart-core";
 import { sourceOf } from "../source";
 import { defineDemo } from "../types";
 
@@ -29,6 +30,16 @@ const MONTH_NAMES: Record<string, string> = {
 
 const rows = nycTemperatureRange.data;
 const source = sourceOf(nycTemperatureRange);
+
+/**
+ * Phone widths (compact and medium breakpoints) label every month upright.
+ * Left alone the engine rotates them, or thins upright labels to every other
+ * month and drops months the titles and prose name. Listing each month as an
+ * explicit tick keeps all twelve.
+ */
+const PHONE_MONTH_AXIS: ChartSpecOverride = {
+  encoding: { x: { axis: { labelAngle: 0, values: rows.map((row) => row.month) } } },
+};
 
 const midpoints = rows.map((row) => ({
   month: row.month,
@@ -64,6 +75,7 @@ export const nycTempMidpoint = defineDemo({
       subtitle:
         "Midpoint of average daily low and high temperature by month, Central Park, 2023 (°C)",
     },
+    overrides: { compact: PHONE_MONTH_AXIS, medium: PHONE_MONTH_AXIS },
   },
 });
 
@@ -90,5 +102,6 @@ export const nycTempRange = defineDemo({
       subtitle:
         "Average daily low to average daily high temperature by month, Central Park, 2023 (°C)",
     },
+    overrides: { compact: PHONE_MONTH_AXIS, medium: PHONE_MONTH_AXIS },
   },
 });

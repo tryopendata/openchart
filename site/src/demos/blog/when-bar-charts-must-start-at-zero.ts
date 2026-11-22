@@ -7,7 +7,7 @@
  */
 import { populationByCountry } from "@datasets/population";
 import { usInflation } from "@datasets/us-inflation";
-import type { ChartSpec } from "@opendata-ai/openchart-core";
+import type { ChartSpec, ChartSpecOverride } from "@opendata-ai/openchart-core";
 import { sourceOf } from "../source";
 import { ACCENT } from "../the-spec/shared";
 import { defineDemo } from "../types";
@@ -61,6 +61,18 @@ export const baselineBarsTruncated = defineDemo({
   },
 });
 
+/**
+ * Phone widths (compact and medium breakpoints) drop the parenthetical
+ * populations from the title, and pin a tick every 100M because the engine
+ * otherwise thins this axis to 0 and 200M, unlike the truncated chart above.
+ */
+const zeroBarsOnPhones: ChartSpecOverride = {
+  encoding: { x: { axis: { values: [0, 100_000_000, 200_000_000, 300_000_000] } } },
+  chrome: {
+    title: `At a zero baseline, ${indonesia.country}'s bar is ${trueRatio}x ${ethiopia.country}'s`,
+  },
+};
+
 export const baselineBarsZero = defineDemo({
   id: "blog/baseline-bars-zero",
   title: "Population of eight countries with a zero baseline",
@@ -72,6 +84,7 @@ export const baselineBarsZero = defineDemo({
       title: `At a zero baseline, ${indonesia.country}'s bar is ${trueRatio}x ${ethiopia.country}'s (${formatMillions(indonesia.population)} vs ${formatMillions(ethiopia.population)})`,
       subtitle: "Population of the eight countries under 1 billion, 2025 estimates",
     },
+    overrides: { compact: zeroBarsOnPhones, medium: zeroBarsOnPhones },
   },
 });
 

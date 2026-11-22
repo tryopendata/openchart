@@ -150,6 +150,7 @@ Subtle cell shading adds a second visual channel without competing with bar leng
   "sort": { "column": "gdpPerCapita", "direction": "desc" },
   "density": "condensed",
   "search": true,
+  "mobileLayout": "scroll",
   "chrome": {
     "title": "India leads on population, United States on income and Japan on longevity",
     "subtitle": "Population, PPP GDP per capita (international $) and life expectancy (years); click a header to sort"
@@ -163,6 +164,6 @@ Tables still give up overall shape when a dataset grows large or continuous. A s
 
 Code under the table opens its JSON spec, built from the same twelve rows as the bar chart. Setting `"type": "table"` replaces mark and encoding channels with a `columns` array mapping each field `key` to a header label. The `format` option accepts `"compact"` to abbreviate billion-scale populations into labels like `1.4B`, alongside d3-format strings such as `"$,.0f"` for whole dollars and `".1f"` for one decimal place.
 
-Every visual cue and interactive control sits on its column or at the top level of the spec. Setting `align: "right"` keeps numbers flush along their final digit, `bar: { color: "#0e7490" }` draws proportional bars in the income column, and `heatmap: { palette: "green" }` shades life expectancy cells. Setting `sortable: true` enables header clicks, `sort` picks the starting order, `density: "condensed"` keeps all twelve rows in view, and `search: true` adds the filter box.
+Every visual cue and interactive control sits on its column or at the top level of the spec. Setting `align: "right"` keeps numbers flush along their final digit, `bar: { color: "#0e7490" }` draws proportional bars in the income column, and `heatmap: { palette: "green" }` shades life expectancy cells. Setting `sortable: true` enables header clicks, `sort` picks the starting order, `density: "condensed"` keeps all twelve rows in view, and `search: true` adds the filter box. On phones, `mobileLayout: "scroll"` keeps the grid rather than cards.
 
 To add paging, total rows or sparkline cells to your own tables, start with the [data table guide](/docs/tables/data-table/).

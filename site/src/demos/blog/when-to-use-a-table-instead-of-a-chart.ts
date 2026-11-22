@@ -6,7 +6,7 @@
  * computed from the dataset rows so they cannot drift from the data.
  */
 import { countryIndicators } from "@datasets/country-indicators";
-import type { ChartSpec, TableSpec } from "@opendata-ai/openchart-core";
+import type { ChartSpec, ChartSpecOverride, TableSpec } from "@opendata-ai/openchart-core";
 import { sourceOf } from "../source";
 import { ACCENT } from "../the-spec/shared";
 import { defineDemo } from "../types";
@@ -28,6 +28,23 @@ const longestLived = rows.reduce((top, row) =>
 const dollars = (value: number) => `$${value.toLocaleString("en-US")}`;
 const incomeRatio = (richest.gdpPerCapita / poorest.gdpPerCapita).toFixed(1);
 
+const PHONE_TICK_STEP = 20_000;
+
+/** Ticks from 0 every $20k up to the richest economy's income rounded up to the next step. */
+const phoneIncomeTicks = Array.from(
+  { length: Math.ceil(richest.gdpPerCapita / PHONE_TICK_STEP) + 1 },
+  (_, step) => step * PHONE_TICK_STEP,
+);
+
+/**
+ * Phone widths (compact and medium breakpoints) print ticks as "$40k" because
+ * the full "$80,000" runs past the right edge of a narrow figure, and pin a
+ * tick every $20k because the engine otherwise thins the axis to two labels.
+ */
+const SHORT_DOLLAR_AXIS: ChartSpecOverride = {
+  encoding: { x: { axis: { format: "$~s", values: phoneIncomeTicks } } },
+};
+
 const rankedBarSpec: ChartSpec = {
   mark: "bar",
   data: rows.map((row) => ({ ...row })),
@@ -48,6 +65,7 @@ const rankedBarSpec: ChartSpec = {
     subtitle:
       "GDP per capita at purchasing power parity (constant international dollars), 12 large economies",
   },
+  overrides: { compact: SHORT_DOLLAR_AXIS, medium: SHORT_DOLLAR_AXIS },
 };
 
 /** Horizontal bar chart ranking twelve large economies by PPP GDP per capita. */
@@ -91,6 +109,9 @@ const tableSpec: TableSpec = {
   sort: { column: "gdpPerCapita", direction: "desc" },
   density: "condensed",
   search: true,
+  // Phones keep a scrolling grid with sortable headers rather than the
+  // default one-card-per-country layout, so readers can still compare rows.
+  mobileLayout: "scroll",
   chrome: {
     title: `${mostPopulous.country} leads on population, ${richest.country} on income and ${longestLived.country} on longevity`,
     subtitle:

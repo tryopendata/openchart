@@ -7,6 +7,7 @@
  * `json demo` fence to `prestonLogScale.spec` verbatim.
  */
 import { countryIndicators } from "@datasets/country-indicators";
+import type { AnnotationOffset, TextAnnotation } from "@opendata-ai/openchart-core";
 import { sourceOf } from "../source";
 import { ACCENT } from "../the-spec/shared";
 import { defineDemo } from "../types";
@@ -35,6 +36,35 @@ const doubledFromLowest = rows.reduce((closest, row) =>
 );
 
 const doublingLifeGain = Math.round(doubledFromLowest.lifeExpectancy - lowestIncome.lifeExpectancy);
+
+type CountryRow = (typeof rows)[number];
+
+/** A curved-leader callout naming a country with its income and life expectancy. */
+const countryCallout = (
+  row: CountryRow,
+  anchor: TextAnnotation["anchor"],
+  offset: AnnotationOffset,
+): TextAnnotation => ({
+  type: "text",
+  x: row.gdpPerCapita,
+  y: row.lifeExpectancy,
+  text: `**${row.country}**\n${usd(row.gdpPerCapita)}, ${row.lifeExpectancy} years`,
+  anchor,
+  offset,
+  connector: "curve",
+});
+
+/**
+ * The same three callouts for phone widths (compact and medium breakpoints).
+ * `responsive: false` stops the engine folding two of them into numbered
+ * footnotes the prose never mentions, and India's label shifts right so it
+ * clears the y-axis tick labels on a narrow plot.
+ */
+const phoneCallouts: TextAnnotation[] = [
+  { ...countryCallout(lowestIncome, "top", { dx: 50, dy: -36 }), responsive: false },
+  { ...countryCallout(longestLived, "left", { dx: -28, dy: -8 }), responsive: false },
+  { ...countryCallout(highestIncome, "bottom", { dx: -36, dy: 42 }), responsive: false },
+];
 
 /** Shared scatter plot geometry and vertical scale so both charts share identical y marks. */
 const prestonBase = {
@@ -103,34 +133,14 @@ export const prestonLogScale = defineDemo({
       },
     },
     annotations: [
-      {
-        type: "text",
-        x: lowestIncome.gdpPerCapita,
-        y: lowestIncome.lifeExpectancy,
-        text: `**${lowestIncome.country}**\n${usd(lowestIncome.gdpPerCapita)}, ${lowestIncome.lifeExpectancy} years`,
-        anchor: "top",
-        offset: { dx: 16, dy: -36 },
-        connector: "curve",
-      },
-      {
-        type: "text",
-        x: longestLived.gdpPerCapita,
-        y: longestLived.lifeExpectancy,
-        text: `**${longestLived.country}**\n${usd(longestLived.gdpPerCapita)}, ${longestLived.lifeExpectancy} years`,
-        anchor: "left",
-        offset: { dx: -28, dy: -8 },
-        connector: "curve",
-      },
-      {
-        type: "text",
-        x: highestIncome.gdpPerCapita,
-        y: highestIncome.lifeExpectancy,
-        text: `**${highestIncome.country}**\n${usd(highestIncome.gdpPerCapita)}, ${highestIncome.lifeExpectancy} years`,
-        anchor: "bottom",
-        offset: { dx: -36, dy: 42 },
-        connector: "curve",
-      },
+      countryCallout(lowestIncome, "top", { dx: 16, dy: -36 }),
+      countryCallout(longestLived, "left", { dx: -28, dy: -8 }),
+      countryCallout(highestIncome, "bottom", { dx: -36, dy: 42 }),
     ],
+    overrides: {
+      compact: { annotations: phoneCallouts },
+      medium: { annotations: phoneCallouts },
+    },
     chrome: {
       title: `Life expectancy rises ${doublingLifeGain} years from ${lowestIncome.country} to ${doubledFromLowest.country}, then flattens past ${longestLived.country}`,
       subtitle:
