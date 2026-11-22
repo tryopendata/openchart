@@ -1,29 +1,29 @@
 ---
 title: Small multiples without the mess
-description: One panel per series beats a tangle of lines. Here is how to order the panels and choose between a shared and a free y scale.
+description: One panel per series beats a tangle of lines. How to order the panels, and when they should share a y scale or each get their own.
 published: 2026-11-17
 author: OpenChart
 tags: [chart-choice]
 related: [composition/facets, change-over-time/line, the-spec/scales]
-lead: blog/launches-panels
+lead: blog/launches-one-chart
 ---
 
 import Demo from "../../components/demo/Demo.astro";
 
-A line chart stops working when the lines start crossing. Four countries' space launches fit on one chart and still tangle: since 1995 all four lines run below 40 launches a year and swap places repeatedly, so the eye has to chase colors to follow any one of them.
+The Soviet Union launched 108 times in 1982, six times as often as the United States. By 2018, the last year in this data, Russia launched 10 times and trailed both the United States and China. On one chart with four lines that history is hard to follow, because the lines cross: since 1995 all four stay under 40 launches a year and keep swapping places.
 
 <Demo id="blog/launches-one-chart" />
 
 ## One panel per series
 
-Small multiples repeat one chart once per series, with the same axes in every panel. Each line gets a frame to itself, so you read its shape without untangling it from three others. The Soviet Union and Russia launched 108 times in 1982 while the United States launched 18. In 2018, the last year in the data, China edged the United States 28 to 27.
+Small multiples repeat one chart once per series, with the same axes in every panel. Each line gets a frame to itself, so you read its shape without untangling it from three others.
 
 ```json demo source="TidyTuesday (R for Data Science Online Learning Community), space launches" height=780
 {
   "mark": {
     "type": "line",
-    "stroke": "#0e7490",
-    "strokeWidth": 2
+    "strokeWidth": 2,
+    "interpolate": "linear"
   },
   "data": [
     {
@@ -1273,18 +1273,35 @@ Small multiples repeat one chart once per series, with the same axes in every pa
       "type": "temporal",
       "axis": {
         "format": "%Y",
-        "tickCount": 3
+        "tickCount": 5
       }
     },
     "y": {
       "field": "launches",
-      "type": "quantitative"
+      "type": "quantitative",
+      "axis": {
+        "tickPosition": "gutter"
+      }
     },
-    "facet": {
+    "row": {
       "field": "country",
       "type": "nominal",
-      "sort": null,
-      "columns": 1
+      "sort": null
+    }
+  },
+  "resolve": {
+    "scale": {
+      "y": "shared"
+    }
+  },
+  "theme": {
+    "colors": {
+      "categorical": [
+        {
+          "light": "#0e7490",
+          "dark": "#22a3c4"
+        }
+      ]
     }
   },
   "chrome": {
@@ -1294,22 +1311,24 @@ Small multiples repeat one chart once per series, with the same axes in every pa
 }
 ```
 
-A single column keeps the year axes aligned, so you compare timing by reading straight down the page: the US peak sits in the mid-1960s and the Soviet peak in the early 1980s. The layout is the same on a phone as on a desktop.
+Stacking the panels in one column keeps the years aligned, so you compare timing by reading straight down the page: the US peak sits in the mid-1960s and the Soviet peak in the early 1980s.
 
-## Shared or independent y scales
+## Shared or free y scales
 
-Panels share one y scale by default, which means a given height stands for the same number in every panel. That keeps level comparisons honest and makes small series look small. Here the US violent crime rate is about 330 per 100,000 residents in 2025, and the homicide rate is 4.1.
+Panels can share one y scale, which means a given height stands for the same number in every panel. That keeps level comparisons honest and makes small series look small. In 2025 the US violent crime rate was about 330 per 100,000 residents and the homicide rate was 4.1.
 
 <Demo id="blog/crime-shared" />
 
-On that shared scale homicide is a flat line along the bottom, so its fall from 9.8 per 100,000 in 1991 and its rise in 2021 are both lost. Giving each panel its own range fixes that.
+On that shared scale homicide is a flat line along the bottom, so its fall from 9.8 per 100,000 in 1991 and its climb from 2018 to 2021 both disappear. Read the 2021 point with some care: the national figures are FBI estimates, and the way police agencies reported to the FBI changed that year.
+
+Giving each panel its own range brings homicide's shape back.
 
 ```json demo source="FBI Uniform Crime Reporting Program, estimated crimes in the United States" height=780
 {
   "mark": {
     "type": "line",
-    "stroke": "#0e7490",
-    "strokeWidth": 2
+    "strokeWidth": 2,
+    "interpolate": "linear"
   },
   "data": [
     {
@@ -2259,18 +2278,25 @@ On that shared scale homicide is a flat line along the bottom, so its fall from 
       "type": "temporal",
       "axis": {
         "format": "%Y",
-        "tickCount": 3
+        "values": [
+          "1990-01-01",
+          "2000-01-01",
+          "2010-01-01",
+          "2020-01-01"
+        ]
       }
     },
     "y": {
       "field": "rate",
-      "type": "quantitative"
+      "type": "quantitative",
+      "axis": {
+        "tickPosition": "gutter"
+      }
     },
-    "facet": {
+    "row": {
       "field": "crime",
       "type": "nominal",
-      "sort": null,
-      "columns": 1
+      "sort": null
     }
   },
   "resolve": {
@@ -2278,16 +2304,41 @@ On that shared scale homicide is a flat line along the bottom, so its fall from 
       "y": "independent"
     }
   },
+  "overrides": {
+    "compact": {
+      "encoding": {
+        "x": {
+          "axis": {
+            "values": [
+              "1990-01-01",
+              "2005-01-01",
+              "2020-01-01"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "theme": {
+    "colors": {
+      "categorical": [
+        {
+          "light": "#0e7490",
+          "dark": "#22a3c4"
+        }
+      ]
+    }
+  },
   "chrome": {
-    "title": "On free scales, the 2021 homicide rise to 6.8 is visible",
+    "title": "On free scales, homicide's rise from 5.0 in 2018 to 6.8 in 2021 shows",
     "subtitle": "US violent crime rates per 100,000 residents, 1979-2025, separate y scale in each panel"
   }
 }
 ```
 
-The FBI's national figures are estimates, and the way agencies report changed in 2021, so treat that year's point with care. Free scales answer a different question. They show whether each series rose or fell and when, and they stop telling you which series is bigger. They also do not start at zero here, so a one-point wobble in homicide takes as much height as a hundred-point swing in robbery. For that reason, say in the subtitle which choice you made.
+Free scales show whether each series rose or fell and when, and stop showing which is bigger. These panels don't start at zero either, so a one-point change in homicide takes as much height as a change of about 37 points in robbery. Say in the subtitle which choice you made, as both crime charts do.
 
-Use shared scales when the question is which series is larger. Use free scales when the question is each series' shape. Neither scale compares percent change. Robbery fell 82% between 1991 and 2025 and aggravated assault 45%, and only an indexed chart puts those on one axis.
+Use shared scales when the question is which series is larger, and free scales when the question is each series' shape. Neither compares percent change: robbery fell 82% between 1991 and 2025 and aggravated assault 45%, and only an indexed chart or a [log scale](/blog/when-to-use-a-log-scale/) puts those on one axis.
 
 ## Ordering and labeling the panels
 
@@ -2301,8 +2352,8 @@ Two or three lines that stay apart do not need panels. A single [line chart](/do
 
 ## The spec
 
-Panels need long data: one row per panel per year, with the date, the series name and the value. `encoding.facet` names the series field, `columns: 1` stacks the panels in one column, and `sort: null` keeps the panels in the order of the data rather than alphabetical.
+Panels need long data: one row per panel per year, with the date, the series name and the value. `encoding.row` names the series field and stacks one panel per value in a single column, with the years printed under the bottom panel only. `sort: null` keeps the panels in the order of the data rather than alphabetical, and `tickPosition: "gutter"` on the y axis puts each panel's tick labels beside it, where no line can run through them.
 
-The two crime charts differ by one line, `resolve: { scale: { y: "independent" } }`, which lets each panel pick its own y range. Panel axes follow the usual [scale rules](/docs/the-spec/scales/), so a `scale.domain` or `zero: true` on `y` pins them if you want every panel to start at zero.
+A row layout gives each panel its own y range unless told otherwise, so the shared charts set `resolve: { scale: { y: "shared" } }` and the free chart sets `"independent"`. Apart from the titles, that is the only difference between the two crime specs. Panel axes follow the usual [scale rules](/docs/the-spec/scales/), so a `scale.domain` or `zero: true` on `y` pins every panel if you want them all to start at zero.
 
-The [facets page](/docs/composition/facets/) has wrapped grids, single rows and single columns, each with a live example.
+Wrapped grids and side-by-side panels, which suit wider screens, are on the [facets page](/docs/composition/facets/).

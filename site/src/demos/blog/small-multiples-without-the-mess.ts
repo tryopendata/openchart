@@ -18,16 +18,18 @@ function must<T>(row: T | undefined, what: string): T {
   return row;
 }
 
-const BLUE = "#0e7490";
-const ORANGE = "#e07b39";
-const GRAY = "#6b7280";
-const PURPLE = "#7c3aed";
+// Light and dark values for each series, so lines and their end labels keep
+// 4.5:1 on the page in both site themes. A plain hex renders verbatim in dark.
+const TEAL = { light: "#0e7490", dark: "#22a3c4" };
+const ORANGE = { light: "#c2410c", dark: "#fb923c" };
+const GRAY = { light: "#6b7280", dark: "#9ca3af" };
+const PURPLE = { light: "#7c3aed", dark: "#a78bfa" };
 
 const launches = spaceLaunchesByCountry.data;
 const crime = fbiViolentCrimeRates.data;
 
 const COUNTRIES = [
-  { key: "ussr_russia", label: "USSR/Russia", color: BLUE },
+  { key: "ussr_russia", label: "USSR/Russia", color: TEAL },
   { key: "usa", label: "United States", color: ORANGE },
   { key: "other", label: "Other countries", color: GRAY },
   { key: "china", label: "China", color: PURPLE },
@@ -48,8 +50,18 @@ const usPeak = peakOf("usa");
 const last = must(launches[launches.length - 1], "space launches");
 
 const xAxis = { format: "%Y", tickCount: 5 } as const;
-// Panels are narrow, so they take fewer x ticks to keep neighbouring labels apart.
-const panelXAxis = { format: "%Y", tickCount: 3 } as const;
+// Panels are short, so their y ticks sit in a gutter beside the plot, where no line
+// can run through them.
+const panelYAxis = { tickPosition: "gutter" } as const;
+const line = { type: "line", strokeWidth: 2, interpolate: "linear" } as const;
+// The crime rows start in 1979, so a 1980 tick would sit under the bottom panel's
+// lowest y label; start the year ticks at 1990 instead, and on a phone space them
+// 15 years apart so the last label has room before the right edge.
+const crimeXAxis = {
+  format: "%Y",
+  values: ["1990-01-01", "2000-01-01", "2010-01-01", "2020-01-01"],
+};
+const crimeCompactX = { axis: { values: ["1990-01-01", "2005-01-01", "2020-01-01"] } };
 
 export const launchesOneChart = defineDemo({
   id: "blog/launches-one-chart",
@@ -57,7 +69,7 @@ export const launchesOneChart = defineDemo({
   source: sourceOf(spaceLaunchesByCountry),
   height: 420,
   spec: {
-    mark: { type: "line", strokeWidth: 2 },
+    mark: line,
     data: launchRows,
     encoding: {
       x: { field: "date", type: "temporal", axis: xAxis },
@@ -65,12 +77,10 @@ export const launchesOneChart = defineDemo({
       color: {
         field: "country",
         type: "nominal",
-        scale: {
-          domain: COUNTRIES.map((country) => country.label),
-          range: COUNTRIES.map((country) => country.color),
-        },
+        scale: { domain: COUNTRIES.map((country) => country.label) },
       },
     },
+    theme: { colors: { categorical: COUNTRIES.map((country) => country.color) } },
     chrome: {
       title: `USSR and Russian launches peaked at ${sovietPeak.ussr_russia} in ${sovietPeak.year}, US launches at ${usPeak.usa} in ${usPeak.year}`,
       subtitle: "Launches per year by country, 1957-2018, all four on one axis",
@@ -84,13 +94,15 @@ export const launchPanels = defineDemo({
   source: sourceOf(spaceLaunchesByCountry),
   height: 780,
   spec: {
-    mark: { type: "line", stroke: BLUE, strokeWidth: 2 },
+    mark: line,
     data: launchRows,
     encoding: {
-      x: { field: "date", type: "temporal", axis: panelXAxis },
-      y: { field: "launches", type: "quantitative" },
-      facet: { field: "country", type: "nominal", sort: null, columns: 1 },
+      x: { field: "date", type: "temporal", axis: xAxis },
+      y: { field: "launches", type: "quantitative", axis: panelYAxis },
+      row: { field: "country", type: "nominal", sort: null },
     },
+    resolve: { scale: { y: "shared" } },
+    theme: { colors: { categorical: [TEAL] } },
     chrome: {
       title: `China launched ${last.china} times in ${last.year}, one more than the US`,
       subtitle: "Launches per year by country, 1957-2018, on the same y scale in every panel",
@@ -111,24 +123,42 @@ const crimeRows = crime.flatMap((row) =>
 
 const row1991 = crime.find((row) => row.year === 1991);
 const lastCrime = must(crime[crime.length - 1], "violent crime");
-// The highest homicide rate since 2000, which is the 2021 bump.
+// The highest homicide rate since 2000 (2021), and the low the climb to it started from.
 const recentHomicidePeak = crime
   .filter((row) => row.year >= 2000)
   .reduce((max, row) => (row.homicide_rate_per_100k > max.homicide_rate_per_100k ? row : max));
+let climbIndex = crime.indexOf(recentHomicidePeak);
+while (
+  climbIndex > 0 &&
+  must(crime[climbIndex - 1], "violent crime").homicide_rate_per_100k <
+    must(crime[climbIndex], "violent crime").homicide_rate_per_100k
+) {
+  climbIndex -= 1;
+}
+const homicideClimbStart = must(crime[climbIndex], "violent crime");
+
+/** Robbery's range over homicide's: how many robbery points share the height of one homicide point on free scales. */
+const span = (values: number[]) => Math.max(...values) - Math.min(...values);
+export const robberyPointsPerHomicidePoint = Math.round(
+  span(crime.map((row) => row.robbery_rate_per_100k)) /
+    span(crime.map((row) => row.homicide_rate_per_100k)),
+);
 
 const crimeSpec = (shared: boolean): VizSpec => ({
-  mark: { type: "line", stroke: BLUE, strokeWidth: 2 },
+  mark: line,
   data: crimeRows,
   encoding: {
-    x: { field: "date", type: "temporal", axis: panelXAxis },
-    y: { field: "rate", type: "quantitative" },
-    facet: { field: "crime", type: "nominal", sort: null, columns: 1 },
+    x: { field: "date", type: "temporal", axis: crimeXAxis },
+    y: { field: "rate", type: "quantitative", axis: panelYAxis },
+    row: { field: "crime", type: "nominal", sort: null },
   },
-  ...(shared ? {} : { resolve: { scale: { y: "independent" } } }),
+  resolve: { scale: { y: shared ? "shared" : "independent" } },
+  overrides: { compact: { encoding: { x: crimeCompactX } } },
+  theme: { colors: { categorical: [TEAL] } },
   chrome: {
     title: shared
       ? `On a shared scale, homicide's fall from ${row1991?.homicide_rate_per_100k} to ${lastCrime.homicide_rate_per_100k} is a flat line`
-      : `On free scales, the ${recentHomicidePeak.year} homicide rise to ${recentHomicidePeak.homicide_rate_per_100k} is visible`,
+      : `On free scales, homicide's rise from ${homicideClimbStart.homicide_rate_per_100k.toFixed(1)} in ${homicideClimbStart.year} to ${recentHomicidePeak.homicide_rate_per_100k} in ${recentHomicidePeak.year} shows`,
     subtitle: `US violent crime rates per 100,000 residents, 1979-2025, ${shared ? "same" : "separate"} y scale in each panel`,
   },
 });
