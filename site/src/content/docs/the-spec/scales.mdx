@@ -21,7 +21,9 @@ An `ordinal` axis treats each year as a category and gives every one the same wi
 
 <Demo id="the-spec/scales-domain" />
 
-Whether a quantitative scale includes zero depends on the mark. Bars, areas and circles include it, because their length or position is read from the baseline. Line, point, beeswarm, range and text marks fit the data instead. This dot plot uses `circle`, so it would start at zero and put every country in the right fifth of the axis; `scale: { zero: false, domain: [65, 85] }` fixes the range to the span that matters. Keep zero on any bar or area chart.
+Whether a quantitative scale includes zero depends on the mark. Bars, areas and circles include it, because their length or position is read from the baseline. Line, point, beeswarm, range and text marks fit the data instead.
+
+This dot plot uses `mark: { type: "point", trendline: false }`, which draws no stems, so an axis from 65 is fair and `scale: { zero: false, domain: [65, 85] }` fixes the range to the span that matters. Without `trendline: false`, a point mark fits a line through the dots. `circle` and `lollipop` draw a stem from zero to each dot, so keep zero for them, as on any bar or area chart.
 
 ## Log scale
 
