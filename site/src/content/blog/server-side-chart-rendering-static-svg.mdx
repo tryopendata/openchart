@@ -1,0 +1,126 @@
+---
+title: "Server-side chart rendering: static SVG with no browser"
+description: Render a chart spec to an SVG string in Node with renderStaticSVG, with no DOM and no client JavaScript. What the output contains, leaves out and weighs.
+published: 2026-11-16
+author: OpenChart
+tags: [developers]
+related: [get-started/static-rendering, output/export, the-spec/anatomy]
+lead: blog/house-price-range
+---
+
+import Demo from "../../components/demo/Demo.astro";
+
+Some places cannot run a chart library: an RSS reader, a page for readers with JavaScript off, a static site build, a report generator. `renderStaticSVG` takes a chart spec and returns an SVG string on the server, with no browser or DOM. The charts on this page are made that way. Each one is rendered to SVG at build time, and a reader without JavaScript sees only that.
+
+<Demo id="blog/house-price-range" />
+
+## The call
+
+Import it from the `static` entry of the vanilla package and give it a spec and a size:
+
+```ts
+import { writeFile } from "node:fs/promises";
+import { renderStaticSVG } from "@opendata-ai/openchart-vanilla/static";
+import { spec } from "./house-prices.js";
+
+const svg = renderStaticSVG(spec, {
+  width: 720,
+  height: 420,
+  idPrefix: "house-prices-light",
+  darkMode: "off",
+});
+await writeFile("house-prices.svg", svg);
+```
+
+Running this chart's spec through it in plain Node, where `window` and `document` do not exist, worked without any setup. The first call took 14 ms, and the next 50 averaged about 1 ms each on one laptop. The SVG was 15.8 KB, or 2.3 KB gzipped, and the same spec and options produced the same bytes every time.
+
+`idPrefix` namespaces the ids inside the SVG, so give each figure in a document its own.
+
+Temporal axes can depend on the server's timezone, so build with `TZ=UTC` if dates have to match between machines. The other options, including `theme` and `precision`, are listed in the [static rendering docs](/docs/get-started/static-rendering/).
+
+## Light and dark
+
+The server has no color scheme to detect, and `darkMode: "auto"` gives the light version. Render the chart twice, once with `"off"` and once with `"force"`, using different prefixes, and let your page's CSS show the one that matches the reader. That is what this site does for every figure.
+
+## What a static SVG leaves out
+
+A static SVG is a picture. It has no animation, no scripts, no tooltips, no keyboard navigation and no hidden data table. It does keep `role="img"` and a label built from the chart's title, which for the chart above reads "Bar chart showing House prices rose 85.9% in Maine from 2019 to 2026 and 14.6% in District of Columbia (10 data points)". Write the finding in a caption and put the values in an HTML table, as the [accessibility post](/blog/accessible-charts-for-the-web/) describes.
+
+It also supports fewer specs than the live library. Charts, layered charts, bar lists, tile maps and geographic maps work. Tables, Sankey diagrams and network graphs do not.
+
+## When to keep the live chart
+
+A reader who needs to hover for exact values or step through points from the keyboard needs the live chart. The usual pattern is both: ship the static SVG so the page has a chart immediately and without JavaScript, then mount the live chart over it. This site's figures work that way, and the same spec drives both.
+
+## Getting a PNG on the server
+
+The output is always SVG. Where a link preview or an email needs a raster image, you have to convert the SVG yourself with a rasterizer such as `sharp`. This site's social cards use `sharp` that way, though it draws those cards with a different tool and not with charts. Rasterizing a chart SVG was not tested for this post.
+
+The SVG names its font and does not embed one, so the machine that draws it needs the font installed. To export from a live chart in the browser instead, see [export](/docs/output/export/).
+
+## The spec
+
+The spec is plain JSON, so the same file can feed the server render and a live `createChart` call in the browser. The chart below is the second example. It maps `net` to the horizontal axis, `state` to the vertical axis, and a `direction` field to color.
+
+```json demo source="IRS Statistics of Income, State-to-State Migration Data" height=420
+{
+  "mark": {
+    "type": "bar"
+  },
+  "data": [
+    { "state": "Texas", "net": 112481, "direction": "Net gain" },
+    { "state": "Florida", "net": 111742, "direction": "Net gain" },
+    { "state": "North Carolina", "net": 69108, "direction": "Net gain" },
+    { "state": "South Carolina", "net": 59102, "direction": "Net gain" },
+    { "state": "Tennessee", "net": 42899, "direction": "Net gain" },
+    { "state": "Massachusetts", "net": -28367, "direction": "Net loss" },
+    { "state": "New Jersey", "net": -29871, "direction": "Net loss" },
+    { "state": "Illinois", "net": -54182, "direction": "Net loss" },
+    { "state": "New York", "net": -157970, "direction": "Net loss" },
+    { "state": "California", "net": -200547, "direction": "Net loss" }
+  ],
+  "encoding": {
+    "x": {
+      "field": "net",
+      "type": "quantitative",
+      "axis": {
+        "title": "People (tax-filer exemptions)",
+        "format": ",.0f"
+      }
+    },
+    "y": {
+      "field": "state",
+      "type": "nominal",
+      "sort": "-x"
+    },
+    "color": {
+      "field": "direction",
+      "type": "nominal",
+      "scale": {
+        "domain": [
+          "Net gain",
+          "Net loss"
+        ],
+        "range": [
+          "#0e7490",
+          "#d55e00"
+        ]
+      }
+    }
+  },
+  "legend": {
+    "show": false
+  },
+  "labels": {
+    "format": ",.0f"
+  },
+  "chrome": {
+    "title": "California lost a net 200,547 people to other states in 2022-23, while Texas gained 112,481",
+    "subtitle": "Net domestic migration in 2022-23, IRS tax-filer exemptions: the 5 largest gains and losses"
+  }
+}
+```
+
+The `direction` field is added when the rows are prepared, as "Net gain" or "Net loss". The spec's `color` scale pins that order to two colors, so losses stay orange on every render. `sort: "-x"` puts the largest loss first, and `labels` prints each value on its bar. The [anatomy of a spec](/docs/the-spec/anatomy/) explains the other blocks.
+
+Static output, the two-theme pattern and every option are covered in [the static rendering docs](/docs/get-started/static-rendering/).

@@ -1,0 +1,135 @@
+---
+title: "Accessible charts for the web: alt text, keyboard and tables"
+description: What a screen reader or keyboard user gets from an OpenChart chart without setup, what you write yourself, and how to check each part in the page.
+published: 2026-11-18
+author: OpenChart
+tags: [developers, accessibility]
+related: [output/accessibility, style/color, tables/data-table, behavior/interaction]
+lead: blog/overdose-accessible
+---
+
+import Demo from "../../components/demo/Demo.astro";
+
+A chart that is only an unlabeled picture tells a screen reader user nothing. An accessible chart needs four things: a text alternative, access to the values, a way to explore from the keyboard, and meaning that does not depend on color. This is what a live OpenChart chart provides for each, and what you still write.
+
+The chart below sets no accessibility options.
+
+<Demo id="blog/nfl-home-generated" />
+
+Reading its DOM shows what a screen reader gets. The chart is a single `role="img"` with the label "Line chart showing NFL home teams won 59.7% of games in 1999 and 49.8% in 2020 from 1999 to 2025 (27 data points)". The library builds that label from the chart type, your title, the date range and the point count, so a title that states the finding already does most of the work.
+
+## Write the text alternative
+
+A generated label cannot know what you want the reader to take away. Set `a11y.description` and it replaces the label. State the finding, not the chart type, because the values are available separately.
+
+The chart below does this. Its description gives the year synthetic opioids passed heroin, the peak and the drop since.
+
+```json demo source="CDC NCHS, VSRR Provisional Drug Overdose Death Counts (12 months ending December)" height=440
+{
+  "mark": {
+    "type": "line",
+    "strokeWidth": 2.5,
+    "interpolate": "linear"
+  },
+  "a11y": {
+    "description": "Synthetic opioid overdose deaths passed heroin deaths in 2016, 19,500 to 15,551, and peaked at 74,829 in 2022. By 2025 they had fallen 49% from the peak, to 38,462."
+  },
+  "data": [
+    { "year": "2015", "drug": "Synthetic opioids", "deaths": 9610 },
+    { "year": "2015", "drug": "Heroin", "deaths": 13051 },
+    { "year": "2016", "drug": "Synthetic opioids", "deaths": 19500 },
+    { "year": "2016", "drug": "Heroin", "deaths": 15551 },
+    { "year": "2017", "drug": "Synthetic opioids", "deaths": 28659 },
+    { "year": "2017", "drug": "Heroin", "deaths": 15593 },
+    { "year": "2018", "drug": "Synthetic opioids", "deaths": 31525 },
+    { "year": "2018", "drug": "Heroin", "deaths": 15102 },
+    { "year": "2019", "drug": "Synthetic opioids", "deaths": 36603 },
+    { "year": "2019", "drug": "Heroin", "deaths": 14116 },
+    { "year": "2020", "drug": "Synthetic opioids", "deaths": 56894 },
+    { "year": "2020", "drug": "Heroin", "deaths": 13253 },
+    { "year": "2021", "drug": "Synthetic opioids", "deaths": 71143 },
+    { "year": "2021", "drug": "Heroin", "deaths": 9263 },
+    { "year": "2022", "drug": "Synthetic opioids", "deaths": 74829 },
+    { "year": "2022", "drug": "Heroin", "deaths": 5958 },
+    { "year": "2023", "drug": "Synthetic opioids", "deaths": 74091 },
+    { "year": "2023", "drug": "Heroin", "deaths": 4062 },
+    { "year": "2024", "drug": "Synthetic opioids", "deaths": 48662 },
+    { "year": "2024", "drug": "Heroin", "deaths": 2794 },
+    { "year": "2025", "drug": "Synthetic opioids", "deaths": 38462 },
+    { "year": "2025", "drug": "Heroin", "deaths": 2060 }
+  ],
+  "encoding": {
+    "x": {
+      "field": "year",
+      "type": "temporal",
+      "axis": {
+        "format": "%Y"
+      }
+    },
+    "y": {
+      "field": "deaths",
+      "type": "quantitative",
+      "axis": {
+        "title": "Deaths, 12 months ending December",
+        "format": ",.0f",
+        "grid": true
+      }
+    },
+    "color": {
+      "field": "drug",
+      "type": "nominal",
+      "scale": {
+        "domain": [
+          "Synthetic opioids",
+          "Heroin"
+        ],
+        "range": [
+          "#0e7490",
+          "#d55e00"
+        ]
+      }
+    },
+    "strokeDash": {
+      "field": "drug",
+      "type": "nominal"
+    }
+  },
+  "legend": {
+    "show": false
+  },
+  "endpointLabels": {
+    "format": ",.0f"
+  },
+  "chromeLayout": "subtract",
+  "chrome": {
+    "title": "Synthetic opioids passed heroin in 2016 and peaked at 74,829 deaths in 2022",
+    "subtitle": "US overdose deaths involving each drug, 12 months ending December, 2015-2025"
+  }
+}
+```
+
+## Values and keyboard
+
+Next to every live chart the library builds a hidden HTML table of its data, and a screen reader can read it. Its column headers are your field names. The table for the football chart opens with `season` and `home_win_pct`, and the numbers are unformatted, so name your fields for a person. If you supply your own table, `a11y: { table: false }` turns the generated one off. A visible [data table](/docs/tables/data-table/) beside the chart serves readers who want to look up exact values.
+
+The chart container takes keyboard focus. On line charts the left and right arrow keys step from one x position to the next, the tooltip lists every series at that position, and Escape closes it. In the overdose chart, focus starts at 2015, and two presses of the right arrow reach 2017, where the tooltip reads 28,659 for synthetic opioids and 15,593 for heroin. To announce each step in your own live region, pass `onMarkFocus` when you mount the chart. The [interaction page](/docs/behavior/interaction/) lists the other handlers.
+
+## Do not rely on color alone
+
+The overdose chart gives each line a color, a dash pattern and a name at its right end, so a reader who cannot tell orange from teal can still tell the lines apart. Bars and areas can take `fillPattern: "auto"` to add hatching. The [colorblind palettes post](/blog/colorblind-safe-chart-palettes/) covers choosing the colors themselves.
+
+Low contrast between neighbors is worth checking while you build. Pass `dev: true` to `compileChart` and the engine warns when adjacent series fall under the 3:1 minimum for graphics. Two pale blues, `#9ecae1` and `#a6d0e8`, produced "1.07:1 contrast" and a suggested replacement. The [color guide](/docs/style/color/) has the palette options.
+
+## Static SVG has less
+
+`renderStaticSVG` returns an SVG with `role="img"` and the same label, but no hidden table and no keyboard navigation. If you embed static charts, write the finding as a sentence beside the chart and supply the table yourself.
+
+## Check it in the page
+
+Select the chart's `role="img"` element in your browser's inspector and read its `aria-label`. Look for the hidden table beside it, named by its `oc-sr-only` wrapper. Tab to the chart, put the mouse aside and press the arrow keys. The checks in this post read the DOM and drove the keyboard. They did not run a screen reader, so listen to your own charts in VoiceOver or NVDA before you ship.
+
+## The spec
+
+`a11y.description` holds the alternative text. In `encoding`, `color` and `strokeDash` both map the `drug` field, so each line differs in hue and in dash. `endpointLabels` writes the series names at the line ends, and `legend: { show: false }` drops the legend they replace.
+
+Each option, with a mapping to the WCAG success criteria, is in [the accessibility docs](/docs/output/accessibility/).

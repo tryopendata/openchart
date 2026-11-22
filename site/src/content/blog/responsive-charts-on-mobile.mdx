@@ -1,0 +1,239 @@
+---
+title: "Responsive charts on mobile: what changes and what you decide"
+description: A chart redraws itself for a 360px phone, with fewer ticks and one callout. Here is what that covers and what you still write yourself.
+published: 2026-11-21
+author: OpenChart
+tags: [developers, annotation]
+related: [behavior/responsive, framing/chrome, the-spec/axes]
+lead: blog/mlb-strikeouts-full
+---
+
+import Demo from "../../components/demo/Demo.astro";
+
+A phone gives a chart about 360px of width, half of what a desktop article column gives it. Scaling a 720px drawing down to fit halves its text too, so tick labels shrink below readable size. OpenChart avoids that by laying the chart out again for whatever width its container has.
+
+Take league-wide batting. Strikeouts passed hits in 2018 and have stayed ahead since, and the chart below marks that year and the shortened 2020 season.
+
+<Demo id="blog/mlb-strikeouts-full" />
+
+Here is the same spec in a 360px container.
+
+<Demo id="blog/mlb-strikeouts-phone" />
+
+## What the layout changes on its own
+
+The library sorts a chart into one of three layouts by container width: full above 700px, medium from 400 to 700px, and compact below 400px. Compact drops value labels, uses the fewest [axis ticks](/docs/the-spec/axes/) and keeps at most one callout inline. A second callout becomes a numbered marker, with its text in a note under the plot.
+
+In the two batting charts above, the year ticks go from four (1960, 1980, 2000, 2020) to three (1960, 2000, 2020), and the 2020 callout turns into the marker 2 with its note under the plot.
+
+Height counts too. A chart 350px tall or shorter keeps its title and drops the subtitle.
+
+The breakpoints follow the width of the container, not the screen. A chart in a 300px sidebar on a desktop monitor gets the compact layout, so test one width inside each band (360, 560 and your full column) instead of one phone.
+
+## What you still decide
+
+The layout cannot shorten your headline. The title of the last chart here takes two lines at 720px and four at 360px, which pushes the plot down. Write a second, shorter [title and subtitle](/docs/framing/chrome/) for compact width and put it in `overrides`.
+
+Callouts need a decision as well. The compact layout keeps one inline and demotes the rest to numbered notes, so choose which one carries the point. You can also write shorter callouts just for phones in `overrides`. Callouts written there are not held to the one-callout limit.
+
+Line-end names need room too, and with many series they run out. `responsive: { labelSummary: true }` moves the names and last values into a keyed list under the plot when they cannot fit, so every series stays named.
+
+Shape is the last one. Height comes from the container, not the spec, and 360px wide by 440px tall is a different shape from 720 by 440. A time series usually reads better wider than tall, so check how steep the lines look before you keep the same height.
+
+The chart below does both. Narrow your browser window below 400px, or open this page on a phone, and it swaps to a short title and a callout that says only the number.
+
+```json demo source="Harvard Growth Lab, Atlas of Economic Complexity (bilateral trade, HS92)" height=460
+{
+  "mark": {
+    "type": "line",
+    "strokeWidth": 2.5,
+    "interpolate": "linear"
+  },
+  "data": [
+    { "year": "1995", "partner": "China", "share": 5.7 },
+    { "year": "1995", "partner": "Mexico", "share": 8.5 },
+    { "year": "1995", "partner": "Canada", "share": 20.1 },
+    { "year": "1996", "partner": "China", "share": 5.9 },
+    { "year": "1996", "partner": "Mexico", "share": 9.6 },
+    { "year": "1996", "partner": "Canada", "share": 20.6 },
+    { "year": "1997", "partner": "China", "share": 6.6 },
+    { "year": "1997", "partner": "Mexico", "share": 10.3 },
+    { "year": "1997", "partner": "Canada", "share": 20.3 },
+    { "year": "1998", "partner": "China", "share": 7.1 },
+    { "year": "1998", "partner": "Mexico", "share": 11 },
+    { "year": "1998", "partner": "Canada", "share": 20.4 },
+    { "year": "1999", "partner": "China", "share": 7.4 },
+    { "year": "1999", "partner": "Mexico", "share": 11.4 },
+    { "year": "1999", "partner": "Canada", "share": 20.7 },
+    { "year": "2000", "partner": "China", "share": 7.1 },
+    { "year": "2000", "partner": "Mexico", "share": 12 },
+    { "year": "2000", "partner": "Canada", "share": 20.5 },
+    { "year": "2001", "partner": "China", "share": 7.7 },
+    { "year": "2001", "partner": "Mexico", "share": 12.4 },
+    { "year": "2001", "partner": "Canada", "share": 20.5 },
+    { "year": "2002", "partner": "China", "share": 9.7 },
+    { "year": "2002", "partner": "Mexico", "share": 12.3 },
+    { "year": "2002", "partner": "Canada", "share": 19.2 },
+    { "year": "2003", "partner": "China", "share": 11 },
+    { "year": "2003", "partner": "Mexico", "share": 11.7 },
+    { "year": "2003", "partner": "Canada", "share": 18.8 },
+    { "year": "2004", "partner": "China", "share": 12.2 },
+    { "year": "2004", "partner": "Mexico", "share": 11.2 },
+    { "year": "2004", "partner": "Canada", "share": 18.5 },
+    { "year": "2005", "partner": "China", "share": 13.4 },
+    { "year": "2005", "partner": "Mexico", "share": 10.9 },
+    { "year": "2005", "partner": "Canada", "share": 18.6 },
+    { "year": "2006", "partner": "China", "share": 14.2 },
+    { "year": "2006", "partner": "Mexico", "share": 11.6 },
+    { "year": "2006", "partner": "Canada", "share": 17.8 },
+    { "year": "2007", "partner": "China", "share": 15.1 },
+    { "year": "2007", "partner": "Mexico", "share": 11.6 },
+    { "year": "2007", "partner": "Canada", "share": 17.3 },
+    { "year": "2008", "partner": "China", "share": 14.7 },
+    { "year": "2008", "partner": "Mexico", "share": 11.3 },
+    { "year": "2008", "partner": "Canada", "share": 17.6 },
+    { "year": "2009", "partner": "China", "share": 17.1 },
+    { "year": "2009", "partner": "Mexico", "share": 12.4 },
+    { "year": "2009", "partner": "Canada", "share": 15.9 },
+    { "year": "2010", "partner": "China", "share": 17.2 },
+    { "year": "2010", "partner": "Mexico", "share": 13.1 },
+    { "year": "2010", "partner": "Canada", "share": 15.9 },
+    { "year": "2011", "partner": "China", "share": 16.4 },
+    { "year": "2011", "partner": "Mexico", "share": 13 },
+    { "year": "2011", "partner": "Canada", "share": 15.7 },
+    { "year": "2012", "partner": "China", "share": 17.2 },
+    { "year": "2012", "partner": "Mexico", "share": 13.5 },
+    { "year": "2012", "partner": "Canada", "share": 15.8 },
+    { "year": "2013", "partner": "China", "share": 17.8 },
+    { "year": "2013", "partner": "Mexico", "share": 13.7 },
+    { "year": "2013", "partner": "Canada", "share": 16.3 },
+    { "year": "2014", "partner": "China", "share": 18.1 },
+    { "year": "2014", "partner": "Mexico", "share": 13.8 },
+    { "year": "2014", "partner": "Canada", "share": 16.5 },
+    { "year": "2015", "partner": "China", "share": 19.8 },
+    { "year": "2015", "partner": "Mexico", "share": 14.7 },
+    { "year": "2015", "partner": "Canada", "share": 14.9 },
+    { "year": "2016", "partner": "China", "share": 19.2 },
+    { "year": "2016", "partner": "Mexico", "share": 14.8 },
+    { "year": "2016", "partner": "Canada", "share": 14.1 },
+    { "year": "2017", "partner": "China", "share": 19.7 },
+    { "year": "2017", "partner": "Mexico", "share": 14.7 },
+    { "year": "2017", "partner": "Canada", "share": 14.3 },
+    { "year": "2018", "partner": "China", "share": 19.3 },
+    { "year": "2018", "partner": "Mexico", "share": 14.9 },
+    { "year": "2018", "partner": "Canada", "share": 13.9 },
+    { "year": "2019", "partner": "China", "share": 16.6 },
+    { "year": "2019", "partner": "Mexico", "share": 15.7 },
+    { "year": "2019", "partner": "Canada", "share": 14.2 },
+    { "year": "2020", "partner": "China", "share": 20.4 },
+    { "year": "2020", "partner": "Mexico", "share": 14.7 },
+    { "year": "2020", "partner": "Canada", "share": 12.3 },
+    { "year": "2021", "partner": "China", "share": 19.8 },
+    { "year": "2021", "partner": "Mexico", "share": 14.2 },
+    { "year": "2021", "partner": "Canada", "share": 13.3 },
+    { "year": "2022", "partner": "China", "share": 18.6 },
+    { "year": "2022", "partner": "Mexico", "share": 14.9 },
+    { "year": "2022", "partner": "Canada", "share": 14.5 },
+    { "year": "2023", "partner": "China", "share": 15.2 },
+    { "year": "2023", "partner": "Mexico", "share": 16.2 },
+    { "year": "2023", "partner": "Canada", "share": 14.5 },
+    { "year": "2024", "partner": "China", "share": 15.1 },
+    { "year": "2024", "partner": "Mexico", "share": 16.6 },
+    { "year": "2024", "partner": "Canada", "share": 13.7 }
+  ],
+  "encoding": {
+    "x": {
+      "field": "year",
+      "type": "temporal",
+      "axis": {
+        "format": "%Y"
+      }
+    },
+    "y": {
+      "field": "share",
+      "type": "quantitative",
+      "axis": {
+        "title": "Share of US goods imports",
+        "format": ".0f",
+        "labelSuffix": "%",
+        "grid": true
+      }
+    },
+    "color": {
+      "field": "partner",
+      "type": "nominal",
+      "scale": {
+        "domain": [
+          "China",
+          "Mexico",
+          "Canada"
+        ],
+        "range": [
+          "#0e7490",
+          "#d55e00",
+          "#7a858f"
+        ]
+      }
+    }
+  },
+  "legend": {
+    "show": false
+  },
+  "endpointLabels": {
+    "format": ".1f",
+    "suffix": "%"
+  },
+  "responsive": {
+    "preserveEnd": true
+  },
+  "annotations": [
+    {
+      "type": "text",
+      "x": "2020",
+      "y": 20.4,
+      "text": "China peaked at 20.4% in 2020",
+      "anchor": "top",
+      "offset": {
+        "dx": 0,
+        "dy": -22
+      },
+      "connector": true
+    }
+  ],
+  "overrides": {
+    "compact": {
+      "chrome": {
+        "title": "China's share of US imports peaked in 2020",
+        "subtitle": "Share of US goods imports, 1995-2024"
+      },
+      "annotations": [
+        {
+          "type": "text",
+          "x": "2020",
+          "y": 20.4,
+          "text": "20.4%",
+          "anchor": "top",
+          "offset": {
+            "dx": -4,
+            "dy": -18
+          },
+          "connector": true
+        }
+      ]
+    }
+  },
+  "chromeLayout": "subtract",
+  "chrome": {
+    "title": "China's share of US goods imports peaked at 20.4% in 2020; Mexico passed it in 2023",
+    "subtitle": "Share of the value of US goods imports from China, Mexico and Canada, 1995-2024"
+  }
+}
+```
+
+## The spec
+
+`overrides.compact` is a patch laid over the spec when the container is under 400px. Here it changes the title and subtitle in `chrome`, which merge field by field into the base, and swaps `annotations` for a single short callout. It can also change labels, legend, and axis settings. `medium` and `full` work the same way.
+
+`responsive: { preserveEnd: true }` keeps the last tick on the time axis when ticks are thinned, so the final year stays on the axis. `endpointLabels` names each line at its right end, which is why the chart needs no legend. `chromeLayout: "subtract"` holds the figure at its fixed height, so a long title or a note for a demoted callout takes room from the plot instead of making the figure taller.
+
+Every breakpoint and `responsive` option is listed in [the responsive docs](/docs/behavior/responsive/).
