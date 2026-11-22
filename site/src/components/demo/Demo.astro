@@ -6,14 +6,17 @@
  * collapsed code under a Show code and Copy toolbar, with any reader controls
  * between the stage and the caption. A demo that is unknown, whose spec or any
  * state's spec fails validation, or that puts controls on a spec other than a
- * chart or layer fails the build, naming the page.
+ * chart or layer fails the build, naming the page. On a blog post the figure
+ * also carries its credit line and reveal entrances (see blog-figure.ts), and a
+ * spec with no chart type to credit fails the build the same way.
  * Large values the page's figures share are written once per page, recorded
  * against `Astro.locals`, which is fresh for each page render.
  */
 import { getDemo } from "../../demos/registry";
 import { DEFAULT_DEMO_HEIGHT, type DemoDef } from "../../demos/types";
+import { type BlogFigure, blogFigure, isBlogPostPath } from "../../lib/demo/blog-figure";
 import { validateDemoControls } from "../../lib/demo/controls";
-import { demoFigureHtml } from "../../lib/demo/figure";
+import { DemoRenderError, demoFigureHtml } from "../../lib/demo/figure";
 import { pageSharedHashes } from "../../lib/demo/shared-values";
 import { validateDemo } from "../../lib/demo/validate";
 
@@ -26,13 +29,15 @@ interface Props {
 const { id, tabs = true } = Astro.props;
 
 let demo: DemoDef;
+let blog: BlogFigure | undefined;
 try {
   demo = getDemo(id);
   validateDemo(id, demo.spec);
   validateDemoControls(demo);
+  blog = isBlogPostPath(Astro.url.pathname) ? blogFigure(demo.id, demo.spec) : undefined;
 } catch (error) {
   const reason = error instanceof Error ? error.message : String(error);
-  throw new Error(`${Astro.url.pathname} renders <Demo id="${id}" />: ${reason}`, {
+  throw new DemoRenderError(`${Astro.url.pathname} renders <Demo id="${id}" />: ${reason}`, {
     cause: error,
   });
 }
@@ -52,6 +57,7 @@ const figure = await demoFigureHtml({
   width: demo.width,
   mount: demo.mount,
   controls: demo.controls,
+  blog,
 });
 ---
 
