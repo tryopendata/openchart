@@ -62,17 +62,28 @@ const ELECTRICITY_NODE_ORDER = [
   "Transportation",
 ] as const;
 
+/**
+ * On phones (the compact and medium breakpoints) the flows under 2% of their
+ * column fold into one "Other" node, so the column has room for two-line labels.
+ */
+const PHONE_OVERRIDES = {
+  compact: { other: 0.02 },
+  medium: { other: 0.02 },
+};
+
 /** Three-stage sankey of the fuels entering US electricity generation and where that energy goes. */
 export const energySankeyElectricity = defineDemo({
   id: "blog/energy-sankey-electricity",
   title: "US electricity generation flow, 2024",
   source,
   height: 460,
+  phoneHeight: 720,
   spec: {
     type: "sankey",
     data: electricityRows,
     encoding: flowEncoding,
     nodeSort: [...ELECTRICITY_NODE_ORDER],
+    overrides: PHONE_OVERRIDES,
     chrome: {
       title: `Electricity generation lost ${electricityRejectedPct}% of its ${electricityOut.toFixed(2)} quads as rejected energy`,
       subtitle:
@@ -87,11 +98,13 @@ export const energySankeyFull = defineDemo({
   title: "US energy flow from fuel source to end use, 2024",
   source,
   height: 620,
+  phoneHeight: 960,
   spec: {
     type: "sankey",
     data: fullRows,
     encoding: flowEncoding,
     linkStyle: "source",
+    overrides: PHONE_OVERRIDES,
     chrome: {
       title: `Rejected energy was ${fullRejectedPct}% of the ${fullTotal.toFixed(2)} quads used in 2024`,
       subtitle:
