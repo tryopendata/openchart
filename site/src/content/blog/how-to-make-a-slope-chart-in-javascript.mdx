@@ -1,0 +1,216 @@
+---
+title: How to make a slope chart in JavaScript
+description: A slope chart compares many things at two points in time with one line each. Here is when it beats grouped bars, how to label it, and where it stops working.
+published: 2026-11-22
+author: OpenChart
+tags: [chart-choice, annotation]
+related: [change-over-time/slope-bump, framing/endpoint-labels, comparison/range]
+lead: blog/airline-slope
+---
+
+import Demo from "../../components/demo/Demo.astro";
+
+A slope chart compares many things at two points in time. Each thing gets one line from its first value to its last, so a falling line is a decrease and a steeper line is a bigger one.
+
+[FiveThirtyEight's airline safety data](https://github.com/fivethirtyeight/data/tree/master/airline-safety) counts fatal accidents at 56 airlines in two 15-year periods. Across all of them the count fell from 122 in 1985-99 to 37 in 2000-14. Grouped bars for the 11 airlines with the most accidents in the first period show the drop, but slowly.
+
+<Demo id="blog/airline-bars" />
+
+To see which airlines improved, a reader finds each airline's pair of bars and compares their lengths. With 22 bars that means a lot of looking back and forth.
+
+## One line per airline
+
+A slope chart puts the two periods on two vertical edges and joins each airline's values with a line. The comparison the reader wants, before against after, is the line itself.
+
+```json demo source="FiveThirtyEight, Airline Safety" height=520
+{
+  "mark": "line",
+  "data": [
+    {
+      "airline": "Aeroflot",
+      "period": "1985-99",
+      "accidents": 14
+    },
+    {
+      "airline": "Aeroflot",
+      "period": "2000-14",
+      "accidents": 1
+    },
+    {
+      "airline": "Delta",
+      "period": "1985-99",
+      "accidents": 12
+    },
+    {
+      "airline": "Delta",
+      "period": "2000-14",
+      "accidents": 2
+    },
+    {
+      "airline": "United",
+      "period": "1985-99",
+      "accidents": 8
+    },
+    {
+      "airline": "United",
+      "period": "2000-14",
+      "accidents": 2
+    },
+    {
+      "airline": "US Airways",
+      "period": "1985-99",
+      "accidents": 7
+    },
+    {
+      "airline": "US Airways",
+      "period": "2000-14",
+      "accidents": 2
+    },
+    {
+      "airline": "China",
+      "period": "1985-99",
+      "accidents": 6
+    },
+    {
+      "airline": "China",
+      "period": "2000-14",
+      "accidents": 1
+    },
+    {
+      "airline": "American",
+      "period": "1985-99",
+      "accidents": 5
+    },
+    {
+      "airline": "American",
+      "period": "2000-14",
+      "accidents": 3
+    },
+    {
+      "airline": "Korean Air",
+      "period": "1985-99",
+      "accidents": 5
+    },
+    {
+      "airline": "Korean Air",
+      "period": "2000-14",
+      "accidents": 0
+    },
+    {
+      "airline": "Ethiopian",
+      "period": "1985-99",
+      "accidents": 5
+    },
+    {
+      "airline": "Ethiopian",
+      "period": "2000-14",
+      "accidents": 2
+    },
+    {
+      "airline": "Air France",
+      "period": "1985-99",
+      "accidents": 4
+    },
+    {
+      "airline": "Air France",
+      "period": "2000-14",
+      "accidents": 2
+    },
+    {
+      "airline": "Thai Airways",
+      "period": "1985-99",
+      "accidents": 4
+    },
+    {
+      "airline": "Thai Airways",
+      "period": "2000-14",
+      "accidents": 1
+    },
+    {
+      "airline": "Philippine",
+      "period": "1985-99",
+      "accidents": 4
+    },
+    {
+      "airline": "Philippine",
+      "period": "2000-14",
+      "accidents": 1
+    }
+  ],
+  "encoding": {
+    "x": {
+      "field": "period",
+      "type": "ordinal"
+    },
+    "y": {
+      "field": "accidents",
+      "type": "quantitative",
+      "axis": false,
+      "scale": {
+        "zero": false
+      }
+    },
+    "color": {
+      "field": "airline",
+      "type": "nominal",
+      "scale": {
+        "range": [
+          "#0e7490"
+        ]
+      }
+    }
+  },
+  "endpointLabels": {
+    "ends": "both",
+    "content": {
+      "leading": "label value",
+      "trailing": "value"
+    }
+  },
+  "legend": {
+    "show": false
+  },
+  "responsive": {
+    "labelSummary": true
+  },
+  "chrome": {
+    "title": "The 11 airlines with the most fatal accidents went from 74 to 17",
+    "subtitle": "Fatal accidents per 15-year period, airlines with 4 or more in 1985-99. All 56 airlines: 122 to 37."
+  }
+}
+```
+
+
+Every line falls, and Aeroflot's falls furthest. The y axis is gone, so the labels carry the numbers: each line is named at both ends with its value, and nobody has to match a color to a legend. All lines share one color because the finding is about the group. A merged airline goes by the first name in the source, so "Delta" is the source's Delta / Northwest.
+
+Grouped bars are the better choice when readers need to compare the airlines with each other within one period. Bars share a baseline, and the end points of slopes do not.
+
+## Choosing the endpoints
+
+Two points hide everything between them, so the choice of endpoints is part of the argument. The airline data comes in two fixed periods and leaves no choice. Arctic sea ice, measured daily since 1979, leaves plenty. Comparing September 1980 with September 2012 gives a steep line, and a flat one for March.
+
+<Demo id="blog/sea-ice-slope" />
+
+That comparison is accurate, and 2012 was the lowest September on record. It also skips what came after: every September since has had more ice than 2012. The full series shows where the two endpoints sit.
+
+<Demo id="blog/sea-ice-line" />
+
+When the path between the points matters, or you have three or more time points, use a [line chart](/docs/change-over-time/line/). A slope chart suits a question about the start and the end only.
+
+## Where slope charts stop working
+
+Too many lines turn into spaghetti, and a dozen is about the limit. The airline chart has 11 because it keeps only the airlines with four or more fatal accidents in 1985-99, and the subtitle says so. State your selection rule in the subtitle whenever you pick a subset.
+
+That rule has a cost. Airlines picked for a bad first period are likely to look better in the second, because bad stretches tend to be followed by better ones. The subtitle also gives the total for all 56 airlines, which fell too.
+
+Lines that end at the same value stack their labels. In the airline chart the engine spaces them apart, and `showLeader` draws a short line from a moved label back to its point if the pairing gets unclear. Small counts tie often, so check the chart with your own data.
+
+## The spec
+
+A slope chart is a line chart with two values on the x axis. In the airline spec, `mark` is `"line"` and `encoding.x` is the period field as `ordinal`, which puts one tick at each edge. On `encoding.y`, `axis: false` removes the axis and its gridlines, and `scale: { zero: false }` lets the lines use the full height instead of measuring from zero.
+
+`color` gives each airline its own line, and a `scale.range` holding one color makes them all match. `endpointLabels` with `ends: "both"` labels each edge, and `content: "label value"` prints the name and the number. `legend: { show: false }` drops the legend because the labels already name every line. The [endpoint labels page](/docs/framing/endpoint-labels/) lists the other label options.
+
+To show the size of each gap rather than its direction, a [range chart](/docs/comparison/range/) draws the two values as a floating bar.
+
+Both slope charts here are specs you can paste into OpenChart, and the [slope and bump page](/docs/change-over-time/slope-bump/) covers the bump-chart variant.
