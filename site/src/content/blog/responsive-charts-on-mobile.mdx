@@ -24,7 +24,7 @@ The library sorts a chart into one of three layouts by container width: full abo
 
 In the two batting charts above, the year ticks go from four (1960, 1980, 2000, 2020) to three (1960, 2000, 2020), and the 2020 callout turns into marker 1 with its note under the plot. Notes are numbered by their place in the spec's `annotations` list, which is why the 2020 callout is listed first.
 
-Height counts too. A chart 350px tall or shorter keeps its title and drops the subtitle.
+Height counts too. A chart 350px tall or shorter drops the subtitle and keeps its title, and one under 100px tall drops the title as well.
 
 The breakpoints follow the width of the container, not the screen. A chart in a 300px sidebar on a desktop monitor gets the compact layout, so test one width inside each band (360, 560 and your full column) instead of one phone.
 
@@ -32,7 +32,7 @@ The breakpoints follow the width of the container, not the screen. A chart in a 
 
 Write a second, shorter [title and subtitle](/docs/framing/chrome/) for compact width and put it in `overrides`. The title of the last chart here takes two lines at 720px and four at 360px, which pushes the plot down, and the layout won't shorten a headline for you.
 
-Pick the callout that carries the point and give it `priority: 1`. Compact keeps the lowest priority inline and numbers the rest, falling back to spec order when no callout has a priority. Callouts you write for phones in `overrides` are not held to the one-callout limit, so keep that list short.
+Pick the callout that carries the point and give it `priority: 1`. Compact keeps the callout with the lowest `priority` number inline and numbers the rest, falling back to spec order when no callout has a priority. Callouts you write for phones in `overrides` are not held to the one-callout limit, so keep that list short.
 
 Check that every line still has its name at its end. Three series fit at 360px. With more, `responsive: { labelSummary: true }` moves names and last values into a keyed list under the plot when they cannot fit, and a top legend, as the [direct labels post](/blog/direct-labels-vs-legends/) suggests for phones, also gives the lines the full width.
 
