@@ -1,0 +1,1178 @@
+---
+title: Dual-axis charts, and what to draw instead
+description: A second y axis lets the author make two lines cross anywhere. Two panels or an indexed chart show the same data without that freedom.
+published: 2026-11-21
+author: OpenChart
+tags: [chart-choice]
+related: [composition/layers, composition/facets, the-spec/axes, change-over-time/line]
+lead: blog/fatalities-indexed
+---
+
+import Demo from "../../components/demo/Demo.astro";
+
+A dual-axis chart puts two y scales on one plot so a count and a rate can share a time axis. Each scale's range is the author's choice, and the point where the two lines cross depends on those ranges, not on the data. A crossing looks like an event in the data.
+
+US road deaths and the death rate show it. Deaths fell from 50,894 in 1966 to 39,254 in 2024. The rate, measured in deaths per 100 million vehicle miles driven, fell from 5.5 to 1.19. Both are real, and both axes below are drawn from the same 59 rows.
+
+<Demo id="blog/dual-axis-zero-based" />
+
+## The same rows on two axis ranges
+
+Starting the left axis at zero is the usual advice for a count. Here it makes the death toll look like a gentle slide next to a steep drop in the rate.
+
+Trim both axes to the range of the data and the two lines start together and fall as a pair.
+
+<Demo id="blog/dual-axis-trimmed" />
+
+Now the lines look like one story. Both charts use the same numbers and differ only in the axis ranges the author picked. Nothing on the plot says which choice is honest. The pre-1975 counts also come from a different source than later years (state summaries adjusted to 30-day deaths), which a single smooth line hides.
+
+## Two panels that share the year axis
+
+The first fix is to stop sharing a plot. Stack one panel per series, align the years, and give each panel its own y scale. Each line then fills its own frame and no reader can read a crossing into it.
+
+Wildfires are a good case. The number of US wildland fires per year has not climbed since the mid-1980s, averaging about 72,900 a year in 1985 to 1994 and about 62,400 in 2015 to 2024. Acres burned per fire went from roughly 42 to 121. The averages start in 1985 because the 1983 and 1984 counts, about 18,000 and 20,000 fires, probably reflect how fires were reported then.
+
+```json demo source="National Interagency Fire Center, wildland fire statistics" height=560
+{
+  "mark": {
+    "type": "line",
+    "stroke": "#0e7490",
+    "strokeWidth": 2
+  },
+  "data": [
+    {
+      "date": "1983-01-01",
+      "measure": "Fires per year",
+      "value": 18229
+    },
+    {
+      "date": "1983-01-01",
+      "measure": "Acres burned per fire",
+      "value": 72.6
+    },
+    {
+      "date": "1984-01-01",
+      "measure": "Fires per year",
+      "value": 20493
+    },
+    {
+      "date": "1984-01-01",
+      "measure": "Acres burned per fire",
+      "value": 56
+    },
+    {
+      "date": "1985-01-01",
+      "measure": "Fires per year",
+      "value": 82591
+    },
+    {
+      "date": "1985-01-01",
+      "measure": "Acres burned per fire",
+      "value": 35.1
+    },
+    {
+      "date": "1986-01-01",
+      "measure": "Fires per year",
+      "value": 85907
+    },
+    {
+      "date": "1986-01-01",
+      "measure": "Acres burned per fire",
+      "value": 31.7
+    },
+    {
+      "date": "1987-01-01",
+      "measure": "Fires per year",
+      "value": 71300
+    },
+    {
+      "date": "1987-01-01",
+      "measure": "Acres burned per fire",
+      "value": 34.3
+    },
+    {
+      "date": "1988-01-01",
+      "measure": "Fires per year",
+      "value": 72750
+    },
+    {
+      "date": "1988-01-01",
+      "measure": "Acres burned per fire",
+      "value": 68.9
+    },
+    {
+      "date": "1989-01-01",
+      "measure": "Fires per year",
+      "value": 48949
+    },
+    {
+      "date": "1989-01-01",
+      "measure": "Acres burned per fire",
+      "value": 37.3
+    },
+    {
+      "date": "1990-01-01",
+      "measure": "Fires per year",
+      "value": 66481
+    },
+    {
+      "date": "1990-01-01",
+      "measure": "Acres burned per fire",
+      "value": 69.5
+    },
+    {
+      "date": "1991-01-01",
+      "measure": "Fires per year",
+      "value": 75754
+    },
+    {
+      "date": "1991-01-01",
+      "measure": "Acres burned per fire",
+      "value": 39
+    },
+    {
+      "date": "1992-01-01",
+      "measure": "Fires per year",
+      "value": 87394
+    },
+    {
+      "date": "1992-01-01",
+      "measure": "Acres burned per fire",
+      "value": 23.7
+    },
+    {
+      "date": "1993-01-01",
+      "measure": "Fires per year",
+      "value": 58810
+    },
+    {
+      "date": "1993-01-01",
+      "measure": "Acres burned per fire",
+      "value": 30.6
+    },
+    {
+      "date": "1994-01-01",
+      "measure": "Fires per year",
+      "value": 79107
+    },
+    {
+      "date": "1994-01-01",
+      "measure": "Acres burned per fire",
+      "value": 51.5
+    },
+    {
+      "date": "1995-01-01",
+      "measure": "Fires per year",
+      "value": 82234
+    },
+    {
+      "date": "1995-01-01",
+      "measure": "Acres burned per fire",
+      "value": 22.4
+    },
+    {
+      "date": "1996-01-01",
+      "measure": "Fires per year",
+      "value": 96363
+    },
+    {
+      "date": "1996-01-01",
+      "measure": "Acres burned per fire",
+      "value": 62.9
+    },
+    {
+      "date": "1997-01-01",
+      "measure": "Fires per year",
+      "value": 66196
+    },
+    {
+      "date": "1997-01-01",
+      "measure": "Acres burned per fire",
+      "value": 43.2
+    },
+    {
+      "date": "1998-01-01",
+      "measure": "Fires per year",
+      "value": 81043
+    },
+    {
+      "date": "1998-01-01",
+      "measure": "Acres burned per fire",
+      "value": 16.4
+    },
+    {
+      "date": "1999-01-01",
+      "measure": "Fires per year",
+      "value": 92487
+    },
+    {
+      "date": "1999-01-01",
+      "measure": "Acres burned per fire",
+      "value": 60.8
+    },
+    {
+      "date": "2000-01-01",
+      "measure": "Fires per year",
+      "value": 92250
+    },
+    {
+      "date": "2000-01-01",
+      "measure": "Acres burned per fire",
+      "value": 80.1
+    },
+    {
+      "date": "2001-01-01",
+      "measure": "Fires per year",
+      "value": 84079
+    },
+    {
+      "date": "2001-01-01",
+      "measure": "Acres burned per fire",
+      "value": 42.5
+    },
+    {
+      "date": "2002-01-01",
+      "measure": "Fires per year",
+      "value": 73457
+    },
+    {
+      "date": "2002-01-01",
+      "measure": "Acres burned per fire",
+      "value": 97.8
+    },
+    {
+      "date": "2003-01-01",
+      "measure": "Fires per year",
+      "value": 63629
+    },
+    {
+      "date": "2003-01-01",
+      "measure": "Acres burned per fire",
+      "value": 62.2
+    },
+    {
+      "date": "2004-01-01",
+      "measure": "Fires per year",
+      "value": 65461
+    },
+    {
+      "date": "2004-01-01",
+      "measure": "Acres burned per fire",
+      "value": 123.7
+    },
+    {
+      "date": "2005-01-01",
+      "measure": "Fires per year",
+      "value": 66753
+    },
+    {
+      "date": "2005-01-01",
+      "measure": "Acres burned per fire",
+      "value": 130.2
+    },
+    {
+      "date": "2006-01-01",
+      "measure": "Fires per year",
+      "value": 96385
+    },
+    {
+      "date": "2006-01-01",
+      "measure": "Acres burned per fire",
+      "value": 102.4
+    },
+    {
+      "date": "2007-01-01",
+      "measure": "Fires per year",
+      "value": 85705
+    },
+    {
+      "date": "2007-01-01",
+      "measure": "Acres burned per fire",
+      "value": 108.8
+    },
+    {
+      "date": "2008-01-01",
+      "measure": "Fires per year",
+      "value": 78979
+    },
+    {
+      "date": "2008-01-01",
+      "measure": "Acres burned per fire",
+      "value": 67
+    },
+    {
+      "date": "2009-01-01",
+      "measure": "Fires per year",
+      "value": 78792
+    },
+    {
+      "date": "2009-01-01",
+      "measure": "Acres burned per fire",
+      "value": 75.2
+    },
+    {
+      "date": "2010-01-01",
+      "measure": "Fires per year",
+      "value": 71971
+    },
+    {
+      "date": "2010-01-01",
+      "measure": "Acres burned per fire",
+      "value": 47.6
+    },
+    {
+      "date": "2011-01-01",
+      "measure": "Fires per year",
+      "value": 74126
+    },
+    {
+      "date": "2011-01-01",
+      "measure": "Acres burned per fire",
+      "value": 117.5
+    },
+    {
+      "date": "2012-01-01",
+      "measure": "Fires per year",
+      "value": 67774
+    },
+    {
+      "date": "2012-01-01",
+      "measure": "Acres burned per fire",
+      "value": 137.6
+    },
+    {
+      "date": "2013-01-01",
+      "measure": "Fires per year",
+      "value": 47579
+    },
+    {
+      "date": "2013-01-01",
+      "measure": "Acres burned per fire",
+      "value": 90.8
+    },
+    {
+      "date": "2014-01-01",
+      "measure": "Fires per year",
+      "value": 63312
+    },
+    {
+      "date": "2014-01-01",
+      "measure": "Acres burned per fire",
+      "value": 56.8
+    },
+    {
+      "date": "2015-01-01",
+      "measure": "Fires per year",
+      "value": 68151
+    },
+    {
+      "date": "2015-01-01",
+      "measure": "Acres burned per fire",
+      "value": 148.6
+    },
+    {
+      "date": "2016-01-01",
+      "measure": "Fires per year",
+      "value": 67743
+    },
+    {
+      "date": "2016-01-01",
+      "measure": "Acres burned per fire",
+      "value": 81.3
+    },
+    {
+      "date": "2017-01-01",
+      "measure": "Fires per year",
+      "value": 71499
+    },
+    {
+      "date": "2017-01-01",
+      "measure": "Acres burned per fire",
+      "value": 140.2
+    },
+    {
+      "date": "2018-01-01",
+      "measure": "Fires per year",
+      "value": 58083
+    },
+    {
+      "date": "2018-01-01",
+      "measure": "Acres burned per fire",
+      "value": 150.9
+    },
+    {
+      "date": "2019-01-01",
+      "measure": "Fires per year",
+      "value": 50477
+    },
+    {
+      "date": "2019-01-01",
+      "measure": "Acres burned per fire",
+      "value": 92.4
+    },
+    {
+      "date": "2020-01-01",
+      "measure": "Fires per year",
+      "value": 58950
+    },
+    {
+      "date": "2020-01-01",
+      "measure": "Acres burned per fire",
+      "value": 171.7
+    },
+    {
+      "date": "2021-01-01",
+      "measure": "Fires per year",
+      "value": 58985
+    },
+    {
+      "date": "2021-01-01",
+      "measure": "Acres burned per fire",
+      "value": 120.8
+    },
+    {
+      "date": "2022-01-01",
+      "measure": "Fires per year",
+      "value": 68988
+    },
+    {
+      "date": "2022-01-01",
+      "measure": "Acres burned per fire",
+      "value": 109.8
+    },
+    {
+      "date": "2023-01-01",
+      "measure": "Fires per year",
+      "value": 56580
+    },
+    {
+      "date": "2023-01-01",
+      "measure": "Acres burned per fire",
+      "value": 47.6
+    },
+    {
+      "date": "2024-01-01",
+      "measure": "Fires per year",
+      "value": 64897
+    },
+    {
+      "date": "2024-01-01",
+      "measure": "Acres burned per fire",
+      "value": 137.5
+    },
+    {
+      "date": "2025-01-01",
+      "measure": "Fires per year",
+      "value": 77850
+    },
+    {
+      "date": "2025-01-01",
+      "measure": "Acres burned per fire",
+      "value": 65.9
+    }
+  ],
+  "encoding": {
+    "x": {
+      "field": "date",
+      "type": "temporal",
+      "axis": {
+        "format": "%Y",
+        "tickCount": 6
+      }
+    },
+    "y": {
+      "field": "value",
+      "type": "quantitative",
+      "axis": {
+        "format": "~s"
+      }
+    },
+    "facet": {
+      "field": "measure",
+      "type": "nominal",
+      "sort": null,
+      "columns": 1
+    }
+  },
+  "resolve": {
+    "scale": {
+      "y": "independent"
+    }
+  },
+  "chrome": {
+    "title": "Fires per year did not climb, but the average fire grew from 42 to 121 acres",
+    "subtitle": "US wildland fires per year and acres burned per fire, 1983-2025. Average acres per fire: 1985-1994 against 2015-2024"
+  }
+}
+```
+
+Independent scales trade away level comparison: a reader cannot judge from the two panels whether 70,000 fires is large next to 120 acres, and should not try. They show whether each series rose, fell, or held. For that question, two panels read faster than any dual-axis chart.
+
+## One axis, both series indexed
+
+The second fix keeps one plot. Divide every year's value by the first year's value and multiply by 100, so both series start at 100 and share a unit: percent of where they began. The gap between the lines is then a real ratio.
+
+```json demo source="NHTSA, Traffic Safety Facts Annual Report (Fatality Analysis Reporting System)" height=420
+{
+  "mark": {
+    "type": "line",
+    "strokeWidth": 2.5
+  },
+  "data": [
+    {
+      "date": "1966-01-01",
+      "series": "Deaths",
+      "index": 100
+    },
+    {
+      "date": "1966-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 100
+    },
+    {
+      "date": "1967-01-01",
+      "series": "Deaths",
+      "index": 99.7
+    },
+    {
+      "date": "1967-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 95.6
+    },
+    {
+      "date": "1968-01-01",
+      "series": "Deaths",
+      "index": 103.6
+    },
+    {
+      "date": "1968-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 94.4
+    },
+    {
+      "date": "1969-01-01",
+      "series": "Deaths",
+      "index": 105.2
+    },
+    {
+      "date": "1969-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 91.6
+    },
+    {
+      "date": "1970-01-01",
+      "series": "Deaths",
+      "index": 103.4
+    },
+    {
+      "date": "1970-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 86.2
+    },
+    {
+      "date": "1971-01-01",
+      "series": "Deaths",
+      "index": 103.2
+    },
+    {
+      "date": "1971-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 81.1
+    },
+    {
+      "date": "1972-01-01",
+      "series": "Deaths",
+      "index": 107.3
+    },
+    {
+      "date": "1972-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 78.7
+    },
+    {
+      "date": "1973-01-01",
+      "series": "Deaths",
+      "index": 106.2
+    },
+    {
+      "date": "1973-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 74.9
+    },
+    {
+      "date": "1974-01-01",
+      "series": "Deaths",
+      "index": 88.8
+    },
+    {
+      "date": "1974-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 64.2
+    },
+    {
+      "date": "1975-01-01",
+      "series": "Deaths",
+      "index": 87.5
+    },
+    {
+      "date": "1975-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 60.9
+    },
+    {
+      "date": "1976-01-01",
+      "series": "Deaths",
+      "index": 89.4
+    },
+    {
+      "date": "1976-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 59.1
+    },
+    {
+      "date": "1977-01-01",
+      "series": "Deaths",
+      "index": 94.1
+    },
+    {
+      "date": "1977-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 59.3
+    },
+    {
+      "date": "1978-01-01",
+      "series": "Deaths",
+      "index": 98.9
+    },
+    {
+      "date": "1978-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 59.3
+    },
+    {
+      "date": "1979-01-01",
+      "series": "Deaths",
+      "index": 100.4
+    },
+    {
+      "date": "1979-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 60.7
+    },
+    {
+      "date": "1980-01-01",
+      "series": "Deaths",
+      "index": 100.4
+    },
+    {
+      "date": "1980-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 60.9
+    },
+    {
+      "date": "1981-01-01",
+      "series": "Deaths",
+      "index": 96.9
+    },
+    {
+      "date": "1981-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 57.6
+    },
+    {
+      "date": "1982-01-01",
+      "series": "Deaths",
+      "index": 86.3
+    },
+    {
+      "date": "1982-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 50.2
+    },
+    {
+      "date": "1983-01-01",
+      "series": "Deaths",
+      "index": 83.7
+    },
+    {
+      "date": "1983-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 46.9
+    },
+    {
+      "date": "1984-01-01",
+      "series": "Deaths",
+      "index": 87
+    },
+    {
+      "date": "1984-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 46.7
+    },
+    {
+      "date": "1985-01-01",
+      "series": "Deaths",
+      "index": 86.1
+    },
+    {
+      "date": "1985-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 44.9
+    },
+    {
+      "date": "1986-01-01",
+      "series": "Deaths",
+      "index": 90.6
+    },
+    {
+      "date": "1986-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 45.6
+    },
+    {
+      "date": "1987-01-01",
+      "series": "Deaths",
+      "index": 91.2
+    },
+    {
+      "date": "1987-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 43.8
+    },
+    {
+      "date": "1988-01-01",
+      "series": "Deaths",
+      "index": 92.5
+    },
+    {
+      "date": "1988-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 42.2
+    },
+    {
+      "date": "1989-01-01",
+      "series": "Deaths",
+      "index": 89.6
+    },
+    {
+      "date": "1989-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 39.5
+    },
+    {
+      "date": "1990-01-01",
+      "series": "Deaths",
+      "index": 87.6
+    },
+    {
+      "date": "1990-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 37.8
+    },
+    {
+      "date": "1991-01-01",
+      "series": "Deaths",
+      "index": 81.6
+    },
+    {
+      "date": "1991-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 34.7
+    },
+    {
+      "date": "1992-01-01",
+      "series": "Deaths",
+      "index": 77.1
+    },
+    {
+      "date": "1992-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 31.8
+    },
+    {
+      "date": "1993-01-01",
+      "series": "Deaths",
+      "index": 78.9
+    },
+    {
+      "date": "1993-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 31.8
+    },
+    {
+      "date": "1994-01-01",
+      "series": "Deaths",
+      "index": 80
+    },
+    {
+      "date": "1994-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 31.5
+    },
+    {
+      "date": "1995-01-01",
+      "series": "Deaths",
+      "index": 82.2
+    },
+    {
+      "date": "1995-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 31.5
+    },
+    {
+      "date": "1996-01-01",
+      "series": "Deaths",
+      "index": 82.7
+    },
+    {
+      "date": "1996-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 30.7
+    },
+    {
+      "date": "1997-01-01",
+      "series": "Deaths",
+      "index": 82.6
+    },
+    {
+      "date": "1997-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 30
+    },
+    {
+      "date": "1998-01-01",
+      "series": "Deaths",
+      "index": 81.5
+    },
+    {
+      "date": "1998-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 28.7
+    },
+    {
+      "date": "1999-01-01",
+      "series": "Deaths",
+      "index": 82
+    },
+    {
+      "date": "1999-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 28.2
+    },
+    {
+      "date": "2000-01-01",
+      "series": "Deaths",
+      "index": 82.4
+    },
+    {
+      "date": "2000-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 27.8
+    },
+    {
+      "date": "2001-01-01",
+      "series": "Deaths",
+      "index": 82.9
+    },
+    {
+      "date": "2001-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 27.5
+    },
+    {
+      "date": "2002-01-01",
+      "series": "Deaths",
+      "index": 84.5
+    },
+    {
+      "date": "2002-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 27.5
+    },
+    {
+      "date": "2003-01-01",
+      "series": "Deaths",
+      "index": 84.3
+    },
+    {
+      "date": "2003-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 26.9
+    },
+    {
+      "date": "2004-01-01",
+      "series": "Deaths",
+      "index": 84.2
+    },
+    {
+      "date": "2004-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 26.2
+    },
+    {
+      "date": "2005-01-01",
+      "series": "Deaths",
+      "index": 85.5
+    },
+    {
+      "date": "2005-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 26.5
+    },
+    {
+      "date": "2006-01-01",
+      "series": "Deaths",
+      "index": 83.9
+    },
+    {
+      "date": "2006-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 25.8
+    },
+    {
+      "date": "2007-01-01",
+      "series": "Deaths",
+      "index": 81.1
+    },
+    {
+      "date": "2007-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 24.7
+    },
+    {
+      "date": "2008-01-01",
+      "series": "Deaths",
+      "index": 73.5
+    },
+    {
+      "date": "2008-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 22.9
+    },
+    {
+      "date": "2009-01-01",
+      "series": "Deaths",
+      "index": 66.6
+    },
+    {
+      "date": "2009-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 20.9
+    },
+    {
+      "date": "2010-01-01",
+      "series": "Deaths",
+      "index": 64.8
+    },
+    {
+      "date": "2010-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 20.2
+    },
+    {
+      "date": "2011-01-01",
+      "series": "Deaths",
+      "index": 63.8
+    },
+    {
+      "date": "2011-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 20
+    },
+    {
+      "date": "2012-01-01",
+      "series": "Deaths",
+      "index": 66.4
+    },
+    {
+      "date": "2012-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 20.7
+    },
+    {
+      "date": "2013-01-01",
+      "series": "Deaths",
+      "index": 64.6
+    },
+    {
+      "date": "2013-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 20
+    },
+    {
+      "date": "2014-01-01",
+      "series": "Deaths",
+      "index": 64.3
+    },
+    {
+      "date": "2014-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 19.6
+    },
+    {
+      "date": "2015-01-01",
+      "series": "Deaths",
+      "index": 69.7
+    },
+    {
+      "date": "2015-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 20.9
+    },
+    {
+      "date": "2016-01-01",
+      "series": "Deaths",
+      "index": 74.3
+    },
+    {
+      "date": "2016-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 21.6
+    },
+    {
+      "date": "2017-01-01",
+      "series": "Deaths",
+      "index": 73.6
+    },
+    {
+      "date": "2017-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 21.3
+    },
+    {
+      "date": "2018-01-01",
+      "series": "Deaths",
+      "index": 72.4
+    },
+    {
+      "date": "2018-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 20.7
+    },
+    {
+      "date": "2019-01-01",
+      "series": "Deaths",
+      "index": 71.4
+    },
+    {
+      "date": "2019-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 20.2
+    },
+    {
+      "date": "2020-01-01",
+      "series": "Deaths",
+      "index": 76.6
+    },
+    {
+      "date": "2020-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 24.4
+    },
+    {
+      "date": "2021-01-01",
+      "series": "Deaths",
+      "index": 84.9
+    },
+    {
+      "date": "2021-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 25.1
+    },
+    {
+      "date": "2022-01-01",
+      "series": "Deaths",
+      "index": 83.9
+    },
+    {
+      "date": "2022-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 24.4
+    },
+    {
+      "date": "2023-01-01",
+      "series": "Deaths",
+      "index": 80.6
+    },
+    {
+      "date": "2023-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 22.9
+    },
+    {
+      "date": "2024-01-01",
+      "series": "Deaths",
+      "index": 77.1
+    },
+    {
+      "date": "2024-01-01",
+      "series": "Deaths per 100M miles",
+      "index": 21.6
+    }
+  ],
+  "encoding": {
+    "x": {
+      "field": "date",
+      "type": "temporal",
+      "axis": {
+        "format": "%Y",
+        "tickCount": 6
+      }
+    },
+    "y": {
+      "field": "index",
+      "type": "quantitative",
+      "scale": {
+        "domain": [
+          0,
+          120
+        ]
+      },
+      "axis": {
+        "title": "1966 = 100",
+        "values": [
+          0,
+          25,
+          50,
+          75,
+          100
+        ]
+      }
+    },
+    "color": {
+      "field": "series",
+      "type": "nominal",
+      "scale": {
+        "domain": [
+          "Deaths",
+          "Deaths per 100M miles"
+        ],
+        "range": [
+          "#0e7490",
+          "#e07b39"
+        ]
+      }
+    }
+  },
+  "chrome": {
+    "title": "Since 1966, deaths fell 23% and the death rate fell 78%",
+    "subtitle": "US road deaths and deaths per 100 million vehicle miles, indexed to 1966 = 100"
+  }
+}
+```
+
+Deaths ended at 77 and the rate at 22. Since the rate is deaths divided by miles driven, that gap implies Americans drive roughly 3.5 times as many miles as in 1966. The dual-axis charts above hid that, and the indexed chart shows it as the space between two lines.
+
+Indexing has a cost. It needs a sensible starting year, since a base year with an unusual value skews the whole picture, and it drops the real units. Add the raw values to a tooltip or table when readers need them.
+
+## When two axes are still reasonable
+
+A second axis is defensible when the left series is bars drawn from zero, the right series is a line, and each axis is colored to match its series. If you cannot say why each axis has the range it has, use panels.
+
+## The spec
+
+A dual-axis chart is a [`layer` array](/docs/composition/layers/) with `resolve: { scale: { y: "independent" } }`, so each layer gets its own y axis, and `axis.labelColor` colors each axis to match its line. The two charts above differ only in the `scale.domain` on each `y`.
+
+The panel chart is one line mark with `encoding.row` set to the measure field, and the same `resolve` line gives each [facet](/docs/composition/facets/) panel its own y domain. `sort: null` keeps the panels in data order. The indexed chart is one line mark with a `color` field and a fixed `scale.domain` on `y`. The [axes page](/docs/the-spec/axes/) lists the axis options, and the [line chart](/docs/change-over-time/line/) page covers the mark.
+
+The [layers page](/docs/composition/layers/) has a live dual-axis example with its full spec.
