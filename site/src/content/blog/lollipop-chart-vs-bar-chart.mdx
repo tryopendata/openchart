@@ -1,0 +1,181 @@
+---
+title: Lollipop chart vs bar chart
+description: A lollipop is a bar chart with less ink. Where it reads better than bars, why its stems must still start at zero, and when plain bars are the better choice.
+published: 2026-11-15
+author: OpenChart
+tags: [chart-choice]
+related: [comparison/lollipop, comparison/bar, comparison/bar-list]
+lead: blog/co2-lollipop
+---
+
+import Demo from "../../components/demo/Demo.astro";
+
+A lollipop chart is a bar chart with the bar thinned to a stem and a dot at the end. It encodes the same thing, a value as a distance from zero, and uses less ink to do it. That makes it quieter on a long list. It also makes it easy to forget that the stem is still a length.
+
+## Bars and lollipops on a long list
+
+Food shows the difference. Lamb, goat and beef emit 31 to 35 kilograms of CO2 for each kilogram of food, and the other nine categories in this dataset sit between 0.2 and 3.5. As bars, the two large values take most of the plot and the small ones shrink to slivers.
+
+<Demo id="blog/co2-bars" />
+
+The same rows as lollipops put the large values at the far end of a thin line and leave the nine small ones as dots that can be located against the axis. Nothing is lost, and the page carries less fill. Both charts sort by value so the ranking is visible, and both put the category names on the left, where they read without rotation.
+
+```json demo source="TidyTuesday (R for Data Science Online Learning Community), food consumption and CO2 emissions" height=460
+{
+  "mark": "lollipop",
+  "data": [
+    {
+      "food": "Lamb and goat",
+      "kgCo2PerKg": 35.02
+    },
+    {
+      "food": "Beef",
+      "kgCo2PerKg": 30.86
+    },
+    {
+      "food": "Pork",
+      "kgCo2PerKg": 3.54
+    },
+    {
+      "food": "Nuts",
+      "kgCo2PerKg": 1.77
+    },
+    {
+      "food": "Fish",
+      "kgCo2PerKg": 1.6
+    },
+    {
+      "food": "Milk and cheese",
+      "kgCo2PerKg": 1.42
+    },
+    {
+      "food": "Rice",
+      "kgCo2PerKg": 1.28
+    },
+    {
+      "food": "Poultry",
+      "kgCo2PerKg": 1.07
+    },
+    {
+      "food": "Eggs",
+      "kgCo2PerKg": 0.92
+    },
+    {
+      "food": "Soybeans",
+      "kgCo2PerKg": 0.45
+    },
+    {
+      "food": "Wheat",
+      "kgCo2PerKg": 0.19
+    }
+  ],
+  "encoding": {
+    "x": {
+      "field": "kgCo2PerKg",
+      "type": "quantitative",
+      "axis": {
+        "title": "kg CO2 per kg of food"
+      }
+    },
+    "y": {
+      "field": "food",
+      "type": "nominal",
+      "sort": "x"
+    }
+  },
+  "chrome": {
+    "title": "Lamb, goat and beef emit 31 to 35 kg of CO2 per kg of food, and no other food tops 3.5",
+    "subtitle": "Kilograms of CO2 per kilogram of food, 130 countries combined (no year stated)"
+  }
+}
+```
+
+The dataset gives no year, and it combines 130 countries, so the numbers describe food in general, not any one diet or market. Each value is total emissions divided by total consumption for that category.
+
+## The stem still has to start at zero
+
+A reader judges a lollipop by the length of its stem, the same way they judge a bar by its length. Cut the axis above zero and the lengths stop matching the values. Median weekly earnings run from $738 for adults without a high school diploma to $2,363 for those with a professional degree, a gap of 3.2 times. Start the axis at $600 and the stems measure $138 and $1,763, so the top one is 12.8 times the bottom one.
+
+```json demo source="US Bureau of Labor Statistics, Education Pays (Current Population Survey, 2024)" height=420
+{
+  "mark": "lollipop",
+  "data": [
+    {
+      "education": "Professional degree",
+      "weeklyEarnings": 2363
+    },
+    {
+      "education": "Doctoral degree",
+      "weeklyEarnings": 2278
+    },
+    {
+      "education": "Master's degree",
+      "weeklyEarnings": 1840
+    },
+    {
+      "education": "Bachelor's degree",
+      "weeklyEarnings": 1543
+    },
+    {
+      "education": "Associate's degree",
+      "weeklyEarnings": 1099
+    },
+    {
+      "education": "Some college",
+      "weeklyEarnings": 1020
+    },
+    {
+      "education": "High school diploma",
+      "weeklyEarnings": 930
+    },
+    {
+      "education": "Less than high school",
+      "weeklyEarnings": 738
+    }
+  ],
+  "encoding": {
+    "x": {
+      "field": "weeklyEarnings",
+      "type": "quantitative",
+      "scale": {
+        "zero": false,
+        "domain": [
+          600,
+          2400
+        ]
+      },
+      "axis": {
+        "title": "Median weekly earnings ($)",
+        "format": "$,.0f"
+      }
+    },
+    "y": {
+      "field": "education",
+      "type": "nominal",
+      "sort": "x"
+    }
+  },
+  "chrome": {
+    "title": "Starting the axis at $600 stretches a 3.2-times gap into 12.8 times",
+    "subtitle": "Median usual weekly earnings by educational attainment, 2024 ($)"
+  }
+}
+```
+
+This is the same mistake as a truncated bar, covered in [when bar charts must start at zero](/blog/when-bar-charts-must-start-at-zero/). Thin stems make it easier to miss, because a lollipop does not look like a filled shape that is obviously cut off. If the point is where values sit rather than how long they are, drop the stems and plot dots alone, which encode position and can use a trimmed axis.
+
+## When plain bars are better
+
+With eight categories and values worth printing, bars win. The same table lists unemployment too, 6.2% for the least educated and 1.3% for professional degrees. The earnings chart below puts each dollar figure inside its bar, and the fill makes the gap between a high school diploma ($930) and a bachelor's degree ($1,543) read as a quantity.
+
+<Demo id="blog/education-bars" />
+
+A short list gains nothing from having less ink, and a dot has no room for a printed value. I would use bars for about ten categories or fewer and a lollipop for a longer list. Bars also stack and group, which a lollipop cannot do: it fits one series, or two values per category in its dumbbell form. Once a list is long enough to sit in a dashboard card, a [bar list](/docs/comparison/bar-list/) drops the axis and fits more rows.
+
+## The spec
+
+A lollipop uses the same encoding as a [bar chart](/docs/comparison/bar/): the value on `x` as a quantitative field and the category on `y` as a nominal one. Setting `mark` to `"lollipop"` instead of `"bar"` is the whole change. `sort: "x"` on `y` puts the largest value at the top.
+
+The trimmed chart adds `scale: { zero: false, domain: [600, 2400] }` on `x`, which is what lets the axis start at $600. Leave that out, since this chart is a warning and not a recipe.
+
+The [lollipop page](/docs/comparison/lollipop/) covers negative values and the dumbbell variant, with live examples.
