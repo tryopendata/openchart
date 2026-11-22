@@ -1,0 +1,110 @@
+---
+title: "Choropleth vs tile map: how to map US state data"
+description: A geographic US choropleth lets large, sparsely populated states dominate the page. A tile grid map gives every state equal weight, at a geographic cost.
+published: 2026-11-18
+author: OpenChart
+tags: [maps, chart-choice]
+related: [maps/choropleth, maps/tile-map, maps/geographic-labels, style/color]
+lead: blog/unemployment-tilemap
+---
+
+import Demo from "../../components/demo/Demo.astro";
+
+In the Bureau of Labor Statistics state unemployment snapshot, DC (5.7%) and Delaware (5.4%) have the highest rates in the country. On a standard US map, those two jurisdictions together cover less than a tenth of a percent of the country's land area. Montana (3.6%) and Wyoming (3.8%) fill the upper middle of the frame, so a reader scanning by color sees moderate Western rates first and overlooks the two highest readings.
+
+A geographic choropleth colors each political boundary by a data value. That design ties every state's visual prominence to its square mileage, which is useful when physical land matters and misleading when each state is an equal unit of comparison.
+
+<Demo id="blog/unemployment-choropleth" />
+
+Area bias hides dense clusters of small states along the East Coast. Rhode Island, Connecticut, New Jersey, and Delaware all record unemployment at or above 4.8%, yet their shapes are narrow slivers beside Texas and Montana. Under the Albers USA projection (the standard layout that tucks Alaska and Hawaii below the lower 48), DC's polygon is too small to spot by eye even though it leads the dataset.
+
+## Giving every state equal area
+
+A tile grid map breaks the link between land area and visual weight by giving every state one identical square. Each square sits in a fixed row-and-column grid that keeps rough regional neighborhoods intact, with Maine in the top right and California along the left edge. Because every cell has the same footprint, DC and Delaware claim the same space as Texas and Alaska.
+
+Putting the two-letter postal code and numeric rate inside each tile removes a second limitation of standard US maps. On a choropleth, small states need callout leader lines or hover tooltips to display a value. On a tile grid, every square has enough room for both the abbreviation and the figure, and text contrast switches automatically between dark labels on pale tiles and light labels on deep tiles.
+
+```json demo source="Bureau of Labor Statistics, Local Area Unemployment Statistics" height=520
+{
+  "type": "tilemap",
+  "data": {
+    "AL": 2.7,
+    "AK": 4.8,
+    "AZ": 4.7,
+    "AR": 4.2,
+    "CA": 5.3,
+    "CO": 3.8,
+    "CT": 4.8,
+    "DE": 5.4,
+    "DC": 5.7,
+    "FL": 4.4,
+    "GA": 3.5,
+    "HI": 2.4,
+    "ID": 3.6,
+    "IL": 5.1,
+    "IN": 3.6,
+    "IA": 3.3,
+    "KS": 3.8,
+    "KY": 4.2,
+    "LA": 4.4,
+    "ME": 3.3,
+    "MD": 4.3,
+    "MA": 4.7,
+    "MI": 5.1,
+    "MN": 4.9,
+    "MS": 3.8,
+    "MO": 4.2,
+    "MT": 3.6,
+    "NE": 3.1,
+    "NV": 5.1,
+    "NH": 3.0,
+    "NJ": 4.9,
+    "NM": 4.8,
+    "NY": 4.4,
+    "NC": 3.7,
+    "ND": 2.8,
+    "OH": 4.0,
+    "OK": 3.9,
+    "OR": 5.2,
+    "PA": 4.2,
+    "RI": 4.9,
+    "SC": 4.2,
+    "SD": 2.3,
+    "TN": 3.3,
+    "TX": 4.3,
+    "UT": 3.8,
+    "VT": 2.6,
+    "VA": 3.8,
+    "WA": 5.1,
+    "WV": 4.5,
+    "WI": 4.0,
+    "WY": 3.8
+  },
+  "palette": "blue",
+  "valueFormat": ".1f",
+  "chrome": {
+    "title": "DC (5.7%) and Delaware (5.4%) lead US state unemployment",
+    "subtitle": "State unemployment rate, seasonally adjusted (%)"
+  }
+}
+```
+
+Equal cells bring the high-unemployment cluster in the Mid-Atlantic and along the West Coast into view. DC, Delaware, California (5.3%), and Oregon (5.2%) carry clear visual weight, while low-rate Plains states such as South Dakota (2.3%) and North Dakota (2.8%) shrink to two ordinary squares.
+
+A tile grid distorts real borders and distances to fit 51 equal squares into neat rows. Some neighboring states separate across rows or columns, and coastal outlines disappear. Readers familiar with US regions still orient themselves quickly, yet anyone checking whether two states share a border needs a geographic map.
+
+## Choosing between geography and fairness
+
+Keep a geographic choropleth when physical space and contiguous borders are part of the story. Weather patterns, drought belts, watershed boundaries, and regional commuting zones depend on real land area and exact adjacency. Even then, color a choropleth by rates or per-person averages. Plotting raw counts like total unemployed workers makes California, Texas, and Florida dark simply because more people live there.
+
+Switch to a tile grid map when every state is an equal reporting unit and small states carry the same analytical weight as large ones. State unemployment rates, minimum wages, tax brackets, and US Senate delegations all fit that rule. In a state-by-state comparison, Delaware's 5.4% unemployment rate or two Senate seats count just as much as Montana's.
+
+Neither map is ideal when the reader's main job is ranking states from highest to lowest. Color ramps group similar values into broad steps, so telling apart Illinois (5.1%) and Oregon (5.2%) by shade alone takes effort. When exact order matters more than regional grouping, a sorted bar chart answers the question faster than any map.
+
+## The spec
+
+The Code panel under the tile map holds its full JSON spec. Setting `"type": "tilemap"` selects the built-in 51-cell US grid, so the spec requires no TopoJSON geography file and no projection. Passing `data` as an object maps each two-letter postal code straight to its numeric value, and `"palette": "blue"` derives the sequential color ramp and legend from those values.
+
+Setting `"valueFormat": ".1f"` formats each tile label, legend tick, and tooltip to one decimal place, while `chrome` sets the title and subtitle. For tabular arrays of row objects, `encoding.state` and `encoding.value` bind row fields to the same grid and leave omitted states as empty outlined cells. The geographic choropleth above uses `"type": "map"` instead, pairing a TopoJSON states file and the `"albersUsa"` projection with two-digit FIPS state codes.
+
+For categorical colors and row-based data bindings, see the [tile map documentation](/docs/maps/tile-map/).
