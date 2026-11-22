@@ -1,0 +1,348 @@
+---
+title: "Histogram bin size: how many bins should you use?"
+description: Bin width decides what a histogram shows. Three widths on the same 51 values, two rules of thumb, and a test for telling a real feature from a bin artifact.
+published: 2026-11-19
+author: OpenChart
+tags: [chart-choice]
+related: [distribution/histogram, distribution/density, the-spec/transforms]
+lead: blog/income-bins-10000
+---
+
+import Demo from "../../components/demo/Demo.astro";
+
+A histogram sorts values into bins and draws a bar for each bin's count. You choose the width of the bins, and the same values can look like a lump, a smooth curve or random spikes depending on that choice.
+
+The 51 values here are the 2024 median household income of each state and DC, from the [Census Bureau's American Community Survey](https://www.census.gov/programs-surveys/acs). The lowest is Mississippi at $59,127 and the highest is DC at $109,707.
+
+## Too few bins
+
+With wide bins everything lands in two or three bars, and the shape of the data is gone.
+
+<Demo id="blog/income-bins-25000" />
+
+The chart puts most states between $75,000 and $100,000 but cannot show whether those values bunch together or spread out.
+
+## Too many bins
+
+With narrow bins most bars hold one or two states, and the outline jumps around from one bar to the next.
+
+<Demo id="blog/income-bins-1000" />
+
+A reader will see peaks and gaps here, but each is one or two states, and moving a state by $1,000 would reshuffle them.
+
+## A width in between
+
+A $10,000 bin gives six bars. The values pile up between $70,000 and $90,000, and a thinner tail runs to the right.
+
+```json demo source="US Census Bureau, American Community Survey 1-year estimates" height=380
+{
+  "mark": {
+    "type": "bar",
+    "fill": "#0e7490"
+  },
+  "data": [
+    {
+      "state": "Alabama",
+      "income": 66659
+    },
+    {
+      "state": "Alaska",
+      "income": 95665
+    },
+    {
+      "state": "Arizona",
+      "income": 81486
+    },
+    {
+      "state": "Arkansas",
+      "income": 62106
+    },
+    {
+      "state": "California",
+      "income": 100149
+    },
+    {
+      "state": "Colorado",
+      "income": 97113
+    },
+    {
+      "state": "Connecticut",
+      "income": 96049
+    },
+    {
+      "state": "Delaware",
+      "income": 87534
+    },
+    {
+      "state": "District of Columbia",
+      "income": 109707
+    },
+    {
+      "state": "Florida",
+      "income": 77735
+    },
+    {
+      "state": "Georgia",
+      "income": 79991
+    },
+    {
+      "state": "Hawaii",
+      "income": 100745
+    },
+    {
+      "state": "Idaho",
+      "income": 81166
+    },
+    {
+      "state": "Illinois",
+      "income": 83211
+    },
+    {
+      "state": "Indiana",
+      "income": 71959
+    },
+    {
+      "state": "Iowa",
+      "income": 75501
+    },
+    {
+      "state": "Kansas",
+      "income": 75514
+    },
+    {
+      "state": "Kentucky",
+      "income": 64526
+    },
+    {
+      "state": "Louisiana",
+      "income": 60986
+    },
+    {
+      "state": "Maine",
+      "income": 76442
+    },
+    {
+      "state": "Maryland",
+      "income": 102905
+    },
+    {
+      "state": "Massachusetts",
+      "income": 104828
+    },
+    {
+      "state": "Michigan",
+      "income": 72389
+    },
+    {
+      "state": "Minnesota",
+      "income": 87117
+    },
+    {
+      "state": "Mississippi",
+      "income": 59127
+    },
+    {
+      "state": "Missouri",
+      "income": 71589
+    },
+    {
+      "state": "Montana",
+      "income": 75340
+    },
+    {
+      "state": "Nebraska",
+      "income": 76376
+    },
+    {
+      "state": "Nevada",
+      "income": 81134
+    },
+    {
+      "state": "New Hampshire",
+      "income": 99782
+    },
+    {
+      "state": "New Jersey",
+      "income": 104294
+    },
+    {
+      "state": "New Mexico",
+      "income": 67816
+    },
+    {
+      "state": "New York",
+      "income": 85820
+    },
+    {
+      "state": "North Carolina",
+      "income": 73958
+    },
+    {
+      "state": "North Dakota",
+      "income": 77871
+    },
+    {
+      "state": "Ohio",
+      "income": 72212
+    },
+    {
+      "state": "Oklahoma",
+      "income": 66148
+    },
+    {
+      "state": "Oregon",
+      "income": 85220
+    },
+    {
+      "state": "Pennsylvania",
+      "income": 77545
+    },
+    {
+      "state": "Rhode Island",
+      "income": 83504
+    },
+    {
+      "state": "South Carolina",
+      "income": 72350
+    },
+    {
+      "state": "South Dakota",
+      "income": 76881
+    },
+    {
+      "state": "Tennessee",
+      "income": 71997
+    },
+    {
+      "state": "Texas",
+      "income": 79721
+    },
+    {
+      "state": "Utah",
+      "income": 96658
+    },
+    {
+      "state": "Vermont",
+      "income": 82730
+    },
+    {
+      "state": "Virginia",
+      "income": 92090
+    },
+    {
+      "state": "Washington",
+      "income": 99389
+    },
+    {
+      "state": "West Virginia",
+      "income": 60798
+    },
+    {
+      "state": "Wisconsin",
+      "income": 77488
+    },
+    {
+      "state": "Wyoming",
+      "income": 75532
+    }
+  ],
+  "transform": [
+    {
+      "bin": {
+        "step": 10000,
+        "extent": [
+          50000,
+          125000
+        ]
+      },
+      "field": "income",
+      "as": [
+        "from",
+        "to"
+      ]
+    },
+    {
+      "aggregate": [
+        {
+          "op": "count",
+          "field": "state",
+          "as": "states"
+        }
+      ],
+      "groupby": [
+        "from",
+        "to"
+      ]
+    }
+  ],
+  "encoding": {
+    "x": {
+      "field": "from",
+      "type": "quantitative",
+      "scale": {
+        "domain": [
+          50000,
+          125000
+        ],
+        "nice": false
+      },
+      "axis": {
+        "title": "Median household income, 2024",
+        "format": "$~s",
+        "values": [
+          60000,
+          80000,
+          100000,
+          120000
+        ]
+      }
+    },
+    "x2": {
+      "field": "to",
+      "type": "quantitative"
+    },
+    "y": {
+      "field": "states",
+      "type": "quantitative",
+      "axis": {
+        "title": "States per bin",
+        "tickCount": 4
+      }
+    }
+  },
+  "chrome": {
+    "title": "30 of 51 states sit between $70,000 and $90,000, with a tail to the right",
+    "subtitle": "Number of states by median household income in $10,000 bins, 50 states and DC"
+  }
+}
+```
+
+Two rules of thumb compute a starting width from the data. Sturges' rule uses the count of values: take the base-2 logarithm of 51 and add one, and round up to 7 bins, or about $7,200 each across this range. The Freedman-Diaconis rule also uses the spread of the middle half of the values, which makes it less sensitive to outliers like DC. It gives a width of about $9,400.
+
+Both rules land near the $10,000 width. Keep every bin the same width: the eye reads a bar's area while the count sets only its height, so bars of unequal width stop meaning the same thing. Try a width on either side of the suggestion and see whether the picture changes.
+
+## A feature that survives a change of width
+
+To tell a real feature from an artifact of the bin edges, redraw the chart at another width. Here is the USGS earthquake catalog for January 2026, counted in 0.1-magnitude bins, with only the quakes of magnitude 2.5 and above.
+
+<Demo id="blog/quakes-bins-0-1" />
+
+Small quakes are far more common than big ones, so counts should fall steadily with magnitude. Instead they dip to 8 at magnitude 3.9 and climb back by 4.5.
+
+<Demo id="blog/quakes-bins-0-5" />
+
+At half-magnitude bins the small spikes at higher magnitudes smooth out, and the dip stays. A feature that survives a wider bin is in the data, and one that vanishes was probably the bins. This dip comes from how the catalog was collected. Most likely, quakes smaller than about magnitude 4.5 are only reported where seismometers are dense, so outside those regions the catalog mostly lists quakes of 4.5 and up and the counts jump back at 4.5.
+
+## The spec
+
+OpenChart has a `histogram` mark that bins raw rows for you: `mark: { type: "histogram", binCount: 24 }` asks for up to 24 bins and picks a round width. The charts here use the `bin` [transform](/docs/the-spec/transforms/) instead, because it lets the spec state the exact width.
+
+In the income spec, `bin: { step: 10000, extent: [50000, 125000] }` writes each state's bin start and end into two new fields. `aggregate` with `op: "count"`, grouped by both fields, turns 51 rows into one count per bin.
+
+The bin start goes on `x` and the bin end on `x2`, so each bar spans its whole range. A `scale.domain` fixes the x range so every width is drawn on the same axis.
+
+The earthquake rows are already counts per 0.1 magnitude, so the first earthquake chart draws them directly, each bar ending 0.1 above its start. The 0.5 chart merges them with a `bin` transform and `op: "sum"` on the count field.
+
+A [density curve](/docs/distribution/density/) avoids bin edges entirely, in exchange for choosing a bandwidth, which sets how far each value is smeared across its neighbors.
+
+The [histogram page](/docs/distribution/histogram/) lists every field the mark takes.

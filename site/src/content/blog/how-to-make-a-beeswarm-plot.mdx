@@ -1,0 +1,366 @@
+---
+title: How to make a beeswarm plot
+description: A beeswarm draws every observation as a dot, nudged off the axis so none overlap. When it beats a histogram, how to split it by group, and when to stop.
+published: 2026-11-16
+author: OpenChart
+tags: [chart-choice]
+related: [distribution/beeswarm, distribution/tick-strip, correlation/scatter]
+lead: blog/teacher-pay-beeswarm
+---
+
+import Demo from "../../components/demo/Demo.astro";
+
+A beeswarm plot draws each observation as its own dot along one axis, and nudges dots apart, off the axis, when they would overlap. The clusters that form are the shape of the distribution, and every value is still there to point at.
+
+The data here is the average public-school teacher salary in each state, adjusted for inflation, from the [National Center for Education Statistics](https://nces.ed.gov/programs/digest/d22/tables/dt22_211.60.asp). Between 1999-00 and 2021-22 it fell in 36 of 51 jurisdictions, the 50 states and DC.
+
+## What a histogram leaves out
+
+A histogram groups the states into bins of similar change and draws a bar for each bin's count.
+
+<Demo id="blog/teacher-pay-histogram" />
+
+The tallest bar is the group of states whose pay fell by about 10%. The chart cannot say which states those are, and an unusual state is just a short bar at the edge.
+
+## One dot per state
+
+A beeswarm keeps each state as a dot, so the same chart can name its outliers.
+
+```json demo source="NCES, Digest of Education Statistics, Table 211.60" height=340
+{
+  "mark": "beeswarm",
+  "data": [
+    {
+      "state": "Alabama",
+      "change": -8.7,
+      "direction": "Fell"
+    },
+    {
+      "state": "Alaska",
+      "change": -4.8,
+      "direction": "Fell"
+    },
+    {
+      "state": "Arizona",
+      "change": -11.2,
+      "direction": "Fell"
+    },
+    {
+      "state": "Arkansas",
+      "change": -5.6,
+      "direction": "Fell"
+    },
+    {
+      "state": "California",
+      "change": 9.9,
+      "direction": "Rose"
+    },
+    {
+      "state": "Colorado",
+      "change": -8,
+      "direction": "Fell"
+    },
+    {
+      "state": "Connecticut",
+      "change": -5.9,
+      "direction": "Fell"
+    },
+    {
+      "state": "Delaware",
+      "change": -11.3,
+      "direction": "Fell"
+    },
+    {
+      "state": "District of Columbia",
+      "change": 5.2,
+      "direction": "Rose"
+    },
+    {
+      "state": "Florida",
+      "change": -16.3,
+      "direction": "Fell"
+    },
+    {
+      "state": "Georgia",
+      "change": -10.4,
+      "direction": "Fell"
+    },
+    {
+      "state": "Hawaii",
+      "change": -0.9,
+      "direction": "Fell"
+    },
+    {
+      "state": "Idaho",
+      "change": -8.4,
+      "direction": "Fell"
+    },
+    {
+      "state": "Illinois",
+      "change": -6.6,
+      "direction": "Fell"
+    },
+    {
+      "state": "Indiana",
+      "change": -22.4,
+      "direction": "Fell"
+    },
+    {
+      "state": "Iowa",
+      "change": -0.3,
+      "direction": "Fell"
+    },
+    {
+      "state": "Kansas",
+      "change": -5.9,
+      "direction": "Fell"
+    },
+    {
+      "state": "Kentucky",
+      "change": -10,
+      "direction": "Fell"
+    },
+    {
+      "state": "Louisiana",
+      "change": -5,
+      "direction": "Fell"
+    },
+    {
+      "state": "Maine",
+      "change": -0.8,
+      "direction": "Fell"
+    },
+    {
+      "state": "Maryland",
+      "change": 3.3,
+      "direction": "Rose"
+    },
+    {
+      "state": "Massachusetts",
+      "change": 14.6,
+      "direction": "Rose"
+    },
+    {
+      "state": "Michigan",
+      "change": -20.2,
+      "direction": "Fell"
+    },
+    {
+      "state": "Minnesota",
+      "change": 3.3,
+      "direction": "Rose"
+    },
+    {
+      "state": "Mississippi",
+      "change": -11.1,
+      "direction": "Fell"
+    },
+    {
+      "state": "Missouri",
+      "change": -11.6,
+      "direction": "Fell"
+    },
+    {
+      "state": "Montana",
+      "change": 0.2,
+      "direction": "Rose"
+    },
+    {
+      "state": "Nebraska",
+      "change": 3.7,
+      "direction": "Rose"
+    },
+    {
+      "state": "Nevada",
+      "change": -11.9,
+      "direction": "Fell"
+    },
+    {
+      "state": "New Hampshire",
+      "change": -0.1,
+      "direction": "Fell"
+    },
+    {
+      "state": "New Jersey",
+      "change": -8.8,
+      "direction": "Fell"
+    },
+    {
+      "state": "New Mexico",
+      "change": 0.1,
+      "direction": "Rose"
+    },
+    {
+      "state": "New York",
+      "change": 8.5,
+      "direction": "Rose"
+    },
+    {
+      "state": "North Carolina",
+      "change": -18.3,
+      "direction": "Fell"
+    },
+    {
+      "state": "North Dakota",
+      "change": 12.1,
+      "direction": "Rose"
+    },
+    {
+      "state": "Ohio",
+      "change": -8.5,
+      "direction": "Fell"
+    },
+    {
+      "state": "Oklahoma",
+      "change": 5.1,
+      "direction": "Rose"
+    },
+    {
+      "state": "Oregon",
+      "change": -1.2,
+      "direction": "Fell"
+    },
+    {
+      "state": "Pennsylvania",
+      "change": -10.2,
+      "direction": "Fell"
+    },
+    {
+      "state": "Rhode Island",
+      "change": -1.9,
+      "direction": "Fell"
+    },
+    {
+      "state": "South Carolina",
+      "change": -11.2,
+      "direction": "Fell"
+    },
+    {
+      "state": "South Dakota",
+      "change": 2.7,
+      "direction": "Rose"
+    },
+    {
+      "state": "Tennessee",
+      "change": -11.4,
+      "direction": "Fell"
+    },
+    {
+      "state": "Texas",
+      "change": -5.9,
+      "direction": "Fell"
+    },
+    {
+      "state": "Utah",
+      "change": 0.7,
+      "direction": "Rose"
+    },
+    {
+      "state": "Vermont",
+      "change": -0.1,
+      "direction": "Fell"
+    },
+    {
+      "state": "Virginia",
+      "change": -7.1,
+      "direction": "Fell"
+    },
+    {
+      "state": "Washington",
+      "change": 19.3,
+      "direction": "Rose"
+    },
+    {
+      "state": "West Virginia",
+      "change": -13.7,
+      "direction": "Fell"
+    },
+    {
+      "state": "Wisconsin",
+      "change": -11.8,
+      "direction": "Fell"
+    },
+    {
+      "state": "Wyoming",
+      "change": 7,
+      "direction": "Rose"
+    }
+  ],
+  "encoding": {
+    "x": {
+      "field": "change",
+      "type": "quantitative",
+      "axis": {
+        "title": "Change in pay",
+        "format": ".0f",
+        "labelSuffix": "%"
+      }
+    },
+    "color": {
+      "field": "direction",
+      "type": "nominal",
+      "scale": {
+        "domain": [
+          "Fell",
+          "Rose"
+        ],
+        "range": [
+          "#d1495b",
+          "#0e7490"
+        ]
+      }
+    },
+    "tooltip": [
+      {
+        "field": "state",
+        "type": "nominal",
+        "title": "State"
+      },
+      {
+        "field": "change",
+        "type": "quantitative",
+        "title": "Change in pay (%)"
+      }
+    ]
+  },
+  "legend": {
+    "show": false
+  },
+  "chrome": {
+    "title": "Teacher pay fell in 36 of 51 states, by as much as 22.4%",
+    "subtitle": "Change in average public-school teacher salary, constant dollars, 1999-00 to 2021-22. One dot per state: red fell, blue rose."
+  }
+}
+```
+
+The leftmost dot is Indiana, down 22.4%, and the rightmost is Washington, up 19.3%. Hovering over any dot names its state.
+
+Read the swarm the way you would read a histogram: where dots crowd together, many states share a value. Of the 36 states that fell, 23 lost between 5% and 12%, and the 15 that gained are spread thinly along the right.
+
+Only the position along the axis means anything. The nudge off the axis exists to keep dots from covering each other, so a dot sitting higher than its neighbor is not larger or later. Add a caption saying so for readers new to the chart.
+
+## Split a swarm by group
+
+A second field turns one swarm into one lane per group. Here, each dot is a college major, placed by the median pay of its recent graduates, and each lane is a field of study.
+
+<Demo id="blog/majors-pay-beeswarm" />
+
+Engineering, in blue, has the widest spread, with majors across a $25,000 range. Many majors share the same pay, because the source rounds it, and identical values stack into columns of dots instead of covering each other.
+
+Seven majors share a median of exactly $45,000, four of them in Computers & Mathematics. A column of dots shows that stack. A box plot, which draws the middle half of the values as one box, would show a single line, and it would also have hidden which state was which in the teacher chart.
+
+A beeswarm shows one number at a time. To ask whether two numbers move together, such as pay and the share of women in a major, use a [scatter plot](/docs/correlation/scatter/) instead.
+
+## Where a beeswarm stops working
+
+Every row gets a dot, so the plot runs out of room as the rows multiply. With thousands of points the dots either shrink until they are specks or stack so far off the axis that neighboring lanes overlap. A few hundred points is a practical ceiling. Past that, use a [histogram](/docs/distribution/histogram/) or a density curve and give up the individual dots.
+
+At the other end, a handful of points that never overlap do not need dodging. A [tick strip](/docs/distribution/tick-strip/) draws one tick per value on a shared axis and is simpler.
+
+## The spec
+
+Set `mark` to `"beeswarm"` and put the value field on `encoding.x`. With no `y`, all the dots share one lane. The teacher chart's `color` field is `direction`, which each row carries as `Fell` or `Rose`, worked out from the change before charting. A `scale` with a `domain` and a `range` pairs each value with its color, and `legend: { show: false }` drops the legend because the subtitle names the colors. The `tooltip` list names the fields shown on hover.
+
+For lanes, add a nominal field on `encoding.y`, as the majors chart does with its field of study. Its `sort` object, `{ field: "pay", op: "median", order: "ascending" }`, orders the lanes by median pay, highest at the top because `y` lists categories from the bottom up. Swap `x` and `y` to turn the swarm vertical.
+
+The [beeswarm page](/docs/distribution/beeswarm/) also covers sizing each dot by a second field.

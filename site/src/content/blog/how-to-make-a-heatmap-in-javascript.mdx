@@ -1,0 +1,413 @@
+---
+title: How to make a heatmap in JavaScript
+description: A heatmap colors a grid of two categories by a number. How to choose sequential or diverging color, order the rows, and label cells so the pattern shows.
+published: 2026-11-13
+author: OpenChart
+tags: [chart-choice, color]
+related: [correlation/heatmap, style/color, the-spec/scales]
+lead: blog/co2-seasonal-heatmap
+---
+
+import Demo from "../../components/demo/Demo.astro";
+
+A heatmap is a grid with one category along each side and a colored cell at every crossing. The color stands for a number, so a table of numbers becomes a picture where dark rows, dark columns and gaps stand out.
+
+## Two categories and one number
+
+Lawful permanent residents, who receive what are called green cards, are counted by country of birth and fiscal year in the [DHS Yearbook of Immigration Statistics](https://ohss.dhs.gov/topics/immigration/yearbook/2023). Here are six countries over ten fiscal years.
+
+<Demo id="blog/green-cards-heatmap" />
+
+Mexico is the darkest row in every year. Fiscal 2020, the first fiscal year of the pandemic, is a pale column through every row, and the total across all countries fell by 31%.
+
+With 60 cells, each cell carries its number, so the reader can check a color against a value. At several hundred cells the labels would crowd each other, and the color and the hover tooltip would have to carry the numbers.
+
+## Choose the color scale
+
+A sequential scale runs from light to dark in one hue, and fits values that only go one way, like counts. A diverging scale runs two hues out from a neutral middle, and fits values that sit above or below a reference point.
+
+A color scale spent on the long-term trend hides the seasonal one. Mauna Loa Observatory in Hawaii has measured carbon dioxide (CO2) in the air every month since 1958, and NOAA publishes the readings through its [Global Monitoring Laboratory](https://gml.noaa.gov/ccgg/trends/data.html). Each row below is one year and each column one month, on a single sequential scale.
+
+<Demo id="blog/co2-heatmap" />
+
+The rows get darker from 1960 to 2025 and nothing else shows. CO2 climbed by more than 100 parts per million (ppm) between those years, so the trend uses up the whole color range.
+
+Within each year CO2 also rises and falls with the seasons. It builds up over the winter, peaks in spring, and drops to its low in autumn as growing plants in the northern hemisphere draw it down. That swing is about 6 ppm, too small to see against 100. Subtracting each year's own average removes the trend and centers the scale on zero, which makes a diverging scale the right one.
+
+```json demo source="NOAA Global Monitoring Laboratory, Mauna Loa CO2 monthly mean" height=380
+{
+  "mark": "rect",
+  "data": [
+    {
+      "year": "1960",
+      "month": "Jan",
+      "departure": -0.5
+    },
+    {
+      "year": "1960",
+      "month": "Feb",
+      "departure": 0.1
+    },
+    {
+      "year": "1960",
+      "month": "Mar",
+      "departure": 0.7
+    },
+    {
+      "year": "1960",
+      "month": "Apr",
+      "departure": 2.1
+    },
+    {
+      "year": "1960",
+      "month": "May",
+      "departure": 3.1
+    },
+    {
+      "year": "1960",
+      "month": "Jun",
+      "departure": 2.7
+    },
+    {
+      "year": "1960",
+      "month": "Jul",
+      "departure": 1.3
+    },
+    {
+      "year": "1960",
+      "month": "Aug",
+      "departure": -1
+    },
+    {
+      "year": "1960",
+      "month": "Sep",
+      "departure": -2.7
+    },
+    {
+      "year": "1960",
+      "month": "Oct",
+      "departure": -3.1
+    },
+    {
+      "year": "1960",
+      "month": "Nov",
+      "departure": -1.9
+    },
+    {
+      "year": "1960",
+      "month": "Dec",
+      "departure": -0.7
+    },
+    {
+      "year": "1980",
+      "month": "Jan",
+      "departure": -0.9
+    },
+    {
+      "year": "1980",
+      "month": "Feb",
+      "departure": -0.4
+    },
+    {
+      "year": "1980",
+      "month": "Mar",
+      "departure": 1.3
+    },
+    {
+      "year": "1980",
+      "month": "Apr",
+      "departure": 2.2
+    },
+    {
+      "year": "1980",
+      "month": "May",
+      "departure": 2.7
+    },
+    {
+      "year": "1980",
+      "month": "Jun",
+      "departure": 2.6
+    },
+    {
+      "year": "1980",
+      "month": "Jul",
+      "departure": 0.7
+    },
+    {
+      "year": "1980",
+      "month": "Aug",
+      "departure": -1.1
+    },
+    {
+      "year": "1980",
+      "month": "Sep",
+      "departure": -2.5
+    },
+    {
+      "year": "1980",
+      "month": "Oct",
+      "departure": -2.6
+    },
+    {
+      "year": "1980",
+      "month": "Nov",
+      "departure": -1.5
+    },
+    {
+      "year": "1980",
+      "month": "Dec",
+      "departure": -0.5
+    },
+    {
+      "year": "2000",
+      "month": "Jan",
+      "departure": -0.3
+    },
+    {
+      "year": "2000",
+      "month": "Feb",
+      "departure": 0
+    },
+    {
+      "year": "2000",
+      "month": "Mar",
+      "departure": 1
+    },
+    {
+      "year": "2000",
+      "month": "Apr",
+      "departure": 2.3
+    },
+    {
+      "year": "2000",
+      "month": "May",
+      "departure": 2
+    },
+    {
+      "year": "2000",
+      "month": "Jun",
+      "departure": 2.2
+    },
+    {
+      "year": "2000",
+      "month": "Jul",
+      "departure": 0.3
+    },
+    {
+      "year": "2000",
+      "month": "Aug",
+      "departure": -1.4
+    },
+    {
+      "year": "2000",
+      "month": "Sep",
+      "departure": -2.6
+    },
+    {
+      "year": "2000",
+      "month": "Oct",
+      "departure": -2.5
+    },
+    {
+      "year": "2000",
+      "month": "Nov",
+      "departure": -1.2
+    },
+    {
+      "year": "2000",
+      "month": "Dec",
+      "departure": 0.1
+    },
+    {
+      "year": "2020",
+      "month": "Jan",
+      "departure": -0.6
+    },
+    {
+      "year": "2020",
+      "month": "Feb",
+      "departure": 0.1
+    },
+    {
+      "year": "2020",
+      "month": "Mar",
+      "departure": 0.5
+    },
+    {
+      "year": "2020",
+      "month": "Apr",
+      "departure": 2.2
+    },
+    {
+      "year": "2020",
+      "month": "May",
+      "departure": 3.1
+    },
+    {
+      "year": "2020",
+      "month": "Jun",
+      "departure": 2.4
+    },
+    {
+      "year": "2020",
+      "month": "Jul",
+      "departure": 0.4
+    },
+    {
+      "year": "2020",
+      "month": "Aug",
+      "departure": -1.5
+    },
+    {
+      "year": "2020",
+      "month": "Sep",
+      "departure": -2.7
+    },
+    {
+      "year": "2020",
+      "month": "Oct",
+      "departure": -2.7
+    },
+    {
+      "year": "2020",
+      "month": "Nov",
+      "departure": -1.1
+    },
+    {
+      "year": "2020",
+      "month": "Dec",
+      "departure": 0
+    },
+    {
+      "year": "2025",
+      "month": "Jan",
+      "departure": -0.7
+    },
+    {
+      "year": "2025",
+      "month": "Feb",
+      "departure": -0.3
+    },
+    {
+      "year": "2025",
+      "month": "Mar",
+      "departure": 0.8
+    },
+    {
+      "year": "2025",
+      "month": "Apr",
+      "departure": 2.3
+    },
+    {
+      "year": "2025",
+      "month": "May",
+      "departure": 3.2
+    },
+    {
+      "year": "2025",
+      "month": "Jun",
+      "departure": 2.3
+    },
+    {
+      "year": "2025",
+      "month": "Jul",
+      "departure": 0.5
+    },
+    {
+      "year": "2025",
+      "month": "Aug",
+      "departure": -1.9
+    },
+    {
+      "year": "2025",
+      "month": "Sep",
+      "departure": -3
+    },
+    {
+      "year": "2025",
+      "month": "Oct",
+      "departure": -2.5
+    },
+    {
+      "year": "2025",
+      "month": "Nov",
+      "departure": -0.9
+    },
+    {
+      "year": "2025",
+      "month": "Dec",
+      "departure": 0.1
+    }
+  ],
+  "encoding": {
+    "x": {
+      "field": "month",
+      "type": "nominal",
+      "sort": [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec"
+      ]
+    },
+    "y": {
+      "field": "year",
+      "type": "nominal",
+      "sort": [
+        "2025",
+        "2020",
+        "2000",
+        "1980",
+        "1960"
+      ]
+    },
+    "color": {
+      "field": "departure",
+      "type": "quantitative",
+      "scale": {
+        "scheme": "redBlue",
+        "domain": [
+          -4,
+          4
+        ],
+        "reverse": true
+      },
+      "format": "+.1f"
+    }
+  },
+  "chrome": {
+    "title": "In every year, CO2 peaks in spring and bottoms out in autumn",
+    "subtitle": "Monthly mean CO2 at Mauna Loa minus that year's average, ppm. Red is above the year's average, blue below."
+  }
+}
+```
+
+Now the same months are red or blue in every year: spring is red and autumn is blue, so the stripes run down the columns.
+
+## Order the rows and columns
+
+A heatmap reads by adjacency, so the order of the categories is part of the chart. OpenChart keeps categories in the order they appear in the data, so data sorted alphabetically puts April next to August. Both CO2 charts list the months in calendar order and the years in time order with a `sort` array. The green card chart orders countries by size, so the darkest row is at the top.
+
+When no natural order exists, sort the rows by their average value. Rows with similar levels then sit together and the blocks of color are easier to see.
+
+## When another chart is better
+
+Five rows of twelve months is small enough that five lines on a shared month axis would show the seasonal cycle just as well. A heatmap pays off when there are dozens of rows, as in a year-by-state or a person-by-day grid, where lines would pile up. For two numbers per observation, use a [scatter plot](/docs/correlation/scatter/).
+
+## The spec
+
+A heatmap is the `rect` mark. Put one category on `encoding.x` and the other on `encoding.y`, both `nominal`, and a quantitative field on `encoding.color`. A `sort` array on a nominal channel lists the categories in order, from the bottom of the axis up for `y`.
+
+On `color`, `scale.scheme` picks the ramp: `"blue"` is sequential and `"redBlue"` is diverging. `scale.domain: [-4, 4]` centers the neutral color on zero, and `reverse: true` flips `redBlue` so positive values are red. `format` sets how values print in the tooltip. See the [color guide](/docs/style/color/) and the [scales guide](/docs/the-spec/scales/) for the other options.
+
+The cell numbers in the green card chart are two extra [layers](/docs/composition/layers/) of `text` marks drawn over the `rect` layer with the same data and the same `x` and `y`. One layer filters to cells of 100 thousand or more and draws white text, and the other draws dark text on the rest, so every label stays readable.
+
+The [heatmap page](/docs/correlation/heatmap/) shows fixed color domains and hand-ordered rows.
