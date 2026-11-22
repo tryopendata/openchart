@@ -100,4 +100,47 @@ export function validateSankeySpec(spec: Record<string, unknown>, errors: Valida
     'sankey node colors cycle the theme categorical palette',
     'Remove scale.scheme. To customize sankey colors, set theme.colors.categorical.',
   );
+
+  validateSankeyOverrides(spec.overrides, errors);
+}
+
+/** Breakpoints a sankey `overrides` block may name. */
+const SANKEY_OVERRIDE_BREAKPOINTS = ['compact', 'medium'];
+
+/**
+ * Check the shape of `overrides`: an object keyed by breakpoint, each value an
+ * object. The fields inside are checked like top-level fields once the active
+ * block merges in at compile time.
+ */
+function validateSankeyOverrides(overrides: unknown, errors: ValidationError[]): void {
+  if (overrides === undefined) return;
+  if (!overrides || typeof overrides !== 'object' || Array.isArray(overrides)) {
+    errors.push({
+      message: 'Spec error: sankey "overrides" must be an object keyed by breakpoint',
+      path: '/overrides',
+      code: 'INVALID_TYPE',
+      suggestion:
+        'Use overrides: { compact: { other: 0.05 } }. Valid breakpoints: compact, medium.',
+    });
+    return;
+  }
+  for (const [key, block] of Object.entries(overrides)) {
+    if (!SANKEY_OVERRIDE_BREAKPOINTS.includes(key)) {
+      errors.push({
+        message: `Spec error: sankey overrides has unknown breakpoint "${key}"`,
+        path: jsonPointer('overrides', key),
+        code: 'INVALID_VALUE',
+        suggestion: `Valid breakpoints: compact (under 400px), medium (400 to 700px).${didYouMean(key, SANKEY_OVERRIDE_BREAKPOINTS)}`,
+      });
+      continue;
+    }
+    if (!block || typeof block !== 'object' || Array.isArray(block)) {
+      errors.push({
+        message: `Spec error: overrides.${key} must be an object`,
+        path: jsonPointer('overrides', key),
+        code: 'INVALID_TYPE',
+        suggestion: `Use overrides.${key}: { other: 0.05 }`,
+      });
+    }
+  }
 }
