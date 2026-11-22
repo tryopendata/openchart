@@ -450,10 +450,50 @@ describe('compileLayer', () => {
           { type: 'text', id: 'b', text: 'B', x: 7, y: 5, responsive: false },
         ],
       },
-      { width: 600, height: 400 },
+      { width: 600, height: 400, stableNoteBand: true },
     );
     expect(layout.chrome.noteBandHeight).toBeGreaterThan(0);
     expect(layout.endpointLabels).toBeUndefined();
+    expect(layout.axes.y2!.ticks.map((tick) => tick.position)).toEqual(
+      layout.axes.y!.ticks.map((tick) => tick.position),
+    );
+    const points = layout.marks.filter((mark) => mark.type === 'point');
+    expect(points.slice(0, 2).map((point) => point.cy)).toEqual(
+      points.slice(2).map((point) => point.cy),
+    );
+  });
+
+  it('aligns independent axes when folded notes grow the figure late', () => {
+    const leaf: ChartSpec = {
+      mark: 'point',
+      endpointLabels: false,
+      data: [
+        { x: 0, y: 0 },
+        { x: 10, y: 10 },
+      ],
+      encoding: {
+        x: { field: 'x', type: 'quantitative' },
+        y: { field: 'y', type: 'quantitative' },
+      },
+    };
+    const options = { width: 390, height: 400 };
+    const layout = compileLayer(
+      {
+        layer: [leaf, leaf],
+        responsive: { autoThin: true },
+        resolve: { scale: { y: 'independent' } },
+        annotations: [2, 3, 4, 5, 6, 7].map((x) => ({
+          type: 'text' as const,
+          id: `note-${x}`,
+          x,
+          y: x,
+          text: `A long explanatory callout at ${x}`,
+        })),
+      } as LayerSpec,
+      options,
+    );
+    expect(layout.chrome.footnotes?.length).toBeGreaterThan(0);
+    expect(layout.dimensions.height).toBeCloseTo(options.height + layout.chrome.noteBandHeight!, 8);
     expect(layout.axes.y2!.ticks.map((tick) => tick.position)).toEqual(
       layout.axes.y!.ticks.map((tick) => tick.position),
     );

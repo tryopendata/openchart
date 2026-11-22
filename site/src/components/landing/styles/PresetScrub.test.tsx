@@ -128,6 +128,7 @@ describe("the house-style scrub", () => {
     expect(screen.getByText("static chart")).toBeInTheDocument();
     await loadChartLibrary();
     await waitFor(() => expect(screen.queryByText("static chart")).toBeNull());
-    expect(container.querySelector(".scrub-chart svg")).not.toBeNull();
+    // LiveChart drops the static children on render and mounts the chart in an effect after it.
+    await waitFor(() => expect(container.querySelector(".scrub-chart svg")).not.toBeNull());
   });
 });

@@ -563,8 +563,7 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
   "chrome": {
     "bottomAnchorY": 403,
     "bottomHeight": 0,
-    "grownHeight": 50.80000000000001,
-    "noteBandHeight": 50.800000000000004,
+    "grownHeight": 0,
     "title": {
       "maxWidth": 601,
       "style": {
@@ -583,7 +582,7 @@ exports[`compileChart snapshot (Step 7 oracle) > annotated scatter with auto, pi
   },
   "crosshair": false,
   "dimensions": {
-    "height": 470.8,
+    "height": 420,
     "width": 640,
   },
   "display": "full",

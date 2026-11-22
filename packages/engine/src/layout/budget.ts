@@ -82,6 +82,8 @@ export interface AuthoredReserves {
 export interface AuthoredReserveOptions {
   /** Compact container with a compact annotation limit: a single note can demote. */
   compactNotes: boolean;
+  /** Reserve note lines for every text annotation before placement (see heightContextResolver). */
+  reserveNotes: boolean;
   /** Reserve outside reference lanes at the figure level (facets reserve per panel). */
   figureReferences?: boolean;
   /** Series-summary lines, measured by the caller from the summary text. */
@@ -100,9 +102,10 @@ export function measureAuthoredReserves(
   measureText: MeasureTextFn | undefined,
   opts: AuthoredReserveOptions,
 ): AuthoredReserves {
-  const noteLines = spec.autoThin
-    ? annotationNoteCapacity(spec.annotations, width, theme, measureText, opts.compactNotes)
-    : 0;
+  const noteLines =
+    spec.autoThin && opts.reserveNotes
+      ? annotationNoteCapacity(spec.annotations, width, theme, measureText, opts.compactNotes)
+      : 0;
   const summaryLines = opts.summaryLines ?? 0;
   const measure = annotationMeasureFn(measureText);
   const referenceAt = (containerWidth: number) =>
@@ -162,10 +165,12 @@ export function seriesSummaryLineCount(summary: SeriesSummaryEntry[]): number {
 }
 
 /**
- * The note list resolved after placement needs more lines than the reserve
- * measured up front. Only possible with a host measureText whose wrapping is
- * not monotone in the source ordinal. Outside the budget the figure grows;
- * a fixed budget reports it instead of moving the plot.
+ * The note list resolved after placement needs more lines than the band
+ * reserved up front. Outside the budget that is the normal path (no reserve
+ * unless `stableNoteBand`) and the figure grows by the notes it draws. Under
+ * a fixed budget the reserve covers every source, so it is only possible with
+ * a host measureText whose wrapping is not monotone in the source ordinal,
+ * and it is reported instead of moving the plot.
  */
 export function noteOverflowDiagnostic(viewport: {
   width: number;

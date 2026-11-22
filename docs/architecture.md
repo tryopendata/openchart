@@ -241,8 +241,11 @@ returning a new spec and inverse; cancelled gestures emit nothing. Internal
 gesture payloads are not public editing APIs. Framework wrappers forward the
 same transaction contract.
 
-Omitted `chromeLayout` grows only the note band. `subtract` preserves exact outer
-height; `grow` keeps the full plot budget and adds all chrome. Layers and facets
+Omitted `chromeLayout` grows only the note band, by the notes actually drawn, so a
+chart that folds no callout keeps its height. Edit mode passes `stableNoteBand`,
+which reserves every text annotation's note lines up front so a gesture never
+resizes the figure. `subtract` preserves exact outer
+height and always reserves; `grow` keeps the full plot budget and adds all chrome. Layers and facets
 report `chrome.grownHeight` once, and mounts consume final `dimensions.height`
 without double counting. Notes preserve source identity across thinning and
 facet instances. Their linked marker emphasis is transient renderer state.

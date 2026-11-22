@@ -519,8 +519,10 @@ function compileLayerIndependent(
       ? layout0.area.y + layout0.area.height
       : Math.min(layout0.area.y + layout0.area.height, layout1.area.y + layout1.area.height);
     // Frozen pass: both leaves draw into the shared plot with the primary's
-    // note band. The reserve is measured from authored text up front, so a
-    // narrower plot that demotes more labels never needs another pass.
+    // note band. Under a reserve (subtract, stableNoteBand) that band already
+    // covers every source. Otherwise a narrower plot can fold more labels and
+    // layout0 grows late by them; the figure takes layout0's chrome and
+    // dimensions, so it stays consistent without another pass.
     const frozenBudget = {
       chartArea: { x, y, width: Math.max(1, right - x), height: Math.max(1, bottom - y) },
       noteReserve: noteReserve(layout0),

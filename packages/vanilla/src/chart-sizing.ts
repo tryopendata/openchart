@@ -86,6 +86,12 @@ export function createChartSizer(container: HTMLElement): ChartSizer {
     const ownHeight =
       lastRenderedSvgHeight !== null && Math.abs(rect.height - lastRenderedSvgHeight) < 0.5;
     if (!ownHeight && rect.height > 0) lastHostHeight = rect.height;
+    // While our SVG holds the host open, its min-height is still the host's
+    // constraint, and it can change underneath us (a breakpoint's min-height).
+    if (ownHeight) {
+      const minHeight = Number.parseFloat(getComputedStyle(container).minHeight);
+      if (minHeight > 0) lastHostHeight = minHeight;
+    }
 
     return {
       width: Math.max(rect.width || 600, 100),

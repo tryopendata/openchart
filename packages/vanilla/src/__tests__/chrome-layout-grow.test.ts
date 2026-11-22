@@ -91,16 +91,22 @@ it('auto-height notes do not consume the top legend allowance', async () => {
     chrome: { title: 'Title' },
     legend: { position: 'top' },
   };
-  const chart = createChart(createAutoHeightContainer(800), spec);
+  const chart = createChart(createAutoHeightContainer(390), spec);
   const before = chart.layout;
+  // Callouts crowded together on a phone-width plot fold into numbered notes.
   chart.update({
     ...spec,
-    annotations: [
-      { type: 'text', id: 'a', x: 1, y: 1, text: 'One', responsive: false },
-      { type: 'text', id: 'b', x: 8, y: 8, text: 'Two', responsive: false },
-    ],
+    responsive: { autoThin: true },
+    annotations: [2, 3, 4, 5, 6, 7].map((x) => ({
+      type: 'text' as const,
+      id: `note-${x}`,
+      x,
+      y: x,
+      text: `A long explanatory callout at ${x}`,
+    })),
   });
   const after = chart.layout;
+  expect(after.chrome.footnotes?.length).toBeGreaterThan(0);
   expect(after.area.height).toBeCloseTo(before.area.height, 5);
   expect(after.dimensions.height - before.dimensions.height).toBeCloseTo(
     after.chrome.noteBandHeight!,
@@ -134,4 +140,92 @@ it('auto-height facets consume engine growth once across updates', async () => {
   chart.update(spec);
   expect(chart.layout.dimensions.height).toBe(initial);
   chart.destroy();
+});
+
+it('reserves the note band in edit mode so an edit never resizes the figure', async () => {
+  const { createChart } = await import('../mount');
+  const spec: ChartSpec = {
+    mark: 'point',
+    animation: false,
+    data: [
+      { x: 0, y: 0 },
+      { x: 10, y: 10 },
+    ],
+    encoding: {
+      x: { field: 'x', type: 'quantitative' },
+      y: { field: 'y', type: 'quantitative' },
+    },
+    annotations: [
+      { type: 'text', id: 'a', x: 1, y: 1, text: 'One', responsive: false },
+      { type: 'text', id: 'b', x: 8, y: 8, text: 'Two', responsive: false },
+    ],
+  };
+  const reading = createChart(createContainer(600, 400), spec);
+  const editing = createChart(createContainer(600, 400), spec, { onEdit: () => {} });
+  expect(reading.layout.chrome.noteBandHeight).toBeUndefined();
+  expect(reading.layout.dimensions.height).toBe(400);
+  expect(editing.layout.chrome.noteBandHeight).toBeGreaterThan(0);
+  expect(editing.layout.dimensions.height).toBeCloseTo(
+    400 + editing.layout.chrome.noteBandHeight!,
+    5,
+  );
+  expect(editing.layout.area).toEqual(reading.layout.area);
+  reading.destroy();
+  editing.destroy();
+});
+
+it('exports an edit-mode chart without its empty note reserve', async () => {
+  const { createChart } = await import('../mount');
+  const spec: ChartSpec = {
+    mark: 'point',
+    animation: false,
+    data: [
+      { x: 0, y: 0 },
+      { x: 10, y: 10 },
+    ],
+    encoding: {
+      x: { field: 'x', type: 'quantitative' },
+      y: { field: 'y', type: 'quantitative' },
+    },
+    annotations: [
+      { type: 'text', id: 'a', x: 1, y: 1, text: 'One', responsive: false },
+      { type: 'text', id: 'b', x: 8, y: 8, text: 'Two', responsive: false },
+    ],
+  };
+  const height = (svg: string) => Number(/viewBox="0 0 [\d.]+ ([\d.]+)"/.exec(svg)?.[1]);
+  const reading = createChart(createContainer(600, 400), spec);
+  const editing = createChart(createContainer(600, 400), spec, { onEdit: () => {} });
+  expect(editing.layout.chrome.noteBandHeight).toBeGreaterThan(0);
+  expect(height(editing.export('svg'))).toBe(height(reading.export('svg')));
+  expect(height(editing.export('svg'))).toBe(400);
+  reading.destroy();
+  editing.destroy();
+});
+
+it('keeps no note reserve when seriesSearch turns edit gestures off', async () => {
+  const { createChart } = await import('../mount');
+  const spec: ChartSpec = {
+    mark: 'line',
+    animation: false,
+    seriesSearch: true,
+    data: ['A', 'B', 'C'].flatMap((s, i) => [
+      { x: '2020-01-01', y: i, s },
+      { x: '2021-01-01', y: 10 + i, s },
+    ]),
+    encoding: {
+      x: { field: 'x', type: 'temporal' },
+      y: { field: 'y', type: 'quantitative' },
+      color: { field: 's', type: 'nominal' },
+    },
+    annotations: [
+      { type: 'text', id: 'a', x: '2020-03-01', y: 1, text: 'One', responsive: false },
+      { type: 'text', id: 'b', x: '2020-09-01', y: 8, text: 'Two', responsive: false },
+    ],
+  };
+  const warn = console.warn;
+  console.warn = () => {};
+  const editing = createChart(createContainer(600, 400), spec, { onEdit: () => {} });
+  console.warn = warn;
+  expect(editing.layout.chrome.noteBandHeight).toBeUndefined();
+  editing.destroy();
 });

@@ -221,13 +221,28 @@ export function createChart<TData extends DataRow = DataRow>(
   // Compilation
   // ---------------------------------------------------------------------------
 
-  function compile(candidate = currentSpec, measure = measureText, runtime = true): ChartLayout {
+  /**
+   * Whether layouts reserve every callout's note lines: an edit that pins a
+   * label or changes which labels fold into notes must not resize the figure.
+   * seriesSearch suppresses edit gestures, so it has nothing to protect.
+   */
+  function reservesNoteBand(candidate: ChartSpec | LayerSpec): boolean {
+    return editing && !wantsSeriesSearch(candidate);
+  }
+
+  function compile(
+    candidate = currentSpec,
+    measure = measureText,
+    runtime = true,
+    stableNoteBand = reservesNoteBand(candidate),
+  ): ChartLayout {
     return sizer.compile(runtime ? visibility.apply(candidate) : candidate, {
       theme: options?.theme,
       darkMode: resolveDarkMode(options?.darkMode),
       renderer: options?.renderer,
       watermark: options?.watermark,
       measureText: measure,
+      stableNoteBand,
     });
   }
 
@@ -825,7 +840,10 @@ export function createChart<TData extends DataRow = DataRow>(
   const doExport = createChartExporter(() => ({
     svgElement,
     canvasLayer,
-    currentLayout,
+    // A file carries the figure a reader sees, not the editor's empty note reserve.
+    currentLayout: reservesNoteBand(currentSpec)
+      ? compile(currentSpec, measureText, true, false)
+      : currentLayout,
     currentSpec,
   }));
 
