@@ -1,0 +1,76 @@
+/*
+ * The end-of-post call to action (BlogCta): a ruled block in the article's
+ * column, set like the endnotes below it. A top rule, a serif heading, a short
+ * line, the install command and two text links. Rules and type only, no panel.
+ */
+@reference "./global.css";
+
+@layer components {
+  .blog-cta {
+    @apply mt-16 flex flex-col gap-4;
+  }
+
+  .blog-cta-title {
+    @apply text-ink font-display m-0 mt-2 text-2xl leading-tight font-semibold;
+  }
+
+  .blog-cta-text {
+    @apply text-ink-2 font-display m-0 text-lg leading-relaxed;
+  }
+
+  .blog-cta-links {
+    @apply m-0 flex flex-wrap gap-x-6 gap-y-2 text-[15px];
+  }
+
+  .blog-cta-links a {
+    @apply text-ink decoration-line underline underline-offset-4 hover:decoration-current;
+  }
+}
+
+/* The shared InstallCommand's own styles ship with the landing stylesheet, which
+   a blog page does not load, so the CTA restates them under its own class. The
+   command wraps, so a phone shows all of it without a scroller. */
+@layer components {
+  .blog-cta .install-command {
+    @apply min-w-0;
+  }
+
+  .blog-cta .install-command-managers {
+    @apply mb-2 flex gap-4 font-mono text-[12px];
+  }
+
+  .blog-cta .install-command-manager {
+    @apply text-muted hover:text-ink border-b border-transparent pb-0.5 no-underline transition-colors duration-150;
+  }
+
+  .blog-cta .install-command-manager[aria-selected="true"],
+  .blog-cta .install-command:not([data-live]) .install-command-manager:first-child {
+    @apply text-ink border-ink;
+  }
+
+  .blog-cta .install-command-line {
+    @apply border-line-strong flex min-h-12 items-stretch rounded-xs border;
+  }
+
+  .blog-cta .install-command-prompt {
+    @apply text-muted py-3 pl-4 font-mono text-[13.5px] leading-6 select-none;
+  }
+
+  .blog-cta .install-command-text {
+    @apply text-ink min-w-0 flex-1 py-3 pr-3 pl-2.5 font-mono text-[13.5px] leading-6;
+    overflow-wrap: break-word;
+  }
+
+  .blog-cta .install-command-copy {
+    @apply border-line-strong text-ink-2 hover:bg-panel hover:text-ink shrink-0 border-l px-3.5 font-sans text-sm font-medium transition-colors duration-150;
+  }
+
+  /* Success is announced, not shown; a failure shows in flow under the line. */
+  .blog-cta .install-command-result:not([data-state="failed"]) {
+    @apply sr-only;
+  }
+
+  .blog-cta .install-command-result[data-state="failed"] {
+    @apply text-ink-2 mt-2 text-xs;
+  }
+}
