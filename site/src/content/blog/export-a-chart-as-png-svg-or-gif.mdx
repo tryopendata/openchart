@@ -1,6 +1,6 @@
 ---
 title: Export a chart as PNG, SVG or GIF from JavaScript
-description: Which format to use where, the chart.export calls that produce each one, and the file sizes of a real chart in each format, measured in Chromium.
+description: Which file format to use where, the chart.export calls that make each one, and how big one real chart gets as SVG, PNG and GIF.
 published: 2026-11-19
 author: OpenChart
 tags: [developers]
@@ -10,13 +10,13 @@ lead: blog/turnout-gains
 
 import Demo from "../../components/demo/Demo.astro";
 
-Use SVG for web pages and vector editors, PNG for slides and social posts, and GIF where video and embedded charts are blocked, such as a newsletter. All three come from `chart.export(format)` on the chart that `createChart` returns. The buttons under this chart call it.
+Turnout rose in every state and DC from 2016 to 2020, and most in Hawaii. To put that chart in a slide deck or a newsletter you need it as a file: SVG for web pages and vector editors, PNG for slides and social posts, and GIF where video and embedded charts are blocked. All three come from `chart.export(format)` on the chart that `createChart` returns, and the buttons under this chart call it.
 
 <Demo id="blog/turnout-gains" />
 
 ## SVG for the web
 
-`chart.export("svg")` returns the chart as a string, immediately. The SVG is finished, with title, subtitle, axes and legend, and has no animation, so it opens in an editor or a CMS as it looks on screen. The chart above exports to 21 KB. `chart.export("svg-with-fonts")` embeds the fonts so the file looks the same on a machine that lacks them.
+`chart.export("svg")` returns the chart as a string, immediately. The SVG is finished, with title, subtitle, axes and legend, and has no animation, so it opens in an editor or a CMS as it looks on screen. It names its fonts without including them. `await chart.export("svg-with-fonts")` embeds the web fonts the page loaded, as base64, so the file renders the same on a machine without them; a font the browser can't fetch is skipped.
 
 In React, Vue and Svelte the `useChart` hook or composable returns the same chart instance, so `export` works the same way. To make SVGs on a server with no browser, use `renderStaticSVG` from [static rendering](/docs/get-started/static-rendering/). The [export docs](/docs/output/export/) list the other formats, including CSV.
 
@@ -37,9 +37,11 @@ save(new Blob([chart.export("svg")], { type: "image/svg+xml" }), "turnout.svg");
 
 ## PNG for slides and social
 
-`await chart.export("png", { dpi })` returns a `Blob`. The default `dpi` of 2 doubles the pixel size, so the 720 by 420 chart above comes out at 1440 by 840 and 135 KB. At `dpi: 3` it is 2160 by 1260 and 219 KB. The setting changes the pixel count, not the layout: the chart is laid out at its current width and drawn at two or three times the resolution. Raise it for print or a large display, and leave it at 2 for slides and posts.
+`await chart.export("png", { dpi })` returns a `Blob`. The chart is laid out at its current width and drawn at `dpi` times the resolution, so the setting changes the pixel count and leaves the layout alone. The default of 2 suits slides and posts; raise it for print or a large display.
 
-A PNG leaves the page's text behind, so the image has to carry its own context. The export includes `chrome.title`, `subtitle`, `source` and `byline`, so set the last two on every chart you plan to export. It is also transparent by default, which makes dark text unreadable on a dark slide. Set `theme.colors.background` in the spec to get an opaque image.
+A PNG leaves the page's text behind, so the image has to carry its own context. The export includes `chrome.title`, `subtitle`, `source` and `byline`, so give every chart you plan to export a `source`, and a `byline` if you credit an author. Both charts here set `chrome.source`, which is why the source line sits inside the chart as well as in the caption.
+
+A PNG is also transparent unless the theme sets a background, which makes dark text unreadable on a dark slide. Set `theme.colors.background` in the spec to get an opaque image.
 
 This arrow chart is built for an image: the title states the finding and nothing else is needed to read it.
 
@@ -47,33 +49,45 @@ This arrow chart is built for an image: the title states the finding and nothing
 {
   "mark": {
     "type": "range",
-    "style": "arrow",
-    "fill": "#0e7490"
+    "style": "arrow"
+  },
+  "theme": {
+    "colors": {
+      "categorical": [
+        {
+          "light": "#0e7490",
+          "dark": "#22a3c4"
+        }
+      ]
+    }
   },
   "data": [
-    { "state": "Utah", "rate_2005": 92.8, "rate_2024": 59.9 },
-    { "state": "Arizona", "rate_2005": 80.6, "rate_2024": 53.2 },
-    { "state": "Nevada", "rate_2005": 73.9, "rate_2024": 50.1 },
-    { "state": "New Mexico", "rate_2005": 73, "rate_2024": 51.9 },
-    { "state": "California", "rate_2005": 70.5, "rate_2024": 49.8 },
-    { "state": "Idaho", "rate_2005": 78.9, "rate_2024": 58.6 },
-    { "state": "District of Columbia", "rate_2005": 59.8, "rate_2024": 39.8 },
-    { "state": "Texas", "rate_2005": 77.4, "rate_2024": 59.3 },
-    { "state": "Colorado", "rate_2005": 69.6, "rate_2024": 51.6 },
-    { "state": "Illinois", "rate_2005": 67, "rate_2024": 49.7 }
+    { "state": "Utah", "rate_2005": 92.8, "rate_2024": 59.9, "drop": 32.9 },
+    { "state": "Arizona", "rate_2005": 80.6, "rate_2024": 53.2, "drop": 27.4 },
+    { "state": "Nevada", "rate_2005": 73.9, "rate_2024": 50.1, "drop": 23.8 },
+    { "state": "New Mexico", "rate_2005": 73, "rate_2024": 51.9, "drop": 21.1 },
+    { "state": "California", "rate_2005": 70.5, "rate_2024": 49.8, "drop": 20.7 },
+    { "state": "Idaho", "rate_2005": 78.9, "rate_2024": 58.6, "drop": 20.3 },
+    { "state": "District of Columbia", "rate_2005": 59.8, "rate_2024": 39.8, "drop": 20 },
+    { "state": "Texas", "rate_2005": 77.4, "rate_2024": 59.3, "drop": 18.1 },
+    { "state": "Colorado", "rate_2005": 69.6, "rate_2024": 51.6, "drop": 18 },
+    { "state": "Illinois", "rate_2005": 67, "rate_2024": 49.7, "drop": 17.3 }
   ],
   "encoding": {
     "y": {
       "field": "state",
       "type": "nominal",
-      "sort": "x"
+      "sort": {
+        "field": "drop",
+        "order": "ascending"
+      }
     },
     "x": {
       "field": "rate_2005",
       "type": "quantitative",
       "title": "2005",
       "axis": {
-        "title": "Births per 1,000 women ages 15-44"
+        "title": "Births per 1,000 women"
       }
     },
     "x2": {
@@ -84,7 +98,8 @@ This arrow chart is built for an image: the title states the finding and nothing
   },
   "chrome": {
     "title": "The fertility rate fell in all 51 jurisdictions, from 92.8 to 59.9 in Utah",
-    "subtitle": "The 10 largest drops in the general fertility rate, 2005 to 2024. Each arrow runs from the 2005 rate to the 2024 rate."
+    "subtitle": "The 10 largest drops in the general fertility rate (births per 1,000 women ages 15-44), 2005 to 2024. Each arrow runs from the 2005 rate to the 2024 rate.",
+    "source": "Source: CDC NCHS, Stats of the States: General Fertility Rate"
   }
 }
 ```
@@ -93,14 +108,34 @@ This arrow chart is built for an image: the title states the finding and nothing
 
 `await chart.export("gif")` records the chart's entrance as an animated GIF. It needs the optional `gifenc` package, which you install yourself with `npm install gifenc`. Without it the call throws an error that says so. Nothing needs to be mid-animation when you call it: the library rebuilds the [entrance](/docs/behavior/motion/) frame by frame from the finished chart.
 
-GIFs are the heavy format. The turnout chart at the default settings is 1440 by 840 and 1.56 MB. `dpi: 1` cuts it to 649 KB, and adding `fps: 12` (the default is 25) brings it to 316 KB. A GIF plays once and holds its last frame unless you pass `loop: true`, and it is limited to 256 colors. A chart with no entrance animation exports as a single frame.
+A GIF plays once and holds its last frame unless you pass `loop: true`, and it is limited to 256 colors. A chart with no entrance animation exports as a single frame. Lowering `dpi` and `fps` (frames per second, 25 by default) is how you bring the file size down.
+
+## File sizes
+
+These are the turnout chart's exports from Chromium, with the chart 656px wide and 420px tall, the size it has in this article's column. Your sizes will differ with the chart.
+
+| Call | Pixels | Size |
+| --- | --- | --- |
+| `export("svg")` | vector | 23 KB |
+| `export("png", { dpi: 1 })` | 656 × 420 | 61 KB |
+| `export("png")` (`dpi` 2) | 1312 × 840 | 140 KB |
+| `export("png", { dpi: 3 })` | 1968 × 1260 | 230 KB |
+| `export("gif")` (`dpi` 2, 25 fps) | 1312 × 840 | 1.7 MB |
+| `export("gif", { dpi: 1 })` | 656 × 420 | 700 KB |
+| `export("gif", { dpi: 1, fps: 12 })` | 656 × 420 | 340 KB |
 
 ## Charts with many points
 
 A scatter of thousands of points draws its dots on a [canvas](/docs/output/canvas/) layer, and exports still re-render the whole chart. A PNG matches the SVG version of the chart. An SVG stays all vector up to 5,000 points, and above that the dots go in as one embedded image while the text and gridlines remain vector.
 
-## What to check before you ship
+## The spec
 
-Export at the container width you want the image to have, because the image takes the chart's current size, and dark mode exports as drawn. Neither SVG nor PNG exports animate, so only the GIF carries the entrance. The sizes above come from one Chromium run on one chart, so measure yours.
+`mark: { type: "range", style: "arrow" }` draws one arrow per row, from the `x` value (the 2005 rate) to the `x2` value (the 2024 rate), so the arrowhead shows the direction of the change. `y.sort` orders the states by the `drop` field, and categories run up from the bottom of the axis in sort order, so `"ascending"` puts the largest drop at the top.
 
-Every call, option and framework hook is in [the export API reference](/docs/api/export/).
+The `title` on `x` and `x2` names each end of the arrow in the tooltip, `chrome.source` puts the source line inside the exported image, and `theme.colors.categorical` gives the arrows a lighter teal on a dark page.
+
+## Before you export
+
+Export at the container width you want the image to have, because the image takes the chart's current size, and dark mode exports as drawn.
+
+To make a GIF that steps through several specs instead of one entrance, see `exportSpecSequence` in [the export API reference](/docs/api/export/).
