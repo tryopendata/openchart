@@ -1,0 +1,2308 @@
+---
+title: Small multiples without the mess
+description: One panel per series beats a tangle of lines. Here is how to order the panels and choose between a shared and a free y scale.
+published: 2026-11-17
+author: OpenChart
+tags: [chart-choice]
+related: [composition/facets, change-over-time/line, the-spec/scales]
+lead: blog/launches-panels
+---
+
+import Demo from "../../components/demo/Demo.astro";
+
+A line chart stops working when the lines start crossing. Four countries' space launches fit on one chart and still tangle: since 1995 all four lines run below 40 launches a year and swap places repeatedly, so the eye has to chase colors to follow any one of them.
+
+<Demo id="blog/launches-one-chart" />
+
+## One panel per series
+
+Small multiples repeat one chart once per series, with the same axes in every panel. Each line gets a frame to itself, so you read its shape without untangling it from three others. The Soviet Union and Russia launched 108 times in 1982 while the United States launched 18. In 2018, the last year in the data, China edged the United States 28 to 27.
+
+```json demo source="TidyTuesday (R for Data Science Online Learning Community), space launches" height=780
+{
+  "mark": {
+    "type": "line",
+    "stroke": "#0e7490",
+    "strokeWidth": 2
+  },
+  "data": [
+    {
+      "date": "1957-01-01",
+      "country": "USSR/Russia",
+      "launches": 2
+    },
+    {
+      "date": "1957-01-01",
+      "country": "United States",
+      "launches": 1
+    },
+    {
+      "date": "1957-01-01",
+      "country": "Other countries",
+      "launches": 0
+    },
+    {
+      "date": "1957-01-01",
+      "country": "China",
+      "launches": 0
+    },
+    {
+      "date": "1958-01-01",
+      "country": "USSR/Russia",
+      "launches": 5
+    },
+    {
+      "date": "1958-01-01",
+      "country": "United States",
+      "launches": 22
+    },
+    {
+      "date": "1958-01-01",
+      "country": "Other countries",
+      "launches": 0
+    },
+    {
+      "date": "1958-01-01",
+      "country": "China",
+      "launches": 0
+    },
+    {
+      "date": "1959-01-01",
+      "country": "USSR/Russia",
+      "launches": 4
+    },
+    {
+      "date": "1959-01-01",
+      "country": "United States",
+      "launches": 18
+    },
+    {
+      "date": "1959-01-01",
+      "country": "Other countries",
+      "launches": 0
+    },
+    {
+      "date": "1959-01-01",
+      "country": "China",
+      "launches": 0
+    },
+    {
+      "date": "1960-01-01",
+      "country": "USSR/Russia",
+      "launches": 8
+    },
+    {
+      "date": "1960-01-01",
+      "country": "United States",
+      "launches": 29
+    },
+    {
+      "date": "1960-01-01",
+      "country": "Other countries",
+      "launches": 0
+    },
+    {
+      "date": "1960-01-01",
+      "country": "China",
+      "launches": 0
+    },
+    {
+      "date": "1961-01-01",
+      "country": "USSR/Russia",
+      "launches": 9
+    },
+    {
+      "date": "1961-01-01",
+      "country": "United States",
+      "launches": 41
+    },
+    {
+      "date": "1961-01-01",
+      "country": "Other countries",
+      "launches": 0
+    },
+    {
+      "date": "1961-01-01",
+      "country": "China",
+      "launches": 0
+    },
+    {
+      "date": "1962-01-01",
+      "country": "USSR/Russia",
+      "launches": 22
+    },
+    {
+      "date": "1962-01-01",
+      "country": "United States",
+      "launches": 59
+    },
+    {
+      "date": "1962-01-01",
+      "country": "Other countries",
+      "launches": 0
+    },
+    {
+      "date": "1962-01-01",
+      "country": "China",
+      "launches": 0
+    },
+    {
+      "date": "1963-01-01",
+      "country": "USSR/Russia",
+      "launches": 23
+    },
+    {
+      "date": "1963-01-01",
+      "country": "United States",
+      "launches": 46
+    },
+    {
+      "date": "1963-01-01",
+      "country": "Other countries",
+      "launches": 0
+    },
+    {
+      "date": "1963-01-01",
+      "country": "China",
+      "launches": 0
+    },
+    {
+      "date": "1964-01-01",
+      "country": "USSR/Russia",
+      "launches": 36
+    },
+    {
+      "date": "1964-01-01",
+      "country": "United States",
+      "launches": 63
+    },
+    {
+      "date": "1964-01-01",
+      "country": "Other countries",
+      "launches": 0
+    },
+    {
+      "date": "1964-01-01",
+      "country": "China",
+      "launches": 0
+    },
+    {
+      "date": "1965-01-01",
+      "country": "USSR/Russia",
+      "launches": 53
+    },
+    {
+      "date": "1965-01-01",
+      "country": "United States",
+      "launches": 70
+    },
+    {
+      "date": "1965-01-01",
+      "country": "Other countries",
+      "launches": 1
+    },
+    {
+      "date": "1965-01-01",
+      "country": "China",
+      "launches": 0
+    },
+    {
+      "date": "1966-01-01",
+      "country": "USSR/Russia",
+      "launches": 51
+    },
+    {
+      "date": "1966-01-01",
+      "country": "United States",
+      "launches": 77
+    },
+    {
+      "date": "1966-01-01",
+      "country": "Other countries",
+      "launches": 3
+    },
+    {
+      "date": "1966-01-01",
+      "country": "China",
+      "launches": 0
+    },
+    {
+      "date": "1967-01-01",
+      "country": "USSR/Russia",
+      "launches": 74
+    },
+    {
+      "date": "1967-01-01",
+      "country": "United States",
+      "launches": 61
+    },
+    {
+      "date": "1967-01-01",
+      "country": "Other countries",
+      "launches": 4
+    },
+    {
+      "date": "1967-01-01",
+      "country": "China",
+      "launches": 0
+    },
+    {
+      "date": "1968-01-01",
+      "country": "USSR/Russia",
+      "launches": 79
+    },
+    {
+      "date": "1968-01-01",
+      "country": "United States",
+      "launches": 48
+    },
+    {
+      "date": "1968-01-01",
+      "country": "Other countries",
+      "launches": 1
+    },
+    {
+      "date": "1968-01-01",
+      "country": "China",
+      "launches": 0
+    },
+    {
+      "date": "1969-01-01",
+      "country": "USSR/Russia",
+      "launches": 81
+    },
+    {
+      "date": "1969-01-01",
+      "country": "United States",
+      "launches": 41
+    },
+    {
+      "date": "1969-01-01",
+      "country": "Other countries",
+      "launches": 2
+    },
+    {
+      "date": "1969-01-01",
+      "country": "China",
+      "launches": 0
+    },
+    {
+      "date": "1970-01-01",
+      "country": "USSR/Russia",
+      "launches": 87
+    },
+    {
+      "date": "1970-01-01",
+      "country": "United States",
+      "launches": 28
+    },
+    {
+      "date": "1970-01-01",
+      "country": "Other countries",
+      "launches": 6
+    },
+    {
+      "date": "1970-01-01",
+      "country": "China",
+      "launches": 1
+    },
+    {
+      "date": "1971-01-01",
+      "country": "USSR/Russia",
+      "launches": 91
+    },
+    {
+      "date": "1971-01-01",
+      "country": "United States",
+      "launches": 34
+    },
+    {
+      "date": "1971-01-01",
+      "country": "Other countries",
+      "launches": 8
+    },
+    {
+      "date": "1971-01-01",
+      "country": "China",
+      "launches": 1
+    },
+    {
+      "date": "1972-01-01",
+      "country": "USSR/Russia",
+      "launches": 79
+    },
+    {
+      "date": "1972-01-01",
+      "country": "United States",
+      "launches": 32
+    },
+    {
+      "date": "1972-01-01",
+      "country": "Other countries",
+      "launches": 2
+    },
+    {
+      "date": "1972-01-01",
+      "country": "China",
+      "launches": 0
+    },
+    {
+      "date": "1973-01-01",
+      "country": "USSR/Russia",
+      "launches": 88
+    },
+    {
+      "date": "1973-01-01",
+      "country": "United States",
+      "launches": 25
+    },
+    {
+      "date": "1973-01-01",
+      "country": "Other countries",
+      "launches": 0
+    },
+    {
+      "date": "1973-01-01",
+      "country": "China",
+      "launches": 1
+    },
+    {
+      "date": "1974-01-01",
+      "country": "USSR/Russia",
+      "launches": 85
+    },
+    {
+      "date": "1974-01-01",
+      "country": "United States",
+      "launches": 23
+    },
+    {
+      "date": "1974-01-01",
+      "country": "Other countries",
+      "launches": 3
+    },
+    {
+      "date": "1974-01-01",
+      "country": "China",
+      "launches": 2
+    },
+    {
+      "date": "1975-01-01",
+      "country": "USSR/Russia",
+      "launches": 93
+    },
+    {
+      "date": "1975-01-01",
+      "country": "United States",
+      "launches": 30
+    },
+    {
+      "date": "1975-01-01",
+      "country": "Other countries",
+      "launches": 6
+    },
+    {
+      "date": "1975-01-01",
+      "country": "China",
+      "launches": 3
+    },
+    {
+      "date": "1976-01-01",
+      "country": "USSR/Russia",
+      "launches": 100
+    },
+    {
+      "date": "1976-01-01",
+      "country": "United States",
+      "launches": 26
+    },
+    {
+      "date": "1976-01-01",
+      "country": "Other countries",
+      "launches": 2
+    },
+    {
+      "date": "1976-01-01",
+      "country": "China",
+      "launches": 3
+    },
+    {
+      "date": "1977-01-01",
+      "country": "USSR/Russia",
+      "launches": 102
+    },
+    {
+      "date": "1977-01-01",
+      "country": "United States",
+      "launches": 26
+    },
+    {
+      "date": "1977-01-01",
+      "country": "Other countries",
+      "launches": 2
+    },
+    {
+      "date": "1977-01-01",
+      "country": "China",
+      "launches": 0
+    },
+    {
+      "date": "1978-01-01",
+      "country": "USSR/Russia",
+      "launches": 91
+    },
+    {
+      "date": "1978-01-01",
+      "country": "United States",
+      "launches": 33
+    },
+    {
+      "date": "1978-01-01",
+      "country": "Other countries",
+      "launches": 3
+    },
+    {
+      "date": "1978-01-01",
+      "country": "China",
+      "launches": 1
+    },
+    {
+      "date": "1979-01-01",
+      "country": "USSR/Russia",
+      "launches": 88
+    },
+    {
+      "date": "1979-01-01",
+      "country": "United States",
+      "launches": 16
+    },
+    {
+      "date": "1979-01-01",
+      "country": "Other countries",
+      "launches": 4
+    },
+    {
+      "date": "1979-01-01",
+      "country": "China",
+      "launches": 1
+    },
+    {
+      "date": "1980-01-01",
+      "country": "USSR/Russia",
+      "launches": 89
+    },
+    {
+      "date": "1980-01-01",
+      "country": "United States",
+      "launches": 14
+    },
+    {
+      "date": "1980-01-01",
+      "country": "Other countries",
+      "launches": 4
+    },
+    {
+      "date": "1980-01-01",
+      "country": "China",
+      "launches": 0
+    },
+    {
+      "date": "1981-01-01",
+      "country": "USSR/Russia",
+      "launches": 100
+    },
+    {
+      "date": "1981-01-01",
+      "country": "United States",
+      "launches": 19
+    },
+    {
+      "date": "1981-01-01",
+      "country": "Other countries",
+      "launches": 6
+    },
+    {
+      "date": "1981-01-01",
+      "country": "China",
+      "launches": 1
+    },
+    {
+      "date": "1982-01-01",
+      "country": "USSR/Russia",
+      "launches": 108
+    },
+    {
+      "date": "1982-01-01",
+      "country": "United States",
+      "launches": 18
+    },
+    {
+      "date": "1982-01-01",
+      "country": "Other countries",
+      "launches": 2
+    },
+    {
+      "date": "1982-01-01",
+      "country": "China",
+      "launches": 1
+    },
+    {
+      "date": "1983-01-01",
+      "country": "USSR/Russia",
+      "launches": 100
+    },
+    {
+      "date": "1983-01-01",
+      "country": "United States",
+      "launches": 22
+    },
+    {
+      "date": "1983-01-01",
+      "country": "Other countries",
+      "launches": 6
+    },
+    {
+      "date": "1983-01-01",
+      "country": "China",
+      "launches": 1
+    },
+    {
+      "date": "1984-01-01",
+      "country": "USSR/Russia",
+      "launches": 97
+    },
+    {
+      "date": "1984-01-01",
+      "country": "United States",
+      "launches": 22
+    },
+    {
+      "date": "1984-01-01",
+      "country": "Other countries",
+      "launches": 7
+    },
+    {
+      "date": "1984-01-01",
+      "country": "China",
+      "launches": 3
+    },
+    {
+      "date": "1985-01-01",
+      "country": "USSR/Russia",
+      "launches": 100
+    },
+    {
+      "date": "1985-01-01",
+      "country": "United States",
+      "launches": 18
+    },
+    {
+      "date": "1985-01-01",
+      "country": "Other countries",
+      "launches": 6
+    },
+    {
+      "date": "1985-01-01",
+      "country": "China",
+      "launches": 1
+    },
+    {
+      "date": "1986-01-01",
+      "country": "USSR/Russia",
+      "launches": 94
+    },
+    {
+      "date": "1986-01-01",
+      "country": "United States",
+      "launches": 9
+    },
+    {
+      "date": "1986-01-01",
+      "country": "Other countries",
+      "launches": 5
+    },
+    {
+      "date": "1986-01-01",
+      "country": "China",
+      "launches": 2
+    },
+    {
+      "date": "1987-01-01",
+      "country": "USSR/Russia",
+      "launches": 96
+    },
+    {
+      "date": "1987-01-01",
+      "country": "United States",
+      "launches": 9
+    },
+    {
+      "date": "1987-01-01",
+      "country": "Other countries",
+      "launches": 6
+    },
+    {
+      "date": "1987-01-01",
+      "country": "China",
+      "launches": 2
+    },
+    {
+      "date": "1988-01-01",
+      "country": "USSR/Russia",
+      "launches": 94
+    },
+    {
+      "date": "1988-01-01",
+      "country": "United States",
+      "launches": 11
+    },
+    {
+      "date": "1988-01-01",
+      "country": "Other countries",
+      "launches": 12
+    },
+    {
+      "date": "1988-01-01",
+      "country": "China",
+      "launches": 4
+    },
+    {
+      "date": "1989-01-01",
+      "country": "USSR/Russia",
+      "launches": 75
+    },
+    {
+      "date": "1989-01-01",
+      "country": "United States",
+      "launches": 18
+    },
+    {
+      "date": "1989-01-01",
+      "country": "Other countries",
+      "launches": 9
+    },
+    {
+      "date": "1989-01-01",
+      "country": "China",
+      "launches": 0
+    },
+    {
+      "date": "1990-01-01",
+      "country": "USSR/Russia",
+      "launches": 79
+    },
+    {
+      "date": "1990-01-01",
+      "country": "United States",
+      "launches": 27
+    },
+    {
+      "date": "1990-01-01",
+      "country": "Other countries",
+      "launches": 10
+    },
+    {
+      "date": "1990-01-01",
+      "country": "China",
+      "launches": 5
+    },
+    {
+      "date": "1991-01-01",
+      "country": "USSR/Russia",
+      "launches": 61
+    },
+    {
+      "date": "1991-01-01",
+      "country": "United States",
+      "launches": 19
+    },
+    {
+      "date": "1991-01-01",
+      "country": "Other countries",
+      "launches": 10
+    },
+    {
+      "date": "1991-01-01",
+      "country": "China",
+      "launches": 1
+    },
+    {
+      "date": "1992-01-01",
+      "country": "USSR/Russia",
+      "launches": 55
+    },
+    {
+      "date": "1992-01-01",
+      "country": "United States",
+      "launches": 29
+    },
+    {
+      "date": "1992-01-01",
+      "country": "Other countries",
+      "launches": 9
+    },
+    {
+      "date": "1992-01-01",
+      "country": "China",
+      "launches": 4
+    },
+    {
+      "date": "1993-01-01",
+      "country": "USSR/Russia",
+      "launches": 48
+    },
+    {
+      "date": "1993-01-01",
+      "country": "United States",
+      "launches": 25
+    },
+    {
+      "date": "1993-01-01",
+      "country": "Other countries",
+      "launches": 9
+    },
+    {
+      "date": "1993-01-01",
+      "country": "China",
+      "launches": 1
+    },
+    {
+      "date": "1994-01-01",
+      "country": "USSR/Russia",
+      "launches": 49
+    },
+    {
+      "date": "1994-01-01",
+      "country": "United States",
+      "launches": 27
+    },
+    {
+      "date": "1994-01-01",
+      "country": "Other countries",
+      "launches": 12
+    },
+    {
+      "date": "1994-01-01",
+      "country": "China",
+      "launches": 5
+    },
+    {
+      "date": "1995-01-01",
+      "country": "USSR/Russia",
+      "launches": 33
+    },
+    {
+      "date": "1995-01-01",
+      "country": "United States",
+      "launches": 30
+    },
+    {
+      "date": "1995-01-01",
+      "country": "Other countries",
+      "launches": 13
+    },
+    {
+      "date": "1995-01-01",
+      "country": "China",
+      "launches": 3
+    },
+    {
+      "date": "1996-01-01",
+      "country": "USSR/Russia",
+      "launches": 27
+    },
+    {
+      "date": "1996-01-01",
+      "country": "United States",
+      "launches": 33
+    },
+    {
+      "date": "1996-01-01",
+      "country": "Other countries",
+      "launches": 13
+    },
+    {
+      "date": "1996-01-01",
+      "country": "China",
+      "launches": 4
+    },
+    {
+      "date": "1997-01-01",
+      "country": "USSR/Russia",
+      "launches": 29
+    },
+    {
+      "date": "1997-01-01",
+      "country": "United States",
+      "launches": 38
+    },
+    {
+      "date": "1997-01-01",
+      "country": "Other countries",
+      "launches": 16
+    },
+    {
+      "date": "1997-01-01",
+      "country": "China",
+      "launches": 6
+    },
+    {
+      "date": "1998-01-01",
+      "country": "USSR/Russia",
+      "launches": 25
+    },
+    {
+      "date": "1998-01-01",
+      "country": "United States",
+      "launches": 36
+    },
+    {
+      "date": "1998-01-01",
+      "country": "Other countries",
+      "launches": 15
+    },
+    {
+      "date": "1998-01-01",
+      "country": "China",
+      "launches": 6
+    },
+    {
+      "date": "1999-01-01",
+      "country": "USSR/Russia",
+      "launches": 21
+    },
+    {
+      "date": "1999-01-01",
+      "country": "United States",
+      "launches": 31
+    },
+    {
+      "date": "1999-01-01",
+      "country": "Other countries",
+      "launches": 21
+    },
+    {
+      "date": "1999-01-01",
+      "country": "China",
+      "launches": 4
+    },
+    {
+      "date": "2000-01-01",
+      "country": "USSR/Russia",
+      "launches": 31
+    },
+    {
+      "date": "2000-01-01",
+      "country": "United States",
+      "launches": 29
+    },
+    {
+      "date": "2000-01-01",
+      "country": "Other countries",
+      "launches": 18
+    },
+    {
+      "date": "2000-01-01",
+      "country": "China",
+      "launches": 5
+    },
+    {
+      "date": "2001-01-01",
+      "country": "USSR/Russia",
+      "launches": 23
+    },
+    {
+      "date": "2001-01-01",
+      "country": "United States",
+      "launches": 23
+    },
+    {
+      "date": "2001-01-01",
+      "country": "Other countries",
+      "launches": 11
+    },
+    {
+      "date": "2001-01-01",
+      "country": "China",
+      "launches": 1
+    },
+    {
+      "date": "2002-01-01",
+      "country": "USSR/Russia",
+      "launches": 24
+    },
+    {
+      "date": "2002-01-01",
+      "country": "United States",
+      "launches": 18
+    },
+    {
+      "date": "2002-01-01",
+      "country": "Other countries",
+      "launches": 17
+    },
+    {
+      "date": "2002-01-01",
+      "country": "China",
+      "launches": 5
+    },
+    {
+      "date": "2003-01-01",
+      "country": "USSR/Russia",
+      "launches": 19
+    },
+    {
+      "date": "2003-01-01",
+      "country": "United States",
+      "launches": 26
+    },
+    {
+      "date": "2003-01-01",
+      "country": "Other countries",
+      "launches": 11
+    },
+    {
+      "date": "2003-01-01",
+      "country": "China",
+      "launches": 6
+    },
+    {
+      "date": "2004-01-01",
+      "country": "USSR/Russia",
+      "launches": 21
+    },
+    {
+      "date": "2004-01-01",
+      "country": "United States",
+      "launches": 19
+    },
+    {
+      "date": "2004-01-01",
+      "country": "Other countries",
+      "launches": 5
+    },
+    {
+      "date": "2004-01-01",
+      "country": "China",
+      "launches": 8
+    },
+    {
+      "date": "2005-01-01",
+      "country": "USSR/Russia",
+      "launches": 23
+    },
+    {
+      "date": "2005-01-01",
+      "country": "United States",
+      "launches": 16
+    },
+    {
+      "date": "2005-01-01",
+      "country": "Other countries",
+      "launches": 11
+    },
+    {
+      "date": "2005-01-01",
+      "country": "China",
+      "launches": 6
+    },
+    {
+      "date": "2006-01-01",
+      "country": "USSR/Russia",
+      "launches": 23
+    },
+    {
+      "date": "2006-01-01",
+      "country": "United States",
+      "launches": 23
+    },
+    {
+      "date": "2006-01-01",
+      "country": "Other countries",
+      "launches": 13
+    },
+    {
+      "date": "2006-01-01",
+      "country": "China",
+      "launches": 6
+    },
+    {
+      "date": "2007-01-01",
+      "country": "USSR/Russia",
+      "launches": 20
+    },
+    {
+      "date": "2007-01-01",
+      "country": "United States",
+      "launches": 20
+    },
+    {
+      "date": "2007-01-01",
+      "country": "Other countries",
+      "launches": 15
+    },
+    {
+      "date": "2007-01-01",
+      "country": "China",
+      "launches": 10
+    },
+    {
+      "date": "2008-01-01",
+      "country": "USSR/Russia",
+      "launches": 24
+    },
+    {
+      "date": "2008-01-01",
+      "country": "United States",
+      "launches": 20
+    },
+    {
+      "date": "2008-01-01",
+      "country": "Other countries",
+      "launches": 12
+    },
+    {
+      "date": "2008-01-01",
+      "country": "China",
+      "launches": 11
+    },
+    {
+      "date": "2009-01-01",
+      "country": "USSR/Russia",
+      "launches": 31
+    },
+    {
+      "date": "2009-01-01",
+      "country": "United States",
+      "launches": 25
+    },
+    {
+      "date": "2009-01-01",
+      "country": "Other countries",
+      "launches": 15
+    },
+    {
+      "date": "2009-01-01",
+      "country": "China",
+      "launches": 6
+    },
+    {
+      "date": "2010-01-01",
+      "country": "USSR/Russia",
+      "launches": 28
+    },
+    {
+      "date": "2010-01-01",
+      "country": "United States",
+      "launches": 15
+    },
+    {
+      "date": "2010-01-01",
+      "country": "Other countries",
+      "launches": 13
+    },
+    {
+      "date": "2010-01-01",
+      "country": "China",
+      "launches": 15
+    },
+    {
+      "date": "2011-01-01",
+      "country": "USSR/Russia",
+      "launches": 28
+    },
+    {
+      "date": "2011-01-01",
+      "country": "United States",
+      "launches": 19
+    },
+    {
+      "date": "2011-01-01",
+      "country": "Other countries",
+      "launches": 14
+    },
+    {
+      "date": "2011-01-01",
+      "country": "China",
+      "launches": 19
+    },
+    {
+      "date": "2012-01-01",
+      "country": "USSR/Russia",
+      "launches": 24
+    },
+    {
+      "date": "2012-01-01",
+      "country": "United States",
+      "launches": 16
+    },
+    {
+      "date": "2012-01-01",
+      "country": "Other countries",
+      "launches": 19
+    },
+    {
+      "date": "2012-01-01",
+      "country": "China",
+      "launches": 19
+    },
+    {
+      "date": "2013-01-01",
+      "country": "USSR/Russia",
+      "launches": 29
+    },
+    {
+      "date": "2013-01-01",
+      "country": "United States",
+      "launches": 20
+    },
+    {
+      "date": "2013-01-01",
+      "country": "Other countries",
+      "launches": 14
+    },
+    {
+      "date": "2013-01-01",
+      "country": "China",
+      "launches": 15
+    },
+    {
+      "date": "2014-01-01",
+      "country": "USSR/Russia",
+      "launches": 30
+    },
+    {
+      "date": "2014-01-01",
+      "country": "United States",
+      "launches": 24
+    },
+    {
+      "date": "2014-01-01",
+      "country": "Other countries",
+      "launches": 20
+    },
+    {
+      "date": "2014-01-01",
+      "country": "China",
+      "launches": 16
+    },
+    {
+      "date": "2015-01-01",
+      "country": "USSR/Russia",
+      "launches": 24
+    },
+    {
+      "date": "2015-01-01",
+      "country": "United States",
+      "launches": 20
+    },
+    {
+      "date": "2015-01-01",
+      "country": "Other countries",
+      "launches": 21
+    },
+    {
+      "date": "2015-01-01",
+      "country": "China",
+      "launches": 19
+    },
+    {
+      "date": "2016-01-01",
+      "country": "USSR/Russia",
+      "launches": 17
+    },
+    {
+      "date": "2016-01-01",
+      "country": "United States",
+      "launches": 22
+    },
+    {
+      "date": "2016-01-01",
+      "country": "Other countries",
+      "launches": 24
+    },
+    {
+      "date": "2016-01-01",
+      "country": "China",
+      "launches": 22
+    },
+    {
+      "date": "2017-01-01",
+      "country": "USSR/Russia",
+      "launches": 18
+    },
+    {
+      "date": "2017-01-01",
+      "country": "United States",
+      "launches": 30
+    },
+    {
+      "date": "2017-01-01",
+      "country": "Other countries",
+      "launches": 24
+    },
+    {
+      "date": "2017-01-01",
+      "country": "China",
+      "launches": 18
+    },
+    {
+      "date": "2018-01-01",
+      "country": "USSR/Russia",
+      "launches": 10
+    },
+    {
+      "date": "2018-01-01",
+      "country": "United States",
+      "launches": 27
+    },
+    {
+      "date": "2018-01-01",
+      "country": "Other countries",
+      "launches": 15
+    },
+    {
+      "date": "2018-01-01",
+      "country": "China",
+      "launches": 28
+    }
+  ],
+  "encoding": {
+    "x": {
+      "field": "date",
+      "type": "temporal",
+      "axis": {
+        "format": "%Y",
+        "tickCount": 3
+      }
+    },
+    "y": {
+      "field": "launches",
+      "type": "quantitative"
+    },
+    "facet": {
+      "field": "country",
+      "type": "nominal",
+      "sort": null,
+      "columns": 1
+    }
+  },
+  "chrome": {
+    "title": "China launched 28 times in 2018, one more than the US",
+    "subtitle": "Launches per year by country, 1957-2018, on the same y scale in every panel"
+  }
+}
+```
+
+A single column keeps the year axes aligned, so you compare timing by reading straight down the page: the US peak sits in the mid-1960s and the Soviet peak in the early 1980s. The layout is the same on a phone as on a desktop.
+
+## Shared or independent y scales
+
+Panels share one y scale by default, which means a given height stands for the same number in every panel. That keeps level comparisons honest and makes small series look small. Here the US violent crime rate is about 330 per 100,000 residents in 2025, and the homicide rate is 4.1.
+
+<Demo id="blog/crime-shared" />
+
+On that shared scale homicide is a flat line along the bottom, so its fall from 9.8 per 100,000 in 1991 and its rise in 2021 are both lost. Giving each panel its own range fixes that.
+
+```json demo source="FBI Uniform Crime Reporting Program, estimated crimes in the United States" height=780
+{
+  "mark": {
+    "type": "line",
+    "stroke": "#0e7490",
+    "strokeWidth": 2
+  },
+  "data": [
+    {
+      "date": "1979-01-01",
+      "crime": "All violent crime",
+      "rate": 548.7
+    },
+    {
+      "date": "1979-01-01",
+      "crime": "Aggravated assault",
+      "rate": 285.9
+    },
+    {
+      "date": "1979-01-01",
+      "crime": "Robbery",
+      "rate": 218.3
+    },
+    {
+      "date": "1979-01-01",
+      "crime": "Homicide",
+      "rate": 9.7
+    },
+    {
+      "date": "1980-01-01",
+      "crime": "All violent crime",
+      "rate": 596.3
+    },
+    {
+      "date": "1980-01-01",
+      "crime": "Aggravated assault",
+      "rate": 298.3
+    },
+    {
+      "date": "1980-01-01",
+      "crime": "Robbery",
+      "rate": 251
+    },
+    {
+      "date": "1980-01-01",
+      "crime": "Homicide",
+      "rate": 10.2
+    },
+    {
+      "date": "1981-01-01",
+      "crime": "All violent crime",
+      "rate": 594
+    },
+    {
+      "date": "1981-01-01",
+      "crime": "Aggravated assault",
+      "rate": 289.6
+    },
+    {
+      "date": "1981-01-01",
+      "crime": "Robbery",
+      "rate": 258.6
+    },
+    {
+      "date": "1981-01-01",
+      "crime": "Homicide",
+      "rate": 9.8
+    },
+    {
+      "date": "1982-01-01",
+      "crime": "All violent crime",
+      "rate": 570.9
+    },
+    {
+      "date": "1982-01-01",
+      "crime": "Aggravated assault",
+      "rate": 289.1
+    },
+    {
+      "date": "1982-01-01",
+      "crime": "Robbery",
+      "rate": 238.8
+    },
+    {
+      "date": "1982-01-01",
+      "crime": "Homicide",
+      "rate": 9.1
+    },
+    {
+      "date": "1983-01-01",
+      "crime": "All violent crime",
+      "rate": 537.5
+    },
+    {
+      "date": "1983-01-01",
+      "crime": "Aggravated assault",
+      "rate": 279.1
+    },
+    {
+      "date": "1983-01-01",
+      "crime": "Robbery",
+      "rate": 216.4
+    },
+    {
+      "date": "1983-01-01",
+      "crime": "Homicide",
+      "rate": 8.3
+    },
+    {
+      "date": "1984-01-01",
+      "crime": "All violent crime",
+      "rate": 539
+    },
+    {
+      "date": "1984-01-01",
+      "crime": "Aggravated assault",
+      "rate": 290.1
+    },
+    {
+      "date": "1984-01-01",
+      "crime": "Robbery",
+      "rate": 205.3
+    },
+    {
+      "date": "1984-01-01",
+      "crime": "Homicide",
+      "rate": 7.9
+    },
+    {
+      "date": "1985-01-01",
+      "crime": "All violent crime",
+      "rate": 556.6
+    },
+    {
+      "date": "1985-01-01",
+      "crime": "Aggravated assault",
+      "rate": 302.9
+    },
+    {
+      "date": "1985-01-01",
+      "crime": "Robbery",
+      "rate": 208.5
+    },
+    {
+      "date": "1985-01-01",
+      "crime": "Homicide",
+      "rate": 7.9
+    },
+    {
+      "date": "1986-01-01",
+      "crime": "All violent crime",
+      "rate": 617.8
+    },
+    {
+      "date": "1986-01-01",
+      "crime": "Aggravated assault",
+      "rate": 346.1
+    },
+    {
+      "date": "1986-01-01",
+      "crime": "Robbery",
+      "rate": 225.2
+    },
+    {
+      "date": "1986-01-01",
+      "crime": "Homicide",
+      "rate": 8.6
+    },
+    {
+      "date": "1987-01-01",
+      "crime": "All violent crime",
+      "rate": 609.7
+    },
+    {
+      "date": "1987-01-01",
+      "crime": "Aggravated assault",
+      "rate": 351.3
+    },
+    {
+      "date": "1987-01-01",
+      "crime": "Robbery",
+      "rate": 212.7
+    },
+    {
+      "date": "1987-01-01",
+      "crime": "Homicide",
+      "rate": 8.3
+    },
+    {
+      "date": "1988-01-01",
+      "crime": "All violent crime",
+      "rate": 637.2
+    },
+    {
+      "date": "1988-01-01",
+      "crime": "Aggravated assault",
+      "rate": 370.2
+    },
+    {
+      "date": "1988-01-01",
+      "crime": "Robbery",
+      "rate": 220.9
+    },
+    {
+      "date": "1988-01-01",
+      "crime": "Homicide",
+      "rate": 8.4
+    },
+    {
+      "date": "1989-01-01",
+      "crime": "All violent crime",
+      "rate": 663.1
+    },
+    {
+      "date": "1989-01-01",
+      "crime": "Aggravated assault",
+      "rate": 383.4
+    },
+    {
+      "date": "1989-01-01",
+      "crime": "Robbery",
+      "rate": 233
+    },
+    {
+      "date": "1989-01-01",
+      "crime": "Homicide",
+      "rate": 8.7
+    },
+    {
+      "date": "1990-01-01",
+      "crime": "All violent crime",
+      "rate": 731.8
+    },
+    {
+      "date": "1990-01-01",
+      "crime": "Aggravated assault",
+      "rate": 424.1
+    },
+    {
+      "date": "1990-01-01",
+      "crime": "Robbery",
+      "rate": 257
+    },
+    {
+      "date": "1990-01-01",
+      "crime": "Homicide",
+      "rate": 9.4
+    },
+    {
+      "date": "1991-01-01",
+      "crime": "All violent crime",
+      "rate": 758.1
+    },
+    {
+      "date": "1991-01-01",
+      "crime": "Aggravated assault",
+      "rate": 433.3
+    },
+    {
+      "date": "1991-01-01",
+      "crime": "Robbery",
+      "rate": 272.7
+    },
+    {
+      "date": "1991-01-01",
+      "crime": "Homicide",
+      "rate": 9.8
+    },
+    {
+      "date": "1992-01-01",
+      "crime": "All violent crime",
+      "rate": 757.5
+    },
+    {
+      "date": "1992-01-01",
+      "crime": "Aggravated assault",
+      "rate": 441.8
+    },
+    {
+      "date": "1992-01-01",
+      "crime": "Robbery",
+      "rate": 263.6
+    },
+    {
+      "date": "1992-01-01",
+      "crime": "Homicide",
+      "rate": 9.3
+    },
+    {
+      "date": "1993-01-01",
+      "crime": "All violent crime",
+      "rate": 746.8
+    },
+    {
+      "date": "1993-01-01",
+      "crime": "Aggravated assault",
+      "rate": 440.3
+    },
+    {
+      "date": "1993-01-01",
+      "crime": "Robbery",
+      "rate": 255.9
+    },
+    {
+      "date": "1993-01-01",
+      "crime": "Homicide",
+      "rate": 9.5
+    },
+    {
+      "date": "1994-01-01",
+      "crime": "All violent crime",
+      "rate": 713.6
+    },
+    {
+      "date": "1994-01-01",
+      "crime": "Aggravated assault",
+      "rate": 427.6
+    },
+    {
+      "date": "1994-01-01",
+      "crime": "Robbery",
+      "rate": 237.7
+    },
+    {
+      "date": "1994-01-01",
+      "crime": "Homicide",
+      "rate": 9
+    },
+    {
+      "date": "1995-01-01",
+      "crime": "All violent crime",
+      "rate": 684.6
+    },
+    {
+      "date": "1995-01-01",
+      "crime": "Aggravated assault",
+      "rate": 418.3
+    },
+    {
+      "date": "1995-01-01",
+      "crime": "Robbery",
+      "rate": 220.9
+    },
+    {
+      "date": "1995-01-01",
+      "crime": "Homicide",
+      "rate": 8.2
+    },
+    {
+      "date": "1996-01-01",
+      "crime": "All violent crime",
+      "rate": 636.5
+    },
+    {
+      "date": "1996-01-01",
+      "crime": "Aggravated assault",
+      "rate": 390.9
+    },
+    {
+      "date": "1996-01-01",
+      "crime": "Robbery",
+      "rate": 201.9
+    },
+    {
+      "date": "1996-01-01",
+      "crime": "Homicide",
+      "rate": 7.4
+    },
+    {
+      "date": "1997-01-01",
+      "crime": "All violent crime",
+      "rate": 611.3
+    },
+    {
+      "date": "1997-01-01",
+      "crime": "Aggravated assault",
+      "rate": 382.3
+    },
+    {
+      "date": "1997-01-01",
+      "crime": "Robbery",
+      "rate": 186.3
+    },
+    {
+      "date": "1997-01-01",
+      "crime": "Homicide",
+      "rate": 6.8
+    },
+    {
+      "date": "1998-01-01",
+      "crime": "All violent crime",
+      "rate": 567.5
+    },
+    {
+      "date": "1998-01-01",
+      "crime": "Aggravated assault",
+      "rate": 361.3
+    },
+    {
+      "date": "1998-01-01",
+      "crime": "Robbery",
+      "rate": 165.4
+    },
+    {
+      "date": "1998-01-01",
+      "crime": "Homicide",
+      "rate": 6.3
+    },
+    {
+      "date": "1999-01-01",
+      "crime": "All violent crime",
+      "rate": 523
+    },
+    {
+      "date": "1999-01-01",
+      "crime": "Aggravated assault",
+      "rate": 334.3
+    },
+    {
+      "date": "1999-01-01",
+      "crime": "Robbery",
+      "rate": 150.1
+    },
+    {
+      "date": "1999-01-01",
+      "crime": "Homicide",
+      "rate": 5.7
+    },
+    {
+      "date": "2000-01-01",
+      "crime": "All violent crime",
+      "rate": 506.5
+    },
+    {
+      "date": "2000-01-01",
+      "crime": "Aggravated assault",
+      "rate": 324
+    },
+    {
+      "date": "2000-01-01",
+      "crime": "Robbery",
+      "rate": 145
+    },
+    {
+      "date": "2000-01-01",
+      "crime": "Homicide",
+      "rate": 5.5
+    },
+    {
+      "date": "2001-01-01",
+      "crime": "All violent crime",
+      "rate": 504.5
+    },
+    {
+      "date": "2001-01-01",
+      "crime": "Aggravated assault",
+      "rate": 318.6
+    },
+    {
+      "date": "2001-01-01",
+      "crime": "Robbery",
+      "rate": 148.5
+    },
+    {
+      "date": "2001-01-01",
+      "crime": "Homicide",
+      "rate": 5.6
+    },
+    {
+      "date": "2002-01-01",
+      "crime": "All violent crime",
+      "rate": 494.4
+    },
+    {
+      "date": "2002-01-01",
+      "crime": "Aggravated assault",
+      "rate": 309.5
+    },
+    {
+      "date": "2002-01-01",
+      "crime": "Robbery",
+      "rate": 146.1
+    },
+    {
+      "date": "2002-01-01",
+      "crime": "Homicide",
+      "rate": 5.6
+    },
+    {
+      "date": "2003-01-01",
+      "crime": "All violent crime",
+      "rate": 475.8
+    },
+    {
+      "date": "2003-01-01",
+      "crime": "Aggravated assault",
+      "rate": 295.4
+    },
+    {
+      "date": "2003-01-01",
+      "crime": "Robbery",
+      "rate": 142.5
+    },
+    {
+      "date": "2003-01-01",
+      "crime": "Homicide",
+      "rate": 5.7
+    },
+    {
+      "date": "2004-01-01",
+      "crime": "All violent crime",
+      "rate": 463.2
+    },
+    {
+      "date": "2004-01-01",
+      "crime": "Aggravated assault",
+      "rate": 288.6
+    },
+    {
+      "date": "2004-01-01",
+      "crime": "Robbery",
+      "rate": 136.7
+    },
+    {
+      "date": "2004-01-01",
+      "crime": "Homicide",
+      "rate": 5.5
+    },
+    {
+      "date": "2005-01-01",
+      "crime": "All violent crime",
+      "rate": 469
+    },
+    {
+      "date": "2005-01-01",
+      "crime": "Aggravated assault",
+      "rate": 290.8
+    },
+    {
+      "date": "2005-01-01",
+      "crime": "Robbery",
+      "rate": 140.8
+    },
+    {
+      "date": "2005-01-01",
+      "crime": "Homicide",
+      "rate": 5.6
+    },
+    {
+      "date": "2006-01-01",
+      "crime": "All violent crime",
+      "rate": 479.3
+    },
+    {
+      "date": "2006-01-01",
+      "crime": "Aggravated assault",
+      "rate": 292
+    },
+    {
+      "date": "2006-01-01",
+      "crime": "Robbery",
+      "rate": 150
+    },
+    {
+      "date": "2006-01-01",
+      "crime": "Homicide",
+      "rate": 5.8
+    },
+    {
+      "date": "2007-01-01",
+      "crime": "All violent crime",
+      "rate": 471.8
+    },
+    {
+      "date": "2007-01-01",
+      "crime": "Aggravated assault",
+      "rate": 287.2
+    },
+    {
+      "date": "2007-01-01",
+      "crime": "Robbery",
+      "rate": 148.3
+    },
+    {
+      "date": "2007-01-01",
+      "crime": "Homicide",
+      "rate": 5.7
+    },
+    {
+      "date": "2008-01-01",
+      "crime": "All violent crime",
+      "rate": 458.6
+    },
+    {
+      "date": "2008-01-01",
+      "crime": "Aggravated assault",
+      "rate": 277.5
+    },
+    {
+      "date": "2008-01-01",
+      "crime": "Robbery",
+      "rate": 145.9
+    },
+    {
+      "date": "2008-01-01",
+      "crime": "Homicide",
+      "rate": 5.4
+    },
+    {
+      "date": "2009-01-01",
+      "crime": "All violent crime",
+      "rate": 431.9
+    },
+    {
+      "date": "2009-01-01",
+      "crime": "Aggravated assault",
+      "rate": 264.7
+    },
+    {
+      "date": "2009-01-01",
+      "crime": "Robbery",
+      "rate": 133.1
+    },
+    {
+      "date": "2009-01-01",
+      "crime": "Homicide",
+      "rate": 5
+    },
+    {
+      "date": "2010-01-01",
+      "crime": "All violent crime",
+      "rate": 404.5
+    },
+    {
+      "date": "2010-01-01",
+      "crime": "Aggravated assault",
+      "rate": 252.8
+    },
+    {
+      "date": "2010-01-01",
+      "crime": "Robbery",
+      "rate": 119.3
+    },
+    {
+      "date": "2010-01-01",
+      "crime": "Homicide",
+      "rate": 4.8
+    },
+    {
+      "date": "2011-01-01",
+      "crime": "All violent crime",
+      "rate": 387.1
+    },
+    {
+      "date": "2011-01-01",
+      "crime": "Aggravated assault",
+      "rate": 241.5
+    },
+    {
+      "date": "2011-01-01",
+      "crime": "Robbery",
+      "rate": 113.9
+    },
+    {
+      "date": "2011-01-01",
+      "crime": "Homicide",
+      "rate": 4.7
+    },
+    {
+      "date": "2012-01-01",
+      "crime": "All violent crime",
+      "rate": 387.8
+    },
+    {
+      "date": "2012-01-01",
+      "crime": "Aggravated assault",
+      "rate": 242.8
+    },
+    {
+      "date": "2012-01-01",
+      "crime": "Robbery",
+      "rate": 113.1
+    },
+    {
+      "date": "2012-01-01",
+      "crime": "Homicide",
+      "rate": 4.7
+    },
+    {
+      "date": "2013-01-01",
+      "crime": "All violent crime",
+      "rate": 379.1
+    },
+    {
+      "date": "2013-01-01",
+      "crime": "Aggravated assault",
+      "rate": 229.6
+    },
+    {
+      "date": "2013-01-01",
+      "crime": "Robbery",
+      "rate": 109
+    },
+    {
+      "date": "2013-01-01",
+      "crime": "Homicide",
+      "rate": 4.5
+    },
+    {
+      "date": "2014-01-01",
+      "crime": "All violent crime",
+      "rate": 372
+    },
+    {
+      "date": "2014-01-01",
+      "crime": "Aggravated assault",
+      "rate": 229.2
+    },
+    {
+      "date": "2014-01-01",
+      "crime": "Robbery",
+      "rate": 101.3
+    },
+    {
+      "date": "2014-01-01",
+      "crime": "Homicide",
+      "rate": 4.4
+    },
+    {
+      "date": "2015-01-01",
+      "crime": "All violent crime",
+      "rate": 384.8
+    },
+    {
+      "date": "2015-01-01",
+      "crime": "Aggravated assault",
+      "rate": 238.1
+    },
+    {
+      "date": "2015-01-01",
+      "crime": "Robbery",
+      "rate": 102.2
+    },
+    {
+      "date": "2015-01-01",
+      "crime": "Homicide",
+      "rate": 4.9
+    },
+    {
+      "date": "2016-01-01",
+      "crime": "All violent crime",
+      "rate": 397.5
+    },
+    {
+      "date": "2016-01-01",
+      "crime": "Aggravated assault",
+      "rate": 248.3
+    },
+    {
+      "date": "2016-01-01",
+      "crime": "Robbery",
+      "rate": 102.9
+    },
+    {
+      "date": "2016-01-01",
+      "crime": "Homicide",
+      "rate": 5.4
+    },
+    {
+      "date": "2017-01-01",
+      "crime": "All violent crime",
+      "rate": 394.9
+    },
+    {
+      "date": "2017-01-01",
+      "crime": "Aggravated assault",
+      "rate": 249.2
+    },
+    {
+      "date": "2017-01-01",
+      "crime": "Robbery",
+      "rate": 98.6
+    },
+    {
+      "date": "2017-01-01",
+      "crime": "Homicide",
+      "rate": 5.3
+    },
+    {
+      "date": "2018-01-01",
+      "crime": "All violent crime",
+      "rate": 383.4
+    },
+    {
+      "date": "2018-01-01",
+      "crime": "Aggravated assault",
+      "rate": 248.2
+    },
+    {
+      "date": "2018-01-01",
+      "crime": "Robbery",
+      "rate": 86.1
+    },
+    {
+      "date": "2018-01-01",
+      "crime": "Homicide",
+      "rate": 5
+    },
+    {
+      "date": "2019-01-01",
+      "crime": "All violent crime",
+      "rate": 380.8
+    },
+    {
+      "date": "2019-01-01",
+      "crime": "Aggravated assault",
+      "rate": 250.4
+    },
+    {
+      "date": "2019-01-01",
+      "crime": "Robbery",
+      "rate": 81.8
+    },
+    {
+      "date": "2019-01-01",
+      "crime": "Homicide",
+      "rate": 5.1
+    },
+    {
+      "date": "2020-01-01",
+      "crime": "All violent crime",
+      "rate": 398.5
+    },
+    {
+      "date": "2020-01-01",
+      "crime": "Aggravated assault",
+      "rate": 279.7
+    },
+    {
+      "date": "2020-01-01",
+      "crime": "Robbery",
+      "rate": 73.9
+    },
+    {
+      "date": "2020-01-01",
+      "crime": "Homicide",
+      "rate": 6.5
+    },
+    {
+      "date": "2021-01-01",
+      "crime": "All violent crime",
+      "rate": 387
+    },
+    {
+      "date": "2021-01-01",
+      "crime": "Aggravated assault",
+      "rate": 272.2
+    },
+    {
+      "date": "2021-01-01",
+      "crime": "Robbery",
+      "rate": 65.5
+    },
+    {
+      "date": "2021-01-01",
+      "crime": "Homicide",
+      "rate": 6.8
+    },
+    {
+      "date": "2022-01-01",
+      "crime": "All violent crime",
+      "rate": 388.7
+    },
+    {
+      "date": "2022-01-01",
+      "crime": "Aggravated assault",
+      "rate": 273
+    },
+    {
+      "date": "2022-01-01",
+      "crime": "Robbery",
+      "rate": 67.1
+    },
+    {
+      "date": "2022-01-01",
+      "crime": "Homicide",
+      "rate": 6.5
+    },
+    {
+      "date": "2023-01-01",
+      "crime": "All violent crime",
+      "rate": 379.5
+    },
+    {
+      "date": "2023-01-01",
+      "crime": "Aggravated assault",
+      "rate": 266.6
+    },
+    {
+      "date": "2023-01-01",
+      "crime": "Robbery",
+      "rate": 67.1
+    },
+    {
+      "date": "2023-01-01",
+      "crime": "Homicide",
+      "rate": 5.9
+    },
+    {
+      "date": "2024-01-01",
+      "crime": "All violent crime",
+      "rate": 362.9
+    },
+    {
+      "date": "2024-01-01",
+      "crime": "Aggravated assault",
+      "rate": 257.6
+    },
+    {
+      "date": "2024-01-01",
+      "crime": "Robbery",
+      "rate": 61
+    },
+    {
+      "date": "2024-01-01",
+      "crime": "Homicide",
+      "rate": 5.1
+    },
+    {
+      "date": "2025-01-01",
+      "crime": "All violent crime",
+      "rate": 327.6
+    },
+    {
+      "date": "2025-01-01",
+      "crime": "Aggravated assault",
+      "rate": 238
+    },
+    {
+      "date": "2025-01-01",
+      "crime": "Robbery",
+      "rate": 49.4
+    },
+    {
+      "date": "2025-01-01",
+      "crime": "Homicide",
+      "rate": 4.1
+    }
+  ],
+  "encoding": {
+    "x": {
+      "field": "date",
+      "type": "temporal",
+      "axis": {
+        "format": "%Y",
+        "tickCount": 3
+      }
+    },
+    "y": {
+      "field": "rate",
+      "type": "quantitative"
+    },
+    "facet": {
+      "field": "crime",
+      "type": "nominal",
+      "sort": null,
+      "columns": 1
+    }
+  },
+  "resolve": {
+    "scale": {
+      "y": "independent"
+    }
+  },
+  "chrome": {
+    "title": "On free scales, the 2021 homicide rise to 6.8 is visible",
+    "subtitle": "US violent crime rates per 100,000 residents, 1979-2025, separate y scale in each panel"
+  }
+}
+```
+
+The FBI's national figures are estimates, and the way agencies report changed in 2021, so treat that year's point with care. Free scales answer a different question. They show whether each series rose or fell and when, and they stop telling you which series is bigger. They also do not start at zero here, so a one-point wobble in homicide takes as much height as a hundred-point swing in robbery. For that reason, say in the subtitle which choice you made.
+
+Use shared scales when the question is which series is larger. Use free scales when the question is each series' shape. Neither scale compares percent change. Robbery fell 82% between 1991 and 2025 and aggravated assault 45%, and only an indexed chart puts those on one axis.
+
+## Ordering and labeling the panels
+
+Panel order is an editorial choice, and alphabetical order is rarely the right one. Sort by the size of each series, by when it peaked, or by the change you want the reader to notice. The launch panels run by total launches from 1957 to 2018, so the biggest program comes first. The crime panels run from the broadest category to the narrowest.
+
+Put the series name above each frame. Use one color in every panel, because position already says which series is which, and leave out the legend.
+
+## When one chart is enough
+
+Two or three lines that stay apart do not need panels. A single [line chart](/docs/change-over-time/line/) lets the reader compare them directly, and splitting them forces an extra look back and forth. Panels start to pay off when lines overlap or cross, and I would split at about four lines.
+
+## The spec
+
+Panels need long data: one row per panel per year, with the date, the series name and the value. `encoding.facet` names the series field, `columns: 1` stacks the panels in one column, and `sort: null` keeps the panels in the order of the data rather than alphabetical.
+
+The two crime charts differ by one line, `resolve: { scale: { y: "independent" } }`, which lets each panel pick its own y range. Panel axes follow the usual [scale rules](/docs/the-spec/scales/), so a `scale.domain` or `zero: true` on `y` pins them if you want every panel to start at zero.
+
+The [facets page](/docs/composition/facets/) has wrapped grids, single rows and single columns, each with a live example.
