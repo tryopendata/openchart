@@ -28,16 +28,18 @@ const MONTH_NAMES: Record<string, string> = {
   Dec: "December",
 };
 
-/**
- * Phone widths (compact and medium breakpoints) label every other month
- * upright instead of rotating all twelve, which reads badly on a narrow plot.
- */
-const PHONE_MONTH_AXIS: ChartSpecOverride = {
-  encoding: { x: { axis: { labelAngle: 0, values: ["Jan", "Mar", "May", "Jul", "Sep", "Nov"] } } },
-};
-
 const rows = nycTemperatureRange.data;
 const source = sourceOf(nycTemperatureRange);
+
+/**
+ * Phone widths (compact and medium breakpoints) label every month upright.
+ * Left alone the engine rotates them, or thins upright labels to every other
+ * month and drops months the titles and prose name. Listing each month as an
+ * explicit tick keeps all twelve.
+ */
+const PHONE_MONTH_AXIS: ChartSpecOverride = {
+  encoding: { x: { axis: { labelAngle: 0, values: rows.map((row) => row.month) } } },
+};
 
 const midpoints = rows.map((row) => ({
   month: row.month,
@@ -50,14 +52,6 @@ const coldestMid = midpoints.reduce((min, row) => (row.midpoint < min.midpoint ?
 const warmestMid = midpoints.reduce((max, row) => (row.midpoint > max.midpoint ? row : max));
 const widest = rows.reduce((max, row) => (spanOf(row) > spanOf(max) ? row : max));
 const narrowest = rows.reduce((min, row) => (spanOf(row) < spanOf(min) ? row : min));
-
-const midpointFinding = `ran from ${coldestMid.midpoint.toFixed(1)}°C in ${MONTH_NAMES[coldestMid.month]} to ${warmestMid.midpoint.toFixed(1)}°C in ${MONTH_NAMES[warmestMid.month]}`;
-
-/** On phones the midpoint title drops "Monthly" so it fits in two lines. */
-const midpointOnPhones: ChartSpecOverride = {
-  ...PHONE_MONTH_AXIS,
-  chrome: { title: `Midpoints ${midpointFinding}` },
-};
 
 export const nycTempMidpoint = defineDemo({
   id: "blog/nyc-temp-midpoint",
@@ -77,11 +71,11 @@ export const nycTempMidpoint = defineDemo({
     },
     labels: false,
     chrome: {
-      title: `Monthly midpoints ${midpointFinding}`,
+      title: `Monthly midpoints ran from ${coldestMid.midpoint.toFixed(1)}°C in ${MONTH_NAMES[coldestMid.month]} to ${warmestMid.midpoint.toFixed(1)}°C in ${MONTH_NAMES[warmestMid.month]}`,
       subtitle:
         "Midpoint of average daily low and high temperature by month, Central Park, 2023 (°C)",
     },
-    overrides: { compact: midpointOnPhones, medium: midpointOnPhones },
+    overrides: { compact: PHONE_MONTH_AXIS, medium: PHONE_MONTH_AXIS },
   },
 });
 

@@ -28,13 +28,21 @@ const longestLived = rows.reduce((top, row) =>
 const dollars = (value: number) => `$${value.toLocaleString("en-US")}`;
 const incomeRatio = (richest.gdpPerCapita / poorest.gdpPerCapita).toFixed(1);
 
+const PHONE_TICK_STEP = 20_000;
+
+/** Ticks from 0 every $20k up to the richest economy's income rounded up to the next step. */
+const phoneIncomeTicks = Array.from(
+  { length: Math.ceil(richest.gdpPerCapita / PHONE_TICK_STEP) + 1 },
+  (_, step) => step * PHONE_TICK_STEP,
+);
+
 /**
  * Phone widths (compact and medium breakpoints) print ticks as "$40k" because
  * the full "$80,000" runs past the right edge of a narrow figure, and pin a
  * tick every $20k because the engine otherwise thins the axis to two labels.
  */
 const SHORT_DOLLAR_AXIS: ChartSpecOverride = {
-  encoding: { x: { axis: { format: "$~s", values: [0, 20_000, 40_000, 60_000, 80_000] } } },
+  encoding: { x: { axis: { format: "$~s", values: phoneIncomeTicks } } },
 };
 
 const rankedBarSpec: ChartSpec = {
