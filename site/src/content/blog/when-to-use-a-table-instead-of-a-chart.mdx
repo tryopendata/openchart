@@ -1,0 +1,168 @@
+---
+title: When to use a table instead of a chart
+description: Charts show shape; tables handle exact lookup and mixed units. Adding inline bars and cell shading gives a table visual scan without losing numbers.
+published: 2026-11-17
+author: OpenChart
+tags: [tables, chart-choice]
+related: [tables/data-table, tables/column-types, tables/row-inspection, comparison/bar]
+lead: blog/economies-ranked-bar
+---
+
+import Demo from "../../components/demo/Demo.astro";
+
+Comparing twelve major economies across population, income per person and life expectancy breaks a single chart. Population runs into billions, income is measured in purchasing-power dollars (adjusted for local price differences) and life expectancy spans roughly fifteen years. Anyone opening a multi-variable chart to check one country's figures ends up decoding bubble sizes and color ramps or hunting through hover tooltips.
+
+<Demo id="blog/economies-ranked-bar" />
+
+A horizontal bar chart handles one metric cleanly. Ranking these economies by income puts the United States at $75,489, nearly eight times India's $9,818, and makes the gap between wealthy and middle-income nations clear at a glance. Population and longevity disappear completely unless you draw two more charts.
+
+## Three signs the data wants a table
+
+Use a table when readers arrive to look up exact values for specific rows. Reading a bar chart means tracing a bar end down to an axis tick and estimating between gridlines. Data labels fix that on a single metric, yet they crowd the plot as soon as each row carries three or four measurements. Printed digits let a reader pull Canada's $58,321 income or 82.2-year life expectancy straight off the row.
+
+Mixed units across variables also favor a table. Population, purchasing-power income and years of life share no common scale, and forcing them onto dual axes produces crossings that shift whenever someone rescales a side. Separate columns keep every unit plain under its own header.
+
+A table lets each reader pick the ranking that answers their question. A bar chart locks every visitor into income order, forcing anyone curious about population size to scan up and down the labels. Clickable headers reorder the rows on demand, moving India and China to the top by population or placing Japan first by life expectancy.
+
+## Borrowing chart cues inside a table
+
+Right-aligning numeric columns with equal-width tabular numerals is the first visual cue a table borrows from charts. Lining up digits flush right puts commas and decimal points in one vertical track, so wider numbers stand out as larger values while country names stay left-aligned. Shortening billion-scale populations into compact labels like 1.4B keeps the column scannable when nobody needs nine trailing digits.
+
+Inline bars bring proportional length comparison directly into a numeric column. Each cell draws a horizontal bar anchored at zero and scaled to the column's maximum alongside its exact dollar value. Scanning down the income column exposes the sharp drop between the high-income economies and China, Mexico and Brazil while keeping every figure intact.
+
+Subtle cell shading adds a second visual channel without competing with bar length. Shading life expectancy on a light sequential green ramp makes Japan's 83.6 years and the lower longevity in India and Indonesia stand out while rows stay ordered by income. Keeping each column to a single visual cue keeps color and bar length easy to read separately.
+
+```json demo title="Twelve large economies: population, income and life expectancy" source="World Bank WDI, OWID (PPP GDP), WHO Global Health Observatory" height=680
+{
+  "type": "table",
+  "data": [
+    {
+      "code": "IN",
+      "country": "India",
+      "population": 1438069596,
+      "gdpPerCapita": 9818,
+      "lifeExpectancy": 68.3
+    },
+    {
+      "code": "CN",
+      "country": "China",
+      "population": 1410710000,
+      "gdpPerCapita": 23846,
+      "lifeExpectancy": 76.1
+    },
+    {
+      "code": "US",
+      "country": "United States",
+      "population": 336806231,
+      "gdpPerCapita": 75489,
+      "lifeExpectancy": 79.2
+    },
+    {
+      "code": "ID",
+      "country": "Indonesia",
+      "population": 281190067,
+      "gdpPerCapita": 14470,
+      "lifeExpectancy": 69
+    },
+    {
+      "code": "BR",
+      "country": "Brazil",
+      "population": 211140729,
+      "gdpPerCapita": 19652,
+      "lifeExpectancy": 75.3
+    },
+    {
+      "code": "MX",
+      "country": "Mexico",
+      "population": 129739759,
+      "gdpPerCapita": 22040,
+      "lifeExpectancy": 76.9
+    },
+    {
+      "code": "JP",
+      "country": "Japan",
+      "population": 124516650,
+      "gdpPerCapita": 46107,
+      "lifeExpectancy": 83.6
+    },
+    {
+      "code": "DE",
+      "country": "Germany",
+      "population": 83287273,
+      "gdpPerCapita": 63676,
+      "lifeExpectancy": 80.8
+    },
+    {
+      "code": "GB",
+      "country": "United Kingdom",
+      "population": 68492000,
+      "gdpPerCapita": 53139,
+      "lifeExpectancy": 81.4
+    },
+    {
+      "code": "FR",
+      "country": "France",
+      "population": 68372286,
+      "gdpPerCapita": 54799,
+      "lifeExpectancy": 82.4
+    },
+    {
+      "code": "KR",
+      "country": "South Korea",
+      "population": 51712619,
+      "gdpPerCapita": 55071,
+      "lifeExpectancy": 81.9
+    },
+    {
+      "code": "CA",
+      "country": "Canada",
+      "population": 40083484,
+      "gdpPerCapita": 58321,
+      "lifeExpectancy": 82.2
+    }
+  ],
+  "columns": [
+    { "key": "country", "label": "Country", "sortable": true },
+    {
+      "key": "population",
+      "label": "Population",
+      "format": "compact",
+      "sortable": true,
+      "align": "right"
+    },
+    {
+      "key": "gdpPerCapita",
+      "label": "GDP/capita (PPP)",
+      "format": "$,.0f",
+      "sortable": true,
+      "align": "right",
+      "bar": { "color": "#0e7490" }
+    },
+    {
+      "key": "lifeExpectancy",
+      "label": "Life exp. (yrs)",
+      "format": ".1f",
+      "sortable": true,
+      "align": "right",
+      "heatmap": { "palette": "green" }
+    }
+  ],
+  "sort": { "column": "gdpPerCapita", "direction": "desc" },
+  "density": "condensed",
+  "search": true,
+  "chrome": {
+    "title": "India leads on population, United States on income and Japan on longevity",
+    "subtitle": "Population, PPP GDP per capita (international $) and life expectancy (years); click a header to sort"
+  }
+}
+```
+
+Tables still give up overall shape when a dataset grows large or continuous. A scatter plot shows the curved link between income and longevity across dozens of countries faster than reading two columns side by side, and a line chart reveals seasonal turns that rows of monthly numbers bury. Past twenty or so rows, pair a table with search or paging so lookup stays fast.
+
+## The spec
+
+Code under the table opens its JSON spec, built from the same twelve rows as the bar chart. Setting `"type": "table"` replaces mark and encoding channels with a `columns` array mapping each field `key` to a header label. The `format` option accepts `"compact"` to abbreviate billion-scale populations into labels like `1.4B`, alongside d3-format strings such as `"$,.0f"` for whole dollars and `".1f"` for one decimal place.
+
+Every visual cue and interactive control sits on its column or at the top level of the spec. Setting `align: "right"` keeps numbers flush along their final digit, `bar: { color: "#0e7490" }` draws proportional bars in the income column, and `heatmap: { palette: "green" }` shades life expectancy cells. Setting `sortable: true` enables header clicks, `sort` picks the starting order, `density: "condensed"` keeps all twelve rows in view, and `search: true` adds the filter box.
+
+To add paging, total rows or sparkline cells to your own tables, start with the [data table guide](/docs/tables/data-table/).
