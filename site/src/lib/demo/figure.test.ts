@@ -158,6 +158,41 @@ describe("demoFigureHtml", () => {
     ).toEqual(["0 0 360 320", "0 0 360 320"]);
   });
 
+  it("writes the phone height beside the desktop height, so CSS reserves it before scripts run", async () => {
+    const figure = await render(figureFor({ phoneHeight: 520, width: 360 }));
+    const stage = figure.querySelector("[data-demo-stage]");
+    expect(stage?.getAttribute("style")).toBe(
+      "--demo-height: 320px; --demo-phone-height: 520px; --demo-width: 360px",
+    );
+  });
+
+  it("adds a static pair laid out at phone size, shown in its own set, with its own ids", async () => {
+    const figure = await render(figureFor({ phoneHeight: 520 }));
+    const sets = [...figure.querySelectorAll("[data-demo-stage] > .demo-static-set")];
+    expect(sets.map((set) => set.getAttribute("data-static-size"))).toEqual(["wide", "phone"]);
+    const viewBoxes = (set: (typeof sets)[number] | undefined) =>
+      [...(set?.querySelectorAll("svg.demo-static") ?? [])].map((svg) => [
+        svg.getAttribute("data-theme"),
+        svg.getAttribute("viewBox"),
+      ]);
+    expect(viewBoxes(sets[0])).toEqual([
+      ["light", "0 0 720 320"],
+      ["dark", "0 0 720 320"],
+    ]);
+    expect(viewBoxes(sets[1])).toEqual([
+      ["light", "0 0 390 520"],
+      ["dark", "0 0 390 520"],
+    ]);
+    const ids = [...figure.querySelectorAll("[id]")].map((el) => el.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("writes one static pair, with no sets, without a phone height", async () => {
+    const figure = await render(figureFor());
+    expect(figure.querySelector(".demo-static-set")).toBeNull();
+    expect(figure.querySelectorAll("svg.demo-static")).toHaveLength(2);
+  });
+
   it("writes the host options on the spec script only when the demo sets some", async () => {
     const script = async (overrides: Partial<DemoFigure>) =>
       (await render(figureFor(overrides))).querySelector("script[data-demo-spec]");
@@ -232,5 +267,75 @@ describe("a chart drawn without the figure", () => {
     expect(JSON.parse(whole.querySelector("script[data-demo-spec]")?.textContent ?? "")).toEqual(
       basicChoropleth.spec,
     );
+  });
+});
+
+describe("demoFigureHtml on a blog post", () => {
+  const blog = {
+    credit: { href: "/docs/comparison/bar/", chartName: "bar chart" },
+    staticWidth: 1024,
+  };
+
+  it("adds one crawlable credit line after the caption, linking to the chart type's docs page", async () => {
+    const figure = await render(figureFor({ blog }));
+    const credit = figure.querySelector("figure.demo-figure > p.figure-credit");
+    expect(credit).not.toBeNull();
+    expect(credit?.hasAttribute("data-pagefind-ignore")).toBe(true);
+    expect(credit?.textContent).toContain("Made with OpenChart");
+    const links = figure.querySelectorAll("a.figure-credit-link");
+    expect(links).toHaveLength(1);
+    expect(links[0]?.getAttribute("href")).toBe("/docs/comparison/bar/");
+    expect(links[0]?.textContent).toContain("bar chart");
+    expect(figure.querySelector("figure")?.lastElementChild).toBe(credit);
+  });
+
+  it("reveals the figure's chrome but never hides the stage behind a motion role", async () => {
+    const figure = await render(figureFor({ blog }));
+    expect(figure.hasAttribute("data-reveal")).toBe(true);
+    const stage = figure.querySelector("[data-demo-stage]");
+    const moving = [...figure.querySelectorAll("[data-motion]")];
+    expect(moving.length).toBeGreaterThan(0);
+    expect(moving.filter((element) => stage && element.contains(stage))).toEqual([]);
+    expect(stage?.hasAttribute("data-motion")).toBe(false);
+  });
+
+  it("lays its static SVGs out at the wide column's width", async () => {
+    const wide = await render(figureFor({ blog }));
+    const narrow = await render(figureFor());
+    const widthOf = (element: Awaited<ReturnType<typeof render>>) =>
+      element.querySelector("svg.demo-static")?.getAttribute("viewBox")?.split(/\s+/)[2];
+    expect(widthOf(wide)).toBe("1024");
+    expect(widthOf(narrow)).toBe("720");
+  });
+
+  it("keeps a demo's own width over the wide static width", async () => {
+    const figure = await render(figureFor({ blog, width: 360 }));
+    const viewBox = figure.querySelector("svg.demo-static")?.getAttribute("viewBox");
+    expect(viewBox?.split(/\s+/)[2]).toBe("360");
+  });
+
+  it("as the hero, keeps the credit but paints in place with no entrance or reveal roles", async () => {
+    const figure = await render(figureFor({ blog, hero: true, tabs: false, entrance: true }));
+    expect(figure.hasAttribute("data-demo-entrance")).toBe(false);
+    expect(figure.querySelector("a.figure-credit-link")).not.toBeNull();
+    expect(figure.hasAttribute("data-reveal")).toBe(false);
+    expect(figure.querySelector("[data-motion]")).toBeNull();
+    expect(figure.querySelector("[data-demo-code]")).toBeNull();
+  });
+
+  it("as the hero, takes ids apart from the body's copy of the same demo", async () => {
+    const idsOf = (element: Awaited<ReturnType<typeof render>>) =>
+      [...element.querySelectorAll("[id]")].map((node) => node.id);
+    const hero = idsOf(await render(figureFor({ blog, hero: true, tabs: false })));
+    const body = idsOf(await render(figureFor({ blog })));
+    expect(hero.length).toBeGreaterThan(0);
+    expect(hero.filter((id) => body.includes(id))).toEqual([]);
+  });
+
+  it("writes none of the blog markup without the blog option", async () => {
+    const figure = await render(figureFor());
+    expect(figure.querySelector(".figure-credit")).toBeNull();
+    expect(figure.hasAttribute("data-reveal")).toBe(false);
+    expect(figure.querySelector("[data-motion]")).toBeNull();
   });
 });

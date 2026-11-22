@@ -30,6 +30,18 @@ function shareOf(sourceName: string, year: string): number {
 const gasLast = shareOf("Gas", lastYear);
 const coalLast = shareOf("Coal", lastYear);
 
+const mixYears = [...new Set(mixRows.map((row) => row.year))].sort();
+/**
+ * Phone-width x axis: the first, middle and last years. Beside the endpoint
+ * label column the narrow axis otherwise thins to a single 2020 tick, or to
+ * 2016 to 2022 by twos on a wider phone, skipping the final year.
+ */
+const phoneYearAxis = {
+  encoding: {
+    x: { axis: { values: [firstYear, mixYears[Math.floor(mixYears.length / 2)] ?? "", lastYear] } },
+  },
+};
+
 export const accessiblePaletteLines = defineDemo({
   id: "blog/accessible-palette-lines",
   title: "US electricity mix with gas and coal highlighted in Okabe-Ito colors",
@@ -61,6 +73,9 @@ export const accessiblePaletteLines = defineDemo({
       title: `Gas rose to ${gasLast}% of US six-source power in ${lastYear} while coal fell to ${coalLast}%`,
       subtitle: `Share of US electricity from the six main sources, %, ${firstYear}-${lastYear}`,
     },
+    // Phones span compact (under 400px) and medium (400 to 700px, where 412
+    // and 430px phones land); desktop figures render at full.
+    overrides: { compact: phoneYearAxis, medium: phoneYearAxis },
   },
 });
 

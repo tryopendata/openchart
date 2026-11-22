@@ -1,8 +1,8 @@
 ---
-/** One blog post, rendered in BlogLayout with its reading time and related docs links. Every post in `allPosts()` gets a page. */
+/** One blog post, rendered in BlogLayout with its reading time, word count and related docs links. Every post in `allPosts()` gets a page. */
 import type { GetStaticPaths } from "astro";
 import BlogLayout from "../../layouts/BlogLayout.astro";
-import { readingTime, relatedLinks } from "../../lib/blog";
+import { readingTime, relatedLinks, wordCount } from "../../lib/blog";
 import { allPages, allPosts, type PostEntry } from "../../lib/collection";
 
 export const getStaticPaths = (async () =>
@@ -22,6 +22,7 @@ const pages = (await allPages()).map(({ page }) => page);
 <BlogLayout
   post={entry.post}
   minutes={readingTime(entry.body)}
+  words={wordCount(entry.body)}
   related={relatedLinks(entry.post.related, pages)}
 >
   <Content />

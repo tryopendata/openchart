@@ -8,6 +8,7 @@
  */
 import type { ThemeConfig, VizSpec } from "@opendata-ai/openchart-core";
 import type { DemoControls, DemoMountOptions, DemoSource } from "../../demos/types";
+import type { BlogFigure } from "./blog-figure";
 import { codeTabsHtml } from "./code-tabs";
 import { demoControlsHtml, embeddedStates } from "./controls";
 import { demoDomId } from "./dom-id";
@@ -24,6 +25,8 @@ export type DemoFigure = {
   source: DemoSource;
   caption?: string;
   height: number;
+  /** Stage height on phones (the `max-sm` breakpoint), in px. Default: `height`. */
+  phoneHeight?: number;
   entrance: boolean;
   tabs: boolean;
   /** Render the static SVGs at build time. When false the stage waits for the live mount. */
@@ -41,6 +44,13 @@ export type DemoFigure = {
   mount?: DemoMountOptions;
   /** Reader controls, drawn as a bar between the stage and the caption (see controls.ts). */
   controls?: DemoControls;
+  /** Set on blog posts only: the credit line, reveal entrances and the wide static width (see blog-figure.ts). */
+  blog?: BlogFigure;
+  /**
+   * A post's hero, above the fold: it paints in place with no entrance and no
+   * reveal roles, and takes its own DOM ids so the body may show the same demo.
+   */
+  hero?: boolean;
 };
 
 /** Static SVGs are laid out at this width; CSS scales them to the stage. */
@@ -102,14 +112,46 @@ export function stageContentHtml(content: StageContent): string {
   return svgs ?? placeholderHtml(content.title);
 }
 
+/** Layout width of the phone static SVGs: a common phone, under 400px so compact overrides apply. */
+const PHONE_STATIC_WIDTH = 390;
+/** The wrapper demo.css shows or hides as one static pair, by `data-static-size`. */
+const STATIC_SET_CLASS = "demo-static-set";
+
+/**
+ * A second static pair laid out at phone size, so a phone without the live
+ * chart (no JavaScript, reduced motion, an evicted chart, print) sees the
+ * phone layout, its breakpoint overrides applied, instead of the desktop one
+ * letterboxed in the taller stage. Null without a phone height or a static renderer.
+ */
+function phoneStaticHtml(figure: DemoFigure, domId: string): string | null {
+  if (figure.phoneHeight === undefined || !figure.static) return null;
+  return staticSvgPair(figure.spec, {
+    width: PHONE_STATIC_WIDTH,
+    height: figure.phoneHeight,
+    idPrefix: `${domId}-p`,
+    theme: figure.pageTheme === false ? NO_PAGE_THEME : undefined,
+  });
+}
+
 function stageHtml(figure: DemoFigure, domId: string): string {
-  const content = stageContentHtml({
+  const wide = stageContentHtml({
     ...figure,
+    // A demo's own width wins; the blog's wide width changes only the statics' layout, never the stage's cap.
+    width: figure.width ?? figure.blog?.staticWidth,
     domId,
     theme: figure.pageTheme === false ? NO_PAGE_THEME : undefined,
   });
+  const phoneStatics = phoneStaticHtml(figure, domId);
+  const content =
+    phoneStatics === null
+      ? wide
+      : `<div class="${STATIC_SET_CLASS}" data-static-size="wide">${wide}</div>` +
+        `<div class="${STATIC_SET_CLASS}" data-static-size="phone">${phoneStatics}</div>`;
   const width = figure.width === undefined ? "" : `; --demo-width: ${figure.width}px`;
-  const style = `--demo-height: ${figure.height}px${width}`;
+  // Written inline with the desktop height, so the phone height is reserved before any script runs.
+  const phone =
+    figure.phoneHeight === undefined ? "" : `; --demo-phone-height: ${figure.phoneHeight}px`;
+  const style = `--demo-height: ${figure.height}px${phone}${width}`;
   // Axis ticks and labels in the SVGs are noise in search results; the caption stays indexed.
   return `<div class="demo-stage" ${DEMO_ATTR.stage} style="${style}" data-pagefind-ignore>${content}</div>`;
 }
@@ -169,35 +211,86 @@ function statesHtml(figure: DemoFigure): string {
   return script + sharedBlocksHtml(states.values);
 }
 
+/**
+ * Demo.astro's error: thrown there when a page cannot render a registered demo.
+ * The message names the page and the demo, and the cause is kept. It lives here
+ * because an Astro component's frontmatter cannot export a class.
+ */
+export class DemoRenderError extends Error {}
+
+/** Thrown when a blog figure's controls or toolbar markup cannot carry its reveal role. */
+export class RevealRoleError extends Error {}
+
+/** The reveal role on a blog figure's caption, controls, credit and toolbar: a short lift, as on the landing figures. */
+const CHROME_MOTION = ` data-motion="quiet"`;
+
+/** Whether the figure enters with the reveal: blog body figures do, the hero and docs figures don't. */
+const reveals = (figure: DemoFigure) => figure.blog !== undefined && !figure.hero;
+
+/** The reveal role attribute on revealed figures, nothing elsewhere. */
+const motionAttr = (figure: DemoFigure) => (reveals(figure) ? CHROME_MOTION : "");
+
 function captionHtml(figure: DemoFigure): string {
   const { label, url } = figure.source;
   const source = url ? `<a href="${escapeHtml(url)}">${escapeHtml(label)}</a>` : escapeHtml(label);
   const lead = escapeHtml(asSentence(figure.caption ?? figure.title));
-  return `<figcaption class="figure-caption">${lead} Source: ${source}.</figcaption>`;
+  return `<figcaption class="figure-caption"${motionAttr(figure)}>${lead} Source: ${source}.</figcaption>`;
+}
+
+const LEADING_TAG = /^<[a-z]+/;
+
+/**
+ * Another module's fragment (the controls bar, the code toolbar) with the reveal
+ * role on its root element, on blog figures only. The stage never goes through here.
+ *
+ * @throws {RevealRoleError} When a non-empty fragment does not open with an
+ * element, so a markup change fails the build instead of silently dropping the role.
+ */
+function revealedFragment(fragment: string, figure: DemoFigure): string {
+  if (!reveals(figure) || fragment === "") return fragment;
+  const tag = LEADING_TAG.exec(fragment)?.[0];
+  if (!tag) {
+    throw new RevealRoleError(
+      `Demo "${figure.id}": a blog figure's controls or toolbar markup must open with an element to carry its reveal role, but starts with "${fragment.slice(0, 40)}".`,
+    );
+  }
+  return tag + CHROME_MOTION + fragment.slice(tag.length);
+}
+
+/** The blog figure's "Made with OpenChart" line, linking to how to build its chart type; nothing elsewhere. */
+function creditHtml(figure: DemoFigure): string {
+  if (!figure.blog) return "";
+  const { href, chartName } = figure.blog.credit;
+  const link = `<a class="figure-credit-link" href="${escapeHtml(href)}">How to build this ${escapeHtml(chartName)}</a>`;
+  return `<p class="figure-credit" data-pagefind-ignore${motionAttr(figure)}>Made with OpenChart. ${link}</p>`;
 }
 
 /**
  * The complete demo for one spec: a `<div class="demo">` holding the published
- * figure (the stage, any reader controls, then its caption) and, after it, the
+ * figure (the stage, any reader controls, its caption, then on a blog post the
+ * credit line) and, after it, the
  * embedded spec, any other states' specs and the code toolbar. The markup runs in reading order, so focus and screen readers
  * meet the chart, its caption, then the code.
  *
  * @throws {TypeError} When the spec's type has no framework wrapper for the code tabs.
  * @throws {FoldMarkerError} When the spec contains the text fold markers use.
+ * @throws {RevealRoleError} On a revealed blog figure, when the controls or toolbar markup cannot take a reveal role.
  */
 export async function demoFigureHtml(figure: DemoFigure): Promise<string> {
-  const domId = demoDomId(figure.id);
-  const entrance = figure.entrance ? ` ${DEMO_ATTR.entrance}` : "";
+  const domId = demoDomId(figure.id, { hero: figure.hero });
+  // The hero is in view at load: an entrance would blank its painted static and redraw from zero.
+  const entrance = figure.entrance && !figure.hero ? ` ${DEMO_ATTR.entrance}` : "";
   const ownTheme = figure.pageTheme === false ? ` ${DEMO_ATTR.ownTheme}` : "";
   // Claimed before the first await, so two figures rendering at once never both write a block.
   const spec = specHtml(embeddedSpec(figure), figure.mount) + statesHtml(figure);
+  const reveal = reveals(figure) ? " data-reveal" : "";
   const code = figure.tabs ? await codeTabsHtml(domId, figure.spec, figure.mount) : "";
-  const controls = demoControlsHtml(figure);
+  const controls = revealedFragment(demoControlsHtml(figure), figure);
   return [
-    `<div class="demo not-prose" ${DEMO_ATTR.figure}="${escapeHtml(figure.id)}"${entrance}${ownTheme}>`,
-    `<figure class="demo-figure">${stageHtml(figure, domId)}${controls}${captionHtml(figure)}</figure>`,
+    `<div class="demo not-prose" ${DEMO_ATTR.figure}="${escapeHtml(figure.id)}"${entrance}${ownTheme}${reveal}>`,
+    `<figure class="demo-figure">${stageHtml(figure, domId)}${controls}${captionHtml(figure)}${creditHtml(figure)}</figure>`,
     spec,
-    code,
+    revealedFragment(code, figure),
     "</div>",
   ].join("");
 }

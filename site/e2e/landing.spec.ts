@@ -61,6 +61,9 @@ for (const scheme of ["light", "dark"] as const) {
   test(`the landing page in ${scheme} passes axe after a full scroll, with no console errors`, async ({
     page,
   }) => {
+    // Scrolling the whole page a step at a time runs 23-26s on a phone viewport
+    // locally and past 30s on CI, so it gets the slow budget.
+    test.slow();
     const errors = collectErrors(page);
     await page.emulateMedia({ colorScheme: scheme });
     await page.goto("/");

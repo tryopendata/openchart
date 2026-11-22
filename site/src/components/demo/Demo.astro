@@ -6,14 +6,19 @@
  * collapsed code under a Show code and Copy toolbar, with any reader controls
  * between the stage and the caption. A demo that is unknown, whose spec or any
  * state's spec fails validation, or that puts controls on a spec other than a
- * chart or layer fails the build, naming the page.
+ * chart or layer fails the build, naming the page. On a blog post the figure
+ * also carries its credit line and reveal entrances (see blog-figure.ts), and a
+ * spec with no chart type to credit fails the build the same way. A post's hero
+ * (`hero`) skips the entrance and the reveal, so the static it paints first stays
+ * put when the live chart takes over, and takes its own DOM ids.
  * Large values the page's figures share are written once per page, recorded
  * against `Astro.locals`, which is fresh for each page render.
  */
 import { getDemo } from "../../demos/registry";
 import { DEFAULT_DEMO_HEIGHT, type DemoDef } from "../../demos/types";
+import { type BlogFigure, blogFigure, isBlogPostPath } from "../../lib/demo/blog-figure";
 import { validateDemoControls } from "../../lib/demo/controls";
-import { demoFigureHtml } from "../../lib/demo/figure";
+import { DemoRenderError, demoFigureHtml } from "../../lib/demo/figure";
 import { pageSharedHashes } from "../../lib/demo/shared-values";
 import { validateDemo } from "../../lib/demo/validate";
 
@@ -21,38 +26,45 @@ interface Props {
   id: string;
   /** Show the code toolbar and its Spec, React, Vue, Svelte and Vanilla tabs. Default true; false is a chart-only figure. */
   tabs?: boolean;
+  /** Render as a blog post's hero: no entrance, no reveal, and DOM ids apart from the body's copy. Default false. */
+  hero?: boolean;
 }
 
-const { id, tabs = true } = Astro.props;
+const { id, tabs = true, hero = false } = Astro.props;
 
-let demo: DemoDef;
+let figure: string;
 try {
-  demo = getDemo(id);
+  const demo: DemoDef = getDemo(id);
   validateDemo(id, demo.spec);
   validateDemoControls(demo);
+  const blog: BlogFigure | undefined = isBlogPostPath(Astro.url.pathname)
+    ? blogFigure(demo.id, demo.spec)
+    : undefined;
+  figure = await demoFigureHtml({
+    id: demo.id,
+    spec: demo.spec,
+    title: demo.title,
+    source: demo.source,
+    caption: demo.caption,
+    height: demo.height ?? DEFAULT_DEMO_HEIGHT,
+    phoneHeight: demo.phoneHeight,
+    entrance: demo.entrance ?? true,
+    tabs,
+    static: demo.static ?? true,
+    pageShared: pageSharedHashes(Astro.locals),
+    pageTheme: demo.pageTheme ?? true,
+    width: demo.width,
+    mount: demo.mount,
+    controls: demo.controls,
+    blog,
+    hero,
+  });
 } catch (error) {
   const reason = error instanceof Error ? error.message : String(error);
-  throw new Error(`${Astro.url.pathname} renders <Demo id="${id}" />: ${reason}`, {
+  throw new DemoRenderError(`${Astro.url.pathname} renders <Demo id="${id}" />: ${reason}`, {
     cause: error,
   });
 }
-
-const figure = await demoFigureHtml({
-  id: demo.id,
-  spec: demo.spec,
-  title: demo.title,
-  source: demo.source,
-  caption: demo.caption,
-  height: demo.height ?? DEFAULT_DEMO_HEIGHT,
-  entrance: demo.entrance ?? true,
-  tabs,
-  static: demo.static ?? true,
-  pageShared: pageSharedHashes(Astro.locals),
-  pageTheme: demo.pageTheme ?? true,
-  width: demo.width,
-  mount: demo.mount,
-  controls: demo.controls,
-});
 ---
 
 <Fragment set:html={figure} />

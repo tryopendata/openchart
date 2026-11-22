@@ -3,14 +3,16 @@
  * and a hast plugin that turns the highlighted block into the demo figure. The
  * fence carries its own spec, so repo Markdown can show a live chart without a
  * registered demo. Shiki highlights before hast plugins run and drops the info
- * string, which is why the transformer copies it onto the `<pre>` first.
+ * string, which is why the transformer copies it onto the `<pre>` first. A
+ * fence in a blog post file gets the blog figure options (see blog-figure.ts).
  */
 import type { SatteriProcessorOptions } from "@astrojs/markdown-satteri";
 import type { VizSpec } from "@opendata-ai/openchart-core";
 import type { ShikiConfig } from "astro";
 import { DEFAULT_DEMO_HEIGHT } from "../../demos/types";
+import { type BlogFigure, blogFigure, isBlogPostFile } from "./blog-figure";
 import { fenceDemoId } from "./dom-id";
-import { demoFigureHtml } from "./figure";
+import { type DemoFigure, demoFigureHtml } from "./figure";
 import { validateDemo } from "./validate";
 
 type HastPlugin = Extract<
@@ -27,10 +29,11 @@ const META = "data-demo";
 const TITLE = "data-demo-title";
 const SOURCE = "data-demo-source";
 const HEIGHT = "data-demo-height";
+const PHONE_HEIGHT = "data-demo-phone-height";
 
 const DEFAULT_SOURCE = "Illustrative data";
 
-/** Copies `demo`, `title`, `source` and `height` from a fence's info string onto its `<pre>`. */
+/** Copies `demo`, `title`, `source`, `height` and `phone-height` from a fence's info string onto its `<pre>`. */
 export const demoFenceMeta: ShikiTransformer = {
   name: "demo-fence-meta",
   pre(node) {
@@ -42,9 +45,11 @@ export const demoFenceMeta: ShikiTransformer = {
     const title = /(?:^|\s)title="([^"]*)"/.exec(raw)?.[1];
     const source = /(?:^|\s)source="([^"]*)"/.exec(raw)?.[1];
     const height = /(?:^|\s)height=(\d+)(?:\s|$)/.exec(bare)?.[1];
+    const phoneHeight = /(?:^|\s)phone-height=(\d+)(?:\s|$)/.exec(bare)?.[1];
     if (title !== undefined) node.properties[TITLE] = title;
     if (source !== undefined) node.properties[SOURCE] = source;
     if (height !== undefined) node.properties[HEIGHT] = height;
+    if (phoneHeight !== undefined) node.properties[PHONE_HEIGHT] = phoneHeight;
   },
 };
 
@@ -82,6 +87,42 @@ function parseFenceSpec(body: string, id: string, location: string): VizSpec {
     throw new DemoFenceError(`Demo fence ${location}: ${reason}`, { cause: error });
   }
   return spec as VizSpec;
+}
+
+/**
+ * The blog-only figure options when the fence sits in a blog post, else nothing.
+ *
+ * @throws {DemoFenceError} When the post's spec has no chart type to credit; the
+ * UnknownFigureCreditError is kept as the cause.
+ */
+function fenceBlogFigure(
+  id: string,
+  spec: VizSpec,
+  fileURL: URL | undefined,
+  location: string,
+): BlogFigure | undefined {
+  if (!isBlogPostFile(fileURL)) return undefined;
+  try {
+    return blogFigure(id, spec);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new DemoFenceError(`Demo fence ${location}: ${reason}`, { cause: error });
+  }
+}
+
+/**
+ * The fence's figure HTML.
+ *
+ * @throws {DemoFenceError} When the figure cannot render; the message names the
+ * fence and the cause is kept.
+ */
+async function fenceFigureHtml(figure: DemoFigure, location: string): Promise<string> {
+  try {
+    return await demoFigureHtml(figure);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new DemoFenceError(`Demo fence ${location}: ${reason}`, { cause: error });
+  }
 }
 
 /** Where this document's fence ids are kept: the compile's own data bag, so no state outlives one render. */
@@ -136,16 +177,22 @@ export function demoFence(): HastPlugin {
         claimFenceId(ctx.data, id, location);
         const spec = parseFenceSpec(body, id, location);
         const height = stringProperty(properties, HEIGHT);
-        const html = await demoFigureHtml({
-          id,
-          spec,
-          title: stringProperty(properties, TITLE) ?? "Live example",
-          source: { label: stringProperty(properties, SOURCE) ?? DEFAULT_SOURCE },
-          height: height ? Number(height) : DEFAULT_DEMO_HEIGHT,
-          entrance: true,
-          tabs: true,
-          static: true,
-        });
+        const phoneHeight = stringProperty(properties, PHONE_HEIGHT);
+        const html = await fenceFigureHtml(
+          {
+            id,
+            spec,
+            title: stringProperty(properties, TITLE) ?? "Live example",
+            source: { label: stringProperty(properties, SOURCE) ?? DEFAULT_SOURCE },
+            height: height ? Number(height) : DEFAULT_DEMO_HEIGHT,
+            phoneHeight: phoneHeight ? Number(phoneHeight) : undefined,
+            entrance: true,
+            tabs: true,
+            static: true,
+            blog: fenceBlogFigure(id, spec, ctx.fileURL, location),
+          },
+          location,
+        );
         return figureNode(html, ctx.sourceFormat);
       },
     },

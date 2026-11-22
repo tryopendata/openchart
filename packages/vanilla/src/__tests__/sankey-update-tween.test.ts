@@ -166,6 +166,48 @@ describe('sankey update tween', () => {
     expect(markup(container)).toBe(markup(fresh));
   });
 
+  it('crossfades a label that changes side instead of sliding it across its node', () => {
+    const { container, chart } = mount(spec(BEFORE));
+    // First-column labels sit left of their node; 'right' moves them right.
+    expect(label(container, 'A').getAttribute('text-anchor')).toBe('end');
+    chart.update({ ...spec(BEFORE), nodeLabelAlign: 'right' });
+    const fresh = mount({ ...spec(BEFORE), nodeLabelAlign: 'right' }).container;
+
+    const moved = label(container, 'A');
+    expect(moved.getAttribute('text-anchor')).toBe('start');
+    expect(moved.hasAttribute('transform')).toBe(false);
+    expect(moved.getAttribute('opacity')).toBe('0');
+    const ghost = container.querySelector('.oc-sankey-labels .oc-ghost[data-node-id="A"]');
+    expect(ghost?.getAttribute('text-anchor')).toBe('end');
+    // Interior labels keep their side, so they slide as before.
+    expect(container.querySelector('.oc-sankey-labels .oc-ghost[data-node-id="X"]')).toBeNull();
+
+    clock.pump(0);
+    clock.pump(5000);
+    expect(ghosts(container)).toHaveLength(0);
+    expect(markup(container)).toBe(markup(fresh));
+  });
+
+  it('crossfades labels that move onto the flow when an update narrows the room', () => {
+    const container = createContainer(360, 400);
+    const chart = createSankey(container, spec(BEFORE), { autoResize: false });
+    instances.push(chart);
+    expect(label(container, 'A').hasAttribute('paint-order')).toBe(false);
+
+    // Long first- and last-column names need gutters that would squeeze the flow.
+    chart.update(
+      spec([
+        ...BEFORE,
+        { from: 'Imported fuels and feedstocks', to: 'Residential and commercial', amount: 5 },
+      ]),
+    );
+
+    const moved = label(container, 'A');
+    expect(moved.hasAttribute('paint-order')).toBe(true);
+    expect(moved.getAttribute('opacity')).toBe('0');
+    expect(container.querySelector('.oc-ghost[data-node-id="A"]')).not.toBeNull();
+  });
+
   it('snaps when update motion is off', () => {
     const off: AnimationSpec = { enter: false, update: false };
     const { container, chart } = mount(spec(BEFORE, off));

@@ -47,6 +47,23 @@ The value channel's `format` takes a d3-format string and applies to every label
 
 <Demo id="flow/sankey-budget" />
 
+## On a phone
+
+When the labels outside the first and last columns would leave the ribbons less than half the width, which happens on most phones, the labels move onto the flow. Labels in the first and middle columns sit just right of their node, labels in the last column just left of it, and each wraps within the gap to the next column with its value on its own line below.
+
+A halo in the background color keeps each label readable over any ribbon, and labels on small neighboring nodes are nudged apart. Setting `nodeLabelAlign` to `"left"` or `"right"` keeps labels where you put them at every width.
+
+A phone also has less room for a long tail of small nodes. `overrides` changes fields at one breakpoint, `compact` under 400px or `medium` from 400 to 700px: `chrome` merges with the top-level chrome, and `other`, `nodeSort`, `nodeLabelAlign` and `nodePadding` replace their top-level values. This folds every node under 2% of its column into "Other" on phones only:
+
+```json
+{
+  "overrides": {
+    "compact": { "other": 0.02 },
+    "medium": { "other": 0.02 }
+  }
+}
+```
+
 ## Fields that matter
 
 | Field | What it does |
@@ -58,6 +75,7 @@ The value channel's `format` takes a d3-format string and applies to every label
 | `nodeAlign` | `"justify"` (the default) moves nodes with no outgoing links to the last column; `"left"` keeps each at its depth. `"right"` and `"center"` are also available. |
 | `linkStyle` | `"gradient"`, `"source"`, `"target"` or `"neutral"` ribbon color. Default `"gradient"`. |
 | `other` | A share of the column total below which nodes merge into "Other". Off unless set. |
+| `overrides` | Fields that change at the `compact` or `medium` breakpoint. |
 | `chrome` | The title and subtitle above the diagram. |
 
 ## Related

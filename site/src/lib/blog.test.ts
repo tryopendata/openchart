@@ -1,6 +1,15 @@
 /** The blog's derived values: reading time, JSON-LD, the RSS feed, tags and related docs links. */
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { articleJsonLd, postsByTag, readingTime, relatedLinks, rssXml, tagsInUse } from "./blog";
+import {
+  articleJsonLd,
+  breadcrumbJsonLd,
+  postsByTag,
+  readingTime,
+  relatedLinks,
+  rssXml,
+  tagsInUse,
+  wordCount,
+} from "./blog";
 import type { BlogPost } from "./blog-types";
 
 const words = (count: number) => Array.from({ length: count }, (_, i) => `word${i}`).join(" ");
@@ -60,9 +69,16 @@ describe("readingTime", () => {
   });
 });
 
+describe("wordCount", () => {
+  it("counts prose words only, the same text readingTime reads", () => {
+    const body = ["```json demo", words(50), "```", "## Two words", words(12)].join("\n");
+    expect(wordCount(body)).toBe(14);
+  });
+});
+
 describe("articleJsonLd", () => {
   it("describes the post as a BlogPosting by its canonical URL and social card", () => {
-    const ld = JSON.parse(articleJsonLd(post({ updated: new Date("2026-12-01") }), links));
+    const ld = JSON.parse(articleJsonLd(post({ updated: new Date("2026-12-01") }), links, 1240));
     expect(ld).toEqual({
       "@context": "https://schema.org",
       "@type": "BlogPosting",
@@ -72,22 +88,50 @@ describe("articleJsonLd", () => {
       dateModified: "2026-12-01",
       author: { "@type": "Organization", name: "OpenChart", url: "https://openchart.example" },
       publisher: { "@type": "Organization", name: "OpenChart", url: "https://openchart.example" },
-      image: links.image,
+      image: { "@type": "ImageObject", url: links.image, width: 1200, height: 630 },
       mainEntityOfPage: { "@type": "WebPage", "@id": links.canonical },
       keywords: ["Chart choice", "Climate"],
+      articleSection: "Chart choice",
+      wordCount: 1240,
+      inLanguage: "en",
     });
   });
 
   it("dates a post never updated as modified when published, and makes a named author a Person", () => {
-    const ld = JSON.parse(articleJsonLd(post({ author: "Ada Byline" }), links));
+    const ld = JSON.parse(articleJsonLd(post({ author: "Ada Byline" }), links, 10));
     expect(ld.dateModified).toBe(ld.datePublished);
     expect(ld.author).toEqual({ "@type": "Person", name: "Ada Byline" });
   });
 
   it("escapes </script> so a title can't close the script tag it sits in", () => {
-    const json = articleJsonLd(post({ title: "Charts </script><script>alert(1)" }), links);
+    const json = articleJsonLd(post({ title: "Charts </script><script>alert(1)" }), links, 10);
     expect(json).not.toContain("</script>");
     expect(JSON.parse(json).headline).toBe("Charts </script><script>alert(1)");
+  });
+});
+
+describe("breadcrumbJsonLd", () => {
+  const crumbLinks = { blog: "https://openchart.example/blog/", canonical: links.canonical };
+
+  it("runs from the blog index to the post", () => {
+    expect(JSON.parse(breadcrumbJsonLd(post(), crumbLinks))).toEqual({
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Blog", item: crumbLinks.blog },
+        {
+          "@type": "ListItem",
+          position: 2,
+          name: "How to chart a temperature anomaly",
+          item: links.canonical,
+        },
+      ],
+    });
+  });
+
+  it("escapes </script> in the post's title", () => {
+    const json = breadcrumbJsonLd(post({ title: "a </script> b" }), crumbLinks);
+    expect(json).not.toContain("</script>");
   });
 });
 

@@ -23,6 +23,12 @@
     height: var(--demo-height, 400px);
     /* A demo with `width` shows a compact or medium layout: the stage stops at that width. */
     max-inline-size: var(--demo-width, none);
+
+    /* A demo with `phoneHeight` takes it below 640px, where blog figures go edge to edge;
+       the inline property reserves it before any script runs. */
+    @variant max-sm {
+      height: var(--demo-phone-height, var(--demo-height, 400px));
+    }
   }
 
   /* Caption, toolbar and code share the chart's own 1rem inset, so their text lines up with its title. */
@@ -34,8 +40,36 @@
     @apply text-ink-2 underline decoration-line underline-offset-2 hover:decoration-current;
   }
 
+  /* A blog figure's credit sits under its caption on the same inset and in the same muted type. */
+  .demo .figure-credit {
+    @apply px-4 pt-1 pb-1 text-sm leading-snug text-muted;
+  }
+
+  .demo .figure-credit-link {
+    @apply text-ink-2 underline decoration-line underline-offset-2 hover:decoration-current;
+  }
+
   .demo-toolbar {
     @apply mt-3 border-t border-line;
+  }
+
+  /* A demo with a phone height carries two static pairs: the wide layout, and one laid
+     out at phone size for the taller phone stage. Each set shows only at its own size;
+     hiding the wrapper hides both themes inside it whatever their own rules say. */
+  .demo-static-set[data-static-size="wide"] {
+    display: contents;
+
+    @variant max-sm {
+      display: none;
+    }
+  }
+
+  .demo-static-set[data-static-size="phone"] {
+    display: none;
+
+    @variant max-sm {
+      display: contents;
+    }
   }
 
   /* The renderer writes an inline pixel height; the stage decides the size instead. */

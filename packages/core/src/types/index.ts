@@ -258,6 +258,7 @@ export type {
   SankeyLinkColor,
   SankeyNodeAlign,
   SankeySpec,
+  SankeySpecOverride,
   SankeySpecWithoutData,
   ScaleConfig,
   ScaleType,

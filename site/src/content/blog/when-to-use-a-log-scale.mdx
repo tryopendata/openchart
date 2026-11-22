@@ -96,6 +96,76 @@ Plotting the same 12 economies on a log horizontal axis spreads out the lower-in
       "connector": "curve"
     }
   ],
+  "overrides": {
+    "compact": {
+      "annotations": [
+        {
+          "type": "text",
+          "x": 9818,
+          "y": 68.3,
+          "text": "**India**\n$9,818, 68.3 years",
+          "anchor": "top",
+          "offset": { "dx": 50, "dy": -36 },
+          "connector": "curve",
+          "responsive": false
+        },
+        {
+          "type": "text",
+          "x": 46107,
+          "y": 83.6,
+          "text": "**Japan**\n$46,107, 83.6 years",
+          "anchor": "left",
+          "offset": { "dx": -28, "dy": -8 },
+          "connector": "curve",
+          "responsive": false
+        },
+        {
+          "type": "text",
+          "x": 75489,
+          "y": 79.2,
+          "text": "**United States**\n$75,489, 79.2 years",
+          "anchor": "bottom",
+          "offset": { "dx": -36, "dy": 42 },
+          "connector": "curve",
+          "responsive": false
+        }
+      ]
+    },
+    "medium": {
+      "annotations": [
+        {
+          "type": "text",
+          "x": 9818,
+          "y": 68.3,
+          "text": "**India**\n$9,818, 68.3 years",
+          "anchor": "top",
+          "offset": { "dx": 50, "dy": -36 },
+          "connector": "curve",
+          "responsive": false
+        },
+        {
+          "type": "text",
+          "x": 46107,
+          "y": 83.6,
+          "text": "**Japan**\n$46,107, 83.6 years",
+          "anchor": "left",
+          "offset": { "dx": -28, "dy": -8 },
+          "connector": "curve",
+          "responsive": false
+        },
+        {
+          "type": "text",
+          "x": 75489,
+          "y": 79.2,
+          "text": "**United States**\n$75,489, 79.2 years",
+          "anchor": "bottom",
+          "offset": { "dx": -36, "dy": 42 },
+          "connector": "curve",
+          "responsive": false
+        }
+      ]
+    }
+  },
   "chrome": {
     "title": "Life expectancy rises 7 years from India to Brazil, then flattens past Japan",
     "subtitle": "GDP per capita (PPP, log scale) vs. life expectancy at birth in 12 large economies. Each tick doubles the last."
@@ -121,6 +191,6 @@ Every log axis needs an explicit label in the axis title and tick values that st
 
 Code under the second chart opens its spec. In the `x` channel, `scale: { type: "log", domain: [8000, 90000], nice: false }` turns on logarithmic spacing while keeping the left edge tight around India instead of rounding down to a power of ten. Inside `axis`, `values` pins ticks to exact doublings and `format: "$~s"` prints compact currency labels from `$10k` to `$80k`.
 
-The `y` channel sets `zero: false` and `domain: [66, 86]` so both scatter plots share the same vertical range. Each entry in `annotations` places a `text` callout in raw data coordinates directly on the log axis, with `connector: "curve"` linking the label back to its country's dot.
+The `y` channel sets `zero: false` and `domain: [66, 86]` so both scatter plots share the same vertical range. Each entry in `annotations` places a `text` callout in raw data coordinates directly on the log axis, with `connector: "curve"` linking the label back to its country's dot. On narrow screens, `overrides` repositions the callouts and sets `responsive: false` so all three stay on the chart instead of folding into numbered footnotes.
 
 For every scale type and domain option OpenChart supports, including `sqrt` and `symlog`, read the [field types and scales guide](/docs/the-spec/scales/).

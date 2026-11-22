@@ -28,7 +28,8 @@ Sankey diagrams show flows between stages. Each data row represents a link from 
 | `iterations`    | `number`          | `6`         | Number of layout relaxation iterations.                                             |
 | `linkStyle`     | `SankeyLinkColor` | `'gradient'`| Link coloring: `'gradient'`, `'source'`, `'target'`, `'neutral'`.                  |
 | `linkOpacity`   | `number`          | `0.5`       | Link fill opacity (0-1). Defaults to 0.75 in dark mode.                            |
-| `nodeLabelAlign`| `string`          | `'auto'`    | Label placement: `'auto'`, `'left'`, `'right'`.                                    |
+| `nodeLabelAlign`| `string`          | `'auto'`    | Label placement: `'auto'`, `'left'`, `'right'`. Under `'auto'`, labels move onto the flow when outside gutters would leave the bands under half the width. |
+| `overrides`     | `{ compact?, medium? }` | `undefined` | Per-breakpoint settings (`compact` under 400px, `medium` 400 to 700px): `chrome` (merged), `other`, `nodeSort`, `nodeLabelAlign`, `nodePadding`. |
 | `chrome`        | `Chrome`          | `undefined` | Editorial text (title, subtitle, source, byline, footer).                           |
 | `legend`        | `LegendConfig`    | `undefined` | Legend display configuration.                                                       |
 | `theme`         | `ThemeConfig`     | `undefined` | Theme overrides.                                                                    |

@@ -47,6 +47,16 @@ Moving the axis back to zero puts every pair of bars back in true proportion. Th
   "chrome": {
     "title": "At a zero baseline, Indonesia's bar is 2.1x Ethiopia's (285M vs 135M)",
     "subtitle": "Population of the eight countries under 1 billion, 2025 estimates"
+  },
+  "overrides": {
+    "compact": {
+      "encoding": { "x": { "axis": { "values": [0, 100000000, 200000000, 300000000] } } },
+      "chrome": { "title": "At a zero baseline, Indonesia's bar is 2.1x Ethiopia's" }
+    },
+    "medium": {
+      "encoding": { "x": { "axis": { "values": [0, 100000000, 200000000, 300000000] } } },
+      "chrome": { "title": "At a zero baseline, Indonesia's bar is 2.1x Ethiopia's" }
+    }
   }
 }
 ```
@@ -71,6 +81,6 @@ Area charts follow the bar rule, even though their top edge traces a line. Shade
 
 OpenChart sets `scale.zero` based on the mark. Bar and area marks include zero on quantitative axes by default, while line, point, and range marks default to `zero: false` to fit the observed spread. Setting `scale: { zero: false }` on a line makes that behavior explicit in the spec, and `scale: { zero: true }` brings a line back to zero whenever the origin is a useful benchmark.
 
-Setting `scale.domain` overrides `scale.zero` and pins both ends of the axis to fixed `[min, max]` bounds. In the code panel under the second chart, `domain: [0, 360000000]` locks the zero-baseline bars to the same upper bound as the cropped chart above it, so the only difference between the two views is where the axis starts.
+Setting `scale.domain` overrides `scale.zero` and pins both ends of the axis to fixed `[min, max]` bounds. In the code panel under the second chart, `domain: [0, 360000000]` locks the zero-baseline bars to the same upper bound as the cropped chart above it, so the only difference between the two views is where the axis starts. On narrow screens, `overrides` swaps in a shorter title and keeps a tick every 100 million.
 
 For every quantitative scale option, including log scales and custom tick bounds, see the [field types and scales guide](/docs/the-spec/scales/).

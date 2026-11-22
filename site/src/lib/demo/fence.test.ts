@@ -7,6 +7,7 @@ import { createSatteriMarkdownProcessor, satteriHeadingIdsPlugin } from "@astroj
 import { Window } from "happy-dom";
 import { describe, expect, it } from "vitest";
 import { docsHastPlugins, docsShikiTransformers } from "../markdown";
+import { DemoFenceError } from "./fence";
 
 async function render(markdown: string) {
   const processor = await createSatteriMarkdownProcessor({
@@ -88,6 +89,27 @@ describe("the json demo fence", () => {
     expect(doc.querySelector("figure.code-frame figcaption")?.textContent).toBe(
       "A demo config height=9",
     );
+  });
+
+  it("reserves a phone height on the stage from phone-height=", async () => {
+    const stageStyle = async (info: string) => {
+      const { doc } = await render(fence(info, JSON.stringify(BAR_SPEC)));
+      return doc.querySelector("[data-demo-stage]")?.getAttribute("style");
+    };
+    expect(await stageStyle("json demo height=320 phone-height=520")).toBe(
+      "--demo-height: 320px; --demo-phone-height: 520px",
+    );
+    // phone-height= alone leaves the desktop height at its default.
+    expect(await stageStyle("json demo phone-height=520")).toBe(
+      "--demo-height: 400px; --demo-phone-height: 520px",
+    );
+  });
+
+  it("throws naming the fence when its figure cannot render", async () => {
+    const spec = { ...BAR_SPEC, chrome: { title: "\u0000demo-fold:0" } };
+    const failure = render(fence("json demo height=320", JSON.stringify(spec)));
+    await expect(failure).rejects.toThrow(DemoFenceError);
+    await expect(failure).rejects.toThrow(/^Demo fence ```json demo height=320: /);
   });
 
   it("throws naming the fence when an identical fence repeats on the same page", async () => {

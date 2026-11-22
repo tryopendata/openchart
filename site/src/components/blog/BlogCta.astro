@@ -1,0 +1,30 @@
+---
+/**
+ * The end-of-post call to action: after a post's own closing paragraph and
+ * before its endnotes, one heading, two sentences, the install command and links
+ * to the getting-started guide and the examples gallery. Every post renders it
+ * through BlogLayout. The rule wipes in and the text lifts, the same motion as a
+ * published figure; without JavaScript everything shows as finished.
+ */
+import { site } from "../../config";
+import InstallCommand from "../shared/InstallCommand.astro";
+import "../../styles/blog-cta.css";
+---
+
+<aside data-blog-cta data-reveal class="blog-cta" aria-labelledby="blog-cta-title">
+  <div class="rule-axis" data-motion="wipe" aria-hidden="true"></div>
+  <h2 id="blog-cta-title" class="blog-cta-title" data-motion="lift-sm">
+    Make these charts yourself
+  </h2>
+  <p class="blog-cta-text" data-motion="lift-sm">
+    Every chart in this post is a JSON spec you can copy. Install the React package below; the guide
+    covers Vue, Svelte and plain JavaScript too.
+  </p>
+  <div data-motion="lift-sm">
+    <InstallCommand id="blog-cta-install" commands={site.install} />
+  </div>
+  <p class="blog-cta-links" data-motion="quiet">
+    <a href="/docs/get-started/introduction/">Read the getting-started guide</a>
+    <a href="/examples/">Browse the gallery</a>
+  </p>
+</aside>

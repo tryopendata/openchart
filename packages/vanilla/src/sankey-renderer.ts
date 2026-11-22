@@ -21,8 +21,8 @@ import { clampStaggerDelay } from '@opendata-ai/openchart-engine';
 import { stampAnimationVars } from './animation-vars';
 import { renderAttributionBrand } from './renderers/brand';
 import { renderChromeElement } from './renderers/chrome';
-import { applyTextStyle } from './renderers/svg-dom';
-import { stampThemeProperties } from './theme-tokens';
+import { applyKnockoutHalo, applyTextStyle } from './renderers/svg-dom';
+import { resolvedSurface, stampThemeProperties } from './theme-tokens';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -377,9 +377,95 @@ function renderNodes(
 // Labels rendering
 // ---------------------------------------------------------------------------
 
+/** The gap between a node's name and its value on the same line, in px. */
+const VALUE_DX = 5;
+
+/** Create a tspan that starts a new line at `x`, `y`. */
+function lineSpan(text: string, x: number, y: number): SVGElement {
+  const tspan = createSVGElement('tspan');
+  tspan.setAttribute('x', String(x));
+  tspan.setAttribute('y', String(y));
+  tspan.textContent = text;
+  return tspan;
+}
+
+/** The node's value as a quieter tabular tspan. */
+function valueSpan(valueLabel: NonNullable<SankeyNodeMark['valueLabel']>): SVGElement {
+  const span = createSVGElement('tspan');
+  span.setAttribute('class', 'oc-sankey-label-value');
+  applyTextStyle(span, valueLabel.style);
+  span.textContent = valueLabel.text;
+  return span;
+}
+
+/**
+ * A label the engine placed on the flow: its wrapped name lines, then the
+ * value on its own line, the whole block centred on the label's y.
+ */
+function fillStackedLabel(text: SVGElement, node: SankeyNodeMark, lines: string[]): void {
+  const { label, valueLabel } = node;
+  const lineHeight = label.style.fontSize * label.style.lineHeight;
+  const lineCount = lines.length + (valueLabel ? 1 : 0);
+  const startY = label.y - ((lineCount - 1) * lineHeight) / 2;
+  lines.forEach((line, i) => {
+    text.appendChild(lineSpan(line, label.x, startY + i * lineHeight));
+  });
+  if (valueLabel) {
+    const span = valueSpan(valueLabel);
+    span.setAttribute('x', String(label.x));
+    span.setAttribute('y', String(startY + lines.length * lineHeight));
+    text.appendChild(span);
+  }
+}
+
+/**
+ * A label outside the flow (or between columns at wider sizes): the name,
+ * wrapped to its room and centred on the label's y, with the value riding the
+ * last line. The value carries no x/y, so it stays in the same text chunk and
+ * the anchor applies to name and value as one block.
+ */
+function fillInlineLabel(
+  text: SVGElement,
+  node: SankeyNodeMark,
+  measureText?: MeasureTextFn,
+): void {
+  const { label, valueLabel } = node;
+  const { fontSize, fontWeight } = label.style;
+  let lines = [label.text];
+  if (label.maxWidth !== undefined && label.maxWidth > 0) {
+    lines = wrapText(label.text, fontSize, fontWeight, label.maxWidth, measureText);
+  }
+
+  if (lines.length > 1) {
+    const lineHeight = fontSize * label.style.lineHeight;
+    const startY = label.y - ((lines.length - 1) * lineHeight) / 2;
+    lines.forEach((line, i) => {
+      text.appendChild(lineSpan(line, label.x, startY + i * lineHeight));
+    });
+  } else if (valueLabel) {
+    // The name needs its own tspan, or the value tspan would render before it.
+    const nameSpan = createSVGElement('tspan');
+    nameSpan.textContent = lines[0];
+    text.appendChild(nameSpan);
+  } else {
+    text.textContent = lines[0];
+  }
+
+  if (valueLabel) {
+    const span = valueSpan(valueLabel);
+    span.setAttribute('dx', String(VALUE_DX));
+    text.appendChild(span);
+  }
+}
+
+/**
+ * Draw every visible node label. Whether a node's value is drawn is the
+ * engine's call: the renderer draws the value whenever the layout carries one.
+ */
 function renderLabels(
   parent: SVGElement,
   nodes: SankeyNodeMark[],
+  surface: string,
   measureText?: MeasureTextFn,
 ): void {
   const g = createSVGElement('g');
@@ -395,51 +481,12 @@ function renderLabels(
     // Path highlighting dims labels alongside their node.
     text.setAttribute('class', 'oc-sankey-label');
     text.setAttribute('data-node-id', node.nodeId);
+    // Sankey labels carry a halo only where the engine asks for one, on labels
+    // placed over the flow. Outside labels sit on the bare background.
+    if (label.halo === true) applyKnockoutHalo(text, surface, label.style.fontSize);
 
-    const fontSize = label.style.fontSize ?? 12;
-    const fontWeight = label.style.fontWeight ?? 400;
-
-    // Wrap label text when maxWidth is set and text would overflow
-    let lines = [label.text];
-    if (label.maxWidth !== undefined && label.maxWidth > 0) {
-      lines = wrapText(label.text, fontSize, fontWeight, label.maxWidth, measureText);
-    }
-
-    if (lines.length > 1) {
-      const lineHeight = fontSize * (label.style.lineHeight ?? 1.3);
-      // Center the multi-line block vertically around the label y position
-      const totalHeight = (lines.length - 1) * lineHeight;
-      const startY = label.y - totalHeight / 2;
-      for (let i = 0; i < lines.length; i++) {
-        const tspan = createSVGElement('tspan');
-        tspan.setAttribute('x', String(label.x));
-        tspan.setAttribute('y', String(startY + i * lineHeight));
-        tspan.textContent = lines[i];
-        text.appendChild(tspan);
-      }
-    } else {
-      text.textContent = lines[0];
-    }
-
-    // The node's value rides the last line as a lighter tabular tspan. It
-    // carries no x/y, so it stays in the same text chunk and the anchor
-    // (start or end) still applies to name + value as one block.
-    if (node.valueLabel) {
-      // A bare textContent has to become a tspan first, or the value tspan
-      // would render before it.
-      if (text.childNodes.length === 0) {
-        const nameSpan = createSVGElement('tspan');
-        nameSpan.textContent = text.textContent;
-        text.textContent = '';
-        text.appendChild(nameSpan);
-      }
-      const valueSpan = createSVGElement('tspan');
-      valueSpan.setAttribute('class', 'oc-sankey-label-value');
-      valueSpan.setAttribute('dx', '5');
-      applyTextStyle(valueSpan, node.valueLabel.style);
-      valueSpan.textContent = node.valueLabel.text;
-      text.appendChild(valueSpan);
-    }
+    if (label.lines) fillStackedLabel(text, node, label.lines);
+    else fillInlineLabel(text, node, measureText);
 
     g.appendChild(text);
   }
@@ -525,7 +572,7 @@ export function renderSankeySVG(
   renderNodes(svg, layout.nodes, animation);
 
   // Labels
-  renderLabels(svg, layout.nodes, layout.measureText);
+  renderLabels(svg, layout.nodes, resolvedSurface(layout.theme), layout.measureText);
 
   // Legend
   renderLegend(svg, layout.legend);

@@ -955,6 +955,8 @@ type SourcePost = {
   author: string;
   tags: string[];
   related: string[];
+  /** The demo id the post leads with, if any. */
+  lead?: string;
   draft: boolean;
 };
 
@@ -974,6 +976,7 @@ function sourcePosts(): SourcePost[] {
         author: String(data.author ?? ""),
         tags: (data.tags ?? []) as string[],
         related: (data.related ?? []) as string[],
+        ...(data.lead ? { lead: String(data.lead) } : {}),
         draft: data.draft === true,
       };
     });
@@ -1389,7 +1392,7 @@ describe("the blog's content (lane d)", () => {
     expect(isoDay(new Date(ld.datePublished))).toBe(isoDay(post.published));
     expect(isoDay(new Date(ld.dateModified))).toBe(isoDay(post.updated ?? post.published));
     expect(ld.author?.name).toBe(post.author);
-    expect(ld.image).toBe(absolute(`/og/blog/${post.slug}.png`));
+    expect(ld.image.url).toBe(absolute(`/og/blog/${post.slug}.png`));
     expect(mainEntity).toBe(canonical);
   });
 
@@ -1445,6 +1448,148 @@ describe("the blog's content (lane d)", () => {
       .filter((href) => /^\/blog\/(?!tags\/)[a-z0-9-]+\/$/.test(href));
     const tagged = posts.filter((post) => post.tags.includes(tag));
     expect([...new Set(listed)].sort()).toEqual(tagged.map((post) => `/blog/${post.slug}/`).sort());
+  });
+});
+
+describe("the blog as an OpenChart showcase", () => {
+  const builtPage = (href: string) => existsSync(join("dist", href, "index.html"));
+
+  it.each(posts)("$slug credits every figure with one link to an existing docs page", (post) => {
+    const figures = [
+      ...page("dist", postPath(post.slug)).querySelectorAll("article .docs-prose .demo[data-demo]"),
+    ];
+    expect(figures.length).toBeGreaterThan(0);
+    for (const figure of figures) {
+      const id = figure.getAttribute("data-demo");
+      const links = [...figure.querySelectorAll("a.figure-credit-link")];
+      expect(links, `${id} credit links`).toHaveLength(1);
+      const href = links[0]?.getAttribute("href") ?? "";
+      expect(href, `${id} credit target`).toMatch(/^\/docs\/[a-z0-9-]+\/[a-z0-9-]+\/$/);
+      expect(builtPage(href), `${id} credit target ${href} is built`).toBe(true);
+      expect(figure.querySelector(".figure-credit")?.textContent).toContain("Made with OpenChart");
+    }
+  });
+
+  it("no docs page figure carries a blog credit", () => {
+    const credited: string[] = [];
+    for (const doc of docs) {
+      if (!existsSync(join("dist", pagePath(doc.id)))) continue;
+      if (read("dist", pagePath(doc.id)).includes("figure-credit")) credited.push(doc.id);
+    }
+    expect(credited).toEqual([]);
+  });
+
+  it.each(posts)(
+    "$slug ends with one CTA after the prose and before the endnotes, offering the install and the guides",
+    (post) => {
+      const doc = page("dist", postPath(post.slug));
+      const ctas = doc.querySelectorAll("article [data-blog-cta]");
+      expect(ctas).toHaveLength(1);
+      const cta = ctas[0];
+      const prose = doc.querySelector("article .docs-prose");
+      const endnotes = doc.querySelector("article .blog-endnotes");
+      const follows = (a: Element | null | undefined, b: Element | null | undefined) =>
+        !!a && !!b && (a.compareDocumentPosition(b) & 4) !== 0;
+      expect(follows(prose, cta)).toBe(true);
+      expect(follows(cta, endnotes)).toBe(true);
+      expect(prose?.contains(cta ?? null)).toBe(false);
+      expect(cta?.querySelector("[data-install-command]")).not.toBeNull();
+      expect(cta?.querySelector('a[href="/docs/get-started/introduction/"]')).not.toBeNull();
+      expect(cta?.querySelector('a[href="/examples/"]')).not.toBeNull();
+      expect(proseText(cta)).not.toContain(EM_DASH);
+    },
+  );
+
+  it.each(posts)("$slug reveals its header, figures and CTA, never a chart stage", (post) => {
+    const doc = page("dist", postPath(post.slug));
+    expect(
+      doc.querySelector("article .blog-article-header")?.closest("[data-reveal]"),
+    ).not.toBeNull();
+    for (const figure of doc.querySelectorAll("article .docs-prose .demo[data-demo]")) {
+      expect(figure.hasAttribute("data-reveal"), figure.getAttribute("data-demo") ?? "").toBe(true);
+    }
+    const stages = [...doc.querySelectorAll("article [data-demo-stage]")];
+    const hidden = [...doc.querySelectorAll("article [data-motion]")].filter((moving) =>
+      stages.some((stage) => moving.contains(stage)),
+    );
+    expect(hidden.map((element) => element.outerHTML.slice(0, 80))).toEqual([]);
+    const cta = doc.querySelector("article [data-blog-cta]");
+    expect(cta?.hasAttribute("data-reveal")).toBe(true);
+    expect(cta?.parentElement?.closest("[data-reveal]") ?? null).toBeNull();
+  });
+
+  it.each(posts.filter((post) => post.lead))(
+    "$slug leads with its lead chart as a hero, painted from static SVGs before any script",
+    (post) => {
+      const doc = page("dist", postPath(post.slug));
+      const heroes = doc.querySelectorAll("article [data-blog-hero]");
+      expect(heroes).toHaveLength(1);
+      const hero = heroes[0];
+      const header = doc.querySelector("article .blog-article-header");
+      const prose = doc.querySelector("article .docs-prose");
+      const follows = (a: Element | null | undefined, b: Element | null | undefined) =>
+        !!a && !!b && (a.compareDocumentPosition(b) & 4) !== 0;
+      expect(follows(header, hero)).toBe(true);
+      expect(follows(hero, prose)).toBe(true);
+      const figure = hero?.querySelector(".demo[data-demo]");
+      expect(figure?.getAttribute("data-demo")).toBe(post.lead);
+      const themes = [...(figure?.querySelectorAll("[data-demo-stage] svg.demo-static") ?? [])].map(
+        (svg) => svg.getAttribute("data-theme"),
+      );
+      // A table or sankey lead has no static SVG; its fallback stands in.
+      if (themes.length > 0) expect(themes).toEqual(["light", "dark"]);
+      expect(figure?.querySelector("[data-demo-code]")).toBeNull();
+      expect(figure?.querySelector("a.figure-credit-link")).not.toBeNull();
+      // Above the fold: no entrance replay over the painted static, no reveal gate.
+      expect(figure?.hasAttribute("data-demo-entrance")).toBe(false);
+      expect(hero?.querySelector("[data-reveal], [data-motion]")).toBeNull();
+      expect(hero?.closest("[data-reveal]:not([data-revealed])") ?? null).toBeNull();
+      expect(hero?.closest("[data-motion]") ?? null).toBeNull();
+      expect(hero?.querySelector('[loading="lazy"]')).toBeNull();
+    },
+  );
+
+  it.each(posts)("$slug repeats no element id", (post) => {
+    const ids = [...page("dist", postPath(post.slug)).querySelectorAll("[id]")].map((element) =>
+      element.getAttribute("id"),
+    );
+    const repeated = ids.filter((id, index) => ids.indexOf(id) !== index);
+    expect([...new Set(repeated)]).toEqual([]);
+  });
+
+  it.each(posts)("$slug carries breadcrumb, image and article metadata for search", (post) => {
+    const doc = page("dist", postPath(post.slug));
+    const canonical = absolute(`/blog/${post.slug}/`);
+    const blocks = [...doc.querySelectorAll('script[type="application/ld+json"]')].map((script) =>
+      JSON.parse(script.textContent ?? "{}"),
+    );
+    const posting = blocks.find((block) => block["@type"] === "BlogPosting");
+    const breadcrumb = blocks.find((block) => block["@type"] === "BreadcrumbList");
+    expect(
+      breadcrumb?.itemListElement?.map((item: { position: number; item: string }) => [
+        item.position,
+        item.item,
+      ]),
+    ).toEqual([
+      [1, absolute("/blog/")],
+      [2, canonical],
+    ]);
+    expect(posting?.image).toMatchObject({
+      "@type": "ImageObject",
+      url: absolute(`/og/blog/${post.slug}.png`),
+      width: 1200,
+      height: 630,
+    });
+    expect(typeof posting?.articleSection).toBe("string");
+    expect(Number.isInteger(posting?.wordCount) && posting.wordCount > 0).toBe(true);
+    expect(posting?.inLanguage).toBe("en");
+    expect(doc.querySelectorAll('meta[property="article:tag"]')).toHaveLength(post.tags.length);
+    expect(doc.querySelector('meta[property="og:image:alt"]')?.getAttribute("content")).toBe(
+      post.title,
+    );
+    expect(doc.querySelector('meta[name="robots"]')?.getAttribute("content")).toContain(
+      "max-image-preview:large",
+    );
   });
 });
 

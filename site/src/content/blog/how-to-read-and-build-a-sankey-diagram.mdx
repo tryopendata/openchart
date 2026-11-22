@@ -14,7 +14,7 @@ A Sankey diagram reads from left to right. Vertical bars mark stages in a system
 
 In 2024, US power plants took in 32.79 quadrillion British thermal units (quads) of fuel and delivered less than half to homes, businesses, and factories. The rest left as rejected energy, mostly waste heat and grid losses, according to Lawrence Livermore National Laboratory.
 
-```json demo title="US electricity generation flow, 2024" source="Lawrence Livermore National Laboratory, Estimated U.S. Energy Consumption in 2024 (data: DOE/EIA)" height=460
+```json demo title="US electricity generation flow, 2024" source="Lawrence Livermore National Laboratory, Estimated U.S. Energy Consumption in 2024 (data: DOE/EIA)" height=460 phone-height=720
 {
   "type": "sankey",
   "data": [
@@ -38,6 +38,27 @@ In 2024, US power plants took in 32.79 quadrillion British thermal units (quads)
     "source": { "field": "source", "type": "nominal" },
     "target": { "field": "target", "type": "nominal" },
     "value": { "field": "value", "type": "quantitative", "format": ".2f" }
+  },
+  "nodeSort": [
+    "Solar",
+    "Nuclear",
+    "Hydro",
+    "Wind",
+    "Natural gas",
+    "Net electricity imports",
+    "Coal",
+    "Biomass",
+    "Geothermal",
+    "Petroleum",
+    "Residential",
+    "Commercial",
+    "Industrial",
+    "Rejected energy",
+    "Transportation"
+  ],
+  "overrides": {
+    "compact": { "other": 0.02 },
+    "medium": { "other": 0.02 }
   },
   "chrome": {
     "title": "Electricity generation lost 59% of its 32.77 quads as rejected energy",
@@ -71,5 +92,7 @@ Dense graphs with dozens of minor categories collapse into unreadable hairlines 
 The Code toggle under the first chart shows its full JSON spec. Setting `"type": "sankey"` selects the flow layout, and each row in `data` gives one directed link with `source`, `target`, and `value` fields. The `encoding` block maps those three fields and attaches a d3-format string (`".2f"`) to `value` so every node label prints two decimal places.
 
 Two top-level options manage color and clutter as a diagram grows. `linkStyle` controls ribbon color, defaulting to `"gradient"` between source and target, with `"source"` (used in the four-stage diagram above), `"target"`, and `"neutral"` also available. Setting `other` to a fraction like `0.05` merges nodes under 5% of their column's total into one "Other" node while keeping total flow unchanged. Titles and subtitles sit in `chrome`.
+
+The first chart also sets `nodeSort`, a list of node ids from top to bottom, to choose where each node sits in its column. Its `overrides` block applies only on narrow screens: at 700 pixels wide or less, `other` folds the four fuels under 2% of the column into one "Other" node, so every label on a phone has room for its name and value.
 
 For node alignment and custom "Other" buckets, read the [Sankey documentation](/docs/flow/sankey/).

@@ -1,0 +1,35 @@
+/*
+ * The end-of-post call to action (BlogCta): a ruled block in the article's
+ * column, set like the endnotes below it. A top rule, a serif heading, a short
+ * line, the install command and two text links. Rules and type only, no panel.
+ */
+@reference "./global.css";
+
+@layer components {
+  .blog-cta {
+    @apply mt-16 flex flex-col gap-4;
+  }
+
+  .blog-cta-title {
+    @apply text-ink font-display m-0 mt-2 text-2xl leading-tight font-semibold;
+  }
+
+  .blog-cta-text {
+    @apply text-ink-2 font-display m-0 text-lg leading-relaxed;
+  }
+
+  .blog-cta-links {
+    @apply m-0 flex flex-wrap gap-x-6 gap-y-2 text-[15px];
+  }
+
+  .blog-cta-links a {
+    @apply text-ink decoration-line underline underline-offset-4 hover:decoration-current;
+  }
+}
+
+/* The install command fills the text column here rather than the landing's 34rem. */
+@layer components {
+  .blog-cta .install-command {
+    @apply max-w-none;
+  }
+}

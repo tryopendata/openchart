@@ -138,6 +138,18 @@ interface DrawnLabel {
   el: Element;
   x: number;
   y: number;
+  placement: string;
+}
+
+/**
+ * Where a label sits relative to its node: its anchor side and whether it is
+ * drawn on the flow (the narrow-width layout, which carries a halo). A label
+ * that changes either crossfades instead of sliding, since sliding would drag
+ * the text across its own node.
+ */
+function labelPlacement(el: Element): string {
+  const onFlow = el.hasAttribute('paint-order') ? 'flow' : 'outside';
+  return `${el.getAttribute('text-anchor') ?? 'start'}:${onFlow}`;
 }
 
 /** The sankey as drawn right now (mid-tween values included), keyed for matching. */
@@ -215,6 +227,7 @@ function captureSankey(svg: SVGSVGElement): SankeySnapshot {
       el,
       x: (numAttr(el, 'x') ?? 0) + offset.x,
       y: (numAttr(el, 'y') ?? 0) + offset.y,
+      placement: labelPlacement(el),
     });
   }
   return { nodes, links, labels };
@@ -275,9 +288,15 @@ function buildSankeyTweens(prev: SankeySnapshot, svg: SVGSVGElement): ElementTwe
   }
 
   const labels = byNodeId(svg, '.oc-sankey-label');
+  const labelParent = svg.querySelector('.oc-sankey-labels');
   for (const [id, el] of labels) {
     const before = prev.labels.get(id);
     if (!before) {
+      tweens.push({ kind: 'enter', el });
+      continue;
+    }
+    if (before.placement !== labelPlacement(el) && labelParent) {
+      tweens.push({ kind: 'exit', ghost: sankeyGhost(before.el, labelParent, 'oc-sankey-label') });
       tweens.push({ kind: 'enter', el });
       continue;
     }
@@ -309,7 +328,6 @@ function buildSankeyTweens(prev: SankeySnapshot, svg: SVGSVGElement): ElementTwe
 
   const groups = (cls: string) => svg.querySelector(`.${cls}`);
   const nodeParent = groups('oc-sankey-nodes');
-  const labelParent = groups('oc-sankey-labels');
   const linkParent = groups('oc-sankey-links');
   for (const [id, before] of prev.nodes) {
     if (nodes.has(id) || !nodeParent) continue;

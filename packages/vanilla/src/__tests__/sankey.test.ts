@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createContainer } from '../__test-fixtures__/dom';
 import { createSankey } from '../sankey-mount';
+import { renderSankeySVG } from '../sankey-renderer';
 
 // ---------------------------------------------------------------------------
 // Shared fixtures
@@ -234,6 +235,96 @@ describe('sankey path highlighting', () => {
     expect(label).not.toBeNull();
     const value = label?.querySelector('.oc-sankey-label-value');
     expect(value?.textContent).toBe('10');
+
+    instance.destroy();
+  });
+});
+
+describe('sankey node labels', () => {
+  const edgeSpec = {
+    type: 'sankey' as const,
+    data: [
+      { from: 'Coal', to: 'Rejected energy', amount: 62.27 },
+      { from: 'Coal', to: 'Homes', amount: 3.5 },
+    ],
+    encoding: {
+      source: { field: 'from', type: 'nominal' as const },
+      target: { field: 'to', type: 'nominal' as const },
+      value: { field: 'amount', type: 'quantitative' as const },
+    },
+  };
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  const labelOf = (container: HTMLElement, id: string) =>
+    container.querySelector(`.oc-sankey-label[data-node-id="${id}"]`);
+
+  it('draws an outside label as name then value on one line', () => {
+    const container = createContainer(800, 300);
+    const instance = createSankey(container, edgeSpec, { autoResize: false });
+
+    const label = labelOf(container, 'Homes');
+    expect(label?.textContent).toBe('Homes3.50');
+    const value = label?.querySelector('.oc-sankey-label-value');
+    expect(value?.getAttribute('dx')).toBe('5');
+    expect(value?.hasAttribute('x')).toBe(false);
+    // Outside labels sit on the bare background, so they carry no halo.
+    expect(label?.hasAttribute('paint-order')).toBe(false);
+
+    instance.destroy();
+  });
+
+  it('leaves the value off when the layout does not carry one', () => {
+    const container = createContainer(800, 300);
+    const instance = createSankey(container, edgeSpec, { autoResize: false });
+    const node = instance.layout.nodes.find((n) => n.nodeId === 'Homes')!;
+    instance.destroy();
+
+    const svg = renderSankeySVG({
+      ...instance.layout,
+      nodes: [{ ...node, valueLabel: undefined }],
+      links: [],
+    });
+    const label = svg.querySelector('.oc-sankey-label');
+    expect(label?.textContent).toBe('Homes');
+    expect(label?.querySelector('.oc-sankey-label-value')).toBeNull();
+  });
+
+  it('stacks a label on the flow at phone widths: name lines, then the value below', () => {
+    const container = createContainer(360, 300);
+    const instance = createSankey(container, edgeSpec, { autoResize: false });
+
+    const label = labelOf(container, 'Rejected energy')!;
+    const spans = [...label.querySelectorAll('tspan')];
+    const value = spans[spans.length - 1];
+    expect(value.getAttribute('class')).toBe('oc-sankey-label-value');
+    expect(value.textContent).toBe('62.27');
+    // Every line, the value included, starts at the label's anchor x.
+    const x = label.getAttribute('x');
+    expect(spans.every((s) => s.getAttribute('x') === x)).toBe(true);
+    const ys = spans.map((s) => Number(s.getAttribute('y')));
+    expect([...ys].sort((a, b) => a - b)).toEqual(ys);
+    expect(ys[ys.length - 1]).toBeGreaterThan(ys[0]);
+    expect(
+      spans
+        .slice(0, -1)
+        .map((s) => s.textContent)
+        .join(' '),
+    ).toBe('Rejected energy');
+
+    instance.destroy();
+  });
+
+  it('gives a label on the flow a halo in the background colour', () => {
+    const container = createContainer(360, 300);
+    const instance = createSankey(container, edgeSpec, { autoResize: false });
+
+    const label = labelOf(container, 'Rejected energy')!;
+    expect(label.getAttribute('paint-order')).toBe('stroke');
+    expect(label.getAttribute('stroke')).toBe(instance.layout.theme.colors.neutral.surface);
+    expect(label.getAttribute('stroke-linejoin')).toBe('round');
 
     instance.destroy();
   });
