@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { compileSankey } from '../../compile';
+import { validateSpec } from '../../compiler/validate';
 import { LABEL_GAP } from '../label-placement';
 
 // ---------------------------------------------------------------------------
@@ -952,7 +953,7 @@ describe('sankey edge values', () => {
 });
 
 describe('sankey interior labels at wider widths', () => {
-  it('wrap before the next column instead of running across it', () => {
+  it('keep the room to the frame edge, as outside labels always have', () => {
     const spec = {
       ...basicSpec,
       data: basicSpec.data.map((r) => ({
@@ -963,9 +964,8 @@ describe('sankey interior labels at wider widths', () => {
     };
     const result = compileSankey(spec, { width: 300, height: 400 });
     const hub = result.nodes.find((n) => n.nodeId === 'Electricity generation')!;
-    const next = result.nodes.find((n) => n.nodeId === 'D')!;
     expect(hub.label.lines).toBeUndefined();
-    expect(hub.label.x + hub.label.maxWidth!).toBeLessThanOrEqual(next.x - LABEL_GAP);
+    expect(hub.label.x + hub.label.maxWidth!).toBe(300 - THEME_PADDING);
   });
 });
 
@@ -1026,5 +1026,22 @@ describe('sankey overrides', () => {
         { width: 360, height: 640 },
       ),
     ).toThrow(/unknown breakpoint "phone"/);
+  });
+
+  it.each([
+    ['a field overrides cannot set', { data: [] }, '/overrides/compact/data'],
+    ['a type swap', { type: 'line' }, '/overrides/compact/type'],
+    ['a typo', { nodePaddng: 4 }, '/overrides/compact/nodePaddng'],
+    ['a non-numeric padding', { nodePadding: 'x' }, '/overrides/compact/nodePadding'],
+    ['a negative padding', { nodePadding: -2 }, '/overrides/compact/nodePadding'],
+    ['an out-of-range other', { other: 5 }, '/overrides/compact/other'],
+    ['an unknown label side', { nodeLabelAlign: 'top' }, '/overrides/compact/nodeLabelAlign'],
+    ['a nodeSort of numbers', { nodeSort: [1, 2] }, '/overrides/compact/nodeSort'],
+  ])('rejects %s at every width, naming its path', (_name, block, path) => {
+    const spec = { ...electricity, overrides: { compact: block } };
+    const result = validateSpec(spec);
+    expect(result.errors.map((e) => e.path)).toEqual([path]);
+    // A desktop compile, where the block is not active, fails too.
+    expect(() => compileSankey(spec, { width: 1280, height: 640 })).toThrow(/overrides\.compact/);
   });
 });
