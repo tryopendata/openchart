@@ -5,96 +5,145 @@ published: 2026-11-15
 author: OpenChart
 tags: [chart-choice]
 related: [comparison/lollipop, comparison/bar, comparison/bar-list]
-lead: blog/co2-lollipop
+lead: blog/education-dot-plot
 ---
 
 import Demo from "../../components/demo/Demo.astro";
 
-A lollipop chart is a bar chart with the bar thinned to a stem and a dot at the end. It encodes the same thing, a value as a distance from zero, and uses less ink to do it. That makes it quieter on a long list. It also makes it easy to forget that the stem is still a length.
+Argentina's diet comes to about 2,172 kg of CO2 per person a year, the most of the 130 countries in a food-emissions dataset, and beef accounts for 79% of it. Ranking the 20 highest countries means drawing 20 long values that sit close together, which is where a lollipop chart beats bars.
 
-## Bars and lollipops on a long list
+A lollipop thins each bar to a stem and puts a dot at the end. It encodes the same thing as a bar, a value as a distance from zero, with less ink.
 
-Food shows the difference. Lamb, goat and beef emit 31 to 35 kilograms of CO2 for each kilogram of food, and the other nine categories in this dataset sit between 0.2 and 3.5. As bars, the two large values take most of the plot and the small ones shrink to slivers.
+## Twenty long bars against twenty stems
+
+As bars, the 20 values run from 1,420 to 2,172 kg and fill most of the plot. The chart becomes a dark block, and the eye has to find each bar's end inside it.
 
 <Demo id="blog/co2-bars" />
 
-The same rows as lollipops put the large values at the far end of a thin line and leave the nine small ones as dots that can be located against the axis. Nothing is lost, and the page carries less fill. Both charts sort by value so the ranking is visible, and both put the category names on the left, where they read without rotation.
+As lollipops, each value is a dot at the end of a thin line, and the dots are what the reader compares. The ranking is the same and easier to scan with less fill around it.
 
-```json demo source="TidyTuesday (R for Data Science Online Learning Community), food consumption and CO2 emissions" height=460
+```json demo source="TidyTuesday (R for Data Science Online Learning Community), food consumption and CO2 emissions" height=560
 {
   "mark": "lollipop",
   "data": [
     {
-      "food": "Lamb and goat",
-      "kgCo2PerKg": 35.02
+      "country": "Argentina",
+      "kgCo2": 2172.4
     },
     {
-      "food": "Beef",
-      "kgCo2PerKg": 30.86
+      "country": "Australia",
+      "kgCo2": 1938.7
     },
     {
-      "food": "Pork",
-      "kgCo2PerKg": 3.54
+      "country": "Albania",
+      "kgCo2": 1777.9
     },
     {
-      "food": "Nuts",
-      "kgCo2PerKg": 1.77
+      "country": "New Zealand",
+      "kgCo2": 1751
     },
     {
-      "food": "Fish",
-      "kgCo2PerKg": 1.6
+      "country": "Iceland",
+      "kgCo2": 1731.4
     },
     {
-      "food": "Milk and cheese",
-      "kgCo2PerKg": 1.42
+      "country": "United States",
+      "kgCo2": 1718.9
     },
     {
-      "food": "Rice",
-      "kgCo2PerKg": 1.28
+      "country": "Uruguay",
+      "kgCo2": 1634.9
     },
     {
-      "food": "Poultry",
-      "kgCo2PerKg": 1.07
+      "country": "Brazil",
+      "kgCo2": 1616.7
     },
     {
-      "food": "Eggs",
-      "kgCo2PerKg": 0.92
+      "country": "Luxembourg",
+      "kgCo2": 1598.4
     },
     {
-      "food": "Soybeans",
-      "kgCo2PerKg": 0.45
+      "country": "Kazakhstan",
+      "kgCo2": 1575.1
     },
     {
-      "food": "Wheat",
-      "kgCo2PerKg": 0.19
+      "country": "Sweden",
+      "kgCo2": 1527
+    },
+    {
+      "country": "Denmark",
+      "kgCo2": 1498.2
+    },
+    {
+      "country": "Greece",
+      "kgCo2": 1497.3
+    },
+    {
+      "country": "Hong Kong",
+      "kgCo2": 1494.3
+    },
+    {
+      "country": "Bermuda",
+      "kgCo2": 1483.3
+    },
+    {
+      "country": "Finland",
+      "kgCo2": 1464.6
+    },
+    {
+      "country": "Ireland",
+      "kgCo2": 1459.7
+    },
+    {
+      "country": "Canada",
+      "kgCo2": 1437.2
+    },
+    {
+      "country": "French Polynesia",
+      "kgCo2": 1424.7
+    },
+    {
+      "country": "France",
+      "kgCo2": 1420.1
     }
   ],
   "encoding": {
     "x": {
-      "field": "kgCo2PerKg",
+      "field": "kgCo2",
       "type": "quantitative",
       "axis": {
-        "title": "kg CO2 per kg of food"
+        "title": "kg CO2 per person per year",
+        "format": ",.0f"
       }
     },
     "y": {
-      "field": "food",
+      "field": "country",
       "type": "nominal",
       "sort": "x"
     }
   },
+  "theme": {
+    "colors": {
+      "categorical": [
+        {
+          "light": "#0e7490",
+          "dark": "#22a3c4"
+        }
+      ]
+    }
+  },
   "chrome": {
-    "title": "Lamb, goat and beef emit 31 to 35 kg of CO2 per kg of food, and no other food tops 3.5",
-    "subtitle": "Kilograms of CO2 per kilogram of food, 130 countries combined (no year stated)"
+    "title": "Argentina's diet comes to 2,172 kg of CO2 per person a year, the most of 130 countries",
+    "subtitle": "Kilograms of CO2 per person per year from 11 food types, the 20 highest of 130 countries (no year stated)"
   }
 }
 ```
 
-The dataset gives no year, and it combines 130 countries, so the numbers describe food in general, not any one diet or market. Each value is total emissions divided by total consumption for that category.
+The dataset gives no year and no original source. Each value adds up the CO2 from a country's average consumption of 11 food types, so it describes diets in general rather than any one market.
 
 ## The stem still has to start at zero
 
-A reader judges a lollipop by the length of its stem, the same way they judge a bar by its length. Cut the axis above zero and the lengths stop matching the values. Median weekly earnings run from $738 for adults without a high school diploma to $2,363 for those with a professional degree, a gap of 3.2 times. Start the axis at $600 and the stems measure $138 and $1,763, so the top one is 12.8 times the bottom one.
+A reader judges a lollipop by the length of its stem, the same way they judge a bar. Cut the axis above zero and the lengths stop matching the values. Median weekly earnings run from $738 for adults without a high school diploma to $2,363 for those with a professional degree, a gap of 3.2 times. Start the axis at $600 and the stems measure $138 and $1,763, so the top one is 12.8 times the bottom one.
 
 ```json demo source="US Bureau of Labor Statistics, Education Pays (Current Population Survey, 2024)" height=420
 {
@@ -146,13 +195,28 @@ A reader judges a lollipop by the length of its stem, the same way they judge a 
       },
       "axis": {
         "title": "Median weekly earnings ($)",
-        "format": "$,.0f"
+        "format": "$,.0f",
+        "values": [
+          600,
+          1200,
+          1800
+        ]
       }
     },
     "y": {
       "field": "education",
       "type": "nominal",
       "sort": "x"
+    }
+  },
+  "theme": {
+    "colors": {
+      "categorical": [
+        {
+          "light": "#0e7490",
+          "dark": "#22a3c4"
+        }
+      ]
     }
   },
   "chrome": {
@@ -162,20 +226,122 @@ A reader judges a lollipop by the length of its stem, the same way they judge a 
 }
 ```
 
-This is the same mistake as a truncated bar, covered in [when bar charts must start at zero](/blog/when-bar-charts-must-start-at-zero/). Thin stems make it easier to miss, because a lollipop does not look like a filled shape that is obviously cut off. If the point is where values sit rather than how long they are, drop the stems and plot dots alone, which encode position and can use a trimmed axis.
+This is the same mistake as a truncated bar, covered in [when bar charts must start at zero](/blog/when-bar-charts-must-start-at-zero/). Thin stems make it easier to miss, because a lollipop doesn't look like a filled shape that has been cut off.
+
+## Dots without stems
+
+If the point is where values sit rather than how long they are, drop the stems. A dot plot encodes position only, so the same axis from $600 is fair here, because the reader compares where the dots fall and no length stands for a value.
+
+```json demo source="US Bureau of Labor Statistics, Education Pays (Current Population Survey, 2024)" height=420
+{
+  "mark": {
+    "type": "point",
+    "trendline": false
+  },
+  "data": [
+    {
+      "education": "Professional degree",
+      "weeklyEarnings": 2363
+    },
+    {
+      "education": "Doctoral degree",
+      "weeklyEarnings": 2278
+    },
+    {
+      "education": "Master's degree",
+      "weeklyEarnings": 1840
+    },
+    {
+      "education": "Bachelor's degree",
+      "weeklyEarnings": 1543
+    },
+    {
+      "education": "Associate's degree",
+      "weeklyEarnings": 1099
+    },
+    {
+      "education": "Some college",
+      "weeklyEarnings": 1020
+    },
+    {
+      "education": "High school diploma",
+      "weeklyEarnings": 930
+    },
+    {
+      "education": "Less than high school",
+      "weeklyEarnings": 738
+    }
+  ],
+  "encoding": {
+    "x": {
+      "field": "weeklyEarnings",
+      "type": "quantitative",
+      "scale": {
+        "zero": false,
+        "domain": [
+          600,
+          2400
+        ]
+      },
+      "axis": {
+        "title": "Median weekly earnings ($)",
+        "format": "$,.0f",
+        "values": [
+          600,
+          1200,
+          1800
+        ]
+      }
+    },
+    "y": {
+      "field": "education",
+      "type": "nominal",
+      "sort": "x",
+      "axis": {
+        "values": [
+          "Professional degree",
+          "Doctoral degree",
+          "Master's degree",
+          "Bachelor's degree",
+          "Associate's degree",
+          "Some college",
+          "High school diploma",
+          "Less than high school"
+        ]
+      }
+    }
+  },
+  "theme": {
+    "colors": {
+      "categorical": [
+        {
+          "light": "#0e7490",
+          "dark": "#22a3c4"
+        }
+      ]
+    }
+  },
+  "chrome": {
+    "title": "Without stems, an axis from $600 shows where each level sits, from $738 to $2,363",
+    "subtitle": "Median usual weekly earnings by educational attainment, 2024 ($)"
+  }
+}
+```
 
 ## When plain bars are better
 
-With eight categories and values worth printing, bars win. The same table lists unemployment too, 6.2% for the least educated and 1.3% for professional degrees. The earnings chart below puts each dollar figure inside its bar, and the fill makes the gap between a high school diploma ($930) and a bachelor's degree ($1,543) read as a quantity.
+With eight categories and values worth printing, bars win. The earnings chart below puts each dollar figure inside its bar, and the fill makes the gap between a high school diploma ($930) and a bachelor's degree ($1,543) read as a quantity.
 
 <Demo id="blog/education-bars" />
 
-A short list gains nothing from having less ink, and a dot has no room for a printed value. I would use bars for about ten categories or fewer and a lollipop for a longer list. Bars also stack and group, which a lollipop cannot do: it fits one series, or two values per category in its dumbbell form. Once a list is long enough to sit in a dashboard card, a [bar list](/docs/comparison/bar-list/) drops the axis and fits more rows.
+A short list gains nothing from having less ink, and a dot has no room for a printed value. I would use bars for about ten categories or fewer and a lollipop for a longer list.
+
+Bars can also stack and group, and a lollipop can't. Give a lollipop a color field and it becomes a dumbbell instead, which joins the lowest and highest value in each category for any number of series. Once a list is long enough to sit in a dashboard card, a [bar list](/docs/comparison/bar-list/) drops the axis and fits more rows.
 
 ## The spec
 
-A lollipop uses the same encoding as a [bar chart](/docs/comparison/bar/): the value on `x` as a quantitative field and the category on `y` as a nominal one. Setting `mark` to `"lollipop"` instead of `"bar"` is the whole change. `sort: "x"` on `y` puts the largest value at the top.
+A lollipop uses the same encoding as a [bar chart](/docs/comparison/bar/): the value on `x` as a quantitative field and the category on `y` as a nominal one. Setting `mark` to `"lollipop"` instead of `"bar"` is the whole change, and `sort` on `y` puts the categories in value order.
 
-The trimmed chart adds `scale: { zero: false, domain: [600, 2400] }` on `x`, which is what lets the axis start at $600. Leave that out, since this chart is a warning and not a recipe.
+The trimmed chart adds `scale: { zero: false, domain: [600, 2400] }` on `x`, with `axis.values` starting at 600 so the cut shows on the axis. Leave that out of real lollipop charts. The dot plot keeps the same axis and sets `mark: { type: "point", trendline: false }`. Lollipop and circle marks always draw stems, and a point mark left with its default trend line fits a regression line through the dots, which means nothing across categories.
 
-The [lollipop page](/docs/comparison/lollipop/) covers negative values and the dumbbell variant, with live examples.
+Negative values and the dumbbell form are on the [lollipop page](/docs/comparison/lollipop/).
