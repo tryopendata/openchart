@@ -7,6 +7,7 @@
  * test holds the two together.
  */
 import { nycTemperatureRange } from "@datasets/nyc-temperature-range";
+import type { ChartSpecOverride } from "@opendata-ai/openchart-core";
 import { sourceOf } from "../source";
 import { defineDemo } from "../types";
 
@@ -27,6 +28,14 @@ const MONTH_NAMES: Record<string, string> = {
   Dec: "December",
 };
 
+/**
+ * Phone widths (compact and medium breakpoints) label every other month
+ * upright instead of rotating all twelve, which reads badly on a narrow plot.
+ */
+const PHONE_MONTH_AXIS: ChartSpecOverride = {
+  encoding: { x: { axis: { labelAngle: 0, values: ["Jan", "Mar", "May", "Jul", "Sep", "Nov"] } } },
+};
+
 const rows = nycTemperatureRange.data;
 const source = sourceOf(nycTemperatureRange);
 
@@ -41,6 +50,14 @@ const coldestMid = midpoints.reduce((min, row) => (row.midpoint < min.midpoint ?
 const warmestMid = midpoints.reduce((max, row) => (row.midpoint > max.midpoint ? row : max));
 const widest = rows.reduce((max, row) => (spanOf(row) > spanOf(max) ? row : max));
 const narrowest = rows.reduce((min, row) => (spanOf(row) < spanOf(min) ? row : min));
+
+const midpointFinding = `ran from ${coldestMid.midpoint.toFixed(1)}°C in ${MONTH_NAMES[coldestMid.month]} to ${warmestMid.midpoint.toFixed(1)}°C in ${MONTH_NAMES[warmestMid.month]}`;
+
+/** On phones the midpoint title drops "Monthly" so it fits in two lines. */
+const midpointOnPhones: ChartSpecOverride = {
+  ...PHONE_MONTH_AXIS,
+  chrome: { title: `Midpoints ${midpointFinding}` },
+};
 
 export const nycTempMidpoint = defineDemo({
   id: "blog/nyc-temp-midpoint",
@@ -60,10 +77,11 @@ export const nycTempMidpoint = defineDemo({
     },
     labels: false,
     chrome: {
-      title: `Monthly midpoints ran from ${coldestMid.midpoint.toFixed(1)}°C in ${MONTH_NAMES[coldestMid.month]} to ${warmestMid.midpoint.toFixed(1)}°C in ${MONTH_NAMES[warmestMid.month]}`,
+      title: `Monthly midpoints ${midpointFinding}`,
       subtitle:
         "Midpoint of average daily low and high temperature by month, Central Park, 2023 (°C)",
     },
+    overrides: { compact: midpointOnPhones, medium: midpointOnPhones },
   },
 });
 
@@ -90,5 +108,6 @@ export const nycTempRange = defineDemo({
       subtitle:
         "Average daily low to average daily high temperature by month, Central Park, 2023 (°C)",
     },
+    overrides: { compact: PHONE_MONTH_AXIS, medium: PHONE_MONTH_AXIS },
   },
 });

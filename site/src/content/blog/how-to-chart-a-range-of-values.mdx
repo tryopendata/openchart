@@ -54,6 +54,18 @@ A vertical range plot draws one floating bar per month from the average daily lo
   "chrome": {
     "title": "May swung 10.1°C a day, against 5.6°C in December",
     "subtitle": "Average daily low to average daily high temperature by month, Central Park, 2023 (°C)"
+  },
+  "overrides": {
+    "compact": {
+      "encoding": {
+        "x": { "axis": { "labelAngle": 0, "values": ["Jan", "Mar", "May", "Jul", "Sep", "Nov"] } }
+      }
+    },
+    "medium": {
+      "encoding": {
+        "x": { "axis": { "labelAngle": 0, "values": ["Jan", "Mar", "May", "Jul", "Sep", "Nov"] } }
+      }
+    }
   }
 }
 ```
@@ -74,7 +86,7 @@ A single average still works when the spread barely changes across categories or
 
 The Code button under the range chart opens its complete JSON spec with all 12 Central Park rows. Setting `mark` to `{ "type": "range", "style": "bar" }` draws floating bars instead of the default dumbbell dots, and `fill` sets the bar color.
 
-In `encoding`, `x` places each nominal `month` across the horizontal axis, while `y` binds `low` and `y2` binds `high` on the same quantitative scale. Each endpoint channel takes its own `title` (`"Avg low"` and `"Avg high"`) for tooltips and accessibility, while `axis.title` on `y` labels the shared temperature scale and [chrome](/docs/framing/chrome/) holds the chart's headline and subtitle.
+In `encoding`, `x` places each nominal `month` across the horizontal axis, while `y` binds `low` and `y2` binds `high` on the same quantitative scale. Each endpoint channel takes its own `title` (`"Avg low"` and `"Avg high"`) for tooltips and accessibility, while `axis.title` on `y` labels the shared temperature scale and [chrome](/docs/framing/chrome/) holds the chart's headline and subtitle. On narrow screens, `overrides` labels every other month upright instead of rotating all twelve.
 
 To orient the chart horizontally, move the category field to `y`, put the two quantitative bounds on `x` and `x2`, and add a `sort` object on `y` to order rows by either endpoint. Switching `style` to `"dumbbell"` or `"arrow"` uses the same data shape and encoding.
 
