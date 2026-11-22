@@ -170,8 +170,8 @@ describe("demoFigureHtml", () => {
     const figure = await render(figureFor({ phoneHeight: 520 }));
     const sets = [...figure.querySelectorAll("[data-demo-stage] > .demo-static-set")];
     expect(sets.map((set) => set.getAttribute("data-static-size"))).toEqual(["wide", "phone"]);
-    const viewBoxes = (set: Element) =>
-      [...set.querySelectorAll("svg.demo-static")].map((svg) => [
+    const viewBoxes = (set: (typeof sets)[number] | undefined) =>
+      [...(set?.querySelectorAll("svg.demo-static") ?? [])].map((svg) => [
         svg.getAttribute("data-theme"),
         svg.getAttribute("viewBox"),
       ]);
