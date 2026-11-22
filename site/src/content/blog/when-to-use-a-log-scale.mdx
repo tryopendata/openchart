@@ -1,0 +1,126 @@
+---
+title: When to use a log scale on a scatter plot
+description: Linear axes crush lower values into one corner when a metric spans orders of magnitude. A log scale turns multiplicative jumps into equal steps.
+published: 2026-11-12
+author: OpenChart
+tags: [chart-choice, annotation]
+related: [the-spec/scales, correlation/scatter, correlation/bubble, the-spec/axes]
+lead: blog/preston-log-scale
+---
+
+import Demo from "../../components/demo/Demo.astro";
+
+Linear axes measure fixed dollar gaps, so they compress proportional gains whenever a metric spans a wide range. Doubling income per person from India ($9,818) to Brazil ($19,652) coincides with seven extra years of life expectancy, rising from 68.3 to 75.3.
+
+On a linear horizontal axis, the dollar jump from Japan ($46,107) to the United States ($75,489) takes nearly three times as much width as India to Brazil, even though life expectancy falls from 83.6 to 79.2 years across that span.
+
+<Demo id="blog/preston-linear-scale" />
+
+Each point plots one of 12 large economies by gross domestic product per person, adjusted for purchasing power parity (PPP, which accounts for local price differences so dollars buy a comparable basket of goods), against life expectancy at birth. Economists call this shape the Preston curve.
+
+Because the linear axis counts in equal $20k steps, five of the 12 countries pile into the left third of the plot. India, Indonesia, Brazil, Mexico, and China all sit below $24k, where the steepest gains in longevity occur, yet they share less horizontal room than the single gap between Japan and the United States.
+
+## Turning ratios into equal distance
+
+A logarithmic axis replaces equal additions with equal multiplications. Moving from $10k to $20k covers the same horizontal width as moving from $40k to $80k, because both steps double the starting income. Any constant ratio takes one fixed distance across the chart.
+
+Plotting the same 12 economies on a log horizontal axis spreads out the lower-income group and exposes the bend past $45k. Below Japan, higher income tracks steeply with longer lives across India, Indonesia, Brazil, Mexico, and China. Past Japan, the slope flattens, with the seven wealthiest economies clustered between 79.2 and 83.6 years.
+
+```json demo source="World Bank WDI, OWID (PPP GDP), WHO Global Health Observatory" height=440
+{
+  "mark": { "type": "point", "fill": "#0e7490", "size": 6 },
+  "data": [
+    { "code": "IN", "country": "India", "population": 1438069596, "gdpPerCapita": 9818, "lifeExpectancy": 68.3 },
+    { "code": "CN", "country": "China", "population": 1410710000, "gdpPerCapita": 23846, "lifeExpectancy": 76.1 },
+    { "code": "US", "country": "United States", "population": 336806231, "gdpPerCapita": 75489, "lifeExpectancy": 79.2 },
+    { "code": "ID", "country": "Indonesia", "population": 281190067, "gdpPerCapita": 14470, "lifeExpectancy": 69.0 },
+    { "code": "BR", "country": "Brazil", "population": 211140729, "gdpPerCapita": 19652, "lifeExpectancy": 75.3 },
+    { "code": "MX", "country": "Mexico", "population": 129739759, "gdpPerCapita": 22040, "lifeExpectancy": 76.9 },
+    { "code": "JP", "country": "Japan", "population": 124516650, "gdpPerCapita": 46107, "lifeExpectancy": 83.6 },
+    { "code": "DE", "country": "Germany", "population": 83287273, "gdpPerCapita": 63676, "lifeExpectancy": 80.8 },
+    { "code": "GB", "country": "United Kingdom", "population": 68492000, "gdpPerCapita": 53139, "lifeExpectancy": 81.4 },
+    { "code": "FR", "country": "France", "population": 68372286, "gdpPerCapita": 54799, "lifeExpectancy": 82.4 },
+    { "code": "KR", "country": "South Korea", "population": 51712619, "gdpPerCapita": 55071, "lifeExpectancy": 81.9 },
+    { "code": "CA", "country": "Canada", "population": 40083484, "gdpPerCapita": 58321, "lifeExpectancy": 82.2 }
+  ],
+  "encoding": {
+    "x": {
+      "field": "gdpPerCapita",
+      "type": "quantitative",
+      "scale": { "type": "log", "domain": [8000, 90000], "nice": false },
+      "axis": {
+        "title": "GDP per capita (PPP $, log scale)",
+        "format": "$~s",
+        "values": [10000, 20000, 40000, 80000],
+        "grid": true
+      }
+    },
+    "y": {
+      "field": "lifeExpectancy",
+      "type": "quantitative",
+      "scale": { "zero": false, "domain": [66, 86] },
+      "axis": { "title": "Life expectancy at birth (years)", "tickCount": 5, "grid": true }
+    },
+    "tooltip": [
+      { "field": "country", "type": "nominal", "title": "Country" },
+      { "field": "gdpPerCapita", "type": "quantitative", "title": "GDP per capita (PPP $)" },
+      { "field": "lifeExpectancy", "type": "quantitative", "title": "Life expectancy (years)" }
+    ]
+  },
+  "annotations": [
+    {
+      "type": "text",
+      "x": 9818,
+      "y": 68.3,
+      "text": "**India**\n$9,818, 68.3 years",
+      "anchor": "top",
+      "offset": { "dx": 16, "dy": -36 },
+      "connector": "curve"
+    },
+    {
+      "type": "text",
+      "x": 46107,
+      "y": 83.6,
+      "text": "**Japan**\n$46,107, 83.6 years",
+      "anchor": "left",
+      "offset": { "dx": -28, "dy": -8 },
+      "connector": "curve"
+    },
+    {
+      "type": "text",
+      "x": 75489,
+      "y": 79.2,
+      "text": "**United States**\n$75,489, 79.2 years",
+      "anchor": "bottom",
+      "offset": { "dx": -36, "dy": 42 },
+      "connector": "curve"
+    }
+  ],
+  "chrome": {
+    "title": "Life expectancy rises 7 years from India to Brazil, then flattens past Japan",
+    "subtitle": "GDP per capita (PPP, log scale) vs. life expectancy at birth in 12 large economies. Each tick doubles the last."
+  }
+}
+```
+
+On a scatter plot with a logarithmic x-axis and a linear y-axis, a straight diagonal line represents a constant payoff per doubling. Every time income doubles along that line, life expectancy rises by the same number of years. When the dots bend horizontal after $45k, that curve shows diminishing returns directly through the change in slope.
+
+Three callouts anchor the shape of the plot: India at the bottom left, Japan at the longevity peak, and the United States at the high-income right edge. Income, city populations, company revenue, and outbreak counts all grow by percentages, so a log axis aligns horizontal distance with how those quantities change.
+
+## When a log scale misleads
+
+Pure log scales break on zero and negative values because no power of ten equals zero or drops below it. Datasets with zero-revenue months, net losses, or temperature anomalies below a baseline cannot sit on a standard log axis. Switch back to a linear scale for those series, or use a symmetric log scale (`symlog`), which stays linear near zero and turns logarithmic farther out.
+
+Bar charts belong on linear axes, never log axes. A bar encodes its value through length measured from a zero baseline, and a log scale has no zero to anchor that edge. Choosing an arbitrary floor such as $1 or $1,000 makes bar lengths depend on the floor you picked instead of the data, so use dots or scatter points whenever a metric needs logarithmic spacing.
+
+Linear axes also remain the better default when values stay within a narrow factor, roughly threefold or less from lowest to highest, or when absolute gaps matter more than ratios. Comparing monthly household budgets in dollars or daily temperatures in degrees is easier when every gridline adds the same fixed amount.
+
+Every log axis needs an explicit label in the axis title and tick values that step by clear multiples. Readers assume a chart is linear unless told otherwise, so writing `GDP per capita (PPP $, log scale)` beside evenly doubled ticks stops anyone from reading a gentle slope on the right as small dollar growth.
+
+## The spec
+
+Code under the second chart opens its spec. In the `x` channel, `scale: { type: "log", domain: [8000, 90000], nice: false }` turns on logarithmic spacing while keeping the left edge tight around India instead of rounding down to a power of ten. Inside `axis`, `values` pins ticks to exact doublings and `format: "$~s"` prints compact currency labels from `$10k` to `$80k`.
+
+The `y` channel sets `zero: false` and `domain: [66, 86]` so both scatter plots share the same vertical range. Each entry in `annotations` places a `text` callout in raw data coordinates directly on the log axis, with `connector: "curve"` linking the label back to its country's dot.
+
+For every scale type and domain option OpenChart supports, including `sqrt` and `symlog`, read the [field types and scales guide](/docs/the-spec/scales/).
