@@ -7,6 +7,7 @@
  * related docs and tags follow it. The head carries the BlogPosting JSON-LD
  * and the article times. The article is indexed by search under Blog.
  */
+import BlogCta from "../components/blog/BlogCta.astro";
 import Byline from "../components/blog/Byline.astro";
 import BlogBreadcrumb from "../components/blog/BlogBreadcrumb.astro";
 import PostEndnotes from "../components/blog/PostEndnotes.astro";
@@ -70,6 +71,7 @@ const jsonLd = articleJsonLd(post, {
     <div class="prose docs-prose blog-prose max-w-none">
       <slot />
     </div>
+    <BlogCta />
     <PostEndnotes related={related} tags={tagsOf(post)} />
   </article>
 </BaseLayout>

@@ -234,3 +234,55 @@ describe("a chart drawn without the figure", () => {
     );
   });
 });
+
+describe("demoFigureHtml on a blog post", () => {
+  const blog = {
+    credit: { href: "/docs/comparison/bar/", chartName: "bar chart" },
+    staticWidth: 1024,
+  };
+
+  it("adds one crawlable credit line after the caption, linking to the chart type's docs page", async () => {
+    const figure = await render(figureFor({ blog }));
+    const credit = figure.querySelector("figure.demo-figure > p.figure-credit");
+    expect(credit).not.toBeNull();
+    expect(credit?.hasAttribute("data-pagefind-ignore")).toBe(true);
+    expect(credit?.textContent).toContain("Made with OpenChart");
+    const links = figure.querySelectorAll("a.figure-credit-link");
+    expect(links).toHaveLength(1);
+    expect(links[0]?.getAttribute("href")).toBe("/docs/comparison/bar/");
+    expect(links[0]?.textContent).toContain("bar chart");
+    expect(figure.querySelector("figure")?.lastElementChild).toBe(credit);
+  });
+
+  it("reveals the figure's chrome but never hides the stage behind a motion role", async () => {
+    const figure = await render(figureFor({ blog }));
+    expect(figure.hasAttribute("data-reveal")).toBe(true);
+    const stage = figure.querySelector("[data-demo-stage]");
+    const moving = [...figure.querySelectorAll("[data-motion]")];
+    expect(moving.length).toBeGreaterThan(0);
+    expect(moving.filter((element) => stage && element.contains(stage))).toEqual([]);
+    expect(stage?.hasAttribute("data-motion")).toBe(false);
+  });
+
+  it("lays its static SVGs out at the wide column's width", async () => {
+    const wide = await render(figureFor({ blog }));
+    const narrow = await render(figureFor());
+    const widthOf = (element: Awaited<ReturnType<typeof render>>) =>
+      element.querySelector("svg.demo-static")?.getAttribute("viewBox")?.split(/\s+/)[2];
+    expect(widthOf(wide)).toBe("1024");
+    expect(widthOf(narrow)).toBe("720");
+  });
+
+  it("keeps a demo's own width over the wide static width", async () => {
+    const figure = await render(figureFor({ blog, width: 360 }));
+    const viewBox = figure.querySelector("svg.demo-static")?.getAttribute("viewBox");
+    expect(viewBox?.split(/\s+/)[2]).toBe("360");
+  });
+
+  it("writes none of the blog markup without the blog option", async () => {
+    const figure = await render(figureFor());
+    expect(figure.querySelector(".figure-credit")).toBeNull();
+    expect(figure.hasAttribute("data-reveal")).toBe(false);
+    expect(figure.querySelector("[data-motion]")).toBeNull();
+  });
+});

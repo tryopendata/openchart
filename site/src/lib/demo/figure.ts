@@ -8,6 +8,7 @@
  */
 import type { ThemeConfig, VizSpec } from "@opendata-ai/openchart-core";
 import type { DemoControls, DemoMountOptions, DemoSource } from "../../demos/types";
+import type { BlogFigure } from "./blog-figure";
 import { codeTabsHtml } from "./code-tabs";
 import { demoControlsHtml, embeddedStates } from "./controls";
 import { demoDomId } from "./dom-id";
@@ -41,6 +42,8 @@ export type DemoFigure = {
   mount?: DemoMountOptions;
   /** Reader controls, drawn as a bar between the stage and the caption (see controls.ts). */
   controls?: DemoControls;
+  /** Set on blog posts only: the credit line, reveal entrances and the wide static width (see blog-figure.ts). */
+  blog?: BlogFigure;
 };
 
 /** Static SVGs are laid out at this width; CSS scales them to the stage. */

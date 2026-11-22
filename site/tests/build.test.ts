@@ -1386,6 +1386,74 @@ describe("the blog's content (lane d)", () => {
   });
 });
 
+describe("the blog as an OpenChart showcase", () => {
+  const builtPage = (href: string) => existsSync(join("dist", href, "index.html"));
+
+  it.each(posts)("$slug credits every figure with one link to an existing docs page", (post) => {
+    const figures = [
+      ...page("dist", postPath(post.slug)).querySelectorAll("article .docs-prose .demo[data-demo]"),
+    ];
+    expect(figures.length).toBeGreaterThan(0);
+    for (const figure of figures) {
+      const id = figure.getAttribute("data-demo");
+      const links = [...figure.querySelectorAll("a.figure-credit-link")];
+      expect(links, `${id} credit links`).toHaveLength(1);
+      const href = links[0]?.getAttribute("href") ?? "";
+      expect(href, `${id} credit target`).toMatch(/^\/docs\/[a-z0-9-]+\/[a-z0-9-]+\/$/);
+      expect(builtPage(href), `${id} credit target ${href} is built`).toBe(true);
+      expect(figure.querySelector(".figure-credit")?.textContent).toContain("Made with OpenChart");
+    }
+  });
+
+  it("no docs page figure carries a blog credit", () => {
+    const credited: string[] = [];
+    for (const doc of docs) {
+      if (!existsSync(join("dist", pagePath(doc.id)))) continue;
+      if (read("dist", pagePath(doc.id)).includes("figure-credit")) credited.push(doc.id);
+    }
+    expect(credited).toEqual([]);
+  });
+
+  it.each(posts)(
+    "$slug ends with one CTA after the prose and before the endnotes, offering the install and the guides",
+    (post) => {
+      const doc = page("dist", postPath(post.slug));
+      const ctas = doc.querySelectorAll("article [data-blog-cta]");
+      expect(ctas).toHaveLength(1);
+      const cta = ctas[0];
+      const prose = doc.querySelector("article .docs-prose");
+      const endnotes = doc.querySelector("article .blog-endnotes");
+      const follows = (a: Element | null | undefined, b: Element | null | undefined) =>
+        !!a && !!b && (a.compareDocumentPosition(b) & 4) !== 0;
+      expect(follows(prose, cta)).toBe(true);
+      expect(follows(cta, endnotes)).toBe(true);
+      expect(prose?.contains(cta ?? null)).toBe(false);
+      expect(cta?.querySelector("[data-install-command]")).not.toBeNull();
+      expect(cta?.querySelector('a[href="/docs/get-started/introduction/"]')).not.toBeNull();
+      expect(cta?.querySelector('a[href="/examples/"]')).not.toBeNull();
+      expect(proseText(cta)).not.toContain(EM_DASH);
+    },
+  );
+
+  it.each(posts)("$slug reveals its header, figures and CTA, never a chart stage", (post) => {
+    const doc = page("dist", postPath(post.slug));
+    expect(
+      doc.querySelector("article .blog-article-header")?.closest("[data-reveal]"),
+    ).not.toBeNull();
+    for (const figure of doc.querySelectorAll("article .docs-prose .demo[data-demo]")) {
+      expect(figure.hasAttribute("data-reveal"), figure.getAttribute("data-demo") ?? "").toBe(true);
+    }
+    const stages = [...doc.querySelectorAll("article [data-demo-stage]")];
+    const hidden = [...doc.querySelectorAll("article [data-motion]")].filter((moving) =>
+      stages.some((stage) => moving.contains(stage)),
+    );
+    expect(hidden.map((element) => element.outerHTML.slice(0, 80))).toEqual([]);
+    const cta = doc.querySelector("article [data-blog-cta]");
+    expect(cta?.hasAttribute("data-reveal")).toBe(true);
+    expect(cta?.parentElement?.closest("[data-reveal]") ?? null).toBeNull();
+  });
+});
+
 describe("phase 5 close", () => {
   it("no source file still carries the phase 5 stub marker", () => {
     const sources = readdirSync("src", { recursive: true, encoding: "utf8" })
