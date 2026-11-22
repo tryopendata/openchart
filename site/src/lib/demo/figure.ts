@@ -108,6 +108,8 @@ export function stageContentHtml(content: StageContent): string {
 function stageHtml(figure: DemoFigure, domId: string): string {
   const content = stageContentHtml({
     ...figure,
+    // A demo's own width wins; the blog's wide width changes only the statics' layout, never the stage's cap.
+    width: figure.width ?? figure.blog?.staticWidth,
     domId,
     theme: figure.pageTheme === false ? NO_PAGE_THEME : undefined,
   });
@@ -179,9 +181,33 @@ function captionHtml(figure: DemoFigure): string {
   return `<figcaption class="figure-caption">${lead} Source: ${source}.</figcaption>`;
 }
 
+/** The reveal role for a blog figure's caption, controls, credit and toolbar: a short lift, as on the landing figures. */
+const CHROME_MOTION = "quiet";
+
+/**
+ * A fragment with the chrome's reveal role on its root element, on blog figures
+ * only. The stage never goes through here, so it is never behind an entrance.
+ */
+function revealedChrome(fragment: string, blog: BlogFigure | undefined): string {
+  if (!blog) return fragment;
+  return fragment.replace(/^<([a-z]+)/, `<$1 data-motion="${CHROME_MOTION}"`);
+}
+
+/** The blog figure's "Made with OpenChart" line, linking to how to build its chart type; nothing elsewhere. */
+function creditHtml(blog: BlogFigure | undefined): string {
+  if (!blog) return "";
+  const { href, chartName } = blog.credit;
+  const link = `<a class="figure-credit-link" href="${escapeHtml(href)}">How to build this ${escapeHtml(chartName)}</a>`;
+  return revealedChrome(
+    `<p class="figure-credit" data-pagefind-ignore>Made with OpenChart. ${link}</p>`,
+    blog,
+  );
+}
+
 /**
  * The complete demo for one spec: a `<div class="demo">` holding the published
- * figure (the stage, any reader controls, then its caption) and, after it, the
+ * figure (the stage, any reader controls, its caption, then on a blog post the
+ * credit line) and, after it, the
  * embedded spec, any other states' specs and the code toolbar. The markup runs in reading order, so focus and screen readers
  * meet the chart, its caption, then the code.
  *
@@ -194,13 +220,16 @@ export async function demoFigureHtml(figure: DemoFigure): Promise<string> {
   const ownTheme = figure.pageTheme === false ? ` ${DEMO_ATTR.ownTheme}` : "";
   // Claimed before the first await, so two figures rendering at once never both write a block.
   const spec = specHtml(embeddedSpec(figure), figure.mount) + statesHtml(figure);
+  const { blog } = figure;
+  const reveal = blog ? " data-reveal" : "";
   const code = figure.tabs ? await codeTabsHtml(domId, figure.spec, figure.mount) : "";
-  const controls = demoControlsHtml(figure);
+  const controls = revealedChrome(demoControlsHtml(figure), blog);
+  const caption = revealedChrome(captionHtml(figure), blog);
   return [
-    `<div class="demo not-prose" ${DEMO_ATTR.figure}="${escapeHtml(figure.id)}"${entrance}${ownTheme}>`,
-    `<figure class="demo-figure">${stageHtml(figure, domId)}${controls}${captionHtml(figure)}</figure>`,
+    `<div class="demo not-prose" ${DEMO_ATTR.figure}="${escapeHtml(figure.id)}"${entrance}${ownTheme}${reveal}>`,
+    `<figure class="demo-figure">${stageHtml(figure, domId)}${controls}${caption}${creditHtml(blog)}</figure>`,
     spec,
-    code,
+    revealedChrome(code, blog),
     "</div>",
   ].join("");
 }

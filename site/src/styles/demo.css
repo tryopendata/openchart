@@ -34,6 +34,15 @@
     @apply text-ink-2 underline decoration-line underline-offset-2 hover:decoration-current;
   }
 
+  /* A blog figure's credit sits under its caption on the same inset and in the same muted type. */
+  .demo .figure-credit {
+    @apply px-4 pt-1 pb-1 text-sm leading-snug text-muted;
+  }
+
+  .demo .figure-credit-link {
+    @apply text-ink-2 underline decoration-line underline-offset-2 hover:decoration-current;
+  }
+
   .demo-toolbar {
     @apply mt-3 border-t border-line;
   }

@@ -3,12 +3,14 @@
  * and a hast plugin that turns the highlighted block into the demo figure. The
  * fence carries its own spec, so repo Markdown can show a live chart without a
  * registered demo. Shiki highlights before hast plugins run and drops the info
- * string, which is why the transformer copies it onto the `<pre>` first.
+ * string, which is why the transformer copies it onto the `<pre>` first. A
+ * fence in a blog post file gets the blog figure options (see blog-figure.ts).
  */
 import type { SatteriProcessorOptions } from "@astrojs/markdown-satteri";
 import type { VizSpec } from "@opendata-ai/openchart-core";
 import type { ShikiConfig } from "astro";
 import { DEFAULT_DEMO_HEIGHT } from "../../demos/types";
+import { type BlogFigure, blogFigure, isBlogPostFile } from "./blog-figure";
 import { fenceDemoId } from "./dom-id";
 import { demoFigureHtml } from "./figure";
 import { validateDemo } from "./validate";
@@ -84,6 +86,27 @@ function parseFenceSpec(body: string, id: string, location: string): VizSpec {
   return spec as VizSpec;
 }
 
+/**
+ * The blog-only figure options when the fence sits in a blog post, else nothing.
+ *
+ * @throws {DemoFenceError} When the post's spec has no chart type to credit; the
+ * UnknownFigureCreditError is kept as the cause.
+ */
+function fenceBlogFigure(
+  id: string,
+  spec: VizSpec,
+  fileURL: URL | undefined,
+  location: string,
+): BlogFigure | undefined {
+  if (!isBlogPostFile(fileURL)) return undefined;
+  try {
+    return blogFigure(id, spec);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new DemoFenceError(`Demo fence ${location}: ${reason}`, { cause: error });
+  }
+}
+
 /** Where this document's fence ids are kept: the compile's own data bag, so no state outlives one render. */
 const FENCE_IDS = "demoFenceIds";
 
@@ -145,6 +168,7 @@ export function demoFence(): HastPlugin {
           entrance: true,
           tabs: true,
           static: true,
+          blog: fenceBlogFigure(id, spec, ctx.fileURL, location),
         });
         return figureNode(html, ctx.sourceFormat);
       },
