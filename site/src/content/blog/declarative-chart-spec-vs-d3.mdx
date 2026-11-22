@@ -1,6 +1,6 @@
 ---
 title: "Declarative chart spec vs D3: what you write and what you give up"
-description: The same line chart as a 25-line JSON spec and as 72 lines of D3, what the spec decides for you, what it cannot draw, and when to reach for D3.
+description: The same line chart as a 45-line JSON spec and as 97 lines of D3, what the spec decides for you, what it cannot draw, and when to reach for D3.
 published: 2026-11-14
 author: OpenChart
 tags: [developers]
@@ -10,7 +10,7 @@ lead: blog/typescript-passes-java
 
 import Demo from "../../components/demo/Demo.astro";
 
-D3 gives you scales, shapes and axes, and you assemble the chart from them. A declarative spec describes the chart, and a library draws it. This post builds one chart both ways, so the difference is visible in code. The chart shows developers pushing TypeScript and Java code to GitHub each quarter. TypeScript passed Java in 2023 Q3.
+More developers pushed TypeScript code to GitHub than Java code for the first time in the third quarter of 2023, and the TypeScript count has grown 9.1 times since early 2020. Here is that chart built both ways. A declarative spec describes the chart and lets a library draw it; D3 gives you scales, shapes and axes, and you assemble the chart from them.
 
 ```json demo source="GitHub Innovation Graph, programming languages by economy" height=420
 {
@@ -78,11 +78,31 @@ D3 gives you scales, shapes and axes, and you assemble the chart from them. A de
     "color": {
       "field": "language",
       "type": "nominal",
-      "scale": { "domain": ["TypeScript", "Java"], "range": ["#0e7490", "#7a858f"] }
+      "scale": { "domain": ["TypeScript", "Java"] }
+    }
+  },
+  "theme": {
+    "colors": {
+      "categorical": [
+        { "light": "#0e7490", "dark": "#22a3c4" },
+        { "light": "#66707a", "dark": "#9aa0a6" }
+      ]
     }
   },
   "legend": { "show": false },
   "endpointLabels": { "format": ".3~s" },
+  "annotations": [
+    {
+      "type": "text",
+      "x": "2023-07-01",
+      "y": 891746,
+      "text": "2023 Q3: TypeScript passes Java",
+      "anchor": "top",
+      "offset": { "dx": -110, "dy": -56 },
+      "connector": true
+    }
+  ],
+  "chromeLayout": "subtract",
   "chrome": {
     "title": "TypeScript overtook Java in 2023 Q3 and has grown 9.1x since 2020 Q1",
     "subtitle": "Developers pushing code to GitHub each quarter, summed across economies"
@@ -90,11 +110,11 @@ D3 gives you scales, shapes and axes, and you assemble the chart from them. A de
 }
 ```
 
-The spec is 25 lines, not counting the 50 data rows. It says which fields go on which axes, which colors to use, and what the title is. It does not say where anything goes on the page.
+The spec is 45 lines, not counting the 50 data rows. It says which fields go on which axes, which colors to use, and what the title is. It does not say where anything goes on the page.
 
 ## The same chart in D3
 
-The D3 version runs on the same rows. It takes 72 lines of TypeScript. Run against those rows in a DOM, it drew two lines, the axes and the end labels.
+The D3 version runs on the same rows and draws the same lines, axes, end labels and callout. It takes 97 lines of TypeScript. Two jobs the spec never mentions take a good share of them: breaking the title into lines, because SVG text does not wrap, and placing the callout by hand.
 
 ```ts title="chart.ts"
 import * as d3 from "d3";
@@ -109,8 +129,8 @@ export function drawChart(
 ) {
   const width = 720;
   const height = 420;
-  const margin = { top: 84, right: 90, bottom: 36, left: 56 };
-  const colors: Record<string, string> = { TypeScript: "#0e7490", Java: "#7a858f" };
+  const margin = { top: 104, right: 90, bottom: 36, left: 56 };
+  const colors: Record<string, string> = { TypeScript: "#0e7490", Java: "#66707a" };
 
   const rows: Row[] = data.map((d) => ({ ...d, date: d3.timeParse("%Y-%m-%d")(d.date) as Date }));
   const series = d3.group(rows, (d) => d.language);
@@ -132,8 +152,21 @@ export function drawChart(
     .attr("role", "img")
     .attr("aria-label", title);
 
-  svg.append("text").attr("x", margin.left).attr("y", 30).attr("font-size", 22).text(title);
-  svg.append("text").attr("x", margin.left).attr("y", 52).attr("fill", "#555").text(subtitle);
+  // SVG text does not wrap, so break the title into lines (two fit above the subtitle).
+  const heading = svg.append("text").attr("font-size", 22);
+  let words: string[] = [];
+  let tspan = heading.append("tspan").attr("x", margin.left).attr("y", 30);
+  for (const word of title.split(" ")) {
+    tspan.text([...words, word].join(" "));
+    if (words.length > 0 && tspan.node()!.getComputedTextLength() > width - margin.left - margin.right) {
+      tspan.text(words.join(" "));
+      words = [];
+      tspan = heading.append("tspan").attr("x", margin.left).attr("dy", 26);
+    }
+    words.push(word);
+    tspan.text(words.join(" "));
+  }
+  svg.append("text").attr("x", margin.left).attr("y", 78).attr("fill", "#555").text(subtitle);
 
   svg
     .append("g")
@@ -168,14 +201,26 @@ export function drawChart(
       .attr("fill", colors[language])
       .text(language);
   }
+
+  // Mark the first quarter TypeScript is ahead. Both series list the same quarters in order.
+  const java = series.get("Java")!;
+  const cross = series.get("TypeScript")!.find((d, i) => d.pushers > java[i].pushers)!;
+  const [cx, cy] = [x(cross.date), y(cross.pushers)];
+  const quarter = `${cross.date.getFullYear()} Q${Math.floor(cross.date.getMonth() / 3) + 1}`;
+  svg.append("line").attr("stroke", "#888")
+    .attr("x1", cx).attr("y1", cy).attr("x2", cx - 90).attr("y2", cy - 60);
+  svg.append("circle").attr("fill", "#fff").attr("stroke", "#888")
+    .attr("cx", cx).attr("cy", cy).attr("r", 4);
+  svg.append("text").attr("text-anchor", "middle")
+    .attr("x", cx - 90).attr("y", cy - 66).text(`${quarter}: TypeScript passes Java`);
 }
 ```
 
-Most of those lines are decisions the spec made for you: the margins, the pixel range of each scale, how the axes are built, where the labels go. D3 does not hide them. That is its strength, and each one is yours to get right.
+Most of those lines are decisions the spec made for you: the margins, the pixel range of each scale, how the axes are built, where the labels go. D3 leaves each of those decisions to you.
 
 ## What the spec gives you
 
-The D3 version draws a chart. The spec version also does several things you did not ask for. On a phone-width container the chart switches to a compact layout with fewer ticks. It can be tabbed to and stepped through with the arrow keys, with a tooltip at each step. It has a hidden data table and a label for screen readers, and its entrance animates. It exports to SVG and PNG. [Annotations](/docs/framing/annotations/) sit in data coordinates, so a callout stays on its point when the chart resizes.
+The spec version also handles these without extra code. On a phone-width container the chart switches to a compact layout with fewer ticks, and the callout becomes a numbered note under the plot. It can be tabbed to and stepped through with the arrow keys, with a tooltip at each step. It has a hidden data table and a label for screen readers, and its entrance animates. It exports to SVG and PNG. [Annotations](/docs/framing/annotations/) sit in data coordinates, so a callout stays on its point when the chart resizes.
 
 The D3 chart scales as a picture, so its text shrinks with its width. It has the `aria-label` the code sets by hand and none of the rest. D3 can do all of it, and you write each piece.
 
@@ -183,18 +228,20 @@ The D3 chart scales as a picture, so its text shrinks with its width. It has the
 
 A spec can only describe charts the library knows how to draw. If the chart you want is not among its chart types, no spec will produce it. You also take the library's defaults for spacing, type and color, and you override them through spec fields where a field exists, which is a narrower set of choices than raw SVG.
 
-Changing a spec is cheap inside that range. The chart below is the same kind of spec with `mark` changed to a range and a second position channel added. In D3 that change touches the line generator, the labels and the scales.
+Changing a spec is cheap inside that range. The chart below swaps `mark` for a range and adds a second position channel, `x2`, so each bar runs from the 10th to the 90th percentile of pay. A `color` field picks out the two groups the title compares, and a reference rule marks the managers' $60,130. In D3 the move from lines to ranges touches the line generator, the labels and the scales.
 
 <Demo id="blog/occupation-pay-ranges" />
 
 ## When to reach for D3
 
-Use D3 when the chart is the product: a custom layout, a mark that no chart type draws, or an interaction the spec cannot describe. Use a spec when the chart is a standard one and the work is in the data and the writing. The two also combine, because a spec is plain JSON and a D3 chart can sit on the same page.
+Use D3 when the chart is the product: a custom layout, a mark that no chart type draws, or an interaction the spec cannot describe. Use a spec when the chart is a standard one and the work is in the data and the writing.
 
 ## The spec
 
-`data` holds one row per quarter and language, with the quarter turned into a date so the x axis can be a time axis. In `encoding`, each channel names a `field` and a `type`. `x` is temporal, `y` is quantitative with `scale.zero` set so the axis starts at zero as the D3 version does, and `color` splits the rows into one line per language. The color scale fixes the order and the two colors.
+`data` holds one row per quarter and language, with the quarter turned into a date so the x axis can be a time axis. In `encoding`, each channel names a `field` and a `type`. `x` is temporal, `y` is quantitative with `scale.zero` set so the axis starts at zero as the D3 version does, and `color` splits the rows into one line per language, its `domain` fixes the order, and `theme.colors.categorical` gives each line a light and a dark color.
 
 `endpointLabels` names each line at its right end in place of a legend, and `chrome` holds the title and subtitle. The [encoding page](/docs/the-spec/encoding/) lists every channel.
 
-Each block of a spec, from data to chrome to annotations, is walked through in [the anatomy of a spec](/docs/the-spec/anatomy/).
+The callout in `annotations` sits at a data position, an `x` date and a `y` count, so it stays on the crossing point at any width. `offset` moves the text away from the point and `connector` draws the line back to it. `chromeLayout: "subtract"` keeps the figure at its height when the callout turns into a note on a phone.
+
+[The anatomy of a spec](/docs/the-spec/anatomy/) takes one published chart apart a block at a time.
