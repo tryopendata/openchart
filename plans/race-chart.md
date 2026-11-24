@@ -376,14 +376,52 @@ Test cases (happy-dom, fake scheduler injected through a test-only seam or `requ
 
 ### Phase 4: line and table marks, mark swap, accessibility
 
-Demo: the `Testing / Race / Marks` story switches bar, line and table mid-play without losing the playhead; a screen reader reads the description and per-period table.
+Demo: in the `Testing / Race / Bar` story, `race.update({ ...spec, mark: 'line' })` and `'table'` swap the mark mid-play without losing the playhead; a screen reader reads the description, the per-period hidden table and the pause/seek announcements. (The `Marks` switcher story lands with the gallery in phase 6.)
 Depends on: phase 3
+
+Phase 4 base (one short Codex run, committed before the lanes start, so no two lanes touch a shared file):
+- `core/src/types/race.ts`: table cells become typed, `RaceTableCell = { column: 'rank'; text: string } | { column: 'change'; direction: 'up' | 'down' | 'same' | 'new'; text: string } | { column: 'name'; text: string; color: string } | { column: 'bar'; x: number; width: number; color: string } | { column: 'value' | 'share'; text: string }`; `RaceTableGeometry.rows[].cells: RaceTableCell[]`; `RaceTableStatic` gains `headerHeight: number`, `fontSize: number` and `labels: Record<RaceTableColumn, string>` (header text). `RaceLineStatic` gains `yAxisX: number`, `labelGutter: number`, `tickFontSize: number`; `RaceLineGeometry.series[].endLabel` gains `value: string` and `RaceLineGeometry` gains `domain: [number, number]` (the monotonic y domain). JSDoc each.
+- `engine/src/race/layout-line.ts` and `layout-table.ts`: stub `computeLineStatic`/`lineGeometry` and `computeTableStatic`/`tableGeometry` that throw `Error('not implemented')`; register `line` and `table` in `RACE_MARKS` (marks.ts) through them. `vanilla/src/race/render-line.ts` and `render-table.ts`: stub factories registered in `RACE_RENDERERS`. `engine/src/race/a11y.ts` keeps `raceA11y` but its signature becomes `raceA11y(model: RaceModel): A11yMetadata` (layout.ts passes the model); `vanilla/src/race/a11y-dom.ts` stub exports `createRaceA11y(shell, model)` returning `{ announce(frame), destroy() }`.
+- `RaceInstance` gains `on(event: 'period', cb: (period: RaceFrame['period']) => void): () => void` (stub in race-mount: registers and returns an unsubscribe, never fires until lane c). RFC's `seekTo(periodValue)` is dropped from v1: `seek` covers it.
+- The registration test (`registration.test.ts`) gains line and table entries and stays locked for the lanes.
 
 | Lane | Size | Owns files | Reads | Tests | Model | Status | Branch | Done when |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| a | M | packages/engine/src/race/layout-line.ts, packages/engine/src/race/__tests__/layout-line.test.ts, packages/vanilla/src/race/render-line.ts, packages/vanilla/src/race/__tests__/render-line.test.ts | | | gpt-6.2-sol | pending | | |
-| b | M | packages/engine/src/race/layout-table.ts, packages/engine/src/race/__tests__/layout-table.test.ts, packages/vanilla/src/race/render-table.ts, packages/vanilla/src/race/__tests__/render-table.test.ts | | | gpt-6.2-sol | pending | | |
-| c | S | packages/engine/src/race/a11y.ts, packages/engine/src/race/__tests__/a11y.test.ts, packages/vanilla/src/race/a11y-dom.ts, packages/vanilla/src/race/__tests__/a11y-dom.test.ts | | | gpt-6.2-sol | pending | | |
+| a | M | packages/engine/src/race/layout-line.ts, packages/engine/src/race/__tests__/layout-line.test.ts, packages/vanilla/src/race/render-line.ts, packages/vanilla/src/race/__tests__/render-line.test.ts | contracts, layout-bar.ts, render-bar.ts, timeline.ts, matrix.ts | packages/engine/src/race/__tests__/layout-line.test.ts packages/vanilla/src/race/__tests__/render-line.test.ts | gpt-6.2-sol | pending | | line race renders and swaps in through `update` |
+| b | M | packages/engine/src/race/layout-table.ts, packages/engine/src/race/__tests__/layout-table.test.ts, packages/vanilla/src/race/render-table.ts, packages/vanilla/src/race/__tests__/render-table.test.ts, packages/core/src/styles/race-table.css | contracts, layout-bar.ts, render-bar.ts, shell.ts, packages/core/src/styles/race.css | packages/engine/src/race/__tests__/layout-table.test.ts packages/vanilla/src/race/__tests__/render-table.test.ts | gpt-6.2-sol | pending | | table race renders and swaps in through `update` |
+| c | M | packages/engine/src/race/a11y.ts, packages/engine/src/race/__tests__/a11y.test.ts, packages/vanilla/src/race/a11y-dom.ts, packages/vanilla/src/race/__tests__/a11y-dom.test.ts, packages/vanilla/src/race-mount.ts, packages/vanilla/src/race/__tests__/race-mount.test.ts | contracts, shell.ts, controls.ts, RFC section 8 | packages/engine/src/race/__tests__/a11y.test.ts packages/vanilla/src/race/__tests__/a11y-dom.test.ts packages/vanilla/src/race/__tests__/race-mount.test.ts | gpt-6.2-sol | pending | | description, hidden table, live region and `on('period')` work |
+
+Test cases:
+- line (4a): `window: 'reveal'` x domain grows from [0, 1] at t = 0 to [0, t] and ends at the full span; `'all'` is fixed; the path holds observed points through `floor(t)` plus the interpolated head at t; a gap (`gaps: 'break'`) yields a `null` that splits the path; y domain never shrinks across increasing t; series are the top-N items plus items that left within the last period, fading; head labels never overlap and stay inside the plot after the push pass (10 crowded series at 360px); renderer draws one path per series with `fill: none`, gaps as separate subpaths, reuses nodes across draws, removes series that left, and destroy removes only its nodes.
+- table (4b): row y = rankPos × rowHeight below the header; the rank and change cells change only when `floor(t)` changes (sample t = 3.2 and 3.8 give the same rank text and change direction); a key new to the top N shows `new`; `bar` width is proportional to value with the max at full column width; `share` is value over the sum of all keys in the period, formatted as a percent; default columns drop `bar` below 520px; custom `columns` order is respected; the row moving up draws above the one moving down; the renderer builds an HTML table in the shell's table host with a header row, positions rows by transform, and destroy empties only what it added.
+- a11y (4c): `raceA11y` description names the span, the leader at start and end and the biggest climber by rank; the hidden table has one row per period up to 60 periods and is sampled (first, last, evenly spaced) beyond; the live region announces on pause, seek and keyboard step ("1995: United States, Japan, Germany lead") and never during play; `on('period')` fires once per period boundary crossed while playing and on seek, unsubscribe stops it, destroy clears listeners; mark swap via `update` keeps the hidden table and live region.
+
+#### Lane 4a brief
+
+- Goal: the line mark: lines for the ranked series, drawn forward over time, with head labels.
+- Interface: `computeLineStatic(model, base, mark, measureText): RaceLineStatic`, `lineGeometry(model, layout, frame): RaceLineGeometry`, `createRaceLineRenderer` (the `RaceRendererFactory<'line'>`), all scaffolded in the phase 4 base.
+- Behavior: the plot reserves a right label gutter from the widest `label value` text at display precision (cap so the plot keeps 50% of the width) and a tick band sized from the theme tick font, as bar does. x maps period index to px; `reveal` uses [0, max(1, t)], `all` uses [0, periodCount - 1]. Points come from `model.matrix` values per key (no new interpolation: use `interpolateRaceValue` for the head). The y domain is the running max over [0, t] of every drawn point (min 0, or the running min when negative), rounded with the existing tick ladder so ticks don't snap. Fading series follow `frame.items[].opacity`. Head labels: sort by y, push down to keep `fontSize + 2` spacing, then push up from the plot bottom; name in the series color, value muted. Ticks: y ticks via `crossfadeTicks`, x ticks from the period labels (thin to fit the width, always the first and the playhead's period).
+- Decisions already made: no sliding window in v1; no markers on points; lines are 2px, `stroke-linejoin: round`.
+- Out of scope: table, a11y, mount changes.
+- Done when: the test cases pass and `scripts/race-frames.ts --geometry --mark line` (add the flag) prints sensible geometry for the GDP fixture; QA in the `Testing / Race / Bar` story by calling `update` with `mark: 'line'` from the browser console at 800px and 360px.
+
+#### Lane 4b brief
+
+- Goal: the table mark: an HTML table whose rows slide to their rank as the race plays.
+- Interface: `computeTableStatic`, `tableGeometry`, `createRaceTableRenderer`, scaffolded in the phase 4 base; typed `RaceTableCell`s.
+- Behavior: rows are `top` tall slots under a header; columns default to `rank, change, name, bar, value, share`, dropping `bar` when `area.width < 520`; widths: rank and change fixed from measured text, name from `layout.labels`, value and share from measured formatted extremes, bar takes the rest. Rank and change derive from `Math.round(rankPos)` at `floor(t)` versus `floor(t) - 1`. The renderer writes cells as text (never `innerHTML`), positions rows with `transform: translateY(...)`, sets row opacity, orders the moving-up row last in DOM, and draws the bar cell as a div with the computed width. Styles in a new `race-table.css` imported by the race styles entry, tabular numerals for numbers, using the theme tokens.
+- Decisions already made: table renders in the shell's table host, not SVG; no sorting by clicking headers.
+- Out of scope: line, a11y, mount changes.
+- Done when: the test cases pass; QA in the browser via `update({ mark: 'table' })` at 800px and 360px, light and dark.
+
+#### Lane 4c brief
+
+- Goal: accessibility and period events: description, hidden per-period table, live announcements, and `on('period')`.
+- Interface: `raceA11y(model): A11yMetadata` (engine), `createRaceA11y(shell, model): { announce(frame): void; destroy(): void }` (vanilla), `RaceInstance.on('period', cb)`.
+- Behavior: per the test cases and RFC section 8. The hidden table lives in a visually hidden container the shell provides (or that `createRaceA11y` appends to the shell root), built once per model. The live region is `aria-live="polite"`. The mount calls `announce` on pause, seek and keyboard step, fires `period` listeners when `floor(t)` changes and on seek, and recreates `createRaceA11y` only when the model changes. Controls' scrubber keeps `aria-valuetext` (already in controls.ts; verify).
+- Decisions already made: announcements never fire during play.
+- Out of scope: line and table geometry.
+- Done when: the test cases pass; QA with the browser's accessibility tree on the `Testing / Race / Bar` story.
 
 ### Phase 5: wrappers and export
 
@@ -402,7 +440,7 @@ Depends on: phase 4, phase 5
 
 | Lane | Size | Owns files | Reads | Tests | Model | Status | Branch | Done when |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| a | M | examples/src/gallery/race.stories.tsx, examples/src/gallery/race.demos.ts, examples/src/gallery/registry.ts, docs/race.md, docs/codebase-map.md, scripts/generate-llms.mjs, llms.txt, llms-full.txt, e2e/visual/race.spec.ts, e2e/visual/__screenshots__/ | | | gpt-6.2-sol | pending | | |
+| a | M | examples/src/testing/race.stories.tsx, examples/src/gallery/race.stories.tsx, examples/src/gallery/race.demos.ts, examples/src/gallery/registry.ts, docs/race.md, docs/codebase-map.md, scripts/generate-llms.mjs, llms.txt, llms-full.txt, e2e/visual/race.spec.ts, e2e/visual/__screenshots__/ | | | gpt-6.2-sol | pending | | |
 
 ## Log
 
@@ -423,3 +461,4 @@ Depends on: phase 4, phase 5
 - 2026-11-24: phase 1 boundary review (opus), five findings accepted: colors become theme-independent slots resolved in layout; `RaceLayoutBase` carries `colors` and truncated `labels`; mark registry drops `measure` for `computeStatic(..., measureText)`; race validation checks fields exist in data; interpolation moves to `race/interpolate.ts`.
 - 2026-11-24: lane 2a review: mark registry builds layouts from the contract entry only (no private createLayout); `RaceModel.frameColors` (spec-theme colors) back `raceFrameAt`, on-screen colors stay on the layout; onWarn adapter cached per sink. Phase 1 issues found during 2a fixed in the same follow-up: domain covers every emitted value, null label/color encodings are validation errors, `RaceBarStatic.cornerRadius`, value gutters measured at display precision and capped so the plot keeps 40%, tick band sized from the theme.
 - 2026-11-24: lanes 2a and 2b both added the same optional `measureText` field to `RaceLayoutBase`; the git auto-merge kept both copies, and the duplicate was removed after the merge. Core `race.ts` is listed only under lane 2a's owned files.
+- 2026-11-24: phase 4 base added before the lanes: the scaffolded table cells (`string[]`) could not carry the inline bar, color chip or change arrow, and the line head label lacked a value, so the shared types change once, up front. RFC's `on('period')` was missing from `RaceInstance` and is added (React `onPeriod` in phase 5 needs it); `seekTo` dropped from v1. The `Marks` switcher story moves to phase 6 with the gallery.
