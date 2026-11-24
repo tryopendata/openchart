@@ -23,7 +23,7 @@ function tickAxis(
   {
     grid,
     alignPeriodLabels,
-  }: { grid?: { left: number; right: number; bottom: number }; alignPeriodLabels?: boolean } = {},
+  }: { grid?: { left: number; right: number }; alignPeriodLabels?: boolean } = {},
 ) {
   const nodes = new Map<number, ReturnType<typeof createTick>>();
 
@@ -55,11 +55,9 @@ function tickAxis(
         setNumbers(group, { opacity: tick.opacity });
         if (line && grid) {
           setNumbers(line, { y1: tick.position, y2: tick.position });
-          const labelY =
-            tick.value === 0
-              ? Math.min(tick.position, grid.bottom - (3 * fontSize) / 4)
-              : tick.position;
-          setNumbers(label, { x: fixed, y: labelY });
+          setNumbers(label, { x: fixed, y: tick.labelPosition ?? tick.position });
+          if (tick.labelOpacity !== undefined) setNumbers(label, { opacity: tick.labelOpacity });
+          else label.removeAttribute('opacity');
         } else {
           setNumbers(label, { x: tick.position, y: fixed });
         }
@@ -126,7 +124,7 @@ export const createRaceLineRenderer: RaceRendererFactory<'line'> = (host, stat, 
   const seriesNodes = new Map<string, ReturnType<typeof createSeries>>();
   const xTicks = tickAxis(xAxis, stat.tickFontSize, { alignPeriodLabels: stat.window === 'all' });
   const yTicks = tickAxis(yAxis, stat.tickFontSize, {
-    grid: { left: stat.yAxisX, right: x + width, bottom: y + height },
+    grid: { left: stat.yAxisX, right: x + width },
   });
   let destroyed = false;
 
@@ -155,7 +153,7 @@ export const createRaceLineRenderer: RaceRendererFactory<'line'> = (host, stat, 
             y1: endLabel.leader.y,
             x2: endLabel.x - 1,
             y2: endLabel.y,
-            opacity: labelOpacity * 0.45,
+            opacity: endLabel.leader.opacity,
           });
         } else {
           nodes.leader.remove();

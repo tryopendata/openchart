@@ -2,7 +2,7 @@ import { type CompileWarning, resolveTheme } from '@opendata-ai/openchart-core';
 import { emitSpecWarnings, type WarnSink } from '../compile/spec-sugar';
 import { compile } from '../compiler/index';
 import { resolveFieldFormatter } from '../format/field-format';
-import { assignRaceColors, cacheRaceColorAssignment, resolveRaceColors } from './colors';
+import { assignRaceColors, resolveRaceColors } from './colors';
 import { buildRaceMatrix } from './matrix';
 import { formatPeriodLabels } from './period-labels';
 import { createRaceTimeline } from './timeline';
@@ -57,7 +57,7 @@ function authoredWatermark(spec: unknown, normalized: boolean): boolean | undefi
  */
 export function prepareRace(
   spec: unknown,
-  options: { onWarn?: (w: CompileWarning) => void },
+  options: { onWarn?: (w: CompileWarning) => void; previousModel?: RaceModel },
 ): RaceModel {
   const { spec: normalized, warnings } = compile(spec);
   if (!('type' in normalized) || normalized.type !== 'race') {
@@ -97,21 +97,21 @@ export function prepareRace(
     values: values(),
   });
   const palette = resolveTheme(normalized.theme).colors.categorical;
-  const colorSlotsForPalette = assignRaceColors(
+  const colorAssignment = assignRaceColors(
     matrix,
     timeline,
     encoding.color,
     encoding.key.field,
+    options.previousModel,
   );
-  const colorSlots = colorSlotsForPalette(palette.length);
-  const frameColors = resolveRaceColors(colorSlots, palette);
+  const frameColors = resolveRaceColors(colorAssignment.slotsFor(palette.length), palette);
 
-  const model: RaceModel = {
+  return {
     spec: normalized,
     specWatermark: authoredWatermark(spec, normalized.watermark),
     matrix,
     timeline,
-    colorSlots,
+    colorAssignment,
     frameColors,
     periodLabels,
     formatValue,
@@ -124,6 +124,4 @@ export function prepareRace(
     },
     warnings,
   };
-  cacheRaceColorAssignment(model, palette.length, colorSlotsForPalette);
-  return model;
 }

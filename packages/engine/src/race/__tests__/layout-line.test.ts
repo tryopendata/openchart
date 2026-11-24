@@ -83,20 +83,52 @@ describe('line race layout', () => {
     expect(ticks.map(({ label }) => label)).toEqual(['$0', '$2T', '$4T', '$6T', '$8T', '$10T']);
   });
 
-  it('fits the labels of crossfading y ticks on a short plot', () => {
-    const { at, layout } = setup({ A: [12.6, 12.6] }, { width: 360, height: 200, axisTick: 14 });
-    const { yTicks } = at(1);
-    const bottom = layout.static.plot.y + layout.static.plot.height;
-    const labelYs = yTicks
-      .filter(({ label, opacity }) => label && opacity > 0.01)
-      .map(({ value, position }) =>
-        value === 0 ? Math.min(position, bottom - 14 * 0.75) : position,
-      )
-      .sort((a, b) => a - b);
-    expect(yTicks.length).toBeGreaterThan(labelYs.length);
-    expect(labelYs.length).toBeGreaterThan(2);
-    for (let i = 1; i < labelYs.length; i++)
-      expect(labelYs[i] - labelYs[i - 1]).toBeGreaterThanOrEqual(14 * 1.2);
+  it.each(
+    [330, 360, 680].flatMap((width) => [12, 14].map((axisTick) => ({ width, axisTick }))),
+  )('keeps zero and its next visible label apart at $width px with $axisTick px text', ({
+    width,
+    axisTick,
+  }) => {
+    const textHeight = 18;
+    const { at } = setup(
+      { A: [12.6, 12.6] },
+      {
+        width,
+        axisTick,
+        height: 200,
+        measureText: (text, size, weight) => ({
+          width: estimateTextWidth(text, size, weight),
+          height: textHeight,
+        }),
+      },
+    );
+
+    const labels = at(1).yTicks.filter(({ label, opacity }) => label && opacity > 0.01);
+    const zero = labels.find(({ value }) => value === 0);
+    const next = labels.find(({ value }) => value > 0);
+    expect(zero?.label).toBe('0.00');
+    expect(next?.label).toBeTruthy();
+    if (!zero || !next) throw new Error('Expected zero and a positive label');
+    expect(
+      (zero.labelPosition ?? zero.position) - (next.labelPosition ?? next.position),
+    ).toBeGreaterThanOrEqual(textHeight);
+  });
+
+  it.each([1, 10])('switches between non-nested y tick steps at scale %i', (scale) => {
+    const { at } = setup({ A: [10 * scale, 60 * scale] }, { width: 680, height: 320 });
+    let sawFiner = false;
+    let sawCoarser = false;
+    for (let frame = 0; frame <= 120; frame++) {
+      const values = at(frame / 120).yTicks.map(({ value }) => value / scale);
+      const finer = values.some(
+        (value) => value === 2 || value === 4 || value === 6 || value === 8,
+      );
+      const coarser = values.includes(5);
+      expect(finer && coarser, `t = ${frame / 120}`).toBe(false);
+      sawFiner ||= finer;
+      sawCoarser ||= coarser;
+    }
+    expect(sawFiner && sawCoarser).toBe(true);
   });
 
   it('keeps the two label opacities continuous as their ranks cross', () => {

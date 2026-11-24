@@ -62,7 +62,7 @@ export function computeBarStatic(input: BarStaticInput): RaceBarStatic {
     period = {
       x: right,
       y: bottom,
-      fontSize: labelWidth > budget ? fontSize * (budget / labelWidth) : fontSize,
+      fontSize: labelWidth > budget ? Math.max(36, fontSize * (budget / labelWidth)) : fontSize,
     };
   }
 

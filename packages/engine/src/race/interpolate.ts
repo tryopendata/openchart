@@ -1,5 +1,7 @@
 function lerp(from: number, to: number, fraction: number): number {
-  return from + (to - from) * fraction;
+  const delta = to - from;
+  // Opposite-signed finite endpoints can have an unrepresentable difference.
+  return Number.isFinite(delta) ? from + delta * fraction : from * (1 - fraction) + to * fraction;
 }
 
 /**

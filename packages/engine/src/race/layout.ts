@@ -10,7 +10,7 @@ import {
   resolveTheme,
 } from '@opendata-ai/openchart-core';
 import { raceA11y } from './a11y';
-import { raceColorSlots, resolveRaceColors } from './colors';
+import { resolveRaceColors } from './colors';
 import { truncateRaceLabel } from './layout-bar';
 import { layoutForRaceMark } from './marks';
 import { raceSpecWarning } from './prepare';
@@ -60,7 +60,7 @@ function raceLayoutBase(
     watermark,
     periods: [...model.periodLabels],
     colors: resolveRaceColors(
-      raceColorSlots(model, theme.colors.categorical.length),
+      model.colorAssignment.slotsFor(theme.colors.categorical.length),
       theme.colors.categorical,
     ),
     labels,

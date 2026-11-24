@@ -407,7 +407,7 @@ export function createRace(
 
   function update(nextSpec: RaceSpec) {
     if (destroyed) return;
-    const next = prepareRace(nextSpec, { onWarn: warn });
+    const next = prepareRace(nextSpec, { onWarn: warn, previousModel: model });
     if (destroyed) return;
     const nextFont = resolveFont(next, font);
     const nextLayout = compileLayout(next, nextFont);

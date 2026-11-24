@@ -47,7 +47,7 @@ describe('race preparation', () => {
       values: [Float64Array.of(20, 22, 24), Float64Array.of(9, 10, 12)],
     });
     expect(model.periodLabels).toEqual(['2022', '2023', '2024']);
-    expect(model.colorSlots).toEqual([0, 1]);
+    expect(model.colorAssignment.slotsFor(6)).toEqual([0, 1]);
     expect(model.timeline).toMatchObject({ periodCount: 3, keyCount: 2, top: 2 });
     expect(model.timeline.sample(1.5)).toEqual({
       t: 1.5,
@@ -79,10 +79,12 @@ describe('race preparation', () => {
       { year: 2024, country: 'CA', gdp: 32, name: 'Canada', region: 'Americas' },
     ];
     const input = { ...spec, data, race: { ...spec.race, top: 3 } };
-    expect(prepareRace(input, {}).colorSlots).toEqual([1, 0, 2]);
+    expect(prepareRace(input, {}).colorAssignment.slotsFor(6)).toEqual([1, 0, 2]);
     expect(
-      prepareRace({ ...input, encoding: { ...spec.encoding, color: { field: 'region' } } }, {})
-        .colorSlots,
+      prepareRace(
+        { ...input, encoding: { ...spec.encoding, color: { field: 'region' } } },
+        {},
+      ).colorAssignment.slotsFor(6),
     ).toEqual([0, 0, 1]);
   });
 

@@ -88,8 +88,19 @@ export interface RaceTimeline {
   exactRank(keyIndex: number, t: number): number;
   /** Cached exact rank at an integer period index. Infinity when absent. */
   periodRank(keyIndex: number, period: number): number;
+  /** Exact and smoothed ranks on the sample grid. A missing exact rank equals keyCount. */
+  rankSamples(keyIndex: number): {
+    exact: Readonly<Float32Array>;
+    smoothed: Readonly<Float32Array>;
+  };
   /** Items with rankPos < top, sorted by rankPos. */
   sample(t: number): RaceSample;
+}
+
+export interface RaceColorAssignment {
+  slotsFor(paletteSize: number): readonly (number | string)[];
+  /** Assignments already used by a spec or layout, available to carry across updates. */
+  readonly byPaletteSize: ReadonlyMap<number, readonly (number | string)[]>;
 }
 
 export interface RaceModel {
@@ -98,8 +109,7 @@ export interface RaceModel {
   specWatermark?: boolean;
   matrix: RaceMatrix;
   timeline: RaceTimeline;
-  /** Per-key palette indices or constant CSS colors. */
-  colorSlots: Array<number | string>;
+  colorAssignment: RaceColorAssignment;
   /** Spec-theme light colors for standalone frames. On-screen geometry uses layout.colors. */
   frameColors: string[];
   periodLabels: string[];

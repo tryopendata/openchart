@@ -294,32 +294,51 @@ function placeHeadLabels(layout: LineLayout, candidates: HeadLabelPlacement[]) {
 
 function lineValueTicks(domain: [number, number], height: number) {
   const span = domain[1] - domain[0];
-  if (span === 0) return [{ value: 0, opacity: 1 }];
+  if (span === 0) return [{ value: 0, opacity: 1, coarse: true }];
 
   const target = targetTickCount(height, 'full', 'y');
   const ideal = span / target;
   const ladder = valueTickLadder(span, [1, 2, 5]);
   const upper = ladder.findIndex((step) => step >= ideal);
-  if (upper <= 0) return crossfadeTicks(domain, height / span, ladder.slice(0, 1));
+  const pxPerUnit = height / span;
+  const ticksAt = (step: number[]) =>
+    crossfadeTicks(domain, pxPerUnit, step).map((tick) => ({ ...tick, coarse: true }));
+  if (upper <= 0) return ticksAt(ladder.slice(0, 1));
 
   const finer = ladder[upper - 1];
   const coarser = ladder[upper];
-  // D3 switches nice increments at the geometric mean of the two steps.
-  // Fade around that threshold to keep ticks stable as the scale grows.
+  // D3 switches nice increments at the geometric mean. Only nested
+  // increments can share a grid while the finer ticks fade in or out.
+  const ratio = coarser / finer;
+  if (Math.abs(ratio - Math.round(ratio)) > 1e-6) {
+    return ticksAt([ideal / finer < Math.sqrt(ratio) ? finer : coarser]);
+  }
   const threshold = (height / target) * Math.sqrt(finer / coarser);
-  return crossfadeTicks(domain, height / span, [finer, coarser], threshold * 1.1, threshold * 0.9);
+  const coarseValues = new Set(ticksAt([coarser]).map(({ value }) => value));
+  return crossfadeTicks(domain, pxPerUnit, [finer, coarser], threshold * 1.1, threshold * 0.9).map(
+    (tick) => ({ ...tick, coarse: coarseValues.has(tick.value) }),
+  );
 }
 
-function fitYTickLabels(ticks: RaceTick[], bottom: number, fontSize: number, labelHeight: number) {
+function fitYTickLabels(ticks: Array<RaceTick & { coarse: boolean }>, labelHeight: number) {
   const occupied: number[] = [];
   const byPriority = [...ticks].sort(
-    (a, b) => Number(b.value === 0) - Number(a.value === 0) || b.opacity - a.opacity,
+    (a, b) =>
+      Number(b.value === 0) - Number(a.value === 0) ||
+      Number(b.coarse) - Number(a.coarse) ||
+      a.value - b.value,
   );
   for (const tick of byPriority) {
     if (!tick.label || tick.opacity <= 0.01) continue;
-    const y = tick.value === 0 ? Math.min(tick.position, bottom - fontSize * 0.75) : tick.position;
-    if (occupied.some((position) => Math.abs(position - y) < labelHeight)) tick.label = '';
-    else occupied.push(y);
+    const y = tick.labelPosition ?? tick.position;
+    let clearance = Infinity;
+    for (const position of occupied) clearance = Math.min(clearance, Math.abs(position - y));
+    const opacity = Math.max(0, Math.min(1, (clearance - labelHeight) / 4));
+    if (opacity === 0) tick.label = '';
+    else {
+      tick.labelOpacity = opacity;
+      occupied.push(y);
+    }
   }
 }
 
@@ -383,7 +402,7 @@ export const lineGeometry: RaceMarkEntry<'line'>['geometry'] = (model, layout, f
   const text = lineText(layout, layout.theme.fonts.sizes.body);
   const series: LineSeries[] = [];
   const labels: HeadLabelPlacement[] = [];
-  const anchors: NonNullable<LineSeries['endLabel']['leader']>[] = [];
+  const anchors: Array<{ x: number; y: number }> = [];
   for (const { key, opacity, rankPos } of visible) {
     const values = model.matrix.values[key];
     const points = Array.from(values.subarray(0, period + 1), (value, index) =>
@@ -411,10 +430,12 @@ export const lineGeometry: RaceMarkEntry<'line'>['geometry'] = (model, layout, f
     anchors.push(anchor);
   }
   const labelHeight = placeHeadLabels(layout, labels);
-  for (const [index, { endLabel }] of labels.entries()) {
+  for (const [index, { endLabel, opacity }] of labels.entries()) {
     const anchor = anchors[index];
-    if ((endLabel.text || endLabel.value) && Math.abs(anchor.y - endLabel.y) > labelHeight / 2) {
-      endLabel.leader = anchor;
+    const displacement = Math.abs(anchor.y - endLabel.y);
+    const strength = Math.min(1, (2 * displacement) / labelHeight - 1);
+    if ((endLabel.text || endLabel.value) && strength > 0) {
+      endLabel.leader = { ...anchor, opacity: strength * (endLabel.opacity ?? opacity) * 0.45 };
     }
   }
 
@@ -434,6 +455,9 @@ export const lineGeometry: RaceMarkEntry<'line'>['geometry'] = (model, layout, f
           value,
           opacity: tick.opacity * edgeOpacity,
           position,
+          labelPosition:
+            value === 0 ? Math.min(position, plot.y + plot.height - tickFontSize * 0.75) : position,
+          coarse: tick.coarse,
           label: tickText.fit(
             model.formatValue(value),
             layout.static.yAxisX - layout.area.x - TICK_GAP,
@@ -445,7 +469,7 @@ export const lineGeometry: RaceMarkEntry<'line'>['geometry'] = (model, layout, f
     tickFontSize,
     layout.theme.fonts.weights.normal,
   ).height;
-  fitYTickLabels(yTicks, plot.y + plot.height, tickFontSize, tickHeight ?? tickFontSize * 1.2);
+  fitYTickLabels(yTicks, tickHeight ?? tickFontSize * 1.2);
 
   return {
     mark: 'line',
