@@ -130,8 +130,6 @@ interface RaceLayoutBase {
   warnings?: CompileWarning[];
   /** Area below chrome where the mark draws. */
   area: Rect;
-  /** Text measurer the layout was computed with; renderers reuse it so chrome wraps identically. */
-  measureText?: MeasureTextFn;
 }
 
 export type RaceLayout =
