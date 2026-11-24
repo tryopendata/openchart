@@ -3,23 +3,24 @@ import {
   type CompileOptions,
   computeChrome,
   estimateTextWidth,
+  type MeasureTextFn,
   mergeThemeConfig,
   type RaceLayout,
   type RaceMarkDef,
   resolveTheme,
-  truncateToWidth,
 } from '@opendata-ai/openchart-core';
 import { raceA11y } from './a11y';
 import { resolveRaceColors } from './colors';
+import { truncateRaceLabel } from './layout-bar';
 import { layoutForRaceMark } from './marks';
 import { raceSpecWarning } from './prepare';
 import type { RaceModel } from './types';
 
-/** The optional mark overrides the model spec's mark for runtime swaps. */
-export function layoutRace(
+function raceLayoutBase(
   model: RaceModel,
-  options: CompileOptions & { mark?: RaceMarkDef },
-): RaceLayout {
+  options: CompileOptions,
+  measureText: MeasureTextFn,
+): Omit<RaceLayout, 'mark' | 'static'> {
   const { width, height } = options;
   const { spec } = model;
   const watermark = model.specWatermark ?? options.watermark ?? true;
@@ -41,24 +42,15 @@ export function layoutRace(
     width: Math.max(0, width - 2 * padding),
     height: Math.max(0, height - 2 * padding - chrome.topHeight - chrome.bottomHeight),
   };
-  const measureText =
-    options.measureText ??
-    ((text: string, fontSize: number, fontWeight?: number) => ({
-      width: estimateTextWidth(text, fontSize, fontWeight),
-      height: fontSize,
-    }));
   const { body } = theme.fonts.sizes;
   const { normal } = theme.fonts.weights;
   const labelBudget = area.width * 0.4;
   const measureWidth = (text: string, size: number, weight?: number) =>
     measureText(text, size, weight).width;
-  const labels = model.matrix.labels.map((label) => {
-    const truncated = truncateToWidth(label, labelBudget, body, normal, measureWidth);
-    const complete = truncated === label ? label : truncated.replace(/\s*[\uD800-\uDBFF]…$/u, '…');
-    // The shared truncator returns an ellipsis even when the budget is narrower.
-    return complete === '…' && measureWidth(complete, body, normal) > labelBudget ? '' : complete;
-  });
-  const base = {
+  const labels = model.matrix.labels.map((label) =>
+    truncateRaceLabel(label, labelBudget, body, normal, measureWidth),
+  );
+  return {
     width,
     height,
     chrome,
@@ -73,6 +65,22 @@ export function layoutRace(
     warnings: model.warnings.map(raceSpecWarning),
     area,
   };
+}
 
-  return layoutForRaceMark(model, base, options.mark ?? spec.mark, measureText);
+/**
+ * Resolve the race layout for the requested size and theme. An explicit mark overrides the spec's.
+ * @throws {Error} The selected mark is unregistered.
+ */
+export function layoutRace(
+  model: RaceModel,
+  options: CompileOptions & { mark?: RaceMarkDef },
+): RaceLayout {
+  const measureText =
+    options.measureText ??
+    ((text: string, fontSize: number, fontWeight?: number) => ({
+      width: estimateTextWidth(text, fontSize, fontWeight),
+      height: fontSize,
+    }));
+  const base = raceLayoutBase(model, options, measureText);
+  return layoutForRaceMark(model, base, options.mark ?? model.spec.mark, measureText);
 }

@@ -7,6 +7,7 @@ const input: BarStaticInput = {
   top: 4,
   maxLabelWidth: 92,
   maxValueLabelWidth: 34,
+  cornerRadius: 4,
   hasNegatives: true,
   fontSize: { name: 14, value: 12, tick: 12 },
   showPeriod: true,
@@ -61,8 +62,10 @@ describe('bar race static layout', () => {
       nameX: 102,
       rowHeight: 50,
       barHeight: 37,
+      cornerRadius: 4,
       top: 4,
       axisY: 42,
+      tickFontSize: 12,
       period: { x: 470, y: 242, fontSize: 72 },
     });
     expect(stat.summary?.x).toBe(stat.period?.x);
@@ -120,7 +123,7 @@ describe('bar race frame geometry', () => {
         opacity: 1,
         bar: { x: 250, y: 61, width: 150, height: 37 },
         name: { x: 102, y: 79.5, text: 'Team A' },
-        value: { x: 406, y: 79.5, text: '30 km' },
+        value: { x: 406, y: 79.5, text: '30 km', anchor: 'start' },
       },
       {
         key: 'B',
@@ -128,7 +131,7 @@ describe('bar race frame geometry', () => {
         opacity: 0.5,
         bar: { x: 200, y: 223.5, width: 50, height: 37 },
         name: { x: 102, y: 242, text: 'Team B' },
-        value: { x: 194, y: 242, text: '-10 km' },
+        value: { x: 194, y: 242, text: '-10 km', anchor: 'end' },
       },
     ]);
   });
@@ -146,15 +149,19 @@ describe('bar race frame geometry', () => {
   });
 
   it('leaves room for the value label at the negative domain endpoint', () => {
-    const stat = computeBarStatic(input);
+    const valueLabel = '-20 km';
+    const fontSize = input.fontSize.value;
+    const maxValueLabelWidth = estimateTextWidth(valueLabel, fontSize);
+    const stat = computeBarStatic({ ...input, maxValueLabelWidth });
     const row = barGeometry(
       stat,
-      { ...frame, items: [{ ...frame.items[1], value: -20, valueLabel: '-20 km' }] },
+      { ...frame, items: [{ ...frame.items[1], value: -20, valueLabel }] },
       formatTick,
+      { fontSize, fontWeight: 400 },
     ).rows[0];
     expect(row.bar.x).toBe(stat.plot.x);
-    expect(row.value.x).toBe(stat.plot.x - 6);
-    expect(row.value.x - input.maxValueLabelWidth - row.name.x).toBe(8);
+    expect(row.value.x).toBeCloseTo(stat.plot.x - 6);
+    expect(row.value.x - maxValueLabelWidth - row.name.x).toBeCloseTo(8);
   });
 
   it('keeps geometry finite and within the vertical bounds of a 30 px area', () => {
@@ -215,7 +222,8 @@ describe('bar race frame geometry', () => {
     );
     const row = geometry.rows[0];
     expect(row.name.x - input.maxLabelWidth).toBe(area.x);
-    expect(row.value.x + input.maxValueLabelWidth).toBe(area.x + area.width);
+    expect(row.value.x + estimateTextWidth(row.value.text, 13)).toBeCloseTo(area.x + area.width);
+    expect(stat.plot.y - area.y).toBe(tick + 10);
     expect(row.bar.width).toBeGreaterThan(0);
     expect(geometry.ticks.length).toBeGreaterThan(1);
     for (const [index, tickLabel] of geometry.ticks.slice(1).entries()) {

@@ -96,6 +96,8 @@ export interface RaceModel {
   timeline: RaceTimeline;
   /** Per-key palette indices or constant CSS colors. */
   colorSlots: Array<number | string>;
+  /** Spec-theme light colors for standalone frames. On-screen geometry uses layout.colors. */
+  frameColors: string[];
   periodLabels: string[];
   formatValue: (value: number) => string;
   playback: RacePlayback;

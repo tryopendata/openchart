@@ -161,6 +161,25 @@ describe('race preparation', () => {
     expect(model.warnings).toEqual(warnings.map(({ message }) => message));
   });
 
+  it('deduplicates a warning classified as a deprecation across preps for the same sink', () => {
+    const input = {
+      ...spec,
+      data: spec.data.map((row, index) => ({
+        ...row,
+        deprecatedGdp: index === 0 ? Infinity : row.gdp,
+      })),
+      encoding: { ...spec.encoding, value: { field: 'deprecatedGdp' } },
+    };
+    const warnings: CompileWarning[] = [];
+    const onWarn = (warning: CompileWarning) => warnings.push(warning);
+    prepareRace(input, { onWarn });
+    prepareRace(input, { onWarn });
+
+    expect(warnings).toEqual([
+      { code: 'RACE_SPEC_WARNING', message: "Dropped 1 non-finite values from 'deprecatedGdp'." },
+    ]);
+  });
+
   it.each([
     { race: { duration: 4800 }, expected: 4800 },
     { race: { step: 450 }, expected: 900 },

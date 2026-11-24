@@ -1,4 +1,4 @@
-import { CATEGORICAL_PALETTE, type RaceSpec } from '@opendata-ai/openchart-core';
+import { CATEGORICAL_PALETTE, estimateTextWidth, type RaceSpec } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import { layoutRace, prepareRace, raceFrameAt, raceGeometryAt } from '../../index';
 
@@ -25,6 +25,14 @@ const spec = {
 } satisfies RaceSpec;
 
 const size = { width: 360, height: 500 };
+const singleKey = {
+  ...spec,
+  data: [
+    { year: 2023, country: 'BR', gdp: 1, name: 'Brazil' },
+    { year: 2024, country: 'BR', gdp: 2, name: 'Brazil' },
+  ],
+  race: { ...spec.race, top: 1 },
+} satisfies RaceSpec;
 
 describe('race frames and geometry', () => {
   it('returns deterministic frames and geometry with the same order, values, and period', () => {
@@ -88,12 +96,12 @@ describe('race frames and geometry', () => {
     expect(raceGeometryAt(model, layout, outside)).toEqual(raceGeometryAt(model, layout, endpoint));
   });
 
-  it('rejects a NaN frame time with a range error', () => {
+  it.each([NaN, Infinity, -Infinity])('rejects a non-finite frame time of %s', (t) => {
     const model = prepareRace(spec, {});
     const layout = layoutRace(model, size);
 
-    expect(() => raceFrameAt(model, NaN)).toThrow(RangeError);
-    expect(() => raceGeometryAt(model, layout, NaN)).toThrow(RangeError);
+    expect(() => raceFrameAt(model, t)).toThrow(RangeError);
+    expect(() => raceGeometryAt(model, layout, t)).toThrow(RangeError);
   });
 
   it('uses layout colors and truncated names while frames keep their full labels', () => {
@@ -140,6 +148,90 @@ describe('race frames and geometry', () => {
 
     expect(raceFrameAt(model, 0).items.map(({ color }) => color)).toEqual(['#123456', '#345678']);
     expect(geometry.rows.map(({ color }) => color)).toEqual(['#123456', '#345678']);
+  });
+
+  it('keeps the prepared frame colors when the input palette changes', () => {
+    const categorical = ['#123456', '#345678'];
+    const model = prepareRace({ ...spec, theme: { colors: { categorical } } }, {});
+    categorical[0] = '#abcdef';
+
+    expect(raceFrameAt(model, 0).items.map(({ color }) => color)).toEqual(['#123456', '#345678']);
+  });
+
+  it('keeps a fading leader within the plot at an integer period', () => {
+    const data = [2023, 2024, 2025, 2026]
+      .map((year) => ({
+        year,
+        country: 'A',
+        gdp: 1,
+        name: 'A',
+      }))
+      .concat([2024, 2025, 2026].map((year) => ({ year, country: 'B', gdp: 10, name: 'B' })));
+    const model = prepareRace({ ...spec, data, race: { top: 1, step: 1000, swap: 1000 } }, {});
+    const layout = layoutRace(model, size);
+    const geometry = raceGeometryAt(model, layout, 2);
+    if (layout.mark !== 'bar' || geometry.mark !== 'bar') throw new Error('Expected bar geometry');
+
+    const leader = geometry.rows[0];
+    expect(leader.key).toBe('B');
+    expect(leader.opacity).toBeLessThan(1);
+    expect(raceFrameAt(model, 2).domain).toEqual([0, 10]);
+    expect(leader.bar.x + leader.bar.width).toBeCloseTo(
+      layout.static.plot.x + layout.static.plot.width,
+    );
+  });
+
+  it('reserves room for the wider interpolated value at 360px', () => {
+    const model = prepareRace({ ...singleKey, labels: undefined }, {});
+    const layout = layoutRace(model, size);
+    const geometry = raceGeometryAt(model, layout, 0.5);
+    if (layout.mark !== 'bar' || geometry.mark !== 'bar') throw new Error('Expected bar geometry');
+
+    const { bar, value } = geometry.rows[0];
+    const width = estimateTextWidth(value.text, layout.theme.fonts.sizes.body);
+    expect(value.text).toBe('1.50');
+    expect(value.x).toBeGreaterThan(bar.x + bar.width);
+    expect(value.x + width).toBeLessThanOrEqual(layout.static.clip.x + layout.static.clip.width);
+  });
+
+  it('preserves 40% of the plot and fits long signed value labels in the clip', () => {
+    const data = [{ ...singleKey.data[0], gdp: -1 }, singleKey.data[1]];
+    const model = prepareRace({ ...singleKey, data, labels: { format: '025.3f' } }, {});
+    const layout = layoutRace(model, size);
+    if (layout.mark !== 'bar') throw new Error('Expected a bar layout');
+
+    expect(layout.static.plot.width).toBeGreaterThanOrEqual(layout.area.width * 0.4);
+    for (const [t, negative] of [
+      [0, true],
+      [1, false],
+    ] as const) {
+      const geometry = raceGeometryAt(model, layout, t);
+      if (geometry.mark !== 'bar') throw new Error('Expected bar geometry');
+      const { name, value } = geometry.rows[0];
+      expect(value.text).toBe(model.formatValue(negative ? -1 : 2));
+      const width = estimateTextWidth(value.text, layout.theme.fonts.sizes.body);
+      const left = negative ? value.x - width : value.x;
+      const right = negative ? value.x : value.x + width;
+      expect(left).toBeGreaterThanOrEqual(name.x + 8 - 1e-9);
+      expect(right).toBeLessThanOrEqual(layout.static.clip.x + layout.static.clip.width + 1e-9);
+    }
+  });
+
+  it('fits wide formatted tick labels at 360px with 14px ticks', () => {
+    const data = [{ ...singleKey.data[0], gdp: -1 }, singleKey.data[1]];
+    const model = prepareRace({ ...singleKey, data, labels: { format: '025.3f' } }, {});
+    const layout = layoutRace(model, { ...size, theme: { fonts: { sizes: { axisTick: 14 } } } });
+    const geometry = raceGeometryAt(model, layout, 0);
+    if (geometry.mark !== 'bar') throw new Error('Expected bar geometry');
+
+    expect(geometry.ticks.some(({ value, label }) => value === 0 && label !== '')).toBe(true);
+    let previousRight = layout.area.x;
+    for (const tick of geometry.ticks.filter(({ label }) => label)) {
+      const halfWidth = estimateTextWidth(tick.label, 14) / 2;
+      expect(tick.position - halfWidth).toBeGreaterThanOrEqual(previousRight - 1e-9);
+      previousRight = tick.position + halfWidth;
+    }
+    expect(previousRight).toBeLessThanOrEqual(layout.area.x + layout.area.width + 1e-9);
   });
 
   it('places the integer-period leader at the frame-rescaled right edge', () => {

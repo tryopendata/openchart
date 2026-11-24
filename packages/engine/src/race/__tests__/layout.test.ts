@@ -6,6 +6,7 @@ import {
 } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import { layoutRace, prepareRace, raceFrameAt, raceGeometryAt } from '../../index';
+import { RACE_MARKS } from '../marks';
 
 const spec = {
   type: 'race',
@@ -156,7 +157,7 @@ describe('race layout', () => {
     expect(plot.y).toBeGreaterThan(area.y);
     expect(plot.y + plot.height).toBeCloseTo(area.y + area.height);
     expect(geometry.ticks.length).toBeGreaterThan(0);
-    for (const tick of geometry.ticks) {
+    for (const tick of geometry.ticks.filter(({ label }) => label)) {
       const halfWidth = estimateTextWidth(tick.label, fontSize) / 2;
       expect(tick.position - halfWidth).toBeGreaterThanOrEqual(area.x);
       expect(tick.position + halfWidth).toBeLessThanOrEqual(area.x + area.width);
@@ -253,10 +254,65 @@ describe('race layout', () => {
 
     expect(layout.mark).toBe('bar');
     expect(line.spec.mark.type).toBe('line');
-    expect(() => layoutRace(line, size)).toThrow(/race mark "line".*registered/i);
+    expect(() => layoutRace(line, size)).toThrow(/Race mark "line".*Registered: bar/);
     expect(() => layoutRace(prepareRace(spec, {}), { ...size, mark: { type: 'table' } })).toThrow(
       /race mark "table".*registered/i,
     );
+  });
+
+  it('lays out and draws a mark registered with only static and geometry methods', () => {
+    const previous = RACE_MARKS.line;
+    RACE_MARKS.line = {
+      computeStatic(_model, { area }, mark) {
+        return {
+          plot: area,
+          xScale: {
+            domain: [0, mark.window === 'all' ? 1 : 0],
+            range: [area.x, area.x + area.width],
+          },
+        };
+      },
+      geometry(_model, layout) {
+        return {
+          mark: 'line',
+          series: [],
+          xTicks: [],
+          yTicks: [{ value: 0, label: '0', opacity: 1, position: layout.static.plot.y }],
+        };
+      },
+    };
+    try {
+      const model = prepareRace(spec, {});
+      const layout = layoutRace(model, { ...size, mark: { type: 'line', window: 'all' } });
+
+      expect(layout).toMatchObject({ mark: 'line', static: { xScale: { domain: [0, 1] } } });
+      expect(raceGeometryAt(model, layout, 0)).toMatchObject({
+        mark: 'line',
+        yTicks: [{ value: 0, position: layout.area.y }],
+      });
+    } finally {
+      if (previous) RACE_MARKS.line = previous;
+      else delete RACE_MARKS.line;
+    }
+  });
+
+  it('reserves the axis band for the theme tick font size', () => {
+    const layout = layoutRace(prepareRace(spec, {}), {
+      ...size,
+      theme: { fonts: { sizes: { axisTick: 14 } } },
+    });
+    if (layout.mark !== 'bar') throw new Error('Expected a bar layout');
+
+    expect(layout.static.plot.y - layout.area.y).toBe(24);
+  });
+
+  it('carries the bar radius from the spec or the mark override', () => {
+    const model = prepareRace({ ...spec, mark: { type: 'bar', cornerRadius: 8 } }, {});
+
+    expect(layoutRace(model, size).static).toMatchObject({ cornerRadius: 8 });
+    expect(layoutRace(model, { ...size, mark: { type: 'bar' } }).static).toMatchObject({
+      cornerRadius: 0,
+    });
   });
 
   it('leaves the cached model intact across width, theme, and mark changes', () => {

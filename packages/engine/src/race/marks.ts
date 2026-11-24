@@ -9,6 +9,7 @@ import type {
 import { barGeometry, computeBarStatic } from './layout-bar';
 import type { RaceModel } from './types';
 
+/** Index the layout variants by mark so each registry entry receives its own static type. */
 export type RaceLayoutsByMark = {
   [TMark in RaceMarkType]: Extract<RaceLayout, { mark: TMark }>;
 };
@@ -32,26 +33,10 @@ export interface RaceMarkEntry<TMark extends RaceMarkType> {
   ): Extract<RaceGeometry, { mark: TMark }>;
 }
 
-interface RegisteredRaceMark<TMark extends RaceMarkType> extends RaceMarkEntry<TMark> {
-  createLayout(
-    model: RaceModel,
-    base: RaceLayoutBase,
-    mark: RaceMarkDefsByType[TMark],
-    measureText: MeasureTextFn,
-  ): RaceLayoutsByMark[TMark];
-}
-
-// Each entry pairs its tag with its own static layout type.
-const registeredMarks: { [TMark in RaceMarkType]?: RegisteredRaceMark<TMark> } = {
+/** Static measurement and frame geometry by supported race mark. */
+export const RACE_MARKS: { [TMark in RaceMarkType]?: RaceMarkEntry<TMark> } = {
   bar: {
-    createLayout(model, base, mark, measureText) {
-      return {
-        ...base,
-        mark: mark.type,
-        static: this.computeStatic(model, base, mark, measureText),
-      };
-    },
-    computeStatic(model, layout, _mark, measureText) {
+    computeStatic(model, layout, mark, measureText) {
       const { area, labels, theme } = layout;
       const { body, axisTick } = theme.fonts.sizes;
       const { normal } = theme.fonts.weights;
@@ -78,7 +63,9 @@ const registeredMarks: { [TMark in RaceMarkType]?: RegisteredRaceMark<TMark> } =
         maxValueLabelWidth: Math.max(
           measureWidth(model.formatValue(min)),
           measureWidth(model.formatValue(max)),
+          measureWidth(model.formatValue(min / 2 + max / 2)),
         ),
+        cornerRadius: mark.cornerRadius ?? 0,
         fontSize: { name: body, value: body, tick: axisTick },
         showPeriod: model.spec.race.period !== false,
         showSummary: model.spec.race.summary === 'sum',
@@ -86,30 +73,47 @@ const registeredMarks: { [TMark in RaceMarkType]?: RegisteredRaceMark<TMark> } =
       });
     },
     geometry(model, layout, frame) {
-      return barGeometry(layout.static, frame, model.formatValue);
+      const { measureText, theme } = layout;
+      return barGeometry(layout.static, frame, model.formatValue, {
+        fontSize: theme.fonts.sizes.body,
+        fontWeight: theme.fonts.weights.normal,
+        measureWidth:
+          measureText && ((text, size, weight) => measureText(text, size, weight).width),
+      });
     },
   },
 };
 
-export const RACE_MARKS: { [TMark in RaceMarkType]?: RaceMarkEntry<TMark> } = registeredMarks;
-
-function requireRaceMark<T>(mark: RaceMarkType, entry: T | undefined): T {
+/**
+ * Get the entry for a race mark.
+ * @throws {Error} The mark is unregistered.
+ */
+export function raceMarkEntry<TMark extends RaceMarkType>(mark: TMark): RaceMarkEntry<TMark> {
+  const entry = RACE_MARKS[mark];
   if (!Object.hasOwn(RACE_MARKS, mark) || !entry) {
-    throw new Error(`Race mark "${mark}" is not registered. Use a registered mark.`);
+    throw new Error(
+      `Race mark "${mark}" is not registered. Registered: ${Object.keys(RACE_MARKS).join(', ')}`,
+    );
   }
   return entry;
 }
 
-export function raceMarkEntry<TMark extends RaceMarkType>(mark: TMark): RaceMarkEntry<TMark> {
-  return requireRaceMark<RaceMarkEntry<TMark>>(mark, RACE_MARKS[mark]);
-}
-
+/**
+ * Attach the selected mark's static geometry to the shared layout.
+ * @throws {Error} The mark is unregistered.
+ */
 export function layoutForRaceMark<TMark extends RaceMarkType>(
   model: RaceModel,
   base: RaceLayoutBase,
   mark: { type: TMark } & RaceMarkDefsByType[TMark],
   measureText: MeasureTextFn,
-): RaceLayout {
-  const entry = requireRaceMark<RegisteredRaceMark<TMark>>(mark.type, registeredMarks[mark.type]);
-  return entry.createLayout(model, base, mark, measureText);
+): RaceLayout;
+export function layoutForRaceMark<TMark extends RaceMarkType>(
+  model: RaceModel,
+  base: RaceLayoutBase,
+  mark: { type: TMark } & RaceMarkDefsByType[TMark],
+  measureText: MeasureTextFn,
+) {
+  const entry = raceMarkEntry(mark.type);
+  return { ...base, mark: mark.type, static: entry.computeStatic(model, base, mark, measureText) };
 }

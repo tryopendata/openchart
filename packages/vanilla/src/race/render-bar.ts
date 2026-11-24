@@ -77,6 +77,7 @@ export function createRaceBarRenderer(
     setNumbers(line, { y1: stat.plot.y, y2: stat.plot.y + stat.plot.height });
     const label = createSVGElement('text');
     label.setAttribute('text-anchor', 'middle');
+    setNumbers(label, { 'font-size': stat.tickFontSize });
     group.append(line, label);
     axis.append(group);
     const nodes = { group, line, label };
@@ -113,10 +114,11 @@ export function createRaceBarRenderer(
         if (!visibleKeys.has(row.key)) nodes.group.removeAttribute('display');
         setNumbers(nodes.group, { opacity: row.opacity });
         const { x, y, width, height } = row.bar;
-        setNumbers(nodes.bar, { x, y, width, height });
+        const radius = Math.min(stat.cornerRadius, height / 2);
+        setNumbers(nodes.bar, { x, y, width, height, rx: radius, ry: radius });
         nodes.bar.setAttribute('fill', row.color);
         drawText(nodes.name, row.name);
-        nodes.value.setAttribute('text-anchor', row.value.x < x ? 'end' : 'start');
+        nodes.value.setAttribute('text-anchor', row.value.anchor);
         drawText(nodes.value, row.value);
       }
       for (const key of visibleKeys) {

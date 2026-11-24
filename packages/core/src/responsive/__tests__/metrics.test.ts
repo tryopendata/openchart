@@ -4,7 +4,17 @@ import {
   AXIS_TITLE_OFFSET_DEFAULT,
   axisTitleOffset,
   TICK_LABEL_OFFSET,
+  truncateToWidth,
 } from '../metrics';
+
+describe('truncateToWidth', () => {
+  it('keeps only whole Unicode code points before the ellipsis', () => {
+    const measure = (text: string) => text.length * 10;
+
+    expect(truncateToWidth('A 🏁 team', 40, 12, 400, measure)).toBe('A…');
+    expect(truncateToWidth('A 🏁 team', 50, 12, 400, measure)).toBe('A 🏁…');
+  });
+});
 
 // The rotated y-axis title is anchored at its center and its glyph box extends
 // half the title font size toward the tick labels. axisTitleOffset() returns the
