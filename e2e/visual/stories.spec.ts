@@ -13,6 +13,11 @@ import { captureStory } from './capture';
  * compress the chart area.
  */
 const stories: Array<{ name: string; slug: string; query?: string; note?: string }> = [
+  { name: 'race-bar-mid', slug: 'testing--race--bar-mid' },
+  { name: 'race-line-end', slug: 'testing--race--line-end' },
+  { name: 'race-table-end', slug: 'testing--race--table-end' },
+  { name: 'race-bar-mid-dark', slug: 'testing--race--bar-mid-dark' },
+  { name: 'race-fixed-scale-mid', slug: 'testing--race--fixed-scale-mid' },
   { name: 'platform-static-chrome', slug: 'testing--static-site-fixtures--platform-chrome' },
   { name: 'platform-static-legend-notes', slug: 'testing--static-site-fixtures--platform-legend-notes' },
   { name: 'platform-static-map', slug: 'testing--static-site-fixtures--platform-map' },

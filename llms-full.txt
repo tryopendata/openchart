@@ -14,11 +14,10 @@ npm install @opendata-ai/openchart-core     # Types + JSON Schema only
 
 ## Core concept
 
-Write a VizSpec JSON object, then render it:
+Write a VizSpec JSON object and render it with the entry point for its spec kind.
 
-- React: `<Chart spec={spec} />`
-- Vue / Svelte: `<Chart :spec="spec" />` / `<Chart {spec} />`
-- Vanilla: `createChart(container, spec)`, `createTable(...)`, `createGraph(...)`
+- React, Vue, and Svelte export `Visualization` for any VizSpec. Kind-specific components include `Chart` for chart and layer specs and `Race` for race specs.
+- Vanilla uses kind-specific functions such as `createChart(container, spec)`, `createTable(container, spec)`, `createGraph(container, spec)`, and `createRace(container, spec)`.
 
 The engine validates the spec, compiles layout and scales, and renders SVG (charts) or DOM (tables). Specs are plain JSON: serializable, and validatable against the published JSON Schema before rendering.
 
@@ -34,6 +33,7 @@ VizSpec is a union of these spec kinds, discriminated differently per kind:
 - **TileMapSpec**: `type: "tilemap"`.
 - **BarListSpec**: `type: "barlist"`.
 - **GeoMapSpec**: `type: "map"`.
+- **RaceSpec**: `type: "race"`.
 
 There is no `type: "line"` grammar. Charts use `mark`, following Vega-Lite. `mark: "line"`, not `type: "line"`.
 
@@ -217,6 +217,36 @@ Labels retain constant text size during camera movement. Decluttered text remain
 - `{ type: "sankey", data, encoding: { source, target, value }, ... }` - flow diagram.
 - `{ type: "tilemap", data, encoding: { state, value }, palette?, ... }` - US state tile-grid map.
 - `{ type: "barlist", data, encoding: { label, value }, ... }` - ranked horizontal bar list.
+
+## RaceSpec
+
+A race plays a ranked leaderboard over a sequence of periods. Supply one row per key and period and at least two periods. Aggregate duplicate rows before rendering. Race specs do not support `transform`.
+
+```typescript
+{
+  type: "race",
+  mark: "bar" | "line" | "table" | RaceMarkDef,
+  data: Array<Record<string, unknown>>,
+  encoding: { time, key, value, color?, label? },
+  race?: { top?, duration?, step?, swap?, rescale?, gaps?, holdEnd?, loop?, autoplay?, controls?, period?, summary? },
+  chrome?, theme?, a11y?, watermark?, width?, height?, labels?, animation?,
+}
+```
+
+- Required encodings are `time` (period field), `key` (stable series identity), and `value` (numeric ranking field). Quantitative and temporal periods sort by value. Ordinal periods use first-seen order. Pass an explicit array of period labels to `encoding.time.sort` to put those periods first in the given order. `encoding.value.format` formats displayed values.
+- Optional `color` maps a field or sets a constant CSS color with `{ value: "#357" }`. By default each key gets a stable color. Optional `label` uses the last non-null label per key, with the key as the fallback.
+- Mark objects take `{ type: "bar", cornerRadius? }`, `{ type: "line", window? }`, or `{ type: "table", columns? }`. The line window defaults to `"reveal"` and grows with the playhead. Use `"all"` to show the full time axis. Table columns are `rank`, `change`, `name`, `bar`, `value`, and `share` by default. The inline bar hides when the table area is narrower than 520px, unless it is the only requested column.
+- `race.top` defaults to 10. For bars and the table's inline bar column, `rescale: "frame"` (default) adapts the value domain as the race plays. `"fixed"` uses the full run, and `{ min }` sets a floor on the frame maximum. The line's value domain uses the series history through the playhead. Interior gaps use `"interpolate"` by default, with `"hold"` and `"drop"` as alternatives.
+- Playback timing is in milliseconds. `duration` sets total playback time, or `step` sets the time between consecutive periods. Use one at most. The default duration is 700ms per period, clamped to 8000–90000ms. `swap` defaults to 400ms, `holdEnd` to 1500ms, and `loop` to false.
+- `autoplay: "visible"` (default) starts at 25% visibility. Use `true` to start immediately or `false` to wait for input. `controls` defaults to true. Keep controls visible when autoplay is enabled so viewers can pause. Reduced motion and `animation: false` open on the final frame without autoplay.
+- Bar races show a large period label by default. Use `period: false` to hide it or `period: { format }` to override the time formatter. Use `summary: "sum"` to display the sum of the top N values on the bar mark.
+
+Mount with `createRace(container, spec, options?)` from `@opendata-ai/openchart-vanilla` or use the `Race` or `Visualization` component in React, Vue, and Svelte. Static SVG rendering does not support race specs.
+
+- `play()` and `pause()` control playback. `seek(t)` clamps a finite period index to the available periods and accepts fractional positions. A non-finite position throws `RangeError`. `setSpeed(multiplier)` takes a finite positive playback multiplier.
+- `update({ ...spec, mark: "line" })` switches marks and retains the playhead. An invalid update throws and leaves the mounted race intact. Remount to change mount-level theme or dark mode options.
+- `getState()` returns `{ t, period, playing, speed, ended }`. `on("period", callback)` reports period crossings and seek destinations and returns an unsubscribe function.
+- `resize()` remeasures the host. `destroy()` stops playback and removes the race. `export("gif", { fps }?)` returns a `Promise<Blob>` for bar and line races.
 
 ## Accessibility
 

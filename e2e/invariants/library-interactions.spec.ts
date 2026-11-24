@@ -123,6 +123,71 @@ test('graph: the canvas releases both Tab directions', async ({ page }) => {
   await expect(canvas).not.toBeFocused();
 });
 
+test('race mark changes replace the mark and keep the playhead and playback', async ({ page, isMobile }) => {
+  test.skip(Boolean(isMobile), 'The live swap is exercised in the desktop invariants project.');
+  await page.goto('/?mode=preview&story=testing--race--marks');
+
+  const pause = page.getByRole('button', { name: 'Pause', exact: true });
+  const play = page.getByRole('button', { name: 'Play', exact: true });
+  const time = page.getByRole('slider', { name: 'Time' });
+  const picker = page.getByRole('combobox', { name: 'Mark' });
+  await pause.click();
+  await time.fill('8.5');
+  await play.click();
+  const position = async () => Number(await time.inputValue());
+  await expect.poll(position).toBeGreaterThan(8.5);
+
+  const host = page.getByTestId('race-host');
+  await expect(host.locator('.oc-race-rows rect').first()).toBeVisible();
+  await expect(picker).toBeEnabled();
+  for (const [mark, current, previous] of [
+    [
+      'line',
+      '.oc-race-line path[data-key]',
+      '.oc-race-rows, .oc-race-period, .oc-race-summary, .oc-race-mark > .oc-race-axis',
+    ],
+    ['table', '.oc-race-table-grid tbody tr', '.oc-race-line'],
+    ['bar', '.oc-race-rows rect', '.oc-race-table'],
+  ]) {
+    // Bracket the React change handler and read again after the next scheduled playback frame.
+    const observation = await picker.evaluateHandle((select) => {
+      const readTime = () =>
+        document.querySelector<HTMLInputElement>('input[aria-label="Time"]')?.valueAsNumber;
+      const samples = new Promise<(number | undefined)[]>((resolve) => {
+        select.addEventListener(
+          'change',
+          () => {
+            const before = readTime();
+            document.addEventListener(
+              'change',
+              () => {
+                const after = readTime();
+                requestAnimationFrame(() => resolve([before, after, readTime()]));
+              },
+              { once: true },
+            );
+          },
+          { capture: true, once: true },
+        );
+      });
+      return { samples };
+    });
+    try {
+      await picker.selectOption(mark);
+      const [before, after, nextFrame] = await observation.evaluate(({ samples }) => samples);
+      expect(before).toBeGreaterThan(8.5);
+      expect(after).toBe(before);
+      expect(nextFrame).toBeGreaterThanOrEqual(Number(before));
+      await expect(host.locator(current).first()).toBeVisible();
+      await expect(host.locator(previous)).toHaveCount(0);
+      await expect(pause).toBeVisible();
+      await expect.poll(position).toBeGreaterThan(Number(before));
+    } finally {
+      await observation.dispose();
+    }
+  }
+});
+
 test('canvas updates and resizes retain visible, interactive SVG chrome above the paint layer', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1000, height: 760 });
   await page.goto(fixture);

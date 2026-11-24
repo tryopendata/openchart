@@ -5,8 +5,8 @@
  * `page: PageEntry` with the page's Ladle slug, sidebar group, and every demo
  * anchor in visual order. The sidecars live outside `*.stories.tsx` on purpose:
  * Ladle turns every named export in a story file into a story, so a shared
- * `export const demos` would collide across same-group pages (e.g. all five
- * Charts pages -> a duplicate `charts--demos` id) and fail the build. Keeping
+ * `export const demos` would collide across same-group pages (e.g. the Charts
+ * pages would all use `charts--demos`) and fail the build. Keeping
  * the registry in sidecars keeps each page's list co-located and drift-proof
  * while staying invisible to Ladle's story scanner.
  *
@@ -33,6 +33,7 @@ import { page as theming } from './features-theming.demos';
 import { page as graphs } from './graphs.demos';
 import { page as maps } from './maps.demos';
 import { page as playground } from './playground.demos';
+import { page as race } from './race.demos';
 import { page as sankeyTileMaps } from './sankey-tilemaps.demos';
 import { page as scrollytelling } from './scrollytelling.demos';
 import { page as showcase } from './showcase.demos';
@@ -59,6 +60,7 @@ export const GALLERY: PageEntry[] = [
   pieDonut,
   scatterDistribution,
   buildingBlocks,
+  race,
   tables,
   graphs,
   sankeyTileMaps,

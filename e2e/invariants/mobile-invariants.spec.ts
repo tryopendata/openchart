@@ -384,3 +384,55 @@ test('mobile invariants: table cards mode', async ({ page }) => {
 
   expect(violations, violations.join('\n')).toEqual([]);
 });
+
+for (const [story, fontSize] of [
+  ['table-end', '13px'],
+  ['table-end-large-text', '14px'],
+]) {
+  test(`mobile invariants: race table fits or ellipsizes the United Kingdom name at ${fontSize}`, async ({ page }) => {
+    test.skip(page.viewportSize()?.width !== 360, 'The narrow Chromium project runs the race table width sweep.');
+
+    for (const width of [360, 330, 680]) {
+      await test.step(`${width}px viewport`, async () => {
+        await page.setViewportSize({ width, height: 740 });
+        await page.goto(`/?story=testing--race--${story}&mode=preview`);
+
+        const host = page.getByTestId('race-host');
+        const name = host.locator('td.oc-race-table-name').getByText('United Kingdom', { exact: true });
+        await expect(name).toBeVisible();
+        await expect(name).toHaveCSS('font-size', fontSize);
+        await expect(host.locator('svg.oc-race')).toHaveAttribute('viewBox', new RegExp(`^0 0 ${width} `));
+        await page.evaluate(() => document.fonts.ready);
+
+        const { staysInColumn, fitsOrEllipsizes } = await name.evaluate((label) => {
+          const cell = label.closest('td');
+          const valueCell = cell?.parentElement?.querySelector('td.oc-race-table-value');
+          if (!cell || !valueCell) throw new Error('Expected the name and value cells in the same row');
+
+          const bounds = label.getBoundingClientRect();
+          const cellBounds = cell.getBoundingClientRect();
+          const valueBounds = valueCell.getBoundingClientRect();
+          const staysInColumn =
+            bounds.left >= cellBounds.left && bounds.right <= Math.min(cellBounds.right, valueBounds.left);
+          if (label.scrollWidth <= label.clientWidth) return { staysInColumn, fitsOrEllipsizes: true };
+
+          const style = getComputedStyle(label);
+          const context = document.createElement('canvas').getContext('2d');
+          if (!context) throw new Error('Expected a canvas text measurer');
+          context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+          return {
+            staysInColumn,
+            fitsOrEllipsizes:
+              style.overflowX === 'hidden' &&
+              style.textOverflow === 'ellipsis' &&
+              style.whiteSpace === 'nowrap' &&
+              bounds.width >= context.measureText('U…').width,
+          };
+        });
+
+        expect(staysInColumn, 'The name stays inside its column and clears the value cell').toBe(true);
+        expect(fitsOrEllipsizes, 'A clipped name has room for a prefix and an ellipsis').toBe(true);
+      });
+    }
+  });
+}
