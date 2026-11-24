@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createRaceTimeline } from '../timeline';
+import { createRaceTimeline, exactRaceRanking } from '../timeline';
 import type { RaceMatrix, RaceTimelineOptions } from '../types';
 
 function matrix(...series: number[][]): RaceMatrix {
@@ -26,6 +26,23 @@ describe('race timeline', () => {
 
     expect(timeline.valueAt(0, 0.25)).toBe(4);
     expect(timeline.valueAt(0, 1.6)).toBeCloseTo(4);
+  });
+
+  it('returns the full exact order, including hidden ranks and prior-order ties', () => {
+    const timeline = createRaceTimeline(matrix([4, 6], [5, 6], [-1, 0], [NaN, -2]), options);
+
+    for (const t of [0, 0.5, 1]) {
+      const ranked = exactRaceRanking(timeline, t);
+      const expected = Array.from({ length: timeline.keyCount }, (_, key) => ({
+        key,
+        rank: timeline.exactRank(key, t),
+      }))
+        .filter(({ rank }) => Number.isFinite(rank))
+        .sort((a, b) => a.rank - b.rank)
+        .map(({ key }) => key);
+      expect(ranked).toEqual(expected);
+    }
+    expect(exactRaceRanking(timeline, 1)).toEqual([1, 0, 2, 3]);
   });
 
   it('ranks a late key at its first finite period and leaves an isolated observation offscreen', () => {

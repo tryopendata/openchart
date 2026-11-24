@@ -2,6 +2,7 @@ import { adaptTheme, DEFAULT_THEME, type RaceSpec } from '@opendata-ai/openchart
 import * as engine from '@opendata-ai/openchart-engine';
 import type { Window as HappyWindow } from 'happy-dom';
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
+import { RACE_MARKS } from '../../../../engine/src/race/marks';
 import { createFakeObserver, stubPageLayout } from '../../__test-fixtures__/visibility';
 import { createRace, type RaceInstance, type RaceMountOptions } from '../../race-mount';
 import { setObserverFactory } from '../../visibility';
@@ -144,6 +145,10 @@ function scrub() {
 
 function svg() {
   return host.querySelector('svg.oc-race')!;
+}
+
+function liveRegion() {
+  return host.querySelector('[aria-live="polite"]');
 }
 
 function observeVisibility() {
@@ -320,6 +325,268 @@ describe('createRace', () => {
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
     expect(chart.getState()).toMatchObject({ t: 0, playing: false });
     expect(rowKeys()).toEqual(['A', 'B']);
+  });
+
+  it('announces pause, paused scrubbing and arrow steps while playback stays quiet', () => {
+    const chart = mount();
+    expect(liveRegion()?.textContent).toBe('');
+    button().click();
+    tick(0);
+    tick(1000);
+    expect(scrub().getAttribute('aria-valuetext')).toBe('2021');
+    expect(liveRegion()?.textContent).toBe('');
+    button().click();
+    expect(liveRegion()?.textContent).toBe('2021: B, A lead');
+
+    const input = scrub();
+    input.value = '0';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(liveRegion()?.textContent).toBe('2020: A, B lead');
+    expect(input.getAttribute('aria-valuetext')).toBe('2020');
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(liveRegion()?.textContent).toBe('2021: B, A lead');
+    expect(input.getAttribute('aria-valuetext')).toBe('2021');
+
+    chart.play();
+    chart.seek(2);
+    tick(1500);
+    tick(3000);
+    expect(chart.getState()).toMatchObject({ t: 2, playing: false });
+    expect(liveRegion()?.textContent).toBe('2021: B, A lead');
+    chart.pause();
+    expect(liveRegion()?.textContent).toBe('2022: B, A lead');
+  });
+
+  it('scrubs by whole periods in reduced motion and keeps the API seek continuous', () => {
+    window.happyDOM.settings.device.prefersReducedMotion = 'reduce';
+    const chart = mount();
+    const input = scrub();
+    input.value = '0.75';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(chart.getState()).toMatchObject({ t: 1, playing: false });
+    expect(input.getAttribute('aria-valuetext')).toBe('2021');
+    expect(liveRegion()?.textContent).toBe('2021: B, A lead');
+    chart.seek(0.25);
+    expect(chart.getState().t).toBe(0.25);
+    expect(liveRegion()?.textContent).toBe('2020: A, B lead');
+  });
+
+  it('emits every crossed period once on a delayed frame and emits the loop destination', () => {
+    const chart = mount({ ...spec, race: { ...spec.race, loop: true } });
+    const periods: ReturnType<RaceInstance['getState']>['period'][] = [];
+    chart.on('period', (period) => periods.push(period));
+    chart.play();
+    tick(0);
+    tick(500);
+    expect(periods).toEqual([]);
+    tick(2000);
+    expect(periods).toEqual([
+      { index: 1, value: 2021, label: '2021' },
+      { index: 2, value: 2022, label: '2022' },
+    ]);
+    tick(2250);
+    tick(3500);
+    expect(periods).toEqual([
+      { index: 1, value: 2021, label: '2021' },
+      { index: 2, value: 2022, label: '2022' },
+      { index: 0, value: 2020, label: '2020' },
+    ]);
+  });
+
+  it('emits the destination once for every seek, including seeks within the same period', () => {
+    const chart = mount({
+      ...spec,
+      encoding: {
+        ...spec.encoding,
+        time: { field: 'year', type: 'quantitative', format: '.0f CE' },
+      },
+    });
+    const periods: ReturnType<RaceInstance['getState']>['period'][] = [];
+    chart.on('period', (period) => periods.push(period));
+    chart.seek(0.5);
+    chart.seek(20);
+    chart.play();
+    const input = scrub();
+    input.value = '0.25';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(() => chart.seek(NaN)).toThrow(RangeError);
+    expect(periods).toEqual([
+      { index: 0, value: 2020, label: '2020 CE' },
+      { index: 2, value: 2022, label: '2022 CE' },
+      { index: 0, value: 2020, label: '2020 CE' },
+      { index: 1, value: 2021, label: '2021 CE' },
+    ]);
+  });
+
+  it('stops notifying unsubscribed listeners and clears listeners on destroy during dispatch', () => {
+    const chart = mount();
+    const calls: string[] = [];
+    const unsubscribe = chart.on('period', () => calls.push('unsubscribed'));
+    chart.seek(0);
+    unsubscribe();
+    unsubscribe();
+    chart.on('period', (period) => {
+      calls.push(period.label);
+      chart.destroy();
+    });
+    chart.on('period', () => calls.push('after destroy'));
+    chart.play();
+    tick(0);
+    tick(2000);
+    chart.seek(0);
+    chart.on('period', () => calls.push('registered after destroy'));
+    chart.seek(1);
+    expect(calls).toEqual(['unsubscribed', '2021']);
+    expect(host.children).toHaveLength(0);
+  });
+
+  it('delivers periods already crossed before a listener-triggered seek', () => {
+    const chart = mount();
+    const periods: number[] = [];
+    chart.on('period', ({ index }) => {
+      if (index === 1) chart.seek(0);
+    });
+    chart.on('period', ({ index }) => periods.push(index));
+    chart.play();
+    tick(0);
+    tick(2000);
+    expect(periods).toEqual([1, 2, 0]);
+    expect(chart.getState()).toMatchObject({ t: 0, playing: true });
+  });
+
+  it('delivers every crossed period when a listener changes the theme', () => {
+    const chart = mount();
+    const periods: number[] = [];
+    chart.on('period', ({ index }) => {
+      if (index === 1) chart.update({ ...spec, theme: { spacing: { padding: 15 } } });
+    });
+    chart.on('period', ({ index }) => periods.push(index));
+    chart.play();
+    tick(0);
+    tick(2000);
+    expect(periods).toEqual([1, 2]);
+  });
+
+  it('keeps a new registration when an old unsubscribe handle is used again', () => {
+    const chart = mount();
+    const periods: number[] = [];
+    const record: Parameters<RaceInstance['on']>[1] = ({ index }) => periods.push(index);
+    const first = chart.on('period', record);
+    first();
+    const second = chart.on('period', record);
+    first();
+    chart.seek(1);
+    second();
+    chart.seek(2);
+    expect(periods).toEqual([1]);
+  });
+
+  it('keeps the screen-reader table and live region mounted across a resize', () => {
+    const chart = mount();
+    chart.seek(1);
+    const table = host.querySelector('table');
+    const live = liveRegion();
+    const description = svg().getAttribute('aria-describedby') ?? '';
+    width = 420;
+    chart.resize();
+    expect(svg().getAttribute('viewBox')).toBe('0 0 420 476');
+    expect(svg().getAttribute('aria-label')).toBe('Annual standings');
+    expect(svg().getAttribute('aria-describedby')).toBe(description);
+    expect(document.getElementById(description)?.textContent).toContain('2020 to 2022');
+    expect(table).toBeTruthy();
+    expect(host.querySelector('table')).toBe(table);
+    expect(liveRegion()).toBe(live);
+    expect(live?.textContent).toBe('2021: B, A lead');
+    chart.destroy();
+    expect(table?.isConnected).toBe(false);
+    expect(live?.isConnected).toBe(false);
+  });
+
+  it.each([{ mark: 'line' }, { mark: 'table' }] satisfies Pick<
+    RaceSpec,
+    'mark'
+  >[])('keeps the existing fallback and live announcement when swapping to $mark', ({ mark }) => {
+    const line = RACE_MARKS.line;
+    const tableEntry = RACE_MARKS.table;
+    const lineRenderer = RACE_RENDERERS.line;
+    const tableRenderer = RACE_RENDERERS.table;
+    onTestFinished(() => {
+      RACE_MARKS.line = line;
+      RACE_MARKS.table = tableEntry;
+      RACE_RENDERERS.line = lineRenderer;
+      RACE_RENDERERS.table = tableRenderer;
+    });
+    RACE_MARKS.line = {
+      computeStatic(_model, { area }) {
+        return {
+          plot: area,
+          xScale: { domain: [0, 2], range: [area.x, area.x + area.width] },
+          yAxisX: area.x,
+          labelGutter: 0,
+          tickFontSize: 12,
+        };
+      },
+      geometry() {
+        return { mark: 'line', series: [], xTicks: [], yTicks: [], domain: [0, 200] };
+      },
+    };
+    RACE_RENDERERS.line = () => ({ draw() {}, destroy() {} });
+    RACE_MARKS.table = {
+      computeStatic() {
+        return {
+          headerHeight: 20,
+          rowHeight: 20,
+          fontSize: 12,
+          columns: [],
+          labels: {
+            rank: 'Rank',
+            change: 'Change',
+            name: 'Name',
+            bar: '',
+            value: 'Value',
+            share: 'Share',
+          },
+        };
+      },
+      geometry() {
+        return { mark: 'table', rows: [] };
+      },
+    };
+    RACE_RENDERERS.table = (markHost) => {
+      const table = markHost.ownerDocument.createElement('table');
+      table.setAttribute('aria-label', 'Visible standings');
+      markHost.append(table);
+      return { draw() {}, destroy: () => table.remove() };
+    };
+
+    const chart = mount();
+    chart.seek(1);
+    const table = host.querySelector('table[aria-label="Data table: Annual standings"]');
+    const live = liveRegion();
+    expect(table?.textContent).toContain('2020');
+    expect(live?.textContent).toBe('2021: B, A lead');
+    chart.play();
+    chart.update({ ...spec, mark });
+    expect(chart.getState()).toMatchObject({ t: 1, playing: true });
+    expect(rowKeys()).toEqual([]);
+    expect(host.querySelectorAll('table')).toHaveLength(mark === 'table' ? 2 : 1);
+    expect(host.querySelector('table[aria-label="Data table: Annual standings"]')).toBe(table);
+    expect(host.querySelectorAll('[aria-live="polite"]')).toHaveLength(1);
+    expect(liveRegion()).toBe(live);
+    expect(liveRegion()?.textContent).toBe('2021: B, A lead');
+    button().click();
+    scrub().dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(liveRegion()?.textContent).toBe('2022: B, A lead');
+
+    chart.update({ ...spec, mark, a11y: { hidden: true } });
+    expect(svg().getAttribute('aria-hidden')).toBe('true');
+    expect(host.querySelector('table[aria-label="Data table: Annual standings"]')).toBeNull();
+    expect(liveRegion()).toBeNull();
+    if (mark === 'table') {
+      const visible = host.querySelector('table[aria-label="Visible standings"]');
+      expect(visible?.closest('[aria-hidden="true"]')).toBeTruthy();
+    }
   });
 
   it('clamps finite seeks and advances from the current playhead at the requested speed', () => {
