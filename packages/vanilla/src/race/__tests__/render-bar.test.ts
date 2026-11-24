@@ -6,7 +6,7 @@ import { createRaceBarRenderer } from '../render-bar';
 const plot = { x: 90, y: 22.123, width: 220, height: 60 };
 const stat: RaceBarStatic = {
   plot,
-  clip: plot,
+  clip: { x: 12.345, y: plot.y, width: 350.678, height: plot.height },
   nameX: 80,
   rowHeight: 30,
   barHeight: 22,
@@ -169,9 +169,9 @@ describe('race bar renderer', () => {
       const id = `${idScope}-race-clip`;
       const clip = host.querySelector(`defs clipPath[id="${id}"] rect`);
       expect(['x', 'y', 'width', 'height'].map((attr) => clip?.getAttribute(attr))).toEqual([
-        '0',
+        '12.35',
         '22.12',
-        '100%',
+        '350.68',
         '60',
       ]);
       expect(host.querySelector('.oc-race-rows')?.getAttribute('clip-path')).toBe(`url(#${id})`);
@@ -203,7 +203,7 @@ describe('race bar renderer', () => {
   it('skips non-finite geometry numbers when writing SVG attributes', () => {
     const { host, draw } = setup('example', {
       ...stat,
-      clip: { ...plot, height: NaN },
+      clip: { ...stat.clip, height: NaN },
       axisY: Infinity,
     });
     draw({

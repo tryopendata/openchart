@@ -1,13 +1,19 @@
 import type { RaceBarGeometry, RaceBarStatic } from '@opendata-ai/openchart-core';
 import { createSVGElement, setAttrs } from '../renderers/svg-dom';
 
+/** Draws in the host's user space and removes only its own nodes on `destroy()`. */
 export interface RaceBarRenderer {
   draw(geometry: RaceBarGeometry): void;
   destroy(): void;
 }
 
-function setNumbers(element: SVGElement, attributes: Record<string, number>) {
-  for (const [name, value] of Object.entries(attributes)) {
+function setNumbers<Attribute extends string>(
+  element: SVGElement,
+  attributes: Record<Attribute, number>,
+) {
+  for (const name in attributes) {
+    if (!Object.hasOwn(attributes, name)) continue;
+    const value = attributes[name];
     if (Number.isFinite(value)) element.setAttribute(name, String(Number(value.toFixed(2))));
   }
 }
@@ -17,6 +23,7 @@ function drawText(element: SVGElement, label: { x: number; y: number; text: stri
   if (element.textContent !== (label?.text ?? '')) element.textContent = label?.text ?? '';
 }
 
+/** Append a keyed SVG renderer to `host`. Use host coordinates for layout and geometry. */
 export function createRaceBarRenderer(
   host: SVGGElement,
   stat: RaceBarStatic,
@@ -27,9 +34,7 @@ export function createRaceBarRenderer(
   const clipPath = createSVGElement('clipPath');
   clipPath.setAttribute('id', clipId);
   const clipRect = createSVGElement('rect');
-  // Clip the sliding rows vertically and leave room for their labels in both gutters.
-  setAttrs(clipRect, { x: 0, width: '100%' });
-  setNumbers(clipRect, { y: stat.clip.y, height: stat.clip.height });
+  setNumbers(clipRect, stat.clip);
   clipPath.append(clipRect);
   defs.append(clipPath);
 

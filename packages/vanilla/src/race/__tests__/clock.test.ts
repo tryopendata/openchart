@@ -222,7 +222,7 @@ describe('race clock', () => {
     clock.play();
     clock.toggle();
     clock.pause();
-    clock.seek(NaN);
+    clock.seek(3);
     clock.stepPeriod(1);
     clock.setSpeed(0);
     clock.destroy();
@@ -232,9 +232,19 @@ describe('race clock', () => {
     expect(states).toEqual([]);
   });
 
-  it('stops and propagates a draw callback error so playback can be restarted', () => {
+  it('still rejects non-finite seek positions after destroy', () => {
+    const { clock, states, ticks } = setup();
+    clock.destroy();
+    for (const t of [NaN, Infinity, -Infinity]) {
+      expect(() => clock.seek(t)).toThrow(RangeError);
+    }
+    expect(ticks).toEqual([]);
+    expect(states).toEqual([]);
+  });
+
+  it('publishes a paused state after a draw callback fails and can restart', () => {
     const error = new Error('Draw failed');
-    const { clock, frame, pending } = setup({
+    const { clock, frame, pending, states } = setup({
       onTick(t) {
         if (t === 1) throw error;
       },
@@ -244,26 +254,33 @@ describe('race clock', () => {
     expect(() => frame(250)).toThrow(error);
     expect(pending.size).toBe(0);
     expect(clock.getState()).toEqual({ t: 1, playing: false, speed: 1, ended: false });
+    expect(states).toEqual([
+      { t: 0, playing: true, speed: 1, ended: false },
+      { t: 1, playing: false, speed: 1, ended: false },
+    ]);
     clock.play();
     frame(500);
     frame(750);
     expect(clock.getState()).toEqual({ t: 2, playing: true, speed: 1, ended: false });
   });
 
-  it('stops and propagates an error from the first state notification', () => {
+  it('keeps the original callback error if publishing the paused state also fails', () => {
     const error = new Error('State update failed');
-    let succeeded = false;
+    const states: RaceClockState[] = [];
     const { clock, frame, pending } = setup({
-      onStateChange() {
-        if (!succeeded) {
-          succeeded = true;
-          throw error;
-        }
+      onStateChange(state) {
+        states.push(state);
+        if (states.length === 1) throw error;
+        if (states.length === 2) throw new Error('Paused state update failed');
       },
     });
     expect(() => clock.play()).toThrow(error);
     expect(pending.size).toBe(0);
     expect(clock.getState()).toEqual({ t: 0, playing: false, speed: 1, ended: false });
+    expect(states).toEqual([
+      { t: 0, playing: true, speed: 1, ended: false },
+      { t: 0, playing: false, speed: 1, ended: false },
+    ]);
     clock.play();
     frame(0);
     frame(250);

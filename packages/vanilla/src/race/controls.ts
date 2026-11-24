@@ -7,12 +7,14 @@ export interface RaceControlsOptions {
   onStep(delta: 1 | -1): void;
 }
 
+/** A control strip whose caller supplies playback state through `update()`. */
 export interface RaceControls {
   readonly element: HTMLElement;
   update(state: RaceClockState): void;
   destroy(): void;
 }
 
+/** Create a detached control strip. Call `update()` when playback state changes. */
 export function createRaceControls(options: RaceControlsOptions): RaceControls {
   const { periodLabels, onToggle, onSeek, onStep } = options;
   const element = document.createElement('div');

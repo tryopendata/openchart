@@ -10,6 +10,7 @@ export interface RaceClockState {
   ended: boolean;
 }
 
+/** Playback settings and callbacks for a clock that requests frames only while playing. */
 export interface RaceClockOptions {
   periodCount: number;
   durationMs: number;
@@ -34,6 +35,7 @@ export interface RaceClock {
   destroy(): void;
 }
 
+/** Create a clock driven by the supplied scheduler or browser animation frames. */
 export function createRaceClock(options: RaceClockOptions): RaceClock {
   const {
     periodCount,
@@ -61,6 +63,11 @@ export function createRaceClock(options: RaceClockOptions): RaceClock {
       if (!destroyed) onStateChange?.({ ...state });
     } catch (error) {
       stop();
+      try {
+        onStateChange?.({ ...state });
+      } catch {
+        // Preserve the original callback error if the paused-state notification also fails.
+      }
       throw error;
     }
   }
@@ -71,8 +78,8 @@ export function createRaceClock(options: RaceClockOptions): RaceClock {
   }
 
   function seek(t: number) {
-    if (destroyed) return;
     if (!Number.isFinite(t)) throw new RangeError('Race seek position must be finite');
+    if (destroyed) return;
     const position = Math.min(Math.max(0, t), lastPeriod);
     elapsedMs = (position / lastPeriod) * durationMs;
     holdStartedAt = undefined;
