@@ -6,6 +6,7 @@ import { createRenderContext, type RenderContext } from '../render-context';
 import type {
   ChartLayout,
   MeasureTextFn,
+  ResolvedChrome,
   ResolvedChromeElement,
 } from '@opendata-ai/openchart-core';
 import {
@@ -89,17 +90,13 @@ export function renderChromeElement(
   parent.appendChild(text);
 }
 
-export function renderChrome(
-  parent: SVGElement,
-  layout: ChartLayout,
-  interactive = true,
+/** Render the editorial rule and eyebrow into the chrome group. */
+export function renderChromeRuleAndEyebrow(
+  g: SVGElement,
+  chrome: ResolvedChrome,
+  measureText?: MeasureTextFn,
   ctx: RenderContext = createRenderContext(),
 ): void {
-  const g = createSVGElement('g', ctx.factory);
-  g.setAttribute('class', 'oc-chrome');
-
-  const { chrome, measureText } = layout;
-
   // Editorial rule: a short colored bar above the top chrome block.
   if (chrome.rule) {
     const rule = createSVGElement('rect', ctx.factory);
@@ -141,6 +138,19 @@ export function renderChrome(
     };
     renderChromeElement(g, shifted, 'oc-eyebrow', 'eyebrow', measureText, true, ctx);
   }
+}
+
+export function renderChrome(
+  parent: SVGElement,
+  layout: ChartLayout,
+  interactive = true,
+  ctx: RenderContext = createRenderContext(),
+): void {
+  const g = createSVGElement('g', ctx.factory);
+  g.setAttribute('class', 'oc-chrome');
+
+  const { chrome, measureText } = layout;
+  renderChromeRuleAndEyebrow(g, chrome, measureText, ctx);
   if (chrome.title) {
     renderChromeElement(g, chrome.title, 'oc-title', 'title', measureText, undefined, ctx);
   }

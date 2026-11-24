@@ -193,7 +193,26 @@ describe('race shell', () => {
     expect(Number(eyebrow?.getAttribute('y'))).toBeCloseTo(
       resolvedEyebrow.y + textAscent(resolvedEyebrow.style.fontSize),
     );
+    expect(eyebrow?.getAttribute('x')).toBe(String(resolvedEyebrow.x));
     expect(eyebrow?.nextElementSibling?.textContent).toBe(chromeContent.title);
+    expect(svg.querySelector('.oc-eyebrow-dot')).toBeNull();
+  });
+
+  it('draws a leading dot and shifts the eyebrow when there is no editorial rule', () => {
+    const layout = barLayout(resolveTheme(), { eyebrow: 'Economy', title: chromeContent.title });
+    const { svg } = createRaceShell(document.createElement('div'), layout, 'eyebrow-dot');
+    const { eyebrow } = layout.chrome;
+    if (!eyebrow) throw new Error('Expected a resolved eyebrow');
+
+    const dot = svg.querySelector('circle.oc-eyebrow-dot');
+    const text = svg.querySelector('text.oc-eyebrow');
+    expect(dot).not.toBeNull();
+    expect(dot?.getAttribute('cx')).toBe(String(eyebrow.x + 3));
+    expect(dot?.getAttribute('r')).toBe('3');
+    expect(dot?.nextElementSibling).toBe(text);
+    expect(text?.textContent).toBe('ECONOMY');
+    expect(text?.getAttribute('x')).toBe(String(eyebrow.x + 14));
+    expect(svg.querySelector('.oc-chrome-rule')).toBeNull();
   });
 
   it('uses the layout measurer to keep title and brand wrapping consistent with reserved space', () => {

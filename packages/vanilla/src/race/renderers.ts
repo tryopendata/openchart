@@ -2,6 +2,7 @@ import type { RaceGeometry, RaceLayout, RaceMarkType } from '@opendata-ai/opench
 import { createRaceBarRenderer } from './render-bar';
 import type { RaceMarkHost } from './shell';
 
+/** Creates a mark renderer from a shell host, static layout, and a scope for renderer IDs. */
 export type RaceRendererFactory<TMark extends RaceMarkType> = (
   host: RaceMarkHost<TMark>,
   stat: Extract<RaceLayout, { mark: TMark }>['static'],
@@ -11,6 +12,7 @@ export type RaceRendererFactory<TMark extends RaceMarkType> = (
   destroy(): void;
 };
 
+/** Maps each implemented race mark to its renderer factory. */
 export const RACE_RENDERERS: { [TMark in RaceMarkType]?: RaceRendererFactory<TMark> } = {
   bar: createRaceBarRenderer,
 };

@@ -1,6 +1,6 @@
 import type { RaceLayout, RaceMarkType } from '@opendata-ai/openchart-core';
 import { renderAttributionBrand } from '../renderers/brand';
-import { renderChromeElement } from '../renderers/chrome';
+import { renderChromeElement, renderChromeRuleAndEyebrow } from '../renderers/chrome';
 import { SVG_NS, setAttrs } from '../renderers/svg-dom';
 import { stampThemeProperties } from '../theme-tokens';
 
@@ -8,26 +8,84 @@ export type RaceMarkHost<TMark extends RaceMarkType> = TMark extends 'table'
   ? HTMLElement
   : SVGGElement;
 
+/** The mounted race frame and the insertion points for marks and controls. */
 export interface RaceShell<TMark extends RaceMarkType = RaceMarkType> {
   root: HTMLElement;
   svg: SVGSVGElement;
   markHost: RaceMarkHost<TMark>;
   controlsSlot: HTMLElement;
+  /** Removes only the shell's root. Safe to call repeatedly. */
   destroy(): void;
 }
 
+function renderRaceChrome(svg: SVGSVGElement, layout: RaceLayout): void {
+  const { chrome, area, measureText } = layout;
+  const chromeGroup = svg.ownerDocument.createElementNS(SVG_NS, 'g');
+  chromeGroup.setAttribute('class', 'oc-chrome');
+  renderChromeRuleAndEyebrow(chromeGroup, chrome, measureText);
+
+  const bottom = chrome.bottomAnchorY ?? area.y + area.height;
+  for (const key of ['title', 'subtitle', 'source', 'byline', 'footer'] as const) {
+    const element = chrome[key];
+    if (!element) continue;
+    const isBottom = key === 'source' || key === 'byline' || key === 'footer';
+    renderChromeElement(
+      chromeGroup,
+      isBottom ? { ...element, y: bottom + element.y } : element,
+      `oc-${key}`,
+      key,
+      measureText,
+    );
+  }
+  svg.append(chromeGroup);
+  renderAttributionBrand(
+    svg,
+    layout.watermark ? chrome : { ...chrome, watermark: undefined },
+    bottom,
+    measureText,
+  );
+  if (layout.a11y.hidden) svg.querySelector('.oc-chrome-ref')?.setAttribute('tabindex', '-1');
+}
+
+function createMarkHost(root: HTMLElement, svg: SVGSVGElement, mark: RaceMarkType) {
+  const doc = root.ownerDocument;
+  let markHost: RaceMarkHost<RaceMarkType>;
+  if (mark === 'table') {
+    markHost = doc.createElement('div');
+    markHost.className = 'oc-race-table';
+    root.append(markHost);
+  } else {
+    markHost = doc.createElementNS(SVG_NS, 'g');
+    markHost.setAttribute('class', 'oc-race-mark');
+    svg.append(markHost);
+  }
+
+  const controlsSlot = doc.createElement('div');
+  controlsSlot.className = 'oc-race-controls-slot';
+  root.append(controlsSlot);
+
+  return { markHost, controlsSlot };
+}
+
+/**
+ * Appends a root with the SVG first, the HTML table host when needed, and the
+ * controls slot last. Bar and line hosts are inside the SVG.
+ *
+ * @param idScope - The scope accepted by mark renderers. The shell creates no IDs.
+ */
 export function createRaceShell<TLayout extends RaceLayout>(
   container: HTMLElement,
   layout: TLayout,
   idScope: string,
 ): RaceShell<TLayout['mark']>;
+/** Selects the host namespace from the layout mark and mounts the assembled root. */
 export function createRaceShell(
   container: HTMLElement,
   layout: RaceLayout,
   _idScope: string,
 ): RaceShell {
   const doc = container.ownerDocument;
-  const { width, height, area, a11y, chrome, theme, measureText } = layout;
+  const { width, height, a11y, theme } = layout;
   const root = doc.createElement('div');
   root.className = 'oc-root oc-race-root';
   stampThemeProperties(root, theme);
@@ -46,58 +104,8 @@ export function createRaceShell(
   stampThemeProperties(svg, theme);
   root.append(svg);
 
-  const chromeGroup = doc.createElementNS(SVG_NS, 'g');
-  chromeGroup.setAttribute('class', 'oc-chrome');
-  if (chrome.rule) {
-    const rule = doc.createElementNS(SVG_NS, 'rect');
-    setAttrs(rule, {
-      class: 'oc-chrome-rule',
-      x: chrome.rule.x,
-      y: chrome.rule.y,
-      width: chrome.rule.width,
-      height: chrome.rule.thickness,
-      fill: chrome.rule.color,
-      'shape-rendering': 'crispEdges',
-    });
-    chromeGroup.append(rule);
-  }
-  const bottom = chrome.bottomAnchorY ?? area.y + area.height;
-  for (const key of ['eyebrow', 'title', 'subtitle', 'source', 'byline', 'footer'] as const) {
-    const element = chrome[key];
-    if (!element) continue;
-    const isBottom = key === 'source' || key === 'byline' || key === 'footer';
-    renderChromeElement(
-      chromeGroup,
-      isBottom ? { ...element, y: bottom + element.y } : element,
-      `oc-${key}`,
-      key,
-      measureText,
-      key === 'eyebrow',
-    );
-  }
-  svg.append(chromeGroup);
-  renderAttributionBrand(
-    svg,
-    layout.watermark ? chrome : { ...chrome, watermark: undefined },
-    bottom,
-    measureText,
-  );
-  if (a11y.hidden) svg.querySelector('.oc-chrome-ref')?.setAttribute('tabindex', '-1');
-
-  let markHost: RaceMarkHost<RaceMarkType>;
-  if (layout.mark === 'table') {
-    markHost = doc.createElement('div');
-    markHost.className = 'oc-race-table';
-    root.append(markHost);
-  } else {
-    markHost = doc.createElementNS(SVG_NS, 'g');
-    markHost.setAttribute('class', 'oc-race-mark');
-    svg.append(markHost);
-  }
-
-  const controlsSlot = doc.createElement('div');
-  controlsSlot.className = 'oc-race-controls-slot';
-  root.append(controlsSlot);
+  renderRaceChrome(svg, layout);
+  const { markHost, controlsSlot } = createMarkHost(root, svg, layout.mark);
   container.append(root);
 
   return {
