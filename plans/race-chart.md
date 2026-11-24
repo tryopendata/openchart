@@ -432,7 +432,7 @@ Depends on: phase 3
 | Lane | Size | Owns files | Reads | Tests | Model | Status | Branch | Done when |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | a | M | packages/react/src/Race.tsx, packages/react/src/Visualization.tsx, packages/react/src/index.ts, packages/react/src/__tests__/Race.test.tsx, packages/vue/src/Race.ts, packages/vue/src/Visualization.ts, packages/vue/src/index.ts, packages/vue/src/__tests__/Race.test.ts, packages/svelte/src/Race.svelte, packages/svelte/src/Visualization.svelte, packages/svelte/src/index.ts, packages/svelte/src/__tests__/Race.test.ts | | | gpt-6.2-sol | running | foreman/race-5a | |
-| b | S | packages/vanilla/src/race/export.ts, packages/vanilla/src/export-gif.ts, packages/vanilla/src/race/__tests__/export.test.ts | | | gpt-6.2-sol | pending | | |
+| b | M | packages/vanilla/src/race/export.ts, packages/vanilla/src/export-gif.ts, packages/vanilla/src/race/__tests__/export.test.ts, packages/vanilla/src/race-mount.ts, packages/vanilla/src/race/__tests__/race-mount.test.ts | | | gpt-6.2-sol | pending | | |
 
 #### Lane 5a brief
 
@@ -442,6 +442,15 @@ Depends on: phase 3
 - Decisions already made: no playback props (`playing`, `t`) in v1; callers use the ref.
 - Out of scope: GIF export, docs.
 - Done when: each package's tests cover mount, spec update keeping t, theme remount restoring t, `onPeriod` firing and unsubscribing, destroy on unmount, and `Visualization` routing a race spec; each package's typecheck passes (svelte-check for Svelte).
+
+#### Lane 5b brief
+
+- Goal: `race.export('gif', { fps? })` returns a GIF of the whole race, frame-stepped from `t = 0` to the end, for the bar and line marks.
+- Interface: `exportRaceGIF(view, options)` in `race/export.ts`, called from `RaceInstance.export` in `race-mount.ts`; the instance signature stays `export(format: 'gif', options?: Pick<GIFExportOptions, 'fps'>): Promise<Blob>`. Factor the encoder out of `exportGIF` (dynamic `gifenc` import with the same missing-peer error, one global palette seeded from a settled frame, background fill, `rasterizeSVGToCanvas`) into a shared helper both exporters call; `exportGIF`'s behavior and tests stay unchanged.
+- Behavior: render each frame into a detached clone of the race's SVG (chrome, axis, marks; never the HTML controls) through the mark's own renderer drawing `raceGeometryAt(layout, t)`, so a frame matches what the live chart shows at that `t`. fps defaults to 25; when `fps × duration` exceeds 1200 frames, lower the fps so the whole timeline fits in 1200 (never truncate). Hold the final frame for 1.5s. `spec.loop` true loops the GIF forever, otherwise it plays once. Fonts embedded and the theme style block injected the same way `exportGIF` does. The live chart's playhead, playing state and DOM are untouched by an export, including one started mid-playback; a `destroy()` during export rejects the promise.
+- Decisions already made: the table mark renders HTML, which the SVG rasterizer can't capture, so `export('gif')` on a table race rejects with `Error('GIF export supports the bar and line marks')` in v1. No dpi or loop options on the instance in v1.
+- Out of scope: video formats, PNG/SVG export of a single frame, the table mark.
+- Done when: tests cover frame count and fps capping, final-frame hold, loop flag, frame geometry matching `raceGeometryAt` at sampled `t` (assert on the cloned SVG before rasterizing), table rejection, missing-gifenc error, live state untouched, and destroy-during-export; `exportGIF`'s existing tests pass unchanged; a real GIF from the GDP bar story opens and plays in a browser.
 
 ### Phase 6: docs, gallery, generated references, baselines
 
@@ -482,3 +491,4 @@ Depends on: phase 4, phase 5
 - 2026-11-24: phase 4 base added before the lanes: the scaffolded table cells (`string[]`) could not carry the inline bar, color chip or change arrow, and the line head label lacked a value, so the shared types change once, up front. RFC's `on('period')` was missing from `RaceInstance` and is added (React `onPeriod` in phase 5 needs it); `seekTo` dropped from v1. The `Marks` switcher story moves to phase 6 with the gallery.
 - 2026-11-24: user asked for a docs page in the Astro site (`site/`) with interactive examples, landed by a Codex lane once the feature is ready: lane 6b replaces the planned `docs/race.md`. User also asked for a ce:design polish pass on the race UI.
 - 2026-11-24: ce:design pass on the race UI (user request): the playback strip was restyled in a separate Codex run (foreman/race-polish, merged into phase 3). Styled scrubber with a played portion, SVG icon button, strip aligned to the chart inset, fixed-width readout.
+- 2026-11-24: lane 5b brief written. The table mark renders HTML, so GIF export covers bar and line and rejects for table in v1. 5b takes `race-mount.ts` and its test, so it starts after lane 4c merges.
