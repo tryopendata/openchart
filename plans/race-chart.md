@@ -431,8 +431,17 @@ Depends on: phase 3
 
 | Lane | Size | Owns files | Reads | Tests | Model | Status | Branch | Done when |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| a | M | packages/react/src/Race.tsx, packages/react/src/Visualization.tsx, packages/react/src/index.ts, packages/react/src/__tests__/Race.test.tsx, packages/vue/src/Race.ts, packages/vue/src/Visualization.ts, packages/vue/src/index.ts, packages/vue/src/__tests__/Race.test.ts, packages/svelte/src/Race.svelte, packages/svelte/src/Visualization.svelte, packages/svelte/src/index.ts, packages/svelte/src/__tests__/Race.test.ts | | | gpt-6.2-sol | pending | | |
+| a | M | packages/react/src/Race.tsx, packages/react/src/Visualization.tsx, packages/react/src/index.ts, packages/react/src/__tests__/Race.test.tsx, packages/vue/src/Race.ts, packages/vue/src/Visualization.ts, packages/vue/src/index.ts, packages/vue/src/__tests__/Race.test.ts, packages/svelte/src/Race.svelte, packages/svelte/src/Visualization.svelte, packages/svelte/src/index.ts, packages/svelte/src/__tests__/Race.test.ts | | | gpt-6.2-sol | running | foreman/race-5a | |
 | b | S | packages/vanilla/src/race/export.ts, packages/vanilla/src/export-gif.ts, packages/vanilla/src/race/__tests__/export.test.ts | | | gpt-6.2-sol | pending | | |
+
+#### Lane 5a brief
+
+- Goal: `<Race>` components for React, Vue and Svelte, and `type: "race"` routing in each `Visualization`.
+- Interface: React `<Race spec theme? darkMode? className? style? autoResize? watermark? onWarn? onPeriod? ref />`, where the ref exposes the `RaceInstance` (via `forwardRef`/`useImperativeHandle` or the pattern the other components use). Vue and Svelte mirror the props and emit or call `period`, and expose the instance the way their `BarList` does.
+- Behavior: follow each package's `BarList` wrapper exactly for mount, destroy, theme context, dark mode and StrictMode. A changed `spec` calls `instance.update(spec)`, which keeps the playhead; an invalid spec reports through `onWarn` or rethrows the same way BarList handles compile errors. Changed `theme` or `darkMode` remounts, because `RaceMountOptions` are read once; a remount restores the previous `t` and playing state through `seek`/`play`. `onPeriod` subscribes through `instance.on('period')` and resubscribes when the callback changes, without remounting. Export `Race` and its props type from each package index.
+- Decisions already made: no playback props (`playing`, `t`) in v1; callers use the ref.
+- Out of scope: GIF export, docs.
+- Done when: each package's tests cover mount, spec update keeping t, theme remount restoring t, `onPeriod` firing and unsubscribing, destroy on unmount, and `Visualization` routing a race spec; each package's typecheck passes (svelte-check for Svelte).
 
 ### Phase 6: docs, gallery, generated references, baselines
 
