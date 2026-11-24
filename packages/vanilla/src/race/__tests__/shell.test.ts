@@ -128,6 +128,16 @@ describe('race shell', () => {
     expect(svg.getAttribute('aria-label')).toBe('Seasonal revenue ranked by region');
   });
 
+  it('matches the controls slot to the chart padding and resolved source size', () => {
+    const layout = barLayout(resolveTheme({ spacing: { padding: 28 } }), chromeContent, {
+      width: 360,
+    });
+    const { controlsSlot } = createRaceShell(document.createElement('div'), layout, 'inset');
+
+    expect(controlsSlot.style.getPropertyValue('--oc-race-padding')).toBe('28px');
+    expect(controlsSlot.style.getPropertyValue('--oc-source-size')).toBe('10px');
+  });
+
   it.each(['', '   '])('names the SVG when the layout label is blank (%j)', (altText) => {
     const layout = barLayout();
     layout.a11y.altText = altText;

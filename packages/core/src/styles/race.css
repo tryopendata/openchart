@@ -1,24 +1,28 @@
 @layer oc.components {
+  .oc-race-controls-slot {
+    padding-inline: var(--oc-race-padding);
+  }
+
   .oc-race-controls {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) fit-content(40%);
+    display: flex;
     align-items: center;
     gap: 12px;
+    height: 44px;
     color: var(--oc-text);
     font-family: var(--oc-font-family);
-    font-size: var(--oc-body-size);
   }
 
   .oc-race-play {
     display: grid;
     place-items: center;
+    flex: none;
     box-sizing: border-box;
-    width: 34px;
-    height: 34px;
+    width: 32px;
+    height: 32px;
     padding: 0;
-    border: 1px solid var(--oc-border);
-    border-radius: 50%;
-    background: var(--oc-bg);
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
     color: inherit;
     font: inherit;
     cursor: pointer;
@@ -35,13 +39,81 @@
   }
 
   .oc-race-scrub {
-    width: 100%;
+    --oc-race-track-direction: to right;
+    --oc-race-track-fill: linear-gradient(
+      var(--oc-race-track-direction),
+      var(--oc-race-progress-color, var(--oc-text)) var(--oc-race-progress, 0%),
+      var(--oc-border) var(--oc-race-progress, 0%)
+    );
+    /* Grow outward and keep the native thumb's travel and center fixed. */
+    --oc-race-thumb-grow: 0px;
+    --oc-race-thumb-ring:
+      0 0 0 var(--oc-race-thumb-grow) var(--oc-text),
+      0 0 0 calc(2px + var(--oc-race-thumb-grow)) var(--oc-bg);
+    appearance: none;
+    flex: 1;
     min-width: 0;
+    height: 16px;
     margin: 0;
-    accent-color: var(--oc-accent);
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .oc-race-scrub:dir(rtl) {
+    --oc-race-track-direction: to left;
+  }
+
+  .oc-race-scrub:hover,
+  .oc-race-scrub:active {
+    --oc-race-thumb-grow: 1px;
+  }
+
+  .oc-race-scrub::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--oc-race-track-fill);
+  }
+
+  .oc-race-scrub::-moz-range-track {
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--oc-race-track-fill);
+  }
+
+  .oc-race-scrub::-webkit-slider-thumb {
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    margin-top: -5px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--oc-text);
+    box-shadow: var(--oc-race-thumb-ring);
+  }
+
+  .oc-race-scrub::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--oc-text);
+    box-shadow: var(--oc-race-thumb-ring);
+  }
+
+  @media (forced-colors: active) {
+    .oc-race-scrub {
+      appearance: auto;
+    }
   }
 
   .oc-race-readout {
+    flex: 0 1 0px;
+    color: var(--oc-text-muted);
+    font-size: var(--oc-source-size);
+    text-align: end;
     overflow-wrap: anywhere;
   }
 
