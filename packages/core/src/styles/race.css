@@ -1,6 +1,10 @@
 @layer oc.components {
   .oc-race-controls-slot {
+    /* Tuck the strip into the SVG's bottom padding and give that padding back below it,
+       so the controls sit close to the source line and the total height is unchanged. */
+    margin-top: calc(8px - var(--oc-race-padding, 0px));
     padding-inline: var(--oc-race-padding);
+    padding-bottom: calc(var(--oc-race-padding, 0px) - 8px);
   }
 
   .oc-race-controls {
@@ -19,6 +23,8 @@
     box-sizing: border-box;
     width: 32px;
     height: 32px;
+    /* Pull the button left so the 16px icon, not the hit area, lines up with the chart inset. */
+    margin-inline-start: -8px;
     padding: 0;
     border: 0;
     border-radius: 4px;
@@ -110,11 +116,14 @@
   }
 
   .oc-race-readout {
-    flex: 0 1 0px;
+    flex: 0 0 auto;
+    max-width: 40%;
+    overflow: hidden;
     color: var(--oc-text-muted);
     font-size: var(--oc-source-size);
     text-align: end;
-    overflow-wrap: anywhere;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .oc-race-readout,
