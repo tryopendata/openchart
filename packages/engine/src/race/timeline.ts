@@ -132,6 +132,7 @@ export function createRaceTimeline(matrix: RaceMatrix, options: RaceTimelineOpti
     periodCount,
     keyCount,
     top,
+    samplesPerPeriod,
     valueAt,
     rankPos,
     exactRank(keyIndex, t) {

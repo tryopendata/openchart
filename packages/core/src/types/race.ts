@@ -78,7 +78,9 @@ export interface RaceBarGeometry {
 export interface RaceLineStatic {
   /** Bounds of the line plot in pixels. */
   plot: Rect;
-  /** Full period-index domain and its pixel range. Reveal mode shortens the domain each frame. */
+  /** Controls whether the x axis reveals periods as the playhead advances or shows all periods. */
+  window: 'reveal' | 'all';
+  /** Full period-index domain and its pixel range. Reveal mode narrows the domain per frame. */
   xScale: {
     /** First and last period indices. */
     domain: [number, number];
@@ -91,6 +93,16 @@ export interface RaceLineStatic {
   labelGutter: number;
   /** Font size for axis tick labels in pixels. */
   tickFontSize: number;
+  /** Visibility and value history for each key that can be drawn. */
+  history: Array<{
+    /** Index into the race matrix. */
+    key: number;
+    /** Contiguous intervals in which the series has a visible head. */
+    runs: Array<{ start: number; end: number; peakTime: number; peakOpacity: number }>;
+    /** Running value bounds at each whole period. */
+    mins: number[];
+    maxes: number[];
+  }>;
 }
 
 export interface RaceLineGeometry {

@@ -1,4 +1,8 @@
 @layer oc.components {
+  .oc-race {
+    direction: ltr;
+  }
+
   .oc-race-controls-slot {
     /* Tuck the strip into the SVG's bottom padding and give that padding back below it,
        so the controls sit close to the source line and the total height is unchanged. */
@@ -159,5 +163,16 @@
 
   .oc-race-row {
     will-change: transform;
+  }
+
+  /* line */
+  .oc-race-line-labels {
+    dominant-baseline: central;
+    font-size: var(--oc-body-size);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .oc-race-line-value {
+    fill: var(--oc-text-muted);
   }
 }
