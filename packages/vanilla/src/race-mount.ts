@@ -23,6 +23,7 @@ import { prefersReducedMotion } from './motion/tween';
 import { createRaceA11y } from './race/a11y-dom';
 import { createRaceClock, type RaceClock, type RaceClockState } from './race/clock';
 import { createRaceControls, type RaceControlsOptions } from './race/controls';
+import { exportRaceGIF } from './race/export';
 import { RACE_RENDERERS } from './race/renderers';
 import { createRaceShell, type RaceMarkHost } from './race/shell';
 import { measureRaceSize, RACE_CONTROLS_HEIGHT } from './race/size';
@@ -65,7 +66,7 @@ export interface RaceInstance {
   update(spec: RaceSpec): void;
   /** Measure and redraw the race at the current playhead. */
   resize(): void;
-  /** Rejects until GIF export arrives in a later release. */
+  /** Export the full bar or line race as a GIF. Rejects for table marks and on destruction. */
   export(format: 'gif', options?: Pick<GIFExportOptions, 'fps'>): Promise<Blob>;
   /** Read the playhead, speed, playback and completion status, and period, including after destroy(). */
   getState(): Pick<RaceClockState, 't' | 'playing' | 'speed' | 'ended'> & {
@@ -121,7 +122,19 @@ function mountView<Mark extends RaceMarkType>(
   shell.root.classList.toggle('oc-dark', darkMode);
   if (layout.mark === 'table') shell.markHost.setAttribute('aria-hidden', 'true');
   if (model.spec.width !== undefined) shell.root.style.width = `${layout.width}px`;
-  const renderer = factory(shell.markHost, layout.static, idScope);
+  function bindRenderer(host: RaceMarkHost<Mark>) {
+    const renderer = factory(host, layout.static, idScope);
+    return {
+      draw(t: number) {
+        const geometry = raceGeometryAt(model, layout, t);
+        if (isGeometryForMark(geometry, layout.mark)) renderer.draw(geometry);
+      },
+      destroy() {
+        renderer.destroy();
+      },
+    };
+  }
+  const renderer = bindRenderer(shell.markHost);
   const controls = layout.playback.controls
     ? createRaceControls({ periodLabels: layout.periods, ...handlers })
     : undefined;
@@ -134,9 +147,12 @@ function mountView<Mark extends RaceMarkType>(
     shell,
     layout,
     controls,
-    draw(t: number) {
-      const geometry = raceGeometryAt(model, layout, t);
-      if (isGeometryForMark(geometry, layout.mark)) renderer.draw(geometry);
+    draw: renderer.draw,
+    mountExportRenderer(svg: SVGSVGElement) {
+      const host = svg.querySelector<RaceMarkHost<Mark>>('g.oc-race-mark');
+      if (!host) throw new Error('The race SVG has no mark host');
+      host.replaceChildren();
+      return bindRenderer(host);
     },
     destroy() {
       controls?.element.removeEventListener('change', onSeekCommit);
@@ -170,6 +186,7 @@ export function createRace(
   const warn = onWarn && ((warning: CompileWarning) => onWarn(warning.message));
   let model = prepareRace(spec, { onWarn: warn });
   const idScope = pageIdScope.next('race');
+  const exportLifetime = new AbortController();
   type PeriodListener = (period: RaceFrame['period']) => void;
   const periodListeners = new Set<PeriodListener>();
   const pendingPeriods: Array<{ period: RaceFrame['period']; listeners: PeriodListener[] }> = [];
@@ -450,8 +467,15 @@ export function createRace(
     setSpeed,
     update,
     resize,
-    async export() {
-      throw new Error('GIF export arrives in a later release');
+    async export(format, options) {
+      if (destroyed) exportLifetime.signal.throwIfAborted();
+      if (format !== 'gif') throw new Error(`Unsupported export format: ${format}`);
+      if (!view) throw new Error('Race is not rendered');
+      const { layout, shell, mountExportRenderer } = view;
+      return exportRaceGIF(
+        { layout, shell, mountExportRenderer, signal: exportLifetime.signal },
+        options,
+      );
     },
     getState() {
       const { t, playing, speed, ended } = clock.getState();
@@ -467,6 +491,7 @@ export function createRace(
     destroy() {
       if (destroyed) return;
       destroyed = true;
+      exportLifetime.abort(new Error('Race was destroyed during GIF export'));
       periodListeners.clear();
       cancelAutoplay();
       observer?.disconnect();

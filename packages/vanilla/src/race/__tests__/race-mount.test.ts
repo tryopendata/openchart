@@ -1080,7 +1080,11 @@ describe('createRace', () => {
     expect(chart.getState()).toMatchObject({ t: 0.5, speed: 1, playing: false });
   });
 
-  it('rejects GIF export with the phase 5 message', async () => {
-    await expect(mount().export('gif')).rejects.toThrow('GIF export arrives in a later release');
+  it('rejects GIF export after the race is destroyed', async () => {
+    const chart = mount();
+    chart.destroy();
+    await expect(chart.export('gif')).rejects.toThrow(
+      new Error('Race was destroyed during GIF export'),
+    );
   });
 });
