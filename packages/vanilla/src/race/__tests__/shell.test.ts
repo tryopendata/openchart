@@ -138,20 +138,28 @@ describe('race shell', () => {
     expect(controlsSlot.style.getPropertyValue('--oc-source-size')).toBe('10px');
   });
 
-  it('moves the controls into the measured footer whitespace only when enabled', () => {
+  it('places enabled controls eight pixels after the last footer line', () => {
     const layout = barLayout(resolveTheme({ spacing: { padding: 28 } }), {
-      source: { text: 'GDP data', offset: { dy: -6 } },
+      source: {
+        text: 'GDP data\nUpdated November 2026',
+        offset: { dy: -6 },
+        style: { fontSize: 10 },
+      },
     });
     layout.watermark = false;
-    const baseline = layout.area.y + layout.area.height;
-    const source = layout.chrome.source;
-    if (!source) throw new Error('Expected source chrome');
-    const footerEnd =
-      baseline + source.y + source.style.fontSize * (source.style.lineHeight ?? 1.3);
-    const { controlsSlot } = createRaceShell(document.createElement('div'), layout, 'lift');
-    expect(
-      Number.parseFloat(controlsSlot.style.getPropertyValue('--oc-race-controls-lift')),
-    ).toBeCloseTo(layout.height - footerEnd - 8);
+    const { svg, controlsSlot } = createRaceShell(document.createElement('div'), layout, 'lift');
+    const source = svg.querySelector('.oc-source');
+    expect([...(source?.children ?? [])].map((line) => line.textContent)).toEqual([
+      'GDP data',
+      'Updated November 2026',
+    ]);
+    // The fixture uses 10px text with 2px of its line box below the baseline.
+    const lastLineBaseline =
+      Number(source?.getAttribute('y')) + Number(source?.lastElementChild?.getAttribute('dy'));
+    const controlsTop =
+      Number.parseFloat(svg.style.height) -
+      Number.parseFloat(controlsSlot.style.getPropertyValue('--oc-race-controls-lift'));
+    expect(controlsTop - lastLineBaseline - 2).toBeCloseTo(8);
 
     layout.playback.controls = false;
     const disabled = createRaceShell(document.createElement('div'), layout, 'disabled');

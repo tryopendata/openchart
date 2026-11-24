@@ -1,9 +1,10 @@
-import { CATEGORICAL_PALETTE } from '@opendata-ai/openchart-core';
+import { CATEGORICAL_PALETTE, type RaceSpec } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import { worldGdpRace } from '../../../../../examples/src/data/world-gdp-race';
 import { layoutRace, prepareRace, raceFrameAt, raceGeometryAt } from '../../index';
 import { assignRaceColors, resolveRaceColors } from '../colors';
-import type { RaceMatrix, RaceTimeline } from '../types';
+import { createRaceTimeline } from '../timeline';
+import type { RaceMatrix } from '../types';
 
 const matrix: RaceMatrix = {
   keys: ['A', 'B', 'C', 'D', 'E', 'F'],
@@ -19,37 +20,12 @@ const matrix: RaceMatrix = {
     [2, 1, 2],
   ].map((values) => new Float64Array(values)),
 };
-const orderedKeys = [
-  [4, 2, 0, 1, 3, 5],
-  [4, 1, 0, 2, 3, 5],
-  [1, 4, 2, 0, 3, 5],
-];
-const timeline: RaceTimeline = {
-  keyCount: 6,
-  periodCount: 3,
+const timeline = createRaceTimeline(matrix, {
   top: 2,
-  samplesPerPeriod: 1,
-  valueAt: (keyIndex, t) => matrix.values[keyIndex][t],
-  exactRank: (keyIndex, t) => orderedKeys[t].indexOf(keyIndex),
-  periodRank: (keyIndex, period) => orderedKeys[period].indexOf(keyIndex),
-  rankPos: (keyIndex, t) => Math.min(2, orderedKeys[t].indexOf(keyIndex)),
-  sample(t) {
-    return {
-      t,
-      periodIndex: t,
-      items: orderedKeys[t].slice(0, this.top).map((keyIndex, rank) => ({
-        keyIndex,
-        rank,
-        rankPos: rank,
-        value: this.valueAt(keyIndex, t),
-        opacity: 1,
-        change: 0,
-      })),
-      domainMin: 0,
-      domainMax: this.valueAt(orderedKeys[t][0], t),
-    };
-  },
-};
+  samplesPerPeriod: 24,
+  swapPeriods: 0,
+  rescale: 'frame',
+});
 const palette = ['red', 'blue', 'green', 'orange', 'purple', 'brown'];
 
 describe('race colors', () => {
@@ -158,18 +134,53 @@ describe('race colors', () => {
     }
   });
 
-  it('honors caller-supplied slots on a copied model', () => {
-    const layout = layoutRace(
-      { ...gdp, colorSlots: gdp.colorSlots.map(() => 'red') },
-      { width: 800, height: 520 },
+  it('scores a line trail after its key leads briefly between color samples', () => {
+    const model = prepareRace(
+      {
+        type: 'race',
+        mark: 'line',
+        data: [
+          [100, 0, 0, 47],
+          [0, 0, 80, 47],
+        ].flatMap((values, period) =>
+          ['A', 'B', 'C', 'X'].map((key, index) => ({ period, key, value: values[index] })),
+        ),
+        race: { top: 1, step: 1000, swap: 0 },
+        encoding: { time: { field: 'period' }, key: { field: 'key' }, value: { field: 'value' } },
+        theme: { colors: { categorical: ['red', 'green', 'blue'] } },
+      },
+      {},
     );
-    expect(layout.colors).toEqual(gdp.matrix.keys.map(() => 'red'));
+    const layout = layoutRace(model, { width: 800, height: 520 });
+    const geometry = raceGeometryAt(model, layout, 0.65);
+    if (geometry.mark !== 'line') throw new Error('Expected a line');
+    expect(new Set(geometry.series.map(({ key }) => key))).toEqual(new Set(['A', 'C', 'X']));
+    expect(new Set(geometry.series.map(({ color }) => color))).toEqual(
+      new Set(['red', 'green', 'blue']),
+    );
+  });
+
+  it('preserves active-palette colors when copying the model', () => {
+    const options = {
+      width: 800,
+      height: 520,
+      theme: { colors: { categorical: palette.slice(0, 2) } },
+    };
+    const original = layoutRace(gdp, options);
+
+    expect(original.colors).not.toEqual(
+      resolveRaceColors(
+        gdp.colorAssignment.slotsFor(CATEGORICAL_PALETTE.length),
+        palette.slice(0, 2),
+      ),
+    );
+    expect(layoutRace({ ...gdp }, options).colors).toEqual(original.colors);
   });
 
   it('assigns colors on first top-N appearance, then to unseen keys in key order', () => {
     expect(
       resolveRaceColors(
-        assignRaceColors(matrix, timeline, undefined, 'team')(palette.length),
+        assignRaceColors(matrix, timeline, undefined, 'team').slotsFor(palette.length),
         palette,
       ),
     ).toEqual(['orange', 'green', 'blue', 'purple', 'red', 'brown']);
@@ -178,7 +189,7 @@ describe('race colors', () => {
   it('colors by key when the color field is the key field', () => {
     expect(
       resolveRaceColors(
-        assignRaceColors(matrix, timeline, { field: 'team' }, 'team')(palette.length),
+        assignRaceColors(matrix, timeline, { field: 'team' }, 'team').slotsFor(palette.length),
         palette,
       ),
     ).toEqual(['orange', 'green', 'blue', 'purple', 'red', 'brown']);
@@ -187,62 +198,153 @@ describe('race colors', () => {
   it('shares colors between keys with the same category, including missing categories', () => {
     expect(
       resolveRaceColors(
-        assignRaceColors(matrix, timeline, { field: 'region' }, 'team')(palette.length),
+        assignRaceColors(matrix, timeline, { field: 'region' }, 'team').slotsFor(palette.length),
         palette,
       ),
     ).toEqual(['orange', 'green', 'blue', 'blue', 'red', 'green']);
   });
 
-  it('assigns a constant color to every key', () => {
-    expect(assignRaceColors(matrix, timeline, { value: '#abc' }, 'team')(palette.length)).toEqual([
-      '#abc',
-      '#abc',
-      '#abc',
-      '#abc',
-      '#abc',
-      '#abc',
+  it('keeps a retained category’s color and gives a new category the available color', () => {
+    const initial: RaceSpec = {
+      type: 'race',
+      mark: 'bar',
+      data: [0, 1].flatMap((period) => [
+        { period, key: 'A', group: 'X', value: 3 },
+        { period, key: 'B', group: 'Y', value: 2 },
+        { period, key: 'C', group: 'Z', value: 1 },
+      ]),
+      encoding: {
+        time: { field: 'period' },
+        key: { field: 'key' },
+        value: { field: 'value' },
+        color: { field: 'group' },
+      },
+      theme: { colors: { categorical: ['red', 'blue'] } },
+      race: { top: 3 },
+    };
+    const model = prepareRace(initial, {});
+    const updated = prepareRace(
+      {
+        ...initial,
+        data: [0, 1].flatMap((period) => [
+          { period, key: 'C', group: 'Z', value: 1 },
+          { period, key: 'D', group: 'W', value: 2 },
+        ]),
+        race: { top: 2 },
+      },
+      { previousModel: model },
+    );
+
+    expect(raceFrameAt(model, 0).items.find(({ key }) => key === 'C')?.color).toBe('red');
+    expect(raceFrameAt(updated, 0).items.map(({ key, color }) => [key, color])).toEqual([
+      ['D', 'blue'],
+      ['C', 'red'],
     ]);
   });
 
-  it('uses the active palette size when minimizing co-visible conflicts', () => {
-    const colors = assignRaceColors(matrix, timeline, undefined, 'team');
-    expect(colors(2)).toBe(colors(2));
-    expect(colors(2).every((slot) => typeof slot === 'number' && slot < 2)).toBe(true);
-    expect(colors(6)).toEqual([3, 2, 1, 4, 0, 5]);
+  it('assigns a constant color to every key', () => {
+    expect(
+      assignRaceColors(matrix, timeline, { value: '#abc' }, 'team').slotsFor(palette.length),
+    ).toEqual(['#abc', '#abc', '#abc', '#abc', '#abc', '#abc']);
   });
 
-  it('assigns colors when smoothed rows first become visible in an integer sample', () => {
-    const transitioning: RaceTimeline = {
-      ...timeline,
-      sample(t) {
-        const sample = timeline.sample(t);
-        if (t !== 1) return sample;
-        return {
-          ...sample,
-          items: [
-            sample.items[0],
-            { keyIndex: 0, value: 7, rank: 2, rankPos: 0.9, opacity: 1, change: 0 },
-            sample.items[1],
-          ],
-        };
+  it('uses different colors for keys that always rank next to each other when co-visible', () => {
+    const model = prepareRace(
+      {
+        type: 'race',
+        mark: 'bar',
+        data: [
+          [100, 10, 70],
+          [100, 95, 30],
+          [100, 95, 30],
+        ].flatMap((values, period) =>
+          ['A', 'B', 'C'].map((key, index) => ({ period, key, value: values[index] })),
+        ),
+        encoding: { time: { field: 'period' }, key: { field: 'key' }, value: { field: 'value' } },
+        race: { top: 2, swap: 0 },
       },
+      {},
+    );
+    const layout = layoutRace(model, {
+      width: 800,
+      height: 520,
+      theme: { colors: { categorical: ['red', 'blue'] } },
+    });
+    const geometry = raceGeometryAt(model, layout, 2);
+    if (geometry.mark !== 'bar') throw new Error('Expected a bar');
+    expect(geometry.rows.map(({ key }) => key)).toEqual(['A', 'B']);
+    expect(new Set(geometry.rows.map(({ color }) => color))).toEqual(new Set(['red', 'blue']));
+  });
+
+  it('assigns a key a color when smoothing first makes it visible at a whole period', () => {
+    const model = prepareRace(
+      {
+        type: 'race',
+        mark: 'bar',
+        data: matrix.keys.flatMap((key, index) =>
+          [0, 1, 2].map((period) => ({
+            key: key === 'A' ? 'Z' : key,
+            period,
+            value: matrix.values[index][period],
+          })),
+        ),
+        encoding: { time: { field: 'period' }, key: { field: 'key' }, value: { field: 'value' } },
+        race: { top: 2, step: 1000, swap: 1000 },
+      },
+      {},
+    );
+    expect(raceFrameAt(model, 0).items.map(({ key }) => key)).toEqual(['E', 'C']);
+    expect(raceFrameAt(model, 1).items.map(({ key, rank }) => [key, rank])).toEqual([
+      ['E', 0],
+      ['B', 1],
+      ['Z', 2],
+    ]);
+    const layout = layoutRace(model, {
+      width: 800,
+      height: 520,
+      theme: { colors: { categorical: palette } },
+    });
+    expect(layout.colors[model.matrix.keys.indexOf('Z')]).toBe('orange');
+    expect(layout.colors[model.matrix.keys.indexOf('D')]).toBe('purple');
+  });
+
+  it.each([
+    'quantitative',
+    'temporal',
+  ] as const)('preserves the color slots after shuffling %s data rows', (type) => {
+    const data = matrix.keys.flatMap((key, index) =>
+      [0, 1, 2].map((period) => ({
+        key,
+        period: type === 'quantitative' ? 2022 + period : `${2022 + period}-01-01`,
+        value: matrix.values[index][period],
+      })),
+    );
+    const input: RaceSpec = {
+      type: 'race',
+      mark: 'bar',
+      data,
+      encoding: {
+        time: { field: 'period', type },
+        key: { field: 'key' },
+        value: { field: 'value' },
+      },
+      race: { top: 2 },
     };
-    expect(
-      resolveRaceColors(
-        assignRaceColors(matrix, transitioning, undefined, 'team')(palette.length),
-        palette,
-      ),
-    ).toEqual(['green', 'orange', 'blue', 'purple', 'red', 'brown']);
-    expect(
-      resolveRaceColors(
-        assignRaceColors(matrix, transitioning, { field: 'region' }, 'team')(palette.length),
-        palette,
-      ),
-    ).toEqual(['green', 'orange', 'blue', 'blue', 'red', 'orange']);
+    const shuffled = [
+      ...data.filter((_, index) => index % 2 === 1).reverse(),
+      ...data.filter((_, index) => index % 2 === 0),
+    ];
+    const original = prepareRace(input, {});
+    const reordered = prepareRace({ ...input, data: shuffled }, {});
+    for (const size of [2, palette.length]) {
+      expect(reordered.colorAssignment.slotsFor(size)).toEqual(
+        original.colorAssignment.slotsFor(size),
+      );
+    }
   });
 
   it('keeps indices unwrapped in the assignment', () => {
-    expect(assignRaceColors(matrix, timeline, undefined, 'team')(palette.length)).toEqual([
+    expect(assignRaceColors(matrix, timeline, undefined, 'team').slotsFor(palette.length)).toEqual([
       3, 2, 1, 4, 0, 5,
     ]);
   });

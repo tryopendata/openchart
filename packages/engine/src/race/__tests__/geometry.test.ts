@@ -83,8 +83,8 @@ describe('race frames and geometry', () => {
     expect(raceGeometryAt(model, layout, 1.25)).toEqual(geometry);
   });
 
-  it('caps the bar period label at 40% of a narrow plot and keeps its bottom-right anchor', () => {
-    const model = prepareRace(spec, {});
+  it('keeps a long period label at least 36px and bottom-right on a 360px chart', () => {
+    const model = prepareRace({ ...spec, race: { ...spec.race, period: { format: '%B %Y' } } }, {});
     const layout = layoutRace(model, { width: 360, height: 520 });
     const geometry = raceGeometryAt(model, layout, 2);
     if (layout.mark !== 'bar' || geometry.mark !== 'bar' || !geometry.period)
@@ -93,7 +93,8 @@ describe('race frames and geometry', () => {
     const { period } = geometry;
     expect(period.x).toBe(plot.x + plot.width);
     expect(period.y).toBe(plot.y + plot.height);
-    expect(estimateTextWidth(period.text, period.fontSize, 600)).toBeCloseTo(plot.width * 0.4);
+    expect(period.fontSize).toBe(36);
+    expect(estimateTextWidth(period.text, period.fontSize, 600)).toBeGreaterThan(plot.width * 0.4);
   });
 
   it.each([

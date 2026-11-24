@@ -201,8 +201,91 @@ describe('race table renderer', () => {
   });
 
   it.each([
+    [
+      'an overtake',
+      [
+        [100, 65],
+        [65, 100],
+        [40, 40],
+      ],
+    ],
+    [
+      'a full reversal',
+      Array.from({ length: 10 }, (_, index) => [100 - 10 * index, 10 + 10 * index]),
+    ],
+  ] as const)('moves every row’s cells continuously through %s', (_, values) => {
+    const { draw, shell } = setup({
+      ...spec,
+      height: 420,
+      race: { ...spec.race, top: values.length, swap: 500 },
+      data: values.flatMap(([first, last], index) => [
+        { period: 0, place: `Team ${index + 1}`, value: first },
+        { period: 1, place: `Team ${index + 1}`, value: last },
+      ]),
+    });
+    let previous = new Map<string, number>();
+    for (let step = 0; step <= 480; step++) {
+      const t = step / 480;
+      draw(t);
+      const positions = new Map<string, number>();
+      for (const row of shell.markHost.querySelectorAll<HTMLTableRowElement>('tbody tr')) {
+        const name = row.querySelector('.oc-race-table-name')?.textContent ?? '';
+        const y = Number.parseFloat(row.style.transform.slice('translateY('.length));
+        const offset =
+          Number.parseFloat(row.style.getPropertyValue('--oc-race-table-content-offset')) || 0;
+        const prior = previous.get(name);
+        if (prior !== undefined)
+          expect(Math.abs(y + offset - prior), `${name} at ${t}`).toBeLessThan(3);
+        positions.set(name, y + offset);
+      }
+      expect(positions.size).toBe(values.length);
+      previous = positions;
+    }
+    expect(previous.get('Team 2')).toBeLessThan(previous.get('Team 1') ?? 0);
+  });
+
+  it('keeps the two rows above the fold continuous while a third is waiting', () => {
+    const { draw, shell } = setup({
+      ...spec,
+      data: [
+        [100, 15],
+        [60, 65],
+        [20, 100],
+      ].flatMap(([first, last], index) => [
+        { period: 0, place: `Team ${index + 1}`, value: first },
+        { period: 1, place: `Team ${index + 1}`, value: last },
+      ]),
+      race: { ...spec.race, top: 2, swap: 500 },
+    });
+    let previous = new Map<string, { y: number; opacity: number }>();
+    for (let step = 0; step <= 480; step++) {
+      draw(step / 480);
+      const next = new Map<string, { y: number; opacity: number }>();
+      for (const row of shell.markHost.querySelectorAll<HTMLTableRowElement>('tbody tr')) {
+        const name = row.querySelector('.oc-race-table-name')?.textContent ?? '';
+        const y = Number.parseFloat(row.style.transform.slice('translateY('.length));
+        const offset =
+          Number.parseFloat(row.style.getPropertyValue('--oc-race-table-content-offset')) || 0;
+        const opacity = Number(row.style.opacity);
+        const prior = previous.get(name);
+        if (prior) {
+          expect(Math.abs(y + offset - prior.y), `${name} at step ${step}`).toBeLessThan(3);
+        }
+        if (step > 0) expect(Math.abs(opacity - (prior?.opacity ?? 0))).toBeLessThan(0.1);
+        next.set(name, { y: y + offset, opacity });
+      }
+      for (const [name, { opacity }] of previous) {
+        if (!next.has(name)) expect(opacity, `${name} at step ${step}`).toBeLessThan(0.1);
+      }
+      expect(next.size).toBeLessThanOrEqual(2);
+      previous = next;
+    }
+    expect([...previous.keys()]).toContain('Team 3');
+  });
+
+  it.each([
     800, 360,
-  ])('separates interior GDP cells and clips the sliding bottom row at %i px', (width) => {
+  ])('keeps GDP cells aligned to their rows and clips the table at %i px', (width) => {
     const { container, layout, model, shell, draw } = setup({
       ...spec,
       width,
@@ -242,7 +325,6 @@ describe('race table renderer', () => {
           Number.parseFloat(row.style.getPropertyValue('--oc-race-table-content-offset')) || 0;
         if (atEdge) {
           sawFadingRow = true;
-          expect(offset).toBe(0);
           expect(y + rowHeight).toBeGreaterThan(bodyHeight);
         }
         if (t === 8.8 && (key === 'United Kingdom' || key === 'Italy')) {
@@ -254,22 +336,17 @@ describe('race table renderer', () => {
         const rankCell = cells[0];
         if (rankCell.column !== 'rank') throw new Error('Expected a rank cell');
         const top = rowY + (rowHeight - 1 - contentHeight) / 2 + offset;
-        return {
-          key,
-          rank: Number(rankCell.text),
-          top,
-          bottom: Math.min(bodyHeight, top + contentHeight),
-        };
+        expect(row.cells[0].textContent).toBe(rankCell.text);
+        return { key, y, top, bottom: Math.min(bodyHeight, top + contentHeight) };
       });
       const visible = bands.filter(({ top }) => top < bodyHeight).sort((a, b) => a.top - b.top);
       for (const [index, band] of visible.entries()) {
         expect(band.top, `${band.key} at ${t}`).toBeGreaterThanOrEqual(-0.02);
-        expect(band.rank, `${band.key} at ${t}`).toBe(index + 1);
-        if (index > 0) {
-          expect(
-            band.top,
-            `${band.key} overlaps ${visible[index - 1].key} at ${t}`,
-          ).toBeGreaterThanOrEqual(visible[index - 1].bottom - 0.02);
+        const previous = visible[index - 1];
+        if (previous && band.y - previous.y >= contentHeight) {
+          expect(band.top, `${band.key} overlaps ${previous.key} at ${t}`).toBeGreaterThanOrEqual(
+            previous.bottom - 0.02,
+          );
         }
       }
     }

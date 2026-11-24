@@ -1,4 +1,4 @@
-import type { RaceLayout, RaceMarkType } from '@opendata-ai/openchart-core';
+import { type RaceLayout, type RaceMarkType, wrapText } from '@opendata-ai/openchart-core';
 import { renderAttributionBrand } from '../renderers/brand';
 import { renderChromeElement, renderChromeRuleAndEyebrow } from '../renderers/chrome';
 import { SVG_NS, setAttrs } from '../renderers/svg-dom';
@@ -48,19 +48,20 @@ function renderRaceChrome(svg: SVGSVGElement, layout: RaceLayout): void {
 }
 
 /** Measure from the last footer item, including wrapped lines and stacked branding. */
-function controlsLift(svg: SVGSVGElement, layout: RaceLayout): number {
-  const { area, chrome, height, watermark } = layout;
+function controlsLift(layout: RaceLayout): number {
+  const { area, chrome, height, measureText, watermark } = layout;
   const bottom = chrome.bottomAnchorY ?? area.y + area.height;
   let contentBottom = bottom;
   for (const key of ['source', 'byline', 'footer', 'brand', 'watermark'] as const) {
     const element = chrome[key];
     if (!element || (key === 'watermark' && !watermark)) continue;
-    const text = svg.querySelector<SVGTextElement>(`[data-chrome-key="${key}"]`);
-    const box = text?.getBBox?.();
-    const { fontSize, lineHeight } = element.style;
-    const lines = Math.max(1, text?.childElementCount ?? 0);
-    const fallback = bottom + element.y + fontSize * (lineHeight ?? 1.3) * lines;
-    contentBottom = Math.max(contentBottom, box?.height ? box.y + box.height : fallback);
+    const { fontSize, fontWeight, lineHeight = 1.3 } = element.style;
+    const wrapped = wrapText(element.text, fontSize, fontWeight, element.maxWidth, measureText);
+    const lines = Math.min(wrapped.length, element.maxLines ?? Infinity);
+    if (lines > 0) {
+      const lastLineBottom = bottom + element.y + fontSize * (1 + lineHeight * (lines - 1));
+      contentBottom = Math.max(contentBottom, lastLineBottom);
+    }
   }
   return Math.max(0, height - contentBottom - 8);
 }
@@ -142,10 +143,10 @@ export function createRaceShell(
   if (root.style.getPropertyValue('--oc-accent')) {
     controlsSlot.style.setProperty('--oc-race-progress-color', 'var(--oc-accent)');
   }
-  container.append(root);
   if (layout.playback.controls) {
-    controlsSlot.style.setProperty('--oc-race-controls-lift', `${controlsLift(svg, layout)}px`);
+    controlsSlot.style.setProperty('--oc-race-controls-lift', `${controlsLift(layout)}px`);
   }
+  container.append(root);
 
   return {
     root,

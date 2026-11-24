@@ -57,31 +57,26 @@ function drawCell(
   }
 }
 
-function contentOffsets(
+function poolRows(
   rows: RaceTableGeometry['rows'],
-  { rowHeight, fontSize }: RaceTableStatic,
-  bodyHeight: number,
-): Map<string, number> {
-  const paintHeight = Math.max(0, rowHeight - 1);
-  const textHeight = Math.min(paintHeight, fontSize * 1.2);
-  const inset = (paintHeight - textHeight) / 2;
-  const visible = rows
-    .filter(({ opacity, atEdge }) => opacity > 0 && !atEdge)
-    .sort((a, b) => (a.rank !== undefined && b.rank !== undefined ? a.rank - b.rank : a.y - b.y));
-  const last = visible.length - 1;
-  const edgeRoom = rows.some(({ atEdge }) => atEdge) ? rowHeight : 0;
-  const bottom = Math.max(0, bodyHeight - edgeRoom - textHeight);
-  const gap = Math.min(rowHeight, textHeight + 2, bottom / Math.max(1, last));
-  const tops = visible.map(({ y }) => y + inset);
+  gap: number,
+  inset: number,
+  bottom: number,
+): number[] {
+  const gaps = [0];
+  for (let index = 1; index < rows.length; index++) {
+    const clearance = rows[index].y - rows[index - 1].y;
+    // Reduce a pair's preferred separation to zero as their animated slots
+    // meet, so swapping the order of those rows cannot flip a pooled offset.
+    gaps.push(gaps[index - 1] + Math.min(gap, clearance * 1.5));
+  }
 
-  // Pool neighbors that would cross in displayed value order. A fading row
-  // takes more of the displacement, leaving room for it without jolting its peers.
   const blocks: Array<{ start: number; end: number; total: number; weight: number }> = [];
-  for (const [index, row] of visible.entries()) {
+  for (const [index, row] of rows.entries()) {
     const block = {
       start: index,
       end: index,
-      total: (tops[index] - index * gap) * row.opacity,
+      total: (row.y + inset - gaps[index]) * row.opacity,
       weight: row.opacity,
     };
     let previous = blocks.at(-1);
@@ -95,13 +90,47 @@ function contentOffsets(
     blocks.push(block);
   }
 
-  const offsets = new Map<string, number>();
+  const targets = new Array<number>(rows.length);
   for (const block of blocks) {
-    const base = Math.max(0, Math.min(bottom - last * gap, block.total / block.weight));
-    for (let index = block.start; index <= block.end; index++) {
-      const offset = base + index * gap - tops[index];
-      if (Math.abs(offset) > 0.001) offsets.set(visible[index].key, offset);
-    }
+    const base = Math.max(0, Math.min(bottom - (gaps.at(-1) ?? 0), block.total / block.weight));
+    for (let index = block.start; index <= block.end; index++) targets[index] = base + gaps[index];
+  }
+  return targets;
+}
+
+function contentOffsets(
+  rows: RaceTableGeometry['rows'],
+  { rowHeight, fontSize }: RaceTableStatic,
+  bodyHeight: number,
+): Map<string, number> {
+  const paintHeight = Math.max(0, rowHeight - 1);
+  const textHeight = Math.min(paintHeight, fontSize * 1.2);
+  const inset = (paintHeight - textHeight) / 2;
+  const visible = rows.filter(({ opacity }) => opacity > 0).sort((a, b) => a.y - b.y);
+  const edge = visible.at(-1);
+  const edgeRoom = edge?.atEdge ? Math.max(0, edge.y - (bodyHeight - rowHeight)) * edge.opacity : 0;
+  const progress = rowHeight > 0 ? Math.min(1, edgeRoom / rowHeight) : 0;
+  const bottom = Math.max(0, bodyHeight - textHeight);
+  const gap = Math.min(rowHeight, textHeight + 2, bottom / Math.max(1, visible.length - 1));
+  // Include the edge row while it joins the bottom slot, then gradually
+  // release its cells so the row can follow its own motion through the clip.
+  const targets = poolRows(
+    visible,
+    gap,
+    inset,
+    Math.max(bottom, edge?.atEdge ? edge.y + inset : 0),
+  );
+  const interior =
+    progress > 0
+      ? poolRows(visible.slice(0, -1), gap, inset, Math.max(0, bottom - edgeRoom))
+      : targets;
+
+  const offsets = new Map<string, number>();
+  for (const [index, row] of visible.entries()) {
+    const top = row.y + inset;
+    const offset =
+      (targets[index] - top) * (1 - progress) + ((interior[index] ?? top) - top) * progress;
+    if (Math.abs(offset) > 0.001) offsets.set(row.key, offset);
   }
   return offsets;
 }

@@ -351,7 +351,8 @@ describe('race layout', () => {
     const name = 'Federative Republic of Brazil and neighbouring regions';
     const rows = spec.data.map((row) => ({ ...row, name }));
     const model = prepareRace({ ...spec, data: rows, mark: 'line' }, {});
-    const { timeline, formatValue, ...data } = model;
+    const { timeline, formatValue, colorAssignment, ...data } = model;
+    const originalColors = raceFrameAt(model, 0.5).items.map(({ color }) => color);
     const before = structuredClone(data);
     const sample = timeline.sample(0.5);
 
@@ -365,7 +366,8 @@ describe('race layout', () => {
 
     expect(wide.labels).toEqual([name, name]);
     expect(narrow.labels[0]).toMatch(/…$/);
-    expect(model).toEqual({ ...before, timeline, formatValue });
+    expect(model).toEqual({ ...before, timeline, formatValue, colorAssignment });
+    expect(raceFrameAt(model, 0.5).items.map(({ color }) => color)).toEqual(originalColors);
     expect(model.timeline).toBe(timeline);
     expect(model.timeline.sample(0.5)).toEqual(sample);
     expect(structuredClone(narrow)).toEqual(narrow);

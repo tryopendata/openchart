@@ -78,6 +78,36 @@ describe('race line renderer', () => {
     }
   });
 
+  it('fades in the leader as an end label moves away from its line', () => {
+    const { draw, host } = setup('line', {
+      ...spec,
+      data: [
+        { year: 2000, key: 'A', value: 100 },
+        { year: 2001, key: 'A', value: 100 },
+        { year: 2000, key: 'B', value: 70 },
+        { year: 2001, key: 'B', value: 99.8 },
+        { year: 2000, key: 'C', value: 60 },
+        { year: 2001, key: 'C', value: 99.7 },
+      ],
+      race: { ...spec.race, top: 3 },
+    });
+
+    const paints = [];
+    for (let step = 0; step <= 120; step++) {
+      draw(step / 120);
+      const color = host.querySelector('path[data-key="C"]')?.getAttribute('stroke');
+      expect(color).toBeTruthy();
+      const leader = [...host.querySelectorAll('.oc-race-line-leader')].find(
+        (line) => line.getAttribute('stroke') === color,
+      );
+      const opacity = Number(leader?.getAttribute('opacity') ?? 0);
+      expect(Math.abs(opacity - (paints.at(-1) ?? 0))).toBeLessThan(0.12);
+      paints.push(opacity);
+    }
+    expect(paints[0]).toBe(0);
+    expect(paints.at(-1)).toBeGreaterThan(0.3);
+  });
+
   it('lifts the zero label above its grid line to clear the first period label', () => {
     const { host, draw } = setup();
     draw(3.1);

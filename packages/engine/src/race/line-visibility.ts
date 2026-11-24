@@ -1,9 +1,8 @@
 import type { RaceLineStatic } from '@opendata-ai/openchart-core';
+import { VISIBILITY_EPSILON } from './timeline';
 import type { RaceTimeline } from './types';
 
 type VisibilityRun = RaceLineStatic['history'][number]['runs'][number];
-
-const VISIBILITY_EPSILON = 1e-6;
 
 /** Visibility on the timeline grid, with the same fractional edges used by the line mark. */
 export function lineVisibilityRuns(
@@ -12,6 +11,7 @@ export function lineVisibilityRuns(
   values: Float64Array,
 ): VisibilityRun[] {
   const { samplesPerPeriod } = timeline;
+  const { smoothed } = timeline.rankSamples(key);
   const threshold = timeline.top - VISIBILITY_EPSILON;
   const runs: VisibilityRun[] = [];
   function add(start: number, end: number, startRank: number, endRank: number) {
@@ -36,7 +36,8 @@ export function lineVisibilityRuns(
 
   for (let period = 0; period < values.length; period++) {
     if (!Number.isFinite(values[period])) continue;
-    let rank = timeline.rankPos(key, period);
+    const first = period * samplesPerPeriod;
+    let rank = smoothed[first];
     if (rank < threshold) add(period, period, rank, rank);
     if (!Number.isFinite(values[period + 1])) continue;
 
@@ -45,7 +46,7 @@ export function lineVisibilityRuns(
     for (let sample = 0; sample < samplesPerPeriod; sample++) {
       const start = period + sample / samplesPerPeriod;
       const end = period + (sample + 1) / samplesPerPeriod;
-      const nextRank = timeline.rankPos(key, end);
+      const nextRank = smoothed[first + sample + 1];
       if (rank < threshold && nextRank < threshold) {
         add(start, end, rank, nextRank);
       } else if (rank < threshold || nextRank < threshold) {

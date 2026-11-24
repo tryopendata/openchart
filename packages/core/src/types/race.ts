@@ -34,6 +34,10 @@ export interface RaceTick {
   label: string;
   opacity: number;
   position: number;
+  /** Label position when it is offset from the tick or grid line. */
+  labelPosition?: number;
+  /** Additional paint opacity for labels that approach a neighbor. */
+  labelOpacity?: number;
 }
 
 export interface RacePlayback {
@@ -131,7 +135,7 @@ export interface RaceLineGeometry {
       /** Paint opacity when a crossing crowds the label. Defaults to the series opacity. */
       opacity?: number;
       /** Line head to connect to the displaced label. */
-      leader?: Point;
+      leader?: Point & { opacity: number };
     };
   }>;
   /** Period ticks on the horizontal axis. */

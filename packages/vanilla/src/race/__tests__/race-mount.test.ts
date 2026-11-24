@@ -991,6 +991,43 @@ describe('createRace', () => {
     expect(host.querySelector('.oc-race-root.oc-dark')).toBeNull();
   });
 
+  it('keeps existing key colors when appending a period and changing top', () => {
+    const keys = Array.from({ length: 20 }, (_, index) => `Team ${index + 1}`);
+    const period = (index: number, names = keys) =>
+      names.map((key, order) => ({
+        key,
+        year: 2000 + index,
+        value: names.length - ((order + 3 * index) % names.length),
+      }));
+    const data = keys.flatMap((_, index) => period(index));
+    const initial = { ...spec, data, race: { ...spec.race, top: 10 } };
+    const chart = mount(initial, {
+      theme: { colors: { categorical: ['red', 'orange', 'green'] } },
+    });
+
+    function readColors() {
+      const colors = new Map<string, string | null>();
+      for (let t = 0; t < keys.length; t++) {
+        chart.seek(t);
+        for (const row of host.querySelectorAll('.oc-race-rows [data-key]:not([display="none"])')) {
+          const key = row.getAttribute('data-key');
+          if (key) colors.set(key, row.querySelector('rect')?.getAttribute('fill') ?? null);
+        }
+      }
+      return colors;
+    }
+
+    const colors = readColors();
+    expect([...colors.keys()].sort()).toEqual([...keys].sort());
+    expect(new Set(colors.values())).toEqual(new Set(['red', 'orange', 'green']));
+
+    const extended = { ...initial, data: [...data, ...period(keys.length, [...keys, 'New team'])] };
+    chart.update(extended);
+    expect(readColors()).toEqual(colors);
+    chart.update({ ...extended, race: { ...extended.race, top: 8 } });
+    expect(readColors()).toEqual(colors);
+  });
+
   it('maps the default palette to dark variants in forced dark mode', () => {
     mount(spec, { darkMode: 'force' });
     expect(host.querySelector('.oc-race-root')?.classList.contains('oc-dark')).toBe(true);

@@ -4,7 +4,7 @@ import type { RaceMatrix, RaceSampleItem, RaceTimeline, RaceTimelineOptions } fr
 
 const PRESENCE_FADE = 1;
 const PRESENCE_PIN = 2;
-const VISIBILITY_EPSILON = 1e-6;
+export const VISIBILITY_EPSILON = 1e-6;
 
 function presenceEdges(
   ranks: Float32Array,
@@ -74,9 +74,12 @@ export function createRaceTimeline(matrix: RaceMatrix, options: RaceTimelineOpti
   // Keep full ranks for ties and period changes, and smooth the ranks clipped to the fold.
   const exactSamples = sampleRanks(matrix.values, periodCount, samplesPerPeriod, keyCount);
   const edges = exactSamples.map((ranks) => presenceEdges(ranks, keyCount, 2 * halfWidth));
-  const smoothedSamples = clipVisibleRanks(exactSamples, edges, top).map((ranks) =>
-    smoothRanks(ranks, halfWidth),
-  );
+  const smoothedSamples = clipVisibleRanks(exactSamples, edges, top).map((ranks, key) => {
+    const smoothed = smoothRanks(ranks, halfWidth);
+    smoothed[0] = Math.min(exactSamples[key][0], top);
+    smoothed[lastSample] = Math.min(exactSamples[key][lastSample], top);
+    return smoothed;
+  });
 
   let globalMin = 0;
   let globalMax = -Infinity;
@@ -107,9 +110,6 @@ export function createRaceTimeline(matrix: RaceMatrix, options: RaceTimelineOpti
 
   function rankPos(keyIndex: number, t: number): number {
     const sample = clampTime(t) * samplesPerPeriod;
-    if (sample === 0 || sample === lastSample) {
-      return Math.min(exactSamples[keyIndex][sample], top);
-    }
     const ranks = smoothedSamples[keyIndex];
     const startIndex = Math.floor(sample);
     const start = ranks[startIndex];
@@ -141,6 +141,9 @@ export function createRaceTimeline(matrix: RaceMatrix, options: RaceTimelineOpti
     valueAt,
     rankPos,
     periodRank,
+    rankSamples(keyIndex) {
+      return { exact: exactSamples[keyIndex], smoothed: smoothedSamples[keyIndex] };
+    },
     exactRank(keyIndex, t) {
       const rank = rankedValues(clampTime(t)).findIndex((item) => item.keyIndex === keyIndex);
       return rank === -1 ? Infinity : rank;

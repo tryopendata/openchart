@@ -26,11 +26,11 @@ const formatShare = format('.1%');
 // Quartiles alone can all land on whole numbers and miss the formatter's decimal digits.
 const VALUE_WIDTH_SAMPLES = [0.25, 0.5, 0.75, Math.SQRT1_2];
 
-function periodShareBase(values: RaceMatrix['values'], period: number) {
+function frameShareBase(values: RaceMatrix['values'], period: number, fraction: number) {
   let total = 0;
   let magnitude = 0;
   for (const series of values) {
-    const value = series[period];
+    const value = interpolateRaceValue(series, period, fraction);
     if (!Number.isFinite(value)) continue;
     if (value < 0) return null;
     total += value;
@@ -41,13 +41,13 @@ function periodShareBase(values: RaceMatrix['values'], period: number) {
   // Rescale both parts of the ratio when the unscaled sum overflows.
   total = 0;
   for (const series of values) {
-    const value = series[period];
+    const value = interpolateRaceValue(series, period, fraction);
     if (Number.isFinite(value)) total += value / magnitude;
   }
   return { total, scale: magnitude };
 }
 
-type ShareBase = ReturnType<typeof periodShareBase>;
+type ShareBase = ReturnType<typeof frameShareBase>;
 
 function shareText(value: number, base: ShareBase): string {
   if (!base || base.total === 0) return EMPTY;
@@ -57,9 +57,7 @@ function shareText(value: number, base: ShareBase): string {
 
 interface TableModelData {
   keyIndices: Map<string, number>;
-  shareBases: Map<number, ShareBase>;
   valueLabels?: Set<string>;
-  shareLabels?: Set<string>;
 }
 
 const modelData = new WeakMap<RaceModel, TableModelData>();
@@ -69,18 +67,9 @@ function tableData(model: RaceModel): TableModelData {
   if (cached) return cached;
   const data: TableModelData = {
     keyIndices: new Map(model.matrix.keys.map((key, index) => [key, index])),
-    shareBases: new Map(),
   };
   modelData.set(model, data);
   return data;
-}
-
-function shareBaseAt(matrix: RaceMatrix, data: TableModelData, period: number): ShareBase {
-  const cached = data.shareBases.get(period);
-  if (cached !== undefined) return cached;
-  const base = periodShareBase(matrix.values, period);
-  data.shareBases.set(period, base);
-  return base;
 }
 
 function digitPattern(text: string): string {
@@ -101,18 +90,6 @@ function collectValueLabels({ matrix, formatValue }: RaceModel): Set<string> {
         const between = interpolateRaceValue(series, period, fraction);
         if (Number.isFinite(between)) labels.add(digitPattern(formatValue(between)));
       }
-    }
-  }
-  return labels;
-}
-
-function collectShareLabels(matrix: RaceMatrix, data: TableModelData): Set<string> {
-  const labels = new Set([EMPTY]);
-  for (let period = 0; period < matrix.periods.length; period++) {
-    const base = shareBaseAt(matrix, data, period);
-    if (!base || base.total === 0) continue;
-    for (const series of matrix.values) {
-      labels.add(digitPattern(shareText(series[period], base)));
     }
   }
   return labels;
@@ -142,9 +119,6 @@ function measureColumns(
   const valueLabels = columns.includes('value')
     ? (data.valueLabels ??= collectValueLabels(model))
     : undefined;
-  const shareLabels = columns.includes('share')
-    ? (data.shareLabels ??= collectShareLabels(model.matrix, data))
-    : undefined;
 
   const emptyWidth = measure(EMPTY);
   const maxChange = digitPattern(String(Math.max(0, top - 1)));
@@ -159,7 +133,8 @@ function measureColumns(
     name: labels.reduce((width, label) => Math.max(width, measure(label)), 0) + CHIP_WIDTH_AND_GAP,
     bar: 0,
     value: measureNumbers(valueLabels),
-    share: measureNumbers(shareLabels),
+    // Gaps can leave a single key with a 100% share between observations.
+    share: Math.max(emptyWidth, measureNumber(digitPattern(formatShare(1)))),
   };
   for (const column of columns) {
     if (column === 'bar') continue;
@@ -239,34 +214,27 @@ export const tableGeometry: RaceMarkEntry<'table'>['geometry'] = (
   const { top } = timeline;
   const data = tableData(model);
   const shareBase = columns.some(({ column }) => column === 'share')
-    ? shareBaseAt(matrix, data, period)
+    ? frameShareBase(matrix.values, period, t - period)
     : null;
   const magnitude = Math.max(-min, max) || 1;
   const span = max / magnitude - min / magnitude || 1;
   const lastSlot = top - 1;
-  const fold = items.findIndex(({ rankPos }) => rankPos >= lastSlot);
-  const edgeIndex = fold === -1 ? lastSlot : Math.min(fold, lastSlot);
-  const edge = items[edgeIndex];
-  const waiting = items[edgeIndex + 1];
-  let edgePosition = edge?.rankPos ?? top;
-  if (edge && waiting) {
-    // When two rows meet at the fold, only the one closer to it can paint.
-    // Ease in that constraint across the inner half slot so a newcomer
-    // overtaking into the table keeps its fade as it leaves the fold.
-    const blend = Math.max(0, Math.min(1, 1 + 2 * (edge.rankPos - lastSlot)));
-    edgePosition += blend * (top - waiting.rankPos);
+  // The first waiting row sets the fold. Reduce the available space as a
+  // pair approaches the last slot, so only one row can paint past that slot.
+  // The minimum varies continuously, even when the two contenders swap order.
+  let cutoff = items[top]?.rankPos ?? top;
+  for (let index = 1; index < items.length; index++) {
+    const inner = items[index - 1].rankPos;
+    const outer = items[index].rankPos;
+    cutoff = Math.min(cutoff, outer + 2 * Math.max(0, lastSlot - inner));
   }
-  const visible = items
-    .slice(0, edgeIndex + Number(edgePosition < top))
-    .sort((a, b) => a.rank - b.rank);
+  const visible = items.filter(({ rankPos }) => rankPos < cutoff).sort((a, b) => a.rank - b.rank);
   const rows = visible.map((item, rank) => {
     const keyIndex = data.keyIndices.get(item.key);
     if (keyIndex === undefined) throw new Error(`Unknown race table key: ${item.key}`);
-    const position = item === edge ? edgePosition : item.rankPos;
-    // A newcomer may already outrank rows above the fold. Include it in
-    // the interior crossing so its cells can move into displayed value order.
-    const atEdge = rank === visible.length - 1 && position > lastSlot;
-    const y = (atEdge ? position : Math.min(lastSlot, position)) * rowHeight;
+    const position = item.rankPos;
+    const atEdge = position > lastSlot;
+    const y = position * rowHeight;
     const previous = period > 0 ? timeline.periodRank(keyIndex, period - 1) : rank;
     const motion = timeline.rankPos(keyIndex, t + 0.001) - timeline.rankPos(keyIndex, t - 0.001);
     const settled =
@@ -287,10 +255,7 @@ export const tableGeometry: RaceMarkEntry<'table'>['geometry'] = (
           return { column, x, width: (Math.abs(value) / span) * width, color: item.color };
         }
         case 'share':
-          return {
-            column,
-            text: shareText(matrix.values[keyIndex][period], shareBase),
-          };
+          return { column, text: shareText(item.value, shareBase) };
       }
       return { column, text: item.valueLabel };
     });
@@ -299,7 +264,7 @@ export const tableGeometry: RaceMarkEntry<'table'>['geometry'] = (
         key: item.key,
         rank,
         y,
-        opacity: Math.min(1, top - position),
+        opacity: Math.min(1, cutoff - position),
         atEdge,
         cells,
       },

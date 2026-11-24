@@ -234,36 +234,72 @@ describe('race table layout', () => {
     ]);
   });
 
-  it('uses one period for both parts of the share while the visible value interpolates', () => {
-    const cells = (t: number) =>
-      tableAt(t)
-        .geometry.rows.find(({ key }) => key === 'Brook')
-        ?.cells.slice(-2);
-    expect(cells(3.8)).toEqual([
-      { column: 'value', text: '106.0' },
-      { column: 'share', text: '30.7%' },
+  it('orders all visible shares by the interpolated values and includes hidden keys in the total', () => {
+    const { geometry } = tableAt(3.5);
+    const ranked = [...geometry.rows].sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0));
+    expect(ranked.map(({ key, cells }) => [key, ...cells.slice(-2)])).toEqual([
+      ['Brook', { column: 'value', text: '85.0' }, { column: 'share', text: '46.8%' }],
+      ['Alpine', { column: 'value', text: '65.0' }, { column: 'share', text: '35.8%' }],
     ]);
-    expect(cells(4)).toEqual([
+    expect(
+      tableAt(4)
+        .geometry.rows.find(({ key }) => key === 'Brook')
+        ?.cells.slice(-2),
+    ).toEqual([
       { column: 'value', text: '120.0' },
       { column: 'share', text: '60.0%' },
     ]);
   });
 
-  it('displays the shares of finite values even when their total overflows', () => {
+  it('uses only the keys present at the playhead when calculating a share', () => {
+    const gapped = prepareRace(
+      {
+        ...spec,
+        data: [
+          { period: 0, key: 'Alpine', score: 60 },
+          { period: 0, key: 'Brook', score: 40 },
+          { period: 1, key: 'Alpine', score: 80 },
+          { period: 1, key: 'Cedar', score: 20 },
+        ],
+        mark: { type: 'table', columns: ['value', 'share'] },
+        race: { ...spec.race, gaps: 'drop', top: 1 },
+      },
+      {},
+    );
+    const layout = layoutRace(gapped, { width: 360, height: 300 });
+    const geometry = raceGeometryAt(gapped, layout, 0.5);
+    if (layout.mark !== 'table' || geometry.mark !== 'table') throw new Error('Expected a table');
+    expect(geometry.rows.map(({ key, cells }) => [key, ...cells])).toEqual([
+      ['Alpine', { column: 'value', text: '70.0' }, { column: 'share', text: '100.0%' }],
+    ]);
+    expect(layout.static.columns[1].width).toBeGreaterThanOrEqual(
+      estimateTextWidth('100.0%', layout.static.fontSize) + 10,
+    );
+  });
+
+  it('displays shares when the whole-field total overflows between periods', () => {
     const large = prepareRace(
       {
         ...spec,
-        data: [0, 1].flatMap((period) =>
-          ['Alpine', 'Brook'].map((key) => ({ period, key, score: 1e308 })),
+        data: [
+          [1.2e308, 8e307],
+          [8e307, 1.2e308],
+        ].flatMap((scores, period) =>
+          ['Alpine', 'Brook'].map((key, index) => ({ period, key, score: scores[index] })),
         ),
         mark: { type: 'table', columns: ['name', 'share'] },
       },
       {},
     );
     const layout = layoutRace(large, { width: 360, height: 300 });
-    const geometry = raceGeometryAt(large, layout, 0);
-    if (geometry.mark !== 'table') throw new Error('Expected a table');
-    expect(geometry.rows.map(({ cells }) => cells[1])).toEqual([
+    const start = raceGeometryAt(large, layout, 0);
+    const middle = raceGeometryAt(large, layout, 0.5);
+    if (start.mark !== 'table' || middle.mark !== 'table') throw new Error('Expected a table');
+    expect(start.rows.map(({ cells }) => cells[1])).toEqual([
+      { column: 'share', text: '60.0%' },
+      { column: 'share', text: '40.0%' },
+    ]);
+    expect(middle.rows.map(({ cells }) => cells[1])).toEqual([
       { column: 'share', text: '50.0%' },
       { column: 'share', text: '50.0%' },
     ]);
@@ -328,6 +364,35 @@ describe('race table layout', () => {
     const next = raceGeometryAt(shares, layout, 1);
     if (next.mark !== 'table') throw new Error('Expected a table');
     expect(next.rows[0].cells[5]).toEqual({ column: 'share', text: '75.0%' });
+  });
+
+  it('waits for an extreme signed value to become nonnegative before displaying shares', () => {
+    const signed = prepareRace(
+      {
+        ...spec,
+        data: [0, 1].flatMap((period) => [
+          { period, key: 'Gain', score: 100 },
+          { period, key: 'Signed', score: period === 0 ? -1e308 : 1e308 },
+        ]),
+        mark: { type: 'table', columns: ['share'] },
+        race: { ...spec.race, swap: 0 },
+      },
+      {},
+    );
+    const layout = layoutRace(signed, { width: 360, height: 300 });
+    const shares = (t: number) => {
+      const geometry = raceGeometryAt(signed, layout, t);
+      if (geometry.mark !== 'table') throw new Error('Expected a table');
+      return Object.fromEntries(geometry.rows.map(({ key, cells }) => [key, cells[0]]));
+    };
+    expect(shares(0.25)).toEqual({
+      Gain: { column: 'share', text: '—' },
+      Signed: { column: 'share', text: '—' },
+    });
+    expect(shares(0.75)).toEqual({
+      Gain: { column: 'share', text: '0.0%' },
+      Signed: { column: 'share', text: '100.0%' },
+    });
   });
 
   it('reuses formatted value text across resize and theme changes for the same model', () => {
