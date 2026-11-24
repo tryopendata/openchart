@@ -432,7 +432,7 @@ Depends on: phase 3, phase 4
 
 | Lane | Size | Owns files | Reads | Tests | Model | Status | Branch | Done when |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| a | M | packages/react/src/Race.tsx, packages/react/src/Visualization.tsx, packages/react/src/index.ts, packages/react/src/__tests__/Race.test.tsx, packages/vue/src/Race.ts, packages/vue/src/Visualization.ts, packages/vue/src/index.ts, packages/vue/src/__tests__/Race.test.ts, packages/svelte/src/Race.svelte, packages/svelte/src/Visualization.svelte, packages/svelte/src/index.ts, packages/svelte/src/__tests__/Race.test.ts | | | gpt-6.2-sol | running | foreman/race-5a | |
+| a | M | packages/react/src/Race.tsx, packages/react/src/Visualization.tsx, packages/react/src/index.ts, packages/react/src/__tests__/Race.test.tsx, packages/vue/src/Race.ts, packages/vue/src/Visualization.ts, packages/vue/src/index.ts, packages/vue/src/__tests__/Race.test.ts, packages/svelte/src/Race.svelte, packages/svelte/src/Visualization.svelte, packages/svelte/src/index.ts, packages/svelte/src/__tests__/Race.test.ts | | | gpt-6.2-sol | merged | foreman/race-5a | |
 | b | M | packages/vanilla/src/race/export.ts, packages/vanilla/src/export-gif.ts, packages/vanilla/src/race/__tests__/export.test.ts, packages/vanilla/src/race-mount.ts, packages/vanilla/src/race/__tests__/race-mount.test.ts | | | gpt-6.2-sol | running | foreman/race-5b | |
 
 #### Lane 5a brief
