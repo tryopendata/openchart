@@ -5,9 +5,11 @@ import {
   type RaceSpec,
 } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
+import { worldGdpRace } from '../../../../../examples/src/data/world-gdp-race';
 import { raceFrameAt, raceGeometryAt } from '../geometry';
 import { layoutRace } from '../layout';
 import { prepareRace } from '../prepare';
+import { createRaceTimeline } from '../timeline';
 
 function setup(
   values: Record<string, Array<number | null>>,
@@ -21,10 +23,11 @@ function setup(
     top?: number;
     gaps?: NonNullable<RaceSpec['race']>['gaps'];
     swap?: number;
+    samplesPerPeriod?: number;
     measureText?: MeasureTextFn;
   } = {},
 ) {
-  const model = prepareRace(
+  const prepared = prepareRace(
     {
       type: 'race',
       mark: options.mark ?? 'line',
@@ -45,6 +48,18 @@ function setup(
     },
     {},
   );
+  const model =
+    options.samplesPerPeriod === undefined
+      ? prepared
+      : {
+          ...prepared,
+          timeline: createRaceTimeline(prepared.matrix, {
+            top: prepared.timeline.top,
+            samplesPerPeriod: options.samplesPerPeriod,
+            swapPeriods: (options.swap ?? 0) / 700,
+            rescale: 'frame',
+          }),
+        };
   const layout = layoutRace(model, {
     width: options.width ?? 680,
     height: options.height ?? 320,
@@ -62,6 +77,121 @@ function setup(
 }
 
 describe('line race layout', () => {
+  it('ends an exit fade on the timeline’s configured sample grid', () => {
+    const { at } = setup({ A: [9, 1, 1], B: [1, 9, 9] }, { top: 1, samplesPerPeriod: 5 });
+    expect(at(1.58).series.find(({ key }) => key === 'A')?.opacity).toBeGreaterThan(0);
+    expect(at(1.605).series.map(({ key }) => key)).toEqual(['B']);
+  });
+
+  it('carries visibility runs and prefix extrema in its serializable static layout', () => {
+    const { layout } = setup({ A: [-2, 3, 1] });
+    expect(JSON.parse(JSON.stringify(layout.static))).toMatchObject({
+      history: [{ runs: [{ start: 0, end: 2 }], mins: [-2, -2, -2], maxes: [0, 3, 3] }],
+    });
+  });
+
+  it('reserves gutters only for series that can be drawn', () => {
+    const options = { top: 1 };
+    const alone = setup({ A: [10, 20, 30] }, options);
+    const crowded = setup(
+      { A: [10, 20, 30], ['A long invisible name '.repeat(8)]: [-1e8, -1e8, -1e8] },
+      options,
+    );
+    expect(crowded.layout.static.plot).toEqual(alone.layout.static.plot);
+    expect(crowded.layout.static.labelGutter).toBe(alone.layout.static.labelGutter);
+  });
+
+  it('keeps the number of text measurements bounded as observations accumulate', () => {
+    function measurements(periods: number) {
+      let count = 0;
+      setup(
+        { A: Array.from({ length: periods }, (_, index) => 100 + index / periods) },
+        {
+          measureText: (text, fontSize, weight) => {
+            count++;
+            return { width: estimateTextWidth(text, fontSize, weight), height: fontSize };
+          },
+        },
+      );
+      return count;
+    }
+    expect(measurements(150)).toBeLessThan(measurements(4) + 30);
+  });
+
+  it('gives the leader the label when a short plot can fit only one', () => {
+    const { at } = setup({ A: [1, 1], B: [2, 2], Z: [3, 3] }, { height: 132 });
+    expect(
+      at(1)
+        .series.filter(({ endLabel }) => endLabel.text)
+        .map(({ key }) => key),
+    ).toEqual(['Z']);
+  });
+
+  it('keeps outgoing labels in order when their ranks reach the same fold', () => {
+    const { at } = setup(
+      {
+        A: [90, 40, 10, 10],
+        B: [80, 60, 80, 80],
+        C: [70, 100, 100, 100],
+        D: [20, 70, 110, 110],
+      },
+      { top: 2 },
+    );
+    const labels = new Map(at(1.1).series.map(({ key, endLabel }) => [key, endLabel]));
+    expect(labels.get('A')?.text).toBe('A');
+    expect(labels.get('B')?.text).toBe('B');
+    expect(labels.get('A')?.y).toBeGreaterThan(labels.get('B')?.y ?? Infinity);
+  });
+
+  it.each([360, 800])('moves GDP head labels continuously at %ipx', (width) => {
+    const model = prepareRace(
+      {
+        type: 'race',
+        mark: 'line',
+        data: worldGdpRace,
+        encoding: {
+          time: { field: 'year', type: 'ordinal' },
+          key: { field: 'country' },
+          value: { field: 'gdp', format: '$.3~s' },
+        },
+        chrome: { title: "The world's largest economies", source: 'World Bank' },
+      },
+      {},
+    );
+    const layout = layoutRace(model, { width, height: 476 });
+    let previous = new Map<string, number>();
+    let largest = { key: '', t: 0, delta: 0 };
+    for (let step = 0; step <= (model.timeline.periodCount - 1) * 120; step++) {
+      const t = step / 120;
+      const frame = raceGeometryAt(model, layout, t);
+      if (frame.mark !== 'line') throw new Error('Expected line geometry');
+      const next = new Map<string, number>();
+      for (const { key, endLabel } of frame.series) {
+        if (!endLabel.text) continue;
+        const before = previous.get(key);
+        const delta = before === undefined ? 0 : Math.abs(endLabel.y - before);
+        if (delta > largest.delta) largest = { key, t, delta };
+        next.set(key, endLabel.y);
+      }
+      previous = next;
+    }
+    expect(largest.delta, JSON.stringify(largest)).toBeLessThanOrEqual(6);
+  });
+
+  it('reproduces fades and domains regardless of previous draws or seeks', () => {
+    const data = { A: [90, 10, 10, 10], B: [10, 90, 140, 240] };
+    const live = setup(data, { top: 1 });
+    const fresh = setup(data, { top: 1 });
+    const times = [0, 0.25, 0.53, 0.9, 1.4, 2, 2.75, 3];
+    const expected = new Map(times.map((t) => [t, fresh.at(t)]));
+    expect(expected.get(0.9)?.series.find(({ key }) => key === 'A')?.opacity).toBeGreaterThan(0);
+    expect(expected.get(0)?.domain).toEqual([0, 90]);
+    expect(expected.get(3)?.domain).toEqual([0, 240]);
+    for (const t of [...times.slice().reverse(), ...times, 0.9, 3, 0.25, 1.4, 2.75, 0, 0.53, 2]) {
+      expect(live.at(t), `t = ${t}`).toEqual(expected.get(t));
+    }
+  });
+
   it('starts the reveal window one period wide, then maps the head to the right edge', () => {
     const { layout, at } = setup({ A: [10, 20, 30, 40] });
     const { plot, xScale } = layout.static;

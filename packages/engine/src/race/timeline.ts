@@ -100,6 +100,11 @@ export function createRaceTimeline(matrix: RaceMatrix, options: RaceTimelineOpti
     return interpolateRaceValue(matrix.values[keyIndex], period, t - period);
   }
 
+  function periodRank(keyIndex: number, period: number): number {
+    const rank = exactSamples[keyIndex][period * samplesPerPeriod];
+    return rank < keyCount ? rank : Infinity;
+  }
+
   function rankPos(keyIndex: number, t: number): number {
     const sample = clampTime(t) * samplesPerPeriod;
     if (sample === 0 || sample === lastSample) {
@@ -132,8 +137,10 @@ export function createRaceTimeline(matrix: RaceMatrix, options: RaceTimelineOpti
     periodCount,
     keyCount,
     top,
+    samplesPerPeriod,
     valueAt,
     rankPos,
+    periodRank,
     exactRank(keyIndex, t) {
       const rank = rankedValues(clampTime(t)).findIndex((item) => item.keyIndex === keyIndex);
       return rank === -1 ? Infinity : rank;
@@ -151,10 +158,9 @@ export function createRaceTimeline(matrix: RaceMatrix, options: RaceTimelineOpti
 
         let change = 0;
         if (periodIndex > 0) {
-          const ranks = exactSamples[keyIndex];
-          const previous = ranks[(periodIndex - 1) * samplesPerPeriod];
-          const current = ranks[periodIndex * samplesPerPeriod];
-          if (previous < keyCount && current < keyCount) change = previous - current;
+          const previous = periodRank(keyIndex, periodIndex - 1);
+          const current = periodRank(keyIndex, periodIndex);
+          if (Number.isFinite(previous) && Number.isFinite(current)) change = previous - current;
         }
 
         const item = {

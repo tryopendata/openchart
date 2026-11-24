@@ -1,6 +1,7 @@
 import {
   estimateTextWidth,
   type RaceLineGeometry,
+  type RaceLineStatic,
   type RaceTick,
 } from '@opendata-ai/openchart-core';
 import { interpolateRaceValue } from './interpolate';
@@ -12,11 +13,12 @@ import type { RaceModel } from './types';
 const LABEL_GAP = 6;
 const TICK_GAP = 4;
 const TICK_PADDING = 10;
-const SAMPLES_PER_PERIOD = 24;
 const VISIBILITY_EPSILON = 1e-6;
 
 type LineLayout = RaceLayoutsByMark['line'];
 type LineSeries = RaceLineGeometry['series'][number];
+type SeriesHistory = RaceLineStatic['history'][number];
+type VisibilityRun = SeriesHistory['runs'][number];
 
 // Round each bound outward on its own nested ladder so a growing span can't shrink either bound.
 function roundBound(value: number): number {
@@ -37,55 +39,39 @@ export const computeLineStatic: RaceMarkEntry<'line'>['computeStatic'] = (
 ) => {
   const { body, axisTick } = theme.fonts.sizes;
   const { normal } = theme.fonts.weights;
+  const history = buildHistory(model);
   let labelWidth = 0;
-  let yAxisWidth = 0;
   let min = 0;
   let max = 0;
-  const measureValue = (value: number, label: string) => {
-    if (!Number.isFinite(value)) return;
-    const text = model.formatValue(value);
-    labelWidth = Math.max(labelWidth, measureText(`${label} ${text}`, body, normal).width);
-    yAxisWidth = Math.max(yAxisWidth, measureText(text, axisTick, normal).width);
-  };
-  for (const [key, values] of model.matrix.values.entries()) {
-    const label = labels[key];
-    let low = Infinity;
-    let high = -Infinity;
-    for (const [period, value] of values.entries()) {
-      if (!Number.isFinite(value)) continue;
-      measureValue(value, label);
-      min = Math.min(min, value);
-      max = Math.max(max, value);
-      const next = values[period + 1];
-      const midpoint = interpolateRaceValue(values, period, 0.5);
-      if (!Number.isFinite(midpoint) || value === next) continue;
-      measureValue(midpoint, label);
-      // Integer observations can display extra decimal places between periods.
-      const fractional = Math.floor(midpoint) + 0.88;
-      const start = Math.min(value, next);
-      const end = Math.max(value, next);
-      if (start < fractional && fractional < end) measureValue(fractional, label);
-      low = Math.min(low, start);
-      high = Math.max(high, end);
-    }
-    // Compact and SI formats can get shorter at a unit change. Allow room
-    // for the mantissa just below that change as well as the observations.
-    for (let unit = 1000; unit <= Math.max(-low, high); unit *= 1000) {
-      const beforeChange = unit * 0.99988;
-      if (low <= beforeChange && beforeChange <= high) measureValue(beforeChange, label);
-      if (low <= -beforeChange && -beforeChange <= high) measureValue(-beforeChange, label);
-    }
+  const lastPeriod = model.timeline.periodCount - 1;
+  for (const entry of history) {
+    labelWidth = Math.max(labelWidth, measureText(labels[entry.key], body, normal).width);
+    const lastRun = entry.runs.at(-1);
+    if (!lastRun) continue;
+    const [low, high] = extentAt(model, entry, Math.min(lastPeriod, lastRun.end + 1));
+    min = Math.min(min, low);
+    max = Math.max(max, high);
   }
 
-  for (const value of [roundBound(min), 0, roundBound(max)]) {
-    yAxisWidth = Math.max(
-      yAxisWidth,
-      measureText(model.formatValue(value), axisTick, normal).width,
-    );
+  const valueProbes = new Set([min, 0, max, min / 2 + max / 2]);
+  const tickProbes = new Set([roundBound(min), 0, roundBound(max)]);
+  for (const bound of [min, max]) {
+    for (const step of valueTickLadder(Math.abs(bound))) {
+      const value = Math.sign(bound) * step;
+      if (value < min || value > max) continue;
+      tickProbes.add(value);
+      // A fractional position between ticks can have wider text than a whole observation.
+      valueProbes.add(value / 3);
+    }
   }
+  const maxWidth = (values: Set<number>, size: number) =>
+    Math.max(
+      ...[...values].map((value) => measureText(model.formatValue(value), size, normal).width),
+    );
   const window = mark.window ?? 'reveal';
-  let leftWidth = yAxisWidth + TICK_GAP;
-  let rightWidth = labelWidth + LABEL_GAP;
+  let leftWidth = maxWidth(tickProbes, axisTick) + TICK_GAP;
+  let rightWidth =
+    labelWidth + measureText(' ', body, normal).width + maxWidth(valueProbes, body) + LABEL_GAP;
   if (window === 'all') {
     const [first, ...rest] = model.periodLabels;
     leftWidth = Math.max(leftWidth, measureText(first, axisTick, normal).width + TICK_GAP / 2);
@@ -109,24 +95,19 @@ export const computeLineStatic: RaceMarkEntry<'line'>['computeStatic'] = (
     plot,
     window,
     xScale: {
-      domain: [0, model.timeline.periodCount - 1],
+      domain: [0, lastPeriod],
       range: [plot.x, plot.x + plot.width],
     },
     yAxisX: plot.x,
     labelGutter,
     tickFontSize: axisTick,
+    history,
   };
 };
 
-interface VisibilityRun {
-  start: number;
-  end: number;
-  peakTime: number;
-  peakOpacity: number;
-}
-
 function visibilityRuns(model: RaceModel, key: number, values: Float64Array): VisibilityRun[] {
   const { timeline } = model;
+  const { samplesPerPeriod } = timeline;
   const threshold = timeline.top - VISIBILITY_EPSILON;
   const runs: VisibilityRun[] = [];
   function add(start: number, end: number, startRank: number, endRank: number) {
@@ -157,9 +138,9 @@ function visibilityRuns(model: RaceModel, key: number, values: Float64Array): Vi
 
     // The timeline interpolates smoothed ranks between these samples. Use the
     // crossing time so a direct seek and a sequence of draws see the same history.
-    for (let sample = 0; sample < SAMPLES_PER_PERIOD; sample++) {
-      const start = period + sample / SAMPLES_PER_PERIOD;
-      const end = period + (sample + 1) / SAMPLES_PER_PERIOD;
+    for (let sample = 0; sample < samplesPerPeriod; sample++) {
+      const start = period + sample / samplesPerPeriod;
+      const end = period + (sample + 1) / samplesPerPeriod;
       const nextRank = timeline.rankPos(key, end);
       if (rank < threshold && nextRank < threshold) {
         add(start, end, rank, nextRank);
@@ -174,16 +155,15 @@ function visibilityRuns(model: RaceModel, key: number, values: Float64Array): Vi
   return runs;
 }
 
-// Only the derived, size-independent history is memoized. The layout is still plain data.
-const histories = new WeakMap<RaceModel, ReturnType<typeof buildHistory>>();
-
-function buildHistory(model: RaceModel) {
-  return model.matrix.values.map((values, key) => {
+function buildHistory(model: RaceModel): SeriesHistory[] {
+  const history: SeriesHistory[] = [];
+  model.matrix.values.forEach((values, key) => {
     const runs = visibilityRuns(model, key, values);
+    if (runs.length === 0) return;
     let min = 0;
     let max = 0;
-    const mins = new Float64Array(values.length);
-    const maxes = new Float64Array(values.length);
+    const mins: number[] = [];
+    const maxes: number[] = [];
     values.forEach((value, period) => {
       if (Number.isFinite(value)) {
         min = Math.min(min, value);
@@ -192,8 +172,16 @@ function buildHistory(model: RaceModel) {
       mins[period] = min;
       maxes[period] = max;
     });
-    return { runs, mins, maxes };
+    history.push({ key, runs, mins, maxes });
   });
+  return history;
+}
+
+function extentAt(model: RaceModel, { key, mins, maxes }: SeriesHistory, t: number) {
+  const period = Math.floor(t);
+  const head = interpolateRaceValue(model.matrix.values[key], period, t - period);
+  const value = Number.isFinite(head) ? head : 0;
+  return [Math.min(mins[period], value), Math.max(maxes[period], value)];
 }
 
 function lineText(layout: LineLayout, size: number) {
@@ -263,32 +251,75 @@ function periodTicks(
   return ticks.sort((a, b) => a.value - b.value);
 }
 
-function placeHeadLabels(layout: LineLayout, series: LineSeries[]) {
+interface HeadLabelPlacement {
+  endLabel: LineSeries['endLabel'];
+  opacity: number;
+  rankPos: number;
+}
+
+function placeHeadLabels(layout: LineLayout, candidates: HeadLabelPlacement[]) {
   const { plot } = layout.static;
   const { sizes, weights } = layout.theme.fonts;
   const fontSize = sizes.body;
   const measuredHeight = layout.measureText?.('Mg', fontSize, weights.normal).height;
-  // Some fonts' ascenders and descenders exceed the nominal body size.
   const labelHeight = Math.ceil(measuredHeight ?? fontSize * 1.2) + 1;
   const spacing = Math.max(fontSize + 2, labelHeight);
-  const capacity = Math.max(0, Math.floor((plot.height - labelHeight) / spacing) + 1);
-  const byY = series
-    .slice(0, capacity)
-    .map(({ endLabel }) => endLabel)
-    .sort((a, b) => a.y - b.y);
-  let next = plot.y + labelHeight / 2;
-  for (const label of byY) {
-    label.y = Math.max(label.y, next);
-    next = label.y + spacing;
+  const capacity = plot.height < labelHeight ? 0 : 1 + (plot.height - labelHeight) / spacing;
+  const labels: HeadLabelPlacement[] = [];
+  let occupied = 0;
+  for (const label of candidates) {
+    if (occupied + label.opacity <= capacity) {
+      labels.push(label);
+      occupied += label.opacity;
+    } else {
+      label.endLabel.text = '';
+      label.endLabel.value = '';
+    }
   }
-  next = plot.y + plot.height - labelHeight / 2;
-  for (const label of byY.reverse()) {
-    label.y = Math.min(label.y, next);
-    next = label.y - spacing;
+
+  labels.sort((a, b) => a.rankPos - b.rankPos);
+  const slots = labels.map((label) => {
+    let slot = 0;
+    let weightedY = 0;
+    let weight = 0;
+    for (const other of labels) {
+      const delta = label.rankPos - other.rankPos;
+      // The opacity-weighted slot and the preferred y agree at a rank crossing.
+      slot += other.opacity * Math.max(0, Math.min(1, 0.5 + delta));
+      const nearby = other.opacity * Math.max(0, 1 - Math.abs(delta));
+      weightedY += nearby * other.endLabel.y;
+      weight += nearby;
+    }
+    const offset = slot * spacing;
+    return { offset, preferred: weightedY / weight - offset };
+  });
+
+  // Pool neighboring offsets that would reverse rank order, moving both labels
+  // toward their shared center. A fading label contributes less to that center.
+  const blocks: Array<{ start: number; end: number; total: number; weight: number }> = [];
+  for (const [index, { preferred }] of slots.entries()) {
+    const weight = labels[index].opacity;
+    const block = { start: index, end: index, total: preferred * weight, weight };
+    let previous = blocks.at(-1);
+    while (previous && previous.total / previous.weight > block.total / block.weight) {
+      block.start = previous.start;
+      block.total += previous.total;
+      block.weight += previous.weight;
+      blocks.pop();
+      previous = blocks.at(-1);
+    }
+    blocks.push(block);
   }
-  for (const { endLabel } of series.slice(capacity)) {
-    endLabel.text = '';
-    endLabel.value = '';
+
+  const top = plot.y + labelHeight / 2;
+  const bottom = plot.y + plot.height - labelHeight / 2;
+  const minOffset = top - spacing / 2;
+  const maxOffset = bottom - (occupied - 0.5) * spacing;
+  for (const block of blocks) {
+    const base = Math.max(minOffset, Math.min(maxOffset, block.total / block.weight));
+    for (let index = block.start; index <= block.end; index++) {
+      labels[index].endLabel.y = Math.max(top, Math.min(bottom, base + slots[index].offset));
+    }
   }
 }
 
@@ -300,22 +331,17 @@ function departingOpacity(run: VisibilityRun, t: number): number {
 /** Draw the ranked series on a domain that includes all points shown up to the playhead. */
 export const lineGeometry: RaceMarkEntry<'line'>['geometry'] = (model, layout, frame) => {
   const { t } = frame;
-  const { plot, xScale, window, tickFontSize } = layout.static;
+  const { plot, xScale, window, tickFontSize, history } = layout.static;
   const xMax = window === 'all' ? xScale.domain[1] : Math.max(1, t);
   const x = (period: number) => xScale.range[0] + (period / xMax) * plot.width;
   const period = frame.period.index;
   const fraction = t - period;
   const active = new Map(frame.items.map((item) => [item.key, item]));
-  let history = histories.get(model);
-  if (!history) {
-    history = buildHistory(model);
-    histories.set(model, history);
-  }
-
   let min = 0;
   let max = 0;
-  const visible: Array<{ key: number; opacity: number }> = [];
-  for (const [key, { runs, mins, maxes }] of history.entries()) {
+  const visible: Array<{ key: number; opacity: number; rankPos: number; departing: boolean }> = [];
+  for (const entry of history) {
+    const { key, runs } = entry;
     let index = runs.length - 1;
     while (index >= 0 && runs[index].start > t) index--;
     const run = runs[index];
@@ -323,14 +349,9 @@ export const lineGeometry: RaceMarkEntry<'line'>['geometry'] = (model, layout, f
     if (!run && !item) continue;
 
     const lastDraw = item || !run ? t : Math.min(t, run.end + 1);
-    const lastPeriod = Math.floor(lastDraw);
-    const lastValue = interpolateRaceValue(
-      model.matrix.values[key],
-      lastPeriod,
-      lastDraw - lastPeriod,
-    );
-    min = Math.min(min, mins[lastPeriod], Number.isFinite(lastValue) ? lastValue : 0);
-    max = Math.max(max, maxes[lastPeriod], Number.isFinite(lastValue) ? lastValue : 0);
+    const [low, high] = extentAt(model, entry, lastDraw);
+    min = Math.min(min, low);
+    max = Math.max(max, high);
     let opacity = item?.opacity ?? 0;
     // Keep the frame's entrance fade. Extend a departing series from its last peak
     // to one period past the exit, even when the frame has already faded it out.
@@ -338,10 +359,22 @@ export const lineGeometry: RaceMarkEntry<'line'>['geometry'] = (model, layout, f
       opacity = Math.max(opacity, departingOpacity(runs[index], t));
       index--;
     }
-    if (opacity > 0) visible.push({ key, opacity });
+    if (opacity > 0) {
+      // Once a series leaves the fold, its fade age keeps its rank moving
+      // past the boundary and separates departing series at the same rank.
+      const age = run ? Math.max(0, t - run.end) : 0;
+      visible.push({
+        key,
+        opacity,
+        rankPos: (item?.rankPos ?? model.timeline.rankPos(key, t)) + age,
+        departing: !item || item.rank >= model.timeline.top,
+      });
+    }
   }
-  // In a very short plot, leave room for the strongest labels first.
-  visible.sort((a, b) => b.opacity - a.opacity);
+  visible.sort(
+    (a, b) =>
+      Number(a.departing) - Number(b.departing) || b.opacity - a.opacity || a.rankPos - b.rankPos,
+  );
 
   min = roundBound(min);
   max = roundBound(max);
@@ -354,7 +387,8 @@ export const lineGeometry: RaceMarkEntry<'line'>['geometry'] = (model, layout, f
 
   const text = lineText(layout, layout.theme.fonts.sizes.body);
   const series: LineSeries[] = [];
-  for (const { key, opacity } of visible) {
+  const labels: HeadLabelPlacement[] = [];
+  for (const { key, opacity, rankPos } of visible) {
     const values = model.matrix.values[key];
     const points = Array.from(values.subarray(0, period + 1), (value, index) =>
       Number.isFinite(value) ? { x: x(index), y: y(value) } : null,
@@ -369,15 +403,17 @@ export const lineGeometry: RaceMarkEntry<'line'>['geometry'] = (model, layout, f
     const budget = layout.area.x + layout.area.width - labelX;
     const value = text.fit(model.formatValue(Number.isFinite(head) ? head : values[last]), budget);
     const name = text.fit(layout.labels[key], budget - (value ? text.width(` ${value}`) : 0));
+    const endLabel = { x: labelX, y: anchor.y, text: name, value };
     series.push({
       key: model.matrix.keys[key],
       color: layout.colors[key],
       opacity,
       points,
-      endLabel: { x: labelX, y: anchor.y, text: name, value },
+      endLabel,
     });
+    labels.push({ endLabel, opacity, rankPos });
   }
-  placeHeadLabels(layout, series);
+  placeHeadLabels(layout, labels);
 
   const tickText = lineText(layout, tickFontSize);
   const showAxes = plot.width > 0 && plot.height > 0;

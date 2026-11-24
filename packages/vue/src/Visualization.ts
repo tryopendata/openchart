@@ -21,6 +21,7 @@ import { Chart } from './Chart';
 import { DataTable } from './DataTable';
 import { GeoMap } from './GeoMap';
 import { Graph } from './Graph';
+import { Race } from './Race';
 import { Sankey } from './Sankey';
 import { TileMap } from './TileMap';
 
@@ -80,7 +81,7 @@ export const Visualization = defineComponent({
         return h(GeoMap, { ...sharedProps, spec });
       }
       if (isRaceSpec(spec)) {
-        throw new Error('Race specs render through createRace');
+        return h(Race, { ...sharedProps, spec });
       }
       return h(Chart, { ...sharedProps, spec });
     };

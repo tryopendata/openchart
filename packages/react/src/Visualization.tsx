@@ -21,6 +21,7 @@ import { Chart } from './Chart';
 import { DataTable } from './DataTable';
 import { GeoMap } from './GeoMap';
 import { Graph } from './Graph';
+import { Race } from './Race';
 import { Sankey } from './Sankey';
 import { TileMap } from './TileMap';
 
@@ -81,7 +82,9 @@ export function Visualization({ spec, theme, darkMode, className, style }: Visua
     );
   }
   if (isRaceSpec(spec)) {
-    throw new Error('Race specs render through createRace');
+    return (
+      <Race spec={spec} theme={theme} darkMode={darkMode} className={className} style={style} />
+    );
   }
   return (
     <Chart spec={spec} theme={theme} darkMode={darkMode} className={className} style={style} />

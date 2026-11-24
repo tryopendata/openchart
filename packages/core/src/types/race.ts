@@ -93,6 +93,16 @@ export interface RaceLineStatic {
   labelGutter: number;
   /** Font size for axis tick labels in pixels. */
   tickFontSize: number;
+  /** Visibility and value history for each key that can be drawn. */
+  history: Array<{
+    /** Index into the race matrix. */
+    key: number;
+    /** Contiguous intervals in which the series has a visible head. */
+    runs: Array<{ start: number; end: number; peakTime: number; peakOpacity: number }>;
+    /** Running value bounds at each whole period. */
+    mins: number[];
+    maxes: number[];
+  }>;
 }
 
 export interface RaceLineGeometry {

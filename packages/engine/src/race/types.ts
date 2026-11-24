@@ -78,12 +78,16 @@ export interface RaceTimeline {
   readonly periodCount: number;
   readonly keyCount: number;
   readonly top: number;
+  /** Number of rank samples per period interval. */
+  readonly samplesPerPeriod: number;
   /** NaN when absent. */
   valueAt(keyIndex: number, t: number): number;
   /** Smoothed rank in [0, top]. */
   rankPos(keyIndex: number, t: number): number;
   /** Zero-based rank among present keys. Infinity when absent. */
   exactRank(keyIndex: number, t: number): number;
+  /** Cached exact rank at an integer period index. Infinity when absent. */
+  periodRank(keyIndex: number, period: number): number;
   /** Items with rankPos < top, sorted by rankPos. */
   sample(t: number): RaceSample;
 }

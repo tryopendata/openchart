@@ -101,6 +101,8 @@ export type { GeoMapProps } from './GeoMap';
 export { GeoMap } from './GeoMap';
 export type { GraphProps } from './Graph';
 export { Graph } from './Graph';
+export type { RaceProps } from './Race';
+export { Race } from './Race';
 export type { SankeyProps } from './Sankey';
 export { Sankey } from './Sankey';
 export type { VizThemeProviderProps } from './ThemeProvider';

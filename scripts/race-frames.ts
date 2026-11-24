@@ -20,9 +20,14 @@ const spec = {
   chrome: { source: worldGdpRaceSource },
 } satisfies RaceSpec;
 
+const markFlag = process.argv.indexOf('--mark');
+const mark = markFlag === -1 ? spec.mark : (process.argv[markFlag + 1] ?? '');
+if (mark !== 'bar' && mark !== 'line' && mark !== 'table') {
+  console.error(`Unknown --mark "${mark}". Use bar, line or table.`);
+  process.exit(1);
+}
+
 if (process.argv.includes('--geometry')) {
-  const markFlag = process.argv.indexOf('--mark');
-  const mark = markFlag >= 0 && process.argv[markFlag + 1] === 'line' ? 'line' : spec.mark;
   const model = prepareRace({ ...spec, mark }, {});
   const layout = layoutRace(model, { width: 800, height: 500 });
   for (const t of [0, 8.5, model.timeline.periodCount - 1]) {
