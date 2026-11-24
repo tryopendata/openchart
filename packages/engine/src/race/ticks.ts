@@ -1,11 +1,11 @@
-/** Returns nested steps, each of which divides the next. */
-export function valueTickLadder(span: number): number[] {
+/** Returns ascending nice steps. The default steps each divide the next. */
+export function valueTickLadder(span: number, multipliers = [1, 5]): number[] {
   const ladder: number[] = [];
   if (span <= 0 || !Number.isFinite(span)) return ladder;
 
   const decade = Math.floor(Math.log10(span));
   for (let exponent = decade - 2; exponent <= decade + 1; exponent++) {
-    for (const multiplier of [1, 5]) {
+    for (const multiplier of multipliers) {
       const step = Number(`${multiplier}e${exponent}`);
       if (step === 0 || !Number.isFinite(step)) continue;
       ladder.push(step);

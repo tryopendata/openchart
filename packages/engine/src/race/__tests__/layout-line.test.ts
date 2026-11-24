@@ -77,6 +77,71 @@ function setup(
 }
 
 describe('line race layout', () => {
+  it('uses normal y-axis density for a 0–11 trillion domain', () => {
+    const { at } = setup({ A: [10.3e12, 10.3e12] }, { height: 476, format: '$.3~s' });
+    const ticks = at(1).yTicks.filter(({ opacity }) => opacity > 0.5);
+    expect(ticks.map(({ label }) => label)).toEqual(['$0', '$2T', '$4T', '$6T', '$8T', '$10T']);
+  });
+
+  it('fits the labels of crossfading y ticks on a short plot', () => {
+    const { at, layout } = setup({ A: [12.6, 12.6] }, { width: 360, height: 200, axisTick: 14 });
+    const { yTicks } = at(1);
+    const bottom = layout.static.plot.y + layout.static.plot.height;
+    const labelYs = yTicks
+      .filter(({ label, opacity }) => label && opacity > 0.01)
+      .map(({ value, position }) =>
+        value === 0 ? Math.min(position, bottom - 14 * 0.75) : position,
+      )
+      .sort((a, b) => a - b);
+    expect(yTicks.length).toBeGreaterThan(labelYs.length);
+    expect(labelYs.length).toBeGreaterThan(2);
+    for (let i = 1; i < labelYs.length; i++)
+      expect(labelYs[i] - labelYs[i - 1]).toBeGreaterThanOrEqual(14 * 1.2);
+  });
+
+  it('keeps the two label opacities continuous as their ranks cross', () => {
+    const { at } = setup({ A: [100, 0], B: [0, 100] }, { width: 620, height: 476 });
+    const before = at(0.520833).series;
+    const after = at(0.520834).series;
+    for (const series of before) {
+      const next = after.find(({ key }) => key === series.key);
+      if (!next) throw new Error('Expected the same two series');
+      const opacity = series.endLabel.opacity ?? series.opacity;
+      expect(next.endLabel.opacity ?? next.opacity).toBeCloseTo(opacity, 3);
+    }
+  });
+
+  it('keeps readable GDP head labels one text height apart at 2000', () => {
+    const measureText: MeasureTextFn = (text, size, weight) => ({
+      width: estimateTextWidth(text, size, weight),
+      height: size * 1.3,
+    });
+    const model = prepareRace(
+      {
+        type: 'race',
+        mark: 'line',
+        data: worldGdpRace,
+        encoding: { time: { field: 'year' }, key: { field: 'country' }, value: { field: 'gdp' } },
+        chrome: { title: 'GDP', source: 'World Bank' },
+      },
+      {},
+    );
+    const layout = layoutRace(model, { width: 620, height: 476, measureText });
+    const geometry = raceGeometryAt(model, layout, 20);
+    if (geometry.mark !== 'line') throw new Error('Expected a line');
+    const labels = geometry.series
+      .filter(
+        ({ endLabel, opacity }) =>
+          (endLabel.opacity ?? opacity) > 0.15 && (endLabel.text || endLabel.value),
+      )
+      .map(({ endLabel }) => endLabel.y)
+      .sort((a, b) => a - b);
+    expect(labels.length).toBeGreaterThanOrEqual(10);
+    for (let i = 1; i < labels.length; i++) {
+      expect(labels[i] - labels[i - 1]).toBeGreaterThanOrEqual(layout.theme.fonts.sizes.body * 1.3);
+    }
+  });
+
   it('ends an exit fade on the timeline’s configured sample grid', () => {
     const { at } = setup({ A: [9, 1, 1], B: [1, 9, 9] }, { top: 1, samplesPerPeriod: 5 });
     expect(at(1.58).series.find(({ key }) => key === 'A')?.opacity).toBeGreaterThan(0);

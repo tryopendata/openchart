@@ -35,25 +35,27 @@ function rankCells(t: number, key: string) {
 }
 
 describe('race table layout', () => {
-  it('reserves a header above the top slots and uses the fractional rank and opacity', () => {
-    const t = 3.75;
-    const { layout, geometry } = tableAt(t);
+  it('gives the bottom slot to one row as entrants and exits slide past the table edge', () => {
+    const { layout } = tableAt(0);
     const { headerHeight, rowHeight } = layout.static;
     expect(headerHeight).toBeGreaterThan(0);
     expect(headerHeight + 2 * rowHeight).toBeCloseTo(layout.area.height);
 
-    const items = raceFrameAt(model, t).items;
-    expect(items.some(({ rankPos }) => !Number.isInteger(rankPos))).toBe(true);
-    expect(items.some(({ opacity }) => opacity < 1)).toBe(true);
-    expect(geometry.rows.map(({ key }) => key).sort()).toEqual(items.map(({ key }) => key).sort());
-    for (const item of items) {
-      const row = geometry.rows.find(({ key }) => key === item.key);
-      expect(row?.y).toBeCloseTo(item.rankPos * rowHeight);
-      expect(row?.opacity).toBe(item.opacity);
+    const edgeRows = (t: number) => tableAt(t).geometry.rows.filter(({ y }) => y > rowHeight);
+    const exit = edgeRows(3.72);
+    const entry = edgeRows(3.9);
+    expect(exit).toMatchObject([{ key: 'Alpine', atEdge: true }]);
+    expect(entry).toMatchObject([{ key: 'Cedar', atEdge: true }]);
+    for (const [row] of [exit, entry]) {
+      expect(row.y + rowHeight).toBeGreaterThan(2 * rowHeight);
+      expect(row.opacity).toBeGreaterThan(0);
+      expect(row.opacity).toBeLessThan(1);
     }
+    for (let tick = 360; tick <= 390; tick++)
+      expect(edgeRows(tick / 100).length).toBeLessThanOrEqual(1);
   });
 
-  it('holds rank and change through an overtake and updates both at the period boundary', () => {
+  it('shows the interpolated rank as soon as values cross and waits for the movement to settle', () => {
     const before = [
       { column: 'rank', text: '2' },
       { column: 'change', direction: 'same', text: '' },
@@ -61,7 +63,14 @@ describe('race table layout', () => {
     expect(raceFrameAt(model, 3.2).items.find(({ key }) => key === 'Brook')?.rank).toBe(1);
     expect(raceFrameAt(model, 3.8).items.find(({ key }) => key === 'Brook')?.rank).toBe(0);
     expect(rankCells(3.2, 'Brook')).toEqual(before);
-    expect(rankCells(3.8, 'Brook')).toEqual(before);
+    expect(rankCells(3.37, 'Brook')).toEqual([
+      { column: 'rank', text: '1' },
+      { column: 'change', direction: 'same', text: '' },
+    ]);
+    expect(rankCells(3.8, 'Brook')).toEqual([
+      { column: 'rank', text: '1' },
+      { column: 'change', direction: 'up', text: '↑1' },
+    ]);
     expect(rankCells(4, 'Brook')).toEqual([
       { column: 'rank', text: '1' },
       { column: 'change', direction: 'up', text: '↑1' },
@@ -75,7 +84,7 @@ describe('race table layout', () => {
     ]);
   });
 
-  it('shows unique observed ranks in value order and reports the exact period change', () => {
+  it('shows unique ranks in displayed value order and reports the exact previous period change', () => {
     const close = prepareRace(
       {
         ...spec,
@@ -115,31 +124,15 @@ describe('race table layout', () => {
     ]);
   });
 
-  it('shows a dash for a row still fading after it leaves the observed top N', () => {
-    const crossing = prepareRace(
-      {
-        ...spec,
-        data: [
-          [100, 60, 20],
-          [99, 60, 61],
-          [98, 60, 90],
-        ].flatMap((values, period) =>
-          values.map((score, index) => ({
-            period,
-            key: ['Alpine', 'Brook', 'Cedar'][index],
-            score,
-          })),
-        ),
-        race: { ...spec.race, swap: 600 },
-      },
-      {},
-    );
-    const layout = layoutRace(crossing, { width: 800, height: 300 });
-    const geometry = raceGeometryAt(crossing, layout, 1);
-    if (geometry.mark !== 'table') throw new Error('Expected a table');
-    expect(geometry.rows.find(({ key }) => key === 'Brook')?.cells.slice(0, 2)).toEqual([
-      { column: 'rank', text: '—' },
-      { column: 'change', direction: 'same', text: '—' },
+  it('uses the exact timeline order for tied interpolated values', () => {
+    const tied = 3 + 50 / 140;
+    const frame = raceFrameAt(model, tied);
+    const geometry = tableAt(tied).geometry;
+    const leaders = frame.items.filter(({ rank }) => rank < 2).sort((a, b) => a.rank - b.rank);
+    expect(geometry.rows).toHaveLength(2);
+    expect(leaders.map(({ key }) => rankCells(tied, key)?.[0])).toEqual([
+      { column: 'rank', text: '1' },
+      { column: 'rank', text: '2' },
     ]);
   });
 
@@ -155,7 +148,7 @@ describe('race table layout', () => {
     const offset = geometry.rows[brookIndex].y - geometry.rows[alpineIndex].y;
     expect(Math.abs(offset)).toBeLessThan(layout.static.rowHeight);
     expect(offset < 0).toBe(risingRowIsHigher);
-    expect(rankCells(t, 'Brook')).toEqual(rankCells(3.2, 'Brook'));
+    expect(rankCells(t, 'Brook')?.[1]).toEqual({ column: 'change', direction: 'same', text: '' });
   });
 
   it('scales fixed inline bars to the race maximum and shares to the whole period', () => {
@@ -252,7 +245,7 @@ describe('race table layout', () => {
     ]);
     expect(cells(4)).toEqual([
       { column: 'value', text: '120.0' },
-      { column: 'share', text: '60%' },
+      { column: 'share', text: '60.0%' },
     ]);
   });
 
@@ -271,8 +264,8 @@ describe('race table layout', () => {
     const geometry = raceGeometryAt(large, layout, 0);
     if (geometry.mark !== 'table') throw new Error('Expected a table');
     expect(geometry.rows.map(({ cells }) => cells[1])).toEqual([
-      { column: 'share', text: '50%' },
-      { column: 'share', text: '50%' },
+      { column: 'share', text: '50.0%' },
+      { column: 'share', text: '50.0%' },
     ]);
   });
 
@@ -334,7 +327,7 @@ describe('race table layout', () => {
     expect(share.text).toBe('—');
     const next = raceGeometryAt(shares, layout, 1);
     if (next.mark !== 'table') throw new Error('Expected a table');
-    expect(next.rows[0].cells[5]).toEqual({ column: 'share', text: '75%' });
+    expect(next.rows[0].cells[5]).toEqual({ column: 'share', text: '75.0%' });
   });
 
   it('reuses formatted value text across resize and theme changes for the same model', () => {

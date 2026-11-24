@@ -138,6 +138,26 @@ describe('race shell', () => {
     expect(controlsSlot.style.getPropertyValue('--oc-source-size')).toBe('10px');
   });
 
+  it('moves the controls into the measured footer whitespace only when enabled', () => {
+    const layout = barLayout(resolveTheme({ spacing: { padding: 28 } }), {
+      source: { text: 'GDP data', offset: { dy: -6 } },
+    });
+    layout.watermark = false;
+    const baseline = layout.area.y + layout.area.height;
+    const source = layout.chrome.source;
+    if (!source) throw new Error('Expected source chrome');
+    const footerEnd =
+      baseline + source.y + source.style.fontSize * (source.style.lineHeight ?? 1.3);
+    const { controlsSlot } = createRaceShell(document.createElement('div'), layout, 'lift');
+    expect(
+      Number.parseFloat(controlsSlot.style.getPropertyValue('--oc-race-controls-lift')),
+    ).toBeCloseTo(layout.height - footerEnd - 8);
+
+    layout.playback.controls = false;
+    const disabled = createRaceShell(document.createElement('div'), layout, 'disabled');
+    expect(disabled.controlsSlot.style.getPropertyValue('--oc-race-controls-lift')).toBe('');
+  });
+
   it.each(['', '   '])('names the SVG when the layout label is blank (%j)', (altText) => {
     const layout = barLayout();
     layout.a11y.altText = altText;

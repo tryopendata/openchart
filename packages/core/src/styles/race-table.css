@@ -23,6 +23,7 @@
 
   .oc-race-table-grid tbody {
     position: relative;
+    overflow: hidden;
     background-image: repeating-linear-gradient(
       to bottom,
       transparent 0 max(0px, calc(var(--oc-race-table-row-height) - 1px)),

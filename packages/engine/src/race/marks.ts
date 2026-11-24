@@ -70,6 +70,14 @@ export const RACE_MARKS: { [TMark in RaceMarkType]?: RaceMarkEntry<TMark> } = {
         cornerRadius: mark.cornerRadius ?? 0,
         fontSize: { name: body, value: body, tick: axisTick },
         showPeriod: model.spec.race.period !== false,
+        measurePeriodWidth(fontSize) {
+          // The SVG uses tabular numerals. Measure a representative digit once per pattern.
+          const labels = new Set(model.periodLabels.map((label) => label.replace(/\d/g, '0')));
+          let width = 0;
+          for (const label of labels)
+            width = Math.max(width, measureText(label, fontSize, 600).width);
+          return width;
+        },
         showSummary: model.spec.race.summary === 'sum',
         hasNegatives: min < 0,
       });

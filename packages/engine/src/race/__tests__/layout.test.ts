@@ -68,6 +68,25 @@ describe('race layout', () => {
     });
   });
 
+  it.each([
+    'bar',
+    'line',
+    'table',
+  ] as const)('reserves space for controls at zero plot padding on %s', (mark) => {
+    const input = {
+      ...spec,
+      mark,
+      chrome: { source: 'Source: World Bank' },
+      watermark: false,
+      theme: { spacing: { padding: 0 } },
+    };
+    const enabled = layoutRace(prepareRace(input, {}), size);
+    const disabled = layoutRace(prepareRace({ ...input, race: { controls: false } }, {}), size);
+    expect(enabled.height).toBe(disabled.height);
+    expect(enabled.area.height).toBe(disabled.area.height - 8);
+    expect(disabled.area.y + disabled.area.height + disabled.chrome.bottomHeight).toBe(size.height);
+  });
+
   it('merges theme overrides and carries prep warnings and the watermark setting', () => {
     const model = prepareRace(
       {

@@ -65,25 +65,43 @@ function contentOffsets(
   const paintHeight = Math.max(0, rowHeight - 1);
   const textHeight = Math.min(paintHeight, fontSize * 1.2);
   const inset = (paintHeight - textHeight) / 2;
-  const visible = rows.filter(({ opacity }) => opacity > 0).sort((a, b) => a.y - b.y);
+  const visible = rows
+    .filter(({ opacity, atEdge }) => opacity > 0 && !atEdge)
+    .sort((a, b) => (a.rank !== undefined && b.rank !== undefined ? a.rank - b.rank : a.y - b.y));
   const last = visible.length - 1;
-  const bottom = Math.max(0, bodyHeight - textHeight);
+  const edgeRoom = rows.some(({ atEdge }) => atEdge) ? rowHeight : 0;
+  const bottom = Math.max(0, bodyHeight - edgeRoom - textHeight);
   const gap = Math.min(rowHeight, textHeight + 2, bottom / Math.max(1, last));
   const tops = visible.map(({ y }) => y + inset);
 
-  // Average a downwards and an upwards sweep so neighboring lines share the displacement.
-  const down: number[] = [];
-  for (const [index, top] of tops.entries()) {
-    const floor = index === 0 ? 0 : down[index - 1] + gap;
-    down.push(Math.min(bottom - (last - index) * gap, Math.max(floor, top)));
+  // Pool neighbors that would cross in displayed value order. A fading row
+  // takes more of the displacement, leaving room for it without jolting its peers.
+  const blocks: Array<{ start: number; end: number; total: number; weight: number }> = [];
+  for (const [index, row] of visible.entries()) {
+    const block = {
+      start: index,
+      end: index,
+      total: (tops[index] - index * gap) * row.opacity,
+      weight: row.opacity,
+    };
+    let previous = blocks.at(-1);
+    while (previous && previous.total / previous.weight > block.total / block.weight) {
+      block.start = previous.start;
+      block.total += previous.total;
+      block.weight += previous.weight;
+      blocks.pop();
+      previous = blocks.at(-1);
+    }
+    blocks.push(block);
   }
+
   const offsets = new Map<string, number>();
-  let ceiling = bottom;
-  for (let index = last; index >= 0; index--) {
-    const up = Math.max(index * gap, Math.min(ceiling, tops[index]));
-    const offset = (up + down[index]) / 2 - tops[index];
-    if (Math.abs(offset) > 0.001) offsets.set(visible[index].key, offset);
-    ceiling = up - gap;
+  for (const block of blocks) {
+    const base = Math.max(0, Math.min(bottom - last * gap, block.total / block.weight));
+    for (let index = block.start; index <= block.end; index++) {
+      const offset = base + index * gap - tops[index];
+      if (Math.abs(offset) > 0.001) offsets.set(visible[index].key, offset);
+    }
   }
   return offsets;
 }

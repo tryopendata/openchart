@@ -4,8 +4,10 @@ import {
   type RaceLineStatic,
   type RaceTick,
 } from '@opendata-ai/openchart-core';
+import { targetTickCount } from '../layout/axes/ticks';
 import { interpolateRaceValue } from './interpolate';
 import { truncateRaceLabel } from './layout-bar';
+import { departingLineOpacity, lineVisibilityRuns } from './line-visibility';
 import type { RaceLayoutsByMark, RaceMarkEntry } from './marks';
 import { crossfadeTicks, periodTickLadder, valueTickLadder } from './ticks';
 import type { RaceModel } from './types';
@@ -13,12 +15,11 @@ import type { RaceModel } from './types';
 const LABEL_GAP = 6;
 const TICK_GAP = 4;
 const TICK_PADDING = 10;
-const VISIBILITY_EPSILON = 1e-6;
+const OVERLAP_OPACITY = 0.15;
 
 type LineLayout = RaceLayoutsByMark['line'];
 type LineSeries = RaceLineGeometry['series'][number];
 type SeriesHistory = RaceLineStatic['history'][number];
-type VisibilityRun = SeriesHistory['runs'][number];
 
 // Round each bound outward on its own nested ladder so a growing span can't shrink either bound.
 function roundBound(value: number): number {
@@ -105,60 +106,10 @@ export const computeLineStatic: RaceMarkEntry<'line'>['computeStatic'] = (
   };
 };
 
-function visibilityRuns(model: RaceModel, key: number, values: Float64Array): VisibilityRun[] {
-  const { timeline } = model;
-  const { samplesPerPeriod } = timeline;
-  const threshold = timeline.top - VISIBILITY_EPSILON;
-  const runs: VisibilityRun[] = [];
-  function add(start: number, end: number, startRank: number, endRank: number) {
-    const peakOpacity = Math.min(1, timeline.top - Math.min(startRank, endRank));
-    const fullRank = timeline.top - 1;
-    let peakTime = end;
-    if (endRank > startRank && endRank > fullRank) {
-      const fraction = Math.max(0, (fullRank - startRank) / (endRank - startRank));
-      peakTime = start + fraction * (end - start);
-    }
-    const previous = runs.at(-1);
-    if (previous && previous.end === start) {
-      previous.end = end;
-      if (peakOpacity >= previous.peakOpacity) {
-        previous.peakOpacity = peakOpacity;
-        previous.peakTime = peakTime;
-      }
-    } else {
-      runs.push({ start, end, peakTime, peakOpacity });
-    }
-  }
-
-  for (let period = 0; period < values.length; period++) {
-    if (!Number.isFinite(values[period])) continue;
-    let rank = timeline.rankPos(key, period);
-    if (rank < threshold) add(period, period, rank, rank);
-    if (!Number.isFinite(values[period + 1])) continue;
-
-    // The timeline interpolates smoothed ranks between these samples. Use the
-    // crossing time so a direct seek and a sequence of draws see the same history.
-    for (let sample = 0; sample < samplesPerPeriod; sample++) {
-      const start = period + sample / samplesPerPeriod;
-      const end = period + (sample + 1) / samplesPerPeriod;
-      const nextRank = timeline.rankPos(key, end);
-      if (rank < threshold && nextRank < threshold) {
-        add(start, end, rank, nextRank);
-      } else if (rank < threshold || nextRank < threshold) {
-        const crossing = start + ((threshold - rank) / (nextRank - rank)) * (end - start);
-        if (rank < threshold) add(start, crossing, rank, threshold);
-        else add(crossing, end, threshold, nextRank);
-      }
-      rank = nextRank;
-    }
-  }
-  return runs;
-}
-
 function buildHistory(model: RaceModel): SeriesHistory[] {
   const history: SeriesHistory[] = [];
   model.matrix.values.forEach((values, key) => {
-    const runs = visibilityRuns(model, key, values);
+    const runs = lineVisibilityRuns(model.timeline, key, values);
     if (runs.length === 0) return;
     let min = 0;
     let max = 0;
@@ -285,7 +236,7 @@ function placeHeadLabels(layout: LineLayout, candidates: HeadLabelPlacement[]) {
     for (const other of labels) {
       const delta = label.rankPos - other.rankPos;
       // The opacity-weighted slot and the preferred y agree at a rank crossing.
-      slot += other.opacity * Math.max(0, Math.min(1, 0.5 + delta));
+      slot += other.opacity * Math.max(0, Math.min(1, 0.5 + 2 * delta));
       const nearby = other.opacity * Math.max(0, 1 - Math.abs(delta));
       weightedY += nearby * other.endLabel.y;
       weight += nearby;
@@ -321,11 +272,55 @@ function placeHeadLabels(layout: LineLayout, candidates: HeadLabelPlacement[]) {
       labels[index].endLabel.y = Math.max(top, Math.min(bottom, base + slots[index].offset));
     }
   }
+
+  // Equal-strength labels recede together as they cross. An established label
+  // can retain more opacity when its neighbor is already fading.
+  const painted = labels.filter(({ endLabel }) => endLabel.text || endLabel.value);
+  for (const label of painted) {
+    if (label.opacity <= OVERLAP_OPACITY) continue;
+    let visibility = 1;
+    for (const other of painted) {
+      if (label === other) continue;
+      const clearance = Math.abs(label.endLabel.y - other.endLabel.y);
+      const fit = Math.max(0, Math.min(1, clearance - labelHeight + 1));
+      const priority = Math.max(0, Math.min(1, (label.opacity - other.opacity) * 2));
+      visibility = Math.min(visibility, Math.max(fit, priority));
+    }
+    const opacity = OVERLAP_OPACITY + (label.opacity - OVERLAP_OPACITY) * visibility;
+    if (opacity < label.opacity) label.endLabel.opacity = opacity;
+  }
+  return labelHeight;
 }
 
-function departingOpacity(run: VisibilityRun, t: number): number {
-  const expiry = run.end + 1;
-  return t < run.peakTime ? 0 : run.peakOpacity * ((expiry - t) / (expiry - run.peakTime));
+function lineValueTicks(domain: [number, number], height: number) {
+  const span = domain[1] - domain[0];
+  if (span === 0) return [{ value: 0, opacity: 1 }];
+
+  const target = targetTickCount(height, 'full', 'y');
+  const ideal = span / target;
+  const ladder = valueTickLadder(span, [1, 2, 5]);
+  const upper = ladder.findIndex((step) => step >= ideal);
+  if (upper <= 0) return crossfadeTicks(domain, height / span, ladder.slice(0, 1));
+
+  const finer = ladder[upper - 1];
+  const coarser = ladder[upper];
+  // D3 switches nice increments at the geometric mean of the two steps.
+  // Fade around that threshold to keep ticks stable as the scale grows.
+  const threshold = (height / target) * Math.sqrt(finer / coarser);
+  return crossfadeTicks(domain, height / span, [finer, coarser], threshold * 1.1, threshold * 0.9);
+}
+
+function fitYTickLabels(ticks: RaceTick[], bottom: number, fontSize: number, labelHeight: number) {
+  const occupied: number[] = [];
+  const byPriority = [...ticks].sort(
+    (a, b) => Number(b.value === 0) - Number(a.value === 0) || b.opacity - a.opacity,
+  );
+  for (const tick of byPriority) {
+    if (!tick.label || tick.opacity <= 0.01) continue;
+    const y = tick.value === 0 ? Math.min(tick.position, bottom - fontSize * 0.75) : tick.position;
+    if (occupied.some((position) => Math.abs(position - y) < labelHeight)) tick.label = '';
+    else occupied.push(y);
+  }
 }
 
 /** Draw the ranked series on a domain that includes all points shown up to the playhead. */
@@ -356,7 +351,7 @@ export const lineGeometry: RaceMarkEntry<'line'>['geometry'] = (model, layout, f
     // Keep the frame's entrance fade. Extend a departing series from its last peak
     // to one period past the exit, even when the frame has already faded it out.
     while (index >= 0 && runs[index].end + 1 > t) {
-      opacity = Math.max(opacity, departingOpacity(runs[index], t));
+      opacity = Math.max(opacity, departingLineOpacity(runs[index], t));
       index--;
     }
     if (opacity > 0) {
@@ -388,6 +383,7 @@ export const lineGeometry: RaceMarkEntry<'line'>['geometry'] = (model, layout, f
   const text = lineText(layout, layout.theme.fonts.sizes.body);
   const series: LineSeries[] = [];
   const labels: HeadLabelPlacement[] = [];
+  const anchors: NonNullable<LineSeries['endLabel']['leader']>[] = [];
   for (const { key, opacity, rankPos } of visible) {
     const values = model.matrix.values[key];
     const points = Array.from(values.subarray(0, period + 1), (value, index) =>
@@ -412,23 +408,21 @@ export const lineGeometry: RaceMarkEntry<'line'>['geometry'] = (model, layout, f
       endLabel,
     });
     labels.push({ endLabel, opacity, rankPos });
+    anchors.push(anchor);
   }
-  placeHeadLabels(layout, labels);
+  const labelHeight = placeHeadLabels(layout, labels);
+  for (const [index, { endLabel }] of labels.entries()) {
+    const anchor = anchors[index];
+    if ((endLabel.text || endLabel.value) && Math.abs(anchor.y - endLabel.y) > labelHeight / 2) {
+      endLabel.leader = anchor;
+    }
+  }
 
   const tickText = lineText(layout, tickFontSize);
   const showAxes = plot.width > 0 && plot.height > 0;
   const yTicks = !showAxes
     ? []
-    : (span === 0
-        ? [{ value: 0, opacity: 1 }]
-        : crossfadeTicks(
-            [low, high],
-            plot.height / span,
-            valueTickLadder(span),
-            Math.max(48, tickFontSize * 3),
-            Math.max(30, tickFontSize * 2),
-          )
-      ).map((tick) => {
+    : lineValueTicks([low, high], plot.height).map((tick) => {
         const value = tick.value * divisor;
         const position = y(value);
         const distanceToEdge = Math.max(
@@ -446,6 +440,13 @@ export const lineGeometry: RaceMarkEntry<'line'>['geometry'] = (model, layout, f
           ),
         };
       });
+  const tickHeight = layout.measureText?.(
+    'Mg',
+    tickFontSize,
+    layout.theme.fonts.weights.normal,
+  ).height;
+  fitYTickLabels(yTicks, plot.y + plot.height, tickFontSize, tickHeight ?? tickFontSize * 1.2);
+
   return {
     mark: 'line',
     series,

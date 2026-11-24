@@ -4,11 +4,11 @@
   }
 
   .oc-race-controls-slot {
-    /* Tuck the strip into the SVG's bottom padding and give that padding back below it,
-       so the controls sit close to the source line and the total height is unchanged. */
-    margin-top: calc(8px - var(--oc-race-padding, 0px));
+    /* The shell measures the unused space below the footer. Preserve the outer height. */
+    position: relative;
+    margin-top: calc(0px - var(--oc-race-controls-lift, 0px));
     padding-inline: var(--oc-race-padding);
-    padding-bottom: calc(var(--oc-race-padding, 0px) - 8px);
+    padding-bottom: var(--oc-race-controls-lift, 0px);
   }
 
   .oc-race-controls {

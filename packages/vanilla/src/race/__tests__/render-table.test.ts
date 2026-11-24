@@ -2,12 +2,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { RaceSpec } from '@opendata-ai/openchart-core';
-import {
-  layoutRace,
-  prepareRace,
-  raceFrameAt,
-  raceGeometryAt,
-} from '@opendata-ai/openchart-engine';
+import { layoutRace, prepareRace, raceGeometryAt } from '@opendata-ai/openchart-engine';
 import { describe, expect, it, onTestFinished } from 'vitest';
 import { worldGdpRace } from '../../../../../examples/src/data/world-gdp-race';
 import { createRace } from '../../race-mount';
@@ -207,7 +202,7 @@ describe('race table renderer', () => {
 
   it.each([
     800, 360,
-  ])('keeps all positive-opacity GDP rows readable through the crossing at %i px', (width) => {
+  ])('separates interior GDP cells and clips the sliding bottom row at %i px', (width) => {
     const { container, layout, model, shell, draw } = setup({
       ...spec,
       width,
@@ -227,49 +222,123 @@ describe('race table renderer', () => {
     const bodyHeight = layout.area.height - headerHeight;
 
     let sawFadingRow = false;
-    for (let tick = 820; tick <= 905; tick++) {
+    const crossingTicks = [
+      ...Array.from({ length: 106 }, (_, i) => 800 + i),
+      ...Array.from({ length: 41 }, (_, i) => 2040 + i),
+    ];
+    for (const tick of crossingTicks) {
       const t = tick / 100;
-      const frame = raceFrameAt(model, t);
-      draw(t);
+      const geometry = draw(t);
       const nodes = [...body.querySelectorAll<HTMLTableRowElement>('tr')];
-      const rendered = new Map(
-        nodes.map((node) => [node.querySelector('.oc-race-table-name')?.textContent, node]),
-      );
-      const bands = frame.items
-        .filter(({ opacity }) => opacity > 0)
-        .map(({ key, rankPos, opacity }) => {
-          if (opacity < 1) sawFadingRow = true;
-          const row = rendered.get(key);
-          if (!row) throw new Error(`Missing ${key} at ${t}`);
-          const rowY = Number.parseFloat(row.style.transform.slice('translateY('.length));
-          expect(rowY, `${key} at ${t}`).toBeCloseTo(rankPos * rowHeight);
-          expect(Number.parseFloat(row.style.opacity), `${key} at ${t}`).toBeCloseTo(opacity);
-          const offset =
-            Number.parseFloat(row.style.getPropertyValue('--oc-race-table-content-offset')) || 0;
-          if (t === 8.8 && (key === 'United Kingdom' || key === 'Italy')) {
-            expect(offset).not.toBe(0);
-            expect(getComputedStyle(row.cells[2]).getPropertyValue('translate')).toBe(
-              `0 ${offset}px`,
-            );
-          }
-          return { key, top: rowY + (rowHeight - 1 - contentHeight) / 2 + offset };
-        })
-        .sort((a, b) => a.top - b.top);
-      expect(rendered.size).toBe(bands.length);
-      for (const [index, band] of bands.entries()) {
+      expect(nodes).toHaveLength(geometry.rows.length);
+      expect(geometry.rows.length).toBeLessThanOrEqual(model.timeline.top);
+      const bands = geometry.rows.map(({ key, y, opacity, atEdge, cells }, index) => {
+        const row = nodes[index];
+        expect(row.querySelector('.oc-race-table-name')?.textContent).toBe(key);
+        const rowY = Number.parseFloat(row.style.transform.slice('translateY('.length));
+        expect(rowY, `${key} at ${t}`).toBeCloseTo(y);
+        expect(Number.parseFloat(row.style.opacity), `${key} at ${t}`).toBeCloseTo(opacity);
+        const offset =
+          Number.parseFloat(row.style.getPropertyValue('--oc-race-table-content-offset')) || 0;
+        if (atEdge) {
+          sawFadingRow = true;
+          expect(offset).toBe(0);
+          expect(y + rowHeight).toBeGreaterThan(bodyHeight);
+        }
+        if (t === 8.8 && (key === 'United Kingdom' || key === 'Italy')) {
+          expect(offset).not.toBe(0);
+          expect(getComputedStyle(row.cells[2]).getPropertyValue('translate')).toBe(
+            `0 ${offset}px`,
+          );
+        }
+        const rankCell = cells[0];
+        if (rankCell.column !== 'rank') throw new Error('Expected a rank cell');
+        const top = rowY + (rowHeight - 1 - contentHeight) / 2 + offset;
+        return {
+          key,
+          rank: Number(rankCell.text),
+          top,
+          bottom: Math.min(bodyHeight, top + contentHeight),
+        };
+      });
+      const visible = bands.filter(({ top }) => top < bodyHeight).sort((a, b) => a.top - b.top);
+      for (const [index, band] of visible.entries()) {
         expect(band.top, `${band.key} at ${t}`).toBeGreaterThanOrEqual(-0.02);
-        expect(band.top + contentHeight, `${band.key} at ${t}`).toBeLessThanOrEqual(
-          bodyHeight + 0.02,
-        );
+        expect(band.rank, `${band.key} at ${t}`).toBe(index + 1);
         if (index > 0) {
           expect(
             band.top,
-            `${band.key} overlaps ${bands[index - 1].key} at ${t}`,
-          ).toBeGreaterThanOrEqual(bands[index - 1].top + contentHeight - 0.02);
+            `${band.key} overlaps ${visible[index - 1].key} at ${t}`,
+          ).toBeGreaterThanOrEqual(visible[index - 1].bottom - 0.02);
         }
       }
     }
     expect(sawFadingRow).toBe(true);
+  });
+
+  it('keeps GDP row motion continuous as Russia rises from the bottom into seventh', () => {
+    const { draw, shell } = setup({
+      ...spec,
+      width: 800,
+      height: 476,
+      data: worldGdpRace.map(({ country, year, gdp }) => ({
+        period: year,
+        place: country,
+        value: gdp,
+      })),
+      race: { autoplay: false },
+    });
+    function read(t: number) {
+      draw(t);
+      const rows = [...shell.markHost.querySelectorAll('tbody tr')];
+      const canada = rows.find(
+        (row) => row.querySelector('.oc-race-table-name')?.textContent === 'Canada',
+      );
+      const russia = rows.find(
+        (row) => row.querySelector('.oc-race-table-name')?.textContent === 'Russia',
+      );
+      if (!canada || !russia) throw new Error('Expected Canada and Russia during the handoff');
+      return {
+        canadaY:
+          Number.parseFloat(canada.style.transform.slice('translateY('.length)) +
+          (Number.parseFloat(canada.style.getPropertyValue('--oc-race-table-content-offset')) || 0),
+        russiaOpacity: Number(russia.style.opacity),
+      };
+    }
+    const before = read(8.186);
+    const after = read(8.187);
+    expect(Math.abs(after.canadaY - before.canadaY)).toBeLessThan(4);
+    expect(after.russiaOpacity - before.russiaOpacity).toBeGreaterThan(0);
+    expect(after.russiaOpacity - before.russiaOpacity).toBeLessThan(0.05);
+  });
+
+  it('clips rows sliding out of the table without pulling their content up into other slots', () => {
+    const { container, draw, shell, layout } = setup();
+    mountWithStyles(container);
+    const body = shell.markHost.querySelector('tbody');
+    if (!body) throw new Error('Expected table body');
+    expect(getComputedStyle(body).overflow).toBe('hidden');
+
+    const { rowHeight } = layout.static;
+    let sawExit = false;
+    let sawEntry = false;
+    for (let tick = 0; tick <= 100; tick++) {
+      const geometry = draw(tick / 100);
+      const edge = geometry.rows.filter(({ y }) => y > rowHeight);
+      expect(edge.length).toBeLessThanOrEqual(1);
+      const [row] = edge;
+      if (!row) continue;
+      sawExit ||= row.key === alpine;
+      sawEntry ||= row.key === 'Cedar';
+      const node = [...body.querySelectorAll('tr')].find(
+        (node) => node.querySelector('.oc-race-table-name')?.textContent === row.key,
+      );
+      expect(node?.style.getPropertyValue('--oc-race-table-content-offset') ?? '').toMatch(
+        /^(0px)?$/,
+      );
+      expect(Number(node?.style.opacity)).toBeLessThan(1);
+    }
+    expect(sawExit && sawEntry).toBe(true);
   });
 
   it('renders matching headers and cells in the resolved custom column order', () => {
@@ -370,7 +439,7 @@ describe('race table renderer', () => {
     expect(body?.lastElementChild).toBe(brookRow);
     expect(brookRow?.cells[4]).toBe(valueCell);
     expect(valueCell?.textContent).toBe('80');
-    expect([brookRow?.cells[0].textContent, brookRow?.cells[1].textContent]).toEqual(['2', '']);
+    expect([brookRow?.cells[0].textContent, brookRow?.cells[1].textContent]).toEqual(['1', '']);
 
     const fading = draw(0.75);
     expect(fading.rows.some(({ opacity }) => opacity < 1)).toBe(true);
