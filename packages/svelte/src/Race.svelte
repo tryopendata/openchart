@@ -36,9 +36,11 @@ let {
 
 let containerEl: HTMLDivElement;
 let instance = $state.raw<RaceInstance | null>(null);
-const periodHandler = $derived(onperiod);
-const inputSpec = $derived(spec);
 let mountedOptionsKey = '';
+let mountedSpecKey = '';
+let periodSubscription:
+  | { instance: RaceInstance; callback: NonNullable<RaceProps['onperiod']>; unsubscribe: () => void }
+  | undefined;
 
 const contextTheme = getVizTheme();
 const contextDarkMode = getVizDarkMode();
@@ -57,41 +59,62 @@ export function getInstance(): RaceInstance | null {
 }
 
 onMount(() => () => {
+  periodSubscription?.unsubscribe();
+  periodSubscription = undefined;
   instance?.destroy();
   instance = null;
 });
 
 $effect(() => {
   const container = containerEl;
-  const nextSpec = inputSpec;
+  const nextSpecKey = JSON.stringify(spec, (_key, value: unknown) => {
+    // Preserve numbers JSON would otherwise lose or reject.
+    if (typeof value === 'number' && !Number.isFinite(value)) return `\0number:${value}`;
+    if (typeof value === 'bigint') return `\0bigint:${value}`;
+    if (typeof value === 'string' && value.startsWith('\0')) return `\0${value}`;
+    return value;
+  });
   const nextOptionsKey = optionsKey;
-  const previous = untrack(() => instance);
 
-  if (previous && nextOptionsKey === mountedOptionsKey) {
-    previous.update(nextSpec);
-    return;
-  }
+  untrack(() => {
+    const previous = instance;
+    if (previous && nextOptionsKey === mountedOptionsKey) {
+      if (nextSpecKey !== mountedSpecKey) {
+        previous.update(spec);
+        mountedSpecKey = nextSpecKey;
+      }
+      return;
+    }
 
-  const state = previous?.getState();
-  const current = createRace(container, nextSpec, untrack(() => options));
-  previous?.destroy();
-  instance = current;
-  mountedOptionsKey = nextOptionsKey;
-  if (state) {
-    // The old chart was still in the host during the replacement mount.
-    current.resize();
-    // Leave the new mount's visibility trigger armed when playback has yet to start.
-    if (state.t > 0 || state.playing) {
-      current.seek(state.t);
-      if (state.playing) current.play();
-      else current.pause();
+    const state = previous?.getState();
+    const current = createRace(container, spec, options);
+    previous?.destroy();
+    instance = current;
+    mountedOptionsKey = nextOptionsKey;
+    mountedSpecKey = nextSpecKey;
+    if (state) {
+      // The old chart was still in the host during the replacement mount.
+      current.resize();
+      // Leave the new mount's visibility trigger armed when playback has yet to start.
+      if (state.t > 0 || state.playing) {
+        current.seek(state.t);
+        if (state.playing) current.play();
+        else current.pause();
+      }
       current.setSpeed(state.speed);
     }
-  }
+  });
 });
 
 $effect(() => {
-  if (instance && periodHandler) return instance.on('period', periodHandler);
+  const current = instance;
+  const callback = onperiod;
+  if (periodSubscription?.instance === current && periodSubscription.callback === callback) return;
+  periodSubscription?.unsubscribe();
+  periodSubscription =
+    current && callback
+      ? { instance: current, callback, unsubscribe: current.on('period', callback) }
+      : undefined;
 });
 </script>
 

@@ -1,10 +1,12 @@
 import type { RaceFrame, RaceSpec } from '@opendata-ai/openchart-core';
-import { render, screen, within } from '@testing-library/svelte';
+import * as vanilla from '@opendata-ai/openchart-vanilla';
+import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import { expect, it, vi } from 'vitest';
 import { createFakeObserver } from '../../../vanilla/src/__test-fixtures__/visibility';
 import { setObserverFactory } from '../../../vanilla/src/visibility';
 import { DARK_MODE_KEY, THEME_KEY } from '../context.js';
 import { Race, Visualization } from '../index';
+import RaceSpecHarness from './RaceSpecHarness.svelte';
 
 const spec: RaceSpec = {
   type: 'race',
@@ -24,6 +26,72 @@ const spec: RaceSpec = {
 };
 
 const updated: RaceSpec = { ...spec, chrome: { title: 'Updated leaders' } };
+
+it('preserves the speed set before playback starts across a theme remount', async () => {
+  const { component, rerender } = render(Race, { props: { spec } });
+  const previous = component.getInstance();
+  previous?.setSpeed(2);
+
+  await rerender({ theme: { fonts: { sizes: { title: 32 } } } });
+
+  expect(component.getInstance()).not.toBe(previous);
+  expect(component.getInstance()?.getState()).toMatchObject({ t: 0, playing: false, speed: 2 });
+});
+
+it('updates on in-place spec edits and reuses the chart for equal snapshots', async () => {
+  const { component, getByRole } = render(RaceSpecHarness, { props: { initialSpec: spec } });
+  const instance = component.getInstance();
+  if (!instance) throw new Error('Race did not mount');
+  const update = vi.spyOn(instance, 'update');
+
+  const roundedMark = { type: 'bar', cornerRadius: 8 };
+  await fireEvent.click(getByRole('button', { name: 'Round bars' }));
+  expect(update).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ mark: roundedMark }));
+
+  const chart = getByRole('img');
+  await fireEvent.click(getByRole('button', { name: 'Render an equal spec' }));
+  expect(update).toHaveBeenCalledTimes(1);
+  expect(getByRole('img')).toBe(chart);
+});
+
+it('moves the initial period subscription to the new instance on remount', async () => {
+  const subscriptions: Array<{
+    instance: vanilla.RaceInstance;
+    events: string[];
+    removed: number;
+  }> = [];
+  const createRace = vanilla.createRace;
+  const mountSpy = vi.spyOn(vanilla, 'createRace').mockImplementation((...args) => {
+    const instance = createRace(...args);
+    const record: (typeof subscriptions)[number] = { instance, events: [], removed: 0 };
+    subscriptions.push(record);
+    const listen = instance.on;
+    vi.spyOn(instance, 'on').mockImplementation((event, callback) => {
+      record.events.push(event);
+      const unsubscribe = listen(event, callback);
+      return () => {
+        record.removed++;
+        unsubscribe();
+      };
+    });
+    return instance;
+  });
+  try {
+    const onPeriod = (_period: RaceFrame['period']) => {};
+    const { component, rerender } = render(Race, { props: { spec, onperiod: onPeriod } });
+    expect(component.getInstance()).toBe(subscriptions[0]?.instance);
+
+    await rerender({ darkMode: 'force' });
+
+    expect(component.getInstance()).toBe(subscriptions[1]?.instance);
+    expect(subscriptions.map(({ events, removed }) => ({ events, removed }))).toEqual([
+      { events: ['period'], removed: 1 },
+      { events: ['period'], removed: 0 },
+    ]);
+  } finally {
+    mountSpy.mockRestore();
+  }
+});
 
 it('mounts a playable race and forwards the wrapper props', () => {
   const { component, container } = render(Race, {

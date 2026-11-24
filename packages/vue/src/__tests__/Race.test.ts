@@ -1,5 +1,6 @@
 import type { RaceFrame, RaceSpec } from '@opendata-ai/openchart-core';
 import type { RaceInstance } from '@opendata-ai/openchart-vanilla';
+import * as vanilla from '@opendata-ai/openchart-vanilla';
 import { enableAutoUnmount, mount } from '@vue/test-utils';
 import { afterEach, expect, it, vi } from 'vitest';
 import { defineComponent, h, nextTick, shallowRef } from 'vue';
@@ -25,6 +26,85 @@ const spec: RaceSpec = {
 };
 
 const updated: RaceSpec = { ...spec, chrome: { title: 'Updated leaders' } };
+
+it('reuses the chart and controls for an equal inline spec', async () => {
+  const { getInstance, setProps, wrapper } = renderRace({ spec });
+  const update = vi.spyOn(getInstance(), 'update');
+  const chart = wrapper.get('svg[role="img"]').element;
+  const play = wrapper.get('button[aria-label="Play"]').element;
+
+  await setProps({ spec: structuredClone(spec) });
+
+  expect(update).not.toHaveBeenCalled();
+  expect(wrapper.get('svg[role="img"]').element).toBe(chart);
+  expect(wrapper.get('button[aria-label="Play"]').element).toBe(play);
+});
+
+it('keeps the instance and Play focus for an equal inline theme', async () => {
+  const theme = { fonts: { sizes: { title: 32 } } };
+  const { getInstance, setProps, wrapper } = renderRace({ spec, theme });
+  document.body.append(wrapper.element);
+  const instance = getInstance();
+  const play = wrapper.get<HTMLButtonElement>('button[aria-label="Play"]').element;
+  play.focus();
+  expect(document.activeElement).toBe(play);
+
+  await setProps({ theme: structuredClone(theme) });
+
+  expect(getInstance()).toBe(instance);
+  expect(wrapper.get('button[aria-label="Play"]').element).toBe(play);
+  expect(document.activeElement).toBe(play);
+});
+
+it('preserves the speed set before playback starts across a theme remount', async () => {
+  const { getInstance, setProps } = renderRace({ spec });
+  const previous = getInstance();
+  previous.setSpeed(2);
+
+  await setProps({ theme: { fonts: { sizes: { title: 32 } } } });
+
+  expect(getInstance()).not.toBe(previous);
+  expect(getInstance().getState()).toMatchObject({ t: 0, playing: false, speed: 2 });
+});
+
+it('moves the initial period subscription to the new instance on remount', async () => {
+  const subscriptions: Array<{
+    instance: vanilla.RaceInstance;
+    events: string[];
+    removed: number;
+  }> = [];
+  const createRace = vanilla.createRace;
+  const mountSpy = vi.spyOn(vanilla, 'createRace').mockImplementation((...args) => {
+    const instance = createRace(...args);
+    const record: (typeof subscriptions)[number] = { instance, events: [], removed: 0 };
+    subscriptions.push(record);
+    const listen = instance.on;
+    vi.spyOn(instance, 'on').mockImplementation((event, callback) => {
+      record.events.push(event);
+      const unsubscribe = listen(event, callback);
+      return () => {
+        record.removed++;
+        unsubscribe();
+      };
+    });
+    return instance;
+  });
+  try {
+    const onPeriod = (_period: RaceFrame['period']) => {};
+    const { getInstance, setProps } = renderRace({ spec, onPeriod });
+    expect(getInstance()).toBe(subscriptions[0]?.instance);
+
+    await setProps({ darkMode: 'force' });
+
+    expect(getInstance()).toBe(subscriptions[1]?.instance);
+    expect(subscriptions.map(({ events, removed }) => ({ events, removed }))).toEqual([
+      { events: ['period'], removed: 1 },
+      { events: ['period'], removed: 0 },
+    ]);
+  } finally {
+    mountSpy.mockRestore();
+  }
+});
 
 enableAutoUnmount(afterEach);
 

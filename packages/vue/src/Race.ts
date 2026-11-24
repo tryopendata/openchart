@@ -51,9 +51,9 @@ export const Race = defineComponent({
   setup(props, { emit, expose }) {
     const containerRef = ref<HTMLDivElement | null>(null);
     let instance: RaceInstance | null = null;
-    let mountedOptions: RaceMountOptions | undefined;
+    let mountedOptionsKey = '';
+    let mountedSpecKey = '';
     let unsubscribe: (() => void) | undefined;
-    const specRevision = ref(0);
     const contextTheme = inject(VizThemeKey, undefined);
     const contextDarkMode = inject(VizDarkModeKey, undefined);
     const options = computed<RaceMountOptions>(() => ({
@@ -63,6 +63,16 @@ export const Race = defineComponent({
       watermark: props.watermark,
       onWarn: (message) => (props.onWarn ?? console.warn)(message),
     }));
+    const optionsKey = computed(() => JSON.stringify(options.value));
+    const specKey = computed(() =>
+      JSON.stringify(props.spec, (_key, value: unknown) => {
+        // Preserve numbers JSON would otherwise lose or reject.
+        if (typeof value === 'number' && !Number.isFinite(value)) return `\0number:${value}`;
+        if (typeof value === 'bigint') return `\0bigint:${value}`;
+        if (typeof value === 'string' && value.startsWith('\0')) return `\0${value}`;
+        return value;
+      }),
+    );
 
     function subscribe() {
       unsubscribe?.();
@@ -79,15 +89,16 @@ export const Race = defineComponent({
       instance = null;
     }
 
-    function mountRace(nextOptions = options.value) {
+    function mountRace(nextOptionsKey = optionsKey.value, nextSpecKey = specKey.value) {
       const container = containerRef.value;
       if (!container) return;
       const state = instance?.getState();
-      const current = createRace(container, props.spec, nextOptions);
+      const current = createRace(container, props.spec, options.value);
       destroyRace();
 
       instance = current;
-      mountedOptions = nextOptions;
+      mountedOptionsKey = nextOptionsKey;
+      mountedSpecKey = nextSpecKey;
       if (state) {
         // The old chart was still in the host during the replacement mount.
         current.resize();
@@ -96,8 +107,8 @@ export const Race = defineComponent({
           current.seek(state.t);
           if (state.playing) current.play();
           else current.pause();
-          current.setSpeed(state.speed);
         }
+        current.setSpeed(state.speed);
       }
       subscribe();
     }
@@ -112,25 +123,17 @@ export const Race = defineComponent({
     onUnmounted(destroyRace);
 
     watch(
-      () => props.spec,
-      () => {
-        specRevision.value++;
-      },
-      { deep: true },
-    );
-
-    watch(
-      [options, specRevision, () => props.onPeriod, () => props.onPeriodOnce],
-      (
-        [nextOptions, revision, onPeriod, onPeriodOnce],
-        [, previousRevision, previous, previousOnce],
-      ) => {
+      [optionsKey, specKey, () => props.onPeriod, () => props.onPeriodOnce],
+      ([nextOptionsKey, nextSpecKey, onPeriod, onPeriodOnce], [, , previous, previousOnce]) => {
         if (onPeriod !== previous || onPeriodOnce !== previousOnce) subscribe();
-        if (nextOptions !== mountedOptions) {
-          mountRace(nextOptions);
+        if (nextOptionsKey !== mountedOptionsKey) {
+          mountRace(nextOptionsKey, nextSpecKey);
           return;
         }
-        if (revision !== previousRevision) instance?.update(props.spec);
+        if (instance && nextSpecKey !== mountedSpecKey) {
+          instance.update(props.spec);
+          mountedSpecKey = nextSpecKey;
+        }
       },
       { flush: 'post' },
     );

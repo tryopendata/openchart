@@ -44,8 +44,8 @@ export const Race = forwardRef<RaceHandle, RaceProps>(function Race(
   const containerRef = useRef<HTMLDivElement>(null);
   const mounted = useRef<{
     instance: RaceInstance;
-    options: RaceMountOptions;
-    spec: RaceSpec;
+    optionsKey: string;
+    specKey: string;
   } | null>(null);
   const warnRef = useRef(onWarn);
   useEffect(() => {
@@ -62,6 +62,7 @@ export const Race = forwardRef<RaceHandle, RaceProps>(function Race(
     }),
     [contextTheme, theme, resolvedDarkMode, autoResize, watermark],
   );
+  const optionsKey = JSON.stringify(options);
 
   useImperativeHandle(
     ref,
@@ -77,10 +78,17 @@ export const Race = forwardRef<RaceHandle, RaceProps>(function Race(
     const container = containerRef.current;
     if (!container) return;
     const current = mounted.current;
-    if (current?.options === options) {
-      if (spec !== current.spec) {
+    const specKey = JSON.stringify(spec, (_key, value: unknown) => {
+      // Preserve numbers JSON would otherwise lose or reject.
+      if (typeof value === 'number' && !Number.isFinite(value)) return `\0number:${value}`;
+      if (typeof value === 'bigint') return `\0bigint:${value}`;
+      if (typeof value === 'string' && value.startsWith('\0')) return `\0${value}`;
+      return value;
+    });
+    if (current?.optionsKey === optionsKey) {
+      if (specKey !== current.specKey) {
         current.instance.update(spec);
-        current.spec = spec;
+        current.specKey = specKey;
       }
       return;
     }
@@ -88,7 +96,7 @@ export const Race = forwardRef<RaceHandle, RaceProps>(function Race(
     const state = current?.instance.getState();
     const instance = createRace(container, spec, options);
     current?.instance.destroy();
-    mounted.current = { instance, options, spec };
+    mounted.current = { instance, optionsKey, specKey };
     if (state) {
       // The old chart was still in the host during the replacement mount.
       instance.resize();
@@ -97,15 +105,16 @@ export const Race = forwardRef<RaceHandle, RaceProps>(function Race(
         instance.seek(state.t);
         if (state.playing) instance.play();
         else instance.pause();
-        instance.setSpeed(state.speed);
       }
+      instance.setSpeed(state.speed);
     }
-  }, [spec, options]);
+  }, [spec, options, optionsKey]);
 
   useEffect(() => {
     const current = mounted.current;
-    if (current?.options === options && onPeriod) return current.instance.on('period', onPeriod);
-  }, [options, onPeriod]);
+    if (current?.optionsKey === optionsKey && onPeriod)
+      return current.instance.on('period', onPeriod);
+  }, [optionsKey, onPeriod]);
 
   useEffect(
     () => () => {

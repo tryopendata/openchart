@@ -1,4 +1,5 @@
 import type { RaceFrame, RaceSpec } from '@opendata-ai/openchart-core';
+import * as vanilla from '@opendata-ai/openchart-vanilla';
 import { render, screen, within } from '@testing-library/react';
 import { createRef, StrictMode } from 'react';
 import { expect, it, vi } from 'vitest';
@@ -24,6 +25,90 @@ const spec: RaceSpec = {
 };
 
 const updated: RaceSpec = { ...spec, chrome: { title: 'Updated leaders' } };
+
+it('reuses the chart and controls for an equal inline spec', () => {
+  const ref = createRef<RaceHandle>();
+  const { rerender } = render(<Race ref={ref} spec={spec} />);
+  const instance = ref.current?.instance;
+  if (!instance) throw new Error('Race did not mount');
+  const update = vi.spyOn(instance, 'update');
+  const chart = screen.getByRole('img');
+  const play = screen.getByRole('button', { name: 'Play' });
+
+  rerender(<Race ref={ref} spec={structuredClone(spec)} />);
+
+  expect(update).not.toHaveBeenCalled();
+  expect(screen.getByRole('img')).toBe(chart);
+  expect(screen.getByRole('button', { name: 'Play' })).toBe(play);
+});
+
+it('keeps the instance and Play focus for an equal inline theme', () => {
+  const ref = createRef<RaceHandle>();
+  const theme = { fonts: { sizes: { title: 32 } } };
+  const { rerender } = render(<Race ref={ref} spec={spec} theme={theme} />);
+  const instance = ref.current?.instance;
+  const play = screen.getByRole('button', { name: 'Play' });
+  play.focus();
+  expect(play).toHaveFocus();
+
+  rerender(<Race ref={ref} spec={spec} theme={structuredClone(theme)} />);
+
+  expect(ref.current?.instance).toBe(instance);
+  expect(screen.getByRole('button', { name: 'Play' })).toBe(play);
+  expect(play).toHaveFocus();
+});
+
+it('preserves the speed set before playback starts across a theme remount', () => {
+  const ref = createRef<RaceHandle>();
+  const { rerender } = render(<Race ref={ref} spec={spec} />);
+  const previous = ref.current?.instance;
+  previous?.setSpeed(2);
+
+  rerender(<Race ref={ref} spec={spec} theme={{ fonts: { sizes: { title: 32 } } }} />);
+
+  expect(ref.current?.instance).not.toBe(previous);
+  expect(ref.current?.instance?.getState()).toMatchObject({ t: 0, playing: false, speed: 2 });
+});
+
+it('moves the initial period subscription to the new instance on remount', () => {
+  const subscriptions: Array<{
+    instance: vanilla.RaceInstance;
+    events: string[];
+    removed: number;
+  }> = [];
+  const createRace = vanilla.createRace;
+  const mountSpy = vi.spyOn(vanilla, 'createRace').mockImplementation((...args) => {
+    const instance = createRace(...args);
+    const record: (typeof subscriptions)[number] = { instance, events: [], removed: 0 };
+    subscriptions.push(record);
+    const listen = instance.on;
+    vi.spyOn(instance, 'on').mockImplementation((event, callback) => {
+      record.events.push(event);
+      const unsubscribe = listen(event, callback);
+      return () => {
+        record.removed++;
+        unsubscribe();
+      };
+    });
+    return instance;
+  });
+  try {
+    const onPeriod = (_period: RaceFrame['period']) => {};
+    const ref = createRef<RaceHandle>();
+    const { rerender } = render(<Race ref={ref} spec={spec} onPeriod={onPeriod} />);
+    expect(ref.current?.instance).toBe(subscriptions[0]?.instance);
+
+    rerender(<Race ref={ref} spec={spec} darkMode="force" onPeriod={onPeriod} />);
+
+    expect(ref.current?.instance).toBe(subscriptions[1]?.instance);
+    expect(subscriptions.map(({ events, removed }) => ({ events, removed }))).toEqual([
+      { events: ['period'], removed: 1 },
+      { events: ['period'], removed: 0 },
+    ]);
+  } finally {
+    mountSpy.mockRestore();
+  }
+});
 
 it('mounts one playable race in Strict Mode and forwards the wrapper props', () => {
   const ref = createRef<RaceHandle>();
