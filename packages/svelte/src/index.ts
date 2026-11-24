@@ -98,6 +98,8 @@ export { getVizDarkMode, getVizTheme, setVizDarkMode, setVizTheme } from './cont
 export { default as DataTable } from './DataTable.svelte';
 export { default as GeoMap } from './GeoMap.svelte';
 export { default as Graph } from './Graph.svelte';
+export type { RaceProps } from './Race.svelte';
+export { default as Race } from './Race.svelte';
 export { default as Sankey } from './Sankey.svelte';
 export { default as VizThemeProvider } from './ThemeProvider.svelte';
 export { default as TileMap } from './TileMap.svelte';

@@ -20,6 +20,7 @@ import Chart from './Chart.svelte';
 import DataTable from './DataTable.svelte';
 import GeoMap from './GeoMap.svelte';
 import Graph from './Graph.svelte';
+import Race from './Race.svelte';
 import Sankey from './Sankey.svelte';
 import TileMap from './TileMap.svelte';
 
@@ -36,10 +37,6 @@ let {
   class?: string;
   style?: string;
 } = $props();
-
-function throwRaceRenderError(): never {
-  throw new Error('Race specs render through createRace');
-}
 </script>
 
 {#if isTableSpec(spec)}
@@ -55,7 +52,7 @@ function throwRaceRenderError(): never {
 {:else if isGeoMapSpec(spec)}
   <GeoMap {spec} {theme} {darkMode} class={className} {style} />
 {:else if isRaceSpec(spec)}
-  {throwRaceRenderError()}
+  <Race {spec} {theme} {darkMode} class={className} {style} />
 {:else}
   <Chart {spec} {theme} {darkMode} class={className} {style} />
 {/if}

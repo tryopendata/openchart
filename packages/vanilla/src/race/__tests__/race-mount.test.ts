@@ -190,6 +190,7 @@ describe('createRace', () => {
       t: 0,
       playing: false,
       speed: 1,
+      ended: false,
       period: { index: 0, value: 2020, label: '2020' },
     });
     expect(frames.size).toBe(0);
@@ -284,6 +285,7 @@ describe('createRace', () => {
       t: 2,
       playing: false,
       speed: 1,
+      ended: false,
       period: { index: 2, value: 2022, label: '2022' },
     });
     expect(host.querySelector('.oc-race-period')?.textContent).toBe('2022');
@@ -687,7 +689,7 @@ describe('createRace', () => {
       },
     });
     chart.seek(10);
-    expect(chart.getState().t).toBe(2);
+    expect(chart.getState()).toMatchObject({ t: 2, ended: false });
     chart.seek(-10);
     expect(chart.getState().t).toBe(0);
     expect(() => chart.seek(NaN)).toThrow(RangeError);
@@ -701,6 +703,7 @@ describe('createRace', () => {
       t: 1.25,
       playing: true,
       speed: 2,
+      ended: false,
       period: { index: 1, value: 2021, label: '2021 CE' },
     });
     chart.pause();
@@ -876,6 +879,7 @@ describe('createRace', () => {
       t: 1,
       playing: true,
       speed: 2,
+      ended: false,
       period: { index: 1, value: 2021, label: '2021' },
     });
     expect(scrub().value).toBe('1');
@@ -920,11 +924,11 @@ describe('createRace', () => {
     tick(0);
     tick(2000);
     tick(3500);
-    expect(chart.getState()).toMatchObject({ t: 2, playing: false });
+    expect(chart.getState()).toMatchObject({ t: 2, playing: false, ended: true });
     chart.update({ ...spec, race: { ...spec.race, duration: 3000 } });
-    expect(chart.getState()).toMatchObject({ t: 2, playing: false });
+    expect(chart.getState()).toMatchObject({ t: 2, playing: false, ended: true });
     button().click();
-    expect(chart.getState()).toMatchObject({ t: 0, playing: true });
+    expect(chart.getState()).toMatchObject({ t: 0, playing: true, ended: false });
     expect(rowKeys()).toEqual(['A', 'B']);
   });
 
