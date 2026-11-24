@@ -79,21 +79,22 @@ describe('raceA11y', () => {
     expect(dataTableFallback.at(-1)).toEqual(['2022 CE', 'c (30.0)', 'b (20.0)']);
   });
 
-  it('gets a whole period ranking without recomputing it for each tied key', () => {
-    const model = prepareRace(
-      {
-        ...spec,
-        data: spec.data.map((row) => ({ ...row, score: row.year === 2021 ? 10 : row.score })),
-      },
-      {},
-    );
+  it('matches every exact rank and uses exactRank only for tied values', () => {
+    const model = prepareRace({ ...spec, race: { ...spec.race, top: 3 } }, {});
     using exactRank = vi.spyOn(model.timeline, 'exactRank');
-    expect(raceA11y(model).dataTableFallback[2]).toEqual([
-      '2021 CE',
-      'Beta (10.0)',
-      'Alpha (10.0)',
+    const { dataTableFallback } = raceA11y(model);
+    expect(exactRank.mock.calls.toSorted()).toEqual([
+      [0, 1],
+      [1, 1],
     ]);
-    expect(exactRank).not.toHaveBeenCalled();
+    for (const [period, label] of model.periodLabels.entries()) {
+      const expected = [label];
+      for (const [key, name] of model.matrix.labels.entries()) {
+        const rank = model.timeline.exactRank(key, period);
+        expected[rank + 1] = `${name} (${model.formatValue(model.timeline.valueAt(key, period))})`;
+      }
+      expect(dataTableFallback[period + 1]).toEqual(expected);
+    }
   });
 
   it('isolates the accessibility metadata returned in each layout', () => {

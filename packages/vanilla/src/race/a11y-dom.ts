@@ -4,17 +4,29 @@ import { applySrOnlyStyles } from '../dom-helpers';
 import { pageIdScope } from '../svg-ids';
 import type { RaceShell } from './shell';
 
-type RaceA11y = { announce(frame: RaceFrame): void; destroy(): void };
-
-const attachByA11y = new WeakMap<RaceA11y, (shell: RaceShell, model: RaceModel) => boolean>();
-
-/** Move the existing accessibility nodes if the new view exposes the same name and metadata. */
-export function moveRaceA11y(a11y: RaceA11y, shell: RaceShell, model: RaceModel): boolean {
-  return attachByA11y.get(a11y)?.(shell, model) ?? false;
-}
+type RaceA11y = {
+  attach(shell: RaceShell, model: RaceModel): boolean;
+  announce(frame: RaceFrame): void;
+  destroy(): void;
+};
 
 function raceName(model: RaceModel): string {
   return model.spec.chrome.title?.text?.trim() || 'Race chart';
+}
+
+function sameMetadata(a: A11yMetadata, b: A11yMetadata): boolean {
+  const rows = b.dataTableFallback;
+  return (
+    a.altText === b.altText &&
+    a.hidden === b.hidden &&
+    a.totalRows === b.totalRows &&
+    a.dataTableFallback.length === rows.length &&
+    a.dataTableFallback.every(
+      (row, index) =>
+        row.length === rows[index].length &&
+        row.every((cell, column) => cell === rows[index][column]),
+    )
+  );
 }
 
 function appendPeriodTable(wrapper: HTMLElement, name: string, metadata: A11yMetadata): void {
@@ -22,9 +34,10 @@ function appendPeriodTable(wrapper: HTMLElement, name: string, metadata: A11yMet
   if (!headers) return;
 
   const table = wrapper.ownerDocument.createElement('table');
-  table.setAttribute('aria-label', `Data table: ${name}`);
+  const caption = table.createCaption();
+  caption.textContent = `${name} by period.`;
   if (metadata.totalRows !== undefined) {
-    table.createCaption().textContent = `Showing ${rows.length} of ${metadata.totalRows} periods, evenly sampled across the race.`;
+    caption.textContent += ` Showing ${rows.length} of ${metadata.totalRows} periods, evenly sampled.`;
   }
   const heading = table.createTHead().insertRow();
   for (const label of headers) {
@@ -34,8 +47,12 @@ function appendPeriodTable(wrapper: HTMLElement, name: string, metadata: A11yMet
     heading.append(cell);
   }
   const body = table.createTBody();
-  for (const values of rows) {
+  for (const [period, ...values] of rows) {
     const row = body.insertRow();
+    const rowHeader = wrapper.ownerDocument.createElement('th');
+    rowHeader.scope = 'row';
+    rowHeader.textContent = String(period);
+    row.append(rowHeader);
     for (const value of values) row.insertCell().textContent = String(value);
   }
   wrapper.append(table);
@@ -63,21 +80,21 @@ export function createRaceA11y(shell: RaceShell, model: RaceModel): RaceA11y {
   wrapper.append(live);
 
   let currentModel = model;
-  let metadataSignature: string | undefined;
+  let currentShell = shell;
+  let destroyed = false;
   let detachDescription: (() => void) | undefined;
-  function attach({ root, svg }: RaceShell, nextModel: RaceModel): boolean {
+  function attach(nextShell: RaceShell, nextModel: RaceModel): boolean {
+    if (destroyed) return false;
     if (currentModel !== nextModel) {
-      metadataSignature ??= JSON.stringify(metadata);
-      if (
-        raceName(nextModel) !== name ||
-        JSON.stringify(raceA11y(nextModel)) !== metadataSignature
-      ) {
+      if (raceName(nextModel) !== name || !sameMetadata(metadata, raceA11y(nextModel))) {
         return false;
       }
       currentModel = nextModel;
     }
+    currentShell = nextShell;
     if (metadata.hidden) return true;
 
+    const { root, svg } = nextShell;
     detachDescription?.();
     const label = svg.getAttribute('aria-label');
     const describedBy = svg.getAttribute('aria-describedby');
@@ -94,6 +111,7 @@ export function createRaceA11y(shell: RaceShell, model: RaceModel): RaceA11y {
   }
 
   const a11y: RaceA11y = {
+    attach,
     announce(frame) {
       if (!detachDescription) return;
       // Fades can leave an exact leader out of the visual frame's items.
@@ -101,16 +119,18 @@ export function createRaceA11y(shell: RaceShell, model: RaceModel): RaceA11y {
       const message = leaders.length
         ? `${leaders.join(', ')} ${leaders.length === 1 ? 'leads' : 'lead'}`
         : 'No ranked entries';
-      live.textContent = `${frame.period.label}: ${message}`;
+      const active = currentShell.root.ownerDocument.activeElement;
+      const scrubberFocused =
+        active?.matches('input[type="range"]') && currentShell.controlsSlot.contains(active);
+      live.textContent = scrubberFocused ? message : `${frame.period.label}: ${message}`;
     },
     destroy() {
+      destroyed = true;
       detachDescription?.();
       detachDescription = undefined;
-      attachByA11y.delete(a11y);
       wrapper.remove();
     },
   };
   attach(shell, model);
-  attachByA11y.set(a11y, attach);
   return a11y;
 }

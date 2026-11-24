@@ -1,6 +1,6 @@
 import type { RaceSpec } from '@opendata-ai/openchart-core';
 import { layoutRace, prepareRace, raceFrameAt } from '@opendata-ai/openchart-engine';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createRaceA11y } from '../a11y-dom';
 import { createRaceShell } from '../shell';
 
@@ -51,13 +51,17 @@ describe('createRaceA11y', () => {
     expect(other.shell.svg.getAttribute('aria-describedby')).not.toBe(description);
 
     const table = shell.root.querySelector('table');
-    expect(table?.getAttribute('aria-label')).toBe('Data table: Gross domestic product');
+    expect(table?.querySelector('tbody tr > th[scope="row"]:first-child')?.textContent).toBe(
+      '1994',
+    );
+    expect(table?.getAttribute('aria-label')).toBeNull();
+    expect(table?.caption?.textContent).toBe('Gross domestic product by period.');
     expect(
       Array.from(table?.querySelectorAll('th[scope="col"]') ?? [], (th) => th.textContent),
     ).toEqual(['Period', 'Rank 1', 'Rank 2', 'Rank 3', 'Rank 4']);
     expect(
       Array.from(table?.querySelectorAll('tbody tr') ?? [], (row) =>
-        Array.from(row.querySelectorAll('td'), (cell) => cell.textContent),
+        Array.from(row.querySelectorAll('th[scope="row"], td'), (cell) => cell.textContent),
       ),
     ).toEqual([
       ['1994', 'United States (7)', 'Japan (5)', 'Germany (2)', 'Canada (1)'],
@@ -66,6 +70,53 @@ describe('createRaceA11y', () => {
     ]);
     expect(table?.parentElement?.style.clipPath).toBe('inset(50%)');
     expect(table?.parentElement?.style.overflow).toBe('clip');
+  });
+
+  it('includes the sampling note in the table name and marks each period as a row header', () => {
+    const { shell } = setup({
+      ...spec,
+      race: { top: 1 },
+      data: Array.from({ length: 121 }, (_, index) => ({
+        year: 1900 + index,
+        country: 'Japan',
+        gdp: index,
+      })),
+    });
+    const table = shell.root.querySelector('table');
+    expect(table?.caption?.textContent).toBe(
+      'Gross domestic product by period. Showing 60 of 121 periods, evenly sampled.',
+    );
+    expect(table?.hasAttribute('aria-label')).toBe(false);
+    const headers = table?.querySelectorAll('tbody tr > th[scope="row"]:first-child');
+    expect(headers).toHaveLength(60);
+    expect(headers?.[0].textContent).toBe('1900');
+    expect(headers?.[59].textContent).toBe('2020');
+  });
+
+  it('reattaches the same nodes for matching metadata and rejects changed rows', () => {
+    const { shell, a11y } = setup();
+    const table = shell.root.querySelector('table');
+    const matching = prepareRace(spec, {});
+    const next = createRaceShell(host, layoutRace(matching, { width: 400, height: 400 }), 'next');
+    expect(a11y.attach(next, matching)).toBe(true);
+    expect(next.root.querySelector('table')).toBe(table);
+    const changed = prepareRace(
+      {
+        ...spec,
+        data: spec.data.map((row) => ({
+          ...row,
+          gdp: typeof row.gdp === 'number' ? row.gdp * 2 : row.gdp,
+        })),
+      },
+      {},
+    );
+    const layout = layoutRace(changed, { width: 400, height: 400 });
+    expect(layout.a11y.altText).toBe(
+      document.getElementById(next.svg.getAttribute('aria-describedby') ?? '')?.textContent,
+    );
+    const updated = createRaceShell(host, layout, 'updated');
+    expect(a11y.attach(updated, changed)).toBe(false);
+    expect(next.root.querySelector('table')).toBe(table);
   });
 
   it('announces up to three current leaders and handles a period with no ranked entries', () => {
@@ -78,7 +129,7 @@ describe('createRaceA11y', () => {
     expect(live?.textContent).toBe('1996: No ranked entries');
   });
 
-  it('announces keys for blank labels and resolves a tie without reranking each tied key', () => {
+  it('announces keys for blank labels in exact tie order', () => {
     const { model, shell, a11y } = setup({
       ...spec,
       encoding: { ...spec.encoding, label: { field: 'label' } },
@@ -88,13 +139,10 @@ describe('createRaceA11y', () => {
         gdp: row.year === 1995 && row.country === 'Germany' ? 6 : row.gdp,
       })),
     });
-    const frame = raceFrameAt(model, 1);
-    using exactRank = vi.spyOn(model.timeline, 'exactRank');
-    a11y.announce(frame);
+    a11y.announce(raceFrameAt(model, 1));
     expect(shell.root.querySelector('[aria-live]')?.textContent).toBe(
       '1995: United States, Japan, Germany lead',
     );
-    expect(exactRank).not.toHaveBeenCalled();
   });
 
   it('uses a fallback title and keeps announcements when the table is disabled', () => {

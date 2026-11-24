@@ -339,16 +339,30 @@ describe('createRace', () => {
     expect(liveRegion()?.textContent).toBe('2021: B, A lead');
 
     const input = scrub();
-    input.value = '0';
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    expect(liveRegion()?.textContent).toBe('2020: A, B lead');
+    input.focus();
+    for (const value of ['0.5', '0']) {
+      input.value = value;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      expect(chart.getState().t).toBe(Number(value));
+      expect(liveRegion()?.textContent).toBe('2021: B, A lead');
+    }
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(liveRegion()?.textContent).toBe('A, B lead');
     expect(input.getAttribute('aria-valuetext')).toBe('2020');
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(liveRegion()?.textContent).toBe('B, A lead');
+    expect(input.getAttribute('aria-valuetext')).toBe('2021');
+
+    button().focus();
+    button().dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    expect(liveRegion()?.textContent).toBe('2020: A, B lead');
+    chart.seek(1);
     expect(liveRegion()?.textContent).toBe('2021: B, A lead');
     expect(input.getAttribute('aria-valuetext')).toBe('2021');
 
     chart.play();
     chart.seek(2);
+    input.dispatchEvent(new Event('change', { bubbles: true }));
     tick(1500);
     tick(3000);
     expect(chart.getState()).toMatchObject({ t: 2, playing: false });
@@ -365,10 +379,66 @@ describe('createRace', () => {
     input.dispatchEvent(new Event('input', { bubbles: true }));
     expect(chart.getState()).toMatchObject({ t: 1, playing: false });
     expect(input.getAttribute('aria-valuetext')).toBe('2021');
+    expect(liveRegion()?.textContent).toBe('');
+    input.dispatchEvent(new Event('change', { bubbles: true }));
     expect(liveRegion()?.textContent).toBe('2021: B, A lead');
     chart.seek(0.25);
     expect(chart.getState().t).toBe(0.25);
     expect(liveRegion()?.textContent).toBe('2020: A, B lead');
+  });
+
+  it('uses the scrubber value text for the period when seeking or stepping with focus there', () => {
+    const chart = mount();
+    const input = scrub();
+    input.focus();
+    chart.seek(1);
+    expect(input.getAttribute('aria-valuetext')).toBe('2021');
+    expect(liveRegion()?.textContent).toBe('B, A lead');
+
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    expect(input.getAttribute('aria-valuetext')).toBe('2020');
+    expect(liveRegion()?.textContent).toBe('A, B lead');
+  });
+
+  it('reports a throwing listener and continues playback, seek and update dispatch', () => {
+    const chart = mount();
+    const failure = new Error('listener failed');
+    const reported: unknown[] = [];
+    const periods: number[] = [];
+    vi.stubGlobal('reportError', (error: unknown) => reported.push(error));
+    chart.on('period', () => {
+      throw failure;
+    });
+    chart.on('period', ({ index }) => periods.push(index));
+
+    chart.play();
+    tick(0);
+    expect(() => tick(2000)).not.toThrow();
+    expect(chart.getState()).toMatchObject({ t: 2, playing: true });
+    expect(frames.size).toBe(1);
+    expect(periods).toEqual([1, 2]);
+    expect(() => chart.seek(2)).not.toThrow();
+    expect(() =>
+      chart.update({ ...spec, data: spec.data.filter(({ year }) => year < 2022) }),
+    ).not.toThrow();
+    expect(chart.getState()).toMatchObject({ t: 1, playing: true });
+    expect(periods).toEqual([1, 2, 2, 1]);
+    expect(reported).toEqual(Array(4).fill(failure));
+  });
+
+  it('reports a listener failure in a microtask when reportError is unavailable', () => {
+    const chart = mount();
+    const failure = new Error('listener failed');
+    const reportTasks: Array<() => void> = [];
+    vi.stubGlobal('reportError', undefined);
+    vi.stubGlobal('queueMicrotask', (callback: () => void) => reportTasks.push(callback));
+    chart.on('period', () => {
+      throw failure;
+    });
+
+    expect(() => chart.seek(1)).not.toThrow();
+    expect(reportTasks).toHaveLength(1);
+    expect(reportTasks[0]).toThrow(failure);
   });
 
   it('emits every crossed period once on a delayed frame and emits the loop destination', () => {
@@ -441,7 +511,7 @@ describe('createRace', () => {
     expect(host.children).toHaveLength(0);
   });
 
-  it('delivers periods already crossed before a listener-triggered seek', () => {
+  it('drops undelivered crossings when a listener seeks away', () => {
     const chart = mount();
     const periods: number[] = [];
     chart.on('period', ({ index }) => {
@@ -451,8 +521,23 @@ describe('createRace', () => {
     chart.play();
     tick(0);
     tick(2000);
-    expect(periods).toEqual([1, 2, 0]);
+    expect(periods).toEqual([1, 0]);
     expect(chart.getState()).toMatchObject({ t: 0, playing: true });
+  });
+
+  it('drops undelivered crossings when a listener update clamps the playhead', () => {
+    const chart = mount();
+    const periods: number[] = [];
+    const stop = chart.on('period', () => {
+      stop();
+      chart.update({ ...spec, data: spec.data.filter(({ year }) => year < 2022) });
+    });
+    chart.on('period', ({ index }) => periods.push(index));
+    chart.play();
+    tick(0);
+    tick(2000);
+    expect(periods).toEqual([1, 1]);
+    expect(chart.getState()).toMatchObject({ t: 1, playing: true });
   });
 
   it('delivers every crossed period when a listener changes the theme', () => {
@@ -562,7 +647,7 @@ describe('createRace', () => {
 
     const chart = mount();
     chart.seek(1);
-    const table = host.querySelector('table[aria-label="Data table: Annual standings"]');
+    const table = host.querySelector('table');
     const live = liveRegion();
     expect(table?.textContent).toContain('2020');
     expect(live?.textContent).toBe('2021: B, A lead');
@@ -571,7 +656,11 @@ describe('createRace', () => {
     expect(chart.getState()).toMatchObject({ t: 1, playing: true });
     expect(rowKeys()).toEqual([]);
     expect(host.querySelectorAll('table')).toHaveLength(mark === 'table' ? 2 : 1);
-    expect(host.querySelector('table[aria-label="Data table: Annual standings"]')).toBe(table);
+    const exposedTables = [...host.querySelectorAll('table')].filter(
+      (candidate) => !candidate.closest('[aria-hidden="true"]'),
+    );
+    expect(exposedTables).toHaveLength(1);
+    expect(exposedTables[0]).toBe(table);
     expect(host.querySelectorAll('[aria-live="polite"]')).toHaveLength(1);
     expect(liveRegion()).toBe(live);
     expect(liveRegion()?.textContent).toBe('2021: B, A lead');
@@ -581,7 +670,7 @@ describe('createRace', () => {
 
     chart.update({ ...spec, mark, a11y: { hidden: true } });
     expect(svg().getAttribute('aria-hidden')).toBe('true');
-    expect(host.querySelector('table[aria-label="Data table: Annual standings"]')).toBeNull();
+    expect(table?.isConnected).toBe(false);
     expect(liveRegion()).toBeNull();
     if (mark === 'table') {
       const visible = host.querySelector('table[aria-label="Visible standings"]');

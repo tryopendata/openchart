@@ -6,23 +6,6 @@ const PRESENCE_FADE = 1;
 const PRESENCE_PIN = 2;
 const VISIBILITY_EPSILON = 1e-6;
 
-const exactRankingByTimeline = new WeakMap<RaceTimeline, (t: number) => number[]>();
-
-/** Returns present key indices in exact rank order, including ranks outside the visible top. */
-export function exactRaceRanking(timeline: RaceTimeline, t: number): number[] {
-  const rankAll = exactRankingByTimeline.get(timeline);
-  if (rankAll) return rankAll(t);
-
-  // Support other implementations of the public RaceTimeline interface.
-  return Array.from({ length: timeline.keyCount }, (_, key) => ({
-    key,
-    rank: timeline.exactRank(key, t),
-  }))
-    .filter(({ rank }) => Number.isFinite(rank))
-    .sort((a, b) => a.rank - b.rank)
-    .map(({ key }) => key);
-}
-
 function presenceEdges(
   ranks: Float32Array,
   absentRank: number,
@@ -145,7 +128,7 @@ export function createRaceTimeline(matrix: RaceMatrix, options: RaceTimelineOpti
     );
   }
 
-  const timeline: RaceTimeline = {
+  return {
     periodCount,
     keyCount,
     top,
@@ -198,8 +181,4 @@ export function createRaceTimeline(matrix: RaceMatrix, options: RaceTimelineOpti
       return { t, periodIndex, items, domainMin, domainMax: domainMax > 0 ? domainMax : 1 };
     },
   };
-  exactRankingByTimeline.set(timeline, (t) =>
-    rankedValues(clampTime(t)).map(({ keyIndex }) => keyIndex),
-  );
-  return timeline;
 }
