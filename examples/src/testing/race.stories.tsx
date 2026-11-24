@@ -1,10 +1,6 @@
 import type { RaceSpec } from '@opendata-ai/openchart-core';
 import { useVizDarkMode, useVizTheme } from '@opendata-ai/openchart-react';
-import {
-  createRace,
-  type RaceInstance,
-  type RaceMountOptions,
-} from '@opendata-ai/openchart-vanilla';
+import { createRace, type RaceInstance } from '@opendata-ai/openchart-vanilla';
 import { useEffect, useRef } from 'react';
 import { worldGdpRace, worldGdpRaceSource } from '../data/world-gdp-race';
 
@@ -43,36 +39,25 @@ function RaceStory({
   belowFold?: boolean;
 }) {
   const host = useRef<HTMLDivElement>(null);
-  const instance = useRef<RaceInstance>(null);
   const theme = useVizTheme();
   const ladleDark = useVizDarkMode();
   const darkMode = dark ? 'force' : ladleDark;
-  const options = useRef<RaceMountOptions>({ darkMode, theme });
-
   useEffect(() => {
     if (!host.current) return;
-    const race = createRace(host.current, spec, options.current);
-    instance.current = race;
+    const race = createRace(host.current, spec, { darkMode, theme });
     window.__race = race;
     return () => {
       race.destroy();
-      instance.current = null;
       window.__race = undefined;
     };
-  }, [spec]);
-
-  useEffect(() => {
-    if (options.current.darkMode === darkMode && options.current.theme === theme) return;
-    options.current.darkMode = darkMode;
-    options.current.theme = theme;
-    instance.current?.resize();
-  }, [darkMode, theme]);
+  }, [spec, darkMode, theme]);
 
   return (
     <>
       <div aria-hidden="true" style={{ height: belowFold ? '100vh' : 56 }} />
       <div
         ref={host}
+        className="oc-root"
         data-testid="race-host"
         style={{ width: '100%', maxWidth: 800, background: dark ? '#18181b' : undefined }}
       />

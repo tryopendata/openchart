@@ -58,10 +58,10 @@ describe('bar race static layout', () => {
     const stat = computeBarStatic({ ...input, hasNegatives });
     expect(stat).toMatchObject({
       plot,
-      clip: { x: 10, y: 42, width: 500, height: 104 },
+      clip: { x: 10, y: 42, width: 500, height: 200 },
       nameX: 102,
-      rowHeight: 26,
-      barHeight: 19,
+      rowHeight: 50,
+      barHeight: 37,
       cornerRadius: 4,
       top: 4,
       axisY: 42,
@@ -89,7 +89,7 @@ describe('bar race frame geometry', () => {
     [360, 14],
     [680, 12],
     [680, 14],
-  ])('keeps ten rows clear of the period at %i px with %i px ticks', (width, tick) => {
+  ])('fits ten row slots across the full plot at %i px with %i px ticks', (width, tick) => {
     const stat = computeBarStatic({
       ...input,
       area: { ...input.area, width, height: 390 },
@@ -101,18 +101,29 @@ describe('bar race frame geometry', () => {
       stat,
       {
         ...frame,
-        items: [{ ...frame.items[0], value: 44, valueLabel: '44 km', rankPos: 9 }],
+        items: Array.from({ length: 10 }, (_, rankPos) => ({
+          ...frame.items[0],
+          key: String(rankPos),
+          value: 44,
+          valueLabel: '44 km',
+          rankPos,
+        })),
       },
       formatTick,
     );
-    const [row] = geometry.rows;
-    expect(row.value.text).toBe('44 km');
-    const labelBottom = row.value.y + input.fontSize.value / 2;
-    expect(labelBottom).toBeLessThan(geometry.period!.y - geometry.period!.fontSize);
-    expect(labelBottom).toBeLessThanOrEqual(stat.clip.y + stat.clip.height);
+    expect(geometry.rows).toHaveLength(10);
+    expect(stat.rowHeight * 10).toBeCloseTo(stat.plot.height);
+    expect(stat.clip.height).toBe(stat.plot.height);
+    for (const { bar, value } of geometry.rows) {
+      expect(bar.y).toBeGreaterThanOrEqual(stat.plot.y);
+      expect(bar.y + bar.height).toBeLessThanOrEqual(stat.plot.y + stat.plot.height);
+      expect(value.y + input.fontSize.value / 2).toBeLessThanOrEqual(
+        stat.clip.y + stat.clip.height,
+      );
+    }
   });
 
-  it('keeps both a period and a summary clear of a short leaderboard', () => {
+  it('keeps the period and summary visible on a short leaderboard', () => {
     const stat = computeBarStatic({
       ...input,
       area: { x: 0, y: 0, width: 360, height: 100 },
@@ -124,10 +135,9 @@ describe('bar race frame geometry', () => {
       formatTick,
     );
     const [row] = geometry.rows;
-    const labelBottom = row.value.y + input.fontSize.value / 2;
     expect(row.bar.height).toBeGreaterThan(0);
-    expect(labelBottom).toBeLessThanOrEqual(stat.clip.y + stat.clip.height);
-    expect(labelBottom).toBeLessThan(geometry.summary!.y - input.fontSize.value);
+    expect(geometry.period).toMatchObject({ y: 100, text: '2020' });
+    expect(geometry.summary).toMatchObject({ text: '20 km' });
     expect(geometry.summary!.y).toBeLessThan(geometry.period!.y - geometry.period!.fontSize);
   });
 
@@ -170,17 +180,17 @@ describe('bar race frame geometry', () => {
         key: 'A',
         color: 'blue',
         opacity: 1,
-        bar: { x: 250, y: 52, width: 150, height: 19 },
-        name: { x: 102, y: 61.5, text: 'Team A' },
-        value: { x: 406, y: 61.5, text: '30 km', anchor: 'start' },
+        bar: { x: 250, y: 61, width: 150, height: 37 },
+        name: { x: 102, y: 79.5, text: 'Team A' },
+        value: { x: 406, y: 79.5, text: '30 km', anchor: 'start' },
       },
       {
         key: 'B',
         color: 'orange',
         opacity: 0.5,
-        bar: { x: 200, y: 136.5, width: 50, height: 19 },
-        name: { x: 102, y: 146, text: 'Team B' },
-        value: { x: 194, y: 146, text: '-10 km', anchor: 'end' },
+        bar: { x: 200, y: 223.5, width: 50, height: 37 },
+        name: { x: 102, y: 242, text: 'Team B' },
+        value: { x: 194, y: 242, text: '-10 km', anchor: 'end' },
       },
     ]);
   });
@@ -195,6 +205,28 @@ describe('bar race frame geometry', () => {
       { value: 30, label: '30 km', opacity: 5 / 12, position: 400 },
       { value: 40, label: '40 km', opacity: 5 / 12, position: 450 },
     ]);
+  });
+
+  it('keeps the right-edge tick but omits its label when the full dollar amount does not fit', () => {
+    const stat = computeBarStatic({
+      ...input,
+      area: { ...input.area, width: 800 },
+      hasNegatives: false,
+      maxValueLabelWidth: 5,
+    });
+    const { ticks } = barGeometry(
+      stat,
+      { ...frame, domain: [0, 5], items: [] },
+      (value) => (value === 0 ? '$0' : `$${value}T`),
+      { fontSize: 13, fontWeight: 400, measureWidth: (text) => 10 * text.length },
+    );
+    expect(ticks[0]).toMatchObject({ value: 0, label: '$0' });
+    expect(ticks.at(-1)).toMatchObject({
+      value: 5,
+      position: stat.plot.x + stat.plot.width,
+      label: '',
+    });
+    expect(ticks.at(-1)?.opacity).toBeGreaterThan(0);
   });
 
   it('leaves room for the value label at the negative domain endpoint', () => {
@@ -225,8 +257,9 @@ describe('bar race frame geometry', () => {
         expect(value).toBeGreaterThanOrEqual(0);
       }
     }
-    expect(geometry.period).toBeNull();
-    expect(geometry.summary).toBeNull();
+    expect(geometry.period).toMatchObject({ y: area.height, text: '2020' });
+    expect(geometry.summary).toMatchObject({ text: '20 km' });
+    expect(geometry.summary!.y).toBeGreaterThanOrEqual(area.y);
   });
 
   it('draws period and summary independently and requires a summary in the frame', () => {

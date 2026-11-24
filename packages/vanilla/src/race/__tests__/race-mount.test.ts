@@ -1,10 +1,16 @@
-import type { RaceSpec } from '@opendata-ai/openchart-core';
+import { adaptTheme, DEFAULT_THEME, type RaceSpec } from '@opendata-ai/openchart-core';
 import * as engine from '@opendata-ai/openchart-engine';
 import type { Window as HappyWindow } from 'happy-dom';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { createFakeObserver, stubPageLayout } from '../../__test-fixtures__/visibility';
 import { createRace, type RaceInstance, type RaceMountOptions } from '../../race-mount';
 import { setObserverFactory } from '../../visibility';
+import { RACE_RENDERERS } from '../renderers';
+
+vi.mock('../renderers', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../renderers')>();
+  return { ...original, RACE_RENDERERS: { ...original.RACE_RENDERERS } };
+});
 
 declare global {
   interface Window {
@@ -42,6 +48,7 @@ let race: RaceInstance | undefined;
 let frameId: number;
 const frames = new Map<number, FrameRequestCallback>();
 const resizeObservers = new Map<Element, () => void>();
+const activeResizeObservers = new Set<ResizeObserver>();
 
 class TestResizeObserver extends ResizeObserver {
   private target?: Element;
@@ -52,6 +59,7 @@ class TestResizeObserver extends ResizeObserver {
 
   override observe(target: Element) {
     this.target = target;
+    activeResizeObservers.add(this);
     resizeObservers.set(target, () => {
       const contentRect = target.getBoundingClientRect();
       const size = { inlineSize: contentRect.width, blockSize: contentRect.height };
@@ -72,6 +80,7 @@ class TestResizeObserver extends ResizeObserver {
 
   override disconnect() {
     if (this.target) resizeObservers.delete(this.target);
+    activeResizeObservers.delete(this);
   }
 }
 
@@ -83,6 +92,8 @@ beforeEach(() => {
   vi.spyOn(host, 'getBoundingClientRect').mockImplementation(
     () => new DOMRect(0, 0, width, height),
   );
+  vi.spyOn(host, 'clientWidth', 'get').mockImplementation(() => width);
+  vi.spyOn(host, 'clientHeight', 'get').mockImplementation(() => height);
   frameId = 0;
   vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
     frames.set(++frameId, cb);
@@ -98,6 +109,7 @@ afterEach(() => {
   host.remove();
   frames.clear();
   resizeObservers.clear();
+  activeResizeObservers.clear();
   window.happyDOM.settings.device.prefersReducedMotion = 'no-preference';
   setObserverFactory(null);
   vi.restoreAllMocks();
@@ -139,6 +151,22 @@ function observeVisibility() {
   stubPageLayout();
   setObserverFactory(intersection.factory);
   return intersection;
+}
+
+function stubFonts(loaded = false) {
+  const before = Object.getOwnPropertyDescriptor(document, 'fonts');
+  const { promise: ready, resolve } = Promise.withResolvers<void>();
+  const check = vi.fn(() => loaded);
+  Object.defineProperty(document, 'fonts', { configurable: true, value: { check, ready } });
+  onTestFinished(() => {
+    if (before) Object.defineProperty(document, 'fonts', before);
+    else Reflect.deleteProperty(document, 'fonts');
+  });
+  return { ready, resolve, check };
+}
+
+function barFills() {
+  return Array.from(host.querySelectorAll('.oc-race-rows rect'), (bar) => bar.getAttribute('fill'));
 }
 
 describe('createRace', () => {
@@ -210,6 +238,20 @@ describe('createRace', () => {
     tick(500);
     expect(chart.getState()).toMatchObject({ t: 1, playing: false });
     expect(host.querySelector('.oc-race-period')?.textContent).toBe('2021');
+  });
+
+  it('disarms visibility autoplay when a reader seeks before the chart is seen', () => {
+    const intersection = observeVisibility();
+    const chart = mount({ ...spec, race: { ...spec.race, autoplay: 'visible' } });
+    expect(() => chart.seek(NaN)).toThrow(RangeError);
+    expect(intersection.observed.has(host)).toBe(true);
+    chart.seek(1);
+    intersection.fire(host, 1);
+    tick(0);
+    tick(500);
+    expect(chart.getState()).toMatchObject({ t: 1, playing: false });
+    expect(scrub().value).toBe('1');
+    expect(frames.size).toBe(0);
   });
 
   it('starts autoplay true at mount even while offscreen', () => {
@@ -343,7 +385,8 @@ describe('createRace', () => {
 
   it('keeps the measured height stable when the host contains in-flow content', () => {
     height = 320;
-    vi.mocked(host.getBoundingClientRect).mockImplementation(() => {
+    width = 640;
+    const clientHeight = () => {
       const root = host.querySelector<HTMLElement>('.oc-race-root');
       const inFlow =
         root &&
@@ -353,8 +396,12 @@ describe('createRace', () => {
         ? parseFloat(root.querySelector<SVGSVGElement>('svg')?.style.height ?? '0') +
           parseFloat(root.querySelector<HTMLElement>('.oc-race-controls-slot')?.style.height ?? '0')
         : 0;
-      return new DOMRect(0, 0, 640, height + chartHeight);
-    });
+      return height + chartHeight;
+    };
+    vi.spyOn(host, 'clientHeight', 'get').mockImplementation(clientHeight);
+    vi.mocked(host.getBoundingClientRect).mockImplementation(
+      () => new DOMRect(0, 0, width, clientHeight()),
+    );
     const chart = mount();
     expect(svg().getAttribute('viewBox')).toBe('0 0 640 276');
     resizeObservers.get(host)!();
@@ -363,6 +410,67 @@ describe('createRace', () => {
     height = 360;
     chart.resize();
     expect(svg().getAttribute('viewBox')).toBe('0 0 640 316');
+  });
+
+  it('uses the fallback height when an auto-height host only has padding', () => {
+    host.style.padding = '16px';
+    width = 392;
+    height = 32;
+    const chart = mount();
+    expect(svg().getAttribute('viewBox')).toBe('0 0 360 476');
+    chart.resize();
+    expect(svg().getAttribute('viewBox')).toBe('0 0 360 476');
+  });
+
+  it('fits the content box of a padded fixed-height host on mount and resize', () => {
+    host.style.padding = '12px 16px 20px 8px';
+    width = 824;
+    height = 552;
+    const chart = mount();
+    expect(svg().getAttribute('viewBox')).toBe('0 0 800 476');
+    width = 384;
+    height = 452;
+    chart.resize();
+    expect(svg().getAttribute('viewBox')).toBe('0 0 360 376');
+  });
+
+  it('checks the host font and relayouts once when the pending font loads', async () => {
+    host.style.fontFamily = 'Georgia, serif';
+    const fonts = stubFonts();
+    const chart = mount();
+    chart.seek(1.5);
+    const before = svg();
+    expect(before.style.getPropertyValue('--oc-font-family')).toBe('Georgia, serif');
+    const observer = new MutationObserver(() => {});
+    observer.observe(host, { childList: true });
+    onTestFinished(() => observer.disconnect());
+    expect(fonts.check).toHaveBeenCalledExactlyOnceWith('12px "Georgia"');
+    fonts.resolve();
+    await fonts.ready;
+    const newShells = observer.takeRecords().flatMap((record) => [...record.addedNodes]);
+    expect(newShells).toEqual([host.firstElementChild]);
+    expect(svg()).not.toBe(before);
+    expect(chart.getState()).toMatchObject({ t: 1.5, playing: false });
+  });
+
+  it('keeps its current view when the font is already loaded', async () => {
+    const fonts = stubFonts(true);
+    mount(spec, { theme: { fonts: { family: 'Georgia' } } });
+    const before = svg();
+    fonts.resolve();
+    await fonts.ready;
+    expect(fonts.check).toHaveBeenCalledExactlyOnceWith('12px "Georgia"');
+    expect(svg()).toBe(before);
+  });
+
+  it('never rebuilds after destruction when a pending font loads', async () => {
+    const fonts = stubFonts();
+    const chart = mount(spec, { theme: { fonts: { family: 'Georgia' } } });
+    chart.destroy();
+    fonts.resolve();
+    await fonts.ready;
+    expect(fonts.check).toHaveBeenCalledExactlyOnceWith('12px "Georgia"');
+    expect(host.children).toHaveLength(0);
   });
 
   it('restores keyboard focus after relayout and disconnects the old controls', () => {
@@ -496,8 +604,14 @@ describe('createRace', () => {
     expect(rowKeys()).toEqual(['B', 'A']);
   });
 
-  it('reports an unregistered mark without mounting a partial race', () => {
-    expect(() => mount({ ...spec, mark: 'line' })).toThrow(/race mark "line".*not registered/i);
+  it('reports an engine mark that has no mounted renderer without inserting a partial race', () => {
+    const renderer = RACE_RENDERERS.bar;
+    delete RACE_RENDERERS.bar;
+    try {
+      expect(() => mount()).toThrow(/^Race mark "bar" is not registered\. Registered: /);
+    } finally {
+      RACE_RENDERERS.bar = renderer;
+    }
     expect(host.children).toHaveLength(0);
     expect(frames.size).toBe(0);
   });
@@ -511,16 +625,56 @@ describe('createRace', () => {
     expect(frames.size).toBe(0);
   });
 
-  it('applies the dark class and draws bar fills from the mount theme palette', () => {
-    mount(spec, {
-      darkMode: 'force',
-      theme: { colors: { categorical: ['#aabbaa', '#eebbee'] } },
-    });
+  it('draws the mount theme palette in light mode', () => {
+    mount(spec, { theme: { colors: { categorical: ['#aabbaa', '#eebbee'] } } });
+    expect(barFills()).toEqual(['#aabbaa', '#eebbee']);
+    expect(host.querySelector('.oc-race-root.oc-dark')).toBeNull();
+  });
+
+  it('maps the default palette to dark variants in forced dark mode', () => {
+    mount(spec, { darkMode: 'force' });
     expect(host.querySelector('.oc-race-root')?.classList.contains('oc-dark')).toBe(true);
-    const fills = Array.from(host.querySelectorAll('.oc-race-rows rect'), (bar) =>
-      bar.getAttribute('fill'),
-    );
-    expect(fills).toEqual(['#aabbaa', '#eebbee']);
+    expect(barFills()).toEqual(adaptTheme(DEFAULT_THEME).colors.categorical.slice(0, 2));
+    expect(barFills()).not.toEqual(DEFAULT_THEME.colors.categorical.slice(0, 2));
+  });
+
+  it('keeps mount options on resize and accepts new theme options on remount', () => {
+    const options: RaceMountOptions = { darkMode: 'off' };
+    const chart = mount(spec, options);
+    const initialFills = barFills();
+    options.darkMode = 'force';
+    options.theme = { colors: { categorical: ['#aabbaa', '#eebbee'] } };
+    chart.resize();
+    expect(barFills()).toEqual(initialFills);
+    expect(host.querySelector('.oc-race-root.oc-dark')).toBeNull();
+    chart.destroy();
+    mount(spec, options);
+    expect(barFills()).toEqual(['#aabbaa', '#eebbee']);
+    expect(host.querySelector('.oc-race-root.oc-dark')).not.toBeNull();
+  });
+
+  it('applies a spec theme update at the current playhead', () => {
+    const chart = mount();
+    chart.seek(1);
+    chart.update({ ...spec, theme: { colors: { categorical: ['#aabbaa', '#eebbee'] } } });
+    expect(chart.getState()).toMatchObject({ t: 1, playing: false });
+    expect(barFills()).toEqual(['#eebbee', '#aabbaa']);
+  });
+
+  it('leaves one race and one observer of each kind after a StrictMode-style remount', () => {
+    const intersection = observeVisibility();
+    const visibleSpec: RaceSpec = { ...spec, race: { ...spec.race, autoplay: 'visible' } };
+    const first = mount(visibleSpec);
+    first.destroy();
+    const second = mount(visibleSpec);
+    expect(host.querySelectorAll('.oc-race-root')).toHaveLength(1);
+    expect([...intersection.observed]).toEqual([host]);
+    expect(intersection.created - intersection.disconnected).toBe(1);
+    expect(activeResizeObservers.size).toBe(1);
+    intersection.fire(host, 1);
+    expect(first.getState().playing).toBe(false);
+    expect(second.getState().playing).toBe(true);
+    expect(frames.size).toBe(1);
   });
 
   it('clears a pending visibility start and resize without removing host content', () => {
@@ -555,10 +709,11 @@ describe('createRace', () => {
     chart.pause();
     chart.seek(2);
     chart.setSpeed(2);
-    chart.setSpeed(NaN);
     chart.update({ ...spec, data: [] });
     chart.resize();
     expect(() => chart.seek(NaN)).toThrow(RangeError);
+    expect(() => chart.setSpeed(NaN)).toThrow(RangeError);
+    expect(() => chart.setSpeed(0)).toThrow(RangeError);
     expect(frames.size).toBe(0);
     tick(2000);
     expect(host.children).toHaveLength(0);

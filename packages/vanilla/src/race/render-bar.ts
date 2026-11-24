@@ -46,7 +46,7 @@ export function createRaceBarRenderer(
   setAttrs(period, { class: 'oc-race-period', 'text-anchor': 'end' });
   const summary = createSVGElement('text');
   setAttrs(summary, { class: 'oc-race-summary', 'text-anchor': 'end' });
-  const owned = [defs, axis, rows, period, summary];
+  const owned = [defs, axis, period, summary, rows];
   host.append(...owned);
 
   const rowNodes = new Map<

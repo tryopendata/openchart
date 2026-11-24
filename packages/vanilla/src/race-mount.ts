@@ -1,14 +1,14 @@
-import {
-  type CompileOptions,
-  type CompileWarning,
-  type DarkMode,
-  DEFAULT_THEME,
-  type RaceFrame,
-  type RaceGeometry,
-  type RaceLayout,
-  type RaceMarkType,
-  type RaceSpec,
-  type ThemeConfig,
+import type {
+  CompileOptions,
+  CompileWarning,
+  DarkMode,
+  MeasureTextFn,
+  RaceFrame,
+  RaceGeometry,
+  RaceLayout,
+  RaceMarkType,
+  RaceSpec,
+  ThemeConfig,
 } from '@opendata-ai/openchart-core';
 import {
   layoutRace,
@@ -18,39 +18,59 @@ import {
   raceGeometryAt,
 } from '@opendata-ai/openchart-engine';
 import type { GIFExportOptions } from './export-gif';
-import { createMeasureText } from './measure-text';
+import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
 import { prefersReducedMotion } from './motion/tween';
-import { createRaceClock, type RaceClockState } from './race/clock';
-import { createRaceControls, type RaceControls } from './race/controls';
+import { createRaceClock, type RaceClock, type RaceClockState } from './race/clock';
+import { createRaceControls, type RaceControlsOptions } from './race/controls';
 import { RACE_RENDERERS } from './race/renderers';
 import { createRaceShell, type RaceMarkHost } from './race/shell';
+import { measureRaceSize, RACE_CONTROLS_HEIGHT } from './race/size';
 import { resolveDarkMode } from './resolve-dark-mode';
 import { pageIdScope } from './svg-ids';
 import { whenSeen } from './visibility';
 
 export interface RaceMountOptions {
+  /** Mount-level theme overrides. Remount to supply a different override. */
   theme?: ThemeConfig;
+  /** Color scheme preference. Defaults to light. Remount to change this option. */
   darkMode?: DarkMode;
   /** Observe container resizing. Defaults to true. */
   autoResize?: boolean;
+  /** Show the watermark unless the spec sets its own watermark preference. */
   watermark?: boolean;
+  /** Receives warnings from preparing the initial or updated spec. */
   onWarn?: CompileOptions['onWarn'];
 }
 
 export interface RaceInstance {
+  /** Start or resume playback. Replay from the start after natural completion. */
   play(): void;
+  /** Pause playback and cancel any pending visibility-triggered start. */
   pause(): void;
-  /** Seek by continuous period index. */
+  /**
+   * Seek by continuous period index, clamped to the available periods.
+   * @throws {RangeError} If t is not finite, including after destroy().
+   */
   seek(t: number): void;
+  /**
+   * Set the playback speed as a multiplier of the authored duration.
+   * @throws {RangeError} If speed is not finite and positive, including after destroy().
+   */
   setSpeed(speed: number): void;
+  /**
+   * Apply a spec change, including its theme, and retain playback at the clamped playhead.
+   * @throws If the spec is invalid. The mounted race and its playback state stay intact.
+   */
   update(spec: RaceSpec): void;
+  /** Measure and redraw the race at the current playhead. */
   resize(): void;
+  /** Rejects until GIF export arrives in a later release. */
   export(format: 'gif', options?: Pick<GIFExportOptions, 'fps'>): Promise<Blob>;
+  /** Read the playhead, speed, playback status, and displayed period, including after destroy(). */
   getState(): Pick<RaceClockState, 't' | 'playing' | 'speed'> & { period: RaceFrame['period'] };
+  /** Stop playback and remove the mounted race. Safe to call repeatedly. */
   destroy(): void;
 }
-
-const CONTROLS_HEIGHT = 44;
 
 type RaceStatics = { [Layout in RaceLayout as Layout['mark']]: Layout['static'] };
 type RaceGeometries = { [Geometry in RaceGeometry as Geometry['mark']]: Geometry };
@@ -67,7 +87,11 @@ const renderers: { [Mark in RaceMarkType]?: RendererFor<Mark> } = RACE_RENDERERS
 
 function rendererFor<Mark extends RaceMarkType>(mark: Mark): RendererFor<Mark> {
   const factory = renderers[mark];
-  if (!factory) throw new Error(`Race mark "${mark}" has no renderer. Use a supported race mark.`);
+  if (!factory) {
+    throw new Error(
+      `Race mark "${mark}" is not registered. Registered: ${Object.keys(renderers).join(', ')}`,
+    );
+  }
   return factory;
 }
 
@@ -78,12 +102,62 @@ function isGeometryForMark<Mark extends RaceMarkType>(
   return geometry.mark === mark;
 }
 
+function mountView<Mark extends RaceMarkType>(
+  container: HTMLElement,
+  model: RaceModel,
+  layout: LayoutFor<Mark> & RaceLayout,
+  darkMode: boolean,
+  idScope: string,
+  handlers: Omit<RaceControlsOptions, 'periodLabels'>,
+) {
+  const factory = rendererFor<Mark>(layout.mark);
+  const shell = createRaceShell(container, layout, idScope);
+  shell.root.classList.toggle('oc-dark', darkMode);
+  if (model.spec.width !== undefined) shell.root.style.width = `${layout.width}px`;
+  const renderer = factory(shell.markHost, layout.static, idScope);
+  const controls = layout.playback.controls
+    ? createRaceControls({ periodLabels: layout.periods, ...handlers })
+    : undefined;
+  if (controls) {
+    shell.controlsSlot.style.height = `${RACE_CONTROLS_HEIGHT}px`;
+    shell.controlsSlot.append(controls.element);
+  }
+  return {
+    root: shell.root,
+    layout,
+    controls,
+    draw(t: number) {
+      const geometry = raceGeometryAt(model, layout, t);
+      if (isGeometryForMark(geometry, layout.mark)) renderer.draw(geometry);
+    },
+    destroy() {
+      controls?.destroy();
+      renderer.destroy();
+      shell.destroy();
+    },
+  };
+}
+
+function playbackTimingChanged(a: RaceModel, b: RaceModel): boolean {
+  return (
+    a.timeline.periodCount !== b.timeline.periodCount ||
+    a.playback.durationMs !== b.playback.durationMs ||
+    a.playback.holdEndMs !== b.playback.holdEndMs ||
+    a.playback.loop !== b.playback.loop
+  );
+}
+
+/**
+ * Mount a race in a host element. Options are read at mount. To change the
+ * mount-level theme or dark mode, destroy and remount with new options.
+ * After destruction, valid playback calls, update(), and resize() have no effect.
+ * @throws If the spec is invalid or the selected mark is unavailable.
+ */
 export function createRace(
   container: HTMLElement,
   spec: RaceSpec,
-  options?: RaceMountOptions,
+  { theme, darkMode: mountDarkMode, autoResize = true, watermark, onWarn }: RaceMountOptions = {},
 ): RaceInstance {
-  const onWarn = options?.onWarn;
   const warn = onWarn && ((warning: CompileWarning) => onWarn(warning.message));
   let model = prepareRace(spec, { onWarn: warn });
   const idScope = pageIdScope.next('race');
@@ -91,113 +165,87 @@ export function createRace(
   let cancelVisibility: (() => void) | undefined;
   let resizeFrame: number | undefined;
   let view: ReturnType<typeof mountView> | undefined;
-  let fontsReady: FontFaceSet['ready'] | undefined;
-  let fontFamily = resolveFont(model);
-  let measureText = createMeasureText(fontFamily);
+  let font = resolveFont(model);
   let clock = makeClock(model);
-  let replayOnPlay = false;
+  const controlHandlers: Omit<RaceControlsOptions, 'periodLabels'> = {
+    onToggle() {
+      cancelAutoplay();
+      clock.toggle();
+    },
+    onSeek: seek,
+    onStep(delta) {
+      cancelAutoplay();
+      clock.stepPeriod(delta);
+    },
+  };
 
-  function resolveFont(candidate: RaceModel): string {
-    return (
-      options?.theme?.fonts?.family ??
-      candidate.spec.theme.fonts?.family ??
-      DEFAULT_THEME.fonts.family
-    );
+  function resolveFont(
+    candidate: RaceModel,
+    previous?: { family: string; measureText: MeasureTextFn },
+  ) {
+    const family =
+      theme?.fonts?.family ?? candidate.spec.theme.fonts?.family ?? resolveFontFamily(container);
+    return previous?.family === family
+      ? previous
+      : { family, measureText: createMeasureText(family) };
   }
 
   function dimensions(candidate: RaceModel) {
-    const rect = container.getBoundingClientRect();
-    let measuredHeight = rect.height;
-    if (candidate.spec.height === undefined && view) {
-      // Measure the host without counting the race itself in its intrinsic height.
-      const { style } = view.root;
-      const position = style.position;
-      style.position = 'absolute';
-      try {
-        measuredHeight = container.getBoundingClientRect().height;
-      } finally {
-        style.position = position;
-      }
-    }
-    const width = candidate.spec.width ?? (rect.width || 640);
-    const height = candidate.spec.height ?? (measuredHeight > 0 ? measuredHeight : 520);
-    return {
-      width,
-      height: Math.max(0, height - (candidate.playback.controls ? CONTROLS_HEIGHT : 0)),
-    };
+    return measureRaceSize(container, candidate.spec, candidate.playback.controls, view?.root);
   }
 
-  function compileLayout(candidate: RaceModel, size = dimensions(candidate)) {
-    const family = resolveFont(candidate);
-    const measure = family === fontFamily ? measureText : createMeasureText(family);
-    const darkMode = resolveDarkMode(options?.darkMode);
+  function compileLayout(candidate: RaceModel, text = font, size = dimensions(candidate)) {
+    const darkMode = resolveDarkMode(mountDarkMode);
     const layout = layoutRace(candidate, {
       ...size,
-      theme: options?.theme,
-      watermark: options?.watermark,
+      theme: { ...theme, fonts: { ...theme?.fonts, family: text.family } },
+      watermark,
       darkMode,
-      measureText: measure,
+      measureText: text.measureText,
     });
     rendererFor(layout.mark);
-    return { layout, darkMode, family, measure };
+    return { layout, darkMode };
   }
 
-  function mountView<Mark extends RaceMarkType>(
-    layout: LayoutFor<Mark> & RaceLayout,
-    darkMode: boolean,
-  ) {
-    const factory = rendererFor<Mark>(layout.mark);
-    const shell = createRaceShell(container, layout, idScope);
-    shell.root.classList.toggle('oc-dark', darkMode);
-    if (model.spec.width !== undefined) shell.root.style.width = `${layout.width}px`;
-    const renderer = factory(shell.markHost, layout.static, idScope);
-    let controls: RaceControls | undefined;
-    if (layout.playback.controls) {
-      controls = createRaceControls({
-        periodLabels: layout.periods,
-        onToggle: () => {
-          if (replayOnPlay) play();
-          else {
-            cancelAutoplay();
-            clock.toggle();
-          }
-        },
-        onSeek: seek,
-        onStep: (delta) => {
-          cancelAutoplay();
-          replayOnPlay = false;
-          clock.stepPeriod(delta);
-        },
-      });
-      shell.controlsSlot.style.height = `${CONTROLS_HEIGHT}px`;
-      shell.controlsSlot.append(controls.element);
-    }
-    return {
-      root: shell.root,
-      layout,
-      controls,
-      draw(t: number) {
-        const geometry = raceGeometryAt(model, layout, t);
-        if (isGeometryForMark(geometry, layout.mark)) renderer.draw(geometry);
-      },
-      destroy() {
-        controls?.destroy();
-        renderer.destroy();
-        shell.destroy();
-      },
-    };
-  }
-
-  function makeClock(candidate: RaceModel) {
+  function makeClock(candidate: RaceModel, previous?: RaceClockState): RaceClock {
     const { durationMs, holdEndMs, loop } = candidate.playback;
-    return createRaceClock({
-      periodCount: candidate.timeline.periodCount,
+    const { periodCount } = candidate.timeline;
+    let replayOnPlay = false;
+    const player = createRaceClock({
+      periodCount,
       durationMs,
       holdEndMs,
       loop,
-      onTick: (t) => view?.draw(t),
+      onTick(t) {
+        replayOnPlay = false;
+        view?.draw(t);
+      },
       onStateChange: (state) => view?.controls?.update(state),
     });
+    if (!previous) return player;
+    player.setSpeed(previous.speed);
+    player.seek(previous.t);
+    if (previous.playing) player.play();
+
+    // A rebuilt clock seeks to the old playhead. Carry completion until playback or a new seek.
+    if (!previous.ended || previous.t < periodCount - 1) return player;
+    replayOnPlay = true;
+    function play() {
+      if (replayOnPlay) player.seek(0);
+      player.play();
+    }
+    return {
+      ...player,
+      play,
+      toggle() {
+        if (replayOnPlay) play();
+        else player.toggle();
+      },
+      getState() {
+        const state = player.getState();
+        return replayOnPlay ? { ...state, ended: true } : state;
+      },
+    };
   }
 
   function focusedControl() {
@@ -209,32 +257,20 @@ export function createRace(
   }
 
   function render(
-    { layout, darkMode, family, measure }: ReturnType<typeof compileLayout>,
+    { layout, darkMode }: ReturnType<typeof compileLayout>,
     focus = focusedControl(),
   ) {
-    fontFamily = family;
-    measureText = measure;
     view?.destroy();
-    view = mountView(layout, darkMode);
+    view = mountView(container, model, layout, darkMode, idScope, controlHandlers);
     const state = clock.getState();
     view.draw(state.t);
     view.controls?.update(state);
     if (focus)
       view.controls?.element.querySelector<HTMLElement>(focus)?.focus({ preventScroll: true });
-    watchFonts();
   }
 
   function resize() {
     if (!destroyed) render(compileLayout(model));
-  }
-
-  function watchFonts() {
-    const ready = container.ownerDocument.fonts?.ready;
-    if (!ready || ready === fontsReady) return;
-    fontsReady = ready;
-    ready.then(() => {
-      if (fontsReady === ready) resize();
-    });
   }
 
   function cancelAutoplay() {
@@ -244,7 +280,6 @@ export function createRace(
 
   function play() {
     cancelAutoplay();
-    if (replayOnPlay) seek(0);
     clock.play();
   }
 
@@ -255,33 +290,33 @@ export function createRace(
 
   function seek(t: number) {
     clock.seek(t);
-    if (!destroyed) replayOnPlay = false;
+    cancelAutoplay();
+  }
+
+  function setSpeed(speed: number) {
+    if (destroyed && (!Number.isFinite(speed) || speed <= 0)) {
+      throw new RangeError('Race playback speed must be finite and greater than zero');
+    }
+    clock.setSpeed(speed);
   }
 
   function update(nextSpec: RaceSpec) {
     if (destroyed) return;
     const next = prepareRace(nextSpec, { onWarn: warn });
     if (destroyed) return;
-    const nextLayout = compileLayout(next);
-    const { t, speed, playing, ended } = clock.getState();
-    const timingChanged =
-      next.timeline.periodCount !== model.timeline.periodCount ||
-      next.playback.durationMs !== model.playback.durationMs ||
-      next.playback.holdEndMs !== model.playback.holdEndMs ||
-      next.playback.loop !== model.playback.loop;
-
+    const nextFont = resolveFont(next, font);
+    const nextLayout = compileLayout(next, nextFont);
+    const timingChanged = playbackTimingChanged(model, next);
     const focus = focusedControl();
     model = next;
+    font = nextFont;
     if (model.playback.autoplay !== 'visible') cancelAutoplay();
     if (timingChanged) {
-      replayOnPlay = (ended || replayOnPlay) && t >= model.timeline.periodCount - 1;
       view?.destroy();
       view = undefined;
+      const previous = clock.getState();
       clock.destroy();
-      clock = makeClock(model);
-      clock.setSpeed(speed);
-      clock.seek(t);
-      if (playing) clock.play();
+      clock = makeClock(model, previous);
     }
     render(nextLayout, focus);
   }
@@ -289,6 +324,7 @@ export function createRace(
   const staticStart = spec.animation === false || prefersReducedMotion();
   if (staticStart) clock.seek(model.timeline.periodCount - 1);
   render(compileLayout(model));
+  scheduleFontReload(font.family, () => !destroyed, resize);
   if (!staticStart) {
     if (model.playback.autoplay === 'visible') {
       cancelVisibility = whenSeen(container, play);
@@ -298,7 +334,7 @@ export function createRace(
   }
 
   let observer: ResizeObserver | undefined;
-  if (options?.autoResize !== false && typeof ResizeObserver === 'function') {
+  if (autoResize && typeof ResizeObserver === 'function') {
     observer = new ResizeObserver(() => {
       if (destroyed || resizeFrame !== undefined) return;
       resizeFrame = requestAnimationFrame(() => {
@@ -306,7 +342,7 @@ export function createRace(
         if (destroyed) return;
         const size = dimensions(model);
         if (view?.layout.width !== size.width || view.layout.height !== size.height) {
-          render(compileLayout(model, size));
+          render(compileLayout(model, font, size));
         }
       });
     });
@@ -317,7 +353,7 @@ export function createRace(
     play,
     pause,
     seek,
-    setSpeed: (speed) => clock.setSpeed(speed),
+    setSpeed,
     update,
     resize,
     async export() {
@@ -330,7 +366,6 @@ export function createRace(
     destroy() {
       if (destroyed) return;
       destroyed = true;
-      fontsReady = undefined;
       cancelAutoplay();
       observer?.disconnect();
       if (resizeFrame !== undefined) cancelAnimationFrame(resizeFrame);

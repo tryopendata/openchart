@@ -44,36 +44,22 @@ export function computeBarStatic(input: BarStaticInput): RaceBarStatic {
   const leftGutter = nameGutter + (hasNegatives ? valueGutter : 0);
   const tickFontSize = input.fontSize.tick;
   const tickHeight = Math.min(tickFontSize + TICK_PADDING, Math.max(0, area.height));
-  const availableHeight = Math.max(0, area.height - tickHeight);
-  // Reserve a band below the row clip so labels at fractional ranks clear the period.
-  // Keep at least half of the space below the ticks available for compact rows.
-  const overlayBudget = availableHeight / 2;
-  const summaryHeight = input.fontSize.value + VALUE_GAP;
-  const summaryBand =
-    showPeriod && showSummary && overlayBudget >= 2 * summaryHeight ? summaryHeight : 0;
-  const periodFontSize = Math.max(
-    0,
-    Math.min(
-      overlayBudget - summaryBand - VALUE_GAP,
-      Math.max(36, Math.min(72, (availableHeight / top) * 2.4)),
-    ),
-  );
-  const periodBand = showPeriod && periodFontSize > 0 ? periodFontSize + VALUE_GAP : 0;
   const plot = {
     x: area.x + leftGutter,
     y: area.y + tickHeight,
     width: Math.max(minPlotWidth, areaWidth - leftGutter - valueGutter),
-    height: availableHeight,
+    height: Math.max(0, area.height - tickHeight),
   };
-  const rowsHeight = Math.max(0, availableHeight - periodBand - summaryBand);
-  const rowHeight = rowsHeight / top;
+  const rowHeight = plot.height / top;
   const right = plot.x + plot.width;
-  const bottom = plot.y + availableHeight;
-  const period = periodBand ? { x: right, y: bottom, fontSize: periodFontSize } : null;
+  const bottom = plot.y + plot.height;
+  const period = showPeriod
+    ? { x: right, y: bottom, fontSize: Math.max(36, Math.min(72, rowHeight * 2.4)) }
+    : null;
 
   return {
     plot,
-    clip: { x: area.x, y: plot.y, width: areaWidth, height: rowsHeight },
+    clip: { x: area.x, y: plot.y, width: areaWidth, height: plot.height },
     nameX: area.x + Math.min(maxLabelWidth, nameGutter),
     rowHeight,
     barHeight: Math.round(rowHeight * 0.74),
@@ -82,8 +68,9 @@ export function computeBarStatic(input: BarStaticInput): RaceBarStatic {
     axisY: plot.y,
     tickFontSize,
     period,
-    summary:
-      showSummary && (!showPeriod || summaryBand > 0) ? { x: right, y: bottom - periodBand } : null,
+    summary: showSummary
+      ? { x: right, y: period ? Math.max(plot.y, bottom - period.fontSize - VALUE_GAP) : bottom }
+      : null,
   };
 }
 
@@ -166,15 +153,11 @@ function barTicks(
   for (const tick of byPriority) {
     const { position } = tick;
     const budget = 2 * Math.max(0, Math.min(position - x, x + width - position));
-    const label = truncateRaceLabel(
-      formatTick(tick.value),
-      budget,
-      fontSize,
-      fontWeight,
-      measureWidth,
-    );
+    const label = formatTick(tick.value);
     if (!label) continue;
-    const halfWidth = measureWidth(label, fontSize, fontWeight) / 2;
+    const labelWidth = measureWidth(label, fontSize, fontWeight);
+    if (labelWidth > budget) continue;
+    const halfWidth = labelWidth / 2;
     const left = position - halfWidth;
     const right = position + halfWidth;
     if (

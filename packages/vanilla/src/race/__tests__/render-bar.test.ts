@@ -47,6 +47,20 @@ function setup(idScope = 'example', layout = stat) {
 }
 
 describe('race bar renderer', () => {
+  it('paints the period and summary before the rows', () => {
+    const { host, draw } = setup();
+    draw({
+      rows: [north],
+      period: { ...stat.period!, text: '1982' },
+      summary: { ...stat.summary!, text: '$42 total' },
+    });
+    const layers = Array.from(
+      host.querySelectorAll('.oc-race-period, .oc-race-summary, .oc-race-rows'),
+      (node) => node.getAttribute('class'),
+    );
+    expect(layers).toEqual(['oc-race-period', 'oc-race-summary', 'oc-race-rows']);
+  });
+
   it('clamps both corner radii to half the bar height', () => {
     const rounded = { ...stat, cornerRadius: 100 };
     const { host, draw } = setup('rounded', rounded);
