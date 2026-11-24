@@ -68,6 +68,8 @@ export interface RaceInstance {
   export(format: 'gif', options?: Pick<GIFExportOptions, 'fps'>): Promise<Blob>;
   /** Read the playhead, speed, playback status, and displayed period, including after destroy(). */
   getState(): Pick<RaceClockState, 't' | 'playing' | 'speed'> & { period: RaceFrame['period'] };
+  /** Register a period listener and return an unsubscribe function. */
+  on(event: 'period', cb: (period: RaceFrame['period']) => void): () => void;
   /** Stop playback and remove the mounted race. Safe to call repeatedly. */
   destroy(): void;
 }
@@ -161,6 +163,7 @@ export function createRace(
   const warn = onWarn && ((warning: CompileWarning) => onWarn(warning.message));
   let model = prepareRace(spec, { onWarn: warn });
   const idScope = pageIdScope.next('race');
+  const periodListeners = new Set<(period: RaceFrame['period']) => void>();
   let destroyed = false;
   let cancelVisibility: (() => void) | undefined;
   let resizeFrame: number | undefined;
@@ -363,9 +366,16 @@ export function createRace(
       const { t, playing, speed } = clock.getState();
       return { t, playing, speed, period: raceFrameAt(model, t).period };
     },
+    on(_event, cb) {
+      if (!destroyed) periodListeners.add(cb);
+      return () => {
+        periodListeners.delete(cb);
+      };
+    },
     destroy() {
       if (destroyed) return;
       destroyed = true;
+      periodListeners.clear();
       cancelAutoplay();
       observer?.disconnect();
       if (resizeFrame !== undefined) cancelAnimationFrame(resizeFrame);

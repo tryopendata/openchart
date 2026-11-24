@@ -7,6 +7,8 @@ import type {
   RaceMarkType,
 } from '@opendata-ai/openchart-core';
 import { barGeometry, computeBarStatic } from './layout-bar';
+import { computeLineStatic, lineGeometry } from './layout-line';
+import { computeTableStatic, tableGeometry } from './layout-table';
 import type { RaceModel } from './types';
 
 /** Index the layout variants by mark so each registry entry receives its own static type. */
@@ -82,6 +84,8 @@ export const RACE_MARKS: { [TMark in RaceMarkType]?: RaceMarkEntry<TMark> } = {
       });
     },
   },
+  line: { computeStatic: computeLineStatic, geometry: lineGeometry },
+  table: { computeStatic: computeTableStatic, geometry: tableGeometry },
 };
 
 /**

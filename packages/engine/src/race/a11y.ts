@@ -1,8 +1,9 @@
 import type { A11yMetadata } from '@opendata-ai/openchart-core';
+import type { RaceModel } from './types';
 
-export function raceA11y(title?: string): A11yMetadata {
+export function raceA11y(model: RaceModel): A11yMetadata {
   return {
-    altText: title ?? 'Race chart',
+    altText: model.spec.chrome.title?.text ?? 'Race chart',
     dataTableFallback: [],
     role: 'img',
     keyboardNavigable: false,
