@@ -212,6 +212,7 @@ export type RaceLayout =
 ### Phase 1: race core (engine model, bar geometry, player pieces)
 
 Scaffold: 9756b43b
+Tag: race-chart-phase-1
 
 Demo: `bun x vitest run packages/engine/src/race packages/engine/src/compiler/validation packages/vanilla/src/race` passes, and `bun scripts/race-frames.ts` prints sensible top-5 rankings for 1980, mid-1988 and 2024.
 Test cases (each lane's brief lists its own; summary):
