@@ -481,13 +481,13 @@ The lines keep the history that bars throw away. Japan's economy peaked at $6.27
 
 ## Playback and reduced motion
 
-`race.autoplay` defaults to `"visible"`, which starts the race when a quarter of it is in view. `true` starts it at mount, and `false` waits for the play button. Readers who have asked their system for reduced motion get the race paused on its last frame, and can still scrub or press play. `race.controls: false` removes the control strip.
+`race.autoplay` defaults to `"visible"`, which starts the race when a quarter of it is in view. `true` starts it at mount, and `false` waits for the play button. Readers who have asked their system for reduced motion get the race paused on its last frame. They can still scrub, and pressing play steps through one year at a time instead of sliding. `race.controls: false` removes the control strip.
 
 The player that `createRace` returns has `play()`, `pause()` and `seek(index)`, which takes a zero-based period index; fractions land between periods. `on("period", callback)` fires each time the playhead crosses a period.
 
 Screen readers get a description that names the first and last leaders, a table of the top entries by period, and a live region that announces the leaders when the reader pauses, steps or scrubs. It stays quiet during playback, so a screen reader isn't reading a new ranking every 700 milliseconds.
 
-Without JavaScript, nothing draws: `renderStaticSVG`, the library's server-side renderer, doesn't render races. Put an image of the last frame or a table of the final period in a `<noscript>` element.
+For readers without JavaScript, or for an image in a newsletter, `renderRaceStaticSVG(spec)` from `@opendata-ai/openchart-vanilla/static` draws the final period as an SVG string without a browser. `renderStaticSVG` accepts race specs too. `createRace` adds the live race to its container without clearing it, so remove the static SVG before you mount the race.
 
 ## In React, Vue or Svelte
 

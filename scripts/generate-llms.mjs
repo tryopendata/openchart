@@ -168,7 +168,7 @@ Common MarkDef options:
 
 ### Static SVG and statistics
 
-Import \`renderStaticSVG\` from \`@opendata-ai/openchart-vanilla/static\`. It renders chart, layer, barlist, tilemap and geomap specs without a browser or DOM shim. Options include per-call \`theme\`, \`measureText\`, \`idPrefix\`, \`darkMode\` and \`precision\` (0–15 or null; default 3). Render separate light/dark SVGs with distinct stable prefixes; keep build timezones consistent. The host supplies captions and HTML tables. See [static rendering](./docs/static-rendering.md).
+Import \`renderStaticSVG\` from \`@opendata-ai/openchart-vanilla/static\`. It renders chart, layer, barlist, tilemap, geomap and race specs (a race renders its final period) without a browser or DOM shim. Options include per-call \`theme\`, \`measureText\`, \`idPrefix\`, \`darkMode\` and \`precision\` (0–15 or null; default 3). Render separate light/dark SVGs with distinct stable prefixes; keep build timezones consistent. The host supplies captions and HTML tables. See [static rendering](./docs/static-rendering.md).
 
 \`encoding.description\` accepts a constant value or field. A series path needs constant text within each series; add a point layer for per-observation descriptions. Static data shapes carry titles and identity attributes; live mounts use authored descriptions for keyboard inspection. \`a11y.table: false\` suppresses the generated live table, while \`a11y.hidden: true\` hides decorative cells.
 
