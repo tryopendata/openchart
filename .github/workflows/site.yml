@@ -36,7 +36,7 @@ jobs:
     name: Lint, check, test, build, browser and Pages checks
     # The same runner image as the browser job in ci.yml.
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     permissions:
       contents: read
