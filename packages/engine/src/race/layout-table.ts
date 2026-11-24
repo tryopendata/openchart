@@ -1,18 +1,21 @@
 import {
   formatPercent,
+  type MeasureTextFn,
+  type RaceLayout,
   type RaceTableCell,
   type RaceTableColumn,
+  type Rect,
 } from '@opendata-ai/openchart-core';
 import { interpolateRaceValue } from './interpolate';
 import type { RaceMarkEntry } from './marks';
-import type { RaceMatrix } from './types';
+import type { RaceMatrix, RaceModel } from './types';
 
 const DEFAULT_COLUMNS: RaceTableColumn[] = ['rank', 'change', 'name', 'bar', 'value', 'share'];
 const LABELS: Record<RaceTableColumn, string> = {
   rank: 'Rank',
   change: 'Change',
   name: 'Name',
-  bar: 'Bar',
+  bar: '',
   value: 'Value',
   share: 'Share',
 };
@@ -28,8 +31,9 @@ function periodShareBase(values: RaceMatrix['values'], period: number) {
   for (const series of values) {
     const value = series[period];
     if (!Number.isFinite(value)) continue;
+    if (value < 0) return null;
     total += value;
-    magnitude = Math.max(magnitude, Math.abs(value));
+    magnitude = Math.max(magnitude, value);
   }
   if (Number.isFinite(total)) return { total, scale: 1 };
 
@@ -42,71 +46,109 @@ function periodShareBase(values: RaceMatrix['values'], period: number) {
   return { total, scale: magnitude };
 }
 
-function shareText(value: number, { total, scale }: ReturnType<typeof periodShareBase>): string {
-  const share = value / scale / total;
+type ShareBase = ReturnType<typeof periodShareBase>;
+
+function shareText(value: number, base: ShareBase): string {
+  if (!base || base.total === 0) return EMPTY;
+  const share = value / base.scale / base.total;
   return Number.isFinite(share * 100) ? formatPercent(share) : EMPTY;
 }
 
-/** Measures `RaceTableMarkDef.columns` and drops `bar` below 520px unless it is the only column. */
-export const computeTableStatic: RaceMarkEntry<'table'>['computeStatic'] = (
-  model,
-  { area, labels, theme },
-  mark,
-  measureText,
-) => {
+interface TableModelData {
+  keyIndices: Map<string, number>;
+  shareBases: Map<number, ShareBase>;
+  valueLabels?: Set<string>;
+  shareLabels?: Set<string>;
+}
+
+const modelData = new WeakMap<RaceModel, TableModelData>();
+
+function tableData(model: RaceModel): TableModelData {
+  const cached = modelData.get(model);
+  if (cached) return cached;
+  const data: TableModelData = {
+    keyIndices: new Map(model.matrix.keys.map((key, index) => [key, index])),
+    shareBases: new Map(),
+  };
+  modelData.set(model, data);
+  return data;
+}
+
+function shareBaseAt(matrix: RaceMatrix, data: TableModelData, period: number): ShareBase {
+  const cached = data.shareBases.get(period);
+  if (cached !== undefined) return cached;
+  const base = periodShareBase(matrix.values, period);
+  data.shareBases.set(period, base);
+  return base;
+}
+
+function digitPattern(text: string): string {
+  return text.replace(/\d/g, '0');
+}
+
+function collectValueLabels({ matrix, formatValue }: RaceModel): Set<string> {
+  const labels = new Set([EMPTY]);
+  for (const series of matrix.values) {
+    for (let period = 0; period < series.length; period++) {
+      const value = series[period];
+      if (!Number.isFinite(value)) continue;
+      labels.add(digitPattern(formatValue(value)));
+      const next = series[period + 1];
+      if (!Number.isFinite(next) || next === value) continue;
+      // Allow for digits trimmed off the observed endpoints.
+      for (const fraction of VALUE_WIDTH_SAMPLES) {
+        const between = interpolateRaceValue(series, period, fraction);
+        if (Number.isFinite(between)) labels.add(digitPattern(formatValue(between)));
+      }
+    }
+  }
+  return labels;
+}
+
+function collectShareLabels(matrix: RaceMatrix, data: TableModelData): Set<string> {
+  const labels = new Set([EMPTY]);
+  for (let period = 0; period < matrix.periods.length; period++) {
+    const base = shareBaseAt(matrix, data, period);
+    if (!base || base.total === 0) continue;
+    for (const series of matrix.values) {
+      labels.add(digitPattern(shareText(series[period], base)));
+    }
+  }
+  return labels;
+}
+
+function measureColumns(
+  model: RaceModel,
+  { labels, theme }: Pick<RaceLayout, 'labels' | 'theme'>,
+  columns: RaceTableColumn[],
+  measureText: MeasureTextFn,
+): Record<RaceTableColumn, number> {
   const { body: fontSize } = theme.fonts.sizes;
   const { normal, semibold } = theme.fonts.weights;
-  const { top, periodCount } = model.timeline;
+  const { top } = model.timeline;
   const measure = (text: string, weight = normal) => measureText(text, fontSize, weight).width;
   // The DOM uses tabular figures, while layout measures proportional text.
   const widestDigit = Array.from('0123456789').reduce((widest, digit) =>
     measure(digit) > measure(widest) ? digit : widest,
   );
-  const measuredNumbers = new Map<string, number>();
-  const measureNumber = (text: string) => {
-    const digits = text.replace(/\d/g, widestDigit);
-    const previous = measuredNumbers.get(digits);
-    if (previous !== undefined) return previous;
-    const width = measure(digits) + 1;
-    measuredNumbers.set(digits, width);
+  const measureNumber = (pattern: string) => measure(pattern.replace(/0/g, widestDigit)) + 1;
+  const measureNumbers = (patterns: Set<string> | undefined) => {
+    let width = 0;
+    for (const pattern of patterns ?? []) width = Math.max(width, measureNumber(pattern));
     return width;
   };
-  const requested = mark.columns ?? DEFAULT_COLUMNS;
-  const columns = requested.filter(
-    (column) => column !== 'bar' || area.width >= 520 || requested.length === 1,
-  );
-  const hasBar = columns.includes('bar');
-  const hasShare = columns.includes('share');
-  const hasValue = columns.includes('value');
-  const emptyWidth = measure(EMPTY);
-  let shareWidth = emptyWidth;
-  let valueWidth = emptyWidth;
-  if (hasValue || hasShare) {
-    for (let period = 0; period < periodCount; period++) {
-      const shareBase = hasShare ? periodShareBase(model.matrix.values, period) : undefined;
-      for (const series of model.matrix.values) {
-        const value = series[period];
-        if (!Number.isFinite(value)) continue;
-        if (shareBase)
-          shareWidth = Math.max(shareWidth, measureNumber(shareText(value, shareBase)));
-        if (!hasValue) continue;
-        valueWidth = Math.max(valueWidth, measureNumber(model.formatValue(value)));
-        const next = series[period + 1];
-        if (!Number.isFinite(next) || next === value) continue;
-        // Format samples between observations to allow for digits trimmed off the endpoints.
-        for (const fraction of VALUE_WIDTH_SAMPLES) {
-          const between = interpolateRaceValue(series, period, fraction);
-          if (Number.isFinite(between)) {
-            valueWidth = Math.max(valueWidth, measureNumber(model.formatValue(between)));
-          }
-        }
-      }
-    }
-  }
+  const data = tableData(model);
+  const valueLabels = columns.includes('value')
+    ? (data.valueLabels ??= collectValueLabels(model))
+    : undefined;
+  const shareLabels = columns.includes('share')
+    ? (data.shareLabels ??= collectShareLabels(model.matrix, data))
+    : undefined;
 
-  const maxChange = Math.max(0, top - 1);
+  const emptyWidth = measure(EMPTY);
+  const maxChange = digitPattern(String(Math.max(0, top - 1)));
   const widths: Record<RaceTableColumn, number> = {
-    rank: Math.max(emptyWidth, measureNumber(String(top))),
+    rank: Math.max(emptyWidth, measureNumber(digitPattern(String(top)))),
     change: Math.max(
       emptyWidth,
       measure('new'),
@@ -115,41 +157,67 @@ export const computeTableStatic: RaceMarkEntry<'table'>['computeStatic'] = (
     ),
     name: labels.reduce((width, label) => Math.max(width, measure(label)), 0) + CHIP_WIDTH_AND_GAP,
     bar: 0,
-    value: valueWidth,
-    share: shareWidth,
+    value: measureNumbers(valueLabels),
+    share: measureNumbers(shareLabels),
   };
-  const fixed = columns.filter((column) => column !== 'bar');
-  for (const column of fixed) {
+  for (const column of columns) {
+    if (column === 'bar') continue;
     widths[column] =
       Math.ceil(Math.max(widths[column], measure(LABELS[column], semibold))) + CELL_PADDING;
   }
+  return widths;
+}
+
+function fitColumns(
+  columns: RaceTableColumn[],
+  widths: Record<RaceTableColumn, number>,
+  area: Rect,
+) {
+  const fixed = columns.filter((column) => column !== 'bar');
   const fixedWidth = fixed.reduce((sum, column) => sum + widths[column], 0);
   if (columns.includes('name')) {
     // Tight tables give the numeric columns their measured widths first.
     const nameBudget = Math.max(0, area.width - (fixedWidth - widths.name));
-    widths.name = hasBar ? Math.min(widths.name, nameBudget) : nameBudget;
+    widths.name = columns.includes('bar') ? Math.min(widths.name, nameBudget) : nameBudget;
   }
   const fittedWidth = fixed.reduce((sum, column) => sum + widths[column], 0);
   const shrink = fittedWidth > area.width ? area.width / fittedWidth : 1;
   widths.bar = Math.max(0, area.width - fittedWidth);
-  const headerHeight = Math.min(area.height, fontSize + 12);
   let x = area.x;
+  return columns.map((column) => {
+    const width = widths[column] * shrink;
+    const position = { column, x, width };
+    x += width;
+    return position;
+  });
+}
+
+/** Measures `RaceTableMarkDef.columns` and drops `bar` below 520px unless it is the only column. */
+export const computeTableStatic: RaceMarkEntry<'table'>['computeStatic'] = (
+  model,
+  base,
+  mark,
+  measureText,
+) => {
+  const { area, theme } = base;
+  const fontSize = theme.fonts.sizes.body;
+  const headerHeight = Math.min(area.height, fontSize + 12);
+  const requested = mark.columns ?? DEFAULT_COLUMNS;
+  const columns = requested.filter(
+    (column) => column !== 'bar' || area.width >= 520 || requested.length === 1,
+  );
   return {
     headerHeight,
-    rowHeight: (area.height - headerHeight) / top,
+    rowHeight: (area.height - headerHeight) / model.timeline.top,
     fontSize,
     labels: { ...LABELS },
-    columns: columns.map((column) => {
-      const width = widths[column] * shrink;
-      const position = { column, x, width };
-      x += width;
-      return position;
-    }),
+    columns: fitColumns(columns, measureColumns(model, base, columns, measureText), area),
   };
 };
 
 function changeCell(rank: number, previous: number, top: number): RaceTableCell {
-  if (rank >= top || rank === previous) return { column: 'change', direction: 'same', text: EMPTY };
+  if (rank >= top) return { column: 'change', direction: 'same', text: EMPTY };
+  if (rank === previous) return { column: 'change', direction: 'same', text: '' };
   if (previous >= top) return { column: 'change', direction: 'new', text: 'new' };
   if (rank < previous) return { column: 'change', direction: 'up', text: `↑${previous - rank}` };
   return { column: 'change', direction: 'down', text: `↓${rank - previous}` };
@@ -157,30 +225,29 @@ function changeCell(rank: number, previous: number, top: number): RaceTableCell 
 
 /** Places rows at their smoothed ranks while holding their rank labels at the observed period. */
 export const tableGeometry: RaceMarkEntry<'table'>['geometry'] = (
-  { timeline, matrix },
+  model,
   { static: { rowHeight, columns } },
   frame,
 ) => {
-  const { t, items } = frame;
-  const period = Math.floor(t);
+  const { timeline, matrix } = model;
+  const {
+    t,
+    items,
+    period: { index: period },
+    domain: [min, max],
+  } = frame;
   const { top } = timeline;
-  const keyIndices = new Map(matrix.keys.map((key, index) => [key, index]));
+  const data = tableData(model);
   const shareBase = columns.some(({ column }) => column === 'share')
-    ? periodShareBase(matrix.values, period)
-    : undefined;
-  let min = 0;
-  let max = 0;
-  for (const { value } of items) {
-    min = Math.min(min, value);
-    max = Math.max(max, value);
-  }
+    ? shareBaseAt(matrix, data, period)
+    : null;
   const magnitude = Math.max(-min, max) || 1;
   const span = max / magnitude - min / magnitude || 1;
   const rows = items.map((item) => {
-    const keyIndex = keyIndices.get(item.key);
+    const keyIndex = data.keyIndices.get(item.key);
     if (keyIndex === undefined) throw new Error(`Unknown race table key: ${item.key}`);
-    const rank = Math.round(timeline.rankPos(keyIndex, period));
-    const previous = period > 0 ? Math.round(timeline.rankPos(keyIndex, period - 1)) : rank;
+    const rank = timeline.periodRank(keyIndex, period);
+    const previous = period > 0 ? timeline.periodRank(keyIndex, period - 1) : rank;
     // Use the local motion around the playhead, independently of the period change label.
     const movesUp = timeline.rankPos(keyIndex, t + 0.001) < timeline.rankPos(keyIndex, t - 0.001);
     const cells = columns.map(({ column, width }): RaceTableCell => {
@@ -199,7 +266,7 @@ export const tableGeometry: RaceMarkEntry<'table'>['geometry'] = (
         case 'share':
           return {
             column,
-            text: shareBase ? shareText(matrix.values[keyIndex][period], shareBase) : EMPTY,
+            text: shareText(matrix.values[keyIndex][period], shareBase),
           };
       }
       return { column, text: item.valueLabel };

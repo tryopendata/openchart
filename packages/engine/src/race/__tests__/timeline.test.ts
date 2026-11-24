@@ -221,6 +221,19 @@ describe('race timeline', () => {
     expect(timeline.sample(0.51)).toEqual(expected);
   });
 
+  it('reads exact observed ranks above and below the fold without smoothing or filling gaps', () => {
+    const timeline = createRaceTimeline(
+      matrix([100, 95, 30], [70, 94, 120], [50, 92, 125], [NaN, NaN, 40]),
+      {
+        ...options,
+        top: 2,
+      },
+    );
+
+    expect([0, 1, 2, 3].map((key) => timeline.periodRank(key, 1))).toEqual([0, 1, 2, Infinity]);
+    expect([0, 1, 2, 3].map((key) => timeline.periodRank(key, 2))).toEqual([3, 1, 0, 2]);
+  });
+
   it('reports rank changes at integer period boundaries and zero for new entries', () => {
     const timeline = createRaceTimeline(matrix([9, 1, 9], [3, 8, 2], [NaN, 6, 6]), {
       ...options,

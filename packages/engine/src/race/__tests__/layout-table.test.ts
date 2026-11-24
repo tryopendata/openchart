@@ -56,7 +56,7 @@ describe('race table layout', () => {
   it('holds rank and change through an overtake and updates both at the period boundary', () => {
     const before = [
       { column: 'rank', text: '2' },
-      { column: 'change', direction: 'same', text: '—' },
+      { column: 'change', direction: 'same', text: '' },
     ];
     expect(raceFrameAt(model, 3.2).items.find(({ key }) => key === 'Brook')?.rank).toBe(1);
     expect(raceFrameAt(model, 3.8).items.find(({ key }) => key === 'Brook')?.rank).toBe(0);
@@ -75,7 +75,7 @@ describe('race table layout', () => {
     ]);
   });
 
-  it('rounds the smoothed rank at the period itself and reports downward movement', () => {
+  it('shows unique observed ranks in value order and reports the exact period change', () => {
     const close = prepareRace(
       {
         ...spec,
@@ -97,16 +97,49 @@ describe('race table layout', () => {
     const layout = layoutRace(close, { width: 800, height: 300 });
     const geometry = raceGeometryAt(close, layout, 1);
     if (geometry.mark !== 'table') throw new Error('Expected a table');
-    expect(raceFrameAt(close, 1).items.find(({ key }) => key === 'Alpine')?.rank).toBe(0);
-    expect(geometry.rows.find(({ key }) => key === 'Alpine')?.cells.slice(0, 2)).toEqual([
-      { column: 'rank', text: '2' },
-      { column: 'change', direction: 'down', text: '↓1' },
+    const standings = geometry.rows.map(({ key, cells }) => ({
+      key,
+      rank: 'text' in cells[0] ? Number(cells[0].text) : NaN,
+      value: 'text' in cells[4] ? Number(cells[4].text) : NaN,
+    }));
+    expect(standings.sort((a, b) => b.value - a.value)).toEqual([
+      { key: 'Alpine', rank: 1, value: 95 },
+      { key: 'Brook', rank: 2, value: 94 },
+      { key: 'Cedar', rank: 3, value: 92 },
     ]);
     const next = raceGeometryAt(close, layout, 2);
     if (next.mark !== 'table') throw new Error('Expected a table');
     expect(next.rows.find(({ key }) => key === 'Alpine')?.cells.slice(0, 2)).toEqual([
       { column: 'rank', text: '3' },
-      { column: 'change', direction: 'down', text: '↓1' },
+      { column: 'change', direction: 'down', text: '↓2' },
+    ]);
+  });
+
+  it('shows a dash for a row still fading after it leaves the observed top N', () => {
+    const crossing = prepareRace(
+      {
+        ...spec,
+        data: [
+          [100, 60, 20],
+          [99, 60, 61],
+          [98, 60, 90],
+        ].flatMap((values, period) =>
+          values.map((score, index) => ({
+            period,
+            key: ['Alpine', 'Brook', 'Cedar'][index],
+            score,
+          })),
+        ),
+        race: { ...spec.race, swap: 600 },
+      },
+      {},
+    );
+    const layout = layoutRace(crossing, { width: 800, height: 300 });
+    const geometry = raceGeometryAt(crossing, layout, 1);
+    if (geometry.mark !== 'table') throw new Error('Expected a table');
+    expect(geometry.rows.find(({ key }) => key === 'Brook')?.cells.slice(0, 2)).toEqual([
+      { column: 'rank', text: '—' },
+      { column: 'change', direction: 'same', text: '—' },
     ]);
   });
 
@@ -125,18 +158,19 @@ describe('race table layout', () => {
     expect(rankCells(t, 'Brook')).toEqual(rankCells(3.2, 'Brook'));
   });
 
-  it('scales inline bars to the current visible maximum and shares to the whole period', () => {
+  it('scales fixed inline bars to the race maximum and shares to the whole period', () => {
     const { layout, geometry } = tableAt(0);
     const width = layout.static.columns.find(({ column }) => column === 'bar')?.width ?? 0;
     expect(width).toBeGreaterThan(0);
+    expect(geometry.rows[0].cells[3]).toMatchObject({ width: width * (100 / 120) });
     expect(geometry.rows).toMatchObject([
       {
         key: 'Alpine',
         cells: [
           { column: 'rank', text: '1' },
-          { column: 'change', direction: 'same', text: '—' },
+          { column: 'change', direction: 'same', text: '' },
           { column: 'name', text: 'Alpine', color: layout.colors[0] },
-          { column: 'bar', x: 0, width, color: layout.colors[0] },
+          { column: 'bar', x: 0, width: width * (100 / 120), color: layout.colors[0] },
           { column: 'value', text: '100.0' },
           { column: 'share', text: '76.9%' },
         ],
@@ -145,9 +179,9 @@ describe('race table layout', () => {
         key: 'Brook',
         cells: [
           { column: 'rank', text: '2' },
-          { column: 'change', direction: 'same', text: '—' },
+          { column: 'change', direction: 'same', text: '' },
           { column: 'name', text: 'Brook', color: layout.colors[1] },
-          { column: 'bar', x: 0, width: width * 0.2, color: layout.colors[1] },
+          { column: 'bar', x: 0, width: width * (20 / 120), color: layout.colors[1] },
           { column: 'value', text: '20.0' },
           { column: 'share', text: '15.4%' },
         ],
@@ -160,6 +194,19 @@ describe('race table layout', () => {
         bar: { column: 'bar', x: 0, width: width * (50 / 120), color: layout.colors[2] },
       },
     ]);
+  });
+
+  it.each([
+    { rescale: undefined, ratio: 1 },
+    { rescale: { min: 150 }, ratio: 100 / 150 },
+  ])('honors the frame domain for rescale $rescale', ({ rescale, ratio }) => {
+    const scaled = prepareRace({ ...spec, race: { ...spec.race, rescale } }, {});
+    const layout = layoutRace(scaled, { width: 800, height: 300 });
+    const geometry = raceGeometryAt(scaled, layout, 0);
+    if (layout.mark !== 'table' || geometry.mark !== 'table') throw new Error('Expected a table');
+    const width = layout.static.columns.find(({ column }) => column === 'bar')?.width ?? 0;
+    expect(width).toBeGreaterThan(0);
+    expect(geometry.rows[0].cells[3]).toMatchObject({ x: 0, width: width * ratio });
   });
 
   it('draws negatives to the left of zero and leaves shares blank when the total is zero', () => {
@@ -265,14 +312,17 @@ describe('race table layout', () => {
     );
   });
 
-  it('sizes the share column from formatted percentages wider than the header', () => {
+  it('suppresses shares for every row when a negative key is outside the visible ranking', () => {
     const shares = prepareRace(
       {
         ...spec,
-        data: [0, 1].flatMap((period) => [
-          { period, key: 'Alpine', score: 100000 },
-          { period, key: 'Brook', score: -99999 },
-        ]),
+        data: [
+          { period: 0, key: 'Alpine', score: 100000 },
+          { period: 0, key: 'Brook', score: -99999 },
+          { period: 1, key: 'Alpine', score: 3 },
+          { period: 1, key: 'Brook', score: 1 },
+        ],
+        race: { ...spec.race, top: 1 },
       },
       {},
     );
@@ -281,9 +331,35 @@ describe('race table layout', () => {
     if (layout.mark !== 'table' || geometry.mark !== 'table') throw new Error('Expected a table');
     const share = geometry.rows[0].cells[5];
     if (share.column !== 'share') throw new Error('Expected a share cell');
-    expect(share.text).toBe('10000000%');
-    expect(layout.static.columns[5].width).toBeGreaterThan(
-      estimateTextWidth(share.text, layout.static.fontSize) + 10,
+    expect(share.text).toBe('—');
+    const next = raceGeometryAt(shares, layout, 1);
+    if (next.mark !== 'table') throw new Error('Expected a table');
+    expect(next.rows[0].cells[5]).toEqual({ column: 'share', text: '75%' });
+  });
+
+  it('reuses formatted value text across resize and theme changes for the same model', () => {
+    let formatCalls = 0;
+    const counted = {
+      ...model,
+      formatValue(value: number) {
+        formatCalls++;
+        return model.formatValue(value);
+      },
+    };
+    const first = layoutRace(counted, { width: 800, height: 300 });
+    expect(formatCalls).toBeGreaterThan(0);
+    const firstCalls = formatCalls;
+    const resized = layoutRace(counted, { width: 360, height: 300 });
+    const themed = layoutRace(counted, {
+      width: 360,
+      height: 300,
+      theme: { fonts: { sizes: { body: 18 } } },
+    });
+    expect(formatCalls).toBe(firstCalls);
+    if (first.mark !== 'table' || resized.mark !== 'table' || themed.mark !== 'table')
+      throw new Error('Expected a table');
+    expect(themed.static.columns.find(({ column }) => column === 'value')?.width).toBeGreaterThan(
+      resized.static.columns.find(({ column }) => column === 'value')?.width ?? Infinity,
     );
   });
 

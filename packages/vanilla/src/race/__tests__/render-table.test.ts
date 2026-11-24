@@ -2,8 +2,14 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { RaceSpec } from '@opendata-ai/openchart-core';
-import { layoutRace, prepareRace, raceGeometryAt } from '@opendata-ai/openchart-engine';
+import {
+  layoutRace,
+  prepareRace,
+  raceFrameAt,
+  raceGeometryAt,
+} from '@opendata-ai/openchart-engine';
 import { describe, expect, it, onTestFinished } from 'vitest';
+import { worldGdpRace } from '../../../../../examples/src/data/world-gdp-race';
 import { createRace } from '../../race-mount';
 import { createRaceTableRenderer } from '../render-table';
 import { createRaceShell } from '../shell';
@@ -49,7 +55,7 @@ function setup(raceSpec: RaceSpec = spec, hidden = false) {
     return geometry;
   }
 
-  return { container, shell, sibling, layout, renderer, draw };
+  return { container, shell, sibling, layout, model, renderer, draw };
 }
 
 function mountWithStyles(container: HTMLElement) {
@@ -82,7 +88,7 @@ describe('race table renderer', () => {
         table?.querySelectorAll('thead > tr > th[scope="col"]') ?? [],
         (cell) => cell.textContent,
       ),
-    ).toEqual(['Rank', 'Change', 'Name', 'Bar', 'Value', 'Share']);
+    ).toEqual(['Rank', 'Change', 'Name', '', 'Value', 'Share']);
     expect(shell.svg.querySelector('table')).toBeNull();
     expect(shell.root.style.position).toBe('relative');
     expect(shell.markHost.style.position).toBe('absolute');
@@ -97,7 +103,7 @@ describe('race table renderer', () => {
   });
 
   it('writes cell text literally and draws the inline bar and identity chip', () => {
-    const { shell, draw } = setup();
+    const { shell, layout, draw } = setup();
     const geometry = draw(0);
     const row = shell.markHost.querySelector<HTMLTableRowElement>('tbody > tr');
     const bar = geometry.rows[0].cells.find(({ column }) => column === 'bar');
@@ -105,7 +111,7 @@ describe('race table renderer', () => {
 
     expect(Array.from(row?.cells ?? [], (cell) => cell.textContent)).toEqual([
       '1',
-      '—',
+      '',
       alpine,
       '',
       '100',
@@ -115,27 +121,155 @@ describe('race table renderer', () => {
     expect(
       row?.cells[2].querySelector<HTMLElement>('[aria-hidden="true"]')?.style.backgroundColor,
     ).toBeTruthy();
-    expect(Number.parseFloat(row?.cells[3].querySelector('div')?.style.width ?? '')).toBeCloseTo(
-      bar.width,
-    );
+    const fill = row?.cells[3].querySelector('div');
+    expect(Number.parseFloat(fill?.style.width ?? '')).toBeCloseTo(layout.static.columns[3].width);
+    expect(fill?.style.transform).toBe('translateX(0px) scaleX(1)');
   });
 
   it('positions the positive bar to the right of zero in a signed table', () => {
-    const { draw, shell } = setup({
+    const { container, draw, layout, shell } = setup({
       ...spec,
       data: [0, 1].flatMap((period) => [
         { period, place: 'Gain', value: 10 },
         { period, place: 'Loss', value: -10 },
       ]),
     });
+    mountWithStyles(container);
     const geometry = draw(0);
     const positive = geometry.rows[0].cells[3];
     if (positive.column !== 'bar') throw new Error('Expected positive bar');
     const [gain, loss] = shell.markHost.querySelectorAll<HTMLDivElement>('tbody td div');
     expect(positive.x).toBeGreaterThan(0);
-    expect(Number.parseFloat(gain.style.left)).toBeCloseTo(positive.x);
-    expect(Number.parseFloat(loss.style.left)).toBe(0);
-    expect(Number.parseFloat(gain.style.width)).toBeCloseTo(Number.parseFloat(loss.style.width));
+    expect(gain.style.left).toBe('');
+    expect(getComputedStyle(gain).transformOrigin).toBe('0 50%');
+    expect(gain.style.transform).toBe(`translateX(${positive.x}px) scaleX(0.5)`);
+    expect(loss.style.transform).toBe('translateX(0px) scaleX(0.5)');
+    expect(Number.parseFloat(gain.style.width)).toBeCloseTo(layout.static.columns[3].width);
+    expect(Number.parseFloat(loss.style.width)).toBeCloseTo(layout.static.columns[3].width);
+  });
+
+  it('leaves unchanged row and cell attributes alone across redraws', () => {
+    const { shell, draw } = setup();
+    draw(0);
+    const table = shell.markHost.querySelector('table');
+    if (!table) throw new Error('Expected a table');
+    const observer = new MutationObserver(() => {});
+    onTestFinished(() => observer.disconnect());
+    observer.observe(table, { subtree: true, attributes: true, childList: true });
+    draw(0);
+    expect(observer.takeRecords()).toHaveLength(0);
+
+    const [firstRow] = table.querySelectorAll('tbody tr');
+    const chip = firstRow.querySelector('[aria-hidden="true"]');
+    draw(0.1);
+    const changes = observer.takeRecords();
+    expect(changes.length).toBeGreaterThan(0);
+    expect(changes.some(({ target }) => target === chip)).toBe(false);
+    expect(changes.some(({ attributeName }) => attributeName === 'data-direction')).toBe(false);
+  });
+
+  it('keeps the background and slot rules fixed during a crossing', () => {
+    const { container, shell, layout, draw } = setup();
+    shell.root.style.setProperty('--oc-bg', '#fff');
+    shell.root.style.setProperty('--oc-border', '#ddd');
+    mountWithStyles(container);
+    draw(0);
+    const body = shell.markHost.querySelector('tbody');
+    const row = body?.querySelector('tr');
+    if (!body || !row) throw new Error('Expected table rows');
+    expect(
+      Number.parseFloat(body.style.getPropertyValue('--oc-race-table-row-height')),
+    ).toBeCloseTo(layout.static.rowHeight);
+    expect(getComputedStyle(row).maxHeight).toContain('- 1px');
+    expect(['', 'none']).toContain(getComputedStyle(row).boxShadow);
+    const rulesStyle = body.getAttribute('style');
+    const originalRowPosition = row.style.transform;
+    draw(0.5);
+    expect(row.style.transform).not.toBe(originalRowPosition);
+    expect(body.getAttribute('style')).toBe(rulesStyle);
+  });
+
+  it.each(['#f6f6f6', '#18181b'])('lets the page surface %s show through the table', (surface) => {
+    const { container, shell, draw } = setup();
+    shell.root.style.setProperty('--oc-bg', '#fff');
+    container.style.backgroundColor = surface;
+    mountWithStyles(container);
+    draw(0);
+    const body = shell.markHost.querySelector('tbody');
+    const row = body?.querySelector('tr');
+    if (!body || !row) throw new Error('Expected table rows');
+    for (const element of [shell.root, shell.markHost, body, row]) {
+      expect(['', 'transparent', 'rgba(0, 0, 0, 0)']).toContain(
+        getComputedStyle(element).backgroundColor,
+      );
+    }
+  });
+
+  it.each([
+    800, 360,
+  ])('keeps all positive-opacity GDP rows readable through the crossing at %i px', (width) => {
+    const { container, layout, model, shell, draw } = setup({
+      ...spec,
+      width,
+      height: 476,
+      data: worldGdpRace.map(({ country, year, gdp }) => ({
+        period: year,
+        place: country,
+        value: gdp,
+      })),
+      race: { autoplay: false },
+    });
+    mountWithStyles(container);
+    const body = shell.markHost.querySelector('tbody');
+    if (!body) throw new Error('Expected table body');
+    const { rowHeight, fontSize, headerHeight } = layout.static;
+    const contentHeight = fontSize * 1.2;
+    const bodyHeight = layout.area.height - headerHeight;
+
+    let sawFadingRow = false;
+    for (let tick = 820; tick <= 905; tick++) {
+      const t = tick / 100;
+      const frame = raceFrameAt(model, t);
+      draw(t);
+      const nodes = [...body.querySelectorAll<HTMLTableRowElement>('tr')];
+      const rendered = new Map(
+        nodes.map((node) => [node.querySelector('.oc-race-table-name')?.textContent, node]),
+      );
+      const bands = frame.items
+        .filter(({ opacity }) => opacity > 0)
+        .map(({ key, rankPos, opacity }) => {
+          if (opacity < 1) sawFadingRow = true;
+          const row = rendered.get(key);
+          if (!row) throw new Error(`Missing ${key} at ${t}`);
+          const rowY = Number.parseFloat(row.style.transform.slice('translateY('.length));
+          expect(rowY, `${key} at ${t}`).toBeCloseTo(rankPos * rowHeight);
+          expect(Number.parseFloat(row.style.opacity), `${key} at ${t}`).toBeCloseTo(opacity);
+          const offset =
+            Number.parseFloat(row.style.getPropertyValue('--oc-race-table-content-offset')) || 0;
+          if (t === 8.8 && (key === 'United Kingdom' || key === 'Italy')) {
+            expect(offset).not.toBe(0);
+            expect(getComputedStyle(row.cells[2]).getPropertyValue('translate')).toBe(
+              `0 ${offset}px`,
+            );
+          }
+          return { key, top: rowY + (rowHeight - 1 - contentHeight) / 2 + offset };
+        })
+        .sort((a, b) => a.top - b.top);
+      expect(rendered.size).toBe(bands.length);
+      for (const [index, band] of bands.entries()) {
+        expect(band.top, `${band.key} at ${t}`).toBeGreaterThanOrEqual(-0.02);
+        expect(band.top + contentHeight, `${band.key} at ${t}`).toBeLessThanOrEqual(
+          bodyHeight + 0.02,
+        );
+        if (index > 0) {
+          expect(
+            band.top,
+            `${band.key} overlaps ${bands[index - 1].key} at ${t}`,
+          ).toBeGreaterThanOrEqual(bands[index - 1].top + contentHeight - 0.02);
+        }
+      }
+    }
+    expect(sawFadingRow).toBe(true);
   });
 
   it('renders matching headers and cells in the resolved custom column order', () => {
@@ -236,7 +370,7 @@ describe('race table renderer', () => {
     expect(body?.lastElementChild).toBe(brookRow);
     expect(brookRow?.cells[4]).toBe(valueCell);
     expect(valueCell?.textContent).toBe('80');
-    expect([brookRow?.cells[0].textContent, brookRow?.cells[1].textContent]).toEqual(['2', '—']);
+    expect([brookRow?.cells[0].textContent, brookRow?.cells[1].textContent]).toEqual(['2', '']);
 
     const fading = draw(0.75);
     expect(fading.rows.some(({ opacity }) => opacity < 1)).toBe(true);
