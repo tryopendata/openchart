@@ -34,6 +34,7 @@ import type {
 } from '@opendata-ai/openchart-core';
 import type { NormalizedBarListSpec } from '../barlist/types';
 import type { NormalizedGeoMapSpec } from '../geo/types';
+import type { NormalizedRaceSpec } from '../race/types';
 import type { NormalizedSankeySpec } from '../sankey/types';
 import type { NormalizedTileMapSpec } from '../tilemap/types';
 
@@ -233,7 +234,8 @@ export type NormalizedSpec =
   | NormalizedSankeySpec
   | NormalizedTileMapSpec
   | NormalizedGeoMapSpec
-  | NormalizedBarListSpec;
+  | NormalizedBarListSpec
+  | NormalizedRaceSpec;
 
 // ---------------------------------------------------------------------------
 // Validation types

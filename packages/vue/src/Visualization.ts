@@ -10,6 +10,7 @@ import {
   isBarListSpec,
   isGeoMapSpec,
   isGraphSpec,
+  isRaceSpec,
   isSankeySpec,
   isTableSpec,
   isTileMapSpec,
@@ -77,6 +78,9 @@ export const Visualization = defineComponent({
       }
       if (isGeoMapSpec(spec)) {
         return h(GeoMap, { ...sharedProps, spec });
+      }
+      if (isRaceSpec(spec)) {
+        throw new Error('Race specs render through createRace');
       }
       return h(Chart, { ...sharedProps, spec });
     };

@@ -77,6 +77,8 @@ function renderViz(spec: VizSpec) {
         return <GeoMap spec={spec} />;
       case 'barlist':
         return <BarList spec={spec} />;
+      case 'race':
+        throw new Error('Race specs render through createRace');
     }
   }
   // ChartSpec | LayerSpec

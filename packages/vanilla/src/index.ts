@@ -84,6 +84,8 @@ export type {
 } from './mount';
 // Main mount API
 export { createChart, resolveInteractionMode } from './mount';
+export type { RaceInstance, RaceMountOptions } from './race-mount';
+export { createRace } from './race-mount';
 export type {
   ReaderController,
   ReaderPresentationOptions,

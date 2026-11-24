@@ -62,6 +62,15 @@ export function validateLayerSpec(
     }
 
     const childObj = child as Record<string, unknown>;
+    if (childObj.type === 'race') {
+      errors.push({
+        code: 'INVALID_VALUE',
+        path: `${prefix}${jsonPointer('layer', i, 'type')}`,
+        message: 'Race specs cannot be layered.',
+        suggestion: 'Render the race in its own container.',
+      });
+      continue;
+    }
     const isNestedLayer = 'layer' in childObj && Array.isArray(childObj.layer);
     const isChildChart = 'mark' in childObj;
 

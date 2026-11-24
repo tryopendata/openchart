@@ -31,9 +31,12 @@
         },
         {
           "$ref": "#/definitions/BarListSpec"
+        },
+        {
+          "$ref": "#/definitions/RaceSpec"
         }
       ],
-      "description": "Top-level visualization spec: union discriminated by structural shape.\n\n- ChartSpec: has `mark` field (no `type`, no `layer`)\n- LayerSpec: has `layer` field\n- TableSpec: has `type: 'table'`\n- GraphSpec: has `type: 'graph'`\n- SankeySpec: has `type: 'sankey'`\n- TileMapSpec: has `type: 'tilemap'`\n- GeoMapSpec: has `type: 'map'`\n- BarListSpec: has `type: 'barlist'`\n\nElection parliament (hemicycle) charts are `ChartSpec` with `mark: 'parliament'`, not a separate top-level type: seat data (party + seats) maps naturally onto encoding.color/y like arc and waffle, and riding the existing chart pipeline gets scales, legend, tooltips, a11y, and dark mode for free instead of a second bespoke compile path (see `packages/engine/src/charts/parliament/`)."
+      "description": "Top-level visualization spec: union discriminated by structural shape.\n\n- ChartSpec: has `mark` field (no `type`, no `layer`)\n- LayerSpec: has `layer` field\n- TableSpec: has `type: 'table'`\n- GraphSpec: has `type: 'graph'`\n- SankeySpec: has `type: 'sankey'`\n- TileMapSpec: has `type: 'tilemap'`\n- GeoMapSpec: has `type: 'map'`\n- BarListSpec: has `type: 'barlist'`\n- RaceSpec: has `type: 'race'`\n\nElection parliament (hemicycle) charts are `ChartSpec` with `mark: 'parliament'`, not a separate top-level type: seat data (party + seats) maps naturally onto encoding.color/y like arc and waffle, and riding the existing chart pipeline gets scales, legend, tooltips, a11y, and dark mode for free instead of a second bespoke compile path (see `packages/engine/src/charts/parliament/`)."
     },
     "ChartSpec": {
       "anyOf": [
@@ -16686,6 +16689,1241 @@
         }
       ],
       "description": "Authored mark text, kept verbatim for strings and formatted for numeric fields."
+    },
+    "RaceSpec": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "race",
+          "description": "Discriminant, always `race`."
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DataRow"
+          },
+          "description": "One data row per key and period."
+        },
+        "mark": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/RaceMarkType"
+            },
+            {
+              "$ref": "#/definitions/RaceMarkDef"
+            }
+          ],
+          "description": "Required bar, line, or table mark. A string uses that mark's default options."
+        },
+        "encoding": {
+          "$ref": "#/definitions/RaceEncoding",
+          "description": "Maps fields to time, key, value, and optional color and label."
+        },
+        "race": {
+          "$ref": "#/definitions/RaceConfig",
+          "description": "Ranking and playback options. Omit to use the race defaults."
+        },
+        "chrome": {
+          "$ref": "#/definitions/Chrome",
+          "description": "Editorial chrome. Omit to draw without authored title, subtitle, or other chrome text."
+        },
+        "theme": {
+          "$ref": "#/definitions/ThemeConfig",
+          "description": "Theme overrides. Omit to use the default theme."
+        },
+        "a11y": {
+          "$ref": "#/definitions/A11yConfig",
+          "description": "Accessibility overrides. Omit to use generated metadata."
+        },
+        "watermark": {
+          "type": "boolean",
+          "description": "Whether to show the OpenData watermark. Defaults to true."
+        },
+        "width": {
+          "type": "number",
+          "description": "Fixed render width in pixels. Defaults to container-driven sizing."
+        },
+        "height": {
+          "type": "number",
+          "description": "Fixed render height in pixels. Defaults to container-driven sizing."
+        },
+        "labels": {
+          "type": "object",
+          "properties": {
+            "format": {
+              "type": "string",
+              "description": "Number format override for label values (d3-format string, e.g. \",.0f\")."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Value label format override. Omit to use the value channel's format or automatic formatting."
+        },
+        "animation": {
+          "$ref": "#/definitions/AnimationSpec",
+          "description": "Set false to disable autoplay and open on the final frame. Playback otherwise follows `race`."
+        }
+      },
+      "required": [
+        "type",
+        "data",
+        "mark",
+        "encoding"
+      ],
+      "additionalProperties": false,
+      "description": "Animated top-N leaderboard over a sequence of periods."
+    },
+    "RaceMarkType": {
+      "type": "string",
+      "enum": [
+        "bar",
+        "line",
+        "table"
+      ],
+      "description": "Mark used to draw each frame of a race."
+    },
+    "RaceMarkDef": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/RaceBarMarkDef"
+        },
+        {
+          "$ref": "#/definitions/RaceLineMarkDef"
+        },
+        {
+          "$ref": "#/definitions/RaceTableMarkDef"
+        }
+      ],
+      "description": "Race mark and its mark-specific options."
+    },
+    "RaceBarMarkDef": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "bar",
+          "description": "Draw horizontal bars."
+        },
+        "cornerRadius": {
+          "type": "number",
+          "description": "Bar corner radius in pixels. Omit to use square corners."
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "RaceLineMarkDef": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "line",
+          "description": "Draw a line for each ranked series."
+        },
+        "window": {
+          "type": "string",
+          "enum": [
+            "reveal",
+            "all"
+          ],
+          "description": "Defaults to `reveal`, which expands the x domain to the playhead. `all` shows the full span."
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "RaceTableMarkDef": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "table",
+          "description": "Draw a table of ranked rows."
+        },
+        "columns": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RaceTableColumn"
+          },
+          "description": "Ordered columns. Defaults to all six in the listed order, with `bar` hidden below 520px."
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "RaceTableColumn": {
+      "type": "string",
+      "enum": [
+        "rank",
+        "change",
+        "name",
+        "bar",
+        "value",
+        "share"
+      ],
+      "description": "Column in a race table."
+    },
+    "RaceEncoding": {
+      "type": "object",
+      "properties": {
+        "time": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "temporal",
+                "ordinal",
+                "quantitative"
+              ],
+              "description": "How to interpret the field values."
+            },
+            "field": {
+              "type": "string",
+              "description": "Data field name (column in the data array).\n\nWhen using `ChartSpec<TData>` with a typed data array, this is constrained to the actual column names of `TData`. Typos fail at compile time and IDEs autocomplete your column names."
+            },
+            "interval": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "const": "day"
+                },
+                {
+                  "type": "string",
+                  "const": "week"
+                },
+                {
+                  "type": "string",
+                  "const": "month"
+                },
+                {
+                  "type": "string",
+                  "const": "quarter"
+                },
+                {
+                  "type": "string",
+                  "const": "year"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "description": "Temporal bar position interval; numbers are milliseconds. Bar marks only."
+            },
+            "aggregate": {
+              "$ref": "#/definitions/AggregateOp",
+              "description": "Optional aggregate to apply before encoding."
+            },
+            "axis": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/AxisConfig"
+                },
+                {
+                  "type": "boolean",
+                  "const": false
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Axis configuration. Set to `false` to suppress axis entirely (no space reserved). `null` is accepted as a VL-aligned alias for `false`."
+            },
+            "scale": {
+              "$ref": "#/definitions/ScaleConfig",
+              "description": "Scale configuration."
+            },
+            "stack": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "string",
+                  "const": "zero"
+                },
+                {
+                  "type": "string",
+                  "const": "normalize"
+                },
+                {
+                  "type": "string",
+                  "const": "center"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Stacking behavior for quantitative channels (Vega-Lite aligned).\n\nVega-Lite accepts `'zero' | 'normalize' | 'center' | null`. OpenChart adds `true` (sugar for `'zero'`) and `false` (sugar for `null`) so callers can write `stack: true` / `stack: false` without learning the string forms. The string forms are still the canonical input — the boolean shorthand is normalized to the matching string before reaching layout.\n\n- undefined: chart-type default (see below) -- stacked for bar/column/area\n- true | 'zero': stack from zero baseline\n- 'normalize': stack and normalize to fraction of total (0-1 per category)\n- 'center': center stacks around zero (streamgraph style)\n- null | false: no stacking -- renders grouped/dodged (bar) or overlap (area)\n\n**Defaults differ by chart type:**\n- **Bar/Column**: defaults to stacked (`'zero'`), Vega-Lite aligned. Use   `stack: null` (or `false`) for grouped/side-by-side bars.\n- **Area**: defaults to stacked (`'zero'`), Vega-Lite aligned. Use   `stack: null` (or `false`) to opt into overlap rendering, where each   series renders as a translucent gradient band anchored at the   y-domain baseline.\n- **Line**: stacking is not applied (lines always overlap)."
+            },
+            "bin": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "$ref": "#/definitions/BinParams"
+                }
+              ],
+              "description": "Encoding-level bin shorthand (Vega-Lite aligned). When set, auto-generates a BinTransform during normalization and updates the field reference to the binned output (convention: `bin_<fieldName>`).\n- true: bin with default params\n- BinParams: bin with custom params (maxbins, step, etc.)"
+            },
+            "timeUnit": {
+              "$ref": "#/definitions/TimeUnit",
+              "description": "Encoding-level timeUnit shorthand (Vega-Lite aligned). When set, auto-generates a TimeUnitTransform during normalization and updates the field reference to the output (convention: `<timeUnit>_<fieldName>`)."
+            },
+            "sort": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "const": "ascending"
+                },
+                {
+                  "type": "string",
+                  "const": "descending"
+                },
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "string",
+                  "const": "x"
+                },
+                {
+                  "type": "string",
+                  "const": "-x"
+                },
+                {
+                  "type": "string",
+                  "const": "y"
+                },
+                {
+                  "type": "string",
+                  "const": "-y"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "$ref": "#/definitions/SortByField"
+                }
+              ],
+              "description": "Sort order for categorical (nominal/ordinal) scale domains (Vega-Lite aligned).\n- 'ascending': sort domain values ascending (default VL behavior)\n- 'descending': sort domain values descending\n- null: use data order (no sorting)\n- undefined: ascending (VL default)\n- 'x' | '-x' | 'y' | '-y': sort by another channel's values ('-' prefix   for descending). The VL ranked-bar idiom: `sort: '-y'` orders categories   by value, largest first. Resolved into an explicit domain during the   pre-validation sugar expansion.\n- string[]: explicit value order. Listed values come first (in the given   order); unlisted data values follow in data order.\n- SortByField: sort by the aggregated values of another field."
+            },
+            "legend": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/LegendConfig"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legend configuration for this channel (Vega-Lite aligned). Only meaningful on the `color` channel. `null` hides the legend (the VL idiom for `legend.show = false`); a config object merges into the top-level `legend` (top-level keys win on conflict)."
+            },
+            "title": {
+              "type": "string",
+              "description": "Display title override (Vega-Lite aligned). Used as the label in tooltips instead of the raw field name. Also usable for axis titles, but `axis.title` takes precedence there."
+            },
+            "format": {
+              "type": "string",
+              "description": "Format string for values (Vega-Lite aligned). For quantitative fields: d3-format string (e.g. \",.0f\", \"$,.2f\"), or semantic keyword `'percent'` / `'currency'`. For temporal fields: d3-time-format string (e.g. \"%Y\", \"%b %d\"). Used in tooltips; `axis.format` takes precedence for axis tick labels."
+            },
+            "highlight": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ],
+              "description": "Emphasis highlight for the color channel. Names one or more series values to visually emphasize; all other series are muted to a neutral gray.\n\nOnly meaningful on the `color` encoding channel. On other channels this property is ignored."
+            }
+          },
+          "required": [
+            "field"
+          ],
+          "description": "Playback field. Temporal dates or years and quantitative values sort by value. Ordinal values use `sort` or first-seen order."
+        },
+        "key": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "$ref": "#/definitions/FieldType",
+              "description": "How to interpret the field values."
+            },
+            "field": {
+              "type": "string",
+              "description": "Data field name (column in the data array).\n\nWhen using `ChartSpec<TData>` with a typed data array, this is constrained to the actual column names of `TData`. Typos fail at compile time and IDEs autocomplete your column names."
+            },
+            "interval": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "const": "day"
+                },
+                {
+                  "type": "string",
+                  "const": "week"
+                },
+                {
+                  "type": "string",
+                  "const": "month"
+                },
+                {
+                  "type": "string",
+                  "const": "quarter"
+                },
+                {
+                  "type": "string",
+                  "const": "year"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "description": "Temporal bar position interval; numbers are milliseconds. Bar marks only."
+            },
+            "aggregate": {
+              "$ref": "#/definitions/AggregateOp",
+              "description": "Optional aggregate to apply before encoding."
+            },
+            "axis": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/AxisConfig"
+                },
+                {
+                  "type": "boolean",
+                  "const": false
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Axis configuration. Set to `false` to suppress axis entirely (no space reserved). `null` is accepted as a VL-aligned alias for `false`."
+            },
+            "scale": {
+              "$ref": "#/definitions/ScaleConfig",
+              "description": "Scale configuration."
+            },
+            "stack": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "string",
+                  "const": "zero"
+                },
+                {
+                  "type": "string",
+                  "const": "normalize"
+                },
+                {
+                  "type": "string",
+                  "const": "center"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Stacking behavior for quantitative channels (Vega-Lite aligned).\n\nVega-Lite accepts `'zero' | 'normalize' | 'center' | null`. OpenChart adds `true` (sugar for `'zero'`) and `false` (sugar for `null`) so callers can write `stack: true` / `stack: false` without learning the string forms. The string forms are still the canonical input — the boolean shorthand is normalized to the matching string before reaching layout.\n\n- undefined: chart-type default (see below) -- stacked for bar/column/area\n- true | 'zero': stack from zero baseline\n- 'normalize': stack and normalize to fraction of total (0-1 per category)\n- 'center': center stacks around zero (streamgraph style)\n- null | false: no stacking -- renders grouped/dodged (bar) or overlap (area)\n\n**Defaults differ by chart type:**\n- **Bar/Column**: defaults to stacked (`'zero'`), Vega-Lite aligned. Use   `stack: null` (or `false`) for grouped/side-by-side bars.\n- **Area**: defaults to stacked (`'zero'`), Vega-Lite aligned. Use   `stack: null` (or `false`) to opt into overlap rendering, where each   series renders as a translucent gradient band anchored at the   y-domain baseline.\n- **Line**: stacking is not applied (lines always overlap)."
+            },
+            "bin": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "$ref": "#/definitions/BinParams"
+                }
+              ],
+              "description": "Encoding-level bin shorthand (Vega-Lite aligned). When set, auto-generates a BinTransform during normalization and updates the field reference to the binned output (convention: `bin_<fieldName>`).\n- true: bin with default params\n- BinParams: bin with custom params (maxbins, step, etc.)"
+            },
+            "timeUnit": {
+              "$ref": "#/definitions/TimeUnit",
+              "description": "Encoding-level timeUnit shorthand (Vega-Lite aligned). When set, auto-generates a TimeUnitTransform during normalization and updates the field reference to the output (convention: `<timeUnit>_<fieldName>`)."
+            },
+            "sort": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "const": "ascending"
+                },
+                {
+                  "type": "string",
+                  "const": "descending"
+                },
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "string",
+                  "const": "x"
+                },
+                {
+                  "type": "string",
+                  "const": "-x"
+                },
+                {
+                  "type": "string",
+                  "const": "y"
+                },
+                {
+                  "type": "string",
+                  "const": "-y"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "$ref": "#/definitions/SortByField"
+                }
+              ],
+              "description": "Sort order for categorical (nominal/ordinal) scale domains (Vega-Lite aligned).\n- 'ascending': sort domain values ascending (default VL behavior)\n- 'descending': sort domain values descending\n- null: use data order (no sorting)\n- undefined: ascending (VL default)\n- 'x' | '-x' | 'y' | '-y': sort by another channel's values ('-' prefix   for descending). The VL ranked-bar idiom: `sort: '-y'` orders categories   by value, largest first. Resolved into an explicit domain during the   pre-validation sugar expansion.\n- string[]: explicit value order. Listed values come first (in the given   order); unlisted data values follow in data order.\n- SortByField: sort by the aggregated values of another field."
+            },
+            "legend": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/LegendConfig"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legend configuration for this channel (Vega-Lite aligned). Only meaningful on the `color` channel. `null` hides the legend (the VL idiom for `legend.show = false`); a config object merges into the top-level `legend` (top-level keys win on conflict)."
+            },
+            "title": {
+              "type": "string",
+              "description": "Display title override (Vega-Lite aligned). Used as the label in tooltips instead of the raw field name. Also usable for axis titles, but `axis.title` takes precedence there."
+            },
+            "format": {
+              "type": "string",
+              "description": "Format string for values (Vega-Lite aligned). For quantitative fields: d3-format string (e.g. \",.0f\", \"$,.2f\"), or semantic keyword `'percent'` / `'currency'`. For temporal fields: d3-time-format string (e.g. \"%Y\", \"%b %d\"). Used in tooltips; `axis.format` takes precedence for axis tick labels."
+            },
+            "highlight": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ],
+              "description": "Emphasis highlight for the color channel. Names one or more series values to visually emphasize; all other series are muted to a neutral gray.\n\nOnly meaningful on the `color` encoding channel. On other channels this property is ignored."
+            }
+          },
+          "required": [
+            "field"
+          ],
+          "description": "Stable identity across periods. Also the display name by default."
+        },
+        "value": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "quantitative",
+              "description": "How to interpret the field values."
+            },
+            "field": {
+              "type": "string",
+              "description": "Data field name (column in the data array).\n\nWhen using `ChartSpec<TData>` with a typed data array, this is constrained to the actual column names of `TData`. Typos fail at compile time and IDEs autocomplete your column names."
+            },
+            "interval": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "const": "day"
+                },
+                {
+                  "type": "string",
+                  "const": "week"
+                },
+                {
+                  "type": "string",
+                  "const": "month"
+                },
+                {
+                  "type": "string",
+                  "const": "quarter"
+                },
+                {
+                  "type": "string",
+                  "const": "year"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "description": "Temporal bar position interval; numbers are milliseconds. Bar marks only."
+            },
+            "aggregate": {
+              "$ref": "#/definitions/AggregateOp",
+              "description": "Optional aggregate to apply before encoding."
+            },
+            "axis": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/AxisConfig"
+                },
+                {
+                  "type": "boolean",
+                  "const": false
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Axis configuration. Set to `false` to suppress axis entirely (no space reserved). `null` is accepted as a VL-aligned alias for `false`."
+            },
+            "scale": {
+              "$ref": "#/definitions/ScaleConfig",
+              "description": "Scale configuration."
+            },
+            "stack": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "string",
+                  "const": "zero"
+                },
+                {
+                  "type": "string",
+                  "const": "normalize"
+                },
+                {
+                  "type": "string",
+                  "const": "center"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Stacking behavior for quantitative channels (Vega-Lite aligned).\n\nVega-Lite accepts `'zero' | 'normalize' | 'center' | null`. OpenChart adds `true` (sugar for `'zero'`) and `false` (sugar for `null`) so callers can write `stack: true` / `stack: false` without learning the string forms. The string forms are still the canonical input — the boolean shorthand is normalized to the matching string before reaching layout.\n\n- undefined: chart-type default (see below) -- stacked for bar/column/area\n- true | 'zero': stack from zero baseline\n- 'normalize': stack and normalize to fraction of total (0-1 per category)\n- 'center': center stacks around zero (streamgraph style)\n- null | false: no stacking -- renders grouped/dodged (bar) or overlap (area)\n\n**Defaults differ by chart type:**\n- **Bar/Column**: defaults to stacked (`'zero'`), Vega-Lite aligned. Use   `stack: null` (or `false`) for grouped/side-by-side bars.\n- **Area**: defaults to stacked (`'zero'`), Vega-Lite aligned. Use   `stack: null` (or `false`) to opt into overlap rendering, where each   series renders as a translucent gradient band anchored at the   y-domain baseline.\n- **Line**: stacking is not applied (lines always overlap)."
+            },
+            "bin": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "$ref": "#/definitions/BinParams"
+                }
+              ],
+              "description": "Encoding-level bin shorthand (Vega-Lite aligned). When set, auto-generates a BinTransform during normalization and updates the field reference to the binned output (convention: `bin_<fieldName>`).\n- true: bin with default params\n- BinParams: bin with custom params (maxbins, step, etc.)"
+            },
+            "timeUnit": {
+              "$ref": "#/definitions/TimeUnit",
+              "description": "Encoding-level timeUnit shorthand (Vega-Lite aligned). When set, auto-generates a TimeUnitTransform during normalization and updates the field reference to the output (convention: `<timeUnit>_<fieldName>`)."
+            },
+            "sort": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "const": "ascending"
+                },
+                {
+                  "type": "string",
+                  "const": "descending"
+                },
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "string",
+                  "const": "x"
+                },
+                {
+                  "type": "string",
+                  "const": "-x"
+                },
+                {
+                  "type": "string",
+                  "const": "y"
+                },
+                {
+                  "type": "string",
+                  "const": "-y"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "$ref": "#/definitions/SortByField"
+                }
+              ],
+              "description": "Sort order for categorical (nominal/ordinal) scale domains (Vega-Lite aligned).\n- 'ascending': sort domain values ascending (default VL behavior)\n- 'descending': sort domain values descending\n- null: use data order (no sorting)\n- undefined: ascending (VL default)\n- 'x' | '-x' | 'y' | '-y': sort by another channel's values ('-' prefix   for descending). The VL ranked-bar idiom: `sort: '-y'` orders categories   by value, largest first. Resolved into an explicit domain during the   pre-validation sugar expansion.\n- string[]: explicit value order. Listed values come first (in the given   order); unlisted data values follow in data order.\n- SortByField: sort by the aggregated values of another field."
+            },
+            "legend": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/LegendConfig"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legend configuration for this channel (Vega-Lite aligned). Only meaningful on the `color` channel. `null` hides the legend (the VL idiom for `legend.show = false`); a config object merges into the top-level `legend` (top-level keys win on conflict)."
+            },
+            "title": {
+              "type": "string",
+              "description": "Display title override (Vega-Lite aligned). Used as the label in tooltips instead of the raw field name. Also usable for axis titles, but `axis.title` takes precedence there."
+            },
+            "format": {
+              "type": "string",
+              "description": "Format string for values (Vega-Lite aligned). For quantitative fields: d3-format string (e.g. \",.0f\", \"$,.2f\"), or semantic keyword `'percent'` / `'currency'`. For temporal fields: d3-time-format string (e.g. \"%Y\", \"%b %d\"). Used in tooltips; `axis.format` takes precedence for axis tick labels."
+            },
+            "highlight": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ],
+              "description": "Emphasis highlight for the color channel. Names one or more series values to visually emphasize; all other series are muted to a neutral gray.\n\nOnly meaningful on the `color` encoding channel. On other channels this property is ignored."
+            }
+          },
+          "required": [
+            "field"
+          ],
+          "description": "Numeric field to rank and draw. Defaults to quantitative."
+        },
+        "color": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "$ref": "#/definitions/FieldType",
+                  "description": "How to interpret the field values."
+                },
+                "field": {
+                  "type": "string",
+                  "description": "Data field name (column in the data array).\n\nWhen using `ChartSpec<TData>` with a typed data array, this is constrained to the actual column names of `TData`. Typos fail at compile time and IDEs autocomplete your column names."
+                },
+                "interval": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "const": "day"
+                    },
+                    {
+                      "type": "string",
+                      "const": "week"
+                    },
+                    {
+                      "type": "string",
+                      "const": "month"
+                    },
+                    {
+                      "type": "string",
+                      "const": "quarter"
+                    },
+                    {
+                      "type": "string",
+                      "const": "year"
+                    },
+                    {
+                      "type": "number"
+                    }
+                  ],
+                  "description": "Temporal bar position interval; numbers are milliseconds. Bar marks only."
+                },
+                "aggregate": {
+                  "$ref": "#/definitions/AggregateOp",
+                  "description": "Optional aggregate to apply before encoding."
+                },
+                "axis": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/AxisConfig"
+                    },
+                    {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Axis configuration. Set to `false` to suppress axis entirely (no space reserved). `null` is accepted as a VL-aligned alias for `false`."
+                },
+                "scale": {
+                  "$ref": "#/definitions/ScaleConfig",
+                  "description": "Scale configuration."
+                },
+                "stack": {
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "string",
+                      "const": "zero"
+                    },
+                    {
+                      "type": "string",
+                      "const": "normalize"
+                    },
+                    {
+                      "type": "string",
+                      "const": "center"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Stacking behavior for quantitative channels (Vega-Lite aligned).\n\nVega-Lite accepts `'zero' | 'normalize' | 'center' | null`. OpenChart adds `true` (sugar for `'zero'`) and `false` (sugar for `null`) so callers can write `stack: true` / `stack: false` without learning the string forms. The string forms are still the canonical input — the boolean shorthand is normalized to the matching string before reaching layout.\n\n- undefined: chart-type default (see below) -- stacked for bar/column/area\n- true | 'zero': stack from zero baseline\n- 'normalize': stack and normalize to fraction of total (0-1 per category)\n- 'center': center stacks around zero (streamgraph style)\n- null | false: no stacking -- renders grouped/dodged (bar) or overlap (area)\n\n**Defaults differ by chart type:**\n- **Bar/Column**: defaults to stacked (`'zero'`), Vega-Lite aligned. Use   `stack: null` (or `false`) for grouped/side-by-side bars.\n- **Area**: defaults to stacked (`'zero'`), Vega-Lite aligned. Use   `stack: null` (or `false`) to opt into overlap rendering, where each   series renders as a translucent gradient band anchored at the   y-domain baseline.\n- **Line**: stacking is not applied (lines always overlap)."
+                },
+                "bin": {
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/definitions/BinParams"
+                    }
+                  ],
+                  "description": "Encoding-level bin shorthand (Vega-Lite aligned). When set, auto-generates a BinTransform during normalization and updates the field reference to the binned output (convention: `bin_<fieldName>`).\n- true: bin with default params\n- BinParams: bin with custom params (maxbins, step, etc.)"
+                },
+                "timeUnit": {
+                  "$ref": "#/definitions/TimeUnit",
+                  "description": "Encoding-level timeUnit shorthand (Vega-Lite aligned). When set, auto-generates a TimeUnitTransform during normalization and updates the field reference to the output (convention: `<timeUnit>_<fieldName>`)."
+                },
+                "sort": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "const": "ascending"
+                    },
+                    {
+                      "type": "string",
+                      "const": "descending"
+                    },
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "type": "string",
+                      "const": "x"
+                    },
+                    {
+                      "type": "string",
+                      "const": "-x"
+                    },
+                    {
+                      "type": "string",
+                      "const": "y"
+                    },
+                    {
+                      "type": "string",
+                      "const": "-y"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    {
+                      "$ref": "#/definitions/SortByField"
+                    }
+                  ],
+                  "description": "Sort order for categorical (nominal/ordinal) scale domains (Vega-Lite aligned).\n- 'ascending': sort domain values ascending (default VL behavior)\n- 'descending': sort domain values descending\n- null: use data order (no sorting)\n- undefined: ascending (VL default)\n- 'x' | '-x' | 'y' | '-y': sort by another channel's values ('-' prefix   for descending). The VL ranked-bar idiom: `sort: '-y'` orders categories   by value, largest first. Resolved into an explicit domain during the   pre-validation sugar expansion.\n- string[]: explicit value order. Listed values come first (in the given   order); unlisted data values follow in data order.\n- SortByField: sort by the aggregated values of another field."
+                },
+                "legend": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/LegendConfig"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Legend configuration for this channel (Vega-Lite aligned). Only meaningful on the `color` channel. `null` hides the legend (the VL idiom for `legend.show = false`); a config object merges into the top-level `legend` (top-level keys win on conflict)."
+                },
+                "title": {
+                  "type": "string",
+                  "description": "Display title override (Vega-Lite aligned). Used as the label in tooltips instead of the raw field name. Also usable for axis titles, but `axis.title` takes precedence there."
+                },
+                "format": {
+                  "type": "string",
+                  "description": "Format string for values (Vega-Lite aligned). For quantitative fields: d3-format string (e.g. \",.0f\", \"$,.2f\"), or semantic keyword `'percent'` / `'currency'`. For temporal fields: d3-time-format string (e.g. \"%Y\", \"%b %d\"). Used in tooltips; `axis.format` takes precedence for axis tick labels."
+                },
+                "highlight": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  ],
+                  "description": "Emphasis highlight for the color channel. Names one or more series values to visually emphasize; all other series are muted to a neutral gray.\n\nOnly meaningful on the `color` encoding channel. On other channels this property is ignored."
+                }
+              },
+              "required": [
+                "field"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "value"
+              ],
+              "additionalProperties": false
+            }
+          ],
+          "description": "Field or constant CSS color. Defaults to coloring by key in order of first appearance in the top N."
+        },
+        "label": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "nominal",
+              "description": "How to interpret the field values."
+            },
+            "field": {
+              "type": "string",
+              "description": "Data field name (column in the data array).\n\nWhen using `ChartSpec<TData>` with a typed data array, this is constrained to the actual column names of `TData`. Typos fail at compile time and IDEs autocomplete your column names."
+            },
+            "interval": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "const": "day"
+                },
+                {
+                  "type": "string",
+                  "const": "week"
+                },
+                {
+                  "type": "string",
+                  "const": "month"
+                },
+                {
+                  "type": "string",
+                  "const": "quarter"
+                },
+                {
+                  "type": "string",
+                  "const": "year"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "description": "Temporal bar position interval; numbers are milliseconds. Bar marks only."
+            },
+            "aggregate": {
+              "$ref": "#/definitions/AggregateOp",
+              "description": "Optional aggregate to apply before encoding."
+            },
+            "axis": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/AxisConfig"
+                },
+                {
+                  "type": "boolean",
+                  "const": false
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Axis configuration. Set to `false` to suppress axis entirely (no space reserved). `null` is accepted as a VL-aligned alias for `false`."
+            },
+            "scale": {
+              "$ref": "#/definitions/ScaleConfig",
+              "description": "Scale configuration."
+            },
+            "stack": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "string",
+                  "const": "zero"
+                },
+                {
+                  "type": "string",
+                  "const": "normalize"
+                },
+                {
+                  "type": "string",
+                  "const": "center"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Stacking behavior for quantitative channels (Vega-Lite aligned).\n\nVega-Lite accepts `'zero' | 'normalize' | 'center' | null`. OpenChart adds `true` (sugar for `'zero'`) and `false` (sugar for `null`) so callers can write `stack: true` / `stack: false` without learning the string forms. The string forms are still the canonical input — the boolean shorthand is normalized to the matching string before reaching layout.\n\n- undefined: chart-type default (see below) -- stacked for bar/column/area\n- true | 'zero': stack from zero baseline\n- 'normalize': stack and normalize to fraction of total (0-1 per category)\n- 'center': center stacks around zero (streamgraph style)\n- null | false: no stacking -- renders grouped/dodged (bar) or overlap (area)\n\n**Defaults differ by chart type:**\n- **Bar/Column**: defaults to stacked (`'zero'`), Vega-Lite aligned. Use   `stack: null` (or `false`) for grouped/side-by-side bars.\n- **Area**: defaults to stacked (`'zero'`), Vega-Lite aligned. Use   `stack: null` (or `false`) to opt into overlap rendering, where each   series renders as a translucent gradient band anchored at the   y-domain baseline.\n- **Line**: stacking is not applied (lines always overlap)."
+            },
+            "bin": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "$ref": "#/definitions/BinParams"
+                }
+              ],
+              "description": "Encoding-level bin shorthand (Vega-Lite aligned). When set, auto-generates a BinTransform during normalization and updates the field reference to the binned output (convention: `bin_<fieldName>`).\n- true: bin with default params\n- BinParams: bin with custom params (maxbins, step, etc.)"
+            },
+            "timeUnit": {
+              "$ref": "#/definitions/TimeUnit",
+              "description": "Encoding-level timeUnit shorthand (Vega-Lite aligned). When set, auto-generates a TimeUnitTransform during normalization and updates the field reference to the output (convention: `<timeUnit>_<fieldName>`)."
+            },
+            "sort": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "const": "ascending"
+                },
+                {
+                  "type": "string",
+                  "const": "descending"
+                },
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "string",
+                  "const": "x"
+                },
+                {
+                  "type": "string",
+                  "const": "-x"
+                },
+                {
+                  "type": "string",
+                  "const": "y"
+                },
+                {
+                  "type": "string",
+                  "const": "-y"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "$ref": "#/definitions/SortByField"
+                }
+              ],
+              "description": "Sort order for categorical (nominal/ordinal) scale domains (Vega-Lite aligned).\n- 'ascending': sort domain values ascending (default VL behavior)\n- 'descending': sort domain values descending\n- null: use data order (no sorting)\n- undefined: ascending (VL default)\n- 'x' | '-x' | 'y' | '-y': sort by another channel's values ('-' prefix   for descending). The VL ranked-bar idiom: `sort: '-y'` orders categories   by value, largest first. Resolved into an explicit domain during the   pre-validation sugar expansion.\n- string[]: explicit value order. Listed values come first (in the given   order); unlisted data values follow in data order.\n- SortByField: sort by the aggregated values of another field."
+            },
+            "legend": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/LegendConfig"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Legend configuration for this channel (Vega-Lite aligned). Only meaningful on the `color` channel. `null` hides the legend (the VL idiom for `legend.show = false`); a config object merges into the top-level `legend` (top-level keys win on conflict)."
+            },
+            "title": {
+              "type": "string",
+              "description": "Display title override (Vega-Lite aligned). Used as the label in tooltips instead of the raw field name. Also usable for axis titles, but `axis.title` takes precedence there."
+            },
+            "format": {
+              "type": "string",
+              "description": "Format string for values (Vega-Lite aligned). For quantitative fields: d3-format string (e.g. \",.0f\", \"$,.2f\"), or semantic keyword `'percent'` / `'currency'`. For temporal fields: d3-time-format string (e.g. \"%Y\", \"%b %d\"). Used in tooltips; `axis.format` takes precedence for axis tick labels."
+            },
+            "highlight": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ],
+              "description": "Emphasis highlight for the color channel. Names one or more series values to visually emphasize; all other series are muted to a neutral gray.\n\nOnly meaningful on the `color` encoding channel. On other channels this property is ignored."
+            }
+          },
+          "required": [
+            "field"
+          ],
+          "description": "Nominal display label. The last non-null label wins per key. Defaults to the key."
+        }
+      },
+      "required": [
+        "time",
+        "key",
+        "value"
+      ],
+      "additionalProperties": false,
+      "description": "Field mappings shared by bar, line, and table races."
+    },
+    "RaceConfig": {
+      "type": "object",
+      "properties": {
+        "top": {
+          "type": "number",
+          "description": "Number of visible slots. Defaults to 10."
+        },
+        "duration": {
+          "type": "number",
+          "description": "Total playback duration in milliseconds at 1× speed. Defaults to 700ms per period, clamped to 8000–90000ms. Mutually exclusive with `step`."
+        },
+        "step": {
+          "type": "number",
+          "description": "Duration per period in milliseconds. Omitted by default and mutually exclusive with `duration`."
+        },
+        "swap": {
+          "type": "number",
+          "description": "Reorder duration in milliseconds. Defaults to 400."
+        },
+        "rescale": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "frame"
+            },
+            {
+              "type": "string",
+              "const": "fixed"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "min": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "min"
+              ],
+              "additionalProperties": false
+            }
+          ],
+          "description": "Value domain policy. Defaults to `frame` for the visible items. Use `fixed` for the full run or `{ min }` for a floor on the frame maximum."
+        },
+        "gaps": {
+          "type": "string",
+          "enum": [
+            "interpolate",
+            "hold",
+            "drop"
+          ],
+          "description": "Interior gap policy. Defaults to `interpolate`. Use `hold` to carry the previous value or `drop` to leave the value absent."
+        },
+        "holdEnd": {
+          "type": "number",
+          "description": "Time to dwell on the final frame in milliseconds. Defaults to 1500."
+        },
+        "loop": {
+          "type": "boolean",
+          "description": "Restart after the final hold. Defaults to false."
+        },
+        "autoplay": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "visible"
+            },
+            {
+              "type": "boolean"
+            }
+          ],
+          "description": "Start when 25% visible (`visible`, the default), immediately (`true`), or on demand (`false`). Reduced motion disables autoplay."
+        },
+        "controls": {
+          "type": "boolean",
+          "description": "Show play/pause, scrubber, and period readout. Defaults to true."
+        },
+        "period": {
+          "anyOf": [
+            {
+              "type": "boolean",
+              "const": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "format": {
+                  "type": "string",
+                  "description": "Overrides the time channel's format."
+                },
+                "position": {
+                  "type": "string",
+                  "const": "auto",
+                  "description": "Period label placement. Defaults to `auto`."
+                }
+              },
+              "additionalProperties": false
+            }
+          ],
+          "description": "Large period label. On by default with automatic placement and the time channel's format. Set false to hide it."
+        },
+        "summary": {
+          "type": [
+            "string",
+            "boolean"
+          ],
+          "enum": [
+            "sum",
+            false
+          ],
+          "description": "Show the sum of the top N values. Defaults to false."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Ranking and playback options for a race."
     },
     "ChartSpecBase": {
       "type": "object",

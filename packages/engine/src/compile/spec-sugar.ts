@@ -880,6 +880,9 @@ function expandLayerSugar(
   const expandedChildren = layer.map((child) => {
     if (!child || typeof child !== 'object' || Array.isArray(child)) return child;
     const childObj = child as Record<string, unknown>;
+    if (childObj.type === 'race') {
+      throw new Error('Race specs cannot be layered. Render the race in its own container.');
+    }
     if (Array.isArray(childObj.layer)) {
       return expandLayerSugar(childObj, warnings, layerData, mergedEncoding);
     }
@@ -938,9 +941,8 @@ function expandValueFormatSugar(
 /**
  * Expand VL-idiom and encoding-level sugar on a raw chart or layer spec.
  * Non-chart specs (tables, graphs, sankey, tilemap, barlist) get valueFormat
- * expansion only. Deprecation warnings are pushed onto `warnings`; callers
- * surface them (compileChart/compileLayer console.warn each unique message
- * once per compile).
+ * expansion only. Race specs pass through unchanged. Deprecation warnings are
+ * pushed onto `warnings`; callers surface each unique message once per compile.
  */
 export function expandSpecSugar(
   spec: Record<string, unknown>,
@@ -948,6 +950,7 @@ export function expandSpecSugar(
   checkMarkOptions = true,
 ): Record<string, unknown> {
   if (!spec || typeof spec !== 'object' || Array.isArray(spec)) return spec;
+  if (spec.type === 'race') return spec;
   const removed = collectRemovedSpecErrors(spec);
   if (removed.length)
     throw new Error(`Invalid spec:\n${removed.map((error) => error.message).join('\n')}`);

@@ -23,6 +23,7 @@ import type {
   TableLayout,
   TileMapLayout,
 } from '@opendata-ai/openchart-core';
+import { isRaceSpec } from '@opendata-ai/openchart-core';
 import { assertMarkOptions } from './compiler/mark-options';
 // Side-effect import: registers all built-in chart renderers with the
 // registry on module load. Tests that clear the registry can import
@@ -48,6 +49,11 @@ import { compileTileMap as compileTileMapImpl } from './tilemap/compile-tilemap'
 // existing deep imports (`import { expandEncodingSugar } from '.../compile'`)
 // keep working.
 export { expandEncodingSugar, expandSpecSugar } from './compile/spec-sugar';
+export { RaceDataError } from './race/errors';
+export { raceFrameAt, raceGeometryAt } from './race/geometry';
+export { layoutRace } from './race/layout';
+export { prepareRace } from './race/prepare';
+export type { RaceModel } from './race/types';
 
 // ---------------------------------------------------------------------------
 // Chart compilation
@@ -67,6 +73,9 @@ export { expandEncodingSugar, expandSpecSugar } from './compile/spec-sugar';
  * @throws Error if spec is invalid or not a chart type.
  */
 export function compileChart(spec: unknown, optionsInput: CompileOptions): ChartLayout {
+  if (isRaceSpec(spec)) {
+    throw new Error('compileChart received a race spec. Use prepareRace and layoutRace instead.');
+  }
   assertMarkOptions(spec);
   return compileChartInternal(spec, optionsInput);
 }

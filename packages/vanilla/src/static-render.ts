@@ -64,6 +64,7 @@ export function renderStaticParts(
   if (precision !== null && (!Number.isInteger(precision) || precision < 0 || precision > 15))
     throw new Error('precision must be an integer between 0 and 15, or null.');
   const type = (spec as { type?: string }).type;
+  if (type === 'race') throw new Error('Race specs render through createRace');
   if (type && !['chart', 'layer', 'barlist', 'tilemap', 'map', 'geomap'].includes(type))
     throw new Error(
       `renderStaticSVG does not render "${type}"; supported: chart, layer, barlist, tilemap, geomap`,

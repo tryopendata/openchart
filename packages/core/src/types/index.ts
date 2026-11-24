@@ -143,6 +143,7 @@ export type {
   YouDrawItSample,
   YouDrawItYInvert,
 } from './layout';
+export type * from './race';
 export type * from './reader-slices';
 // Spec types (user input)
 export type {
@@ -245,6 +246,16 @@ export type {
   NodeOverride,
   ParliamentEncoding,
   PointEncoding,
+  RaceBarMarkDef,
+  RaceConfig,
+  RaceEncoding,
+  RaceLineMarkDef,
+  RaceMarkDef,
+  RaceMarkType,
+  RaceSpec,
+  RaceSpecWithoutData,
+  RaceTableColumn,
+  RaceTableMarkDef,
   RadialGradient,
   RangeAnnotation,
   RangeEncoding,
@@ -302,6 +313,7 @@ export {
   isGradientDef,
   isGraphSpec,
   isLayerSpec,
+  isRaceSpec,
   isRangeAnnotation,
   isRefLineAnnotation,
   isSankeySpec,

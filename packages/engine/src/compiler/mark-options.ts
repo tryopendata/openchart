@@ -56,6 +56,7 @@ const SHARED_OPTIONS = new Set([
 export function collectMarkOptionErrors(input: unknown, path = ''): ValidationError[] {
   if (!input || typeof input !== 'object' || Array.isArray(input)) return [];
   const spec = input as Record<string, unknown>;
+  if (spec.type === 'race') return [];
   const errors: ValidationError[] = [];
   if (spec.mark && typeof spec.mark === 'object' && !Array.isArray(spec.mark)) {
     const mark = spec.mark as NormalizedMarkDef;

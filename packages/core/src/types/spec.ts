@@ -3210,6 +3210,124 @@ export interface BarListEncoding {
   tooltip?: EncodingChannel | EncodingChannel[];
 }
 
+// ---------------------------------------------------------------------------
+// Race spec (animated rankings over time)
+// ---------------------------------------------------------------------------
+
+/** Mark used to draw each frame of a race. */
+export type RaceMarkType = 'bar' | 'line' | 'table';
+
+export interface RaceBarMarkDef {
+  /** Draw horizontal bars. */
+  type: 'bar';
+  /** Bar corner radius in pixels. Omit to use square corners. */
+  cornerRadius?: number;
+}
+
+export interface RaceLineMarkDef {
+  /** Draw a line for each ranked series. */
+  type: 'line';
+  /** Defaults to `reveal`, which expands the x domain to the playhead. `all` shows the full span. */
+  window?: 'reveal' | 'all';
+}
+
+export interface RaceTableMarkDef {
+  /** Draw a table of ranked rows. */
+  type: 'table';
+  /** Ordered columns. Defaults to all six in the listed order, with `bar` hidden below 520px. */
+  columns?: RaceTableColumn[];
+}
+
+/** Column in a race table. */
+export type RaceTableColumn = 'rank' | 'change' | 'name' | 'bar' | 'value' | 'share';
+
+/** Race mark and its mark-specific options. */
+export type RaceMarkDef = RaceBarMarkDef | RaceLineMarkDef | RaceTableMarkDef;
+
+type RaceFieldEncoding<TType extends FieldType = FieldType> = Omit<EncodingChannel, 'type'> & {
+  /** How to interpret the field values. */
+  type?: TType;
+};
+
+/** Field mappings shared by bar, line, and table races. */
+export interface RaceEncoding {
+  /** Playback field. Temporal dates or years and quantitative values sort by value. Ordinal values use `sort` or first-seen order. */
+  time: RaceFieldEncoding<'temporal' | 'ordinal' | 'quantitative'>;
+  /** Stable identity across periods. Also the display name by default. */
+  key: RaceFieldEncoding;
+  /** Numeric field to rank and draw. Defaults to quantitative. */
+  value: RaceFieldEncoding<'quantitative'>;
+  /** Field or constant CSS color. Defaults to coloring by key in order of first appearance in the top N. */
+  color?: RaceFieldEncoding | { value: string };
+  /** Nominal display label. The last non-null label wins per key. Defaults to the key. */
+  label?: RaceFieldEncoding<'nominal'>;
+}
+
+/** Ranking and playback options for a race. */
+export interface RaceConfig {
+  /** Number of visible slots. Defaults to 10. */
+  top?: number;
+  /** Total playback duration in milliseconds at 1× speed. Defaults to 700ms per period, clamped to 8000–90000ms. Mutually exclusive with `step`. */
+  duration?: number;
+  /** Duration per period in milliseconds. Omitted by default and mutually exclusive with `duration`. */
+  step?: number;
+  /** Reorder duration in milliseconds. Defaults to 400. */
+  swap?: number;
+  /** Value domain policy. Defaults to `frame` for the visible items. Use `fixed` for the full run or `{ min }` for a floor on the frame maximum. */
+  rescale?: 'frame' | 'fixed' | { min: number };
+  /** Interior gap policy. Defaults to `interpolate`. Use `hold` to carry the previous value or `drop` to leave the value absent. */
+  gaps?: 'interpolate' | 'hold' | 'drop';
+  /** Time to dwell on the final frame in milliseconds. Defaults to 1500. */
+  holdEnd?: number;
+  /** Restart after the final hold. Defaults to false. */
+  loop?: boolean;
+  /** Start when 25% visible (`visible`, the default), immediately (`true`), or on demand (`false`). Reduced motion disables autoplay. */
+  autoplay?: 'visible' | boolean;
+  /** Show play/pause, scrubber, and period readout. Defaults to true. */
+  controls?: boolean;
+  /** Large period label. On by default with automatic placement and the time channel's format. Set false to hide it. */
+  period?:
+    | false
+    | {
+        /** Overrides the time channel's format. */
+        format?: string;
+        /** Period label placement. Defaults to `auto`. */
+        position?: 'auto';
+      };
+  /** Show the sum of the top N values. Defaults to false. */
+  summary?: 'sum' | false;
+}
+
+/** Animated top-N leaderboard over a sequence of periods. */
+export interface RaceSpec {
+  /** Discriminant, always `race`. */
+  type: 'race';
+  /** One data row per key and period. */
+  data: DataRow[];
+  /** Required bar, line, or table mark. A string uses that mark's default options. */
+  mark: RaceMarkType | RaceMarkDef;
+  /** Maps fields to time, key, value, and optional color and label. */
+  encoding: RaceEncoding;
+  /** Ranking and playback options. Omit to use the race defaults. */
+  race?: RaceConfig;
+  /** Editorial chrome. Omit to draw without authored title, subtitle, or other chrome text. */
+  chrome?: Chrome;
+  /** Theme overrides. Omit to use the default theme. */
+  theme?: ThemeConfig;
+  /** Accessibility overrides. Omit to use generated metadata. */
+  a11y?: A11yConfig;
+  /** Whether to show the OpenData watermark. Defaults to true. */
+  watermark?: boolean;
+  /** Fixed render width in pixels. Defaults to container-driven sizing. */
+  width?: number;
+  /** Fixed render height in pixels. Defaults to container-driven sizing. */
+  height?: number;
+  /** Value label format override. Omit to use the value channel's format or automatic formatting. */
+  labels?: Pick<LabelConfig, 'format'>;
+  /** Set false to disable autoplay and open on the final frame. Playback otherwise follows `race`. */
+  animation?: AnimationSpec;
+}
+
 /**
  * Top-level visualization spec: union discriminated by structural shape.
  *
@@ -3221,6 +3339,7 @@ export interface BarListEncoding {
  * - TileMapSpec: has `type: 'tilemap'`
  * - GeoMapSpec: has `type: 'map'`
  * - BarListSpec: has `type: 'barlist'`
+ * - RaceSpec: has `type: 'race'`
  *
  * Election parliament (hemicycle) charts are `ChartSpec` with `mark:
  * 'parliament'`, not a separate top-level type: seat data (party + seats)
@@ -3237,7 +3356,8 @@ export type VizSpec =
   | SankeySpec
   | TileMapSpec
   | GeoMapSpec
-  | BarListSpec;
+  | BarListSpec
+  | RaceSpec;
 
 /**
  * Chart spec without runtime data, for persistence/storage.
@@ -3258,6 +3378,8 @@ export type GeoMapSpecWithoutData = Omit<GeoMapSpec, 'data' | 'points'> & {
 };
 /** BarList spec without runtime data, for persistence/storage. */
 export type BarListSpecWithoutData = Omit<BarListSpec, 'data'>;
+/** Race spec without runtime data, for persistence/storage. */
+export type RaceSpecWithoutData = Omit<RaceSpec, 'data'>;
 /** Union of data-stripped spec types for persistence/storage. */
 export type StoredVizSpec =
   | ChartSpecWithoutData
@@ -3266,7 +3388,8 @@ export type StoredVizSpec =
   | SankeySpecWithoutData
   | TileMapSpecWithoutData
   | GeoMapSpecWithoutData
-  | BarListSpecWithoutData;
+  | BarListSpecWithoutData
+  | RaceSpecWithoutData;
 
 // ---------------------------------------------------------------------------
 // Transforms (Vega-Lite aligned)
@@ -3645,9 +3768,9 @@ export function resolveMarkDef(mark: MarkType | MarkDef): MarkDef {
 // Type guards
 // ---------------------------------------------------------------------------
 
-/** Check if a spec is a ChartSpec (has `mark` field, not a layer/table/graph). */
+/** Check if a spec has a chart mark and is neither a layer nor a race. */
 export function isChartSpec(spec: VizSpec | Record<string, unknown>): spec is ChartSpec {
-  return 'mark' in spec && !('layer' in spec);
+  return 'mark' in spec && !('layer' in spec) && (spec as Record<string, unknown>).type !== 'race';
 }
 
 /** Check if a spec is a LayerSpec (has `layer` array). */
@@ -3678,6 +3801,17 @@ export function isTileMapSpec(spec: VizSpec | Record<string, unknown>): spec is 
 /** Check if a spec is a BarListSpec. */
 export function isBarListSpec(spec: VizSpec | Record<string, unknown>): spec is BarListSpec {
   return 'type' in spec && (spec as Record<string, unknown>).type === 'barlist';
+}
+
+/** Check if a spec is a RaceSpec. */
+export function isRaceSpec(spec: unknown): spec is RaceSpec {
+  return (
+    typeof spec === 'object' &&
+    spec !== null &&
+    !Array.isArray(spec) &&
+    'type' in spec &&
+    spec.type === 'race'
+  );
 }
 
 /** Check if a spec is a GeoMapSpec. */

@@ -21,6 +21,12 @@ export {
   compileSankey,
   compileTable,
   compileTileMap,
+  layoutRace,
+  prepareRace,
+  RaceDataError,
+  type RaceModel,
+  raceFrameAt,
+  raceGeometryAt,
 } from './compile';
 export { resolveLayerTheme } from './compile/layer';
 

@@ -8,7 +8,7 @@
  * Every error includes a machine-readable code and an actionable suggestion
  * so consumers (and LLMs) can fix issues programmatically.
  */
-import { jsonPointer, MARK_TYPES, type VizSpec } from '@opendata-ai/openchart-core';
+import { isRaceSpec, jsonPointer, MARK_TYPES, type VizSpec } from '@opendata-ai/openchart-core';
 import { collectMarkOptionErrors } from './mark-options';
 import { collectRemovedSpecErrors } from './removed-spec-fields';
 import type { ValidationError, ValidationResult } from './types';
@@ -22,6 +22,7 @@ import {
 import { validateGeoMapSpec } from './validation/geo-map';
 import { validateGraphSpec } from './validation/graph';
 import { validateLayerSpec } from './validation/layer';
+import { validateRaceSpec } from './validation/race';
 import { validateSankeySpec } from './validation/sankey';
 import { validateTableSpec } from './validation/table';
 import { validateTileMapSpec } from './validation/tilemap';
@@ -163,6 +164,7 @@ function validateSpecShape(spec: unknown): ValidationResult {
   // - Graph specs have type: 'graph'
   // - Sankey specs have type: 'sankey'
   // - TileMap specs have type: 'tilemap'
+  // - Race specs have type: 'race'
   const hasLayer = 'layer' in obj && Array.isArray(obj.layer);
   const hasMark = 'mark' in obj;
   const isTable = obj.type === 'table';
@@ -171,10 +173,19 @@ function validateSpecShape(spec: unknown): ValidationResult {
   const isTileMap = obj.type === 'tilemap';
   const isMap = obj.type === 'map';
   const isBarList = obj.type === 'barlist';
+  const isRace = obj.type === 'race';
   const isLayer =
-    hasLayer && !isTable && !isGraph && !isSankey && !isTileMap && !isMap && !isBarList;
+    hasLayer && !isTable && !isGraph && !isSankey && !isTileMap && !isMap && !isBarList && !isRace;
   const isChart =
-    hasMark && !hasLayer && !isTable && !isGraph && !isSankey && !isTileMap && !isMap && !isBarList;
+    hasMark &&
+    !hasLayer &&
+    !isTable &&
+    !isGraph &&
+    !isSankey &&
+    !isTileMap &&
+    !isMap &&
+    !isBarList &&
+    !isRace;
 
   if (
     !isChart &&
@@ -184,6 +195,7 @@ function validateSpecShape(spec: unknown): ValidationResult {
     !isTileMap &&
     !isMap &&
     !isBarList &&
+    !isRace &&
     !isLayer
   ) {
     // Near-misses for VL composition operators that are unsupported by decision
@@ -223,10 +235,10 @@ function validateSpecShape(spec: unknown): ValidationResult {
       errors: [
         {
           message:
-            'Spec error: spec must have a "mark" field for charts, a "layer" array for layered charts, or a "type" field for tables/graphs/sankey/tilemap/map/barlist',
+            'Spec error: spec must have a "mark" field for charts, a "layer" array for layered charts, or a "type" field for tables/graphs/sankey/tilemap/map/barlist/race',
           path: '/mark',
           code: 'MISSING_FIELD',
-          suggestion: `Add a "mark" field for charts (e.g. mark: "bar"), a "layer" array for layered charts, or a "type" field (type: "table", type: "graph", type: "sankey", type: "tilemap", type: "map", or type: "barlist"). Valid mark types: ${[...MARK_TYPES].join(', ')}`,
+          suggestion: `Add a "mark" field for charts (e.g. mark: "bar"), a "layer" array for layered charts, or a "type" field (type: "table", type: "graph", type: "sankey", type: "tilemap", type: "map", type: "barlist", or type: "race"). Valid mark types: ${[...MARK_TYPES].join(', ')}`,
         },
       ],
       normalized: null,
@@ -277,6 +289,8 @@ function validateSpecShape(spec: unknown): ValidationResult {
     validateGeoMapSpec(obj, errors);
   } else if (isBarList) {
     validateBarListSpec(obj, errors);
+  } else if (isRace) {
+    validateRaceSpec(obj, errors);
   }
 
   // animation is shared by every spec type, so it validates outside the
@@ -302,6 +316,7 @@ function validateSpecShape(spec: unknown): ValidationResult {
 /** Validate authored mark contracts before any sugar transformation. */
 export function validateSpec(spec: unknown): ValidationResult {
   const result = validateSpecShape(spec);
+  if (isRaceSpec(spec)) return result;
   const errors = collectMarkOptionErrors(spec);
   return errors.length
     ? { ...result, valid: false, errors: [...result.errors, ...errors], normalized: null }

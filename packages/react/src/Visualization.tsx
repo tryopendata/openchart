@@ -10,6 +10,7 @@ import {
   isBarListSpec,
   isGeoMapSpec,
   isGraphSpec,
+  isRaceSpec,
   isSankeySpec,
   isTableSpec,
   isTileMapSpec,
@@ -78,6 +79,9 @@ export function Visualization({ spec, theme, darkMode, className, style }: Visua
     return (
       <GeoMap spec={spec} theme={theme} darkMode={darkMode} className={className} style={style} />
     );
+  }
+  if (isRaceSpec(spec)) {
+    throw new Error('Race specs render through createRace');
   }
   return (
     <Chart spec={spec} theme={theme} darkMode={darkMode} className={className} style={style} />

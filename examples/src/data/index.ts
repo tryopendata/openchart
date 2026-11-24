@@ -62,3 +62,4 @@ export { userJourney } from './user-journey';
 export { vaccineExemptions } from './vaccine-exemptions';
 export { wealthHealth } from './wealth-health';
 export { worldGdp } from './world-gdp';
+export { worldGdpRace, worldGdpRaceSource } from './world-gdp-race';

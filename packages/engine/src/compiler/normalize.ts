@@ -35,6 +35,7 @@ import {
   isGeoMapSpec,
   isGraphSpec,
   isLayerSpec,
+  isRaceSpec,
   isSankeySpec,
   isTableSpec,
   isTileMapSpec,
@@ -43,6 +44,7 @@ import {
 } from '@opendata-ai/openchart-core';
 import type { NormalizedBarListSpec } from '../barlist/types';
 import type { NormalizedGeoMapSpec } from '../geo/types';
+import { normalizeRaceSpec } from '../race/normalize';
 import type { NormalizedSankeySpec } from '../sankey/types';
 import { STATE_CODE_SET } from '../tilemap/layout';
 import type { NormalizedTileMapSpec } from '../tilemap/types';
@@ -734,6 +736,9 @@ export function normalizeSpec(spec: VizSpec, warnings: string[] = []): Normalize
       );
   }
 
+  if (isRaceSpec(spec)) {
+    return normalizeRaceSpec(spec, warnings);
+  }
   if (isLayerSpec(spec)) {
     // For LayerSpec, we flatten and normalize the first leaf to get a valid NormalizedChartSpec.
     // The actual layer compilation happens in compileLayer, not here.
@@ -767,7 +772,7 @@ export function normalizeSpec(spec: VizSpec, warnings: string[] = []): Normalize
   }
   // Should never happen after validation
   throw new Error(
-    `Unknown spec shape. Expected mark (chart), layer, type: 'table', type: 'graph', type: 'sankey', type: 'tilemap', type: 'map', or type: 'barlist'.`,
+    `Unknown spec shape. Expected mark (chart), layer, type: 'table', type: 'graph', type: 'sankey', type: 'tilemap', type: 'map', type: 'barlist', or type: 'race'.`,
   );
 }
 
@@ -807,6 +812,9 @@ export function flattenLayers(
   const leaves: ChartSpec[] = [];
 
   for (const child of spec.layer) {
+    if (isRaceSpec(child)) {
+      throw new Error('Race specs cannot be layered. Render the race in its own container.');
+    }
     if (isLayerSpec(child)) {
       // Nested layer: recurse with merged context
       leaves.push(

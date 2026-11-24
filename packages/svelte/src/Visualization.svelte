@@ -10,6 +10,7 @@ import {
   isBarListSpec,
   isGeoMapSpec,
   isGraphSpec,
+  isRaceSpec,
   isSankeySpec,
   isTableSpec,
   isTileMapSpec,
@@ -35,6 +36,10 @@ let {
   class?: string;
   style?: string;
 } = $props();
+
+function throwRaceRenderError(): never {
+  throw new Error('Race specs render through createRace');
+}
 </script>
 
 {#if isTableSpec(spec)}
@@ -49,6 +54,8 @@ let {
   <BarList {spec} {theme} {darkMode} class={className} {style} />
 {:else if isGeoMapSpec(spec)}
   <GeoMap {spec} {theme} {darkMode} class={className} {style} />
+{:else if isRaceSpec(spec)}
+  {throwRaceRenderError()}
 {:else}
   <Chart {spec} {theme} {darkMode} class={className} {style} />
 {/if}
