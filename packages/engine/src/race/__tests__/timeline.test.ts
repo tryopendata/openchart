@@ -28,7 +28,7 @@ describe('race timeline', () => {
     expect(timeline.valueAt(0, 1.6)).toBeCloseTo(4);
   });
 
-  it('introduces a late key at its first finite period and omits it across gaps', () => {
+  it('ranks a late key at its first finite period and leaves an isolated observation offscreen', () => {
     const timeline = createRaceTimeline(
       matrix([3, 3, 3, 3, 3, 3], [NaN, NaN, NaN, 8, NaN, 9]),
       options,
@@ -39,7 +39,8 @@ describe('race timeline', () => {
     expect(timeline.sample(2.99).items.map(({ keyIndex }) => keyIndex)).toEqual([0]);
     expect(timeline.valueAt(1, 3)).toBe(8);
     expect(timeline.exactRank(1, 3)).toBe(0);
-    expect(timeline.sample(3).items.map(({ keyIndex }) => keyIndex)).toContain(1);
+    expect(timeline.rankPos(1, 3)).toBe(timeline.top);
+    expect(timeline.sample(3).items.map(({ keyIndex }) => keyIndex)).toEqual([0]);
     expect(timeline.valueAt(1, 3.01)).toBeNaN();
     expect(timeline.valueAt(1, 4)).toBeNaN();
     expect(timeline.valueAt(1, 4.99)).toBeNaN();
@@ -61,6 +62,47 @@ describe('race timeline', () => {
       [2, 0, 0],
       [1, 1, 1],
     ]);
+  });
+
+  it('keeps incumbents in place until a late entrant can fade in', () => {
+    const incumbents = [5, 4, 3, 2, 1].map((value) => Array<number>(6).fill(value));
+    const timeline = createRaceTimeline(matrix(...incumbents, [NaN, NaN, NaN, 100, 100, 100]), {
+      ...options,
+      top: 5,
+      swapPeriods: 0.57,
+    });
+    const positions = (t: number) =>
+      timeline.sample(t).items.map(({ keyIndex, rankPos }) => [keyIndex, rankPos]);
+    const initial = positions(2);
+
+    expect(positions(2.75)).toEqual(initial);
+    expect(positions(2.99)).toEqual(initial);
+    expect(timeline.rankPos(5, 3)).toBe(5);
+    expect(positions(3)).toEqual(initial);
+    expect(timeline.valueAt(5, 3)).toBe(100);
+    expect(timeline.exactRank(5, 3)).toBe(0);
+    expect(timeline.rankPos(5, 3.05)).toBeGreaterThan(4);
+    expect(timeline.rankPos(5, 3.05)).toBeLessThan(5);
+    expect(positions(3.65)[0]).toEqual([5, 0]);
+  });
+
+  it('fades an exiting leader to the sentinel and keeps the frame maximum continuous', () => {
+    const incumbents = [5, 4, 3, 2, 1].map((value) => Array<number>(6).fill(value));
+    const timeline = createRaceTimeline(matrix(...incumbents, [100, 100, 100, NaN, NaN, NaN]), {
+      ...options,
+      top: 5,
+      swapPeriods: 0.57,
+    });
+
+    expect(timeline.sample(1).domainMax).toBe(100);
+    expect(timeline.rankPos(5, 1.95)).toBeGreaterThan(4);
+    expect(timeline.rankPos(5, 1.95)).toBeLessThan(5);
+    expect(timeline.sample(1.95).domainMax).toBeGreaterThan(5);
+    expect(timeline.sample(1.95).domainMax).toBeLessThan(100);
+    expect(timeline.sample(1.99999999).domainMax).toBeCloseTo(5);
+    expect(timeline.rankPos(5, 2)).toBe(5);
+    expect(timeline.sample(2).domainMax).toBe(5);
+    expect(timeline.sample(2.00000001).domainMax).toBe(5);
   });
 
   it('clamps top to the key count and keeps all present keys in view', () => {
@@ -132,24 +174,24 @@ describe('race timeline', () => {
   it.each([
     1e154,
     Number.MAX_VALUE,
-  ])('keeps positions and opacity finite for a swap of %s periods', (swapPeriods) => {
-    const timeline = createRaceTimeline(matrix([10, 0], [0, 10]), {
+  ])('caps a swap of %s periods at the number of samples', (swapPeriods) => {
+    const input = matrix([10, 0], [0, 10]);
+    const timeline = createRaceTimeline(input, {
       ...options,
       top: 1,
       swapPeriods,
+    });
+    const sampleCount = options.samplesPerPeriod + 1;
+    const bounded = createRaceTimeline(input, {
+      ...options,
+      top: 1,
+      swapPeriods: (4 * sampleCount) / options.samplesPerPeriod,
     });
 
     expect(timeline.sample(0).items.map(({ keyIndex, rankPos }) => [keyIndex, rankPos])).toEqual([
       [0, 0],
     ]);
-    expect(
-      timeline
-        .sample(0.5)
-        .items.map(({ keyIndex, rankPos, opacity }) => [keyIndex, rankPos, opacity]),
-    ).toEqual([
-      [0, 0.5, 0.5],
-      [1, 0.5, 0.5],
-    ]);
+    expect(timeline.sample(0.5)).toEqual(bounded.sample(0.5));
     expect(timeline.sample(1).items.map(({ keyIndex, rankPos }) => [keyIndex, rankPos])).toEqual([
       [1, 0],
     ]);
@@ -187,11 +229,12 @@ describe('race timeline', () => {
     expect(timeline.sample(0.9).items.map(({ change }) => change)).toEqual([0, 0]);
     for (const t of [1, 1.9]) {
       const changes = timeline.sample(t).items.map(({ keyIndex, change }) => [keyIndex, change]);
-      expect(changes.sort(([a], [b]) => a - b)).toEqual([
+      const expected = [
         [0, -2],
         [1, 1],
-        [2, 0],
-      ]);
+      ];
+      if (t > 1) expected.push([2, 0]);
+      expect(changes.sort(([a], [b]) => a - b)).toEqual(expected);
     }
   });
 

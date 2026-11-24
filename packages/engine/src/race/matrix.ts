@@ -36,24 +36,17 @@ function orderPeriods(periods: Period[], time: TimeEncoding): void {
       period.sortKey = index;
     });
   } else {
-    periods.sort((a, b) => {
-      if (time.type === 'temporal' && typeof a.value !== typeof b.value) {
-        const timestamp = (period: Period) =>
-          typeof period.value === 'number'
-            ? new Date(0).setUTCFullYear(period.value)
-            : period.sortKey;
-        return timestamp(a) - timestamp(b);
+    if (time.type === 'temporal' && periods.some(({ value }) => typeof value === 'string')) {
+      for (const period of periods) {
+        if (typeof period.value === 'number') period.sortKey = Date.UTC(period.value, 0, 1);
       }
-      return a.sortKey - b.sortKey;
-    });
+    }
+    periods.sort((a, b) => a.sortKey - b.sortKey);
   }
 }
 
 function lerp(from: number, to: number, fraction: number): number {
-  // Opposite signs can overflow when taking the difference of two finite endpoints.
-  return from < 0 !== to < 0
-    ? from * (1 - fraction) + to * fraction
-    : from + (to - from) * fraction;
+  return from + (to - from) * fraction;
 }
 
 /** Read a value at a period index plus a fractional offset. */
@@ -87,7 +80,14 @@ function fillInteriorGaps(values: Float64Array, gaps: ResolvedRaceOptions['gaps'
   }
 }
 
-/** @throws {RaceDataError} DUPLICATE_KEY_PERIOD, TOO_FEW_PERIODS, NO_VALUES */
+/**
+ * Pivots long rows into a dense matrix with interpolate, hold, or drop applied to interior gaps.
+ * Quantitative periods sort numerically. Temporal periods sort by year when all are numeric,
+ * or by epoch milliseconds when any is a date. Ordinals follow a sort array or first-seen order.
+ * Warns about skipped rows, non-finite values, and more than 500 distinct keys.
+ *
+ * @throws {RaceDataError} DUPLICATE_KEY_PERIOD, TOO_FEW_PERIODS, NO_VALUES
+ */
 export function buildRaceMatrix(
   rows: DataRow[],
   encoding: RaceEncoding,
@@ -99,6 +99,8 @@ export function buildRaceMatrix(
   const periodsByValue = new Map<string | number, Period>();
   const rowsByKey = new Map<string, Map<Period, Observation>>();
   let firstCollision: { key: string; period: Period; entry: Observation } | undefined;
+  let skippedCount = 0;
+  let firstSkipped: string | undefined;
   let nonFiniteCount = 0;
 
   for (const row of rows) {
@@ -106,12 +108,20 @@ export function buildRaceMatrix(
     const number = finiteNumber(raw);
     if (number === undefined && raw != null) nonFiniteCount++;
 
-    const parsedPeriod = readPeriod(row[time.field], timeType);
-    if (!parsedPeriod) continue;
+    const rawPeriod = row[time.field];
+    const rawKey = row[key.field];
+    const parsedPeriod = readPeriod(rawPeriod, timeType);
+    if (!parsedPeriod || rawKey == null) {
+      skippedCount++;
+      firstSkipped ??= !parsedPeriod
+        ? `'${time.field}' has an invalid ${timeType} period '${String(rawPeriod)}'`
+        : `'${key.field}' has a missing key '${String(rawKey)}'`;
+      continue;
+    }
     const period = periodsByValue.get(parsedPeriod.value) ?? parsedPeriod;
     periodsByValue.set(period.value, period);
 
-    const keyValue = String(row[key.field]);
+    const keyValue = String(rawKey);
     let keyRows = rowsByKey.get(keyValue);
     if (!keyRows) {
       keyRows = new Map();
@@ -126,6 +136,11 @@ export function buildRaceMatrix(
     }
   }
 
+  if (firstSkipped) {
+    const rowsLabel = skippedCount === 1 ? 'row' : 'rows';
+    warn(`Skipped ${skippedCount} ${rowsLabel}. In the first skipped row, ${firstSkipped}.`);
+  }
+
   if (firstCollision) {
     const { key: keyValue, period, entry } = firstCollision;
     throw new RaceDataError(
@@ -136,9 +151,13 @@ export function buildRaceMatrix(
 
   const periods = [...periodsByValue.values()];
   if (periods.length < 2) {
+    const suggestion =
+      firstSkipped && skippedCount === rows.length && timeType !== 'ordinal'
+        ? " For category labels, set type: 'ordinal'."
+        : '';
     throw new RaceDataError(
       'TOO_FEW_PERIODS',
-      `${rows.length} rows contain ${periods.length} distinct periods in '${time.field}'. Supply at least two periods.`,
+      `${rows.length} rows contain ${periods.length} distinct periods in '${time.field}' (type '${timeType}'). Supply at least two periods.${suggestion}`,
     );
   }
   orderPeriods(periods, { ...time, type: timeType });

@@ -36,6 +36,7 @@ describe('race matrix', () => {
   it('sorts ISO dates, Dates, and years by time while preserving period values', () => {
     const matrix = buildRaceMatrix(
       [
+        { country: 'A', year: 2002, gdp: 40 },
         { country: 'A', year: new Date('2001-03-01T12:00:00Z'), gdp: 30 },
         { country: 'A', year: 2000, gdp: 20 },
         { country: 'A', year: '1999-04-15', gdp: 10 },
@@ -47,10 +48,11 @@ describe('race matrix', () => {
 
     expect(matrix.periods).toEqual([
       { value: '1999-04-15', sortKey: Date.parse('1999-04-15') },
-      { value: 2000, sortKey: 2000 },
+      { value: 2000, sortKey: Date.UTC(2000, 0, 1) },
       { value: '2001-03-01T12:00:00.000Z', sortKey: Date.parse('2001-03-01T12:00:00Z') },
+      { value: 2002, sortKey: Date.UTC(2002, 0, 1) },
     ]);
-    expect(matrix.values).toEqual([Float64Array.of(10, 20, 30)]);
+    expect(matrix.values).toEqual([Float64Array.of(10, 20, 30, 40)]);
   });
 
   it('keeps distinct ISO period values that share an instant', () => {
@@ -175,6 +177,65 @@ describe('race matrix', () => {
     );
   });
 
+  it('warns once for skipped rows with invalid periods or missing keys', () => {
+    const warnings: string[] = [];
+    const rows = [
+      { country: 'A', year: 'bad period', gdp: 100 },
+      { country: null, year: 1999, gdp: 50 },
+      { year: 2000, gdp: 60 },
+      { country: 0, year: 2001, gdp: 4 },
+      { country: 0, year: 2002, gdp: 8 },
+    ];
+
+    expect(buildRaceMatrix(rows, encoding, 'drop', (warning) => warnings.push(warning))).toEqual({
+      periods: [
+        { value: 2001, sortKey: 2001 },
+        { value: 2002, sortKey: 2002 },
+      ],
+      keys: ['0'],
+      labels: ['0'],
+      colorValues: [null],
+      values: [Float64Array.of(4, 8)],
+    });
+    expect(warnings).toEqual([expect.stringMatching(/\b3\b.*year.*bad period/i)]);
+  });
+
+  it('reports the first missing key when a row also has an invalid period', () => {
+    const warnings: string[] = [];
+    const rows = [
+      { country: null, year: 1999, gdp: 5 },
+      { year: 'bad period', gdp: 20 },
+      { country: 'A', year: 2001, gdp: 4 },
+      { country: 'A', year: 2002, gdp: 8 },
+    ];
+
+    const matrix = buildRaceMatrix(rows, encoding, 'drop', (warning) => warnings.push(warning));
+
+    expect(matrix.keys).toEqual(['A']);
+    expect(warnings).toEqual([expect.stringMatching(/\b2\b.*country.*null/i)]);
+  });
+
+  it('suggests an ordinal time encoding when every period label is unparseable', () => {
+    const warnings: string[] = [];
+    const rows = [
+      { country: 'A', year: 'Q1 2020', gdp: 4 },
+      { country: 'A', year: 'Q2 2020', gdp: 8 },
+    ];
+    const run = () =>
+      buildRaceMatrix(rows, { ...encoding, time: { field: 'year' } }, 'drop', (warning) =>
+        warnings.push(warning),
+      );
+
+    expect(run).toThrow(
+      expect.objectContaining({
+        constructor: RaceDataError,
+        code: 'TOO_FEW_PERIODS',
+        message: expect.stringMatching(/year.*temporal.*type: 'ordinal'/),
+      }),
+    );
+    expect(warnings).toEqual([expect.stringMatching(/\b2\b.*year.*Q1 2020/i)]);
+  });
+
   it.each([
     { values: [null, null], description: 'null' },
     { values: [NaN, Infinity], description: 'non-finite' },
@@ -199,7 +260,10 @@ describe('race matrix', () => {
     const matrix = buildRaceMatrix(rows, encoding, 'drop', (warning) => warnings.push(warning));
 
     expect(matrix.values).toEqual([Float64Array.of(10, NaN, NaN, NaN, NaN, NaN)]);
-    expect(warnings).toEqual([expect.stringMatching(/\b4\b.*non-finite/i)]);
+    expect(warnings).toEqual([
+      expect.stringMatching(/\b1\b.*year.*bad/i),
+      expect.stringMatching(/\b4\b.*non-finite/i),
+    ]);
   });
 
   it.each([500, 501])('warns above 500 distinct keys with %i keys', (keyCount) => {
