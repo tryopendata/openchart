@@ -460,7 +460,7 @@ Depends on: phase 4, phase 5
 | Lane | Size | Owns files | Reads | Tests | Model | Status | Branch | Done when |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | a | M | examples/src/testing/race.stories.tsx, examples/src/gallery/race.stories.tsx, examples/src/gallery/race.demos.ts, examples/src/gallery/registry.ts, docs/codebase-map.md, scripts/generate-llms.mjs, llms.txt, llms-full.txt, e2e/visual/stories.spec.ts, e2e/visual/stories-mobile.spec.ts, e2e/visual/__screenshots__/ | | | gpt-6.2-sol | pending | | |
-| b | M | site/src/content/docs/change-over-time/race.mdx, site/src/demos/change-over-time/, site/src/components/demo/, site/tests/ | site/AGENTS.md, site/src/content/docs/change-over-time/slope-bump.mdx, site/src/content/docs/behavior/motion.mdx, the race stories | site tests and `bun run build` in site/ | gpt-6.2-sol | pending | | race docs page builds with working interactive demos |
+| b | M | site/src/content/docs/change-over-time/race.mdx, site/src/demos/change-over-time/, site/src/demos/types.ts, site/src/components/demo/, site/src/lib/demo/, site/src/scripts/demo-mount.ts, site/src/scripts/demos.ts, site/tests/, site/e2e/ | site/AGENTS.md, site/src/content/docs/change-over-time/slope-bump.mdx, site/src/content/docs/behavior/motion.mdx, the race stories | site tests and `bun run build` in site/ | gpt-6.2-sol | pending | | race docs page builds with working interactive demos |
 
 #### Lane 6a brief
 
@@ -507,3 +507,4 @@ Depends on: phase 4, phase 5
 - 2026-11-24: lane 4b review: the table took rank from the smoothed `rankPos`, which gave duplicate ranks at period boundaries. The brief now says exact ranks. The table also honors `rescale` for its bar column, and share shows a dash when a period mixes signs.
 - 2026-11-24: lane 6a brief written. Baselines go into the existing `stories.spec.ts` and `stories-mobile.spec.ts` (darwin-only, like the rest) from static stories at fixed t, not a new spec file.
 - 2026-11-24: phase 5 now depends on phase 4, because 5b edits `race-mount.ts` after 4c. Lane 5a already ran against phase 3 and merges after phase 4 tags.
+- 2026-11-24: lane 6b owns the site's demo rendering (`src/lib/demo/`, `src/scripts/demo-mount.ts`, `demos.ts`, `demos/types.ts`) and `e2e/`, because every demo is rendered to static SVG at build time and mounted live in the browser; a race needs both paths.
