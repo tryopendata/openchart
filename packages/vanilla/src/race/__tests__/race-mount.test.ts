@@ -305,7 +305,7 @@ describe('createRace', () => {
     expect(host.querySelector('[data-key="B"] text:last-child')?.textContent).toBe('165');
     expect(host.querySelector('.oc-race-period')?.textContent).toBe('2021');
     expect(host.querySelector('.oc-race-readout')?.textContent).toBe('2021');
-    expect(scrub().value).toBe('1');
+    expect(scrub().value).toBe('1.5');
     expect(scrub().getAttribute('aria-valuetext')).toBe('2021');
     button().click();
     tick(1800);
@@ -734,14 +734,14 @@ describe('createRace', () => {
     tick(750);
     expect(svg()).not.toBe(original);
     expect(svg().getAttribute('viewBox')).toBe('0 0 360 466');
-    expect(scrub().value).toBe('0');
+    expect(scrub().value).toBe('0.75');
     expect(button().getAttribute('aria-label')).toBe('Pause');
     width = 680;
     chart.resize();
     expect(svg().getAttribute('viewBox')).toBe('0 0 680 466');
     tick(1250);
     expect(chart.getState()).toMatchObject({ t: 1.25, playing: true });
-    expect(scrub().value).toBe('1');
+    expect(scrub().value).toBe('1.25');
     expect(prepare).toHaveBeenCalledTimes(1);
   });
 
@@ -862,7 +862,7 @@ describe('createRace', () => {
     chart.update({ ...spec, race: { ...spec.race, top: 1 } });
     expect(chart.getState()).toMatchObject({ t: 1.25, playing: true, speed: 2 });
     expect(rowKeys()).toEqual(['B']);
-    expect(scrub().value).toBe('1');
+    expect(scrub().value).toBe('1.25');
     expect(button().getAttribute('aria-label')).toBe('Pause');
     tick(750);
     expect(chart.getState().t).toBe(1.5);
@@ -961,7 +961,7 @@ describe('createRace', () => {
     );
     expect(svg()).toBe(initialSvg);
     expect(chart.getState()).toEqual(initialState);
-    expect(scrub().value).toBe('0');
+    expect(scrub().value).toBe('0.5');
     tick(1500);
     expect(chart.getState()).toMatchObject({ t: 1.5, playing: true });
     expect(rowKeys()).toEqual(['B', 'A']);
@@ -1192,6 +1192,19 @@ describe('createRace', () => {
     tick(1625);
     expect(chart.getState().t).toBeGreaterThan(1);
     expect(chart.getState().t).toBeLessThan(2);
+  });
+
+  it('never draws an earlier period after a fractional seek during stepped playback', () => {
+    const chart = mount();
+    window.happyDOM.settings.device.prefersReducedMotion = 'reduce';
+    button().click();
+    tick(0);
+    chart.seek(1.5);
+    const seeked = chart.getState().t;
+    tick(400);
+    expect(seeked).toBe(1);
+    expect(chart.getState().t).toBeGreaterThanOrEqual(seeked);
+    chart.pause();
   });
 
   it('keeps its position before a following sibling when changing timing', () => {

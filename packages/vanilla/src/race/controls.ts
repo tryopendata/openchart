@@ -57,8 +57,11 @@ export function createRaceControls(options: RaceControlsOptions): RaceControls {
       iconPath.setAttribute('d', playing ? PAUSE_PATH : PLAY_PATH);
     }
     const period = Math.floor(t);
-    if (!playing || period !== previousPeriod) {
-      const value = String(playing ? period : t);
+    // A focused range input reports each value change to screen readers, so while it
+    // has focus during playback, move it once per period. Otherwise follow t.
+    const throttle = playing && element.ownerDocument.activeElement === scrubber;
+    if (!throttle || period !== previousPeriod) {
+      const value = String(throttle ? period : t);
       if (scrubber.value !== value) scrubber.value = value;
     }
     const progress = lastPeriod > 0 ? Math.min(1, Math.max(0, t / lastPeriod)) : 0;

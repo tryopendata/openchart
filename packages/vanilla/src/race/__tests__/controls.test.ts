@@ -64,10 +64,26 @@ describe('race controls', () => {
     expect(scrubber.getAttribute('aria-valuetext')).toBe('1980');
     expect(readout.textContent).toBe('1980');
     controls.update({ t: 1.75, playing: true, speed: 2, ended: false });
-    expect(scrubber.value).toBe('1');
+    expect(scrubber.value).toBe('1.75');
     expect(scrubber.getAttribute('aria-valuetext')).toBe('1981');
     expect(readout.textContent).toBe('1981');
     expect(actions).toEqual([]);
+  });
+
+  it('moves a focused scrubber once per period during playback', () => {
+    const { controls, element, scrubber } = setup();
+    document.body.append(element);
+    try {
+      scrubber.focus();
+      controls.update({ t: 0.4, playing: true, speed: 1, ended: false });
+      expect(scrubber.value).toBe('0');
+      controls.update({ t: 1.6, playing: true, speed: 1, ended: false });
+      expect(scrubber.value).toBe('1');
+      controls.update({ t: 1.6, playing: false, speed: 1, ended: false });
+      expect(scrubber.value).toBe('1.6');
+    } finally {
+      element.remove();
+    }
   });
 
   it('fills the scrubber in proportion to the playback position', () => {

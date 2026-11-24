@@ -402,7 +402,9 @@ export function createRace(
   function seek(t: number, announceOnSeek = true) {
     seeking = true;
     try {
-      clock.seek(t);
+      // Stepped playback draws whole periods, so a fractional seek would draw and then snap back.
+      const stepped = stepPlayback && clock.getState().playing && Number.isFinite(t);
+      clock.seek(stepped ? Math.floor(t) : t);
     } finally {
       seeking = false;
     }
