@@ -32,6 +32,7 @@ export { resolveLayerTheme } from './compile/layer';
 
 // Lazy edge-tooltip builder (graph edge hover content on demand).
 export { buildEdgeTooltip } from './graphs/compile-graph';
+export { raceA11y, raceA11yLeaders } from './race/a11y';
 
 // ---------------------------------------------------------------------------
 // Animation resolution

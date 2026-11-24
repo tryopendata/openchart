@@ -390,7 +390,7 @@ Phase 4 base (one short Codex run, committed before the lanes start, so no two l
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | a | M | packages/engine/src/race/layout-line.ts, packages/engine/src/race/__tests__/layout-line.test.ts, packages/vanilla/src/race/render-line.ts, packages/vanilla/src/race/__tests__/render-line.test.ts, scripts/race-frames.ts, packages/core/src/styles/race.css | contracts, layout-bar.ts, render-bar.ts, timeline.ts, matrix.ts | packages/engine/src/race/__tests__/layout-line.test.ts packages/vanilla/src/race/__tests__/render-line.test.ts | gpt-6.2-sol | running | foreman/race-4a | line race renders and swaps in through `update` |
 | b | M | packages/engine/src/race/layout-table.ts, packages/engine/src/race/__tests__/layout-table.test.ts, packages/vanilla/src/race/render-table.ts, packages/vanilla/src/race/__tests__/render-table.test.ts, packages/core/src/styles/race-table.css, packages/core/src/styles/index.css | contracts, layout-bar.ts, render-bar.ts, shell.ts, packages/core/src/styles/race.css | packages/engine/src/race/__tests__/layout-table.test.ts packages/vanilla/src/race/__tests__/render-table.test.ts | gpt-6.2-sol | running | foreman/race-4b | table race renders and swaps in through `update` |
-| c | M | packages/engine/src/race/a11y.ts, packages/engine/src/race/__tests__/a11y.test.ts, packages/vanilla/src/race/a11y-dom.ts, packages/vanilla/src/race/__tests__/a11y-dom.test.ts, packages/vanilla/src/race-mount.ts, packages/vanilla/src/race/__tests__/race-mount.test.ts | contracts, shell.ts, controls.ts, RFC section 8 | packages/engine/src/race/__tests__/a11y.test.ts packages/vanilla/src/race/__tests__/a11y-dom.test.ts packages/vanilla/src/race/__tests__/race-mount.test.ts | gpt-6.2-sol | running | foreman/race-4c | description, hidden table, live region and `on('period')` work |
+| c | M | packages/engine/src/race/a11y.ts, packages/engine/src/race/__tests__/a11y.test.ts, packages/vanilla/src/race/a11y-dom.ts, packages/vanilla/src/race/__tests__/a11y-dom.test.ts, packages/vanilla/src/race-mount.ts, packages/vanilla/src/race/__tests__/race-mount.test.ts | contracts, shell.ts, controls.ts, RFC section 8 | packages/engine/src/race/__tests__/a11y.test.ts packages/vanilla/src/race/__tests__/a11y-dom.test.ts packages/vanilla/src/race/__tests__/race-mount.test.ts | gpt-6.2-sol | merged | foreman/race-4c | description, hidden table, live region and `on('period')` work |
 
 Test cases:
 - line (4a): `window: 'reveal'` x domain grows from [0, 1] at t = 0 to [0, t] and ends at the full span; `'all'` is fixed; the path holds observed points through `floor(t)` plus the interpolated head at t; a gap (`gaps: 'break'`) yields a `null` that splits the path; y domain never shrinks across increasing t; series are the top-N items plus items that left within the last period, fading; head labels never overlap and stay inside the plot after the push pass (10 crowded series at 360px); renderer draws one path per series with `fill: none`, gaps as separate subpaths, reuses nodes across draws, removes series that left, and destroy removes only its nodes.
@@ -410,7 +410,7 @@ Test cases:
 
 - Goal: the table mark: an HTML table whose rows slide to their rank as the race plays.
 - Interface: `computeTableStatic`, `tableGeometry`, `createRaceTableRenderer`, scaffolded in the phase 4 base; typed `RaceTableCell`s.
-- Behavior: rows are `top` tall slots under a header; columns default to `rank, change, name, bar, value, share`, dropping `bar` when `area.width < 520`; widths: rank and change fixed from measured text, name from `layout.labels`, value and share from measured formatted extremes, bar takes the rest. Rank and change derive from `Math.round(rankPos)` at `floor(t)` versus `floor(t) - 1`. The renderer writes cells as text (never `innerHTML`), positions rows with `transform: translateY(...)`, sets row opacity, orders the moving-up row last in DOM, and draws the bar cell as a div with the computed width. Styles in a new `race-table.css` imported by the race styles entry, tabular numerals for numbers, using the theme tokens.
+- Behavior: rows are `top` tall slots under a header; columns default to `rank, change, name, bar, value, share`, dropping `bar` when `area.width < 520`; widths: rank and change fixed from measured text, name from `layout.labels`, value and share from measured formatted extremes, bar takes the rest. Rank and change derive from the exact ranks at period `floor(t)` versus `floor(t) - 1` (the same exact samples `item.change` uses), never from the smoothed `rankPos`, so ranks are unique and agree with the values shown. The renderer writes cells as text (never `innerHTML`), positions rows with `transform: translateY(...)`, sets row opacity, orders the moving-up row last in DOM, and draws the bar cell as a div with the computed width. Styles in a new `race-table.css` imported by the race styles entry, tabular numerals for numbers, using the theme tokens.
 - Decisions already made: table renders in the shell's table host, not SVG; no sorting by clicking headers.
 - Out of scope: line, a11y, mount changes.
 - Done when: the test cases pass; QA in the browser via `update({ mark: 'table' })` at 800px and 360px, light and dark.
@@ -427,12 +427,12 @@ Test cases:
 ### Phase 5: wrappers and export
 
 Demo: `<Race spec />` renders in React, Vue and Svelte stories and through `<Visualization>`; `race.export('gif')` produces a GIF whose frames match `raceGeometryAt` at the sampled t, capped at 1200 frames.
-Depends on: phase 3
+Depends on: phase 3, phase 4
 
 | Lane | Size | Owns files | Reads | Tests | Model | Status | Branch | Done when |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | a | M | packages/react/src/Race.tsx, packages/react/src/Visualization.tsx, packages/react/src/index.ts, packages/react/src/__tests__/Race.test.tsx, packages/vue/src/Race.ts, packages/vue/src/Visualization.ts, packages/vue/src/index.ts, packages/vue/src/__tests__/Race.test.ts, packages/svelte/src/Race.svelte, packages/svelte/src/Visualization.svelte, packages/svelte/src/index.ts, packages/svelte/src/__tests__/Race.test.ts | | | gpt-6.2-sol | running | foreman/race-5a | |
-| b | S | packages/vanilla/src/race/export.ts, packages/vanilla/src/export-gif.ts, packages/vanilla/src/race/__tests__/export.test.ts | | | gpt-6.2-sol | pending | | |
+| b | M | packages/vanilla/src/race/export.ts, packages/vanilla/src/export-gif.ts, packages/vanilla/src/race/__tests__/export.test.ts, packages/vanilla/src/race-mount.ts, packages/vanilla/src/race/__tests__/race-mount.test.ts | | | gpt-6.2-sol | running | foreman/race-5b | |
 
 #### Lane 5a brief
 
@@ -443,6 +443,15 @@ Depends on: phase 3
 - Out of scope: GIF export, docs.
 - Done when: each package's tests cover mount, spec update keeping t, theme remount restoring t, `onPeriod` firing and unsubscribing, destroy on unmount, and `Visualization` routing a race spec; each package's typecheck passes (svelte-check for Svelte).
 
+#### Lane 5b brief
+
+- Goal: `race.export('gif', { fps? })` returns a GIF of the whole race, frame-stepped from `t = 0` to the end, for the bar and line marks.
+- Interface: `exportRaceGIF(view, options)` in `race/export.ts`, called from `RaceInstance.export` in `race-mount.ts`; the instance signature stays `export(format: 'gif', options?: Pick<GIFExportOptions, 'fps'>): Promise<Blob>`. Factor the encoder out of `exportGIF` (dynamic `gifenc` import with the same missing-peer error, one global palette seeded from a settled frame, background fill, `rasterizeSVGToCanvas`) into a shared helper both exporters call; `exportGIF`'s behavior and tests stay unchanged.
+- Behavior: render each frame into a detached clone of the race's SVG (chrome, axis, marks; never the HTML controls) through the mark's own renderer drawing `raceGeometryAt(layout, t)`, so a frame matches what the live chart shows at that `t`. fps defaults to 25; when `fps × duration` exceeds 1200 frames, lower the fps so the whole timeline fits in 1200 (never truncate). Hold the final frame for 1.5s. `spec.loop` true loops the GIF forever, otherwise it plays once. Fonts embedded and the theme style block injected the same way `exportGIF` does. The live chart's playhead, playing state and DOM are untouched by an export, including one started mid-playback; a `destroy()` during export rejects the promise.
+- Decisions already made: the table mark renders HTML, which the SVG rasterizer can't capture, so `export('gif')` on a table race rejects with `Error('GIF export supports the bar and line marks')` in v1. No dpi or loop options on the instance in v1.
+- Out of scope: video formats, PNG/SVG export of a single frame, the table mark.
+- Done when: tests cover frame count and fps capping, final-frame hold, loop flag, frame geometry matching `raceGeometryAt` at sampled `t` (assert on the cloned SVG before rasterizing), table rejection, missing-gifenc error, live state untouched, and destroy-during-export; `exportGIF`'s existing tests pass unchanged; a real GIF from the GDP bar story opens and plays in a browser.
+
 ### Phase 6: docs, gallery, generated references, baselines
 
 Demo: the gallery has a Race page with all three marks; `bun run check:generated` and `bun run test:visual` pass.
@@ -450,8 +459,20 @@ Depends on: phase 4, phase 5
 
 | Lane | Size | Owns files | Reads | Tests | Model | Status | Branch | Done when |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| a | M | examples/src/testing/race.stories.tsx, examples/src/gallery/race.stories.tsx, examples/src/gallery/race.demos.ts, examples/src/gallery/registry.ts, docs/codebase-map.md, scripts/generate-llms.mjs, llms.txt, llms-full.txt, e2e/visual/race.spec.ts, e2e/visual/__screenshots__/ | | | gpt-6.2-sol | pending | | |
-| b | M | site/src/content/docs/change-over-time/race.mdx, site/src/demos/change-over-time/, site/src/components/demo/, site/tests/ | site/AGENTS.md, site/src/content/docs/change-over-time/slope-bump.mdx, site/src/content/docs/behavior/motion.mdx, the race stories | site tests and `bun run build` in site/ | gpt-6.2-sol | pending | | race docs page builds with working interactive demos |
+| a | M | examples/src/testing/race.stories.tsx, examples/src/gallery/race.stories.tsx, examples/src/gallery/race.demos.ts, examples/src/gallery/registry.ts, docs/codebase-map.md, scripts/generate-llms.mjs, llms.txt, llms-full.txt, e2e/visual/stories.spec.ts, e2e/visual/stories-mobile.spec.ts, e2e/visual/__screenshots__/ | | | gpt-6.2-sol | pending | | |
+| b | M | site/src/content/docs/change-over-time/race.mdx, site/src/demos/change-over-time/, site/src/demos/types.ts, site/src/components/demo/, site/src/lib/demo/, site/src/scripts/demo-mount.ts, site/src/scripts/demos.ts, site/tests/, site/e2e/ | site/AGENTS.md, site/src/content/docs/change-over-time/slope-bump.mdx, site/src/content/docs/behavior/motion.mdx, the race stories | site tests and `bun run build` in site/ | gpt-6.2-sol | pending | | race docs page builds with working interactive demos |
+
+#### Lane 6a brief
+
+- Goal: the race chart is discoverable and guarded: a gallery page, a Marks switcher story, generated LLM references, the codebase map, and visual baselines.
+- Behavior:
+  - Gallery: a "Race" page (`examples/src/gallery/race.stories.tsx` plus its `race.demos.ts` sidecar registered in `registry.ts`, following the existing sidecar pattern) with the GDP race as bar, line and table, a looping top-5, and a fixed-scale race, each with chrome written in the site's editorial voice.
+  - Testing stories: add a "Marks" story with a bar / line / table switcher that calls `instance.update({ ...spec, mark })` so the live swap keeps the playhead, and static baseline stories that set `autoplay: false` and `seek(t)` on mount at fixed `t` values (0, 8.5, the last period) for each mark.
+  - llms: `scripts/generate-llms.mjs` documents the race spec (the type, `mark`, encoding channels, `top`, timing, `rescale`, `loop`, `autoplay`, the line `window`, the runtime API) the way it documents the other spec types; regenerate `llms.txt` and `llms-full.txt` so `bun run check:generated` passes.
+  - `docs/codebase-map.md`: a Race section listing the engine (`prepareRace`, `layoutRace`, `raceGeometryAt`, `RACE_MARKS`, timeline), vanilla (`createRace`, shell, renderers, controls, clock, a11y, export) and wrapper files, plus the gotchas (options read once so theme changes remount; table mark is HTML; geometry is pure in t).
+  - Visual baselines: entries in `e2e/visual/stories.spec.ts` (bar, line, table at mid-race; bar dark; fixed scale) and `stories-mobile.spec.ts` (bar and table at 360px), captured from the static stories so they don't depend on the JS clock. Generate darwin baselines with `bun run test:visual:update` for the new entries only and confirm no existing baseline changed.
+- Out of scope: the Astro docs site (lane 6b), the external skill.
+- Done when: the gallery page renders all three marks in Ladle; the Marks switcher swaps mid-play without a jump; `bun run check:generated` passes; `bun run test:visual` passes with the new baselines and no changed existing ones.
 
 #### Lane 6b brief
 
@@ -482,3 +503,8 @@ Depends on: phase 4, phase 5
 - 2026-11-24: phase 4 base added before the lanes: the scaffolded table cells (`string[]`) could not carry the inline bar, color chip or change arrow, and the line head label lacked a value, so the shared types change once, up front. RFC's `on('period')` was missing from `RaceInstance` and is added (React `onPeriod` in phase 5 needs it); `seekTo` dropped from v1. The `Marks` switcher story moves to phase 6 with the gallery.
 - 2026-11-24: user asked for a docs page in the Astro site (`site/`) with interactive examples, landed by a Codex lane once the feature is ready: lane 6b replaces the planned `docs/race.md`. User also asked for a ce:design polish pass on the race UI.
 - 2026-11-24: ce:design pass on the race UI (user request): the playback strip was restyled in a separate Codex run (foreman/race-polish, merged into phase 3). Styled scrubber with a played portion, SVG icon button, strip aligned to the chart inset, fixed-width readout.
+- 2026-11-24: lane 5b brief written. The table mark renders HTML, so GIF export covers bar and line and rejects for table in v1. 5b takes `race-mount.ts` and its test, so it starts after lane 4c merges.
+- 2026-11-24: lane 4b review: the table took rank from the smoothed `rankPos`, which gave duplicate ranks at period boundaries. The brief now says exact ranks. The table also honors `rescale` for its bar column, and share shows a dash when a period mixes signs.
+- 2026-11-24: lane 6a brief written. Baselines go into the existing `stories.spec.ts` and `stories-mobile.spec.ts` (darwin-only, like the rest) from static stories at fixed t, not a new spec file.
+- 2026-11-24: phase 5 now depends on phase 4, because 5b edits `race-mount.ts` after 4c. Lane 5a already ran against phase 3 and merges after phase 4 tags.
+- 2026-11-24: lane 6b owns the site's demo rendering (`src/lib/demo/`, `src/scripts/demo-mount.ts`, `demos.ts`, `demos/types.ts`) and `e2e/`, because every demo is rendered to static SVG at build time and mounted live in the browser; a race needs both paths.

@@ -43,7 +43,7 @@ describe('race layout', () => {
     expect(layout).toMatchObject({
       ...size,
       mark: 'bar',
-      a11y: { altText: 'Size of the economy', role: 'img' },
+      a11y: { altText: '2024 to 2025. Brazil leads in 2024. Brazil leads in 2025.', role: 'img' },
       periods: ['2024', '2025'],
       playback: {
         durationMs: 8000,
@@ -83,7 +83,7 @@ describe('race layout', () => {
       theme: { spacing: { padding: 25 }, colors: { categorical: ['#123456', '#abcdef'] } },
     });
 
-    expect(layout.a11y.altText).toBe('Race chart');
+    expect(layout.a11y.altText).toBe('2024 to 2025. Brazil leads in 2024. Brazil leads in 2025.');
     expect(layout.area.x).toBe(25);
     expect(layout.theme.fonts.sizes.body).toBe(15);
     expect(layout.colors).toEqual(['#123456', '#abcdef']);
