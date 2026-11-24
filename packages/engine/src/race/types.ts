@@ -86,6 +86,8 @@ export interface RaceTimeline {
   rankPos(keyIndex: number, t: number): number;
   /** Zero-based rank among present keys. Infinity when absent. */
   exactRank(keyIndex: number, t: number): number;
+  /** Cached exact rank at an integer period index. Infinity when absent. */
+  periodRank(keyIndex: number, period: number): number;
   /** Items with rankPos < top, sorted by rankPos. */
   sample(t: number): RaceSample;
 }

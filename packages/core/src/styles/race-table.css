@@ -1,0 +1,124 @@
+@layer oc.components {
+  .oc-race-table {
+    overflow: hidden;
+  }
+
+  .oc-race-table-grid {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    width: 100%;
+    height: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    color: var(--oc-text);
+    font-family: var(--oc-font-family);
+    font-weight: var(--oc-race-table-body-weight, 400);
+    line-height: 1.2;
+  }
+
+  .oc-race-table-grid thead,
+  .oc-race-table-grid tbody {
+    display: block;
+  }
+
+  .oc-race-table-grid tbody {
+    position: relative;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0 max(0px, calc(var(--oc-race-table-row-height) - 1px)),
+      var(--oc-border) 0 var(--oc-race-table-row-height)
+    );
+  }
+
+  .oc-race-table-grid tr {
+    display: grid;
+    grid-template-columns: var(--oc-race-table-columns);
+    align-items: center;
+    overflow: hidden;
+  }
+
+  .oc-race-table-grid thead tr {
+    box-shadow: inset 0 -1px var(--oc-border);
+  }
+
+  .oc-race-table-grid tbody tr {
+    position: absolute;
+    inset: 0 0 auto;
+    max-height: max(0px, calc(var(--oc-race-table-row-height) - 1px));
+    overflow: visible;
+  }
+
+  .oc-race-table-grid tbody td {
+    max-height: 100%;
+    translate: 0 var(--oc-race-table-content-offset, 0px);
+  }
+
+  .oc-race-table-cell {
+    min-width: 0;
+    overflow: hidden;
+    padding: 0 5px;
+    text-align: start;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .oc-race-table-grid th {
+    color: var(--oc-text-muted);
+    font-weight: var(--oc-race-table-heading-weight, 600);
+  }
+
+  .oc-race-table-rank,
+  .oc-race-table-change,
+  .oc-race-table-value,
+  .oc-race-table-share {
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  .oc-race-table-change,
+  .oc-race-table-share {
+    color: var(--oc-text-muted);
+  }
+
+  .oc-race-table-change[data-direction="up"] {
+    color: var(--oc-positive);
+  }
+
+  .oc-race-table-change[data-direction="down"] {
+    color: var(--oc-negative);
+  }
+
+  td.oc-race-table-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .oc-race-table-name > span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .oc-race-table-chip {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    border-radius: var(--oc-radius-full);
+  }
+
+  td.oc-race-table-bar {
+    position: relative;
+    height: 100%;
+    padding: 0;
+  }
+
+  .oc-race-table-fill {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    height: min(8px, 55%);
+    border-radius: var(--oc-radius-sm);
+    translate: 0 -50%;
+    transform-origin: 0 50%;
+  }
+}

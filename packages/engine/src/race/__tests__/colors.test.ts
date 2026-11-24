@@ -29,6 +29,7 @@ const timeline: RaceTimeline = {
   samplesPerPeriod: 1,
   valueAt: (keyIndex, t) => matrix.values[keyIndex][t],
   exactRank: (keyIndex, t) => orderedKeys[t].indexOf(keyIndex),
+  periodRank: (keyIndex, period) => orderedKeys[period].indexOf(keyIndex),
   rankPos: (keyIndex, t) => Math.min(2, orderedKeys[t].indexOf(keyIndex)),
   sample(t) {
     return {
