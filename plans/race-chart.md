@@ -302,8 +302,8 @@ Depends on: phase 1
 
 | Lane | Size | Owns files | Reads | Tests | Model | Status | Branch | Done when |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| a | M | packages/engine/src/race/prepare.ts, packages/engine/src/race/layout.ts, packages/engine/src/race/geometry.ts, packages/engine/src/race/marks.ts, packages/core/src/types/race.ts, packages/engine/src/race/__tests__/prepare.test.ts, packages/engine/src/race/__tests__/layout.test.ts, packages/engine/src/race/__tests__/geometry.test.ts, scripts/race-frames.ts | contracts, packages/engine/src/barlist/compile-barlist.ts | packages/engine/src/race/__tests__/prepare.test.ts, packages/engine/src/race/__tests__/layout.test.ts, packages/engine/src/race/__tests__/geometry.test.ts | gpt-6.2-sol | running | foreman/race-2a | engine pipeline tests pass, `race-frames.ts --geometry` prints geometry |
-| b | M | packages/vanilla/src/race/shell.ts, packages/vanilla/src/race/renderers.ts, packages/vanilla/src/race/__tests__/shell.test.ts | contracts, packages/vanilla/src/barlist-renderer.ts, packages/vanilla/src/barlist-mount.ts | packages/vanilla/src/race/__tests__/shell.test.ts | gpt-6.2-sol | running | foreman/race-2b | shell tests pass |
+| a | M | packages/engine/src/race/prepare.ts, packages/engine/src/race/layout.ts, packages/engine/src/race/geometry.ts, packages/engine/src/race/marks.ts, packages/core/src/types/race.ts, packages/engine/src/race/types.ts, packages/engine/src/race/__tests__/prepare.test.ts, packages/engine/src/race/__tests__/layout.test.ts, packages/engine/src/race/__tests__/geometry.test.ts, scripts/race-frames.ts | contracts, packages/engine/src/barlist/compile-barlist.ts | packages/engine/src/race/__tests__/prepare.test.ts, packages/engine/src/race/__tests__/layout.test.ts, packages/engine/src/race/__tests__/geometry.test.ts | gpt-6.2-sol | running | foreman/race-2a | engine pipeline tests pass, `race-frames.ts --geometry` prints geometry |
+| b | M | packages/vanilla/src/race/shell.ts, packages/vanilla/src/race/renderers.ts, packages/vanilla/src/race/__tests__/shell.test.ts, packages/core/src/types/race.ts, packages/vanilla/src/renderers/chrome.ts | contracts, packages/vanilla/src/barlist-renderer.ts, packages/vanilla/src/barlist-mount.ts | packages/vanilla/src/race/__tests__/shell.test.ts | gpt-6.2-sol | running | foreman/race-2b | shell tests pass |
 
 Test cases:
 - prepare: a valid spec returns a model whose matrix, timeline and labels match the data; an invalid spec throws the same aggregated validation error `compileChart` throws for a bad chart; a duplicate row throws `RaceDataError` unwrapped; warnings reach `onWarn` (non-finite values, > 500 keys, `top` above the key count, `controls: false` with autoplay); duration resolves from `duration`, from `step` × (P - 1), and by default to clamp(P × 700, 8000, 90000); `swap` converts to `swapPeriods` from the resolved duration; `labels.format` and `encoding.value.format` drive `formatValue`; playback carries durationMs, holdEndMs, loop, autoplay (false when `animation: false`), controls.
@@ -340,7 +340,37 @@ Depends on: phase 2
 
 | Lane | Size | Owns files | Reads | Tests | Model | Status | Branch | Done when |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| a | M | packages/vanilla/src/race-mount.ts, packages/vanilla/src/race/__tests__/race-mount.test.ts, examples/src/testing/race.stories.tsx | | | gpt-6.2-sol | pending | | |
+| a | M | packages/vanilla/src/race-mount.ts, packages/vanilla/src/race/__tests__/race-mount.test.ts, examples/src/testing/race.stories.tsx | contracts, packages/vanilla/src/barlist-mount.ts, packages/vanilla/src/visibility.ts | packages/vanilla/src/race/__tests__/race-mount.test.ts | gpt-6.2-sol | pending | | mount tests pass, story works in a real browser |
+
+Test cases (happy-dom, fake scheduler injected through a test-only seam or `requestAnimationFrame` stub, IntersectionObserver absent so `whenSeen` fires at once unless the test installs a fake):
+- mount renders the shell, one row group per visible key and the controls; `controls: false` renders none.
+- `autoplay: 'visible'` starts only once seen (fake IntersectionObserver); `true` starts at mount; `false` opens paused at t = 0; `animation: false` and reduced motion open paused on the final frame and never autoplay.
+- the clock drives frames: after advancing time, rows reorder and the readout and scrubber follow.
+- `seek`, `play`, `pause`, `setSpeed` delegate; `seek(NaN)` throws `RangeError`; `getState()` returns t, playing, speed and the period (index, value, label).
+- resize mid-play relayouts without restarting: t keeps advancing from where it was, `playing` stays true, the model is not rebuilt (spy on `prepareRace` via module boundary or count matrix builds).
+- `update(spec)` with a different `top` or mark keeps t (clamped to the new period count) and the playing state; `update` with an invalid spec throws and the mounted race keeps playing unchanged.
+- dark mode adds `oc-dark`; a theme option palette changes bar fills.
+- `destroy()` cancels the clock, the visibility hold and the resize observer, empties what it added, and later calls are no-ops; a second `destroy()` is safe.
+- `export('gif')` rejects with a clear "GIF export arrives in a later release" error until phase 5.
+
+#### Lane 3a brief
+
+- Goal: `createRace` wires the pieces into a working embeddable race: prepare once, lay out per size, render through the registries, drive the clock, and expose the `RaceInstance` API.
+- Interface: `createRace(container, spec, options?)`, `RaceInstance`, `RaceMountOptions` as scaffolded. Uses `prepareRace`, `layoutRace`, `raceGeometryAt`, `raceFrameAt`, `createRaceShell`, `RACE_RENDERERS`, `createRaceClock`, `createRaceControls`, `whenSeen`, `prefersReducedMotion`, `resolveDarkMode`, `createMeasureText`.
+- Behavior:
+  - Size: width = `spec.width` ?? container width ?? 640; height = `spec.height` ?? container height when > 0 ?? 520; the SVG gets the height minus the controls strip (44px) when controls show.
+  - Fonts and measuring follow `barlist-mount.ts`: a `createMeasureText` for the theme font family, and one relayout after `document.fonts.ready` resolves.
+  - Render: layout → shell → renderer (`RACE_RENDERERS[layout.mark]`, clear error if missing) → controls in `shell.controlsSlot` → draw `raceGeometryAt(model, layout, t)`. Relayout (resize, fonts, `update`) destroys the shell, renderer and controls and rebuilds them, then redraws at the current t; the clock and model survive.
+  - Clock: `createRaceClock({ periodCount, durationMs, holdEndMs, loop, onTick: draw, onStateChange: controls.update })`. Controls call `clock.toggle`, `clock.seek`, `clock.stepPeriod`.
+  - Autoplay: reduced motion or `animation: false` → seek to the last period, no autoplay. Otherwise `'visible'` → `whenSeen(container, play)` (cancel on destroy); `true` → play now; `false` → stay at 0.
+  - `update(spec)`: `prepareRace` first; on throw rethrow and leave everything as it was. On success swap the model, clamp t, relayout, keep playing state; rebuild the clock only when period count, duration, hold or loop changed.
+  - Resize: a `ResizeObserver` when `autoResize !== false`, coalesced to one relayout per frame; `resize()` relayouts on demand.
+  - `export`: return a rejected promise with `Error('GIF export arrives in a later release')` (phase 5 replaces it).
+  - `destroy`: idempotent; cancels everything; methods after it are no-ops (`seek(NaN)` still throws `RangeError` first, matching the clock).
+  - Story `examples/src/testing/race.stories.tsx` (`Testing / Race`): `Bar` (GDP fixture, chrome title "The world's largest economies", source line), `Loop` (`loop: true`, `top: 5`), `Fixed scale` (`rescale: 'fixed'`), `No controls` (`controls: false, autoplay: true`), and `Dark` (dark mode). Each mounts with `createRace` in a `useEffect` with `destroy` on cleanup, following the existing testing stories.
+- Decisions already made: race playback does not use `createEntranceLifecycle`. It is a user-controllable timeline, not a CSS entrance: it needs no resize deferral (frames are pure in t), and pausing, seeking and looping are outside that lifecycle's model. `whenSeen` gives the same play-when-seen hold. Logged as a deviation from the svg-animation rule's "every mount owns one lifecycle".
+- Out of scope: line and table marks, a11y announcements and the hidden table (phase 4), framework wrappers and GIF export (phase 5).
+- Done when: the mount test covers every case above and passes; the story plays correctly in a real browser (Playwright screenshot at three t values via `seek`, and a resize mid-play).
 
 ### Phase 4: line and table marks, mark swap, accessibility
 
