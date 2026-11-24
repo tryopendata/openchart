@@ -583,7 +583,7 @@ describe('race GIF export', () => {
         expect(label?.textContent).toBe([endLabel.text, endLabel.value].filter(Boolean).join(' '));
         expect(Number(label?.getAttribute('x'))).toBeCloseTo(endLabel.x, 2);
         expect(Number(label?.getAttribute('y'))).toBeCloseTo(endLabel.y, 2);
-        expect(Number(label?.getAttribute('opacity'))).toBeCloseTo(opacity, 2);
+        expect(Number(label?.getAttribute('opacity'))).toBeCloseTo(endLabel.opacity ?? opacity, 2);
       }
     }
   });
