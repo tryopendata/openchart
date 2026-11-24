@@ -5,11 +5,11 @@
  */
 import type { ThemeConfig, VizSpec } from "@opendata-ai/openchart-core";
 import { isGraphSpec, isRaceSpec, isSankeySpec, isTableSpec } from "@opendata-ai/openchart-core";
-import { renderStaticSVG } from "@opendata-ai/openchart-vanilla/static";
+import { renderRaceStaticSVG, renderStaticSVG } from "@opendata-ai/openchart-vanilla/static";
 import { chartTheme } from "./chart-theme";
 import { dropInheritedType } from "./inherited-type";
 import { DEMO_CLASS } from "./markup";
-import { raceStaticSvg } from "./race-static-svg";
+import { measureRaceText } from "./race-text";
 import { slimSvg } from "./slim-svg";
 
 export type StaticSvgOptions = {
@@ -55,22 +55,32 @@ function markStatic(svg: string): string {
  * null when the spec type has no static renderer (table, graph, sankey).
  */
 export function staticSvg(spec: VizSpec, options: StaticSvgOptions): string | null {
-  if (isRaceSpec(spec)) {
-    const theme = options.theme ?? chartTheme(options.dark);
-    return dropInheritedType(markStatic(raceStaticSvg(spec, { ...options, theme })));
-  }
   if (!hasStaticRenderer(spec)) return null;
-  const svg = renderStaticSVG(spec, {
+  const race = isRaceSpec(spec);
+  const siteTheme = chartTheme(options.dark);
+  const theme = options.theme ?? siteTheme;
+  const renderOptions = {
     idPrefix: options.idPrefix,
     width: options.width,
     height: options.height,
-    theme: options.theme ?? chartTheme(options.dark),
+    theme,
     darkMode: options.dark ? "force" : "off",
-    precision: options.precision ?? STATIC_PRECISION,
+    precision: options.precision ?? (race ? 2 : STATIC_PRECISION),
     // The attribution is a link, and a link inside an image fails axe. The site's own footer credits the library.
     watermark: false,
-  });
-  return slimSvg(dropInheritedType(markStatic(svg)));
+  } as const;
+  const svg = race
+    ? renderRaceStaticSVG(
+        { ...spec, watermark: false },
+        {
+          ...renderOptions,
+          measureText:
+            theme.fonts?.family === siteTheme.fonts?.family ? measureRaceText : undefined,
+        },
+      )
+    : renderStaticSVG(spec, renderOptions);
+  const marked = dropInheritedType(markStatic(svg));
+  return race ? marked : slimSvg(marked);
 }
 
 /**

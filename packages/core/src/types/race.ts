@@ -95,6 +95,8 @@ export interface RaceLineStatic {
   yAxisX: number;
   /** Width reserved to the right of the plot for line-end labels, in pixels. */
   labelGutter: number;
+  /** Whether end labels also display values. */
+  showValues: boolean;
   /** Font size for axis tick labels in pixels. */
   tickFontSize: number;
   /** Visibility and value history for each key that can be drawn. */
@@ -188,10 +190,16 @@ export type RaceTableCell =
     };
 
 export interface RaceTableStatic {
+  /** Height of the clipped table body in pixels. */
+  bodyHeight: number;
   /** Height of each row slot in pixels. */
   rowHeight: number;
   /** Height of the header row in pixels. */
   headerHeight: number;
+  /** Whether the change heading uses a compact glyph. */
+  compactChange: boolean;
+  /** Horizontal padding on each side of a table cell in pixels. */
+  cellPadding: number;
   /** Font size for table text in pixels. */
   fontSize: number;
   /** Columns in display order. */
@@ -222,6 +230,8 @@ export interface RaceTableGeometry {
     rank?: number;
     /** Whether the row is sliding through the bottom edge of the table. */
     atEdge?: boolean;
+    /** Vertical adjustment to keep cell content inside the table body. */
+    contentOffset: number;
     /** Cell data in the static column order. */
     cells: RaceTableCell[];
   }>;

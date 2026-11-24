@@ -57,6 +57,31 @@ it.each([
   expect(current?.getState().t).toBe(1);
 });
 
+it('replays from the start after a completed race remounts', () => {
+  const clock = installFrameClock();
+  onTestFinished(clock.restore);
+  const replaySpec: RaceSpec = { ...playbackSpec, race: { ...playbackSpec.race, autoplay: true } };
+  const ref = createRef<RaceHandle>();
+  const { rerender } = render(<Race spec={replaySpec} ref={ref} />);
+  const previous = ref.current?.instance;
+  if (!previous) throw new Error('Race did not mount');
+  previous.setSpeed(2);
+  clock.pump(0);
+  clock.pump(200);
+  expect(previous.getState()).toMatchObject({ t: 2, playing: false, ended: true });
+
+  rerender(<Race spec={replaySpec} ref={ref} watermark={false} />);
+  const current = ref.current?.instance;
+  expect(current).not.toBe(previous);
+  expect(current?.getState()).toMatchObject({ t: 2, playing: false, ended: true, speed: 2 });
+  fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+  expect(current?.getState()).toMatchObject({ t: 0, playing: true, speed: 2 });
+
+  clock.pump(300);
+  clock.pump(400);
+  expect(current?.getState().t).toBe(1);
+});
+
 it('reuses the chart and controls for an equal inline spec', () => {
   const ref = createRef<RaceHandle>();
   const { rerender } = render(<Race ref={ref} spec={spec} />);
@@ -195,6 +220,24 @@ it.each([true, false])('keeps t and playing=%s after a theme change', (playing) 
   expect(ref.current?.instance).toBe(previous);
   expect(ref.current?.instance?.getState()).toMatchObject({ t: 1.25, playing, speed: 2 });
   expect(screen.getByText('Annual leaders').style.fontSize).toBe('32px');
+});
+
+it('keeps visibility autoplay pending when the wrapper remounts an unseen race', () => {
+  const observer = createFakeObserver();
+  setObserverFactory(observer.factory);
+  onTestFinished(() => setObserverFactory(null));
+  const visible: RaceSpec = { ...spec, race: { ...spec.race, autoplay: 'visible' } };
+  const ref = createRef<RaceHandle>();
+  const { container, rerender } = render(<Race spec={visible} ref={ref} />);
+  const previous = ref.current?.instance;
+  const host = container.firstElementChild;
+  if (!host || !previous) throw new Error('Race did not mount');
+
+  rerender(<Race spec={visible} ref={ref} watermark={false} />);
+  expect(ref.current?.instance).not.toBe(previous);
+  expect(ref.current?.instance?.getState()).toMatchObject({ t: 0, playing: false });
+  observer.fire(host, 0.5);
+  expect(ref.current?.instance?.getState().playing).toBe(true);
 });
 
 it('keeps visibility autoplay pending after a dark mode change', () => {

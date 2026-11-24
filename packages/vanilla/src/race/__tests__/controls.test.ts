@@ -64,7 +64,7 @@ describe('race controls', () => {
     expect(scrubber.getAttribute('aria-valuetext')).toBe('1980');
     expect(readout.textContent).toBe('1980');
     controls.update({ t: 1.75, playing: true, speed: 2, ended: false });
-    expect(scrubber.value).toBe('1.75');
+    expect(scrubber.value).toBe('1');
     expect(scrubber.getAttribute('aria-valuetext')).toBe('1981');
     expect(readout.textContent).toBe('1981');
     expect(actions).toEqual([]);

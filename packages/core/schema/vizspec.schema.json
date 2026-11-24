@@ -17898,11 +17898,6 @@
                 "format": {
                   "type": "string",
                   "description": "Overrides the time channel's format."
-                },
-                "position": {
-                  "type": "string",
-                  "const": "auto",
-                  "description": "Period label placement. Defaults to `auto`."
                 }
               },
               "additionalProperties": false

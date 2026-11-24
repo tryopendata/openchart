@@ -3,6 +3,8 @@ import type {
   RaceLayout,
   RaceTableCell,
   RaceTableColumn,
+  RaceTableGeometry,
+  RaceTableStatic,
   Rect,
 } from '@opendata-ai/openchart-core';
 import { format } from 'd3-format';
@@ -19,7 +21,8 @@ const LABELS: Record<RaceTableColumn, string> = {
   value: 'Value',
   share: 'Share',
 };
-const CELL_PADDING = 10;
+const COMPACT_WIDTH = 520;
+const COMPACT_CHANGE = '↕';
 const CHIP_WIDTH_AND_GAP = 14;
 const EMPTY = '—';
 const formatShare = format('.1%');
@@ -100,6 +103,8 @@ function measureColumns(
   { labels, theme }: Pick<RaceLayout, 'labels' | 'theme'>,
   columns: RaceTableColumn[],
   measureText: MeasureTextFn,
+  headings: RaceTableStatic['labels'],
+  cellPadding: number,
 ): Record<RaceTableColumn, number> {
   const { body: fontSize } = theme.fonts.sizes;
   const { normal, semibold } = theme.fonts.weights;
@@ -140,7 +145,7 @@ function measureColumns(
   for (const column of columns) {
     if (column === 'bar') continue;
     widths[column] =
-      Math.ceil(Math.max(widths[column], measure(LABELS[column], semibold))) + CELL_PADDING;
+      Math.ceil(Math.max(widths[column], measure(headings[column], semibold))) + 2 * cellPadding;
   }
   return widths;
 }
@@ -180,15 +185,27 @@ export const computeTableStatic: RaceMarkEntry<'table'>['computeStatic'] = (
   const fontSize = theme.fonts.sizes.body;
   const headerHeight = Math.min(area.height, fontSize + 12);
   const requested = mark.columns ?? DEFAULT_COLUMNS;
+  const compact = area.width < COMPACT_WIDTH;
   const columns = requested.filter(
-    (column) => column !== 'bar' || area.width >= 520 || requested.length === 1,
+    (column) => column !== 'bar' || !compact || requested.length === 1,
   );
+  const compactChange = compact && columns.includes('name');
+  const labels = { ...LABELS, change: compactChange ? COMPACT_CHANGE : LABELS.change };
+  const bodyHeight = area.height - headerHeight;
+  const cellPadding = compact ? 1.5 : 5;
   return {
     headerHeight,
-    rowHeight: (area.height - headerHeight) / model.timeline.top,
+    bodyHeight,
+    rowHeight: bodyHeight / model.timeline.top,
+    compactChange,
+    cellPadding,
     fontSize,
-    labels: { ...LABELS },
-    columns: fitColumns(columns, measureColumns(model, base, columns, measureText), area),
+    labels,
+    columns: fitColumns(
+      columns,
+      measureColumns(model, base, columns, measureText, labels, cellPadding),
+      area,
+    ),
   };
 };
 
@@ -199,12 +216,88 @@ function changeCell(rank: number, previous: number, top: number): RaceTableCell 
   return { column: 'change', direction: 'down', text: `↓${rank - previous}` };
 }
 
+function poolRows(
+  rows: RaceTableGeometry['rows'],
+  gap: number,
+  inset: number,
+  bottom: number,
+): number[] {
+  const gaps = [0];
+  for (let index = 1; index < rows.length; index++) {
+    const clearance = rows[index].y - rows[index - 1].y;
+    // Reduce a pair's preferred separation to zero as their animated slots
+    // meet, so swapping the order of those rows cannot flip a pooled offset.
+    gaps.push(gaps[index - 1] + Math.min(gap, clearance * 1.5));
+  }
+
+  const blocks: Array<{ start: number; end: number; total: number; weight: number }> = [];
+  for (const [index, row] of rows.entries()) {
+    const block = {
+      start: index,
+      end: index,
+      total: (row.y + inset - gaps[index]) * row.opacity,
+      weight: row.opacity,
+    };
+    let previous = blocks.at(-1);
+    while (previous && previous.total / previous.weight > block.total / block.weight) {
+      block.start = previous.start;
+      block.total += previous.total;
+      block.weight += previous.weight;
+      blocks.pop();
+      previous = blocks.at(-1);
+    }
+    blocks.push(block);
+  }
+
+  const targets = new Array<number>(rows.length);
+  for (const block of blocks) {
+    const base = Math.max(0, Math.min(bottom - (gaps.at(-1) ?? 0), block.total / block.weight));
+    for (let index = block.start; index <= block.end; index++) targets[index] = base + gaps[index];
+  }
+  return targets;
+}
+
+function contentOffsets(
+  rows: RaceTableGeometry['rows'],
+  { rowHeight, fontSize, bodyHeight }: RaceTableStatic,
+): void {
+  const paintHeight = Math.max(0, rowHeight - 1);
+  const textHeight = Math.min(paintHeight, fontSize * 1.2);
+  const inset = (paintHeight - textHeight) / 2;
+  const visible = rows.filter(({ opacity }) => opacity > 0).sort((a, b) => a.y - b.y);
+  const edge = visible.at(-1);
+  const edgeRoom = edge?.atEdge ? Math.max(0, edge.y - (bodyHeight - rowHeight)) * edge.opacity : 0;
+  const progress = rowHeight > 0 ? Math.min(1, edgeRoom / rowHeight) : 0;
+  const bottom = Math.max(0, bodyHeight - textHeight);
+  const gap = Math.min(rowHeight, textHeight + 2, bottom / Math.max(1, visible.length - 1));
+  // Include the edge row while it joins the bottom slot, then gradually
+  // release its cells so the row can follow its own motion through the clip.
+  const targets = poolRows(
+    visible,
+    gap,
+    inset,
+    Math.max(bottom, edge?.atEdge ? edge.y + inset : 0),
+  );
+  const interior =
+    progress > 0
+      ? poolRows(visible.slice(0, -1), gap, inset, Math.max(0, bottom - edgeRoom))
+      : targets;
+
+  for (const [index, row] of visible.entries()) {
+    const top = row.y + inset;
+    const offset =
+      (targets[index] - top) * (1 - progress) + ((interior[index] ?? top) - top) * progress;
+    if (Math.abs(offset) > 0.001) row.contentOffset = offset;
+  }
+}
+
 /** Slide rows through the table, ranking the visible values at the playhead. */
 export const tableGeometry: RaceMarkEntry<'table'>['geometry'] = (
   model,
-  { static: { rowHeight, columns } },
+  { static: stat },
   frame,
 ) => {
+  const { rowHeight, columns } = stat;
   const { timeline, matrix } = model;
   const {
     t,
@@ -267,11 +360,14 @@ export const tableGeometry: RaceMarkEntry<'table'>['geometry'] = (
         y,
         opacity: Math.min(1, cutoff - position),
         atEdge,
+        contentOffset: 0,
         cells,
       },
       movesUp: motion < 0,
     };
   });
   rows.sort((a, b) => Number(a.movesUp) - Number(b.movesUp));
-  return { mark: 'table', rows: rows.map(({ row }) => row) };
+  const ordered = rows.map(({ row }) => row);
+  contentOffsets(ordered, stat);
+  return { mark: 'table', rows: ordered };
 };

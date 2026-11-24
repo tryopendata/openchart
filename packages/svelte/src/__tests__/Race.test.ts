@@ -57,6 +57,30 @@ it.each([
   expect(current?.getState().t).toBe(1);
 });
 
+it('replays from the start after a completed race remounts', async () => {
+  const clock = installFrameClock();
+  onTestFinished(clock.restore);
+  const replaySpec: RaceSpec = { ...playbackSpec, race: { ...playbackSpec.race, autoplay: true } };
+  const { component, rerender, getByRole } = render(Race, { props: { spec: replaySpec } });
+  const previous = component.getInstance();
+  if (!previous) throw new Error('Race did not mount');
+  previous.setSpeed(2);
+  clock.pump(0);
+  clock.pump(200);
+  expect(previous.getState()).toMatchObject({ t: 2, playing: false, ended: true });
+
+  await rerender({ watermark: false });
+  const current = component.getInstance();
+  expect(current).not.toBe(previous);
+  expect(current?.getState()).toMatchObject({ t: 2, playing: false, ended: true, speed: 2 });
+  await fireEvent.click(getByRole('button', { name: 'Play' }));
+  expect(current?.getState()).toMatchObject({ t: 0, playing: true, speed: 2 });
+
+  clock.pump(300);
+  clock.pump(400);
+  expect(current?.getState().t).toBe(1);
+});
+
 it('preserves the speed set before playback starts after a theme change', async () => {
   const { component, rerender } = render(Race, { props: { spec } });
   const previous = component.getInstance();

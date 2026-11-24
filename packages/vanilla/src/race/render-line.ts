@@ -1,5 +1,5 @@
 import type { Point, RaceTick } from '@opendata-ai/openchart-core';
-import { createSVGElement, setAttrs } from '../renderers/svg-dom';
+import { defaultElementFactory, type ElementFactory, setAttrs } from '../renderers/svg-dom';
 import type { RaceRendererFactory } from './renderers';
 import { setNumbers } from './svg-attrs';
 
@@ -20,6 +20,7 @@ function linePath(points: Array<Point | null>): string {
 function tickAxis(
   axis: SVGElement,
   fontSize: number,
+  createSVGElement: ElementFactory['svg'],
   {
     grid,
     alignPeriodLabels,
@@ -40,7 +41,6 @@ function tickAxis(
       group.append(line);
     }
     group.append(label);
-    axis.append(group);
     const tick = { group, label, line };
     nodes.set(value, tick);
     return tick;
@@ -49,9 +49,12 @@ function tickAxis(
   return {
     draw(ticks: RaceTick[], fixed: number) {
       const active = new Set<number>();
+      let next = axis.firstElementChild;
       for (const tick of ticks) {
         const { group, label, line } = nodes.get(tick.value) ?? createTick(tick.value);
         active.add(tick.value);
+        if (group === next) next = next.nextElementSibling;
+        else axis.insertBefore(group, next);
         setNumbers(group, { opacity: tick.opacity });
         if (line && grid) {
           setNumbers(line, { y1: tick.position, y2: tick.position });
@@ -74,7 +77,12 @@ function tickAxis(
 }
 
 /** Mount and update keyed series and axis ticks in the shell's SVG mark host. */
-export const createRaceLineRenderer: RaceRendererFactory<'line'> = (host, stat, idScope) => {
+export const createRaceLineRenderer: RaceRendererFactory<'line'> = (
+  host,
+  stat,
+  idScope,
+  { svg: createSVGElement } = defaultElementFactory,
+) => {
   const { x, y, width, height } = stat.plot;
   const clipId = `${idScope}-race-line-clip`;
   const root = createSVGElement('g');
@@ -109,21 +117,27 @@ export const createRaceLineRenderer: RaceRendererFactory<'line'> = (host, stat, 
       'stroke-linejoin': 'round',
       'clip-path': `url(#${clipId})`,
     });
-    paths.append(path);
     const label = createSVGElement('text');
+    label.setAttribute('data-key', key);
     const name = createSVGElement('tspan');
     const value = createSVGElement('tspan');
     value.setAttribute('class', 'oc-race-line-value');
     label.append(name, value);
-    labels.append(label);
     const leader = createSVGElement('line');
-    setAttrs(leader, { class: 'oc-race-line-leader', 'stroke-width': 1 });
+    setAttrs(leader, {
+      class: 'oc-race-line-leader',
+      'data-key': key,
+      stroke: 'var(--oc-text-muted)',
+      'stroke-width': 0.8,
+    });
     return { path, label, name, value, leader };
   }
 
   const seriesNodes = new Map<string, ReturnType<typeof createSeries>>();
-  const xTicks = tickAxis(xAxis, stat.tickFontSize, { alignPeriodLabels: stat.window === 'all' });
-  const yTicks = tickAxis(yAxis, stat.tickFontSize, {
+  const xTicks = tickAxis(xAxis, stat.tickFontSize, createSVGElement, {
+    alignPeriodLabels: stat.window === 'all',
+  });
+  const yTicks = tickAxis(yAxis, stat.tickFontSize, createSVGElement, {
     grid: { left: stat.yAxisX, right: x + width },
   });
   let destroyed = false;
@@ -136,28 +150,50 @@ export const createRaceLineRenderer: RaceRendererFactory<'line'> = (host, stat, 
       yTicks.draw(geometry.yTicks, stat.yAxisX - 4);
 
       const active = new Set<string>();
+      const paintedLeaders = new Map<string, SVGElement>();
+      let nextPath = paths.firstElementChild;
+      let nextLabel = labels.firstElementChild;
+      let nextLeader = leaders.firstElementChild;
       for (const series of geometry.series) {
         const { key, color, opacity, points, endLabel } = series;
         const nodes = seriesNodes.get(key) ?? createSeries(key);
         seriesNodes.set(key, nodes);
         active.add(key);
+        if (nodes.path === nextPath) nextPath = nextPath.nextElementSibling;
+        else paths.insertBefore(nodes.path, nextPath);
+        if (nodes.label === nextLabel) nextLabel = nextLabel.nextElementSibling;
+        else labels.insertBefore(nodes.label, nextLabel);
         setAttrs(nodes.path, { d: linePath(points), stroke: color });
         setNumbers(nodes.path, { opacity });
         const labelOpacity = endLabel.opacity ?? opacity;
         setNumbers(nodes.label, { x: endLabel.x, y: endLabel.y, opacity: labelOpacity });
-        if (endLabel.leader) {
-          if (!nodes.leader.parentNode) leaders.append(nodes.leader);
-          nodes.leader.setAttribute('stroke', color);
+        const leader = endLabel.leader;
+        let paintLeader = false;
+        if (leader) {
           setNumbers(nodes.leader, {
-            x1: endLabel.leader.x,
-            y1: endLabel.leader.y,
+            x1: leader.x,
+            y1: leader.y,
             x2: endLabel.x - 1,
             y2: endLabel.y,
-            opacity: endLabel.leader.opacity,
+            opacity: leader.opacity,
           });
-        } else {
-          nodes.leader.remove();
+          const coordinates = ['x1', 'y1', 'x2', 'y2']
+            .map((attribute) => nodes.leader.getAttribute(attribute))
+            .join(',');
+          const painted = paintedLeaders.get(coordinates);
+          if (painted) {
+            // Tied series can temporarily share an endpoint and label slot.
+            setNumbers(painted, {
+              opacity: Math.max(Number(painted.getAttribute('opacity')), leader.opacity),
+            });
+          } else {
+            paintedLeaders.set(coordinates, nodes.leader);
+            paintLeader = true;
+          }
         }
+        if (nodes.leader === nextLeader) nextLeader = nextLeader.nextElementSibling;
+        else if (paintLeader) leaders.insertBefore(nodes.leader, nextLeader);
+        if (!paintLeader) nodes.leader.remove();
         nodes.name.setAttribute('fill', color);
         if (nodes.name.textContent !== endLabel.text) nodes.name.textContent = endLabel.text;
         const value = endLabel.text && endLabel.value ? ` ${endLabel.value}` : endLabel.value;

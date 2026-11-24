@@ -150,6 +150,12 @@ function normalizeActual(root: Element, legacyRoot: Element, name: string): void
       new RegExp(`#${name}-oc-root(?: (?!\\{))?`, 'g'),
       '',
     ); // R2
+  if (style?.textContent) {
+    // The race selector has no effect on the map fixtures.
+    style.textContent = style.textContent
+      .replace(', svg.oc-race {', ' {')
+      .replace(/svg\.oc-race \{[^}]*\}\n/, '');
+  }
   const legacyNodes = [legacyRoot, ...legacyRoot.querySelectorAll('*')];
   [root, ...root.querySelectorAll('*')].forEach((el, i) => {
     const legacy = legacyNodes[i];

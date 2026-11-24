@@ -187,7 +187,9 @@ export function buildRaceMatrix(
     warn(`Dropped ${nonFiniteCount} non-finite values from '${value.field}'.`);
   }
   if (keys.length > 500) {
-    warn(`${keys.length} distinct keys in '${key.field}' can slow race rank precomputation.`);
+    warn(
+      `${keys.length} distinct keys in '${key.field}' can slow race rank precomputation. Filter to the keys that can reach the top N, or aggregate the rest into an "Other" key.`,
+    );
   }
   if (finiteCount === 0) {
     throw new RaceDataError(

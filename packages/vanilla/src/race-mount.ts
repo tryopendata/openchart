@@ -40,6 +40,11 @@ export interface RaceMountOptions {
   autoResize?: boolean;
   /** Show the watermark unless the spec sets its own watermark preference. */
   watermark?: boolean;
+  /**
+   * Restore playback from getState(). A paused first frame still starts when visible
+   * if the spec uses visibility autoplay.
+   */
+  initialState?: RaceClockState;
   /** Receives warnings from preparing the initial or updated spec. */
   onWarn?: CompileOptions['onWarn'];
 }
@@ -182,7 +187,7 @@ function playbackTimingChanged(a: RaceModel, b: RaceModel): boolean {
 export function createRace(
   container: HTMLElement,
   spec: RaceSpec,
-  { theme, darkMode, autoResize = true, watermark, onWarn }: RaceMountOptions = {},
+  { theme, darkMode, autoResize = true, watermark, onWarn, initialState }: RaceMountOptions = {},
 ): RaceInstance {
   const warn = onWarn && ((warning: CompileWarning) => onWarn(warning.message));
   let model = prepareRace(spec, { onWarn: warn });
@@ -199,17 +204,17 @@ export function createRace(
   let a11y: ReturnType<typeof createRaceA11y> | undefined;
   let periodIndex = 0;
   let seeking = false;
-  const reducedMotion = prefersReducedMotion();
+  let stepPlayback = prefersReducedMotion();
   let appearance = { theme, darkMode };
   let font = resolveFont(model);
-  let clock = makeClock(model);
+  let clock = makeClock(model, initialState);
   const controlHandlers: ControlHandlers = {
     onToggle() {
       if (clock.getState().playing) pause();
       else play();
     },
     onSeek(t) {
-      seek(reducedMotion ? Math.round(t) : t, false);
+      seek(prefersReducedMotion() ? Math.round(t) : t, false);
     },
     onSeekCommit: announce,
     onStep(delta) {
@@ -261,14 +266,13 @@ export function createRace(
   function makeClock(candidate: RaceModel, previous?: RaceClockState): RaceClock {
     const { durationMs, holdEndMs, loop } = candidate.playback;
     const { periodCount } = candidate.timeline;
-    let replayOnPlay = false;
-    const player = createRaceClock({
+    return createRaceClock({
       periodCount,
+      initialState: previous,
       durationMs,
       holdEndMs,
       loop,
       onTick(t) {
-        replayOnPlay = false;
         view?.draw(t);
       },
       onStateChange(state) {
@@ -283,26 +287,6 @@ export function createRace(
         }
       },
     });
-    if (!previous) return player;
-    player.setSpeed(previous.speed);
-    player.seek(previous.t);
-    if (previous.playing) player.play();
-
-    // A rebuilt clock seeks to the old playhead. Carry completion until playback or a new seek.
-    if (!previous.ended || previous.t < periodCount - 1) return player;
-    replayOnPlay = true;
-    function play() {
-      if (replayOnPlay) player.seek(0);
-      player.play();
-    }
-    return {
-      ...player,
-      play,
-      getState() {
-        const state = player.getState();
-        return replayOnPlay ? { ...state, ended: true } : state;
-      },
-    };
   }
 
   function focusedControl() {
@@ -316,6 +300,7 @@ export function createRace(
   function render(
     { layout, darkMode }: ReturnType<typeof compileLayout>,
     focus = focusedControl(),
+    anchor?: ChildNode | null,
   ) {
     const previousView = view;
     const fragment = container.ownerDocument.createDocumentFragment();
@@ -328,7 +313,7 @@ export function createRace(
     view.draw(state.t);
     view.controls?.update(state);
     const oldRoot = previousView?.shell.root;
-    const nextSibling = oldRoot?.parentNode === container ? oldRoot.nextSibling : null;
+    const nextSibling = anchor ?? (oldRoot?.parentNode === container ? oldRoot.nextSibling : null);
     previousView?.destroy();
     container.insertBefore(fragment, nextSibling);
     if (focus)
@@ -404,7 +389,8 @@ export function createRace(
 
   function play() {
     cancelAutoplay();
-    clock.play();
+    if (!clock.getState().playing) stepPlayback = prefersReducedMotion();
+    clock.play(stepPlayback);
   }
 
   function pause() {
@@ -445,14 +431,20 @@ export function createRace(
     model = next;
     font = nextFont;
     if (model.playback.autoplay !== 'visible') cancelAutoplay();
+    let anchor: ChildNode | null | undefined;
+    let resumePlayback = false;
     if (timingChanged) {
+      const root = view?.shell.root;
+      if (root?.parentNode === container) anchor = root.nextSibling;
       view?.destroy();
       view = undefined;
       const previous = clock.getState();
+      resumePlayback = previous.playing;
       clock.destroy();
       clock = makeClock(model, previous);
     }
-    render(nextLayout, focus);
+    render(nextLayout, focus, anchor);
+    if (resumePlayback) clock.play(stepPlayback);
     if (fontChanged) scheduleFontResize(font);
     const nextIndex = Math.floor(clock.getState().t);
     if (periodIndex !== nextIndex) {
@@ -461,17 +453,21 @@ export function createRace(
     }
   }
 
-  const staticStart = spec.animation === false || reducedMotion;
+  const staticStart = !initialState && (spec.animation === false || stepPlayback);
   if (staticStart) clock.seek(model.timeline.periodCount - 1);
   periodIndex = Math.floor(clock.getState().t);
   render(compileLayout(model));
   scheduleFontResize(font);
-  if (!staticStart) {
-    if (model.playback.autoplay === 'visible') {
-      cancelVisibility = whenSeen(container, play);
-    } else if (model.playback.autoplay) {
-      clock.play();
-    }
+  const pausedAtStart = initialState && !initialState.ended && initialState.t === 0;
+  if (initialState?.playing) clock.play(stepPlayback);
+  else if (
+    !stepPlayback &&
+    model.playback.autoplay === 'visible' &&
+    (!initialState || pausedAtStart)
+  ) {
+    cancelVisibility = whenSeen(container, play);
+  } else if (!initialState && !staticStart && model.playback.autoplay === true) {
+    play();
   }
 
   let observer: ResizeObserver | undefined;
@@ -499,8 +495,9 @@ export function createRace(
     setTheme,
     resize,
     async export(format, options) {
-      if (destroyed) exportLifetime.signal.throwIfAborted();
-      if (format !== 'gif') throw new Error(`Unsupported export format: ${format}`);
+      if (destroyed) throw new Error('This race was destroyed. Create a new race to export.');
+      if (format !== 'gif')
+        throw new Error(`Race export supports "gif" only, received "${format}".`);
       if (!view) throw new Error('Race is not rendered');
       const { layout, shell, mountExportRenderer } = view;
       return exportRaceGIF(
@@ -512,7 +509,9 @@ export function createRace(
       const { t, playing, speed, ended } = clock.getState();
       return { t, playing, speed, ended, period: periodAt(Math.floor(t)) };
     },
-    on(_event, cb) {
+    on(event, cb) {
+      if (event !== 'period')
+        throw new TypeError(`Unknown race event "${event}". Supported: "period".`);
       const listener: PeriodListener = (period) => cb(period);
       if (!destroyed) periodListeners.add(listener);
       return () => {

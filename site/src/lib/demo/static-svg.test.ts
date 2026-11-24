@@ -2,12 +2,12 @@
 /** Build-time static rendering, run with no DOM as the Astro build runs it. */
 import type { RaceSpec } from "@opendata-ai/openchart-core";
 import { layoutRace, prepareRace, raceGeometryAt } from "@opendata-ai/openchart-engine";
-import { RACE_CONTROLS_HEIGHT } from "@opendata-ai/openchart-vanilla";
 import { Window } from "happy-dom";
 import { describe, expect, it } from "vitest";
 import { fixtureBar } from "../../demos/fixtures/bar";
 import { fixtureTable } from "../../demos/fixtures/table";
 import { chartTheme } from "./chart-theme";
+import { measureRaceText } from "./race-text";
 import { staticSvg } from "./static-svg";
 
 const SIZE = { width: 720, height: 320 };
@@ -30,8 +30,13 @@ const salesRace: RaceSpec = {
 };
 
 function readRace(spec: RaceSpec, dark = false, size = SIZE) {
-  const markup = staticSvg(spec, { ...size, idPrefix: `race-${dark ? "d" : "l"}`, dark });
-  const doc = new new Window().DOMParser().parseFromString(markup ?? "", "text/html");
+  const markup = staticSvg(spec, {
+    ...size,
+    idPrefix: `race-${dark ? "d" : "l"}`,
+    dark,
+    precision: 2,
+  });
+  const doc = new new Window().DOMParser().parseFromString(markup ?? "", "image/svg+xml");
   const svg = doc.querySelector(`svg.demo-static[data-theme='${dark ? "dark" : "light"}']`);
   if (!svg) throw new Error("Expected a race SVG in the requested theme.");
   return svg;
@@ -60,7 +65,7 @@ describe("staticSvg", () => {
   });
 
   it.each([
-    { mark: "bar", shape: "rect", label: "Last & <leader>" },
+    { mark: "bar", shape: ".oc-race-rows rect", label: "Last & <leader>" },
     { mark: "line", shape: "path[d^='M'][d*='L']", label: "Last & <leader> $20" },
     { mark: "table", shape: "circle", label: "Last & <leader>" },
   ] satisfies { mark: RaceSpec["mark"]; shape: string; label: string }[])(
@@ -71,7 +76,7 @@ describe("staticSvg", () => {
       expect(
         svg.ownerDocument.getElementById(svg.getAttribute("aria-describedby") ?? "")?.textContent,
       ).toBe("1. Last & <leader>, $20.");
-      expect(svg.querySelectorAll(shape)).toHaveLength(1);
+      expect(svg.querySelectorAll(`.oc-race-mark ${shape}`)).toHaveLength(1);
       const labels = [...svg.querySelectorAll("text")].map((el) => el.textContent);
       expect(labels).toContain(label);
       expect(labels).toContain("2002");
@@ -82,10 +87,11 @@ describe("staticSvg", () => {
   it("paints positive-width bars with a different theme palette in dark mode", () => {
     const light = readRace(salesRace);
     const dark = readRace(salesRace, true);
-    expect(Number(dark.querySelector("rect")?.getAttribute("width"))).toBeGreaterThan(0);
-    expect(dark.getAttribute("fill")).not.toBe(light.getAttribute("fill"));
-    expect(dark.querySelector("rect")?.getAttribute("fill")).not.toBe(
-      light.querySelector("rect")?.getAttribute("fill"),
+    expect(Number(dark.querySelector(".oc-race-rows rect")?.getAttribute("width"))).toBeGreaterThan(
+      0,
+    );
+    expect(dark.querySelector(".oc-race-rows rect")?.getAttribute("fill")).not.toBe(
+      light.querySelector(".oc-race-rows rect")?.getAttribute("fill"),
     );
   });
 
@@ -125,15 +131,16 @@ describe("staticSvg", () => {
       const model = prepareRace({ ...spec, watermark: false }, {});
       const layout = layoutRace(model, {
         ...size,
-        height: size.height - (controls ? RACE_CONTROLS_HEIGHT : 0),
+        height: size.height - (controls ? 44 : 0),
         theme: chartTheme(false),
+        measureText: measureRaceText,
         darkMode: false,
       });
       const frame = raceGeometryAt(model, layout, model.timeline.periodCount - 1);
       if (frame.mark !== "bar") throw new Error("Expected bar race geometry.");
       const svg = readRace(spec, false, size);
-      const rowTops = [...svg.querySelectorAll("g[dominant-baseline='central'] > rect")].map(
-        (row) => Number(row.getAttribute("y")),
+      const rowTops = [...svg.querySelectorAll(".oc-race-rows rect")].map((row) =>
+        Number(row.getAttribute("y")),
       );
 
       expect(rowTops).toEqual(frame.rows.map(({ bar }) => Number(bar.y.toFixed(2))));
@@ -182,14 +189,16 @@ describe("staticSvg", () => {
     expect(Number(title?.getAttribute("y"))).toBeCloseTo(16);
   });
 
-  it("uses the line's color and leader position for the corresponding label", () => {
+  it("uses the line's color in its end label", () => {
     const svg = readRace({ ...salesRace, mark: "line" });
     const trace = svg.querySelector("path");
     const name = [...svg.querySelectorAll("tspan")].find(
       (el) => el.textContent === "Last & <leader>",
     );
     expect(name?.getAttribute("fill")).toBe(trace?.getAttribute("stroke"));
-    expect(name?.parentElement?.getAttribute("dominant-baseline")).toBe("central");
+    expect(name?.closest(".oc-race-line-labels")?.getAttribute("class")).toBe(
+      "oc-race-line-labels",
+    );
   });
 
   it("keeps the author's description along with the final ranking", () => {

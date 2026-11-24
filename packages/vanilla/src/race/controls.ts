@@ -49,18 +49,28 @@ export function createRaceControls(options: RaceControlsOptions): RaceControls {
   readout.style.minWidth = `min(${longestLabel}ch, 40%)`;
   element.append(button, scrubber, readout);
 
+  let previousPeriod = -1;
   function update({ t, playing }: RaceClockState) {
     const action = playing ? 'Pause' : 'Play';
     if (button.getAttribute('aria-label') !== action) {
       button.setAttribute('aria-label', action);
       iconPath.setAttribute('d', playing ? PAUSE_PATH : PLAY_PATH);
     }
-    scrubber.value = String(t);
+    const period = Math.floor(t);
+    if (!playing || period !== previousPeriod) {
+      const value = String(playing ? period : t);
+      if (scrubber.value !== value) scrubber.value = value;
+    }
     const progress = lastPeriod > 0 ? Math.min(1, Math.max(0, t / lastPeriod)) : 0;
     scrubber.style.setProperty('--oc-race-progress', `${progress * 100}%`);
-    const label = periodLabels[Math.floor(t)] ?? '';
-    scrubber.setAttribute('aria-valuetext', label);
-    readout.textContent = label;
+    if (period !== previousPeriod) {
+      previousPeriod = period;
+      const label = periodLabels[period] ?? '';
+      if (scrubber.getAttribute('aria-valuetext') !== label) {
+        scrubber.setAttribute('aria-valuetext', label);
+        readout.textContent = label;
+      }
+    }
   }
 
   function seek() {

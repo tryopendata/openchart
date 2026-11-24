@@ -3291,8 +3291,6 @@ export interface RaceConfig {
     | {
         /** Overrides the time channel's format. */
         format?: string;
-        /** Period label placement. Defaults to `auto`. */
-        position?: 'auto';
       };
   /** Show the sum of the top N values. Defaults to false. */
   summary?: 'sum' | false;

@@ -4,6 +4,7 @@ import {
   type RaceLineStatic,
   type RaceTick,
 } from '@opendata-ai/openchart-core';
+import { tickLabelsOverlap } from '../layout/axes/thinning';
 import { targetTickCount } from '../layout/axes/ticks';
 import { interpolateRaceValue } from './interpolate';
 import { truncateRaceLabel } from './layout-bar';
@@ -12,7 +13,8 @@ import type { RaceLayoutsByMark, RaceMarkEntry } from './marks';
 import { crossfadeTicks, periodTickLadder, valueTickLadder } from './ticks';
 import type { RaceModel } from './types';
 
-const LABEL_GAP = 6;
+const LABEL_GAP = 14;
+const LINE_VALUES_MIN_WIDTH = 420;
 const TICK_GAP = 4;
 const TICK_PADDING = 10;
 const OVERLAP_OPACITY = 0.15;
@@ -71,8 +73,11 @@ export const computeLineStatic: RaceMarkEntry<'line'>['computeStatic'] = (
     );
   const window = mark.window ?? 'reveal';
   let leftWidth = maxWidth(tickProbes, axisTick) + TICK_GAP;
-  let rightWidth =
-    labelWidth + measureText(' ', body, normal).width + maxWidth(valueProbes, body) + LABEL_GAP;
+  const showValues = area.width >= LINE_VALUES_MIN_WIDTH;
+  let rightWidth = labelWidth + LABEL_GAP;
+  if (showValues) {
+    rightWidth += measureText(' ', body, normal).width + maxWidth(valueProbes, body);
+  }
   if (window === 'all') {
     const [first, ...rest] = model.periodLabels;
     leftWidth = Math.max(leftWidth, measureText(first, axisTick, normal).width + TICK_GAP / 2);
@@ -80,7 +85,8 @@ export const computeLineStatic: RaceMarkEntry<'line'>['computeStatic'] = (
       rightWidth = Math.max(rightWidth, measureText(label, axisTick, normal).width + TICK_GAP / 2);
     }
   }
-  const gutterBudget = area.width / 2;
+  // On phones, reserve more room for complete names when space is tight.
+  const gutterBudget = area.width * (showValues ? 0.5 : 0.56);
   const leftGutter = Math.min(
     Math.ceil(leftWidth),
     gutterBudget - Math.min(rightWidth, gutterBudget / 2),
@@ -101,6 +107,7 @@ export const computeLineStatic: RaceMarkEntry<'line'>['computeStatic'] = (
     },
     yAxisX: plot.x,
     labelGutter,
+    showValues,
     tickFontSize: axisTick,
     history,
   };
@@ -176,7 +183,9 @@ function periodTicks(
     if (
       !required &&
       (width > budget ||
-        occupied.some((other) => start < other.right + TICK_GAP && end > other.left - TICK_GAP))
+        occupied.some((other) =>
+          tickLabelsOverlap({ left: start, right: end }, other, stat.tickFontSize),
+        ))
     )
       return;
     ticks.push({ value: period, label, opacity: 1, position });
@@ -184,8 +193,9 @@ function periodTicks(
   };
   const right = area.x + area.width;
   const middle = (x(0) + x(playhead)) / 2;
-  add(0, area.x, playhead === 0 ? right : middle - TICK_GAP / 2, true);
-  if (playhead !== 0) add(playhead, middle + TICK_GAP / 2, right, true);
+  const halfGap = stat.tickFontSize / 4;
+  add(0, area.x, playhead === 0 ? right : middle - halfGap, true);
+  if (playhead !== 0) add(playhead, middle + halfGap, right, true);
 
   const { width } = stat.plot;
   if (width > 0) {
@@ -345,7 +355,7 @@ function fitYTickLabels(ticks: Array<RaceTick & { coarse: boolean }>, labelHeigh
 /** Draw the ranked series on a domain that includes all points shown up to the playhead. */
 export const lineGeometry: RaceMarkEntry<'line'>['geometry'] = (model, layout, frame) => {
   const { t } = frame;
-  const { plot, xScale, window, tickFontSize, history } = layout.static;
+  const { plot, xScale, window, tickFontSize, history, showValues } = layout.static;
   const xMax = window === 'all' ? xScale.domain[1] : Math.max(1, t);
   const x = (period: number) => xScale.range[0] + (period / xMax) * plot.width;
   const period = frame.period.index;
@@ -416,7 +426,10 @@ export const lineGeometry: RaceMarkEntry<'line'>['geometry'] = (model, layout, f
     if (!anchor) continue;
     const labelX = anchor.x + LABEL_GAP;
     const budget = layout.area.x + layout.area.width - labelX;
-    const value = text.fit(model.formatValue(Number.isFinite(head) ? head : values[last]), budget);
+    const valueText = showValues
+      ? model.formatValue(Number.isFinite(head) ? head : values[last])
+      : '';
+    const value = text.width(valueText) <= budget ? valueText : '';
     const name = text.fit(layout.labels[key], budget - (value ? text.width(` ${value}`) : 0));
     const endLabel = { x: labelX, y: anchor.y, text: name, value };
     series.push({

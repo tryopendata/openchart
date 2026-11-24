@@ -5,6 +5,7 @@ import type {
   DarkMode,
   GeoMapSpec,
   LayerSpec,
+  RaceSpec,
   ResolvedTheme,
   ThemeConfig,
   TileMapSpec,
@@ -13,6 +14,7 @@ import {
   isBarListSpec,
   isGeoMapSpec,
   isLayerSpec,
+  isRaceSpec,
   isTileMapSpec,
 } from '@opendata-ai/openchart-core';
 import {
@@ -25,6 +27,7 @@ import {
 import { renderBarListSVG } from './barlist-renderer';
 import { applyMapCamera, cameraForTarget } from './map-camera';
 import { renderMapSVG } from './map-renderer';
+import { renderRaceStaticParts } from './race/static-svg';
 import { createIdScope, createRenderContext } from './render-context';
 import { applyRoleStyle, type ElementFactory, SVG_NS, XLINK_NS } from './renderers/svg-dom';
 import { StaticElement, serialize, staticFactory } from './static-dom';
@@ -42,11 +45,14 @@ export interface StaticRenderOptions {
   renderer?: 'auto' | 'svg' | 'canvas';
   watermark?: boolean;
   measureText?: CompileOptions['measureText'];
-  /** Geometry decimal places; null preserves raw doubles. Default 3. */
+  /**
+   * Geometry decimal places. Default 3. Null preserves full renderer precision.
+   * Race SVG marks share the live renderer's two-decimal coordinates.
+   */
   precision?: number | null;
 }
 const XMLNS_NS = 'http://www.w3.org/2000/xmlns/';
-export type StaticSpec = ChartSpec | LayerSpec | TileMapSpec | GeoMapSpec | BarListSpec;
+export type StaticSpec = ChartSpec | LayerSpec | TileMapSpec | GeoMapSpec | BarListSpec | RaceSpec;
 /**
  * Internal to the package: split rendering from serialization for parity and
  * interleaving tests. The public `./static` entry exposes only `renderStaticSVG`.
@@ -64,10 +70,9 @@ export function renderStaticParts(
   if (precision !== null && (!Number.isInteger(precision) || precision < 0 || precision > 15))
     throw new Error('precision must be an integer between 0 and 15, or null.');
   const type = (spec as { type?: string }).type;
-  if (type === 'race') throw new Error('Race specs render through createRace');
-  if (type && !['chart', 'layer', 'barlist', 'tilemap', 'map', 'geomap'].includes(type))
+  if (type && !['chart', 'layer', 'barlist', 'tilemap', 'map', 'geomap', 'race'].includes(type))
     throw new Error(
-      `renderStaticSVG does not render "${type}"; supported: chart, layer, barlist, tilemap, geomap`,
+      `renderStaticSVG does not render "${type}"; supported: chart, layer, barlist, tilemap, geomap, race`,
     );
   const ctx = createRenderContext({
     factory,
@@ -75,6 +80,10 @@ export function renderStaticParts(
     interactive: false,
     precision,
   });
+  if (isRaceSpec(spec)) {
+    const svg = renderRaceStaticParts(spec, options, ctx);
+    return { svg, serialize: () => serialize(svg as unknown as StaticElement, { precision }) };
+  }
   const compileOpts: CompileOptions = {
     width: options.width ?? 640,
     height: options.height ?? 420,

@@ -492,7 +492,7 @@ describe('race table renderer', () => {
     expect(getComputedStyle(host).overflow).toBe('hidden');
     expect(getComputedStyle(first).position).toBe('absolute');
     expect(getComputedStyle(rank).textAlign).toBe('right');
-    expect(getComputedStyle(rank).fontVariantNumeric).toBe('normal');
+    expect(getComputedStyle(rank.closest('table')!).fontVariantNumeric).toBe('normal');
   });
 
   it('reuses rows and cells, applies transforms and opacity, and paints in geometry order', () => {

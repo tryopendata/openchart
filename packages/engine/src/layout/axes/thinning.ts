@@ -33,6 +33,16 @@ export function measureLabel(
     : estimateTextWidth(text, fontSize, fontWeight);
 }
 
+/** Whether two horizontal label intervals leave the standard gap. */
+export function tickLabelsOverlap(
+  a: { left: number; right: number },
+  b: { left: number; right: number },
+  fontSize: number,
+): boolean {
+  const gap = fontSize * MIN_TICK_GAP_FACTOR;
+  return a.left < b.right + gap && a.right > b.left - gap;
+}
+
 /** Check whether any adjacent tick labels overlap along the axis direction. */
 export function ticksOverlap(
   ticks: AxisTick[],
@@ -61,9 +71,16 @@ export function ticksOverlap(
   for (let i = 0; i < ticks.length - 1; i++) {
     const aWidth = measureLabel(ticks[i].label, fontSize, fontWeight, measureText);
     const bWidth = measureLabel(ticks[i + 1].label, fontSize, fontWeight, measureText);
-    const aRight = ticks[i].position + aWidth / 2;
-    const bLeft = ticks[i + 1].position - bWidth / 2;
-    if (aRight + minGap > bLeft) return true;
+    const a = ticks[i].position;
+    const b = ticks[i + 1].position;
+    if (
+      tickLabelsOverlap(
+        { left: a - aWidth / 2, right: a + aWidth / 2 },
+        { left: b - bWidth / 2, right: b + bWidth / 2 },
+        fontSize,
+      )
+    )
+      return true;
   }
   return false;
 }

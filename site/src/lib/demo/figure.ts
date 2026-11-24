@@ -117,6 +117,8 @@ export function stageContentHtml(content: StageContent): string {
 const PHONE_STATIC_WIDTH = 390;
 /** The race stage at a 360px viewport, inside the docs content gutters. */
 const RACE_PHONE_STATIC_WIDTH = 320;
+/** The race stage at 1280px, with the docs sidebar and outline visible. */
+const RACE_WIDE_STATIC_WIDTH = 671;
 /** The wrapper demo.css shows or hides as one static pair, by `data-static-size`. */
 const STATIC_SET_CLASS = "demo-static-set";
 
@@ -150,7 +152,10 @@ function stageHtml(figure: DemoFigure, domId: string): string {
   const wide = stageContentHtml({
     ...figure,
     // A demo's own width wins; the blog's wide width changes only the statics' layout, never the stage's cap.
-    width: figure.width ?? figure.blog?.staticWidth,
+    width:
+      figure.width ??
+      figure.blog?.staticWidth ??
+      (isRaceSpec(figure.spec) ? RACE_WIDE_STATIC_WIDTH : undefined),
     domId,
     theme: figure.pageTheme === false ? NO_PAGE_THEME : undefined,
   });

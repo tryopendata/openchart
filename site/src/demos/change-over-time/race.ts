@@ -23,10 +23,7 @@ const bar: RaceSpec = {
   chrome: { title: barTitle, subtitle },
 };
 const line: RaceSpec = { ...bar, mark: "line" };
-const table: RaceSpec = {
-  ...bar,
-  mark: { type: "table", columns: ["rank", "change", "name", "value"] },
-};
+const table: RaceSpec = { ...bar, mark: "table" };
 const figure = { source, height: 490, phoneHeight: 530, entrance: false };
 
 export const gdpRace = defineDemo({

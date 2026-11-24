@@ -127,14 +127,6 @@ function checkPeriod(period: unknown, errors: ValidationError[]): void {
       suggestion: 'Use a format string such as format: "%Y" for temporal years or omit format.',
     });
   }
-  if (period.position !== undefined && period.position !== 'auto') {
-    errors.push({
-      code: 'INVALID_VALUE',
-      path: '/race/period/position',
-      message: 'Spec error: race.period.position must be "auto"',
-      suggestion: 'Use position: "auto" or omit position to let the chart place the label.',
-    });
-  }
 }
 
 function validatePlaybackOptions(race: Record<string, unknown>, errors: ValidationError[]): void {

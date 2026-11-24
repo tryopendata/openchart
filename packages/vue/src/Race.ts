@@ -92,26 +92,14 @@ export const Race = defineComponent({
       const container = containerRef.value;
       if (!container) return;
       const state = instance?.getState();
-      const current = createRace(container, props.spec, options.value);
+      const current = createRace(container, props.spec, { ...options.value, initialState: state });
       destroyRace();
+      if (state) current.resize();
 
       instance = current;
       mountedOptionsKey = optionsKey.value;
       mountedThemeKey = themeKey.value;
       mountedSpecKey = specKey.value;
-      if (state) {
-        // The old chart was still in the host during the replacement mount.
-        current.resize();
-        // Leave the new mount's visibility trigger armed when playback has yet to start.
-        if (state.ended) {
-          current.pause();
-        } else if (state.t > 0 || state.playing) {
-          current.seek(state.t);
-          if (state.playing) current.play();
-          else current.pause();
-        }
-        current.setSpeed(state.speed);
-      }
       subscribe();
     }
 

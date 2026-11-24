@@ -131,6 +131,10 @@ export class StaticElement {
   get firstChild(): StaticNode | null {
     return this.childNodes[0] ?? null;
   }
+  get nextElementSibling(): StaticElement | null {
+    const siblings = this.parentNode?.children;
+    return siblings?.[siblings.indexOf(this) + 1] ?? null;
+  }
   get nextSibling(): StaticNode | null {
     if (!this.parentNode) return null;
     return this.parentNode.childNodes[this.parentNode.childNodes.indexOf(this) + 1] ?? null;

@@ -35,6 +35,21 @@ function rankCells(t: number, key: string) {
 }
 
 describe('race table layout', () => {
+  it('pools content within the table body from geometry alone as rows cross', () => {
+    const { layout, geometry } = tableAt(3.37, 360);
+    const { bodyHeight, rowHeight, fontSize, headerHeight } = layout.static;
+    expect(bodyHeight).toBeCloseTo(layout.area.height - headerHeight);
+    expect(geometry.rows.some(({ contentOffset }) => Math.abs(contentOffset) > 1)).toBe(true);
+    const paintHeight = Math.max(0, rowHeight - 1);
+    const textHeight = Math.min(paintHeight, fontSize * 1.2);
+    for (const row of geometry.rows.filter(({ atEdge }) => !atEdge)) {
+      const top = row.y + row.contentOffset + (paintHeight - textHeight) / 2;
+      expect(top).toBeGreaterThanOrEqual(0);
+      expect(top + textHeight).toBeLessThanOrEqual(bodyHeight);
+    }
+    expect(tableAt(3.37, 360).geometry).toEqual(geometry);
+  });
+
   it('gives the bottom slot to one row as entrants and exits slide past the table edge', () => {
     const { layout } = tableAt(0);
     const { headerHeight, rowHeight } = layout.static;
@@ -273,7 +288,7 @@ describe('race table layout', () => {
       ['Alpine', { column: 'value', text: '70.0' }, { column: 'share', text: '100.0%' }],
     ]);
     expect(layout.static.columns[1].width).toBeGreaterThanOrEqual(
-      estimateTextWidth('100.0%', layout.static.fontSize) + 10,
+      estimateTextWidth('100.0%', layout.static.fontSize) + 2 * layout.static.cellPadding,
     );
   });
 
@@ -324,14 +339,14 @@ describe('race table layout', () => {
     const layout = layoutRace(scaled, { width: 360, height: 300 });
     if (layout.mark !== 'table') throw new Error('Expected a table');
     expect(raceFrameAt(scaled, t).items[0].valueLabel).toBe(label);
-    const { fontSize, columns } = layout.static;
+    const { fontSize, columns, cellPadding } = layout.static;
     const widest = Math.max(
       ...Array.from('0123456789', (digit) =>
         estimateTextWidth(label.replace(/\d/g, digit), fontSize),
       ),
     );
     expect(columns.find(({ column }) => column === 'value')?.width).toBeGreaterThanOrEqual(
-      widest + 10,
+      widest + 2 * cellPadding,
     );
   });
 
