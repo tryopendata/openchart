@@ -78,6 +78,8 @@ export interface RaceTimeline {
   readonly periodCount: number;
   readonly keyCount: number;
   readonly top: number;
+  /** Number of rank samples per period interval. */
+  readonly samplesPerPeriod: number;
   /** NaN when absent. */
   valueAt(keyIndex: number, t: number): number;
   /** Smoothed rank in [0, top]. */

@@ -1,21 +1,11 @@
 import type { RaceBarGeometry, RaceBarStatic } from '@opendata-ai/openchart-core';
 import { createSVGElement, setAttrs } from '../renderers/svg-dom';
+import { setNumbers } from './svg-attrs';
 
 /** Draws in the host's user space and removes only its own nodes on `destroy()`. */
 export interface RaceBarRenderer {
   draw(geometry: RaceBarGeometry): void;
   destroy(): void;
-}
-
-function setNumbers<Attribute extends string>(
-  element: SVGElement,
-  attributes: Record<Attribute, number>,
-) {
-  for (const name in attributes) {
-    if (!Object.hasOwn(attributes, name)) continue;
-    const value = attributes[name];
-    if (Number.isFinite(value)) element.setAttribute(name, String(Number(value.toFixed(2))));
-  }
 }
 
 function drawText(element: SVGElement, label: { x: number; y: number; text: string } | null) {
