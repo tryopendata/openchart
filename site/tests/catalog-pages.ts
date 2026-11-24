@@ -8,7 +8,15 @@
  */
 export const catalogPages = {
   comparison: ["bar", "column", "grouped-stacked", "lollipop", "bar-list", "range"],
-  "change-over-time": ["line", "area", "stacked-area", "slope-bump", "sparkline", "calendar"],
+  "change-over-time": [
+    "line",
+    "area",
+    "stacked-area",
+    "slope-bump",
+    "race",
+    "sparkline",
+    "calendar",
+  ],
   "part-to-whole": ["pie-donut", "stacked-100", "waffle", "parliament"],
   distribution: ["histogram", "density", "beeswarm", "tick-strip", "error-bars"],
   correlation: ["scatter", "bubble", "heatmap", "trendlines"],

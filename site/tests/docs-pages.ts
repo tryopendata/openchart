@@ -138,6 +138,7 @@ const REFERENCE_BY_SECTION: Record<CatalogSection, string> = {
 /** Catalog pages whose reference page differs from their section's. */
 const REFERENCE_EXCEPTIONS: Partial<Record<CatalogPageId, string>> = {
   "comparison/bar-list": "spec/barlist-spec",
+  "change-over-time/race": "output/export",
   "distribution/histogram": "spec/transforms",
   "distribution/density": "spec/transforms",
   "correlation/trendlines": "spec/layer-spec",

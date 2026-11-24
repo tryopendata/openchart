@@ -5,8 +5,8 @@
  * entrance when it is first seen, unless the demo turns `entrance` off), and the
  * collapsed code under a Show code and Copy toolbar, with any reader controls
  * between the stage and the caption. A demo that is unknown, whose spec or any
- * state's spec fails validation, or that puts controls on a spec other than a
- * chart or layer fails the build, naming the page. On a blog post the figure
+ * state's spec fails validation, or that uses unsupported controls fails the
+ * build, naming the page. On a blog post the figure
  * also carries its credit line and reveal entrances (see blog-figure.ts), and a
  * spec with no chart type to credit fails the build the same way. A post's hero
  * (`hero`) skips the entrance and the reveal, so the static it paints first stays
@@ -68,3 +68,11 @@ try {
 ---
 
 <Fragment set:html={figure} />
+
+<style is:global>
+  /* Race columns are measured with proportional digits. Match that width in the site font. */
+  .demo:not([data-demo-own-theme]) .demo-live .oc-race-table-value,
+  .demo:not([data-demo-own-theme]) .demo-live .oc-race-table-share {
+    font-variant-numeric: proportional-nums;
+  }
+</style>

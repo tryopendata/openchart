@@ -5,9 +5,11 @@
  */
 import { indexTotalReturns } from "@datasets/index-total-returns";
 import { usInflation } from "@datasets/us-inflation";
-import type { ChartSpec, VizSpec } from "@opendata-ai/openchart-core";
+import { type ChartSpec, isRaceSpec, type VizSpec } from "@opendata-ai/openchart-core";
 import { Window } from "happy-dom";
 import { describe, expect, it } from "vitest";
+import { gdpRace } from "../../demos/change-over-time/race";
+import { fixtureBar } from "../../demos/fixtures/bar";
 import { editFixture, eventsFixture, statesFixture } from "../../demos/fixtures/controls";
 import { fixtureTable } from "../../demos/fixtures/table";
 import { basicGraph } from "../../demos/flow/graph";
@@ -207,5 +209,52 @@ describe("validateDemoControls", () => {
 
   it("accepts controls on a chart whose states are valid", () => {
     expect(() => validateDemoControls(statesFixture)).not.toThrow();
+  });
+
+  it("accepts race mark states", () => {
+    expect(() => validateDemoControls(gdpRace)).not.toThrow();
+  });
+
+  it.each([
+    { controls: { replay: true } },
+    { controls: { eventLog: true } },
+    { controls: { exports: ["svg"] } },
+    { mount: { interaction: "edit" } },
+    { mount: { renderer: "canvas" } },
+  ] satisfies Array<Partial<DemoDef>>)(
+    "rejects chart controls or mount options on a race (%j)",
+    (overrides) => {
+      expect(() => validateDemoControls({ ...gdpRace, ...overrides })).toThrow(
+        /state buttons only/,
+      );
+    },
+  );
+
+  it.each([
+    [gdpRace, fixtureBar],
+    [fixtureBar, gdpRace],
+    [fixtureBar, fixtureTable],
+  ])("rejects a switch between incompatible demo types", (own, other) => {
+    const controls = {
+      states: { initialLabel: own.title, others: [{ label: "Other mark", spec: other.spec }] },
+    };
+    expect(() => validateDemoControls({ ...own, controls })).toThrow(
+      /Other mark.*\n.*Use race specs/,
+    );
+  });
+
+  it.each([
+    { years: [2000, 2000, 2001], reason: /2 rows have country = 'Canada' and year = 2000/ },
+    { years: [2000], reason: /Supply at least two periods/ },
+  ])("fails the build for invalid race state data in $years", ({ years, reason }) => {
+    const { spec } = gdpRace;
+    if (!isRaceSpec(spec)) throw new Error("Expected a race demo.");
+    const broken = { ...spec, data: years.map((year) => ({ year, country: "Canada", gdp: 1 })) };
+    const controls = {
+      states: { initialLabel: "Bar", others: [{ label: "Broken rows", spec: broken }] },
+    };
+    const validate = () => validateDemoControls({ ...gdpRace, controls });
+    expect(validate).toThrow(/state "Broken rows"/);
+    expect(validate).toThrow(reason);
   });
 });

@@ -9,15 +9,17 @@ import {
   type DarkMode,
   isChartSpec,
   isLayerSpec,
+  isRaceSpec,
+  type RaceSpec,
   type ThemeConfig,
   type VizSpec,
 } from "@opendata-ai/openchart-core";
 import {
-  type ChartInstance,
   createBarList,
   createChart,
   createGeoMap,
   createGraph,
+  createRace,
   createSankey,
   createTable,
   createTileMap,
@@ -53,8 +55,10 @@ export type DemoMountRequest = {
 
 /** A mounted demo. */
 export type DemoMount = {
-  /** The live chart for a chart or layer spec, for updates and exports; null for other types. */
-  instance: ChartInstance | null;
+  /** Updates a live chart, layer or race with a compatible spec. */
+  update?(spec: VizSpec): void;
+  /** Rebuilds a race for the new theme at the same playhead. */
+  setTheme?(dark: boolean): void;
   /** Destroys the chart and removes its host, leaving the stage as the build wrote it. */
   destroy(): void;
   /** True while the entrance is still held because the chart has not been seen yet. */
@@ -70,7 +74,7 @@ type Mount = (host: HTMLElement, spec: never, options: MountOptions) => { destro
  * inside a chart, since this is the library's own site. Use it for every mount
  * and every `update`.
  */
-export function withoutWatermark<T extends VizSpec>(spec: T): T {
+function withoutWatermark<T extends VizSpec>(spec: T): T {
   return { ...spec, watermark: false };
 }
 
@@ -86,10 +90,87 @@ const MOUNTS_BY_TYPE: Record<string, Mount> = {
   barlist: createBarList,
 };
 
-/** The mount function for a spec: charts and layers carry `mark` or `layer`, the rest a `type`. */
-function mountFor(spec: VizSpec): Mount | undefined {
-  if (isChart(spec)) return createChart as Mount;
-  return MOUNTS_BY_TYPE[String((spec as { type?: unknown }).type)];
+function mountRaceDemo(host: HTMLElement, spec: RaceSpec, { dark, ownTheme }: DemoMountRequest) {
+  const mount = (spec: RaceSpec, dark: boolean) =>
+    createRace(host, spec, {
+      theme: ownTheme ? undefined : chartTheme(dark),
+      darkMode: dark ? "force" : "off",
+    });
+  let current = spec;
+  let race = mount(current, dark);
+  // At t=0 a paused player and a player waiting to be seen report the same state.
+  let usedControls = false;
+  const listeners = new AbortController();
+  const noteControlUse = () => {
+    usedControls = true;
+  };
+  for (const event of ["click", "input", "keydown"]) {
+    host.addEventListener(event, noteControlUse, { capture: true, signal: listeners.signal });
+  }
+  return {
+    destroy() {
+      listeners.abort();
+      race.destroy();
+    },
+    update(next: VizSpec) {
+      if (!isRaceSpec(next))
+        throw new DemoMountError("A race demo can only update to a race spec.");
+      const unbranded = withoutWatermark(next);
+      race.update(unbranded);
+      current = unbranded;
+    },
+    setTheme(dark: boolean) {
+      const { t, playing } = race.getState();
+      const restorePlayback = usedControls || playing || t !== 0;
+      const themed = restorePlayback
+        ? mount({ ...current, race: { ...current.race, autoplay: false } }, dark)
+        : mount(current, dark);
+      race.destroy();
+      race = themed;
+      if (restorePlayback) {
+        if (race.getState().t !== t) race.seek(t);
+        if (playing) race.play();
+      }
+    },
+  };
+}
+
+function mountVisualization(
+  host: HTMLElement,
+  spec: VizSpec,
+  options: DemoMountRequest,
+): Pick<DemoMount, "destroy" | "update" | "setTheme"> {
+  const unbranded = withoutWatermark(spec);
+  // Races have their own playback settings. The demo's entrance flag only applies to charts.
+  if (isRaceSpec(unbranded)) return mountRaceDemo(host, unbranded, options);
+  const theme = options.ownTheme ? undefined : chartTheme(options.dark);
+  const darkMode: DarkMode = options.dark ? "force" : "off";
+  const playable: VizSpec = options.entrance ? unbranded : { ...unbranded, animation: false };
+  const mountOptions = {
+    theme,
+    darkMode,
+    renderer: options.renderer,
+    interaction: options.interaction,
+  };
+  if (isChart(playable)) {
+    const chart = createChart(host, playable, { ...mountOptions, ...options.handlers });
+    return {
+      destroy: chart.destroy,
+      update(next: VizSpec) {
+        if (!isChart(next))
+          throw new DemoMountError("A chart demo can only update to a chart or layer spec.");
+        chart.update(withoutWatermark(next));
+      },
+    };
+  }
+  const type = String((playable as { type?: unknown }).type);
+  const mount = MOUNTS_BY_TYPE[type];
+  if (!mount) {
+    throw new DemoMountError(
+      `No mount function for spec type "${type}". Supported: chart, layer, race, ${Object.keys(MOUNTS_BY_TYPE).join(", ")}.`,
+    );
+  }
+  return mount(host, playable as never, mountOptions);
 }
 
 /**
@@ -100,35 +181,20 @@ function mountFor(spec: VizSpec): Mount | undefined {
  * held, and the library plays it the first time at least a quarter of the stage
  * is in view; under reduced motion nothing plays. Mount ahead of the reader
  * (demos.ts does at LEAD_PX) and the entrance still waits. Without `entrance`
- * the chart draws finished, so a remount never replays it.
+ * the chart draws finished, so a remount never replays it. Races use their own
+ * playback settings with either value of `entrance`.
  *
  * @throws {DemoMountError} When the spec type has no mount function, or mounting throws.
  */
 export function mountDemo(stage: HTMLElement, spec: VizSpec, options: DemoMountRequest): DemoMount {
-  const mount = mountFor(spec);
-  if (!mount) {
-    const type = String((spec as { type?: unknown }).type);
-    throw new DemoMountError(
-      `No mount function for spec type "${type}". Supported: chart, layer, ${Object.keys(MOUNTS_BY_TYPE).join(", ")}.`,
-    );
-  }
   const host = stage.ownerDocument.createElement("div");
   host.className = DEMO_CLASS.live;
   stage.append(host);
-  const unbranded = withoutWatermark(spec);
-  const playable = options.entrance ? unbranded : { ...unbranded, animation: false };
-  // Other types name some handlers alike with other signatures, so only a chart gets them.
-  const handlers = isChart(spec) ? options.handlers : undefined;
   try {
-    const instance = mount(host, playable as never, {
-      theme: options.ownTheme ? undefined : chartTheme(options.dark),
-      darkMode: options.dark ? "force" : "off",
-      ...(options.renderer ? { renderer: options.renderer } : {}),
-      ...(options.interaction ? { interaction: options.interaction } : {}),
-      ...handlers,
-    });
+    const instance = mountVisualization(host, spec, options);
     return {
-      instance: isChart(spec) ? (instance as ChartInstance) : null,
+      update: instance.update,
+      setTheme: instance.setTheme,
       destroy() {
         instance.destroy();
         host.remove();
@@ -138,6 +204,7 @@ export function mountDemo(stage: HTMLElement, spec: VizSpec, options: DemoMountR
     };
   } catch (error) {
     host.remove();
+    if (error instanceof DemoMountError) throw error;
     const reason = error instanceof Error ? error.message : String(error);
     throw new DemoMountError(`Mounting the spec failed: ${reason}`, { cause: error });
   }

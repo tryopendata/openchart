@@ -23,6 +23,7 @@ const WRAPPERS_BY_TYPE: Record<string, Wrapper> = {
   tilemap: { component: "TileMap", mount: "createTileMap", specType: "TileMapSpec" },
   map: { component: "GeoMap", mount: "createGeoMap", specType: "GeoMapSpec" },
   barlist: { component: "BarList", mount: "createBarList", specType: "BarListSpec" },
+  race: { component: "Race", mount: "createRace", specType: "RaceSpec" },
 };
 const CHART: Wrapper = { component: "Chart", mount: "createChart", specType: "ChartSpec" };
 const LAYER: Wrapper = { ...CHART, specType: "LayerSpec" };

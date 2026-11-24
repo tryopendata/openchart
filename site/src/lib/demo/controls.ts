@@ -7,7 +7,7 @@
  * states' specs, without the data they repeat from the demo's own spec, and
  * checks a demo's controls when the page builds.
  */
-import { isChartSpec, isLayerSpec, type VizSpec } from "@opendata-ai/openchart-core";
+import { isChartSpec, isLayerSpec, isRaceSpec, type VizSpec } from "@opendata-ai/openchart-core";
 import type { DemoControls, DemoDef, DemoState } from "../../demos/types";
 import { escapeHtml } from "./escape-html";
 import { foldTargets } from "./fold-targets";
@@ -133,17 +133,35 @@ export function embeddedStates(
 }
 
 /**
- * Checks a demo's controls when its page builds: controls and edit mode need a
- * chart or layer spec, and every state's spec must pass the library's validation.
+ * Checks a demo's controls when its page builds. Races can switch between race
+ * specs. Other controls need a chart or layer. Every state passes spec validation.
  *
  * @throws {InvalidDemoError} Naming the demo id, and the state label for a state that fails.
  */
 export function validateDemoControls(
   demo: Pick<DemoDef, "id" | "spec" | "controls" | "mount">,
 ): void {
-  const { id, spec, controls } = demo;
+  const { id, spec, controls, mount } = demo;
+  const race = isRaceSpec(spec);
+  if (
+    race &&
+    (controls?.replay ||
+      controls?.eventLog ||
+      controls?.exports?.length ||
+      mount?.interaction ||
+      mount?.renderer)
+  ) {
+    throw new InvalidDemoError(id, [
+      {
+        path: "",
+        code: "INVALID_TYPE",
+        message: "Race demos support state buttons only.",
+        suggestion: "Use the built-in race player for playback.",
+      },
+    ]);
+  }
   if (!needsControls(demo)) return;
-  if (!isChartSpec(spec) && !isLayerSpec(spec)) {
+  if (!race && !isChartSpec(spec) && !isLayerSpec(spec)) {
     const type = String((spec as { type?: unknown }).type);
     throw new InvalidDemoError(id, [
       {
@@ -156,6 +174,21 @@ export function validateDemoControls(
     ]);
   }
   for (const state of controls?.states?.others ?? []) {
-    validateDemo(`${id} (state "${state.label}")`, state.spec);
+    const stateId = `${id} (state "${state.label}")`;
+    validateDemo(stateId, state.spec);
+    const compatible = race
+      ? isRaceSpec(state.spec)
+      : isChartSpec(state.spec) || isLayerSpec(state.spec);
+    if (!compatible) {
+      throw new InvalidDemoError(stateId, [
+        {
+          path: "",
+          code: "INVALID_TYPE",
+          message: "The demo and this state use different spec types.",
+          suggestion:
+            "Use race specs for all states of a race demo, and chart or layer specs for chart states.",
+        },
+      ]);
+    }
   }
 }

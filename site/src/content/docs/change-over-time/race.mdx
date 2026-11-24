@@ -1,0 +1,74 @@
+---
+title: Race
+description: Play a ranking over time as bars, lines or a table, and let readers pause on any period.
+section: change-over-time
+order: 4.5
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+A race plays the top entries in a ranking one period at a time. Use it when the order of events is the story, such as which economies passed Japan and when. Use a [bump chart](/docs/change-over-time/slope-bump/) to compare rank across several periods, or [small-multiples line charts](/docs/composition/facets/) to compare how values changed for each series. Readers can scrub a race, but they can't compare two moments that never share the screen.
+
+## Bar race
+
+Set `type: "race"` and `mark: "bar"`. Each row supplies one country's GDP for one year. The race ranks the countries each year and moves the bars between ranks as the values change. `encoding.value.format` uses `$.3~s` to show values such as `$4.03T`.
+
+<Demo id="change-over-time/race" />
+
+## Line race
+
+Set `mark: "line"` to trace the ranked series up to the playhead. The x axis grows with the playhead by default. Use `mark: { type: "line", window: "all" }` to show the full time axis while the lines draw in.
+
+<Demo id="change-over-time/race-line" />
+
+## Table race
+
+Set `mark: "table"` when readers need the rank and value in columns. This example uses `columns` to give the country names and values more room on phones. The default columns also include an inline bar and share of the total across all entries.
+
+<Demo id="change-over-time/race-table" />
+
+## Loop the top five
+
+`race.top: 5` limits the ranking to five slots. `race.loop: true` restarts the race after the final hold, which lasts 1,500 milliseconds by default.
+
+<Demo id="change-over-time/race-loop" />
+
+## Fixed scale
+
+The default `race.rescale: "frame"` fits the bar scale to each frame. Set `"fixed"` to hold that scale across the whole run. Early bars can look short when the values grow substantially over time. Line races fit the y axis to the history through the playhead.
+
+<Demo id="change-over-time/race-fixed" />
+
+## Playback and controls
+
+With `race.autoplay: "visible"` (the default), playback starts when at least a quarter of the race is in view. Set `false` to wait for the reader or `true` to start at mount. With reduced motion, a race opens paused on the final frame. Readers can scrub back and play from an earlier period.
+
+The player includes play and pause, a scrubber and a period readout. With focus on the player, press Space to play or pause and use the arrow keys to step one period at a time.
+
+## Runtime API
+
+In vanilla JavaScript, `createRace(container, spec)` returns the player. Call `play()` or `pause()` to control it, and `seek(t)` to move to a zero-based period index. Fractional indices land between periods. `update({ ...spec, mark: "line" })` swaps the mark at the current playhead, as in the first example. `on("period", callback)` listens for period crossings and seeks and returns an unsubscribe function. Call `destroy()` when you remove the player.
+
+Install the optional `gifenc` package to export GIFs. `await player.export("gif")` returns a `Blob` of the full run for bar and line marks. To export a race shown as a table, switch it to bar or line first.
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `type` | `"race"`. |
+| `mark` | `"bar"`, `"line"` or `"table"`. Use an object for options such as a line's `window` or a table's `columns`. |
+| `encoding.time` | The period field. Quantitative and temporal fields sort by value. Ordinal fields use the order in the data unless you set `sort`. |
+| `encoding.key` | The field that identifies the same entry across periods. Supply one row per key and period. |
+| `encoding.value` | The numeric field to rank and draw. Set `format` here for the value labels. |
+| `race.top` | Number of ranked slots. Defaults to 10. |
+| `race.duration`, `race.step` | Set total playback time or time per period, in milliseconds. Supply one of the two. |
+| `race.rescale` | For bars and inline table bars, `"frame"` fits each frame, `"fixed"` uses one scale, and `{ min }` sets a floor on the frame maximum. |
+| `race.loop`, `race.holdEnd` | Repeat after the last frame and set how long to hold it, in milliseconds. |
+| `race.autoplay`, `race.controls` | Choose when playback starts and whether to show the player controls. |
+
+## Related
+
+- [Slope and bump](/docs/change-over-time/slope-bump/) for comparing ranks at a glance.
+- [Line](/docs/change-over-time/line/) for comparing values across periods.
+- [Motion](/docs/behavior/motion/) for chart entrances and data updates.
+- [Export](/docs/output/export/) for other export formats.
