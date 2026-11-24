@@ -59,6 +59,7 @@ const CREDIT_TARGETS: Record<string, FigureCredit> = {
   waffle: docsCredit("part-to-whole/waffle", "waffle chart"),
   beeswarm: docsCredit("distribution/beeswarm", "beeswarm plot"),
   histogram: docsCredit("distribution/histogram", "histogram"),
+  race: docsCredit("change-over-time/race", "race chart"),
 };
 
 /** A chart's mark name, whether the spec writes it as a string or as `{ type }`. */

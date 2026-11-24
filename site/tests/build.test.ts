@@ -54,11 +54,13 @@ import { usEnergyFlow2024 } from "@datasets/us-energy-flow-2024";
 import { usImportShares } from "@datasets/us-import-shares";
 import { usInflation } from "@datasets/us-inflation";
 import { usStateUnemployment } from "@datasets/us-state-unemployment";
+import { worldGdpRaceSource } from "@datasets/world-gdp-race";
 import { build as esbuild } from "esbuild";
 import { Window } from "happy-dom";
 import { afterEach, describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 import { docsAreas, site } from "../src/config";
+import { statePopulation } from "../src/demos/blog/when-to-use-a-bar-chart-race";
 import { sourceOf } from "../src/demos/source";
 import { LANDING_SECTION_IDS, type LandingSectionId, landingCopy } from "../src/landing/copy";
 import {
@@ -1030,6 +1032,10 @@ const TIER_1_LABELS = [
   tidyTuesdayFoodCo2,
   uflVepTurnout,
   usImportShares,
+  // Checked row by row against the World Bank's NY.GDP.MKTP.CD series (OpenData worldbank/gdp).
+  { source: worldGdpRaceSource },
+  // Verified against census/state-population; the rows and the query live in the post's demo module.
+  statePopulation,
 ].map((dataset) => sourceOf(dataset).label);
 
 /** Whether a figure's caption cites a tier-1 dataset. */
