@@ -45,6 +45,7 @@ export const Race = forwardRef<RaceHandle, RaceProps>(function Race(
   const mounted = useRef<{
     instance: RaceInstance;
     optionsKey: string;
+    themeKey: string;
     specKey: string;
   } | null>(null);
   const warnRef = useRef(onWarn);
@@ -62,7 +63,8 @@ export const Race = forwardRef<RaceHandle, RaceProps>(function Race(
     }),
     [contextTheme, theme, resolvedDarkMode, autoResize, watermark],
   );
-  const optionsKey = JSON.stringify(options);
+  const optionsKey = JSON.stringify({ autoResize, watermark });
+  const themeKey = JSON.stringify({ theme: options.theme, darkMode: options.darkMode });
 
   useImperativeHandle(
     ref,
@@ -84,13 +86,17 @@ export const Race = forwardRef<RaceHandle, RaceProps>(function Race(
         current.instance.update(spec);
         current.specKey = specKey;
       }
+      if (themeKey !== current.themeKey) {
+        current.instance.setTheme(options);
+        current.themeKey = themeKey;
+      }
       return;
     }
 
     const state = current?.instance.getState();
     const instance = createRace(container, spec, options);
     current?.instance.destroy();
-    mounted.current = { instance, optionsKey, specKey };
+    mounted.current = { instance, optionsKey, themeKey, specKey };
     if (state) {
       // The old chart was still in the host during the replacement mount.
       instance.resize();
@@ -104,7 +110,7 @@ export const Race = forwardRef<RaceHandle, RaceProps>(function Race(
       }
       instance.setSpeed(state.speed);
     }
-  }, [spec, options, optionsKey]);
+  }, [spec, options, optionsKey, themeKey]);
 
   useEffect(() => {
     const current = mounted.current;

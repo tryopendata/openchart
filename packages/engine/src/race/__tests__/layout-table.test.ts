@@ -308,13 +308,7 @@ describe('race table layout', () => {
   it.each([
     { start: 20e12, end: 10e12, format: '$.3~s', t: 0.25, label: '$17.5T' },
     { start: 100, end: 200, format: undefined, t: 0.175, label: '117.50' },
-  ])('reserves room for the interpolated tabular value $label', ({
-    start,
-    end,
-    format,
-    t,
-    label,
-  }) => {
+  ])('reserves room for the interpolated value $label', ({ start, end, format, t, label }) => {
     const scaled = prepareRace(
       {
         ...spec,

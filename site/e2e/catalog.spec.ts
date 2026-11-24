@@ -102,8 +102,8 @@ test("the top-five race loops after the final period and the fixed race keeps it
   await loop.locator("[data-demo-stage]").scrollIntoViewIfNeeded();
   const loopSlider = loop.getByRole("slider", { name: "Time" });
   await expect(loop.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
-  await loopSlider.fill("44");
   const holdStarted = await page.evaluate(() => performance.now());
+  await loopSlider.fill("44");
   await expect(loopSlider).toHaveAttribute("aria-valuetext", "2024");
   await expect(loop.locator(".oc-race-rows rect:visible")).toHaveCount(5);
   await expect(loopSlider).toHaveAttribute("aria-valuetext", "1980", { timeout: 5_000 });
@@ -152,7 +152,7 @@ test.describe("the race page without JavaScript", () => {
       await page.goto(RACE);
       for (const suffix of RACE_SUFFIXES) {
         const demo = raceDemo(page, suffix);
-        const frame = demo.getByRole("img", { name: "The world's largest economies (2024)" });
+        const frame = demo.getByRole("img", { name: /\(2024\)$/ });
         await expect(frame).toHaveAttribute("data-theme", colorScheme);
         await expect(frame.getByText("2024", { exact: true }).first()).toBeVisible();
         await expect(demo.getByRole("slider", { name: "Time" })).toHaveCount(0);
@@ -176,6 +176,30 @@ test("all race demos open on the final frame with reduced motion and follow the 
     await expect(slider).toHaveValue("44");
     await expect(slider).toHaveAttribute("aria-valuetext", "2024");
     await expect(demo.getByRole("button", { name: "Play", exact: true })).toBeVisible();
+  }
+  const barStage = raceDemo(page).locator("[data-demo-stage]");
+  const rowPositions = await barStage.evaluate((stage) => {
+    const snapshot = [
+      ...stage.querySelectorAll<SVGSVGElement>('svg.demo-static[data-theme="light"]'),
+    ].find((svg) => getComputedStyle(svg.parentElement ?? stage).display !== "none");
+    if (!snapshot) throw new Error("Expected a light race snapshot at the current size.");
+    const top = stage.getBoundingClientRect().top;
+    const rows = (rects: Iterable<SVGRectElement>) =>
+      [...rects].map((rect) => rect.getBoundingClientRect().top - top);
+    snapshot.style.setProperty("display", "block", "important");
+    try {
+      return {
+        snapshot: rows(snapshot.querySelectorAll('g[dominant-baseline="central"] > rect')),
+        live: rows(stage.querySelectorAll(".oc-race-rows rect")),
+      };
+    } finally {
+      snapshot.style.removeProperty("display");
+    }
+  });
+  expect(rowPositions.snapshot).toHaveLength(10);
+  expect(rowPositions.live).toHaveLength(10);
+  for (const [index, y] of rowPositions.snapshot.entries()) {
+    expect(rowPositions.live[index]).toBeCloseTo(y, 1);
   }
   const values = raceDemo(page, "-table").locator("tbody .oc-race-table-value");
   await expect(values).toHaveCount(10);

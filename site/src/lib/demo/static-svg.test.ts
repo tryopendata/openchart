@@ -1,10 +1,13 @@
 // @vitest-environment node
 /** Build-time static rendering, run with no DOM as the Astro build runs it. */
 import type { RaceSpec } from "@opendata-ai/openchart-core";
+import { layoutRace, prepareRace, raceGeometryAt } from "@opendata-ai/openchart-engine";
+import { RACE_CONTROLS_HEIGHT } from "@opendata-ai/openchart-vanilla";
 import { Window } from "happy-dom";
 import { describe, expect, it } from "vitest";
 import { fixtureBar } from "../../demos/fixtures/bar";
 import { fixtureTable } from "../../demos/fixtures/table";
+import { chartTheme } from "./chart-theme";
 import { staticSvg } from "./static-svg";
 
 const SIZE = { width: 720, height: 320 };
@@ -26,8 +29,8 @@ const salesRace: RaceSpec = {
   race: { top: 1 },
 };
 
-function readRace(spec: RaceSpec, dark = false) {
-  const markup = staticSvg(spec, { ...SIZE, idPrefix: `race-${dark ? "d" : "l"}`, dark });
+function readRace(spec: RaceSpec, dark = false, size = SIZE) {
+  const markup = staticSvg(spec, { ...size, idPrefix: `race-${dark ? "d" : "l"}`, dark });
   const doc = new new Window().DOMParser().parseFromString(markup ?? "", "text/html");
   const svg = doc.querySelector(`svg.demo-static[data-theme='${dark ? "dark" : "light"}']`);
   if (!svg) throw new Error("Expected a race SVG in the requested theme.");
@@ -104,6 +107,66 @@ describe("staticSvg", () => {
     expect(y("Winner")).toBeLessThan(y("Passed"));
     expect(y("1")).toBe(y("Winner"));
     expect(y("2")).toBe(y("Passed"));
+  });
+
+  it.each([
+    { width: 330, axisTick: 12, controls: true },
+    { width: 360, axisTick: 14, controls: false },
+    { width: 680, axisTick: 14, controls: true },
+  ])(
+    "draws final rows at live height at $width px with controls=$controls",
+    ({ width, axisTick, controls }) => {
+      const spec: RaceSpec = {
+        ...salesRace,
+        race: { ...salesRace.race, controls, autoplay: false },
+        theme: { fonts: { sizes: { axisTick } } },
+      };
+      const size = { width, height: SIZE.height };
+      const model = prepareRace({ ...spec, watermark: false }, {});
+      const layout = layoutRace(model, {
+        ...size,
+        height: size.height - (controls ? RACE_CONTROLS_HEIGHT : 0),
+        theme: chartTheme(false),
+        darkMode: false,
+      });
+      const frame = raceGeometryAt(model, layout, model.timeline.periodCount - 1);
+      if (frame.mark !== "bar") throw new Error("Expected bar race geometry.");
+      const svg = readRace(spec, false, size);
+      const rowTops = [...svg.querySelectorAll("g[dominant-baseline='central'] > rect")].map(
+        (row) => Number(row.getAttribute("y")),
+      );
+
+      expect(rowTops).toEqual(frame.rows.map(({ bar }) => Number(bar.y.toFixed(2))));
+      expect(svg.getAttribute("viewBox")).toBe(`0 0 ${width} ${size.height}`);
+    },
+  );
+
+  it("offsets the full-window line tick labels away from their gridlines", () => {
+    const svg = readRace({ ...salesRace, mark: { type: "line", window: "all" } });
+    const ticks = [...svg.querySelectorAll("text[dx]")].map((label) => [
+      label.textContent,
+      label.getAttribute("text-anchor"),
+      label.getAttribute("dx"),
+    ]);
+
+    expect(ticks).toEqual([
+      ["2000", "end", "-2"],
+      ["2001", "start", "2"],
+      ["2002", "start", "2"],
+    ]);
+  });
+
+  it("leaves the whole stage to a table when the controls are disabled", () => {
+    const svg = readRace({
+      ...salesRace,
+      mark: "table",
+      race: { top: 1, autoplay: false, controls: false },
+    });
+
+    expect(svg.getAttribute("aria-label")).toBe("Sales (2002)");
+    expect([...svg.querySelectorAll("text")].map((label) => label.textContent)).not.toContain(
+      "2002",
+    );
   });
 
   it("sets the baseline inside the top chrome and marks capped titles with an ellipsis", () => {

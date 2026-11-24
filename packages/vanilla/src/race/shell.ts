@@ -104,13 +104,13 @@ function createMarkHost(root: HTMLElement, svg: SVGSVGElement, layout: RaceLayou
  * @param idScope - The scope accepted by mark renderers. The shell creates no IDs.
  */
 export function createRaceShell<TLayout extends RaceLayout>(
-  container: HTMLElement,
+  container: HTMLElement | DocumentFragment,
   layout: TLayout,
   idScope: string,
 ): RaceShell<TLayout['mark']>;
 /** Selects the host namespace from the layout mark and mounts the assembled root. */
 export function createRaceShell(
-  container: HTMLElement,
+  container: HTMLElement | DocumentFragment,
   layout: RaceLayout,
   _idScope: string,
 ): RaceShell {

@@ -57,7 +57,7 @@ export type DemoMountRequest = {
 export type DemoMount = {
   /** Updates a live chart, layer or race with a compatible spec. */
   update?(spec: VizSpec): void;
-  /** Rebuilds a race for the new theme at the same playhead. */
+  /** Redraws a race for the new theme without interrupting playback. */
   setTheme?(dark: boolean): void;
   /** Destroys the chart and removes its host, leaving the stage as the build wrote it. */
   destroy(): void;
@@ -91,46 +91,20 @@ const MOUNTS_BY_TYPE: Record<string, Mount> = {
 };
 
 function mountRaceDemo(host: HTMLElement, spec: RaceSpec, { dark, ownTheme }: DemoMountRequest) {
-  const mount = (spec: RaceSpec, dark: boolean) =>
-    createRace(host, spec, {
-      theme: ownTheme ? undefined : chartTheme(dark),
-      darkMode: dark ? "force" : "off",
-    });
-  let current = spec;
-  let race = mount(current, dark);
-  // At t=0 a paused player and a player waiting to be seen report the same state.
-  let usedControls = false;
-  const listeners = new AbortController();
-  const noteControlUse = () => {
-    usedControls = true;
-  };
-  for (const event of ["click", "input", "keydown"]) {
-    host.addEventListener(event, noteControlUse, { capture: true, signal: listeners.signal });
+  function appearance(dark: boolean) {
+    const darkMode: DarkMode = dark ? "force" : "off";
+    return { theme: ownTheme ? undefined : chartTheme(dark), darkMode };
   }
+  const race = createRace(host, spec, appearance(dark));
   return {
-    destroy() {
-      listeners.abort();
-      race.destroy();
-    },
+    destroy: () => race.destroy(),
     update(next: VizSpec) {
       if (!isRaceSpec(next))
         throw new DemoMountError("A race demo can only update to a race spec.");
-      const unbranded = withoutWatermark(next);
-      race.update(unbranded);
-      current = unbranded;
+      race.update(withoutWatermark(next));
     },
     setTheme(dark: boolean) {
-      const { t, playing } = race.getState();
-      const restorePlayback = usedControls || playing || t !== 0;
-      const themed = restorePlayback
-        ? mount({ ...current, race: { ...current.race, autoplay: false } }, dark)
-        : mount(current, dark);
-      race.destroy();
-      race = themed;
-      if (restorePlayback) {
-        if (race.getState().t !== t) race.seek(t);
-        if (playing) race.play();
-      }
+      race.setTheme(appearance(dark));
     },
   };
 }
@@ -170,7 +144,8 @@ function mountVisualization(
       `No mount function for spec type "${type}". Supported: chart, layer, race, ${Object.keys(MOUNTS_BY_TYPE).join(", ")}.`,
     );
   }
-  return mount(host, playable as never, mountOptions);
+  const instance = mount(host, playable as never, mountOptions);
+  return { destroy: () => instance.destroy() };
 }
 
 /**

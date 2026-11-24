@@ -108,12 +108,15 @@ describe('race controls', () => {
     expect(keydown(scrubber, 'ArrowLeft')).toBe(true);
     expect(keydown(button, 'ArrowLeft')).toBe(true);
     expect(keydown(element, 'ArrowRight')).toBe(true);
-    expect(keydown(element, 'ArrowDown')).toBe(false);
+    expect(keydown(element, 'ArrowUp')).toBe(true);
+    expect(keydown(element, 'ArrowDown')).toBe(true);
     expect(actions).toEqual([
       ['step', 1],
       ['step', -1],
       ['step', -1],
       ['step', 1],
+      ['step', 1],
+      ['step', -1],
     ]);
   });
 

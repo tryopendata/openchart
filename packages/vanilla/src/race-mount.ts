@@ -32,9 +32,9 @@ import { pageIdScope } from './svg-ids';
 import { whenSeen } from './visibility';
 
 export interface RaceMountOptions {
-  /** Mount-level theme overrides. Remount to supply a different override. */
+  /** Mount-level theme overrides. */
   theme?: ThemeConfig;
-  /** Color scheme preference. Defaults to light. Remount to change this option. */
+  /** Color scheme preference. Defaults to light. */
   darkMode?: DarkMode;
   /** Observe container resizing. Defaults to true. */
   autoResize?: boolean;
@@ -64,6 +64,8 @@ export interface RaceInstance {
    * @throws If the spec is invalid. The mounted race and its playback state stay intact.
    */
   update(spec: RaceSpec): void;
+  /** Replace mount-level theme overrides and redraw without interrupting playback. */
+  setTheme(options: Pick<RaceMountOptions, 'theme' | 'darkMode'>): void;
   /** Measure and redraw the race at the current playhead. */
   resize(): void;
   /** Export the full bar or line race as a GIF. Rejects for table marks and on destruction. */
@@ -110,7 +112,7 @@ function isGeometryForMark<Mark extends RaceMarkType>(
 }
 
 function mountView<Mark extends RaceMarkType>(
-  container: HTMLElement,
+  container: DocumentFragment,
   model: RaceModel,
   layout: LayoutFor<Mark> & RaceLayout,
   darkMode: boolean,
@@ -173,15 +175,14 @@ function playbackTimingChanged(a: RaceModel, b: RaceModel): boolean {
 }
 
 /**
- * Mount a race in a host element. Options are read at mount. To change the
- * mount-level theme or dark mode, destroy and remount with new options.
- * After destruction, valid playback calls, update(), and resize() have no effect.
+ * Mount a race in a host element. Use setTheme() to replace the mount-level theme or color scheme.
+ * After destruction, valid playback calls, update(), setTheme(), and resize() have no effect.
  * @throws If the spec is invalid or the selected mark is unavailable.
  */
 export function createRace(
   container: HTMLElement,
   spec: RaceSpec,
-  { theme, darkMode: mountDarkMode, autoResize = true, watermark, onWarn }: RaceMountOptions = {},
+  { theme, darkMode, autoResize = true, watermark, onWarn }: RaceMountOptions = {},
 ): RaceInstance {
   const warn = onWarn && ((warning: CompileWarning) => onWarn(warning.message));
   let model = prepareRace(spec, { onWarn: warn });
@@ -199,6 +200,7 @@ export function createRace(
   let periodIndex = 0;
   let seeking = false;
   const reducedMotion = prefersReducedMotion();
+  let appearance = { theme, darkMode };
   let font = resolveFont(model);
   let clock = makeClock(model);
   const controlHandlers: ControlHandlers = {
@@ -220,6 +222,7 @@ export function createRace(
   function resolveFont(
     candidate: RaceModel,
     previous?: { family: string; measureText: MeasureTextFn },
+    { theme } = appearance,
   ) {
     const family =
       theme?.fonts?.family ?? candidate.spec.theme.fonts?.family ?? resolveFontFamily(container);
@@ -237,8 +240,13 @@ export function createRace(
     );
   }
 
-  function compileLayout(candidate: RaceModel, text = font, size = dimensions(candidate)) {
-    const darkMode = resolveDarkMode(mountDarkMode);
+  function compileLayout(
+    candidate: RaceModel,
+    text = font,
+    size = dimensions(candidate),
+    { theme, darkMode: colorScheme } = appearance,
+  ) {
+    const darkMode = resolveDarkMode(colorScheme);
     const layout = layoutRace(candidate, {
       ...size,
       theme: { ...theme, fonts: { ...theme?.fonts, family: text.family } },
@@ -310,21 +318,41 @@ export function createRace(
     focus = focusedControl(),
   ) {
     const previousView = view;
-    view = mountView(container, model, layout, darkMode, idScope, controlHandlers);
+    const fragment = container.ownerDocument.createDocumentFragment();
+    view = mountView(fragment, model, layout, darkMode, idScope, controlHandlers);
     if (!a11y?.attach(view.shell, model)) {
       a11y?.destroy();
       a11y = createRaceA11y(view.shell, model);
     }
-    previousView?.destroy();
     const state = clock.getState();
     view.draw(state.t);
     view.controls?.update(state);
+    const oldRoot = previousView?.shell.root;
+    const nextSibling = oldRoot?.parentNode === container ? oldRoot.nextSibling : null;
+    previousView?.destroy();
+    container.insertBefore(fragment, nextSibling);
     if (focus)
       view.controls?.element.querySelector<HTMLElement>(focus)?.focus({ preventScroll: true });
   }
 
   function resize() {
     if (!destroyed) render(compileLayout(model));
+  }
+
+  function scheduleFontResize(text: typeof font) {
+    scheduleFontReload(text.family, () => !destroyed && font === text, resize);
+  }
+
+  function setTheme({ theme, darkMode }: Pick<RaceMountOptions, 'theme' | 'darkMode'>) {
+    if (destroyed) return;
+    const nextAppearance = { theme, darkMode };
+    const nextFont = resolveFont(model, font, nextAppearance);
+    const nextLayout = compileLayout(model, nextFont, dimensions(model), nextAppearance);
+    const fontChanged = nextFont !== font;
+    appearance = nextAppearance;
+    font = nextFont;
+    render(nextLayout);
+    if (fontChanged) scheduleFontResize(font);
   }
 
   function cancelAutoplay() {
@@ -411,6 +439,7 @@ export function createRace(
     if (destroyed) return;
     const nextFont = resolveFont(next, font);
     const nextLayout = compileLayout(next, nextFont);
+    const fontChanged = nextFont !== font;
     const timingChanged = playbackTimingChanged(model, next);
     const focus = focusedControl();
     model = next;
@@ -424,6 +453,7 @@ export function createRace(
       clock = makeClock(model, previous);
     }
     render(nextLayout, focus);
+    if (fontChanged) scheduleFontResize(font);
     const nextIndex = Math.floor(clock.getState().t);
     if (periodIndex !== nextIndex) {
       periodIndex = nextIndex;
@@ -435,7 +465,7 @@ export function createRace(
   if (staticStart) clock.seek(model.timeline.periodCount - 1);
   periodIndex = Math.floor(clock.getState().t);
   render(compileLayout(model));
-  scheduleFontReload(font.family, () => !destroyed, resize);
+  scheduleFontResize(font);
   if (!staticStart) {
     if (model.playback.autoplay === 'visible') {
       cancelVisibility = whenSeen(container, play);
@@ -466,6 +496,7 @@ export function createRace(
     seek,
     setSpeed,
     update,
+    setTheme,
     resize,
     async export(format, options) {
       if (destroyed) exportLifetime.signal.throwIfAborted();
