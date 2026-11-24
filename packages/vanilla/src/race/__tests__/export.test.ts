@@ -435,7 +435,7 @@ describe('race GIF export', () => {
     const lastMovingBar = frames.at(-2)?.querySelector('[data-key="A"] rect');
     const expectedWidth = geometry.rows.find((row) => row.key === 'A')?.bar.width;
     expect(Number(lastMovingBar?.getAttribute('width'))).toBeCloseTo(expectedWidth ?? NaN, 2);
-  });
+  }, 20_000); // Draws 1200 frames; the default 5s budget fails under full-suite load.
 
   it.each([
     [false, -1],
