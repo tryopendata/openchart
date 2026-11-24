@@ -9,6 +9,7 @@ import {
 import { directLabelsEndpoints } from "../../demos/blog/direct-labels-vs-legends";
 import { nycTempRange } from "../../demos/blog/how-to-chart-a-range-of-values";
 import { gistempColumns } from "../../demos/blog/how-to-chart-a-temperature-anomaly";
+import { gdpRace } from "../../demos/blog/how-to-make-a-bar-chart-race-in-javascript";
 import { energySankeyFull } from "../../demos/blog/how-to-read-and-build-a-sankey-diagram";
 import { prestonLogScale } from "../../demos/blog/when-to-use-a-log-scale";
 import {
@@ -37,6 +38,7 @@ describe("figureCredit", () => {
         [unemploymentTilemap, "/docs/maps/tile-map/", "tile map"],
         [unemploymentChoropleth, "/docs/maps/choropleth/", "choropleth map"],
         [economiesTable, "/docs/tables/data-table/", "data table"],
+        [gdpRace, "/docs/change-over-time/race/", "race chart"],
       ] as const
     ).map(([demo, href, chartName]) => ({ id: demo.id, demo, href, chartName })),
   )("credits $id with its chart type's docs page", ({ demo, href, chartName }) => {

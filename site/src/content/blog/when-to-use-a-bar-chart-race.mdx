@@ -1,0 +1,224 @@
+---
+title: When to use a bar chart race
+description: A bar chart race shows the order in which entries overtook each other. Census data shows what it hides, and when a bump chart or line chart works better.
+published: 2026-11-24
+author: OpenChart
+tags: [chart-choice]
+related: [change-over-time/race, change-over-time/slope-bump, change-over-time/line, comparison/bar]
+lead: blog/state-population-race
+---
+
+import Demo from "../../components/demo/Demo.astro";
+
+Use a bar chart race when the story is the order in which things overtook each other, and when readers will watch it play. New York was the most populous state at every census from 1910 to 1960. California passed it in 1970, Texas in 2000 and Florida in 2020, and a race plays those overtakes in the order they happened. It is a poor choice for comparing two dates, judging growth or letting a reader scan, because each frame replaces the one before it.
+
+## What a race shows well
+
+The race at the top of this post ranks the 10 most populous states at each census from 1910 to 2020, using the Census Bureau's resident population counts. The order of the top 10 changes at every one of the 11 steps between the 12 censuses, and the race plays them in 8.4 seconds, 700 milliseconds per census. Pennsylvania slides from 2nd to 6th by 2000, Florida enters in 1960 in 10th place, and Georgia drops out in 1920 and returns in 2000.
+
+A ranking that barely changes makes a dull race. If the leader holds first for the whole run and two entries swap once, the reader watches bars grow in place for 20 seconds to see one swap, and a line chart shows that swap at a glance. Count the changes of order in your data before you choose.
+
+## What a race hides
+
+Two moments never share the screen. California grew more than 16-fold, from 2.4 million people in 1910 to 39.5 million in 2020, while New York grew from 9.1 million to 20.2 million. The race shows all four numbers, but a reader who wants to compare them has to remember bars that left the screen seconds earlier.
+
+Bar lengths don't compare across frames either. By default each frame fits its scale to the bars on screen, so the leading state's bar is about the same length whether it holds 9.1 million people or 39.5 million. Setting `race.rescale: "fixed"` keeps one scale for the whole run, at the cost of a 1910 chart where every bar is under a quarter of the width.
+
+Anything below the top 10 is invisible. Florida ranked 33rd in 1910, and its population grew 3.7-fold by 1950, but it doesn't appear until 1960.
+
+A reader who scrolls past a race sees one frame, and a reader who prefers reduced motion gets the race paused on its last frame. Put the finding in the title so that one frame carries it.
+
+## A bump chart shows every rank at once
+
+A bump chart plots rank instead of value, one line per state across all 12 censuses. Every overtake in the race is a crossing here, and all of them are on screen together.
+
+<Demo id="blog/state-population-bump" />
+
+Florida's climb from 33rd and New York's slide after 1960 read in one look. Ranks drop the sizes, so first and second place sit one rank apart both in 1910, when New York had 1.4 million more people than Pennsylvania, and in 2020, when California had 10.4 million more than Texas. Every extra line adds crossings, so this chart keeps only the seven states that ever ranked in the top five.
+
+## A line chart keeps the values
+
+A line chart of the same seven states shows how fast each state grew, which the ranks leave out.
+
+```json demo source="US Census Bureau, decennial census resident population by state" height=460
+{
+  "mark": "line",
+  "encoding": {
+    "x": {
+      "field": "year",
+      "type": "temporal",
+      "axis": {
+        "format": "%Y"
+      }
+    },
+    "y": {
+      "field": "population",
+      "type": "quantitative",
+      "axis": {
+        "title": "Residents",
+        "format": "~s",
+        "tickCount": 5
+      }
+    },
+    "color": {
+      "field": "state",
+      "type": "nominal"
+    }
+  },
+  "endpointLabels": {
+    "ends": "end",
+    "content": "label"
+  },
+  "legend": {
+    "show": false
+  },
+  "theme": {
+    "colors": {
+      "categorical": [
+        {
+          "light": "#0e7490",
+          "dark": "#22a3c4"
+        },
+        {
+          "light": "#0e7490",
+          "dark": "#22a3c4"
+        },
+        {
+          "light": "#64748b",
+          "dark": "#94a3b8"
+        },
+        {
+          "light": "#64748b",
+          "dark": "#94a3b8"
+        },
+        {
+          "light": "#64748b",
+          "dark": "#94a3b8"
+        },
+        {
+          "light": "#64748b",
+          "dark": "#94a3b8"
+        },
+        {
+          "light": "#0e7490",
+          "dark": "#22a3c4"
+        }
+      ]
+    }
+  },
+  "chrome": {
+    "title": "Texas passed New York in 2000 and Florida passed it in 2020",
+    "subtitle": "Resident population at each census, states that reached the top five, 1910-2020"
+  },
+  "data": [
+    { "state": "California", "year": "1910", "population": 2377549 },
+    { "state": "California", "year": "1920", "population": 3426861 },
+    { "state": "California", "year": "1930", "population": 5677251 },
+    { "state": "California", "year": "1940", "population": 6907387 },
+    { "state": "California", "year": "1950", "population": 10586223 },
+    { "state": "California", "year": "1960", "population": 15717204 },
+    { "state": "California", "year": "1970", "population": 19953134 },
+    { "state": "California", "year": "1980", "population": 23667902 },
+    { "state": "California", "year": "1990", "population": 29760021 },
+    { "state": "California", "year": "2000", "population": 33871648 },
+    { "state": "California", "year": "2010", "population": 37253956 },
+    { "state": "California", "year": "2020", "population": 39538223 },
+    { "state": "Florida", "year": "1910", "population": 752619 },
+    { "state": "Florida", "year": "1920", "population": 968470 },
+    { "state": "Florida", "year": "1930", "population": 1468211 },
+    { "state": "Florida", "year": "1940", "population": 1897414 },
+    { "state": "Florida", "year": "1950", "population": 2771305 },
+    { "state": "Florida", "year": "1960", "population": 4951560 },
+    { "state": "Florida", "year": "1970", "population": 6789443 },
+    { "state": "Florida", "year": "1980", "population": 9746324 },
+    { "state": "Florida", "year": "1990", "population": 12937926 },
+    { "state": "Florida", "year": "2000", "population": 15982378 },
+    { "state": "Florida", "year": "2010", "population": 18801310 },
+    { "state": "Florida", "year": "2020", "population": 21538187 },
+    { "state": "Illinois", "year": "1910", "population": 5638591 },
+    { "state": "Illinois", "year": "1920", "population": 6485280 },
+    { "state": "Illinois", "year": "1930", "population": 7630654 },
+    { "state": "Illinois", "year": "1940", "population": 7897241 },
+    { "state": "Illinois", "year": "1950", "population": 8712176 },
+    { "state": "Illinois", "year": "1960", "population": 10081158 },
+    { "state": "Illinois", "year": "1970", "population": 11113976 },
+    { "state": "Illinois", "year": "1980", "population": 11426518 },
+    { "state": "Illinois", "year": "1990", "population": 11430602 },
+    { "state": "Illinois", "year": "2000", "population": 12419293 },
+    { "state": "Illinois", "year": "2010", "population": 12830632 },
+    { "state": "Illinois", "year": "2020", "population": 12812508 },
+    { "state": "New York", "year": "1910", "population": 9113614 },
+    { "state": "New York", "year": "1920", "population": 10385227 },
+    { "state": "New York", "year": "1930", "population": 12588066 },
+    { "state": "New York", "year": "1940", "population": 13479142 },
+    { "state": "New York", "year": "1950", "population": 14830192 },
+    { "state": "New York", "year": "1960", "population": 16782304 },
+    { "state": "New York", "year": "1970", "population": 18236967 },
+    { "state": "New York", "year": "1980", "population": 17558072 },
+    { "state": "New York", "year": "1990", "population": 17990455 },
+    { "state": "New York", "year": "2000", "population": 18976457 },
+    { "state": "New York", "year": "2010", "population": 19378102 },
+    { "state": "New York", "year": "2020", "population": 20201249 },
+    { "state": "Ohio", "year": "1910", "population": 4767121 },
+    { "state": "Ohio", "year": "1920", "population": 5759394 },
+    { "state": "Ohio", "year": "1930", "population": 6646697 },
+    { "state": "Ohio", "year": "1940", "population": 6907612 },
+    { "state": "Ohio", "year": "1950", "population": 7946627 },
+    { "state": "Ohio", "year": "1960", "population": 9706397 },
+    { "state": "Ohio", "year": "1970", "population": 10652017 },
+    { "state": "Ohio", "year": "1980", "population": 10797630 },
+    { "state": "Ohio", "year": "1990", "population": 10847115 },
+    { "state": "Ohio", "year": "2000", "population": 11353140 },
+    { "state": "Ohio", "year": "2010", "population": 11536504 },
+    { "state": "Ohio", "year": "2020", "population": 11799448 },
+    { "state": "Pennsylvania", "year": "1910", "population": 7665111 },
+    { "state": "Pennsylvania", "year": "1920", "population": 8720017 },
+    { "state": "Pennsylvania", "year": "1930", "population": 9631350 },
+    { "state": "Pennsylvania", "year": "1940", "population": 9900180 },
+    { "state": "Pennsylvania", "year": "1950", "population": 10498012 },
+    { "state": "Pennsylvania", "year": "1960", "population": 11319366 },
+    { "state": "Pennsylvania", "year": "1970", "population": 11793909 },
+    { "state": "Pennsylvania", "year": "1980", "population": 11863895 },
+    { "state": "Pennsylvania", "year": "1990", "population": 11881643 },
+    { "state": "Pennsylvania", "year": "2000", "population": 12281054 },
+    { "state": "Pennsylvania", "year": "2010", "population": 12702379 },
+    { "state": "Pennsylvania", "year": "2020", "population": 13002700 },
+    { "state": "Texas", "year": "1910", "population": 3896542 },
+    { "state": "Texas", "year": "1920", "population": 4663228 },
+    { "state": "Texas", "year": "1930", "population": 5824715 },
+    { "state": "Texas", "year": "1940", "population": 6414824 },
+    { "state": "Texas", "year": "1950", "population": 7711194 },
+    { "state": "Texas", "year": "1960", "population": 9579677 },
+    { "state": "Texas", "year": "1970", "population": 11196730 },
+    { "state": "Texas", "year": "1980", "population": 14229191 },
+    { "state": "Texas", "year": "1990", "population": 16986510 },
+    { "state": "Texas", "year": "2000", "population": 20851820 },
+    { "state": "Texas", "year": "2010", "population": 25145561 },
+    { "state": "Texas", "year": "2020", "population": 29145505 }
+  ]
+}
+```
+
+New York added 2 million people in the 50 years after 1970, while Texas added 18 million and Florida 14.7 million. The overtakes are still there, as crossings at the census where each happened. Seven lines fit on one chart here because the three climbers are teal and the rest gray; with more series, [small multiples](/docs/composition/facets/) give each one its own panel.
+
+## Choosing between them
+
+| If the reader's question is | Use |
+| --- | --- |
+| Who was ahead at each point, and in what order did they pass each other? | A bar chart race |
+| How did each entry's rank change over the whole period? | A [bump chart](/docs/change-over-time/slope-bump/) |
+| How much did each grow, and how fast? | A [line chart](/docs/change-over-time/line/) |
+| Who leads now? | A [ranked bar chart](/docs/comparison/bar/) of the latest period |
+| How do two dates compare? | A [slope chart](/blog/how-to-make-a-slope-chart-in-javascript/) |
+
+Pairing a race with a bump or line chart gives readers the sequence first and then lets them compare any two censuses.
+
+## The spec
+
+The race is `type: "race"` with `encoding.time` on the census year, `encoding.key` on the state and `encoding.value` on the population, and it ranks the top 10 by default. Its rows cover only the 14 states that reach the top 10 at some census, since no other state could appear.
+
+The bump chart is `mark: "line"` with `point: true` and each state's rank among all 50 states on `y`. `scale.reverse: true` puts 1st at the top, and a `domain` from 1 to 33 leaves room for Florida's start.
+
+The line chart's spec is printed above: `endpointLabels` names each line at its end, and `theme.colors.categorical` lists one color per state in alphabetical order, teal for the three climbers and gray for the rest.
+
+To build a race from your own data, follow [How to make a bar chart race in JavaScript](/blog/how-to-make-a-bar-chart-race-in-javascript/).

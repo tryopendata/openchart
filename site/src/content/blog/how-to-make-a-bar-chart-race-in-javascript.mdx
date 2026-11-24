@@ -1,0 +1,515 @@
+---
+title: How to make a bar chart race in JavaScript
+description: A bar chart race plays a ranking one period at a time. This post builds one from World Bank GDP data, swaps it to lines and a table, and exports a GIF.
+published: 2026-11-24
+author: OpenChart
+tags: [developers]
+related: [change-over-time/race, change-over-time/slope-bump, output/export, behavior/motion]
+lead: blog/gdp-race
+---
+
+import Demo from "../../components/demo/Demo.astro";
+
+China's economy passed Japan's in 2010 and reached $18.7 trillion in 2024, 65% of the United States' $28.8 trillion, according to the World Bank. A bar chart race shows that climb a year at a time: the 10 largest economies are bars sorted by size, and the bars slide past each other as each year's numbers arrive. In OpenChart a race is a spec with `type: "race"`, three encoding fields and one row per country per year.
+
+The race runs 31.5 seconds, 700 milliseconds for each of the 45 years. The control strip under the chart pauses, plays and scrubs to any year, and with focus on the strip the arrow keys step one year at a time.
+
+## The data: one row per entry per period
+
+A race reads long data, one row for each country in each year:
+
+```ts
+const rows = [
+  { country: "China", year: 2009, gdp: 5190e9 },
+  { country: "China", year: 2010, gdp: 6193e9 },
+  { country: "Japan", year: 2009, gdp: 5289e9 },
+  { country: "Japan", year: 2010, gdp: 5759e9 },
+  // ...one row per country and year
+];
+```
+
+The World Bank's download, like most spreadsheets, is wide: one row per country and a column per year. Reshape it before it goes in the spec:
+
+```ts
+const rows = wide.flatMap(({ country, ...byYear }) =>
+  Object.entries(byYear)
+    .filter(([, gdp]) => gdp !== "" && gdp != null)
+    .map(([year, gdp]) => ({ country, year: Number(year), gdp: Number(gdp) })),
+);
+```
+
+The filter matters because `Number("")` is 0, and a blank cell would otherwise rank as an economy of zero dollars.
+
+Each country gets at most one row per year. Two rows with the same country and year stop the race with an error that asks you to aggregate them first, and the data needs at least two periods. A period can be a number, a date or a label such as `"2023-Q3"`. Numbers and dates sort by value; labels keep the order they first appear in unless `encoding.time.sort` lists them.
+
+## A complete race spec
+
+This spec races the five largest economies. `encoding.time` names the period field, `encoding.key` the field that identifies an entry from one year to the next, and `encoding.value` the number to rank by. `format: "$.3~s"` prints values such as $28.8T.
+
+```json demo source="World Bank, GDP (current US$)" height=400 phone-height=440
+{
+  "type": "race",
+  "mark": "bar",
+  "encoding": {
+    "time": {
+      "field": "year",
+      "type": "quantitative",
+      "format": "d"
+    },
+    "key": {
+      "field": "country",
+      "type": "nominal"
+    },
+    "value": {
+      "field": "gdp",
+      "type": "quantitative",
+      "format": "$.3~s"
+    }
+  },
+  "race": {
+    "top": 5,
+    "duration": 20000
+  },
+  "chrome": {
+    "title": "Only 8 economies have been in the top five since 1980",
+    "subtitle": "GDP in current US dollars, 1980-2024"
+  },
+  "data": [
+    { "country": "China", "year": 1980, "gdp": 191000000000 },
+    { "country": "China", "year": 1981, "gdp": 196000000000 },
+    { "country": "China", "year": 1982, "gdp": 205000000000 },
+    { "country": "China", "year": 1983, "gdp": 231000000000 },
+    { "country": "China", "year": 1984, "gdp": 260000000000 },
+    { "country": "China", "year": 1985, "gdp": 310000000000 },
+    { "country": "China", "year": 1986, "gdp": 301000000000 },
+    { "country": "China", "year": 1987, "gdp": 273000000000 },
+    { "country": "China", "year": 1988, "gdp": 313000000000 },
+    { "country": "China", "year": 1989, "gdp": 348000000000 },
+    { "country": "China", "year": 1990, "gdp": 362000000000 },
+    { "country": "China", "year": 1991, "gdp": 385000000000 },
+    { "country": "China", "year": 1992, "gdp": 429000000000 },
+    { "country": "China", "year": 1993, "gdp": 447000000000 },
+    { "country": "China", "year": 1994, "gdp": 567000000000 },
+    { "country": "China", "year": 1995, "gdp": 738000000000 },
+    { "country": "China", "year": 1996, "gdp": 869000000000 },
+    { "country": "China", "year": 1997, "gdp": 968000000000 },
+    { "country": "China", "year": 1998, "gdp": 1037000000000 },
+    { "country": "China", "year": 1999, "gdp": 1104000000000 },
+    { "country": "China", "year": 2000, "gdp": 1224000000000 },
+    { "country": "China", "year": 2001, "gdp": 1355000000000 },
+    { "country": "China", "year": 2002, "gdp": 1490000000000 },
+    { "country": "China", "year": 2003, "gdp": 1684000000000 },
+    { "country": "China", "year": 2004, "gdp": 1984000000000 },
+    { "country": "China", "year": 2005, "gdp": 2318000000000 },
+    { "country": "China", "year": 2006, "gdp": 2791000000000 },
+    { "country": "China", "year": 2007, "gdp": 3604000000000 },
+    { "country": "China", "year": 2008, "gdp": 4667000000000 },
+    { "country": "China", "year": 2009, "gdp": 5190000000000 },
+    { "country": "China", "year": 2010, "gdp": 6193000000000 },
+    { "country": "China", "year": 2011, "gdp": 7672000000000 },
+    { "country": "China", "year": 2012, "gdp": 8674000000000 },
+    { "country": "China", "year": 2013, "gdp": 9743000000000 },
+    { "country": "China", "year": 2014, "gdp": 10675000000000 },
+    { "country": "China", "year": 2015, "gdp": 11281000000000 },
+    { "country": "China", "year": 2016, "gdp": 11456000000000 },
+    { "country": "China", "year": 2017, "gdp": 12538000000000 },
+    { "country": "China", "year": 2018, "gdp": 14148000000000 },
+    { "country": "China", "year": 2019, "gdp": 14560000000000 },
+    { "country": "China", "year": 2020, "gdp": 14996000000000 },
+    { "country": "China", "year": 2021, "gdp": 18202000000000 },
+    { "country": "China", "year": 2022, "gdp": 18317000000000 },
+    { "country": "China", "year": 2023, "gdp": 18270000000000 },
+    { "country": "China", "year": 2024, "gdp": 18744000000000 },
+    { "country": "Germany", "year": 1980, "gdp": 954000000000 },
+    { "country": "Germany", "year": 1981, "gdp": 803000000000 },
+    { "country": "Germany", "year": 1982, "gdp": 779000000000 },
+    { "country": "Germany", "year": 1983, "gdp": 774000000000 },
+    { "country": "Germany", "year": 1984, "gdp": 728000000000 },
+    { "country": "Germany", "year": 1985, "gdp": 735000000000 },
+    { "country": "Germany", "year": 1986, "gdp": 1050000000000 },
+    { "country": "Germany", "year": 1987, "gdp": 1303000000000 },
+    { "country": "Germany", "year": 1988, "gdp": 1406000000000 },
+    { "country": "Germany", "year": 1989, "gdp": 1404000000000 },
+    { "country": "Germany", "year": 1990, "gdp": 1778000000000 },
+    { "country": "Germany", "year": 1991, "gdp": 1876000000000 },
+    { "country": "Germany", "year": 1992, "gdp": 2141000000000 },
+    { "country": "Germany", "year": 1993, "gdp": 2079000000000 },
+    { "country": "Germany", "year": 1994, "gdp": 2215000000000 },
+    { "country": "Germany", "year": 1995, "gdp": 2593000000000 },
+    { "country": "Germany", "year": 1996, "gdp": 2507000000000 },
+    { "country": "Germany", "year": 1997, "gdp": 2219000000000 },
+    { "country": "Germany", "year": 1998, "gdp": 2248000000000 },
+    { "country": "Germany", "year": 1999, "gdp": 2214000000000 },
+    { "country": "Germany", "year": 2000, "gdp": 1967000000000 },
+    { "country": "Germany", "year": 2001, "gdp": 1966000000000 },
+    { "country": "Germany", "year": 2002, "gdp": 2102000000000 },
+    { "country": "Germany", "year": 2003, "gdp": 2535000000000 },
+    { "country": "Germany", "year": 2004, "gdp": 2852000000000 },
+    { "country": "Germany", "year": 2005, "gdp": 2893000000000 },
+    { "country": "Germany", "year": 2006, "gdp": 3046000000000 },
+    { "country": "Germany", "year": 2007, "gdp": 3484000000000 },
+    { "country": "Germany", "year": 2008, "gdp": 3808000000000 },
+    { "country": "Germany", "year": 2009, "gdp": 3479000000000 },
+    { "country": "Germany", "year": 2010, "gdp": 3467000000000 },
+    { "country": "Germany", "year": 2011, "gdp": 3824000000000 },
+    { "country": "Germany", "year": 2012, "gdp": 3596000000000 },
+    { "country": "Germany", "year": 2013, "gdp": 3807000000000 },
+    { "country": "Germany", "year": 2014, "gdp": 3965000000000 },
+    { "country": "Germany", "year": 2015, "gdp": 3425000000000 },
+    { "country": "Germany", "year": 2016, "gdp": 3537000000000 },
+    { "country": "Germany", "year": 2017, "gdp": 3765000000000 },
+    { "country": "Germany", "year": 2018, "gdp": 4055000000000 },
+    { "country": "Germany", "year": 2019, "gdp": 3960000000000 },
+    { "country": "Germany", "year": 2020, "gdp": 3941000000000 },
+    { "country": "Germany", "year": 2021, "gdp": 4355000000000 },
+    { "country": "Germany", "year": 2022, "gdp": 4201000000000 },
+    { "country": "Germany", "year": 2023, "gdp": 4562000000000 },
+    { "country": "Germany", "year": 2024, "gdp": 4686000000000 },
+    { "country": "France", "year": 1980, "gdp": 695000000000 },
+    { "country": "France", "year": 1981, "gdp": 609000000000 },
+    { "country": "France", "year": 1982, "gdp": 578000000000 },
+    { "country": "France", "year": 1983, "gdp": 553000000000 },
+    { "country": "France", "year": 1984, "gdp": 525000000000 },
+    { "country": "France", "year": 1985, "gdp": 547000000000 },
+    { "country": "France", "year": 1986, "gdp": 765000000000 },
+    { "country": "France", "year": 1987, "gdp": 926000000000 },
+    { "country": "France", "year": 1988, "gdp": 1011000000000 },
+    { "country": "France", "year": 1989, "gdp": 1017000000000 },
+    { "country": "France", "year": 1990, "gdp": 1258000000000 },
+    { "country": "France", "year": 1991, "gdp": 1259000000000 },
+    { "country": "France", "year": 1992, "gdp": 1390000000000 },
+    { "country": "France", "year": 1993, "gdp": 1314000000000 },
+    { "country": "France", "year": 1994, "gdp": 1386000000000 },
+    { "country": "France", "year": 1995, "gdp": 1595000000000 },
+    { "country": "France", "year": 1996, "gdp": 1599000000000 },
+    { "country": "France", "year": 1997, "gdp": 1449000000000 },
+    { "country": "France", "year": 1998, "gdp": 1497000000000 },
+    { "country": "France", "year": 1999, "gdp": 1487000000000 },
+    { "country": "France", "year": 2000, "gdp": 1361000000000 },
+    { "country": "France", "year": 2001, "gdp": 1370000000000 },
+    { "country": "France", "year": 2002, "gdp": 1492000000000 },
+    { "country": "France", "year": 2003, "gdp": 1835000000000 },
+    { "country": "France", "year": 2004, "gdp": 2110000000000 },
+    { "country": "France", "year": 2005, "gdp": 2192000000000 },
+    { "country": "France", "year": 2006, "gdp": 2318000000000 },
+    { "country": "France", "year": 2007, "gdp": 2656000000000 },
+    { "country": "France", "year": 2008, "gdp": 2927000000000 },
+    { "country": "France", "year": 2009, "gdp": 2700000000000 },
+    { "country": "France", "year": 2010, "gdp": 2646000000000 },
+    { "country": "France", "year": 2011, "gdp": 2870000000000 },
+    { "country": "France", "year": 2012, "gdp": 2683000000000 },
+    { "country": "France", "year": 2013, "gdp": 2816000000000 },
+    { "country": "France", "year": 2014, "gdp": 2861000000000 },
+    { "country": "France", "year": 2015, "gdp": 2442000000000 },
+    { "country": "France", "year": 2016, "gdp": 2470000000000 },
+    { "country": "France", "year": 2017, "gdp": 2589000000000 },
+    { "country": "France", "year": 2018, "gdp": 2782000000000 },
+    { "country": "France", "year": 2019, "gdp": 2723000000000 },
+    { "country": "France", "year": 2020, "gdp": 2648000000000 },
+    { "country": "France", "year": 2021, "gdp": 2966000000000 },
+    { "country": "France", "year": 2022, "gdp": 2795000000000 },
+    { "country": "France", "year": 2023, "gdp": 3056000000000 },
+    { "country": "France", "year": 2024, "gdp": 3160000000000 },
+    { "country": "United Kingdom", "year": 1980, "gdp": 565000000000 },
+    { "country": "United Kingdom", "year": 1981, "gdp": 541000000000 },
+    { "country": "United Kingdom", "year": 1982, "gdp": 515000000000 },
+    { "country": "United Kingdom", "year": 1983, "gdp": 490000000000 },
+    { "country": "United Kingdom", "year": 1984, "gdp": 461000000000 },
+    { "country": "United Kingdom", "year": 1985, "gdp": 489000000000 },
+    { "country": "United Kingdom", "year": 1986, "gdp": 601000000000 },
+    { "country": "United Kingdom", "year": 1987, "gdp": 745000000000 },
+    { "country": "United Kingdom", "year": 1988, "gdp": 910000000000 },
+    { "country": "United Kingdom", "year": 1989, "gdp": 927000000000 },
+    { "country": "United Kingdom", "year": 1990, "gdp": 1093000000000 },
+    { "country": "United Kingdom", "year": 1991, "gdp": 1143000000000 },
+    { "country": "United Kingdom", "year": 1992, "gdp": 1180000000000 },
+    { "country": "United Kingdom", "year": 1993, "gdp": 1061000000000 },
+    { "country": "United Kingdom", "year": 1994, "gdp": 1140000000000 },
+    { "country": "United Kingdom", "year": 1995, "gdp": 1349000000000 },
+    { "country": "United Kingdom", "year": 1996, "gdp": 1425000000000 },
+    { "country": "United Kingdom", "year": 1997, "gdp": 1569000000000 },
+    { "country": "United Kingdom", "year": 1998, "gdp": 1661000000000 },
+    { "country": "United Kingdom", "year": 1999, "gdp": 1693000000000 },
+    { "country": "United Kingdom", "year": 2000, "gdp": 1672000000000 },
+    { "country": "United Kingdom", "year": 2001, "gdp": 1656000000000 },
+    { "country": "United Kingdom", "year": 2002, "gdp": 1791000000000 },
+    { "country": "United Kingdom", "year": 2003, "gdp": 2061000000000 },
+    { "country": "United Kingdom", "year": 2004, "gdp": 2430000000000 },
+    { "country": "United Kingdom", "year": 2005, "gdp": 2551000000000 },
+    { "country": "United Kingdom", "year": 2006, "gdp": 2720000000000 },
+    { "country": "United Kingdom", "year": 2007, "gdp": 3105000000000 },
+    { "country": "United Kingdom", "year": 2008, "gdp": 2945000000000 },
+    { "country": "United Kingdom", "year": 2009, "gdp": 2429000000000 },
+    { "country": "United Kingdom", "year": 2010, "gdp": 2497000000000 },
+    { "country": "United Kingdom", "year": 2011, "gdp": 2676000000000 },
+    { "country": "United Kingdom", "year": 2012, "gdp": 2720000000000 },
+    { "country": "United Kingdom", "year": 2013, "gdp": 2797000000000 },
+    { "country": "United Kingdom", "year": 2014, "gdp": 3085000000000 },
+    { "country": "United Kingdom", "year": 2015, "gdp": 2946000000000 },
+    { "country": "United Kingdom", "year": 2016, "gdp": 2707000000000 },
+    { "country": "United Kingdom", "year": 2017, "gdp": 2699000000000 },
+    { "country": "United Kingdom", "year": 2018, "gdp": 2897000000000 },
+    { "country": "United Kingdom", "year": 2019, "gdp": 2876000000000 },
+    { "country": "United Kingdom", "year": 2020, "gdp": 2724000000000 },
+    { "country": "United Kingdom", "year": 2021, "gdp": 3195000000000 },
+    { "country": "United Kingdom", "year": 2022, "gdp": 3181000000000 },
+    { "country": "United Kingdom", "year": 2023, "gdp": 3421000000000 },
+    { "country": "United Kingdom", "year": 2024, "gdp": 3686000000000 },
+    { "country": "India", "year": 1980, "gdp": 186000000000 },
+    { "country": "India", "year": 1981, "gdp": 193000000000 },
+    { "country": "India", "year": 1982, "gdp": 201000000000 },
+    { "country": "India", "year": 1983, "gdp": 218000000000 },
+    { "country": "India", "year": 1984, "gdp": 212000000000 },
+    { "country": "India", "year": 1985, "gdp": 233000000000 },
+    { "country": "India", "year": 1986, "gdp": 249000000000 },
+    { "country": "India", "year": 1987, "gdp": 279000000000 },
+    { "country": "India", "year": 1988, "gdp": 297000000000 },
+    { "country": "India", "year": 1989, "gdp": 296000000000 },
+    { "country": "India", "year": 1990, "gdp": 321000000000 },
+    { "country": "India", "year": 1991, "gdp": 270000000000 },
+    { "country": "India", "year": 1992, "gdp": 288000000000 },
+    { "country": "India", "year": 1993, "gdp": 279000000000 },
+    { "country": "India", "year": 1994, "gdp": 327000000000 },
+    { "country": "India", "year": 1995, "gdp": 360000000000 },
+    { "country": "India", "year": 1996, "gdp": 393000000000 },
+    { "country": "India", "year": 1997, "gdp": 416000000000 },
+    { "country": "India", "year": 1998, "gdp": 421000000000 },
+    { "country": "India", "year": 1999, "gdp": 459000000000 },
+    { "country": "India", "year": 2000, "gdp": 468000000000 },
+    { "country": "India", "year": 2001, "gdp": 485000000000 },
+    { "country": "India", "year": 2002, "gdp": 515000000000 },
+    { "country": "India", "year": 2003, "gdp": 608000000000 },
+    { "country": "India", "year": 2004, "gdp": 709000000000 },
+    { "country": "India", "year": 2005, "gdp": 820000000000 },
+    { "country": "India", "year": 2006, "gdp": 940000000000 },
+    { "country": "India", "year": 2007, "gdp": 1217000000000 },
+    { "country": "India", "year": 2008, "gdp": 1199000000000 },
+    { "country": "India", "year": 2009, "gdp": 1342000000000 },
+    { "country": "India", "year": 2010, "gdp": 1676000000000 },
+    { "country": "India", "year": 2011, "gdp": 1823000000000 },
+    { "country": "India", "year": 2012, "gdp": 1828000000000 },
+    { "country": "India", "year": 2013, "gdp": 1857000000000 },
+    { "country": "India", "year": 2014, "gdp": 2039000000000 },
+    { "country": "India", "year": 2015, "gdp": 2104000000000 },
+    { "country": "India", "year": 2016, "gdp": 2295000000000 },
+    { "country": "India", "year": 2017, "gdp": 2651000000000 },
+    { "country": "India", "year": 2018, "gdp": 2703000000000 },
+    { "country": "India", "year": 2019, "gdp": 2836000000000 },
+    { "country": "India", "year": 2020, "gdp": 2675000000000 },
+    { "country": "India", "year": 2021, "gdp": 3167000000000 },
+    { "country": "India", "year": 2022, "gdp": 3346000000000 },
+    { "country": "India", "year": 2023, "gdp": 3638000000000 },
+    { "country": "India", "year": 2024, "gdp": 3910000000000 },
+    { "country": "Italy", "year": 1980, "gdp": 478000000000 },
+    { "country": "Italy", "year": 1981, "gdp": 432000000000 },
+    { "country": "Italy", "year": 1982, "gdp": 428000000000 },
+    { "country": "Italy", "year": 1983, "gdp": 444000000000 },
+    { "country": "Italy", "year": 1984, "gdp": 439000000000 },
+    { "country": "Italy", "year": 1985, "gdp": 453000000000 },
+    { "country": "Italy", "year": 1986, "gdp": 642000000000 },
+    { "country": "Italy", "year": 1987, "gdp": 808000000000 },
+    { "country": "Italy", "year": 1988, "gdp": 894000000000 },
+    { "country": "Italy", "year": 1989, "gdp": 931000000000 },
+    { "country": "Italy", "year": 1990, "gdp": 1184000000000 },
+    { "country": "Italy", "year": 1991, "gdp": 1249000000000 },
+    { "country": "Italy", "year": 1992, "gdp": 1323000000000 },
+    { "country": "Italy", "year": 1993, "gdp": 1067000000000 },
+    { "country": "Italy", "year": 1994, "gdp": 1102000000000 },
+    { "country": "Italy", "year": 1995, "gdp": 1177000000000 },
+    { "country": "Italy", "year": 1996, "gdp": 1315000000000 },
+    { "country": "Italy", "year": 1997, "gdp": 1245000000000 },
+    { "country": "Italy", "year": 1998, "gdp": 1273000000000 },
+    { "country": "Italy", "year": 1999, "gdp": 1255000000000 },
+    { "country": "Italy", "year": 2000, "gdp": 1150000000000 },
+    { "country": "Italy", "year": 2001, "gdp": 1172000000000 },
+    { "country": "Italy", "year": 2002, "gdp": 1282000000000 },
+    { "country": "Italy", "year": 2003, "gdp": 1583000000000 },
+    { "country": "Italy", "year": 2004, "gdp": 1813000000000 },
+    { "country": "Italy", "year": 2005, "gdp": 1865000000000 },
+    { "country": "Italy", "year": 2006, "gdp": 1959000000000 },
+    { "country": "Italy", "year": 2007, "gdp": 2223000000000 },
+    { "country": "Italy", "year": 2008, "gdp": 2418000000000 },
+    { "country": "Italy", "year": 2009, "gdp": 2209000000000 },
+    { "country": "Italy", "year": 2010, "gdp": 2145000000000 },
+    { "country": "Italy", "year": 2011, "gdp": 2307000000000 },
+    { "country": "Italy", "year": 2012, "gdp": 2098000000000 },
+    { "country": "Italy", "year": 2013, "gdp": 2153000000000 },
+    { "country": "Italy", "year": 2014, "gdp": 2173000000000 },
+    { "country": "Italy", "year": 2015, "gdp": 1845000000000 },
+    { "country": "Italy", "year": 2016, "gdp": 1887000000000 },
+    { "country": "Italy", "year": 2017, "gdp": 1971000000000 },
+    { "country": "Italy", "year": 2018, "gdp": 2099000000000 },
+    { "country": "Italy", "year": 2019, "gdp": 2020000000000 },
+    { "country": "Italy", "year": 2020, "gdp": 1907000000000 },
+    { "country": "Italy", "year": 2021, "gdp": 2179000000000 },
+    { "country": "Italy", "year": 2022, "gdp": 2104000000000 },
+    { "country": "Italy", "year": 2023, "gdp": 2317000000000 },
+    { "country": "Italy", "year": 2024, "gdp": 2381000000000 },
+    { "country": "Japan", "year": 1980, "gdp": 1129000000000 },
+    { "country": "Japan", "year": 1981, "gdp": 1245000000000 },
+    { "country": "Japan", "year": 1982, "gdp": 1159000000000 },
+    { "country": "Japan", "year": 1983, "gdp": 1271000000000 },
+    { "country": "Japan", "year": 1984, "gdp": 1346000000000 },
+    { "country": "Japan", "year": 1985, "gdp": 1427000000000 },
+    { "country": "Japan", "year": 1986, "gdp": 2120000000000 },
+    { "country": "Japan", "year": 1987, "gdp": 2581000000000 },
+    { "country": "Japan", "year": 1988, "gdp": 3126000000000 },
+    { "country": "Japan", "year": 1989, "gdp": 3109000000000 },
+    { "country": "Japan", "year": 1990, "gdp": 3186000000000 },
+    { "country": "Japan", "year": 1991, "gdp": 3648000000000 },
+    { "country": "Japan", "year": 1992, "gdp": 3981000000000 },
+    { "country": "Japan", "year": 1993, "gdp": 4537000000000 },
+    { "country": "Japan", "year": 1994, "gdp": 4999000000000 },
+    { "country": "Japan", "year": 1995, "gdp": 5546000000000 },
+    { "country": "Japan", "year": 1996, "gdp": 4923000000000 },
+    { "country": "Japan", "year": 1997, "gdp": 4492000000000 },
+    { "country": "Japan", "year": 1998, "gdp": 4098000000000 },
+    { "country": "Japan", "year": 1999, "gdp": 4636000000000 },
+    { "country": "Japan", "year": 2000, "gdp": 4968000000000 },
+    { "country": "Japan", "year": 2001, "gdp": 4375000000000 },
+    { "country": "Japan", "year": 2002, "gdp": 4183000000000 },
+    { "country": "Japan", "year": 2003, "gdp": 4520000000000 },
+    { "country": "Japan", "year": 2004, "gdp": 4893000000000 },
+    { "country": "Japan", "year": 2005, "gdp": 4831000000000 },
+    { "country": "Japan", "year": 2006, "gdp": 4602000000000 },
+    { "country": "Japan", "year": 2007, "gdp": 4580000000000 },
+    { "country": "Japan", "year": 2008, "gdp": 5107000000000 },
+    { "country": "Japan", "year": 2009, "gdp": 5289000000000 },
+    { "country": "Japan", "year": 2010, "gdp": 5759000000000 },
+    { "country": "Japan", "year": 2011, "gdp": 6233000000000 },
+    { "country": "Japan", "year": 2012, "gdp": 6272000000000 },
+    { "country": "Japan", "year": 2013, "gdp": 5212000000000 },
+    { "country": "Japan", "year": 2014, "gdp": 4897000000000 },
+    { "country": "Japan", "year": 2015, "gdp": 4445000000000 },
+    { "country": "Japan", "year": 2016, "gdp": 5004000000000 },
+    { "country": "Japan", "year": 2017, "gdp": 4931000000000 },
+    { "country": "Japan", "year": 2018, "gdp": 5041000000000 },
+    { "country": "Japan", "year": 2019, "gdp": 5118000000000 },
+    { "country": "Japan", "year": 2020, "gdp": 5054000000000 },
+    { "country": "Japan", "year": 2021, "gdp": 5039000000000 },
+    { "country": "Japan", "year": 2022, "gdp": 4262000000000 },
+    { "country": "Japan", "year": 2023, "gdp": 4213000000000 },
+    { "country": "Japan", "year": 2024, "gdp": 4028000000000 },
+    { "country": "United States", "year": 1980, "gdp": 2857000000000 },
+    { "country": "United States", "year": 1981, "gdp": 3207000000000 },
+    { "country": "United States", "year": 1982, "gdp": 3344000000000 },
+    { "country": "United States", "year": 1983, "gdp": 3634000000000 },
+    { "country": "United States", "year": 1984, "gdp": 4038000000000 },
+    { "country": "United States", "year": 1985, "gdp": 4339000000000 },
+    { "country": "United States", "year": 1986, "gdp": 4580000000000 },
+    { "country": "United States", "year": 1987, "gdp": 4855000000000 },
+    { "country": "United States", "year": 1988, "gdp": 5236000000000 },
+    { "country": "United States", "year": 1989, "gdp": 5642000000000 },
+    { "country": "United States", "year": 1990, "gdp": 5963000000000 },
+    { "country": "United States", "year": 1991, "gdp": 6158000000000 },
+    { "country": "United States", "year": 1992, "gdp": 6520000000000 },
+    { "country": "United States", "year": 1993, "gdp": 6859000000000 },
+    { "country": "United States", "year": 1994, "gdp": 7287000000000 },
+    { "country": "United States", "year": 1995, "gdp": 7640000000000 },
+    { "country": "United States", "year": 1996, "gdp": 8073000000000 },
+    { "country": "United States", "year": 1997, "gdp": 8578000000000 },
+    { "country": "United States", "year": 1998, "gdp": 9063000000000 },
+    { "country": "United States", "year": 1999, "gdp": 9631000000000 },
+    { "country": "United States", "year": 2000, "gdp": 10251000000000 },
+    { "country": "United States", "year": 2001, "gdp": 10582000000000 },
+    { "country": "United States", "year": 2002, "gdp": 10929000000000 },
+    { "country": "United States", "year": 2003, "gdp": 11456000000000 },
+    { "country": "United States", "year": 2004, "gdp": 12217000000000 },
+    { "country": "United States", "year": 2005, "gdp": 13039000000000 },
+    { "country": "United States", "year": 2006, "gdp": 13816000000000 },
+    { "country": "United States", "year": 2007, "gdp": 14474000000000 },
+    { "country": "United States", "year": 2008, "gdp": 14770000000000 },
+    { "country": "United States", "year": 2009, "gdp": 14478000000000 },
+    { "country": "United States", "year": 2010, "gdp": 15049000000000 },
+    { "country": "United States", "year": 2011, "gdp": 15600000000000 },
+    { "country": "United States", "year": 2012, "gdp": 16254000000000 },
+    { "country": "United States", "year": 2013, "gdp": 16843000000000 },
+    { "country": "United States", "year": 2014, "gdp": 17551000000000 },
+    { "country": "United States", "year": 2015, "gdp": 18206000000000 },
+    { "country": "United States", "year": 2016, "gdp": 18695000000000 },
+    { "country": "United States", "year": 2017, "gdp": 19477000000000 },
+    { "country": "United States", "year": 2018, "gdp": 20533000000000 },
+    { "country": "United States", "year": 2019, "gdp": 21381000000000 },
+    { "country": "United States", "year": 2020, "gdp": 21060000000000 },
+    { "country": "United States", "year": 2021, "gdp": 23315000000000 },
+    { "country": "United States", "year": 2022, "gdp": 25605000000000 },
+    { "country": "United States", "year": 2023, "gdp": 27292000000000 },
+    { "country": "United States", "year": 2024, "gdp": 28751000000000 }
+  ]
+}
+```
+
+The spec's data keeps only the eight of the 20 economies that reach the top five in some year, 360 rows of the dataset's 892, because a top-five race can never draw the other 12. For the top-10 race the same cut would keep 15 economies.
+
+To put it on a page, pass a container and the spec to `createRace`:
+
+```ts
+import { createRace } from "@opendata-ai/openchart-vanilla";
+
+const player = createRace(document.getElementById("race"), spec);
+```
+
+The race fills its container, so give the container a height. One with no height gets 520 pixels, 44 of them for the control strip.
+
+## Top N, speed and scale
+
+`race.top` sets the number of slots, 10 by default. Each extra slot makes every bar thinner, so pick the smallest number that holds the story. Five slots show every change among the leaders. Ten add the climbs further down: China starts 12th in 1980 and India 13th, and India is 5th by 2024.
+
+Playback defaults to 700 milliseconds per period, with the total kept between 8 and 90 seconds. Set the total in milliseconds with `race.duration`, as the spec above does with 20 seconds, or the time per period with `race.step`, but not both. The last frame holds for 1.5 seconds (`race.holdEnd`), and `race.loop: true` starts over after it.
+
+By default each frame fits its scale to the bars on screen (`race.rescale: "frame"`), so the leader's bar stays near full width and the others read as fractions of it. `rescale: "fixed"` keeps one scale for the whole run, which shows real growth: the United States' bar in 1980 is a tenth of its 2024 length. `race.rescale: { min }` sets a floor on the frame's maximum, so a race that starts small doesn't open with bars stretched to full width.
+
+## Gaps, late starters and ties
+
+A country with no rows before some year enters the race that year. The World Bank's series for Russia starts in 1988, so Russia appears then. The World Bank publishes no Soviet series, so the 1980s rankings have no entry for the Soviet Union at all. Check what your data leaves out before you publish a ranking.
+
+A missing year between two observed ones is filled by interpolating between them, the default `race.gaps: "interpolate"`. `"hold"` carries the last value forward, and `"drop"` takes the entry out of the ranking until its next value.
+
+Ties keep the previous period's order. In this data, which is rounded to the billion, Canada and India both have $1,828 billion in 2012, tied for 10th. India was ahead in 2011, so India keeps 10th and Canada drops out. Entries with no earlier order fall back to alphabetical order by key.
+
+## Lines and tables
+
+The same spec draws lines or a table when you change `mark`. `mark: "line"` traces each ranked economy up to the playhead, and the x axis widens as the years go by. `mark: { type: "line", window: "all" }` shows all 45 years from the start.
+
+<Demo id="blog/gdp-race-line" />
+
+The lines keep the history that bars throw away. Japan's economy peaked at $6.27 trillion in 2012 and fell to $4.03 trillion by 2024, and both points stay on screen while the race goes on.
+
+`mark: "table"` lists rank, the change in rank since the previous period, name and value, and the rows slide when the order changes. The default columns also include an inline bar and each entry's share of the total. This one lists four columns so the names fit on a phone.
+
+<Demo id="blog/gdp-race-table" />
+
+## Playback and reduced motion
+
+`race.autoplay` defaults to `"visible"`, which starts the race when a quarter of it is in view. `true` starts it at mount, and `false` waits for the play button. Readers who have asked their system for reduced motion get the race paused on its last frame, and can still scrub or press play. `race.controls: false` removes the control strip.
+
+The player that `createRace` returns has `play()`, `pause()` and `seek(index)`, which takes a zero-based period index; fractions land between periods. `on("period", callback)` fires each time the playhead crosses a period.
+
+Screen readers get a description that names the first and last leaders, a table of the top entries by period, and a live region that announces the leaders when the reader pauses, steps or scrubs. It stays quiet during playback, so a screen reader isn't reading a new ranking every 700 milliseconds.
+
+Without JavaScript, nothing draws: `renderStaticSVG`, the library's server-side renderer, doesn't render races. Put an image of the last frame or a table of the final period in a `<noscript>` element.
+
+## In React, Vue or Svelte
+
+Each framework package exports a `Race` component that takes the same spec:
+
+```tsx
+import type { RaceSpec } from "@opendata-ai/openchart-core";
+import { Race, type RaceHandle } from "@opendata-ai/openchart-react";
+import { useRef } from "react";
+
+export function GdpRace({ spec }: { spec: RaceSpec }) {
+  const race = useRef<RaceHandle>(null);
+  return <Race ref={race} spec={spec} style={{ height: 520 }} />;
+}
+```
+
+`race.current?.instance` is the same player that `createRace` returns. Vue and Svelte import `Race` from `@opendata-ai/openchart-vue` and `@opendata-ai/openchart-svelte`.
+
+## Exporting a GIF for social posts
+
+`await player.export("gif")` records the whole race, from the first period through a 1.5-second hold on the last, and returns a `Blob`. It needs the optional `gifenc` package (`npm install gifenc`) and works for bar and line races; switch a table race to bars first. The GIF is drawn at the race's current size in pixels, so size the container to the image you want before you call it.
+
+`fps` sets frames per second, 25 by default. A GIF gets at most 1,199 frames, so a race longer than about 48 seconds exports at a lower frame rate. The GIF loops when the spec sets `race.loop: true` and plays once otherwise. [Export a chart as PNG, SVG or GIF](/blog/export-a-chart-as-png-svg-or-gif/) has a short function that saves the `Blob` as a file.
+
+Every race option, including the table columns and the scale floor, is on the [race docs page](/docs/change-over-time/race/).
