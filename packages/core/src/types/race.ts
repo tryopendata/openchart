@@ -78,7 +78,9 @@ export interface RaceBarGeometry {
 export interface RaceLineStatic {
   /** Bounds of the line plot in pixels. */
   plot: Rect;
-  /** Full period-index domain and its pixel range. Reveal mode shortens the domain each frame. */
+  /** Controls whether the x axis reveals periods as the playhead advances or shows all periods. */
+  window: 'reveal' | 'all';
+  /** Full period-index domain and its pixel range. Reveal mode narrows the domain per frame. */
   xScale: {
     /** First and last period indices. */
     domain: [number, number];

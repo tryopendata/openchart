@@ -21,7 +21,9 @@ const spec = {
 } satisfies RaceSpec;
 
 if (process.argv.includes('--geometry')) {
-  const model = prepareRace(spec, {});
+  const markFlag = process.argv.indexOf('--mark');
+  const mark = markFlag >= 0 && process.argv[markFlag + 1] === 'line' ? 'line' : spec.mark;
+  const model = prepareRace({ ...spec, mark }, {});
   const layout = layoutRace(model, { width: 800, height: 500 });
   for (const t of [0, 8.5, model.timeline.periodCount - 1]) {
     console.log(JSON.stringify({ t, geometry: raceGeometryAt(model, layout, t) }, null, 2));
