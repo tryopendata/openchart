@@ -1,4 +1,11 @@
-import type { A11yMetadata, CompileWarning, Point, Rect, ResolvedChrome } from './layout';
+import type {
+  A11yMetadata,
+  CompileWarning,
+  MeasureTextFn,
+  Point,
+  Rect,
+  ResolvedChrome,
+} from './layout';
 import type { RaceTableColumn } from './spec';
 import type { ResolvedTheme } from './theme';
 
@@ -115,6 +122,8 @@ interface RaceLayoutBase {
    * `raceFrameAt` uses the matrix's full labels for accessibility and export.
    */
   labels: string[];
+  /** Text measurer the layout was computed with; renderers reuse it so chrome wraps identically. */
+  measureText?: MeasureTextFn;
   playback: RacePlayback;
   warnings?: CompileWarning[];
   /** Area below chrome where the mark draws. */

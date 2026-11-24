@@ -90,6 +90,8 @@ export interface RaceTimeline {
 
 export interface RaceModel {
   spec: NormalizedRaceSpec;
+  /** Authored watermark setting, before normalization supplies a default. */
+  specWatermark?: boolean;
   matrix: RaceMatrix;
   timeline: RaceTimeline;
   /** Per-key palette indices or constant CSS colors. */
