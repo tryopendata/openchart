@@ -42,11 +42,12 @@ it.each([
   if (!autoplay) await wrapper.get('button[aria-label="Play"]').trigger('click');
   clock.pump(0);
   clock.pump(200);
-  expect(previous.getState()).toMatchObject({ t: 2, playing: false });
+  expect(previous.getState()).toMatchObject({ t: 2, playing: false, ended: true });
 
   await setProps({ theme: { fonts: { sizes: { title: 32 } } } });
   const current = getInstance();
-  expect(current).not.toBe(previous);
+  expect(current).toBe(previous);
+  expect(current.getState()).toMatchObject({ t: 2, playing: false, ended: true, speed: 2 });
   await wrapper.get('button[aria-label="Play"]').trigger('click');
   expect(current.getState()).toMatchObject({ t: 0, playing: true, speed: 2 });
 
@@ -84,14 +85,14 @@ it('keeps the instance and Play focus for an equal inline theme', async () => {
   expect(document.activeElement).toBe(play);
 });
 
-it('preserves the speed set before playback starts across a theme remount', async () => {
+it('preserves the speed set before playback starts after a theme change', async () => {
   const { getInstance, setProps } = renderRace({ spec });
   const previous = getInstance();
   previous.setSpeed(2);
 
   await setProps({ theme: { fonts: { sizes: { title: 32 } } } });
 
-  expect(getInstance()).not.toBe(previous);
+  expect(getInstance()).toBe(previous);
   expect(getInstance().getState()).toMatchObject({ t: 0, playing: false, speed: 2 });
 });
 
@@ -122,7 +123,7 @@ it('moves the initial period subscription to the new instance on remount', async
     const { getInstance, setProps } = renderRace({ spec, onPeriod });
     expect(getInstance()).toBe(subscriptions[0]?.instance);
 
-    await setProps({ darkMode: 'force' });
+    await setProps({ watermark: false });
 
     expect(getInstance()).toBe(subscriptions[1]?.instance);
     expect(subscriptions.map(({ events, removed }) => ({ events, removed }))).toEqual([
@@ -197,7 +198,7 @@ it('updates the chart on the same instance and keeps the fractional playhead', a
   expect(instance.getState()).toMatchObject({ t: 1.25, playing: false });
 });
 
-it.each([true, false])('restores t and playing=%s after a theme remount', async (playing) => {
+it.each([true, false])('keeps t and playing=%s after a theme change', async (playing) => {
   const raceSpec = { ...spec, race: { ...spec.race, autoplay: !playing } };
   const { wrapper, getInstance, setProps } = renderRace({ spec: raceSpec });
   const previous = getInstance();
@@ -208,10 +209,9 @@ it.each([true, false])('restores t and playing=%s after a theme remount', async 
 
   await setProps({ theme: { fonts: { sizes: { title: 32 } } } });
 
-  expect(getInstance()).not.toBe(previous);
+  expect(getInstance()).toBe(previous);
   expect(getInstance().getState()).toMatchObject({ t: 1.25, playing, speed: 2 });
   expect(wrapper.get('.oc-title').attributes('style')).toContain('font-size: 32px');
-  expect(previous.getState().playing).toBe(false);
 });
 
 it('keeps visibility autoplay pending after a dark mode change', async () => {
@@ -234,7 +234,7 @@ it('keeps visibility autoplay pending after a dark mode change', async () => {
   }
 });
 
-it('merges context theme and remounts when the resolved dark mode changes', async () => {
+it('merges context theme and redraws when the resolved dark mode changes', async () => {
   const raceSpec = { ...spec, chrome: { title: 'Annual leaders', source: 'Annual survey' } };
   const { wrapper, getInstance, setProps } = renderRace(
     { spec: raceSpec, theme: { fonts: { sizes: { title: 28 } } } },
@@ -249,7 +249,7 @@ it('merges context theme and remounts when the resolved dark mode changes', asyn
   await setProps({ darkMode: 'off' });
 
   expect(wrapper.find('.oc-dark').exists()).toBe(false);
-  expect(getInstance()).not.toBe(previous);
+  expect(getInstance()).toBe(previous);
   expect(getInstance().getState().t).toBe(1.25);
 });
 
@@ -358,13 +358,13 @@ it('keeps a working race when a theme change comes with an invalid spec and appl
 
   await setProps({ spec: updated });
 
-  expect(getInstance()).not.toBe(instance);
+  expect(getInstance()).toBe(instance);
   expect(getInstance().getState().t).toBe(1.25);
   expect(wrapper.get('.oc-title').text()).toBe('Updated leaders');
   expect(wrapper.get('.oc-title').attributes('style')).toContain('font-size: 32px');
 });
 
-it('applies the host style before a theme remount with autoResize disabled', async () => {
+it('applies the host style before a theme redraw with autoResize disabled', async () => {
   const { wrapper, setProps } = renderRace({ spec, style: { width: '400px' }, autoResize: false });
   const host = wrapper.element;
   if (!(host instanceof HTMLElement)) throw new Error('Race host did not mount');

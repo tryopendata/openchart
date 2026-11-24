@@ -17,6 +17,7 @@ import {
   raceFrameAt,
   raceGeometryAt,
 } from "@opendata-ai/openchart-engine";
+import { RACE_CONTROLS_HEIGHT } from "@opendata-ai/openchart-vanilla";
 import { escapeElementText, escapeHtml } from "./escape-html";
 import type { StaticSvgOptions } from "./static-svg";
 
@@ -111,9 +112,12 @@ function lines(layout: Extract<RaceLayout, { mark: "line" }>, geometry: RaceLine
   const { plot, tickFontSize, yAxisX, window } = layout.static;
   const { axis, gridline } = layout.theme.colors;
   const xTicks = geometry.xTicks.map(({ position, value, label, opacity }) => {
-    const anchor = window === "reveal" ? "middle" : value === 0 ? "end" : "start";
+    const alignment: Attributes =
+      window === "all"
+        ? { "text-anchor": value === 0 ? "end" : "start", dx: value === 0 ? -2 : 2 }
+        : { "text-anchor": "middle" };
     return text(position, plot.y + plot.height + tickFontSize + 2, label, {
-      "text-anchor": anchor,
+      ...alignment,
       opacity,
     });
   });
@@ -184,7 +188,7 @@ export function raceStaticSvg(
   const period = frame.period.label;
   const layout = layoutRace(model, {
     width,
-    height: Math.max(0, height - 24),
+    height: Math.max(0, height - (model.playback.controls ? RACE_CONTROLS_HEIGHT : 0)),
     darkMode: dark,
     theme,
   });
@@ -216,11 +220,14 @@ export function raceStaticSvg(
         "aria-describedby": descriptionId,
       };
   const periodLabel =
-    (geometry.mark === "bar" && geometry.period) || spec.race?.period === false
+    !layout.playback.controls ||
+    (geometry.mark === "bar" && geometry.period) ||
+    spec.race?.period === false
       ? ""
       : text(width - spacing.padding, height - 8, period, {
           "text-anchor": "end",
           fill: colors.axis,
         });
-  return `<svg${attrs({ viewBox: `0 0 ${width} ${height}`, "data-theme": dark ? "dark" : "light", "font-family": fonts.family, "font-size": fonts.sizes.body, fill: colors.text, ...accessible })}>${description}${raceChrome(layout)}${marks}${periodLabel}</svg>`;
+  // The stage keeps a fixed height as its width changes. Scale the snapshot only horizontally.
+  return `<svg${attrs({ viewBox: `0 0 ${width} ${height}`, preserveAspectRatio: "none", "data-theme": dark ? "dark" : "light", "font-family": fonts.family, "font-size": fonts.sizes.body, fill: colors.text, ...accessible })}>${description}${raceChrome(layout)}${marks}${periodLabel}</svg>`;
 }

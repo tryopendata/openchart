@@ -72,7 +72,7 @@
   .oc-race-table-change,
   .oc-race-table-value,
   .oc-race-table-share {
-    font-variant-numeric: tabular-nums;
+    font-variant-numeric: normal;
     text-align: right;
   }
 

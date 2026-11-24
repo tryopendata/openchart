@@ -105,9 +105,10 @@ function measureColumns(
   const { normal, semibold } = theme.fonts.weights;
   const { top } = model.timeline;
   const measure = (text: string, weight = normal) => measureText(text, fontSize, weight).width;
-  // The DOM uses tabular figures, while layout measures proportional text.
-  const widestDigit = Array.from('0123456789').reduce((widest, digit) =>
-    measure(digit) > measure(widest) ? digit : widest,
+  // The table draws the font's default figures, matching the text measurer.
+  const digits = Array.from('0123456789', (digit) => ({ digit, width: measure(digit) }));
+  const { digit: widestDigit } = digits.reduce((widest, digit) =>
+    digit.width > widest.width ? digit : widest,
   );
   const measureNumber = (pattern: string) => measure(pattern.replace(/0/g, widestDigit)) + 1;
   const measureNumbers = (patterns: Set<string> | undefined) => {

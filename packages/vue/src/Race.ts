@@ -52,6 +52,7 @@ export const Race = defineComponent({
     const containerRef = ref<HTMLDivElement | null>(null);
     let instance: RaceInstance | null = null;
     let mountedOptionsKey = '';
+    let mountedThemeKey = '';
     let mountedSpecKey = '';
     let unsubscribe: (() => void) | undefined;
     const contextTheme = inject(VizThemeKey, undefined);
@@ -63,7 +64,13 @@ export const Race = defineComponent({
       watermark: props.watermark,
       onWarn: (message) => (props.onWarn ?? console.warn)(message),
     }));
-    const optionsKey = computed(() => JSON.stringify(options.value));
+    const optionsKey = computed(() =>
+      JSON.stringify({ autoResize: props.autoResize, watermark: props.watermark }),
+    );
+    const themeKey = computed(() => {
+      const { theme, darkMode } = options.value;
+      return JSON.stringify({ theme, darkMode });
+    });
     const specKey = computed(() => JSON.stringify(props.spec));
 
     function subscribe() {
@@ -81,7 +88,7 @@ export const Race = defineComponent({
       instance = null;
     }
 
-    function mountRace(nextOptionsKey = optionsKey.value, nextSpecKey = specKey.value) {
+    function mountRace() {
       const container = containerRef.value;
       if (!container) return;
       const state = instance?.getState();
@@ -89,8 +96,9 @@ export const Race = defineComponent({
       destroyRace();
 
       instance = current;
-      mountedOptionsKey = nextOptionsKey;
-      mountedSpecKey = nextSpecKey;
+      mountedOptionsKey = optionsKey.value;
+      mountedThemeKey = themeKey.value;
+      mountedSpecKey = specKey.value;
       if (state) {
         // The old chart was still in the host during the replacement mount.
         current.resize();
@@ -117,16 +125,23 @@ export const Race = defineComponent({
     onUnmounted(destroyRace);
 
     watch(
-      [optionsKey, specKey, () => props.onPeriod, () => props.onPeriodOnce],
-      ([nextOptionsKey, nextSpecKey, onPeriod, onPeriodOnce], [, , previous, previousOnce]) => {
+      [optionsKey, themeKey, specKey, () => props.onPeriod, () => props.onPeriodOnce],
+      (
+        [nextOptionsKey, nextThemeKey, nextSpecKey, onPeriod, onPeriodOnce],
+        [, , , previous, previousOnce],
+      ) => {
         if (onPeriod !== previous || onPeriodOnce !== previousOnce) subscribe();
-        if (nextOptionsKey !== mountedOptionsKey) {
-          mountRace(nextOptionsKey, nextSpecKey);
+        if (!instance || nextOptionsKey !== mountedOptionsKey) {
+          mountRace();
           return;
         }
-        if (instance && nextSpecKey !== mountedSpecKey) {
+        if (nextSpecKey !== mountedSpecKey) {
           instance.update(props.spec);
           mountedSpecKey = nextSpecKey;
+        }
+        if (nextThemeKey !== mountedThemeKey) {
+          instance.setTheme(options.value);
+          mountedThemeKey = nextThemeKey;
         }
       },
       { flush: 'post' },

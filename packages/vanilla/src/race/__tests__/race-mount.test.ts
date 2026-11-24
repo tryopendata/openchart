@@ -313,18 +313,21 @@ describe('createRace', () => {
     expect(button().getAttribute('aria-label')).toBe('Play');
   });
 
-  it('seeks when scrubbing and steps to the next whole period with arrow keys', () => {
+  it.each([
+    ['ArrowRight', 'ArrowLeft'],
+    ['ArrowUp', 'ArrowDown'],
+  ])('seeks when scrubbing and steps a period with %s and %s', (forward, backward) => {
     const chart = mount();
     button().click();
     const input = scrub();
     input.value = '0.5';
     input.dispatchEvent(new Event('input', { bubbles: true }));
     expect(chart.getState()).toMatchObject({ t: 0.5, playing: true });
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: forward, bubbles: true }));
     expect(chart.getState()).toMatchObject({ t: 1, playing: false });
     expect(rowKeys()).toEqual(['B', 'A']);
     expect(input.getAttribute('aria-valuetext')).toBe('2021');
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: backward, bubbles: true }));
     expect(chart.getState()).toMatchObject({ t: 0, playing: false });
     expect(rowKeys()).toEqual(['A', 'B']);
   });
@@ -1035,7 +1038,7 @@ describe('createRace', () => {
     expect(barFills()).not.toEqual(DEFAULT_THEME.colors.categorical.slice(0, 2));
   });
 
-  it('keeps mount options on resize and accepts new theme options on remount', () => {
+  it('keeps mount options on resize and accepts a new theme through the instance', () => {
     const options: RaceMountOptions = { darkMode: 'off' };
     const chart = mount(spec, options);
     const initialFills = barFills();
@@ -1044,10 +1047,33 @@ describe('createRace', () => {
     chart.resize();
     expect(barFills()).toEqual(initialFills);
     expect(host.querySelector('.oc-race-root.oc-dark')).toBeNull();
-    chart.destroy();
-    mount(spec, options);
+    chart.setTheme(options);
     expect(barFills()).toEqual(['#aabbaa', '#eebbee']);
     expect(host.querySelector('.oc-race-root.oc-dark')).not.toBeNull();
+    chart.setTheme({});
+    expect(barFills()).toEqual(initialFills);
+    expect(host.querySelector('.oc-race-root.oc-dark')).toBeNull();
+  });
+
+  it('keeps a completed race on the last period until Play restarts it after a theme change', () => {
+    const chart = mount({ ...spec, race: { ...spec.race, holdEnd: 0 } });
+    chart.setSpeed(2);
+    button().click();
+    tick(0);
+    tick(1000);
+    const ended = { t: 2, playing: false, ended: true, speed: 2 };
+    expect(chart.getState()).toMatchObject(ended);
+
+    button().focus();
+    chart.setTheme({ darkMode: 'force' });
+
+    expect(host.querySelector('.oc-race-root.oc-dark')).not.toBeNull();
+    expect(chart.getState()).toMatchObject(ended);
+    expect(scrub().getAttribute('aria-valuetext')).toBe('2022');
+    expect(document.activeElement).toBe(button());
+    button().click();
+    expect(scrub().getAttribute('aria-valuetext')).toBe('2020');
+    expect(chart.getState()).toMatchObject({ t: 0, playing: true, ended: false, speed: 2 });
   });
 
   it('applies a spec theme update at the current playhead', () => {

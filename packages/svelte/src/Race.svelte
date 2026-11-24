@@ -37,6 +37,7 @@ let {
 let containerEl: HTMLDivElement;
 let instance = $state.raw<RaceInstance | null>(null);
 let mountedOptionsKey = '';
+let mountedThemeKey = '';
 let mountedSpecKey = '';
 let periodSubscription:
   | { instance: RaceInstance; callback: NonNullable<RaceProps['onperiod']>; unsubscribe: () => void }
@@ -51,7 +52,8 @@ const options = $derived<RaceMountOptions>({
   watermark,
   onWarn: (message) => (untrack(() => onWarn) ?? console.warn)(message),
 });
-const optionsKey = $derived(JSON.stringify(options));
+const optionsKey = $derived(JSON.stringify({ autoResize, watermark }));
+const themeKey = $derived(JSON.stringify({ theme: options.theme, darkMode: options.darkMode }));
 
 /** Read the current race instance through bind:this. */
 export function getInstance(): RaceInstance | null {
@@ -69,6 +71,7 @@ $effect(() => {
   const container = containerEl;
   const nextSpecKey = JSON.stringify(spec);
   const nextOptionsKey = optionsKey;
+  const nextThemeKey = themeKey;
 
   untrack(() => {
     const previous = instance;
@@ -76,6 +79,10 @@ $effect(() => {
       if (nextSpecKey !== mountedSpecKey) {
         previous.update(spec);
         mountedSpecKey = nextSpecKey;
+      }
+      if (nextThemeKey !== mountedThemeKey) {
+        previous.setTheme(options);
+        mountedThemeKey = nextThemeKey;
       }
       return;
     }
@@ -85,6 +92,7 @@ $effect(() => {
     previous?.destroy();
     instance = current;
     mountedOptionsKey = nextOptionsKey;
+    mountedThemeKey = nextThemeKey;
     mountedSpecKey = nextSpecKey;
     if (state) {
       // The old chart was still in the host during the replacement mount.

@@ -302,7 +302,7 @@ export function startDemos(doc: Document): void {
       .catch((error: unknown) => showFailure(demo, error));
   });
 
-  // A mounted chart has no theme setter, so a theme change rebuilds each live one, in its current state.
+  // Races can redraw in place. Other demos remount with their current spec.
   observeTheme(doc, () => {
     if (!loaded) return;
     const dark = isDarkPage(doc);

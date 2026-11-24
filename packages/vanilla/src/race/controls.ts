@@ -69,9 +69,12 @@ export function createRaceControls(options: RaceControlsOptions): RaceControls {
 
   function keydown(event: KeyboardEvent) {
     if (event.altKey || event.ctrlKey || event.metaKey) return;
-    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+    if (event.key === 'ArrowRight' || event.key === 'ArrowUp') {
       event.preventDefault();
-      onStep(event.key === 'ArrowLeft' ? -1 : 1);
+      onStep(1);
+    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') {
+      event.preventDefault();
+      onStep(-1);
     } else if (
       event.key === ' ' &&
       !(event.target instanceof Node && button.contains(event.target))

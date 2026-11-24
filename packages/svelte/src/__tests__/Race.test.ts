@@ -43,11 +43,12 @@ it.each([
   if (!autoplay) await fireEvent.click(getByRole('button', { name: 'Play' }));
   clock.pump(0);
   clock.pump(200);
-  expect(previous.getState()).toMatchObject({ t: 2, playing: false });
+  expect(previous.getState()).toMatchObject({ t: 2, playing: false, ended: true });
 
   await rerender({ theme: { fonts: { sizes: { title: 32 } } } });
   const current = component.getInstance();
-  expect(current).not.toBe(previous);
+  expect(current).toBe(previous);
+  expect(current?.getState()).toMatchObject({ t: 2, playing: false, ended: true, speed: 2 });
   await fireEvent.click(getByRole('button', { name: 'Play' }));
   expect(current?.getState()).toMatchObject({ t: 0, playing: true, speed: 2 });
 
@@ -56,14 +57,14 @@ it.each([
   expect(current?.getState().t).toBe(1);
 });
 
-it('preserves the speed set before playback starts across a theme remount', async () => {
+it('preserves the speed set before playback starts after a theme change', async () => {
   const { component, rerender } = render(Race, { props: { spec } });
   const previous = component.getInstance();
   previous?.setSpeed(2);
 
   await rerender({ theme: { fonts: { sizes: { title: 32 } } } });
 
-  expect(component.getInstance()).not.toBe(previous);
+  expect(component.getInstance()).toBe(previous);
   expect(component.getInstance()?.getState()).toMatchObject({ t: 0, playing: false, speed: 2 });
 });
 
@@ -110,7 +111,7 @@ it('moves the initial period subscription to the new instance on remount', async
     const { component, rerender } = render(Race, { props: { spec, onperiod: onPeriod } });
     expect(component.getInstance()).toBe(subscriptions[0]?.instance);
 
-    await rerender({ darkMode: 'force' });
+    await rerender({ watermark: false });
 
     expect(component.getInstance()).toBe(subscriptions[1]?.instance);
     expect(subscriptions.map(({ events, removed }) => ({ events, removed }))).toEqual([
@@ -150,7 +151,7 @@ it('updates the chart on the same instance and keeps the fractional playhead', a
   expect(instance?.getState()).toMatchObject({ t: 1.25, playing: false });
 });
 
-it.each([true, false])('restores t and playing=%s after a theme remount', async (playing) => {
+it.each([true, false])('keeps t and playing=%s after a theme change', async (playing) => {
   const raceSpec = { ...spec, race: { ...spec.race, autoplay: !playing } };
   const { component, rerender } = render(Race, { props: { spec: raceSpec } });
   const previous = component.getInstance();
@@ -162,10 +163,9 @@ it.each([true, false])('restores t and playing=%s after a theme remount', async 
 
   await rerender({ theme: { fonts: { sizes: { title: 32 } } } });
 
-  expect(component.getInstance()).not.toBe(previous);
+  expect(component.getInstance()).toBe(previous);
   expect(component.getInstance()?.getState()).toMatchObject({ t: 1.25, playing, speed: 2 });
   expect(screen.getByText('Annual leaders').style.fontSize).toBe('32px');
-  expect(previous?.getState().playing).toBe(false);
 });
 
 it('keeps visibility autoplay pending after a dark mode change', async () => {
@@ -189,7 +189,7 @@ it('keeps visibility autoplay pending after a dark mode change', async () => {
   }
 });
 
-it('merges context theme and remounts when the resolved dark mode changes', async () => {
+it('merges context theme and redraws when the resolved dark mode changes', async () => {
   const raceSpec = { ...spec, chrome: { title: 'Annual leaders', source: 'Annual survey' } };
   const { component, rerender, container } = render(Race, {
     props: { spec: raceSpec, theme: { fonts: { sizes: { title: 28 } } } },
@@ -207,7 +207,7 @@ it('merges context theme and remounts when the resolved dark mode changes', asyn
   await rerender({ darkMode: 'off' });
 
   expect(container.querySelector('.oc-dark')).not.toBeInTheDocument();
-  expect(component.getInstance()).not.toBe(previous);
+  expect(component.getInstance()).toBe(previous);
   expect(component.getInstance()?.getState().t).toBe(1.25);
 });
 

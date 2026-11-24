@@ -7,7 +7,7 @@
  * two ways of putting a chart on a page cannot drift apart.
  */
 import type { ThemeConfig, VizSpec } from "@opendata-ai/openchart-core";
-import { isChartSpec, isLayerSpec, isTableSpec } from "@opendata-ai/openchart-core";
+import { isChartSpec, isLayerSpec, isRaceSpec, isTableSpec } from "@opendata-ai/openchart-core";
 import type { DemoControls, DemoMountOptions, DemoSource } from "../../demos/types";
 import type { BlogFigure } from "./blog-figure";
 import { codeTabsHtml } from "./code-tabs";
@@ -115,6 +115,8 @@ export function stageContentHtml(content: StageContent): string {
 
 /** Layout width of the phone static SVGs: a common phone, under 400px so compact overrides apply. */
 const PHONE_STATIC_WIDTH = 390;
+/** The race stage at a 360px viewport, inside the docs content gutters. */
+const RACE_PHONE_STATIC_WIDTH = 320;
 /** The wrapper demo.css shows or hides as one static pair, by `data-static-size`. */
 const STATIC_SET_CLASS = "demo-static-set";
 
@@ -127,7 +129,7 @@ const STATIC_SET_CLASS = "demo-static-set";
 function phoneStaticHtml(figure: DemoFigure, domId: string): string | null {
   if (figure.phoneHeight === undefined || !figure.static) return null;
   return staticSvgPair(figure.spec, {
-    width: PHONE_STATIC_WIDTH,
+    width: isRaceSpec(figure.spec) ? RACE_PHONE_STATIC_WIDTH : PHONE_STATIC_WIDTH,
     height: figure.phoneHeight,
     idPrefix: `${domId}-p`,
     theme: figure.pageTheme === false ? NO_PAGE_THEME : undefined,

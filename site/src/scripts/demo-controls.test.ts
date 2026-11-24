@@ -7,7 +7,7 @@
 
 import { indexTotalReturns } from "@datasets/index-total-returns";
 import type { ChartSpec, EditTransaction } from "@opendata-ai/openchart-core";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   editFixture,
   eventsFixture,
@@ -68,8 +68,9 @@ const figureHtml = (demo: DemoDef, options: FigureOptions = {}) =>
 async function livePage(demos: DemoDef[], options: FigureOptions = {}) {
   document.body.innerHTML = (await Promise.all(demos.map((d) => figureHtml(d, options)))).join("");
   startDemos(document);
-  await vi.waitFor(() =>
-    expect(document.querySelectorAll("[data-demo-live]")).toHaveLength(demos.length),
+  await vi.waitFor(
+    () => expect(document.querySelectorAll("[data-demo-live]")).toHaveLength(demos.length),
+    { timeout: 5_000 },
   );
 }
 
@@ -117,6 +118,10 @@ const allRows = (statesFixture.spec as ChartSpec).data.length;
 const secondState = statesFixture.controls?.states?.others[0];
 if (!secondState) throw new Error("fixtures/states needs a second state");
 const throughEnd2021 = (secondState.spec as ChartSpec).data.length;
+
+beforeAll(async () => {
+  await Promise.all([import("./demo-mount"), import("./demo-controls")]);
+});
 
 beforeEach(() => {
   vi.stubGlobal("IntersectionObserver", Viewport);

@@ -43,11 +43,12 @@ it.each([
   if (!autoplay) fireEvent.click(screen.getByRole('button', { name: 'Play' }));
   clock.pump(0);
   clock.pump(200);
-  expect(previous.getState()).toMatchObject({ t: 2, playing: false });
+  expect(previous.getState()).toMatchObject({ t: 2, playing: false, ended: true });
 
   rerender(<Race spec={replaySpec} ref={ref} theme={{ fonts: { sizes: { title: 32 } } }} />);
   const current = ref.current?.instance;
-  expect(current).not.toBe(previous);
+  expect(current).toBe(previous);
+  expect(current?.getState()).toMatchObject({ t: 2, playing: false, ended: true, speed: 2 });
   fireEvent.click(screen.getByRole('button', { name: 'Play' }));
   expect(current?.getState()).toMatchObject({ t: 0, playing: true, speed: 2 });
 
@@ -88,7 +89,7 @@ it('keeps the instance and Play focus for an equal inline theme', () => {
   expect(play).toHaveFocus();
 });
 
-it('preserves the speed set before playback starts across a theme remount', () => {
+it('preserves the speed set before playback starts after a theme change', () => {
   const ref = createRef<RaceHandle>();
   const { rerender } = render(<Race ref={ref} spec={spec} />);
   const previous = ref.current?.instance;
@@ -96,7 +97,7 @@ it('preserves the speed set before playback starts across a theme remount', () =
 
   rerender(<Race ref={ref} spec={spec} theme={{ fonts: { sizes: { title: 32 } } }} />);
 
-  expect(ref.current?.instance).not.toBe(previous);
+  expect(ref.current?.instance).toBe(previous);
   expect(ref.current?.instance?.getState()).toMatchObject({ t: 0, playing: false, speed: 2 });
 });
 
@@ -128,7 +129,7 @@ it('moves the initial period subscription to the new instance on remount', () =>
     const { rerender } = render(<Race ref={ref} spec={spec} onPeriod={onPeriod} />);
     expect(ref.current?.instance).toBe(subscriptions[0]?.instance);
 
-    rerender(<Race ref={ref} spec={spec} darkMode="force" onPeriod={onPeriod} />);
+    rerender(<Race ref={ref} spec={spec} watermark={false} onPeriod={onPeriod} />);
 
     expect(ref.current?.instance).toBe(subscriptions[1]?.instance);
     expect(subscriptions.map(({ events, removed }) => ({ events, removed }))).toEqual([
@@ -178,7 +179,7 @@ it('updates the chart on the same instance and keeps the fractional playhead', (
   expect(instance?.getState()).toMatchObject({ t: 1.25, playing: false });
 });
 
-it.each([true, false])('restores t and playing=%s after a theme remount', (playing) => {
+it.each([true, false])('keeps t and playing=%s after a theme change', (playing) => {
   const ref = createRef<RaceHandle>();
   const raceSpec = { ...spec, race: { ...spec.race, autoplay: !playing } };
   const { rerender } = render(<Race spec={raceSpec} ref={ref} />);
@@ -191,10 +192,9 @@ it.each([true, false])('restores t and playing=%s after a theme remount', (playi
 
   rerender(<Race spec={raceSpec} ref={ref} theme={{ fonts: { sizes: { title: 32 } } }} />);
 
-  expect(ref.current?.instance).not.toBe(previous);
+  expect(ref.current?.instance).toBe(previous);
   expect(ref.current?.instance?.getState()).toMatchObject({ t: 1.25, playing, speed: 2 });
   expect(screen.getByText('Annual leaders').style.fontSize).toBe('32px');
-  expect(previous?.getState().playing).toBe(false);
 });
 
 it('keeps visibility autoplay pending after a dark mode change', () => {
@@ -219,7 +219,7 @@ it('keeps visibility autoplay pending after a dark mode change', () => {
   }
 });
 
-it('merges context theme and remounts when the resolved dark mode changes', () => {
+it('merges context theme and redraws when the resolved dark mode changes', () => {
   const ref = createRef<RaceHandle>();
   const theme = { fonts: { sizes: { title: 34, small: 17 } } };
   const override = { fonts: { sizes: { title: 28 } } };
@@ -239,7 +239,7 @@ it('merges context theme and remounts when the resolved dark mode changes', () =
   rerender(view('off'));
 
   expect(container.querySelector('.oc-dark')).not.toBeInTheDocument();
-  expect(ref.current?.instance).not.toBe(previous);
+  expect(ref.current?.instance).toBe(previous);
   expect(ref.current?.instance?.getState().t).toBe(1.25);
 });
 

@@ -84,6 +84,7 @@ export type {
 } from './mount';
 // Main mount API
 export { createChart, resolveInteractionMode } from './mount';
+export { RACE_CONTROLS_HEIGHT } from './race/size';
 export type { RaceInstance, RaceMountOptions } from './race-mount';
 export { createRace } from './race-mount';
 export type {
