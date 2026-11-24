@@ -1,6 +1,7 @@
 import type { DataRow, RaceEncoding } from '@opendata-ai/openchart-core';
 import { finiteNumber } from '../data/finite-number';
 import { RaceDataError } from './errors';
+import { interpolateRaceValue } from './interpolate';
 import type { RaceMatrix, ResolvedRaceOptions } from './types';
 
 type Period = RaceMatrix['periods'][number];
@@ -45,23 +46,6 @@ function orderPeriods(periods: Period[], time: TimeEncoding): void {
   }
 }
 
-function lerp(from: number, to: number, fraction: number): number {
-  return from + (to - from) * fraction;
-}
-
-/** Read a value at a period index plus a fractional offset. */
-export function interpolateRaceValue(
-  values: Float64Array,
-  periodIndex: number,
-  fraction: number,
-): number {
-  const from = values[periodIndex];
-  if (!Number.isFinite(from)) return NaN;
-  if (fraction === 0) return from;
-  const to = values[periodIndex + 1];
-  return Number.isFinite(to) ? lerp(from, to, fraction) : NaN;
-}
-
 function fillInteriorGaps(values: Float64Array, gaps: ResolvedRaceOptions['gaps']): void {
   if (gaps === 'drop') return;
 
@@ -73,7 +57,12 @@ function fillInteriorGaps(values: Float64Array, gaps: ResolvedRaceOptions['gaps'
         values[gap] =
           gaps === 'hold'
             ? values[previous]
-            : lerp(values[previous], values[period], (gap - previous) / (period - previous));
+            : interpolateRaceValue(
+                values,
+                previous,
+                (gap - previous) / (period - previous),
+                period,
+              );
       }
     }
     previous = period;
@@ -100,6 +89,7 @@ export function buildRaceMatrix(
   const rowsByKey = new Map<string, Map<Period, Observation>>();
   let firstCollision: { key: string; period: Period; entry: Observation } | undefined;
   let skippedCount = 0;
+  let invalidPeriodCount = 0;
   let firstSkipped: string | undefined;
   let nonFiniteCount = 0;
 
@@ -113,6 +103,7 @@ export function buildRaceMatrix(
     const parsedPeriod = readPeriod(rawPeriod, timeType);
     if (!parsedPeriod || rawKey == null) {
       skippedCount++;
+      if (!parsedPeriod) invalidPeriodCount++;
       firstSkipped ??= !parsedPeriod
         ? `'${time.field}' has an invalid ${timeType} period '${String(rawPeriod)}'`
         : `'${key.field}' has a missing key '${String(rawKey)}'`;
@@ -152,7 +143,7 @@ export function buildRaceMatrix(
   const periods = [...periodsByValue.values()];
   if (periods.length < 2) {
     const suggestion =
-      firstSkipped && skippedCount === rows.length && timeType !== 'ordinal'
+      invalidPeriodCount > 0 && invalidPeriodCount === rows.length && timeType !== 'ordinal'
         ? " For category labels, set type: 'ordinal'."
         : '';
     throw new RaceDataError(

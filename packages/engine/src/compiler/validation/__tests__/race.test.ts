@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ValidationError } from '../../types';
+import { validateSpec } from '../../validate';
 import { validateRaceSpec } from '../race';
 
 const spec = {
@@ -141,6 +142,45 @@ describe('race spec validation', () => {
       'non-empty "field" string',
       'a column in your data',
     );
+  });
+
+  it('reports a misspelled key field with available data columns and a suggested correction', () => {
+    const encoding = { ...spec.encoding, key: { field: 'contry' } };
+
+    expect(validateSpec({ ...spec, encoding })).toEqual({
+      valid: false,
+      normalized: null,
+      errors: [
+        {
+          code: 'DATA_FIELD_MISSING',
+          path: '/encoding/key/field',
+          message:
+            'Spec error: encoding.key.field "contry" does not exist in data. Available columns: year, country, gdp',
+          suggestion:
+            'Use one of the available data columns: year, country, gdp. Did you mean "country"?',
+        },
+      ],
+    });
+  });
+
+  it('checks fields across all rows and reports unknown time, value, label, and color columns', () => {
+    const errors = validate({
+      data: [{ year: 2023, gdp: 3052 }, spec.data[1]],
+      encoding: {
+        ...spec.encoding,
+        time: { field: 'date' },
+        value: { field: 'population' },
+        label: { field: 'name' },
+        color: { field: 'region' },
+      },
+    });
+
+    expect(errors.map(({ code, path }) => [code, path])).toEqual([
+      ['DATA_FIELD_MISSING', '/encoding/time/field'],
+      ['DATA_FIELD_MISSING', '/encoding/value/field'],
+      ['DATA_FIELD_MISSING', '/encoding/label/field'],
+      ['DATA_FIELD_MISSING', '/encoding/color/field'],
+    ]);
   });
 
   it('requires an explicitly typed value channel to be quantitative', () => {
