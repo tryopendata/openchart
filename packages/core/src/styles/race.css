@@ -160,4 +160,11 @@
   .oc-race-row {
     will-change: transform;
   }
+
+  /* line */
+  .oc-race-line-labels {
+    dominant-baseline: central;
+    font-size: var(--oc-body-size);
+    font-variant-numeric: tabular-nums;
+  }
 }
