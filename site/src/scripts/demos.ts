@@ -16,7 +16,7 @@
  * static SVG is showing anyway (the gate lifted, or reduced motion), the live
  * chart replaces it finished.
  */
-import type { ChartSpec, LayerSpec, VizSpec } from "@opendata-ai/openchart-core";
+import type { VizSpec } from "@opendata-ai/openchart-core";
 import { DEMO_ATTR, DEMO_CLASS, DEMO_PAGE_ATTR } from "../lib/demo/markup";
 import { setupDemoCodeToggle } from "./demo-code-toggle";
 import type { LiveHandle, WiredControls } from "./demo-controls";
@@ -195,9 +195,8 @@ function liveHandle(demos: DemoStage[], demo: DemoStage, mounter: DemoMounter): 
       }),
     spec: current,
     update(spec) {
+      demo.live?.update?.(spec);
       demo.spec = spec;
-      // Controls exist only on chart and layer specs (lib/demo/controls.ts checks at build).
-      demo.live?.instance?.update(mounter.withoutWatermark(spec) as ChartSpec | LayerSpec);
     },
     remount(spec, { entrance }) {
       demo.spec = spec;
@@ -306,7 +305,17 @@ export function startDemos(doc: Document): void {
   // A mounted chart has no theme setter, so a theme change rebuilds each live one, in its current state.
   observeTheme(doc, () => {
     if (!loaded) return;
+    const dark = isDarkPage(doc);
     for (const demo of demos.filter((candidate) => candidate.live)) {
+      if (demo.live?.setTheme) {
+        try {
+          demo.live.setTheme(dark);
+        } catch (error) {
+          unmount(demo);
+          showFailure(demo, error);
+        }
+        continue;
+      }
       unmount(demo);
       mountNow(demos, demo, loaded);
     }

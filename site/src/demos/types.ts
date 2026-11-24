@@ -10,7 +10,7 @@ export type DemoSource = { label: string; url?: string };
 /** Another state of the same chart. A button moves the live chart to it with `update`, so the library's update transition plays. */
 export type DemoState = { label: string; spec: VizSpec };
 
-/** Reader controls under the stage. Every control ships `hidden` and is shown once its script has wired it. Chart and layer specs only. */
+/** Reader controls under the stage, hidden until wired. Race specs support state buttons only. */
 export type DemoControls = {
   /** Buttons that switch between `spec` (named `initialLabel`) and each of `others` (one to five). */
   states?: { initialLabel: string; others: readonly DemoState[] };

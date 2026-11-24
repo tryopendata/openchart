@@ -1,6 +1,7 @@
 /** Framework code generated from a spec for the demo code tabs. */
 import type { VizSpec } from "@opendata-ai/openchart-core";
 import { describe, expect, it } from "vitest";
+import { gdpRace } from "../../demos/change-over-time/race";
 import { fixtureBar } from "../../demos/fixtures/bar";
 import { fixtureTable } from "../../demos/fixtures/table";
 import { basicGraph } from "../../demos/flow/graph";
@@ -39,6 +40,16 @@ describe("frameworkSnippets", () => {
     expect(react).toContain('import type { TableSpec } from "@opendata-ai/openchart-core";');
     expect(react).toContain("<DataTable spec={spec} />");
     expect(vanilla).toContain("createTable(container, spec);");
+  });
+
+  it("uses Race and createRace in the race code tabs", () => {
+    const { react, vue, svelte, vanilla } = foldedFrameworkSnippets(gdpRace.spec).shown;
+    expect(react).toContain("<Race spec={spec} />");
+    expect(vue).toContain('<Race :spec="spec" />');
+    expect(svelte).toContain("<Race {spec} />");
+    expect(vanilla).toContain("createRace(container, spec);");
+    for (const code of [react, vue, svelte, vanilla])
+      expect(code).toContain("const spec: RaceSpec");
   });
 
   it("hoists data with more than five rows into a data constant", () => {

@@ -4,11 +4,12 @@
  * mounts, and it is all a reader without JavaScript sees.
  */
 import type { ThemeConfig, VizSpec } from "@opendata-ai/openchart-core";
-import { isGraphSpec, isSankeySpec, isTableSpec } from "@opendata-ai/openchart-core";
+import { isGraphSpec, isRaceSpec, isSankeySpec, isTableSpec } from "@opendata-ai/openchart-core";
 import { renderStaticSVG } from "@opendata-ai/openchart-vanilla/static";
 import { chartTheme } from "./chart-theme";
 import { dropInheritedType } from "./inherited-type";
 import { DEMO_CLASS } from "./markup";
+import { raceStaticSvg } from "./race-static-svg";
 import { slimSvg } from "./slim-svg";
 
 export type StaticSvgOptions = {
@@ -54,6 +55,10 @@ function markStatic(svg: string): string {
  * null when the spec type has no static renderer (table, graph, sankey).
  */
 export function staticSvg(spec: VizSpec, options: StaticSvgOptions): string | null {
+  if (isRaceSpec(spec)) {
+    const theme = options.theme ?? chartTheme(options.dark);
+    return dropInheritedType(markStatic(raceStaticSvg(spec, { ...options, theme })));
+  }
   if (!hasStaticRenderer(spec)) return null;
   const svg = renderStaticSVG(spec, {
     idPrefix: options.idPrefix,
