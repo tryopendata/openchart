@@ -11,17 +11,43 @@ function periods(...values: Array<string | number>) {
 }
 
 describe('race period labels', () => {
-  it('prints integer years as written even beside a date with day precision', () => {
-    expect(formatPeriodLabels(periods(1995, '1996-02-03'), temporal)).toEqual([
-      '1995',
-      'Feb 3, 1996',
-    ]);
+  it('formats RFC-2822 and long-form dates using their stored UTC timestamps', () => {
+    expect(
+      formatPeriodLabels(
+        [
+          { value: 'Sat, 01 Mar 2024 00:00:00 GMT', sortKey: Date.UTC(2024, 2, 1) },
+          { value: 'September 1, 2024 00:00:00 GMT', sortKey: Date.UTC(2024, 8, 1) },
+          { value: 'Tue, 01 Oct 2024 00:00:00 GMT', sortKey: Date.UTC(2024, 9, 1) },
+        ],
+        temporal,
+      ),
+    ).toEqual(['Mar 2024', 'Sep 2024', 'Oct 2024']);
+  });
+
+  it('uses date granularity for an integer year stored with an epoch sort key', () => {
+    expect(
+      formatPeriodLabels(
+        [
+          { value: 1995, sortKey: Date.UTC(1995, 0, 1) },
+          { value: '1996-02-03', sortKey: Date.UTC(1996, 1, 3) },
+        ],
+        temporal,
+      ),
+    ).toEqual(['Jan 1, 1995', 'Feb 3, 1996']);
+  });
+
+  it('prints integer years as written when the matrix uses year sort keys', () => {
+    const years = [1995, 1996].map((value) => ({ value, sortKey: value }));
+    expect(formatPeriodLabels(years, temporal)).toEqual(['1995', '1996']);
   });
 
   it('formats integer years as January 1 in UTC', () => {
-    expect(
-      formatPeriodLabels(periods(1000, 1995, 9999), { ...temporal, format: '%Y-%m-%d' }),
-    ).toEqual(['1000-01-01', '1995-01-01', '9999-01-01']);
+    const years = [1000, 1995, 9999].map((value) => ({ value, sortKey: value }));
+    expect(formatPeriodLabels(years, { ...temporal, format: '%Y-%m-%d' })).toEqual([
+      '1000-01-01',
+      '1995-01-01',
+      '9999-01-01',
+    ]);
   });
 
   it('uses the authored time format in UTC with and without explicit offsets', () => {
@@ -29,10 +55,13 @@ describe('race period labels', () => {
     process.env.TZ = 'Pacific/Honolulu';
     try {
       expect(
-        formatPeriodLabels(periods('2024-03-01T00:30:00+02:00', '2024-03-01T00:30:00'), {
-          ...temporal,
-          format: '%Y-%m-%d %H:%M',
-        }),
+        formatPeriodLabels(
+          [
+            { value: '2024-03-01T00:30:00+02:00', sortKey: Date.UTC(2024, 1, 29, 22, 30) },
+            { value: '2024-03-01T00:30:00', sortKey: Date.UTC(2024, 2, 1, 0, 30) },
+          ],
+          { ...temporal, format: '%Y-%m-%d %H:%M' },
+        ),
       ).toEqual(['2024-02-29 22:30', '2024-03-01 00:30']);
     } finally {
       if (previous === undefined) delete process.env.TZ;
@@ -45,7 +74,8 @@ describe('race period labels', () => {
     { values: ['2024-01-01', '2024-02-01'], labels: ['Jan 2024', 'Feb 2024'] },
     { values: ['2024-01-01', '2024-02-03'], labels: ['Jan 1, 2024', 'Feb 3, 2024'] },
   ])('chooses one granularity for dates $values', ({ values, labels }) => {
-    expect(formatPeriodLabels(periods(...values), temporal)).toEqual(labels);
+    const dates = values.map((value) => ({ value, sortKey: Date.parse(value) }));
+    expect(formatPeriodLabels(dates, temporal)).toEqual(labels);
   });
 
   it('prints ordinal values as text in period order', () => {

@@ -3,8 +3,8 @@ export function valueTickLadder(span: number): number[] {
   const ladder: number[] = [];
   if (span <= 0 || !Number.isFinite(span)) return ladder;
 
-  const firstExponent = Math.max(-324, Math.floor(Math.log10(span)) - 2);
-  for (let exponent = firstExponent; exponent <= 308; exponent++) {
+  const decade = Math.floor(Math.log10(span));
+  for (let exponent = decade - 2; exponent <= decade + 1; exponent++) {
     for (const multiplier of [1, 5]) {
       const step = Number(`${multiplier}e${exponent}`);
       if (step === 0 || !Number.isFinite(step)) continue;
@@ -20,6 +20,10 @@ export function periodTickLadder(): number[] {
   return [1, 5, 10, 50, 100, 500];
 }
 
+/**
+ * Crossfades ticks from adjacent ladder steps. `room` is the pixel spacing at
+ * which a step becomes active, and `fadeFrom` is where finer ticks start to appear.
+ */
 export function crossfadeTicks(
   domain: [number, number],
   pxPerUnit: number,

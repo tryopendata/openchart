@@ -7,6 +7,7 @@ const input: BarStaticInput = {
   top: 4,
   maxLabelWidth: 92,
   maxValueLabelWidth: 34,
+  hasNegatives: true,
   fontSize: { name: 14, value: 12, tick: 12 },
   showPeriod: true,
   showSummary: true,
@@ -44,9 +45,16 @@ const frame: RaceFrame = {
 const formatTick = (value: number) => `${value} km`;
 
 describe('bar race static layout', () => {
-  it('reserves gutters and a tick band and clips rows vertically while keeping the gutters', () => {
-    const plot = { x: 110, y: 42, width: 360, height: 200 };
-    const stat = computeBarStatic(input);
+  it.each([
+    { hasNegatives: false, x: 110, width: 360 },
+    { hasNegatives: true, x: 150, width: 320 },
+  ])('reserves gutters and clips to the row band with hasNegatives=$hasNegatives', ({
+    hasNegatives,
+    x,
+    width,
+  }) => {
+    const plot = { x, y: 42, width, height: 200 };
+    const stat = computeBarStatic({ ...input, hasNegatives });
     expect(stat).toMatchObject({
       plot,
       clip: { x: 10, y: 42, width: 500, height: 200 },
@@ -71,6 +79,37 @@ describe('bar race static layout', () => {
 });
 
 describe('bar race frame geometry', () => {
+  it('keeps the zero line and ticks stable when the visible domain crosses zero', () => {
+    const stat = computeBarStatic({
+      ...input,
+      area: { x: 0, y: 0, width: 600, height: 300 },
+      maxLabelWidth: 80,
+      maxValueLabelWidth: 50,
+    });
+    const leader = { ...frame.items[0], value: 100, valueLabel: '100 km' };
+    const before = barGeometry(
+      stat,
+      {
+        ...frame,
+        domain: [0, 100],
+        items: [leader, { ...frame.items[1], value: 0, valueLabel: '0 km' }],
+      },
+      formatTick,
+    );
+    const after = barGeometry(
+      stat,
+      {
+        ...frame,
+        domain: [-0.001, 100],
+        items: [leader, { ...frame.items[1], value: -0.001, valueLabel: '-0.001 km' }],
+      },
+      formatTick,
+    );
+
+    expect(Math.abs(after.rows[0].bar.x - before.rows[0].bar.x)).toBeLessThanOrEqual(1);
+    expect(after.ticks.map(({ value }) => value)).toEqual(before.ticks.map(({ value }) => value));
+  });
+
   it('places positive and negative bars against zero at their fractional rank positions', () => {
     const geometry = barGeometry(computeBarStatic(input), frame, formatTick);
     expect(geometry.mark).toBe('bar');
@@ -113,8 +152,8 @@ describe('bar race frame geometry', () => {
       { ...frame, items: [{ ...frame.items[1], value: -20, valueLabel: '-20 km' }] },
       formatTick,
     ).rows[0];
-    expect(row.bar.x).toBe(stat.plot.x + input.maxValueLabelWidth + 6);
-    expect(row.value.x - input.maxValueLabelWidth).toBe(stat.plot.x);
+    expect(row.bar.x).toBe(stat.plot.x);
+    expect(row.value.x).toBe(stat.plot.x - 6);
     expect(row.value.x - input.maxValueLabelWidth - row.name.x).toBe(8);
   });
 
@@ -132,61 +171,6 @@ describe('bar race frame geometry', () => {
     expect(geometry.period?.y).toBe(area.height);
     expect(geometry.summary?.y).toBeGreaterThanOrEqual(area.y);
     expect(geometry.summary?.y).toBeLessThan(geometry.period?.y ?? 0);
-  });
-
-  it('maps large finite endpoints and keeps ticks when the domain subtraction would overflow', () => {
-    const stat = computeBarStatic(input);
-    const geometry = barGeometry(
-      stat,
-      {
-        ...frame,
-        domain: [-1e308, 1e308],
-        items: [
-          { ...frame.items[0], value: 1e308 },
-          { ...frame.items[1], value: -1e308 },
-        ],
-      },
-      String,
-    );
-    expect(geometry.rows.map(({ bar }) => [bar.x, bar.width])).toEqual([
-      [310, 160],
-      [150, 160],
-    ]);
-    expect(geometry.ticks.map(({ value, position }) => [value, position])).toEqual([
-      [-1e308, 150],
-      [-5e307, 230],
-      [0, 310],
-      [5e307, 390],
-      [1e308, 470],
-    ]);
-  });
-
-  it('keeps the axis sparse when pixels per unit would overflow on a tiny domain', () => {
-    const stat = computeBarStatic(input);
-    const geometry = barGeometry(
-      stat,
-      { ...frame, domain: [0, 1e-310], items: [{ ...frame.items[0], value: 1e-310 }] },
-      String,
-    );
-    expect(geometry.rows[0].bar).toMatchObject({ x: 110, width: 360 });
-    expect(geometry.ticks.map(({ value, position }) => [value, position])).toEqual([
-      [0, 110],
-      [5e-311, 290],
-      [1e-310, 470],
-    ]);
-  });
-
-  it('keeps distinct ticks when the domain contains only two representable values', () => {
-    const value = Number.MIN_VALUE;
-    const geometry = barGeometry(
-      computeBarStatic(input),
-      { ...frame, domain: [0, value], items: [{ ...frame.items[0], value }] },
-      String,
-    );
-    expect(geometry.ticks.map(({ value: tick, position }) => [tick, position])).toEqual([
-      [0, 110],
-      [value, 470],
-    ]);
   });
 
   it('draws period and summary independently and requires a summary in the frame', () => {
@@ -213,7 +197,12 @@ describe('bar race frame geometry', () => {
     [680, 14],
   ])('fits the name and value gutters at width %i with %i px tick text', (width, tick) => {
     const area = { ...input.area, width };
-    const stat = computeBarStatic({ ...input, area, fontSize: { ...input.fontSize, tick } });
+    const stat = computeBarStatic({
+      ...input,
+      area,
+      hasNegatives: false,
+      fontSize: { ...input.fontSize, tick },
+    });
     const domainEnd = frame.domain[1];
     const geometry = barGeometry(
       stat,

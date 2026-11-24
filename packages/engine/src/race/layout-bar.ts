@@ -5,25 +5,31 @@ const NAME_GAP = 8;
 const VALUE_GAP = 6;
 const TICK_HEIGHT = 22;
 
+/** Layout inputs measured for the whole race and the current chart area. */
 export interface BarStaticInput {
   area: Rect;
   top: number;
   maxLabelWidth: number;
   maxValueLabelWidth: number;
+  /** True when any value in the race matrix is negative. */
+  hasNegatives: boolean;
   fontSize: { name: number; value: number; tick: number };
   showPeriod: boolean;
   showSummary: boolean;
 }
 
+/** Reserves fixed label gutters and clips rows vertically across the full area width. */
 export function computeBarStatic(input: BarStaticInput): RaceBarStatic {
-  const { area, top, maxLabelWidth, maxValueLabelWidth, showPeriod, showSummary } = input;
+  const { area, top, maxLabelWidth, maxValueLabelWidth, hasNegatives, showPeriod, showSummary } =
+    input;
   const nameGutter = maxLabelWidth + NAME_GAP;
   const valueGutter = maxValueLabelWidth + VALUE_GAP;
+  const leftGutter = nameGutter + (hasNegatives ? valueGutter : 0);
   const tickHeight = Math.min(TICK_HEIGHT, Math.max(0, area.height));
   const plot = {
-    x: area.x + nameGutter,
+    x: area.x + leftGutter,
     y: area.y + tickHeight,
-    width: Math.max(0, area.width - nameGutter - valueGutter),
+    width: Math.max(0, area.width - leftGutter - valueGutter),
     height: Math.max(0, area.height - tickHeight),
   };
   const rowHeight = plot.height / top;
@@ -36,7 +42,7 @@ export function computeBarStatic(input: BarStaticInput): RaceBarStatic {
   return {
     plot,
     clip: { x: area.x, y: plot.y, width: Math.max(0, area.width), height: plot.height },
-    nameX: plot.x - NAME_GAP,
+    nameX: area.x + maxLabelWidth,
     rowHeight,
     barHeight: Math.round(rowHeight * 0.74),
     top,
@@ -48,41 +54,29 @@ export function computeBarStatic(input: BarStaticInput): RaceBarStatic {
   };
 }
 
-function shiftDecimal(value: number, places: number): number {
-  if (places === 0) return value;
-  const [coefficient, exponent] = value.toExponential().split('e');
-  return Number(`${coefficient}e${Number(exponent) + places}`);
+/** Maps the frame domain to the fixed plot and supplies the baseline and tick spacing scale. */
+function barScale(stat: RaceBarStatic, [min, max]: RaceFrame['domain']) {
+  const { x, width } = stat.plot;
+  const span = max - min;
+  const scale = (value: number) => x + ((value - min) / (span || 1)) * width;
+  return { scale, zero: scale(0), pxPerUnit: span > 0 ? width / span : 0 };
 }
 
+/** Positions a frame's bars, labels, and ticks on the same x scale. */
 export function barGeometry(
   stat: RaceBarStatic,
   frame: RaceFrame,
   formatTick: (value: number) => string,
 ): RaceBarGeometry {
-  const { plot, clip, rowHeight, barHeight } = stat;
+  const { plot, rowHeight, barHeight } = stat;
   const [min, max] = frame.domain;
-  const rightGutter = Math.max(0, clip.x + clip.width - (plot.x + plot.width));
-  const negativeInset = min < 0 ? Math.min(rightGutter, plot.width) : 0;
-  const xStart = plot.x + negativeInset;
-  const width = plot.width - negativeInset;
-
-  // Rescale extreme domains by a power of ten to preserve decimal tick steps.
-  const rawSpan = max - min;
-  const places =
-    rawSpan === Infinity ? -308 : rawSpan > 0 && width / rawSpan === Infinity ? 308 : 0;
-  const scaledMin = shiftDecimal(min, places);
-  const scaledMax = shiftDecimal(max, places);
-  const span = scaledMax - scaledMin;
-  const smallestStep = places > 0 ? shiftDecimal(Number.MIN_VALUE, places) : 0;
-  const ladder = valueTickLadder(span).filter((step) => step >= smallestStep);
-  const scale = (value: number) => xStart + ((value - scaledMin) / (span || 1)) * width;
-  const zero = scale(0);
+  const { scale, zero, pxPerUnit } = barScale(stat, frame.domain);
   const inset = (rowHeight - barHeight) / 2;
 
   return {
     mark: 'bar',
     rows: frame.items.map((item) => {
-      const x = scale(shiftDecimal(item.value, places));
+      const x = scale(item.value);
       const y = plot.y + item.rankPos * rowHeight + inset;
       const center = y + barHeight / 2;
       return {
@@ -98,11 +92,13 @@ export function barGeometry(
         },
       };
     }),
-    ticks: crossfadeTicks([scaledMin, scaledMax], width / span, ladder).map(
-      ({ value, opacity }) => {
-        const tick = shiftDecimal(value, -places);
-        return { value: tick, opacity, position: scale(value), label: formatTick(tick) };
-      },
+    ticks: crossfadeTicks(frame.domain, pxPerUnit, valueTickLadder(max - min)).map(
+      ({ value, opacity }) => ({
+        value,
+        opacity,
+        position: scale(value),
+        label: formatTick(value),
+      }),
     ),
     period: stat.period ? { ...stat.period, text: frame.period.label } : null,
     summary: stat.summary && frame.summary ? { ...stat.summary, text: frame.summary.label } : null,

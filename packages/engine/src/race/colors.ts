@@ -1,6 +1,12 @@
 import { CATEGORICAL_PALETTE, type RaceEncoding } from '@opendata-ai/openchart-core';
 import type { RaceMatrix, RaceTimeline } from './types';
 
+/**
+ * Assigns palette colors in order of first appearance in integer-period samples,
+ * followed by any remaining keys in matrix order. An omitted color field or one
+ * matching the key field assigns colors per key. An empty palette uses the core
+ * categorical palette.
+ */
 export function assignRaceColors(
   matrix: RaceMatrix,
   timeline: RaceTimeline,

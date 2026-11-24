@@ -1,6 +1,7 @@
 import type { RaceFrame } from '@opendata-ai/openchart-core';
 import type { RaceMatrix, RaceSample } from './types';
 
+/** Labels, colors, and formatting shared by every frame of a race. */
 export interface RacePresentation {
   keys: string[];
   labels: string[];
@@ -8,10 +9,12 @@ export interface RacePresentation {
   formatValue: (value: number) => string;
   periods: RaceMatrix['periods'];
   periodLabels: string[];
+  /** The timeline's effective top, clamped to the key count, for the summary. */
   top: number;
   summary: boolean;
 }
 
+/** Adds display fields and, when enabled, sums values with exact ranks below the effective top. */
 export function buildRaceFrame(sample: RaceSample, presentation: RacePresentation): RaceFrame {
   const { t, periodIndex, items, domainMin, domainMax } = sample;
   const { keys, labels, colors, formatValue, periods, periodLabels, top, summary } = presentation;
