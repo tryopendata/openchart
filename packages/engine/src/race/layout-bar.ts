@@ -26,6 +26,7 @@ export interface BarStaticInput {
   hasNegatives: boolean;
   fontSize: { name: number; value: number; tick: number };
   showPeriod: boolean;
+  measurePeriodWidth?: (fontSize: number) => number;
   showSummary: boolean;
 }
 
@@ -53,9 +54,17 @@ export function computeBarStatic(input: BarStaticInput): RaceBarStatic {
   const rowHeight = plot.height / top;
   const right = plot.x + plot.width;
   const bottom = plot.y + plot.height;
-  const period = showPeriod
-    ? { x: right, y: bottom, fontSize: Math.max(36, Math.min(72, rowHeight * 2.4)) }
-    : null;
+  let period: RaceBarStatic['period'] = null;
+  if (showPeriod) {
+    const fontSize = Math.max(36, Math.min(72, rowHeight * 2.4));
+    const labelWidth = input.measurePeriodWidth?.(fontSize) ?? 0;
+    const budget = plot.width * 0.4;
+    period = {
+      x: right,
+      y: bottom,
+      fontSize: labelWidth > budget ? fontSize * (budget / labelWidth) : fontSize,
+    };
+  }
 
   return {
     plot,

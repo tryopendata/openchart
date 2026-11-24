@@ -2,7 +2,7 @@ import { type CompileWarning, resolveTheme } from '@opendata-ai/openchart-core';
 import { emitSpecWarnings, type WarnSink } from '../compile/spec-sugar';
 import { compile } from '../compiler/index';
 import { resolveFieldFormatter } from '../format/field-format';
-import { assignRaceColors, resolveRaceColors } from './colors';
+import { assignRaceColors, cacheRaceColorAssignment, resolveRaceColors } from './colors';
 import { buildRaceMatrix } from './matrix';
 import { formatPeriodLabels } from './period-labels';
 import { createRaceTimeline } from './timeline';
@@ -96,13 +96,17 @@ export function prepareRace(
     channelFormat: encoding.value.format,
     values: values(),
   });
-  const colorSlots = assignRaceColors(matrix, timeline, encoding.color, encoding.key.field);
-  const frameColors = resolveRaceColors(
-    colorSlots,
-    resolveTheme(normalized.theme).colors.categorical,
+  const palette = resolveTheme(normalized.theme).colors.categorical;
+  const colorSlotsForPalette = assignRaceColors(
+    matrix,
+    timeline,
+    encoding.color,
+    encoding.key.field,
   );
+  const colorSlots = colorSlotsForPalette(palette.length);
+  const frameColors = resolveRaceColors(colorSlots, palette);
 
-  return {
+  const model: RaceModel = {
     spec: normalized,
     specWatermark: authoredWatermark(spec, normalized.watermark),
     matrix,
@@ -120,4 +124,6 @@ export function prepareRace(
     },
     warnings,
   };
+  cacheRaceColorAssignment(model, palette.length, colorSlotsForPalette);
+  return model;
 }

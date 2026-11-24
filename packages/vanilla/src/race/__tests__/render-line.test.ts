@@ -31,11 +31,11 @@ const spec = {
   race: { top: 1, gaps: 'drop', swap: 0, autoplay: false },
 } satisfies RaceSpec;
 
-function setup(mark: RaceSpec['mark'] = 'line') {
+function setup(mark: RaceSpec['mark'] = 'line', input = spec) {
   const svg = document.createElementNS(SVG_NS, 'svg');
   const host = document.createElementNS(SVG_NS, 'g');
   svg.append(host);
-  const model = prepareRace({ ...spec, mark }, {});
+  const model = prepareRace({ ...input, mark }, {});
   const layout = layoutRace(model, {
     width: 360,
     height: 360,
@@ -54,6 +54,30 @@ function setup(mark: RaceSpec['mark'] = 'line') {
 }
 
 describe('race line renderer', () => {
+  it('connects displaced labels with a thin translucent stroke in the series color', () => {
+    const { draw, host } = setup('line', {
+      ...spec,
+      data: [2000, 2001].flatMap((year) =>
+        [100, 99, 98, 97].map((value, key) => ({ year, key: String(key), value })),
+      ),
+      race: { ...spec.race, top: 4 },
+    });
+    const geometry = draw(1);
+    const leaders = [...host.querySelectorAll('.oc-race-line-leader')];
+    expect(leaders.length).toBeGreaterThan(0);
+    expect(leaders).toHaveLength(geometry.series.filter(({ endLabel }) => endLabel.leader).length);
+    for (const [index, { endLabel, color, opacity }] of geometry.series
+      .filter(({ endLabel }) => endLabel.leader)
+      .entries()) {
+      const leader = leaders[index];
+      expect(leader.getAttribute('stroke')).toBe(color);
+      expect(leader.getAttribute('stroke-width')).toBe('1');
+      expect(Number(leader.getAttribute('y1'))).toBeCloseTo(endLabel.leader?.y ?? NaN, 1);
+      expect(Number(leader.getAttribute('y2'))).toBeCloseTo(endLabel.y, 1);
+      expect(Number(leader.getAttribute('opacity'))).toBeLessThan(opacity);
+    }
+  });
+
   it('lifts the zero label above its grid line to clear the first period label', () => {
     const { host, draw } = setup();
     draw(3.1);
@@ -174,7 +198,8 @@ describe('race line renderer', () => {
     expect(Number(label?.getAttribute('y'))).toBe(Number(outgoing?.endLabel.y.toFixed(2)));
     expect(label?.textContent).toBe(`A ${outgoing?.endLabel.value}`);
     expect(Number(path?.getAttribute('opacity'))).toBe(Number(outgoing?.opacity.toFixed(2)));
-    expect(Number(label?.getAttribute('opacity'))).toBe(Number(outgoing?.opacity.toFixed(2)));
+    const labelOpacity = outgoing?.endLabel.opacity ?? outgoing?.opacity;
+    expect(Number(label?.getAttribute('opacity'))).toBe(Number(labelOpacity?.toFixed(2)));
 
     draw(5);
     expect(host.querySelector('path[data-key="A"]')).toBeNull();

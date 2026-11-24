@@ -128,6 +128,10 @@ export interface RaceLineGeometry {
       text: string;
       /** Formatted value at the line's head. */
       value: string;
+      /** Paint opacity when a crossing crowds the label. Defaults to the series opacity. */
+      opacity?: number;
+      /** Line head to connect to the displaced label. */
+      leader?: Point;
     };
   }>;
   /** Period ticks on the horizontal axis. */
@@ -210,6 +214,10 @@ export interface RaceTableGeometry {
     y: number;
     /** Opacity of the row in this frame. */
     opacity: number;
+    /** Zero-based displayed rank, when supplied by the race layout. */
+    rank?: number;
+    /** Whether the row is sliding through the bottom edge of the table. */
+    atEdge?: boolean;
     /** Cell data in the static column order. */
     cells: RaceTableCell[];
   }>;

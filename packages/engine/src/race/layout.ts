@@ -10,7 +10,7 @@ import {
   resolveTheme,
 } from '@opendata-ai/openchart-core';
 import { raceA11y } from './a11y';
-import { resolveRaceColors } from './colors';
+import { raceColorSlots, resolveRaceColors } from './colors';
 import { truncateRaceLabel } from './layout-bar';
 import { layoutForRaceMark } from './marks';
 import { raceSpecWarning } from './prepare';
@@ -36,11 +36,12 @@ function raceLayoutBase(
     watermark,
   );
   const { padding } = theme.spacing;
+  const bottomPadding = model.playback.controls ? Math.max(8, padding) : padding;
   const area = {
     x: padding,
     y: padding + chrome.topHeight,
     width: Math.max(0, width - 2 * padding),
-    height: Math.max(0, height - 2 * padding - chrome.topHeight - chrome.bottomHeight),
+    height: Math.max(0, height - padding - bottomPadding - chrome.topHeight - chrome.bottomHeight),
   };
   const { body } = theme.fonts.sizes;
   const { normal } = theme.fonts.weights;
@@ -58,7 +59,10 @@ function raceLayoutBase(
     a11y: raceA11y(model),
     watermark,
     periods: [...model.periodLabels],
-    colors: resolveRaceColors(model.colorSlots, theme.colors.categorical),
+    colors: resolveRaceColors(
+      raceColorSlots(model, theme.colors.categorical.length),
+      theme.colors.categorical,
+    ),
     labels,
     measureText: options.measureText,
     playback: { ...model.playback },

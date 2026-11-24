@@ -47,6 +47,24 @@ function renderRaceChrome(svg: SVGSVGElement, layout: RaceLayout): void {
   if (layout.a11y.hidden) svg.querySelector('.oc-chrome-ref')?.setAttribute('tabindex', '-1');
 }
 
+/** Measure from the last footer item, including wrapped lines and stacked branding. */
+function controlsLift(svg: SVGSVGElement, layout: RaceLayout): number {
+  const { area, chrome, height, watermark } = layout;
+  const bottom = chrome.bottomAnchorY ?? area.y + area.height;
+  let contentBottom = bottom;
+  for (const key of ['source', 'byline', 'footer', 'brand', 'watermark'] as const) {
+    const element = chrome[key];
+    if (!element || (key === 'watermark' && !watermark)) continue;
+    const text = svg.querySelector<SVGTextElement>(`[data-chrome-key="${key}"]`);
+    const box = text?.getBBox?.();
+    const { fontSize, lineHeight } = element.style;
+    const lines = Math.max(1, text?.childElementCount ?? 0);
+    const fallback = bottom + element.y + fontSize * (lineHeight ?? 1.3) * lines;
+    contentBottom = Math.max(contentBottom, box?.height ? box.y + box.height : fallback);
+  }
+  return Math.max(0, height - contentBottom - 8);
+}
+
 function createMarkHost(root: HTMLElement, svg: SVGSVGElement, layout: RaceLayout) {
   const doc = root.ownerDocument;
   let markHost: RaceMarkHost<RaceMarkType>;
@@ -125,6 +143,9 @@ export function createRaceShell(
     controlsSlot.style.setProperty('--oc-race-progress-color', 'var(--oc-accent)');
   }
   container.append(root);
+  if (layout.playback.controls) {
+    controlsSlot.style.setProperty('--oc-race-controls-lift', `${controlsLift(svg, layout)}px`);
+  }
 
   return {
     root,

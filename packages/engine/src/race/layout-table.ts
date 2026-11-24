@@ -1,11 +1,11 @@
-import {
-  formatPercent,
-  type MeasureTextFn,
-  type RaceLayout,
-  type RaceTableCell,
-  type RaceTableColumn,
-  type Rect,
+import type {
+  MeasureTextFn,
+  RaceLayout,
+  RaceTableCell,
+  RaceTableColumn,
+  Rect,
 } from '@opendata-ai/openchart-core';
+import { format } from 'd3-format';
 import { interpolateRaceValue } from './interpolate';
 import type { RaceMarkEntry } from './marks';
 import type { RaceMatrix, RaceModel } from './types';
@@ -22,6 +22,7 @@ const LABELS: Record<RaceTableColumn, string> = {
 const CELL_PADDING = 10;
 const CHIP_WIDTH_AND_GAP = 14;
 const EMPTY = '—';
+const formatShare = format('.1%');
 // Quartiles alone can all land on whole numbers and miss the formatter's decimal digits.
 const VALUE_WIDTH_SAMPLES = [0.25, 0.5, 0.75, Math.SQRT1_2];
 
@@ -51,7 +52,7 @@ type ShareBase = ReturnType<typeof periodShareBase>;
 function shareText(value: number, base: ShareBase): string {
   if (!base || base.total === 0) return EMPTY;
   const share = value / base.scale / base.total;
-  return Number.isFinite(share * 100) ? formatPercent(share) : EMPTY;
+  return Number.isFinite(share * 100) ? formatShare(share) : EMPTY;
 }
 
 interface TableModelData {
@@ -216,14 +217,13 @@ export const computeTableStatic: RaceMarkEntry<'table'>['computeStatic'] = (
 };
 
 function changeCell(rank: number, previous: number, top: number): RaceTableCell {
-  if (rank >= top) return { column: 'change', direction: 'same', text: EMPTY };
   if (rank === previous) return { column: 'change', direction: 'same', text: '' };
   if (previous >= top) return { column: 'change', direction: 'new', text: 'new' };
   if (rank < previous) return { column: 'change', direction: 'up', text: `↑${previous - rank}` };
   return { column: 'change', direction: 'down', text: `↓${rank - previous}` };
 }
 
-/** Places rows at their smoothed ranks while holding their rank labels at the observed period. */
+/** Slide rows through the table, ranking the visible values at the playhead. */
 export const tableGeometry: RaceMarkEntry<'table'>['geometry'] = (
   model,
   { static: { rowHeight, columns } },
@@ -243,19 +243,42 @@ export const tableGeometry: RaceMarkEntry<'table'>['geometry'] = (
     : null;
   const magnitude = Math.max(-min, max) || 1;
   const span = max / magnitude - min / magnitude || 1;
-  const rows = items.map((item) => {
+  const lastSlot = top - 1;
+  const fold = items.findIndex(({ rankPos }) => rankPos >= lastSlot);
+  const edgeIndex = fold === -1 ? lastSlot : Math.min(fold, lastSlot);
+  const edge = items[edgeIndex];
+  const waiting = items[edgeIndex + 1];
+  let edgePosition = edge?.rankPos ?? top;
+  if (edge && waiting) {
+    // When two rows meet at the fold, only the one closer to it can paint.
+    // Ease in that constraint across the inner half slot so a newcomer
+    // overtaking into the table keeps its fade as it leaves the fold.
+    const blend = Math.max(0, Math.min(1, 1 + 2 * (edge.rankPos - lastSlot)));
+    edgePosition += blend * (top - waiting.rankPos);
+  }
+  const visible = items
+    .slice(0, edgeIndex + Number(edgePosition < top))
+    .sort((a, b) => a.rank - b.rank);
+  const rows = visible.map((item, rank) => {
     const keyIndex = data.keyIndices.get(item.key);
     if (keyIndex === undefined) throw new Error(`Unknown race table key: ${item.key}`);
-    const rank = timeline.periodRank(keyIndex, period);
+    const position = item === edge ? edgePosition : item.rankPos;
+    // A newcomer may already outrank rows above the fold. Include it in
+    // the interior crossing so its cells can move into displayed value order.
+    const atEdge = rank === visible.length - 1 && position > lastSlot;
+    const y = (atEdge ? position : Math.min(lastSlot, position)) * rowHeight;
     const previous = period > 0 ? timeline.periodRank(keyIndex, period - 1) : rank;
-    // Use the local motion around the playhead, independently of the period change label.
-    const movesUp = timeline.rankPos(keyIndex, t + 0.001) < timeline.rankPos(keyIndex, t - 0.001);
+    const motion = timeline.rankPos(keyIndex, t + 0.001) - timeline.rankPos(keyIndex, t - 0.001);
+    const settled =
+      !atEdge &&
+      (t === timeline.periodCount - 1 ||
+        (Math.abs(motion) < 1e-6 && Math.abs(item.rankPos - rank) < 1e-6));
     const cells = columns.map(({ column, width }): RaceTableCell => {
       switch (column) {
         case 'rank':
-          return { column, text: rank < top ? String(rank + 1) : EMPTY };
+          return { column, text: String(rank + 1) };
         case 'change':
-          return changeCell(rank, previous, top);
+          return changeCell(rank, settled ? previous : rank, top);
         case 'name':
           return { column, text: item.label, color: item.color };
         case 'bar': {
@@ -272,8 +295,15 @@ export const tableGeometry: RaceMarkEntry<'table'>['geometry'] = (
       return { column, text: item.valueLabel };
     });
     return {
-      row: { key: item.key, y: item.rankPos * rowHeight, opacity: item.opacity, cells },
-      movesUp,
+      row: {
+        key: item.key,
+        rank,
+        y,
+        opacity: Math.min(1, top - position),
+        atEdge,
+        cells,
+      },
+      movesUp: motion < 0,
     };
   });
   rows.sort((a, b) => Number(a.movesUp) - Number(b.movesUp));

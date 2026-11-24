@@ -96,9 +96,10 @@ export const createRaceLineRenderer: RaceRendererFactory<'line'> = (host, stat, 
   setAttrs(yAxis, { 'text-anchor': 'end', 'dominant-baseline': 'central' });
   axis.append(yAxis, xAxis);
   const paths = createSVGElement('g');
+  const leaders = createSVGElement('g');
   const labels = createSVGElement('g');
   labels.setAttribute('class', 'oc-race-line-labels');
-  root.append(defs, axis, paths, labels);
+  root.append(defs, axis, paths, leaders, labels);
   host.append(root);
 
   function createSeries(key: string) {
@@ -117,7 +118,9 @@ export const createRaceLineRenderer: RaceRendererFactory<'line'> = (host, stat, 
     value.setAttribute('class', 'oc-race-line-value');
     label.append(name, value);
     labels.append(label);
-    return { path, label, name, value };
+    const leader = createSVGElement('line');
+    setAttrs(leader, { class: 'oc-race-line-leader', 'stroke-width': 1 });
+    return { path, label, name, value, leader };
   }
 
   const seriesNodes = new Map<string, ReturnType<typeof createSeries>>();
@@ -142,16 +145,31 @@ export const createRaceLineRenderer: RaceRendererFactory<'line'> = (host, stat, 
         active.add(key);
         setAttrs(nodes.path, { d: linePath(points), stroke: color });
         setNumbers(nodes.path, { opacity });
-        setNumbers(nodes.label, { x: endLabel.x, y: endLabel.y, opacity });
+        const labelOpacity = endLabel.opacity ?? opacity;
+        setNumbers(nodes.label, { x: endLabel.x, y: endLabel.y, opacity: labelOpacity });
+        if (endLabel.leader) {
+          if (!nodes.leader.parentNode) leaders.append(nodes.leader);
+          nodes.leader.setAttribute('stroke', color);
+          setNumbers(nodes.leader, {
+            x1: endLabel.leader.x,
+            y1: endLabel.leader.y,
+            x2: endLabel.x - 1,
+            y2: endLabel.y,
+            opacity: labelOpacity * 0.45,
+          });
+        } else {
+          nodes.leader.remove();
+        }
         nodes.name.setAttribute('fill', color);
         if (nodes.name.textContent !== endLabel.text) nodes.name.textContent = endLabel.text;
         const value = endLabel.text && endLabel.value ? ` ${endLabel.value}` : endLabel.value;
         if (nodes.value.textContent !== value) nodes.value.textContent = value;
       }
-      for (const [key, { path, label }] of seriesNodes) {
+      for (const [key, { path, label, leader }] of seriesNodes) {
         if (active.has(key)) continue;
         path.remove();
         label.remove();
+        leader.remove();
         seriesNodes.delete(key);
       }
     },
