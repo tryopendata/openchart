@@ -377,6 +377,7 @@ Test cases (happy-dom, fake scheduler injected through a test-only seam or `requ
 
 ### Phase 4: line and table marks, mark swap, accessibility
 
+Tag: race-chart-phase-4
 Demo: in the `Testing / Race / Bar` story, `race.update({ ...spec, mark: 'line' })` and `'table'` swap the mark mid-play without losing the playhead; a screen reader reads the description, the per-period hidden table and the pause/seek announcements. (The `Marks` switcher story lands with the gallery in phase 6.)
 Depends on: phase 3
 
