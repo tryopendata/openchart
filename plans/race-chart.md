@@ -440,7 +440,15 @@ Depends on: phase 4, phase 5
 
 | Lane | Size | Owns files | Reads | Tests | Model | Status | Branch | Done when |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| a | M | examples/src/testing/race.stories.tsx, examples/src/gallery/race.stories.tsx, examples/src/gallery/race.demos.ts, examples/src/gallery/registry.ts, docs/race.md, docs/codebase-map.md, scripts/generate-llms.mjs, llms.txt, llms-full.txt, e2e/visual/race.spec.ts, e2e/visual/__screenshots__/ | | | gpt-6.2-sol | pending | | |
+| a | M | examples/src/testing/race.stories.tsx, examples/src/gallery/race.stories.tsx, examples/src/gallery/race.demos.ts, examples/src/gallery/registry.ts, docs/codebase-map.md, scripts/generate-llms.mjs, llms.txt, llms-full.txt, e2e/visual/race.spec.ts, e2e/visual/__screenshots__/ | | | gpt-6.2-sol | pending | | |
+| b | M | site/src/content/docs/change-over-time/race.mdx, site/src/demos/change-over-time/, site/src/components/demo/, site/tests/ | site/AGENTS.md, site/src/content/docs/change-over-time/slope-bump.mdx, site/src/content/docs/behavior/motion.mdx, the race stories | site tests and `bun run build` in site/ | gpt-6.2-sol | pending | | race docs page builds with working interactive demos |
+
+#### Lane 6b brief
+
+- Goal: a "Race" page in the Astro docs site (`site/`), under Change over time, with interactive examples, following the existing page patterns (front matter, `<Demo id>` embeds, a "Fields that matter" table, links to related pages).
+- Behavior: demos registered the way existing `site/src/demos/change-over-time/*` demos are; teach `Demo` to mount `type: "race"` specs through `createRace` (with destroy on unmount and the docs theme). Examples: the GDP bar race with chrome and a value format; the same race as `mark: "line"` and `mark: "table"`; a looping top-5; a fixed scale; a short section on controls, `autoplay: "visible"`, reduced motion, and the runtime API (`play`, `pause`, `seek`, `update` for mark swap, `on('period')`, GIF export). Prose follows the site's voice (plain, specific, no hype) and states when to choose a race versus a bump chart or a small-multiples line chart.
+- Decisions already made: lands after phases 4 and 5, so every mark and export exists; runs as its own Codex lane in parallel with 6a.
+- Done when: `bun run build` in `site/` passes with the page, the site's tests pass, and each demo plays in a real browser at desktop and 360px, light and dark.
 
 ## Log
 
@@ -462,3 +470,4 @@ Depends on: phase 4, phase 5
 - 2026-11-24: lane 2a review: mark registry builds layouts from the contract entry only (no private createLayout); `RaceModel.frameColors` (spec-theme colors) back `raceFrameAt`, on-screen colors stay on the layout; onWarn adapter cached per sink. Phase 1 issues found during 2a fixed in the same follow-up: domain covers every emitted value, null label/color encodings are validation errors, `RaceBarStatic.cornerRadius`, value gutters measured at display precision and capped so the plot keeps 40%, tick band sized from the theme.
 - 2026-11-24: lanes 2a and 2b both added the same optional `measureText` field to `RaceLayoutBase`; the git auto-merge kept both copies, and the duplicate was removed after the merge. Core `race.ts` is listed only under lane 2a's owned files.
 - 2026-11-24: phase 4 base added before the lanes: the scaffolded table cells (`string[]`) could not carry the inline bar, color chip or change arrow, and the line head label lacked a value, so the shared types change once, up front. RFC's `on('period')` was missing from `RaceInstance` and is added (React `onPeriod` in phase 5 needs it); `seekTo` dropped from v1. The `Marks` switcher story moves to phase 6 with the gallery.
+- 2026-11-24: user asked for a docs page in the Astro site (`site/`) with interactive examples, landed by a Codex lane once the feature is ready: lane 6b replaces the planned `docs/race.md`. User also asked for a ce:design polish pass on the race UI.
