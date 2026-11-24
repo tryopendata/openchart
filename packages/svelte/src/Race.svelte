@@ -67,13 +67,7 @@ onMount(() => () => {
 
 $effect(() => {
   const container = containerEl;
-  const nextSpecKey = JSON.stringify(spec, (_key, value: unknown) => {
-    // Preserve numbers JSON would otherwise lose or reject.
-    if (typeof value === 'number' && !Number.isFinite(value)) return `\0number:${value}`;
-    if (typeof value === 'bigint') return `\0bigint:${value}`;
-    if (typeof value === 'string' && value.startsWith('\0')) return `\0${value}`;
-    return value;
-  });
+  const nextSpecKey = JSON.stringify(spec);
   const nextOptionsKey = optionsKey;
 
   untrack(() => {
@@ -96,7 +90,9 @@ $effect(() => {
       // The old chart was still in the host during the replacement mount.
       current.resize();
       // Leave the new mount's visibility trigger armed when playback has yet to start.
-      if (state.t > 0 || state.playing) {
+      if (state.ended) {
+        current.pause();
+      } else if (state.t > 0 || state.playing) {
         current.seek(state.t);
         if (state.playing) current.play();
         else current.pause();

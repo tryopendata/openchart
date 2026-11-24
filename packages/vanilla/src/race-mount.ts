@@ -67,8 +67,10 @@ export interface RaceInstance {
   resize(): void;
   /** Rejects until GIF export arrives in a later release. */
   export(format: 'gif', options?: Pick<GIFExportOptions, 'fps'>): Promise<Blob>;
-  /** Read the playhead, speed, playback status, and displayed period, including after destroy(). */
-  getState(): Pick<RaceClockState, 't' | 'playing' | 'speed'> & { period: RaceFrame['period'] };
+  /** Read the playhead, speed, playback and completion status, and period, including after destroy(). */
+  getState(): Pick<RaceClockState, 't' | 'playing' | 'speed' | 'ended'> & {
+    period: RaceFrame['period'];
+  };
   /** Listen for period crossings and seek destinations. Returns an unsubscribe function. */
   on(event: 'period', cb: (period: RaceFrame['period']) => void): () => void;
   /** Stop playback and remove the mounted race. Safe to call repeatedly. */
@@ -452,8 +454,8 @@ export function createRace(
       throw new Error('GIF export arrives in a later release');
     },
     getState() {
-      const { t, playing, speed } = clock.getState();
-      return { t, playing, speed, period: periodAt(Math.floor(t)) };
+      const { t, playing, speed, ended } = clock.getState();
+      return { t, playing, speed, ended, period: periodAt(Math.floor(t)) };
     },
     on(_event, cb) {
       const listener: PeriodListener = (period) => cb(period);

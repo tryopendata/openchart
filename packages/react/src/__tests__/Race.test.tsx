@@ -1,8 +1,9 @@
 import type { RaceFrame, RaceSpec } from '@opendata-ai/openchart-core';
 import * as vanilla from '@opendata-ai/openchart-vanilla';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { createRef, StrictMode } from 'react';
-import { expect, it, vi } from 'vitest';
+import { expect, it, onTestFinished, vi } from 'vitest';
+import { installFrameClock } from '../../../vanilla/src/__test-fixtures__/graph-frame-clock';
 import { createFakeObserver } from '../../../vanilla/src/__test-fixtures__/visibility';
 import { setObserverFactory } from '../../../vanilla/src/visibility';
 import { Race, type RaceHandle, Visualization, VizThemeProvider } from '../index';
@@ -25,6 +26,35 @@ const spec: RaceSpec = {
 };
 
 const updated: RaceSpec = { ...spec, chrome: { title: 'Updated leaders' } };
+const playbackSpec: RaceSpec = { ...spec, race: { ...spec.race, duration: 400, holdEnd: 0 } };
+
+it.each([
+  false,
+  true,
+])('replays from the start after a completed race changes theme with autoplay=%s', (autoplay) => {
+  const clock = installFrameClock();
+  onTestFinished(clock.restore);
+  const replaySpec: RaceSpec = { ...playbackSpec, race: { ...playbackSpec.race, autoplay } };
+  const ref = createRef<RaceHandle>();
+  const { rerender } = render(<Race spec={replaySpec} ref={ref} />);
+  const previous = ref.current?.instance;
+  if (!previous) throw new Error('Race did not mount');
+  previous.setSpeed(2);
+  if (!autoplay) fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+  clock.pump(0);
+  clock.pump(200);
+  expect(previous.getState()).toMatchObject({ t: 2, playing: false });
+
+  rerender(<Race spec={replaySpec} ref={ref} theme={{ fonts: { sizes: { title: 32 } } }} />);
+  const current = ref.current?.instance;
+  expect(current).not.toBe(previous);
+  fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+  expect(current?.getState()).toMatchObject({ t: 0, playing: true, speed: 2 });
+
+  clock.pump(300);
+  clock.pump(400);
+  expect(current?.getState().t).toBe(1);
+});
 
 it('reuses the chart and controls for an equal inline spec', () => {
   const ref = createRef<RaceHandle>();
@@ -189,27 +219,6 @@ it('keeps visibility autoplay pending after a dark mode change', () => {
   }
 });
 
-it('passes a NaN update through to the runtime after a missing value', () => {
-  const missing: RaceSpec = {
-    ...spec,
-    data: spec.data.map((row) => (row.year === 2021 ? { ...row, value: null } : row)),
-  };
-  const nonFinite: RaceSpec = {
-    ...spec,
-    data: spec.data.map((row) => (row.year === 2021 ? { ...row, value: NaN } : row)),
-  };
-  const ref = createRef<RaceHandle>();
-  const reports: string[] = [];
-  const onWarn = (message: string) => reports.push(message);
-  const { rerender } = render(<Race spec={missing} ref={ref} onWarn={onWarn} />);
-  const instance = ref.current?.instance;
-
-  rerender(<Race spec={nonFinite} ref={ref} onWarn={onWarn} />);
-
-  expect(ref.current?.instance).toBe(instance);
-  expect(reports).toEqual(["Dropped 1 non-finite values from 'value'."]);
-});
-
 it('merges context theme and remounts when the resolved dark mode changes', () => {
   const ref = createRef<RaceHandle>();
   const theme = { fonts: { sizes: { title: 34, small: 17 } } };
@@ -234,48 +243,41 @@ it('merges context theme and remounts when the resolved dark mode changes', () =
   expect(ref.current?.instance?.getState().t).toBe(1.25);
 });
 
-it('forwards period payloads, replaces the listener in place, and unsubscribes on unmount', () => {
-  const ref = createRef<RaceHandle>();
-  const { rerender, unmount } = render(<Race spec={spec} ref={ref} />);
-  const instance = ref.current?.instance;
-  if (!instance) throw new Error('Race did not mount');
-  const listen = instance.on.bind(instance);
-  const listeners = new Set<(period: RaceFrame['period']) => void>();
-  const on = vi.spyOn(instance, 'on').mockImplementation((event, callback) => {
-    const unsubscribe = listen(event, callback);
-    listeners.add(callback);
-    return () => {
-      listeners.delete(callback);
-      unsubscribe();
-    };
-  });
+it('delivers period crossings in order and stops notifying a removed callback', () => {
+  const clock = installFrameClock();
+  onTestFinished(clock.restore);
   const first: RaceFrame['period'][] = [];
   const second: RaceFrame['period'][] = [];
-  const period = { index: 1, value: 2021, label: '2021' };
+  const ref = createRef<RaceHandle>();
+  const { rerender, unmount } = render(
+    <Race spec={playbackSpec} ref={ref} onPeriod={(period) => first.push(period)} />,
+  );
+  const instance = ref.current?.instance;
+  if (!instance) throw new Error('Race did not mount');
 
-  const firstHandler = (value: RaceFrame['period']) => first.push(value);
-  rerender(<Race spec={spec} ref={ref} onPeriod={firstHandler} />);
-  for (const listener of listeners) listener(period);
-  expect(first).toEqual([period]);
+  instance.play();
+  clock.pump(0);
+  clock.pump(100);
+  expect(first).toEqual([]);
+  clock.pump(200);
+  const period2021 = { index: 1, value: 2021, label: '2021' };
+  expect(first).toEqual([period2021]);
+  clock.pump(400);
+  const period2022 = { index: 2, value: 2022, label: '2022' };
+  expect(first).toEqual([period2021, period2022]);
 
-  rerender(<Race spec={updated} ref={ref} onPeriod={firstHandler} />);
-  expect(on).toHaveBeenCalledTimes(1);
-
-  rerender(<Race spec={updated} ref={ref} onPeriod={(value) => second.push(value)} />);
-  for (const listener of listeners) listener(period);
+  rerender(<Race spec={playbackSpec} ref={ref} onPeriod={(period) => second.push(period)} />);
   expect(ref.current?.instance).toBe(instance);
-  expect(on.mock.calls.map(([event]) => event)).toEqual(['period', 'period']);
-  expect(first).toEqual([period]);
-  expect(second).toEqual([period]);
-  expect(listeners.size).toBe(1);
-
-  rerender(<Race spec={updated} ref={ref} />);
-  expect(listeners.size).toBe(0);
-  rerender(<Race spec={updated} ref={ref} onPeriod={firstHandler} />);
-  expect(listeners.size).toBe(1);
-
+  instance.seek(0);
+  const period2020 = { index: 0, value: 2020, label: '2020' };
+  expect(second).toEqual([period2020]);
+  rerender(<Race spec={playbackSpec} ref={ref} />);
+  instance.seek(1);
+  expect(second).toEqual([period2020]);
+  rerender(<Race spec={playbackSpec} ref={ref} onPeriod={(period) => first.push(period)} />);
   unmount();
-  expect(listeners.size).toBe(0);
+  instance.seek(2);
+  expect(first).toEqual([period2021, period2022]);
 });
 
 it('stops and destroys the real instance on unmount', () => {

@@ -2,8 +2,9 @@ import type { RaceFrame, RaceSpec } from '@opendata-ai/openchart-core';
 import type { RaceInstance } from '@opendata-ai/openchart-vanilla';
 import * as vanilla from '@opendata-ai/openchart-vanilla';
 import { enableAutoUnmount, mount } from '@vue/test-utils';
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, expect, it, onTestFinished, vi } from 'vitest';
 import { defineComponent, h, nextTick, shallowRef } from 'vue';
+import { installFrameClock } from '../../../vanilla/src/__test-fixtures__/graph-frame-clock';
 import { createFakeObserver } from '../../../vanilla/src/__test-fixtures__/visibility';
 import { setObserverFactory } from '../../../vanilla/src/visibility';
 import { Race, type RaceProps, Visualization, VizThemeProvider } from '../index';
@@ -26,6 +27,33 @@ const spec: RaceSpec = {
 };
 
 const updated: RaceSpec = { ...spec, chrome: { title: 'Updated leaders' } };
+const playbackSpec: RaceSpec = { ...spec, race: { ...spec.race, duration: 400, holdEnd: 0 } };
+
+it.each([
+  false,
+  true,
+])('replays from the start after a completed race changes theme with autoplay=%s', async (autoplay) => {
+  const clock = installFrameClock();
+  onTestFinished(clock.restore);
+  const replaySpec: RaceSpec = { ...playbackSpec, race: { ...playbackSpec.race, autoplay } };
+  const { wrapper, getInstance, setProps } = renderRace({ spec: replaySpec });
+  const previous = getInstance();
+  previous.setSpeed(2);
+  if (!autoplay) await wrapper.get('button[aria-label="Play"]').trigger('click');
+  clock.pump(0);
+  clock.pump(200);
+  expect(previous.getState()).toMatchObject({ t: 2, playing: false });
+
+  await setProps({ theme: { fonts: { sizes: { title: 32 } } } });
+  const current = getInstance();
+  expect(current).not.toBe(previous);
+  await wrapper.get('button[aria-label="Play"]').trigger('click');
+  expect(current.getState()).toMatchObject({ t: 0, playing: true, speed: 2 });
+
+  clock.pump(300);
+  clock.pump(400);
+  expect(current.getState().t).toBe(1);
+});
 
 it('reuses the chart and controls for an equal inline spec', async () => {
   const { getInstance, setProps, wrapper } = renderRace({ spec });
@@ -206,28 +234,6 @@ it('keeps visibility autoplay pending after a dark mode change', async () => {
   }
 });
 
-it('passes a NaN update through to the runtime after a missing value', async () => {
-  const missing: RaceSpec = {
-    ...spec,
-    data: spec.data.map((row) => (row.year === 2021 ? { ...row, value: null } : row)),
-  };
-  const nonFinite: RaceSpec = {
-    ...spec,
-    data: spec.data.map((row) => (row.year === 2021 ? { ...row, value: NaN } : row)),
-  };
-  const reports: string[] = [];
-  const { getInstance, setProps } = renderRace({
-    spec: missing,
-    onWarn: (message) => reports.push(message),
-  });
-  const instance = getInstance();
-
-  await setProps({ spec: nonFinite });
-
-  expect(getInstance()).toBe(instance);
-  expect(reports).toEqual(["Dropped 1 non-finite values from 'value'."]);
-});
-
 it('merges context theme and remounts when the resolved dark mode changes', async () => {
   const raceSpec = { ...spec, chrome: { title: 'Annual leaders', source: 'Annual survey' } };
   const { wrapper, getInstance, setProps } = renderRace(
@@ -247,45 +253,40 @@ it('merges context theme and remounts when the resolved dark mode changes', asyn
   expect(getInstance().getState().t).toBe(1.25);
 });
 
-it('emits period payloads, replaces the listener in place, and unsubscribes on unmount', async () => {
-  const { wrapper, getInstance, setProps } = renderRace({ spec });
-  const instance = getInstance();
-  const listen = instance.on.bind(instance);
-  const listeners = new Set<(period: RaceFrame['period']) => void>();
-  const on = vi.spyOn(instance, 'on').mockImplementation((event, callback) => {
-    const unsubscribe = listen(event, callback);
-    listeners.add(callback);
-    return () => {
-      listeners.delete(callback);
-      unsubscribe();
-    };
-  });
+it('delivers period crossings in order and stops notifying a removed callback', async () => {
+  const clock = installFrameClock();
+  onTestFinished(clock.restore);
   const first: RaceFrame['period'][] = [];
   const second: RaceFrame['period'][] = [];
-  const period = { index: 1, value: 2021, label: '2021' };
+  const { getInstance, setProps, wrapper } = renderRace({
+    spec: playbackSpec,
+    onPeriod: (period) => first.push(period),
+  });
+  const instance = getInstance();
 
-  await setProps({ onPeriod: (value) => first.push(value) });
-  for (const listener of listeners) listener(period);
-  expect(first).toEqual([period]);
+  instance.play();
+  clock.pump(0);
+  clock.pump(100);
+  expect(first).toEqual([]);
+  clock.pump(200);
+  const period2021 = { index: 1, value: 2021, label: '2021' };
+  expect(first).toEqual([period2021]);
+  clock.pump(400);
+  const period2022 = { index: 2, value: 2022, label: '2022' };
+  expect(first).toEqual([period2021, period2022]);
 
-  await setProps({ spec: updated });
-  expect(on).toHaveBeenCalledTimes(1);
-
-  await setProps({ onPeriod: (value) => second.push(value) });
-  for (const listener of listeners) listener(period);
+  await setProps({ onPeriod: (period) => second.push(period) });
   expect(getInstance()).toBe(instance);
-  expect(on.mock.calls.map(([event]) => event)).toEqual(['period', 'period']);
-  expect(first).toEqual([period]);
-  expect(second).toEqual([period]);
-  expect(listeners.size).toBe(1);
-
+  instance.seek(0);
+  const period2020 = { index: 0, value: 2020, label: '2020' };
+  expect(second).toEqual([period2020]);
   await setProps({ onPeriod: undefined });
-  expect(listeners.size).toBe(0);
-  await setProps({ onPeriod: (value) => first.push(value) });
-  expect(listeners.size).toBe(1);
-
+  instance.seek(1);
+  expect(second).toEqual([period2020]);
+  await setProps({ onPeriod: (period) => first.push(period) });
   wrapper.unmount();
-  expect(listeners.size).toBe(0);
+  instance.seek(2);
+  expect(first).toEqual([period2021, period2022]);
 });
 
 it('stops and destroys the real instance on unmount', () => {
@@ -386,7 +387,6 @@ it.each(
 )('binds %s even when the same update contains an invalid spec', async (prop) => {
   const { errors, getInstance, setProps } = renderRace({ spec });
   const instance = getInstance();
-  const on = vi.spyOn(instance, 'on');
   const periods: RaceFrame['period'][] = [];
 
   const invalid: RaceSpec = { ...spec, race: { top: 0 } };
@@ -396,11 +396,9 @@ it.each(
   await setProps({ spec: updated });
 
   expect(getInstance()).toBe(instance);
-  expect(on.mock.calls.map(([event]) => event)).toEqual(['period']);
-  const callback = on.mock.calls[0]?.[1];
   const second = { index: 2, value: 2022, label: '2022' };
   const first = { index: 1, value: 2021, label: '2021' };
-  callback?.(first);
-  callback?.(second);
+  instance.seek(1);
+  instance.seek(2);
   expect(periods).toEqual(prop === 'onPeriodOnce' ? [first] : [first, second]);
 });

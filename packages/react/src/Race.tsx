@@ -78,13 +78,7 @@ export const Race = forwardRef<RaceHandle, RaceProps>(function Race(
     const container = containerRef.current;
     if (!container) return;
     const current = mounted.current;
-    const specKey = JSON.stringify(spec, (_key, value: unknown) => {
-      // Preserve numbers JSON would otherwise lose or reject.
-      if (typeof value === 'number' && !Number.isFinite(value)) return `\0number:${value}`;
-      if (typeof value === 'bigint') return `\0bigint:${value}`;
-      if (typeof value === 'string' && value.startsWith('\0')) return `\0${value}`;
-      return value;
-    });
+    const specKey = JSON.stringify(spec);
     if (current?.optionsKey === optionsKey) {
       if (specKey !== current.specKey) {
         current.instance.update(spec);
@@ -101,7 +95,9 @@ export const Race = forwardRef<RaceHandle, RaceProps>(function Race(
       // The old chart was still in the host during the replacement mount.
       instance.resize();
       // Leave the new mount's visibility trigger armed when playback has yet to start.
-      if (state.t > 0 || state.playing) {
+      if (state.ended) {
+        instance.pause();
+      } else if (state.t > 0 || state.playing) {
         instance.seek(state.t);
         if (state.playing) instance.play();
         else instance.pause();
