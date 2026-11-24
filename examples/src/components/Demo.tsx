@@ -19,6 +19,7 @@ import {
   DataTable,
   GeoMap,
   Graph,
+  Race,
   Sankey,
   TileMap,
 } from '@opendata-ai/openchart-react';
@@ -78,7 +79,7 @@ function renderViz(spec: VizSpec) {
       case 'barlist':
         return <BarList spec={spec} />;
       case 'race':
-        throw new Error('Race specs render through createRace');
+        return <Race spec={spec} />;
     }
   }
   // ChartSpec | LayerSpec

@@ -8,6 +8,8 @@ import { captureStory } from './capture';
  * container renders at roughly ~358px after Ladle padding — inside the
  * compact (<400px) breakpoint band, which is where the 7.9.x dropped-label
  * bugs lived and which the desktop `visual` project (1280x900) never sees.
+ * The race entries use 360x844 on purpose to capture the narrower bar and
+ * table layouts.
  *
  * Story set: all mobile-regression stories plus three canonical chart types.
  * Screenshot names carry a `-mobile` suffix for readability; Playwright
@@ -53,3 +55,15 @@ for (const story of stories) {
     await captureStory(page, story.slug, `${story.name}-mobile.png`);
   });
 }
+
+test.describe('race at 360px', () => {
+  test.use({ viewport: { width: 360, height: 844 } });
+
+  test('visual mobile: race-bar-mid', async ({ page }) => {
+    await captureStory(page, 'testing--race--bar-mid', 'race-bar-mid-mobile.png');
+  });
+
+  test('visual mobile: race-table-end', async ({ page }) => {
+    await captureStory(page, 'testing--race--table-end', 'race-table-end-mobile.png');
+  });
+});
