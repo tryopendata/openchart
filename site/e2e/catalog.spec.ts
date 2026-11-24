@@ -279,12 +279,12 @@ test("race values match measured figures and fit right through playback", async 
         const style = getComputedStyle(label);
         canvas.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
         const measured = canvas.measureText(label.textContent ?? "").width;
-        const { x, width } = label.getBBox();
-        maxWidthDifference = Math.max(
-          maxWidthDifference,
-          Math.abs(label.getComputedTextLength() - measured),
-        );
-        maxOverrun = Math.max(maxOverrun, x + width - edge);
+        const advance = label.getComputedTextLength();
+        maxWidthDifference = Math.max(maxWidthDifference, Math.abs(advance - measured));
+        // Use the text advance, not getBBox(): Chromium on Linux snaps the box to whole pixels.
+        const start = Number(label.getAttribute("x"));
+        const right = label.getAttribute("text-anchor") === "end" ? start : start + advance;
+        maxOverrun = Math.max(maxOverrun, right - edge);
         samples++;
       }
     }
