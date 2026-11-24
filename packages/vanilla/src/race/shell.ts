@@ -106,6 +106,13 @@ export function createRaceShell(
 
   renderRaceChrome(svg, layout);
   const { markHost, controlsSlot } = createMarkHost(root, svg, layout.mark);
+  controlsSlot.style.setProperty('--oc-race-padding', `${theme.spacing.padding}px`);
+  if (layout.chrome.source) {
+    controlsSlot.style.setProperty('--oc-source-size', `${layout.chrome.source.style.fontSize}px`);
+  }
+  if (root.style.getPropertyValue('--oc-accent')) {
+    controlsSlot.style.setProperty('--oc-race-progress-color', 'var(--oc-accent)');
+  }
   container.append(root);
 
   return {

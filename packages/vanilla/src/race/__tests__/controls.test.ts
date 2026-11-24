@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { createRaceControls } from '../controls';
 
-function setup() {
+function setup(periodLabels = ['1980', '1981', '1982']) {
   const actions: Array<'toggle' | ['seek' | 'step', number]> = [];
   const controls = createRaceControls({
-    periodLabels: ['1980', '1981', '1982'],
+    periodLabels,
     onToggle: () => actions.push('toggle'),
     onSeek: (t) => actions.push(['seek', t]),
     onStep: (delta) => actions.push(['step', delta]),
@@ -36,12 +36,18 @@ describe('race controls', () => {
     const { controls, button, actions } = setup();
     expect(button.type).toBe('button');
     expect(button.getAttribute('aria-label')).toBe('Play');
+    const playIcon = button.querySelector('svg[aria-hidden="true"] path')?.getAttribute('d');
+    expect(playIcon).toBeTruthy();
     button.click();
     controls.update({ t: 0, playing: true, speed: 1, ended: false });
     expect(button.getAttribute('aria-label')).toBe('Pause');
+    const pauseIcon = button.querySelector('svg[aria-hidden="true"] path')?.getAttribute('d');
+    expect(pauseIcon).toBeTruthy();
+    expect(pauseIcon).not.toBe(playIcon);
     button.click();
     controls.update({ t: 2, playing: false, speed: 1, ended: true });
     expect(button.getAttribute('aria-label')).toBe('Play');
+    expect(button.querySelector('svg path')?.getAttribute('d')).toBe(playIcon);
     expect(actions).toEqual(['toggle', 'toggle']);
   });
 
@@ -62,6 +68,23 @@ describe('race controls', () => {
     expect(scrubber.getAttribute('aria-valuetext')).toBe('1981');
     expect(readout.textContent).toBe('1981');
     expect(actions).toEqual([]);
+  });
+
+  it('fills the scrubber in proportion to the playback position', () => {
+    const { controls, scrubber } = setup();
+    expect(scrubber.style.getPropertyValue('--oc-race-progress')).toBe('0%');
+    controls.update({ t: 1, playing: true, speed: 1, ended: false });
+    expect(scrubber.style.getPropertyValue('--oc-race-progress')).toBe('50%');
+    controls.update({ t: 2, playing: false, speed: 1, ended: true });
+    expect(scrubber.style.getPropertyValue('--oc-race-progress')).toBe('100%');
+  });
+
+  it('reserves width for the longest period label before playback reaches it', () => {
+    const { controls, readout } = setup(['1980', 'January 1981', '1982']);
+    expect(readout.style.minWidth).toBe('min(12ch, 40%)');
+    controls.update({ t: 1, playing: true, speed: 1, ended: false });
+    expect(readout.textContent).toBe('January 1981');
+    expect(readout.style.minWidth).toBe('min(12ch, 40%)');
   });
 
   it('seeks to the fractional position chosen with the scrubber', () => {
