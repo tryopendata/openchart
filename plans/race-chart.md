@@ -336,6 +336,7 @@ Test cases:
 
 ### Phase 3: bar race in the browser
 
+Tag: race-chart-phase-3
 Demo: `bun run dev`, open the `Testing / Race / Bar` story: the GDP race autoplays when scrolled into view, pauses, scrubs, steps with arrow keys, rescales, loops with `loop: true`, survives resize mid-play and theme toggles, and opens on the final frame under reduced motion.
 Depends on: phase 2
 
