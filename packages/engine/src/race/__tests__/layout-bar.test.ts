@@ -58,10 +58,10 @@ describe('bar race static layout', () => {
     const stat = computeBarStatic({ ...input, hasNegatives });
     expect(stat).toMatchObject({
       plot,
-      clip: { x: 10, y: 42, width: 500, height: 200 },
+      clip: { x: 10, y: 42, width: 500, height: 104 },
       nameX: 102,
-      rowHeight: 50,
-      barHeight: 37,
+      rowHeight: 26,
+      barHeight: 19,
       cornerRadius: 4,
       top: 4,
       axisY: 42,
@@ -82,6 +82,55 @@ describe('bar race static layout', () => {
 });
 
 describe('bar race frame geometry', () => {
+  it.each([
+    [330, 12],
+    [330, 14],
+    [360, 12],
+    [360, 14],
+    [680, 12],
+    [680, 14],
+  ])('keeps ten rows clear of the period at %i px with %i px ticks', (width, tick) => {
+    const stat = computeBarStatic({
+      ...input,
+      area: { ...input.area, width, height: 390 },
+      top: 10,
+      fontSize: { ...input.fontSize, tick },
+      showSummary: false,
+    });
+    const geometry = barGeometry(
+      stat,
+      {
+        ...frame,
+        items: [{ ...frame.items[0], value: 44, valueLabel: '44 km', rankPos: 9 }],
+      },
+      formatTick,
+    );
+    const [row] = geometry.rows;
+    expect(row.value.text).toBe('44 km');
+    const labelBottom = row.value.y + input.fontSize.value / 2;
+    expect(labelBottom).toBeLessThan(geometry.period!.y - geometry.period!.fontSize);
+    expect(labelBottom).toBeLessThanOrEqual(stat.clip.y + stat.clip.height);
+  });
+
+  it('keeps both a period and a summary clear of a short leaderboard', () => {
+    const stat = computeBarStatic({
+      ...input,
+      area: { x: 0, y: 0, width: 360, height: 100 },
+      top: 2,
+    });
+    const geometry = barGeometry(
+      stat,
+      { ...frame, items: [{ ...frame.items[0], rankPos: 1 }] },
+      formatTick,
+    );
+    const [row] = geometry.rows;
+    const labelBottom = row.value.y + input.fontSize.value / 2;
+    expect(row.bar.height).toBeGreaterThan(0);
+    expect(labelBottom).toBeLessThanOrEqual(stat.clip.y + stat.clip.height);
+    expect(labelBottom).toBeLessThan(geometry.summary!.y - input.fontSize.value);
+    expect(geometry.summary!.y).toBeLessThan(geometry.period!.y - geometry.period!.fontSize);
+  });
+
   it('keeps the zero line and ticks stable when the visible domain crosses zero', () => {
     const stat = computeBarStatic({
       ...input,
@@ -121,17 +170,17 @@ describe('bar race frame geometry', () => {
         key: 'A',
         color: 'blue',
         opacity: 1,
-        bar: { x: 250, y: 61, width: 150, height: 37 },
-        name: { x: 102, y: 79.5, text: 'Team A' },
-        value: { x: 406, y: 79.5, text: '30 km', anchor: 'start' },
+        bar: { x: 250, y: 52, width: 150, height: 19 },
+        name: { x: 102, y: 61.5, text: 'Team A' },
+        value: { x: 406, y: 61.5, text: '30 km', anchor: 'start' },
       },
       {
         key: 'B',
         color: 'orange',
         opacity: 0.5,
-        bar: { x: 200, y: 223.5, width: 50, height: 37 },
-        name: { x: 102, y: 242, text: 'Team B' },
-        value: { x: 194, y: 242, text: '-10 km', anchor: 'end' },
+        bar: { x: 200, y: 136.5, width: 50, height: 19 },
+        name: { x: 102, y: 146, text: 'Team B' },
+        value: { x: 194, y: 146, text: '-10 km', anchor: 'end' },
       },
     ]);
   });
@@ -169,15 +218,15 @@ describe('bar race frame geometry', () => {
     const stat = computeBarStatic({ ...input, area });
     const geometry = barGeometry(stat, frame, formatTick);
     expect(stat.plot.height).toBe(8);
+    expect(stat.clip.height).toBe(8);
     for (const row of geometry.rows) {
       for (const value of Object.values(row.bar)) {
         expect(Number.isFinite(value)).toBe(true);
         expect(value).toBeGreaterThanOrEqual(0);
       }
     }
-    expect(geometry.period?.y).toBe(area.height);
-    expect(geometry.summary?.y).toBeGreaterThanOrEqual(area.y);
-    expect(geometry.summary?.y).toBeLessThan(geometry.period?.y ?? 0);
+    expect(geometry.period).toBeNull();
+    expect(geometry.summary).toBeNull();
   });
 
   it('draws period and summary independently and requires a summary in the frame', () => {

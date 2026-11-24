@@ -12,6 +12,8 @@ import {
   compileTileMap,
 } from '../../../packages/engine/src/compile';
 import { migrateSpecV8 } from '../../../packages/engine/src/migration/v8';
+import { layoutRace } from '../../../packages/engine/src/race/layout';
+import { prepareRace } from '../../../packages/engine/src/race/prepare';
 
 const modules = import.meta.glob('../**/*.{stories,layouts}.tsx', { eager: true }) as Record<
   string,
@@ -39,6 +41,9 @@ for (const [file, module] of Object.entries(modules)) collect(module.__authoredV
 function compile(spec: VizSpec, width: number) {
   const options = { width, height: 400, onWarn: () => {} };
   if ('layer' in spec) return compileLayer(spec, options);
+  if ('type' in spec && spec.type === 'race') {
+    return layoutRace(prepareRace(spec, { onWarn: () => {} }), options);
+  }
   if ('mark' in spec) return compileChart(spec, options);
   switch (spec.type) {
     case 'table':
