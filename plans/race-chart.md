@@ -427,7 +427,7 @@ Test cases:
 ### Phase 5: wrappers and export
 
 Demo: `<Race spec />` renders in React, Vue and Svelte stories and through `<Visualization>`; `race.export('gif')` produces a GIF whose frames match `raceGeometryAt` at the sampled t, capped at 1200 frames.
-Depends on: phase 3
+Depends on: phase 3, phase 4
 
 | Lane | Size | Owns files | Reads | Tests | Model | Status | Branch | Done when |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -459,8 +459,20 @@ Depends on: phase 4, phase 5
 
 | Lane | Size | Owns files | Reads | Tests | Model | Status | Branch | Done when |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| a | M | examples/src/testing/race.stories.tsx, examples/src/gallery/race.stories.tsx, examples/src/gallery/race.demos.ts, examples/src/gallery/registry.ts, docs/codebase-map.md, scripts/generate-llms.mjs, llms.txt, llms-full.txt, e2e/visual/race.spec.ts, e2e/visual/__screenshots__/ | | | gpt-6.2-sol | pending | | |
+| a | M | examples/src/testing/race.stories.tsx, examples/src/gallery/race.stories.tsx, examples/src/gallery/race.demos.ts, examples/src/gallery/registry.ts, docs/codebase-map.md, scripts/generate-llms.mjs, llms.txt, llms-full.txt, e2e/visual/stories.spec.ts, e2e/visual/stories-mobile.spec.ts, e2e/visual/__screenshots__/ | | | gpt-6.2-sol | pending | | |
 | b | M | site/src/content/docs/change-over-time/race.mdx, site/src/demos/change-over-time/, site/src/components/demo/, site/tests/ | site/AGENTS.md, site/src/content/docs/change-over-time/slope-bump.mdx, site/src/content/docs/behavior/motion.mdx, the race stories | site tests and `bun run build` in site/ | gpt-6.2-sol | pending | | race docs page builds with working interactive demos |
+
+#### Lane 6a brief
+
+- Goal: the race chart is discoverable and guarded: a gallery page, a Marks switcher story, generated LLM references, the codebase map, and visual baselines.
+- Behavior:
+  - Gallery: a "Race" page (`examples/src/gallery/race.stories.tsx` plus its `race.demos.ts` sidecar registered in `registry.ts`, following the existing sidecar pattern) with the GDP race as bar, line and table, a looping top-5, and a fixed-scale race, each with chrome written in the site's editorial voice.
+  - Testing stories: add a "Marks" story with a bar / line / table switcher that calls `instance.update({ ...spec, mark })` so the live swap keeps the playhead, and static baseline stories that set `autoplay: false` and `seek(t)` on mount at fixed `t` values (0, 8.5, the last period) for each mark.
+  - llms: `scripts/generate-llms.mjs` documents the race spec (the type, `mark`, encoding channels, `top`, timing, `rescale`, `loop`, `autoplay`, the line `window`, the runtime API) the way it documents the other spec types; regenerate `llms.txt` and `llms-full.txt` so `bun run check:generated` passes.
+  - `docs/codebase-map.md`: a Race section listing the engine (`prepareRace`, `layoutRace`, `raceGeometryAt`, `RACE_MARKS`, timeline), vanilla (`createRace`, shell, renderers, controls, clock, a11y, export) and wrapper files, plus the gotchas (options read once so theme changes remount; table mark is HTML; geometry is pure in t).
+  - Visual baselines: entries in `e2e/visual/stories.spec.ts` (bar, line, table at mid-race; bar dark; fixed scale) and `stories-mobile.spec.ts` (bar and table at 360px), captured from the static stories so they don't depend on the JS clock. Generate darwin baselines with `bun run test:visual:update` for the new entries only and confirm no existing baseline changed.
+- Out of scope: the Astro docs site (lane 6b), the external skill.
+- Done when: the gallery page renders all three marks in Ladle; the Marks switcher swaps mid-play without a jump; `bun run check:generated` passes; `bun run test:visual` passes with the new baselines and no changed existing ones.
 
 #### Lane 6b brief
 
@@ -493,3 +505,5 @@ Depends on: phase 4, phase 5
 - 2026-11-24: ce:design pass on the race UI (user request): the playback strip was restyled in a separate Codex run (foreman/race-polish, merged into phase 3). Styled scrubber with a played portion, SVG icon button, strip aligned to the chart inset, fixed-width readout.
 - 2026-11-24: lane 5b brief written. The table mark renders HTML, so GIF export covers bar and line and rejects for table in v1. 5b takes `race-mount.ts` and its test, so it starts after lane 4c merges.
 - 2026-11-24: lane 4b review: the table took rank from the smoothed `rankPos`, which gave duplicate ranks at period boundaries. The brief now says exact ranks. The table also honors `rescale` for its bar column, and share shows a dash when a period mixes signs.
+- 2026-11-24: lane 6a brief written. Baselines go into the existing `stories.spec.ts` and `stories-mobile.spec.ts` (darwin-only, like the rest) from static stories at fixed t, not a new spec file.
+- 2026-11-24: phase 5 now depends on phase 4, because 5b edits `race-mount.ts` after 4c. Lane 5a already ran against phase 3 and merges after phase 4 tags.
