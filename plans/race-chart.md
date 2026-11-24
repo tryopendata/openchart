@@ -456,6 +456,7 @@ Depends on: phase 3, phase 4
 
 ### Phase 6: docs, gallery, generated references, baselines
 
+Tag: race-chart-phase-6
 Demo: the gallery has a Race page with all three marks; `bun run check:generated` and `bun run test:visual` pass.
 Depends on: phase 4, phase 5
 
