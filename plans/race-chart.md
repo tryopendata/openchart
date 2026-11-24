@@ -60,7 +60,7 @@ Layout:
     packages/engine/src/race/prepare.ts      prepareRace: validate, normalize, matrix, timeline, colors, labels, formatter -> RaceModel (phase 2)
     packages/engine/src/race/layout.ts       layoutRace: theme, chrome, size, mark static via registry, a11y -> RaceLayout (phase 2)
     packages/engine/src/race/geometry.ts     raceFrameAt, raceGeometryAt: dispatch through the registry (phase 2)
-    packages/engine/src/race/marks.ts        RACE_MARKS registry: mark -> { measure, computeStatic, geometry } (phase 2 registers bar; phase 4 scaffold adds line, table)
+    packages/engine/src/race/marks.ts        RACE_MARKS registry: mark -> { computeStatic(model, base, mark, measureText), geometry } (phase 2 registers bar; phase 4 scaffold adds line, table)
     packages/engine/src/race/layout-line.ts  line static + geometry (phase 4)
     packages/engine/src/race/layout-table.ts table static + geometry (phase 4)
     packages/engine/src/race/a11y.ts         raceA11y: accessible name, description, per-period rows (phase 4; phase 2 scaffold stub returns title-only metadata)
@@ -118,7 +118,7 @@ export interface RaceTimeline {
 }
 export interface RaceModel {
   spec: NormalizedRaceSpec; matrix: RaceMatrix; timeline: RaceTimeline;
-  colors: string[]; periodLabels: string[]; formatValue: (value: number) => string;
+  colorSlots: Array<number | string>; periodLabels: string[]; formatValue: (value: number) => string;
   playback: RacePlayback; warnings: string[];
 }
 
@@ -133,7 +133,8 @@ export function createRaceTimeline(matrix: RaceMatrix, options: RaceTimelineOpti
 // engine/src/race/period-labels.ts
 export function formatPeriodLabels(periods: RaceMatrix['periods'], time: EncodingChannel): string[];
 // engine/src/race/colors.ts
-export function assignRaceColors(matrix: RaceMatrix, timeline: RaceTimeline, palette: readonly string[], colorEncoding: RaceEncoding['color'], keyField: string): string[];
+export function assignRaceColors(matrix: RaceMatrix, timeline: RaceTimeline, colorEncoding: RaceEncoding['color'], keyField: string): Array<number | string>; // palette index or constant
+export function resolveRaceColors(slots: Array<number | string>, palette: readonly string[]): string[];
 // engine/src/race/frame.ts
 export interface RacePresentation { keys: string[]; labels: string[]; colors: string[]; formatValue: (value: number) => string; periods: RaceMatrix['periods']; periodLabels: string[]; summary: boolean; top: number }
 export function buildRaceFrame(sample: RaceSample, presentation: RacePresentation): RaceFrame;
@@ -195,6 +196,8 @@ export type RaceGeometry = RaceBarGeometry | RaceLineGeometry | RaceTableGeometr
 interface RaceLayoutBase {
   width: number; height: number; chrome: ResolvedChrome; theme: ResolvedTheme; a11y: A11yMetadata;
   watermark: boolean; periods: string[]; playback: RacePlayback; warnings?: CompileWarning[];
+  /** Per-key colors for the active theme, and per-key display labels (truncated to fit). */
+  colors: string[]; labels: string[];
   /** Area below chrome where the mark draws. */
   area: Rect;
 }
@@ -298,7 +301,7 @@ Depends on: phase 1
 
 | Lane | Size | Owns files | Reads | Tests | Model | Status | Branch | Done when |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| a | M | packages/engine/src/race/prepare.ts, packages/engine/src/race/layout.ts, packages/engine/src/race/geometry.ts, packages/engine/src/race/marks.ts, packages/core/src/types/race.ts, packages/engine/src/race/__tests__/prepare.test.ts, packages/engine/src/race/__tests__/layout.test.ts, packages/engine/src/race/__tests__/geometry.test.ts | contracts, packages/engine/src/barlist/compile-barlist.ts | packages/engine/src/race/__tests__/prepare.test.ts, packages/engine/src/race/__tests__/layout.test.ts, packages/engine/src/race/__tests__/geometry.test.ts | gpt-6.2-sol | pending | | engine pipeline tests pass, `race-frames.ts --geometry` prints geometry |
+| a | M | packages/engine/src/race/prepare.ts, packages/engine/src/race/layout.ts, packages/engine/src/race/geometry.ts, packages/engine/src/race/marks.ts, packages/core/src/types/race.ts, packages/engine/src/race/__tests__/prepare.test.ts, packages/engine/src/race/__tests__/layout.test.ts, packages/engine/src/race/__tests__/geometry.test.ts, scripts/race-frames.ts | contracts, packages/engine/src/barlist/compile-barlist.ts | packages/engine/src/race/__tests__/prepare.test.ts, packages/engine/src/race/__tests__/layout.test.ts, packages/engine/src/race/__tests__/geometry.test.ts | gpt-6.2-sol | pending | | engine pipeline tests pass, `race-frames.ts --geometry` prints geometry |
 | b | M | packages/vanilla/src/race/shell.ts, packages/vanilla/src/race/renderers.ts, packages/vanilla/src/race/__tests__/shell.test.ts | contracts, packages/vanilla/src/barlist-renderer.ts, packages/vanilla/src/barlist-mount.ts | packages/vanilla/src/race/__tests__/shell.test.ts | gpt-6.2-sol | pending | | shell tests pass |
 
 Test cases:
@@ -310,12 +313,12 @@ Test cases:
 #### Lane 2a brief
 
 - Goal: the engine pipeline: spec to `RaceModel` once, model plus size to `RaceLayout`, and model plus layout plus t to geometry, with bar registered in `RACE_MARKS`.
-- Interface: `prepareRace`, `layoutRace`, `raceFrameAt`, `raceGeometryAt` and the `RACE_MARKS` entry type as scaffolded. One additive shared-type change, owned by this lane: `RaceLayoutBase` gains `colors: string[]` (per-key colors for the active theme) and `measureText?` if the brand renderer needs it (match `BarListLayout`).
+- Interface: `prepareRace`, `layoutRace`, `raceFrameAt`, `raceGeometryAt` and the `RACE_MARKS` entry type as scaffolded. `RaceLayoutBase.colors` and `labels` already exist (phase 1 boundary fixes); this lane may add `measureText?` to it if the brand renderer needs it (match `BarListLayout`).
 - Behavior:
-  - `prepareRace`: validate and normalize through the shared `compile` from `compiler/index` (as `compileBarList` does), emit warnings through `emitSpecWarnings`, throw on a non-race spec. Then `buildRaceMatrix(data, encoding, race.gaps, warn)`; resolve duration (`step` × (P - 1), else `duration`, else clamp(P × 700, 8000, 90000)); `swapPeriods = swap / (durationMs / (P - 1))`; `createRaceTimeline` with 24 samples per period; warn when `race.top` exceeds the key count; `formatPeriodLabels(matrix.periods, encoding.time)` with `race.period.format` overriding the channel format; `assignRaceColors` with the light theme's categorical palette (`resolveTheme(spec.theme)`); `formatValue` from `resolveFieldFormatter` with the value channel format, `labels.format` winning, and the matrix's finite values as context.
-  - `layoutRace`: merge and resolve the theme (`mergeThemeConfig`, `resolveTheme`, `adaptTheme` for dark mode); `computeChrome` exactly as `compileBarList` does; `area` = the rect below the chrome inside padding with the options' width and height; `colors` = model colors, each light categorical palette entry mapped to the same index of the dark palette in dark mode, other colors through `adaptColorForDarkMode`; measure with `options.measureText` or `estimateTextWidth`: `maxLabelWidth` over all labels (capped at 40% of the area width), `maxValueLabelWidth` over `formatValue` of the global min and max; call the mark's `measure` and `computeStatic`; `a11y` from `raceA11y(title)`; carry `periods` (the labels), `playback`, `watermark`, warnings.
-  - Bar entry in `marks.ts`: `measure` returns the widths above; `computeStatic` calls `computeBarStatic` with theme font sizes and `showPeriod = race.period !== false`, `showSummary = race.summary === 'sum'`, `hasNegatives` = any finite matrix value below 0; `geometry` calls `barGeometry(stat, frame, model.formatValue)`.
-  - `raceFrameAt(model, t)`: `buildRaceFrame(model.timeline.sample(clamped t), presentation)` with `top = model.timeline.top`. `raceGeometryAt` builds the same frame with `layout.colors` and dispatches through `RACE_MARKS[layout.mark]`.
+  - `prepareRace`: validate and normalize through the shared `compile` from `compiler/index` (as `compileBarList` does), emit warnings through `emitSpecWarnings`, throw on a non-race spec. Then `buildRaceMatrix(data, encoding, race.gaps, warn)`; resolve duration (`step` × (P - 1), else `duration`, else clamp(P × 700, 8000, 90000)); `swapPeriods = swap / (durationMs / (P - 1))`; `createRaceTimeline` with 24 samples per period; warn when `race.top` exceeds the key count; `formatPeriodLabels(matrix.periods, encoding.time)` with `race.period.format` overriding the channel format; `assignRaceColors` into `model.colorSlots` (theme-independent); `formatValue` from `resolveFieldFormatter` with the value channel format, `labels.format` winning, and the matrix's finite values as context.
+  - `layoutRace`: merge and resolve the theme (`mergeThemeConfig`, `resolveTheme`, `adaptTheme` for dark mode); `computeChrome` exactly as `compileBarList` does; `area` = the rect below the chrome inside padding with the options' width and height; `colors` = `resolveRaceColors(model.colorSlots, theme.colors.categorical)` for the resolved (light or dark) theme; `labels` = matrix labels truncated with an ellipsis to 40% of the area width using `options.measureText` or `estimateTextWidth`; call the mark's `computeStatic(model, base, mark, measureText)`; `a11y` from `raceA11y(title)`; carry `periods` (the labels), `playback`, `watermark`, warnings.
+  - Bar entry in `marks.ts`: `computeStatic` measures `maxLabelWidth` over `layout.labels` and `maxValueLabelWidth` over `formatValue` of the global min and max, then calls `computeBarStatic` with theme font sizes and `showPeriod = race.period !== false`, `showSummary = race.summary === 'sum'`, `hasNegatives` = any finite matrix value below 0; `geometry` calls `barGeometry(stat, frame, model.formatValue)`.
+  - `raceFrameAt(model, t)`: `buildRaceFrame(model.timeline.sample(clamped t), presentation)` with `top = model.timeline.top`. `raceGeometryAt` builds the same frame with `layout.colors` and `layout.labels` and dispatches through `RACE_MARKS[layout.mark]`.
 - Decisions already made: the rank cache lives only in the model; layout is plain data and never holds functions other than an optional `measureText` (as barlist does); line and table register in phase 4.
 - Out of scope: line and table entries, the real accessibility description (phase 4), DOM.
 - Done when: the three test files cover every prepare, layout and geometry case above and pass; `bun scripts/race-frames.ts --geometry` prints three geometries.
@@ -384,3 +387,4 @@ Depends on: phase 4, phase 5
 - 2026-11-24: lane 1b decisions: bar clip spans area width and plot height; negative domains inset the scale's left end by the value-label space; undersized areas clamp to non-negative geometry; period ladder [1, 5, 10, 50, 100, 500] so it nests.
 - 2026-11-24: lane 1b review: the per-frame negative inset made the scale jump when the visible min crossed zero; replaced by `BarStaticInput.hasNegatives` (decided once per race from the matrix), which shifts `plot.x`. Period labels reuse the matrix's `sortKey` instead of re-parsing.
 - 2026-11-24: lane 1a review: entering/exiting keys now pin raw rank to `top` around first/last presence so they enter and leave at the fold; unparseable periods and missing keys warn; mixed year/date periods use epoch-ms sortKeys.
+- 2026-11-24: phase 1 boundary review (opus), five findings accepted: colors become theme-independent slots resolved in layout; `RaceLayoutBase` carries `colors` and truncated `labels`; mark registry drops `measure` for `computeStatic(..., measureText)`; race validation checks fields exist in data; interpolation moves to `race/interpolate.ts`.
