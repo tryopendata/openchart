@@ -367,7 +367,7 @@ Shared scales means shared **domains**, not just a shared plot rect. `compileLay
 | Framework wrappers | `packages/react/src/Race.tsx`, `packages/vue/src/Race.ts`, and `packages/svelte/src/Race.svelte`. The corresponding `Visualization` components dispatch race specs to these wrappers. |
 | Examples | `examples/src/gallery/race.stories.tsx` shows the three marks and playback options. `examples/src/testing/race.stories.tsx` has the live Marks switcher and fixed-playhead visual fixtures. |
 
-`instance.update()` applies a new spec, including its `theme`, and retains the playhead across a mark swap. `createRace()` reads its mount options once. To change the mount-level theme or dark mode in vanilla, destroy and remount. The framework wrappers handle that remount for their callers.
+`instance.update()` applies a new spec, including its `theme`, and retains the playhead across a mark swap. `instance.setTheme({ theme, darkMode })` swaps the mount-level theme or color scheme in place and keeps the clock (t, playing, ended, speed); the framework wrappers and the docs site call it instead of remounting. Other mount options (`autoResize`, `watermark`) are read once.
 
 ## Visual regression
 

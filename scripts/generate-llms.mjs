@@ -305,7 +305,7 @@ A race plays a ranked leaderboard over a sequence of periods. Supply one row per
 Mount with \`createRace(container, spec, options?)\` from \`@opendata-ai/openchart-vanilla\` or use the \`Race\` or \`Visualization\` component in React, Vue, and Svelte. Static SVG rendering does not support race specs.
 
 - \`play()\` and \`pause()\` control playback. \`seek(t)\` clamps a finite period index to the available periods and accepts fractional positions. A non-finite position throws \`RangeError\`. \`setSpeed(multiplier)\` takes a finite positive playback multiplier.
-- \`update({ ...spec, mark: "line" })\` switches marks and retains the playhead. An invalid update throws and leaves the mounted race intact. Remount to change mount-level theme or dark mode options.
+- \`update({ ...spec, mark: "line" })\` switches marks and retains the playhead. An invalid update throws and leaves the mounted race intact. \`setTheme({ theme, darkMode })\` replaces the mount-level theme or color scheme in place and keeps the playhead, playing state and speed.
 - \`getState()\` returns \`{ t, period, playing, speed, ended }\`. \`on("period", callback)\` reports period crossings and seek destinations and returns an unsubscribe function.
 - \`resize()\` remeasures the host. \`destroy()\` stops playback and removes the race. \`export("gif", { fps }?)\` returns a \`Promise<Blob>\` for bar and line races.
 
