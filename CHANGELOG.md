@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [9.1.0] - 2026-11-24
+
 Motion is on by default for every visualization type. Graphs keep their own defaults (500ms enter, 300ms update and exit). See the "Motion on by default" section of [the v9 migration guide](https://github.com/tryopendata/openchart/blob/main/docs/migrating-v9.md) for opt-outs.
 
 ### Behaviour changes
@@ -28,6 +30,13 @@ Motion is on by default for every visualization type. Graphs keep their own defa
 - Sankey label gutters are sized with the host's text measure when it provides one, instead of the built-in estimate. A first- or last-column value that would run past the frame once a gutter reaches its 35% cap is left off the label; the tooltip still shows it.
 
 ### Added
+
+- Race charts (`type: 'race'`): an animated top-N leaderboard over time, the "bar chart race" seen on social media. Encode `time`, `key` and `value`, pick the mark with `mark: 'bar' | 'line' | 'table'`, and the same data plays as racing bars, a line chart whose leaders are labelled at the line ends, or a table whose rows slide between ranks. `race` sets the playback: `top`, `duration` (defaults to 700ms per period, kept between 8 and 90 seconds), `step`, `swap`, `rescale`, `gaps`, `holdEnd`, `loop`, `autoplay` (default `'visible'`), `controls`, `period` and `summary`. Values are interpolated between periods and ranks swap smoothly; colours stay with their entity, including across `update()`.
+  - Mount with `createRace(container, spec, options)` in vanilla, or `<Race />` in React, Vue and Svelte. The instance exposes `play()`, `pause()`, `seek()`, `setSpeed()`, `update()`, `setTheme()`, `getState()` and a `period` event.
+  - Built-in playback controls: play/pause, a scrubber and a period readout, with keyboard stepping (arrow keys step a period, Space plays and pauses). A live region announces the standings on pause, step and scrub, and stays quiet during playback. Under reduced motion, play steps one period at a time.
+  - `export('gif')` renders the whole race as an animated GIF.
+  - `renderRaceStaticSVG(spec, options)` from `@opendata-ai/openchart-vanilla/static` renders the final period without a browser, and `renderStaticSVG` accepts race specs.
+  - Docs page at `/docs/change-over-time/race/`, gallery entries, and LLM reference coverage.
 
 - Sankey `overrides`: `overrides.compact` (under 400px) and `overrides.medium` (400 to 700px) change `chrome` (merged with the top-level chrome), `other`, `nodeSort`, `nodeLabelAlign` and `nodePadding` at that breakpoint, for example to fold small flows into "Other" only on phones.
 
