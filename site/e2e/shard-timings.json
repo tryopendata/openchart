@@ -1,0 +1,30 @@
+{
+  "desktop": {
+    "analytics.spec.ts": 53.5,
+    "blog-hero.spec.ts": 6.6,
+    "blog-mobile.spec.ts": 50.1,
+    "blog.spec.ts": 25.3,
+    "catalog.spec.ts": 29,
+    "controls.spec.ts": 5.6,
+    "demo-fit.spec.ts": 49.6,
+    "docs-areas.spec.ts": 22.4,
+    "gallery.spec.ts": 52.9,
+    "landing.spec.ts": 110.9,
+    "search.spec.ts": 15.5,
+    "site.spec.ts": 13.4
+  },
+  "mobile": {
+    "analytics.spec.ts": 0,
+    "blog-hero.spec.ts": 6.7,
+    "blog-mobile.spec.ts": 51.8,
+    "blog.spec.ts": 32.4,
+    "catalog.spec.ts": 37.9,
+    "controls.spec.ts": 5.2,
+    "demo-fit.spec.ts": 47.3,
+    "docs-areas.spec.ts": 21.8,
+    "gallery.spec.ts": 68.4,
+    "landing.spec.ts": 97.4,
+    "search.spec.ts": 14.6,
+    "site.spec.ts": 13.4
+  }
+}

@@ -23,6 +23,7 @@ Run these from `site/`. They are the only supported way to build, test, and run 
 | `make build` | Static build into dist/, then the acceptance tests over it |
 | `make preview` | Serve the production build on PORT_WEB |
 | `make e2e` | Browser and accessibility tests against the production build |
+| `make e2e-timings` | Run the browser tests and rewrite `e2e/shard-timings.json`, the per-file times CI splits its four browser shards by |
 | `bunx playwright test <file>` | One browser test file, after a build |
 | `make deploy-check` | Build, then serve dist/ through `wrangler pages dev` and check headers, redirects, the RSS feed, the search index files, trailing-slash URLs and the 404 page |
 | `make deploy-preview BRANCH=<name>` | Build and upload a preview (needs Cloudflare variables, see Deploy) |
@@ -132,7 +133,7 @@ Pages project `openchart`, settings (recreate them from this list):
 - Build watch paths: `site/*`, `docs/*`, `packages/*`, `examples/src/data/*`, `package.json`, `bun.lock`, `bunfig.toml`.
 - Variables: because `wrangler.jsonc` exists, it is the source of truth for the project's variables and Cloudflare Pages ignores dashboard ones. `PUBLIC_POSTHOG_KEY` (the shared Steamfield public client key) lives in `wrangler.jsonc`'s `env.production.vars`, which reaches production builds while branch previews get none. `astro build` reads `PUBLIC_POSTHOG_KEY` (and `PUBLIC_POSTHOG_HOST` if set) from its environment (`import.meta.env` in `BaseLayout.astro`).
 
-The Site workflow (`.github/workflows/site.yml`) only checks: lint, check, test, build, the browser tests and `make deploy-check`, on pushes and pull requests that touch the site, `docs/`, `packages/`, `examples/src/data/`, `bun.lock`, the root `package.json` or `bunfig.toml`, the workflow itself or `.github/actions/setup-bun/`. Don't mark its check required: it is path-filtered, so a pull request that touches none of those paths never runs it and would wait forever.
+The Site workflow (`.github/workflows/site.yml`) only checks: lint, check, test, build, the browser tests (four parallel shards balanced by `e2e/shard-timings.json` through `E2E_SHARD`) and `make deploy-check`, on pushes and pull requests that touch the site, `docs/`, `packages/`, `examples/src/data/`, `bun.lock`, the root `package.json` or `bunfig.toml`, the workflow itself or `.github/actions/setup-bun/`. Don't mark its check required: it is path-filtered, so a pull request that touches none of those paths never runs it and would wait forever.
 
 Manual uploads: `make deploy-check` needs no account. `make deploy` and `make deploy-preview BRANCH=<name>` remain for uploading from a machine; they need `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` exported and stop before building when one is missing. `make deploy-preview BRANCH=main` stops too: `main` is production, so use `make deploy`. Both run the workspace's wrangler (`bunx --no-install`) and never download one. Agents never deploy: no `make deploy*`, no `wrangler pages deploy`.
 

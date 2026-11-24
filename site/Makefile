@@ -8,7 +8,7 @@ PORT_E2E ?= 4322
 export PORT_WEB PORT_E2E
 
 .DEFAULT_GOAL := help
-.PHONY: help install dev lint format check test coverage build preview e2e clean deploy-check deploy-preview deploy
+.PHONY: help install dev lint format check test coverage build preview e2e e2e-timings clean deploy-check deploy-preview deploy
 
 help: ## List targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-15s %s\n", $$1, $$2}'
@@ -71,6 +71,10 @@ preview: ## Serve the production build on PORT_WEB
 
 e2e: ## Browser and accessibility tests against the production build
 	node scripts/e2e.mjs
+
+e2e-timings: ## Run the browser tests and record per-file times for CI's shard split
+	PLAYWRIGHT_JSON_OUTPUT_NAME=playwright-report/timings.json node scripts/e2e.mjs -- --reporter=json,dot
+	node scripts/e2e-timings.mjs playwright-report/timings.json
 
 clean: ## Remove build output, test output and Astro caches
 	rm -rf dist .astro .astro-cache .vite-cache node_modules/.astro coverage playwright-report test-results

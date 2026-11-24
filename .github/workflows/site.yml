@@ -33,10 +33,9 @@ concurrency:
 
 jobs:
   checks:
-    name: Lint, check, test, build, browser and Pages checks
-    # The same runner image as the browser job in ci.yml.
+    name: Lint, check, test, build and Pages checks
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 30
 
     permissions:
       contents: read
@@ -71,6 +70,46 @@ jobs:
         working-directory: site
         run: make build
 
+      # -o build reuses the dist/ built above instead of building it again.
+      - name: Pages headers, canonical URLs and 404
+        working-directory: site
+        run: make -o build deploy-check
+
+  browser:
+    # One shard per runner. scripts/e2e-shards.mjs splits the spec files by the
+    # run times in e2e/shard-timings.json, so the shards finish together; refresh
+    # them with `make e2e-timings` when they drift apart.
+    name: Browser and accessibility tests (${{ matrix.shard }}/${{ strategy.job-total }})
+    # The same runner image as the browser job in ci.yml.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    permissions:
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup
+        uses: ./.github/actions/setup-bun
+
+      # The site and the specs resolve the library packages through their dist/.
+      - name: Build library packages
+        run: bun run build
+
+      # Each shard builds its own dist/: faster than waiting on a shared build job.
+      - name: Build site
+        working-directory: site
+        run: bunx astro build
+
       - name: Cache Playwright browsers
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -85,18 +124,15 @@ jobs:
 
       - name: Browser and accessibility tests
         working-directory: site
+        env:
+          E2E_SHARD: ${{ matrix.shard }}/${{ strategy.job-total }}
         run: node scripts/e2e.mjs
-
-      # -o build reuses the dist/ built above instead of building it again.
-      - name: Pages headers, canonical URLs and 404
-        working-directory: site
-        run: make -o build deploy-check
 
       - name: Upload browser test output on failure
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: site-playwright-report
+          name: site-playwright-report-${{ matrix.shard }}
           path: |
             site/playwright-report/
             site/test-results/

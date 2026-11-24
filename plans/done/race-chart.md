@@ -2,7 +2,7 @@
 
 Skill: deliver. Profile: deliver. On resume, re-read shared/lane-dag.md before anything else.
 plan_graph: /Users/riley/.claude/plugins/cache/claude-essentials/ce/6.0.0/shared/scripts/plan_graph.py
-Started: 2026-11-24. Timebox: none. Landing branch: deliver/race-chart.
+Started: 2026-11-24. Timebox: none. Landing branch: deliver/race-chart. Done: 2026-11-24, merged to main and released as 9.1.0.
 Gate: `bun run build && bun run typecheck && bun run lint && bun run check:generated && bun run test` (50s). Filtered tests: `bun x vitest run <path>`. Typecheck: `bun run build && bun run typecheck`.
 Runner: plain commands. All code, scaffolds included, is written by Codex delegates through foreman (`foreman start <name> --new-worktree --from <base> --setup "bun install --frozen-lockfile" --write --model gpt-6.2-sol`), at the user's request. The orchestrator writes contracts, reviews diffs, runs the gate and merges.
 Worktree setup: `bun install --frozen-lockfile`.

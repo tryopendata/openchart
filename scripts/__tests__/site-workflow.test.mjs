@@ -45,7 +45,20 @@ describe("site workflow", () => {
       deploys.map(({ job, step }) => `${job}: ${step.name ?? step.run}`),
       [],
     );
-    assert.deepEqual(Object.keys(workflow.jobs), ["checks"]);
+    assert.deepEqual(Object.keys(workflow.jobs), ["checks", "browser"]);
+  });
+
+  test("browser tests run as a shard matrix numbered 1 to N", () => {
+    const browser = workflow.jobs.browser;
+    const shards = browser.strategy.matrix.shard;
+    assert.deepEqual(
+      shards,
+      shards.map((_, i) => i + 1),
+    );
+    assert.equal(browser.strategy["fail-fast"], false, "one failing shard must not cancel the others");
+    const run = browser.steps.find((step) => step.run === "node scripts/e2e.mjs");
+    assert.ok(run, "the browser job runs node scripts/e2e.mjs");
+    assert.equal(run.env?.E2E_SHARD, "${{ matrix.shard }}/${{ strategy.job-total }}");
   });
 
   test("runs are serialized per ref and main never cancels", () => {
