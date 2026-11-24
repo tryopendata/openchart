@@ -97,6 +97,8 @@ export type { UseTableReturn } from './hooks/useTable';
 export { useTable } from './hooks/useTable';
 export type { UseTableStateOptions, UseTableStateReturn } from './hooks/useTableState';
 export { useTableState } from './hooks/useTableState';
+export type { RaceHandle, RaceProps } from './Race';
+export { Race } from './Race';
 export type { SankeyHandle, SankeyProps } from './Sankey';
 export { Sankey } from './Sankey';
 export type { VizThemeProviderProps } from './ThemeContext';
