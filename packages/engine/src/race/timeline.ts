@@ -1,4 +1,4 @@
-import { interpolateRaceValue } from './matrix';
+import { interpolateRaceValue } from './interpolate';
 import { sampleRanks, smoothRanks } from './rank-smoothing';
 import type { RaceMatrix, RaceSampleItem, RaceTimeline, RaceTimelineOptions } from './types';
 

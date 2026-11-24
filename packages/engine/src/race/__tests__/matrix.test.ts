@@ -215,6 +215,22 @@ describe('race matrix', () => {
     expect(warnings).toEqual([expect.stringMatching(/\b2\b.*country.*null/i)]);
   });
 
+  it('reports too few periods without an ordinal hint when rows have missing keys', () => {
+    const rows = [
+      { year: 2000, gdp: 4 },
+      { country: null, year: 2001, gdp: 8 },
+    ];
+
+    expect(() => buildRaceMatrix(rows, encoding, 'drop', () => {})).toThrow(
+      expect.objectContaining({
+        constructor: RaceDataError,
+        code: 'TOO_FEW_PERIODS',
+        message:
+          "2 rows contain 0 distinct periods in 'year' (type 'temporal'). Supply at least two periods.",
+      }),
+    );
+  });
+
   it('suggests an ordinal time encoding when every period label is unparseable', () => {
     const warnings: string[] = [];
     const rows = [

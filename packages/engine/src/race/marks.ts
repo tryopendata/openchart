@@ -1,5 +1,5 @@
 import type {
-  CompileOptions,
+  MeasureTextFn,
   RaceFrame,
   RaceGeometry,
   RaceLayout,
@@ -8,22 +8,13 @@ import type {
 } from '@opendata-ai/openchart-core';
 import type { RaceModel } from './types';
 
-interface RaceMarkMeasurements {
-  maxLabelWidth: number;
-  maxValueLabelWidth: number;
-}
-
 export interface RaceMarkEntry<TMark extends RaceMarkType> {
-  measure(
-    model: RaceModel,
-    layout: Omit<RaceLayout, 'mark' | 'static'>,
-    options: CompileOptions,
-  ): RaceMarkMeasurements;
+  /** Measure the text this mark needs. The bar name gutter uses `layout.labels`. */
   computeStatic(
     model: RaceModel,
     layout: Omit<RaceLayout, 'mark' | 'static'>,
     mark: Extract<RaceMarkDef, { type: TMark }>,
-    measurements: RaceMarkMeasurements,
+    measureText: MeasureTextFn,
   ): Extract<RaceLayout, { mark: TMark }>['static'];
   geometry(
     model: RaceModel,

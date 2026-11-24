@@ -92,7 +92,8 @@ export interface RaceModel {
   spec: NormalizedRaceSpec;
   matrix: RaceMatrix;
   timeline: RaceTimeline;
-  colors: string[];
+  /** Per-key palette indices or constant CSS colors. */
+  colorSlots: Array<number | string>;
   periodLabels: string[];
   formatValue: (value: number) => string;
   playback: RacePlayback;

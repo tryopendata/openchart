@@ -84,6 +84,35 @@ function validateEncoding(encoding: unknown, errors: ValidationError[]): void {
   }
 }
 
+function validateEncodingFields(
+  encoding: unknown,
+  data: Record<string, unknown>[],
+  errors: ValidationError[],
+): void {
+  if (!isRecord(encoding) || data.length === 0) return;
+
+  const dataColumns = new Set<string>();
+  for (const row of data) {
+    for (const column of Object.keys(row)) dataColumns.add(column);
+  }
+  const columnList = [...dataColumns];
+  const availableColumns = columnList.join(', ');
+
+  for (const channel of ['time', 'key', 'value', 'label', 'color']) {
+    const definition = encoding[channel];
+    if (!isRecord(definition)) continue;
+    const { field } = definition;
+    if (typeof field !== 'string' || field.trim() === '' || dataColumns.has(field)) continue;
+
+    errors.push({
+      message: `Spec error: encoding.${channel}.field "${field}" does not exist in data. Available columns: ${availableColumns}`,
+      path: jsonPointer('encoding', channel, 'field'),
+      code: 'DATA_FIELD_MISSING',
+      suggestion: `Use one of the available data columns: ${availableColumns}.${didYouMean(field, columnList)}`,
+    });
+  }
+}
+
 function validateTableColumns(columns: unknown, errors: ValidationError[]): void {
   if (
     columns === undefined ||
@@ -170,7 +199,7 @@ function validateMark(mark: unknown, errors: ValidationError[]): void {
   validateMarkOptions(type, definition, errors);
 }
 
-function validateData(data: unknown, errors: ValidationError[]): void {
+function validateData(data: unknown, errors: ValidationError[]): data is Record<string, unknown>[] {
   if (!Array.isArray(data)) {
     errors.push({
       code: 'INVALID_TYPE',
@@ -178,7 +207,7 @@ function validateData(data: unknown, errors: ValidationError[]): void {
       message: 'Spec error: a race requires a "data" array',
       suggestion: 'Provide data as an array of rows with one row per key and period.',
     });
-    return;
+    return false;
   }
 
   let firstInvalidRow = -1;
@@ -189,7 +218,7 @@ function validateData(data: unknown, errors: ValidationError[]): void {
     invalidCount++;
   }
 
-  if (firstInvalidRow === -1) return;
+  if (firstInvalidRow === -1) return true;
   const invalidRows = invalidCount === 1 ? 'is not an object' : 'are not objects';
   const otherRows = invalidCount > 1 ? ' and the other non-object rows' : '';
   errors.push({
@@ -198,15 +227,18 @@ function validateData(data: unknown, errors: ValidationError[]): void {
     message: `Spec error: each race data row must be an object. ${invalidCount} of ${data.length} rows ${invalidRows}.`,
     suggestion: `Replace or remove row ${firstInvalidRow + 1}${otherRows}. Each row should name the fields used by time, key, and value.`,
   });
+  return false;
 }
 
 /**
- * Append race spec shape problems as ValidationErrors to `errors` without throwing.
+ * Append race spec shape and field problems as ValidationErrors to `errors` without throwing.
  * The race matrix checks data values, duplicate key/period pairs, and period counts.
  */
 export function validateRaceSpec(spec: Record<string, unknown>, errors: ValidationError[]): void {
-  validateData(spec.data, errors);
-  validateEncoding(spec.encoding, errors);
+  const { data, encoding } = spec;
+  const validData = validateData(data, errors);
+  validateEncoding(encoding, errors);
+  if (validData) validateEncodingFields(encoding, data, errors);
   validateMark(spec.mark, errors);
   validateOptions(spec.race, errors);
 

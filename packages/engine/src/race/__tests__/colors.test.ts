@@ -1,5 +1,6 @@
+import { CATEGORICAL_PALETTE } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
-import { assignRaceColors } from '../colors';
+import { assignRaceColors, resolveRaceColors } from '../colors';
 import type { RaceMatrix, RaceTimeline } from '../types';
 
 const matrix: RaceMatrix = {
@@ -49,40 +50,25 @@ const palette = ['red', 'blue', 'green', 'orange', 'purple', 'brown'];
 
 describe('race colors', () => {
   it('assigns colors on first top-N appearance, then to unseen keys in key order', () => {
-    expect(assignRaceColors(matrix, timeline, palette, undefined, 'team')).toEqual([
-      'orange',
-      'green',
-      'blue',
-      'purple',
-      'red',
-      'brown',
-    ]);
+    expect(
+      resolveRaceColors(assignRaceColors(matrix, timeline, undefined, 'team'), palette),
+    ).toEqual(['orange', 'green', 'blue', 'purple', 'red', 'brown']);
   });
 
   it('colors by key when the color field is the key field', () => {
-    expect(assignRaceColors(matrix, timeline, palette, { field: 'team' }, 'team')).toEqual([
-      'orange',
-      'green',
-      'blue',
-      'purple',
-      'red',
-      'brown',
-    ]);
+    expect(
+      resolveRaceColors(assignRaceColors(matrix, timeline, { field: 'team' }, 'team'), palette),
+    ).toEqual(['orange', 'green', 'blue', 'purple', 'red', 'brown']);
   });
 
   it('shares colors between keys with the same category, including missing categories', () => {
-    expect(assignRaceColors(matrix, timeline, palette, { field: 'region' }, 'team')).toEqual([
-      'orange',
-      'green',
-      'blue',
-      'blue',
-      'red',
-      'green',
-    ]);
+    expect(
+      resolveRaceColors(assignRaceColors(matrix, timeline, { field: 'region' }, 'team'), palette),
+    ).toEqual(['orange', 'green', 'blue', 'blue', 'red', 'green']);
   });
 
   it('assigns a constant color to every key', () => {
-    expect(assignRaceColors(matrix, timeline, palette, { value: '#abc' }, 'team')).toEqual([
+    expect(assignRaceColors(matrix, timeline, { value: '#abc' }, 'team')).toEqual([
       '#abc',
       '#abc',
       '#abc',
@@ -93,14 +79,9 @@ describe('race colors', () => {
   });
 
   it('cycles the palette as new keys appear', () => {
-    expect(assignRaceColors(matrix, timeline, ['red', 'blue'], undefined, 'team')).toEqual([
-      'blue',
-      'red',
-      'blue',
-      'red',
-      'red',
-      'blue',
-    ]);
+    expect(
+      resolveRaceColors(assignRaceColors(matrix, timeline, undefined, 'team'), ['red', 'blue']),
+    ).toEqual(['blue', 'red', 'blue', 'red', 'red', 'blue']);
   });
 
   it('assigns colors when smoothed rows first become visible in an integer sample', () => {
@@ -119,21 +100,40 @@ describe('race colors', () => {
         };
       },
     };
-    expect(assignRaceColors(matrix, transitioning, palette, undefined, 'team')).toEqual([
-      'green',
-      'orange',
-      'blue',
-      'purple',
-      'red',
-      'brown',
+    expect(
+      resolveRaceColors(assignRaceColors(matrix, transitioning, undefined, 'team'), palette),
+    ).toEqual(['green', 'orange', 'blue', 'purple', 'red', 'brown']);
+    expect(
+      resolveRaceColors(
+        assignRaceColors(matrix, transitioning, { field: 'region' }, 'team'),
+        palette,
+      ),
+    ).toEqual(['green', 'orange', 'blue', 'blue', 'red', 'orange']);
+  });
+
+  it('keeps indices unwrapped in the assignment', () => {
+    expect(assignRaceColors(matrix, timeline, undefined, 'team')).toEqual([3, 2, 1, 4, 0, 5]);
+  });
+});
+
+describe('resolving race colors', () => {
+  it('resolves the same slots against different palettes and preserves constants', () => {
+    const slots = [2, 0, '#abc', 3];
+
+    expect(resolveRaceColors(slots, ['red', 'blue'])).toEqual(['red', 'red', '#abc', 'blue']);
+    expect(resolveRaceColors(slots, ['cyan', 'magenta', 'yellow'])).toEqual([
+      'yellow',
+      'cyan',
+      '#abc',
+      'cyan',
     ]);
-    expect(assignRaceColors(matrix, transitioning, palette, { field: 'region' }, 'team')).toEqual([
-      'green',
-      'orange',
-      'blue',
-      'blue',
-      'red',
-      'orange',
+  });
+
+  it('uses the core categorical palette when the active palette is empty', () => {
+    expect(resolveRaceColors([1, CATEGORICAL_PALETTE.length, '#abc'], [])).toEqual([
+      CATEGORICAL_PALETTE[1],
+      CATEGORICAL_PALETTE[0],
+      '#abc',
     ]);
   });
 });

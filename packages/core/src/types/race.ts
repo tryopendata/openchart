@@ -108,6 +108,13 @@ interface RaceLayoutBase {
   a11y: A11yMetadata;
   watermark: boolean;
   periods: string[];
+  /** Per-key colors resolved for the active theme. Used by `raceGeometryAt` for mark presentation. */
+  colors: string[];
+  /**
+   * Per-key display labels for `raceGeometryAt`, possibly truncated to fit the gutter.
+   * `raceFrameAt` uses the matrix's full labels for accessibility and export.
+   */
+  labels: string[];
   playback: RacePlayback;
   warnings?: CompileWarning[];
   /** Area below chrome where the mark draws. */

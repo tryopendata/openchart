@@ -1,4 +1,4 @@
-import { interpolateRaceValue } from './matrix';
+import { interpolateRaceValue } from './interpolate';
 
 /**
  * Samples (periodCount - 1) * samplesPerPeriod + 1 ranks per key in key index order.
