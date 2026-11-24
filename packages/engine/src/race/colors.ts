@@ -1,12 +1,38 @@
-import type { RaceEncoding } from '@opendata-ai/openchart-core';
+import { CATEGORICAL_PALETTE, type RaceEncoding } from '@opendata-ai/openchart-core';
 import type { RaceMatrix, RaceTimeline } from './types';
 
+/**
+ * Assigns palette colors in order of first appearance in integer-period samples,
+ * followed by any remaining keys in matrix order. An omitted color field or one
+ * matching the key field assigns colors per key. An empty palette uses the core
+ * categorical palette.
+ */
 export function assignRaceColors(
-  _matrix: RaceMatrix,
-  _timeline: RaceTimeline,
-  _palette: readonly string[],
-  _colorEncoding: RaceEncoding['color'],
-  _keyField: string,
+  matrix: RaceMatrix,
+  timeline: RaceTimeline,
+  palette: readonly string[],
+  colorEncoding: RaceEncoding['color'],
+  keyField: string,
 ): string[] {
-  throw new Error('not implemented');
+  if (colorEncoding && 'value' in colorEncoding) {
+    const { value } = colorEncoding;
+    return matrix.keys.map(() => value);
+  }
+
+  const colors = palette.length > 0 ? palette : CATEGORICAL_PALETTE;
+  const byCategory = colorEncoding !== undefined && colorEncoding.field !== keyField;
+  const groupColors = new Map<number | string | null, string>();
+  const assign = (keyIndex: number) => {
+    const group = byCategory ? matrix.colorValues[keyIndex] : keyIndex;
+    const color = groupColors.get(group) ?? colors[groupColors.size % colors.length];
+    groupColors.set(group, color);
+    return color;
+  };
+
+  for (let period = 0; period < timeline.periodCount; period++) {
+    for (const { keyIndex } of timeline.sample(period).items) {
+      assign(keyIndex);
+    }
+  }
+  return matrix.keys.map((_, keyIndex) => assign(keyIndex));
 }
