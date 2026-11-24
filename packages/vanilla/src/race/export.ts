@@ -1,18 +1,15 @@
 import type { RaceLayout } from '@opendata-ai/openchart-core';
-import { type RaceModel, raceGeometryAt } from '@opendata-ai/openchart-engine';
 import { embedFonts } from '../export';
 import type { GIFExportOptions } from '../export-gif';
 import { encodeSVGFrames } from '../gif-frame-encoder';
 import { SVG_NS, setAttrs } from '../renderers/svg-dom';
 import { prepareSettledExportTheme } from '../theme-style-block';
-import { RACE_RENDERERS } from './renderers';
 import type { RaceShell } from './shell';
 
 interface RaceExportView {
-  model: RaceModel;
   layout: RaceLayout;
   shell: Pick<RaceShell, 'svg'>;
-  idScope: string;
+  mountExportRenderer(svg: SVGSVGElement): { draw(t: number): void; destroy(): void };
   signal?: AbortSignal;
 }
 
@@ -21,16 +18,76 @@ const END_HOLD_MS = 1500;
 const MIN_DELAY_CS = 2; // Browsers can display a shorter delay as 100 ms.
 const MAX_DELAY_CS = 0xffff;
 
-// The shared theme block covers chrome. The mark rules in race.css also need
-// to travel with the serialized SVG, which has no access to the page stylesheet.
-const RACE_FRAME_STYLES = `
-.oc-race-axis line { stroke: var(--oc-gridline); }
-.oc-race-axis text, .oc-race-summary { fill: var(--oc-text-muted); }
-.oc-race-summary { font-size: var(--oc-source-size); }
-.oc-race-rows text { fill: var(--oc-text); font-size: var(--oc-body-size); }
-.oc-race-period { fill: var(--oc-text-faint); }
-.oc-race-line-labels { dominant-baseline: central; font-size: var(--oc-body-size); }
-`;
+const FRAME_STYLE_PROPERTIES = [
+  'fill',
+  'stroke',
+  'opacity',
+  'font-family',
+  'font-size',
+  'font-weight',
+  'font-variant-numeric',
+  'letter-spacing',
+  'dominant-baseline',
+  'direction',
+] as const;
+
+function raceClass(element: Element): string | undefined {
+  return Array.from(element.classList).find((name) => name.startsWith('oc-race-'));
+}
+
+function snapshotRaceStyles(source: SVGElement, fallbackFont: string) {
+  const doc = source.ownerDocument;
+  const win = doc.defaultView;
+  const fonts = new Map<string, SVGTextElement>();
+  const rules: string[] = [];
+  if (!win) return { css: '', fonts: [] };
+
+  const samples = new Map<string, Element>([['.oc-race', source]]);
+  for (const element of source.querySelectorAll('.oc-race-mark, .oc-race-mark *')) {
+    const role = raceClass(element);
+    if (role) {
+      if (!samples.has(`.${role}`)) samples.set(`.${role}`, element);
+    } else if (element.localName === 'line' || element.localName === 'text') {
+      const group = element.closest('[class*="oc-race-"]');
+      const groupRole = group && raceClass(group);
+      if (!groupRole) continue;
+      const selector = `.${groupRole} ${element.localName}`;
+      if (!samples.has(selector)) samples.set(selector, element);
+    }
+  }
+
+  for (const [selector, element] of samples) {
+    const computed = win.getComputedStyle(element);
+    const declarations: string[] = [];
+    for (const property of FRAME_STYLE_PROPERTIES) {
+      // The renderer updates these paint attributes as the race advances.
+      if (
+        (property === 'fill' || property === 'stroke' || property === 'opacity') &&
+        element.hasAttribute(property)
+      )
+        continue;
+      const value = computed.getPropertyValue(property);
+      if (property === 'dominant-baseline') {
+        // A baseline inherited from renderer markup belongs to that subtree.
+        // Applying the y-axis baseline to all axis labels moves the x-axis labels.
+        const baseline = element.closest('[dominant-baseline]')?.getAttribute(property) ?? 'auto';
+        if (value === baseline) continue;
+      }
+      if (value) declarations.push(`${property}: ${value};`);
+    }
+    if (declarations.length) rules.push(`${selector} { ${declarations.join(' ')} }`);
+
+    const family = computed.fontFamily || fallbackFont;
+    const weight = computed.fontWeight;
+    const key = `${family}:${weight}`;
+    if (fonts.has(key)) continue;
+    const probe = doc.createElementNS(SVG_NS, 'text');
+    probe.style.fontFamily = family;
+    probe.style.fontWeight = weight;
+    fonts.set(key, probe);
+  }
+  return { css: rules.join('\n'), fonts: [...fonts.values()] };
+}
 
 function paletteSwatches(svg: SVGElement, colors: readonly string[]): SVGElement {
   // Set aside most of the palette for series colors and keep space for chrome and antialiasing.
@@ -51,7 +108,7 @@ function paletteSwatches(svg: SVGElement, colors: readonly string[]): SVGElement
 
 /** Render the mounted bar or line layout from the first period through the end hold. */
 export async function exportRaceGIF(
-  { model, layout, shell, idScope, signal }: RaceExportView,
+  { layout, shell, mountExportRenderer, signal }: RaceExportView,
   options?: Pick<GIFExportOptions, 'fps'>,
 ): Promise<Blob> {
   if (layout.mark === 'table') throw new Error('GIF export supports the bar and line marks');
@@ -67,7 +124,7 @@ export async function exportRaceGIF(
   if (minimumFrames >= MAX_FRAMES) {
     throw new RangeError('Race duration exceeds the GIF limit. Shorten the race duration.');
   }
-  const end = model.timeline.periodCount - 1;
+  const end = layout.periods.length - 1;
   const count = Math.min(
     MAX_FRAMES - 1,
     Math.floor(durationCs / MIN_DELAY_CS),
@@ -75,52 +132,31 @@ export async function exportRaceGIF(
   );
   // Snapshot the live SVG and theme before yielding to the optional encoder import.
   const svg = shell.svg.ownerDocument.importNode(shell.svg, true);
-  const host = svg.querySelector<SVGGElement>('g.oc-race-mark');
-  if (!host) throw new Error('The race SVG has no mark host');
-
-  function mountRenderer(markHost: SVGGElement) {
-    const bar = layout.mark === 'bar' && RACE_RENDERERS.bar?.(markHost, layout.static, idScope);
-    const line = layout.mark === 'line' && RACE_RENDERERS.line?.(markHost, layout.static, idScope);
-    if (!bar && !line) throw new Error(`Race mark "${layout.mark}" is not registered`);
-    // Font discovery reads the weight from markup.
-    markHost.querySelector('.oc-race-period')?.setAttribute('font-weight', '600');
-    return {
-      draw(t: number) {
-        const geometry = raceGeometryAt(model, layout, t);
-        if (bar && geometry.mark === 'bar') bar.draw(geometry);
-        if (line && geometry.mark === 'line') line.draw(geometry);
-      },
-      destroy() {
-        if (bar) bar.destroy();
-        if (line) line.destroy();
-      },
-    };
-  }
-  host.replaceChildren();
-
   prepareSettledExportTheme(shell.svg, svg, theme);
-  const style = svg.querySelector('style[data-oc-theme]');
-  if (style?.textContent) {
-    style.textContent =
-      style.textContent.replace('svg.oc-chart', 'svg.oc-race') + RACE_FRAME_STYLES;
-  }
-  // Font discovery reads the literal family from markup.
   svg.style.fontFamily =
     svg.style.getPropertyValue('--oc-font-family').trim() || theme.fonts.family;
+  const { css, fonts } = snapshotRaceStyles(shell.svg, svg.style.fontFamily);
+  svg.querySelector('style[data-oc-theme]')?.append(`\n${css}`);
   const surface = svg.style.getPropertyValue('--oc-bg').trim();
   const backgroundColor =
     surface && !/^(none|transparent|currentcolor|url\()/i.test(surface)
       ? surface
       : theme.colors.neutral.surface;
-  // Add the renderer's defs after the shared theme and fonts' defs.
-  let renderer = mountRenderer(host);
+  let renderer = mountExportRenderer(svg);
 
   const encoding = encodeSVGFrames(
     svg,
-    { loop: playback.loop, backgroundColor },
+    { dpi: 1, loop: playback.loop, backgroundColor },
     async () => {
       renderer.draw(end);
-      await embedFonts(svg);
+      // Font discovery reads inline declarations. Supply the live CSS font usage
+      // during discovery without changing the exported mark attributes.
+      svg.append(...fonts);
+      try {
+        await embedFonts(svg);
+      } finally {
+        for (const font of fonts) font.remove();
+      }
       return {
         svg,
         count,
@@ -129,7 +165,7 @@ export async function exportRaceGIF(
           startFrames() {
             // Rebuild the keyed renderer so the seed cannot affect paint order at t = 0.
             renderer.destroy();
-            renderer = mountRenderer(host);
+            renderer = mountExportRenderer(svg);
           },
         },
         draw(index) {
@@ -137,10 +173,10 @@ export async function exportRaceGIF(
             renderer.draw(end);
             return END_HOLD_MS;
           }
-          renderer.draw((index / count) * end);
-          // GIF delays are centiseconds. Round elapsed time to avoid accumulating drift.
+          // Sample at the displayed start time, including the rounding to centiseconds.
           const before = Math.round((index / count) * durationCs);
           const after = Math.round(((index + 1) / count) * durationCs);
+          renderer.draw((before / durationCs) * end);
           return (after - before) * 10;
         },
       };

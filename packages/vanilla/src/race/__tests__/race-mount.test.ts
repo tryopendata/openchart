@@ -1083,6 +1083,8 @@ describe('createRace', () => {
   it('rejects GIF export after the race is destroyed', async () => {
     const chart = mount();
     chart.destroy();
-    await expect(chart.export('gif')).rejects.toThrow('Race is not rendered');
+    await expect(chart.export('gif')).rejects.toThrow(
+      new Error('Race was destroyed during GIF export'),
+    );
   });
 });

@@ -1,3 +1,4 @@
+import type { GifencEncoder } from 'gifenc';
 import {
   ensureSVGDimensions,
   exportSVG,
@@ -35,10 +36,65 @@ interface GIFFrames {
   };
 }
 
+function writeDeltaFrame(
+  gif: GifencEncoder,
+  previous: Uint8Array,
+  next: Uint8Array,
+  width: number,
+  height: number,
+  delay: number,
+  transparentIndex: number,
+): void {
+  let left = width;
+  let right = -1;
+  let top = height;
+  let bottom = -1;
+  for (let y = 0; y < height; y++) {
+    const row = y * width;
+    for (let x = 0; x < width; x++) {
+      const index = row + x;
+      if (previous[index] === next[index]) continue;
+      left = Math.min(left, x);
+      right = Math.max(right, x);
+      top = Math.min(top, y);
+      bottom = y;
+    }
+  }
+
+  // Keep the composited image for the next frame, including through identical holds.
+  const options = { delay, transparent: true, transparentIndex, dispose: 1 };
+  if (right === -1) {
+    gif.writeFrame(new Uint8Array([transparentIndex]), 1, 1, options);
+    return;
+  }
+  const cropWidth = right - left + 1;
+  const cropHeight = bottom - top + 1;
+  const pixels = new Uint8Array(cropWidth * cropHeight);
+  for (let y = 0; y < cropHeight; y++) {
+    const row = (top + y) * width + left;
+    for (let x = 0; x < cropWidth; x++) {
+      const index = row + x;
+      pixels[y * cropWidth + x] = previous[index] === next[index] ? transparentIndex : next[index];
+    }
+  }
+
+  const frameStart = gif.bytesView().length;
+  gif.writeFrame(pixels, cropWidth, cropHeight, options);
+  if (left === 0 && top === 0) return;
+  // gifenc emits cropped dimensions but hard-codes (0, 0). A non-first frame
+  // starts with the 8-byte Graphic Control Extension, then the Image Descriptor.
+  const descriptor = frameStart + 8;
+  const bytes = gif.bytesView();
+  if (bytes[descriptor] !== 0x2c) throw new Error('GIF encoder did not write an image descriptor');
+  const position = new DataView(bytes.buffer, bytes.byteOffset + descriptor + 1, 4);
+  position.setUint16(0, left, true);
+  position.setUint16(2, top, true);
+}
+
 /** Rasterize a detached scene to a GIF, using its settled frame for a global palette. */
 export async function encodeSVGFrames(
   source: SVGElement,
-  options: GIFExportOptions | undefined,
+  options: Pick<GIFExportOptions, 'dpi' | 'loop' | 'backgroundColor' | 'theme'> | undefined,
   prepare: () => Promise<GIFFrames>,
   signal?: AbortSignal,
 ): Promise<Blob> {
@@ -96,22 +152,31 @@ export async function encodeSVGFrames(
     }
     globalPalette.startFrames();
   }
-  const palette = quantize(seed, 256 - reserved.size);
+  const palette = quantize(seed, (globalPalette ? 255 : 256) - reserved.size);
   palette.push(...reserved.values());
+  const transparentIndex = palette.length;
+  const colorTable = globalPalette ? [...palette, [0, 0, 0]] : palette;
+  let previous: Uint8Array | undefined;
 
   async function writeFrame(index: number | null, first: boolean) {
     const delay = draw(index);
     const canvas = await rasterize(svg, width, height, dpi);
     const pixels = applyPalette(readCanvasSRGB(canvas), palette);
+    if (previous) {
+      writeDeltaFrame(gif, previous, pixels, canvas.width, canvas.height, delay, transparentIndex);
+      previous = pixels;
+      return;
+    }
     gif.writeFrame(pixels, canvas.width, canvas.height, {
       delay,
       ...(first ? { repeat } : {}),
-      ...(first || !globalPalette ? { palette } : {}),
+      ...(first || !globalPalette ? { palette: colorTable } : {}),
     });
+    if (globalPalette) previous = pixels;
   }
 
   for (let index = 0; index < count; index++) await writeFrame(index, index === 0);
   await writeFrame(null, !(count > 0));
   gif.finish();
-  return new Blob([Uint8Array.from(gif.bytes())], { type: 'image/gif' });
+  return new Blob([(gif.bytesView?.() ?? gif.bytes()) as BlobPart], { type: 'image/gif' });
 }

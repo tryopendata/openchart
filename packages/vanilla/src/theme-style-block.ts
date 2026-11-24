@@ -24,7 +24,7 @@ import { SVG_NS } from './renderers/svg-dom';
  * `--oc-*` custom properties on each supported SVG root and defines every class-based
  * chrome rule against them.
  */
-export function buildThemeStyleBlock(theme: ResolvedTheme, rootId?: string): string {
+export function buildThemeStyleBlock(theme: ResolvedTheme, rootId?: string, race = false): string {
   const accent = theme.colors.categorical[0] ?? cssTokenDefault('--oc-accent', 'light');
   const bg = theme.colors.neutral.surface;
 
@@ -64,7 +64,7 @@ export function buildThemeStyleBlock(theme: ResolvedTheme, rootId?: string): str
   const rules = [
     // Tabular figures everywhere in the chart's own text: axis ticks, value
     // labels and legend entries all line up column-wise.
-    `svg.oc-chart, svg.oc-map, svg.oc-tilemap, svg.oc-barlist { ${props.join('; ')}; font-variant-numeric: tabular-nums; }`,
+    `svg.oc-chart, svg.oc-map, svg.oc-tilemap, svg.oc-barlist${race ? ', svg.oc-race' : ''} { ${props.join('; ')}; font-variant-numeric: tabular-nums; }`,
     `.oc-chrome { font-family: var(--oc-font-family); }`,
     `.oc-eyebrow { font-size: var(--oc-eyebrow-size); font-weight: var(--oc-eyebrow-weight); letter-spacing: var(--oc-eyebrow-tracking); text-transform: uppercase; fill: var(--oc-accent); }`,
     `.oc-title { font-size: var(--oc-title-size); font-weight: var(--oc-title-weight); letter-spacing: var(--oc-title-tracking); fill: var(--oc-text); }`,
@@ -114,14 +114,16 @@ export function buildThemeStyleBlock(theme: ResolvedTheme, rootId?: string): str
 export function injectThemeStyleBlock(svg: SVGElement, theme: ResolvedTheme | undefined): void {
   if (!theme) return;
   for (const previous of svg.querySelectorAll('style[data-oc-theme]')) previous.remove();
-  let defs = svg.querySelector('defs');
+  const race = svg.classList.contains('oc-race');
+  // The race recreates its mark host and the clip defs it owns between passes.
+  let defs = svg.querySelector(race ? ':scope > defs' : 'defs');
   if (!defs) {
     defs = document.createElementNS(SVG_NS, 'defs');
     svg.insertBefore(defs, svg.firstChild);
   }
   const style = document.createElementNS(SVG_NS, 'style');
   style.setAttribute('data-oc-theme', '');
-  style.textContent = buildThemeStyleBlock(theme);
+  style.textContent = buildThemeStyleBlock(theme, undefined, race);
   defs.insertBefore(style, defs.firstChild);
 }
 

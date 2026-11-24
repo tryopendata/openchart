@@ -122,7 +122,19 @@ function mountView<Mark extends RaceMarkType>(
   shell.root.classList.toggle('oc-dark', darkMode);
   if (layout.mark === 'table') shell.markHost.setAttribute('aria-hidden', 'true');
   if (model.spec.width !== undefined) shell.root.style.width = `${layout.width}px`;
-  const renderer = factory(shell.markHost, layout.static, idScope);
+  function bindRenderer(host: RaceMarkHost<Mark>) {
+    const renderer = factory(host, layout.static, idScope);
+    return {
+      draw(t: number) {
+        const geometry = raceGeometryAt(model, layout, t);
+        if (isGeometryForMark(geometry, layout.mark)) renderer.draw(geometry);
+      },
+      destroy() {
+        renderer.destroy();
+      },
+    };
+  }
+  const renderer = bindRenderer(shell.markHost);
   const controls = layout.playback.controls
     ? createRaceControls({ periodLabels: layout.periods, ...handlers })
     : undefined;
@@ -135,9 +147,12 @@ function mountView<Mark extends RaceMarkType>(
     shell,
     layout,
     controls,
-    draw(t: number) {
-      const geometry = raceGeometryAt(model, layout, t);
-      if (isGeometryForMark(geometry, layout.mark)) renderer.draw(geometry);
+    draw: renderer.draw,
+    mountExportRenderer(svg: SVGSVGElement) {
+      const host = svg.querySelector<RaceMarkHost<Mark>>('g.oc-race-mark');
+      if (!host) throw new Error('The race SVG has no mark host');
+      host.replaceChildren();
+      return bindRenderer(host);
     },
     destroy() {
       controls?.element.removeEventListener('change', onSeekCommit);
@@ -453,11 +468,12 @@ export function createRace(
     update,
     resize,
     async export(format, options) {
+      if (destroyed) exportLifetime.signal.throwIfAborted();
       if (format !== 'gif') throw new Error(`Unsupported export format: ${format}`);
       if (!view) throw new Error('Race is not rendered');
-      const { layout, shell } = view;
+      const { layout, shell, mountExportRenderer } = view;
       return exportRaceGIF(
-        { model, layout, shell, idScope, signal: exportLifetime.signal },
+        { layout, shell, mountExportRenderer, signal: exportLifetime.signal },
         options,
       );
     },
