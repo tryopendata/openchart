@@ -1,5 +1,54 @@
 # Changelog
 
+## [9.1.0](https://github.com/tryopendata/openchart/compare/core-v9.0.0...core-v9.1.0) (2026-11-24)
+
+Motion is on by default for every visualization type. Graphs keep their own defaults (500ms enter, 300ms update and exit). See the "Motion on by default" section of [the v9 migration guide](https://github.com/tryopendata/openchart/blob/main/docs/migrating-v9.md) for opt-outs.
+
+### Behaviour changes
+
+- Animation is on by default for every type (charts, sparklines, tables, bar lists, tile maps, sankeys, geo maps, graphs). Omitting `animation` now resolves to the same defaults as `true`, including in `resolveAnimation(undefined)`. Set `animation: false` to opt out.
+- Entrances play when the chart scrolls into view (`animation.enter.trigger: 'visible'`, the default). A chart in a hidden (zero-size) container waits until it has size and is seen. Use `trigger: 'mount'` for the old play-at-mount behaviour, for example in screenshot tests.
+- Entrances use new choreography: 800ms enter, 80ms stagger clamped so the whole stagger spans at most 450ms, 500ms update. Annotations start after the last mark reaches 90%. Stacked bars reveal as one shape per stack on the author's curve (the stack segment duration is accepted and ignored). Value labels stay hidden until their bar or stack has landed, then fade in place. Line points pop in left to right once their own line has drawn, and the line's endpoint label waits for its last dot. Heatmap, waffle and calendar cells pop in on scattered start times instead of the bar wipe. Pie and donut slices grow from the centre, and their labels follow. Line endpoint labels and area interior labels fade in as their own series reaches the end, instead of showing before the line draws.
+- The default curve is now `glide` (`cubic-bezier(0.2, 0, 0, 1)`: a gentle start and a long deceleration), still named `smooth`. `gentle` is the previous `smooth`, and `snappy` is redefined as a non-overshooting curve.
+- Exits are a fast 120ms fade. When an update removes marks, surviving marks, chrome and entering marks wait for the exit to clear, so updates that remove marks start 120ms later.
+- An `.update()` that arrives while the entrance is still waiting to be seen re-arms the entrance on the new data, for every type including graphs. An update during a playing entrance snaps. A render with nothing to draw does not arm the entrance. Edit mode skips the entrance.
+- Resize no longer tweens, and a resize during an update tween snaps it.
+- Reduced motion opens no entrance window, so resizes and updates are not deferred.
+- `createChartStory` resolves an omitted `animation` to `{ enter: false }` (updates kept), since scroll drives the reveal. Because ten more marks now transition (see Added), story steps on those marks morph instead of crossfading.
+- Graph `animation.enter.stagger` as an object is deprecated and ignored; it warns through `onWarn` instead of failing validation. Use `stagger: true | false`.
+- GIF frames follow the real entrance keyframes, curves and timing, so exported frames change: labels, text, rules and annotations animate on their own schedule, `snappy` and spring curves are honoured, and the capture window is the entrance end plus 300ms.
+- Non-GIF exports (SVG, PNG, JPG) carry no animation stamps.
+- Sankey labels move onto the flow at narrow widths (typically under about 700px). When the outside label gutters would leave the flow under half the plot width and `nodeLabelAlign` is `'auto'`, first and middle column labels sit just right of their node and last column labels just left of it, with the value on its own line, a halo in the background colour, and labels in a crowded column nudged apart. The nodes then use the full width. Wider sankeys keep outside labels exactly as before. If a crowded column cannot hold every label with its value line, the value lines drop first (the tooltip keeps them).
+- A chart with text annotations no longer grows by an empty note band. With `chromeLayout` omitted or `'grow'`, the figure used to reserve room below the plot for every callout that might fold into a numbered note, even when none did (an empty 17 to 440px band, depending on the callouts). It now grows only by the notes it draws, so most annotated charts keep their authored height. Edit mode keeps the full reserve on screen so a gesture never resizes the figure (series search turns it off with the edit gestures), and its exports leave the reserve out. Other hosts can ask for the reserve with the new `stableNoteBand` compile option. `chromeLayout: 'subtract'` is unchanged.
+- A chart in a `min-height` host follows a change to that min-height while its own taller SVG holds the host open, instead of compiling against the old value.
+- Sankey label gutters are sized with the host's text measure when it provides one, instead of the built-in estimate. A first- or last-column value that would run past the frame once a gutter reaches its 35% cap is left off the label; the tooltip still shows it.
+
+### Added
+
+- Race charts (`type: 'race'`): an animated top-N leaderboard over time, the "bar chart race" seen on social media. Encode `time`, `key` and `value`, pick the mark with `mark: 'bar' | 'line' | 'table'`, and the same data plays as racing bars, a line chart whose leaders are labelled at the line ends, or a table whose rows slide between ranks. `race` sets the playback: `top`, `duration` (defaults to 700ms per period, kept between 8 and 90 seconds), `step`, `swap`, `rescale`, `gaps`, `holdEnd`, `loop`, `autoplay` (default `'visible'`), `controls`, `period` and `summary`. Values are interpolated between periods and ranks swap smoothly; colours stay with their entity, including across `update()`.
+  - Mount with `createRace(container, spec, options)` in vanilla, or `<Race />` in React, Vue and Svelte. The instance exposes `play()`, `pause()`, `seek()`, `setSpeed()`, `update()`, `setTheme()`, `getState()` and a `period` event.
+  - Built-in playback controls: play/pause, a scrubber and a period readout, with keyboard stepping (arrow keys step a period, Space plays and pauses). A live region announces the standings on pause, step and scrub, and stays quiet during playback. Under reduced motion, play steps one period at a time.
+  - `export('gif')` renders the whole race as an animated GIF.
+  - `renderRaceStaticSVG(spec, options)` from `@opendata-ai/openchart-vanilla/static` renders the final period without a browser, and `renderStaticSVG` accepts race specs.
+  - Docs page at `/docs/change-over-time/race/`, gallery entries, and LLM reference coverage.
+
+- Sankey `overrides`: `overrides.compact` (under 400px) and `overrides.medium` (400 to 700px) change `chrome` (merged with the top-level chrome), `other`, `nodeSort`, `nodeLabelAlign` and `nodePadding` at that breakpoint, for example to fold small flows into "Other" only on phones.
+
+- Update tweens for chart marks that used to swap instantly: rect/heatmap, waffle, calendar, parliament, range, errorbar, tick, circle, lollipop and text. This widens `canTransitionSpecShape`.
+- Update tweens for non-chart types, all following `update.ease` and `update.spring`:
+  - Bar lists: rows slide to their slot, bar width and fill tween, new rows fade in and removed rows leave a fading ghost.
+  - Tile maps: tile fill, fill-opacity and label colour.
+  - Sankeys: nodes move and resize, links morph including their gradients, labels slide, new nodes and links fade in, removed ones fade out.
+  - Geo maps: feature fills and points tween, entering points fade in, removed points leave ghosts. Tables still snap on update (entrance only).
+- `export('gif')` for bar lists, tile maps, sankeys and geo maps, with their real entrance motion: map fill colour sweep and point scale-up, bar list row slide, and focus dim respected. Tables and graphs have no GIF export.
+- Graph `animation.enter.trigger` (`'visible'` or `'mount'`) and `spring` on every graph phase, for 2D and 3D. Graph instances expose `entrancePlayed`, and the React, Vue and Svelte wrappers suppress the entrance on a theme or dimension remount only if it already played.
+- `BarListRowMark.key` and `RectMark.cell` layout metadata.
+
+### Fixed
+
+- GIF and JPG exports came out with a black background when the SVG had no root background rect or used a transparent, `currentColor` or `url()` paint. `getSVGBackgroundColor` now reads only the root background rect and falls back to white.
+- Canvas entrance cleanup now ends when the tween completes, instead of on a mount-time timer.
+
 ## [9.0.0](https://github.com/tryopendata/openchart/compare/core-v9.0.0-rc.2...core-v9.0.0) (2026-10-28)
 
 Stable v9 release. Upgrade all six packages together and review [the v9 migration guide](https://github.com/tryopendata/openchart/blob/core-v9.0.0/docs/migrating-v9.md). This entry includes the changes introduced in both release candidates since 8.9.1.
