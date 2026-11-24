@@ -1,4 +1,5 @@
 import type { RaceGeometry, RaceLayout, RaceMarkType } from '@opendata-ai/openchart-core';
+import { createRaceBarRenderer } from './render-bar';
 import type { RaceMarkHost } from './shell';
 
 export type RaceRendererFactory<TMark extends RaceMarkType> = (
@@ -10,4 +11,6 @@ export type RaceRendererFactory<TMark extends RaceMarkType> = (
   destroy(): void;
 };
 
-export const RACE_RENDERERS: { [TMark in RaceMarkType]?: RaceRendererFactory<TMark> } = {};
+export const RACE_RENDERERS: { [TMark in RaceMarkType]?: RaceRendererFactory<TMark> } = {
+  bar: createRaceBarRenderer,
+};
