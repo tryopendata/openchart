@@ -94,22 +94,10 @@ export const Race = forwardRef<RaceHandle, RaceProps>(function Race(
     }
 
     const state = current?.instance.getState();
-    const instance = createRace(container, spec, options);
+    const instance = createRace(container, spec, { ...options, initialState: state });
     current?.instance.destroy();
+    if (state) instance.resize();
     mounted.current = { instance, optionsKey, themeKey, specKey };
-    if (state) {
-      // The old chart was still in the host during the replacement mount.
-      instance.resize();
-      // Leave the new mount's visibility trigger armed when playback has yet to start.
-      if (state.ended) {
-        instance.pause();
-      } else if (state.t > 0 || state.playing) {
-        instance.seek(state.t);
-        if (state.playing) instance.play();
-        else instance.pause();
-      }
-      instance.setSpeed(state.speed);
-    }
   }, [spec, options, optionsKey, themeKey]);
 
   useEffect(() => {

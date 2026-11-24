@@ -88,25 +88,13 @@ $effect(() => {
     }
 
     const state = previous?.getState();
-    const current = createRace(container, spec, options);
+    const current = createRace(container, spec, { ...options, initialState: state });
     previous?.destroy();
+    if (state) current.resize();
     instance = current;
     mountedOptionsKey = nextOptionsKey;
     mountedThemeKey = nextThemeKey;
     mountedSpecKey = nextSpecKey;
-    if (state) {
-      // The old chart was still in the host during the replacement mount.
-      current.resize();
-      // Leave the new mount's visibility trigger armed when playback has yet to start.
-      if (state.ended) {
-        current.pause();
-      } else if (state.t > 0 || state.playing) {
-        current.seek(state.t);
-        if (state.playing) current.play();
-        else current.pause();
-      }
-      current.setSpeed(state.speed);
-    }
   });
 });
 

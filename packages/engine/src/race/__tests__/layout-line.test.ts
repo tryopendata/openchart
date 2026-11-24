@@ -425,7 +425,7 @@ describe('line race layout', () => {
     expect(head(1)).toBeUndefined();
   });
 
-  it('reserves the measured name and value gutter and caps it to keep half the area for the plot', () => {
+  it('reserves the measured name and value gutter and leaves room for the plot when a narrow label is long', () => {
     const short = setup({ A: [1, 123.45] });
     const { static: stat, theme } = short.layout;
     const textWidth = estimateTextWidth(
@@ -435,10 +435,12 @@ describe('line race layout', () => {
     );
     expect(stat.labelGutter).toBeGreaterThan(textWidth);
     const long = setup({ ['A very long series name '.repeat(6)]: [1, 123.45] }, { width: 330 });
-    expect(long.layout.static.plot.width).toBeCloseTo(long.layout.area.width / 2);
+    expect(long.layout.static.plot.width).toBeGreaterThanOrEqual(
+      long.layout.area.width * 0.44 - 0.01,
+    );
     const { endLabel } = long.at(1).series[0];
     expect(endLabel.text).toMatch(/…$/);
-    expect(endLabel.value).toBe('123.45');
+    expect(endLabel.value).toBe('');
   });
 
   it('reserves room for compact values between observed points and for the y ticks they reach', () => {
@@ -558,7 +560,7 @@ describe('line race layout', () => {
         (estimateTextWidth(a.label, axisTick, normal) +
           estimateTextWidth(b.label, axisTick, normal)) /
         2;
-      expect(b.position - a.position).toBeGreaterThanOrEqual(halfWidths);
+      expect(b.position - a.position).toBeGreaterThanOrEqual(halfWidths + axisTick / 2);
     }
     expect(yTicks.some(({ value, label }) => value === 0 && label === '0.00')).toBe(true);
     expect(

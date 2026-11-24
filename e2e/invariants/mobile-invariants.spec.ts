@@ -404,7 +404,7 @@ for (const [story, fontSize] of [
         await expect(host.locator('svg.oc-race')).toHaveAttribute('viewBox', new RegExp(`^0 0 ${width} `));
         await page.evaluate(() => document.fonts.ready);
 
-        const { staysInColumn, fitsOrEllipsizes } = await name.evaluate((label) => {
+        const { staysInColumn, fits, fitsOrEllipsizes } = await name.evaluate((label) => {
           const cell = label.closest('td');
           const valueCell = cell?.parentElement?.querySelector('td.oc-race-table-value');
           if (!cell || !valueCell) throw new Error('Expected the name and value cells in the same row');
@@ -414,7 +414,7 @@ for (const [story, fontSize] of [
           const valueBounds = valueCell.getBoundingClientRect();
           const staysInColumn =
             bounds.left >= cellBounds.left && bounds.right <= Math.min(cellBounds.right, valueBounds.left);
-          if (label.scrollWidth <= label.clientWidth) return { staysInColumn, fitsOrEllipsizes: true };
+          if (label.scrollWidth <= label.clientWidth) return { staysInColumn, fits: true, fitsOrEllipsizes: true };
 
           const style = getComputedStyle(label);
           const context = document.createElement('canvas').getContext('2d');
@@ -422,6 +422,7 @@ for (const [story, fontSize] of [
           context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
           return {
             staysInColumn,
+            fits: false,
             fitsOrEllipsizes:
               style.overflowX === 'hidden' &&
               style.textOverflow === 'ellipsis' &&
@@ -430,6 +431,13 @@ for (const [story, fontSize] of [
           };
         });
 
+        if (width === 360) {
+          expect(fits, 'United Kingdom fits at 360px').toBe(true);
+          const us = host.locator('td.oc-race-table-name').getByText('United States', { exact: true });
+          await expect(us).toBeVisible();
+          expect(await us.evaluate((label) => label.scrollWidth <= label.clientWidth)).toBe(true);
+          await expect(host.locator('th[aria-label="Change"]')).toHaveText('↕');
+        }
         expect(staysInColumn, 'The name stays inside its column and clears the value cell').toBe(true);
         expect(fitsOrEllipsizes, 'A clipped name has room for a prefix and an ellipsis').toBe(true);
       });

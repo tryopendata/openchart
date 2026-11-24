@@ -1,4 +1,5 @@
 import type { RaceGeometry, RaceLayout, RaceMarkType } from '@opendata-ai/openchart-core';
+import type { ElementFactory } from '../renderers/svg-dom';
 import { createRaceBarRenderer } from './render-bar';
 import { createRaceLineRenderer } from './render-line';
 import { createRaceTableRenderer } from './render-table';
@@ -9,6 +10,7 @@ export type RaceRendererFactory<TMark extends RaceMarkType> = (
   host: RaceMarkHost<TMark>,
   stat: Extract<RaceLayout, { mark: TMark }>['static'],
   idScope: string,
+  factory?: ElementFactory,
 ) => {
   draw(geometry: Extract<RaceGeometry, { mark: TMark }>): void;
   destroy(): void;

@@ -179,18 +179,19 @@ describe('race GIF export', () => {
     }
   });
 
-  it('includes the race root in the shared theme block without changing the chart selector', () => {
+  it('shares the theme selector between race and chart exports', () => {
     const { theme } = layoutRace(prepareRace(spec, {}), options);
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.classList.add('oc-race');
     injectThemeStyleBlock(svg, theme);
     const block = () => svg.querySelector('style[data-oc-theme]')?.textContent;
-    expect(block()).toMatch(
+    const raceBlock = block();
+    expect(raceBlock).toMatch(
       /^svg\.oc-chart, svg\.oc-map, svg\.oc-tilemap, svg\.oc-barlist, svg\.oc-race \{/,
     );
     svg.classList.replace('oc-race', 'oc-chart');
     injectThemeStyleBlock(svg, theme);
-    expect(block()).toMatch(/^svg\.oc-chart, svg\.oc-map, svg\.oc-tilemap, svg\.oc-barlist \{/);
+    expect(block()).toBe(raceBlock);
   });
 
   it('embeds the computed value of every raster declaration in race.css', async () => {
@@ -406,7 +407,7 @@ describe('race GIF export', () => {
   it('rejects unsupported formats from JavaScript', async () => {
     const instance = mount();
     await expect(Reflect.apply(instance.export, instance, ['png'])).rejects.toThrow(
-      'Unsupported export format: png',
+      'Race export supports "gif" only, received "png".',
     );
     expect(frames).toHaveLength(0);
   });

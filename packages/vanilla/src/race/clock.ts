@@ -16,6 +16,7 @@ export interface RaceClockOptions {
   durationMs: number;
   holdEndMs: number;
   loop: boolean;
+  initialState?: RaceClockState;
   onTick: (t: number) => void;
   onStateChange?: (state: RaceClockState) => void;
   /** Defaults to requestAnimationFrame and cancelAnimationFrame. */
@@ -23,7 +24,7 @@ export interface RaceClockOptions {
 }
 
 export interface RaceClock {
-  play(): void;
+  play(stepPeriods?: boolean): void;
   pause(): void;
   toggle(): void;
   /** @throws {RangeError} If t is non-finite. */
@@ -42,6 +43,7 @@ export function createRaceClock(options: RaceClockOptions): RaceClock {
     durationMs,
     holdEndMs,
     loop,
+    initialState,
     onTick,
     onStateChange,
     scheduler = {
@@ -51,7 +53,18 @@ export function createRaceClock(options: RaceClockOptions): RaceClock {
   } = options;
   const lastPeriod = periodCount - 1;
   const state: RaceClockState = { t: 0, playing: false, speed: 1, ended: false };
-  let elapsedMs = 0;
+  if (initialState) {
+    if (!Number.isFinite(initialState.t)) throw new RangeError('Race seek position must be finite');
+    if (!Number.isFinite(initialState.speed) || initialState.speed <= 0) {
+      throw new RangeError('Race playback speed must be finite and greater than zero');
+    }
+    state.t = Math.min(Math.max(0, initialState.t), lastPeriod);
+    state.speed = initialState.speed;
+    state.ended = initialState.ended && state.t === lastPeriod && !initialState.playing;
+  }
+  const stepMs = durationMs / lastPeriod;
+  let elapsedMs = (state.t / lastPeriod) * durationMs;
+  let stepped = false;
   let frameId: number | undefined;
   let previousNow: number | undefined;
   let holdStartedAt: number | undefined;
@@ -109,7 +122,8 @@ export function createRaceClock(options: RaceClockOptions): RaceClock {
     } else {
       if (state.t < lastPeriod) {
         elapsedMs += (now - previous) * state.speed;
-        const position = Math.min(1, elapsedMs / durationMs) * lastPeriod;
+        const playhead = elapsedMs >= durationMs ? lastPeriod : elapsedMs / stepMs;
+        const position = stepped ? Math.floor(playhead) : playhead;
         if (position !== state.t) draw(position);
       }
       if (state.playing && state.t === lastPeriod) {
@@ -127,10 +141,12 @@ export function createRaceClock(options: RaceClockOptions): RaceClock {
     requestFrame();
   }
 
-  function play() {
+  function play(stepPeriods = false) {
     if (destroyed || state.playing) return;
+    stepped = stepPeriods;
     state.playing = true;
     if (state.ended) seek(0);
+    else if (stepped && !Number.isInteger(state.t)) draw(Math.floor(state.t));
     else notifyState();
     requestFrame();
   }

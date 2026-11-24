@@ -24,3 +24,17 @@ describe("validateDemo", () => {
     for (const problem of problems) expect(message).toContain(problem.message);
   });
 });
+
+it("prints the race data repair once when preparation fails", () => {
+  const row = { year: 2022, name: "Alpine", value: 20 };
+  expect(() =>
+    validateDemo("duplicate-race", {
+      type: "race",
+      mark: "bar",
+      data: [row, row],
+      encoding: { time: { field: "year" }, key: { field: "name" }, value: { field: "value" } },
+    }),
+  ).toThrow(
+    /^Demo "duplicate-race" has an invalid spec:\n- \(spec root\): 2 rows have name = 'Alpine' and year = 2022\. Aggregate them first so each key has one value per period\.$/,
+  );
+});

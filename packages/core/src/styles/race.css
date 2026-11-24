@@ -1,6 +1,7 @@
 @layer oc.components {
   .oc-race {
     direction: ltr;
+    font-variant-numeric: normal;
   }
 
   .oc-race-controls-slot {
@@ -128,14 +129,7 @@
     text-align: end;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  .oc-race-readout,
-  .oc-race-axis,
-  .oc-race-rows,
-  .oc-race-period,
-  .oc-race-summary {
-    font-variant-numeric: tabular-nums;
+    font-variant-numeric: normal;
   }
 
   .oc-race-axis line {
@@ -169,7 +163,6 @@
   .oc-race-line-labels {
     dominant-baseline: central;
     font-size: var(--oc-body-size);
-    font-variant-numeric: tabular-nums;
   }
 
   .oc-race-line-value {

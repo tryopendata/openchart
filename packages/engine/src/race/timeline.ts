@@ -144,6 +144,9 @@ export function createRaceTimeline(matrix: RaceMatrix, options: RaceTimelineOpti
     rankSamples(keyIndex) {
       return { exact: exactSamples[keyIndex], smoothed: smoothedSamples[keyIndex] };
     },
+    ranked(t) {
+      return rankedValues(clampTime(t)).map(({ keyIndex }) => keyIndex);
+    },
     exactRank(keyIndex, t) {
       const rank = rankedValues(clampTime(t)).findIndex((item) => item.keyIndex === keyIndex);
       return rank === -1 ? Infinity : rank;

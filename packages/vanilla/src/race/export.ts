@@ -142,7 +142,7 @@ export async function exportRaceGIF(
     surface && !/^(none|transparent|currentcolor|url\()/i.test(surface)
       ? surface
       : theme.colors.neutral.surface;
-  let renderer = mountExportRenderer(svg);
+  const renderer = mountExportRenderer(svg);
 
   const encoding = encodeSVGFrames(
     svg,
@@ -162,11 +162,6 @@ export async function exportRaceGIF(
         count,
         globalPalette: {
           swatches: paletteSwatches(svg, layout.colors),
-          startFrames() {
-            // Rebuild the keyed renderer so the seed cannot affect paint order at t = 0.
-            renderer.destroy();
-            renderer = mountExportRenderer(svg);
-          },
         },
         draw(index) {
           if (index === null) {

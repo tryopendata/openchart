@@ -23,7 +23,7 @@ Set `mark: "line"` to trace the ranked series up to the playhead. The x axis gro
 
 ## Table race
 
-Set `mark: "table"` when readers need the rank and value in columns. This example uses `columns` to give the country names and values more room on phones. The default columns also include an inline bar (hidden below 520px) and share of the total across all entries.
+Set `mark: "table"` when readers need the rank and value in columns. The default columns include an inline bar and each entry’s share of the total. Below 520px of table space, the bar hides and the Change heading becomes an arrow to leave more room for names. Use `columns` to pick which columns to show.
 
 <Demo id="change-over-time/race-table" />
 
@@ -41,7 +41,7 @@ The default `race.rescale: "frame"` fits the bar scale to each frame. Set `"fixe
 
 ## Playback and controls
 
-With `race.autoplay: "visible"` (the default), playback starts when at least a quarter of the race is in view. Set `false` to wait for the reader or `true` to start at mount. With reduced motion, a race opens paused on the final frame. Readers can scrub back and play from an earlier period.
+With `race.autoplay: "visible"` (the default), playback starts when at least a quarter of the race is in view. Set `false` to wait for the reader or `true` to start at mount. With reduced motion, a race opens paused on the final frame. Readers can scrub back and press Play to advance one whole period at a time.
 
 The player includes play and pause, a scrubber and a period readout. With focus on the player, press Space to play or pause. Right and Up step forward one period, and Left and Down step back one.
 
@@ -50,6 +50,8 @@ The player includes play and pause, a scrubber and a period readout. With focus 
 In vanilla JavaScript, `createRace(container, spec)` returns the player. Call `play()` or `pause()` to control it, and `seek(t)` to move to a zero-based period index. Fractional indices land between periods. `update({ ...spec, mark: "line" })` swaps the mark at the current playhead, as in the first example. `on("period", callback)` listens for period crossings and seeks and returns an unsubscribe function. Call `destroy()` when you remove the player.
 
 Use `setTheme({ theme, darkMode })` to replace the mount-level theme and color scheme during playback. Omit `theme` to use the spec's theme, or `darkMode` to use light mode.
+
+To render the final frame as a standalone SVG, use `renderRaceStaticSVG(spec, options)` from `@opendata-ai/openchart-vanilla/static`.
 
 Install the optional `gifenc` package to export GIFs. `await player.export("gif")` returns a `Blob` of the full run for bar and line marks. To export a race shown as a table, switch it to bar or line first.
 

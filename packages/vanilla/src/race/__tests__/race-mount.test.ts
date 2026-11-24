@@ -305,7 +305,7 @@ describe('createRace', () => {
     expect(host.querySelector('[data-key="B"] text:last-child')?.textContent).toBe('165');
     expect(host.querySelector('.oc-race-period')?.textContent).toBe('2021');
     expect(host.querySelector('.oc-race-readout')?.textContent).toBe('2021');
-    expect(scrub().value).toBe('1.5');
+    expect(scrub().value).toBe('1');
     expect(scrub().getAttribute('aria-valuetext')).toBe('2021');
     button().click();
     tick(1800);
@@ -734,14 +734,14 @@ describe('createRace', () => {
     tick(750);
     expect(svg()).not.toBe(original);
     expect(svg().getAttribute('viewBox')).toBe('0 0 360 466');
-    expect(scrub().value).toBe('0.75');
+    expect(scrub().value).toBe('0');
     expect(button().getAttribute('aria-label')).toBe('Pause');
     width = 680;
     chart.resize();
     expect(svg().getAttribute('viewBox')).toBe('0 0 680 466');
     tick(1250);
     expect(chart.getState()).toMatchObject({ t: 1.25, playing: true });
-    expect(scrub().value).toBe('1.25');
+    expect(scrub().value).toBe('1');
     expect(prepare).toHaveBeenCalledTimes(1);
   });
 
@@ -862,7 +862,7 @@ describe('createRace', () => {
     chart.update({ ...spec, race: { ...spec.race, top: 1 } });
     expect(chart.getState()).toMatchObject({ t: 1.25, playing: true, speed: 2 });
     expect(rowKeys()).toEqual(['B']);
-    expect(scrub().value).toBe('1.25');
+    expect(scrub().value).toBe('1');
     expect(button().getAttribute('aria-label')).toBe('Pause');
     tick(750);
     expect(chart.getState().t).toBe(1.5);
@@ -961,7 +961,7 @@ describe('createRace', () => {
     );
     expect(svg()).toBe(initialSvg);
     expect(chart.getState()).toEqual(initialState);
-    expect(scrub().value).toBe('0.5');
+    expect(scrub().value).toBe('0');
     tick(1500);
     expect(chart.getState()).toMatchObject({ t: 1.5, playing: true });
     expect(rowKeys()).toEqual(['B', 'A']);
@@ -971,7 +971,11 @@ describe('createRace', () => {
     const renderer = RACE_RENDERERS.bar;
     delete RACE_RENDERERS.bar;
     try {
-      expect(() => mount()).toThrow(/^Race mark "bar" is not registered\. Registered: /);
+      const initialState = { t: 0.5, playing: true, ended: false, speed: 1 };
+      expect(() => mount(spec, { initialState })).toThrow(
+        /^Race mark "bar" is not registered\. Registered: /,
+      );
+      expect(frames.size).toBe(0);
     } finally {
       RACE_RENDERERS.bar = renderer;
     }
@@ -1143,11 +1147,78 @@ describe('createRace', () => {
     expect(chart.getState()).toMatchObject({ t: 0.5, speed: 1, playing: false });
   });
 
+  it('restores a completed race and replays at its previous speed', () => {
+    const replay = { ...spec, race: { ...spec.race, autoplay: true as const, holdEnd: 0 } };
+    const previous = mount(replay);
+    previous.setSpeed(2);
+    tick(0);
+    tick(1000);
+    const initialState = previous.getState();
+    expect(initialState).toMatchObject({ t: 2, playing: false, ended: true, speed: 2 });
+    previous.destroy();
+
+    const chart = mount(replay, { initialState });
+    expect(chart.getState()).toEqual(initialState);
+    expect(scrub().getAttribute('aria-valuetext')).toBe('2022');
+    button().click();
+    expect(chart.getState()).toMatchObject({ t: 0, playing: true, ended: false, speed: 2 });
+    tick(1100);
+    tick(1600);
+    expect(chart.getState().t).toBe(1);
+  });
+
+  it('uses the motion preference at Play and redraws only at whole periods', () => {
+    const chart = mount();
+    const value = () => host.querySelector('[data-key="A"] text:last-child')?.textContent;
+    chart.seek(0.25);
+    window.happyDOM.settings.device.prefersReducedMotion = 'reduce';
+    button().click();
+    tick(0);
+    expect(chart.getState().t).toBe(0);
+    const firstValue = value();
+    tick(500);
+    expect(chart.getState().t).toBe(0);
+    expect(value()).toBe(firstValue);
+    tick(1000);
+    expect(chart.getState().t).toBe(1);
+    expect(value()).not.toBe(firstValue);
+    tick(1500);
+    expect(chart.getState().t).toBe(1);
+    chart.pause();
+
+    window.happyDOM.settings.device.prefersReducedMotion = 'no-preference';
+    button().click();
+    tick(1500);
+    tick(1625);
+    expect(chart.getState().t).toBeGreaterThan(1);
+    expect(chart.getState().t).toBeLessThan(2);
+  });
+
+  it('keeps its position before a following sibling when changing timing', () => {
+    const chart = mount();
+    const following = document.createElement('p');
+    following.textContent = 'After the race';
+    host.append(following);
+    chart.seek(0.5);
+    chart.update({ ...spec, race: { ...spec.race, duration: 500 } });
+
+    expect(host.firstElementChild).toBe(host.querySelector('.oc-race-root'));
+    expect(host.lastElementChild).toBe(following);
+    expect(chart.getState().t).toBe(0.5);
+  });
+
+  it('rejects an unrecognized event name', () => {
+    const chart = mount();
+    expect(() => chart.on('end' as 'period', () => {})).toThrow(
+      new TypeError('Unknown race event "end". Supported: "period".'),
+    );
+  });
+
   it('rejects GIF export after the race is destroyed', async () => {
     const chart = mount();
     chart.destroy();
     await expect(chart.export('gif')).rejects.toThrow(
-      new Error('Race was destroyed during GIF export'),
+      new Error('This race was destroyed. Create a new race to export.'),
     );
   });
 });

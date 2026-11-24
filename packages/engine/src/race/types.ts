@@ -84,6 +84,8 @@ export interface RaceTimeline {
   valueAt(keyIndex: number, t: number): number;
   /** Smoothed rank in [0, top]. */
   rankPos(keyIndex: number, t: number): number;
+  /** Present key indices in exact rank order. */
+  ranked(t: number): number[];
   /** Zero-based rank among present keys. Infinity when absent. */
   exactRank(keyIndex: number, t: number): number;
   /** Cached exact rank at an integer period index. Infinity when absent. */

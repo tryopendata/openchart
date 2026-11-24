@@ -1,4 +1,5 @@
 import { type RaceLayout, type RaceMarkType, wrapText } from '@opendata-ai/openchart-core';
+import { createRenderContext, type RenderContext } from '../render-context';
 import { renderAttributionBrand } from '../renderers/brand';
 import { renderChromeElement, renderChromeRuleAndEyebrow } from '../renderers/chrome';
 import { SVG_NS, setAttrs } from '../renderers/svg-dom';
@@ -18,11 +19,11 @@ export interface RaceShell<TMark extends RaceMarkType = RaceMarkType> {
   destroy(): void;
 }
 
-function renderRaceChrome(svg: SVGSVGElement, layout: RaceLayout): void {
+export function renderRaceChrome(svg: SVGElement, layout: RaceLayout, ctx: RenderContext): void {
   const { chrome, area, measureText } = layout;
-  const chromeGroup = svg.ownerDocument.createElementNS(SVG_NS, 'g');
+  const chromeGroup = ctx.factory.svg('g');
   chromeGroup.setAttribute('class', 'oc-chrome');
-  renderChromeRuleAndEyebrow(chromeGroup, chrome, measureText);
+  renderChromeRuleAndEyebrow(chromeGroup, chrome, measureText, ctx);
 
   const bottom = chrome.bottomAnchorY ?? area.y + area.height;
   for (const key of ['title', 'subtitle', 'source', 'byline', 'footer'] as const) {
@@ -35,6 +36,8 @@ function renderRaceChrome(svg: SVGSVGElement, layout: RaceLayout): void {
       `oc-${key}`,
       key,
       measureText,
+      undefined,
+      ctx,
     );
   }
   svg.append(chromeGroup);
@@ -43,12 +46,14 @@ function renderRaceChrome(svg: SVGSVGElement, layout: RaceLayout): void {
     layout.watermark ? chrome : { ...chrome, watermark: undefined },
     bottom,
     measureText,
+    true,
+    ctx,
   );
   if (layout.a11y.hidden) svg.querySelector('.oc-chrome-ref')?.setAttribute('tabindex', '-1');
 }
 
 /** Measure from the last footer item, including wrapped lines and stacked branding. */
-function controlsLift(layout: RaceLayout): number {
+export function controlsLift(layout: RaceLayout): number {
   const { area, chrome, height, measureText, watermark } = layout;
   const bottom = chrome.bottomAnchorY ?? area.y + area.height;
   let contentBottom = bottom;
@@ -126,6 +131,7 @@ export function createRaceShell(
   svg.style.width = '100%';
   svg.style.height = `${height}px`;
   svg.style.fontFamily = 'var(--oc-font-family)';
+  svg.style.fontWeight = String(theme.fonts.weights.normal);
   if (a11y.hidden) svg.setAttribute('aria-hidden', 'true');
   else {
     svg.setAttribute('role', 'img');
@@ -134,7 +140,7 @@ export function createRaceShell(
   stampThemeProperties(svg, theme);
   root.append(svg);
 
-  renderRaceChrome(svg, layout);
+  renderRaceChrome(svg, layout, createRenderContext());
   const { markHost, controlsSlot } = createMarkHost(root, svg, layout);
   controlsSlot.style.setProperty('--oc-race-padding', `${theme.spacing.padding}px`);
   if (layout.chrome.source) {

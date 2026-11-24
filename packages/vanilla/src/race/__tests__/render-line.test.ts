@@ -54,7 +54,22 @@ function setup(mark: RaceSpec['mark'] = 'line', input = spec) {
 }
 
 describe('race line renderer', () => {
-  it('connects displaced labels with a thin translucent stroke in the series color', () => {
+  it('draws series in the same order after a seek as after sequential draws', () => {
+    const sequential = setup();
+    const direct = setup();
+    for (let t = 0; t <= 4; t += 0.25) sequential.draw(t);
+    direct.draw(4);
+    const paintOrder = ({ host }: ReturnType<typeof setup>) =>
+      [...host.querySelectorAll('[data-key]')].map((node) => [
+        node.localName,
+        node.getAttribute('data-key'),
+      ]);
+    expect(paintOrder(direct)).toContainEqual(['path', 'B']);
+    expect(paintOrder(direct)).toContainEqual(['path', 'A']);
+    expect(paintOrder(sequential)).toEqual(paintOrder(direct));
+  });
+
+  it('connects displaced labels with thin, muted, diagonal leaders', () => {
     const { draw, host } = setup('line', {
       ...spec,
       data: [2000, 2001].flatMap((year) =>
@@ -66,16 +81,35 @@ describe('race line renderer', () => {
     const leaders = [...host.querySelectorAll('.oc-race-line-leader')];
     expect(leaders.length).toBeGreaterThan(0);
     expect(leaders).toHaveLength(geometry.series.filter(({ endLabel }) => endLabel.leader).length);
-    for (const [index, { endLabel, color, opacity }] of geometry.series
+    for (const [index, { endLabel, opacity }] of geometry.series
       .filter(({ endLabel }) => endLabel.leader)
       .entries()) {
       const leader = leaders[index];
-      expect(leader.getAttribute('stroke')).toBe(color);
-      expect(leader.getAttribute('stroke-width')).toBe('1');
+      expect(leader.getAttribute('stroke')).toBe('var(--oc-text-muted)');
+      expect(leader.getAttribute('stroke-width')).toBe('0.8');
+      expect(Number(leader.getAttribute('x2')) - Number(leader.getAttribute('x1'))).toBeGreaterThan(
+        8,
+      );
       expect(Number(leader.getAttribute('y1'))).toBeCloseTo(endLabel.leader?.y ?? NaN, 1);
       expect(Number(leader.getAttribute('y2'))).toBeCloseTo(endLabel.y, 1);
       expect(Number(leader.getAttribute('opacity'))).toBeLessThan(opacity);
     }
+  });
+
+  it('paints coincident leaders once when nearly tied series cross', () => {
+    const { draw, host } = setup('line', {
+      ...spec,
+      data: [
+        { year: 2000, key: 'A', value: 100 },
+        { year: 2001, key: 'A', value: 100 - 48 * 2 ** -24 },
+        { year: 2000, key: 'B', value: 100 - 5 * 2 ** -24 },
+        { year: 2001, key: 'B', value: 100 - 5 * 2 ** -24 },
+      ],
+      race: { ...spec.race, top: 2, duration: 1000, swap: 100 },
+    });
+    draw(5 / 48);
+    expect(host.querySelectorAll('path[data-key]')).toHaveLength(2);
+    expect(host.querySelectorAll('.oc-race-line-leader')).toHaveLength(1);
   });
 
   it('fades in the leader as an end label moves away from its line', () => {
@@ -95,11 +129,7 @@ describe('race line renderer', () => {
     const paints = [];
     for (let step = 0; step <= 120; step++) {
       draw(step / 120);
-      const color = host.querySelector('path[data-key="C"]')?.getAttribute('stroke');
-      expect(color).toBeTruthy();
-      const leader = [...host.querySelectorAll('.oc-race-line-leader')].find(
-        (line) => line.getAttribute('stroke') === color,
-      );
+      const leader = host.querySelector('.oc-race-line-leader[data-key="C"]');
       const opacity = Number(leader?.getAttribute('opacity') ?? 0);
       expect(Math.abs(opacity - (paints.at(-1) ?? 0))).toBeLessThan(0.12);
       paints.push(opacity);
@@ -154,9 +184,7 @@ describe('race line renderer', () => {
     tick.opacity = 0.34567;
     renderer.draw(geometry);
     const path = host.querySelector('path[data-key="A"]');
-    const label = [...host.querySelectorAll('text')].find((node) =>
-      node.textContent?.startsWith('A '),
-    );
+    const label = host.querySelector('text[data-key="A"]');
     const tickLabel = [...host.querySelectorAll('text')].find(
       (node) => node.textContent === tick.label,
     );
@@ -207,11 +235,9 @@ describe('race line renderer', () => {
     const { host, draw } = setup();
     const first = draw(3.1);
     const path = host.querySelector('path[data-key="A"]');
-    const label = [...host.querySelectorAll('text')].find((node) =>
-      node.textContent?.startsWith('A '),
-    );
+    const label = host.querySelector('text[data-key="A"]');
     const tick = [...host.querySelectorAll('text')].find((node) => node.textContent === '2000');
-    expect(label?.textContent).toBe(`A ${first.series[0].endLabel.value}`);
+    expect(label?.textContent).toBe('A');
     expect(label?.firstElementChild?.getAttribute('fill')).toBe(first.series[0].color);
     expect(label?.lastElementChild?.getAttribute('class')).toBe('oc-race-line-value');
     expect(label?.lastElementChild?.hasAttribute('fill')).toBe(false);
@@ -226,7 +252,7 @@ describe('race line renderer', () => {
     const outgoing = second.series.find(({ key }) => key === 'A');
     expect(Number(label?.getAttribute('x'))).toBe(Number(outgoing?.endLabel.x.toFixed(2)));
     expect(Number(label?.getAttribute('y'))).toBe(Number(outgoing?.endLabel.y.toFixed(2)));
-    expect(label?.textContent).toBe(`A ${outgoing?.endLabel.value}`);
+    expect(label?.textContent).toBe('A');
     expect(Number(path?.getAttribute('opacity'))).toBe(Number(outgoing?.opacity.toFixed(2)));
     const labelOpacity = outgoing?.endLabel.opacity ?? outgoing?.opacity;
     expect(Number(label?.getAttribute('opacity'))).toBe(Number(labelOpacity?.toFixed(2)));

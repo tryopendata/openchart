@@ -1,5 +1,5 @@
 import type { RaceSpec } from '@opendata-ai/openchart-core';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { raceA11y } from '../a11y';
 import { layoutRace } from '../layout';
 import { prepareRace } from '../prepare';
@@ -79,14 +79,9 @@ describe('raceA11y', () => {
     expect(dataTableFallback.at(-1)).toEqual(['2022 CE', 'c (30.0)', 'b (20.0)']);
   });
 
-  it('matches every exact rank and uses exactRank only for tied values', () => {
+  it('matches the exact standings, including ties', () => {
     const model = prepareRace({ ...spec, race: { ...spec.race, top: 3 } }, {});
-    using exactRank = vi.spyOn(model.timeline, 'exactRank');
     const { dataTableFallback } = raceA11y(model);
-    expect(exactRank.mock.calls.toSorted()).toEqual([
-      [0, 1],
-      [1, 1],
-    ]);
     for (const [period, label] of model.periodLabels.entries()) {
       const expected = [label];
       for (const [key, name] of model.matrix.labels.entries()) {

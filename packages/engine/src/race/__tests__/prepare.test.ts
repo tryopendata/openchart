@@ -32,6 +32,56 @@ function getError(run: () => unknown): Error {
 }
 
 describe('race preparation', () => {
+  it('reuses ranking and formatting across a mark swap and rebuilds after a data edit', () => {
+    const input = structuredClone(spec);
+    const previousModel = prepareRace(input, {});
+    const line = prepareRace({ ...input, mark: 'line' }, { previousModel });
+    expect(line.spec.mark.type).toBe('line');
+    for (const field of ['matrix', 'timeline', 'periodLabels', 'formatValue'] as const) {
+      expect(line[field]).toBe(previousModel[field]);
+    }
+
+    input.data[0].gdp = 40;
+    const updated = prepareRace({ ...input, mark: 'line' }, { previousModel: line });
+    for (const field of ['matrix', 'timeline', 'periodLabels', 'formatValue'] as const) {
+      expect(updated[field]).not.toBe(line[field]);
+    }
+    expect(line.timeline.valueAt(0, 2)).toBe(24);
+    expect(updated.timeline.valueAt(0, 2)).toBe(40);
+  });
+
+  it('ignores unconsumed metadata on encoding and scaling options when reusing ranking', () => {
+    const metadata = {
+      toJSON() {
+        throw new Error('Metadata is not part of the race');
+      },
+    };
+    const input: RaceSpec = {
+      ...spec,
+      encoding: { ...spec.encoding, color: { ...metadata, field: 'country' } },
+      race: { ...spec.race, rescale: { ...metadata, min: 30 } },
+    };
+    const previousModel = prepareRace(input, {});
+    const next = prepareRace({ ...input, mark: 'line' }, { previousModel });
+    expect(next.timeline).toBe(previousModel.timeline);
+    expect(next.timeline.sample(2).domainMax).toBe(30);
+  });
+
+  it('rebuilds ranking when timing or formatting changes', () => {
+    const previousModel = prepareRace(spec, {});
+    const updated = prepareRace(
+      {
+        ...spec,
+        race: { ...spec.race, swap: 300, period: { format: '%y' } },
+        labels: { format: '.2f' },
+      },
+      { previousModel },
+    );
+    expect(updated.timeline).not.toBe(previousModel.timeline);
+    expect(updated.periodLabels).toEqual(['22', '23', '24']);
+    expect(updated.formatValue(24)).toBe('24.00');
+  });
+
   it('pivots data, fills interior gaps, and caches ranks, labels, and color slots', () => {
     const model = prepareRace(spec, {});
 

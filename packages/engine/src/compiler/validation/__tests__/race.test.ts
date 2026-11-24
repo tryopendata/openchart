@@ -367,7 +367,6 @@ describe('race spec validation', () => {
 
   it.each([
     ['format', 2024, 'must be a string', 'format: "%Y"'],
-    ['position', 'bottom', 'must be "auto"', 'position: "auto"'],
   ])('rejects invalid period option %s', (option, value, problem, fix) => {
     expectError(
       { race: { period: { [option]: value } } },
@@ -447,11 +446,7 @@ describe('race spec validation', () => {
   });
 
   it.each([
-    [
-      'line',
-      'ordinal',
-      { loop: true, controls: true, autoplay: true, period: { position: 'auto' } },
-    ],
+    ['line', 'ordinal', { loop: true, controls: true, autoplay: true, period: { format: '%Y' } }],
     ['table', 'quantitative', { autoplay: false, period: false, summary: false }],
   ])('accepts the %s shorthand with %s time and a quantitative value', (mark, type, race) => {
     const encoding = {

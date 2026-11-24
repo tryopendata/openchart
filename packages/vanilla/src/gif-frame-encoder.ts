@@ -32,7 +32,6 @@ interface GIFFrames {
   /** Reserve colors that may disappear by the settled frame and write only a global table. */
   globalPalette?: {
     swatches: SVGElement;
-    startFrames(): void;
   };
 }
 
@@ -150,7 +149,6 @@ export async function encodeSVGFrames(
       const b = rgba[i + 2];
       reserved.set((r << 16) | (g << 8) | b, [r, g, b]);
     }
-    globalPalette.startFrames();
   }
   const palette = quantize(seed, (globalPalette ? 255 : 256) - reserved.size);
   palette.push(...reserved.values());

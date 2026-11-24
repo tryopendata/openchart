@@ -1,5 +1,5 @@
 import type { RaceBarGeometry, RaceBarStatic } from '@opendata-ai/openchart-core';
-import { createSVGElement, setAttrs } from '../renderers/svg-dom';
+import { defaultElementFactory, type ElementFactory, setAttrs } from '../renderers/svg-dom';
 import { setNumbers } from './svg-attrs';
 
 /** Draws in the host's user space and removes only its own nodes on `destroy()`. */
@@ -18,6 +18,7 @@ export function createRaceBarRenderer(
   host: SVGGElement,
   stat: RaceBarStatic,
   idScope: string,
+  { svg: createSVGElement }: ElementFactory = defaultElementFactory,
 ): RaceBarRenderer {
   const clipId = `${idScope}-race-clip`;
   const defs = createSVGElement('defs');
@@ -80,10 +81,13 @@ export function createRaceBarRenderer(
       if (destroyed) return;
 
       const activeTicks = new Set<number>();
+      let nextTick = axis.firstElementChild;
       for (const tick of geometry.ticks) {
         const { value, position, opacity, label } = tick;
         const nodes = tickNodes.get(value) ?? createTick(value);
         activeTicks.add(value);
+        if (nodes.group === nextTick) nextTick = nextTick.nextElementSibling;
+        else axis.insertBefore(nodes.group, nextTick);
         setNumbers(nodes.group, { opacity });
         setNumbers(nodes.line, { x1: position, x2: position });
         drawText(nodes.label, { x: position, y: stat.axisY, text: label });

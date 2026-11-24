@@ -56,6 +56,29 @@ it.each([
   expect(current.getState().t).toBe(1);
 });
 
+it('replays from the start after a completed race remounts', async () => {
+  const clock = installFrameClock();
+  onTestFinished(clock.restore);
+  const replaySpec: RaceSpec = { ...playbackSpec, race: { ...playbackSpec.race, autoplay: true } };
+  const { wrapper, getInstance, setProps } = renderRace({ spec: replaySpec });
+  const previous = getInstance();
+  previous.setSpeed(2);
+  clock.pump(0);
+  clock.pump(200);
+  expect(previous.getState()).toMatchObject({ t: 2, playing: false, ended: true });
+
+  await setProps({ autoResize: false });
+  const current = getInstance();
+  expect(current).not.toBe(previous);
+  expect(current.getState()).toMatchObject({ t: 2, playing: false, ended: true, speed: 2 });
+  await wrapper.get('button[aria-label="Play"]').trigger('click');
+  expect(current.getState()).toMatchObject({ t: 0, playing: true, speed: 2 });
+
+  clock.pump(300);
+  clock.pump(400);
+  expect(current.getState().t).toBe(1);
+});
+
 it('reuses the chart and controls for an equal inline spec', async () => {
   const { getInstance, setProps, wrapper } = renderRace({ spec });
   const update = vi.spyOn(getInstance(), 'update');
