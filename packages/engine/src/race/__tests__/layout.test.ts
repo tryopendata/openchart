@@ -254,10 +254,19 @@ describe('race layout', () => {
 
     expect(layout.mark).toBe('bar');
     expect(line.spec.mark.type).toBe('line');
-    expect(() => layoutRace(line, size)).toThrow(/Race mark "line".*Registered: bar/);
-    expect(() => layoutRace(prepareRace(spec, {}), { ...size, mark: { type: 'table' } })).toThrow(
-      /race mark "table".*registered/i,
-    );
+    const lineEntry = RACE_MARKS.line;
+    const tableEntry = RACE_MARKS.table;
+    delete RACE_MARKS.line;
+    delete RACE_MARKS.table;
+    try {
+      expect(() => layoutRace(line, size)).toThrow(/Race mark "line".*Registered: bar/);
+      expect(() => layoutRace(prepareRace(spec, {}), { ...size, mark: { type: 'table' } })).toThrow(
+        /race mark "table".*registered/i,
+      );
+    } finally {
+      RACE_MARKS.line = lineEntry;
+      RACE_MARKS.table = tableEntry;
+    }
   });
 
   it('lays out and draws a mark registered with only static and geometry methods', () => {
@@ -270,6 +279,9 @@ describe('race layout', () => {
             domain: [0, mark.window === 'all' ? 1 : 0],
             range: [area.x, area.x + area.width],
           },
+          yAxisX: area.x,
+          labelGutter: 0,
+          tickFontSize: 12,
         };
       },
       geometry(_model, layout) {
@@ -278,6 +290,7 @@ describe('race layout', () => {
           series: [],
           xTicks: [],
           yTicks: [{ value: 0, label: '0', opacity: 1, position: layout.static.plot.y }],
+          domain: [0, 1],
         };
       },
     };

@@ -1,10 +1,17 @@
-import { isChartSpec, type LayerSpec, type RaceSpec } from '@opendata-ai/openchart-core';
+import {
+  isChartSpec,
+  type LayerSpec,
+  type RaceMarkType,
+  type RaceSpec,
+} from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
+import { RACE_RENDERERS } from '../../../../vanilla/src/race/renderers';
 import { compileChart } from '../../compile';
 import { expandSpecSugar } from '../../compile/spec-sugar';
 import { normalizeSpec } from '../../compiler/normalize';
 import { validateSpec } from '../../compiler/validate';
 import { RaceDataError } from '../errors';
+import { RACE_MARKS } from '../marks';
 
 const spec = {
   type: 'race',
@@ -35,6 +42,16 @@ const layered = {
 } satisfies LayerSpec;
 
 describe('race registration', () => {
+  const marks: RaceMarkType[] = ['bar', 'line', 'table'];
+
+  it.each(marks)('registers the %s layout and renderer', (mark) => {
+    expect(RACE_MARKS[mark]).toEqual({
+      computeStatic: expect.any(Function),
+      geometry: expect.any(Function),
+    });
+    expect(RACE_RENDERERS[mark]).toEqual(expect.any(Function));
+  });
+
   it('accepts race mark options without chart validation', () => {
     expect(validateSpec(spec)).toEqual({ valid: true, errors: [], normalized: spec });
     expect(isChartSpec(spec)).toBe(false);

@@ -280,7 +280,13 @@ describe('race shell', () => {
       {
         ...layout,
         mark: 'line',
-        static: { plot: layout.area, xScale: { domain: [0, 1], range: [0, 600] } },
+        static: {
+          plot: layout.area,
+          xScale: { domain: [0, 1], range: [0, 600] },
+          yAxisX: layout.area.x,
+          labelGutter: 0,
+          tickFontSize: 12,
+        },
       },
       'line',
     );
@@ -294,7 +300,24 @@ describe('race shell', () => {
   it('puts the HTML table host after the SVG and before the controls slot', () => {
     const { root, svg, markHost, controlsSlot } = createRaceShell(
       document.createElement('div'),
-      { ...barLayout(), mark: 'table', static: { rowHeight: 30, columns: [] } },
+      {
+        ...barLayout(),
+        mark: 'table',
+        static: {
+          rowHeight: 30,
+          headerHeight: 30,
+          fontSize: 12,
+          columns: [],
+          labels: {
+            rank: 'Rank',
+            change: 'Change',
+            name: 'Name',
+            bar: '',
+            value: 'Value',
+            share: 'Share',
+          },
+        },
+      },
       'table',
     );
 

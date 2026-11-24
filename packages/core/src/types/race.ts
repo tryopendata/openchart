@@ -76,35 +76,131 @@ export interface RaceBarGeometry {
 }
 
 export interface RaceLineStatic {
+  /** Bounds of the line plot in pixels. */
   plot: Rect;
   /** Full period-index domain and its pixel range. Reveal mode shortens the domain each frame. */
-  xScale: { domain: [number, number]; range: [number, number] };
+  xScale: {
+    /** First and last period indices. */
+    domain: [number, number];
+    /** Left and right x coordinates in pixels. */
+    range: [number, number];
+  };
+  /** Horizontal position of the y axis in pixels. */
+  yAxisX: number;
+  /** Width reserved to the right of the plot for line-end labels, in pixels. */
+  labelGutter: number;
+  /** Font size for axis tick labels in pixels. */
+  tickFontSize: number;
 }
 
 export interface RaceLineGeometry {
+  /** Identifies line geometry in a race frame. */
   mark: 'line';
+  /** Series drawn in the current frame. */
   series: Array<{
+    /** Stable key for the series. */
     key: string;
+    /** Display color for the line and its name. */
     color: string;
+    /** Opacity of the series in this frame. */
     opacity: number;
     /** Observed points through the current period, plus the interpolated head. Null marks a gap. */
     points: Array<Point | null>;
-    endLabel: { x: number; y: number; text: string };
+    /** Positioned name and value at the line's head. */
+    endLabel: {
+      /** Horizontal label position in pixels. */
+      x: number;
+      /** Vertical label position in pixels. */
+      y: number;
+      /** Series name to display. */
+      text: string;
+      /** Formatted value at the line's head. */
+      value: string;
+    };
   }>;
+  /** Period ticks on the horizontal axis. */
   xTicks: RaceTick[];
+  /** Value ticks on the vertical axis. */
   yTicks: RaceTick[];
+  /** Y-axis value domain. It can expand as the playhead advances. */
+  domain: [number, number];
 }
 
+/** Display data for a cell in a race table row. */
+export type RaceTableCell =
+  | {
+      /** Identifies the rank column. */
+      column: 'rank';
+      /** Displayed rank for the current period. */
+      text: string;
+    }
+  | {
+      /** Identifies the change column. */
+      column: 'change';
+      /** Rank movement since the previous period, or `new` for a key entering the ranking. */
+      direction: 'up' | 'down' | 'same' | 'new';
+      /** Display text for the rank change. */
+      text: string;
+    }
+  | {
+      /** Identifies the name column. */
+      column: 'name';
+      /** Series name to display. */
+      text: string;
+      /** Series color for the chip next to the name. */
+      color: string;
+    }
+  | {
+      /** Identifies the inline bar column. */
+      column: 'bar';
+      /** Left edge of the inline bar in pixels. */
+      x: number;
+      /** Width of the inline bar in pixels. */
+      width: number;
+      /** Fill color of the inline bar. */
+      color: string;
+    }
+  | {
+      /** Identifies the value or share column. */
+      column: 'value' | 'share';
+      /** Formatted value or percentage share, according to the column. */
+      text: string;
+    };
+
 export interface RaceTableStatic {
+  /** Height of each row slot in pixels. */
   rowHeight: number;
-  /** Columns in display order. Positions and widths are in pixels. */
-  columns: Array<{ column: RaceTableColumn; x: number; width: number }>;
+  /** Height of the header row in pixels. */
+  headerHeight: number;
+  /** Font size for table text in pixels. */
+  fontSize: number;
+  /** Columns in display order. */
+  columns: Array<{
+    /** Column identifier shared by the header and row cells. */
+    column: RaceTableColumn;
+    /** Horizontal position of the column in pixels. */
+    x: number;
+    /** Width of the column in pixels. */
+    width: number;
+  }>;
+  /** Header text by column. */
+  labels: Record<RaceTableColumn, string>;
 }
 
 export interface RaceTableGeometry {
+  /** Identifies table geometry in a race frame. */
   mark: 'table';
-  /** Rows in draw order. Cells align with the static column order. */
-  rows: Array<{ key: string; y: number; opacity: number; cells: string[] }>;
+  /** Rows in draw order. */
+  rows: Array<{
+    /** Stable key for the row's series. */
+    key: string;
+    /** Vertical row position in pixels. */
+    y: number;
+    /** Opacity of the row in this frame. */
+    opacity: number;
+    /** Cell data in the static column order. */
+    cells: RaceTableCell[];
+  }>;
 }
 
 export type RaceGeometry = RaceBarGeometry | RaceLineGeometry | RaceTableGeometry;

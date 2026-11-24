@@ -55,7 +55,7 @@ function raceLayoutBase(
     height,
     chrome,
     theme,
-    a11y: raceA11y(spec.chrome.title?.text),
+    a11y: raceA11y(model),
     watermark,
     periods: [...model.periodLabels],
     colors: resolveRaceColors(model.colorSlots, theme.colors.categorical),
