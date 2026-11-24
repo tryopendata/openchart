@@ -82,6 +82,65 @@ describe('bar race static layout', () => {
 });
 
 describe('bar race frame geometry', () => {
+  it.each([
+    [330, 12],
+    [330, 14],
+    [360, 12],
+    [360, 14],
+    [680, 12],
+    [680, 14],
+  ])('fits ten row slots across the full plot at %i px with %i px ticks', (width, tick) => {
+    const stat = computeBarStatic({
+      ...input,
+      area: { ...input.area, width, height: 390 },
+      top: 10,
+      fontSize: { ...input.fontSize, tick },
+      showSummary: false,
+    });
+    const geometry = barGeometry(
+      stat,
+      {
+        ...frame,
+        items: Array.from({ length: 10 }, (_, rankPos) => ({
+          ...frame.items[0],
+          key: String(rankPos),
+          value: 44,
+          valueLabel: '44 km',
+          rankPos,
+        })),
+      },
+      formatTick,
+    );
+    expect(geometry.rows).toHaveLength(10);
+    expect(stat.rowHeight * 10).toBeCloseTo(stat.plot.height);
+    expect(stat.clip.height).toBe(stat.plot.height);
+    for (const { bar, value } of geometry.rows) {
+      expect(bar.y).toBeGreaterThanOrEqual(stat.plot.y);
+      expect(bar.y + bar.height).toBeLessThanOrEqual(stat.plot.y + stat.plot.height);
+      expect(value.y + input.fontSize.value / 2).toBeLessThanOrEqual(
+        stat.clip.y + stat.clip.height,
+      );
+    }
+  });
+
+  it('keeps the period and summary visible on a short leaderboard', () => {
+    const stat = computeBarStatic({
+      ...input,
+      area: { x: 0, y: 0, width: 360, height: 100 },
+      top: 2,
+    });
+    const geometry = barGeometry(
+      stat,
+      { ...frame, items: [{ ...frame.items[0], rankPos: 1 }] },
+      formatTick,
+    );
+    const [row] = geometry.rows;
+    expect(row.bar.height).toBeGreaterThan(0);
+    expect(geometry.period).toMatchObject({ y: 100, text: '2020' });
+    expect(geometry.summary).toMatchObject({ text: '20 km' });
+    expect(geometry.summary!.y).toBeLessThan(geometry.period!.y - geometry.period!.fontSize);
+  });
+
   it('keeps the zero line and ticks stable when the visible domain crosses zero', () => {
     const stat = computeBarStatic({
       ...input,
@@ -148,6 +207,28 @@ describe('bar race frame geometry', () => {
     ]);
   });
 
+  it('keeps the right-edge tick but omits its label when the full dollar amount does not fit', () => {
+    const stat = computeBarStatic({
+      ...input,
+      area: { ...input.area, width: 800 },
+      hasNegatives: false,
+      maxValueLabelWidth: 5,
+    });
+    const { ticks } = barGeometry(
+      stat,
+      { ...frame, domain: [0, 5], items: [] },
+      (value) => (value === 0 ? '$0' : `$${value}T`),
+      { fontSize: 13, fontWeight: 400, measureWidth: (text) => 10 * text.length },
+    );
+    expect(ticks[0]).toMatchObject({ value: 0, label: '$0' });
+    expect(ticks.at(-1)).toMatchObject({
+      value: 5,
+      position: stat.plot.x + stat.plot.width,
+      label: '',
+    });
+    expect(ticks.at(-1)?.opacity).toBeGreaterThan(0);
+  });
+
   it('leaves room for the value label at the negative domain endpoint', () => {
     const valueLabel = '-20 km';
     const fontSize = input.fontSize.value;
@@ -169,15 +250,16 @@ describe('bar race frame geometry', () => {
     const stat = computeBarStatic({ ...input, area });
     const geometry = barGeometry(stat, frame, formatTick);
     expect(stat.plot.height).toBe(8);
+    expect(stat.clip.height).toBe(8);
     for (const row of geometry.rows) {
       for (const value of Object.values(row.bar)) {
         expect(Number.isFinite(value)).toBe(true);
         expect(value).toBeGreaterThanOrEqual(0);
       }
     }
-    expect(geometry.period?.y).toBe(area.height);
-    expect(geometry.summary?.y).toBeGreaterThanOrEqual(area.y);
-    expect(geometry.summary?.y).toBeLessThan(geometry.period?.y ?? 0);
+    expect(geometry.period).toMatchObject({ y: area.height, text: '2020' });
+    expect(geometry.summary).toMatchObject({ text: '20 km' });
+    expect(geometry.summary!.y).toBeGreaterThanOrEqual(area.y);
   });
 
   it('draws period and summary independently and requires a summary in the frame', () => {

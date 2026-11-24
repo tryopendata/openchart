@@ -153,15 +153,11 @@ function barTicks(
   for (const tick of byPriority) {
     const { position } = tick;
     const budget = 2 * Math.max(0, Math.min(position - x, x + width - position));
-    const label = truncateRaceLabel(
-      formatTick(tick.value),
-      budget,
-      fontSize,
-      fontWeight,
-      measureWidth,
-    );
+    const label = formatTick(tick.value);
     if (!label) continue;
-    const halfWidth = measureWidth(label, fontSize, fontWeight) / 2;
+    const labelWidth = measureWidth(label, fontSize, fontWeight);
+    if (labelWidth > budget) continue;
+    const halfWidth = labelWidth / 2;
     const left = position - halfWidth;
     const right = position + halfWidth;
     if (
