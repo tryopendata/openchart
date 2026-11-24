@@ -82,6 +82,17 @@ function validateEncoding(encoding: unknown, errors: ValidationError[]): void {
     }
     validateEncodingType(channel, type, errors);
   }
+
+  for (const channel of ['label', 'color']) {
+    const definition = encoding[channel];
+    if (definition === undefined || isRecord(definition)) continue;
+    errors.push({
+      code: 'INVALID_TYPE',
+      path: jsonPointer('encoding', channel),
+      message: `Spec error: encoding.${channel} must be an object`,
+      suggestion: `Use a channel definition or omit encoding.${channel}.`,
+    });
+  }
 }
 
 function validateEncodingFields(

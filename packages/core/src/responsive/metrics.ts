@@ -261,7 +261,7 @@ export function maxRotatedLabelWidth(tickAngle: number, tickFontSize: number): n
  * Truncate a label with an ellipsis so it fits inside an explicit pixel budget.
  * Returns the label unchanged when it already fits.
  *
- * Binary-search on character count against the real measure function, so it
+ * Binary-search on Unicode code point count against the real measure function, so it
  * respects proportional fonts rather than assuming a fixed character width.
  */
 export function truncateToWidth(
@@ -275,20 +275,19 @@ export function truncateToWidth(
   if (measure(label, fontSize, fontWeight) <= budget) return label;
 
   const ELLIPSIS = '…';
-  // Nothing sensible fits: keep a single character + ellipsis rather than
-  // returning an empty label.
+  const characters = Array.from(label);
   let lo = 0;
-  let hi = label.length;
+  let hi = characters.length;
   while (lo < hi) {
     const mid = Math.ceil((lo + hi) / 2);
-    const candidate = label.slice(0, mid) + ELLIPSIS;
+    const candidate = characters.slice(0, mid).join('') + ELLIPSIS;
     if (measure(candidate, fontSize, fontWeight) <= budget) {
       lo = mid;
     } else {
       hi = mid - 1;
     }
   }
-  return lo > 0 ? label.slice(0, lo).trimEnd() + ELLIPSIS : ELLIPSIS;
+  return characters.slice(0, lo).join('').trimEnd() + ELLIPSIS;
 }
 
 /**

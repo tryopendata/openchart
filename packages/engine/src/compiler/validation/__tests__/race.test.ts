@@ -41,6 +41,16 @@ function expectError(
 }
 
 describe('race spec validation', () => {
+  it.each(['label', 'color'])('rejects a null %s channel as a validation error', (channel) => {
+    expectError(
+      { encoding: { ...spec.encoding, [channel]: null } },
+      `/encoding/${channel}`,
+      'INVALID_TYPE',
+      'must be an object',
+      'omit',
+    );
+  });
+
   it.each([undefined, { values: spec.data }])('requires a data array for %j', (data) => {
     expectError({ data }, '/data', 'INVALID_TYPE', '"data" array', 'array of rows');
   });

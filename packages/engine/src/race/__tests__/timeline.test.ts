@@ -86,7 +86,7 @@ describe('race timeline', () => {
     expect(positions(3.65)[0]).toEqual([5, 0]);
   });
 
-  it('fades an exiting leader to the sentinel and keeps the frame maximum continuous', () => {
+  it('keeps the exiting leader in the domain until it crosses the visibility threshold', () => {
     const incumbents = [5, 4, 3, 2, 1].map((value) => Array<number>(6).fill(value));
     const timeline = createRaceTimeline(matrix(...incumbents, [100, 100, 100, NaN, NaN, NaN]), {
       ...options,
@@ -97,9 +97,10 @@ describe('race timeline', () => {
     expect(timeline.sample(1).domainMax).toBe(100);
     expect(timeline.rankPos(5, 1.95)).toBeGreaterThan(4);
     expect(timeline.rankPos(5, 1.95)).toBeLessThan(5);
-    expect(timeline.sample(1.95).domainMax).toBeGreaterThan(5);
-    expect(timeline.sample(1.95).domainMax).toBeLessThan(100);
-    expect(timeline.sample(1.99999999).domainMax).toBeCloseTo(5);
+    expect(timeline.sample(1.95).domainMax).toBe(100);
+    const atThreshold = timeline.sample(1.99999999);
+    expect(atThreshold.items.some(({ keyIndex }) => keyIndex === 5)).toBe(false);
+    expect(atThreshold.domainMax).toBe(5);
     expect(timeline.rankPos(5, 2)).toBe(5);
     expect(timeline.sample(2).domainMax).toBe(5);
     expect(timeline.sample(2.00000001).domainMax).toBe(5);

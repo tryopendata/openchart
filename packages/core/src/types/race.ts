@@ -50,8 +50,10 @@ export interface RaceBarStatic {
   nameX: number;
   rowHeight: number;
   barHeight: number;
+  cornerRadius: number;
   top: number;
   axisY: number;
+  tickFontSize: number;
   period: { x: number; y: number; fontSize: number } | null;
   summary: { x: number; y: number } | null;
 }
@@ -62,7 +64,7 @@ export interface RaceBarRow {
   opacity: number;
   bar: Rect;
   name: { x: number; y: number; text: string };
-  value: { x: number; y: number; text: string };
+  value: { x: number; y: number; text: string; anchor: 'start' | 'end' };
 }
 
 export interface RaceBarGeometry {
@@ -122,6 +124,8 @@ interface RaceLayoutBase {
    * `raceFrameAt` uses the matrix's full labels for accessibility and export.
    */
   labels: string[];
+  /** Text measurer the layout was computed with; renderers reuse it so chrome wraps identically. */
+  measureText?: MeasureTextFn;
   playback: RacePlayback;
   warnings?: CompileWarning[];
   /** Area below chrome where the mark draws. */

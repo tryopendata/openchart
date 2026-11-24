@@ -141,12 +141,9 @@ export function createRaceTimeline(matrix: RaceMatrix, options: RaceTimelineOpti
     sample(t) {
       t = clampTime(t);
       const periodIndex = Math.floor(t);
-      const sampleIndex = Math.round(t * samplesPerPeriod);
-      const isInterior = t > 0 && t < periodCount - 1;
       let domainMin = 0;
       let domainMax = -Infinity;
       const items: RaceSampleItem[] = [];
-      const fading: RaceSampleItem[] = [];
 
       rankedValues(t).forEach(({ keyIndex, value }, rank) => {
         const position = rankPos(keyIndex, t);
@@ -170,22 +167,14 @@ export function createRaceTimeline(matrix: RaceMatrix, options: RaceTimelineOpti
         };
         items.push(item);
         domainMin = Math.min(domainMin, value);
-        if (isInterior && edges[keyIndex]?.[sampleIndex]) fading.push(item);
-        else domainMax = Math.max(domainMax, value);
+        domainMax = Math.max(domainMax, value);
       });
 
       if (rescale === 'fixed') {
         domainMin = globalMin;
         domainMax = globalMax;
-      } else {
-        // Ease the axis toward the remaining rows as an entry or exit becomes transparent.
-        const baseline = domainMax > 0 ? domainMax : 1;
-        for (const { value, opacity } of fading) {
-          if (value <= 0) continue;
-          const weight = (opacity - VISIBILITY_EPSILON) / (1 - VISIBILITY_EPSILON);
-          domainMax = Math.max(domainMax, baseline + (value - baseline) * weight);
-        }
-        if (typeof rescale === 'object') domainMax = Math.max(rescale.min, domainMax);
+      } else if (typeof rescale === 'object') {
+        domainMax = Math.max(rescale.min, domainMax);
       }
 
       items.sort((a, b) => a.rankPos - b.rankPos || a.keyIndex - b.keyIndex);

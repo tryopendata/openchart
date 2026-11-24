@@ -1,4 +1,5 @@
 import type { RaceBarGeometry, RaceBarRow, RaceBarStatic } from '@opendata-ai/openchart-core';
+import { layoutRace, prepareRace, raceGeometryAt } from '@opendata-ai/openchart-engine';
 import { describe, expect, it } from 'vitest';
 import { SVG_NS } from '../../renderers/svg-dom';
 import { createRaceBarRenderer } from '../render-bar';
@@ -10,8 +11,10 @@ const stat: RaceBarStatic = {
   nameX: 80,
   rowHeight: 30,
   barHeight: 22,
+  cornerRadius: 0,
   top: 2,
   axisY: 14.456,
+  tickFontSize: 12,
   period: { x: 310, y: 65, fontSize: 24 },
   summary: { x: 310, y: 40 },
 };
@@ -22,7 +25,7 @@ const north: RaceBarRow = {
   opacity: 0.924,
   bar: { x: 140, y: 26.456, width: 120.123, height: 22 },
   name: { x: 80, y: 37.456, text: 'North' },
-  value: { x: 265.123, y: 37.456, text: '42' },
+  value: { x: 265.123, y: 37.456, text: '42', anchor: 'start' },
 };
 
 const south: RaceBarRow = {
@@ -31,7 +34,7 @@ const south: RaceBarRow = {
   opacity: 1,
   bar: { x: 100, y: 56, width: 40, height: 22 },
   name: { x: 80, y: 67, text: 'South' },
-  value: { x: 95, y: 67, text: '−14' },
+  value: { x: 95, y: 67, text: '−14', anchor: 'end' },
 };
 
 function setup(idScope = 'example', layout = stat) {
@@ -44,6 +47,90 @@ function setup(idScope = 'example', layout = stat) {
 }
 
 describe('race bar renderer', () => {
+  it('clamps both corner radii to half the bar height', () => {
+    const rounded = { ...stat, cornerRadius: 100 };
+    const { host, draw } = setup('rounded', rounded);
+    draw({ rows: [north] });
+
+    const bar = host.querySelector('[data-key="north"] rect');
+    expect(bar?.getAttribute('rx')).toBe('11');
+    expect(bar?.getAttribute('ry')).toBe('11');
+  });
+
+  it('applies the font size carried by the bar layout to tick text', () => {
+    const model = prepareRace(
+      {
+        type: 'race',
+        mark: 'bar',
+        data: [
+          { period: 1, name: 'North', score: 8 },
+          { period: 2, name: 'North', score: 10 },
+        ],
+        encoding: { time: { field: 'period' }, key: { field: 'name' }, value: { field: 'score' } },
+        race: { top: 1 },
+      },
+      {},
+    );
+    const layout = layoutRace(model, {
+      width: 360,
+      height: 300,
+      theme: { fonts: { sizes: { axisTick: 14 } } },
+    });
+    const geometry = raceGeometryAt(model, layout, 0);
+    if (layout.mark !== 'bar' || geometry.mark !== 'bar') throw new Error('Expected bars');
+    const { host, renderer } = setup('large-ticks', layout.static);
+    renderer.draw(geometry);
+
+    expect(host.querySelector('.oc-race-axis text')?.getAttribute('font-size')).toBe('14');
+  });
+
+  it('keeps the value label anchor when a long label shifts across the bar start', () => {
+    const { host, draw } = setup();
+    draw({
+      rows: [
+        { ...north, value: { ...north.value, x: 110 } },
+        { ...south, value: { ...south.value, x: 220 } },
+      ],
+      ticks: [{ value: 0, label: '0', position: north.bar.x, opacity: 1 }],
+    });
+
+    expect(
+      host.querySelector('[data-key="north"] text:last-child')?.getAttribute('text-anchor'),
+    ).toBe('start');
+    expect(
+      host.querySelector('[data-key="south"] text:last-child')?.getAttribute('text-anchor'),
+    ).toBe('end');
+  });
+
+  it('keeps a clamped negative label end-anchored without a zero tick', () => {
+    const model = prepareRace(
+      {
+        type: 'race',
+        mark: 'bar',
+        data: [
+          { period: 1, name: 'South', score: -1 },
+          { period: 2, name: 'South', score: 2 },
+        ],
+        encoding: { time: { field: 'period' }, key: { field: 'name' }, value: { field: 'score' } },
+        labels: { format: '025.3f' },
+        race: { top: 1 },
+      },
+      {},
+    );
+    const layout = layoutRace(model, { width: 360, height: 300 });
+    const geometry = raceGeometryAt(model, layout, 0);
+    if (layout.mark !== 'bar' || geometry.mark !== 'bar') throw new Error('Expected bars');
+
+    const { bar, value } = geometry.rows[0];
+    expect(value.x).toBeGreaterThan(bar.x);
+    const { host, renderer } = setup('clamped', layout.static);
+    renderer.draw({ ...geometry, ticks: geometry.ticks.filter((tick) => tick.value !== 0) });
+
+    const label = host.querySelector('[data-key="South"] text:last-child');
+    expect(label?.textContent).toBe(value.text);
+    expect(label?.getAttribute('text-anchor')).toBe('end');
+  });
+
   it('creates one group per key on first draw and updates the same row and marks', () => {
     const { host, draw } = setup();
     expect(host.querySelectorAll('[data-key]')).toHaveLength(0);

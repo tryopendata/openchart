@@ -60,6 +60,9 @@
   .oc-race-axis text,
   .oc-race-summary {
     fill: var(--oc-text-muted);
+  }
+
+  .oc-race-summary {
     font-size: var(--oc-source-size);
   }
 
