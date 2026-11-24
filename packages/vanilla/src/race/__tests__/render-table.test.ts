@@ -404,19 +404,21 @@ describe('race table renderer', () => {
     try {
       race.seek(0.75);
       race.play();
-      expect(container.querySelector('table')).toBeNull();
+      expect(container.querySelector('table.oc-race-table-grid')).toBeNull();
       race.update(spec);
       expect(race.getState()).toMatchObject({ t: 0.75, period: { index: 0 }, playing: true });
-      const brook = Array.from(container.querySelectorAll<HTMLTableRowElement>('tbody tr')).find(
-        (row) => row.cells[2].textContent === 'Brook',
-      );
+      const brook = Array.from(
+        container.querySelectorAll<HTMLTableRowElement>('table.oc-race-table-grid tbody tr'),
+      ).find((row) => row.cells[2].textContent === 'Brook');
       expect(brook?.cells[4].textContent).toBe('100');
       expect(container.querySelector('input[type="range"]')?.getAttribute('aria-valuetext')).toBe(
         '0',
       );
       race.pause();
       race.seek(1);
-      expect(container.querySelector('tbody > tr')?.textContent).toContain('Brook');
+      expect(container.querySelector('table.oc-race-table-grid tbody > tr')?.textContent).toContain(
+        'Brook',
+      );
       expect(container.querySelector('input[type="range"]')?.getAttribute('aria-valuetext')).toBe(
         '1',
       );
