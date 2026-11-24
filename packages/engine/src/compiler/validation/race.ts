@@ -1,11 +1,7 @@
-import {
-  jsonPointer,
-  type RaceConfig,
-  type RaceMarkType,
-  type RaceTableColumn,
-} from '@opendata-ai/openchart-core';
+import { jsonPointer, type RaceMarkType, type RaceTableColumn } from '@opendata-ai/openchart-core';
 import type { ValidationError } from '../types';
 import { didYouMean } from './helpers';
+import { validateOptions } from './race-options';
 
 const MARK_OPTIONS: Record<RaceMarkType, string> = {
   bar: 'cornerRadius',
@@ -22,27 +18,30 @@ const TABLE_COLUMNS: readonly string[] = [
   'share',
 ] satisfies RaceTableColumn[];
 
-const RACE_OPTIONS = [
-  'top',
-  'duration',
-  'step',
-  'swap',
-  'rescale',
-  'gaps',
-  'holdEnd',
-  'loop',
-  'autoplay',
-  'controls',
-  'period',
-  'summary',
-] satisfies (keyof RaceConfig)[];
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value);
+function validateEncodingType(channel: string, type: unknown, errors: ValidationError[]): void {
+  if (type === undefined) return;
+  if (channel === 'value' && type !== 'quantitative') {
+    errors.push({
+      code: 'ENCODING_MISMATCH',
+      path: '/encoding/value/type',
+      message: `Spec error: encoding.value.type must be "quantitative"${typeof type === 'string' ? `, received "${type}"` : ''}`,
+      suggestion:
+        'Set encoding.value.type to "quantitative" or omit it, and rank a numeric column.',
+    });
+  }
+  if (channel === 'time' && type !== 'temporal' && type !== 'ordinal' && type !== 'quantitative') {
+    errors.push({
+      code: 'ENCODING_MISMATCH',
+      path: '/encoding/time/type',
+      message: 'Spec error: encoding.time.type must be "temporal", "ordinal", or "quantitative"',
+      suggestion:
+        'Use "temporal" for dates or years, "ordinal" for ordered categories, or "quantitative" for numbers.',
+    });
+  }
 }
 
 function validateEncoding(encoding: unknown, errors: ValidationError[]): void {
@@ -57,8 +56,7 @@ function validateEncoding(encoding: unknown, errors: ValidationError[]): void {
     return;
   }
 
-  const examples = { time: 'year', key: 'country', value: 'gdp' };
-  for (const [channel, example] of Object.entries(examples)) {
+  for (const [channel, example] of Object.entries({ time: 'year', key: 'country', value: 'gdp' })) {
     const definition = encoding[channel];
     if (!isRecord(definition)) {
       errors.push({
@@ -82,33 +80,29 @@ function validateEncoding(encoding: unknown, errors: ValidationError[]): void {
         suggestion: `Set encoding.${channel}.field to the name of a column in your data, e.g. "${example}".`,
       });
     }
-
-    if (channel === 'value' && type !== undefined && type !== 'quantitative') {
-      errors.push({
-        code: 'ENCODING_MISMATCH',
-        path: '/encoding/value/type',
-        message: `Spec error: encoding.value.type must be "quantitative"${typeof type === 'string' ? `, received "${type}"` : ''}`,
-        suggestion:
-          'Set encoding.value.type to "quantitative" or omit it, and rank a numeric column.',
-      });
-    }
-
-    if (
-      channel === 'time' &&
-      type !== undefined &&
-      type !== 'temporal' &&
-      type !== 'ordinal' &&
-      type !== 'quantitative'
-    ) {
-      errors.push({
-        code: 'ENCODING_MISMATCH',
-        path: '/encoding/time/type',
-        message: 'Spec error: encoding.time.type must be "temporal", "ordinal", or "quantitative"',
-        suggestion:
-          'Use "temporal" for dates or years, "ordinal" for ordered categories, or "quantitative" for numbers.',
-      });
-    }
+    validateEncodingType(channel, type, errors);
   }
+}
+
+function validateTableColumns(columns: unknown, errors: ValidationError[]): void {
+  if (
+    columns === undefined ||
+    (Array.isArray(columns) &&
+      columns.length > 0 &&
+      new Set(columns).size === columns.length &&
+      [...columns].every((column) => typeof column === 'string' && TABLE_COLUMNS.includes(column)))
+  ) {
+    return;
+  }
+
+  errors.push({
+    code: 'INVALID_VALUE',
+    path: '/mark/columns',
+    message:
+      'Spec error: mark.columns must be a non-empty array of supported table column names. Each column must be unique.',
+    suggestion:
+      'Choose one or more distinct columns from "rank", "change", "name", "bar", "value", "share" in display order, or omit columns for the defaults.',
+  });
 }
 
 function validateMarkOptions(
@@ -120,7 +114,7 @@ function validateMarkOptions(
   if (
     type === 'bar' &&
     cornerRadius !== undefined &&
-    (!isFiniteNumber(cornerRadius) || cornerRadius < 0)
+    (typeof cornerRadius !== 'number' || !Number.isFinite(cornerRadius) || cornerRadius < 0)
   ) {
     errors.push({
       code: 'INVALID_VALUE',
@@ -137,22 +131,7 @@ function validateMarkOptions(
       suggestion: 'Use "reveal" to extend the axis to the playhead or "all" to show the full span.',
     });
   }
-  if (
-    type === 'table' &&
-    columns !== undefined &&
-    !(
-      Array.isArray(columns) &&
-      [...columns].every((column) => typeof column === 'string' && TABLE_COLUMNS.includes(column))
-    )
-  ) {
-    errors.push({
-      code: 'INVALID_VALUE',
-      path: '/mark/columns',
-      message: 'Spec error: mark.columns must be an array of supported table column names',
-      suggestion:
-        'Choose columns from "rank", "change", "name", "bar", "value", "share" in display order, or omit columns for the defaults.',
-    });
-  }
+  if (type === 'table') validateTableColumns(columns, errors);
 }
 
 function validateMark(mark: unknown, errors: ValidationError[]): void {
@@ -191,172 +170,42 @@ function validateMark(mark: unknown, errors: ValidationError[]): void {
   validateMarkOptions(type, definition, errors);
 }
 
-function validatePlaybackOptions(race: Record<string, unknown>, errors: ValidationError[]): void {
-  for (const option of ['loop', 'controls']) {
-    if (race[option] === undefined || typeof race[option] === 'boolean') continue;
-    errors.push({
-      code: 'INVALID_VALUE',
-      path: jsonPointer('race', option),
-      message: `Spec error: race.${option} must be true or false`,
-      suggestion: `Use ${option}: false to disable it or ${option}: true to enable it.`,
-    });
-  }
-
-  const { autoplay, summary, period } = race;
-  if (autoplay !== undefined && autoplay !== 'visible' && typeof autoplay !== 'boolean') {
-    errors.push({
-      code: 'INVALID_VALUE',
-      path: '/race/autoplay',
-      message: 'Spec error: race.autoplay must be "visible", true, or false',
-      suggestion:
-        'Use "visible" to start when the chart is in view, true to start immediately, or false to wait for play.',
-    });
-  }
-  if (summary !== undefined && summary !== 'sum' && summary !== false) {
-    errors.push({
-      code: 'INVALID_VALUE',
-      path: '/race/summary',
-      message: 'Spec error: race.summary must be "sum" or false',
-      suggestion: 'Use "sum" to show the total for visible items or false to hide the summary.',
-    });
-  }
-
-  if (period === undefined || period === false) return;
-  if (!isRecord(period)) {
-    errors.push({
-      code: 'INVALID_VALUE',
-      path: '/race/period',
-      message: 'Spec error: race.period must be false or an object',
-      suggestion:
-        'Use period: false to hide the label, period: { format: "%Y" } to format it, or omit period to use the default label.',
-    });
-    return;
-  }
-  if (period.format !== undefined && typeof period.format !== 'string') {
-    errors.push({
-      code: 'INVALID_VALUE',
-      path: '/race/period/format',
-      message: 'Spec error: race.period.format must be a string',
-      suggestion: 'Use a format string such as format: "%Y" for temporal years or omit format.',
-    });
-  }
-  if (period.position !== undefined && period.position !== 'auto') {
-    errors.push({
-      code: 'INVALID_VALUE',
-      path: '/race/period/position',
-      message: 'Spec error: race.period.position must be "auto"',
-      suggestion: 'Use position: "auto" or omit position to let the chart place the label.',
-    });
-  }
-}
-
-function validateOptions(race: unknown, errors: ValidationError[]): void {
-  if (race === undefined) return;
-  if (!isRecord(race)) {
-    errors.push({
-      code: 'INVALID_TYPE',
-      path: '/race',
-      message: 'Spec error: race must be an object when provided',
-      suggestion: 'Use race: { top: 10 } or omit race to use the defaults.',
-    });
-    return;
-  }
-
-  for (const option of Object.keys(race)) {
-    if (RACE_OPTIONS.some((known) => known === option)) continue;
-    const hint = didYouMean(option, RACE_OPTIONS);
-    errors.push({
-      code: 'INVALID_VALUE',
-      path: jsonPointer('race', option),
-      message: `Spec error: Unknown race option "${option}"`,
-      suggestion: hint
-        ? `Check the option name and keep its value.${hint}`
-        : `Remove "${option}". Supported race options are ${RACE_OPTIONS.join(', ')}.`,
-    });
-  }
-
-  const { duration, step, top, rescale, gaps } = race;
-  if (duration !== undefined && step !== undefined) {
-    errors.push({
-      code: 'INVALID_VALUE',
-      path: '/race',
-      message: 'Spec error: race.duration and race.step are mutually exclusive',
-      suggestion:
-        'Keep duration for the whole race or step for each period. Remove the other option.',
-    });
-  }
-
-  if (top !== undefined && (!isFiniteNumber(top) || !Number.isInteger(top) || top < 1)) {
-    errors.push({
-      code: 'INVALID_VALUE',
-      path: '/race/top',
-      message: 'Spec error: race.top must be an integer of at least 1',
-      suggestion: 'Set race.top to the desired number of visible ranks, e.g. top: 10.',
-    });
-  }
-
-  const timingExamples = { duration: 12000, step: 700, swap: 0, holdEnd: 0 };
-  for (const [option, example] of Object.entries(timingExamples)) {
-    const value = race[option];
-    if (value === undefined) continue;
-    const allowZero = option === 'swap' || option === 'holdEnd';
-    if (!isFiniteNumber(value) || value < 0 || (value === 0 && !allowZero)) {
-      errors.push({
-        code: 'INVALID_VALUE',
-        path: jsonPointer('race', option),
-        message: `Spec error: race.${option} must be a finite number ${allowZero ? 'of zero or more' : 'greater than zero'}`,
-        suggestion: `Use ${option}: ${example} or omit the option. Times are in milliseconds.`,
-      });
-    }
-  }
-
-  if (
-    rescale !== undefined &&
-    rescale !== 'frame' &&
-    rescale !== 'fixed' &&
-    !(isRecord(rescale) && isFiniteNumber(rescale.min))
-  ) {
-    errors.push({
-      code: 'INVALID_VALUE',
-      path: '/race/rescale',
-      message: 'Spec error: race.rescale must be "frame", "fixed", or an object with a finite min',
-      suggestion:
-        'Use "frame" to follow visible values, "fixed" to keep one scale, or { min: 100 } to set a floor on the maximum.',
-    });
-  }
-
-  if (gaps !== undefined && gaps !== 'interpolate' && gaps !== 'hold' && gaps !== 'drop') {
-    errors.push({
-      code: 'INVALID_VALUE',
-      path: '/race/gaps',
-      message: 'Spec error: race.gaps must be "interpolate", "hold", or "drop"',
-      suggestion:
-        'Use "interpolate" to fill gaps between observed periods, "hold" to carry the last value, or "drop" to leave values absent.',
-    });
-  }
-  validatePlaybackOptions(race, errors);
-}
-
-export function validateRaceSpec(spec: Record<string, unknown>, errors: ValidationError[]): void {
-  if (!Array.isArray(spec.data)) {
+function validateData(data: unknown, errors: ValidationError[]): void {
+  if (!Array.isArray(data)) {
     errors.push({
       code: 'INVALID_TYPE',
       path: '/data',
       message: 'Spec error: a race requires a "data" array',
       suggestion: 'Provide data as an array of rows with one row per key and period.',
     });
-  } else {
-    for (const [index, row] of spec.data.entries()) {
-      if (isRecord(row)) continue;
-      errors.push({
-        code: 'INVALID_TYPE',
-        path: jsonPointer('data', index),
-        message: 'Spec error: each race data row must be an object',
-        suggestion: `Replace or remove row ${index + 1}. Each row should name the fields used by time, key, and value.`,
-      });
-    }
+    return;
   }
 
+  let firstInvalidRow = -1;
+  let invalidCount = 0;
+  for (let index = 0; index < data.length; index++) {
+    if (isRecord(data[index])) continue;
+    if (firstInvalidRow === -1) firstInvalidRow = index;
+    invalidCount++;
+  }
+
+  if (firstInvalidRow === -1) return;
+  const invalidRows = invalidCount === 1 ? 'is not an object' : 'are not objects';
+  const otherRows = invalidCount > 1 ? ' and the other non-object rows' : '';
+  errors.push({
+    code: 'INVALID_TYPE',
+    path: jsonPointer('data', firstInvalidRow),
+    message: `Spec error: each race data row must be an object. ${invalidCount} of ${data.length} rows ${invalidRows}.`,
+    suggestion: `Replace or remove row ${firstInvalidRow + 1}${otherRows}. Each row should name the fields used by time, key, and value.`,
+  });
+}
+
+/**
+ * Append race spec shape problems as ValidationErrors to `errors` without throwing.
+ * The race matrix checks data values, duplicate key/period pairs, and period counts.
+ */
+export function validateRaceSpec(spec: Record<string, unknown>, errors: ValidationError[]): void {
+  validateData(spec.data, errors);
   validateEncoding(spec.encoding, errors);
   validateMark(spec.mark, errors);
   validateOptions(spec.race, errors);

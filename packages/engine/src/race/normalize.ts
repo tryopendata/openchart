@@ -26,6 +26,13 @@ function normalizeChrome(chrome: Chrome | undefined): NormalizedChrome {
   return result;
 }
 
+/**
+ * Fill defaults on a validated race spec. Leave an omitted `duration` undefined
+ * for phase 2 to resolve from the period count.
+ *
+ * Force autoplay off when `animation === false`. Append a warning to `warnings`
+ * when `controls: false` would leave an autoplaying race without a pause control.
+ */
 export function normalizeRaceSpec(spec: RaceSpec, warnings: string[]): NormalizedRaceSpec {
   const { encoding, race } = spec;
   const mark: RaceMarkDef = typeof spec.mark === 'string' ? { type: spec.mark } : spec.mark;

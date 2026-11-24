@@ -67,6 +67,22 @@ describe('race spec validation', () => {
     );
   });
 
+  it('summarizes invalid data rows and reports independent encoding and mark errors', () => {
+    const data: unknown[] = Array.from({ length: 50_000 }, () => spec.data[0]);
+    data[1] = 1;
+    data[42] = null;
+    data[49_999] = [];
+
+    const errors = validate({ data, encoding: undefined, mark: 'column' });
+    expect(errors.map(({ code, path }) => ({ code, path }))).toEqual([
+      { code: 'INVALID_TYPE', path: '/data/1' },
+      { code: 'MISSING_FIELD', path: '/encoding' },
+      { code: 'INVALID_VALUE', path: '/mark' },
+    ]);
+    expect(errors[0]?.message).toContain('3 of 50000 rows are not objects');
+    expect(errors[0]?.suggestion).toContain('Replace or remove row 2');
+  });
+
   it('requires an encoding object', () => {
     expectError(
       { encoding: undefined },
@@ -191,6 +207,19 @@ describe('race spec validation', () => {
     ],
   ])('rejects an unsupported value for a known mark option %j', (mark, option, problem, fix) => {
     expectError({ mark }, `/mark/${option}`, 'INVALID_VALUE', problem, fix);
+  });
+
+  it.each([
+    { columns: [], issue: 'empty' },
+    { columns: ['name', 'name'], issue: 'duplicate' },
+  ])('rejects $issue table columns', ({ columns }) => {
+    expectError(
+      { mark: { type: 'table', columns } },
+      '/mark/columns',
+      'INVALID_VALUE',
+      'must be a non-empty array of supported table column names. Each column must be unique',
+      'Choose one or more distinct columns',
+    );
   });
 
   it('requires the race options to be an object when supplied', () => {
