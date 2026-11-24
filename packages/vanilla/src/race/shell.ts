@@ -47,12 +47,23 @@ function renderRaceChrome(svg: SVGSVGElement, layout: RaceLayout): void {
   if (layout.a11y.hidden) svg.querySelector('.oc-chrome-ref')?.setAttribute('tabindex', '-1');
 }
 
-function createMarkHost(root: HTMLElement, svg: SVGSVGElement, mark: RaceMarkType) {
+function createMarkHost(root: HTMLElement, svg: SVGSVGElement, layout: RaceLayout) {
   const doc = root.ownerDocument;
   let markHost: RaceMarkHost<RaceMarkType>;
-  if (mark === 'table') {
+  if (layout.mark === 'table') {
+    const { x, y, width, height } = layout.area;
+    const { normal, semibold } = layout.theme.fonts.weights;
     markHost = doc.createElement('div');
     markHost.className = 'oc-race-table';
+    if (layout.a11y.hidden) markHost.setAttribute('aria-hidden', 'true');
+    root.style.position = 'relative';
+    markHost.style.position = 'absolute';
+    markHost.style.left = `${x}px`;
+    markHost.style.top = `${y}px`;
+    markHost.style.width = `${width}px`;
+    markHost.style.height = `${height}px`;
+    markHost.style.setProperty('--oc-race-table-body-weight', String(normal));
+    markHost.style.setProperty('--oc-race-table-heading-weight', String(semibold));
     root.append(markHost);
   } else {
     markHost = doc.createElementNS(SVG_NS, 'g');
@@ -105,7 +116,7 @@ export function createRaceShell(
   root.append(svg);
 
   renderRaceChrome(svg, layout);
-  const { markHost, controlsSlot } = createMarkHost(root, svg, layout.mark);
+  const { markHost, controlsSlot } = createMarkHost(root, svg, layout);
   controlsSlot.style.setProperty('--oc-race-padding', `${theme.spacing.padding}px`);
   if (layout.chrome.source) {
     controlsSlot.style.setProperty('--oc-source-size', `${layout.chrome.source.style.fontSize}px`);
