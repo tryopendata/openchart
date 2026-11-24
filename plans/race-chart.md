@@ -341,7 +341,7 @@ Depends on: phase 2
 
 | Lane | Size | Owns files | Reads | Tests | Model | Status | Branch | Done when |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| a | M | packages/vanilla/src/race-mount.ts, packages/vanilla/src/race/__tests__/race-mount.test.ts, examples/src/testing/race.stories.tsx | contracts, packages/vanilla/src/barlist-mount.ts, packages/vanilla/src/visibility.ts | packages/vanilla/src/race/__tests__/race-mount.test.ts | gpt-6.2-sol | pending | | mount tests pass, story works in a real browser |
+| a | M | packages/vanilla/src/race-mount.ts, packages/vanilla/src/race/__tests__/race-mount.test.ts, examples/src/testing/race.stories.tsx, packages/engine/src/race/layout-bar.ts, packages/engine/src/race/__tests__/layout-bar.test.ts | contracts, packages/vanilla/src/barlist-mount.ts, packages/vanilla/src/visibility.ts | packages/vanilla/src/race/__tests__/race-mount.test.ts | gpt-6.2-sol | running | foreman/race-3a | mount tests pass, story works in a real browser |
 
 Test cases (happy-dom, fake scheduler injected through a test-only seam or `requestAnimationFrame` stub, IntersectionObserver absent so `whenSeen` fires at once unless the test installs a fake):
 - mount renders the shell, one row group per visible key and the controls; `controls: false` renders none.
