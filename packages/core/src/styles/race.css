@@ -1,3 +1,79 @@
 @layer oc.components {
-  /* Race player and table row styles. */
+  .oc-race-controls {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) fit-content(40%);
+    align-items: center;
+    gap: 12px;
+    color: var(--oc-text);
+    font-family: var(--oc-font-family);
+    font-size: var(--oc-body-size);
+  }
+
+  .oc-race-play {
+    display: grid;
+    place-items: center;
+    box-sizing: border-box;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 1px solid var(--oc-border);
+    border-radius: 50%;
+    background: var(--oc-bg);
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .oc-race-play:hover {
+    background: var(--oc-hover-bg);
+  }
+
+  .oc-race-play:focus-visible,
+  .oc-race-scrub:focus-visible {
+    outline: 2px solid var(--oc-focus);
+    outline-offset: 2px;
+  }
+
+  .oc-race-scrub {
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    accent-color: var(--oc-accent);
+  }
+
+  .oc-race-readout {
+    overflow-wrap: anywhere;
+  }
+
+  .oc-race-readout,
+  .oc-race-axis,
+  .oc-race-rows,
+  .oc-race-period,
+  .oc-race-summary {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .oc-race-axis line {
+    stroke: var(--oc-gridline);
+  }
+
+  .oc-race-axis text,
+  .oc-race-summary {
+    fill: var(--oc-text-muted);
+    font-size: var(--oc-source-size);
+  }
+
+  .oc-race-rows text {
+    fill: var(--oc-text);
+    font-size: var(--oc-body-size);
+  }
+
+  .oc-race-period {
+    fill: var(--oc-text-faint);
+    font-weight: 600;
+  }
+
+  .oc-race-row {
+    will-change: transform;
+  }
 }
