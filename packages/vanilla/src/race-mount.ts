@@ -23,6 +23,7 @@ import { prefersReducedMotion } from './motion/tween';
 import { createRaceA11y } from './race/a11y-dom';
 import { createRaceClock, type RaceClock, type RaceClockState } from './race/clock';
 import { createRaceControls, type RaceControlsOptions } from './race/controls';
+import { exportRaceGIF } from './race/export';
 import { RACE_RENDERERS } from './race/renderers';
 import { createRaceShell, type RaceMarkHost } from './race/shell';
 import { measureRaceSize, RACE_CONTROLS_HEIGHT } from './race/size';
@@ -65,7 +66,7 @@ export interface RaceInstance {
   update(spec: RaceSpec): void;
   /** Measure and redraw the race at the current playhead. */
   resize(): void;
-  /** Rejects until GIF export arrives in a later release. */
+  /** Export the full bar or line race as a GIF. Rejects for table marks and on destruction. */
   export(format: 'gif', options?: Pick<GIFExportOptions, 'fps'>): Promise<Blob>;
   /** Read the playhead, speed, playback status, and displayed period, including after destroy(). */
   getState(): Pick<RaceClockState, 't' | 'playing' | 'speed'> & { period: RaceFrame['period'] };
@@ -168,6 +169,7 @@ export function createRace(
   const warn = onWarn && ((warning: CompileWarning) => onWarn(warning.message));
   let model = prepareRace(spec, { onWarn: warn });
   const idScope = pageIdScope.next('race');
+  const exportLifetime = new AbortController();
   type PeriodListener = (period: RaceFrame['period']) => void;
   const periodListeners = new Set<PeriodListener>();
   const pendingPeriods: Array<{ period: RaceFrame['period']; listeners: PeriodListener[] }> = [];
@@ -448,8 +450,14 @@ export function createRace(
     setSpeed,
     update,
     resize,
-    async export() {
-      throw new Error('GIF export arrives in a later release');
+    async export(format, options) {
+      if (format !== 'gif') throw new Error(`Unsupported export format: ${format}`);
+      if (!view) throw new Error('Race is not rendered');
+      const { layout, shell } = view;
+      return exportRaceGIF(
+        { model, layout, shell, idScope, signal: exportLifetime.signal },
+        options,
+      );
     },
     getState() {
       const { t, playing, speed } = clock.getState();
@@ -465,6 +473,7 @@ export function createRace(
     destroy() {
       if (destroyed) return;
       destroyed = true;
+      exportLifetime.abort(new Error('Race was destroyed during GIF export'));
       periodListeners.clear();
       cancelAutoplay();
       observer?.disconnect();

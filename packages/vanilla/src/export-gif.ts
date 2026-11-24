@@ -41,16 +41,11 @@ import {
 } from '@opendata-ai/openchart-core';
 import { interpolateRgb } from 'd3-interpolate';
 import { type EntranceScan, entranceRoleOf, scanEntrance, scanEntranceEndMs } from './animation';
-import {
-  embedFonts,
-  ensureSVGDimensions,
-  exportSVG,
-  getSVGBackgroundColor,
-  getSVGDimensions,
-  rasterizeSVGToCanvas,
-} from './export';
-import { readCanvasSRGB } from './gif-encode';
+import { embedFonts } from './export';
+import { encodeSVGFrames } from './gif-frame-encoder';
 import { injectThemeStyleBlock } from './theme-style-block';
+
+export { isModuleNotFound, resolveRepeat } from './gif-frame-encoder';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -196,29 +191,6 @@ const DEFAULT_ENTER_MS = 800;
 const CAPTURE_TAIL_MS = 300;
 
 const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
-
-/**
- * Distinguish "the optional gifenc peer isn't installed" from a real error
- * thrown while loading it. Node/bundlers use ERR_MODULE_NOT_FOUND /
- * MODULE_NOT_FOUND / "Cannot find module" for the former.
- */
-export function isModuleNotFound(err: unknown): boolean {
-  const code = (err as { code?: string })?.code;
-  if (code === 'ERR_MODULE_NOT_FOUND' || code === 'MODULE_NOT_FOUND') return true;
-  const message = (err as { message?: string })?.message ?? '';
-  return /cannot find (module|package)|failed to (resolve|fetch)/i.test(message);
-}
-
-/**
- * Map the `loop` option to gifenc's `repeat` value:
- * `true` → 0 (loop forever), a number → that count, otherwise → -1 (play once,
- * hold the final frame — the default and the common editorial case).
- */
-export function resolveRepeat(loop: boolean | number | undefined): number {
-  if (loop === true) return 0;
-  if (typeof loop === 'number') return loop;
-  return -1;
-}
 
 function formatInset(v: { top: number; right: number; bottom: number; left: number }): string {
   const side = (n: number) => (n === 0 ? '0' : `${n}%`);
@@ -524,118 +496,23 @@ export async function exportGIF(
   animation: ResolvedAnimation | undefined,
   options?: GIFExportOptions,
 ): Promise<Blob> {
-  let gifenc: typeof import('gifenc');
-  try {
-    gifenc = await import('gifenc');
-  } catch (err) {
-    // Only a genuine "module not found" means the optional peer is absent. Any
-    // other failure (a real bug in gifenc's module eval, a corrupt install) must
-    // surface with its context, not the misleading install hint.
-    if (isModuleNotFound(err)) {
-      throw new Error(
-        "GIF export requires the optional 'gifenc' peer dependency. Install it: npm install gifenc",
-      );
-    }
-    throw new Error('GIF export failed to load the gifenc encoder', { cause: err });
-  }
-  const { GIFEncoder, quantize, applyPalette } = gifenc;
+  return encodeSVGFrames(svgElement, options, async () => {
+    const fps = options?.fps ?? 25;
+    const clone = svgElement.cloneNode(true) as SVGElement;
+    injectThemeStyleBlock(clone, options?.theme);
+    if (options?.embedFonts ?? true) await embedFonts(clone);
+    const sampler = createFrameSampler(clone, animation, options?.theme);
 
-  const fps = options?.fps ?? 25;
-  const dpi = options?.dpi ?? 2;
-  const shouldEmbed = options?.embedFonts ?? true;
-  const { width, height } = getSVGDimensions(svgElement);
-  if (!width || !height) {
-    throw new Error(`SVG has zero dimensions (width=${width}, height=${height})`);
-  }
-
-  // Build one font-embedded clone that represents the FINAL frame; every frame
-  // derives from it, so fonts are embedded exactly once.
-  const clone = svgElement.cloneNode(true) as SVGElement;
-  // Inline the theme style block so class-based chrome fills survive the detach
-  // from the page stylesheet (metrics, eyebrow dot, legend). No-op when undefined.
-  injectThemeStyleBlock(clone, options?.theme);
-  if (shouldEmbed) {
-    await embedFonts(clone);
-  }
-  const sampler = createFrameSampler(clone, animation, options?.theme);
-
-  // Total capture window: explicit override, else the choreography table's end
-  // for the elements present (the same figure cleanup uses) plus a short tail.
-  const totalMs = options?.durationMs ?? sampler.endMs + CAPTURE_TAIL_MS;
-  const frameDelay = Math.round(1000 / fps);
-  const totalFrames = Math.max(1, Math.round((totalMs / 1000) * fps));
-
-  // Loop → gifenc repeat: play-once (-1), forever (0), or explicit count.
-  const repeat = resolveRepeat(options?.loop);
-
-  // GIF can't carry partial alpha, so fill an opaque background before drawing
-  // each frame (else a transparent chart composites onto black). Runs before
-  // ctx.scale, so paint the raw device-pixel canvas size.
-  // The theme background is the fallback: canvas mark mode suppresses the SVG
-  // background rect, so there's nothing in the markup to read it from.
-  const bgColor =
-    options?.backgroundColor ??
-    getSVGBackgroundColor(svgElement, options?.theme?.colors.background);
-  const fillBackground = (ctx: CanvasRenderingContext2D, cv: HTMLCanvasElement): void => {
-    ctx.fillStyle = bgColor;
-    ctx.fillRect(0, 0, cv.width, cv.height);
-  };
-
-  const gif = GIFEncoder();
-
-  // Derive ONE global palette from the settled frame (most complete colors)
-  // and reuse it for every frame, so colors stay stable and the file stays
-  // small. gifenc writes the global color table from the palette on the first
-  // frame; later frames reuse it.
-  let globalPalette: number[][] = [];
-  await seedPalette(clone, sampler, width, height, dpi, fillBackground, (data) => {
-    globalPalette = quantize(data, 256);
+    // Capture the choreography plus a short tail unless the caller sets a duration.
+    const totalMs = options?.durationMs ?? sampler.endMs + CAPTURE_TAIL_MS;
+    const frameDelay = Math.round(1000 / fps);
+    return {
+      svg: clone,
+      count: Math.max(1, Math.round((totalMs / 1000) * fps)),
+      draw(index) {
+        sampler.apply(index === null ? null : (index / fps) * 1000);
+        return frameDelay;
+      },
+    };
   });
-
-  let frameWritten = 0;
-  const writeFrame = async (nowMs: number | null): Promise<void> => {
-    sampler.apply(nowMs);
-    const svgString = ensureSVGDimensions(exportSVG(clone), width, height);
-    const canvas = await rasterizeSVGToCanvas(svgString, width, height, dpi, fillBackground);
-    const index = applyPalette(readCanvasSRGB(canvas), globalPalette);
-    // `repeat` is only meaningful on the first frame (it writes the loop
-    // extension); passing it later is ignored by gifenc.
-    gif.writeFrame(index, canvas.width, canvas.height, {
-      palette: globalPalette,
-      delay: frameDelay,
-      ...(frameWritten === 0 ? { repeat } : {}),
-    });
-    frameWritten++;
-  };
-
-  for (let i = 0; i < totalFrames; i++) {
-    await writeFrame((i / fps) * 1000);
-  }
-  // Final settled frame the GIF holds on.
-  await writeFrame(null);
-
-  gif.finish();
-  // gifenc types bytes() as Uint8Array<ArrayBufferLike>; BlobPart wants a view
-  // over a plain ArrayBuffer. The runtime value is a valid BufferSource, so the
-  // cast is safe — it only bridges the ArrayBufferLike/ArrayBuffer lib mismatch.
-  return new Blob([gif.bytes() as BlobPart], { type: 'image/gif' });
-}
-
-/**
- * Render the settled clone once (no per-frame state) to derive the palette
- * source, without writing a frame. Restores frame state afterward.
- */
-async function seedPalette(
-  clone: SVGElement,
-  sampler: FrameSampler,
-  width: number,
-  height: number,
-  dpi: number,
-  prepare: (ctx: CanvasRenderingContext2D, cv: HTMLCanvasElement) => void,
-  use: (data: Uint8ClampedArray) => void,
-): Promise<void> {
-  sampler.apply(null);
-  const svgString = ensureSVGDimensions(exportSVG(clone), width, height);
-  const canvas = await rasterizeSVGToCanvas(svgString, width, height, dpi, prepare);
-  use(readCanvasSRGB(canvas));
 }
