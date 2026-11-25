@@ -69,6 +69,7 @@ import { captureMapSnapshot, runMapFillTransition } from './map-transition';
 import { createMapZoomController, type MapZoomController } from './map-zoom';
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
 import { prefersReducedMotion } from './motion/tween';
+import type { PlaybackController } from './playback/types';
 import { observeResize } from './resize-observer';
 import { resolveDarkMode } from './resolve-dark-mode';
 import type { Camera } from './story/camera-math';
@@ -195,6 +196,8 @@ export interface GeoMapInstance {
   destroy(): void;
   /** The current compiled layout. */
   readonly layout: GeoMapLayout;
+  /** Playback controls for a spec with a time channel; null when the spec has none. */
+  readonly playback: PlaybackController | null;
   /** Zoom to one or more features by ID. */
   zoomTo(featureId: string | number | Array<string | number>, opts?: GeoMapCameraOptions): void;
   /** Pan to a feature keeping the current zoom level. */
@@ -1338,6 +1341,9 @@ export function createGeoMap(
     destroy,
     get layout(): GeoMapLayout {
       return currentLayout;
+    },
+    get playback(): PlaybackController | null {
+      return null;
     },
     zoomTo(featureId: string | number | Array<string | number>, opts?: GeoMapCameraOptions): void {
       const ids = Array.isArray(featureId) ? featureId : [featureId];

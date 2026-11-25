@@ -32,6 +32,9 @@ export { resolveLayerTheme } from './compile/layer';
 
 // Lazy edge-tooltip builder (graph edge hover content on demand).
 export { buildEdgeTooltip } from './graphs/compile-graph';
+// Shared playback layer (periods, value matrix, interpolation, timing) used by
+// the race and by time-encoded charts and maps.
+export * from './playback';
 export { raceA11y, raceA11yLeaders } from './race/a11y';
 
 // ---------------------------------------------------------------------------

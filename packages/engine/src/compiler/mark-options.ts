@@ -8,6 +8,7 @@ const APPLIES_TO: Partial<Record<keyof NormalizedMarkDef, readonly MarkType[]>> 
   point: ['line', 'area', 'density'],
   interpolate: ['line', 'area', 'density'],
   orient: ['bar', 'histogram'],
+  mirror: ['bar'],
   cornerRadius: ['bar', 'rect', 'histogram', 'waffle'],
   innerRadius: ['arc'],
   outerRadius: ['arc'],

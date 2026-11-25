@@ -449,6 +449,10 @@
                           ],
                           "description": "Corner radius for rect/bar marks. 'pill' sets rx to half the bar thickness."
                         },
+                        "mirror": {
+                          "type": "boolean",
+                          "description": "Mirror horizontal bars around a shared center axis (a population pyramid). Only meaningful when `type` is `'bar'`; needs a color field with exactly two values, the first drawn to the left. Defaults to false."
+                        },
                         "type": {
                           "type": "string",
                           "const": "bar"
@@ -5880,6 +5884,108 @@
       ],
       "description": "Resolution strategy for shared resources across layers. 'shared' (default): union domains, single axis/legend. 'independent': each layer gets its own scale/axis/legend."
     },
+    "PlaybackConfig": {
+      "type": "object",
+      "properties": {
+        "duration": {
+          "type": "number",
+          "description": "Total playback duration in milliseconds at 1× speed. Defaults to 700ms per period, clamped to 8000–90000ms. Mutually exclusive with `step`."
+        },
+        "step": {
+          "type": "number",
+          "description": "Duration per period in milliseconds. Omitted by default and mutually exclusive with `duration`."
+        },
+        "gaps": {
+          "type": "string",
+          "enum": [
+            "interpolate",
+            "hold",
+            "drop"
+          ],
+          "description": "Interior gap policy. Defaults to `interpolate`. Use `hold` to carry the previous value or `drop` to leave the value absent."
+        },
+        "holdEnd": {
+          "type": "number",
+          "description": "Time to dwell on the final frame in milliseconds. Defaults to 1500."
+        },
+        "loop": {
+          "type": "boolean",
+          "description": "Restart after the final hold. Defaults to false."
+        },
+        "autoplay": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "visible"
+            },
+            {
+              "type": "boolean"
+            }
+          ],
+          "description": "Start when 25% visible (`visible`, the default), immediately (`true`), or on demand (`false`). Reduced motion disables autoplay."
+        },
+        "controls": {
+          "type": "boolean",
+          "description": "Show play/pause, scrubber, and period readout. Defaults to true."
+        },
+        "period": {
+          "anyOf": [
+            {
+              "type": "boolean",
+              "const": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "format": {
+                  "type": "string",
+                  "description": "Overrides the time channel's format."
+                },
+                "position": {
+                  "$ref": "#/definitions/PlaybackPeriodPosition",
+                  "description": "Where the label sits. Defaults to `auto`: centered for scatter, lower left for maps, upper right for bars."
+                }
+              },
+              "additionalProperties": false
+            }
+          ],
+          "description": "Large period label. On by default with automatic placement and the time channel's format. Set false to hide it."
+        },
+        "labels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Point and circle charts only: keys whose name is drawn next to the mark for the whole run."
+        },
+        "trails": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ],
+          "description": "Point and circle charts only: draw past positions as a trail. `true` is every key; an array names keys. Defaults to false."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Playback options for charts and maps with a `time` channel. Fields shared with the race's `race` block have the same names, types and defaults."
+    },
+    "PlaybackPeriodPosition": {
+      "type": "string",
+      "enum": [
+        "auto",
+        "center",
+        "top-right",
+        "bottom-left"
+      ],
+      "description": "Placement of the large faint period label behind a playback chart."
+    },
     "ArcEncoding<DataRow>": {
       "type": "object",
       "properties": {
@@ -6237,6 +6343,10 @@
         "column": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
           "description": "Column facet channel: partitions data into side-by-side panels. Each unique value of the column field produces one panel, arranged in a single row. Shares the y-axis scale by default; x-axis is independent. Mutually exclusive with `facet` and `row`."
+        },
+        "time": {
+          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
+          "description": "Playback field. Each distinct value is one period, and the chart animates through them with the shared `playback` controls. Temporal and quantitative periods sort by value; ordinal periods follow `sort` or first-seen order."
         }
       },
       "required": [
@@ -6506,6 +6616,10 @@
         "column": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
           "description": "Column facet channel: partitions data into side-by-side panels. Each unique value of the column field produces one panel, arranged in a single row. Shares the y-axis scale by default; x-axis is independent. Mutually exclusive with `facet` and `row`."
+        },
+        "time": {
+          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
+          "description": "Playback field. Each distinct value is one period, and the chart animates through them with the shared `playback` controls. Temporal and quantitative periods sort by value; ordinal periods follow `sort` or first-seen order."
         }
       },
       "required": [
@@ -6629,6 +6743,10 @@
         "column": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
           "description": "Column facet channel: partitions data into side-by-side panels. Each unique value of the column field produces one panel, arranged in a single row. Shares the y-axis scale by default; x-axis is independent. Mutually exclusive with `facet` and `row`."
+        },
+        "time": {
+          "$ref": "#/definitions/EncodingChannel%3CDataRow%3E",
+          "description": "Playback field. Each distinct value is one period, and the chart animates through them with the shared `playback` controls. Temporal and quantitative periods sort by value; ordinal periods follow `sort` or first-seen order."
         }
       },
       "required": [
@@ -8528,6 +8646,10 @@
             "zIndex": {
               "type": "number",
               "description": "Render order within a LayerSpec. Higher values render on top. When omitted, layers render in array order (later layers paint on top). Axis assignment (left/right y) is always determined by array position, not zIndex."
+            },
+            "playback": {
+              "$ref": "#/definitions/PlaybackConfig",
+              "description": "Playback timing, controls and period label for a chart with `encoding.time` (point, circle and bar marks). Ignored with a warning when the chart has no time channel."
             }
           },
           "required": [
@@ -8857,6 +8979,10 @@
             "zIndex": {
               "type": "number",
               "description": "Render order within a LayerSpec. Higher values render on top. When omitted, layers render in array order (later layers paint on top). Axis assignment (left/right y) is always determined by array position, not zIndex."
+            },
+            "playback": {
+              "$ref": "#/definitions/PlaybackConfig",
+              "description": "Playback timing, controls and period label for a chart with `encoding.time` (point, circle and bar marks). Ignored with a warning when the chart has no time channel."
             }
           },
           "required": [
@@ -9185,6 +9311,10 @@
             "zIndex": {
               "type": "number",
               "description": "Render order within a LayerSpec. Higher values render on top. When omitted, layers render in array order (later layers paint on top). Axis assignment (left/right y) is always determined by array position, not zIndex."
+            },
+            "playback": {
+              "$ref": "#/definitions/PlaybackConfig",
+              "description": "Playback timing, controls and period label for a chart with `encoding.time` (point, circle and bar marks). Ignored with a warning when the chart has no time channel."
             }
           },
           "required": [
@@ -9226,6 +9356,10 @@
                         }
                       ],
                       "description": "Corner radius for rect/bar marks. 'pill' sets rx to half the bar thickness."
+                    },
+                    "mirror": {
+                      "type": "boolean",
+                      "description": "Mirror horizontal bars around a shared center axis (a population pyramid). Only meaningful when `type` is `'bar'`; needs a color field with exactly two values, the first drawn to the left. Defaults to false."
                     },
                     "type": {
                       "type": "string",
@@ -9495,6 +9629,10 @@
             "zIndex": {
               "type": "number",
               "description": "Render order within a LayerSpec. Higher values render on top. When omitted, layers render in array order (later layers paint on top). Axis assignment (left/right y) is always determined by array position, not zIndex."
+            },
+            "playback": {
+              "$ref": "#/definitions/PlaybackConfig",
+              "description": "Playback timing, controls and period label for a chart with `encoding.time` (point, circle and bar marks). Ignored with a warning when the chart has no time channel."
             }
           },
           "required": [
@@ -9823,6 +9961,10 @@
             "zIndex": {
               "type": "number",
               "description": "Render order within a LayerSpec. Higher values render on top. When omitted, layers render in array order (later layers paint on top). Axis assignment (left/right y) is always determined by array position, not zIndex."
+            },
+            "playback": {
+              "$ref": "#/definitions/PlaybackConfig",
+              "description": "Playback timing, controls and period label for a chart with `encoding.time` (point, circle and bar marks). Ignored with a warning when the chart has no time channel."
             }
           },
           "required": [
@@ -10124,6 +10266,10 @@
             "zIndex": {
               "type": "number",
               "description": "Render order within a LayerSpec. Higher values render on top. When omitted, layers render in array order (later layers paint on top). Axis assignment (left/right y) is always determined by array position, not zIndex."
+            },
+            "playback": {
+              "$ref": "#/definitions/PlaybackConfig",
+              "description": "Playback timing, controls and period label for a chart with `encoding.time` (point, circle and bar marks). Ignored with a warning when the chart has no time channel."
             }
           },
           "required": [
@@ -10414,6 +10560,10 @@
             "zIndex": {
               "type": "number",
               "description": "Render order within a LayerSpec. Higher values render on top. When omitted, layers render in array order (later layers paint on top). Axis assignment (left/right y) is always determined by array position, not zIndex."
+            },
+            "playback": {
+              "$ref": "#/definitions/PlaybackConfig",
+              "description": "Playback timing, controls and period label for a chart with `encoding.time` (point, circle and bar marks). Ignored with a warning when the chart has no time channel."
             }
           },
           "required": [
@@ -10704,6 +10854,10 @@
             "zIndex": {
               "type": "number",
               "description": "Render order within a LayerSpec. Higher values render on top. When omitted, layers render in array order (later layers paint on top). Axis assignment (left/right y) is always determined by array position, not zIndex."
+            },
+            "playback": {
+              "$ref": "#/definitions/PlaybackConfig",
+              "description": "Playback timing, controls and period label for a chart with `encoding.time` (point, circle and bar marks). Ignored with a warning when the chart has no time channel."
             }
           },
           "required": [
@@ -10994,6 +11148,10 @@
             "zIndex": {
               "type": "number",
               "description": "Render order within a LayerSpec. Higher values render on top. When omitted, layers render in array order (later layers paint on top). Axis assignment (left/right y) is always determined by array position, not zIndex."
+            },
+            "playback": {
+              "$ref": "#/definitions/PlaybackConfig",
+              "description": "Playback timing, controls and period label for a chart with `encoding.time` (point, circle and bar marks). Ignored with a warning when the chart has no time channel."
             }
           },
           "required": [
@@ -11297,6 +11455,10 @@
             "zIndex": {
               "type": "number",
               "description": "Render order within a LayerSpec. Higher values render on top. When omitted, layers render in array order (later layers paint on top). Axis assignment (left/right y) is always determined by array position, not zIndex."
+            },
+            "playback": {
+              "$ref": "#/definitions/PlaybackConfig",
+              "description": "Playback timing, controls and period label for a chart with `encoding.time` (point, circle and bar marks). Ignored with a warning when the chart has no time channel."
             }
           },
           "required": [
@@ -11630,6 +11792,10 @@
             "zIndex": {
               "type": "number",
               "description": "Render order within a LayerSpec. Higher values render on top. When omitted, layers render in array order (later layers paint on top). Axis assignment (left/right y) is always determined by array position, not zIndex."
+            },
+            "playback": {
+              "$ref": "#/definitions/PlaybackConfig",
+              "description": "Playback timing, controls and period label for a chart with `encoding.time` (point, circle and bar marks). Ignored with a warning when the chart has no time channel."
             }
           },
           "required": [
@@ -11950,6 +12116,10 @@
             "zIndex": {
               "type": "number",
               "description": "Render order within a LayerSpec. Higher values render on top. When omitted, layers render in array order (later layers paint on top). Axis assignment (left/right y) is always determined by array position, not zIndex."
+            },
+            "playback": {
+              "$ref": "#/definitions/PlaybackConfig",
+              "description": "Playback timing, controls and period label for a chart with `encoding.time` (point, circle and bar marks). Ignored with a warning when the chart has no time channel."
             }
           },
           "required": [
@@ -12240,6 +12410,10 @@
             "zIndex": {
               "type": "number",
               "description": "Render order within a LayerSpec. Higher values render on top. When omitted, layers render in array order (later layers paint on top). Axis assignment (left/right y) is always determined by array position, not zIndex."
+            },
+            "playback": {
+              "$ref": "#/definitions/PlaybackConfig",
+              "description": "Playback timing, controls and period label for a chart with `encoding.time` (point, circle and bar marks). Ignored with a warning when the chart has no time channel."
             }
           },
           "required": [
@@ -12542,6 +12716,10 @@
             "zIndex": {
               "type": "number",
               "description": "Render order within a LayerSpec. Higher values render on top. When omitted, layers render in array order (later layers paint on top). Axis assignment (left/right y) is always determined by array position, not zIndex."
+            },
+            "playback": {
+              "$ref": "#/definitions/PlaybackConfig",
+              "description": "Playback timing, controls and period label for a chart with `encoding.time` (point, circle and bar marks). Ignored with a warning when the chart has no time channel."
             }
           },
           "required": [
@@ -12832,6 +13010,10 @@
             "zIndex": {
               "type": "number",
               "description": "Render order within a LayerSpec. Higher values render on top. When omitted, layers render in array order (later layers paint on top). Axis assignment (left/right y) is always determined by array position, not zIndex."
+            },
+            "playback": {
+              "$ref": "#/definitions/PlaybackConfig",
+              "description": "Playback timing, controls and period label for a chart with `encoding.time` (point, circle and bar marks). Ignored with a warning when the chart has no time channel."
             }
           },
           "required": [
@@ -13134,6 +13316,10 @@
             "zIndex": {
               "type": "number",
               "description": "Render order within a LayerSpec. Higher values render on top. When omitted, layers render in array order (later layers paint on top). Axis assignment (left/right y) is always determined by array position, not zIndex."
+            },
+            "playback": {
+              "$ref": "#/definitions/PlaybackConfig",
+              "description": "Playback timing, controls and period label for a chart with `encoding.time` (point, circle and bar marks). Ignored with a warning when the chart has no time channel."
             }
           },
           "required": [
@@ -13461,6 +13647,10 @@
             "zIndex": {
               "type": "number",
               "description": "Render order within a LayerSpec. Higher values render on top. When omitted, layers render in array order (later layers paint on top). Axis assignment (left/right y) is always determined by array position, not zIndex."
+            },
+            "playback": {
+              "$ref": "#/definitions/PlaybackConfig",
+              "description": "Playback timing, controls and period label for a chart with `encoding.time` (point, circle and bar marks). Ignored with a warning when the chart has no time channel."
             }
           },
           "required": [
@@ -13779,6 +13969,10 @@
             "zIndex": {
               "type": "number",
               "description": "Render order within a LayerSpec. Higher values render on top. When omitted, layers render in array order (later layers paint on top). Axis assignment (left/right y) is always determined by array position, not zIndex."
+            },
+            "playback": {
+              "$ref": "#/definitions/PlaybackConfig",
+              "description": "Playback timing, controls and period label for a chart with `encoding.time` (point, circle and bar marks). Ignored with a warning when the chart has no time channel."
             }
           },
           "required": [
@@ -14119,6 +14313,10 @@
             "zIndex": {
               "type": "number",
               "description": "Render order within a LayerSpec. Higher values render on top. When omitted, layers render in array order (later layers paint on top). Axis assignment (left/right y) is always determined by array position, not zIndex."
+            },
+            "playback": {
+              "$ref": "#/definitions/PlaybackConfig",
+              "description": "Playback timing, controls and period label for a chart with `encoding.time` (point, circle and bar marks). Ignored with a warning when the chart has no time channel."
             }
           },
           "required": [
@@ -15742,6 +15940,10 @@
         "valueFormat": {
           "type": "string",
           "description": "d3-format string applied to tile values, legend labels, and tooltips. Examples: \".1f\" for one decimal, \"$,.0f\" for currency, \"~s\" for SI."
+        },
+        "playback": {
+          "$ref": "#/definitions/PlaybackConfig",
+          "description": "Playback timing, controls and period label. Applies when `encoding.time` is set."
         }
       },
       "required": [
@@ -15778,6 +15980,10 @@
             }
           ],
           "description": "Tooltip encoding (optional)."
+        },
+        "time": {
+          "$ref": "#/definitions/EncodingChannel",
+          "description": "Playback field (optional). Each distinct value is one period; tiles recolor as the map plays."
         }
       },
       "required": [
@@ -15871,6 +16077,10 @@
         "animation": {
           "$ref": "#/definitions/AnimationSpec",
           "description": "Motion. On by default: the entrance plays once the visualization scrolls into view, and data updates animate. Set false to turn all motion off, or pass an object to configure each phase. Static rendering and exports never animate, and prefers-reduced-motion always wins."
+        },
+        "playback": {
+          "$ref": "#/definitions/PlaybackConfig",
+          "description": "Playback timing, controls and period label. Applies when `encoding.time` or `points.time` is set."
         }
       },
       "required": [
@@ -16183,6 +16393,10 @@
             }
           ],
           "description": "Tooltip encoding (optional)."
+        },
+        "time": {
+          "$ref": "#/definitions/EncodingChannel",
+          "description": "Playback field (optional). Each distinct value is one period; features recolor as the map plays."
         }
       },
       "additionalProperties": false,
@@ -16243,6 +16457,10 @@
         "opacity": {
           "type": "number",
           "description": "Fill opacity for point circles. Default 0.65. Range 0-1."
+        },
+        "time": {
+          "$ref": "#/definitions/EncodingChannel",
+          "description": "Playback field (optional). Point size and color follow each period; requires `key`."
         }
       },
       "required": [
@@ -16723,6 +16941,10 @@
         "race": {
           "$ref": "#/definitions/RaceConfig",
           "description": "Ranking and playback options. Omit to use the race defaults."
+        },
+        "playback": {
+          "$ref": "#/definitions/PlaybackTimingConfig",
+          "description": "Playback timing in the shared form. Setting a field here and in `race` is an error."
         },
         "chrome": {
           "$ref": "#/definitions/Chrome",
@@ -17920,6 +18142,77 @@
       "additionalProperties": false,
       "description": "Ranking and playback options for a race."
     },
+    "PlaybackTimingConfig": {
+      "type": "object",
+      "properties": {
+        "duration": {
+          "type": "number",
+          "description": "Total playback duration in milliseconds at 1× speed. Defaults to 700ms per period, clamped to 8000–90000ms. Mutually exclusive with `step`."
+        },
+        "step": {
+          "type": "number",
+          "description": "Duration per period in milliseconds. Omitted by default and mutually exclusive with `duration`."
+        },
+        "gaps": {
+          "type": "string",
+          "enum": [
+            "interpolate",
+            "hold",
+            "drop"
+          ],
+          "description": "Interior gap policy. Defaults to `interpolate`. Use `hold` to carry the previous value or `drop` to leave the value absent."
+        },
+        "holdEnd": {
+          "type": "number",
+          "description": "Time to dwell on the final frame in milliseconds. Defaults to 1500."
+        },
+        "loop": {
+          "type": "boolean",
+          "description": "Restart after the final hold. Defaults to false."
+        },
+        "autoplay": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "visible"
+            },
+            {
+              "type": "boolean"
+            }
+          ],
+          "description": "Start when 25% visible (`visible`, the default), immediately (`true`), or on demand (`false`). Reduced motion disables autoplay."
+        },
+        "controls": {
+          "type": "boolean",
+          "description": "Show play/pause, scrubber, and period readout. Defaults to true."
+        },
+        "period": {
+          "anyOf": [
+            {
+              "type": "boolean",
+              "const": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "format": {
+                  "type": "string",
+                  "description": "Overrides the time channel's format."
+                },
+                "position": {
+                  "$ref": "#/definitions/PlaybackPeriodPosition",
+                  "description": "Where the label sits. Defaults to `auto`: centered for scatter, lower left for maps, upper right for bars."
+                }
+              },
+              "additionalProperties": false
+            }
+          ],
+          "description": "Large period label. On by default with automatic placement and the time channel's format. Set false to hide it."
+        }
+      },
+      "additionalProperties": false,
+      "description": "The playback timing fields a race accepts in its top-level `playback` block."
+    },
     "ChartSpecBase": {
       "type": "object",
       "additionalProperties": false,
@@ -18130,6 +18423,10 @@
         "zIndex": {
           "type": "number",
           "description": "Render order within a LayerSpec. Higher values render on top. When omitted, layers render in array order (later layers paint on top). Axis assignment (left/right y) is always determined by array position, not zIndex."
+        },
+        "playback": {
+          "$ref": "#/definitions/PlaybackConfig",
+          "description": "Playback timing, controls and period label for a chart with `encoding.time` (point, circle and bar marks). Ignored with a warning when the chart has no time channel."
         }
       }
     }

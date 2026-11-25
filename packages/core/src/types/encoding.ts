@@ -35,6 +35,8 @@ export interface EncodingRule {
   theta?: ChannelRule;
   detail: ChannelRule;
   description?: ChannelRule;
+  /** Playback period channel. Declared only on marks that support playback. */
+  time?: ChannelRule;
 }
 
 // ---------------------------------------------------------------------------
@@ -101,6 +103,7 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     tooltip: optional(),
     description: optional(),
     detail: optional('nominal'),
+    time: optional('temporal', 'ordinal', 'quantitative'),
   },
   line: {
     x: required('temporal', 'ordinal'),
@@ -135,6 +138,7 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     tooltip: optional(),
     description: optional(),
     detail: optional('nominal'),
+    time: optional('temporal', 'ordinal', 'quantitative'),
   },
   circle: {
     x: required('quantitative'),
@@ -145,6 +149,7 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     tooltip: optional(),
     description: optional(),
     detail: optional('nominal'),
+    time: optional('temporal', 'ordinal', 'quantitative'),
   },
   lollipop: {
     x: required('quantitative'),

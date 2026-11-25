@@ -222,9 +222,9 @@ describe('rect encoding rules', () => {
 });
 
 describe('lollipop encoding rules', () => {
-  it('has the same rules as circle (semantic alias)', () => {
+  it('has the same rules as circle (semantic alias), except the circle-only time channel', () => {
     const lollipopRules = MARK_ENCODING_RULES.lollipop;
-    const circleRules = MARK_ENCODING_RULES.circle;
+    const { time: _time, ...circleRules } = MARK_ENCODING_RULES.circle;
     expect(lollipopRules).toEqual(circleRules);
   });
 

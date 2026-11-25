@@ -941,6 +941,9 @@ export function createChart<TData extends DataRow = DataRow>(
     get layout() {
       return currentLayout;
     },
+    get playback() {
+      return null;
+    },
     getSelectedElement(): ElementRef | null {
       return edits.selected;
     },

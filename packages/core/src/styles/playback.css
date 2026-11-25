@@ -1,0 +1,4 @@
+/*
+ * Playback controls (play button, scrubber, readout) shared by races, charts and maps.
+ * Each selector lists both the .oc-race-* and .oc-playback-* prefixes.
+ */

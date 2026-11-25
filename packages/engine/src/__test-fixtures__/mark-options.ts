@@ -27,6 +27,7 @@ export const MARK_CONTRACT_TYPES = [
 export const MARK_OPTION_CASES = {
   ticks: { value: true, marks: ['errorbar'] },
   orient: { value: 'horizontal', marks: ['bar', 'histogram'] },
+  mirror: { value: true, marks: ['bar'] },
   cornerRadius: { value: 3, marks: ['bar', 'rect', 'histogram', 'waffle'] },
   point: { value: true, marks: ['line', 'area', 'density'] },
   interpolate: { value: 'linear', marks: ['line', 'area', 'density'] },

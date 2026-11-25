@@ -11,6 +11,7 @@ import type {
 } from '@opendata-ai/openchart-core';
 import type { JPGExportOptions, SVGExportOptions } from './export';
 import type { GIFExportOptions } from './export-gif';
+import type { PlaybackController } from './playback/types';
 import type { TransitionHandle } from './transition';
 
 /**
@@ -109,6 +110,8 @@ export interface ChartInstance {
   destroy(): void;
   /** The current compiled layout (for hooks / debugging). */
   readonly layout: ChartLayout;
+  /** Playback controls for a spec with a time channel; null when the spec has none. */
+  readonly playback: PlaybackController | null;
   /** Get the currently selected element, or null if none. */
   getSelectedElement(): ElementRef | null;
   /** Programmatically select an element. Silent no-op if element not found. */

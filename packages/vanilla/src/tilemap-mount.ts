@@ -41,6 +41,7 @@ import {
   numAttr,
   runElementTweens,
 } from './motion/element-tween';
+import type { PlaybackController } from './playback/types';
 import { observeResize } from './resize-observer';
 import { resolveDarkMode } from './resolve-dark-mode';
 import { prepareSettledExportTheme } from './theme-style-block';
@@ -121,6 +122,8 @@ export interface TileMapInstance {
   destroy(): void;
   /** The current compiled layout. */
   readonly layout: TileMapLayout;
+  /** Playback controls for a spec with a time channel; null when the spec has none. */
+  readonly playback: PlaybackController | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -641,6 +644,9 @@ export function createTileMap(
     destroy,
     get layout(): TileMapLayout {
       return currentLayout;
+    },
+    get playback(): PlaybackController | null {
+      return null;
     },
   };
 }

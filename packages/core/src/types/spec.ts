@@ -212,6 +212,12 @@ interface MarkOptions {
     | 'natural';
   /** Explicit orientation override for bar marks. */
   orient?: 'horizontal' | 'vertical';
+  /**
+   * Mirror horizontal bars around a shared center axis (a population pyramid).
+   * Only meaningful when `type` is `'bar'`; needs a color field with exactly two
+   * values, the first drawn to the left. Defaults to false.
+   */
+  mirror?: boolean;
   /** Inner radius for arc marks. >0 produces a donut, 0 or omitted produces a pie. */
   innerRadius?: number;
   /** Outer radius for arc marks. */
@@ -435,7 +441,7 @@ type SharedMarkOptions = Pick<
  * Extend this union with `type CustomMark = MarkDef & { ... }`, not an interface.
  */
 export type MarkDef =
-  | (SharedMarkOptions & { type: 'bar' } & Pick<MarkOptions, 'orient' | 'cornerRadius'>)
+  | (SharedMarkOptions & { type: 'bar' } & Pick<MarkOptions, 'orient' | 'cornerRadius' | 'mirror'>)
   | (SharedMarkOptions & { type: 'line' } & Pick<MarkOptions, 'point' | 'interpolate'>)
   | (SharedMarkOptions & { type: 'area' } & Pick<MarkOptions, 'point' | 'interpolate'>)
   | (SharedMarkOptions & { type: 'point' } & Pick<MarkOptions, 'trendline'>)
@@ -1939,6 +1945,13 @@ export interface LineEncoding<TData extends DataRow = DataRow> extends Encoding<
 export interface BarEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
   x: EncodingChannel<TData>;
   y: EncodingChannel<TData>;
+  /**
+   * Playback field. Each distinct value is one period, and the chart animates
+   * through them with the shared `playback` controls. Temporal and
+   * quantitative periods sort by value; ordinal periods follow `sort` or
+   * first-seen order.
+   */
+  time?: EncodingChannel<TData>;
 }
 
 /**
@@ -1959,6 +1972,13 @@ export interface AreaEncoding<TData extends DataRow = DataRow> extends Encoding<
 export interface PointEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
   x: EncodingChannel<TData>;
   y: EncodingChannel<TData>;
+  /**
+   * Playback field. Each distinct value is one period, and the chart animates
+   * through them with the shared `playback` controls. Temporal and
+   * quantitative periods sort by value; ordinal periods follow `sort` or
+   * first-seen order.
+   */
+  time?: EncodingChannel<TData>;
 }
 
 /**
@@ -1969,6 +1989,13 @@ export interface PointEncoding<TData extends DataRow = DataRow> extends Encoding
 export interface CircleEncoding<TData extends DataRow = DataRow> extends Encoding<TData> {
   x: EncodingChannel<TData>;
   y: EncodingChannel<TData>;
+  /**
+   * Playback field. Each distinct value is one period, and the chart animates
+   * through them with the shared `playback` controls. Temporal and
+   * quantitative periods sort by value; ordinal periods follow `sort` or
+   * first-seen order.
+   */
+  time?: EncodingChannel<TData>;
 }
 
 /**
@@ -2312,6 +2339,12 @@ interface BaseChartSpec<TData extends DataRow = DataRow> {
    * not zIndex.
    */
   zIndex?: number;
+  /**
+   * Playback timing, controls and period label for a chart with
+   * `encoding.time` (point, circle and bar marks). Ignored with a warning
+   * when the chart has no time channel.
+   */
+  playback?: PlaybackConfig;
 }
 
 /**
@@ -2927,6 +2960,8 @@ export interface TileMapEncoding {
   color?: EncodingChannel;
   /** Tooltip encoding (optional). */
   tooltip?: EncodingChannel | EncodingChannel[];
+  /** Playback field (optional). Each distinct value is one period; tiles recolor as the map plays. */
+  time?: EncodingChannel;
 }
 
 /** Sequential color palette names available for tile maps. */
@@ -2976,6 +3011,8 @@ export interface TileMapSpec {
    * Examples: ".1f" for one decimal, "$,.0f" for currency, "~s" for SI.
    */
   valueFormat?: string;
+  /** Playback timing, controls and period label. Applies when `encoding.time` is set. */
+  playback?: PlaybackConfig;
 }
 
 // ---------------------------------------------------------------------------
@@ -3086,6 +3123,8 @@ export interface GeoMapEncoding {
   textPriority?: EncodingChannel;
   /** Tooltip encoding (optional). */
   tooltip?: EncodingChannel | EncodingChannel[];
+  /** Playback field (optional). Each distinct value is one period; features recolor as the map plays. */
+  time?: EncodingChannel;
 }
 
 /** Point/symbol layer rendered above choropleth features. */
@@ -3111,6 +3150,8 @@ export interface GeoMapPointsLayer {
   key?: EncodingChannel;
   /** Fill opacity for point circles. Default 0.65. Range 0-1. */
   opacity?: number;
+  /** Playback field (optional). Point size and color follow each period; requires `key`. */
+  time?: EncodingChannel;
 }
 
 export interface GeoMapSpec {
@@ -3145,6 +3186,8 @@ export interface GeoMapSpec {
    * animate, and prefers-reduced-motion always wins.
    */
   animation?: AnimationSpec;
+  /** Playback timing, controls and period label. Applies when `encoding.time` or `points.time` is set. */
+  playback?: PlaybackConfig;
 }
 
 // ---------------------------------------------------------------------------
@@ -3213,6 +3256,49 @@ export interface BarListEncoding {
 // ---------------------------------------------------------------------------
 // Race spec (animated rankings over time)
 // ---------------------------------------------------------------------------
+
+/** Placement of the large faint period label behind a playback chart. */
+export type PlaybackPeriodPosition = 'auto' | 'center' | 'top-right' | 'bottom-left';
+
+/**
+ * Playback options for charts and maps with a `time` channel. Fields shared
+ * with the race's `race` block have the same names, types and defaults.
+ */
+export interface PlaybackConfig {
+  /** Total playback duration in milliseconds at 1× speed. Defaults to 700ms per period, clamped to 8000–90000ms. Mutually exclusive with `step`. */
+  duration?: number;
+  /** Duration per period in milliseconds. Omitted by default and mutually exclusive with `duration`. */
+  step?: number;
+  /** Interior gap policy. Defaults to `interpolate`. Use `hold` to carry the previous value or `drop` to leave the value absent. */
+  gaps?: 'interpolate' | 'hold' | 'drop';
+  /** Time to dwell on the final frame in milliseconds. Defaults to 1500. */
+  holdEnd?: number;
+  /** Restart after the final hold. Defaults to false. */
+  loop?: boolean;
+  /** Start when 25% visible (`visible`, the default), immediately (`true`), or on demand (`false`). Reduced motion disables autoplay. */
+  autoplay?: 'visible' | boolean;
+  /** Show play/pause, scrubber, and period readout. Defaults to true. */
+  controls?: boolean;
+  /** Large period label. On by default with automatic placement and the time channel's format. Set false to hide it. */
+  period?:
+    | false
+    | {
+        /** Overrides the time channel's format. */
+        format?: string;
+        /** Where the label sits. Defaults to `auto`: centered for scatter, lower left for maps, upper right for bars. */
+        position?: PlaybackPeriodPosition;
+      };
+  /** Point and circle charts only: keys whose name is drawn next to the mark for the whole run. */
+  labels?: string[];
+  /** Point and circle charts only: draw past positions as a trail. `true` is every key; an array names keys. Defaults to false. */
+  trails?: boolean | string[];
+}
+
+/** The playback timing fields a race accepts in its top-level `playback` block. */
+export type PlaybackTimingConfig = Pick<
+  PlaybackConfig,
+  'duration' | 'step' | 'gaps' | 'holdEnd' | 'loop' | 'autoplay' | 'controls' | 'period'
+>;
 
 /** Mark used to draw each frame of a race. */
 export type RaceMarkType = 'bar' | 'line' | 'table';
@@ -3308,6 +3394,8 @@ export interface RaceSpec {
   encoding: RaceEncoding;
   /** Ranking and playback options. Omit to use the race defaults. */
   race?: RaceConfig;
+  /** Playback timing in the shared form. Setting a field here and in `race` is an error. */
+  playback?: PlaybackTimingConfig;
   /** Editorial chrome. Omit to draw without authored title, subtitle, or other chrome text. */
   chrome?: Chrome;
   /** Theme overrides. Omit to use the default theme. */
